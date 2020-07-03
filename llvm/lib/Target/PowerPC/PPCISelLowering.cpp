@@ -2438,22 +2438,22 @@ bool PPCTargetLowering::SelectAddressEVXRegReg(SDValue N, SDValue &Base,
 /// non-zero and N can be represented by a base register plus a signed 16-bit
 /// displacement, make a more precise judgement by checking (displacement % \p
 /// EncodingAlignment).
-bool PPCTargetLowering::SelectAddressRegReg(SDValue N, SDValue &Base,
-                                            SDValue &Index, SelectionDAG &DAG,
-                                            unsigned EncodingAlignment) const {
+bool PPCTargetLowering::SelectAddressRegReg(
+    SDValue N, SDValue &Base, SDValue &Index, SelectionDAG &DAG,
+    MaybeAlign EncodingAlignment) const {
   // If we have a PC Relative target flag don't select as [reg+reg]. It will be
   // a [pc+imm].
   if (SelectAddressPCRel(N, Base))
     return false;
 
-  int16_t imm = 0;
+  int16_t Imm = 0;
   if (N.getOpcode() == ISD::ADD) {
     // Is there any SPE load/store (f64), which can't handle 16bit offset?
     // SPE load/store can only handle 8-bit offsets.
     if (hasSPE() && SelectAddressEVXRegReg(N, Base, Index, DAG))
         return true;
-    if (isIntS16Immediate(N.getOperand(1), imm) &&
-        (!EncodingAlignment || !(imm % EncodingAlignment)))
+    if (isIntS16Immediate(N.getOperand(1), Imm) &&
+        (!EncodingAlignment || isAligned(*EncodingAlignment, Imm)))
       return false; // r+i
     if (N.getOperand(1).getOpcode() == PPCISD::Lo)
       return false;    // r+i
@@ -2462,8 +2462,8 @@ bool PPCTargetLowering::SelectAddressRegReg(SDValue N, SDValue &Base,
     Index = N.getOperand(1);
     return true;
   } else if (N.getOpcode() == ISD::OR) {
-    if (isIntS16Immediate(N.getOperand(1), imm) &&
-        (!EncodingAlignment || !(imm % EncodingAlignment)))
+    if (isIntS16Immediate(N.getOperand(1), Imm) &&
+        (!EncodingAlignment || isAligned(*EncodingAlignment, Imm)))
       return false; // r+i can fold it if we can.
 
     // If this is an or of disjoint bitfields, we can codegen this as an add
@@ -2529,10 +2529,9 @@ static void fixupFuncForFI(SelectionDAG &DAG, int FrameIdx, EVT VT) {
 /// a signed 16-bit displacement [r+imm], and if it is not better
 /// represented as reg+reg.  If \p EncodingAlignment is non-zero, only accept
 /// displacements that are multiples of that value.
-bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
-                                            SDValue &Base,
-                                            SelectionDAG &DAG,
-                                            unsigned EncodingAlignment) const {
+bool PPCTargetLowering::SelectAddressRegImm(
+    SDValue N, SDValue &Disp, SDValue &Base, SelectionDAG &DAG,
+    MaybeAlign EncodingAlignment) const {
   // FIXME dl should come from parent load or store, not from address
   SDLoc dl(N);
 
@@ -2548,7 +2547,7 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
   if (N.getOpcode() == ISD::ADD) {
     int16_t imm = 0;
     if (isIntS16Immediate(N.getOperand(1), imm) &&
-        (!EncodingAlignment || (imm % EncodingAlignment) == 0)) {
+        (!EncodingAlignment || isAligned(*EncodingAlignment, imm))) {
       Disp = DAG.getTargetConstant(imm, dl, N.getValueType());
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(N.getOperand(0))) {
         Base = DAG.getTargetFrameIndex(FI->getIndex(), N.getValueType());
@@ -2572,7 +2571,7 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
   } else if (N.getOpcode() == ISD::OR) {
     int16_t imm = 0;
     if (isIntS16Immediate(N.getOperand(1), imm) &&
-        (!EncodingAlignment || (imm % EncodingAlignment) == 0)) {
+        (!EncodingAlignment || isAligned(*EncodingAlignment, imm))) {
       // If this is an or of disjoint bitfields, we can codegen this as an add
       // (for better address arithmetic) if the LHS and RHS of the OR are
       // provably disjoint.
@@ -2599,7 +2598,7 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
     // this as "d, 0"
     int16_t Imm;
     if (isIntS16Immediate(CN, Imm) &&
-        (!EncodingAlignment || (Imm % EncodingAlignment) == 0)) {
+        (!EncodingAlignment || isAligned(*EncodingAlignment, Imm))) {
       Disp = DAG.getTargetConstant(Imm, dl, CN->getValueType(0));
       Base = DAG.getRegister(Subtarget.isPPC64() ? PPC::ZERO8 : PPC::ZERO,
                              CN->getValueType(0));
@@ -2609,7 +2608,8 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
     // Handle 32-bit sext immediates with LIS + addr mode.
     if ((CN->getValueType(0) == MVT::i32 ||
          (int64_t)CN->getZExtValue() == (int)CN->getZExtValue()) &&
-        (!EncodingAlignment || (CN->getZExtValue() % EncodingAlignment) == 0)) {
+        (!EncodingAlignment ||
+         isAligned(*EncodingAlignment, CN->getZExtValue()))) {
       int Addr = (int)CN->getZExtValue();
 
       // Otherwise, break this down into an LIS + disp.
@@ -2796,14 +2796,14 @@ bool PPCTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
 
   // LDU/STU can only handle immediates that are a multiple of 4.
   if (VT != MVT::i64) {
-    if (!SelectAddressRegImm(Ptr, Offset, Base, DAG, 0))
+    if (!SelectAddressRegImm(Ptr, Offset, Base, DAG, None))
       return false;
   } else {
     // LDU/STU need an address with at least 4-byte alignment.
     if (Alignment < 4)
       return false;
 
-    if (!SelectAddressRegImm(Ptr, Offset, Base, DAG, 4))
+    if (!SelectAddressRegImm(Ptr, Offset, Base, DAG, Align(4)))
       return false;
   }
 

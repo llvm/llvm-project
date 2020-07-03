@@ -590,8 +590,8 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (!isa<ConstantInt>(PacketSize) || !isa<ConstantInt>(PacketAlign))
     return false;
   unsigned Size = cast<ConstantInt>(PacketSize)->getZExtValue();
-  unsigned Align = cast<ConstantInt>(PacketAlign)->getZExtValue();
-  if (Size != Align || !isPowerOf2_32(Size))
+  Align Alignment = cast<ConstantInt>(PacketAlign)->getAlignValue();
+  if (Alignment != Size)
     return false;
 
   Type *PtrElemTy;

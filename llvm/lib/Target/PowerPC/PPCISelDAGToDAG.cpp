@@ -240,7 +240,7 @@ namespace {
     /// bit signed displacement.
     /// Returns false if it can be represented by [r+imm], which are preferred.
     bool SelectAddrIdx(SDValue N, SDValue &Base, SDValue &Index) {
-      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG, 0);
+      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG, None);
     }
 
     /// SelectAddrIdx4 - Given the specified address, check to see if it can be
@@ -250,7 +250,8 @@ namespace {
     /// displacement must be a multiple of 4.
     /// Returns false if it can be represented by [r+imm], which are preferred.
     bool SelectAddrIdxX4(SDValue N, SDValue &Base, SDValue &Index) {
-      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG, 4);
+      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG,
+                                              Align(4));
     }
 
     /// SelectAddrIdx16 - Given the specified address, check to see if it can be
@@ -260,7 +261,8 @@ namespace {
     /// displacement must be a multiple of 16.
     /// Returns false if it can be represented by [r+imm], which are preferred.
     bool SelectAddrIdxX16(SDValue N, SDValue &Base, SDValue &Index) {
-      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG, 16);
+      return PPCLowering->SelectAddressRegReg(N, Base, Index, *CurDAG,
+                                              Align(16));
     }
 
     /// SelectAddrIdxOnly - Given the specified address, force it to be
@@ -275,21 +277,22 @@ namespace {
     /// displacement.
     bool SelectAddrImm(SDValue N, SDValue &Disp,
                        SDValue &Base) {
-      return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG, 0);
+      return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG, None);
     }
 
     /// SelectAddrImmX4 - Returns true if the address N can be represented by
     /// a base register plus a signed 16-bit displacement that is a multiple of
     /// 4 (last parameter). Suitable for use by STD and friends.
     bool SelectAddrImmX4(SDValue N, SDValue &Disp, SDValue &Base) {
-      return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG, 4);
+      return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG, Align(4));
     }
 
     /// SelectAddrImmX16 - Returns true if the address N can be represented by
     /// a base register plus a signed 16-bit displacement that is a multiple of
     /// 16(last parameter). Suitable for use by STXV and friends.
     bool SelectAddrImmX16(SDValue N, SDValue &Disp, SDValue &Base) {
-      return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG, 16);
+      return PPCLowering->SelectAddressRegImm(N, Disp, Base, *CurDAG,
+                                              Align(16));
     }
 
     // Select an address into a single register.
