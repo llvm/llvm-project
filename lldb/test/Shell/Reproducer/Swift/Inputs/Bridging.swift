@@ -1,6 +1,6 @@
 func main() {
-  let x : Int32 = 41 // Make sure we use the Swift Standard Library
-  let foo = Foo(i: x)
+  let foo = Foo(i: 41)
+  print("Bridging") // Make sure we use the Swift Standard Library
 }
 
 main()
