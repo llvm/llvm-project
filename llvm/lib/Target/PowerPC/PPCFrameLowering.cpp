@@ -73,10 +73,12 @@ static unsigned computeLinkageSize(const PPCSubtarget &STI) {
 }
 
 static unsigned computeBasePointerSaveOffset(const PPCSubtarget &STI) {
-  // SVR4 ABI: First slot in the general register save area.
-  return STI.isPPC64()
-             ? -16U
-             : STI.getTargetMachine().isPositionIndependent() ? -12U : -8U;
+  // Third slot in the general purpose register save area.
+  if (STI.is32BitELFABI() && STI.getTargetMachine().isPositionIndependent())
+    return -12U;
+
+  // Second slot in the general purpose register save area.
+  return STI.isPPC64() ? -16U : -8U;
 }
 
 static unsigned computeCRSaveOffset(const PPCSubtarget &STI) {
@@ -2419,8 +2421,6 @@ unsigned PPCFrameLowering::getFramePointerSaveOffset() const {
 }
 
 unsigned PPCFrameLowering::getBasePointerSaveOffset() const {
-  if (Subtarget.isAIXABI())
-    report_fatal_error("BasePointer is not implemented on AIX yet.");
   return BasePointerSaveOffset;
 }
 
