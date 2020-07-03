@@ -16889,6 +16889,136 @@ vec_cnttzm(vector unsigned long long __a, vector unsigned long long __b) {
 
 #define vec_srdb(__a, __b, __c) __builtin_altivec_vsrdbi(__a, __b, (__c & 0x7))
 
+/* vec_insertl */
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_insertl(unsigned char __a, vector unsigned char __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinsbrx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinsblx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_insertl(unsigned short __a, vector unsigned short __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinshrx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinshlx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_insertl(unsigned int __a, vector unsigned int __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinswrx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinswlx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai vec_insertl(
+    unsigned long long __a, vector unsigned long long __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinsdrx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinsdlx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai vec_insertl(
+    vector unsigned char __a, vector unsigned char __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinsbvrx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinsbvlx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai vec_insertl(
+    vector unsigned short __a, vector unsigned short __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinshvrx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinshvlx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai vec_insertl(
+    vector unsigned int __a, vector unsigned int __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinswvrx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinswvlx(__b, __c, __a);
+#endif
+}
+
+/* vec_inserth */
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_inserth(unsigned char __a, vector unsigned char __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinsblx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinsbrx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_inserth(unsigned short __a, vector unsigned short __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinshlx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinshrx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_inserth(unsigned int __a, vector unsigned int __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinswlx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinswrx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai vec_inserth(
+    unsigned long long __a, vector unsigned long long __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinsdlx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinsdrx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai vec_inserth(
+    vector unsigned char __a, vector unsigned char __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinsbvlx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinsbvrx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai vec_inserth(
+    vector unsigned short __a, vector unsigned short __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinshvlx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinshvrx(__b, __c, __a);
+#endif
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai vec_inserth(
+    vector unsigned int __a, vector unsigned int __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vinswvlx(__b, __c, __a);
+#else
+  return __builtin_altivec_vinswvrx(__b, __c, __a);
+#endif
+}
+
 #ifdef __VSX__
 
 /* vec_permx */

@@ -392,22 +392,17 @@ define <4 x float> @signbit_sel_v4f32_fcmp(<4 x float> %x, <4 x float> %y, <4 x 
 define <4 x i64> @blend_splat1_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z) {
 ; AVX1-LABEL: blend_splat1_mask_cond_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqq %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqq %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
+; AVX1-NEXT:    vpsllq $63, %xmm0, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
+; AVX1-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: blend_splat1_mask_cond_v4i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
-; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqq %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
+; AVX2-NEXT:    vpsllq $63, %ymm0, %ymm0
+; AVX2-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: blend_splat1_mask_cond_v4i64:
@@ -432,22 +427,11 @@ define <4 x i64> @blend_splat1_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x 
 }
 
 define <4 x i32> @blend_splat1_mask_cond_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
-; AVX1-LABEL: blend_splat1_mask_cond_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: blend_splat1_mask_cond_v4i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
-; AVX2-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX2-NEXT:    retq
+; AVX12-LABEL: blend_splat1_mask_cond_v4i32:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX12-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: blend_splat1_mask_cond_v4i32:
 ; AVX512F:       # %bb.0:
@@ -474,23 +458,22 @@ define <4 x i32> @blend_splat1_mask_cond_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x 
 define <16 x i16> @blend_splat1_mask_cond_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %z) {
 ; AVX1-LABEL: blend_splat1_mask_cond_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps %ymm2, %ymm0, %ymm2
-; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vpsllw $15, %xmm0, %xmm3
+; AVX1-NEXT:    vpsraw $15, %xmm3, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm0, %ymm1
+; AVX1-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: blend_splat1_mask_cond_v16i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqw %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
+; AVX2-NEXT:    vpsllw $15, %ymm0, %ymm0
+; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX2-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: blend_splat1_mask_cond_v16i16:
@@ -507,13 +490,19 @@ define <16 x i16> @blend_splat1_mask_cond_v16i16(<16 x i16> %x, <16 x i16> %y, <
 }
 
 define <16 x i8> @blend_splat1_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
-; AVX-LABEL: blend_splat1_mask_cond_v16i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
-; AVX-NEXT:    retq
+; AVX12-LABEL: blend_splat1_mask_cond_v16i8:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpsllw $7, %xmm0, %xmm0
+; AVX12-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512-LABEL: blend_splat1_mask_cond_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX512-NEXT:    retq
   %a = and <16 x i8> %x, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %c = icmp eq <16 x i8> %a, zeroinitializer
   %r = select <16 x i1> %c, <16 x i8> %y, <16 x i8> %z
@@ -523,10 +512,7 @@ define <16 x i8> @blend_splat1_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x
 define <2 x i64> @blend_splatmax_mask_cond_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ; AVX12-LABEL: blend_splatmax_mask_cond_v2i64:
 ; AVX12:       # %bb.0:
-; AVX12-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX12-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX12-NEXT:    vpcmpeqq %xmm3, %xmm0, %xmm0
-; AVX12-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX12-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: blend_splatmax_mask_cond_v2i64:
@@ -553,25 +539,10 @@ define <2 x i64> @blend_splatmax_mask_cond_v2i64(<2 x i64> %x, <2 x i64> %y, <2 
 }
 
 define <8 x i32> @blend_splatmax_mask_cond_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
-; AVX1-LABEL: blend_splatmax_mask_cond_v8i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: blend_splatmax_mask_cond_v8i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
-; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
-; AVX2-NEXT:    retq
+; AVX12-LABEL: blend_splatmax_mask_cond_v8i32:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
+; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: blend_splatmax_mask_cond_v8i32:
 ; AVX512F:       # %bb.0:
@@ -595,13 +566,19 @@ define <8 x i32> @blend_splatmax_mask_cond_v8i32(<8 x i32> %x, <8 x i32> %y, <8 
 }
 
 define <8 x i16> @blend_splatmax_mask_cond_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %z) {
-; AVX-LABEL: blend_splatmax_mask_cond_v8i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
-; AVX-NEXT:    retq
+; AVX12-LABEL: blend_splatmax_mask_cond_v8i16:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX12-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512-LABEL: blend_splatmax_mask_cond_v8i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX512-NEXT:    retq
   %a = and <8 x i16> %x, <i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
   %c = icmp eq <8 x i16> %a, zeroinitializer
   %r = select <8 x i1> %c, <8 x i16> %y, <8 x i16> %z
@@ -611,23 +588,19 @@ define <8 x i16> @blend_splatmax_mask_cond_v8i16(<8 x i16> %x, <8 x i16> %y, <8 
 define <32 x i8> @blend_splatmax_mask_cond_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %z) {
 ; AVX1-LABEL: blend_splatmax_mask_cond_v32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqb %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpgtb %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps %ymm2, %ymm0, %ymm2
-; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm0, %ymm1
+; AVX1-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: blend_splatmax_mask_cond_v32i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
+; AVX2-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: blend_splatmax_mask_cond_v32i8:
@@ -646,22 +619,17 @@ define <32 x i8> @blend_splatmax_mask_cond_v32i8(<32 x i8> %x, <32 x i8> %y, <32
 define <4 x i64> @blend_splat_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z) {
 ; AVX1-LABEL: blend_splat_mask_cond_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqq %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqq %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
+; AVX1-NEXT:    vpsllq $62, %xmm0, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsllq $62, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
+; AVX1-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: blend_splat_mask_cond_v4i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [2,2,2,2]
-; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqq %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
+; AVX2-NEXT:    vpsllq $62, %ymm0, %ymm0
+; AVX2-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: blend_splat_mask_cond_v4i64:
@@ -686,22 +654,11 @@ define <4 x i64> @blend_splat_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i
 }
 
 define <4 x i32> @blend_splat_mask_cond_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
-; AVX1-LABEL: blend_splat_mask_cond_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: blend_splat_mask_cond_v4i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [65536,65536,65536,65536]
-; AVX2-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX2-NEXT:    retq
+; AVX12-LABEL: blend_splat_mask_cond_v4i32:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpslld $15, %xmm0, %xmm0
+; AVX12-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: blend_splat_mask_cond_v4i32:
 ; AVX512F:       # %bb.0:
@@ -728,23 +685,22 @@ define <4 x i32> @blend_splat_mask_cond_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i
 define <16 x i16> @blend_splat_mask_cond_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %z) {
 ; AVX1-LABEL: blend_splat_mask_cond_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps %ymm2, %ymm0, %ymm2
-; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vpsllw $5, %xmm0, %xmm3
+; AVX1-NEXT:    vpsraw $15, %xmm3, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsllw $5, %xmm0, %xmm0
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm0, %ymm1
+; AVX1-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: blend_splat_mask_cond_v16i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqw %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
+; AVX2-NEXT:    vpsllw $5, %ymm0, %ymm0
+; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX2-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: blend_splat_mask_cond_v16i16:
@@ -761,13 +717,19 @@ define <16 x i16> @blend_splat_mask_cond_v16i16(<16 x i16> %x, <16 x i16> %y, <1
 }
 
 define <16 x i8> @blend_splat_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
-; AVX-LABEL: blend_splat_mask_cond_v16i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
-; AVX-NEXT:    retq
+; AVX12-LABEL: blend_splat_mask_cond_v16i8:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpsllw $5, %xmm0, %xmm0
+; AVX12-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512-LABEL: blend_splat_mask_cond_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX512-NEXT:    retq
   %a = and <16 x i8> %x, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %c = icmp eq <16 x i8> %a, zeroinitializer
   %r = select <16 x i1> %c, <16 x i8> %y, <16 x i8> %z
@@ -898,32 +860,16 @@ define <16 x i8> @blend_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z
 }
 
 define void @PR46531(i32* %x, i32* %y, i32* %z) {
-; AVX1-LABEL: PR46531:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqu (%rsi), %xmm0
-; AVX1-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX1-NEXT:    vpor %xmm0, %xmm1, %xmm2
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpxor %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendvps %xmm3, %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovups %xmm0, (%rdi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: PR46531:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqu (%rsi), %xmm0
-; AVX2-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm2
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
-; AVX2-NEXT:    vpand %xmm3, %xmm1, %xmm3
-; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX2-NEXT:    vpcmpeqd %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpxor %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vblendvps %xmm3, %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vmovups %xmm0, (%rdi)
-; AVX2-NEXT:    retq
+; AVX12-LABEL: PR46531:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vmovdqu (%rsi), %xmm0
+; AVX12-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX12-NEXT:    vpor %xmm0, %xmm1, %xmm2
+; AVX12-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; AVX12-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX12-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0
+; AVX12-NEXT:    vmovups %xmm0, (%rdi)
+; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: PR46531:
 ; AVX512F:       # %bb.0:

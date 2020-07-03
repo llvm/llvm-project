@@ -464,6 +464,64 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
               Intrinsic<[llvm_v16i8_ty],
                         [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
                         [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+  // P10 Vector Insert.
+  def int_ppc_altivec_vinsblx : GCCBuiltin<"__builtin_altivec_vinsblx">,
+              Intrinsic<[llvm_v16i8_ty],
+                        [llvm_v16i8_ty, llvm_i64_ty, llvm_i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinsbrx : GCCBuiltin<"__builtin_altivec_vinsbrx">,
+              Intrinsic<[llvm_v16i8_ty],
+                        [llvm_v16i8_ty, llvm_i64_ty, llvm_i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinshlx : GCCBuiltin<"__builtin_altivec_vinshlx">,
+              Intrinsic<[llvm_v8i16_ty],
+                        [llvm_v8i16_ty, llvm_i64_ty, llvm_i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinshrx : GCCBuiltin<"__builtin_altivec_vinshrx">,
+              Intrinsic<[llvm_v8i16_ty],
+                        [llvm_v8i16_ty, llvm_i64_ty, llvm_i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinswlx : GCCBuiltin<"__builtin_altivec_vinswlx">,
+              Intrinsic<[llvm_v4i32_ty],
+                        [llvm_v4i32_ty, llvm_i64_ty, llvm_i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinswrx : GCCBuiltin<"__builtin_altivec_vinswrx">,
+              Intrinsic<[llvm_v4i32_ty],
+                        [llvm_v4i32_ty, llvm_i64_ty, llvm_i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinsdlx : GCCBuiltin<"__builtin_altivec_vinsdlx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v2i64_ty, llvm_i64_ty, llvm_i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinsdrx : GCCBuiltin<"__builtin_altivec_vinsdrx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v2i64_ty, llvm_i64_ty, llvm_i64_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinsbvlx : GCCBuiltin<"__builtin_altivec_vinsbvlx">,
+              Intrinsic<[llvm_v16i8_ty],
+                        [llvm_v16i8_ty, llvm_i64_ty, llvm_v16i8_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinsbvrx : GCCBuiltin<"__builtin_altivec_vinsbvrx">,
+              Intrinsic<[llvm_v16i8_ty],
+                        [llvm_v16i8_ty, llvm_i64_ty, llvm_v16i8_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinshvlx : GCCBuiltin<"__builtin_altivec_vinshvlx">,
+              Intrinsic<[llvm_v8i16_ty],
+                        [llvm_v8i16_ty, llvm_i64_ty, llvm_v8i16_ty],
+                        [IntrNoMem]>;
+ def int_ppc_altivec_vinshvrx : GCCBuiltin<"__builtin_altivec_vinshvrx">,
+              Intrinsic<[llvm_v8i16_ty],
+                        [llvm_v8i16_ty, llvm_i64_ty, llvm_v8i16_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinswvlx : GCCBuiltin<"__builtin_altivec_vinswvlx">,
+              Intrinsic<[llvm_v4i32_ty],
+                        [llvm_v4i32_ty, llvm_i64_ty, llvm_v4i32_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vinswvrx : GCCBuiltin<"__builtin_altivec_vinswvrx">,
+              Intrinsic<[llvm_v4i32_ty],
+                        [llvm_v4i32_ty, llvm_i64_ty, llvm_v4i32_ty],
+                        [IntrNoMem]>;
 }
 
 // Vector average.

@@ -672,11 +672,10 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
     if (Record)
       Record = Record->getDefinition();
     if (Record && !Record->isDependentType()) {
-      uint64_t OffsetBits = Ctx.getFieldOffset(FD);
-      if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType())) {
+      if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType()))
         HI.Size = Size->getQuantity();
-        HI.Offset = OffsetBits / 8;
-      }
+      if (!FD->isInvalidDecl())
+        HI.Offset = Ctx.getFieldOffset(FD) / 8;
     }
     return;
   }

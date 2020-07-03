@@ -3,6 +3,14 @@
 // RUN:   -target-cpu pwr10 -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s
 
+// RUN: %clang_cc1 -target-feature +vsx -target-feature +altivec \
+// RUN:   -target-cpu pwr10 -triple powerpc64-unknown-unknown -emit-llvm %s \
+// RUN:   -o - | FileCheck %s -check-prefix=CHECK-BE
+
+// RUN: %clang_cc1 -target-feature +vsx -target-feature +altivec \
+// RUN:   -target-cpu pwr10 -triple powerpc64le-unknown-unknown -emit-llvm %s \
+// RUN:   -o - | FileCheck %s -check-prefix=CHECK-LE
+
 #include <altivec.h>
 
 vector signed char vsca, vscb;
@@ -16,7 +24,10 @@ vector unsigned long long vulla, vullb, vullc;
 vector unsigned __int128 vui128a, vui128b, vui128c;
 vector float vfa, vfb;
 vector double vda, vdb;
-unsigned int uia;
+unsigned int uia, uib;
+unsigned char uca;
+unsigned short usa;
+unsigned long long ulla;
 
 vector unsigned long long test_vpdepd(void) {
   // CHECK: @llvm.ppc.altivec.vpdepd(<2 x i64>
@@ -388,4 +399,116 @@ vector double test_vec_blend_d(void) {
   // CHECK-NEXT: bitcast <2 x i64> %{{.*}} to <2 x double>
   // CHECK-NEXT: ret <2 x double>
   return vec_blendv(vda, vdb, vullc);
+}
+
+vector unsigned char test_vec_insertl_uc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsblx(<16 x i8> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsbrx(<16 x i8> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_insertl(uca, vuca, uia);
+}
+
+vector unsigned short test_vec_insertl_us(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinshlx(<8 x i16> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE-NEXT: ret <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vinshrx(<8 x i16> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE-NEXT: ret <8 x i16>
+  return vec_insertl(usa, vusa, uia);
+}
+
+vector unsigned int test_vec_insertl_ui(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinswlx(<4 x i32> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE-NEXT: ret <4 x i32>
+  // CHECK-LE: @llvm.ppc.altivec.vinswrx(<4 x i32> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE-NEXT: ret <4 x i32>
+  return vec_insertl(uib, vuia, uia);
+}
+
+vector unsigned long long test_vec_insertl_ul(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsdlx(<2 x i64> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE-NEXT: ret <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vinsdrx(<2 x i64> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE-NEXT: ret <2 x i64>
+  return vec_insertl(ulla, vulla, uia);
+}
+
+vector unsigned char test_vec_insertl_ucv(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsbvlx(<16 x i8> %{{.+}}, i64 %{{.+}}, <16 x i8>
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsbvrx(<16 x i8> %{{.+}}, i64 %{{.+}}, <16 x i8>
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_insertl(vuca, vucb, uia);
+}
+
+vector unsigned short test_vec_insertl_usv(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinshvlx(<8 x i16> %{{.+}}, i64 %{{.+}}, <8 x i16>
+  // CHECK-BE-NEXT: ret <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vinshvrx(<8 x i16> %{{.+}}, i64 %{{.+}}, <8 x i16>
+  // CHECK-LE-NEXT: ret <8 x i16>
+  return vec_insertl(vusa, vusb, uia);
+}
+
+vector unsigned int test_vec_insertl_uiv(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinswvlx(<4 x i32> %{{.+}}, i64 %{{.+}}, <4 x i32>
+  // CHECK-BE-NEXT: ret <4 x i32>
+  // CHECK-LE: @llvm.ppc.altivec.vinswvrx(<4 x i32> %{{.+}}, i64 %{{.+}}, <4 x i32>
+  // CHECK-LE-NEXT: ret <4 x i32>
+  return vec_insertl(vuia, vuib, uia);
+}
+
+vector unsigned char test_vec_inserth_uc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsbrx(<16 x i8> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsblx(<16 x i8> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_inserth(uca, vuca, uia);
+}
+
+vector unsigned short test_vec_inserth_us(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinshrx(<8 x i16> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE-NEXT: ret <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vinshlx(<8 x i16> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE-NEXT: ret <8 x i16>
+  return vec_inserth(usa, vusa, uia);
+}
+
+vector unsigned int test_vec_inserth_ui(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinswrx(<4 x i32> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE-NEXT: ret <4 x i32>
+  // CHECK-LE: @llvm.ppc.altivec.vinswlx(<4 x i32> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE-NEXT: ret <4 x i32>
+  return vec_inserth(uib, vuia, uia);
+}
+
+vector unsigned long long test_vec_inserth_ul(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsdrx(<2 x i64> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE-NEXT: ret <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vinsdlx(<2 x i64> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE-NEXT: ret <2 x i64>
+  return vec_inserth(ulla, vulla, uia);
+}
+
+vector unsigned char test_vec_inserth_ucv(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsbvrx(<16 x i8> %{{.+}}, i64 %{{.+}}, <16 x i8>
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsbvlx(<16 x i8> %{{.+}}, i64 %{{.+}}, <16 x i8>
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_inserth(vuca, vucb, uia);
+}
+
+vector unsigned short test_vec_inserth_usv(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinshvrx(<8 x i16> %{{.+}}, i64 %{{.+}}, <8 x i16>
+  // CHECK-BE-NEXT: ret <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vinshvlx(<8 x i16> %{{.+}}, i64 %{{.+}}, <8 x i16>
+  // CHECK-LE-NEXT: ret <8 x i16>
+  return vec_inserth(vusa, vusb, uia);
+}
+
+vector unsigned int test_vec_inserth_uiv(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinswvrx(<4 x i32> %{{.+}}, i64 %{{.+}}, <4 x i32>
+  // CHECK-BE-NEXT: ret <4 x i32>
+  // CHECK-LE: @llvm.ppc.altivec.vinswvlx(<4 x i32> %{{.+}}, i64 %{{.+}}, <4 x i32>
+  // CHECK-LE-NEXT: ret <4 x i32>
+  return vec_inserth(vuia, vuib, uia);
 }

@@ -67,7 +67,7 @@ public:
 private:
   ASTContext &ASTCtx;
   class ParentMap;
-  TraversalKind Traversal = TK_IgnoreUnlessSpelledInSource;
+  TraversalKind Traversal = TK_AsIs;
   std::unique_ptr<ParentMap> Parents;
 };
 
