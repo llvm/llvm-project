@@ -779,74 +779,74 @@ let Predicates = [IsISA3_1] in {
   def VINSD : VXForm_VRT5_UIM5_RB5_ins<463, "vinsd", []>;
   def VINSBVLX :
     VXForm_VTB5_RA5_ins<15, "vinsbvlx",
-                       [(set v16i8:$vD,
-                             (int_ppc_altivec_vinsbvlx v16i8:$vDi, i64:$rA,
-                                                       v16i8:$vB))]>;
+                        [(set v16i8:$vD,
+                              (int_ppc_altivec_vinsbvlx v16i8:$vDi, i64:$rA,
+                                                        v16i8:$vB))]>;
   def VINSBVRX :
     VXForm_VTB5_RA5_ins<271, "vinsbvrx",
-                       [(set v16i8:$vD,
-                             (int_ppc_altivec_vinsbvrx v16i8:$vDi, i64:$rA,
-                                                       v16i8:$vB))]>;
+                        [(set v16i8:$vD,
+                              (int_ppc_altivec_vinsbvrx v16i8:$vDi, i64:$rA,
+                                                        v16i8:$vB))]>;
   def VINSHVLX :
     VXForm_VTB5_RA5_ins<79, "vinshvlx",
-                       [(set v8i16:$vD,
-                             (int_ppc_altivec_vinshvlx v8i16:$vDi, i64:$rA,
-                                                       v8i16:$vB))]>;
+                        [(set v8i16:$vD,
+                              (int_ppc_altivec_vinshvlx v8i16:$vDi, i64:$rA,
+                                                        v8i16:$vB))]>;
   def VINSHVRX :
     VXForm_VTB5_RA5_ins<335, "vinshvrx",
-                       [(set v8i16:$vD,
-                             (int_ppc_altivec_vinshvrx v8i16:$vDi, i64:$rA,
-                                                       v8i16:$vB))]>;
+                        [(set v8i16:$vD,
+                              (int_ppc_altivec_vinshvrx v8i16:$vDi, i64:$rA,
+                                                        v8i16:$vB))]>;
   def VINSWVLX :
     VXForm_VTB5_RA5_ins<143, "vinswvlx",
-                       [(set v4i32:$vD,
-                             (int_ppc_altivec_vinswvlx v4i32:$vDi, i64:$rA,
-                                                       v4i32:$vB))]>;
+                        [(set v4i32:$vD,
+                              (int_ppc_altivec_vinswvlx v4i32:$vDi, i64:$rA,
+                                                        v4i32:$vB))]>;
   def VINSWVRX :
     VXForm_VTB5_RA5_ins<399, "vinswvrx",
-                       [(set v4i32:$vD,
-                             (int_ppc_altivec_vinswvrx v4i32:$vDi, i64:$rA,
-                                                       v4i32:$vB))]>;
+                        [(set v4i32:$vD,
+                              (int_ppc_altivec_vinswvrx v4i32:$vDi, i64:$rA,
+                                                        v4i32:$vB))]>;
   def VINSBLX :
     VXForm_VRT5_RAB5_ins<527, "vinsblx",
-                        [(set v16i8:$vD,
-                              (int_ppc_altivec_vinsblx v16i8:$vDi, i64:$rA,
-                                                       i64:$rB))]>;
+                         [(set v16i8:$vD,
+                               (int_ppc_altivec_vinsblx v16i8:$vDi, i64:$rA,
+                                                        i64:$rB))]>;
   def VINSBRX :
     VXForm_VRT5_RAB5_ins<783, "vinsbrx",
-                        [(set v16i8:$vD,
-                              (int_ppc_altivec_vinsbrx v16i8:$vDi, i64:$rA,
-                                                       i64:$rB))]>;
+                         [(set v16i8:$vD,
+                               (int_ppc_altivec_vinsbrx v16i8:$vDi, i64:$rA,
+                                                        i64:$rB))]>;
   def VINSHLX :
     VXForm_VRT5_RAB5_ins<591, "vinshlx",
-                        [(set v8i16:$vD,
-                              (int_ppc_altivec_vinshlx v8i16:$vDi, i64:$rA,
-                                                       i64:$rB))]>;
+                         [(set v8i16:$vD,
+                               (int_ppc_altivec_vinshlx v8i16:$vDi, i64:$rA,
+                                                        i64:$rB))]>;
   def VINSHRX :
     VXForm_VRT5_RAB5_ins<847, "vinshrx",
-                        [(set v8i16:$vD,
-                              (int_ppc_altivec_vinshrx v8i16:$vDi, i64:$rA,
-                                                       i64:$rB))]>;
+                         [(set v8i16:$vD,
+                               (int_ppc_altivec_vinshrx v8i16:$vDi, i64:$rA,
+                                                        i64:$rB))]>;
   def VINSWLX :
     VXForm_VRT5_RAB5_ins<655, "vinswlx",
-                        [(set v4i32:$vD,
-                              (int_ppc_altivec_vinswlx v4i32:$vDi, i64:$rA,
-                                                       i64:$rB))]>;
+                         [(set v4i32:$vD,
+                               (int_ppc_altivec_vinswlx v4i32:$vDi, i64:$rA,
+                                                        i64:$rB))]>;
   def VINSWRX :
     VXForm_VRT5_RAB5_ins<911, "vinswrx",
-                        [(set v4i32:$vD,
-                              (int_ppc_altivec_vinswrx v4i32:$vDi, i64:$rA,
-                                                       i64:$rB))]>;
+                         [(set v4i32:$vD,
+                               (int_ppc_altivec_vinswrx v4i32:$vDi, i64:$rA,
+                                                        i64:$rB))]>;
   def VINSDLX :
     VXForm_VRT5_RAB5_ins<719, "vinsdlx",
-                        [(set v2i64:$vD,
-                              (int_ppc_altivec_vinsdlx v2i64:$vDi, i64:$rA,
-                                                       i64:$rB))]>;
+                         [(set v2i64:$vD,
+                               (int_ppc_altivec_vinsdlx v2i64:$vDi, i64:$rA,
+                                                        i64:$rB))]>;
   def VINSDRX :
     VXForm_VRT5_RAB5_ins<975, "vinsdrx",
-                        [(set v2i64:$vD,
-                              (int_ppc_altivec_vinsdrx v2i64:$vDi, i64:$rA,
-                                                       i64:$rB))]>;
+                         [(set v2i64:$vD,
+                               (int_ppc_altivec_vinsdrx v2i64:$vDi, i64:$rA,
+                                                        i64:$rB))]>;
 
    def VPDEPD : VXForm_1<1485, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vpdepd $vD, $vA, $vB", IIC_VecGeneral,
