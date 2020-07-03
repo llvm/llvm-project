@@ -53,7 +53,8 @@ public:
   // depending on the relocation type. prepareSymbolRelocation() will set up the
   // GOT/stubs entries, and getSymbolVA() will return the addresses of those
   // entries.
-  virtual void prepareSymbolRelocation(Symbol &, uint8_t type) = 0;
+  virtual void prepareSymbolRelocation(Symbol &, const InputSection *,
+                                       const Reloc &) = 0;
   virtual uint64_t getSymbolVA(const Symbol &, uint8_t type) const = 0;
 
   uint32_t cpuType;
