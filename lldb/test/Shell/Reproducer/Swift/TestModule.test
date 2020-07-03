@@ -18,10 +18,12 @@
 # RUN: rm -rf %t.run && mkdir %t.run && cd %t.run
 
 # Capture the reproducer.
-# RUN: %lldb -x -b -s %S/Inputs/Module.in \
-# RUN:          --capture \
-# RUN:          --capture-path %t.repro \
-# RUN:          %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+# RUN: %lldb -x -b \
+# RUN:       -S %p/Inputs/swift.lldbinit \
+# RUN:       -s %S/Inputs/Module.in \
+# RUN:       --capture \
+# RUN:       --capture-path %t.repro \
+# RUN:       %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
 
 # Cleanup build directory.
 # RUN: rm -rf %t.build

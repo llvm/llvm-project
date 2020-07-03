@@ -42,11 +42,12 @@
 
 # Capture the reproducer.
 # RUN: %lldb -x -b \
-# RUN:          -o 'settings set interpreter.stop-command-source-on-error false' \
-# RUN:          -s %S/Inputs/SwiftInterface.in \
-# RUN:          --capture \
-# RUN:          --capture-path %t.repro \
-# RUN:          %t.out/a.out 2>&1 | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+# RUN:       -S %p/Inputs/swift.lldbinit \
+# RUN:       -o 'settings set interpreter.stop-command-source-on-error false' \
+# RUN:       -s %S/Inputs/SwiftInterface.in \
+# RUN:       --capture \
+# RUN:       --capture-path %t.repro \
+# RUN:       %t.out/a.out 2>&1 | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
 
 # Cleanup lib directory and binary.
 # RUN: rm -rf %t.lib
