@@ -722,41 +722,43 @@ public:
   /// Some passes (e.g. InstCombine) depend on the bit-wise characteristics of
   /// FCMP_* values. Changing the bit patterns requires a potential change to
   /// those passes.
-  enum Predicate {
-    // Opcode              U L G E    Intuitive operation
-    FCMP_FALSE =  0,  ///< 0 0 0 0    Always false (always folded)
-    FCMP_OEQ   =  1,  ///< 0 0 0 1    True if ordered and equal
-    FCMP_OGT   =  2,  ///< 0 0 1 0    True if ordered and greater than
-    FCMP_OGE   =  3,  ///< 0 0 1 1    True if ordered and greater than or equal
-    FCMP_OLT   =  4,  ///< 0 1 0 0    True if ordered and less than
-    FCMP_OLE   =  5,  ///< 0 1 0 1    True if ordered and less than or equal
-    FCMP_ONE   =  6,  ///< 0 1 1 0    True if ordered and operands are unequal
-    FCMP_ORD   =  7,  ///< 0 1 1 1    True if ordered (no nans)
-    FCMP_UNO   =  8,  ///< 1 0 0 0    True if unordered: isnan(X) | isnan(Y)
-    FCMP_UEQ   =  9,  ///< 1 0 0 1    True if unordered or equal
-    FCMP_UGT   = 10,  ///< 1 0 1 0    True if unordered or greater than
-    FCMP_UGE   = 11,  ///< 1 0 1 1    True if unordered, greater than, or equal
-    FCMP_ULT   = 12,  ///< 1 1 0 0    True if unordered or less than
-    FCMP_ULE   = 13,  ///< 1 1 0 1    True if unordered, less than, or equal
-    FCMP_UNE   = 14,  ///< 1 1 1 0    True if unordered or not equal
-    FCMP_TRUE  = 15,  ///< 1 1 1 1    Always true (always folded)
+  enum Predicate : unsigned {
+    // Opcode            U L G E    Intuitive operation
+    FCMP_FALSE = 0, ///< 0 0 0 0    Always false (always folded)
+    FCMP_OEQ = 1,   ///< 0 0 0 1    True if ordered and equal
+    FCMP_OGT = 2,   ///< 0 0 1 0    True if ordered and greater than
+    FCMP_OGE = 3,   ///< 0 0 1 1    True if ordered and greater than or equal
+    FCMP_OLT = 4,   ///< 0 1 0 0    True if ordered and less than
+    FCMP_OLE = 5,   ///< 0 1 0 1    True if ordered and less than or equal
+    FCMP_ONE = 6,   ///< 0 1 1 0    True if ordered and operands are unequal
+    FCMP_ORD = 7,   ///< 0 1 1 1    True if ordered (no nans)
+    FCMP_UNO = 8,   ///< 1 0 0 0    True if unordered: isnan(X) | isnan(Y)
+    FCMP_UEQ = 9,   ///< 1 0 0 1    True if unordered or equal
+    FCMP_UGT = 10,  ///< 1 0 1 0    True if unordered or greater than
+    FCMP_UGE = 11,  ///< 1 0 1 1    True if unordered, greater than, or equal
+    FCMP_ULT = 12,  ///< 1 1 0 0    True if unordered or less than
+    FCMP_ULE = 13,  ///< 1 1 0 1    True if unordered, less than, or equal
+    FCMP_UNE = 14,  ///< 1 1 1 0    True if unordered or not equal
+    FCMP_TRUE = 15, ///< 1 1 1 1    Always true (always folded)
     FIRST_FCMP_PREDICATE = FCMP_FALSE,
     LAST_FCMP_PREDICATE = FCMP_TRUE,
     BAD_FCMP_PREDICATE = FCMP_TRUE + 1,
-    ICMP_EQ    = 32,  ///< equal
-    ICMP_NE    = 33,  ///< not equal
-    ICMP_UGT   = 34,  ///< unsigned greater than
-    ICMP_UGE   = 35,  ///< unsigned greater or equal
-    ICMP_ULT   = 36,  ///< unsigned less than
-    ICMP_ULE   = 37,  ///< unsigned less or equal
-    ICMP_SGT   = 38,  ///< signed greater than
-    ICMP_SGE   = 39,  ///< signed greater or equal
-    ICMP_SLT   = 40,  ///< signed less than
-    ICMP_SLE   = 41,  ///< signed less or equal
+    ICMP_EQ = 32,  ///< equal
+    ICMP_NE = 33,  ///< not equal
+    ICMP_UGT = 34, ///< unsigned greater than
+    ICMP_UGE = 35, ///< unsigned greater or equal
+    ICMP_ULT = 36, ///< unsigned less than
+    ICMP_ULE = 37, ///< unsigned less or equal
+    ICMP_SGT = 38, ///< signed greater than
+    ICMP_SGE = 39, ///< signed greater or equal
+    ICMP_SLT = 40, ///< signed less than
+    ICMP_SLE = 41, ///< signed less or equal
     FIRST_ICMP_PREDICATE = ICMP_EQ,
     LAST_ICMP_PREDICATE = ICMP_SLE,
     BAD_ICMP_PREDICATE = ICMP_SLE + 1
   };
+  using PredicateField =
+      Bitfield::Element<Predicate, 0, 6, LAST_ICMP_PREDICATE>; // Next bit:6
 
 protected:
   CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
@@ -797,12 +799,10 @@ public:
   }
 
   /// Return the predicate for this instruction.
-  Predicate getPredicate() const {
-    return Predicate(getSubclassDataFromInstruction());
-  }
+  Predicate getPredicate() const { return getSubclassData<PredicateField>(); }
 
   /// Set the predicate for this instruction to the specified value.
-  void setPredicate(Predicate P) { setInstructionSubclassData(P); }
+  void setPredicate(Predicate P) { setSubclassData<PredicateField>(P); }
 
   static bool isFPPredicate(Predicate P) {
     return P >= FIRST_FCMP_PREDICATE && P <= LAST_FCMP_PREDICATE;
@@ -1096,6 +1096,11 @@ using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 /// subclass requires. Note that accessing the end of the argument list isn't
 /// as cheap as most other operations on the base class.
 class CallBase : public Instruction {
+  // The first two bits are reserved by CallInst for fast retrieving,
+  using CallInstReservedField = Bitfield::Element<unsigned, 0, 2>; // Next bit:2
+  using CallingConvField = Bitfield::Element<CallingConv::ID, 2, 10,
+                                             CallingConv::MaxID>; // Next bit:12
+
 protected:
   /// The last operand is the called operand.
   static constexpr int CalledOperandOpEndIdx = -1;
@@ -1349,14 +1354,11 @@ public:
   }
 
   CallingConv::ID getCallingConv() const {
-    return static_cast<CallingConv::ID>(getSubclassDataFromInstruction() >> 2);
+    return getSubclassData<CallingConvField>();
   }
 
   void setCallingConv(CallingConv::ID CC) {
-    auto ID = static_cast<unsigned>(CC);
-    assert(!(ID & ~CallingConv::MaxID) && "Unsupported calling convention");
-    setInstructionSubclassData((getSubclassDataFromInstruction() & 3) |
-                               (ID << 2));
+    setSubclassData<CallingConvField>(CC);
   }
 
   /// Check if this call is an inline asm statement.
