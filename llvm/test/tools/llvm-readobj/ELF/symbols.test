@@ -129,7 +129,6 @@ DynamicSymbols:
 
 # STRTAB-LINK-ERR-LLVM:      Symbols [
 # STRTAB-LINK-ERR-LLVM-NEXT: warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
-# STRTAB-LINK-ERR-LLVM-NEXT: warning: '[[FILE]]': st_name (0x0) is past the end of the string table of size 0x0
 # STRTAB-LINK-ERR-LLVM-NEXT:   Symbol {
 # STRTAB-LINK-ERR-LLVM-NEXT:     Name: <?> (0)
 # STRTAB-LINK-ERR-LLVM-NEXT:     Value: 0x0
@@ -139,7 +138,6 @@ DynamicSymbols:
 # STRTAB-LINK-ERR-LLVM-NEXT:     Other: 0
 # STRTAB-LINK-ERR-LLVM-NEXT:     Section: Undefined (0x0)
 # STRTAB-LINK-ERR-LLVM-NEXT:   }
-# STRTAB-LINK-ERR-LLVM-NEXT: warning: '[[FILE]]': st_name (0x1) is past the end of the string table of size 0x0
 # STRTAB-LINK-ERR-LLVM-NEXT:   Symbol {
 # STRTAB-LINK-ERR-LLVM-NEXT:     Name: <?> (1)
 # STRTAB-LINK-ERR-LLVM-NEXT:     Value: 0x1
@@ -154,9 +152,7 @@ DynamicSymbols:
 # STRTAB-LINK-ERR-GNU:      warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
 # STRTAB-LINK-ERR-GNU:      Symbol table '.symtab' contains 2 entries:
 # STRTAB-LINK-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
-# STRTAB-LINK-ERR-GNU-NEXT: warning: '[[FILE]]': st_name (0x0) is past the end of the string table of size 0x0
 # STRTAB-LINK-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND <?>
-# STRTAB-LINK-ERR-GNU-NEXT: warning: '[[FILE]]': st_name (0x1) is past the end of the string table of size 0x0
 # STRTAB-LINK-ERR-GNU-NEXT:      1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT     1 <?>
 
 --- !ELF
