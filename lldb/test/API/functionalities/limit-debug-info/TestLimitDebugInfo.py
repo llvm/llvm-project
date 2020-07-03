@@ -44,10 +44,15 @@ class LimitDebugInfoTestCase(TestBase):
         # all members.
         self.expect_expr("inherits_from_one.member", result_value="47")
         self.expect_expr("inherits_from_one.one", result_value="142")
-
         self.expect_expr("inherits_from_two.member", result_value="47")
         self.expect_expr("inherits_from_two.one", result_value="142")
         self.expect_expr("inherits_from_two.two", result_value="242")
+
+        self.expect_expr("one_as_member.member", result_value="47")
+        self.expect_expr("one_as_member.one.member", result_value="147")
+        self.expect_expr("two_as_member.member", result_value="47")
+        self.expect_expr("two_as_member.two.one.member", result_value="147")
+        self.expect_expr("two_as_member.two.member", result_value="247")
 
     @skipIf(bugnumber="pr46284", debug_info="gmodules")
     @skipIfWindows # Clang emits type info even with -flimit-debug-info
@@ -63,11 +68,18 @@ class LimitDebugInfoTestCase(TestBase):
         self.expect_expr("inherits_from_one.member", result_value="47")
         self.expect("expr inherits_from_one.one", error=True,
             substrs=["no member named 'one' in 'InheritsFromOne'"])
-
         self.expect_expr("inherits_from_two.member", result_value="47")
         self.expect("expr inherits_from_two.one", error=True,
             substrs=["no member named 'one' in 'InheritsFromTwo'"])
         self.expect_expr("inherits_from_two.two", result_value="242")
+
+        self.expect_expr("one_as_member.member", result_value="47")
+        self.expect("expr one_as_member.one.member", error=True,
+                substrs=["no member named 'member' in 'member::One'"])
+        self.expect_expr("two_as_member.member", result_value="47")
+        self.expect("expr two_as_member.two.one.member", error=True,
+                substrs=["no member named 'member' in 'member::One'"])
+        self.expect_expr("two_as_member.two.member", result_value="247")
 
     @skipIf(bugnumber="pr46284", debug_info="gmodules")
     @skipIfWindows # Clang emits type info even with -flimit-debug-info
@@ -85,9 +97,16 @@ class LimitDebugInfoTestCase(TestBase):
         # "One".
         self.expect_expr("inherits_from_one.member", result_value="47")
         self.expect_expr("inherits_from_one.one", result_value="142")
-
         self.expect_expr("inherits_from_two.member", result_value="47")
         self.expect("expr inherits_from_two.one", error=True,
             substrs=["no member named 'one' in 'InheritsFromTwo'"])
         self.expect("expr inherits_from_two.two", error=True,
             substrs=["no member named 'two' in 'InheritsFromTwo'"])
+
+        self.expect_expr("one_as_member.member", result_value="47")
+        self.expect_expr("one_as_member.one.member", result_value="147")
+        self.expect_expr("two_as_member.member", result_value="47")
+        self.expect("expr two_as_member.two.one.member", error=True,
+                substrs=["no member named 'one' in 'member::Two'"])
+        self.expect("expr two_as_member.two.member", error=True,
+                substrs=["no member named 'member' in 'member::Two'"])
