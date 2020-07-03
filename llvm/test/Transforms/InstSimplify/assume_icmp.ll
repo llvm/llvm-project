@@ -8,22 +8,14 @@ define void @basic_ugt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @basic_ugt(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ule i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[CMP5]])
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp ugt i32 [[Y]], [[X]]
-; CHECK-NEXT:    call void @use(i1 [[CMP6]])
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp uge i32 [[Y]], [[X]]
-; CHECK-NEXT:    call void @use(i1 [[CMP7]])
-; CHECK-NEXT:    [[CMP8:%.*]] = icmp ult i32 [[Y]], [[X]]
-; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp ule i32 [[Y]], [[X]]
-; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
   %cmp1 = icmp ugt i32 %x, %y
@@ -56,20 +48,16 @@ define void @basic_uge(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ule i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP5]])
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp ugt i32 [[Y]], [[X]]
-; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp uge i32 [[Y]], [[X]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp ult i32 [[Y]], [[X]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp ule i32 [[Y]], [[X]]
-; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
   %cmp1 = icmp uge i32 %x, %y
@@ -96,6 +84,9 @@ define void @basic_uge(i32 %x, i32 %y) {
   ret void
 }
 
+; This does not simplify in InstSimplify, because AssumptionCache tracker
+; does not track values through "and". The "and" assume will be broken
+; down into two separate assume calls by InstCombine.
 define void @and(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @and(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
