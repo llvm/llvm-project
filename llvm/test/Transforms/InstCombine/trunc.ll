@@ -268,6 +268,56 @@ define i64 @test8(i32 %A, i32 %B) {
   ret i64 %G
 }
 
+define <2 x i64> @test8_vec(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @test8_vec(
+; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[E:%.*]] = shl nuw <2 x i64> [[D]], <i64 32, i64 32>
+; CHECK-NEXT:    [[F:%.*]] = or <2 x i64> [[E]], [[C]]
+; CHECK-NEXT:    ret <2 x i64> [[F]]
+;
+  %C = zext <2 x i32> %A to <2 x i128>
+  %D = zext <2 x i32> %B to <2 x i128>
+  %E = shl <2 x i128> %D, <i128 32, i128 32>
+  %F = or <2 x i128> %E, %C
+  %G = trunc <2 x i128> %F to <2 x i64>
+  ret <2 x i64> %G
+}
+
+define <2 x i64> @test8_vec_nonuniform(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @test8_vec_nonuniform(
+; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[E:%.*]] = shl <2 x i128> [[D]], <i128 32, i128 48>
+; CHECK-NEXT:    [[F:%.*]] = or <2 x i128> [[E]], [[C]]
+; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[G]]
+;
+  %C = zext <2 x i32> %A to <2 x i128>
+  %D = zext <2 x i32> %B to <2 x i128>
+  %E = shl <2 x i128> %D, <i128 32, i128 48>
+  %F = or <2 x i128> %E, %C
+  %G = trunc <2 x i128> %F to <2 x i64>
+  ret <2 x i64> %G
+}
+
+define <2 x i64> @test8_vec_undef(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @test8_vec_undef(
+; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[E:%.*]] = shl <2 x i128> [[D]], <i128 32, i128 undef>
+; CHECK-NEXT:    [[F:%.*]] = or <2 x i128> [[E]], [[C]]
+; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[G]]
+;
+  %C = zext <2 x i32> %A to <2 x i128>
+  %D = zext <2 x i32> %B to <2 x i128>
+  %E = shl <2 x i128> %D, <i128 32, i128 undef>
+  %F = or <2 x i128> %E, %C
+  %G = trunc <2 x i128> %F to <2 x i64>
+  ret <2 x i64> %G
+}
+
 define i8 @test9(i32 %X) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i8
