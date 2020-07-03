@@ -772,6 +772,22 @@ class Foo {})cpp";
          HI.CallPassType->PassBy = PassMode::Value;
          HI.CallPassType->Converted = false;
        }},
+      {// Dont crash on invalid decl
+       R"cpp(
+        // error-ok
+        struct Foo {
+          Bar [[x^x]];
+        };)cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "xx";
+         HI.Kind = index::SymbolKind::Field;
+         HI.NamespaceScope = "";
+         HI.Definition = "int xx";
+         HI.LocalScope = "Foo::";
+         HI.Size = 4;
+         HI.Type = "int";
+         HI.AccessSpecifier = "public";
+       }},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
