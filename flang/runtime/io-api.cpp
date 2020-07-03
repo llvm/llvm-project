@@ -28,9 +28,10 @@ Cookie BeginInternalArrayListIO(const Descriptor &descriptor,
     void ** /*scratchArea*/, std::size_t /*scratchBytes*/,
     const char *sourceFile, int sourceLine) {
   Terminator oom{sourceFile, sourceLine};
-  return &New<InternalListIoStatementState<DIR>>{}(
-      oom, descriptor, sourceFile, sourceLine)
-              .ioStatementState();
+  return &New<InternalListIoStatementState<DIR>>{oom}(
+      descriptor, sourceFile, sourceLine)
+              .release()
+              ->ioStatementState();
 }
 
 Cookie IONAME(BeginInternalArrayListOutput)(const Descriptor &descriptor,
@@ -52,9 +53,10 @@ Cookie BeginInternalArrayFormattedIO(const Descriptor &descriptor,
     const char *format, std::size_t formatLength, void ** /*scratchArea*/,
     std::size_t /*scratchBytes*/, const char *sourceFile, int sourceLine) {
   Terminator oom{sourceFile, sourceLine};
-  return &New<InternalFormattedIoStatementState<DIR>>{}(
-      oom, descriptor, format, formatLength, sourceFile, sourceLine)
-              .ioStatementState();
+  return &New<InternalFormattedIoStatementState<DIR>>{oom}(
+      descriptor, format, formatLength, sourceFile, sourceLine)
+              .release()
+              ->ioStatementState();
 }
 
 Cookie IONAME(BeginInternalArrayFormattedOutput)(const Descriptor &descriptor,
@@ -78,9 +80,10 @@ Cookie BeginInternalFormattedIO(
     void ** /*scratchArea*/, std::size_t /*scratchBytes*/,
     const char *sourceFile, int sourceLine) {
   Terminator oom{sourceFile, sourceLine};
-  return &New<InternalFormattedIoStatementState<DIR>>{}(oom, internal,
-      internalLength, format, formatLength, sourceFile, sourceLine)
-              .ioStatementState();
+  return &New<InternalFormattedIoStatementState<DIR>>{oom}(
+      internal, internalLength, format, formatLength, sourceFile, sourceLine)
+              .release()
+              ->ioStatementState();
 }
 
 Cookie IONAME(BeginInternalFormattedOutput)(char *internal,
@@ -234,8 +237,9 @@ Cookie IONAME(BeginClose)(
   } else {
     // CLOSE(UNIT=bad unit) is just a no-op
     Terminator oom{sourceFile, sourceLine};
-    return &New<NoopCloseStatementState>{}(oom, sourceFile, sourceLine)
-                .ioStatementState();
+    return &New<NoopCloseStatementState>{oom}(sourceFile, sourceLine)
+                .release()
+                ->ioStatementState();
   }
 }
 
