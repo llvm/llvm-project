@@ -470,7 +470,11 @@ bb9:                                              ; preds = %bb4
 }
 
 ; CHECK-LABEL: {{^}}cbranch_kill:
-; CHECK-NOT: exp null off, off, off, off done vm
+; CHECK: ; %bb.{{[0-9]+}}: ; %export
+; CHECK-NEXT: s_or_b64
+; CHECK-NEXT: s_cbranch_execz [[EXIT:BB[0-9]+_[0-9]+]]
+; CHECK: [[EXIT]]:
+; CHECK-NEXT: exp null off, off, off, off done vm
 define amdgpu_ps void @cbranch_kill(i32 inreg %0, <2 x float> %1) {
 .entry:
   %val0 = extractelement <2 x float> %1, i32 0
