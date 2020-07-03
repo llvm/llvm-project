@@ -726,7 +726,7 @@ namespace llvm {
     /// Returns false if it can be represented by [r+imm], which are preferred.
     bool SelectAddressRegReg(SDValue N, SDValue &Base, SDValue &Index,
                              SelectionDAG &DAG,
-                             unsigned EncodingAlignment = 0) const;
+                             MaybeAlign EncodingAlignment = None) const;
 
     /// SelectAddressRegImm - Returns true if the address N can be represented
     /// by a base register plus a signed 16-bit displacement [r+imm], and if it
@@ -735,7 +735,7 @@ namespace llvm {
     /// requirement, i.e. multiples of 4 for DS form.
     bool SelectAddressRegImm(SDValue N, SDValue &Disp, SDValue &Base,
                              SelectionDAG &DAG,
-                             unsigned EncodingAlignment) const;
+                             MaybeAlign EncodingAlignment) const;
 
     /// SelectAddressRegRegOnly - Given the specified addressed, force it to be
     /// represented as an indexed [r+r] operation.

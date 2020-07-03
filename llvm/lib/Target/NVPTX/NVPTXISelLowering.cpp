@@ -3780,8 +3780,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
-    Info.align =
-        MaybeAlign(cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
+    Info.align = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
 
     return true;
   }
@@ -3800,8 +3799,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
-    Info.align =
-        MaybeAlign(cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
+    Info.align = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
 
     return true;
   }

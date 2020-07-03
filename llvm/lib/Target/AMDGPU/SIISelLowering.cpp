@@ -3127,7 +3127,7 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(
   SDValue Size  = Tmp2.getOperand(1);
   SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
   Chain = SP.getValue(1);
-  MaybeAlign Alignment(cast<ConstantSDNode>(Tmp3)->getZExtValue());
+  MaybeAlign Alignment = cast<ConstantSDNode>(Tmp3)->getMaybeAlignValue();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const TargetFrameLowering *TFL = ST.getFrameLowering();
   unsigned Opc =
