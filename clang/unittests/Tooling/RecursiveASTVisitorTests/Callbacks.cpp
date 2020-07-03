@@ -606,14 +606,13 @@ TraverseUnaryMinus UnaryOperator(-)
 WalkUpFromStmt IntegerLiteral(3)
 )txt"));
 
-  // FIXME: The following log should include a call to WalkUpFromStmt for
-  // UnaryOperator(-).
   EXPECT_TRUE(visitorCallbackLogEqual(
       RecordingVisitor(ShouldTraversePostOrder::Yes), Code,
       R"txt(
 WalkUpFromStmt IntegerLiteral(1)
 TraverseUnaryMinus UnaryOperator(-)
   WalkUpFromStmt IntegerLiteral(2)
+  WalkUpFromStmt UnaryOperator(-)
 WalkUpFromStmt IntegerLiteral(3)
 WalkUpFromStmt CompoundStmt
 )txt"));
@@ -675,7 +674,6 @@ WalkUpFromExpr IntegerLiteral(3)
   WalkUpFromStmt IntegerLiteral(3)
 )txt"));
 
-  // FIXME: The following log should include a call to WalkUpFromUnaryMinus.
   EXPECT_TRUE(visitorCallbackLogEqual(
       RecordingVisitor(ShouldTraversePostOrder::Yes), Code,
       R"txt(
@@ -684,6 +682,9 @@ WalkUpFromExpr IntegerLiteral(1)
 TraverseUnaryMinus UnaryOperator(-)
   WalkUpFromExpr IntegerLiteral(2)
     WalkUpFromStmt IntegerLiteral(2)
+  WalkUpFromUnaryMinus UnaryOperator(-)
+    WalkUpFromExpr UnaryOperator(-)
+      WalkUpFromStmt UnaryOperator(-)
 WalkUpFromExpr IntegerLiteral(3)
   WalkUpFromStmt IntegerLiteral(3)
 WalkUpFromStmt CompoundStmt
@@ -996,8 +997,6 @@ TraverseBinAdd BinaryOperator(+)
 WalkUpFromStmt IntegerLiteral(4)
 )txt"));
 
-  // FIXME: The following log should include a call to WalkUpFromStmt for
-  // BinaryOperator(+).
   EXPECT_TRUE(visitorCallbackLogEqual(
       RecordingVisitor(ShouldTraversePostOrder::Yes), Code,
       R"txt(
@@ -1005,6 +1004,7 @@ WalkUpFromStmt IntegerLiteral(1)
 TraverseBinAdd BinaryOperator(+)
   WalkUpFromStmt IntegerLiteral(2)
   WalkUpFromStmt IntegerLiteral(3)
+  WalkUpFromStmt BinaryOperator(+)
 WalkUpFromStmt IntegerLiteral(4)
 WalkUpFromStmt CompoundStmt
 )txt"));
@@ -1067,7 +1067,6 @@ WalkUpFromExpr IntegerLiteral(4)
   WalkUpFromStmt IntegerLiteral(4)
 )txt"));
 
-  // FIXME: The following log should include a call to WalkUpFromBinAdd.
   EXPECT_TRUE(visitorCallbackLogEqual(
       RecordingVisitor(ShouldTraversePostOrder::Yes), Code,
       R"txt(
@@ -1078,6 +1077,9 @@ TraverseBinAdd BinaryOperator(+)
     WalkUpFromStmt IntegerLiteral(2)
   WalkUpFromExpr IntegerLiteral(3)
     WalkUpFromStmt IntegerLiteral(3)
+  WalkUpFromBinAdd BinaryOperator(+)
+    WalkUpFromExpr BinaryOperator(+)
+      WalkUpFromStmt BinaryOperator(+)
 WalkUpFromExpr IntegerLiteral(4)
   WalkUpFromStmt IntegerLiteral(4)
 WalkUpFromStmt CompoundStmt
@@ -1396,8 +1398,6 @@ TraverseBinAddAssign CompoundAssignOperator(+=)
 WalkUpFromStmt IntegerLiteral(3)
 )txt"));
 
-  // FIXME: The following log should include a call to WalkUpFromStmt for
-  // CompoundAssignOperator(+=).
   EXPECT_TRUE(visitorCallbackLogEqual(
       RecordingVisitor(ShouldTraversePostOrder::Yes), Code,
       R"txt(
@@ -1405,6 +1405,7 @@ WalkUpFromStmt IntegerLiteral(1)
 TraverseBinAddAssign CompoundAssignOperator(+=)
   WalkUpFromStmt DeclRefExpr(a)
   WalkUpFromStmt IntegerLiteral(2)
+  WalkUpFromStmt CompoundAssignOperator(+=)
 WalkUpFromStmt IntegerLiteral(3)
 WalkUpFromStmt CompoundStmt
 )txt"));
@@ -1470,7 +1471,6 @@ WalkUpFromExpr IntegerLiteral(3)
   WalkUpFromStmt IntegerLiteral(3)
 )txt"));
 
-  // FIXME: The following log should include a call to WalkUpFromBinAddAssign.
   EXPECT_TRUE(visitorCallbackLogEqual(
       RecordingVisitor(ShouldTraversePostOrder::Yes), Code,
       R"txt(
@@ -1481,6 +1481,9 @@ TraverseBinAddAssign CompoundAssignOperator(+=)
     WalkUpFromStmt DeclRefExpr(a)
   WalkUpFromExpr IntegerLiteral(2)
     WalkUpFromStmt IntegerLiteral(2)
+  WalkUpFromBinAddAssign CompoundAssignOperator(+=)
+    WalkUpFromExpr CompoundAssignOperator(+=)
+      WalkUpFromStmt CompoundAssignOperator(+=)
 WalkUpFromExpr IntegerLiteral(3)
   WalkUpFromStmt IntegerLiteral(3)
 WalkUpFromStmt CompoundStmt
