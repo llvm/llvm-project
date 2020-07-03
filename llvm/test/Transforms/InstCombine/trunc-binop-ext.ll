@@ -318,11 +318,11 @@ define <2 x i16> @narrow_zext_mul_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; Test cases for PR43580
 define i8 @narrow_zext_ashr_keep_trunc(i8 %i1, i8 %i2) {
 ; CHECK-LABEL: @narrow_zext_ashr_keep_trunc(
-; CHECK-NEXT:    [[I1_EXT:%.*]] = sext i8 [[I1:%.*]] to i32
-; CHECK-NEXT:    [[I2_EXT:%.*]] = sext i8 [[I2:%.*]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[I1_EXT]], [[I2_EXT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[SUB]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[TMP1]] to i8
+; CHECK-NEXT:    [[I1_EXT:%.*]] = sext i8 [[I1:%.*]] to i16
+; CHECK-NEXT:    [[I2_EXT:%.*]] = sext i8 [[I2:%.*]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i16 [[I1_EXT]], [[I2_EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 [[SUB]], 1
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %i1.ext = sext i8 %i1 to i32
@@ -335,11 +335,11 @@ define i8 @narrow_zext_ashr_keep_trunc(i8 %i1, i8 %i2) {
 
 define i8 @narrow_zext_ashr_keep_trunc2(i9 %i1, i9 %i2) {
 ; CHECK-LABEL: @narrow_zext_ashr_keep_trunc2(
-; CHECK-NEXT:    [[I1_EXT1:%.*]] = zext i9 [[I1:%.*]] to i64
-; CHECK-NEXT:    [[I2_EXT2:%.*]] = zext i9 [[I2:%.*]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = add nuw nsw i64 [[I1_EXT1]], [[I2_EXT2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[SUB]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[TMP1]] to i8
+; CHECK-NEXT:    [[I1_EXT1:%.*]] = zext i9 [[I1:%.*]] to i16
+; CHECK-NEXT:    [[I2_EXT2:%.*]] = zext i9 [[I2:%.*]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = add nuw nsw i16 [[I1_EXT1]], [[I2_EXT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 [[SUB]], 1
+; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
   %i1.ext = sext i9 %i1 to i64
@@ -352,11 +352,11 @@ define i8 @narrow_zext_ashr_keep_trunc2(i9 %i1, i9 %i2) {
 
 define i7 @narrow_zext_ashr_keep_trunc3(i8 %i1, i8 %i2) {
 ; CHECK-LABEL: @narrow_zext_ashr_keep_trunc3(
-; CHECK-NEXT:    [[I1_EXT1:%.*]] = zext i8 [[I1:%.*]] to i64
-; CHECK-NEXT:    [[I2_EXT2:%.*]] = zext i8 [[I2:%.*]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = add nuw nsw i64 [[I1_EXT1]], [[I2_EXT2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[SUB]], 1
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[TMP1]] to i7
+; CHECK-NEXT:    [[I1_EXT1:%.*]] = zext i8 [[I1:%.*]] to i14
+; CHECK-NEXT:    [[I2_EXT2:%.*]] = zext i8 [[I2:%.*]] to i14
+; CHECK-NEXT:    [[SUB:%.*]] = add nuw nsw i14 [[I1_EXT1]], [[I2_EXT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i14 [[SUB]], 1
+; CHECK-NEXT:    [[T:%.*]] = trunc i14 [[TMP1]] to i7
 ; CHECK-NEXT:    ret i7 [[T]]
 ;
   %i1.ext = sext i8 %i1 to i64
