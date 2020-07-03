@@ -597,6 +597,8 @@ Type *AttributeImpl::getValueAsType() const {
 }
 
 bool AttributeImpl::operator<(const AttributeImpl &AI) const {
+  if (this == &AI)
+    return false;
   // This sorts the attributes with Attribute::AttrKinds coming first (sorted
   // relative to their enum value) and then strings.
   if (isEnumAttribute()) {
