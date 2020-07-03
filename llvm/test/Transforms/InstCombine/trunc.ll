@@ -82,9 +82,8 @@ define i64 @test2(i64 %a) {
 define <2 x i64> @test2_vec(<2 x i64> %a) {
 ; CHECK-LABEL: @test2_vec(
 ; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 4, i32 4>
-; CHECK-NEXT:    [[Q:%.*]] = ashr exact <2 x i32> [[C]], <i32 4, i32 4>
-; CHECK-NEXT:    [[D:%.*]] = sext <2 x i32> [[Q]] to <2 x i64>
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i64> [[A]], <i64 36, i64 36>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i64> [[D1]], <i64 36, i64 36>
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
@@ -99,9 +98,8 @@ define <2 x i64> @test2_vec(<2 x i64> %a) {
 define <2 x i64> @test2_vec_nonuniform(<2 x i64> %a) {
 ; CHECK-LABEL: @test2_vec_nonuniform(
 ; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 4, i32 5>
-; CHECK-NEXT:    [[Q:%.*]] = ashr <2 x i32> [[C]], <i32 4, i32 5>
-; CHECK-NEXT:    [[D:%.*]] = sext <2 x i32> [[Q]] to <2 x i64>
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i64> [[A]], <i64 36, i64 37>
+; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i64> [[D1]], <i64 36, i64 37>
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
@@ -116,9 +114,8 @@ define <2 x i64> @test2_vec_nonuniform(<2 x i64> %a) {
 define <2 x i64> @test2_vec_undef(<2 x i64> %a) {
 ; CHECK-LABEL: @test2_vec_undef(
 ; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 4, i32 undef>
-; CHECK-NEXT:    [[Q:%.*]] = ashr <2 x i32> [[C]], <i32 4, i32 undef>
-; CHECK-NEXT:    [[D:%.*]] = sext <2 x i32> [[Q]] to <2 x i64>
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i64> [[A]], <i64 36, i64 0>
+; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i64> [[D1]], <i64 36, i64 0>
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
