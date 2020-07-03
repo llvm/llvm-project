@@ -8,6 +8,7 @@ add_flang_library(FortranLower
   ComplexExpr.cpp
   ConvertType.cpp
   DoLoopHelper.cpp
+  FIRBuilder.cpp
   Mangler.cpp
   OpenMP.cpp
   PFTBuilder.cpp
