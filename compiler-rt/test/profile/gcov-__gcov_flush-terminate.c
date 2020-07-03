@@ -9,23 +9,14 @@
 
 // CHECK:             -:    0:Runs:1
 // CHECK-NEXT:        -:    0:Programs:1
-// CHECK:             -:    1:void __gcov_flush(void);
-// CHECK-NEXT:        -:    2:
-// CHECK-NEXT:        1:    3:int main(void) {
-// CHECK-NEXT:        1:    4:  int i = 22;
-// CHECK-NEXT:        1:    5:  __gcov_flush();
-// CHECK-NEXT:        1:    6:  i = 42;
-// CHECK-NEXT:        1:    7:  __builtin_trap();
-// CHECK-NEXT:        1:    8:  i = 84;
-// CHECK-NEXT:        1:    9:  return 0;
 
 void __gcov_flush(void);
 
-int main(void) {
-  int i = 22;
-  __gcov_flush();
-  i = 42;
-  __builtin_trap();
-  i = 84;
-  return 0;
+int main(void) {                   // CHECK:      1: [[#@LINE]]:int main(void)
+  int i = 22;                      // CHECK-NEXT: 1: [[#@LINE]]:
+  __gcov_flush();                  // CHECK-NEXT: 1: [[#@LINE]]:
+  i = 42;                          // CHECK-NEXT: 1: [[#@LINE]]:
+  __builtin_trap();                // CHECK-NEXT: 1: [[#@LINE]]:
+  i = 84;                          // CHECK-NEXT: 1: [[#@LINE]]:
+  return 0;                        // CHECK-NEXT: 1: [[#@LINE]]:
 }
