@@ -21,7 +21,7 @@ User Guide for AMDGPU Backend
    AMDGPUOperandSyntax
    AMDGPUInstructionSyntax
    AMDGPUInstructionNotation
-   AMDGPUDwarfProposalForHeterogeneousDebugging
+   AMDGPUDwarfExtensionsForHeterogeneousDebugging
 
 Introduction
 ============
@@ -1160,14 +1160,14 @@ DWARF Debug Information
 
 .. warning::
 
-   This section describes a **provisional proposal** for AMDGPU DWARF [DWARF]_
-   that is not currently fully implemented and is subject to change.
+   This section describes **provisional support** for AMDGPU DWARF [DWARF]_ that
+   is not currently fully implemented and is subject to change.
 
 AMDGPU generates DWARF [DWARF]_ debugging information ELF sections (see
 :ref:`amdgpu-elf-code-object`) which contain information that maps the code
 object executable code and data to the source language constructs. It can be
 used by tools such as debuggers and profilers. It uses features defined in
-:doc:`AMDGPUDwarfProposalForHeterogeneousDebugging` that are made available in
+:doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging` that are made available in
 DWARF Version 4 and DWARF Version 5 as an LLVM vendor extension.
 
 This section defines the AMDGPU target architecture specific DWARF mappings.
@@ -1299,8 +1299,8 @@ Address Class Identifier
 ------------------------
 
 The DWARF address class represents the source language memory space. See DWARF
-Version 5 section 2.12 which is updated by the propoal in
-:ref:`amdgpu-dwarf-segment_addresses`.
+Version 5 section 2.12 which is updated by the *DWARF Extensions For
+Heterogeneous Debugging* section :ref:`amdgpu-dwarf-segment_addresses`.
 
 The DWARF address class mapping used for AMDGPU is defined in
 :ref:`amdgpu-dwarf-address-class-mapping-table`.
@@ -1321,8 +1321,8 @@ The DWARF address class mapping used for AMDGPU is defined in
    ``DW_ADDR_AMDGPU_region`` 0x8000 Region (GDS)
    ========================= ====== =================
 
-The DWARF address class values defined in the proposal at
-:ref:`amdgpu-dwarf-segment_addresses` are used.
+The DWARF address class values defined in the *DWARF Extensions For
+Heterogeneous Debugging* section :ref:`amdgpu-dwarf-segment_addresses` are used.
 
 In addition, ``DW_ADDR_AMDGPU_region`` is encoded as a vendor extension. This is
 available for use for the AMD extension for access to the hardware GDS memory
@@ -1341,8 +1341,8 @@ Address Space Identifier
 ------------------------
 
 DWARF address spaces correspond to target architecture specific linear
-addressable memory areas. See DWARF Version 5 section 2.12 and
-:ref:`amdgpu-dwarf-segment_addresses`.
+addressable memory areas. See DWARF Version 5 section 2.12 and *DWARF Extensions
+For Heterogeneous Debugging* section :ref:`amdgpu-dwarf-segment_addresses`.
 
 The DWARF address space mapping used for AMDGPU is defined in
 :ref:`amdgpu-dwarf-address-space-mapping-table`.
@@ -1447,8 +1447,8 @@ DWARF lane identifies specify a target architecture lane position for hardware
 that executes in a SIMD or SIMT manner, and on which a source language maps its
 threads of execution onto those lanes. The DWARF lane identifier is pushed by
 the ``DW_OP_LLVM_push_lane`` DWARF expression operation. See DWARF Version 5
-section 2.5 which is updated by the proposal in
-:ref:`amdgpu-dwarf-operation-expressions`.
+section 2.5 which is updated by *DWARF Extensions For Heterogeneous Debugging*
+section :ref:`amdgpu-dwarf-operation-expressions`.
 
 For AMDGPU, the lane identifier corresponds to the hardware lane ID of a
 wavefront. It is numbered from 0 to the wavefront size minus 1.
@@ -1483,7 +1483,8 @@ Debugger Information Entry Attributes
 
 This section describes how certain debugger information entry attributes are
 used by AMDGPU. See the sections in DWARF Version 5 section 2 which are updated
-by the proposal in :ref:`amdgpu-dwarf-debugging-information-entry-attributes`.
+by *DWARF Extensions For Heterogeneous Debugging* section
+:ref:`amdgpu-dwarf-debugging-information-entry-attributes`.
 
 .. _amdgpu-dwarf-dw-at-llvm-lane-pc:
 
@@ -1938,8 +1939,8 @@ DWARF Version 5 section 6.2.4):
 
 Source text for online-compiled programs (for example, those compiled by the
 OpenCL language runtime) may be embedded into the DWARF Version 5 line table.
-See DWARF Version 5 section 6.2.4.1 which is updated by the proposal in
-:ref:`DW_LNCT_LLVM_source
+See DWARF Version 5 section 6.2.4.1 which is updated by *DWARF Extensions For
+Heterogeneous Debugging* section :ref:`DW_LNCT_LLVM_source
 <amdgpu-dwarf-line-number-information-dw-lnct-llvm-source>`.
 
 The Clang option used to control source embedding in AMDGPU is defined in
