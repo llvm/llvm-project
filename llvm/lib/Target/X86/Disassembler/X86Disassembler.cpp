@@ -166,9 +166,6 @@ static InstrUID decode(OpcodeType type, InstructionContext insnContext,
     if (modFromModRM(modRM) == 0x3)
       return modRMTable[dec->instructionIDs + ((modRM & 0x38) >> 3) + 8];
     return modRMTable[dec->instructionIDs + ((modRM & 0x38) >> 3)];
-  case MODRM_SPLITREGM:
-    assert(modFromModRM(modRM) == 0x3);
-    return modRMTable[dec->instructionIDs+(modRM & 0x7)];
   case MODRM_SPLITMISC:
     if (modFromModRM(modRM) == 0x3)
       return modRMTable[dec->instructionIDs + (modRM & 0x3f) + 8];
