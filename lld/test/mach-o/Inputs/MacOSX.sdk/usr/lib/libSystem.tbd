@@ -13,7 +13,7 @@ exports:
 archs:            [ x86_64 ]
 uuids:            [ 'x86_64: 00000000-0000-0000-0000-000000000001' ]
 platform:         macosx
-install-name:     '/usr/lib/libdyld.dylib'
+install-name:     '/usr/lib/system/libdyld.dylib'
 current-version:  0001.001.1
 parent-umbrella:  System
 exports:
@@ -23,7 +23,7 @@ exports:
 archs:            [ x86_64 ]
 uuids:            [ 'x86_64: 00000000-0000-0000-0000-000000000002' ]
 platform:         macosx
-install-name:     '/usr/lib/libsystem_c.dylib'
+install-name:     '/usr/lib/system/libsystem_c.dylib'
 current-version:  0001.001.1
 parent-umbrella:  System
 exports:
@@ -33,7 +33,7 @@ exports:
 archs:            [ x86_64 ]
 uuids:            [ 'x86_64: 00000000-0000-0000-0000-000000000003' ]
 platform:         macosx
-install-name:     '/usr/lib/libsystem_m.dylib'
+install-name:     '/usr/lib/system/libsystem_m.dylib'
 current-version:  0001.001.1
 parent-umbrella:  System
 exports:

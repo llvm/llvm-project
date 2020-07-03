@@ -64,11 +64,9 @@ struct OMPInformationCache : public InformationCache {
                       SmallPtrSetImpl<Function *> &ModuleSlice)
       : InformationCache(M, AG, Allocator, CGSCC), ModuleSlice(ModuleSlice),
         OMPBuilder(M) {
-    initializeTypes(M);
+    OMPBuilder.initialize();
     initializeRuntimeFunctions();
     initializeInternalControlVars();
-
-    OMPBuilder.initialize();
   }
 
   /// Generic information that describes an internal control variable.

@@ -357,3 +357,51 @@
 # CHECK-BE: vsrdbi 2, 3, 4, 5                     # encoding: [0x10,0x43,0x23,0x56]
 # CHECK-LE: vsrdbi 2, 3, 4, 5                     # encoding: [0x56,0x23,0x43,0x10]
             vsrdbi 2, 3, 4, 5
+# CHECK-BE: vinsw 2, 3, 12                        # encoding: [0x10,0x4c,0x18,0xcf]
+# CHECK-LE: vinsw 2, 3, 12                        # encoding: [0xcf,0x18,0x4c,0x10]
+            vinsw 2, 3, 12
+# CHECK-BE: vinsd 2, 3, 12                        # encoding: [0x10,0x4c,0x19,0xcf]
+# CHECK-LE: vinsd 2, 3, 12                        # encoding: [0xcf,0x19,0x4c,0x10]
+            vinsd 2, 3, 12
+# CHECK-BE: vinsbvlx 1, 3, 5                      # encoding: [0x10,0x23,0x28,0x0f]
+# CHECK-LE: vinsbvlx 1, 3, 5                      # encoding: [0x0f,0x28,0x23,0x10]
+            vinsbvlx 1, 3, 5
+# CHECK-BE: vinsbvrx 1, 3, 5                      # encoding: [0x10,0x23,0x29,0x0f]
+# CHECK-LE: vinsbvrx 1, 3, 5                      # encoding: [0x0f,0x29,0x23,0x10]
+            vinsbvrx 1, 3, 5
+# CHECK-BE: vinshvlx 1, 3, 5                      # encoding: [0x10,0x23,0x28,0x4f]
+# CHECK-LE: vinshvlx 1, 3, 5                      # encoding: [0x4f,0x28,0x23,0x10]
+            vinshvlx 1, 3, 5
+# CHECK-BE: vinshvrx 1, 3, 5                      # encoding: [0x10,0x23,0x29,0x4f]
+# CHECK-LE: vinshvrx 1, 3, 5                      # encoding: [0x4f,0x29,0x23,0x10]
+            vinshvrx 1, 3, 5
+# CHECK-BE: vinswvlx 1, 3, 5                      # encoding: [0x10,0x23,0x28,0x8f]
+# CHECK-LE: vinswvlx 1, 3, 5                      # encoding: [0x8f,0x28,0x23,0x10]
+            vinswvlx 1, 3, 5
+# CHECK-BE: vinswvrx 1, 3, 5                      # encoding: [0x10,0x23,0x29,0x8f]
+# CHECK-LE: vinswvrx 1, 3, 5                      # encoding: [0x8f,0x29,0x23,0x10]
+            vinswvrx 1, 3, 5
+# CHECK-BE: vinsblx 1, 2, 3                       # encoding: [0x10,0x22,0x1a,0x0f]
+# CHECK-LE: vinsblx 1, 2, 3                       # encoding: [0x0f,0x1a,0x22,0x10]
+            vinsblx 1, 2, 3
+# CHECK-BE: vinsbrx 1, 2, 3                       # encoding: [0x10,0x22,0x1b,0x0f]
+# CHECK-LE: vinsbrx 1, 2, 3                       # encoding: [0x0f,0x1b,0x22,0x10]
+            vinsbrx 1, 2, 3
+# CHECK-BE: vinshlx 1, 2, 3                       # encoding: [0x10,0x22,0x1a,0x4f]
+# CHECK-LE: vinshlx 1, 2, 3                       # encoding: [0x4f,0x1a,0x22,0x10]
+            vinshlx 1, 2, 3
+# CHECK-BE: vinshrx 1, 2, 3                       # encoding: [0x10,0x22,0x1b,0x4f]
+# CHECK-LE: vinshrx 1, 2, 3                       # encoding: [0x4f,0x1b,0x22,0x10]
+            vinshrx 1, 2, 3
+# CHECK-BE: vinswlx 1, 2, 3                       # encoding: [0x10,0x22,0x1a,0x8f]
+# CHECK-LE: vinswlx 1, 2, 3                       # encoding: [0x8f,0x1a,0x22,0x10]
+            vinswlx 1, 2, 3
+# CHECK-BE: vinswrx 1, 2, 3                       # encoding: [0x10,0x22,0x1b,0x8f]
+# CHECK-LE: vinswrx 1, 2, 3                       # encoding: [0x8f,0x1b,0x22,0x10]
+            vinswrx 1, 2, 3
+# CHECK-BE: vinsdlx 1, 2, 3                       # encoding: [0x10,0x22,0x1a,0xcf]
+# CHECK-LE: vinsdlx 1, 2, 3                       # encoding: [0xcf,0x1a,0x22,0x10]
+            vinsdlx 1, 2, 3
+# CHECK-BE: vinsdrx 1, 2, 3                       # encoding: [0x10,0x22,0x1b,0xcf]
+# CHECK-LE: vinsdrx 1, 2, 3                       # encoding: [0xcf,0x1b,0x22,0x10]
+            vinsdrx 1, 2, 3

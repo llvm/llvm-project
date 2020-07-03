@@ -5,6 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; Instcombine should be able to eliminate all of these ext casts.
 
 declare void @use(i32)
+declare void @use_vec(<2 x i32>)
 
 define i64 @test1(i64 %a) {
 ; CHECK-LABEL: @test1(
@@ -18,6 +19,48 @@ define i64 @test1(i64 %a) {
   %d = zext i32 %c to i64
   call void @use(i32 %b)
   ret i64 %d
+}
+
+define <2 x i64> @test1_vec(<2 x i64> %a) {
+; CHECK-LABEL: @test1_vec(
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i64> [[A]], <i64 15, i64 15>
+; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
+; CHECK-NEXT:    ret <2 x i64> [[D]]
+;
+  %b = trunc <2 x i64> %a to <2 x i32>
+  %c = and <2 x i32> %b, <i32 15, i32 15>
+  %d = zext <2 x i32> %c to <2 x i64>
+  call void @use_vec(<2 x i32> %b)
+  ret <2 x i64> %d
+}
+
+define <2 x i64> @test1_vec_nonuniform(<2 x i64> %a) {
+; CHECK-LABEL: @test1_vec_nonuniform(
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i64> [[A]], <i64 15, i64 7>
+; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
+; CHECK-NEXT:    ret <2 x i64> [[D]]
+;
+  %b = trunc <2 x i64> %a to <2 x i32>
+  %c = and <2 x i32> %b, <i32 15, i32 7>
+  %d = zext <2 x i32> %c to <2 x i64>
+  call void @use_vec(<2 x i32> %b)
+  ret <2 x i64> %d
+}
+
+define <2 x i64> @test1_vec_undef(<2 x i64> %a) {
+; CHECK-LABEL: @test1_vec_undef(
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i64> [[A]], <i64 15, i64 0>
+; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
+; CHECK-NEXT:    ret <2 x i64> [[D]]
+;
+  %b = trunc <2 x i64> %a to <2 x i32>
+  %c = and <2 x i32> %b, <i32 15, i32 undef>
+  %d = zext <2 x i32> %c to <2 x i64>
+  call void @use_vec(<2 x i32> %b)
+  ret <2 x i64> %d
 }
 
 define i64 @test2(i64 %a) {
@@ -34,6 +77,57 @@ define i64 @test2(i64 %a) {
   %d = sext i32 %q to i64
   call void @use(i32 %b)
   ret i64 %d
+}
+
+define <2 x i64> @test2_vec(<2 x i64> %a) {
+; CHECK-LABEL: @test2_vec(
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 4, i32 4>
+; CHECK-NEXT:    [[Q:%.*]] = ashr exact <2 x i32> [[C]], <i32 4, i32 4>
+; CHECK-NEXT:    [[D:%.*]] = sext <2 x i32> [[Q]] to <2 x i64>
+; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
+; CHECK-NEXT:    ret <2 x i64> [[D]]
+;
+  %b = trunc <2 x i64> %a to <2 x i32>
+  %c = shl <2 x i32> %b, <i32 4, i32 4>
+  %q = ashr <2 x i32> %c, <i32 4, i32 4>
+  %d = sext <2 x i32> %q to <2 x i64>
+  call void @use_vec(<2 x i32> %b)
+  ret <2 x i64> %d
+}
+
+define <2 x i64> @test2_vec_nonuniform(<2 x i64> %a) {
+; CHECK-LABEL: @test2_vec_nonuniform(
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 4, i32 5>
+; CHECK-NEXT:    [[Q:%.*]] = ashr <2 x i32> [[C]], <i32 4, i32 5>
+; CHECK-NEXT:    [[D:%.*]] = sext <2 x i32> [[Q]] to <2 x i64>
+; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
+; CHECK-NEXT:    ret <2 x i64> [[D]]
+;
+  %b = trunc <2 x i64> %a to <2 x i32>
+  %c = shl <2 x i32> %b, <i32 4, i32 5>
+  %q = ashr <2 x i32> %c, <i32 4, i32 5>
+  %d = sext <2 x i32> %q to <2 x i64>
+  call void @use_vec(<2 x i32> %b)
+  ret <2 x i64> %d
+}
+
+define <2 x i64> @test2_vec_undef(<2 x i64> %a) {
+; CHECK-LABEL: @test2_vec_undef(
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 4, i32 undef>
+; CHECK-NEXT:    [[Q:%.*]] = ashr <2 x i32> [[C]], <i32 4, i32 undef>
+; CHECK-NEXT:    [[D:%.*]] = sext <2 x i32> [[Q]] to <2 x i64>
+; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
+; CHECK-NEXT:    ret <2 x i64> [[D]]
+;
+  %b = trunc <2 x i64> %a to <2 x i32>
+  %c = shl <2 x i32> %b, <i32 4, i32 undef>
+  %q = ashr <2 x i32> %c, <i32 4, i32 undef>
+  %d = sext <2 x i32> %q to <2 x i64>
+  call void @use_vec(<2 x i32> %b)
+  ret <2 x i64> %d
 }
 
 define i64 @test3(i64 %a) {

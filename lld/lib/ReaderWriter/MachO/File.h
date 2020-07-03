@@ -450,7 +450,7 @@ private:
             MemoryBuffer::getMemBuffer("", _mb->getBufferIdentifier()), _ctx));
         reexport.file = _ownedFiles.back().get();
         std::error_code err = _ownedFiles.back()->loadFromInterface(*document);
-        if (!err)
+        if (err)
           return err;
       }
     }

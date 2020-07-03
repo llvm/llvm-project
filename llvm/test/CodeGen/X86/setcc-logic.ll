@@ -323,15 +323,12 @@ define i32 @vec_extract_branch(<2 x double> %x)  {
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    cmpltpd %xmm0, %xmm1
 ; CHECK-NEXT:    movmskpd %xmm1, %eax
-; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB16_3
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    shrb %al
-; CHECK-NEXT:    je .LBB16_3
-; CHECK-NEXT:  # %bb.2: # %true
+; CHECK-NEXT:    cmpb $3, %al
+; CHECK-NEXT:    jne .LBB16_2
+; CHECK-NEXT:  # %bb.1: # %true
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB16_3: # %false
+; CHECK-NEXT:  .LBB16_2: # %false
 ; CHECK-NEXT:    movl $88, %eax
 ; CHECK-NEXT:    retq
   %t1 = fcmp ogt <2 x double> %x, zeroinitializer

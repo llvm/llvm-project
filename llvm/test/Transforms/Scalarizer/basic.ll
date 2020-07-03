@@ -363,26 +363,6 @@ define void @f11(<32 x i1> *%dest, <32 x i1> *%src0) {
   ret void
 }
 
-; Test that variable inserts aren't scalarized.
-define void @f12(<4 x i32> *%dest, <4 x i32> *%src, i32 %index) {
-; CHECK: @f12(
-; CHECK: %val1 = insertelement <4 x i32> %val0, i32 1, i32 %index
-; CHECK-DAG: %val1.i0 = extractelement <4 x i32> %val1, i32 0
-; CHECK-DAG: %val1.i1 = extractelement <4 x i32> %val1, i32 1
-; CHECK-DAG: %val1.i2 = extractelement <4 x i32> %val1, i32 2
-; CHECK-DAG: %val1.i3 = extractelement <4 x i32> %val1, i32 3
-; CHECK-DAG: %val2.i0 = shl i32 1, %val1.i0
-; CHECK-DAG: %val2.i1 = shl i32 2, %val1.i1
-; CHECK-DAG: %val2.i2 = shl i32 3, %val1.i2
-; CHECK-DAG: %val2.i3 = shl i32 4, %val1.i3
-; CHECK: ret void
-  %val0 = load <4 x i32> , <4 x i32> *%src
-  %val1 = insertelement <4 x i32> %val0, i32 1, i32 %index
-  %val2 = shl <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %val1
-  store <4 x i32> %val2, <4 x i32> *%dest
-  ret void
-}
-
 ; Test vector GEPs with more than one index.
 define void @f13(<4 x float *> *%dest, <4 x [4 x float] *> %ptr, <4 x i32> %i,
                  float *%other) {

@@ -94,6 +94,16 @@ private:
   llvm::SetVector<const Symbol *> entries;
 };
 
+struct BindingEntry {
+  const DylibSymbol *dysym;
+  const InputSection *isec;
+  uint64_t offset;
+  int64_t addend;
+  BindingEntry(const DylibSymbol *dysym, const InputSection *isec,
+               uint64_t offset, int64_t addend)
+      : dysym(dysym), isec(isec), offset(offset), addend(addend) {}
+};
+
 // Stores bind opcodes for telling dyld which symbols to load non-lazily.
 class BindingSection : public SyntheticSection {
 public:
@@ -107,6 +117,13 @@ public:
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) const override;
 
+  void addEntry(const DylibSymbol *dysym, const InputSection *isec,
+                uint64_t offset, int64_t addend) {
+    bindings.emplace_back(dysym, isec, offset, addend);
+  }
+
+private:
+  std::vector<BindingEntry> bindings;
   SmallVector<char, 128> contents;
 };
 
@@ -256,6 +273,7 @@ private:
 };
 
 struct InStruct {
+  BindingSection *binding = nullptr;
   GotSection *got = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;

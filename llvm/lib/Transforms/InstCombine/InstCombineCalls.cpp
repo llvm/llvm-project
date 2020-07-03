@@ -1144,7 +1144,7 @@ Instruction *InstCombiner::simplifyMaskedStore(IntrinsicInst &II) {
   // If the mask is all ones, this is a plain vector store of the 1st argument.
   if (ConstMask->isAllOnesValue()) {
     Value *StorePtr = II.getArgOperand(1);
-    Align Alignment(cast<ConstantInt>(II.getArgOperand(2))->getZExtValue());
+    Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
     return new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
   }
 
@@ -3383,8 +3383,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::arm_neon_vst4lane: {
     Align MemAlign = getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
     unsigned AlignArg = II->getNumArgOperands() - 1;
-    ConstantInt *IntrAlign = dyn_cast<ConstantInt>(II->getArgOperand(AlignArg));
-    if (IntrAlign && IntrAlign->getZExtValue() < MemAlign.value())
+    Value *AlignArgOp = II->getArgOperand(AlignArg);
+    MaybeAlign Align = cast<ConstantInt>(AlignArgOp)->getMaybeAlignValue();
+    if (Align && *Align < MemAlign)
       return replaceOperand(*II, AlignArg,
                             ConstantInt::get(Type::getInt32Ty(II->getContext()),
                                              MemAlign.value(), false));
@@ -4546,11 +4547,10 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
                           Call.getContext(), Op1C->getZExtValue()));
     // Add alignment attribute if alignment is a power of two constant.
     if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment)) {
-      uint64_t AlignmentVal = Op0C->getZExtValue();
-      if (llvm::isPowerOf2_64(AlignmentVal))
-        Call.addAttribute(AttributeList::ReturnIndex,
-                          Attribute::getWithAlignment(Call.getContext(),
-                                                      Align(AlignmentVal)));
+      if (MaybeAlign AlignmentVal = Op0C->getMaybeAlignValue())
+        Call.addAttribute(
+            AttributeList::ReturnIndex,
+            Attribute::getWithAlignment(Call.getContext(), *AlignmentVal));
     }
   } else if (isReallocLikeFn(&Call, TLI) && Op1C) {
     Call.addAttribute(AttributeList::ReturnIndex,

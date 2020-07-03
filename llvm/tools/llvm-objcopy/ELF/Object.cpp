@@ -745,7 +745,7 @@ void SymbolTableSection::prepareForLayout() {
   // Reserve proper amount of space in section index table, so we can
   // layout sections correctly. We will fill the table with correct
   // indexes later in fillShdnxTable.
-  if (SectionIndexTable)  
+  if (SectionIndexTable)
     SectionIndexTable->reserve(Symbols.size());
 
   // Add all of our strings to SymbolNames so that SymbolNames has the right
@@ -1260,7 +1260,7 @@ std::unique_ptr<Object> IHexELFBuilder::build() {
 template <class ELFT> void ELFBuilder<ELFT>::setParentSegment(Segment &Child) {
   for (Segment &Parent : Obj.segments()) {
     // Every segment will overlap with itself but we don't want a segment to
-    // be it's own parent so we avoid that situation.
+    // be its own parent so we avoid that situation.
     if (&Child != &Parent && segmentOverlapsSegment(Child, Parent)) {
       // We want a canonical "most parental" segment but this requires
       // inspecting the ParentSegment.

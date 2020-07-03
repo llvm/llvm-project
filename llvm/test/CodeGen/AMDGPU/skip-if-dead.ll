@@ -12,11 +12,11 @@ define amdgpu_ps void @test_kill_depth_0_imm_pos() #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_neg:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: s_cbranch_execnz BB1_2
+; CHECK-NEXT: s_cbranch_execz BB1_2
 ; CHECK-NEXT: ; %bb.1:
-; CHECK-NEXT: exp null off, off, off, off done vm
 ; CHECK-NEXT: s_endpgm
 ; CHECK-NEXT: BB1_2:
+; CHECK-NEXT: exp null off, off, off, off done vm
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
   call void @llvm.amdgcn.kill(i1 false)
@@ -27,15 +27,14 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_neg_x2:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: s_cbranch_execnz BB2_2
-; CHECK:      exp null
-; CHECK-NEXT: s_endpgm
-; CHECK:      BB2_2:
+; CHECK-NEXT: s_cbranch_execz BB2_3
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: s_cbranch_execnz BB2_4
-; CHECK:      exp null
+; CHECK-NEXT: s_cbranch_execz BB2_3
+; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
-; CHECK-NEXT: BB2_4:
+; CHECK-NEXT: BB2_3:
+; CHECK:      exp null
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
   call void @llvm.amdgcn.kill(i1 false)
@@ -46,10 +45,11 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_var:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: s_cbranch_execnz BB3_2
-; CHECK:      exp null
+; CHECK-NEXT: s_cbranch_execz BB3_2
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: s_endpgm
 ; CHECK-NEXT: BB3_2:
+; CHECK:      exp null
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
   %cmp = fcmp olt float %x, 0.0
@@ -61,15 +61,14 @@ define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2_same:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: s_cbranch_execnz BB4_2
-; CHECK:      exp null
-; CHECK-NEXT: s_endpgm
-; CHECK-NEXT: BB4_2:
+; CHECK-NEXT: s_cbranch_execz BB4_3
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: s_cbranch_execnz BB4_4
-; CHECK:      exp null
+; CHECK-NEXT: s_cbranch_execz BB4_3
+; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
-; CHECK-NEXT: BB4_4:
+; CHECK-NEXT: BB4_3:
+; CHECK:      exp null
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
   %cmp = fcmp olt float %x, 0.0
@@ -82,15 +81,14 @@ define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: s_cbranch_execnz BB5_2
-; CHECK:      exp null
-; CHECK-NEXT: s_endpgm
-; CHECK-NEXT: BB5_2:
+; CHECK-NEXT: s_cbranch_execz BB5_3
+; CHECK-NEXT: ; %bb.1
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v1
-; CHECK-NEXT: s_cbranch_execnz BB5_4
-; CHECK:      exp null
+; CHECK-NEXT: s_cbranch_execz BB5_3
+; CHECK-NEXT: ; %bb.2
 ; CHECK-NEXT: s_endpgm
-; CHECK-NEXT: BB5_4:
+; CHECK-NEXT: BB5_3:
+; CHECK:      exp null
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
   %cmp.x = fcmp olt float %x, 0.0
@@ -103,18 +101,15 @@ define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2_instructions:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
-; CHECK-NEXT: s_cbranch_execnz BB6_2
+; CHECK-NEXT: s_cbranch_execz BB6_3
 ; CHECK-NEXT: ; %bb.1:
-; CHECK-NEXT: exp
-; CHECK-NEXT: s_endpgm
-; CHECK-NEXT: BB6_2:
 ; CHECK: v_mov_b32_e64 v7, -1
 ; CHECK: v_cmpx_gt_f32_e32 vcc, 0, v7
-; CHECK-NEXT: s_cbranch_execnz BB6_4
-; CHECK-NEXT: ; %bb.3:
-; CHECK-NEXT: exp
+; CHECK-NEXT: s_cbranch_execz BB6_3
+; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
-; CHECK-NEXT: BB6_4:
+; CHECK-NEXT: BB6_3:
+; CHECK-NEXT: exp null
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
   %cmp.x = fcmp olt float %x, 0.0
@@ -237,6 +232,62 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: {{^}}test_kill_control_flow_return:
+
+; CHECK: v_cmp_eq_u32_e64 [[KILL_CC:s\[[0-9]+:[0-9]+\]]], s0, 1
+; CHECK: s_and_b64 exec, exec, s[2:3]
+; CHECK-NEXT: s_cbranch_execz [[EXIT_BB:BB[0-9]+_[0-9]+]]
+
+; CHECK: s_cmp_lg_u32 s{{[0-9]+}}, 0
+; CHECK: s_cbranch_scc0 [[COND_BB:BB[0-9]+_[0-9]+]]
+; CHECK: s_branch [[RETURN_BB:BB[0-9]+_[0-9]+]]
+
+; CHECK: [[COND_BB]]:
+; CHECK: v_mov_b32_e64 v7, -1
+; CHECK: v_nop_e64
+; CHECK: v_nop_e64
+; CHECK: v_nop_e64
+; CHECK: v_nop_e64
+; CHECK: v_nop_e64
+; CHECK: v_nop_e64
+; CHECK: v_nop_e64
+; CHECK: v_nop_e64
+; CHECK: v_nop_e64
+; CHECK: v_nop_e64
+; CHECK: v_mov_b32_e32 v0, v7
+
+; CHECK: [[EXIT_BB]]:
+; CHECK-NEXT: exp null
+; CHECK-NEXT: s_endpgm
+
+; CHECK: [[RETURN_BB]]:
+define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
+entry:
+  %kill = icmp eq i32 %arg, 1
+  %cmp = icmp eq i32 %arg, 0
+  call void @llvm.amdgcn.kill(i1 %kill)
+  br i1 %cmp, label %bb, label %exit
+
+bb:
+  %var = call float asm sideeffect "
+    v_mov_b32_e64 v7, -1
+    v_nop_e64
+    v_nop_e64
+    v_nop_e64
+    v_nop_e64
+    v_nop_e64
+    v_nop_e64
+    v_nop_e64
+    v_nop_e64
+    v_nop_e64
+    v_nop_e64", "={v7}"()
+  br label %exit
+
+exit:
+  %ret = phi float [ %var, %bb ], [ 0.0, %entry ]
+  ret float %ret
+}
+
 ; CHECK-LABEL: {{^}}test_kill_divergent_loop:
 ; CHECK: v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT: s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], vcc
@@ -295,12 +346,9 @@ exit:
 ; CHECK-LABEL: {{^}}phi_use_def_before_kill:
 ; CHECK: v_cndmask_b32_e64 [[PHIREG:v[0-9]+]], 0, -1.0,
 ; CHECK: v_cmpx_lt_f32_e32 vcc, 0,
-; CHECK-NEXT: s_cbranch_execnz [[BB4:BB[0-9]+_[0-9]+]]
+; CHECK-NEXT: s_cbranch_execz [[EXITBB:BB[0-9]+_[0-9]+]]
 
-; CHECK: exp
-; CHECK-NEXT: s_endpgm
-
-; CHECK: [[KILLBB:BB[0-9]+_[0-9]+]]:
+; CHECK: ; %[[KILLBB:bb.[0-9]+]]:
 ; CHECK-NEXT: s_cbranch_scc0 [[PHIBB:BB[0-9]+_[0-9]+]]
 
 ; CHECK: [[PHIBB]]:
@@ -312,6 +360,10 @@ exit:
 ; CHECK: buffer_store_dword
 
 ; CHECK: [[ENDBB]]:
+; CHECK-NEXT: s_endpgm
+
+; CHECK: [[EXITBB]]:
+; CHECK: exp null
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 bb:
@@ -418,7 +470,11 @@ bb9:                                              ; preds = %bb4
 }
 
 ; CHECK-LABEL: {{^}}cbranch_kill:
-; CHECK-NOT: exp null off, off, off, off done vm
+; CHECK: ; %bb.{{[0-9]+}}: ; %export
+; CHECK-NEXT: s_or_b64
+; CHECK-NEXT: s_cbranch_execz [[EXIT:BB[0-9]+_[0-9]+]]
+; CHECK: [[EXIT]]:
+; CHECK-NEXT: exp null off, off, off, off done vm
 define amdgpu_ps void @cbranch_kill(i32 inreg %0, <2 x float> %1) {
 .entry:
   %val0 = extractelement <2 x float> %1, i32 0

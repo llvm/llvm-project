@@ -11,6 +11,7 @@
 #include "ExportTrie.h"
 #include "InputFiles.h"
 #include "MachOStructs.h"
+#include "MergedOutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -95,7 +96,68 @@ void GotSection::writeTo(uint8_t *buf) const {
 BindingSection::BindingSection()
     : SyntheticSection(segment_names::linkEdit, section_names::binding) {}
 
-bool BindingSection::isNeeded() const { return in.got->isNeeded(); }
+bool BindingSection::isNeeded() const {
+  return bindings.size() != 0 || in.got->isNeeded();
+}
+
+namespace {
+struct Binding {
+  OutputSegment *segment = nullptr;
+  uint64_t offset = 0;
+  int64_t addend = 0;
+  uint8_t ordinal = 0;
+};
+} // namespace
+
+// Encode a sequence of opcodes that tell dyld to write the address of dysym +
+// addend at osec->addr + outSecOff.
+//
+// The bind opcode "interpreter" remembers the values of each binding field, so
+// we only need to encode the differences between bindings. Hence the use of
+// lastBinding.
+static void encodeBinding(const DylibSymbol &dysym, const OutputSection *osec,
+                          uint64_t outSecOff, int64_t addend,
+                          Binding &lastBinding, raw_svector_ostream &os) {
+  using namespace llvm::MachO;
+  OutputSegment *seg = osec->parent;
+  uint64_t offset = osec->getSegmentOffset() + outSecOff;
+  if (lastBinding.segment != seg) {
+    os << static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
+                               seg->index);
+    encodeULEB128(offset, os);
+    lastBinding.segment = seg;
+    lastBinding.offset = offset;
+  } else if (lastBinding.offset != offset) {
+    assert(lastBinding.offset <= offset);
+    os << static_cast<uint8_t>(BIND_OPCODE_ADD_ADDR_ULEB);
+    encodeULEB128(offset - lastBinding.offset, os);
+    lastBinding.offset = offset;
+  }
+
+  if (lastBinding.ordinal != dysym.file->ordinal) {
+    if (dysym.file->ordinal <= BIND_IMMEDIATE_MASK) {
+      os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
+                                 dysym.file->ordinal);
+    } else {
+      error("TODO: Support larger dylib symbol ordinals");
+      return;
+    }
+    lastBinding.ordinal = dysym.file->ordinal;
+  }
+
+  if (lastBinding.addend != addend) {
+    os << static_cast<uint8_t>(BIND_OPCODE_SET_ADDEND_SLEB);
+    encodeSLEB128(addend, os);
+    lastBinding.addend = addend;
+  }
+
+  os << static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
+     << dysym.getName() << '\0'
+     << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER)
+     << static_cast<uint8_t>(BIND_OPCODE_DO_BIND);
+  // DO_BIND causes dyld to both perform the binding and increment the offset
+  lastBinding.offset += WordSize;
+}
 
 // Emit bind opcodes, which are a stream of byte-sized opcodes that dyld
 // interprets to update a record with the following fields:
@@ -111,44 +173,40 @@ bool BindingSection::isNeeded() const { return in.got->isNeeded(); }
 // entry. It does *not* clear the record state after doing the bind, so
 // subsequent opcodes only need to encode the differences between bindings.
 void BindingSection::finalizeContents() {
-  if (!isNeeded())
-    return;
-
   raw_svector_ostream os{contents};
-  os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
-                             in.got->parent->index);
-  encodeULEB128(in.got->getSegmentOffset(), os);
-  uint32_t entries_to_skip = 0;
+  Binding lastBinding;
+  bool didEncode = false;
+  size_t gotIdx = 0;
   for (const Symbol *sym : in.got->getEntries()) {
     if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-      if (entries_to_skip != 0) {
-        os << static_cast<uint8_t>(MachO::BIND_OPCODE_ADD_ADDR_ULEB);
-        encodeULEB128(WordSize * entries_to_skip, os);
-        entries_to_skip = 0;
-      }
-
-      // TODO: Implement compact encoding -- we only need to encode the
-      // differences between consecutive symbol entries.
-      if (dysym->file->ordinal <= MachO::BIND_IMMEDIATE_MASK) {
-        os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
-                                   dysym->file->ordinal);
-      } else {
-        error("TODO: Support larger dylib symbol ordinals");
-        continue;
-      }
-      os << static_cast<uint8_t>(
-                MachO::BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
-         << dysym->getName() << '\0'
-         << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_TYPE_IMM |
-                                 MachO::BIND_TYPE_POINTER)
-         << static_cast<uint8_t>(MachO::BIND_OPCODE_DO_BIND);
-    } else {
-      // We have a defined symbol with a pre-populated address; skip over it.
-      ++entries_to_skip;
+      didEncode = true;
+      encodeBinding(*dysym, in.got, gotIdx * WordSize, 0, lastBinding, os);
     }
+    ++gotIdx;
   }
 
-  os << static_cast<uint8_t>(MachO::BIND_OPCODE_DONE);
+  // Sorting the relocations by segment and address allows us to encode them
+  // more compactly.
+  llvm::sort(bindings, [](const BindingEntry &a, const BindingEntry &b) {
+    OutputSegment *segA = a.isec->parent->parent;
+    OutputSegment *segB = b.isec->parent->parent;
+    if (segA != segB)
+      return segA->fileOff < segB->fileOff;
+    OutputSection *osecA = a.isec->parent;
+    OutputSection *osecB = b.isec->parent;
+    if (osecA != osecB)
+      return osecA->addr < osecB->addr;
+    if (a.isec != b.isec)
+      return a.isec->outSecOff < b.isec->outSecOff;
+    return a.offset < b.offset;
+  });
+  for (const BindingEntry &b : bindings) {
+    didEncode = true;
+    encodeBinding(*b.dysym, b.isec->parent, b.isec->outSecOff + b.offset,
+                  b.addend, lastBinding, os);
+  }
+  if (didEncode)
+    os << static_cast<uint8_t>(MachO::BIND_OPCODE_DONE);
 }
 
 void BindingSection::writeTo(uint8_t *buf) const {

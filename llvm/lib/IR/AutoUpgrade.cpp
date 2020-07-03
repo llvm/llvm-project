@@ -3757,10 +3757,10 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     auto *MemCI = cast<MemIntrinsic>(NewCall);
     // All mem intrinsics support dest alignment.
     const ConstantInt *Align = cast<ConstantInt>(CI->getArgOperand(3));
-    MemCI->setDestAlignment(Align->getZExtValue());
+    MemCI->setDestAlignment(Align->getMaybeAlignValue());
     // Memcpy/Memmove also support source alignment.
     if (auto *MTI = dyn_cast<MemTransferInst>(MemCI))
-      MTI->setSourceAlignment(Align->getZExtValue());
+      MTI->setSourceAlignment(Align->getMaybeAlignValue());
     break;
   }
   }

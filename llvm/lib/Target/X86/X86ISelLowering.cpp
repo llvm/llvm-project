@@ -1039,8 +1039,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ROTL,               MVT::v4i32, Custom);
     setOperationAction(ISD::ROTL,               MVT::v8i16, Custom);
 
-    // With AVX512, expanding (and promoting the shifts) is better.
-    if (!Subtarget.hasAVX512())
+    // With 512-bit registers or AVX512VL+BW, expanding (and promoting the
+    // shifts) is better.
+    if (!Subtarget.useAVX512Regs() &&
+        !(Subtarget.hasBWI() && Subtarget.hasVLX()))
       setOperationAction(ISD::ROTL,             MVT::v16i8, Custom);
 
     setOperationAction(ISD::STRICT_FSQRT,       MVT::v2f64, Legal);
@@ -1227,7 +1229,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ROTL,              MVT::v16i16, Custom);
 
     // With BWI, expanding (and promoting the shifts) is the better.
-    if (!Subtarget.hasBWI())
+    if (!Subtarget.useBWIRegs())
       setOperationAction(ISD::ROTL,            MVT::v32i8,  Custom);
 
     setOperationAction(ISD::SELECT,            MVT::v4f64, Custom);
@@ -17485,8 +17487,17 @@ static SDValue lower512BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                   Subtarget, DAG))
     return Broadcast;
 
-  if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.hasBWI())
+  if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.hasBWI()) {
+    // Try using bit ops for masking and blending before falling back to
+    // splitting.
+    if (SDValue V = lowerShuffleAsBitMask(DL, VT, V1, V2, Mask, Zeroable,
+                                          Subtarget, DAG))
+      return V;
+    if (SDValue V = lowerShuffleAsBitBlend(DL, VT, V1, V2, Mask, DAG))
+      return V;
+
     return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
+  }
 
   // Dispatch to each element type for lowering. If we don't have support for
   // specific element type shuffles at 512 bits, immediately split them and
@@ -31789,8 +31800,8 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
 
   BuildMI(testMBB, DL,
           TII->get(TFI.Uses64BitFramePtr ? X86::CMP64rr : X86::CMP32rr))
-      .addReg(physSPReg)
-      .addReg(FinalStackPtr);
+      .addReg(FinalStackPtr)
+      .addReg(physSPReg);
 
   BuildMI(testMBB, DL, TII->get(X86::JCC_1))
       .addMBB(tailMBB)

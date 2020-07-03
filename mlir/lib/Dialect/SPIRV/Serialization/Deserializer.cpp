@@ -400,7 +400,8 @@ private:
   /// Method to deserialize an operation in the SPIR-V dialect that is a mirror
   /// of an instruction in the SPIR-V spec. This is auto generated if hasOpcode
   /// == 1 and autogenSerialization == 1 in ODS.
-  template <typename OpTy> LogicalResult processOp(ArrayRef<uint32_t> words) {
+  template <typename OpTy>
+  LogicalResult processOp(ArrayRef<uint32_t> words) {
     return emitError(unknownLoc, "unsupported deserialization for ")
            << OpTy::getOperationName() << " op";
   }
@@ -1566,8 +1567,8 @@ LogicalResult Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
     return success();
   }
 
-    return emitError(unknownLoc, "unsupported OpConstantNull type: ")
-           << resultType;
+  return emitError(unknownLoc, "unsupported OpConstantNull type: ")
+         << resultType;
 }
 
 //===----------------------------------------------------------------------===//

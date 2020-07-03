@@ -88,9 +88,7 @@ define amdgpu_ps void @branch(float %arg0, float %arg1) {
 ; GCN-64: s_wqm_b64 [[LIVEWQM1:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM1]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM1]]
-; GCN: s_cbranch_execnz
-; GCN: exp null
-; GCN: image_sample
+; GCN: s_cbranch_execz
 ; GCN: v_add_f32_e32
 ; GCN-32: s_and_b32 exec_lo, exec_lo, [[LIVE]]
 ; GCN-64: s_and_b64 exec, exec, [[LIVE]]
@@ -133,8 +131,7 @@ define amdgpu_ps <4 x float> @wqm_demote_1(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN-64: s_wqm_b64 [[LIVEWQM1:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM1]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM1]]
-; GCN: s_cbranch_execnz
-; GCN: exp null
+; GCN: s_cbranch_execz
 ; GCN: v_add_f32_e32
 ; GCN-32: s_and_b32 exec_lo, exec_lo, [[LIVE]]
 ; GCN-64: s_and_b64 exec, exec, [[LIVE]]
@@ -172,9 +169,7 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN-64-NEXT: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM0]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM0]]
-; GCN: s_cbranch_execnz
-; GCN: exp null
-; GCN: s_endpgm
+; GCN: s_cbranch_execz
 ; GCN: v_add_f32_e32
 ; GCN-32: s_and_b32 exec_lo, exec_lo, [[LIVE]]
 ; GCN-64: s_and_b64 exec, exec, [[LIVE]]
@@ -206,14 +201,13 @@ define amdgpu_ps <4 x float> @wqm_demote_dynamic(<8 x i32> inreg %rsrc, <4 x i32
 ; GCN-64-NEXT: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM0]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM0]]
-; GCN-NOT: s_cbranch_execnz
+; GCN-NOT: s_cbranch_execz
 ; GCN: ; %.continue0
 ; GCN-32: s_wqm_b32 [[LIVEWQM1:s[0-9]+]], [[LIVE]]
 ; GCN-64: s_wqm_b64 [[LIVEWQM1:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM1]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM1]]
-; GCN: s_cbranch_execnz
-; GCN: exp null
+; GCN: s_cbranch_execz
 ; GCN: v_cndmask_b32_e64 [[DST:v[0-9]+]], 1.0, 0, [[LIVE]]
 ; GCN-32: s_and_b32 exec_lo, exec_lo, [[LIVE]]
 ; GCN-64: s_and_b64 exec, exec, [[LIVE]]
@@ -271,18 +265,17 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GCN-64-NEXT: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM0]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM0]]
-; GCN-NOT: s_cbranch_execnz
+; GCN-NOT: s_cbranch_execz
 ; GCN: ; %.continue0.preheader
 ; GCN-32: s_wqm_b32 [[LIVEWQM1:s[0-9]+]], [[LIVE]]
 ; GCN-64: s_wqm_b64 [[LIVEWQM1:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM1]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM1]]
-; GCN: s_cbranch_execnz
-; GCN: exp null
+; GCN: s_cbranch_execz
 ; GCN: ; %.demote1
 ; GCN-32: s_andn2_b32 [[LIVE]], [[LIVE]], exec
 ; GCN-64: s_andn2_b64 [[LIVE]], [[LIVE]], exec
-; GCN-NOT: s_cbranch_execnz
+; GCN-NOT: s_cbranch_execz
 ; GCN: ; %.continue1
 ; GCN-32: s_or_b32 exec_lo
 ; GCN-64: s_or_b64 exec
