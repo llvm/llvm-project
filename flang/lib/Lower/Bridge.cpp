@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -818,8 +819,17 @@ private:
     auto distance = builder->create<mlir::SubIOp>(loc, upperValue, lowerValue);
     auto adjusted =
         builder->create<mlir::AddIOp>(loc, distance, info.stepValue);
-    auto tripCount =
+    mlir::Value tripCount =
         builder->create<mlir::SignedDivIOp>(loc, adjusted, info.stepValue);
+    // Unstructured loop - `--always-execute-loop-body`.
+    if (fir::isAlwaysExecuteLoopBody()) {
+      auto tripCountType = tripCount.getType();
+      mlir::Value zero = builder->createIntegerConstant(loc, tripCountType, 0);
+      auto cond = builder->create<mlir::CmpIOp>(loc, CmpIPredicate::sle,
+                                                tripCount, zero);
+      auto one = builder->createIntegerConstant(loc, tripCountType, 1);
+      tripCount = builder->create<mlir::SelectOp>(loc, cond, one, tripCount);
+    }
     info.tripVariable = builder->createTemporary(loc, info.loopVariableType);
     builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
     builder->create<fir::StoreOp>(loc, lowerValue, info.loopVariable);
