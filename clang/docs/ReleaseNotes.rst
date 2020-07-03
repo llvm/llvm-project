@@ -243,6 +243,34 @@ These are major API changes that have happened since the 10.0.0 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
+- ``RecursiveASTVisitor`` no longer calls separate methods to visit specific
+  operator kinds. Previously, ``RecursiveASTVisitor`` treated unary, binary,
+  and compound assignment operators as if they were subclasses of the
+  corresponding AST node. For example, the binary operator plus was treated as
+  if it was a ``BinAdd`` subclass of the ``BinaryOperator`` class: during AST
+  traversal of a ``BinaryOperator`` AST node that had a ``BO_Add`` opcode,
+  ``RecursiveASTVisitor`` was calling the ``TraverseBinAdd`` method instead of
+  ``TraverseBinaryOperator``. This feature was contributing a non-trivial
+  amount of complexity to the implementation of ``RecursiveASTVisitor``, it was
+  used only in a minor way in Clang, was not tested, and as a result it was
+  buggy. Furthermore, this feature was creating a non-uniformity in the API.
+  Since this feature was not documented, it was quite difficult to figure out
+  how to use ``RecursiveASTVisitor`` to visit operators.
+
+  To update your code to the new uniform API, move the code from separate
+  visitation methods into methods that correspond to the actual AST node and
+  perform case analysis based on the operator opcode as needed:
+
+  * ``TraverseUnary*() => TraverseUnaryOperator()``
+  * ``WalkUpFromUnary*() => WalkUpFromUnaryOperator()``
+  * ``VisitUnary*() => VisiUnaryOperator()``
+  * ``TraverseBin*() => TraverseBinaryOperator()``
+  * ``WalkUpFromBin*() => WalkUpFromBinaryOperator()``
+  * ``VisitBin*() => VisiBinaryOperator()``
+  * ``TraverseBin*Assign() => TraverseCompoundAssignOperator()``
+  * ``WalkUpFromBin*Assign() => WalkUpFromCompoundAssignOperator()``
+  * ``VisitBin*Assign() => VisiCompoundAssignOperator()``
+
 Build System Changes
 --------------------
 
