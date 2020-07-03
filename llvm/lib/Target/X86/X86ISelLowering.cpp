@@ -40195,6 +40195,31 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // If this is "((X & C) == 0) ? Y : Z" and C is a constant mask vector of
+  // single bits, then invert the predicate and swap the select operands.
+  // This can lower using a vector shift bit-hack rather than mask and compare.
+  if (DCI.isBeforeLegalize() && !Subtarget.hasAVX512() &&
+      N->getOpcode() == ISD::VSELECT && Cond.getOpcode() == ISD::SETCC &&
+      Cond.hasOneUse() && CondVT.getVectorElementType() == MVT::i1 &&
+      Cond.getOperand(0).getOpcode() == ISD::AND &&
+      isNullOrNullSplat(Cond.getOperand(1)) &&
+      cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETEQ &&
+      Cond.getOperand(0).getValueType() == VT) {
+    // The 'and' mask must be composed of power-of-2 constants.
+    // TODO: This is limited to splats because the availability/lowering of
+    //       non-uniform shifts and variable blend types is lumpy. Supporting
+    //       arbitrary power-of-2 vector constants will make the code more
+    //       complicated and may require target limitations to ensure that the
+    //       transform is profitable.
+    auto *C = isConstOrConstSplat(Cond.getOperand(0).getOperand(1));
+    if (C && C->getAPIntValue().isPowerOf2()) {
+      // vselect (X & C == 0), LHS, RHS --> vselect (X & C != 0), RHS, LHS
+      SDValue NotCond = DAG.getSetCC(DL, CondVT, Cond.getOperand(0),
+                                     Cond.getOperand(1), ISD::SETNE);
+      return DAG.getSelect(DL, VT, NotCond, RHS, LHS);
+    }
+  }
+
   return SDValue();
 }
 
