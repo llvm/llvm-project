@@ -294,6 +294,7 @@ public:
 };
 } // namespace
 
+bool fir::isAlwaysExecuteLoopBody() { return forceLoopToExecuteOnce; }
 /// Convert FIR's structured control flow ops to CFG ops.  This
 /// conversion enables the `createLowerToCFGPass` to transform these to CFG
 /// form.

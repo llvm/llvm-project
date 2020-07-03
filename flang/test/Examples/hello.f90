@@ -8,8 +8,8 @@
 
 ! RUN: bbc %s -o - | tco | llc --relocation-model=pic --filetype=obj -o %t.o
 ! RUN: %CC -I%S/../.. %S/main.c -c -o %t.main.o
-! RUN: %CC %t.o %t.main.o -L%L -lFortranRuntime -lFortranDecimal -lstdc++ -lm
-! RUN: ./a.out | FileCheck %s
+! RUN: %CC %t.o %t.main.o -L%L -lFortranRuntime -lFortranDecimal -lstdc++ -lm -o hello
+! RUN: ./hello | FileCheck %s
 
 ! CHECK: Hello, World!
   print *, "Hello, World!"

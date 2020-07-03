@@ -1,0 +1,17 @@
+! RUN: bbc --always-execute-loop-body %s -o - | tco | llc --relocation-model=pic --filetype=obj -o %temp.o
+! RUN: %CC -I%S/../.. %S/../Examples/main.c -c -o %t.main.o
+! RUN: %CC %temp.o %t.main.o -L%L -lFortranRuntime -lFortranDecimal -lstdc++ -lm -o loop
+! RUN: ./loop | FileCheck %s
+
+program alwaysexecuteloopbody
+  implicit none
+  integer :: i,j
+  do i=4, 1, 1
+    ! CHECK: In goto loop
+    print *, "In goto loop"
+    return
+  end do
+  ! CHECK-NOT: Should not exec
+  print *, "Should not exec"
+end program
+
