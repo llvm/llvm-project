@@ -458,8 +458,7 @@ define i32 @sel_sext_const_uses(i8 %a, i8 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i8 [[X:%.*]], 15
 ; CHECK-NEXT:    [[A_EXT:%.*]] = sext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[A_EXT]])
-; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[COND]], i8 [[A]], i8 127
-; CHECK-NEXT:    [[R:%.*]] = sext i8 [[NARROW]] to i32
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i32 [[A_EXT]], i32 127
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cond = icmp ugt i8 %x, 15
@@ -474,8 +473,7 @@ define i32 @sel_zext_const_uses(i8 %a, i8 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i8 [[X:%.*]], 15
 ; CHECK-NEXT:    [[A_EXT:%.*]] = zext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[A_EXT]])
-; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[COND]], i8 -1, i8 [[A]]
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[NARROW]] to i32
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i32 255, i32 [[A_EXT]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cond = icmp sgt i8 %x, 15
