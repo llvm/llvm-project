@@ -1,5 +1,6 @@
 func main() {
-  let foo = Foo(i: 42)
+  Int x = 41 // Make sure we use the Swift Standard Library
+  let foo = Foo(i: x)
 }
 
 main()
