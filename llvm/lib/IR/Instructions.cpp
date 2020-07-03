@@ -960,7 +960,8 @@ CleanupReturnInst::CleanupReturnInst(const CleanupReturnInst &CRI)
                   OperandTraits<CleanupReturnInst>::op_end(this) -
                       CRI.getNumOperands(),
                   CRI.getNumOperands()) {
-  setInstructionSubclassData(CRI.getSubclassDataFromInstruction());
+  setSubclassData<Instruction::OpaqueField>(
+      CRI.getSubclassData<Instruction::OpaqueField>());
   Op<0>() = CRI.Op<0>();
   if (CRI.hasUnwindDest())
     Op<1>() = CRI.Op<1>();
@@ -968,7 +969,7 @@ CleanupReturnInst::CleanupReturnInst(const CleanupReturnInst &CRI)
 
 void CleanupReturnInst::init(Value *CleanupPad, BasicBlock *UnwindBB) {
   if (UnwindBB)
-    setInstructionSubclassData(getSubclassDataFromInstruction() | 1);
+    setSubclassData<UnwindDestField>(true);
 
   Op<0>() = CleanupPad;
   if (UnwindBB)
@@ -1072,7 +1073,7 @@ void CatchSwitchInst::init(Value *ParentPad, BasicBlock *UnwindDest,
 
   Op<0>() = ParentPad;
   if (UnwindDest) {
-    setInstructionSubclassData(getSubclassDataFromInstruction() | 1);
+    setSubclassData<UnwindDestField>(true);
     setUnwindDest(UnwindDest);
   }
 }
@@ -1299,9 +1300,7 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
 void AllocaInst::setAlignment(Align Align) {
   assert(Align <= MaximumAlignment &&
          "Alignment is greater than MaximumAlignment!");
-  setInstructionSubclassData((getSubclassDataFromInstruction() & ~31) |
-                             encode(Align));
-  assert(getAlignment() == Align.value() && "Alignment representation error!");
+  setSubclassData<AlignmentField>(encode(Align));
 }
 
 bool AllocaInst::isArrayAllocation() const {
@@ -1397,9 +1396,7 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
 void LoadInst::setAlignment(Align Align) {
   assert(Align <= MaximumAlignment &&
          "Alignment is greater than MaximumAlignment!");
-  setInstructionSubclassData((getSubclassDataFromInstruction() & ~(31 << 1)) |
-                             (encode(Align) << 1));
-  assert(getAlign() == Align && "Alignment representation error!");
+  setSubclassData<AlignmentField>(encode(Align));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1476,9 +1473,7 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
 void StoreInst::setAlignment(Align Alignment) {
   assert(Alignment <= MaximumAlignment &&
          "Alignment is greater than MaximumAlignment!");
-  setInstructionSubclassData((getSubclassDataFromInstruction() & ~(31 << 1)) |
-                             (encode(Alignment) << 1));
-  assert(getAlign() == Alignment && "Alignment representation error!");
+  setSubclassData<AlignmentField>(encode(Alignment));
 }
 
 //===----------------------------------------------------------------------===//

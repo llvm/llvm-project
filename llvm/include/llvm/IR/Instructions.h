@@ -16,6 +16,7 @@
 #define LLVM_IR_INSTRUCTIONS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -58,6 +59,10 @@ class LLVMContext;
 /// an instruction to allocate memory on the stack
 class AllocaInst : public UnaryInstruction {
   Type *AllocatedType;
+
+  using AlignmentField = Bitfield::Element<unsigned, 0, 5>;    // Next bit:5
+  using UsedWithInAllocaField = Bitfield::Element<bool, 5, 1>; // Next bit:6
+  using SwiftErrorField = Bitfield::Element<bool, 6, 1>;       // Next bit:7
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -108,7 +113,7 @@ public:
   /// Return the alignment of the memory that is being allocated by the
   /// instruction.
   Align getAlign() const {
-    return *decodeMaybeAlign(getSubclassDataFromInstruction() & 31);
+    return *decodeMaybeAlign(getSubclassData<AlignmentField>());
   }
   // FIXME: Remove this one transition to Align is over.
   unsigned getAlignment() const { return getAlign().value(); }
@@ -122,25 +127,18 @@ public:
   /// Return true if this alloca is used as an inalloca argument to a call. Such
   /// allocas are never considered static even if they are in the entry block.
   bool isUsedWithInAlloca() const {
-    return getSubclassDataFromInstruction() & 32;
+    return getSubclassData<UsedWithInAllocaField>();
   }
 
   /// Specify whether this alloca is used to represent the arguments to a call.
   void setUsedWithInAlloca(bool V) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~32) |
-                               (V ? 32 : 0));
+    setSubclassData<UsedWithInAllocaField>(V);
   }
 
   /// Return true if this alloca is used as a swifterror argument to a call.
-  bool isSwiftError() const {
-    return getSubclassDataFromInstruction() & 64;
-  }
-
+  bool isSwiftError() const { return getSubclassData<SwiftErrorField>(); }
   /// Specify whether this alloca is used to represent a swifterror.
-  void setSwiftError(bool V) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~64) |
-                               (V ? 64 : 0));
-  }
+  void setSwiftError(bool V) { setSubclassData<SwiftErrorField>(V); }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -153,8 +151,9 @@ public:
 private:
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 };
 
@@ -165,6 +164,11 @@ private:
 /// An instruction for reading from memory. This uses the SubclassData field in
 /// Value to store whether or not the load is volatile.
 class LoadInst : public UnaryInstruction {
+  using VolatileField = Bitfield::Element<bool, 0, 1>;      // Next bit:1
+  using AlignmentField = Bitfield::Element<unsigned, 1, 6>; // Next bit:7
+  using OrderingField = Bitfield::Element<AtomicOrdering, 7, 3,
+                                          AtomicOrdering::LAST>; // Next bit:10
+
   void AssertOK();
 
 protected:
@@ -194,13 +198,10 @@ public:
            BasicBlock *InsertAtEnd);
 
   /// Return true if this is a load from a volatile memory location.
-  bool isVolatile() const { return getSubclassDataFromInstruction() & 1; }
+  bool isVolatile() const { return getSubclassData<VolatileField>(); }
 
   /// Specify whether this is a volatile load or not.
-  void setVolatile(bool V) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
-                               (V ? 1 : 0));
-  }
+  void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
 
   /// Return the alignment of the access that is being performed.
   /// FIXME: Remove this function once transition to Align is over.
@@ -209,21 +210,19 @@ public:
 
   /// Return the alignment of the access that is being performed.
   Align getAlign() const {
-    return *decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31);
+    return *decodeMaybeAlign(getSubclassData<AlignmentField>());
   }
 
   void setAlignment(Align Alignment);
 
   /// Returns the ordering constraint of this load instruction.
   AtomicOrdering getOrdering() const {
-    return AtomicOrdering((getSubclassDataFromInstruction() >> 7) & 7);
+    return getSubclassData<OrderingField>();
   }
-
   /// Sets the ordering constraint of this load instruction.  May not be Release
   /// or AcquireRelease.
   void setOrdering(AtomicOrdering Ordering) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~(7 << 7)) |
-                               ((unsigned)Ordering << 7));
+    setSubclassData<OrderingField>(Ordering);
   }
 
   /// Returns the synchronization scope ID of this load instruction.
@@ -273,8 +272,9 @@ public:
 private:
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 
   /// The synchronization scope ID of this load instruction.  Not quite enough
@@ -289,6 +289,11 @@ private:
 
 /// An instruction for storing to memory.
 class StoreInst : public Instruction {
+  using VolatileField = Bitfield::Element<bool, 0, 1>;      // Next bit:1
+  using AlignmentField = Bitfield::Element<unsigned, 1, 6>; // Next bit:7
+  using OrderingField = Bitfield::Element<AtomicOrdering, 7, 3,
+                                          AtomicOrdering::LAST>; // Next bit:10
+
   void AssertOK();
 
 protected:
@@ -318,13 +323,10 @@ public:
   }
 
   /// Return true if this is a store to a volatile memory location.
-  bool isVolatile() const { return getSubclassDataFromInstruction() & 1; }
+  bool isVolatile() const { return getSubclassData<VolatileField>(); }
 
   /// Specify whether this is a volatile store or not.
-  void setVolatile(bool V) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
-                               (V ? 1 : 0));
-  }
+  void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -335,21 +337,20 @@ public:
   unsigned getAlignment() const { return getAlign().value(); }
 
   Align getAlign() const {
-    return *decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31);
+    return *decodeMaybeAlign(getSubclassData<AlignmentField>());
   }
 
   void setAlignment(Align Alignment);
 
   /// Returns the ordering constraint of this store instruction.
   AtomicOrdering getOrdering() const {
-    return AtomicOrdering((getSubclassDataFromInstruction() >> 7) & 7);
+    return getSubclassData<OrderingField>();
   }
 
   /// Sets the ordering constraint of this store instruction.  May not be
   /// Acquire or AcquireRelease.
   void setOrdering(AtomicOrdering Ordering) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~(7 << 7)) |
-                               ((unsigned)Ordering << 7));
+    setSubclassData<OrderingField>(Ordering);
   }
 
   /// Returns the synchronization scope ID of this store instruction.
@@ -402,8 +403,9 @@ public:
 private:
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 
   /// The synchronization scope ID of this store instruction.  Not quite enough
@@ -424,6 +426,9 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(StoreInst, Value)
 
 /// An instruction for ordering other memory operations.
 class FenceInst : public Instruction {
+  using OrderingField = Bitfield::Element<AtomicOrdering, 1, 3,
+                                          AtomicOrdering::LAST>; // Next bit:4
+
   void Init(AtomicOrdering Ordering, SyncScope::ID SSID);
 
 protected:
@@ -448,14 +453,13 @@ public:
 
   /// Returns the ordering constraint of this fence instruction.
   AtomicOrdering getOrdering() const {
-    return AtomicOrdering(getSubclassDataFromInstruction() >> 1);
+    return getSubclassData<OrderingField>();
   }
 
   /// Sets the ordering constraint of this fence instruction.  May only be
   /// Acquire, Release, AcquireRelease, or SequentiallyConsistent.
   void setOrdering(AtomicOrdering Ordering) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & 1) |
-                               ((unsigned)Ordering << 1));
+    setSubclassData<OrderingField>(Ordering);
   }
 
   /// Returns the synchronization scope ID of this fence instruction.
@@ -479,8 +483,9 @@ public:
 private:
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 
   /// The synchronization scope ID of this fence instruction.  Not quite enough
@@ -525,6 +530,16 @@ public:
     return User::operator new(s, 3);
   }
 
+  // FIXME: Reuse bit 1 that was used by `syncscope.`
+  using VolatileField = Bitfield::Element<bool, 0, 1>; // Next bit:1
+  using SuccessOrderingField =
+      Bitfield::Element<AtomicOrdering, 2, 3,
+                        AtomicOrdering::LAST>; // Next bit:5
+  using FailureOrderingField =
+      Bitfield::Element<AtomicOrdering, 5, 3,
+                        AtomicOrdering::LAST>;     // Next bit:8
+  using WeakField = Bitfield::Element<bool, 8, 1>; // Next bit:9
+
   /// Always returns the natural type alignment.
   /// FIXME: Introduce a proper alignment
   /// https://bugs.llvm.org/show_bug.cgi?id=27168
@@ -533,54 +548,42 @@ public:
   /// Return true if this is a cmpxchg from a volatile memory
   /// location.
   ///
-  bool isVolatile() const {
-    return getSubclassDataFromInstruction() & 1;
-  }
+  bool isVolatile() const { return getSubclassData<VolatileField>(); }
 
   /// Specify whether this is a volatile cmpxchg.
   ///
-  void setVolatile(bool V) {
-     setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
-                                (unsigned)V);
-  }
+  void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
 
   /// Return true if this cmpxchg may spuriously fail.
-  bool isWeak() const {
-    return getSubclassDataFromInstruction() & 0x100;
-  }
+  bool isWeak() const { return getSubclassData<WeakField>(); }
 
-  void setWeak(bool IsWeak) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~0x100) |
-                               (IsWeak << 8));
-  }
+  void setWeak(bool IsWeak) { setSubclassData<WeakField>(IsWeak); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   /// Returns the success ordering constraint of this cmpxchg instruction.
   AtomicOrdering getSuccessOrdering() const {
-    return AtomicOrdering((getSubclassDataFromInstruction() >> 2) & 7);
+    return getSubclassData<SuccessOrderingField>();
   }
 
   /// Sets the success ordering constraint of this cmpxchg instruction.
   void setSuccessOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "CmpXchg instructions can only be atomic.");
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~0x1c) |
-                               ((unsigned)Ordering << 2));
+    setSubclassData<SuccessOrderingField>(Ordering);
   }
 
   /// Returns the failure ordering constraint of this cmpxchg instruction.
   AtomicOrdering getFailureOrdering() const {
-    return AtomicOrdering((getSubclassDataFromInstruction() >> 5) & 7);
+    return getSubclassData<FailureOrderingField>();
   }
 
   /// Sets the failure ordering constraint of this cmpxchg instruction.
   void setFailureOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "CmpXchg instructions can only be atomic.");
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~0xe0) |
-                               ((unsigned)Ordering << 5));
+    setSubclassData<FailureOrderingField>(Ordering);
   }
 
   /// Returns the synchronization scope ID of this cmpxchg instruction.
@@ -642,8 +645,9 @@ public:
 private:
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 
   /// The synchronization scope ID of this cmpxchg instruction.  Not quite
@@ -679,7 +683,7 @@ public:
   /// the descriptions, 'p' is the pointer to the instruction's memory location,
   /// 'old' is the initial value of *p, and 'v' is the other value passed to the
   /// instruction.  These instructions always return 'old'.
-  enum BinOp {
+  enum BinOp : unsigned {
     /// *p = v
     Xchg,
     /// *p = old + v
@@ -726,9 +730,15 @@ public:
     return User::operator new(s, 2);
   }
 
-  BinOp getOperation() const {
-    return static_cast<BinOp>(getSubclassDataFromInstruction() >> 5);
-  }
+  // FIXME: Reuse bit 1 that was used by `syncscope.`
+  using VolatileField = Bitfield::Element<bool, 0, 1>; // Next bit:1
+  using AtomicOrderingField =
+      Bitfield::Element<AtomicOrdering, 2, 3,
+                        AtomicOrdering::LAST>; // Next bit:5
+  using OperationField = Bitfield::Element<BinOp, 5, 4,
+                                           BinOp::LAST_BINOP>; // Next bit:9
+
+  BinOp getOperation() const { return getSubclassData<OperationField>(); }
 
   static StringRef getOperationName(BinOp Op);
 
@@ -743,9 +753,7 @@ public:
   }
 
   void setOperation(BinOp Operation) {
-    unsigned short SubclassData = getSubclassDataFromInstruction();
-    setInstructionSubclassData((SubclassData & 31) |
-                               (Operation << 5));
+    setSubclassData<OperationField>(Operation);
   }
 
   /// Always returns the natural type alignment.
@@ -755,31 +763,25 @@ public:
 
   /// Return true if this is a RMW on a volatile memory location.
   ///
-  bool isVolatile() const {
-    return getSubclassDataFromInstruction() & 1;
-  }
+  bool isVolatile() const { return getSubclassData<VolatileField>(); }
 
   /// Specify whether this is a volatile RMW or not.
   ///
-  void setVolatile(bool V) {
-     setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
-                                (unsigned)V);
-  }
+  void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   /// Returns the ordering constraint of this rmw instruction.
   AtomicOrdering getOrdering() const {
-    return AtomicOrdering((getSubclassDataFromInstruction() >> 2) & 7);
+    return getSubclassData<AtomicOrderingField>();
   }
 
   /// Sets the ordering constraint of this rmw instruction.
   void setOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "atomicrmw instructions can only be atomic.");
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~(7 << 2)) |
-                               ((unsigned)Ordering << 2));
+    setSubclassData<AtomicOrderingField>(Ordering);
   }
 
   /// Returns the synchronization scope ID of this rmw instruction.
@@ -822,8 +824,9 @@ private:
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 
   /// The synchronization scope ID of this rmw instruction.  Not quite enough
@@ -1552,37 +1555,35 @@ public:
                                  BasicBlock *InsertAtEnd);
 
   // Note that 'musttail' implies 'tail'.
-  enum TailCallKind {
+  enum TailCallKind : unsigned {
     TCK_None = 0,
     TCK_Tail = 1,
     TCK_MustTail = 2,
-    TCK_NoTail = 3
+    TCK_NoTail = 3,
+    TCK_LAST = TCK_NoTail
   };
+
+  using TailCallKindField = Bitfield::Element<TailCallKind, 0, 2, TCK_LAST>;
+
   TailCallKind getTailCallKind() const {
-    return TailCallKind(getSubclassDataFromInstruction() & 3);
+    return getSubclassData<TailCallKindField>();
   }
 
   bool isTailCall() const {
-    unsigned Kind = getSubclassDataFromInstruction() & 3;
+    TailCallKind Kind = getTailCallKind();
     return Kind == TCK_Tail || Kind == TCK_MustTail;
   }
 
-  bool isMustTailCall() const {
-    return (getSubclassDataFromInstruction() & 3) == TCK_MustTail;
-  }
+  bool isMustTailCall() const { return getTailCallKind() == TCK_MustTail; }
 
-  bool isNoTailCall() const {
-    return (getSubclassDataFromInstruction() & 3) == TCK_NoTail;
-  }
-
-  void setTailCall(bool isTC = true) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~3) |
-                               unsigned(isTC ? TCK_Tail : TCK_None));
-  }
+  bool isNoTailCall() const { return getTailCallKind() == TCK_NoTail; }
 
   void setTailCallKind(TailCallKind TCK) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~3) |
-                               unsigned(TCK));
+    setSubclassData<TailCallKindField>(TCK);
+  }
+
+  void setTailCall(bool IsTc = true) {
+    setTailCallKind(IsTc ? TCK_Tail : TCK_None);
   }
 
   /// Return true if the call can return twice
@@ -1605,8 +1606,9 @@ public:
 private:
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 };
 
@@ -2725,6 +2727,8 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PHINode, Value)
 /// cleanup.
 ///
 class LandingPadInst : public Instruction {
+  using CleanupField = Bitfield::Element<bool, 0, 1>;
+
   /// The number of operands actually allocated.  NumOperands is
   /// the number actually in use.
   unsigned ReservedSpace;
@@ -2769,13 +2773,10 @@ public:
   /// Return 'true' if this landingpad instruction is a
   /// cleanup. I.e., it should be run when unwinding even if its landing pad
   /// doesn't catch the exception.
-  bool isCleanup() const { return getSubclassDataFromInstruction() & 1; }
+  bool isCleanup() const { return getSubclassData<CleanupField>(); }
 
   /// Indicate that this landingpad instruction is a cleanup.
-  void setCleanup(bool V) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
-                               (V ? 1 : 0));
-  }
+  void setCleanup(bool V) { setSubclassData<CleanupField>(V); }
 
   /// Add a catch or filter clause to the landing pad.
   void addClause(Constant *ClauseVal);
@@ -3762,11 +3763,11 @@ public:
   }
 
 private:
-
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 };
 
@@ -4002,11 +4003,11 @@ public:
   }
 
 private:
-
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 };
 
@@ -4097,6 +4098,8 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ResumeInst, Value)
 //                         CatchSwitchInst Class
 //===----------------------------------------------------------------------===//
 class CatchSwitchInst : public Instruction {
+  using UnwindDestField = Bitfield::Element<unsigned, 0, 1>; // Next bit:1
+
   /// The number of operands actually allocated.  NumOperands is
   /// the number actually in use.
   unsigned ReservedSpace;
@@ -4158,7 +4161,7 @@ public:
   void setParentPad(Value *ParentPad) { setOperand(0, ParentPad); }
 
   // Accessor Methods for CatchSwitch stmt
-  bool hasUnwindDest() const { return getSubclassDataFromInstruction() & 1; }
+  bool hasUnwindDest() const { return getSubclassData<UnwindDestField>(); }
   bool unwindsToCaller() const { return !hasUnwindDest(); }
   BasicBlock *getUnwindDest() const {
     if (hasUnwindDest())
@@ -4444,6 +4447,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CatchReturnInst, Value)
 //===----------------------------------------------------------------------===//
 
 class CleanupReturnInst : public Instruction {
+  using UnwindDestField = Bitfield::Element<unsigned, 0, 1>; // Next bit:1
 private:
   CleanupReturnInst(const CleanupReturnInst &RI);
   CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB, unsigned Values,
@@ -4484,7 +4488,7 @@ public:
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  bool hasUnwindDest() const { return getSubclassDataFromInstruction() & 1; }
+  bool hasUnwindDest() const { return getSubclassData<UnwindDestField>(); }
   bool unwindsToCaller() const { return !hasUnwindDest(); }
 
   /// Convenience accessor.
@@ -4528,8 +4532,9 @@ private:
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
-  void setInstructionSubclassData(unsigned short D) {
-    Instruction::setInstructionSubclassData(D);
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
   }
 };
 
