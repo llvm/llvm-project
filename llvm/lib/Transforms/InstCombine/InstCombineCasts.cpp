@@ -715,6 +715,25 @@ Instruction *InstCombiner::visitTrunc(TruncInst &Trunc) {
     return replaceInstUsesWith(Trunc, Res);
   }
 
+  // For integer types, check if we can shorten the entire input expression to
+  // DestWidth * 2, which won't allow removing the truncate, but reducing the
+  // width may enable further optimizations, e.g. allowing for larger
+  // vectorization factors.
+  if (auto *DestITy = dyn_cast<IntegerType>(DestTy)) {
+    if (DestWidth * 2 < SrcWidth) {
+      auto *NewDestTy = DestITy->getExtendedType();
+      if (shouldChangeType(SrcTy, NewDestTy) &&
+          canEvaluateTruncated(Src, NewDestTy, *this, &Trunc)) {
+        LLVM_DEBUG(
+            dbgs() << "ICE: EvaluateInDifferentType converting expression type"
+                      " to reduce the width of operand of"
+                   << Trunc << '\n');
+        Value *Res = EvaluateInDifferentType(Src, NewDestTy, false);
+        return new TruncInst(Res, DestTy);
+      }
+    }
+  }
+
   // Test if the trunc is the user of a select which is part of a
   // minimum or maximum operation. If so, don't do any more simplification.
   // Even simplifying demanded bits can break the canonical form of a
