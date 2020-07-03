@@ -48,6 +48,9 @@ SetVector<StringRef> DWARFYAML::Data::getUsedSectionNames() const {
 namespace yaml {
 
 void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
+  void *OldContext = IO.getContext();
+  DWARFYAML::DWARFContext DWARFCtx;
+  IO.setContext(&DWARFCtx);
   IO.mapOptional("debug_str", DWARF.DebugStrings);
   IO.mapOptional("debug_abbrev", DWARF.AbbrevDecls);
   if (!DWARF.ARanges.empty() || !IO.outputting())
@@ -56,11 +59,13 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
     IO.mapOptional("debug_ranges", DWARF.DebugRanges);
   IO.mapOptional("debug_pubnames", DWARF.PubNames);
   IO.mapOptional("debug_pubtypes", DWARF.PubTypes);
+  DWARFCtx.IsGNUPubSec = true;
   IO.mapOptional("debug_gnu_pubnames", DWARF.GNUPubNames);
   IO.mapOptional("debug_gnu_pubtypes", DWARF.GNUPubTypes);
   IO.mapOptional("debug_info", DWARF.CompileUnits);
   IO.mapOptional("debug_line", DWARF.DebugLines);
   IO.mapOptional("debug_addr", DWARF.DebugAddr);
+  IO.setContext(OldContext);
 }
 
 void MappingTraits<DWARFYAML::Abbrev>::mapping(IO &IO,
@@ -112,23 +117,18 @@ void MappingTraits<DWARFYAML::Ranges>::mapping(IO &IO,
 void MappingTraits<DWARFYAML::PubEntry>::mapping(IO &IO,
                                                  DWARFYAML::PubEntry &Entry) {
   IO.mapRequired("DieOffset", Entry.DieOffset);
-  if (reinterpret_cast<DWARFYAML::PubSection *>(IO.getContext())->IsGNUStyle)
+  if (static_cast<DWARFYAML::DWARFContext *>(IO.getContext())->IsGNUPubSec)
     IO.mapRequired("Descriptor", Entry.Descriptor);
   IO.mapRequired("Name", Entry.Name);
 }
 
 void MappingTraits<DWARFYAML::PubSection>::mapping(
     IO &IO, DWARFYAML::PubSection &Section) {
-  auto OldContext = IO.getContext();
-  IO.setContext(&Section);
-
   IO.mapRequired("Length", Section.Length);
   IO.mapRequired("Version", Section.Version);
   IO.mapRequired("UnitOffset", Section.UnitOffset);
   IO.mapRequired("UnitSize", Section.UnitSize);
   IO.mapRequired("Entries", Section.Entries);
-
-  IO.setContext(OldContext);
 }
 
 void MappingTraits<DWARFYAML::Unit>::mapping(IO &IO, DWARFYAML::Unit &Unit) {

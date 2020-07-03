@@ -122,7 +122,7 @@ static DWARFYAML::PubSection dumpPubSection(const DWARFContext &DCtx,
                                             bool IsGNUStyle) {
   DWARFDataExtractor PubSectionData(DCtx.getDWARFObj(), Section,
                                     DCtx.isLittleEndian(), 0);
-  DWARFYAML::PubSection Y(IsGNUStyle);
+  DWARFYAML::PubSection Y;
   uint64_t Offset = 0;
   dumpInitialLength(PubSectionData, Offset, Y.Length);
   Y.Version = PubSectionData.getU16(&Offset);

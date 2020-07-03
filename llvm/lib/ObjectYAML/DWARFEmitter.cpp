@@ -188,14 +188,14 @@ Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
 Error DWARFYAML::emitPubSection(raw_ostream &OS,
                                 const DWARFYAML::PubSection &Sect,
-                                bool IsLittleEndian) {
+                                bool IsLittleEndian, bool IsGNUPubSec) {
   writeInitialLength(Sect.Length, OS, IsLittleEndian);
   writeInteger((uint16_t)Sect.Version, OS, IsLittleEndian);
   writeInteger((uint32_t)Sect.UnitOffset, OS, IsLittleEndian);
   writeInteger((uint32_t)Sect.UnitSize, OS, IsLittleEndian);
   for (auto Entry : Sect.Entries) {
     writeInteger((uint32_t)Entry.DieOffset, OS, IsLittleEndian);
-    if (Sect.IsGNUStyle)
+    if (IsGNUPubSec)
       writeInteger((uint8_t)Entry.Descriptor, OS, IsLittleEndian);
     OS.write(Entry.Name.data(), Entry.Name.size());
     OS.write('\0');

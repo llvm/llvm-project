@@ -1460,16 +1460,17 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
   //   %d = ashr i32 %a, 30
   Value *A = nullptr;
   // TODO: Eventually this could be subsumed by EvaluateInDifferentType.
-  ConstantInt *BA = nullptr, *CA = nullptr;
-  if (match(Src, m_AShr(m_Shl(m_Trunc(m_Value(A)), m_ConstantInt(BA)),
-                        m_ConstantInt(CA))) &&
+  Constant *BA = nullptr, *CA = nullptr;
+  if (match(Src, m_AShr(m_Shl(m_Trunc(m_Value(A)), m_Constant(BA)),
+                        m_Constant(CA))) &&
       BA == CA && A->getType() == CI.getType()) {
     unsigned MidSize = Src->getType()->getScalarSizeInBits();
     unsigned SrcDstSize = CI.getType()->getScalarSizeInBits();
-    unsigned ShAmt = CA->getZExtValue()+SrcDstSize-MidSize;
-    Constant *ShAmtV = ConstantInt::get(CI.getType(), ShAmt);
-    A = Builder.CreateShl(A, ShAmtV, CI.getName());
-    return BinaryOperator::CreateAShr(A, ShAmtV);
+    Constant *SizeDiff = ConstantInt::get(CA->getType(), SrcDstSize - MidSize);
+    Constant *ShAmt = ConstantExpr::getAdd(CA, SizeDiff);
+    Constant *ShAmtExt = ConstantExpr::getSExt(ShAmt, CI.getType());
+    A = Builder.CreateShl(A, ShAmtExt, CI.getName());
+    return BinaryOperator::CreateAShr(A, ShAmtExt);
   }
 
   return nullptr;
