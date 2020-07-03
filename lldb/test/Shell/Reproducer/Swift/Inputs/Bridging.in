@@ -1,4 +1,4 @@
-breakpoint set -f Bridging.swift -l 3
+breakpoint set -f Bridging.swift -l 2
 run
 bt
 p let $bar = Foo(i: 95126)
