@@ -1674,12 +1674,11 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "min-leg
 ; CHECK-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm2, %ymm3
 ; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; CHECK-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
-; CHECK-NEXT:    vpsrlw $7, %ymm0, %ymm3
-; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm3, %ymm3
-; CHECK-NEXT:    vpor %ymm3, %ymm2, %ymm2
+; CHECK-NEXT:    vpsrlw $7, %ymm0, %ymm2
+; CHECK-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
+; CHECK-NEXT:    vpternlogq $248, {{.*}}(%rip), %ymm2, %ymm3
 ; CHECK-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %b8 = sub <32 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %b
   %shl = shl <32 x i8> %a, %b
@@ -1695,19 +1694,18 @@ define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "mi
 ; CHECK-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
 ; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpsllw %xmm2, %ymm0, %ymm3
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm4 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; CHECK-NEXT:    vpsubb %xmm1, %xmm4, %xmm1
 ; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vpsllw %xmm2, %xmm4, %xmm2
 ; CHECK-NEXT:    vpbroadcastb %xmm2, %ymm2
-; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm2
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; CHECK-NEXT:    vpsubb %xmm1, %xmm3, %xmm1
 ; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpsrlw %xmm1, %xmm4, %xmm1
-; CHECK-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
-; CHECK-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    vpsrlw %xmm1, %ymm0, %ymm5
+; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm2
+; CHECK-NEXT:    vpsrlw %xmm1, %xmm4, %xmm0
+; CHECK-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastb %xmm0, %ymm0
+; CHECK-NEXT:    vpternlogq $236, %ymm5, %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %splat = shufflevector <32 x i8> %b, <32 x i8> undef, <32 x i32> zeroinitializer
   %splat8 = sub <32 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %splat
@@ -1788,10 +1786,12 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-v
 define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: splatconstant_rotate_mask_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm2
+; CHECK-NEXT:    vpand %ymm1, %ymm2, %ymm2
 ; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
-; CHECK-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vpandn %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogq $168, {{.*}}(%rip), %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %lshr = lshr <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
