@@ -2741,31 +2741,21 @@ void DWARFASTParserClang::ParseSingleMember(
 
           if (TypeSystemClang::IsCXXClassType(member_clang_type) &&
               !member_clang_type.GetCompleteType()) {
-            if (die.GetCU()->GetProducer() == eProducerClang)
-              module_sp->ReportError(
-                  "DWARF DIE at 0x%8.8x (class %s) has a member variable "
-                  "0x%8.8x (%s) whose type is a forward declaration, not a "
-                  "complete definition.\nTry compiling the source file "
-                  "with -fstandalone-debug",
-                  parent_die.GetOffset(), parent_die.GetName(), die.GetOffset(),
-                  name);
-            else
-              module_sp->ReportError(
-                  "DWARF DIE at 0x%8.8x (class %s) has a member variable "
-                  "0x%8.8x (%s) whose type is a forward declaration, not a "
-                  "complete definition.\nPlease file a bug against the "
-                  "compiler and include the preprocessed output for %s",
-                  parent_die.GetOffset(), parent_die.GetName(), die.GetOffset(),
-                  name, GetUnitName(parent_die).c_str());
-            // We have no choice other than to pretend that the member
-            // class is complete. If we don't do this, clang will crash
-            // when trying to layout the class. Since we provide layout
-            // assistance, all ivars in this class and other classes will
-            // be fine, this is the best we can do short of crashing.
+            // Mark the class as complete, ut we make a note of the fact that
+            // this class is not _really_ complete so we can later search for a
+            // definition in a different module.
+            // Since we provide layout assistance, all ivars in this class and
+            // other classes will be fine even if we are not able to find the
+            // definition elsewhere.
             if (TypeSystemClang::StartTagDeclarationDefinition(
                     member_clang_type)) {
               TypeSystemClang::CompleteTagDeclarationDefinition(
                   member_clang_type);
+              const auto *td = TypeSystemClang::GetQualType(
+                                   member_clang_type.GetOpaqueQualType())
+                                   .getTypePtr()
+                                   ->getAsTagDecl();
+              m_ast.GetMetadata(td)->SetIsForcefullyCompleted();
             } else {
               module_sp->ReportError(
                   "DWARF DIE at 0x%8.8x (class %s) has a member variable "
