@@ -13,22 +13,19 @@ define void @test(i64* %ptr, i64* noalias %res) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[CALL_I_I:%.*]] = call i32* @get_ptr()
-; CHECK-NEXT:    [[L_0_0:%.*]] = load i32, i32* [[CALL_I_I]], align 2
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i32, i32* [[CALL_I_I]], i32 2
-; CHECK-NEXT:    [[L_1_0:%.*]] = load i32, i32* [[GEP_1]], align 2
-; CHECK-NEXT:    [[EXT_0_0:%.*]] = zext i32 [[L_0_0]] to i64
-; CHECK-NEXT:    [[EXT_1_0:%.*]] = zext i32 [[L_1_0]] to i64
-; CHECK-NEXT:    [[SUB_1:%.*]] = sub nsw i64 [[EXT_0_0]], [[EXT_1_0]]
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i32, i32* [[CALL_I_I]], i32 1
-; CHECK-NEXT:    [[L_0_1:%.*]] = load i32, i32* [[GEP_2]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[CALL_I_I]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 2
 ; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i32, i32* [[CALL_I_I]], i32 3
-; CHECK-NEXT:    [[L_1_1:%.*]] = load i32, i32* [[GEP_3]], align 2
-; CHECK-NEXT:    [[EXT_0_1:%.*]] = zext i32 [[L_0_1]] to i64
-; CHECK-NEXT:    [[EXT_1_1:%.*]] = zext i32 [[L_1_1]] to i64
-; CHECK-NEXT:    [[SUB_2:%.*]] = sub nsw i64 [[EXT_0_1]], [[EXT_1_1]]
-; CHECK-NEXT:    store i64 [[SUB_1]], i64* [[RES:%.*]], align 8
-; CHECK-NEXT:    [[RES_1:%.*]] = getelementptr i64, i64* [[RES]], i64 1
-; CHECK-NEXT:    store i64 [[SUB_2]], i64* [[RES_1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[GEP_1]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, <2 x i32>* [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <2 x i64> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[RES_1:%.*]] = getelementptr i64, i64* [[RES:%.*]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64* [[RES]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP6]], <2 x i64>* [[TMP7]], align 8
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
