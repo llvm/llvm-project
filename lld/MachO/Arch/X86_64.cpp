@@ -34,7 +34,8 @@ struct X86_64 : TargetInfo {
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                             uint64_t entryAddr) const override;
 
-  void prepareSymbolRelocation(lld::macho::Symbol &, uint8_t type) override;
+  void prepareSymbolRelocation(lld::macho::Symbol &, const InputSection *,
+                               const Reloc &) override;
   uint64_t getSymbolVA(const lld::macho::Symbol &, uint8_t type) const override;
 };
 
@@ -208,8 +209,9 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
                    in.stubHelper->addr);
 }
 
-void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym, uint8_t type) {
-  switch (type) {
+void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym,
+                                     const InputSection *isec, const Reloc &r) {
+  switch (r.type) {
   case X86_64_RELOC_GOT_LOAD:
     // TODO: implement mov -> lea relaxation for non-dynamic symbols
   case X86_64_RELOC_GOT:
@@ -220,7 +222,17 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym, uint8_t type) {
       in.stubs->addEntry(*dysym);
     break;
   }
-  case X86_64_RELOC_UNSIGNED:
+  case X86_64_RELOC_UNSIGNED: {
+    if (auto *dysym = dyn_cast<DylibSymbol>(&sym)) {
+      if (r.length != 3) {
+        error("X86_64_RELOC_UNSIGNED referencing the dynamic symbol " +
+              dysym->getName() + " must have r_length = 3");
+        return;
+      }
+      in.binding->addEntry(dysym, isec, r.offset, r.addend);
+    }
+    break;
+  }
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:
   case X86_64_RELOC_SIGNED_2:
@@ -228,7 +240,7 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym, uint8_t type) {
     break;
   case X86_64_RELOC_SUBTRACTOR:
   case X86_64_RELOC_TLV:
-    fatal("TODO: handle relocation type " + std::to_string(type));
+    fatal("TODO: handle relocation type " + std::to_string(r.type));
     break;
   default:
     llvm_unreachable("unexpected relocation type");
