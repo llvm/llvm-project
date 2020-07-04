@@ -5588,6 +5588,36 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask) {
   return canWidenShuffleElements(Mask, WidenedMask);
 }
 
+// Attempt to narrow/widen shuffle mask until it matches the target number of
+// elements.
+static bool scaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts,
+                                 SmallVectorImpl<int> &ScaledMask) {
+  unsigned NumSrcElts = Mask.size();
+  assert(((NumSrcElts % NumDstElts) == 0 || (NumDstElts % NumSrcElts) == 0) &&
+         "Illegal shuffle scale factor");
+
+  // Narrowing is guaranteed to work.
+  if (NumDstElts >= NumSrcElts) {
+    int Scale = NumDstElts / NumSrcElts;
+    llvm::narrowShuffleMaskElts(Scale, Mask, ScaledMask);
+    return true;
+  }
+
+  // We have to repeat the widening until we reach the target size, but we can
+  // split out the first widening as it sets up ScaledMask for us.
+  if (canWidenShuffleElements(Mask, ScaledMask)) {
+    while (ScaledMask.size() > NumDstElts) {
+      SmallVector<int, 16> WidenedMask;
+      if (!canWidenShuffleElements(ScaledMask, WidenedMask))
+        return false;
+      ScaledMask = std::move(WidenedMask);
+    }
+    return true;
+  }
+
+  return false;
+}
+
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
 bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
@@ -41763,6 +41793,7 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  unsigned NumDstElts = VT.getVectorNumElements();
   unsigned DstBitsPerElt = VT.getScalarSizeInBits();
   unsigned SrcBitsPerElt = 2 * DstBitsPerElt;
   assert(N0.getScalarValueSizeInBits() == SrcBitsPerElt &&
@@ -41779,7 +41810,6 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
       getTargetConstantBitsFromNode(N0, SrcBitsPerElt, UndefElts0, EltBits0) &&
       getTargetConstantBitsFromNode(N1, SrcBitsPerElt, UndefElts1, EltBits1)) {
     unsigned NumLanes = VT.getSizeInBits() / 128;
-    unsigned NumDstElts = VT.getVectorNumElements();
     unsigned NumSrcElts = NumDstElts / 2;
     unsigned NumDstEltsPerLane = NumDstElts / NumLanes;
     unsigned NumSrcEltsPerLane = NumSrcElts / NumLanes;
@@ -41824,6 +41854,37 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
     }
 
     return getConstVector(Bits, Undefs, VT.getSimpleVT(), DAG, SDLoc(N));
+  }
+
+  // Attempt to fold PACK(LOSUBVECTOR(SHUFFLE(X)),HISUBVECTOR(SHUFFLE(X)))
+  // to SHUFFLE(PACK(LOSUBVECTOR(X),HISUBVECTOR(X))), this is mainly for
+  // truncation trees that help us avoid lane crossing shuffles.
+  // TODO: There's a lot more we can do for PACK/HADD style shuffle combines.
+  if (N0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      N0.getConstantOperandAPInt(1) == 0 &&
+      N1.getConstantOperandAPInt(1) == (NumDstElts / 2) &&
+      N0.getOperand(0) == N1.getOperand(0) && VT.is128BitVector() &&
+      N0.getOperand(0).getValueType().is256BitVector()) {
+    // TODO - support target/faux shuffles.
+    SDValue Vec = peekThroughBitcasts(N0.getOperand(0));
+    if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(Vec)) {
+      // To keep the PACK LHS/RHS coherency, we must be able to scale the unary
+      // shuffle to a vXi64 width - we can probably relax this in the future.
+      SmallVector<int, 4> ShuffleMask;
+      if (SVN->getOperand(1).isUndef() &&
+          scaleShuffleElements(SVN->getMask(), 4, ShuffleMask)) {
+        SDLoc DL(N);
+        SDValue Lo, Hi;
+        std::tie(Lo, Hi) = DAG.SplitVector(SVN->getOperand(0), DL);
+        Lo = DAG.getBitcast(N0.getValueType(), Lo);
+        Hi = DAG.getBitcast(N1.getValueType(), Hi);
+        SDValue Res = DAG.getNode(Opcode, DL, VT, Lo, Hi);
+        Res = DAG.getBitcast(MVT::v4i32, Res);
+        Res = DAG.getVectorShuffle(MVT::v4i32, DL, Res, Res, ShuffleMask);
+        return DAG.getBitcast(VT, Res);
+      }
+    }
   }
 
   // Try to combine a PACKUSWB/PACKSSWB implemented truncate with a regular
