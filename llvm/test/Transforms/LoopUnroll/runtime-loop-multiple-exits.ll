@@ -1,8 +1,8 @@
 ; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-loop-lcssa -verify-dom-info -verify-loop-info -S | FileCheck %s -check-prefix=EPILOG-NO-IC
 ; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-loop-lcssa -verify-dom-info -verify-loop-info -instcombine -S | FileCheck %s -check-prefix=EPILOG
-; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-loop-lcssa -verify-dom-info -verify-loop-info -instcombine
+; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-loop-lcssa -verify-dom-info -verify-loop-info -instcombine -S
 ; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false -unroll-runtime-multi-exit=true -verify-loop-lcssa -verify-dom-info -verify-loop-info -instcombine -S | FileCheck %s -check-prefix=PROLOG
-; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-runtime-epilog=false -unroll-count=2 -unroll-runtime-multi-exit=true -verify-loop-lcssa -verify-dom-info -verify-loop-info -instcombine
+; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-runtime-epilog=false -unroll-count=2 -unroll-runtime-multi-exit=true -verify-loop-lcssa -verify-dom-info -verify-loop-info -instcombine -S
 
 ; REQUIRES: asserts
 
@@ -23,12 +23,12 @@ define void @test1(i64 %trip, i1 %cond) {
 ; EPILOG-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; EPILOG:  loop_latch.epil:
 ; EPILOG-NEXT:     %epil.iter.sub = add i64 %epil.iter, -1
-; EPILOG-NEXT:     %epil.iter.cmp = icmp eq i64 %epil.iter.sub, 0
-; EPILOG-NEXT:     br i1 %epil.iter.cmp, label %exit2.loopexit.epilog-lcssa, label %loop_header.epil
+; EPILOG-NEXT:     %epil.iter.cmp.not = icmp eq i64 %epil.iter.sub, 0
+; EPILOG-NEXT:     br i1 %epil.iter.cmp.not, label %exit2.loopexit.epilog-lcssa, label %loop_header.epil
 ; EPILOG:  loop_latch.7:
 ; EPILOG-NEXT:     %niter.nsub.7 = add i64 %niter, -8
-; EPILOG-NEXT:     %niter.ncmp.7 = icmp eq i64 %niter.nsub.7, 0
-; EPILOG-NEXT:     br i1 %niter.ncmp.7, label %exit2.loopexit.unr-lcssa.loopexit, label %loop_header
+; EPILOG-NEXT:     %niter.ncmp.7.not = icmp eq i64 %niter.nsub.7, 0
+; EPILOG-NEXT:     br i1 %niter.ncmp.7.not, label %exit2.loopexit.unr-lcssa.loopexit, label %loop_header
 
 ; PROLOG: test1(
 ; PROLOG-NEXT:  entry:
@@ -43,12 +43,12 @@ define void @test1(i64 %trip, i1 %cond) {
 ; PROLOG:       loop_latch.prol:
 ; PROLOG-NEXT:    %iv_next.prol = add i64 %iv.prol, 1
 ; PROLOG-NEXT:    %prol.iter.sub = add i64 %prol.iter, -1
-; PROLOG-NEXT:    %prol.iter.cmp = icmp eq i64 %prol.iter.sub, 0
-; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %loop_header.prol.loopexit.unr-lcssa, label %loop_header.prol
+; PROLOG-NEXT:    %prol.iter.cmp.not = icmp eq i64 %prol.iter.sub, 0
+; PROLOG-NEXT:    br i1 %prol.iter.cmp.not, label %loop_header.prol.loopexit.unr-lcssa, label %loop_header.prol
 ; PROLOG:  loop_latch.7:
 ; PROLOG-NEXT:     %iv_next.7 = add i64 %iv, 8
-; PROLOG-NEXT:     %cmp.7 = icmp eq i64 %iv_next.7, %trip
-; PROLOG-NEXT:     br i1 %cmp.7, label %exit2.loopexit.unr-lcssa, label %loop_header
+; PROLOG-NEXT:     %cmp.7.not = icmp eq i64 %iv_next.7, %trip
+; PROLOG-NEXT:     br i1 %cmp.7.not, label %exit2.loopexit.unr-lcssa, label %loop_header
 entry:
   br label %loop_header
 
@@ -157,8 +157,8 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG:  loop_latch.7:
 ; EPILOG-NEXT:     %sum.next.7 = add i64 %sum.next.6, %add
 ; EPILOG-NEXT:     %niter.nsub.7 = add i64 %niter, -8
-; EPILOG-NEXT:     %niter.ncmp.7 = icmp eq i64 %niter.nsub.7, 0
-; EPILOG-NEXT:     br i1 %niter.ncmp.7, label %exit2.loopexit.unr-lcssa.loopexit, label %loop_header
+; EPILOG-NEXT:     %niter.ncmp.7.not = icmp eq i64 %niter.nsub.7, 0
+; EPILOG-NEXT:     br i1 %niter.ncmp.7.not, label %exit2.loopexit.unr-lcssa.loopexit, label %loop_header
 
 ; PROLOG:  test3(
 ; PROLOG-NEXT:  entry:
@@ -174,8 +174,8 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG:  loop_latch.7:
 ; PROLOG-NEXT:     %iv_next.7 = add nuw nsw i64 %iv, 8
 ; PROLOG-NEXT:     %sum.next.7 = add i64 %sum.next.6, %add
-; PROLOG-NEXT:     %cmp.7 = icmp eq i64 %iv_next.7, %trip
-; PROLOG-NEXT:     br i1 %cmp.7, label %exit2.loopexit.unr-lcssa, label %loop_header
+; PROLOG-NEXT:     %cmp.7.not = icmp eq i64 %iv_next.7, %trip
+; PROLOG-NEXT:     br i1 %cmp.7.not, label %exit2.loopexit.unr-lcssa, label %loop_header
 entry:
   br label %loop_header
 
@@ -575,8 +575,8 @@ define void @test8() {
 ; PROLOG: test8(
 ; PROLOG: outerloop:
 ; PROLOG-NEXT: phi i64 [ 3, %bb ], [ 0, %outerloop.loopexit ]
-; PROLOG:      %lcmp.mod = icmp eq i64
-; PROLOG-NEXT: br i1 %lcmp.mod, label %innerH.prol.loopexit, label %innerH.prol.preheader
+; PROLOG:      %lcmp.mod.not = icmp eq i64
+; PROLOG-NEXT: br i1 %lcmp.mod.not, label %innerH.prol.loopexit, label %innerH.prol.preheader
 ; PROLOG: latch.6:
 ; PROLOG-NEXT: br i1 false, label %outerloop.loopexit.loopexit, label %latch.7
 ; PROLOG: latch.7:
@@ -613,7 +613,7 @@ define i8 addrspace(1)* @test9(i8* nocapture readonly %arg, i32 %n) {
 ; PROLOG-NEXT: %phi.prol = phi i64 [ 0, %header.prol.preheader ], [ %iv.next.prol, %latch.prol ]
 ; PROLOG: latch.prol:
 ; PROLOG-NOT: trip
-; PROLOG:     br i1 %prol.iter.cmp, label %header.prol.loopexit.unr-lcssa, label %header.prol
+; PROLOG:     br i1 %prol.iter.cmp.not, label %header.prol.loopexit.unr-lcssa, label %header.prol
 bb:
   br label %outerloopHdr
 

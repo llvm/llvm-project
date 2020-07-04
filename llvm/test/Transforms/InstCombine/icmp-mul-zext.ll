@@ -13,16 +13,16 @@ define i32 @sterix(i32, i8, i64) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], [[SH_PROM]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[SHR]] to i64
 ; CHECK-NEXT:    [[MUL3:%.*]] = mul nuw nsw i64 [[CONV]], [[CONV2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[MUL3]], 4294967295
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[MUL3]], 4294967296
+; CHECK-NEXT:    br i1 [[TMP3]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[MUL3]], [[TMP2]]
 ; CHECK-NEXT:    [[CONV4:%.*]] = trunc i64 [[AND]] to i32
-; CHECK-NEXT:    [[TOBOOL7:%.*]] = icmp eq i32 [[CONV4]], 0
-; CHECK-NEXT:    [[PHI_CAST:%.*]] = zext i1 [[TOBOOL7]] to i32
+; CHECK-NEXT:    [[TOBOOL7_NOT:%.*]] = icmp eq i32 [[CONV4]], 0
+; CHECK-NEXT:    [[PHITMP:%.*]] = zext i1 [[TOBOOL7_NOT]] to i32
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[PHI_CAST]], [[LOR_RHS]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[PHITMP]], [[LOR_RHS]] ]
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:
