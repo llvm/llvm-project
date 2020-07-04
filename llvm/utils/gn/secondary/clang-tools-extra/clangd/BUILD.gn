@@ -63,6 +63,7 @@ static_library("clangd") {
     "Compiler.cpp",
     "Config.cpp",
     "ConfigCompile.cpp",
+    "ConfigProvider.cpp",
     "ConfigYAML.cpp",
     "Diagnostics.cpp",
     "DraftStore.cpp",
