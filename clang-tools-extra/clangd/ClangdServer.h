@@ -11,6 +11,7 @@
 
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "CodeComplete.h"
+#include "ConfigProvider.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
 #include "Protocol.h"
@@ -112,6 +113,9 @@ public:
 
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
+
+    /// If set, queried to obtain the configuration to handle each request.
+    config::Provider *ConfigProvider = nullptr;
 
     /// If set, enable clang-tidy in clangd and use to it get clang-tidy
     /// configurations for a particular file.
@@ -325,6 +329,15 @@ private:
   void formatCode(PathRef File, llvm::StringRef Code,
                   ArrayRef<tooling::Range> Ranges,
                   Callback<tooling::Replacements> CB);
+
+  /// Derives a context for a task processing the specified source file.
+  /// This includes the current configuration (see Options::ConfigProvider).
+  /// The empty string means no particular file is the target.
+  /// Rather than called by each feature, this is exposed to the components
+  /// that control worker threads, like TUScheduler and BackgroundIndex.
+  /// This means it's OK to do some IO here, and it cuts across all features.
+  Context createProcessingContext(PathRef) const;
+  config::Provider *ConfigProvider = nullptr;
 
   const ThreadsafeFS &TFS;
 
