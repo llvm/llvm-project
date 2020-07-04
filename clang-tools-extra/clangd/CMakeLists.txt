@@ -38,6 +38,7 @@ add_clang_library(clangDaemon
   Compiler.cpp
   Config.cpp
   ConfigCompile.cpp
+  ConfigProvider.cpp
   ConfigYAML.cpp
   Diagnostics.cpp
   DraftStore.cpp
