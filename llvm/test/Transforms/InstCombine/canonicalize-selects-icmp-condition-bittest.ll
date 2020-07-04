@@ -8,8 +8,8 @@ declare void @use1(i1)
 define i8 @p0(i8 %x, i8 %v0, i8 %v1) {
 ; CHECK-LABEL: @p0(
 ; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq i8 [[T0]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T1]], i8 [[V1:%.*]], i8 [[V0:%.*]], !prof !0
+; CHECK-NEXT:    [[T1_NOT:%.*]] = icmp eq i8 [[T0]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T1_NOT]], i8 [[V1:%.*]], i8 [[V0:%.*]], !prof !0
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %t0 = and i8 %x, 1
@@ -20,8 +20,8 @@ define i8 @p0(i8 %x, i8 %v0, i8 %v1) {
 define i8 @p1(i8 %x, i8 %v0, i8 %v1) {
 ; CHECK-LABEL: @p1(
 ; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq i8 [[T0]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T1]], i8 [[V1:%.*]], i8 [[V0:%.*]]
+; CHECK-NEXT:    [[T1_NOT:%.*]] = icmp eq i8 [[T0]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T1_NOT]], i8 [[V1:%.*]], i8 [[V0:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %t0 = and i8 %x, 1
@@ -51,14 +51,14 @@ define i8 @t3(i8 %x, i8 %v0, i8 %v1, i8 %v2, i8 %v3, i8* %out, i1 %c) {
 ; CHECK-LABEL: @t3(
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = icmp ne i8 [[T0]], 0
+; CHECK-NEXT:    [[T1_NOT:%.*]] = icmp eq i8 [[T0]], 0
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[R0:%.*]] = select i1 [[T1]], i8 [[V0:%.*]], i8 [[V1:%.*]]
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[T1_NOT]], i8 [[V1:%.*]], i8 [[V0:%.*]]
 ; CHECK-NEXT:    store i8 [[R0]], i8* [[OUT:%.*]], align 1
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[R1:%.*]] = select i1 [[T1]], i8 [[V2:%.*]], i8 [[V3:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[T1_NOT]], i8 [[V3:%.*]], i8 [[V2:%.*]]
 ; CHECK-NEXT:    ret i8 [[R1]]
 ;
 bb0:
@@ -76,10 +76,10 @@ bb2:
 define i8 @t4(i8 %x, i8 %v0, i8 %v1, i8 %v2, i8 %v3, i8* %out) {
 ; CHECK-LABEL: @t4(
 ; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = icmp ne i8 [[T0]], 0
-; CHECK-NEXT:    [[R0:%.*]] = select i1 [[T1]], i8 [[V0:%.*]], i8 [[V1:%.*]]
+; CHECK-NEXT:    [[T1_NOT:%.*]] = icmp eq i8 [[T0]], 0
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[T1_NOT]], i8 [[V1:%.*]], i8 [[V0:%.*]]
 ; CHECK-NEXT:    store i8 [[R0]], i8* [[OUT:%.*]], align 1
-; CHECK-NEXT:    [[R1:%.*]] = select i1 [[T1]], i8 [[V2:%.*]], i8 [[V3:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[T1_NOT]], i8 [[V3:%.*]], i8 [[V2:%.*]]
 ; CHECK-NEXT:    ret i8 [[R1]]
 ;
   %t0 = and i8 %x, 1
@@ -112,8 +112,8 @@ define i8 @n6(i8 %x, i8 %v0, i8 %v1) {
 define i8 @n7(i8 %x, i8 %v0, i8 %v1) {
 ; CHECK-LABEL: @n7(
 ; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq i8 [[T0]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T1]], i8 [[V0:%.*]], i8 [[V1:%.*]]
+; CHECK-NEXT:    [[T1_NOT_NOT:%.*]] = icmp eq i8 [[T0]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T1_NOT_NOT]], i8 [[V0:%.*]], i8 [[V1:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %t0 = and i8 %x, 1
