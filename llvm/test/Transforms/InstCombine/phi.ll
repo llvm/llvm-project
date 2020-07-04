@@ -519,9 +519,9 @@ Exit:           ; preds = %Loop
         %E = add i32 %B, 19
         ret i32 %E
 ; CHECK-LABEL: @test23(
-; CHECK: %phitmp = add i32 %A, 19
+; CHECK: %phi.bo = add i32 %A, 19
 ; CHECK: Loop:
-; CHECK-NEXT: %B = phi i32 [ %phitmp, %BB0 ], [ 61, %Loop ]
+; CHECK-NEXT: %B = phi i32 [ %phi.bo, %BB0 ], [ 61, %Loop ]
 ; CHECK: Exit:
 ; CHECK-NEXT: ret i32 %B
 }
