@@ -525,14 +525,16 @@ public:
   bool runOnFunction(Function &F) override {
     if (skipFunction(F) || !EnableKnowledgeRetention)
       return false;
-    DominatorTreeWrapperPass *DT =
-        getAnalysisIfAvailable<DominatorTreeWrapperPass>();
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    return simplifyAssumes(F, &AC, DT ? &DT->getDomTree() : nullptr);
+    DominatorTreeWrapperPass *DTWP =
+        getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    return simplifyAssumes(F, &AC, DTWP ? &DTWP->getDomTree() : nullptr);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
+
     AU.setPreservesAll();
   }
 };
@@ -542,7 +544,6 @@ char AssumeSimplifyPassLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AssumeSimplifyPassLegacyPass, "assume-simplify",
                       "Assume Simplify", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_END(AssumeSimplifyPassLegacyPass, "assume-simplify",
                     "Assume Simplify", false, false)
@@ -553,9 +554,43 @@ FunctionPass *llvm::createAssumeSimplifyPass() {
 
 PreservedAnalyses AssumeBuilderPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-  AssumptionCache* AC = AM.getCachedResult<AssumptionAnalysis>(F);
+  AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
   DominatorTree* DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   for (Instruction &I : instructions(F))
     salvageKnowledge(&I, AC, DT);
   return PreservedAnalyses::all();
 }
+
+namespace {
+class AssumeBuilderPassLegacyPass : public FunctionPass {
+public:
+  static char ID;
+
+  AssumeBuilderPassLegacyPass() : FunctionPass(ID) {
+    initializeAssumeBuilderPassLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+  bool runOnFunction(Function &F) override {
+    AssumptionCache &AC =
+        getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    DominatorTreeWrapperPass *DTWP =
+        getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    for (Instruction &I : instructions(F))
+      salvageKnowledge(&I, &AC, DTWP ? &DTWP->getDomTree() : nullptr);
+    return true;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
+
+    AU.setPreservesAll();
+  }
+};
+} // namespace
+
+char AssumeBuilderPassLegacyPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(AssumeBuilderPassLegacyPass, "assume-builder",
+                      "Assume Builder", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_END(AssumeBuilderPassLegacyPass, "assume-builder",
+                    "Assume Builder", false, false)
