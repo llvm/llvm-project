@@ -1697,13 +1697,23 @@ public:
 /// expressions.
 ///
 class ObjCAvailabilityCheckExpr : public Expr {
+public:
+  struct VersionAsWritten {
+    /// Platform version canonicalized for use with availability checks.
+    VersionTuple Version;
+    /// Platform version as written in the source.
+    VersionTuple SourceVersion;
+  };
+
+private:
   friend class ASTStmtReader;
 
-  VersionTuple VersionToCheck;
+  VersionAsWritten VersionToCheck;
   SourceLocation AtLoc, RParen;
 
 public:
-  ObjCAvailabilityCheckExpr(VersionTuple VersionToCheck, SourceLocation AtLoc,
+  ObjCAvailabilityCheckExpr(VersionAsWritten VersionToCheck,
+                            SourceLocation AtLoc,
                             SourceLocation RParen, QualType Ty)
       : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_RValue, OK_Ordinary, false,
              false, false, false),
@@ -1717,8 +1727,9 @@ public:
   SourceRange getSourceRange() const { return {AtLoc, RParen}; }
 
   /// This may be '*', in which case this should fold to true.
-  bool hasVersion() const { return !VersionToCheck.empty(); }
-  VersionTuple getVersion() { return VersionToCheck; }
+  bool hasVersion() const { return !VersionToCheck.Version.empty(); }
+  VersionTuple getVersion() { return VersionToCheck.Version; }
+  VersionTuple getVersionAsWritten() { return VersionToCheck.SourceVersion; }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());

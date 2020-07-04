@@ -8970,6 +8970,44 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBBreakpoint_AddNameWithErrorHandling(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
+  char *arg2 = (char *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  lldb::SBError result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBBreakpoint_AddNameWithErrorHandling",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBBreakpoint, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBBreakpoint_AddNameWithErrorHandling" "', argument " "1"" of type '" "lldb::SBBreakpoint *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBBreakpoint * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBBreakpoint_AddNameWithErrorHandling" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->AddNameWithErrorHandling((char const *)arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBError(static_cast< const lldb::SBError& >(result))), SWIGTYPE_p_lldb__SBError, SWIG_POINTER_OWN |  0 );
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBBreakpoint_RemoveName(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
@@ -81351,6 +81389,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBBreakpoint_SetCommandLineCommands", _wrap_SBBreakpoint_SetCommandLineCommands, METH_VARARGS, (char *)"SBBreakpoint_SetCommandLineCommands(SBBreakpoint self, SBStringList commands)"},
 	 { (char *)"SBBreakpoint_GetCommandLineCommands", _wrap_SBBreakpoint_GetCommandLineCommands, METH_VARARGS, (char *)"SBBreakpoint_GetCommandLineCommands(SBBreakpoint self, SBStringList commands) -> bool"},
 	 { (char *)"SBBreakpoint_AddName", _wrap_SBBreakpoint_AddName, METH_VARARGS, (char *)"SBBreakpoint_AddName(SBBreakpoint self, char const * new_name) -> bool"},
+	 { (char *)"SBBreakpoint_AddNameWithErrorHandling", _wrap_SBBreakpoint_AddNameWithErrorHandling, METH_VARARGS, (char *)"SBBreakpoint_AddNameWithErrorHandling(SBBreakpoint self, char const * new_name) -> SBError"},
 	 { (char *)"SBBreakpoint_RemoveName", _wrap_SBBreakpoint_RemoveName, METH_VARARGS, (char *)"SBBreakpoint_RemoveName(SBBreakpoint self, char const * name_to_remove)"},
 	 { (char *)"SBBreakpoint_MatchesName", _wrap_SBBreakpoint_MatchesName, METH_VARARGS, (char *)"SBBreakpoint_MatchesName(SBBreakpoint self, char const * name) -> bool"},
 	 { (char *)"SBBreakpoint_GetNames", _wrap_SBBreakpoint_GetNames, METH_VARARGS, (char *)"SBBreakpoint_GetNames(SBBreakpoint self, SBStringList names)"},
