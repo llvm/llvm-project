@@ -1393,7 +1393,8 @@ void ASTStmtReader::VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E)
   SourceRange R = Record.readSourceRange();
   E->AtLoc = R.getBegin();
   E->RParen = R.getEnd();
-  E->VersionToCheck = Record.readVersionTuple();
+  E->VersionToCheck.Version = Record.readVersionTuple();
+  E->VersionToCheck.SourceVersion = Record.readVersionTuple();
 }
 
 //===----------------------------------------------------------------------===//
