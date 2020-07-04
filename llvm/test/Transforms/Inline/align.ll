@@ -23,7 +23,10 @@ define void @foo(float* nocapture %a, float* nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (float* nocapture [[A:%.*]], float* nocapture readonly [[C:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(float* [[A]], i64 128) ]
+; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint float* [[A]] to i64
+; CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 127
+; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
 ; CHECK-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I]], align 4
@@ -84,8 +87,14 @@ define void @foo2(float* nocapture %a, float* nocapture %b, float* nocapture rea
 ; CHECK-LABEL: define {{[^@]+}}@foo2
 ; CHECK-SAME: (float* nocapture [[A:%.*]], float* nocapture [[B:%.*]], float* nocapture readonly [[C:%.*]]) #0
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(float* [[A]], i64 128) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(float* [[B]], i64 128) ]
+; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint float* [[A]] to i64
+; CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 127
+; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+; CHECK-NEXT:    [[PTRINT1:%.*]] = ptrtoint float* [[B]] to i64
+; CHECK-NEXT:    [[MASKEDPTR2:%.*]] = and i64 [[PTRINT1]], 127
+; CHECK-NEXT:    [[MASKCOND3:%.*]] = icmp eq i64 [[MASKEDPTR2]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND3]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
 ; CHECK-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I]], align 4

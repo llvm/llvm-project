@@ -122,7 +122,11 @@ _Bool is_aligned(TYPE ptr, unsigned align) {
 // CHECK-VOID_PTR-NEXT:    [[ALIGNED_INTPTR:%.*]] = and i64 [[OVER_BOUNDARY]], [[INVERTED_MASK]]
 // CHECK-VOID_PTR-NEXT:    [[DIFF:%.*]] = sub i64 [[ALIGNED_INTPTR]], [[INTPTR]]
 // CHECK-VOID_PTR-NEXT:    [[ALIGNED_RESULT:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 [[DIFF]]
-// CHECK-VOID_PTR-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[ALIGNED_RESULT]], i64 [[ALIGNMENT]]) ]
+// CHECK-VOID_PTR-NEXT:    [[MASK1:%.*]] = sub i64 [[ALIGNMENT]], 1
+// CHECK-VOID_PTR-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[ALIGNED_RESULT]] to i64
+// CHECK-VOID_PTR-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], [[MASK1]]
+// CHECK-VOID_PTR-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
+// CHECK-VOID_PTR-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
 // CHECK-VOID_PTR-NEXT:    ret i8* [[ALIGNED_RESULT]]
 //
 // CHECK-FLOAT_PTR-LABEL: define {{[^@]+}}@align_up
@@ -138,7 +142,11 @@ _Bool is_aligned(TYPE ptr, unsigned align) {
 // CHECK-FLOAT_PTR-NEXT:    [[TMP0:%.*]] = bitcast float* [[PTR]] to i8*
 // CHECK-FLOAT_PTR-NEXT:    [[ALIGNED_RESULT:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 [[DIFF]]
 // CHECK-FLOAT_PTR-NEXT:    [[TMP1:%.*]] = bitcast i8* [[ALIGNED_RESULT]] to float*
-// CHECK-FLOAT_PTR-NEXT:    call void @llvm.assume(i1 true) [ "align"(float* [[TMP1]], i64 [[ALIGNMENT]]) ]
+// CHECK-FLOAT_PTR-NEXT:    [[MASK1:%.*]] = sub i64 [[ALIGNMENT]], 1
+// CHECK-FLOAT_PTR-NEXT:    [[PTRINT:%.*]] = ptrtoint float* [[TMP1]] to i64
+// CHECK-FLOAT_PTR-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], [[MASK1]]
+// CHECK-FLOAT_PTR-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
+// CHECK-FLOAT_PTR-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
 // CHECK-FLOAT_PTR-NEXT:    ret float* [[TMP1]]
 //
 // CHECK-LONG-LABEL: define {{[^@]+}}@align_up
@@ -176,7 +184,11 @@ TYPE align_up(TYPE ptr, unsigned align) {
 // CHECK-VOID_PTR-NEXT:    [[ALIGNED_INTPTR:%.*]] = and i64 [[INTPTR]], [[INVERTED_MASK]]
 // CHECK-VOID_PTR-NEXT:    [[DIFF:%.*]] = sub i64 [[ALIGNED_INTPTR]], [[INTPTR]]
 // CHECK-VOID_PTR-NEXT:    [[ALIGNED_RESULT:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 [[DIFF]]
-// CHECK-VOID_PTR-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[ALIGNED_RESULT]], i64 [[ALIGNMENT]]) ]
+// CHECK-VOID_PTR-NEXT:    [[MASK1:%.*]] = sub i64 [[ALIGNMENT]], 1
+// CHECK-VOID_PTR-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[ALIGNED_RESULT]] to i64
+// CHECK-VOID_PTR-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], [[MASK1]]
+// CHECK-VOID_PTR-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
+// CHECK-VOID_PTR-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
 // CHECK-VOID_PTR-NEXT:    ret i8* [[ALIGNED_RESULT]]
 //
 // CHECK-FLOAT_PTR-LABEL: define {{[^@]+}}@align_down
@@ -191,7 +203,11 @@ TYPE align_up(TYPE ptr, unsigned align) {
 // CHECK-FLOAT_PTR-NEXT:    [[TMP0:%.*]] = bitcast float* [[PTR]] to i8*
 // CHECK-FLOAT_PTR-NEXT:    [[ALIGNED_RESULT:%.*]] = getelementptr inbounds i8, i8* [[TMP0]], i64 [[DIFF]]
 // CHECK-FLOAT_PTR-NEXT:    [[TMP1:%.*]] = bitcast i8* [[ALIGNED_RESULT]] to float*
-// CHECK-FLOAT_PTR-NEXT:    call void @llvm.assume(i1 true) [ "align"(float* [[TMP1]], i64 [[ALIGNMENT]]) ]
+// CHECK-FLOAT_PTR-NEXT:    [[MASK1:%.*]] = sub i64 [[ALIGNMENT]], 1
+// CHECK-FLOAT_PTR-NEXT:    [[PTRINT:%.*]] = ptrtoint float* [[TMP1]] to i64
+// CHECK-FLOAT_PTR-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], [[MASK1]]
+// CHECK-FLOAT_PTR-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
+// CHECK-FLOAT_PTR-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
 // CHECK-FLOAT_PTR-NEXT:    ret float* [[TMP1]]
 //
 // CHECK-LONG-LABEL: define {{[^@]+}}@align_down
