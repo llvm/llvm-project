@@ -144,8 +144,10 @@ TEST_F(BackgroundIndexTest, Config) {
       Context::empty(), FS, CDB, [&](llvm::StringRef) { return &MSS; },
       /*ThreadPoolSize=*/4, /*OnProgress=*/nullptr, std::move(ContextProvider));
   // Index the two files.
-  for (auto &Cmd : Cmds)
-    CDB.setCompileCommand(testPath(Cmd.Filename), std::move(Cmd));
+  for (auto &Cmd : Cmds) {
+    std::string FullPath = testPath(Cmd.Filename);
+    CDB.setCompileCommand(FullPath, std::move(Cmd));
+  }
   // Wait for both files to be indexed.
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   EXPECT_THAT(runFuzzyFind(Idx, ""),
