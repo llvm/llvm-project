@@ -42936,6 +42936,10 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.hasSSE41())
     return SDValue();
 
+  // If we have VPTERNLOG we should prefer that since PBLENDVB is multiple uops.
+  if (Subtarget.hasVLX())
+    return SDValue();
+
   MVT BlendVT = VT.is256BitVector() ? MVT::v32i8 : MVT::v16i8;
 
   X = DAG.getBitcast(BlendVT, X);
