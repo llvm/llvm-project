@@ -4646,17 +4646,6 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
   case ICmpInst::ICMP_NE:
     // Recognize pattern:
     //   mulval = mul(zext A, zext B)
-    //   cmp eq/neq mulval, zext trunc mulval
-    if (ZExtInst *Zext = dyn_cast<ZExtInst>(OtherVal))
-      if (Zext->hasOneUse()) {
-        Value *ZextArg = Zext->getOperand(0);
-        if (TruncInst *Trunc = dyn_cast<TruncInst>(ZextArg))
-          if (Trunc->getType()->getPrimitiveSizeInBits() == MulWidth)
-            break; //Recognized
-      }
-
-    // Recognize pattern:
-    //   mulval = mul(zext A, zext B)
     //   cmp eq/neq mulval, and(mulval, mask), mask selects low MulWidth bits.
     ConstantInt *CI;
     Value *ValToMask;
