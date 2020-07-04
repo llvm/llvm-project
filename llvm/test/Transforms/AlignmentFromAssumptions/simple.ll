@@ -4,7 +4,10 @@ target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 
 define i32 @foo(i32* nocapture %a) nounwind uwtable readonly {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i32 32)]
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   %0 = load i32, i32* %a, align 4
   ret i32 %0
 
@@ -15,7 +18,11 @@ entry:
 
 define i32 @foo2(i32* nocapture %a) nounwind uwtable readonly {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i32 32, i32 24)]
+  %ptrint = ptrtoint i32* %a to i64
+  %offsetptr = add i64 %ptrint, 24
+  %maskedptr = and i64 %offsetptr, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 2
   %0 = load i32, i32* %arrayidx, align 4
   ret i32 %0
@@ -27,7 +34,11 @@ entry:
 
 define i32 @foo2a(i32* nocapture %a) nounwind uwtable readonly {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i32 32, i32 28)]
+  %ptrint = ptrtoint i32* %a to i64
+  %offsetptr = add i64 %ptrint, 28
+  %maskedptr = and i64 %offsetptr, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 -1
   %0 = load i32, i32* %arrayidx, align 4
   ret i32 %0
@@ -39,7 +50,10 @@ entry:
 
 define i32 @goo(i32* nocapture %a) nounwind uwtable readonly {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i32 32, i32 0)]
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   %0 = load i32, i32* %a, align 4
   ret i32 %0
 
@@ -50,7 +64,10 @@ entry:
 
 define i32 @hoo(i32* nocapture %a) nounwind uwtable readonly {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32, i32 0)]
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
@@ -81,7 +98,10 @@ for.end:                                          ; preds = %for.body
 ;         load(a, i0+i1+i2+32)
 define void @hoo2(i32* nocapture %a, i64 %id, i64 %num) nounwind uwtable readonly {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i8 32, i64 0)]
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   %id.mul = shl nsw i64 %id, 6
   %num.mul = shl nsw i64 %num, 6
   br label %for0.body
@@ -127,7 +147,10 @@ return:
 
 define i32 @joo(i32* nocapture %a) nounwind uwtable readonly {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i8 32, i8 0)]
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
@@ -152,13 +175,16 @@ for.end:                                          ; preds = %for.body
 
 define i32 @koo(i32* nocapture %a) nounwind uwtable readonly {
 entry:
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %r.06 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i8 32, i8 0)]
   %0 = load i32, i32* %arrayidx, align 4
   %add = add nsw i32 %0, %r.06
   %indvars.iv.next = add i64 %indvars.iv, 4
@@ -177,7 +203,10 @@ for.end:                                          ; preds = %for.body
 
 define i32 @koo2(i32* nocapture %a) nounwind uwtable readonly {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i128 32, i128 0)]
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
@@ -202,7 +231,10 @@ for.end:                                          ; preds = %for.body
 
 define i32 @moo(i32* nocapture %a) nounwind uwtable {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %a, i16 32)]
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
   %0 = bitcast i32* %a to i8*
   tail call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 0, i64 64, i1 false)
   ret i32 undef
@@ -214,9 +246,15 @@ entry:
 
 define i32 @moo2(i32* nocapture %a, i32* nocapture %b) nounwind uwtable {
 entry:
-  tail call void @llvm.assume(i1 true) ["align"(i32* %b, i32 128)]
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
+  %ptrint1 = ptrtoint i32* %b to i64
+  %maskedptr3 = and i64 %ptrint1, 127
+  %maskcond4 = icmp eq i64 %maskedptr3, 0
+  tail call void @llvm.assume(i1 %maskcond4)
   %0 = bitcast i32* %a to i8*
-  tail call void @llvm.assume(i1 true) ["align"(i8* %0, i16 32)]
   %1 = bitcast i32* %b to i8*
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 64, i1 false)
   ret i32 undef

@@ -39,7 +39,7 @@ char **caller(char **x) {
   // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT:   unreachable, !nosanitize
   // CHECK-SANITIZE:                  [[CONT]]:
-  // CHECK-SANITIZE-NEXT:               call void @llvm.assume(i1 true) [ "align"(i8** %[[X_RETURNED]], i64 128) ]
+  // CHECK-SANITIZE-NEXT:               call void @llvm.assume(i1 %[[MASKCOND]])
   // CHECK-NEXT:                        ret i8** %[[X_RETURNED]]
   // CHECK-NEXT:                      }
 #line 100
