@@ -7,7 +7,7 @@
 define void @spam() local_unnamed_addr {
 ; CHECK-LABEL: spam:
 ; CHECK:       ## %bb.0: ## %bb
-; CHECK-NEXT:    pmovmskb %xmm0, %eax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb9
