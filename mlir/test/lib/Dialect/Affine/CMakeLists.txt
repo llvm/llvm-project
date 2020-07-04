@@ -3,7 +3,6 @@ add_mlir_library(MLIRAffineTransformsTestPasses
   TestAffineDataCopy.cpp
   TestAffineLoopUnswitching.cpp
   TestLoopPermutation.cpp
-  TestParallelismDetection.cpp
   TestVectorizationUtils.cpp
 
   EXCLUDE_FROM_LIBMLIR
