@@ -16,10 +16,7 @@ define i1 @zext_uge_sext(i32 %x) {
 
 define i1 @zext_ugt_sext(i32 %x) {
 ; CHECK-LABEL: @zext_ugt_sext(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %sext = sext i32 %x to i64
   %zext = zext i32 %x to i64
@@ -42,10 +39,7 @@ define i1 @zext_ult_sext(i32 %x) {
 
 define i1 @zext_ule_sext(i32 %x) {
 ; CHECK-LABEL: @zext_ule_sext(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sext = sext i32 %x to i64
   %zext = zext i32 %x to i64
@@ -55,10 +49,7 @@ define i1 @zext_ule_sext(i32 %x) {
 
 define i1 @zext_sge_sext(i32 %x) {
 ; CHECK-LABEL: @zext_sge_sext(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i64 [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sext = sext i32 %x to i64
   %zext = zext i32 %x to i64
@@ -81,10 +72,7 @@ define i1 @zext_sgt_sext(i32 %x) {
 
 define i1 @zext_slt_sext(i32 %x) {
 ; CHECK-LABEL: @zext_slt_sext(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %sext = sext i32 %x to i64
   %zext = zext i32 %x to i64
@@ -107,10 +95,7 @@ define i1 @zext_sle_sext(i32 %x) {
 
 define i1 @sext_uge_zext(i32 %x) {
 ; CHECK-LABEL: @sext_uge_zext(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[SEXT]], [[ZEXT]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sext = sext i32 %x to i64
   %zext = zext i32 %x to i64
@@ -133,10 +118,7 @@ define i1 @sext_ugt_zext(i32 %x) {
 
 define i1 @sext_ult_zext(i32 %x) {
 ; CHECK-LABEL: @sext_ult_zext(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SEXT]], [[ZEXT]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %sext = sext i32 %x to i64
   %zext = zext i32 %x to i64
@@ -172,10 +154,7 @@ define i1 @sext_sge_zext(i32 %x) {
 
 define i1 @sext_sgt_zext(i32 %x) {
 ; CHECK-LABEL: @sext_sgt_zext(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[SEXT]], [[ZEXT]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %sext = sext i32 %x to i64
   %zext = zext i32 %x to i64
@@ -198,13 +177,56 @@ define i1 @sext_slt_zext(i32 %x) {
 
 define i1 @sext_sle_zext(i32 %x) {
 ; CHECK-LABEL: @sext_sle_zext(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[SEXT]], [[ZEXT]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sext = sext i32 %x to i64
   %zext = zext i32 %x to i64
   %cmp = icmp sle i64 %sext, %zext
+  ret i1 %cmp
+}
+
+define <4 x i1> @zext_ugt_sext_vec(<4 x i32> %x) {
+; CHECK-LABEL: @zext_ugt_sext_vec(
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
+;
+  %sext = sext <4 x i32> %x to <4 x i64>
+  %zext = zext <4 x i32> %x to <4 x i64>
+  %cmp = icmp ugt <4 x i64> %zext, %sext
+  ret <4 x i1> %cmp
+}
+
+define <4 x i1> @sext_ult_zext_vec(<4 x i32> %x) {
+; CHECK-LABEL: @sext_ult_zext_vec(
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
+;
+  %sext = sext <4 x i32> %x to <4 x i64>
+  %zext = zext <4 x i32> %x to <4 x i64>
+  %cmp = icmp ult <4 x i64> %sext, %zext
+  ret <4 x i1> %cmp
+}
+
+define i1 @zext_ugt_sext_different_operand(i32 %x, i32 %y) {
+; CHECK-LABEL: @zext_ugt_sext_different_operand(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[ZEXT]], [[SEXT]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sext = sext i32 %x to i64
+  %zext = zext i32 %y to i64
+  %cmp = icmp ugt i64 %zext, %sext
+  ret i1 %cmp
+}
+
+define i1 @sext_ult_zext_different_operand(i32 %x, i32 %y) {
+; CHECK-LABEL: @sext_ult_zext_different_operand(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SEXT]], [[ZEXT]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sext = sext i32 %x to i64
+  %zext = zext i32 %y to i64
+  %cmp = icmp ult i64 %sext, %zext
   ret i1 %cmp
 }

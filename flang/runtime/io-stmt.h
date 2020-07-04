@@ -36,6 +36,7 @@ template <Direction, typename CHAR = char>
 class ExternalFormattedIoStatementState;
 template <Direction> class ExternalListIoStatementState;
 template <Direction> class UnformattedIoStatementState;
+class ExternalMiscIoStatementState;
 
 // The Cookie type in the I/O API is a pointer (for C) to this class.
 class IoStatementState {
@@ -73,7 +74,8 @@ public:
 
   bool EmitRepeated(char, std::size_t);
   bool EmitField(const char *, std::size_t length, std::size_t width);
-  void SkipSpaces(std::optional<int> &remaining);
+
+  std::optional<char32_t> SkipSpaces(std::optional<int> &remaining);
   std::optional<char32_t> NextInField(std::optional<int> &remaining);
   std::optional<char32_t> GetNextNonBlank(); // can advance record
 
@@ -94,7 +96,8 @@ private:
       std::reference_wrapper<ExternalListIoStatementState<Direction::Output>>,
       std::reference_wrapper<ExternalListIoStatementState<Direction::Input>>,
       std::reference_wrapper<UnformattedIoStatementState<Direction::Output>>,
-      std::reference_wrapper<UnformattedIoStatementState<Direction::Input>>>
+      std::reference_wrapper<UnformattedIoStatementState<Direction::Input>>,
+      std::reference_wrapper<ExternalMiscIoStatementState>>
       u_;
 };
 
@@ -235,7 +238,7 @@ class ExternalIoStatementState : public ExternalIoStatementBase,
 public:
   using ExternalIoStatementBase::ExternalIoStatementBase;
   int EndIoStatement();
-  bool Emit(const char *, std::size_t chars /* not bytes */);
+  bool Emit(const char *, std::size_t);
   bool Emit(const char16_t *, std::size_t chars /* not bytes */);
   bool Emit(const char32_t *, std::size_t chars /* not bytes */);
   std::optional<char32_t> GetCurrentChar();
@@ -280,6 +283,7 @@ template <Direction DIR>
 class UnformattedIoStatementState : public ExternalIoStatementState<DIR> {
 public:
   using ExternalIoStatementState<DIR>::ExternalIoStatementState;
+  bool Receive(char *, std::size_t);
   int EndIoStatement();
 };
 
@@ -352,6 +356,18 @@ extern template class FormatControl<
     ExternalFormattedIoStatementState<Direction::Output>>;
 extern template class FormatControl<
     ExternalFormattedIoStatementState<Direction::Input>>;
+
+class ExternalMiscIoStatementState : public ExternalIoStatementBase {
+public:
+  enum Which { Flush, Backspace, Endfile, Rewind };
+  ExternalMiscIoStatementState(ExternalFileUnit &unit, Which which,
+      const char *sourceFile = nullptr, int sourceLine = 0)
+      : ExternalIoStatementBase{unit, sourceFile, sourceLine}, which_{which} {}
+  int EndIoStatement();
+
+private:
+  Which which_;
+};
 
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_IO_STMT_H_

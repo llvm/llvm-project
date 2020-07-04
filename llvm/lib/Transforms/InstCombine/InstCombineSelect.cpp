@@ -2532,21 +2532,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
 
-  // Canonicalize a one-use integer compare with a non-canonical predicate by
-  // inverting the predicate and swapping the select operands. This matches a
-  // compare canonicalization for conditional branches.
-  // TODO: Should we do the same for FP compares?
   CmpInst::Predicate Pred;
-  if (match(CondVal, m_OneUse(m_ICmp(Pred, m_Value(), m_Value()))) &&
-      !isCanonicalPredicate(Pred)) {
-    // Swap true/false values and condition.
-    CmpInst *Cond = cast<CmpInst>(CondVal);
-    Cond->setPredicate(CmpInst::getInversePredicate(Pred));
-    SI.swapValues();
-    SI.swapProfMetadata();
-    Worklist.push(Cond);
-    return &SI;
-  }
 
   if (SelType->isIntOrIntVectorTy(1) &&
       TrueVal->getType() == CondVal->getType()) {

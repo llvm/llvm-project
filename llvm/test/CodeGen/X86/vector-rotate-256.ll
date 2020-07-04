@@ -1802,11 +1802,9 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind {
 ; AVX512VL-LABEL: splatconstant_rotate_mask_v32i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm1
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX512VL-NEXT:    vpand %ymm2, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpandn %ymm0, %ymm2, %ymm0
-; AVX512VL-NEXT:    vpternlogq $168, {{.*}}(%rip), %ymm1, %ymm0
+; AVX512VL-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
+; AVX512VL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: splatconstant_rotate_mask_v32i8:

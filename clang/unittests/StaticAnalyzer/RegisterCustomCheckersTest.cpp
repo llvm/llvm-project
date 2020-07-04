@@ -11,6 +11,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/CheckerRegistryData.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
@@ -100,7 +101,7 @@ public:
     llvm::raw_svector_ostream OS(Buf);
     C.getAnalysisManager()
         .getCheckerManager()
-        ->getCheckerRegistry()
+        ->getCheckerRegistryData()
         .printEnabledCheckerList(OS);
     // Strip a newline off.
     auto R =
