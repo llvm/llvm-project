@@ -3933,7 +3933,6 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
 // Try to match two logic ops to a VPTERNLOG.
 // FIXME: Handle inverted inputs?
 // FIXME: Handle more complex patterns that use an operand more than once?
-// FIXME: Support X86ISD::ANDNP
 bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   MVT NVT = N->getSimpleValueType(0);
 
@@ -3951,7 +3950,8 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   SDValue N1 = N->getOperand(1);
 
   auto isLogicOp = [](unsigned Opc) {
-    return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR;
+    return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR ||
+           Opc == X86ISD::ANDNP;
   };
 
   SDValue A, B, C;
@@ -3975,25 +3975,28 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   case ISD::AND:
     switch (Opc2) {
     default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND: Imm = 0x80; break;
-    case ISD::OR:  Imm = 0xe0; break;
-    case ISD::XOR: Imm = 0x60; break;
+    case ISD::AND:      Imm = 0x80; break;
+    case ISD::OR:       Imm = 0xe0; break;
+    case ISD::XOR:      Imm = 0x60; break;
+    case X86ISD::ANDNP: Imm = 0x20; break;
     }
     break;
   case ISD::OR:
     switch (Opc2) {
     default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND: Imm = 0xf8; break;
-    case ISD::OR:  Imm = 0xfe; break;
-    case ISD::XOR: Imm = 0xf6; break;
+    case ISD::AND:      Imm = 0xf8; break;
+    case ISD::OR:       Imm = 0xfe; break;
+    case ISD::XOR:      Imm = 0xf6; break;
+    case X86ISD::ANDNP: Imm = 0xf2; break;
     }
     break;
   case ISD::XOR:
     switch (Opc2) {
     default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND: Imm = 0x78; break;
-    case ISD::OR:  Imm = 0x1e; break;
-    case ISD::XOR: Imm = 0x96; break;
+    case ISD::AND:      Imm = 0x78; break;
+    case ISD::OR:       Imm = 0x1e; break;
+    case ISD::XOR:      Imm = 0x96; break;
+    case X86ISD::ANDNP: Imm = 0xd2; break;
     }
     break;
   }

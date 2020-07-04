@@ -95,26 +95,30 @@ sw.epilog:                                        ; preds = %entry, %sw.bb.5, %s
 
 ; CHECK-LABEL: bar64:
 ; CHECK: block   {{$}}
+; CHECK: i64.const
+; CHECK: i64.gt_u
+; CHECK: br_if 0
 ; CHECK: block   {{$}}
 ; CHECK: block   {{$}}
 ; CHECK: block   {{$}}
 ; CHECK: block   {{$}}
 ; CHECK: block   {{$}}
 ; CHECK: block   {{$}}
-; CHECK: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 6{{$}}
-; CHECK: .LBB{{[0-9]+}}_1:
-; CHECK:   call foo0{{$}}
+; CHECK: i32.wrap_i64
+; CHECK: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 0{{$}}
 ; CHECK: .LBB{{[0-9]+}}_2:
-; CHECK:   call foo1{{$}}
+; CHECK:   call foo0{{$}}
 ; CHECK: .LBB{{[0-9]+}}_3:
-; CHECK:   call foo2{{$}}
+; CHECK:   call foo1{{$}}
 ; CHECK: .LBB{{[0-9]+}}_4:
-; CHECK:   call foo3{{$}}
+; CHECK:   call foo2{{$}}
 ; CHECK: .LBB{{[0-9]+}}_5:
-; CHECK:   call foo4{{$}}
+; CHECK:   call foo3{{$}}
 ; CHECK: .LBB{{[0-9]+}}_6:
-; CHECK:   call foo5{{$}}
+; CHECK:   call foo4{{$}}
 ; CHECK: .LBB{{[0-9]+}}_7:
+; CHECK:   call foo5{{$}}
+; CHECK: .LBB{{[0-9]+}}_8:
 ; CHECK:   return{{$}}
 define void @bar64(i64 %n) {
 entry:
@@ -170,5 +174,45 @@ sw.bb.5:                                          ; preds = %entry
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %entry, %sw.bb.5, %sw.bb.4, %sw.bb.3, %sw.bb.2, %sw.bb.1, %sw.bb
+  ret void
+}
+
+; CHECK-LABEL: truncated:
+; CHECK:   block
+; CHECK:   block
+; CHECK:   block
+; CHECK:   i32.wrap_i64
+; CHECK:   br_table {{[^,]+}}, 0, 1, 2{{$}}
+; CHECK: .LBB{{[0-9]+}}_1
+; CHECK:   end_block
+; CHECK:   call foo0{{$}}
+; CHECK:   return{{$}}
+; CHECK: .LBB{{[0-9]+}}_2
+; CHECK:   end_block
+; CHECK:   call foo1{{$}}
+; CHECK:   return{{$}}
+; CHECK: .LBB{{[0-9]+}}_3
+; CHECK:   end_block
+; CHECK:   call foo2{{$}}
+; CHECK:   return{{$}}
+; CHECK:   end_function
+define void @truncated(i64 %n) {
+entry:
+  %m = trunc i64 %n to i32
+  switch i32 %m, label %default [
+    i32 0, label %bb1
+    i32 1, label %bb2
+  ]
+
+bb1:
+  tail call void @foo0()
+  ret void
+
+bb2:
+  tail call void @foo1()
+  ret void
+
+default:
+  tail call void @foo2()
   ret void
 }
