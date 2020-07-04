@@ -1285,8 +1285,10 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
   for (auto MBB : MBBs)
     Ops.push_back(DAG.getBasicBlock(MBB));
 
-  // Do not add the default case for now. It will be added in
-  // WebAssemblyFixBrTableDefaults.
+  // Add the first MBB as a dummy default target for now. This will be replaced
+  // with the proper default target (and the preceding range check eliminated)
+  // if possible by WebAssemblyFixBrTableDefaults.
+  Ops.push_back(DAG.getBasicBlock(*MBBs.begin()));
   return DAG.getNode(WebAssemblyISD::BR_TABLE, DL, MVT::Other, Ops);
 }
 
