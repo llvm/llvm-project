@@ -13,9 +13,9 @@ void *caller(char **x) {
   // CHECK-NEXT:                        store i8** %[[X]], i8*** %[[X_ADDR]], align 8
   // CHECK-NEXT:                        %[[X_RELOADED:.*]] = load i8**, i8*** %[[X_ADDR]], align 8
   // CHECK-NEXT:                        %[[BITCAST:.*]] = bitcast i8** %[[X_RELOADED]] to i8*
-  // CHECK-SANITIZE-NEXT:               %[[PTRINT:.*]] = ptrtoint i8* %[[BITCAST]] to i64
-  // CHECK-SANITIZE-NEXT:               %[[MASKEDPTR:.*]] = and i64 %[[PTRINT]], 536870911
-  // CHECK-SANITIZE-NEXT:               %[[MASKCOND:.*]] = icmp eq i64 %[[MASKEDPTR]], 0
+  // CHECK-NEXT:                        %[[PTRINT:.*]] = ptrtoint i8* %[[BITCAST]] to i64
+  // CHECK-NEXT:                        %[[MASKEDPTR:.*]] = and i64 %[[PTRINT]], 536870911
+  // CHECK-NEXT:                        %[[MASKCOND:.*]] = icmp eq i64 %[[MASKEDPTR]], 0
   // CHECK-SANITIZE-NEXT:               %[[PTRINT_DUP:.*]] = ptrtoint i8* %[[BITCAST]] to i64, !nosanitize
   // CHECK-SANITIZE-NEXT:               br i1 %[[MASKCOND]], label %[[CONT:.*]], label %[[HANDLER_ALIGNMENT_ASSUMPTION:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_ALIGNMENT_ASSUMPTION]]:
@@ -24,7 +24,7 @@ void *caller(char **x) {
   // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT:   unreachable, !nosanitize
   // CHECK-SANITIZE:                  [[CONT]]:
-  // CHECK-NEXT:                        call void @llvm.assume(i1 true) [ "align"(i8* %[[BITCAST]], i64 536870912) ]
+  // CHECK-NEXT:                        call void @llvm.assume(i1 %[[MASKCOND]])
   // CHECK-NEXT:                        ret i8* %[[BITCAST]]
   // CHECK-NEXT:                      }
 #line 100
