@@ -1409,6 +1409,9 @@ def PROBED_ALLOCA_32 : PPCCustomInserterPseudo<(outs gprc:$result),
 def PREPARE_PROBED_ALLOCA_32 : PPCEmitTimePseudo<(outs gprc:$fp,
     gprc:$sp),
     (ins gprc:$negsize, memri:$fpsi), "#PREPARE_PROBED_ALLOCA_32", []>;
+def PROBED_STACKALLOC_32 : PPCEmitTimePseudo<(outs gprc:$scratch, gprc:$temp),
+    (ins i64imm:$stacksize),
+    "#PROBED_STACKALLOC_32", []>;
 }
 
 // SELECT_CC_* - Used to implement the SELECT_CC DAG operation.  Expanded after
