@@ -33,7 +33,7 @@ static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
 
   // Delete out-of-chunk GVs and their uses
   std::vector<GlobalVariable *> ToRemove;
-  std::vector<Instruction *> InstToRemove;
+  std::vector<WeakVH> InstToRemove;
   for (auto &GV : Program->globals())
     if (GV.hasInitializer() && !GVsToKeep.count(&GV)) {
       for (auto U : GV.users())
@@ -44,8 +44,11 @@ static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
       ToRemove.push_back(&GV);
     }
 
-  // Delete Instruction uses of unwanted GVs
-  for (auto *Inst : InstToRemove) {
+  // Delete (unique) Instruction uses of unwanted GVs
+  for (Value *V : InstToRemove) {
+    if (!V)
+      continue;
+    auto *Inst = cast<Instruction>(V);
     Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
     Inst->eraseFromParent();
   }

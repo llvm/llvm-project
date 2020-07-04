@@ -60,7 +60,7 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
 
   for (auto *F : Funcs) {
     ValueToValueMapTy VMap;
-    std::vector<Instruction *> InstToDelete;
+    std::vector<WeakVH> InstToDelete;
     for (auto &A : F->args())
       if (!ArgsToKeep.count(&A)) {
         // By adding undesired arguments to the VMap, CloneFunction will remove
@@ -70,8 +70,11 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
           if (auto *I = dyn_cast<Instruction>(*&U))
             InstToDelete.push_back(I);
       }
-    // Delete any instruction that uses the argument
-    for (auto *I : InstToDelete) {
+    // Delete any (unique) instruction that uses the argument
+    for (Value *V : InstToDelete) {
+      if (!V)
+        continue;
+      auto *I = cast<Instruction>(V);
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
       I->eraseFromParent();
     }
