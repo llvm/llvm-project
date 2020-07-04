@@ -69,7 +69,8 @@ private:
 const char *testRoot();
 
 // Returns a suitable absolute path for this OS.
-std::string testPath(PathRef File);
+std::string testPath(PathRef File,
+                     llvm::sys::path::Style = llvm::sys::path::Style::native);
 
 // unittest: is a scheme that refers to files relative to testRoot()
 // This anchor is used to force the linker to link in the generated object file
