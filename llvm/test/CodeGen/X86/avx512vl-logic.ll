@@ -954,3 +954,36 @@ entry:
   %4 = select <4 x i1> %extract.i, <4 x float> %2, <4 x float> zeroinitializer
   ret <4 x float> %4
 }
+
+define <4 x i32> @ternlog_and_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: ternlog_and_andn:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpternlogd $8, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = and <4 x i32> %y, %a
+  %c = and <4 x i32> %b, %z
+  ret <4 x i32> %c
+}
+
+define <4 x i32> @ternlog_or_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: ternlog_or_andn:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpternlogd $206, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = and <4 x i32> %y, %a
+  %c = or <4 x i32> %b, %z
+  ret <4 x i32> %c
+}
+
+define <4 x i32> @ternlog_xor_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: ternlog_xor_andn:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpternlogd $198, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = and <4 x i32> %y, %a
+  %c = xor <4 x i32> %b, %z
+  ret <4 x i32> %c
+}
