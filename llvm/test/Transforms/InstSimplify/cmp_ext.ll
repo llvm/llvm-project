@@ -208,3 +208,55 @@ define i1 @sext_sle_zext(i32 %x) {
   %cmp = icmp sle i64 %sext, %zext
   ret i1 %cmp
 }
+
+define <4 x i1> @zext_ugt_sext_vec(<4 x i32> %x) {
+; CHECK-LABEL: @zext_ugt_sext_vec(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i32> [[X:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X]] to <4 x i64>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <4 x i64> [[ZEXT]], [[SEXT]]
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %sext = sext <4 x i32> %x to <4 x i64>
+  %zext = zext <4 x i32> %x to <4 x i64>
+  %cmp = icmp ugt <4 x i64> %zext, %sext
+  ret <4 x i1> %cmp
+}
+
+define <4 x i1> @sext_ult_zext_vec(<4 x i32> %x) {
+; CHECK-LABEL: @sext_ult_zext_vec(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i32> [[X:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X]] to <4 x i64>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i64> [[SEXT]], [[ZEXT]]
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %sext = sext <4 x i32> %x to <4 x i64>
+  %zext = zext <4 x i32> %x to <4 x i64>
+  %cmp = icmp ult <4 x i64> %sext, %zext
+  ret <4 x i1> %cmp
+}
+
+define i1 @zext_ugt_sext_different_operand(i32 %x, i32 %y) {
+; CHECK-LABEL: @zext_ugt_sext_different_operand(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[ZEXT]], [[SEXT]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sext = sext i32 %x to i64
+  %zext = zext i32 %y to i64
+  %cmp = icmp ugt i64 %zext, %sext
+  ret i1 %cmp
+}
+
+define i1 @sext_ult_zext_different_operand(i32 %x, i32 %y) {
+; CHECK-LABEL: @sext_ult_zext_different_operand(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SEXT]], [[ZEXT]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sext = sext i32 %x to i64
+  %zext = zext i32 %y to i64
+  %cmp = icmp ult i64 %sext, %zext
+  ret i1 %cmp
+}
