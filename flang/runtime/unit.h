@@ -106,7 +106,8 @@ private:
       ExternalListIoStatementState<Direction::Output>,
       ExternalListIoStatementState<Direction::Input>,
       UnformattedIoStatementState<Direction::Output>,
-      UnformattedIoStatementState<Direction::Input>>
+      UnformattedIoStatementState<Direction::Input>,
+      ExternalMiscIoStatementState>
       u_;
 
   // Points to the active alternative (if any) in u_ for use as a Cookie
