@@ -121,16 +121,20 @@ ret2:
   ret i16 %trunc_unnecessary              ; crash visiting this use after corrupting iterator
 }
 
-; FIXME: This miscompiles because of broken pattern matching.
+; This miscompiled because of broken pattern matching.
 
 define i1 @PR46561(i1 %a, i1 %x, i1 %y, i8 %z) {
 ; CHECK-LABEL: @PR46561(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[A:%.*]], label [[COND_TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       cond.true:
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[Z:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[PHI_CMP:%.*]] = xor i1 [[TMP1]], [[MULBOOL]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i1 [ true, [[COND_TRUE]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[PHI_CMP]], [[COND_TRUE]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[P]]
 ;
 entry:
