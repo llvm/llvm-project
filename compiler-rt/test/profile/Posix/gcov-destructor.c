@@ -3,6 +3,7 @@
 // RUN: %clang --coverage %s -o %t
 // RUN: rm -f gcov-destructor.gcda && %run %t
 // RUN: llvm-cov gcov -t gcov-destructor.gcda | FileCheck %s
+// UNSUPPORTED: darwin
 
 #include <unistd.h>
 
