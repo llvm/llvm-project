@@ -42782,6 +42782,16 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
   }
 
   SDLoc DL(N);
+
+  if (UseVPTERNLOG) {
+    // Emit a VPTERNLOG node directly.
+    SDValue A = DAG.getBitcast(VT, N0.getOperand(1));
+    SDValue B = DAG.getBitcast(VT, N0.getOperand(0));
+    SDValue C = DAG.getBitcast(VT, N1.getOperand(0));
+    SDValue Imm = DAG.getTargetConstant(0xCA, DL, MVT::i8);
+    return DAG.getNode(X86ISD::VPTERNLOG, DL, VT, A, B, C, Imm);
+  }
+
   SDValue X = N->getOperand(0);
   SDValue Y =
       DAG.getNode(X86ISD::ANDNP, DL, VT, DAG.getBitcast(VT, N0.getOperand(1)),
