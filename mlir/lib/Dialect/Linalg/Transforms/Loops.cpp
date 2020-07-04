@@ -333,23 +333,28 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs, ConvOp convOp) {
 
 template <typename IndexedValueType>
 void emitScalarImplementation(ArrayRef<Value> allIvs, PoolingMaxOp op) {
-  auto indices = getInputAndOutputIndices(allIvs, op);
+  InputAndOutputIndices indices = getInputAndOutputIndices(allIvs, op);
   // Emit scalar form.
-  Value lhs = std_load(op.output(), indices.outputs);
-  Value rhs = std_load(op.input(), indices.inputs);
+  IndexedValueType output(op.output());
+  IndexedValueType input(op.input());
+  Value lhs = output(indices.outputs);
+  Value rhs = input(indices.inputs);
   using edsc::op::sgt;
   Value maxValue = std_select(sgt(lhs, rhs), lhs, rhs);
-  std_store(maxValue, op.output(), indices.outputs);
+  output(indices.outputs) = maxValue;
 }
+
 template <typename IndexedValueType>
 void emitScalarImplementation(ArrayRef<Value> allIvs, PoolingMinOp op) {
-  auto indices = getInputAndOutputIndices(allIvs, op);
+  InputAndOutputIndices indices = getInputAndOutputIndices(allIvs, op);
   // Emit scalar form.
-  Value lhs = std_load(op.output(), indices.outputs);
-  Value rhs = std_load(op.input(), indices.inputs);
+  IndexedValueType output(op.output());
+  IndexedValueType input(op.input());
+  Value lhs = output(indices.outputs);
+  Value rhs = input(indices.inputs);
   using edsc::op::slt;
   Value minValue = std_select(slt(lhs, rhs), lhs, rhs);
-  std_store(minValue, op.output(), indices.outputs);
+  output(indices.outputs) = minValue;
 }
 template <typename IndexedValueType>
 void emitScalarImplementation(ArrayRef<Value> allIvs, PoolingSumOp op) {
