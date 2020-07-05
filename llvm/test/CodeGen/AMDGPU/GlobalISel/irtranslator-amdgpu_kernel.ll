@@ -1092,9 +1092,9 @@ define amdgpu_kernel void @empty_struct_arg({} %in) nounwind {
 
 ; With the SelectionDAG argument lowering, the alignments for the
 ; struct members is not properly considered, making these wrong.
-define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32, i64} %arg1) {
+define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8 %pad, {i32, i64} %arg1) {
   ; HSA-VI-LABEL: name: struct_argument_alignment
-  ; HSA-VI: bb.1 (%ir-block.1):
+  ; HSA-VI: bb.1 (%ir-block.0):
   ; HSA-VI:   liveins: $sgpr4_sgpr5
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
@@ -1112,13 +1112,15 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
   ; HSA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s128), 64
   ; HSA-VI:   [[C3:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; HSA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C3]](p1)
+  ; HSA-VI:   [[COPY2:%[0-9]+]]:_(p1) = COPY [[C3]](p1)
   ; HSA-VI:   G_STORE [[EXTRACT]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
   ; HSA-VI:   G_STORE [[EXTRACT1]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   G_STORE [[LOAD1]](s8), [[COPY2]](p1) :: (volatile store 1 into `i8 addrspace(1)* null`, addrspace 1)
   ; HSA-VI:   G_STORE [[EXTRACT2]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
   ; HSA-VI:   G_STORE [[EXTRACT3]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
   ; HSA-VI:   S_ENDPGM 0
   ; LEGACY-MESA-VI-LABEL: name: struct_argument_alignment
-  ; LEGACY-MESA-VI: bb.1 (%ir-block.1):
+  ; LEGACY-MESA-VI: bb.1 (%ir-block.0):
   ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
   ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
   ; LEGACY-MESA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
@@ -1136,8 +1138,10 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
   ; LEGACY-MESA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s128), 64
   ; LEGACY-MESA-VI:   [[C3:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; LEGACY-MESA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C3]](p1)
+  ; LEGACY-MESA-VI:   [[COPY2:%[0-9]+]]:_(p1) = COPY [[C3]](p1)
   ; LEGACY-MESA-VI:   G_STORE [[EXTRACT]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
   ; LEGACY-MESA-VI:   G_STORE [[EXTRACT1]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE [[LOAD1]](s8), [[COPY2]](p1) :: (volatile store 1 into `i8 addrspace(1)* null`, addrspace 1)
   ; LEGACY-MESA-VI:   G_STORE [[EXTRACT2]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
   ; LEGACY-MESA-VI:   G_STORE [[EXTRACT3]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
   ; LEGACY-MESA-VI:   S_ENDPGM 0
@@ -1147,6 +1151,7 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
   %val3 = extractvalue {i32, i64} %arg1, 1
   store volatile i32 %val0, i32 addrspace(1)* null
   store volatile i64 %val1, i64 addrspace(1)* null
+  store volatile i8 %pad, i8 addrspace(1)* null
   store volatile i32 %val2, i32 addrspace(1)* null
   store volatile i64 %val3, i64 addrspace(1)* null
   ret void
@@ -1164,20 +1169,15 @@ define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, 
   ; HSA-VI:   [[LOAD:%[0-9]+]]:_(s96) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 12, align 16, addrspace 4)
   ; HSA-VI:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](s96), 0
   ; HSA-VI:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD]](s96), 32
-  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
+  ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 13
   ; HSA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load 1, align 4, addrspace 4)
-  ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 13
-  ; HSA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
-  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s96) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 12, align 1, addrspace 4)
-  ; HSA-VI:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD2]](s96), 0
-  ; HSA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s96), 32
-  ; HSA-VI:   [[C3:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; HSA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C3]](p1)
-  ; HSA-VI:   G_STORE [[EXTRACT]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load 12, align 1, addrspace 4)
+  ; HSA-VI:   [[C2:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
+  ; HSA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C2]](p1)
+  ; HSA-VI:   G_STORE [[EXTRACT]](s32), [[C2]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
   ; HSA-VI:   G_STORE [[EXTRACT1]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
-  ; HSA-VI:   G_STORE [[EXTRACT2]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
-  ; HSA-VI:   G_STORE [[EXTRACT3]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   G_STORE %3:_(s32), [[C2]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
+  ; HSA-VI:   G_STORE %4:_(s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
   ; HSA-VI:   S_ENDPGM 0
   ; LEGACY-MESA-VI-LABEL: name: packed_struct_argument_alignment
   ; LEGACY-MESA-VI: bb.1 (%ir-block.1):
@@ -1188,20 +1188,15 @@ define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, 
   ; LEGACY-MESA-VI:   [[LOAD:%[0-9]+]]:_(s96) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 12, align 4, addrspace 4)
   ; LEGACY-MESA-VI:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](s96), 0
   ; LEGACY-MESA-VI:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD]](s96), 32
-  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+  ; LEGACY-MESA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 49
   ; LEGACY-MESA-VI:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
-  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load 1, align 16, addrspace 4)
-  ; LEGACY-MESA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 49
-  ; LEGACY-MESA-VI:   [[PTR_ADD2:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
-  ; LEGACY-MESA-VI:   [[LOAD2:%[0-9]+]]:_(s96) = G_LOAD [[PTR_ADD2]](p4) :: (dereferenceable invariant load 12, align 1, addrspace 4)
-  ; LEGACY-MESA-VI:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD2]](s96), 0
-  ; LEGACY-MESA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s96), 32
-  ; LEGACY-MESA-VI:   [[C3:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; LEGACY-MESA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C3]](p1)
-  ; LEGACY-MESA-VI:   G_STORE [[EXTRACT]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
+  ; LEGACY-MESA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load 12, align 1, addrspace 4)
+  ; LEGACY-MESA-VI:   [[C2:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
+  ; LEGACY-MESA-VI:   [[COPY1:%[0-9]+]]:_(p1) = COPY [[C2]](p1)
+  ; LEGACY-MESA-VI:   G_STORE [[EXTRACT]](s32), [[C2]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
   ; LEGACY-MESA-VI:   G_STORE [[EXTRACT1]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
-  ; LEGACY-MESA-VI:   G_STORE [[EXTRACT2]](s32), [[C3]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
-  ; LEGACY-MESA-VI:   G_STORE [[EXTRACT3]](s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE %3:_(s32), [[C2]](p1) :: (volatile store 4 into `i32 addrspace(1)* null`, addrspace 1)
+  ; LEGACY-MESA-VI:   G_STORE %4:_(s64), [[COPY1]](p1) :: (volatile store 8 into `i64 addrspace(1)* null`, addrspace 1)
   ; LEGACY-MESA-VI:   S_ENDPGM 0
   %val0 = extractvalue <{i32, i64}> %arg0, 0
   %val1 = extractvalue <{i32, i64}> %arg0, 1
@@ -1211,5 +1206,20 @@ define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, 
   store volatile i64 %val1, i64 addrspace(1)* null
   store volatile i32 %val2, i32 addrspace(1)* null
   store volatile i64 %val3, i64 addrspace(1)* null
+  ret void
+}
+
+define amdgpu_kernel void @unused_i32_arg(i32 addrspace(1)* nocapture %out, i32 %unused, i32 %in) nounwind {
+  ; HSA-VI-LABEL: name: unused_i32_arg
+  ; HSA-VI: bb.1.entry:
+  ; HSA-VI:   liveins: $sgpr4_sgpr5
+  ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; HSA-VI:   S_ENDPGM 0
+  ; LEGACY-MESA-VI-LABEL: name: unused_i32_arg
+  ; LEGACY-MESA-VI: bb.1.entry:
+  ; LEGACY-MESA-VI:   liveins: $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+  ; LEGACY-MESA-VI:   S_ENDPGM 0
+entry:
   ret void
 }
