@@ -125,7 +125,7 @@ TEST(PreamblePatchTest, IncludeParsing) {
         #/**/include <b.h>)cpp",
   };
 
-  for (const auto Case : Cases) {
+  for (const auto &Case : Cases) {
     Annotations Test(Case);
     const auto Code = Test.code();
     SCOPED_TRACE(Code);
