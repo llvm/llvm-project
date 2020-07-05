@@ -11,7 +11,25 @@ declare_args() {
 
 template("unix_toolchain") {
   toolchain(target_name) {
+    # https://groups.google.com/a/chromium.org/d/msg/gn-dev/F_lv5T-tNDM
+    forward_variables_from(invoker.toolchain_args, "*")
+    not_needed("*")
+
     forward_variables_from(invoker, "*")
+
+    cc = "cc"
+    cxx = "c++"
+
+    if (clang_base_path != "") {
+      cc = "$clang_base_path/bin/clang"
+      cxx = "$clang_base_path/bin/clang++"
+    }
+
+    ld = cxx  # Don't use goma wrapper for linking.
+    if (use_goma) {
+      cc = "$goma_dir/gomacc $cc"
+      cxx = "$goma_dir/gomacc $cxx"
+    }
 
     tool("cc") {
       depfile = "{{output}}.d"
@@ -128,20 +146,6 @@ template("unix_toolchain") {
 }
 
 unix_toolchain("unix") {
-  cc = "cc"
-  cxx = "c++"
-
-  if (clang_base_path != "") {
-    cc = "$clang_base_path/bin/clang"
-    cxx = "$clang_base_path/bin/clang++"
-  }
-
-  ld = cxx  # Don't use goma wrapper for linking.
-  if (use_goma) {
-    cc = "$goma_dir/gomacc $cc"
-    cxx = "$goma_dir/gomacc $cxx"
-  }
-
   if (current_os != "mac") {
     ar = "ar"
   }
@@ -156,13 +160,11 @@ unix_toolchain("unix") {
 # as compiler and linker.
 template("stage2_unix_toolchain") {
   unix_toolchain(target_name) {
-    forward_variables_from(invoker, "*")
+    toolchain_args = {
+      forward_variables_from(invoker.toolchain_args, "*")
 
-    cc = "bin/clang"
-    cxx = "bin/clang++"
-    ld = cxx
-    if (current_os != "mac") {
-      ar = "bin/llvm-ar"
+      clang_base_path = "."
+      use_goma = false
     }
 
     deps = [
@@ -170,6 +172,7 @@ template("stage2_unix_toolchain") {
       "//:lld($host_toolchain)",
     ]
     if (current_os != "mac") {
+      ar = "bin/llvm-ar"
       deps += [ "//:llvm-ar($host_toolchain)" ]
     }
   }
@@ -179,8 +182,6 @@ stage2_unix_toolchain("stage2_unix") {
   toolchain_args = {
     current_os = host_os
     current_cpu = host_cpu
-    is_clang = true
-    use_lld = host_os != "mac"
   }
 }
 
@@ -189,8 +190,6 @@ if (android_ndk_path != "") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm64"
-      is_clang = true
-      use_lld = true
     }
   }
 
@@ -198,8 +197,6 @@ if (android_ndk_path != "") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm"
-      is_clang = true
-      use_lld = true
     }
   }
 }
