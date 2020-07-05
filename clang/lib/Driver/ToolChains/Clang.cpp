@@ -2966,7 +2966,8 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
   if (!EffectiveTriple.isOSLinux())
     return;
 
-  if (!EffectiveTriple.isX86() && !EffectiveTriple.isSystemZ())
+  if (!EffectiveTriple.isX86() && !EffectiveTriple.isSystemZ() &&
+      !EffectiveTriple.isPPC64())
     return;
 
   if (Args.hasFlag(options::OPT_fstack_clash_protection,
