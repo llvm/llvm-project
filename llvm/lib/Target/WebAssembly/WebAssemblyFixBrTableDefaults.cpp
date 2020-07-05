@@ -76,17 +76,15 @@ MachineBasicBlock *fixBrTable(MachineInstr &MI, MachineBasicBlock *MBB,
 
     // If the range check checks an i64 value, we cannot optimize it out because
     // the i64 index is truncated to an i32, making values over 2^32
-    // indistinguishable from small numbers.
+    // indistinguishable from small numbers. There are also other strange edge
+    // cases that can arise in practice that we don't want to reason about, so
+    // conservatively only perform the optimization if the range check is the
+    // normal case of an i32.gt_u.
     MachineRegisterInfo &MRI = MF.getRegInfo();
     auto *RangeCheck = MRI.getVRegDef(Cond[1].getReg());
     assert(RangeCheck != nullptr);
-    unsigned RangeCheckOp = RangeCheck->getOpcode();
-    assert(RangeCheckOp == WebAssembly::GT_U_I32 ||
-           RangeCheckOp == WebAssembly::GT_U_I64);
-    if (RangeCheckOp == WebAssembly::GT_U_I64) {
-      // Bail out and leave the jump table untouched
+    if (RangeCheck->getOpcode() != WebAssembly::GT_U_I32)
       return nullptr;
-    }
 
     // Remove the dummy default target and install the real one.
     MI.RemoveOperand(MI.getNumExplicitOperands() - 1);
