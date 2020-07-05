@@ -105,6 +105,10 @@
 // Re-worked external template instantiations for std::string with a focus on
 // performance and fast-path inlining.
 #  define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
+// Enable clang::trivial_abi on std::unique_ptr.
+#  define _LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
+// Enable clang::trivial_abi on std::shared_ptr and std::weak_ptr
+#  define _LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
