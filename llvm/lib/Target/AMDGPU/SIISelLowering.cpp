@@ -1527,9 +1527,10 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
 
   const ArgDescriptor *InputPtrReg;
   const TargetRegisterClass *RC;
+  LLT ArgTy;
 
-  std::tie(InputPtrReg, RC)
-    = Info->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
+  std::tie(InputPtrReg, RC, ArgTy) =
+      Info->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
 
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
   MVT PtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
@@ -1675,8 +1676,9 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
   AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
   const ArgDescriptor *Reg;
   const TargetRegisterClass *RC;
+  LLT Ty;
 
-  std::tie(Reg, RC) = MFI.getPreloadedValue(PVID);
+  std::tie(Reg, RC, Ty) = MFI.getPreloadedValue(PVID);
   return CreateLiveInRegister(DAG, RC, Reg->getRegister(), VT);
 }
 
@@ -2580,15 +2582,18 @@ void SITargetLowering::passSpecialInputs(
   for (auto InputID : InputRegs) {
     const ArgDescriptor *OutgoingArg;
     const TargetRegisterClass *ArgRC;
+    LLT ArgTy;
 
-    std::tie(OutgoingArg, ArgRC) = CalleeArgInfo->getPreloadedValue(InputID);
+    std::tie(OutgoingArg, ArgRC, ArgTy) =
+        CalleeArgInfo->getPreloadedValue(InputID);
     if (!OutgoingArg)
       continue;
 
     const ArgDescriptor *IncomingArg;
     const TargetRegisterClass *IncomingArgRC;
-    std::tie(IncomingArg, IncomingArgRC)
-      = CallerArgInfo.getPreloadedValue(InputID);
+    LLT Ty;
+    std::tie(IncomingArg, IncomingArgRC, Ty) =
+        CallerArgInfo.getPreloadedValue(InputID);
     assert(IncomingArgRC == ArgRC);
 
     // All special arguments are ints for now.
@@ -2621,24 +2626,25 @@ void SITargetLowering::passSpecialInputs(
   // packed.
   const ArgDescriptor *OutgoingArg;
   const TargetRegisterClass *ArgRC;
+  LLT Ty;
 
-  std::tie(OutgoingArg, ArgRC) =
-    CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X);
+  std::tie(OutgoingArg, ArgRC, Ty) =
+      CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X);
   if (!OutgoingArg)
-    std::tie(OutgoingArg, ArgRC) =
-      CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
+    std::tie(OutgoingArg, ArgRC, Ty) =
+        CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
   if (!OutgoingArg)
-    std::tie(OutgoingArg, ArgRC) =
-      CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
+    std::tie(OutgoingArg, ArgRC, Ty) =
+        CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
   if (!OutgoingArg)
     return;
 
-  const ArgDescriptor *IncomingArgX
-    = CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X).first;
-  const ArgDescriptor *IncomingArgY
-    = CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y).first;
-  const ArgDescriptor *IncomingArgZ
-    = CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z).first;
+  const ArgDescriptor *IncomingArgX = std::get<0>(
+      CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X));
+  const ArgDescriptor *IncomingArgY = std::get<0>(
+      CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y));
+  const ArgDescriptor *IncomingArgZ = std::get<0>(
+      CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z));
 
   SDValue InputReg;
   SDLoc SL;
