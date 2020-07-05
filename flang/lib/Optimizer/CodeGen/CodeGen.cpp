@@ -2697,6 +2697,7 @@ struct FIRToLLVMLoweringPass
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+    target.addLegalDialect<mlir::omp::OpenMPDialect>();
 
     // required NOPs for applying a full conversion
     target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
