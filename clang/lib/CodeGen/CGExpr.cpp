@@ -2398,7 +2398,7 @@ EmitBitCastOfLValueToProperType(CodeGenFunction &CGF,
 static LValue EmitThreadPrivateVarDeclLValue(
     CodeGenFunction &CGF, const VarDecl *VD, QualType T, Address Addr,
     llvm::Type *RealVarTy, SourceLocation Loc) {
-  if (CGF.CGM.getOpenMPIRBuilder())
+  if (CGF.CGM.getLangOpts().OpenMPIRBuilder)
     Addr = CodeGenFunction::OMPBuilderCBHelpers::getAddrOfThreadPrivate(
         CGF, VD, Addr, Loc);
   else
