@@ -307,8 +307,6 @@ def mlimit_float_precision : Separate<["-"], "mlimit-float-precision">,
   HelpText<"Limit float precision to the given value">;
 def split_stacks : Flag<["-"], "split-stacks">,
   HelpText<"Try to use a split stack if possible.">;
-def mno_zero_initialized_in_bss : Flag<["-"], "mno-zero-initialized-in-bss">,
-  HelpText<"Do not put zero initialized data in the BSS">;
 def mregparm : Separate<["-"], "mregparm">,
   HelpText<"Limit the number of registers available for integer arguments">;
 def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
