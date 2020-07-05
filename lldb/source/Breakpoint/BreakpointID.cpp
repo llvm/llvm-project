@@ -112,7 +112,7 @@ bool BreakpointID::StringIsBreakpointName(llvm::StringRef str, Status &error) {
   // Cannot contain ., -, or space.
   if (str.find_first_of(".- ") != llvm::StringRef::npos) {
     error.SetErrorStringWithFormat("Breakpoint names cannot contain "
-                                   "'.' or '-': \"%s\"",
+                                   "'.' or '-' or spaces: \"%s\"",
                                    str.str().c_str());
     return false;
   }
