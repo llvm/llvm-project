@@ -1049,7 +1049,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       const auto &IDToRefs = AST.getMacros().MacroRefs;
       auto Refs = IDToRefs.find(*MacroSID);
       if (Refs != IDToRefs.end()) {
-        for (const auto Ref : Refs->second) {
+        for (const auto &Ref : Refs->second) {
           Location Result;
           Result.range = Ref;
           Result.uri = URIMainFile;
