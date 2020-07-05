@@ -229,6 +229,12 @@ public:
                                                bool ForVirtualBase,
                                                bool Delegating) override;
 
+  llvm::Value *getCXXDestructorImplicitParam(CodeGenFunction &CGF,
+                                             const CXXDestructorDecl *DD,
+                                             CXXDtorType Type,
+                                             bool ForVirtualBase,
+                                             bool Delegating) override;
+
   void EmitDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *DD,
                           CXXDtorType Type, bool ForVirtualBase,
                           bool Delegating, Address This,
@@ -1717,13 +1723,21 @@ CGCXXABI::AddedStructorArgs ItaniumCXXABI::getImplicitConstructorArgs(
   return AddedStructorArgs::prefix({{VTT, VTTTy}});
 }
 
+llvm::Value *ItaniumCXXABI::getCXXDestructorImplicitParam(
+    CodeGenFunction &CGF, const CXXDestructorDecl *DD, CXXDtorType Type,
+    bool ForVirtualBase, bool Delegating) {
+  GlobalDecl GD(DD, Type);
+  return CGF.GetVTTParameter(GD, ForVirtualBase, Delegating);
+}
+
 void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
                                        const CXXDestructorDecl *DD,
                                        CXXDtorType Type, bool ForVirtualBase,
                                        bool Delegating, Address This,
                                        QualType ThisTy) {
   GlobalDecl GD(DD, Type);
-  llvm::Value *VTT = CGF.GetVTTParameter(GD, ForVirtualBase, Delegating);
+  llvm::Value *VTT =
+      getCXXDestructorImplicitParam(CGF, DD, Type, ForVirtualBase, Delegating);
   QualType VTTTy = getContext().getPointerType(getContext().VoidPtrTy);
 
   CGCallee Callee;
