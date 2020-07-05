@@ -237,8 +237,6 @@ def disable_O0_optnone : Flag<["-"], "disable-O0-optnone">,
   HelpText<"Disable adding the optnone attribute to functions at O0">;
 def disable_red_zone : Flag<["-"], "disable-red-zone">,
   HelpText<"Do not emit code that uses the red zone.">;
-def dwarf_column_info : Flag<["-"], "dwarf-column-info">,
-  HelpText<"Turn on column location information.">;
 def dwarf_ext_refs : Flag<["-"], "dwarf-ext-refs">,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
