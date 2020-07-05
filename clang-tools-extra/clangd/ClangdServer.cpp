@@ -750,10 +750,10 @@ Context ClangdServer::createProcessingContext(PathRef File) const {
     return Context::current().clone();
 
   config::Params Params;
+  llvm::SmallString<256> PosixPath;
   if (!File.empty()) {
     assert(llvm::sys::path::is_absolute(File));
-    llvm::SmallString<256> PosixPath = File;
-    llvm::sys::path::native(PosixPath, llvm::sys::path::Style::posix);
+    llvm::sys::path::native(File, PosixPath, llvm::sys::path::Style::posix);
     Params.Path = PosixPath.str();
   }
 
