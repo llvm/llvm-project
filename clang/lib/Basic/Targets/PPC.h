@@ -343,6 +343,10 @@ public:
   const char *getFloat128Mangling() const override { return "u9__ieee128"; }
 
   bool hasExtIntType() const override { return true; }
+
+  bool isSPRegName(StringRef RegName) const override {
+    return RegName.equals("r1") || RegName.equals("x1");
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY PPC32TargetInfo : public PPCTargetInfo {
