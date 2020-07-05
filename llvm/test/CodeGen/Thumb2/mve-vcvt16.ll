@@ -18,15 +18,15 @@ entry:
 define arm_aapcs_vfpcc <8 x float> @fpext_8(<8 x half> %src1) {
 ; CHECK-LABEL: fpext_8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcvtt.f32.f16 s11, s1
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s1
-; CHECK-NEXT:    vcvtt.f32.f16 s9, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s0
-; CHECK-NEXT:    vcvtt.f32.f16 s7, s3
-; CHECK-NEXT:    vcvtb.f32.f16 s6, s3
-; CHECK-NEXT:    vcvtt.f32.f16 s5, s2
-; CHECK-NEXT:    vcvtb.f32.f16 s4, s2
-; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vmov q2, q0
+; CHECK-NEXT:    vcvtt.f32.f16 s3, s9
+; CHECK-NEXT:    vcvtt.f32.f16 s7, s11
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s9
+; CHECK-NEXT:    vcvtb.f32.f16 s6, s11
+; CHECK-NEXT:    vcvtt.f32.f16 s1, s8
+; CHECK-NEXT:    vcvtt.f32.f16 s5, s10
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s8
+; CHECK-NEXT:    vcvtb.f32.f16 s4, s10
 ; CHECK-NEXT:    bx lr
 entry:
   %out = fpext <8 x half> %src1 to <8 x float>
@@ -247,12 +247,12 @@ define arm_aapcs_vfpcc <8 x float> @load_shuffleext_16(<16 x half>* %src) {
 ; CHECK-NEXT:    vld20.16 {q2, q3}, [r0]
 ; CHECK-NEXT:    vld21.16 {q2, q3}, [r0]
 ; CHECK-NEXT:    vcvtt.f32.f16 s3, s9
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s9
-; CHECK-NEXT:    vcvtt.f32.f16 s1, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s8
 ; CHECK-NEXT:    vcvtt.f32.f16 s7, s11
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s9
 ; CHECK-NEXT:    vcvtb.f32.f16 s6, s11
+; CHECK-NEXT:    vcvtt.f32.f16 s1, s8
 ; CHECK-NEXT:    vcvtt.f32.f16 s5, s10
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s8
 ; CHECK-NEXT:    vcvtb.f32.f16 s4, s10
 ; CHECK-NEXT:    bx lr
 entry:
