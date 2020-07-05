@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -emit-llvm -o - -triple amdgcn < %s | FileCheck %s --check-prefixes=COMMON,AMDGPU
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -emit-llvm -o - -triple "spir-unknown-unknown" < %s | FileCheck %s --check-prefixes=COMMON,SPIR32
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -emit-llvm -o - -triple "spir64-unknown-unknown" < %s | FileCheck %s --check-prefixes=COMMON,SPIR64
-// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -debug-info-kind=limited -emit-llvm -o - -triple amdgcn < %s | FileCheck %s --check-prefixes=CHECK-DEBUG
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -debug-info-kind=limited -gno-column-info -emit-llvm -o - -triple amdgcn < %s | FileCheck %s --check-prefixes=CHECK-DEBUG
 
 // Check that the enqueue_kernel array temporary is in the entry block to avoid
 // a dynamic alloca
