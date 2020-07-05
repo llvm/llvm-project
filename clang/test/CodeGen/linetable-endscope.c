@@ -11,7 +11,7 @@
 void foo(char c)
 {
   int i;
-  // CHECK: ![[CONV]] = !DILocation(line: [[@LINE+1]], scope: !{{.*}})
+  // CHECK: ![[CONV]] = !DILocation(line: [[@LINE+1]], column: 5, scope: !{{.*}})
   i = c;
-  // CHECK: ![[RET]] = !DILocation(line: [[@LINE+1]], scope: !{{.*}})
+  // CHECK: ![[RET]] = !DILocation(line: [[@LINE+1]], column: 1, scope: !{{.*}})
 }
