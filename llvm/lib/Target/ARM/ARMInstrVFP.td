@@ -708,6 +708,7 @@ def VCVTDS  : ASuI<0b11101, 0b11, 0b0111, 0b11, 0,
   let Inst{22}    = Dd{4};
 
   let Predicates = [HasVFP2, HasDPVFP];
+  let hasSideEffects = 0;
 }
 
 // Special case encoding: bits 11-8 is 0b1011.
@@ -732,9 +733,11 @@ def VCVTSD  : VFPAI<(outs SPR:$Sd), (ins DPR:$Dm), VFPUnaryFrm,
   let Inst{4}     = 0;
 
   let Predicates = [HasVFP2, HasDPVFP];
+  let hasSideEffects = 0;
 }
 
 // Between half, single and double-precision.
+let hasSideEffects = 0 in
 def VCVTBHS: ASuI<0b11101, 0b11, 0b0010, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtb", ".f32.f16\t$Sd, $Sm",
                  [/* Intentionally left blank, see patterns below */]>,
@@ -746,6 +749,7 @@ def : FP16Pat<(f32 (fpextend (f16 HPR:$Sm))),
 def : FP16Pat<(f16_to_fp GPR:$a),
               (VCVTBHS (COPY_TO_REGCLASS GPR:$a, SPR))>;
 
+let hasSideEffects = 0 in
 def VCVTBSH: ASuI<0b11101, 0b11, 0b0011, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTHS, "vcvtb", ".f16.f32\t$Sd, $Sm",
                  [/* Intentionally left blank, see patterns below */]>,
@@ -763,6 +767,7 @@ def : FP16Pat<(insertelt (v4f16 DPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm
               (v4f16 (INSERT_SUBREG (v4f16 DPR:$src1), (VCVTBSH SPR:$src2),
                                     (SSubReg_f16_reg imm:$lane)))>;
 
+let hasSideEffects = 0 in
 def VCVTTHS: ASuI<0b11101, 0b11, 0b0010, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtt", ".f32.f16\t$Sd, $Sm",
                  [/* Intentionally left blank, see patterns below */]>,
@@ -776,6 +781,7 @@ def : FP16Pat<(f32 (fpextend (extractelt (v4f16 DPR:$src), imm_odd:$lane))),
                 (v2f32 (COPY_TO_REGCLASS (v4f16 DPR:$src), DPR_VFP2)),
                 (SSubReg_f16_reg imm_odd:$lane)))>;
 
+let hasSideEffects = 0 in
 def VCVTTSH: ASuI<0b11101, 0b11, 0b0011, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTHS, "vcvtt", ".f16.f32\t$Sd, $Sm",
                  [/* Intentionally left blank, see patterns below */]>,
@@ -801,6 +807,8 @@ def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
   // Encode instruction operands.
   let Inst{3-0} = Sm{4-1};
   let Inst{5}   = Sm{0};
+
+  let hasSideEffects = 0;
 }
 
 def : FullFP16Pat<(f64 (fpextend (f16 HPR:$Sm))),
@@ -824,6 +832,8 @@ def VCVTBDH : ADuI<0b11101, 0b11, 0b0011, 0b01, 0,
   let Inst{5}       = Dm{4};
   let Inst{15-12}   = Sd{4-1};
   let Inst{22}      = Sd{0};
+
+  let hasSideEffects = 0;
 }
 
 def : FullFP16Pat<(f16 (fpround DPR:$Dm)),
@@ -843,6 +853,8 @@ def VCVTTHD : ADuI<0b11101, 0b11, 0b0010, 0b11, 0,
   // Encode instruction operands.
   let Inst{3-0} = Sm{4-1};
   let Inst{5}   = Sm{0};
+
+  let hasSideEffects = 0;
 }
 
 def VCVTTDH : ADuI<0b11101, 0b11, 0b0011, 0b11, 0,
@@ -858,11 +870,13 @@ def VCVTTDH : ADuI<0b11101, 0b11, 0b0011, 0b11, 0,
   let Inst{22}    = Sd{0};
   let Inst{3-0}   = Dm{3-0};
   let Inst{5}     = Dm{4};
+
+  let hasSideEffects = 0;
 }
 
 multiclass vcvt_inst<string opc, bits<2> rm,
                      SDPatternOperator node = null_frag> {
-  let PostEncoderMethod = "", DecoderNamespace = "VFPV8" in {
+  let PostEncoderMethod = "", DecoderNamespace = "VFPV8", hasSideEffects = 0 in {
     def SH : AHuInp<0b11101, 0b11, 0b1100, 0b11, 0,
                     (outs SPR:$Sd), (ins HPR:$Sm),
                     NoItinerary, !strconcat("vcvt", opc, ".s32.f16\t$Sd, $Sm"),
@@ -1367,6 +1381,7 @@ class AVConv1IDs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{22}    = Dd{4};
 
   let Predicates = [HasVFP2, HasDPVFP];
+  let hasSideEffects = 0;
 }
 
 class AVConv1InSs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
@@ -1383,6 +1398,8 @@ class AVConv1InSs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{5}     = Sm{0};
   let Inst{15-12} = Sd{4-1};
   let Inst{22}    = Sd{0};
+
+  let hasSideEffects = 0;
 }
 
 class AVConv1IHs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
@@ -1402,6 +1419,7 @@ class AVConv1IHs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{22}    = Sd{0};
 
   let Predicates = [HasFullFP16];
+  let hasSideEffects = 0;
 }
 
 def VSITOD : AVConv1IDs_Encode<0b11101, 0b11, 0b1000, 0b1011,
@@ -1515,6 +1533,7 @@ class AVConv1IsD_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{22}    = Sd{0};
 
   let Predicates = [HasVFP2, HasDPVFP];
+  let hasSideEffects = 0;
 }
 
 class AVConv1InsS_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
@@ -1551,6 +1570,7 @@ class AVConv1IsH_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{22}    = Sd{0};
 
   let Predicates = [HasFullFP16];
+  let hasSideEffects = 0;
 }
 
 // Always set Z bit in the instruction, i.e. "round towards zero" variants.
@@ -1730,6 +1750,8 @@ class AVConv1XInsS_Encode<bits<5> op1, bits<2> op2, bits<4> op3, bits<4> op4,
   // if dp_operation then UInt(D:Vd) else UInt(Vd:D);
   let Inst{22} = dst{0};
   let Inst{15-12} = dst{4-1};
+
+  let hasSideEffects = 0;
 }
 
 // Double Precision register
@@ -1742,6 +1764,7 @@ class AVConv1XInsD_Encode<bits<5> op1, bits<2> op2, bits<4> op3, bits<4> op4,
   let Inst{22} = dst{4};
   let Inst{15-12} = dst{3-0};
 
+  let hasSideEffects = 0;
   let Predicates = [HasVFP2, HasDPVFP];
 }
 
@@ -1940,7 +1963,9 @@ class BF16_VCVT<string opc, bits<2> op7_6>
   let Inst{11-8}  = 0b1001;
   let Inst{7-6}   = op7_6;
   let Inst{4}     = 0;
+
   let DecoderNamespace = "VFPV8";
+  let hasSideEffects = 0;
 }
 
 def BF16_VCVTB : BF16_VCVT<"vcvtb", 0b01>;

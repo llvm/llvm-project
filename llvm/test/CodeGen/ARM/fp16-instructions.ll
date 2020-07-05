@@ -72,10 +72,10 @@ entry:
 ; CHECK-SOFTFP-VFP3:  vadd.f32
 ; CHECK-SOFTFP-VFP3:  bl  __aeabi_f2h
 
-; CHECK-SOFTFP-FP16:  vmov          [[S2:s[0-9]]], r1
-; CHECK-SOFTFP-FP16:  vmov          [[S0:s[0-9]]], r0
-; CHECK-SOFTFP-FP16:  vcvtb.f32.f16 [[S2]], [[S2]]
-; CHECK-SOFTFP-FP16:  vcvtb.f32.f16 [[S0]], [[S0]]
+; CHECK-SOFTFP-FP16-DAG:  vmov          [[S0:s[0-9]]], r0
+; CHECK-SOFTFP-FP16-DAG:  vmov          [[S2:s[0-9]]], r1
+; CHECK-SOFTFP-FP16-DAG:  vcvtb.f32.f16 [[S0]], [[S0]]
+; CHECK-SOFTFP-FP16-DAG:  vcvtb.f32.f16 [[S2]], [[S2]]
 ; CHECK-SOFTFP-FP16:  vadd.f32      [[S0]], [[S0]], [[S2]]
 ; CHECK-SOFTFP-FP16:  vcvtb.f16.f32 [[S0]], [[S0]]
 ; CHECK-SOFTFP-FP16:  vmov  r0, s0
@@ -355,10 +355,10 @@ entry:
 ; CHECK-SOFTFP-VFP3:  vdiv.f32
 ; CHECK-SOFTFP-VFP3:  bl  __aeabi_f2h
 
-; CHECK-SOFTFP-FP16:  vmov          [[S2:s[0-9]]], r1
-; CHECK-SOFTFP-FP16:  vmov          [[S0:s[0-9]]], r0
-; CHECK-SOFTFP-FP16:  vcvtb.f32.f16 [[S2]], [[S2]]
-; CHECK-SOFTFP-FP16:  vcvtb.f32.f16 [[S0]], [[S0]]
+; CHECK-SOFTFP-FP16-DAG:  vmov          [[S0:s[0-9]]], r0
+; CHECK-SOFTFP-FP16-DAG:  vmov          [[S2:s[0-9]]], r1
+; CHECK-SOFTFP-FP16-DAG:  vcvtb.f32.f16 [[S0]], [[S0]]
+; CHECK-SOFTFP-FP16-DAG:  vcvtb.f32.f16 [[S2]], [[S2]]
 ; CHECK-SOFTFP-FP16:  vdiv.f32      [[S0]], [[S0]], [[S2]]
 ; CHECK-SOFTFP-FP16:  vcvtb.f16.f32 [[S0]], [[S0]]
 ; CHECK-SOFTFP-FP16:  vmov  r0, s0
@@ -577,10 +577,10 @@ entry:
 ; CHECK-SOFTFP-VFP3:  vmul.f32
 ; CHECK-SOFTFP-VFP3:  bl  __aeabi_f2h
 
-; CHECK-SOFTFP-FP16:  vmov          [[S2:s[0-9]]], r1
-; CHECK-SOFTFP-FP16:  vmov          [[S0:s[0-9]]], r0
-; CHECK-SOFTFP-FP16:  vcvtb.f32.f16 [[S2]], [[S2]]
-; CHECK-SOFTFP-FP16:  vcvtb.f32.f16 [[S0]], [[S0]]
+; CHECK-SOFTFP-FP16-DAG:  vmov          [[S0:s[0-9]]], r0
+; CHECK-SOFTFP-FP16-DAG:  vmov          [[S2:s[0-9]]], r1
+; CHECK-SOFTFP-FP16-DAG:  vcvtb.f32.f16 [[S0]], [[S0]]
+; CHECK-SOFTFP-FP16-DAG:  vcvtb.f32.f16 [[S2]], [[S2]]
 ; CHECK-SOFTFP-FP16:  vmul.f32      [[S0]], [[S0]], [[S2]]
 ; CHECK-SOFTFP-FP16:  vcvtb.f16.f32 [[S0]], [[S0]]
 ; CHECK-SOFTFP-FP16:  vmov  r0, s0
@@ -973,10 +973,10 @@ entry:
 ; CHECK-SOFTFP-VFP3:  vsub.f32
 ; CHECK-SOFTFP-VFP3:  bl  __aeabi_f2h
 
-; CHECK-SOFTFP-FP16:  vmov          [[S2:s[0-9]]], r1
-; CHECK-SOFTFP-FP16:  vmov          [[S0:s[0-9]]], r0
-; CHECK-SOFTFP-FP16:  vcvtb.f32.f16 [[S2]], [[S2]]
-; CHECK-SOFTFP-FP16:  vcvtb.f32.f16 [[S0]], [[S0]]
+; CHECK-SOFTFP-FP16-DAG:  vmov          [[S0:s[0-9]]], r0
+; CHECK-SOFTFP-FP16-DAG:  vmov          [[S2:s[0-9]]], r1
+; CHECK-SOFTFP-FP16-DAG:  vcvtb.f32.f16 [[S0]], [[S0]]
+; CHECK-SOFTFP-FP16-DAG:  vcvtb.f32.f16 [[S2]], [[S2]]
 ; CHECK-SOFTFP-FP16:  vsub.f32      [[S0]], [[S0]], [[S2]]
 ; CHECK-SOFTFP-FP16:  vcvtb.f16.f32 [[S0]], [[S0]]
 ; CHECK-SOFTFP-FP16:  vmov  r0, s0
