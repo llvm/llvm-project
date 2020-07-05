@@ -1588,27 +1588,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
     Obj.SymbolTable->initialize(Obj.sections());
     initSymbolTable(Obj.SymbolTable);
   } else if (EnsureSymtab) {
-    // Reuse an existing SHT_STRTAB section if it exists.
-    StringTableSection *StrTab = nullptr;
-    for (auto &Sec : Obj.sections()) {
-      if (Sec.Type == ELF::SHT_STRTAB && !(Sec.Flags & SHF_ALLOC)) {
-        StrTab = static_cast<StringTableSection *>(&Sec);
-
-        // Prefer a string table that is not the section header string table, if
-        // such a table exists.
-        if (Obj.SectionNames != &Sec)
-          break;
-      }
-    }
-    if (!StrTab)
-      StrTab = &Obj.addSection<StringTableSection>();
-
-    SymbolTableSection &SymTab = Obj.addSection<SymbolTableSection>();
-    SymTab.Name = ".symtab";
-    SymTab.Link = StrTab->Index;
-    SymTab.initialize(Obj.sections());
-    SymTab.addSymbol("", 0, 0, nullptr, 0, 0, 0, 0);
-    Obj.SymbolTable = &SymTab;
+    Obj.addNewSymbolTable();
   }
 
   // Now that all sections and symbols have been added we can add
@@ -1898,6 +1878,33 @@ Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
       if (Error E = Sec->removeSymbols(ToRemove))
         return E;
   return Error::success();
+}
+
+void Object::addNewSymbolTable() {
+  assert(!SymbolTable && "Object must not has a SymbolTable.");
+
+  // Reuse an existing SHT_STRTAB section if it exists.
+  StringTableSection *StrTab = nullptr;
+  for (SectionBase &Sec : sections()) {
+    if (Sec.Type == ELF::SHT_STRTAB && !(Sec.Flags & SHF_ALLOC)) {
+      StrTab = static_cast<StringTableSection *>(&Sec);
+
+      // Prefer a string table that is not the section header string table, if
+      // such a table exists.
+      if (SectionNames != &Sec)
+        break;
+    }
+  }
+  if (!StrTab)
+    StrTab = &addSection<StringTableSection>();
+
+  SymbolTableSection &SymTab = addSection<SymbolTableSection>();
+  SymTab.Name = ".symtab";
+  SymTab.Link = StrTab->Index;
+  SymTab.initialize(sections());
+  SymTab.addSymbol("", 0, 0, nullptr, 0, 0, 0, 0);
+
+  SymbolTable = &SymTab;
 }
 
 void Object::sortSections() {
