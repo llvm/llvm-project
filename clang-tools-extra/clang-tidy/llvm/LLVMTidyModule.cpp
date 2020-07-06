@@ -44,7 +44,7 @@ public:
     ClangTidyOptions Options;
     Options.CheckOptions["llvm-qualified-auto.AddConstToQualified"] = "0";
     Options.CheckOptions["llvm-else-after-return.WarnOnUnfixable"] = "0";
-    Options.CheckOptions["llvm-else-after-return.RefactorConditionVariables"] =
+    Options.CheckOptions["llvm-else-after-return.WarnOnConditionVariables"] =
         "0";
     return Options;
   }
