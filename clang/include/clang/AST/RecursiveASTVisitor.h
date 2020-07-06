@@ -593,7 +593,6 @@ bool RecursiveASTVisitor<Derived>::dataTraverseNode(Stmt *S,
 
       BINOP_LIST()
 #undef OPERATOR
-#undef BINOP_LIST
 
 #define OPERATOR(NAME)                                                         \
   case BO_##NAME##Assign:                                                      \
@@ -601,7 +600,6 @@ bool RecursiveASTVisitor<Derived>::dataTraverseNode(Stmt *S,
 
       CAO_LIST()
 #undef OPERATOR
-#undef CAO_LIST
     }
   } else if (UnaryOperator *UnOp = dyn_cast<UnaryOperator>(S)) {
     switch (UnOp->getOpcode()) {
@@ -611,7 +609,6 @@ bool RecursiveASTVisitor<Derived>::dataTraverseNode(Stmt *S,
 
       UNARYOP_LIST()
 #undef OPERATOR
-#undef UNARYOP_LIST
     }
   }
 
@@ -633,27 +630,70 @@ bool RecursiveASTVisitor<Derived>::dataTraverseNode(Stmt *S,
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::PostVisitStmt(Stmt *S) {
+  // In pre-order traversal mode, each Traverse##STMT method is responsible for
+  // calling WalkUpFrom. Therefore, if the user overrides Traverse##STMT and
+  // does not call the default implementation, the WalkUpFrom callback is not
+  // called. Post-order traversal mode should provide the same behavior
+  // regarding method overrides.
+  //
+  // In post-order traversal mode the Traverse##STMT method, when it receives a
+  // DataRecursionQueue, can't call WalkUpFrom after traversing children because
+  // it only enqueues the children and does not traverse them. TraverseStmt
+  // traverses the enqueued children, and we call WalkUpFrom here.
+  //
+  // However, to make pre-order and post-order modes identical with regards to
+  // whether they call WalkUpFrom at all, we call WalkUpFrom if and only if the
+  // user did not override the Traverse##STMT method. We implement the override
+  // check with isSameMethod calls below.
+
+  if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(S)) {
+    switch (BinOp->getOpcode()) {
+#define OPERATOR(NAME)                                                         \
+  case BO_##NAME:                                                              \
+    if (::clang::detail::isSameMethod(&RecursiveASTVisitor::TraverseBin##NAME, \
+                                      &Derived::TraverseBin##NAME)) {          \
+      TRY_TO(WalkUpFromBin##NAME(static_cast<BinaryOperator *>(S)));           \
+    }                                                                          \
+    return true;
+
+      BINOP_LIST()
+#undef OPERATOR
+
+#define OPERATOR(NAME)                                                         \
+  case BO_##NAME##Assign:                                                      \
+    if (::clang::detail::isSameMethod(                                         \
+            &RecursiveASTVisitor::TraverseBin##NAME##Assign,                   \
+            &Derived::TraverseBin##NAME##Assign)) {                            \
+      TRY_TO(WalkUpFromBin##NAME##Assign(                                      \
+          static_cast<CompoundAssignOperator *>(S)));                          \
+    }                                                                          \
+    return true;
+
+      CAO_LIST()
+#undef OPERATOR
+    }
+  } else if (UnaryOperator *UnOp = dyn_cast<UnaryOperator>(S)) {
+    switch (UnOp->getOpcode()) {
+#define OPERATOR(NAME)                                                         \
+  case UO_##NAME:                                                              \
+    if (::clang::detail::isSameMethod(                                         \
+            &RecursiveASTVisitor::TraverseUnary##NAME,                         \
+            &Derived::TraverseUnary##NAME)) {                                  \
+      TRY_TO(WalkUpFromUnary##NAME(static_cast<UnaryOperator *>(S)));          \
+    }                                                                          \
+    return true;
+
+      UNARYOP_LIST()
+#undef OPERATOR
+    }
+  }
+
   switch (S->getStmtClass()) {
   case Stmt::NoStmtClass:
     break;
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT)                                                    \
   case Stmt::CLASS##Class:                                                     \
-    /* In pre-order traversal mode, each Traverse##STMT method is responsible  \
-     * for calling WalkUpFrom. Therefore, if the user overrides Traverse##STMT \
-     * and does not call the default implementation, the WalkUpFrom callback   \
-     * is not called. Post-order traversal mode should provide the same        \
-     * behavior regarding method overrides.                                    \
-     *                                                                         \
-     * In post-order traversal mode the Traverse##STMT method, when it         \
-     * receives a DataRecursionQueue, can't call WalkUpFrom after traversing   \
-     * children because it only enqueues the children and does not traverse    \
-     * them. TraverseStmt traverses the enqueued children, and we call         \
-     * WalkUpFrom here.                                                        \
-     *                                                                         \
-     * However, to make pre-order and post-order modes identical with regards  \
-     * to whether they call WalkUpFrom at all, we call WalkUpFrom if and only  \
-     * if the user did not override the Traverse##STMT method. */              \
     if (::clang::detail::isSameMethod(&RecursiveASTVisitor::Traverse##CLASS,   \
                                       &Derived::Traverse##CLASS)) {            \
       TRY_TO(WalkUpFrom##CLASS(static_cast<CLASS *>(S)));                      \
@@ -661,7 +701,6 @@ bool RecursiveASTVisitor<Derived>::PostVisitStmt(Stmt *S) {
     break;
 #define INITLISTEXPR(CLASS, PARENT)                                            \
   case Stmt::CLASS##Class:                                                     \
-    /* See the comment above for the explanation of the isSameMethod check. */ \
     if (::clang::detail::isSameMethod(&RecursiveASTVisitor::Traverse##CLASS,   \
                                       &Derived::Traverse##CLASS)) {            \
       auto ILE = static_cast<CLASS *>(S);                                      \
@@ -3667,6 +3706,10 @@ bool RecursiveASTVisitor<Derived>::VisitOMPAffinityClause(
 #undef TRAVERSE_STMT_BASE
 
 #undef TRY_TO
+
+#undef UNARYOP_LIST
+#undef BINOP_LIST
+#undef CAO_LIST
 
 } // end namespace clang
 
