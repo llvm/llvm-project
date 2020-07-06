@@ -5345,7 +5345,7 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
           // MCSectionXCOFF to get the correct storage mapping class.
           // In this case, XCOFF::XMC_PR.
           MCSectionXCOFF *Sec = Context.getXCOFFSection(
-              S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER, SC,
+              S->getSymbolTableName(), XCOFF::XMC_PR, XCOFF::XTY_ER, SC,
               SectionKind::getMetadata());
           S->setRepresentedCsect(Sec);
         }

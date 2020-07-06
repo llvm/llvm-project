@@ -1608,8 +1608,10 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
   case GlobalValue::PrivateLinkage:
     return;
   case GlobalValue::InternalLinkage:
-    OutStreamer->emitSymbolAttribute(GVSym, MCSA_LGlobal);
-    return;
+    assert(GV->getVisibility() == GlobalValue::DefaultVisibility &&
+           "InternalLinkage should not have other visibility setting.");
+    LinkageAttr = MCSA_LGlobal;
+    break;
   case GlobalValue::AppendingLinkage:
     llvm_unreachable("Should never emit this");
   case GlobalValue::CommonLinkage:
@@ -1621,8 +1623,7 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
   MCSymbolAttr VisibilityAttr = MCSA_Invalid;
   switch (GV->getVisibility()) {
 
-    // TODO: "exported" and "internal" Visibility needs to go here.
-
+  // TODO: "exported" and "internal" Visibility needs to go here.
   case GlobalValue::DefaultVisibility:
     break;
   case GlobalValue::HiddenVisibility:
