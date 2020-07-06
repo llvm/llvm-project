@@ -7,22 +7,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define i32 @f1(<4 x i32> *%src, i32 %index) {
 ; ALL-LABEL: @f1(
 ; ALL-NEXT:    [[SRC_I0:%.*]] = bitcast <4 x i32>* [[SRC:%.*]] to i32*
-; ALL-NEXT:    [[VAL0_I0:%.*]] = load i32, i32* [[SRC_I0]], align 16
-; ALL-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 1
-; ALL-NEXT:    [[VAL0_I1:%.*]] = load i32, i32* [[SRC_I1]], align 4
-; ALL-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 2
-; ALL-NEXT:    [[VAL0_I2:%.*]] = load i32, i32* [[SRC_I2]], align 8
 ; ALL-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, i32* [[SRC_I0]], i32 3
 ; ALL-NEXT:    [[VAL0_I3:%.*]] = load i32, i32* [[SRC_I3]], align 4
-; ALL-NEXT:    [[VAL1_I0:%.*]] = shl i32 1, [[VAL0_I0]]
-; ALL-NEXT:    [[VAL1_I1:%.*]] = shl i32 2, [[VAL0_I1]]
-; ALL-NEXT:    [[VAL1_I2:%.*]] = shl i32 3, [[VAL0_I2]]
-; ALL-NEXT:    [[VAL1_I3:%.*]] = shl i32 4, [[VAL0_I3]]
-; ALL-NEXT:    [[VAL1_UPTO0:%.*]] = insertelement <4 x i32> undef, i32 [[VAL1_I0]], i32 0
-; ALL-NEXT:    [[VAL1_UPTO1:%.*]] = insertelement <4 x i32> [[VAL1_UPTO0]], i32 [[VAL1_I1]], i32 1
-; ALL-NEXT:    [[VAL1_UPTO2:%.*]] = insertelement <4 x i32> [[VAL1_UPTO1]], i32 [[VAL1_I2]], i32 2
-; ALL-NEXT:    [[VAL1:%.*]] = insertelement <4 x i32> [[VAL1_UPTO2]], i32 [[VAL1_I3]], i32 3
-; ALL-NEXT:    [[VAL2:%.*]] = extractelement <4 x i32> [[VAL1]], i32 3
+; ALL-NEXT:    [[VAL2:%.*]] = shl i32 4, [[VAL0_I3]]
 ; ALL-NEXT:    ret i32 [[VAL2]]
 ;
   %val0 = load <4 x i32> , <4 x i32> *%src
