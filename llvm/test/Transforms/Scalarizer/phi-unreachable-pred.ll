@@ -11,11 +11,8 @@ define i16 @f1() {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_BODY:%.*]], label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[PHI_I0:%.*]] = phi i16 [ 1, [[ENTRY:%.*]] ], [ undef, [[FOR_COND]] ]
-; CHECK-NEXT:    [[PHI_I1:%.*]] = phi i16 [ 1, [[ENTRY]] ], [ undef, [[FOR_COND]] ]
-; CHECK-NEXT:    [[PHI_I2:%.*]] = phi i16 [ 1, [[ENTRY]] ], [ undef, [[FOR_COND]] ]
-; CHECK-NEXT:    [[PHI_I3:%.*]] = phi i16 [ 1, [[ENTRY]] ], [ undef, [[FOR_COND]] ]
-; CHECK-NEXT:    ret i16 [[PHI_I0]]
+; CHECK-NEXT:    [[EXTRACT:%.*]] = phi i16 [ 1, [[ENTRY:%.*]] ], [ undef, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i16 [[EXTRACT]]
 ;
 entry:
   br label %for.end

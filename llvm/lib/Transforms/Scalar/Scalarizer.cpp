@@ -22,8 +22,8 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -41,6 +41,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -222,6 +223,8 @@ private:
   ScatterMap Scattered;
   GatherList Gathered;
 
+  SmallVector<WeakTrackingVH, 32> PotentiallyDeadInstrs;
+
   unsigned ParallelLoopAccessMDKind;
 
   DominatorTree *DT;
@@ -383,11 +386,6 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V) {
 // so that we can avoid creating the gathered form if all uses of Op are
 // replaced with uses of CV.
 void ScalarizerVisitor::gather(Instruction *Op, const ValueVector &CV) {
-  // Since we're not deleting Op yet, stub out its operands, so that it
-  // doesn't make anything live unnecessarily.
-  for (unsigned I = 0, E = Op->getNumOperands(); I != E; ++I)
-    Op->setOperand(I, UndefValue::get(Op->getOperand(I)->getType()));
-
   transferMetadataAndIRFlags(Op, CV);
 
   // If we already have a scattered form of Op (created from ExtractElements
@@ -402,7 +400,7 @@ void ScalarizerVisitor::gather(Instruction *Op, const ValueVector &CV) {
       Instruction *Old = cast<Instruction>(V);
       CV[I]->takeName(Old);
       Old->replaceAllUsesWith(CV[I]);
-      Old->eraseFromParent();
+      PotentiallyDeadInstrs.emplace_back(Old);
     }
   }
   SV = CV;
@@ -950,10 +948,13 @@ bool ScalarizerVisitor::finish() {
       Res->takeName(Op);
       Op->replaceAllUsesWith(Res);
     }
-    Op->eraseFromParent();
+    PotentiallyDeadInstrs.emplace_back(Op);
   }
   Gathered.clear();
   Scattered.clear();
+
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(PotentiallyDeadInstrs);
+
   return true;
 }
 
