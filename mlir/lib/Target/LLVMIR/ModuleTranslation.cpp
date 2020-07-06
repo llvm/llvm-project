@@ -783,12 +783,13 @@ LogicalResult ModuleTranslation::checkSupportedModuleOps(Operation *m) {
   return success();
 }
 
-LogicalResult ModuleTranslation::convertFunctions() {
+LogicalResult ModuleTranslation::convertFunctionSignatures() {
   // Lock access to the llvm context.
   llvm::sys::SmartScopedLock<true> scopedLock(
       llvmDialect->getLLVMContextMutex());
+
   // Declare all functions first because there may be function calls that form a
-  // call graph with cycles.
+  // call graph with cycles, or global initializers that reference functions.
   for (auto function : getModuleBody(mlirModule).getOps<LLVMFuncOp>()) {
     llvm::FunctionCallee llvmFuncCst = llvmModule->getOrInsertFunction(
         function.getName(),
@@ -801,6 +802,14 @@ LogicalResult ModuleTranslation::convertFunctions() {
                                             function.passthrough(), llvmFunc)))
       return failure();
   }
+
+  return success();
+}
+
+LogicalResult ModuleTranslation::convertFunctions() {
+  // Lock access to the llvm context.
+  llvm::sys::SmartScopedLock<true> scopedLock(
+      llvmDialect->getLLVMContextMutex());
 
   // Convert functions.
   for (auto function : getModuleBody(mlirModule).getOps<LLVMFuncOp>()) {
