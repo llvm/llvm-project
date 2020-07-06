@@ -51,6 +51,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "scalarizer"
 
+static cl::opt<bool> ScalarizeVariableInsertExtract(
+    "scalarize-variable-insert-extract", cl::init(true), cl::Hidden,
+    cl::desc("Allow the scalarizer pass to scalarize "
+             "insertelement/extractelement with variable index"));
+
 // This is disabled by default because having separate loads and stores
 // makes it more likely that the -combiner-alias-analysis limits will be
 // reached.
@@ -760,7 +765,15 @@ bool ScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
     for (unsigned I = 0; I < NumElems; ++I)
       Res[I] = CI->getValue().getZExtValue() == I ? NewElt : Op0[I];
   } else {
-    return false;
+    if (!ScalarizeVariableInsertExtract)
+      return false;
+
+    for (unsigned I = 0; I < NumElems; ++I) {
+      Res[I] = Builder.CreateSelect(
+          Builder.CreateICmpEQ(InsIdx, ConstantInt::get(InsIdx->getType(), I),
+                               InsIdx->getName() + ".is." + Twine(I)),
+          NewElt, Op0[I], IEI.getName() + ".i" + Twine(I));
+    }
   }
 
   gather(&IEI, Res);
