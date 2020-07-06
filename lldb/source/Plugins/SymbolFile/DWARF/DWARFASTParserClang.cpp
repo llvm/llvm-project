@@ -1267,32 +1267,20 @@ TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
   if (TypeSystemClang::IsCXXClassType(array_element_type) &&
       !array_element_type.GetCompleteType()) {
     ModuleSP module_sp = die.GetModule();
-    if (module_sp) {
-      if (die.GetCU()->GetProducer() == eProducerClang)
-        module_sp->ReportError(
-            "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
-            "class/union/struct element type DIE 0x%8.8x that is a "
-            "forward declaration, not a complete definition.\nTry "
-            "compiling the source file with -fstandalone-debug or "
-            "disable -gmodules",
-            die.GetOffset(), type_die.GetOffset());
-      else
-        module_sp->ReportError(
-            "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
-            "class/union/struct element type DIE 0x%8.8x that is a "
-            "forward declaration, not a complete definition.\nPlease "
-            "file a bug against the compiler and include the "
-            "preprocessed output for %s",
-            die.GetOffset(), type_die.GetOffset(), GetUnitName(die).c_str());
-    }
 
-    // We have no choice other than to pretend that the element class
-    // type is complete. If we don't do this, clang will crash when
-    // trying to layout the class. Since we provide layout
-    // assistance, all ivars in this class and other classes will be
-    // fine, this is the best we can do short of crashing.
+    // Mark the class as complete, but we make a note of the fact that
+    // this class is not _really_ complete so we can later search for a
+    // definition in a different module.
+    // Since we provide layout assistance, all ivars in this class and other
+    // classes will be fine even if we are not able to find the definition
+    // elsewhere.
     if (TypeSystemClang::StartTagDeclarationDefinition(array_element_type)) {
       TypeSystemClang::CompleteTagDeclarationDefinition(array_element_type);
+      const auto *td =
+          TypeSystemClang::GetQualType(array_element_type.GetOpaqueQualType())
+              .getTypePtr()
+              ->getAsTagDecl();
+      m_ast.GetMetadata(td)->SetIsForcefullyCompleted();
     } else {
       module_sp->ReportError("DWARF DIE at 0x%8.8x was not able to "
                              "start its definition.\nPlease file a "
@@ -2741,7 +2729,7 @@ void DWARFASTParserClang::ParseSingleMember(
 
           if (TypeSystemClang::IsCXXClassType(member_clang_type) &&
               !member_clang_type.GetCompleteType()) {
-            // Mark the class as complete, ut we make a note of the fact that
+            // Mark the class as complete, but we make a note of the fact that
             // this class is not _really_ complete so we can later search for a
             // definition in a different module.
             // Since we provide layout assistance, all ivars in this class and

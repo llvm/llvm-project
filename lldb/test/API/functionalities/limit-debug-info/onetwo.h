@@ -24,3 +24,18 @@ struct Two {
   virtual ~Two();
 };
 } // namespace member
+
+namespace array {
+struct One {
+  int member = 174;
+  constexpr One() = default;
+  virtual ~One();
+};
+
+struct Two {
+  One one[3];
+  int member = 274;
+  constexpr Two() = default;
+  virtual ~Two();
+};
+} // namespace array
