@@ -193,6 +193,7 @@ public:
   bool visitCastInst(CastInst &CI);
   bool visitBitCastInst(BitCastInst &BCI);
   bool visitInsertElementInst(InsertElementInst &IEI);
+  bool visitExtractElementInst(ExtractElementInst &EEI);
   bool visitShuffleVectorInst(ShuffleVectorInst &SVI);
   bool visitPHINode(PHINode &PHI);
   bool visitLoadInst(LoadInst &LI);
@@ -766,6 +767,24 @@ bool ScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
   return true;
 }
 
+bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
+  VectorType *VT = dyn_cast<VectorType>(EEI.getOperand(0)->getType());
+  if (!VT)
+    return false;
+
+  IRBuilder<> Builder(&EEI);
+  Scatterer Op0 = scatter(&EEI, EEI.getOperand(0));
+  Value *ExtIdx = EEI.getOperand(1);
+
+  if (auto *CI = dyn_cast<ConstantInt>(ExtIdx)) {
+    Value *Res = Op0[CI->getValue().getZExtValue()];
+    gather(&EEI, {Res});
+    return true;
+  }
+
+  return false;
+}
+
 bool ScalarizerVisitor::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   VectorType *VT = dyn_cast<VectorType>(SVI.getType());
   if (!VT)
@@ -885,16 +904,20 @@ bool ScalarizerVisitor::finish() {
     if (!Op->use_empty()) {
       // The value is still needed, so recreate it using a series of
       // InsertElements.
-      auto *Ty = cast<VectorType>(Op->getType());
-      Value *Res = UndefValue::get(Ty);
-      BasicBlock *BB = Op->getParent();
-      unsigned Count = Ty->getNumElements();
-      IRBuilder<> Builder(Op);
-      if (isa<PHINode>(Op))
-        Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
-      for (unsigned I = 0; I < Count; ++I)
-        Res = Builder.CreateInsertElement(Res, CV[I], Builder.getInt32(I),
-                                          Op->getName() + ".upto" + Twine(I));
+      Value *Res = UndefValue::get(Op->getType());
+      if (auto *Ty = dyn_cast<VectorType>(Op->getType())) {
+        BasicBlock *BB = Op->getParent();
+        unsigned Count = Ty->getNumElements();
+        IRBuilder<> Builder(Op);
+        if (isa<PHINode>(Op))
+          Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+        for (unsigned I = 0; I < Count; ++I)
+          Res = Builder.CreateInsertElement(Res, CV[I], Builder.getInt32(I),
+                                            Op->getName() + ".upto" + Twine(I));
+      } else {
+        assert(CV.size() == 1 && Op->getType() == CV[0]->getType());
+        Res = CV[0];
+      }
       Res->takeName(Op);
       Op->replaceAllUsesWith(Res);
     }
