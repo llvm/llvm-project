@@ -45,7 +45,7 @@ public:
     WCharType = UnsignedInt;
     WIntType = UnsignedInt;
     UseZeroLengthBitfieldAlignment = true;
-    resetDataLayout("e-m:e-i64:64-n32:64-S64");
+    resetDataLayout("e-m:e-i64:64-n32:64-S128");
   }
 
   void getTargetDefines(const LangOptions &Opts,
