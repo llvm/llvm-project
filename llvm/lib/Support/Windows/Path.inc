@@ -1372,6 +1372,12 @@ bool home_directory(SmallVectorImpl<char> &result) {
   return getKnownFolderPath(FOLDERID_Profile, result);
 }
 
+bool user_config_directory(SmallVectorImpl<char> &result) {
+  // Either local or roaming appdata may be suitable in some cases, depending
+  // on the data. Local is more conservative, Roaming may not always be correct.
+  return getKnownFolderPath(FOLDERID_LocalAppData, result);
+}
+
 bool cache_directory(SmallVectorImpl<char> &result) {
   return getKnownFolderPath(FOLDERID_LocalAppData, result);
 }

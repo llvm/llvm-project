@@ -1158,6 +1158,30 @@ static bool getDarwinConfDir(bool TempDir, SmallVectorImpl<char> &Result) {
   return false;
 }
 
+bool user_config_directory(SmallVectorImpl<char> &result) {
+#ifdef __APPLE__
+  // Mac: ~/Library/Preferences/
+  if (home_directory(result)) {
+    append("Library", "Preferences");
+    return true;
+  }
+#else
+  // XDG_CONFIG_HOME as defined in the XDG Base Directory Specification:
+  // http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+  if (const char *RequestedDir = getenv("XDG_CONFIG_HOME")) {
+    result.clear();
+    result.append(RequestedDir, RequestedDir + strlen(RequestedDir));
+    return true;
+  }
+#endif
+  // Fallback: ~/.config
+  if (!home_directory(result)) {
+    return false;
+  }
+  append(result, ".config");
+  return true;
+}
+
 bool cache_directory(SmallVectorImpl<char> &result) {
 #ifdef __APPLE__
   if (getDarwinConfDir(false/*tempDir*/, result)) {
