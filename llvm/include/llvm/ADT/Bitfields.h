@@ -227,7 +227,7 @@ struct Bitfield {
     static constexpr unsigned Shift = Offset;
     static constexpr unsigned Bits = Size;
     static constexpr unsigned FirstBit = Offset;
-    static constexpr unsigned LastBit = Shift + Bits;
+    static constexpr unsigned LastBit = Shift + Bits - 1;
 
   private:
     template <typename, typename> friend struct bitfields_details::Impl;
@@ -273,7 +273,7 @@ struct Bitfield {
 
   /// Returns whether the two bitfields share common bits.
   template <typename A, typename B> static constexpr bool isOverlapping() {
-    return A::LastBit > B::FirstBit && B::LastBit > A::FirstBit;
+    return A::LastBit >= B::FirstBit && B::LastBit >= A::FirstBit;
   }
 };
 
