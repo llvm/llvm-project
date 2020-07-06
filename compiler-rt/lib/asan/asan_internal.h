@@ -118,8 +118,6 @@ void AppendToErrorMessageBuffer(const char *buffer);
 
 void *AsanDlSymNext(const char *sym);
 
-void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name);
-
 // Returns `true` iff most of ASan init process should be skipped due to the
 // ASan library being loaded via `dlopen()`. Platforms may perform any
 // `dlopen()` specific initialization inside this function.
