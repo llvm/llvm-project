@@ -416,6 +416,8 @@ public:
     if (!getDerived().shouldTraversePostOrder())                               \
       TRY_TO(WalkUpFromUnary##NAME(S));                                        \
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getSubExpr());                          \
+    if (!Queue && getDerived().shouldTraversePostOrder())                      \
+      TRY_TO(WalkUpFromUnary##NAME(S));                                        \
     return true;                                                               \
   }                                                                            \
   bool WalkUpFromUnary##NAME(UnaryOperator *S) {                               \
@@ -437,6 +439,8 @@ public:
       TRY_TO(WalkUpFromBin##NAME(S));                                          \
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getLHS());                              \
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getRHS());                              \
+    if (!Queue && getDerived().shouldTraversePostOrder())                      \
+      TRY_TO(WalkUpFromBin##NAME(S));                                          \
     return true;                                                               \
   }                                                                            \
   bool WalkUpFromBin##NAME(BINOP_TYPE *S) {                                    \
