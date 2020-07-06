@@ -6177,12 +6177,15 @@ bool TargetLowering::expandROT(SDNode *Node, SDValue &Result,
   SDLoc DL(SDValue(Node, 0));
 
   EVT ShVT = Op1.getValueType();
-  SDValue BitWidthC = DAG.getConstant(EltSizeInBits, DL, ShVT);
+  SDValue Zero = DAG.getConstant(0, DL, ShVT);
 
-  // If a rotate in the other direction is legal, use it.
+  assert(isPowerOf2_32(EltSizeInBits) && EltSizeInBits > 1 &&
+         "Expecting the type bitwidth to be a power of 2");
+
+  // If a rotate in the other direction is supported, use it.
   unsigned RevRot = IsLeft ? ISD::ROTR : ISD::ROTL;
-  if (isOperationLegal(RevRot, VT)) {
-    SDValue Sub = DAG.getNode(ISD::SUB, DL, ShVT, BitWidthC, Op1);
+  if (isOperationLegalOrCustom(RevRot, VT)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Op1);
     Result = DAG.getNode(RevRot, DL, VT, Op0, Sub);
     return true;
   }
@@ -6195,15 +6198,13 @@ bool TargetLowering::expandROT(SDNode *Node, SDValue &Result,
     return false;
 
   // Otherwise,
-  //   (rotl x, c) -> (or (shl x, (and c, w-1)), (srl x, (and w-c, w-1)))
-  //   (rotr x, c) -> (or (srl x, (and c, w-1)), (shl x, (and w-c, w-1)))
+  //   (rotl x, c) -> (or (shl x, (and c, w-1)), (srl x, (and -c, w-1)))
+  //   (rotr x, c) -> (or (srl x, (and c, w-1)), (shl x, (and -c, w-1)))
   //
-  assert(isPowerOf2_32(EltSizeInBits) && EltSizeInBits > 1 &&
-         "Expecting the type bitwidth to be a power of 2");
   unsigned ShOpc = IsLeft ? ISD::SHL : ISD::SRL;
   unsigned HsOpc = IsLeft ? ISD::SRL : ISD::SHL;
   SDValue BitWidthMinusOneC = DAG.getConstant(EltSizeInBits - 1, DL, ShVT);
-  SDValue NegOp1 = DAG.getNode(ISD::SUB, DL, ShVT, BitWidthC, Op1);
+  SDValue NegOp1 = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Op1);
   SDValue And0 = DAG.getNode(ISD::AND, DL, ShVT, Op1, BitWidthMinusOneC);
   SDValue And1 = DAG.getNode(ISD::AND, DL, ShVT, NegOp1, BitWidthMinusOneC);
   Result = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ShOpc, DL, VT, Op0, And0),
