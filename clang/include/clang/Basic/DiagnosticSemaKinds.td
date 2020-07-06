@@ -10527,6 +10527,9 @@ def err_await_suspend_invalid_return_type : Error<
 def note_await_ready_no_bool_conversion : Note<
   "return type of 'await_ready' is required to be contextually convertible to 'bool'"
 >;
+def warn_coroutine_handle_address_invalid_return_type : Warning <
+  "return type of 'coroutine_handle<>::address should be 'void*' (have %0) in order to get capability with existing async C API.">,
+  InGroup<Coroutine>;
 def err_coroutine_promise_final_suspend_requires_nothrow : Error<
   "the expression 'co_await __promise.final_suspend()' is required to be non-throwing"
 >;
