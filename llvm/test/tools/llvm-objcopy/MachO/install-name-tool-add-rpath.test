@@ -22,6 +22,13 @@
 
 # NO-INPUT: no input file specified
 
+## Add same RPATH twice:
+# RUN: not llvm-install-name-tool -add_rpath @executable_X \
+# RUN:                            -add_rpath @executable_X %t.i386 2>&1 \
+# RUN: | FileCheck --check-prefix=DOUBLE %s
+
+# DOUBLE: duplicate load command
+
 ## Check that cmdsize accounts for NULL terminator.
 # RUN: yaml2obj %p/Inputs/x86_64.yaml -o %t.x86_64
 # RUN: llvm-install-name-tool -add_rpath abcd %t.x86_64
