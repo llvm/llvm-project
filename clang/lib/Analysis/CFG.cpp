@@ -4913,14 +4913,13 @@ CFGBlock *CFGBuilder::VisitOMPExecutableDirective(OMPExecutableDirective *D,
       B = R;
   }
   // Visit associated structured block if any.
-  if (!D->isStandaloneDirective())
-    if (CapturedStmt *CS = D->getInnermostCapturedStmt()) {
-      Stmt *S = CS->getCapturedStmt();
-      if (!isa<CompoundStmt>(S))
-        addLocalScopeAndDtors(S);
-      if (CFGBlock *R = addStmt(S))
-        B = R;
-    }
+  if (!D->isStandaloneDirective()) {
+    Stmt *S = D->getRawStmt();
+    if (!isa<CompoundStmt>(S))
+      addLocalScopeAndDtors(S);
+    if (CFGBlock *R = addStmt(S))
+      B = R;
+  }
 
   return B;
 }
