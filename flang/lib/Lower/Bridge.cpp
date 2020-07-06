@@ -788,11 +788,12 @@ private:
         info.isStructured() ? builder->getIndexType() : info.loopVariableType;
     auto lowerValue = genFIRLoopIndex(info.lowerExpr, type);
     auto upperValue = genFIRLoopIndex(info.upperExpr, type);
-    info.stepValue =
-        info.stepExpr.has_value() ? genFIRLoopIndex(*info.stepExpr, type)
-        : info.isStructured()
-            ? builder->create<mlir::ConstantIndexOp>(loc, 1)
-            : builder->createIntegerConstant(loc, info.loopVariableType, 1);
+    info.stepValue = info.stepExpr.has_value()
+                         ? genFIRLoopIndex(*info.stepExpr, type)
+                         : info.isStructured()
+                               ? builder->create<mlir::ConstantIndexOp>(loc, 1)
+                               : builder->createIntegerConstant(
+                                     loc, info.loopVariableType, 1);
     assert(info.stepValue && "step value must be set");
     info.loopVariable = createTemp(loc, *info.loopVariableSym);
 
@@ -1107,9 +1108,8 @@ private:
   void genFIR(const Fortran::parser::InquireStmt &stmt) {
     auto iostat = genInquireStatement(*this, stmt);
     if (const auto *specs =
-            std::get_if<std::list<Fortran::parser::InquireSpec>>(&stmt.u)) {
+            std::get_if<std::list<Fortran::parser::InquireSpec>>(&stmt.u))
       genIoConditionBranches(getEval(), *specs, iostat);
-    }
   }
   void genFIR(const Fortran::parser::OpenStmt &stmt) {
     auto iostat = genOpenStatement(*this, stmt);
