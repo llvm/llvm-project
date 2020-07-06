@@ -38,7 +38,9 @@ enum LexerState {
 class FormatTokenLexer {
 public:
   FormatTokenLexer(const SourceManager &SourceMgr, FileID ID, unsigned Column,
-                   const FormatStyle &Style, encoding::Encoding Encoding);
+                   const FormatStyle &Style, encoding::Encoding Encoding,
+                   llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
+                   IdentifierTable &IdentTable);
 
   ArrayRef<FormatToken *> lex();
 
@@ -103,10 +105,10 @@ private:
   const SourceManager &SourceMgr;
   FileID ID;
   const FormatStyle &Style;
-  IdentifierTable IdentTable;
+  IdentifierTable &IdentTable;
   AdditionalKeywords Keywords;
   encoding::Encoding Encoding;
-  llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
+  llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator;
   // Index (in 'Tokens') of the last token that starts a new line.
   unsigned FirstInLineIndex;
   SmallVector<FormatToken *, 16> Tokens;
