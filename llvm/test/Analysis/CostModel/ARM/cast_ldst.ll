@@ -1284,8 +1284,8 @@ define i32 @load_fpextends() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r2 = fpext half %loadf16 to double
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r3 = fpext float %loadf32 to double
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = fpext <2 x half> %loadv2f16 to <2 x float>
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = fpext <4 x half> %loadv4f16 to <4 x float>
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3 = fpext <8 x half> %loadv8f16 to <8 x float>
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = fpext <4 x half> %loadv4f16 to <4 x float>
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3 = fpext <8 x half> %loadv8f16 to <8 x float>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4 = fpext <16 x half> %loadv16f16 to <16 x float>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5 = fpext <2 x half> %loadv2f16 to <2 x double>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v6 = fpext <4 x half> %loadv4f16 to <4 x double>
@@ -1294,8 +1294,8 @@ define i32 @load_fpextends() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v9 = fpext <2 x float> %loadv2f32 to <2 x double>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v10 = fpext <4 x float> %loadv4f32 to <4 x double>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v11 = fpext <8 x float> %loadv8f32 to <8 x double>
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %loadv4f16ou = load <4 x half>, <4 x half>* undef, align 8
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2ou = fpext <4 x half> %loadv4f16ou to <4 x float>
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4f16ou = load <4 x half>, <4 x half>* undef, align 8
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2ou = fpext <4 x half> %loadv4f16ou to <4 x float>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-RECIP-LABEL: 'load_fpextends'
@@ -1396,8 +1396,8 @@ define i32 @load_fpextends() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r2 = fpext half %loadf16 to double
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r3 = fpext float %loadf32 to double
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = fpext <2 x half> %loadv2f16 to <2 x float>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = fpext <4 x half> %loadv4f16 to <4 x float>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3 = fpext <8 x half> %loadv8f16 to <8 x float>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = fpext <4 x half> %loadv4f16 to <4 x float>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = fpext <8 x half> %loadv8f16 to <8 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4 = fpext <16 x half> %loadv16f16 to <16 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5 = fpext <2 x half> %loadv2f16 to <2 x double>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v6 = fpext <4 x half> %loadv4f16 to <4 x double>
@@ -1407,7 +1407,7 @@ define i32 @load_fpextends() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v10 = fpext <4 x float> %loadv4f32 to <4 x double>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v11 = fpext <8 x float> %loadv8f32 to <8 x double>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4f16ou = load <4 x half>, <4 x half>* undef, align 8
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2ou = fpext <4 x half> %loadv4f16ou to <4 x float>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2ou = fpext <4 x half> %loadv4f16ou to <4 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-SIZE-LABEL: 'load_fpextends'
@@ -1558,9 +1558,9 @@ define i32 @load_fptrunc() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i3264 = fptrunc double undef to float
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v21632 = fptrunc <2 x float> undef to <2 x half>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v21664 = fptrunc <2 x double> undef to <2 x half>
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v41632 = fptrunc <4 x float> undef to <4 x half>
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v41632 = fptrunc <4 x float> undef to <4 x half>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v41664 = fptrunc <4 x double> undef to <4 x half>
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v81632 = fptrunc <8 x float> undef to <8 x half>
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v81632 = fptrunc <8 x float> undef to <8 x half>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v81664 = fptrunc <8 x double> undef to <8 x half>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v23264 = fptrunc <2 x double> undef to <2 x float>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v43264 = fptrunc <4 x double> undef to <4 x float>
@@ -1569,7 +1569,7 @@ define i32 @load_fptrunc() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store float %i3264, float* undef, align 4
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x half> %v21632, <2 x half>* undef, align 4
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x half> %v21664, <2 x half>* undef, align 4
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: store <4 x half> %v41632, <4 x half>* undef, align 8
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x half> %v41632, <4 x half>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: store <4 x half> %v41664, <4 x half>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x half> %v81632, <8 x half>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x half> %v81664, <8 x half>* undef, align 16
@@ -1658,9 +1658,9 @@ define i32 @load_fptrunc() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %i3264 = fptrunc double undef to float
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v21632 = fptrunc <2 x float> undef to <2 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v21664 = fptrunc <2 x double> undef to <2 x half>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v41632 = fptrunc <4 x float> undef to <4 x half>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v41632 = fptrunc <4 x float> undef to <4 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v41664 = fptrunc <4 x double> undef to <4 x half>
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v81632 = fptrunc <8 x float> undef to <8 x half>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v81632 = fptrunc <8 x float> undef to <8 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v81664 = fptrunc <8 x double> undef to <8 x half>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v23264 = fptrunc <2 x double> undef to <2 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v43264 = fptrunc <4 x double> undef to <4 x float>
@@ -2784,8 +2784,8 @@ define i32 @maskedload_fpextends() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v9 = fpext <2 x float> %loadv2f32 to <2 x double>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v10 = fpext <4 x float> %loadv4f32 to <4 x double>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v11 = fpext <8 x float> %loadv8f32 to <8 x double>
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %loadv4f16ou = load <4 x half>, <4 x half>* undef, align 8
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2ou = fpext <4 x half> %loadv4f16ou to <4 x float>
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4f16ou = load <4 x half>, <4 x half>* undef, align 8
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2ou = fpext <4 x half> %loadv4f16ou to <4 x float>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-RECIP-LABEL: 'maskedload_fpextends'
@@ -2877,7 +2877,7 @@ define i32 @maskedload_fpextends() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v10 = fpext <4 x float> %loadv4f32 to <4 x double>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v11 = fpext <8 x float> %loadv8f32 to <8 x double>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4f16ou = load <4 x half>, <4 x half>* undef, align 8
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2ou = fpext <4 x half> %loadv4f16ou to <4 x float>
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2ou = fpext <4 x half> %loadv4f16ou to <4 x float>
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-V8M-MAIN-SIZE-LABEL: 'maskedload_fpextends'
