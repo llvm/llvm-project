@@ -238,7 +238,7 @@ handleTlsRelocation(RelType type, Symbol &sym, InputSectionBase &c,
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
-  if (expr == R_DTPREL && !config->shared) {
+  if (expr == R_DTPREL && canRelax && !config->shared) {
     c.relocations.push_back(
         {target->adjustRelaxExpr(type, nullptr, R_RELAX_TLS_LD_TO_LE), type,
          offset, addend, &sym});
