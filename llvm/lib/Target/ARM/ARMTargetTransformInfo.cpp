@@ -892,23 +892,24 @@ int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     return 1;
 
   // Type legalization can't handle structs
-  if (TLI->getValueType(DL, Src,  true) == MVT::Other)
+  if (TLI->getValueType(DL, Src, true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
-
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
 
   if (ST->hasNEON() && Src->isVectorTy() &&
       (Alignment && *Alignment != Align(16)) &&
       cast<VectorType>(Src)->getElementType()->isDoubleTy()) {
     // Unaligned loads/stores are extremely inefficient.
     // We need 4 uops for vst.1/vld.1 vs 1uop for vldr/vstr.
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
     return LT.first * 4;
   }
+
   int BaseCost = ST->hasMVEIntegerOps() && Src->isVectorTy()
                      ? ST->getMVEVectorCostFactor()
                      : 1;
-  return BaseCost * LT.first;
+  return BaseCost * BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                           CostKind, I);
 }
 
 int ARMTTIImpl::getInterleavedMemoryOpCost(
