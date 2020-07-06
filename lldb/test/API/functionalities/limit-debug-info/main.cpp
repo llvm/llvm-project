@@ -22,4 +22,7 @@ struct TwoAsMember {
   int member = 47;
 } two_as_member;
 
+array::One array_of_one[3];
+array::Two array_of_two[3];
+
 int main() { return 0; }
