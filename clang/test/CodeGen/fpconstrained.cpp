@@ -5,10 +5,6 @@
 // RUN: %clang_cc1 -x c++ -ffast-math -fexceptions -fcxx-exceptions -ffp-contract=fast -ffp-exception-behavior=ignore -emit-llvm -o - %s | FileCheck %s -check-prefix=FAST
 // RUN: %clang_cc1 -x c++ -ffast-math -fexceptions -fcxx-exceptions -ffp-contract=fast -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck %s -check-prefix=EXCEPT
 // RUN: %clang_cc1 -x c++ -ffast-math -fexceptions -fcxx-exceptions -ffp-contract=fast -ffp-exception-behavior=maytrap -emit-llvm -o - %s | FileCheck %s -check-prefix=MAYTRAP
-
-// Disabled until constrained floating point is completed for PowerPC.
-// XFAIL: powerpc, powerpc64, powerpc64le
-
 float f0, f1, f2;
 
   template <class>

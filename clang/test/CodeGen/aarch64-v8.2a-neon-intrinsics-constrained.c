@@ -19,9 +19,6 @@
 
 // REQUIRES: aarch64-registered-target
 
-// Disabled until constrained floating point is implemented for arm64.
-// XFAIL: *
-
 #include <arm_neon.h>
 
 // COMMON-LABEL: test_vsqrt_f16
