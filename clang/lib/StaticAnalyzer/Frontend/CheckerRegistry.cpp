@@ -310,6 +310,13 @@ template <bool IsWeak> void CheckerRegistry::resolveDependencies() {
            DependencyIt->FullName == Entry.second &&
            "Failed to find the dependency of a checker!");
 
+    // We do allow diagnostics from unit test/example dependency checkers.
+    assert((DependencyIt->FullName.startswith("test") ||
+            DependencyIt->FullName.startswith("example") || IsWeak ||
+            DependencyIt->IsHidden) &&
+           "Strong dependencies are modeling checkers, and as such "
+           "non-user facing! Mark them hidden in Checkers.td!");
+
     if (IsWeak)
       CheckerIt->WeakDependencies.emplace_back(&*DependencyIt);
     else
