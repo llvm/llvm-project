@@ -1193,7 +1193,7 @@ bool user_config_directory(SmallVectorImpl<char> &result) {
 #ifdef __APPLE__
   // Mac: ~/Library/Preferences/
   if (home_directory(result)) {
-    append("Library", "Preferences");
+    append(result, "Library", "Preferences");
     return true;
   }
 #else
