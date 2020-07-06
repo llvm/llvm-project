@@ -4540,10 +4540,11 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
                           Call.getContext(), Op1C->getZExtValue()));
     // Add alignment attribute if alignment is a power of two constant.
     if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment)) {
-      if (MaybeAlign AlignmentVal = Op0C->getMaybeAlignValue())
-        Call.addAttribute(
-            AttributeList::ReturnIndex,
-            Attribute::getWithAlignment(Call.getContext(), *AlignmentVal));
+      uint64_t AlignmentVal = Op0C->getZExtValue();
+      if (llvm::isPowerOf2_64(AlignmentVal))
+        Call.addAttribute(AttributeList::ReturnIndex,
+                          Attribute::getWithAlignment(Call.getContext(),
+                                                      Align(AlignmentVal)));
     }
   } else if (isReallocLikeFn(&Call, TLI) && Op1C) {
     Call.addAttribute(AttributeList::ReturnIndex,
