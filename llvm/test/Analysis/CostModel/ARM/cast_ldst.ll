@@ -122,8 +122,8 @@ define i32 @load_extends() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %v8864u = zext <8 x i8> %loadv8i8 to <8 x i64>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16816s = sext <16 x i8> %loadv16i8 to <16 x i16>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16816u = zext <16 x i8> %loadv16i8 to <16 x i16>
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v16832s = sext <16 x i8> %loadv16i8 to <16 x i32>
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v16832u = zext <16 x i8> %loadv16i8 to <16 x i32>
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v16832s = sext <16 x i8> %loadv16i8 to <16 x i32>
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v16832u = zext <16 x i8> %loadv16i8 to <16 x i32>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1322 for instruction: %v16864s = sext <16 x i8> %loadv16i8 to <16 x i64>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 298 for instruction: %v16864u = zext <16 x i8> %loadv16i8 to <16 x i64>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v21632s = sext <2 x i16> %loadv2i16 to <2 x i32>
@@ -758,7 +758,7 @@ define i32 @store_trunc() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8832 = trunc <8 x i32> undef to <8 x i8>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v8864 = trunc <8 x i64> undef to <8 x i8>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16816 = trunc <16 x i16> undef to <16 x i8>
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v16832 = trunc <16 x i32> undef to <16 x i8>
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v16832 = trunc <16 x i32> undef to <16 x i8>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v16864 = trunc <16 x i64> undef to <16 x i8>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v21632 = trunc <2 x i32> undef to <2 x i16>
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v21664 = trunc <2 x i64> undef to <2 x i16>
