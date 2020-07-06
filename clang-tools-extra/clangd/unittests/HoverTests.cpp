@@ -784,11 +784,24 @@ class Foo {})cpp";
          HI.NamespaceScope = "";
          HI.Definition = "int xx";
          HI.LocalScope = "Foo::";
-         HI.Size = 4;
          HI.Type = "int";
          HI.AccessSpecifier = "public";
        }},
-  };
+      {R"cpp(
+        // error-ok
+        struct Foo {
+          Bar xx;
+          int [[y^y]];
+        };)cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "yy";
+         HI.Kind = index::SymbolKind::Field;
+         HI.NamespaceScope = "";
+         HI.Definition = "int yy";
+         HI.LocalScope = "Foo::";
+         HI.Type = "int";
+         HI.AccessSpecifier = "public";
+       }}};
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
 
