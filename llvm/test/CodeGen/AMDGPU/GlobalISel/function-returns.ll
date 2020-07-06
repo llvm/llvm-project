@@ -181,6 +181,21 @@ define signext i16 @i16_signext_func_void() #0 {
   ret i16 %val
 }
 
+define half @f16_func_void() #0 {
+  ; CHECK-LABEL: name: f16_func_void
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (load 2 from `half addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0
+  %val = load half, half addrspace(1)* undef
+  ret half %val
+}
+
 define i32 @i32_func_void() #0 {
   ; CHECK-LABEL: name: i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
@@ -724,6 +739,24 @@ define <2 x i16> @v2i16_func_void() #0 {
   ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0, implicit $vgpr1
   %val = load <2 x i16>, <2 x i16> addrspace(1)* undef
   ret <2 x i16> %val
+}
+
+define <2 x half> @v2f16_func_void() #0 {
+  ; CHECK-LABEL: name: v2f16_func_void
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[DEF]](p1) :: (load 4 from `<2 x half> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<2 x s16>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   $vgpr1 = COPY [[ANYEXT1]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0, implicit $vgpr1
+  %val = load <2 x half>, <2 x half> addrspace(1)* undef
+  ret <2 x half> %val
 }
 
 define <3 x i16> @v3i16_func_void() #0 {
