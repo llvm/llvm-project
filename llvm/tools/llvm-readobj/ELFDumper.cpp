@@ -343,7 +343,7 @@ public:
                                            const Elf_Sym *FirstSym) const;
   Expected<StringRef> getSymbolSectionName(const Elf_Sym *Symbol,
                                            unsigned SectionIndex) const;
-  Expected<std::string> getStaticSymbolName(uint32_t Index) const;
+  std::string getStaticSymbolName(uint32_t Index) const;
   StringRef getDynamicString(uint64_t Value) const;
   Expected<StringRef> getSymbolVersionByIndex(uint32_t VersionSymbolIndex,
                                               bool &IsDefault) const;
@@ -1131,21 +1131,27 @@ static std::string maybeDemangle(StringRef Name) {
 }
 
 template <typename ELFT>
-Expected<std::string>
-ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
+std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
+  auto Warn = [&](Error E) -> std::string {
+    this->reportUniqueWarning(
+        createError("unable to read the name of symbol with index " +
+                    Twine(Index) + ": " + toString(std::move(E))));
+    return "<?>";
+  };
+
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
   Expected<const typename ELFT::Sym *> SymOrErr =
       Obj->getSymbol(DotSymtabSec, Index);
   if (!SymOrErr)
-    return SymOrErr.takeError();
+    return Warn(SymOrErr.takeError());
 
   Expected<StringRef> StrTabOrErr = Obj->getStringTableForSymtab(*DotSymtabSec);
   if (!StrTabOrErr)
-    return StrTabOrErr.takeError();
+    return Warn(StrTabOrErr.takeError());
 
   Expected<StringRef> NameOrErr = (*SymOrErr)->getName(*StrTabOrErr);
   if (!NameOrErr)
-    return NameOrErr.takeError();
+    return Warn(NameOrErr.takeError());
   return maybeDemangle(*NameOrErr);
 }
 
@@ -6575,21 +6581,12 @@ void LLVMStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
     return;
   }
 
-  auto GetSymName = [&](uint32_t Index) -> std::string {
-    if (Expected<std::string> NameOrErr =
-            this->dumper()->getStaticSymbolName(Index))
-      return *NameOrErr;
-    else
-      this->reportUniqueWarning(
-          createError("unable to read the name of symbol with index " +
-                      Twine(Index) + ": " + toString(NameOrErr.takeError())));
-    return "<?>";
-  };
-
   for (const Elf_CGProfile &CGPE : *CGProfileOrErr) {
     DictScope D(W, "CGProfileEntry");
-    W.printNumber("From", GetSymName(CGPE.cgp_from), CGPE.cgp_from);
-    W.printNumber("To", GetSymName(CGPE.cgp_to), CGPE.cgp_to);
+    W.printNumber("From", this->dumper()->getStaticSymbolName(CGPE.cgp_from),
+                  CGPE.cgp_from);
+    W.printNumber("To", this->dumper()->getStaticSymbolName(CGPE.cgp_to),
+                  CGPE.cgp_to);
     W.printNumber("Weight", CGPE.cgp_weight);
   }
 }
