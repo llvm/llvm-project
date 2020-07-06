@@ -785,6 +785,7 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
   if (!VT)
     return false;
 
+  unsigned NumSrcElems = VT->getNumElements();
   IRBuilder<> Builder(&EEI);
   Scatterer Op0 = scatter(&EEI, EEI.getOperand(0));
   Value *ExtIdx = EEI.getOperand(1);
@@ -795,7 +796,18 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
     return true;
   }
 
-  return false;
+  if (!ScalarizeVariableInsertExtract)
+    return false;
+
+  Value *Res = UndefValue::get(VT->getElementType());
+  for (unsigned I = 0; I < NumSrcElems; ++I) {
+    Res = Builder.CreateSelect(
+        Builder.CreateICmpEQ(ExtIdx, ConstantInt::get(ExtIdx->getType(), I),
+                             ExtIdx->getName() + ".is." + Twine(I)),
+        Op0[I], Res, EEI.getName() + ".upto" + Twine(I));
+  }
+  gather(&EEI, {Res});
+  return true;
 }
 
 bool ScalarizerVisitor::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
