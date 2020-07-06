@@ -1247,16 +1247,24 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
         return;
 
       Value *CopyOf = CB.getOperand(0);
-      auto *PI = getPredicateInfoFor(&CB);
-      auto *PBranch = dyn_cast_or_null<PredicateBranch>(PI);
       ValueLatticeElement OriginalVal = getValueState(CopyOf);
-      if (!PI || !PBranch) {
+      auto *PI = getPredicateInfoFor(&CB);
+      assert(PI && "Missing predicate info for ssa.copy");
+
+      CmpInst *Cmp;
+      bool TrueEdge;
+      if (auto *PBranch = dyn_cast<PredicateBranch>(PI)) {
+        Cmp = dyn_cast<CmpInst>(PBranch->Condition);
+        TrueEdge = PBranch->TrueEdge;
+      } else if (auto *PAssume = dyn_cast<PredicateAssume>(PI)) {
+        Cmp = dyn_cast<CmpInst>(PAssume->Condition);
+        TrueEdge = true;
+      } else {
         mergeInValue(ValueState[&CB], &CB, OriginalVal);
         return;
       }
 
       // Everything below relies on the condition being a comparison.
-      auto *Cmp = dyn_cast<CmpInst>(PBranch->Condition);
       if (!Cmp) {
         mergeInValue(ValueState[&CB], &CB, OriginalVal);
         return;
@@ -1281,7 +1289,7 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
         return;
       }
 
-      if (!PBranch->TrueEdge)
+      if (!TrueEdge)
         Pred = CmpInst::getInversePredicate(Pred);
 
       ValueLatticeElement CondVal = getValueState(CmpOp1);
