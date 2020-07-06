@@ -161,6 +161,10 @@ else()
     VERSION "${amd_comgr_VERSION_MAJOR}.${amd_comgr_VERSION_MINOR}.${amd_comgr_VERSION_PATCH}")
 endif()
 
+if (NOT COMGR_BUILD_SHARED_LIBS)
+  set_target_properties(amd_comgr PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
 if (CMAKE_SIZEOF_VOID_P EQUAL 4)
   set_target_properties(amd_comgr PROPERTIES OUTPUT_NAME "amd_comgr32")
 endif()
@@ -181,6 +185,12 @@ set(AMD_COMGR_PACKAGE_PREFIX lib/cmake/amd_comgr)
 
 # Generate the build-tree package.
 set(AMD_COMGR_PREFIX_CODE)
+if (NOT COMGR_BUILD_SHARED_LIBS)
+  string(APPEND AMD_COMGR_PREFIX_CODE "\ninclude(CMakeFindDependencyMacro)\n")
+  string(APPEND AMD_COMGR_PREFIX_CODE "find_dependency(Clang REQUIRED)\n")
+  string(APPEND AMD_COMGR_PREFIX_CODE "find_dependency(LLD REQUIRED)\n")
+endif()
+
 set(AMD_COMGR_TARGETS_PATH
   "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
 set(AMD_COMGR_VERSION_PATH
@@ -222,6 +232,13 @@ foreach(p ${count})
   set(AMD_COMGR_PREFIX_CODE "${AMD_COMGR_PREFIX_CODE}
 get_filename_component(AMD_COMGR_PREFIX \"\${AMD_COMGR_PREFIX}\" PATH)")
 endforeach()
+
+if (NOT COMGR_BUILD_SHARED_LIBS)
+  string(APPEND AMD_COMGR_PREFIX_CODE "\ninclude(CMakeFindDependencyMacro)\n")
+  string(APPEND AMD_COMGR_PREFIX_CODE "find_dependency(Clang REQUIRED)\n")
+  string(APPEND AMD_COMGR_PREFIX_CODE "find_dependency(LLD REQUIRED)\n")
+endif()
+
 set(AMD_COMGR_TARGETS_PATH "\${AMD_COMGR_PREFIX}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
 configure_file("cmake/${AMD_COMGR_CONFIG_NAME}.in"
   "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_CONFIG_NAME}.install"
