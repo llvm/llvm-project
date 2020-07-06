@@ -769,10 +769,12 @@ bool ScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
       return false;
 
     for (unsigned I = 0; I < NumElems; ++I) {
-      Res[I] = Builder.CreateSelect(
+      Value *ShouldReplace =
           Builder.CreateICmpEQ(InsIdx, ConstantInt::get(InsIdx->getType(), I),
-                               InsIdx->getName() + ".is." + Twine(I)),
-          NewElt, Op0[I], IEI.getName() + ".i" + Twine(I));
+                               InsIdx->getName() + ".is." + Twine(I));
+      Value *OldElt = Op0[I];
+      Res[I] = Builder.CreateSelect(ShouldReplace, NewElt, OldElt,
+                                    IEI.getName() + ".i" + Twine(I));
     }
   }
 
@@ -801,10 +803,12 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 
   Value *Res = UndefValue::get(VT->getElementType());
   for (unsigned I = 0; I < NumSrcElems; ++I) {
-    Res = Builder.CreateSelect(
+    Value *ShouldExtract =
         Builder.CreateICmpEQ(ExtIdx, ConstantInt::get(ExtIdx->getType(), I),
-                             ExtIdx->getName() + ".is." + Twine(I)),
-        Op0[I], Res, EEI.getName() + ".upto" + Twine(I));
+                             ExtIdx->getName() + ".is." + Twine(I));
+    Value *Elt = Op0[I];
+    Res = Builder.CreateSelect(ShouldExtract, Elt, Res,
+                               EEI.getName() + ".upto" + Twine(I));
   }
   gather(&EEI, {Res});
   return true;
