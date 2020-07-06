@@ -192,6 +192,11 @@ New check aliases
   :doc:`bugprone-signed-char-misuse
   <clang-tidy/checks/bugprone-signed-char-misuse>` was added.
 
+- New alias :doc:`llvm-else-after-return
+  <clang-tidy/checks/llvm-else-after-return>` to
+  :doc:`readability-else-after-return
+  <clang-tidy/checks/readability-else-after-return>` was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
