@@ -469,6 +469,12 @@ SmallVector<AffineMap, 4> ContractionOp::getIndexingMaps() {
   return res;
 }
 
+Optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {
+  SmallVector<int64_t, 4> shape;
+  getIterationBounds(shape);
+  return shape;
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
@@ -1522,6 +1528,11 @@ OpFoldResult TransferReadOp::fold(ArrayRef<Attribute>) {
   return OpFoldResult();
 }
 
+Optional<SmallVector<int64_t, 4>> TransferReadOp::getShapeForUnroll() {
+  auto s = getVectorType().getShape();
+  return SmallVector<int64_t, 4>{s.begin(), s.end()};
+}
+
 //===----------------------------------------------------------------------===//
 // TransferWriteOp
 //===----------------------------------------------------------------------===//
@@ -1610,6 +1621,11 @@ static LogicalResult verify(TransferWriteOp op) {
 LogicalResult TransferWriteOp::fold(ArrayRef<Attribute>,
                                     SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
+}
+
+Optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
+  auto s = getVectorType().getShape();
+  return SmallVector<int64_t, 4>{s.begin(), s.end()};
 }
 
 //===----------------------------------------------------------------------===//

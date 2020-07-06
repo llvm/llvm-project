@@ -444,7 +444,7 @@ def MyInterface : OpInterface<"MyInterface"> {
     // Note: `ConcreteOp` corresponds to the derived operation typename.
     InterfaceMethod<"/*insert doc here*/",
       "unsigned", "getNumWithDefault", (ins), /*methodBody=*/[{}], [{
-        ConcreteOp op = cast<ConcreteOp>(getOperation());
+        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
         return op.getNumInputs() + op.getNumOutputs();
     }]>,
   ];

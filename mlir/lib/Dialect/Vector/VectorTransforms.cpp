@@ -30,6 +30,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/VectorUnrollInterface.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -357,7 +358,7 @@ struct VectorState {
 //    (removable with DCE).
 
 // TODO(andydavis) Generalize this to support structured ops beyond
-// vector ContractionOp, and merge it with 'unrollSingleResultOpMatchingType'
+// vector ContractionOp, and merge it with 'unrollSingleResultVectorOp'
 static Value unrollSingleResultStructuredOp(Operation *op,
                                             ArrayRef<int64_t> iterationBounds,
                                             std::vector<VectorState> &vectors,
@@ -450,11 +451,7 @@ static Value unrollSingleResultStructuredOp(Operation *op,
 
 static void getVectorContractionOpUnrollState(
     vector::ContractionOp contractionOp, ArrayRef<int64_t> targetShape,
-    SmallVectorImpl<int64_t> &iterationBounds,
     std::vector<VectorState> &vectors, unsigned &resultIndex) {
-  // Get contraction op iteration bounds.
-  contractionOp.getIterationBounds(iterationBounds);
-  assert(iterationBounds.size() == targetShape.size());
   // Get map from iteration space index to lhs/rhs/result shape index.
   std::vector<DenseMap<int64_t, int64_t>> iterationIndexMapList;
   contractionOp.getIterationIndexMap(iterationIndexMapList);
@@ -476,17 +473,15 @@ static void getVectorContractionOpUnrollState(
     vectors.push_back({contractionOp.getRHSVectorMaskType(),
                        vectors[1].indexMap, accOperandIndex + 2, false});
   }
-  // Unroll 'op' 'iterationBounds' to 'targetShape'.
   // TODO(andydavis) Use linalg style 'args_in'/'args_out' to partition
   // 'vectors' instead of 'resultIndex'.
   resultIndex = accOperandIndex;
 }
 
-static void
-getVectorElementwiseOpUnrollState(Operation *op, ArrayRef<int64_t> targetShape,
-                                  SmallVectorImpl<int64_t> &iterationBounds,
-                                  std::vector<VectorState> &vectors,
-                                  unsigned &resultIndex) {
+static void getVectorElementwiseOpUnrollState(Operation *op,
+                                              ArrayRef<int64_t> targetShape,
+                                              std::vector<VectorState> &vectors,
+                                              unsigned &resultIndex) {
   // Verify that operation and operands all have the same vector shape.
   auto resultType = op->getResult(0).getType().dyn_cast_or_null<VectorType>();
   assert(resultType && "Expected op with vector result type");
@@ -494,8 +489,6 @@ getVectorElementwiseOpUnrollState(Operation *op, ArrayRef<int64_t> targetShape,
   // Verify that all operands have the same vector type as result.
   assert(llvm::all_of(op->getOperandTypes(),
                       [=](Type type) { return type == resultType; }));
-  // Populate 'iterationBounds' with 'resultShape' for elementwise operations.
-  iterationBounds.assign(resultShape.begin(), resultShape.end());
 
   // Create trivial elementwise identity index map based on 'resultShape'.
   DenseMap<int64_t, int64_t> indexMap;
@@ -513,28 +506,32 @@ getVectorElementwiseOpUnrollState(Operation *op, ArrayRef<int64_t> targetShape,
 }
 
 // Entry point for unrolling declarative pattern rewrites.
-SmallVector<Value, 1> mlir::vector::unrollSingleResultOpMatchingType(
-    OpBuilder &builder, Operation *op, ArrayRef<int64_t> targetShape) {
+SmallVector<Value, 1>
+mlir::vector::unrollSingleResultVectorOp(OpBuilder &builder, Operation *op,
+                                         ArrayRef<int64_t> targetShape) {
   assert(op->getNumResults() == 1 && "Expected single result operation");
 
   // Populate 'iterationBounds', 'vectors' and 'resultIndex' to unroll 'op'.
   SmallVector<int64_t, 6> iterationBounds;
+  auto unrollableVectorOp = cast<VectorUnrollOpInterface>(op);
+  auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
+  assert(maybeUnrollShape && "Trying to unroll an incorrect vector op");
+
   std::vector<VectorState> vectors;
   unsigned resultIndex;
 
   if (auto contractionOp = dyn_cast<vector::ContractionOp>(op)) {
     // Populate state for vector ContractionOp.
-    getVectorContractionOpUnrollState(contractionOp, targetShape,
-                                      iterationBounds, vectors, resultIndex);
+    getVectorContractionOpUnrollState(contractionOp, targetShape, vectors,
+                                      resultIndex);
   } else {
     // Populate state for vector elementwise op.
-    getVectorElementwiseOpUnrollState(op, targetShape, iterationBounds, vectors,
-                                      resultIndex);
+    getVectorElementwiseOpUnrollState(op, targetShape, vectors, resultIndex);
   }
 
   // Unroll 'op' with 'iterationBounds' to 'targetShape'.
   return SmallVector<Value, 1>{unrollSingleResultStructuredOp(
-      op, iterationBounds, vectors, resultIndex, targetShape, builder)};
+      op, *maybeUnrollShape, vectors, resultIndex, targetShape, builder)};
 }
 
 /// Generates slices of 'vectorType' according to 'sizes' and 'strides, and
