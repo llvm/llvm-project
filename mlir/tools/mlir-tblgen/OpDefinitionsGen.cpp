@@ -36,10 +36,14 @@ using namespace mlir::tblgen;
 
 cl::OptionCategory opDefGenCat("Options for -gen-op-defs and -gen-op-decls");
 
-static cl::opt<std::string>
-    opFilter("op-regex",
-             cl::desc("Regex of name of op's to filter (no filter if empty)"),
-             cl::cat(opDefGenCat));
+static cl::opt<std::string> opIncFilter(
+    "op-include-regex",
+    cl::desc("Regex of name of op's to include (no filter if empty)"),
+    cl::cat(opDefGenCat));
+static cl::opt<std::string> opExcFilter(
+    "op-exclude-regex",
+    cl::desc("Regex of name of op's to exclude (no filter if empty)"),
+    cl::cat(opDefGenCat));
 
 static const char *const tblgenNamePrefix = "tblgen_";
 static const char *const generatedArgName = "odsArg";
@@ -2133,13 +2137,20 @@ getAllDerivedDefinitions(const RecordKeeper &recordKeeper,
   if (!classDef)
     PrintFatalError("ERROR: Couldn't find the `" + className + "' class!\n");
 
-  llvm::Regex includeRegex(opFilter);
+  llvm::Regex includeRegex(opIncFilter), excludeRegex(opExcFilter);
   std::vector<Record *> defs;
   for (const auto &def : recordKeeper.getDefs()) {
-    if (def.second->isSubClassOf(classDef)) {
-      if (opFilter.empty() || includeRegex.match(getOperationName(*def.second)))
-        defs.push_back(def.second.get());
-    }
+    if (!def.second->isSubClassOf(classDef))
+      continue;
+    // Include if no include filter or include filter matches.
+    if (!opIncFilter.empty() &&
+        !includeRegex.match(getOperationName(*def.second)))
+      continue;
+    // Unless there is an exclude filter and it matches.
+    if (!opExcFilter.empty() &&
+        excludeRegex.match(getOperationName(*def.second)))
+      continue;
+    defs.push_back(def.second.get());
   }
 
   return defs;
