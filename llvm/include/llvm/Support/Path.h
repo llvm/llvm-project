@@ -371,6 +371,13 @@ void system_temp_directory(bool erasedOnReboot, SmallVectorImpl<char> &result);
 /// @result True if a home directory is set, false otherwise.
 bool home_directory(SmallVectorImpl<char> &result);
 
+/// Get the directory where packages should read user-specific configurations.
+/// e.g. $XDG_CONFIG_HOME.
+///
+/// @param result Holds the resulting path name.
+/// @result True if the appropriate path was determined, it need not exist.
+bool user_config_directory(SmallVectorImpl<char> &result);
+
 /// Get the directory where installed packages should put their
 /// machine-local cache, e.g. $XDG_CACHE_HOME.
 ///
