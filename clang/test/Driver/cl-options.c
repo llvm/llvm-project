@@ -56,15 +56,6 @@
 // fpstrict-NOT: -menable-unsafe-fp-math
 // fpstrict-NOT: -ffast-math
 
-// RUN: %clang_cl /Z7 -gcolumn-info -### -- %s 2>&1 | FileCheck -check-prefix=gcolumn %s
-// gcolumn: -dwarf-column-info
-
-// RUN: %clang_cl /Z7 -gno-column-info -### -- %s 2>&1 | FileCheck -check-prefix=gnocolumn %s
-// gnocolumn-NOT: -dwarf-column-info
-
-// RUN: %clang_cl /Z7 -### -- %s 2>&1 | FileCheck -check-prefix=gdefcolumn %s
-// gdefcolumn-NOT: -dwarf-column-info
-
 // RUN: %clang_cl -### /FA -fprofile-instr-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE %s
 // RUN: %clang_cl -### /FA -fprofile-instr-generate=/tmp/somefile.profraw -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE-FILE %s
 // CHECK-PROFILE-INSTR-GENERATE: "-fprofile-instrument=clang" "--dependent-lib=clang_rt.profile-{{[^"]*}}.lib"

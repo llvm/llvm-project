@@ -2030,7 +2030,7 @@ def : Flag<["-"], "gno-record-gcc-switches">, Alias<gno_record_command_line>;
 def gstrict_dwarf : Flag<["-"], "gstrict-dwarf">, Group<g_flags_Group>;
 def gno_strict_dwarf : Flag<["-"], "gno-strict-dwarf">, Group<g_flags_Group>;
 def gcolumn_info : Flag<["-"], "gcolumn-info">, Group<g_flags_Group>, Flags<[CoreOption]>;
-def gno_column_info : Flag<["-"], "gno-column-info">, Group<g_flags_Group>, Flags<[CoreOption]>;
+def gno_column_info : Flag<["-"], "gno-column-info">, Group<g_flags_Group>, Flags<[CoreOption, CC1Option]>;
 def gsplit_dwarf : Flag<["-"], "gsplit-dwarf">, Group<g_flags_Group>;
 def gsplit_dwarf_EQ : Joined<["-"], "gsplit-dwarf=">, Group<g_flags_Group>,
   HelpText<"Set DWARF fission mode to either 'split' or 'single'">,

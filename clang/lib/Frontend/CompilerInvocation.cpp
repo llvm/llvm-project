@@ -787,7 +787,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Opts.setDebuggerTuning(static_cast<llvm::DebuggerKind>(Val));
   }
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 0, Diags);
-  Opts.DebugColumnInfo = Args.hasArg(OPT_dwarf_column_info);
+  Opts.DebugColumnInfo = !Args.hasArg(OPT_gno_column_info);
   Opts.EmitCodeView = Args.hasArg(OPT_gcodeview);
   Opts.CodeViewGHash = Args.hasArg(OPT_gcodeview_ghash);
   Opts.MacroDebugInfo = Args.hasArg(OPT_debug_info_macro);

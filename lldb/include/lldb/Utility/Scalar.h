@@ -125,7 +125,7 @@ public:
     m_integer.clearAllBits();
   }
 
-  const char *GetTypeAsCString() const;
+  const char *GetTypeAsCString() const { return GetValueTypeAsCString(m_type); }
 
   void GetValue(Stream *s, bool show_type) const;
 

@@ -638,9 +638,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
   return ret;
 }
 
+#if OMPT_SUPPORT
 void __ompt_taskwait_dep_finish(kmp_taskdata_t *current_task,
                                 ompt_data_t *taskwait_task_data) {
-#if OMPT_SUPPORT
   if (ompt_enabled.ompt_callback_task_schedule) {
     ompt_data_t task_data = ompt_data_none;
     ompt_callbacks.ompt_callback(ompt_callback_task_schedule)(
@@ -652,8 +652,8 @@ void __ompt_taskwait_dep_finish(kmp_taskdata_t *current_task,
   }
   current_task->ompt_task_info.frame.enter_frame.ptr = NULL;
   *taskwait_task_data = ompt_data_none;
-#endif /* OMPT_SUPPORT */
 }
+#endif /* OMPT_SUPPORT */
 
 /*!
 @ingroup TASKING
@@ -763,7 +763,9 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
     KA_TRACE(10, ("__kmpc_omp_wait_deps(exit): T#%d has no blocking "
                   "dependencies : loc=%p\n",
                   gtid, loc_ref));
+#if OMPT_SUPPORT
     __ompt_taskwait_dep_finish(current_task, taskwait_task_data);
+#endif /* OMPT_SUPPORT */
     return;
   }
 
@@ -776,7 +778,9 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
     KA_TRACE(10, ("__kmpc_omp_wait_deps(exit): T#%d has no blocking "
                   "dependencies : loc=%p\n",
                   gtid, loc_ref));
+#if OMPT_SUPPORT
     __ompt_taskwait_dep_finish(current_task, taskwait_task_data);
+#endif /* OMPT_SUPPORT */
     return;
   }
 
@@ -788,7 +792,9 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
                        __kmp_task_stealing_constraint);
   }
 
+#if OMPT_SUPPORT
   __ompt_taskwait_dep_finish(current_task, taskwait_task_data);
+#endif /* OMPT_SUPPORT */
   KA_TRACE(10, ("__kmpc_omp_wait_deps(exit): T#%d finished waiting : loc=%p\n",
                 gtid, loc_ref));
 }

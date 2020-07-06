@@ -362,7 +362,7 @@ TEST(ScalarTest, Scalar_512) {
 
   ASSERT_TRUE(S.MakeUnsigned());
   EXPECT_EQ(S.GetType(), Scalar::e_uint512);
-  ASSERT_STREQ(S.GetTypeAsCString(), "unsigned int512_t");
+  ASSERT_STREQ(S.GetTypeAsCString(), "uint512_t");
   ASSERT_STREQ(S.GetValueTypeAsCString(Scalar::e_uint512), "uint512_t");
   EXPECT_EQ(S.GetByteSize(), 64U);
 

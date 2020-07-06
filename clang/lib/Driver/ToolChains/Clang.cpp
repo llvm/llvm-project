@@ -3748,10 +3748,9 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   // not to include any column info.
   if (const Arg *A = Args.getLastArg(options::OPT_gcolumn_info))
     (void)checkDebugInfoOption(A, Args, D, TC);
-  if (Args.hasFlag(options::OPT_gcolumn_info, options::OPT_gno_column_info,
-                   /*Default=*/!EmitCodeView &&
-                       DebuggerTuning != llvm::DebuggerKind::SCE))
-    CmdArgs.push_back("-dwarf-column-info");
+  if (!Args.hasFlag(options::OPT_gcolumn_info, options::OPT_gno_column_info,
+                    !EmitCodeView && DebuggerTuning != llvm::DebuggerKind::SCE))
+    CmdArgs.push_back("-gno-column-info");
 
   // FIXME: Move backend command line options to the module.
   // If -gline-tables-only or -gline-directives-only is the last option it wins.

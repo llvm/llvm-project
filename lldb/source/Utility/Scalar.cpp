@@ -229,44 +229,6 @@ void Scalar::GetValue(Stream *s, bool show_type) const {
   }
 }
 
-const char *Scalar::GetTypeAsCString() const {
-  switch (m_type) {
-  case e_void:
-    return "void";
-  case e_sint:
-    return "int";
-  case e_uint:
-    return "unsigned int";
-  case e_slong:
-    return "long";
-  case e_ulong:
-    return "unsigned long";
-  case e_slonglong:
-    return "long long";
-  case e_ulonglong:
-    return "unsigned long long";
-  case e_sint128:
-    return "int128_t";
-  case e_uint128:
-    return "unsigned int128_t";
-  case e_sint256:
-    return "int256_t";
-  case e_uint256:
-    return "unsigned int256_t";
-  case e_sint512:
-    return "int512_t";
-  case e_uint512:
-    return "unsigned int512_t";
-  case e_float:
-    return "float";
-  case e_double:
-    return "double";
-  case e_long_double:
-    return "long double";
-  }
-  return "<invalid Scalar type>";
-}
-
 Scalar::~Scalar() = default;
 
 Scalar::Type Scalar::GetBestTypeForBitSize(size_t bit_size, bool sign) {
