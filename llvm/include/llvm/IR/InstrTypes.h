@@ -1135,6 +1135,15 @@ protected:
 public:
   using Instruction::getContext;
 
+  /// Create a clone of \p CB with a different set of operand bundles and
+  /// insert it before \p InsertPt.
+  ///
+  /// The returned call instruction is identical \p CB in every way except that
+  /// the operand bundles for the new instruction are set to the operand bundles
+  /// in \p Bundles.
+  static CallBase *Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
+                          Instruction *InsertPt = nullptr);
+
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call ||
            I->getOpcode() == Instruction::Invoke ||

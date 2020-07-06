@@ -2321,13 +2321,10 @@ static void RemovePreallocated(Function *F) {
     assert(PreallocatedSetup && "Did not find preallocated bundle");
     uint64_t ArgCount =
         cast<ConstantInt>(PreallocatedSetup->getArgOperand(0))->getZExtValue();
-    CallBase *NewCB = nullptr;
-    if (InvokeInst *II = dyn_cast<InvokeInst>(CB)) {
-      NewCB = InvokeInst::Create(II, OpBundles, CB);
-    } else {
-      CallInst *CI = cast<CallInst>(CB);
-      NewCB = CallInst::Create(CI, OpBundles, CB);
-    }
+
+    assert((isa<CallInst>(CB) || isa<InvokeInst>(CB)) &&
+           "Unknown indirect call type");
+    CallBase *NewCB = CallBase::Create(CB, OpBundles, CB);
     CB->replaceAllUsesWith(NewCB);
     NewCB->takeName(CB);
     CB->eraseFromParent();

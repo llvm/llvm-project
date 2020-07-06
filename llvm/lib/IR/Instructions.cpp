@@ -247,6 +247,20 @@ void LandingPadInst::addClause(Constant *Val) {
 //                        CallBase Implementation
 //===----------------------------------------------------------------------===//
 
+CallBase *CallBase::Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
+                           Instruction *InsertPt) {
+  switch (CB->getOpcode()) {
+  case Instruction::Call:
+    return CallInst::Create(cast<CallInst>(CB), Bundles, InsertPt);
+  case Instruction::Invoke:
+    return InvokeInst::Create(cast<InvokeInst>(CB), Bundles, InsertPt);
+  case Instruction::CallBr:
+    return CallBrInst::Create(cast<CallBrInst>(CB), Bundles, InsertPt);
+  default:
+    llvm_unreachable("Unknown CallBase sub-class!");
+  }
+}
+
 Function *CallBase::getCaller() { return getParent()->getParent(); }
 
 unsigned CallBase::getNumSubclassExtraOperandsDynamic() const {
