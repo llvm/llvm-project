@@ -18,6 +18,10 @@ using namespace ento;
 // Methods of CmdLineOption, PackageInfo and CheckerInfo.
 //===----------------------------------------------------------------------===//
 
+LLVM_DUMP_METHOD void CmdLineOption::dump() const {
+  dumpToStream(llvm::errs());
+}
+
 LLVM_DUMP_METHOD void
 CmdLineOption::dumpToStream(llvm::raw_ostream &Out) const {
   // The description can be just checked in Checkers.inc, the point here is to
@@ -39,6 +43,8 @@ static StringRef toString(StateFromCmdLine Kind) {
   llvm_unreachable("Unhandled StateFromCmdLine enum");
 }
 
+LLVM_DUMP_METHOD void CheckerInfo::dump() const { dumpToStream(llvm::errs()); }
+
 LLVM_DUMP_METHOD void CheckerInfo::dumpToStream(llvm::raw_ostream &Out) const {
   // The description can be just checked in Checkers.inc, the point here is to
   // debug whether we succeeded in parsing it. Same with documentation uri.
@@ -59,6 +65,8 @@ LLVM_DUMP_METHOD void CheckerInfo::dumpToStream(llvm::raw_ostream &Out) const {
     Out << "    " << Dependency->FullName << '\n';
   }
 }
+
+LLVM_DUMP_METHOD void PackageInfo::dump() const { dumpToStream(llvm::errs()); }
 
 LLVM_DUMP_METHOD void PackageInfo::dumpToStream(llvm::raw_ostream &Out) const {
   Out << FullName << "\n";
