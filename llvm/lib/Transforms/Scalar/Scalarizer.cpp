@@ -192,6 +192,7 @@ public:
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI);
   bool visitCastInst(CastInst &CI);
   bool visitBitCastInst(BitCastInst &BCI);
+  bool visitInsertElementInst(InsertElementInst &IEI);
   bool visitShuffleVectorInst(ShuffleVectorInst &SVI);
   bool visitPHINode(PHINode &PHI);
   bool visitLoadInst(LoadInst &LI);
@@ -389,7 +390,7 @@ void ScalarizerVisitor::gather(Instruction *Op, const ValueVector &CV) {
   if (!SV.empty()) {
     for (unsigned I = 0, E = SV.size(); I != E; ++I) {
       Value *V = SV[I];
-      if (V == nullptr)
+      if (V == nullptr || SV[I] == CV[I])
         continue;
 
       Instruction *Old = cast<Instruction>(V);
@@ -737,6 +738,31 @@ bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
     }
   }
   gather(&BCI, Res);
+  return true;
+}
+
+bool ScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
+  VectorType *VT = dyn_cast<VectorType>(IEI.getType());
+  if (!VT)
+    return false;
+
+  unsigned NumElems = VT->getNumElements();
+  IRBuilder<> Builder(&IEI);
+  Scatterer Op0 = scatter(&IEI, IEI.getOperand(0));
+  Value *NewElt = IEI.getOperand(1);
+  Value *InsIdx = IEI.getOperand(2);
+
+  ValueVector Res;
+  Res.resize(NumElems);
+
+  if (auto *CI = dyn_cast<ConstantInt>(InsIdx)) {
+    for (unsigned I = 0; I < NumElems; ++I)
+      Res[I] = CI->getValue().getZExtValue() == I ? NewElt : Op0[I];
+  } else {
+    return false;
+  }
+
+  gather(&IEI, Res);
   return true;
 }
 
