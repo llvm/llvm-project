@@ -909,7 +909,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
       return std::nullopt;
     } else if (baseExpr->Rank() == 0) {
       if (const Symbol * symbol{GetLastSymbol(*baseExpr)}) {
-        Say("'%s' is not an array"_err_en_US, symbol->name());
+        if (!context_.HasError(symbol)) {
+          Say("'%s' is not an array"_err_en_US, symbol->name());
+          context_.SetError(const_cast<Symbol &>(*symbol));
+        }
       }
     } else if (std::optional<DataRef> dataRef{
                    ExtractDataRef(std::move(*baseExpr))}) {
