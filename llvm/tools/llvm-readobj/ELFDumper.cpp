@@ -2865,9 +2865,14 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
 
     MipsGOTParser<ELFT> Parser(Obj, ObjF->getFileName(), dynamic_table(),
                                dynamic_symbols());
-    if (Parser.hasGot())
+    if (Error E = Parser.findGOT(dynamic_table(), dynamic_symbols()))
+      reportError(std::move(E), ObjF->getFileName());
+    else if (!Parser.isGotEmpty())
       ELFDumperStyle->printMipsGOT(Parser);
-    if (Parser.hasPlt())
+
+    if (Error E = Parser.findPLT(dynamic_table()))
+      reportError(std::move(E), ObjF->getFileName());
+    else if (!Parser.isPltEmpty())
       ELFDumperStyle->printMipsPLT(Parser);
     break;
   }
@@ -2929,9 +2934,11 @@ public:
 
   MipsGOTParser(const ELFO *Obj, StringRef FileName, Elf_Dyn_Range DynTable,
                 Elf_Sym_Range DynSyms);
+  Error findGOT(Elf_Dyn_Range DynTable, Elf_Sym_Range DynSyms);
+  Error findPLT(Elf_Dyn_Range DynTable);
 
-  bool hasGot() const { return !GotEntries.empty(); }
-  bool hasPlt() const { return !PltEntries.empty(); }
+  bool isGotEmpty() const { return GotEntries.empty(); }
+  bool isPltEmpty() const { return PltEntries.empty(); }
 
   uint64_t getGp() const;
 
@@ -2979,7 +2986,11 @@ MipsGOTParser<ELFT>::MipsGOTParser(const ELFO *Obj, StringRef FileName,
                                    Elf_Sym_Range DynSyms)
     : IsStatic(DynTable.empty()), Obj(Obj), GotSec(nullptr), LocalNum(0),
       GlobalNum(0), PltSec(nullptr), PltRelSec(nullptr), PltSymTable(nullptr),
-      FileName(FileName) {
+      FileName(FileName) {}
+
+template <class ELFT>
+Error MipsGOTParser<ELFT>::findGOT(Elf_Dyn_Range DynTable,
+                                   Elf_Sym_Range DynSyms) {
   // See "Global Offset Table" in Chapter 5 in the following document
   // for detailed GOT description.
   // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
@@ -2988,22 +2999,20 @@ MipsGOTParser<ELFT>::MipsGOTParser(const ELFO *Obj, StringRef FileName,
   if (IsStatic) {
     GotSec = findSectionByName(*Obj, FileName, ".got");
     if (!GotSec)
-      return;
+      return Error::success();
 
     ArrayRef<uint8_t> Content =
         unwrapOrError(FileName, Obj->getSectionContents(GotSec));
     GotEntries = Entries(reinterpret_cast<const Entry *>(Content.data()),
                          Content.size() / sizeof(Entry));
     LocalNum = GotEntries.size();
-    return;
+    return Error::success();
   }
 
-  // Lookup dynamic table tags which define GOT/PLT layouts.
+  // Lookup dynamic table tags which define the GOT layout.
   Optional<uint64_t> DtPltGot;
   Optional<uint64_t> DtLocalGotNum;
   Optional<uint64_t> DtGotSym;
-  Optional<uint64_t> DtMipsPltGot;
-  Optional<uint64_t> DtJmpRel;
   for (const auto &Entry : DynTable) {
     switch (Entry.getTag()) {
     case ELF::DT_PLTGOT:
@@ -3015,6 +3024,47 @@ MipsGOTParser<ELFT>::MipsGOTParser(const ELFO *Obj, StringRef FileName,
     case ELF::DT_MIPS_GOTSYM:
       DtGotSym = Entry.getVal();
       break;
+    }
+  }
+
+  if (!DtPltGot && !DtLocalGotNum && !DtGotSym)
+    return Error::success();
+
+  if (!DtPltGot)
+    return createError("cannot find PLTGOT dynamic tag");
+  if (!DtLocalGotNum)
+    return createError("cannot find MIPS_LOCAL_GOTNO dynamic tag");
+  if (!DtGotSym)
+    return createError("cannot find MIPS_GOTSYM dynamic tag");
+
+  size_t DynSymTotal = DynSyms.size();
+  if (*DtGotSym > DynSymTotal)
+    return createError("MIPS_GOTSYM exceeds a number of dynamic symbols");
+
+  GotSec = findNotEmptySectionByAddress(Obj, FileName, *DtPltGot);
+  if (!GotSec)
+    return createError("there is no non-empty GOT section at 0x" +
+                       Twine::utohexstr(*DtPltGot));
+
+  LocalNum = *DtLocalGotNum;
+  GlobalNum = DynSymTotal - *DtGotSym;
+
+  ArrayRef<uint8_t> Content =
+      unwrapOrError(FileName, Obj->getSectionContents(GotSec));
+  GotEntries = Entries(reinterpret_cast<const Entry *>(Content.data()),
+                       Content.size() / sizeof(Entry));
+  GotDynSyms = DynSyms.drop_front(*DtGotSym);
+
+  return Error::success();
+}
+
+template <class ELFT>
+Error MipsGOTParser<ELFT>::findPLT(Elf_Dyn_Range DynTable) {
+  // Lookup dynamic table tags which define the PLT layout.
+  Optional<uint64_t> DtMipsPltGot;
+  Optional<uint64_t> DtJmpRel;
+  for (const auto &Entry : DynTable) {
+    switch (Entry.getTag()) {
     case ELF::DT_MIPS_PLTGOT:
       DtMipsPltGot = Entry.getVal();
       break;
@@ -3024,63 +3074,35 @@ MipsGOTParser<ELFT>::MipsGOTParser(const ELFO *Obj, StringRef FileName,
     }
   }
 
-  // Find dynamic GOT section.
-  if (DtPltGot || DtLocalGotNum || DtGotSym) {
-    if (!DtPltGot)
-      report_fatal_error("Cannot find PLTGOT dynamic table tag.");
-    if (!DtLocalGotNum)
-      report_fatal_error("Cannot find MIPS_LOCAL_GOTNO dynamic table tag.");
-    if (!DtGotSym)
-      report_fatal_error("Cannot find MIPS_GOTSYM dynamic table tag.");
-
-    size_t DynSymTotal = DynSyms.size();
-    if (*DtGotSym > DynSymTotal)
-      reportError(
-          createError("MIPS_GOTSYM exceeds a number of dynamic symbols"),
-          FileName);
-
-    GotSec = findNotEmptySectionByAddress(Obj, FileName, *DtPltGot);
-    if (!GotSec)
-      reportError(createError("There is no not empty GOT section at 0x" +
-                              Twine::utohexstr(*DtPltGot)),
-                  FileName);
-
-    LocalNum = *DtLocalGotNum;
-    GlobalNum = DynSymTotal - *DtGotSym;
-
-    ArrayRef<uint8_t> Content =
-        unwrapOrError(FileName, Obj->getSectionContents(GotSec));
-    GotEntries = Entries(reinterpret_cast<const Entry *>(Content.data()),
-                         Content.size() / sizeof(Entry));
-    GotDynSyms = DynSyms.drop_front(*DtGotSym);
-  }
+  if (!DtMipsPltGot && !DtJmpRel)
+    return Error::success();
 
   // Find PLT section.
-  if (DtMipsPltGot || DtJmpRel) {
-    if (!DtMipsPltGot)
-      report_fatal_error("Cannot find MIPS_PLTGOT dynamic table tag.");
-    if (!DtJmpRel)
-      report_fatal_error("Cannot find JMPREL dynamic table tag.");
+  if (!DtMipsPltGot)
+    return createError("cannot find MIPS_PLTGOT dynamic tag");
+  if (!DtJmpRel)
+    return createError("cannot find JMPREL dynamic tag");
 
-    PltSec = findNotEmptySectionByAddress(Obj, FileName, * DtMipsPltGot);
-    if (!PltSec)
-      report_fatal_error("There is no not empty PLTGOT section at 0x " +
-                         Twine::utohexstr(*DtMipsPltGot));
+  PltSec = findNotEmptySectionByAddress(Obj, FileName, *DtMipsPltGot);
+  if (!PltSec)
+    return createError("there is no non-empty PLTGOT section at 0x" +
+                       Twine::utohexstr(*DtMipsPltGot));
 
-    PltRelSec = findNotEmptySectionByAddress(Obj, FileName, * DtJmpRel);
-    if (!PltRelSec)
-      report_fatal_error("There is no not empty RELPLT section at 0x" +
-                         Twine::utohexstr(*DtJmpRel));
+  PltRelSec = findNotEmptySectionByAddress(Obj, FileName, *DtJmpRel);
+  if (!PltRelSec)
+    return createError("there is no non-empty RELPLT section at 0x" +
+                       Twine::utohexstr(*DtJmpRel));
 
-    ArrayRef<uint8_t> PltContent =
-        unwrapOrError(FileName, Obj->getSectionContents(PltSec));
-    PltEntries = Entries(reinterpret_cast<const Entry *>(PltContent.data()),
-                         PltContent.size() / sizeof(Entry));
+  ArrayRef<uint8_t> PltContent =
+      unwrapOrError(FileName, Obj->getSectionContents(PltSec));
+  PltEntries = Entries(reinterpret_cast<const Entry *>(PltContent.data()),
+                       PltContent.size() / sizeof(Entry));
 
-    PltSymTable = unwrapOrError(FileName, Obj->getSection(PltRelSec->sh_link));
-    PltStrTable =
-        unwrapOrError(FileName, Obj->getStringTableForSymtab(*PltSymTable));
-  }
+  PltSymTable = unwrapOrError(FileName, Obj->getSection(PltRelSec->sh_link));
+  PltStrTable =
+      unwrapOrError(FileName, Obj->getStringTableForSymtab(*PltSymTable));
+
+  return Error::success();
 }
 
 template <class ELFT> uint64_t MipsGOTParser<ELFT>::getGp() const {
