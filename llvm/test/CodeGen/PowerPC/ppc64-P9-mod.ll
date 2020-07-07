@@ -88,13 +88,16 @@ entry:
   store i32 %div, i32* @div_resultsw, align 4
   ret void
 ; CHECK-LABEL: modulo_div_sw
-; CHECK-NOT: modsw
-; CHECK: div
-; CHECK-NOT: modsw
-; CHECK: mull
-; CHECK-NOT: modsw
-; CHECK: sub
+; CHECK: modsw {{[0-9]+}}, 3, 4
 ; CHECK: blr
+; CHECK-DRP-LABEL: modulo_div_sw
+; CHECK-DRP-NOT: modsw
+; CHECK-DRP: div
+; CHECK-DRP-NOT: modsw
+; CHECK-DRP: mull
+; CHECK-DRP-NOT: modsw
+; CHECK-DRP: sub
+; CHECK-DRP: blr
 ; CHECK-PWR8-LABEL: modulo_div_sw
 ; CHECK-PWR8: div
 ; CHECK-PWR8: mull
@@ -129,13 +132,16 @@ entry:
   store i32 %div, i32* @div_resultuw, align 4
   ret void
 ; CHECK-LABEL: modulo_div_uw
-; CHECK-NOT: modsw
-; CHECK: div
-; CHECK-NOT: modsw
-; CHECK: mull
-; CHECK-NOT: modsw
-; CHECK: sub
+; CHECK: moduw {{[0-9]+}}, 3, 4
 ; CHECK: blr
+; CHECK-DRP-LABEL: modulo_div_uw
+; CHECK-DRP-NOT: moduw
+; CHECK-DRP: div
+; CHECK-DRP-NOT: moduw
+; CHECK-DRP: mull
+; CHECK-DRP-NOT: moduw
+; CHECK-DRP: sub
+; CHECK-DRP: blr
 ; CHECK-PWR8-LABEL: modulo_div_uw
 ; CHECK-PWR8: div
 ; CHECK-PWR8: mull
