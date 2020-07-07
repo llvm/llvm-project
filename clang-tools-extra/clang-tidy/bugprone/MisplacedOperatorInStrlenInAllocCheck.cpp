@@ -19,12 +19,10 @@ namespace bugprone {
 
 void MisplacedOperatorInStrlenInAllocCheck::registerMatchers(
     MatchFinder *Finder) {
-  const auto StrLenFunc = functionDecl(anyOf(
-      hasName("::strlen"), hasName("::std::strlen"), hasName("::strnlen"),
-      hasName("::std::strnlen"), hasName("::strnlen_s"),
-      hasName("::std::strnlen_s"), hasName("::wcslen"),
-      hasName("::std::wcslen"), hasName("::wcsnlen"), hasName("::std::wcsnlen"),
-      hasName("::wcsnlen_s"), hasName("std::wcsnlen_s")));
+  const auto StrLenFunc = functionDecl(hasAnyName(
+      "::strlen", "::std::strlen", "::strnlen", "::std::strnlen", "::strnlen_s",
+      "::std::strnlen_s", "::wcslen", "::std::wcslen", "::wcsnlen",
+      "::std::wcsnlen", "::wcsnlen_s", "std::wcsnlen_s"));
 
   const auto BadUse =
       callExpr(callee(StrLenFunc),
@@ -42,12 +40,10 @@ void MisplacedOperatorInStrlenInAllocCheck::registerMatchers(
             hasDescendant(BadUse)),
       BadUse);
 
-  const auto Alloc0Func =
-      functionDecl(anyOf(hasName("::malloc"), hasName("std::malloc"),
-                         hasName("::alloca"), hasName("std::alloca")));
-  const auto Alloc1Func =
-      functionDecl(anyOf(hasName("::calloc"), hasName("std::calloc"),
-                         hasName("::realloc"), hasName("std::realloc")));
+  const auto Alloc0Func = functionDecl(
+      hasAnyName("::malloc", "std::malloc", "::alloca", "std::alloca"));
+  const auto Alloc1Func = functionDecl(
+      hasAnyName("::calloc", "std::calloc", "::realloc", "std::realloc"));
 
   const auto Alloc0FuncPtr =
       varDecl(hasType(isConstQualified()),
