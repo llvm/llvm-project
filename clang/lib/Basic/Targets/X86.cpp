@@ -62,6 +62,7 @@ static const char *const GCCRegNames[] = {
     "cr0",   "cr2",   "cr3",   "cr4",   "cr8",
     "dr0",   "dr1",   "dr2",   "dr3",   "dr6",     "dr7",
     "bnd0",  "bnd1",  "bnd2",  "bnd3",
+    "tmm0",  "tmm1",  "tmm2",  "tmm3",  "tmm4",    "tmm5",  "tmm6",  "tmm7",
 };
 
 const TargetInfo::AddlRegName AddlRegNames[] = {
@@ -394,7 +395,10 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
   } else if (Name == "xsaveopt" || Name == "xsavec" || Name == "xsaves") {
     if (Enabled)
       Features["xsave"] = true;
-  }
+  } else if (Name == "amx-tile" && !Enabled) {
+    Features["amx-bf16"] = Features["amx-int8"] = false;
+  } else if ((Name == "amx-bf16" || Name == "amx-int8") && Enabled)
+    Features["amx-tile"] = true;
 }
 
 /// handleTargetFeatures - Perform initialization based on the user
@@ -529,6 +533,12 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasINVPCID = true;
     } else if (Feature == "+enqcmd") {
       HasENQCMD = true;
+    } else if (Feature == "+amx-bf16") {
+      HasAMXBF16 = true;
+    } else if (Feature == "+amx-int8") {
+      HasAMXINT8 = true;
+    } else if (Feature == "+amx-tile") {
+      HasAMXTILE = true;
     } else if (Feature == "+serialize") {
       HasSERIALIZE = true;
     } else if (Feature == "+tsxldtrk") {
@@ -924,6 +934,12 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__INVPCID__");
   if (HasENQCMD)
     Builder.defineMacro("__ENQCMD__");
+  if (HasAMXTILE)
+    Builder.defineMacro("__AMXTILE__");
+  if (HasAMXINT8)
+    Builder.defineMacro("__AMXINT8__");
+  if (HasAMXBF16)
+    Builder.defineMacro("__AMXBF16__");
   if (HasSERIALIZE)
     Builder.defineMacro("__SERIALIZE__");
   if (HasTSXLDTRK)
@@ -1020,6 +1036,9 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("3dnowa", true)
       .Case("adx", true)
       .Case("aes", true)
+      .Case("amx-bf16", true)
+      .Case("amx-int8", true)
+      .Case("amx-tile", true)
       .Case("avx", true)
       .Case("avx2", true)
       .Case("avx512f", true)
@@ -1102,6 +1121,9 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("adx", HasADX)
       .Case("aes", HasAES)
+      .Case("amx-bf16", HasAMXBF16)
+      .Case("amx-int8", HasAMXINT8)
+      .Case("amx-tile", HasAMXTILE)
       .Case("avx", SSELevel >= AVX)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)

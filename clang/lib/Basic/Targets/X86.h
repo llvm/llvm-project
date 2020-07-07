@@ -125,6 +125,9 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasPTWRITE = false;
   bool HasINVPCID = false;
   bool HasENQCMD = false;
+  bool HasAMXTILE = false;
+  bool HasAMXINT8 = false;
+  bool HasAMXBF16 = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
 
