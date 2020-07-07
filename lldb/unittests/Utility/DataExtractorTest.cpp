@@ -299,3 +299,105 @@ TEST(DataExtractorTest, GetULEB128_bit63) {
   EXPECT_EQ(expected, BE.GetULEB128(&offset));
   EXPECT_EQ(9U, offset);
 }
+
+TEST(DataExtractorTest, GetFloat) {
+  float expected = 4.0f;
+  lldb::offset_t offset;
+
+  {
+    uint8_t buffer[] = {0x00, 0x00, 0x80, 0x40};
+    DataExtractor LE(buffer, sizeof(buffer), lldb::eByteOrderLittle,
+                     sizeof(void *));
+
+    offset = 0;
+    EXPECT_DOUBLE_EQ(expected, LE.GetFloat(&offset));
+    EXPECT_EQ(4U, offset);
+  }
+
+  {
+    uint8_t buffer[] = {0x40, 0x80, 0x00, 0x00};
+    DataExtractor BE(buffer, sizeof(buffer), lldb::eByteOrderBig,
+                     sizeof(void *));
+    offset = 0;
+    EXPECT_DOUBLE_EQ(expected, BE.GetFloat(&offset));
+    EXPECT_EQ(4U, offset);
+  }
+}
+
+TEST(DataExtractorTest, GetFloatUnaligned) {
+  float expected = 4.0f;
+  lldb::offset_t offset;
+
+  {
+    uint8_t buffer[] = {0x00, 0x00, 0x00, 0x80, 0x40};
+    DataExtractor LE(buffer, sizeof(buffer), lldb::eByteOrderLittle,
+                     sizeof(void *));
+
+    offset = 1;
+    EXPECT_DOUBLE_EQ(expected, LE.GetFloat(&offset));
+    EXPECT_EQ(5U, offset);
+  }
+
+  {
+    uint8_t buffer[] = {0x00, 0x40, 0x80, 0x00, 0x00};
+    DataExtractor BE(buffer, sizeof(buffer), lldb::eByteOrderBig,
+                     sizeof(void *));
+    offset = 1;
+    EXPECT_DOUBLE_EQ(expected, BE.GetFloat(&offset));
+    EXPECT_EQ(5U, offset);
+  }
+}
+
+TEST(DataExtractorTest, GetDouble) {
+  if (sizeof(double) != 8)
+    return;
+
+  double expected = 4.0f;
+  lldb::offset_t offset;
+
+  {
+    uint8_t buffer[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x40};
+    DataExtractor LE(buffer, sizeof(buffer), lldb::eByteOrderLittle,
+                     sizeof(void *));
+
+    offset = 0;
+    EXPECT_DOUBLE_EQ(expected, LE.GetDouble(&offset));
+    EXPECT_EQ(8U, offset);
+  }
+
+  {
+    uint8_t buffer[] = {0x40, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    DataExtractor BE(buffer, sizeof(buffer), lldb::eByteOrderBig,
+                     sizeof(void *));
+    offset = 0;
+    EXPECT_DOUBLE_EQ(expected, BE.GetDouble(&offset));
+    EXPECT_EQ(8U, offset);
+  }
+}
+
+TEST(DataExtractorTest, GetDoubleUnaligned) {
+  if (sizeof(double) != 8)
+    return;
+
+  float expected = 4.0f;
+  lldb::offset_t offset;
+
+  {
+    uint8_t buffer[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x40};
+    DataExtractor LE(buffer, sizeof(buffer), lldb::eByteOrderLittle,
+                     sizeof(void *));
+
+    offset = 1;
+    EXPECT_DOUBLE_EQ(expected, LE.GetDouble(&offset));
+    EXPECT_EQ(9U, offset);
+  }
+
+  {
+    uint8_t buffer[] = {0x00, 0x40, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    DataExtractor BE(buffer, sizeof(buffer), lldb::eByteOrderBig,
+                     sizeof(void *));
+    offset = 1;
+    EXPECT_DOUBLE_EQ(expected, BE.GetDouble(&offset));
+    EXPECT_EQ(9U, offset);
+  }
+}
