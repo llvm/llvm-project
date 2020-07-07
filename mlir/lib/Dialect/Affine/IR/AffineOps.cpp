@@ -1810,13 +1810,6 @@ static LogicalResult verify(AffineIfOp op) {
                                            condition.getNumDims())))
     return failure();
 
-  // Verify that the entry of each child region does not have arguments.
-  for (auto &region : op.getOperation()->getRegions()) {
-    for (auto &b : region)
-      if (b.getNumArguments() != 0)
-        return op.emitOpError(
-            "requires that child entry blocks have no arguments");
-  }
   return success();
 }
 
