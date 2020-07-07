@@ -1,7 +1,12 @@
-; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/hello.s -o %t.hello.o
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/hello.s -o %t.hello32.o
+; RUN: llc -mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t32.o
+; RUN: wasm-ld -m wasm32 -no-gc-sections --export=__data_end --export=__heap_base --allow-undefined --no-entry -o %t32.wasm %t32.o %t.hello32.o
+; RUN: obj2yaml %t32.wasm | FileCheck --check-prefixes CHECK,CHK32 %s
 
-target triple = "wasm32-unknown-unknown"
+; RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-unknown %p/Inputs/hello.s -o %t.hello64.o
+; RUN: llc -mtriple=wasm64-unknown-unknown -filetype=obj %s -o %t64.o
+; RUN: wasm-ld -m wasm64 -no-gc-sections --export=__data_end --export=__heap_base --allow-undefined --no-entry -o %t64.wasm %t64.o %t.hello64.o
+; RUN: obj2yaml %t64.wasm | FileCheck --check-prefixes CHECK,CHK64 %s
 
 @foo = hidden global i32 1, align 4
 @aligned_bar = hidden global i32 3, align 16
@@ -13,26 +18,28 @@ target triple = "wasm32-unknown-unknown"
 @local_struct = hidden global %struct.s zeroinitializer, align 4
 @local_struct_internal_ptr = hidden local_unnamed_addr global i32* getelementptr inbounds (%struct.s, %struct.s* @local_struct, i32 0, i32 1), align 4
 
-; RUN: wasm-ld -no-gc-sections --export=__data_end --export=__heap_base --allow-undefined --no-entry -o %t.wasm %t.o %t.hello.o
-; RUN: obj2yaml %t.wasm | FileCheck %s
-
 ; CHECK:        - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x00000002
+; CHK32-NEXT:       - Initial:         0x00000002
+; CHK64-NEXT:       - Flags:           [ IS_64 ]
+; CHK64-NEXT:         Initial:         0x00000002
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Type:            I32
+; CHK32-NEXT:         Type:            I32
+; CHK64-NEXT:         Type:            I64
 ; CHECK-NEXT:         Mutable:         true
 ; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
+; CHK32-NEXT:           Opcode:          I32_CONST
+; CHK64-NEXT:           Opcode:          I64_CONST
 ; CHECK-NEXT:           Value:           66624
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1080
+; CHK32-NEXT:           Value:           1080
+; CHK64-NEXT:           Value:           1088
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
@@ -53,13 +60,11 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1040
-; CHECK-NEXT:         Content:         '0100000000000000000000000000000003000000000000000004000034040000'
-; CHECK-NEXT:    - Type:            CUSTOM
 
 
 ; RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry \
-; RUN:     --initial-memory=131072 --max-memory=131072 -o %t_max.wasm %t.o \
-; RUN:     %t.hello.o
+; RUN:     --initial-memory=131072 --max-memory=131072 -o %t_max.wasm %t32.o \
+; RUN:     %t.hello32.o
 ; RUN: obj2yaml %t_max.wasm | FileCheck %s -check-prefix=CHECK-MAX
 
 ; CHECK-MAX:        - Type:            MEMORY
@@ -70,7 +75,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry --shared-memory \
 ; RUN:     --features=atomics,bulk-memory --initial-memory=131072 \
-; RUN:     --max-memory=131072 -o %t_max.wasm %t.o %t.hello.o
+; RUN:     --max-memory=131072 -o %t_max.wasm %t32.o %t.hello32.o
 ; RUN: obj2yaml %t_max.wasm | FileCheck %s -check-prefix=CHECK-SHARED
 
 ; CHECK-SHARED:        - Type:            MEMORY
@@ -79,7 +84,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-SHARED-NEXT:         Initial:         0x00000002
 ; CHECK-SHARED-NEXT:         Maximum:         0x00000002
 
-; RUN: wasm-ld --relocatable -o %t_reloc.wasm %t.o %t.hello.o
+; RUN: wasm-ld --relocatable -o %t_reloc.wasm %t32.o %t.hello32.o
 ; RUN: obj2yaml %t_reloc.wasm | FileCheck %s -check-prefix=RELOC
 
 ; RELOC:       - Type:            DATA

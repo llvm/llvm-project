@@ -147,6 +147,7 @@ test:
 # BIN-NEXT:         Field:           __linear_memory
 # BIN-NEXT:         Kind:            MEMORY
 # BIN-NEXT:         Memory:
+# BIN-NEXT:           Flags:           [ IS_64 ]
 # BIN-NEXT:           Initial:         0x00000001
 # BIN-NEXT:       - Module:          env
 # BIN-NEXT:         Field:           __indirect_function_table
