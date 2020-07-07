@@ -12,9 +12,6 @@
 // RUN: -o - %s | FileCheck --check-prefix=CHECK-ASM \
 // RUN: --check-prefix=FIXME-CHECK  %s
 
-// Disabled until constrained floating point is completed for PowerPC.
-// XFAIL: *
-
 typedef __attribute__((vector_size(4 * sizeof(float)))) float vec_float;
 typedef __attribute__((vector_size(2 * sizeof(double)))) double vec_double;
 
