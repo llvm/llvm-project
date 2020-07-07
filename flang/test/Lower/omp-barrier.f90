@@ -1,5 +1,8 @@
 ! This test checks lowering of OpenMP Barrier Directive.
 
+! https://github.com/flang-compiler/f18-llvm-project/issues/250
+! XFAIL: *
+
 ! RUN: bbc -fopenmp -emit-fir %s -o - | \
 ! RUN:   FileCheck %s --check-prefix=FIRDialect
 ! RUN: bbc -fopenmp -emit-llvm %s -o - | \
