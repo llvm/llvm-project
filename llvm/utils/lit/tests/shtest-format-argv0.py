@@ -5,7 +5,7 @@
 #
 # This test is not supported on AIX since `[` is only available as a shell builtin
 # and is not installed under PATH by default.
-# UNSUPPORTED: aix
+# UNSUPPORTED: system-aix
 #
 # RUN: %{lit} -j 1 -v %{inputs}/shtest-format-argv0 | FileCheck %s
 

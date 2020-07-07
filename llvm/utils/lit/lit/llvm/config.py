@@ -51,12 +51,14 @@ class LLVMConfig(object):
         elif platform.system() == 'Windows':
             # For tests that require Windows to run.
             features.add('system-windows')
-        elif platform.system() == "Linux":
+        elif platform.system() == 'Linux':
             features.add('system-linux')
         elif platform.system() in ['FreeBSD']:
             features.add('system-freebsd')
-        elif platform.system() == "NetBSD":
+        elif platform.system() == 'NetBSD':
             features.add('system-netbsd')
+        elif platform.system() == 'AIX':
+            features.add('system-aix')
 
         # Native compilation: host arch == default triple arch
         # Both of these values should probably be in every site config (e.g. as
