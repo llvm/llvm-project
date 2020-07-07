@@ -290,6 +290,8 @@ public:
     return false;
   }
 
+  virtual bool fallBackToDAGISel(const Function &F) const { return false; }
+
   /// This hook must be implemented to lower the incoming (formal)
   /// arguments, described by \p VRegs, for GlobalISel. Each argument
   /// must end up in the related virtual registers described by \p VRegs.
