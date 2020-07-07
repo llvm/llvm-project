@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
+#include "mlir/Dialect/SPIRV/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -2516,12 +2517,12 @@ Deserializer::processOp<spirv::MemoryBarrierOp>(ArrayRef<uint32_t> operands) {
 #include "mlir/Dialect/SPIRV/SPIRVSerialization.inc"
 } // namespace
 
-Optional<spirv::ModuleOp> spirv::deserialize(ArrayRef<uint32_t> binary,
-                                             MLIRContext *context) {
+spirv::OwningSPIRVModuleRef spirv::deserialize(ArrayRef<uint32_t> binary,
+                                               MLIRContext *context) {
   Deserializer deserializer(binary, context);
 
   if (failed(deserializer.deserialize()))
-    return llvm::None;
+    return nullptr;
 
-  return deserializer.collect();
+  return deserializer.collect().getValueOr(nullptr);
 }
