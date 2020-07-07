@@ -930,57 +930,44 @@ define <16 x i8> @blend_splat_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x 
   ret <16 x i8> %r
 }
 
-define <4 x i64> @blend_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z) {
-; AVX1-LABEL: blend_mask_cond_v4i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqq %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqq %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
-; AVX1-NEXT:    retq
+define <2 x i64> @blend_mask_cond_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
+; AVX12-LABEL: blend_mask_cond_v2i64:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX12-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX12-NEXT:    vpcmpeqq %xmm3, %xmm0, %xmm0
+; AVX12-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX12-NEXT:    retq
 ;
-; AVX2-LABEL: blend_mask_cond_v4i64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqq %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: blend_mask_cond_v4i64:
+; AVX512F-LABEL: blend_mask_cond_v2i64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
-; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [2,4,8,16]
+; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,4]
 ; AVX512F-NEXT:    vptestnmq %zmm3, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VL-LABEL: blend_mask_cond_v4i64:
+; AVX512VL-LABEL: blend_mask_cond_v2i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vptestnmq {{.*}}(%rip), %ymm0, %k1
-; AVX512VL-NEXT:    vpblendmq %ymm1, %ymm2, %ymm0 {%k1}
+; AVX512VL-NEXT:    vptestnmq {{.*}}(%rip), %xmm0, %k1
+; AVX512VL-NEXT:    vpblendmq %xmm1, %xmm2, %xmm0 {%k1}
 ; AVX512VL-NEXT:    retq
 ;
-; XOP-LABEL: blend_mask_cond_v4i64:
+; XOP-LABEL: blend_mask_cond_v2i64:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; XOP-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; XOP-NEXT:    vpcomeqq %xmm4, %xmm3, %xmm3
-; XOP-NEXT:    vpcomeqq %xmm4, %xmm0, %xmm0
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; XOP-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
+; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; XOP-NEXT:    vpcomeqq %xmm3, %xmm0, %xmm0
+; XOP-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
 ; XOP-NEXT:    retq
-  %a = and <4 x i64> %x, <i64 2, i64 4, i64 8, i64 16>
-  %c = icmp eq <4 x i64> %a, zeroinitializer
-  %r = select <4 x i1> %c, <4 x i64> %y, <4 x i64> %z
-  ret <4 x i64> %r
+  %a = and <2 x i64> %x, <i64 1, i64 4>
+  %c = icmp eq <2 x i64> %a, zeroinitializer
+  %r = select <2 x i1> %c, <2 x i64> %y, <2 x i64> %z
+  ret <2 x i64> %r
 }
 
 define <4 x i32> @blend_mask_cond_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
@@ -1021,6 +1008,156 @@ define <4 x i32> @blend_mask_cond_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z
   %c = icmp eq <4 x i32> %a, zeroinitializer
   %r = select <4 x i1> %c, <4 x i32> %y, <4 x i32> %z
   ret <4 x i32> %r
+}
+
+define <8 x i16> @blend_mask_cond_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %z) {
+; AVX-LABEL: blend_mask_cond_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    retq
+;
+; XOP-LABEL: blend_mask_cond_v8i16:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; XOP-NEXT:    vpcomeqw %xmm3, %xmm0, %xmm0
+; XOP-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; XOP-NEXT:    retq
+  %a = and <8 x i16> %x, <i16 1, i16 2, i16 8, i16 4, i16 8, i16 1024, i16 2, i16 4096>
+  %c = icmp eq <8 x i16> %a, zeroinitializer
+  %r = select <8 x i1> %c, <8 x i16> %y, <8 x i16> %z
+  ret <8 x i16> %r
+}
+
+define <16 x i8> @blend_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
+; AVX-LABEL: blend_mask_cond_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    retq
+;
+; XOP-LABEL: blend_mask_cond_v16i8:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; XOP-NEXT:    vpcomeqb %xmm3, %xmm0, %xmm0
+; XOP-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; XOP-NEXT:    retq
+  %a = and <16 x i8> %x, <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 4, i8 4, i8 4, i8 4, i8 2, i8 2, i8 2, i8 2>
+  %c = icmp eq <16 x i8> %a, zeroinitializer
+  %r = select <16 x i1> %c, <16 x i8> %y, <16 x i8> %z
+  ret <16 x i8> %r
+}
+
+define <4 x i64> @blend_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z) {
+; AVX1-LABEL: blend_mask_cond_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqq %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqq %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: blend_mask_cond_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpcmpeqq %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: blend_mask_cond_v4i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [2,4,32768,1]
+; AVX512F-NEXT:    vptestnmq %zmm3, %zmm0, %k1
+; AVX512F-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_mask_cond_v4i64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vptestnmq {{.*}}(%rip), %ymm0, %k1
+; AVX512VL-NEXT:    vpblendmq %ymm1, %ymm2, %ymm0 {%k1}
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: blend_mask_cond_v4i64:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; XOP-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; XOP-NEXT:    vpcomeqq %xmm4, %xmm3, %xmm3
+; XOP-NEXT:    vpcomeqq %xmm4, %xmm0, %xmm0
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; XOP-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
+; XOP-NEXT:    retq
+  %a = and <4 x i64> %x, <i64 2, i64 4, i64 32768, i64 1>
+  %c = icmp eq <4 x i64> %a, zeroinitializer
+  %r = select <4 x i1> %c, <4 x i64> %y, <4 x i64> %z
+  ret <4 x i64> %r
+}
+
+define <8 x i32> @blend_mask_cond_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
+; AVX1-LABEL: blend_mask_cond_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: blend_mask_cond_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: blend_mask_cond_v8i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,8,4,8,1024,2,4096]
+; AVX512F-NEXT:    vptestnmd %zmm3, %zmm0, %k1
+; AVX512F-NEXT:    vpblendmd %zmm1, %zmm2, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_mask_cond_v8i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vptestnmd {{.*}}(%rip), %ymm0, %k1
+; AVX512VL-NEXT:    vpblendmd %ymm1, %ymm2, %ymm0 {%k1}
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: blend_mask_cond_v8i32:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; XOP-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; XOP-NEXT:    vpcomeqd %xmm4, %xmm3, %xmm3
+; XOP-NEXT:    vpcomeqd %xmm4, %xmm0, %xmm0
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; XOP-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
+; XOP-NEXT:    retq
+  %a = and <8 x i32> %x, <i32 1, i32 2, i32 8, i32 4, i32 8, i32 1024, i32 2, i32 4096>
+  %c = icmp eq <8 x i32> %a, zeroinitializer
+  %r = select <8 x i1> %c, <8 x i32> %y, <8 x i32> %z
+  ret <8 x i32> %r
 }
 
 define <16 x i16> @blend_mask_cond_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %z) {
@@ -1069,26 +1206,50 @@ define <16 x i16> @blend_mask_cond_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i1
   ret <16 x i16> %r
 }
 
-define <16 x i8> @blend_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
-; AVX-LABEL: blend_mask_cond_v16i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
-; AVX-NEXT:    retq
+define <32 x i8> @blend_mask_cond_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %z) {
+; AVX1-LABEL: blend_mask_cond_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm2, %ymm0, %ymm2
+; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
 ;
-; XOP-LABEL: blend_mask_cond_v16i8:
+; AVX2-LABEL: blend_mask_cond_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: blend_mask_cond_v32i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
+; AVX512-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
+; AVX512-NEXT:    retq
+;
+; XOP-LABEL: blend_mask_cond_v32i8:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; XOP-NEXT:    vpcomeqb %xmm3, %xmm0, %xmm0
-; XOP-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; XOP-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; XOP-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; XOP-NEXT:    vpcomeqb %xmm4, %xmm3, %xmm3
+; XOP-NEXT:    vpcomeqb %xmm4, %xmm0, %xmm0
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; XOP-NEXT:    vpcmov %ymm0, %ymm2, %ymm1, %ymm0
 ; XOP-NEXT:    retq
-  %a = and <16 x i8> %x, <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 4, i8 4, i8 4, i8 4, i8 2, i8 2, i8 2, i8 2>
-  %c = icmp eq <16 x i8> %a, zeroinitializer
-  %r = select <16 x i1> %c, <16 x i8> %y, <16 x i8> %z
-  ret <16 x i8> %r
+  %a = and <32 x i8> %x, <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 4, i8 4, i8 4, i8 4, i8 2, i8 2, i8 2, i8 2, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 4, i8 4, i8 4, i8 4, i8 128, i8 4, i8 2, i8 16>
+  %c = icmp eq <32 x i8> %a, zeroinitializer
+  %r = select <32 x i1> %c, <32 x i8> %y, <32 x i8> %z
+  ret <32 x i8> %r
 }
 
 define void @PR46531(i32* %x, i32* %y, i32* %z) {
