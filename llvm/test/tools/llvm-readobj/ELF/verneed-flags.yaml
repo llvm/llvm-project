@@ -13,37 +13,52 @@
 # LLVM-VERDEF-NEXT:     Entries [
 # LLVM-VERDEF-NEXT:       Entry {
 # LLVM-VERDEF-NEXT:         Hash: 0
-# LLVM-VERDEF-NEXT:         Flags: Base (0x1)
+# LLVM-VERDEF-NEXT:         Flags [ (0x1)
+# LLVM-VERDEF-NEXT:           Base (0x1)
+# LLVM-VERDEF-NEXT:         ]
 # LLVM-VERDEF-NEXT:         Index: 0
 # LLVM-VERDEF-NEXT:         Name: base
 # LLVM-VERDEF-NEXT:       }
 # LLVM-VERDEF-NEXT:       Entry {
 # LLVM-VERDEF-NEXT:         Hash: 0
-# LLVM-VERDEF-NEXT:         Flags: Weak (0x2)
+# LLVM-VERDEF-NEXT:         Flags [ (0x2)
+# LLVM-VERDEF-NEXT:           Weak (0x2)
+# LLVM-VERDEF-NEXT:         ]
 # LLVM-VERDEF-NEXT:         Index: 0
 # LLVM-VERDEF-NEXT:         Name: weak
 # LLVM-VERDEF-NEXT:       }
 # LLVM-VERDEF-NEXT:       Entry {
 # LLVM-VERDEF-NEXT:         Hash: 0
-# LLVM-VERDEF-NEXT:         Flags: Info (0x4)
+# LLVM-VERDEF-NEXT:         Flags [ (0x4)
+# LLVM-VERDEF-NEXT:           Info (0x4)
+# LLVM-VERDEF-NEXT:         ]
 # LLVM-VERDEF-NEXT:         Index: 0
 # LLVM-VERDEF-NEXT:         Name: info
 # LLVM-VERDEF-NEXT:       }
 # LLVM-VERDEF-NEXT:       Entry {
 # LLVM-VERDEF-NEXT:         Hash: 0
-# LLVM-VERDEF-NEXT:         Flags: 0x7
+# LLVM-VERDEF-NEXT:         Flags [ (0x7)
+# LLVM-VERDEF-NEXT:           Base (0x1)
+# LLVM-VERDEF-NEXT:           Info (0x4)
+# LLVM-VERDEF-NEXT:           Weak (0x2)
+# LLVM-VERDEF-NEXT:         ]
 # LLVM-VERDEF-NEXT:         Index: 0
 # LLVM-VERDEF-NEXT:         Name: all
 # LLVM-VERDEF-NEXT:       }
 # LLVM-VERDEF-NEXT:       Entry {
 # LLVM-VERDEF-NEXT:         Hash: 0
-# LLVM-VERDEF-NEXT:         Flags: 0x8
+# LLVM-VERDEF-NEXT:         Flags [ (0x8)
+# LLVM-VERDEF-NEXT:         ]
 # LLVM-VERDEF-NEXT:         Index: 0
 # LLVM-VERDEF-NEXT:         Name: unknown
 # LLVM-VERDEF-NEXT:       }
 # LLVM-VERDEF-NEXT:       Entry {
 # LLVM-VERDEF-NEXT:         Hash: 0
-# LLVM-VERDEF-NEXT:         Flags: 0xF
+# LLVM-VERDEF-NEXT:         Flags [ (0xF)
+# LLVM-VERDEF-NEXT:           Base (0x1)
+# LLVM-VERDEF-NEXT:           Info (0x4)
+# LLVM-VERDEF-NEXT:           Weak (0x2)
+# LLVM-VERDEF-NEXT:         ]
 # LLVM-VERDEF-NEXT:         Index: 0
 # LLVM-VERDEF-NEXT:         Name: all_and_unknown
 # LLVM-VERDEF-NEXT:       }
@@ -52,7 +67,7 @@
 # LLVM-VERDEF-NEXT: ]
 
 # GNU-VERDEF:      Version needs section '.gnu.version_r' contains 1 entries:
-# GNU-VERDEF-NEXT:  Addr: 0000000000000000  Offset: 0x000200  Link: 6 (.dynstr)
+# GNU-VERDEF-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 3 (.dynstr)
 # GNU-VERDEF-NEXT:   0x0000: Version: 1  File: dso.so.0  Cnt: 6
 # GNU-VERDEF-NEXT:   0x0010:   Name: base  Flags: BASE  Version: 0
 # GNU-VERDEF-NEXT:   0x0020:   Name: weak  Flags: WEAK  Version: 0
