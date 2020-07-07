@@ -116,4 +116,5 @@ void caller() {
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-CHECKER-OPTION-HELP
 
 // CHECK-CHECKER-OPTION-HELP: example.MyChecker:ExampleOption  (bool) This is an
-// CHECK-CHECKER-OPTION-HELP-SAME: example checker opt. (default: false)
+// CHECK-CHECKER-OPTION-HELP-SAME: example checker opt. (default:
+// CHECK-CHECKER-OPTION-HELP-NEXT: false)
