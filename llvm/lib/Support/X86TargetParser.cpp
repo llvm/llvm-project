@@ -390,6 +390,7 @@ ProcessorFeatures llvm::X86::getKeyFeature(X86::CPUKind Kind) {
 }
 
 // Features with no dependencies.
+static constexpr FeatureBitset ImpliedFeatures64BIT = {};
 static constexpr FeatureBitset ImpliedFeaturesADX = {};
 static constexpr FeatureBitset ImpliedFeaturesBMI = {};
 static constexpr FeatureBitset ImpliedFeaturesBMI2 = {};
@@ -435,6 +436,7 @@ static constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
 
 // Not really CPU features, but need to be in the table because clang uses
 // target features to communicate them to the backend.
+static constexpr FeatureBitset ImpliedFeaturesRETPOLINE_EXTERNAL_THUNK = {};
 static constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_BRANCHES = {};
 static constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_CALLS = {};
 static constexpr FeatureBitset ImpliedFeaturesLVI_CFI = {};
@@ -558,6 +560,8 @@ void llvm::X86::getImpliedFeatures(
   auto I = llvm::find_if(
       FeatureInfos, [&](const FeatureInfo &FI) { return FI.Name == Feature; });
   if (I == std::end(FeatureInfos)) {
+    // FIXME: This shouldn't happen, but may not have all features in the table
+    // yet.
     return;
   }
 
