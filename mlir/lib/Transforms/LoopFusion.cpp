@@ -42,9 +42,9 @@ namespace {
 /// which fuses loop nests with single-writer/single-reader memref dependences
 /// with the goal of improving locality.
 
-// TODO(andydavis) Support fusion of source loop nests which write to multiple
+// TODO: Support fusion of source loop nests which write to multiple
 // memrefs, where each memref can have multiple users (if profitable).
-// TODO(andydavis) Extend this pass to check for fusion preventing dependences,
+// TODO: Extend this pass to check for fusion preventing dependences,
 // and add support for more general loop fusion algorithms.
 
 struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
@@ -68,7 +68,7 @@ mlir::createLoopFusionPass(unsigned fastMemorySpace,
                                       maximalFusion);
 }
 
-// TODO(b/117228571) Replace when this is modeled through side-effects/op traits
+// TODO: Replace when this is modeled through side-effects/op traits
 static bool isMemRefDereferencingOp(Operation &op) {
   return isa<AffineReadOpInterface, AffineWriteOpInterface, AffineDmaStartOp,
              AffineDmaWaitOp>(op);
@@ -101,8 +101,8 @@ struct LoopNestStateCollector {
 // MemRefDependenceGraph is a graph data structure where graph nodes are
 // top-level operations in a FuncOp which contain load/store ops, and edges
 // are memref dependences between the nodes.
-// TODO(andydavis) Add a more flexible dependence graph representation.
-// TODO(andydavis) Add a depth parameter to dependence graph construction.
+// TODO: Add a more flexible dependence graph representation.
+// TODO: Add a depth parameter to dependence graph construction.
 struct MemRefDependenceGraph {
 public:
   // Node represents a node in the graph. A Node is either an entire loop nest
@@ -628,7 +628,7 @@ public:
 
 // Initializes the data dependence graph by walking operations in 'f'.
 // Assigns each node in the graph a node id based on program order in 'f'.
-// TODO(andydavis) Add support for taking a Block arg to construct the
+// TODO: Add support for taking a Block arg to construct the
 // dependence graph at a different depth.
 bool MemRefDependenceGraph::init(FuncOp f) {
   DenseMap<Value, SetVector<unsigned>> memrefAccesses;
@@ -796,7 +796,7 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> loadOpInsts,
           getNumCommonSurroundingLoops(*srcOpInst, *dstOpInst);
       for (unsigned d = 1; d <= numCommonLoops + 1; ++d) {
         FlatAffineConstraints dependenceConstraints;
-        // TODO(andydavis) Cache dependence analysis results, check cache here.
+        // TODO: Cache dependence analysis results, check cache here.
         DependenceResult result = checkMemrefAccessDependence(
             srcAccess, dstAccess, d, &dependenceConstraints,
             /*dependenceComponents=*/nullptr);
@@ -823,7 +823,7 @@ static void sinkSequentialLoops(MemRefDependenceGraph::Node *node) {
   node->op = newRootForOp.getOperation();
 }
 
-//  TODO(mlir-team): improve/complete this when we have target data.
+//  TODO: improve/complete this when we have target data.
 static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
   auto elementType = memRefType.getElementType();
 
@@ -841,7 +841,7 @@ static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
 // Creates and returns a private (single-user) memref for fused loop rooted
 // at 'forOp', with (potentially reduced) memref size based on the
 // MemRefRegion written to by 'srcStoreOpInst' at depth 'dstLoopDepth'.
-// TODO(bondhugula): consider refactoring the common code from generateDma and
+// TODO: consider refactoring the common code from generateDma and
 // this one.
 static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
                                  unsigned dstLoopDepth,
@@ -912,7 +912,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
 
   // Create new private memref for fused loop 'forOp'. 'newShape' is always
   // a constant shape.
-  // TODO(andydavis) Create/move alloc ops for private memrefs closer to their
+  // TODO: Create/move alloc ops for private memrefs closer to their
   // consumer loop nests to reduce their live range. Currently they are added
   // at the beginning of the function, because loop nests can be reordered
   // during the fusion pass.
@@ -1012,7 +1012,7 @@ static bool hasNonAffineUsersOnThePath(unsigned srcId, unsigned dstId,
 // 'srcLiveOutStoreOp', has output edges.
 // Returns true if 'dstNode's read/write region to 'memref' is a super set of
 // 'srcNode's write region to 'memref' and 'srcId' has only one output edge.
-// TODO(andydavis) Generalize this to handle more live in/out cases.
+// TODO: Generalize this to handle more live in/out cases.
 static bool
 canFuseSrcWhichWritesToLiveOut(unsigned srcId, unsigned dstId,
                                AffineWriteOpInterface srcLiveOutStoreOp,
@@ -1040,7 +1040,7 @@ canFuseSrcWhichWritesToLiveOut(unsigned srcId, unsigned dstId,
     return false;
 
   // Compute MemRefRegion 'dstRegion' for 'dstStore/LoadOpInst' on 'memref'.
-  // TODO(andydavis) Compute 'unionboundingbox' of all write regions (one for
+  // TODO: Compute 'unionboundingbox' of all write regions (one for
   // each store op in 'dstStoreOps').
   SmallVector<Operation *, 2> dstStoreOps;
   dstNode->getStoreOpsForMemref(memref, &dstStoreOps);
@@ -1064,7 +1064,7 @@ canFuseSrcWhichWritesToLiveOut(unsigned srcId, unsigned dstId,
 
   // Return false if write region is not a superset of 'srcNodes' write
   // region to 'memref'.
-  // TODO(andydavis) Check the shape and lower bounds here too.
+  // TODO: Check the shape and lower bounds here too.
   if (srcNumElements != dstNumElements)
     return false;
 
@@ -1244,7 +1244,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
         maybeSliceWriteRegionSizeBytes.getValue();
 
     // If we are fusing for reuse, check that write regions remain the same.
-    // TODO(andydavis) Write region check should check sizes and offsets in
+    // TODO: Write region check should check sizes and offsets in
     // each dimension, so that we are sure they are covering the same memref
     // region. Also, move this out to a isMemRefRegionSuperSet helper function.
     if (srcOpInst != srcStoreOpInst &&
@@ -1268,7 +1268,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
       llvm::dbgs() << msg.str();
     });
 
-    // TODO(b/123247369): This is a placeholder cost model.
+    // TODO: This is a placeholder cost model.
     // Among all choices that add an acceptable amount of redundant computation
     // (as per computeToleranceThreshold), we will simply pick the one that
     // reduces the intermediary size the most.
@@ -1424,9 +1424,10 @@ namespace {
 // takes O(V) time for initialization, and has runtime O(V + E).
 //
 // This greedy algorithm is not 'maximal' due to the current restriction of
-// fusing along single producer consumer edges, but there is a TODO to fix this.
+// fusing along single producer consumer edges, but there is a TODO: to fix
+// this.
 //
-// TODO(andydavis) Experiment with other fusion policies.
+// TODO: Experiment with other fusion policies.
 struct GreedyFusion {
 public:
   // The data dependence graph to traverse during fusion.
@@ -1457,7 +1458,7 @@ public:
 
   // Initializes 'worklist' with nodes from 'mdg'
   void init() {
-    // TODO(andydavis) Add a priority queue for prioritizing nodes by different
+    // TODO: Add a priority queue for prioritizing nodes by different
     // metrics (e.g. arithmetic intensity/flops-to-bytes ratio).
     worklist.clear();
     worklistSet.clear();
@@ -1474,7 +1475,7 @@ public:
   // *) Second pass fuses sibling nodes which share no dependence edges.
   // *) Third pass fuses any remaining producer nodes into their users.
   void run() {
-    // TODO(andydavis) Run this repeatedly until a fixed-point is reached.
+    // TODO: Run this repeatedly until a fixed-point is reached.
     fuseProducerConsumerNodes(/*maxSrcUserCount=*/1);
     fuseSiblingNodes();
     fuseProducerConsumerNodes(
@@ -1537,7 +1538,7 @@ public:
             continue;
           // Skip if 'srcNode' has more than one live-out store to a
           // function-local memref.
-          // TODO(andydavis) Support more generic multi-output src loop nests
+          // TODO: Support more generic multi-output src loop nests
           // fusion.
           auto srcStoreOp = mdg->getUniqueOutgoingStore(srcNode);
           if (!srcStoreOp) {
@@ -1602,7 +1603,7 @@ public:
           unsigned dstLoopDepthTest = getInnermostCommonLoopDepth(dstOps);
           // Check the feasibility of fusing src loop nest into dst loop nest
           // at loop depths in range [1, dstLoopDepthTest].
-          // TODO(andydavis) Use slice union computation and union of memref
+          // TODO: Use slice union computation and union of memref
           // read/write regions to cost model and fusion.
           bool canFuse = false;
           for (unsigned i = 1; i <= dstLoopDepthTest; ++i) {
@@ -1663,7 +1664,7 @@ public:
                     memref)
                   storesForMemref.push_back(storeOpInst);
               }
-              // TODO(andydavis) Use union of memref write regions to compute
+              // TODO: Use union of memref write regions to compute
               // private memref footprint.
               auto newMemRef = createPrivateMemRef(
                   dstAffineForOp, storesForMemref[0], bestDstLoopDepth,
@@ -1765,7 +1766,7 @@ public:
     while (findSiblingNodeToFuse(dstNode, &visitedSibNodeIds, &idAndMemref)) {
       unsigned sibId = idAndMemref.first;
       Value memref = idAndMemref.second;
-      // TODO(andydavis) Check that 'sibStoreOpInst' post-dominates all other
+      // TODO: Check that 'sibStoreOpInst' post-dominates all other
       // stores to the same memref in 'sibNode' loop nest.
       auto *sibNode = mdg->getNode(sibId);
       // Compute an operation list insertion point for the fused loop
@@ -1787,7 +1788,7 @@ public:
       assert(sibLoadOpInsts.size() == 1);
       Operation *sibLoadOpInst = sibLoadOpInsts[0];
       assert(!sibNode->stores.empty());
-      // TODO(andydavis) Choose the store which postdominates all other stores.
+      // TODO: Choose the store which postdominates all other stores.
       auto *sibStoreOpInst = sibNode->stores.back();
 
       // Gather 'dstNode' load ops to 'memref'.
@@ -1833,7 +1834,7 @@ public:
     // on 'memref'.
     auto canFuseWithSibNode = [&](Node *sibNode, Value memref) {
       // Skip if 'outEdge' is not a read-after-write dependence.
-      // TODO(andydavis) Remove restrict to single load op restriction.
+      // TODO: Remove restrict to single load op restriction.
       if (sibNode->getLoadOpCount(memref) != 1)
         return false;
       // Skip if there exists a path of dependent edges between

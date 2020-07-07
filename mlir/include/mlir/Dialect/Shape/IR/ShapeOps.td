@@ -479,7 +479,7 @@ def Shape_ConcatOp : Shape_Op<"concat", []> {
 // Shape constraint related ops.
 //===----------------------------------------------------------------------===//
 
-//TODO(tpopp): Move the code below and witnesses to a different file.
+// TODO: Move the code below and witnesses to a different file.
 def Shape_AnyOp : Shape_Op<"any", [Commutative, NoSideEffect]> {
   let summary = "Return any combination of the input shapes";
   let description = [{

@@ -226,7 +226,7 @@ Operation *mlir::edsc::ops::linalg_generic_conv_nhwc(Value vI, Value vW,
                                                      ArrayRef<int> strides,
                                                      ArrayRef<int> dilations) {
   MLIRContext *ctx = ScopedContext::getContext();
-  // TODO(ntv) some template magic to make everything rank-polymorphic.
+  // TODO: some template magic to make everything rank-polymorphic.
   assert((dilations.empty() || dilations.size() == 2) && "only 2-D conv atm");
   assert((strides.empty() || strides.size() == 2) && "only 2-D conv atm");
 
@@ -259,7 +259,7 @@ Operation *mlir::edsc::ops::linalg_generic_dilated_conv_nhwc(
     Value vI, Value vW, Value vO, int depth_multiplier, ArrayRef<int> strides,
     ArrayRef<int> dilations) {
   MLIRContext *ctx = ScopedContext::getContext();
-  // TODO(ntv) some template magic to make everything rank-polymorphic.
+  // TODO: some template magic to make everything rank-polymorphic.
   assert((dilations.empty() || dilations.size() == 2) && "only 2-D conv atm");
   assert((strides.empty() || strides.size() == 2) && "only 2-D conv atm");
 

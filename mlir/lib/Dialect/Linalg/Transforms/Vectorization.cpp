@@ -83,7 +83,7 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   if (!genericOp || !::isRowMajorMatmul(genericOp))
     return failure();
 
-  // TODO(ntv): non-identity layout.
+  // TODO: non-identity layout.
   auto isStaticMemRefWithIdentityLayout = [](Value v) {
     auto m = v.getType().dyn_cast<MemRefType>();
     if (!m || !m.hasStaticShape() || !m.getAffineMaps().empty())

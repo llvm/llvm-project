@@ -1283,7 +1283,7 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
       os << formatv("    auto tblgen_instance = {0}::{1}(tblgen_attrVal);\n",
                     enumAttr->getCppNamespace(), avail.getQueryFnName());
       os << "    if (tblgen_instance) "
-         // TODO(antiagainst): use `avail.getMergeCode()` here once ODS supports
+         // TODO` here once ODS supports
          // dialect-specific contents so that we can use not implementing the
          // availability interface as indication of no requirements.
          << std::string(tgfmt(caseSpecs.front().second.getMergeActionCode(),

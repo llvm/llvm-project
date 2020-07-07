@@ -784,7 +784,7 @@ Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
 
   auto name = getToken().getStringValue();
   auto *dialect = builder.getContext()->getRegisteredDialect(name);
-  // TODO(shpeisman): Allow for having an unknown dialect on an opaque
+  // TODO: Allow for having an unknown dialect on an opaque
   // attribute. Otherwise, it can't be roundtripped without having the dialect
   // registered.
   if (!dialect)

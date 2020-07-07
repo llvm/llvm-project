@@ -101,7 +101,7 @@ static Type adjustType(VectorType tp, int64_t index) {
 }
 
 // Helper method to possibly drop a dimension in a load.
-// TODO(ajcbik): use a reshaping vector load (and share lowering code)
+// TODO
 static Value reshapeLoad(Location loc, Value val, VectorType type,
                          int64_t index, int64_t pos,
                          PatternRewriter &rewriter) {
@@ -129,7 +129,7 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
 }
 
 // Helper method to possibly drop a dimension in a store.
-// TODO(ajcbik): use a reshaping vector store (and share lowering code)
+// TODO
 static Value reshapeStore(Location loc, Value val, Value result,
                           VectorType type, int64_t index, int64_t pos,
                           PatternRewriter &rewriter) {
@@ -182,7 +182,7 @@ static void getMappedElements(const DenseMap<int64_t, int64_t> &indexMap,
 
 // Returns a tuple type with vector element types for each resulting slice
 // of 'vectorType' unrolled by 'sizes' and 'strides'.
-// TODO(andydavis) Move this to a utility function and share it with
+// TODO: Move this to a utility function and share it with
 // Extract/InsertSlicesOp verification.
 static TupleType generateExtractSlicesOpResultType(VectorType vectorType,
                                                    ArrayRef<int64_t> sizes,
@@ -276,7 +276,7 @@ static Value getOrCreateUnrolledVectorSlice(
   // Compute slice offsets.
   SmallVector<int64_t, 4> sliceOffsets(state.unrolledShape.size());
   getMappedElements(indexMap, offsets, sliceOffsets);
-  // TODO(b/144845578) Support non-1 strides.
+  // TODO: Support non-1 strides.
   SmallVector<int64_t, 4> sliceStrides(state.unrolledShape.size(), 1);
   // Compute linear index of 'sliceOffsets' w.r.t 'state.basis'.
   int64_t sliceLinearIndex =
@@ -347,7 +347,7 @@ struct VectorState {
 //                           insertslice
 //                                |
 
-// TODO(andydavis) Add the following canonicalization/simplification patterns:
+// TODO: Add the following canonicalization/simplification patterns:
 // *) Add pattern which matches InsertStridedSlice -> StridedSlice and forwards
 //    InsertStridedSlice operand to StridedSlice.
 // *) Add pattern which matches SourceOp -> StridedSlice -> UserOp which checks
@@ -357,7 +357,7 @@ struct VectorState {
 //    operation, and leave the duplicate StridedSlice ops with no users
 //    (removable with DCE).
 
-// TODO(andydavis) Generalize this to support structured ops beyond
+// TODO: Generalize this to support structured ops beyond
 // vector ContractionOp, and merge it with 'unrollSingleResultVectorOp'
 static Value unrollSingleResultStructuredOp(Operation *op,
                                             ArrayRef<int64_t> iterationBounds,
@@ -473,7 +473,7 @@ static void getVectorContractionOpUnrollState(
     vectors.push_back({contractionOp.getRHSVectorMaskType(),
                        vectors[1].indexMap, accOperandIndex + 2, false});
   }
-  // TODO(andydavis) Use linalg style 'args_in'/'args_out' to partition
+  // TODO: Use linalg style 'args_in'/'args_out' to partition
   // 'vectors' instead of 'resultIndex'.
   resultIndex = accOperandIndex;
 }
@@ -618,7 +618,7 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
 
   LogicalResult matchAndRewrite(vector::TransferReadOp xferReadOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO(andydavis, ntv) Support splitting TransferReadOp with non-identity
+    // TODO: Support splitting TransferReadOp with non-identity
     // permutation maps. Repurpose code from MaterializeVectors transformation.
     if (!isIdentitySuffix(xferReadOp.permutation_map()))
       return failure();
@@ -677,7 +677,7 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp xferWriteOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO(andydavis, ntv) Support splitting TransferWriteOp with non-identity
+    // TODO: Support splitting TransferWriteOp with non-identity
     // permutation maps. Repurpose code from MaterializeVectors transformation.
     if (!isIdentitySuffix(xferWriteOp.permutation_map()))
       return failure();
@@ -1553,7 +1553,7 @@ namespace mlir {
 /// the vector.contract op is a row-major matrix multiply.
 LogicalResult
 ContractionOpToMatmulOpLowering::match(vector::ContractionOp op) const {
-  // TODO(ajcbik): implement masks
+  // TODO: implement masks
   if (llvm::size(op.masks()) != 0)
     return failure();
 
@@ -1619,7 +1619,7 @@ void ContractionOpToMatmulOpLowering::rewrite(vector::ContractionOp op,
 /// otherwise supports any layout permutation of the matrix-multiply.
 LogicalResult
 ContractionOpToOuterProductOpLowering ::match(vector::ContractionOp op) const {
-  // TODO(ajcbik): implement masks
+  // TODO: implement masks
   if (llvm::size(op.masks()) != 0)
     return failure();
 
@@ -1728,11 +1728,11 @@ void ContractionOpToOuterProductOpLowering::rewrite(
 ///
 /// This only kicks in when VectorTransformsOptions is set to AXPY.
 //
-// TODO (ajcbik): this is very similar, but not quite the same as
-//                the outerproduct lowering above; merge the two?
+// TODO: this is very similar, but not quite the same as the outerproduct
+// lowering above; merge the two?
 LogicalResult
 ContractionOpToAXPYLowering::match(vector::ContractionOp op) const {
-  // TODO(ajcbik): implement masks
+  // TODO: implement masks
   if (llvm::size(op.masks()) != 0)
     return failure();
 
@@ -1818,23 +1818,23 @@ void ContractionOpToAXPYLowering::rewrite(vector::ContractionOp op,
 /// This only kicks in when either VectorTransformsOptions is set
 /// to DOT or when other contraction patterns fail.
 //
-// TODO(ajcbik): break down into transpose/reshape/cast ops
+// TODO: break down into transpose/reshape/cast ops
 //               when they become available to avoid code dup
-// TODO(ajcbik): investigate lowering order impact on performance
+// TODO: investigate lowering order impact on performance
 LogicalResult
 ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
                                        PatternRewriter &rewriter) const {
 
-  // TODO(ajcbik): implement masks.
+  // TODO: implement masks.
   if (llvm::size(op.masks()) != 0)
     return failure();
-  // TODO(thomasraoux): support mixed mode contract lowering.
+  // TODO: support mixed mode contract lowering.
   if (op.getLhsType().getElementType() !=
           getElementTypeOrSelf(op.getAccType()) ||
       op.getRhsType().getElementType() != getElementTypeOrSelf(op.getAccType()))
     return failure();
 
-  // TODO(ntv, ajcbik): implement benefits, cost models.
+  // TODO: implement benefits, cost models.
   MLIRContext *ctx = op.getContext();
   ContractionOpToMatmulOpLowering pat1(vectorTransformsOptions, ctx);
   if (succeeded(pat1.match(op)))
@@ -1895,7 +1895,7 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
 }
 
 // Lower one parallel dimension.
-// TODO(ajcbik): consider reusing existing contract unrolling
+// TODO: consider reusing existing contract unrolling
 Value ContractionOpLowering::lowerParallel(vector::ContractionOp op,
                                            int64_t lhsIndex, int64_t rhsIndex,
                                            PatternRewriter &rewriter) const {
@@ -1998,8 +1998,8 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
 
 } // namespace mlir
 
-// TODO(andydavis) Add pattern to rewrite ExtractSlices(ConstantMaskOp).
-// TODO(andydavis) Add this as DRR pattern.
+// TODO: Add pattern to rewrite ExtractSlices(ConstantMaskOp).
+// TODO: Add this as DRR pattern.
 void mlir::vector::populateVectorToVectorTransformationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
   // clang-format off

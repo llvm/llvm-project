@@ -96,8 +96,8 @@ public:
   /// The specific parser to use depending on llvm::cl parser used. This is only
   /// necessary because we need to provide additional methods for certain data
   /// type parsers.
-  /// TODO(riverriddle) We should upstream the methods in GenericOptionParser to
-  /// avoid the need to do this.
+  /// TODO: We should upstream the methods in GenericOptionParser to avoid the
+  /// need to do this.
   template <typename DataType>
   using OptionParser =
       std::conditional_t<std::is_base_of<llvm::cl::generic_parser_base,

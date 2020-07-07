@@ -964,9 +964,9 @@ is used. They serve as "hooks" to the enclosing environment.  This includes
   replaced by the operand/result's type. E.g., for `F32` in `F32:$operand`, its
   `$_self` will be expanded as `getOperand(...).getType()`.
 
-TODO(b/130663252): Reconsider the leading symbol for special placeholders.
-Eventually we want to allow referencing operand/result $-names; such $-names
-can start with underscore.
+TODO: Reconsider the leading symbol for special placeholders. Eventually we want
+to allow referencing operand/result $-names; such $-names can start with
+underscore.
 
 For example, to write an attribute `attr` is an `IntegerAttr`, in C++ you can
 just call `attr.isa<IntegerAttr>()`. The code can be wrapped in a `CPred` as

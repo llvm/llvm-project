@@ -290,7 +290,7 @@ func @invalid_if_conditional6() {
 }
 
 // -----
-// TODO (support affine.if (1)?
+// TODO: support affine.if (1)?
 func @invalid_if_conditional7() {
   affine.for %i = 1 to 10 {
     affine.if affine_set<(i) : (1)> // expected-error {{expected '== 0' or '>= 0' at end of affine constraint}}

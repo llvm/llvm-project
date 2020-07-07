@@ -14,7 +14,7 @@ using namespace mlir;
 /// Walk all of the operations nested under and including the given operations.
 void detail::walkOperations(Operation *op,
                             function_ref<void(Operation *op)> callback) {
-  // TODO(b/140235992) This walk should be iterative over the operations.
+  // TODO: This walk should be iterative over the operations.
   for (auto &region : op->getRegions())
     for (auto &block : region)
       // Early increment here in the case where the operation is erased.
@@ -29,7 +29,7 @@ void detail::walkOperations(Operation *op,
 WalkResult
 detail::walkOperations(Operation *op,
                        function_ref<WalkResult(Operation *op)> callback) {
-  // TODO(b/140235992) This walk should be iterative over the operations.
+  // TODO: This walk should be iterative over the operations.
   for (auto &region : op->getRegions()) {
     for (auto &block : region) {
       // Early increment here in the case where the operation is erased.

@@ -111,7 +111,7 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
               context, llvm::None, values, op->getAttrDictionary(),
               op->getRegions(), inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());
-        // TODO(jpienaar): Expand to regions.
+        // TODO: Expand to regions.
         OpTy::build(b, state, values, op->getAttrs());
         (void)b.createOperation(state);
       }

@@ -72,13 +72,13 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   }
   llvm::SetVector<Operation *> interfaceVarSet;
 
-  // TODO(ravishankarm) : This should in reality traverse the entry function
+  // TODO: This should in reality traverse the entry function
   // call graph and collect all the interfaces. For now, just traverse the
   // instructions in this function.
   funcOp.walk([&](spirv::AddressOfOp addressOfOp) {
     auto var =
         module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.variable());
-    // TODO(antiagainst): Per SPIR-V spec: "Before version 1.4, the interface’s
+    // TODO: Per SPIR-V spec: "Before version 1.4, the interface’s
     // storage classes are limited to the Input and Output storage classes.
     // Starting with version 1.4, the interface’s storage classes are all
     // storage classes used in declaring all global variables referenced by the
@@ -158,7 +158,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     ConversionPatternRewriter &rewriter) const {
   if (!funcOp.getAttrOfType<spirv::EntryPointABIAttr>(
           spirv::getEntryPointABIAttrName())) {
-    // TODO(ravishankarm) : Non-entry point functions are not handled.
+    // TODO: Non-entry point functions are not handled.
     return failure();
   }
   TypeConverter::SignatureConversion signatureConverter(
@@ -169,7 +169,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     auto abiInfo = funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
         argType.index(), attrName);
     if (!abiInfo) {
-      // TODO(ravishankarm) : For non-entry point functions, it should be legal
+      // TODO: For non-entry point functions, it should be legal
       // to pass around scalar/vector values and return a scalar/vector. For now
       // non-entry point functions are not handled in this ABI lowering and will
       // produce an error.
@@ -187,7 +187,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
         rewriter.create<spirv::AddressOfOp>(funcOp.getLoc(), var);
     // Check if the arg is a scalar or vector type. In that case, the value
     // needs to be loaded into registers.
-    // TODO(ravishankarm) : This is loading value of the scalar into registers
+    // TODO: This is loading value of the scalar into registers
     // at the start of the function. It is probably better to do the load just
     // before the use. There might be multiple loads and currently there is no
     // easy way to replace all uses with a sequence of operations.

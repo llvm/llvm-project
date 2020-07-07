@@ -1104,7 +1104,7 @@ Block *ConversionPatternRewriter::splitBlock(Block *block,
 /// PatternRewriter hook for merging a block into another.
 void ConversionPatternRewriter::mergeBlocks(Block *source, Block *dest,
                                             ValueRange argValues) {
-  // TODO(riverriddle) This requires fixing the implementation of
+  // TODO: This requires fixing the implementation of
   // 'replaceUsesOfBlockArgument', which currently isn't undoable.
   llvm_unreachable("block merging updates are currently not supported");
 }
@@ -1381,7 +1381,7 @@ OperationLegalizer::legalize(Operation *op,
   }
 
   // If the operation isn't legal, try to fold it in-place.
-  // TODO(riverriddle) Should we always try to do this, even if the op is
+  // TODO: Should we always try to do this, even if the op is
   // already legal?
   if (succeeded(legalizeWithFold(op, rewriter))) {
     LLVM_DEBUG({

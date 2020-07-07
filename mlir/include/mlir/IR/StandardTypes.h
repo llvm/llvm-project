@@ -250,7 +250,7 @@ public:
   using ImplType = detail::ShapedTypeStorage;
   using Type::Type;
 
-  // TODO(ntv): merge these two special values in a single one used everywhere.
+  // TODO: merge these two special values in a single one used everywhere.
   // Unfortunately, uses of `-1` have crept deep into the codebase now and are
   // hard to track.
   static constexpr int64_t kDynamicSize = -1;
@@ -561,7 +561,7 @@ public:
   /// Returns the memory space in which data referred to by this memref resides.
   unsigned getMemorySpace() const;
 
-  // TODO(ntv): merge these two special values in a single one used everywhere.
+  // TODO: merge these two special values in a single one used everywhere.
   // Unfortunately, uses of `-1` have crept deep into the codebase now and are
   // hard to track.
   static constexpr int64_t kDynamicSize = -1;
