@@ -216,7 +216,7 @@ public:
   ImageSamplingInfo getSamplingInfo() const;
   ImageSamplerUseInfo getSamplerUseInfo() const;
   ImageFormat getImageFormat() const;
-  // TODO(ravishankarm): Add support for Access qualifier
+  // TODO: Add support for Access qualifier
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      Optional<spirv::StorageClass> storage = llvm::None);

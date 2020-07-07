@@ -25,7 +25,7 @@ using namespace mlir;
 
 namespace {
 
-// TODO(andydavis) Add common surrounding loop depth-wise dependence checks.
+// TODO: Add common surrounding loop depth-wise dependence checks.
 /// Checks dependences between all pairs of memref accesses in a Function.
 struct TestMemRefDependenceCheck
     : public PassWrapper<TestMemRefDependenceCheck, FunctionPass> {
@@ -85,7 +85,7 @@ static void checkDependences(ArrayRef<Operation *> loadsAndStores) {
             &dependenceComponents);
         assert(result.value != DependenceResult::Failure);
         bool ret = hasDependence(result);
-        // TODO(andydavis) Print dependence type (i.e. RAW, etc) and print
+        // TODO: Print dependence type (i.e. RAW, etc) and print
         // distance vectors as: ([2, 3], [0, 10]). Also, shorten distance
         // vectors from ([1, 1], [3, 3]) to (1, 3).
         srcOpInst->emitRemark("dependence from ")

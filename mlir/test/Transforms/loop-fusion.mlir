@@ -1,12 +1,12 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion -split-input-file | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion="fusion-maximal" -split-input-file | FileCheck %s --check-prefix=MAXIMAL
 
-// TODO(andydavis) Add more tests:
+// TODO: Add more tests:
 // *) Add nested fusion test cases when non-constant loop bound support is
 //    added to iteration domain in dependence check.
 // *) Add a test w/ floordiv/ceildiv/mod when supported in dependence check.
 // *) Add tests which check fused computation slice indexing and loop bounds.
-// TODO(andydavis) Test clean up: move memref allocs to func args.
+// TODO: Test clean up: move memref allocs to func args.
 
 // -----
 
@@ -317,7 +317,7 @@ func @should_fuse_producer_consumer() {
   }
   // Fusing loop %i0 to %i2 would violate the WAW dependence between %i0 and
   // %i1, but OK to fuse %i1 into %i2.
-  // TODO(andydavis) When the fusion pass is run to a fixed-point, it should
+  // TODO: When the fusion pass is run to a fixed-point, it should
   // fuse all three of these loop nests.
   // CHECK:      alloc() : memref<1xf32>
   // CHECK:      affine.for %{{.*}} = 0 to 10 {

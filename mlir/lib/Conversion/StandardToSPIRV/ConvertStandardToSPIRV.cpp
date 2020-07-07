@@ -536,7 +536,7 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
                                           srcType.getElementType());
       dstElementsAttr = dstElementsAttr.reshape(dstAttrType);
     } else {
-      // TODO(antiagainst): add support for large vectors.
+      // TODO: add support for large vectors.
       return failure();
     }
   }

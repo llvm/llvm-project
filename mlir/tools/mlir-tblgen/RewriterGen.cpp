@@ -204,7 +204,7 @@ std::string PatternEmitter::handleConstantAttr(Attribute attr,
     PrintFatalError(loc, "Attribute " + attr.getAttrDefName() +
                              " does not have the 'constBuilderCall' field");
 
-  // TODO(jpienaar): Verify the constants here
+  // TODO: Verify the constants here
   return std::string(tgfmt(attr.getConstBuilderTemplate(), &fmtCtx, value));
 }
 
@@ -343,7 +343,7 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth,
       "(void)tblgen_attr;\n",
       depth, attr.getStorageType(), namedAttr->name);
 
-  // TODO(antiagainst): This should use getter method to avoid duplication.
+  // TODO: This should use getter method to avoid duplication.
   if (attr.hasDefaultValue()) {
     os.indent(indent) << "if (!tblgen_attr) tblgen_attr = "
                       << std::string(tgfmt(attr.getConstBuilderTemplate(),
@@ -429,7 +429,7 @@ void PatternEmitter::emitMatchLogic(DagNode tree) {
       PrintFatalError(
           loc, "cannot use AttrConstraint in Pattern multi-entity constraints");
     } else {
-      // TODO(b/138794486): replace formatv arguments with the exact specified
+      // TODO: replace formatv arguments with the exact specified
       // args.
       if (entities.size() > 4) {
         PrintFatalError(loc, "only support up to 4-entity constraints now");
@@ -526,7 +526,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
     auto &info = symbolInfoPair.getValue();
     os.indent(4) << info.getVarDecl(symbol);
   }
-  // TODO(jpienaar): capture ops with consistent numbering so that it can be
+  // TODO: capture ops with consistent numbering so that it can be
   // reused for fused loc.
   os.indent(4) << formatv("::mlir::Operation *tblgen_ops[{0}];\n\n",
                           pattern.getSourcePattern().getNumOps());
@@ -619,7 +619,7 @@ void PatternEmitter::emitRewriteLogic() {
       // `{0}` resolves to an `Operation::result_range` as well as cases that
       // are not iterable (e.g. vector that gets wrapped in additional braces by
       // RewriterGen).
-      // TODO(b/147096809): Revisit the need for materializing a vector.
+      // TODO: Revisit the need for materializing a vector.
       os << symbolInfoMap.getAllRangeUse(
           val,
           "    for (auto v : ::llvm::SmallVector<::mlir::Value, 4>{ {0} }) {{ "
@@ -771,7 +771,7 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree) {
   LLVM_DEBUG(llvm::dbgs() << '\n');
 
   auto fmt = tree.getNativeCodeTemplate();
-  // TODO(b/138794486): replace formatv arguments with the exact specified args.
+  // TODO: replace formatv arguments with the exact specified args.
   SmallVector<std::string, 8> attrs(8);
   if (tree.getNumArgs() > 8) {
     PrintFatalError(loc, "unsupported NativeCodeCall argument numbers: " +
@@ -797,7 +797,7 @@ int PatternEmitter::getNodeValueCount(DagNode node) {
     // Otherwise this is an unbound op; we will use all its results.
     return pattern.getDialectOp(node).getNumResults();
   }
-  // TODO(antiagainst): This considers all NativeCodeCall as returning one
+  // TODO: This considers all NativeCodeCall as returning one
   // value. Enhance if multi-value ones are needed.
   return 1;
 }
@@ -1026,7 +1026,7 @@ void PatternEmitter::supplyValuesForOpArgs(
       // The argument in the result DAG pattern.
       auto patArgName = node.getArgName(argIndex);
       if (leaf.isConstantAttr() || leaf.isEnumAttrCase()) {
-        // TODO(jpienaar): Refactor out into map to avoid recomputing these.
+        // TODO: Refactor out into map to avoid recomputing these.
         if (!opArg.is<NamedAttribute *>())
           PrintFatalError(loc, Twine("expected attribute ") + Twine(argIndex));
         if (!patArgName.empty())

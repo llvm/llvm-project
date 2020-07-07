@@ -129,9 +129,9 @@ public:
 //   dma_start %src[%i, %j], %dst[%k, %l], %num_elements, %tag[%idx], %stride,
 //             %num_elt_per_stride :
 //
-// TODO(mlir-team): add additional operands to allow source and destination
-// striding, and multiple stride levels.
-// TODO(andydavis) Consider replacing src/dst memref indices with view memrefs.
+// TODO: add additional operands to allow source and destination striding, and
+// multiple stride levels.
+// TODO: Consider replacing src/dst memref indices with view memrefs.
 class DmaStartOp
     : public Op<DmaStartOp, OpTrait::VariadicOperands, OpTrait::ZeroResult> {
 public:

@@ -27,7 +27,7 @@
 
 using namespace mlir;
 
-// TODO(antiagainst): generate these strings using ODS.
+// TODO: generate these strings using ODS.
 static constexpr const char kAlignmentAttrName[] = "alignment";
 static constexpr const char kBranchWeightAttrName[] = "branch_weights";
 static constexpr const char kCallee[] = "callee";
@@ -313,7 +313,7 @@ static LogicalResult verifyLoadStorePtrAndValTypes(LoadStoreOpTy op, Value ptr,
   // ODS already checks ptr is spirv::PointerType. Just check that the pointee
   // type of the pointer and the type of the value are the same
   //
-  // TODO(ravishankarm): Check that the value type satisfies restrictions of
+  // TODO: Check that the value type satisfies restrictions of
   // SPIR-V OpLoad/OpStore operations
   if (val.getType() !=
       ptr.getType().cast<spirv::PointerType>().getPointeeType()) {
@@ -618,7 +618,7 @@ static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
     Operation *sizeOp = groupOp->getOperand(1).getDefiningOp();
     int32_t clusterSize = 0;
 
-    // TODO(antiagainst): support specialization constant here.
+    // TODO: support specialization constant here.
     if (failed(extractValueFromConstOp(sizeOp, clusterSize)))
       return groupOp->emitOpError(
           "cluster size operand must come from a constant op");
@@ -753,7 +753,7 @@ static Type getElementPtrType(Type type, ValueRange indices, Location baseLoc) {
         return nullptr;
       }
 
-      // TODO(denis0x0D): this should be relaxed to allow
+      // TODO: this should be relaxed to allow
       // integer literals of other bitwidths.
       if (failed(extractValueFromConstOp(op, index))) {
         emitError(baseLoc,
@@ -948,7 +948,7 @@ static LogicalResult verify(spirv::AtomicCompareExchangeWeakOp atomOp) {
                "as the op result type, but found ")
            << pointeeType << " vs " << atomOp.getType();
 
-  // TODO(antiagainst): Unequal cannot be set to Release or Acquire and Release.
+  // TODO: Unequal cannot be set to Release or Acquire and Release.
   // In addition, Unequal cannot be set to a stronger memory-order then Equal.
 
   return success();
@@ -1384,7 +1384,7 @@ bool spirv::ConstantOp::isBuildableWith(Type type) {
 
   if (type.getKind() >= Type::FIRST_SPIRV_TYPE &&
       type.getKind() <= spirv::TypeKind::LAST_SPIRV_TYPE) {
-    // TODO(antiagainst): support constant struct
+    // TODO: support constant struct
     return type.isa<spirv::ArrayType>();
   }
 
@@ -1633,7 +1633,7 @@ LogicalResult spirv::FuncOp::verifyBody() {
     return WalkResult::advance();
   });
 
-  // TODO(antiagainst): verify other bits like linkage type.
+  // TODO: verify other bits like linkage type.
 
   return failure(walkResult.wasInterrupted());
 }
@@ -1939,7 +1939,7 @@ void spirv::LoopOp::build(OpBuilder &builder, OperationState &state) {
 }
 
 static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &state) {
-  // TODO(antiagainst): support loop control properly
+  // TODO: support loop control properly
   Builder builder = parser.getBuilder();
   state.addAttribute("loop_control",
                      builder.getI32IntegerAttr(
@@ -2222,7 +2222,7 @@ static LogicalResult verify(spirv::ModuleOp moduleOp) {
       if (funcOp.isExternal())
         return op.emitError("'spv.module' cannot contain external functions");
 
-      // TODO(antiagainst): move this check to spv.func.
+      // TODO: move this check to spv.func.
       for (auto &block : funcOp)
         for (auto &op : block) {
           if (op.getDialect() != dialect)
@@ -2302,7 +2302,7 @@ static LogicalResult verify(spirv::SelectOp op) {
 
 static ParseResult parseSelectionOp(OpAsmParser &parser,
                                     OperationState &state) {
-  // TODO(antiagainst): support selection control properly
+  // TODO: support selection control properly
   Builder builder = parser.getBuilder();
   state.addAttribute("selection_control",
                      builder.getI32IntegerAttr(
@@ -2536,7 +2536,7 @@ static LogicalResult verify(spirv::UnreachableOp unreachableOp) {
   if (block->hasNoPredecessors())
     return success();
 
-  // TODO(antiagainst): further verification needs to analyze reachability from
+  // TODO: further verification needs to analyze reachability from
   // the entry block.
 
   return success();
@@ -2626,7 +2626,7 @@ static LogicalResult verify(spirv::VariableOp varOp) {
                                "constant or spv.globalVariable op");
   }
 
-  // TODO(antiagainst): generate these strings using ODS.
+  // TODO: generate these strings using ODS.
   auto *op = varOp.getOperation();
   auto descriptorSetName = llvm::convertToSnakeFromCamelCase(
       stringifyDecoration(spirv::Decoration::DescriptorSet));

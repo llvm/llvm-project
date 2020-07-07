@@ -137,7 +137,7 @@ Attribute mlir::quant::quantizeAttr(Attribute realValue,
                  quantizedElementType.dyn_cast<UniformQuantizedPerAxisType>()) {
     UniformQuantizedPerAxisValueConverter converter(uniformQuantizedPerAxis);
     auto converted = converter.convert(realValue);
-    // TODO(fengliuai): why we need this outConvertedType? remove it?
+    // TODO: why we need this outConvertedType? remove it?
     if (converted) {
       outConvertedType = converted.getType();
     }

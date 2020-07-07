@@ -149,7 +149,7 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
 
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
-// TODO(bondhugula): extend this for arbitrary affine bounds.
+// TODO: extend this for arbitrary affine bounds.
 LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
   Optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount || tripCount.getValue() != 1)
@@ -529,7 +529,7 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
     return failure();
 
   // If the trip count is lower than the unroll factor, no unrolled body.
-  // TODO(bondhugula): option to specify cleanup loop unrolling.
+  // TODO: option to specify cleanup loop unrolling.
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.hasValue() &&
       mayBeConstantTripCount.getValue() < unrollFactor)
@@ -623,7 +623,7 @@ LogicalResult mlir::loopUnrollByFactor(scf::ForOp forOp,
             : boundsBuilder.create<ConstantIndexOp>(loc, stepUnrolledCst);
   } else {
     // Dynamic loop bounds computation.
-    // TODO(andydavis) Add dynamic asserts for negative lb/ub/step, or
+    // TODO: Add dynamic asserts for negative lb/ub/step, or
     // consider using ceilDiv from AffineApplyExpander.
     auto lowerBound = forOp.lowerBound();
     auto upperBound = forOp.upperBound();
@@ -720,7 +720,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
   // Loops where both lower and upper bounds are multi-result maps won't be
   // unrolled (since the trip can't be expressed as an affine function in
   // general).
-  // TODO(mlir-team): this may not be common, but we could support the case
+  // TODO: this may not be common, but we could support the case
   // where the lower bound is a multi-result map and the ub is a single result
   // one.
   if (forOp.getLowerBoundMap().getNumResults() != 1)
@@ -1127,7 +1127,7 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
 // Returns the new AffineForOps, nested immediately under `target`.
 template <typename ForType, typename SizeType>
 static ForType stripmineSink(ForType forOp, SizeType factor, ForType target) {
-  // TODO(ntv): Use cheap structural assertions that targets are nested under
+  // TODO: Use cheap structural assertions that targets are nested under
   // forOp and that targets are not nested under each other when DominanceInfo
   // exposes the capability. It seems overkill to construct a whole function
   // dominance tree at this point.
@@ -1226,7 +1226,7 @@ static LogicalResult hoistOpsBetween(scf::ForOp outer, scf::ForOp inner) {
       continue;
     }
     // Skip if op has side effects.
-    // TODO(ntv): loads to immutable memory regions are ok.
+    // TODO: loads to immutable memory regions are ok.
     if (!MemoryEffectOpInterface::hasNoEffect(&op)) {
       status = failure();
       continue;
@@ -1294,7 +1294,7 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   auto intraTile = tile(forOps, tileSizes, forOps.back());
   TileLoops tileLoops = std::make_pair(forOps, intraTile);
 
-  // TODO(ntv, zinenko) for now we just ignore the result of band isolation.
+  // TODO: for now we just ignore the result of band isolation.
   // In the future, mapping decisions may be impacted by the ability to
   // isolate perfectly nested bands.
   tryIsolateBands(tileLoops);
@@ -1322,7 +1322,7 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
   // assuming the step is strictly positive.  Update the bounds and the step
   // of the loop to go from 0 to the number of iterations, if necessary.
-  // TODO(zinenko): introduce support for negative steps or emit dynamic asserts
+  // TODO: introduce support for negative steps or emit dynamic asserts
   // on step positivity, whatever gets implemented first.
   if (isZeroBased && isStepOne)
     return {/*lowerBound=*/lowerBound, /*upperBound=*/upperBound,
@@ -1552,7 +1552,7 @@ findHighestBlockForPlacement(const MemRefRegion &region, Block &block,
   // symbolic/variant.
   auto it = enclosingFors.rbegin();
   for (auto e = enclosingFors.rend(); it != e; ++it) {
-    // TODO(bondhugula): also need to be checking this for regions symbols that
+    // TODO: also need to be checking this for regions symbols that
     // aren't loop IVs, whether we are within their resp. defs' dominance scope.
     if (llvm::is_contained(symbols, it->getInductionVar()))
       break;
@@ -1580,7 +1580,7 @@ struct StrideInfo {
 /// potentially multiple striding levels from outermost to innermost. For an
 /// n-dimensional region, there can be at most n-1 levels of striding
 /// successively nested.
-//  TODO(bondhugula): make this work with non-identity layout maps.
+//  TODO: make this work with non-identity layout maps.
 static void getMultiLevelStrides(const MemRefRegion &region,
                                  ArrayRef<int64_t> bufferShape,
                                  SmallVectorImpl<StrideInfo> *strideInfos) {
@@ -1865,7 +1865,7 @@ static LogicalResult generateCopy(
     SmallVector<StrideInfo, 4> dmaStrideInfos;
     getMultiLevelStrides(region, fastBufferShape, &dmaStrideInfos);
 
-    // TODO(bondhugula): use all stride levels once DmaStartOp is extended for
+    // TODO: use all stride levels once DmaStartOp is extended for
     // multi-level strides.
     if (dmaStrideInfos.size() > 1) {
       LLVM_DEBUG(llvm::dbgs() << "Only up to one level of stride supported\n");
@@ -2120,7 +2120,7 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
 
     // Each memref has a single buffer associated with it irrespective of how
     // many load's and store's happen on it.
-    // TODO(bondhugula): in the future, when regions don't intersect and satisfy
+    // TODO: in the future, when regions don't intersect and satisfy
     // other properties (based on load/store regions), we could consider
     // multiple buffers per memref.
 

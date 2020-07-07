@@ -451,7 +451,7 @@ Optional<SDBMExpr> SDBMExpr::tryConvertAffineExpr(AffineExpr affine) {
       if (pattern.match(expr)) {
         if (SDBMExpr converted = visit(x.matched())) {
           if (auto varConverted = converted.dyn_cast<SDBMTermExpr>())
-            // TODO(ntv): return varConverted.stripe(C.getConstantValue());
+            // TODO: return varConverted.stripe(C.getConstantValue());
             return SDBMStripeExpr::get(
                 varConverted,
                 SDBMConstantExpr::get(dialect,

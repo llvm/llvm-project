@@ -601,7 +601,7 @@ void ModuleTranslation::connectPHINodes(LLVMFuncOp func) {
   }
 }
 
-// TODO(mlir-team): implement an iterative version
+// TODO: implement an iterative version
 static void topologicalSortImpl(llvm::SetVector<Block *> &blocks, Block *b) {
   blocks.insert(b);
   for (Block *bb : b->getSuccessors()) {

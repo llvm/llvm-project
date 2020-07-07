@@ -68,7 +68,7 @@ UniformQuantizedPerAxisValueConverter::convert(Attribute realValue) {
   if (auto attr = realValue.dyn_cast<DenseFPElementsAttr>()) {
     return convert(attr);
   }
-  // TODO(fengliuai): handles sparse elements attribute
+  // TODO: handles sparse elements attribute
   return nullptr;
 }
 

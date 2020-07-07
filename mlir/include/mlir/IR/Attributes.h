@@ -417,7 +417,7 @@ public:
   APInt getValue() const;
   /// Return the integer value as a 64-bit int. The attribute must be a signless
   /// integer.
-  // TODO(jpienaar): Change callers to use getValue instead.
+  // TODO: Change callers to use getValue instead.
   int64_t getInt() const;
   /// Return the integer value as a signed 64-bit int. The attribute must be
   /// a signed integer.
@@ -1438,8 +1438,7 @@ public:
     auto zeroValue = getZeroValue<T>();
     auto valueIt = getValues().getValues<T>().begin();
     const std::vector<ptrdiff_t> flatSparseIndices(getFlattenedSparseIndices());
-    // TODO(riverriddle): Move-capture flatSparseIndices when c++14 is
-    // available.
+    // TODO: Move-capture flatSparseIndices when c++14 is available.
     std::function<T(ptrdiff_t)> mapFn = [=](ptrdiff_t index) {
       // Try to map the current index to one of the sparse indices.
       for (unsigned i = 0, e = flatSparseIndices.size(); i != e; ++i)

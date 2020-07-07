@@ -165,7 +165,7 @@ void emitScalarImplementation(ArrayRef<Value> allIvs,
   SmallVector<Value, 4> indexedValues;
   indexedValues.reserve(nInputs + nOutputs);
 
-  // TODO(mravishankar): Avoid the loads if the corresponding argument of the
+  // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
   // 1.a. Emit load from input views.
   for (unsigned i = 0; i < nInputs; ++i) {
@@ -183,7 +183,7 @@ void emitScalarImplementation(ArrayRef<Value> allIvs,
         IndexedValueType(linalgOp.getOutputBuffer(i))(indexing));
   }
 
-  // TODO(ntv): When a region inliner exists, use it.
+  // TODO: When a region inliner exists, use it.
   // 2. Inline region, currently only works for a single basic block.
   // 3. Emit store.
   SmallVector<SmallVector<Value, 8>, 8> indexing;
@@ -246,7 +246,7 @@ void emitScalarImplementation(ArrayRef<Value> allIvs, DotOp dotOp) {
 template <typename IndexedValueType>
 Value getConvOpInput(ConvOp convOp, StdIndexedValue im,
                      MutableArrayRef<Value> imIdx) {
-  // TODO(ntv): add a level of indirection to linalg.generic.
+  // TODO: add a level of indirection to linalg.generic.
   if (!convOp.padding())
     return im(imIdx);
 
@@ -409,7 +409,7 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs,
   for (unsigned i = 0; i < nLoops; ++i)
     indexedValues.push_back(allIvs[i]);
 
-  // TODO(mravishankar): Avoid the loads if the corresponding argument of the
+  // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
   // 1.a. Emit load from input views.
   for (unsigned i = 0; i < nInputs; ++i) {
@@ -428,7 +428,7 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs,
         IndexedValueType(indexedGenericOp.getOutputBuffer(i))(indexing));
   }
 
-  // TODO(ntv): When a region inliner exists, use it.
+  // TODO: When a region inliner exists, use it.
   // 2. Inline region, currently only works for a single basic block.
   // 3. Emit store.
   SmallVector<SmallVector<Value, 8>, 8> indexing;
@@ -560,7 +560,7 @@ static void lowerLinalgToLoopsImpl(FuncOp funcOp, MLIRContext *context) {
   OwningRewritePatternList patterns;
   // Canonicalization and folding patterns applied greedily allow cleaning up
   // the emitted IR on the fly.
-  // TODO(ntv) fold view and subview ops?
+  // TODO: fold view and subview ops?
   insertPatterns<LoopType,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"

@@ -26,7 +26,7 @@ def : Pat<(AddFOp:$op_results $a, $b),
           (UnrollVectorOp<[2, 2]> $op_results, $a, $b),
           [(Constraint<HasShape<[4, 4]>> $a)]>;
 
-// TODO(andydavis) Add Constraints on lhs/rhs shapes.
+// TODO: Add Constraints on lhs/rhs shapes.
 def : Pat<(Vector_ContractionOp:$op_results $a, $b, $c, $masks, $attr0, $attr1),
           (UnrollVectorOp<[2, 2, 2]> $op_results, $a, $b, $c),
           [(Constraint<HasShape<[4, 4]>> $c)]>;
