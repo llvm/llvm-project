@@ -180,6 +180,11 @@ public:
   /// Returns the map consisting of the `resultPos` subset.
   AffineMap getSubMap(ArrayRef<unsigned> resultPos);
 
+  /// Returns the map consisting of the most minor `numResults` results.
+  /// Returns the null AffineMap if `numResults` == 0.
+  /// Returns `*this` if `numResults` >= `this->getNumResults()`.
+  AffineMap getMinorSubMap(unsigned numResults);
+
   friend ::llvm::hash_code hash_value(AffineMap arg);
 
 private:

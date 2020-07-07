@@ -355,10 +355,18 @@ bool AffineMap::isPermutation() {
 AffineMap AffineMap::getSubMap(ArrayRef<unsigned> resultPos) {
   SmallVector<AffineExpr, 4> exprs;
   exprs.reserve(resultPos.size());
-  for (auto idx : resultPos) {
+  for (auto idx : resultPos)
     exprs.push_back(getResult(idx));
-  }
   return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
+}
+
+AffineMap AffineMap::getMinorSubMap(unsigned numResults) {
+  if (numResults == 0)
+    return AffineMap();
+  if (numResults > getNumResults())
+    return *this;
+  return getSubMap(llvm::to_vector<4>(
+      llvm::seq<unsigned>(getNumResults() - numResults, getNumResults())));
 }
 
 AffineMap mlir::simplifyAffineMap(AffineMap map) {
