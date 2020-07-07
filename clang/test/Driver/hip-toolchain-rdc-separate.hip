@@ -122,8 +122,7 @@
 // LINK-SAME: "-targets={{.*}},hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
 // LINK-SAME: "-inputs={{.*}},[[IMG_DEV1]],[[IMG_DEV2]]" "-outputs=[[BUNDLE:.*hipfb]]"
 
-// LINK: {{".*llvm-mc.*"}} "-triple" "amdgcn-amd-amdhsa" "-o"
-// LINK-SAME: "[[OBJBUNDLE:.*o]]" "{{.*}}.mcin" "--filetype=obj"
+// LINK: {{".*llvm-mc.*"}} "-o" "[[OBJBUNDLE:.*o]]" "{{.*}}.mcin" "--filetype=obj"
 
 // LINK: [[LD:".*ld.*"]] {{.*}} "-o" "a.out" {{.*}} "[[A_OBJ_HOST]]"
 // LINK-SAME: "[[B_OBJ_HOST]]" "[[OBJBUNDLE]]"
