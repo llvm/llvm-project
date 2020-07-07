@@ -63,9 +63,16 @@ public:
   bool isPIEDefault() const override { return false; }
   bool isPICDefaultForced() const override { return true; }
 
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
+
+private:
+  llvm::StringRef GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const;
 };
 
 } // end namespace toolchains
