@@ -62,3 +62,59 @@
 # GNU-NEXT:    Address  Initial Sym.Val. Type    Ndx Name
 # GNU-NEXT:   0041081c 004007c0 00000000 FUNC    UND puts
 # GNU-NEXT:   00410820 004007c0 00000000 FUNC    UND __libc_start_main
+
+## Check we report errors when dynamic tags, needed for dumping PLT, are missing.
+
+# RUN: yaml2obj --docnum=1 -DTAG=DT_MIPS_PLTGOT %s -o %t.err1.o
+# RUN: not llvm-readobj -A %t.err1.o 2>&1 | FileCheck %s -DFILE=%t.err1.o --check-prefix=ERR1
+
+# ERR1: error: '[[FILE]]': cannot find JMPREL dynamic tag
+
+# RUN: yaml2obj --docnum=1 -DTAG=DT_JMPREL %s -o %t.err2.o
+# RUN: not llvm-readobj -A %t.err2.o 2>&1 | FileCheck %s -DFILE=%t.err2.o --check-prefix=ERR2
+
+# ERR2: error: '[[FILE]]': cannot find MIPS_PLTGOT dynamic tag
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_MIPS
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   [[TAG]]
+        Value: 0
+      - Tag:   DT_NULL
+        Value: 0
+
+## Check we report errors when we are unable to find PLTGOT/JMPREL sections.
+# RUN: yaml2obj --docnum=2 %s -DVAL1=0xffff -o %t.err3.o
+# RUN: not llvm-readobj -A %t.err3.o 2>&1 | FileCheck %s -DFILE=%t.err3.o -check-prefix ERR3
+
+# ERR3: error: '[[FILE]]': there is no non-empty PLTGOT section at 0xffff
+
+# RUN: yaml2obj --docnum=2 %s -DVAL2=0xffff -o %t.err4.o
+# RUN: not llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefix ERR4
+
+# ERR4: error: '[[FILE]]': there is no non-empty RELPLT section at 0xffff
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_MIPS
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_MIPS_PLTGOT
+        Value: [[VAL1=0]]
+      - Tag:   DT_JMPREL
+        Value: [[VAL2=0]]
+      - Tag:   DT_NULL
+        Value: 0
+DynamicSymbols: []
