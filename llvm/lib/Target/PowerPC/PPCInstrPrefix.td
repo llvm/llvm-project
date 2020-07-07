@@ -1,3 +1,19 @@
+//===----------------------------------------------------------------------===//
+// PowerPC ISA 3.1 specific type constraints.
+//
+
+def SDT_PPCSplat32 : SDTypeProfile<1, 3, [ SDTCisVT<0, v2i64>,
+  SDTCisVec<1>, SDTCisInt<2>, SDTCisInt<3>
+]>;
+
+//===----------------------------------------------------------------------===//
+// ISA 3.1 specific PPCISD nodes.
+//
+
+def PPCxxsplti32dx : SDNode<"PPCISD::XXSPLTI32DX", SDT_PPCSplat32, []>;
+
+//===----------------------------------------------------------------------===//
+
 // PC Relative flag (for instructions that use the address of the prefix for
 // address computations).
 class isPCRel { bit PCRel = 1; }
@@ -732,8 +748,11 @@ let Predicates = [PrefixInstrs] in {
                                             (PPCxxspltidp i32:$IMM32))]>;
   def XXSPLTI32DX :
       8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
-                             (ins vsrc:$XTi, i1imm:$IX, i32imm:$IMM32),
-                             "xxsplti32dx $XT, $IX, $IMM32", IIC_VecGeneral, []>,
+                             (ins vsrc:$XTi, u1imm:$IX, i32imm:$IMM32),
+                             "xxsplti32dx $XT, $IX, $IMM32", IIC_VecGeneral,
+                             [(set v2i64:$XT,
+                                   (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
+                                                   i32:$IMM32))]>,
                              RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
   def XXPERMX :
     8RR_XX4Form_IMM3_XTABC6<34, 0, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
