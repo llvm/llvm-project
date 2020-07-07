@@ -70,6 +70,7 @@ Clang-Tidy Checks
    `bugprone-misplaced-widening-cast <bugprone-misplaced-widening-cast.html>`_,
    `bugprone-move-forwarding-reference <bugprone-move-forwarding-reference.html>`_, "Yes"
    `bugprone-multiple-statement-macro <bugprone-multiple-statement-macro.html>`_,
+   `bugprone-no-escape <bugprone-no-escape.html>`_, "Yes"
    `bugprone-not-null-terminated-result <bugprone-not-null-terminated-result.html>`_, "Yes"
    `bugprone-parent-virtual-call <bugprone-parent-virtual-call.html>`_, "Yes"
    `bugprone-posix-return <bugprone-posix-return.html>`_, "Yes"
