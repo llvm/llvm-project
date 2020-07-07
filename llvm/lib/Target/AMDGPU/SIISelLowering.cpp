@@ -11690,3 +11690,18 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
   SmallPtrSet<const Value *, 16> Visited;
   return hasCFUser(V, Visited, Subtarget->getWavefrontSize());
 }
+
+std::pair<int, MVT>
+SITargetLowering::getTypeLegalizationCost(const DataLayout &DL,
+                                          Type *Ty) const {
+  auto Cost = TargetLoweringBase::getTypeLegalizationCost(DL, Ty);
+  auto Size = DL.getTypeSizeInBits(Ty);
+  // Maximum load or store can handle 8 dwords for scalar and 4 for
+  // vector ALU. Let's assume anything above 8 dwords is expensive
+  // even if legal.
+  if (Size <= 256)
+    return Cost;
+
+  Cost.first = (Size + 255) / 256;
+  return Cost;
+}
