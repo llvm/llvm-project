@@ -38,6 +38,7 @@ set(MLIR_TEST_DEPENDS
   mlir-edsc-builder-api-test
   mlir-linalg-ods-gen
   mlir-opt
+  mlir-reduce
   mlir-sdbm-api-test
   mlir-tblgen
   mlir-translate
