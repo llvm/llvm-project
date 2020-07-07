@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s --passes=inline -S | FileCheck %s
 
 ; Test that functions with attribute optnone are not inlined.
 ; Also test that only functions with attribute alwaysinline are
