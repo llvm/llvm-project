@@ -76,7 +76,7 @@ struct CmdLineOption {
            "Invalid development status!");
   }
 
-  LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+  LLVM_DUMP_METHOD void dump() const;
   LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out) const;
 };
 
@@ -135,7 +135,7 @@ struct CheckerInfo {
   // Used for lower_bound.
   explicit CheckerInfo(StringRef FullName) : FullName(FullName) {}
 
-  LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+  LLVM_DUMP_METHOD void dump() const;
   LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out) const;
 };
 
@@ -155,7 +155,7 @@ struct PackageInfo {
 
   explicit PackageInfo(StringRef FullName) : FullName(FullName) {}
 
-  LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
+  LLVM_DUMP_METHOD void dump() const;
   LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out) const;
 };
 
