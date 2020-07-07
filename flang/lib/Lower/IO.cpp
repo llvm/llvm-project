@@ -965,15 +965,30 @@ getFormat<Fortran::parser::PrintStmt>(
                    strTy, lenTy, labelMap, assignMap);
 }
 
-static std::tuple<mlir::Value, mlir::Value, mlir::Value>
+/// Generate a reference to a buffer and the length of buffer.There are 3 cases
+/// An IoUnit can be variable, a ScalarIntExpr (i.e FileUnitNumber) or a *.
+/// The first is handled here, rest 2 are somewhere else.
+static std::tuple<mlir::Value, mlir::Value>
 genBuffer(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
           const Fortran::parser::IoUnit &iounit, mlir::Type strTy,
           mlir::Type lenTy) {
-  [[maybe_unused]] auto &var = std::get<Fortran::parser::Variable>(iounit.u);
-  TODO();
+  // Variable
+  auto *var = std::get_if<Fortran::parser::Variable>(&iounit.u);
+  assert(var && "Has to be a variable");
+  auto e = Fortran::semantics::GetExpr(*var);
+  auto &builder = converter.getFirOpBuilder();
+  if (Fortran::semantics::ExprHasTypeCategory(
+          *e, Fortran::common::TypeCategory::Character)) {
+    // Helper to query [BUFFER, LEN].
+    Fortran::lower::CharacterExprHelper helper(builder, loc);
+    auto dataLen = helper.materializeCharacter(converter.genExprValue(*e));
+    auto buff = builder.createConvert(loc, strTy, dataLen.first);
+    auto len = builder.createConvert(loc, lenTy, dataLen.second);
+    return {buff, len};
+  }
 }
 template <typename A>
-std::tuple<mlir::Value, mlir::Value, mlir::Value>
+std::tuple<mlir::Value, mlir::Value>
 getBuffer(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
           const A &stmt, mlir::Type strTy, mlir::Type lenTy) {
   if (stmt.iounit)
