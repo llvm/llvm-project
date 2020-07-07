@@ -375,5 +375,49 @@ entry:
   ret <4 x i32> %vecins1
 }
 
+define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture readonly %ptr, i32 signext %offset) local_unnamed_addr #0 {
+; CHECK-P8-LABEL: no_RAUW_in_combine_during_legalize:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    addis r5, r2, .LCPI15_0@toc@ha
+; CHECK-P8-NEXT:    sldi r4, r4, 2
+; CHECK-P8-NEXT:    xxlxor v4, v4, v4
+; CHECK-P8-NEXT:    addi r5, r5, .LCPI15_0@toc@l
+; CHECK-P8-NEXT:    lxsiwzx v2, r3, r4
+; CHECK-P8-NEXT:    lvx v3, 0, r5
+; CHECK-P8-NEXT:    vperm v2, v4, v2, v3
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P9-LABEL: no_RAUW_in_combine_during_legalize:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    sldi r4, r4, 2
+; CHECK-P9-NEXT:    lxsiwzx v2, r3, r4
+; CHECK-P9-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
+; CHECK-P9-NEXT:    addi r3, r3, .LCPI15_0@toc@l
+; CHECK-P9-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-NEXT:    xxlxor v4, v4, v4
+; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: no_RAUW_in_combine_during_legalize:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    sldi r4, r4, 2
+; CHECK-NOVSX-NEXT:    vxor v2, v2, v2
+; CHECK-NOVSX-NEXT:    lwzx r3, r3, r4
+; CHECK-NOVSX-NEXT:    std r3, -16(r1)
+; CHECK-NOVSX-NEXT:    addi r3, r1, -16
+; CHECK-NOVSX-NEXT:    lvx v3, 0, r3
+; CHECK-NOVSX-NEXT:    vmrglb v2, v2, v3
+; CHECK-NOVSX-NEXT:    blr
+entry:
+  %idx.ext = sext i32 %offset to i64
+  %add.ptr = getelementptr inbounds i32, i32* %ptr, i64 %idx.ext
+  %0 = load i32, i32* %add.ptr, align 4
+  %conv = zext i32 %0 to i64
+  %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
+  %1 = bitcast <2 x i64> %splat.splatinsert to <16 x i8>
+  %shuffle = shufflevector <16 x i8> %1, <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
+  ret <16 x i8> %shuffle
+}
+
 declare double @dummy() local_unnamed_addr
 attributes #0 = { nounwind }
