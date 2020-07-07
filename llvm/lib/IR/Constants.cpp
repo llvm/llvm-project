@@ -1585,6 +1585,27 @@ Constant *Constant::getSplatValue(bool AllowUndefs) const {
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
     return CV->getSplatValue(AllowUndefs);
+
+  // Check if this is a constant expression splat of the form returned by
+  // ConstantVector::getSplat()
+  const auto *Shuf = dyn_cast<ConstantExpr>(this);
+  if (Shuf && Shuf->getOpcode() == Instruction::ShuffleVector &&
+      isa<UndefValue>(Shuf->getOperand(1))) {
+
+    const auto *IElt = dyn_cast<ConstantExpr>(Shuf->getOperand(0));
+    if (IElt && IElt->getOpcode() == Instruction::InsertElement &&
+        isa<UndefValue>(IElt->getOperand(0))) {
+
+      ArrayRef<int> Mask = Shuf->getShuffleMask();
+      Constant *SplatVal = IElt->getOperand(1);
+      ConstantInt *Index = dyn_cast<ConstantInt>(IElt->getOperand(2));
+
+      if (Index && Index->getValue() == 0 &&
+          std::all_of(Mask.begin(), Mask.end(), [](int I) { return I == 0; }))
+        return SplatVal;
+    }
+  }
+
   return nullptr;
 }
 
