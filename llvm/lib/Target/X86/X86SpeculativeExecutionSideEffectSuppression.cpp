@@ -30,7 +30,7 @@ using namespace llvm;
 STATISTIC(NumLFENCEsInserted, "Number of lfence instructions inserted");
 
 static cl::opt<bool> EnableSpeculativeExecutionSideEffectSuppression(
-    "x86-seses-enable",
+    "x86-seses-enable-without-lvi-cfi",
     cl::desc("Force enable speculative execution side effect suppression. "
              "(Note: User must pass -mlvi-cfi in order to mitigate indirect "
              "branches and returns.)"),
@@ -91,10 +91,12 @@ bool X86SpeculativeExecutionSideEffectSuppression::runOnMachineFunction(
   const auto &OptLevel = MF.getTarget().getOptLevel();
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
 
-  // Check whether SESES needs to run as the fallback for LVI at O0 or if the
-  // user explicitly passed the SESES flag.
+  // Check whether SESES needs to run as the fallback for LVI at O0, whether the
+  // user explicitly passed an SESES flag, or whether the SESES target feature
+  // was set.
   if (!EnableSpeculativeExecutionSideEffectSuppression &&
-      !(Subtarget.useLVILoadHardening() && OptLevel == CodeGenOpt::None))
+      !(Subtarget.useLVILoadHardening() && OptLevel == CodeGenOpt::None) &&
+      !Subtarget.useSpeculativeExecutionSideEffectSuppression())
     return false;
 
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()

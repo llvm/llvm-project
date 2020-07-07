@@ -178,6 +178,27 @@
 // RUN: %clang -target i386-linux-gnu -mlvi-hardening -mretpoline-external-thunk %s -### -o %t.o 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE-EXTERNAL-THUNK %s
 // LVIHARDENING-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mlvi-hardening'
 
+// RUN: %clang -target i386-linux-gnu -mseses %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SESES %s
+// RUN: %clang -target i386-linux-gnu -mno-seses %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SESES %s
+// SESES: "-target-feature" "+seses"
+// SESES: "-target-feature" "+lvi-cfi"
+// NO-SESES-NOT: seses
+// NO-SESES-NOT: lvi-cfi
+
+// RUN: %clang -target i386-linux-gnu -mseses -mno-lvi-cfi %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SESES-NOLVICFI %s
+// SESES-NOLVICFI: "-target-feature" "+seses"
+// SESES-NOLVICFI-NOT: lvi-cfi
+
+// RUN: %clang -target i386-linux-gnu -mseses -mspeculative-load-hardening %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SESES-SLH %s
+// SESES-SLH: error: invalid argument 'mspeculative-load-hardening' not allowed with 'mseses'
+// RUN: %clang -target i386-linux-gnu -mseses -mretpoline %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE %s
+// SESES-RETPOLINE: error: invalid argument 'mretpoline' not allowed with 'mseses'
+// RUN: %clang -target i386-linux-gnu -mseses -mretpoline-external-thunk %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE-EXTERNAL-THUNK %s
+// SESES-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mseses'
+
+// RUN: %clang -target i386-linux-gnu -mseses -mlvi-hardening %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SESES-LVIHARDENING %s
+// SESES-LVIHARDENING: error: invalid argument 'mlvi-hardening' not allowed with 'mseses'
+
 // RUN: %clang -target i386-linux-gnu -mwaitpkg %s -### -o %t.o 2>&1 | FileCheck -check-prefix=WAITPKG %s
 // RUN: %clang -target i386-linux-gnu -mno-waitpkg %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-WAITPKG %s
 // WAITPKG: "-target-feature" "+waitpkg"
