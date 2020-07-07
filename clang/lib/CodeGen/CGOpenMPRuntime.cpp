@@ -886,8 +886,11 @@ void ReductionCodeGen::emitInitialization(
       SharedType, SharedAddresses[N].first.getBaseInfo(),
       CGF.CGM.getTBAAInfoForSubobject(SharedAddresses[N].first, SharedType));
   if (CGF.getContext().getAsArrayType(PrivateVD->getType())) {
+    if (DRD && DRD->getInitializer())
+      (void)DefaultInit(CGF);
     emitAggregateInitialization(CGF, N, PrivateAddr, SharedLVal, DRD);
   } else if (DRD && (DRD->getInitializer() || !PrivateVD->hasInit())) {
+    (void)DefaultInit(CGF);
     emitInitWithReductionInitializer(CGF, DRD, ClausesData[N].ReductionOp,
                                      PrivateAddr, SharedLVal.getAddress(CGF),
                                      SharedLVal.getType());
