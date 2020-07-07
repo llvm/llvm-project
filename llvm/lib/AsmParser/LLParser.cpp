@@ -7209,8 +7209,13 @@ int LLParser::ParseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
     return Error(NewLoc, "new value and pointer type do not match");
   if (!New->getType()->isFirstClassType())
     return Error(NewLoc, "cmpxchg operand must be a first class value");
+
+  Align Alignment(
+      PFS.getFunction().getParent()->getDataLayout().getTypeStoreSize(
+          Cmp->getType()));
+
   AtomicCmpXchgInst *CXI = new AtomicCmpXchgInst(
-      Ptr, Cmp, New, SuccessOrdering, FailureOrdering, SSID);
+      Ptr, Cmp, New, Alignment, SuccessOrdering, FailureOrdering, SSID);
   CXI->setVolatile(isVolatile);
   CXI->setWeak(isWeak);
   Inst = CXI;
@@ -7294,9 +7299,11 @@ int LLParser::ParseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   if (Size < 8 || (Size & (Size - 1)))
     return Error(ValLoc, "atomicrmw operand must be power-of-two byte-sized"
                          " integer");
-
+  Align Alignment(
+      PFS.getFunction().getParent()->getDataLayout().getTypeStoreSize(
+          Val->getType()));
   AtomicRMWInst *RMWI =
-    new AtomicRMWInst(Operation, Ptr, Val, Ordering, SSID);
+      new AtomicRMWInst(Operation, Ptr, Val, Alignment, Ordering, SSID);
   RMWI->setVolatile(isVolatile);
   Inst = RMWI;
   return AteExtraComma ? InstExtraComma : InstNormal;
