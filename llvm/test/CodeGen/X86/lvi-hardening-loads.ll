@@ -26,8 +26,11 @@ entry:
 ; X64-NEXT:      jmp .LBB0_1
 
 ; X64-NOOPT: # %bb.0: # %entry
+; X64-NOOPT-NEXT:      lfence
 ; X64-NOOPT-NEXT:      movq %rdi, -{{[0-9]+}}(%rsp)
+; X64-NOOPT-NEXT:      lfence
 ; X64-NOOPT-NEXT:      movl %esi, -{{[0-9]+}}(%rsp)
+; X64-NOOPT-NEXT:      lfence
 ; X64-NOOPT-NEXT:      movl $0, -{{[0-9]+}}(%rsp)
 ; X64-NOOPT-NEXT:      lfence
 ; X64-NOOPT-NEXT:      movl $0, -{{[0-9]+}}(%rsp)
@@ -48,6 +51,7 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 ; X64-NOOPT: .LBB0_1: # %for.cond
 ; X64-NOOPT-NEXT:      # =>This Inner Loop Header: Depth=1
+; X64-NOOPT-NEXT:  lfence
 ; X64-NOOPT-NEXT:      movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NOOPT-NEXT:  lfence
 ; X64-NOOPT-NEXT:      cmpl -{{[0-9]+}}(%rsp), %eax
@@ -73,12 +77,13 @@ for.body:                                         ; preds = %for.cond
 
 ; X64-NOOPT: # %bb.2: # %for.body
 ; X64-NOOPT-NEXT: # in Loop: Header=BB0_1 Depth=1
-; X64-NOOPT-NEXT:      movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NOOPT-NEXT:  lfence
+; X64-NOOPT-NEXT:      movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NOOPT-NEXT:      cltd
 ; X64-NOOPT-NEXT:      movl $2, %ecx
 ; X64-NOOPT-NEXT:      idivl %ecx
 ; X64-NOOPT-NEXT:      cmpl $0, %edx
+; X64-NOOPT-NEXT:  lfence
 ; X64-NOOPT-NEXT:      jne .LBB0_4
 
 if.then:                                          ; preds = %for.body
@@ -105,6 +110,7 @@ if.then:                                          ; preds = %for.body
 
 ; X64-NOOPT: # %bb.3: # %if.then
 ; X64-NOOPT-NEXT: # in Loop: Header=BB0_1 Depth=1
+; X64-NOOPT-NEXT:      lfence
 ; X64-NOOPT-NEXT:      movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NOOPT-NEXT:      lfence
 ; X64-NOOPT-NEXT:      movslq -{{[0-9]+}}(%rsp), %rcx
@@ -126,10 +132,12 @@ for.inc:                                          ; preds = %if.end
 
 ; X64-NOOPT: .LBB0_5: # %for.inc
 ; X64-NOOPT-NEXT: # in Loop: Header=BB0_1 Depth=1
-; X64-NOOPT-NEXT:      movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NOOPT-NEXT:      lfence
+; X64-NOOPT-NEXT:      movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NOOPT-NEXT:      addl $1, %eax
+; X64-NOOPT-NEXT:      lfence
 ; X64-NOOPT-NEXT:      movl %eax, -{{[0-9]+}}(%rsp)
+; X64-NOOPT-NEXT:      lfence
 ; X64-NOOPT-NEXT:      jmp .LBB0_1
 
 for.end:                                          ; preds = %for.cond

@@ -1,5 +1,3 @@
-include Makefile.rules
+C_SOURCES := main.c
 
-a.out: globals.ll
-	$(CC) $(CFLAGS) -g -c $^ -o globals.o
-	$(LD) $(LDFLAGS) -g globals.o -o $@
+include Makefile.rules

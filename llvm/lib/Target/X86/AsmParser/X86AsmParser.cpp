@@ -864,6 +864,8 @@ private:
     return nullptr;
   }
 
+  bool MatchRegisterByName(unsigned &RegNo, StringRef RegName, SMLoc StartLoc,
+                           SMLoc EndLoc);
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
                      bool RestoreOnFailure);
 
@@ -1145,6 +1147,108 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
   return checkScale(Scale, ErrMsg);
 }
 
+bool X86AsmParser::MatchRegisterByName(unsigned &RegNo, StringRef RegName,
+                                       SMLoc StartLoc, SMLoc EndLoc) {
+  // If we encounter a %, ignore it. This code handles registers with and
+  // without the prefix, unprefixed registers can occur in cfi directives.
+  RegName.consume_front("%");
+
+  RegNo = MatchRegisterName(RegName);
+
+  // If the match failed, try the register name as lowercase.
+  if (RegNo == 0)
+    RegNo = MatchRegisterName(RegName.lower());
+
+  // The "flags" and "mxcsr" registers cannot be referenced directly.
+  // Treat it as an identifier instead.
+  if (isParsingMSInlineAsm() && isParsingIntelSyntax() &&
+      (RegNo == X86::EFLAGS || RegNo == X86::MXCSR))
+    RegNo = 0;
+
+  if (!is64BitMode()) {
+    // FIXME: This should be done using Requires<Not64BitMode> and
+    // Requires<In64BitMode> so "eiz" usage in 64-bit instructions can be also
+    // checked.
+    // FIXME: Check AH, CH, DH, BH cannot be used in an instruction requiring a
+    // REX prefix.
+    if (RegNo == X86::RIZ || RegNo == X86::RIP ||
+        X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo) ||
+        X86II::isX86_64NonExtLowByteReg(RegNo) ||
+        X86II::isX86_64ExtendedReg(RegNo)) {
+      return Error(StartLoc,
+                   "register %" + RegName + " is only available in 64-bit mode",
+                   SMRange(StartLoc, EndLoc));
+    }
+  }
+
+  // If this is "db[0-15]", match it as an alias
+  // for dr[0-15].
+  if (RegNo == 0 && RegName.startswith("db")) {
+    if (RegName.size() == 3) {
+      switch (RegName[2]) {
+      case '0':
+        RegNo = X86::DR0;
+        break;
+      case '1':
+        RegNo = X86::DR1;
+        break;
+      case '2':
+        RegNo = X86::DR2;
+        break;
+      case '3':
+        RegNo = X86::DR3;
+        break;
+      case '4':
+        RegNo = X86::DR4;
+        break;
+      case '5':
+        RegNo = X86::DR5;
+        break;
+      case '6':
+        RegNo = X86::DR6;
+        break;
+      case '7':
+        RegNo = X86::DR7;
+        break;
+      case '8':
+        RegNo = X86::DR8;
+        break;
+      case '9':
+        RegNo = X86::DR9;
+        break;
+      }
+    } else if (RegName.size() == 4 && RegName[2] == '1') {
+      switch (RegName[3]) {
+      case '0':
+        RegNo = X86::DR10;
+        break;
+      case '1':
+        RegNo = X86::DR11;
+        break;
+      case '2':
+        RegNo = X86::DR12;
+        break;
+      case '3':
+        RegNo = X86::DR13;
+        break;
+      case '4':
+        RegNo = X86::DR14;
+        break;
+      case '5':
+        RegNo = X86::DR15;
+        break;
+      }
+    }
+  }
+
+  if (RegNo == 0) {
+    if (isParsingIntelSyntax())
+      return true;
+    return Error(StartLoc, "invalid register name", SMRange(StartLoc, EndLoc));
+  }
+  return false;
+}
+
 bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc, bool RestoreOnFailure) {
   MCAsmParser &Parser = getParser();
@@ -1180,37 +1284,9 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                  SMRange(StartLoc, EndLoc));
   }
 
-  RegNo = MatchRegisterName(Tok.getString());
-
-  // If the match failed, try the register name as lowercase.
-  if (RegNo == 0)
-    RegNo = MatchRegisterName(Tok.getString().lower());
-
-  // The "flags" and "mxcsr" registers cannot be referenced directly.
-  // Treat it as an identifier instead.
-  if (isParsingMSInlineAsm() && isParsingIntelSyntax() &&
-      (RegNo == X86::EFLAGS || RegNo == X86::MXCSR))
-    RegNo = 0;
-
-  if (!is64BitMode()) {
-    // FIXME: This should be done using Requires<Not64BitMode> and
-    // Requires<In64BitMode> so "eiz" usage in 64-bit instructions can be also
-    // checked.
-    // FIXME: Check AH, CH, DH, BH cannot be used in an instruction requiring a
-    // REX prefix.
-    if (RegNo == X86::RIZ || RegNo == X86::RIP ||
-        X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo) ||
-        X86II::isX86_64NonExtLowByteReg(RegNo) ||
-        X86II::isX86_64ExtendedReg(RegNo)) {
-      StringRef RegName = Tok.getString();
-      OnFailure();
-      if (!RestoreOnFailure) {
-        Parser.Lex(); // Eat register name.
-      }
-      return Error(StartLoc,
-                   "register %" + RegName + " is only available in 64-bit mode",
-                   SMRange(StartLoc, EndLoc));
-    }
+  if (MatchRegisterByName(RegNo, Tok.getString(), StartLoc, EndLoc)) {
+    OnFailure();
+    return true;
   }
 
   // Parse "%st" as "%st(0)" and "%st(1)", which is multiple tokens.
@@ -1258,40 +1334,6 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
   }
 
   EndLoc = Parser.getTok().getEndLoc();
-
-  // If this is "db[0-15]", match it as an alias
-  // for dr[0-15].
-  if (RegNo == 0 && Tok.getString().startswith("db")) {
-    if (Tok.getString().size() == 3) {
-      switch (Tok.getString()[2]) {
-      case '0': RegNo = X86::DR0; break;
-      case '1': RegNo = X86::DR1; break;
-      case '2': RegNo = X86::DR2; break;
-      case '3': RegNo = X86::DR3; break;
-      case '4': RegNo = X86::DR4; break;
-      case '5': RegNo = X86::DR5; break;
-      case '6': RegNo = X86::DR6; break;
-      case '7': RegNo = X86::DR7; break;
-      case '8': RegNo = X86::DR8; break;
-      case '9': RegNo = X86::DR9; break;
-      }
-    } else if (Tok.getString().size() == 4 && Tok.getString()[2] == '1') {
-      switch (Tok.getString()[3]) {
-      case '0': RegNo = X86::DR10; break;
-      case '1': RegNo = X86::DR11; break;
-      case '2': RegNo = X86::DR12; break;
-      case '3': RegNo = X86::DR13; break;
-      case '4': RegNo = X86::DR14; break;
-      case '5': RegNo = X86::DR15; break;
-      }
-    }
-
-    if (RegNo != 0) {
-      EndLoc = Parser.getTok().getEndLoc();
-      Parser.Lex(); // Eat it.
-      return false;
-    }
-  }
 
   if (RegNo == 0) {
     OnFailure();
@@ -1590,12 +1632,41 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       SMLoc IdentLoc = Tok.getLoc();
       StringRef Identifier = Tok.getString();
       UpdateLocLex = false;
-      // Register
+      // Register, or (MASM only) <register>.<field>
       unsigned Reg;
-      if (Tok.is(AsmToken::Identifier) && !ParseRegister(Reg, IdentLoc, End)) {
-        if (SM.onRegister(Reg, ErrMsg))
-          return Error(Tok.getLoc(), ErrMsg);
-        break;
+      if (Tok.is(AsmToken::Identifier)) {
+        if (!ParseRegister(Reg, IdentLoc, End, /*RestoreOnFailure=*/true)) {
+          if (SM.onRegister(Reg, ErrMsg))
+            return Error(IdentLoc, ErrMsg);
+          break;
+        }
+        if (Parser.isParsingMasm()) {
+          const std::pair<StringRef, StringRef> RegField =
+              Tok.getString().split('.');
+          const StringRef RegName = RegField.first, Field = RegField.second;
+          SMLoc RegEndLoc =
+              SMLoc::getFromPointer(RegName.data() + RegName.size());
+          if (!Field.empty() &&
+              !MatchRegisterByName(Reg, RegName, IdentLoc, RegEndLoc)) {
+            if (SM.onRegister(Reg, ErrMsg))
+              return Error(IdentLoc, ErrMsg);
+
+            SMLoc FieldStartLoc = SMLoc::getFromPointer(Field.data());
+            const std::pair<StringRef, StringRef> BaseMember = Field.split('.');
+            const StringRef Base = BaseMember.first, Member = BaseMember.second;
+
+            unsigned Offset;
+            if (Parser.LookUpFieldOffset(Base, Member, Offset))
+              return Error(FieldStartLoc, "unknown offset");
+            else if (SM.onPlus(ErrMsg))
+              return Error(getTok().getLoc(), ErrMsg);
+            else if (SM.onInteger(Offset, ErrMsg))
+              return Error(IdentLoc, ErrMsg);
+
+            End = consumeToken();
+            break;
+          }
+        }
       }
       // Operator synonymous ("not", "or" etc.)
       bool ParseError = false;
@@ -1607,37 +1678,39 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       // Symbol reference, when parsing assembly content
       InlineAsmIdentifierInfo Info;
       const MCExpr *Val;
-      if (!isParsingMSInlineAsm()) {
-        if (getParser().parsePrimaryExpr(Val, End)) {
-          return Error(Tok.getLoc(), "Unexpected identifier!");
-        } else if (SM.onIdentifierExpr(Val, Identifier, Info, false, ErrMsg)) {
-          return Error(IdentLoc, ErrMsg);
-        } else
+      if (isParsingMSInlineAsm() || Parser.isParsingMasm()) {
+        // MS Dot Operator expression
+        if (Identifier.count('.') && PrevTK == AsmToken::RBrac) {
+          if (ParseIntelDotOperator(SM, End))
+            return true;
           break;
+        }
       }
-      // MS InlineAsm operators (TYPE/LENGTH/SIZE)
-      if (unsigned OpKind = IdentifyIntelInlineAsmOperator(Identifier)) {
-        if (int64_t Val = ParseIntelInlineAsmOperator(OpKind)) {
-          if (SM.onInteger(Val, ErrMsg))
-            return Error(IdentLoc, ErrMsg);
-        } else
+      if (isParsingMSInlineAsm()) {
+        // MS InlineAsm operators (TYPE/LENGTH/SIZE)
+        if (unsigned OpKind = IdentifyIntelInlineAsmOperator(Identifier)) {
+          if (int64_t Val = ParseIntelInlineAsmOperator(OpKind)) {
+            if (SM.onInteger(Val, ErrMsg))
+              return Error(IdentLoc, ErrMsg);
+          } else
+            return true;
+          break;
+        }
+        // MS InlineAsm identifier
+        // Call parseIdentifier() to combine @ with the identifier behind it.
+        if (TK == AsmToken::At && Parser.parseIdentifier(Identifier))
+          return Error(IdentLoc, "expected identifier");
+        if (ParseIntelInlineAsmIdentifier(Val, Identifier, Info, false, End))
           return true;
+        else if (SM.onIdentifierExpr(Val, Identifier, Info, true, ErrMsg))
+          return Error(IdentLoc, ErrMsg);
         break;
       }
-      // MS Dot Operator expression
-      if (Identifier.count('.') && PrevTK == AsmToken::RBrac) {
-        if (ParseIntelDotOperator(SM, End))
-          return true;
-        break;
-      }
-      // MS InlineAsm identifier
-      // Call parseIdentifier() to combine @ with the identifier behind it.
-      if (TK == AsmToken::At && Parser.parseIdentifier(Identifier))
-        return Error(IdentLoc, "expected identifier");
-      if (ParseIntelInlineAsmIdentifier(Val, Identifier, Info, false, End))
-        return true;
-      else if (SM.onIdentifierExpr(Val, Identifier, Info, true, ErrMsg))
+      if (getParser().parsePrimaryExpr(Val, End)) {
+        return Error(Tok.getLoc(), "Unexpected identifier!");
+      } else if (SM.onIdentifierExpr(Val, Identifier, Info, false, ErrMsg)) {
         return Error(IdentLoc, ErrMsg);
+      }
       break;
     }
     case AsmToken::Integer: {
@@ -1856,10 +1929,14 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End) 
     APInt DotDisp;
     DotDispStr.getAsInteger(10, DotDisp);
     Offset = DotDisp.getZExtValue();
-  } else if (isParsingMSInlineAsm() && Tok.is(AsmToken::Identifier)) {
-    std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
-    if (SemaCallback->LookupInlineAsmField(BaseMember.first, BaseMember.second,
-                                           Offset))
+  } else if ((isParsingMSInlineAsm() || getParser().isParsingMasm()) &&
+             Tok.is(AsmToken::Identifier)) {
+    const std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
+    const StringRef Base = BaseMember.first, Member = BaseMember.second;
+    if (getParser().LookUpFieldOffset(SM.getSymName(), DotDispStr, Offset) &&
+        getParser().LookUpFieldOffset(Base, Member, Offset) &&
+        (!SemaCallback ||
+         SemaCallback->LookupInlineAsmField(Base, Member, Offset)))
       return Error(Tok.getLoc(), "Unable to lookup field reference!");
   } else
     return Error(Tok.getLoc(), "Unexpected token type!");

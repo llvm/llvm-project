@@ -2264,6 +2264,11 @@ def mlvi_cfi : Flag<["-"], "mlvi-cfi">, Group<m_Group>, Flags<[CoreOption,Driver
   HelpText<"Enable only control-flow mitigations for Load Value Injection (LVI)">;
 def mno_lvi_cfi : Flag<["-"], "mno-lvi-cfi">, Group<m_Group>, Flags<[CoreOption,DriverOption]>,
   HelpText<"Disable control-flow mitigations for Load Value Injection (LVI)">;
+def m_seses : Flag<["-"], "mseses">, Group<m_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Enable speculative execution side effect suppression (SESES). "
+    "Includes LVI control flow integrity mitigations">;
+def mno_seses : Flag<["-"], "mno-seses">, Group<m_Group>, Flags<[CoreOption, DriverOption]>,
+  HelpText<"Disable speculative execution side effect suppression (SESES)">;
 
 def mrelax : Flag<["-"], "mrelax">, Group<m_riscv_Features_Group>,
   HelpText<"Enable linker relaxation">;

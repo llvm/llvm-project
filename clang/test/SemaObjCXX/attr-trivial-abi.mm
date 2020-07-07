@@ -57,7 +57,7 @@ struct __attribute__((trivial_abi(1))) S8 { // expected-error {{'trivial_abi' at
 };
 
 // Do not warn when 'trivial_abi' is used to annotate a template class.
-template<class T>
+template <class T>
 struct __attribute__((trivial_abi)) S10 {
   T p;
 };
@@ -76,21 +76,27 @@ struct S14 {
   __weak id b;
 };
 
-template<class T>
+template <class T>
 struct __attribute__((trivial_abi)) S15 : S14<T> {
 };
 
 S15<int> s15;
 
-template<class T>
+template <class T>
 struct __attribute__((trivial_abi)) S16 {
   S14<T> a;
 };
 
 S16<int> s16;
 
-template<class T>
+template <class T>
 struct __attribute__((trivial_abi)) S17 { // expected-warning {{'trivial_abi' cannot be applied to 'S17'}} expected-note {{has a __weak field}}
+  S17();
+  S17(S17 &&);
+  __weak id a;
+};
+
+struct __attribute__((trivial_abi)) S18 { // expected-warning {{'trivial_abi' cannot be applied to 'S18'}} expected-note {{has a __weak field}}
   __weak id a;
 };
 

@@ -9719,6 +9719,10 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
 
   // Ill-formed if the copy and move constructors are deleted.
   auto HasNonDeletedCopyOrMoveConstructor = [&]() {
+    // If the type is dependent, then assume it might have
+    // implicit copy or move ctor because we won't know yet at this point.
+    if (RD.isDependentType())
+      return true;
     if (RD.needsImplicitCopyConstructor() &&
         !RD.defaultedCopyConstructorIsDeleted())
       return true;

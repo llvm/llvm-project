@@ -442,6 +442,9 @@ protected:
   /// POP+LFENCE+JMP sequence.
   bool UseLVIControlFlowIntegrity = false;
 
+  /// Enable Speculative Execution Side Effect Suppression
+  bool UseSpeculativeExecutionSideEffectSuppression = false;
+
   /// Insert LFENCE instructions to prevent data speculatively injected into
   /// loads from being used maliciously.
   bool UseLVILoadHardening = false;
@@ -759,6 +762,9 @@ public:
   bool useGLMDivSqrtCosts() const { return UseGLMDivSqrtCosts; }
   bool useLVIControlFlowIntegrity() const { return UseLVIControlFlowIntegrity; }
   bool useLVILoadHardening() const { return UseLVILoadHardening; }
+  bool useSpeculativeExecutionSideEffectSuppression() const {
+    return UseSpeculativeExecutionSideEffectSuppression;
+  }
 
   unsigned getPreferVectorWidth() const { return PreferVectorWidth; }
   unsigned getRequiredVectorWidth() const { return RequiredVectorWidth; }

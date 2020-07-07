@@ -687,10 +687,15 @@ ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
         language_flags);
   }
 
-  if (!valobj && synthetic_array_member)
-    valobj = GetSyntheticValue()
-                 ->GetChildAtIndex(synthetic_index, synthetic_array_member)
-                 .get();
+  // In case of an incomplete type, LLDB will try to use the ValueObject's
+  // synthetic value to create the child ValueObject.
+  if (!valobj && synthetic_array_member) {
+    if (ValueObjectSP synth_valobj_sp = GetSyntheticValue()) {
+      valobj = synth_valobj_sp
+                   ->GetChildAtIndex(synthetic_index, synthetic_array_member)
+                   .get();
+    }
+  }
 
   return valobj;
 }

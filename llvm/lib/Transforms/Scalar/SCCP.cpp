@@ -1104,11 +1104,21 @@ void SCCPSolver::visitStoreInst(StoreInst &SI) {
     TrackedGlobals.erase(I);      // No need to keep tracking this!
 }
 
+static ValueLatticeElement getValueFromMetadata(const Instruction *I) {
+  if (MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
+    if (I->getType()->isIntegerTy())
+      return ValueLatticeElement::getRange(
+          getConstantRangeFromMetadata(*Ranges));
+  // TODO: Also handle MD_nonnull.
+  return ValueLatticeElement::getOverdefined();
+}
+
 // Handle load instructions.  If the operand is a constant pointer to a constant
 // global, we can replace the load with the loaded constant value!
 void SCCPSolver::visitLoadInst(LoadInst &I) {
-  // If this load is of a struct, just mark the result overdefined.
-  if (I.getType()->isStructTy())
+  // If this load is of a struct or the load is volatile, just mark the result
+  // as overdefined.
+  if (I.getType()->isStructTy() || I.isVolatile())
     return (void)markOverdefined(&I);
 
   // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
@@ -1122,41 +1132,39 @@ void SCCPSolver::visitLoadInst(LoadInst &I) {
 
   ValueLatticeElement &IV = ValueState[&I];
 
-  if (!isConstant(PtrVal) || I.isVolatile())
-    return (void)markOverdefined(IV, &I);
+  if (isConstant(PtrVal)) {
+    Constant *Ptr = getConstant(PtrVal);
 
-  Constant *Ptr = getConstant(PtrVal);
-
-  // load null is undefined.
-  if (isa<ConstantPointerNull>(Ptr)) {
-    if (NullPointerIsDefined(I.getFunction(), I.getPointerAddressSpace()))
-      return (void)markOverdefined(IV, &I);
-    else
-      return;
-  }
-
-  // Transform load (constant global) into the value loaded.
-  if (auto *GV = dyn_cast<GlobalVariable>(Ptr)) {
-    if (!TrackedGlobals.empty()) {
-      // If we are tracking this global, merge in the known value for it.
-      auto It = TrackedGlobals.find(GV);
-      if (It != TrackedGlobals.end()) {
-        mergeInValue(IV, &I, It->second, getMaxWidenStepsOpts());
+    // load null is undefined.
+    if (isa<ConstantPointerNull>(Ptr)) {
+      if (NullPointerIsDefined(I.getFunction(), I.getPointerAddressSpace()))
+        return (void)markOverdefined(IV, &I);
+      else
         return;
+    }
+
+    // Transform load (constant global) into the value loaded.
+    if (auto *GV = dyn_cast<GlobalVariable>(Ptr)) {
+      if (!TrackedGlobals.empty()) {
+        // If we are tracking this global, merge in the known value for it.
+        auto It = TrackedGlobals.find(GV);
+        if (It != TrackedGlobals.end()) {
+          mergeInValue(IV, &I, It->second, getMaxWidenStepsOpts());
+          return;
+        }
       }
+    }
+
+    // Transform load from a constant into a constant if possible.
+    if (Constant *C = ConstantFoldLoadFromConstPtr(Ptr, I.getType(), DL)) {
+      if (isa<UndefValue>(C))
+        return;
+      return (void)markConstant(IV, &I, C);
     }
   }
 
-  // Transform load from a constant into a constant if possible.
-  if (Constant *C = ConstantFoldLoadFromConstPtr(Ptr, I.getType(), DL)) {
-    if (isa<UndefValue>(C))
-      return;
-    return (void)markConstant(IV, &I, C);
-  }
-
-  // Otherwise we cannot say for certain what value this load will produce.
-  // Bail out.
-  markOverdefined(IV, &I);
+  // Fall back to metadata.
+  mergeInValue(&I, getValueFromMetadata(&I));
 }
 
 void SCCPSolver::visitCallBase(CallBase &CB) {
@@ -1171,10 +1179,13 @@ void SCCPSolver::handleCallOverdefined(CallBase &CB) {
   if (CB.getType()->isVoidTy())
     return;
 
+  // Always mark struct return as overdefined.
+  if (CB.getType()->isStructTy())
+    return (void)markOverdefined(&CB);
+
   // Otherwise, if we have a single return value case, and if the function is
   // a declaration, maybe we can constant fold it.
-  if (F && F->isDeclaration() && !CB.getType()->isStructTy() &&
-      canConstantFoldCallTo(&CB, F)) {
+  if (F && F->isDeclaration() && canConstantFoldCallTo(&CB, F)) {
     SmallVector<Constant *, 8> Operands;
     for (auto AI = CB.arg_begin(), E = CB.arg_end(); AI != E; ++AI) {
       if (AI->get()->getType()->isStructTy())
@@ -1202,8 +1213,8 @@ void SCCPSolver::handleCallOverdefined(CallBase &CB) {
     }
   }
 
-  // Otherwise, we don't know anything about this call, mark it overdefined.
-  return (void)markOverdefined(&CB);
+  // Fall back to metadata.
+  mergeInValue(&CB, getValueFromMetadata(&CB));
 }
 
 void SCCPSolver::handleCallArguments(CallBase &CB) {
@@ -1247,16 +1258,24 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
         return;
 
       Value *CopyOf = CB.getOperand(0);
-      auto *PI = getPredicateInfoFor(&CB);
-      auto *PBranch = dyn_cast_or_null<PredicateBranch>(PI);
       ValueLatticeElement OriginalVal = getValueState(CopyOf);
-      if (!PI || !PBranch) {
+      auto *PI = getPredicateInfoFor(&CB);
+      assert(PI && "Missing predicate info for ssa.copy");
+
+      CmpInst *Cmp;
+      bool TrueEdge;
+      if (auto *PBranch = dyn_cast<PredicateBranch>(PI)) {
+        Cmp = dyn_cast<CmpInst>(PBranch->Condition);
+        TrueEdge = PBranch->TrueEdge;
+      } else if (auto *PAssume = dyn_cast<PredicateAssume>(PI)) {
+        Cmp = dyn_cast<CmpInst>(PAssume->Condition);
+        TrueEdge = true;
+      } else {
         mergeInValue(ValueState[&CB], &CB, OriginalVal);
         return;
       }
 
       // Everything below relies on the condition being a comparison.
-      auto *Cmp = dyn_cast<CmpInst>(PBranch->Condition);
       if (!Cmp) {
         mergeInValue(ValueState[&CB], &CB, OriginalVal);
         return;
@@ -1281,7 +1300,7 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
         return;
       }
 
-      if (!PBranch->TrueEdge)
+      if (!TrueEdge)
         Pred = CmpInst::getInversePredicate(Pred);
 
       ValueLatticeElement CondVal = getValueState(CmpOp1);
