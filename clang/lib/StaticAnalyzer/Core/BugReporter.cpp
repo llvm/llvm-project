@@ -2108,13 +2108,24 @@ void BuiltinBug::anchor() {}
 // Methods for BugReport and subclasses.
 //===----------------------------------------------------------------------===//
 
-static bool isDependency(const CheckerRegistryData &Registry,
-                         StringRef CheckerName) {
+LLVM_ATTRIBUTE_USED static bool
+isDependency(const CheckerRegistryData &Registry, StringRef CheckerName) {
   for (const std::pair<StringRef, StringRef> &Pair : Registry.Dependencies) {
     if (Pair.second == CheckerName)
       return true;
   }
   return false;
+}
+
+LLVM_ATTRIBUTE_USED static bool isHidden(const CheckerRegistryData &Registry,
+                                         StringRef CheckerName) {
+  for (const CheckerInfo &Checker : Registry.Checkers) {
+    if (Checker.FullName == CheckerName)
+      return Checker.IsHidden;
+  }
+  llvm_unreachable(
+      "Checker name not found in CheckerRegistry -- did you retrieve it "
+      "correctly from CheckerManager::getCurrentCheckerName?");
 }
 
 PathSensitiveBugReport::PathSensitiveBugReport(
@@ -2132,6 +2143,16 @@ PathSensitiveBugReport::PathSensitiveBugReport(
          "Some checkers depend on this one! We don't allow dependency "
          "checkers to emit warnings, because checkers should depend on "
          "*modeling*, not *diagnostics*.");
+
+  assert(
+      bt.getCheckerName().startswith("debug") ||
+      !isHidden(ErrorNode->getState()
+                    ->getAnalysisManager()
+                    .getCheckerManager()
+                    ->getCheckerRegistryData(),
+                bt.getCheckerName()) &&
+          "Hidden checkers musn't emit diagnostics as they are by definition "
+          "non-user facing!");
 }
 
 void PathSensitiveBugReport::addVisitor(
