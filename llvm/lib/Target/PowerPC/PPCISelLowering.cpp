@@ -9896,9 +9896,10 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   // to vector legalization will not be sent to the target combine. Try to
   // combine it here.
   if (SDValue NewShuffle = combineVectorShuffle(SVOp, DAG)) {
-    DAG.ReplaceAllUsesOfValueWith(Op, NewShuffle);
     Op = NewShuffle;
     SVOp = cast<ShuffleVectorSDNode>(Op);
+    V1 = Op.getOperand(0);
+    V2 = Op.getOperand(1);
   }
   EVT VT = Op.getValueType();
   bool isLittleEndian = Subtarget.isLittleEndian();
