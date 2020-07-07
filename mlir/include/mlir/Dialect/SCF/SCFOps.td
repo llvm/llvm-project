@@ -183,7 +183,8 @@ def ForOp : SCF_Op<"for",
 
 def IfOp : SCF_Op<"if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       SingleBlockImplicitTerminator<"YieldOp">, RecursiveSideEffects]> {
+       SingleBlockImplicitTerminator<"YieldOp">, RecursiveSideEffects,
+       NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for

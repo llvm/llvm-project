@@ -1737,6 +1737,9 @@ def AttrSizedOperandSegments : NativeOpTrait<"AttrSizedOperandSegments">;
 // should be named as `result_segment_sizes`.
 def AttrSizedResultSegments  : NativeOpTrait<"AttrSizedResultSegments">;
 
+// Op attached regions have no arguments
+def NoRegionArguments : NativeOpTrait<"NoRegionArguments">;
+
 //===----------------------------------------------------------------------===//
 // OpInterface definitions
 //===----------------------------------------------------------------------===//

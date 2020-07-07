@@ -309,3 +309,32 @@ func @vector_store_vector_memref() {
   }
   return
 }
+
+// -----
+
+func @affine_if_with_then_region_args(%N: index) {
+  %c = constant 200 : index
+  %i = constant 20: index
+  // expected-error@+1 {{affine.if' op region #0 should have no arguments}}
+  affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%c]  {
+    ^bb0(%arg:i32):
+      %w = affine.apply affine_map<(d0,d1)[s0] -> (d0+d1+s0)> (%i, %i) [%N]
+  }
+  return
+}
+
+// -----
+
+func @affine_if_with_else_region_args(%N: index) {
+  %c = constant 200 : index
+  %i = constant 20: index
+  // expected-error@+1 {{affine.if' op region #1 should have no arguments}}
+  affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%c]  {
+      %w = affine.apply affine_map<(d0,d1)[s0] -> (d0+d1+s0)> (%i, %i) [%N]
+  } else {
+    ^bb0(%arg:i32):
+      %w = affine.apply affine_map<(d0,d1)[s0] -> (d0-d1+s0)> (%i, %i) [%N]
+  }
+  return
+}
+
