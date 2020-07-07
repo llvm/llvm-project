@@ -33044,6 +33044,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
+  auto TMMImmToTMMReg = [](unsigned Imm) {
+    assert (Imm < 8 && "Illegal tmm index");
+    return X86::TMM0 + Imm;
+  };
   switch (MI.getOpcode()) {
   default: llvm_unreachable("Unexpected instr type to insert");
   case X86::TLS_addr32:
@@ -33324,6 +33328,67 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         BuildMI(*BB, MI, DL, TII->get(X86::LEA32r), MI.getOperand(0).getReg()),
         X86::ESP, false, ArgOffset);
     MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTDPBSSD:
+  case X86::PTDPBSUD:
+  case X86::PTDPBUSD:
+  case X86::PTDPBUUD:
+  case X86::PTDPBF16PS: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    case X86::PTDPBSSD: Opc = X86::TDPBSSD; break;
+    case X86::PTDPBSUD: Opc = X86::TDPBSUD; break;
+    case X86::PTDPBUSD: Opc = X86::TDPBUSD; break;
+    case X86::PTDPBUUD: Opc = X86::TDPBUUD; break;
+    case X86::PTDPBF16PS: Opc = X86::TDPBF16PS; break;
+    }
+
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Undef);
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(2).getImm()), RegState::Undef);
+
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
+  case X86::PTILEZERO: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Imm = MI.getOperand(0).getImm();
+    BuildMI(*BB, MI, DL, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
+  case X86::PTILELOADD:
+  case X86::PTILELOADDT1:
+  case X86::PTILESTORED: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    case X86::PTILELOADD:   Opc = X86::TILELOADD;   break;
+    case X86::PTILELOADDT1: Opc = X86::TILELOADDT1; break;
+    case X86::PTILESTORED:  Opc = X86::TILESTORED;  break;
+    }
+
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
+    unsigned CurOp = 0;
+    if (Opc != X86::TILESTORED)
+      MIB.addReg(TMMImmToTMMReg(MI.getOperand(CurOp++).getImm()),
+                 RegState::Define);
+
+    MIB.add(MI.getOperand(CurOp++)); // base
+    MIB.add(MI.getOperand(CurOp++)); // scale
+    MIB.add(MI.getOperand(CurOp++)); // index -- stride
+    MIB.add(MI.getOperand(CurOp++)); // displacement
+    MIB.add(MI.getOperand(CurOp++)); // segment
+
+    if (Opc == X86::TILESTORED)
+      MIB.addReg(TMMImmToTMMReg(MI.getOperand(CurOp++).getImm()),
+                 RegState::Undef);
+
+    MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
   }
