@@ -1396,7 +1396,7 @@ struct SemiNCAInfo {
       const TreeNodePtr Node = NodeToTN.second.get();
 
       // Handle tree leaves.
-      if (Node->getChildren().empty()) {
+      if (Node->isLeaf()) {
         if (Node->getDFSNumIn() + 1 != Node->getDFSNumOut()) {
           errs() << "Tree leaf should have DFSOut = DFSIn + 1:\n\t";
           PrintNodeAndDFSNums(Node);
@@ -1508,7 +1508,8 @@ struct SemiNCAInfo {
     for (auto &NodeToTN : DT.DomTreeNodes) {
       const TreeNodePtr TN = NodeToTN.second.get();
       const NodePtr BB = TN->getBlock();
-      if (!BB || TN->getChildren().empty()) continue;
+      if (!BB || TN->isLeaf())
+        continue;
 
       LLVM_DEBUG(dbgs() << "Verifying parent property of node "
                         << BlockNamePrinter(TN) << "\n");
@@ -1517,7 +1518,7 @@ struct SemiNCAInfo {
         return From != BB && To != BB;
       });
 
-      for (TreeNodePtr Child : TN->getChildren())
+      for (TreeNodePtr Child : TN->children())
         if (NodeToInfo.count(Child->getBlock()) != 0) {
           errs() << "Child " << BlockNamePrinter(Child)
                  << " reachable after its parent " << BlockNamePrinter(BB)
@@ -1541,17 +1542,17 @@ struct SemiNCAInfo {
     for (auto &NodeToTN : DT.DomTreeNodes) {
       const TreeNodePtr TN = NodeToTN.second.get();
       const NodePtr BB = TN->getBlock();
-      if (!BB || TN->getChildren().empty()) continue;
+      if (!BB || TN->isLeaf())
+        continue;
 
-      const auto &Siblings = TN->getChildren();
-      for (const TreeNodePtr N : Siblings) {
+      for (const TreeNodePtr N : TN->children()) {
         clear();
         NodePtr BBN = N->getBlock();
         doFullDFSWalk(DT, [BBN](NodePtr From, NodePtr To) {
           return From != BBN && To != BBN;
         });
 
-        for (const TreeNodePtr S : Siblings) {
+        for (const TreeNodePtr S : TN->children()) {
           if (S == N) continue;
 
           if (NodeToInfo.count(S->getBlock()) == 0) {

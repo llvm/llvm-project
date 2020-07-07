@@ -218,8 +218,7 @@ bool OptimizePICCall::runOnMachineFunction(MachineFunction &F) {
     MBBI.preVisit(ScopedHT);
     Changed |= visitNode(MBBI);
     const MachineDomTreeNode *Node = MBBI.getNode();
-    const std::vector<MachineDomTreeNode *> &Children = Node->getChildren();
-    WorkList.append(Children.begin(), Children.end());
+    WorkList.append(Node->begin(), Node->end());
   }
 
   return Changed;

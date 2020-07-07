@@ -623,14 +623,13 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
   //   if () {} else {}
   //   use x
   //
-  const std::vector<MachineDomTreeNode *> &Children =
-    DT->getNode(MBB)->getChildren();
-  for (const auto &DTChild : Children)
+  for (MachineDomTreeNode *DTChild : DT->getNode(MBB)->children()) {
     // DomTree children of MBB that have MBB as immediate dominator are added.
     if (DTChild->getIDom()->getBlock() == MI.getParent() &&
         // Skip MBBs already added to the AllSuccs vector above.
         !MBB->isSuccessor(DTChild->getBlock()))
       AllSuccs.push_back(DTChild->getBlock());
+  }
 
   // Sort Successors according to their loop depth or block frequency info.
   llvm::stable_sort(
