@@ -523,6 +523,9 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
     uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
 
+    if (Arg.use_empty())
+      continue;
+
     ArrayRef<Register> OrigArgRegs = VRegs[i];
     Register ArgReg =
       OrigArgRegs.size() == 1
