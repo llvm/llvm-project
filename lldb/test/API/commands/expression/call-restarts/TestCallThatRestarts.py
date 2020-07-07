@@ -52,10 +52,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
                                       'Stop here in main.', self.main_source_spec)
 
         # Make sure the SIGCHLD behavior is pass/no-stop/no-notify:
-        return_obj = lldb.SBCommandReturnObject()
-        self.dbg.GetCommandInterpreter().HandleCommand(
-            "process handle SIGCHLD -s 0 -p 1 -n 0", return_obj)
-        self.assertTrue(return_obj.Succeeded(), "Set SIGCHLD to pass, no-stop")
+        self.runCmd("process handle SIGCHLD -s 0 -p 1 -n 0")
 
         # The sigchld_no variable should be 0 at this point.
         self.sigchld_no = target.FindFirstGlobalVariable("sigchld_no")
@@ -107,11 +104,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
 
         # Now set the signal to print but not stop and make sure that calling
         # still works:
-        self.dbg.GetCommandInterpreter().HandleCommand(
-            "process handle SIGCHLD -s 0 -p 1 -n 1", return_obj)
-        self.assertTrue(
-            return_obj.Succeeded(),
-            "Set SIGCHLD to pass, no-stop, notify")
+        self.runCmd("process handle SIGCHLD -s 0 -p 1 -n 1")
 
         value = frame.EvaluateExpression(
             "call_me (%d)" %
@@ -135,29 +128,20 @@ class ExprCommandThatRestartsTestCase(TestBase):
         # Okay, now set UnwindOnError to true, and then make the signal behavior to stop
         # and see that now we do stop at the signal point:
 
-        self.dbg.GetCommandInterpreter().HandleCommand(
-            "process handle SIGCHLD -s 1 -p 1 -n 1", return_obj)
-        self.assertTrue(
-            return_obj.Succeeded(),
-            "Set SIGCHLD to pass, stop, notify")
+        self.runCmd("process handle SIGCHLD -s 1 -p 1 -n 1")
 
         value = frame.EvaluateExpression(
             "call_me (%d)" %
             (num_sigchld), options)
-        self.assertTrue(
-            value.IsValid() and value.GetError().Success() == False)
+        self.assertTrue(value.IsValid())
+        self.assertFalse(value.GetError().Success())
 
         # Set signal handling back to no-stop, and continue and we should end
         # up back in out starting frame:
-        self.dbg.GetCommandInterpreter().HandleCommand(
-            "process handle SIGCHLD -s 0 -p 1 -n 1", return_obj)
-        self.assertTrue(
-            return_obj.Succeeded(),
-            "Set SIGCHLD to pass, no-stop, notify")
+        self.runCmd("process handle SIGCHLD -s 0 -p 1 -n 1")
 
         error = process.Continue()
-        self.assertTrue(
-            error.Success(),
+        self.assertSuccess(error,
             "Continuing after stopping for signal succeeds.")
 
         frame = self.thread.GetFrameAtIndex(0)
