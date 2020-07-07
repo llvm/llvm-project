@@ -6794,30 +6794,33 @@ void LLVMStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
     if (Shdr.sh_type != ELF::SHT_LLVM_LINKER_OPTIONS)
       continue;
 
-    ArrayRef<uint8_t> Contents =
-        unwrapOrError(this->FileName, Obj->getSectionContents(&Shdr));
-    if (Contents.empty())
+    Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj->getSectionContents(&Shdr);
+    if (!ContentsOrErr) {
+      this->reportUniqueWarning(
+          createError("unable to read the content of the "
+                      "SHT_LLVM_LINKER_OPTIONS section: " +
+                      toString(ContentsOrErr.takeError())));
+      continue;
+    }
+    if (ContentsOrErr->empty())
       continue;
 
-    if (Contents.back() != 0) {
-      reportWarning(createError("SHT_LLVM_LINKER_OPTIONS section at index " +
-                                Twine(I) +
-                                " is broken: the "
-                                "content is not null-terminated"),
-                    this->FileName);
+    if (ContentsOrErr->back() != 0) {
+      this->reportUniqueWarning(
+          createError("SHT_LLVM_LINKER_OPTIONS section at index " + Twine(I) +
+                      " is broken: the "
+                      "content is not null-terminated"));
       continue;
     }
 
     SmallVector<StringRef, 16> Strings;
-    toStringRef(Contents.drop_back()).split(Strings, '\0');
+    toStringRef(ContentsOrErr->drop_back()).split(Strings, '\0');
     if (Strings.size() % 2 != 0) {
-      reportWarning(
-          createError(
-              "SHT_LLVM_LINKER_OPTIONS section at index " + Twine(I) +
-              " is broken: an incomplete "
-              "key-value pair was found. The last possible key was: \"" +
-              Strings.back() + "\""),
-          this->FileName);
+      this->reportUniqueWarning(createError(
+          "SHT_LLVM_LINKER_OPTIONS section at index " + Twine(I) +
+          " is broken: an incomplete "
+          "key-value pair was found. The last possible key was: \"" +
+          Strings.back() + "\""));
       continue;
     }
 
