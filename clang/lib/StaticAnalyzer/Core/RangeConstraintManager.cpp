@@ -401,6 +401,9 @@ REGISTER_MAP_WITH_PROGRAMSTATE(ClassMap, SymbolRef, EquivalenceClass)
 REGISTER_MAP_WITH_PROGRAMSTATE(ClassMembers, EquivalenceClass, SymbolSet)
 REGISTER_MAP_WITH_PROGRAMSTATE(ConstraintRange, EquivalenceClass, RangeSet)
 
+REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(ClassSet, EquivalenceClass)
+REGISTER_MAP_WITH_PROGRAMSTATE(DisequalityMap, EquivalenceClass, ClassSet)
+
 namespace {
 /// This class encapsulates a set of symbols equal to each other.
 ///
@@ -450,6 +453,26 @@ public:
   LLVM_NODISCARD inline bool isTriviallyDead(ProgramStateRef State,
                                              SymbolReaper &Reaper);
 
+  LLVM_NODISCARD static inline ProgramStateRef
+  markDisequal(BasicValueFactory &BV, RangeSet::Factory &F,
+               ProgramStateRef State, SymbolRef First, SymbolRef Second);
+  LLVM_NODISCARD static inline ProgramStateRef
+  markDisequal(BasicValueFactory &BV, RangeSet::Factory &F,
+               ProgramStateRef State, EquivalenceClass First,
+               EquivalenceClass Second);
+  LLVM_NODISCARD inline ProgramStateRef
+  markDisequal(BasicValueFactory &BV, RangeSet::Factory &F,
+               ProgramStateRef State, EquivalenceClass Other) const;
+  LLVM_NODISCARD static inline ClassSet
+  getDisequalClasses(ProgramStateRef State, SymbolRef Sym);
+  LLVM_NODISCARD inline ClassSet
+  getDisequalClasses(ProgramStateRef State) const;
+  LLVM_NODISCARD inline ClassSet
+  getDisequalClasses(DisequalityMapTy Map, ClassSet::Factory &Factory) const;
+
+  LLVM_NODISCARD static inline Optional<bool>
+  areEqual(ProgramStateRef State, SymbolRef First, SymbolRef Second);
+
   /// Check equivalence data for consistency.
   LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED static bool
   isClassDataConsistent(ProgramStateRef State);
@@ -496,6 +519,11 @@ private:
                                    ProgramStateRef State, SymbolSet Members,
                                    EquivalenceClass Other,
                                    SymbolSet OtherMembers);
+  static inline void
+  addToDisequalityInfo(DisequalityMapTy &Info, ConstraintRangeTy &Constraints,
+                       BasicValueFactory &BV, RangeSet::Factory &F,
+                       ProgramStateRef State, EquivalenceClass First,
+                       EquivalenceClass Second);
 
   /// This is a unique identifier of the class.
   uintptr_t ID;
@@ -504,17 +532,6 @@ private:
 //===----------------------------------------------------------------------===//
 //                             Constraint functions
 //===----------------------------------------------------------------------===//
-
-LLVM_NODISCARD inline ProgramStateRef setConstraint(ProgramStateRef State,
-                                                    EquivalenceClass Class,
-                                                    RangeSet Constraint) {
-  return State->set<ConstraintRange>(Class, Constraint);
-}
-
-LLVM_NODISCARD inline ProgramStateRef
-setConstraint(ProgramStateRef State, SymbolRef Sym, RangeSet Constraint) {
-  return setConstraint(State, EquivalenceClass::find(State, Sym), Constraint);
-}
 
 LLVM_NODISCARD inline const RangeSet *getConstraint(ProgramStateRef State,
                                                     EquivalenceClass Class) {
@@ -692,10 +709,11 @@ LLVM_NODISCARD inline
 class SymbolicRangeInferrer
     : public SymExprVisitor<SymbolicRangeInferrer, RangeSet> {
 public:
+  template <class SourceType>
   static RangeSet inferRange(BasicValueFactory &BV, RangeSet::Factory &F,
-                             ProgramStateRef State, SymbolRef Sym) {
+                             ProgramStateRef State, SourceType Origin) {
     SymbolicRangeInferrer Inferrer(BV, F, State);
-    return Inferrer.infer(Sym);
+    return Inferrer.infer(Origin);
   }
 
   RangeSet VisitSymExpr(SymbolRef Sym) {
@@ -760,10 +778,18 @@ private:
     // If Sym is a comparison expression (except <=>),
     // find any other comparisons with the same operands.
     // See function description.
-    if (Optional<RangeSet> CmpRangeSet = getRangeForComparisonSymbol(Sym))
+    if (Optional<RangeSet> CmpRangeSet = getRangeForComparisonSymbol(Sym)) {
       return *CmpRangeSet;
+    }
 
     return Visit(Sym);
+  }
+
+  RangeSet infer(EquivalenceClass Class) {
+    if (const RangeSet *AssociatedConstraint = getConstraint(State, Class))
+      return *AssociatedConstraint;
+
+    return infer(Class.getType());
   }
 
   /// Infer range information solely from the type.
@@ -1034,19 +1060,15 @@ private:
     if (!Equality)
       return llvm::None;
 
-    EquivalenceClass LHS = EquivalenceClass::find(State, Equality->Left);
-    EquivalenceClass RHS = EquivalenceClass::find(State, Equality->Right);
-
-    if (LHS != RHS)
-      // Can't really say anything at this point.
-      // We can add more logic here if we track disequalities as well.
-      return llvm::None;
-
-    // At this point, operands of the equality operation are known to be equal.
-    if (Equality->IsEquality) {
-      return getTrueRange(Sym->getType());
+    if (Optional<bool> AreEqual = EquivalenceClass::areEqual(
+            State, Equality->Left, Equality->Right)) {
+      if (*AreEqual == Equality->IsEquality) {
+        return getTrueRange(Sym->getType());
+      }
+      return getFalseRange(Sym->getType());
     }
-    return getFalseRange(Sym->getType());
+
+    return llvm::None;
   }
 
   RangeSet getTrueRange(QualType T) {
@@ -1303,6 +1325,7 @@ private:
   RangeSet::Factory F;
 
   RangeSet getRange(ProgramStateRef State, SymbolRef Sym);
+  RangeSet getRange(ProgramStateRef State, EquivalenceClass Class);
 
   RangeSet getSymLTRange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
@@ -1356,12 +1379,42 @@ private:
 
   ProgramStateRef trackDisequality(ProgramStateRef State, SymbolRef LHS,
                                    SymbolRef RHS) {
-    // TODO: track inequalities
-    return State;
+    return EquivalenceClass::markDisequal(getBasicVals(), F, State, LHS, RHS);
   }
 
   ProgramStateRef trackEquality(ProgramStateRef State, SymbolRef LHS,
-                                SymbolRef RHS);
+                                SymbolRef RHS) {
+    return EquivalenceClass::merge(getBasicVals(), F, State, LHS, RHS);
+  }
+
+  LLVM_NODISCARD inline ProgramStateRef setConstraint(ProgramStateRef State,
+                                                      EquivalenceClass Class,
+                                                      RangeSet Constraint) {
+    ConstraintRangeTy Constraints = State->get<ConstraintRange>();
+    ConstraintRangeTy::Factory &CF = State->get_context<ConstraintRange>();
+
+    // Add new constraint.
+    Constraints = CF.add(Constraints, Class, Constraint);
+
+    // There is a chance that we might need to update constraints for the
+    // classes that are known to be disequal to Class.
+    //
+    // In order for this to be even possible, the new constraint should
+    // be simply a constant because we can't reason about range disequalities.
+    if (const llvm::APSInt *Point = Constraint.getConcreteValue())
+      for (EquivalenceClass DisequalClass : Class.getDisequalClasses(State)) {
+        RangeSet UpdatedConstraint =
+            getRange(State, DisequalClass).Delete(getBasicVals(), F, *Point);
+        Constraints = CF.add(Constraints, DisequalClass, UpdatedConstraint);
+      }
+
+    return State->set<ConstraintRange>(Constraints);
+  }
+
+  LLVM_NODISCARD inline ProgramStateRef
+  setConstraint(ProgramStateRef State, SymbolRef Sym, RangeSet Constraint) {
+    return setConstraint(State, EquivalenceClass::find(State, Sym), Constraint);
+  }
 };
 
 } // end anonymous namespace
@@ -1496,11 +1549,15 @@ EquivalenceClass::mergeImpl(BasicValueFactory &ValueFactory,
 
   // 2. Get ALL equivalence-related maps
   ClassMapTy Classes = State->get<ClassMap>();
-  ClassMapTy::Factory &CF = State->get_context<ClassMap>();
+  ClassMapTy::Factory &CMF = State->get_context<ClassMap>();
 
   ClassMembersTy Members = State->get<ClassMembers>();
   ClassMembersTy::Factory &MF = State->get_context<ClassMembers>();
 
+  DisequalityMapTy DisequalityInfo = State->get<DisequalityMap>();
+  DisequalityMapTy::Factory &DF = State->get_context<DisequalityMap>();
+
+  ClassSet::Factory &CF = State->get_context<ClassSet>();
   SymbolSet::Factory &F = getMembersFactory(State);
 
   // 2. Merge members of the Other class into the current class.
@@ -1508,7 +1565,7 @@ EquivalenceClass::mergeImpl(BasicValueFactory &ValueFactory,
   for (SymbolRef Sym : OtherMembers) {
     NewClassMembers = F.add(NewClassMembers, Sym);
     // *this is now the class for all these new symbols.
-    Classes = CF.add(Classes, Sym, *this);
+    Classes = CMF.add(Classes, Sym, *this);
   }
 
   // 3. Adjust member mapping.
@@ -1518,7 +1575,34 @@ EquivalenceClass::mergeImpl(BasicValueFactory &ValueFactory,
   // Now only the current class is mapped to all the symbols.
   Members = MF.add(Members, *this, NewClassMembers);
 
-  // 4. Update the state
+  // 4. Update disequality relations
+  ClassSet DisequalToOther = Other.getDisequalClasses(DisequalityInfo, CF);
+  if (!DisequalToOther.isEmpty()) {
+    ClassSet DisequalToThis = getDisequalClasses(DisequalityInfo, CF);
+    DisequalityInfo = DF.remove(DisequalityInfo, Other);
+
+    for (EquivalenceClass DisequalClass : DisequalToOther) {
+      DisequalToThis = CF.add(DisequalToThis, DisequalClass);
+
+      // Disequality is a symmetric relation meaning that if
+      // DisequalToOther not null then the set for DisequalClass is not
+      // empty and has at least Other.
+      ClassSet OriginalSetLinkedToOther =
+          *DisequalityInfo.lookup(DisequalClass);
+
+      // Other will be eliminated and we should replace it with the bigger
+      // united class.
+      ClassSet NewSet = CF.remove(OriginalSetLinkedToOther, Other);
+      NewSet = CF.add(NewSet, *this);
+
+      DisequalityInfo = DF.add(DisequalityInfo, DisequalClass, NewSet);
+    }
+
+    DisequalityInfo = DF.add(DisequalityInfo, *this, DisequalToThis);
+    State = State->set<DisequalityMap>(DisequalityInfo);
+  }
+
+  // 5. Update the state
   State = State->set<ClassMap>(Classes);
   State = State->set<ClassMembers>(Members);
 
@@ -1549,6 +1633,121 @@ bool EquivalenceClass::isTriviallyDead(ProgramStateRef State,
   return isTrivial(State) && Reaper.isDead(getRepresentativeSymbol());
 }
 
+inline ProgramStateRef EquivalenceClass::markDisequal(BasicValueFactory &VF,
+                                                      RangeSet::Factory &RF,
+                                                      ProgramStateRef State,
+                                                      SymbolRef First,
+                                                      SymbolRef Second) {
+  return markDisequal(VF, RF, State, find(State, First), find(State, Second));
+}
+
+inline ProgramStateRef EquivalenceClass::markDisequal(BasicValueFactory &VF,
+                                                      RangeSet::Factory &RF,
+                                                      ProgramStateRef State,
+                                                      EquivalenceClass First,
+                                                      EquivalenceClass Second) {
+  return First.markDisequal(VF, RF, State, Second);
+}
+
+inline ProgramStateRef
+EquivalenceClass::markDisequal(BasicValueFactory &VF, RangeSet::Factory &RF,
+                               ProgramStateRef State,
+                               EquivalenceClass Other) const {
+  // If we know that two classes are equal, we can only produce an infeasible
+  // state.
+  if (*this == Other) {
+    return nullptr;
+  }
+
+  DisequalityMapTy DisequalityInfo = State->get<DisequalityMap>();
+  ConstraintRangeTy Constraints = State->get<ConstraintRange>();
+
+  // Disequality is a symmetric relation, so if we mark A as disequal to B,
+  // we should also mark B as disequalt to A.
+  addToDisequalityInfo(DisequalityInfo, Constraints, VF, RF, State, *this,
+                       Other);
+  addToDisequalityInfo(DisequalityInfo, Constraints, VF, RF, State, Other,
+                       *this);
+
+  State = State->set<DisequalityMap>(DisequalityInfo);
+  State = State->set<ConstraintRange>(Constraints);
+
+  return State;
+}
+
+inline void EquivalenceClass::addToDisequalityInfo(
+    DisequalityMapTy &Info, ConstraintRangeTy &Constraints,
+    BasicValueFactory &VF, RangeSet::Factory &RF, ProgramStateRef State,
+    EquivalenceClass First, EquivalenceClass Second) {
+
+  // 1. Get all of the required factories.
+  DisequalityMapTy::Factory &F = State->get_context<DisequalityMap>();
+  ClassSet::Factory &CF = State->get_context<ClassSet>();
+  ConstraintRangeTy::Factory &CRF = State->get_context<ConstraintRange>();
+
+  // 2. Add Second to the set of classes disequal to First.
+  const ClassSet *CurrentSet = Info.lookup(First);
+  ClassSet NewSet = CurrentSet ? *CurrentSet : CF.getEmptySet();
+  NewSet = CF.add(NewSet, Second);
+
+  Info = F.add(Info, First, NewSet);
+
+  // 3. If Second is known to be a constant, we can delete this point
+  //    from the constraint asociated with First.
+  //
+  //    So, if Second == 10, it means that First != 10.
+  //    At the same time, the same logic does not apply to ranges.
+  if (const RangeSet *SecondConstraint = Constraints.lookup(Second))
+    if (const llvm::APSInt *Point = SecondConstraint->getConcreteValue()) {
+
+      RangeSet FirstConstraint = SymbolicRangeInferrer::inferRange(
+          VF, RF, State, First.getRepresentativeSymbol());
+
+      FirstConstraint = FirstConstraint.Delete(VF, RF, *Point);
+      Constraints = CRF.add(Constraints, First, FirstConstraint);
+    }
+}
+
+inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
+                                                 SymbolRef FirstSym,
+                                                 SymbolRef SecondSym) {
+  EquivalenceClass First = find(State, FirstSym);
+  EquivalenceClass Second = find(State, SecondSym);
+
+  // The same equivalence class => symbols are equal.
+  if (First == Second)
+    return true;
+
+  // Let's check if we know anything about these two classes being not equal to
+  // each other.
+  ClassSet DisequalToFirst = First.getDisequalClasses(State);
+  if (DisequalToFirst.contains(Second))
+    return false;
+
+  // It is not clear.
+  return llvm::None;
+}
+
+inline ClassSet EquivalenceClass::getDisequalClasses(ProgramStateRef State,
+                                                     SymbolRef Sym) {
+  return find(State, Sym).getDisequalClasses(State);
+}
+
+inline ClassSet
+EquivalenceClass::getDisequalClasses(ProgramStateRef State) const {
+  return getDisequalClasses(State->get<DisequalityMap>(),
+                            State->get_context<ClassSet>());
+}
+
+inline ClassSet
+EquivalenceClass::getDisequalClasses(DisequalityMapTy Map,
+                                     ClassSet::Factory &Factory) const {
+  if (const ClassSet *DisequalClasses = Map.lookup(*this))
+    return *DisequalClasses;
+
+  return Factory.getEmptySet();
+}
+
 bool EquivalenceClass::isClassDataConsistent(ProgramStateRef State) {
   ClassMembersTy Members = State->get<ClassMembers>();
 
@@ -1560,6 +1759,28 @@ bool EquivalenceClass::isClassDataConsistent(ProgramStateRef State) {
       }
 
       return false;
+    }
+  }
+
+  DisequalityMapTy Disequalities = State->get<DisequalityMap>();
+  for (std::pair<EquivalenceClass, ClassSet> DisequalityInfo : Disequalities) {
+    EquivalenceClass Class = DisequalityInfo.first;
+    ClassSet DisequalClasses = DisequalityInfo.second;
+
+    // There is no use in keeping empty sets in the map.
+    if (DisequalClasses.isEmpty())
+      return false;
+
+    // Disequality is symmetrical, i.e. for every Class A and B that A != B,
+    // B != A should also be true.
+    for (EquivalenceClass DisequalClass : DisequalClasses) {
+      const ClassSet *DisequalToDisequalClasses =
+          Disequalities.lookup(DisequalClass);
+
+      // It should be a set of at least one element: Class
+      if (!DisequalToDisequalClasses ||
+          !DisequalToDisequalClasses->contains(Class))
+        return false;
     }
   }
 
@@ -1669,9 +1890,48 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   ClassMapTy NewMap = Map;
   ClassMapTy::Factory &ClassFactory = State->get_context<ClassMap>();
 
+  DisequalityMapTy Disequalities = State->get<DisequalityMap>();
+  DisequalityMapTy::Factory &DisequalityFactory =
+      State->get_context<DisequalityMap>();
+  ClassSet::Factory &ClassSetFactory = State->get_context<ClassSet>();
+
   bool ClassMapChanged = false;
   bool MembersMapChanged = false;
   bool ConstraintMapChanged = false;
+  bool DisequalitiesChanged = false;
+
+  auto removeDeadClass = [&](EquivalenceClass Class) {
+    // Remove associated constraint ranges.
+    Constraints = ConstraintFactory.remove(Constraints, Class);
+    ConstraintMapChanged = true;
+
+    // Update disequality information to not hold any information on the
+    // removed class.
+    ClassSet DisequalClasses =
+        Class.getDisequalClasses(Disequalities, ClassSetFactory);
+    if (!DisequalClasses.isEmpty()) {
+      for (EquivalenceClass DisequalClass : DisequalClasses) {
+        ClassSet DisequalToDisequalSet =
+            DisequalClass.getDisequalClasses(Disequalities, ClassSetFactory);
+        // DisequalToDisequalSet is guaranteed to be non-empty for consistent
+        // disequality info.
+        assert(!DisequalToDisequalSet.isEmpty());
+        ClassSet NewSet = ClassSetFactory.remove(DisequalToDisequalSet, Class);
+
+        // No need in keeping an empty set.
+        if (NewSet.isEmpty()) {
+          Disequalities =
+              DisequalityFactory.remove(Disequalities, DisequalClass);
+        } else {
+          Disequalities =
+              DisequalityFactory.add(Disequalities, DisequalClass, NewSet);
+        }
+      }
+      // Remove the data for the class
+      Disequalities = DisequalityFactory.remove(Disequalities, Class);
+      DisequalitiesChanged = true;
+    }
+  };
 
   // 1. Let's see if dead symbols are trivial and have associated constraints.
   for (std::pair<EquivalenceClass, RangeSet> ClassConstraintPair :
@@ -1679,8 +1939,7 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
     EquivalenceClass Class = ClassConstraintPair.first;
     if (Class.isTriviallyDead(State, SymReaper)) {
       // If this class is trivial, we can remove its constraints right away.
-      Constraints = ConstraintFactory.remove(Constraints, Class);
-      ConstraintMapChanged = true;
+      removeDeadClass(Class);
     }
   }
 
@@ -1698,6 +1957,7 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   //    and their constraints.
   for (std::pair<EquivalenceClass, SymbolSet> ClassMembersPair :
        ClassMembersMap) {
+    EquivalenceClass Class = ClassMembersPair.first;
     SymbolSet LiveMembers = ClassMembersPair.second;
     bool MembersChanged = false;
 
@@ -1716,17 +1976,14 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
 
     if (LiveMembers.isEmpty()) {
       // The class is dead now, we need to wipe it out of the members map...
-      NewClassMembersMap =
-          EMFactory.remove(NewClassMembersMap, ClassMembersPair.first);
+      NewClassMembersMap = EMFactory.remove(NewClassMembersMap, Class);
 
       // ...and remove all of its constraints.
-      Constraints =
-          ConstraintFactory.remove(Constraints, ClassMembersPair.first);
-      ConstraintMapChanged = true;
+      removeDeadClass(Class);
     } else {
       // We need to change the members associated with the class.
-      NewClassMembersMap = EMFactory.add(NewClassMembersMap,
-                                         ClassMembersPair.first, LiveMembers);
+      NewClassMembersMap =
+          EMFactory.add(NewClassMembersMap, Class, LiveMembers);
     }
   }
 
@@ -1742,6 +1999,9 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   if (ConstraintMapChanged)
     State = State->set<ConstraintRange>(Constraints);
 
+  if (DisequalitiesChanged)
+    State = State->set<DisequalityMap>(Disequalities);
+
   assert(EquivalenceClass::isClassDataConsistent(State));
 
   return State;
@@ -1750,6 +2010,11 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
 RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
                                           SymbolRef Sym) {
   return SymbolicRangeInferrer::inferRange(getBasicVals(), F, State, Sym);
+}
+
+RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
+                                          EquivalenceClass Class) {
+  return SymbolicRangeInferrer::inferRange(getBasicVals(), F, State, Class);
 }
 
 //===------------------------------------------------------------------------===
@@ -1974,12 +2239,6 @@ ProgramStateRef RangeConstraintManager::assumeSymOutsideInclusiveRange(
   RangeSet RangeGT = getSymGTRange(State, Sym, To, Adjustment);
   RangeSet New(RangeLT.addRange(F, RangeGT));
   return New.isEmpty() ? nullptr : setConstraint(State, Sym, New);
-}
-
-ProgramStateRef RangeConstraintManager::trackEquality(ProgramStateRef State,
-                                                      SymbolRef LHS,
-                                                      SymbolRef RHS) {
-  return EquivalenceClass::merge(getBasicVals(), F, State, LHS, RHS);
 }
 
 //===----------------------------------------------------------------------===//
