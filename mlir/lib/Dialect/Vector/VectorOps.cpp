@@ -571,6 +571,100 @@ static LogicalResult verify(vector::ExtractOp op) {
   return success();
 }
 
+static SmallVector<unsigned, 4> extractUnsignedVector(ArrayAttr arrayAttr) {
+  return llvm::to_vector<4>(llvm::map_range(
+      arrayAttr.getAsRange<IntegerAttr>(),
+      [](IntegerAttr attr) { return static_cast<unsigned>(attr.getInt()); }));
+}
+
+static Value foldExtractOp(ExtractOp extractOp) {
+  MLIRContext *context = extractOp.getContext();
+  AffineMap permutationMap;
+  auto extractedPos = extractUnsignedVector(extractOp.position());
+  // Walk back a chain of InsertOp/TransposeOp until we hit a match.
+  // Compose TransposeOp permutations as we walk back.
+  auto insertOp = extractOp.vector().getDefiningOp<vector::InsertOp>();
+  auto transposeOp = extractOp.vector().getDefiningOp<vector::TransposeOp>();
+  while (insertOp || transposeOp) {
+    if (transposeOp) {
+      // If it is transposed, compose the map and iterate.
+      auto permutation = extractUnsignedVector(transposeOp.transp());
+      AffineMap newMap = AffineMap::getPermutationMap(permutation, context);
+      if (!permutationMap)
+        permutationMap = newMap;
+      else if (newMap.getNumInputs() != permutationMap.getNumResults())
+        return Value();
+      else
+        permutationMap = newMap.compose(permutationMap);
+      // Compute insert/transpose for the next iteration.
+      Value transposed = transposeOp.vector();
+      insertOp = transposed.getDefiningOp<vector::InsertOp>();
+      transposeOp = transposed.getDefiningOp<vector::TransposeOp>();
+      continue;
+    }
+
+    assert(insertOp);
+    Value insertionDest = insertOp.dest();
+    // If it is inserted into, either the position matches and we have a
+    // successful folding; or we iterate until we run out of
+    // InsertOp/TransposeOp. This is because `vector.insert %scalar, %vector`
+    // produces a new vector with 1 modified value/slice in exactly the static
+    // position we need to match.
+    auto insertedPos = extractUnsignedVector(insertOp.position());
+    // Trivial permutations are solved with position equality checks.
+    if (!permutationMap || permutationMap.isIdentity()) {
+      if (extractedPos == insertedPos)
+        return insertOp.source();
+      // Fallthrough: if the position does not match, just skip to the next
+      // producing `vector.insert` / `vector.transpose`.
+      // Compute insert/transpose for the next iteration.
+      insertOp = insertionDest.getDefiningOp<vector::InsertOp>();
+      transposeOp = insertionDest.getDefiningOp<vector::TransposeOp>();
+      continue;
+    }
+
+    // More advanced permutations require application of the permutation.
+    // However, the rank of `insertedPos` may be different from that of the
+    // `permutationMap`. To support such case, we need to:
+    //   1. apply on the `insertedPos.size()` major dimensions
+    //   2. check the other dimensions of the permutation form a minor identity.
+    assert(permutationMap.isPermutation() && "expected a permutation");
+    if (insertedPos.size() == extractedPos.size()) {
+      bool fold = true;
+      for (unsigned idx = 0, sz = extractedPos.size(); idx < sz; ++idx) {
+        auto pos =
+            permutationMap.getResult(idx).cast<AffineDimExpr>().getPosition();
+        if (pos >= sz || insertedPos[pos] != extractedPos[idx]) {
+          fold = false;
+          break;
+        }
+      }
+      if (fold) {
+        assert(permutationMap.getNumResults() >= insertedPos.size() &&
+               "expected map of rank larger than insert indexing");
+        unsigned minorRank =
+            permutationMap.getNumResults() - insertedPos.size();
+        AffineMap minorMap = permutationMap.getMinorSubMap(minorRank);
+        if (!minorMap || AffineMap::isMinorIdentity(minorMap))
+          return insertOp.source();
+      }
+    }
+
+    // If we haven't found a match, just continue to the next producing
+    // `vector.insert` / `vector.transpose`.
+    // Compute insert/transpose for the next iteration.
+    insertOp = insertionDest.getDefiningOp<vector::InsertOp>();
+    transposeOp = insertionDest.getDefiningOp<vector::TransposeOp>();
+  }
+  return Value();
+}
+
+OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
+  if (auto val = foldExtractOp(*this))
+    return val;
+  return OpFoldResult();
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractSlicesOp
 //===----------------------------------------------------------------------===//
