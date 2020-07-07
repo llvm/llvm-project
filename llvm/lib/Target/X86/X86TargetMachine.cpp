@@ -489,10 +489,12 @@ void X86PassConfig::addMachineSSAOptimization() {
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86FloatingPointStackifierPass());
+  // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
+  // to using the Speculative Execution Side Effect Suppression pass for
+  // mitigation. This is to prevent slow downs due to
+  // analyses needed by the LVIHardening pass when compiling at -O0.
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createX86LoadValueInjectionLoadHardeningPass());
-  else
-    addPass(createX86LoadValueInjectionLoadHardeningUnoptimizedPass());
 }
 
 void X86PassConfig::addPreSched2() { addPass(createX86ExpandPseudoPass()); }
