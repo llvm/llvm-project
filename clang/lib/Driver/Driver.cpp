@@ -1146,8 +1146,12 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       BitcodeEmbed = static_cast<BitcodeEmbedMode>(Model);
   }
 
-  setNumberOfParallelJobs(
-      getLastArgIntValue(Args, options::OPT_parallel_jobs_EQ, 1, Diags));
+  // Force -parallel-jobs=1 when verbose is set to avoid corrupted output
+  if (Args.hasArg(options::OPT_v))
+    setNumberOfParallelJobs(1);
+  else
+    setNumberOfParallelJobs(
+        getLastArgIntValue(Args, options::OPT_parallel_jobs_EQ, 1, Diags));
 
   std::unique_ptr<llvm::opt::InputArgList> UArgs =
       std::make_unique<InputArgList>(std::move(Args));
