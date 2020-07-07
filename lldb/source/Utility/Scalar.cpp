@@ -557,6 +557,14 @@ bool Scalar::MakeUnsigned() {
   return success;
 }
 
+static llvm::APInt ToAPInt(const llvm::APFloat &f, unsigned bits,
+                           bool is_unsigned) {
+  llvm::APSInt result(bits, is_unsigned);
+  bool isExact;
+  f.convertToInteger(result, llvm::APFloat::rmTowardZero, &isExact);
+  return std::move(result);
+}
+
 template <typename T> T Scalar::GetAs(T fail_value) const {
   switch (GetCategory(m_type)) {
   case Category::Void:
@@ -565,12 +573,9 @@ template <typename T> T Scalar::GetAs(T fail_value) const {
     if (IsSigned(m_type))
       return m_integer.sextOrTrunc(sizeof(T) * 8).getSExtValue();
     return m_integer.zextOrTrunc(sizeof(T) * 8).getZExtValue();
-  case Category::Float: {
-    llvm::APSInt result(sizeof(T) * 8, std::is_unsigned<T>::value);
-    bool isExact;
-    m_float.convertToInteger(result, llvm::APFloat::rmTowardZero, &isExact);
-    return result.getSExtValue();
-  }
+  case Category::Float:
+    return ToAPInt(m_float, sizeof(T) * 8, std::is_unsigned<T>::value)
+        .getSExtValue();
   }
   return fail_value;
 }
@@ -612,51 +617,25 @@ unsigned long long Scalar::ULongLong(unsigned long long fail_value) const {
 }
 
 llvm::APInt Scalar::SInt128(const llvm::APInt &fail_value) const {
-  switch (m_type) {
-  case e_void:
+  switch (GetCategory(m_type)) {
+  case Category::Void:
     break;
-  case e_sint:
-  case e_uint:
-  case e_slong:
-  case e_ulong:
-  case e_slonglong:
-  case e_ulonglong:
-  case e_sint128:
-  case e_uint128:
-  case e_sint256:
-  case e_uint256:
-  case e_sint512:
-  case e_uint512:
+  case Category::Integral:
     return m_integer;
-  case e_float:
-  case e_double:
-  case e_long_double:
-    return m_float.bitcastToAPInt();
+  case Category::Float:
+    return ToAPInt(m_float, 128, /*is_unsigned=*/false);
   }
   return fail_value;
 }
 
 llvm::APInt Scalar::UInt128(const llvm::APInt &fail_value) const {
-  switch (m_type) {
-  case e_void:
+  switch (GetCategory(m_type)) {
+  case Category::Void:
     break;
-  case e_sint:
-  case e_uint:
-  case e_slong:
-  case e_ulong:
-  case e_slonglong:
-  case e_ulonglong:
-  case e_sint128:
-  case e_uint128:
-  case e_sint256:
-  case e_uint256:
-  case e_sint512:
-  case e_uint512:
+  case Category::Integral:
     return m_integer;
-  case e_float:
-  case e_double:
-  case e_long_double:
-    return m_float.bitcastToAPInt();
+  case Category::Float:
+    return ToAPInt(m_float, 128, /*is_unsigned=*/true);
   }
   return fail_value;
 }
