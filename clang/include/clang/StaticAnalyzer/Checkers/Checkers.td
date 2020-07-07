@@ -375,18 +375,6 @@ def TrustNonnullChecker : Checker<"TrustNonnull">,
 
 } // end "apiModeling"
 
-let ParentPackage = APIModelingAlpha in {
-
-def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
-  HelpText<"Check constraints of arguments of C standard library functions, "
-           "such as whether the parameter of isalpha is in the range [0, 255] "
-           "or is EOF.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
-  WeakDependencies<[NonNullParamChecker]>,
-  Documentation<NotDocumented>;
-
-} // end "alpha.apiModeling"
-
 //===----------------------------------------------------------------------===//
 // Evaluate "builtin" functions.
 //===----------------------------------------------------------------------===//
@@ -544,6 +532,14 @@ def SimpleStreamChecker : Checker<"SimpleStream">,
 def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
   HelpText<"Check for calls to blocking functions inside a critical section">,
   Documentation<HasAlphaDocumentation>;
+
+def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
+  HelpText<"Check constraints of arguments of C standard library functions, "
+           "such as whether the parameter of isalpha is in the range [0, 255] "
+           "or is EOF.">,
+  Dependencies<[StdCLibraryFunctionsChecker]>,
+  WeakDependencies<[NonNullParamChecker]>,
+  Documentation<NotDocumented>;
 
 } // end "alpha.unix"
 
