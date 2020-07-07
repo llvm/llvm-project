@@ -22,9 +22,12 @@
 #include "clang/AST/LocInfoType.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateArgumentVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeVisitor.h"
 
 namespace clang {
+
+class APValue;
 
 /**
 
@@ -50,6 +53,7 @@ struct {
   void Visit(const OMPClause *C);
   void Visit(const BlockDecl::Capture &C);
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
+  void Visit(const APValue &Value, QualType Ty);
 };
 */
 template <typename Derived, typename NodeDelegateType>
@@ -209,6 +213,10 @@ public:
         Visit(TSI->getType());
       Visit(A.getAssociationExpr());
     });
+  }
+
+  void Visit(const APValue &Value, QualType Ty) {
+    getNodeDelegate().AddChild([=] { getNodeDelegate().Visit(Value, Ty); });
   }
 
   void Visit(const comments::Comment *C, const comments::FullComment *FC) {
