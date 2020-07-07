@@ -11,11 +11,6 @@
 
 #include "target_impl.h"
 
-// inc requires an amdgcn specific intrinsic which is not yet available
-DEVICE unsigned atomicInc(unsigned *address);
-DEVICE unsigned atomicInc(unsigned *address, unsigned max);
-DEVICE int atomicInc(int *address);
-
 namespace {
 
 template <typename T> DEVICE T atomicAdd(T *address, T val) {
@@ -36,6 +31,10 @@ template <typename T> DEVICE T atomicCAS(T *address, T compare, T val) {
   (void)__atomic_compare_exchange(address, &compare, &val, false,
                                   __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
   return compare;
+}
+
+INLINE uint32_t atomicInc(uint32_t *address, uint32_t max) {
+  return __builtin_amdgcn_atomic_inc32(address, max, __ATOMIC_SEQ_CST, "");
 }
 
 } // namespace
