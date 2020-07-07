@@ -737,8 +737,7 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN) {
       continue;
 
     Scopes.push_back(Node);
-    const std::vector<MachineDomTreeNode*> &Children = Node->getChildren();
-    unsigned NumChildren = Children.size();
+    unsigned NumChildren = Node->getNumChildren();
 
     // Don't hoist things out of a large switch statement.  This often causes
     // code to be hoisted that wasn't going to be executed, and increases
@@ -747,13 +746,14 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN) {
       NumChildren = 0;
 
     OpenChildren[Node] = NumChildren;
-    // Add children in reverse order as then the next popped worklist node is
-    // the first child of this node.  This means we ultimately traverse the
-    // DOM tree in exactly the same order as if we'd recursed.
-    for (int i = (int)NumChildren-1; i >= 0; --i) {
-      MachineDomTreeNode *Child = Children[i];
-      ParentMap[Child] = Node;
-      WorkList.push_back(Child);
+    if (NumChildren) {
+      // Add children in reverse order as then the next popped worklist node is
+      // the first child of this node.  This means we ultimately traverse the
+      // DOM tree in exactly the same order as if we'd recursed.
+      for (MachineDomTreeNode *Child : reverse(Node->children())) {
+        ParentMap[Child] = Node;
+        WorkList.push_back(Child);
+      }
     }
   }
 

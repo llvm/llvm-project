@@ -77,11 +77,17 @@ template <class NodeT> class DomTreeNodeBase {
   const_iterator begin() const { return Children.begin(); }
   const_iterator end() const { return Children.end(); }
 
+  DomTreeNodeBase *const &back() const { return Children.back(); }
+  DomTreeNodeBase *&back() { return Children.back(); }
+
+  iterator_range<iterator> children() { return make_range(begin(), end()); }
+  iterator_range<const_iterator> children() const {
+    return make_range(begin(), end());
+  }
+
   NodeT *getBlock() const { return TheBB; }
   DomTreeNodeBase *getIDom() const { return IDom; }
   unsigned getLevel() const { return Level; }
-
-  const std::vector<DomTreeNodeBase *> &getChildren() const { return Children; }
 
   std::unique_ptr<DomTreeNodeBase> addChild(
       std::unique_ptr<DomTreeNodeBase> C) {
@@ -89,6 +95,7 @@ template <class NodeT> class DomTreeNodeBase {
     return C;
   }
 
+  bool isLeaf() const { return Children.empty(); }
   size_t getNumChildren() const { return Children.size(); }
 
   void clearAllChildren() { Children.clear(); }
@@ -619,7 +626,7 @@ protected:
   void eraseNode(NodeT *BB) {
     DomTreeNodeBase<NodeT> *Node = getNode(BB);
     assert(Node && "Removing node that isn't in dominator tree.");
-    assert(Node->getChildren().empty() && "Node is not a leaf node.");
+    assert(Node->isLeaf() && "Node is not a leaf node.");
 
     DFSInfoValid = false;
 
