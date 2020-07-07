@@ -1,10 +1,6 @@
 // RUN: %libomp-compile
 // RUN: env OMP_SCHEDULE=nonmonotonic:dynamic,10 %libomp-run
 
-// gcc 9/10 use GOMP_parallel_loop_maybe_nonmonotonic_runtime, not implemented
-// Should be removed once the functions are implemented
-// XFAIL: gcc-9, gcc-10
-
 // The test checks iterations distribution for OMP 5.0 nonmonotonic OMP_SCHEDULE
 // case #threads > #chunks (fallback to monotonic dynamic)
 
