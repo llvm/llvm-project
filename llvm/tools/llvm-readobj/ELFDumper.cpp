@@ -343,7 +343,7 @@ public:
                                            const Elf_Sym *FirstSym) const;
   Expected<StringRef> getSymbolSectionName(const Elf_Sym *Symbol,
                                            unsigned SectionIndex) const;
-  Expected<std::string> getStaticSymbolName(uint32_t Index) const;
+  std::string getStaticSymbolName(uint32_t Index) const;
   StringRef getDynamicString(uint64_t Value) const;
   Expected<StringRef> getSymbolVersionByIndex(uint32_t VersionSymbolIndex,
                                               bool &IsDefault) const;
@@ -851,6 +851,10 @@ private:
   void printHashHistogram(const Elf_Hash &HashTable);
   void printGnuHashHistogram(const Elf_GnuHash &GnuHashTable);
 
+  void printHashTableSymbols(const ELFO *Obj, const Elf_Hash &HashTable);
+  void printGnuHashTableSymbols(const ELFO *Obj,
+                                const Elf_GnuHash &GnuHashTable);
+
   struct Field {
     std::string Str;
     unsigned Column;
@@ -1131,21 +1135,27 @@ static std::string maybeDemangle(StringRef Name) {
 }
 
 template <typename ELFT>
-Expected<std::string>
-ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
+std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
+  auto Warn = [&](Error E) -> std::string {
+    this->reportUniqueWarning(
+        createError("unable to read the name of symbol with index " +
+                    Twine(Index) + ": " + toString(std::move(E))));
+    return "<?>";
+  };
+
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
   Expected<const typename ELFT::Sym *> SymOrErr =
       Obj->getSymbol(DotSymtabSec, Index);
   if (!SymOrErr)
-    return SymOrErr.takeError();
+    return Warn(SymOrErr.takeError());
 
   Expected<StringRef> StrTabOrErr = Obj->getStringTableForSymtab(*DotSymtabSec);
   if (!StrTabOrErr)
-    return StrTabOrErr.takeError();
+    return Warn(StrTabOrErr.takeError());
 
   Expected<StringRef> NameOrErr = (*SymOrErr)->getName(*StrTabOrErr);
   if (!NameOrErr)
-    return NameOrErr.takeError();
+    return Warn(NameOrErr.takeError());
   return maybeDemangle(*NameOrErr);
 }
 
@@ -4062,78 +4072,62 @@ void GNUStyle<ELFT>::printSymbols(const ELFO *Obj, bool PrintSymbols,
     this->dumper()->printSymbolsHelper(false);
 }
 
-template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
-  if (this->dumper()->getDynamicStringTable().empty())
-    return;
-  auto StringTable = this->dumper()->getDynamicStringTable();
-  Elf_Sym_Range DynSyms = this->dumper()->dynamic_symbols();
-
-  auto PrintHashTable = [&](const Elf_Hash *SysVHash) {
-    if (ELFT::Is64Bits)
-      OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
-    else
-      OS << "  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name";
-    OS << "\n";
-
-    const Elf_Sym *FirstSym = DynSyms.empty() ? nullptr : &DynSyms[0];
-    if (!FirstSym) {
-      Optional<DynRegionInfo> DynSymRegion = this->dumper()->getDynSymRegion();
-      this->reportUniqueWarning(
-          createError(Twine("unable to print symbols for the .hash table: the "
-                            "dynamic symbol table ") +
-                      (DynSymRegion ? "is empty" : "was not found")));
-      return;
-    }
-
-    auto Buckets = SysVHash->buckets();
-    auto Chains = SysVHash->chains();
-    for (uint32_t Buc = 0; Buc < SysVHash->nbucket; Buc++) {
-      if (Buckets[Buc] == ELF::STN_UNDEF)
-        continue;
-      std::vector<bool> Visited(SysVHash->nchain);
-      for (uint32_t Ch = Buckets[Buc]; Ch < SysVHash->nchain; Ch = Chains[Ch]) {
-        if (Ch == ELF::STN_UNDEF)
-          break;
-
-        if (Visited[Ch]) {
-          reportWarning(
-              createError(".hash section is invalid: bucket " + Twine(Ch) +
-                          ": a cycle was detected in the linked chain"),
-              this->FileName);
-          break;
-        }
-
-        printHashedSymbol(Obj, FirstSym, Ch, StringTable, Buc);
-        Visited[Ch] = true;
-      }
-    }
-  };
-
-  if (const Elf_Hash *SysVHash = this->dumper()->getHashTable()) {
-    OS << "\n Symbol table of .hash for image:\n";
-    if (Error E = checkHashTable<ELFT>(Obj, SysVHash))
-      this->reportUniqueWarning(std::move(E));
-    else
-      PrintHashTable(SysVHash);
-  }
-
-  // Try printing the .gnu.hash table.
-  const Elf_GnuHash *GnuHash = this->dumper()->getGnuHashTable();
-  if (!GnuHash)
+template <class ELFT>
+void GNUStyle<ELFT>::printHashTableSymbols(const ELFO *Obj,
+                                           const Elf_Hash &SysVHash) {
+  StringRef StringTable = this->dumper()->getDynamicStringTable();
+  if (StringTable.empty())
     return;
 
-  OS << "\n Symbol table of .gnu.hash for image:\n";
   if (ELFT::Is64Bits)
     OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
   else
     OS << "  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name";
   OS << "\n";
 
-  if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHash)) {
-    this->reportUniqueWarning(std::move(E));
+  Elf_Sym_Range DynSyms = this->dumper()->dynamic_symbols();
+  const Elf_Sym *FirstSym = DynSyms.empty() ? nullptr : &DynSyms[0];
+  if (!FirstSym) {
+    Optional<DynRegionInfo> DynSymRegion = this->dumper()->getDynSymRegion();
+    this->reportUniqueWarning(
+        createError(Twine("unable to print symbols for the .hash table: the "
+                          "dynamic symbol table ") +
+                    (DynSymRegion ? "is empty" : "was not found")));
     return;
   }
 
+  auto Buckets = SysVHash.buckets();
+  auto Chains = SysVHash.chains();
+  for (uint32_t Buc = 0; Buc < SysVHash.nbucket; Buc++) {
+    if (Buckets[Buc] == ELF::STN_UNDEF)
+      continue;
+    std::vector<bool> Visited(SysVHash.nchain);
+    for (uint32_t Ch = Buckets[Buc]; Ch < SysVHash.nchain; Ch = Chains[Ch]) {
+      if (Ch == ELF::STN_UNDEF)
+        break;
+
+      if (Visited[Ch]) {
+        reportWarning(createError(".hash section is invalid: bucket " +
+                                  Twine(Ch) +
+                                  ": a cycle was detected in the linked chain"),
+                      this->FileName);
+        break;
+      }
+
+      printHashedSymbol(Obj, FirstSym, Ch, StringTable, Buc);
+      Visited[Ch] = true;
+    }
+  }
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printGnuHashTableSymbols(const ELFO *Obj,
+                                              const Elf_GnuHash &GnuHash) {
+  StringRef StringTable = this->dumper()->getDynamicStringTable();
+  if (StringTable.empty())
+    return;
+
+  Elf_Sym_Range DynSyms = this->dumper()->dynamic_symbols();
   const Elf_Sym *FirstSym = DynSyms.empty() ? nullptr : &DynSyms[0];
   if (!FirstSym) {
     Optional<DynRegionInfo> DynSymRegion = this->dumper()->getDynSymRegion();
@@ -4144,19 +4138,44 @@ template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
     return;
   }
 
-  auto Buckets = GnuHash->buckets();
-  for (uint32_t Buc = 0; Buc < GnuHash->nbuckets; Buc++) {
+  ArrayRef<Elf_Word> Buckets = GnuHash.buckets();
+  for (uint32_t Buc = 0; Buc < GnuHash.nbuckets; Buc++) {
     if (Buckets[Buc] == ELF::STN_UNDEF)
       continue;
     uint32_t Index = Buckets[Buc];
-    uint32_t GnuHashable = Index - GnuHash->symndx;
+    uint32_t GnuHashable = Index - GnuHash.symndx;
     // Print whole chain
     while (true) {
       printHashedSymbol(Obj, FirstSym, Index++, StringTable, Buc);
       // Chain ends at symbol with stopper bit
-      if ((GnuHash->values(DynSyms.size())[GnuHashable++] & 1) == 1)
+      if ((GnuHash.values(DynSyms.size())[GnuHashable++] & 1) == 1)
         break;
     }
+  }
+}
+
+template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
+  if (const Elf_Hash *SysVHash = this->dumper()->getHashTable()) {
+    OS << "\n Symbol table of .hash for image:\n";
+    if (Error E = checkHashTable<ELFT>(Obj, SysVHash))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printHashTableSymbols(Obj, *SysVHash);
+  }
+
+  // Try printing the .gnu.hash table.
+  if (const Elf_GnuHash *GnuHash = this->dumper()->getGnuHashTable()) {
+    OS << "\n Symbol table of .gnu.hash for image:\n";
+    if (ELFT::Is64Bits)
+      OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
+    else
+      OS << "  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name";
+    OS << "\n";
+
+    if (Error E = checkGNUHashTable<ELFT>(Obj, GnuHash))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printGnuHashTableSymbols(Obj, *GnuHash);
   }
 }
 
@@ -6564,21 +6583,23 @@ void LLVMStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
   ListScope L(W, "CGProfile");
   if (!this->dumper()->getDotCGProfileSec())
     return;
-  auto CGProfile = unwrapOrError(
-      this->FileName, Obj->template getSectionContentsAsArray<Elf_CGProfile>(
-                          this->dumper()->getDotCGProfileSec()));
-  for (const Elf_CGProfile &CGPE : CGProfile) {
+
+  Expected<ArrayRef<Elf_CGProfile>> CGProfileOrErr =
+      Obj->template getSectionContentsAsArray<Elf_CGProfile>(
+          this->dumper()->getDotCGProfileSec());
+  if (!CGProfileOrErr) {
+    this->reportUniqueWarning(
+        createError("unable to dump the SHT_LLVM_CALL_GRAPH_PROFILE section: " +
+                    toString(CGProfileOrErr.takeError())));
+    return;
+  }
+
+  for (const Elf_CGProfile &CGPE : *CGProfileOrErr) {
     DictScope D(W, "CGProfileEntry");
-    W.printNumber(
-        "From",
-        unwrapOrError(this->FileName,
-                      this->dumper()->getStaticSymbolName(CGPE.cgp_from)),
-        CGPE.cgp_from);
-    W.printNumber(
-        "To",
-        unwrapOrError(this->FileName,
-                      this->dumper()->getStaticSymbolName(CGPE.cgp_to)),
-        CGPE.cgp_to);
+    W.printNumber("From", this->dumper()->getStaticSymbolName(CGPE.cgp_from),
+                  CGPE.cgp_from);
+    W.printNumber("To", this->dumper()->getStaticSymbolName(CGPE.cgp_to),
+                  CGPE.cgp_to);
     W.printNumber("Weight", CGPE.cgp_weight);
   }
 }
@@ -6773,30 +6794,33 @@ void LLVMStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
     if (Shdr.sh_type != ELF::SHT_LLVM_LINKER_OPTIONS)
       continue;
 
-    ArrayRef<uint8_t> Contents =
-        unwrapOrError(this->FileName, Obj->getSectionContents(&Shdr));
-    if (Contents.empty())
+    Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj->getSectionContents(&Shdr);
+    if (!ContentsOrErr) {
+      this->reportUniqueWarning(
+          createError("unable to read the content of the "
+                      "SHT_LLVM_LINKER_OPTIONS section: " +
+                      toString(ContentsOrErr.takeError())));
+      continue;
+    }
+    if (ContentsOrErr->empty())
       continue;
 
-    if (Contents.back() != 0) {
-      reportWarning(createError("SHT_LLVM_LINKER_OPTIONS section at index " +
-                                Twine(I) +
-                                " is broken: the "
-                                "content is not null-terminated"),
-                    this->FileName);
+    if (ContentsOrErr->back() != 0) {
+      this->reportUniqueWarning(
+          createError("SHT_LLVM_LINKER_OPTIONS section at index " + Twine(I) +
+                      " is broken: the "
+                      "content is not null-terminated"));
       continue;
     }
 
     SmallVector<StringRef, 16> Strings;
-    toStringRef(Contents.drop_back()).split(Strings, '\0');
+    toStringRef(ContentsOrErr->drop_back()).split(Strings, '\0');
     if (Strings.size() % 2 != 0) {
-      reportWarning(
-          createError(
-              "SHT_LLVM_LINKER_OPTIONS section at index " + Twine(I) +
-              " is broken: an incomplete "
-              "key-value pair was found. The last possible key was: \"" +
-              Strings.back() + "\""),
-          this->FileName);
+      this->reportUniqueWarning(createError(
+          "SHT_LLVM_LINKER_OPTIONS section at index " + Twine(I) +
+          " is broken: an incomplete "
+          "key-value pair was found. The last possible key was: \"" +
+          Strings.back() + "\""));
       continue;
     }
 

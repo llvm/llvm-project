@@ -4802,6 +4802,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (OpOpcode == ISD::FNEG)  // abs(-X) -> abs(X)
       return getNode(ISD::FABS, DL, VT, Operand.getOperand(0));
     break;
+  case ISD::VSCALE:
+    assert(VT == Operand.getValueType() && "Unexpected VT!");
+    break;
   }
 
   SDNode *N;
