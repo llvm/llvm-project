@@ -9,6 +9,7 @@
 #include "file.h"
 #include "magic-numbers.h"
 #include "memory.h"
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
