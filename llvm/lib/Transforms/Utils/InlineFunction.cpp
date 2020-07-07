@@ -1864,13 +1864,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
           OpDefs.emplace_back("deopt", std::move(MergedDeoptArgs));
         }
 
-        Instruction *NewI = nullptr;
-        if (isa<CallInst>(ICS))
-          NewI = CallInst::Create(cast<CallInst>(ICS), OpDefs, ICS);
-        else if (isa<CallBrInst>(ICS))
-          NewI = CallBrInst::Create(cast<CallBrInst>(ICS), OpDefs, ICS);
-        else
-          NewI = InvokeInst::Create(cast<InvokeInst>(ICS), OpDefs, ICS);
+        Instruction *NewI = CallBase::Create(ICS, OpDefs, ICS);
 
         // Note: the RAUW does the appropriate fixup in VMap, so we need to do
         // this even if the call returns void.
@@ -2166,13 +2160,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         I->getOperandBundlesAsDefs(OpBundles);
         OpBundles.emplace_back("funclet", CallSiteEHPad);
 
-        Instruction *NewInst;
-        if (auto *CallI = dyn_cast<CallInst>(I))
-          NewInst = CallInst::Create(CallI, OpBundles, CallI);
-        else if (auto *CallBrI = dyn_cast<CallBrInst>(I))
-          NewInst = CallBrInst::Create(CallBrI, OpBundles, CallBrI);
-        else
-          NewInst = InvokeInst::Create(cast<InvokeInst>(I), OpBundles, I);
+        Instruction *NewInst = CallBase::Create(I, OpBundles, I);
         NewInst->takeName(I);
         I->replaceAllUsesWith(NewInst);
         I->eraseFromParent();

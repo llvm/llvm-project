@@ -204,14 +204,9 @@ void CFGuard::insertCFGuardDispatch(CallBase *CB) {
   Bundles.emplace_back("cfguardtarget", CalledOperand);
 
   // Create a copy of the call/invoke instruction and add the new bundle.
-  CallBase *NewCB;
-  if (CallInst *CI = dyn_cast<CallInst>(CB)) {
-    NewCB = CallInst::Create(CI, Bundles, CB);
-  } else {
-    assert(isa<InvokeInst>(CB) && "Unknown indirect call type");
-    InvokeInst *II = cast<InvokeInst>(CB);
-    NewCB = llvm::InvokeInst::Create(II, Bundles, CB);
-  }
+  assert((isa<CallInst>(CB) || isa<InvokeInst>(CB)) &&
+         "Unknown indirect call type");
+  CallBase *NewCB = CallBase::Create(CB, Bundles, CB);
 
   // Change the target of the call to be the guard dispatch function.
   NewCB->setCalledOperand(GuardDispatchLoad);
