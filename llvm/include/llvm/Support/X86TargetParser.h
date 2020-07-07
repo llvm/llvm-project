@@ -137,6 +137,11 @@ ProcessorFeatures getKeyFeature(CPUKind Kind);
 /// Fill in the features that \p CPU supports into \p Features.
 void getFeaturesForCPU(StringRef CPU, SmallVectorImpl<StringRef> &Features);
 
+/// Fill \p Features with the features that are implied to be enabled/disabled
+/// by the provided \p Feature.
+void getImpliedFeatures(StringRef Feature, bool Enabled,
+                        SmallVectorImpl<StringRef> &Features);
+
 } // namespace X86
 } // namespace llvm
 

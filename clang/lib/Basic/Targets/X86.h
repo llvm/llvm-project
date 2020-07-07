@@ -262,15 +262,6 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  static void setSSELevel(llvm::StringMap<bool> &Features, X86SSEEnum Level,
-                          bool Enabled);
-
-  static void setMMXLevel(llvm::StringMap<bool> &Features, MMX3DNowEnum Level,
-                          bool Enabled);
-
-  static void setXOPLevel(llvm::StringMap<bool> &Features, XOPEnum Level,
-                          bool Enabled);
-
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
                          bool Enabled) const override {
     setFeatureEnabledImpl(Features, Name, Enabled);
