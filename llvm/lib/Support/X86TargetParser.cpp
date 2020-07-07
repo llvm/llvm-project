@@ -558,8 +558,6 @@ void llvm::X86::getImpliedFeatures(
   auto I = llvm::find_if(
       FeatureInfos, [&](const FeatureInfo &FI) { return FI.Name == Feature; });
   if (I == std::end(FeatureInfos)) {
-    // This shouldn't happen, but handle it gracefully for release builds.
-    assert(false && "Feature not in table!");
     return;
   }
 
