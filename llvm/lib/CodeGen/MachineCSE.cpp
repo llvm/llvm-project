@@ -747,9 +747,8 @@ bool MachineCSE::PerformCSE(MachineDomTreeNode *Node) {
   do {
     Node = WorkList.pop_back_val();
     Scopes.push_back(Node);
-    const std::vector<MachineDomTreeNode*> &Children = Node->getChildren();
-    OpenChildren[Node] = Children.size();
-    for (MachineDomTreeNode *Child : Children)
+    OpenChildren[Node] = Node->getNumChildren();
+    for (MachineDomTreeNode *Child : Node->children())
       WorkList.push_back(Child);
   } while (!WorkList.empty());
 
@@ -862,8 +861,7 @@ bool MachineCSE::PerformSimplePRE(MachineDominatorTree *DT) {
   BBs.push_back(DT->getRootNode());
   do {
     auto Node = BBs.pop_back_val();
-    const std::vector<MachineDomTreeNode *> &Children = Node->getChildren();
-    for (MachineDomTreeNode *Child : Children)
+    for (MachineDomTreeNode *Child : Node->children())
       BBs.push_back(Child);
 
     MachineBasicBlock *MBB = Node->getBlock();

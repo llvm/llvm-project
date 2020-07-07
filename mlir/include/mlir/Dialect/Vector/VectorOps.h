@@ -1,4 +1,4 @@
-//===- VectorOps.h - MLIR Super Vectorizer Operations -----------*- C++ -*-===//
+//===- VectorOps.h - MLIR Vector Dialect Operations -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,6 +19,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/VectorUnrollInterface.h"
 
 namespace mlir {
 class MLIRContext;

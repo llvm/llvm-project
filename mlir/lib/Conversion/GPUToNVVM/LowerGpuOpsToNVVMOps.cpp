@@ -140,7 +140,7 @@ struct LowerGpuOpsToNVVMOpsPass
                         LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op>();
     target.addIllegalOp<FuncOp>();
     target.addLegalDialect<NVVM::NVVMDialect>();
-    // TODO(csigg): Remove once we support replacing non-root ops.
+    // TODO: Remove once we support replacing non-root ops.
     target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
     if (failed(applyPartialConversion(m, target, patterns)))
       signalPassFailure();

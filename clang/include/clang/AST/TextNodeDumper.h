@@ -22,9 +22,12 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateArgumentVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeVisitor.h"
 
 namespace clang {
+
+class APValue;
 
 class TextTreeStructure {
   raw_ostream &OS;
@@ -153,6 +156,12 @@ class TextNodeDumper
 
   const char *getCommandName(unsigned CommandID);
 
+  void dumpAPValueChildren(const APValue &Value, QualType Ty,
+                           const APValue &(*IdxToChildFun)(const APValue &,
+                                                           unsigned),
+                           unsigned NumChildren, StringRef LabelSingular,
+                           StringRef LabelPlurial);
+
 public:
   TextNodeDumper(raw_ostream &OS, const ASTContext &Context, bool ShowColors);
   TextNodeDumper(raw_ostream &OS, bool ShowColors);
@@ -179,6 +188,8 @@ public:
   void Visit(const BlockDecl::Capture &C);
 
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
+
+  void Visit(const APValue &Value, QualType Ty);
 
   void dumpPointer(const void *Ptr);
   void dumpLocation(SourceLocation Loc);

@@ -34,7 +34,8 @@ public:
       const char *predicate, const char *file, int line) const;
 
   // For test harnessing - overrides CrashArgs().
-  static void RegisterCrashHandler(void (*)(const char *, va_list &));
+  static void RegisterCrashHandler(void (*)(const char *sourceFile,
+      int sourceLine, const char *message, va_list &ap));
 
 private:
   const char *sourceFileName_{nullptr};

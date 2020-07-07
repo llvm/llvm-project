@@ -659,8 +659,10 @@ bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) {
 }
 
 void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
-  const auto &Ctx = ND.getASTContext();
+  if (ND.isInvalidDecl())
+    return;
 
+  const auto &Ctx = ND.getASTContext();
   if (auto *RD = llvm::dyn_cast<RecordDecl>(&ND)) {
     if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RD->getTypeForDecl()))
       HI.Size = Size->getQuantity();
@@ -671,11 +673,10 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
     const auto *Record = FD->getParent();
     if (Record)
       Record = Record->getDefinition();
-    if (Record && !Record->isDependentType()) {
+    if (Record && !Record->isInvalidDecl() && !Record->isDependentType()) {
+      HI.Offset = Ctx.getFieldOffset(FD) / 8;
       if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType()))
         HI.Size = Size->getQuantity();
-      if (!FD->isInvalidDecl())
-        HI.Offset = Ctx.getFieldOffset(FD) / 8;
     }
     return;
   }

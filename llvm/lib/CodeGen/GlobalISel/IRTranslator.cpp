@@ -2384,6 +2384,14 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   // Make our arguments/constants entry block fallthrough to the IR entry block.
   EntryBB->addSuccessor(&getMBB(F.front()));
 
+  if (CLI->fallBackToDAGISel(F)) {
+    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                               F.getSubprogram(), &F.getEntryBlock());
+    R << "unable to lower function: " << ore::NV("Prototype", F.getType());
+    reportTranslationError(*MF, *TPC, *ORE, R);
+    return false;
+  }
+
   // Lower the actual args into this basic block.
   SmallVector<ArrayRef<Register>, 8> VRegArgs;
   for (const Argument &Arg: F.args()) {

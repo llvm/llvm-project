@@ -131,7 +131,7 @@ module attributes {
       store %0#1, %arg2[%j] : memref<10xf32>
       gpu.return
     }
-    // TODO(thomasraoux): The transformation should only be legal if
+    // TODO: The transformation should only be legal if
     // VariablePointer capability is supported. This test is still useful to
     // make sure we can handle scf op result with type change.
     // CHECK-LABEL: @simple_if_yield_type_change

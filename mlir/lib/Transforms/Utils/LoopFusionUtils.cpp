@@ -164,7 +164,7 @@ static Operation *getFusedLoopNestInsertionPoint(AffineForOp srcForOp,
         return nullptr;
     }
     // Return insertion point in valid range closest to 'opB'.
-    // TODO(andydavis) Consider other insertion points in valid range.
+    // TODO: Consider other insertion points in valid range.
     return firstDepOpA;
   }
   // No dependences from 'opA' to operation in range ('opA', 'opB'), return
@@ -187,7 +187,7 @@ gatherLoadsAndStores(AffineForOp forOp,
   return !hasIfOp;
 }
 
-// TODO(andydavis) Prevent fusion of loop nests with side-effecting operations.
+// TODO: Prevent fusion of loop nests with side-effecting operations.
 FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
                                 unsigned dstLoopDepth,
                                 ComputationSliceState *srcSlice) {
@@ -361,7 +361,7 @@ static int64_t getComputeCostHelper(
   return tripCount * opCount;
 }
 
-// TODO(andydavis,b/126426796): extend this to handle multiple result maps.
+// TODO: extend this to handle multiple result maps.
 static Optional<uint64_t> getConstDifference(AffineMap lbMap, AffineMap ubMap) {
   assert(lbMap.getNumResults() == 1 && "expected single result bound map");
   assert(ubMap.getNumResults() == 1 && "expected single result bound map");
@@ -391,7 +391,7 @@ static uint64_t getSliceIterationCount(
 // nest surrounding represented by slice loop bounds in 'slice'.
 // Returns true on success, false otherwise (if a non-constant trip count
 // was encountered).
-// TODO(andydavis) Make this work with non-unit step loops.
+// TODO: Make this work with non-unit step loops.
 static bool buildSliceTripCountMap(
     ComputationSliceState *slice,
     llvm::SmallDenseMap<Operation *, uint64_t, 8> *tripCountMap) {
@@ -457,7 +457,7 @@ bool mlir::getFusionComputeCost(AffineForOp srcForOp, LoopNestStats &srcStats,
   auto *insertPointParent = slice->insertPoint->getParentOp();
 
   // The store and loads to this memref will disappear.
-  // TODO(andydavis) Add load coalescing to memref data flow opt pass.
+  // TODO: Add load coalescing to memref data flow opt pass.
   if (storeLoadFwdGuaranteed) {
     // Subtract from operation count the loads/store we expect load/store
     // forwarding to remove.

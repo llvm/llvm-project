@@ -75,10 +75,10 @@ bool isTopLevelValue(Value value);
 //   affine.dma_start %src[%i, %j], %dst[%k, %l], %tag[%idx], %num_elements,
 //     %stride, %num_elt_per_stride : ...
 //
-// TODO(mlir-team): add additional operands to allow source and destination
-// striding, and multiple stride levels (possibly using AffineMaps to specify
-// multiple levels of striding).
-// TODO(andydavis) Consider replacing src/dst memref indices with view memrefs.
+// TODO: add additional operands to allow source and destination striding, and
+// multiple stride levels (possibly using AffineMaps to specify multiple levels
+// of striding).
+// TODO: Consider replacing src/dst memref indices with view memrefs.
 class AffineDmaStartOp : public Op<AffineDmaStartOp, OpTrait::VariadicOperands,
                                    OpTrait::ZeroResult> {
 public:

@@ -276,14 +276,14 @@ define void @f8(<4 x float *> *%dest, <4 x float *> %ptr0, <4 x i32> %i0,
 ; CHECK: %dest.i1 = getelementptr float*, float** %dest.i0, i32 1
 ; CHECK: %dest.i2 = getelementptr float*, float** %dest.i0, i32 2
 ; CHECK: %dest.i3 = getelementptr float*, float** %dest.i0, i32 3
+; CHECK: %ptr0.i0 = extractelement <4 x float*> %ptr0, i32 0
+; CHECK: %ptr0.i2 = extractelement <4 x float*> %ptr0, i32 2
+; CHECK: %ptr0.i3 = extractelement <4 x float*> %ptr0, i32 3
 ; CHECK: %i0.i1 = extractelement <4 x i32> %i0, i32 1
 ; CHECK: %i0.i3 = extractelement <4 x i32> %i0, i32 3
-; CHECK: %ptr0.i0 = extractelement <4 x float*> %ptr0, i32 0
 ; CHECK: %val.i0 = getelementptr float, float* %ptr0.i0, i32 100
 ; CHECK: %val.i1 = getelementptr float, float* %other, i32 %i0.i1
-; CHECK: %ptr0.i2 = extractelement <4 x float*> %ptr0, i32 2
 ; CHECK: %val.i2 = getelementptr float, float* %ptr0.i2, i32 100
-; CHECK: %ptr0.i3 = extractelement <4 x float*> %ptr0, i32 3
 ; CHECK: %val.i3 = getelementptr float, float* %ptr0.i3, i32 %i0.i3
 ; CHECK: store float* %val.i0, float** %dest.i0, align 32
 ; CHECK: store float* %val.i1, float** %dest.i1, align 8
@@ -537,6 +537,19 @@ define <2 x float> @f22(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK: %res.i1 = call fast float @llvm.fma.f32
   %res = call fast <2 x float> @llvm.fma.v2f32(<2 x float> %x, <2 x float> %y, <2 x float> %z)
   ret <2 x float> %res
+}
+
+; See https://reviews.llvm.org/D83101#2133062
+define <2 x i32> @f23_crash(<2 x i32> %srcvec, i32 %v1) {
+; CHECK-LABEL: @f23_crash(
+; CHECK: %1 = extractelement <2 x i32> %srcvec, i32 0
+; CHECK: %t1.upto0 = insertelement <2 x i32> undef, i32 %1, i32 0
+; CHECK: %t1 = insertelement <2 x i32> %t1.upto0, i32 %v1, i32 1
+; CHECK: ret <2 x i32> %t1
+  %v0 = extractelement <2 x i32> %srcvec, i32 0
+  %t0 = insertelement <2 x i32> undef, i32 %v0, i32 0
+  %t1 = insertelement <2 x i32> %t0, i32 %v1, i32 1
+  ret <2 x i32> %t1
 }
 
 !0 = !{ !"root" }

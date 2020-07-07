@@ -98,7 +98,6 @@ public:
 
   /// Create a flat affine constraint system from an AffineValueMap or a list of
   /// these. The constructed system will only include equalities.
-  // TODO(bondhugula)
   explicit FlatAffineConstraints(const AffineValueMap &avm);
   explicit FlatAffineConstraints(ArrayRef<const AffineValueMap *> avmRef);
 
@@ -213,7 +212,7 @@ public:
   /// 'affine.for' operation are added as trailing identifiers (either
   /// dimensional or symbolic depending on whether the operand is a valid
   /// symbol).
-  //  TODO(bondhugula): add support for non-unit strides.
+  //  TODO: add support for non-unit strides.
   LogicalResult addAffineForOpDomain(AffineForOp forOp);
 
   /// Adds a lower or an upper bound for the identifier at the specified
@@ -335,8 +334,8 @@ public:
   /// Projects out (aka eliminates) 'num' identifiers starting at position
   /// 'pos'. The resulting constraint system is the shadow along the dimensions
   /// that still exist. This method may not always be integer exact.
-  // TODO(bondhugula): deal with integer exactness when necessary - can return a
-  // value to mark exactness for example.
+  // TODO: deal with integer exactness when necessary - can return a value to
+  // mark exactness for example.
   void projectOut(unsigned pos, unsigned num);
   inline void projectOut(unsigned pos) { return projectOut(pos, 1); }
 

@@ -765,7 +765,7 @@ func @conv2d(%input: memref<16x1024x1024x3xf32, #lm0, /*scratchpad=*/1>,
 }
 ```
 
-TODO (Add more examples showing the IR for a variety of interesting cases)
+TODO: (Add more examples showing the IR for a variety of interesting cases)
 
 ## Design alternatives and extensions
 

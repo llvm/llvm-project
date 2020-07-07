@@ -279,12 +279,12 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
     return false;
   }
   if (auto convOp = dyn_cast<linalg::ConvOp>(producer.getOperation())) {
-    // TODO(ntv): add a level of indirection to linalg.generic.
+    // TODO: add a level of indirection to linalg.generic.
     if (convOp.padding())
       return false;
   }
   if (auto convOp = dyn_cast<linalg::ConvOp>(consumer.getOperation())) {
-    // TODO(ntv): add a level of indirection to linalg.generic.
+    // TODO: add a level of indirection to linalg.generic.
     if (convOp.padding())
       return false;
   }
@@ -403,7 +403,7 @@ static void fuseLinalgOpsGreedily(FuncOp f) {
       linalgOps.push_back(op);
   });
 
-  // TODO(pifon, ntv): LinalgDependenceGraph should be able to update itself.
+  // TODO: LinalgDependenceGraph should be able to update itself.
   // The current naive and expensive reconstruction of the graph should be
   // removed.
   for (auto *op : llvm::reverse(linalgOps)) {

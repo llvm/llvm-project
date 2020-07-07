@@ -2442,7 +2442,8 @@ const ArgDescriptor *AMDGPULegalizerInfo::getArgDescriptor(
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
   const ArgDescriptor *Arg;
   const TargetRegisterClass *RC;
-  std::tie(Arg, RC) = MFI->getPreloadedValue(ArgType);
+  LLT ArgTy;
+  std::tie(Arg, RC, ArgTy) = MFI->getPreloadedValue(ArgType);
   if (!Arg) {
     LLVM_DEBUG(dbgs() << "Required arg register missing\n");
     return nullptr;
@@ -3178,8 +3179,9 @@ bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
 
   const ArgDescriptor *Arg;
   const TargetRegisterClass *RC;
-  std::tie(Arg, RC)
-    = MFI->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
+  LLT ArgTy;
+  std::tie(Arg, RC, ArgTy) =
+      MFI->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
   if (!Arg)
     return false;
 

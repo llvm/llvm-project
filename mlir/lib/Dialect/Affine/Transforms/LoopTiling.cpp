@@ -159,7 +159,7 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
 
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
 /// and intra-tile loops. A band is a contiguous set of loops.
-//  TODO(bondhugula): handle non hyper-rectangular spaces.
+//  TODO: handle non hyper-rectangular spaces.
 LogicalResult
 mlir::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
                           ArrayRef<unsigned> tileSizes,
@@ -282,7 +282,7 @@ static void adjustToDivisorsOfTripCounts(ArrayRef<AffineForOp> band,
 // based on a simple model that looks at the memory footprint and determines
 // tile sizes assuming identity accesses / 1:1 tile size proportional footprint
 // along each of the dimensions being tiled.
-// TODO(mlir-team): evolve this model. Tile size determination is a large area
+// TODO: evolve this model. Tile size determination is a large area
 // to play with in general.
 void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
                               SmallVectorImpl<unsigned> *tileSizes) {
@@ -334,7 +334,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   }
 
   // Divide all loops equally in an attempt to reduce footprint.
-  // TODO(bondhugula): this is approximate. Ideally, obtain reuse factor /
+  // TODO: this is approximate. Ideally, obtain reuse factor /
   // profitability along each dimension and weight tile sizes based on that as
   // one possible approach. Or compute a polynomial in tile sizes and solve for
   // it.

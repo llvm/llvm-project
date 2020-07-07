@@ -439,6 +439,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  |-NonTypeTemplateParmDecl 0x{{.+}} <col:12, col:20> col:16 'int' depth 0 index 0 I
 // CHECK-NEXT:  | `-TemplateArgument expr
 // CHECK-NEXT:  |   `-ConstantExpr 0x{{.+}} <col:20> 'int'
+// CHECK-NEXT:  |     |-value: Int 42
 // CHECK-NEXT:  |     `-IntegerLiteral 0x{{.+}} <col:20> 'int' 42
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 struct TestTemplateDefaultNonType
 
@@ -644,6 +645,7 @@ namespace TestNonTypeTemplateParmDecl {
 // CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 0 I
 // CHECK-NEXT:       TemplateArgument expr
 // CHECK-NEXT:         ConstantExpr{{.*}} 'int'
+// CHECK-NEXT:           value: Int 1
 // CHECK-NEXT:           IntegerLiteral{{.*}} 'int' 1
 // CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 1 ... J
 

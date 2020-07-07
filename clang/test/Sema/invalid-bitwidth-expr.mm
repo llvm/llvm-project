@@ -32,3 +32,8 @@ struct Z {
   int X : func<int>(); // expected-note {{in instantiation of function template}}
 };
 constexpr int ssss = sizeof(Z);
+
+struct Z2 {
+  int X : sizeof(_ExtInt(invalid())); // expected-error {{use of undeclared identifier}}
+};
+constexpr int sssss = sizeof(Z2);

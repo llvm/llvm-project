@@ -316,7 +316,7 @@ promoteSubViews(OpBuilder &b, LinalgOp op,
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
 
   if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
-    // TODO(ntv): add a level of indirection to linalg.generic.
+    // TODO: add a level of indirection to linalg.generic.
     if (convOp.padding())
       return {};
   }

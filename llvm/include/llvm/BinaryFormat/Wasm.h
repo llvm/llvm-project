@@ -63,8 +63,8 @@ struct WasmExport {
 
 struct WasmLimits {
   uint8_t Flags;
-  uint32_t Initial;
-  uint32_t Maximum;
+  uint64_t Initial;
+  uint64_t Maximum;
 };
 
 struct WasmTable {
@@ -282,6 +282,7 @@ enum : unsigned {
 enum : unsigned {
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,
   WASM_LIMITS_FLAG_IS_SHARED = 0x2,
+  WASM_LIMITS_FLAG_IS_64 = 0x4,
 };
 
 enum : unsigned {

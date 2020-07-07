@@ -6117,6 +6117,14 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
   return Ok;
 }
 
+// Check that (every element of) Z is undef or not an exact multiple of BW.
+static bool isNonZeroModBitWidth(SDValue Z, unsigned BW) {
+  return ISD::matchUnaryPredicate(
+      Z,
+      [=](ConstantSDNode *C) { return !C || C->getAPIntValue().urem(BW) != 0; },
+      true);
+}
+
 bool TargetLowering::expandFunnelShift(SDNode *Node, SDValue &Result,
                                        SelectionDAG &DAG) const {
   EVT VT = Node->getValueType(0);
@@ -6127,40 +6135,52 @@ bool TargetLowering::expandFunnelShift(SDNode *Node, SDValue &Result,
                         !isOperationLegalOrCustomOrPromote(ISD::OR, VT)))
     return false;
 
-  // fshl: X << (Z % BW) | Y >> 1 >> (BW - 1 - (Z % BW))
-  // fshr: X << 1 << (BW - 1 - (Z % BW)) | Y >> (Z % BW)
   SDValue X = Node->getOperand(0);
   SDValue Y = Node->getOperand(1);
   SDValue Z = Node->getOperand(2);
 
-  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  unsigned BW = VT.getScalarSizeInBits();
   bool IsFSHL = Node->getOpcode() == ISD::FSHL;
   SDLoc DL(SDValue(Node, 0));
 
   EVT ShVT = Z.getValueType();
-  SDValue Mask = DAG.getConstant(EltSizeInBits - 1, DL, ShVT);
-  SDValue ShAmt, InvShAmt;
-  if (isPowerOf2_32(EltSizeInBits)) {
-    // Z % BW -> Z & (BW - 1)
-    ShAmt = DAG.getNode(ISD::AND, DL, ShVT, Z, Mask);
-    // (BW - 1) - (Z % BW) -> ~Z & (BW - 1)
-    InvShAmt = DAG.getNode(ISD::AND, DL, ShVT, DAG.getNOT(DL, Z, ShVT), Mask);
-  } else {
-    SDValue BitWidthC = DAG.getConstant(EltSizeInBits, DL, ShVT);
-    ShAmt = DAG.getNode(ISD::UREM, DL, ShVT, Z, BitWidthC);
-    InvShAmt = DAG.getNode(ISD::SUB, DL, ShVT, Mask, ShAmt);
-  }
 
-  SDValue One = DAG.getConstant(1, DL, ShVT);
   SDValue ShX, ShY;
-  if (IsFSHL) {
-    ShX = DAG.getNode(ISD::SHL, DL, VT, X, ShAmt);
-    SDValue ShY1 = DAG.getNode(ISD::SRL, DL, VT, Y, One);
-    ShY = DAG.getNode(ISD::SRL, DL, VT, ShY1, InvShAmt);
+  SDValue ShAmt, InvShAmt;
+  if (isNonZeroModBitWidth(Z, BW)) {
+    // fshl: X << C | Y >> (BW - C)
+    // fshr: X << (BW - C) | Y >> C
+    // where C = Z % BW is not zero
+    SDValue BitWidthC = DAG.getConstant(BW, DL, ShVT);
+    ShAmt = DAG.getNode(ISD::UREM, DL, ShVT, Z, BitWidthC);
+    InvShAmt = DAG.getNode(ISD::SUB, DL, ShVT, BitWidthC, ShAmt);
+    ShX = DAG.getNode(ISD::SHL, DL, VT, X, IsFSHL ? ShAmt : InvShAmt);
+    ShY = DAG.getNode(ISD::SRL, DL, VT, Y, IsFSHL ? InvShAmt : ShAmt);
   } else {
-    SDValue ShX1 = DAG.getNode(ISD::SHL, DL, VT, X, One);
-    ShX = DAG.getNode(ISD::SHL, DL, VT, ShX1, InvShAmt);
-    ShY = DAG.getNode(ISD::SRL, DL, VT, Y, ShAmt);
+    // fshl: X << (Z % BW) | Y >> 1 >> (BW - 1 - (Z % BW))
+    // fshr: X << 1 << (BW - 1 - (Z % BW)) | Y >> (Z % BW)
+    SDValue Mask = DAG.getConstant(BW - 1, DL, ShVT);
+    if (isPowerOf2_32(BW)) {
+      // Z % BW -> Z & (BW - 1)
+      ShAmt = DAG.getNode(ISD::AND, DL, ShVT, Z, Mask);
+      // (BW - 1) - (Z % BW) -> ~Z & (BW - 1)
+      InvShAmt = DAG.getNode(ISD::AND, DL, ShVT, DAG.getNOT(DL, Z, ShVT), Mask);
+    } else {
+      SDValue BitWidthC = DAG.getConstant(BW, DL, ShVT);
+      ShAmt = DAG.getNode(ISD::UREM, DL, ShVT, Z, BitWidthC);
+      InvShAmt = DAG.getNode(ISD::SUB, DL, ShVT, Mask, ShAmt);
+    }
+
+    SDValue One = DAG.getConstant(1, DL, ShVT);
+    if (IsFSHL) {
+      ShX = DAG.getNode(ISD::SHL, DL, VT, X, ShAmt);
+      SDValue ShY1 = DAG.getNode(ISD::SRL, DL, VT, Y, One);
+      ShY = DAG.getNode(ISD::SRL, DL, VT, ShY1, InvShAmt);
+    } else {
+      SDValue ShX1 = DAG.getNode(ISD::SHL, DL, VT, X, One);
+      ShX = DAG.getNode(ISD::SHL, DL, VT, ShX1, InvShAmt);
+      ShY = DAG.getNode(ISD::SRL, DL, VT, Y, ShAmt);
+    }
   }
   Result = DAG.getNode(ISD::OR, DL, VT, ShX, ShY);
   return true;
@@ -6177,12 +6197,15 @@ bool TargetLowering::expandROT(SDNode *Node, SDValue &Result,
   SDLoc DL(SDValue(Node, 0));
 
   EVT ShVT = Op1.getValueType();
-  SDValue BitWidthC = DAG.getConstant(EltSizeInBits, DL, ShVT);
+  SDValue Zero = DAG.getConstant(0, DL, ShVT);
 
-  // If a rotate in the other direction is legal, use it.
+  assert(isPowerOf2_32(EltSizeInBits) && EltSizeInBits > 1 &&
+         "Expecting the type bitwidth to be a power of 2");
+
+  // If a rotate in the other direction is supported, use it.
   unsigned RevRot = IsLeft ? ISD::ROTR : ISD::ROTL;
-  if (isOperationLegal(RevRot, VT)) {
-    SDValue Sub = DAG.getNode(ISD::SUB, DL, ShVT, BitWidthC, Op1);
+  if (isOperationLegalOrCustom(RevRot, VT)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Op1);
     Result = DAG.getNode(RevRot, DL, VT, Op0, Sub);
     return true;
   }
@@ -6195,15 +6218,13 @@ bool TargetLowering::expandROT(SDNode *Node, SDValue &Result,
     return false;
 
   // Otherwise,
-  //   (rotl x, c) -> (or (shl x, (and c, w-1)), (srl x, (and w-c, w-1)))
-  //   (rotr x, c) -> (or (srl x, (and c, w-1)), (shl x, (and w-c, w-1)))
+  //   (rotl x, c) -> (or (shl x, (and c, w-1)), (srl x, (and -c, w-1)))
+  //   (rotr x, c) -> (or (srl x, (and c, w-1)), (shl x, (and -c, w-1)))
   //
-  assert(isPowerOf2_32(EltSizeInBits) && EltSizeInBits > 1 &&
-         "Expecting the type bitwidth to be a power of 2");
   unsigned ShOpc = IsLeft ? ISD::SHL : ISD::SRL;
   unsigned HsOpc = IsLeft ? ISD::SRL : ISD::SHL;
   SDValue BitWidthMinusOneC = DAG.getConstant(EltSizeInBits - 1, DL, ShVT);
-  SDValue NegOp1 = DAG.getNode(ISD::SUB, DL, ShVT, BitWidthC, Op1);
+  SDValue NegOp1 = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Op1);
   SDValue And0 = DAG.getNode(ISD::AND, DL, ShVT, Op1, BitWidthMinusOneC);
   SDValue And1 = DAG.getNode(ISD::AND, DL, ShVT, NegOp1, BitWidthMinusOneC);
   Result = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ShOpc, DL, VT, Op0, And0),

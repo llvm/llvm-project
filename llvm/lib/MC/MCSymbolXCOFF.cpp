@@ -17,6 +17,9 @@ MCSectionXCOFF *MCSymbolXCOFF::getRepresentedCsect() const {
           RepresentedCsect->getCSectType() == XCOFF::XTY_ER) &&
          "Symbol does not represent a csect; MCSectionXCOFF that represents "
          "the symbol should not be (but is) set.");
+  assert(getSymbolTableName().equals(RepresentedCsect->getSymbolTableName()) &&
+         "SymbolTableNames need to be the same for this symbol and its csect "
+         "representation.");
   return RepresentedCsect;
 }
 
@@ -29,5 +32,8 @@ void MCSymbolXCOFF::setRepresentedCsect(MCSectionXCOFF *C) {
           C->getCSectType() == XCOFF::XTY_ER) &&
          "Symbol does not represent a csect; can only set a MCSectionXCOFF "
          "representation for a csect.");
+  assert(getSymbolTableName().equals(C->getSymbolTableName()) &&
+         "SymbolTableNames need to be the same for this symbol and its csect "
+         "representation.");
   RepresentedCsect = C;
 }

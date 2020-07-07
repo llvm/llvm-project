@@ -159,7 +159,7 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
   Type resultType;
   auto loc = parser.getCurrentLocation();
   DictionaryAttr dictAttr;
-  // TODO(andydavis, ntv) Unify linalg op attribute parsing.
+  // TODO: Unify linalg op attribute parsing.
   if (parser.parseAttribute(dictAttr, "_", result.attributes) ||
       parser.parseOperand(lhsInfo) || parser.parseComma() ||
       parser.parseOperand(rhsInfo) || parser.parseComma() ||
@@ -192,7 +192,7 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ContractionOp op) {
-  // TODO(andydavis, ntv) Unify printing code with linalg ops.
+  // TODO: Unify printing code with linalg ops.
   auto attrNames = op.getTraitAttrNames();
   llvm::StringSet<> traitAttrsSet;
   traitAttrsSet.insert(attrNames.begin(), attrNames.end());
@@ -469,6 +469,12 @@ SmallVector<AffineMap, 4> ContractionOp::getIndexingMaps() {
   return res;
 }
 
+Optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {
+  SmallVector<int64_t, 4> shape;
+  getIterationBounds(shape);
+  return shape;
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
@@ -586,7 +592,7 @@ isValidExtractOrInsertSlicesType(Operation *op, VectorType vectorType,
                                  TupleType tupleType, ArrayRef<int64_t> sizes,
                                  ArrayRef<int64_t> strides) {
   // Check for non-unit strides.
-  // TODO(b/144845578) Support non-1 strides.
+  // TODO: Support non-1 strides.
   if (llvm::any_of(strides, [](int64_t s) { return s != 1; }))
     return op->emitError("requires unit strides");
   // Check that 'vectorType' rank matches rank of tuple element vectors.
@@ -858,7 +864,7 @@ void InsertStridedSliceOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(getStridesAttrName(), stridesAttr);
 }
 
-// TODO(ntv) Should be moved to Tablegen Confined attributes.
+// TODO: Should be moved to Tablegen Confined attributes.
 template <typename OpType>
 static LogicalResult isIntegerArrayAttrSmallerThanShape(OpType op,
                                                         ArrayAttr arrayAttr,
@@ -1325,7 +1331,7 @@ static LogicalResult verifyTransferOp(Operation *op, MemRefType memrefType,
     if (memrefVecEltRank > resultVecRank)
       return op->emitOpError(
           "requires memref vector element and vector result ranks to match.");
-    // TODO(b/146516564) Move this to isSuffix in Vector/Utils.h.
+    // TODO: Move this to isSuffix in Vector/Utils.h.
     unsigned rankOffset = resultVecRank - memrefVecEltRank;
     auto memrefVecEltShape = memrefVectorElementType.getShape();
     auto resultVecShape = vectorType.getShape();
@@ -1522,6 +1528,11 @@ OpFoldResult TransferReadOp::fold(ArrayRef<Attribute>) {
   return OpFoldResult();
 }
 
+Optional<SmallVector<int64_t, 4>> TransferReadOp::getShapeForUnroll() {
+  auto s = getVectorType().getShape();
+  return SmallVector<int64_t, 4>{s.begin(), s.end()};
+}
+
 //===----------------------------------------------------------------------===//
 // TransferWriteOp
 //===----------------------------------------------------------------------===//
@@ -1610,6 +1621,11 @@ static LogicalResult verify(TransferWriteOp op) {
 LogicalResult TransferWriteOp::fold(ArrayRef<Attribute>,
                                     SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
+}
+
+Optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
+  auto s = getVectorType().getShape();
+  return SmallVector<int64_t, 4>{s.begin(), s.end()};
 }
 
 //===----------------------------------------------------------------------===//

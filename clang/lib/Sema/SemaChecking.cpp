@@ -88,6 +88,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <bitset>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -3607,6 +3608,64 @@ bool Sema::CheckX86BuiltinGatherScatterScale(unsigned BuiltinID,
          << Arg->getSourceRange();
 }
 
+enum { TileRegLow = 0, TileRegHigh = 7 };
+
+bool Sema::CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall,
+                                    ArrayRef<int> ArgNums) {
+  for (int ArgNum : ArgNums) {
+    if (SemaBuiltinConstantArgRange(TheCall, ArgNum, TileRegLow, TileRegHigh))
+      return true;
+  }
+  return false;
+}
+
+bool Sema::CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall, int ArgNum) {
+  return SemaBuiltinConstantArgRange(TheCall, ArgNum, TileRegLow, TileRegHigh);
+}
+
+bool Sema::CheckX86BuiltinTileDuplicate(CallExpr *TheCall,
+                                        ArrayRef<int> ArgNums) {
+  // Because the max number of tile register is TileRegHigh + 1, so here we use
+  // each bit to represent the usage of them in bitset.
+  std::bitset<TileRegHigh + 1> ArgValues;
+  for (int ArgNum : ArgNums) {
+    llvm::APSInt Arg;
+    SemaBuiltinConstantArg(TheCall, ArgNum, Arg);
+    int ArgExtValue = Arg.getExtValue();
+    assert((ArgExtValue >= TileRegLow || ArgExtValue <= TileRegHigh) &&
+           "Incorrect tile register num.");
+    if (ArgValues.test(ArgExtValue))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_x86_builtin_tile_arg_duplicate)
+             << TheCall->getArg(ArgNum)->getSourceRange();
+    ArgValues.set(ArgExtValue);
+  }
+  return false;
+}
+
+bool Sema::CheckX86BuiltinTileRangeAndDuplicate(CallExpr *TheCall,
+                                                ArrayRef<int> ArgNums) {
+  return CheckX86BuiltinTileArgumentsRange(TheCall, ArgNums) ||
+         CheckX86BuiltinTileDuplicate(TheCall, ArgNums);
+}
+
+bool Sema::CheckX86BuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
+  switch (BuiltinID) {
+  default:
+    return false;
+  case X86::BI__builtin_ia32_tileloadd64:
+  case X86::BI__builtin_ia32_tileloaddt164:
+  case X86::BI__builtin_ia32_tilestored64:
+  case X86::BI__builtin_ia32_tilezero:
+    return CheckX86BuiltinTileArgumentsRange(TheCall, 0);
+  case X86::BI__builtin_ia32_tdpbssd:
+  case X86::BI__builtin_ia32_tdpbsud:
+  case X86::BI__builtin_ia32_tdpbusd:
+  case X86::BI__builtin_ia32_tdpbuud:
+  case X86::BI__builtin_ia32_tdpbf16ps:
+    return CheckX86BuiltinTileRangeAndDuplicate(TheCall, {0, 1, 2});
+  }
+}
 static bool isX86_32Builtin(unsigned BuiltinID) {
   // These builtins only work on x86-32 targets.
   switch (BuiltinID) {
@@ -3638,6 +3697,10 @@ bool Sema::CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
 
   // If the intrinsic has a gather/scatter scale immediate make sure its valid.
   if (CheckX86BuiltinGatherScatterScale(BuiltinID, TheCall))
+    return true;
+
+  // If the intrinsic has a tile arguments, make sure they are valid.
+  if (CheckX86BuiltinTileArguments(BuiltinID, TheCall))
     return true;
 
   // For intrinsics which take an immediate value as part of the instruction,

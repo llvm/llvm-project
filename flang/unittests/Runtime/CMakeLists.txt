@@ -41,6 +41,18 @@ target_link_libraries(external-hello-world
   LLVMSupport
 )
 
+add_executable(external-io
+  external-io.cpp
+)
+
+target_link_libraries(external-io
+  RuntimeTesting
+  FortranRuntime
+  LLVMSupport
+)
+
+add_test(NAME ExternalIO COMMAND external-io)
+
 add_executable(list-input-test
   list-input.cpp
 )

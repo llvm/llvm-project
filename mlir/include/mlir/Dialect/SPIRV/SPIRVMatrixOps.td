@@ -61,8 +61,8 @@ def SPV_MatrixTimesScalarOp : SPV_Op<"MatrixTimesScalar", []> {
     SPV_AnyMatrix:$result
   );
 
-  // TODO (Hazem): we need just one matrix type given that the input and result
-  // are the same and the scalar's type can be deduced from it.
+  // TODO: we need just one matrix type given that the input and result are the
+  // same and the scalar's type can be deduced from it.
   let assemblyFormat = [{
     operands attr-dict `:` type($matrix) `,` type($scalar) `->` type($result)
   }];

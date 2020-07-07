@@ -119,8 +119,8 @@ def CopyOp : LinalgStructured_Op<"copy", [
     OptionalAttr<AffineMapAttr>:$inputPermutation,
     OptionalAttr<AffineMapAttr>:$outputPermutation);
 
-  // TODO(ntv) this should go away once the usage of OptionalAttr triggers
-  // emission of builders with default arguments left unspecified.
+  // TODO: this should go away once the usage of OptionalAttr triggers emission
+  // of builders with default arguments left unspecified.
   let builders = [OpBuilder<
     "OpBuilder &builder, OperationState &result, Value input, Value output", [{
     return build(
@@ -305,8 +305,8 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
                    OptionalAttr<I64ElementsAttr>:$padding);
 
   let extraClassDeclaration = commonUtils # [{
-    // TODO(ntv) extend to support more than 1 dimensions and potentially
-    // grouping too.
+    // TODO: extend to support more than 1 dimensions and potentially grouping
+    // too.
     unsigned getNumBatchDimensions() { return 1; }
 
     unsigned getNumInputFeatureDimensions() { return 1; }

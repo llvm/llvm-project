@@ -17094,6 +17094,58 @@ vec_blendv(vector double __a, vector double __b,
            vector unsigned long long __c) {
   return __builtin_vsx_xxblendvd(__a, __b, __c);
 }
+
+/* vec_splati */
+
+#define vec_splati(__a)                                                        \
+  _Generic((__a), signed int                                                   \
+           : ((vector signed int)__a), unsigned int                            \
+           : ((vector unsigned int)__a), float                                 \
+           : ((vector float)__a))
+
+/* vec_spatid */
+
+static __inline__ vector double __ATTRS_o_ai vec_splatid(const float __a) {
+  return ((vector double)((double)__a));
+}
+
+/* vec_splati_ins */
+
+static __inline__ vector signed int __ATTRS_o_ai vec_splati_ins(
+    vector signed int __a, const unsigned int __b, const signed int __c) {
+#ifdef __LITTLE_ENDIAN__
+  __a[1 - __b] = __c;
+  __a[3 - __b] = __c;
+#else
+  __a[__b] = __c;
+  __a[2 + __b] = __c;
+#endif
+  return __a;
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai vec_splati_ins(
+    vector unsigned int __a, const unsigned int __b, const unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  __a[1 - __b] = __c;
+  __a[3 - __b] = __c;
+#else
+  __a[__b] = __c;
+  __a[2 + __b] = __c;
+#endif
+  return __a;
+}
+
+static __inline__ vector float __ATTRS_o_ai
+vec_splati_ins(vector float __a, const unsigned int __b, const float __c) {
+#ifdef __LITTLE_ENDIAN__
+  __a[1 - __b] = __c;
+  __a[3 - __b] = __c;
+#else
+  __a[__b] = __c;
+  __a[2 + __b] = __c;
+#endif
+  return __a;
+}
 #endif /* __VSX__ */
 #endif /* __POWER10_VECTOR__ */
 

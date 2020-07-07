@@ -76,7 +76,7 @@ public:
       return success();
     }
 
-    // TODO(riverriddle) support hex floating point values.
+    // TODO: support hex floating point values.
     return emitError(getCurrentLocation(), "expected floating point literal");
   }
 

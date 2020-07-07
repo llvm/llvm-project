@@ -896,7 +896,7 @@ OpFoldResult CmpFOp::fold(ArrayRef<Attribute> operands) {
   auto lhs = operands.front().dyn_cast_or_null<FloatAttr>();
   auto rhs = operands.back().dyn_cast_or_null<FloatAttr>();
 
-  // TODO(gcmn) We could actually do some intelligent things if we know only one
+  // TODO: We could actually do some intelligent things if we know only one
   // of the operands, but it's inf or nan.
   if (!lhs || !rhs)
     return {};

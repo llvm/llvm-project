@@ -187,9 +187,7 @@ struct SemiNCAInfo {
 
     // Add a new tree node for this NodeT, and link it as a child of
     // IDomNode
-    return (DT.DomTreeNodes[BB] = IDomNode->addChild(
-        std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode)))
-        .get();
+    return DT.createChild(BB, IDomNode);
   }
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
@@ -587,9 +585,7 @@ struct SemiNCAInfo {
     // all real exits (including multiple exit blocks, infinite loops).
     NodePtr Root = IsPostDom ? nullptr : DT.Roots[0];
 
-    DT.RootNode = (DT.DomTreeNodes[Root] =
-                       std::make_unique<DomTreeNodeBase<NodeT>>(Root, nullptr))
-        .get();
+    DT.RootNode = DT.createNode(Root);
     SNCA.attachNewSubtree(DT, DT.RootNode);
   }
 
@@ -610,8 +606,7 @@ struct SemiNCAInfo {
 
       // Add a new tree node for this BasicBlock, and link it as a child of
       // IDomNode.
-      DT.DomTreeNodes[W] = IDomNode->addChild(
-          std::make_unique<DomTreeNodeBase<NodeT>>(W, IDomNode));
+      DT.createChild(W, IDomNode);
     }
   }
 
@@ -661,10 +656,7 @@ struct SemiNCAInfo {
 
       // The unreachable node becomes a new root -- a tree node for it.
       TreeNodePtr VirtualRoot = DT.getNode(nullptr);
-      FromTN =
-          (DT.DomTreeNodes[From] = VirtualRoot->addChild(
-               std::make_unique<DomTreeNodeBase<NodeT>>(From, VirtualRoot)))
-              .get();
+      FromTN = DT.createChild(From, VirtualRoot);
       DT.Roots.push_back(From);
     }
 
@@ -1372,7 +1364,7 @@ struct SemiNCAInfo {
     if (!DT.DFSInfoValid || !DT.Parent)
       return true;
 
-    const NodePtr RootBB = IsPostDom ? nullptr : DT.getRoots()[0];
+    const NodePtr RootBB = IsPostDom ? nullptr : *DT.root_begin();
     const TreeNodePtr Root = DT.getNode(RootBB);
 
     auto PrintNodeAndDFSNums = [](const TreeNodePtr TN) {
@@ -1396,7 +1388,7 @@ struct SemiNCAInfo {
       const TreeNodePtr Node = NodeToTN.second.get();
 
       // Handle tree leaves.
-      if (Node->getChildren().empty()) {
+      if (Node->isLeaf()) {
         if (Node->getDFSNumIn() + 1 != Node->getDFSNumOut()) {
           errs() << "Tree leaf should have DFSOut = DFSIn + 1:\n\t";
           PrintNodeAndDFSNums(Node);
@@ -1508,7 +1500,8 @@ struct SemiNCAInfo {
     for (auto &NodeToTN : DT.DomTreeNodes) {
       const TreeNodePtr TN = NodeToTN.second.get();
       const NodePtr BB = TN->getBlock();
-      if (!BB || TN->getChildren().empty()) continue;
+      if (!BB || TN->isLeaf())
+        continue;
 
       LLVM_DEBUG(dbgs() << "Verifying parent property of node "
                         << BlockNamePrinter(TN) << "\n");
@@ -1517,7 +1510,7 @@ struct SemiNCAInfo {
         return From != BB && To != BB;
       });
 
-      for (TreeNodePtr Child : TN->getChildren())
+      for (TreeNodePtr Child : TN->children())
         if (NodeToInfo.count(Child->getBlock()) != 0) {
           errs() << "Child " << BlockNamePrinter(Child)
                  << " reachable after its parent " << BlockNamePrinter(BB)
@@ -1541,17 +1534,17 @@ struct SemiNCAInfo {
     for (auto &NodeToTN : DT.DomTreeNodes) {
       const TreeNodePtr TN = NodeToTN.second.get();
       const NodePtr BB = TN->getBlock();
-      if (!BB || TN->getChildren().empty()) continue;
+      if (!BB || TN->isLeaf())
+        continue;
 
-      const auto &Siblings = TN->getChildren();
-      for (const TreeNodePtr N : Siblings) {
+      for (const TreeNodePtr N : TN->children()) {
         clear();
         NodePtr BBN = N->getBlock();
         doFullDFSWalk(DT, [BBN](NodePtr From, NodePtr To) {
           return From != BBN && To != BBN;
         });
 
-        for (const TreeNodePtr S : Siblings) {
+        for (const TreeNodePtr S : TN->children()) {
           if (S == N) continue;
 
           if (NodeToInfo.count(S->getBlock()) == 0) {

@@ -696,7 +696,7 @@ The syntax of a numeric substitution is
   A numeric operand is a previously defined numeric variable, an integer
   literal, or a function. Spaces are accepted before, after and between any of
   these elements. Numeric operands have 64-bit precision. Overflow and underflow
-  are rejected. There is no support for operator precendence, but parentheses
+  are rejected. There is no support for operator precedence, but parentheses
   can be used to change the evaluation order.
 
 The supported operators are:
@@ -715,7 +715,7 @@ The syntax of a function call is ``<name>(<arguments>)`` where:
   * mul - Returns the product of its two operands.
   * sub - Returns the difference of its two operands.
 
-* ``<arguments>`` is a comma seperated list of expressions.
+* ``<arguments>`` is a comma separated list of expressions.
 
 For example:
 

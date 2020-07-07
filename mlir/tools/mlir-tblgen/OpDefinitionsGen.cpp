@@ -36,10 +36,14 @@ using namespace mlir::tblgen;
 
 cl::OptionCategory opDefGenCat("Options for -gen-op-defs and -gen-op-decls");
 
-static cl::opt<std::string>
-    opFilter("op-regex",
-             cl::desc("Regex of name of op's to filter (no filter if empty)"),
-             cl::cat(opDefGenCat));
+static cl::opt<std::string> opIncFilter(
+    "op-include-regex",
+    cl::desc("Regex of name of op's to include (no filter if empty)"),
+    cl::cat(opDefGenCat));
+static cl::opt<std::string> opExcFilter(
+    "op-exclude-regex",
+    cl::desc("Regex of name of op's to exclude (no filter if empty)"),
+    cl::cat(opDefGenCat));
 
 static const char *const tblgenNamePrefix = "tblgen_";
 static const char *const generatedArgName = "odsArg";
@@ -315,7 +319,7 @@ private:
 
 private:
   // The TableGen record for this op.
-  // TODO(antiagainst,zinenko): OpEmitter should not have a Record directly,
+  // TODO: OpEmitter should not have a Record directly,
   // it should rather go through the Operator for better abstraction.
   const Record &def;
 
@@ -911,9 +915,9 @@ void OpEmitter::genSeparateArgParamBuilder() {
 
     if (inferType) {
       // Generate builder that infers type too.
-      // TODO(jpienaar): Subsume this with general checking if type can be
+      // TODO: Subsume this with general checking if type can be
       // inferred automatically.
-      // TODO(jpienaar): Expand to handle regions.
+      // TODO: Expand to handle regions.
       body << formatv(R"(
         ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
         if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
@@ -1002,7 +1006,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 }
 
 void OpEmitter::genInferredTypeCollectiveParamBuilder() {
-  // TODO(jpienaar): Expand to support regions.
+  // TODO: Expand to support regions.
   const char *params =
       "::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &{0}, "
       "::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> "
@@ -1115,7 +1119,7 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
 
 void OpEmitter::genBuilder() {
   // Handle custom builders if provided.
-  // TODO(antiagainst): Create wrapper class for OpBuilder to hide the native
+  // TODO: Create wrapper class for OpBuilder to hide the native
   // TableGen API calls here.
   {
     auto *listInit = dyn_cast_or_null<ListInit>(def.getValueInit("builders"));
@@ -1211,7 +1215,7 @@ void OpEmitter::genCollectiveParamBuilder() {
   body << "  " << builderOpState << ".addTypes(resultTypes);\n";
 
   // Generate builder that infers type too.
-  // TODO(jpienaar): Expand to handle regions and successors.
+  // TODO: Expand to handle regions and successors.
   if (canInferType(op) && op.getNumSuccessors() == 0)
     genInferredTypeCollectiveParamBuilder();
 }
@@ -1275,7 +1279,7 @@ void OpEmitter::buildParamList(std::string &paramList,
       // Creating an APInt requires us to provide bitwidth, value, and
       // signedness, which is complicated compared to others. Similarly
       // for APFloat.
-      // TODO(b/144412160) Adjust the 'returnType' field of such attributes
+      // TODO: Adjust the 'returnType' field of such attributes
       // to support them.
       StringRef retType = namedAttr->attr.getReturnType();
       if (retType == "::llvm::APInt" || retType == "::llvm::APFloat")
@@ -2133,13 +2137,20 @@ getAllDerivedDefinitions(const RecordKeeper &recordKeeper,
   if (!classDef)
     PrintFatalError("ERROR: Couldn't find the `" + className + "' class!\n");
 
-  llvm::Regex includeRegex(opFilter);
+  llvm::Regex includeRegex(opIncFilter), excludeRegex(opExcFilter);
   std::vector<Record *> defs;
   for (const auto &def : recordKeeper.getDefs()) {
-    if (def.second->isSubClassOf(classDef)) {
-      if (opFilter.empty() || includeRegex.match(getOperationName(*def.second)))
-        defs.push_back(def.second.get());
-    }
+    if (!def.second->isSubClassOf(classDef))
+      continue;
+    // Include if no include filter or include filter matches.
+    if (!opIncFilter.empty() &&
+        !includeRegex.match(getOperationName(*def.second)))
+      continue;
+    // Unless there is an exclude filter and it matches.
+    if (!opExcFilter.empty() &&
+        excludeRegex.match(getOperationName(*def.second)))
+      continue;
+    defs.push_back(def.second.get());
   }
 
   return defs;

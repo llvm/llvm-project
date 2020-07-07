@@ -512,9 +512,10 @@ llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
 
   AddRegionToWorklist(N);
 
-  for (size_t I = 0; I < Worklist.size(); I++)
-    for (DomTreeNode *Child : Worklist[I]->getChildren())
+  for (size_t I = 0; I < Worklist.size(); I++) {
+    for (DomTreeNode *Child : Worklist[I]->children())
       AddRegionToWorklist(Child);
+  }
 
   return Worklist;
 }

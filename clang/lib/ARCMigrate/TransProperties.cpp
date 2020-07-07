@@ -287,7 +287,10 @@ private:
   public:
     PlusOneAssign(ObjCIvarDecl *D) : Ivar(D) {}
 
-    bool VisitBinAssign(BinaryOperator *E) {
+    bool VisitBinaryOperator(BinaryOperator *E) {
+      if (E->getOpcode() != BO_Assign)
+        return true;
+
       Expr *lhs = E->getLHS()->IgnoreParenImpCasts();
       if (ObjCIvarRefExpr *RE = dyn_cast<ObjCIvarRefExpr>(lhs)) {
         if (RE->getDecl() != Ivar)

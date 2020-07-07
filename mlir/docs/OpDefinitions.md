@@ -444,7 +444,7 @@ def MyInterface : OpInterface<"MyInterface"> {
     // Note: `ConcreteOp` corresponds to the derived operation typename.
     InterfaceMethod<"/*insert doc here*/",
       "unsigned", "getNumWithDefault", (ins), /*methodBody=*/[{}], [{
-        ConcreteOp op = cast<ConcreteOp>(getOperation());
+        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
         return op.getNumInputs() + op.getNumOutputs();
     }]>,
   ];
@@ -780,8 +780,8 @@ There are many operations that have known type equality constraints registered
 as traits on the operation; for example the true, false, and result values of a
 `select` operation often have the same type. The assembly format may inspect
 these equal constraints to discern the types of missing variables. The currently
-supported traits are: `AllTypesMatch`, `SameTypeOperands`, and
-`SameOperandsAndResultType`.
+supported traits are: `AllTypesMatch`, `TypesMatchWith`, `SameTypeOperands`,
+and `SameOperandsAndResultType`.
 
 ### `hasCanonicalizer`
 
@@ -964,9 +964,9 @@ is used. They serve as "hooks" to the enclosing environment.  This includes
   replaced by the operand/result's type. E.g., for `F32` in `F32:$operand`, its
   `$_self` will be expanded as `getOperand(...).getType()`.
 
-TODO(b/130663252): Reconsider the leading symbol for special placeholders.
-Eventually we want to allow referencing operand/result $-names; such $-names
-can start with underscore.
+TODO: Reconsider the leading symbol for special placeholders. Eventually we want
+to allow referencing operand/result $-names; such $-names can start with
+underscore.
 
 For example, to write an attribute `attr` is an `IntegerAttr`, in C++ you can
 just call `attr.isa<IntegerAttr>()`. The code can be wrapped in a `CPred` as

@@ -261,15 +261,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // PowerPC has no SREM/UREM instructions unless we are on P9
   // On P9 we may use a hardware instruction to compute the remainder.
-  // The instructions are not legalized directly because in the cases where the
-  // result of both the remainder and the division is required it is more
-  // efficient to compute the remainder from the result of the division rather
-  // than use the remainder instruction.
+  // When the result of both the remainder and the division is required it is
+  // more efficient to compute the remainder from the result of the division
+  // rather than use the remainder instruction. The instructions are legalized
+  // directly because the DivRemPairsPass performs the transformation at the IR
+  // level.
   if (Subtarget.isISA3_0()) {
-    setOperationAction(ISD::SREM, MVT::i32, Custom);
-    setOperationAction(ISD::UREM, MVT::i32, Custom);
-    setOperationAction(ISD::SREM, MVT::i64, Custom);
-    setOperationAction(ISD::UREM, MVT::i64, Custom);
+    setOperationAction(ISD::SREM, MVT::i32, Legal);
+    setOperationAction(ISD::UREM, MVT::i32, Legal);
+    setOperationAction(ISD::SREM, MVT::i64, Legal);
+    setOperationAction(ISD::UREM, MVT::i64, Legal);
   } else {
     setOperationAction(ISD::SREM, MVT::i32, Expand);
     setOperationAction(ISD::UREM, MVT::i32, Expand);
@@ -1476,6 +1477,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
   case PPCISD::XXSPLTI_SP_TO_DP:
     return "PPCISD::XXSPLTI_SP_TO_DP";
+  case PPCISD::XXSPLTI32DX:
+    return "PPCISD::XXSPLTI32DX";
   case PPCISD::VECINSERT:       return "PPCISD::VECINSERT";
   case PPCISD::XXPERMDI:        return "PPCISD::XXPERMDI";
   case PPCISD::VECSHL:          return "PPCISD::VECSHL";
@@ -5344,7 +5347,7 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
           // MCSectionXCOFF to get the correct storage mapping class.
           // In this case, XCOFF::XMC_PR.
           MCSectionXCOFF *Sec = Context.getXCOFFSection(
-              S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER, SC,
+              S->getSymbolTableName(), XCOFF::XMC_PR, XCOFF::XTY_ER, SC,
               SectionKind::getMetadata());
           S->setRepresentedCsect(Sec);
         }
@@ -9777,6 +9780,77 @@ SDValue PPCTargetLowering::lowerToVINSERTH(ShuffleVectorSDNode *N,
   return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
 }
 
+/// lowerToXXSPLTI32DX - Return the SDValue if this VECTOR_SHUFFLE can be
+/// handled by the XXSPLTI32DX instruction introduced in ISA 3.1, otherwise
+/// return the default SDValue.
+SDValue PPCTargetLowering::lowerToXXSPLTI32DX(ShuffleVectorSDNode *SVN,
+                                              SelectionDAG &DAG) const {
+  // The LHS and RHS may be bitcasts to v16i8 as we canonicalize shuffles
+  // to v16i8. Peek through the bitcasts to get the actual operands.
+  SDValue LHS = peekThroughBitcasts(SVN->getOperand(0));
+  SDValue RHS = peekThroughBitcasts(SVN->getOperand(1));
+
+  auto ShuffleMask = SVN->getMask();
+  SDValue VecShuffle(SVN, 0);
+  SDLoc DL(SVN);
+
+  // Check that we have a four byte shuffle.
+  if (!isNByteElemShuffleMask(SVN, 4, 1))
+    return SDValue();
+
+  // Canonicalize the RHS being a BUILD_VECTOR when lowering to xxsplti32dx.
+  if (RHS->getOpcode() != ISD::BUILD_VECTOR) {
+    std::swap(LHS, RHS);
+    VecShuffle = DAG.getCommutedVectorShuffle(*SVN);
+    ShuffleMask = cast<ShuffleVectorSDNode>(VecShuffle)->getMask();
+  }
+
+  // Ensure that the RHS is a vector of constants.
+  BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(RHS.getNode());
+  if (!BVN)
+    return SDValue();
+
+  // Check if RHS is a splat of 4-bytes (or smaller).
+  APInt APSplatValue, APSplatUndef;
+  unsigned SplatBitSize;
+  bool HasAnyUndefs;
+  if (!BVN->isConstantSplat(APSplatValue, APSplatUndef, SplatBitSize,
+                            HasAnyUndefs, 0, !Subtarget.isLittleEndian()) ||
+      SplatBitSize > 32)
+    return SDValue();
+
+  // Check that the shuffle mask matches the semantics of XXSPLTI32DX.
+  // The instruction splats a constant C into two words of the source vector
+  // producing { C, Unchanged, C, Unchanged } or { Unchanged, C, Unchanged, C }.
+  // Thus we check that the shuffle mask is the equivalent  of
+  // <0, [4-7], 2, [4-7]> or <[4-7], 1, [4-7], 3> respectively.
+  // Note: the check above of isNByteElemShuffleMask() ensures that the bytes
+  // within each word are consecutive, so we only need to check the first byte.
+  SDValue Index;
+  bool IsLE = Subtarget.isLittleEndian();
+  if ((ShuffleMask[0] == 0 && ShuffleMask[8] == 8) &&
+      (ShuffleMask[4] % 4 == 0 && ShuffleMask[12] % 4 == 0 &&
+       ShuffleMask[4] > 15 && ShuffleMask[12] > 15))
+    Index = DAG.getTargetConstant(IsLE ? 0 : 1, DL, MVT::i32);
+  else if ((ShuffleMask[4] == 4 && ShuffleMask[12] == 12) &&
+           (ShuffleMask[0] % 4 == 0 && ShuffleMask[8] % 4 == 0 &&
+            ShuffleMask[0] > 15 && ShuffleMask[8] > 15))
+    Index = DAG.getTargetConstant(IsLE ? 1 : 0, DL, MVT::i32);
+  else
+    return SDValue();
+
+  // If the splat is narrower than 32-bits, we need to get the 32-bit value
+  // for XXSPLTI32DX.
+  unsigned SplatVal = APSplatValue.getZExtValue();
+  for (; SplatBitSize < 32; SplatBitSize <<= 1)
+    SplatVal |= (SplatVal << SplatBitSize);
+
+  SDValue SplatNode = DAG.getNode(
+      PPCISD::XXSPLTI32DX, DL, MVT::v2i64, DAG.getBitcast(MVT::v2i64, LHS),
+      Index, DAG.getTargetConstant(SplatVal, DL, MVT::i32));
+  return DAG.getNode(ISD::BITCAST, DL, MVT::v16i8, SplatNode);
+}
+
 /// LowerROTL - Custom lowering for ROTL(v1i128) to vector_shuffle(v16i8).
 /// We lower ROTL(v1i128) to vector_shuffle(v16i8) only if shift amount is
 /// a multiple of 8. Otherwise convert it to a scalar rotation(i128)
@@ -9822,9 +9896,10 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   // to vector legalization will not be sent to the target combine. Try to
   // combine it here.
   if (SDValue NewShuffle = combineVectorShuffle(SVOp, DAG)) {
-    DAG.ReplaceAllUsesOfValueWith(Op, NewShuffle);
     Op = NewShuffle;
     SVOp = cast<ShuffleVectorSDNode>(Op);
+    V1 = Op.getOperand(0);
+    V2 = Op.getOperand(1);
   }
   EVT VT = Op.getValueType();
   bool isLittleEndian = Subtarget.isLittleEndian();
@@ -9892,6 +9967,12 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     SDValue Ins = DAG.getNode(PPCISD::VECINSERT, dl, MVT::v4i32, Conv1, Conv2,
                               DAG.getConstant(InsertAtByte, dl, MVT::i32));
     return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
+  }
+
+  if (Subtarget.hasPrefixInstrs()) {
+    SDValue SplatInsertNode;
+    if ((SplatInsertNode = lowerToXXSPLTI32DX(SVOp, DAG)))
+      return SplatInsertNode;
   }
 
   if (Subtarget.hasP9Altivec()) {
@@ -10490,18 +10571,6 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     break;
   }
   return SDValue();
-}
-
-SDValue PPCTargetLowering::LowerREM(SDValue Op, SelectionDAG &DAG) const {
-  // Check for a DIV with the same operands as this REM.
-  for (auto UI : Op.getOperand(1)->uses()) {
-    if ((Op.getOpcode() == ISD::SREM && UI->getOpcode() == ISD::SDIV) ||
-        (Op.getOpcode() == ISD::UREM && UI->getOpcode() == ISD::UDIV))
-      if (UI->getOperand(0) == Op.getOperand(0) &&
-          UI->getOperand(1) == Op.getOperand(1))
-        return SDValue();
-  }
-  return Op;
 }
 
 // Lower scalar BSWAP64 to xxbrd.
@@ -11121,9 +11190,6 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   case ISD::INTRINSIC_VOID:
     return LowerINTRINSIC_VOID(Op, DAG);
-  case ISD::SREM:
-  case ISD::UREM:
-    return LowerREM(Op, DAG);
   case ISD::BSWAP:
     return LowerBSWAP(Op, DAG);
   case ISD::ATOMIC_CMP_SWAP:

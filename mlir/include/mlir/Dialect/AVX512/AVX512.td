@@ -55,7 +55,7 @@ def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [NoSideEffect,
                    I32:$k,
                    VectorOfLengthAndType<[16, 8], [F32, F64]>:$a,
                    AnyTypeOf<[I16, I8]>:$imm,
-                   // TODO(ntv): figure rounding out (optional operand?).
+                   // TODO: figure rounding out (optional operand?).
                    I32:$rounding
             );
   let results = (outs VectorOfLengthAndType<[16, 8], [F32, F64]>:$dst);
@@ -87,7 +87,7 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [NoSideEffect,
                    VectorOfLengthAndType<[16, 8], [F32, F64]>:$a,
                    VectorOfLengthAndType<[16, 8], [F32, F64]>:$b,
                    AnyTypeOf<[I16, I8]>:$k,
-                   // TODO(ntv): figure rounding out (optional operand?).
+                   // TODO: figure rounding out (optional operand?).
                    I32:$rounding
             );
   let results = (outs VectorOfLengthAndType<[16, 8], [F32, F64]>:$dst);

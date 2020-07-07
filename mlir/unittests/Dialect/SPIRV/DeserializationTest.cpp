@@ -54,7 +54,7 @@ protected:
   void expectDiagnostic(StringRef errorMessage) {
     ASSERT_NE(nullptr, diagnostic.get());
 
-    // TODO(antiagainst): check error location too.
+    // TODO: check error location too.
     EXPECT_THAT(diagnostic->str(), StrEq(std::string(errorMessage)));
   }
 

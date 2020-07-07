@@ -62,6 +62,7 @@ static const char *const GCCRegNames[] = {
     "cr0",   "cr2",   "cr3",   "cr4",   "cr8",
     "dr0",   "dr1",   "dr2",   "dr3",   "dr6",     "dr7",
     "bnd0",  "bnd1",  "bnd2",  "bnd3",
+    "tmm0",  "tmm1",  "tmm2",  "tmm3",  "tmm4",    "tmm5",  "tmm6",  "tmm7",
 };
 
 const TargetInfo::AddlRegName AddlRegNames[] = {
@@ -107,14 +108,14 @@ bool X86TargetInfo::initFeatureMap(
   // FIXME: This *really* should not be here.
   // X86_64 always has SSE2.
   if (getTriple().getArch() == llvm::Triple::x86_64)
-    setFeatureEnabledImpl(Features, "sse2", true);
+    setFeatureEnabled(Features, "sse2", true);
 
   using namespace llvm::X86;
 
   SmallVector<StringRef, 16> CPUFeatures;
   getFeaturesForCPU(CPU, CPUFeatures);
   for (auto &F : CPUFeatures)
-    setFeatureEnabledImpl(Features, F, true);
+    setFeatureEnabled(Features, F, true);
 
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec))
     return false;
@@ -144,259 +145,25 @@ bool X86TargetInfo::initFeatureMap(
   return true;
 }
 
-void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
-                                X86SSEEnum Level, bool Enabled) {
-  if (Enabled) {
-    switch (Level) {
-    case AVX512F:
-      Features["avx512f"] = true;
-      Features["fma"] = true;
-      Features["f16c"] = true;
-      LLVM_FALLTHROUGH;
-    case AVX2:
-      Features["avx2"] = true;
-      LLVM_FALLTHROUGH;
-    case AVX:
-      Features["avx"] = true;
-      LLVM_FALLTHROUGH;
-    case SSE42:
-      Features["sse4.2"] = true;
-      LLVM_FALLTHROUGH;
-    case SSE41:
-      Features["sse4.1"] = true;
-      LLVM_FALLTHROUGH;
-    case SSSE3:
-      Features["ssse3"] = true;
-      LLVM_FALLTHROUGH;
-    case SSE3:
-      Features["sse3"] = true;
-      LLVM_FALLTHROUGH;
-    case SSE2:
-      Features["sse2"] = true;
-      LLVM_FALLTHROUGH;
-    case SSE1:
-      Features["sse"] = true;
-      LLVM_FALLTHROUGH;
-    case NoSSE:
-      break;
-    }
-    return;
-  }
-
-  switch (Level) {
-  case NoSSE:
-  case SSE1:
-    Features["sse"] = false;
-    LLVM_FALLTHROUGH;
-  case SSE2:
-    Features["sse2"] = Features["pclmul"] = Features["aes"] = false;
-    Features["sha"] = Features["gfni"] = false;
-    LLVM_FALLTHROUGH;
-  case SSE3:
-    Features["sse3"] = false;
-    setXOPLevel(Features, NoXOP, false);
-    LLVM_FALLTHROUGH;
-  case SSSE3:
-    Features["ssse3"] = false;
-    LLVM_FALLTHROUGH;
-  case SSE41:
-    Features["sse4.1"] = false;
-    LLVM_FALLTHROUGH;
-  case SSE42:
-    Features["sse4.2"] = false;
-    LLVM_FALLTHROUGH;
-  case AVX:
-    Features["fma"] = Features["avx"] = Features["f16c"] = false;
-    Features["vaes"] = Features["vpclmulqdq"] = false;
-    setXOPLevel(Features, FMA4, false);
-    LLVM_FALLTHROUGH;
-  case AVX2:
-    Features["avx2"] = false;
-    LLVM_FALLTHROUGH;
-  case AVX512F:
-    Features["avx512f"] = Features["avx512cd"] = Features["avx512er"] = false;
-    Features["avx512pf"] = Features["avx512dq"] = Features["avx512bw"] = false;
-    Features["avx512vl"] = Features["avx512vbmi"] = false;
-    Features["avx512ifma"] = Features["avx512vpopcntdq"] = false;
-    Features["avx512bitalg"] = Features["avx512vnni"] = false;
-    Features["avx512vbmi2"] = Features["avx512bf16"] = false;
-    Features["avx512vp2intersect"] = false;
-    break;
-  }
-}
-
-void X86TargetInfo::setMMXLevel(llvm::StringMap<bool> &Features,
-                                MMX3DNowEnum Level, bool Enabled) {
-  if (Enabled) {
-    switch (Level) {
-    case AMD3DNowAthlon:
-      Features["3dnowa"] = true;
-      LLVM_FALLTHROUGH;
-    case AMD3DNow:
-      Features["3dnow"] = true;
-      LLVM_FALLTHROUGH;
-    case MMX:
-      Features["mmx"] = true;
-      LLVM_FALLTHROUGH;
-    case NoMMX3DNow:
-      break;
-    }
-    return;
-  }
-
-  switch (Level) {
-  case NoMMX3DNow:
-  case MMX:
-    Features["mmx"] = false;
-    LLVM_FALLTHROUGH;
-  case AMD3DNow:
-    Features["3dnow"] = false;
-    LLVM_FALLTHROUGH;
-  case AMD3DNowAthlon:
-    Features["3dnowa"] = false;
-    break;
-  }
-}
-
-void X86TargetInfo::setXOPLevel(llvm::StringMap<bool> &Features, XOPEnum Level,
-                                bool Enabled) {
-  if (Enabled) {
-    switch (Level) {
-    case XOP:
-      Features["xop"] = true;
-      LLVM_FALLTHROUGH;
-    case FMA4:
-      Features["fma4"] = true;
-      setSSELevel(Features, AVX, true);
-      LLVM_FALLTHROUGH;
-    case SSE4A:
-      Features["sse4a"] = true;
-      setSSELevel(Features, SSE3, true);
-      LLVM_FALLTHROUGH;
-    case NoXOP:
-      break;
-    }
-    return;
-  }
-
-  switch (Level) {
-  case NoXOP:
-  case SSE4A:
-    Features["sse4a"] = false;
-    LLVM_FALLTHROUGH;
-  case FMA4:
-    Features["fma4"] = false;
-    LLVM_FALLTHROUGH;
-  case XOP:
-    Features["xop"] = false;
-    break;
-  }
-}
-
-void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
-                                          StringRef Name, bool Enabled) {
-  // This is a bit of a hack to deal with the sse4 target feature when used
-  // as part of the target attribute. We handle sse4 correctly everywhere
-  // else. See below for more information on how we handle the sse4 options.
-  if (Name != "sse4")
-    Features[Name] = Enabled;
-
-  if (Name == "mmx") {
-    setMMXLevel(Features, MMX, Enabled);
-  } else if (Name == "sse") {
-    setSSELevel(Features, SSE1, Enabled);
-  } else if (Name == "sse2") {
-    setSSELevel(Features, SSE2, Enabled);
-  } else if (Name == "sse3") {
-    setSSELevel(Features, SSE3, Enabled);
-  } else if (Name == "ssse3") {
-    setSSELevel(Features, SSSE3, Enabled);
-  } else if (Name == "sse4.2") {
-    setSSELevel(Features, SSE42, Enabled);
-  } else if (Name == "sse4.1") {
-    setSSELevel(Features, SSE41, Enabled);
-  } else if (Name == "3dnow") {
-    setMMXLevel(Features, AMD3DNow, Enabled);
-  } else if (Name == "3dnowa") {
-    setMMXLevel(Features, AMD3DNowAthlon, Enabled);
-  } else if (Name == "aes") {
-    if (Enabled)
-      setSSELevel(Features, SSE2, Enabled);
-    else
-      Features["vaes"] = false;
-  } else if (Name == "vaes") {
-    if (Enabled) {
-      setSSELevel(Features, AVX, Enabled);
-      Features["aes"] = true;
-    }
-  } else if (Name == "pclmul") {
-    if (Enabled)
-      setSSELevel(Features, SSE2, Enabled);
-    else
-      Features["vpclmulqdq"] = false;
-  } else if (Name == "vpclmulqdq") {
-    if (Enabled) {
-      setSSELevel(Features, AVX, Enabled);
-      Features["pclmul"] = true;
-    }
-  } else if (Name == "gfni") {
-     if (Enabled)
-      setSSELevel(Features, SSE2, Enabled);
-  } else if (Name == "avx") {
-    setSSELevel(Features, AVX, Enabled);
-  } else if (Name == "avx2") {
-    setSSELevel(Features, AVX2, Enabled);
-  } else if (Name == "avx512f") {
-    setSSELevel(Features, AVX512F, Enabled);
-  } else if (Name.startswith("avx512")) {
-    if (Enabled)
-      setSSELevel(Features, AVX512F, Enabled);
-    // Enable BWI instruction if certain features are being enabled.
-    if ((Name == "avx512vbmi" || Name == "avx512vbmi2" ||
-         Name == "avx512bitalg" || Name == "avx512bf16") && Enabled)
-      Features["avx512bw"] = true;
-    // Also disable some features if BWI is being disabled.
-    if (Name == "avx512bw" && !Enabled) {
-      Features["avx512vbmi"] = false;
-      Features["avx512vbmi2"] = false;
-      Features["avx512bitalg"] = false;
-      Features["avx512bf16"] = false;
-    }
-  } else if (Name == "fma") {
-    if (Enabled)
-      setSSELevel(Features, AVX, Enabled);
-    else
-      setSSELevel(Features, AVX512F, Enabled);
-  } else if (Name == "fma4") {
-    setXOPLevel(Features, FMA4, Enabled);
-  } else if (Name == "xop") {
-    setXOPLevel(Features, XOP, Enabled);
-  } else if (Name == "sse4a") {
-    setXOPLevel(Features, SSE4A, Enabled);
-  } else if (Name == "f16c") {
-    if (Enabled)
-      setSSELevel(Features, AVX, Enabled);
-    else
-      setSSELevel(Features, AVX512F, Enabled);
-  } else if (Name == "sha") {
-    if (Enabled)
-      setSSELevel(Features, SSE2, Enabled);
-  } else if (Name == "sse4") {
+void X86TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
+                                      StringRef Name, bool Enabled) const {
+  if (Name == "sse4") {
     // We can get here via the __target__ attribute since that's not controlled
     // via the -msse4/-mno-sse4 command line alias. Handle this the same way
     // here - turn on the sse4.2 if enabled, turn off the sse4.1 level if
     // disabled.
     if (Enabled)
-      setSSELevel(Features, SSE42, Enabled);
+      Name = "sse4.2";
     else
-      setSSELevel(Features, SSE41, Enabled);
-  } else if (Name == "xsave") {
-    if (!Enabled)
-      Features["xsaveopt"] = Features["xsavec"] = Features["xsaves"] = false;
-  } else if (Name == "xsaveopt" || Name == "xsavec" || Name == "xsaves") {
-    if (Enabled)
-      Features["xsave"] = true;
+      Name = "sse4.1";
   }
+
+  Features[Name] = Enabled;
+
+  SmallVector<StringRef, 8> ImpliedFeatures;
+  llvm::X86::getImpliedFeatures(Name, Enabled, ImpliedFeatures);
+  for (const auto &F : ImpliedFeatures)
+    Features[F] = Enabled;
 }
 
 /// handleTargetFeatures - Perform initialization based on the user
@@ -531,6 +298,12 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasINVPCID = true;
     } else if (Feature == "+enqcmd") {
       HasENQCMD = true;
+    } else if (Feature == "+amx-bf16") {
+      HasAMXBF16 = true;
+    } else if (Feature == "+amx-int8") {
+      HasAMXINT8 = true;
+    } else if (Feature == "+amx-tile") {
+      HasAMXTILE = true;
     } else if (Feature == "+serialize") {
       HasSERIALIZE = true;
     } else if (Feature == "+tsxldtrk") {
@@ -926,6 +699,12 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__INVPCID__");
   if (HasENQCMD)
     Builder.defineMacro("__ENQCMD__");
+  if (HasAMXTILE)
+    Builder.defineMacro("__AMXTILE__");
+  if (HasAMXINT8)
+    Builder.defineMacro("__AMXINT8__");
+  if (HasAMXBF16)
+    Builder.defineMacro("__AMXBF16__");
   if (HasSERIALIZE)
     Builder.defineMacro("__SERIALIZE__");
   if (HasTSXLDTRK)
@@ -1022,6 +801,9 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("3dnowa", true)
       .Case("adx", true)
       .Case("aes", true)
+      .Case("amx-bf16", true)
+      .Case("amx-int8", true)
+      .Case("amx-tile", true)
       .Case("avx", true)
       .Case("avx2", true)
       .Case("avx512f", true)
@@ -1104,6 +886,9 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("adx", HasADX)
       .Case("aes", HasAES)
+      .Case("amx-bf16", HasAMXBF16)
+      .Case("amx-int8", HasAMXINT8)
+      .Case("amx-tile", HasAMXTILE)
       .Case("avx", SSELevel >= AVX)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)

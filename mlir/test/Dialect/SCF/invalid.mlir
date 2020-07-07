@@ -105,7 +105,7 @@ func @loop_if_not_one_block_per_region(%arg0: i1) {
 // -----
 
 func @loop_if_illegal_block_argument(%arg0: i1) {
-  // expected-error@+1 {{requires that child entry blocks have no arguments}}
+  // expected-error@+1 {{region #0 should have no arguments}}
   "scf.if"(%arg0) ({
     ^bb0(%0 : index):
       scf.yield

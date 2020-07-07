@@ -77,7 +77,7 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_all_reduce_op()
   gpu.func @gpu_all_reduce_op() {
     %arg0 = constant 1.0 : f32
-    // TODO(csigg): Check full IR expansion once lowering has settled.
+    // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync.bfly
     // CHECK: nvvm.barrier0
     // CHECK: llvm.fadd
@@ -93,7 +93,7 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_all_reduce_region()
   gpu.func @gpu_all_reduce_region() {
     %arg0 = constant 1 : i32
-    // TODO(csigg): Check full IR expansion once lowering has settled.
+    // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync.bfly
     // CHECK: nvvm.barrier0
     %result = "gpu.all_reduce"(%arg0) ({

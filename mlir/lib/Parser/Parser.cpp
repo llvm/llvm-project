@@ -1886,7 +1886,7 @@ OwningModuleRef mlir::parseSourceFile(StringRef filename,
                                       llvm::SourceMgr &sourceMgr,
                                       MLIRContext *context) {
   if (sourceMgr.getNumBuffers() != 0) {
-    // TODO(b/136086478): Extend to support multiple buffers.
+    // TODO: Extend to support multiple buffers.
     emitError(mlir::UnknownLoc::get(context),
               "only main buffer parsed at the moment");
     return nullptr;

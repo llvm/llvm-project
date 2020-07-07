@@ -19,7 +19,10 @@ def TDLC_ClauseB : Clause<"clauseb"> {
 }
 
 def TDL_DirA : Directive<"dira"> {
-  let allowedClauses = [TDLC_ClauseA, TDLC_ClauseB];
+  let allowedClauses = [
+    VersionedClause<TDLC_ClauseA, 2, 4>,
+    VersionedClause<TDLC_ClauseB, 2>
+  ];
   let isDefault = 1;
 }
 
@@ -51,6 +54,9 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  Clause getTdlClauseKind(llvm::StringRef Str);
 // CHECK-EMPTY:
 // CHECK-NEXT:  llvm::StringRef getTdlClauseName(Clause C);
+// CHECK-EMPTY:
+// CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
+// CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-NEXT:  } // namespace llvm
@@ -87,3 +93,14 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");
 // IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(Directive D, Clause C, unsigned Version) {
+// IMPL-NEXT:    assert(unsigned(D) <= llvm::tdl::Directive_enumSize);
+// IMPL-NEXT:    assert(unsigned(C) <= llvm::tdl::Clause_enumSize);
+// IMPL-NEXT:    if (D == TDLD_dira && C == TDLC_clausea && 2 <= Version && 4 >= Version)
+// IMPL-NEXT:      return true;
+// IMPL-NEXT:    if (D == TDLD_dira && C == TDLC_clauseb && 2 <= Version && 2147483647 >= Version)
+// IMPL-NEXT:      return true;
+// IMPL-NEXT:    return false;
+// IMPL-NEXT:  }
+

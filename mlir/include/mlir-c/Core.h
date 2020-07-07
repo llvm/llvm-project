@@ -96,7 +96,7 @@ unsigned getFunctionArity(mlir_func_t function);
 /// Returns the rank of the `function` argument at position `pos`.
 /// If the argument is of MemRefType, this returns the rank of the MemRef.
 /// Otherwise returns `0`.
-/// TODO(ntv): support more than MemRefType and scalar Type.
+/// TODO: support more than MemRefType and scalar Type.
 unsigned getRankOfFunctionArgument(mlir_func_t function, unsigned pos);
 
 /// Returns an opaque mlir::Type of the `function` argument at position `pos`.

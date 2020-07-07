@@ -1263,32 +1263,7 @@ TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
   if (attrs.byte_stride == 0 && attrs.bit_stride == 0)
     attrs.byte_stride = element_type->GetByteSize().getValueOr(0);
   CompilerType array_element_type = element_type->GetForwardCompilerType();
-
-  if (TypeSystemClang::IsCXXClassType(array_element_type) &&
-      !array_element_type.GetCompleteType()) {
-    ModuleSP module_sp = die.GetModule();
-
-    // Mark the class as complete, but we make a note of the fact that
-    // this class is not _really_ complete so we can later search for a
-    // definition in a different module.
-    // Since we provide layout assistance, all ivars in this class and other
-    // classes will be fine even if we are not able to find the definition
-    // elsewhere.
-    if (TypeSystemClang::StartTagDeclarationDefinition(array_element_type)) {
-      TypeSystemClang::CompleteTagDeclarationDefinition(array_element_type);
-      const auto *td =
-          TypeSystemClang::GetQualType(array_element_type.GetOpaqueQualType())
-              .getTypePtr()
-              ->getAsTagDecl();
-      m_ast.GetMetadata(td)->SetIsForcefullyCompleted();
-    } else {
-      module_sp->ReportError("DWARF DIE at 0x%8.8x was not able to "
-                             "start its definition.\nPlease file a "
-                             "bug and attach the file at the start "
-                             "of this error message",
-                             type_die.GetOffset());
-    }
-  }
+  CompleteType(array_element_type);
 
   uint64_t array_element_bit_stride =
       attrs.byte_stride * 8 + attrs.bit_stride;
@@ -1341,6 +1316,28 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
                                   Type::ResolveState::Forward);
   }
   return nullptr;
+}
+
+void DWARFASTParserClang::CompleteType(CompilerType type) {
+  // Technically, enums can be incomplete too, but we don't handle those as they
+  // are emitted even under -flimit-debug-info.
+  if (!TypeSystemClang::IsCXXClassType(type))
+    return;
+
+  if (type.GetCompleteType())
+    return;
+
+  // No complete definition in this module.  Mark the class as complete to
+  // satisfy local ast invariants, but make a note of the fact that
+  // it is not _really_ complete so we can later search for a definition in a
+  // different module.
+  // Since we provide layout assistance, layouts of types containing this class
+  // will be correct even if we  are not able to find the definition elsewhere.
+  bool started = TypeSystemClang::StartTagDeclarationDefinition(type);
+  lldbassert(started && "Unable to start a class type definition.");
+  TypeSystemClang::CompleteTagDeclarationDefinition(type);
+  const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
+  m_ast.GetMetadata(td)->SetIsForcefullyCompleted();
 }
 
 TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
@@ -2045,26 +2042,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
       for (const auto &base_class : bases) {
         clang::TypeSourceInfo *type_source_info =
             base_class->getTypeSourceInfo();
-        if (type_source_info) {
-          CompilerType base_class_type =
-              m_ast.GetType(type_source_info->getType());
-          if (!base_class_type.GetCompleteType()) {
-            // We mark the class as complete to allow the TransferBaseClasses
-            // call to succeed. But we make a note of the fact that this class
-            // is not _really_ complete so we can later search for a definition
-            // in a different module.
-            if (TypeSystemClang::StartTagDeclarationDefinition(
-                    base_class_type)) {
-              TypeSystemClang::CompleteTagDeclarationDefinition(
-                  base_class_type);
-              const auto *td = TypeSystemClang::GetQualType(
-                                   base_class_type.GetOpaqueQualType())
-                                   .getTypePtr()
-                                   ->getAsTagDecl();
-              m_ast.GetMetadata(td)->SetIsForcefullyCompleted();
-            }
-          }
-        }
+        if (type_source_info)
+          CompleteType(m_ast.GetType(type_source_info->getType()));
       }
 
       m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
@@ -2727,34 +2706,7 @@ void DWARFASTParserClang::ParseSingleMember(
             }
           }
 
-          if (TypeSystemClang::IsCXXClassType(member_clang_type) &&
-              !member_clang_type.GetCompleteType()) {
-            // Mark the class as complete, but we make a note of the fact that
-            // this class is not _really_ complete so we can later search for a
-            // definition in a different module.
-            // Since we provide layout assistance, all ivars in this class and
-            // other classes will be fine even if we are not able to find the
-            // definition elsewhere.
-            if (TypeSystemClang::StartTagDeclarationDefinition(
-                    member_clang_type)) {
-              TypeSystemClang::CompleteTagDeclarationDefinition(
-                  member_clang_type);
-              const auto *td = TypeSystemClang::GetQualType(
-                                   member_clang_type.GetOpaqueQualType())
-                                   .getTypePtr()
-                                   ->getAsTagDecl();
-              m_ast.GetMetadata(td)->SetIsForcefullyCompleted();
-            } else {
-              module_sp->ReportError(
-                  "DWARF DIE at 0x%8.8x (class %s) has a member variable "
-                  "0x%8.8x (%s) whose type claims to be a C++ class but we "
-                  "were not able to start its definition.\nPlease file a "
-                  "bug and attach the file at the start of this error "
-                  "message",
-                  parent_die.GetOffset(), parent_die.GetName(), die.GetOffset(),
-                  name);
-            }
-          }
+          CompleteType(member_clang_type);
 
           field_decl = TypeSystemClang::AddFieldToRecordType(
               class_clang_type, name, member_clang_type, accessibility,

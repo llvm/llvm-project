@@ -30,7 +30,7 @@ STATISTIC(NumLFENCEsInserted, "Number of lfence instructions inserted");
 
 static cl::opt<bool> EnableSpeculativeExecutionSideEffectSuppression(
     "x86-seses-enable",
-    cl::desc("Force enable speculative execution side effect suppresion. "
+    cl::desc("Force enable speculative execution side effect suppression. "
              "(Note: User must pass -mlvi-cfi in order to mitigate indirect "
              "branches and returns.)"),
     cl::init(false), cl::Hidden);
@@ -153,5 +153,5 @@ FunctionPass *llvm::createX86SpeculativeExecutionSideEffectSuppression() {
 }
 
 INITIALIZE_PASS(X86SpeculativeExecutionSideEffectSuppression, "x86-seses",
-                "X86 Speculative Execution Side Effect Suppresion", false,
+                "X86 Speculative Execution Side Effect Suppression", false,
                 false)

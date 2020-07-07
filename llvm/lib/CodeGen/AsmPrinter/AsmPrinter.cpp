@@ -682,8 +682,7 @@ void AsmPrinter::emitFunctionHeader() {
   if (!MAI->hasVisibilityOnlyWithLinkage())
     emitVisibility(CurrentFnSym, F.getVisibility());
 
-  if (MAI->needsFunctionDescriptors() &&
-      F.getLinkage() != GlobalValue::InternalLinkage)
+  if (MAI->needsFunctionDescriptors())
     emitLinkage(&F, CurrentFnDescSym);
 
   emitLinkage(&F, CurrentFnSym);

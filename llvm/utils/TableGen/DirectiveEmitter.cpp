@@ -22,6 +22,14 @@ using namespace llvm;
 
 namespace llvm {
 
+// Get Directive or Clause name formatted by replacing whitespaces with
+// underscores.
+std::string getFormattedName(StringRef Name) {
+  std::string N = Name.str();
+  std::replace(N.begin(), N.end(), ' ', '_');
+  return N;
+}
+
 // Generate enum class
 void GenerateEnumClass(const std::vector<Record *> &Records, raw_ostream &OS,
                        StringRef Enum, StringRef Prefix, StringRef CppNamespace,
@@ -30,9 +38,7 @@ void GenerateEnumClass(const std::vector<Record *> &Records, raw_ostream &OS,
   OS << "enum class " << Enum << " {\n";
   for (const auto &R : Records) {
     const auto Name = R->getValueAsString("name");
-    std::string N = Name.str();
-    std::replace(N.begin(), N.end(), ' ', '_');
-    OS << "  " << Prefix << N << ",\n";
+    OS << "  " << Prefix << getFormattedName(Name) << ",\n";
   }
   OS << "};\n";
   OS << "\n";
@@ -47,12 +53,10 @@ void GenerateEnumClass(const std::vector<Record *> &Records, raw_ostream &OS,
   if (MakeEnumAvailableInNamespace) {
     OS << "\n";
     for (const auto &R : Records) {
-      const auto Name = R->getValueAsString("name");
-      std::string N = Name.str();
-      std::replace(N.begin(), N.end(), ' ', '_');
-      OS << "constexpr auto " << Prefix << N << " = "
-         << "llvm::" << CppNamespace << "::" << Enum << "::" << Prefix << N
-         << ";\n";
+      const auto FormattedName = getFormattedName(R->getValueAsString("name"));
+      OS << "constexpr auto " << Prefix << FormattedName << " = "
+         << "llvm::" << CppNamespace << "::" << Enum << "::" << Prefix
+         << FormattedName << ";\n";
     }
   }
 }
@@ -122,6 +126,11 @@ void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n";
   OS << "llvm::StringRef get" << LanguageName << "ClauseName(Clause C);\n";
   OS << "\n";
+  OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
+     << "Version.\n";
+  OS << "bool isAllowedClauseForDirective(Directive D, "
+     << "Clause C, unsigned Version);\n";
+  OS << "\n";
 
   // Closing namespaces
   for (auto Ns : llvm::reverse(Namespaces))
@@ -143,9 +152,7 @@ void GenerateGetName(const std::vector<Record *> &Records, raw_ostream &OS,
   for (const auto &R : Records) {
     const auto Name = R->getValueAsString("name");
     const auto AlternativeName = R->getValueAsString("alternativeName");
-    std::string N = Name.str();
-    std::replace(N.begin(), N.end(), ' ', '_');
-    OS << "    case " << Prefix << N << ":\n";
+    OS << "    case " << Prefix << getFormattedName(Name) << ":\n";
     OS << "      return \"";
     if (AlternativeName.empty())
       OS << Name;
@@ -173,9 +180,8 @@ void GenerateGetKind(const std::vector<Record *> &Records, raw_ostream &OS,
     return;
   }
 
-  const auto DefaultName = (*DefaultIt)->getValueAsString("name");
-  std::string DefaultEnum = DefaultName.str();
-  std::replace(DefaultEnum.begin(), DefaultEnum.end(), ' ', '_');
+  const auto FormattedDefaultName =
+      getFormattedName((*DefaultIt)->getValueAsString("name"));
 
   OS << "\n";
   OS << Enum << " llvm::" << Namespace << "::get" << LanguageName << Enum
@@ -184,15 +190,66 @@ void GenerateGetKind(const std::vector<Record *> &Records, raw_ostream &OS,
 
   for (const auto &R : Records) {
     const auto Name = R->getValueAsString("name");
-    std::string N = Name.str();
-    std::replace(N.begin(), N.end(), ' ', '_');
     if (ImplicitAsUnknown && R->getValueAsBit("isImplicit")) {
-      OS << "    .Case(\"" << Name << "\"," << Prefix << DefaultEnum << ")\n";
+      OS << "    .Case(\"" << Name << "\"," << Prefix << FormattedDefaultName
+         << ")\n";
     } else {
-      OS << "    .Case(\"" << Name << "\"," << Prefix << N << ")\n";
+      OS << "    .Case(\"" << Name << "\"," << Prefix << getFormattedName(Name)
+         << ")\n";
     }
   }
-  OS << "    .Default(" << Prefix << DefaultEnum << ");\n";
+  OS << "    .Default(" << Prefix << FormattedDefaultName << ");\n";
+  OS << "}\n";
+}
+
+void GenerateTestForAllowedClauses(const std::vector<Record *> &Clauses,
+                                   raw_ostream &OS, StringRef DirectiveName,
+                                   StringRef DirectivePrefix,
+                                   StringRef ClausePrefix) {
+
+  const auto FormattedDirectiveName = getFormattedName(DirectiveName);
+  for (const auto &C : Clauses) {
+    const auto MinVersion = C->getValueAsInt("minVersion");
+    const auto MaxVersion = C->getValueAsInt("maxVersion");
+    const auto SpecificClause = C->getValueAsDef("clause");
+    const auto ClauseName = SpecificClause->getValueAsString("name");
+
+    OS << "  if (D == " << DirectivePrefix << FormattedDirectiveName
+       << " && C == " << ClausePrefix << getFormattedName(ClauseName) << " && "
+       << MinVersion << " <= Version && " << MaxVersion << " >= Version)\n";
+    OS << "    return true;\n";
+  }
+}
+
+// Generate the isAllowedClauseForDirective function implementation.
+void GenerateIsAllowedClause(const std::vector<Record *> &Directives,
+                             raw_ostream &OS, StringRef DirectivePrefix,
+                             StringRef ClausePrefix, StringRef CppNamespace) {
+  OS << "\n";
+  OS << "bool llvm::" << CppNamespace << "::isAllowedClauseForDirective("
+     << "Directive D, Clause C, unsigned Version) {\n";
+  OS << "  assert(unsigned(D) <= llvm::" << CppNamespace
+     << "::Directive_enumSize);\n";
+  OS << "  assert(unsigned(C) <= llvm::" << CppNamespace
+     << "::Clause_enumSize);\n";
+
+  for (const auto &D : Directives) {
+    const auto DirectiveName = D->getValueAsString("name");
+
+    const auto &AllowedClauses = D->getValueAsListOfDefs("allowedClauses");
+    GenerateTestForAllowedClauses(AllowedClauses, OS, DirectiveName,
+                                  DirectivePrefix, ClausePrefix);
+
+    const auto &AllowedOnceClauses =
+        D->getValueAsListOfDefs("allowedOnceClauses");
+    GenerateTestForAllowedClauses(AllowedOnceClauses, OS, DirectiveName,
+                                  DirectivePrefix, ClausePrefix);
+
+    const auto &RequiredClauses = D->getValueAsListOfDefs("requiredClauses");
+    GenerateTestForAllowedClauses(RequiredClauses, OS, DirectiveName,
+                                  DirectivePrefix, ClausePrefix);
+  }
+  OS << "  return false;\n";
   OS << "}\n";
 }
 
@@ -233,6 +290,9 @@ void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
   // getClauseName(Clause Kind)
   GenerateGetName(Clauses, OS, "Clause", ClausePrefix, LanguageName,
                   CppNamespace);
+
+  GenerateIsAllowedClause(Directives, OS, DirectivePrefix, ClausePrefix,
+                          CppNamespace);
 }
 
 } // namespace llvm

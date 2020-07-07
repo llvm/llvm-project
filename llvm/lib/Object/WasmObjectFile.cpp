@@ -208,9 +208,9 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
 static wasm::WasmLimits readLimits(WasmObjectFile::ReadContext &Ctx) {
   wasm::WasmLimits Result;
   Result.Flags = readVaruint32(Ctx);
-  Result.Initial = readVaruint32(Ctx);
+  Result.Initial = readVaruint64(Ctx);
   if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
-    Result.Maximum = readVaruint32(Ctx);
+    Result.Maximum = readVaruint64(Ctx);
   return Result;
 }
 

@@ -22,8 +22,8 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -41,6 +41,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -50,6 +51,11 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "scalarizer"
+
+static cl::opt<bool> ScalarizeVariableInsertExtract(
+    "scalarize-variable-insert-extract", cl::init(true), cl::Hidden,
+    cl::desc("Allow the scalarizer pass to scalarize "
+             "insertelement/extractelement with variable index"));
 
 // This is disabled by default because having separate loads and stores
 // makes it more likely that the -combiner-alias-analysis limits will be
@@ -192,6 +198,8 @@ public:
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI);
   bool visitCastInst(CastInst &CI);
   bool visitBitCastInst(BitCastInst &BCI);
+  bool visitInsertElementInst(InsertElementInst &IEI);
+  bool visitExtractElementInst(ExtractElementInst &EEI);
   bool visitShuffleVectorInst(ShuffleVectorInst &SVI);
   bool visitPHINode(PHINode &PHI);
   bool visitLoadInst(LoadInst &LI);
@@ -214,6 +222,8 @@ private:
 
   ScatterMap Scattered;
   GatherList Gathered;
+
+  SmallVector<WeakTrackingVH, 32> PotentiallyDeadInstrs;
 
   unsigned ParallelLoopAccessMDKind;
 
@@ -376,11 +386,6 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V) {
 // so that we can avoid creating the gathered form if all uses of Op are
 // replaced with uses of CV.
 void ScalarizerVisitor::gather(Instruction *Op, const ValueVector &CV) {
-  // Since we're not deleting Op yet, stub out its operands, so that it
-  // doesn't make anything live unnecessarily.
-  for (unsigned I = 0, E = Op->getNumOperands(); I != E; ++I)
-    Op->setOperand(I, UndefValue::get(Op->getOperand(I)->getType()));
-
   transferMetadataAndIRFlags(Op, CV);
 
   // If we already have a scattered form of Op (created from ExtractElements
@@ -389,13 +394,13 @@ void ScalarizerVisitor::gather(Instruction *Op, const ValueVector &CV) {
   if (!SV.empty()) {
     for (unsigned I = 0, E = SV.size(); I != E; ++I) {
       Value *V = SV[I];
-      if (V == nullptr)
+      if (V == nullptr || SV[I] == CV[I])
         continue;
 
       Instruction *Old = cast<Instruction>(V);
       CV[I]->takeName(Old);
       Old->replaceAllUsesWith(CV[I]);
-      Old->eraseFromParent();
+      PotentiallyDeadInstrs.emplace_back(Old);
     }
   }
   SV = CV;
@@ -740,6 +745,73 @@ bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
   return true;
 }
 
+bool ScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
+  VectorType *VT = dyn_cast<VectorType>(IEI.getType());
+  if (!VT)
+    return false;
+
+  unsigned NumElems = VT->getNumElements();
+  IRBuilder<> Builder(&IEI);
+  Scatterer Op0 = scatter(&IEI, IEI.getOperand(0));
+  Value *NewElt = IEI.getOperand(1);
+  Value *InsIdx = IEI.getOperand(2);
+
+  ValueVector Res;
+  Res.resize(NumElems);
+
+  if (auto *CI = dyn_cast<ConstantInt>(InsIdx)) {
+    for (unsigned I = 0; I < NumElems; ++I)
+      Res[I] = CI->getValue().getZExtValue() == I ? NewElt : Op0[I];
+  } else {
+    if (!ScalarizeVariableInsertExtract)
+      return false;
+
+    for (unsigned I = 0; I < NumElems; ++I) {
+      Value *ShouldReplace =
+          Builder.CreateICmpEQ(InsIdx, ConstantInt::get(InsIdx->getType(), I),
+                               InsIdx->getName() + ".is." + Twine(I));
+      Value *OldElt = Op0[I];
+      Res[I] = Builder.CreateSelect(ShouldReplace, NewElt, OldElt,
+                                    IEI.getName() + ".i" + Twine(I));
+    }
+  }
+
+  gather(&IEI, Res);
+  return true;
+}
+
+bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
+  VectorType *VT = dyn_cast<VectorType>(EEI.getOperand(0)->getType());
+  if (!VT)
+    return false;
+
+  unsigned NumSrcElems = VT->getNumElements();
+  IRBuilder<> Builder(&EEI);
+  Scatterer Op0 = scatter(&EEI, EEI.getOperand(0));
+  Value *ExtIdx = EEI.getOperand(1);
+
+  if (auto *CI = dyn_cast<ConstantInt>(ExtIdx)) {
+    Value *Res = Op0[CI->getValue().getZExtValue()];
+    gather(&EEI, {Res});
+    return true;
+  }
+
+  if (!ScalarizeVariableInsertExtract)
+    return false;
+
+  Value *Res = UndefValue::get(VT->getElementType());
+  for (unsigned I = 0; I < NumSrcElems; ++I) {
+    Value *ShouldExtract =
+        Builder.CreateICmpEQ(ExtIdx, ConstantInt::get(ExtIdx->getType(), I),
+                             ExtIdx->getName() + ".is." + Twine(I));
+    Value *Elt = Op0[I];
+    Res = Builder.CreateSelect(ShouldExtract, Elt, Res,
+                               EEI.getName() + ".upto" + Twine(I));
+  }
+  gather(&EEI, {Res});
+  return true;
+}
+
 bool ScalarizerVisitor::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   VectorType *VT = dyn_cast<VectorType>(SVI.getType());
   if (!VT)
@@ -859,23 +931,30 @@ bool ScalarizerVisitor::finish() {
     if (!Op->use_empty()) {
       // The value is still needed, so recreate it using a series of
       // InsertElements.
-      auto *Ty = cast<VectorType>(Op->getType());
-      Value *Res = UndefValue::get(Ty);
-      BasicBlock *BB = Op->getParent();
-      unsigned Count = Ty->getNumElements();
-      IRBuilder<> Builder(Op);
-      if (isa<PHINode>(Op))
-        Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
-      for (unsigned I = 0; I < Count; ++I)
-        Res = Builder.CreateInsertElement(Res, CV[I], Builder.getInt32(I),
-                                          Op->getName() + ".upto" + Twine(I));
+      Value *Res = UndefValue::get(Op->getType());
+      if (auto *Ty = dyn_cast<VectorType>(Op->getType())) {
+        BasicBlock *BB = Op->getParent();
+        unsigned Count = Ty->getNumElements();
+        IRBuilder<> Builder(Op);
+        if (isa<PHINode>(Op))
+          Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+        for (unsigned I = 0; I < Count; ++I)
+          Res = Builder.CreateInsertElement(Res, CV[I], Builder.getInt32(I),
+                                            Op->getName() + ".upto" + Twine(I));
+      } else {
+        assert(CV.size() == 1 && Op->getType() == CV[0]->getType());
+        Res = CV[0];
+      }
       Res->takeName(Op);
       Op->replaceAllUsesWith(Res);
     }
-    Op->eraseFromParent();
+    PotentiallyDeadInstrs.emplace_back(Op);
   }
   Gathered.clear();
   Scattered.clear();
+
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(PotentiallyDeadInstrs);
+
   return true;
 }
 

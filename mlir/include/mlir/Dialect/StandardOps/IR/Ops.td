@@ -17,6 +17,7 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/VectorUnrollInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
 def StandardOps_Dialect : Dialect {
@@ -82,7 +83,9 @@ class UnaryOpSameOperandAndResultType<string mnemonic,
 }
 
 class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
-    UnaryOpSameOperandAndResultType<mnemonic, traits>,
+    UnaryOpSameOperandAndResultType<mnemonic,
+      !listconcat(traits,
+                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
     Arguments<(ins FloatLike:$operand)>;
 
 // Base class for standard arithmetic operations.  Requires operands and
@@ -112,7 +115,9 @@ class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 //     <op>i %0, %1 : i32
 //
 class IntArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticOp<mnemonic, traits>,
+    ArithmeticOp<mnemonic,
+      !listconcat(traits,
+                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
     Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs)>;
 
 // Base class for standard arithmetic binary operations on floats, vectors and
@@ -125,7 +130,9 @@ class IntArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 //     <op>f %0, %1 : f32
 //
 class FloatArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-    ArithmeticOp<mnemonic, traits>,
+    ArithmeticOp<mnemonic,
+      !listconcat(traits,
+                  [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs)>;
 
 // Base class for standard arithmetic operations on complex numbers with a

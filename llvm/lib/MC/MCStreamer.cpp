@@ -1071,6 +1071,12 @@ void MCStreamer::emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
                    "XCOFF targets");
 }
 
+void MCStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
+                                          StringRef Rename) {
+  llvm_unreachable("emitXCOFFRenameDirective is only supported on "
+                   "XCOFF targets");
+}
+
 void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
 void MCStreamer::emitELFSymverDirective(StringRef AliasName,
                                         const MCSymbol *Aliasee) {}

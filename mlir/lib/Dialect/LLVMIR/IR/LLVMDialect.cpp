@@ -978,7 +978,7 @@ static LogicalResult verify(DialectCastOp op) {
     // * if we allow memrefs to cast from/to bare pointers, some users might
     // alternatively want metadata that only present in the descriptor.
     //
-    // TODO(timshen): re-evaluate the memref cast design when it's needed.
+    // TODO: re-evaluate the memref cast design when it's needed.
     return op.emitOpError("type must be non-index integer types, float types, "
                           "or vector of mentioned types.");
   };

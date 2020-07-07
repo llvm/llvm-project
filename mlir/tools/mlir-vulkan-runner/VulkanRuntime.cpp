@@ -15,7 +15,7 @@
 
 #include <chrono>
 #include <cstring>
-// TODO(antiagainst): It's generally bad to access stdout/stderr in a library.
+// TODO: It's generally bad to access stdout/stderr in a library.
 // Figure out a better way for error reporting.
 #include <iomanip>
 #include <iostream>
@@ -261,7 +261,7 @@ LogicalResult VulkanRuntime::createDevice() {
   RETURN_ON_VULKAN_ERROR(physicalDeviceCount ? VK_SUCCESS : VK_INCOMPLETE,
                          "physicalDeviceCount");
 
-  // TODO(denis0x0D): find the best device.
+  // TODO: find the best device.
   physicalDevice = physicalDevices.front();
   if (failed(getBestComputeQueue()))
     return failure();
