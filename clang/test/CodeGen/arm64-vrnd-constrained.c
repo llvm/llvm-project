@@ -9,6 +9,9 @@
 
 // REQUIRES: aarch64-registered-target
 
+// Disabled until constrained floating point is implemented for arm64.
+// XFAIL: *
+
 #include <arm_neon.h>
 
 float64x2_t rnd5(float64x2_t a) { return vrndq_f64(a); }
