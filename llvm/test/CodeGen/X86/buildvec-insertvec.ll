@@ -784,12 +784,13 @@ define <4 x i32> @ossfuzz5688(i32 %a0) {
   ret <4 x i32> %5
 }
 
-; FIXME: If we do not define all bytes that are extracted, this is a miscompile.
+; If we do not define all bytes that are extracted, this is a miscompile.
 
 define i32 @PR46586(i8* %p, <4 x i32> %v) {
 ; SSE2-LABEL: PR46586:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzbl 3(%rdi), %eax
+; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pinsrw $6, %eax, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
 ; SSE2-NEXT:    movd %xmm1, %eax
