@@ -3763,12 +3763,13 @@ SDValue X86TargetLowering::LowerMemOpCallTo(SDValue Chain, SDValue StackPtr,
                                             SDValue Arg, const SDLoc &dl,
                                             SelectionDAG &DAG,
                                             const CCValAssign &VA,
-                                            ISD::ArgFlagsTy Flags) const {
+                                            ISD::ArgFlagsTy Flags,
+                                            bool isByVal) const {
   unsigned LocMemOffset = VA.getLocMemOffset();
   SDValue PtrOff = DAG.getIntPtrConstant(LocMemOffset, dl);
   PtrOff = DAG.getNode(ISD::ADD, dl, getPointerTy(DAG.getDataLayout()),
                        StackPtr, PtrOff);
-  if (Flags.isByVal())
+  if (isByVal)
     return CreateCopyOfByValArgument(Arg, PtrOff, Chain, Flags, DAG, dl);
 
   return DAG.getStore(
@@ -4080,7 +4081,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         StackPtr = DAG.getCopyFromReg(Chain, dl, RegInfo->getStackRegister(),
                                       getPointerTy(DAG.getDataLayout()));
       MemOpChains.push_back(LowerMemOpCallTo(Chain, StackPtr, Arg,
-                                             dl, DAG, VA, Flags));
+                                             dl, DAG, VA, Flags, isByVal));
     }
   }
 
