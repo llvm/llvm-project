@@ -10320,6 +10320,11 @@ def warn_nested_declare_variant
     : Warning<"nesting `omp begin/end declare variant` is not supported yet; "
               "nested context ignored">,
       InGroup<SourceUsesOpenMP>;
+def warn_unknown_declare_variant_isa_trait
+    : Warning<"isa trait '%0' is not known to the current target; verify the "
+              "spelling or consider restricting the context selector with the "
+              "'arch' selector further">,
+      InGroup<SourceUsesOpenMP>;
 def err_omp_non_pointer_type_array_shaping_base : Error<
   "expected expression with a pointer to a complete type as a base of an array "
   "shaping operation">;
