@@ -3852,6 +3852,10 @@ std::string CompilerInvocation::getModuleHash() const {
   for (StringRef Feature : LangOpts->ModuleFeatures)
     code = hash_combine(code, Feature);
 
+  code = hash_combine(code, LangOpts->ObjCRuntime);
+  const auto &BCN = LangOpts->CommentOpts.BlockCommandNames;
+  code = hash_combine(code, hash_combine_range(BCN.begin(), BCN.end()));
+
   // Extend the signature with the target options.
   code = hash_combine(code, TargetOpts->Triple, TargetOpts->CPU,
                       TargetOpts->ABI);
