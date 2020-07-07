@@ -54,8 +54,7 @@ void SpuriouslyWakeUpFunctionsCheck::registerMatchers(MatchFinder *Finder) {
           .bind("wait"));
 
   auto hasWaitDescendantC = hasDescendant(
-      callExpr(callee(functionDecl(
-                   anyOf(hasName("cnd_wait"), hasName("cnd_timedwait")))))
+      callExpr(callee(functionDecl(hasAnyName("cnd_wait", "cnd_timedwait"))))
           .bind("wait"));
   if (getLangOpts().CPlusPlus) {
     // Check for `CON54-CPP`
