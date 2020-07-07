@@ -205,7 +205,7 @@ auto GetLowerBoundHelper::operator()(const Symbol &symbol0) -> Result {
       if (j++ == dimension_) {
         if (const auto &bound{shapeSpec.lbound().GetExplicit()}) {
           return Fold(context_, common::Clone(*bound));
-        } else if (semantics::IsDescriptor(symbol)) {
+        } else if (IsDescriptor(symbol)) {
           return ExtentExpr{DescriptorInquiry{NamedEntity{symbol0},
               DescriptorInquiry::Field::LowerBound, dimension_}};
         } else {
@@ -230,7 +230,7 @@ auto GetLowerBoundHelper::operator()(const Component &component) -> Result {
         if (j++ == dimension_) {
           if (const auto &bound{shapeSpec.lbound().GetExplicit()}) {
             return Fold(context_, common::Clone(*bound));
-          } else if (semantics::IsDescriptor(symbol)) {
+          } else if (IsDescriptor(symbol)) {
             return ExtentExpr{
                 DescriptorInquiry{NamedEntity{common::Clone(component)},
                     DescriptorInquiry::Field::LowerBound, dimension_}};
