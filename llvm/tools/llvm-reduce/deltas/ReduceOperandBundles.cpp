@@ -27,9 +27,9 @@
 #include <iterator>
 #include <vector>
 
-namespace {
+namespace llvm {
 class Module;
-} // namespace
+} // namespace llvm
 
 using namespace llvm;
 
