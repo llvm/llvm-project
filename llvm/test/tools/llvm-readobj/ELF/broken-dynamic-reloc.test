@@ -497,7 +497,7 @@ Sections:
   - Name: .rel.dyn
     Type: SHT_REL
     Relocations:
-      - Type: R_X86_64_NONE
+      - Type:   R_X86_64_NONE
         Offset: 0x2
   - Name: .dynamic
     Type: SHT_DYNAMIC
