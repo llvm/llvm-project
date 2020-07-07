@@ -51,6 +51,38 @@ option(MLIR_INCLUDE_TESTS
 option(MLIR_INCLUDE_INTEGRATION_TESTS
        "Generate build targets for the MLIR integration tests.")
 
+#-------------------------------------------------------------------------------
+# Python Bindings Configuration
+# Requires:
+#   The pybind11 library can be found (set with -DPYBIND_DIR=...)
+#   The python executable is correct (set with -DPYTHON_EXECUTABLE=...)
+#
+# Version locking
+# ---------------
+# By default, python extensions are version locked to specific Python libraries.
+# This linking mode is somewhat more consistent across platforms and surfaces
+# undefined symbols at link time (vs runtime). It is suitable for development
+# workflows but can be disabled for more flexible deployment by
+# setting -DMLIR_PYTHON_BINDINGS_VERSION_LOCKED=OFF
+#-------------------------------------------------------------------------------
+
+set(MLIR_BINDINGS_PYTHON_ENABLED 0 CACHE BOOL
+       "Enables building of Python bindings.")
+set(MLIR_PYTHON_BINDINGS_VERSION_LOCKED 1 CACHE BOOL
+       "Links to specific python libraries, resolving all symbols.")
+
+if(MLIR_BINDINGS_PYTHON_ENABLED)
+  find_package(PythonInterp REQUIRED)
+  find_package(PythonLibs REQUIRED)
+  message(STATUS "Found python include dirs: ${PYTHON_INCLUDE_DIRS}")
+  message(STATUS "Found ppython libraries: ${PYTHON_LIBRARIES}")
+  find_package(pybind11 CONFIG REQUIRED)
+  message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIRS}")
+  message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
+                 "suffix = '${PYTHON_MODULE_SUFFIX}', "
+                 "extension = '${PYTHON_MODULE_EXTENSION}")
+endif()
+
 include_directories( "include")
 include_directories( ${MLIR_INCLUDE_DIR})
 
