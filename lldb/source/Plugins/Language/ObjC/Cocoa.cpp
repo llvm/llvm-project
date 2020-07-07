@@ -867,7 +867,7 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   // is generally true and POSIXly happy, but might break if a library vendor
   // decides to get creative
   time_t epoch = GetOSXEpoch();
-  epoch = epoch + (time_t)date_value;
+  epoch = epoch + static_cast<time_t>(std::floor(date_value));
   tm *tm_date = gmtime(&epoch);
   if (!tm_date)
     return false;
