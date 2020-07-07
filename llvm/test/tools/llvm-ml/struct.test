@@ -1,0 +1,104 @@
+# RUN: llvm-ml -filetype=asm %s | FileCheck %s
+
+.data
+BAZ STRUCT
+  a BYTE 1
+  b BYTE 2
+BAZ ENDS
+
+FOOBAR struct 2
+  c BYTE 3 DUP (4)
+  d DWORD 5
+  e BAZ <>
+  STRUCT f
+    g BYTE 6
+    h BYTE 7
+  ends
+  h BYTE "abcde"
+foobar ENDS
+
+t1 foobar <>
+
+; CHECK: t1:
+;
+; BYTE 3 DUP (4), plus alignment padding
+; CHECK-NEXT: .byte 4
+; CHECK-NEXT: .byte 4
+; CHECK-NEXT: .byte 4
+; CHECK-NEXT: .zero 1
+;
+; DWORD 5
+; CHECK-NEXT: .long 5
+;
+; BAZ <>
+; CHECK-NEXT: .byte 1
+; CHECK-NEXT: .byte 2
+;
+; <BYTE 6, BYTE 7>, with internal alignment padding
+; CHECK-NEXT: .byte 6
+; CHECK-NEXT: .zero 1
+; CHECK-NEXT: .byte 7
+; CHECK-NEXT: .zero 1
+;
+; BYTE "abcde", plus alignment padding
+; CHECK-NEXT: .byte 97
+; CHECK-NEXT: .byte 98
+; CHECK-NEXT: .byte 99
+; CHECK-NEXT: .byte 100
+; CHECK-NEXT: .byte 101
+; CHECK-NEXT: .zero 1
+
+t2 FOOBAR <"gh",,<10,11>,<12>,"ijk">
+
+; CHECK: t2:
+;
+; BYTE "gh", padded with " ", plus alignment padding
+; CHECK-NEXT: .byte 103
+; CHECK-NEXT: .byte 104
+; CHECK-NEXT: .byte 32
+; CHECK-NEXT: .zero 1
+;
+; DWORD 5 (default-initialized when omitted)
+; CHECK-NEXT: .long 5
+;
+; BAZ <10, 11>
+; CHECK-NEXT: .byte 10
+; CHECK-NEXT: .byte 11
+;
+; <BYTE 6, BYTE 7>, with internal alignment padding
+; CHECK-NEXT: .byte 12
+; CHECK-NEXT: .zero 1
+; CHECK-NEXT: .byte 7
+; CHECK-NEXT: .zero 1
+;
+; BYTE "ijk", padded with " ", plus alignment padding
+; CHECK-NEXT: .byte 105
+; CHECK-NEXT: .byte 106
+; CHECK-NEXT: .byte 107
+; CHECK-NEXT: .byte 32
+; CHECK-NEXT: .byte 32
+; CHECK-NEXT: .zero 1
+
+.code
+
+t3:
+mov eax, t2.f.h
+mov eax, [t2].f.h
+mov eax, [t2.f.h]
+mov eax, t2.FOOBAR.f.h
+
+; CHECK: t3:
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+
+t4:
+mov eax, j.FOOBAR.f.h
+mov eax, j.baz.b
+
+; CHECK: t4:
+; CHECK-NEXT: mov eax, dword ptr [rip + j+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + j+1]
+
+END
