@@ -1,64 +1,64 @@
-RUN: llvm-readobj -A %p/Inputs/got-plt.exe.elf-mipsel | FileCheck %s
-RUN: llvm-readelf -A %p/Inputs/got-plt.exe.elf-mipsel | FileCheck --check-prefix=GNU %s
+# RUN: llvm-readobj -A %p/Inputs/got-plt.exe.elf-mipsel | FileCheck %s
+# RUN: llvm-readelf -A %p/Inputs/got-plt.exe.elf-mipsel | FileCheck --check-prefix=GNU %s
 
-CHECK:      PLT GOT {
-CHECK-NEXT:   Reserved entries [
-CHECK-NEXT:     Entry {
-CHECK-NEXT:       Address: 0x410814
-CHECK-NEXT:       Initial: 0x0
-CHECK-NEXT:       Purpose: PLT lazy resolver
-CHECK-NEXT:     }
-CHECK-NEXT:     Entry {
-CHECK-NEXT:       Address: 0x410818
-CHECK-NEXT:       Initial: 0x0
-CHECK-NEXT:       Purpose: Module pointer
-CHECK-NEXT:     }
-CHECK-NEXT:   ]
-CHECK-NEXT:   Entries [
-CHECK-NEXT:     Entry {
-CHECK-NEXT:       Address: 0x41081C
-CHECK-NEXT:       Initial: 0x4007C0
-CHECK-NEXT:       Value: 0x0
-CHECK-NEXT:       Type: Function (0x2)
-CHECK-NEXT:       Section: Undefined (0x0)
-CHECK-NEXT:       Name: puts@GLIBC_2.0 (71)
-CHECK-NEXT:     }
-CHECK-NEXT:     Entry {
-CHECK-NEXT:       Address: 0x410820
-CHECK-NEXT:       Initial: 0x4007C0
-CHECK-NEXT:       Value: 0x0
-CHECK-NEXT:       Type: Function (0x2)
-CHECK-NEXT:       Section: Undefined (0x0)
-CHECK-NEXT:       Name: __libc_start_main@GLIBC_2.0 (53)
-CHECK-NEXT:     }
-CHECK-NEXT:   ]
-CHECK-NEXT: }
+# CHECK:      PLT GOT {
+# CHECK-NEXT:   Reserved entries [
+# CHECK-NEXT:     Entry {
+# CHECK-NEXT:       Address: 0x410814
+# CHECK-NEXT:       Initial: 0x0
+# CHECK-NEXT:       Purpose: PLT lazy resolver
+# CHECK-NEXT:     }
+# CHECK-NEXT:     Entry {
+# CHECK-NEXT:       Address: 0x410818
+# CHECK-NEXT:       Initial: 0x0
+# CHECK-NEXT:       Purpose: Module pointer
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Entries [
+# CHECK-NEXT:     Entry {
+# CHECK-NEXT:       Address: 0x41081C
+# CHECK-NEXT:       Initial: 0x4007C0
+# CHECK-NEXT:       Value: 0x0
+# CHECK-NEXT:       Type: Function (0x2)
+# CHECK-NEXT:       Section: Undefined (0x0)
+# CHECK-NEXT:       Name: puts@GLIBC_2.0 (71)
+# CHECK-NEXT:     }
+# CHECK-NEXT:     Entry {
+# CHECK-NEXT:       Address: 0x410820
+# CHECK-NEXT:       Initial: 0x4007C0
+# CHECK-NEXT:       Value: 0x0
+# CHECK-NEXT:       Type: Function (0x2)
+# CHECK-NEXT:       Section: Undefined (0x0)
+# CHECK-NEXT:       Name: __libc_start_main@GLIBC_2.0 (53)
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# CHECK-NEXT: }
 
-GNU:      Primary GOT:
-GNU-NEXT:  Canonical gp value: 00418840
+# GNU:      Primary GOT:
+# GNU-NEXT:  Canonical gp value: 00418840
 
-GNU:       Reserved entries:
-GNU-NEXT:    Address     Access  Initial Purpose
-GNU-NEXT:   00410850 -32752(gp) 00000000 Lazy resolver
-GNU-NEXT:   00410854 -32748(gp) 80000000 Module pointer (GNU extension)
+# GNU:       Reserved entries:
+# GNU-NEXT:    Address     Access  Initial Purpose
+# GNU-NEXT:   00410850 -32752(gp) 00000000 Lazy resolver
+# GNU-NEXT:   00410854 -32748(gp) 80000000 Module pointer (GNU extension)
 
-GNU:       Local entries:
-GNU-NEXT:    Address     Access  Initial
-GNU-NEXT:   00410858 -32744(gp) 004003d4
-GNU-NEXT:   0041085c -32740(gp) 00410800
-GNU-NEXT:   00410860 -32736(gp) 00000000
+# GNU:       Local entries:
+# GNU-NEXT:    Address     Access  Initial
+# GNU-NEXT:   00410858 -32744(gp) 004003d4
+# GNU-NEXT:   0041085c -32740(gp) 00410800
+# GNU-NEXT:   00410860 -32736(gp) 00000000
 
-GNU:       Global entries:
-GNU-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
-GNU-NEXT:   00410864 -32732(gp) 00000000 00000000 FUNC    UND __gmon_start__
-GNU-NEXT: PLT GOT:
+# GNU:       Global entries:
+# GNU-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
+# GNU-NEXT:   00410864 -32732(gp) 00000000 00000000 FUNC    UND __gmon_start__
+# GNU-NEXT: PLT GOT:
 
-GNU:       Reserved entries:
-GNU-NEXT:    Address  Initial Purpose
-GNU-NEXT:   00410814 00000000 PLT lazy resolver
-GNU-NEXT:   00410818 00000000 Module pointer
+# GNU:       Reserved entries:
+# GNU-NEXT:    Address  Initial Purpose
+# GNU-NEXT:   00410814 00000000 PLT lazy resolver
+# GNU-NEXT:   00410818 00000000 Module pointer
 
-GNU:       Entries:
-GNU-NEXT:    Address  Initial Sym.Val. Type    Ndx Name
-GNU-NEXT:   0041081c 004007c0 00000000 FUNC    UND puts
-GNU-NEXT:   00410820 004007c0 00000000 FUNC    UND __libc_start_main
+# GNU:       Entries:
+# GNU-NEXT:    Address  Initial Sym.Val. Type    Ndx Name
+# GNU-NEXT:   0041081c 004007c0 00000000 FUNC    UND puts
+# GNU-NEXT:   00410820 004007c0 00000000 FUNC    UND __libc_start_main
