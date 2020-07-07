@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_LOWER_ABSTRACTCONVERTER_H
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H

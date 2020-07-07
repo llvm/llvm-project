@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
+//
 // Utility that defines fir call interface for procedure both on caller and
 // and callee side and get the related FuncOp.
 // It does not emit any FIR code but for the created mlir::FuncOp, instead it
