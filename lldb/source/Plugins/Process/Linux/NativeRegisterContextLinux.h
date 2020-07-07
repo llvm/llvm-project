@@ -55,7 +55,7 @@ protected:
 
   virtual void *GetGPRBuffer() = 0;
 
-  virtual size_t GetGPRSize() {
+  virtual size_t GetGPRSize() const {
     return GetRegisterInfoInterface().GetGPRSize();
   }
 

@@ -17,16 +17,16 @@
 using namespace lldb_private;
 
 RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
-    Thread &thread, RegisterInfoInterface *register_info,
+    Thread &thread, std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextPOSIX_arm64(thread, 0, register_info) {
+    : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
   m_fpregset = getRegset(
-      notes, register_info->GetTargetArchitecture().GetTriple(), FPR_Desc);
+      notes, m_register_info_up->GetTargetArchitecture().GetTriple(), FPR_Desc);
 }
 
 RegisterContextCorePOSIX_arm64::~RegisterContextCorePOSIX_arm64() {}
@@ -61,7 +61,7 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     return false;
 
   offset -= GetGPRSize();
-  if (IsFPR(reg) && offset + reg_info->byte_size <= sizeof(FPU)) {
+  if (IsFPR(reg) && offset + reg_info->byte_size <= GetFPUSize()) {
     Status error;
     value.SetFromMemoryData(reg_info, m_fpregset.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
