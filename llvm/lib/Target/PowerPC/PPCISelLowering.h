@@ -102,6 +102,10 @@ namespace llvm {
     /// vector or scalar.
     XXSPLTI_SP_TO_DP,
 
+    /// XXSPLTI32DX - The PPC XXSPLTI32DX instruction.
+    ///
+    XXSPLTI32DX,
+
     /// VECINSERT - The PPC vector insert instruction
     ///
     VECINSERT,
@@ -1269,6 +1273,10 @@ namespace llvm {
     /// handled by the VINSERTB instruction introduced in ISA 3.0. This is
     /// essentially v16i8 vector version of VINSERTH.
     SDValue lowerToVINSERTB(ShuffleVectorSDNode *N, SelectionDAG &DAG) const;
+
+    /// lowerToXXSPLTI32DX - Return the SDValue if this VECTOR_SHUFFLE can be
+    /// handled by the XXSPLTI32DX instruction introduced in ISA 3.1.
+    SDValue lowerToXXSPLTI32DX(ShuffleVectorSDNode *N, SelectionDAG &DAG) const;
 
     // Return whether the call instruction can potentially be optimized to a
     // tail call. This will cause the optimizers to attempt to move, or
