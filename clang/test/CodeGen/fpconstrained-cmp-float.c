@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -frounding-math -ffp-exception-behavior=maytrap -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=MAYTRAP
 
 // Disabled until constrained floating point is completed for PowerPC.
-// XFAIL: *
+// XFAIL: powerpc, powerpc64, powerpc64le
 
 _Bool QuietEqual(float f1, float f2) {
   // CHECK-LABEL: define {{.*}}i1 @QuietEqual(float %f1, float %f2)
