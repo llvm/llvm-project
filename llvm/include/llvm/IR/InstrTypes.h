@@ -758,7 +758,7 @@ public:
     BAD_ICMP_PREDICATE = ICMP_SLE + 1
   };
   using PredicateField =
-      Bitfield::Element<Predicate, 0, 6, LAST_ICMP_PREDICATE>; // Next bit:6
+      Bitfield::Element<Predicate, 0, 6, LAST_ICMP_PREDICATE>;
 
 protected:
   CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
@@ -1096,12 +1096,16 @@ using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 /// subclass requires. Note that accessing the end of the argument list isn't
 /// as cheap as most other operations on the base class.
 class CallBase : public Instruction {
-  // The first two bits are reserved by CallInst for fast retrieving,
-  using CallInstReservedField = Bitfield::Element<unsigned, 0, 2>; // Next bit:2
-  using CallingConvField = Bitfield::Element<CallingConv::ID, 2, 10,
-                                             CallingConv::MaxID>; // Next bit:12
-
 protected:
+  // The first two bits are reserved by CallInst for fast retrieval,
+  using CallInstReservedField = Bitfield::Element<unsigned, 0, 2>;
+  using CallingConvField =
+      Bitfield::Element<CallingConv::ID, CallInstReservedField::NextBit, 10,
+                        CallingConv::MaxID>;
+  static_assert(
+      Bitfield::areContiguous<CallInstReservedField, CallingConvField>(),
+      "Bitfields must be contiguous");
+
   /// The last operand is the called operand.
   static constexpr int CalledOperandOpEndIdx = -1;
 

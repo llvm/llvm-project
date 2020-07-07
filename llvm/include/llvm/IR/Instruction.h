@@ -23,6 +23,7 @@
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
@@ -53,7 +54,7 @@ class Instruction : public User,
 protected:
   // The 15 first bits of `Value::SubclassData` are available for subclasses of
   // `Instruction` to use.
-  using OpaqueField = Bitfield::Element<uint16_t, 0, 15>; // Next bit:15
+  using OpaqueField = Bitfield::Element<uint16_t, 0, 15>;
 
   // Template alias so that all Instruction storing alignment use the same
   // definiton.
@@ -61,9 +62,17 @@ protected:
   // 2^29. We store them as Log2(Alignment), so we need 5 bits to encode the 30
   // possible values.
   template <unsigned Offset>
-  using AlignmentBitfieldElement =
+  using AlignmentBitfieldElementT =
       typename Bitfield::Element<unsigned, Offset, 5,
                                  Value::MaxAlignmentExponent>;
+
+  template <unsigned Offset>
+  using BoolBitfieldElementT = typename Bitfield::Element<bool, Offset, 1>;
+
+  template <unsigned Offset>
+  using AtomicOrderingBitfieldElementT =
+      typename Bitfield::Element<AtomicOrdering, Offset, 3,
+                                 AtomicOrdering::LAST>;
 
 private:
   // The last bit is used to store whether the instruction has metadata attached

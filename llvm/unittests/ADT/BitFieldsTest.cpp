@@ -192,6 +192,18 @@ TEST(BitfieldsTest, isOverlapping) {
   EXPECT_FALSE((Bitfield::isOverlapping<C, D>()));
 }
 
+TEST(BitfieldsTest, areContiguous) {
+  using A = Bitfield::Element<unsigned, 0, 1>; // Next Bit:1
+  using B = Bitfield::Element<unsigned, 1, 4>; // Next Bit:5
+  using C = Bitfield::Element<unsigned, 5, 3>; // Next Bit:8
+  EXPECT_TRUE((Bitfield::areContiguous<A, B>()));
+  EXPECT_TRUE((Bitfield::areContiguous<A, B, C>()));
+
+  EXPECT_FALSE((Bitfield::areContiguous<A, C>()));
+  EXPECT_FALSE((Bitfield::areContiguous<A, A>()));
+  EXPECT_FALSE((Bitfield::areContiguous<B, A>()));
+}
+
 TEST(BitfieldsTest, FullUint64) {
   uint64_t Storage = 0;
   using Value = Bitfield::Element<uint64_t, 0, 64>;
