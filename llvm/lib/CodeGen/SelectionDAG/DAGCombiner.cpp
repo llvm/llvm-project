@@ -2371,6 +2371,16 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     return DAG.getVScale(DL, VT, C0 + C1);
   }
 
+  // fold a+vscale(c1)+vscale(c2) -> a+vscale(c1+c2)
+  if ((N0.getOpcode() == ISD::ADD) &&
+      (N0.getOperand(1).getOpcode() == ISD::VSCALE) &&
+      (N1.getOpcode() == ISD::VSCALE)) {
+    auto VS0 = N0.getOperand(1)->getConstantOperandAPInt(0);
+    auto VS1 = N1->getConstantOperandAPInt(0);
+    auto VS = DAG.getVScale(DL, VT, VS0 + VS1);
+    return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), VS);
+  }
+
   return SDValue();
 }
 

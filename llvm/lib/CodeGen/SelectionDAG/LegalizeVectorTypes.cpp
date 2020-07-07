@@ -1537,11 +1537,22 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
                    LD->getPointerInfo(), LoMemVT, LD->getOriginalAlign(),
                    MMOFlags, AAInfo);
 
-  unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
-  Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
-  Hi = DAG.getLoad(ISD::UNINDEXED, ExtType, HiVT, dl, Ch, Ptr, Offset,
-                   LD->getPointerInfo().getWithOffset(IncrementSize), HiMemVT,
-                   LD->getOriginalAlign(), MMOFlags, AAInfo);
+  unsigned IncrementSize = LoMemVT.getSizeInBits().getKnownMinSize() / 8;
+
+  MachinePointerInfo MPI;
+  if (LoVT.isScalableVector()) {
+    SDValue BytesIncrement = DAG.getVScale(
+        dl, Ptr.getValueType(),
+        APInt(Ptr.getValueSizeInBits().getFixedSize(), IncrementSize));
+    MPI = MachinePointerInfo(LD->getPointerInfo().getAddrSpace());
+    Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr, BytesIncrement);
+  } else {
+    MPI = LD->getPointerInfo().getWithOffset(IncrementSize);
+    Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
+  }
+
+  Hi = DAG.getLoad(ISD::UNINDEXED, ExtType, HiVT, dl, Ch, Ptr, Offset, MPI,
+                   HiMemVT, LD->getOriginalAlign(), MMOFlags, AAInfo);
 
   // Build a factor node to remember that this load is independent of the
   // other one.
