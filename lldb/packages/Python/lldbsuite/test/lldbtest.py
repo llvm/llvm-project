@@ -2399,9 +2399,7 @@ FileCheck output:
             self.assertEqual(error_msg, eval_result.GetError().GetCString())
             return
 
-        if not eval_result.GetError().Success():
-            self.assertTrue(eval_result.GetError().Success(),
-                "Unexpected failure with msg: " + eval_result.GetError().GetCString())
+        self.assertSuccess(eval_result.GetError())
 
         if result_type:
             self.assertEqual(result_type, eval_result.GetDisplayTypeName())
@@ -2452,6 +2450,13 @@ FileCheck output:
         shell_command = lldb.SBPlatformShellCommand(cmd)
         err = platform.Run(shell_command)
         return (err, shell_command.GetStatus(), shell_command.GetOutput())
+
+    """Assert that an lldb.SBError is in the "success" state."""
+    def assertSuccess(self, obj, msg=None):
+        if not obj.Success():
+            error = obj.GetCString()
+            self.fail(self._formatMessage(msg,
+                "'{}' is not success".format(error)))
 
     # =================================================
     # Misc. helper methods for debugging test execution
