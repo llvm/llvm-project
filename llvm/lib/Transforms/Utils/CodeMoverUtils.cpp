@@ -297,8 +297,12 @@ collectInstructionsInBetween(Instruction &StartInst, const Instruction &EndInst,
 }
 
 bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
-                              DominatorTree &DT, const PostDominatorTree &PDT,
-                              DependenceInfo &DI) {
+                              DominatorTree &DT, const PostDominatorTree *PDT,
+                              DependenceInfo *DI) {
+  // Skip tests when we don't have PDT or DI
+  if (!PDT || !DI)
+    return false;
+
   // Cannot move itself before itself.
   if (&I == &InsertPoint)
     return false;
@@ -314,7 +318,7 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
     return reportInvalidCandidate(I, NotMovedTerminator);
 
   // TODO remove this limitation.
-  if (!isControlFlowEquivalent(I, InsertPoint, DT, PDT))
+  if (!isControlFlowEquivalent(I, InsertPoint, DT, *PDT))
     return reportInvalidCandidate(I, NotControlFlowEquivalent);
 
   if (!DT.dominates(&InsertPoint, &I))
@@ -363,7 +367,7 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
   // StartInst to \p EndInst.
   if (std::any_of(InstsToCheck.begin(), InstsToCheck.end(),
                   [&DI, &I](Instruction *CurInst) {
-                    auto DepResult = DI.depends(&I, CurInst, true);
+                    auto DepResult = DI->depends(&I, CurInst, true);
                     if (DepResult &&
                         (DepResult->isOutput() || DepResult->isFlow() ||
                          DepResult->isAnti()))
@@ -376,8 +380,8 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
 }
 
 bool llvm::isSafeToMoveBefore(BasicBlock &BB, Instruction &InsertPoint,
-                              DominatorTree &DT, const PostDominatorTree &PDT,
-                              DependenceInfo &DI) {
+                              DominatorTree &DT, const PostDominatorTree *PDT,
+                              DependenceInfo *DI) {
   return llvm::all_of(BB, [&](Instruction &I) {
     if (BB.getTerminator() == &I)
       return true;
@@ -396,7 +400,7 @@ void llvm::moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
     // Increment the iterator before modifying FromBB.
     ++It;
 
-    if (isSafeToMoveBefore(I, *MovePos, DT, PDT, DI))
+    if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
       I.moveBefore(MovePos);
   }
 }
@@ -408,7 +412,7 @@ void llvm::moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
   Instruction *MovePos = ToBB.getTerminator();
   while (FromBB.size() > 1) {
     Instruction &I = FromBB.front();
-    if (isSafeToMoveBefore(I, *MovePos, DT, PDT, DI))
+    if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
       I.moveBefore(MovePos);
   }
 }

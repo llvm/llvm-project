@@ -1835,6 +1835,10 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
 
   const bool IsAnnotatedParallel = TheLoop->isAnnotatedParallel();
 
+  const bool EnableMemAccessVersioningOfLoop =
+      EnableMemAccessVersioning &&
+      !TheLoop->getHeader()->getParent()->hasOptSize();
+
   // For each block.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the BB and collect legal loads and stores. Also detect any
@@ -1890,7 +1894,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         NumLoads++;
         Loads.push_back(Ld);
         DepChecker->addAccess(Ld);
-        if (EnableMemAccessVersioning)
+        if (EnableMemAccessVersioningOfLoop)
           collectStridedAccess(Ld);
         continue;
       }
@@ -1914,7 +1918,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         NumStores++;
         Stores.push_back(St);
         DepChecker->addAccess(St);
-        if (EnableMemAccessVersioning)
+        if (EnableMemAccessVersioningOfLoop)
           collectStridedAccess(St);
       }
     } // Next instr.

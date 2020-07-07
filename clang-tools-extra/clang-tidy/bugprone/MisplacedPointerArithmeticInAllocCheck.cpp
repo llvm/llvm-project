@@ -19,10 +19,9 @@ namespace bugprone {
 
 void MisplacedPointerArithmeticInAllocCheck::registerMatchers(
     MatchFinder *Finder) {
-  const auto AllocFunc = functionDecl(
-      anyOf(hasName("::malloc"), hasName("std::malloc"), hasName("::alloca"),
-            hasName("::calloc"), hasName("std::calloc"), hasName("::realloc"),
-            hasName("std::realloc")));
+  const auto AllocFunc =
+      functionDecl(hasAnyName("::malloc", "std::malloc", "::alloca", "::calloc",
+                              "std::calloc", "::realloc", "std::realloc"));
 
   const auto AllocFuncPtr =
       varDecl(hasType(isConstQualified()),

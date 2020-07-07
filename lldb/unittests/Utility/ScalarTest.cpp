@@ -66,16 +66,6 @@ TEST(ScalarTest, ComparisonFloat) {
   ASSERT_TRUE(s2 >= s1);
 }
 
-template <typename T1, typename T2>
-static T2 ConvertHost(T1 val, T2 (Scalar::*)(T2) const) {
-  return T2(val);
-}
-
-template <typename T1, typename T2>
-static T2 ConvertScalar(T1 val, T2 (Scalar::*conv)(T2) const) {
-  return (Scalar(val).*conv)(T2());
-}
-
 template <typename T> static void CheckConversion(T val) {
   SCOPED_TRACE("val = " + std::to_string(val));
   EXPECT_EQ((signed char)val, Scalar(val).SChar());
@@ -102,6 +92,19 @@ TEST(ScalarTest, Getters) {
   CheckConversion<unsigned long long>(0x8765432112345678ull);
   CheckConversion<float>(42.25f);
   CheckConversion<double>(42.25);
+
+  EXPECT_EQ(APInt(128, 1) << 70, Scalar(std::pow(2.0f, 70.0f)).SInt128(APInt()));
+  EXPECT_EQ(APInt(128, -1, true) << 70,
+            Scalar(-std::pow(2.0f, 70.0f)).SInt128(APInt()));
+  EXPECT_EQ(APInt(128, 1) << 70,
+            Scalar(std::pow(2.0f, 70.0f)).UInt128(APInt()));
+  EXPECT_EQ(APInt(128, 0), Scalar(-std::pow(2.0f, 70.0f)).UInt128(APInt()));
+
+  EXPECT_EQ(APInt(128, 1) << 70, Scalar(std::pow(2.0, 70.0)).SInt128(APInt()));
+  EXPECT_EQ(APInt(128, -1, true) << 70,
+            Scalar(-std::pow(2.0, 70.0)).SInt128(APInt()));
+  EXPECT_EQ(APInt(128, 1) << 70, Scalar(std::pow(2.0, 70.0)).UInt128(APInt()));
+  EXPECT_EQ(APInt(128, 0), Scalar(-std::pow(2.0, 70.0)).UInt128(APInt()));
 }
 
 TEST(ScalarTest, RightShiftOperator) {

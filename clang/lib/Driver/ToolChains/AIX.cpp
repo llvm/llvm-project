@@ -13,12 +13,15 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/Path.h"
 
 using AIX = clang::driver::toolchains::AIX;
 using namespace clang::driver;
 using namespace clang::driver::tools;
+using namespace clang::driver::toolchains;
 
 using namespace llvm::opt;
+using namespace llvm::sys;
 
 void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
@@ -161,6 +164,43 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 AIX::AIX(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : ToolChain(D, Triple, Args) {
   getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
+}
+
+// Returns the effective header sysroot path to use.
+// This comes from either -isysroot or --sysroot.
+llvm::StringRef
+AIX::GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const {
+  if (DriverArgs.hasArg(options::OPT_isysroot))
+    return DriverArgs.getLastArgValue(options::OPT_isysroot);
+  if (!getDriver().SysRoot.empty())
+    return getDriver().SysRoot;
+  return "/";
+}
+
+void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                    ArgStringList &CC1Args) const {
+  // Return if -nostdinc is specified as a driver option.
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
+  const Driver &D = getDriver();
+
+  // Add the Clang builtin headers (<resource>/include).
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> P(D.ResourceDir);
+    path::append(P, "/include");
+    addSystemInclude(DriverArgs, CC1Args, P.str());
+  }
+
+  // Return if -nostdlibinc is specified as a driver option.
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  // Add <sysroot>/usr/include.
+  SmallString<128> UP(Sysroot);
+  path::append(UP, "/usr/include");
+  addSystemInclude(DriverArgs, CC1Args, UP.str());
 }
 
 auto AIX::buildAssembler() const -> Tool * { return new aix::Assembler(*this); }

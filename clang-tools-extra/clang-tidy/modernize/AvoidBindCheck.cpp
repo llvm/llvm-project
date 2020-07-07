@@ -645,8 +645,7 @@ void AvoidBindCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void AvoidBindCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          callee(namedDecl(
-              anyOf(hasName("::boost::bind"), hasName("::std::bind")))),
+          callee(namedDecl(hasAnyName("::boost::bind", "::std::bind"))),
           hasArgument(
               0, anyOf(expr(hasType(memberPointerType())).bind("ref"),
                        expr(hasParent(materializeTemporaryExpr().bind("ref"))),

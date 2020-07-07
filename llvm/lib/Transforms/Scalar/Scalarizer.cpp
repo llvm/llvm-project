@@ -944,6 +944,8 @@ bool ScalarizerVisitor::finish() {
       } else {
         assert(CV.size() == 1 && Op->getType() == CV[0]->getType());
         Res = CV[0];
+        if (Op == Res)
+          continue;
       }
       Res->takeName(Op);
       Op->replaceAllUsesWith(Res);

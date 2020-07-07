@@ -552,20 +552,22 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
 
   // Match static functions/variable definitions which are defined in named
   // namespaces.
-  Optional<ast_matchers::internal::Matcher<NamedDecl>> HasAnySymbolNames;
+  SmallVector<std::string, 4> QualNames;
+  QualNames.reserve(Context->Spec.Names.size());
   for (StringRef SymbolName : Context->Spec.Names) {
-    llvm::StringRef GlobalSymbolName = SymbolName.trim().ltrim(':');
-    const auto HasName = hasName(("::" + GlobalSymbolName).str());
-    HasAnySymbolNames =
-        HasAnySymbolNames ? anyOf(*HasAnySymbolNames, HasName) : HasName;
+    QualNames.push_back(("::" + SymbolName.trim().ltrim(':')).str());
   }
 
-  if (!HasAnySymbolNames) {
+  if (QualNames.empty()) {
     llvm::errs() << "No symbols being moved.\n";
     return;
   }
+
+  ast_matchers::internal::Matcher<NamedDecl> HasAnySymbolNames =
+      hasAnyName(SmallVector<StringRef, 4>(QualNames.begin(), QualNames.end()));
+
   auto InMovedClass =
-      hasOutermostEnclosingClass(cxxRecordDecl(*HasAnySymbolNames));
+      hasOutermostEnclosingClass(cxxRecordDecl(HasAnySymbolNames));
 
   // Matchers for helper declarations in old.cc.
   auto InAnonymousNS = hasParent(namespaceDecl(isAnonymous()));
@@ -612,17 +614,17 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Create a MatchCallback for class declarations.
   MatchCallbacks.push_back(std::make_unique<ClassDeclarationMatch>(this));
   // Match moved class declarations.
-  auto MovedClass = cxxRecordDecl(InOldFiles, *HasAnySymbolNames,
-                                  isDefinition(), TopLevelDecl)
-                        .bind("moved_class");
+  auto MovedClass =
+      cxxRecordDecl(InOldFiles, HasAnySymbolNames, isDefinition(), TopLevelDecl)
+          .bind("moved_class");
   Finder->addMatcher(MovedClass, MatchCallbacks.back().get());
   // Match moved class methods (static methods included) which are defined
   // outside moved class declaration.
-  Finder->addMatcher(
-      cxxMethodDecl(InOldFiles, ofOutermostEnclosingClass(*HasAnySymbolNames),
-                    isDefinition())
-          .bind("class_method"),
-      MatchCallbacks.back().get());
+  Finder->addMatcher(cxxMethodDecl(InOldFiles,
+                                   ofOutermostEnclosingClass(HasAnySymbolNames),
+                                   isDefinition())
+                         .bind("class_method"),
+                     MatchCallbacks.back().get());
   // Match static member variable definition of the moved class.
   Finder->addMatcher(
       varDecl(InMovedClass, InOldFiles, isDefinition(), isStaticDataMember())
@@ -630,20 +632,20 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
       MatchCallbacks.back().get());
 
   MatchCallbacks.push_back(std::make_unique<FunctionDeclarationMatch>(this));
-  Finder->addMatcher(functionDecl(InOldFiles, *HasAnySymbolNames, TopLevelDecl)
+  Finder->addMatcher(functionDecl(InOldFiles, HasAnySymbolNames, TopLevelDecl)
                          .bind("function"),
                      MatchCallbacks.back().get());
 
   MatchCallbacks.push_back(std::make_unique<VarDeclarationMatch>(this));
   Finder->addMatcher(
-      varDecl(InOldFiles, *HasAnySymbolNames, TopLevelDecl).bind("var"),
+      varDecl(InOldFiles, HasAnySymbolNames, TopLevelDecl).bind("var"),
       MatchCallbacks.back().get());
 
   // Match enum definition in old.h. Enum helpers (which are defined in old.cc)
   // will not be moved for now no matter whether they are used or not.
   MatchCallbacks.push_back(std::make_unique<EnumDeclarationMatch>(this));
   Finder->addMatcher(
-      enumDecl(InOldHeader, *HasAnySymbolNames, isDefinition(), TopLevelDecl)
+      enumDecl(InOldHeader, HasAnySymbolNames, isDefinition(), TopLevelDecl)
           .bind("enum"),
       MatchCallbacks.back().get());
 
@@ -653,7 +655,7 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   MatchCallbacks.push_back(std::make_unique<TypeAliasMatch>(this));
   Finder->addMatcher(namedDecl(anyOf(typedefDecl().bind("typedef"),
                                      typeAliasDecl().bind("type_alias")),
-                               InOldHeader, *HasAnySymbolNames, TopLevelDecl),
+                               InOldHeader, HasAnySymbolNames, TopLevelDecl),
                      MatchCallbacks.back().get());
 }
 
