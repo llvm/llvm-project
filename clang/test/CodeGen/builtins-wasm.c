@@ -26,18 +26,6 @@ __SIZE_TYPE__ memory_grow(__SIZE_TYPE__ delta) {
   // WEBASSEMBLY64: call i64 @llvm.wasm.memory.grow.i64(i32 0, i64 %{{.*}})
 }
 
-void memory_init(void *dest, int offset, int size) {
-  __builtin_wasm_memory_init(3, 0, dest, offset, size);
-  // WEBASSEMBLY32: call void @llvm.wasm.memory.init(i32 3, i32 0, i8* %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-  // WEBASSEMBLY64: call void @llvm.wasm.memory.init(i32 3, i32 0, i8* %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-}
-
-void data_drop() {
-  __builtin_wasm_data_drop(3);
-  // WEBASSEMBLY32: call void @llvm.wasm.data.drop(i32 3)
-  // WEBASSEMBLY64: call void @llvm.wasm.data.drop(i32 3)
-}
-
 __SIZE_TYPE__ tls_size() {
   return __builtin_wasm_tls_size();
   // WEBASSEMBLY32: call i32 @llvm.wasm.tls.size.i32()

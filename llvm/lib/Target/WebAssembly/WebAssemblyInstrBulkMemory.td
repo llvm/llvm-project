@@ -33,39 +33,43 @@ def wasm_memset_t : SDTypeProfile<0, 4,
 def wasm_memset : SDNode<"WebAssemblyISD::MEMORY_FILL", wasm_memset_t,
                          [SDNPHasChain, SDNPMayStore]>;
 
+multiclass BulkMemoryOps<WebAssemblyRegClass rc, string B> {
+
 let mayStore = 1, hasSideEffects = 1 in
-defm MEMORY_INIT :
+defm MEMORY_INIT_A#B :
   BULK_I<(outs),
-         (ins i32imm_op:$seg, i32imm_op:$idx, I32:$dest,
-              I32:$offset, I32:$size),
+         (ins i32imm_op:$seg, i32imm_op:$idx, rc:$dest,
+              rc:$offset, rc:$size),
          (outs), (ins i32imm_op:$seg, i32imm_op:$idx),
-         [(int_wasm_memory_init (i32 timm:$seg), (i32 timm:$idx), I32:$dest,
-            I32:$offset, I32:$size
-          )],
+         [],
          "memory.init\t$seg, $idx, $dest, $offset, $size",
          "memory.init\t$seg, $idx", 0x08>;
 
 let hasSideEffects = 1 in
 defm DATA_DROP :
   BULK_I<(outs), (ins i32imm_op:$seg), (outs), (ins i32imm_op:$seg),
-         [(int_wasm_data_drop (i32 timm:$seg))],
+         [],
          "data.drop\t$seg", "data.drop\t$seg", 0x09>;
 
 let mayLoad = 1, mayStore = 1 in
-defm MEMORY_COPY :
+defm MEMORY_COPY_A#B :
   BULK_I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
-                      I32:$dst, I32:$src, I32:$len),
+                      rc:$dst, rc:$src, rc:$len),
          (outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx),
          [(wasm_memcpy (i32 imm:$src_idx), (i32 imm:$dst_idx),
-           I32:$dst, I32:$src, I32:$len
+           rc:$dst, rc:$src, rc:$len
          )],
          "memory.copy\t$src_idx, $dst_idx, $dst, $src, $len",
          "memory.copy\t$src_idx, $dst_idx", 0x0a>;
 
 let mayStore = 1 in
-defm MEMORY_FILL :
-  BULK_I<(outs), (ins i32imm_op:$idx, I32:$dst, I32:$value, I32:$size),
+defm MEMORY_FILL_A#B :
+  BULK_I<(outs), (ins i32imm_op:$idx, rc:$dst, I32:$value, rc:$size),
          (outs), (ins i32imm_op:$idx),
-         [(wasm_memset (i32 imm:$idx), I32:$dst, I32:$value, I32:$size)],
+         [(wasm_memset (i32 imm:$idx), rc:$dst, I32:$value, rc:$size)],
          "memory.fill\t$idx, $dst, $value, $size",
          "memory.fill\t$idx", 0x0b>;
+}
+
+defm : BulkMemoryOps<I32, "32">;
+defm : BulkMemoryOps<I64, "64">;

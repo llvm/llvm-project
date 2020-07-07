@@ -22,15 +22,15 @@ SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
-  if (!DAG.getMachineFunction()
-           .getSubtarget<WebAssemblySubtarget>()
-           .hasBulkMemory())
+  auto &ST = DAG.getMachineFunction().getSubtarget<WebAssemblySubtarget>();
+  if (!ST.hasBulkMemory())
     return SDValue();
 
   SDValue MemIdx = DAG.getConstant(0, DL, MVT::i32);
+  auto LenMVT = ST.hasAddr64() ? MVT::i64 : MVT::i32;
   return DAG.getNode(WebAssemblyISD::MEMORY_COPY, DL, MVT::Other,
                      {Chain, MemIdx, MemIdx, Dst, Src,
-                      DAG.getZExtOrTrunc(Size, DL, MVT::i32)});
+                      DAG.getZExtOrTrunc(Size, DL, LenMVT)});
 }
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemmove(
@@ -46,14 +46,14 @@ SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Val,
     SDValue Size, Align Alignment, bool IsVolatile,
     MachinePointerInfo DstPtrInfo) const {
-  if (!DAG.getMachineFunction()
-           .getSubtarget<WebAssemblySubtarget>()
-           .hasBulkMemory())
+  auto &ST = DAG.getMachineFunction().getSubtarget<WebAssemblySubtarget>();
+  if (!ST.hasBulkMemory())
     return SDValue();
 
   SDValue MemIdx = DAG.getConstant(0, DL, MVT::i32);
+  auto LenMVT = ST.hasAddr64() ? MVT::i64 : MVT::i32;
   // Only low byte matters for val argument, so anyext the i8
   return DAG.getNode(WebAssemblyISD::MEMORY_FILL, DL, MVT::Other, Chain, MemIdx,
                      Dst, DAG.getAnyExtOrTrunc(Val, DL, MVT::i32),
-                     DAG.getZExtOrTrunc(Size, DL, MVT::i32));
+                     DAG.getZExtOrTrunc(Size, DL, LenMVT));
 }
