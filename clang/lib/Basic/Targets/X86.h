@@ -138,7 +138,6 @@ public:
       : TargetInfo(Triple) {
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     AddrSpaceMap = &X86AddrSpaceMap;
-    HasStrictFP = true;
   }
 
   const char *getLongDoubleMangling() const override {
