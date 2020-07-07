@@ -780,8 +780,8 @@ There are many operations that have known type equality constraints registered
 as traits on the operation; for example the true, false, and result values of a
 `select` operation often have the same type. The assembly format may inspect
 these equal constraints to discern the types of missing variables. The currently
-supported traits are: `AllTypesMatch`, `SameTypeOperands`, and
-`SameOperandsAndResultType`.
+supported traits are: `AllTypesMatch`, `TypesMatchWith`, `SameTypeOperands`,
+and `SameOperandsAndResultType`.
 
 ### `hasCanonicalizer`
 
