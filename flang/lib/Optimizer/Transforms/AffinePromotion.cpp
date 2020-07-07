@@ -236,7 +236,7 @@ bool analyzeCoordinate(mlir::Value coordinate) {
 bool AffineLoopAnalysis::analyzeArrayReference(mlir::Value arrayRef) {
   bool canPromote = true;
   if (auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>()) {
-    for (auto coordinate : acoOp.coor())
+    for (auto coordinate : acoOp.getIndices())
       canPromote = canPromote && analyzeCoordinate(coordinate);
   } else {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: cannot promote loop, "
@@ -298,7 +298,7 @@ Optional<int64_t> constantIntegerLike(const mlir::Value value) {
 }
 
 mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) {
-  if (auto refType = op.ref().getType().dyn_cast_or_null<ReferenceType>()) {
+  if (auto refType = op.memref().getType().dyn_cast_or_null<ReferenceType>()) {
     if (auto seqType = refType.getEleTy().dyn_cast_or_null<SequenceType>()) {
       return seqType.getEleTy();
     }
@@ -312,18 +312,30 @@ mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) {
 std::pair<mlir::AffineApplyOp, fir::ConvertOp>
 createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
   auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>();
-  auto genDim = acoOp.dims().getDefiningOp<GenDimsOp>();
+  assert(acoOp.getShape() && isa<ShapeOp>(acoOp.getShape().getDefiningOp()));
+  auto genDim = acoOp.getShape().getDefiningOp<ShapeOp>();
   auto affineMap =
-      createArrayIndexAffineMap(acoOp.coor().size(), acoOp.getContext());
+      createArrayIndexAffineMap(acoOp.getIndices().size(), acoOp.getContext());
   SmallVector<mlir::Value, 4> indexArgs;
-  indexArgs.append(acoOp.coor().begin(), acoOp.coor().end());
-  indexArgs.append(genDim.triples().begin(), genDim.triples().end());
+  indexArgs.append(acoOp.getIndices().begin(), acoOp.getIndices().end());
+
+  // FIXME: quick hack for now (assumes 1 for the shift and stride)
+  auto iter = genDim.extents().begin();
+  auto one = rewriter.create<mlir::ConstantOp>(
+      acoOp.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
+  auto end = genDim.extents().size();
+  for (decltype(end) i = 0; i < end; ++i) {
+    indexArgs.push_back(one);
+    indexArgs.push_back(*iter++);
+    indexArgs.push_back(one);
+  }
+
   auto affineApply = rewriter.create<mlir::AffineApplyOp>(acoOp.getLoc(),
                                                           affineMap, indexArgs);
   auto arrayElementType = coordinateArrayElement(acoOp);
   auto newType = mlir::MemRefType::get({-1}, arrayElementType);
   auto arrayConvert =
-      rewriter.create<fir::ConvertOp>(acoOp.getLoc(), newType, acoOp.ref());
+      rewriter.create<fir::ConvertOp>(acoOp.getLoc(), newType, acoOp.memref());
   return std::make_pair(affineApply, arrayConvert);
 }
 

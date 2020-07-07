@@ -10,38 +10,37 @@ func @calc(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
   %c1 = constant 1 : index
   %c0 = constant 0 : index
   %len = constant 100 : index
-  %dims = fir.gendims %c1, %len, %c1
-       : (index, index, index) -> !fir.dims<1>
+  %dims = fir.shape %len : (index) -> !fir.shape<1>
   %siz = affine.apply #arr_len()[%c1,%len]
   %t1 = fir.alloca !fir.array<?xf32>, %siz
 
   fir.do_loop %i = %c1 to %len step %c1 {
     %a1_idx = fir.array_coor %a1(%dims) %i
-            : (!arr_d1, !fir.dims<1>, index) -> !fir.ref<f32>
+            : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
     %a1_v = fir.load %a1_idx : !fir.ref<f32>
 
     %a2_idx = fir.array_coor %a2(%dims) %i
-            : (!arr_d1, !fir.dims<1>, index) -> !fir.ref<f32>
+            : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
     %a2_v = fir.load %a2_idx : !fir.ref<f32>
 
     %v = addf %a1_v, %a2_v : f32
     %t1_idx = fir.array_coor %t1(%dims) %i
-            : (!arr_d1, !fir.dims<1>, index) -> !fir.ref<f32>
+            : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
 
     fir.store %v to %t1_idx : !fir.ref<f32>
   }
   fir.do_loop %i = %c1 to %len step %c1 {
     %t1_idx = fir.array_coor %t1(%dims) %i
-            : (!arr_d1, !fir.dims<1>, index) -> !fir.ref<f32>
+            : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
     %t1_v = fir.load %t1_idx : !fir.ref<f32>
 
     %a2_idx = fir.array_coor %a2(%dims) %i
-            : (!arr_d1, !fir.dims<1>, index) -> !fir.ref<f32>
+            : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
     %a2_v = fir.load %a2_idx : !fir.ref<f32>
 
     %v = mulf %t1_v, %a2_v : f32
     %a3_idx = fir.array_coor %a3(%dims) %i
-            : (!arr_d1, !fir.dims<1>, index) -> !fir.ref<f32>
+            : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
 
     fir.store %v to %a3_idx : !fir.ref<f32>
   }

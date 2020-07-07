@@ -18,6 +18,22 @@
 
 using namespace fir;
 
+static void populateShape(llvm::SmallVectorImpl<mlir::Value> &vec,
+                          ShapeOp shape) {
+  vec.append(shape.extents().begin(), shape.extents().end());
+}
+
+// Operands of fir.shape_shift split into two vectors.
+static void populateShapeAndShift(llvm::SmallVectorImpl<mlir::Value> &shapeVec,
+                                  llvm::SmallVectorImpl<mlir::Value> &shiftVec,
+                                  ShapeShiftOp shift) {
+  auto endIter = shift.pairs().end();
+  for (auto i = shift.pairs().begin(); i != endIter;) {
+    shiftVec.push_back(*i++);
+    shapeVec.push_back(*i++);
+  }
+}
+
 namespace {
 
 /// Convert fir.embox to the extended form where necessary.
@@ -29,26 +45,46 @@ public:
   matchAndRewrite(EmboxOp embox,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = embox.getLoc();
-    auto dimsVal = embox.getDims();
+    auto dimsVal = embox.getShape();
+    // If the embox does not include a shape, then do not convert it
     if (!dimsVal)
       return mlir::failure();
-    auto dimsOp = dyn_cast<GenDimsOp>(dimsVal.getDefiningOp());
-    assert(dimsOp && "dims is not a fir.gendims");
+    auto shapeOp = dyn_cast<ShapeOp>(dimsVal.getDefiningOp());
+    llvm::SmallVector<mlir::Value, 8> shapeOpers;
+    llvm::SmallVector<mlir::Value, 8> shiftOpers;
+    if (shapeOp) {
+      populateShape(shapeOpers, shapeOp);
+    } else {
+      auto shiftOp = dyn_cast<ShapeShiftOp>(dimsVal.getDefiningOp());
+      assert(shiftOp && "shape is neither fir.shape nor fir.shape_shift");
+      populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
+    }
     mlir::NamedAttrList attrs;
-    auto lenParamSize = embox.getLenParams().size();
     auto idxTy = rewriter.getIndexType();
+    auto rank = shapeOp.getType().cast<ShapeType>().getRank();
+    auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
+    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::rankAttrName(), rankAttr));
+    auto lenParamSize = embox.getLenParams().size();
     auto lenParamAttr = rewriter.getIntegerAttr(idxTy, lenParamSize);
     attrs.push_back(
         rewriter.getNamedAttr(XEmboxOp::lenParamAttrName(), lenParamAttr));
-    auto dimsSize = dimsOp.getNumOperands();
-    auto dimAttr = rewriter.getIntegerAttr(idxTy, dimsSize);
-    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::dimsAttrName(), dimAttr));
-    auto rank = dimsOp.getType().cast<fir::DimsType>().getRank();
-    auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
-    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::rankAttrName(), rankAttr));
+    auto shapeAttr = rewriter.getIntegerAttr(idxTy, shapeOpers.size());
+    attrs.push_back(
+        rewriter.getNamedAttr(XEmboxOp::shapeAttrName(), shapeAttr));
+    auto shiftAttr = rewriter.getIntegerAttr(idxTy, shiftOpers.size());
+    attrs.push_back(
+        rewriter.getNamedAttr(XEmboxOp::shiftAttrName(), shiftAttr));
+    llvm::SmallVector<mlir::Value, 8> sliceOpers;
+    if (auto s = embox.getSlice())
+      if (auto sliceOp =
+          dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
+        sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
+    auto sliceAttr = rewriter.getIntegerAttr(idxTy, sliceOpers.size());
+    attrs.push_back(
+        rewriter.getNamedAttr(XEmboxOp::sliceAttrName(), sliceAttr));
     auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
-                                          embox.getLenParams(),
-                                          dimsOp.getOperands(), attrs);
+                                          shapeOpers, shiftOpers, sliceOpers,
+                                          embox.getLenParams(), attrs);
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
   }
@@ -63,26 +99,47 @@ public:
   matchAndRewrite(ArrayCoorOp arrCoor,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = arrCoor.getLoc();
-    auto dimsVal = arrCoor.dims();
-    auto dimsOp = dyn_cast<GenDimsOp>(dimsVal.getDefiningOp());
-    assert(dimsOp && "dims is not a fir.gendims");
+    auto shapeVal = arrCoor.getShape();
+    auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp());
+    llvm::SmallVector<mlir::Value, 8> shapeOpers;
+    llvm::SmallVector<mlir::Value, 8> shiftOpers;
+    if (shapeOp) {
+      populateShape(shapeOpers, shapeOp);
+    } else {
+      auto shiftOp = dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp());
+      if (shiftOp)
+        populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
+    }
     mlir::NamedAttrList attrs;
-    auto indexSize = arrCoor.coor().size();
     auto idxTy = rewriter.getIndexType();
-    auto idxAttr = rewriter.getIntegerAttr(idxTy, indexSize);
-    attrs.push_back(
-        rewriter.getNamedAttr(XArrayCoorOp::indexAttrName(), idxAttr));
-    auto dimsSize = dimsOp.getNumOperands();
-    auto dimAttr = rewriter.getIntegerAttr(idxTy, dimsSize);
-    attrs.push_back(
-        rewriter.getNamedAttr(XArrayCoorOp::dimsAttrName(), dimAttr));
-    auto rank = dimsOp.getType().cast<fir::DimsType>().getRank();
+    auto rank = shapeOp.getType().cast<ShapeType>().getRank();
     auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::rankAttrName(), rankAttr));
+    auto lenParamSize = arrCoor.getLenParams().size();
+    auto lenParamAttr = rewriter.getIntegerAttr(idxTy, lenParamSize);
+    attrs.push_back(
+        rewriter.getNamedAttr(XArrayCoorOp::lenParamAttrName(), lenParamAttr));
+    auto indexSize = arrCoor.getIndices().size();
+    auto idxAttr = rewriter.getIntegerAttr(idxTy, indexSize);
+    attrs.push_back(
+        rewriter.getNamedAttr(XArrayCoorOp::indexAttrName(), idxAttr));
+    auto shapeSize = shapeOp.getNumOperands();
+    auto dimAttr = rewriter.getIntegerAttr(idxTy, shapeSize);
+    attrs.push_back(
+        rewriter.getNamedAttr(XArrayCoorOp::shapeAttrName(), dimAttr));
+    llvm::SmallVector<mlir::Value, 8> sliceOpers;
+    if (auto s = arrCoor.getSlice())
+      if (auto sliceOp =
+          dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
+        sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
+    auto sliceAttr = rewriter.getIntegerAttr(idxTy, sliceOpers.size());
+    attrs.push_back(
+        rewriter.getNamedAttr(XArrayCoorOp::sliceAttrName(), sliceAttr));
     auto xArrCoor = rewriter.create<XArrayCoorOp>(
-        loc, arrCoor.getType(), arrCoor.ref(), dimsOp.getOperands(),
-        arrCoor.coor(), attrs);
+        loc, arrCoor.getType(), arrCoor.memref(), shapeOpers,
+        shiftOpers, sliceOpers,
+        arrCoor.getIndices(), arrCoor.getLenParams(), attrs);
     rewriter.replaceOp(arrCoor, xArrCoor.getOperation()->getResults());
     return mlir::success();
   }
@@ -99,7 +156,7 @@ public:
     target.addLegalDialect<FIROpsDialect, mlir::StandardOpsDialect>();
     target.addIllegalOp<ArrayCoorOp>();
     target.addDynamicallyLegalOp<EmboxOp>(
-        [](EmboxOp embox) { return !embox.getDims(); });
+        [](EmboxOp embox) { return !embox.getShape(); });
 
     // Do the conversions.
     if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
@@ -129,21 +186,32 @@ public:
   }
 
   void maybeEraseOp(mlir::Operation *op) {
+    if (!op)
+      return;
+
     // Erase any embox that was replaced.
-    if (auto embox = dyn_cast_or_null<EmboxOp>(op))
-      if (embox.getDims()) {
+    if (auto embox = dyn_cast<EmboxOp>(op))
+      if (embox.getShape()) {
         assert(op->use_empty());
         opsToErase.push_back(op);
       }
 
     // Erase all fir.array_coor.
-    if (auto arrCoor = dyn_cast_or_null<ArrayCoorOp>(op)) {
+    if (isa<ArrayCoorOp>(op)) {
       assert(op->use_empty());
       opsToErase.push_back(op);
     }
 
-    // Erase all fir.gendims ops.
-    if (auto genDims = dyn_cast_or_null<GenDimsOp>(op)) {
+    // Erase all fir.shape, fir.shape_shift, and fir.slice ops.
+    if (isa<ShapeOp>(op)) {
+      assert(op->use_empty());
+      opsToErase.push_back(op);
+    }
+    if (isa<ShapeShiftOp>(op)) {
+      assert(op->use_empty());
+      opsToErase.push_back(op);
+    }
+    if (isa<SliceOp>(op)) {
       assert(op->use_empty());
       opsToErase.push_back(op);
     }
