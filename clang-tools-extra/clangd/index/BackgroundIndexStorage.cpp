@@ -95,8 +95,8 @@ public:
 };
 
 // Creates and owns IndexStorages for multiple CDBs.
-// When a CDB root is found, shards are stored in $ROOT/.clangd/index.
-// When no root is found, the fallback path is ~/.cache/clangd/index.
+// When a CDB root is found, shards are stored in $ROOT/.cache/clangd/index/.
+// When no root is found, the fallback path is ~/.cache/clangd/index/.
 class DiskBackedIndexStorageManager {
 public:
   DiskBackedIndexStorageManager(
@@ -115,7 +115,7 @@ public:
     llvm::SmallString<128> StorageDir(FallbackDir);
     if (auto PI = GetProjectInfo(File)) {
       StorageDir = PI->SourceRoot;
-      llvm::sys::path::append(StorageDir, ".clangd", "index");
+      llvm::sys::path::append(StorageDir, ".cache", "clangd", "index");
     }
     auto &IndexStorage = IndexStorageMap[StorageDir];
     if (!IndexStorage)

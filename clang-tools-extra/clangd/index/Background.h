@@ -56,9 +56,9 @@ public:
   using Factory = llvm::unique_function<BackgroundIndexStorage *(PathRef)>;
 
   // Creates an Index Storage that saves shards into disk. Index storage uses
-  // CDBDirectory + ".clangd/index/" as the folder to save shards. CDBDirectory
-  // is the first directory containing a CDB in parent directories of a file, or
-  // user's home directory if none was found, e.g. standard library headers.
+  // CDBDirectory + ".cache/clangd/index/" as the folder to save shards.
+  // CDBDirectory is the first directory containing a CDB in parent directories
+  // of a file, or user cache directory if none was found, e.g. stdlib headers.
   static Factory createDiskBackedStorageFactory(
       std::function<llvm::Optional<ProjectInfo>(PathRef)> GetProjectInfo);
 };
