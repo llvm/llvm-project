@@ -513,9 +513,14 @@ private:
 /// failure (false) as second element.
 ///
 class AtomicCmpXchgInst : public Instruction {
-  void Init(Value *Ptr, Value *Cmp, Value *NewVal,
+  void Init(Value *Ptr, Value *Cmp, Value *NewVal, Align Align,
             AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
             SyncScope::ID SSID);
+
+  template <unsigned Offset>
+  using AtomicOrderingBitfieldElement =
+      typename Bitfield::Element<AtomicOrdering, Offset, 3,
+                                 AtomicOrdering::LAST>;
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -524,34 +529,35 @@ protected:
   AtomicCmpXchgInst *cloneImpl() const;
 
 public:
-  AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
+  AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal, Align Alignment,
                     AtomicOrdering SuccessOrdering,
-                    AtomicOrdering FailureOrdering,
-                    SyncScope::ID SSID, Instruction *InsertBefore = nullptr);
-  AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
+                    AtomicOrdering FailureOrdering, SyncScope::ID SSID,
+                    Instruction *InsertBefore = nullptr);
+  AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal, Align Alignment,
                     AtomicOrdering SuccessOrdering,
-                    AtomicOrdering FailureOrdering,
-                    SyncScope::ID SSID, BasicBlock *InsertAtEnd);
+                    AtomicOrdering FailureOrdering, SyncScope::ID SSID,
+                    BasicBlock *InsertAtEnd);
 
   // allocate space for exactly three operands
   void *operator new(size_t s) {
     return User::operator new(s, 3);
   }
 
-  // FIXME: Reuse bit 1 that was used by `syncscope.`
-  using VolatileField = Bitfield::Element<bool, 0, 1>; // Next bit:1
-  using SuccessOrderingField =
-      Bitfield::Element<AtomicOrdering, 2, 3,
-                        AtomicOrdering::LAST>; // Next bit:5
-  using FailureOrderingField =
-      Bitfield::Element<AtomicOrdering, 5, 3,
-                        AtomicOrdering::LAST>;     // Next bit:8
-  using WeakField = Bitfield::Element<bool, 8, 1>; // Next bit:9
+  using VolatileField = Bitfield::Element<bool, 0, 1>;           // Next bit:1
+  using WeakField = Bitfield::Element<bool, 1, 1>;               // Next bit:2
+  using SuccessOrderingField = AtomicOrderingBitfieldElement<2>; // Next bit:5
+  using FailureOrderingField = AtomicOrderingBitfieldElement<5>; // Next bit:8
+  using AlignmentField = AlignmentBitfieldElement<8>;            // Next bit:13
 
-  /// Always returns the natural type alignment.
-  /// FIXME: Introduce a proper alignment
-  /// https://bugs.llvm.org/show_bug.cgi?id=27168
-  Align getAlign() const;
+  /// Return the alignment of the memory that is being allocated by the
+  /// instruction.
+  Align getAlign() const {
+    return Align(1ULL << getSubclassData<AlignmentField>());
+  }
+
+  void setAlignment(Align Align) {
+    setSubclassData<AlignmentField>(Log2(Align));
+  }
 
   /// Return true if this is a cmpxchg from a volatile memory
   /// location.
@@ -726,10 +732,21 @@ public:
     BAD_BINOP
   };
 
-  AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
+private:
+  template <unsigned Offset>
+  using AtomicOrderingBitfieldElement =
+      typename Bitfield::Element<AtomicOrdering, Offset, 3,
+                                 AtomicOrdering::LAST>;
+
+  template <unsigned Offset>
+  using BinOpBitfieldElement =
+      typename Bitfield::Element<BinOp, Offset, 4, BinOp::LAST_BINOP>;
+
+public:
+  AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val, Align Alignment,
                 AtomicOrdering Ordering, SyncScope::ID SSID,
                 Instruction *InsertBefore = nullptr);
-  AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
+  AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val, Align Alignment,
                 AtomicOrdering Ordering, SyncScope::ID SSID,
                 BasicBlock *InsertAtEnd);
 
@@ -738,13 +755,10 @@ public:
     return User::operator new(s, 2);
   }
 
-  // FIXME: Reuse bit 1 that was used by `syncscope.`
-  using VolatileField = Bitfield::Element<bool, 0, 1>; // Next bit:1
-  using AtomicOrderingField =
-      Bitfield::Element<AtomicOrdering, 2, 3,
-                        AtomicOrdering::LAST>; // Next bit:5
-  using OperationField = Bitfield::Element<BinOp, 5, 4,
-                                           BinOp::LAST_BINOP>; // Next bit:9
+  using VolatileField = Bitfield::Element<bool, 0, 1>;          // Next bit:1
+  using AtomicOrderingField = AtomicOrderingBitfieldElement<1>; // Next bit:4
+  using OperationField = BinOpBitfieldElement<4>;               // Next bit:8
+  using AlignmentField = AlignmentBitfieldElement<8>;           // Next bit:13
 
   BinOp getOperation() const { return getSubclassData<OperationField>(); }
 
@@ -764,10 +778,15 @@ public:
     setSubclassData<OperationField>(Operation);
   }
 
-  /// Always returns the natural type alignment.
-  /// FIXME: Introduce a proper alignment
-  /// https://bugs.llvm.org/show_bug.cgi?id=27168
-  Align getAlign() const;
+  /// Return the alignment of the memory that is being allocated by the
+  /// instruction.
+  Align getAlign() const {
+    return Align(1ULL << getSubclassData<AlignmentField>());
+  }
+
+  void setAlignment(Align Align) {
+    setSubclassData<AlignmentField>(Log2(Align));
+  }
 
   /// Return true if this is a RMW on a volatile memory location.
   ///
@@ -827,7 +846,7 @@ public:
   }
 
 private:
-  void Init(BinOp Operation, Value *Ptr, Value *Val,
+  void Init(BinOp Operation, Value *Ptr, Value *Val, Align Align,
             AtomicOrdering Ordering, SyncScope::ID SSID);
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
