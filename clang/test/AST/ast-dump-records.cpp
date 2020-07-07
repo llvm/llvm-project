@@ -15,7 +15,7 @@ struct B;
 // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:8> col:8 referenced struct B
 
 struct A {
-  // CHECK: CXXRecordDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+29]]:1> line:[[@LINE-1]]:8 struct A definition
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+32]]:1> line:[[@LINE-1]]:8 struct A definition
   // CHECK-NEXT: DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
   // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
   // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -33,14 +33,17 @@ struct A {
   int d : 12;
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> col:7 d 'int'
   // CHECK-NEXT: ConstantExpr 0x{{[^ ]*}} <col:11> 'int'
+  // CHECK-NEXT: value: Int 12
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 12
   int : 0;
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> col:7 'int'
   // CHECK-NEXT: ConstantExpr 0x{{[^ ]*}} <col:9> 'int'
+  // CHECK-NEXT: value: Int 0
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:9> 'int' 0
   int e : 10;
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> col:7 e 'int'
   // CHECK-NEXT: ConstantExpr 0x{{[^ ]*}} <col:11> 'int'
+  // CHECK-NEXT: value: Int 10
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 10
   B *f;
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:6> col:6 f 'B *'
@@ -141,7 +144,7 @@ union F;
 // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:7> col:7 union F
 
 union E {
-  // CHECK: CXXRecordDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+29]]:1> line:[[@LINE-1]]:7 union E definition
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+32]]:1> line:[[@LINE-1]]:7 union E definition
   // CHECK-NEXT: DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
   // CHECK-NEXT: DefaultConstructor exists trivial needs_implicit
   // CHECK-NEXT: CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -159,14 +162,17 @@ union E {
   int d : 12;
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> col:7 d 'int'
   // CHECK-NEXT: ConstantExpr 0x{{[^ ]*}} <col:11> 'int'
+  // CHECK-NEXT: value: Int 12
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 12
   int : 0;
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> col:7 'int'
   // CHECK-NEXT: ConstantExpr 0x{{[^ ]*}} <col:9> 'int'
+  // CHECK-NEXT: value: Int 0
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:9> 'int' 0
   int e : 10;
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> col:7 e 'int'
   // CHECK-NEXT: ConstantExpr 0x{{[^ ]*}} <col:11> 'int'
+  // CHECK-NEXT: value: Int 10
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 10
   B *f;
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:6> col:6 f 'B *'

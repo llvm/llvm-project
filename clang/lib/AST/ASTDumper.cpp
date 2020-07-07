@@ -270,3 +270,19 @@ LLVM_DUMP_METHOD void Comment::dumpColor() const {
   ASTDumper Dumper(llvm::errs(), /*ShowColors=*/true);
   Dumper.Visit(FC, FC);
 }
+
+//===----------------------------------------------------------------------===//
+// APValue method implementations
+//===----------------------------------------------------------------------===//
+
+LLVM_DUMP_METHOD void APValue::dump() const {
+  ASTDumper Dumper(llvm::errs(), /*ShowColors=*/false);
+  Dumper.Visit(*this, /*Ty=*/QualType());
+}
+
+LLVM_DUMP_METHOD void APValue::dump(raw_ostream &OS,
+                                    const ASTContext &Context) const {
+  ASTDumper Dumper(llvm::errs(), Context,
+                   Context.getDiagnostics().getShowColors());
+  Dumper.Visit(*this, /*Ty=*/Context.getPointerType(Context.CharTy));
+}
