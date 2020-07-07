@@ -263,14 +263,7 @@ public:
                         MacroBuilder &Builder) const override;
 
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
-                         bool Enabled) const override {
-    setFeatureEnabledImpl(Features, Name, Enabled);
-  }
-
-  // This exists purely to cut down on the number of virtual calls in
-  // initFeatureMap which calls this repeatedly.
-  static void setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
-                                    StringRef Name, bool Enabled);
+                         bool Enabled) const final;
 
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
@@ -279,7 +272,7 @@ public:
 
   bool isValidFeatureName(StringRef Name) const override;
 
-  bool hasFeature(StringRef Feature) const override;
+  bool hasFeature(StringRef Feature) const final;
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
