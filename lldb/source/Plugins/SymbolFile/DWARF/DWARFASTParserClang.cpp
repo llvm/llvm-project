@@ -1641,33 +1641,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   dwarf->GetUniqueDWARFASTTypeMap().Insert(unique_typename,
                                            *unique_ast_entry_up);
 
-  if (attrs.is_forward_declaration && die.HasChildren()) {
-    // Check to see if the DIE actually has a definition, some version of
-    // GCC will
-    // emit DIEs with DW_AT_declaration set to true, but yet still have
-    // subprogram, members, or inheritance, so we can't trust it
-    DWARFDIE child_die = die.GetFirstChild();
-    while (child_die) {
-      switch (child_die.Tag()) {
-      case DW_TAG_inheritance:
-      case DW_TAG_subprogram:
-      case DW_TAG_member:
-      case DW_TAG_APPLE_property:
-      case DW_TAG_class_type:
-      case DW_TAG_structure_type:
-      case DW_TAG_enumeration_type:
-      case DW_TAG_typedef:
-      case DW_TAG_union_type:
-        child_die.Clear();
-        attrs.is_forward_declaration = false;
-        break;
-      default:
-        child_die = child_die.GetSibling();
-        break;
-      }
-    }
-  }
-
   if (!attrs.is_forward_declaration) {
     // Always start the definition for a class type so that if the class
     // has child classes or types that require the class to be created
