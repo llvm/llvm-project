@@ -363,7 +363,7 @@ def parseOptionsAndInitTestdirs():
                     args.executable)
             sys.exit(-1)
 
-    if args.server:
+    if args.server and not args.out_of_tree_debugserver:
         os.environ['LLDB_DEBUGSERVER_PATH'] = args.server
 
     if args.excluded:
