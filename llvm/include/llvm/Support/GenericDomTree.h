@@ -325,8 +325,6 @@ protected:
     return false;
   }
 
-  void releaseMemory() { reset(); }
-
   /// getNode - return the (Post)DominatorTree node for the specified basic
   /// block.  This is the same as using operator[] on this class.  The result
   /// may (but is not required to) be null for a forward (backwards)
@@ -760,9 +758,6 @@ public:
     return DomTreeBuilder::Verify(*this, VL);
   }
 
-protected:
-  void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
-
   void reset() {
     DomTreeNodes.clear();
     Roots.clear();
@@ -771,6 +766,9 @@ protected:
     DFSInfoValid = false;
     SlowQueries = 0;
   }
+
+protected:
+  void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
   // NewBB is split and now it has one successor. Update dominator tree to
   // reflect this change.

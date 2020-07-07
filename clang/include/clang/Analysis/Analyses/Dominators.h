@@ -167,9 +167,7 @@ public:
   }
 
   /// Releases the memory held by the dominator tree.
-  virtual void releaseMemory() {
-    DT.releaseMemory();
-  }
+  virtual void releaseMemory() { DT.reset(); }
 
   /// Converts the dominator tree to human readable form.
   virtual void print(raw_ostream &OS, const llvm::Module* M= nullptr) const {
