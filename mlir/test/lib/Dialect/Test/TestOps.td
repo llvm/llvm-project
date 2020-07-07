@@ -1353,6 +1353,46 @@ def FormatInferVariadicTypeFromNonVariadic
 }
 
 //===----------------------------------------------------------------------===//
+// AllTypesMatch type inference
+//===----------------------------------------------------------------------===//
+
+def FormatAllTypesMatchVarOp : TEST_Op<"format_all_types_match_var", [
+    AllTypesMatch<["value1", "value2", "result"]>
+  ]> {
+  let arguments = (ins AnyType:$value1, AnyType:$value2);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value1 `,` $value2 `:` type($value1)";
+}
+
+def FormatAllTypesMatchAttrOp : TEST_Op<"format_all_types_match_attr", [
+    AllTypesMatch<["value1", "value2", "result"]>
+  ]> {
+  let arguments = (ins AnyAttr:$value1, AnyType:$value2);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value1 `,` $value2";
+}
+
+//===----------------------------------------------------------------------===//
+// TypesMatchWith type inference
+//===----------------------------------------------------------------------===//
+
+def FormatTypesMatchVarOp : TEST_Op<"format_types_match_var", [
+    TypesMatchWith<"result type matches operand", "value", "result", "$_self">
+  ]> {
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value `:` type($value)";
+}
+
+def FormatTypesMatchAttrOp : TEST_Op<"format_types_match_attr", [
+    TypesMatchWith<"result type matches constant", "value", "result", "$_self">
+  ]> {
+  let arguments = (ins AnyAttr:$value);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value";
+}
+
+//===----------------------------------------------------------------------===//
 // Test SideEffects
 //===----------------------------------------------------------------------===//
 

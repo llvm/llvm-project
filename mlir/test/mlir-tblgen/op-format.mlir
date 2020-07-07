@@ -108,3 +108,23 @@ test.format_optional_operand_result_b_op : i64
 
 // CHECK: test.format_infer_variadic_type_from_non_variadic %[[I64]], %[[I64]] : i64
 test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
+
+//===----------------------------------------------------------------------===//
+// AllTypesMatch type inference
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_all_types_match_var %[[I64]], %[[I64]] : i64
+%ignored_res1 = test.format_all_types_match_var %i64, %i64 : i64
+
+// CHECK: test.format_all_types_match_attr 1 : i64, %[[I64]]
+%ignored_res2 = test.format_all_types_match_attr 1 : i64, %i64
+
+//===----------------------------------------------------------------------===//
+// TypesMatchWith type inference
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_types_match_var %[[I64]] : i64
+%ignored_res3 = test.format_types_match_var %i64 : i64
+
+// CHECK: test.format_types_match_attr 1 : i64
+%ignored_res4 = test.format_types_match_attr 1 : i64
