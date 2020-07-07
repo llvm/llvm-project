@@ -505,48 +505,50 @@ TEST(CodeMoverUtils, IsSafeToMoveTest1) {
         // Can move after CI_safecall, as it does not throw, not synchronize, or
         // must return.
         EXPECT_TRUE(isSafeToMoveBefore(*CI_safecall->getPrevNode(),
-                                       *CI_safecall->getNextNode(), DT, PDT,
-                                       DI));
+                                       *CI_safecall->getNextNode(), DT, &PDT,
+                                       &DI));
 
         // Cannot move CI_unsafecall, as it may throw.
         EXPECT_FALSE(isSafeToMoveBefore(*CI_unsafecall->getNextNode(),
-                                        *CI_unsafecall, DT, PDT, DI));
+                                        *CI_unsafecall, DT, &PDT, &DI));
 
         // Moving instruction to non control flow equivalent places are not
         // supported.
-        EXPECT_FALSE(
-            isSafeToMoveBefore(*SI_A5, *Entry->getTerminator(), DT, PDT, DI));
+        EXPECT_FALSE(isSafeToMoveBefore(*SI_A5, *Entry->getTerminator(), DT,
+                                        &PDT, &DI));
 
         // Moving PHINode is not supported.
         EXPECT_FALSE(isSafeToMoveBefore(PN, *PN.getNextNode()->getNextNode(),
-                                        DT, PDT, DI));
+                                        DT, &PDT, &DI));
 
         // Cannot move non-PHINode before PHINode.
-        EXPECT_FALSE(isSafeToMoveBefore(*PN.getNextNode(), PN, DT, PDT, DI));
+        EXPECT_FALSE(isSafeToMoveBefore(*PN.getNextNode(), PN, DT, &PDT, &DI));
 
         // Moving Terminator is not supported.
         EXPECT_FALSE(isSafeToMoveBefore(*Entry->getTerminator(),
-                                        *PN.getNextNode(), DT, PDT, DI));
+                                        *PN.getNextNode(), DT, &PDT, &DI));
 
         // Cannot move %arrayidx_A after SI, as SI is its user.
         EXPECT_FALSE(isSafeToMoveBefore(*SI->getPrevNode(), *SI->getNextNode(),
-                                        DT, PDT, DI));
+                                        DT, &PDT, &DI));
 
         // Cannot move SI before %arrayidx_A, as %arrayidx_A is its operand.
-        EXPECT_FALSE(isSafeToMoveBefore(*SI, *SI->getPrevNode(), DT, PDT, DI));
+        EXPECT_FALSE(
+            isSafeToMoveBefore(*SI, *SI->getPrevNode(), DT, &PDT, &DI));
 
         // Cannot move LI2 after SI_A6, as there is a flow dependence.
         EXPECT_FALSE(
-            isSafeToMoveBefore(*LI2, *SI_A6->getNextNode(), DT, PDT, DI));
+            isSafeToMoveBefore(*LI2, *SI_A6->getNextNode(), DT, &PDT, &DI));
 
         // Cannot move SI after LI1, as there is a anti dependence.
-        EXPECT_FALSE(isSafeToMoveBefore(*SI, *LI1->getNextNode(), DT, PDT, DI));
+        EXPECT_FALSE(
+            isSafeToMoveBefore(*SI, *LI1->getNextNode(), DT, &PDT, &DI));
 
         // Cannot move SI_A5 after SI, as there is a output dependence.
-        EXPECT_FALSE(isSafeToMoveBefore(*SI_A5, *LI1, DT, PDT, DI));
+        EXPECT_FALSE(isSafeToMoveBefore(*SI_A5, *LI1, DT, &PDT, &DI));
 
         // Can move LI2 before LI1, as there is only an input dependence.
-        EXPECT_TRUE(isSafeToMoveBefore(*LI2, *LI1, DT, PDT, DI));
+        EXPECT_TRUE(isSafeToMoveBefore(*LI2, *LI1, DT, &PDT, &DI));
       });
 }
 
@@ -578,11 +580,11 @@ TEST(CodeMoverUtils, IsSafeToMoveTest2) {
         Instruction *SubInst = getInstructionByName(F, "sub");
 
         // Cannot move as %user uses %add and %sub doesn't dominates %user.
-        EXPECT_FALSE(isSafeToMoveBefore(*AddInst, *SubInst, DT, PDT, DI));
+        EXPECT_FALSE(isSafeToMoveBefore(*AddInst, *SubInst, DT, &PDT, &DI));
 
         // Cannot move as %sub_op0 is an operand of %sub and %add doesn't
         // dominates %sub_op0.
-        EXPECT_FALSE(isSafeToMoveBefore(*SubInst, *AddInst, DT, PDT, DI));
+        EXPECT_FALSE(isSafeToMoveBefore(*SubInst, *AddInst, DT, &PDT, &DI));
       });
 }
 
@@ -611,7 +613,7 @@ TEST(CodeMoverUtils, IsSafeToMoveTest3) {
 
         // Can move as the incoming block of %inc for %i (%for.latch) dominated
         // by %cmp.
-        EXPECT_TRUE(isSafeToMoveBefore(*IncInst, *CmpInst, DT, PDT, DI));
+        EXPECT_TRUE(isSafeToMoveBefore(*IncInst, *CmpInst, DT, &PDT, &DI));
       });
 }
 
@@ -643,10 +645,10 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
         Instruction *SubInst = getInstructionByName(F, "sub");
 
         // Cannot move as %user uses %add and %sub doesn't dominates %user.
-        EXPECT_FALSE(isSafeToMoveBefore(*AddInst, *SubInst, DT, PDT, DI));
+        EXPECT_FALSE(isSafeToMoveBefore(*AddInst, *SubInst, DT, &PDT, &DI));
 
         // Cannot move as %sub_op0 is an operand of %sub and %add doesn't
         // dominates %sub_op0.
-        EXPECT_FALSE(isSafeToMoveBefore(*SubInst, *AddInst, DT, PDT, DI));
+        EXPECT_FALSE(isSafeToMoveBefore(*SubInst, *AddInst, DT, &PDT, &DI));
       });
 }
