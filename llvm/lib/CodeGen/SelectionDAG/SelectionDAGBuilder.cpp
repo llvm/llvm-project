@@ -658,7 +658,7 @@ static void getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
 
 static SDValue widenVectorToPartType(SelectionDAG &DAG,
                                      SDValue Val, const SDLoc &DL, EVT PartVT) {
-  if (!PartVT.isVector())
+  if (!PartVT.isFixedLengthVector())
     return SDValue();
 
   EVT ValueVT = Val.getValueType();
@@ -704,8 +704,9 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       Val = Widened;
     } else if (PartVT.isVector() &&
                PartEVT.getVectorElementType().bitsGE(
-                 ValueVT.getVectorElementType()) &&
-               PartEVT.getVectorNumElements() == ValueVT.getVectorNumElements()) {
+                   ValueVT.getVectorElementType()) &&
+               PartEVT.getVectorElementCount() ==
+                   ValueVT.getVectorElementCount()) {
 
       // Promoted vector extract
       Val = DAG.getAnyExtOrTrunc(Val, DL, PartVT);
