@@ -192,13 +192,13 @@ static constexpr FeatureBitset FeaturesK8 =
 static constexpr FeatureBitset FeaturesK8SSE3 = FeaturesK8 | FeatureSSE3;
 static constexpr FeatureBitset FeaturesAMDFAM10 =
     FeaturesK8SSE3 | FeatureCMPXCHG16B | FeatureLZCNT | FeaturePOPCNT |
-    FeaturePRFCHW | FeatureSAHF | FeatureSSE4A;
+    FeaturePRFCHW | FeatureSAHF | FeatureSSE4_A;
 
 // Bobcat architecture processors.
 static constexpr FeatureBitset FeaturesBTVER1 =
     FeatureX87 | FeatureCMPXCHG8B | FeatureCMPXCHG16B | FeatureEM64T |
     FeatureFXSR | FeatureLZCNT | FeatureMMX | FeaturePOPCNT | FeaturePRFCHW |
-    FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 | FeatureSSE4A |
+    FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_A |
     FeatureSAHF;
 static constexpr FeatureBitset FeaturesBTVER2 =
     FeaturesBTVER1 | FeatureAES | FeatureAVX | FeatureBMI | FeatureF16C |
@@ -210,7 +210,7 @@ static constexpr FeatureBitset FeaturesBDVER1 =
     FeatureCMPXCHG16B | FeatureEM64T | FeatureFMA4 | FeatureFXSR | FeatureLWP |
     FeatureLZCNT | FeatureMMX | FeaturePCLMUL | FeaturePOPCNT | FeaturePRFCHW |
     FeatureSAHF | FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 |
-    FeatureSSE4_1 | FeatureSSE4_2 | FeatureSSE4A | FeatureXOP | FeatureXSAVE;
+    FeatureSSE4_1 | FeatureSSE4_2 | FeatureSSE4_A | FeatureXOP | FeatureXSAVE;
 static constexpr FeatureBitset FeaturesBDVER2 =
     FeaturesBDVER1 | FeatureBMI | FeatureFMA | FeatureF16C | FeatureTBM;
 static constexpr FeatureBitset FeaturesBDVER3 =
@@ -228,7 +228,7 @@ static constexpr FeatureBitset FeaturesZNVER1 =
     FeatureMOVBE | FeatureMWAITX | FeaturePCLMUL | FeaturePOPCNT |
     FeaturePRFCHW | FeatureRDRND | FeatureRDSEED | FeatureSAHF | FeatureSHA |
     FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_1 |
-    FeatureSSE4_2 | FeatureSSE4A | FeatureXSAVE | FeatureXSAVEC |
+    FeatureSSE4_2 | FeatureSSE4_A | FeatureXSAVE | FeatureXSAVEC |
     FeatureXSAVEOPT | FeatureXSAVES;
 static constexpr FeatureBitset FeaturesZNVER2 =
     FeaturesZNVER1 | FeatureCLWB | FeatureRDPID | FeatureWBNOINVD;
