@@ -679,13 +679,13 @@ public:
     return ArgInfo;
   }
 
-  std::pair<const ArgDescriptor *, const TargetRegisterClass *>
+  std::tuple<const ArgDescriptor *, const TargetRegisterClass *, LLT>
   getPreloadedValue(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
     return ArgInfo.getPreloadedValue(Value);
   }
 
   Register getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
-    auto Arg = ArgInfo.getPreloadedValue(Value).first;
+    auto Arg = std::get<0>(ArgInfo.getPreloadedValue(Value));
     return Arg ? Arg->getRegister() : Register();
   }
 
