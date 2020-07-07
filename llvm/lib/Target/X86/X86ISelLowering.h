@@ -1436,7 +1436,7 @@ namespace llvm {
     SDValue LowerMemOpCallTo(SDValue Chain, SDValue StackPtr, SDValue Arg,
                              const SDLoc &dl, SelectionDAG &DAG,
                              const CCValAssign &VA,
-                             ISD::ArgFlagsTy Flags) const;
+                             ISD::ArgFlagsTy Flags, bool isByval) const;
 
     // Call lowering helpers.
 
