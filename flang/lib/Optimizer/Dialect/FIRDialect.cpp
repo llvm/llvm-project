@@ -24,11 +24,17 @@ namespace {
 struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
+  bool isLegalToInline(mlir::Operation *call, mlir::Operation *callable,
+                       bool wouldBeCloned) const final {
+    return fir::canLegallyInline(call, callable, wouldBeCloned);
+  }
+
   /// This hook checks to see if the operation `op` is legal to inline into the
   /// given region `reg`.
   bool isLegalToInline(mlir::Operation *op, mlir::Region *reg,
+                       bool wouldBeCloned,
                        mlir::BlockAndValueMapping &map) const final {
-    return fir::canLegallyInline(op, reg, map);
+    return fir::canLegallyInline(op, reg, wouldBeCloned, map);
   }
 
   /// This hook is called when a terminator operation has been inlined.
@@ -41,6 +47,13 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
     assert(returnOp.getNumOperands() == valuesToRepl.size());
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
+  }
+
+  mlir::Operation *materializeCallConversion(mlir::OpBuilder &builder,
+                                             mlir::Value input,
+                                             mlir::Type resultType,
+                                             mlir::Location loc) const {
+    return builder.create<fir::ConvertOp>(loc, resultType, input);
   }
 };
 } // namespace

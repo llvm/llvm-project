@@ -2994,8 +2994,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
         (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
         (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
         (inType.isa<fir::BoxType>() && outType.isa<fir::BoxType>()) ||
-        (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
-        (inType.isa<mlir::FunctionType>() && outType.isa<mlir::FunctionType>()))
+        (fir::isa_complex(inType) && fir::isa_complex(outType)))
       return mlir::success();
     return emitOpError("invalid type conversion");
   }];

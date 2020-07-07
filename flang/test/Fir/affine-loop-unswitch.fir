@@ -11,8 +11,7 @@ func @calc(%a: !arr_d1, %v: f32) {
   %c1 = constant 1 : index
   %c2 = constant 2 : index
   %len = constant 100 : index
-  %dims = fir.gendims %c1, %len, %c1
-       : (index, index, index) -> !fir.dims<1>
+  %dims = fir.shape %len : (index) -> !fir.shape<1>
 
   fir.do_loop %i = %c1 to %len step %c1 {
     fir.do_loop %j = %c1 to %len step %c1 {
@@ -21,14 +20,14 @@ func @calc(%a: !arr_d1, %v: f32) {
         %cond = cmpi "sgt", %im2, %c0 : index
         fir.if %cond {
           %a_idx = fir.array_coor %a(%dims) %i
-            : (!arr_d1, !fir.dims<1>, index) -> !fir.ref<f32>
+            : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
           fir.store %v to %a_idx : !fir.ref<f32>
         }
           %aj_idx = fir.array_coor %a(%dims) %j
-            : (!arr_d1, !fir.dims<1>, index) -> !fir.ref<f32>
+            : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
           fir.store %v to %aj_idx : !fir.ref<f32>
           %ak_idx = fir.array_coor %a(%dims) %k
-            : (!arr_d1, !fir.dims<1>, index) -> !fir.ref<f32>
+            : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
           fir.store %v to %ak_idx : !fir.ref<f32>
       }
     }

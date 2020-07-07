@@ -36,14 +36,14 @@ func @fa(%a : !fir.ref<!fir.array<100xf32>>) {
   %c = fir.convert %a : (!fir.ref<!fir.array<100xf32>>) -> !fir.ref<!fir.array<?xf32>>
   %c1 = constant 1 : index
   %c100 = constant 100 : index
-  %d = fir.gendims %c1, %c100, %c1 : (index, index, index) -> !fir.dims<1>
+  %d = fir.shape %c100 : (index) -> !fir.shape<1>
   // CHECK: %[[GEP70:.*]] = getelementptr {{.*}}, i32 0, i32 7, i32 0, i32 0
   // CHECK: store i64 {{.*}}, i64* %[[GEP70]]
   // CHECK: %[[GEP71:.*]] = getelementptr {{.*}}, i32 0, i32 7, i32 0, i32 1
   // CHECK: store i64 {{.*}}, i64* %[[GEP71]]
   // CHECK: %[[GEP72:.*]] = getelementptr {{.*}}, i32 0, i32 7, i32 0, i32 2
   // CHECK: store i64 {{.*}}, i64* %[[GEP72]]
-  %b = fir.embox %c, %d : (!fir.ref<!fir.array<?xf32>>, !fir.dims<1>) -> !fir.box<!fir.array<?xf32>>
+  %b = fir.embox %c(%d) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
   // CHECK: call void @ga(
   fir.call @ga(%b) : (!fir.box<!fir.array<?xf32>>) -> ()
   // CHECK: ret void

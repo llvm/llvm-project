@@ -92,9 +92,6 @@ public:
     });
     addConversion(
         [&](fir::RecordType derived) { return convertRecordType(derived); });
-    addConversion([&](fir::DimsType dims) {
-      return mlir::LLVM::LLVMType::getArrayTy(dimsType(), dims.getRank());
-    });
     addConversion([&](fir::FieldType field) {
       return mlir::LLVM::LLVMType::getInt32Ty(llvmDialect);
     });
@@ -1341,7 +1338,7 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
   matchAndRewrite(fir::EmboxOp embox, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // There should be no dims on this embox op
-    assert(!embox.getDims());
+    assert(!embox.getShape());
 
     auto loc = embox.getLoc();
     auto *dialect = getDialect();
@@ -1360,32 +1357,26 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
       auto fld = applyCast(fldTy, value);
       rewriter.create<mlir::LLVM::StoreOp>(loc, fld, fldPtr);
     };
+    auto bitCast = [&](mlir::LLVM::LLVMType ty,
+                       mlir::Value val) -> mlir::Value {
+      return rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, val);
+    };
+    auto intCast = [&](mlir::LLVM::LLVMType ty,
+                       mlir::Value val) -> mlir::Value {
+      return integerCast(loc, rewriter, ty, val);
+    };
 
     // Write each of the fields with the appropriate values
-    storeField(0, operands[0], [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, val).getResult();
-    });
+    storeField(0, operands[0], bitCast);
     auto [eleSize, cfiTy] = getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy());
-    storeField(1, eleSize, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
+    storeField(1, eleSize, intCast);
     auto version = genConstantOffset(loc, rewriter, CFI_VERSION);
-    storeField(2, version, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
-    storeField(3, /*rank*/ c0, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
-    storeField(4, cfiTy, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
+    storeField(2, version, intCast);
+    storeField(3, /*rank*/ c0, intCast);
+    storeField(4, cfiTy, intCast);
     auto attr = genConstantOffset(loc, rewriter, CFI_attribute_other);
-    storeField(5, attr, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
-    storeField(6, /*addend*/ c0, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
+    storeField(5, attr, intCast);
+    storeField(6, /*addend*/ c0, intCast);
 
     rewriter.replaceOp(embox, alloca.getResult());
     return success();
@@ -1417,47 +1408,87 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
       auto fld = applyCast(fldTy, value);
       rewriter.create<mlir::LLVM::StoreOp>(loc, fld, fldPtr);
     };
+    auto bitCast = [&](mlir::LLVM::LLVMType ty,
+                       mlir::Value val) -> mlir::Value {
+      return rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, val);
+    };
+    auto intCast = [&](mlir::LLVM::LLVMType ty,
+                       mlir::Value val) -> mlir::Value {
+      return integerCast(loc, rewriter, ty, val);
+    };
 
     // Write each of the fields with the appropriate values
-    storeField(0, operands[0], [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, val).getResult();
-    });
+    storeField(0, operands[0], bitCast);
     auto [eleSize, cfiTy] = getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy());
-    storeField(1, eleSize, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
+    storeField(1, eleSize, intCast);
     auto version = genConstantOffset(loc, rewriter, CFI_VERSION);
-    storeField(2, version, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
+    storeField(2, version, intCast);
     auto rankVal = genConstantOffset(loc, rewriter, rank);
-    storeField(3, rankVal, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
-    storeField(4, cfiTy, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
+    storeField(3, rankVal, intCast);
+    storeField(4, cfiTy, intCast);
     auto attr = genConstantOffset(loc, rewriter, CFI_attribute_other);
-    storeField(5, attr, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
-    storeField(6, /*addend*/ c0, [&](mlir::LLVM::LLVMType ty, mlir::Value val) {
-      return integerCast(loc, rewriter, ty, val);
-    });
+    storeField(5, attr, intCast);
+    storeField(6, /*addend*/ c0, intCast);
 
-    unsigned dimsOff = 1;
+    // Generate the triples in the dims field of the descriptor
     auto i64Ty = mlir::LLVM::LLVMType::getInt64Ty(dialect);
     auto i64PtrTy = i64Ty.getPointerTo();
+    assert(xbox.shapeOperands().size());
+    unsigned shapeOff = 1;
+    bool hasShift = xbox.shiftOperands().size();
+    unsigned shiftOff = shapeOff + xbox.shapeOperands().size();
+    bool hasSlice = xbox.sliceOperands().size();
+    unsigned sliceOff = shiftOff + xbox.shiftOperands().size();
+    mlir::Value zero = genConstantIndex(loc, i64Ty, rewriter, 0);
+    mlir::Value one = genConstantIndex(loc, i64Ty, rewriter, 1);
+    mlir::Value prevDim = integerCast(loc, rewriter, i64Ty, eleSize);
     for (unsigned d = 0; d < rank; ++d) {
       // store lower bound (normally 0)
       auto f70p = genGEPToField(loc, i64PtrTy, rewriter, alloca, c0, 7, d, 0);
-      rewriter.create<mlir::LLVM::StoreOp>(loc, operands[dimsOff++], f70p);
+      if (boxTy.isa<fir::PointerType>() || boxTy.isa<fir::HeapType>() ||
+          hasSlice) {
+        mlir::Value lb = one;
+        if (hasShift)
+          lb = operands[shiftOff];
+        if (hasSlice)
+          lb = rewriter.create<mlir::LLVM::SubOp>(loc, i64Ty, lb,
+                                                  operands[sliceOff]);
+        rewriter.create<mlir::LLVM::StoreOp>(loc, lb, f70p);
+      } else {
+        rewriter.create<mlir::LLVM::StoreOp>(loc, zero, f70p);
+      }
+
       // store extent
+      mlir::Value extent = operands[shapeOff];
+      mlir::Value outerExtent = extent;
+      if (hasSlice) {
+        extent = rewriter.create<mlir::LLVM::SubOp>(
+            loc, i64Ty, operands[sliceOff + 1], operands[sliceOff]);
+        extent = rewriter.create<mlir::LLVM::AddOp>(loc, i64Ty, extent,
+                                                    operands[sliceOff + 2]);
+        extent = rewriter.create<mlir::LLVM::SDivOp>(loc, i64Ty, extent,
+                                                     operands[sliceOff + 2]);
+      }
       auto f71p = genGEPToField(loc, i64PtrTy, rewriter, alloca, c0, 7, d, 1);
-      rewriter.create<mlir::LLVM::StoreOp>(loc, operands[dimsOff++], f71p);
-      // store step (scaled by extent to save a multiplication)
+      rewriter.create<mlir::LLVM::StoreOp>(loc, extent, f71p);
+
+      // store step (scaled by shaped extent)
+      mlir::Value step = prevDim;
+      if (hasSlice)
+        step = rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, step,
+                                                  operands[sliceOff + 2]);
       auto f72p = genGEPToField(loc, i64PtrTy, rewriter, alloca, c0, 7, d, 2);
-      rewriter.create<mlir::LLVM::StoreOp>(loc, operands[dimsOff++], f72p);
+      rewriter.create<mlir::LLVM::StoreOp>(loc, step, f72p);
+      // compute the stride for the next natural dimension
+      prevDim =
+          rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, prevDim, outerExtent);
+
+      // increment iterators
+      shapeOff++;
+      if (hasShift)
+        shiftOff++;
+      if (hasSlice)
+        sliceOff += 3;
     }
     auto desc = rewriter.create<mlir::LLVM::BitcastOp>(
         loc, lowerTy().convertType(boxTy), alloca);
@@ -1611,24 +1642,43 @@ struct XArrayCoorOpConversion
     auto loc = coor.getLoc();
     auto rank = coor.getRank();
     assert(coor.indexOperands().size() == rank);
-    assert(coor.dimsOperands().size() == 3 * rank);
-    unsigned dimsOff = 1;
-    unsigned indexOff = 1 + coor.dimsOperands().size();
+    assert(coor.shapeOperands().size() == 0 ||
+           coor.shapeOperands().size() == rank);
+    assert(coor.shiftOperands().size() == 0 ||
+           coor.shiftOperands().size() == rank);
+    assert(coor.sliceOperands().size() == 0 ||
+           coor.sliceOperands().size() == 3 * rank);
+    auto indexOps = coor.indexOperands().begin();
+    auto shapeOps = coor.shapeOperands().begin();
+    auto shiftOps = coor.shiftOperands().begin();
+    auto sliceOps = coor.sliceOperands().begin();
+    auto idxTy = lowerTy().indexType();
     // Cast the base address to a pointer to T
     auto base = rewriter.create<mlir::LLVM::BitcastOp>(loc, ty, operands[0]);
-    auto idxTy = lowerTy().indexType();
-    mlir::Value prevExt = genConstantIndex(loc, idxTy, rewriter, 1);
+    mlir::Value one = genConstantIndex(loc, idxTy, rewriter, 1);
+    auto prevExt = one;
     mlir::Value off = genConstantIndex(loc, idxTy, rewriter, 0);
     for (unsigned i = 0; i < rank; ++i) {
-      auto index = asType(loc, rewriter, idxTy, operands[indexOff++]);
-      auto lb = asType(loc, rewriter, idxTy, operands[dimsOff++]);
-      auto nextExt = asType(loc, rewriter, idxTy, operands[dimsOff++]);
-      auto step = asType(loc, rewriter, idxTy, operands[dimsOff++]);
+      auto index = asType(loc, rewriter, idxTy, *indexOps);
+      auto nextExt = asType(loc, rewriter, idxTy, *shapeOps);
+      mlir::Value lb = one;
+      if (coor.shiftOperands().size())
+        lb = asType(loc, rewriter, idxTy, *shiftOps);
+      mlir::Value step{};
+      if (coor.sliceOperands().size()) {
+        auto sliceLb = asType(loc, rewriter, idxTy, *sliceOps);
+        lb = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, lb, sliceLb);
+        step = asType(loc, rewriter, idxTy, *(sliceOps + 2));
+      }
       // For each dimension, i, add to the running pointer offset the value of
       // (index_i - lb_i) * step_i * extent_{i-1}.
       // Note: LLVM will do constant folding, etc.
-      auto diff = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb);
-      auto sc0 = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, step);
+      mlir::Value diff =
+          rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb);
+      mlir::Value sc0 =
+          step ? rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, step)
+                     .getResult()
+               : diff;
       auto sc1 = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, sc0, prevExt);
       off = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc1, off);
       prevExt =

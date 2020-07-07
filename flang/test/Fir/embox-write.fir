@@ -5,8 +5,8 @@ func @set_all_n(%n : index, %x : i32) {
   %aTmp = fir.alloca i32, %n
   %aMem = fir.convert %aTmp : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
   %c1 = constant 1 : index
-  %aDim = fir.gendims %c1, %n, %c1 : (index, index, index) -> !fir.dims<1>
-  %a = fir.embox %aMem, %aDim : (!fir.ref<!fir.array<?xi32>>, !fir.dims<1>) -> !fir.box<!fir.array<?xi32>>
+  %aDim = fir.shape %n : (index) -> !fir.shape<1>
+  %a = fir.embox %aMem(%aDim) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
   // CHECK-DAG: %[[IV:.*]] = phi i64
   // CHECK-DAG: %[[LCV:.*]] = phi i64
   // CHECK: icmp sgt i64 %[[LCV]], 0
