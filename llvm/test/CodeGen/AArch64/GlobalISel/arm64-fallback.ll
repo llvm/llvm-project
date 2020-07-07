@@ -220,19 +220,28 @@ entry:
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments{{.*}}scalable_arg
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower function{{.*}}scalable_arg
 ; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_arg
 define <vscale x 16 x i8> @scalable_arg(<vscale x 16 x i1> %pred, i8* %addr) #1 {
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, i8* %addr)
   ret <vscale x 16 x i8> %res
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction{{.*}}scalable_call
-; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_call
-define <vscale x 16 x i8> @scalable_call(i8* %addr) #1 {
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower function{{.*}}scalable_ret
+; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_ret
+define <vscale x 16 x i8> @scalable_ret(i8* %addr) #1 {
   %pred = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 0)
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, i8* %addr)
   ret <vscale x 16 x i8> %res
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction{{.*}}scalable_call
+; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_call
+define i8 @scalable_call(i8* %addr) #1 {
+  %pred = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 0)
+  %vec = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8(<vscale x 16 x i1> %pred, i8* %addr)
+  %res = extractelement <vscale x 16 x i8> %vec, i32 0
+  ret i8 %res
 }
 
 attributes #1 = { "target-features"="+sve" }
