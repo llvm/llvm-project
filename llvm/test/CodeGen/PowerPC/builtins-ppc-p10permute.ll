@@ -231,3 +231,25 @@ entry:
   ret <4 x i32> %0
 }
 declare <4 x i32> @llvm.ppc.altivec.vinswvrx(<4 x i32>, i64, <4 x i32>)
+
+define <4 x i32> @testVINSW(<4 x i32> %a, i64 %b) {
+; CHECK-LABEL: testVINSW:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vinsw v2, r5, 1
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> %a, i64 %b, i32 1)
+  ret <4 x i32> %0
+}
+declare <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32>, i64, i32 immarg)
+
+define <2 x i64> @testVINSD(<2 x i64> %a, i64 %b) {
+; CHECK-LABEL: testVINSD:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vinsd v2, r5, 1
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> %a, i64 %b, i32 1)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64>, i64, i32 immarg)

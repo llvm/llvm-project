@@ -193,8 +193,7 @@ void AMDGCN::Linker::constructGenerateObjFileFromHIPFatBinary(
 
   Objf << ObjBuffer;
 
-  ArgStringList McArgs{"-triple", Args.MakeArgString(TC.getTripleString()),
-                       "-o",      Output.getFilename(),
+  ArgStringList McArgs{"-o",      Output.getFilename(),
                        McinFile,  "--filetype=obj"};
   const char *Mc = Args.MakeArgString(TC.GetProgramPath("llvm-mc"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),

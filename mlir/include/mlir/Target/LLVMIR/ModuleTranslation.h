@@ -61,6 +61,8 @@ public:
     LLVM::ensureDistinctSuccessors(m);
 
     T translator(m, std::move(llvmModule));
+    if (failed(translator.convertFunctionSignatures()))
+      return nullptr;
     if (failed(translator.convertGlobals()))
       return nullptr;
     if (failed(translator.convertFunctions()))
@@ -94,6 +96,7 @@ private:
   /// Check whether the module contains only supported ops directly in its body.
   static LogicalResult checkSupportedModuleOps(Operation *m);
 
+  LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);

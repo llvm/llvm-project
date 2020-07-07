@@ -94,6 +94,12 @@ New checks
   result of a memory allocation function (``malloc()``, ``calloc()``,
   ``realloc()``, ``alloca()``) instead of its argument.
 
+- New :doc:`bugprone-no-escape
+  <clang-tidy/checks/bugprone-no-escape>` check.
+
+  Finds pointers with the ``noescape`` attribute that are captured by an
+  asynchronously-executed block.
+
 - New :doc:`bugprone-spuriously-wake-up-functions
   <clang-tidy/checks/bugprone-spuriously-wake-up-functions>` check.
 
@@ -206,14 +212,14 @@ Changes in existing checks
   Now checks ``std::basic_string_view`` by default.
 
 - Improved :doc:`readability-else-after-return
-  <clang-tidy/checks/readability-else-after-return>` check now supports a 
+  <clang-tidy/checks/readability-else-after-return>` check now supports a
   `WarnOnConditionVariables` option to control whether to refactor condition
   variables where possible.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability-identifier-naming>` check.
 
-  Now able to rename member references in class template definitions with 
+  Now able to rename member references in class template definitions with
   explicit access.
 
 - Improved :doc:`readability-qualified-auto

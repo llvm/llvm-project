@@ -783,3 +783,51 @@ define <4 x i32> @ossfuzz5688(i32 %a0) {
   store i32 %4, i32* undef
   ret <4 x i32> %5
 }
+
+; If we do not define all bytes that are extracted, this is a miscompile.
+
+define i32 @PR46586(i8* %p, <4 x i32> %v) {
+; SSE2-LABEL: PR46586:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movzbl 3(%rdi), %eax
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pinsrw $6, %eax, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    xorl %edx, %edx
+; SSE2-NEXT:    divl %ecx
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: PR46586:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
+; SSE41-NEXT:    extractps $3, %xmm0, %ecx
+; SSE41-NEXT:    pextrd $3, %xmm1, %eax
+; SSE41-NEXT:    xorl %edx, %edx
+; SSE41-NEXT:    divl %ecx
+; SSE41-NEXT:    movl %edx, %eax
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: PR46586:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
+; AVX-NEXT:    vextractps $3, %xmm0, %ecx
+; AVX-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX-NEXT:    xorl %edx, %edx
+; AVX-NEXT:    divl %ecx
+; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    retq
+  %p0 = getelementptr inbounds i8, i8* %p, i64 0
+  %p3 = getelementptr inbounds i8, i8* %p, i64 3
+  %t25 = load i8, i8* %p0
+  %t28 = load i8, i8* %p3
+  %t29 = insertelement <4 x i8> undef, i8 %t25, i32 0
+  %t32 = insertelement <4 x i8> %t29, i8 %t28, i32 3
+  %t33 = zext <4 x i8> %t32 to <4 x i32>
+  %t34 = urem <4 x i32> %t33, %v
+  %t35 = extractelement <4 x i32> %t34, i32 3
+  ret i32 %t35
+}

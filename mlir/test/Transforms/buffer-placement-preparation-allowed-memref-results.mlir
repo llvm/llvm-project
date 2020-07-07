@@ -64,6 +64,15 @@ func @simple_signature_conversion(%arg0: tensor<4x8xf32>) -> tensor<4x8xf32> {
 
 // -----
 
+// CHECK-LABEL: func @func_with_unranked_arg_and_result
+func @func_with_unranked_arg_and_result(%arg0: tensor<*xf32>) -> tensor<*xf32> {
+  return %arg0 : tensor<*xf32>
+}
+// CHECK-SAME: ([[ARG:%.*]]: memref<*xf32>) -> memref<*xf32>
+// CHECK-NEXT: return [[ARG]] : memref<*xf32>
+
+// -----
+
 // CHECK-LABEL: func @func_and_block_signature_conversion
 func @func_and_block_signature_conversion(%arg0 : tensor<2xf32>, %cond : i1, %arg1: tensor<4x4xf32>) -> tensor<4x4xf32>{
     cond_br %cond, ^bb1, ^bb2
