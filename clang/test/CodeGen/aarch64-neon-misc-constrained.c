@@ -15,6 +15,9 @@
 
 // REQUIRES: aarch64-registered-target
 
+// Disabled until constrained floating point is implemented for arm64.
+// XFAIL: *
+
 // Test new aarch64 intrinsics and types but constrained
 
 #include <arm_neon.h>

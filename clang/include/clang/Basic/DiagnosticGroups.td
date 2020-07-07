@@ -107,6 +107,7 @@ def DoublePromotion : DiagGroup<"double-promotion">;
 def EnumTooLarge : DiagGroup<"enum-too-large">;
 def UnsupportedNan : DiagGroup<"unsupported-nan">;
 def UnsupportedAbs : DiagGroup<"unsupported-abs">;
+def UnsupportedFPOpt : DiagGroup<"unsupported-floating-point-opt">;
 def UnsupportedCB : DiagGroup<"unsupported-cb">;
 def UnsupportedGPOpt : DiagGroup<"unsupported-gpopt">;
 def UnsupportedTargetOpt : DiagGroup<"unsupported-target-opt">;
