@@ -121,11 +121,74 @@ for.body29:
   br i1 %cmp26, label %for.body29, label %for.cond.cleanup28
 }
 
+define void @pr43371_pgso() !prof !14 {
+;
+; CHECK-LABEL: @pr43371_pgso
+; CHECK-NOT:   vector.scevcheck
+;
+; We do not want to generate SCEV predicates when optimising for size, because
+; that will lead to extra code generation such as the SCEV overflow runtime
+; checks. Not generating SCEV predicates can still result in vectorisation as
+; the non-consecutive loads/stores can be scalarized:
+;
+; CHECK: vector.body:
+; CHECK: store i16 0, i16* %{{.*}}, align 1
+; CHECK: store i16 0, i16* %{{.*}}, align 1
+; CHECK: br i1 {{.*}}, label %vector.body
+;
+entry:
+  br label %for.body29
+
+for.cond.cleanup28:
+  unreachable
+
+for.body29:
+  %i24.0170 = phi i16 [ 0, %entry], [ %inc37, %for.body29]
+  %add33 = add i16 undef, %i24.0170
+  %idxprom34 = zext i16 %add33 to i32
+  %arrayidx35 = getelementptr [2592 x i16], [2592 x i16] * @cm_array, i32 0, i32 %idxprom34
+  store i16 0, i16 * %arrayidx35, align 1
+  %inc37 = add i16 %i24.0170, 1
+  %cmp26 = icmp ult i16 %inc37, 756
+  br i1 %cmp26, label %for.body29, label %for.cond.cleanup28
+}
+
 ; PR45526: don't vectorize with fold-tail if first-order-recurrence is live-out.
 ;
 define i32 @pr45526() optsize {
 ;
 ; CHECK-LABEL: @pr45526
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   br label %loop
+; CHECK-EMPTY:
+; CHECK-NEXT: loop:
+; CHECK-NEXT:   %piv = phi i32 [ 0, %entry ], [ %pivPlus1, %loop ]
+; CHECK-NEXT:   %for = phi i32 [ 5, %entry ], [ %pivPlus1, %loop ]
+; CHECK-NEXT:   %pivPlus1 = add nuw nsw i32 %piv, 1
+; CHECK-NEXT:   %cond = icmp ult i32 %piv, 510
+; CHECK-NEXT:   br i1 %cond, label %loop, label %exit
+; CHECK-EMPTY:
+; CHECK-NEXT: exit:
+; CHECK-NEXT:   %for.lcssa = phi i32 [ %for, %loop ]
+; CHECK-NEXT:   ret i32 %for.lcssa
+;
+entry:
+  br label %loop
+
+loop:
+  %piv = phi i32 [ 0, %entry ], [ %pivPlus1, %loop ]
+  %for = phi i32 [ 5, %entry ], [ %pivPlus1, %loop ]
+  %pivPlus1 = add nuw nsw i32 %piv, 1
+  %cond = icmp ult i32 %piv, 510
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i32 %for
+}
+
+define i32 @pr45526_pgso() !prof !14 {
+;
+; CHECK-LABEL: @pr45526_pgso
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   br label %loop
 ; CHECK-EMPTY:
@@ -190,7 +253,7 @@ define void @stride1(i16* noalias %B, i32 %BStride) optsize {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1026
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !19
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !21
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

@@ -20,6 +20,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 
 using namespace llvm;
@@ -412,7 +413,11 @@ int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
   const ValueToValueMap &Strides =
       getSymbolicStrides() ? *getSymbolicStrides() : ValueToValueMap();
 
-  bool CanAddPredicate = !TheLoop->getHeader()->getParent()->hasOptSize();
+  Function *F = TheLoop->getHeader()->getParent();
+  bool OptForSize = F->hasOptSize() ||
+                    llvm::shouldOptimizeForSize(TheLoop->getHeader(), PSI, BFI,
+                                                PGSOQueryType::IRPass);
+  bool CanAddPredicate = !OptForSize;
   int Stride = getPtrStride(PSE, Ptr, TheLoop, Strides, CanAddPredicate, false);
   if (Stride == 1 || Stride == -1)
     return Stride;
