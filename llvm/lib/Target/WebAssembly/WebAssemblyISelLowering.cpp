@@ -1677,19 +1677,13 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
   // Only manually lower vector shifts
   assert(Op.getSimpleValueType().isVector());
 
-  // Unroll non-splat vector shifts
-  BuildVectorSDNode *ShiftVec;
-  SDValue SplatVal;
-  if (!(ShiftVec = dyn_cast<BuildVectorSDNode>(Op.getOperand(1).getNode())) ||
-      !(SplatVal = ShiftVec->getSplatValue()))
+  auto ShiftVal = Op.getOperand(1);
+  if (!DAG.isSplatValue(ShiftVal, /*AllowUndefs=*/true))
     return unrollVectorShift(Op, DAG);
 
-  // All splats except i64x2 const splats are handled by patterns
-  auto *SplatConst = dyn_cast<ConstantSDNode>(SplatVal);
-  if (!SplatConst || Op.getSimpleValueType() != MVT::v2i64)
-    return Op;
+  auto SplatVal = DAG.getSplatValue(ShiftVal);
+  assert(SplatVal != SDValue());
 
-  // i64x2 const splats are custom lowered to avoid unnecessary wraps
   unsigned Opcode;
   switch (Op.getOpcode()) {
   case ISD::SHL:
@@ -1704,9 +1698,11 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
   default:
     llvm_unreachable("unexpected opcode");
   }
-  APInt Shift = SplatConst->getAPIntValue().zextOrTrunc(32);
+
+  // Use anyext because none of the high bits can affect the shift
+  auto ScalarShift = DAG.getAnyExtOrTrunc(SplatVal, DL, MVT::i32);
   return DAG.getNode(Opcode, DL, Op.getValueType(), Op.getOperand(0),
-                     DAG.getConstant(Shift, DL, MVT::i32));
+                     ScalarShift);
 }
 
 //===----------------------------------------------------------------------===//
