@@ -3125,5 +3125,44 @@ TEST(IsVirtual, NoVirtualBase) {
                          cxxRecordDecl(hasAnyBase(isVirtual()))));
 }
 
+TEST(BaseSpecifier, hasDirectBase) {
+  EXPECT_TRUE(matches(
+      R"cc(
+    class Base {};
+    class Derived : Base{};
+    )cc",
+      cxxRecordDecl(hasName("Derived"),
+                    hasDirectBase(hasType(cxxRecordDecl(hasName("Base")))))));
+
+  StringRef MultiDerived = R"cc(
+    class Base {};
+    class Base2 {};
+    class Derived : Base, Base2{};
+    )cc";
+
+  EXPECT_TRUE(matches(
+      MultiDerived,
+      cxxRecordDecl(hasName("Derived"),
+                    hasDirectBase(hasType(cxxRecordDecl(hasName("Base")))))));
+  EXPECT_TRUE(matches(
+      MultiDerived,
+      cxxRecordDecl(hasName("Derived"),
+                    hasDirectBase(hasType(cxxRecordDecl(hasName("Base2")))))));
+
+  StringRef Indirect = R"cc(
+    class Base {};
+    class Intermediate : Base {};
+    class Derived : Intermediate{};
+    )cc";
+
+  EXPECT_TRUE(
+      matches(Indirect, cxxRecordDecl(hasName("Derived"),
+                                      hasDirectBase(hasType(cxxRecordDecl(
+                                          hasName("Intermediate")))))));
+  EXPECT_TRUE(notMatches(
+      Indirect,
+      cxxRecordDecl(hasName("Derived"),
+                    hasDirectBase(hasType(cxxRecordDecl(hasName("Base")))))));
+}
 } // namespace ast_matchers
 } // namespace clang
