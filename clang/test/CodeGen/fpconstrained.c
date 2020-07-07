@@ -5,6 +5,10 @@
 // RUN: %clang_cc1 -ffast-math -ffp-contract=fast -ffp-exception-behavior=ignore -emit-llvm -o - %s | FileCheck %s -check-prefix=FAST
 // RUN: %clang_cc1 -ffast-math -ffp-contract=fast -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck %s -check-prefix=EXCEPT
 // RUN: %clang_cc1 -ffast-math -ffp-contract=fast -ffp-exception-behavior=maytrap -emit-llvm -o - %s | FileCheck %s -check-prefix=MAYTRAP
+
+// Disabled until constrained floating point is completed for PowerPC.
+// XFAIL: *
+
 float f0, f1, f2;
 
 void foo() {
