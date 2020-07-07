@@ -1,5 +1,7 @@
-; RUN: llc -mtriple x86_64-apple-macosx -O0 -filetype=obj -o %t_le.o %s
-; RUN: llvm-dwarfdump -v -debug-info %t_le.o | FileCheck %s
+; RUN: llc -dwarf-version=2 -mtriple x86_64-apple-macosx -O0 -filetype=obj -o %t_2_le.o %s
+; RUN: llvm-dwarfdump -v -debug-info %t_2_le.o | FileCheck %s
+; RUN: llc -dwarf-version=4 -debugger-tune=gdb -mtriple x86_64-apple-macosx -O0 -filetype=obj -o %t_4_le.o %s
+; RUN: llvm-dwarfdump -v -debug-info %t_4_le.o | FileCheck %s
 
 ; Produced at -O0 from:
 ; struct {
@@ -16,7 +18,7 @@
 ; CHECK:      DW_AT_byte_size  {{.*}} (0x01)
 ; CHECK-NEXT: DW_AT_bit_size   {{.*}} (0x06)
 ; CHECK-NEXT: DW_AT_bit_offset {{.*}} (0xffffffffffffffff)
-; CHECK-NEXT: DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
+; CHECK-NEXT: DW_AT_data_member_location {{.*}} ({{.*}}0x0{{0*}})
 
 ; ModuleID = 'repro.c'
 source_filename = "repro.c"
