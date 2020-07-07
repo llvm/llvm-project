@@ -21,17 +21,6 @@ using namespace types;
 
 #include "llvm/Frontend/OpenMP/OMP.cpp.inc"
 
-bool llvm::omp::isAllowedClauseForDirective(Directive D, Clause C,
-                                            unsigned Version) {
-  assert(unsigned(D) <= llvm::omp::Directive_enumSize);
-  assert(unsigned(C) <= llvm::omp::Clause_enumSize);
-#define OMP_DIRECTIVE_CLAUSE(Dir, MinVersion, MaxVersion, Cl)                  \
-  if (D == Dir && C == Cl && MinVersion <= Version && MaxVersion >= Version)   \
-    return true;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-  return false;
-}
-
 /// Declarations for LLVM-IR types (simple, array, function and structure) are
 /// generated below. Their names are defined and used in OpenMPKinds.def. Here
 /// we provide the declarations, the initializeTypes function will provide the
