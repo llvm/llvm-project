@@ -39,6 +39,8 @@ static cl::opt<bool> DisableOpenMPOptimizations(
 
 static cl::opt<bool> PrintICVValues("openmp-print-icv-values", cl::init(false),
                                     cl::Hidden);
+static cl::opt<bool> PrintOpenMPKernels("openmp-print-gpu-kernels",
+                                        cl::init(false), cl::Hidden);
 
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
@@ -48,6 +50,8 @@ STATISTIC(NumOpenMPRuntimeFunctionsIdentified,
           "Number of OpenMP runtime functions identified");
 STATISTIC(NumOpenMPRuntimeFunctionUsesIdentified,
           "Number of OpenMP runtime function uses identified");
+STATISTIC(NumOpenMPTargetRegionKernels,
+          "Number of OpenMP target region entry points (=kernels) identified");
 
 #if !defined(NDEBUG)
 static constexpr auto TAG = "[" DEBUG_TYPE "]";
@@ -99,9 +103,10 @@ struct AAICVTracker;
 struct OMPInformationCache : public InformationCache {
   OMPInformationCache(Module &M, AnalysisGetter &AG,
                       BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
-                      SmallPtrSetImpl<Function *> &ModuleSlice)
+                      SmallPtrSetImpl<Function *> &ModuleSlice,
+                      SmallPtrSetImpl<Kernel> &Kernels)
       : InformationCache(M, AG, Allocator, CGSCC), ModuleSlice(ModuleSlice),
-        OMPBuilder(M) {
+        OMPBuilder(M), Kernels(Kernels) {
     OMPBuilder.initialize();
     initializeRuntimeFunctions();
     initializeInternalControlVars();
@@ -399,6 +404,9 @@ struct OMPInformationCache : public InformationCache {
 
     // TODO: We should attach the attributes defined in OMPKinds.def.
   }
+
+  /// Collection of known kernels (\see Kernel) in the module.
+  SmallPtrSetImpl<Kernel> &Kernels;
 };
 
 struct OpenMPOpt {
@@ -423,26 +431,10 @@ struct OpenMPOpt {
                       << " functions in a slice with "
                       << OMPInfoCache.ModuleSlice.size() << " functions\n");
 
-    /// Print initial ICV values for testing.
-    /// FIXME: This should be done from the Attributor once it is added.
-    if (PrintICVValues) {
-      InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel};
-
-      for (Function *F : OMPInfoCache.ModuleSlice) {
-        for (auto ICV : ICVs) {
-          auto ICVInfo = OMPInfoCache.ICVs[ICV];
-          auto Remark = [&](OptimizationRemark OR) {
-            return OR << "OpenMP ICV " << ore::NV("OpenMPICV", ICVInfo.Name)
-                      << " Value: "
-                      << (ICVInfo.InitValue
-                              ? ICVInfo.InitValue->getValue().toString(10, true)
-                              : "IMPLEMENTATION_DEFINED");
-          };
-
-          emitRemarkOnFunction(F, "OpenMPICVTracker", Remark);
-        }
-      }
-    }
+    if (PrintICVValues)
+      printICVs();
+    if (PrintOpenMPKernels)
+      printKernels();
 
     Changed |= runAttributor();
 
@@ -453,6 +445,42 @@ struct OpenMPOpt {
     Changed |= deleteParallelRegions();
 
     return Changed;
+  }
+
+  /// Print initial ICV values for testing.
+  /// FIXME: This should be done from the Attributor once it is added.
+  void printICVs() const {
+    InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel};
+
+    for (Function *F : OMPInfoCache.ModuleSlice) {
+      for (auto ICV : ICVs) {
+        auto ICVInfo = OMPInfoCache.ICVs[ICV];
+        auto Remark = [&](OptimizationRemark OR) {
+          return OR << "OpenMP ICV " << ore::NV("OpenMPICV", ICVInfo.Name)
+                    << " Value: "
+                    << (ICVInfo.InitValue
+                            ? ICVInfo.InitValue->getValue().toString(10, true)
+                            : "IMPLEMENTATION_DEFINED");
+        };
+
+        emitRemarkOnFunction(F, "OpenMPICVTracker", Remark);
+      }
+    }
+  }
+
+  /// Print OpenMP GPU kernels for testing.
+  void printKernels() const {
+    for (Function *F : SCC) {
+      if (!OMPInfoCache.Kernels.count(F))
+        continue;
+
+      auto Remark = [&](OptimizationRemark OR) {
+        return OR << "OpenMP GPU kernel "
+                  << ore::NV("OpenMPGPUKernel", F->getName()) << "\n";
+      };
+
+      emitRemarkOnFunction(F, "OpenMPGPU", Remark);
+    }
   }
 
   /// Return the call if \p U is a callee use in a regular call. If \p RFI is
@@ -775,7 +803,7 @@ private:
   template <typename RemarkKind,
             typename RemarkCallBack = function_ref<RemarkKind(RemarkKind &&)>>
   void emitRemark(Instruction *Inst, StringRef RemarkName,
-                  RemarkCallBack &&RemarkCB) {
+                  RemarkCallBack &&RemarkCB) const {
     Function *F = Inst->getParent()->getParent();
     auto &ORE = OREGetter(F);
 
@@ -785,9 +813,10 @@ private:
 
   /// Emit a remark on a function. Since only OptimizationRemark is supporting
   /// this, it can't be made generic.
-  void emitRemarkOnFunction(
-      Function *F, StringRef RemarkName,
-      function_ref<OptimizationRemark(OptimizationRemark &&)> &&RemarkCB) {
+  void
+  emitRemarkOnFunction(Function *F, StringRef RemarkName,
+                       function_ref<OptimizationRemark(OptimizationRemark &&)>
+                           &&RemarkCB) const {
     auto &ORE = OREGetter(F);
 
     ORE.emit([&]() {
@@ -1044,7 +1073,8 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   BumpPtrAllocator Allocator;
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
-                                /*CGSCC*/ &Functions, ModuleSlice);
+                                /*CGSCC*/ &Functions, ModuleSlice,
+                                OMPInModule.getKernels());
 
   Attributor A(Functions, InfoCache, CGUpdater);
 
@@ -1109,9 +1139,9 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     AnalysisGetter AG;
     SetVector<Function *> Functions(SCC.begin(), SCC.end());
     BumpPtrAllocator Allocator;
-    OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG,
-                                  Allocator,
-                                  /*CGSCC*/ &Functions, ModuleSlice);
+    OMPInformationCache InfoCache(
+        *(Functions.back()->getParent()), AG, Allocator,
+        /*CGSCC*/ &Functions, ModuleSlice, OMPInModule.getKernels());
 
     Attributor A(Functions, InfoCache, CGUpdater);
 
@@ -1125,14 +1155,45 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
 
 } // end anonymous namespace
 
+void OpenMPInModule::identifyKernels(Module &M) {
+
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+  if (!MD)
+    return;
+
+  for (auto *Op : MD->operands()) {
+    if (Op->getNumOperands() < 2)
+      continue;
+    MDString *KindID = dyn_cast<MDString>(Op->getOperand(1));
+    if (!KindID || KindID->getString() != "kernel")
+      continue;
+
+    Function *KernelFn =
+        mdconst::dyn_extract_or_null<Function>(Op->getOperand(0));
+    if (!KernelFn)
+      continue;
+
+    ++NumOpenMPTargetRegionKernels;
+
+    Kernels.insert(KernelFn);
+  }
+}
+
 bool llvm::omp::containsOpenMP(Module &M, OpenMPInModule &OMPInModule) {
   if (OMPInModule.isKnown())
     return OMPInModule;
-
 #define OMP_RTL(_Enum, _Name, ...)                                             \
-  if (M.getFunction(_Name))                                                    \
-    return OMPInModule = true;
+  else if (M.getFunction(_Name)) OMPInModule = true;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
+
+  // Identify kernels once. TODO: We should split the OMPInformationCache into a
+  // module and an SCC part. The kernel information, among other things, could
+  // go into the module part.
+  if (OMPInModule.isKnown() && OMPInModule) {
+    OMPInModule.identifyKernels(M);
+    return true;
+  }
+
   return OMPInModule = false;
 }
 
