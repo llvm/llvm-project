@@ -794,8 +794,16 @@ let Predicates = [IsISA3_1] in {
                                       (int_ppc_altivec_vsrdbi v16i8:$VRA,
                                                               v16i8:$VRB, 
                                                               i32:$SH))]>;
-  def VINSW : VXForm_VRT5_UIM5_RB5_ins<207, "vinsw", []>;
-  def VINSD : VXForm_VRT5_UIM5_RB5_ins<463, "vinsd", []>;
+  def VINSW : 
+    VXForm_VRT5_UIM5_RB5_ins<207, "vinsw",
+                             [(set v4i32:$vD,
+                                   (int_ppc_altivec_vinsw v4i32:$vDi, i64:$rB,
+                                                          timm:$UIM))]>;
+  def VINSD :
+    VXForm_VRT5_UIM5_RB5_ins<463, "vinsd",
+                             [(set v2i64:$vD,
+                                   (int_ppc_altivec_vinsd v2i64:$vDi, i64:$rB,
+                                                          timm:$UIM))]>;
   def VINSBVLX :
     VXForm_VTB5_RA5_ins<15, "vinsbvlx",
                         [(set v16i8:$vD,
