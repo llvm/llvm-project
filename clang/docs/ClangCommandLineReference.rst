@@ -3127,6 +3127,12 @@ X86
 
 .. option:: -maes, -mno-aes
 
+.. option:: -mamx-bf16, -mno-amx-bf16
+
+.. option:: -mamx-int8, -mno-amx-int8
+
+.. option:: -mamx-tile, -mno-amx-tile
+
 .. option:: -mavx, -mno-avx
 
 .. option:: -mavx2, -mno-avx2
