@@ -11,6 +11,7 @@ asynchronously-executed block. The block arguments in ``dispatch_async()`` and
 The following is an example of an invalid use of the ``noescape`` attribute.
 
   .. code-block:: objc
+
     void foo(__attribute__((noescape)) int *p) {
       dispatch_async(queue, ^{
         *p = 123;
