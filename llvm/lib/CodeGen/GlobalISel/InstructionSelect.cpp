@@ -223,9 +223,6 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     return false;
   }
 #endif
-  auto &TLI = *MF.getSubtarget().getTargetLowering();
-  TLI.finalizeLowering(MF);
-
   // Determine if there are any calls in this machine function. Ported from
   // SelectionDAG.
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -241,6 +238,9 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  // FIXME: FinalizeISel pass calls finalizeLowering, so it's called twice.
+  auto &TLI = *MF.getSubtarget().getTargetLowering();
+  TLI.finalizeLowering(MF);
 
   LLVM_DEBUG({
     dbgs() << "Rules covered by selecting function: " << MF.getName() << ":";
@@ -249,11 +249,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     dbgs() << "\n\n";
   });
   CoverageInfo.emit(CoveragePrefix,
-                    MF.getSubtarget()
-                        .getTargetLowering()
-                        ->getTargetMachine()
-                        .getTarget()
-                        .getBackendName());
+                    TLI.getTargetMachine().getTarget().getBackendName());
 
   // If we successfully selected the function nothing is going to use the vreg
   // types after us (otherwise MIRPrinter would need them). Make sure the types
