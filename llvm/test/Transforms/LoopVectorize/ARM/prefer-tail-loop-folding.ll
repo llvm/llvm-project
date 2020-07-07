@@ -562,14 +562,12 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-; TODO: this fpext could be allowed, but we don't lower it very efficiently yet,
-; so reject this for now.
 define void @fpext_allowed(float* noalias nocapture %A, half* noalias nocapture readonly %B, float* noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:        fpext_allowed(
-; PREFER-FOLDING-NOT: vector.body:
+; PREFER-FOLDING:     vector.body:
 ; PREFER-FOLDING-NOT: llvm.masked.load
 ; PREFER-FOLDING-NOT: llvm.masked.store
-; PREFER-FOLDING-NOT: br i1 %{{.*}}, label %{{.*}}, label %vector.body
+; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body
 
@@ -591,14 +589,12 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-; TODO: this fptrunc could be allowed, but we don't lower it very efficiently yet,
-; so reject this for now.
 define void @fptrunc_allowed(half* noalias nocapture %A, float* noalias nocapture readonly %B, float* noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:        fptrunc_allowed(
-; PREFER-FOLDING-NOT: vector.body:
+; PREFER-FOLDING:     vector.body:
 ; PREFER-FOLDING-NOT: llvm.masked.load
 ; PREFER-FOLDING-NOT: llvm.masked.store
-; PREFER-FOLDING-NOT: br i1 %{{.*}}, label %{{.*}}, label %vector.body
+; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body
 
