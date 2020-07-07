@@ -61,7 +61,19 @@ class Clause<string c> {
   bit isDefault = 0;
 }
 
-// Information about a specific directive
+// Hold information about clause validity by version.
+class VersionedClause<Clause c, int min = 1, int max = 0x7FFFFFFF> {
+  // Actual clause.
+  Clause clause = c;
+
+  // Mininum version number where this clause is valid.
+  int minVersion = min;
+
+  // Maximum version number where this clause is valid.
+  int maxVersion = max;
+}
+
+// Information about a specific directive.
 class Directive<string d> {
   // Name of the directive. Can be composite directive sepearted by whitespace.
   string name = d;
@@ -71,13 +83,13 @@ class Directive<string d> {
   string alternativeName = "";
 
   // List of allowed clauses for the directive.
-  list<Clause> allowedClauses = ?;
+  list<VersionedClause> allowedClauses = [];
 
   // List of clauses that are allowed to appear only once.
-  list<Clause> allowedOnceClauses = ?;
+  list<VersionedClause> allowedOnceClauses = [];
 
   // List of clauses that are required.
-  list<Clause> requiredClauses = ?;
+  list<VersionedClause> requiredClauses = [];
 
   // Set directive used by default when unknown.
   bit isDefault = 0;
