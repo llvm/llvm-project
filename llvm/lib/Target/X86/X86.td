@@ -455,6 +455,15 @@ def FeatureLVIControlFlowIntegrity
           "LFENCE instruction to serialize control flow. Also decompose RET "
           "instructions into a POP+LFENCE+JMP sequence.">;
 
+// Enable SESES to mitigate speculative execution attacks
+def FeatureSpeculativeExecutionSideEffectSuppression
+    : SubtargetFeature<
+          "seses", "UseSpeculativeExecutionSideEffectSuppression", "true",
+          "Prevent speculative execution side channel timing attacks by "
+          "inserting a speculation barrier before memory reads, memory writes, "
+          "and conditional branches. Implies LVI Control Flow integrity.",
+          [FeatureLVIControlFlowIntegrity]>;
+
 // Mitigate LVI attacks against data loads
 def FeatureLVILoadHardening
     : SubtargetFeature<
