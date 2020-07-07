@@ -22,13 +22,15 @@
 namespace clang {
 namespace format {
 
-FormatTokenLexer::FormatTokenLexer(const SourceManager &SourceMgr, FileID ID,
-                                   unsigned Column, const FormatStyle &Style,
-                                   encoding::Encoding Encoding)
+FormatTokenLexer::FormatTokenLexer(
+    const SourceManager &SourceMgr, FileID ID, unsigned Column,
+    const FormatStyle &Style, encoding::Encoding Encoding,
+    llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
+    IdentifierTable &IdentTable)
     : FormatTok(nullptr), IsFirstToken(true), StateStack({LexerState::NORMAL}),
       Column(Column), TrailingWhitespace(0), SourceMgr(SourceMgr), ID(ID),
-      Style(Style), IdentTable(getFormattingLangOpts(Style)),
-      Keywords(IdentTable), Encoding(Encoding), FirstInLineIndex(0),
+      Style(Style), IdentTable(IdentTable), Keywords(IdentTable),
+      Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
       FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
   Lex.reset(new Lexer(ID, SourceMgr.getBuffer(ID), SourceMgr,
