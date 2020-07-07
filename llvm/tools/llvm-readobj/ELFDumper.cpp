@@ -6564,21 +6564,32 @@ void LLVMStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
   ListScope L(W, "CGProfile");
   if (!this->dumper()->getDotCGProfileSec())
     return;
-  auto CGProfile = unwrapOrError(
-      this->FileName, Obj->template getSectionContentsAsArray<Elf_CGProfile>(
-                          this->dumper()->getDotCGProfileSec()));
-  for (const Elf_CGProfile &CGPE : CGProfile) {
+
+  Expected<ArrayRef<Elf_CGProfile>> CGProfileOrErr =
+      Obj->template getSectionContentsAsArray<Elf_CGProfile>(
+          this->dumper()->getDotCGProfileSec());
+  if (!CGProfileOrErr) {
+    this->reportUniqueWarning(
+        createError("unable to dump the SHT_LLVM_CALL_GRAPH_PROFILE section: " +
+                    toString(CGProfileOrErr.takeError())));
+    return;
+  }
+
+  auto GetSymName = [&](uint32_t Index) -> std::string {
+    if (Expected<std::string> NameOrErr =
+            this->dumper()->getStaticSymbolName(Index))
+      return *NameOrErr;
+    else
+      this->reportUniqueWarning(
+          createError("unable to read the name of symbol with index " +
+                      Twine(Index) + ": " + toString(NameOrErr.takeError())));
+    return "<?>";
+  };
+
+  for (const Elf_CGProfile &CGPE : *CGProfileOrErr) {
     DictScope D(W, "CGProfileEntry");
-    W.printNumber(
-        "From",
-        unwrapOrError(this->FileName,
-                      this->dumper()->getStaticSymbolName(CGPE.cgp_from)),
-        CGPE.cgp_from);
-    W.printNumber(
-        "To",
-        unwrapOrError(this->FileName,
-                      this->dumper()->getStaticSymbolName(CGPE.cgp_to)),
-        CGPE.cgp_to);
+    W.printNumber("From", GetSymName(CGPE.cgp_from), CGPE.cgp_from);
+    W.printNumber("To", GetSymName(CGPE.cgp_to), CGPE.cgp_to);
     W.printNumber("Weight", CGPE.cgp_weight);
   }
 }
