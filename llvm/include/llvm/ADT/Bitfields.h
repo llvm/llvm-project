@@ -212,10 +212,10 @@ template <> struct ResolveUnderlyingType<bool, false> {
 struct Bitfield {
   /// Describes an element of a Bitfield. This type is then used with the
   /// Bitfield static member functions.
-  /// \param T, the type of the field once in unpacked form,
-  /// \param Offset, the position of the first bit,
-  /// \param Size, the size of the field,
-  /// \param MaxValue, For enums the maximum enum allowed.
+  /// \tparam T         The type of the field once in unpacked form.
+  /// \tparam Offset    The position of the first bit.
+  /// \tparam Size      The size of the field.
+  /// \tparam MaxValue  For enums the maximum enum allowed.
   template <typename T, unsigned Offset, unsigned Size,
             T MaxValue = std::is_enum<T>::value
                              ? T(0) // coupled with static_assert below
