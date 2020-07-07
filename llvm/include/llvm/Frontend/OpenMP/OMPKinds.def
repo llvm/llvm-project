@@ -584,6 +584,11 @@ __OMP_RTL(__tgt_push_mapper_component, false, Void, VoidPtr, VoidPtr, VoidPtr,
 __OMP_RTL(__kmpc_task_allow_completion_event, false, VoidPtr, IdentPtr,
           /* Int */ Int32, /* kmp_task_t */ VoidPtr)
 
+/// Note that device runtime functions (in the following) do not necessarily
+/// need attributes as we expect to see the definitions.
+__OMP_RTL(__kmpc_kernel_parallel, false, Int1, VoidPtrPtr)
+__OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
+
 __OMP_RTL(__last, false, Void, )
 
 #undef __OMP_RTL
