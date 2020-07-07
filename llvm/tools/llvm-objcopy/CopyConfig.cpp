@@ -874,42 +874,39 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
     auto Match = [=](StringRef RPath) { return RPath == Old || RPath == New; };
 
     // Cannot specify duplicate -rpath entries
-    auto It1 = find_if(Config.RPathsToUpdate,
-                       [&Match](const std::pair<StringRef, StringRef> &OldNew) {
-                         return Match(OldNew.first) || Match(OldNew.second);
-                       });
+    auto It1 = find_if(
+        Config.RPathsToUpdate,
+        [&Match](const DenseMap<StringRef, StringRef>::value_type &OldNew) {
+          return Match(OldNew.getFirst()) || Match(OldNew.getSecond());
+        });
     if (It1 != Config.RPathsToUpdate.end())
-      return createStringError(
-          errc::invalid_argument,
-          "cannot specify both -rpath %s %s and -rpath %s %s",
-          It1->first.str().c_str(), It1->second.str().c_str(),
-          Old.str().c_str(), New.str().c_str());
+      return createStringError(errc::invalid_argument,
+                               "cannot specify both -rpath " + It1->getFirst() +
+                                   " " + It1->getSecond() + " and -rpath " +
+                                   Old + " " + New);
 
     // Cannot specify the same rpath under both -delete_rpath and -rpath
     auto It2 = find_if(Config.RPathsToRemove, Match);
     if (It2 != Config.RPathsToRemove.end())
-      return createStringError(
-          errc::invalid_argument,
-          "cannot specify both -delete_rpath %s and -rpath %s %s",
-          It2->str().c_str(), Old.str().c_str(), New.str().c_str());
+      return createStringError(errc::invalid_argument,
+                               "cannot specify both -delete_rpath " + *It2 +
+                                   " and -rpath " + Old + " " + New);
 
     // Cannot specify the same rpath under both -add_rpath and -rpath
     auto It3 = find_if(Config.RPathToAdd, Match);
     if (It3 != Config.RPathToAdd.end())
-      return createStringError(
-          errc::invalid_argument,
-          "cannot specify both -add_rpath %s and -rpath %s %s",
-          It3->str().c_str(), Old.str().c_str(), New.str().c_str());
+      return createStringError(errc::invalid_argument,
+                               "cannot specify both -add_rpath " + *It3 +
+                                   " and -rpath " + Old + " " + New);
 
-    Config.RPathsToUpdate.emplace_back(Old, New);
+    Config.RPathsToUpdate.insert({Old, New});
   }
 
   if (auto *Arg = InputArgs.getLastArg(INSTALL_NAME_TOOL_id))
     Config.SharedLibId = Arg->getValue();
 
   for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_change)) {
-    Config.InstallNamesToUpdate.emplace_back(Arg->getValue(0),
-                                             Arg->getValue(1));
+    Config.InstallNamesToUpdate.insert({Arg->getValue(0), Arg->getValue(1)});
   }
 
   SmallVector<StringRef, 2> Positional;
