@@ -108,14 +108,14 @@ bool X86TargetInfo::initFeatureMap(
   // FIXME: This *really* should not be here.
   // X86_64 always has SSE2.
   if (getTriple().getArch() == llvm::Triple::x86_64)
-    setFeatureEnabledImpl(Features, "sse2", true);
+    setFeatureEnabled(Features, "sse2", true);
 
   using namespace llvm::X86;
 
   SmallVector<StringRef, 16> CPUFeatures;
   getFeaturesForCPU(CPU, CPUFeatures);
   for (auto &F : CPUFeatures)
-    setFeatureEnabledImpl(Features, F, true);
+    setFeatureEnabled(Features, F, true);
 
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec))
     return false;
@@ -145,8 +145,8 @@ bool X86TargetInfo::initFeatureMap(
   return true;
 }
 
-void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
-                                          StringRef Name, bool Enabled) {
+void X86TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
+                                      StringRef Name, bool Enabled) const {
   if (Name == "sse4") {
     // We can get here via the __target__ attribute since that's not controlled
     // via the -msse4/-mno-sse4 command line alias. Handle this the same way
