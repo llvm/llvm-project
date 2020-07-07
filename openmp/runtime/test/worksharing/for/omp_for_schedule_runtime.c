@@ -11,10 +11,6 @@
 // RUN: env OMP_SCHEDULE=static_steal %libomp-run 102 1
 // RUN: env OMP_SCHEDULE=static_steal,14 %libomp-run 102 14
 
-// gcc 9/10 use GOMP_parallel_loop_maybe_nonmonotonic_runtime, not implemented
-// Should be removed once the functions are implemented
-// XFAIL: gcc-9, gcc-10
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
