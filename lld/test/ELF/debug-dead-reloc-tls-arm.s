@@ -7,8 +7,7 @@
 # RUN: llvm-objdump -s %t | FileCheck %s
 
 # CHECK:      Contents of section .debug_info:
-## FIXME: Use ffffffff
-# CHECK-NEXT:  0000 00000000
+# CHECK-NEXT:  0000 ffffffff
 
 .globl _start
 _start:
