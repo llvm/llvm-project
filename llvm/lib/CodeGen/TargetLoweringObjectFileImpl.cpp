@@ -2168,6 +2168,6 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
     const MCSymbol *Sym) const {
   return getContext().getXCOFFSection(
-      cast<MCSymbolXCOFF>(Sym)->getUnqualifiedName(), XCOFF::XMC_TC,
+      cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), XCOFF::XMC_TC,
       XCOFF::XTY_SD, XCOFF::C_HIDEXT, SectionKind::getData());
 }
