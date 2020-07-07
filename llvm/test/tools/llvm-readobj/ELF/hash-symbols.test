@@ -509,3 +509,131 @@ ProgramHeaders:
     Sections:
       - Section: .gnu.hash
       - Section: .dynamic
+
+## Check the behavior when the dynamic symbol table is empty or not found.
+
+## Case A.1: Check we report a warning when the dynamic symbol table is empty and we attempt to print hash symbols
+##         from the .hash table. The number of symbols in the dynamic symbol table can be calculated from its size
+##         or derived from the Chain vector of the .hash table. Make both ways to return a zero to do the check.
+# RUN: yaml2obj --docnum=9 %s -o %t9.1.so
+# RUN: llvm-readelf --hash-symbols %t9.1.so 2>&1 | FileCheck %s -DFILE=%t9.1.so --check-prefix=DYNSYM-EMPTY-HASH
+
+# DYNSYM-EMPTY-HASH:      Symbol table of .hash for image:
+# DYNSYM-EMPTY-HASH-NEXT:   Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# DYNSYM-EMPTY-HASH-NEXT: warning: '[[FILE]]': unable to print symbols for the .hash table: the dynamic symbol table is empty
+# DYNSYM-EMPTY-HASH-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Flags:  [ SHF_ALLOC ]
+    Bucket: [ 0 ]
+    Chain:  [ ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_STRTAB
+## PT_LOAD p_offset == .hash offset == 0x54.
+## 0x54 + 0x2c == 0x80 == .dynstr offset.
+        Value: 0x2c
+      - Tag:   DT_STRSZ
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name:  .dynstr
+    Type:  SHT_STRTAB
+    Flags: [ SHF_ALLOC ]
+  - Name:  .dynsym
+    Type:  [[DYNSYMTYPE=SHT_DYNSYM]]
+    Flags: [ SHF_ALLOC ]
+    Size:  0
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .hash
+      - Section: .dynamic
+      - Section: .dynstr
+
+## Case A.2: similar to A.1, but now check that we report a warning when the dynamic symbol table was not found.
+##           To do that, set the type of the .dynsym to SHT_PROGBITS to hide it.
+# RUN: yaml2obj --docnum=9 -DDYNSYMTYPE=SHT_PROGBITS %s -o %t9.2.so
+# RUN: llvm-readelf --hash-symbols %t9.2.so 2>&1 | FileCheck %s -DFILE=%t9.2.so --check-prefix=DYNSYM-NOTFOUND-HASH
+
+# DYNSYM-NOTFOUND-HASH:      Symbol table of .hash for image:
+# DYNSYM-NOTFOUND-HASH-NEXT:   Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# DYNSYM-NOTFOUND-HASH-NEXT: warning: '[[FILE]]': unable to print symbols for the .hash table: the dynamic symbol table was not found
+# DYNSYM-NOTFOUND-HASH-NOT:  {{.}}
+
+## Case B.1: Check we report a warning when the dynamic symbol table is empty and we attempt to print
+##           hash symbols from the .gnu.hash table.
+# RUN: yaml2obj --docnum=10 %s -o %t10.1.so
+# RUN: llvm-readelf --hash-symbols %t10.1.so 2>&1 | FileCheck %s -DFILE=%t10.1.so --check-prefix=DYNSYM-EMPTY-GNUHASH
+
+# DYNSYM-EMPTY-GNUHASH:      Symbol table of .gnu.hash for image:
+# DYNSYM-EMPTY-GNUHASH-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# DYNSYM-EMPTY-GNUHASH-NEXT: warning: '[[FILE]]': unable to print symbols for the .gnu.hash table: the dynamic symbol table is empty
+# DYNSYM-EMPTY-GNUHASH-NOT:  {{.}}
+
+## Case B.2: similar to B.1, but now check that we report a warning when the dynamic symbol table was not found.
+##           To do that, set the type of the .dynsym to SHT_PROGBITS to hide it.
+# RUN: yaml2obj --docnum=10 -DDYNSYMTYPE=SHT_PROGBITS %s -o %t10.2.so
+# RUN: llvm-readelf --hash-symbols %t10.2.so 2>&1 | FileCheck %s -DFILE=%t10.2.so --check-prefix=DYNSYM-NOTFOUND-GNUHASH
+
+# DYNSYM-NOTFOUND-GNUHASH:      Symbol table of .gnu.hash for image:
+# DYNSYM-NOTFOUND-GNUHASH-NEXT:  Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# DYNSYM-NOTFOUND-GNUHASH-NEXT: warning: '[[FILE]]': unable to print symbols for the .gnu.hash table: the dynamic symbol table was not found
+# DYNSYM-NOTFOUND-GNUHASH-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x0
+      Shift2: 0x0
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x1 ]
+    HashValues:  [ 0x0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_STRTAB
+## PT_LOAD p_offset == .hash offset == 0x54.
+## 0x54 + 0x3c == 0x80 == .dynstr offset.
+        Value: 0x3c
+      - Tag:   DT_STRSZ
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name: .dynstr
+    Type: SHT_STRTAB
+  - Name:  .dynsym
+    Type:  [[DYNSYMTYPE=SHT_DYNSYM]]
+    Flags: [ SHF_ALLOC ]
+    Size:  0
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
+      - Section: .dynstr
