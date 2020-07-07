@@ -1289,9 +1289,16 @@ public:
       Value m;
       if (acc) {
         Value e = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
-        m = rewriter.create<vector::FMAOp>(loc, b, op.rhs(), e);
+        if (eltType.isa<IntegerType>())
+          m = rewriter.create<AddIOp>(
+              loc, rewriter.create<MulIOp>(loc, b, op.rhs()), e);
+        else
+          m = rewriter.create<vector::FMAOp>(loc, b, op.rhs(), e);
       } else {
-        m = rewriter.create<MulFOp>(loc, b, op.rhs());
+        if (eltType.isa<IntegerType>())
+          m = rewriter.create<MulIOp>(loc, b, op.rhs());
+        else
+          m = rewriter.create<MulFOp>(loc, b, op.rhs());
       }
       result = rewriter.create<vector::InsertOp>(loc, resType, m, result, pos);
     }
