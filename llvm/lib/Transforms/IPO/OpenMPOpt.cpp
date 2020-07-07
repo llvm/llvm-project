@@ -57,6 +57,28 @@ STATISTIC(NumOpenMPTargetRegionKernels,
 static constexpr auto TAG = "[" DEBUG_TYPE "]";
 #endif
 
+/// Apply \p CB to all uses of \p F. If \p LookThroughConstantExprUses is
+/// true, constant expression users are not given to \p CB but their uses are
+/// traversed transitively.
+template <typename CBTy>
+static void foreachUse(Function &F, CBTy CB,
+                       bool LookThroughConstantExprUses = true) {
+  SmallVector<Use *, 8> Worklist(make_pointer_range(F.uses()));
+
+  for (unsigned idx = 0; idx < Worklist.size(); ++idx) {
+    Use &U = *Worklist[idx];
+
+    // Allow use in constant bitcasts and simply look through them.
+    if (LookThroughConstantExprUses && isa<ConstantExpr>(U.getUser())) {
+      for (Use &CEU : cast<ConstantExpr>(U.getUser())->uses())
+        Worklist.push_back(&CEU);
+      continue;
+    }
+
+    CB(U);
+  }
+}
+
 /// Helper struct to store tracked ICV values at specif instructions.
 struct ICVValue {
   Instruction *Inst;
@@ -102,11 +124,12 @@ struct AAICVTracker;
 /// Attributor runs.
 struct OMPInformationCache : public InformationCache {
   OMPInformationCache(Module &M, AnalysisGetter &AG,
-                      BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
-                      SmallPtrSetImpl<Function *> &ModuleSlice,
+                      BumpPtrAllocator &Allocator, SetVector<Function *> &CGSCC,
                       SmallPtrSetImpl<Kernel> &Kernels)
-      : InformationCache(M, AG, Allocator, CGSCC), ModuleSlice(ModuleSlice),
-        OMPBuilder(M), Kernels(Kernels) {
+      : InformationCache(M, AG, Allocator, &CGSCC), OMPBuilder(M),
+        Kernels(Kernels) {
+    initializeModuleSlice(CGSCC);
+
     OMPBuilder.initialize();
     initializeRuntimeFunctions();
     initializeInternalControlVars();
@@ -196,20 +219,20 @@ struct OMPInformationCache : public InformationCache {
     /// Run the callback \p CB on each use and forget the use if the result is
     /// true. The callback will be fed the function in which the use was
     /// encountered as second argument.
-    void foreachUse(function_ref<bool(Use &, Function &)> CB) {
-      for (auto &It : UsesMap)
-        foreachUse(CB, It.first, It.second.get());
+    void foreachUse(SmallVectorImpl<Function *> &SCC,
+                    function_ref<bool(Use &, Function &)> CB) {
+      for (Function *F : SCC)
+        foreachUse(CB, F);
     }
 
     /// Run the callback \p CB on each use within the function \p F and forget
     /// the use if the result is true.
-    void foreachUse(function_ref<bool(Use &, Function &)> CB, Function *F,
-                    UseVector *Uses = nullptr) {
+    void foreachUse(function_ref<bool(Use &, Function &)> CB, Function *F) {
       SmallVector<unsigned, 8> ToBeDeleted;
       ToBeDeleted.clear();
 
       unsigned Idx = 0;
-      UseVector &UV = Uses ? *Uses : getOrCreateUseVector(F);
+      UseVector &UV = getOrCreateUseVector(F);
 
       for (Use *U : UV) {
         if (CB(*U, *F))
@@ -232,8 +255,45 @@ struct OMPInformationCache : public InformationCache {
     DenseMap<Function *, std::shared_ptr<UseVector>> UsesMap;
   };
 
+  /// Initialize the ModuleSlice member based on \p SCC. ModuleSlices contains
+  /// (a subset of) all functions that we can look at during this SCC traversal.
+  /// This includes functions (transitively) called from the SCC and the
+  /// (transitive) callers of SCC functions. We also can look at a function if
+  /// there is a "reference edge", i.a., if the function somehow uses (!=calls)
+  /// a function in the SCC or a caller of a function in the SCC.
+  void initializeModuleSlice(SetVector<Function *> &SCC) {
+    ModuleSlice.insert(SCC.begin(), SCC.end());
+
+    SmallPtrSet<Function *, 16> Seen;
+    SmallVector<Function *, 16> Worklist(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      for (Instruction &I : instructions(*F))
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (Function *Callee = CB->getCalledFunction())
+            if (Seen.insert(Callee).second)
+              Worklist.push_back(Callee);
+    }
+
+    Seen.clear();
+    Worklist.append(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      // Traverse all transitive uses.
+      foreachUse(*F, [&](Use &U) {
+        if (auto *UsrI = dyn_cast<Instruction>(U.getUser()))
+          if (Seen.insert(UsrI->getFunction()).second)
+            Worklist.push_back(UsrI->getFunction());
+      });
+    }
+  }
+
   /// The slice of the module we are allowed to look at.
-  SmallPtrSetImpl<Function *> &ModuleSlice;
+  SmallPtrSet<Function *, 8> ModuleSlice;
 
   /// An OpenMP-IR-Builder instance
   OpenMPIRBuilder OMPBuilder;
@@ -548,7 +608,7 @@ private:
       return true;
     };
 
-    RFI.foreachUse(DeleteCallCB);
+    RFI.foreachUse(SCC, DeleteCallCB);
 
     return Changed;
   }
@@ -633,7 +693,7 @@ private:
                                   /* GlobalOnly */ true, SingleChoice);
       return false;
     };
-    RFI.foreachUse(CombineIdentStruct);
+    RFI.foreachUse(SCC, CombineIdentStruct);
 
     if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
@@ -733,7 +793,7 @@ private:
       Changed = true;
       return true;
     };
-    RFI.foreachUse(ReplaceAndDeleteCB);
+    RFI.foreachUse(SCC, ReplaceAndDeleteCB);
 
     return Changed;
   }
@@ -776,7 +836,7 @@ private:
     OMPInformationCache::RuntimeFunctionInfo &GlobThreadNumRFI =
         OMPInfoCache.RFIs[OMPRTL___kmpc_global_thread_num];
 
-    GlobThreadNumRFI.foreachUse([&](Use &U, Function &F) {
+    GlobThreadNumRFI.foreachUse(SCC, [&](Use &U, Function &F) {
       if (CallInst *CI = getCallIfRegularCall(U, &GlobThreadNumRFI))
         AddUserArgs(*CI);
       return false;
@@ -938,7 +998,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
       return true;
     };
 
-    GetterRFI.foreachUse(ReplaceAndDeleteCB);
+    GetterRFI.foreachUse(ReplaceAndDeleteCB, getAnchorScope());
     return Changed;
   }
 
@@ -1048,12 +1108,9 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
-  SmallPtrSet<Function *, 16> ModuleSlice;
   SmallVector<Function *, 16> SCC;
-  for (LazyCallGraph::Node &N : C) {
+  for (LazyCallGraph::Node &N : C)
     SCC.push_back(&N.getFunction());
-    ModuleSlice.insert(SCC.back());
-  }
 
   if (SCC.empty())
     return PreservedAnalyses::all();
@@ -1073,8 +1130,7 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   BumpPtrAllocator Allocator;
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
-                                /*CGSCC*/ &Functions, ModuleSlice,
-                                OMPInModule.getKernels());
+                                /*CGSCC*/ Functions, OMPInModule.getKernels());
 
   Attributor A(Functions, InfoCache, CGUpdater);
 
@@ -1112,14 +1168,11 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     if (DisableOpenMPOptimizations || skipSCC(CGSCC))
       return false;
 
-    SmallPtrSet<Function *, 16> ModuleSlice;
     SmallVector<Function *, 16> SCC;
     for (CallGraphNode *CGN : CGSCC)
       if (Function *Fn = CGN->getFunction())
-        if (!Fn->isDeclaration()) {
+        if (!Fn->isDeclaration())
           SCC.push_back(Fn);
-          ModuleSlice.insert(Fn);
-        }
 
     if (SCC.empty())
       return false;
@@ -1141,7 +1194,7 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     BumpPtrAllocator Allocator;
     OMPInformationCache InfoCache(
         *(Functions.back()->getParent()), AG, Allocator,
-        /*CGSCC*/ &Functions, ModuleSlice, OMPInModule.getKernels());
+        /*CGSCC*/ Functions, OMPInModule.getKernels());
 
     Attributor A(Functions, InfoCache, CGUpdater);
 
