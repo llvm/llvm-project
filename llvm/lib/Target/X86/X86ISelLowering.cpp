@@ -8002,10 +8002,11 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
         Elt = NextElt;
     }
 
-    // If our first insertion is not the first index then insert into zero
-    // vector to break any register dependency else use SCALAR_TO_VECTOR.
+    // If our first insertion is not the first index or zeros are needed, then
+    // insert into zero vector. Otherwise, use SCALAR_TO_VECTOR (leaves high
+    // elements undefined).
     if (!V) {
-      if (i != 0)
+      if (i != 0 || NumZero)
         V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
       else {
         V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, Elt);
