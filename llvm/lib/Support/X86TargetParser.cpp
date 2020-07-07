@@ -441,6 +441,7 @@ static constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_BRANCHES = {};
 static constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_CALLS = {};
 static constexpr FeatureBitset ImpliedFeaturesLVI_CFI = {};
 static constexpr FeatureBitset ImpliedFeaturesLVI_LOAD_HARDENING = {};
+static constexpr FeatureBitset ImpliedFeaturesSESES = {};
 
 // XSAVE features are dependent on basic XSAVE.
 static constexpr FeatureBitset ImpliedFeaturesXSAVEC = FeatureXSAVE;
@@ -562,6 +563,7 @@ void llvm::X86::getImpliedFeatures(
   if (I == std::end(FeatureInfos)) {
     // FIXME: This shouldn't happen, but may not have all features in the table
     // yet.
+    assert(false && "Feature not found in table!");
     return;
   }
 
