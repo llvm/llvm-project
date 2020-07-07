@@ -743,8 +743,8 @@ private:
           }
 
           if (!isSafeToMoveBefore(*FC1->Preheader,
-                                  *FC0->Preheader->getTerminator(), DT, PDT,
-                                  DI)) {
+                                  *FC0->Preheader->getTerminator(), DT, &PDT,
+                                  &DI)) {
             LLVM_DEBUG(dbgs() << "Fusion candidate contains unsafe "
                                  "instructions in preheader. Not fusing.\n");
             reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
@@ -757,7 +757,7 @@ private:
 
             if (!isSafeToMoveBefore(*FC0->ExitBlock,
                                     *FC1->ExitBlock->getFirstNonPHIOrDbg(), DT,
-                                    PDT, DI)) {
+                                    &PDT, &DI)) {
               LLVM_DEBUG(dbgs() << "Fusion candidate contains unsafe "
                                    "instructions in exit block. Not fusing.\n");
               reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
@@ -767,8 +767,8 @@ private:
 
             if (!isSafeToMoveBefore(
                     *FC1->GuardBranch->getParent(),
-                    *FC0->GuardBranch->getParent()->getTerminator(), DT, PDT,
-                    DI)) {
+                    *FC0->GuardBranch->getParent()->getTerminator(), DT, &PDT,
+                    &DI)) {
               LLVM_DEBUG(dbgs()
                          << "Fusion candidate contains unsafe "
                             "instructions in guard block. Not fusing.\n");
