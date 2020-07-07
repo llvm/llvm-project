@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/VectorUnrollInterface.td"
 
 def Vector_Dialect : Dialect {
   let name = "vector";
@@ -39,10 +40,13 @@ class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
 // TODO(andydavis, ntv) Add an attribute to specify a different algebra
 // with operators other than the current set: {*, +}.
 def Vector_ContractionOp :
-  Vector_Op<"contract", [NoSideEffect,
-     PredOpTrait<"lhs and rhs have same element type", TCopVTEtIsSameAs<0, 1>>,
-     PredOpTrait<"third operand acc and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 2>>]>,
+  Vector_Op<"contract", [
+      NoSideEffect,
+      PredOpTrait<"lhs and rhs have same element type", TCopVTEtIsSameAs<0, 1>>,
+      PredOpTrait<"third operand acc and result have same element type",
+                  TCresVTEtIsSameAsOpBase<0, 2>>,
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+    ]>,
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
                Variadic<VectorOf<[I1]>>:$masks,
                AffineMapArrayAttr:$indexing_maps, ArrayAttr:$iterator_types)>,
@@ -896,7 +900,9 @@ def Vector_TransferOpUtils {
 }
 
 def Vector_TransferReadOp :
-  Vector_Op<"transfer_read">,
+  Vector_Op<"transfer_read", [
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+    ]>,
     Arguments<(ins AnyMemRef:$memref, Variadic<Index>:$indices,
                AffineMapAttr:$permutation_map, AnyType:$padding,
                OptionalAttr<BoolArrayAttr>:$masked)>,
@@ -1068,7 +1074,9 @@ def Vector_TransferReadOp :
 }
 
 def Vector_TransferWriteOp :
-  Vector_Op<"transfer_write">,
+  Vector_Op<"transfer_write", [
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+    ]>,
     Arguments<(ins AnyVector:$vector, AnyMemRef:$memref,
                Variadic<Index>:$indices,
                AffineMapAttr:$permutation_map,

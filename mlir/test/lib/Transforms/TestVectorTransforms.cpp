@@ -92,6 +92,20 @@ struct TestVectorContractionConversion
   }
 };
 
+struct TestVectorUnrollingPatterns
+    : public PassWrapper<TestVectorUnrollingPatterns, FunctionPass> {
+  void runOnFunction() override {
+    MLIRContext *ctx = &getContext();
+    OwningRewritePatternList patterns;
+    patterns.insert<UnrollVectorPattern<AddFOp>>(ArrayRef<int64_t>{2, 2}, ctx);
+    patterns.insert<UnrollVectorPattern<vector::ContractionOp>>(
+        ArrayRef<int64_t>{2, 2, 2}, ctx);
+    populateVectorToVectorCanonicalizationPatterns(patterns, ctx);
+    populateVectorToVectorTransformationPatterns(patterns, ctx);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -107,5 +121,9 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorContractionConversion> contractionPass(
       "test-vector-contraction-conversion",
       "Test conversion patterns that lower contract ops in the vector dialect");
+
+  PassRegistration<TestVectorUnrollingPatterns> contractionUnrollingPass(
+      "test-vector-unrolling-patterns",
+      "Test conversion patterns to unroll contract ops in the vector dialect");
 }
 } // namespace mlir
