@@ -342,6 +342,20 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_AMDGPU_REL64: return "rel64";
   case VK_AMDGPU_ABS32_LO: return "abs32@lo";
   case VK_AMDGPU_ABS32_HI: return "abs32@hi";
+  case VK_VE_HI32: return "hi";
+  case VK_VE_LO32: return "lo";
+  case VK_VE_PC_HI32: return "pc_hi";
+  case VK_VE_PC_LO32: return "pc_lo";
+  case VK_VE_GOT_HI32: return "got_hi";
+  case VK_VE_GOT_LO32: return "got_lo";
+  case VK_VE_GOTOFF_HI32: return "gotoff_hi";
+  case VK_VE_GOTOFF_LO32: return "gotoff_lo";
+  case VK_VE_PLT_HI32: return "plt_hi";
+  case VK_VE_PLT_LO32: return "plt_lo";
+  case VK_VE_TLS_GD_HI32: return "tls_gd_hi";
+  case VK_VE_TLS_GD_LO32: return "tls_gd_lo";
+  case VK_VE_TPOFF_HI32: return "tpoff_hi";
+  case VK_VE_TPOFF_LO32: return "tpoff_lo";
   }
   llvm_unreachable("Invalid variant kind");
 }
@@ -463,6 +477,20 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("rel64", VK_AMDGPU_REL64)
     .Case("abs32@lo", VK_AMDGPU_ABS32_LO)
     .Case("abs32@hi", VK_AMDGPU_ABS32_HI)
+    .Case("hi", VK_VE_HI32)
+    .Case("lo", VK_VE_LO32)
+    .Case("pc_hi", VK_VE_PC_HI32)
+    .Case("pc_lo", VK_VE_PC_LO32)
+    .Case("got_hi", VK_VE_GOT_HI32)
+    .Case("got_lo", VK_VE_GOT_LO32)
+    .Case("gotoff_hi", VK_VE_GOTOFF_HI32)
+    .Case("gotoff_lo", VK_VE_GOTOFF_LO32)
+    .Case("plt_hi", VK_VE_PLT_HI32)
+    .Case("plt_lo", VK_VE_PLT_LO32)
+    .Case("tls_gd_hi", VK_VE_TLS_GD_HI32)
+    .Case("tls_gd_lo", VK_VE_TLS_GD_LO32)
+    .Case("tpoff_hi", VK_VE_TPOFF_HI32)
+    .Case("tpoff_lo", VK_VE_TPOFF_LO32)
     .Default(VK_Invalid);
 }
 
