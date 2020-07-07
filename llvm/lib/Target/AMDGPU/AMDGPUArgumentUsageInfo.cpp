@@ -83,59 +83,63 @@ void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
   }
 }
 
-std::pair<const ArgDescriptor *, const TargetRegisterClass *>
+std::tuple<const ArgDescriptor *, const TargetRegisterClass *, LLT>
 AMDGPUFunctionArgInfo::getPreloadedValue(
-  AMDGPUFunctionArgInfo::PreloadedValue Value) const {
+    AMDGPUFunctionArgInfo::PreloadedValue Value) const {
   switch (Value) {
   case AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER: {
-    return std::make_pair(
-      PrivateSegmentBuffer ? &PrivateSegmentBuffer : nullptr,
-      &AMDGPU::SGPR_128RegClass);
+    return std::make_tuple(PrivateSegmentBuffer ? &PrivateSegmentBuffer
+                                                : nullptr,
+                           &AMDGPU::SGPR_128RegClass, LLT::vector(4, 32));
   }
   case AMDGPUFunctionArgInfo::IMPLICIT_BUFFER_PTR:
-    return std::make_pair(ImplicitBufferPtr ? &ImplicitBufferPtr : nullptr,
-                          &AMDGPU::SGPR_64RegClass);
+    return std::make_tuple(ImplicitBufferPtr ? &ImplicitBufferPtr : nullptr,
+                           &AMDGPU::SGPR_64RegClass,
+                           LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
-    return std::make_pair(WorkGroupIDX ? &WorkGroupIDX : nullptr,
-                          &AMDGPU::SGPR_32RegClass);
-
+    return std::make_tuple(WorkGroupIDX ? &WorkGroupIDX : nullptr,
+                           &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
-    return std::make_pair(WorkGroupIDY ? &WorkGroupIDY : nullptr,
-                          &AMDGPU::SGPR_32RegClass);
+    return std::make_tuple(WorkGroupIDY ? &WorkGroupIDY : nullptr,
+                           &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
-    return std::make_pair(WorkGroupIDZ ? &WorkGroupIDZ : nullptr,
-                          &AMDGPU::SGPR_32RegClass);
+    return std::make_tuple(WorkGroupIDZ ? &WorkGroupIDZ : nullptr,
+                           &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET:
-    return std::make_pair(
-      PrivateSegmentWaveByteOffset ? &PrivateSegmentWaveByteOffset : nullptr,
-      &AMDGPU::SGPR_32RegClass);
+    return std::make_tuple(
+        PrivateSegmentWaveByteOffset ? &PrivateSegmentWaveByteOffset : nullptr,
+        &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR:
-    return std::make_pair(KernargSegmentPtr ? &KernargSegmentPtr : nullptr,
-                          &AMDGPU::SGPR_64RegClass);
+    return std::make_tuple(KernargSegmentPtr ? &KernargSegmentPtr : nullptr,
+                           &AMDGPU::SGPR_64RegClass,
+                           LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   case AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR:
-    return std::make_pair(ImplicitArgPtr ? &ImplicitArgPtr : nullptr,
-                          &AMDGPU::SGPR_64RegClass);
+    return std::make_tuple(ImplicitArgPtr ? &ImplicitArgPtr : nullptr,
+                           &AMDGPU::SGPR_64RegClass,
+                           LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   case AMDGPUFunctionArgInfo::DISPATCH_ID:
-    return std::make_pair(DispatchID ? &DispatchID : nullptr,
-                          &AMDGPU::SGPR_64RegClass);
+    return std::make_tuple(DispatchID ? &DispatchID : nullptr,
+                           &AMDGPU::SGPR_64RegClass, LLT::scalar(64));
   case AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT:
-    return std::make_pair(FlatScratchInit ? &FlatScratchInit : nullptr,
-                          &AMDGPU::SGPR_64RegClass);
+    return std::make_tuple(FlatScratchInit ? &FlatScratchInit : nullptr,
+                           &AMDGPU::SGPR_64RegClass, LLT::scalar(64));
   case AMDGPUFunctionArgInfo::DISPATCH_PTR:
-    return std::make_pair(DispatchPtr ? &DispatchPtr : nullptr,
-                          &AMDGPU::SGPR_64RegClass);
+    return std::make_tuple(DispatchPtr ? &DispatchPtr : nullptr,
+                           &AMDGPU::SGPR_64RegClass,
+                           LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   case AMDGPUFunctionArgInfo::QUEUE_PTR:
-    return std::make_pair(QueuePtr ? &QueuePtr : nullptr,
-                          &AMDGPU::SGPR_64RegClass);
+    return std::make_tuple(QueuePtr ? &QueuePtr : nullptr,
+                           &AMDGPU::SGPR_64RegClass,
+                           LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_X:
-    return std::make_pair(WorkItemIDX ? &WorkItemIDX : nullptr,
-                          &AMDGPU::VGPR_32RegClass);
+    return std::make_tuple(WorkItemIDX ? &WorkItemIDX : nullptr,
+                           &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_Y:
-    return std::make_pair(WorkItemIDY ? &WorkItemIDY : nullptr,
-                          &AMDGPU::VGPR_32RegClass);
+    return std::make_tuple(WorkItemIDY ? &WorkItemIDY : nullptr,
+                           &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_Z:
-    return std::make_pair(WorkItemIDZ ? &WorkItemIDZ : nullptr,
-                          &AMDGPU::VGPR_32RegClass);
+    return std::make_tuple(WorkItemIDZ ? &WorkItemIDZ : nullptr,
+                           &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
   }
   llvm_unreachable("unexpected preloaded value type");
 }
