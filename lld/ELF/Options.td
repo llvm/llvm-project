@@ -635,6 +635,7 @@ def: F<"no-copy-dt-needed-entries">;
 def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
 def: F<"no-pipeline-knowledge">;
+def: F<"no-relax">;
 def: F<"no-warn-mismatch">;
 def: Flag<["-"], "p">;
 def: Separate<["--", "-"], "rpath-link">;
