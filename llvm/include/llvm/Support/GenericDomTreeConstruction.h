@@ -187,9 +187,7 @@ struct SemiNCAInfo {
 
     // Add a new tree node for this NodeT, and link it as a child of
     // IDomNode
-    return (DT.DomTreeNodes[BB] = IDomNode->addChild(
-        std::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode)))
-        .get();
+    return DT.createChild(BB, IDomNode);
   }
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
@@ -587,9 +585,7 @@ struct SemiNCAInfo {
     // all real exits (including multiple exit blocks, infinite loops).
     NodePtr Root = IsPostDom ? nullptr : DT.Roots[0];
 
-    DT.RootNode = (DT.DomTreeNodes[Root] =
-                       std::make_unique<DomTreeNodeBase<NodeT>>(Root, nullptr))
-        .get();
+    DT.RootNode = DT.createNode(Root);
     SNCA.attachNewSubtree(DT, DT.RootNode);
   }
 
@@ -610,8 +606,7 @@ struct SemiNCAInfo {
 
       // Add a new tree node for this BasicBlock, and link it as a child of
       // IDomNode.
-      DT.DomTreeNodes[W] = IDomNode->addChild(
-          std::make_unique<DomTreeNodeBase<NodeT>>(W, IDomNode));
+      DT.createChild(W, IDomNode);
     }
   }
 
@@ -661,10 +656,7 @@ struct SemiNCAInfo {
 
       // The unreachable node becomes a new root -- a tree node for it.
       TreeNodePtr VirtualRoot = DT.getNode(nullptr);
-      FromTN =
-          (DT.DomTreeNodes[From] = VirtualRoot->addChild(
-               std::make_unique<DomTreeNodeBase<NodeT>>(From, VirtualRoot)))
-              .get();
+      FromTN = DT.createChild(From, VirtualRoot);
       DT.Roots.push_back(From);
     }
 
