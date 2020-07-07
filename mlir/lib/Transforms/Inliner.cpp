@@ -321,7 +321,7 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
 
     for (Operation &op : *block) {
       if (auto call = dyn_cast<CallOpInterface>(op)) {
-        // TODO(riverriddle) Support inlining nested call references.
+        // TODO: Support inlining nested call references.
         CallInterfaceCallable callable = call.getCallableForCallee();
         if (SymbolRefAttr symRef = callable.dyn_cast<SymbolRefAttr>()) {
           if (!symRef.isa<FlatSymbolRefAttr>())

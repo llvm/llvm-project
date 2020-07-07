@@ -33,8 +33,8 @@ using llvm::dbgs;
 /// Returns the sequence of AffineApplyOp Operations operation in
 /// 'affineApplyOps', which are reachable via a search starting from 'operands',
 /// and ending at operands which are not defined by AffineApplyOps.
-// TODO(andydavis) Add a method to AffineApplyOp which forward substitutes
-// the AffineApplyOp into any user AffineApplyOps.
+// TODO: Add a method to AffineApplyOp which forward substitutes the
+// AffineApplyOp into any user AffineApplyOps.
 void mlir::getReachableAffineApplyOps(
     ArrayRef<Value> operands, SmallVectorImpl<Operation *> &affineApplyOps) {
   struct State {
@@ -81,10 +81,10 @@ void mlir::getReachableAffineApplyOps(
 // the loop IVs of the forOps appearing in that order. Any symbols founds in
 // the bound operands are added as symbols in the system. Returns failure for
 // the yet unimplemented cases.
-// TODO(andydavis,bondhugula) Handle non-unit steps through local variables or
-// stride information in FlatAffineConstraints. (For eg., by using iv - lb %
-// step = 0 and/or by introducing a method in FlatAffineConstraints
-// setExprStride(ArrayRef<int64_t> expr, int64_t stride)
+// TODO: Handle non-unit steps through local variables or stride information in
+// FlatAffineConstraints. (For eg., by using iv - lb % step = 0 and/or by
+// introducing a method in FlatAffineConstraints setExprStride(ArrayRef<int64_t>
+// expr, int64_t stride)
 LogicalResult mlir::getIndexSet(MutableArrayRef<AffineForOp> forOps,
                                 FlatAffineConstraints *domain) {
   SmallVector<Value, 4> indices;
@@ -104,10 +104,10 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<AffineForOp> forOps,
 // potentially involving any Function symbols. The dimensional identifiers in
 // 'indexSet' correspond to the loops surrounding 'op' from outermost to
 // innermost.
-// TODO(andydavis) Add support to handle IfInsts surrounding 'op'.
+// TODO: Add support to handle IfInsts surrounding 'op'.
 static LogicalResult getInstIndexSet(Operation *op,
                                      FlatAffineConstraints *indexSet) {
-  // TODO(andydavis) Extend this to gather enclosing IfInsts and consider
+  // TODO: Extend this to gather enclosing IfInsts and consider
   // factoring it out into a utility function.
   SmallVector<AffineForOp, 4> loops;
   getLoopIVs(*op, &loops);
@@ -130,9 +130,9 @@ namespace {
 // an Value in multiple maps are provided (i.e. getSrcDimOrSymPos) to handle
 // the common case of resolving positions for all access function operands.
 //
-// TODO(andydavis) Generalize this: could take a template parameter for
-// the number of maps (3 in the current case), and lookups could take indices
-// of maps to check. So getSrcDimOrSymPos would be "getPos(value, {0, 2})".
+// TODO: Generalize this: could take a template parameter for the number of maps
+// (3 in the current case), and lookups could take indices of maps to check. So
+// getSrcDimOrSymPos would be "getPos(value, {0, 2})".
 class ValuePositionMap {
 public:
   void addSrcValue(Value value) {
@@ -758,7 +758,7 @@ void MemRefAccess::getAccessMap(AffineValueMap *accessMap) const {
 //       0         0         0        -1        0     0     0     50   >= 0
 //
 //
-// TODO(andydavis) Support AffineExprs mod/floordiv/ceildiv.
+// TODO: Support AffineExprs mod/floordiv/ceildiv.
 DependenceResult mlir::checkMemrefAccessDependence(
     const MemRefAccess &srcAccess, const MemRefAccess &dstAccess,
     unsigned loopDepth, FlatAffineConstraints *dependenceConstraints,
@@ -874,8 +874,8 @@ void mlir::getDependenceComponents(
 
         FlatAffineConstraints dependenceConstraints;
         SmallVector<DependenceComponent, 2> depComps;
-        // TODO(andydavis,bondhugula) Explore whether it would be profitable
-        // to pre-compute and store deps instead of repeatedly checking.
+        // TODO: Explore whether it would be profitable to pre-compute and store
+        // deps instead of repeatedly checking.
         DependenceResult result = checkMemrefAccessDependence(
             srcAccess, dstAccess, d, &dependenceConstraints, &depComps);
         if (hasDependence(result))

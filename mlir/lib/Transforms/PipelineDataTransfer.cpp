@@ -46,7 +46,7 @@ std::unique_ptr<OperationPass<FuncOp>> mlir::createPipelineDataTransferPass() {
 
 // Returns the position of the tag memref operand given a DMA operation.
 // Temporary utility: will be replaced when DmaStart/DmaFinish abstract op's are
-// added.  TODO(b/117228571)
+// added.  TODO
 static unsigned getTagMemRefPos(Operation &dmaOp) {
   assert((isa<AffineDmaStartOp, AffineDmaWaitOp>(dmaOp)));
   if (auto dmaStartOp = dyn_cast<AffineDmaStartOp>(dmaOp)) {
@@ -149,7 +149,7 @@ static bool checkTagMatch(AffineDmaStartOp startOp, AffineDmaWaitOp waitOp) {
             e = startIndices.end();
        it != e; ++it, ++wIt) {
     // Keep it simple for now, just checking if indices match.
-    // TODO(mlir-team): this would in general need to check if there is no
+    // TODO: this would in general need to check if there is no
     // intervening write writing to the same tag location, i.e., memory last
     // write/data flow analysis. This is however sufficient/powerful enough for
     // now since the DMA generation pass or the input for it will always have
@@ -185,12 +185,12 @@ static void findMatchingStartFinishInsts(
       continue;
 
     // Only DMAs incoming into higher memory spaces are pipelined for now.
-    // TODO(bondhugula): handle outgoing DMA pipelining.
+    // TODO: handle outgoing DMA pipelining.
     if (!dmaStartOp.isDestMemorySpaceFaster())
       continue;
 
     // Check for dependence with outgoing DMAs. Doing this conservatively.
-    // TODO(andydavis,bondhugula): use the dependence analysis to check for
+    // TODO: use the dependence analysis to check for
     // dependences between an incoming and outgoing DMA in the same iteration.
     auto it = outgoingDmaOps.begin();
     for (; it != outgoingDmaOps.end(); ++it) {
@@ -252,8 +252,8 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
   // Identify memref's to replace by scanning through all DMA start
   // operations. A DMA start operation has two memref's - the one from the
   // higher level of memory hierarchy is the one to double buffer.
-  // TODO(bondhugula): check whether double-buffering is even necessary.
-  // TODO(bondhugula): make this work with different layouts: assuming here that
+  // TODO: check whether double-buffering is even necessary.
+  // TODO: make this work with different layouts: assuming here that
   // the dimension we are adding here for the double buffering is the outermost
   // dimension.
   for (auto &pair : startWaitPairs) {

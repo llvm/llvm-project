@@ -37,8 +37,8 @@ class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-// TODO(andydavis, ntv) Add an attribute to specify a different algebra
-// with operators other than the current set: {*, +}.
+// TODO: Add an attribute to specify a different algebra with operators other
+// than the current set: {*, +}.
 def Vector_ContractionOp :
   Vector_Op<"contract", [
       NoSideEffect,
@@ -714,8 +714,8 @@ def Vector_OuterProductOp :
   }];
 }
 
-// TODO(andydavis) Add transformation which decomposes ReshapeOp into an
-// optimized sequence of vector rotate/shuffle/select operations.
+// TODO: Add transformation which decomposes ReshapeOp into an optimized
+// sequence of vector rotate/shuffle/select operations.
 def Vector_ReshapeOp :
   Vector_Op<"reshape", [AttrSizedOperandSegments, NoSideEffect]>,
     Arguments<(ins AnyVector:$vector, Variadic<Index>:$input_shape,
@@ -849,7 +849,7 @@ def Vector_ExtractStridedSliceOp :
     attribute and extracts the n-D subvector at the proper offset.
 
     At the moment strides must contain only 1s.
-    // TODO(ntv) support non-1 strides.
+    // TODO: support non-1 strides.
 
     Returns an n-D vector where the first k-D dimensions match the `sizes`
     attribute. The returned subvector contains the elements starting at offset
@@ -862,7 +862,7 @@ def Vector_ExtractStridedSliceOp :
         {offsets = [0, 2], sizes = [2, 4], strides = [1, 1]}:
       vector<4x8x16xf32> to vector<2x4x16xf32>
 
-    // TODO(ntv) Evolve to a range form syntax similar to:
+    // TODO: Evolve to a range form syntax similar to:
     %1 = vector.extract_strided_slice %0[0:2:1][2:4:1]
       vector<4x8x16xf32> to vector<2x4x16xf32>
     ```
@@ -1513,7 +1513,7 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [NoSideEffect,
         PredOpTrait<"rhs operand and result have same element type",
                     TCresVTEtIsSameAsOpBase<0, 1>>]>,
       Arguments<(
-        // TODO(ntv, fhahn): tighten vector element types that make sense.
+        // TODO: tighten vector element types that make sense.
         ins VectorOfRankAndType<[1],
               [AnySignlessInteger, AnySignedInteger, AnyFloat]>:$lhs,
             VectorOfRankAndType<[1],
@@ -1576,7 +1576,7 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [NoSideEffect,
   PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(
-      // TODO(ntv, fhahn, ajcbik): tighten vector element types that make sense.
+      // TODO: tighten vector element types that make sense.
       ins VectorOfRankAndType<[1],
             [AnySignlessInteger, AnySignedInteger, AnyFloat]>:$matrix,
           I32Attr:$rows, I32Attr:$columns)>,

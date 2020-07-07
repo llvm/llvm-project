@@ -319,7 +319,7 @@ private:
 
 private:
   // The TableGen record for this op.
-  // TODO(antiagainst,zinenko): OpEmitter should not have a Record directly,
+  // TODO: OpEmitter should not have a Record directly,
   // it should rather go through the Operator for better abstraction.
   const Record &def;
 
@@ -915,9 +915,9 @@ void OpEmitter::genSeparateArgParamBuilder() {
 
     if (inferType) {
       // Generate builder that infers type too.
-      // TODO(jpienaar): Subsume this with general checking if type can be
+      // TODO: Subsume this with general checking if type can be
       // inferred automatically.
-      // TODO(jpienaar): Expand to handle regions.
+      // TODO: Expand to handle regions.
       body << formatv(R"(
         ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
         if (succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
@@ -1006,7 +1006,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 }
 
 void OpEmitter::genInferredTypeCollectiveParamBuilder() {
-  // TODO(jpienaar): Expand to support regions.
+  // TODO: Expand to support regions.
   const char *params =
       "::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &{0}, "
       "::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> "
@@ -1119,7 +1119,7 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
 
 void OpEmitter::genBuilder() {
   // Handle custom builders if provided.
-  // TODO(antiagainst): Create wrapper class for OpBuilder to hide the native
+  // TODO: Create wrapper class for OpBuilder to hide the native
   // TableGen API calls here.
   {
     auto *listInit = dyn_cast_or_null<ListInit>(def.getValueInit("builders"));
@@ -1215,7 +1215,7 @@ void OpEmitter::genCollectiveParamBuilder() {
   body << "  " << builderOpState << ".addTypes(resultTypes);\n";
 
   // Generate builder that infers type too.
-  // TODO(jpienaar): Expand to handle regions and successors.
+  // TODO: Expand to handle regions and successors.
   if (canInferType(op) && op.getNumSuccessors() == 0)
     genInferredTypeCollectiveParamBuilder();
 }
@@ -1279,7 +1279,7 @@ void OpEmitter::buildParamList(std::string &paramList,
       // Creating an APInt requires us to provide bitwidth, value, and
       // signedness, which is complicated compared to others. Similarly
       // for APFloat.
-      // TODO(b/144412160) Adjust the 'returnType' field of such attributes
+      // TODO: Adjust the 'returnType' field of such attributes
       // to support them.
       StringRef retType = namedAttr->attr.getReturnType();
       if (retType == "::llvm::APInt" || retType == "::llvm::APFloat")

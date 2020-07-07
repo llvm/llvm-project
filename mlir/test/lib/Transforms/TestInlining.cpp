@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TODO(riverriddle) This pass is only necessary because the main inlining pass
+// TODO: This pass is only necessary because the main inlining pass
 // has no abstracted away the call+callee relationship. When the inlining
 // interface has this support, this pass should be removed.
 //

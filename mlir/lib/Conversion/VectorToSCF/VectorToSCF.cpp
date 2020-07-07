@@ -86,7 +86,7 @@ public:
         scope(std::make_unique<ScopedContext>(rewriter, loc)), xferOp(xferOp),
         op(xferOp.getOperation()) {
     vectorType = xferOp.getVectorType();
-    // TODO(ntv, ajcbik): when we go to k > 1-D vectors adapt minorRank.
+    // TODO: when we go to k > 1-D vectors adapt minorRank.
     minorRank = 1;
     majorRank = vectorType.getRank() - minorRank;
     leadingRank = xferOp.getMemRefType().getRank() - (majorRank + minorRank);
@@ -528,8 +528,8 @@ MemRefType VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
 /// in the presence of data-parallel only operations, we generate code that
 /// writes the same value multiple time on the edge locations.
 ///
-/// TODO(ntv): implement alternatives to clipping.
-/// TODO(ntv): support non-data-parallel operations.
+/// TODO: implement alternatives to clipping.
+/// TODO: support non-data-parallel operations.
 
 /// Performs the rewrite.
 template <>
@@ -603,8 +603,8 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
 /// See `Important notes about clipping and full-tiles only abstraction` in the
 /// description of `readClipped` above.
 ///
-/// TODO(ntv): implement alternatives to clipping.
-/// TODO(ntv): support non-data-parallel operations.
+/// TODO: implement alternatives to clipping.
+/// TODO: support non-data-parallel operations.
 template <>
 LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {

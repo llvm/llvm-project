@@ -183,8 +183,8 @@ private:
 ///
 /// This only kicks in when VectorTransformsOptions is set to AXPY.
 //
-// TODO (ajcbik): this is very similar, but not quite the same as
-//                the outerproduct lowering above; merge the two?
+// TODO: this is very similar, but not quite the same as the outerproduct
+// lowering above; merge the two?
 class ContractionOpToAXPYLowering
     : public OpRewritePattern<vector::ContractionOp> {
 public:

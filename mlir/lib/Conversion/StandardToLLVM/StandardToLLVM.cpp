@@ -331,7 +331,7 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
 //   4. a second array containing as many `index`-type integers as the rank of
 //   the MemRef: the second array represents the "stride" (in tensor abstraction
 //   sense), i.e. the number of consecutive elements of the underlying buffer.
-//   TODO(ntv, zinenko): add assertions for the static cases.
+//   TODO: add assertions for the static cases.
 //
 // template <typename Elem, size_t Rank>
 // struct {

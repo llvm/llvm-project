@@ -8,7 +8,7 @@
 //
 // This file implements a pass to forward memref stores to loads, thereby
 // potentially getting rid of intermediate memref's entirely.
-// TODO(mlir-team): In the future, similar techniques could be used to eliminate
+// TODO: In the future, similar techniques could be used to eliminate
 // dead memref store's and perform more complex forwarding when support for
 // SSA scalars live out of 'affine.for'/'affine.if' statements is available.
 //===----------------------------------------------------------------------===//
@@ -54,9 +54,9 @@ namespace {
 // don't reason about loops that are guaranteed to execute at least once or
 // multiple sources to forward from.
 //
-// TODO(mlir-team): more forwarding can be done when support for
+// TODO: more forwarding can be done when support for
 // loop/conditional live-out SSA values is available.
-// TODO(mlir-team): do general dead store elimination for memref's. This pass
+// TODO: do general dead store elimination for memref's. This pass
 // currently only eliminates the stores only if no other loads/uses (other
 // than dealloc) remain.
 //
@@ -203,7 +203,7 @@ void MemRefDataFlowOpt::runOnFunction() {
     // If the memref hasn't been alloc'ed in this function, skip.
     Operation *defOp = memref.getDefiningOp();
     if (!defOp || !isa<AllocOp>(defOp))
-      // TODO(mlir-team): if the memref was returned by a 'call' operation, we
+      // TODO: if the memref was returned by a 'call' operation, we
       // could still erase it if the call had no side-effects.
       continue;
     if (llvm::any_of(memref.getUsers(), [&](Operation *ownerOp) {

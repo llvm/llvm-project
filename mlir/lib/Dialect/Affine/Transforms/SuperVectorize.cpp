@@ -236,7 +236,7 @@ using namespace mlir;
 ///
 /// Lowering, unrolling, pipelining:
 /// ================================
-/// TODO(ntv): point to the proper places.
+/// TODO: point to the proper places.
 ///
 /// Algorithm:
 /// ==========
@@ -248,7 +248,7 @@ using namespace mlir;
 ///     reduction, vectorizable, ...) as well as b. all contiguous load/store
 ///     operations along a specified minor dimension (not necessarily the
 ///     fastest varying) ;
-///  2. analyzing those patterns for profitability (TODO(ntv): and
+///  2. analyzing those patterns for profitability (TODO: and
 ///     interference);
 ///  3. Then, for each pattern in order:
 ///    a. applying iterative rewriting of the loop and the load operations in
@@ -259,7 +259,7 @@ using namespace mlir;
 ///    c. traversing the use-def chains starting from the roots and iteratively
 ///       propagating vectorized values. Scalar values that are encountered
 ///       during this process must come from outside the scope of the current
-///       pattern (TODO(ntv): enforce this and generalize). Such a scalar value
+///       pattern (TODO: enforce this and generalize). Such a scalar value
 ///       is vectorized only if it is a constant (into a vector splat). The
 ///       non-constant case is not supported for now and results in the pattern
 ///       failing to vectorize;
@@ -582,7 +582,7 @@ Vectorize::Vectorize(ArrayRef<int64_t> virtualVectorSize) {
   vectorSizes = virtualVectorSize;
 }
 
-/////// TODO(ntv): Hoist to a VectorizationStrategy.cpp when appropriate.
+/////// TODO: Hoist to a VectorizationStrategy.cpp when appropriate.
 /////////
 namespace {
 
@@ -614,7 +614,7 @@ static void vectorizeLoopIfProfitable(Operation *loop, unsigned depthInPattern,
 /// load/store MemRefs, this creates a generic vectorization strategy that works
 /// for any loop in a hierarchy (outermost, innermost or intermediate).
 ///
-/// TODO(ntv): In the future we should additionally increase the power of the
+/// TODO: In the future we should additionally increase the power of the
 /// profitability analysis along 3 directions:
 ///   1. account for loop extents (both static and parametric + annotations);
 ///   2. account for data layout permutations;
@@ -636,7 +636,7 @@ static LogicalResult analyzeProfitability(ArrayRef<NestedMatch> matches,
   return success();
 }
 
-///// end TODO(ntv): Hoist to a VectorizationStrategy.cpp when appropriate /////
+///// end TODO: Hoist to a VectorizationStrategy.cpp when appropriate /////
 
 namespace {
 
@@ -741,7 +741,7 @@ static void computeMemoryOpIndices(Operation *op, AffineMap map,
   }
 }
 
-////// TODO(ntv): Hoist to a VectorizationMaterialize.cpp when appropriate. ////
+////// TODO: Hoist to a VectorizationMaterialize.cpp when appropriate. ////
 
 /// Handles the vectorization of load and store MLIR operations.
 ///
@@ -763,7 +763,7 @@ static LogicalResult vectorizeRootOrTerminal(Value iv,
   auto memRefType = memoryOp.getMemRef().getType().template cast<MemRefType>();
 
   auto elementType = memRefType.getElementType();
-  // TODO(ntv): ponder whether we want to further vectorize a vector value.
+  // TODO: ponder whether we want to further vectorize a vector value.
   assert(VectorType::isValidElementType(elementType) &&
          "Not a valid vector element type");
   auto vectorType = VectorType::get(state->strategy->vectorSizes, elementType);
@@ -772,7 +772,7 @@ static LogicalResult vectorizeRootOrTerminal(Value iv,
   auto *opInst = memoryOp.getOperation();
   // For now, vector.transfers must be aligned, operate only on indices with an
   // identity subset of AffineMap and do not change layout.
-  // TODO(ntv): increase the expressiveness power of vector.transfer operations
+  // TODO: increase the expressiveness power of vector.transfer operations
   // as needed by various targets.
   if (auto load = dyn_cast<AffineLoadOp>(opInst)) {
     OpBuilder b(opInst);
@@ -800,7 +800,7 @@ static LogicalResult vectorizeRootOrTerminal(Value iv,
   }
   return success();
 }
-/// end TODO(ntv): Hoist to a VectorizationMaterialize.cpp when appropriate. ///
+/// end TODO: Hoist to a VectorizationMaterialize.cpp when appropriate. ///
 
 /// Coarsens the loops bounds and transforms all remaining load and store
 /// operations into the appropriate vector.transfer.
@@ -937,7 +937,7 @@ static Value vectorizeConstant(Operation *op, ConstantOp constant, Type type) {
 /// Returns an operand that has been vectorized to match `state`'s strategy if
 /// vectorization is possible with the above logic. Returns nullptr otherwise.
 ///
-/// TODO(ntv): handle more complex cases.
+/// TODO: handle more complex cases.
 static Value vectorizeOperand(Value operand, Operation *op,
                               VectorizationState *state) {
   LLVM_DEBUG(dbgs() << "\n[early-vect]vectorize operand: " << operand);
@@ -956,7 +956,7 @@ static Value vectorizeOperand(Value operand, Operation *op,
     LLVM_DEBUG(dbgs() << "-> delayed replacement by: " << res);
     return res;
   }
-  // 2. TODO(ntv): broadcast needed.
+  // 2. TODO: broadcast needed.
   if (operand.getType().isa<VectorType>()) {
     LLVM_DEBUG(dbgs() << "-> non-vectorizable");
     return nullptr;
@@ -978,7 +978,7 @@ static Value vectorizeOperand(Value operand, Operation *op,
 /// particular operation vectorizes. For now we implement the case distinction
 /// here.
 /// Returns a vectorized form of an operation or nullptr if vectorization fails.
-// TODO(ntv): consider adding a trait to Op to describe how it gets vectorized.
+// TODO: consider adding a trait to Op to describe how it gets vectorized.
 // Maybe some Ops are not vectorizable or require some tricky logic, we cannot
 // do one-off logic here; ideally it would be TableGen'd.
 static Operation *vectorizeOneOperation(Operation *opInst,
@@ -1044,9 +1044,9 @@ static Operation *vectorizeOneOperation(Operation *opInst,
   }
 
   // Create a clone of the op with the proper operands and return types.
-  // TODO(ntv): The following assumes there is always an op with a fixed
+  // TODO: The following assumes there is always an op with a fixed
   // name that works both in scalar mode and vector mode.
-  // TODO(ntv): Is it worth considering an Operation.clone operation which
+  // TODO: Is it worth considering an Operation.clone operation which
   // changes the type so we can promote an Operation with less boilerplate?
   OpBuilder b(opInst);
   OperationState newOp(opInst->getLoc(), opInst->getName().getStringRef(),
@@ -1072,7 +1072,7 @@ static LogicalResult vectorizeNonTerminals(VectorizationState *state) {
   // Note: we have to exclude terminals because some of their defs may not be
   // nested under the vectorization pattern (e.g. constants defined in an
   // encompassing scope).
-  // TODO(ntv): Use a backward slice for terminals, avoid special casing and
+  // TODO: Use a backward slice for terminals, avoid special casing and
   // merge implementations.
   for (auto *op : state->roots) {
     getForwardSlice(op, &worklist, [state](Operation *op) {
@@ -1120,7 +1120,7 @@ static LogicalResult vectorizeRootMatch(NestedMatch m,
   // pattern matching, from profitability analysis, from application.
   // As a consequence we must check that each root pattern is still
   // vectorizable. If a pattern is not vectorizable anymore, we just skip it.
-  // TODO(ntv): implement a non-greedy profitability analysis that keeps only
+  // TODO: implement a non-greedy profitability analysis that keeps only
   // non-intersecting patterns.
   if (!isVectorizableLoopBody(loop, vectorTransferPattern())) {
     LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ loop is not vectorizable");
@@ -1162,7 +1162,7 @@ static LogicalResult vectorizeRootMatch(NestedMatch m,
 
   // 2. Vectorize operations reached by use-def chains from root except the
   // terminals (store operations) that need to be post-processed separately.
-  // TODO(ntv): add more as we expand.
+  // TODO: add more as we expand.
   if (failed(vectorizeNonTerminals(&state))) {
     LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ failed vectorizeNonTerminals");
     return guard.failure();
@@ -1172,7 +1172,7 @@ static LogicalResult vectorizeRootMatch(NestedMatch m,
   // Note: we have to post-process terminals because some of their defs may not
   // be nested under the vectorization pattern (e.g. constants defined in an
   // encompassing scope).
-  // TODO(ntv): Use a backward slice for terminals, avoid special casing and
+  // TODO: Use a backward slice for terminals, avoid special casing and
   // merge implementations.
   for (auto *op : state.terminals) {
     if (!vectorizeOneOperation(op, &state)) { // nullptr == failure
@@ -1221,7 +1221,7 @@ void Vectorize::runOnFunction() {
     // This automatically prunes intersecting matches.
     for (auto m : matches) {
       VectorizationStrategy strategy;
-      // TODO(ntv): depending on profitability, elect to reduce the vector size.
+      // TODO: depending on profitability, elect to reduce the vector size.
       strategy.vectorSizes.assign(vectorSizes.begin(), vectorSizes.end());
       if (failed(analyzeProfitability(m.getMatchedChildren(), 1, patternDepth,
                                       &strategy))) {
@@ -1229,10 +1229,10 @@ void Vectorize::runOnFunction() {
       }
       vectorizeLoopIfProfitable(m.getMatchedOperation(), 0, patternDepth,
                                 &strategy);
-      // TODO(ntv): if pattern does not apply, report it; alter the
+      // TODO: if pattern does not apply, report it; alter the
       // cost/benefit.
       vectorizeRootMatch(m, &strategy);
-      // TODO(ntv): some diagnostics if failure to vectorize occurs.
+      // TODO: some diagnostics if failure to vectorize occurs.
     }
   }
   LLVM_DEBUG(dbgs() << "\n");

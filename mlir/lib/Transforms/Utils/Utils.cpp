@@ -28,7 +28,7 @@ using namespace mlir;
 
 /// Return true if this operation dereferences one or more memref's.
 // Temporary utility: will be replaced when this is modeled through
-// side-effects/op traits. TODO(b/117228571)
+// side-effects/op traits. TODO
 static bool isMemRefDereferencingOp(Operation &op) {
   return isa<AffineReadOpInterface, AffineWriteOpInterface, AffineDmaStartOp,
              AffineDmaWaitOp>(op);
@@ -83,7 +83,7 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
     return success();
 
   if (usePositions.size() > 1) {
-    // TODO(mlir-team): extend it for this case when needed (rare).
+    // TODO: extend it for this case when needed (rare).
     assert(false && "multiple dereferencing uses in a single op not supported");
     return failure();
   }
@@ -162,7 +162,7 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
   // Create new fully composed AffineMap for new op to be created.
   assert(newMapOperands.size() == newMemRefRank);
   auto newMap = builder.getMultiDimIdentityMap(newMemRefRank);
-  // TODO(b/136262594) Avoid creating/deleting temporary AffineApplyOps here.
+  // TODO: Avoid creating/deleting temporary AffineApplyOps here.
   fullyComposeAffineMapAndOperands(&newMap, &newMapOperands);
   newMap = simplifyAffineMap(newMap);
   canonicalizeMapAndOperands(&newMap, &newMapOperands);

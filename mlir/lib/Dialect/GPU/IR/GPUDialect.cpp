@@ -87,7 +87,7 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
       return launchOp.emitOpError("kernel function is missing the '")
              << GPUDialect::getKernelFuncAttrName() << "' attribute";
 
-    // TODO(ntv,zinenko,herhut): if the kernel function has been converted to
+    // TODO: if the kernel function has been converted to
     // the LLVM dialect but the caller hasn't (which happens during the
     // separate compilation), do not check type correspondence as it would
     // require the verifier to be aware of the LLVM type conversion.

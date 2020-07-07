@@ -141,7 +141,7 @@ func @extract_from_not_constant() -> i32 {
 // spv.constant
 //===----------------------------------------------------------------------===//
 
-// TODO(antiagainst): test constants in different blocks
+// TODO: test constants in different blocks
 
 func @deduplicate_scalar_constant() -> (i32, i32) {
   // CHECK: %[[CST:.*]] = spv.constant 42 : i32

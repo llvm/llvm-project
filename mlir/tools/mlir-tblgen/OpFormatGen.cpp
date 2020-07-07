@@ -2118,7 +2118,7 @@ FormatParser::parseTypeDirectiveOperand(std::unique_ptr<Element> &element) {
 //===----------------------------------------------------------------------===//
 
 void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass) {
-  // TODO(riverriddle) Operator doesn't expose all necessary functionality via
+  // TODO: Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);
   if (!op.hasAssemblyFormat())
