@@ -277,7 +277,7 @@ public:
     AU.setPreservesAll();
   }
 
-  void releaseMemory() override { DT.releaseMemory(); }
+  void releaseMemory() override { DT.reset(); }
 
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 };
