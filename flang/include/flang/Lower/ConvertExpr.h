@@ -5,10 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 ///
 /// Implements the conversion from Fortran::evaluate::Expr trees to FIR.
-///
-/// [Coding style](https://llvm.org/docs/CodingStandards.html)
 ///
 //===----------------------------------------------------------------------===//
 

@@ -4,7 +4,11 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//----------------------------------------------------------------------------//
+//===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 ///
 /// Conversion of front-end TYPE, KIND, ATTRIBUTE (TKA) information to FIR/MLIR.
 /// This is meant to be the single point of truth (SPOT) for all type
@@ -12,9 +16,7 @@
 /// tree TKA to the FIR type system. If one is converting front-end types and
 /// not using one of the routines provided here, it's being done wrong.
 ///
-/// [Coding style](https://llvm.org/docs/CodingStandards.html)
-///
-//----------------------------------------------------------------------------//
+//===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_LOWER_CONVERT_TYPE_H
 #define FORTRAN_LOWER_CONVERT_TYPE_H
