@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -ffast-math -ffp-contract=fast -ffp-exception-behavior=maytrap -emit-llvm -o - %s | FileCheck %s -check-prefix=MAYTRAP
 
 // Disabled until constrained floating point is completed for PowerPC.
-// XFAIL: *
+// XFAIL: powerpc, powerpc64, powerpc664le
 
 float f0, f1, f2;
 
