@@ -14,7 +14,7 @@ class TestCase(TestBase):
         dbg = lldb.SBDebugger.Create(False)
         # Set the input handle to some stream so that we don't start the
         # editline interface.
-        dbg.SetInputFileHandle(io.BytesIO(b""), True)
+        dbg.SetInputFileHandle(open("input_file"), True)
         opts = lldb.SBCommandInterpreterRunOptions()
         # Launch the command interpreter now.
         dbg.RunCommandInterpreter(True, True, opts, 0, False, False)
