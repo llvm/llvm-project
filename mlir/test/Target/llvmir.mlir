@@ -1230,3 +1230,13 @@ llvm.func @constant_bf16() -> !llvm<"bfloat"> {
 
 // CHECK: ret bfloat 0xR4120
 
+// -----
+
+llvm.func @address_taken() {
+  llvm.return
+}
+
+llvm.mlir.global internal constant @taker_of_address() : !llvm<"void()*"> {
+  %0 = llvm.mlir.addressof @address_taken : !llvm<"void()*">
+  llvm.return %0 : !llvm<"void()*">
+}
