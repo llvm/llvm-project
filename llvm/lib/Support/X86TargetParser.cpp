@@ -48,6 +48,14 @@ public:
     return (Bits[I / 32] & Mask) != 0;
   }
 
+  constexpr FeatureBitset &operator|=(const FeatureBitset &RHS) {
+    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I) {
+      uint32_t NewBits = Bits[I] | RHS.Bits[I];
+      Bits[I] = NewBits;
+    }
+    return *this;
+  }
+
   constexpr FeatureBitset operator&(const FeatureBitset &RHS) const {
     FeatureBitset Result;
     for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I)
@@ -75,6 +83,11 @@ struct ProcInfo {
   X86::CPUKind Kind;
   unsigned KeyFeature;
   FeatureBitset Features;
+};
+
+struct FeatureInfo {
+  StringLiteral Name;
+  FeatureBitset ImpliedFeatures;
 };
 
 } // end anonymous namespace
@@ -376,19 +389,187 @@ ProcessorFeatures llvm::X86::getKeyFeature(X86::CPUKind Kind) {
   llvm_unreachable("Unable to find CPU kind!");
 }
 
-static const char *FeatureStrings[X86::CPU_FEATURE_MAX] = {
-#define X86_FEATURE(ENUM, STR) STR,
+// Features with no dependencies.
+static constexpr FeatureBitset ImpliedFeaturesADX = {};
+static constexpr FeatureBitset ImpliedFeaturesBMI = {};
+static constexpr FeatureBitset ImpliedFeaturesBMI2 = {};
+static constexpr FeatureBitset ImpliedFeaturesCLDEMOTE = {};
+static constexpr FeatureBitset ImpliedFeaturesCLFLUSHOPT = {};
+static constexpr FeatureBitset ImpliedFeaturesCLWB = {};
+static constexpr FeatureBitset ImpliedFeaturesCLZERO = {};
+static constexpr FeatureBitset ImpliedFeaturesCMOV = {};
+static constexpr FeatureBitset ImpliedFeaturesCMPXCHG16B = {};
+static constexpr FeatureBitset ImpliedFeaturesCMPXCHG8B = {};
+static constexpr FeatureBitset ImpliedFeaturesEM64T = {};
+static constexpr FeatureBitset ImpliedFeaturesENQCMD = {};
+static constexpr FeatureBitset ImpliedFeaturesFSGSBASE = {};
+static constexpr FeatureBitset ImpliedFeaturesFXSR = {};
+static constexpr FeatureBitset ImpliedFeaturesINVPCID = {};
+static constexpr FeatureBitset ImpliedFeaturesLWP = {};
+static constexpr FeatureBitset ImpliedFeaturesLZCNT = {};
+static constexpr FeatureBitset ImpliedFeaturesMWAITX = {};
+static constexpr FeatureBitset ImpliedFeaturesMOVBE = {};
+static constexpr FeatureBitset ImpliedFeaturesMOVDIR64B = {};
+static constexpr FeatureBitset ImpliedFeaturesMOVDIRI = {};
+static constexpr FeatureBitset ImpliedFeaturesPCONFIG = {};
+static constexpr FeatureBitset ImpliedFeaturesPOPCNT = {};
+static constexpr FeatureBitset ImpliedFeaturesPKU = {};
+static constexpr FeatureBitset ImpliedFeaturesPREFETCHWT1 = {};
+static constexpr FeatureBitset ImpliedFeaturesPRFCHW = {};
+static constexpr FeatureBitset ImpliedFeaturesPTWRITE = {};
+static constexpr FeatureBitset ImpliedFeaturesRDPID = {};
+static constexpr FeatureBitset ImpliedFeaturesRDRND = {};
+static constexpr FeatureBitset ImpliedFeaturesRDSEED = {};
+static constexpr FeatureBitset ImpliedFeaturesRTM = {};
+static constexpr FeatureBitset ImpliedFeaturesSAHF = {};
+static constexpr FeatureBitset ImpliedFeaturesSERIALIZE = {};
+static constexpr FeatureBitset ImpliedFeaturesSGX = {};
+static constexpr FeatureBitset ImpliedFeaturesSHSTK = {};
+static constexpr FeatureBitset ImpliedFeaturesTBM = {};
+static constexpr FeatureBitset ImpliedFeaturesTSXLDTRK = {};
+static constexpr FeatureBitset ImpliedFeaturesWAITPKG = {};
+static constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
+static constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
+static constexpr FeatureBitset ImpliedFeaturesX87 = {};
+static constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
+
+// Not really CPU features, but need to be in the table because clang uses
+// target features to communicate them to the backend.
+static constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_BRANCHES = {};
+static constexpr FeatureBitset ImpliedFeaturesRETPOLINE_INDIRECT_CALLS = {};
+static constexpr FeatureBitset ImpliedFeaturesLVI_CFI = {};
+static constexpr FeatureBitset ImpliedFeaturesLVI_LOAD_HARDENING = {};
+
+// XSAVE features are dependent on basic XSAVE.
+static constexpr FeatureBitset ImpliedFeaturesXSAVEC = FeatureXSAVE;
+static constexpr FeatureBitset ImpliedFeaturesXSAVEOPT = FeatureXSAVE;
+static constexpr FeatureBitset ImpliedFeaturesXSAVES = FeatureXSAVE;
+
+// MMX->3DNOW->3DNOWA chain.
+static constexpr FeatureBitset ImpliedFeaturesMMX = {};
+static constexpr FeatureBitset ImpliedFeatures3DNOW = FeatureMMX;
+static constexpr FeatureBitset ImpliedFeatures3DNOWA = Feature3DNOW;
+
+// SSE/AVX/AVX512F chain.
+static constexpr FeatureBitset ImpliedFeaturesSSE = {};
+static constexpr FeatureBitset ImpliedFeaturesSSE2 = FeatureSSE;
+static constexpr FeatureBitset ImpliedFeaturesSSE3 = FeatureSSE2;
+static constexpr FeatureBitset ImpliedFeaturesSSSE3 = FeatureSSE3;
+static constexpr FeatureBitset ImpliedFeaturesSSE4_1 = FeatureSSSE3;
+static constexpr FeatureBitset ImpliedFeaturesSSE4_2 = FeatureSSE4_1;
+static constexpr FeatureBitset ImpliedFeaturesAVX = FeatureSSE4_2;
+static constexpr FeatureBitset ImpliedFeaturesAVX2 = FeatureAVX;
+static constexpr FeatureBitset ImpliedFeaturesAVX512F =
+    FeatureAVX2 | FeatureF16C | FeatureFMA;
+
+// Vector extensions that build on SSE or AVX.
+static constexpr FeatureBitset ImpliedFeaturesAES = FeatureSSE2;
+static constexpr FeatureBitset ImpliedFeaturesF16C = FeatureAVX;
+static constexpr FeatureBitset ImpliedFeaturesFMA = FeatureAVX;
+static constexpr FeatureBitset ImpliedFeaturesGFNI = FeatureSSE2;
+static constexpr FeatureBitset ImpliedFeaturesPCLMUL = FeatureSSE2;
+static constexpr FeatureBitset ImpliedFeaturesSHA = FeatureSSE2;
+static constexpr FeatureBitset ImpliedFeaturesVAES = FeatureAES | FeatureAVX;
+static constexpr FeatureBitset ImpliedFeaturesVPCLMULQDQ =
+    FeatureAVX | FeaturePCLMUL;
+
+// AVX512 features.
+static constexpr FeatureBitset ImpliedFeaturesAVX512CD = FeatureAVX512F;
+static constexpr FeatureBitset ImpliedFeaturesAVX512BW = FeatureAVX512F;
+static constexpr FeatureBitset ImpliedFeaturesAVX512DQ = FeatureAVX512F;
+static constexpr FeatureBitset ImpliedFeaturesAVX512ER = FeatureAVX512F;
+static constexpr FeatureBitset ImpliedFeaturesAVX512PF = FeatureAVX512F;
+static constexpr FeatureBitset ImpliedFeaturesAVX512VL = FeatureAVX512F;
+
+static constexpr FeatureBitset ImpliedFeaturesAVX512BF16 = FeatureAVX512BW;
+static constexpr FeatureBitset ImpliedFeaturesAVX512BITALG = FeatureAVX512BW;
+static constexpr FeatureBitset ImpliedFeaturesAVX512IFMA = FeatureAVX512F;
+static constexpr FeatureBitset ImpliedFeaturesAVX512VNNI = FeatureAVX512F;
+static constexpr FeatureBitset ImpliedFeaturesAVX512VPOPCNTDQ = FeatureAVX512F;
+static constexpr FeatureBitset ImpliedFeaturesAVX512VBMI = FeatureAVX512BW;
+static constexpr FeatureBitset ImpliedFeaturesAVX512VBMI2 = FeatureAVX512BW;
+static constexpr FeatureBitset ImpliedFeaturesAVX512VP2INTERSECT =
+    FeatureAVX512F;
+
+// FIXME: These two aren't really implemented and just exist in the feature
+// list for __builtin_cpu_supports. So omit their dependencies.
+static constexpr FeatureBitset ImpliedFeaturesAVX5124FMAPS = {};
+static constexpr FeatureBitset ImpliedFeaturesAVX5124VNNIW = {};
+
+// SSE4_A->FMA4->XOP chain.
+static constexpr FeatureBitset ImpliedFeaturesSSE4_A = FeatureSSSE3;
+static constexpr FeatureBitset ImpliedFeaturesFMA4 = FeatureAVX | FeatureSSE4_A;
+static constexpr FeatureBitset ImpliedFeaturesXOP = FeatureFMA4;
+
+// AMX Features
+static constexpr FeatureBitset ImpliedFeaturesAMX_TILE = {};
+static constexpr FeatureBitset ImpliedFeaturesAMX_BF16 = FeatureAMX_TILE;
+static constexpr FeatureBitset ImpliedFeaturesAMX_INT8 = FeatureAMX_TILE;
+
+static constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
+#define X86_FEATURE(ENUM, STR) {{STR}, ImpliedFeatures##ENUM},
 #include "llvm/Support/X86TargetParser.def"
 };
 
+// Convert the set bits in FeatureBitset to a list of strings.
+static void getFeatureBitsAsStrings(const FeatureBitset &Bits,
+                                    SmallVectorImpl<StringRef> &Features) {
+  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
+    if (Bits[i] && !FeatureInfos[i].Name.empty())
+      Features.push_back(FeatureInfos[i].Name);
+}
+
 void llvm::X86::getFeaturesForCPU(StringRef CPU,
-                                  SmallVectorImpl<StringRef> &Features) {
+                                  SmallVectorImpl<StringRef> &EnabledFeatures) {
   auto I = llvm::find_if(Processors,
                          [&](const ProcInfo &P) { return P.Name == CPU; });
   assert(I != std::end(Processors) && "Processor not found!");
 
   // Add the string version of all set bits.
-  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
-    if (FeatureStrings[i] && I->Features[i])
-      Features.push_back(FeatureStrings[i]);
+  getFeatureBitsAsStrings(I->Features, EnabledFeatures);
+}
+
+// For each feature that is (transitively) implied by this feature, set it.
+static void getImpliedEnabledFeatures(FeatureBitset &Bits,
+                                      const FeatureBitset &Implies) {
+  Bits |= Implies;
+  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i) {
+    if (Implies[i])
+      getImpliedEnabledFeatures(Bits, FeatureInfos[i].ImpliedFeatures);
+  }
+}
+
+/// Create bit vector of features that are implied disabled if the feature
+/// passed in Value is disabled.
+static void getImpliedDisabledFeatures(FeatureBitset &Bits, unsigned Value) {
+  // Check all features looking for any dependent on this feature. If we find
+  // one, mark it and recursively find any feature that depend on it.
+  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i) {
+    if (FeatureInfos[i].ImpliedFeatures[Value]) {
+      Bits.set(i);
+      getImpliedDisabledFeatures(Bits, i);
+    }
+  }
+}
+
+void llvm::X86::getImpliedFeatures(
+    StringRef Feature, bool Enabled,
+    SmallVectorImpl<StringRef> &ImpliedFeatures) {
+  auto I = llvm::find_if(
+      FeatureInfos, [&](const FeatureInfo &FI) { return FI.Name == Feature; });
+  if (I == std::end(FeatureInfos)) {
+    // This shouldn't happen, but handle it gracefully for release builds.
+    assert(false && "Feature not in table!");
+    return;
+  }
+
+  FeatureBitset ImpliedBits;
+  if (Enabled)
+    getImpliedEnabledFeatures(ImpliedBits, I->ImpliedFeatures);
+  else
+    getImpliedDisabledFeatures(ImpliedBits,
+                               std::distance(std::begin(FeatureInfos), I));
+
+  // Convert all the found bits into strings.
+  getFeatureBitsAsStrings(ImpliedBits, ImpliedFeatures);
 }
