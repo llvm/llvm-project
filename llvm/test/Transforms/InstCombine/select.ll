@@ -1255,8 +1255,8 @@ define i128 @test86(i1 %flag) {
 
 define i32 @test_select_select0(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
 ; CHECK-LABEL: @test_select_select0(
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 [[A:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[R1:%.*]], i32 [[R0:%.*]]
+; CHECK-NEXT:    [[C0_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0_NOT]], i32 [[R1:%.*]], i32 [[R0:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[A]], [[V2:%.*]]
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[S0]], i32 [[R1]]
 ; CHECK-NEXT:    ret i32 [[S1]]
@@ -1270,8 +1270,8 @@ define i32 @test_select_select0(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
 
 define i32 @test_select_select1(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
 ; CHECK-LABEL: @test_select_select1(
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 [[A:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[R1:%.*]], i32 [[R0:%.*]]
+; CHECK-NEXT:    [[C0_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[V1:%.*]]
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0_NOT]], i32 [[R1:%.*]], i32 [[R0:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[A]], [[V2:%.*]]
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[R0]], i32 [[S0]]
 ; CHECK-NEXT:    ret i32 [[S1]]
@@ -2239,4 +2239,37 @@ exit:
 
 exit2:
   ret i32 %iv.inc
+}
+
+define i32 @test_select_into_phi_not_idom(i1 %cond, i32 %A, i32 %B)  {
+; CHECK-LABEL: @test_select_into_phi_not_idom(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[A:%.*]], [[IF_TRUE]] ], [ [[B:%.*]], [[IF_FALSE]] ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 [[PHI]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.false
+
+if.true:
+  br label %merge
+
+if.false:
+  br label %merge
+
+merge:
+  %phi = phi i32 [%A, %if.true], [%B, %if.false]
+  br label %exit
+
+exit:
+  %sel = select i1 %cond, i32 %phi, i32 %A
+  ret i32 %sel
 }
