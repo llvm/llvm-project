@@ -2442,7 +2442,7 @@ OptimizeFunctions(Module &M,
     // FIXME: We should also hoist alloca affected by this to the entry
     // block if possible.
     if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca) &&
-        !F->hasAddressTaken()) {
+        !F->hasAddressTaken() && !hasMustTailCallers(F)) {
       RemoveAttribute(F, Attribute::InAlloca);
       Changed = true;
     }
