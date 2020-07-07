@@ -286,3 +286,21 @@ define dso_local double @testDoubleZeroScalar() local_unnamed_addr {
 entry:
   ret double 0.000000e+00
 }
+
+define dso_local <4 x i32> @vec_splati() local_unnamed_addr {
+; CHECK-LABEL: vec_splati:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltiw vs34, -17
+; CHECK-NEXT:    blr
+entry:
+  ret <4 x i32> <i32 -17, i32 -17, i32 -17, i32 -17>
+}
+
+define dso_local <2 x double> @vec_splatid() local_unnamed_addr {
+; CHECK-LABEL: vec_splatid:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltidp vs34, 1065353216
+; CHECK-NEXT:    blr
+entry:
+  ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
+}
