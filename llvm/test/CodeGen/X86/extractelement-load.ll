@@ -267,8 +267,8 @@ entry:
   ret float %cond
 }
 
-; FIXME: Incorrect AVX2 codegen due to bad extraction from a VBROADCAST_LOAD of the <2 x i16> constant bitcast as <4 x i32>.
-define void @subextract_broadcast_load_constant(<2 x i16>* nocapture %0, i16* nocapture %1, i16* nocapture %2)  {
+; Test for bad extractions from a VBROADCAST_LOAD of the <2 x i16> non-uniform constant bitcast as <4 x i32>.
+define void @subextract_broadcast_load_constant(<2 x i16>* nocapture %0, i16* nocapture %1, i16* nocapture %2) {
 ; X32-SSE2-LABEL: subextract_broadcast_load_constant:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -279,26 +279,12 @@ define void @subextract_broadcast_load_constant(<2 x i16>* nocapture %0, i16* no
 ; X32-SSE2-NEXT:    movw $-24160, (%eax) # imm = 0xA1A0
 ; X32-SSE2-NEXT:    retl
 ;
-; X64-SSSE3-LABEL: subextract_broadcast_load_constant:
-; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    movl $-1583308898, (%rdi) # imm = 0xA1A09F9E
-; X64-SSSE3-NEXT:    movw $-24674, (%rsi) # imm = 0x9F9E
-; X64-SSSE3-NEXT:    movw $-24160, (%rdx) # imm = 0xA1A0
-; X64-SSSE3-NEXT:    retq
-;
-; X64-AVX1-LABEL: subextract_broadcast_load_constant:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    movl $-1583308898, (%rdi) # imm = 0xA1A09F9E
-; X64-AVX1-NEXT:    movw $-24674, (%rsi) # imm = 0x9F9E
-; X64-AVX1-NEXT:    movw $-24160, (%rdx) # imm = 0xA1A0
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: subextract_broadcast_load_constant:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    movl $-1583308898, (%rdi) # imm = 0xA1A09F9E
-; X64-AVX2-NEXT:    movw $-24674, (%rsi) # imm = 0x9F9E
-; X64-AVX2-NEXT:    movw $-24674, (%rdx) # imm = 0x9F9E
-; X64-AVX2-NEXT:    retq
+; X64-LABEL: subextract_broadcast_load_constant:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $-1583308898, (%rdi) # imm = 0xA1A09F9E
+; X64-NEXT:    movw $-24674, (%rsi) # imm = 0x9F9E
+; X64-NEXT:    movw $-24160, (%rdx) # imm = 0xA1A0
+; X64-NEXT:    retq
   %4 = bitcast <2 x i16>* %0 to i8*
   store i8 -98, i8* %4, align 1
   %5 = getelementptr inbounds i8, i8* %4, i64 1
