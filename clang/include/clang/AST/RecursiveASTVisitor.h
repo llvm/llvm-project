@@ -48,29 +48,6 @@
 #include <cstddef>
 #include <type_traits>
 
-// The following three macros are used for meta programming.  The code
-// using them is responsible for defining macro OPERATOR().
-
-// All unary operators.
-#define UNARYOP_LIST()                                                         \
-  OPERATOR(PostInc) OPERATOR(PostDec) OPERATOR(PreInc) OPERATOR(PreDec)        \
-      OPERATOR(AddrOf) OPERATOR(Deref) OPERATOR(Plus) OPERATOR(Minus)          \
-      OPERATOR(Not) OPERATOR(LNot) OPERATOR(Real) OPERATOR(Imag)               \
-      OPERATOR(Extension) OPERATOR(Coawait)
-
-// All binary operators (excluding compound assign operators).
-#define BINOP_LIST()                                                           \
-  OPERATOR(PtrMemD) OPERATOR(PtrMemI) OPERATOR(Mul) OPERATOR(Div)              \
-      OPERATOR(Rem) OPERATOR(Add) OPERATOR(Sub) OPERATOR(Shl) OPERATOR(Shr)    \
-      OPERATOR(LT) OPERATOR(GT) OPERATOR(LE) OPERATOR(GE) OPERATOR(EQ)         \
-      OPERATOR(NE) OPERATOR(Cmp) OPERATOR(And) OPERATOR(Xor) OPERATOR(Or)      \
-      OPERATOR(LAnd) OPERATOR(LOr) OPERATOR(Assign) OPERATOR(Comma)
-
-// All compound assign operators.
-#define CAO_LIST()                                                             \
-  OPERATOR(Mul) OPERATOR(Div) OPERATOR(Rem) OPERATOR(Add) OPERATOR(Sub)        \
-      OPERATOR(Shl) OPERATOR(Shr) OPERATOR(And) OPERATOR(Or) OPERATOR(Xor)
-
 namespace clang {
 
 // A helper macro to implement short-circuiting when recursing.  It
@@ -407,64 +384,6 @@ public:
   bool Visit##CLASS(CLASS *S) { return true; }
 #include "clang/AST/StmtNodes.inc"
 
-// Define Traverse*(), WalkUpFrom*(), and Visit*() for unary
-// operator methods.  Unary operators are not classes in themselves
-// (they're all opcodes in UnaryOperator) but do have visitors.
-#define OPERATOR(NAME)                                                         \
-  bool TraverseUnary##NAME(UnaryOperator *S,                                   \
-                           DataRecursionQueue *Queue = nullptr) {              \
-    if (!getDerived().shouldTraversePostOrder())                               \
-      TRY_TO(WalkUpFromUnary##NAME(S));                                        \
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getSubExpr());                          \
-    if (!Queue && getDerived().shouldTraversePostOrder())                      \
-      TRY_TO(WalkUpFromUnary##NAME(S));                                        \
-    return true;                                                               \
-  }                                                                            \
-  bool WalkUpFromUnary##NAME(UnaryOperator *S) {                               \
-    TRY_TO(WalkUpFromUnaryOperator(S));                                        \
-    TRY_TO(VisitUnary##NAME(S));                                               \
-    return true;                                                               \
-  }                                                                            \
-  bool VisitUnary##NAME(UnaryOperator *S) { return true; }
-
-  UNARYOP_LIST()
-#undef OPERATOR
-
-// Define Traverse*(), WalkUpFrom*(), and Visit*() for binary
-// operator methods.  Binary operators are not classes in themselves
-// (they're all opcodes in BinaryOperator) but do have visitors.
-#define GENERAL_BINOP_FALLBACK(NAME, BINOP_TYPE)                               \
-  bool TraverseBin##NAME(BINOP_TYPE *S, DataRecursionQueue *Queue = nullptr) { \
-    if (!getDerived().shouldTraversePostOrder())                               \
-      TRY_TO(WalkUpFromBin##NAME(S));                                          \
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getLHS());                              \
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getRHS());                              \
-    if (!Queue && getDerived().shouldTraversePostOrder())                      \
-      TRY_TO(WalkUpFromBin##NAME(S));                                          \
-    return true;                                                               \
-  }                                                                            \
-  bool WalkUpFromBin##NAME(BINOP_TYPE *S) {                                    \
-    TRY_TO(WalkUpFrom##BINOP_TYPE(S));                                         \
-    TRY_TO(VisitBin##NAME(S));                                                 \
-    return true;                                                               \
-  }                                                                            \
-  bool VisitBin##NAME(BINOP_TYPE *S) { return true; }
-
-#define OPERATOR(NAME) GENERAL_BINOP_FALLBACK(NAME, BinaryOperator)
-  BINOP_LIST()
-#undef OPERATOR
-
-// Define Traverse*(), WalkUpFrom*(), and Visit*() for compound
-// assignment methods.  Compound assignment operators are not
-// classes in themselves (they're all opcodes in
-// CompoundAssignOperator) but do have visitors.
-#define OPERATOR(NAME)                                                         \
-  GENERAL_BINOP_FALLBACK(NAME##Assign, CompoundAssignOperator)
-
-  CAO_LIST()
-#undef OPERATOR
-#undef GENERAL_BINOP_FALLBACK
-
 // ---- Methods on Types ----
 // FIXME: revamp to take TypeLoc's rather than Types.
 
@@ -583,39 +502,6 @@ private:
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::dataTraverseNode(Stmt *S,
                                                     DataRecursionQueue *Queue) {
-#define DISPATCH_STMT(NAME, CLASS, VAR)                                        \
-  return TRAVERSE_STMT_BASE(NAME, CLASS, VAR, Queue);
-
-  // If we have a binary expr, dispatch to the subcode of the binop.  A smart
-  // optimizer (e.g. LLVM) will fold this comparison into the switch stmt
-  // below.
-  if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(S)) {
-    switch (BinOp->getOpcode()) {
-#define OPERATOR(NAME)                                                         \
-  case BO_##NAME:                                                              \
-    DISPATCH_STMT(Bin##NAME, BinaryOperator, S);
-
-      BINOP_LIST()
-#undef OPERATOR
-
-#define OPERATOR(NAME)                                                         \
-  case BO_##NAME##Assign:                                                      \
-    DISPATCH_STMT(Bin##NAME##Assign, CompoundAssignOperator, S);
-
-      CAO_LIST()
-#undef OPERATOR
-    }
-  } else if (UnaryOperator *UnOp = dyn_cast<UnaryOperator>(S)) {
-    switch (UnOp->getOpcode()) {
-#define OPERATOR(NAME)                                                         \
-  case UO_##NAME:                                                              \
-    DISPATCH_STMT(Unary##NAME, UnaryOperator, S);
-
-      UNARYOP_LIST()
-#undef OPERATOR
-    }
-  }
-
   // Top switch stmt: dispatch to TraverseFooStmt for each concrete FooStmt.
   switch (S->getStmtClass()) {
   case Stmt::NoStmtClass:
@@ -623,7 +509,7 @@ bool RecursiveASTVisitor<Derived>::dataTraverseNode(Stmt *S,
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT)                                                    \
   case Stmt::CLASS##Class:                                                     \
-    DISPATCH_STMT(CLASS, CLASS, S);
+    return TRAVERSE_STMT_BASE(CLASS, CLASS, S, Queue);
 #include "clang/AST/StmtNodes.inc"
   }
 
@@ -649,48 +535,6 @@ bool RecursiveASTVisitor<Derived>::PostVisitStmt(Stmt *S) {
   // whether they call WalkUpFrom at all, we call WalkUpFrom if and only if the
   // user did not override the Traverse##STMT method. We implement the override
   // check with isSameMethod calls below.
-
-  if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(S)) {
-    switch (BinOp->getOpcode()) {
-#define OPERATOR(NAME)                                                         \
-  case BO_##NAME:                                                              \
-    if (::clang::detail::isSameMethod(&RecursiveASTVisitor::TraverseBin##NAME, \
-                                      &Derived::TraverseBin##NAME)) {          \
-      TRY_TO(WalkUpFromBin##NAME(static_cast<BinaryOperator *>(S)));           \
-    }                                                                          \
-    return true;
-
-      BINOP_LIST()
-#undef OPERATOR
-
-#define OPERATOR(NAME)                                                         \
-  case BO_##NAME##Assign:                                                      \
-    if (::clang::detail::isSameMethod(                                         \
-            &RecursiveASTVisitor::TraverseBin##NAME##Assign,                   \
-            &Derived::TraverseBin##NAME##Assign)) {                            \
-      TRY_TO(WalkUpFromBin##NAME##Assign(                                      \
-          static_cast<CompoundAssignOperator *>(S)));                          \
-    }                                                                          \
-    return true;
-
-      CAO_LIST()
-#undef OPERATOR
-    }
-  } else if (UnaryOperator *UnOp = dyn_cast<UnaryOperator>(S)) {
-    switch (UnOp->getOpcode()) {
-#define OPERATOR(NAME)                                                         \
-  case UO_##NAME:                                                              \
-    if (::clang::detail::isSameMethod(                                         \
-            &RecursiveASTVisitor::TraverseUnary##NAME,                         \
-            &Derived::TraverseUnary##NAME)) {                                  \
-      TRY_TO(WalkUpFromUnary##NAME(static_cast<UnaryOperator *>(S)));          \
-    }                                                                          \
-    return true;
-
-      UNARYOP_LIST()
-#undef OPERATOR
-    }
-  }
 
   switch (S->getStmtClass()) {
   case Stmt::NoStmtClass:
@@ -3710,10 +3554,6 @@ bool RecursiveASTVisitor<Derived>::VisitOMPAffinityClause(
 #undef TRAVERSE_STMT_BASE
 
 #undef TRY_TO
-
-#undef UNARYOP_LIST
-#undef BINOP_LIST
-#undef CAO_LIST
 
 } // end namespace clang
 
