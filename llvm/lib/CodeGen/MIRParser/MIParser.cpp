@@ -563,7 +563,7 @@ MIParser::MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
 
 void MIParser::lex(unsigned SkipChar) {
   CurrentSource = lexMIToken(
-      CurrentSource.data() + SkipChar, Token,
+      CurrentSource.slice(SkipChar, StringRef::npos), Token,
       [this](StringRef::iterator Loc, const Twine &Msg) { error(Loc, Msg); });
 }
 
