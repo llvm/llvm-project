@@ -13,6 +13,7 @@ subroutine s1()
   integer, dimension(4) :: intArray
   integer :: intScalarCoarray[*]
   integer :: intCoarray[3, 4, *]
+  integer :: smallIntCoarray[4, *]
   intCoVar = 343
   ! OK
   rVar1 = rCoarray[1,2,3]
@@ -20,6 +21,8 @@ subroutine s1()
   rVar1 = rCoarray[1,2]
   !ERROR: Must have INTEGER type, but is REAL(4)
   rVar1 = rCoarray[1,2,3.4]
+  !ERROR: Must have INTEGER type, but is REAL(4)
+  iVar1 = smallIntCoarray[3.4]
   !ERROR: Must be a scalar value, but is a rank-1 array
   rVar1 = rCoarray[1,intArray,3]
   ! OK
