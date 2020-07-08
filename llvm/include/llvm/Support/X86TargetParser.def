@@ -226,6 +226,5 @@ X86_FEATURE       (RETPOLINE_INDIRECT_BRANCHES, "retpoline-indirect-branches")
 X86_FEATURE       (RETPOLINE_INDIRECT_CALLS,    "retpoline-indirect-calls")
 X86_FEATURE       (LVI_CFI,                     "lvi-cfi")
 X86_FEATURE       (LVI_LOAD_HARDENING,          "lvi-load-hardening")
-X86_FEATURE       (SESES,                       "seses")
 #undef X86_FEATURE_COMPAT
 #undef X86_FEATURE
