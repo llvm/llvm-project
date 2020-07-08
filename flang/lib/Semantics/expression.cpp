@@ -1089,15 +1089,17 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
         std::get<std::list<parser::ImageSelectorSpec>>(x.imageSelector.t)) {
       std::visit(
           common::visitors{
-              [&](const auto &x) {Analyze(x.v); },
+              [&](const auto &x) { Analyze(x.v); },
           },
           imageSelSpec.u);
     }
     // Reverse the chain of symbols so that the base is first and coarray
     // ultimate component is last.
-    return Designate(
-        DataRef{CoarrayRef{SymbolVector{reversed.crbegin(), reversed.crend()},
-            std::move(subscripts), std::move(cosubscripts)}});
+    if (cosubsOk) {
+      return Designate(
+          DataRef{CoarrayRef{SymbolVector{reversed.crbegin(), reversed.crend()},
+              std::move(subscripts), std::move(cosubscripts)}});
+    }
   }
   return std::nullopt;
 }
