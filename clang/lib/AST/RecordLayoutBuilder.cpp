@@ -1187,11 +1187,10 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
   // Query the external layout to see if it provides an offset.
   bool HasExternalLayout = false;
   if (UseExternalLayout) {
-    // FIXME: This appears to be reversed.
     if (Base->IsVirtual)
-      HasExternalLayout = External.getExternalNVBaseOffset(Base->Class, Offset);
-    else
       HasExternalLayout = External.getExternalVBaseOffset(Base->Class, Offset);
+    else
+      HasExternalLayout = External.getExternalNVBaseOffset(Base->Class, Offset);
   }
 
   // Clang <= 6 incorrectly applied the 'packed' attribute to base classes.

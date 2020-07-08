@@ -10,6 +10,9 @@
 
 // reference at (size_type); // constexpr in C++17
 
+// GCC 5 doesn't implement the required constexpr support
+// UNSUPPORTED: gcc-5
+
 #include <array>
 #include <cassert>
 

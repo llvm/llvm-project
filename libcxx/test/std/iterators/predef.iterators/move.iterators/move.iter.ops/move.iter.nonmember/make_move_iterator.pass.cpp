@@ -50,7 +50,7 @@ int main(int, char**)
     {
     constexpr const char *p = "123456789";
     constexpr auto iter = std::make_move_iterator<const char *>(p);
-    static_assert(iter.base() == p);
+    static_assert(iter.base() == p, "");
     }
 #endif
 

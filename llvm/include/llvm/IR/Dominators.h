@@ -208,7 +208,8 @@ template <class Node, class ChildIterator> struct DomTreeGraphTraitsBase {
 
 template <>
 struct GraphTraits<DomTreeNode *>
-    : public DomTreeGraphTraitsBase<DomTreeNode, DomTreeNode::iterator> {};
+    : public DomTreeGraphTraitsBase<DomTreeNode, DomTreeNode::const_iterator> {
+};
 
 template <>
 struct GraphTraits<const DomTreeNode *>

@@ -8,6 +8,13 @@
 #CHECK: a	%r0, 4095(%r1,%r15)     # encoding: [0x5a,0x01,0xff,0xff]
 #CHECK: a	%r0, 4095(%r15,%r1)     # encoding: [0x5a,0x0f,0x1f,0xff]
 #CHECK: a	%r15, 0                 # encoding: [0x5a,0xf0,0x00,0x00]
+#CHECK: a	%r0, 0                  # encoding: [0x5a,0x00,0x00,0x00]
+#CHECK: a	%r0, 4095               # encoding: [0x5a,0x00,0x0f,0xff]
+#CHECK: a	%r0, 0(%r1)             # encoding: [0x5a,0x00,0x10,0x00]
+#CHECK: a	%r0, 0(%r15)            # encoding: [0x5a,0x00,0xf0,0x00]
+#CHECK: a	%r0, 4095(%r1,%r15)     # encoding: [0x5a,0x01,0xff,0xff]
+#CHECK: a	%r0, 4095(%r15,%r1)     # encoding: [0x5a,0x0f,0x1f,0xff]
+#CHECK: a	%r15, 0                 # encoding: [0x5a,0xf0,0x00,0x00]
 
 	a	%r0, 0
 	a	%r0, 4095
@@ -16,6 +23,14 @@
 	a	%r0, 4095(%r1,%r15)
 	a	%r0, 4095(%r15,%r1)
 	a	%r15, 0
+	a	0, 0
+	a	0, 4095
+	a	0, 0(1)
+	a	0, 0(15)
+	a	0, 4095(1,15)
+	a	0, 4095(15,1)
+	a	15, 0
+
 
 #CHECK: ad	%f0, 0                  # encoding: [0x6a,0x00,0x00,0x00]
 #CHECK: ad	%f0, 4095               # encoding: [0x6a,0x00,0x0f,0xff]
@@ -326,6 +341,13 @@
 #CHECK: al	%r0, 4095(%r1,%r15)     # encoding: [0x5e,0x01,0xff,0xff]
 #CHECK: al	%r0, 4095(%r15,%r1)     # encoding: [0x5e,0x0f,0x1f,0xff]
 #CHECK: al	%r15, 0                 # encoding: [0x5e,0xf0,0x00,0x00]
+#CHECK: al	%r0, 0                  # encoding: [0x5e,0x00,0x00,0x00]
+#CHECK: al	%r0, 4095               # encoding: [0x5e,0x00,0x0f,0xff]
+#CHECK: al	%r0, 0(%r1)             # encoding: [0x5e,0x00,0x10,0x00]
+#CHECK: al	%r0, 0(%r15)            # encoding: [0x5e,0x00,0xf0,0x00]
+#CHECK: al	%r0, 4095(%r1,%r15)     # encoding: [0x5e,0x01,0xff,0xff]
+#CHECK: al	%r0, 4095(%r15,%r1)     # encoding: [0x5e,0x0f,0x1f,0xff]
+#CHECK: al	%r15, 0                 # encoding: [0x5e,0xf0,0x00,0x00]
 
 	al	%r0, 0
 	al	%r0, 4095
@@ -334,6 +356,13 @@
 	al	%r0, 4095(%r1,%r15)
 	al	%r0, 4095(%r15,%r1)
 	al	%r15, 0
+	al	0, 0
+	al	0, 4095
+	al	0, 0(1)
+	al	0, 0(15)
+	al	0, 4095(1,15)
+	al	0, 4095(15,1)
+	al	15, 0
 
 #CHECK: alc	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x98]
 #CHECK: alc	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x98]
@@ -417,6 +446,16 @@
 #CHECK: alg	%r0, 524287(%r1,%r15)   # encoding: [0xe3,0x01,0xff,0xff,0x7f,0x0a]
 #CHECK: alg	%r0, 524287(%r15,%r1)   # encoding: [0xe3,0x0f,0x1f,0xff,0x7f,0x0a]
 #CHECK: alg	%r15, 0                 # encoding: [0xe3,0xf0,0x00,0x00,0x00,0x0a]
+#CHECK: alg	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x0a]
+#CHECK: alg	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x0a]
+#CHECK: alg	%r0, 0                  # encoding: [0xe3,0x00,0x00,0x00,0x00,0x0a]
+#CHECK: alg	%r0, 1                  # encoding: [0xe3,0x00,0x00,0x01,0x00,0x0a]
+#CHECK: alg	%r0, 524287             # encoding: [0xe3,0x00,0x0f,0xff,0x7f,0x0a]
+#CHECK: alg	%r0, 0(%r1)             # encoding: [0xe3,0x00,0x10,0x00,0x00,0x0a]
+#CHECK: alg	%r0, 0(%r15)            # encoding: [0xe3,0x00,0xf0,0x00,0x00,0x0a]
+#CHECK: alg	%r0, 524287(%r1,%r15)   # encoding: [0xe3,0x01,0xff,0xff,0x7f,0x0a]
+#CHECK: alg	%r0, 524287(%r15,%r1)   # encoding: [0xe3,0x0f,0x1f,0xff,0x7f,0x0a]
+#CHECK: alg	%r15, 0                 # encoding: [0xe3,0xf0,0x00,0x00,0x00,0x0a]
 
 	alg	%r0, -524288
 	alg	%r0, -1
@@ -428,6 +467,16 @@
 	alg	%r0, 524287(%r1,%r15)
 	alg	%r0, 524287(%r15,%r1)
 	alg	%r15, 0
+	alg	0, -524288
+	alg	0, -1
+	alg	0, 0
+	alg	0, 1
+	alg	0, 524287
+	alg	0, 0(1)
+	alg	0, 0(15)
+	alg	0, 524287(1,15)
+	alg	0, 524287(15,1)
+	alg	15, 0
 
 #CHECK: algf	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x1a]
 #CHECK: algf	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x1a]
@@ -492,6 +541,19 @@
 #CHECK: algsi	0(%r15), 42             # encoding: [0xeb,0x2a,0xf0,0x00,0x00,0x7e]
 #CHECK: algsi	524287(%r1), 42         # encoding: [0xeb,0x2a,0x1f,0xff,0x7f,0x7e]
 #CHECK: algsi	524287(%r15), 42        # encoding: [0xeb,0x2a,0xff,0xff,0x7f,0x7e]
+#CHECK: algsi	-524288, 0              # encoding: [0xeb,0x00,0x00,0x00,0x80,0x7e]
+#CHECK: algsi	-1, 0                   # encoding: [0xeb,0x00,0x0f,0xff,0xff,0x7e]
+#CHECK: algsi	0, 0                    # encoding: [0xeb,0x00,0x00,0x00,0x00,0x7e]
+#CHECK: algsi	1, 0                    # encoding: [0xeb,0x00,0x00,0x01,0x00,0x7e]
+#CHECK: algsi	524287, 0               # encoding: [0xeb,0x00,0x0f,0xff,0x7f,0x7e]
+#CHECK: algsi	0, -128                 # encoding: [0xeb,0x80,0x00,0x00,0x00,0x7e]
+#CHECK: algsi	0, -1                   # encoding: [0xeb,0xff,0x00,0x00,0x00,0x7e]
+#CHECK: algsi	0, 1                    # encoding: [0xeb,0x01,0x00,0x00,0x00,0x7e]
+#CHECK: algsi	0, 127                  # encoding: [0xeb,0x7f,0x00,0x00,0x00,0x7e]
+#CHECK: algsi	0(%r1), 42              # encoding: [0xeb,0x2a,0x10,0x00,0x00,0x7e]
+#CHECK: algsi	0(%r15), 42             # encoding: [0xeb,0x2a,0xf0,0x00,0x00,0x7e]
+#CHECK: algsi	524287(%r1), 42         # encoding: [0xeb,0x2a,0x1f,0xff,0x7f,0x7e]
+#CHECK: algsi	524287(%r15), 42        # encoding: [0xeb,0x2a,0xff,0xff,0x7f,0x7e]
 
 	algsi	-524288, 0
 	algsi	-1, 0
@@ -506,6 +568,19 @@
 	algsi	0(%r15), 42
 	algsi	524287(%r1), 42
 	algsi	524287(%r15), 42
+	algsi	-524288, 0
+	algsi	-1, 0
+	algsi	0, 0
+	algsi	1, 0
+	algsi	524287, 0
+	algsi	0, -128
+	algsi	0, -1
+	algsi	0, 1
+	algsi	0, 127
+	algsi	0(1), 42
+	algsi	0(15), 42
+	algsi	524287(1), 42
+	algsi	524287(15), 42
 
 #CHECK: alr	%r0, %r0                # encoding: [0x1e,0x00]
 #CHECK: alr	%r0, %r15               # encoding: [0x1e,0x0f]
@@ -596,6 +671,20 @@
 	ap	0(16,%r15), 0(1)
 	ap	0(1), 0(16,%r1)
 	ap	0(1), 0(16,%r15)
+	ap	0(1), 0(1)
+	ap	0(1), 0(1,1)
+	ap	0(1), 0(1,15)
+	ap	0(1), 4095(1)
+	ap	0(1), 4095(1,1)
+	ap	0(1), 4095(1,15)
+	ap	0(1,1), 0(1)
+	ap	0(1,15), 0(1)
+	ap	4095(1,1), 0(1)
+	ap	4095(1,15), 0(1)
+	ap	0(16,1), 0(1)
+	ap	0(16,15), 0(1)
+	ap	0(1), 0(16,1)
+	ap	0(1), 0(16,15)
 
 #CHECK: ar	%r0, %r0                # encoding: [0x1a,0x00]
 #CHECK: ar	%r0, %r15               # encoding: [0x1a,0x0f]

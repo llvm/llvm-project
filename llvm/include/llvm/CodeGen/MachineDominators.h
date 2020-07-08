@@ -261,7 +261,8 @@ template <class T> struct GraphTraits;
 template <>
 struct GraphTraits<MachineDomTreeNode *>
     : public MachineDomTreeGraphTraitsBase<MachineDomTreeNode,
-                                           MachineDomTreeNode::iterator> {};
+                                           MachineDomTreeNode::const_iterator> {
+};
 
 template <>
 struct GraphTraits<const MachineDomTreeNode *>

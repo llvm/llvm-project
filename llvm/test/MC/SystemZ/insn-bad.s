@@ -1343,7 +1343,7 @@
 #CHECK: clc	0, 0
 #CHECK: error: missing length in address
 #CHECK: clc	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: clc	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: clc	0(0,%r1), 0(%r1)
@@ -2573,7 +2573,7 @@
 #CHECK: ed	0, 0
 #CHECK: error: missing length in address
 #CHECK: ed	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: ed	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: ed	0(0,%r1), 0(%r1)
@@ -2611,7 +2611,7 @@
 #CHECK: edmk	0, 0
 #CHECK: error: missing length in address
 #CHECK: edmk	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: edmk	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: edmk	0(0,%r1), 0(%r1)
@@ -4373,7 +4373,7 @@
 #CHECK: mvc	0, 0
 #CHECK: error: missing length in address
 #CHECK: mvc	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: mvc	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: mvc	0(0,%r1), 0(%r1)
@@ -4428,7 +4428,7 @@
 #CHECK: mvcin	0, 0
 #CHECK: error: missing length in address
 #CHECK: mvcin	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: mvcin	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: mvcin	0(0,%r1), 0(%r1)
@@ -4462,7 +4462,7 @@
 	mvcin	0(1,%r2), 0(%r1,%r2)
 	mvcin	0(-), 0
 
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: mvck	0(%r1,%r1), 0(2,%r1), %r3
 #CHECK: error: invalid operand
 #CHECK: mvck	-1(%r1,%r1), 0(%r1), %r3
@@ -4474,7 +4474,7 @@
 #CHECK: mvck	0(%r1,%r1), 4096(%r1), %r3
 #CHECK: error: invalid use of indexed addressing
 #CHECK: mvck	0(%r1,%r2), 0(%r1,%r2), %r3
-#CHECK: error: unknown token in expression
+#CHECK: error: unexpected token in address
 #CHECK: mvck	0(-), 0, %r3
 
 	mvck	0(%r1,%r1), 0(2,%r1), %r3
@@ -4538,7 +4538,7 @@
         mvcos	0(%r1), -1(%r15), %r2
         mvcos	0(%r1), 4096(%r15), %r2
 
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: mvcp	0(%r1,%r1), 0(2,%r1), %r3
 #CHECK: error: invalid operand
 #CHECK: mvcp	-1(%r1,%r1), 0(%r1), %r3
@@ -4550,7 +4550,7 @@
 #CHECK: mvcp	0(%r1,%r1), 4096(%r1), %r3
 #CHECK: error: invalid use of indexed addressing
 #CHECK: mvcp	0(%r1,%r2), 0(%r1,%r2), %r3
-#CHECK: error: unknown token in expression
+#CHECK: error: unexpected token in address
 #CHECK: mvcp	0(-), 0, %r3
 
 	mvcp	0(%r1,%r1), 0(2,%r1), %r3
@@ -4561,7 +4561,7 @@
 	mvcp	0(%r1,%r2), 0(%r1,%r2), %r3
 	mvcp	0(-), 0, %r3
 
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: mvcs	0(%r1,%r1), 0(2,%r1), %r3
 #CHECK: error: invalid operand
 #CHECK: mvcs	-1(%r1,%r1), 0(%r1), %r3
@@ -4573,7 +4573,7 @@
 #CHECK: mvcs	0(%r1,%r1), 4096(%r1), %r3
 #CHECK: error: invalid use of indexed addressing
 #CHECK: mvcs	0(%r1,%r2), 0(%r1,%r2), %r3
-#CHECK: error: unknown token in expression
+#CHECK: error: unexpected token in address
 #CHECK: mvcs	0(-), 0, %r3
 
 	mvcs	0(%r1,%r1), 0(2,%r1), %r3
@@ -4690,7 +4690,7 @@
 #CHECK: mvn	0, 0
 #CHECK: error: missing length in address
 #CHECK: mvn	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: mvn	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: mvn	0(0,%r1), 0(%r1)
@@ -4775,7 +4775,7 @@
 #CHECK: mvz	0, 0
 #CHECK: error: missing length in address
 #CHECK: mvz	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: mvz	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: mvz	0(0,%r1), 0(%r1)
@@ -4917,7 +4917,7 @@
 #CHECK: nc	0, 0
 #CHECK: error: missing length in address
 #CHECK: nc	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: nc	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: nc	0(0,%r1), 0(%r1)
@@ -5071,7 +5071,7 @@
 #CHECK: oc	0, 0
 #CHECK: error: missing length in address
 #CHECK: oc	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: oc	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: oc	0(0,%r1), 0(%r1)
@@ -5319,7 +5319,7 @@
 #CHECK: pka	0, 0
 #CHECK: error: missing length in address
 #CHECK: pka	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: pka	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: pka	0(%r1), 0(0,%r1)
@@ -5357,7 +5357,7 @@
 #CHECK: pku	0, 0
 #CHECK: error: missing length in address
 #CHECK: pku	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: pku	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: pku	0(%r1), 0(0,%r1)
@@ -6232,7 +6232,7 @@
 #CHECK: srp	0, 0, 0
 #CHECK: error: missing length in address
 #CHECK: srp	0(%r1), 0(%r1), 0
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: srp	0(1,%r1), 0(2,%r1), 0
 #CHECK: error: invalid operand
 #CHECK: srp	0(0,%r1), 0(%r1), 0
@@ -7118,7 +7118,7 @@
 #CHECK: tr	0, 0
 #CHECK: error: missing length in address
 #CHECK: tr	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: tr	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: tr	0(0,%r1), 0(%r1)
@@ -7216,7 +7216,7 @@
 #CHECK: trt	0, 0
 #CHECK: error: missing length in address
 #CHECK: trt	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: trt	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: trt	0(0,%r1), 0(%r1)
@@ -7276,7 +7276,7 @@
 #CHECK: trtr	0, 0
 #CHECK: error: missing length in address
 #CHECK: trtr	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: trtr	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: trtr	0(0,%r1), 0(%r1)
@@ -7405,7 +7405,7 @@
 #CHECK: unpka	0, 0
 #CHECK: error: missing length in address
 #CHECK: unpka	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: unpka	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: unpka	0(0,%r1), 0(%r1)
@@ -7443,7 +7443,7 @@
 #CHECK: unpku	0, 0
 #CHECK: error: missing length in address
 #CHECK: unpku	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: unpku	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: unpku	0(0,%r1), 0(%r1)
@@ -7489,7 +7489,7 @@
 #CHECK: xc	0, 0
 #CHECK: error: missing length in address
 #CHECK: xc	0(%r1), 0(%r1)
-#CHECK: error: invalid use of length addressing
+#CHECK: error: invalid use of indexed addressing
 #CHECK: xc	0(1,%r1), 0(2,%r1)
 #CHECK: error: invalid operand
 #CHECK: xc	0(0,%r1), 0(%r1)

@@ -8660,8 +8660,7 @@ namespace {
       }
 
       // Visit the children of this block in the dominator tree.
-      for (MachineDomTreeNode::iterator I = Node->begin(), E = Node->end();
-           I != E; ++I) {
+      for (auto I = Node->begin(), E = Node->end(); I != E; ++I) {
         Changed |= VisitNode(*I, TLSBaseAddrReg);
       }
 

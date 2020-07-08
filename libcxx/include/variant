@@ -1063,8 +1063,7 @@ public:
       }
       __impl __tmp(_VSTD::move(*__rhs));
 #ifndef _LIBCPP_NO_EXCEPTIONS
-      if constexpr (__all<(is_nothrow_move_constructible_v<_Types> &&
-                           is_nothrow_swappable_v<_Types>)...>::value) {
+      if constexpr (__all<is_nothrow_move_constructible_v<_Types>...>::value) {
         this->__generic_construct(*__rhs, _VSTD::move(*__lhs));
       } else {
         // EXTENSION: When the move construction of `__lhs` into `__rhs` throws

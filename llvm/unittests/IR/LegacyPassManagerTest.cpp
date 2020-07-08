@@ -680,7 +680,7 @@ namespace llvm {
       ASSERT_EQ(M->getFunctionList().size(), 4U);
       Function *F = M->getFunction("test2");
       Function *SF = splitSimpleFunction(*F);
-      CallInst::Create(F, "", &*SF->getEntryBlock().getFirstInsertionPt());
+      CallInst::Create(F, "", &SF->getEntryBlock());
       ASSERT_EQ(M->getFunctionList().size(), 5U);
       CGModifierPass *P = new CGModifierPass();
       legacy::PassManager Passes;
