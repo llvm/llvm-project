@@ -381,7 +381,7 @@ int main(int argc, char **argv) {
   if (OutputAssembly)
     Passes.add(
         createPrintModulePass(Out.os(), "", PreserveAssemblyUseListOrder));
-  else if (Force || !CheckBitcodeOutputToConsole(Out.os(), true))
+  else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
     Passes.add(createBitcodeWriterPass(Out.os(), PreserveBitcodeUseListOrder));
 
   Passes.run(*M.get());
