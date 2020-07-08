@@ -494,6 +494,15 @@ void MutationDispatcher::PrintMutationSequence() {
   }
 }
 
+std::string MutationDispatcher::MutationSequence() {
+  std::string MS;
+  for (auto M : CurrentMutatorSequence) {
+    MS += M.Name;
+    MS += "-";
+  }
+  return MS;
+}
+
 size_t MutationDispatcher::Mutate(uint8_t *Data, size_t Size, size_t MaxSize) {
   return MutateImpl(Data, Size, MaxSize, Mutators);
 }
