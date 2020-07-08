@@ -103,14 +103,18 @@ enum InstClassEnum {
   TBUFFER_STORE,
 };
 
-enum RegisterEnum {
-  SBASE = 0x1,
-  SRSRC = 0x2,
-  SOFFSET = 0x4,
-  VADDR = 0x8,
-  ADDR = 0x10,
-  SSAMP = 0x20,
+struct AddressRegs {
+  unsigned char NumVAddrs = 0;
+  bool SBase = false;
+  bool SRsrc = false;
+  bool SOffset = false;
+  bool VAddr = false;
+  bool Addr = false;
+  bool SSamp = false;
 };
+
+// GFX10 image_sample instructions can have 12 vaddrs + srsrc + ssamp.
+const unsigned MaxAddressRegs = 12 + 1 + 1;
 
 class SILoadStoreOptimizer : public MachineFunctionPass {
   struct CombineInfo {
@@ -126,8 +130,8 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
     bool SLC;
     bool DLC;
     bool UseST64;
-    int AddrIdx[5];
-    const MachineOperand *AddrReg[5];
+    int AddrIdx[MaxAddressRegs];
+    const MachineOperand *AddrReg[MaxAddressRegs];
     unsigned NumAddresses;
     unsigned Order;
 
@@ -349,7 +353,8 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
     }
     if (TII.isMIMG(Opc)) {
       // Ignore instructions encoded without vaddr.
-      if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr) == -1)
+      if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr) == -1 &&
+          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0) == -1)
         return UNKNOWN;
       // TODO: Support IMAGE_GET_RESINFO and IMAGE_GET_LOD.
       if (TII.get(Opc).mayStore() || !TII.get(Opc).mayLoad() ||
@@ -422,58 +427,54 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   }
 }
 
-static unsigned getRegs(unsigned Opc, const SIInstrInfo &TII) {
+static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
+  AddressRegs Result;
+
   if (TII.isMUBUF(Opc)) {
-    unsigned result = 0;
+    if (AMDGPU::getMUBUFHasVAddr(Opc))
+      Result.VAddr = true;
+    if (AMDGPU::getMUBUFHasSrsrc(Opc))
+      Result.SRsrc = true;
+    if (AMDGPU::getMUBUFHasSoffset(Opc))
+      Result.SOffset = true;
 
-    if (AMDGPU::getMUBUFHasVAddr(Opc)) {
-      result |= VADDR;
-    }
-
-    if (AMDGPU::getMUBUFHasSrsrc(Opc)) {
-      result |= SRSRC;
-    }
-
-    if (AMDGPU::getMUBUFHasSoffset(Opc)) {
-      result |= SOFFSET;
-    }
-
-    return result;
+    return Result;
   }
 
   if (TII.isMIMG(Opc)) {
-    unsigned result = VADDR | SRSRC;
+    int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
+    if (VAddr0Idx >= 0) {
+      int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::srsrc);
+      Result.NumVAddrs = SRsrcIdx - VAddr0Idx;
+    } else {
+      Result.VAddr = true;
+    }
+    Result.SRsrc = true;
     const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Opc);
     if (Info && AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode)->Sampler)
-      result |= SSAMP;
+      Result.SSamp = true;
 
-    return result;
+    return Result;
   }
   if (TII.isMTBUF(Opc)) {
-    unsigned result = 0;
+    if (AMDGPU::getMTBUFHasVAddr(Opc))
+      Result.VAddr = true;
+    if (AMDGPU::getMTBUFHasSrsrc(Opc))
+      Result.SRsrc = true;
+    if (AMDGPU::getMTBUFHasSoffset(Opc))
+      Result.SOffset = true;
 
-    if (AMDGPU::getMTBUFHasVAddr(Opc)) {
-      result |= VADDR;
-    }
-
-    if (AMDGPU::getMTBUFHasSrsrc(Opc)) {
-      result |= SRSRC;
-    }
-
-    if (AMDGPU::getMTBUFHasSoffset(Opc)) {
-      result |= SOFFSET;
-    }
-
-    return result;
+    return Result;
   }
 
   switch (Opc) {
   default:
-    return 0;
+    return Result;
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
-    return SBASE;
+    Result.SBase = true;
+    return Result;
   case AMDGPU::DS_READ_B32:
   case AMDGPU::DS_READ_B64:
   case AMDGPU::DS_READ_B32_gfx9:
@@ -482,7 +483,8 @@ static unsigned getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::DS_WRITE_B64:
   case AMDGPU::DS_WRITE_B32_gfx9:
   case AMDGPU::DS_WRITE_B64_gfx9:
-    return ADDR;
+    Result.Addr = true;
+    return Result;
   }
 }
 
@@ -539,38 +541,34 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     DLC = TII.getNamedOperand(*I, AMDGPU::OpName::dlc)->getImm();
   }
 
-  unsigned AddrOpName[5] = {0};
+  AddressRegs Regs = getRegs(Opc, TII);
+
   NumAddresses = 0;
-  const unsigned Regs = getRegs(I->getOpcode(), TII);
+  for (unsigned J = 0; J < Regs.NumVAddrs; J++)
+    AddrIdx[NumAddresses++] =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0) + J;
+  if (Regs.Addr)
+    AddrIdx[NumAddresses++] =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::addr);
+  if (Regs.SBase)
+    AddrIdx[NumAddresses++] =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::sbase);
+  if (Regs.SRsrc)
+    AddrIdx[NumAddresses++] =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::srsrc);
+  if (Regs.SOffset)
+    AddrIdx[NumAddresses++] =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::soffset);
+  if (Regs.VAddr)
+    AddrIdx[NumAddresses++] =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
+  if (Regs.SSamp)
+    AddrIdx[NumAddresses++] =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::ssamp);
+  assert(NumAddresses <= MaxAddressRegs);
 
-  if (Regs & ADDR) {
-    AddrOpName[NumAddresses++] = AMDGPU::OpName::addr;
-  }
-
-  if (Regs & SBASE) {
-    AddrOpName[NumAddresses++] = AMDGPU::OpName::sbase;
-  }
-
-  if (Regs & SRSRC) {
-    AddrOpName[NumAddresses++] = AMDGPU::OpName::srsrc;
-  }
-
-  if (Regs & SOFFSET) {
-    AddrOpName[NumAddresses++] = AMDGPU::OpName::soffset;
-  }
-
-  if (Regs & VADDR) {
-    AddrOpName[NumAddresses++] = AMDGPU::OpName::vaddr;
-  }
-
-  if (Regs & SSAMP) {
-    AddrOpName[NumAddresses++] = AMDGPU::OpName::ssamp;
-  }
-
-  for (unsigned i = 0; i < NumAddresses; i++) {
-    AddrIdx[i] = AMDGPU::getNamedOperandIdx(I->getOpcode(), AddrOpName[i]);
-    AddrReg[i] = &I->getOperand(AddrIdx[i]);
-  }
+  for (unsigned J = 0; J < NumAddresses; J++)
+    AddrReg[J] = &I->getOperand(AddrIdx[J]);
 }
 
 } // end anonymous namespace.
@@ -694,7 +692,7 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
   unsigned OperandsToMatch[] = {AMDGPU::OpName::glc, AMDGPU::OpName::slc,
                                 AMDGPU::OpName::d16, AMDGPU::OpName::unorm,
                                 AMDGPU::OpName::da,  AMDGPU::OpName::r128,
-                                AMDGPU::OpName::a16};
+                                AMDGPU::OpName::a16, AMDGPU::OpName::dlc};
 
   for (auto op : OperandsToMatch) {
     int Idx = AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), op);
@@ -1288,9 +1286,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
 
   auto MIB = BuildMI(*MBB, Paired.I, DL, TII->get(Opcode), DestReg);
 
-  const unsigned Regs = getRegs(Opcode, *TII);
+  AddressRegs Regs = getRegs(Opcode, *TII);
 
-  if (Regs & VADDR)
+  if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
   // It shouldn't be possible to get this far if the two instructions
@@ -1351,9 +1349,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
 
   auto MIB = BuildMI(*MBB, Paired.I, DL, TII->get(Opcode), DestReg);
 
-  const unsigned Regs = getRegs(Opcode, *TII);
+  AddressRegs Regs = getRegs(Opcode, *TII);
 
-  if (Regs & VADDR)
+  if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
   unsigned JoinedFormat =
@@ -1431,9 +1429,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
   auto MIB = BuildMI(*MBB, Paired.I, DL, TII->get(Opcode))
                  .addReg(SrcReg, RegState::Kill);
 
-  const unsigned Regs = getRegs(Opcode, *TII);
+  AddressRegs Regs = getRegs(Opcode, *TII);
 
-  if (Regs & VADDR)
+  if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
   unsigned JoinedFormat =
@@ -1594,9 +1592,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
   auto MIB = BuildMI(*MBB, Paired.I, DL, TII->get(Opcode))
                  .addReg(SrcReg, RegState::Kill);
 
-  const unsigned Regs = getRegs(Opcode, *TII);
+  AddressRegs Regs = getRegs(Opcode, *TII);
 
-  if (Regs & VADDR)
+  if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
 
@@ -1991,6 +1989,8 @@ SILoadStoreOptimizer::collectMergeableInsts(
     if (!CI.hasMergeableAddress(*MRI))
       continue;
 
+    LLVM_DEBUG(dbgs() << "Mergeable: " << MI);
+
     addInstToMergeableList(CI, MergeableInsts);
   }
 
@@ -2086,6 +2086,8 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
     }
 
     Modified = true;
+
+    LLVM_DEBUG(dbgs() << "Merging: " << *CI.I << "   with: " << *Paired.I);
 
     switch (CI.InstClass) {
     default:

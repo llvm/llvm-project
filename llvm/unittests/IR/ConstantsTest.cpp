@@ -646,10 +646,10 @@ TEST(ConstantsTest, GetSplatValueRoundTrip) {
   Type *Int8Ty = Type::getInt8Ty(Context);
 
   for (unsigned Min : {1, 2, 8}) {
-    ElementCount SEC = {Min, true};
-    ElementCount FEC = {Min, false};
+    ElementCount ScalableEC = {Min, true};
+    ElementCount FixedEC = {Min, false};
 
-    for (auto EC : {SEC, FEC}) {
+    for (auto EC : {ScalableEC, FixedEC}) {
       for (auto *Ty : {FloatTy, Int32Ty, Int8Ty}) {
         Constant *Zero = Constant::getNullValue(Ty);
         Constant *One = Constant::getAllOnesValue(Ty);
