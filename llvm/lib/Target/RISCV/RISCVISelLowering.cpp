@@ -33,6 +33,7 @@
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -2976,6 +2977,26 @@ bool RISCVTargetLowering::shouldExtendTypeInLibCall(EVT Type) const {
     return false;
 
   return true;
+}
+
+bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                                 SDValue C) const {
+  // Check integral scalar types.
+  if (VT.isScalarInteger()) {
+    // Do not perform the transformation on riscv32 with the M extension.
+    if (!Subtarget.is64Bit() && Subtarget.hasStdExtM())
+      return false;
+    if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
+      if (ConstNode->getAPIntValue().getBitWidth() > 8 * sizeof(int64_t))
+        return false;
+      int64_t Imm = ConstNode->getSExtValue();
+      if (isPowerOf2_64(Imm + 1) || isPowerOf2_64(Imm - 1) ||
+          isPowerOf2_64(1 - Imm) || isPowerOf2_64(-1 - Imm))
+        return true;
+    }
+  }
+
+  return false;
 }
 
 #define GET_REGISTER_MATCHER
