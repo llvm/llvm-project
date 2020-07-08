@@ -2080,6 +2080,8 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
       auto name = optLinkage.getValue();
       if (name == "internal")
         return mlir::LLVM::Linkage::Internal;
+      if (name == "linkonce")
+        return mlir::LLVM::Linkage::Linkonce;
       if (name == "common")
         return mlir::LLVM::Linkage::Common;
       if (name == "weak")

@@ -18,6 +18,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 
+#define TODO() llvm_unreachable("not implemented")
+
 // recursively build the vector of module scopes
 static void moduleNames(const Fortran::semantics::Scope &scope,
                         llvm::SmallVector<llvm::StringRef, 2> &result) {
@@ -108,10 +110,10 @@ Fortran::lower::mangle::mangleName(fir::NameUniquer &uniquer,
               return uniquer.doConstant(modNames, optHost, symbolName);
             return uniquer.doVariable(modNames, optHost, symbolName);
           },
-          [](const auto &) -> std::string {
-            assert(false);
-            return {};
+          [&](const Fortran::semantics::CommonBlockDetails &) {
+            return uniquer.doCommonBlock(symbolName);
           },
+          [](const auto &) -> std::string { TODO(); },
       },
       ultimateSymbol.details());
 }
