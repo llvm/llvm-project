@@ -184,6 +184,10 @@ X86_FEATURE       (CLWB,            "clwb")
 X86_FEATURE       (CLZERO,          "clzero")
 X86_FEATURE       (CMPXCHG16B,      "cx16")
 X86_FEATURE       (CMPXCHG8B,       "cx8")
+// FIXME: Merge with 64BIT? Currently separate to be used to tell if CPU is
+// valid for 64-bit mode, but has empty string so it doesn't get added to
+// target attributes in IR.
+X86_FEATURE       (EM64T,           "")
 X86_FEATURE       (ENQCMD,          "enqcmd")
 X86_FEATURE       (F16C,            "f16c")
 X86_FEATURE       (FSGSBASE,        "fsgsbase")
