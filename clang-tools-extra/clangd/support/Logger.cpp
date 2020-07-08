@@ -9,6 +9,7 @@
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
@@ -56,6 +57,28 @@ void StreamLogger::log(Logger::Level Level,
   Logs << llvm::formatv("{0}[{1:%H:%M:%S.%L}] {2}\n", indicator(Level),
                         Timestamp, Message);
   Logs.flush();
+}
+
+namespace {
+// Like llvm::StringError but with fewer options and no gratuitous copies.
+class SimpleStringError : public llvm::ErrorInfo<SimpleStringError> {
+  std::error_code EC;
+  std::string Message;
+
+public:
+  SimpleStringError(std::error_code EC, std::string &&Message)
+      : EC(EC), Message(std::move(Message)) {}
+  void log(llvm::raw_ostream &OS) const override { OS << Message; }
+  std::string message() const override { return Message; }
+  std::error_code convertToErrorCode() const override { return EC; }
+  static char ID;
+};
+char SimpleStringError::ID;
+
+} // namespace
+
+llvm::Error detail::error(std::error_code EC, std::string &&Msg) {
+  return llvm::make_error<SimpleStringError>(EC, std::move(Msg));
 }
 
 } // namespace clangd
