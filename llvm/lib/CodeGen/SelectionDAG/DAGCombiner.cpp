@@ -638,6 +638,19 @@ namespace {
           : MemNode(N), OffsetFromBase(Offset) {}
     };
 
+    // Classify the origin of a stored value.
+    enum class StoreSource { Unknown, Constant, Extract, Load };
+    StoreSource getStoreSource(SDValue StoreVal) {
+      if (isa<ConstantSDNode>(StoreVal) || isa<ConstantFPSDNode>(StoreVal))
+        return StoreSource::Constant;
+      if (StoreVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+          StoreVal.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+        return StoreSource::Extract;
+      if (isa<LoadSDNode>(StoreVal))
+        return StoreSource::Load;
+      return StoreSource::Unknown;
+    }
+
     /// This is a helper function for visitMUL to check the profitability
     /// of folding (mul (add x, c1), c2) -> (add (mul x, c2), c1*c2).
     /// MulNode is the original multiply, AddNode is (add x, c1),
@@ -16024,14 +16037,12 @@ void DAGCombiner::getStoreMergeCandidates(
   if (BasePtr.getBase().isUndef())
     return;
 
-  bool IsConstantSrc = isa<ConstantSDNode>(Val) || isa<ConstantFPSDNode>(Val);
-  bool IsExtractVecSrc = (Val.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
-                          Val.getOpcode() == ISD::EXTRACT_SUBVECTOR);
-  bool IsLoadSrc = isa<LoadSDNode>(Val);
+  StoreSource StoreSrc = getStoreSource(Val);
+  assert(StoreSrc != StoreSource::Unknown && "Expected known source for store");
   BaseIndexOffset LBasePtr;
   // Match on loadbaseptr if relevant.
   EVT LoadVT;
-  if (IsLoadSrc) {
+  if (StoreSrc == StoreSource::Load) {
     auto *Ld = cast<LoadSDNode>(Val);
     LBasePtr = BaseIndexOffset::match(Ld, DAG);
     LoadVT = Ld->getMemoryVT();
@@ -16059,7 +16070,7 @@ void DAGCombiner::getStoreMergeCandidates(
     // Allow merging constants of different types as integers.
     bool NoTypeMatch = (MemVT.isInteger()) ? !MemVT.bitsEq(Other->getMemoryVT())
                                            : Other->getMemoryVT() != MemVT;
-    if (IsLoadSrc) {
+    if (StoreSrc == StoreSource::Load) {
       if (NoTypeMatch)
         return false;
       // The Load's Base Ptr must also match
@@ -16083,13 +16094,13 @@ void DAGCombiner::getStoreMergeCandidates(
       } else
         return false;
     }
-    if (IsConstantSrc) {
+    if (StoreSrc == StoreSource::Constant) {
       if (NoTypeMatch)
         return false;
       if (!(isa<ConstantSDNode>(OtherBC) || isa<ConstantFPSDNode>(OtherBC)))
         return false;
     }
-    if (IsExtractVecSrc) {
+    if (StoreSrc == StoreSource::Extract) {
       // Do not merge truncated stores here.
       if (Other->isTruncatingStore())
         return false;
@@ -16261,16 +16272,12 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
   // Perform an early exit check. Do not bother looking at stored values that
   // are not constants, loads, or extracted vector elements.
   SDValue StoredVal = peekThroughBitcasts(St->getValue());
-  bool IsLoadSrc = isa<LoadSDNode>(StoredVal);
-  bool IsConstantSrc = isa<ConstantSDNode>(StoredVal) ||
-                       isa<ConstantFPSDNode>(StoredVal);
-  bool IsExtractVecSrc = (StoredVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
-                          StoredVal.getOpcode() == ISD::EXTRACT_SUBVECTOR);
+  StoreSource StoreSrc = getStoreSource(StoredVal);
   bool IsNonTemporalStore = St->isNonTemporal();
-  bool IsNonTemporalLoad =
-      IsLoadSrc && cast<LoadSDNode>(StoredVal)->isNonTemporal();
+  bool IsNonTemporalLoad = StoreSrc == StoreSource::Load &&
+                           cast<LoadSDNode>(StoredVal)->isNonTemporal();
 
-  if (!IsConstantSrc && !IsLoadSrc && !IsExtractVecSrc)
+  if (StoreSrc == StoreSource::Unknown)
     return false;
 
   SmallVector<MemOpLink, 8> StoreNodes;
@@ -16335,7 +16342,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     const DataLayout &DL = DAG.getDataLayout();
 
     // Store the constants into memory as one consecutive store.
-    if (IsConstantSrc) {
+    if (StoreSrc == StoreSource::Constant) {
       while (NumConsecutiveStores >= 2) {
         LSBaseSDNode *FirstInChain = StoreNodes[0].MemNode;
         unsigned FirstStoreAS = FirstInChain->getAddressSpace();
@@ -16454,7 +16461,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
     // When extracting multiple vector elements, try to store them
     // in one vector store rather than a sequence of scalar stores.
-    if (IsExtractVecSrc) {
+    if (StoreSrc == StoreSource::Extract) {
       // Loop on Consecutive Stores on success.
       while (NumConsecutiveStores >= 2) {
         LSBaseSDNode *FirstInChain = StoreNodes[0].MemNode;
@@ -16522,6 +16529,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     // Below we handle the case of multiple consecutive stores that
     // come from multiple consecutive loads. We merge them into a single
     // wide load and a single wide store.
+    assert(StoreSrc == StoreSource::Load && "Expected load source for store");
 
     // Look for load nodes which are used by the stored values.
     SmallVector<MemOpLink, 8> LoadNodes;
