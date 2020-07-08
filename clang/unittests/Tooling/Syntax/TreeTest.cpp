@@ -2193,11 +2193,18 @@ struct X {
   X& operator=(const X&);
   friend X operator+(X, const X&);
   friend bool operator<(const X&, const X&);
+  friend X operator<<(X&, const X&);
+  X operator,(X&);
+  // TODO: Fix crash on member function pointer and add a test for `->*`
+  // TODO: Unbox operators in syntax tree. 
+  // Represent operators by `+` instead of `IdExpression-UnqualifiedId-+`
 };
 void test(X x, X y) {
   x = y;
   x + y;
   x < y;
+  x << y;
+  x, y;
 }
 )cpp",
       R"txt(
@@ -2262,6 +2269,40 @@ void test(X x, X y) {
 | |   |   |   `-&
 | |   |   `-)
 | |   `-;
+| |-UnknownDeclaration
+| | `-SimpleDeclaration
+| |   |-friend
+| |   |-X
+| |   |-SimpleDeclarator
+| |   | |-operator
+| |   | |-<<
+| |   | `-ParametersAndQualifiers
+| |   |   |-(
+| |   |   |-SimpleDeclaration
+| |   |   | |-X
+| |   |   | `-SimpleDeclarator
+| |   |   |   `-&
+| |   |   |-,
+| |   |   |-SimpleDeclaration
+| |   |   | |-const
+| |   |   | |-X
+| |   |   | `-SimpleDeclarator
+| |   |   |   `-&
+| |   |   `-)
+| |   `-;
+| |-SimpleDeclaration
+| | |-X
+| | |-SimpleDeclarator
+| | | |-operator
+| | | |-,
+| | | `-ParametersAndQualifiers
+| | |   |-(
+| | |   |-SimpleDeclaration
+| | |   | |-X
+| | |   | `-SimpleDeclarator
+| | |   |   `-&
+| | |   `-)
+| | `-;
 | |-}
 | `-;
 `-SimpleDeclaration
@@ -2318,6 +2359,185 @@ void test(X x, X y) {
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-y
+    | `-;
+    |-ExpressionStatement
+    | |-BinaryOperatorExpression
+    | | |-IdExpression
+    | | | `-UnqualifiedId
+    | | |   `-x
+    | | |-IdExpression
+    | | | `-UnqualifiedId
+    | | |   `-<<
+    | | `-IdExpression
+    | |   `-UnqualifiedId
+    | |     `-y
+    | `-;
+    |-ExpressionStatement
+    | |-BinaryOperatorExpression
+    | | |-IdExpression
+    | | | `-UnqualifiedId
+    | | |   `-x
+    | | |-IdExpression
+    | | | `-UnqualifiedId
+    | | |   `-,
+    | | `-IdExpression
+    | |   `-UnqualifiedId
+    | |     `-y
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, UserDefinedUnaryPrefixOperator) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+struct X {
+  X operator++();
+  bool operator!();
+  X* operator&();
+};
+void test(X x) {
+  ++x;
+  !x;
+  &x;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+|-SimpleDeclaration
+| |-struct
+| |-X
+| |-{
+| |-SimpleDeclaration
+| | |-X
+| | |-SimpleDeclarator
+| | | |-operator
+| | | |-++
+| | | `-ParametersAndQualifiers
+| | |   |-(
+| | |   `-)
+| | `-;
+| |-SimpleDeclaration
+| | |-bool
+| | |-SimpleDeclarator
+| | | |-operator
+| | | |-!
+| | | `-ParametersAndQualifiers
+| | |   |-(
+| | |   `-)
+| | `-;
+| |-SimpleDeclaration
+| | |-X
+| | |-SimpleDeclarator
+| | | |-*
+| | | |-operator
+| | | |-&
+| | | `-ParametersAndQualifiers
+| | |   |-(
+| | |   `-)
+| | `-;
+| |-}
+| `-;
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-X
+  |   | `-SimpleDeclarator
+  |   |   `-x
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-IdExpression
+    | | | `-UnqualifiedId
+    | | |   `-++
+    | | `-IdExpression
+    | |   `-UnqualifiedId
+    | |     `-x
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-IdExpression
+    | | | `-UnqualifiedId
+    | | |   `-!
+    | | `-IdExpression
+    | |   `-UnqualifiedId
+    | |     `-x
+    | `-;
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-IdExpression
+    | | | `-UnqualifiedId
+    | | |   `-&
+    | | `-IdExpression
+    | |   `-UnqualifiedId
+    | |     `-x
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, UserDefinedUnaryPostfixOperator) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+struct X {
+  X operator++(int);
+};
+void test(X x) {
+  x++;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+|-SimpleDeclaration
+| |-struct
+| |-X
+| |-{
+| |-SimpleDeclaration
+| | |-X
+| | |-SimpleDeclarator
+| | | |-operator
+| | | |-++
+| | | `-ParametersAndQualifiers
+| | |   |-(
+| | |   |-SimpleDeclaration
+| | |   | `-int
+| | |   `-)
+| | `-;
+| |-}
+| `-;
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-X
+  |   | `-SimpleDeclarator
+  |   |   `-x
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-PostfixUnaryOperatorExpression
+    | | |-IdExpression
+    | | | `-UnqualifiedId
+    | | |   `-x
+    | | `-IdExpression
+    | |   `-UnqualifiedId
+    | |     `-++
     | `-;
     `-}
 )txt"));
