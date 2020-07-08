@@ -16248,31 +16248,18 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   EVT MemVT = St->getMemoryVT();
   if (MemVT.isScalableVector())
     return false;
-
-  int64_t ElementSizeBytes = MemVT.getStoreSize();
-  unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
-
-  if (MemVT.getSizeInBits() * 2 > MaximumLegalStoreInBits)
+  if (!MemVT.isSimple() || MemVT.getSizeInBits() * 2 > MaximumLegalStoreInBits)
     return false;
 
-  bool NoVectors = DAG.getMachineFunction().getFunction().hasFnAttribute(
-      Attribute::NoImplicitFloat);
-
   // This function cannot currently deal with non-byte-sized memory sizes.
+  int64_t ElementSizeBytes = MemVT.getStoreSize();
   if (ElementSizeBytes * 8 != (int64_t)MemVT.getSizeInBits())
     return false;
 
-  if (!MemVT.isSimple())
-    return false;
-
-  // Perform an early exit check. Do not bother looking at stored values that
-  // are not constants, loads, or extracted vector elements.
+  // Do not bother looking at stored values that are not constants, loads, or
+  // extracted vector elements.
   SDValue StoredVal = peekThroughBitcasts(St->getValue());
   StoreSource StoreSrc = getStoreSource(StoredVal);
-  bool IsNonTemporalStore = St->isNonTemporal();
-  bool IsNonTemporalLoad = StoreSrc == StoreSource::Load &&
-                           cast<LoadSDNode>(StoredVal)->isNonTemporal();
-
   if (StoreSrc == StoreSource::Unknown)
     return false;
 
@@ -16291,6 +16278,16 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
     return LHS.OffsetFromBase < RHS.OffsetFromBase;
   });
 
+  unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
+  bool AllowVectors = !DAG.getMachineFunction().getFunction().hasFnAttribute(
+      Attribute::NoImplicitFloat);
+
+  bool IsNonTemporalStore = St->isNonTemporal();
+  bool IsNonTemporalLoad = StoreSrc == StoreSource::Load &&
+                           cast<LoadSDNode>(StoredVal)->isNonTemporal();
+  LLVMContext &Context = *DAG.getContext();
+  const DataLayout &DL = DAG.getDataLayout();
+
   // Store Merge attempts to merge the lowest stores. This generally
   // works out as if successful, as the remaining stores are checked
   // after the first collection of stores is merged. However, in the
@@ -16298,7 +16295,6 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   // p[0], p[1], p[2], p[3]}, we would fail and miss the subsequent
   // mergeable cases. To prevent this, we prune such stores from the
   // front of StoreNodes here.
-
   bool MadeChange = false;
   while (StoreNodes.size() > 1) {
     size_t StartIdx = 0;
@@ -16333,12 +16329,8 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
       continue;
     }
 
-    // The node with the lowest store address.
-    LLVMContext &Context = *DAG.getContext();
-    const DataLayout &DL = DAG.getDataLayout();
-
-    // Store the constants into memory as one consecutive store.
     if (StoreSrc == StoreSource::Constant) {
+      // Store the constants into memory as one consecutive store.
       while (NumConsecutiveStores >= 2) {
         LSBaseSDNode *FirstInChain = StoreNodes[0].MemNode;
         unsigned FirstStoreAS = FirstInChain->getAddressSpace();
@@ -16399,7 +16391,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
           // noimplicitfloat attribute.
           if ((!NonZero ||
                TLI.storeOfVectorConstantIsCheap(MemVT, i + 1, FirstStoreAS)) &&
-              !NoVectors) {
+              AllowVectors) {
             // Find a legal type for the vector store.
             unsigned Elts = (i + 1) * NumMemElts;
             EVT Ty = EVT::getVectorVT(Context, MemVT.getScalarType(), Elts);
@@ -16412,7 +16404,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
           }
         }
 
-        bool UseVector = (LastLegalVectorType > LastLegalType) && !NoVectors;
+        bool UseVector = (LastLegalVectorType > LastLegalType) && AllowVectors;
         unsigned NumElem = (UseVector) ? LastLegalVectorType : LastLegalType;
 
         // Check if we found a legal integer type that creates a meaningful
@@ -16659,7 +16651,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
       // Only use vector types if the vector type is larger than the integer
       // type. If they are the same, use integers.
       bool UseVectorTy =
-          LastLegalVectorType > LastLegalIntegerType && !NoVectors;
+          LastLegalVectorType > LastLegalIntegerType && AllowVectors;
       unsigned LastLegalType =
           std::max(LastLegalVectorType, LastLegalIntegerType);
 
