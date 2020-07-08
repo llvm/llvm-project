@@ -41887,7 +41887,7 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
   unsigned Opcode = N->getOpcode();
   assert((X86ISD::PACKSS == Opcode || X86ISD::PACKUS == Opcode) &&
-         "Unexpected shift opcode");
+         "Unexpected pack opcode");
 
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
