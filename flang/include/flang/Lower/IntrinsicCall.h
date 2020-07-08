@@ -27,39 +27,40 @@ namespace Fortran::lower {
 
 /// Helper for building calls to intrinsic functions in the runtime support
 /// libraries.
-class IntrinsicCallOpsHelper {
-public:
-  explicit IntrinsicCallOpsHelper(FirOpBuilder &builder, mlir::Location loc)
-      : builder(builder), loc(loc) {}
-  IntrinsicCallOpsHelper(const IntrinsicCallOpsHelper &) = delete;
 
-  /// Generate the FIR+MLIR operations for the generic intrinsic \p name
-  /// with arguments \p args and expected result type \p resultType.
-  /// Returned mlir::Value is the returned Fortran intrinsic value.
-  fir::ExtendedValue genIntrinsicCall(llvm::StringRef name,
-                                      mlir::Type resultType,
-                                      llvm::ArrayRef<fir::ExtendedValue> args);
+/// Generate the FIR+MLIR operations for the generic intrinsic \p name
+/// with arguments \p args and expected result type \p resultType.
+/// Returned mlir::Value is the returned Fortran intrinsic value.
+fir::ExtendedValue genIntrinsicCall(FirOpBuilder &, mlir::Location,
+                                    llvm::StringRef name, mlir::Type resultType,
+                                    llvm::ArrayRef<fir::ExtendedValue> args);
 
-  //===--------------------------------------------------------------------===//
-  // Direct access to intrinsics that may be used by lowering outside
-  // of intrinsic call lowering.
-  //===--------------------------------------------------------------------===//
+/// Get SymbolRefAttr of runtime (or wrapper function containing inlined
+// implementation) of an unrestricted intrinsic (defined by its signature
+// and generic name)
+mlir::SymbolRefAttr
+getUnrestrictedIntrinsicSymbolRefAttr(FirOpBuilder &, mlir::Location,
+                                      llvm::StringRef name,
+                                      mlir::FunctionType signature);
 
-  /// Generate maximum. There must be at least one argument and all arguments
-  /// must have the same type.
-  mlir::Value genMax(llvm::ArrayRef<mlir::Value> args);
+//===--------------------------------------------------------------------===//
+// Direct access to intrinsics that may be used by lowering outside
+// of intrinsic call lowering.
+//===--------------------------------------------------------------------===//
 
-  /// Generate minimum. Same constraints as genMax.
-  mlir::Value genMin(llvm::ArrayRef<mlir::Value> args);
+/// Generate maximum. There must be at least one argument and all arguments
+/// must have the same type.
+mlir::Value genMax(FirOpBuilder &, mlir::Location,
+                   llvm::ArrayRef<mlir::Value> args);
 
-  /// Generate power function x**y with given the expected
-  /// result type.
-  mlir::Value genPow(mlir::Type resultType, mlir::Value x, mlir::Value y);
+/// Generate minimum. Same constraints as genMax.
+mlir::Value genMin(FirOpBuilder &, mlir::Location,
+                   llvm::ArrayRef<mlir::Value> args);
 
-private:
-  FirOpBuilder &builder;
-  mlir::Location loc;
-};
+/// Generate power function x**y with given the expected
+/// result type.
+mlir::Value genPow(FirOpBuilder &, mlir::Location, mlir::Type resultType,
+                   mlir::Value x, mlir::Value y);
 
 } // namespace Fortran::lower
 
