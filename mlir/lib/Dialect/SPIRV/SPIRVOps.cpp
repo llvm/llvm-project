@@ -2779,37 +2779,30 @@ static LogicalResult verifyMatrixTimesScalar(spirv::MatrixTimesScalarOp op) {
   // auto-generated verify method.
 
   auto inputMatrix = op.matrix().getType().cast<spirv::MatrixType>();
-  // Check that the scalar type is the same as the matrix components type.
-  if (auto inputMatrixColumns =
-          inputMatrix.getElementType().dyn_cast<VectorType>()) {
-    if (op.scalar().getType() != inputMatrixColumns.getElementType())
-      return op.emitError("input matrix components' type and scaling "
-                          "value must have the same type");
+  auto resultMatrix = op.result().getType().cast<spirv::MatrixType>();
 
-    // Note that the next three checks could be done using the AllTypesMatch
-    // trait in the Op definition file but it generates a vague error message.
+  // Check that the scalar type is the same as the matrix element type.
+  if (op.scalar().getType() != inputMatrix.getElementType())
+    return op.emitError("input matrix components' type and scaling value must "
+                        "have the same type");
 
-    // Check that the input and result matrices have the same size
-    auto resultMatrix = op.result().getType().cast<spirv::MatrixType>();
-    if (inputMatrix.getNumElements() != resultMatrix.getNumElements())
-      return op.emitError("input and result matrices must have "
-                          "the same number of columns");
+  // Note that the next three checks could be done using the AllTypesMatch
+  // trait in the Op definition file but it generates a vague error message.
 
-    if (auto resultMatrixColumns =
-            resultMatrix.getElementType().dyn_cast<VectorType>()) {
-      // Check that the input and result matrices' columns have the same type
-      if (inputMatrixColumns.getElementType() !=
-          resultMatrixColumns.getElementType())
-        return op.emitError("input and result matrices' columns must "
-                            "have the same component type");
+  // Check that the input and result matrices have the same columns' count
+  if (inputMatrix.getNumColumns() != resultMatrix.getNumColumns())
+    return op.emitError("input and result matrices must have the same "
+                        "number of columns");
 
-      // Check that the input and result matrices' columns have the same size
-      if (inputMatrixColumns.getNumElements() !=
-          resultMatrixColumns.getNumElements())
-        return op.emitError("input and result matrices' columns must "
-                            "have the same size");
-    }
-  }
+  // Check that the input and result matrices' have the same rows count
+  if (inputMatrix.getNumRows() != resultMatrix.getNumRows())
+    return op.emitError("input and result matrices' columns must have "
+                        "the same size");
+
+  // Check that the input and result matrices' have the same component type
+  if (inputMatrix.getElementType() != resultMatrix.getElementType())
+    return op.emitError("input and result matrices' columns must have "
+                        "the same component type");
 
   return success();
 }
@@ -2902,24 +2895,56 @@ static LogicalResult verifyTranspose(spirv::TransposeOp op) {
   auto resultMatrix = op.result().getType().cast<spirv::MatrixType>();
 
   // Verify that the input and output matrices have correct shapes.
-  if (auto inputMatrixColumns =
-          inputMatrix.getElementType().dyn_cast<VectorType>()) {
-    if (inputMatrixColumns.getNumElements() != resultMatrix.getNumElements())
-      return op.emitError("input matrix rows count must be equal to "
-                          "output matrix columns count");
-    if (auto resultMatrixColumns =
-            resultMatrix.getElementType().dyn_cast<VectorType>()) {
-      if (resultMatrixColumns.getNumElements() != inputMatrix.getNumElements())
-        return op.emitError("input matrix columns count must be equal "
-                            "to output matrix rows count");
+  if (inputMatrix.getNumRows() != resultMatrix.getNumColumns())
+    return op.emitError("input matrix rows count must be equal to "
+                        "output matrix columns count");
 
-      // Verify that the input and output matrices have the same component type
-      if (inputMatrixColumns.getElementType() !=
-          resultMatrixColumns.getElementType())
-        return op.emitError("input and output matrices must have the "
-                            "same component type");
-    }
-  }
+  if (inputMatrix.getNumColumns() != resultMatrix.getNumRows())
+    return op.emitError("input matrix columns count must be equal to "
+                        "output matrix rows count");
+
+  // Verify that the input and output matrices have the same component type
+  if (inputMatrix.getElementType() != resultMatrix.getElementType())
+    return op.emitError("input and output matrices must have the same "
+                        "component type");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.MatrixTimesMatrix
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyMatrixTimesMatrix(spirv::MatrixTimesMatrixOp op) {
+  auto leftMatrix = op.leftmatrix().getType().cast<spirv::MatrixType>();
+  auto rightMatrix = op.rightmatrix().getType().cast<spirv::MatrixType>();
+  auto resultMatrix = op.result().getType().cast<spirv::MatrixType>();
+
+  // left matrix columns' count and right matrix rows' count must be equal
+  if (leftMatrix.getNumColumns() != rightMatrix.getNumRows())
+    return op.emitError("left matrix columns' count must be equal to "
+                        "the right matrix rows' count");
+
+  // right and result matrices columns' count must be the same
+  if (rightMatrix.getNumColumns() != resultMatrix.getNumColumns())
+    return op.emitError(
+        "right and result matrices must have equal columns' count");
+
+  // right and result matrices component type must be the same
+  if (rightMatrix.getElementType() != resultMatrix.getElementType())
+    return op.emitError("right and result matrices' component type must"
+                        " be the same");
+
+  // left and result matrices component type must be the same
+  if (leftMatrix.getElementType() != resultMatrix.getElementType())
+    return op.emitError("left and result matrices' component type"
+                        " must be the same");
+
+  // left and result matrices rows count must be the same
+  if (leftMatrix.getNumRows() != resultMatrix.getNumRows())
+    return op.emitError("left and result matrices must have equal rows'"
+                        " count");
+
   return success();
 }
 

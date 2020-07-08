@@ -1127,12 +1127,12 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
 
   if (auto matrixType = type.dyn_cast<spirv::MatrixType>()) {
     uint32_t elementTypeID = 0;
-    if (failed(processType(loc, matrixType.getElementType(), elementTypeID))) {
+    if (failed(processType(loc, matrixType.getColumnType(), elementTypeID))) {
       return failure();
     }
     typeEnum = spirv::Opcode::OpTypeMatrix;
     operands.push_back(elementTypeID);
-    operands.push_back(matrixType.getNumElements());
+    operands.push_back(matrixType.getNumColumns());
     return success();
   }
 
