@@ -449,10 +449,10 @@ enum NodeType {
 
   /// BUILD_VECTOR(ELT0, ELT1, ELT2, ELT3,...) - Return a fixed-width vector
   /// with the specified, possibly variable, elements. The types of the
-  /// operands must all be the same. The types of the operands must match the
-  /// vector element type, except that integer types are allowed to be larger
-  /// than the element type, in which case the operands are implicitly
-  /// truncated.
+  /// operands must match the vector element type, except that integer types
+  /// are allowed to be larger than the element type, in which case the
+  /// operands are implicitly truncated. The types of the operands must all
+  /// be the same.
   BUILD_VECTOR,
 
   /// INSERT_VECTOR_ELT(VECTOR, VAL, IDX) - Returns VECTOR with the element
