@@ -1390,12 +1390,17 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
 }
 
 SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
+  assert((Node->getOpcode() == ISD::BUILD_VECTOR ||
+          Node->getOpcode() == ISD::CONCAT_VECTORS) &&
+         "Unexpected opcode!");
+
   // We can't handle this case efficiently.  Allocate a sufficiently
-  // aligned object on the stack, store each element into it, then load
+  // aligned object on the stack, store each operand into it, then load
   // the result as a vector.
   // Create the stack frame object.
   EVT VT = Node->getValueType(0);
-  EVT EltVT = VT.getVectorElementType();
+  EVT MemVT = isa<BuildVectorSDNode>(Node) ? VT.getVectorElementType()
+                                           : Node->getOperand(0).getValueType();
   SDLoc dl(Node);
   SDValue FIPtr = DAG.CreateStackTemporary(VT);
   int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
@@ -1404,7 +1409,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
 
   // Emit a store of each element to the stack slot.
   SmallVector<SDValue, 8> Stores;
-  unsigned TypeByteSize = EltVT.getSizeInBits() / 8;
+  unsigned TypeByteSize = MemVT.getSizeInBits() / 8;
   assert(TypeByteSize > 0 && "Vector element type too small for stack store!");
   // Store (in the right endianness) the elements to memory.
   for (unsigned i = 0, e = Node->getNumOperands(); i != e; ++i) {
@@ -1417,11 +1422,11 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
 
     // If the destination vector element type is narrower than the source
     // element type, only store the bits necessary.
-    if (EltVT.bitsLT(Node->getOperand(i).getValueType().getScalarType())) {
+    if (MemVT.bitsLT(Node->getOperand(i).getValueType()))
       Stores.push_back(DAG.getTruncStore(DAG.getEntryNode(), dl,
                                          Node->getOperand(i), Idx,
-                                         PtrInfo.getWithOffset(Offset), EltVT));
-    } else
+                                         PtrInfo.getWithOffset(Offset), MemVT));
+    else
       Stores.push_back(DAG.getStore(DAG.getEntryNode(), dl, Node->getOperand(i),
                                     Idx, PtrInfo.getWithOffset(Offset)));
   }
