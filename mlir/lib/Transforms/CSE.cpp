@@ -64,7 +64,7 @@ struct CSE : public CSEBase<CSE> {
     ScopedMapTy::ScopeTy scope;
 
     DominanceInfoNode *node;
-    DominanceInfoNode::iterator childIterator;
+    DominanceInfoNode::const_iterator childIterator;
 
     /// If this node has been fully processed yet or not.
     bool processed;
