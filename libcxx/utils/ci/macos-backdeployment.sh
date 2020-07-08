@@ -120,8 +120,10 @@ LIBCXX_ROOT_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/libc++/${DEPLOYME
 LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET="${PREVIOUS_DYLIBS_DIR}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
 
 # Filesystem is supported on Apple platforms starting with macosx10.15.
-if [[ ${DEPLOYMENT_TARGET} =~ "^10.9|10.10|10.11|10.12|10.13|10.14$" ]]; then
-    ENABLE_FILESYSTEM="--param enable_filesystem=False"
+if [[ ${DEPLOYMENT_TARGET} =~ ^10.9|10.10|10.11|10.12|10.13|10.14$ ]]; then
+    ENABLE_FILESYSTEM="--param enable_filesystem=false"
+else
+    ENABLE_FILESYSTEM="--param enable_filesystem=true"
 fi
 
 # TODO: We need to also run the tests for libc++abi.
