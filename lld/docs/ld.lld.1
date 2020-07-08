@@ -625,6 +625,13 @@ Use wrapper functions for symbol.
 Linker option extensions.
 .Bl -tag -width indent -compact
 .Pp
+.It Cm dead-reloc-in-nonalloc Ns = Ns Ar section_glob=value
+Resolve a relocation in a matched non-SHF_ALLOC section referencing a discarded symbol to
+.Ar value
+Accepts globs, in the event of a section matching more than one option, the last
+option takes precedence. An order of least specific to most specific match is
+recommended.
+.Pp
 .It Cm execstack
 Make the main stack executable.
 Stack permissions are recorded in the
