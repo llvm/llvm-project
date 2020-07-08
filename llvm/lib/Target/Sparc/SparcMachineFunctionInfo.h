@@ -19,14 +19,14 @@ namespace llvm {
   class SparcMachineFunctionInfo : public MachineFunctionInfo {
     virtual void anchor();
   private:
-    unsigned GlobalBaseReg;
+    Register GlobalBaseReg;
 
     /// VarArgsFrameOffset - Frame offset to start of varargs area.
     int VarArgsFrameOffset;
 
     /// SRetReturnReg - Holds the virtual register into which the sret
     /// argument is passed.
-    unsigned SRetReturnReg;
+    Register SRetReturnReg;
 
     /// IsLeafProc - True if the function is a leaf procedure.
     bool IsLeafProc;
@@ -38,14 +38,14 @@ namespace llvm {
       : GlobalBaseReg(0), VarArgsFrameOffset(0), SRetReturnReg(0),
         IsLeafProc(false) {}
 
-    unsigned getGlobalBaseReg() const { return GlobalBaseReg; }
-    void setGlobalBaseReg(unsigned Reg) { GlobalBaseReg = Reg; }
+    Register getGlobalBaseReg() const { return GlobalBaseReg; }
+    void setGlobalBaseReg(Register Reg) { GlobalBaseReg = Reg; }
 
     int getVarArgsFrameOffset() const { return VarArgsFrameOffset; }
     void setVarArgsFrameOffset(int Offset) { VarArgsFrameOffset = Offset; }
 
-    unsigned getSRetReturnReg() const { return SRetReturnReg; }
-    void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
+    Register getSRetReturnReg() const { return SRetReturnReg; }
+    void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
 
     void setLeafProc(bool rhs) { IsLeafProc = rhs; }
     bool isLeafProc() const { return IsLeafProc; }

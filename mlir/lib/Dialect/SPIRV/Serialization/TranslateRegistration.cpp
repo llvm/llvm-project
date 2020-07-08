@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/SPIRV/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Serialization.h"
 #include "mlir/IR/Builders.h"
@@ -49,13 +50,13 @@ static OwningModuleRef deserializeModule(const llvm::MemoryBuffer *input,
   auto binary = llvm::makeArrayRef(reinterpret_cast<const uint32_t *>(start),
                                    size / sizeof(uint32_t));
 
-  auto spirvModule = spirv::deserialize(binary, context);
+  spirv::OwningSPIRVModuleRef spirvModule = spirv::deserialize(binary, context);
   if (!spirvModule)
     return {};
 
   OwningModuleRef module(ModuleOp::create(FileLineColLoc::get(
       input->getBufferIdentifier(), /*line=*/0, /*column=*/0, context)));
-  module->getBody()->push_front(spirvModule->getOperation());
+  module->getBody()->push_front(spirvModule.release());
 
   return module;
 }
@@ -136,14 +137,14 @@ static LogicalResult roundTripModule(llvm::SourceMgr &sourceMgr,
     return failure();
 
   // Then deserialize to get back a SPIR-V module.
-  auto spirvModule = spirv::deserialize(binary, context);
+  spirv::OwningSPIRVModuleRef spirvModule = spirv::deserialize(binary, context);
   if (!spirvModule)
     return failure();
 
   // Wrap around in a new MLIR module.
   OwningModuleRef dstModule(ModuleOp::create(FileLineColLoc::get(
       /*filename=*/"", /*line=*/0, /*column=*/0, context)));
-  dstModule->getBody()->push_front(spirvModule->getOperation());
+  dstModule->getBody()->push_front(spirvModule.release());
   dstModule->print(output);
 
   return mlir::success();

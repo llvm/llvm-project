@@ -9,9 +9,8 @@
 ; CHECK-LABEL: <test1>:
 ; CHECK-LABEL: <$d.1>:
 ; CHECK-LABEL: <$x.2>:
-; CHECK-NEXT:    b 0x30 <$x.4+0x4>
+; CHECK-NEXT:    b 0x2c <$x.4>
 ; CHECK-LABEL: <$x.4>:
-; CHECK-NEXT:    b 0x30 <$x.4+0x4>
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ldr x30, [sp], #16
 ; CHECK-NEXT:    ret
@@ -75,7 +74,6 @@ define hidden i32 @test2() local_unnamed_addr {
 ; CHECK-LABEL: <$x.10>:
 ; CHECK-NEXT:    b {{.*}} <test3+0x18>
 ; CHECK-LABEL: <$x.12>:
-; CHECK-NEXT:    b {{.*}} <$x.12+0x4>
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ldr x30, [sp], #16
 ; CHECK-NEXT:    ret

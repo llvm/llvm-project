@@ -85,7 +85,7 @@ bool AffineValueMap::isFunctionOf(unsigned idx, Value value) const {
     return false;
   }
   auto expr = const_cast<AffineValueMap *>(this)->getAffineMap().getResult(idx);
-  // TODO(ntv): this is better implemented on a flattened representation.
+  // TODO: this is better implemented on a flattened representation.
   // At least for now it is conservative.
   return expr.isFunctionOfDim(index);
 }

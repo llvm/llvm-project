@@ -54,7 +54,7 @@
 // CHECK-NOT: "{{.*}}opt"
 // CHECK-NOT: "{{.*}}llc"
 // NORDC: {{.*lld.*}}"-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.out"
-// RDCL: "{{.*lld.*}}" {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// RDCL: "{{.*lld.*}}" {{.*}} "-plugin-opt=-amdgpu-internalize-symbols" {{.*}}"-save-temps"
 // RDCL-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx900"
 // RDCC: "{{.*clang.*}}" "-cc1" {{.*}} "-E" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.cui"
 // RDCC: "{{.*clang.*}}" "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.bc"

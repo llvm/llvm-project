@@ -177,18 +177,16 @@ namespace {
 /// mlir::Type. The type returned may be an MLIR standard or FIR type.
 class TypeBuilder {
 public:
-  
   /// Constructor.
   explicit TypeBuilder(
       mlir::MLIRContext *context,
       const Fortran::common::IntrinsicTypeDefaultKinds &defaults)
       : context{context}, defaults{defaults} {}
 
-  
   //===--------------------------------------------------------------------===//
   // Generate type entry points
   //===--------------------------------------------------------------------===//
-  
+
   template <template <typename> typename A, Fortran::common::TypeCategory TC>
   mlir::Type gen(const A<Fortran::evaluate::SomeKind<TC>> &) {
     return genFIRType<TC>(context, defaultKind<TC>());
@@ -262,7 +260,7 @@ private:
   //===--------------------------------------------------------------------===//
   // Generate type helpers
   //===--------------------------------------------------------------------===//
-  
+
   mlir::Type gen(const Fortran::evaluate::ImpliedDoIndex &) {
     return genFIRType<Fortran::common::TypeCategory::Integer>(
         context, defaultKind<Fortran::common::TypeCategory::Integer>());

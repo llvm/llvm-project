@@ -86,6 +86,8 @@ write_lit_config("lit_site_cfg") {
 
   if (host_cpu == "x64") {
     extra_values += [ "HOST_ARCH=x86_64" ]
+  } else if (host_cpu == "arm64") {
+    extra_values += [ "HOST_ARCH=arm64" ]
   } else if (host_cpu == "ppc64") {
     extra_values += [ "HOST_ARCH=powerpc64le" ]
   } else {

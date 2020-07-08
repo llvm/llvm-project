@@ -1675,6 +1675,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall)
     return DAG.getNode(SystemZISD::SIBCALL, DL, NodeTys, Ops);
   Chain = DAG.getNode(SystemZISD::CALL, DL, NodeTys, Ops);
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
@@ -4467,10 +4468,20 @@ static SDValue getPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
 }
 
 static bool isZeroVector(SDValue N) {
+  if (N->getOpcode() == ISD::BITCAST)
+    N = N->getOperand(0);
   if (N->getOpcode() == ISD::SPLAT_VECTOR)
     if (auto *Op = dyn_cast<ConstantSDNode>(N->getOperand(0)))
       return Op->getZExtValue() == 0;
   return ISD::isBuildVectorAllZeros(N.getNode());
+}
+
+// Return the index of the zero/undef vector, or UINT32_MAX if not found.
+static uint32_t findZeroVectorIdx(SDValue *Ops, unsigned Num) {
+  for (unsigned I = 0; I < Num ; I++)
+    if (isZeroVector(Ops[I]))
+      return I;
+  return UINT32_MAX;
 }
 
 // Bytes is a VPERM-like permute vector, except that -1 is used for
@@ -4491,9 +4502,8 @@ static SDValue getGeneralPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
 
   // Fall back on VPERM.  Construct an SDNode for the permute vector.  Try to
   // eliminate a zero vector by reusing any zero index in the permute vector.
-  unsigned ZeroVecIdx =
-    isZeroVector(Ops[0]) ? 0 : (isZeroVector(Ops[1]) ? 1 : UINT_MAX);
-  if (ZeroVecIdx != UINT_MAX) {
+  unsigned ZeroVecIdx = findZeroVectorIdx(&Ops[0], 2);
+  if (ZeroVecIdx != UINT32_MAX) {
     bool MaskFirst = true;
     int ZeroIdx = -1;
     for (unsigned I = 0; I < SystemZ::VectorBytes; ++I) {
@@ -4551,10 +4561,13 @@ static SDValue getGeneralPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
 namespace {
 // Describes a general N-operand vector shuffle.
 struct GeneralShuffle {
-  GeneralShuffle(EVT vt) : VT(vt) {}
+  GeneralShuffle(EVT vt) : VT(vt), UnpackFromEltSize(UINT_MAX) {}
   void addUndef();
   bool add(SDValue, unsigned);
   SDValue getNode(SelectionDAG &, const SDLoc &);
+  void tryPrepareForUnpack();
+  bool unpackWasPrepared() { return UnpackFromEltSize <= 4; }
+  SDValue insertUnpackIfPrepared(SelectionDAG &DAG, const SDLoc &DL, SDValue Op);
 
   // The operands of the shuffle.
   SmallVector<SDValue, SystemZ::VectorBytes> Ops;
@@ -4566,6 +4579,9 @@ struct GeneralShuffle {
 
   // The type of the shuffle result.
   EVT VT;
+
+  // Holds a value of 1, 2 or 4 if a final unpack has been prepared for.
+  unsigned UnpackFromEltSize;
 };
 }
 
@@ -4648,6 +4664,9 @@ SDValue GeneralShuffle::getNode(SelectionDAG &DAG, const SDLoc &DL) {
   if (Ops.size() == 0)
     return DAG.getUNDEF(VT);
 
+  // Use a single unpack if possible as the last operation.
+  tryPrepareForUnpack();
+
   // Make sure that there are at least two shuffle operands.
   if (Ops.size() == 1)
     Ops.push_back(DAG.getUNDEF(MVT::v16i8));
@@ -4713,11 +4732,115 @@ SDValue GeneralShuffle::getNode(SelectionDAG &DAG, const SDLoc &DL) {
   // to VPERM.
   unsigned OpNo0, OpNo1;
   SDValue Op;
-  if (const Permute *P = matchPermute(Bytes, OpNo0, OpNo1))
+  if (unpackWasPrepared() && Ops[1].isUndef())
+    Op = Ops[0];
+  else if (const Permute *P = matchPermute(Bytes, OpNo0, OpNo1))
     Op = getPermuteNode(DAG, DL, *P, Ops[OpNo0], Ops[OpNo1]);
   else
     Op = getGeneralPermuteNode(DAG, DL, &Ops[0], Bytes);
+
+  Op = insertUnpackIfPrepared(DAG, DL, Op);
+
   return DAG.getNode(ISD::BITCAST, DL, VT, Op);
+}
+
+#ifndef NDEBUG
+static void dumpBytes(const SmallVectorImpl<int> &Bytes, std::string Msg) {
+  dbgs() << Msg.c_str() << " { ";
+  for (unsigned i = 0; i < Bytes.size(); i++)
+    dbgs() << Bytes[i] << " ";
+  dbgs() << "}\n";
+}
+#endif
+
+// If the Bytes vector matches an unpack operation, prepare to do the unpack
+// after all else by removing the zero vector and the effect of the unpack on
+// Bytes.
+void GeneralShuffle::tryPrepareForUnpack() {
+  uint32_t ZeroVecOpNo = findZeroVectorIdx(&Ops[0], Ops.size());
+  if (ZeroVecOpNo == UINT32_MAX || Ops.size() == 1)
+    return;
+
+  // Only do this if removing the zero vector reduces the depth, otherwise
+  // the critical path will increase with the final unpack.
+  if (Ops.size() > 2 &&
+      Log2_32_Ceil(Ops.size()) == Log2_32_Ceil(Ops.size() - 1))
+    return;
+
+  // Find an unpack that would allow removing the zero vector from Ops.
+  UnpackFromEltSize = 1;
+  for (; UnpackFromEltSize <= 4; UnpackFromEltSize *= 2) {
+    bool MatchUnpack = true;
+    SmallVector<int, SystemZ::VectorBytes> SrcBytes;
+    for (unsigned Elt = 0; Elt < SystemZ::VectorBytes; Elt++) {
+      unsigned ToEltSize = UnpackFromEltSize * 2;
+      bool IsZextByte = (Elt % ToEltSize) < UnpackFromEltSize;
+      if (!IsZextByte)
+        SrcBytes.push_back(Bytes[Elt]);
+      if (Bytes[Elt] != -1) {
+        unsigned OpNo = unsigned(Bytes[Elt]) / SystemZ::VectorBytes;
+        if (IsZextByte != (OpNo == ZeroVecOpNo)) {
+          MatchUnpack = false;
+          break;
+        }
+      }
+    }
+    if (MatchUnpack) {
+      if (Ops.size() == 2) {
+        // Don't use unpack if a single source operand needs rearrangement.
+        for (unsigned i = 0; i < SystemZ::VectorBytes / 2; i++)
+          if (SrcBytes[i] != -1 && SrcBytes[i] % 16 != int(i)) {
+            UnpackFromEltSize = UINT_MAX;
+            return;
+          }
+      }
+      break;
+    }
+  }
+  if (UnpackFromEltSize > 4)
+    return;
+
+  LLVM_DEBUG(dbgs() << "Preparing for final unpack of element size "
+             << UnpackFromEltSize << ". Zero vector is Op#" << ZeroVecOpNo
+             << ".\n";
+             dumpBytes(Bytes, "Original Bytes vector:"););
+
+  // Apply the unpack in reverse to the Bytes array.
+  unsigned B = 0;
+  for (unsigned Elt = 0; Elt < SystemZ::VectorBytes;) {
+    Elt += UnpackFromEltSize;
+    for (unsigned i = 0; i < UnpackFromEltSize; i++, Elt++, B++)
+      Bytes[B] = Bytes[Elt];
+  }
+  while (B < SystemZ::VectorBytes)
+    Bytes[B++] = -1;
+
+  // Remove the zero vector from Ops
+  Ops.erase(&Ops[ZeroVecOpNo]);
+  for (unsigned I = 0; I < SystemZ::VectorBytes; ++I)
+    if (Bytes[I] >= 0) {
+      unsigned OpNo = unsigned(Bytes[I]) / SystemZ::VectorBytes;
+      if (OpNo > ZeroVecOpNo)
+        Bytes[I] -= SystemZ::VectorBytes;
+    }
+
+  LLVM_DEBUG(dumpBytes(Bytes, "Resulting Bytes vector, zero vector removed:");
+             dbgs() << "\n";);
+}
+
+SDValue GeneralShuffle::insertUnpackIfPrepared(SelectionDAG &DAG,
+                                               const SDLoc &DL,
+                                               SDValue Op) {
+  if (!unpackWasPrepared())
+    return Op;
+  unsigned InBits = UnpackFromEltSize * 8;
+  EVT InVT = MVT::getVectorVT(MVT::getIntegerVT(InBits),
+                                SystemZ::VectorBits / InBits);
+  SDValue PackedOp = DAG.getNode(ISD::BITCAST, DL, InVT, Op);
+  unsigned OutBits = InBits * 2;
+  EVT OutVT = MVT::getVectorVT(MVT::getIntegerVT(OutBits),
+                               SystemZ::VectorBits / OutBits);
+  return DAG.getNode(SystemZISD::UNPACKL_HIGH, DL, OutVT, PackedOp);
 }
 
 // Return true if the given BUILD_VECTOR is a scalar-to-vector conversion.
@@ -5114,9 +5237,8 @@ SystemZTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   return DAG.getNode(ISD::BITCAST, DL, VT, Res);
 }
 
-SDValue
-SystemZTargetLowering::lowerExtendVectorInreg(SDValue Op, SelectionDAG &DAG,
-                                              unsigned UnpackHigh) const {
+SDValue SystemZTargetLowering::
+lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const {
   SDValue PackedOp = Op.getOperand(0);
   EVT OutVT = Op.getValueType();
   EVT InVT = PackedOp.getValueType();
@@ -5126,9 +5248,37 @@ SystemZTargetLowering::lowerExtendVectorInreg(SDValue Op, SelectionDAG &DAG,
     FromBits *= 2;
     EVT OutVT = MVT::getVectorVT(MVT::getIntegerVT(FromBits),
                                  SystemZ::VectorBits / FromBits);
-    PackedOp = DAG.getNode(UnpackHigh, SDLoc(PackedOp), OutVT, PackedOp);
+    PackedOp =
+      DAG.getNode(SystemZISD::UNPACK_HIGH, SDLoc(PackedOp), OutVT, PackedOp);
   } while (FromBits != ToBits);
   return PackedOp;
+}
+
+// Lower a ZERO_EXTEND_VECTOR_INREG to a vector shuffle with a zero vector.
+SDValue SystemZTargetLowering::
+lowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const {
+  SDValue PackedOp = Op.getOperand(0);
+  SDLoc DL(Op);
+  EVT OutVT = Op.getValueType();
+  EVT InVT = PackedOp.getValueType();
+  unsigned InNumElts = InVT.getVectorNumElements();
+  unsigned OutNumElts = OutVT.getVectorNumElements();
+  unsigned NumInPerOut = InNumElts / OutNumElts;
+
+  SDValue ZeroVec =
+    DAG.getSplatVector(InVT, DL, DAG.getConstant(0, DL, InVT.getScalarType()));
+
+  SmallVector<int, 16> Mask(InNumElts);
+  unsigned ZeroVecElt = InNumElts;
+  for (unsigned PackedElt = 0; PackedElt < OutNumElts; PackedElt++) {
+    unsigned MaskElt = PackedElt * NumInPerOut;
+    unsigned End = MaskElt + NumInPerOut - 1;
+    for (; MaskElt < End; MaskElt++)
+      Mask[MaskElt] = ZeroVecElt++;
+    Mask[MaskElt] = PackedElt;
+  }
+  SDValue Shuf = DAG.getVectorShuffle(InVT, DL, PackedOp, ZeroVec, Mask);
+  return DAG.getNode(ISD::BITCAST, DL, OutVT, Shuf);
 }
 
 SDValue SystemZTargetLowering::lowerShift(SDValue Op, SelectionDAG &DAG,
@@ -5296,9 +5446,9 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   case ISD::EXTRACT_VECTOR_ELT:
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::SIGN_EXTEND_VECTOR_INREG:
-    return lowerExtendVectorInreg(Op, DAG, SystemZISD::UNPACK_HIGH);
+    return lowerSIGN_EXTEND_VECTOR_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
-    return lowerExtendVectorInreg(Op, DAG, SystemZISD::UNPACKL_HIGH);
+    return lowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
   case ISD::SHL:
     return lowerShift(Op, DAG, SystemZISD::VSHL_BY_SCALAR);
   case ISD::SRL:

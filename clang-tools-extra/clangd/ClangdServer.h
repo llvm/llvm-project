@@ -11,6 +11,7 @@
 
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "CodeComplete.h"
+#include "ConfigProvider.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
 #include "Protocol.h"
@@ -112,6 +113,9 @@ public:
 
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
+
+    /// If set, queried to obtain the configuration to handle each request.
+    config::Provider *ConfigProvider = nullptr;
 
     /// If set, enable clang-tidy in clangd and use to it get clang-tidy
     /// configurations for a particular file.
@@ -247,18 +251,17 @@ public:
                       Callback<ReferencesResult> CB);
 
   /// Run formatting for \p Rng inside \p File with content \p Code.
-  llvm::Expected<tooling::Replacements> formatRange(StringRef Code,
-                                                    PathRef File, Range Rng);
+  void formatRange(PathRef File, StringRef Code, Range Rng,
+                   Callback<tooling::Replacements> CB);
 
   /// Run formatting for the whole \p File with content \p Code.
-  llvm::Expected<tooling::Replacements> formatFile(StringRef Code,
-                                                   PathRef File);
+  void formatFile(PathRef File, StringRef Code,
+                  Callback<tooling::Replacements> CB);
 
   /// Run formatting after \p TriggerText was typed at \p Pos in \p File with
   /// content \p Code.
-  llvm::Expected<std::vector<TextEdit>> formatOnType(StringRef Code,
-                                                     PathRef File, Position Pos,
-                                                     StringRef TriggerText);
+  void formatOnType(PathRef File, StringRef Code, Position Pos,
+                    StringRef TriggerText, Callback<std::vector<TextEdit>> CB);
 
   /// Test the validity of a rename operation.
   void prepareRename(PathRef File, Position Pos,
@@ -323,11 +326,18 @@ public:
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
 
 private:
-  /// FIXME: This stats several files to find a .clang-format file. I/O can be
-  /// slow. Think of a way to cache this.
-  llvm::Expected<tooling::Replacements>
-  formatCode(llvm::StringRef Code, PathRef File,
-             ArrayRef<tooling::Range> Ranges);
+  void formatCode(PathRef File, llvm::StringRef Code,
+                  ArrayRef<tooling::Range> Ranges,
+                  Callback<tooling::Replacements> CB);
+
+  /// Derives a context for a task processing the specified source file.
+  /// This includes the current configuration (see Options::ConfigProvider).
+  /// The empty string means no particular file is the target.
+  /// Rather than called by each feature, this is exposed to the components
+  /// that control worker threads, like TUScheduler and BackgroundIndex.
+  /// This means it's OK to do some IO here, and it cuts across all features.
+  Context createProcessingContext(PathRef) const;
+  config::Provider *ConfigProvider = nullptr;
 
   const ThreadsafeFS &TFS;
 

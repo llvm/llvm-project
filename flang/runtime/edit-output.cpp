@@ -127,9 +127,9 @@ const char *RealOutputEditingBase::FormatExponent(
 bool RealOutputEditingBase::EmitPrefix(
     const DataEdit &edit, std::size_t length, std::size_t width) {
   if (edit.IsListDirected()) {
-    int prefixLength{edit.descriptor == DataEdit::ListDirectedRealPart
-            ? 2
-            : edit.descriptor == DataEdit::ListDirectedImaginaryPart ? 0 : 1};
+    int prefixLength{edit.descriptor == DataEdit::ListDirectedRealPart ? 2
+            : edit.descriptor == DataEdit::ListDirectedImaginaryPart   ? 0
+                                                                       : 1};
     int suffixLength{edit.descriptor == DataEdit::ListDirectedRealPart ||
                 edit.descriptor == DataEdit::ListDirectedImaginaryPart
             ? 1

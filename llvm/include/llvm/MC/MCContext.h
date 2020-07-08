@@ -57,6 +57,7 @@ namespace llvm {
   class MCSymbol;
   class MCSymbolELF;
   class MCSymbolWasm;
+  class MCSymbolXCOFF;
   class SMLoc;
   class SourceMgr;
 
@@ -307,6 +308,9 @@ namespace llvm {
                                        const MCSymbolELF *Group,
                                        unsigned UniqueID,
                                        const MCSymbolELF *LinkedToSym);
+
+    MCSymbolXCOFF *createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
+                                         bool IsTemporary);
 
     /// Map of currently defined macros.
     StringMap<MCAsmMacro> MacroMap;

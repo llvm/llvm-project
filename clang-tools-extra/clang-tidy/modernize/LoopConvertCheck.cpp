@@ -146,9 +146,8 @@ StatementMatcher makeArrayLoopMatcher() {
 ///   - If the end iterator variable 'g' is defined, it is the same as 'f'.
 StatementMatcher makeIteratorLoopMatcher() {
   StatementMatcher BeginCallMatcher =
-      cxxMemberCallExpr(
-          argumentCountIs(0),
-          callee(cxxMethodDecl(anyOf(hasName("begin"), hasName("cbegin")))))
+      cxxMemberCallExpr(argumentCountIs(0),
+                        callee(cxxMethodDecl(hasAnyName("begin", "cbegin"))))
           .bind(BeginCallName);
 
   DeclarationMatcher InitDeclMatcher =
@@ -162,8 +161,7 @@ StatementMatcher makeIteratorLoopMatcher() {
       varDecl(hasInitializer(anything())).bind(EndVarName);
 
   StatementMatcher EndCallMatcher = cxxMemberCallExpr(
-      argumentCountIs(0),
-      callee(cxxMethodDecl(anyOf(hasName("end"), hasName("cend")))));
+      argumentCountIs(0), callee(cxxMethodDecl(hasAnyName("end", "cend"))));
 
   StatementMatcher IteratorBoundMatcher =
       expr(anyOf(ignoringParenImpCasts(
@@ -280,8 +278,7 @@ StatementMatcher makePseudoArrayLoopMatcher() {
       ));
 
   StatementMatcher SizeCallMatcher = cxxMemberCallExpr(
-      argumentCountIs(0),
-      callee(cxxMethodDecl(anyOf(hasName("size"), hasName("length")))),
+      argumentCountIs(0), callee(cxxMethodDecl(hasAnyName("size", "length"))),
       on(anyOf(hasType(pointsTo(RecordWithBeginEnd)),
                hasType(RecordWithBeginEnd))));
 

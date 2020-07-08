@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=c++11 -verify -fopenmp -ferror-limit 200 %s -Wuninitialized
+// RUN: %clang_cc1 -std=c++11 -verify=expected,omp4 -fopenmp -fopenmp-version=45 -ferror-limit 200 %s -Wuninitialized
 
 // RUN: %clang_cc1 -std=c++11 -verify -fopenmp-simd -ferror-limit 200 %s -Wuninitialized
+// RUN: %clang_cc1 -std=c++11 -verify=expected,omp4 -fopenmp-simd -fopenmp-version=45 -ferror-limit 200 %s -Wuninitialized
 struct ST {
   int *a;
 };
@@ -189,11 +191,11 @@ T tmain(T argc) {
   {}
 #pragma omp target parallel is_device_ptr(ps) map(ps->a) // expected-error{{pointer cannot be mapped along with a section derived from itself}} expected-note{{used here}}
   {}
-#pragma omp target parallel is_device_ptr(ps) firstprivate(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}}
+#pragma omp target parallel is_device_ptr(ps) firstprivate(ps) // omp4-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}}
   {}
 #pragma omp target parallel firstprivate(ps) is_device_ptr(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}} expected-note{{defined as firstprivate}}
   {}
-#pragma omp target parallel is_device_ptr(ps) private(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}}
+#pragma omp target parallel is_device_ptr(ps) private(ps) // omp4-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}}
   {}
 #pragma omp target parallel private(ps) is_device_ptr(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}} expected-note{{defined as private}}
   {}
@@ -258,11 +260,11 @@ int main(int argc, char **argv) {
   {}
 #pragma omp target parallel is_device_ptr(ps) map(ps->a) // expected-error{{pointer cannot be mapped along with a section derived from itself}} expected-note{{used here}}
   {}
-#pragma omp target parallel is_device_ptr(ps) firstprivate(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}}
+#pragma omp target parallel is_device_ptr(ps) firstprivate(ps) // omp4-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}}
   {}
 #pragma omp target parallel firstprivate(ps) is_device_ptr(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}} expected-note{{defined as firstprivate}}
   {}
-#pragma omp target parallel is_device_ptr(ps) private(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}}
+#pragma omp target parallel is_device_ptr(ps) private(ps) // omp4-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}}
   {}
 #pragma omp target parallel private(ps) is_device_ptr(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target parallel' directive}} expected-note{{defined as private}}
   {}

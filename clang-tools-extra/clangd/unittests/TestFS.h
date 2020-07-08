@@ -33,8 +33,7 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
 // A VFS provider that returns TestFSes containing a provided set of files.
 class MockFS : public ThreadsafeFS {
 public:
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  view(llvm::NoneType) const override {
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
     return buildTestFS(Files, Timestamps);
   }
 
@@ -70,7 +69,8 @@ private:
 const char *testRoot();
 
 // Returns a suitable absolute path for this OS.
-std::string testPath(PathRef File);
+std::string testPath(PathRef File,
+                     llvm::sys::path::Style = llvm::sys::path::Style::native);
 
 // unittest: is a scheme that refers to files relative to testRoot()
 // This anchor is used to force the linker to link in the generated object file

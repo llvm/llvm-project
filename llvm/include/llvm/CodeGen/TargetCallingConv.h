@@ -144,13 +144,17 @@ namespace ISD {
       assert(getNonZeroByValAlign() == A && "bitfield overflow");
     }
 
-    unsigned getOrigAlign() const {
+    LLVM_ATTRIBUTE_DEPRECATED(unsigned getOrigAlign() const,
+                              "Use getNonZeroOrigAlign() instead") {
       MaybeAlign A = decodeMaybeAlign(OrigAlign);
       return A ? A->value() : 0;
     }
+    Align getNonZeroOrigAlign() const {
+      return decodeMaybeAlign(OrigAlign).valueOrOne();
+    }
     void setOrigAlign(Align A) {
       OrigAlign = encode(A);
-      assert(getOrigAlign() == A.value() && "bitfield overflow");
+      assert(getNonZeroOrigAlign() == A && "bitfield overflow");
     }
 
     unsigned getByValSize() const { return ByValSize; }

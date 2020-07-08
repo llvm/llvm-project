@@ -43,14 +43,13 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   if (!Entry.second)
     return Entry.first->second;
 
-  unsigned Align = GV.getAlignment();
-  if (Align == 0)
-    Align = DL.getABITypeAlignment(GV.getValueType());
+  Align Alignment =
+      DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
 
   /// TODO: We should sort these to minimize wasted space due to alignment
   /// padding. Currently the padding is decided by the first encountered use
   /// during lowering.
-  unsigned Offset = LDSSize = alignTo(LDSSize, Align);
+  unsigned Offset = LDSSize = alignTo(LDSSize, Alignment);
 
   Entry.first->second = Offset;
   LDSSize += DL.getTypeAllocSize(GV.getValueType());

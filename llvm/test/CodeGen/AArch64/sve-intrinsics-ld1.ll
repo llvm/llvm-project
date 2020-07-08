@@ -1,5 +1,8 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
 ; RUN: llc -O0 -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ;
 ; LD1B
@@ -87,7 +90,7 @@ define <vscale x 8 x half> @ld1h_f16(<vscale x 8 x i1> %pred, half* %addr) {
   ret <vscale x 8 x half> %res
 }
 
-define <vscale x 8 x bfloat> @ld1h_bf16(<vscale x 8 x i1> %pred, bfloat* %addr) {
+define <vscale x 8 x bfloat> @ld1h_bf16(<vscale x 8 x i1> %pred, bfloat* %addr) #0 {
 ; CHECK-LABEL: ld1h_bf16:
 ; CHECK: ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT: ret
@@ -208,3 +211,6 @@ declare <vscale x 2 x i16> @llvm.aarch64.sve.ld1.nxv2i16(<vscale x 2 x i1>, i16*
 declare <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32(<vscale x 2 x i1>, i32*)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.ld1.nxv2i64(<vscale x 2 x i1>, i64*)
 declare <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1>, double*)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }

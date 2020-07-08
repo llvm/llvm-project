@@ -14,6 +14,7 @@
 
 #include "NewPMDriver.h"
 #include "PassPrinters.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -306,9 +307,26 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.
   AAManager AA;
-  if (auto Err = PB.parseAAPipeline(AA, AAPipeline)) {
-    errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
-    return false;
+  if (!AAPipeline.empty()) {
+    assert(Passes.empty() &&
+           "--aa-pipeline and -foo-pass should not both be specified");
+    if (auto Err = PB.parseAAPipeline(AA, AAPipeline)) {
+      errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
+      return false;
+    }
+  }
+  // For compatibility with legacy pass manager.
+  // Alias analyses are not specially specified when using the legacy PM.
+  SmallVector<StringRef, 4> NonAAPasses;
+  for (auto PassName : Passes) {
+    if (PB.isAAPassName(PassName)) {
+      if (auto Err = PB.parseAAPipeline(AA, PassName)) {
+        errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
+        return false;
+      }
+    } else {
+      NonAAPasses.push_back(PassName);
+    }
   }
 
   LoopAnalysisManager LAM(DebugPM);
@@ -341,7 +359,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       return false;
     }
   }
-  for (auto PassName : Passes) {
+  for (auto PassName : NonAAPasses) {
     if (auto Err =
             PB.parsePassPipeline(MPM, PassName, VerifyEachPass, DebugPM)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";

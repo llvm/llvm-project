@@ -1130,17 +1130,11 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
     return nullptr;
   }
 
-  // Determine the overload types of the original intrinsic.
-  auto IID = II->getIntrinsicID();
-  SmallVector<Intrinsic::IITDescriptor, 16> Table;
-  getIntrinsicInfoTableEntries(IID, Table);
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-
   // Validate function argument and return types, extracting overloaded types
   // along the way.
-  FunctionType *FTy = II->getCalledFunction()->getFunctionType();
   SmallVector<Type *, 6> OverloadTys;
-  Intrinsic::matchIntrinsicSignature(FTy, TableRef, OverloadTys);
+  if (!Intrinsic::getIntrinsicSignature(II->getCalledFunction(), OverloadTys))
+    return nullptr;
 
   Module *M = II->getParent()->getParent()->getParent();
   Type *EltTy = IIVTy->getElementType();
@@ -1148,7 +1142,8 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
       (NewNumElts == 1) ? EltTy : FixedVectorType::get(EltTy, NewNumElts);
 
   OverloadTys[0] = NewTy;
-  Function *NewIntrin = Intrinsic::getDeclaration(M, IID, OverloadTys);
+  Function *NewIntrin =
+      Intrinsic::getDeclaration(M, II->getIntrinsicID(), OverloadTys);
 
   CallInst *NewCall = Builder.CreateCall(NewIntrin, Args);
   NewCall->takeName(II);

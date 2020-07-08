@@ -43,11 +43,14 @@ public:
   static ExternalFileUnit *LookUpForClose(int unit);
   static int NewUnit(const Terminator &);
   static void CloseAll(IoErrorHandler &);
+  static void FlushAll(IoErrorHandler &);
 
   void OpenUnit(OpenStatus, Position, OwningPtr<char> &&path,
       std::size_t pathLength, IoErrorHandler &);
   void CloseUnit(CloseStatus, IoErrorHandler &);
   void DestroyClosed();
+
+  bool SetDirection(Direction, IoErrorHandler &);
 
   template <typename A, typename... X>
   IoStatementState &BeginIoStatement(X &&... xs) {
@@ -61,27 +64,38 @@ public:
     return *io_;
   }
 
-  bool Emit(const char *, std::size_t bytes, IoErrorHandler &);
+  bool Emit(const char *, std::size_t, IoErrorHandler &);
+  bool Receive(char *, std::size_t, IoErrorHandler &);
   std::optional<char32_t> GetCurrentChar(IoErrorHandler &);
   void SetLeftTabLimit();
+  void BeginReadingRecord(IoErrorHandler &);
   bool AdvanceRecord(IoErrorHandler &);
   void BackspaceRecord(IoErrorHandler &);
   void FlushIfTerminal(IoErrorHandler &);
+  void Endfile(IoErrorHandler &);
+  void Rewind(IoErrorHandler &);
   void EndIoStatement();
   void SetPosition(std::int64_t pos) {
     frameOffsetInFile_ = pos;
     recordOffsetInFrame_ = 0;
+    BeginRecord();
   }
 
 private:
   static UnitMap &GetUnitMap();
-  void NextSequentialUnformattedInputRecord(IoErrorHandler &);
-  void NextSequentialFormattedInputRecord(IoErrorHandler &);
-  void BackspaceSequentialUnformattedRecord(IoErrorHandler &);
-  void BackspaceSequentialFormattedRecord(IoErrorHandler &);
+  const char *FrameNextInput(IoErrorHandler &, std::size_t);
+  void BeginSequentialVariableUnformattedInputRecord(IoErrorHandler &);
+  void BeginSequentialVariableFormattedInputRecord(IoErrorHandler &);
+  void BackspaceFixedRecord(IoErrorHandler &);
+  void BackspaceVariableUnformattedRecord(IoErrorHandler &);
+  void BackspaceVariableFormattedRecord(IoErrorHandler &);
+  bool SetSequentialVariableFormattedRecordLength();
+  void DoImpliedEndfile(IoErrorHandler &);
+  void DoEndfile(IoErrorHandler &);
 
   int unitNumber_{-1};
-  bool isReading_{false};
+  Direction direction_{Direction::Output};
+  bool impliedEndfile_{false}; // seq. output has taken place
 
   Lock lock_;
 
@@ -92,7 +106,8 @@ private:
       ExternalListIoStatementState<Direction::Output>,
       ExternalListIoStatementState<Direction::Input>,
       UnformattedIoStatementState<Direction::Output>,
-      UnformattedIoStatementState<Direction::Input>>
+      UnformattedIoStatementState<Direction::Input>,
+      ExternalMiscIoStatementState>
       u_;
 
   // Points to the active alternative (if any) in u_ for use as a Cookie
@@ -100,9 +115,10 @@ private:
 
   // Subtle: The beginning of the frame can't be allowed to advance
   // during a single list-directed READ due to the possibility of a
-  // multi-record CHARACTER value with a "r*" repeat count.
+  // multi-record CHARACTER value with a "r*" repeat count.  So we
+  // manage the frame and the current record therein separately.
   std::int64_t frameOffsetInFile_{0};
-  std::int64_t recordOffsetInFrame_{0}; // of currentRecordNumber
+  std::size_t recordOffsetInFrame_{0}; // of currentRecordNumber
 };
 
 } // namespace Fortran::runtime::io

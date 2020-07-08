@@ -327,3 +327,17 @@ void DebugHandlerBase::endFunction(const MachineFunction *MF) {
   LabelsBeforeInsn.clear();
   LabelsAfterInsn.clear();
 }
+
+void DebugHandlerBase::beginBasicBlock(const MachineBasicBlock &MBB) {
+  if (!MBB.isBeginSection())
+    return;
+
+  PrevLabel = MBB.getSymbol();
+}
+
+void DebugHandlerBase::endBasicBlock(const MachineBasicBlock &MBB) {
+  if (!MBB.isEndSection())
+    return;
+
+  PrevLabel = nullptr;
+}

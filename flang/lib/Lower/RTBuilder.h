@@ -212,22 +212,41 @@ struct RuntimeTableKey<RT(ATs...)> {
 // Runtime table building (constexpr folded)
 //===----------------------------------------------------------------------===//
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgnu-string-literal-operator-template"
-#endif
-
-// clang++ generates warnings about usage of a GNU extension, ignore them
 template <char... Cs>
 using RuntimeIdentifier = std::integer_sequence<char, Cs...>;
-template <typename T, T... Cs>
-static constexpr RuntimeIdentifier<Cs...> operator""_rt_ident() {
+
+namespace details {
+template <typename T, T... As, T... Bs>
+static constexpr std::integer_sequence<T, As..., Bs...>
+concat(std::integer_sequence<T, As...>, std::integer_sequence<T, Bs...>) {
   return {};
 }
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+template <typename T, T... As, T... Bs, typename... Cs>
+static constexpr auto concat(std::integer_sequence<T, As...>,
+                             std::integer_sequence<T, Bs...>, Cs...) {
+  return concat(std::integer_sequence<T, As..., Bs...>{}, Cs{}...);
+}
+template <typename T>
+static constexpr std::integer_sequence<T> concat(std::integer_sequence<T>) {
+  return {};
+}
+template <typename T, T a>
+static constexpr auto filterZero(std::integer_sequence<T, a>) {
+  if constexpr (a != 0) {
+    return std::integer_sequence<T, a>{};
+  } else {
+    return std::integer_sequence<T>{};
+  }
+}
+template <typename T, T... b>
+static constexpr auto filter(std::integer_sequence<T, b...>) {
+  if constexpr (sizeof...(b) > 0) {
+    return details::concat(filterZero(std::integer_sequence<T, b>{})...);
+  } else {
+    return std::integer_sequence<T>{};
+  }
+}
+} // namespace details
 
 template <typename...>
 struct RuntimeTableEntry;
@@ -239,11 +258,23 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
   static constexpr const char name[sizeof...(Cs) + 1] = {Cs..., '\0'};
 };
 
-#define QuoteKey(X) #X##_rt_ident
-#define ExpandKey(X) QuoteKey(X)
+#undef E
+#define E(L, I) (I < sizeof(L) / sizeof(*L) ? L[I] : 0)
+#define QuoteKey(X) #X
+#define MacroExpandKey(X)                                                      \
+  E(X, 0), E(X, 1), E(X, 2), E(X, 3), E(X, 4), E(X, 5), E(X, 6), E(X, 7),      \
+      E(X, 8), E(X, 9), E(X, 10), E(X, 11), E(X, 12), E(X, 13), E(X, 14),      \
+      E(X, 15), E(X, 16), E(X, 17), E(X, 18), E(X, 19), E(X, 20), E(X, 21),    \
+      E(X, 22), E(X, 23), E(X, 24), E(X, 25), E(X, 26), E(X, 27), E(X, 28),    \
+      E(X, 29), E(X, 30), E(X, 31), E(X, 32), E(X, 33), E(X, 34), E(X, 35),    \
+      E(X, 36), E(X, 37), E(X, 38), E(X, 39), E(X, 40), E(X, 41), E(X, 42),    \
+      E(X, 43), E(X, 44), E(X, 45), E(X, 46), E(X, 47), E(X, 48), E(X, 49)
+#define ExpandKey(X) MacroExpandKey(QuoteKey(X))
+#define FullSeq(X) std::integer_sequence<char, ExpandKey(X)>
+#define AsSequence(X) decltype(Fortran::lower::details::filter(FullSeq(X){}))
 #define mkKey(X)                                                               \
   Fortran::lower::RuntimeTableEntry<                                           \
-      Fortran::lower::RuntimeTableKey<decltype(X)>, decltype(ExpandKey(X))>
+      Fortran::lower::RuntimeTableKey<decltype(X)>, AsSequence(X)>
 
 } // namespace Fortran::lower
 

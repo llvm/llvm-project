@@ -1,4 +1,6 @@
-; RUN: opt -S -basicaa -dse -enable-dse-memoryssa < %s | FileCheck %s
+; RUN: opt -S -basic-aa -dse -enable-dse-memoryssa < %s | FileCheck %s
+
+target triple = "x86_64-unknown-linux-gnu"
 
 declare i8* @strcpy(i8* %dest, i8* %src) nounwind
 define void @test1(i8* %src) {
@@ -11,13 +13,13 @@ define void @test1(i8* %src) {
   ret void
 }
 
-declare i8* @strncpy(i8* %dest, i8* %src, i32 %n) nounwind
+declare i8* @strncpy(i8* %dest, i8* %src, i64 %n) nounwind
 define void @test2(i8* %src) {
 ; CHECK-LABEL: @test2(
   %B = alloca [16 x i8]
   %dest = getelementptr inbounds [16 x i8], [16 x i8]* %B, i64 0, i64 0
 ; CHECK-NOT: @strncpy
-  %call = call i8* @strncpy(i8* %dest, i8* %src, i32 12)
+  %call = call i8* @strncpy(i8* %dest, i8* %src, i64 12)
 ; CHECK: ret void
   ret void
 }
@@ -33,13 +35,13 @@ define void @test3(i8* %src) {
   ret void
 }
 
-declare i8* @strncat(i8* %dest, i8* %src, i32 %n) nounwind
+declare i8* @strncat(i8* %dest, i8* %src, i64 %n) nounwind
 define void @test4(i8* %src) {
 ; CHECK-LABEL: @test4(
   %B = alloca [16 x i8]
   %dest = getelementptr inbounds [16 x i8], [16 x i8]* %B, i64 0, i64 0
 ; CHECK-NOT: @strncat
-  %call = call i8* @strncat(i8* %dest, i8* %src, i32 12)
+  %call = call i8* @strncat(i8* %dest, i8* %src, i64 12)
 ; CHECK: ret void
   ret void
 }

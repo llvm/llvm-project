@@ -111,6 +111,10 @@ void Value::deleteValue() {
     static_cast<DerivedUser *>(this)->DeleteValue(                             \
         static_cast<DerivedUser *>(this));                                     \
     break;
+#define HANDLE_CONSTANT(Name)                                                  \
+  case Value::Name##Val:                                                       \
+    llvm_unreachable("constants should be destroyed with destroyConstant");    \
+    break;
 #define HANDLE_INSTRUCTION(Name)  /* nothing */
 #include "llvm/IR/Value.def"
 
@@ -768,7 +772,7 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
           // it the preferred alignment. Otherwise, we have to assume that it
           // may only have the minimum ABI alignment.
           if (GVar->isStrongDefinitionForLinker())
-            return Align(DL.getPreferredAlignment(GVar));
+            return DL.getPreferredAlign(GVar);
           else
             return DL.getABITypeAlign(ObjectType);
         }

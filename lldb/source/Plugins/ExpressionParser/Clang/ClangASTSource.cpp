@@ -53,9 +53,9 @@ private:
 ClangASTSource::ClangASTSource(
     const lldb::TargetSP &target,
     const std::shared_ptr<ClangASTImporter> &importer)
-    : m_import_in_progress(false), m_lookups_enabled(false), m_target(target),
-      m_ast_context(nullptr), m_ast_importer_sp(importer),
-      m_active_lexical_decls(), m_active_lookups() {
+    : m_lookups_enabled(false), m_target(target), m_ast_context(nullptr),
+      m_ast_importer_sp(importer), m_active_lexical_decls(),
+      m_active_lookups() {
   assert(m_ast_importer_sp && "No ClangASTImporter passed to ClangASTSource?");
 }
 
@@ -99,11 +99,6 @@ void ClangASTSource::StartTranslationUnit(ASTConsumer *Consumer) {
 bool ClangASTSource::FindExternalVisibleDeclsByName(
     const DeclContext *decl_ctx, DeclarationName clang_decl_name) {
   if (!m_ast_context) {
-    SetNoExternalVisibleDeclsForName(decl_ctx, clang_decl_name);
-    return false;
-  }
-
-  if (GetImportInProgress()) {
     SetNoExternalVisibleDeclsForName(decl_ctx, clang_decl_name);
     return false;
   }
@@ -1744,12 +1739,8 @@ CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
   if (src_ast == nullptr)
     return CompilerType();
 
-  SetImportInProgress(true);
-
   QualType copied_qual_type = ClangUtil::GetQualType(
       m_ast_importer_sp->CopyType(*m_clang_ast_context, src_type));
-
-  SetImportInProgress(false);
 
   if (copied_qual_type.getAsOpaquePtr() &&
       copied_qual_type->getCanonicalTypeInternal().isNull())

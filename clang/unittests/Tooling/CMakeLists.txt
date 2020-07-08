@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
 if (MSVC)
   set_source_files_properties(RecursiveASTVisitorTest.cpp PROPERTIES COMPILE_FLAGS /bigobj)
   set_source_files_properties(RecursiveASTVisitorTestExprVisitor.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+  set_source_files_properties(RecursiveASTVisitorTests/Callbacks.cpp PROPERTIES COMPILE_FLAGS /bigobj)
   set_source_files_properties(SourceCodeTest.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 endif()
 
@@ -27,6 +28,7 @@ add_clang_unittest(ToolingTests
   QualTypeNamesTest.cpp
   RangeSelectorTest.cpp
   RecursiveASTVisitorTests/Attr.cpp
+  RecursiveASTVisitorTests/Callbacks.cpp
   RecursiveASTVisitorTests/Class.cpp
   RecursiveASTVisitorTests/ConstructExpr.cpp
   RecursiveASTVisitorTests/CXXBoolLiteralExpr.cpp

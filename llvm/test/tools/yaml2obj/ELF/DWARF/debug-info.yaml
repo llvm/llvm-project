@@ -6,7 +6,7 @@
 
 # RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB %s -o %t1.le.o
 # RUN: llvm-readobj --sections --section-data %t1.le.o | \
-# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9A -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-LE-CONTENT
+# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9B -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-LE-CONTENT
 
 #                    SHDR: Index: [[INDEX]]
 #               SHDR-NEXT: Name: .debug_info ([[NAME]])
@@ -200,8 +200,7 @@ DWARF:
         - Attribute: 0x01
           Form:      DW_FORM_addrx4         ## 0x2c
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -262,8 +261,7 @@ DWARF:
             - Value: 0x1234             ## DW_FORM_addrx2
             - Value: 0x123456           ## DW_FORM_addrx3 (unimplemented)
             - Value: 0x12345678         ## DW_FORM_addrx4
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       ## Test another unit type.
       UnitType:   DW_UT_compile
@@ -272,8 +270,7 @@ DWARF:
       Entries:
         - AbbrCode: 0
           Values:   []
-    - Length:
-        TotalLength: 0x5678
+    - Length:     0x5678
       ## Test DWARFv4
       Version:    4
       AbbrOffset: 0x5678
@@ -290,7 +287,7 @@ DWARF:
 
 # RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB %s -o %t1.be.o
 # RUN: llvm-readobj --sections --section-data %t1.be.o | \
-# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9A -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-BE-CONTENT
+# RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9B -DSIZE=171 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-BE-CONTENT
 
 # DWARF32-BE-CONTENT-NEXT: SectionData (
 # DWARF32-BE-CONTENT-NEXT:   0000: 00001234 00050204 00001234 01123456
@@ -440,8 +437,7 @@ DWARF:
       Children:   DW_CHILDREN_no
       Attributes: []
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -470,8 +466,7 @@ DWARF:
       Children:   DW_CHILDREN_no
       Attributes: []
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -539,8 +534,7 @@ DWARF:
       Children:   DW_CHILDREN_no
       Attributes: []
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -568,8 +562,7 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -620,8 +613,7 @@ DWARF:
         - Attribute: DW_AT_high_pc
           Form:      DW_FORM_data4
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -659,8 +651,7 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_info:
-    - Length:
-        TotalLength: 0x1234
+    - Length:     0x1234
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
@@ -669,3 +660,66 @@ DWARF:
         - AbbrCode: 1
           Values:
             - Value: 0x1234
+
+## j) Test that yaml2obj emits the correct DWARF64 unit headers.
+
+## DWARFv5 unit header.
+
+# RUN: yaml2obj --docnum=11 %s -o %t11.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t11.o | \
+# RUN:   FileCheck %s --check-prefix=DWARFV5-HEADER
+
+#      DWARFV5-HEADER: Hex dump of section '.debug_info':
+# DWARFV5-HEADER-NEXT: 0x00000000 ffffffff 0c000000 00000000 05000208 ................
+##                                ^-------------------------          unit_length (12-byte)
+##                                                           ^---     version (2-byte)
+##                                                               ^-   unit_type (1-byte)
+##                                                                 ^- address_size (1-byte)
+# DWARFV5-HEADER-NEXT: 0x00000010 34120000 00000000                   4.......
+##                                ^----------------                   debug_abbrev_offset (8-byte)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_info:
+    - Format:     DWARF64
+      Length:     0x0c
+      Version:    5
+      UnitType:   DW_UT_type
+      AbbrOffset: 0x1234
+      AddrSize:   8
+      Entries:    []
+
+## DWARFv4 unit header.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t12.o | \
+# RUN:   FileCheck %s --check-prefix=DWARFV4-HEADER
+
+#      DWARFV4-HEADER: Hex dump of section '.debug_info':
+# DWARFV4-HEADER-NEXT: 0x00000000 ffffffff 0c000000 00000000 04003412 ..............4.
+##                                ^-------------------------          unit_length (12-byte)
+##                                                           ^---     version (2-byte)
+##                                                               ^--- debug_abbrev_offset (8-byte)
+# DWARFV4-HEADER-NEXT: 0x00000010 00000000 000008                     .......
+##                                -------------
+##                                             ^-                     address_size (1-byte)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_info:
+    - Format:     DWARF64
+      Length:     0x0c
+      Version:    4
+      AbbrOffset: 0x1234
+      AddrSize:   8
+      Entries:    []

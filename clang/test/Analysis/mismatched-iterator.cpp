@@ -118,3 +118,15 @@ void ignore_conjured2() {
 
   if (V1.cbegin() == V2.cbegin()) {} //no-warning
 }
+
+template<typename T>
+struct cont_with_ptr_iterator {
+  T *begin() const;
+  T *end() const;
+};
+
+void comparison_ptr_iterator(cont_with_ptr_iterator<int> &C1,
+                             cont_with_ptr_iterator<int> &C2) {
+  if (C1.begin() != C2.end()) {} // expected-warning{{Iterators of different containers used where the same container is expected}}
+}
+

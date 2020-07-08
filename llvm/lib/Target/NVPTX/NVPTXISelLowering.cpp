@@ -2302,10 +2302,10 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
     MemSDNode *MemSD = cast<MemSDNode>(N);
     const DataLayout &TD = DAG.getDataLayout();
 
-    unsigned Align = MemSD->getAlignment();
-    unsigned PrefAlign =
-        TD.getPrefTypeAlignment(ValVT.getTypeForEVT(*DAG.getContext()));
-    if (Align < PrefAlign) {
+    Align Alignment = MemSD->getAlign();
+    Align PrefAlign =
+        TD.getPrefTypeAlign(ValVT.getTypeForEVT(*DAG.getContext()));
+    if (Alignment < PrefAlign) {
       // This store is not sufficiently aligned, so bail out and let this vector
       // store be scalarized.  Note that we may still be able to emit smaller
       // vector stores.  For example, if we are storing a <4 x float> with an
@@ -3780,8 +3780,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
-    Info.align =
-        MaybeAlign(cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
+    Info.align = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
 
     return true;
   }
@@ -3800,8 +3799,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
-    Info.align =
-        MaybeAlign(cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
+    Info.align = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
 
     return true;
   }
@@ -4791,11 +4789,10 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
 
-  unsigned Align = LD->getAlignment();
+  Align Alignment = LD->getAlign();
   auto &TD = DAG.getDataLayout();
-  unsigned PrefAlign =
-      TD.getPrefTypeAlignment(ResVT.getTypeForEVT(*DAG.getContext()));
-  if (Align < PrefAlign) {
+  Align PrefAlign = TD.getPrefTypeAlign(ResVT.getTypeForEVT(*DAG.getContext()));
+  if (Alignment < PrefAlign) {
     // This load is not sufficiently aligned, so bail out and let this vector
     // load be scalarized.  Note that we may still be able to emit smaller
     // vector loads.  For example, if we are loading a <4 x float> with an

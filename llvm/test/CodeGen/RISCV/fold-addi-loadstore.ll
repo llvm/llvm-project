@@ -23,8 +23,7 @@ define i64 @load_g_0() nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g_0)
 ; RV32I-NEXT:    lw a0, %lo(g_0)(a1)
-; RV32I-NEXT:    addi a1, a1, %lo(g_0)
-; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    lw a1, %lo(g_0+4)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_g_0:
@@ -99,8 +98,7 @@ define i64 @load_g_8() nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g_8)
 ; RV32I-NEXT:    lw a0, %lo(g_8)(a1)
-; RV32I-NEXT:    addi a1, a1, %lo(g_8)
-; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    lw a1, %lo(g_8+4)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_g_8:
@@ -118,8 +116,7 @@ define i64 @load_g_16() nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g_16)
 ; RV32I-NEXT:    lw a0, %lo(g_16)(a1)
-; RV32I-NEXT:    addi a1, a1, %lo(g_16)
-; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    lw a1, %lo(g_16+4)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_g_16:
@@ -155,9 +152,8 @@ define void @store_g_8() nounwind {
 ; RV32I-LABEL: store_g_8:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(g_8)
+; RV32I-NEXT:    sw zero, %lo(g_8+4)(a0)
 ; RV32I-NEXT:    sw zero, %lo(g_8)(a0)
-; RV32I-NEXT:    addi a0, a0, %lo(g_8)
-; RV32I-NEXT:    sw zero, 4(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: store_g_8:
@@ -197,15 +193,14 @@ entry:
 define i64 @load_ga_16() nounwind {
 ; RV32I-LABEL: load_ga_16:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, %hi(ga_16)
-; RV32I-NEXT:    addi a1, a0, %lo(ga_16)
-; RV32I-NEXT:    lw a0, 8(a1)
-; RV32I-NEXT:    lw a1, 12(a1)
+; RV32I-NEXT:    lui a1, %hi(ga_16)
+; RV32I-NEXT:    lw a0, %lo(ga_16+8)(a1)
+; RV32I-NEXT:    lw a1, %lo(ga_16+12)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_ga_16:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lui a0, %hi(ga_16+8)
+; RV64I-NEXT:    lui a0, %hi(ga_16)
 ; RV64I-NEXT:    ld a0, %lo(ga_16+8)(a0)
 ; RV64I-NEXT:    ret
 entry:
@@ -245,8 +240,7 @@ define i64 @load_tl_8() nounwind {
 ; RV32I-NEXT:    lui a0, %tprel_hi(tl_8)
 ; RV32I-NEXT:    add a1, a0, tp, %tprel_add(tl_8)
 ; RV32I-NEXT:    lw a0, %tprel_lo(tl_8)(a1)
-; RV32I-NEXT:    addi a1, a1, %tprel_lo(tl_8)
-; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    lw a1, %tprel_lo(tl_8+4)(a1)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_tl_8:

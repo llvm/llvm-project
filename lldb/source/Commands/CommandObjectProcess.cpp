@@ -13,7 +13,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
@@ -1059,10 +1058,10 @@ protected:
       int signo = LLDB_INVALID_SIGNAL_NUMBER;
 
       const char *signal_name = command.GetArgumentAtIndex(0);
-      if (::isxdigit(signal_name[0]))
-        signo =
-            StringConvert::ToSInt32(signal_name, LLDB_INVALID_SIGNAL_NUMBER, 0);
-      else
+      if (::isxdigit(signal_name[0])) {
+        if (!llvm::to_integer(signal_name, signo))
+          signo = LLDB_INVALID_SIGNAL_NUMBER;
+      } else
         signo = process->GetUnixSignals()->GetSignalNumberFromName(signal_name);
 
       if (signo == LLDB_INVALID_SIGNAL_NUMBER) {
@@ -1410,7 +1409,8 @@ public:
       real_value = 0;
     else {
       // If the value isn't 'true' or 'false', it had better be 0 or 1.
-      real_value = StringConvert::ToUInt32(option.c_str(), 3);
+      if (!llvm::to_integer(option, real_value))
+        real_value = 3;
       if (real_value != 0 && real_value != 1)
         okay = false;
     }

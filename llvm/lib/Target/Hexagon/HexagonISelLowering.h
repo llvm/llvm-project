@@ -306,8 +306,9 @@ namespace HexagonISD {
                             const AttributeList &FuncAttributes) const override;
 
     bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
-        unsigned AddrSpace, unsigned Alignment, MachineMemOperand::Flags Flags,
-        bool *Fast) const override;
+                            unsigned AddrSpace, Align Alignment,
+                            MachineMemOperand::Flags Flags,
+                            bool *Fast) const override;
 
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
         unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast)
@@ -408,10 +409,11 @@ namespace HexagonISD {
     VectorPair opSplit(SDValue Vec, const SDLoc &dl, SelectionDAG &DAG) const;
     SDValue opCastElem(SDValue Vec, MVT ElemTy, SelectionDAG &DAG) const;
 
-    bool allowsHvxMemoryAccess(MVT VecTy, unsigned Alignment,
-        MachineMemOperand::Flags Flags, bool *Fast) const;
-    bool allowsHvxMisalignedMemoryAccesses(MVT VecTy, unsigned Align,
-        MachineMemOperand::Flags Flags, bool *Fast) const;
+    bool allowsHvxMemoryAccess(MVT VecTy, MachineMemOperand::Flags Flags,
+                               bool *Fast) const;
+    bool allowsHvxMisalignedMemoryAccesses(MVT VecTy,
+                                           MachineMemOperand::Flags Flags,
+                                           bool *Fast) const;
 
     bool isHvxSingleTy(MVT Ty) const;
     bool isHvxPairTy(MVT Ty) const;

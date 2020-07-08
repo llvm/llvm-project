@@ -1424,32 +1424,41 @@ Intrinsic::matchIntrinsicVarArg(bool isVarArg,
   return true;
 }
 
-Optional<Function*> Intrinsic::remangleIntrinsicFunction(Function *F) {
+bool Intrinsic::getIntrinsicSignature(Function *F,
+                                      SmallVectorImpl<Type *> &ArgTys) {
   Intrinsic::ID ID = F->getIntrinsicID();
   if (!ID)
+    return false;
+
+  SmallVector<Intrinsic::IITDescriptor, 8> Table;
+  getIntrinsicInfoTableEntries(ID, Table);
+  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
+
+  if (Intrinsic::matchIntrinsicSignature(F->getFunctionType(), TableRef,
+                                         ArgTys) !=
+      Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
+    return false;
+  }
+  if (Intrinsic::matchIntrinsicVarArg(F->getFunctionType()->isVarArg(),
+                                      TableRef))
+    return false;
+  return true;
+}
+
+Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
+  SmallVector<Type *, 4> ArgTys;
+  if (!getIntrinsicSignature(F, ArgTys))
     return None;
 
-  FunctionType *FTy = F->getFunctionType();
-  // Accumulate an array of overloaded types for the given intrinsic
-  SmallVector<Type *, 4> ArgTys;
-  {
-    SmallVector<Intrinsic::IITDescriptor, 8> Table;
-    getIntrinsicInfoTableEntries(ID, Table);
-    ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-
-    if (Intrinsic::matchIntrinsicSignature(FTy, TableRef, ArgTys))
-      return None;
-    if (Intrinsic::matchIntrinsicVarArg(FTy->isVarArg(), TableRef))
-      return None;
-  }
-
+  Intrinsic::ID ID = F->getIntrinsicID();
   StringRef Name = F->getName();
   if (Name == Intrinsic::getName(ID, ArgTys))
     return None;
 
   auto NewDecl = Intrinsic::getDeclaration(F->getParent(), ID, ArgTys);
   NewDecl->setCallingConv(F->getCallingConv());
-  assert(NewDecl->getFunctionType() == FTy && "Shouldn't change the signature");
+  assert(NewDecl->getFunctionType() == F->getFunctionType() &&
+         "Shouldn't change the signature");
   return NewDecl;
 }
 

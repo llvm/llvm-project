@@ -302,6 +302,12 @@ BUILTIN(__builtin_altivec_vrldnm, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
 
+// P10 Vector Centrifuge built-in.
+BUILTIN(__builtin_altivec_vcfuged, "V2ULLiV2ULLiV2ULLi", "")
+
+// P10 Vector Gather Every N-th Bit built-in.
+BUILTIN(__builtin_altivec_vgnb, "ULLiV1ULLLiIi", "")
+
 // P10 Vector Clear Bytes built-ins.
 BUILTIN(__builtin_altivec_vclrlb, "V16cV16cUi", "")
 BUILTIN(__builtin_altivec_vclrrb, "V16cV16cUi", "")
@@ -309,6 +315,26 @@ BUILTIN(__builtin_altivec_vclrrb, "V16cV16cUi", "")
 // P10 Vector Count Leading / Trailing Zeroes under bit Mask built-ins.
 BUILTIN(__builtin_altivec_vclzdm, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vctzdm, "V2ULLiV2ULLiV2ULLi", "")
+
+// P10 Vector Shift built-ins.
+BUILTIN(__builtin_altivec_vsldbi, "V16UcV16UcV16UcIi", "")
+BUILTIN(__builtin_altivec_vsrdbi, "V16UcV16UcV16UcIi", "")
+
+// P10 Vector Insert built-ins.
+BUILTIN(__builtin_altivec_vinsblx, "V16UcV16UcULLiULLi", "")
+BUILTIN(__builtin_altivec_vinsbrx, "V16UcV16UcULLiULLi", "")
+BUILTIN(__builtin_altivec_vinshlx, "V8UsV8UsULLiULLi", "")
+BUILTIN(__builtin_altivec_vinshrx, "V8UsV8UsULLiULLi", "")
+BUILTIN(__builtin_altivec_vinswlx, "V4UiV4UiULLiULLi", "")
+BUILTIN(__builtin_altivec_vinswrx, "V4UiV4UiULLiULLi", "")
+BUILTIN(__builtin_altivec_vinsdlx, "V2ULLiV2ULLiULLiULLi", "")
+BUILTIN(__builtin_altivec_vinsdrx, "V2ULLiV2ULLiULLiULLi", "")
+BUILTIN(__builtin_altivec_vinsbvlx, "V16UcV16UcULLiV16Uc", "")
+BUILTIN(__builtin_altivec_vinsbvrx, "V16UcV16UcULLiV16Uc", "")
+BUILTIN(__builtin_altivec_vinshvlx, "V8UsV8UsULLiV8Us", "")
+BUILTIN(__builtin_altivec_vinshvrx, "V8UsV8UsULLiV8Us", "")
+BUILTIN(__builtin_altivec_vinswvlx, "V4UiV4UiULLiV4Ui", "")
+BUILTIN(__builtin_altivec_vinswvrx, "V4UiV4UiULLiV4Ui", "")
 
 // VSX built-ins.
 
@@ -439,6 +465,17 @@ BUILTIN(__builtin_vsx_extractuword, "V2ULLiV16UcIi", "")
 BUILTIN(__builtin_vsx_xxpermdi, "v.", "t")
 BUILTIN(__builtin_vsx_xxsldwi, "v.", "t")
 
+BUILTIN(__builtin_vsx_xxeval, "V2ULLiV2ULLiV2ULLiV2ULLiIi", "")
+
+// P10 Vector Permute Extended built-in.
+BUILTIN(__builtin_vsx_xxpermx, "V16UcV16UcV16UcV16UcIi", "")
+
+// P10 Vector Blend built-ins.
+BUILTIN(__builtin_vsx_xxblendvb, "V16UcV16UcV16UcV16Uc", "")
+BUILTIN(__builtin_vsx_xxblendvh, "V8UsV8UsV8UsV8Us", "")
+BUILTIN(__builtin_vsx_xxblendvw, "V4UiV4UiV4UiV4Ui", "")
+BUILTIN(__builtin_vsx_xxblendvd, "V2ULLiV2ULLiV2ULLiV2ULLi", "")
+
 // Float 128 built-ins
 BUILTIN(__builtin_sqrtf128_round_to_odd, "LLdLLd", "")
 BUILTIN(__builtin_addf128_round_to_odd, "LLdLLdLLd", "")
@@ -489,6 +526,7 @@ BUILTIN(__builtin_divdeu, "ULLiULLiULLi", "")
 BUILTIN(__builtin_bpermd, "SLLiSLLiSLLi", "")
 BUILTIN(__builtin_pdepd, "ULLiULLiULLi", "")
 BUILTIN(__builtin_pextd, "ULLiULLiULLi", "")
+BUILTIN(__builtin_cfuged, "ULLiULLiULLi", "")
 BUILTIN(__builtin_cntlzdm, "ULLiULLiULLi", "")
 BUILTIN(__builtin_cnttzdm, "ULLiULLiULLi", "")
 

@@ -372,7 +372,7 @@ public:
   bool isAddrLabelDiff() const { return Kind == AddrLabelDiff; }
 
   void dump() const;
-  void dump(raw_ostream &OS) const;
+  void dump(raw_ostream &OS, const ASTContext &Context) const;
 
   void printPretty(raw_ostream &OS, const ASTContext &Ctx, QualType Ty) const;
   std::string getAsString(const ASTContext &Ctx, QualType Ty) const;

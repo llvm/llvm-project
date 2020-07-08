@@ -590,23 +590,21 @@ kern_return_t DNBArchMachARM64::EnableHardwareSingleStep(bool enable) {
     return err.Status();
   }
 
+#if defined(__LP64__)
+  uint64_t pc = arm_thread_state64_get_pc (m_state.context.gpr);
+#else
+  uint64_t pc = m_state.context.gpr.__pc;
+#endif
+
   if (enable) {
     DNBLogThreadedIf(LOG_STEP,
                      "%s: Setting MDSCR_EL1 Single Step bit at pc 0x%llx",
-#if defined(__LP64__)
-                     __FUNCTION__, (uint64_t)arm_thread_state64_get_pc (m_state.context.gpr));
-#else
-                     __FUNCTION__, (uint64_t)m_state.context.gpr.__pc);
-#endif
+                     __FUNCTION__, pc);
     m_state.dbg.__mdscr_el1 |= SS_ENABLE;
   } else {
     DNBLogThreadedIf(LOG_STEP,
                      "%s: Clearing MDSCR_EL1 Single Step bit at pc 0x%llx",
-#if defined(__LP64__)
-                     __FUNCTION__, (uint64_t)arm_thread_state64_get_pc (m_state.context.gpr));
-#else
-                     __FUNCTION__, (uint64_t)m_state.context.gpr.__pc);
-#endif
+                     __FUNCTION__, pc);
     m_state.dbg.__mdscr_el1 &= ~(SS_ENABLE);
   }
 

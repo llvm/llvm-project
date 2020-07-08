@@ -31,11 +31,11 @@ define i8 @combine_shl(i8 %A) {
 
 define i32 @neg(i32 %i) {
 ; CHECK-LABEL: @neg(
-; CHECK-NEXT:    [[TMP:%.*]] = sub i32 0, [[I:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP]]
+; CHECK-NEXT:    [[T:%.*]] = sub i32 0, [[I:%.*]]
+; CHECK-NEXT:    ret i32 [[T]]
 ;
-  %tmp = mul i32 %i, -1
-  ret i32 %tmp
+  %t = mul i32 %i, -1
+  ret i32 %t
 }
 
 ; Use the sign-bit as a mask:
@@ -125,6 +125,182 @@ define <2 x i32> @mul_bool_vec_commute(<2 x i32> %x, <2 x i1> %y) {
   %z = zext <2 x i1> %y to <2 x i32>
   %m = mul <2 x i32> %z, %x
   ret <2 x i32> %m
+}
+
+define <3 x i7> @mul_bools(<3 x i1> %x, <3 x i1> %y) {
+; CHECK-LABEL: @mul_bools(
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext <3 x i1> [[MULBOOL]] to <3 x i7>
+; CHECK-NEXT:    ret <3 x i7> [[R]]
+;
+  %zx = zext <3 x i1> %x to <3 x i7>
+  %zy = zext <3 x i1> %y to <3 x i7>
+  %r = mul <3 x i7> %zx, %zy
+  ret <3 x i7> %r
+}
+
+define i32 @mul_bools_use1(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_use1(
+; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZY]])
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i1 %x to i32
+  %zy = zext i1 %y to i32
+  call void @use32(i32 %zy)
+  %r = mul i32 %zx, %zy
+  ret i32 %r
+}
+
+define i32 @mul_bools_use2(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_use2(
+; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZY]])
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i1 %x to i32
+  %zy = zext i1 %y to i32
+  call void @use32(i32 %zy)
+  %r = mul i32 %zy, %zx
+  ret i32 %r
+}
+
+define i32 @mul_bools_use3(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_use3(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZX]])
+; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZY]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i32 [[ZY]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i1 %x to i32
+  call void @use32(i32 %zx)
+  %zy = zext i1 %y to i32
+  call void @use32(i32 %zy)
+  %r = mul i32 %zx, %zy
+  ret i32 %r
+}
+
+define <3 x i32> @mul_bools_sext(<3 x i1> %x, <3 x i1> %y) {
+; CHECK-LABEL: @mul_bools_sext(
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext <3 x i1> [[MULBOOL]] to <3 x i32>
+; CHECK-NEXT:    ret <3 x i32> [[R]]
+;
+  %sx = sext <3 x i1> %x to <3 x i32>
+  %sy = sext <3 x i1> %y to <3 x i32>
+  %r = mul <3 x i32> %sx, %sy
+  ret <3 x i32> %r
+}
+
+define i32 @mul_bools_sext_use1(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_sext_use1(
+; CHECK-NEXT:    [[SY:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SY]])
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i1 %x to i32
+  %sy = sext i1 %y to i32
+  call void @use32(i32 %sy)
+  %r = mul i32 %sx, %sy
+  ret i32 %r
+}
+
+define i32 @mul_bools_sext_use2(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_sext_use2(
+; CHECK-NEXT:    [[SY:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SY]])
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i1 %x to i32
+  %sy = sext i1 %y to i32
+  call void @use32(i32 %sy)
+  %r = mul i32 %sy, %sx
+  ret i32 %r
+}
+
+define i32 @mul_bools_sext_use3(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_sext_use3(
+; CHECK-NEXT:    [[SX:%.*]] = sext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SX]])
+; CHECK-NEXT:    [[SY:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SY]])
+; CHECK-NEXT:    [[R:%.*]] = mul nsw i32 [[SY]], [[SX]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i1 %x to i32
+  call void @use32(i32 %sx)
+  %sy = sext i1 %y to i32
+  call void @use32(i32 %sy)
+  %r = mul i32 %sy, %sx
+  ret i32 %r
+}
+
+define <3 x i32> @mul_bools_mixed_ext(<3 x i1> %x, <3 x i1> %y) {
+; CHECK-LABEL: @mul_bools_mixed_ext(
+; CHECK-NEXT:    [[NARROW:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext <3 x i1> [[NARROW]] to <3 x i32>
+; CHECK-NEXT:    ret <3 x i32> [[R]]
+;
+  %zx = zext <3 x i1> %x to <3 x i32>
+  %sy = sext <3 x i1> %y to <3 x i32>
+  %r = mul <3 x i32> %zx, %sy
+  ret <3 x i32> %r
+}
+
+define i32 @mul_bools_mixed_ext_use1(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_mixed_ext_use1(
+; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZY]])
+; CHECK-NEXT:    [[NARROW:%.*]] = and i1 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NARROW]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i1 %x to i32
+  %zy = zext i1 %y to i32
+  call void @use32(i32 %zy)
+  %r = mul i32 %sx, %zy
+  ret i32 %r
+}
+
+define i32 @mul_bools_mixed_ext_use2(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_mixed_ext_use2(
+; CHECK-NEXT:    [[SY:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SY]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X:%.*]], i32 [[SY]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i1 %x to i32
+  %sy = sext i1 %y to i32
+  call void @use32(i32 %sy)
+  %r = mul i32 %sy, %zx
+  ret i32 %r
+}
+
+define i32 @mul_bools_mixed_ext_use3(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_mixed_ext_use3(
+; CHECK-NEXT:    [[SX:%.*]] = sext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SX]])
+; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZY]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y]], i32 [[SX]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i1 %x to i32
+  call void @use32(i32 %sx)
+  %zy = zext i1 %y to i32
+  call void @use32(i32 %zy)
+  %r = mul i32 %zy, %sx
+  ret i32 %r
 }
 
 ; (A >>u 31) * B --> (A >>s 31) & B

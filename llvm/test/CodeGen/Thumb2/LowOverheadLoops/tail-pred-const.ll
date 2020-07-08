@@ -266,16 +266,9 @@ for.cond.cleanup:
 }
 
 ; CHECK-LABEL: @overflow_BTC_plus_1(
-;
+; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK-NOT:   @llvm.get.active.lane.mask
-;
-; CHECK: %lane.mask.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-; CHECK: %lane.mask.splat = shufflevector <4 x i32> %lane.mask.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK: %lane.mask.induction = add <4 x i32> %lane.mask.splat, <i32 0, i32 1, i32 2, i32 3>
-; CHECK: %[[ICMP:.*]] = icmp ule <4 x i32> %lane.mask.induction, <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ICMP]], <4 x i32> undef)
-;
+; CHECK:       @llvm.get.active.lane.mask
 ; CHECK:       ret void
 ;
 define dso_local void @overflow_BTC_plus_1(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
@@ -316,8 +309,9 @@ for.cond.cleanup:
 }
 
 ; CHECK-LABEL: @overflow_in_sub(
+; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK-NOT:   @llvm.get.active.lane.mask
+; CHECK:       @llvm.get.active.lane.mask
 ; CHECK:       ret void
 ;
 define dso_local void @overflow_in_sub(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
@@ -366,8 +360,9 @@ for.cond.cleanup:
 }
 
 ; CHECK-LABEL: @overflow_in_rounding_tripcount(
+; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK-NOT:   @llvm.get.active.lane.mask
+; CHECK:       @llvm.get.active.lane.mask
 ; CHECK:       ret void
 ;
 define dso_local void @overflow_in_rounding_tripcount(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
@@ -413,15 +408,9 @@ for.cond.cleanup:
 
 
 ; CHECK-LABEL: @IV_not_an_induction(
-;
+; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK-NOT:   @llvm.get.active.lane.mask
-;
-; CHECK:  %lane.mask.splatinsert = insertelement <4 x i32> undef, i32 %N, i32 0
-; CHECK:  %lane.mask.splat = shufflevector <4 x i32> %lane.mask.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK:  %lane.mask.induction = add <4 x i32> %lane.mask.splat, <i32 0, i32 1, i32 2, i32 3>
-; CHECK:  %[[ICMP:.*]] = icmp ule <4 x i32> %lane.mask.induction, <i32 32002, i32 32002, i32 32002, i32 32002>
-; CHECK: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ICMP]], <4 x i32> undef)
+; CHECK:       @llvm.get.active.lane.mask
 ; CHECK:       ret void
 ;
 define dso_local void @IV_not_an_induction(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
@@ -462,15 +451,9 @@ for.cond.cleanup:
 }
 
 ; CHECK-LABEL: @IV_wrong_step(
-;
+; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK-NOT:   @llvm.get.active.lane.mask
-;
-; CHECK:  %lane.mask.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-; CHECK:  %lane.mask.splat = shufflevector <4 x i32> %lane.mask.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK:  %lane.mask.induction = add <4 x i32> %lane.mask.splat, <i32 0, i32 1, i32 2, i32 3>
-; CHECK:  %[[ICMP:.*]] = icmp ule <4 x i32> %lane.mask.induction, <i32 32002, i32 32002, i32 32002, i32 32002>
-; CHECK: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ICMP]], <4 x i32> undef)
+; CHECK:       @llvm.get.active.lane.mask
 ; CHECK:       ret void
 ;
 define dso_local void @IV_wrong_step(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
@@ -514,15 +497,9 @@ for.cond.cleanup:
 }
 
 ; CHECK-LABEL: @IV_step_not_constant(
-;
+; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK-NOT:   @llvm.get.active.lane.mask
-;
-; CHECK:  %lane.mask.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-; CHECK:  %lane.mask.splat = shufflevector <4 x i32> %lane.mask.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK:  %lane.mask.induction = add <4 x i32> %lane.mask.splat, <i32 0, i32 1, i32 2, i32 3>
-; CHECK:  %[[ICMP:.*]] = icmp ule <4 x i32> %lane.mask.induction, <i32 32002, i32 32002, i32 32002, i32 32002>
-; CHECK: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ICMP]], <4 x i32> undef)
+; CHECK:       @llvm.get.active.lane.mask
 ; CHECK:       ret void
 ;
 define dso_local void @IV_step_not_constant(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
@@ -563,15 +540,9 @@ for.cond.cleanup:
 }
 
 ; CHECK-LABEL: @outerloop_phi(
-;
+; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK-NOT:   @llvm.get.active.lane.mask
-; CHECK:  %lane.mask.splatinsert = insertelement <4 x i32> undef, i32 %j.025, i32 0
-; CHECK:  %lane.mask.splat = shufflevector <4 x i32> %lane.mask.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK:  %lane.mask.induction = add <4 x i32> %lane.mask.splat, <i32 0, i32 1, i32 2, i32 3>
-; CHECK:  %[[ICMP:.*]] = icmp ule <4 x i32> %lane.mask.induction, <i32 4096, i32 4096, i32 4096, i32 4096>
-; CHECK: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ICMP]], <4 x i32> undef)
-;
+; CHECK:       @llvm.get.active.lane.mask
 ; CHECK:       ret void
 ;
 define dso_local void @outerloop_phi(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32 %N) local_unnamed_addr #0 {

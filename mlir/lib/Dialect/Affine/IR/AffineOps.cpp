@@ -467,7 +467,7 @@ indicesFromAffineApplyOp(ArrayRef<Value> operands) {
 // of allowing mathematical AffineMap composition.
 // Returns an AffineMap where symbols that come from an AffineApplyOp have been
 // rewritten as dims and are ordered after the original dims.
-// TODO(andydavis,ntv): This promotion makes AffineMap lose track of which
+// TODO: This promotion makes AffineMap lose track of which
 // symbols are represented as dims. This loss is static but can still be
 // recovered dynamically (with `isValidSymbol`). Still this is annoying for the
 // semi-affine map case. A dynamic canonicalization of all dims that are valid
@@ -536,7 +536,7 @@ static AffineMap promoteComposedSymbolsAsDims(AffineMap map,
 /// composition via symbols, which is ambiguous mathematically. This corner case
 /// is handled by locally rewriting such symbols that come from AffineApplyOp
 /// into dims and composing through dims.
-/// TODO(andydavis, ntv): Composition via symbols comes at a significant code
+/// TODO: Composition via symbols comes at a significant code
 /// complexity. Alternatively we should investigate whether we want to
 /// explicitly disallow symbols coming from affine.apply and instead force the
 /// user to compose symbols beforehand. The annoyances may be small (i.e. 1 or 2
@@ -647,7 +647,7 @@ AffineApplyNormalizer::AffineApplyNormalizer(AffineMap map,
   LLVM_DEBUG(auxiliaryMap.print(dbgs() << "\nWith map: "));
   LLVM_DEBUG(map.compose(auxiliaryMap).print(dbgs() << "\nResult: "));
 
-  // TODO(andydavis,ntv): Disabling simplification results in major speed gains.
+  // TODO: Disabling simplification results in major speed gains.
   // Another option is to cache the results as it is expected a lot of redundant
   // work is performed in practice.
   affineMap = simplifyAffineMap(map.compose(auxiliaryMap));
@@ -928,7 +928,7 @@ static LogicalResult foldMemRefCast(Operation *op) {
 // AffineDmaStartOp
 //===----------------------------------------------------------------------===//
 
-// TODO(b/133776335) Check that map operands are loop IVs or symbols.
+// TODO: Check that map operands are loop IVs or symbols.
 void AffineDmaStartOp::build(OpBuilder &builder, OperationState &result,
                              Value srcMemRef, AffineMap srcMap,
                              ValueRange srcIndices, Value destMemRef,
@@ -1098,7 +1098,7 @@ LogicalResult AffineDmaStartOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineDmaWaitOp
 //===----------------------------------------------------------------------===//
 
-// TODO(b/133776335) Check that map operands are loop IVs or symbols.
+// TODO: Check that map operands are loop IVs or symbols.
 void AffineDmaWaitOp::build(OpBuilder &builder, OperationState &result,
                             Value tagMemRef, AffineMap tagMap,
                             ValueRange tagIndices, Value numElements) {
@@ -1810,13 +1810,6 @@ static LogicalResult verify(AffineIfOp op) {
                                            condition.getNumDims())))
     return failure();
 
-  // Verify that the entry of each child region does not have arguments.
-  for (auto &region : op.getOperation()->getRegions()) {
-    for (auto &b : region)
-      if (b.getNumArguments() != 0)
-        return op.emitOpError(
-            "requires that child entry blocks have no arguments");
-  }
   return success();
 }
 
@@ -2203,7 +2196,7 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
                 "expected affine min or max op");
 
   // Fold the affine map.
-  // TODO(andydavis, ntv) Fold more cases:
+  // TODO: Fold more cases:
   // min(some_affine, some_affine + constant, ...), etc.
   SmallVector<int64_t, 2> results;
   auto foldedMap = op.map().partialConstantFold(operands, &results);

@@ -18,10 +18,20 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "TranslationUnit";
   case NodeKind::UnknownExpression:
     return OS << "UnknownExpression";
-  case NodeKind::CxxNullPtrExpression:
-    return OS << "CxxNullPtrExpression";
+  case NodeKind::ParenExpression:
+    return OS << "ParenExpression";
   case NodeKind::IntegerLiteralExpression:
     return OS << "IntegerLiteralExpression";
+  case NodeKind::CharacterLiteralExpression:
+    return OS << "CharacterLiteralExpression";
+  case NodeKind::FloatingLiteralExpression:
+    return OS << "FloatingLiteralExpression";
+  case NodeKind::StringLiteralExpression:
+    return OS << "StringLiteralExpression";
+  case NodeKind::BoolLiteralExpression:
+    return OS << "BoolLiteralExpression";
+  case NodeKind::CxxNullPtrExpression:
+    return OS << "CxxNullPtrExpression";
   case NodeKind::PrefixUnaryOperatorExpression:
     return OS << "PrefixUnaryOperatorExpression";
   case NodeKind::PostfixUnaryOperatorExpression:
@@ -172,6 +182,8 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "IdExpression_qualifier";
   case syntax::NodeRole::NestedNameSpecifier_specifier:
     return OS << "NestedNameSpecifier_specifier";
+  case syntax::NodeRole::ParenExpression_subExpression:
+    return OS << "ParenExpression_subExpression";
   }
   llvm_unreachable("invalid role");
 }
@@ -195,7 +207,42 @@ syntax::UnqualifiedId *syntax::IdExpression::unqualifiedId() {
       findChild(syntax::NodeRole::IdExpression_id));
 }
 
+syntax::Leaf *syntax::ParenExpression::openParen() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::OpenParen));
+}
+
+syntax::Expression *syntax::ParenExpression::subExpression() {
+  return llvm::cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::ParenExpression_subExpression));
+}
+
+syntax::Leaf *syntax::ParenExpression::closeParen() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::CloseParen));
+}
+
 syntax::Leaf *syntax::IntegerLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::CharacterLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::FloatingLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::StringLiteralExpression::literalToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::BoolLiteralExpression::literalToken() {
   return llvm::cast_or_null<syntax::Leaf>(
       findChild(syntax::NodeRole::LiteralToken));
 }

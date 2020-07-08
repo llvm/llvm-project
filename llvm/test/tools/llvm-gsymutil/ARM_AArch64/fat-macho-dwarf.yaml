@@ -407,8 +407,7 @@ Slices:
           - DieOffset:       0x0000006F
             Name:            char
       debug_info:
-        - Length:
-            TotalLength:     115
+        - Length:          115
           Version:         4
           AbbrOffset:      0
           AddrSize:        4
@@ -886,8 +885,7 @@ Slices:
           - DieOffset:       0x00000076
             Name:            char
       debug_info:
-        - Length:
-            TotalLength:     122
+        - Length:          122
           Version:         4
           AbbrOffset:      0
           AddrSize:        8

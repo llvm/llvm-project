@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ;; Splats of legal integer vector types
 
@@ -172,6 +175,15 @@ define <vscale x 16 x i1> @sve_splat_16xi1(i1 %val) {
 
 ;; Splats of legal floating point vector types
 
+define <vscale x 8 x bfloat> @splat_nxv8bf16(bfloat %val) #0 {
+; CHECK-LABEL: splat_nxv8bf16:
+; CHECK: mov z0.h, h0
+; CHECK-NEXT: ret
+  %1 = insertelement <vscale x 8 x bfloat> undef, bfloat %val, i32 0
+  %2 = shufflevector <vscale x 8 x bfloat> %1, <vscale x 8 x bfloat> undef, <vscale x 8 x i32> zeroinitializer
+  ret <vscale x 8 x bfloat> %2
+}
+
 define <vscale x 8 x half> @splat_nxv8f16(half %val) {
 ; CHECK-LABEL: splat_nxv8f16:
 ; CHECK: mov z0.h, h0
@@ -231,6 +243,13 @@ define <vscale x 8 x half> @splat_nxv8f16_zero() {
 ; CHECK: mov z0.h, #0
 ; CHECK-NEXT: ret
   ret <vscale x 8 x half> zeroinitializer
+}
+
+define <vscale x 8 x bfloat> @splat_nxv8bf16_zero() #0 {
+; CHECK-LABEL: splat_nxv8bf16_zero:
+; CHECK: mov z0.h, #0
+; CHECK-NEXT: ret
+  ret <vscale x 8 x bfloat> zeroinitializer
 }
 
 define <vscale x 4 x half> @splat_nxv4f16_zero() {
@@ -321,3 +340,6 @@ define <vscale x 2 x double> @splat_nxv2f64_imm() {
   %2 = shufflevector <vscale x 2 x double> %1, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x double> %2
 }
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }

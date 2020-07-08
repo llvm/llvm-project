@@ -49,6 +49,7 @@ public:
 
   void DestroyClosed(ExternalFileUnit &);
   void CloseAll(IoErrorHandler &);
+  void FlushAll(IoErrorHandler &);
 
 private:
   struct Chain {

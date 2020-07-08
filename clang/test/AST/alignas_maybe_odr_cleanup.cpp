@@ -15,8 +15,9 @@ struct FOO {
   }
 };
 
-// CHECK: AlignedAttr {{.*}} alignas
-// CHECK: ConstantExpr {{.+}} 'int' Int: 32
-// CHECK: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK: DeclRefExpr {{.*}} 'const int' lvalue Var {{.*}} 'vec_align_bytes' 'const int' non_odr_use_constant
-// CHECK: NullStmt
+// CHECK:      |   `-AlignedAttr {{.*}} <col:14> alignas
+// CHECK-NEXT:      |     `-ConstantExpr {{.*}} <col:22> 'int'
+// CHECK-NEXT:      |       |-value: Int 32
+// CHECK-NEXT:      |       `-ImplicitCastExpr {{.*}} <col:22> 'int' <LValueToRValue>
+// CHECK-NEXT:      |         `-DeclRefExpr {{.*}} <col:22> 'const int' lvalue Var {{.*}} 'vec_align_bytes' 'const int' non_odr_use_constant
+// CHECK-NEXT:      `-NullStmt {{.*}} <line:14:5>

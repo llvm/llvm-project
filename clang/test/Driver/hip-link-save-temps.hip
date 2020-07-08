@@ -38,12 +38,12 @@
 
 // CHECK: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=obj1-host-x86_64-unknown-linux-gnu.o,obj1-hip-amdgcn-amd-amdhsa-gfx900.o,obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "-unbundle"
 // CHECK: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=obj2-host-x86_64-unknown-linux-gnu.o,obj2-hip-amdgcn-amd-amdhsa-gfx900.o,obj2-hip-amdgcn-amd-amdhsa-gfx906.o" "-unbundle"
-// CHECK-NOT: llvm-link
-// CHECK-NOT: opt
-// CHECK-NOT: llc
-// CHECK: "{{.*lld.*}}" {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// CHECK-NOT: {{".*/llvm-link"}}
+// CHECK-NOT: {{".*/opt"}}
+// CHECK-NOT: {{".*/llc"}}
+// CHECK: "{{.*lld.*}}" {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // CHECK-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx900" "obj1-hip-amdgcn-amd-amdhsa-gfx900.o" "obj2-hip-amdgcn-amd-amdhsa-gfx900.o"
-// CHECK: "{{.*lld.*}}" {{.*}} "-mllvm" "-amdgpu-internalize-symbols"
+// CHECK: "{{.*lld.*}}" {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // CHECK-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx906" "obj1-hip-amdgcn-amd-amdhsa-gfx906.o" "obj2-hip-amdgcn-amd-amdhsa-gfx906.o"
 // CHECK: {{".*llvm-mc.*"}} "-o" "[[OBJBUNDLE:.*.o]]" "{{.*}}.mcin" "--filetype=obj"
 // OUT: "{{.*ld.*}}" {{.*}} "-o" "executable" {{.*}} "[[OBJBUNDLE]]"

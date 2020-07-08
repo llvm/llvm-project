@@ -270,6 +270,10 @@ public:
 
       {
         WithContext Guard(std::move(CurrentReq->Ctx));
+        // Note that we don't make use of the ContextProvider here.
+        // Preamble tasks are always scheduled by ASTWorker tasks, and we
+        // reuse the context/config that was created at that level.
+
         // Build the preamble and let the waiters know about it.
         build(std::move(*CurrentReq));
       }
@@ -456,6 +460,8 @@ private:
   const DebouncePolicy UpdateDebounce;
   /// File that ASTWorker is responsible for.
   const Path FileName;
+  /// Callback to create processing contexts for tasks.
+  const std::function<Context(llvm::StringRef)> ContextProvider;
   const GlobalCompilationDatabase &CDB;
   /// Callback invoked when preamble or main file AST is built.
   ParsingCallbacks &Callbacks;
@@ -569,8 +575,9 @@ ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
                      bool RunSync, const TUScheduler::Options &Opts,
                      ParsingCallbacks &Callbacks)
     : IdleASTs(LRUCache), RunSync(RunSync), UpdateDebounce(Opts.UpdateDebounce),
-      FileName(FileName), CDB(CDB), Callbacks(Callbacks), Barrier(Barrier),
-      Done(false), Status(FileName, Callbacks),
+      FileName(FileName), ContextProvider(Opts.ContextProvider), CDB(CDB),
+      Callbacks(Callbacks), Barrier(Barrier), Done(false),
+      Status(FileName, Callbacks),
       PreamblePeer(FileName, Callbacks, Opts.StorePreamblesInMemory,
                    RunSync || !Opts.AsyncPreambleBuilds, Status, *this) {
   // Set a fallback command because compile command can be accessed before
@@ -1055,6 +1062,9 @@ void ASTWorker::run() {
         Status.ASTActivity.K = ASTAction::RunningAction;
         Status.ASTActivity.Name = CurrentRequest->Name;
       });
+      llvm::Optional<WithContext> WithProvidedContext;
+      if (ContextProvider)
+        WithProvidedContext.emplace(ContextProvider(FileName));
       CurrentRequest->Action();
     }
 
@@ -1288,14 +1298,18 @@ llvm::StringMap<std::string> TUScheduler::getAllFileContents() const {
   return Results;
 }
 
-void TUScheduler::run(llvm::StringRef Name,
+void TUScheduler::run(llvm::StringRef Name, llvm::StringRef Path,
                       llvm::unique_function<void()> Action) {
   if (!PreambleTasks)
     return Action();
   PreambleTasks->runAsync(Name, [this, Ctx = Context::current().clone(),
+                                 Path(Path.str()),
                                  Action = std::move(Action)]() mutable {
     std::lock_guard<Semaphore> BarrierLock(Barrier);
     WithContext WC(std::move(Ctx));
+    llvm::Optional<WithContext> WithProvidedContext;
+    if (Opts.ContextProvider)
+      WithProvidedContext.emplace(Opts.ContextProvider(Path));
     Action();
   });
 }
@@ -1356,6 +1370,9 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
         WithContext Guard(std::move(Ctx));
         trace::Span Tracer(Name);
         SPAN_ATTACH(Tracer, "file", File);
+        llvm::Optional<WithContext> WithProvidedContext;
+        if (Opts.ContextProvider)
+          WithProvidedContext.emplace(Opts.ContextProvider(File));
         Action(InputsAndPreamble{Contents, Command, Preamble.get()});
       };
 

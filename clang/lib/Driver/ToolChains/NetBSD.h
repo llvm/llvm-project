@@ -19,10 +19,9 @@ namespace tools {
 
 /// netbsd -- Directly call GNU Binutils assembler and linker
 namespace netbsd {
-class LLVM_LIBRARY_VISIBILITY Assembler : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
-  Assembler(const ToolChain &TC)
-      : GnuTool("netbsd::Assembler", "assembler", TC) {}
+  Assembler(const ToolChain &TC) : Tool("netbsd::Assembler", "assembler", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -32,9 +31,9 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC) : GnuTool("netbsd::Linker", "linker", TC) {}
+  Linker(const ToolChain &TC) : Tool("netbsd::Linker", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }

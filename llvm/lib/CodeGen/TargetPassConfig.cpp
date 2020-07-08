@@ -472,7 +472,7 @@ bool TargetPassConfig::hasLimitedCodeGenPipeline() {
 }
 
 std::string
-TargetPassConfig::getLimitedCodeGenPipelineReason(const char *Separator) const {
+TargetPassConfig::getLimitedCodeGenPipelineReason(const char *Separator) {
   if (!hasLimitedCodeGenPipeline())
     return std::string();
   std::string Res;

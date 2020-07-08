@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -basicaa -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
+; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
 ; RUN: < %s | FileCheck %s
-; RUN: opt %loadPolly -basicaa -polly-codegen -disable-output \
+; RUN: opt %loadPolly -basic-aa -polly-codegen -disable-output \
 ; RUN: -polly-allow-modref-calls < %s
 ;
 ; Verify that we model the read access of the gcread intrinsic

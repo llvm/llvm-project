@@ -18,6 +18,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Testing/CommandLineArgs.h"
+#include "clang/Testing/TestClangConfig.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
 #include "clang/Tooling/Syntax/Mutations.h"
@@ -46,77 +47,6 @@ static llvm::ArrayRef<syntax::Token> tokens(syntax::Node *N) {
   return llvm::makeArrayRef(T->firstLeaf()->token(),
                             T->lastLeaf()->token() + 1);
 }
-
-struct TestClangConfig {
-  TestLanguage Language;
-  std::string Target;
-
-  bool isC99OrLater() const { return Language == Lang_C99; }
-
-  bool isCXX() const {
-    return Language == Lang_CXX03 || Language == Lang_CXX11 ||
-           Language == Lang_CXX14 || Language == Lang_CXX17 ||
-           Language == Lang_CXX20;
-  }
-
-  bool isCXX11OrLater() const {
-    return Language == Lang_CXX11 || Language == Lang_CXX14 ||
-           Language == Lang_CXX17 || Language == Lang_CXX20;
-  }
-
-  bool isCXX14OrLater() const {
-    return Language == Lang_CXX14 || Language == Lang_CXX17 ||
-           Language == Lang_CXX20;
-  }
-
-  bool supportsCXXDynamicExceptionSpecification() const {
-    return Language == Lang_CXX03 || Language == Lang_CXX11 ||
-           Language == Lang_CXX14;
-  }
-
-  bool hasDelayedTemplateParsing() const {
-    return Target == "x86_64-pc-win32-msvc";
-  }
-
-  std::vector<std::string> getCommandLineArgs() const {
-    std::vector<std::string> Result = getCommandLineArgsForTesting(Language);
-    Result.push_back("-target");
-    Result.push_back(Target);
-    return Result;
-  }
-
-  std::string toString() const {
-    std::string Result;
-    llvm::raw_string_ostream OS(Result);
-    OS << "{ Language=" << Language << ", Target=" << Target << " }";
-    return OS.str();
-  }
-
-  friend std::ostream &operator<<(std::ostream &OS,
-                                  const TestClangConfig &ClangConfig) {
-    return OS << ClangConfig.toString();
-  }
-
-  static std::vector<TestClangConfig> &allConfigs() {
-    static std::vector<TestClangConfig> all_configs = []() {
-      std::vector<TestClangConfig> all_configs;
-      for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
-                                Lang_CXX14, Lang_CXX17, Lang_CXX20}) {
-        TestClangConfig config;
-        config.Language = lang;
-        config.Target = "x86_64-pc-linux-gnu";
-        all_configs.push_back(config);
-
-        // Windows target is interesting to test because it enables
-        // `-fdelayed-template-parsing`.
-        config.Target = "x86_64-pc-win32-msvc";
-        all_configs.push_back(config);
-      }
-      return all_configs;
-    }();
-    return all_configs;
-  }
-};
 
 class SyntaxTreeTest : public ::testing::Test,
                        public ::testing::WithParamInterface<TestClangConfig> {
@@ -1199,14 +1129,13 @@ void test(S s) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, CxxNullPtrLiteral) {
-  if (!GetParam().isCXX11OrLater()) {
-    return;
-  }
+TEST_P(SyntaxTreeTest, ParenExpr) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 void test() {
-  nullptr;
+  (1);
+  ((1));
+  (1 + (2));
 }
 )cpp",
       R"txt(
@@ -1221,8 +1150,35 @@ void test() {
   `-CompoundStatement
     |-{
     |-ExpressionStatement
-    | |-CxxNullPtrExpression
-    | | `-nullptr
+    | |-ParenExpression
+    | | |-(
+    | | |-IntegerLiteralExpression
+    | | | `-1
+    | | `-)
+    | `-;
+    |-ExpressionStatement
+    | |-ParenExpression
+    | | |-(
+    | | |-ParenExpression
+    | | | |-(
+    | | | |-IntegerLiteralExpression
+    | | | | `-1
+    | | | `-)
+    | | `-)
+    | `-;
+    |-ExpressionStatement
+    | |-ParenExpression
+    | | |-(
+    | | |-BinaryOperatorExpression
+    | | | |-IntegerLiteralExpression
+    | | | | `-1
+    | | | |-+
+    | | | `-ParenExpression
+    | | |   |-(
+    | | |   |-IntegerLiteralExpression
+    | | |   | `-2
+    | | |   `-)
+    | | `-)
     | `-;
     `-}
 )txt"));
@@ -1366,6 +1322,386 @@ void test() {
     |-ExpressionStatement
     | |-IntegerLiteralExpression
     | | `-1'2'0ull
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, CharacterLiteral) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  'a';
+  '\n';
+  '\x20';
+  '\0';
+  L'a';
+  L'α';
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-'\n'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-'\x20'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-'\0'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-L'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-L'α'
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, CharacterLiteralUtf) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  u'a';
+  u'構';
+  U'a';
+  U'🌲';
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-u'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-u'構'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-U'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-U'🌲'
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, CharacterLiteralUtf8) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  u8'a';
+  u8'\x7f';
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-u8'a'
+    | `-;
+    |-ExpressionStatement
+    | |-CharacterLiteralExpression
+    | | `-u8'\x7f'
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, FloatingLiteral) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  1e-2;
+  2.;
+  .2;
+  2.f;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-FloatingLiteralExpression
+    | | `-1e-2
+    | `-;
+    |-ExpressionStatement
+    | |-FloatingLiteralExpression
+    | | `-2.
+    | `-;
+    |-ExpressionStatement
+    | |-FloatingLiteralExpression
+    | | `-.2
+    | `-;
+    |-ExpressionStatement
+    | |-FloatingLiteralExpression
+    | | `-2.f
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, FloatingLiteralHexadecimal) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  0xfp1;
+  0xf.p1;
+  0x.fp1;
+  0xf.fp1f;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-FloatingLiteralExpression
+    | | `-0xfp1
+    | `-;
+    |-ExpressionStatement
+    | |-FloatingLiteralExpression
+    | | `-0xf.p1
+    | `-;
+    |-ExpressionStatement
+    | |-FloatingLiteralExpression
+    | | `-0x.fp1
+    | `-;
+    |-ExpressionStatement
+    | |-FloatingLiteralExpression
+    | | `-0xf.fp1f
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, StringLiteral) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  "a\n\0\x20";
+  L"αβ";
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-"a\n\0\x20"
+    | `-;
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-L"αβ"
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, StringLiteralUtf) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  u8"a\x1f\x05";
+  u"C++抽象構文木";
+  U"📖🌲\n";
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-u8"a\x1f\x05"
+    | `-;
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-u"C++抽象構文木"
+    | `-;
+    |-ExpressionStatement
+    | |-StringLiteralExpression
+    | | `-U"📖🌲\n"
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, StringLiteralRaw) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  // This test uses regular string literals instead of raw string literals to
+  // hold source code and expected output because of a bug in MSVC up to MSVC
+  // 2019 16.2:
+  // https://developercommunity.visualstudio.com/content/problem/67300/stringifying-raw-string-literal.html
+  EXPECT_TRUE(treeDumpEqual( //
+      "void test() {\n"
+      "  R\"SyntaxTree(\n"
+      "  Hello \"Syntax\" \\\"\n"
+      "  )SyntaxTree\";\n"
+      "}\n",
+      "*: TranslationUnit\n"
+      "`-SimpleDeclaration\n"
+      "  |-void\n"
+      "  |-SimpleDeclarator\n"
+      "  | |-test\n"
+      "  | `-ParametersAndQualifiers\n"
+      "  |   |-(\n"
+      "  |   `-)\n"
+      "  `-CompoundStatement\n"
+      "    |-{\n"
+      "    |-ExpressionStatement\n"
+      "    | |-StringLiteralExpression\n"
+      "    | | `-R\"SyntaxTree(\n"
+      "  Hello \"Syntax\" \\\"\n"
+      "  )SyntaxTree\"\n"
+      "    | `-;\n"
+      "    `-}\n"));
+}
+
+TEST_P(SyntaxTreeTest, BoolLiteral) {
+  if (GetParam().isC()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  true;
+  false;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-BoolLiteralExpression
+    | | `-true
+    | `-;
+    |-ExpressionStatement
+    | |-BoolLiteralExpression
+    | | `-false
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, CxxNullPtrLiteral) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+void test() {
+  nullptr;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-CxxNullPtrExpression
+    | | `-nullptr
     | `-;
     `-}
 )txt"));
@@ -1691,18 +2027,18 @@ void test(int a) {
     |-{
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-BoolLiteralExpression
     | | | `-true
     | | |-||
-    | | `-UnknownExpression
+    | | `-BoolLiteralExpression
     | |   `-false
     | `-;
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-BoolLiteralExpression
     | | | `-true
     | | |-or
-    | | `-UnknownExpression
+    | | `-BoolLiteralExpression
     | |   `-false
     | `-;
     |-ExpressionStatement
@@ -1759,7 +2095,7 @@ void test(int a, int b) {
     |-{
     |-ExpressionStatement
     | |-BinaryOperatorExpression
-    | | |-UnknownExpression
+    | | |-ParenExpression
     | | | |-(
     | | | |-BinaryOperatorExpression
     | | | | |-IntegerLiteralExpression
@@ -1769,7 +2105,7 @@ void test(int a, int b) {
     | | | |   `-2
     | | | `-)
     | | |-*
-    | | `-UnknownExpression
+    | | `-ParenExpression
     | |   |-(
     | |   |-BinaryOperatorExpression
     | |   | |-IntegerLiteralExpression
@@ -2556,17 +2892,17 @@ static_assert(true);
 |-StaticAssertDeclaration
 | |-static_assert
 | |-(
-| |-UnknownExpression
+| |-BoolLiteralExpression
 | | `-true
 | |-,
-| |-UnknownExpression
+| |-StringLiteralExpression
 | | `-"message"
 | |-)
 | `-;
 `-StaticAssertDeclaration
   |-static_assert
   |-(
-  |-UnknownExpression
+  |-BoolLiteralExpression
   | `-true
   |-)
   `-;
@@ -3186,7 +3522,7 @@ int b() noexcept(true);
   |   |-)
   |   |-noexcept
   |   |-(
-  |   |-UnknownExpression
+  |   |-BoolLiteralExpression
   |   | `-true
   |   `-)
   `-;
@@ -3536,7 +3872,24 @@ TEST_P(SyntaxTreeTest, SynthesizedNodes) {
   EXPECT_TRUE(S->isDetached());
 }
 
+static std::vector<TestClangConfig> allTestClangConfigs() {
+  std::vector<TestClangConfig> all_configs;
+  for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
+                            Lang_CXX14, Lang_CXX17, Lang_CXX20}) {
+    TestClangConfig config;
+    config.Language = lang;
+    config.Target = "x86_64-pc-linux-gnu";
+    all_configs.push_back(config);
+
+    // Windows target is interesting to test because it enables
+    // `-fdelayed-template-parsing`.
+    config.Target = "x86_64-pc-win32-msvc";
+    all_configs.push_back(config);
+  }
+  return all_configs;
+}
+
 INSTANTIATE_TEST_CASE_P(SyntaxTreeTests, SyntaxTreeTest,
-                        testing::ValuesIn(TestClangConfig::allConfigs()), );
+                        testing::ValuesIn(allTestClangConfigs()), );
 
 } // namespace

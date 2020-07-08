@@ -522,6 +522,7 @@ void ScalarBitSetTraits<WasmYAML::LimitFlags>::bitset(
 #define BCase(X) IO.bitSetCase(Value, #X, wasm::WASM_LIMITS_FLAG_##X)
   BCase(HAS_MAX);
   BCase(IS_SHARED);
+  BCase(IS_64);
 #undef BCase
 }
 

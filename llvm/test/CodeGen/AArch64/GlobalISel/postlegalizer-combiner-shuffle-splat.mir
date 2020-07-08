@@ -328,3 +328,31 @@ body:             |
     %splat:_(<8 x s8>) = G_SHUFFLE_VECTOR %ins(<8 x s8>), %undef, shufflemask(0, 0, 0, 0, 0, 0, 0, 0)
     $d0 = COPY %splat(<8 x s8>)
     RET_ReallyLR implicit $d0
+
+...
+---
+name:            build_vector
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $w0, $w1, $w2, $w3
+    ; The G_SHUFFLE_VECTOR is fed by a G_BUILD_VECTOR, and the 0th input
+    ; operand is not a constant. We should get a G_DUP.
+    ;
+    ; CHECK-LABEL: name: build_vector
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
+    ; CHECK: %lane:_(s32) = COPY $w0
+    ; CHECK: %shuf:_(<4 x s32>) = G_DUP %lane(s32)
+    ; CHECK: $q0 = COPY %shuf(<4 x s32>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %lane:_(s32) = COPY $w0
+    %b:_(s32) = COPY $w1
+    %c:_(s32) = COPY $w2
+    %d:_(s32) = COPY $w3
+    %undef:_(<4 x s32>) = G_IMPLICIT_DEF
+    %buildvec:_(<4 x s32>) = G_BUILD_VECTOR %lane, %b, %c, %d
+    %shuf:_(<4 x s32>) = G_SHUFFLE_VECTOR %buildvec(<4 x s32>), %undef, shufflemask(0, 0, 0, 0)
+    $q0 = COPY %shuf(<4 x s32>)
+    RET_ReallyLR implicit $q0

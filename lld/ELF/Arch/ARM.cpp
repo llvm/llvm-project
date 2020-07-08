@@ -121,6 +121,8 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     return R_TLSGD_PC;
   case R_ARM_TLS_LDM32:
     return R_TLSLD_PC;
+  case R_ARM_TLS_LDO32:
+    return R_DTPREL;
   case R_ARM_BASE_PREL:
     // B(S) + A - P
     // FIXME: currently B(S) assumed to be .got, this may not hold for all

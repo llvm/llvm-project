@@ -75,7 +75,7 @@ using namespace llvm;
 
 namespace {
 
-/// A little helper class for building 
+/// A little helper class for building
 class CoroCloner {
 public:
   enum class Kind {
@@ -563,7 +563,7 @@ void CoroCloner::replaceEntryBlock() {
   // In the original function, the AllocaSpillBlock is a block immediately
   // following the allocation of the frame object which defines GEPs for
   // all the allocas that have been moved into the frame, and it ends by
-  // branching to the original beginning of the coroutine.  Make this 
+  // branching to the original beginning of the coroutine.  Make this
   // the entry block of the cloned function.
   auto *Entry = cast<BasicBlock>(VMap[Shape.AllocaSpillBlock]);
   auto *OldEntry = &NewF->getEntryBlock();
@@ -1239,6 +1239,103 @@ static void simplifySuspendPoints(coro::Shape &Shape) {
   S.resize(N);
 }
 
+/// For every local variable that has lifetime intrinsics markers, we sink
+/// their lifetime.start marker to the places where the variable is being
+/// used for the first time. Doing so minimizes the lifetime of each variable,
+/// hence minimizing the amount of data we end up putting on the frame.
+static void sinkLifetimeStartMarkers(Function &F) {
+  DominatorTree Dom(F);
+  for (Instruction &I : instructions(F)) {
+    // We look for this particular pattern:
+    //   %tmpX = alloca %.., align ...
+    //   %0 = bitcast %...* %tmpX to i8*
+    //   call void @llvm.lifetime.start.p0i8(i64 ..., i8* nonnull %0) #2
+    if (!isa<AllocaInst>(&I))
+      continue;
+    // There can be multiple lifetime start markers for the same variable.
+    SmallPtrSet<IntrinsicInst *, 1> LifetimeStartInsts;
+    // SinkBarriers stores all instructions that use this local variable.
+    // When sinking the lifetime start intrinsics, we can never sink past
+    // these barriers.
+    SmallPtrSet<Instruction *, 4> SinkBarriers;
+    bool Valid = true;
+    auto AddSinkBarrier = [&](Instruction *I) {
+      // When adding a new barrier to SinkBarriers, we maintain the case
+      // that no instruction in SinkBarriers dominates another instruction.
+      SmallPtrSet<Instruction *, 1> ToRemove;
+      bool ShouldAdd = true;
+      for (Instruction *S : SinkBarriers) {
+        if (I == S || Dom.dominates(S, I)) {
+          ShouldAdd = false;
+          break;
+        } else if (Dom.dominates(I, S)) {
+          ToRemove.insert(S);
+        }
+      }
+      if (ShouldAdd) {
+        SinkBarriers.insert(I);
+        for (Instruction *R : ToRemove) {
+          SinkBarriers.erase(R);
+        }
+      }
+    };
+    for (User *U : I.users()) {
+      if (!isa<BitCastInst>(U))
+        continue;
+      for (User *CU : U->users()) {
+        // If we see any user of CastInst that's not lifetime start/end
+        // intrinsics, give up because it's too complex.
+        if (auto *CUI = dyn_cast<IntrinsicInst>(CU)) {
+          if (CUI->getIntrinsicID() == Intrinsic::lifetime_start)
+            LifetimeStartInsts.insert(CUI);
+          else if (CUI->getIntrinsicID() == Intrinsic::lifetime_end)
+            AddSinkBarrier(CUI);
+          else
+            Valid = false;
+        } else {
+          Valid = false;
+        }
+      }
+    }
+    if (!Valid || LifetimeStartInsts.empty())
+      continue;
+
+    for (User *U : I.users()) {
+      if (isa<BitCastInst>(U))
+        continue;
+      // Every user of the variable is also a sink barrier.
+      AddSinkBarrier(cast<Instruction>(U));
+    }
+
+    // For each sink barrier, we insert a lifetime start marker right
+    // before it.
+    for (Instruction *S : SinkBarriers) {
+      if (auto *IS = dyn_cast<IntrinsicInst>(S)) {
+        if (IS->getIntrinsicID() == Intrinsic::lifetime_end) {
+          // If we have a lifetime end marker in SinkBarriers, meaning it's
+          // not dominated by any other users, we can safely delete it.
+          IS->eraseFromParent();
+          continue;
+        }
+      }
+      // We find an existing lifetime.start marker that domintes the barrier,
+      // clone it and insert it right before the barrier. We cannot clone an
+      // arbitrary lifetime.start marker because we want to make sure the
+      // BitCast instruction referred in the marker also dominates the barrier.
+      for (const IntrinsicInst *LifetimeStart : LifetimeStartInsts) {
+        if (Dom.dominates(LifetimeStart, S)) {
+          LifetimeStart->clone()->insertBefore(S);
+          break;
+        }
+      }
+    }
+    // All the old lifetime.start markers are no longer necessary.
+    for (IntrinsicInst *S : LifetimeStartInsts) {
+      S->eraseFromParent();
+    }
+  }
+}
+
 static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,
                                  SmallVectorImpl<Function *> &Clones) {
   assert(Shape.ABI == coro::ABI::Switch);
@@ -1428,6 +1525,7 @@ static coro::Shape splitCoroutine(Function &F,
     return Shape;
 
   simplifySuspendPoints(Shape);
+  sinkLifetimeStartMarkers(F);
   buildCoroutineFrame(F, Shape);
   replaceFrameSize(Shape);
 

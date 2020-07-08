@@ -623,6 +623,9 @@ class MsvcBuilder(Builder):
 class GccBuilder(Builder):
     def __init__(self, toolchain_type, args):
         Builder.__init__(self, toolchain_type, args, '.o')
+        if sys.platform == 'darwin':
+            cmd = ['xcrun', '--sdk', args.apple_sdk, '--show-sdk-path']
+            self.apple_sdk = subprocess.check_output(cmd).strip().decode('utf-8')
 
     def _get_compilation_command(self, source, obj):
         args = []
@@ -645,6 +648,9 @@ class GccBuilder(Builder):
         args.extend(['-o', obj])
         args.append(source)
 
+        if sys.platform == 'darwin':
+            args.extend(['-isysroot', self.apple_sdk])
+
         return ('compiling', [source], obj, None, args)
 
     def _get_link_command(self):
@@ -663,6 +669,9 @@ class GccBuilder(Builder):
                 args += ['-L' + x, '-Wl,-rpath,' + x]
         args.extend(['-o', self._exe_file_name()])
         args.extend(self._obj_file_names())
+
+        if sys.platform == 'darwin':
+            args.extend(['-isysroot', self.apple_sdk])
 
         return ('linking', self._obj_file_names(), self._exe_file_name(), None, args)
 

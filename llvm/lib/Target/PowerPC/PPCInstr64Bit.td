@@ -425,6 +425,19 @@ def DYNALLOC8 : PPCEmitTimePseudo<(outs g8rc:$result), (ins g8rc:$negsize, memri
                              (PPCdynalloc i64:$negsize, iaddr:$fpsi))]>;
 def DYNAREAOFFSET8 : PPCEmitTimePseudo<(outs i64imm:$result), (ins memri:$fpsi), "#DYNAREAOFFSET8",
                        [(set i64:$result, (PPCdynareaoffset iaddr:$fpsi))]>;
+// Probed alloca to support stack clash protection.
+let Defs = [X1], Uses = [X1], hasNoSchedulingInfo = 1 in {
+def PROBED_ALLOCA_64 : PPCCustomInserterPseudo<(outs g8rc:$result),
+                         (ins g8rc:$negsize, memri:$fpsi), "#PROBED_ALLOCA_64",
+                           [(set i64:$result,
+                             (PPCprobedalloca i64:$negsize, iaddr:$fpsi))]>;
+def PREPARE_PROBED_ALLOCA_64 : PPCEmitTimePseudo<(outs g8rc:$fp,
+    g8rc:$sp),
+    (ins g8rc:$negsize, memri:$fpsi), "#PREPARE_PROBED_ALLOCA_64", []>;
+def PROBED_STACKALLOC_64 : PPCEmitTimePseudo<(outs g8rc:$scratch, g8rc:$temp),
+    (ins i64imm:$stacksize),
+    "#PROBED_STACKALLOC_64", []>;
+}
 
 let hasSideEffects = 0 in {
 let Defs = [LR8] in {

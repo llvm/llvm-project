@@ -474,6 +474,16 @@ Code Generation Options
   optimization. With "thin", :doc:`ThinLTO <../ThinLTO>`
   compilation is invoked instead.
 
+  .. note::
+
+     On Darwin, when using :option:`-flto` along with :option:`-g` and
+     compiling and linking in separate steps, you also need to pass
+     ``-Wl,-object_path_lto,<lto-filename>.o`` at the linking step to instruct the
+     ld64 linker not to delete the temporary object file generated during Link
+     Time Optimization (this flag is automatically passed to the linker by Clang
+     if compilation and linking are done in a single step). This allows debugging
+     the executable as well as generating the ``.dSYM`` bundle using :manpage:`dsymutil(1)`.
+
 Driver Options
 ~~~~~~~~~~~~~~
 

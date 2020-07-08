@@ -284,7 +284,7 @@ private:
 // Utility to generate a function to register a symbol alias.
 static bool canRegisterAlias(StringRef name, llvm::StringSet<> &usedAliases) {
   assert(!name.empty() && "expected alias name to be non-empty");
-  // TODO(riverriddle) Assert that the provided alias name can be lexed as
+  // TODO: Assert that the provided alias name can be lexed as
   // an identifier.
 
   // Check that the alias doesn't contain a '.' character and the name is not
@@ -431,7 +431,7 @@ void AliasState::recordAttributeReference(Attribute attr) {
 /// Record a reference to the given type.
 void AliasState::recordTypeReference(Type ty) { usedTypes.insert(ty); }
 
-// TODO Support visiting other types/operations when implemented.
+// TODO: Support visiting other types/operations when implemented.
 void AliasState::visitType(Type type) {
   recordTypeReference(type);
 
@@ -2442,7 +2442,7 @@ void Value::dump() {
 }
 
 void Value::printAsOperand(raw_ostream &os, AsmState &state) {
-  // TODO(riverriddle) This doesn't necessarily capture all potential cases.
+  // TODO: This doesn't necessarily capture all potential cases.
   // Currently, region arguments can be shadowed when printing the main
   // operation. If the IR hasn't been printed, this will produce the old SSA
   // name and not the shadowed name.

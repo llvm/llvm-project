@@ -438,16 +438,17 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     DOPRegIsUnique = true;
     break;
   }
-
-  assert (DOPRegIsUnique && "The destructive operand should be unique");
 #endif
 
   // Resolve the reverse opcode
   if (UseRev) {
-    if (AArch64::getSVERevInstr(Opcode) != -1)
-      Opcode = AArch64::getSVERevInstr(Opcode);
-    else if (AArch64::getSVEOrigInstr(Opcode) != -1)
-      Opcode = AArch64::getSVEOrigInstr(Opcode);
+    int NewOpcode;
+    // e.g. DIV -> DIVR
+    if ((NewOpcode = AArch64::getSVERevInstr(Opcode)) != -1)
+      Opcode = NewOpcode;
+    // e.g. DIVR -> DIV
+    else if ((NewOpcode = AArch64::getSVENonRevInstr(Opcode)) != -1)
+      Opcode = NewOpcode;
   }
 
   // Get the right MOVPRFX
@@ -480,6 +481,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   //
   MachineInstrBuilder PRFX, DOP;
   if (FalseZero) {
+#ifndef NDEBUG
+    assert(DOPRegIsUnique && "The destructive operand should be unique");
+#endif
     assert(ElementSize != AArch64::ElementSizeNone &&
            "This instruction is unpredicated");
 
@@ -492,6 +496,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     // After the movprfx, the destructive operand is same as Dst
     DOPIdx = 0;
   } else if (DstReg != MI.getOperand(DOPIdx).getReg()) {
+#ifndef NDEBUG
+    assert(DOPRegIsUnique && "The destructive operand should be unique");
+#endif
     PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfx))
                .addReg(DstReg, RegState::Define)
                .addReg(MI.getOperand(DOPIdx).getReg());

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/PPCPredicates.h"
 #include "PPCFrameLowering.h"
 #include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
@@ -31,6 +32,7 @@ using namespace llvm;
 #define DEBUG_TYPE "framelowering"
 STATISTIC(NumPESpillVSR, "Number of spills to vector in prologue");
 STATISTIC(NumPEReloadVSR, "Number of reloads from vector in epilogue");
+STATISTIC(NumPrologProbed, "Number of prologues probed");
 
 static cl::opt<bool>
 EnablePEVectorSpills("ppc-enable-pe-vector-spills",
@@ -73,10 +75,12 @@ static unsigned computeLinkageSize(const PPCSubtarget &STI) {
 }
 
 static unsigned computeBasePointerSaveOffset(const PPCSubtarget &STI) {
-  // SVR4 ABI: First slot in the general register save area.
-  return STI.isPPC64()
-             ? -16U
-             : STI.getTargetMachine().isPositionIndependent() ? -12U : -8U;
+  // Third slot in the general purpose register save area.
+  if (STI.is32BitELFABI() && STI.getTargetMachine().isPositionIndependent())
+    return -12U;
+
+  // Second slot in the general purpose register save area.
+  return STI.isPPC64() ? -16U : -8U;
 }
 
 static unsigned computeCRSaveOffset(const PPCSubtarget &STI) {
@@ -755,6 +759,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const PPCTargetLowering &TLI = *Subtarget.getTargetLowering();
 
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
@@ -843,9 +848,12 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
          "FrameSize must be >0 to save/restore the FP or LR for 32-bit SVR4.");
 
   // Using the same bool variable as below to suppress compiler warnings.
-  bool SingleScratchReg =
-    findScratchRegister(&MBB, false, twoUniqueScratchRegsRequired(&MBB),
-                        &ScratchReg, &TempReg);
+  // Stack probe requires two scratch registers, one for old sp, one for large
+  // frame and large probe size.
+  bool SingleScratchReg = findScratchRegister(
+      &MBB, false,
+      twoUniqueScratchRegsRequired(&MBB) || TLI.hasInlineStackProbe(MF),
+      &ScratchReg, &TempReg);
   assert(SingleScratchReg &&
          "Required number of registers not available in this block");
 
@@ -1021,58 +1029,81 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // the negated frame size will be placed in ScratchReg.
   bool HasSTUX = false;
 
-  // This condition must be kept in sync with canUseAsPrologue.
-  if (HasBP && MaxAlign > 1) {
-    if (isPPC64)
-      BuildMI(MBB, MBBI, dl, TII.get(PPC::RLDICL), ScratchReg)
-          .addReg(SPReg)
-          .addImm(0)
-          .addImm(64 - Log2(MaxAlign));
-    else // PPC32...
-      BuildMI(MBB, MBBI, dl, TII.get(PPC::RLWINM), ScratchReg)
-          .addReg(SPReg)
-          .addImm(0)
-          .addImm(32 - Log2(MaxAlign))
-          .addImm(31);
-    if (!isLargeFrame) {
-      BuildMI(MBB, MBBI, dl, SubtractImmCarryingInst, ScratchReg)
-        .addReg(ScratchReg, RegState::Kill)
+  // If FrameSize <= TLI.getStackProbeSize(MF), as POWER ABI requires backchain
+  // pointer is always stored at SP, we will get a free probe due to an essential
+  // STU(X) instruction.
+  if (TLI.hasInlineStackProbe(MF) && FrameSize > TLI.getStackProbeSize(MF)) {
+    // To be consistent with other targets, a pseudo instruction is emitted and
+    // will be later expanded in `inlineStackProbe`.
+    BuildMI(MBB, MBBI, dl,
+            TII.get(isPPC64 ? PPC::PROBED_STACKALLOC_64
+                            : PPC::PROBED_STACKALLOC_32))
+        .addDef(ScratchReg)
+        .addDef(TempReg) // TempReg stores the old sp.
         .addImm(NegFrameSize);
-    } else {
-      assert(!SingleScratchReg && "Only a single scratch reg available");
-      BuildMI(MBB, MBBI, dl, LoadImmShiftedInst, TempReg)
-        .addImm(NegFrameSize >> 16);
-      BuildMI(MBB, MBBI, dl, OrImmInst, TempReg)
-        .addReg(TempReg, RegState::Kill)
-        .addImm(NegFrameSize & 0xFFFF);
-      BuildMI(MBB, MBBI, dl, SubtractCarryingInst, ScratchReg)
-        .addReg(ScratchReg, RegState::Kill)
-        .addReg(TempReg, RegState::Kill);
+    // FIXME: HasSTUX is only read if HasRedZone is not set, in such case, we
+    // update the ScratchReg to meet the assumption that ScratchReg contains
+    // the NegFrameSize. This solution is rather tricky.
+    if (!HasRedZone) {
+      BuildMI(MBB, MBBI, dl, TII.get(PPC::SUBF), ScratchReg)
+          .addReg(TempReg)
+          .addReg(SPReg);
+      HasSTUX = true;
     }
-
-    BuildMI(MBB, MBBI, dl, StoreUpdtIdxInst, SPReg)
-      .addReg(SPReg, RegState::Kill)
-      .addReg(SPReg)
-      .addReg(ScratchReg);
-    HasSTUX = true;
-
-  } else if (!isLargeFrame) {
-    BuildMI(MBB, StackUpdateLoc, dl, StoreUpdtInst, SPReg)
-      .addReg(SPReg)
-      .addImm(NegFrameSize)
-      .addReg(SPReg);
-
   } else {
-    BuildMI(MBB, MBBI, dl, LoadImmShiftedInst, ScratchReg)
-      .addImm(NegFrameSize >> 16);
-    BuildMI(MBB, MBBI, dl, OrImmInst, ScratchReg)
-      .addReg(ScratchReg, RegState::Kill)
-      .addImm(NegFrameSize & 0xFFFF);
-    BuildMI(MBB, MBBI, dl, StoreUpdtIdxInst, SPReg)
-      .addReg(SPReg, RegState::Kill)
-      .addReg(SPReg)
-      .addReg(ScratchReg);
-    HasSTUX = true;
+    // This condition must be kept in sync with canUseAsPrologue.
+    if (HasBP && MaxAlign > 1) {
+      if (isPPC64)
+        BuildMI(MBB, MBBI, dl, TII.get(PPC::RLDICL), ScratchReg)
+            .addReg(SPReg)
+            .addImm(0)
+            .addImm(64 - Log2(MaxAlign));
+      else // PPC32...
+        BuildMI(MBB, MBBI, dl, TII.get(PPC::RLWINM), ScratchReg)
+            .addReg(SPReg)
+            .addImm(0)
+            .addImm(32 - Log2(MaxAlign))
+            .addImm(31);
+      if (!isLargeFrame) {
+        BuildMI(MBB, MBBI, dl, SubtractImmCarryingInst, ScratchReg)
+            .addReg(ScratchReg, RegState::Kill)
+            .addImm(NegFrameSize);
+      } else {
+        assert(!SingleScratchReg && "Only a single scratch reg available");
+        BuildMI(MBB, MBBI, dl, LoadImmShiftedInst, TempReg)
+            .addImm(NegFrameSize >> 16);
+        BuildMI(MBB, MBBI, dl, OrImmInst, TempReg)
+            .addReg(TempReg, RegState::Kill)
+            .addImm(NegFrameSize & 0xFFFF);
+        BuildMI(MBB, MBBI, dl, SubtractCarryingInst, ScratchReg)
+            .addReg(ScratchReg, RegState::Kill)
+            .addReg(TempReg, RegState::Kill);
+      }
+
+      BuildMI(MBB, MBBI, dl, StoreUpdtIdxInst, SPReg)
+          .addReg(SPReg, RegState::Kill)
+          .addReg(SPReg)
+          .addReg(ScratchReg);
+      HasSTUX = true;
+
+    } else if (!isLargeFrame) {
+      BuildMI(MBB, StackUpdateLoc, dl, StoreUpdtInst, SPReg)
+          .addReg(SPReg)
+          .addImm(NegFrameSize)
+          .addReg(SPReg);
+
+    } else {
+      BuildMI(MBB, MBBI, dl, LoadImmShiftedInst, ScratchReg)
+          .addImm(NegFrameSize >> 16);
+      BuildMI(MBB, MBBI, dl, OrImmInst, ScratchReg)
+          .addReg(ScratchReg, RegState::Kill)
+          .addImm(NegFrameSize & 0xFFFF);
+      BuildMI(MBB, MBBI, dl, StoreUpdtIdxInst, SPReg)
+          .addReg(SPReg, RegState::Kill)
+          .addReg(SPReg)
+          .addReg(ScratchReg);
+      HasSTUX = true;
+    }
   }
 
   // Save the TOC register after the stack pointer update if a prologue TOC
@@ -1331,6 +1362,142 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       }
     }
   }
+}
+
+void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
+                                        MachineBasicBlock &PrologMBB) const {
+  // TODO: Generate CFI instructions.
+  bool isPPC64 = Subtarget.isPPC64();
+  const PPCTargetLowering &TLI = *Subtarget.getTargetLowering();
+  const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto StackAllocMIPos = llvm::find_if(PrologMBB, [](MachineInstr &MI) {
+    int Opc = MI.getOpcode();
+    return Opc == PPC::PROBED_STACKALLOC_64 || Opc == PPC::PROBED_STACKALLOC_32;
+  });
+  if (StackAllocMIPos == PrologMBB.end())
+    return;
+  const BasicBlock *ProbedBB = PrologMBB.getBasicBlock();
+  DebugLoc DL = PrologMBB.findDebugLoc(StackAllocMIPos);
+  MachineInstr &MI = *StackAllocMIPos;
+  int64_t NegFrameSize = MI.getOperand(2).getImm();
+  int64_t NegProbeSize = -(int64_t)TLI.getStackProbeSize(MF);
+  assert(isInt<32>(NegProbeSize) && "Unhandled probe size");
+  int64_t NumBlocks = NegFrameSize / NegProbeSize;
+  int64_t NegResidualSize = NegFrameSize % NegProbeSize;
+  Register SPReg = isPPC64 ? PPC::X1 : PPC::R1;
+  Register ScratchReg = MI.getOperand(0).getReg();
+  Register FPReg = MI.getOperand(1).getReg();
+  const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  bool HasBP = RegInfo->hasBasePointer(MF);
+  Align MaxAlign = MFI.getMaxAlign();
+  // Initialize current frame pointer.
+  const MCInstrDesc &CopyInst = TII.get(isPPC64 ? PPC::OR8 : PPC::OR);
+  BuildMI(PrologMBB, {MI}, DL, CopyInst, FPReg).addReg(SPReg).addReg(SPReg);
+  // Subroutine to determine if we can use the Imm as part of d-form.
+  auto CanUseDForm = [](int64_t Imm) { return isInt<16>(Imm) && Imm % 4 == 0; };
+  // Subroutine to materialize the Imm into TempReg.
+  auto MaterializeImm = [&](MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI, int64_t Imm,
+                            Register &TempReg) {
+    assert(isInt<32>(Imm) && "Unhandled imm");
+    if (isInt<16>(Imm))
+      BuildMI(MBB, MBBI, DL, TII.get(isPPC64 ? PPC::LI8 : PPC::LI), TempReg)
+          .addImm(Imm);
+    else {
+      BuildMI(MBB, MBBI, DL, TII.get(isPPC64 ? PPC::LIS8 : PPC::LIS), TempReg)
+          .addImm(Imm >> 16);
+      BuildMI(MBB, MBBI, DL, TII.get(isPPC64 ? PPC::ORI8 : PPC::ORI), TempReg)
+          .addReg(TempReg)
+          .addImm(Imm & 0xFFFF);
+    }
+  };
+  // Subroutine to store frame pointer and decrease stack pointer by probe size.
+  auto allocateAndProbe = [&](MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI, int64_t NegSize,
+                              Register NegSizeReg, bool UseDForm) {
+    if (UseDForm)
+      BuildMI(MBB, MBBI, DL, TII.get(isPPC64 ? PPC::STDU : PPC::STWU), SPReg)
+          .addReg(FPReg)
+          .addImm(NegSize)
+          .addReg(SPReg);
+    else
+      BuildMI(MBB, MBBI, DL, TII.get(isPPC64 ? PPC::STDUX : PPC::STWUX), SPReg)
+          .addReg(FPReg)
+          .addReg(SPReg)
+          .addReg(NegSizeReg);
+  };
+  // For case HasBP && MaxAlign > 1, we have to align the SP by performing
+  // SP = SP - SP % MaxAlign.
+  if (HasBP && MaxAlign > 1) {
+    if (isPPC64)
+      BuildMI(PrologMBB, {MI}, DL, TII.get(PPC::RLDICL), ScratchReg)
+          .addReg(FPReg)
+          .addImm(0)
+          .addImm(64 - Log2(MaxAlign));
+    else
+      BuildMI(PrologMBB, {MI}, DL, TII.get(PPC::RLWINM), ScratchReg)
+          .addReg(FPReg)
+          .addImm(0)
+          .addImm(32 - Log2(MaxAlign))
+          .addImm(31);
+    BuildMI(PrologMBB, {MI}, DL, TII.get(isPPC64 ? PPC::STDUX : PPC::STWUX),
+            SPReg)
+        .addReg(FPReg)
+        .addReg(SPReg)
+        .addReg(ScratchReg);
+  }
+  // Probe residual part.
+  if (NegResidualSize) {
+    bool ResidualUseDForm = CanUseDForm(NegResidualSize);
+    if (!ResidualUseDForm)
+      MaterializeImm(PrologMBB, {MI}, NegResidualSize, ScratchReg);
+    allocateAndProbe(PrologMBB, {MI}, NegResidualSize, ScratchReg,
+                     ResidualUseDForm);
+  }
+  bool UseDForm = CanUseDForm(NegProbeSize);
+  // If number of blocks is small, just probe them directly.
+  if (NumBlocks < 3) {
+    if (!UseDForm)
+      MaterializeImm(PrologMBB, {MI}, NegProbeSize, ScratchReg);
+    for (int i = 0; i < NumBlocks; ++i)
+      allocateAndProbe(PrologMBB, {MI}, NegProbeSize, ScratchReg, UseDForm);
+  } else {
+    // Since CTR is a volatile register and current shrinkwrap implementation
+    // won't choose an MBB in a loop as the PrologMBB, it's safe to synthesize a
+    // CTR loop to probe.
+    // Calculate trip count and stores it in CTRReg.
+    MaterializeImm(PrologMBB, {MI}, NumBlocks, ScratchReg);
+    BuildMI(PrologMBB, {MI}, DL, TII.get(isPPC64 ? PPC::MTCTR8 : PPC::MTCTR))
+        .addReg(ScratchReg, RegState::Kill);
+    if (!UseDForm)
+      MaterializeImm(PrologMBB, {MI}, NegProbeSize, ScratchReg);
+    // Create MBBs of the loop.
+    MachineFunction::iterator MBBInsertPoint =
+        std::next(PrologMBB.getIterator());
+    MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(ProbedBB);
+    MF.insert(MBBInsertPoint, LoopMBB);
+    MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(ProbedBB);
+    MF.insert(MBBInsertPoint, ExitMBB);
+    // Synthesize the loop body.
+    allocateAndProbe(*LoopMBB, LoopMBB->end(), NegProbeSize, ScratchReg,
+                     UseDForm);
+    BuildMI(LoopMBB, DL, TII.get(isPPC64 ? PPC::BDNZ8 : PPC::BDNZ))
+        .addMBB(LoopMBB);
+    LoopMBB->addSuccessor(ExitMBB);
+    LoopMBB->addSuccessor(LoopMBB);
+    // Synthesize the exit MBB.
+    ExitMBB->splice(ExitMBB->end(), &PrologMBB,
+                    std::next(MachineBasicBlock::iterator(MI)),
+                    PrologMBB.end());
+    ExitMBB->transferSuccessorsAndUpdatePHIs(&PrologMBB);
+    PrologMBB.addSuccessor(LoopMBB);
+    // Update liveins.
+    recomputeLiveIns(*LoopMBB);
+    recomputeLiveIns(*ExitMBB);
+  }
+  ++NumPrologProbed;
+  MI.eraseFromParent();
 }
 
 void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -2081,8 +2248,8 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
     const TargetRegisterClass &RC = Subtarget.isPPC64() ? G8RC : GPRC;
     const TargetRegisterInfo &TRI = *Subtarget.getRegisterInfo();
     unsigned Size = TRI.getSpillSize(RC);
-    unsigned Align = TRI.getSpillAlignment(RC);
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Align, false));
+    Align Alignment = TRI.getSpillAlign(RC);
+    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Alignment, false));
 
     // Might we have over-aligned allocas?
     bool HasAlVars =
@@ -2090,8 +2257,8 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
 
     // These kinds of spills might need two registers.
     if (spillsCR(MF) || spillsVRSAVE(MF) || HasAlVars)
-      RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Align, false));
-
+      RS->addScavengingFrameIndex(
+          MFI.CreateStackObject(Size, Alignment, false));
   }
 }
 
@@ -2419,8 +2586,6 @@ unsigned PPCFrameLowering::getFramePointerSaveOffset() const {
 }
 
 unsigned PPCFrameLowering::getBasePointerSaveOffset() const {
-  if (Subtarget.isAIXABI())
-    report_fatal_error("BasePointer is not implemented on AIX yet.");
   return BasePointerSaveOffset;
 }
 

@@ -46,7 +46,7 @@ namespace {
 /// inner levels if necessary to determine at what depth copies need to be
 /// placed so that the allocated buffers fit within the memory capacity
 /// provided.
-// TODO(bondhugula): We currently can't generate copies correctly when stores
+// TODO: We currently can't generate copies correctly when stores
 // are strided. Check for strided stores.
 struct AffineDataCopyGeneration
     : public AffineDataCopyGenerationBase<AffineDataCopyGeneration> {
@@ -75,7 +75,7 @@ struct AffineDataCopyGeneration
 /// Generates copies for memref's living in 'slowMemorySpace' into newly created
 /// buffers in 'fastMemorySpace', and replaces memory operations to the former
 /// by the latter. Only load op's handled for now.
-/// TODO(bondhugula): extend this to store op's.
+/// TODO: extend this to store op's.
 std::unique_ptr<OperationPass<FuncOp>> mlir::createAffineDataCopyGenerationPass(
     unsigned slowMemorySpace, unsigned fastMemorySpace, unsigned tagMemorySpace,
     int minDmaTransferSize, uint64_t fastMemCapacityBytes) {
@@ -113,7 +113,7 @@ AffineDataCopyGeneration::runOnBlock(Block *block,
   // operations excluding AffineForOp's) are always assumed to not exhaust
   // memory. As a result, this approach is conservative in some cases at the
   // moment; we do a check later and report an error with location info.
-  // TODO(bondhugula): An 'affine.if' operation is being treated similar to an
+  // TODO: An 'affine.if' operation is being treated similar to an
   // operation. 'affine.if''s could have 'affine.for's in them;
   // treat them separately.
 
@@ -218,7 +218,7 @@ void AffineDataCopyGeneration::runOnFunction() {
     nest->walk([&](Operation *op) {
       if (auto forOp = dyn_cast<AffineForOp>(op))
         promoteIfSingleIteration(forOp);
-      else if (isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op))
+      else if (isa<AffineLoadOp, AffineStoreOp>(op))
         copyOps.push_back(op);
     });
 

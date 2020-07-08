@@ -442,3 +442,76 @@ func @f(%arg0 : !shape.shape) {
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
+
+// -----
+
+// Fold `rank` based on constant shape.
+// CHECK-LABEL: @fold_rank
+func @fold_rank() -> !shape.size {
+  // CHECK-DAG: %[[RESULT:.*]] = shape.const_size 5
+  // CHECK-DAG: return %[[RESULT]] : !shape.size
+  %shape = shape.const_shape [3, 4, 5, 6, 7]
+  %rank = shape.rank %shape
+  return %rank : !shape.size
+}
+
+// -----
+
+// Do not fold `rank` if shape is dynamic.
+// CHECK-LABEL: @dont_fold_rank
+// CHECK-SAME: (%[[SHAPE:.*]]: !shape.shape) -> !shape.size
+func @dont_fold_rank(%shape : !shape.shape) -> !shape.size {
+  // CHECK-DAG: %[[RESULT:.*]] = shape.rank %[[SHAPE]]
+  // CHECK-DAG: return %[[RESULT]] : !shape.size
+  %rank = shape.rank %shape
+  return %rank : !shape.size
+}
+
+// -----
+
+// Canonicalize `rank` when shape is derived from ranked tensor.
+// CHECK-LABEL: @canonicalize_rank
+func @canonicalize_rank(%arg : tensor<1x2x?xf32>) -> !shape.size {
+// CHECK-DAG: %[[RESULT:.*]] = shape.const_size 3
+// CHECK-DAG: return %[[RESULT]] : !shape.size
+%shape = shape.shape_of %arg : tensor<1x2x?xf32>
+%rank = shape.rank %shape
+return %rank : !shape.size
+}
+
+// -----
+
+// Do not canonicalize `rank` when shape is derived from unranked tensor.
+// CHECK-LABEL: @dont_canonicalize_rank
+// CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>) -> !shape.size
+func @dont_canonicalize_rank(%arg : tensor<*xf32>) -> !shape.size {
+// CHECK-DAG: %[[SHAPE:.*]] = shape.shape_of %[[ARG]] : tensor<*xf32>
+// CHECK-DAG: %[[SIZE:.*]] = shape.rank %[[SHAPE]]
+// CHECK-DAG: return %[[SIZE]] : !shape.size
+%shape = shape.shape_of %arg : tensor<*xf32>
+%rank = shape.rank %shape
+return %rank : !shape.size
+}
+
+// Canonicalize redundant conversion from `index` to `size` and back.
+// CHECK-LABEL: @index_to_size_to_index
+// CHECK-SAME: (%[[IDX:.*]]: index) -> index
+func @index_to_size_to_index(%index : index) -> index {
+  // CHECK: return %[[IDX]] : index
+  %size = shape.index_to_size %index
+  %result = shape.size_to_index %size
+  return %result : index
+}
+
+// -----
+
+// Canonicalize redundant conversion from `size` to `index` and back.
+// CHECK-LABEL: @size_to_index_to_size
+// CHECK-SAME: (%[[SIZE:.*]]: !shape.size) -> !shape.size
+func @size_to_index_to_size(%size : !shape.size) -> !shape.size {
+  // CHECK: return %[[SIZE]] : !shape.size
+  %idx = shape.size_to_index %size
+  %result = shape.index_to_size %idx
+  return %result : !shape.size
+}
+

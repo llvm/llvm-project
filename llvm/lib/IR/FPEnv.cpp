@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/ADT/StringSwitch.h"
 
 namespace llvm {
 
@@ -80,4 +80,4 @@ Optional<StringRef> ExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
   }
   return ExceptStr;
 }
-}
+} // namespace llvm

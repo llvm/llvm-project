@@ -1127,10 +1127,8 @@ bool X86FastISel::X86SelectStore(const Instruction *I) {
   if (!isTypeLegal(Val->getType(), VT, /*AllowI1=*/true))
     return false;
 
-  unsigned Alignment = S->getAlignment();
-  unsigned ABIAlignment = DL.getABITypeAlignment(Val->getType());
-  if (Alignment == 0) // Ensure that codegen never sees alignment 0
-    Alignment = ABIAlignment;
+  Align Alignment = S->getAlign();
+  Align ABIAlignment = DL.getABITypeAlign(Val->getType());
   bool Aligned = Alignment >= ABIAlignment;
 
   X86AddressMode AM;
@@ -1321,14 +1319,9 @@ bool X86FastISel::X86SelectLoad(const Instruction *I) {
   if (!X86SelectAddress(Ptr, AM))
     return false;
 
-  unsigned Alignment = LI->getAlignment();
-  unsigned ABIAlignment = DL.getABITypeAlignment(LI->getType());
-  if (Alignment == 0) // Ensure that codegen never sees alignment 0
-    Alignment = ABIAlignment;
-
   unsigned ResultReg = 0;
   if (!X86FastEmitLoad(VT, AM, createMachineMemOperandFor(LI), ResultReg,
-                       Alignment))
+                       LI->getAlign().value()))
     return false;
 
   updateValueMap(I, ResultReg);
@@ -3584,7 +3577,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       EVT ResVT = VA.getValVT();
       unsigned Opc = ResVT == MVT::f32 ? X86::ST_Fp80m32 : X86::ST_Fp80m64;
       unsigned MemSize = ResVT.getSizeInBits()/8;
-      int FI = MFI.CreateStackObject(MemSize, MemSize, false);
+      int FI = MFI.CreateStackObject(MemSize, Align(MemSize), false);
       addFrameReference(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                 TII.get(Opc)), FI)
         .addReg(CopyReg);

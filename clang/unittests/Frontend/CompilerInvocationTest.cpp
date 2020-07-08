@@ -78,7 +78,8 @@ TEST_F(CC1CommandLineGenerationTest,
 
 TEST_F(CC1CommandLineGenerationTest,
        CanGenerateCC1CommandLineSeparateRequiredAbsent) {
-  const std::string DefaultTriple = llvm::sys::getDefaultTargetTriple();
+  const std::string DefaultTriple =
+      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
   const char *Args[] = {"clang", "-xc++", "-"};
 
   CompilerInvocation CInvok;

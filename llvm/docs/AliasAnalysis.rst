@@ -77,7 +77,7 @@ possible) C code:
     C[1] = A[9-i];        /* One byte store */
   }
 
-In this case, the ``basicaa`` pass will disambiguate the stores to ``C[0]`` and
+In this case, the ``basic-aa`` pass will disambiguate the stores to ``C[0]`` and
 ``C[1]`` because they are accesses to two distinct locations one byte apart, and
 the accesses are each one byte.  In this case, the Loop Invariant Code Motion
 (LICM) pass can use store motion to remove the stores from the loop.  In
@@ -278,7 +278,7 @@ implementing, you just override the interfaces you can improve.
 
 With only one special exception (the :ref:`-no-aa <aliasanalysis-no-aa>` pass)
 every alias analysis pass chains to another alias analysis implementation (for
-example, the user can specify "``-basicaa -ds-aa -licm``" to get the maximum
+example, the user can specify "``-basic-aa -ds-aa -licm``" to get the maximum
 benefit from both alias analyses).  The alias analysis class automatically
 takes care of most of this for methods that you don't override.  For methods
 that you do override, in code paths that return a conservative MayAlias or
@@ -515,10 +515,10 @@ The ``-no-aa`` pass is just like what it sounds: an alias analysis that never
 returns any useful information.  This pass can be useful if you think that alias
 analysis is doing something wrong and are trying to narrow down a problem.
 
-The ``-basicaa`` pass
-^^^^^^^^^^^^^^^^^^^^^
+The ``-basic-aa`` pass
+^^^^^^^^^^^^^^^^^^^^^^
 
-The ``-basicaa`` pass is an aggressive local analysis that *knows* many
+The ``-basic-aa`` pass is an aggressive local analysis that *knows* many
 important facts:
 
 * Distinct globals, stack allocations, and heap allocations can never alias.

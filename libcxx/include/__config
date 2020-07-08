@@ -398,12 +398,12 @@
 
 #if defined(_LIBCPP_COMPILER_CLANG)
 
-// _LIBCPP_ALTERNATE_STRING_LAYOUT is an old name for
-// _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT left here for backward compatibility.
-#if (defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__) &&       \
-     (!defined(__arm__) || __ARM_ARCH_7K__ >= 2)) ||                           \
-    defined(_LIBCPP_ALTERNATE_STRING_LAYOUT)
-#define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+#if defined(_LIBCPP_ALTERNATE_STRING_LAYOUT)
+#  error _LIBCPP_ALTERNATE_STRING_LAYOUT is deprecated, please use _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT instead
+#endif
+#if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__) &&       \
+    (!defined(__arm__) || __ARM_ARCH_7K__ >= 2)
+#  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 #endif
 
 #if __has_feature(cxx_alignas)
@@ -419,8 +419,8 @@ typedef __char16_t char16_t;
 typedef __char32_t char32_t;
 #endif
 
-#if !(__has_feature(cxx_exceptions)) && !defined(_LIBCPP_NO_EXCEPTIONS)
-#define _LIBCPP_NO_EXCEPTIONS
+#if !__has_feature(cxx_exceptions)
+#  define _LIBCPP_NO_EXCEPTIONS
 #endif
 
 #if !(__has_feature(cxx_rtti)) && !defined(_LIBCPP_NO_RTTI)
@@ -528,8 +528,8 @@ typedef __char32_t char32_t;
 
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 
-#if !__EXCEPTIONS && !defined(_LIBCPP_NO_EXCEPTIONS)
-#define _LIBCPP_NO_EXCEPTIONS
+#if !__EXCEPTIONS
+#  define _LIBCPP_NO_EXCEPTIONS
 #endif
 
 // Determine if GCC supports relaxed constexpr

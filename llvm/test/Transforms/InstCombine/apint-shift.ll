@@ -307,8 +307,8 @@ define i53 @test15a(i1 %X) {
 
 define i1 @test16(i84 %X) {
 ; CHECK-LABEL: @test16(
-; CHECK-NEXT:    [[AND:%.*]] = and i84 [[X:%.*]], 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i84 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i84 [[X:%.*]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i84 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = ashr i84 %X, 4
@@ -324,6 +324,30 @@ define <2 x i1> @test16vec(<2 x i84> %X) {
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shr = ashr <2 x i84> %X, <i84 4, i84 4>
+  %and = and <2 x i84> %shr, <i84 1, i84 1>
+  %cmp = icmp ne <2 x i84> %and, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @test16vec_nonuniform(<2 x i84> %X) {
+; CHECK-LABEL: @test16vec_nonuniform(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], <i84 16, i84 4>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shr = ashr <2 x i84> %X, <i84 4, i84 2>
+  %and = and <2 x i84> %shr, <i84 1, i84 1>
+  %cmp = icmp ne <2 x i84> %and, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @test16vec_undef(<2 x i84> %X) {
+; CHECK-LABEL: @test16vec_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], <i84 16, i84 undef>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shr = ashr <2 x i84> %X, <i84 4, i84 undef>
   %and = and <2 x i84> %shr, <i84 1, i84 1>
   %cmp = icmp ne <2 x i84> %and, zeroinitializer
   ret <2 x i1> %cmp
@@ -502,18 +526,18 @@ define <2 x i43> @lshr_shl_eq_amt_multi_use_splat_vec(<2 x i43> %A) {
   ret <2 x i43> %D
 }
 
-define i37 @test25(i37 %tmp.2, i37 %AA) {
+define i37 @test25(i37 %AA, i37 %BB) {
 ; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[TMP_3:%.*]] = and i37 [[TMP_2:%.*]], -131072
-; CHECK-NEXT:    [[X2:%.*]] = add i37 [[TMP_3]], [[AA:%.*]]
-; CHECK-NEXT:    [[TMP_6:%.*]] = and i37 [[X2]], -131072
-; CHECK-NEXT:    ret i37 [[TMP_6]]
+; CHECK-NEXT:    [[D:%.*]] = and i37 [[AA:%.*]], -131072
+; CHECK-NEXT:    [[C2:%.*]] = add i37 [[D]], [[BB:%.*]]
+; CHECK-NEXT:    [[F:%.*]] = and i37 [[C2]], -131072
+; CHECK-NEXT:    ret i37 [[F]]
 ;
-  %x = lshr i37 %AA, 17
-  %tmp.3 = lshr i37 %tmp.2, 17
-  %tmp.5 = add i37 %tmp.3, %x
-  %tmp.6 = shl i37 %tmp.5, 17
-  ret i37 %tmp.6
+  %C = lshr i37 %BB, 17
+  %D = lshr i37 %AA, 17
+  %E = add i37 %D, %C
+  %F = shl i37 %E, 17
+  ret i37 %F
 }
 
 define i40 @test26(i40 %A) {
@@ -534,10 +558,10 @@ define i177 @ossfuzz_9880(i177 %X) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i177, align 8
 ; CHECK-NEXT:    [[L1:%.*]] = load i177, i177* [[A]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L1]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i177
-; CHECK-NEXT:    [[B14:%.*]] = add i177 [[L1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i177 [[B14]], -1
-; CHECK-NEXT:    [[B1:%.*]] = zext i1 [[TMP3]] to i177
+; CHECK-NEXT:    [[B5_NEG:%.*]] = sext i1 [[TMP1]] to i177
+; CHECK-NEXT:    [[B14:%.*]] = add i177 [[L1]], [[B5_NEG]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i177 [[B14]], -1
+; CHECK-NEXT:    [[B1:%.*]] = zext i1 [[TMP2]] to i177
 ; CHECK-NEXT:    ret i177 [[B1]]
 ;
   %A = alloca i177

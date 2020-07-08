@@ -246,7 +246,7 @@ func @bar() {
 }
 ```
 
-### Calling Convention for `memref`
+### Calling Convention for Ranked `memref`
 
 Function _arguments_ of `memref` type, ranked or unranked, are _expanded_ into a
 list of arguments of non-aggregate types that the memref descriptor defined
@@ -317,7 +317,9 @@ llvm.func @bar() {
 
 ```
 
-For **unranked** memrefs, the list of function arguments always contains two
+### Calling Convention for Unranked `memref`
+
+For unranked memrefs, the list of function arguments always contains two
 elements, same as the unranked memref descriptor: an integer rank, and a
 type-erased (`!llvm<"i8*">`) pointer to the ranked memref descriptor. Note that
 while the _calling convention_ does not require stack allocation, _casting_ to
@@ -368,6 +370,20 @@ llvm.func @bar() {
   llvm.return
 }
 ```
+
+**Lifetime.** The second element of the unranked memref descriptor points to
+some memory in which the ranked memref descriptor is stored. By convention, this
+memory is allocated on stack and has the lifetime of the function. (*Note:* due
+to function-length lifetime, creation of multiple unranked memref descriptors,
+e.g., in a loop, may lead to stack overflows.) If an unranked descriptor has to
+be returned from a function, the ranked descriptor it points to is copied into
+dynamically allocated memory, and the pointer in the unranked descriptor is
+updated accordingly. The allocation happens immediately before returning. It is
+the responsibility of the caller to free the dynamically allocated memory. The
+default conversion of `std.call` and `std.call_indirect` copies the ranked
+descriptor to newly allocated memory on the caller's stack. Thus, the convention
+of the ranked memref descriptor pointed to by an unranked memref descriptor
+being stored on stack is respected.
 
 *This convention may or may not apply if the conversion of MemRef types is
 overridden by the user.*

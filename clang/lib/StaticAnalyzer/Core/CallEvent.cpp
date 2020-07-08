@@ -523,7 +523,7 @@ CallEvent::getReturnValueUnderConstruction() const {
   if (!CC)
     return None;
 
-  ExprEngine::EvalCallOptions CallOpts;
+  EvalCallOptions CallOpts;
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
   SVal RetVal =
     Engine.computeObjectUnderConstruction(getOriginExpr(), getState(),

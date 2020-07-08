@@ -67,7 +67,7 @@ void mulRegionBuilder(ValueRange args);
 /// the current ScopedContext, at the current insert point.
 void macRegionBuilder(ValueRange args);
 
-/// TODO(ntv): In the future we should tie these implementations to something in
+/// TODO: In the future we should tie these implementations to something in
 /// Tablegen that generates the proper interfaces and the proper sugared named
 /// ops.
 
@@ -119,7 +119,7 @@ Operation *linalg_generic_pointwise_max(StructuredIndexed I1,
                                         StructuredIndexed I2,
                                         StructuredIndexed O);
 
-// TODO(ntv): Implement more useful pointwise operations on a per-need basis.
+// TODO: Implement more useful pointwise operations on a per-need basis.
 
 using MatmulRegionBuilder = function_ref<void(ValueRange args)>;
 
@@ -187,7 +187,7 @@ linalg_generic_matmul(Container values,
 ///
 /// For now `...` must be empty (i.e. only 2-D convolutions are supported).
 ///
-// TODO(ntv) Extend convolution rank with some template magic.
+// TODO: Extend convolution rank with some template magic.
 Operation *linalg_generic_conv_nhwc(Value vI, Value vW, Value vO,
                                     ArrayRef<int> strides = {},
                                     ArrayRef<int> dilations = {});
@@ -222,7 +222,7 @@ Operation *linalg_generic_conv_nhwc(Container values,
 ///
 /// For now `...` must be empty (i.e. only 2-D convolutions are supported).
 ///
-// TODO(ntv) Extend convolution rank with some template magic.
+// TODO: Extend convolution rank with some template magic.
 Operation *linalg_generic_dilated_conv_nhwc(Value vI, Value vW, Value vO,
                                             int depth_multiplier = 1,
                                             ArrayRef<int> strides = {},

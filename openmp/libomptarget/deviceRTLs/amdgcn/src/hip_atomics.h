@@ -39,5 +39,9 @@ template <typename T> DEVICE T atomicCAS(T *address, T compare, T val) {
   return compare;
 }
 
+INLINE uint32_t atomicInc(uint32_t *address, uint32_t max) {
+  return __builtin_amdgcn_atomic_inc32(address, max, __ATOMIC_SEQ_CST, "");
+}
+
 } // namespace
 #endif

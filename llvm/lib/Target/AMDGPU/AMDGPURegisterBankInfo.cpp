@@ -1303,18 +1303,16 @@ static Register getSrcRegIgnoringCopies(const MachineRegisterInfo &MRI,
 // the three offsets (voffset, soffset and instoffset)
 static unsigned setBufferOffsets(MachineIRBuilder &B,
                                  const AMDGPURegisterBankInfo &RBI,
-                                 Register CombinedOffset,
-                                 Register &VOffsetReg,
-                                 Register &SOffsetReg,
-                                 int64_t &InstOffsetVal,
-                                 unsigned Align) {
+                                 Register CombinedOffset, Register &VOffsetReg,
+                                 Register &SOffsetReg, int64_t &InstOffsetVal,
+                                 Align Alignment) {
   const LLT S32 = LLT::scalar(32);
   MachineRegisterInfo *MRI = B.getMRI();
 
   if (Optional<int64_t> Imm = getConstantVRegVal(CombinedOffset, *MRI)) {
     uint32_t SOffset, ImmOffset;
-    if (AMDGPU::splitMUBUFOffset(*Imm, SOffset, ImmOffset,
-                                 &RBI.Subtarget, Align)) {
+    if (AMDGPU::splitMUBUFOffset(*Imm, SOffset, ImmOffset, &RBI.Subtarget,
+                                 Alignment)) {
       VOffsetReg = B.buildConstant(S32, 0).getReg(0);
       SOffsetReg = B.buildConstant(S32, SOffset).getReg(0);
       InstOffsetVal = ImmOffset;
@@ -1334,7 +1332,7 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
 
   uint32_t SOffset, ImmOffset;
   if (Offset > 0 && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset,
-                                             &RBI.Subtarget, Align)) {
+                                             &RBI.Subtarget, Alignment)) {
     if (RBI.getRegBank(Base, *MRI, *RBI.TRI) == &AMDGPU::VGPRRegBank) {
       VOffsetReg = Base;
       SOffsetReg = B.buildConstant(S32, SOffset).getReg(0);
@@ -1417,7 +1415,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
 
   // Use the alignment to ensure that the required offsets will fit into the
   // immediate offsets.
-  const unsigned Alignment = NumLoads > 1 ? 16 * NumLoads : 1;
+  const Align Alignment = NumLoads > 1 ? Align(16 * NumLoads) : Align(1);
 
   MachineIRBuilder B(MI);
   MachineFunction &MF = B.getMF();
@@ -3952,6 +3950,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
+    case Intrinsic::amdgcn_sqrt:
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_rsq_clamp:
@@ -4231,8 +4230,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(Bank, 32);
       break;
     }
-    case Intrinsic::amdgcn_end_cf:
-    case Intrinsic::amdgcn_init_exec: {
+    case Intrinsic::amdgcn_end_cf: {
       unsigned Size = getSizeInBits(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;
@@ -4288,7 +4286,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_init_exec_from_input: {
       unsigned Size = getSizeInBits(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
-      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;
     }
     case Intrinsic::amdgcn_ds_gws_init:

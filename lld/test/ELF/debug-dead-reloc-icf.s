@@ -10,6 +10,9 @@
 
 # CHECK:      Contents of section .debug_info:
 # CHECK-NEXT:  0000 {{[0-9a-f]+}}000 00000000 ffffffff ffffffff
+# CHECK:      Contents of section .debug_line:
+# CHECK-NEXT:  0000 [[ADDR:[0-9a-f]+]] 00000000
+# CHECK-SAME:                                   [[ADDR]] 00000000
 
 .globl _start
 _start:
@@ -22,3 +25,11 @@ _start:
 .section .debug_info
   .quad .text+8
   .quad .text.1+8
+
+## .debug_line contributions associated with folded-in functions will describe
+## different lines to the canonical function. Leaving a tombstone value would
+## prevent users from setting breakpoints on the folded-in functions.
+## Instead resolve the relocation to the folded .text.1 to .text
+.section .debug_line
+  .quad .text
+  .quad .text.1

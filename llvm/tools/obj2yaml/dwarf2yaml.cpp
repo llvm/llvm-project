@@ -122,7 +122,7 @@ static DWARFYAML::PubSection dumpPubSection(const DWARFContext &DCtx,
                                             bool IsGNUStyle) {
   DWARFDataExtractor PubSectionData(DCtx.getDWARFObj(), Section,
                                     DCtx.isLittleEndian(), 0);
-  DWARFYAML::PubSection Y(IsGNUStyle);
+  DWARFYAML::PubSection Y;
   uint64_t Offset = 0;
   dumpInitialLength(PubSectionData, Offset, Y.Length);
   Y.Version = PubSectionData.getU16(&Offset);
@@ -165,7 +165,8 @@ void dumpDebugPubSections(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   for (const auto &CU : DCtx.compile_units()) {
     DWARFYAML::Unit NewUnit;
-    NewUnit.Length.setLength(CU->getLength());
+    NewUnit.Format = CU->getFormat();
+    NewUnit.Length = CU->getLength();
     NewUnit.Version = CU->getVersion();
     if(NewUnit.Version >= 5)
       NewUnit.Type = (dwarf::UnitType)CU->getUnitType();

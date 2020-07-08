@@ -444,7 +444,7 @@ bool MutableAffineMap::isMultipleOf(unsigned idx, int64_t factor) const {
   if (results[idx].isMultipleOf(factor))
     return true;
 
-  // TODO(bondhugula): use simplifyAffineExpr and FlatAffineConstraints to
+  // TODO: use simplifyAffineExpr and FlatAffineConstraints to
   // complete this (for a more powerful analysis).
   return false;
 }
@@ -453,7 +453,7 @@ bool MutableAffineMap::isMultipleOf(unsigned idx, int64_t factor) const {
 // be pure for the simplification implemented.
 void MutableAffineMap::simplify() {
   // Simplify each of the results if possible.
-  // TODO(ntv): functional-style map
+  // TODO: functional-style map
   for (unsigned i = 0, e = getNumResults(); i < e; i++) {
     results[i] = simplifyAffineExpr(getResult(i), numDims, numSymbols);
   }

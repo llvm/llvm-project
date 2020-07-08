@@ -96,7 +96,7 @@
 // -----
 #hello_world = affine_map<(i, j) -> (i, 3*d0 + )> // expected-error {{use of undeclared identifier}}
 
-// TODO(bondhugula): Add more tests; coverage of error messages emitted not complete
+// TODO: Add more tests; coverage of error messages emitted not complete
 
 // -----
 #ABC = affine_map<(i,j) -> (i+j)>

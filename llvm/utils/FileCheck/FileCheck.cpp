@@ -97,12 +97,12 @@ static cl::opt<bool> AllowDeprecatedDagOverlap(
              "non-overlapping CHECK-DAG implementation.\n"));
 
 static cl::opt<bool> Verbose(
-    "v", cl::init(false),
+    "v", cl::init(false), cl::ZeroOrMore,
     cl::desc("Print directive pattern matches, or add them to the input dump\n"
              "if enabled.\n"));
 
 static cl::opt<bool> VerboseVerbose(
-    "vv", cl::init(false),
+    "vv", cl::init(false), cl::ZeroOrMore,
     cl::desc("Print information helpful in diagnosing internal FileCheck\n"
              "issues, or add it to the input dump if enabled.  Implies\n"
              "-v.\n"));
@@ -110,7 +110,6 @@ static cl::opt<bool> VerboseVerbose(
 // The order of DumpInputValue members affects their precedence, as documented
 // for -dump-input below.
 enum DumpInputValue {
-  DumpInputDefault,
   DumpInputNever,
   DumpInputFail,
   DumpInputAlways,
@@ -551,7 +550,7 @@ int main(int argc, char **argv) {
                               "FILECHECK_OPTS");
   DumpInputValue DumpInput =
       DumpInputs.empty()
-          ? DumpInputDefault
+          ? DumpInputFail
           : *std::max_element(DumpInputs.begin(), DumpInputs.end());
   if (DumpInput == DumpInputHelp) {
     DumpInputAnnotationHelp(outs());
@@ -667,9 +666,6 @@ int main(int argc, char **argv) {
   SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(
                             InputFileText, InputFile.getBufferIdentifier()),
                         SMLoc());
-
-  if (DumpInput == DumpInputDefault)
-    DumpInput = DumpInputFail;
 
   std::vector<FileCheckDiag> Diags;
   int ExitCode = FC.checkInput(SM, InputFileText,

@@ -1,7 +1,5 @@
-! RUN: %S/test_any.sh %s %t %f18
-! negative test -- invalid labels, out of range
 
-! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
+! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: Label '0' is out of range
 ! CHECK: Label '100000' is out of range
 ! CHECK: Label '123456' is out of range

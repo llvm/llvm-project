@@ -1,12 +1,12 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion -split-input-file | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion="fusion-maximal" -split-input-file | FileCheck %s --check-prefix=MAXIMAL
 
-// TODO(andydavis) Add more tests:
+// TODO: Add more tests:
 // *) Add nested fusion test cases when non-constant loop bound support is
 //    added to iteration domain in dependence check.
 // *) Add a test w/ floordiv/ceildiv/mod when supported in dependence check.
 // *) Add tests which check fused computation slice indexing and loop bounds.
-// TODO(andydavis) Test clean up: move memref allocs to func args.
+// TODO: Test clean up: move memref allocs to func args.
 
 // -----
 
@@ -317,7 +317,7 @@ func @should_fuse_producer_consumer() {
   }
   // Fusing loop %i0 to %i2 would violate the WAW dependence between %i0 and
   // %i1, but OK to fuse %i1 into %i2.
-  // TODO(andydavis) When the fusion pass is run to a fixed-point, it should
+  // TODO: When the fusion pass is run to a fixed-point, it should
   // fuse all three of these loop nests.
   // CHECK:      alloc() : memref<1xf32>
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
@@ -2570,3 +2570,67 @@ func @calc(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %le
 // CHECK-NEXT:    affine.store %{{.*}}, %arg{{.*}}[%arg{{.*}}] : memref<?xf32>
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
+
+// -----
+
+// CHECK-LABEL: func @should_not_fuse_since_non_affine_users
+func @should_not_fuse_since_non_affine_users(%in0 : memref<32xf32>,
+                      %in1 : memref<32xf32>) {
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = addf %lhs, %rhs : f32
+    affine.store %add, %in0[%d] : memref<32xf32>
+  }
+  affine.for %d = 0 to 32 {
+    %lhs = load %in0[%d] : memref<32xf32>
+    %rhs = load %in1[%d] : memref<32xf32>
+    %add = subf %lhs, %rhs : f32
+    store %add, %in0[%d] : memref<32xf32>
+  }
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = mulf %lhs, %rhs : f32
+    affine.store %add, %in0[%d] : memref<32xf32>
+  }
+  return
+}
+
+// CHECK:  affine.for
+// CHECK:    addf
+// CHECK:  affine.for
+// CHECK:    subf
+// CHECK:  affine.for
+// CHECK:    mulf
+
+// -----
+
+// CHECK-LABEL: func @should_not_fuse_since_top_level_non_affine_users
+func @should_not_fuse_since_top_level_non_affine_users(%in0 : memref<32xf32>,
+                      %in1 : memref<32xf32>) {
+  %sum = alloc() : memref<f32>
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = addf %lhs, %rhs : f32
+    store %add, %sum[] : memref<f32>
+    affine.store %add, %in0[%d] : memref<32xf32>
+  }
+  %load_sum = load %sum[] : memref<f32>
+  affine.for %d = 0 to 32 {
+    %lhs = affine.load %in0[%d] : memref<32xf32>
+    %rhs = affine.load %in1[%d] : memref<32xf32>
+    %add = mulf %lhs, %rhs : f32
+    %sub = subf %add, %load_sum: f32
+    affine.store %sub, %in0[%d] : memref<32xf32>
+  }
+  dealloc %sum : memref<f32>
+  return
+}
+
+// CHECK:  affine.for
+// CHECK:    addf
+// CHECK:  affine.for
+// CHECK:    mulf
+// CHECK:    subf

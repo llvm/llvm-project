@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-detect < %s
+; RUN: opt %loadPolly -basic-aa -polly-detect < %s
 
 ; Used to fail with:
 ; ../../isl/isl_aff.c:591: position out of bounds

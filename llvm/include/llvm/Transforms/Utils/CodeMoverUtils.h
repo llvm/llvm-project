@@ -38,14 +38,16 @@ bool isControlFlowEquivalent(const BasicBlock &BB0, const BasicBlock &BB1,
 
 /// Return true if \p I can be safely moved before \p InsertPoint.
 bool isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
-                        DominatorTree &DT, const PostDominatorTree &PDT,
-                        DependenceInfo &DI);
+                        DominatorTree &DT,
+                        const PostDominatorTree *PDT = nullptr,
+                        DependenceInfo *DI = nullptr);
 
 /// Return true if all instructions (except the terminator) in \p BB can be
 /// safely moved before \p InsertPoint.
 bool isSafeToMoveBefore(BasicBlock &BB, Instruction &InsertPoint,
-                        DominatorTree &DT, const PostDominatorTree &PDT,
-                        DependenceInfo &DI);
+                        DominatorTree &DT,
+                        const PostDominatorTree *PDT = nullptr,
+                        DependenceInfo *DI = nullptr);
 
 /// Move instructions, in an order-preserving manner, from \p FromBB to the
 /// beginning of \p ToBB when proven safe.

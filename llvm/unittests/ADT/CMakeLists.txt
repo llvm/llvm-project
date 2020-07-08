@@ -8,6 +8,7 @@ add_llvm_unittest(ADTTests
   APIntTest.cpp
   APSIntTest.cpp
   ArrayRefTest.cpp
+  BitFieldsTest.cpp
   BitmaskEnumTest.cpp
   BitVectorTest.cpp
   BreadthFirstIteratorTest.cpp

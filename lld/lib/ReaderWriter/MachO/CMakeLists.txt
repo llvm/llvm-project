@@ -24,6 +24,7 @@ add_lld_library(lldMachO
     Demangle
     Object
     Support
+    TextAPI
 
   LINK_LIBS
     lldCommon

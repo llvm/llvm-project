@@ -14,9 +14,9 @@ llvm_add_library(MLIRTableGen STATIC
   Constraint.cpp
   Dialect.cpp
   Format.cpp
+  Interfaces.cpp
   Operator.cpp
   OpClass.cpp
-  OpInterfaces.cpp
   OpTrait.cpp
   Pass.cpp
   Pattern.cpp

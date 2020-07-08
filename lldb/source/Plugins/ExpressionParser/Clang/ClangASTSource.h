@@ -197,11 +197,6 @@ public:
 
   clang::Sema *getSema();
 
-  void SetImportInProgress(bool import_in_progress) {
-    m_import_in_progress = import_in_progress;
-  }
-  bool GetImportInProgress() { return m_import_in_progress; }
-
   void SetLookupsEnabled(bool lookups_enabled) {
     m_lookups_enabled = lookups_enabled;
   }
@@ -376,7 +371,6 @@ protected:
 
   friend struct NameSearchContext;
 
-  bool m_import_in_progress;
   bool m_lookups_enabled;
 
   /// The target to use in finding variables and types.

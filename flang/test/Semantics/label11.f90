@@ -1,12 +1,11 @@
-! RUN: %S/test_any.sh %s %t %f18
-! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
+! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: BLOCK DATA subprogram name mismatch
 ! CHECK: should be
 ! CHECK: FUNCTION name mismatch
 ! CHECK: SUBROUTINE name mismatch
 ! CHECK: PROGRAM name mismatch
 ! CHECK: SUBMODULE name mismatch
-! CHECK: INTERFACE generic-name .t7. mismatch
+! CHECK: INTERFACE generic-name (t7) mismatch
 ! CHECK: mismatched INTERFACE
 ! CHECK: derived type definition name mismatch
 ! CHECK: MODULE PROCEDURE name mismatch

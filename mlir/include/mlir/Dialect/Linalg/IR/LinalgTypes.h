@@ -32,7 +32,7 @@ enum LinalgTypes {
 ///      %0 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
 ///    }
 /// ```
-class RangeType : public Type::TypeBase<RangeType, Type> {
+class RangeType : public Type::TypeBase<RangeType, Type, TypeStorage> {
 public:
   // Used for generic hooks in TypeBase.
   using Base::Base;

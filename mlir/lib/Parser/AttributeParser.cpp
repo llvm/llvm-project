@@ -345,7 +345,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
     return apVal ? FloatAttr::get(floatType, *apVal) : Attribute();
   }
 
-  if (!type.isa<IntegerType>() && !type.isa<IndexType>())
+  if (!type.isa<IntegerType, IndexType>())
     return emitError(loc, "integer literal not valid for specified type"),
            nullptr;
 
@@ -784,7 +784,7 @@ Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
 
   auto name = getToken().getStringValue();
   auto *dialect = builder.getContext()->getRegisteredDialect(name);
-  // TODO(shpeisman): Allow for having an unknown dialect on an opaque
+  // TODO: Allow for having an unknown dialect on an opaque
   // attribute. Otherwise, it can't be roundtripped without having the dialect
   // registered.
   if (!dialect)
@@ -823,7 +823,7 @@ ShapedType Parser::parseElementsLiteralType(Type type) {
       return nullptr;
   }
 
-  if (!type.isa<RankedTensorType>() && !type.isa<VectorType>()) {
+  if (!type.isa<RankedTensorType, VectorType>()) {
     emitError("elements literal must be a ranked tensor or vector type");
     return nullptr;
   }

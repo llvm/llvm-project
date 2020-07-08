@@ -224,8 +224,7 @@ define i4 @PR45762(i3 %x4) {
 ; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
 ; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl i4 1, [[T7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i3 [[X4]], 0
-; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP1]], i3 0, i3 [[T4]]
-; CHECK-NEXT:    [[UMUL_23:%.*]] = zext i3 [[NARROW]] to i4
+; CHECK-NEXT:    [[UMUL_23:%.*]] = select i1 [[TMP1]], i4 0, i4 [[T7]]
 ; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_23]]
 ; CHECK-NEXT:    ret i4 [[SEL_71]]
 ;

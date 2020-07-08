@@ -18,8 +18,34 @@ kernel void test () {
   // vgpr constraints
   __asm__ ("v_mov_b32 %0, %1" : "=v" (vgpr) : "v" (imm) : );
 
-  // 'A' constraint
+  // 'I' constraint (an immediate integer in the range -16 to 64)
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "I" (imm) : );
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "I" (-16) : );
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "I" (64) : );
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "I" (-17) : ); // expected-error {{value '-17' out of range for constraint 'I'}}
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "I" (65) : ); // expected-error {{value '65' out of range for constraint 'I'}}
+
+  // 'J' constraint (an immediate 16-bit signed integer)
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "J" (imm) : );
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "J" (-32768) : );
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "J" (32767) : );
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "J" (-32769) : ); // expected-error {{value '-32769' out of range for constraint 'J'}}
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "J" (32768) : ); // expected-error {{value '32768' out of range for constraint 'J'}}
+
+  // 'A' constraint (an immediate constant that can be inlined)
   __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "A" (imm) : );
+
+  // 'B' constraint (an immediate 32-bit signed integer)
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "B" (imm) : );
+
+  // 'C' constraint (an immediate 32-bit unsigned integer or 'A' constraint)
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "C" (imm) : );
+
+  // 'DA' constraint (an immediate 64-bit constant that can be split into two 'A' constants)
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "DA" (imm) : );
+
+  // 'DB' constraint (an immediate 64-bit constant that can be split into two 'B' constants)
+  __asm__ ("s_mov_b32 %0, %1" : "=s" (sgpr) : "DB" (imm) : );
 
 }
 

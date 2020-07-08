@@ -165,7 +165,7 @@ void emitScalarImplementation(ArrayRef<Value> allIvs,
   SmallVector<Value, 4> indexedValues;
   indexedValues.reserve(nInputs + nOutputs);
 
-  // TODO(mravishankar): Avoid the loads if the corresponding argument of the
+  // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
   // 1.a. Emit load from input views.
   for (unsigned i = 0; i < nInputs; ++i) {
@@ -183,7 +183,7 @@ void emitScalarImplementation(ArrayRef<Value> allIvs,
         IndexedValueType(linalgOp.getOutputBuffer(i))(indexing));
   }
 
-  // TODO(ntv): When a region inliner exists, use it.
+  // TODO: When a region inliner exists, use it.
   // 2. Inline region, currently only works for a single basic block.
   // 3. Emit store.
   SmallVector<SmallVector<Value, 8>, 8> indexing;
@@ -246,7 +246,7 @@ void emitScalarImplementation(ArrayRef<Value> allIvs, DotOp dotOp) {
 template <typename IndexedValueType>
 Value getConvOpInput(ConvOp convOp, StdIndexedValue im,
                      MutableArrayRef<Value> imIdx) {
-  // TODO(ntv): add a level of indirection to linalg.generic.
+  // TODO: add a level of indirection to linalg.generic.
   if (!convOp.padding())
     return im(imIdx);
 
@@ -263,16 +263,16 @@ Value getConvOpInput(ConvOp convOp, StdIndexedValue im,
       continue;
     }
 
-    using edsc::op::operator<;
-    using edsc::op::operator>=;
+    using edsc::op::sge;
+    using edsc::op::slt;
     using edsc::op::operator||;
-    Value leftOutOfBound = dim < zeroIndex;
+    Value leftOutOfBound = slt(dim, zeroIndex);
     if (conds.empty())
       conds.push_back(leftOutOfBound);
     else
       conds.push_back(conds.back() || leftOutOfBound);
     Value rightBound = std_dim(convOp.input(), idx);
-    conds.push_back(conds.back() || (dim >= rightBound));
+    conds.push_back(conds.back() || (sge(dim, rightBound)));
 
     // When padding is involved, the indices will only be shifted to negative,
     // so having a max op is enough.
@@ -333,23 +333,28 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs, ConvOp convOp) {
 
 template <typename IndexedValueType>
 void emitScalarImplementation(ArrayRef<Value> allIvs, PoolingMaxOp op) {
-  auto indices = getInputAndOutputIndices(allIvs, op);
+  InputAndOutputIndices indices = getInputAndOutputIndices(allIvs, op);
   // Emit scalar form.
-  Value lhs = std_load(op.output(), indices.outputs);
-  Value rhs = std_load(op.input(), indices.inputs);
-  using edsc::op::operator>;
-  Value maxValue = std_select(lhs > rhs, lhs, rhs);
-  std_store(maxValue, op.output(), indices.outputs);
+  IndexedValueType output(op.output());
+  IndexedValueType input(op.input());
+  Value lhs = output(indices.outputs);
+  Value rhs = input(indices.inputs);
+  using edsc::op::sgt;
+  Value maxValue = std_select(sgt(lhs, rhs), lhs, rhs);
+  output(indices.outputs) = maxValue;
 }
+
 template <typename IndexedValueType>
 void emitScalarImplementation(ArrayRef<Value> allIvs, PoolingMinOp op) {
-  auto indices = getInputAndOutputIndices(allIvs, op);
+  InputAndOutputIndices indices = getInputAndOutputIndices(allIvs, op);
   // Emit scalar form.
-  Value lhs = std_load(op.output(), indices.outputs);
-  Value rhs = std_load(op.input(), indices.inputs);
-  using edsc::op::operator<;
-  Value minValue = std_select(lhs < rhs, lhs, rhs);
-  std_store(minValue, op.output(), indices.outputs);
+  IndexedValueType output(op.output());
+  IndexedValueType input(op.input());
+  Value lhs = output(indices.outputs);
+  Value rhs = input(indices.inputs);
+  using edsc::op::slt;
+  Value minValue = std_select(slt(lhs, rhs), lhs, rhs);
+  output(indices.outputs) = minValue;
 }
 template <typename IndexedValueType>
 void emitScalarImplementation(ArrayRef<Value> allIvs, PoolingSumOp op) {
@@ -404,7 +409,7 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs,
   for (unsigned i = 0; i < nLoops; ++i)
     indexedValues.push_back(allIvs[i]);
 
-  // TODO(mravishankar): Avoid the loads if the corresponding argument of the
+  // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
   // 1.a. Emit load from input views.
   for (unsigned i = 0; i < nInputs; ++i) {
@@ -423,7 +428,7 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs,
         IndexedValueType(indexedGenericOp.getOutputBuffer(i))(indexing));
   }
 
-  // TODO(ntv): When a region inliner exists, use it.
+  // TODO: When a region inliner exists, use it.
   // 2. Inline region, currently only works for a single basic block.
   // 3. Emit store.
   SmallVector<SmallVector<Value, 8>, 8> indexing;
@@ -555,7 +560,7 @@ static void lowerLinalgToLoopsImpl(FuncOp funcOp, MLIRContext *context) {
   OwningRewritePatternList patterns;
   // Canonicalization and folding patterns applied greedily allow cleaning up
   // the emitted IR on the fly.
-  // TODO(ntv) fold view and subview ops?
+  // TODO: fold view and subview ops?
   insertPatterns<LoopType,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"

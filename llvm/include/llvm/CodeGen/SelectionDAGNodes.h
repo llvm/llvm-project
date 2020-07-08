@@ -1576,6 +1576,8 @@ public:
   uint64_t getLimitedValue(uint64_t Limit = UINT64_MAX) {
     return Value->getLimitedValue(Limit);
   }
+  MaybeAlign getMaybeAlignValue() const { return Value->getMaybeAlignValue(); }
+  Align getAlignValue() const { return Value->getAlignValue(); }
 
   bool isOne() const { return Value->isOne(); }
   bool isNullValue() const { return Value->isZero(); }

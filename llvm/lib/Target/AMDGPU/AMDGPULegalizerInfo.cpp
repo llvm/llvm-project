@@ -121,10 +121,10 @@ static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
     unsigned Size = Ty.getSizeInBits();
 
     LLT CoercedTy;
-    if (Size < 32) {
+    if (Size <= 32) {
       // <2 x s8> -> s16
-      assert(Size == 16);
-      CoercedTy = LLT::scalar(16);
+      // <4 x s8> -> s32
+      CoercedTy = LLT::scalar(Size);
     } else
       CoercedTy = LLT::scalarOrVector(Size / 32, 32);
 
@@ -982,15 +982,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Actions.bitcastIf(
       [=](const LegalityQuery &Query) -> bool {
         const LLT Ty = Query.Types[0];
+        const unsigned Size = Ty.getSizeInBits();
 
-        // Do not cast an extload/truncstore.
-        if (Ty.getSizeInBits() != Query.MMODescrs[0].SizeInBits)
-          return false;
+        if (Size != Query.MMODescrs[0].SizeInBits)
+          return Size <= 32 && Ty.isVector();
 
         if (loadStoreBitcastWorkaround(Ty) && isRegisterType(Ty))
           return true;
-        const unsigned Size = Ty.getSizeInBits();
-        return Ty.isVector() && isRegisterSize(Size) &&
+        return Ty.isVector() && (Size <= 32 || isRegisterSize(Size)) &&
                !isRegisterVectorElementType(Ty.getElementType());
       }, bitcastToRegisterType(0));
 
@@ -2443,7 +2442,8 @@ const ArgDescriptor *AMDGPULegalizerInfo::getArgDescriptor(
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
   const ArgDescriptor *Arg;
   const TargetRegisterClass *RC;
-  std::tie(Arg, RC) = MFI->getPreloadedValue(ArgType);
+  LLT ArgTy;
+  std::tie(Arg, RC, ArgTy) = MFI->getPreloadedValue(ArgType);
   if (!Arg) {
     LLVM_DEBUG(dbgs() << "Required arg register missing\n");
     return nullptr;
@@ -3179,8 +3179,9 @@ bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
 
   const ArgDescriptor *Arg;
   const TargetRegisterClass *RC;
-  std::tie(Arg, RC)
-    = MFI->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
+  LLT ArgTy;
+  std::tie(Arg, RC, ArgTy) =
+      MFI->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
   if (!Arg)
     return false;
 

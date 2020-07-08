@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp4 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp4 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
 void foo() {
 }
@@ -103,7 +105,7 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(T) // expected-error {{'T' does not refer to a value}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target parallel for map(I) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target parallel for map(I) // omp4-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}} omp5-error 2 {{expected addressable lvalue in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(S2::S2s)
   for (i = 0; i < argc; ++i) foo();
@@ -121,7 +123,8 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(to x) // expected-error {{expected ',' or ')' in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target parallel for map(tofrom: argc > 0 ? x : y) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}} 
+#pragma omp target parallel for map(tofrom \
+                                    : argc > 0 ? x : y) // omp4-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}} omp5-error 2 {{expected addressable lvalue in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(argc)
   for (i = 0; i < argc; ++i) foo();
@@ -228,8 +231,10 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for map(to, x)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(to x) // expected-error {{expected ',' or ')' in 'map' clause}}
-  for (i = 0; i < argc; ++i) foo();
-#pragma omp target parallel for map(tofrom: argc > 0 ? argv[1] : argv[2]) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  for (i = 0; i < argc; ++i)
+    foo();
+#pragma omp target parallel for map(tofrom \
+                                    : argc > 0 ? argv[1] : argv[2]) // omp4-error {{expected expression containing only member accesses and/or array sections based on named variables}} omp5-error {{expected addressable lvalue in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(argc)
   for (i = 0; i < argc; ++i) foo();

@@ -17,6 +17,7 @@ int (* __attribute__((acquire_handle("Fuchsia"))) fpt)(char *); // expected-warn
 auto lambdat = [](int handle __attribute__((use_handle("Fuchsia"))))
     __attribute__((acquire_handle("Fuchsia"))) -> int { return 0; };
 int __attribute((acquire_handle("Fuchsia"))) ta; // expected-warning {{'acquire_handle' attribute only applies to functions, typedefs, and parameters}}
+int open(const char *path, int flags, ...) [[clang::acquire_handle]]; // expected-error {{'acquire_handle' attribute takes one argument}}
 
 // Typedefs.
 typedef int callback(char *) __attribute__((acquire_handle("Fuchsia")));

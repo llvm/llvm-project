@@ -261,7 +261,7 @@ private:
   T handle;
 };
 
-void doNotWarnOnUnkownDtor() {
+void doNotWarnOnUnknownDtor() {
   HandleWrapperUnkonwDtor<zx_handle_t> w1;
   zx_handle_t sb;
   if (zx_channel_create(0, w1.get_handle_address(), &sb))

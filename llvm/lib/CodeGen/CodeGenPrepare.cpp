@@ -60,7 +60,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
-#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -5577,9 +5576,9 @@ bool CodeGenPrepare::mergeSExts(Function &F) {
   return Changed;
 }
 
-// Spliting large data structures so that the GEPs accessing them can have
+// Splitting large data structures so that the GEPs accessing them can have
 // smaller offsets so that they can be sunk to the same blocks as their users.
-// For example, a large struct starting from %base is splitted into two parts
+// For example, a large struct starting from %base is split into two parts
 // where the second part starts from %new_base.
 //
 // Before:
@@ -5654,7 +5653,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
                                         GEP->getAddressSpace())) {
           // We need to create a new base if the offset to the current base is
           // too large to fit into the addressing mode. So, a very large struct
-          // may be splitted into several parts.
+          // may be split into several parts.
           BaseGEP = GEP;
           BaseOffset = Offset;
           NewBaseGEP = nullptr;

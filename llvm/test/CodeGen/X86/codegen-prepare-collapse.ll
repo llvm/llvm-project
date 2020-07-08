@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel=true -O1 -mtriple=x86_64-unkown-linux-gnu -start-before=codegenprepare -stop-after=codegenprepare -o - < %s | FileCheck %s
+; RUN: llc -fast-isel=true -O1 -mtriple=x86_64-unknown-linux-gnu -start-before=codegenprepare -stop-after=codegenprepare -o - < %s | FileCheck %s
 
 ; CHECK-LABEL: @foo
 define void @foo() {

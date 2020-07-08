@@ -9,6 +9,7 @@
 #include "ElseAfterReturnCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -18,52 +19,48 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
-namespace {
 static const char ReturnStr[] = "return";
 static const char ContinueStr[] = "continue";
 static const char BreakStr[] = "break";
 static const char ThrowStr[] = "throw";
 static const char WarningMessage[] = "do not use 'else' after '%0'";
 static const char WarnOnUnfixableStr[] = "WarnOnUnfixable";
+static const char WarnOnConditionVariablesStr[] = "WarnOnConditionVariables";
 
-const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
+static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
   if (!Node)
     return nullptr;
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Node)) {
-    if (DeclRef->getDecl()->getID() == DeclIdentifier) {
+    if (DeclRef->getDecl()->getID() == DeclIdentifier)
       return DeclRef;
-    }
   } else {
     for (const Stmt *ChildNode : Node->children()) {
-      if (const DeclRefExpr *Result = findUsage(ChildNode, DeclIdentifier)) {
+      if (const DeclRefExpr *Result = findUsage(ChildNode, DeclIdentifier))
         return Result;
-      }
     }
   }
   return nullptr;
 }
 
-const DeclRefExpr *
+static const DeclRefExpr *
 findUsageRange(const Stmt *Node,
-               const llvm::iterator_range<int64_t *> &DeclIdentifiers) {
+               const llvm::ArrayRef<int64_t> &DeclIdentifiers) {
   if (!Node)
     return nullptr;
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Node)) {
-    if (llvm::is_contained(DeclIdentifiers, DeclRef->getDecl()->getID())) {
+    if (llvm::is_contained(DeclIdentifiers, DeclRef->getDecl()->getID()))
       return DeclRef;
-    }
   } else {
     for (const Stmt *ChildNode : Node->children()) {
       if (const DeclRefExpr *Result =
-              findUsageRange(ChildNode, DeclIdentifiers)) {
+              findUsageRange(ChildNode, DeclIdentifiers))
         return Result;
-      }
     }
   }
   return nullptr;
 }
 
-const DeclRefExpr *checkInitDeclUsageInElse(const IfStmt *If) {
+static const DeclRefExpr *checkInitDeclUsageInElse(const IfStmt *If) {
   const auto *InitDeclStmt = dyn_cast_or_null<DeclStmt>(If->getInit());
   if (!InitDeclStmt)
     return nullptr;
@@ -80,25 +77,23 @@ const DeclRefExpr *checkInitDeclUsageInElse(const IfStmt *If) {
   return findUsageRange(If->getElse(), DeclIdentifiers);
 }
 
-const DeclRefExpr *checkConditionVarUsageInElse(const IfStmt *If) {
-  const VarDecl *CondVar = If->getConditionVariable();
-  return CondVar != nullptr ? findUsage(If->getElse(), CondVar->getID())
-                            : nullptr;
+static const DeclRefExpr *checkConditionVarUsageInElse(const IfStmt *If) {
+  if (const VarDecl *CondVar = If->getConditionVariable())
+    return findUsage(If->getElse(), CondVar->getID());
+  return nullptr;
 }
 
-bool containsDeclInScope(const Stmt *Node) {
-  if (isa<DeclStmt>(Node)) {
+static bool containsDeclInScope(const Stmt *Node) {
+  if (isa<DeclStmt>(Node))
     return true;
-  }
-  if (const auto *Compound = dyn_cast<CompoundStmt>(Node)) {
+  if (const auto *Compound = dyn_cast<CompoundStmt>(Node))
     return llvm::any_of(Compound->body(), [](const Stmt *SubNode) {
       return isa<DeclStmt>(SubNode);
     });
-  }
   return false;
 }
 
-void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
+static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
                            const Stmt *Else, SourceLocation ElseLoc) {
   auto Remap = [&](SourceLocation Loc) {
     return Context.getSourceManager().getExpansionLoc(Loc);
@@ -132,15 +127,17 @@ void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
         SourceRange(ElseExpandedLoc, EndLoc), Repl);
   }
 }
-} // namespace
 
 ElseAfterReturnCheck::ElseAfterReturnCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WarnOnUnfixable(Options.get(WarnOnUnfixableStr, true)) {}
+      WarnOnUnfixable(Options.get(WarnOnUnfixableStr, true)),
+      WarnOnConditionVariables(Options.get(WarnOnConditionVariablesStr, true)) {
+}
 
 void ElseAfterReturnCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, WarnOnUnfixableStr, WarnOnUnfixable);
+  Options.store(Opts, WarnOnConditionVariablesStr, WarnOnConditionVariables);
 }
 
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
@@ -185,6 +182,8 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (checkConditionVarUsageInElse(If) != nullptr) {
+    if (!WarnOnConditionVariables)
+      return;
     if (IsLastInScope) {
       // If the if statement is the last statement its enclosing statements
       // scope, we can pull the decl out of the if statement.
@@ -218,6 +217,8 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (checkInitDeclUsageInElse(If) != nullptr) {
+    if (!WarnOnConditionVariables)
+      return;
     if (IsLastInScope) {
       // If the if statement is the last statement its enclosing statements
       // scope, we can pull the decl out of the if statement.

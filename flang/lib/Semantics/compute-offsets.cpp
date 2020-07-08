@@ -8,6 +8,7 @@
 
 #include "compute-offsets.h"
 #include "../../runtime/descriptor.h"
+#include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
@@ -39,19 +40,23 @@ private:
     std::size_t alignment{0};
   };
   struct SymbolAndOffset {
-    Symbol *symbol{nullptr};
-    std::size_t offset{0};
+    SymbolAndOffset(Symbol &s, std::size_t off, const EquivalenceObject &obj)
+        : symbol{&s}, offset{off}, object{&obj} {}
+    SymbolAndOffset(const SymbolAndOffset &) = default;
+    Symbol *symbol;
+    std::size_t offset;
+    const EquivalenceObject *object;
   };
 
   void Compute(Scope &);
   void DoScope(Scope &);
   void DoCommonBlock(Symbol &);
-  void DoEquivalenceSet(EquivalenceSet &);
-  std::size_t GetOffset(SymbolAndOffset &);
+  void DoEquivalenceSet(const EquivalenceSet &);
+  SymbolAndOffset Resolve(const SymbolAndOffset &);
   std::size_t ComputeOffset(const EquivalenceObject &);
   void DoSymbol(Symbol &);
   SizeAndAlignment GetSizeAndAlignment(const Symbol &);
-  SizeAndAlignment GetElementSize(const Symbol &, bool isSubstring = false);
+  SizeAndAlignment GetElementSize(const Symbol &);
   std::size_t CountElements(const Symbol &);
   static std::size_t Align(std::size_t, std::size_t);
   static SizeAndAlignment GetIntrinsicSizeAndAlignment(TypeCategory, int);
@@ -85,7 +90,7 @@ void ComputeOffsetsHelper::DoScope(Scope &scope) {
     DoCommonBlock(*pair.second);
   }
   // Build dependents_ from equivalences: symbol -> symbol+offset
-  for (EquivalenceSet &set : scope.equivalenceSets()) {
+  for (const EquivalenceSet &set : scope.equivalenceSets()) {
     DoEquivalenceSet(set);
   }
   offset_ = 0;
@@ -100,7 +105,8 @@ void ComputeOffsetsHelper::DoScope(Scope &scope) {
     if (symbol->size() == 0) {
       SizeAndAlignment s{GetSizeAndAlignment(*symbol)};
       symbol->set_size(s.size);
-      symbol->set_offset(GetOffset(dep));
+      SymbolAndOffset resolved{Resolve(dep)};
+      symbol->set_offset(dep.symbol->offset() + resolved.offset);
       offset_ = std::max(offset_, symbol->offset() + symbol->size());
     }
   }
@@ -108,12 +114,16 @@ void ComputeOffsetsHelper::DoScope(Scope &scope) {
   scope.set_alignment(alignment_);
 }
 
-std::size_t ComputeOffsetsHelper::GetOffset(SymbolAndOffset &dep) {
+auto ComputeOffsetsHelper::Resolve(const SymbolAndOffset &dep)
+    -> SymbolAndOffset {
   auto it{dependents_.find(*dep.symbol)};
   if (it == dependents_.end()) {
-    return dep.symbol->offset() + dep.offset;
+    return dep;
   } else {
-    return GetOffset(it->second) + dep.offset;
+    SymbolAndOffset result{Resolve(it->second)};
+    result.offset += dep.offset;
+    result.object = dep.object;
+    return result;
   }
 }
 
@@ -128,22 +138,51 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   details.set_alignment(alignment_);
 }
 
-void ComputeOffsetsHelper::DoEquivalenceSet(EquivalenceSet &set) {
+void ComputeOffsetsHelper::DoEquivalenceSet(const EquivalenceSet &set) {
   std::vector<SymbolAndOffset> symbolOffsets;
-  SymbolAndOffset max;
-  for (EquivalenceObject &object : set) {
+  std::optional<std::size_t> representative;
+  for (const EquivalenceObject &object : set) {
     std::size_t offset{ComputeOffset(object)};
-    symbolOffsets.push_back({&object.symbol, offset});
-    if (offset >= max.offset) {
-      max.offset = offset;
-      max.symbol = &object.symbol;
+    SymbolAndOffset resolved{
+        Resolve(SymbolAndOffset{object.symbol, offset, object})};
+    symbolOffsets.push_back(resolved);
+    if (!representative ||
+        resolved.offset >= symbolOffsets[*representative].offset) {
+      // The equivalenced object with the largest offset from its resolved
+      // symbol will be the representative of this set, since the offsets
+      // of the other objects will be positive relative to it.
+      representative = symbolOffsets.size() - 1;
     }
   }
-  CHECK(max.symbol);
-  for (auto &[symbol, offset] : symbolOffsets) {
-    if (symbol != max.symbol) {
-      dependents_.emplace(
-          *symbol, SymbolAndOffset{max.symbol, max.offset - offset});
+  CHECK(representative);
+  const SymbolAndOffset &base{symbolOffsets[*representative]};
+  for (const auto &[symbol, offset, object] : symbolOffsets) {
+    if (symbol == base.symbol) {
+      if (offset != base.offset) {
+        auto x{evaluate::OffsetToDesignator(
+            context_.foldingContext(), *symbol, base.offset, 1)};
+        auto y{evaluate::OffsetToDesignator(
+            context_.foldingContext(), *symbol, offset, 1)};
+        if (x && y) {
+          context_
+              .Say(base.object->source,
+                  "'%s' and '%s' cannot have the same first storage unit"_err_en_US,
+                  x->AsFortran(), y->AsFortran())
+              .Attach(object->source, "Incompatible reference to '%s'"_en_US,
+                  y->AsFortran());
+        } else { // error recovery
+          context_
+              .Say(base.object->source,
+                  "'%s' (offset %zd bytes and %zd bytes) cannot have the same first storage unit"_err_en_US,
+                  symbol->name(), base.offset, offset)
+              .Attach(object->source,
+                  "Incompatible reference to '%s' offset %zd bytes"_en_US,
+                  symbol->name(), offset);
+        }
+      }
+    } else {
+      dependents_.emplace(*symbol,
+          SymbolAndOffset{*base.symbol, base.offset - offset, *object});
     }
   }
 }
@@ -152,9 +191,6 @@ void ComputeOffsetsHelper::DoEquivalenceSet(EquivalenceSet &set) {
 std::size_t ComputeOffsetsHelper::ComputeOffset(
     const EquivalenceObject &object) {
   std::size_t offset{0};
-  if (object.substringStart) {
-    offset = *object.substringStart - 1;
-  }
   if (!object.subscripts.empty()) {
     const ArraySpec &shape{object.symbol.get<ObjectEntityDetails>().shape()};
     auto lbound{[&](std::size_t i) {
@@ -172,8 +208,17 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
       offset *= ubound(i) - lbound(i) + 1;
     }
   }
-  return offset *
-      GetElementSize(object.symbol, object.substringStart.has_value()).size;
+  auto result{offset * GetElementSize(object.symbol).size};
+  if (object.substringStart) {
+    int kind{context_.defaultKinds().GetDefaultKind(TypeCategory::Character)};
+    if (const DeclTypeSpec * type{object.symbol.GetType()}) {
+      if (const IntrinsicTypeSpec * intrinsic{type->AsIntrinsic()}) {
+        kind = ToInt64(intrinsic->kind()).value_or(kind);
+      }
+    }
+    result += kind * (*object.substringStart - 1);
+  }
+  return result;
 }
 
 void ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
@@ -203,8 +248,8 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(const Symbol &symbol)
   return result;
 }
 
-auto ComputeOffsetsHelper::GetElementSize(
-    const Symbol &symbol, bool isSubstring) -> SizeAndAlignment {
+auto ComputeOffsetsHelper::GetElementSize(const Symbol &symbol)
+    -> SizeAndAlignment {
   const DeclTypeSpec *type{symbol.GetType()};
   if (!type) {
     return {};
@@ -226,7 +271,7 @@ auto ComputeOffsetsHelper::GetElementSize(
     if (auto kind{ToInt64(intrinsic->kind())}) {
       result = GetIntrinsicSizeAndAlignment(intrinsic->category(), *kind);
     }
-    if (!isSubstring && type->category() == DeclTypeSpec::Character) {
+    if (type->category() == DeclTypeSpec::Character) {
       ParamValue length{type->characterTypeSpec().length()};
       CHECK(length.isExplicit()); // else should be descriptor
       if (MaybeIntExpr lengthExpr{length.GetExplicit()}) {

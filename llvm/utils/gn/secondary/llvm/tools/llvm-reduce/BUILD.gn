@@ -17,6 +17,7 @@ executable("llvm-reduce") {
     "deltas/ReduceGlobalVars.cpp",
     "deltas/ReduceInstructions.cpp",
     "deltas/ReduceMetadata.cpp",
+    "deltas/ReduceOperandBundles.cpp",
     "llvm-reduce.cpp",
   ]
 }

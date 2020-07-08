@@ -39,6 +39,7 @@ public:
   void set_mayPosition(bool yes) { mayPosition_ = yes; }
   FileOffset position() const { return position_; }
   bool isTerminal() const { return isTerminal_; }
+  std::optional<FileOffset> knownSize() const { return knownSize_; }
 
   bool IsOpen() const { return fd_ >= 0; }
   void Open(OpenStatus, Position, IoErrorHandler &);
@@ -94,5 +95,7 @@ private:
   int nextId_;
   OwningPtr<Pending> pending_;
 };
+
+bool IsATerminal(int fd);
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_FILE_H_

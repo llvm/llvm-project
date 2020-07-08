@@ -183,7 +183,8 @@ def ForOp : SCF_Op<"for",
 
 def IfOp : SCF_Op<"if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       SingleBlockImplicitTerminator<"YieldOp">, RecursiveSideEffects]> {
+       SingleBlockImplicitTerminator<"YieldOp">, RecursiveSideEffects,
+       NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for
@@ -346,6 +347,8 @@ def ParallelOp : SCF_Op<"parallel",
     unsigned getNumLoops() { return step().size(); }
     unsigned getNumReductions() { return initVals().size(); }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {

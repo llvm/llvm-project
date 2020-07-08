@@ -36,6 +36,10 @@ add_clang_library(clangDaemon
   CollectMacros.cpp
   CompileCommands.cpp
   Compiler.cpp
+  Config.cpp
+  ConfigCompile.cpp
+  ConfigProvider.cpp
+  ConfigYAML.cpp
   Diagnostics.cpp
   DraftStore.cpp
   ExpectedTypes.cpp

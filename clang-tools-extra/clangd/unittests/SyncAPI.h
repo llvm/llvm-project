@@ -44,13 +44,10 @@ llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
                                     Position Pos, StringRef NewName,
                                     const clangd::RenameOptions &RenameOpts);
 
+llvm::Expected<tooling::Replacements>
+runFormatFile(ClangdServer &Server, PathRef File, StringRef Code);
+
 std::string runDumpAST(ClangdServer &Server, PathRef File);
-
-llvm::Expected<std::vector<SymbolInformation>>
-runWorkspaceSymbols(ClangdServer &Server, StringRef Query, int Limit);
-
-Expected<std::vector<DocumentSymbol>> runDocumentSymbols(ClangdServer &Server,
-                                                         PathRef File);
 
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, StringRef Query);
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, const FuzzyFindRequest &Req);

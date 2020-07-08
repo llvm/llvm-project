@@ -1036,6 +1036,14 @@ struct Attributor {
     identifyDefaultAbstractAttributes(const_cast<Function &>(F));
   }
 
+  /// Helper function to remove callsite.
+  void removeCallSite(CallInst *CI) {
+    if (!CI)
+      return;
+
+    CGUpdater.removeCallSite(*CI);
+  }
+
   /// Record that \p U is to be replaces with \p NV after information was
   /// manifested. This also triggers deletion of trivially dead istructions.
   bool changeUseAfterManifest(Use &U, Value &NV) {
@@ -2014,6 +2022,9 @@ struct AbstractAttribute : public IRPosition {
 
   /// This function should return the "summarized" assumed state as string.
   virtual const std::string getAsStr() const = 0;
+
+  /// This function should return the name of the AbstractAttribute
+  virtual const std::string getName() const = 0;
   ///}
 
   /// Allow the Attributor access to the protected methods.
@@ -2128,6 +2139,9 @@ struct AAReturnedValues
   static AAReturnedValues &createForPosition(const IRPosition &IRP,
                                              Attributor &A);
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAReturnedValues"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2146,6 +2160,9 @@ struct AANoUnwind
   /// Create an abstract attribute view for the position \p IRP.
   static AANoUnwind &createForPosition(const IRPosition &IRP, Attributor &A);
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoUnwind"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2163,6 +2180,9 @@ struct AANoSync
 
   /// Create an abstract attribute view for the position \p IRP.
   static AANoSync &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoSync"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -2183,6 +2203,9 @@ struct AANonNull
   /// Create an abstract attribute view for the position \p IRP.
   static AANonNull &createForPosition(const IRPosition &IRP, Attributor &A);
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANonNull"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2202,6 +2225,9 @@ struct AANoRecurse
   /// Create an abstract attribute view for the position \p IRP.
   static AANoRecurse &createForPosition(const IRPosition &IRP, Attributor &A);
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoRecurse"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2220,6 +2246,9 @@ struct AAWillReturn
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAWillReturn &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAWillReturn"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -2246,6 +2275,9 @@ struct AAUndefinedBehavior
   /// Create an abstract attribute view for the position \p IRP.
   static AAUndefinedBehavior &createForPosition(const IRPosition &IRP,
                                                 Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAUndefinedBehavior"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -2275,6 +2307,9 @@ struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute> {
   static AAReachability &createForPosition(const IRPosition &IRP,
                                            Attributor &A);
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAReachability"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2293,6 +2328,9 @@ struct AANoAlias
 
   /// Create an abstract attribute view for the position \p IRP.
   static AANoAlias &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoAlias"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -2313,6 +2351,9 @@ struct AANoFree
   /// Create an abstract attribute view for the position \p IRP.
   static AANoFree &createForPosition(const IRPosition &IRP, Attributor &A);
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoFree"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2331,6 +2372,9 @@ struct AANoReturn
 
   /// Create an abstract attribute view for the position \p IRP.
   static AANoReturn &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoReturn"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -2385,6 +2429,9 @@ public:
   static bool mayCatchAsynchronousExceptions(const Function &F) {
     return F.hasPersonalityFn() && !canSimplifyInvokeNoUnwind(&F);
   }
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAIsDead"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -2576,6 +2623,9 @@ struct AADereferenceable
   static AADereferenceable &createForPosition(const IRPosition &IRP,
                                               Attributor &A);
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AADereferenceable"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2593,6 +2643,9 @@ struct AAAlign : public IRAttribute<
 
   /// Return known alignment.
   unsigned getKnownAlign() const { return getKnown(); }
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAAlign"; }
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAAlign &createForPosition(const IRPosition &IRP, Attributor &A);
@@ -2648,6 +2701,9 @@ struct AANoCapture
   /// Create an abstract attribute view for the position \p IRP.
   static AANoCapture &createForPosition(const IRPosition &IRP, Attributor &A);
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoCapture"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2666,6 +2722,9 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute> {
   static AAValueSimplify &createForPosition(const IRPosition &IRP,
                                             Attributor &A);
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAValueSimplify"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2682,6 +2741,9 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAHeapToStack"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -2715,6 +2777,9 @@ struct AAPrivatizablePtr
   /// Create an abstract attribute view for the position \p IRP.
   static AAPrivatizablePtr &createForPosition(const IRPosition &IRP,
                                               Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAPrivatizablePtr"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -2766,6 +2831,9 @@ struct AAMemoryBehavior
   /// Create an abstract attribute view for the position \p IRP.
   static AAMemoryBehavior &createForPosition(const IRPosition &IRP,
                                              Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAMemoryBehavior"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;
@@ -2925,6 +2993,9 @@ struct AAMemoryLocation
     return getMemoryLocationsAsStr(getAssumedNotAccessedLocation());
   }
 
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAMemoryLocation"; }
+
   /// Unique ID (due to the unique address)
   static const char ID;
 };
@@ -2969,6 +3040,9 @@ struct AAValueConstantRange
       return llvm::None;
     return nullptr;
   }
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAValueConstantRange"; }
 
   /// Unique ID (due to the unique address)
   static const char ID;

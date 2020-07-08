@@ -752,8 +752,6 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
 // constructor fields
 std::vector<FunctionSummary::ParamAccess>
 StackSafetyInfo::getParamAccesses() const {
-  assert(needsParamAccessSummary(*F->getParent()));
-
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
   for (const auto &KV : getInfo().Info.Params) {
     auto &PS = KV.second;

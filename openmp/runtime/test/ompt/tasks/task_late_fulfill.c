@@ -1,8 +1,8 @@
 // RUN: %libomp-compile -fopenmp-version=50 && env OMP_NUM_THREADS='3' \
 // RUN:    %libomp-run | %sort-threads | FileCheck %s
 
-// Checked gcc 9.2 still does not support detach clause on task construct.
-// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8, gcc-9
+// Checked gcc 10.1 still does not support detach clause on task construct.
+// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8, gcc-9, gcc-10
 // clang supports detach clause since version 11.
 // UNSUPPORTED: clang-10, clang-9, clang-8, clang-7
 // icc compiler does not support detach clause.
@@ -53,6 +53,13 @@ int main() {
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID]],
 // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
+
+// The following is to match the taskwait task created in __kmpc_omp_wait_deps
+// this should go away, once codegen for "detached if(0)" is fixed
+
+// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
+// CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID]],
+// CHECK-SAME: has_dependences=yes
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
 // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID]],

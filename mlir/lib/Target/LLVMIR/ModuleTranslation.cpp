@@ -121,7 +121,7 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
       elementType = arrayTy->getElementType();
       numElements = arrayTy->getNumElements();
     } else {
-      auto *vectorTy = cast<llvm::VectorType>(llvmType);
+      auto *vectorTy = cast<llvm::FixedVectorType>(llvmType);
       elementType = vectorTy->getElementType();
       numElements = vectorTy->getNumElements();
     }
@@ -447,10 +447,15 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
   // emit any LLVM instruction.
   if (auto addressOfOp = dyn_cast<LLVM::AddressOfOp>(opInst)) {
     LLVM::GlobalOp global = addressOfOp.getGlobal();
-    // The verifier should not have allowed this.
-    assert(global && "referencing an undefined global");
+    LLVM::LLVMFuncOp function = addressOfOp.getFunction();
 
-    valueMapping[addressOfOp.getResult()] = globalsMapping.lookup(global);
+    // The verifier should not have allowed this.
+    assert((global || function) &&
+           "referencing an undefined global or function");
+
+    valueMapping[addressOfOp.getResult()] =
+        global ? globalsMapping.lookup(global)
+               : functionMapping.lookup(function.getName());
     return success();
   }
 
@@ -596,7 +601,7 @@ void ModuleTranslation::connectPHINodes(LLVMFuncOp func) {
   }
 }
 
-// TODO(mlir-team): implement an iterative version
+// TODO: implement an iterative version
 static void topologicalSortImpl(llvm::SetVector<Block *> &blocks, Block *b) {
   blocks.insert(b);
   for (Block *bb : b->getSuccessors()) {
@@ -773,8 +778,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
 LogicalResult ModuleTranslation::checkSupportedModuleOps(Operation *m) {
   for (Operation &o : getModuleBody(m).getOperations())
-    if (!isa<LLVM::LLVMFuncOp>(&o) && !isa<LLVM::GlobalOp>(&o) &&
-        !o.isKnownTerminator())
+    if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp>(&o) && !o.isKnownTerminator())
       return o.emitOpError("unsupported module-level operation");
   return success();
 }

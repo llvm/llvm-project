@@ -38,15 +38,19 @@ entry:
 ; GCN-LABEL: {{^}}int4_inselt:
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC1:[^,]+]], [[IDX:s[0-9]+]], 3
-; GCN-DAG: v_cndmask_b32_e32 v[[ELT_LAST:[0-9]+]], 1, v{{[0-9]+}}, [[CC1]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC2:[^,]+]], [[IDX]], 2
-; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}, [[CC2]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC3:[^,]+]], [[IDX]], 1
-; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}, [[CC3]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC4:[^,]+]], [[IDX]], 0
-; GCN-DAG: v_cndmask_b32_e32 v[[ELT_FIRST:[0-9]+]], 1, v{{[0-9]+}}, [[CC4]]
-; GCN:     flat_store_dwordx4 v[{{[0-9:]+}}], v{{\[}}[[ELT_FIRST]]:[[ELT_LAST]]]
+; GCN-DAG: s_cmp_lg_u32 [[IDX:s[0-9]+]], 3
+; GCN-DAG: s_cselect_b32 s[[ELT_3:[0-9]+]], s{{[0-9]+}}, 1
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN-DAG: s_cselect_b32 s[[ELT_2:[0-9]+]], s{{[0-9]+}}, 1
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 1
+; GCN-DAG: s_cselect_b32 s[[ELT_1:[0-9]+]], s{{[0-9]+}}, 1
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 0
+; GCN-DAG: s_cselect_b32 s[[ELT_0:[0-9]+]], s{{[0-9]+}}, 1
+; GCN-DAG: v_mov_b32_e32 v[[VELT_0:[0-9]+]], s[[ELT_0]]
+; GCN-DAG: v_mov_b32_e32 v[[VELT_1:[0-9]+]], s[[ELT_1]]
+; GCN-DAG: v_mov_b32_e32 v[[VELT_2:[0-9]+]], s[[ELT_2]]
+; GCN-DAG: v_mov_b32_e32 v[[VELT_3:[0-9]+]], s[[ELT_3]]
+; GCN:     flat_store_dwordx4 v[{{[0-9:]+}}], v{{\[}}[[VELT_0]]:[[VELT_3]]]
 define amdgpu_kernel void @int4_inselt(<4 x i32> addrspace(1)* %out, <4 x i32> %vec, i32 %sel) {
 entry:
   %v = insertelement <4 x i32> %vec, i32 1, i32 %sel

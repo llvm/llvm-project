@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
+#include "mlir/Dialect/SPIRV/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -91,7 +92,7 @@ using BlockMergeInfoMap = DenseMap<Block *, BlockMergeInfo>;
 /// higher-order bits. So this deserializer uses that to get instruction
 /// boundary and parse instructions and build a SPIR-V ModuleOp gradually.
 ///
-// TODO(antiagainst): clean up created ops on errors
+// TODO: clean up created ops on errors
 class Deserializer {
 public:
   /// Creates a deserializer for the given SPIR-V `binary` module.
@@ -400,7 +401,8 @@ private:
   /// Method to deserialize an operation in the SPIR-V dialect that is a mirror
   /// of an instruction in the SPIR-V spec. This is auto generated if hasOpcode
   /// == 1 and autogenSerialization == 1 in ODS.
-  template <typename OpTy> LogicalResult processOp(ArrayRef<uint32_t> words) {
+  template <typename OpTy>
+  LogicalResult processOp(ArrayRef<uint32_t> words) {
     return emitError(unknownLoc, "unsupported deserialization for ")
            << OpTy::getOperationName() << " op";
   }
@@ -419,7 +421,7 @@ private:
   /// MLIRContext to create SPIR-V ModuleOp into.
   MLIRContext *context;
 
-  // TODO(antiagainst): create Location subclass for binary blob
+  // TODO: create Location subclass for binary blob
   Location unknownLoc;
 
   /// The SPIR-V ModuleOp.
@@ -601,7 +603,7 @@ LogicalResult Deserializer::processHeader() {
            << majorVersion;
   }
 
-  // TODO(antiagainst): generator number, bound, schema
+  // TODO: generator number, bound, schema
   curOffset = spirv::kHeaderWordCount;
   return success();
 }
@@ -675,7 +677,7 @@ LogicalResult Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
 }
 
 LogicalResult Deserializer::processDecoration(ArrayRef<uint32_t> words) {
-  // TODO : This function should also be auto-generated. For now, since only a
+  // TODO: This function should also be auto-generated. For now, since only a
   // few decorations are processed/handled in a meaningful manner, going with a
   // manual implementation.
   if (words.size() < 2) {
@@ -803,7 +805,7 @@ LogicalResult Deserializer::processFunction(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unknown Function Control: ") << operands[2];
   }
   if (functionControl.getValue() != spirv::FunctionControl::None) {
-    /// TODO : Handle different function controls
+    /// TODO: Handle different function controls
     return emitError(unknownLoc, "unhandled Function Control: '")
            << spirv::stringifyFunctionControl(functionControl.getValue())
            << "'";
@@ -1196,7 +1198,7 @@ LogicalResult Deserializer::processArrayType(ArrayRef<uint32_t> operands) {
   }
 
   unsigned count = 0;
-  // TODO(antiagainst): The count can also come frome a specialization constant.
+  // TODO: The count can also come frome a specialization constant.
   auto countInfo = getConstant(operands[2]);
   if (!countInfo) {
     return emitError(unknownLoc, "OpTypeArray count <id> ")
@@ -1335,7 +1337,7 @@ LogicalResult Deserializer::processStructType(ArrayRef<uint32_t> operands) {
   }
   typeMap[operands[0]] =
       spirv::StructType::get(memberTypes, offsetInfo, memberDecorationsInfo);
-  // TODO(ravishankarm): Update StructType to have member name as attribute as
+  // TODO: Update StructType to have member name as attribute as
   // well.
   return success();
 }
@@ -1566,8 +1568,8 @@ LogicalResult Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
     return success();
   }
 
-    return emitError(unknownLoc, "unsupported OpConstantNull type: ")
-           << resultType;
+  return emitError(unknownLoc, "unsupported OpConstantNull type: ")
+         << resultType;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1822,7 +1824,7 @@ spirv::LoopOp ControlFlowStructurizer::createLoopOp() {
   // merge block so that the newly created LoopOp will be inserted there.
   OpBuilder builder(&mergeBlock->front());
 
-  // TODO(antiagainst): handle loop control properly
+  // TODO: handle loop control properly
   auto loopOp = builder.create<spirv::LoopOp>(location);
   loopOp.addEntryAndMergeBlock();
 
@@ -1965,7 +1967,7 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
     // selection/loop. If so, they will be recorded within blockMergeInfo.
     // We need to update the pointers there to the newly remapped ones so we can
     // continue structurizing them later.
-    // TODO(antiagainst): The asserts in the following assumes input SPIR-V blob
+    // TODO: The asserts in the following assumes input SPIR-V blob
     // forms correctly nested selection/loop constructs. We should relax this
     // and support error cases better.
     auto it = blockMergeInfo.find(block);
@@ -2515,12 +2517,12 @@ Deserializer::processOp<spirv::MemoryBarrierOp>(ArrayRef<uint32_t> operands) {
 #include "mlir/Dialect/SPIRV/SPIRVSerialization.inc"
 } // namespace
 
-Optional<spirv::ModuleOp> spirv::deserialize(ArrayRef<uint32_t> binary,
-                                             MLIRContext *context) {
+spirv::OwningSPIRVModuleRef spirv::deserialize(ArrayRef<uint32_t> binary,
+                                               MLIRContext *context) {
   Deserializer deserializer(binary, context);
 
   if (failed(deserializer.deserialize()))
-    return llvm::None;
+    return nullptr;
 
-  return deserializer.collect();
+  return deserializer.collect().getValueOr(nullptr);
 }

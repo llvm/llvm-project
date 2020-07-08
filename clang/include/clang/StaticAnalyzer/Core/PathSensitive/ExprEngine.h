@@ -96,8 +96,37 @@ class RegionAndSymbolInvalidationTraits;
 class SymbolManager;
 class SwitchNodeBuilder;
 
+/// Hints for figuring out of a call should be inlined during evalCall().
+struct EvalCallOptions {
+  /// This call is a constructor or a destructor for which we do not currently
+  /// compute the this-region correctly.
+  bool IsCtorOrDtorWithImproperlyModeledTargetRegion = false;
+
+  /// This call is a constructor or a destructor for a single element within
+  /// an array, a part of array construction or destruction.
+  bool IsArrayCtorOrDtor = false;
+
+  /// This call is a constructor or a destructor of a temporary value.
+  bool IsTemporaryCtorOrDtor = false;
+
+  /// This call is a constructor for a temporary that is lifetime-extended
+  /// by binding it to a reference-type field within an aggregate,
+  /// for example 'A { const C &c; }; A a = { C() };'
+  bool IsTemporaryLifetimeExtendedViaAggregate = false;
+
+  /// This call is a pre-C++17 elidable constructor that we failed to elide
+  /// because we failed to compute the target region into which
+  /// this constructor would have been ultimately elided. Analysis that
+  /// we perform in this case is still correct but it behaves differently,
+  /// as if copy elision is disabled.
+  bool IsElidableCtorThatHasNotBeenElided = false;
+
+  EvalCallOptions() {}
+};
+
 class ExprEngine {
   void anchor();
+
 public:
   /// The modes of inlining, which override the default analysis-wide settings.
   enum InliningModes {
@@ -106,34 +135,6 @@ public:
 
     /// Do minimal inlining of callees.
     Inline_Minimal = 0x1
-  };
-
-  /// Hints for figuring out of a call should be inlined during evalCall().
-  struct EvalCallOptions {
-    /// This call is a constructor or a destructor for which we do not currently
-    /// compute the this-region correctly.
-    bool IsCtorOrDtorWithImproperlyModeledTargetRegion = false;
-
-    /// This call is a constructor or a destructor for a single element within
-    /// an array, a part of array construction or destruction.
-    bool IsArrayCtorOrDtor = false;
-
-    /// This call is a constructor or a destructor of a temporary value.
-    bool IsTemporaryCtorOrDtor = false;
-
-    /// This call is a constructor for a temporary that is lifetime-extended
-    /// by binding it to a reference-type field within an aggregate,
-    /// for example 'A { const C &c; }; A a = { C() };'
-    bool IsTemporaryLifetimeExtendedViaAggregate = false;
-
-    /// This call is a pre-C++17 elidable constructor that we failed to elide
-    /// because we failed to compute the target region into which
-    /// this constructor would have been ultimately elided. Analysis that
-    /// we perform in this case is still correct but it behaves differently,
-    /// as if copy elision is disabled.
-    bool IsElidableCtorThatHasNotBeenElided = false;
-
-    EvalCallOptions() {}
   };
 
 private:

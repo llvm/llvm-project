@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "CompileCommands.h"
+#include "Config.h"
 #include "TestFS.h"
+#include "support/Context.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -22,6 +24,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::_;
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::HasSubstr;
@@ -184,6 +187,25 @@ TEST(CommandMangler, ClangPathResolve) {
   EXPECT_EQ((TempDir + "/bin/foo").str(), Cmd.front());
 }
 #endif
+
+TEST(CommandMangler, ConfigEdits) {
+  auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Cmd = {"clang++", "foo.cc"};
+  {
+    Config Cfg;
+    Cfg.CompileFlags.Edits.push_back([](std::vector<std::string> &Argv) {
+      for (auto &Arg : Argv)
+        for (char &C : Arg)
+          C = llvm::toUpper(C);
+    });
+    Cfg.CompileFlags.Edits.push_back(
+        [](std::vector<std::string> &Argv) { Argv.push_back("--hello"); });
+    WithContextValue WithConfig(Config::Key, std::move(Cfg));
+    Mangler.adjust(Cmd);
+  }
+  // Edits are applied in given order and before other mangling.
+  EXPECT_THAT(Cmd, ElementsAre(_, "FOO.CC", "--hello", "-fsyntax-only"));
+}
 
 } // namespace
 } // namespace clangd

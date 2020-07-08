@@ -1,4 +1,4 @@
-; RUN: opt -tbaa -basicaa -gvn -S < %s | FileCheck %s
+; RUN: opt -tbaa -basic-aa -gvn -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64"
 

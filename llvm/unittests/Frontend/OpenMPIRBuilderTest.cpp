@@ -779,4 +779,39 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
   EXPECT_EQ(CriticalEndCI->getArgOperand(2)->getType(), CriticalNamePtrTy);
 }
 
+TEST_F(OpenMPIRBuilderTest, CopyinBlocks) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  IntegerType* Int32 = Type::getInt32Ty(M->getContext());
+  AllocaInst* MasterAddress = Builder.CreateAlloca(Int32->getPointerTo());
+	AllocaInst* PrivAddress = Builder.CreateAlloca(Int32->getPointerTo());
+
+  BasicBlock *EntryBB = BB;
+
+  OMPBuilder.CreateCopyinClauseBlocks(Builder.saveIP(), MasterAddress, PrivAddress, Int32, /*BranchtoEnd*/true);
+
+  BranchInst* EntryBr = dyn_cast_or_null<BranchInst>(EntryBB->getTerminator());
+
+  EXPECT_NE(EntryBr, nullptr);
+  EXPECT_TRUE(EntryBr->isConditional());
+
+  BasicBlock* NotMasterBB = EntryBr->getSuccessor(0);
+  BasicBlock* CopyinEnd = EntryBr->getSuccessor(1);
+  CmpInst* CMP = dyn_cast_or_null<CmpInst>(EntryBr->getCondition());
+
+  EXPECT_NE(CMP, nullptr);
+  EXPECT_NE(NotMasterBB, nullptr);
+  EXPECT_NE(CopyinEnd, nullptr);
+
+  BranchInst* NotMasterBr = dyn_cast_or_null<BranchInst>(NotMasterBB->getTerminator());
+  EXPECT_NE(NotMasterBr, nullptr);
+  EXPECT_FALSE(NotMasterBr->isConditional());
+  EXPECT_EQ(CopyinEnd,NotMasterBr->getSuccessor(0));
+}
+
 } // namespace

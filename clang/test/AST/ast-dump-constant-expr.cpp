@@ -54,27 +54,32 @@ void Test() {
 // CHECK-NEXT:FunctionDecl {{.*}} <{{.*}}ast-dump-constant-expr.cpp:42:1, line:52:1> line:42:6{{( imported)?}} Test 'void ()'
 // CHECK-NEXT:`-CompoundStmt {{.*}} <col:13, line:52:1>
 // CHECK-NEXT:  |-CStyleCastExpr {{.*}} <line:43:3, col:19> 'void' <ToVoid>
-// CHECK-NEXT:  | `-ConstantExpr {{.*}} <col:10, col:19> 'int' Int: 42
+// CHECK-NEXT:  | `-ConstantExpr {{.*}} <col:10, col:19> 'int'
+// CHECK-NEXT:  |   |-value: Int 42
 // CHECK-NEXT:  |   `-CallExpr {{.*}} <col:10, col:19> 'int'
 // CHECK-NEXT:  |     `-ImplicitCastExpr {{.*}} <col:10> 'int (*)()' <FunctionToPointerDecay>
 // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} <col:10> 'int ()' lvalue Function {{.*}} 'test_Int' 'int ()'
 // CHECK-NEXT:  |-CStyleCastExpr {{.*}} <line:44:3, col:21> 'void' <ToVoid>
-// CHECK-NEXT:  | `-ConstantExpr {{.*}} <col:10, col:21> 'float' Float: 1.000000e+00
+// CHECK-NEXT:  | `-ConstantExpr {{.*}} <col:10, col:21> 'float'
+// CHECK-NEXT:  |   |-value: Float 1.000000e+00
 // CHECK-NEXT:  |   `-CallExpr {{.*}} <col:10, col:21> 'float'
 // CHECK-NEXT:  |     `-ImplicitCastExpr {{.*}} <col:10> 'float (*)()' <FunctionToPointerDecay>
 // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} <col:10> 'float ()' lvalue Function {{.*}} 'test_Float' 'float ()'
 // CHECK-NEXT:  |-CStyleCastExpr {{.*}} <line:45:3, col:26> 'void' <ToVoid>
-// CHECK-NEXT:  | `-ConstantExpr {{.*}} <col:10, col:26> '_Complex int' ComplexInt: 1, 2
+// CHECK-NEXT:  | `-ConstantExpr {{.*}} <col:10, col:26> '_Complex int'
+// CHECK-NEXT:  |   |-value: ComplexInt 1 + 2i
 // CHECK-NEXT:  |   `-CallExpr {{.*}} <col:10, col:26> '_Complex int'
 // CHECK-NEXT:  |     `-ImplicitCastExpr {{.*}} <col:10> '_Complex int (*)()' <FunctionToPointerDecay>
 // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} <col:10> '_Complex int ()' lvalue Function {{.*}} 'test_ComplexInt' '_Complex int ()'
 // CHECK-NEXT:  |-CStyleCastExpr {{.*}} <line:46:3, col:28> 'void' <ToVoid>
-// CHECK-NEXT:  | `-ConstantExpr {{.*}} <col:10, col:28> '_Complex float' ComplexFloat: 1.200000e+00, 3.400000e+00
+// CHECK-NEXT:  | `-ConstantExpr {{.*}} <col:10, col:28> '_Complex float'
+// CHECK-NEXT:  |   |-value: ComplexFloat 1.200000e+00 + 3.400000e+00i
 // CHECK-NEXT:  |   `-CallExpr {{.*}} <col:10, col:28> '_Complex float'
 // CHECK-NEXT:  |     `-ImplicitCastExpr {{.*}} <col:10> '_Complex float (*)()' <FunctionToPointerDecay>
 // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} <col:10> '_Complex float ()' lvalue Function {{.*}} 'test_ComplexFloat' '_Complex float ()'
 // CHECK-NEXT:  `-CStyleCastExpr {{.*}} <line:47:3, col:22> 'void' <ToVoid>
-// CHECK-NEXT:    `-ConstantExpr {{.*}} <col:10, col:22> '__int128' Int: 18446744073709551616
+// CHECK-NEXT:    `-ConstantExpr {{.*}} <col:10, col:22> '__int128'
+// CHECK-NEXT:      |-value: Int 18446744073709551616
 // CHECK-NEXT:      `-CallExpr {{.*}} <col:10, col:22> '__int128'
 // CHECK-NEXT:        `-ImplicitCastExpr {{.*}} <col:10> '__int128 (*)()' <FunctionToPointerDecay>
 // CHECK-NEXT:          `-DeclRefExpr {{.*}} <col:10> '__int128 ()' lvalue Function {{.*}} 'test_Int128' '__int128 ()'

@@ -117,7 +117,7 @@ public:
   struct CallInfo {
     uint32_t Kind;
     uint32_t AccessIndex;
-    uint32_t RecordAlignment;
+    Align RecordAlignment;
     MDNode *Metadata;
     Value *Base;
   };
@@ -157,11 +157,11 @@ private:
   void replaceWithGEP(std::vector<CallInst *> &CallList,
                       uint32_t NumOfZerosIndex, uint32_t DIIndex);
   bool HasPreserveFieldInfoCall(CallInfoStack &CallStack);
-  void GetStorageBitRange(DIDerivedType *MemberTy, uint32_t RecordAlignment,
+  void GetStorageBitRange(DIDerivedType *MemberTy, Align RecordAlignment,
                           uint32_t &StartBitOffset, uint32_t &EndBitOffset);
   uint32_t GetFieldInfo(uint32_t InfoKind, DICompositeType *CTy,
                         uint32_t AccessIndex, uint32_t PatchImm,
-                        uint32_t RecordAlignment);
+                        Align RecordAlignment);
 
   Value *computeBaseAndAccessKey(CallInst *Call, CallInfo &CInfo,
                                  std::string &AccessKey, MDNode *&BaseMeta);
@@ -250,7 +250,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.AccessIndex = getConstant(Call->getArgOperand(2));
     CInfo.Base = Call->getArgOperand(0);
     CInfo.RecordAlignment =
-        DL->getABITypeAlignment(CInfo.Base->getType()->getPointerElementType());
+        DL->getABITypeAlign(CInfo.Base->getType()->getPointerElementType());
     return true;
   }
   if (GV->getName().startswith("llvm.preserve.union.access.index")) {
@@ -261,7 +261,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.AccessIndex = getConstant(Call->getArgOperand(1));
     CInfo.Base = Call->getArgOperand(0);
     CInfo.RecordAlignment =
-        DL->getABITypeAlignment(CInfo.Base->getType()->getPointerElementType());
+        DL->getABITypeAlign(CInfo.Base->getType()->getPointerElementType());
     return true;
   }
   if (GV->getName().startswith("llvm.preserve.struct.access.index")) {
@@ -272,7 +272,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     CInfo.AccessIndex = getConstant(Call->getArgOperand(2));
     CInfo.Base = Call->getArgOperand(0);
     CInfo.RecordAlignment =
-        DL->getABITypeAlignment(CInfo.Base->getType()->getPointerElementType());
+        DL->getABITypeAlign(CInfo.Base->getType()->getPointerElementType());
     return true;
   }
   if (GV->getName().startswith("llvm.bpf.preserve.field.info")) {
@@ -522,12 +522,12 @@ uint64_t BPFAbstractMemberAccess::getConstant(const Value *IndexValue) {
 
 /// Get the start and the end of storage offset for \p MemberTy.
 void BPFAbstractMemberAccess::GetStorageBitRange(DIDerivedType *MemberTy,
-                                                 uint32_t RecordAlignment,
+                                                 Align RecordAlignment,
                                                  uint32_t &StartBitOffset,
                                                  uint32_t &EndBitOffset) {
   uint32_t MemberBitSize = MemberTy->getSizeInBits();
   uint32_t MemberBitOffset = MemberTy->getOffsetInBits();
-  uint32_t AlignBits = RecordAlignment * 8;
+  uint32_t AlignBits = RecordAlignment.value() * 8;
   if (RecordAlignment > 8 || MemberBitSize > AlignBits)
     report_fatal_error("Unsupported field expression for llvm.bpf.preserve.field.info, "
                        "requiring too big alignment");
@@ -543,7 +543,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
                                                DICompositeType *CTy,
                                                uint32_t AccessIndex,
                                                uint32_t PatchImm,
-                                               uint32_t RecordAlignment) {
+                                               Align RecordAlignment) {
   if (InfoKind == BPFCoreSharedInfo::FIELD_EXISTENCE)
       return 1;
 
@@ -808,8 +808,10 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     CInfo = StackElem.second;
     CallStack.pop();
 
-    if (CInfo.Kind == BPFPreserveFieldInfoAI)
+    if (CInfo.Kind == BPFPreserveFieldInfoAI) {
+      InfoKind = CInfo.AccessIndex;
       break;
+    }
 
     // If the next Call (the top of the stack) is a BPFPreserveFieldInfoAI,
     // the action will be extracting field info.
@@ -827,11 +829,10 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     AccessKey += ":" + std::to_string(AccessIndex);
 
     MDNode *MDN = CInfo.Metadata;
-    uint32_t RecordAlignment = CInfo.RecordAlignment;
     // At this stage, it cannot be pointer type.
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
     PatchImm = GetFieldInfo(InfoKind, CTy, AccessIndex, PatchImm,
-                            RecordAlignment);
+                            CInfo.RecordAlignment);
   }
 
   // Access key is the

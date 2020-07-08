@@ -1212,7 +1212,8 @@ mapping.
                                              frame.
    1              EXEC_MASK_32      32       Execution Mask Register when
                                              executing in wavefront 32 mode.
-   2-15           *Reserved*
+   2-15           *Reserved*                 *Reserved for highly accessed
+                                             registers using DWARF shortcut.*
    16             PC_64             64       Program Counter (PC) when
                                              executing in a 64-bit process
                                              address space. Used in the CFI to
@@ -1220,31 +1221,55 @@ mapping.
                                              frame.
    17             EXEC_MASK_64      64       Execution Mask Register when
                                              executing in wavefront 64 mode.
-   18-31          *Reserved*
+   18-31          *Reserved*                 *Reserved for highly accessed
+                                             registers using DWARF shortcut.*
    32-95          SGPR0-SGPR63      32       Scalar General Purpose
                                              Registers.
-   96-127         *Reserved*
-   128-511        *Reserved*
-   512-1023       *Reserved*
-   1024-1087      *Reserved*
-   1088-1129      SGPR64-SGPR105    32       Scalar General Purpose Registers
-   1130-1535      *Reserved*
+   96-127         *Reserved*                 *Reserved for frequently accessed
+                                             registers using DWARF 1-byte ULEB.*
+   128            SCC               32       Scalar Condition Code Register.
+   129-511        *Reserved*                 *Reserved for future Scalar
+                                             Architectural Registers.*
+   512            VCC_32            32       Vector Condition Code Register
+                                             when executing in wavefront 32
+                                             mode.
+   513-1023       *Reserved*                 *Reserved for future Vector
+                                             Architectural Registers when
+                                             executing in wavefront 32 mode.*
+   768            VCC_64            32       Vector Condition Code Register
+                                             when executing in wavefront 64
+                                             mode.
+   769-1023       *Reserved*                 *Reserved for future Vector
+                                             Architectural Registers when
+                                             executing in wavefront 64 mode.*
+   1024-1087      *Reserved*                 *Reserved for padding.*
+   1088-1129      SGPR64-SGPR105    32       Scalar General Purpose Registers.
+   1130-1535      *Reserved*                 *Reserved for future Scalar
+                                             General Purpose Registers.*
    1536-1791      VGPR0-VGPR255     32*32    Vector General Purpose Registers
                                              when executing in wavefront 32
                                              mode.
-   1792-2047      *Reserved*
+   1792-2047      *Reserved*                 *Reserved for future Vector
+                                             General Purpose Registers when
+                                             executing in wavefront 32 mode.*
    2048-2303      AGPR0-AGPR255     32*32    Vector Accumulation Registers
                                              when executing in wavefront 32
-                                             ode.
-   2304-2559      *Reserved*
+                                             mode.
+   2304-2559      *Reserved*                 *Reserved for future Vector
+                                             Accumulation Registers when
+                                             executing in wavefront 32 mode.*
    2560-2815      VGPR0-VGPR255     64*32    Vector General Purpose Registers
                                              when executing in wavefront 64
                                              mode.
-   2816-3071      *Reserved*
+   2816-3071      *Reserved*                 *Reserved for future Vector
+                                             General Purpose Registers when
+                                             executing in wavefront 64 mode.*
    3072-3327      AGPR0-AGPR255     64*32    Vector Accumulation Registers
                                              when executing in wavefront 64
                                              mode.
-   3328-3583      *Reserved*
+   3328-3583      *Reserved*                 *Reserved for future Vector
+                                             Accumulation Registers when
+                                             executing in wavefront 64 mode.*
    ============== ================= ======== ==================================
 
 The vector registers are represented as the full size for the wavefront. They
@@ -1631,7 +1656,7 @@ The following provides an example using pseudo LLVM MIR.
         DW_AT_name = "__divergent_lane_pc_1_then";
         DW_AT_location = DIExpression[
           DW_OP_call_ref %__divergent_lane_pc;
-          DW_OP_xaddr &lex_1_start;
+          DW_OP_addrx &lex_1_start;
           DW_OP_stack_value;
           DW_OP_LLVM_extend 64, 64;
           DW_OP_call_ref %__lex_1_save_exec;
@@ -1654,7 +1679,7 @@ The following provides an example using pseudo LLVM MIR.
           DW_AT_name = "__divergent_lane_pc_1_1_then";
           DW_AT_location = DIExpression[
             DW_OP_call_ref %__divergent_lane_pc_1_then;
-            DW_OP_xaddr &lex_1_1_start;
+            DW_OP_addrx &lex_1_1_start;
             DW_OP_stack_value;
             DW_OP_LLVM_extend 64, 64;
             DW_OP_call_ref %__lex_1_1_save_exec;
@@ -1673,7 +1698,7 @@ The following provides an example using pseudo LLVM MIR.
           DW_AT_name = "__divergent_lane_pc_1_1_else";
           DW_AT_location = DIExpression[
             DW_OP_call_ref %__divergent_lane_pc_1_then;
-            DW_OP_xaddr &lex_1_1_end;
+            DW_OP_addrx &lex_1_1_end;
             DW_OP_stack_value;
             DW_OP_LLVM_extend 64, 64;
             DW_OP_call_ref %__lex_1_1_save_exec;
@@ -1699,7 +1724,7 @@ The following provides an example using pseudo LLVM MIR.
         DW_AT_name = "__divergent_lane_pc_1_else";
         DW_AT_location = DIExpression[
           DW_OP_call_ref %__divergent_lane_pc;
-          DW_OP_xaddr &lex_1_end;
+          DW_OP_addrx &lex_1_end;
           DW_OP_stack_value;
           DW_OP_LLVM_extend 64, 64;
           DW_OP_call_ref %__lex_1_save_exec;

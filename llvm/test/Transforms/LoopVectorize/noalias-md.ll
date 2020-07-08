@@ -1,7 +1,7 @@
-; RUN: opt -basicaa -loop-vectorize -force-vector-width=2 \
+; RUN: opt -basic-aa -loop-vectorize -force-vector-width=2 \
 ; RUN:     -force-vector-interleave=1 -S < %s \
 ; RUN:     | FileCheck %s -check-prefix=BOTH -check-prefix=LV
-; RUN: opt -basicaa -scoped-noalias -loop-vectorize -dse -force-vector-width=2 \
+; RUN: opt -basic-aa -scoped-noalias -loop-vectorize -dse -force-vector-width=2 \
 ; RUN:     -force-vector-interleave=1 -S < %s \
 ; RUN:     | FileCheck %s -check-prefix=BOTH -check-prefix=DSE
 

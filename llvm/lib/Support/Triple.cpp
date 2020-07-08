@@ -1624,6 +1624,35 @@ bool Triple::isMacOSXVersionLT(unsigned Major, unsigned Minor,
   }
 }
 
+VersionTuple Triple::getMinimumSupportedOSVersion() const {
+  if (getVendor() != Triple::Apple || getArch() != Triple::aarch64)
+    return VersionTuple();
+  switch (getOS()) {
+  case Triple::MacOSX:
+    // ARM64 slice is supported starting from macOS 11.0+.
+    return VersionTuple(11, 0, 0);
+  case Triple::IOS:
+    // ARM64 slice is supported starting from Mac Catalyst 14 (macOS 11).
+    // ARM64 simulators are supported for iOS 14+.
+    if (isMacCatalystEnvironment() || isSimulatorEnvironment())
+      return VersionTuple(14, 0, 0);
+    break;
+  case Triple::TvOS:
+    // ARM64 simulators are supported for tvOS 14+.
+    if (isSimulatorEnvironment())
+      return VersionTuple(14, 0, 0);
+    break;
+  case Triple::WatchOS:
+    // ARM64 simulators are supported for watchOS 7+.
+    if (isSimulatorEnvironment())
+      return VersionTuple(7, 0, 0);
+    break;
+  default:
+    break;
+  }
+  return VersionTuple();
+}
+
 StringRef Triple::getARMCPUForArch(StringRef MArch) const {
   if (MArch.empty())
     MArch = getArchName();

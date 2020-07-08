@@ -54,7 +54,6 @@ public:
   uint64_t addr = 0;
   uint64_t fileOff = 0;
   MachHeaderSection *headerSection = nullptr;
-  BindingSection *bindingSection = nullptr;
   LazyBindingSection *lazyBindingSection = nullptr;
   ExportSection *exportSection = nullptr;
   StringTableSection *stringTableSection = nullptr;
@@ -254,7 +253,7 @@ void Writer::scanRelocations() {
           error("undefined symbol " + s->getName() + ", referenced from " +
                 sys::path::filename(isec->file->getName()));
         else
-          target->prepareSymbolRelocation(*s, r.type);
+          target->prepareSymbolRelocation(*s, isec, r);
       }
     }
   }
@@ -262,7 +261,7 @@ void Writer::scanRelocations() {
 
 void Writer::createLoadCommands() {
   headerSection->addLoadCommand(
-      make<LCDyldInfo>(bindingSection, lazyBindingSection, exportSection));
+      make<LCDyldInfo>(in.binding, lazyBindingSection, exportSection));
   headerSection->addLoadCommand(
       make<LCSymtab>(symtabSection, stringTableSection));
   headerSection->addLoadCommand(make<LCDysymtab>());
@@ -358,6 +357,10 @@ static int sectionOrder(OutputSection *osec) {
         .Case(section_names::stringTable, -1)
         .Default(0);
   }
+  // ZeroFill sections must always be the at the end of their segments,
+  // otherwise subsequent sections may get overwritten with zeroes at runtime.
+  if (isZeroFill(osec->flags))
+    return std::numeric_limits<int>::max();
   return 0;
 }
 
@@ -400,7 +403,6 @@ static void sortSegmentsAndSections() {
 void Writer::createOutputSections() {
   // First, create hidden sections
   headerSection = make<MachHeaderSection>();
-  bindingSection = make<BindingSection>();
   lazyBindingSection = make<LazyBindingSection>();
   stringTableSection = make<StringTableSection>();
   symtabSection = make<SymtabSection>(*stringTableSection);
@@ -509,7 +511,7 @@ void Writer::run() {
       assignAddresses(seg);
 
   // Fill __LINKEDIT contents.
-  bindingSection->finalizeContents();
+  in.binding->finalizeContents();
   lazyBindingSection->finalizeContents();
   exportSection->finalizeContents();
   symtabSection->finalizeContents();
@@ -531,6 +533,7 @@ void Writer::run() {
 void macho::writeResult() { Writer().run(); }
 
 void macho::createSyntheticSections() {
+  in.binding = make<BindingSection>();
   in.got = make<GotSection>();
   in.lazyPointers = make<LazyPointerSection>();
   in.stubs = make<StubsSection>();

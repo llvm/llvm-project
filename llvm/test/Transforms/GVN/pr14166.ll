@@ -1,4 +1,4 @@
-; RUN: opt -disable-basicaa -gvn -S < %s | FileCheck %s
+; RUN: opt -disable-basic-aa -gvn -S < %s | FileCheck %s
 target datalayout = "e-p:32:32:32"
 target triple = "i386-pc-linux-gnu"
 define <2 x i32> @test1() {

@@ -133,12 +133,16 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v8f16:    return "MVT::v8f16";
   case MVT::v16f16:   return "MVT::v16f16";
   case MVT::v32f16:   return "MVT::v32f16";
+  case MVT::v64f16:   return "MVT::v64f16";
+  case MVT::v128f16:  return "MVT::v128f16";
   case MVT::v2bf16:   return "MVT::v2bf16";
   case MVT::v3bf16:   return "MVT::v3bf16";
   case MVT::v4bf16:   return "MVT::v4bf16";
   case MVT::v8bf16:   return "MVT::v8bf16";
   case MVT::v16bf16:  return "MVT::v16bf16";
   case MVT::v32bf16:  return "MVT::v32bf16";
+  case MVT::v64bf16:  return "MVT::v64bf16";
+  case MVT::v128bf16: return "MVT::v128bf16";
   case MVT::v1f32:    return "MVT::v1f32";
   case MVT::v2f32:    return "MVT::v2f32";
   case MVT::v3f32:    return "MVT::v3f32";
@@ -158,18 +162,21 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v4f64:    return "MVT::v4f64";
   case MVT::v8f64:    return "MVT::v8f64";
   case MVT::v16f64:   return "MVT::v16f64";
+  case MVT::v32f64:   return "MVT::v32f64";
   case MVT::nxv1i1:   return "MVT::nxv1i1";
   case MVT::nxv2i1:   return "MVT::nxv2i1";
   case MVT::nxv4i1:   return "MVT::nxv4i1";
   case MVT::nxv8i1:   return "MVT::nxv8i1";
   case MVT::nxv16i1:  return "MVT::nxv16i1";
   case MVT::nxv32i1:  return "MVT::nxv32i1";
+  case MVT::nxv64i1:  return "MVT::nxv64i1";
   case MVT::nxv1i8:   return "MVT::nxv1i8";
   case MVT::nxv2i8:   return "MVT::nxv2i8";
   case MVT::nxv4i8:   return "MVT::nxv4i8";
   case MVT::nxv8i8:   return "MVT::nxv8i8";
   case MVT::nxv16i8:  return "MVT::nxv16i8";
   case MVT::nxv32i8:  return "MVT::nxv32i8";
+  case MVT::nxv64i8:  return "MVT::nxv64i8";
   case MVT::nxv1i16:  return "MVT::nxv1i16";
   case MVT::nxv2i16:  return "MVT::nxv2i16";
   case MVT::nxv4i16:  return "MVT::nxv4i16";
@@ -181,14 +188,19 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::nxv4i32:  return "MVT::nxv4i32";
   case MVT::nxv8i32:  return "MVT::nxv8i32";
   case MVT::nxv16i32: return "MVT::nxv16i32";
+  case MVT::nxv32i32: return "MVT::nxv32i32";
   case MVT::nxv1i64:  return "MVT::nxv1i64";
   case MVT::nxv2i64:  return "MVT::nxv2i64";
   case MVT::nxv4i64:  return "MVT::nxv4i64";
   case MVT::nxv8i64:  return "MVT::nxv8i64";
   case MVT::nxv16i64: return "MVT::nxv16i64";
+  case MVT::nxv32i64: return "MVT::nxv32i64";
+  case MVT::nxv1f16:  return "MVT::nxv1f16";
   case MVT::nxv2f16:  return "MVT::nxv2f16";
   case MVT::nxv4f16:  return "MVT::nxv4f16";
   case MVT::nxv8f16:  return "MVT::nxv8f16";
+  case MVT::nxv16f16: return "MVT::nxv16f16";
+  case MVT::nxv32f16: return "MVT::nxv32f16";
   case MVT::nxv2bf16:  return "MVT::nxv2bf16";
   case MVT::nxv4bf16:  return "MVT::nxv4bf16";
   case MVT::nxv8bf16:  return "MVT::nxv8bf16";
@@ -619,6 +631,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   canThrow = false;
   isNoReturn = false;
   isNoSync = false;
+  isNoFree = false;
   isWillReturn = false;
   isCold = false;
   isNoDuplicate = false;
@@ -785,6 +798,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
       isNoReturn = true;
     else if (Property->getName() == "IntrNoSync")
       isNoSync = true;
+    else if (Property->getName() == "IntrNoFree")
+      isNoFree = true;
     else if (Property->getName() == "IntrWillReturn")
       isWillReturn = true;
     else if (Property->getName() == "IntrCold")

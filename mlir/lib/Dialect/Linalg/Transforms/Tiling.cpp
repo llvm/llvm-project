@@ -161,7 +161,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
 //   }
 // }
 //
-// TODO(pifon, ntv): Investigate whether mixing implicit and explicit indices
+// TODO: Investigate whether mixing implicit and explicit indices
 // does not lead to losing information.
 static void transformIndexedGenericOpIndices(
     OpBuilder &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
@@ -176,7 +176,7 @@ static void transformIndexedGenericOpIndices(
   // that refers to an existing function symbol. The `fun` function call will be
   // inserted in the loop body in that case.
   //
-  // TODO(pifon): Add support for `linalg.indexed_generic` with `fun` attribute.
+  // TODO: Add support for `linalg.indexed_generic` with `fun` attribute.
   auto &region = indexedGenericOp.region();
   if (region.empty()) {
     indexedGenericOp.emitOpError("expected a region");

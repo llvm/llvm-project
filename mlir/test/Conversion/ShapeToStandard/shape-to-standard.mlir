@@ -86,7 +86,6 @@ func @size_const() -> !shape.size {
 }
 // CHECK: %[[C1:.*]] = constant 1 : index
 // CHECK: return %[[C1]] : index
-
 // -----
 
 // Lower `shape_of` for statically shaped tensor.
@@ -115,3 +114,47 @@ func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
   %shape = shape.shape_of %arg : tensor<1x5x?xf32>
   return
 }
+
+// -----
+
+// Convert `rank` to `dim` of the first dimension.
+// CHECK-LABEL: @rank
+// CHECK-SAME: (%[[SHAPE:.*]]: tensor<?xindex>) -> index
+func @rank(%shape : !shape.shape) -> !shape.size {
+  // CHECK-DAG: %[[C0:.*]] = constant 0 : index
+  // CHECK-DAG: %[[RESULT:.*]] = dim %[[SHAPE]], %[[C0]]
+  // CHECK-DAG: return %[[RESULT]] : index
+  %rank = shape.rank %shape
+  return %rank : !shape.size
+}
+
+// -----
+
+// Express `get_extent` as `std.dim` when it relies directly on the outcome of a
+// `shape_of` operation.
+// CHECK-LABEL: @get_extent_shape_of
+// CHECK-SAME:  (%[[ARG:.*]]: tensor<2x3xf32>, %[[IDX:.*]]: index) -> index
+func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : !shape.size)
+    -> !shape.size {
+  // CHECK: %[[RESULT:.*]] = dim %[[ARG]], %[[IDX]] : tensor<2x3xf32>
+  // CHECK: return %[[RESULT]] : index
+  %shape = shape.shape_of %arg : tensor<2x3xf32>
+  %result = shape.get_extent %shape, %idx
+  return %result : !shape.size
+}
+
+// -----
+
+// Express `get_extent` as `std.extract_element` when it relies directly on the
+// outcome of a `from_extent_tensor` operation.
+// CHECK-LABEL: @get_extent_from_extent_tensor
+// CHECK-SAME: (%[[EXTENTS:.*]]: tensor<?xindex>, %[[IDX:.*]]: index) -> index
+func @get_extent_from_extent_tensor(%extents : tensor<?xindex>,
+                                    %idx : !shape.size) -> !shape.size {
+  // CHECK: %[[RESULT:.*]] = extract_element %[[EXTENTS]][%[[IDX]]] : tensor<?xindex>
+  // CHECK: return %[[RESULT]] : index
+  %shape = shape.from_extent_tensor %extents : tensor<?xindex>
+  %result = shape.get_extent %shape, %idx
+  return %result : !shape.size
+}
+

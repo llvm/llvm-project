@@ -131,18 +131,19 @@ bool LoopExtractor::runOnFunction(Function &F) {
   if (F.empty())
     return false;
 
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+  bool Changed = false;
+  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F, &Changed).getLoopInfo();
 
   // If there are no loops in the function.
   if (LI.empty())
-    return false;
+    return Changed;
 
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
 
   // If there is more than one top-level loop in this function, extract all of
   // the loops.
   if (std::next(LI.begin()) != LI.end())
-    return extractLoops(LI.begin(), LI.end(), LI, DT);
+    return Changed | extractLoops(LI.begin(), LI.end(), LI, DT);
 
   // Otherwise there is exactly one top-level loop.
   Loop *TLL = *LI.begin();
@@ -171,14 +172,14 @@ bool LoopExtractor::runOnFunction(Function &F) {
     }
 
     if (ShouldExtractLoop)
-      return extractLoop(TLL, LI, DT);
+      return Changed | extractLoop(TLL, LI, DT);
   }
 
   // Okay, this function is a minimal container around the specified loop.
   // If we extract the loop, we will continue to just keep extracting it
   // infinitely... so don't extract it. However, if the loop contains any
   // sub-loops, extract them.
-  return extractLoops(TLL->begin(), TLL->end(), LI, DT);
+  return Changed | extractLoops(TLL->begin(), TLL->end(), LI, DT);
 }
 
 bool LoopExtractor::extractLoops(Loop::iterator From, Loop::iterator To,

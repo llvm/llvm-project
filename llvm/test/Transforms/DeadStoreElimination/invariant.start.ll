@@ -1,5 +1,5 @@
 ; Test to make sure llvm.invariant.start calls are not treated as clobbers.
-; RUN: opt < %s -basicaa -dse -S | FileCheck %s
+; RUN: opt < %s -basic-aa -dse -S | FileCheck %s
 
 declare {}* @llvm.invariant.start.p0i8(i64, i8* nocapture) nounwind readonly
 
