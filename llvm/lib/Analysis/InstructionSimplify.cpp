@@ -4117,6 +4117,11 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   if (TrueVal == FalseVal)
     return TrueVal;
 
+  if (isa<UndefValue>(TrueVal))   // select ?, undef, X -> X
+    return FalseVal;
+  if (isa<UndefValue>(FalseVal))   // select ?, X, undef -> X
+    return TrueVal;
+
   // Deal with partial undef vector constants: select ?, VecC, VecC' --> VecC''
   Constant *TrueC, *FalseC;
   if (TrueVal->getType()->isVectorTy() && match(TrueVal, m_Constant(TrueC)) &&
