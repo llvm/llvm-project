@@ -723,7 +723,7 @@ static void print(CooperativeMatrixNVType type, DialectAsmPrinter &os) {
 }
 
 static void print(MatrixType type, DialectAsmPrinter &os) {
-  os << "matrix<" << type.getNumElements() << " x " << type.getElementType();
+  os << "matrix<" << type.getNumColumns() << " x " << type.getColumnType();
   os << ">";
 }
 
