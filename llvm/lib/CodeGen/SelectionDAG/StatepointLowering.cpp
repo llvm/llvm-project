@@ -913,36 +913,38 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   // Export the result value if needed
   const GCResultInst *GCResult = I.getGCResult();
   Type *RetTy = I.getActualReturnType();
-  if (!RetTy->isVoidTy() && GCResult) {
-    if (GCResult->getParent() != I.getParent()) {
-      // Result value will be used in a different basic block so we need to
-      // export it now.  Default exporting mechanism will not work here because
-      // statepoint call has a different type than the actual call. It means
-      // that by default llvm will create export register of the wrong type
-      // (always i32 in our case). So instead we need to create export register
-      // with correct type manually.
-      // TODO: To eliminate this problem we can remove gc.result intrinsics
-      //       completely and make statepoint call to return a tuple.
-      unsigned Reg = FuncInfo.CreateRegs(RetTy);
-      RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
-                       DAG.getDataLayout(), Reg, RetTy,
-                       I.getCallingConv());
-      SDValue Chain = DAG.getEntryNode();
 
-      RFV.getCopyToRegs(ReturnValue, DAG, getCurSDLoc(), Chain, nullptr);
-      PendingExports.push_back(Chain);
-      FuncInfo.ValueMap[&I] = Reg;
-    } else {
-      // Result value will be used in a same basic block. Don't export it or
-      // perform any explicit register copies.
-      // We'll replace the actuall call node shortly. gc_result will grab
-      // this value.
-      setValue(&I, ReturnValue);
-    }
-  } else {
-    // The token value is never used from here on, just generate a poison value
+  if (RetTy->isVoidTy() || !GCResult) {
+    // The return value is not needed, just generate a poison value. 
     setValue(&I, DAG.getIntPtrConstant(-1, getCurSDLoc()));
+    return;
   }
+
+  if (GCResult->getParent() == I.getParent()) {
+    // Result value will be used in a same basic block. Don't export it or
+    // perform any explicit register copies. The gc_result will simply grab
+    // this value. 
+    setValue(&I, ReturnValue);
+    return;
+  }
+  
+  // Result value will be used in a different basic block so we need to export
+  // it now.  Default exporting mechanism will not work here because statepoint
+  // call has a different type than the actual call. It means that by default
+  // llvm will create export register of the wrong type (always i32 in our
+  // case). So instead we need to create export register with correct type
+  // manually.
+  // TODO: To eliminate this problem we can remove gc.result intrinsics
+  //       completely and make statepoint call to return a tuple.
+  unsigned Reg = FuncInfo.CreateRegs(RetTy);
+  RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
+                   DAG.getDataLayout(), Reg, RetTy,
+                   I.getCallingConv());
+  SDValue Chain = DAG.getEntryNode();
+  
+  RFV.getCopyToRegs(ReturnValue, DAG, getCurSDLoc(), Chain, nullptr);
+  PendingExports.push_back(Chain);
+  FuncInfo.ValueMap[&I] = Reg;
 }
 
 void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
