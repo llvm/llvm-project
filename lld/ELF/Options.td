@@ -436,7 +436,7 @@ defm warn_backrefs: BB<"warn-backrefs",
     "Do not warn about backward symbol references to fetch archive members (default)">;
 
 defm warn_backrefs_exclude
-    : Eq<"warn-backrefs-exclude",
+    : EEq<"warn-backrefs-exclude",
          "Glob describing an archive (or an object file within --start-lib) "
          "which should be ignored for --warn-backrefs.">,
       MetaVarName<"<glob>">;
