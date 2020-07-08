@@ -3057,11 +3057,11 @@ __pattern_set_union(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _Forw
     if (__n1 + __n2 <= __set_algo_cut_off)
         return std::set_union(__first1, __last1, __first2, __last2, __result, __comp);
 
-    typedef typename std::iterator_traits<_OutputIterator>::value_type _T;
+    typedef typename std::iterator_traits<_OutputIterator>::value_type _Tp;
     return __parallel_set_union_op(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
         [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _ForwardIterator2 __last2,
-           _T* __result, _Compare __comp) {
+           _Tp* __result, _Compare __comp) {
             return __pstl::__utils::__set_union_construct(__first1, __last1, __first2, __last2, __result, __comp,
                                                           __BrickCopyConstruct<_IsVector>());
         },
@@ -3248,7 +3248,7 @@ __pattern_set_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, 
 
     if (__n1 + __n2 > __set_algo_cut_off)
         return __parallel_set_op(std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result,
-                                 __comp, [](_DifferenceType __n, _DifferenceType __m) { return __n; },
+                                 __comp, [](_DifferenceType __n, _DifferenceType) { return __n; },
                                  [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
                                     _ForwardIterator2 __last2, _Tp* __result, _Compare __comp) {
                                      return __pstl::__utils::__set_difference_construct(
