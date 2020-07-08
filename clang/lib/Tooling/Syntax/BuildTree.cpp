@@ -12,6 +12,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TypeLoc.h"
@@ -113,6 +114,85 @@ private:
   }
 };
 } // namespace
+
+static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
+  switch (E.getOperator()) {
+  // Comparison
+  case OO_EqualEqual:
+  case OO_ExclaimEqual:
+  case OO_Greater:
+  case OO_GreaterEqual:
+  case OO_Less:
+  case OO_LessEqual:
+  case OO_Spaceship:
+  // Assignment
+  case OO_Equal:
+  case OO_SlashEqual:
+  case OO_PercentEqual:
+  case OO_CaretEqual:
+  case OO_PipeEqual:
+  case OO_LessLessEqual:
+  case OO_GreaterGreaterEqual:
+  case OO_PlusEqual:
+  case OO_MinusEqual:
+  case OO_StarEqual:
+  case OO_AmpEqual:
+  // Binary computation
+  case OO_Slash:
+  case OO_Percent:
+  case OO_Caret:
+  case OO_Pipe:
+  case OO_LessLess:
+  case OO_GreaterGreater:
+  case OO_AmpAmp:
+  case OO_PipePipe:
+  case OO_ArrowStar:
+  case OO_Comma:
+    return syntax::NodeKind::BinaryOperatorExpression;
+  case OO_Tilde:
+  case OO_Exclaim:
+    return syntax::NodeKind::PrefixUnaryOperatorExpression;
+  // Prefix/Postfix increment/decrement
+  case OO_PlusPlus:
+  case OO_MinusMinus:
+    switch (E.getNumArgs()) {
+    case 1:
+      return syntax::NodeKind::PrefixUnaryOperatorExpression;
+    case 2:
+      return syntax::NodeKind::PostfixUnaryOperatorExpression;
+    default:
+      llvm_unreachable("Invalid number of arguments for operator");
+    }
+  // Operators that can be unary or binary
+  case OO_Plus:
+  case OO_Minus:
+  case OO_Star:
+  case OO_Amp:
+    switch (E.getNumArgs()) {
+    case 1:
+      return syntax::NodeKind::PrefixUnaryOperatorExpression;
+    case 2:
+      return syntax::NodeKind::BinaryOperatorExpression;
+    default:
+      llvm_unreachable("Invalid number of arguments for operator");
+    }
+    return syntax::NodeKind::BinaryOperatorExpression;
+  // Not yet supported by SyntaxTree
+  case OO_New:
+  case OO_Delete:
+  case OO_Array_New:
+  case OO_Array_Delete:
+  case OO_Coawait:
+  case OO_Call:
+  case OO_Subscript:
+  case OO_Arrow:
+    return syntax::NodeKind::UnknownExpression;
+  case OO_Conditional: // not overloadable
+  case NUM_OVERLOADED_OPERATORS:
+  case OO_None:
+    llvm_unreachable("Not an overloadable operator");
+  }
+}
 
 /// Gets the range of declarator as defined by the C++ grammar. E.g.
 ///     `int a;` -> range of `a`,
@@ -733,8 +813,29 @@ public:
     return true;
   }
 
+  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
+    if (getOperatorNodeKind(*S) ==
+        syntax::NodeKind::PostfixUnaryOperatorExpression) {
+      // A postfix unary operator is declared as taking two operands. The second
+      // operand is used to distinguish from its prefix counterpart. In the
+      // semantic AST this "phantom" operand is represented as a
+      // `IntegerLiteral` with invalid `SourceLocation`. We skip visiting this
+      // operand because it does not correspond to anything written in source
+      // code
+      for (auto *child : S->children()) {
+        if (child->getSourceRange().isInvalid())
+          continue;
+        if (!TraverseStmt(child))
+          return false;
+      }
+      return WalkUpFromCXXOperatorCallExpr(S);
+    } else
+      return RecursiveASTVisitor::TraverseCXXOperatorCallExpr(S);
+  }
+
   bool WalkUpFromCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
-    if (S->isInfixBinaryOp()) {
+    switch (getOperatorNodeKind(*S)) {
+    case syntax::NodeKind::BinaryOperatorExpression:
       Builder.markExprChild(
           S->getArg(0),
           syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
@@ -747,8 +848,31 @@ public:
       Builder.foldNode(Builder.getExprRange(S),
                        new (allocator()) syntax::BinaryOperatorExpression, S);
       return true;
+    case syntax::NodeKind::PrefixUnaryOperatorExpression:
+      Builder.markChildToken(
+          S->getOperatorLoc(),
+          syntax::NodeRole::OperatorExpression_operatorToken);
+      Builder.markExprChild(S->getArg(0),
+                            syntax::NodeRole::UnaryOperatorExpression_operand);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::PrefixUnaryOperatorExpression,
+                       S);
+      return true;
+    case syntax::NodeKind::PostfixUnaryOperatorExpression:
+      Builder.markChildToken(
+          S->getOperatorLoc(),
+          syntax::NodeRole::OperatorExpression_operatorToken);
+      Builder.markExprChild(S->getArg(0),
+                            syntax::NodeRole::UnaryOperatorExpression_operand);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::PostfixUnaryOperatorExpression,
+                       S);
+      return true;
+    case syntax::NodeKind::UnknownExpression:
+      return RecursiveASTVisitor::WalkUpFromCXXOperatorCallExpr(S);
+    default:
+      llvm_unreachable("getOperatorNodeKind() does not return this value");
     }
-    return RecursiveASTVisitor::WalkUpFromCXXOperatorCallExpr(S);
   }
 
   bool WalkUpFromNamespaceDecl(NamespaceDecl *S) {

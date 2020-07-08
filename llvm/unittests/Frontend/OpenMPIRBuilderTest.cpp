@@ -19,7 +19,6 @@
 
 using namespace llvm;
 using namespace omp;
-using namespace types;
 
 namespace {
 
@@ -50,7 +49,6 @@ protected:
   void TearDown() override {
     BB = nullptr;
     M.reset();
-    uninitializeTypes();
   }
 
   LLVMContext Ctx;

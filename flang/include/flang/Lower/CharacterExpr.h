@@ -106,6 +106,19 @@ public:
   /// Character lengths. TODO: move this to FirOpBuilder?
   mlir::Type getLengthType() { return builder.getIndexType(); }
 
+  /// Create an extended value from:
+  /// - fir.boxchar<kind>
+  /// - fir.ref<fir.array<len x fir.char<kind>>>
+  /// - fir.array<len x fir.char<kind>>
+  /// - fir.char<kind>
+  /// - fir.ref<char<kind>>
+  /// If the no length is passed, it is attempted to be extracted from \p
+  /// character (or its type). This will crash if this is not possible.
+  /// The returned value is a CharBoxValue if \p character is a scalar,
+  /// otherwise it is a CharArrayBoxValue.
+  fir::ExtendedValue toExtendedValue(mlir::Value character,
+                                     mlir::Value len = {});
+
 private:
   fir::CharBoxValue materializeValue(const fir::CharBoxValue &str);
   fir::CharBoxValue toDataLengthPair(mlir::Value character);

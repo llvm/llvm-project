@@ -29,7 +29,6 @@
 
 using namespace llvm;
 using namespace omp;
-using namespace types;
 
 #define DEBUG_TYPE "openmp-opt"
 
@@ -263,11 +262,11 @@ struct OMPInformationCache : public InformationCache {
       ICV.InitValue = nullptr;                                                 \
       break;                                                                   \
     case ICV_ZERO:                                                             \
-      ICV.InitValue =                                                          \
-          ConstantInt::get(Type::getInt32Ty(Int32->getContext()), 0);          \
+      ICV.InitValue = ConstantInt::get(                                        \
+          Type::getInt32Ty(OMPBuilder.Int32->getContext()), 0);                \
       break;                                                                   \
     case ICV_FALSE:                                                            \
-      ICV.InitValue = ConstantInt::getFalse(Int1->getContext());               \
+      ICV.InitValue = ConstantInt::getFalse(OMPBuilder.Int1->getContext());    \
       break;                                                                   \
     case ICV_LAST:                                                             \
       break;                                                                   \
@@ -332,16 +331,39 @@ struct OMPInformationCache : public InformationCache {
 
     Module &M = *((*ModuleSlice.begin())->getParent());
 
+    // Helper macros for handling __VA_ARGS__ in OMP_RTL
+#define OMP_TYPE(VarName, ...)                                                 \
+  Type *VarName = OMPBuilder.VarName;                                          \
+  (void)VarName;
+
+#define OMP_ARRAY_TYPE(VarName, ...)                                           \
+  ArrayType *VarName##Ty = OMPBuilder.VarName##Ty;                             \
+  (void)VarName##Ty;                                                           \
+  PointerType *VarName##PtrTy = OMPBuilder.VarName##PtrTy;                     \
+  (void)VarName##PtrTy;
+
+#define OMP_FUNCTION_TYPE(VarName, ...)                                        \
+  FunctionType *VarName = OMPBuilder.VarName;                                  \
+  (void)VarName;                                                               \
+  PointerType *VarName##Ptr = OMPBuilder.VarName##Ptr;                         \
+  (void)VarName##Ptr;
+
+#define OMP_STRUCT_TYPE(VarName, ...)                                          \
+  StructType *VarName = OMPBuilder.VarName;                                    \
+  (void)VarName;                                                               \
+  PointerType *VarName##Ptr = OMPBuilder.VarName##Ptr;                         \
+  (void)VarName##Ptr;
+
 #define OMP_RTL(_Enum, _Name, _IsVarArg, _ReturnType, ...)                     \
   {                                                                            \
     SmallVector<Type *, 8> ArgsTypes({__VA_ARGS__});                           \
     Function *F = M.getFunction(_Name);                                        \
-    if (declMatchesRTFTypes(F, _ReturnType, ArgsTypes)) {                      \
+    if (declMatchesRTFTypes(F, OMPBuilder._ReturnType, ArgsTypes)) {           \
       auto &RFI = RFIs[_Enum];                                                 \
       RFI.Kind = _Enum;                                                        \
       RFI.Name = _Name;                                                        \
       RFI.IsVarArg = _IsVarArg;                                                \
-      RFI.ReturnType = _ReturnType;                                            \
+      RFI.ReturnType = OMPBuilder._ReturnType;                                 \
       RFI.ArgumentTypes = std::move(ArgsTypes);                                \
       RFI.Declaration = F;                                                     \
       unsigned NumUses = CollectUses(RFI);                                     \
@@ -593,11 +615,11 @@ private:
            "Unexpected replacement value!");
 
     // TODO: Use dominance to find a good position instead.
-    auto CanBeMoved = [](CallBase &CB) {
+    auto CanBeMoved = [this](CallBase &CB) {
       unsigned NumArgs = CB.getNumArgOperands();
       if (NumArgs == 0)
         return true;
-      if (CB.getArgOperand(0)->getType() != IdentPtr)
+      if (CB.getArgOperand(0)->getType() != OMPInfoCache.OMPBuilder.IdentPtr)
         return false;
       for (unsigned u = 1; u < NumArgs; ++u)
         if (isa<Instruction>(CB.getArgOperand(u)))
@@ -632,7 +654,7 @@ private:
     // existing and used by one of the calls, or created from scratch.
     if (CallBase *CI = dyn_cast<CallBase>(ReplVal)) {
       if (CI->getNumArgOperands() > 0 &&
-          CI->getArgOperand(0)->getType() == IdentPtr) {
+          CI->getArgOperand(0)->getType() == OMPInfoCache.OMPBuilder.IdentPtr) {
         Value *Ident = getCombinedIdentFromCallUsesIn(RFI, F,
                                                       /* GlobalOnly */ true);
         CI->setArgOperand(0, Ident);

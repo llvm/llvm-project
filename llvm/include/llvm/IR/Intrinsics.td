@@ -534,6 +534,7 @@ def int_instrprof_value_profile : Intrinsic<[],
 
 def int_call_preallocated_setup : Intrinsic<[llvm_token_ty], [llvm_i32_ty]>;
 def int_call_preallocated_arg : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;
+def int_call_preallocated_teardown : Intrinsic<[], [llvm_token_ty]>;
 
 //===------------------- Standard C Library Intrinsics --------------------===//
 //

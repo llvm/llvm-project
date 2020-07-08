@@ -574,15 +574,13 @@ size_t ValueObject::GetIndexOfChildWithName(ConstString name) {
 
 ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
                                                   bool can_create) {
-  // when getting a child by name, it could be buried inside some base classes
-  // (which really aren't part of the expression path), so we need a vector of
-  // indexes that can get us down to the correct child
-  ValueObjectSP child_sp;
-
-  // We may need to update our value if we are dynamic
+  // We may need to update our value if we are dynamic.
   if (IsPossibleDynamicType())
     UpdateValueIfNeeded(false);
 
+  // When getting a child by name, it could be buried inside some base classes
+  // (which really aren't part of the expression path), so we need a vector of
+  // indexes that can get us down to the correct child.
   std::vector<uint32_t> child_indexes;
   bool omit_empty_base_classes = true;
 
@@ -592,20 +590,13 @@ ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
   const size_t num_child_indexes =
       GetCompilerType().GetIndexOfChildMemberWithName(
           name.GetCString(), omit_empty_base_classes, child_indexes);
-  if (num_child_indexes > 0) {
-    std::vector<uint32_t>::const_iterator pos = child_indexes.begin();
-    std::vector<uint32_t>::const_iterator end = child_indexes.end();
+  if (num_child_indexes == 0)
+    return nullptr;
 
-    child_sp = GetChildAtIndex(*pos, can_create);
-    for (++pos; pos != end; ++pos) {
-      if (child_sp) {
-        ValueObjectSP new_child_sp(child_sp->GetChildAtIndex(*pos, can_create));
-        child_sp = new_child_sp;
-      } else {
-        child_sp.reset();
-      }
-    }
-  }
+  ValueObjectSP child_sp = GetSP();
+  for (uint32_t idx : child_indexes)
+    if (child_sp)
+      child_sp = child_sp->GetChildAtIndex(idx, can_create);
   return child_sp;
 }
 
