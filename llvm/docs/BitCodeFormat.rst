@@ -1067,6 +1067,7 @@ The integer codes are mapped to well-known attributes as follows.
 * code 65: ``preallocated``
 * code 66: ``no_merge``
 * code 67: ``null_pointer_is_valid``
+* code 68: ``noundef``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
