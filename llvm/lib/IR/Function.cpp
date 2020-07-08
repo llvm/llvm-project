@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1484,12 +1485,21 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 }
 
 /// hasAddressTaken - returns true if there are any uses of this function
-/// other than direct calls or invokes to it.
-bool Function::hasAddressTaken(const User* *PutOffender) const {
+/// other than direct calls or invokes to it. Optionally ignores callback
+/// uses.
+bool Function::hasAddressTaken(const User **PutOffender,
+                               bool IgnoreCallbackUses) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
       continue;
+
+    if (IgnoreCallbackUses) {
+      AbstractCallSite ACS(&U);
+      if (ACS && ACS.isCallbackCall())
+        continue;
+    }
+
     const auto *Call = dyn_cast<CallBase>(FU);
     if (!Call) {
       if (PutOffender)
