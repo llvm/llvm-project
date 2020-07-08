@@ -2145,12 +2145,12 @@ PathSensitiveBugReport::PathSensitiveBugReport(
          "*modeling*, not *diagnostics*.");
 
   assert(
-      bt.getCheckerName().startswith("debug") ||
-      !isHidden(ErrorNode->getState()
-                    ->getAnalysisManager()
-                    .getCheckerManager()
-                    ->getCheckerRegistryData(),
-                bt.getCheckerName()) &&
+      (bt.getCheckerName().startswith("debug") ||
+       !isHidden(ErrorNode->getState()
+                     ->getAnalysisManager()
+                     .getCheckerManager()
+                     ->getCheckerRegistryData(),
+                 bt.getCheckerName())) &&
           "Hidden checkers musn't emit diagnostics as they are by definition "
           "non-user facing!");
 }
