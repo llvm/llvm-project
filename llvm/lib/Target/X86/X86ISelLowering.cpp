@@ -40311,17 +40311,41 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETEQ &&
       Cond.getOperand(0).getValueType() == VT) {
     // The 'and' mask must be composed of power-of-2 constants.
-    // TODO: This is limited to splats because the availability/lowering of
-    //       non-uniform shifts and variable blend types is lumpy. Supporting
-    //       arbitrary power-of-2 vector constants will make the code more
-    //       complicated and may require target limitations to ensure that the
-    //       transform is profitable.
-    auto *C = isConstOrConstSplat(Cond.getOperand(0).getOperand(1));
+    SDValue And = Cond.getOperand(0);
+    auto *C = isConstOrConstSplat(And.getOperand(1));
     if (C && C->getAPIntValue().isPowerOf2()) {
       // vselect (X & C == 0), LHS, RHS --> vselect (X & C != 0), RHS, LHS
-      SDValue NotCond = DAG.getSetCC(DL, CondVT, Cond.getOperand(0),
-                                     Cond.getOperand(1), ISD::SETNE);
+      SDValue NotCond =
+          DAG.getSetCC(DL, CondVT, And, Cond.getOperand(1), ISD::SETNE);
       return DAG.getSelect(DL, VT, NotCond, RHS, LHS);
+    }
+
+    // If we have a non-splat but still powers-of-2 mask, AVX1 can use pmulld
+    // and AVX2 can use vpsllv{dq}. 8-bit lacks a proper shift or multiply.
+    // 16-bit lacks a proper blendv.
+    unsigned EltBitWidth = VT.getScalarSizeInBits();
+    bool CanShiftBlend =
+        TLI.isTypeLegal(VT) && ((Subtarget.hasAVX() && EltBitWidth == 32) ||
+                                (Subtarget.hasAVX2() && EltBitWidth == 64) ||
+                                (Subtarget.hasXOP()));
+    if (CanShiftBlend &&
+        ISD::matchUnaryPredicate(And.getOperand(1), [](ConstantSDNode *C) {
+          return C->getAPIntValue().isPowerOf2();
+        })) {
+      // Create a left-shift constant to get the mask bits over to the sign-bit.
+      SDValue Mask = And.getOperand(1);
+      SmallVector<int, 32> ShlVals;
+      for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
+        auto *MaskVal = cast<ConstantSDNode>(Mask.getOperand(i));
+        ShlVals.push_back(EltBitWidth - 1 -
+                          MaskVal->getAPIntValue().exactLogBase2());
+      }
+      // vsel ((X & C) == 0), LHS, RHS --> vsel ((shl X, C') < 0), RHS, LHS
+      SDValue ShlAmt = getConstVector(ShlVals, VT.getSimpleVT(), DAG, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, And.getOperand(0), ShlAmt);
+      SDValue NewCond =
+          DAG.getSetCC(DL, CondVT, Shl, Cond.getOperand(1), ISD::SETLT);
+      return DAG.getSelect(DL, VT, NewCond, RHS, LHS);
     }
   }
 
