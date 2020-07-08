@@ -1772,7 +1772,9 @@ def Log2Op : FloatUnaryOp<"log2"> {
 // MemRefCastOp
 //===----------------------------------------------------------------------===//
 
-def MemRefCastOp : CastOp<"memref_cast"> {
+def MemRefCastOp : CastOp<"memref_cast", [
+    DeclareOpInterfaceMethods<ViewLikeOpInterface>
+  ]> {
   let summary = "memref cast operation";
   let description = [{
     Syntax:
