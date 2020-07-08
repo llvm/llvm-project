@@ -528,7 +528,7 @@ class Constants {
 int TWO_PI = 0x40c90fdb;
 int PI = 0x40490fdb;
 int TWO_PI_INV = 0x3e22f983;
-int FP_UINT_MAX_PLUS_1 = 0x4f800000;    // 1 << 32 in floating point encoding
+int FP_4294966784 = 0x4f7ffffe; // 4294966784 = 4294967296 - 512 = 2^32 - 2^9
 int FP16_ONE = 0x3C00;
 int FP16_NEG_ONE = 0xBC00;
 int FP32_ONE = 0x3f800000;
