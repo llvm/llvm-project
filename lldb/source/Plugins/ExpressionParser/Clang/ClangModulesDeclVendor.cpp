@@ -254,14 +254,12 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     m_compiler_instance->getPreprocessor().getHeaderSearchInfo();
 
   if (module.search_path) {
-    auto path_begin = llvm::sys::path::begin(module.search_path.GetStringRef());
-    auto path_end = llvm::sys::path::end(module.search_path.GetStringRef());
-    auto sysroot_begin = llvm::sys::path::begin(module.sysroot.GetStringRef());
-    auto sysroot_end = llvm::sys::path::end(module.sysroot.GetStringRef());
-    // FIXME: Use C++14 std::equal(it, it, it, it) variant once it's available.
-    bool is_system_module = (std::distance(path_begin, path_end) >=
-                             std::distance(sysroot_begin, sysroot_end)) &&
-                            std::equal(sysroot_begin, sysroot_end, path_begin);
+    using namespace llvm::sys::path;
+    auto path_begin = begin(module.search_path.GetStringRef());
+    auto path_end = end(module.search_path.GetStringRef());
+    auto sysroot_begin = begin(module.sysroot.GetStringRef());
+    auto sysroot_end = end(module.sysroot.GetStringRef());
+    bool is_system_module = std::equal(sysroot_begin, sysroot_end, path_begin, path_end);
     // No need to inject search paths to modules in the sysroot.
     if (!is_system_module) {
       auto error = [&]() {
