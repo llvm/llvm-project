@@ -29,6 +29,12 @@ template <typename d> class e {
 constexpr static int calc_val() { return 1 + 2; }
 const auto the_value = calc_val() + sizeof(char);
 
+void vlaTest() {
+  int msize = 4;
+  float arr[msize];
+  [&arr] {};
+}
+
 // RUN: c-index-test -evaluate-cursor-at=%s:4:7 \
 // RUN:    -evaluate-cursor-at=%s:8:7 \
 // RUN:    -evaluate-cursor-at=%s:8:11 -std=c++11 %s | FileCheck %s
@@ -65,3 +71,7 @@ const auto the_value = calc_val() + sizeof(char);
 // CHECK-EXPR: Value: 3
 // CHECK-EXPR: unsigned, Value: 4
 // CHECK-EXPR: unsigned, Value: 1
+
+// RUN: c-index-test -evaluate-cursor-at=%s:35:5 \
+// RUN:    -std=c++11 %s | FileCheck -check-prefix=VLA %s
+// VLA: Not Evaluatable
