@@ -186,6 +186,8 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     if (!Arg.IsFixed)
       MaxSize = 0;
 
+    assert(Arg.Regs.size() == 1);
+
     Register ValVReg = VA.getLocInfo() != CCValAssign::LocInfo::FPExt
                            ? extendRegister(Arg.Regs[0], VA, MaxSize)
                            : Arg.Regs[0];
