@@ -75,6 +75,30 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   EVT VT = Node->getValueType(0);
 
   switch (Opcode) {
+  case ISD::ADD: {
+    // Optimize (add r, imm) to (addi (addi r, imm0) imm1) if applicable. The
+    // immediate must be in specific ranges and have a single use.
+    if (auto *ConstOp = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
+      if (!(ConstOp->hasOneUse()))
+        break;
+      // The imm must be in range [-4096,-2049] or [2048,4094].
+      int64_t Imm = ConstOp->getSExtValue();
+      if (!(-4096 <= Imm && Imm <= -2049) && !(2048 <= Imm && Imm <= 4094))
+        break;
+      // Break the imm to imm0+imm1.
+      SDLoc DL(Node);
+      EVT VT = Node->getValueType(0);
+      const SDValue ImmOp0 = CurDAG->getTargetConstant(Imm - Imm / 2, DL, VT);
+      const SDValue ImmOp1 = CurDAG->getTargetConstant(Imm / 2, DL, VT);
+      auto *NodeAddi0 = CurDAG->getMachineNode(RISCV::ADDI, DL, VT,
+                                               Node->getOperand(0), ImmOp0);
+      auto *NodeAddi1 = CurDAG->getMachineNode(RISCV::ADDI, DL, VT,
+                                               SDValue(NodeAddi0, 0), ImmOp1);
+      ReplaceNode(Node, NodeAddi1);
+      return;
+    }
+    break;
+  }
   case ISD::Constant: {
     auto ConstNode = cast<ConstantSDNode>(Node);
     if (VT == XLenVT && ConstNode->isNullValue()) {
