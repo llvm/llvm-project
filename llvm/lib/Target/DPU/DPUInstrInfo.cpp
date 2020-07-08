@@ -173,6 +173,82 @@ void DPUInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 }
 
+static bool
+reverseBranchOpc(unsigned Opc, unsigned &ReversedOpc) {
+  switch (Opc) {
+  default:
+    return false;
+  case DPU::JEQrii:
+    ReversedOpc = DPU::JNEQrii;
+    break;
+  case DPU::JEQrri:
+    ReversedOpc = DPU::JNEQrri;
+    break;
+  case DPU::JNEQrii:
+    ReversedOpc = DPU::JEQrii;
+    break;
+  case DPU::JNEQrri:
+    ReversedOpc = DPU::JNEQrri;
+    break;
+  case DPU::JZri:
+    ReversedOpc = DPU::JNZri;
+    break;
+  case DPU::JNZri:
+    ReversedOpc = DPU::JZri;
+    break;
+  case DPU::JLTUrii:
+    ReversedOpc = DPU::JGEUrii;
+    break;
+  case DPU::JLTUrri:
+    ReversedOpc = DPU::JGEUrri;
+    break;
+  case DPU::JGEUrii:
+    ReversedOpc = DPU::JLTUrii;
+    break;
+  case DPU::JGEUrri:
+    ReversedOpc = DPU::JLTUrri;
+    break;
+  case DPU::JLEUrii:
+    ReversedOpc = DPU::JGTUrii;
+    break;
+  case DPU::JLEUrri:
+    ReversedOpc = DPU::JGTUrri;
+    break;
+  case DPU::JGTUrii:
+    ReversedOpc = DPU::JLEUrii;
+    break;
+  case DPU::JGTUrri:
+    ReversedOpc = DPU::JLEUrri;
+    break;
+  case DPU::JLTSrii:
+    ReversedOpc = DPU::JGESrii;
+    break;
+  case DPU::JLTSrri:
+    ReversedOpc = DPU::JGESrri;
+    break;
+  case DPU::JGESrii:
+    ReversedOpc = DPU::JLTSrii;
+    break;
+  case DPU::JGESrri:
+    ReversedOpc = DPU::JLTSrri;
+    break;
+  case DPU::JLESrii:
+    ReversedOpc = DPU::JGTSrii;
+    break;
+  case DPU::JLESrri:
+    ReversedOpc = DPU::JGTSrri;
+    break;
+  case DPU::JGTSrii:
+    ReversedOpc = DPU::JLESrii;
+    break;
+  case DPU::JGTSrri:
+    ReversedOpc = DPU::JLESrri;
+    break;
+  }
+
+  return true;
+}
+
 bool DPUInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   unsigned Opc = Cond[0].getImm();
@@ -182,12 +258,18 @@ bool DPUInstrInfo::reverseBranchCondition(
   case DPU::Jcci:
   case DPU::Jcc64:
     Cond[1].setImm(ISD::getSetCCInverse(ISD::CondCode(Cond[1].getImm()), MVT::i32));
-    return false;
-  default:
+    break;
+  default: {
+    unsigned ReversedOpc;
+    if (!reverseBranchOpc(Opc, ReversedOpc)) {
+        return true;
+    }
+    Cond[0].setImm(ReversedOpc);
     break;
   }
+  }
 
-  return true;
+  return false;
 }
 
 static void
