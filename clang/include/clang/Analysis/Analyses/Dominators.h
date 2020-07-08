@@ -349,7 +349,7 @@ ClangCFGPostDomReverseChildrenGetter::Get(
 ///
 template <> struct GraphTraits<clang::DomTreeNode *> {
   using NodeRef = ::clang::DomTreeNode *;
-  using ChildIteratorType = ::clang::DomTreeNode::iterator;
+  using ChildIteratorType = ::clang::DomTreeNode::const_iterator;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
   static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
