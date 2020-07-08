@@ -1934,6 +1934,15 @@ TARGET_HEADER_BUILTIN(__readgsword,  "UsUNi", "nh", "intrin.h", ALL_MS_LANGUAGES
 TARGET_HEADER_BUILTIN(__readgsdword, "UNiUNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(__readgsqword, "ULLiUNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
+TARGET_HEADER_BUILTIN(_InterlockedAnd64,         "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedDecrement64,   "WiWiD*",   "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchange64,    "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangeAdd64, "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangeSub64, "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedIncrement64,   "WiWiD*",   "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedOr64,          "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedXor64,         "WiWiD*Wi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
 #undef TARGET_HEADER_BUILTIN
