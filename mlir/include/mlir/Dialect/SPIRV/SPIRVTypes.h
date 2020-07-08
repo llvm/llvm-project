@@ -410,12 +410,22 @@ public:
                                                     Type columnType,
                                                     uint32_t columnCount);
 
-  /// Returns true if the matrix elements are vectors of float elements
+  /// Returns true if the matrix elements are vectors of float elements.
   static bool isValidColumnType(Type columnType);
 
-  Type getElementType() const;
+  Type getColumnType() const;
 
+  /// Returns the number of rows.
+  unsigned getNumRows() const;
+
+  /// Returns the number of columns.
+  unsigned getNumColumns() const;
+
+  /// Returns total number of elements (rows*columns).
   unsigned getNumElements() const;
+
+  /// Returns the elements' type (i.e, single element type).
+  Type getElementType() const;
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      Optional<spirv::StorageClass> storage = llvm::None);
