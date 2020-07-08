@@ -702,8 +702,8 @@ public:
     std::pair<unsigned, MVT> SrcLT = TLI->getTypeLegalizationCost(DL, Src);
     std::pair<unsigned, MVT> DstLT = TLI->getTypeLegalizationCost(DL, Dst);
 
-    unsigned SrcSize = SrcLT.second.getSizeInBits();
-    unsigned DstSize = DstLT.second.getSizeInBits();
+    TypeSize SrcSize = SrcLT.second.getSizeInBits();
+    TypeSize DstSize = DstLT.second.getSizeInBits();
     bool IntOrPtrSrc = Src->isIntegerTy() || Src->isPointerTy();
     bool IntOrPtrDst = Dst->isIntegerTy() || Dst->isPointerTy();
 
@@ -777,8 +777,7 @@ public:
     // Check vector-to-vector casts.
     if (DstVTy && SrcVTy) {
       // If the cast is between same-sized registers, then the check is simple.
-      if (SrcLT.first == DstLT.first &&
-          SrcLT.second.getSizeInBits() == DstLT.second.getSizeInBits()) {
+      if (SrcLT.first == DstLT.first && SrcSize == DstSize) {
 
         // Assume that Zext is done using AND.
         if (Opcode == Instruction::ZExt)
