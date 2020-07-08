@@ -11,6 +11,10 @@
 // trait before that.
 // UNSUPPORTED: c++03, c++11, c++14
 
+// libc++ doesn't implement std::is_aggregate on GCC 5 and GCC 6.
+// UNSUPPORTED: libc++ && gcc-5
+// UNSUPPORTED: libc++ && gcc-6
+
 #include <array>
 #include <type_traits>
 
