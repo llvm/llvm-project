@@ -119,7 +119,7 @@ static Value optionallyTruncateOrExtend(Location loc, Value value, Type dstType,
   return value;
 }
 
-/// Broadcasts the value to vector with `numElements` number of elements
+/// Broadcasts the value to vector with `numElements` number of elements.
 static Value broadcast(Location loc, Value toBroadcast, unsigned numElements,
                        LLVMTypeConverter &typeConverter,
                        ConversionPatternRewriter &rewriter) {
@@ -134,6 +134,35 @@ static Value broadcast(Location loc, Value toBroadcast, unsigned numElements,
         loc, llvmVectorType, broadcasted, toBroadcast, index);
   }
   return broadcasted;
+}
+
+/// Broadcasts the value. If `srcType` is a scalar, the value remains unchanged.
+static Value optionallyBroadcast(Location loc, Value value, Type srcType,
+                                 LLVMTypeConverter &typeConverter,
+                                 ConversionPatternRewriter &rewriter) {
+  if (auto vectorType = srcType.dyn_cast<VectorType>()) {
+    unsigned numElements = vectorType.getNumElements();
+    return broadcast(loc, value, numElements, typeConverter, rewriter);
+  }
+  return value;
+}
+
+/// Utility function for bitfiled ops: `BitFieldInsert`, `BitFieldSExtract` and
+/// `BitFieldUExtract`.
+/// Broadcast `Offset` and `Count` to match the type of `Base`. If `Base` is of
+/// a vector type, construct a vector that has:
+///  - same number of elements as `Base`
+///  - each element has the type that is the same as the type of `Offset` or
+///    `Count`
+///  - each element has the same value as `Offset` or `Count`
+/// Then cast `Offset` and `Count` if their bit width is different
+/// from `Base` bit width.
+static Value processCountOrOffset(Location loc, Value value, Type srcType,
+                                  Type dstType, LLVMTypeConverter &converter,
+                                  ConversionPatternRewriter &rewriter) {
+  Value broadcasted =
+      optionallyBroadcast(loc, value, srcType, converter, rewriter);
+  return optionallyTruncateOrExtend(loc, broadcasted, dstType, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -156,41 +185,20 @@ public:
       return failure();
     Location loc = op.getLoc();
 
-    // Broadcast `Offset` and `Count` to match the type of `Base` and `Insert`.
-    // If `Base` is of a vector type, construct a vector that has:
-    //  - same number of elements as `Base`
-    //  - each element has the type that is the same as the type of `Offset` or
-    //    `Count`
-    //  - each element has the same value as `Offset` or `Count`
-    Value offset;
-    Value count;
-    if (auto vectorType = srcType.dyn_cast<VectorType>()) {
-      unsigned numElements = vectorType.getNumElements();
-      offset =
-          broadcast(loc, op.offset(), numElements, typeConverter, rewriter);
-      count = broadcast(loc, op.count(), numElements, typeConverter, rewriter);
-    } else {
-      offset = op.offset();
-      count = op.count();
-    }
-
-    // Create a mask with all bits set of the same type as `srcType`
-    Value minusOne = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
-
-    // Need to cast `Offset` and `Count` if their bit width is different
-    // from `Base` bit width.
-    Value optionallyCastedCount =
-        optionallyTruncateOrExtend(loc, count, dstType, rewriter);
-    Value optionallyCastedOffset =
-        optionallyTruncateOrExtend(loc, offset, dstType, rewriter);
+    // Process `Offset` and `Count`: broadcast and extend/truncate if needed.
+    Value offset = processCountOrOffset(loc, op.offset(), srcType, dstType,
+                                        typeConverter, rewriter);
+    Value count = processCountOrOffset(loc, op.count(), srcType, dstType,
+                                       typeConverter, rewriter);
 
     // Create a mask with bits set outside [Offset, Offset + Count - 1].
-    Value maskShiftedByCount = rewriter.create<LLVM::ShlOp>(
-        loc, dstType, minusOne, optionallyCastedCount);
+    Value minusOne = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
+    Value maskShiftedByCount =
+        rewriter.create<LLVM::ShlOp>(loc, dstType, minusOne, count);
     Value negated = rewriter.create<LLVM::XOrOp>(loc, dstType,
                                                  maskShiftedByCount, minusOne);
-    Value maskShiftedByCountAndOffset = rewriter.create<LLVM::ShlOp>(
-        loc, dstType, negated, optionallyCastedOffset);
+    Value maskShiftedByCountAndOffset =
+        rewriter.create<LLVM::ShlOp>(loc, dstType, negated, offset);
     Value mask = rewriter.create<LLVM::XOrOp>(
         loc, dstType, maskShiftedByCountAndOffset, minusOne);
 
@@ -198,8 +206,8 @@ public:
     // [Offset, Offset + Count - 1]. Then `or` with shifted `Insert`.
     Value baseAndMask =
         rewriter.create<LLVM::AndOp>(loc, dstType, op.base(), mask);
-    Value insertShiftedByOffset = rewriter.create<LLVM::ShlOp>(
-        loc, dstType, op.insert(), optionallyCastedOffset);
+    Value insertShiftedByOffset =
+        rewriter.create<LLVM::ShlOp>(loc, dstType, op.insert(), offset);
     rewriter.replaceOpWithNewOp<LLVM::OrOp>(op, dstType, baseAndMask,
                                             insertShiftedByOffset);
     return success();
@@ -248,6 +256,94 @@ public:
     }
     rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(constOp, dstType, operands,
                                                   constOp.getAttrs());
+    return success();
+  }
+};
+
+class BitFieldSExtractPattern
+    : public SPIRVToLLVMConversion<spirv::BitFieldSExtractOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::BitFieldSExtractOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::BitFieldSExtractOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = this->typeConverter.convertType(srcType);
+    if (!dstType)
+      return failure();
+    Location loc = op.getLoc();
+
+    // Process `Offset` and `Count`: broadcast and extend/truncate if needed.
+    Value offset = processCountOrOffset(loc, op.offset(), srcType, dstType,
+                                        typeConverter, rewriter);
+    Value count = processCountOrOffset(loc, op.count(), srcType, dstType,
+                                       typeConverter, rewriter);
+
+    // Create a constant that holds the size of the `Base`.
+    IntegerType integerType;
+    if (auto vecType = srcType.dyn_cast<VectorType>())
+      integerType = vecType.getElementType().cast<IntegerType>();
+    else
+      integerType = srcType.cast<IntegerType>();
+
+    auto baseSize = rewriter.getIntegerAttr(integerType, getBitWidth(srcType));
+    Value size =
+        srcType.isa<VectorType>()
+            ? rewriter.create<LLVM::ConstantOp>(
+                  loc, dstType,
+                  SplatElementsAttr::get(srcType.cast<ShapedType>(), baseSize))
+            : rewriter.create<LLVM::ConstantOp>(loc, dstType, baseSize);
+
+    // Shift `Base` left by [sizeof(Base) - (Count + Offset)], so that the bit
+    // at Offset + Count - 1 is the most significant bit now.
+    Value countPlusOffset =
+        rewriter.create<LLVM::AddOp>(loc, dstType, count, offset);
+    Value amountToShiftLeft =
+        rewriter.create<LLVM::SubOp>(loc, dstType, size, countPlusOffset);
+    Value baseShiftedLeft = rewriter.create<LLVM::ShlOp>(
+        loc, dstType, op.base(), amountToShiftLeft);
+
+    // Shift the result right, filling the bits with the sign bit.
+    Value amountToShiftRight =
+        rewriter.create<LLVM::AddOp>(loc, dstType, offset, amountToShiftLeft);
+    rewriter.replaceOpWithNewOp<LLVM::AShrOp>(op, dstType, baseShiftedLeft,
+                                              amountToShiftRight);
+    return success();
+  }
+};
+
+class BitFieldUExtractPattern
+    : public SPIRVToLLVMConversion<spirv::BitFieldUExtractOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::BitFieldUExtractOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::BitFieldUExtractOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = this->typeConverter.convertType(srcType);
+    if (!dstType)
+      return failure();
+    Location loc = op.getLoc();
+
+    // Process `Offset` and `Count`: broadcast and extend/truncate if needed.
+    Value offset = processCountOrOffset(loc, op.offset(), srcType, dstType,
+                                        typeConverter, rewriter);
+    Value count = processCountOrOffset(loc, op.count(), srcType, dstType,
+                                       typeConverter, rewriter);
+
+    // Create a mask with bits set at [0, Count - 1].
+    Value minusOne = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
+    Value maskShiftedByCount =
+        rewriter.create<LLVM::ShlOp>(loc, dstType, minusOne, count);
+    Value mask = rewriter.create<LLVM::XOrOp>(loc, dstType, maskShiftedByCount,
+                                              minusOne);
+
+    // Shift `Base` by `Offset` and apply the mask on it.
+    Value shiftedBase =
+        rewriter.create<LLVM::LShrOp>(loc, dstType, op.base(), offset);
+    rewriter.replaceOpWithNewOp<LLVM::AndOp>(op, dstType, shiftedBase, mask);
     return success();
   }
 };
@@ -586,7 +682,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
 
       // Bitwise ops
-      BitFieldInsertPattern,
+      BitFieldInsertPattern, BitFieldUExtractPattern, BitFieldSExtractPattern,
       DirectConversionPattern<spirv::BitCountOp, LLVM::CtPopOp>,
       DirectConversionPattern<spirv::BitReverseOp, LLVM::BitReverseOp>,
       DirectConversionPattern<spirv::BitwiseAndOp, LLVM::AndOp>,
