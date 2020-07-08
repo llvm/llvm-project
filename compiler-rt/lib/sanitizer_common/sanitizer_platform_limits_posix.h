@@ -704,6 +704,12 @@ struct __sanitizer_dl_phdr_info {
 extern unsigned struct_ElfW_Phdr_sz;
 #endif
 
+struct __sanitizer_protoent {
+  char *p_name;
+  char **p_aliases;
+  int p_proto;
+};
+
 struct __sanitizer_addrinfo {
   int ai_flags;
   int ai_family;

@@ -203,13 +203,6 @@ DisableBuiltins("disable-builtin",
                 cl::desc("Disable specific target library builtin function"),
                 cl::ZeroOrMore);
 
-
-static cl::opt<bool>
-Quiet("q", cl::desc("Obsolete option"), cl::Hidden);
-
-static cl::alias
-QuietA("quiet", cl::desc("Alias for -q"), cl::aliasopt(Quiet));
-
 static cl::opt<bool>
 AnalyzeOnly("analyze", cl::desc("Only perform analysis, no optimization"));
 
@@ -730,7 +723,7 @@ int main(int argc, char **argv) {
   // console, print out a warning message and refuse to do it.  We don't
   // impress anyone by spewing tons of binary goo to a terminal.
   if (!Force && !NoOutput && !AnalyzeOnly && !OutputAssembly)
-    if (CheckBitcodeOutputToConsole(Out->os(), !Quiet))
+    if (CheckBitcodeOutputToConsole(Out->os()))
       NoOutput = true;
 
   if (OutputThinLTOBC)
@@ -900,19 +893,19 @@ int main(int argc, char **argv) {
       if (AnalyzeOnly) {
         switch (Kind) {
         case PT_Region:
-          Passes.add(createRegionPassPrinter(PassInf, Out->os(), Quiet));
+          Passes.add(createRegionPassPrinter(PassInf, Out->os()));
           break;
         case PT_Loop:
-          Passes.add(createLoopPassPrinter(PassInf, Out->os(), Quiet));
+          Passes.add(createLoopPassPrinter(PassInf, Out->os()));
           break;
         case PT_Function:
-          Passes.add(createFunctionPassPrinter(PassInf, Out->os(), Quiet));
+          Passes.add(createFunctionPassPrinter(PassInf, Out->os()));
           break;
         case PT_CallGraphSCC:
-          Passes.add(createCallGraphPassPrinter(PassInf, Out->os(), Quiet));
+          Passes.add(createCallGraphPassPrinter(PassInf, Out->os()));
           break;
         default:
-          Passes.add(createModulePassPrinter(PassInf, Out->os(), Quiet));
+          Passes.add(createModulePassPrinter(PassInf, Out->os()));
           break;
         }
       }
