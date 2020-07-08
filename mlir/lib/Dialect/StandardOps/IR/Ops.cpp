@@ -1822,6 +1822,8 @@ OpFoldResult LoadOp::fold(ArrayRef<Attribute> cstOperands) {
 // MemRefCastOp
 //===----------------------------------------------------------------------===//
 
+Value MemRefCastOp::getViewSource() { return source(); }
+
 bool MemRefCastOp::areCastCompatible(Type a, Type b) {
   auto aT = a.dyn_cast<MemRefType>();
   auto bT = b.dyn_cast<MemRefType>();
