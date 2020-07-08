@@ -244,6 +244,16 @@ define i8 @scalable_call(i8* %addr) #1 {
   ret i8 %res
 }
 
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction{{.*}}asm_indirect_output
+; FALLBACK-WITH-REPORT-OUT-LABEL: asm_indirect_output
+define void @asm_indirect_output() {
+entry:
+  %ap = alloca i8*, align 8
+  %0 = load i8*, i8** %ap, align 8
+  call void asm sideeffect "", "=*r|m,0,~{memory}"(i8** %ap, i8* %0)
+  ret void
+}
+
 attributes #1 = { "target-features"="+sve" }
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 %pattern)

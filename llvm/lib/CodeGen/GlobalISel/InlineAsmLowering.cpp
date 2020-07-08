@@ -406,6 +406,18 @@ bool InlineAsmLowering::lowerInlineAsm(
           InstFlagIdx += getNumOpRegs(*Inst, InstFlagIdx) + 1;
         assert(getNumOpRegs(*Inst, InstFlagIdx) == 1 && "Wrong flag");
 
+        unsigned MatchedOperandFlag = Inst->getOperand(InstFlagIdx).getImm();
+        if (InlineAsm::isMemKind(MatchedOperandFlag)) {
+          LLVM_DEBUG(dbgs() << "Matching input constraint to mem operand not "
+                               "supported. This should be target specific.\n");
+          return false;
+        }
+        if (!InlineAsm::isRegDefKind(MatchedOperandFlag) &&
+            !InlineAsm::isRegDefEarlyClobberKind(MatchedOperandFlag)) {
+          LLVM_DEBUG(dbgs() << "Unknown matching constraint\n");
+          return false;
+        }
+
         // We want to tie input to register in next operand.
         unsigned DefRegIdx = InstFlagIdx + 1;
         Register Def = Inst->getOperand(DefRegIdx).getReg();

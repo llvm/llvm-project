@@ -2476,10 +2476,10 @@ FileCheck output:
         options.SetIgnoreBreakpoints(True)
 
         if self.frame().IsValid():
-          options.SetLanguage(frame.GuessLanguage())
-          eval_result = self.frame().EvaluateExpression(expr, options)
+            options.SetLanguage(frame.GuessLanguage())
+            eval_result = self.frame().EvaluateExpression(expr, options)
         else:
-          eval_result = self.target().EvaluateExpression(expr, options)
+            eval_result = self.target().EvaluateExpression(expr, options)
 
         self.assertSuccess(eval_result.GetError())
 
