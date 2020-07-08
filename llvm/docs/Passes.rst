@@ -67,7 +67,7 @@ This is inspired and adapted from code by: Naveen Neelakantam, Francesco
 Spadini, and Wojciech Stryjewski.
 
 ``-basic-aa``: Basic Alias Analysis (stateless AA impl)
-------------------------------------------------------
+-------------------------------------------------------
 
 A basic alias analysis pass that implements identities (two different globals
 cannot alias, etc), but does no stateful analysis.

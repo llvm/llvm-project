@@ -1180,6 +1180,9 @@ void mlir::populateVectorToLLVMMatrixConversionPatterns(
 namespace {
 struct LowerVectorToLLVMPass
     : public ConvertVectorToLLVMBase<LowerVectorToLLVMPass> {
+  LowerVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
+    this->reassociateFPReductions = options.reassociateFPReductions;
+  }
   void runOnOperation() override;
 };
 } // namespace
@@ -1210,6 +1213,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
   }
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertVectorToLLVMPass() {
-  return std::make_unique<LowerVectorToLLVMPass>();
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createConvertVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
+  return std::make_unique<LowerVectorToLLVMPass>(options);
 }
