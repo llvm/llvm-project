@@ -1374,6 +1374,7 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_inalloca:
     case lltok::kw_nest:
     case lltok::kw_noalias:
+    case lltok::kw_noundef:
     case lltok::kw_nocapture:
     case lltok::kw_nonnull:
     case lltok::kw_returned:
@@ -1677,6 +1678,9 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_inalloca:        B.addAttribute(Attribute::InAlloca); break;
     case lltok::kw_inreg:           B.addAttribute(Attribute::InReg); break;
     case lltok::kw_nest:            B.addAttribute(Attribute::Nest); break;
+    case lltok::kw_noundef:
+      B.addAttribute(Attribute::NoUndef);
+      break;
     case lltok::kw_noalias:         B.addAttribute(Attribute::NoAlias); break;
     case lltok::kw_nocapture:       B.addAttribute(Attribute::NoCapture); break;
     case lltok::kw_nofree:          B.addAttribute(Attribute::NoFree); break;
@@ -1774,6 +1778,9 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     }
     case lltok::kw_inreg:           B.addAttribute(Attribute::InReg); break;
     case lltok::kw_noalias:         B.addAttribute(Attribute::NoAlias); break;
+    case lltok::kw_noundef:
+      B.addAttribute(Attribute::NoUndef);
+      break;
     case lltok::kw_nonnull:         B.addAttribute(Attribute::NonNull); break;
     case lltok::kw_signext:         B.addAttribute(Attribute::SExt); break;
     case lltok::kw_zeroext:         B.addAttribute(Attribute::ZExt); break;

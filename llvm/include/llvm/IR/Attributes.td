@@ -39,6 +39,9 @@ def Builtin : EnumAttr<"builtin">;
 /// Pass structure by value.
 def ByVal : TypeAttr<"byval">;
 
+/// Parameter or return value may not contain uninitialized or poison bits.
+def NoUndef : EnumAttr<"noundef">;
+
 /// Marks function as being in a cold path.
 def Cold : EnumAttr<"cold">;
 
