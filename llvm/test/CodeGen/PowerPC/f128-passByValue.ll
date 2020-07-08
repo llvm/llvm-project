@@ -1,5 +1,4 @@
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -ppc-vsr-nums-as-vr \
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown -ppc-vsr-nums-as-vr \
 ; RUN:   -verify-machineinstrs -ppc-asm-full-reg-names < %s | FileCheck %s
 
 ; Function Attrs: norecurse nounwind readnone
