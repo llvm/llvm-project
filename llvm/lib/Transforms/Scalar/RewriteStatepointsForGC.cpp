@@ -1352,7 +1352,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     auto AS = Ty->getScalarType()->getPointerAddressSpace();
     Type *NewTy = Type::getInt8PtrTy(M->getContext(), AS);
     if (auto *VT = dyn_cast<VectorType>(Ty))
-      NewTy = FixedVectorType::get(NewTy, VT->getNumElements());
+      NewTy = FixedVectorType::get(NewTy,
+                                   cast<FixedVectorType>(VT)->getNumElements());
     return Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate,
                                      {NewTy});
   };
@@ -2667,8 +2668,9 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
     unsigned VF = 0;
     for (unsigned i = 0; i < I.getNumOperands(); i++)
       if (auto *OpndVTy = dyn_cast<VectorType>(I.getOperand(i)->getType())) {
-        assert(VF == 0 || VF == OpndVTy->getNumElements());
-        VF = OpndVTy->getNumElements();
+        assert(VF == 0 ||
+               VF == cast<FixedVectorType>(OpndVTy)->getNumElements());
+        VF = cast<FixedVectorType>(OpndVTy)->getNumElements();
       }
 
     // It's the vector to scalar traversal through the pointer operand which
