@@ -57,6 +57,14 @@
 #CHECK: foo	%, 200
 #CHECK: error: unknown token in expression
 #CHECK: foo	{, 200
+#CHECK: error: invalid instruction
+#CHECK: foo	100(15), 300
+#CHECK: error: register expected
+#CHECK: foo	100(15,), 300
+#CHECK: error: invalid instruction
+#CHECK: foo	100(15,%r1), 300
+#CHECK: error: invalid instruction
+#CHECK: foo	100(%v20,10), 300
 
 	foo	100, 200
 	foo	100(, 200
@@ -86,3 +94,7 @@
 	foo	%c, 200
 	foo	%, 200
 	foo	{, 200
+	foo	100(15), 300
+	foo	100(15,), 300
+	foo	100(15,%r1), 300
+	foo	100(%v20,10), 300
