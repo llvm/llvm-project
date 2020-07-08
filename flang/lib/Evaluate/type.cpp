@@ -22,16 +22,20 @@
 
 // IsDescriptor() predicate: true when a symbol is implemented
 // at runtime with a descriptor.
-// TODO there's probably a better place for this predicate than here
 namespace Fortran::semantics {
 
-static bool IsDescriptor(const ObjectEntityDetails &details) {
-  if (const auto *type{details.type()}) {
+static bool IsDescriptor(const DeclTypeSpec *type) {
+  if (type) {
     if (auto dynamicType{evaluate::DynamicType::From(*type)}) {
-      if (dynamicType->RequiresDescriptor()) {
-        return true;
-      }
+      return dynamicType->RequiresDescriptor();
     }
+  }
+  return false;
+}
+
+static bool IsDescriptor(const ObjectEntityDetails &details) {
+  if (IsDescriptor(details.type())) {
+    return true;
   }
   // TODO: Automatic (adjustable) arrays - are they descriptors?
   for (const ShapeSpec &shapeSpec : details.shape()) {
@@ -62,6 +66,7 @@ bool IsDescriptor(const Symbol &symbol) {
                        symbol.attrs().test(Attr::EXTERNAL)) &&
                 IsDescriptor(d);
           },
+          [&](const EntityDetails &d) { return IsDescriptor(d.type()); },
           [](const AssocEntityDetails &d) {
             if (const auto &expr{d.expr()}) {
               if (expr->Rank() > 0) {
@@ -149,7 +154,7 @@ bool DynamicType::IsAssumedLengthCharacter() const {
       charLength_->isAssumed();
 }
 
-bool DynamicType::IsUnknownLengthCharacter() const {
+bool DynamicType::IsNonConstantLengthCharacter() const {
   if (category_ != TypeCategory::Character) {
     return false;
   } else if (!charLength_) {
@@ -471,7 +476,7 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
 }
 
 bool DynamicType::RequiresDescriptor() const {
-  return IsPolymorphic() || IsUnknownLengthCharacter() ||
+  return IsPolymorphic() || IsNonConstantLengthCharacter() ||
       (derived_ && CountNonConstantLenParameters(*derived_) > 0);
 }
 
