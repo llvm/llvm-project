@@ -79,8 +79,7 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
   rewriter.setInsertionPoint(module.getBody(),
                              std::prev(module.getBody()->end()));
   FuncOp funcOp =
-      rewriter.create<FuncOp>(op->getLoc(), fnNameAttr.getValue(), libFnType,
-                              ArrayRef<NamedAttribute>{});
+      rewriter.create<FuncOp>(op->getLoc(), fnNameAttr.getValue(), libFnType);
   // Insert a function attribute that will trigger the emission of the
   // corresponding `_mlir_ciface_xxx` interface so that external libraries see
   // a normalized ABI. This interface is added during std to llvm conversion.
