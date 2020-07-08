@@ -4709,7 +4709,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
                               Sema::ReferenceConversions::NestedQualification)
                              ? ICK_Qualification
                              : ICK_Identity;
-    ICS.Standard.FromTypePtr = T2.getAsOpaquePtr();
+    ICS.Standard.setFromType(T2);
     ICS.Standard.setToType(0, T2);
     ICS.Standard.setToType(1, T1);
     ICS.Standard.setToType(2, T1);
