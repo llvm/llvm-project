@@ -709,8 +709,7 @@ namespace {
 
     /// Merge consecutive store operations into a wide store.
     /// This optimization uses wide integers or vectors when possible.
-    /// \return number of stores that were merged into a merged store (the
-    /// affected nodes are stored as a prefix in \p StoreNodes).
+    /// \return true if stores were merged.
     bool mergeConsecutiveStores(StoreSDNode *St);
 
     /// Try to transform a truncation where C is a constant:
@@ -16300,7 +16299,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   // mergeable cases. To prevent this, we prune such stores from the
   // front of StoreNodes here.
 
-  bool RV = false;
+  bool MadeChange = false;
   while (StoreNodes.size() > 1) {
     size_t StartIdx = 0;
     while ((StartIdx + 1 < StoreNodes.size()) &&
@@ -16310,7 +16309,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
 
     // Bail if we don't have enough candidates to merge.
     if (StartIdx + 1 >= StoreNodes.size())
-      return RV;
+      return MadeChange;
 
     if (StartIdx)
       StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + StartIdx);
@@ -16446,8 +16445,8 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
           continue;
         }
 
-        RV |= mergeStoresOfConstantsOrVecElts(StoreNodes, MemVT, NumElem, true,
-                                              UseVector, LastIntegerTrunc);
+        MadeChange |= mergeStoresOfConstantsOrVecElts(
+            StoreNodes, MemVT, NumElem, true, UseVector, LastIntegerTrunc);
 
         // Remove merged stores for next iteration.
         StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
@@ -16513,7 +16512,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
           continue;
         }
 
-        RV |= mergeStoresOfConstantsOrVecElts(
+        MadeChange |= mergeStoresOfConstantsOrVecElts(
             StoreNodes, MemVT, NumStoresToMerge, false, true, false);
 
         StoreNodes.erase(StoreNodes.begin(),
@@ -16759,8 +16758,8 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
                                       SDValue(NewLoad.getNode(), 1));
       }
 
-      // Replace the all stores with the new store. Recursively remove
-      // corresponding value if its no longer used.
+      // Replace all stores with the new store. Recursively remove corresponding
+      // values if they are no longer used.
       for (unsigned i = 0; i < NumElem; ++i) {
         SDValue Val = StoreNodes[i].MemNode->getOperand(1);
         CombineTo(StoreNodes[i].MemNode, NewStore);
@@ -16768,13 +16767,13 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
           recursivelyDeleteUnusedNodes(Val.getNode());
       }
 
-      RV = true;
+      MadeChange = true;
       StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
       LoadNodes.erase(LoadNodes.begin(), LoadNodes.begin() + NumElem);
       NumConsecutiveStores -= NumElem;
     }
   }
-  return RV;
+  return MadeChange;
 }
 
 SDValue DAGCombiner::replaceStoreChain(StoreSDNode *ST, SDValue BetterChain) {
