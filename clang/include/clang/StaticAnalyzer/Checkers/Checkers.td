@@ -577,9 +577,17 @@ def CXXSelfAssignmentChecker : Checker<"SelfAssignment">,
   Documentation<NotDocumented>,
   Hidden;
 
-def SmartPtrModeling: Checker<"SmartPtr">,
+def SmartPtrModeling: Checker<"SmartPtrModeling">,
   HelpText<"Model behavior of C++ smart pointers">,
   Documentation<NotDocumented>,
+    CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "ModelSmartPtrDereference",
+                  "Enable modeling for SmartPtr null dereferences",
+                  "false",
+                  InAlpha,
+                  Hide>,
+  ]>,
   Hidden;
 
 def MoveChecker: Checker<"Move">,
@@ -734,6 +742,11 @@ def MismatchedIteratorChecker : Checker<"MismatchedIterator">,
   HelpText<"Check for use of iterators of different containers where iterators "
            "of the same container are expected">,
   Dependencies<[IteratorModeling]>,
+  Documentation<HasAlphaDocumentation>;
+
+def SmartPtrChecker: Checker<"SmartPtr">,
+  HelpText<"Find the dereference of null SmrtPtr">,
+  Dependencies<[SmartPtrModeling]>,
   Documentation<HasAlphaDocumentation>;
 
 } // end: "alpha.cplusplus"
