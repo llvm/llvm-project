@@ -522,6 +522,69 @@ define <16 x float> @test_masked_permps_v16f32(<16 x float>* %vp, <16 x float> %
   ret <16 x float> %res
 }
 
+define void @test_demandedelts_pshufb_v32i8_v16i8(<2 x i32>* %src, <8 x i32>* %dst) {
+; SKX64-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
+; SKX64:       # %bb.0:
+; SKX64-NEXT:    vmovdqa 32(%rdi), %xmm0
+; SKX64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SKX64-NEXT:    vmovdqa %ymm0, 672(%rsi)
+; SKX64-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,0,2,3]
+; SKX64-NEXT:    vmovaps %ymm0, 832(%rsi)
+; SKX64-NEXT:    vzeroupper
+; SKX64-NEXT:    retq
+;
+; KNL64-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
+; KNL64:       # %bb.0:
+; KNL64-NEXT:    vmovdqa 32(%rdi), %xmm0
+; KNL64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; KNL64-NEXT:    vmovdqa %ymm0, 672(%rsi)
+; KNL64-NEXT:    vmovdqa 208(%rdi), %xmm0
+; KNL64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; KNL64-NEXT:    vmovdqa %ymm0, 832(%rsi)
+; KNL64-NEXT:    retq
+;
+; SKX32-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
+; SKX32:       # %bb.0:
+; SKX32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SKX32-NEXT:    vmovdqa 32(%ecx), %xmm0
+; SKX32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SKX32-NEXT:    vmovdqa %ymm0, 672(%eax)
+; SKX32-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,0,2,3]
+; SKX32-NEXT:    vmovaps %ymm0, 832(%eax)
+; SKX32-NEXT:    vzeroupper
+; SKX32-NEXT:    retl
+;
+; KNL32-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
+; KNL32:       # %bb.0:
+; KNL32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL32-NEXT:    vmovdqa 32(%eax), %xmm0
+; KNL32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; KNL32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; KNL32-NEXT:    vmovdqa %ymm0, 672(%ecx)
+; KNL32-NEXT:    vmovdqa 208(%eax), %xmm0
+; KNL32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; KNL32-NEXT:    vmovdqa %ymm0, 832(%ecx)
+; KNL32-NEXT:    retl
+  %t64 = bitcast <2 x i32>* %src to <16 x i32>*
+  %t87 = load <16 x i32>, <16 x i32>* %t64, align 64
+  %t88 = extractelement <16 x i32> %t87, i64 11
+  %t89 = insertelement <8 x i32> <i32 undef, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 %t88, i64 0
+  %t90 = insertelement <8 x i32> %t89, i32 %t88, i64 1
+  %ptridx49.i = getelementptr inbounds <8 x i32>, <8 x i32>* %dst, i64 21
+  store <8 x i32> %t90, <8 x i32>* %ptridx49.i, align 32
+  %ptridx56.i = getelementptr inbounds <2 x i32>, <2 x i32>* %src, i64 24
+  %t00 = bitcast <2 x i32>* %ptridx56.i to <16 x i32>*
+  %t09 = load <16 x i32>, <16 x i32>* %t00, align 64
+  %t10 = extractelement <16 x i32> %t09, i64 5
+  %t11 = insertelement <8 x i32> <i32 undef, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 %t10, i64 0
+  %t12 = extractelement <16 x i32> %t09, i64 4
+  %t13 = insertelement <8 x i32> %t11, i32 %t12, i64 1
+  %ptridx64.i = getelementptr inbounds <8 x i32>, <8 x i32>* %dst, i64 26
+  store <8 x i32> %t13, <8 x i32>* %ptridx64.i, align 32
+  ret void
+}
+
 %union1= type { <16 x float> }
 @src1 = external dso_local local_unnamed_addr global %union1, align 64
 
