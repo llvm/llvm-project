@@ -746,6 +746,18 @@ int main(int argc, char **argv) {
     for (const auto &P : PassList) {
       Passes.push_back(P->getPassArgument());
     }
+    if (OptLevelO0)
+      Passes.push_back("default<O0>");
+    if (OptLevelO1)
+      Passes.push_back("default<O1>");
+    if (OptLevelO2)
+      Passes.push_back("default<O2>");
+    if (OptLevelO3)
+      Passes.push_back("default<O3>");
+    if (OptLevelOs)
+      Passes.push_back("default<Os>");
+    if (OptLevelOz)
+      Passes.push_back("default<Oz>");
     OutputKind OK = OK_NoOutput;
     if (!NoOutput)
       OK = OutputAssembly
