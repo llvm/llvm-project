@@ -3673,6 +3673,7 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
   case FT_STRUCT:
     return parseFieldInitializer(Field, Field.Contents.StructInfo, Initializer);
   }
+  llvm_unreachable("Unhandled FieldType enum");
 }
 
 bool MasmParser::parseStructInitializer(const StructInfo &Structure,
@@ -3826,6 +3827,7 @@ bool MasmParser::emitFieldValue(const FieldInfo &Field) {
   case FT_STRUCT:
     return emitFieldValue(Field, Field.Contents.StructInfo);
   }
+  llvm_unreachable("Unhandled FieldType enum");
 }
 
 bool MasmParser::emitStructValue(const StructInfo &Structure) {
@@ -3905,6 +3907,7 @@ bool MasmParser::emitFieldInitializer(const FieldInfo &Field,
     return emitFieldInitializer(Field, Field.Contents.StructInfo,
                                 Initializer.StructInfo);
   }
+  llvm_unreachable("Unhandled FieldType enum");
 }
 
 bool MasmParser::emitStructInitializer(const StructInfo &Structure,
