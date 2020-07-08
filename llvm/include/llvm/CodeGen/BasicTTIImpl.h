@@ -451,6 +451,14 @@ public:
     UP.BEInsns = 2;
   }
 
+  void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                             TTI::PeelingPreferences &PP) {
+    PP.PeelCount = 0;
+    PP.AllowPeeling = true;
+    PP.AllowLoopNestsPeeling = false;
+    PP.PeelProfiledIterations = true;
+  }
+
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC,
                                 TargetLibraryInfo *LibInfo,

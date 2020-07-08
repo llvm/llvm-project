@@ -64,6 +64,9 @@ public:
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 
+  void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                             TTI::PeelingPreferences &PP);
+
   /// Bias LSR towards creating post-increment opportunities.
   bool shouldFavorPostInc() const;
 
