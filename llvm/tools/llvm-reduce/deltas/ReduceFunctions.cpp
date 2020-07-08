@@ -24,16 +24,13 @@ using namespace llvm;
 /// that aren't inside any of the desired Chunks.
 static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
                                        Module *Program) {
+  Oracle O(ChunksToKeep);
+
   // Get functions inside desired chunks
   std::set<Function *> FuncsToKeep;
-  int I = 0, FunctionCount = 0;
   for (auto &F : *Program)
-    if (I < (int)ChunksToKeep.size()) {
-      if (ChunksToKeep[I].contains(++FunctionCount))
-        FuncsToKeep.insert(&F);
-      if (FunctionCount == ChunksToKeep[I].end)
-        ++I;
-    }
+    if (O.shouldKeep())
+      FuncsToKeep.insert(&F);
 
   // Delete out-of-chunk functions, and replace their calls with undef
   std::vector<Function *> FuncsToRemove;

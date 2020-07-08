@@ -42,7 +42,8 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
                                        Module *Program) {
-  int I = 0, ArgCount = 0;
+  Oracle O(ChunksToKeep);
+
   std::set<Argument *> ArgsToKeep;
   std::vector<Function *> Funcs;
   // Get inside-chunk arguments, as well as their parent function
@@ -50,12 +51,8 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
     if (!F.isDeclaration()) {
       Funcs.push_back(&F);
       for (auto &A : F.args())
-        if (I < (int)ChunksToKeep.size()) {
-          if (ChunksToKeep[I].contains(++ArgCount))
-            ArgsToKeep.insert(&A);
-          if (ChunksToKeep[I].end == ArgCount)
-            ++I;
-        }
+        if (O.shouldKeep())
+          ArgsToKeep.insert(&A);
     }
 
   for (auto *F : Funcs) {
