@@ -535,7 +535,7 @@ will only be done through the following process:
     at a minimum. This time-based guideline is not strict: we may support much
     older compilers, or decide to support fewer versions.
 
-  * An RFC is sent to the `llvm-dev mailing list <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_
+  * An RFC is sent to the `llvm-dev mailing list`_
 
     - Detail upsides of the version increase (e.g. which newer C++ language or
       library features LLVM should use; avoid miscompiles in particular compiler
@@ -580,15 +580,15 @@ have the following general policies for introducing major new components into
 the LLVM world.  However, this is really only intended to cover common cases
 that we have seen arise: different situations are different, and we are open
 to discussing unusual cases as well - just start an RFC thread on the
-`llvm-dev mailing list <https://lists.llvm.org/mailman/listinfo/llvm-dev>`_.
+`llvm-dev mailing list`_.
 
 Adding a New Target
 -------------------
 
 LLVM is very receptive to new targets, even experimental ones, but a number of
 problems can appear when adding new large portions of code, and back-ends are
-normally added in bulk.  We have found that landing large pieces of new code 
-and then trying to fix emergent problems in-tree is problematic for a variety 
+normally added in bulk.  We have found that landing large pieces of new code
+and then trying to fix emergent problems in-tree is problematic for a variety
 of reasons.
 
 For these reasons, new targets are *always* added as *experimental* until
@@ -627,8 +627,8 @@ The basic rules for a back-end to be upstreamed in **experimental** mode are:
 * The target should have either reasonable documentation on how it
   works (ISA, ABI, etc.) or a publicly available simulator/hardware
   (either free or cheap enough) - preferably both.  This allows
-  developers to validate assumptions, understand constraints and review code 
-  that can affect the target. 
+  developers to validate assumptions, understand constraints and review code
+  that can affect the target.
 
 In addition, the rules for a back-end to be promoted to **official** are:
 
@@ -699,7 +699,7 @@ targets", they:
    "should" concerns above.
 
 If you have a project that you think would make sense to add to the LLVM
-monorepo, please start an RFC thread on the llvm-dev mailing list to kick off
+monorepo, please start an RFC thread on the `llvm-dev mailing list`_ to kick off
 the discussion.  This process can take some time and iteration - please don’t
 be discouraged or intimidated by that!
 
@@ -761,8 +761,7 @@ may be eventually retired, but no process has been established for that yet.  If
 and when this comes up, please start an RFC discussion on llvm-dev.
 
 This process is very new - please expect the details to change, it is always
-safe to ask on the `llvm-dev mailing list
-<https://lists.llvm.org/mailman/listinfo/llvm-dev>`_ about this.
+safe to ask on the `llvm-dev mailing list`_ about this.
 
 Suggested disclaimer for the project README and the main project web page:
 
@@ -1033,3 +1032,5 @@ applications to the binary redistribution clause. This also means that it is ok
 to move code from (e.g.)  libc++ to the LLVM core without concern, but that code
 cannot be moved from the LLVM core to libc++ without the copyright owner's
 permission.
+
+.. _llvm-dev mailing list: http://lists.llvm.org/mailman/listinfo/llvm-dev
