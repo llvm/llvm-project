@@ -468,7 +468,6 @@ def OMP_TargetParallelDo : Directive<"target parallel do"> {
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_DefaultMap>,
     VersionedClause<OMPC_NumThreads>,
-    VersionedClause<OMPC_DefaultMap>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Shared>,
     VersionedClause<OMPC_Reduction>,
