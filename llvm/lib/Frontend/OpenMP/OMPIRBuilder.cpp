@@ -31,7 +31,6 @@
 
 using namespace llvm;
 using namespace omp;
-using namespace types;
 
 static cl::opt<bool>
     OptimisticAttributes("openmp-ir-builder-optimistic-attributes", cl::Hidden,
@@ -1091,4 +1090,25 @@ Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
   std::string Prefix = Twine("gomp_critical_user_", CriticalName).str();
   std::string Name = getNameWithSeparators({Prefix, "var"}, ".", ".");
   return getOrCreateOMPInternalVariable(KmpCriticalNameTy, Name);
+}
+
+// Create all simple and struct types exposed by the runtime and remember
+// the llvm::PointerTypes of them for easy access later.
+void OpenMPIRBuilder::initializeTypes(Module &M) {
+  LLVMContext &Ctx = M.getContext();
+  StructType *T;
+#define OMP_TYPE(VarName, InitValue) VarName = InitValue;
+#define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
+  VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
+  VarName##PtrTy = PointerType::getUnqual(VarName##Ty);
+#define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
+  VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
+  VarName##Ptr = PointerType::getUnqual(VarName);
+#define OMP_STRUCT_TYPE(VarName, StructName, ...)                              \
+  T = M.getTypeByName(StructName);                                             \
+  if (!T)                                                                      \
+    T = StructType::create(Ctx, {__VA_ARGS__}, StructName);                    \
+  VarName = T;                                                                 \
+  VarName##Ptr = PointerType::getUnqual(T);
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
 }
