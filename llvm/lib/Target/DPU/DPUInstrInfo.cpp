@@ -173,8 +173,7 @@ void DPUInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 }
 
-static bool
-reverseBranchOpc(unsigned Opc, unsigned &ReversedOpc) {
+static bool reverseBranchOpc(unsigned Opc, unsigned &ReversedOpc) {
   switch (Opc) {
   default:
     return false;
@@ -262,7 +261,7 @@ bool DPUInstrInfo::reverseBranchCondition(
   default: {
     unsigned ReversedOpc;
     if (!reverseBranchOpc(Opc, ReversedOpc)) {
-        return true;
+      return true;
     }
     Cond[0].setImm(ReversedOpc);
     break;
