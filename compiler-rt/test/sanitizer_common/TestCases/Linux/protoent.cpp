@@ -1,4 +1,5 @@
 // RUN: %clangxx -std=c++11 -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
+// REQUIRES: !android
 
 #include <assert.h>
 #include <errno.h>
