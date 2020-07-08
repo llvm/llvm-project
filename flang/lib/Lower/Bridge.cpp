@@ -789,12 +789,11 @@ private:
         info.isStructured() ? builder->getIndexType() : info.loopVariableType;
     auto lowerValue = genFIRLoopIndex(info.lowerExpr, type);
     auto upperValue = genFIRLoopIndex(info.upperExpr, type);
-    info.stepValue = info.stepExpr.has_value()
-                         ? genFIRLoopIndex(*info.stepExpr, type)
-                         : info.isStructured()
-                               ? builder->create<mlir::ConstantIndexOp>(loc, 1)
-                               : builder->createIntegerConstant(
-                                     loc, info.loopVariableType, 1);
+    info.stepValue =
+        info.stepExpr.has_value() ? genFIRLoopIndex(*info.stepExpr, type)
+        : info.isStructured()
+            ? builder->create<mlir::ConstantIndexOp>(loc, 1)
+            : builder->createIntegerConstant(loc, info.loopVariableType, 1);
     assert(info.stepValue && "step value must be set");
     info.loopVariable = createTemp(loc, *info.loopVariableSym);
 
@@ -1577,10 +1576,11 @@ private:
   /// the correct value. It will be referenced on demand using `fir.addr_of`.
   void instantiateGlobal(const Fortran::lower::pft::Variable &var) {
     const auto &sym = var.getSymbol();
-    std::string globalName = mangleName(sym);
+    auto globalName = mangleName(sym);
     fir::GlobalOp global;
     bool isConst = sym.attrs().test(Fortran::semantics::Attr::PARAMETER);
-    auto loc = toLocation();
+    auto loc = genLocation(sym.name());
+    auto idxTy = builder->getIndexType();
     // FIXME: name returned does not consider subprogram's scope, is not unique
     if (builder->getNamedGlobal(globalName))
       return;
@@ -1624,7 +1624,6 @@ private:
         addSymbol(sym, addrOf);
         return;
       }
-      auto idxTy = builder->getIndexType();
       mlir::Value len;
       if (sia.isChar) {
         auto c = sia.getCharLenConst();
@@ -1650,8 +1649,72 @@ private:
         assert(sia.isArray);
         localSymbols.addSymbolWithBounds(sym, addrOf, extents, lbounds);
       }
+    } else if (const auto *details =
+                   sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+      const int64_t sz = static_cast<int64_t>(sym.size());
+      bool hasInit = [&]() {
+        for (const auto &obj : details->objects())
+          if (const auto *objDet =
+                  obj->detailsIf<Fortran::semantics::ObjectEntityDetails>())
+            if (objDet->init())
+              return true;
+        return false;
+      }();
+      if (!sym.name().size() || !hasInit) {
+        // anonymous COMMON must always be initialized to zero
+        // a named COMMON sans initializers is also initialized to zero
+        auto linkage = builder->getStringAttr("common");
+        fir::SequenceType::Shape shape = {sz};
+        auto i8Ty = builder->getIntegerType(8);
+        auto commonTy = fir::SequenceType::get(shape, i8Ty);
+        auto vecTy = mlir::VectorType::get(sz, i8Ty);
+        mlir::Attribute zero = builder->getIntegerAttr(i8Ty, 0);
+        auto init =
+            mlir::DenseElementsAttr::get(vecTy, llvm::makeArrayRef(zero));
+        global =
+            builder->createGlobal(loc, commonTy, globalName, linkage, init);
+      } else {
+        // FIXME? For now let the layout be determined by the target data
+        // layout. This may need to be revisited if the target data layout is
+        // insufficient to layout Fortran COMMON blocks.
+        // The target data layout is the better solution because it is selected
+        // by the instance of flang's chosen target rather than by properties of
+        // the build machine.
+        mlir::Type commonTy = [&]() {
+          llvm::SmallVector<mlir::Type, 8> members;
+          for (const auto &obj : details->objects())
+            members.push_back(genType(*obj));
+          return mlir::TupleType::get(members, builder->getContext());
+        }();
+        auto linkage = builder->getStringAttr("linkonce");
+        auto initFunc = [&](Fortran::lower::FirOpBuilder &builder) {
+          mlir::Value cb = builder.create<fir::UndefOp>(loc, commonTy);
+          unsigned offset = 0;
+          // Assume that the members of the COMMON block will appear in an order
+          // that is sorted by offset.
+          std::int64_t lastByteOff = -1;
+          for (const auto &obj : details->objects()) {
+            assert(lastByteOff < static_cast<std::int64_t>(obj->offset()));
+            lastByteOff = static_cast<std::int64_t>(obj->offset());
+            if (const auto *objDet =
+                    obj->detailsIf<Fortran::semantics::ObjectEntityDetails>())
+              if (objDet->init()) {
+                auto initVal = genExprValue(objDet->init().value());
+                auto off = builder.createIntegerConstant(loc, idxTy, offset++);
+                cb = builder.create<fir::InsertValueOp>(loc, commonTy, cb,
+                                                        initVal, off);
+              }
+          }
+          builder.create<fir::HasValueOp>(loc, cb);
+        };
+        global = builder->createGlobal(loc, commonTy, globalName,
+                                       /*isConstant=*/false, initFunc, linkage);
+      }
+      auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
+                                                   global.getSymbol());
+      addSymbol(sym, addrOf);
     } else {
-      TODO(); // Procedure pointer
+      TODO(); // Procedure pointer or something else
     }
   }
 
@@ -1660,7 +1723,10 @@ private:
   /// constructed.
   mlir::Value createNewLocal(mlir::Location loc,
                              const Fortran::lower::pft::Variable &var,
+                             mlir::Value *preAlloc,
                              llvm::ArrayRef<mlir::Value> shape = {}) {
+    if (preAlloc)
+      return *preAlloc;
     auto nm = var.getSymbol().name().ToString();
     auto ty = genType(var);
     if (shape.size())
@@ -1688,7 +1754,8 @@ private:
   /// Instantiate a local variable. Precondition: Each variable will be visited
   /// such that if it's properties depend on other variables, the variables upon
   /// which its properties depend will already have been visited.
-  void instantiateLocal(const Fortran::lower::pft::Variable &var) {
+  void instantiateLocal(const Fortran::lower::pft::Variable &var,
+                        mlir::Value *preAlloc = nullptr) {
     const auto &sym = var.getSymbol();
     const auto loc = genLocation(sym.name());
     auto idxTy = builder->getIndexType();
@@ -1708,7 +1775,7 @@ private:
       // to be handled as dummy parameters.)
 
       // Otherwise, it's a local variable.
-      auto local = createNewLocal(loc, var);
+      auto local = createNewLocal(loc, var, preAlloc);
       addSymbol(sym, local);
       return;
     }
@@ -1781,7 +1848,7 @@ private:
               return;
             }
             // local CHARACTER array with constant size
-            auto local = createNewLocal(loc, var);
+            auto local = createNewLocal(loc, var, preAlloc);
             localSymbols.addCharSymbolWithShape(sym, local, len, shape);
             return;
           }
@@ -1790,7 +1857,7 @@ private:
             return;
           }
           // local array with constant size
-          auto local = createNewLocal(loc, var);
+          auto local = createNewLocal(loc, var, preAlloc);
           localSymbols.addSymbolWithShape(sym, local, shape);
           return;
         }
@@ -1851,7 +1918,7 @@ private:
         llvm::SmallVector<mlir::Value, 8> shape;
         shape.push_back(len);
         shape.append(extents.begin(), extents.end());
-        auto local = createNewLocal(loc, var, shape);
+        auto local = createNewLocal(loc, var, preAlloc, shape);
         localSymbols.addCharSymbolWithBounds(sym, local, len, extents, lbounds);
         return;
       }
@@ -1861,7 +1928,7 @@ private:
       }
       // local array with computed bounds
       assert(!mustBeDummy);
-      auto local = createNewLocal(loc, var, extents);
+      auto local = createNewLocal(loc, var, preAlloc, extents);
       localSymbols.addSymbolWithBounds(sym, local, extents, lbounds);
       return;
     }
@@ -1884,17 +1951,39 @@ private:
       addSymbol(sym, addr, true);
       return;
     }
-    auto local = createNewLocal(loc, var);
+    auto local = createNewLocal(loc, var, preAlloc);
     addSymbol(sym, local);
   }
 
-  void instantiateVar(const Fortran::lower::pft::Variable &var) {
-    if (Fortran::semantics::FindCommonBlockContaining(var.getSymbol())) {
-      mlir::emitError(toLocation(),
-                      "Common blocks not yet handled in lowering");
-      exit(1);
+  /// The COMMON block is a global structure. `var` will be at some offset
+  /// within the COMMON block. Adds the address of `var` (COMMON + offset) to
+  /// the symbol map.
+  void instantiateCommon(const Fortran::semantics::Symbol &common,
+                         const Fortran::lower::pft::Variable &var) {
+    auto commonName = mangleName(common);
+    if (!builder->getNamedGlobal(commonName)) {
+      Fortran::lower::pft::Variable commonVar{common, true};
+      instantiateGlobal(commonVar);
     }
-    if (var.isGlobal())
+    auto commonAddr = lookupSymbol(common);
+    const auto &varSym = var.getSymbol();
+    auto byteOffset = varSym.offset();
+    auto loc = genLocation(varSym.name());
+    auto i8Ptr = fir::ReferenceType::get(builder->getIntegerType(8));
+    auto base = builder->createConvert(loc, i8Ptr, commonAddr);
+    llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
+        loc, builder->getIndexType(), byteOffset)};
+    auto varAddr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
+    auto localTy = fir::ReferenceType::get(genType(var));
+    mlir::Value local = builder->createConvert(loc, localTy, varAddr);
+    instantiateLocal(var, &local);
+  }
+
+  void instantiateVar(const Fortran::lower::pft::Variable &var) {
+    if (auto *common =
+            Fortran::semantics::FindCommonBlockContaining(var.getSymbol()))
+      instantiateCommon(*common, var);
+    else if (var.isGlobal())
       instantiateGlobal(var);
     else
       instantiateLocal(var);
