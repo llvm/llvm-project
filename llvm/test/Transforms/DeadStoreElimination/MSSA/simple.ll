@@ -625,7 +625,6 @@ define void @test41(i32* noalias %P) {
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to i8*
 ; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @free(i8* [[P2]])
 ; CHECK-NEXT:    ret void
 ;
