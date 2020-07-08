@@ -426,19 +426,24 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   if (!RIFF)
     return RIFF.takeError();
   if (RIFF->Type != riff::fourCC("CdIx"))
-    return makeError("wrong RIFF type");
+    return makeError("wrong RIFF filetype: " + riff::fourCCStr(RIFF->Type));
   llvm::StringMap<llvm::StringRef> Chunks;
   for (const auto &Chunk : RIFF->Chunks)
     Chunks.try_emplace(llvm::StringRef(Chunk.ID.data(), Chunk.ID.size()),
                        Chunk.Data);
 
-  for (llvm::StringRef RequiredChunk : {"meta", "stri"})
+  if (!Chunks.count("meta"))
+    return makeError("missing meta chunk");
+  Reader Meta(Chunks.lookup("meta"));
+  auto SeenVersion = Meta.consume32();
+  if (SeenVersion != Version)
+    return makeError("wrong version: want " + llvm::Twine(Version) + ", got " +
+                     llvm::Twine(SeenVersion));
+
+  // meta chunk is checked above, as we prefer the "version mismatch" error.
+  for (llvm::StringRef RequiredChunk : {"stri"})
     if (!Chunks.count(RequiredChunk))
       return makeError("missing required chunk " + RequiredChunk);
-
-  Reader Meta(Chunks.lookup("meta"));
-  if (Meta.consume32() != Version)
-    return makeError("wrong version");
 
   auto Strings = readStringTable(Chunks.lookup("stri"));
   if (!Strings)
@@ -665,7 +670,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   trace::Span OverallTracer("LoadIndex");
   auto Buffer = llvm::MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
-    elog("Can't open {0}", SymbolFilename);
+    elog("Can't open {0}: {1}", SymbolFilename, Buffer.getError().message());
     return nullptr;
   }
 
@@ -682,7 +687,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
       if (I->Relations)
         Relations = std::move(*I->Relations);
     } else {
-      elog("Bad Index: {0}", I.takeError());
+      elog("Bad index file: {0}", I.takeError());
       return nullptr;
     }
   }
