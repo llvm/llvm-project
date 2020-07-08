@@ -94,7 +94,6 @@ bool UnrollRuntimeLoopRemainder(
 
 void computePeelCount(Loop *L, unsigned LoopSize,
                       TargetTransformInfo::UnrollingPreferences &UP,
-                      TargetTransformInfo::PeelingPreferences &PP,
                       unsigned &TripCount, ScalarEvolution &SE);
 
 bool canPeel(Loop *L);
@@ -120,8 +119,6 @@ bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                         unsigned MaxTripCount, bool MaxOrZero,
                         unsigned &TripMultiple, unsigned LoopSize,
                         TargetTransformInfo::UnrollingPreferences &UP,
-                        TargetTransformInfo::PeelingPreferences &PP,
-
                         bool &UseUpperBound);
 
 void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
@@ -136,13 +133,9 @@ TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
-    Optional<bool> UserUpperBound, Optional<unsigned> UserFullUnrollMaxCount);
-
-TargetTransformInfo::PeelingPreferences
-gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                         const TargetTransformInfo &TTI,
-                         Optional<bool> UserAllowPeeling,
-                         Optional<bool> UserAllowProfileBasedPeeling);
+    Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling,
+    Optional<bool> UserAllowProfileBasedPeeling,
+    Optional<unsigned> UserFullUnrollMaxCount);
 
 unsigned ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
                              bool &NotDuplicatable, bool &Convergent,
