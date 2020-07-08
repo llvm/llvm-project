@@ -790,3 +790,61 @@ define <2 x i32> @true_undef_vec(i1 %cond, <2 x i32> %x) {
   %s = select i1 %cond, <2 x i32> undef, <2 x i32> %x
   ret <2 x i32> %s
 }
+
+; These can be folded because the other value is guaranteed not to be poison.
+define i32 @false_undef_true_constant(i1 %cond) {
+; CHECK-LABEL: @false_undef_true_constant(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 10, i32 undef
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %s = select i1 %cond, i32 10, i32 undef
+  ret i32 %s
+}
+
+define i32 @true_undef_false_constant(i1 %cond) {
+; CHECK-LABEL: @true_undef_false_constant(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 undef, i32 20
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %s = select i1 %cond, i32 undef, i32 20
+  ret i32 %s
+}
+
+define <2 x i32> @false_undef_true_constant_vec(i1 %cond) {
+; CHECK-LABEL: @false_undef_true_constant_vec(
+; CHECK-NEXT:    ret <2 x i32> <i32 42, i32 -42>
+;
+  %s = select i1 %cond, <2 x i32> <i32 42, i32 -42>, <2 x i32> undef
+  ret <2 x i32> %s
+}
+
+define <2 x i32> @true_undef_false_constant_vec(i1 %cond) {
+; CHECK-LABEL: @true_undef_false_constant_vec(
+; CHECK-NEXT:    ret <2 x i32> <i32 -42, i32 42>
+;
+  %s = select i1 %cond, <2 x i32> undef, <2 x i32> <i32 -42, i32 42>
+  ret <2 x i32> %s
+}
+
+; If one input is undef and the other is freeze, we can fold it to the freeze.
+define i32 @false_undef_true_freeze(i1 %cond, i32 %x) {
+; CHECK-LABEL: @false_undef_true_freeze(
+; CHECK-NEXT:    [[XF:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 [[XF]], i32 undef
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %xf = freeze i32 %x
+  %s = select i1 %cond, i32 %xf, i32 undef
+  ret i32 %s
+}
+
+define i32 @false_undef_false_freeze(i1 %cond, i32 %x) {
+; CHECK-LABEL: @false_undef_false_freeze(
+; CHECK-NEXT:    [[XF:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 undef, i32 [[XF]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %xf = freeze i32 %x
+  %s = select i1 %cond, i32 undef, i32 %xf
+  ret i32 %s
+}
