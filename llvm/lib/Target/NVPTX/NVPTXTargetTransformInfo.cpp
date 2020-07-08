@@ -155,8 +155,3 @@ void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.Partial = UP.Runtime = true;
   UP.PartialThreshold = UP.Threshold / 4;
 }
-
-void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::PeelingPreferences &PP) {
-  BaseT::getPeelingPreferences(L, SE, PP);
-}
