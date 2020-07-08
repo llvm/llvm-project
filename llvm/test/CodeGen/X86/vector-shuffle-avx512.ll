@@ -528,8 +528,9 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(<2 x i32>* %src, <8 x i32>* %d
 ; SKX64-NEXT:    vmovdqa 32(%rdi), %xmm0
 ; SKX64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; SKX64-NEXT:    vmovdqa %ymm0, 672(%rsi)
-; SKX64-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,0,2,3]
-; SKX64-NEXT:    vmovaps %ymm0, 832(%rsi)
+; SKX64-NEXT:    vmovdqa 208(%rdi), %xmm0
+; SKX64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; SKX64-NEXT:    vmovdqa %ymm0, 832(%rsi)
 ; SKX64-NEXT:    vzeroupper
 ; SKX64-NEXT:    retq
 ;
@@ -550,8 +551,9 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(<2 x i32>* %src, <8 x i32>* %d
 ; SKX32-NEXT:    vmovdqa 32(%ecx), %xmm0
 ; SKX32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; SKX32-NEXT:    vmovdqa %ymm0, 672(%eax)
-; SKX32-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,0,2,3]
-; SKX32-NEXT:    vmovaps %ymm0, 832(%eax)
+; SKX32-NEXT:    vmovdqa 208(%ecx), %xmm0
+; SKX32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; SKX32-NEXT:    vmovdqa %ymm0, 832(%eax)
 ; SKX32-NEXT:    vzeroupper
 ; SKX32-NEXT:    retl
 ;
