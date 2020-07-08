@@ -2668,6 +2668,11 @@ SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
   // Passing 'true' for doesNotReturn above won't generate the trap for us.
   if (TM.getTargetTriple().isPS4CPU())
     Chain = DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, Chain);
+  // WebAssembly needs an unreachable instruction after a non-returning call,
+  // because the function return type can be different from __stack_chk_fail's
+  // return type (void).
+  if (TM.getTargetTriple().isWasm())
+    Chain = DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, Chain);
 
   DAG.setRoot(Chain);
 }

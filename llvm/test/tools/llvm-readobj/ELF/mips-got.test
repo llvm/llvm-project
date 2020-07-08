@@ -519,3 +519,31 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 DynamicSymbols: []
+
+# RUN: yaml2obj --docnum=2 -DVAL1=0xffff %s -o %t.err4.o
+# RUN: not llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefix=ERR4
+
+# ERR4: error: '[[FILE]]': DT_MIPS_GOTSYM value (65535) exceeds the number of dynamic symbols (1)
+
+# RUN: yaml2obj --docnum=2 -DVAL2=0xffff %s -o %t.err5.o
+# RUN: not llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefix=ERR5
+
+# ERR5: error: '[[FILE]]': there is no non-empty GOT section at 0xffff
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_MIPS
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 0
+      - Tag:   DT_MIPS_GOTSYM
+        Value: [[VAL1=0]]
+      - Tag:   DT_PLTGOT
+        Value: [[VAL2=0]]
+DynamicSymbols: []

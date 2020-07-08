@@ -40,6 +40,7 @@
 // CHECK-NEXT: core.CallAndMessage:ParameterCount = true
 // CHECK-NEXT: core.CallAndMessage:UndefReceiver = true
 // CHECK-NEXT: cplusplus.Move:WarnOn = KnownsAndLocals
+// CHECK-NEXT: cplusplus.SmartPtrModeling:ModelSmartPtrDereference = false
 // CHECK-NEXT: crosscheck-with-z3 = false
 // CHECK-NEXT: ctu-dir = ""
 // CHECK-NEXT: ctu-import-threshold = 8

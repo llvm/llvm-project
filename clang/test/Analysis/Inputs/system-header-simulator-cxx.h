@@ -946,10 +946,15 @@ namespace std {
   template <typename T> // TODO: Implement the stub for deleter.
   class unique_ptr {
   public:
+    unique_ptr() {}
+    unique_ptr(T *) {}
     unique_ptr(const unique_ptr &) = delete;
     unique_ptr(unique_ptr &&);
 
     T *get() const;
+    T *release() const;
+    void reset(T *p = nullptr) const;
+    void swap(unique_ptr<T> &p) const;
 
     typename std::add_lvalue_reference<T>::type operator*() const;
     T *operator->() const;

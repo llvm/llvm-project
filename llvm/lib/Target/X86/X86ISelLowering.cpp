@@ -38963,9 +38963,6 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   // Handle extract(bitcast(broadcast(scalar_value))).
   if (X86ISD::VBROADCAST == SrcBC.getOpcode()) {
     SDValue SrcOp = SrcBC.getOperand(0);
-    if (SrcOp.getValueSizeInBits() == VT.getSizeInBits())
-      return DAG.getBitcast(VT, SrcOp);
-
     EVT SrcOpVT = SrcOp.getValueType();
     if (SrcOpVT.isScalarInteger() && VT.isInteger() &&
         (SrcOpVT.getSizeInBits() % SrcEltBits) == 0) {
