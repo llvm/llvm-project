@@ -1,5 +1,5 @@
 ; Tests that coro-split will optimize the lifetime.start maker of each local variable,
-; sink them to the places closest to the actual use.
+; sink them to the places after the suspend block.
 ; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
@@ -7,6 +7,7 @@
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }
 %"struct.lean_future<int>::Awaiter" = type { i32, %"struct.std::coroutine_handle.0" }
 
+declare i1 @getcond()
 declare i8* @malloc(i64)
 declare void @print(i32)
 
@@ -20,7 +21,10 @@ entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %alloc = call i8* @malloc(i64 16) #3
   %vFrame = call noalias nonnull i8* @llvm.coro.begin(token %id, i8* %alloc)
+  %testcond = call i1 @getcond()
+  br i1 %testcond, label %if.suspend, label %else.direct
 
+if.suspend:
   %save = call token @llvm.coro.save(i8* null)
   %Result.i19 = getelementptr inbounds %"struct.lean_future<int>::Awaiter", %"struct.lean_future<int>::Awaiter"* %ref.tmp7, i64 0, i32 0
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
@@ -28,31 +32,36 @@ entry:
     i8 0, label %await.ready
     i8 1, label %exit
   ]
+
+else.direct:
+  br label %after.await
+
 await.ready:
   %StrayCoroSave = call token @llvm.coro.save(i8* null)
   %val = load i32, i32* %Result.i19
   %test = load i32, i32* %testval
   call void @print(i32 %test)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8*  %cast)
   call void @print(i32 %val)
+  br label %after.await
+
+after.await:
+  %test1 = load i32, i32* %testval
+  call void @print(i32 %test1)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8*  %cast)
   br label %exit
+
 exit:
   call i1 @llvm.coro.end(i8* null, i1 false)
   ret void
 }
 
 ; CHECK-LABEL: @a.resume(
-; CHECK:         %testval = alloca i32, align 4
-; CHECK-NEXT:    getelementptr inbounds %a.Frame
-; CHECK-NEXT:    getelementptr inbounds %"struct.lean_future<int>::Awaiter"
-; CHECK-NEXT:    %cast1 = bitcast i32* %testval to i8*
-; CHECK-NEXT:    %val = load i32, i32* %Result
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* %cast1)
-; CHECK-NEXT:    %test = load i32, i32* %testval
-; CHECK-NEXT:    call void @print(i32 %test)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* %cast1)
-; CHECK-NEXT:    call void @print(i32 %val)
-; CHECK-NEXT:    ret void
+; CHECK:    %[[VAL:testval.+]] = getelementptr inbounds %a.Frame
+; CHECK-NOT:     %testval = alloca i32, align 4
+; CHECK-NOT:     %[[CAST:.+]] = bitcast i32* %testval to i8*
+; CHECK-NOT:     call void @llvm.lifetime.start.p0i8(i64 4, i8* %[[CAST]])
+; CHECK:         %test = load i32, i32* %[[VAL]]
+; CHECK-NOT:     %test = load i32, i32* %testval
 
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
 declare i1 @llvm.coro.alloc(token) #3
