@@ -44,6 +44,9 @@ using FourCC = std::array<char, 4>;
 inline constexpr FourCC fourCC(const char (&Literal)[5]) {
   return FourCC{{Literal[0], Literal[1], Literal[2], Literal[3]}};
 }
+inline constexpr llvm::StringRef fourCCStr(const FourCC &Data) {
+  return llvm::StringRef(&Data[0], Data.size());
+}
 // A chunk is a section in a RIFF container.
 struct Chunk {
   FourCC ID;
