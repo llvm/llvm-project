@@ -576,6 +576,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::ISubOp, LLVM::SubOp>,
       DirectConversionPattern<spirv::FAddOp, LLVM::FAddOp>,
       DirectConversionPattern<spirv::FDivOp, LLVM::FDivOp>,
+      DirectConversionPattern<spirv::FMulOp, LLVM::FMulOp>,
       DirectConversionPattern<spirv::FNegateOp, LLVM::FNegOp>,
       DirectConversionPattern<spirv::FRemOp, LLVM::FRemOp>,
       DirectConversionPattern<spirv::FSubOp, LLVM::FSubOp>,
@@ -640,6 +641,10 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::LogicalEqualOp, LLVM::ICmpPredicate::eq>,
       IComparePattern<spirv::LogicalNotEqualOp, LLVM::ICmpPredicate::ne>,
       NotPattern<spirv::LogicalNotOp>,
+
+      // Miscellaneous ops
+      DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
+      DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
 
       // Shift ops
       ShiftPattern<spirv::ShiftRightArithmeticOp, LLVM::AShrOp>,
