@@ -117,4 +117,26 @@ Sections:
         Value: [[VAL2=0]]
       - Tag:   DT_NULL
         Value: 0
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Address: 0x100
+    ShSize:  0xffffffff
+    Link:    [[LINK=0x1]]
 DynamicSymbols: []
+
+## Check we report errors when we are unable to dump PLTGOT properly.
+
+# RUN: yaml2obj --docnum=2 -DVAL1=0x100 %s -o %t.err5.o
+# RUN: not llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefix ERR5
+
+# ERR5: error: '[[FILE]]': unable to read PLTGOT section content: section [index 2] has a sh_offset (0x70) + sh_size (0xffffffff) that is greater than the file size (0x280)
+
+# RUN: yaml2obj --docnum=2 -DVAL2=0x100 -DLINK=0xaaaaaaaa %s -o %t.err6.o
+# RUN: not llvm-readobj -A %t.err6.o 2>&1 | FileCheck %s -DFILE=%t.err6.o -check-prefix ERR6
+
+# ERR6: error: '[[FILE]]': unable to get a symbol table linked to the RELPLT section with index 2: invalid section index: 2863311530
+
+# RUN: yaml2obj --docnum=2 -DVAL2=0x100 %s -o %t.err7.o
+# RUN: not llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o -check-prefix ERR7
+
+# ERR7: error: '[[FILE]]': unable to get a string table for the symbol table with index 1: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM
