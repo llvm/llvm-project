@@ -1,9 +1,5 @@
 // RUN: %libomp-compile-and-run
 
-// gcc 9/10 use GOMP_parallel_loop_maybe_nonmonotonic_runtime, not implemented
-// Should be removed once the functions are implemented
-// XFAIL: gcc-9, gcc-10
-
 #include <stdio.h>
 #include <omp.h>
 #include "omp_testsuite.h"

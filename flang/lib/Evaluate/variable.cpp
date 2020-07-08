@@ -8,6 +8,7 @@
 
 #include "flang/Evaluate/variable.h"
 #include "flang/Common/idioms.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/char-block.h"
@@ -259,16 +260,13 @@ static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &sym) {
     if (const semantics::ParamValue * len{dyType->charLength()}) {
       if (len->isExplicit()) {
         if (auto intExpr{len->GetExplicit()}) {
-          return ConvertToType<SubscriptInteger>(*std::move(intExpr));
-        } else {
-          // There was an error constructing this symbol's type.  It should
-          // have a length expression, but we couldn't retrieve it
-          return std::nullopt;
+          if (IsConstantExpr(*intExpr)) {
+            return ConvertToType<SubscriptInteger>(*std::move(intExpr));
+          }
         }
-      } else {
-        return Expr<SubscriptInteger>{
-            DescriptorInquiry{NamedEntity{sym}, DescriptorInquiry::Field::Len}};
       }
+      return Expr<SubscriptInteger>{
+          DescriptorInquiry{NamedEntity{sym}, DescriptorInquiry::Field::Len}};
     }
   }
   return std::nullopt;
