@@ -7361,6 +7361,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   bool Changed = false;
   SmallVector<Value *, 4> Incoming;
   SmallPtrSet<Value *, 16> VisitedInstrs;
+  unsigned MaxVecRegSize = R.getMaxVecRegSize();
 
   bool HaveVectorizedPhiNodes = true;
   while (HaveVectorizedPhiNodes) {
@@ -7387,8 +7388,18 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
       // Look for the next elements with the same type.
       SmallVector<Value *, 4>::iterator SameTypeIt = IncIt;
+      Type *EltTy = (*IncIt)->getType();
+      unsigned EltSize = EltTy->isSized() ? DL->getTypeSizeInBits(EltTy)
+                                          : MaxVecRegSize;
+      unsigned MaxNumElts = MaxVecRegSize / EltSize;
+      if (MaxNumElts < 2) {
+        ++IncIt;
+        continue;
+      }
+
       while (SameTypeIt != E &&
-             (*SameTypeIt)->getType() == (*IncIt)->getType()) {
+             (*SameTypeIt)->getType() == EltTy &&
+             (SameTypeIt - IncIt) < MaxNumElts) {
         VisitedInstrs.insert(*SameTypeIt);
         ++SameTypeIt;
       }
