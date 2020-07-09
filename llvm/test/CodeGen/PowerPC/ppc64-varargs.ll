@@ -7,29 +7,12 @@
 define i32 @f(...) nounwind {
 ; BE-LABEL: f:
 ; BE:       # %bb.0: # %entry
-; BE-NEXT:    mr r11, r3
 ; BE-NEXT:    li r3, 0
-; BE-NEXT:    std r11, 48(r1)
-; BE-NEXT:    std r4, 56(r1)
-; BE-NEXT:    std r5, 64(r1)
-; BE-NEXT:    std r6, 72(r1)
-; BE-NEXT:    std r7, 80(r1)
-; BE-NEXT:    std r8, 88(r1)
-; BE-NEXT:    std r9, 96(r1)
-; BE-NEXT:    std r10, 104(r1)
 ; BE-NEXT:    blr
 ;
 ; LE-LABEL: f:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    std r3, 32(r1)
 ; LE-NEXT:    li r3, 0
-; LE-NEXT:    std r4, 40(r1)
-; LE-NEXT:    std r5, 48(r1)
-; LE-NEXT:    std r6, 56(r1)
-; LE-NEXT:    std r7, 64(r1)
-; LE-NEXT:    std r8, 72(r1)
-; LE-NEXT:    std r9, 80(r1)
-; LE-NEXT:    std r10, 88(r1)
 ; LE-NEXT:    blr
 entry:
   ret i32 0
