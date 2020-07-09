@@ -159,10 +159,10 @@ public:
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
 
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
-    if (!isa<VectorType>(DataType) || !ST->hasSVE())
+    if (!isa<ScalableVectorType>(DataType) || !ST->hasSVE())
       return false;
 
-    Type *Ty = cast<VectorType>(DataType)->getElementType();
+    Type *Ty = cast<ScalableVectorType>(DataType)->getElementType();
     if (Ty->isBFloatTy() || Ty->isHalfTy() ||
         Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
