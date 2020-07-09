@@ -136,12 +136,16 @@ getFileLine(const SectionChunk *c, uint32_t addr) {
 // of all references to that symbol from that file. If no debug information is
 // available, returns just the name of the file, else one string per actual
 // reference as described in the debug info.
-std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex) {
+// Returns up to maxStrings string descriptions, along with the total number of
+// locations found.
+static std::pair<std::vector<std::string>, size_t>
+getSymbolLocations(ObjFile *file, uint32_t symIndex, size_t maxStrings) {
   struct Location {
     Symbol *sym;
     std::pair<StringRef, uint32_t> fileLine;
   };
   std::vector<Location> locations;
+  size_t numLocations = 0;
 
   for (Chunk *c : file->getChunks()) {
     auto *sc = dyn_cast<SectionChunk>(c);
@@ -150,6 +154,10 @@ std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex) {
     for (const coff_relocation &r : sc->getRelocs()) {
       if (r.SymbolTableIndex != symIndex)
         continue;
+      numLocations++;
+      if (locations.size() >= maxStrings)
+        continue;
+
       Optional<std::pair<StringRef, uint32_t>> fileLine =
           getFileLine(sc, r.VirtualAddress);
       Symbol *sym = getSymbol(sc, r.VirtualAddress);
@@ -160,8 +168,12 @@ std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex) {
     }
   }
 
-  if (locations.empty())
-    return std::vector<std::string>({"\n>>> referenced by " + toString(file)});
+  if (maxStrings == 0)
+    return std::make_pair(std::vector<std::string>(), numLocations);
+
+  if (numLocations == 0)
+    return std::make_pair(
+        std::vector<std::string>{"\n>>> referenced by " + toString(file)}, 1);
 
   std::vector<std::string> symbolLocations(locations.size());
   size_t i = 0;
@@ -175,17 +187,26 @@ std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex) {
     if (loc.sym)
       os << ":(" << toString(*loc.sym) << ')';
   }
-  return symbolLocations;
+  return std::make_pair(symbolLocations, numLocations);
 }
 
-std::vector<std::string> getSymbolLocations(InputFile *file,
-                                            uint32_t symIndex) {
+std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex) {
+  return getSymbolLocations(file, symIndex, SIZE_MAX).first;
+}
+
+static std::pair<std::vector<std::string>, size_t>
+getSymbolLocations(InputFile *file, uint32_t symIndex, size_t maxStrings) {
   if (auto *o = dyn_cast<ObjFile>(file))
-    return getSymbolLocations(o, symIndex);
-  if (auto *b = dyn_cast<BitcodeFile>(file))
-    return getSymbolLocations(b);
+    return getSymbolLocations(o, symIndex, maxStrings);
+  if (auto *b = dyn_cast<BitcodeFile>(file)) {
+    std::vector<std::string> symbolLocations = getSymbolLocations(b);
+    size_t numLocations = symbolLocations.size();
+    if (symbolLocations.size() > maxStrings)
+      symbolLocations.resize(maxStrings);
+    return std::make_pair(symbolLocations, numLocations);
+  }
   llvm_unreachable("unsupported file type passed to getSymbolLocations");
-  return {};
+  return std::make_pair(std::vector<std::string>(), (size_t)0);
 }
 
 // For an undefined symbol, stores all files referencing it and the index of
@@ -205,20 +226,21 @@ static void reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
   os << "undefined symbol: " << toString(*undefDiag.sym);
 
   const size_t maxUndefReferences = 3;
-  size_t i = 0, numRefs = 0;
+  size_t numDisplayedRefs = 0, numRefs = 0;
   for (const UndefinedDiag::File &ref : undefDiag.files) {
-    std::vector<std::string> symbolLocations =
-        getSymbolLocations(ref.file, ref.symIndex);
-    numRefs += symbolLocations.size();
+    std::vector<std::string> symbolLocations;
+    size_t totalLocations = 0;
+    std::tie(symbolLocations, totalLocations) = getSymbolLocations(
+        ref.file, ref.symIndex, maxUndefReferences - numDisplayedRefs);
+
+    numRefs += totalLocations;
+    numDisplayedRefs += symbolLocations.size();
     for (const std::string &s : symbolLocations) {
-      if (i >= maxUndefReferences)
-        break;
       os << s;
-      i++;
     }
   }
-  if (i < numRefs)
-    os << "\n>>> referenced " << numRefs - i << " more times";
+  if (numDisplayedRefs < numRefs)
+    os << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
   errorOrWarn(os.str());
 }
 
