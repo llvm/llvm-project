@@ -71,7 +71,7 @@ message Symbol {
   string name = 3;
   SymbolLocation definition = 4;
   string scope = 5;
-  SymbolLocation canonical_declarattion = 6;
+  SymbolLocation canonical_declaration = 6;
   int32 references = 7;
   uint32 origin = 8;
   string signature = 9;
@@ -99,7 +99,10 @@ message SymbolInfo {
 message SymbolLocation {
   Position start = 1;
   Position end = 2;
-  string file_uri = 3;
+  // clangd::SymbolLocation stores FileURI, but the protocol transmits a the
+  // relative path. Because paths are different on the remote and local machines
+  // they will be translated in the marshalling layer.
+  string file_path = 3;
 }
 
 message Position {
