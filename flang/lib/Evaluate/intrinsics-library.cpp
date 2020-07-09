@@ -248,17 +248,6 @@ template <typename T> struct ToStdComplex {
   using AType = Type;
 };
 
-template <> struct ToStdComplex<float _Complex> {
-  using Type = std::complex<float>;
-  // Complex arguments are passed by reference in C++ std math functions.
-  using AType = Type &;
-};
-
-template <> struct ToStdComplex<double _Complex> {
-  using Type = std::complex<double>;
-  using AType = Type &;
-};
-
 template <typename F, F func> struct CComplexFunc {};
 template <typename R, typename... A, FuncPointer<R, A...> func>
 struct CComplexFunc<FuncPointer<R, A...>, func> {

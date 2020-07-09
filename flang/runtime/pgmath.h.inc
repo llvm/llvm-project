@@ -33,8 +33,6 @@
 #ifdef PGMATH_USE_ALL_TYPES
 #define PGMATH_USE_S(name, func) PGMATH_USE_ALL_TYPES(name, func)
 #define PGMATH_USE_D(name, func) PGMATH_USE_ALL_TYPES(name, func)
-#define PGMATH_USE_C(name, func) PGMATH_USE_ALL_TYPES(name, func)
-#define PGMATH_USE_Z(name, func) PGMATH_USE_ALL_TYPES(name, func)
 #define PGMATH_USE_OTHER(name, func) PGMATH_USE_ALL_TYPES(name, func)
 #endif
 
@@ -64,15 +62,8 @@
   PGMATH_USE_S(func, __##impl##s_##func##_1) \
   PGMATH_USE_D(func, __##impl##d_##func##_1)
 
-#define PGMATH_COMPLEX_IMPL(impl, func) \
-  PGMATH_DECLARE(float _Complex __##impl##c_##func##_1(float _Complex)) \
-  PGMATH_DECLARE(double _Complex __##impl##z_##func##_1(double _Complex)) \
-  PGMATH_USE_C(func, __##impl##c_##func##_1) \
-  PGMATH_USE_Z(func, __##impl##z_##func##_1)
-
 #define PGMATH_ALL_FP_IMPL(impl, func) \
   PGMATH_REAL_IMPL(impl, func) \
-  PGMATH_FAST_COMPLEX_IMPL(impl, func)
 
 #define PGMATH_REAL2_IMPL(impl, func) \
   PGMATH_DECLARE(float __##impl##s_##func##_1(float, float)) \
@@ -80,17 +71,8 @@
   PGMATH_USE_S(func, __##impl##s_##func##_1) \
   PGMATH_USE_D(func, __##impl##d_##func##_1)
 
-#define PGMATH_COMPLEX2_IMPL(impl, func) \
-  PGMATH_DECLARE( \
-      float _Complex __##impl##c_##func##_1(float _Complex, float _Complex)) \
-  PGMATH_DECLARE(double _Complex __##impl##z_##func##_1( \
-      double _Complex, double _Complex)) \
-  PGMATH_USE_C(func, __##impl##c_##func##_1) \
-  PGMATH_USE_Z(func, __##impl##z_##func##_1)
-
 #define PGMATH_ALL_FP2_IMPL(impl, func) \
   PGMATH_REAL2_IMPL(func) \
-  PGMATH_COMPLEX2_IMPL(func)
 
 #undef PGMATH_FAST_REAL
 #undef PGMATH_FAST_COMPLEX
@@ -100,10 +82,8 @@
 #undef PGMATH_FAST_ALL_FP2
 #ifdef PGMATH_FAST
 #define PGMATH_FAST_REAL(func) PGMATH_REAL_IMPL(f, func)
-#define PGMATH_FAST_COMPLEX(func) PGMATH_COMPLEX_IMPL(f, func)
 #define PGMATH_FAST_ALL_FP(func) PGMATH_ALL_IMPL(f, func)
 #define PGMATH_FAST_REAL2(func) PGMATH_REAL2_IMPL(f, func)
-#define PGMATH_FAST_COMPLEX2(func) PGMATH_COMPLEX2_IMPL(f, func)
 #define PGMATH_FAST_ALL_FP2(func) PGMATH_ALL_FP2_IMPL(f, func)
 #else
 #define PGMATH_FAST_REAL(func)
@@ -122,10 +102,8 @@
 #undef PGMATH_RELAXED_ALL_FP2
 #ifdef PGMATH_RELAXED
 #define PGMATH_RELAXED_REAL(func) PGMATH_REAL_IMPL(r, func)
-#define PGMATH_RELAXED_COMPLEX(func) PGMATH_COMPLEX_IMPL(r, func)
 #define PGMATH_RELAXED_ALL_FP(func) PGMATH_ALL_IMPL(r, func)
 #define PGMATH_RELAXED_REAL2(func) PGMATH_REAL2_IMPL(r, func)
-#define PGMATH_RELAXED_COMPLEX2(func) PGMATH_COMPLEX2_IMPL(r, func)
 #define PGMATH_RELAXED_ALL_FP2(func) PGMATH_ALL_FP2_IMPL(r, func)
 #else
 #define PGMATH_RELAXED_REAL(func)
@@ -144,10 +122,8 @@
 #undef PGMATH_PRECISE_ALL_FP2
 #ifdef PGMATH_PRECISE
 #define PGMATH_PRECISE_REAL(func) PGMATH_REAL_IMPL(p, func)
-#define PGMATH_PRECISE_COMPLEX(func) PGMATH_COMPLEX_IMPL(p, func)
 #define PGMATH_PRECISE_ALL_FP(func) PGMATH_ALL_IMPL(p, func)
 #define PGMATH_PRECISE_REAL2(func) PGMATH_REAL2_IMPL(p, func)
-#define PGMATH_PRECISE_COMPLEX2(func) PGMATH_COMPLEX2_IMPL(p, func)
 #define PGMATH_PRECISE_ALL_FP2(func) PGMATH_ALL_FP2_IMPL(p, func)
 #else
 #define PGMATH_PRECISE_REAL(func)
@@ -163,28 +139,16 @@
   PGMATH_PRECISE_REAL(func) \
   PGMATH_RELAXED_REAL(func)
 
-#define PGMATH_COMPLEX(func) \
-  PGMATH_FAST_COMPLEX(func) \
-  PGMATH_PRECISE_COMPLEX(func) \
-  PGMATH_RELAXED_COMPLEX(func)
-
 #define PGMATH_ALL(func) \
   PGMATH_REAL(func) \
-  PGMATH_COMPLEX(func)
 
 #define PGMATH_REAL2(func) \
   PGMATH_FAST_REAL2(func) \
   PGMATH_PRECISE_REAL2(func) \
   PGMATH_RELAXED_REAL2(func)
 
-#define PGMATH_COMPLEX2(func) \
-  PGMATH_FAST_COMPLEX2(func) \
-  PGMATH_PRECISE_COMPLEX2(func) \
-  PGMATH_RELAXED_COMPLEX2(func)
-
 #define PGMATH_ALL2(func) \
   PGMATH_REAL2(func) \
-  PGMATH_COMPLEX2(func)
 
 // Marcos to declare __mth_i libpgmath variants
 #define PGMATH_MTH_VERSION_REAL(func) \
@@ -243,16 +207,12 @@ PGMATH_ALL2(pow)
 #define PGMATH_DELCARE_POW(impl) \
   PGMATH_DECLARE(float __##impl##s_powi_1(float, int)) \
   PGMATH_DECLARE(double __##impl##d_powi_1(double, int)) \
-  PGMATH_DECLARE(float _Complex __##impl##c_powi_1(float _Complex, int)) \
-  PGMATH_DECLARE(double _Complex __##impl##z_powi_1(double _Complex, int)) \
   PGMATH_USE_S(pow, __##impl##s_powi_1) \
   PGMATH_USE_D(pow, __##impl##d_powi_1) \
   PGMATH_USE_C(pow, __##impl##c_powi_1) \
   PGMATH_USE_Z(pow, __##impl##z_powi_1) \
   PGMATH_DECLARE(float __##impl##s_powk_1(float, int64_t)) \
   PGMATH_DECLARE(double __##impl##d_powk_1(double, int64_t)) \
-  PGMATH_DECLARE(float _Complex __##impl##c_powk_1(float _Complex, int64_t)) \
-  PGMATH_DECLARE(double _Complex __##impl##z_powk_1(double _Complex, int64_t)) \
   PGMATH_USE_S(pow, __##impl##s_powk_1) \
   PGMATH_USE_D(pow, __##impl##d_powk_1) \
   PGMATH_USE_C(pow, __##impl##c_powk_1) \
@@ -277,7 +237,6 @@ PGMATH_USE_OTHER(pow, __mth_i_kpowk)
 PGMATH_ALL(sin)
 PGMATH_ALL(sinh)
 PGMATH_MTH_VERSION_REAL(sqrt)
-PGMATH_COMPLEX(sqrt) // real versions are __mth_i...
 PGMATH_ALL(tan)
 PGMATH_ALL(tanh)
 
