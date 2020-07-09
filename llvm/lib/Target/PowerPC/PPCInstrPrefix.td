@@ -942,7 +942,25 @@ let Predicates = [IsISA3_1] in {
                          "vclrrb $vD, $vA, $rB", IIC_VecGeneral,
                          [(set v16i8:$vD,
                                (int_ppc_altivec_vclrrb v16i8:$vA, i32:$rB))]>;
+
+  // The XFormMemOp flag for the following 8 instructions is set on
+  // the instruction format.
+  let mayLoad = 1, mayStore = 0 in {
+    def LXVRBX : X_XT6_RA5_RB5<31, 13, "lxvrbx", vsrc, []>;
+    def LXVRHX : X_XT6_RA5_RB5<31, 45, "lxvrhx", vsrc, []>;
+    def LXVRWX : X_XT6_RA5_RB5<31, 77, "lxvrwx", vsrc, []>;
+    def LXVRDX : X_XT6_RA5_RB5<31, 109, "lxvrdx", vsrc, []>;
+  }
+
+  let mayLoad = 0, mayStore = 1 in {
+    def STXVRBX : X_XS6_RA5_RB5<31, 141, "stxvrbx", vsrc, []>;
+    def STXVRHX : X_XS6_RA5_RB5<31, 173, "stxvrhx", vsrc, []>;
+    def STXVRWX : X_XS6_RA5_RB5<31, 205, "stxvrwx", vsrc, []>;
+    def STXVRDX : X_XS6_RA5_RB5<31, 237, "stxvrdx", vsrc, []>;
+  }
 }
+
+
 
 //---------------------------- Anonymous Patterns ----------------------------//
 let Predicates = [IsISA3_1] in {
