@@ -109,6 +109,11 @@ public:
   /// times.
   void getCapabilities(CapabilityArrayRefVector &capabilities,
                        Optional<spirv::StorageClass> storage = llvm::None);
+
+  /// Returns the size in bytes for each type. If no size can be calculated,
+  /// returns `llvm::None`. Note that if the type has explicit layout, it is
+  /// also taken into account in calculation.
+  Optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V scalar type: bool type, integer type, floating point type.
@@ -127,6 +132,8 @@ public:
                      Optional<spirv::StorageClass> storage = llvm::None);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        Optional<spirv::StorageClass> storage = llvm::None);
+
+  Optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V composite type: VectorType, SPIR-V ArrayType, or SPIR-V StructType.
@@ -153,6 +160,8 @@ public:
                      Optional<spirv::StorageClass> storage = llvm::None);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        Optional<spirv::StorageClass> storage = llvm::None);
+
+  Optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V array type
@@ -181,6 +190,10 @@ public:
                      Optional<spirv::StorageClass> storage = llvm::None);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        Optional<spirv::StorageClass> storage = llvm::None);
+
+  /// Returns the array size in bytes. Since array type may have an explicit
+  /// stride declaration (in bytes), we also include it in the calculation.
+  Optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V image type

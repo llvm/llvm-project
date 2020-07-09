@@ -151,6 +151,14 @@ void ArrayType::getCapabilities(
   getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
 }
 
+Optional<int64_t> ArrayType::getSizeInBytes() {
+  auto elementType = getElementType().cast<SPIRVType>();
+  Optional<int64_t> size = elementType.getSizeInBytes();
+  if (!size)
+    return llvm::None;
+  return (*size + getArrayStride()) * getNumElements();
+}
+
 //===----------------------------------------------------------------------===//
 // CompositeType
 //===----------------------------------------------------------------------===//
@@ -278,6 +286,24 @@ void CompositeType::getCapabilities(
     break;
   default:
     llvm_unreachable("invalid composite type");
+  }
+}
+
+Optional<int64_t> CompositeType::getSizeInBytes() {
+  switch (getKind()) {
+  case spirv::TypeKind::Array:
+    return cast<ArrayType>().getSizeInBytes();
+  case spirv::TypeKind::Struct:
+    return cast<StructType>().getSizeInBytes();
+  case StandardTypes::Vector: {
+    auto elementSize =
+        cast<VectorType>().getElementType().cast<ScalarType>().getSizeInBytes();
+    if (!elementSize)
+      return llvm::None;
+    return *elementSize * cast<VectorType>().getNumElements();
+  }
+  default:
+    return llvm::None;
   }
 }
 
@@ -806,6 +832,19 @@ void ScalarType::getCapabilities(
 #undef WIDTH_CASE
 }
 
+Optional<int64_t> ScalarType::getSizeInBytes() {
+  auto bitWidth = getIntOrFloatBitWidth();
+  // According to the SPIR-V spec:
+  // "There is no physical size or bit pattern defined for values with boolean
+  // type. If they are stored (in conjunction with OpVariable), they can only
+  // be used with logical addressing operations, not physical, and only with
+  // non-externally visible shader Storage Classes: Workgroup, CrossWorkgroup,
+  // Private, Function, Input, and Output."
+  if (bitWidth == 1)
+    return llvm::None;
+  return bitWidth / 8;
+}
+
 //===----------------------------------------------------------------------===//
 // SPIRVType
 //===----------------------------------------------------------------------===//
@@ -859,6 +898,14 @@ void SPIRVType::getCapabilities(
   } else {
     llvm_unreachable("invalid SPIR-V Type to getCapabilities");
   }
+}
+
+Optional<int64_t> SPIRVType::getSizeInBytes() {
+  if (auto scalarType = dyn_cast<ScalarType>())
+    return scalarType.getSizeInBytes();
+  if (auto compositeType = dyn_cast<CompositeType>())
+    return compositeType.getSizeInBytes();
+  return llvm::None;
 }
 
 //===----------------------------------------------------------------------===//
