@@ -85,7 +85,6 @@ bool IsPointerDummy(const Symbol &);
 bool IsBindCProcedure(const Symbol &);
 bool IsBindCProcedure(const Scope &);
 bool IsProcName(const Symbol &); // proc-name
-bool IsFunctionResult(const Symbol &);
 bool IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsExtensibleType(const DerivedTypeSpec *);
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name);

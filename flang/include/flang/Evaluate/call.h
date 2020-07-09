@@ -195,6 +195,7 @@ public:
       : proc_{std::move(p)}, arguments_{std::move(a)},
         hasAlternateReturns_{hasAlternateReturns} {}
   ~ProcedureRef();
+  static void Deleter(ProcedureRef *);
 
   ProcedureDesignator &proc() { return proc_; }
   const ProcedureDesignator &proc() const { return proc_; }

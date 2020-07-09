@@ -8,6 +8,11 @@ add_library(RuntimeTesting
 )
 llvm_update_compile_flags(RuntimeTesting)
 
+target_link_libraries(RuntimeTesting
+  FortranRuntime
+  LLVMSupport
+)
+
 add_executable(format-test
   format.cpp
 )
