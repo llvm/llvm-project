@@ -74,7 +74,6 @@ class Configuration(object):
         self.use_target = False
         self.use_system_cxx_lib = self.get_lit_bool('use_system_cxx_lib', False)
         self.use_clang_verify = False
-        self.long_tests = None
 
     def get_lit_conf(self, name, default=None):
         val = self.lit_config.params.get(name, None)
@@ -284,18 +283,6 @@ class Configuration(object):
             (_, name, version) = self.config.deployment
             self.config.available_features.add('availability=%s' % name)
             self.config.available_features.add('availability=%s%s' % (name, version))
-
-        # Simulator testing can take a really long time for some of these tests
-        # so add a feature check so we can REQUIRES: long_tests in them
-        self.long_tests = self.get_lit_bool('long_tests')
-        if self.long_tests is None:
-            # Default to running long tests.
-            self.long_tests = True
-            self.lit_config.note(
-                "inferred long_tests as: %r" % self.long_tests)
-
-        if self.long_tests:
-            self.config.available_features.add('long_tests')
 
         if self.target_info.is_windows():
             if self.cxx_stdlib_under_test == 'libc++':
