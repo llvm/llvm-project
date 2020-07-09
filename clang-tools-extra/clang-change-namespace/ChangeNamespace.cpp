@@ -19,14 +19,8 @@ namespace change_namespace {
 
 namespace {
 
-inline std::string
-joinNamespaces(const llvm::SmallVectorImpl<StringRef> &Namespaces) {
-  if (Namespaces.empty())
-    return "";
-  std::string Result(Namespaces.front());
-  for (auto I = Namespaces.begin() + 1, E = Namespaces.end(); I != E; ++I)
-    Result += ("::" + *I).str();
-  return Result;
+inline std::string joinNamespaces(ArrayRef<StringRef> Namespaces) {
+  return llvm::join(Namespaces, "::");
 }
 
 // Given "a::b::c", returns {"a", "b", "c"}.
