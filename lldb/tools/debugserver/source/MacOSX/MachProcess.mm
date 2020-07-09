@@ -614,9 +614,9 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
                    &vers_cmd) != sizeof(struct version_min_command))
       return;
     info.platform = platform;
-    info.major_version = vers_cmd.sdk >> 16;
-    info.minor_version = (vers_cmd.sdk >> 8) & 0xffu;
-    info.patch_version = vers_cmd.sdk & 0xffu;
+    info.major_version = vers_cmd.version >> 16;
+    info.minor_version = (vers_cmd.version >> 8) & 0xffu;
+    info.patch_version = vers_cmd.version & 0xffu;
     info.maybe_simulator = true;
   };
   switch (cmd) {
@@ -639,9 +639,9 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
                    &build_vers) != sizeof(struct build_version_command))
       break;
     info.platform = build_vers.platform;
-    info.major_version = build_vers.sdk >> 16;
-    info.minor_version = (build_vers.sdk >> 8) & 0xffu;
-    info.patch_version = build_vers.sdk & 0xffu;
+    info.major_version = build_vers.minos >> 16;
+    info.minor_version = (build_vers.minos >> 8) & 0xffu;
+    info.patch_version = build_vers.minos & 0xffu;
     break;
   }
 #endif
