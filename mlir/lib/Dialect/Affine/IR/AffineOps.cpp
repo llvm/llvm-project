@@ -1690,7 +1690,7 @@ void mlir::extractForInductionVars(ArrayRef<AffineForOp> forInsts,
 /// Builds an affine loop nest, using "loopCreatorFn" to create individual loop
 /// operations.
 template <typename BoundListTy, typename LoopCreatorTy>
-void buildAffineLoopNestImpl(
+static void buildAffineLoopNestImpl(
     OpBuilder &builder, Location loc, BoundListTy lbs, BoundListTy ubs,
     ArrayRef<int64_t> steps,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn,
