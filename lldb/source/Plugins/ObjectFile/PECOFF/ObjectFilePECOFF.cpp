@@ -169,8 +169,9 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
 
-  if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
-    data_sp = std::move(full_sp);
+  if (data_sp->GetByteSize() < length)
+    if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
+      data_sp = std::move(full_sp);
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
       toStringRef(data_sp->GetData()), file.GetFilename().GetStringRef()));
 
@@ -539,6 +540,9 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   if (!size)
     return {};
 
+  if (m_data.ValidOffsetForDataOfSize(offset, size))
+    return DataExtractor(m_data, offset, size);
+
   if (m_file) {
     // A bit of a hack, but we intend to write to this buffer, so we can't
     // mmap it.
@@ -562,13 +566,11 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
 }
 
 DataExtractor ObjectFilePECOFF::ReadImageDataByRVA(uint32_t rva, size_t size) {
-  if (m_file) {
-    Address addr = GetAddress(rva);
-    SectionSP sect = addr.GetSection();
-    if (!sect)
-      return {};
-    rva = sect->GetFileOffset() + addr.GetOffset();
-  }
+  Address addr = GetAddress(rva);
+  SectionSP sect = addr.GetSection();
+  if (!sect)
+    return {};
+  rva = sect->GetFileOffset() + addr.GetOffset();
 
   return ReadImageData(rva, size);
 }

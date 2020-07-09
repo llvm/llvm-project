@@ -165,8 +165,7 @@ Symbols:
 )");
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
 
-  ModuleSpec Spec{FileSpec(ExpectedFile->name())};
-  auto M = std::make_shared<Module>(Spec);
+  auto M = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
   auto Count = [M](const char *Name, FunctionNameType Type) -> int {
     SymbolContextList SymList;

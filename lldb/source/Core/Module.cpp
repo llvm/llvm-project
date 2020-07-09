@@ -147,11 +147,16 @@ Module::Module(const ModuleSpec &module_spec)
                   : module_spec.GetObjectName().AsCString(""),
               module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
+  auto data_sp = module_spec.GetData();
+  lldb::offset_t file_size = 0;
+  if (data_sp)
+    file_size = data_sp->GetByteSize();
+
   // First extract all module specifications from the file using the local file
   // path. If there are no specifications, then don't fill anything in
   ModuleSpecList modules_specs;
-  if (ObjectFile::GetModuleSpecifications(module_spec.GetFileSpec(), 0, 0,
-                                          modules_specs) == 0)
+  if (ObjectFile::GetModuleSpecifications(
+          module_spec.GetFileSpec(), 0, file_size, modules_specs, data_sp) == 0)
     return;
 
   // Now make sure that one of the module specifications matches what we just
@@ -170,11 +175,20 @@ Module::Module(const ModuleSpec &module_spec)
     return;
   }
 
-  if (module_spec.GetFileSpec())
-    m_mod_time = FileSystem::Instance().GetModificationTime(module_spec.GetFileSpec());
-  else if (matching_module_spec.GetFileSpec())
-    m_mod_time =
-        FileSystem::Instance().GetModificationTime(matching_module_spec.GetFileSpec());
+  // Set m_data_sp if it was initially provided in the ModuleSpec. Note that
+  // we cannot use the data_sp variable here, because it will have been
+  // modified by GetModuleSpecifications().
+  if (auto module_spec_data_sp = module_spec.GetData()) {
+    m_data_sp = module_spec_data_sp;
+    m_mod_time = {};
+  } else {
+    if (module_spec.GetFileSpec())
+      m_mod_time =
+          FileSystem::Instance().GetModificationTime(module_spec.GetFileSpec());
+    else if (matching_module_spec.GetFileSpec())
+      m_mod_time = FileSystem::Instance().GetModificationTime(
+          matching_module_spec.GetFileSpec());
+  }
 
   // Copy the architecture from the actual spec if we got one back, else use
   // the one that was specified
@@ -1110,6 +1124,10 @@ void Module::ReportError(const char *format, ...) {
 }
 
 bool Module::FileHasChanged() const {
+  // We have provided the DataBuffer for this module to avoid accessing the
+  // filesystem. We never want to reload those files.
+  if (m_data_sp)
+    return false;
   if (!m_file_has_changed)
     m_file_has_changed =
         (FileSystem::Instance().GetModificationTime(m_file) != m_mod_time);
@@ -1229,12 +1247,19 @@ ObjectFile *Module::GetObjectFile() {
       static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
       Timer scoped_timer(func_cat, "Module::GetObjectFile () module = %s",
                          GetFileSpec().GetFilename().AsCString(""));
-      DataBufferSP data_sp;
       lldb::offset_t data_offset = 0;
-      const lldb::offset_t file_size =
-          FileSystem::Instance().GetByteSize(m_file);
+      lldb::offset_t file_size = 0;
+
+      if (m_data_sp)
+        file_size = m_data_sp->GetByteSize();
+      else if (m_file)
+        file_size = FileSystem::Instance().GetByteSize(m_file);
+
       if (file_size > m_object_offset) {
         m_did_load_objfile = true;
+        // FindPlugin will modify its data_sp argument. Do not let it
+        // modify our m_data_sp member.
+        auto data_sp = m_data_sp;
         m_objfile_sp = ObjectFile::FindPlugin(
             shared_from_this(), &m_file, m_object_offset,
             file_size - m_object_offset, data_sp, data_offset);
