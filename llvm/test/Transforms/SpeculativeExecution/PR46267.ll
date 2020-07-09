@@ -1,6 +1,36 @@
 ; RUN: opt < %s -S -speculative-execution | FileCheck %s
 ; RUN: opt < %s -S -passes='speculative-execution' | FileCheck %s
 
+%class.B = type { i32 (...)** }
+
+; Testing that two bitcasts are not hoisted to the first BB
+define i8* @foo(%class.B* readonly %b) {
+; CHECK-LABEL: foo
+; CHECK-LABEL: entry
+; CHECK-NEXT: %i = icmp eq %class.B* %b, null
+; CHECK-NEXT: br i1 %i, label %end, label %notnull
+entry:
+  %i = icmp eq %class.B* %b, null
+  br i1 %i, label %end, label %notnull
+
+; CHECK-LABEL: notnull:
+; CHECK-NEXT: %i1 = bitcast %class.B* %b to i32**
+; CHECK: %i3 = bitcast %class.B* %b to i8*
+notnull:                             ; preds = %entry
+  %i1 = bitcast %class.B* %b to i32**
+  %vtable = load i32*, i32** %i1, align 8
+  %i2 = getelementptr inbounds i32, i32* %vtable, i64 -2
+  %offset.to.top = load i32, i32* %i2, align 4
+  %i3 = bitcast %class.B* %b to i8*
+  %i4 = sext i32 %offset.to.top to i64
+  %i5 = getelementptr inbounds i8, i8* %i3, i64 %i4
+  br label %end
+
+end:                                 ; preds = %notnull, %entry
+  %i6 = phi i8* [ %i5, %notnull ], [ null, %entry ]
+  ret i8* %i6
+}
+
 define void @f(i32 %i) {
 entry:
 ; CHECK-LABEL: @f(
