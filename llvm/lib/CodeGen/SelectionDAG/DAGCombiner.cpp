@@ -16551,7 +16551,6 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     unsigned FirstStoreAS = FirstInChain->getAddressSpace();
     unsigned FirstStoreAlign = FirstInChain->getAlignment();
     LoadSDNode *FirstLoad = cast<LoadSDNode>(LoadNodes[0].MemNode);
-    unsigned FirstLoadAlign = FirstLoad->getAlignment();
 
     // Scan the memory operations on the chain and find the first
     // non-consecutive load memory address. These variables hold the index in
@@ -16565,10 +16564,10 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     bool isDereferenceable = true;
     bool DoIntegerTruncate = false;
     StartAddress = LoadNodes[0].OffsetFromBase;
-    SDValue FirstChain = FirstLoad->getChain();
+    SDValue LoadChain = FirstLoad->getChain();
     for (unsigned i = 1; i < LoadNodes.size(); ++i) {
       // All loads must share the same chain.
-      if (LoadNodes[i].MemNode->getChain() != FirstChain)
+      if (LoadNodes[i].MemNode->getChain() != LoadChain)
         break;
 
       int64_t CurrAddress = LoadNodes[i].OffsetFromBase;
@@ -16645,6 +16644,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     // the NumElem refers to array/index size.
     unsigned NumElem = std::min(NumConsecutiveStores, LastConsecutiveLoad + 1);
     NumElem = std::min(LastLegalType, NumElem);
+    unsigned FirstLoadAlign = FirstLoad->getAlignment();
 
     if (NumElem < 2) {
       // We know that candidate stores are in order and of correct
