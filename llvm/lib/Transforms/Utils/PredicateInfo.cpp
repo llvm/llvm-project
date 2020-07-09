@@ -896,18 +896,21 @@ public:
         PB->From->printAsOperand(OS);
         OS << ",";
         PB->To->printAsOperand(OS);
-        OS << "] }\n";
+        OS << "]";
       } else if (const auto *PS = dyn_cast<PredicateSwitch>(PI)) {
         OS << "; switch predicate info { CaseValue: " << *PS->CaseValue
            << " Switch:" << *PS->Switch << " Edge: [";
         PS->From->printAsOperand(OS);
         OS << ",";
         PS->To->printAsOperand(OS);
-        OS << "] }\n";
+        OS << "]";
       } else if (const auto *PA = dyn_cast<PredicateAssume>(PI)) {
         OS << "; assume predicate info {"
-           << " Comparison:" << *PA->Condition << " }\n";
+           << " Comparison:" << *PA->Condition;
       }
+      OS << ", RenamedOp: ";
+      PI->RenamedOp->printAsOperand(OS, false);
+      OS << " }\n";
     }
   }
 };
