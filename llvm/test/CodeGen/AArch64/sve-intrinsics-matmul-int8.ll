@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve,+i8mm -asm-verbose=0 < %s -o - 2>%t | FileCheck %s
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
 ; WARN-NOT: warning
 
 define <vscale x 4 x i32> @smmla(<vscale x 4 x i32> %r, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) nounwind {

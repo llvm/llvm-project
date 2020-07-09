@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+sve -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECKISEL
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
 ; WARN-NOT: warning
 
 ; CHECKCG-LABEL: foo:
