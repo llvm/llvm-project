@@ -167,9 +167,15 @@ def SDT_AArch64Arith : SDTypeProfile<1, 3, [
   SDTCVecEltisVT<1,i1>, SDTCisSameAs<2,3>
 ]>;
 
+def SDT_AArch64FMA : SDTypeProfile<1, 4, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>, SDTCisVec<4>,
+  SDTCVecEltisVT<1,i1>, SDTCisSameAs<2,3>, SDTCisSameAs<3,4>
+]>;
+
 // Predicated operations with the result of inactive lanes being unspecified.
 def AArch64add_p  : SDNode<"AArch64ISD::ADD_PRED",  SDT_AArch64Arith>;
 def AArch64fadd_p : SDNode<"AArch64ISD::FADD_PRED", SDT_AArch64Arith>;
+def AArch64fma_p  : SDNode<"AArch64ISD::FMA_PRED",  SDT_AArch64FMA>;
 def AArch64sdiv_p : SDNode<"AArch64ISD::SDIV_PRED", SDT_AArch64Arith>;
 def AArch64udiv_p : SDNode<"AArch64ISD::UDIV_PRED", SDT_AArch64Arith>;
 
@@ -392,6 +398,16 @@ let Predicates = [HasSVE] in {
   defm FMSB_ZPmZZ  : sve_fp_3op_p_zds_b<0b01, "fmsb",  int_aarch64_sve_fmsb>;
   defm FNMAD_ZPmZZ : sve_fp_3op_p_zds_b<0b10, "fnmad", int_aarch64_sve_fnmad>;
   defm FNMSB_ZPmZZ : sve_fp_3op_p_zds_b<0b11, "fnmsb", int_aarch64_sve_fnmsb>;
+
+  // Add patterns for FMA where disabled lanes are undef.
+  // FIXME: Implement a pseudo so we can choose a better instruction after
+  // regalloc.
+  def : Pat<(nxv8f16 (AArch64fma_p nxv8i1:$P, nxv8f16:$Op1, nxv8f16:$Op2, nxv8f16:$Op3)),
+            (FMLA_ZPmZZ_H $P, $Op3, $Op1, $Op2)>;
+  def : Pat<(nxv4f32 (AArch64fma_p nxv4i1:$P, nxv4f32:$Op1, nxv4f32:$Op2, nxv4f32:$Op3)),
+            (FMLA_ZPmZZ_S $P, $Op3, $Op1, $Op2)>;
+  def : Pat<(nxv2f64 (AArch64fma_p nxv2i1:$P, nxv2f64:$Op1, nxv2f64:$Op2, nxv2f64:$Op3)),
+            (FMLA_ZPmZZ_D $P, $Op3, $Op1, $Op2)>;
 
   defm FTMAD_ZZI : sve_fp_ftmad<"ftmad", int_aarch64_sve_ftmad_x>;
 
