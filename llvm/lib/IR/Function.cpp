@@ -128,6 +128,27 @@ bool Argument::hasPassPointeeByValueAttr() const {
          Attrs.hasParamAttribute(getArgNo(), Attribute::Preallocated);
 }
 
+uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
+  AttributeSet ParamAttrs
+    = getParent()->getAttributes().getParamAttributes(getArgNo());
+
+  // FIXME: All the type carrying attributes are mutually exclusive, so there
+  // should be a single query to get the stored type that handles any of them.
+  if (Type *ByValTy = ParamAttrs.getByValType())
+    return DL.getTypeAllocSize(ByValTy);
+  if (Type *PreAllocTy = ParamAttrs.getPreallocatedType())
+    return DL.getTypeAllocSize(PreAllocTy);
+
+  // FIXME: inalloca always depends on pointee element type. It's also possible
+  // for byval to miss it.
+  if (ParamAttrs.hasAttribute(Attribute::InAlloca) ||
+      ParamAttrs.hasAttribute(Attribute::ByVal) ||
+      ParamAttrs.hasAttribute(Attribute::Preallocated))
+    return DL.getTypeAllocSize(cast<PointerType>(getType())->getElementType());
+
+  return 0;
+}
+
 unsigned Argument::getParamAlignment() const {
   assert(getType()->isPointerTy() && "Only pointers have alignments");
   return getParent()->getParamAlignment(getArgNo());
