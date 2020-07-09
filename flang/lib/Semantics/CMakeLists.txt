@@ -44,6 +44,7 @@ add_flang_library(FortranSemantics
 
   LINK_LIBS
   FortranCommon
+  FortranParser
   FortranEvaluate
 
   LINK_COMPONENTS

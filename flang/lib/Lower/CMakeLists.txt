@@ -22,6 +22,10 @@ add_flang_library(FortranLower
   LINK_LIBS
   FIROptimizer
   ${dialect_libs}
+  FortranCommon
+  FortranParser
+  FortranEvaluate
+  FortranSemantics
   MLIRAffineToStandard
   MLIRLLVMIR
   MLIRSCFToStandard

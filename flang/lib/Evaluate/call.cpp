@@ -212,6 +212,7 @@ int ProcedureRef::Rank() const {
 
 ProcedureRef::~ProcedureRef() {}
 
+void ProcedureRef::Deleter(ProcedureRef *p) { delete p; }
+
 FOR_EACH_SPECIFIC_TYPE(template class FunctionRef, )
 } // namespace Fortran::evaluate
-DEFINE_DELETER(Fortran::evaluate::ProcedureRef)

@@ -122,20 +122,49 @@ private:
 
 template <typename A> using CopyableIndirection = Indirection<A, true>;
 
-// For use with std::unique_ptr<> when declaring owning pointers to
-// forward-referenced types, here's a minimal custom deleter that avoids
-// some of the drama with std::default_delete<>.  Invoke DEFINE_DELETER()
-// later in exactly one C++ source file where a complete definition of the
-// type is visible.  Be advised, std::unique_ptr<> does not have copy
-// semantics; if you need ownership, copy semantics, and nullability,
-// std::optional<CopyableIndirection<>> works.
-template <typename A> class Deleter {
+// A variation of std::unique_ptr<> with a reified deletion routine.
+// Used to avoid dependence cycles between shared libraries.
+template <typename A> class ForwardOwningPointer {
 public:
-  void operator()(A *) const;
+  ForwardOwningPointer() {}
+  ForwardOwningPointer(A *p, void (*del)(A *)) : p_{p}, deleter_{del} {}
+  ForwardOwningPointer(ForwardOwningPointer &&that)
+      : p_{that.p_}, deleter_{that.deleter_} {
+    that.p_ = nullptr;
+  }
+  ForwardOwningPointer &operator=(ForwardOwningPointer &&that) {
+    p_ = that.p_;
+    that.p_ = nullptr;
+    deleter_ = that.deleter_;
+    return *this;
+  }
+  ~ForwardOwningPointer() {
+    if (p_) {
+      deleter_(p_);
+    }
+  }
+
+  A &operator*() const { return *p_; }
+  A *operator->() const { return p_; }
+  operator bool() const { return p_ != nullptr; }
+  A *get() { return p_; }
+  A *release() {
+    A *result{p_};
+    p_ = nullptr;
+    return result;
+  }
+
+  void Reset(A *p, void (*del)(A *)) {
+    if (p_) {
+      deleter_(p_);
+    }
+    p_ = p;
+    deleter_ = del;
+  }
+
+private:
+  A *p_{nullptr};
+  void (*deleter_)(A *){nullptr};
 };
 } // namespace Fortran::common
-#define DEFINE_DELETER(A) \
-  template <> void Fortran::common::Deleter<A>::operator()(A *p) const { \
-    delete p; \
-  }
 #endif // FORTRAN_COMMON_INDIRECTION_H_
