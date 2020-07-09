@@ -166,6 +166,43 @@ static Value processCountOrOffset(Location loc, Value value, Type srcType,
 }
 
 //===----------------------------------------------------------------------===//
+// Type conversion
+//===----------------------------------------------------------------------===//
+
+/// Converts SPIR-V array type to LLVM array. There is no modelling of array
+/// stride at the moment.
+static Optional<Type> convertArrayType(spirv::ArrayType type,
+                                       TypeConverter &converter) {
+  if (type.getArrayStride() != 0)
+    return llvm::None;
+  auto elementType =
+      converter.convertType(type.getElementType()).cast<LLVM::LLVMType>();
+  unsigned numElements = type.getNumElements();
+  return LLVM::LLVMType::getArrayTy(elementType, numElements);
+}
+
+/// Converts SPIR-V pointer type to LLVM pointer. Pointer's storage class is not
+/// modelled at the moment.
+static Type convertPointerType(spirv::PointerType type,
+                               TypeConverter &converter) {
+  auto pointeeType =
+      converter.convertType(type.getPointeeType()).cast<LLVM::LLVMType>();
+  return pointeeType.getPointerTo();
+}
+
+/// Converts SPIR-V runtime array to LLVM array. Since LLVM allows indexing over
+/// the bounds, the runtime array is converted to a 0-sized LLVM array. There is
+/// no modelling of array stride at the moment.
+static Optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
+                                              TypeConverter &converter) {
+  if (type.getArrayStride() != 0)
+    return llvm::None;
+  auto elementType =
+      converter.convertType(type.getElementType()).cast<LLVM::LLVMType>();
+  return LLVM::LLVMType::getArrayTy(elementType, 0);
+}
+
+//===----------------------------------------------------------------------===//
 // Operation conversion
 //===----------------------------------------------------------------------===//
 
@@ -581,6 +618,8 @@ public:
         funcType.getNumInputs());
     auto llvmType = this->typeConverter.convertFunctionSignature(
         funcOp.getType(), /*isVariadic=*/false, signatureConverter);
+    if (!llvmType)
+      return failure();
 
     // Create a new `LLVMFuncOp`
     Location loc = funcOp.getLoc();
@@ -661,6 +700,18 @@ public:
 //===----------------------------------------------------------------------===//
 // Pattern population
 //===----------------------------------------------------------------------===//
+
+void mlir::populateSPIRVToLLVMTypeConversion(LLVMTypeConverter &typeConverter) {
+  typeConverter.addConversion([&](spirv::ArrayType type) {
+    return convertArrayType(type, typeConverter);
+  });
+  typeConverter.addConversion([&](spirv::PointerType type) {
+    return convertPointerType(type, typeConverter);
+  });
+  typeConverter.addConversion([&](spirv::RuntimeArrayType type) {
+    return convertRuntimeArrayType(type, typeConverter);
+  });
+}
 
 void mlir::populateSPIRVToLLVMConversionPatterns(
     MLIRContext *context, LLVMTypeConverter &typeConverter,
