@@ -34,7 +34,7 @@ parameters = [
             feature=lambda filesystem: None if filesystem else
               Feature(name='c++filesystem-disabled')),
 
-  Parameter(name='enable_experimental', choices=[True, False], type=bool, default=True,
+  Parameter(name='enable_experimental', choices=[True, False], type=bool, default=False,
           help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
           feature=lambda experimental: None if not experimental else
             Feature(name='c++experimental', linkFlag='-lc++experimental')),
