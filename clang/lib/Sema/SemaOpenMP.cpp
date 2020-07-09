@@ -14692,7 +14692,7 @@ static bool checkOMPArraySectionConstantForReduction(
   if (Length == nullptr) {
     // For array sections of the form [1:] or [:], we would need to analyze
     // the lower bound...
-    if (OASE->getColonLoc().isValid())
+    if (OASE->getColonLocFirst().isValid())
       return false;
 
     // This is an array subscript which has implicit length 1!
@@ -14718,7 +14718,7 @@ static bool checkOMPArraySectionConstantForReduction(
     if (Length == nullptr) {
       // For array sections of the form [1:] or [:], we would need to analyze
       // the lower bound...
-      if (OASE->getColonLoc().isValid())
+      if (OASE->getColonLocFirst().isValid())
         return false;
 
       // This is an array subscript which has implicit length 1!
@@ -16475,7 +16475,8 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
   // If this is an array subscript, it refers to the whole size if the size of
   // the dimension is constant and equals 1. Also, an array section assumes the
   // format of an array subscript if no colon is used.
-  if (isa<ArraySubscriptExpr>(E) || (OASE && OASE->getColonLoc().isInvalid())) {
+  if (isa<ArraySubscriptExpr>(E) ||
+      (OASE && OASE->getColonLocFirst().isInvalid())) {
     if (const auto *ATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
       return ATy->getSize().getSExtValue() != 1;
     // Size can't be evaluated statically.
@@ -16531,7 +16532,8 @@ static bool checkArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
 
   // An array subscript always refer to a single element. Also, an array section
   // assumes the format of an array subscript if no colon is used.
-  if (isa<ArraySubscriptExpr>(E) || (OASE && OASE->getColonLoc().isInvalid()))
+  if (isa<ArraySubscriptExpr>(E) ||
+      (OASE && OASE->getColonLocFirst().isInvalid()))
     return false;
 
   assert(OASE && "Expecting array section if not an array subscript.");
@@ -16575,7 +16577,7 @@ static bool checkArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
 //
 // We want to retrieve the member expression 'this->S';
 
-// OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.2]
+// OpenMP 5.0 [2.19.7.1, map Clause, Restrictions, p.2]
 //  If a list item is an array section, it must specify contiguous storage.
 //
 // For this restriction it is sufficient that we make sure only references

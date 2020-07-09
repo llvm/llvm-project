@@ -17,46 +17,61 @@
 #include "clang/AST/Expr.h"
 
 namespace clang {
-/// OpenMP 4.0 [2.4, Array Sections].
+/// OpenMP 5.0 [2.1.5, Array Sections].
 /// To specify an array section in an OpenMP construct, array subscript
 /// expressions are extended with the following syntax:
 /// \code
+/// [ lower-bound : length : stride ]
+/// [ lower-bound : length : ]
 /// [ lower-bound : length ]
+/// [ lower-bound : : stride ]
+/// [ lower-bound : : ]
 /// [ lower-bound : ]
+/// [ : length : stride ]
+/// [ : length : ]
 /// [ : length ]
+/// [ : : stride ]
+/// [ : : ]
 /// [ : ]
 /// \endcode
 /// The array section must be a subset of the original array.
 /// Array sections are allowed on multidimensional arrays. Base language array
 /// subscript expressions can be used to specify length-one dimensions of
 /// multidimensional array sections.
-/// The lower-bound and length are integral type expressions. When evaluated
+/// Each of the lower-bound, length, and stride expressions if specified must be
+/// an integral type expressions of the base language. When evaluated
 /// they represent a set of integer values as follows:
 /// \code
-/// { lower-bound, lower-bound + 1, lower-bound + 2,... , lower-bound + length -
-/// 1 }
+/// { lower-bound, lower-bound + stride, lower-bound + 2 * stride,... ,
+/// lower-bound + ((length - 1) * stride) }
 /// \endcode
 /// The lower-bound and length must evaluate to non-negative integers.
+/// The stride must evaluate to a positive integer.
 /// When the size of the array dimension is not known, the length must be
 /// specified explicitly.
-/// When the length is absent, it defaults to the size of the array dimension
-/// minus the lower-bound.
-/// When the lower-bound is absent it defaults to 0.
+/// When the stride is absent it defaults to 1.
+/// When the length is absent it defaults to ⌈(size − lower-bound)/stride⌉,
+/// where size is the size of the array dimension. When the lower-bound is
+/// absent it defaults to 0.
 class OMPArraySectionExpr : public Expr {
-  enum { BASE, LOWER_BOUND, LENGTH, END_EXPR };
+  enum { BASE, LOWER_BOUND, LENGTH, STRIDE, END_EXPR };
   Stmt *SubExprs[END_EXPR];
-  SourceLocation ColonLoc;
+  SourceLocation ColonLocFirst;
+  SourceLocation ColonLocSecond;
   SourceLocation RBracketLoc;
 
 public:
-  OMPArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, QualType Type,
-                      ExprValueKind VK, ExprObjectKind OK,
-                      SourceLocation ColonLoc, SourceLocation RBracketLoc)
-      : Expr(OMPArraySectionExprClass, Type, VK, OK), ColonLoc(ColonLoc),
+  OMPArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, Expr *Stride,
+                      QualType Type, ExprValueKind VK, ExprObjectKind OK,
+                      SourceLocation ColonLocFirst,
+                      SourceLocation ColonLocSecond, SourceLocation RBracketLoc)
+      : Expr(OMPArraySectionExprClass, Type, VK, OK),
+        ColonLocFirst(ColonLocFirst), ColonLocSecond(ColonLocSecond),
         RBracketLoc(RBracketLoc) {
     SubExprs[BASE] = Base;
     SubExprs[LOWER_BOUND] = LowerBound;
     SubExprs[LENGTH] = Length;
+    SubExprs[STRIDE] = Stride;
     setDependence(computeDependence(this));
   }
 
@@ -89,13 +104,22 @@ public:
   /// Set length of the array section.
   void setLength(Expr *E) { SubExprs[LENGTH] = E; }
 
+  /// Get stride of array section.
+  Expr *getStride() { return cast_or_null<Expr>(SubExprs[STRIDE]); }
+  const Expr *getStride() const { return cast_or_null<Expr>(SubExprs[STRIDE]); }
+  /// Set length of the array section.
+  void setStride(Expr *E) { SubExprs[STRIDE] = E; }
+
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getBase()->getBeginLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY { return RBracketLoc; }
 
-  SourceLocation getColonLoc() const { return ColonLoc; }
-  void setColonLoc(SourceLocation L) { ColonLoc = L; }
+  SourceLocation getColonLocFirst() const { return ColonLocFirst; }
+  void setColonLocFirst(SourceLocation L) { ColonLocFirst = L; }
+
+  SourceLocation getColonLocSecond() const { return ColonLocSecond; }
+  void setColonLocSecond(SourceLocation L) { ColonLocSecond = L; }
 
   SourceLocation getRBracketLoc() const { return RBracketLoc; }
   void setRBracketLoc(SourceLocation L) { RBracketLoc = L; }
