@@ -4118,6 +4118,17 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   if (TrueVal == FalseVal)
     return TrueVal;
 
+  // If the true or false value is undef, we can fold to the other value as
+  // long as the other value isn't poison.
+  // select ?, undef, X -> X
+  if (isa<UndefValue>(TrueVal) &&
+      isGuaranteedNotToBeUndefOrPoison(FalseVal, Q.CxtI, Q.DT))
+    return FalseVal;
+  // select ?, X, undef -> X
+  if (isa<UndefValue>(FalseVal) &&
+      isGuaranteedNotToBeUndefOrPoison(TrueVal, Q.CxtI, Q.DT))
+    return TrueVal;
+
   // Deal with partial undef vector constants: select ?, VecC, VecC' --> VecC''
   Constant *TrueC, *FalseC;
   if (TrueVal->getType()->isVectorTy() && match(TrueVal, m_Constant(TrueC)) &&
