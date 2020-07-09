@@ -1,4 +1,4 @@
-include(AddLLVM) # for add_lit_testsuite
+include(AddLLVM) # for configure_lit_site_cfg and add_lit_target
 macro(pythonize_bool var)
   if (${var})
     set(${var} True)
@@ -76,6 +76,7 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
   MAIN_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py")
 
-add_lit_testsuite(check-cxxabi "Running libcxxabi tests"
+add_lit_target(check-cxxabi "Running libcxxabi tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS ${LIBCXXABI_TEST_DEPS})
+  DEPENDS ${LIBCXXABI_TEST_DEPS}
+  PARAMS "${LIBCXXABI_TEST_PARAMS}")

@@ -103,7 +103,7 @@ if(LIBCXX_TEST_GDB_PRETTY_PRINTERS)
 endif()
 
 if (LIBCXX_INCLUDE_TESTS)
-  include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
+  include(AddLLVM) # for configure_lit_site_cfg and add_lit_target
 
   configure_lit_site_cfg(
     "${LIBCXX_TEST_CONFIG}"
@@ -114,10 +114,11 @@ if (LIBCXX_INCLUDE_TESTS)
     DEPENDS cxx ${LIBCXX_TEST_DEPS}
     COMMENT "Builds dependencies required to run the test suite.")
 
-  add_lit_testsuite(check-cxx
+  add_lit_target(check-cxx
     "Running libcxx tests"
     ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS check-cxx-deps)
+    DEPENDS check-cxx-deps
+    PARAMS "${LIBCXX_TEST_PARAMS}")
 endif()
 
 if (LIBCXX_GENERATE_COVERAGE)
