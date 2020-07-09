@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include <cstdint>
 #include <vector>
@@ -67,11 +68,12 @@ private:
 
   /// gnu styled tables contains additional information.
   /// This flag determines whether or not section we parse is debug_gnu* table.
-  bool GnuStyle;
+  bool GnuStyle = false;
 
 public:
-  DWARFDebugPubTable(const DWARFObject &Obj, const DWARFSection &Sec,
-                     bool LittleEndian, bool GnuStyle);
+  DWARFDebugPubTable() = default;
+
+  Error extract(DWARFDataExtractor Data, bool GnuStyle);
 
   void dump(raw_ostream &OS) const;
 
