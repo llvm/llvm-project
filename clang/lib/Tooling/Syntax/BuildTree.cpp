@@ -192,6 +192,7 @@ static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
   case OO_None:
     llvm_unreachable("Not an overloadable operator");
   }
+  llvm_unreachable("Unknown OverloadedOperatorKind enum");
 }
 
 /// Gets the range of declarator as defined by the C++ grammar. E.g.
