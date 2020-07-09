@@ -33,4 +33,8 @@ parameters = [
             help="Whether to enable tests for the C++ <filesystem> library.",
             feature=lambda filesystem: None if filesystem else
               Feature(name='c++filesystem-disabled')),
+
+  Parameter(name='long_tests', choices=[True, False], type=bool, default=True,
+            help="Whether to tests that take longer to run. This can be useful when running on a very slow device.",
+            feature=lambda enabled: Feature(name='long_tests') if enabled else None),
 ]
