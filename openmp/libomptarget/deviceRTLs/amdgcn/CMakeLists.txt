@@ -143,7 +143,7 @@ macro(add_ocl_bc_library dir)
   set(cl_bc_files)
   file(GLOB h_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
   if(NOT ${AOMP_STANDALONE_BUILD})
-    set(cu_cmd "${cu_cmd};--hip-device-lib-path=${ROCM_DIR}/lib/bitcode")
+    set(cu_cmd "${cu_cmd};--hip-device-lib-path=${ROCM_DIR}/amdgcn/bitcode")
   endif(NOT ${AOMP_STANDALONE_BUILD})
 
   foreach(file ${ARGN})

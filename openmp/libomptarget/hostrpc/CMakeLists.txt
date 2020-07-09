@@ -109,7 +109,7 @@ macro(add_openmp_library libname archname dir)
     -I${ROCDL_INC_IRIF})
 
   if(NOT ${AOMP_STANDALONE_BUILD})
-    set(openmp_args "${openmp_args};--hip-device-lib-path=${ROCM_DIR}/lib/bitcode")
+    set(openmp_args "${openmp_args};--hip-device-lib-path=${ROCM_DIR}/amdgcn/bitcode")
   endif(NOT ${AOMP_STANDALONE_BUILD})
   set(obj_files)
   set(bc_files)
