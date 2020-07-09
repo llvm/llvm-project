@@ -131,6 +131,11 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
 
 // Returns success if any hoisting happened.
 LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
+  // Bail out early if the ifOp returns a result.  TODO: Consider how to
+  // properly support this case.
+  if (ifOp.getNumResults() != 0)
+    return failure();
+
   // Apply canonicalization patterns and folding - this is necessary for the
   // hoisting check to be correct (operands should be composed), and to be more
   // effective (no unused operands). Since the pattern rewriter's folding is
