@@ -394,6 +394,15 @@ define <4 x double> @shuffle_v4f64_zz23_optsize(<4 x double> %a) optsize {
   %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   ret <4 x double> %s
 }
+define <4 x double> @shuffle_v4f64_zz23_pgso(<4 x double> %a) !prof !14 {
+; ALL-LABEL: shuffle_v4f64_zz23_pgso:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; ALL-NEXT:    retq
+  %s = shufflevector <4 x double> %a, <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  ret <4 x double> %s
+}
 
 define <4 x double> @shuffle_v4f64_zz45(<4 x double> %a) {
 ; ALL-LABEL: shuffle_v4f64_zz45:
@@ -425,6 +434,15 @@ define <4 x double> @shuffle_v4f64_zz67_optsize(<4 x double> %a) optsize {
 ; ALL-LABEL: shuffle_v4f64_zz67_optsize:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[2,3]
+; ALL-NEXT:    retq
+  %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x double> %s
+}
+define <4 x double> @shuffle_v4f64_zz67_pgso(<4 x double> %a) !prof !14 {
+; ALL-LABEL: shuffle_v4f64_zz67_pgso:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; ALL-NEXT:    retq
   %s = shufflevector <4 x double> <double 0.0, double 0.0, double undef, double undef>, <4 x double> %a, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
   ret <4 x double> %s
@@ -685,3 +703,20 @@ entry:
   %res = add <8 x i32> %shuffle, <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
   ret <8 x i32> %res
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}
