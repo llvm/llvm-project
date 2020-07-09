@@ -114,7 +114,7 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
     // Insert this op in the defined ops list.
     definedOps.insert(&op);
 
-    if (op.getNumOperands() == 0 && !isa<AffineTerminatorOp>(op)) {
+    if (op.getNumOperands() == 0 && !isa<AffineYieldOp>(op)) {
       LLVM_DEBUG(llvm::dbgs() << "\nNon-constant op with 0 operands\n");
       return false;
     }
@@ -199,7 +199,7 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   for (auto &op : *loopBody) {
     // We don't hoist for loops.
     if (!isa<AffineForOp>(op)) {
-      if (!isa<AffineTerminatorOp>(op)) {
+      if (!isa<AffineYieldOp>(op)) {
         if (isOpLoopInvariant(op, indVar, definedOps, opsToHoist)) {
           opsToMove.push_back(&op);
         }

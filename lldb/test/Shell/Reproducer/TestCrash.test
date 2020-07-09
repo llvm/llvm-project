@@ -10,3 +10,8 @@
 # CHECK: Crash reproducer for
 # CHECK: Reproducer written to
 # CHECK: ********************
+
+# RUN: %lldb -b --capture --capture-path %t.repro --reproducer-no-generate-on-signal -o 'reproducer xcrash -s SIGSEGV' | FileCheck %s --check-prefix NOHANDLER
+
+# NOHANDLER-NOT: Crash reproducer
+# NOHANDLER-NOT: Reproducer written

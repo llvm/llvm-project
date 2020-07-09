@@ -186,7 +186,7 @@ AffineDataCopyGeneration::runOnBlock(Block *block,
   if (curBegin != block->end()) {
     // Can't be a terminator because it would have been skipped above.
     assert(!curBegin->isKnownTerminator() && "can't be a terminator");
-    // Exclude the affine terminator - hence, the std::prev.
+    // Exclude the affine.yield - hence, the std::prev.
     affineDataCopyGenerate(/*begin=*/curBegin, /*end=*/std::prev(block->end()),
                            copyOptions, /*filterMemRef=*/llvm::None, copyNests);
   }

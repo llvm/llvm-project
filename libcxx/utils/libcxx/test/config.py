@@ -427,7 +427,6 @@ class Configuration(object):
             self.configure_link_flags_abi_library()
             self.configure_extra_library_flags()
         elif self.cxx_stdlib_under_test == 'libstdc++':
-            self.config.available_features.add('c++experimental')
             self.cxx.link_flags += ['-lstdc++fs', '-lm', '-pthread']
         elif self.cxx_stdlib_under_test == 'msvc':
             # FIXME: Correctly setup debug/release flags here.
@@ -465,10 +464,6 @@ class Configuration(object):
                 self.add_path(self.exec_env, self.abi_library_root)
 
     def configure_link_flags_cxx_library(self):
-        libcxx_experimental = self.get_lit_bool('enable_experimental', default=False)
-        if libcxx_experimental:
-            self.config.available_features.add('c++experimental')
-            self.cxx.link_flags += ['-lc++experimental']
         if self.link_shared:
             self.cxx.link_flags += ['-lc++']
         else:
@@ -654,19 +649,13 @@ class Configuration(object):
 
     def configure_substitutions(self):
         sub = self.config.substitutions
-        # Configure compiler substitutions
         sub.append(('%{cxx}', pipes.quote(self.cxx.path)))
-        sub.append(('%{libcxx_src_root}', self.libcxx_src_root))
-        # Configure flags substitutions
         flags = self.cxx.flags + (self.cxx.modules_flags if self.cxx.use_modules else [])
         compile_flags = self.cxx.compile_flags + (self.cxx.warning_flags if self.cxx.use_warnings else [])
         sub.append(('%{flags}',         ' '.join(map(pipes.quote, flags))))
         sub.append(('%{compile_flags}', ' '.join(map(pipes.quote, compile_flags))))
         sub.append(('%{link_flags}',    ' '.join(map(pipes.quote, self.cxx.link_flags))))
         sub.append(('%{link_libcxxabi}', pipes.quote(self.cxx.link_libcxxabi_flag)))
-
-        # Configure exec prefix substitutions.
-        # Configure run env substitution.
         codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
         env_vars = ' '.join('%s=%s' % (k, pipes.quote(v)) for (k, v) in self.exec_env.items())
         exec_args = [

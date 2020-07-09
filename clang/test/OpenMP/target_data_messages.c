@@ -45,5 +45,12 @@ int main(int argc, char **argv) {
   {
     foo();
   }
+
+  const int b = 5;
+  int marr[10][10], iarr[5];
+#pragma omp target data map(to: marr[10][0:2:2]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
+  {}
+#pragma omp target data map(alloc: iarr[:2:b]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
+  {}
   return 0;
 }
