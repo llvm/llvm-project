@@ -291,10 +291,8 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
       if (TotalSpeculationCost > SpecExecMaxSpeculationCost)
         return false;  // too much to hoist
     } else {
-      // If the instruction cannot be hoisted but has zero cost suppose it's
-      // a special case e.g. debug info instrinsics that should not be counted
-      // for threshold.
-      if (Cost)
+      // Debug info instrinsics should not be counted for threshold.
+      if (!isa<DbgInfoIntrinsic>(I))
         NotHoistedInstCount++;
       if (NotHoistedInstCount > SpecExecMaxNotHoisted)
         return false; // too much left behind
