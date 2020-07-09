@@ -221,6 +221,32 @@ for.end:
   ret void
 }
 
+; PR46652: Check that the need for stride==1 check prevents vectorizing a loop
+; having tiny trip count, when compiling w/o -Os/-Oz.
+; CHECK-LABEL: @pr46652
+; CHECK-NOT: vector.scevcheck
+; CHECK-NOT: vector.body
+; CHECK-LABEL: for.body
+
+@g = external global [1 x i16], align 1
+
+define void @pr46652(i16 %stride) {
+entry:
+  br label %for.body
+
+for.body:                                        ; preds = %for.body, %entry
+  %l1.02 = phi i16 [ 1, %entry ], [ %inc9, %for.body ]
+  %mul = mul nsw i16 %l1.02, %stride
+  %arrayidx6 = getelementptr inbounds [1 x i16], [1 x i16]* @g, i16 0, i16 %mul
+  %0 = load i16, i16* %arrayidx6, align 1
+  %inc9 = add nuw nsw i16 %l1.02, 1
+  %exitcond.not = icmp eq i16 %inc9, 16
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                        ; preds = %for.body
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
