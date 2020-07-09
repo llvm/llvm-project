@@ -317,21 +317,101 @@ OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shapeAttr(); }
 // CstrBroadcastableOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+// Given an input shape Value, try to obtain the shape's values.
+LogicalResult getShapeVec(Value input, SmallVectorImpl<int64_t> &shapeValues) {
+  if (auto inputOp = input.getDefiningOp<ShapeOfOp>()) {
+    auto type = inputOp.arg().getType().dyn_cast<ShapedType>();
+    if (!type.hasRank())
+      return failure();
+    shapeValues = llvm::to_vector<6>(type.getShape());
+    return success();
+  } else if (auto inputOp = input.getDefiningOp<ConstShapeOp>()) {
+    shapeValues = llvm::to_vector<6>(inputOp.shape().getValues<int64_t>());
+    return success();
+  } else {
+    return failure();
+  }
+}
+
+// For shapes that were created by some operations, we can obtain partial
+// information on the shapes and sometimes determine if they will be
+// broadcastable with that.
+struct CstrBroadcastablePartialInfo
+    : public OpRewritePattern<CstrBroadcastableOp> {
+  using OpRewritePattern<CstrBroadcastableOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CstrBroadcastableOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<int64_t, 6> lhsShape, rhsShape;
+    if (failed(getShapeVec(op.lhs(), lhsShape)))
+      return failure();
+    if (failed(getShapeVec(op.rhs(), rhsShape)))
+      return failure();
+    if (!OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<ConstWitnessOp>(op.getOperation(), true);
+    return success();
+  }
+};
+
+// Scalars are always broadcastable.
+struct CstrBroadcastableScalar : public OpRewritePattern<CstrBroadcastableOp> {
+  using OpRewritePattern<CstrBroadcastableOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CstrBroadcastableOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<int64_t, 6> shape;
+    if (failed(getShapeVec(op.lhs(), shape)) || shape.size() > 0)
+      return failure();
+    if (failed(getShapeVec(op.rhs(), shape)) || shape.size() > 0)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<ConstWitnessOp>(op.getOperation(), true);
+    return success();
+  }
+};
+
+} // namespace
+
 void CstrBroadcastableOp::getCanonicalizationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
-  // If inputs are equal, return passing witness
-  patterns.insert<CstrBroadcastableEqOps>(context);
+  // Canonicalization patterns have overlap with the considerations during
+  // folding in case additional shape information is inferred at some point that
+  // does not result in folding.
+  patterns.insert<CstrBroadcastableEqOps, CstrBroadcastablePartialInfo,
+                  CstrBroadcastableScalar>(context);
 }
 
 OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
-  if (!operands[0] || !operands[1])
+  // Both operands are not needed if one is a scalar.
+  if (operands[0] &&
+      operands[0].cast<DenseIntElementsAttr>().getNumElements() == 0)
+    return BoolAttr::get(true, getContext());
+  if (operands[1] &&
+      operands[1].cast<DenseIntElementsAttr>().getNumElements() == 0)
+    return BoolAttr::get(true, getContext());
+
+  if (operands[0] && operands[1]) {
+    auto lhsShape = llvm::to_vector<6>(
+        operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+    auto rhsShape = llvm::to_vector<6>(
+        operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
+    SmallVector<int64_t, 6> resultShape;
+    if (OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
+      return BoolAttr::get(true, getContext());
+  }
+
+  // Lastly, see if folding can be completed based on what constraints are known
+  // on the input shapes.
+  SmallVector<int64_t, 6> lhsShape, rhsShape;
+  if (failed(getShapeVec(lhs(), lhsShape)))
     return nullptr;
-  auto lhsShape = llvm::to_vector<6>(
-      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
-  auto rhsShape = llvm::to_vector<6>(
-      operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
-  SmallVector<int64_t, 6> resultShape;
-  if (OpTrait::util::getBroadcastedShape(lhsShape, rhsShape, resultShape))
+  if (failed(getShapeVec(rhs(), rhsShape)))
+    return nullptr;
+
+  if (OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
     return BoolAttr::get(true, getContext());
 
   // Because a failing witness result here represents an eventual assertion
