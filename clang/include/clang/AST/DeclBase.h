@@ -875,15 +875,19 @@ public:
     return getParentFunctionOrMethod() == nullptr;
   }
 
-  /// Returns true if this declaration is lexically inside a function or inside
-  /// a variable initializer. It recognizes non-defining declarations as well
-  /// as members of local classes and lambdas:
+  /// Determine whether a substitution into this declaration would occur as
+  /// part of a substitution into a dependent local scope. Such a substitution
+  /// transitively substitutes into all constructs nested within this
+  /// declaration.
+  ///
+  /// This recognizes non-defining declarations as well as members of local
+  /// classes and lambdas:
   /// \code
-  ///     void foo() { void bar(); }
-  ///     void foo2() { class ABC { void bar(); }; }
-  ///     inline int x = [](){ return 0; }();
+  ///     template<typename T> void foo() { void bar(); }
+  ///     template<typename T> void foo2() { class ABC { void bar(); }; }
+  ///     template<typename T> inline int x = [](){ return 0; }();
   /// \endcode
-  bool isInLocalScope() const;
+  bool isInLocalScopeForInstantiation() const;
 
   /// If this decl is defined inside a function/method/block it returns
   /// the corresponding DeclContext, otherwise it returns null.
