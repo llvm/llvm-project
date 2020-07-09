@@ -990,26 +990,27 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   SmallVector<IntrinsicInst *, 4> Gathers;
   SmallVector<IntrinsicInst *, 4> Scatters;
 
+  bool Changed = false;
+
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
       if (II && II->getIntrinsicID() == Intrinsic::masked_gather) {
         Gathers.push_back(II);
         if (isa<GetElementPtrInst>(II->getArgOperand(0)))
-          optimiseOffsets(
+          Changed |= optimiseOffsets(
               cast<Instruction>(II->getArgOperand(0))->getOperand(1),
               II->getParent(), LI);
       } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter) {
         Scatters.push_back(II);
         if (isa<GetElementPtrInst>(II->getArgOperand(1)))
-          optimiseOffsets(
+          Changed |= optimiseOffsets(
               cast<Instruction>(II->getArgOperand(1))->getOperand(1),
               II->getParent(), LI);
       }
     }
   }
 
-  bool Changed = false;
   for (unsigned i = 0; i < Gathers.size(); i++) {
     IntrinsicInst *I = Gathers[i];
     Value *L = lowerGather(I);
