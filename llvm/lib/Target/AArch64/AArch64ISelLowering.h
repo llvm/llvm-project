@@ -734,6 +734,16 @@ public:
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
+  /// SVE code generation for fixed length vectors does not custom lower
+  /// BUILD_VECTOR. This makes BUILD_VECTOR legalisation a source of stores to
+  /// merge. However, merging them creates a BUILD_VECTOR that is just as
+  /// illegal as the original, thus leading to an infinite legalisation loop.
+  /// NOTE: Once BUILD_VECTOR is legal or can be custom lowered for all legal
+  /// vector types this override can be removed.
+  bool mergeStoresAfterLegalization(EVT VT) const override {
+    return !useSVEForFixedLengthVectors();
+  }
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
