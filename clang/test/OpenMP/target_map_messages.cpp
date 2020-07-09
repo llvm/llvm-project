@@ -550,6 +550,12 @@ T tmain(T argc) {
 #pragma omp target data map(tofrom, close: x) // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
 #pragma omp target data map(close, tofrom: close, tofrom, x)
   foo();
+
+  T marr[10][10], iarr[5];
+#pragma omp target data map(marr[10][0:2:2]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
+  {}
+#pragma omp target data map(iarr[:2:d]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
+  {}
   return 0;
 }
 
@@ -735,6 +741,13 @@ int main(int argc, char **argv) {
 #pragma omp target map(delete: a) // expected-error {{map type 'delete' is not allowed for '#pragma omp target'}}
   {}
 #pragma omp target map(release: a) // expected-error {{map type 'release' is not allowed for '#pragma omp target'}}
+  {}
+
+  int marr[10][10], iarr[5];
+
+#pragma omp target map(marr[10][0:2:2]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
+  {}
+#pragma omp target map(iarr[:2:d]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   {}
 
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}

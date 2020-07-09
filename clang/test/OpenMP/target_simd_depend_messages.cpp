@@ -82,7 +82,7 @@ int main(int argc, char **argv, char *env[]) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target simd depend (in : argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target simd depend (in : argv[3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
+  #pragma omp target simd depend(in : argv [3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target simd depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
   for (i = 0; i < argc; ++i) foo();

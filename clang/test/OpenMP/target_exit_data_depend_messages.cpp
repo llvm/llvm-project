@@ -76,7 +76,7 @@ int tmain(T argc, S **argv, R *env[]) {
   foo();
   #pragma omp target exit data map(from: i) depend (in : argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   foo();
-  #pragma omp target exit data map(from: i) depend (in : argv[3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
+  #pragma omp target exit data map(from : i) depend(in : argv [3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   foo();
   #pragma omp target exit data map(from: i) depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
   foo();
@@ -151,7 +151,7 @@ int main(int argc, char **argv, char *env[]) {
   foo();
   #pragma omp target exit data map(from: i) depend (in : argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   foo();
-  #pragma omp target exit data map(from: i) depend (in : argv[3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
+  #pragma omp target exit data map(from : i) depend(in : argv [3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   foo();
   #pragma omp target exit data map(from: i) depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
   foo();

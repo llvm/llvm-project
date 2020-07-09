@@ -2095,35 +2095,19 @@ define i32 @hadd32_4_optsize(<4 x i32> %x225) optsize {
 }
 
 define i32 @hadd32_4_pgso(<4 x i32> %x225) !prof !14 {
-; SSE3-SLOW-LABEL: hadd32_4_pgso:
-; SSE3-SLOW:       # %bb.0:
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSE3-SLOW-NEXT:    phaddd %xmm1, %xmm1
-; SSE3-SLOW-NEXT:    movd %xmm1, %eax
-; SSE3-SLOW-NEXT:    retq
+; SSE3-LABEL: hadd32_4_pgso:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    phaddd %xmm0, %xmm0
+; SSE3-NEXT:    phaddd %xmm0, %xmm0
+; SSE3-NEXT:    movd %xmm0, %eax
+; SSE3-NEXT:    retq
 ;
-; SSE3-FAST-LABEL: hadd32_4_pgso:
-; SSE3-FAST:       # %bb.0:
-; SSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSE3-FAST-NEXT:    movd %xmm0, %eax
-; SSE3-FAST-NEXT:    retq
-;
-; AVX-SLOW-LABEL: hadd32_4_pgso:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vmovd %xmm0, %eax
-; AVX-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: hadd32_4_pgso:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vmovd %xmm0, %eax
-; AVX-FAST-NEXT:    retq
+; AVX-LABEL: hadd32_4_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
   %x226 = shufflevector <4 x i32> %x225, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   %x227 = add <4 x i32> %x225, %x226
   %x228 = shufflevector <4 x i32> %x227, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>

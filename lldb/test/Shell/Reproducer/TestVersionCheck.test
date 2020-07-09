@@ -15,8 +15,8 @@
 # Make sure that replay works.
 # RUN: not %lldb --replay %t.repro 2>&1 | FileCheck %s --check-prefix ERROR
 
-# Make sure that we can circumvent the version check with -reproducer-skip-version-check.
-# RUN: %lldb --replay %t.repro -reproducer-skip-version-check | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+# Make sure that we can circumvent the version check with -reproducer-no-version-check.
+# RUN: %lldb --replay %t.repro -reproducer-no-version-check | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
 
 # CAPTURE: testing
 # REPLAY-NOT: testing
