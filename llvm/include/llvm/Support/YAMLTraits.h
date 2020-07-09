@@ -649,24 +649,25 @@ inline bool isBool(StringRef S) {
 inline QuotingType needsQuotes(StringRef S) {
   if (S.empty())
     return QuotingType::Single;
+
+  QuotingType MaxQuotingNeeded = QuotingType::None;
   if (isSpace(static_cast<unsigned char>(S.front())) ||
       isSpace(static_cast<unsigned char>(S.back())))
-    return QuotingType::Single;
+    MaxQuotingNeeded = QuotingType::Single;
   if (isNull(S))
-    return QuotingType::Single;
+    MaxQuotingNeeded = QuotingType::Single;
   if (isBool(S))
-    return QuotingType::Single;
+    MaxQuotingNeeded = QuotingType::Single;
   if (isNumeric(S))
-    return QuotingType::Single;
+    MaxQuotingNeeded = QuotingType::Single;
 
   // 7.3.3 Plain Style
   // Plain scalars must not begin with most indicators, as this would cause
   // ambiguity with other YAML constructs.
   static constexpr char Indicators[] = R"(-?:\,[]{}#&*!|>'"%@`)";
   if (S.find_first_of(Indicators) == 0)
-    return QuotingType::Single;
+    MaxQuotingNeeded = QuotingType::Single;
 
-  QuotingType MaxQuotingNeeded = QuotingType::None;
   for (unsigned char C : S) {
     // Alphanum is safe.
     if (isAlnum(C))
@@ -684,11 +685,11 @@ inline QuotingType needsQuotes(StringRef S) {
     case 0x9:
       continue;
     // LF(0xA) and CR(0xD) may delimit values and so require at least single
-    // quotes.
+    // quotes. LLVM YAML parser cannot handle single quoted multiline so use
+    // double quoting to produce valid YAML.
     case 0xA:
     case 0xD:
-      MaxQuotingNeeded = QuotingType::Single;
-      continue;
+      return QuotingType::Double;
     // DEL (0x7F) are excluded from the allowed character range.
     case 0x7F:
       return QuotingType::Double;
