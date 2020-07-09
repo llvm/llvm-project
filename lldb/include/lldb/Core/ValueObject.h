@@ -971,6 +971,13 @@ protected:
 
   void SetPreferredDisplayLanguageIfNeeded(lldb::LanguageType);
 
+  void UpdateChildrenAddressType() {
+    GetRoot()->DoUpdateChildrenAddressType(*this);
+  }
+
+protected:
+  virtual void DoUpdateChildrenAddressType(ValueObject &valobj) { return; };
+
 private:
   virtual CompilerType MaybeCalculateCompleteType();
 
