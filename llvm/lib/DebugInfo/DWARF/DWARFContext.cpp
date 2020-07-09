@@ -339,8 +339,7 @@ static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
 static void dumpPubTableSection(raw_ostream &OS, DIDumpOptions DumpOpts,
                                 DWARFDataExtractor Data, bool GnuStyle) {
   DWARFDebugPubTable Table;
-  if (Error E = Table.extract(Data, GnuStyle))
-    DumpOpts.RecoverableErrorHandler(std::move(E));
+  Table.extract(Data, GnuStyle, DumpOpts.RecoverableErrorHandler);
   Table.dump(OS);
 }
 
