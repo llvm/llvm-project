@@ -77,7 +77,7 @@ void DWARFDebugPubTable::extract(
       RecoverableErrorHandler(createStringError(
           errc::invalid_argument,
           "name lookup table at offset 0x%" PRIx64 " parsing failed: %s",
-          SetOffset, toString(std::move(C.takeError())).c_str()));
+          SetOffset, toString(C.takeError()).c_str()));
       continue;
     }
     if (C.tell() != Offset)
