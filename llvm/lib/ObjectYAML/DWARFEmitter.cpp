@@ -440,36 +440,36 @@ class DIEFixupVisitor : public DWARFYAML::Visitor {
 public:
   DIEFixupVisitor(DWARFYAML::Data &DI) : DWARFYAML::Visitor(DI){};
 
-private:
-  virtual void onStartCompileUnit(DWARFYAML::Unit &CU) {
+protected:
+  void onStartCompileUnit(DWARFYAML::Unit &CU) override {
     // Size of the unit header, excluding the length field itself.
     Length = CU.Version >= 5 ? 8 : 7;
   }
 
-  virtual void onEndCompileUnit(DWARFYAML::Unit &CU) { CU.Length = Length; }
+  void onEndCompileUnit(DWARFYAML::Unit &CU) override { CU.Length = Length; }
 
-  virtual void onStartDIE(DWARFYAML::Unit &CU, DWARFYAML::Entry &DIE) {
+  void onStartDIE(DWARFYAML::Unit &CU, DWARFYAML::Entry &DIE) override {
     Length += getULEB128Size(DIE.AbbrCode);
   }
 
-  virtual void onValue(const uint8_t U) { Length += 1; }
-  virtual void onValue(const uint16_t U) { Length += 2; }
-  virtual void onValue(const uint32_t U) { Length += 4; }
-  virtual void onValue(const uint64_t U, const bool LEB = false) {
+  void onValue(const uint8_t U) override { Length += 1; }
+  void onValue(const uint16_t U) override { Length += 2; }
+  void onValue(const uint32_t U) override { Length += 4; }
+  void onValue(const uint64_t U, const bool LEB = false) override {
     if (LEB)
       Length += getULEB128Size(U);
     else
       Length += 8;
   }
-  virtual void onValue(const int64_t S, const bool LEB = false) {
+  void onValue(const int64_t S, const bool LEB = false) override {
     if (LEB)
       Length += getSLEB128Size(S);
     else
       Length += 8;
   }
-  virtual void onValue(const StringRef String) { Length += String.size() + 1; }
+  void onValue(const StringRef String) override { Length += String.size() + 1; }
 
-  virtual void onValue(const MemoryBufferRef MBR) {
+  void onValue(const MemoryBufferRef MBR) override {
     Length += MBR.getBufferSize();
   }
 };
