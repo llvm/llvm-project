@@ -7475,10 +7475,49 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
 
 namespace {
 
+class MSP430ABIInfo : public DefaultABIInfo {
+  static ABIArgInfo complexArgInfo() {
+    ABIArgInfo Info = ABIArgInfo::getDirect();
+    Info.setCanBeFlattened(false);
+    return Info;
+  }
+
+public:
+  MSP430ABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+
+  ABIArgInfo classifyReturnType(QualType RetTy) const {
+    if (RetTy->isAnyComplexType())
+      return complexArgInfo();
+
+    return DefaultABIInfo::classifyReturnType(RetTy);
+  }
+
+  ABIArgInfo classifyArgumentType(QualType RetTy) const {
+    if (RetTy->isAnyComplexType())
+      return complexArgInfo();
+
+    return DefaultABIInfo::classifyArgumentType(RetTy);
+  }
+
+  // Just copy the original implementations because
+  // DefaultABIInfo::classify{Return,Argument}Type() are not virtual
+  void computeInfo(CGFunctionInfo &FI) const override {
+    if (!getCXXABI().classifyReturnType(FI))
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    for (auto &I : FI.arguments())
+      I.info = classifyArgumentType(I.type);
+  }
+
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override {
+    return EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty));
+  }
+};
+
 class MSP430TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   MSP430TargetCodeGenInfo(CodeGenTypes &CGT)
-      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
+      : TargetCodeGenInfo(std::make_unique<MSP430ABIInfo>(CGT)) {}
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
 };
