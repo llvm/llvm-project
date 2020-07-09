@@ -433,7 +433,7 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
 /// an issue, for example, in particular for 32b pointers with negative indices
 /// that rely on two's complement wrap-arounds for precise alias information
 /// where the maximum pointer size is 64b.
-static APInt adjustToPointerSize(APInt Offset, unsigned PointerSize) {
+static APInt adjustToPointerSize(const APInt &Offset, unsigned PointerSize) {
   assert(PointerSize <= Offset.getBitWidth() && "Invalid PointerSize!");
   unsigned ShiftBits = Offset.getBitWidth() - PointerSize;
   return (Offset << ShiftBits).ashr(ShiftBits);
@@ -1993,7 +1993,7 @@ void BasicAAResult::GetIndexDifference(
 
 bool BasicAAResult::constantOffsetHeuristic(
     const SmallVectorImpl<VariableGEPIndex> &VarIndices,
-    LocationSize MaybeV1Size, LocationSize MaybeV2Size, APInt BaseOffset,
+    LocationSize MaybeV1Size, LocationSize MaybeV2Size, const APInt &BaseOffset,
     AssumptionCache *AC, DominatorTree *DT) {
   if (VarIndices.size() != 2 || MaybeV1Size == LocationSize::unknown() ||
       MaybeV2Size == LocationSize::unknown())
