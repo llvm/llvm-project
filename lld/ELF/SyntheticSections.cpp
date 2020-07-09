@@ -2712,8 +2712,9 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
   for (const LLDDWARFSection *pub : {&pubNames, &pubTypes}) {
     DWARFDataExtractor data(obj, *pub, config->isLE, config->wordsize);
     DWARFDebugPubTable table;
-    if (Error e = table.extract(data, /*GnuStyle=*/true))
+    table.extract(data, /*GnuStyle=*/true, [&](Error e) {
       warn(toString(pub->sec) + ": " + toString(std::move(e)));
+    });
     for (const DWARFDebugPubTable::Set &set : table.getData()) {
       // The value written into the constant pool is kind << 24 | cuIndex. As we
       // don't know how many compilation units precede this object to compute

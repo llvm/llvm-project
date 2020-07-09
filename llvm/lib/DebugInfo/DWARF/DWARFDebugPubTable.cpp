@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -18,32 +19,75 @@
 using namespace llvm;
 using namespace dwarf;
 
-Error DWARFDebugPubTable::extract(DWARFDataExtractor Data, bool GnuStyle) {
+void DWARFDebugPubTable::extract(
+    DWARFDataExtractor Data, bool GnuStyle,
+    function_ref<void(Error)> RecoverableErrorHandler) {
   this->GnuStyle = GnuStyle;
   Sets.clear();
-  DataExtractor::Cursor C(0);
-  while (C && Data.isValidOffset(C.tell())) {
+  uint64_t Offset = 0;
+  while (Data.isValidOffset(Offset)) {
+    uint64_t SetOffset = Offset;
     Sets.push_back({});
-    Set &SetData = Sets.back();
+    Set &NewSet = Sets.back();
 
-    std::tie(SetData.Length, SetData.Format) = Data.getInitialLength(C);
-    const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(SetData.Format);
+    DataExtractor::Cursor C(Offset);
+    std::tie(NewSet.Length, NewSet.Format) = Data.getInitialLength(C);
+    if (!C) {
+      // Drop the newly added set because it does not contain anything useful
+      // to dump.
+      Sets.pop_back();
+      RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          "name lookup table at offset 0x%" PRIx64 " parsing failed: %s",
+          SetOffset, toString(C.takeError()).c_str()));
+      return;
+    }
 
-    SetData.Version = Data.getU16(C);
-    SetData.Offset = Data.getRelocatedValue(C, OffsetSize);
-    SetData.Size = Data.getUnsigned(C, OffsetSize);
+    Offset = C.tell() + NewSet.Length;
+    DWARFDataExtractor SetData(Data, Offset);
+    const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(NewSet.Format);
+
+    NewSet.Version = SetData.getU16(C);
+    NewSet.Offset = SetData.getRelocatedValue(C, OffsetSize);
+    NewSet.Size = SetData.getUnsigned(C, OffsetSize);
+
+    if (!C) {
+      // Preserve the newly added set because at least some fields of the header
+      // are read and can be dumped.
+      RecoverableErrorHandler(
+          createStringError(errc::invalid_argument,
+                            "name lookup table at offset 0x%" PRIx64
+                            " does not have a complete header: %s",
+                            SetOffset, toString(C.takeError()).c_str()));
+      continue;
+    }
 
     while (C) {
-      uint64_t DieRef = Data.getUnsigned(C, OffsetSize);
+      uint64_t DieRef = SetData.getUnsigned(C, OffsetSize);
       if (DieRef == 0)
         break;
-      uint8_t IndexEntryValue = GnuStyle ? Data.getU8(C) : 0;
-      StringRef Name = Data.getCStrRef(C);
-      SetData.Entries.push_back(
-          {DieRef, PubIndexEntryDescriptor(IndexEntryValue), Name});
+      uint8_t IndexEntryValue = GnuStyle ? SetData.getU8(C) : 0;
+      StringRef Name = SetData.getCStrRef(C);
+      if (C)
+        NewSet.Entries.push_back(
+            {DieRef, PubIndexEntryDescriptor(IndexEntryValue), Name});
     }
+
+    if (!C) {
+      RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          "name lookup table at offset 0x%" PRIx64 " parsing failed: %s",
+          SetOffset, toString(std::move(C.takeError())).c_str()));
+      continue;
+    }
+    if (C.tell() != Offset)
+      RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          "name lookup table at offset 0x%" PRIx64
+          " has a terminator at offset 0x%" PRIx64
+          " before the expected end at 0x%" PRIx64,
+          SetOffset, C.tell() - OffsetSize, Offset - OffsetSize));
   }
-  return C.takeError();
 }
 
 void DWARFDebugPubTable::dump(raw_ostream &OS) const {
