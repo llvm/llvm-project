@@ -116,6 +116,11 @@ namespace rdar34167492 {
   };
 }
 
+namespace use_of_earlier_param {
+  template<typename T> void f(T a, int = decltype(a)());
+  void g() { f(0); }
+}
+
 #if __cplusplus >= 201402L
 namespace lambda {
   // Verify that a default argument in a lambda can refer to the type of a
