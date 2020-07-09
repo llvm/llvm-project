@@ -797,7 +797,8 @@ EXAMPLES:
   llvm::outs() << examples << '\n';
 }
 
-llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
+llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
+                                         opt::InputArgList &input_args) {
   if (auto *replay_path = input_args.getLastArg(OPT_replay)) {
     const bool no_version_check = input_args.hasArg(OPT_no_version_check);
     if (const char *error =
@@ -818,6 +819,12 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
   }
 
   if (capture || capture_path) {
+    // Register the reproducer signal handler.
+    if (!input_args.hasArg(OPT_no_generate_on_signal)) {
+      llvm::sys::AddSignalHandler(reproducer_handler,
+                                  const_cast<char *>(argv0.data()));
+    }
+
     if (capture_path) {
       if (!capture)
         WithColor::warning() << "-capture-path specified without -capture\n";
@@ -867,12 +874,9 @@ int main(int argc, char const *argv[]) {
     return 1;
   }
 
-  if (auto exit_code = InitializeReproducer(input_args)) {
+  if (auto exit_code = InitializeReproducer(argv[0], input_args)) {
     return *exit_code;
   }
-
-  // Register the reproducer signal handler.
-  llvm::sys::AddSignalHandler(reproducer_handler, const_cast<char *>(argv[0]));
 
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
