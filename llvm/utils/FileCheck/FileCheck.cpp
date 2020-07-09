@@ -121,10 +121,9 @@ static cl::list<DumpInputValue> DumpInputs(
     cl::desc("Dump input to stderr, adding annotations representing\n"
              "currently enabled diagnostics.  When there are multiple\n"
              "occurrences of this option, the <value> that appears earliest\n"
-             "in the list below has precedence.\n"),
+             "in the list below has precedence.  The default is 'fail'.\n"),
     cl::value_desc("mode"),
-    cl::values(clEnumValN(DumpInputHelp, "help",
-                          "Explain dump format and quit"),
+    cl::values(clEnumValN(DumpInputHelp, "help", "Explain input dump and quit"),
                clEnumValN(DumpInputAlways, "always", "Always dump input"),
                clEnumValN(DumpInputFail, "fail", "Dump input on failure"),
                clEnumValN(DumpInputNever, "never", "Never dump input")));
@@ -180,8 +179,15 @@ static MarkerStyle GetMarker(FileCheckDiag::MatchType MatchTy) {
 
 static void DumpInputAnnotationHelp(raw_ostream &OS) {
   OS << "The following description was requested by -dump-input=help to\n"
-     << "explain the input annotations printed by -dump-input=always and\n"
-     << "-dump-input=fail:\n\n";
+     << "explain the input dump printed by FileCheck.\n"
+     << "\n"
+     << "Related command-line options:\n"
+     << "  - -dump-input=<value> enables or disables the input dump\n"
+     << "  - -v and -vv add more annotations\n"
+     << "  - -color forces colors to be enabled both in the dump and below\n"
+     << "  - -help documents the above options in more detail\n"
+     << "\n"
+     << "Input dump annotation format:\n";
 
   // Labels for input lines.
   OS << "  - ";
@@ -233,8 +239,7 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
   WithColor(OS, raw_ostream::CYAN, true, false) << "discarded match";
   OS << ", ";
   WithColor(OS, raw_ostream::CYAN, true, true) << "unmatched input";
-  OS << "\n\n"
-     << "If you are not seeing color above or in input dumps, try: -color\n";
+  OS << "\n";
 }
 
 /// An annotation for a single input line.
@@ -675,12 +680,10 @@ int main(int argc, char **argv) {
   if (DumpInput == DumpInputAlways ||
       (ExitCode == 1 && DumpInput == DumpInputFail)) {
     errs() << "\n"
-           << "Input file: "
-           << InputFilename
-           << "\n"
+           << "Input file: " << InputFilename << "\n"
            << "Check file: " << CheckFilename << "\n"
            << "\n"
-           << "-dump-input=help describes the format of the following dump.\n"
+           << "-dump-input=help explains the following input dump.\n"
            << "\n";
     std::vector<InputAnnotation> Annotations;
     unsigned LabelWidth;

@@ -223,7 +223,13 @@ StructureConstructor &StructureConstructor::Add(
 
 GenericExprWrapper::~GenericExprWrapper() {}
 
+void GenericExprWrapper::Deleter(GenericExprWrapper *p) { delete p; }
+
 GenericAssignmentWrapper::~GenericAssignmentWrapper() {}
+
+void GenericAssignmentWrapper::Deleter(GenericAssignmentWrapper *p) {
+  delete p;
+}
 
 template <TypeCategory CAT> int Expr<SomeKind<CAT>>::GetKind() const {
   return std::visit(
@@ -243,5 +249,3 @@ std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {
 
 INSTANTIATE_EXPRESSION_TEMPLATES
 } // namespace Fortran::evaluate
-DEFINE_DELETER(Fortran::evaluate::GenericExprWrapper)
-DEFINE_DELETER(Fortran::evaluate::GenericAssignmentWrapper)

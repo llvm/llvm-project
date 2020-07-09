@@ -291,6 +291,22 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
   });
 }
 
+static void writeInstrProfile(StringRef OutputFilename,
+                              ProfileFormat OutputFormat,
+                              InstrProfWriter &Writer) {
+  std::error_code EC;
+  raw_fd_ostream Output(OutputFilename.data(), EC, sys::fs::OF_None);
+  if (EC)
+    exitWithErrorCode(EC, OutputFilename);
+
+  if (OutputFormat == PF_Text) {
+    if (Error E = Writer.writeText(Output))
+      exitWithError(std::move(E));
+  } else {
+    Writer.write(Output);
+  }
+}
+
 static void mergeInstrProfile(const WeightedFileVector &Inputs,
                               SymbolRemapper *Remapper,
                               StringRef OutputFilename,
@@ -366,18 +382,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       (NumErrors > 0 && FailMode == failIfAnyAreInvalid))
     exitWithError("No profiles could be merged.");
 
-  std::error_code EC;
-  raw_fd_ostream Output(OutputFilename.data(), EC, sys::fs::OF_None);
-  if (EC)
-    exitWithErrorCode(EC, OutputFilename);
-
-  InstrProfWriter &Writer = Contexts[0]->Writer;
-  if (OutputFormat == PF_Text) {
-    if (Error E = Writer.writeText(Output))
-      exitWithError(std::move(E));
-  } else {
-    Writer.write(Output);
-  }
+  writeInstrProfile(OutputFilename, OutputFormat, Contexts[0]->Writer);
 }
 
 /// Make a copy of the given function samples with all symbol names remapped

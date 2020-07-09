@@ -1026,6 +1026,13 @@ bool IsDummy(const Symbol &symbol) {
       symbol.details());
 }
 
+bool IsFunctionResult(const Symbol &symbol) {
+  return (symbol.has<ObjectEntityDetails>() &&
+             symbol.get<ObjectEntityDetails>().isFuncResult()) ||
+      (symbol.has<ProcEntityDetails>() &&
+          symbol.get<ProcEntityDetails>().isFuncResult());
+}
+
 int CountLenParameters(const DerivedTypeSpec &type) {
   return std::count_if(type.parameters().begin(), type.parameters().end(),
       [](const auto &pair) { return pair.second.isLen(); });
