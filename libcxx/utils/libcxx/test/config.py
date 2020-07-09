@@ -126,7 +126,7 @@ class Configuration(object):
         self.configure_deployment()
         self.configure_src_root()
         self.configure_obj_root()
-        self.configure_cxx_stdlib_under_test()
+        self.cxx_stdlib_under_test = self.get_lit_conf('cxx_stdlib_under_test', 'libc++')
         self.cxx_library_root = self.get_lit_conf('cxx_library_root', self.libcxx_obj_root)
         self.abi_library_root = self.get_lit_conf('abi_library_path', None)
         self.cxx_runtime_root = self.get_lit_conf('cxx_runtime_root', self.cxx_library_root)
@@ -256,22 +256,6 @@ class Configuration(object):
                     break
             else:
                 self.libcxx_obj_root = self.project_obj_root
-
-    def configure_cxx_stdlib_under_test(self):
-        self.cxx_stdlib_under_test = self.get_lit_conf(
-            'cxx_stdlib_under_test', 'libc++')
-        if self.cxx_stdlib_under_test not in \
-                ['libc++', 'libstdc++', 'msvc', 'cxx_default']:
-            self.lit_config.fatal(
-                'unsupported value for "cxx_stdlib_under_test": %s'
-                % self.cxx_stdlib_under_test)
-        self.config.available_features.add(self.cxx_stdlib_under_test)
-        if self.cxx_stdlib_under_test == 'libstdc++':
-            # Manually enable the experimental and filesystem tests for libstdc++
-            # if the options aren't present.
-            # FIXME this is a hack.
-            if self.get_lit_conf('enable_experimental') is None:
-                self.config.enable_experimental = 'true'
 
     def configure_features(self):
         additional_features = self.get_lit_conf('additional_features')
