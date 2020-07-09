@@ -221,15 +221,16 @@ bool HexagonGenExtract::convert(Instruction *In) {
 }
 
 bool HexagonGenExtract::visitBlock(BasicBlock *B) {
+  bool Changed = false;
+
   // Depth-first, bottom-up traversal.
   for (auto *DTN : children<DomTreeNode*>(DT->getNode(B)))
-    visitBlock(DTN->getBlock());
+    Changed |= visitBlock(DTN->getBlock());
 
   // Allow limiting the number of generated extracts for debugging purposes.
   bool HasCutoff = ExtractCutoff.getPosition();
   unsigned Cutoff = ExtractCutoff;
 
-  bool Changed = false;
   BasicBlock::iterator I = std::prev(B->end()), NextI, Begin = B->begin();
   while (true) {
     if (HasCutoff && (ExtractCount >= Cutoff))
