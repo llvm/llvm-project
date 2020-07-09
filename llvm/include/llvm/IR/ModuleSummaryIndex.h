@@ -553,8 +553,7 @@ public:
     unsigned AlwaysInline : 1;
   };
 
-  /// Describes the uses of a parameter by the range of offsets accessed in the
-  /// function and all of the call targets it is passed to.
+  /// Describes the uses of a parameter by the function.
   struct ParamAccess {
     static constexpr uint32_t RangeWidth = 64;
 
@@ -564,7 +563,7 @@ public:
     struct Call {
       uint64_t ParamNo = 0;
       GlobalValue::GUID Callee = 0;
-      ConstantRange Offsets{RangeWidth, true};
+      ConstantRange Offsets{/*BitWidth=*/RangeWidth, /*isFullSet=*/true};
 
       Call() = default;
       Call(uint64_t ParamNo, GlobalValue::GUID Callee,
@@ -573,7 +572,15 @@ public:
     };
 
     uint64_t ParamNo = 0;
-    ConstantRange Use{RangeWidth, true};
+    /// The range contains byte offsets from the parameter pointer which
+    /// accessed by the function. In the per-module summary, it only includes
+    /// accesses made by the function instructions. In the combined summary, it
+    /// also includes accesses by nested function calls.
+    ConstantRange Use{/*BitWidth=*/RangeWidth, /*isFullSet=*/true};
+    /// In the per-module summary, it summarizes the byte offset applied to each
+    /// pointer parameter before passing to each corresponding callee.
+    /// In the combined summary, it's empty and information is propagated by
+    /// inter-procedural analysis and applied to the Use field.
     std::vector<Call> Calls;
 
     ParamAccess() = default;
