@@ -27558,12 +27558,13 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
                            ISD::SETGT);
         return DAG.getBitcast(SelVT, DAG.getSelect(dl, VT, Sel, V0, V1));
       } else if (Subtarget.hasSSE41()) {
-        // On SSE41 targets we make use of the fact that VSELECT lowers
-        // to PBLENDVB which selects bytes based just on the sign bit.
+        // On SSE41 targets we can use PBLENDVB which selects bytes based just
+        // on the sign bit.
         V0 = DAG.getBitcast(VT, V0);
         V1 = DAG.getBitcast(VT, V1);
         Sel = DAG.getBitcast(VT, Sel);
-        return DAG.getBitcast(SelVT, DAG.getSelect(dl, VT, Sel, V0, V1));
+        return DAG.getBitcast(SelVT,
+                              DAG.getNode(X86ISD::BLENDV, dl, VT, Sel, V0, V1));
       }
       // On pre-SSE41 targets we test for the sign bit by comparing to
       // zero - a negative value will set all bits of the lanes to true
@@ -27673,14 +27674,15 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
                     !ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
 
     auto SignBitSelect = [&](SDValue Sel, SDValue V0, SDValue V1) {
-      // On SSE41 targets we make use of the fact that VSELECT lowers
-      // to PBLENDVB which selects bytes based just on the sign bit.
+      // On SSE41 targets we can use PBLENDVB which selects bytes based just on
+      // the sign bit.
       if (UseSSE41) {
         MVT ExtVT = MVT::getVectorVT(MVT::i8, VT.getVectorNumElements() * 2);
         V0 = DAG.getBitcast(ExtVT, V0);
         V1 = DAG.getBitcast(ExtVT, V1);
         Sel = DAG.getBitcast(ExtVT, Sel);
-        return DAG.getBitcast(VT, DAG.getSelect(dl, ExtVT, Sel, V0, V1));
+        return DAG.getBitcast(
+            VT, DAG.getNode(X86ISD::BLENDV, dl, ExtVT, Sel, V0, V1));
       }
       // On pre-SSE41 targets we splat the sign bit - a negative value will
       // set all bits of the lanes to true and VSELECT uses that in
@@ -27820,12 +27822,13 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
 
     auto SignBitSelect = [&](MVT SelVT, SDValue Sel, SDValue V0, SDValue V1) {
       if (Subtarget.hasSSE41()) {
-        // On SSE41 targets we make use of the fact that VSELECT lowers
-        // to PBLENDVB which selects bytes based just on the sign bit.
+        // On SSE41 targets we can use PBLENDVB which selects bytes based just
+        // on the sign bit.
         V0 = DAG.getBitcast(VT, V0);
         V1 = DAG.getBitcast(VT, V1);
         Sel = DAG.getBitcast(VT, Sel);
-        return DAG.getBitcast(SelVT, DAG.getSelect(DL, VT, Sel, V0, V1));
+        return DAG.getBitcast(SelVT,
+                              DAG.getNode(X86ISD::BLENDV, DL, VT, Sel, V0, V1));
       }
       // On pre-SSE41 targets we test for the sign bit by comparing to
       // zero - a negative value will set all bits of the lanes to true
