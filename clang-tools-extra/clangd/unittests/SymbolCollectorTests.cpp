@@ -542,6 +542,96 @@ TEST_F(SymbolCollectorTest, ObjCPropertyImpl) {
   //        Figure out why it's platform-dependent.
 }
 
+TEST_F(SymbolCollectorTest, ObjCLocations) {
+  Annotations Header(R"(
+    // Declared in header, defined in main.
+    @interface $dogdecl[[Dog]]
+    @end
+    @interface $fluffydecl[[Dog]] (Fluffy)
+    @end
+  )");
+  Annotations Main(R"(
+    @interface Dog ()
+    @end
+    @implementation $dogdef[[Dog]]
+    @end
+    @implementation $fluffydef[[Dog]] (Fluffy)
+    @end
+    // Category with no declaration (only implementation).
+    @implementation $ruff[[Dog]] (Ruff)
+    @end
+    // Implicitly defined interface.
+    @implementation $catdog[[CatDog]]
+    @end
+  )");
+  runSymbolCollector(Header.code(), Main.code(),
+                     {"-xobjective-c++", "-Wno-objc-root-class"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("Dog"), DeclRange(Header.range("dogdecl")),
+                        DefRange(Main.range("dogdef"))),
+                  AllOf(QName("Fluffy"), DeclRange(Header.range("fluffydecl")),
+                        DefRange(Main.range("fluffydef"))),
+                  AllOf(QName("CatDog"), DeclRange(Main.range("catdog")),
+                        DefRange(Main.range("catdog"))),
+                  AllOf(QName("Ruff"), DeclRange(Main.range("ruff")),
+                        DefRange(Main.range("ruff")))));
+}
+
+TEST_F(SymbolCollectorTest, ObjCForwardDecls) {
+  Annotations Header(R"(
+    // Forward declared in header, declared and defined in main.
+    @protocol Barker;
+    @class Dog;
+    // Never fully declared so Clang latches onto this decl.
+    @class $catdogdecl[[CatDog]];
+  )");
+  Annotations Main(R"(
+    @protocol $barkerdecl[[Barker]]
+    - (void)woof;
+    @end
+    @interface $dogdecl[[Dog]]<Barker>
+    - (void)woof;
+    @end
+    @implementation $dogdef[[Dog]]
+    - (void)woof {}
+    @end
+    @implementation $catdogdef[[CatDog]]
+    @end
+  )");
+  runSymbolCollector(Header.code(), Main.code(),
+                     {"-xobjective-c++", "-Wno-objc-root-class"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("CatDog"), DeclRange(Header.range("catdogdecl")),
+                        DefRange(Main.range("catdogdef"))),
+                  AllOf(QName("Dog"), DeclRange(Main.range("dogdecl")),
+                        DefRange(Main.range("dogdef"))),
+                  AllOf(QName("Barker"), DeclRange(Main.range("barkerdecl"))),
+                  QName("Barker::woof"), QName("Dog::woof")));
+}
+
+TEST_F(SymbolCollectorTest, ObjCClassExtensions) {
+  Annotations Header(R"(
+    @interface $catdecl[[Cat]]
+    @end
+  )");
+  Annotations Main(R"(
+    @interface Cat ()
+    - (void)meow;
+    @end
+    @interface Cat ()
+    - (void)pur;
+    @end
+  )");
+  runSymbolCollector(Header.code(), Main.code(),
+                     {"-xobjective-c++", "-Wno-objc-root-class"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("Cat"), DeclRange(Header.range("catdecl"))),
+                  QName("Cat::meow"), QName("Cat::pur")));
+}
+
 TEST_F(SymbolCollectorTest, Locations) {
   Annotations Header(R"cpp(
     // Declared in header, defined in main.
