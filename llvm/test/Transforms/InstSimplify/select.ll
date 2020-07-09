@@ -848,3 +848,17 @@ define i32 @false_undef_false_freeze(i1 %cond, i32 %x) {
   %s = select i1 %cond, i32 undef, i32 %xf
   ret i32 %s
 }
+
+@g = external global i32, align 1
+
+; Make sure we don't fold partial undef vectors when constexprs are involved.
+; We would need to prove the constexpr doesn't result in poison which we aren't
+; equiped to do yet.
+define <2 x i32> @false_undef_true_constextpr_vec(i1 %cond) {
+; CHECK-LABEL: @false_undef_true_constextpr_vec(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> <i32 undef, i32 ptrtoint (i32* @g to i32)>, <2 x i32> <i32 ptrtoint (i32* @g to i32), i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[S]]
+;
+  %s = select i1 %cond, <2 x i32> <i32 undef, i32 ptrtoint (i32* @g to i32)>, <2 x i32> <i32 ptrtoint (i32* @g to i32), i32 undef>
+  ret <2 x i32> %s
+}

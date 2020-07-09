@@ -4135,9 +4135,11 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
       // one element is undef, choose the defined element as the safe result.
       if (TEltC == FEltC)
         NewC.push_back(TEltC);
-      else if (isa<UndefValue>(TEltC))
+      else if (isa<UndefValue>(TEltC) &&
+               isGuaranteedNotToBeUndefOrPoison(FEltC))
         NewC.push_back(FEltC);
-      else if (isa<UndefValue>(FEltC))
+      else if (isa<UndefValue>(FEltC) &&
+               isGuaranteedNotToBeUndefOrPoison(TEltC))
         NewC.push_back(TEltC);
       else
         break;
