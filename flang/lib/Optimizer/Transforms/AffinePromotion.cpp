@@ -88,14 +88,14 @@ private:
   mlir::Value firCondition;
   Optional<mlir::IntegerSet> integerSet;
   unsigned symCount, dimCount;
-  template <typename T1, typename T2>
-  MaybeAffineExpr affineBinaryOp(mlir::AffineExprKind kind, T1 lhs, T2 rhs) {
-    return affineBinaryOp<MaybeAffineExpr, MaybeAffineExpr>(
-        kind, toAffineExpr(lhs), toAffineExpr(rhs));
+
+  MaybeAffineExpr affineBinaryOp(mlir::AffineExprKind kind, mlir::Value lhs,
+                                 mlir::Value rhs) {
+    return affineBinaryOp(kind, toAffineExpr(lhs), toAffineExpr(rhs));
   }
-  template <>
-  MaybeAffineExpr affineBinaryOp<MaybeAffineExpr, MaybeAffineExpr>(
-      mlir::AffineExprKind kind, MaybeAffineExpr lhs, MaybeAffineExpr rhs) {
+
+  MaybeAffineExpr affineBinaryOp(mlir::AffineExprKind kind, MaybeAffineExpr lhs,
+                                 MaybeAffineExpr rhs) {
     if (lhs.hasValue() && rhs.hasValue())
       return mlir::getAffineBinaryOpExpr(kind, lhs.getValue(), rhs.getValue());
     else
@@ -110,9 +110,10 @@ private:
   /// block arguments of a loopOp or forOp are used as dimensions
   MaybeAffineExpr toAffineExpr(mlir::Value value) {
     if (auto op = value.getDefiningOp<mlir::SubIOp>())
-      return affineBinaryOp(
-          mlir::AffineExprKind::Add, op.lhs(),
-          affineBinaryOp(mlir::AffineExprKind::Mul, op.rhs(), -1));
+      return affineBinaryOp(mlir::AffineExprKind::Add, toAffineExpr(op.lhs()),
+                            affineBinaryOp(mlir::AffineExprKind::Mul,
+                                           toAffineExpr(op.rhs()),
+                                           toAffineExpr(-1)));
     if (auto op = value.getDefiningOp<mlir::AddIOp>())
       return affineBinaryOp(mlir::AffineExprKind::Add, op.lhs(), op.rhs());
     if (auto op = value.getDefiningOp<mlir::MulIOp>())
