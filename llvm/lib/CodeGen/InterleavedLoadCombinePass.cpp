@@ -1200,7 +1200,8 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   IRBuilder<> Builder(InsertionPoint);
   Type *ETy = InterleavedLoad.front().SVI->getType()->getElementType();
   unsigned ElementsPerSVI =
-      InterleavedLoad.front().SVI->getType()->getNumElements();
+      cast<FixedVectorType>(InterleavedLoad.front().SVI->getType())
+          ->getNumElements();
   FixedVectorType *ILTy = FixedVectorType::get(ETy, Factor * ElementsPerSVI);
 
   SmallVector<unsigned, 4> Indices;

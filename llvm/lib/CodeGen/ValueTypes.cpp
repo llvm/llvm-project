@@ -122,7 +122,14 @@ EVT EVT::getExtendedVectorElementType() const {
 
 unsigned EVT::getExtendedVectorNumElements() const {
   assert(isExtended() && "Type is not extended!");
-  return cast<VectorType>(LLVMTy)->getNumElements();
+  ElementCount EC = cast<VectorType>(LLVMTy)->getElementCount();
+  if (EC.Scalable) {
+    WithColor::warning()
+        << "The code that requested the fixed number of elements has made the "
+           "assumption that this vector is not scalable. This assumption was "
+           "not correct, and this may lead to broken code\n";
+  }
+  return EC.Min;
 }
 
 ElementCount EVT::getExtendedVectorElementCount() const {

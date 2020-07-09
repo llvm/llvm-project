@@ -1765,7 +1765,7 @@ static std::string scalarConstantToHexString(const Constant *C) {
   } else {
     unsigned NumElements;
     if (auto *VTy = dyn_cast<VectorType>(Ty))
-      NumElements = VTy->getNumElements();
+      NumElements = cast<FixedVectorType>(VTy)->getNumElements();
     else
       NumElements = Ty->getArrayNumElements();
     std::string HexString;
