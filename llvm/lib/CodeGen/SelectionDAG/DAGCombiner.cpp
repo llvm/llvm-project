@@ -16773,7 +16773,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   // Do not bother looking at stored values that are not constants, loads, or
   // extracted vector elements.
   SDValue StoredVal = peekThroughBitcasts(St->getValue());
-  StoreSource StoreSrc = getStoreSource(StoredVal);
+  const StoreSource StoreSrc = getStoreSource(StoredVal);
   if (StoreSrc == StoreSource::Unknown)
     return false;
 
@@ -16815,22 +16815,25 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
 
     // We have at least 2 consecutive stores. Try to merge them.
     assert(NumConsecutiveStores >= 2 && "Expected at least 2 stores");
-    if (StoreSrc == StoreSource::Constant) {
+    switch (StoreSrc) {
+    case StoreSource::Constant:
       MadeChange |= tryStoreMergeOfConstants(StoreNodes, NumConsecutiveStores,
                                              MemVT, RootNode, AllowVectors);
-      continue;
-    }
-    if (StoreSrc == StoreSource::Extract) {
+      break;
+
+    case StoreSource::Extract:
       MadeChange |= tryStoreMergeOfExtracts(StoreNodes, NumConsecutiveStores,
                                             MemVT, RootNode);
-      continue;
-    }
-    if (StoreSrc == StoreSource::Load) {
+      break;
+
+    case StoreSource::Load:
       MadeChange |= tryStoreMergeOfLoads(StoreNodes, NumConsecutiveStores,
                                          MemVT, RootNode, AllowVectors,
-                                         IsNonTemporalStore,
-                                         IsNonTemporalLoad);
-      continue;
+                                         IsNonTemporalStore, IsNonTemporalLoad);
+      break;
+
+    default:
+      llvm_unreachable("Unhandled store source type");
     }
   }
   return MadeChange;
