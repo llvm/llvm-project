@@ -2610,9 +2610,9 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
   SDValue Chain;
   if (N->isStrictFPOpcode()) {
     HalfLo = DAG.getNode(N->getOpcode(), DL, {HalfVT, MVT::Other},
-                         {N->getOperand(0), HalfLo});
+                         {N->getOperand(0), InLoVec});
     HalfHi = DAG.getNode(N->getOpcode(), DL, {HalfVT, MVT::Other},
-                         {N->getOperand(0), HalfHi});
+                         {N->getOperand(0), InHiVec});
     // Legalize the chain result - switch anything that used the old chain to
     // use the new one.
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, HalfLo.getValue(1),
