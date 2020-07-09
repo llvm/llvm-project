@@ -109,13 +109,13 @@ default.
 
   Specify the compiler used to build the tests.
 
-.. option:: cxx_stdlib_under_test=<stdlib name>
+.. option:: stdlib=<stdlib name>
 
-  **Values**: libc++, libstdc++
+  **Values**: libc++, libstdc++, msvc
 
-  Specify the C++ standard library being tested. Unless otherwise specified
-  libc++ is used. This option is intended to allow running the libc++ test
-  suite against other standard library implementations.
+  Specify the C++ standard library being tested. The default is libc++ if this
+  option is not provided. This option is intended to allow running the libc++
+  test suite against other standard library implementations.
 
 .. option:: std=<standard version>
 
@@ -150,22 +150,6 @@ default.
   not. The ``cxx_library_root`` and ``cxx_runtime_root`` parameters should
   still be used to specify the path of the library to link to and run against,
   respectively.
-
-.. option:: use_lit_shell=<bool>
-
-  Enable or disable the use of LIT's internal shell in ShTests. If the
-  environment variable LIT_USE_INTERNAL_SHELL is present then that is used as
-  the default value. Otherwise the default value is True on Windows and False
-  on every other platform.
-
-.. option:: compile_flags="<list-of-args>"
-
-  Specify additional compile flags as a space delimited string.
-  Note: This options should not be used to change the standard version used.
-
-.. option:: link_flags="<list-of-args>"
-
-  Specify additional link flags as a space delimited string.
 
 .. option:: debug_level=<level>
 
