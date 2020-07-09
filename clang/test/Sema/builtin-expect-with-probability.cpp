@@ -1,4 +1,30 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+
+__attribute__((noreturn)) extern void bar();
+
+int test_no_warn(int x) {
+  if (x) {
+    if (__builtin_expect_with_probability(1, 1, 1))
+      bar();
+  } else {
+    return 0;
+  }
+} // should not emit warn "control may reach end of non-void function" here since expr is constantly true, so the "if(__bui..)" should be constantly true condition and be ignored
+
+template <int b> void tempf() {
+  static_assert(b == 1, "should be evaluated as 1"); // should not have error here
+}
+
+constexpr int constf() {
+  return __builtin_expect_with_probability(1, 1, 1);
+}
+
+void foo() {
+  tempf<__builtin_expect_with_probability(1, 1, 1)>();
+  constexpr int f = constf();
+  static_assert(f == 1, "should be evaluated as 1"); // should not have error here
+}
+
 extern int global;
 
 struct S {
