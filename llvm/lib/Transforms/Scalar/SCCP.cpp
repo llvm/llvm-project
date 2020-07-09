@@ -1258,7 +1258,7 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
         return;
 
       Value *CopyOf = CB.getOperand(0);
-      ValueLatticeElement OriginalVal = getValueState(CopyOf);
+      ValueLatticeElement CopyOfVal = getValueState(CopyOf);
       auto *PI = getPredicateInfoFor(&CB);
       assert(PI && "Missing predicate info for ssa.copy");
 
@@ -1271,25 +1271,27 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
         Cmp = dyn_cast<CmpInst>(PAssume->Condition);
         TrueEdge = true;
       } else {
-        mergeInValue(ValueState[&CB], &CB, OriginalVal);
+        mergeInValue(ValueState[&CB], &CB, CopyOfVal);
         return;
       }
 
       // Everything below relies on the condition being a comparison.
       if (!Cmp) {
-        mergeInValue(ValueState[&CB], &CB, OriginalVal);
+        mergeInValue(ValueState[&CB], &CB, CopyOfVal);
         return;
       }
 
+      Value *RenamedOp = PI->RenamedOp;
       Value *CmpOp0 = Cmp->getOperand(0);
       Value *CmpOp1 = Cmp->getOperand(1);
-      if (CopyOf != CmpOp0 && CopyOf != CmpOp1) {
-        mergeInValue(ValueState[&CB], &CB, OriginalVal);
+      // Bail out if neither of the operands matches RenamedOp.
+      if (CmpOp0 != RenamedOp && CmpOp1 != RenamedOp) {
+        mergeInValue(ValueState[&CB], &CB, getValueState(CopyOf));
         return;
       }
 
       auto Pred = Cmp->getPredicate();
-      if (CmpOp0 != CopyOf) {
+      if (CmpOp1 == RenamedOp) {
         std::swap(CmpOp0, CmpOp1);
         Pred = Cmp->getSwappedPredicate();
       }
@@ -1300,27 +1302,37 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
         return;
       }
 
+      // The code below relies on PredicateInfo only inserting copies for the
+      // true branch when the branch condition is an AND and only inserting
+      // copies for the false branch when the branch condition is an OR. This
+      // ensures we can intersect the range from the condition with the range of
+      // CopyOf.
       if (!TrueEdge)
         Pred = CmpInst::getInversePredicate(Pred);
 
       ValueLatticeElement CondVal = getValueState(CmpOp1);
       ValueLatticeElement &IV = ValueState[&CB];
-      if (CondVal.isConstantRange() || OriginalVal.isConstantRange()) {
-        auto NewCR =
+      if (CondVal.isConstantRange() || CopyOfVal.isConstantRange()) {
+        auto ImposedCR =
             ConstantRange::getFull(DL.getTypeSizeInBits(CopyOf->getType()));
 
         // Get the range imposed by the condition.
         if (CondVal.isConstantRange())
-          NewCR = ConstantRange::makeAllowedICmpRegion(
+          ImposedCR = ConstantRange::makeAllowedICmpRegion(
               Pred, CondVal.getConstantRange());
 
         // Combine range info for the original value with the new range from the
         // condition.
-        auto OriginalCR = OriginalVal.isConstantRange()
-                              ? OriginalVal.getConstantRange()
-                              : ConstantRange::getFull(
-                                    DL.getTypeSizeInBits(CopyOf->getType()));
-        NewCR = NewCR.intersectWith(OriginalCR);
+        auto CopyOfCR = CopyOfVal.isConstantRange()
+                            ? CopyOfVal.getConstantRange()
+                            : ConstantRange::getFull(
+                                  DL.getTypeSizeInBits(CopyOf->getType()));
+        auto NewCR = ImposedCR.intersectWith(CopyOfCR);
+        // If the existing information is != x, do not use the information from
+        // a chained predicate, as the != x information is more likely to be
+        // helpful in practice.
+        if (!CopyOfCR.contains(NewCR) && CopyOfCR.getSingleMissingElement())
+          NewCR = CopyOfCR;
 
         addAdditionalUser(CmpOp1, &CB);
         // TODO: Actually filp MayIncludeUndef for the created range to false,
@@ -1344,7 +1356,7 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
         return;
       }
 
-      return (void)mergeInValue(IV, &CB, OriginalVal);
+      return (void)mergeInValue(IV, &CB, CopyOfVal);
     }
   }
 
