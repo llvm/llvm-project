@@ -11,10 +11,10 @@
 #include <complex.h>
 #endif
 
-// CHECK-DAG: define {{.*}} @__mulsc3
-// CHECK-DAG: define {{.*}} @__muldc3
-// CHECK-DAG: define {{.*}} @__divsc3
-// CHECK-DAG: define {{.*}} @__divdc3
+// CHECK-DAG: define weak {{.*}} @__mulsc3
+// CHECK-DAG: define weak {{.*}} @__muldc3
+// CHECK-DAG: define weak {{.*}} @__divsc3
+// CHECK-DAG: define weak {{.*}} @__divdc3
 
 // CHECK-DAG: call float @__nv_scalbnf(
 void test_scmplx(float _Complex a) {

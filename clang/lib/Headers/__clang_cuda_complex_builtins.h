@@ -18,7 +18,7 @@
 #pragma push_macro("__DEVICE__")
 #ifdef _OPENMP
 #pragma omp declare target
-#define __DEVICE__ __attribute__((noinline, nothrow, cold))
+#define __DEVICE__ __attribute__((noinline, nothrow, cold, weak))
 #else
 #define __DEVICE__ __device__ inline
 #endif
