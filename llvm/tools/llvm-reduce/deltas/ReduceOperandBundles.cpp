@@ -56,18 +56,15 @@ public:
     OperandBundlesToKeepIndexes.reserve(Call.getNumOperandBundles());
 
     // Enumerate every operand bundle on this call.
-    for_each(seq(0U, Call.getNumOperandBundles()), [&](unsigned BundleIndex) {
+    for (unsigned BundleIndex : seq(0U, Call.getNumOperandBundles()))
       if (O.shouldKeep()) // Should we keep this one?
         OperandBundlesToKeepIndexes.emplace_back(BundleIndex);
-    });
   }
 };
 
 struct OperandBundleCounter : public InstVisitor<OperandBundleCounter> {
   /// How many features (in this case, operand bundles) did we count, total?
   int OperandBundeCount = 0;
-
-  OperandBundleCounter() {}
 
   /// So far only CallBase sub-classes can have operand bundles.
   void visitCallBase(CallBase &Call) {
@@ -104,9 +101,8 @@ static void extractOperandBundesFromModule(std::vector<Chunk> ChunksToKeep,
   OperandBundleRemapper R(ChunksToKeep);
   R.visit(Program);
 
-  for_each(R.CallsToRefine, [](const auto &P) {
-    return maybeRewriteCallWithDifferentBundles(P.first, P.second);
-  });
+  for (const auto &I : R.CallsToRefine)
+    maybeRewriteCallWithDifferentBundles(I.first, I.second);
 }
 
 /// Counts the amount of operand bundles.
