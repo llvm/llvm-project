@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -33,6 +34,8 @@ using namespace fir;
 namespace {
 class AffineFunctionAnalysis;
 class AffineLoopAnalysis;
+class AffineIfAnalysis;
+class AffineIfConversion;
 
 class AffineLoopAnalysis {
 public:
@@ -49,7 +52,7 @@ private:
   bool analyzeBody(fir::LoopOp, AffineFunctionAnalysis &);
   bool analyzeLoop(fir::LoopOp loopOperation,
                    AffineFunctionAnalysis &functionAnalysis) {
-    LLVM_DEBUG(llvm::dbgs() << "AffinLoopAnalysis: \n"; loopOperation.dump(););
+    LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: \n"; loopOperation.dump(););
     return analyzeMemoryAccess(loopOperation) &&
            analyzeBody(loopOperation, functionAnalysis);
   }
@@ -65,7 +68,120 @@ private:
   }
 };
 
-/// builds analysis for all loop operations within a function
+/// Calculates arguments for creating an IntegerSet symCount, dimCount are the
+/// final number of symbols and dimensions of the affine map. If integer set if
+/// possible is in Optional IntegerSet
+class AffineIfCondition {
+public:
+  typedef Optional<mlir::AffineExpr> MaybeAffineExpr;
+  AffineIfCondition(mlir::Value fc)
+      : firCondition(fc), symCount(0), dimCount(0) {
+    if (auto condDef = firCondition.getDefiningOp<mlir::CmpIOp>())
+      fromCmpIOp(condDef);
+  }
+  AffineIfCondition() {}
+  llvm::SmallVector<mlir::Value, 8> affineArgs;
+  friend AffineIfAnalysis;
+  friend AffineIfConversion;
+
+private:
+  mlir::Value firCondition;
+  Optional<mlir::IntegerSet> integerSet;
+  unsigned symCount, dimCount;
+  template <typename T1, typename T2>
+  MaybeAffineExpr affineBinaryOp(mlir::AffineExprKind kind, T1 lhs, T2 rhs) {
+    return affineBinaryOp<MaybeAffineExpr, MaybeAffineExpr>(
+        kind, toAffineExpr(lhs), toAffineExpr(rhs));
+  }
+  template <>
+  MaybeAffineExpr affineBinaryOp<MaybeAffineExpr, MaybeAffineExpr>(
+      mlir::AffineExprKind kind, MaybeAffineExpr lhs, MaybeAffineExpr rhs) {
+    if (lhs.hasValue() && rhs.hasValue())
+      return mlir::getAffineBinaryOpExpr(kind, lhs.getValue(), rhs.getValue());
+    else
+      return {};
+  }
+  MaybeAffineExpr toAffineExpr(MaybeAffineExpr e) { return e; }
+  MaybeAffineExpr toAffineExpr(int64_t value) {
+    return {mlir::getAffineConstantExpr(value, firCondition.getContext())};
+  }
+  /// Returns an AffineExpr if it is a result of operations that can be done
+  /// in an affine expression, this includes -, +, *, rem, constant.
+  /// block arguments of a loopOp or forOp are used as dimensions
+  MaybeAffineExpr toAffineExpr(mlir::Value value) {
+    if (auto op = value.getDefiningOp<mlir::SubIOp>())
+      return affineBinaryOp(
+          mlir::AffineExprKind::Add, op.lhs(),
+          affineBinaryOp(mlir::AffineExprKind::Mul, op.rhs(), -1));
+    if (auto op = value.getDefiningOp<mlir::AddIOp>())
+      return affineBinaryOp(mlir::AffineExprKind::Add, op.lhs(), op.rhs());
+    if (auto op = value.getDefiningOp<mlir::MulIOp>())
+      return affineBinaryOp(mlir::AffineExprKind::Mul, op.lhs(), op.rhs());
+    if (auto op = value.getDefiningOp<mlir::UnsignedRemIOp>())
+      return affineBinaryOp(mlir::AffineExprKind::Mod, op.lhs(), op.rhs());
+    if (auto op = value.getDefiningOp<mlir::ConstantOp>())
+      if (auto intConstant = op.getValue().dyn_cast<IntegerAttr>())
+        return toAffineExpr(intConstant.getInt());
+    if (auto blockArg = value.dyn_cast<mlir::BlockArgument>()) {
+      affineArgs.push_back(value);
+      if (isa<fir::LoopOp>(blockArg.getOwner()->getParentOp()) ||
+          isa<mlir::AffineForOp>(blockArg.getOwner()->getParentOp()))
+        return {mlir::getAffineDimExpr(dimCount++, value.getContext())};
+      return {mlir::getAffineSymbolExpr(symCount++, value.getContext())};
+    }
+    return {};
+  }
+  void fromCmpIOp(mlir::CmpIOp cmpOp) {
+    auto lhsAffine = toAffineExpr(cmpOp.lhs());
+    auto rhsAffine = toAffineExpr(cmpOp.rhs());
+    if (!lhsAffine.hasValue() || !rhsAffine.hasValue())
+      return;
+    auto constraintPair = constraint(
+        cmpOp.predicate(), rhsAffine.getValue() - lhsAffine.getValue());
+    if (!constraintPair)
+      return;
+    integerSet = mlir::IntegerSet::get(dimCount, symCount,
+                                       {constraintPair.getValue().first},
+                                       {constraintPair.getValue().second});
+    return;
+  }
+
+  Optional<std::pair<AffineExpr, bool>>
+  constraint(mlir::CmpIPredicate predicate, mlir::AffineExpr basic) {
+    switch (predicate) {
+    case mlir::CmpIPredicate::slt:
+      return {std::make_pair(basic - 1, false)};
+    case mlir::CmpIPredicate::sle:
+      return {std::make_pair(basic, false)};
+    case mlir::CmpIPredicate::sgt:
+      return {std::make_pair(1 - basic, false)};
+    case mlir::CmpIPredicate::sge:
+      return {std::make_pair(0 - basic, false)};
+    case mlir::CmpIPredicate::eq:
+      return {std::make_pair(basic, true)};
+    default:
+      return {};
+    }
+  }
+};
+
+/// Analysis for affine promotion of fir.if
+class AffineIfAnalysis {
+public:
+  AffineIfAnalysis(fir::WhereOp op, AffineFunctionAnalysis &afa)
+      : legality(analyzeIf(op, afa)) {}
+  bool canPromoteToAffine() { return legality; }
+  friend AffineFunctionAnalysis;
+
+private:
+  bool legality;
+  AffineIfAnalysis(bool forcedLegality) : legality(forcedLegality) {}
+  bool analyzeIf(fir::WhereOp, AffineFunctionAnalysis &);
+};
+
+/// Stores analysis objects for all loops and where operations inside a function
+///  these analysis are used twice, first for marking operations for rewrite and
+///  second when doing rewrite.
 class AffineFunctionAnalysis {
 public:
   AffineFunctionAnalysis(mlir::FuncOp funcOp) {
@@ -83,11 +199,24 @@ public:
     }
     return it->getSecond();
   }
+  AffineIfAnalysis getChildIfAnalysis(fir::WhereOp op) const {
+    auto it = ifAnalysisMap.find_as(op);
+    if (it == ifAnalysisMap.end()) {
+      LLVM_DEBUG(llvm::dbgs() << "AffineFunctionAnalysis: not computed for:\n";
+                 op.dump(););
+      op.emitError("error in fetching if analysis in AffineFunctionAnalysis\n");
+      return AffineIfAnalysis(false);
+    }
+    return it->getSecond();
+  }
   friend AffineLoopAnalysis;
+  friend AffineIfAnalysis;
 
 private:
   llvm::DenseMap<mlir::Operation *, AffineLoopAnalysis> loopAnalysisMap;
+  llvm::DenseMap<mlir::Operation *, AffineIfAnalysis> ifAnalysisMap;
 };
+
 bool analyzeCoordinate(mlir::Value coordinate) {
   if (auto blockArg = coordinate.dyn_cast<mlir::BlockArgument>()) {
     if (isa<fir::LoopOp>(blockArg.getOwner()->getParentOp())) {
@@ -125,9 +254,24 @@ bool AffineLoopAnalysis::analyzeBody(fir::LoopOp loopOperation,
     if (!analysis.canPromoteToAffine())
       return false;
   }
+  for (auto whereOp : loopOperation.getOps<fir::WhereOp>())
+    functionAnalysis.ifAnalysisMap.try_emplace(whereOp, whereOp,
+                                               functionAnalysis);
   return true;
 }
 
+bool AffineIfAnalysis::analyzeIf(fir::WhereOp op, AffineFunctionAnalysis &afa) {
+  if (op.getNumResults() == 0)
+    return true;
+  LLVM_DEBUG(
+      llvm::dbgs() << "AffineIfAnalysis: not promoting as op has results\n";);
+  return false;
+}
+
+/// AffineMap rewriting fir.array_coor operation to affine apply,
+/// %dim = fir.gendim %lowerBound, %upperBound, %stride
+/// %a = fir.array_coor %arr(%dim) %i
+/// returning affineMap = affine_map<(i)[lb, ub, st] -> (i*st - lb)>
 mlir::AffineMap createArrayIndexAffineMap(unsigned dimensions,
                                           MLIRContext *context) {
   auto index = mlir::getAffineConstantExpr(0, context);
@@ -144,6 +288,7 @@ mlir::AffineMap createArrayIndexAffineMap(unsigned dimensions,
   }
   return mlir::AffineMap::get(dimensions, dimensions * 3, index);
 }
+
 Optional<int64_t> constantIntegerLike(const mlir::Value value) {
   if (auto definition = value.getDefiningOp<ConstantOp>())
     if (auto stepAttr = definition.getValue().dyn_cast<IntegerAttr>())
@@ -151,7 +296,63 @@ Optional<int64_t> constantIntegerLike(const mlir::Value value) {
   return {};
 }
 
-/// Convert `fir.loop` to `affine.for`
+mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) {
+  if (auto refType = op.ref().getType().dyn_cast_or_null<ReferenceType>()) {
+    if (auto seqType = refType.getEleTy().dyn_cast_or_null<SequenceType>()) {
+      return seqType.getEleTy();
+    }
+  }
+  op.emitError(
+      "AffineLoopConversion: array type in coordinate operation not valid\n");
+  return mlir::Type();
+}
+
+/// Returns affine.apply and fir.convert from array_coor and gendims
+std::pair<mlir::AffineApplyOp, fir::ConvertOp>
+createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
+  auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>();
+  auto genDim = acoOp.dims().getDefiningOp<GenDimsOp>();
+  auto affineMap =
+      createArrayIndexAffineMap(acoOp.coor().size(), acoOp.getContext());
+  SmallVector<mlir::Value, 4> indexArgs;
+  indexArgs.append(acoOp.coor().begin(), acoOp.coor().end());
+  indexArgs.append(genDim.triples().begin(), genDim.triples().end());
+  auto affineApply = rewriter.create<mlir::AffineApplyOp>(acoOp.getLoc(),
+                                                          affineMap, indexArgs);
+  auto arrayElementType = coordinateArrayElement(acoOp);
+  auto newType = mlir::MemRefType::get({-1}, arrayElementType);
+  auto arrayConvert =
+      rewriter.create<fir::ConvertOp>(acoOp.getLoc(), newType, acoOp.ref());
+  return std::make_pair(affineApply, arrayConvert);
+}
+
+void rewriteLoad(fir::LoadOp loadOp, mlir::PatternRewriter &rewriter) {
+  rewriter.setInsertionPoint(loadOp);
+  auto affineOps = createAffineOps(loadOp.memref(), rewriter);
+  rewriter.replaceOpWithNewOp<mlir::AffineLoadOp>(
+      loadOp, affineOps.second.getResult(), affineOps.first.getResult());
+}
+
+void rewriteStore(fir::StoreOp storeOp, mlir::PatternRewriter &rewriter) {
+  rewriter.setInsertionPoint(storeOp);
+  auto affineOps = createAffineOps(storeOp.memref(), rewriter);
+  rewriter.replaceOpWithNewOp<mlir::AffineStoreOp>(storeOp, storeOp.value(),
+                                                   affineOps.second.getResult(),
+                                                   affineOps.first.getResult());
+}
+
+void rewriteMemoryOps(Block *block, mlir::PatternRewriter &rewriter) {
+  for (auto &bodyOp : block->getOperations()) {
+    if (isa<fir::LoadOp>(bodyOp))
+      rewriteLoad(cast<fir::LoadOp>(bodyOp), rewriter);
+    if (isa<fir::StoreOp>(bodyOp))
+      rewriteStore(cast<fir::StoreOp>(bodyOp), rewriter);
+  }
+}
+
+/// Convert `fir.loop` to `affine.for`, creates fir.convert for arrays to
+/// memref, rewrites array_coor to affine.apply with affine_map. Rewrites fir
+/// loads and stores to affine.
 class AffineLoopConversion : public mlir::OpRewritePattern<fir::LoopOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -168,6 +369,7 @@ public:
     auto loopAndIndex = createAffineFor(loop, rewriter);
     auto affineFor = loopAndIndex.first;
     auto inductionVar = loopAndIndex.second;
+
     rewriter.startRootUpdate(affineFor.getOperation());
     affineFor.getBody()->getOperations().splice(--affineFor.getBody()->end(),
                                                 loopOps, loopOps.begin(),
@@ -178,23 +380,11 @@ public:
     loop.getInductionVar().replaceAllUsesWith(inductionVar);
     rewriter.finalizeRootUpdate(loop.getOperation());
 
-    for (auto &bodyOp : affineFor.getBody()->getOperations()) {
-      if (isa<fir::LoadOp>(bodyOp)) {
-        if (failed(rewriteLoad(cast<fir::LoadOp>(bodyOp), rewriter))) {
-          return failure();
-        }
-      }
-      if (isa<fir::StoreOp>(bodyOp)) {
-        if (failed(rewriteStore(cast<fir::StoreOp>(bodyOp), rewriter))) {
-          return failure();
-        }
-      }
-    }
-
-    rewriter.replaceOp(loop, affineFor.getOperation()->getResults());
+    rewriteMemoryOps(affineFor.getBody(), rewriter);
 
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: loop rewriten to:\n";
                affineFor.dump(););
+    rewriter.replaceOp(loop, affineFor.getOperation()->getResults());
     return success();
   }
 
@@ -206,6 +396,7 @@ private:
         return positiveConstantStep(op, constantStep.getValue(), rewriter);
     return genericBounds(op, rewriter);
   }
+  // when step for the loop is positive compile time constant
   std::pair<mlir::AffineForOp, mlir::Value>
   positiveConstantStep(fir::LoopOp op, int64_t step,
                        mlir::PatternRewriter &rewriter) const {
@@ -224,8 +415,8 @@ private:
     auto lowerBound = mlir::getAffineSymbolExpr(0, op.getContext());
     auto upperBound = mlir::getAffineSymbolExpr(1, op.getContext());
     auto step = mlir::getAffineSymbolExpr(2, op.getContext());
-    mlir::AffineMap upperBoundMap =
-        mlir::AffineMap::get(0, 3, (upperBound - lowerBound + step).floorDiv(step));
+    mlir::AffineMap upperBoundMap = mlir::AffineMap::get(
+        0, 3, (upperBound - lowerBound + step).floorDiv(step));
     auto genericUpperBound = rewriter.create<mlir::AffineApplyOp>(
         op.getLoc(), upperBoundMap,
         ValueRange({op.lowerBound(), op.upperBound(), op.step()}));
@@ -247,51 +438,50 @@ private:
         ValueRange({affineFor.getInductionVar(), op.lowerBound(), op.step()}));
     return std::make_pair(affineFor, actualIndex.getResult());
   }
-  mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) const {
-    if (auto refType = op.ref().getType().dyn_cast_or_null<ReferenceType>()) {
-      if (auto seqType = refType.getEleTy().dyn_cast_or_null<SequenceType>()) {
-        return seqType.getEleTy();
-      }
+  AffineFunctionAnalysis &functionAnalysis;
+};
+
+class AffineIfConversion : public mlir::OpRewritePattern<fir::WhereOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  AffineIfConversion(mlir::MLIRContext *context, AffineFunctionAnalysis &afa)
+      : OpRewritePattern(context), functionAnalysis(afa) {}
+  mlir::LogicalResult
+  matchAndRewrite(fir::WhereOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: rewriting where:\n";
+               op.dump(););
+    auto &whereOps = op.whereRegion().front().getOperations();
+    auto affineCondition = AffineIfCondition(op.condition());
+    if (!affineCondition.integerSet) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+              << "AffineIfConversion: couldn't calculate affine condition\n";);
+      return failure();
     }
-    op.emitError(
-        "AffineLoopConversion: array type in coordinate operation not valid\n");
-    return mlir::Type();
-  }
-  std::pair<mlir::AffineApplyOp, fir::ConvertOp>
-  createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) const {
-    auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>();
-    auto genDim = acoOp.dims().getDefiningOp<GenDimsOp>();
-    auto affineMap =
-        createArrayIndexAffineMap(acoOp.coor().size(), acoOp.getContext());
-    SmallVector<mlir::Value, 4> indexArgs;
-    indexArgs.append(acoOp.coor().begin(), acoOp.coor().end());
-    indexArgs.append(genDim.triples().begin(), genDim.triples().end());
-    auto affineApply = rewriter.create<mlir::AffineApplyOp>(
-        acoOp.getLoc(), affineMap, indexArgs);
-    auto arrayElementType = coordinateArrayElement(acoOp);
-    auto newType = mlir::MemRefType::get({-1}, arrayElementType);
-    auto arrayConvert =
-        rewriter.create<fir::ConvertOp>(acoOp.getLoc(), newType, acoOp.ref());
-    return std::make_pair(affineApply, arrayConvert);
+    auto affineIf = rewriter.create<mlir::AffineIfOp>(
+        op.getLoc(), affineCondition.integerSet.getValue(),
+        affineCondition.affineArgs, !op.otherRegion().empty());
+    rewriter.startRootUpdate(affineIf);
+    affineIf.getThenBlock()->getOperations().splice(
+        --affineIf.getThenBlock()->end(), whereOps, whereOps.begin(),
+        --whereOps.end());
+    if (!op.otherRegion().empty()) {
+      auto &otherOps = op.otherRegion().front().getOperations();
+      affineIf.getElseBlock()->getOperations().splice(
+          --affineIf.getElseBlock()->end(), otherOps, otherOps.begin(),
+          --otherOps.end());
+    }
+    rewriter.finalizeRootUpdate(affineIf);
+    rewriteMemoryOps(affineIf.getBody(), rewriter);
+
+    LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: where converted to:\n";
+               affineIf.dump(););
+    rewriter.replaceOp(op, affineIf.getOperation()->getResults());
+    return success();
   }
 
-  mlir::LogicalResult rewriteLoad(fir::LoadOp loadOp,
-                                  mlir::PatternRewriter &rewriter) const {
-    rewriter.setInsertionPoint(loadOp);
-    auto affineOps = createAffineOps(loadOp.memref(), rewriter);
-    rewriter.replaceOpWithNewOp<mlir::AffineLoadOp>(
-        loadOp, affineOps.second.getResult(), affineOps.first.getResult());
-    return success();
-  }
-  mlir::LogicalResult rewriteStore(fir::StoreOp storeOp,
-                                   mlir::PatternRewriter &rewriter) const {
-    rewriter.setInsertionPoint(storeOp);
-    auto affineOps = createAffineOps(storeOp.memref(), rewriter);
-    rewriter.replaceOpWithNewOp<mlir::AffineStoreOp>(
-        storeOp, storeOp.value(), affineOps.second.getResult(),
-        affineOps.first.getResult());
-    return success();
-  }
+private:
   AffineFunctionAnalysis &functionAnalysis;
 };
 
@@ -308,13 +498,18 @@ public:
     auto function = getFunction();
     auto functionAnalysis = AffineFunctionAnalysis(function);
     mlir::OwningRewritePatternList patterns;
+    patterns.insert<AffineIfConversion>(context, functionAnalysis);
     patterns.insert<AffineLoopConversion>(context, functionAnalysis);
     mlir::ConversionTarget target = *context;
     target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
                            mlir::scf::SCFDialect, mlir::StandardOpsDialect>();
+    target.addDynamicallyLegalOp<WhereOp>([&functionAnalysis](fir::WhereOp op) {
+      return !(functionAnalysis.getChildIfAnalysis(op).canPromoteToAffine());
+    });
     target.addDynamicallyLegalOp<LoopOp>([&functionAnalysis](fir::LoopOp op) {
       return !(functionAnalysis.getChildLoopAnalysis(op).canPromoteToAffine());
     });
+
     LLVM_DEBUG(llvm::dbgs()
                    << "AffineDialectPromotion: running promotion on: \n";
                function.print(llvm::dbgs()););
