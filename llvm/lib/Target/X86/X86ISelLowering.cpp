@@ -9689,6 +9689,9 @@ static SDValue LowerToHorizontalOp(const BuildVectorSDNode *BV,
   return SDValue();
 }
 
+static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
+                          SelectionDAG &DAG);
+
 /// If a BUILD_VECTOR's source elements all apply the same bit operation and
 /// one of their operands is constant, lower to a pair of BUILD_VECTOR and
 /// just apply the bit to the vectors.
@@ -9696,6 +9699,7 @@ static SDValue LowerToHorizontalOp(const BuildVectorSDNode *BV,
 /// from this, but enough scalar bit operations are created from the later
 /// legalization + scalarization stages to need basic support.
 static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op,
+                                       const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
   SDLoc DL(Op);
   MVT VT = Op->getSimpleValueType(0);
@@ -9759,7 +9763,14 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op,
 
   SDValue LHS = DAG.getBuildVector(VT, DL, LHSElts);
   SDValue RHS = DAG.getBuildVector(VT, DL, RHSElts);
-  return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+  SDValue Res = DAG.getNode(Opcode, DL, VT, LHS, RHS);
+
+  if (!IsShift)
+    return Res;
+
+  // Immediately lower the shift to ensure the constant build vector doesn't
+  // get converted to a constant pool before the shift is lowered.
+  return LowerShift(Res, Subtarget, DAG);
 }
 
 /// Create a vector constant without a load. SSE/AVX provide the bare minimum
@@ -10115,7 +10126,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return HorizontalOp;
   if (SDValue Broadcast = lowerBuildVectorAsBroadcast(BV, Subtarget, DAG))
     return Broadcast;
-  if (SDValue BitOp = lowerBuildVectorToBitOp(BV, DAG))
+  if (SDValue BitOp = lowerBuildVectorToBitOp(BV, Subtarget, DAG))
     return BitOp;
 
   unsigned EVTBits = EltVT.getSizeInBits();
