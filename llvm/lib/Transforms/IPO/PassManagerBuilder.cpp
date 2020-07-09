@@ -196,7 +196,6 @@ PassManagerBuilder::PassManagerBuilder() {
     PrepareForThinLTO = EnablePrepareForThinLTO;
     PerformThinLTO = EnablePerformThinLTO;
     DivergentTarget = false;
-    CallGraphProfile = true;
 }
 
 PassManagerBuilder::~PassManagerBuilder() {
@@ -836,10 +835,6 @@ void PassManagerBuilder::populateModulePassManager(
 
   if (MergeFunctions)
     MPM.add(createMergeFunctionsPass());
-
-  // Add Module flag "CG Profile" based on Branch Frequency Information.
-  if (CallGraphProfile)
-    MPM.add(createCGProfileLegacyPass());
 
   // LoopSink pass sinks instructions hoisted by LICM, which serves as a
   // canonicalization pass that enables other optimizations. As a result,

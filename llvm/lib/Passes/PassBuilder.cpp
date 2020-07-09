@@ -248,6 +248,10 @@ static cl::opt<bool>
     EnableCHR("enable-chr-npm", cl::init(true), cl::Hidden,
               cl::desc("Enable control height reduction optimization (CHR)"));
 
+static cl::opt<bool> EnableCallGraphProfile(
+    "enable-npm-call-graph-profile", cl::init(true), cl::Hidden,
+    cl::desc("Enable call graph profile pass for the new PM (default = on)"));
+
 /// Flag to enable inline deferral during PGO.
 static cl::opt<bool>
     EnablePGOInlineDeferral("enable-npm-pgo-inline-deferral", cl::init(true),
@@ -263,7 +267,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   Coroutines = false;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
-  CallGraphProfile = true;
+  CallGraphProfile = EnableCallGraphProfile;
 }
 
 extern cl::opt<bool> EnableHotColdSplit;
