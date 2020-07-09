@@ -2297,7 +2297,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
 #if defined(__APPLE__) &&                                                      \
     (defined(__arm__) || defined(__arm64__) || defined(__aarch64__))
-      if (m_header.flags & 0x80000000u &&
+      if (m_header.flags & MH_DYLIB_IN_CACHE &&
           process->GetAddressByteSize() == sizeof(void *)) {
         // This mach-o memory file is in the dyld shared cache. If this
         // program is not remote and this is iOS, then this process will
@@ -2379,7 +2379,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             // problem. For binaries outside the shared cache, it's faster to
             // read the entire strtab at once instead of piece-by-piece as we
             // process the nlist records.
-            if ((m_header.flags & 0x80000000u) == 0) {
+            if ((m_header.flags & MH_DYLIB_IN_CACHE) == 0) {
               DataBufferSP strtab_data_sp(
                   ReadMemory(process_sp, strtab_addr, strtab_data_byte_size));
               if (strtab_data_sp) {
@@ -2608,7 +2608,7 @@ size_t ObjectFileMachO::ParseSymtab() {
   // to parse any DSC unmapped symbol information. If we find any, we set a
   // flag that tells the normal nlist parser to ignore all LOCAL symbols.
 
-  if (m_header.flags & 0x80000000u) {
+  if (m_header.flags & MH_DYLIB_IN_CACHE) {
     // Before we can start mapping the DSC, we need to make certain the
     // target process is actually using the cache we can find.
 
