@@ -948,6 +948,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
         setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
         setOperationAction(ISD::SELECT, VT, Custom);
+        setOperationAction(ISD::FMA, VT, Custom);
       }
     }
 
@@ -1470,6 +1471,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FADD_PRED)
     MAKE_CASE(AArch64ISD::FADDA_PRED)
     MAKE_CASE(AArch64ISD::FADDV_PRED)
+    MAKE_CASE(AArch64ISD::FMA_PRED)
     MAKE_CASE(AArch64ISD::FMAXV_PRED)
     MAKE_CASE(AArch64ISD::FMAXNMV_PRED)
     MAKE_CASE(AArch64ISD::FMINV_PRED)
@@ -3455,6 +3457,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerF128Call(Op, DAG, RTLIB::SUB_F128);
   case ISD::FMUL:
     return LowerF128Call(Op, DAG, RTLIB::MUL_F128);
+  case ISD::FMA:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
   case ISD::FDIV:
     return LowerF128Call(Op, DAG, RTLIB::DIV_F128);
   case ISD::FP_ROUND:

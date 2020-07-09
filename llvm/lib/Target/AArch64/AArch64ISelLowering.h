@@ -77,6 +77,7 @@ enum NodeType : unsigned {
   FADD_PRED,
   SDIV_PRED,
   UDIV_PRED,
+  FMA_PRED,
   SMIN_MERGE_OP1,
   UMIN_MERGE_OP1,
   SMAX_MERGE_OP1,
