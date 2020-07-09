@@ -14,6 +14,7 @@ add_header_library(
     FloatOperations.h
     FloatProperties.h
     FPBits.h
+    BasicOperations.h
     ManipulationFunctions.h
     NearestIntegerOperations.h
   DEPENDS
