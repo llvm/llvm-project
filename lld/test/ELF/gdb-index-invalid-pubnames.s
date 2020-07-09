@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 # RUN: ld.lld --gdb-index %t -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: warning: {{.*}}(.debug_gnu_pubnames): unexpected end of data at offset 0x1 while reading [0x0, 0x4)
+# CHECK: warning: {{.*}}(.debug_gnu_pubnames): name lookup table at offset 0x0 parsing failed: unexpected end of data at offset 0x1 while reading [0x0, 0x4)
 
     .section .debug_abbrev,"",@progbits
     .byte 1                         # Abbreviation Code

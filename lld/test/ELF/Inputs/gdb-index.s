@@ -53,7 +53,7 @@ aaaaaaaaaaaaaaaa:
 .byte 0
 
 .section .debug_gnu_pubnames,"",@progbits
-.long 0x18
+.long 0x24
 .value 0x2
 .long 0
 .long 0x33
