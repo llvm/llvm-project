@@ -24,9 +24,17 @@ parameters = [
             feature=lambda exceptions: None if exceptions else
               Feature(name='no-exceptions', compileFlag='-fno-exceptions')),
 
+  Parameter(name='stdlib', choices=['libc++', 'libstdc++', 'msvc'], type=str, default='libc++',
+            help="The C++ Standard Library implementation being tested.",
+            feature=lambda stdlib: Feature(name=stdlib)),
+
   # Parameters to enable or disable parts of the test suite
   Parameter(name='enable_filesystem', choices=[True, False], type=bool, default=True,
             help="Whether to enable tests for the C++ <filesystem> library.",
             feature=lambda filesystem: None if filesystem else
               Feature(name='c++filesystem-disabled')),
+
+  Parameter(name='long_tests', choices=[True, False], type=bool, default=True,
+            help="Whether to tests that take longer to run. This can be useful when running on a very slow device.",
+            feature=lambda enabled: Feature(name='long_tests') if enabled else None),
 ]

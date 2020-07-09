@@ -16,6 +16,8 @@
 
 #include <experimental/coroutine>
 
+#include "test_macros.h"
+
 namespace coro = std::experimental::coroutines_v1;
 
 coro::suspend_always sa;
@@ -25,7 +27,7 @@ struct MyFuture {
   struct promise_type {
     typedef coro::coroutine_handle<promise_type> HandleT;
     coro::suspend_never initial_suspend() { return sn; }
-    coro::suspend_always final_suspend() noexcept { return sa; }
+    coro::suspend_always final_suspend() TEST_NOEXCEPT { return sa; }
     coro::suspend_never yield_value(int) { return sn; }
     MyFuture get_return_object() {
       MyFuture f(HandleT::from_promise(*this));

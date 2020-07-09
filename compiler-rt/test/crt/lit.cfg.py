@@ -26,15 +26,15 @@ def get_library_path(file):
                             config.target_cflags.strip(),
                             '-print-file-name=%s' % file],
                            stdout=subprocess.PIPE,
-                           env=config.environment)
+                           env=config.environment,
+                           universal_newlines=True)
     if not cmd.stdout:
       lit_config.fatal("Couldn't find the library path for '%s'" % file)
     dir = cmd.stdout.read().strip()
     if sys.platform in ['win32'] and execute_external:
         # Don't pass dosish path separator to msys bash.exe.
         dir = dir.replace('\\', '/')
-    # Ensure the result is an ascii string, across Python2.5+ - Python3.
-    return str(dir.decode('ascii'))
+    return dir
 
 
 def get_libgcc_file_name():
@@ -42,15 +42,15 @@ def get_libgcc_file_name():
                             config.target_cflags.strip(),
                             '-print-libgcc-file-name'],
                            stdout=subprocess.PIPE,
-                           env=config.environment)
+                           env=config.environment,
+                           universal_newlines=True)
     if not cmd.stdout:
       lit_config.fatal("Couldn't find the library path for '%s'" % file)
     dir = cmd.stdout.read().strip()
     if sys.platform in ['win32'] and execute_external:
         # Don't pass dosish path separator to msys bash.exe.
         dir = dir.replace('\\', '/')
-    # Ensure the result is an ascii string, across Python2.5+ - Python3.
-    return str(dir.decode('ascii'))
+    return dir
 
 
 def build_invocation(compile_flags):
@@ -66,6 +66,11 @@ config.substitutions.append(
 
 base_lib = os.path.join(
     config.compiler_rt_libdir, "clang_rt.%%s%s.o" % config.target_suffix)
+
+if sys.platform in ['win32'] and execute_external:
+    # Don't pass dosish path separator to msys bash.exe.
+    base_lib = base_lib.replace('\\', '/')
+
 config.substitutions.append(('%crtbegin', base_lib % "crtbegin"))
 config.substitutions.append(('%crtend', base_lib % "crtend"))
 

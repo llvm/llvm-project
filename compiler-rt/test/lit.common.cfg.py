@@ -23,6 +23,9 @@ else:
     # bash on Windows is usually very slow.
     execute_external = (not sys.platform in ['win32'])
 
+# Allow expanding substitutions that are based on other substitutions
+config.recursiveExpansionLimit = 10
+
 # Setup test format.
 config.test_format = lit.formats.ShTest(execute_external)
 if execute_external:
@@ -66,6 +69,8 @@ if config.android:
     # just contains a handful of ABI functions", which makes most C++ code fail
     # to link. In r19 and later we just use the default which is libc++.
     config.cxx_mode_flags.append('-stdlib=libstdc++')
+
+config.environment = dict(os.environ)
 
 # Clear some environment variables that might affect Clang.
 possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'LSAN_OPTIONS',
