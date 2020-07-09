@@ -4227,6 +4227,87 @@ static bool addInstantiatedParametersToScope(Sema &S, FunctionDecl *Function,
   return false;
 }
 
+bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
+                                      ParmVarDecl *Param) {
+  assert(Param->hasUninstantiatedDefaultArg());
+  Expr *UninstExpr = Param->getUninstantiatedDefaultArg();
+
+  EnterExpressionEvaluationContext EvalContext(
+      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Param);
+
+  // Instantiate the expression.
+  //
+  // FIXME: Pass in a correct Pattern argument, otherwise
+  // getTemplateInstantiationArgs uses the lexical context of FD, e.g.
+  //
+  // template<typename T>
+  // struct A {
+  //   static int FooImpl();
+  //
+  //   template<typename Tp>
+  //   // bug: default argument A<T>::FooImpl() is evaluated with 2-level
+  //   // template argument list [[T], [Tp]], should be [[Tp]].
+  //   friend A<Tp> Foo(int a);
+  // };
+  //
+  // template<typename T>
+  // A<T> Foo(int a = A<T>::FooImpl());
+  MultiLevelTemplateArgumentList TemplateArgs
+    = getTemplateInstantiationArgs(FD, nullptr, /*RelativeToPrimary=*/true);
+
+  InstantiatingTemplate Inst(*this, CallLoc, Param,
+                             TemplateArgs.getInnermost());
+  if (Inst.isInvalid())
+    return true;
+  if (Inst.isAlreadyInstantiating()) {
+    Diag(Param->getBeginLoc(), diag::err_recursive_default_argument) << FD;
+    Param->setInvalidDecl();
+    return true;
+  }
+
+  ExprResult Result;
+  {
+    // C++ [dcl.fct.default]p5:
+    //   The names in the [default argument] expression are bound, and
+    //   the semantic constraints are checked, at the point where the
+    //   default argument expression appears.
+    ContextRAII SavedContext(*this, FD);
+    LocalInstantiationScope Local(*this);
+    runWithSufficientStackSpace(CallLoc, [&] {
+      Result = SubstInitializer(UninstExpr, TemplateArgs,
+                                /*DirectInit*/false);
+    });
+  }
+  if (Result.isInvalid())
+    return true;
+
+  // Check the expression as an initializer for the parameter.
+  InitializedEntity Entity
+    = InitializedEntity::InitializeParameter(Context, Param);
+  InitializationKind Kind = InitializationKind::CreateCopy(
+      Param->getLocation(),
+      /*FIXME:EqualLoc*/ UninstExpr->getBeginLoc());
+  Expr *ResultE = Result.getAs<Expr>();
+
+  InitializationSequence InitSeq(*this, Entity, Kind, ResultE);
+  Result = InitSeq.Perform(*this, Entity, Kind, ResultE);
+  if (Result.isInvalid())
+    return true;
+
+  Result =
+      ActOnFinishFullExpr(Result.getAs<Expr>(), Param->getOuterLocStart(),
+                          /*DiscardedValue*/ false);
+  if (Result.isInvalid())
+    return true;
+
+  // Remember the instantiated default argument.
+  Param->setDefaultArg(Result.getAs<Expr>());
+  if (ASTMutationListener *L = getASTMutationListener())
+    L->DefaultArgumentInstantiated(Param);
+
+  return false;
+}
+
 void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
                                     FunctionDecl *Decl) {
   const FunctionProtoType *Proto = Decl->getType()->castAs<FunctionProtoType>();
