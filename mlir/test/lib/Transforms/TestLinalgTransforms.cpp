@@ -244,8 +244,8 @@ static LogicalResult copyCallBackFn(OpBuilder &b, Value src, Value dst,
   return success();
 }
 
-void fillPromotionCallBackPatterns(MLIRContext *ctx,
-                                   OwningRewritePatternList &patterns) {
+static void fillPromotionCallBackPatterns(MLIRContext *ctx,
+                                          OwningRewritePatternList &patterns) {
   patterns.insert<LinalgTilingPattern<MatmulOp>>(
       ctx, LinalgTilingOptions().setTileSizes({16, 16, 16}),
       LinalgMarker(Identifier::get("START", ctx),

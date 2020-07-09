@@ -609,8 +609,8 @@ mlir::createConvertLinalgToAffineLoopsPass() {
 
 // TODO: gradually remove this layer as more ops become "named".
 template <typename LoopTy>
-Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
-                                                OpBuilder &builder) {
+static Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
+                                                       OpBuilder &builder) {
   assert(isa<LinalgOp>(op) && "LinalgOp expected");
   if (isa<CopyOp>(op))
     return linalgOpToLoopsImpl<LoopTy, CopyOp>(op, builder);

@@ -50,6 +50,7 @@ static cl::opt<bool> DisableBinopExtractShuffle(
 
 static const unsigned InvalidIndex = std::numeric_limits<unsigned>::max();
 
+namespace {
 class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
@@ -80,6 +81,7 @@ private:
   bool scalarizeBinopOrCmp(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
 };
+} // namespace
 
 static void replaceValue(Value &Old, Value &New) {
   Old.replaceAllUsesWith(&New);

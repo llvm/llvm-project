@@ -55,8 +55,8 @@ static cl::opt<uint32_t> UnlikelyBranchWeight(
     "unlikely-branch-weight", cl::Hidden, cl::init(1),
     cl::desc("Weight of the branch unlikely to be taken (default = 1)"));
 
-std::tuple<uint32_t, uint32_t> getBranchWeight(Intrinsic::ID IntrinsicID,
-                                               CallInst *CI, int BranchCount) {
+static std::tuple<uint32_t, uint32_t>
+getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
   if (IntrinsicID == Intrinsic::expect) {
     // __builtin_expect
     return std::make_tuple(LikelyBranchWeight.getValue(),
