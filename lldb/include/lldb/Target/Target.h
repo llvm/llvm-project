@@ -1130,7 +1130,7 @@ public:
     return m_scratch_typesystem_lock;
   }
 
-  SwiftASTContextReader
+  llvm::Optional<SwiftASTContextReader>
   GetScratchSwiftASTContext(Status &error, ExecutionContextScope &exe_scope,
                             bool create_on_demand = true);
 

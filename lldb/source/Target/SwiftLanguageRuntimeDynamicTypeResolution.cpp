@@ -513,18 +513,20 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
   if (m_compiler_type.hasValue())
     return m_compiler_type.getValue();
 
-  auto swift_ast_ctx = m_for_object_sp->GetScratchSwiftASTContext();
-  if (!swift_ast_ctx) {
+  llvm::Optional<SwiftASTContextReader> maybe_swift_ast_ctx =
+      m_for_object_sp->GetScratchSwiftASTContext();
+  if (!maybe_swift_ast_ctx) {
     error->SetErrorString("couldn't get Swift scratch context");
     return CompilerType();
   }
+  SwiftASTContext *swift_ast_ctx = maybe_swift_ast_ctx->get();
   auto &remote_ast = m_swift_runtime.GetRemoteASTContext(*swift_ast_ctx);
   swift::remoteAST::Result<swift::Type> result =
       remote_ast.getTypeForRemoteTypeMetadata(
           swift::remote::RemoteAddress(m_metadata_location));
 
   if (result) {
-    m_compiler_type = {swift_ast_ctx.get(), result.getValue().getPointer()};
+    m_compiler_type = {swift_ast_ctx, result.getValue().getPointer()};
     if (log)
       log->Printf("[MetadataPromise] result is type %s",
                   m_compiler_type->GetTypeName().AsCString());
@@ -543,10 +545,13 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
 SwiftLanguageRuntime::MetadataPromiseSP
 SwiftLanguageRuntimeImpl::GetMetadataPromise(lldb::addr_t addr,
                                              ValueObject &for_object) {
-  auto swift_ast_ctx = for_object.GetScratchSwiftASTContext();
-  if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
+  llvm::Optional<SwiftASTContextReader> maybe_swift_ast_ctx =
+      for_object.GetScratchSwiftASTContext();
+  if (!maybe_swift_ast_ctx)
     return nullptr;
-
+  SwiftASTContext *swift_ast_ctx = maybe_swift_ast_ctx->get();
+  if (swift_ast_ctx->HasFatalErrors())
+    return nullptr;
   if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
     return nullptr;
 
@@ -1037,9 +1042,11 @@ SwiftLanguageRuntimeImpl::DoArchetypeBindingForType(StackFrame &stack_frame,
   auto &target = m_process.GetTarget();
   assert(IsScratchContextLocked(target) &&
          "Swift scratch context not locked ahead of archetype binding");
-  auto scratch_ctx = target.GetScratchSwiftASTContext(error, stack_frame);
-  if (!scratch_ctx)
+  llvm::Optional<SwiftASTContextReader> maybe_scratch_ctx =
+      target.GetScratchSwiftASTContext(error, stack_frame);
+  if (!maybe_scratch_ctx)
     return base_type;
+  SwiftASTContext *scratch_ctx = maybe_scratch_ctx->get();
   base_type = scratch_ctx->ImportType(base_type, error);
 
   if (base_type.GetTypeInfo() & lldb::eTypeIsSwift) {
@@ -1424,11 +1431,13 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
   // Import the remangled dynamic name into the scratch context.
   assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
          "Swift scratch context not locked ahead of dynamic type resolution");
-  auto scratch_ctx = in_value.GetScratchSwiftASTContext();
-  if (!scratch_ctx)
+  llvm::Optional<SwiftASTContextReader> maybe_scratch_ctx =
+      in_value.GetScratchSwiftASTContext();
+  if (!maybe_scratch_ctx)
     return false;
   CompilerType swift_type =
-      scratch_ctx->GetTypeFromMangledTypename(ConstString(remangled));
+      maybe_scratch_ctx->get()->GetTypeFromMangledTypename(
+          ConstString(remangled));
 
   // Roll back the ObjC dynamic type resolution.
   if (!swift_type)
@@ -1482,9 +1491,11 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   // use the scratch context where such operations are legal and safe.
   assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
          "Swift scratch context not locked ahead of dynamic type resolution");
-  auto scratch_ctx = in_value.GetScratchSwiftASTContext();
-  if (!scratch_ctx)
+  llvm::Optional<SwiftASTContextReader> maybe_scratch_ctx =
+      in_value.GetScratchSwiftASTContext();
+  if (!maybe_scratch_ctx)
     return false;
+  SwiftASTContextForExpressions *scratch_ctx = maybe_scratch_ctx->get();
 
   auto retry_once = [&]() {
     // Retry exactly once using the per-module fallback scratch context.

@@ -1752,10 +1752,10 @@ LanguageType ValueObject::GetObjectRuntimeLanguage() {
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-SwiftASTContextReader ValueObject::GetScratchSwiftASTContext() {
+llvm::Optional<SwiftASTContextReader> ValueObject::GetScratchSwiftASTContext() {
   lldb::TargetSP target_sp(GetTargetSP());
   if (!target_sp)
-    return {};
+    return llvm::None;
   Status error;
   ExecutionContext ctx = GetExecutionContextRef().Lock(false);
   auto *exe_scope = ctx.GetBestExecutionContextScope();

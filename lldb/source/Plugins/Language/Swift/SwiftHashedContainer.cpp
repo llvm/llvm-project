@@ -294,13 +294,13 @@ HashedCollectionConfig::StorageObjectAtAddress(
   // same address.
   Status error;
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  auto reader =
+  llvm::Optional<SwiftASTContextReader> reader =
     process_sp->GetTarget().GetScratchSwiftASTContext(error, *exe_scope);
-  SwiftASTContext *ast_ctx = reader.get();
-  if (!ast_ctx)
+  if (!reader)
     return nullptr;
   if (error.Fail())
     return nullptr;
+  SwiftASTContext *ast_ctx = reader->get();
 
   CompilerType rawStorage_type =
       ast_ctx->GetTypeFromMangledTypename(m_nativeStorageRoot_mangled);
@@ -445,10 +445,10 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
     m_value_stride = value_type_stride ? *value_type_stride : 0;
     if (TypeSystemSwift *swift_ast =
             llvm::dyn_cast_or_null<TypeSystemSwift>(key_type.GetTypeSystem())) {
-      auto scratch_ctx_reader = nativeStorage_sp->GetScratchSwiftASTContext();
-      auto scratch_ctx = scratch_ctx_reader.get();
-      if (!scratch_ctx)
+      llvm::Optional<SwiftASTContextReader> scratch_ctx_reader = nativeStorage_sp->GetScratchSwiftASTContext();
+      if (!scratch_ctx_reader)
         return;
+      SwiftASTContext *scratch_ctx = scratch_ctx_reader->get();
       auto *runtime = SwiftLanguageRuntime::Get(m_process);
       if (!runtime)
         return;

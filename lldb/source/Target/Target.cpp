@@ -2342,11 +2342,12 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
 SwiftPersistentExpressionState *
 Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
   Status error;
-  auto swift_ast_context = GetScratchSwiftASTContext(error, exe_scope, true);
-  if (!swift_ast_context)
+  auto maybe_swift_ast_context =
+      GetScratchSwiftASTContext(error, exe_scope, true);
+  if (!maybe_swift_ast_context)
     return nullptr;
   return (SwiftPersistentExpressionState *)
-      swift_ast_context->GetPersistentExpressionState();
+      maybe_swift_ast_context->get()->GetPersistentExpressionState();
 }
 #endif // LLDB_ENABLE_SWIFT
 
@@ -2421,7 +2422,17 @@ Target::GetUtilityFunctionForLanguage(const char *text,
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-SwiftASTContextReader Target::GetScratchSwiftASTContext(
+ClangASTImporterSP Target::GetClangASTImporter() {
+  if (m_valid) {
+    if (!m_ast_importer_sp) {
+      m_ast_importer_sp = std::make_shared<ClangASTImporter>();
+    }
+    return m_ast_importer_sp;
+  }
+  return ClangASTImporterSP();
+}
+
+llvm::Optional<SwiftASTContextReader> Target::GetScratchSwiftASTContext(
     Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
 
@@ -2502,7 +2513,9 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
                                          error);
   }
 
-  return SwiftASTContextReader(GetSwiftScratchContextLock(), swift_ast_ctx);
+  if (!swift_ast_ctx)
+    return llvm::None;
+  return SwiftASTContextReader(GetSwiftScratchContextLock(), *swift_ast_ctx);
 }
 
 static SharedMutex *

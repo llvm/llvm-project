@@ -944,8 +944,10 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
       Status error;
       Target &target = frame.GetThread()->GetProcess()->GetTarget();
       ExecutionContext exe_ctx(frame);
-      auto swift_ast = target.GetScratchSwiftASTContext(error, frame);
-      if (swift_ast) {
+      llvm::Optional<SwiftASTContextReader> maybe_swift_ast =
+          target.GetScratchSwiftASTContext(error, frame);
+      if (maybe_swift_ast) {
+        SwiftASTContext *swift_ast = maybe_swift_ast->get();
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
             mangled_name.GetMangledName());
         if (error.Success()) {
@@ -1149,9 +1151,11 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   if (!exe_scope)
     return error_valobj_sp;
 
-  auto ast_context = target->GetScratchSwiftASTContext(error, *frame_sp);
-  if (!ast_context || error.Fail())
+  llvm::Optional<SwiftASTContextReader> maybe_ast_context =
+      target->GetScratchSwiftASTContext(error, *frame_sp);
+  if (!maybe_ast_context || error.Fail())
     return error_valobj_sp;
+  SwiftASTContext *ast_context = maybe_ast_context->get();
 
   auto buffer_up =
       std::make_unique<DataBufferHeap>(arg0->GetScalar().GetByteSize(), 0);
@@ -1484,9 +1488,9 @@ SwiftLanguageRuntimeImpl::GetBridgedSyntheticChildProvider(
   ProjectionSyntheticChildren::TypeProjectionUP type_projection(
       new ProjectionSyntheticChildren::TypeProjectionUP::element_type());
 
-  if (auto swift_ast_ctx = valobj.GetScratchSwiftASTContext()) {
+  if (auto maybe_swift_ast_ctx = valobj.GetScratchSwiftASTContext()) {
     CompilerType swift_type =
-        swift_ast_ctx->GetTypeFromMangledTypename(type_name);
+        maybe_swift_ast_ctx->get()->GetTypeFromMangledTypename(type_name);
 
     if (swift_type.IsValid()) {
       ExecutionContext exe_ctx(m_process);

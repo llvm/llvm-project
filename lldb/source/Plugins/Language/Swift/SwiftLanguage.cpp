@@ -1016,9 +1016,11 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             if (target) {
               const bool create_on_demand = false;
               Status error;
-              auto ast_ctx = target->GetScratchSwiftASTContext(
-                  error, *exe_scope, create_on_demand);
-              if (ast_ctx) {
+              llvm::Optional<SwiftASTContextReader> maybe_ast_ctx =
+                  target->GetScratchSwiftASTContext(error, *exe_scope,
+                                                    create_on_demand);
+              if (maybe_ast_ctx) {
+                SwiftASTContext *ast_ctx = maybe_ast_ctx->get();
                 ConstString cs_input{input};
                 Mangled mangled(cs_input);
                 if (mangled.GuessLanguage() == eLanguageTypeSwift) {
@@ -1074,9 +1076,11 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             Target *target = exe_scope->CalculateTarget().get();
             const bool create_on_demand = false;
             Status error;
-            auto ast_ctx = target->GetScratchSwiftASTContext(error, *exe_scope,
-                                                             create_on_demand);
-            if (ast_ctx) {
+            llvm::Optional<SwiftASTContextReader> maybe_ast_ctx =
+                target->GetScratchSwiftASTContext(error, *exe_scope,
+                                                  create_on_demand);
+            if (maybe_ast_ctx) {
+              SwiftASTContext *ast_ctx = maybe_ast_ctx->get();
               auto iter = ast_ctx->GetModuleCache().begin(),
                    end = ast_ctx->GetModuleCache().end();
 

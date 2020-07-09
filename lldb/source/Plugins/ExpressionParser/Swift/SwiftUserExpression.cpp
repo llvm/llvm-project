@@ -195,11 +195,13 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
   // Make sure the target's SwiftASTContext has been setup before doing any
   // Swift name lookups.
-  auto swift_ast_ctx = m_target->GetScratchSwiftASTContext(err, *frame);
-  if (!swift_ast_ctx) {
+  llvm::Optional<SwiftASTContextReader> maybe_swift_ast_ctx =
+      m_target->GetScratchSwiftASTContext(err, *frame);
+  if (!maybe_swift_ast_ctx) {
     LLDB_LOG(log, "  [SUE::SC] NULL Swift AST Context");
     return;
   }
+  SwiftASTContext *swift_ast_ctx = maybe_swift_ast_ctx->get();
 
   if (!swift_ast_ctx->GetClangImporter()) {
     LLDB_LOG(log, "  [SUE::SC] Swift AST Context has no Clang importer");
