@@ -61,6 +61,7 @@
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1461,7 +1462,7 @@ bool ShouldUnique(StringRef arg) {
 
 void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
-  llvm::DenseSet<StringRef> unique_flags;
+  llvm::StringSet<> unique_flags;
   for (auto &arg : importer_options.ExtraArgs)
     unique_flags.insert(arg);
 
