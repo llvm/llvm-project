@@ -794,8 +794,7 @@ define <2 x i32> @true_undef_vec(i1 %cond, <2 x i32> %x) {
 ; These can be folded because the other value is guaranteed not to be poison.
 define i32 @false_undef_true_constant(i1 %cond) {
 ; CHECK-LABEL: @false_undef_true_constant(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 10, i32 undef
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 10
 ;
   %s = select i1 %cond, i32 10, i32 undef
   ret i32 %s
@@ -803,8 +802,7 @@ define i32 @false_undef_true_constant(i1 %cond) {
 
 define i32 @true_undef_false_constant(i1 %cond) {
 ; CHECK-LABEL: @true_undef_false_constant(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 undef, i32 20
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 20
 ;
   %s = select i1 %cond, i32 undef, i32 20
   ret i32 %s
@@ -830,8 +828,7 @@ define <2 x i32> @true_undef_false_constant_vec(i1 %cond) {
 define i32 @false_undef_true_freeze(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @false_undef_true_freeze(
 ; CHECK-NEXT:    [[XF:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 [[XF]], i32 undef
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[XF]]
 ;
   %xf = freeze i32 %x
   %s = select i1 %cond, i32 %xf, i32 undef
@@ -841,8 +838,7 @@ define i32 @false_undef_true_freeze(i1 %cond, i32 %x) {
 define i32 @false_undef_false_freeze(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @false_undef_false_freeze(
 ; CHECK-NEXT:    [[XF:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 undef, i32 [[XF]]
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[XF]]
 ;
   %xf = freeze i32 %x
   %s = select i1 %cond, i32 undef, i32 %xf
