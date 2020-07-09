@@ -177,6 +177,38 @@ static cl::opt<bool> StackTaggingMergeSetTag(
 
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
+/// Returns the argument pop size.
+static uint64_t getArgumentPopSize(MachineFunction &MF,
+                                   MachineBasicBlock &MBB) {
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  bool IsTailCallReturn = false;
+  if (MBB.end() != MBBI) {
+    unsigned RetOpcode = MBBI->getOpcode();
+    IsTailCallReturn = RetOpcode == AArch64::TCRETURNdi ||
+                       RetOpcode == AArch64::TCRETURNri ||
+                       RetOpcode == AArch64::TCRETURNriBTI;
+  }
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+
+  uint64_t ArgumentPopSize = 0;
+  if (IsTailCallReturn) {
+    MachineOperand &StackAdjust = MBBI->getOperand(1);
+
+    // For a tail-call in a callee-pops-arguments environment, some or all of
+    // the stack may actually be in use for the call's arguments, this is
+    // calculated during LowerCall and consumed here...
+    ArgumentPopSize = StackAdjust.getImm();
+  } else {
+    // ... otherwise the amount to pop is *all* of the argument space,
+    // conveniently stored in the MachineFunctionInfo by
+    // LowerFormalArguments. This will, of course, be zero for the C calling
+    // convention.
+    ArgumentPopSize = AFI->getArgumentStackToRestore();
+  }
+
+  return ArgumentPopSize;
+}
+
 /// This is the biggest offset to the stack pointer we can encode in aarch64
 /// instructions (without using a separate calculation and a temp register).
 /// Note that the exception here are vector stores/loads which cannot encode any
@@ -1416,7 +1448,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL;
-  bool IsTailCallReturn = false;
   bool NeedsWinCFI = needsWinCFI(MF);
   bool HasWinCFI = false;
   bool IsFunclet = false;
@@ -1427,10 +1458,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (MBB.end() != MBBI) {
     DL = MBBI->getDebugLoc();
-    unsigned RetOpcode = MBBI->getOpcode();
-    IsTailCallReturn = RetOpcode == AArch64::TCRETURNdi ||
-                       RetOpcode == AArch64::TCRETURNri ||
-                       RetOpcode == AArch64::TCRETURNriBTI;
     IsFunclet = isFuncletReturnInstr(*MBBI);
   }
 
@@ -1445,21 +1472,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Initial and residual are named for consistency with the prologue. Note that
   // in the epilogue, the residual adjustment is executed first.
-  uint64_t ArgumentPopSize = 0;
-  if (IsTailCallReturn) {
-    MachineOperand &StackAdjust = MBBI->getOperand(1);
-
-    // For a tail-call in a callee-pops-arguments environment, some or all of
-    // the stack may actually be in use for the call's arguments, this is
-    // calculated during LowerCall and consumed here...
-    ArgumentPopSize = StackAdjust.getImm();
-  } else {
-    // ... otherwise the amount to pop is *all* of the argument space,
-    // conveniently stored in the MachineFunctionInfo by
-    // LowerFormalArguments. This will, of course, be zero for the C calling
-    // convention.
-    ArgumentPopSize = AFI->getArgumentStackToRestore();
-  }
+  uint64_t ArgumentPopSize = getArgumentPopSize(MF, MBB);
 
   // The stack frame should be like below,
   //
