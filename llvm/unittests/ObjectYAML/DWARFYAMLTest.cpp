@@ -16,13 +16,7 @@
 
 using namespace llvm;
 
-static Expected<DWARFYAML::Data> parseDWARFYAML(StringRef Yaml,
-                                                bool IsLittleEndian = false,
-                                                bool Is64bit = true) {
-  DWARFYAML::Data Data;
-  Data.IsLittleEndian = IsLittleEndian;
-  Data.Is64bit = Is64bit;
-
+template <class T> static Error parseDWARFYAML(StringRef Yaml, T &Data) {
   SMDiagnostic GenerateDiag;
   yaml::Input YIn(
       Yaml, /*Ctxt=*/nullptr,
@@ -35,7 +29,7 @@ static Expected<DWARFYAML::Data> parseDWARFYAML(StringRef Yaml,
   if (YIn.error())
     return createStringError(YIn.error(), GenerateDiag.getMessage());
 
-  return Data;
+  return Error::success();
 }
 
 TEST(DebugAddrSection, TestParseDebugAddrYAML) {
@@ -45,31 +39,29 @@ debug_addr:
     Length:  0x1234
     Version: 5
 )";
-  auto DWARFOrErr = parseDWARFYAML(Yaml);
-  EXPECT_THAT_EXPECTED(DWARFOrErr, Succeeded());
+  DWARFYAML::Data Data;
+  EXPECT_THAT_ERROR(parseDWARFYAML(Yaml, Data), Succeeded());
 }
 
 TEST(DebugAddrSection, TestMissingVersion) {
   StringRef Yaml = R"(
-debug_addr:
-  - Format: DWARF64
-    Length: 0x1234
+Format: DWARF64
+Length: 0x1234
 )";
-  auto DWARFOrErr = parseDWARFYAML(Yaml);
-  EXPECT_THAT_ERROR(DWARFOrErr.takeError(),
+  DWARFYAML::AddrTableEntry AddrTableEntry;
+  EXPECT_THAT_ERROR(parseDWARFYAML(Yaml, AddrTableEntry),
                     FailedWithMessage("missing required key 'Version'"));
 }
 
 TEST(DebugAddrSection, TestUnexpectedKey) {
   StringRef Yaml = R"(
-debug_addr:
-  - Format:  DWARF64
-    Length:  0x1234
-    Version: 5
-    Blah:    unexpected
+Format:  DWARF64
+Length:  0x1234
+Version: 5
+Blah:    unexpected
 )";
-  auto DWARFOrErr = parseDWARFYAML(Yaml);
-  EXPECT_THAT_ERROR(DWARFOrErr.takeError(),
+  DWARFYAML::AddrTableEntry AddrTableEntry;
+  EXPECT_THAT_ERROR(parseDWARFYAML(Yaml, AddrTableEntry),
                     FailedWithMessage("unknown key 'Blah'"));
 }
 
@@ -98,11 +90,11 @@ debug_pubtypes:
     - DieOffset:  0x4321
       Name:       def
 )";
-  auto DWARFOrErr = parseDWARFYAML(Yaml);
-  ASSERT_THAT_EXPECTED(DWARFOrErr, Succeeded());
+  DWARFYAML::Data Data;
+  ASSERT_THAT_ERROR(parseDWARFYAML(Yaml, Data), Succeeded());
 
-  ASSERT_TRUE(DWARFOrErr->PubNames.hasValue());
-  DWARFYAML::PubSection PubNames = DWARFOrErr->PubNames.getValue();
+  ASSERT_TRUE(Data.PubNames.hasValue());
+  DWARFYAML::PubSection PubNames = Data.PubNames.getValue();
 
   ASSERT_EQ(PubNames.Entries.size(), 2u);
   EXPECT_EQ((uint32_t)PubNames.Entries[0].DieOffset, 0x1234u);
@@ -110,8 +102,8 @@ debug_pubtypes:
   EXPECT_EQ((uint32_t)PubNames.Entries[1].DieOffset, 0x4321u);
   EXPECT_EQ(PubNames.Entries[1].Name, "def");
 
-  ASSERT_TRUE(DWARFOrErr->PubTypes.hasValue());
-  DWARFYAML::PubSection PubTypes = DWARFOrErr->PubTypes.getValue();
+  ASSERT_TRUE(Data.PubTypes.hasValue());
+  DWARFYAML::PubSection PubTypes = Data.PubTypes.getValue();
 
   ASSERT_EQ(PubTypes.Entries.size(), 2u);
   EXPECT_EQ((uint32_t)PubTypes.Entries[0].DieOffset, 0x1234u);
@@ -133,8 +125,8 @@ debug_pubnames:
       Descriptor: 0x12
       Name:       abcd
 )";
-  auto DWARFOrErr = parseDWARFYAML(Yaml);
-  EXPECT_THAT_ERROR(DWARFOrErr.takeError(),
+  DWARFYAML::Data Data;
+  EXPECT_THAT_ERROR(parseDWARFYAML(Yaml, Data),
                     FailedWithMessage("unknown key 'Descriptor'"));
 }
 
@@ -167,11 +159,11 @@ debug_gnu_pubtypes:
       Descriptor: 0x34
       Name:       def
 )";
-  auto DWARFOrErr = parseDWARFYAML(Yaml);
-  ASSERT_THAT_EXPECTED(DWARFOrErr, Succeeded());
+  DWARFYAML::Data Data;
+  ASSERT_THAT_ERROR(parseDWARFYAML(Yaml, Data), Succeeded());
 
-  ASSERT_TRUE(DWARFOrErr->GNUPubNames.hasValue());
-  DWARFYAML::PubSection GNUPubNames = DWARFOrErr->GNUPubNames.getValue();
+  ASSERT_TRUE(Data.GNUPubNames.hasValue());
+  DWARFYAML::PubSection GNUPubNames = Data.GNUPubNames.getValue();
 
   ASSERT_EQ(GNUPubNames.Entries.size(), 2u);
   EXPECT_EQ((uint32_t)GNUPubNames.Entries[0].DieOffset, 0x1234u);
@@ -181,8 +173,8 @@ debug_gnu_pubtypes:
   EXPECT_EQ((uint8_t)GNUPubNames.Entries[1].Descriptor, 0x34);
   EXPECT_EQ(GNUPubNames.Entries[1].Name, "def");
 
-  ASSERT_TRUE(DWARFOrErr->GNUPubTypes.hasValue());
-  DWARFYAML::PubSection GNUPubTypes = DWARFOrErr->GNUPubTypes.getValue();
+  ASSERT_TRUE(Data.GNUPubTypes.hasValue());
+  DWARFYAML::PubSection GNUPubTypes = Data.GNUPubTypes.getValue();
 
   ASSERT_EQ(GNUPubTypes.Entries.size(), 2u);
   EXPECT_EQ((uint32_t)GNUPubTypes.Entries[0].DieOffset, 0x1234u);
@@ -205,7 +197,7 @@ debug_gnu_pubnames:
     - DieOffset: 0x1234
       Name:      abcd
 )";
-  auto DWARFOrErr = parseDWARFYAML(Yaml);
-  EXPECT_THAT_ERROR(DWARFOrErr.takeError(),
+  DWARFYAML::Data Data;
+  EXPECT_THAT_ERROR(parseDWARFYAML(Yaml, Data),
                     FailedWithMessage("missing required key 'Descriptor'"));
 }
