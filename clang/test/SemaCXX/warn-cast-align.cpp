@@ -44,9 +44,16 @@ void test1(void *P) {
   c = IntPtr(P);
 }
 
+struct __attribute__((aligned(16))) AlignedS {
+  char m[16];
+};
+
 struct __attribute__((aligned(16))) A {
   char m0[16];
   char m1[16];
+  AlignedS *getAlignedS() {
+    return (AlignedS *)m1;
+  }
 };
 
 struct B0 {
@@ -92,6 +99,9 @@ struct __attribute__((aligned(16))) D4 : virtual D2 {
 
 struct D5 : virtual D0 {
   char m0[16];
+  AlignedS *get() {
+    return (AlignedS *)m0; // expected-warning {{cast from 'char *' to 'AlignedS *'}}
+  }
 };
 
 struct D6 : virtual D5 {
