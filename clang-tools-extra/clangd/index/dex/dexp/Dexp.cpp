@@ -32,6 +32,9 @@ llvm::cl::opt<std::string> IndexLocation(
 llvm::cl::opt<std::string>
     ExecCommand("c", llvm::cl::desc("Command to execute and then exit"));
 
+llvm::cl::opt<std::string> ProjectRoot("project-root",
+                                       llvm::cl::desc("Path to the project"));
+
 static constexpr char Overview[] = R"(
 This is an **experimental** interactive tool to process user-provided search
 queries over given symbol collection obtained via clangd-indexer. The
@@ -326,7 +329,8 @@ struct {
 
 std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
   return Index.startswith("remote:")
-             ? remote::getClient(Index.drop_front(strlen("remote:")))
+             ? remote::getClient(Index.drop_front(strlen("remote:")),
+                                 ProjectRoot)
              : loadIndex(Index, /*UseDex=*/true);
 }
 
