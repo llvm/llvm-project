@@ -16,7 +16,7 @@
 # RUN: %target-swift-frontend -serialize-debugging-options \
 # RUN:          -module-cache-path %t/cache \
 # RUN:          -merge-modules -emit-module \
-# RUN:          -parse-as-library -sil-merge-partial-modules \
+# RUN:          -parse-as-library \
 # RUN:          -disable-diagnostic-passes -disable-sil-perf-optzns \
 # RUN:          -module-name Library Library.part.swiftmodule \
 # RUN:          -o Library.swiftmodule -I%t
@@ -33,7 +33,7 @@
 # RUN: %target-swift-frontend -serialize-debugging-options  -merge-modules \
 # RUN:          -module-cache-path %t/cache \
 # RUN:          -emit-module RemoteASTImport.part.swiftmodule \
-# RUN:          -parse-as-library -sil-merge-partial-modules \
+# RUN:          -parse-as-library \
 # RUN:          -disable-diagnostic-passes -disable-sil-perf-optzns \
 # RUN:          -import-objc-header %S/Inputs/BridgingHeader.h \
 # RUN:          -I%t -Xcc -DSYNTAX_ERROR=1 \
