@@ -758,13 +758,13 @@ Attribute Parser::parseDenseElementsAttr(Type attrType) {
   if (parseToken(Token::less, "expected '<' after 'dense'"))
     return nullptr;
 
-  // Parse the literal data.
+  // Parse the literal data if necessary.
   TensorLiteralParser literalParser(*this);
-  if (literalParser.parse(/*allowHex=*/true))
-    return nullptr;
-
-  if (parseToken(Token::greater, "expected '>'"))
-    return nullptr;
+  if (!consumeIf(Token::greater)) {
+    if (literalParser.parse(/*allowHex=*/true) ||
+        parseToken(Token::greater, "expected '>'"))
+      return nullptr;
+  }
 
   auto typeLoc = getToken().getLoc();
   auto type = parseElementsLiteralType(attrType);
@@ -841,6 +841,25 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   if (parseToken(Token::less, "Expected '<' after 'sparse'"))
     return nullptr;
 
+  // Check for the case where all elements are sparse. The indices are
+  // represented by a 2-dimensional shape where the second dimension is the rank
+  // of the type.
+  Type indiceEltType = builder.getIntegerType(64);
+  if (consumeIf(Token::greater)) {
+    ShapedType type = parseElementsLiteralType(attrType);
+    if (!type)
+      return nullptr;
+
+    // Construct the sparse elements attr using zero element indice/value
+    // attributes.
+    ShapedType indicesType =
+        RankedTensorType::get({0, type.getRank()}, indiceEltType);
+    ShapedType valuesType = RankedTensorType::get({0}, type.getElementType());
+    return SparseElementsAttr::get(
+        type, DenseElementsAttr::get(indicesType, ArrayRef<Attribute>()),
+        DenseElementsAttr::get(valuesType, ArrayRef<Attribute>()));
+  }
+
   /// Parse the indices. We don't allow hex values here as we may need to use
   /// the inferred shape.
   auto indicesLoc = getToken().getLoc();
@@ -869,7 +888,6 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   // 2-dimensional shape where the second dimension is the rank of the type.
   // Given that the parsed indices is a splat, we know that we only have one
   // indice and thus one for the first dimension.
-  auto indiceEltType = builder.getIntegerType(64);
   ShapedType indicesType;
   if (indiceParser.getShape().empty()) {
     indicesType = RankedTensorType::get({1, type.getRank()}, indiceEltType);

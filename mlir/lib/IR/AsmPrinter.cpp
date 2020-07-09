@@ -1432,10 +1432,12 @@ void ModulePrinter::printAttribute(Attribute attr,
       break;
     }
     os << "sparse<";
-    printDenseIntOrFPElementsAttr(elementsAttr.getIndices(),
-                                  /*allowHex=*/false);
-    os << ", ";
-    printDenseElementsAttr(elementsAttr.getValues(), /*allowHex=*/true);
+    DenseIntElementsAttr indices = elementsAttr.getIndices();
+    if (indices.getNumElements() != 0) {
+      printDenseIntOrFPElementsAttr(indices, /*allowHex=*/false);
+      os << ", ";
+      printDenseElementsAttr(elementsAttr.getValues(), /*allowHex=*/true);
+    }
     os << '>';
     break;
   }
@@ -1476,20 +1478,15 @@ printDenseElementsAttrImpl(bool isSplat, ShapedType type, raw_ostream &os,
 
   // Special case for degenerate tensors.
   auto numElements = type.getNumElements();
-  int64_t rank = type.getRank();
-  if (numElements == 0) {
-    for (int i = 0; i < rank; ++i)
-      os << '[';
-    for (int i = 0; i < rank; ++i)
-      os << ']';
+  if (numElements == 0)
     return;
-  }
 
   // We use a mixed-radix counter to iterate through the shape. When we bump a
   // non-least-significant digit, we emit a close bracket. When we next emit an
   // element we re-open all closed brackets.
 
   // The mixed-radix counter, with radices in 'shape'.
+  int64_t rank = type.getRank();
   SmallVector<unsigned, 4> counter(rank, 0);
   // The number of brackets that have been opened and not closed.
   unsigned openBrackets = 0;
