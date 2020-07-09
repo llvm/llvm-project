@@ -25,6 +25,7 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
+#include <future>
 #include <map>
 #include <memory>
 #include <system_error>
@@ -53,6 +54,13 @@ namespace orc {
 /// are used by various ORC APIs to support lazy compilation
 class TrampolinePool {
 public:
+  using NotifyLandingResolvedFunction =
+      unique_function<void(JITTargetAddress) const>;
+
+  using ResolveLandingFunction = unique_function<void(
+      JITTargetAddress TrampolineAddr,
+      NotifyLandingResolvedFunction OnLandingResolved) const>;
+
   virtual ~TrampolinePool() {}
 
   /// Get an available trampoline address.
@@ -66,18 +74,15 @@ private:
 /// A trampoline pool for trampolines within the current process.
 template <typename ORCABI> class LocalTrampolinePool : public TrampolinePool {
 public:
-  using GetTrampolineLandingFunction =
-      std::function<JITTargetAddress(JITTargetAddress TrampolineAddr)>;
-
   /// Creates a LocalTrampolinePool with the given RunCallback function.
   /// Returns an error if this function is unable to correctly allocate, write
   /// and protect the resolver code block.
   static Expected<std::unique_ptr<LocalTrampolinePool>>
-  Create(GetTrampolineLandingFunction GetTrampolineLanding) {
+  Create(ResolveLandingFunction ResolveLanding) {
     Error Err = Error::success();
 
     auto LTP = std::unique_ptr<LocalTrampolinePool>(
-        new LocalTrampolinePool(std::move(GetTrampolineLanding), Err));
+        new LocalTrampolinePool(std::move(ResolveLanding), Err));
 
     if (Err)
       return std::move(Err);
@@ -108,13 +113,19 @@ private:
   static JITTargetAddress reenter(void *TrampolinePoolPtr, void *TrampolineId) {
     LocalTrampolinePool<ORCABI> *TrampolinePool =
         static_cast<LocalTrampolinePool *>(TrampolinePoolPtr);
-    return TrampolinePool->GetTrampolineLanding(static_cast<JITTargetAddress>(
-        reinterpret_cast<uintptr_t>(TrampolineId)));
+
+    std::promise<JITTargetAddress> LandingAddressP;
+    auto LandingAddressF = LandingAddressP.get_future();
+
+    TrampolinePool->ResolveLanding(pointerToJITTargetAddress(TrampolineId),
+                                   [&](JITTargetAddress LandingAddress) {
+                                     LandingAddressP.set_value(LandingAddress);
+                                   });
+    return LandingAddressF.get();
   }
 
-  LocalTrampolinePool(GetTrampolineLandingFunction GetTrampolineLanding,
-                      Error &Err)
-      : GetTrampolineLanding(std::move(GetTrampolineLanding)) {
+  LocalTrampolinePool(ResolveLandingFunction ResolveLanding, Error &Err)
+      : ResolveLanding(std::move(ResolveLanding)) {
 
     ErrorAsOutParameter _(&Err);
 
@@ -173,7 +184,7 @@ private:
     return Error::success();
   }
 
-  GetTrampolineLandingFunction GetTrampolineLanding;
+  ResolveLandingFunction ResolveLanding;
 
   std::mutex LTPMutex;
   sys::OwningMemoryBlock ResolverBlock;
@@ -241,10 +252,14 @@ private:
                                  JITTargetAddress ErrorHandlerAddress,
                                  Error &Err)
       : JITCompileCallbackManager(nullptr, ES, ErrorHandlerAddress) {
+    using NotifyLandingResolvedFunction =
+        TrampolinePool::NotifyLandingResolvedFunction;
+
     ErrorAsOutParameter _(&Err);
     auto TP = LocalTrampolinePool<ORCABI>::Create(
-        [this](JITTargetAddress TrampolineAddr) {
-          return executeCompileCallback(TrampolineAddr);
+        [this](JITTargetAddress TrampolineAddr,
+               NotifyLandingResolvedFunction NotifyLandingResolved) {
+          NotifyLandingResolved(executeCompileCallback(TrampolineAddr));
         });
 
     if (!TP) {
