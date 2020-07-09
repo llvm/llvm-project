@@ -4295,7 +4295,7 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
 
     Base = SDB->getValue(C);
 
-    unsigned NumElts = cast<VectorType>(Ptr->getType())->getNumElements();
+    unsigned NumElts = cast<FixedVectorType>(Ptr->getType())->getNumElements();
     EVT VT = EVT::getVectorVT(*DAG.getContext(), TLI.getPointerTy(DL), NumElts);
     Index = DAG.getConstant(0, SDB->getCurSDLoc(), VT);
     IndexType = ISD::SIGNED_SCALED;

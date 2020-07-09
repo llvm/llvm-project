@@ -1059,7 +1059,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   // splat vector.
   unsigned VectorWidth = 0;
   if (auto *VT = dyn_cast<VectorType>(U.getType()))
-    VectorWidth = VT->getNumElements();
+    VectorWidth = cast<FixedVectorType>(VT)->getNumElements();
 
   // We might need to splat the base pointer into a vector if the offsets
   // are vectors.
@@ -1946,7 +1946,7 @@ bool IRTranslator::translateInsertElement(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (cast<VectorType>(U.getType())->getNumElements() == 1)
+  if (cast<FixedVectorType>(U.getType())->getNumElements() == 1)
     return translateCopy(U, *U.getOperand(1), MIRBuilder);
 
   Register Res = getOrCreateVReg(U);
@@ -1961,7 +1961,7 @@ bool IRTranslator::translateExtractElement(const User &U,
                                            MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (cast<VectorType>(U.getOperand(0)->getType())->getNumElements() == 1)
+  if (cast<FixedVectorType>(U.getOperand(0)->getType())->getNumElements() == 1)
     return translateCopy(U, *U.getOperand(0), MIRBuilder);
 
   Register Res = getOrCreateVReg(U);
