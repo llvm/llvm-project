@@ -811,6 +811,7 @@ public:
     case LineChar::LabelHoriz:
       return IsASCII ? "-" : u8"\u2500";
     }
+    llvm_unreachable("Unhandled LineChar enum");
   }
 
   /// Print live ranges to the right of an existing line. This assumes the
