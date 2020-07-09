@@ -24,6 +24,10 @@ parameters = [
             feature=lambda exceptions: None if exceptions else
               Feature(name='no-exceptions', compileFlag='-fno-exceptions')),
 
+  Parameter(name='stdlib', choices=['libc++', 'libstdc++', 'msvc'], type=str, default='libc++',
+            help="The C++ Standard Library implementation being tested.",
+            feature=lambda stdlib: Feature(name=stdlib)),
+
   # Parameters to enable or disable parts of the test suite
   Parameter(name='enable_filesystem', choices=[True, False], type=bool, default=True,
             help="Whether to enable tests for the C++ <filesystem> library.",
