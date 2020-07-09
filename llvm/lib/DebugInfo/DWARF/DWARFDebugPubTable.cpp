@@ -18,34 +18,32 @@
 using namespace llvm;
 using namespace dwarf;
 
-DWARFDebugPubTable::DWARFDebugPubTable(const DWARFObject &Obj,
-                                       const DWARFSection &Sec,
-                                       bool LittleEndian, bool GnuStyle)
-    : GnuStyle(GnuStyle) {
-  DWARFDataExtractor PubNames(Obj, Sec, LittleEndian, 0);
-  uint64_t Offset = 0;
-  while (PubNames.isValidOffset(Offset)) {
+Error DWARFDebugPubTable::extract(DWARFDataExtractor Data, bool GnuStyle) {
+  this->GnuStyle = GnuStyle;
+  Sets.clear();
+  DataExtractor::Cursor C(0);
+  while (C && Data.isValidOffset(C.tell())) {
     Sets.push_back({});
     Set &SetData = Sets.back();
 
-    std::tie(SetData.Length, SetData.Format) =
-        PubNames.getInitialLength(&Offset);
+    std::tie(SetData.Length, SetData.Format) = Data.getInitialLength(C);
     const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(SetData.Format);
 
-    SetData.Version = PubNames.getU16(&Offset);
-    SetData.Offset = PubNames.getRelocatedValue(OffsetSize, &Offset);
-    SetData.Size = PubNames.getUnsigned(&Offset, OffsetSize);
+    SetData.Version = Data.getU16(C);
+    SetData.Offset = Data.getRelocatedValue(C, OffsetSize);
+    SetData.Size = Data.getUnsigned(C, OffsetSize);
 
-    while (Offset < Sec.Data.size()) {
-      uint64_t DieRef = PubNames.getUnsigned(&Offset, OffsetSize);
+    while (C) {
+      uint64_t DieRef = Data.getUnsigned(C, OffsetSize);
       if (DieRef == 0)
         break;
-      uint8_t IndexEntryValue = GnuStyle ? PubNames.getU8(&Offset) : 0;
-      StringRef Name = PubNames.getCStrRef(&Offset);
+      uint8_t IndexEntryValue = GnuStyle ? Data.getU8(C) : 0;
+      StringRef Name = Data.getCStrRef(C);
       SetData.Entries.push_back(
           {DieRef, PubIndexEntryDescriptor(IndexEntryValue), Name});
     }
   }
+  return C.takeError();
 }
 
 void DWARFDebugPubTable::dump(raw_ostream &OS) const {
