@@ -17,6 +17,8 @@
 #include "lldb/Utility/UserID.h"
 #include "llvm/ADT/ArrayRef.h"
 
+#include <mutex>
+
 namespace lldb_private {
 
 class ExecutionContext;
@@ -655,6 +657,9 @@ protected:
   uint32_t
       m_prologue_byte_size; ///< Compute the prologue size once and cache it
 
+  std::mutex
+      m_call_edges_lock; ///< Exclusive lock that controls read/write
+                         ///  access to m_call_edges and m_call_edges_resolved.
   bool m_call_edges_resolved = false; ///< Whether call site info has been
                                       ///  parsed.
   std::vector<std::unique_ptr<CallEdge>> m_call_edges; ///< Outgoing call edges.

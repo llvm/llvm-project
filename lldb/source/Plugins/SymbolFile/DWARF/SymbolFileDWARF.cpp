@@ -3844,6 +3844,11 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
 
 std::vector<std::unique_ptr<lldb_private::CallEdge>>
 SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
+  // ParseCallEdgesInFunction must be called at the behest of an exclusively
+  // locked lldb::Function instance. Storage for parsed call edges is owned by
+  // the lldb::Function instance: locking at the SymbolFile level would be too
+  // late, because the act of storing results from ParseCallEdgesInFunction
+  // would be racy.
   DWARFDIE func_die = GetDIE(func_id.GetID());
   if (func_die.IsValid())
     return CollectCallEdges(GetObjectFile()->GetModule(), func_die);
