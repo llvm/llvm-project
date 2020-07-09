@@ -427,7 +427,6 @@ class Configuration(object):
             self.configure_link_flags_abi_library()
             self.configure_extra_library_flags()
         elif self.cxx_stdlib_under_test == 'libstdc++':
-            self.config.available_features.add('c++experimental')
             self.cxx.link_flags += ['-lstdc++fs', '-lm', '-pthread']
         elif self.cxx_stdlib_under_test == 'msvc':
             # FIXME: Correctly setup debug/release flags here.
@@ -465,10 +464,6 @@ class Configuration(object):
                 self.add_path(self.exec_env, self.abi_library_root)
 
     def configure_link_flags_cxx_library(self):
-        libcxx_experimental = self.get_lit_bool('enable_experimental', default=False)
-        if libcxx_experimental:
-            self.config.available_features.add('c++experimental')
-            self.cxx.link_flags += ['-lc++experimental']
         if self.link_shared:
             self.cxx.link_flags += ['-lc++']
         else:
