@@ -38,7 +38,7 @@ ms ShortTime = ms(50);
 
 static constexpr unsigned Threads = 5;
 
-std::atomic<unsigned> CountDown = Threads;
+std::atomic<unsigned> CountDown(Threads);
 
 void f1()
 {
