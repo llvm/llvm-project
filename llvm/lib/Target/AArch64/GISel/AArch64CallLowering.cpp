@@ -52,10 +52,10 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {}
 
 namespace {
-struct IncomingArgHandler : public CallLowering::ValueHandler {
+struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      CCAssignFn *AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn), StackUsed(0) {}
+      : IncomingValueHandler(MIRBuilder, MRI, AssignFn), StackUsed(0) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -98,8 +98,6 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
   /// (it's an implicit-def of the BL).
   virtual void markPhysRegUsed(unsigned PhysReg) = 0;
 
-  bool isIncomingArgumentHandler() const override { return true; }
-
   uint64_t StackUsed;
 };
 
@@ -126,16 +124,14 @@ struct CallReturnHandler : public IncomingArgHandler {
   MachineInstrBuilder MIB;
 };
 
-struct OutgoingArgHandler : public CallLowering::ValueHandler {
+struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      MachineInstrBuilder MIB, CCAssignFn *AssignFn,
                      CCAssignFn *AssignFnVarArg, bool IsTailCall = false,
                      int FPDiff = 0)
-      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
+      : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
         AssignFnVarArg(AssignFnVarArg), IsTailCall(IsTailCall), FPDiff(FPDiff),
         StackSize(0), SPReg(0) {}
-
-  bool isIncomingArgumentHandler() const override { return false; }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
