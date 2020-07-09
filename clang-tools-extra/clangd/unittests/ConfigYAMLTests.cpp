@@ -98,10 +98,25 @@ CompileFlags: {^
                         DiagKind(llvm::SourceMgr::DK_Error),
                         DiagPos(YAML.point()), DiagRange(llvm::None))));
 
-  ASSERT_EQ(Results.size(), 2u);
+  ASSERT_EQ(Results.size(), 1u); // invalid fragment discarded.
   EXPECT_THAT(Results.front().CompileFlags.Add, ElementsAre(Val("first")));
   EXPECT_TRUE(Results.front().If.HasUnrecognizedCondition);
-  EXPECT_THAT(Results.back().CompileFlags.Add, IsEmpty());
+}
+
+TEST(ParseYAML, Invalid) {
+  CapturedDiags Diags;
+  const char *YAML = R"yaml(
+If:
+
+horrible
+---
+- 1
+  )yaml";
+  auto Results = Fragment::parseYAML(YAML, "config.yaml", Diags.callback());
+  EXPECT_THAT(Diags.Diagnostics,
+              ElementsAre(DiagMessage("If should be a dictionary"),
+                          DiagMessage("Config should be a dictionary")));
+  ASSERT_THAT(Results, IsEmpty());
 }
 
 } // namespace

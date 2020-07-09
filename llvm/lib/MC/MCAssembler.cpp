@@ -820,48 +820,57 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {
     for (MCFragment &Frag : Sec) {
-      // Data and relaxable fragments both have fixups.  So only process
-      // those here.
-      // FIXME: Is there a better way to do this?  MCEncodedFragmentWithFixups
-      // being templated makes this tricky.
-      if (isa<MCEncodedFragment>(&Frag) &&
-          isa<MCCompactEncodedInstFragment>(&Frag))
-        continue;
-      if (!isa<MCEncodedFragment>(&Frag) && !isa<MCCVDefRangeFragment>(&Frag) &&
-          !isa<MCAlignFragment>(&Frag))
-        continue;
       ArrayRef<MCFixup> Fixups;
       MutableArrayRef<char> Contents;
       const MCSubtargetInfo *STI = nullptr;
-      if (auto *FragWithFixups = dyn_cast<MCDataFragment>(&Frag)) {
-        Fixups = FragWithFixups->getFixups();
-        Contents = FragWithFixups->getContents();
-        STI = FragWithFixups->getSubtargetInfo();
-        assert(!FragWithFixups->hasInstructions() || STI != nullptr);
-      } else if (auto *FragWithFixups = dyn_cast<MCRelaxableFragment>(&Frag)) {
-        Fixups = FragWithFixups->getFixups();
-        Contents = FragWithFixups->getContents();
-        STI = FragWithFixups->getSubtargetInfo();
-        assert(!FragWithFixups->hasInstructions() || STI != nullptr);
-      } else if (auto *FragWithFixups = dyn_cast<MCCVDefRangeFragment>(&Frag)) {
-        Fixups = FragWithFixups->getFixups();
-        Contents = FragWithFixups->getContents();
-      } else if (auto *FragWithFixups = dyn_cast<MCDwarfLineAddrFragment>(&Frag)) {
-        Fixups = FragWithFixups->getFixups();
-        Contents = FragWithFixups->getContents();
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(&Frag)) {
+
+      // Process MCAlignFragment and MCEncodedFragmentWithFixups here.
+      switch (Frag.getKind()) {
+      default:
+        continue;
+      case MCFragment::FT_Align: {
+        MCAlignFragment &AF = cast<MCAlignFragment>(Frag);
         // Insert fixup type for code alignment if the target define
         // shouldInsertFixupForCodeAlign target hook.
-        if (Sec.UseCodeAlign() && AF->hasEmitNops()) {
-          getBackend().shouldInsertFixupForCodeAlign(*this, Layout, *AF);
-        }
+        if (Sec.UseCodeAlign() && AF.hasEmitNops())
+          getBackend().shouldInsertFixupForCodeAlign(*this, Layout, AF);
         continue;
-      } else if (auto *FragWithFixups =
-                     dyn_cast<MCDwarfCallFrameFragment>(&Frag)) {
-        Fixups = FragWithFixups->getFixups();
-        Contents = FragWithFixups->getContents();
-      } else
-        llvm_unreachable("Unknown fragment with fixups!");
+      }
+      case MCFragment::FT_Data: {
+        MCDataFragment &DF = cast<MCDataFragment>(Frag);
+        Fixups = DF.getFixups();
+        Contents = DF.getContents();
+        STI = DF.getSubtargetInfo();
+        assert(!DF.hasInstructions() || STI != nullptr);
+        break;
+      }
+      case MCFragment::FT_Relaxable: {
+        MCRelaxableFragment &RF = cast<MCRelaxableFragment>(Frag);
+        Fixups = RF.getFixups();
+        Contents = RF.getContents();
+        STI = RF.getSubtargetInfo();
+        assert(!RF.hasInstructions() || STI != nullptr);
+        break;
+      }
+      case MCFragment::FT_CVDefRange: {
+        MCCVDefRangeFragment &CF = cast<MCCVDefRangeFragment>(Frag);
+        Fixups = CF.getFixups();
+        Contents = CF.getContents();
+        break;
+      }
+      case MCFragment::FT_Dwarf: {
+        MCDwarfLineAddrFragment &DF = cast<MCDwarfLineAddrFragment>(Frag);
+        Fixups = DF.getFixups();
+        Contents = DF.getContents();
+        break;
+      }
+      case MCFragment::FT_DwarfFrame: {
+        MCDwarfCallFrameFragment &DF = cast<MCDwarfCallFrameFragment>(Frag);
+        Fixups = DF.getFixups();
+        Contents = DF.getContents();
+        break;
+      }
+      }
       for (const MCFixup &Fixup : Fixups) {
         uint64_t FixedValue;
         bool IsResolved;

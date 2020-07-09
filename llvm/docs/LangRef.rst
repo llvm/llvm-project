@@ -6843,7 +6843,9 @@ function and looks like:
     param: 4, offset: [0, 5][, calls: ((Callee)[, (Callee)]*)]?
 
 where the first ``param`` is the number of the parameter it describes,
-``offset`` is the known access range of the paramenter inside of the function.
+``offset`` is the inclusive range of offsets from the pointer parameter to bytes
+which can be accessed by the function. This range does not include accesses by
+function calls from ``calls`` list.
 
 where each ``Callee`` decribes how parameter is forwared into other
 functions and looks like:
@@ -6854,7 +6856,44 @@ functions and looks like:
 
 The ``callee`` refers to the summary entry id of the callee,  ``param`` is
 the number of the callee parameter which points into the callers parameter
-with offset known to be inside of the ``offset`` range.
+with offset known to be inside of the ``offset`` range. ``calls`` will be
+consumed and removed by thin link stage to update ``Param::offset`` so it
+covers all accesses possible by ``calls``.
+
+Pointer parameter without corresponding ``Param`` is considered unsafe and we
+assume that access with any offset is possible.
+
+Example:
+
+If we have the following function:
+
+.. code-block:: text
+
+    define i64 @foo(i64* %0, i32* %1, i8* %2, i8 %3) {
+      store i32* %1, i32** @x
+      %5 = getelementptr inbounds i8, i8* %2, i64 5
+      %6 = load i8, i8* %5
+      %7 = getelementptr inbounds i8, i8* %2, i8 %3
+      tail call void @bar(i8 %3, i8* %7)
+      %8 = load i64, i64* %0
+      ret i64 %8
+    }
+
+We can expect the record like this:
+
+.. code-block:: text
+
+    params: ((param: 0, offset: [0, 7]),(param: 2, offset: [5, 5], calls: ((callee: ^3, param: 1, offset: [-128, 127]))))
+
+The function may access just 8 bytes of the paramenter %0 . ``calls`` is empty,
+so the parameter is either not used for function calls or ``offset`` already
+covers all accesses from nested function calls.
+Parameter %1 escapes, so access is unknown.
+The function itself can access just a single byte of the parameter %2. Additional
+access is possible inside of the ``@bar`` or ``^3``. The function adds signed
+offset to the pointer and passes the result as the argument %1 into ``^3``.
+This record itself does not tell us how ``^3`` will access the parameter.
+Parameter %3 is not a pointer.
 
 .. _refs_summary:
 

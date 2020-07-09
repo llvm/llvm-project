@@ -600,6 +600,9 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
         RenameIter == RenameStack.begin() ? OrigOp : (RenameIter - 1)->Def;
     ValueDFS &Result = *RenameIter;
     auto *ValInfo = Result.PInfo;
+    ValInfo->RenamedOp = (RenameStack.end() - Start) == RenameStack.begin()
+                             ? OrigOp
+                             : (RenameStack.end() - Start - 1)->Def;
     // For edge predicates, we can just place the operand in the block before
     // the terminator.  For assume, we have to place it right before the assume
     // to ensure we dominate all of our uses.  Always insert right before the
