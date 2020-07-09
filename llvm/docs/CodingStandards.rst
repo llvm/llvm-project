@@ -1302,6 +1302,9 @@ loops wherever possible for all newly added code. For example:
   for (Instruction &I : *BB)
     ... use I ...
 
+Usage of ``std::for_each()``/``llvm::for_each()`` functions is discouraged,
+unless the the callable object already exists.
+
 Don't evaluate ``end()`` every time through a loop
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
