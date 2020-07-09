@@ -625,6 +625,7 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   PMBuilder.SizeLevel = CodeGenOpts.OptimizeSize;
   PMBuilder.SLPVectorize = CodeGenOpts.VectorizeSLP;
   PMBuilder.LoopVectorize = CodeGenOpts.VectorizeLoop;
+  PMBuilder.CallGraphProfile = !CodeGenOpts.DisableIntegratedAS;
 
   PMBuilder.DisableUnrollLoops = !CodeGenOpts.UnrollLoops;
   // Loop interleaving in the loop vectorizer has historically been set to be
@@ -1157,7 +1158,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   PTO.LoopInterleaving = CodeGenOpts.UnrollLoops;
   PTO.LoopVectorization = CodeGenOpts.VectorizeLoop;
   PTO.SLPVectorization = CodeGenOpts.VectorizeSLP;
-  PTO.CallGraphProfile = CodeGenOpts.CallGraphProfile;
+  PTO.CallGraphProfile = !CodeGenOpts.DisableIntegratedAS;
   PTO.Coroutines = LangOpts.Coroutines;
 
   PassInstrumentationCallbacks PIC;
@@ -1578,7 +1579,7 @@ static void runThinLTOBackend(
   Conf.PTO.LoopInterleaving = CGOpts.UnrollLoops;
   Conf.PTO.LoopVectorization = CGOpts.VectorizeLoop;
   Conf.PTO.SLPVectorization = CGOpts.VectorizeSLP;
-  Conf.PTO.CallGraphProfile = CGOpts.CallGraphProfile;
+  Conf.PTO.CallGraphProfile = !CGOpts.DisableIntegratedAS;
 
   // Context sensitive profile.
   if (CGOpts.hasProfileCSIRInstr()) {
