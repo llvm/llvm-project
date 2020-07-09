@@ -71,7 +71,7 @@ static unsigned getLLVMTypeBitWidth(LLVM::LLVMType type) {
 }
 
 /// Creates `IntegerAttribute` with all bits set for given type
-IntegerAttr minusOneIntegerAttribute(Type type, Builder builder) {
+static IntegerAttr minusOneIntegerAttribute(Type type, Builder builder) {
   if (auto vecType = type.dyn_cast<VectorType>()) {
     auto integerType = vecType.getElementType().cast<IntegerType>();
     return builder.getIntegerAttr(integerType, -1);

@@ -1086,10 +1086,12 @@ Expected<StringRef> ELFDumper<ELFT>::getSymbolVersion(const Elf_Sym *Sym,
                       sizeof(Elf_Sym);
 
   // Get the corresponding version index entry.
-  const Elf_Versym *Versym = unwrapOrError(
-      ObjF->getFileName(), ObjF->getELFFile()->template getEntry<Elf_Versym>(
-                               SymbolVersionSection, EntryIndex));
-  return this->getSymbolVersionByIndex(Versym->vs_index, IsDefault);
+  if (Expected<const Elf_Versym *> EntryOrErr =
+          ObjF->getELFFile()->template getEntry<Elf_Versym>(
+              SymbolVersionSection, EntryIndex))
+    return this->getSymbolVersionByIndex((*EntryOrErr)->vs_index, IsDefault);
+  else
+    return EntryOrErr.takeError();
 }
 
 template <typename ELFT>
