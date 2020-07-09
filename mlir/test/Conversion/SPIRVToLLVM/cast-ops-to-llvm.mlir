@@ -34,6 +34,12 @@ func @bitcast_vector_to_vector(%arg0 : vector<4xf32>) {
 	return
 }
 
+func @bitcast_pointer(%arg0: !spv.ptr<f32, Function>) {
+	// CHECK: %{{.*}} = llvm.bitcast %{{.*}} : !llvm<"float*"> to !llvm<"i32*">
+	%0 = spv.Bitcast %arg0 : !spv.ptr<f32, Function> to !spv.ptr<i32, Function>
+	return
+}
+
 //===----------------------------------------------------------------------===//
 // spv.ConvertFToS
 //===----------------------------------------------------------------------===//

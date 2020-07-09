@@ -32,6 +32,9 @@ protected:
   LLVMTypeConverter &typeConverter;
 };
 
+/// Populates type conversions with additional SPIR-V types.
+void populateSPIRVToLLVMTypeConversion(LLVMTypeConverter &typeConverter);
+
 /// Populates the given list with patterns that convert from SPIR-V to LLVM.
 void populateSPIRVToLLVMConversionPatterns(MLIRContext *context,
                                            LLVMTypeConverter &typeConverter,
