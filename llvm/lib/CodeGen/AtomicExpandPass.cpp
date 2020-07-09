@@ -89,7 +89,7 @@ namespace {
         AtomicRMWInst *I,
         TargetLoweringBase::AtomicExpansionKind ExpansionKind);
     AtomicRMWInst *widenPartwordAtomicRMW(AtomicRMWInst *AI);
-    void expandPartwordCmpXchg(AtomicCmpXchgInst *I);
+    bool expandPartwordCmpXchg(AtomicCmpXchgInst *I);
     void expandAtomicRMWToMaskedIntrinsic(AtomicRMWInst *AI);
     void expandAtomicCmpXchgToMaskedIntrinsic(AtomicCmpXchgInst *CI);
 
@@ -826,7 +826,7 @@ AtomicRMWInst *AtomicExpand::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
   return NewAI;
 }
 
-void AtomicExpand::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
+bool AtomicExpand::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // The basic idea here is that we're expanding a cmpxchg of a
   // smaller memory size up to a word-sized cmpxchg. To do this, we
   // need to add a retry-loop for strong cmpxchg, so that
@@ -949,6 +949,7 @@ void AtomicExpand::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
 
   CI->replaceAllUsesWith(Res);
   CI->eraseFromParent();
+  return true;
 }
 
 void AtomicExpand::expandAtomicOpToLLSC(
@@ -1448,7 +1449,7 @@ bool AtomicExpand::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
     llvm_unreachable("Unhandled case in tryExpandAtomicCmpXchg");
   case TargetLoweringBase::AtomicExpansionKind::None:
     if (ValueSize < MinCASSize)
-      expandPartwordCmpXchg(CI);
+      return expandPartwordCmpXchg(CI);
     return false;
   case TargetLoweringBase::AtomicExpansionKind::LLSC: {
     return expandAtomicCmpXchg(CI);
