@@ -202,29 +202,27 @@ void GenerateGetKind(const std::vector<Record *> &Records, raw_ostream &OS,
   OS << "}\n";
 }
 
-void GenerateTestForAllowedClauses(const std::vector<Record *> &Clauses,
-                                   raw_ostream &OS, StringRef DirectiveName,
-                                   StringRef DirectivePrefix,
-                                   StringRef ClausePrefix) {
-
-  const auto FormattedDirectiveName = getFormattedName(DirectiveName);
+void GenerateCaseForVersionedClauses(const std::vector<Record *> &Clauses,
+                                     raw_ostream &OS, StringRef DirectiveName,
+                                     StringRef DirectivePrefix,
+                                     StringRef ClausePrefix) {
   for (const auto &C : Clauses) {
     const auto MinVersion = C->getValueAsInt("minVersion");
     const auto MaxVersion = C->getValueAsInt("maxVersion");
     const auto SpecificClause = C->getValueAsDef("clause");
     const auto ClauseName = SpecificClause->getValueAsString("name");
-
-    OS << "  if (D == " << DirectivePrefix << FormattedDirectiveName
-       << " && C == " << ClausePrefix << getFormattedName(ClauseName) << " && "
-       << MinVersion << " <= Version && " << MaxVersion << " >= Version)\n";
-    OS << "    return true;\n";
+    OS << "        case " << ClausePrefix << getFormattedName(ClauseName)
+       << ":\n";
+    OS << "          return " << MinVersion << " <= Version && " << MaxVersion
+       << " >= Version;\n";
   }
 }
 
 // Generate the isAllowedClauseForDirective function implementation.
 void GenerateIsAllowedClause(const std::vector<Record *> &Directives,
-                             raw_ostream &OS, StringRef DirectivePrefix,
-                             StringRef ClausePrefix, StringRef CppNamespace) {
+                             raw_ostream &OS, StringRef LanguageName,
+                             StringRef DirectivePrefix, StringRef ClausePrefix,
+                             StringRef CppNamespace) {
   OS << "\n";
   OS << "bool llvm::" << CppNamespace << "::isAllowedClauseForDirective("
      << "Directive D, Clause C, unsigned Version) {\n";
@@ -233,24 +231,39 @@ void GenerateIsAllowedClause(const std::vector<Record *> &Directives,
   OS << "  assert(unsigned(C) <= llvm::" << CppNamespace
      << "::Clause_enumSize);\n";
 
+  OS << "  switch (D) {\n";
+
   for (const auto &D : Directives) {
+
     const auto DirectiveName = D->getValueAsString("name");
 
+    OS << "    case " << DirectivePrefix << getFormattedName(DirectiveName)
+       << ":\n";
+    OS << "      switch (C) {\n";
+
     const auto &AllowedClauses = D->getValueAsListOfDefs("allowedClauses");
-    GenerateTestForAllowedClauses(AllowedClauses, OS, DirectiveName,
-                                  DirectivePrefix, ClausePrefix);
+    GenerateCaseForVersionedClauses(AllowedClauses, OS, DirectiveName,
+                                    DirectivePrefix, ClausePrefix);
 
     const auto &AllowedOnceClauses =
         D->getValueAsListOfDefs("allowedOnceClauses");
-    GenerateTestForAllowedClauses(AllowedOnceClauses, OS, DirectiveName,
-                                  DirectivePrefix, ClausePrefix);
+    GenerateCaseForVersionedClauses(AllowedOnceClauses, OS, DirectiveName,
+                                    DirectivePrefix, ClausePrefix);
 
     const auto &RequiredClauses = D->getValueAsListOfDefs("requiredClauses");
-    GenerateTestForAllowedClauses(RequiredClauses, OS, DirectiveName,
-                                  DirectivePrefix, ClausePrefix);
+    GenerateCaseForVersionedClauses(RequiredClauses, OS, DirectiveName,
+                                    DirectivePrefix, ClausePrefix);
+
+    OS << "        default:\n";
+    OS << "          return false;\n";
+    OS << "      }\n"; // End of clauses switch
+    OS << "      break;\n";
   }
-  OS << "  return false;\n";
-  OS << "}\n";
+
+  OS << "  }\n"; // End of directives switch
+  OS << "  llvm_unreachable(\"Invalid " << LanguageName
+     << " Directive kind\");\n";
+  OS << "}\n"; // End of function isAllowedClauseForDirective
 }
 
 // Generate the implemenation section for the enumeration in the directive
@@ -291,8 +304,8 @@ void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
   GenerateGetName(Clauses, OS, "Clause", ClausePrefix, LanguageName,
                   CppNamespace);
 
-  GenerateIsAllowedClause(Directives, OS, DirectivePrefix, ClausePrefix,
-                          CppNamespace);
+  GenerateIsAllowedClause(Directives, OS, LanguageName, DirectivePrefix,
+                          ClausePrefix, CppNamespace);
 }
 
 } // namespace llvm

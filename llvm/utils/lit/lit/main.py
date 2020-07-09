@@ -265,15 +265,15 @@ def print_results(tests, elapsed, opts):
         tests_by_code[test.result.code].append(test)
 
     for code in lit.Test.ResultCode.all_codes():
-        print_group(tests_by_code[code], code, opts.show_results)
+        print_group(tests_by_code[code], code, opts.shown_codes)
 
     print_summary(tests_by_code, opts.quiet, elapsed)
 
 
-def print_group(tests, code, show_results):
+def print_group(tests, code, shown_codes):
     if not tests:
         return
-    if not code.isFailure and code not in show_results:
+    if not code.isFailure and code not in shown_codes:
         return
     print('*' * 20)
     print('{} Tests ({}):'.format(code.label, len(tests)))

@@ -15,6 +15,7 @@
 #include "lock.h"
 #include "memory.h"
 #include "unit.h"
+#include <cstdlib>
 
 namespace Fortran::runtime::io {
 
@@ -59,7 +60,7 @@ private:
   };
 
   static constexpr int buckets_{1031}; // must be prime
-  int Hash(int n) { return n % buckets_; }
+  int Hash(int n) { return std::abs(n) % buckets_; }
 
   ExternalFileUnit *Find(int n) {
     Chain *previous{nullptr};
