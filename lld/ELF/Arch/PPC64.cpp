@@ -1039,6 +1039,11 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (s.isInPlt())
     return true;
 
+  // This check looks at the st_other bits of the callee. If the value is 1
+  // then the callee clobbers the TOC and we need an R2 save stub.
+  if ((s.stOther >> 5) == 1)
+    return true;
+
   // If a symbol is a weak undefined and we are compiling an executable
   // it doesn't need a range-extending thunk since it can't be called.
   if (s.isUndefWeak() && !config->shared)
