@@ -279,6 +279,20 @@ public:
   void addSymbols(ThunkSection &isec) override;
 };
 
+// PPC64 R2 Save Stub
+// When the caller requires a valid R2 TOC pointer but the callee does not
+// require a TOC pointer and the callee cannot guarantee that it doesn't
+// clobber R2 then we need to save R2. This stub:
+// 1) Saves the TOC pointer to the stack.
+// 2) Tail calls the callee.
+class PPC64R2SaveStub final : public Thunk {
+public:
+  PPC64R2SaveStub(Symbol &dest) : Thunk(dest, 0) {}
+  uint32_t size() override { return 8; }
+  void writeTo(uint8_t *buf) override;
+  void addSymbols(ThunkSection &isec) override;
+};
+
 // A bl instruction uses a signed 24 bit offset, with an implicit 4 byte
 // alignment. This gives a possible 26 bits of 'reach'. If the call offset is
 // larger then that we need to emit a long-branch thunk. The target address
@@ -822,6 +836,21 @@ void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
   s->file = destination.file;
 }
 
+void PPC64R2SaveStub::writeTo(uint8_t *buf) {
+  int64_t offset = destination.getVA() - (getThunkTargetSym()->getVA() + 4);
+  // The branch offset needs to fit in 26 bits.
+  if (!isInt<26>(offset))
+    fatal("R2 save stub branch offset is too large: " + Twine(offset));
+  write32(buf + 0, 0xf8410018);                         // std  r2,24(r1)
+  write32(buf + 4, 0x48000000 | (offset & 0x03fffffc)); // b    <offset>
+}
+
+void PPC64R2SaveStub::addSymbols(ThunkSection &isec) {
+  Defined *s = addSymbol(saver.save("__toc_save_" + destination.getName()),
+                         STT_FUNC, 0, isec);
+  s->needsTocRestore = true;
+}
+
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
   int64_t offset = in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
                    getPPC64TocBase();
@@ -949,6 +978,11 @@ static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
          "unexpected relocation type for thunk");
   if (s.isInPlt())
     return make<PPC64PltCallStub>(s);
+
+  // This check looks at the st_other bits of the callee. If the value is 1
+  // then the callee clobbers the TOC and we need an R2 save stub.
+  if ((s.stOther >> 5) == 1)
+    return make<PPC64R2SaveStub>(s);
 
   if (config->picThunk)
     return make<PPC64PILongBranchThunk>(s, a);
