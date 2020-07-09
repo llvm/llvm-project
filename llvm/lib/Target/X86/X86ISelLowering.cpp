@@ -42429,7 +42429,7 @@ static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
   }
 }
 
-unsigned convertIntLogicToFPLogicOpcode(unsigned Opcode) {
+static unsigned convertIntLogicToFPLogicOpcode(unsigned Opcode) {
   unsigned FPOpcode;
   switch (Opcode) {
   default: llvm_unreachable("Unexpected input node for FP logic conversion");
