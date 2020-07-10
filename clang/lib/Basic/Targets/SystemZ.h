@@ -48,6 +48,7 @@ public:
     MinGlobalAlign = 16;
     resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64");
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    HasStrictFP = true;
   }
 
   void getTargetDefines(const LangOptions &Opts,

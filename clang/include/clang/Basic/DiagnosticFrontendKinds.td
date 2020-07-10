@@ -37,6 +37,12 @@ def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 def warn_fe_override_module : Warning<
     "overriding the module target triple with %0">,
     InGroup<DiagGroup<"override-module">>;
+def warn_fe_backend_unsupported_fp_rounding : Warning<
+    "overriding currently unsupported rounding mode on this target">,
+    InGroup<UnsupportedFPOpt>;
+def warn_fe_backend_unsupported_fp_exceptions : Warning<
+    "overriding currently unsupported use of floating point exceptions "
+    "on this target">, InGroup<UnsupportedFPOpt>;
 
 def remark_fe_backend_optimization_remark : Remark<"%0">, BackendInfo,
     InGroup<BackendOptimizationRemark>;
