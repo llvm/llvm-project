@@ -132,27 +132,35 @@ def docker_shell(args):
         pass
 
     finally:
-        print("Please wait for docker to clean up")
-        call("docker stop satest", shell=True)
+        docker_cleanup()
 
 
 def docker_run(args, command, docker_args=""):
-    return call("docker run --rm --name satest "
-                "-v {llvm}:/llvm-project "
-                "-v {build}:/build "
-                "-v {clang}:/analyzer "
-                "-v {scripts}:/scripts "
-                "-v {projects}:/projects "
-                "{docker_args} "
-                "satest-image:latest {command}"
-                .format(llvm=args.llvm_project_dir,
-                        build=args.build_dir,
-                        clang=args.clang_dir,
-                        scripts=SCRIPTS_DIR,
-                        projects=PROJECTS_DIR,
-                        docker_args=docker_args,
-                        command=command),
-                shell=True)
+    try:
+        return call("docker run --rm --name satest "
+                    "-v {llvm}:/llvm-project "
+                    "-v {build}:/build "
+                    "-v {clang}:/analyzer "
+                    "-v {scripts}:/scripts "
+                    "-v {projects}:/projects "
+                    "{docker_args} "
+                    "satest-image:latest {command}"
+                    .format(llvm=args.llvm_project_dir,
+                            build=args.build_dir,
+                            clang=args.clang_dir,
+                            scripts=SCRIPTS_DIR,
+                            projects=PROJECTS_DIR,
+                            docker_args=docker_args,
+                            command=command),
+                    shell=True)
+
+    except KeyboardInterrupt:
+        docker_cleanup()
+
+
+def docker_cleanup():
+    print("Please wait for docker to clean up")
+    call("docker stop satest", shell=True)
 
 
 def main():
