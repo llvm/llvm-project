@@ -46,18 +46,24 @@ void print_protoent_by_num(int num) {
 }
 
 int main() {
+  // CHECK: All protoent
   // CHECK: ip (0)
   // CHECK-NEXT: alias IP
   // CHECK: ipv6 (41)
   // CHECK-NEXT: alias IPv6
+  fprintf(stderr, "All protoent\n");
   print_all_protoent();
 
-  // CHECK: rdp (27)
-  // CHECK-NEXT: alias RDP
-  print_protoent_by_name("rdp");
+  // CHECK: Protoent by name
+  // CHECK-NEXT: ipv6 (41)
+  // CHECK-NEXT: alias IPv6
+  fprintf(stderr, "Protoent by name\n");
+  print_protoent_by_name("ipv6");
 
-  // CHECK: udp (17)
+  // CHECK: Protoent by num
+  // CHECK-NEXT: udp (17)
   // CHECK-NEXT: alias UDP
+  fprintf(stderr, "Protoent by num\n");
   print_protoent_by_num(17);
   return 0;
 }
