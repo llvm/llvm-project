@@ -499,11 +499,15 @@ static bool isEmptyField(ASTContext &Context, const FieldDecl *FD,
 
   // Constant arrays of empty records count as empty, strip them off.
   // Constant arrays of zero length always count as empty.
+  bool WasArray = false;
   if (AllowArrays)
     while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
       if (AT->getSize() == 0)
         return true;
       FT = AT->getElementType();
+      // The [[no_unique_address]] special case below does not apply to
+      // arrays of C++ empty records, so we need to remember this fact.
+      WasArray = true;
     }
 
   const RecordType *RT = FT->getAs<RecordType>();
@@ -514,7 +518,14 @@ static bool isEmptyField(ASTContext &Context, const FieldDecl *FD,
   //
   // FIXME: We should use a predicate for whether this behavior is true in the
   // current ABI.
-  if (isa<CXXRecordDecl>(RT->getDecl()))
+  //
+  // The exception to the above rule are fields marked with the
+  // [[no_unique_address]] attribute (since C++20).  Those do count as empty
+  // according to the Itanium ABI.  The exception applies only to records,
+  // not arrays of records, so we must also check whether we stripped off an
+  // array type above.
+  if (isa<CXXRecordDecl>(RT->getDecl()) &&
+      (WasArray || !FD->hasAttr<NoUniqueAddressAttr>()))
     return false;
 
   return isEmptyRecord(Context, FT, AllowArrays);
@@ -7235,6 +7246,10 @@ QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
       // do count.  So do anonymous bitfields that aren't zero-sized.
       if (getContext().getLangOpts().CPlusPlus &&
           FD->isZeroLengthBitField(getContext()))
+        continue;
+      // Like isSingleElementStruct(), ignore C++20 empty data members.
+      if (FD->hasAttr<NoUniqueAddressAttr>() &&
+          isEmptyRecord(getContext(), FD->getType(), true))
         continue;
 
       // Unlike isSingleElementStruct(), arrays do not count.
