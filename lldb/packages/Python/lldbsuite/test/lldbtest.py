@@ -1881,8 +1881,7 @@ class TestBase(Base):
         shlib_prefix = self.platformContext.shlib_prefix
         shlib_extension = '.' + self.platformContext.shlib_extension
 
-        working_dir = self.get_process_working_directory()
-        environment = ['%s=%s' % (shlib_environment_var, working_dir)]
+        dirs = []
         # Add any shared libraries to our target if remote so they get
         # uploaded into the working directory on the remote side
         for name in shlibs:
@@ -1905,6 +1904,7 @@ class TestBase(Base):
                 # Make sure we found the local shared library in the above code
                 self.assertTrue(os.path.exists(local_shlib_path))
 
+
             # Add the shared library to our target
             shlib_module = target.AddModule(local_shlib_path, None, None, None)
             if lldb.remote_platform:
@@ -1914,8 +1914,15 @@ class TestBase(Base):
                     os.path.basename(local_shlib_path))
                 shlib_module.SetRemoteInstallFileSpec(
                     lldb.SBFileSpec(remote_shlib_path, False))
+                dir_to_add = self.get_process_working_directory()
+            else:
+                dir_to_add = os.path.dirname(local_shlib_path)
 
-        return environment
+            if dir_to_add not in dirs:
+                dirs.append(dir_to_add)
+
+        env_value = self.platformContext.shlib_path_separator.join(dirs)
+        return ['%s=%s' % (shlib_environment_var, env_value)]
 
     def registerSanitizerLibrariesWithTarget(self, target):
         runtimes = []
