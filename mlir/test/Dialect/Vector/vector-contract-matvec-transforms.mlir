@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-axpy=1 | FileCheck %s
+// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-outerproduct=1 | FileCheck %s
 
 #matvec_accesses = [
   affine_map<(i, j) -> (i, j)>,
@@ -44,27 +44,18 @@
 // CHECK-SAME: %[[A:.*0]]: memref<vector<2x2xf32>>
 // CHECK-SAME: %[[B:.*1]]: memref<vector<2xf32>>
 // CHECK-SAME: %[[C:.*2]]: memref<vector<2xf32>>
-// CHECK: %[[C0:.*]] = constant dense<0.000000e+00> : vector<2x2xf32>
 // CHECK: %[[T0:.*]] = load %[[A]][] : memref<vector<2x2xf32>>
 // CHECK: %[[T1:.*]] = load %[[B]][] : memref<vector<2xf32>>
 // CHECK: %[[T2:.*]] = load %[[C]][] : memref<vector<2xf32>>
-// CHECK: %[[T3:.*]] = vector.extract %[[T0]][0, 0] : vector<2x2xf32>
-// CHECK: %[[T4:.*]] = vector.insert %[[T3]], %[[C0]] [0, 0] : f32 into vector<2x2xf32>
-// CHECK: %[[T5:.*]] = vector.extract %[[T0]][1, 0] : vector<2x2xf32>
-// CHECK: %[[T6:.*]] = vector.insert %[[T5]], %[[T4]] [0, 1] : f32 into vector<2x2xf32>
-// CHECK: %[[T7:.*]] = vector.extract %[[T0]][0, 1] : vector<2x2xf32>
-// CHECK: %[[T8:.*]] = vector.insert %[[T7]], %[[T6]] [1, 0] : f32 into vector<2x2xf32>
-// CHECK: %[[T9:.*]] = vector.extract %[[T0]][1, 1] : vector<2x2xf32>
-// CHECK: %[[T10:.*]] = vector.insert %[[T9]], %[[T8]] [1, 1] : f32 into vector<2x2xf32>
-// CHECK: %[[T11:.*]] = vector.extract %[[T10]][0] : vector<2x2xf32>
-// CHECK: %[[T12:.*]] = vector.extract %[[T1]][0] : vector<2xf32>
-// CHECK: %[[T13:.*]] = splat %[[T12]] : vector<2xf32>
-// CHECK: %[[T14:.*]] = vector.fma %[[T11]], %[[T13]], %[[T2]] : vector<2xf32>
-// CHECK: %[[T15:.*]] = vector.extract %[[T10]][1] : vector<2x2xf32>
-// CHECK: %[[T16:.*]] = vector.extract %[[T1]][1] : vector<2xf32>
-// CHECK: %[[T17:.*]] = splat %[[T16]] : vector<2xf32>
-// CHECK: %[[T18:.*]] = vector.fma %[[T15]], %[[T17]], %[[T14]] : vector<2xf32>
-// CHECK: store %[[T18]], %[[C]][] : memref<vector<2xf32>>
+// CHECK: %[[T3:.*]] = vector.transpose %[[T0]], [1, 0] : vector<2x2xf32> to vector<2x2xf32>
+// CHECK: %[[T4:.*]] = vector.extract %[[T3]][0] : vector<2x2xf32>
+// CHECK: %[[T5:.*]] = vector.extract %[[T1]][0] : vector<2xf32>
+// CHECK: %[[T6:.*]] = vector.outerproduct %[[T4]], %[[T5]], %[[T2]] : vector<2xf32>, f32
+// CHECK: %[[T7:.*]] = vector.extract %[[T3]][1] : vector<2x2xf32>
+// CHECK: %[[T8:.*]] = vector.extract %[[T1]][1] : vector<2xf32>
+// CHECK: %[[T9:.*]] = vector.outerproduct %[[T7]], %[[T8]], %[[T6]] : vector<2xf32>, f32
+// CHECK: store %[[T9]], %[[C]][] : memref<vector<2xf32>>
+// CHECK: return
 func @matvec2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<vector<2xf32>>,
                                                 %arg2: memref<vector<2xf32>>) {
   %A = load %arg0[] : memref<vector<2x2xf32>>
@@ -84,13 +75,12 @@ func @matvec2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<vector<2xf32>>,
 // CHECK: %[[T2:.*]] = load %[[C]][] : memref<vector<2xf32>>
 // CHECK: %[[T3:.*]] = vector.extract %[[T0]][0] : vector<2x2xf32>
 // CHECK: %[[T4:.*]] = vector.extract %[[T1]][0] : vector<2xf32>
-// CHECK: %[[T5:.*]] = splat %[[T4]] : vector<2xf32>
-// CHECK: %[[T6:.*]] = vector.fma %[[T3]], %[[T5]], %[[T2]] : vector<2xf32>
-// CHECK: %[[T7:.*]] = vector.extract %[[T0]][1] : vector<2x2xf32>
-// CHECK: %[[T8:.*]] = vector.extract %[[T1]][1] : vector<2xf32>
-// CHECK: %[[T9:.*]] = splat %[[T8]] : vector<2xf32>
-// CHECK: %[[T10:.*]] = vector.fma %[[T7]], %[[T9]], %[[T6]] : vector<2xf32>
-// CHECK: store %[[T10]], %[[C]][] : memref<vector<2xf32>>
+// CHECK: %[[T5:.*]] = vector.outerproduct %[[T3]], %[[T4]], %[[T2]] : vector<2xf32>, f32
+// CHECK: %[[T6:.*]] = vector.extract %[[T0]][1] : vector<2x2xf32>
+// CHECK: %[[T7:.*]] = vector.extract %[[T1]][1] : vector<2xf32>
+// CHECK: %[[T8:.*]] = vector.outerproduct %[[T6]], %[[T7]], %[[T5]] : vector<2xf32>, f32
+// CHECK: store %[[T8]], %[[C]][] : memref<vector<2xf32>>
+// CHECK: return
 func @mattransvec2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<vector<2xf32>>,
                                                      %arg2: memref<vector<2xf32>>) {
   %A = load %arg0[] : memref<vector<2x2xf32>>
@@ -105,27 +95,18 @@ func @mattransvec2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<vector<2xf32>
 // CHECK-SAME: %[[A:.*0]]: memref<vector<2x2xf32>>
 // CHECK-SAME: %[[B:.*1]]: memref<vector<2xf32>>
 // CHECK-SAME: %[[C:.*2]]: memref<vector<2xf32>>
-// CHECK: %[[C0:.*]] = constant dense<0.000000e+00> : vector<2x2xf32>
 // CHECK: %[[T0:.*]] = load %[[A]][] : memref<vector<2x2xf32>>
 // CHECK: %[[T1:.*]] = load %[[B]][] : memref<vector<2xf32>>
 // CHECK: %[[T2:.*]] = load %[[C]][] : memref<vector<2xf32>>
-// CHECK: %[[T3:.*]] = vector.extract %[[T0]][0, 0] : vector<2x2xf32>
-// CHECK: %[[T4:.*]] = vector.insert %[[T3]], %[[C0]] [0, 0] : f32 into vector<2x2xf32>
-// CHECK: %[[T5:.*]] = vector.extract %[[T0]][1, 0] : vector<2x2xf32>
-// CHECK: %[[T6:.*]] = vector.insert %[[T5]], %[[T4]] [0, 1] : f32 into vector<2x2xf32>
-// CHECK: %[[T7:.*]] = vector.extract %[[T0]][0, 1] : vector<2x2xf32>
-// CHECK: %[[T8:.*]] = vector.insert %[[T7]], %[[T6]] [1, 0] : f32 into vector<2x2xf32>
-// CHECK: %[[T9:.*]] = vector.extract %[[T0]][1, 1] : vector<2x2xf32>
-// CHECK: %[[T10:.*]] = vector.insert %[[T9]], %[[T8]] [1, 1] : f32 into vector<2x2xf32>
-// CHECK: %[[T11:.*]] = vector.extract %[[T10]][0] : vector<2x2xf32>
-// CHECK: %[[T12:.*]] = vector.extract %[[T1]][0] : vector<2xf32>
-// CHECK: %[[T13:.*]] = splat %[[T12]] : vector<2xf32>
-// CHECK: %[[T14:.*]] = vector.fma %[[T11]], %[[T13]], %[[T2]] : vector<2xf32>
-// CHECK: %[[T15:.*]] = vector.extract %[[T10]][1] : vector<2x2xf32>
-// CHECK: %[[T16:.*]] = vector.extract %[[T1]][1] : vector<2xf32>
-// CHECK: %[[T17:.*]] = splat %[[T16]] : vector<2xf32>
-// CHECK: %[[T18:.*]] = vector.fma %[[T15]], %[[T17]], %[[T14]] : vector<2xf32>
-// CHECK: store %[[T18]], %[[C]][] : memref<vector<2xf32>>
+// CHECK: %[[T3:.*]] = vector.transpose %[[T0]], [1, 0] : vector<2x2xf32> to vector<2x2xf32>
+// CHECK: %[[T4:.*]] = vector.extract %[[T3]][0] : vector<2x2xf32>
+// CHECK: %[[T5:.*]] = vector.extract %[[T1]][0] : vector<2xf32>
+// CHECK: %[[T6:.*]] = vector.outerproduct %[[T4]], %[[T5]], %[[T2]] : vector<2xf32>, f32
+// CHECK: %[[T7:.*]] = vector.extract %[[T3]][1] : vector<2x2xf32>
+// CHECK: %[[T8:.*]] = vector.extract %[[T1]][1] : vector<2xf32>
+// CHECK: %[[T9:.*]] = vector.outerproduct %[[T7]], %[[T8]], %[[T6]] : vector<2xf32>, f32
+// CHECK: store %[[T9]], %[[C]][] : memref<vector<2xf32>>
+// CHECK: return
 func @vecmat2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<vector<2xf32>>,
                                                 %arg2: memref<vector<2xf32>>) {
   %A = load %arg0[] : memref<vector<2x2xf32>>
@@ -145,13 +126,12 @@ func @vecmat2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<vector<2xf32>>,
 // CHECK: %[[T2:.*]] = load %[[C]][] : memref<vector<2xf32>>
 // CHECK: %[[T3:.*]] = vector.extract %[[T0]][0] : vector<2x2xf32>
 // CHECK: %[[T4:.*]] = vector.extract %[[T1]][0] : vector<2xf32>
-// CHECK: %[[T5:.*]] = splat %[[T4]] : vector<2xf32>
-// CHECK: %[[T6:.*]] = vector.fma %[[T3]], %[[T5]], %[[T2]] : vector<2xf32>
-// CHECK: %[[T7:.*]] = vector.extract %[[T0]][1] : vector<2x2xf32>
-// CHECK: %[[T8:.*]] = vector.extract %[[T1]][1] : vector<2xf32>
-// CHECK: %[[T9:.*]] = splat %[[T8]] : vector<2xf32>
-// CHECK: %[[T10:.*]] = vector.fma %[[T7]], %[[T9]], %[[T6]] : vector<2xf32>
-// CHECK: store %[[T10]], %[[C]][] : memref<vector<2xf32>>
+// CHECK: %[[T5:.*]] = vector.outerproduct %[[T3]], %[[T4]], %[[T2]] : vector<2xf32>, f32
+// CHECK: %[[T6:.*]] = vector.extract %[[T0]][1] : vector<2x2xf32>
+// CHECK: %[[T7:.*]] = vector.extract %[[T1]][1] : vector<2xf32>
+// CHECK: %[[T8:.*]] = vector.outerproduct %[[T6]], %[[T7]], %[[T5]] : vector<2xf32>, f32
+// CHECK: store %[[T8]], %[[C]][] : memref<vector<2xf32>>
+// CHECK: return
 func @vecmattrans2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<vector<2xf32>>,
                                                      %arg2: memref<vector<2xf32>>) {
   %A = load %arg0[] : memref<vector<2x2xf32>>
