@@ -9,7 +9,8 @@
 // This file implements the Bit-Tracking Dead Code Elimination pass. Some
 // instructions (shifts, some ands, ors, etc.) kill some of their input bits.
 // We track these dead bits and remove instructions that compute only these
-// dead bits.
+// dead bits. We also simplify sext that generates unused extension bits,
+// converting it to a zext.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,6 +20,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
@@ -33,6 +35,8 @@ using namespace llvm;
 
 STATISTIC(NumRemoved, "Number of instructions removed (unused)");
 STATISTIC(NumSimplified, "Number of instructions trivialized (dead bits)");
+STATISTIC(NumSExt2ZExt,
+          "Number of sign extension instructions converted to zero extension");
 
 /// If an instruction is trivialized (dead), then the chain of users of that
 /// instruction may need to be cleared of assumptions that can no longer be
@@ -107,6 +111,24 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       I.dropAllReferences();
       Changed = true;
       continue;
+    }
+
+    // Convert SExt into ZExt if none of the extension bits is required
+    if (SExtInst *SE = dyn_cast<SExtInst>(&I)) {
+      APInt Demanded = DB.getDemandedBits(SE);
+      const uint32_t SrcBitSize = SE->getSrcTy()->getScalarSizeInBits();
+      auto *const DstTy = SE->getDestTy();
+      const uint32_t DestBitSize = DstTy->getScalarSizeInBits();
+      if (Demanded.countLeadingZeros() >= (DestBitSize - SrcBitSize)) {
+        clearAssumptionsOfUsers(SE, DB);
+        IRBuilder<> Builder(SE);
+        I.replaceAllUsesWith(
+            Builder.CreateZExt(SE->getOperand(0), DstTy, SE->getName()));
+        Worklist.push_back(SE);
+        Changed = true;
+        NumSExt2ZExt++;
+        continue;
+      }
     }
 
     for (Use &U : I.operands()) {
