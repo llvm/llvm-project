@@ -977,16 +977,16 @@ genBuffer(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   assert(var && "Has to be a variable");
   auto e = Fortran::semantics::GetExpr(*var);
   auto &builder = converter.getFirOpBuilder();
-  if (Fortran::semantics::ExprHasTypeCategory(
-          *e, Fortran::common::TypeCategory::Character)) {
-    // Helper to query [BUFFER, LEN].
-    Fortran::lower::CharacterExprHelper helper(builder, loc);
-    auto dataLen = helper.materializeCharacter(converter.genExprValue(*e));
-    auto buff = builder.createConvert(loc, strTy, dataLen.first);
-    auto len = builder.createConvert(loc, lenTy, dataLen.second);
-    return {buff, len};
-  }
+  assert(Fortran::semantics::ExprHasTypeCategory(
+      *e, Fortran::common::TypeCategory::Character));
+  // Helper to query [BUFFER, LEN].
+  Fortran::lower::CharacterExprHelper helper(builder, loc);
+  auto dataLen = helper.materializeCharacter(converter.genExprValue(*e));
+  auto buff = builder.createConvert(loc, strTy, dataLen.first);
+  auto len = builder.createConvert(loc, lenTy, dataLen.second);
+  return {buff, len};
 }
+
 template <typename A>
 std::tuple<mlir::Value, mlir::Value>
 getBuffer(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
