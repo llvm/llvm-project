@@ -507,7 +507,7 @@ LLVM_DUMP_METHOD void DomTreeUpdater::dump() const {
 
   OS << "Pending DeletedBBs:\n";
   Index = 0;
-  for (const auto &BB : DeletedBBs) {
+  for (const auto *BB : DeletedBBs) {
     OS << "  " << Index << " : ";
     ++Index;
     if (BB->hasName())
