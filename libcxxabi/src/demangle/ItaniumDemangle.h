@@ -5096,7 +5096,21 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
 //            ::= <special-name>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
-  ScopedTemplateParamList EncodingTemplateParams(this);
+  // The template parameters of an encoding are unrelated to those of the
+  // enclosing context.
+  class SaveTemplateParams {
+    AbstractManglingParser *Parser;
+    decltype(TemplateParams) OldParams;
+
+  public:
+    SaveTemplateParams(AbstractManglingParser *Parser) : Parser(Parser) {
+      OldParams = std::move(Parser->TemplateParams);
+      Parser->TemplateParams.clear();
+    }
+    ~SaveTemplateParams() {
+      Parser->TemplateParams = std::move(OldParams);
+    }
+  } SaveTemplateParams(this);
 
   if (look() == 'G' || look() == 'T')
     return getDerived().parseSpecialName();
