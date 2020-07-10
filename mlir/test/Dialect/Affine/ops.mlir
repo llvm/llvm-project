@@ -2,7 +2,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-op-generic | FileCheck -check-prefix=GENERIC %s
 
 // Check that the attributes for the affine operations are round-tripped.
-// Check that `affine.terminator` is visible in the generic form.
+// Check that `affine.yield` is visible in the generic form.
 // CHECK-LABEL: @empty
 func @empty() {
   // CHECK: affine.for
@@ -10,7 +10,7 @@ func @empty() {
   //
   // GENERIC:      "affine.for"()
   // GENERIC-NEXT: ^bb0(%{{.*}}: index):
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: })
   affine.for %i = 0 to 10 {
   } {some_attr = true}
@@ -19,7 +19,7 @@ func @empty() {
   // CHECK-NEXT: } {some_attr = true}
   //
   // GENERIC:      "affine.if"()
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: },  {
   // GENERIC-NEXT: })
   affine.if affine_set<() : ()> () {
@@ -29,10 +29,10 @@ func @empty() {
   // CHECK: } {some_attr = true}
   //
   // GENERIC:      "affine.if"()
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: },  {
   // GENERIC-NEXT:   "foo"() : () -> ()
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: })
   affine.if affine_set<() : ()> () {
   } else {
@@ -42,19 +42,19 @@ func @empty() {
   return
 }
 
-// Check that an explicit affine terminator is not printed in custom format.
+// Check that an explicit affine.yield is not printed in custom format.
 // Check that no extra terminator is introduced.
-// CHECK-LABEL: @affine_terminator
-func @affine_terminator() {
+// CHECK-LABEL: @affine.yield
+func @affine.yield() {
   // CHECK: affine.for
   // CHECK-NEXT: }
   //
   // GENERIC:      "affine.for"() ( {
   // GENERIC-NEXT: ^bb0(%{{.*}}: index):	// no predecessors
-  // GENERIC-NEXT:   "affine.terminator"() : () -> ()
+  // GENERIC-NEXT:   "affine.yield"() : () -> ()
   // GENERIC-NEXT: }) {lower_bound = #map0, step = 1 : index, upper_bound = #map1} : () -> ()
   affine.for %i = 0 to 10 {
-    "affine.terminator"() : () -> ()
+    "affine.yield"() : () -> ()
   }
   return
 }
@@ -153,14 +153,34 @@ func @valid_symbol_affine_scope(%n : index, %A : memref<?xf32>) {
 
 // -----
 
-// CHECK-LABEL: @parallel
-// CHECK-SAME: (%[[N:.*]]: index)
-func @parallel(%N : index) {
+// CHECK-LABEL: func @parallel
+// CHECK-SAME: (%[[A:.*]]: memref<100x100xf32>, %[[N:.*]]: index)
+func @parallel(%A : memref<100x100xf32>, %N : index) {
   // CHECK: affine.parallel (%[[I0:.*]], %[[J0:.*]]) = (0, 0) to (symbol(%[[N]]), 100) step (10, 10)
   affine.parallel (%i0, %j0) = (0, 0) to (symbol(%N), 100) step (10, 10) {
-    // CHECK-NEXT: affine.parallel (%{{.*}}, %{{.*}}) = (%[[I0]], %[[J0]]) to (%[[I0]] + 10, %[[J0]] + 10)
-    affine.parallel (%i1, %j1) = (%i0, %j0) to (%i0 + 10, %j0 + 10) {
+    // CHECK: affine.parallel (%{{.*}}, %{{.*}}) = (%[[I0]], %[[J0]]) to (%[[I0]] + 10, %[[J0]] + 10) reduce ("minf", "maxf") -> (f32, f32)
+    %0:2 = affine.parallel (%i1, %j1) = (%i0, %j0) to (%i0 + 10, %j0 + 10) reduce ("minf", "maxf") -> (f32, f32) {
+      %2 = affine.load %A[%i0 + %i0, %j0 + %j1] : memref<100x100xf32>
+      affine.yield %2, %2 : f32, f32
     }
   }
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @affine_if
+func @affine_if() -> f32 {
+  // CHECK: %[[ZERO:.*]] = constant {{.*}} : f32
+  %zero = constant 0.0 : f32
+  // CHECK: %[[OUT:.*]] = affine.if {{.*}}() -> f32 {
+  %0 = affine.if affine_set<() : ()> () -> f32 {
+    // CHECK: affine.yield %[[ZERO]] : f32
+    affine.yield %zero : f32
+  } else {
+    // CHECK: affine.yield %[[ZERO]] : f32
+    affine.yield %zero : f32
+  }
+  // CHECK: return %[[OUT]] : f32
+  return %0 : f32
 }
