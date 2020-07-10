@@ -1171,7 +1171,7 @@ def applySubstitutions(script, substitutions, recursion_limit=None):
             # short-lived, since the set of substitutions is fairly small, and
             # since thrashing has such bad consequences, not bounding the cache
             # seems reasonable.
-            ln = _caching_re_compile(a).sub(b, ln)
+            ln = _caching_re_compile(a).sub(str(b), ln)
 
         # Strip the trailing newline and any extra whitespace.
         return ln.strip()
