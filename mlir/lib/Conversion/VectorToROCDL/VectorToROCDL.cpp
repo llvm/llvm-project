@@ -72,7 +72,7 @@ public:
         llvm::size(xferOp.indices()) == 0)
       return failure();
 
-    if (!AffineMap::isMinorIdentity(xferOp.permutation_map()))
+    if (!xferOp.permutation_map().isMinorIdentity())
       return failure();
 
     // Have it handled in vector->llvm conversion pass.
