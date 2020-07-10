@@ -295,3 +295,18 @@ func @insert_extract_transpose_3d_2d(
   // CHECK-SAME: vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<4xf32>
   return %r1, %r2, %r3, %r4 : vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: fold_extracts
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: vector<3x4x5x6xf32>
+//  CHECK-NEXT: vector.extract %[[A]][0, 1, 2, 3] : vector<3x4x5x6xf32>
+//  CHECK-NEXT: vector.extract %[[A]][0] : vector<3x4x5x6xf32>
+//  CHECK-NEXT: return
+func @fold_extracts(%a : vector<3x4x5x6xf32>) -> (f32, vector<4x5x6xf32>) {
+  %b = vector.extract %a[0] : vector<3x4x5x6xf32>
+  %c = vector.extract %b[1, 2] : vector<4x5x6xf32>
+  %d = vector.extract %c[3] : vector<6xf32>
+  %e = vector.extract %a[0] : vector<3x4x5x6xf32>
+  return %d, %e : f32, vector<4x5x6xf32>
+}
