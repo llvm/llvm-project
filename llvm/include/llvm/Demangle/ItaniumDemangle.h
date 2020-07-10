@@ -5096,6 +5096,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
 //            ::= <special-name>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
+  ScopedTemplateParamList EncodingTemplateParams(this);
+
   if (look() == 'G' || look() == 'T')
     return getDerived().parseSpecialName();
 
