@@ -295,8 +295,7 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; YAML:         - 4470750F2E319329
 ; YAML:         - 0FB556FD1FAB66D7
 ; YAML:         - 5970EFB4874D0F3F
-; YAML:         - D8EF11198C33843F
-; YAML:         - D81F744D7366282B
+; YAML:         - EDB1D74C120CF44A
 ; ...
 
 

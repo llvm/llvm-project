@@ -137,7 +137,6 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-lib
   llvm-nm
   llvm-objdump
-  llvm-pdbutil
   llvm-profdata
   llvm-ranlib
   llvm-readobj

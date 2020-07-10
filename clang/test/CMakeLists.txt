@@ -126,7 +126,6 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-nm
     llvm-objcopy
     llvm-objdump
-    llvm-pdbutil
     llvm-profdata
     llvm-readelf
     llvm-readobj
