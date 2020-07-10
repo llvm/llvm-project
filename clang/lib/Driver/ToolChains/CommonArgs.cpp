@@ -106,6 +106,31 @@ void tools::handleTargetFeaturesGroup(const ArgList &Args,
   }
 }
 
+std::vector<StringRef>
+tools::unifyTargetFeatures(const std::vector<StringRef> &Features) {
+  std::vector<StringRef> UnifiedFeatures;
+  // Find the last of each feature.
+  llvm::StringMap<unsigned> LastOpt;
+  for (unsigned I = 0, N = Features.size(); I < N; ++I) {
+    StringRef Name = Features[I];
+    assert(Name[0] == '-' || Name[0] == '+');
+    LastOpt[Name.drop_front(1)] = I;
+  }
+
+  for (unsigned I = 0, N = Features.size(); I < N; ++I) {
+    // If this feature was overridden, ignore it.
+    StringRef Name = Features[I];
+    llvm::StringMap<unsigned>::iterator LastI = LastOpt.find(Name.drop_front(1));
+    assert(LastI != LastOpt.end());
+    unsigned Last = LastI->second;
+    if (Last != I)
+      continue;
+
+    UnifiedFeatures.push_back(Name);
+  }
+  return UnifiedFeatures;
+}
+
 void tools::addDirectoryList(const ArgList &Args, ArgStringList &CmdArgs,
                              const char *ArgName, const char *EnvVar) {
   const char *DirList = ::getenv(EnvVar);
@@ -938,10 +963,12 @@ void tools::SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
   InputInfo II(types::TY_Object, Output.getFilename(), Output.getFilename());
 
   // First extract the dwo sections.
-  C.addCommand(std::make_unique<Command>(JA, T, Exec, ExtractArgs, II));
+  C.addCommand(std::make_unique<Command>(
+      JA, T, ResponseFileSupport::AtFileCurCP(), Exec, ExtractArgs, II));
 
   // Then remove them from the original .o file.
-  C.addCommand(std::make_unique<Command>(JA, T, Exec, StripArgs, II));
+  C.addCommand(std::make_unique<Command>(
+      JA, T, ResponseFileSupport::AtFileCurCP(), Exec, StripArgs, II));
 }
 
 // Claim options we don't want to warn if they are unused. We do this for
@@ -1596,7 +1623,8 @@ bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
       UBArgs.push_back(C.getArgs().MakeArgString(InputArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
-      C.addCommand(std::make_unique<Command>(JA, T, UBProgram, UBArgs, Inputs));
+      C.addCommand(std::make_unique<Command>(
+          JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs));
       if (postClangLink)
         CC1Args.push_back("-mlink-builtin-bitcode");
 

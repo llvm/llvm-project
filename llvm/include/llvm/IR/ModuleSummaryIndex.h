@@ -553,8 +553,7 @@ public:
     unsigned AlwaysInline : 1;
   };
 
-  /// Describes the uses of a parameter by the range of offsets accessed in the
-  /// function and all of the call targets it is passed to.
+  /// Describes the uses of a parameter by the function.
   struct ParamAccess {
     static constexpr uint32_t RangeWidth = 64;
 
@@ -564,7 +563,7 @@ public:
     struct Call {
       uint64_t ParamNo = 0;
       GlobalValue::GUID Callee = 0;
-      ConstantRange Offsets{RangeWidth, true};
+      ConstantRange Offsets{/*BitWidth=*/RangeWidth, /*isFullSet=*/true};
 
       Call() = default;
       Call(uint64_t ParamNo, GlobalValue::GUID Callee,
@@ -573,7 +572,15 @@ public:
     };
 
     uint64_t ParamNo = 0;
-    ConstantRange Use{RangeWidth, true};
+    /// The range contains byte offsets from the parameter pointer which
+    /// accessed by the function. In the per-module summary, it only includes
+    /// accesses made by the function instructions. In the combined summary, it
+    /// also includes accesses by nested function calls.
+    ConstantRange Use{/*BitWidth=*/RangeWidth, /*isFullSet=*/true};
+    /// In the per-module summary, it summarizes the byte offset applied to each
+    /// pointer parameter before passing to each corresponding callee.
+    /// In the combined summary, it's empty and information is propagated by
+    /// inter-procedural analysis and applied to the Use field.
     std::vector<Call> Calls;
 
     ParamAccess() = default;
@@ -622,7 +629,8 @@ private:
   std::unique_ptr<TypeIdInfo> TIdInfo;
 
   /// Uses for every parameter to this function.
-  std::vector<ParamAccess> ParamAccesses;
+  using ParamAccessesTy = std::vector<ParamAccess>;
+  std::unique_ptr<ParamAccessesTy> ParamAccesses;
 
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
@@ -633,19 +641,20 @@ public:
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
                   std::vector<ConstVCall> TypeTestAssumeConstVCalls,
                   std::vector<ConstVCall> TypeCheckedLoadConstVCalls,
-                  std::vector<ParamAccess> ParamAccesses)
+                  std::vector<ParamAccess> Params)
       : GlobalValueSummary(FunctionKind, Flags, std::move(Refs)),
         InstCount(NumInsts), FunFlags(FunFlags), EntryCount(EntryCount),
-        CallGraphEdgeList(std::move(CGEdges)),
-        ParamAccesses(std::move(ParamAccesses)) {
+        CallGraphEdgeList(std::move(CGEdges)) {
     if (!TypeTests.empty() || !TypeTestAssumeVCalls.empty() ||
         !TypeCheckedLoadVCalls.empty() || !TypeTestAssumeConstVCalls.empty() ||
         !TypeCheckedLoadConstVCalls.empty())
-      TIdInfo = std::make_unique<TypeIdInfo>(TypeIdInfo{
-          std::move(TypeTests), std::move(TypeTestAssumeVCalls),
-          std::move(TypeCheckedLoadVCalls),
-          std::move(TypeTestAssumeConstVCalls),
-          std::move(TypeCheckedLoadConstVCalls)});
+      TIdInfo = std::make_unique<TypeIdInfo>(
+          TypeIdInfo{std::move(TypeTests), std::move(TypeTestAssumeVCalls),
+                     std::move(TypeCheckedLoadVCalls),
+                     std::move(TypeTestAssumeConstVCalls),
+                     std::move(TypeCheckedLoadConstVCalls)});
+    if (!Params.empty())
+      ParamAccesses = std::make_unique<ParamAccessesTy>(std::move(Params));
   }
   // Gets the number of readonly and writeonly refs in RefEdgeList
   std::pair<unsigned, unsigned> specialRefCounts() const;
@@ -717,11 +726,20 @@ public:
   }
 
   /// Returns the list of known uses of pointer parameters.
-  ArrayRef<ParamAccess> paramAccesses() const { return ParamAccesses; }
+  ArrayRef<ParamAccess> paramAccesses() const {
+    if (ParamAccesses)
+      return *ParamAccesses;
+    return {};
+  }
 
   /// Sets the list of known uses of pointer parameters.
   void setParamAccesses(std::vector<ParamAccess> NewParams) {
-    ParamAccesses = std::move(NewParams);
+    if (NewParams.empty())
+      ParamAccesses.reset();
+    else if (ParamAccesses)
+      *ParamAccesses = std::move(NewParams);
+    else
+      ParamAccesses = std::make_unique<ParamAccessesTy>(std::move(NewParams));
   }
 
   /// Add a type test to the summary. This is used by WholeProgramDevirt if we

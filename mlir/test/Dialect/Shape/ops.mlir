@@ -111,3 +111,8 @@ func @test_from_extent_tensor(%arg: tensor<?xindex>) -> !shape.shape {
   %0 = shape.from_extent_tensor %arg : tensor<?xindex>
   return %0 : !shape.shape
 }
+
+func @rank(%shape : !shape.shape) -> !shape.size {
+  %rank = shape.rank %shape
+  return %rank : !shape.size
+}

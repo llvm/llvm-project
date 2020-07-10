@@ -152,6 +152,29 @@
 	lctl	%c14,%c15,0
 	lctl	0,15,0
 
+#CHECK: st	%r0, 0                  # encoding: [0x50,0x00,0x00,0x00]
+#CHECK: st	%r0, 4095               # encoding: [0x50,0x00,0x0f,0xff]
+#CHECK: st	%r0, 0(%r1)             # encoding: [0x50,0x00,0x10,0x00]
+#CHECK: st	%r0, 0(%r15)            # encoding: [0x50,0x00,0xf0,0x00]
+#CHECK: st	%r0, 4095(%r1,%r15)     # encoding: [0x50,0x01,0xff,0xff]
+#CHECK: st	%r0, 4095(%r15,%r1)     # encoding: [0x50,0x0f,0x1f,0xff]
+#CHECK: st	%r15, 0                 # encoding: [0x50,0xf0,0x00,0x00]
+#CHECK: st	%r0, 0(%r1)             # encoding: [0x50,0x00,0x10,0x00]
+#CHECK: st	%r0, 0(%r15)            # encoding: [0x50,0x00,0xf0,0x00]
+#CHECK: st	%r0, 4095(%r1,%r15)     # encoding: [0x50,0x01,0xff,0xff]
+#CHECK: st	%r0, 4095(%r15,%r1)     # encoding: [0x50,0x0f,0x1f,0xff]
+
+	st	%r0, 0
+	st	%r0, 4095
+	st	%r0, 0(%r1)
+	st	%r0, 0(%r15)
+	st	%r0, 4095(%r1,%r15)
+	st	%r0, 4095(%r15,%r1)
+	st	%r15, 0
+	st	0, 0(1)
+	st	0, 0(15)
+	st	0, 4095(1,15)
+	st	0, 4095(15,1)
 
 #CHECK: .cfi_offset %r0, 0
 #CHECK: .cfi_offset %r1, 8

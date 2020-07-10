@@ -18,7 +18,7 @@ define void @select() {
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v16a = select <4 x i1> undef, <4 x i64> undef, <4 x i64> undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v16b = select <8 x i1> undef, <8 x i64> undef, <8 x i64> undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v16c = select <16 x i1> undef, <16 x i64> undef, <16 x i64> undef
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-SIZE-LABEL: 'select'
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = select i1 undef, i8 undef, i8 undef

@@ -221,6 +221,28 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
   return None;
 }
 
+
+/// Return true if-and-only-if the given SDValue can be lowered as either a
+/// constant argument or a stack reference.  The key point is that the value
+/// doesn't need to be spilled or tracked as a vreg use.
+static bool willLowerDirectly(SDValue Incoming) {
+  // We are making an unchecked assumption that the frame size <= 2^16 as that
+  // is the largest offset which can be encoded in the stackmap format.
+  if (isa<FrameIndexSDNode>(Incoming))
+    return true;
+
+  // The largest constant describeable in the StackMap format is 64 bits.
+  // Potential Optimization:  Constants values are sign extended by consumer,
+  // and thus there are many constants of static type > 64 bits whose value
+  // happens to be sext(Con64) and could thus be lowered directly.
+  if (Incoming.getValueType().getSizeInBits() > 64)
+    return false;
+
+  return (isa<ConstantSDNode>(Incoming) || isa<ConstantFPSDNode>(Incoming) ||
+          Incoming.isUndef());
+}
+
+
 /// Try to find existing copies of the incoming values in stack slots used for
 /// statepoint spilling.  If we can find a spill slot for the incoming value,
 /// mark that slot as allocated, and reuse the same slot for this safepoint.
@@ -230,12 +252,10 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
                                              SelectionDAGBuilder &Builder) {
   SDValue Incoming = Builder.getValue(IncomingValue);
 
-  if (isa<ConstantSDNode>(Incoming) || isa<ConstantFPSDNode>(Incoming) ||
-      isa<FrameIndexSDNode>(Incoming) || Incoming.isUndef()) {
-    // We won't need to spill this, so no need to check for previously
-    // allocated stack slots
+  // If we won't spill this, we don't need to check for previously allocated
+  // stack slots.
+  if (willLowerDirectly(Incoming))
     return;
-  }
 
   SDValue OldLocation = Builder.StatepointLowering.getLocation(Incoming);
   if (OldLocation.getNode())
@@ -384,45 +404,53 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
                              SmallVectorImpl<SDValue> &Ops,
                              SmallVectorImpl<MachineMemOperand *> &MemRefs,
                              SelectionDAGBuilder &Builder) {
-  // Note: We know all of these spills are independent, but don't bother to
-  // exploit that chain wise.  DAGCombine will happily do so as needed, so
-  // doing it here would be a small compile time win at most.
-  SDValue Chain = Builder.getRoot();
+  
+  if (willLowerDirectly(Incoming)) {
+    if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Incoming)) {
+      // This handles allocas as arguments to the statepoint (this is only
+      // really meaningful for a deopt value.  For GC, we'd be trying to
+      // relocate the address of the alloca itself?)
+      assert(Incoming.getValueType() == Builder.getFrameIndexTy() &&
+             "Incoming value is a frame index!");
+      Ops.push_back(Builder.DAG.getTargetFrameIndex(FI->getIndex(),
+                                                    Builder.getFrameIndexTy()));
 
-  if (Incoming.isUndef() && Incoming.getValueType().getSizeInBits() <= 64) {
-    // Put an easily recognized constant that's unlikely to be a valid
-    // value so that uses of undef by the consumer of the stackmap is
-    // easily recognized. This is legal since the compiler is always
-    // allowed to chose an arbitrary value for undef.
-    pushStackMapConstant(Ops, Builder, 0xFEFEFEFE);
-    return;
+      auto &MF = Builder.DAG.getMachineFunction();
+      auto *MMO = getMachineMemOperand(MF, *FI);
+      MemRefs.push_back(MMO);
+      return;
+    }
+
+    assert(Incoming.getValueType().getSizeInBits() <= 64);
+    
+    if (Incoming.isUndef()) {
+      // Put an easily recognized constant that's unlikely to be a valid
+      // value so that uses of undef by the consumer of the stackmap is
+      // easily recognized. This is legal since the compiler is always
+      // allowed to chose an arbitrary value for undef.
+      pushStackMapConstant(Ops, Builder, 0xFEFEFEFE);
+      return;
+    }
+
+    // If the original value was a constant, make sure it gets recorded as
+    // such in the stackmap.  This is required so that the consumer can
+    // parse any internal format to the deopt state.  It also handles null
+    // pointers and other constant pointers in GC states.
+    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Incoming)) {
+      pushStackMapConstant(Ops, Builder, C->getSExtValue());
+      return;
+    } else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Incoming)) {
+      pushStackMapConstant(Ops, Builder,
+                           C->getValueAPF().bitcastToAPInt().getZExtValue());
+      return;
+    }
+
+    llvm_unreachable("unhandled direct lowering case");
   }
 
-  // If the original value was a constant, make sure it gets recorded as
-  // such in the stackmap.  This is required so that the consumer can
-  // parse any internal format to the deopt state.  It also handles null
-  // pointers and other constant pointers in GC states.  Note the constant
-  // vectors do not appear to actually hit this path and that anything larger
-  // than an i64 value (not type!) will fail asserts here.
-  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Incoming)) {
-    pushStackMapConstant(Ops, Builder,
-                         C->getValueAPF().bitcastToAPInt().getZExtValue());
-  } else if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Incoming)) {
-    pushStackMapConstant(Ops, Builder, C->getSExtValue());
-  } else if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Incoming)) {
-    // This handles allocas as arguments to the statepoint (this is only
-    // really meaningful for a deopt value.  For GC, we'd be trying to
-    // relocate the address of the alloca itself?)
-    assert(Incoming.getValueType() == Builder.getFrameIndexTy() &&
-           "Incoming value is a frame index!");
-    Ops.push_back(Builder.DAG.getTargetFrameIndex(FI->getIndex(),
-                                                  Builder.getFrameIndexTy()));
 
-    auto &MF = Builder.DAG.getMachineFunction();
-    auto *MMO = getMachineMemOperand(MF, *FI);
-    MemRefs.push_back(MMO);
 
-  } else if (!RequireSpillSlot) {
+  if (!RequireSpillSlot) {
     // If this value is live in (not live-on-return, or live-through), we can
     // treat it the same way patchpoint treats it's "live in" values.  We'll
     // end up folding some of these into stack references, but they'll be
@@ -432,20 +460,20 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
     // fix-up pass should be executed to force spilling of such registers.
     Ops.push_back(Incoming);
   } else {
-    // Otherwise, locate a spill slot and explicitly spill it so it
-    // can be found by the runtime later.  We currently do not support
-    // tracking values through callee saved registers to their eventual
-    // spill location.  This would be a useful optimization, but would
-    // need to be optional since it requires a lot of complexity on the
-    // runtime side which not all would support.
+    // Otherwise, locate a spill slot and explicitly spill it so it can be
+    // found by the runtime later.  Note: We know all of these spills are
+    // independent, but don't bother to exploit that chain wise.  DAGCombine
+    // will happily do so as needed, so doing it here would be a small compile
+    // time win at most. 
+    SDValue Chain = Builder.getRoot();
     auto Res = spillIncomingStatepointValue(Incoming, Chain, Builder);
     Ops.push_back(std::get<0>(Res));
     if (auto *MMO = std::get<2>(Res))
       MemRefs.push_back(MMO);
     Chain = std::get<1>(Res);;
+    Builder.DAG.setRoot(Chain);
   }
 
-  Builder.DAG.setRoot(Chain);
 }
 
 /// Lower deopt state and gc pointer arguments of the statepoint.  The actual
@@ -885,36 +913,38 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   // Export the result value if needed
   const GCResultInst *GCResult = I.getGCResult();
   Type *RetTy = I.getActualReturnType();
-  if (!RetTy->isVoidTy() && GCResult) {
-    if (GCResult->getParent() != I.getParent()) {
-      // Result value will be used in a different basic block so we need to
-      // export it now.  Default exporting mechanism will not work here because
-      // statepoint call has a different type than the actual call. It means
-      // that by default llvm will create export register of the wrong type
-      // (always i32 in our case). So instead we need to create export register
-      // with correct type manually.
-      // TODO: To eliminate this problem we can remove gc.result intrinsics
-      //       completely and make statepoint call to return a tuple.
-      unsigned Reg = FuncInfo.CreateRegs(RetTy);
-      RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
-                       DAG.getDataLayout(), Reg, RetTy,
-                       I.getCallingConv());
-      SDValue Chain = DAG.getEntryNode();
 
-      RFV.getCopyToRegs(ReturnValue, DAG, getCurSDLoc(), Chain, nullptr);
-      PendingExports.push_back(Chain);
-      FuncInfo.ValueMap[&I] = Reg;
-    } else {
-      // Result value will be used in a same basic block. Don't export it or
-      // perform any explicit register copies.
-      // We'll replace the actuall call node shortly. gc_result will grab
-      // this value.
-      setValue(&I, ReturnValue);
-    }
-  } else {
-    // The token value is never used from here on, just generate a poison value
+  if (RetTy->isVoidTy() || !GCResult) {
+    // The return value is not needed, just generate a poison value. 
     setValue(&I, DAG.getIntPtrConstant(-1, getCurSDLoc()));
+    return;
   }
+
+  if (GCResult->getParent() == I.getParent()) {
+    // Result value will be used in a same basic block. Don't export it or
+    // perform any explicit register copies. The gc_result will simply grab
+    // this value. 
+    setValue(&I, ReturnValue);
+    return;
+  }
+  
+  // Result value will be used in a different basic block so we need to export
+  // it now.  Default exporting mechanism will not work here because statepoint
+  // call has a different type than the actual call. It means that by default
+  // llvm will create export register of the wrong type (always i32 in our
+  // case). So instead we need to create export register with correct type
+  // manually.
+  // TODO: To eliminate this problem we can remove gc.result intrinsics
+  //       completely and make statepoint call to return a tuple.
+  unsigned Reg = FuncInfo.CreateRegs(RetTy);
+  RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
+                   DAG.getDataLayout(), Reg, RetTy,
+                   I.getCallingConv());
+  SDValue Chain = DAG.getEntryNode();
+  
+  RFV.getCopyToRegs(ReturnValue, DAG, getCurSDLoc(), Chain, nullptr);
+  PendingExports.push_back(Chain);
+  FuncInfo.ValueMap[&I] = Reg;
 }
 
 void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
@@ -960,23 +990,23 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
 void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
   // The result value of the gc_result is simply the result of the actual
   // call.  We've already emitted this, so just grab the value.
-  const GCStatepointInst *I = CI.getStatepoint();
+  const GCStatepointInst *SI = CI.getStatepoint();
 
-  if (I->getParent() != CI.getParent()) {
-    // Statepoint is in different basic block so we should have stored call
-    // result in a virtual register.
-    // We can not use default getValue() functionality to copy value from this
-    // register because statepoint and actual call return types can be
-    // different, and getValue() will use CopyFromReg of the wrong type,
-    // which is always i32 in our case.
-    Type *RetTy = I->getActualReturnType();
-    SDValue CopyFromReg = getCopyFromRegs(I, RetTy);
-
-    assert(CopyFromReg.getNode());
-    setValue(&CI, CopyFromReg);
-  } else {
-    setValue(&CI, getValue(I));
+  if (SI->getParent() == CI.getParent()) {
+    setValue(&CI, getValue(SI));
+    return;
   }
+  // Statepoint is in different basic block so we should have stored call
+  // result in a virtual register.
+  // We can not use default getValue() functionality to copy value from this
+  // register because statepoint and actual call return types can be
+  // different, and getValue() will use CopyFromReg of the wrong type,
+  // which is always i32 in our case.
+  Type *RetTy = SI->getActualReturnType();
+  SDValue CopyFromReg = getCopyFromRegs(SI, RetTy);
+  
+  assert(CopyFromReg.getNode());
+  setValue(&CI, CopyFromReg);
 }
 
 void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {

@@ -18,8 +18,7 @@
 ; YAML-NEXT:    - String:          ' loads, '
 ; YAML-NEXT:    - NumComputeOps:   '0'
 ; YAML-NEXT:    - String:          ' compute ops'
-; YAML-NEXT:    - String:          ',
-; YAML-NEXT:  additionally '
+; YAML-NEXT:    - String:          ",\nadditionally "
 ; YAML-NEXT:    - NumStores:       '0'
 ; YAML-NEXT:    - String:          ' stores, '
 ; YAML-NEXT:    - NumLoads:        '4'
@@ -47,8 +46,7 @@
 ; YAML-NEXT:    - String:          ' loads, '
 ; YAML-NEXT:    - NumComputeOps:   '120'
 ; YAML-NEXT:    - String:          ' compute ops'
-; YAML-NEXT:    - String:          ',
-; YAML-NEXT:  additionally '
+; YAML-NEXT:    - String:          ",\nadditionally "
 ; YAML-NEXT:    - NumStores:       '0'
 ; YAML-NEXT:    - String:          ' stores, '
 ; YAML-NEXT:    - NumLoads:        '4'

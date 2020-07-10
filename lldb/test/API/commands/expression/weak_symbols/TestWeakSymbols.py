@@ -39,7 +39,7 @@ class TestWeakSymbolsInExpressions(TestBase):
         # the bug that expressions with no result currently return False for Success()...
         expr = "if (&" + weak_varname + " != NULL) { present_weak_int = 10; } else { present_weak_int = 20;}; 10"
         result = self.frame.EvaluateExpression(expr)
-        self.assertTrue(result.GetError().Success(), "absent_weak_int expr failed: %s"%(result.GetError().GetCString()))
+        self.assertSuccess(result.GetError(), "absent_weak_int expr failed")
         self.assertEqual(value.GetValueAsSigned(), correct_value, "Didn't change present_weak_int correctly.")
         
     def do_test(self):

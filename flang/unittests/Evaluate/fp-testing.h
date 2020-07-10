@@ -19,7 +19,9 @@ public:
 
 private:
   fenv_t originalFenv_;
-  fenv_t currentFenv_;
+#if __x86_64__
+  unsigned int originalMxcsr;
+#endif
 };
 
 #endif // FORTRAN_TEST_EVALUATE_FP_TESTING_H_

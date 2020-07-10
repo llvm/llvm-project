@@ -34,6 +34,9 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
 
   OwningRewritePatternList patterns;
+
+  populateSPIRVToLLVMTypeConversion(converter);
+
   populateSPIRVToLLVMModuleConversionPatterns(context, converter, patterns);
   populateSPIRVToLLVMConversionPatterns(context, converter, patterns);
   populateSPIRVToLLVMFunctionConversionPatterns(context, converter, patterns);

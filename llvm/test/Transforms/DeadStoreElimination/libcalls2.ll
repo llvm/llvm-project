@@ -1,4 +1,4 @@
-; RUN: opt -S -basicaa -dse < %s | FileCheck %s
+; RUN: opt -S -basic-aa -dse < %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

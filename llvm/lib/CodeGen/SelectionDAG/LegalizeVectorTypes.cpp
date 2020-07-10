@@ -1537,11 +1537,22 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
                    LD->getPointerInfo(), LoMemVT, LD->getOriginalAlign(),
                    MMOFlags, AAInfo);
 
-  unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
-  Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
-  Hi = DAG.getLoad(ISD::UNINDEXED, ExtType, HiVT, dl, Ch, Ptr, Offset,
-                   LD->getPointerInfo().getWithOffset(IncrementSize), HiMemVT,
-                   LD->getOriginalAlign(), MMOFlags, AAInfo);
+  unsigned IncrementSize = LoMemVT.getSizeInBits().getKnownMinSize() / 8;
+
+  MachinePointerInfo MPI;
+  if (LoVT.isScalableVector()) {
+    SDValue BytesIncrement = DAG.getVScale(
+        dl, Ptr.getValueType(),
+        APInt(Ptr.getValueSizeInBits().getFixedSize(), IncrementSize));
+    MPI = MachinePointerInfo(LD->getPointerInfo().getAddrSpace());
+    Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr, BytesIncrement);
+  } else {
+    MPI = LD->getPointerInfo().getWithOffset(IncrementSize);
+    Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
+  }
+
+  Hi = DAG.getLoad(ISD::UNINDEXED, ExtType, HiVT, dl, Ch, Ptr, Offset, MPI,
+                   HiMemVT, LD->getOriginalAlign(), MMOFlags, AAInfo);
 
   // Build a factor node to remember that this load is independent of the
   // other one.
@@ -1767,8 +1778,7 @@ void DAGTypeLegalizer::SplitVecRes_ExtendOp(SDNode *N, SDValue &Lo,
   // more effectively move in the right direction and prevent falling down
   // to scalarization in many cases due to the input vector being split too
   // far.
-  unsigned NumElements = SrcVT.getVectorNumElements();
-  if ((NumElements & 1) == 0 &&
+  if ((SrcVT.getVectorMinNumElements() & 1) == 0 &&
       SrcVT.getSizeInBits() * 2 < DestVT.getSizeInBits()) {
     LLVMContext &Ctx = *DAG.getContext();
     EVT NewSrcVT = SrcVT.widenIntegerVectorElementType(Ctx);
@@ -1912,11 +1922,11 @@ void DAGTypeLegalizer::SplitVecRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue SV = N->getOperand(2);
   SDLoc dl(N);
 
-  const unsigned Alignment = DAG.getDataLayout().getABITypeAlignment(
-      NVT.getTypeForEVT(*DAG.getContext()));
+  const Align Alignment =
+      DAG.getDataLayout().getABITypeAlign(NVT.getTypeForEVT(*DAG.getContext()));
 
-  Lo = DAG.getVAArg(NVT, dl, Chain, Ptr, SV, Alignment);
-  Hi = DAG.getVAArg(NVT, dl, Lo.getValue(1), Ptr, SV, Alignment);
+  Lo = DAG.getVAArg(NVT, dl, Chain, Ptr, SV, Alignment.value());
+  Hi = DAG.getVAArg(NVT, dl, Lo.getValue(1), Ptr, SV, Alignment.value());
   Chain = Hi.getValue(1);
 
   // Modified the chain - switch anything that used the old chain to use
@@ -2479,7 +2489,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
   if (!LoMemVT.isByteSized() || !HiMemVT.isByteSized())
     return TLI.scalarizeVectorStore(N, DAG);
 
-  unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
+  unsigned IncrementSize = LoMemVT.getSizeInBits().getKnownMinSize() / 8;
 
   if (isTruncating)
     Lo = DAG.getTruncStore(Ch, DL, Lo, Ptr, N->getPointerInfo(), LoMemVT,
@@ -2488,17 +2498,24 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
     Lo = DAG.getStore(Ch, DL, Lo, Ptr, N->getPointerInfo(), Alignment, MMOFlags,
                       AAInfo);
 
-  // Increment the pointer to the other half.
-  Ptr = DAG.getObjectPtrOffset(DL, Ptr, IncrementSize);
+  MachinePointerInfo MPI;
+  if (LoMemVT.isScalableVector()) {
+    SDValue BytesIncrement = DAG.getVScale(
+        DL, Ptr.getValueType(),
+        APInt(Ptr.getValueSizeInBits().getFixedSize(), IncrementSize));
+    MPI = MachinePointerInfo(N->getPointerInfo().getAddrSpace());
+    Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr, BytesIncrement);
+  } else {
+    MPI = N->getPointerInfo().getWithOffset(IncrementSize);
+    // Increment the pointer to the other half.
+    Ptr = DAG.getObjectPtrOffset(DL, Ptr, IncrementSize);
+  }
 
   if (isTruncating)
-    Hi = DAG.getTruncStore(Ch, DL, Hi, Ptr,
-                           N->getPointerInfo().getWithOffset(IncrementSize),
+    Hi = DAG.getTruncStore(Ch, DL, Hi, Ptr, MPI,
                            HiMemVT, Alignment, MMOFlags, AAInfo);
   else
-    Hi = DAG.getStore(Ch, DL, Hi, Ptr,
-                      N->getPointerInfo().getWithOffset(IncrementSize),
-                      Alignment, MMOFlags, AAInfo);
+    Hi = DAG.getStore(Ch, DL, Hi, Ptr, MPI, Alignment, MMOFlags, AAInfo);
 
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
 }
@@ -2593,9 +2610,9 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
   SDValue Chain;
   if (N->isStrictFPOpcode()) {
     HalfLo = DAG.getNode(N->getOpcode(), DL, {HalfVT, MVT::Other},
-                         {N->getOperand(0), HalfLo});
+                         {N->getOperand(0), InLoVec});
     HalfHi = DAG.getNode(N->getOpcode(), DL, {HalfVT, MVT::Other},
-                         {N->getOperand(0), HalfHi});
+                         {N->getOperand(0), InHiVec});
     // Legalize the chain result - switch anything that used the old chain to
     // use the new one.
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, HalfLo.getValue(1),

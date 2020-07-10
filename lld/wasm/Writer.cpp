@@ -224,8 +224,16 @@ void Writer::layoutMemory() {
     log("mem: stack base  = " + Twine(memoryPtr));
     memoryPtr += config->zStackSize;
     auto *sp = cast<DefinedGlobal>(WasmSym::stackPointer);
-    assert(sp->global->global.InitExpr.Opcode == WASM_OPCODE_I32_CONST);
-    sp->global->global.InitExpr.Value.Int32 = memoryPtr;
+    switch (sp->global->global.InitExpr.Opcode) {
+    case WASM_OPCODE_I32_CONST:
+      sp->global->global.InitExpr.Value.Int32 = memoryPtr;
+      break;
+    case WASM_OPCODE_I64_CONST:
+      sp->global->global.InitExpr.Value.Int64 = memoryPtr;
+      break;
+    default:
+      llvm_unreachable("init expr must be i32/i64.const");
+    }
     log("mem: stack top   = " + Twine(memoryPtr));
   };
 
@@ -296,13 +304,16 @@ void Writer::layoutMemory() {
   if (WasmSym::heapBase)
     WasmSym::heapBase->setVirtualAddress(memoryPtr);
 
+  uint64_t maxMemorySetting = 1ULL << (config->is64 ? 48 : 32);
+
   if (config->initialMemory != 0) {
     if (config->initialMemory != alignTo(config->initialMemory, WasmPageSize))
       error("initial memory must be " + Twine(WasmPageSize) + "-byte aligned");
     if (memoryPtr > config->initialMemory)
       error("initial memory too small, " + Twine(memoryPtr) + " bytes needed");
-    if (config->initialMemory > (1ULL << 32))
-      error("initial memory too large, cannot be greater than 4294967296");
+    if (config->initialMemory > maxMemorySetting)
+      error("initial memory too large, cannot be greater than " +
+            Twine(maxMemorySetting));
     memoryPtr = config->initialMemory;
   }
   out.dylinkSec->memSize = memoryPtr;
@@ -316,8 +327,9 @@ void Writer::layoutMemory() {
       error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
     if (memoryPtr > config->maxMemory)
       error("maximum memory too small, " + Twine(memoryPtr) + " bytes needed");
-    if (config->maxMemory > (1ULL << 32))
-      error("maximum memory too large, cannot be greater than 4294967296");
+    if (config->maxMemory > maxMemorySetting)
+      error("maximum memory too large, cannot be greater than " +
+            Twine(maxMemorySetting));
     out.memorySec->maxMemoryPages = config->maxMemory / WasmPageSize;
     log("mem: max pages   = " + Twine(out.memorySec->maxMemoryPages));
   }

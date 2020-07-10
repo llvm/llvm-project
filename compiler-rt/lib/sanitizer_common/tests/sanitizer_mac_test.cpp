@@ -24,8 +24,12 @@ namespace __sanitizer {
 
 TEST(SanitizerMac, GetMacosAlignedVersion) {
   MacosVersion vers = GetMacosAlignedVersion();
-  EXPECT_EQ(vers.major, 10);
-  EXPECT_EQ(vers.minor, GetDarwinKernelVersion().major - 4);
+  u16 kernel_major = GetDarwinKernelVersion().major;
+  bool macos_11 = (kernel_major >= 20);
+  u16 expected_major = macos_11 ? (kernel_major - 9) : 10;
+  u16 expected_minor = macos_11 ? 0 : (kernel_major - 4);
+  EXPECT_EQ(vers.major, expected_major);
+  EXPECT_EQ(vers.minor, expected_minor);
 }
 
 void ParseVersion(const char *vers, u16 *major, u16 *minor);

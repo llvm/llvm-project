@@ -4646,17 +4646,6 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
   case ICmpInst::ICMP_NE:
     // Recognize pattern:
     //   mulval = mul(zext A, zext B)
-    //   cmp eq/neq mulval, zext trunc mulval
-    if (ZExtInst *Zext = dyn_cast<ZExtInst>(OtherVal))
-      if (Zext->hasOneUse()) {
-        Value *ZextArg = Zext->getOperand(0);
-        if (TruncInst *Trunc = dyn_cast<TruncInst>(ZextArg))
-          if (Trunc->getType()->getPrimitiveSizeInBits() == MulWidth)
-            break; //Recognized
-      }
-
-    // Recognize pattern:
-    //   mulval = mul(zext A, zext B)
     //   cmp eq/neq mulval, and(mulval, mask), mask selects low MulWidth bits.
     ConstantInt *CI;
     Value *ValToMask;
@@ -5283,6 +5272,47 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
   return new ICmpInst(FlippedStrictness->first, Op0, FlippedStrictness->second);
 }
 
+/// If we have a comparison with a non-canonical predicate, if we can update
+/// all the users, invert the predicate and adjust all the users.
+static CmpInst *canonicalizeICmpPredicate(CmpInst &I) {
+  // Is the predicate already canonical?
+  CmpInst::Predicate Pred = I.getPredicate();
+  if (isCanonicalPredicate(Pred))
+    return nullptr;
+
+  // Can all users be adjusted to predicate inversion?
+  if (!canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
+    return nullptr;
+
+  // Ok, we can canonicalize comparison!
+  // Let's first invert the comparison's predicate.
+  I.setPredicate(CmpInst::getInversePredicate(Pred));
+  I.setName(I.getName() + ".not");
+
+  // And now let's adjust every user.
+  for (User *U : I.users()) {
+    switch (cast<Instruction>(U)->getOpcode()) {
+    case Instruction::Select: {
+      auto *SI = cast<SelectInst>(U);
+      SI->swapValues();
+      SI->swapProfMetadata();
+      break;
+    }
+    case Instruction::Br:
+      cast<BranchInst>(U)->swapSuccessors(); // swaps prof metadata too
+      break;
+    case Instruction::Xor:
+      U->replaceAllUsesWith(&I);
+      break;
+    default:
+      llvm_unreachable("Got unexpected user - out of sync with "
+                       "canFreelyInvertAllUsersOf() ?");
+    }
+  }
+
+  return &I;
+}
+
 /// Integer compare with boolean values can always be turned into bitwise ops.
 static Instruction *canonicalizeICmpBool(ICmpInst &I,
                                          InstCombiner::BuilderTy &Builder) {
@@ -5521,8 +5551,11 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     if (Instruction *Res = canonicalizeICmpBool(I, Builder))
       return Res;
 
-  if (ICmpInst *NewICmp = canonicalizeCmpWithConstant(I))
-    return NewICmp;
+  if (Instruction *Res = canonicalizeCmpWithConstant(I))
+    return Res;
+
+  if (Instruction *Res = canonicalizeICmpPredicate(I))
+    return Res;
 
   if (Instruction *Res = foldICmpWithConstant(I))
     return Res;

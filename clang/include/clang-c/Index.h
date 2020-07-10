@@ -2167,7 +2167,7 @@ enum CXCursorKind {
    */
   CXCursor_ObjCSelfExpr = 147,
 
-  /** OpenMP 4.0 [2.4, Array Section].
+  /** OpenMP 5.0 [2.1.5, Array Section].
    */
   CXCursor_OMPArraySectionExpr = 148,
 

@@ -223,8 +223,7 @@ DWARF:
         - LowOffset:       0x0000000000001000
           HighOffset:      0x0000000000002000
   debug_info:
-    - Length:
-        TotalLength:     99
+    - Length:          99
       Version:         4
       AbbrOffset:      0
       AddrSize:        8

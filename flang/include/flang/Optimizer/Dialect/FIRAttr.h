@@ -75,7 +75,8 @@ public:
 /// A case selector of `CASE (n:m)` corresponds to any value from `n` to `m` and
 /// is encoded as `#fir.interval, %n, %m`.
 class ClosedIntervalAttr
-    : public mlir::Attribute::AttrBase<ClosedIntervalAttr> {
+    : public mlir::Attribute::AttrBase<ClosedIntervalAttr, mlir::Attribute,
+                                       mlir::AttributeStorage> {
 public:
   using Base::Base;
 
@@ -91,7 +92,9 @@ public:
 /// an ssa-value.
 /// A case selector of `CASE (:m)` corresponds to any value up to and including
 /// `m` and is encoded as `#fir.upper, %m`.
-class UpperBoundAttr : public mlir::Attribute::AttrBase<UpperBoundAttr> {
+class UpperBoundAttr
+    : public mlir::Attribute::AttrBase<UpperBoundAttr, mlir::Attribute,
+                                       mlir::AttributeStorage> {
 public:
   using Base::Base;
 
@@ -107,7 +110,9 @@ public:
 /// an ssa-value.
 /// A case selector of `CASE (n:)` corresponds to any value down to and
 /// including `n` and is encoded as `#fir.lower, %n`.
-class LowerBoundAttr : public mlir::Attribute::AttrBase<LowerBoundAttr> {
+class LowerBoundAttr
+    : public mlir::Attribute::AttrBase<LowerBoundAttr, mlir::Attribute,
+                                       mlir::AttributeStorage> {
 public:
   using Base::Base;
 
@@ -123,7 +128,9 @@ public:
 /// interval contains exactly one value.
 /// A case selector of `CASE (p)` corresponds to exactly the value `p` and is
 /// encoded as `#fir.point, %p`.
-class PointIntervalAttr : public mlir::Attribute::AttrBase<PointIntervalAttr> {
+class PointIntervalAttr
+    : public mlir::Attribute::AttrBase<PointIntervalAttr, mlir::Attribute,
+                                       mlir::AttributeStorage> {
 public:
   using Base::Base;
 

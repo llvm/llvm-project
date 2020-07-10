@@ -98,7 +98,6 @@ public:
 
   /// Create a flat affine constraint system from an AffineValueMap or a list of
   /// these. The constructed system will only include equalities.
-  // TODO(bondhugula)
   explicit FlatAffineConstraints(const AffineValueMap &avm);
   explicit FlatAffineConstraints(ArrayRef<const AffineValueMap *> avmRef);
 
@@ -126,18 +125,32 @@ public:
   /// intersection with no simplification of any sort attempted.
   void append(const FlatAffineConstraints &other);
 
-  // Checks for emptiness by performing variable elimination on all identifiers,
-  // running the GCD test on each equality constraint, and checking for invalid
-  // constraints.
-  // Returns true if the GCD test fails for any equality, or if any invalid
-  // constraints are discovered on any row. Returns false otherwise.
+  /// Checks for emptiness by performing variable elimination on all
+  /// identifiers, running the GCD test on each equality constraint, and
+  /// checking for invalid constraints. Returns true if the GCD test fails for
+  /// any equality, or if any invalid constraints are discovered on any row.
+  /// Returns false otherwise.
   bool isEmpty() const;
 
-  // Runs the GCD test on all equality constraints. Returns 'true' if this test
-  // fails on any equality. Returns 'false' otherwise.
-  // This test can be used to disprove the existence of a solution. If it
-  // returns true, no integer solution to the equality constraints can exist.
+  /// Runs the GCD test on all equality constraints. Returns 'true' if this test
+  /// fails on any equality. Returns 'false' otherwise.
+  /// This test can be used to disprove the existence of a solution. If it
+  /// returns true, no integer solution to the equality constraints can exist.
   bool isEmptyByGCDTest() const;
+
+  /// Runs the GCD test heuristic. If it proves inconclusive, falls back to
+  /// generalized basis reduction if the set is bounded.
+  ///
+  /// Returns true if the set of constraints is found to have no solution,
+  /// false if a solution exists or all tests were inconclusive.
+  bool isIntegerEmpty() const;
+
+  /// Find a sample point satisfying the constraints. This uses a branch and
+  /// bound algorithm with generalized basis reduction, which always works if
+  /// the set is bounded. This should not be called for unbounded sets.
+  ///
+  /// Returns such a point if one exists, or an empty Optional otherwise.
+  Optional<SmallVector<int64_t, 8>> findIntegerSample() const;
 
   // Clones this object.
   std::unique_ptr<FlatAffineConstraints> clone() const;
@@ -199,7 +212,7 @@ public:
   /// 'affine.for' operation are added as trailing identifiers (either
   /// dimensional or symbolic depending on whether the operand is a valid
   /// symbol).
-  //  TODO(bondhugula): add support for non-unit strides.
+  //  TODO: add support for non-unit strides.
   LogicalResult addAffineForOpDomain(AffineForOp forOp);
 
   /// Adds a lower or an upper bound for the identifier at the specified
@@ -321,8 +334,8 @@ public:
   /// Projects out (aka eliminates) 'num' identifiers starting at position
   /// 'pos'. The resulting constraint system is the shadow along the dimensions
   /// that still exist. This method may not always be integer exact.
-  // TODO(bondhugula): deal with integer exactness when necessary - can return a
-  // value to mark exactness for example.
+  // TODO: deal with integer exactness when necessary - can return a value to
+  // mark exactness for example.
   void projectOut(unsigned pos, unsigned num);
   inline void projectOut(unsigned pos) { return projectOut(pos, 1); }
 

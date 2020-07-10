@@ -9,6 +9,7 @@
 #include "file.h"
 #include "magic-numbers.h"
 #include "memory.h"
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
@@ -64,9 +65,11 @@ void OpenFile::Open(
     if (fd_ >= 0) {
       return;
     }
+    knownSize_.reset();
     break;
   case OpenStatus::New:
     flags |= O_CREAT | O_EXCL;
+    knownSize_ = 0;
     break;
   case OpenStatus::Scratch:
     if (path_.get()) {
@@ -74,15 +77,18 @@ void OpenFile::Open(
       path_.reset();
     }
     fd_ = openfile_mkstemp(handler);
+    knownSize_ = 0;
     return;
   case OpenStatus::Replace:
     flags |= O_CREAT | O_TRUNC;
+    knownSize_ = 0;
     break;
   case OpenStatus::Unknown:
     if (fd_ >= 0) {
       return;
     }
     flags |= O_CREAT;
+    knownSize_.reset();
     break;
   }
   // If we reach this point, we're opening a new file.
@@ -104,7 +110,6 @@ void OpenFile::Open(
     handler.SignalErrno();
   }
   pending_.reset();
-  knownSize_.reset();
   if (position == Position::Append && !RawSeekToEnd()) {
     handler.SignalErrno();
   }
@@ -152,17 +157,14 @@ std::size_t OpenFile::Read(FileOffset at, char *buffer, std::size_t minBytes,
   if (!Seek(at, handler)) {
     return 0;
   }
-  if (maxBytes < minBytes) {
-    minBytes = maxBytes;
-  }
+  minBytes = std::min(minBytes, maxBytes);
   std::size_t got{0};
   while (got < minBytes) {
     auto chunk{::read(fd_, buffer + got, maxBytes - got)};
     if (chunk == 0) {
       handler.SignalEnd();
       break;
-    }
-    if (chunk < 0) {
+    } else if (chunk < 0) {
       auto err{errno};
       if (err != EAGAIN && err != EWOULDBLOCK && err != EINTR) {
         handler.SignalError(err);
@@ -352,7 +354,9 @@ bool OpenFile::RawSeekToEnd() {
 
 int OpenFile::PendingResult(const Terminator &terminator, int iostat) {
   int id{nextId_++};
-  pending_.reset(&New<Pending>{}(terminator, id, iostat, std::move(pending_)));
+  pending_ = New<Pending>{terminator}(id, iostat, std::move(pending_));
   return id;
 }
+
+bool IsATerminal(int fd) { return ::isatty(fd); }
 } // namespace Fortran::runtime::io

@@ -65,8 +65,6 @@ class VEAsmParser : public MCTargetAsmParser {
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
-  // Helper function to parse and generate identifier with relocation.
-  const MCExpr *parseIdentifier(StringRef Identifier);
   // Custom parse functions for VE specific operands.
   OperandMatchResultTy parseMEMOperand(OperandVector &Operands);
   OperandMatchResultTy parseMEMAsOperand(OperandVector &Operands);
@@ -75,6 +73,13 @@ class VEAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseMImmOperand(OperandVector &Operands);
   OperandMatchResultTy parseOperand(OperandVector &Operands, StringRef Name);
   OperandMatchResultTy parseVEAsmOperand(std::unique_ptr<VEOperand> &Operand);
+
+  // Helper function to parse expression with a symbol.
+  const MCExpr *extractModifierFromExpr(const MCExpr *E,
+                                        VEMCExpr::VariantKind &Variant);
+  const MCExpr *fixupVariantKind(const MCExpr *E);
+  bool parseExpression(const MCExpr *&EVal);
+
   // Split the mnemonic stripping conditional code and quantifiers
   StringRef splitMnemonic(StringRef Name, SMLoc NameLoc,
                           OperandVector *Operands);
@@ -948,27 +953,163 @@ bool VEAsmParser::ParseDirective(AsmToken DirectiveID) {
   return true;
 }
 
-const MCExpr *VEAsmParser::parseIdentifier(StringRef Identifier) {
-  StringRef Modifier;
-  // Search @modifiers like "symbol@hi".
-  size_t at = Identifier.rfind('@');
-  if (at != 0 || at != StringRef::npos) {
-    std::pair<StringRef, StringRef> Pair = Identifier.rsplit("@");
-    if (!Pair.first.empty() && !Pair.second.empty()) {
-      Identifier = Pair.first;
-      Modifier = Pair.second;
+/// Extract \code @lo32/@hi32/etc \endcode modifier from expression.
+/// Recursively scan the expression and check for VK_VE_HI32/LO32/etc
+/// symbol variants.  If all symbols with modifier use the same
+/// variant, return the corresponding VEMCExpr::VariantKind,
+/// and a modified expression using the default symbol variant.
+/// Otherwise, return NULL.
+const MCExpr *
+VEAsmParser::extractModifierFromExpr(const MCExpr *E,
+                                     VEMCExpr::VariantKind &Variant) {
+  MCContext &Context = getParser().getContext();
+  Variant = VEMCExpr::VK_VE_None;
+
+  switch (E->getKind()) {
+  case MCExpr::Target:
+  case MCExpr::Constant:
+    return nullptr;
+
+  case MCExpr::SymbolRef: {
+    const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
+
+    switch (SRE->getKind()) {
+    case MCSymbolRefExpr::VK_None:
+      // Use VK_VE_REFLONG to a symbol without modifiers.
+      Variant = VEMCExpr::VK_VE_REFLONG;
+      break;
+    case MCSymbolRefExpr::VK_VE_HI32:
+      Variant = VEMCExpr::VK_VE_HI32;
+      break;
+    case MCSymbolRefExpr::VK_VE_LO32:
+      Variant = VEMCExpr::VK_VE_LO32;
+      break;
+    case MCSymbolRefExpr::VK_VE_PC_HI32:
+      Variant = VEMCExpr::VK_VE_PC_HI32;
+      break;
+    case MCSymbolRefExpr::VK_VE_PC_LO32:
+      Variant = VEMCExpr::VK_VE_PC_LO32;
+      break;
+    case MCSymbolRefExpr::VK_VE_GOT_HI32:
+      Variant = VEMCExpr::VK_VE_GOT_HI32;
+      break;
+    case MCSymbolRefExpr::VK_VE_GOT_LO32:
+      Variant = VEMCExpr::VK_VE_GOT_LO32;
+      break;
+    case MCSymbolRefExpr::VK_VE_GOTOFF_HI32:
+      Variant = VEMCExpr::VK_VE_GOTOFF_HI32;
+      break;
+    case MCSymbolRefExpr::VK_VE_GOTOFF_LO32:
+      Variant = VEMCExpr::VK_VE_GOTOFF_LO32;
+      break;
+    case MCSymbolRefExpr::VK_VE_PLT_HI32:
+      Variant = VEMCExpr::VK_VE_PLT_HI32;
+      break;
+    case MCSymbolRefExpr::VK_VE_PLT_LO32:
+      Variant = VEMCExpr::VK_VE_PLT_LO32;
+      break;
+    case MCSymbolRefExpr::VK_VE_TLS_GD_HI32:
+      Variant = VEMCExpr::VK_VE_TLS_GD_HI32;
+      break;
+    case MCSymbolRefExpr::VK_VE_TLS_GD_LO32:
+      Variant = VEMCExpr::VK_VE_TLS_GD_LO32;
+      break;
+    case MCSymbolRefExpr::VK_VE_TPOFF_HI32:
+      Variant = VEMCExpr::VK_VE_TPOFF_HI32;
+      break;
+    case MCSymbolRefExpr::VK_VE_TPOFF_LO32:
+      Variant = VEMCExpr::VK_VE_TPOFF_LO32;
+      break;
+    default:
+      return nullptr;
     }
+
+    return MCSymbolRefExpr::create(&SRE->getSymbol(), Context);
   }
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-  const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
-  VEMCExpr::VariantKind VK = VEMCExpr::parseVariantKind(Modifier);
-  if (VK == VEMCExpr::VK_VE_None) {
-    // Create identifier using default variant kind
-    VEMCExpr::VariantKind Kind = VEMCExpr::VK_VE_REFLONG;
-    return VEMCExpr::create(Kind, Res, getContext());
+
+  case MCExpr::Unary: {
+    const MCUnaryExpr *UE = cast<MCUnaryExpr>(E);
+    const MCExpr *Sub = extractModifierFromExpr(UE->getSubExpr(), Variant);
+    if (!Sub)
+      return nullptr;
+    return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
   }
-  return VEMCExpr::create(VK, Res, getContext());
+
+  case MCExpr::Binary: {
+    const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
+    VEMCExpr::VariantKind LHSVariant, RHSVariant;
+    const MCExpr *LHS = extractModifierFromExpr(BE->getLHS(), LHSVariant);
+    const MCExpr *RHS = extractModifierFromExpr(BE->getRHS(), RHSVariant);
+
+    if (!LHS && !RHS)
+      return nullptr;
+
+    if (!LHS)
+      LHS = BE->getLHS();
+    if (!RHS)
+      RHS = BE->getRHS();
+
+    if (LHSVariant == VEMCExpr::VK_VE_None)
+      Variant = RHSVariant;
+    else if (RHSVariant == VEMCExpr::VK_VE_None)
+      Variant = LHSVariant;
+    else if (LHSVariant == RHSVariant)
+      Variant = LHSVariant;
+    else
+      return nullptr;
+
+    return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
+  }
+  }
+
+  llvm_unreachable("Invalid expression kind!");
+}
+
+const MCExpr *VEAsmParser::fixupVariantKind(const MCExpr *E) {
+  MCContext &Context = getParser().getContext();
+
+  switch (E->getKind()) {
+  case MCExpr::Target:
+  case MCExpr::Constant:
+  case MCExpr::SymbolRef:
+    return E;
+
+  case MCExpr::Unary: {
+    const MCUnaryExpr *UE = cast<MCUnaryExpr>(E);
+    const MCExpr *Sub = fixupVariantKind(UE->getSubExpr());
+    if (Sub == UE->getSubExpr())
+      return E;
+    return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
+  }
+
+  case MCExpr::Binary: {
+    const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
+    const MCExpr *LHS = fixupVariantKind(BE->getLHS());
+    const MCExpr *RHS = fixupVariantKind(BE->getRHS());
+    if (LHS == BE->getLHS() && RHS == BE->getRHS())
+      return E;
+    return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
+  }
+  }
+
+  llvm_unreachable("Invalid expression kind!");
+}
+
+/// ParseExpression.  This differs from the default "parseExpression" in that
+/// it handles modifiers.
+bool VEAsmParser::parseExpression(const MCExpr *&EVal) {
+  // Handle \code symbol @lo32/@hi32/etc \endcode.
+  if (getParser().parseExpression(EVal))
+    return true;
+
+  // Convert MCSymbolRefExpr with VK_* to MCExpr with VK_*.
+  EVal = fixupVariantKind(EVal);
+  VEMCExpr::VariantKind Variant;
+  const MCExpr *E = extractModifierFromExpr(EVal, Variant);
+  if (E)
+    EVal = VEMCExpr::create(Variant, E, getParser().getContext());
+
+  return false;
 }
 
 OperandMatchResultTy VEAsmParser::parseMEMOperand(OperandVector &Operands) {
@@ -992,24 +1133,13 @@ OperandMatchResultTy VEAsmParser::parseMEMOperand(OperandVector &Operands) {
 
   case AsmToken::Minus:
   case AsmToken::Integer:
-  case AsmToken::Dot: {
+  case AsmToken::Dot:
+  case AsmToken::Identifier: {
     const MCExpr *EVal;
-    if (!getParser().parseExpression(EVal, E))
+    if (!parseExpression(EVal))
       Offset = VEOperand::CreateImm(EVal, S, E);
     else
       return MatchOperand_NoMatch;
-    break;
-  }
-
-  case AsmToken::Identifier: {
-    StringRef Identifier;
-    if (!getParser().parseIdentifier(Identifier)) {
-      E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-      const MCExpr *EVal = parseIdentifier(Identifier);
-
-      E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-      Offset = VEOperand::CreateImm(EVal, S, E);
-    }
     break;
   }
 
@@ -1110,9 +1240,10 @@ OperandMatchResultTy VEAsmParser::parseMEMAsOperand(OperandVector &Operands) {
 
   case AsmToken::Minus:
   case AsmToken::Integer:
-  case AsmToken::Dot: {
+  case AsmToken::Dot:
+  case AsmToken::Identifier: {
     const MCExpr *EVal;
-    if (!getParser().parseExpression(EVal, E))
+    if (!parseExpression(EVal))
       Offset = VEOperand::CreateImm(EVal, S, E);
     else
       return MatchOperand_NoMatch;
@@ -1275,22 +1406,10 @@ VEAsmParser::parseVEAsmOperand(std::unique_ptr<VEOperand> &Op) {
   case AsmToken::Minus:
   case AsmToken::Integer:
   case AsmToken::Dot:
-    if (!getParser().parseExpression(EVal, E))
+  case AsmToken::Identifier:
+    if (!parseExpression(EVal))
       Op = VEOperand::CreateImm(EVal, S, E);
     break;
-
-  case AsmToken::Identifier: {
-    StringRef Identifier;
-    if (!getParser().parseIdentifier(Identifier)) {
-      E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-      MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-
-      const MCExpr *Res =
-          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
-      Op = VEOperand::CreateImm(Res, S, E);
-    }
-    break;
-  }
   }
   return (Op) ? MatchOperand_Success : MatchOperand_ParseFail;
 }

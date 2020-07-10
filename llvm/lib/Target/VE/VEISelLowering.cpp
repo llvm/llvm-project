@@ -548,7 +548,7 @@ bool VETargetLowering::hasAndNot(SDValue Y) const {
   // for all immediate values now.
   // FIXME: Change hasAndNot function to have two operands to make it work
   //        correctly with Aurora VE.
-  if (auto *C = dyn_cast<ConstantSDNode>(Y))
+  if (isa<ConstantSDNode>(Y))
     return false;
 
   // It's ok for generic registers.

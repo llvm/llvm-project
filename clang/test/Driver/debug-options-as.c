@@ -23,7 +23,7 @@
 // RUN:   | FileCheck %s
 //
 // CHECK: "-cc1as"
-// CHECK: "-debug-info-kind=limited"
+// CHECK: "-debug-info-kind=constructor"
 
 // Check to make sure clang with -g on a .s file gets passed -dwarf-debug-producer.
 // rdar://12955296

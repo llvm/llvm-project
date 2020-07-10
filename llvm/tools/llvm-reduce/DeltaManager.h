@@ -14,11 +14,13 @@
 #include "TestRunner.h"
 #include "deltas/Delta.h"
 #include "deltas/ReduceArguments.h"
+#include "deltas/ReduceAttributes.h"
 #include "deltas/ReduceBasicBlocks.h"
 #include "deltas/ReduceFunctions.h"
 #include "deltas/ReduceGlobalVars.h"
-#include "deltas/ReduceMetadata.h"
 #include "deltas/ReduceInstructions.h"
+#include "deltas/ReduceMetadata.h"
+#include "deltas/ReduceOperandBundles.h"
 
 namespace llvm {
 
@@ -30,6 +32,8 @@ inline void runDeltaPasses(TestRunner &Tester) {
   reduceMetadataDeltaPass(Tester);
   reduceArgumentsDeltaPass(Tester);
   reduceInstructionsDeltaPass(Tester);
+  reduceOperandBundesDeltaPass(Tester);
+  reduceAttributesDeltaPass(Tester);
   // TODO: Implement the remaining Delta Passes
 }
 

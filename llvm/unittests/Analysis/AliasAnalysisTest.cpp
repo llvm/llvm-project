@@ -174,6 +174,7 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   auto PtrType = Type::getInt32PtrTy(C);
   auto *Value = ConstantInt::get(IntType, 42);
   auto *Addr = ConstantPointerNull::get(PtrType);
+  auto Alignment = Align(IntType->getBitWidth() / 8);
 
   auto *Store1 = new StoreInst(Value, Addr, BB);
   auto *Load1 = new LoadInst(IntType, Addr, "load", BB);
@@ -181,11 +182,11 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   auto *VAArg1 = new VAArgInst(Addr, PtrType, "vaarg", BB);
   auto *CmpXChg1 = new AtomicCmpXchgInst(
       Addr, ConstantInt::get(IntType, 0), ConstantInt::get(IntType, 1),
-      AtomicOrdering::Monotonic, AtomicOrdering::Monotonic,
+      Alignment, AtomicOrdering::Monotonic, AtomicOrdering::Monotonic,
       SyncScope::System, BB);
-  auto *AtomicRMW =
-      new AtomicRMWInst(AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1),
-                        AtomicOrdering::Monotonic, SyncScope::System, BB);
+  auto *AtomicRMW = new AtomicRMWInst(
+      AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1), Alignment,
+      AtomicOrdering::Monotonic, SyncScope::System, BB);
 
   ReturnInst::Create(C, nullptr, BB);
 

@@ -93,9 +93,11 @@ BackgroundIndex::BackgroundIndex(
     Context BackgroundContext, const ThreadsafeFS &TFS,
     const GlobalCompilationDatabase &CDB,
     BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize,
-    std::function<void(BackgroundQueue::Stats)> OnProgress)
+    std::function<void(BackgroundQueue::Stats)> OnProgress,
+    std::function<Context(PathRef)> ContextProvider)
     : SwapIndex(std::make_unique<MemIndex>()), TFS(TFS), CDB(CDB),
       BackgroundContext(std::move(BackgroundContext)),
+      ContextProvider(std::move(ContextProvider)),
       Rebuilder(this, &IndexedSymbols, ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
       Queue(std::move(OnProgress)),
@@ -122,6 +124,11 @@ BackgroundQueue::Task BackgroundIndex::changedFilesTask(
     const std::vector<std::string> &ChangedFiles) {
   BackgroundQueue::Task T([this, ChangedFiles] {
     trace::Span Tracer("BackgroundIndexEnqueue");
+
+    llvm::Optional<WithContext> WithProvidedContext;
+    if (ContextProvider)
+      WithProvidedContext.emplace(ContextProvider(/*Path=*/""));
+
     // We're doing this asynchronously, because we'll read shards here too.
     log("Enqueueing {0} commands for indexing", ChangedFiles.size());
     SPAN_ATTACH(Tracer, "files", int64_t(ChangedFiles.size()));
@@ -147,17 +154,20 @@ static llvm::StringRef filenameWithoutExtension(llvm::StringRef Path) {
   return Path.drop_back(llvm::sys::path::extension(Path).size());
 }
 
-BackgroundQueue::Task
-BackgroundIndex::indexFileTask(tooling::CompileCommand Cmd) {
-  BackgroundQueue::Task T([this, Cmd] {
-    // We can't use llvm::StringRef here since we are going to
-    // move from Cmd during the call below.
-    const std::string FileName = Cmd.Filename;
-    if (auto Error = index(std::move(Cmd)))
-      elog("Indexing {0} failed: {1}", FileName, std::move(Error));
+BackgroundQueue::Task BackgroundIndex::indexFileTask(std::string Path) {
+  std::string Tag = filenameWithoutExtension(Path).str();
+  BackgroundQueue::Task T([this, Path(std::move(Path))] {
+    llvm::Optional<WithContext> WithProvidedContext;
+    if (ContextProvider)
+      WithProvidedContext.emplace(ContextProvider(Path));
+    auto Cmd = CDB.getCompileCommand(Path);
+    if (!Cmd)
+      return;
+    if (auto Error = index(std::move(*Cmd)))
+      elog("Indexing {0} failed: {1}", Path, std::move(Error));
   });
   T.QueuePri = IndexFile;
-  T.Tag = std::string(filenameWithoutExtension(Cmd.Filename));
+  T.Tag = std::move(Tag);
   return T;
 }
 
@@ -342,10 +352,8 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
 // Restores shards for \p MainFiles from index storage. Then checks staleness of
 // those shards and returns a list of TUs that needs to be indexed to update
 // staleness.
-std::vector<tooling::CompileCommand>
+std::vector<std::string>
 BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
-  std::vector<tooling::CompileCommand> NeedsReIndexing;
-
   Rebuilder.startLoading();
   // Load shards for all of the mainfiles.
   const std::vector<LoadedShard> Result =
@@ -398,14 +406,7 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
     TUsToIndex.insert(TUForFile);
   }
 
-  for (PathRef TU : TUsToIndex) {
-    auto Cmd = CDB.getCompileCommand(TU);
-    if (!Cmd)
-      continue;
-    NeedsReIndexing.emplace_back(std::move(*Cmd));
-  }
-
-  return NeedsReIndexing;
+  return {TUsToIndex.begin(), TUsToIndex.end()};
 }
 
 } // namespace clangd

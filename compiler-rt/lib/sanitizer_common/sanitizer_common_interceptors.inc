@@ -3092,6 +3092,34 @@ INTERCEPTOR(int, sendmmsg, int fd, struct __sanitizer_mmsghdr *msgvec,
 #define INIT_SENDMMSG
 #endif
 
+#if SANITIZER_INTERCEPT_SYSMSG
+INTERCEPTOR(int, msgsnd, int msqid, const void *msgp, SIZE_T msgsz,
+            int msgflg) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, msgsnd, msqid, msgp, msgsz, msgflg);
+  if (msgp)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, msgp, sizeof(long) + msgsz);
+  int res = REAL(msgsnd)(msqid, msgp, msgsz, msgflg);
+  return res;
+}
+
+INTERCEPTOR(SSIZE_T, msgrcv, int msqid, void *msgp, SIZE_T msgsz,
+            long msgtyp, int msgflg) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, msgrcv, msqid, msgp, msgsz, msgtyp, msgflg);
+  SSIZE_T len = REAL(msgrcv)(msqid, msgp, msgsz, msgtyp, msgflg);
+  if (len != -1)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, msgp, sizeof(long) + len);
+  return len;
+}
+
+#define INIT_SYSMSG                  \
+  COMMON_INTERCEPT_FUNCTION(msgsnd); \
+  COMMON_INTERCEPT_FUNCTION(msgrcv);
+#else
+#define INIT_SYSMSG
+#endif
+
 #if SANITIZER_INTERCEPT_GETPEERNAME
 INTERCEPTOR(int, getpeername, int sockfd, void *addr, unsigned *addrlen) {
   void *ctx;
@@ -7271,23 +7299,26 @@ INTERCEPTOR(int, setttyentpath, char *path) {
 #endif
 
 #if SANITIZER_INTERCEPT_PROTOENT
+static void write_protoent(void *ctx, struct __sanitizer_protoent *p) {
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, sizeof(*p));
+
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_name, REAL(strlen)(p->p_name) + 1);
+
+  SIZE_T pp_size = 1; // One handles the trailing \0
+
+  for (char **pp = p->p_aliases; *pp; ++pp, ++pp_size)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *pp, REAL(strlen)(*pp) + 1);
+
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases,
+                                  pp_size * sizeof(char **));
+}
+
 INTERCEPTOR(struct __sanitizer_protoent *, getprotoent) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getprotoent);
   struct __sanitizer_protoent *p = REAL(getprotoent)();
-  if (p) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, sizeof(*p));
-
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_name, REAL(strlen)(p->p_name) + 1);
-
-    SIZE_T pp_size = 1; // One handles the trailing \0
-
-    for (char **pp = p->p_aliases; *pp; ++pp, ++pp_size)
-       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *pp, REAL(strlen)(*pp) + 1);
-
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases,
-                                   pp_size * sizeof(char **));
-  }
+  if (p)
+    write_protoent(ctx, p);
   return p;
 }
 
@@ -7297,19 +7328,8 @@ INTERCEPTOR(struct __sanitizer_protoent *, getprotobyname, const char *name) {
   if (name)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
   struct __sanitizer_protoent *p = REAL(getprotobyname)(name);
-  if (p) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, sizeof(*p));
-
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_name, REAL(strlen)(p->p_name) + 1);
-
-    SIZE_T pp_size = 1; // One handles the trailing \0
-
-    for (char **pp = p->p_aliases; *pp; ++pp, ++pp_size)
-       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *pp, REAL(strlen)(*pp) + 1);
-
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases,
-                                   pp_size * sizeof(char **));
-  }
+  if (p)
+    write_protoent(ctx, p);
   return p;
 }
 
@@ -7317,19 +7337,8 @@ INTERCEPTOR(struct __sanitizer_protoent *, getprotobynumber, int proto) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getprotobynumber, proto);
   struct __sanitizer_protoent *p = REAL(getprotobynumber)(proto);
-  if (p) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p, sizeof(*p));
-
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_name, REAL(strlen)(p->p_name) + 1);
-
-    SIZE_T pp_size = 1; // One handles the trailing \0
-
-    for (char **pp = p->p_aliases; *pp; ++pp, ++pp_size)
-       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *pp, REAL(strlen)(*pp) + 1);
-
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases,
-                                   pp_size * sizeof(char **));
-  }
+  if (p)
+    write_protoent(ctx, p);
   return p;
 }
 #define INIT_PROTOENT \
@@ -7338,6 +7347,58 @@ INTERCEPTOR(struct __sanitizer_protoent *, getprotobynumber, int proto) {
   COMMON_INTERCEPT_FUNCTION(getprotobynumber)
 #else
 #define INIT_PROTOENT
+#endif
+
+#if SANITIZER_INTERCEPT_PROTOENT_R
+INTERCEPTOR(int, getprotoent_r, struct __sanitizer_protoent *result_buf,
+            char *buf, SIZE_T buflen, struct __sanitizer_protoent **result) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getprotoent_r, result_buf, buf, buflen,
+                           result);
+  int res = REAL(getprotoent_r)(result_buf, buf, buflen, result);
+
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof *result);
+  if (!res && *result)
+    write_protoent(ctx, *result);
+  return res;
+}
+
+INTERCEPTOR(int, getprotobyname_r, const char *name,
+            struct __sanitizer_protoent *result_buf, char *buf, SIZE_T buflen,
+            struct __sanitizer_protoent **result) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getprotobyname_r, name, result_buf, buf,
+                           buflen, result);
+  if (name)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
+  int res = REAL(getprotobyname_r)(name, result_buf, buf, buflen, result);
+
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof *result);
+  if (!res && *result)
+    write_protoent(ctx, *result);
+  return res;
+}
+
+INTERCEPTOR(int, getprotobynumber_r, int num,
+            struct __sanitizer_protoent *result_buf, char *buf,
+            SIZE_T buflen, struct __sanitizer_protoent **result) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getprotobynumber_r, num, result_buf, buf,
+                           buflen, result);
+  int res = REAL(getprotobynumber_r)(num, result_buf, buf, buflen, result);
+
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof *result);
+  if (!res && *result)
+    write_protoent(ctx, *result);
+  return res;
+}
+
+#define INIT_PROTOENT_R \
+  COMMON_INTERCEPT_FUNCTION(getprotoent_r); \
+  COMMON_INTERCEPT_FUNCTION(getprotobyname_r); \
+  COMMON_INTERCEPT_FUNCTION(getprotobynumber_r);
+#else
+#define INIT_PROTOENT_R
 #endif
 
 #if SANITIZER_INTERCEPT_NETENT
@@ -9879,6 +9940,7 @@ static void InitializeCommonInterceptors() {
   INIT_SENDMSG;
   INIT_RECVMMSG;
   INIT_SENDMMSG;
+  INIT_SYSMSG;
   INIT_GETPEERNAME;
   INIT_IOCTL;
   INIT_INET_ATON;
@@ -10042,6 +10104,7 @@ static void InitializeCommonInterceptors() {
   INIT_STRMODE;
   INIT_TTYENT;
   INIT_PROTOENT;
+  INIT_PROTOENT_R;
   INIT_NETENT;
   INIT_GETMNTINFO;
   INIT_MI_VECTOR_HASH;

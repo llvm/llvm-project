@@ -14,6 +14,11 @@ unsigned long long test_pextd(void) {
   return __builtin_pextd(ulla, ullb);
 }
 
+unsigned long long test_cfuged(void) {
+  // CHECK: @llvm.ppc.cfuged
+  return __builtin_cfuged(ulla, ullb);
+}
+
 unsigned long long test_cntlzdm(void) {
   // CHECK: @llvm.ppc.cntlzdm
   return __builtin_cntlzdm(ulla, ullb);

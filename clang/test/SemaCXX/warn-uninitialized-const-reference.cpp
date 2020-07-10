@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wuninitialized-const-reference -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -fexceptions -Wuninitialized-const-reference -verify %s
 
 class A {
 public:
@@ -9,6 +9,16 @@ public:
   bool operator!=(const A &);
 };
 
+template <class T>
+void ignore_template(const T &) {}
+void ignore(const int &i) {}
+void dont_ignore_non_empty(const int &i) { ; } // Calling this won't silence the warning for you
+void dont_ignore_block(const int &i) {
+  {}
+} // Calling this won't silence the warning for you
+void ignore_function_try_block_maybe_who_knows(const int &) try {
+} catch (...) {
+}
 A const_ref_use_A(const A &a);
 int const_ref_use(const int &i);
 A const_use_A(const A a);
@@ -33,4 +43,13 @@ void f(int a) {
   if (a < 42)
     m = 1;
   const_ref_use(m);
+
+  int l;
+  ignore_template(l); // This is a pattern to avoid "unused variable" warnings (e.g. boost::ignore_unused).
+  ignore(l);
+  dont_ignore_non_empty(l); // expected-warning {{variable 'l' is uninitialized when passed as a const reference argument here}}
+  int l1;
+  dont_ignore_block(l1); // expected-warning {{variable 'l1' is uninitialized when passed as a const reference argument here}}
+  int l2;
+  ignore_function_try_block_maybe_who_knows(l2); // expected-warning {{variable 'l2' is uninitialized when passed as a const reference argument here}}
 }

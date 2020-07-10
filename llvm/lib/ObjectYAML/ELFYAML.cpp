@@ -1102,6 +1102,17 @@ static void sectionMapping(IO &IO, ELFYAML::DynamicSection &Section) {
 static void sectionMapping(IO &IO, ELFYAML::RawContentSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Content", Section.Content);
+
+  // We also support reading a content as array of bytes using the ContentArray
+  // key. obj2yaml never prints this field.
+  assert(!IO.outputting() || !Section.ContentBuf.hasValue());
+  IO.mapOptional("ContentArray", Section.ContentBuf);
+  if (Section.ContentBuf) {
+    if (Section.Content)
+      IO.setError("Content and ContentArray can't be used together");
+    Section.Content = yaml::BinaryRef(*Section.ContentBuf);
+  }
+
   IO.mapOptional("Size", Section.Size);
   IO.mapOptional("Info", Section.Info);
 }

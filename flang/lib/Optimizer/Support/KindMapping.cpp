@@ -8,7 +8,6 @@
 
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Allow the user to set the FIR intrinsic type kind value to LLVM type
@@ -219,26 +218,33 @@ MatchResult fir::KindMapping::parse(llvm::StringRef kindMap) {
   return mlir::success();
 }
 
-Bitsize fir::KindMapping::getCharacterBitsize(KindTy kind) {
+Bitsize fir::KindMapping::getCharacterBitsize(KindTy kind) const {
   return getIntegerLikeBitsize<'a'>(kind, intMap);
 }
 
-Bitsize fir::KindMapping::getIntegerBitsize(KindTy kind) {
+Bitsize fir::KindMapping::getIntegerBitsize(KindTy kind) const {
   return getIntegerLikeBitsize<'i'>(kind, intMap);
 }
 
-Bitsize fir::KindMapping::getLogicalBitsize(KindTy kind) {
+Bitsize fir::KindMapping::getLogicalBitsize(KindTy kind) const {
   return getIntegerLikeBitsize<'l'>(kind, intMap);
 }
 
-LLVMTypeID fir::KindMapping::getRealTypeID(KindTy kind) {
+LLVMTypeID fir::KindMapping::getRealTypeID(KindTy kind) const {
   return getFloatLikeTypeID<'r'>(kind, floatMap);
 }
 
-LLVMTypeID fir::KindMapping::getComplexTypeID(KindTy kind) {
+LLVMTypeID fir::KindMapping::getComplexTypeID(KindTy kind) const {
   return getFloatLikeTypeID<'c'>(kind, floatMap);
 }
 
-const llvm::fltSemantics &fir::KindMapping::getFloatSemantics(KindTy kind) {
+Bitsize fir::KindMapping::getRealBitsize(KindTy kind) const {
+  auto typeId = getFloatLikeTypeID<'r'>(kind, floatMap);
+  llvm::LLVMContext llCtxt; // FIXME
+  return llvm::Type::getPrimitiveType(llCtxt, typeId)->getPrimitiveSizeInBits();
+}
+
+const llvm::fltSemantics &
+fir::KindMapping::getFloatSemantics(KindTy kind) const {
   return getFloatSemanticsOfKind<'r'>(kind, floatMap);
 }

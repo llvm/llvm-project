@@ -757,10 +757,9 @@ int TargetTransformInfo::getMemoryOpCost(unsigned Opcode, Type *Src,
   return Cost;
 }
 
-int TargetTransformInfo::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                               unsigned Alignment,
-                                               unsigned AddressSpace,
-                                               TTI::TargetCostKind CostKind) const {
+int TargetTransformInfo::getMaskedMemoryOpCost(
+    unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind) const {
   int Cost =
       TTIImpl->getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                      CostKind);
@@ -768,12 +767,9 @@ int TargetTransformInfo::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   return Cost;
 }
 
-int TargetTransformInfo::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                                const Value *Ptr,
-                                                bool VariableMask,
-                                                unsigned Alignment,
-                                                TTI::TargetCostKind CostKind,
-                                                const Instruction *I) const {
+int TargetTransformInfo::getGatherScatterOpCost(
+    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   int Cost = TTIImpl->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                              Alignment, CostKind, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
@@ -782,8 +778,7 @@ int TargetTransformInfo::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
 
 int TargetTransformInfo::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    unsigned Alignment, unsigned AddressSpace,
-    TTI::TargetCostKind CostKind,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) const {
   int Cost = TTIImpl->getInterleavedMemoryOpCost(
       Opcode, VecTy, Factor, Indices, Alignment, AddressSpace, CostKind,
@@ -915,13 +910,13 @@ bool TargetTransformInfo::isLegalToVectorizeStore(StoreInst *SI) const {
 }
 
 bool TargetTransformInfo::isLegalToVectorizeLoadChain(
-    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+    unsigned ChainSizeInBytes, Align Alignment, unsigned AddrSpace) const {
   return TTIImpl->isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment,
                                               AddrSpace);
 }
 
 bool TargetTransformInfo::isLegalToVectorizeStoreChain(
-    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+    unsigned ChainSizeInBytes, Align Alignment, unsigned AddrSpace) const {
   return TTIImpl->isLegalToVectorizeStoreChain(ChainSizeInBytes, Alignment,
                                                AddrSpace);
 }
@@ -1058,6 +1053,8 @@ static TTI::ReductionKind matchPairwiseReductionAtLevel(Instruction *I,
   // Check that the next levels binary operation exists and matches with the
   // current one.
   if (Level + 1 != NumLevels) {
+    if (!isa<Instruction>(NextLevelOp))
+      return TTI::RK_None;
     Optional<TTI::ReductionData> NextLevelRD =
         getReductionData(cast<Instruction>(NextLevelOp));
     if (!NextLevelRD || !RD->hasSameData(*NextLevelRD))
@@ -1079,7 +1076,7 @@ static TTI::ReductionKind matchPairwiseReductionAtLevel(Instruction *I,
     return RD->Kind;
 
   // Match next level.
-  return matchPairwiseReductionAtLevel(cast<Instruction>(NextLevelOp), Level,
+  return matchPairwiseReductionAtLevel(dyn_cast<Instruction>(NextLevelOp), Level,
                                        NumLevels);
 }
 

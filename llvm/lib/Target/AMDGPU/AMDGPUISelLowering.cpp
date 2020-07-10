@@ -1010,7 +1010,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   const unsigned ExplicitOffset = ST.getExplicitKernelArgOffset(Fn);
   CallingConv::ID CC = Fn.getCallingConv();
 
-  unsigned MaxAlign = 1;
+  Align MaxAlign = Align(1);
   uint64_t ExplicitArgOffset = 0;
   const DataLayout &DL = Fn.getParent()->getDataLayout();
 
@@ -1018,12 +1018,12 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
   for (const Argument &Arg : Fn.args()) {
     Type *BaseArgTy = Arg.getType();
-    unsigned Align = DL.getABITypeAlignment(BaseArgTy);
-    MaxAlign = std::max(Align, MaxAlign);
+    Align Alignment = DL.getABITypeAlign(BaseArgTy);
+    MaxAlign = std::max(Alignment, MaxAlign);
     unsigned AllocSize = DL.getTypeAllocSize(BaseArgTy);
 
-    uint64_t ArgOffset = alignTo(ExplicitArgOffset, Align) + ExplicitOffset;
-    ExplicitArgOffset = alignTo(ExplicitArgOffset, Align) + AllocSize;
+    uint64_t ArgOffset = alignTo(ExplicitArgOffset, Alignment) + ExplicitOffset;
+    ExplicitArgOffset = alignTo(ExplicitArgOffset, Alignment) + AllocSize;
 
     // We're basically throwing away everything passed into us and starting over
     // to get accurate in-memory offsets. The "PartOffset" is completely useless
@@ -1976,104 +1976,43 @@ SDValue AMDGPUTargetLowering::LowerUDIVREM(SDValue Op,
       return Res;
   }
 
-  SDValue Num = Op.getOperand(0);
-  SDValue Den = Op.getOperand(1);
+  SDValue X = Op.getOperand(0);
+  SDValue Y = Op.getOperand(1);
 
-  // RCP =  URECIP(Den) = 2^32 / Den + e
-  // e is rounding error.
-  SDValue RCP = DAG.getNode(AMDGPUISD::URECIP, DL, VT, Den);
+  // See AMDGPUCodeGenPrepare::expandDivRem32 for a description of the
+  // algorithm used here.
 
-  // RCP_LO = mul(RCP, Den) */
-  SDValue RCP_LO = DAG.getNode(ISD::MUL, DL, VT, RCP, Den);
+  // Initial estimate of inv(y).
+  SDValue Z = DAG.getNode(AMDGPUISD::URECIP, DL, VT, Y);
 
-  // RCP_HI = mulhu (RCP, Den) */
-  SDValue RCP_HI = DAG.getNode(ISD::MULHU, DL, VT, RCP, Den);
+  // One round of UNR.
+  SDValue NegY = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Y);
+  SDValue NegYZ = DAG.getNode(ISD::MUL, DL, VT, NegY, Z);
+  Z = DAG.getNode(ISD::ADD, DL, VT, Z,
+                  DAG.getNode(ISD::MULHU, DL, VT, Z, NegYZ));
 
-  // NEG_RCP_LO = -RCP_LO
-  SDValue NEG_RCP_LO = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                                                     RCP_LO);
+  // Quotient/remainder estimate.
+  SDValue Q = DAG.getNode(ISD::MULHU, DL, VT, X, Z);
+  SDValue R =
+      DAG.getNode(ISD::SUB, DL, VT, X, DAG.getNode(ISD::MUL, DL, VT, Q, Y));
 
-  const SDValue Zero = DAG.getConstant(0, DL, VT);
-  const EVT CCVT = getSetCCResultType(DAG.getDataLayout(),
-                                      *DAG.getContext(), VT);
+  // First quotient/remainder refinement.
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue Cond = DAG.getSetCC(DL, CCVT, R, Y, ISD::SETUGE);
+  Q = DAG.getNode(ISD::SELECT, DL, VT, Cond,
+                  DAG.getNode(ISD::ADD, DL, VT, Q, One), Q);
+  R = DAG.getNode(ISD::SELECT, DL, VT, Cond,
+                  DAG.getNode(ISD::SUB, DL, VT, R, Y), R);
 
-  // ABS_RCP_LO = (RCP_HI == 0 ? NEG_RCP_LO : RCP_LO)
-  SDValue CmpRcpHiZero = DAG.getSetCC(DL, CCVT, RCP_HI, Zero, ISD::SETEQ);
-  SDValue ABS_RCP_LO = DAG.getNode(ISD::SELECT,
-                                   DL, VT, CmpRcpHiZero, NEG_RCP_LO, RCP_LO);
+  // Second quotient/remainder refinement.
+  Cond = DAG.getSetCC(DL, CCVT, R, Y, ISD::SETUGE);
+  Q = DAG.getNode(ISD::SELECT, DL, VT, Cond,
+                  DAG.getNode(ISD::ADD, DL, VT, Q, One), Q);
+  R = DAG.getNode(ISD::SELECT, DL, VT, Cond,
+                  DAG.getNode(ISD::SUB, DL, VT, R, Y), R);
 
-  // Calculate the rounding error from the URECIP instruction
-  // E = mulhu(ABS_RCP_LO, RCP)
-  SDValue E = DAG.getNode(ISD::MULHU, DL, VT, ABS_RCP_LO, RCP);
-
-  // RCP_A_E = RCP + E
-  SDValue RCP_A_E = DAG.getNode(ISD::ADD, DL, VT, RCP, E);
-
-  // RCP_S_E = RCP - E
-  SDValue RCP_S_E = DAG.getNode(ISD::SUB, DL, VT, RCP, E);
-
-  // Tmp0 = (RCP_HI == 0 ? RCP_A_E : RCP_SUB_E)
-  SDValue Tmp0 = DAG.getNode(ISD::SELECT, DL, VT,
-                             CmpRcpHiZero, RCP_A_E, RCP_S_E);
-
-  // Quotient = mulhu(Tmp0, Num)
-  SDValue Quotient = DAG.getNode(ISD::MULHU, DL, VT, Tmp0, Num);
-
-  // Num_S_Remainder = Quotient * Den
-  SDValue Num_S_Remainder = DAG.getNode(ISD::MUL, DL, VT, Quotient, Den);
-
-  // Remainder = Num - Num_S_Remainder
-  SDValue Remainder = DAG.getNode(ISD::SUB, DL, VT, Num, Num_S_Remainder);
-
-  // Remainder_GE_Den = (Remainder >= Den)
-  SDValue Remainder_GE_Den = DAG.getSetCC(DL, CCVT, Remainder, Den, ISD::SETUGE);
-
-  // Remainder_GE_Zero = (Num >= Num_S_Remainder)
-  SDValue Remainder_GE_Zero = DAG.getSetCC(DL, CCVT, Num, Num_S_Remainder,
-                                           ISD::SETUGE);
-
-  // Tmp1 = Remainder_GE_Den & Remainder_GE_Zero
-  SDValue Tmp1 = DAG.getNode(ISD::AND, DL, CCVT, Remainder_GE_Den,
-                             Remainder_GE_Zero);
-
-  // Calculate Division result:
-
-  // Quotient_A_One = Quotient + 1
-  SDValue Quotient_A_One = DAG.getNode(ISD::ADD, DL, VT, Quotient,
-                                       DAG.getConstant(1, DL, VT));
-
-  // Quotient_S_One = Quotient - 1
-  SDValue Quotient_S_One = DAG.getNode(ISD::SUB, DL, VT, Quotient,
-                                       DAG.getConstant(1, DL, VT));
-
-  // Div = (Tmp1 ? Quotient_A_One : Quotient)
-  SDValue Div = DAG.getNode(ISD::SELECT, DL, VT, Tmp1,
-                            Quotient_A_One, Quotient);
-
-  // Div = (Remainder_GE_Zero ? Div : Quotient_S_One)
-  Div = DAG.getNode(ISD::SELECT, DL, VT, Remainder_GE_Zero,
-                    Div, Quotient_S_One);
-
-  // Calculate Rem result:
-
-  // Remainder_S_Den = Remainder - Den
-  SDValue Remainder_S_Den = DAG.getNode(ISD::SUB, DL, VT, Remainder, Den);
-
-  // Remainder_A_Den = Remainder + Den
-  SDValue Remainder_A_Den = DAG.getNode(ISD::ADD, DL, VT, Remainder, Den);
-
-  // Rem = (Tmp1 ? Remainder_S_Den : Remainder)
-  SDValue Rem = DAG.getNode(ISD::SELECT, DL, VT, Tmp1,
-                            Remainder_S_Den, Remainder);
-
-  // Rem = (Remainder_GE_Zero ? Rem : Remainder_A_Den)
-  Rem = DAG.getNode(ISD::SELECT, DL, VT,
-                    Remainder_GE_Zero, Rem, Remainder_A_Den);
-  SDValue Ops[2] = {
-    Div,
-    Rem
-  };
-  return DAG.getMergeValues(Ops, DL);
+  return DAG.getMergeValues({Q, R}, DL);
 }
 
 SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
@@ -2931,16 +2870,17 @@ SDValue AMDGPUTargetLowering::performLoadCombine(SDNode *N,
   EVT VT = LN->getMemoryVT();
 
   unsigned Size = VT.getStoreSize();
-  unsigned Align = LN->getAlignment();
-  if (Align < Size && isTypeLegal(VT)) {
+  Align Alignment = LN->getAlign();
+  if (Alignment < Size && isTypeLegal(VT)) {
     bool IsFast;
     unsigned AS = LN->getAddressSpace();
 
     // Expand unaligned loads earlier than legalization. Due to visitation order
     // problems during legalization, the emitted instructions to pack and unpack
     // the bytes again are not eliminated in the case of an unaligned copy.
-    if (!allowsMisalignedMemoryAccesses(
-            VT, AS, Align, LN->getMemOperand()->getFlags(), &IsFast)) {
+    if (!allowsMisalignedMemoryAccesses(VT, AS, Alignment.value(),
+                                        LN->getMemOperand()->getFlags(),
+                                        &IsFast)) {
       SDValue Ops[2];
 
       if (VT.isVector())
@@ -2985,8 +2925,8 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
 
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;
-  unsigned Align = SN->getAlignment();
-  if (Align < Size && isTypeLegal(VT)) {
+  Align Alignment = SN->getAlign();
+  if (Alignment < Size && isTypeLegal(VT)) {
     bool IsFast;
     unsigned AS = SN->getAddressSpace();
 
@@ -2994,8 +2934,9 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
     // order problems during legalization, the emitted instructions to pack and
     // unpack the bytes again are not eliminated in the case of an unaligned
     // copy.
-    if (!allowsMisalignedMemoryAccesses(
-            VT, AS, Align, SN->getMemOperand()->getFlags(), &IsFast)) {
+    if (!allowsMisalignedMemoryAccesses(VT, AS, Alignment.value(),
+                                        SN->getMemOperand()->getFlags(),
+                                        &IsFast)) {
       if (VT.isVector())
         return scalarizeVectorStore(SN, DAG);
 

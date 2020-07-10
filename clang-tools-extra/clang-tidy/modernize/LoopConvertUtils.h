@@ -346,7 +346,7 @@ private:
   bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
                              Expr *Init);
   bool TraverseMemberExpr(MemberExpr *Member);
-  bool TraverseUnaryDeref(UnaryOperator *Uop);
+  bool TraverseUnaryOperator(UnaryOperator *Uop);
   bool VisitDeclRefExpr(DeclRefExpr *E);
   bool VisitDeclStmt(DeclStmt *S);
   bool TraverseStmt(Stmt *S);

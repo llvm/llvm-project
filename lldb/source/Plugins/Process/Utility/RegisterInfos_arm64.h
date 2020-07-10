@@ -456,37 +456,26 @@ static uint32_t g_d29_invalidates[] = {fpu_v29, fpu_s29, LLDB_INVALID_REGNUM};
 static uint32_t g_d30_invalidates[] = {fpu_v30, fpu_s30, LLDB_INVALID_REGNUM};
 static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
 
-// Generates register kinds array for 64-bit general purpose registers
-#define GPR64_KIND(reg, generic_kind)                                          \
+// Generates register kinds array with DWARF, EH frame and generic kind
+#define MISC_KIND(reg, type, generic_kind)                                     \
   {                                                                            \
     arm64_ehframe::reg, arm64_dwarf::reg, generic_kind, LLDB_INVALID_REGNUM,   \
-        gpr_##reg                                                              \
+        type##_##reg                                                           \
   }
 
-// Generates register kinds array for registers with lldb kind
-#define MISC_KIND(lldb_kind)                                                   \
+// Generates register kinds array for registers with only lldb kind
+#define LLDB_KIND(lldb_kind)                                                   \
   {                                                                            \
     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,             \
         LLDB_INVALID_REGNUM, lldb_kind                                         \
   }
 
 // Generates register kinds array for vector registers
-#define VREG_KIND(reg)                                                         \
-  {                                                                            \
-    LLDB_INVALID_REGNUM, arm64_dwarf::reg, LLDB_INVALID_REGNUM,                \
-        LLDB_INVALID_REGNUM, fpu_##reg                                         \
-  }
-
-// Generates register kinds array for cpsr
-#define CPSR_KIND(lldb_kind)                                                   \
-  {                                                                            \
-    arm64_ehframe::cpsr, arm64_dwarf::cpsr, LLDB_REGNUM_GENERIC_FLAGS,         \
-        LLDB_INVALID_REGNUM, lldb_kind                                         \
-  }
-
-#define MISC_GPR_KIND(lldb_kind) CPSR_KIND(lldb_kind)
-#define MISC_FPU_KIND(lldb_kind) MISC_KIND(lldb_kind)
-#define MISC_EXC_KIND(lldb_kind) MISC_KIND(lldb_kind)
+#define GPR64_KIND(reg, generic_kind) MISC_KIND(reg, gpr, generic_kind)
+#define VREG_KIND(reg) MISC_KIND(reg, fpu, LLDB_INVALID_REGNUM)
+#define MISC_GPR_KIND(lldb_kind) MISC_KIND(cpsr, gpr, LLDB_REGNUM_GENERIC_FLAGS)
+#define MISC_FPU_KIND(lldb_kind) LLDB_KIND(lldb_kind)
+#define MISC_EXC_KIND(lldb_kind) LLDB_KIND(lldb_kind)
 
 // Defines a 64-bit general purpose register
 #define DEFINE_GPR64(reg, generic_kind)                                        \
@@ -509,7 +498,7 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
   {                                                                            \
     #wreg, nullptr, 4,                                                         \
         GPR_OFFSET(gpr_##xreg) + GPR_W_PSEUDO_REG_ENDIAN_OFFSET,               \
-        lldb::eEncodingUint, lldb::eFormatHex, MISC_KIND(gpr_##wreg),          \
+        lldb::eEncodingUint, lldb::eFormatHex, LLDB_KIND(gpr_##wreg),          \
         g_contained_##xreg, g_##wreg##_invalidates, nullptr, 0                 \
   }
 
@@ -525,7 +514,7 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
 #define DEFINE_FPU_PSEUDO(reg, size, offset, vreg)                             \
   {                                                                            \
     #reg, nullptr, size, FPU_OFFSET(fpu_##vreg - fpu_v0) + offset,             \
-        lldb::eEncodingIEEE754, lldb::eFormatFloat, MISC_KIND(fpu_##reg),      \
+        lldb::eEncodingIEEE754, lldb::eFormatFloat, LLDB_KIND(fpu_##reg),      \
         g_contained_##vreg, g_##reg##_invalidates, nullptr, 0                  \
   }
 

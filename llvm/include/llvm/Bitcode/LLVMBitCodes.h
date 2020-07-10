@@ -85,7 +85,7 @@ enum ModuleCodes {
   MODULE_CODE_ASM = 4,         // ASM:         [strchr x N]
   MODULE_CODE_SECTIONNAME = 5, // SECTIONNAME: [strchr x N]
 
-  // FIXME: Remove DEPLIB in 4.0.
+  // Deprecated, but still needed to read old bitcode files.
   MODULE_CODE_DEPLIB = 6, // DEPLIB:      [strchr x N]
 
   // GLOBALVAR: [pointer type, isconst, initid,
@@ -121,7 +121,7 @@ enum ModuleCodes {
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
 enum AttributeCodes {
-  // FIXME: Remove `PARAMATTR_CODE_ENTRY_OLD' in 4.0
+  // Deprecated, but still needed to read old bitcode files.
   PARAMATTR_CODE_ENTRY_OLD = 1, // ENTRY: [paramidx0, attr0,
                                 //         paramidx1, attr1...]
   PARAMATTR_CODE_ENTRY = 2,     // ENTRY: [attrgrp0, attrgrp1, ...]
@@ -536,8 +536,9 @@ enum FunctionCodes {
 
   FUNC_CODE_DEBUG_LOC = 35,        // DEBUG_LOC:  [Line,Col,ScopeVal, IAVal]
   FUNC_CODE_INST_FENCE = 36,       // FENCE: [ordering, synchscope]
-  FUNC_CODE_INST_CMPXCHG_OLD = 37, // CMPXCHG: [ptrty,ptr,cmp,new, align, vol,
-                                   //           ordering, synchscope]
+  FUNC_CODE_INST_CMPXCHG_OLD = 37, // CMPXCHG: [ptrty, ptr, cmp, new, vol,
+                                   //           success_ordering, ssid,
+                                   //           failure_ordering?, weak?]
   FUNC_CODE_INST_ATOMICRMW = 38,   // ATOMICRMW: [ptrty,ptr,val, operation,
                                    //             align, vol,
                                    //             ordering, synchscope]
@@ -551,8 +552,9 @@ enum FunctionCodes {
   FUNC_CODE_INST_GEP = 43,             // GEP:  [inbounds, n x operands]
   FUNC_CODE_INST_STORE = 44,       // STORE: [ptrty,ptr,valty,val, align, vol]
   FUNC_CODE_INST_STOREATOMIC = 45, // STORE: [ptrty,ptr,val, align, vol
-  FUNC_CODE_INST_CMPXCHG = 46,     // CMPXCHG: [ptrty,ptr,valty,cmp,new, align,
-                                   //           vol,ordering,synchscope]
+  FUNC_CODE_INST_CMPXCHG = 46,     // CMPXCHG: [ptrty, ptr, cmp, newval, vol,
+                                   //           success_ordering, ssid,
+                                   //           failure_ordering, weak]
   FUNC_CODE_INST_LANDINGPAD = 47,  // LANDINGPAD: [ty,val,num,id0,val0...]
   FUNC_CODE_INST_CLEANUPRET = 48,  // CLEANUPRET: [val] or [val,bb#]
   FUNC_CODE_INST_CATCHRET = 49,    // CATCHRET: [val,bb#]
@@ -643,6 +645,7 @@ enum AttributeKindCodes {
   ATTR_KIND_PREALLOCATED = 65,
   ATTR_KIND_NO_MERGE = 66,
   ATTR_KIND_NULL_POINTER_IS_VALID = 67,
+  ATTR_KIND_NOUNDEF = 68,
 };
 
 enum ComdatSelectionKindCodes {

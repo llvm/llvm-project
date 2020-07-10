@@ -10,7 +10,6 @@
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
@@ -109,11 +108,8 @@ public:
           process->GetThreadList().GetMutex());
 
       for (size_t i = 0; i < num_args; i++) {
-        bool success;
-
-        uint32_t thread_idx = StringConvert::ToUInt32(
-            command.GetArgumentAtIndex(i), 0, 0, &success);
-        if (!success) {
+        uint32_t thread_idx;
+        if (!llvm::to_integer(command.GetArgumentAtIndex(i), thread_idx)) {
           result.AppendErrorWithFormat("invalid thread specification: \"%s\"\n",
                                        command.GetArgumentAtIndex(i));
           result.SetStatus(eReturnStatusFailed);
@@ -565,9 +561,9 @@ protected:
       }
     } else {
       const char *thread_idx_cstr = command.GetArgumentAtIndex(0);
-      uint32_t step_thread_idx =
-          StringConvert::ToUInt32(thread_idx_cstr, LLDB_INVALID_INDEX32);
-      if (step_thread_idx == LLDB_INVALID_INDEX32) {
+      uint32_t step_thread_idx;
+
+      if (!llvm::to_integer(thread_idx_cstr, step_thread_idx)) {
         result.AppendErrorWithFormat("invalid thread index '%s'.\n",
                                      thread_idx_cstr);
         result.SetStatus(eReturnStatusFailed);
@@ -1095,9 +1091,7 @@ protected:
         size_t num_args = command.GetArgumentCount();
         for (size_t i = 0; i < num_args; i++) {
           uint32_t line_number;
-          line_number = StringConvert::ToUInt32(command.GetArgumentAtIndex(i),
-                                                UINT32_MAX);
-          if (line_number == UINT32_MAX) {
+          if (!llvm::to_integer(command.GetArgumentAtIndex(i), line_number)) {
             result.AppendErrorWithFormat("invalid line number: '%s'.\n",
                                          command.GetArgumentAtIndex(i));
             result.SetStatus(eReturnStatusFailed);
@@ -1321,8 +1315,13 @@ protected:
       return false;
     }
 
-    uint32_t index_id =
-        StringConvert::ToUInt32(command.GetArgumentAtIndex(0), 0, 0);
+    uint32_t index_id;
+    if (!llvm::to_integer(command.GetArgumentAtIndex(0), index_id)) {
+      result.AppendErrorWithFormat("Invalid thread index '%s'",
+                                   command.GetArgumentAtIndex(0));
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
 
     Thread *new_thread =
         process->GetThreadList().FindThreadByIndexID(index_id).get();
@@ -1989,10 +1988,8 @@ public:
       return false;
     }
 
-    bool success;
-    uint32_t thread_plan_idx =
-        StringConvert::ToUInt32(args.GetArgumentAtIndex(0), 0, 0, &success);
-    if (!success) {
+    uint32_t thread_plan_idx;
+    if (!llvm::to_integer(args.GetArgumentAtIndex(0), thread_plan_idx)) {
       result.AppendErrorWithFormat(
           "Invalid thread index: \"%s\" - should be unsigned int.",
           args.GetArgumentAtIndex(0));
@@ -2066,11 +2063,8 @@ public:
         process->GetThreadList().GetMutex());
 
     for (size_t i = 0; i < num_args; i++) {
-      bool success;
-
-      lldb::tid_t tid = StringConvert::ToUInt64(
-          args.GetArgumentAtIndex(i), 0, 0, &success);
-      if (!success) {
+      lldb::tid_t tid;
+      if (!llvm::to_integer(args.GetArgumentAtIndex(i), tid)) {
         result.AppendErrorWithFormat("invalid thread specification: \"%s\"\n",
                                      args.GetArgumentAtIndex(i));
         result.SetStatus(eReturnStatusFailed);

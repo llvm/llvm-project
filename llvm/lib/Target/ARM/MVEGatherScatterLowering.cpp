@@ -78,7 +78,7 @@ private:
 
   // Check this is a valid gather with correct alignment
   bool isLegalTypeAndAlignment(unsigned NumElements, unsigned ElemSize,
-                               unsigned Alignment);
+                               Align Alignment);
   // Check whether Ptr is hidden behind a bitcast and look through it
   void lookThroughBitcast(Value *&Ptr);
   // Check for a getelementptr and deduce base and offsets from it, on success
@@ -155,12 +155,12 @@ Pass *llvm::createMVEGatherScatterLoweringPass() {
 
 bool MVEGatherScatterLowering::isLegalTypeAndAlignment(unsigned NumElements,
                                                        unsigned ElemSize,
-                                                       unsigned Alignment) {
+                                                       Align Alignment) {
   if (((NumElements == 4 &&
         (ElemSize == 32 || ElemSize == 16 || ElemSize == 8)) ||
        (NumElements == 8 && (ElemSize == 16 || ElemSize == 8)) ||
        (NumElements == 16 && ElemSize == 8)) &&
-      ElemSize / 8 <= Alignment)
+      Alignment >= ElemSize / 8)
     return true;
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: instruction does not have "
                     << "valid alignment or vector type \n");
@@ -306,7 +306,7 @@ Value *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   // Potentially optimising the addressing modes as we do so.
   auto *Ty = cast<FixedVectorType>(I->getType());
   Value *Ptr = I->getArgOperand(0);
-  unsigned Alignment = cast<ConstantInt>(I->getArgOperand(1))->getZExtValue();
+  Align Alignment = cast<ConstantInt>(I->getArgOperand(1))->getAlignValue();
   Value *Mask = I->getArgOperand(2);
   Value *PassThru = I->getArgOperand(3);
 
@@ -466,7 +466,7 @@ Value *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   // Potentially optimising the addressing modes as we do so.
   Value *Input = I->getArgOperand(0);
   Value *Ptr = I->getArgOperand(1);
-  unsigned Alignment = cast<ConstantInt>(I->getArgOperand(2))->getZExtValue();
+  Align Alignment = cast<ConstantInt>(I->getArgOperand(2))->getAlignValue();
   auto *Ty = cast<FixedVectorType>(Input->getType());
 
   if (!isLegalTypeAndAlignment(Ty->getNumElements(), Ty->getScalarSizeInBits(),
@@ -990,26 +990,27 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   SmallVector<IntrinsicInst *, 4> Gathers;
   SmallVector<IntrinsicInst *, 4> Scatters;
 
+  bool Changed = false;
+
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
       if (II && II->getIntrinsicID() == Intrinsic::masked_gather) {
         Gathers.push_back(II);
         if (isa<GetElementPtrInst>(II->getArgOperand(0)))
-          optimiseOffsets(
+          Changed |= optimiseOffsets(
               cast<Instruction>(II->getArgOperand(0))->getOperand(1),
               II->getParent(), LI);
       } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter) {
         Scatters.push_back(II);
         if (isa<GetElementPtrInst>(II->getArgOperand(1)))
-          optimiseOffsets(
+          Changed |= optimiseOffsets(
               cast<Instruction>(II->getArgOperand(1))->getOperand(1),
               II->getParent(), LI);
       }
     }
   }
 
-  bool Changed = false;
   for (unsigned i = 0; i < Gathers.size(); i++) {
     IntrinsicInst *I = Gathers[i];
     Value *L = lowerGather(I);

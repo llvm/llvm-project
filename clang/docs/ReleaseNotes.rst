@@ -94,8 +94,8 @@ New Compiler Flags
 ------------------
 
 - -fstack-clash-protection will provide a protection against the stack clash
-  attack for x86 and s390x architectures through automatic probing of each page
-  of allocated stack.
+  attack for x86, s390x and ppc64 architectures through automatic probing of
+  each page of allocated stack.
 
 - -ffp-exception-behavior={ignore,maytrap,strict} allows the user to specify
   the floating-point exception behavior. The default setting is ``ignore``.
@@ -103,6 +103,10 @@ New Compiler Flags
 - -ffp-model={precise,strict,fast} provides the user an umbrella option to
   simplify access to the many single purpose floating point options. The default
   setting is ``precise``.
+
+- The default module cache has moved from /tmp to a per-user cache directory.
+  By default, this is ~/.cache but on some platforms or installations, this
+  might be elsewhere. The -fmodules-cache-path=... flag continues to work.
 
 Deprecated Compiler Flags
 -------------------------
@@ -239,6 +243,34 @@ These are major API changes that have happened since the 10.0.0 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
+- ``RecursiveASTVisitor`` no longer calls separate methods to visit specific
+  operator kinds. Previously, ``RecursiveASTVisitor`` treated unary, binary,
+  and compound assignment operators as if they were subclasses of the
+  corresponding AST node. For example, the binary operator plus was treated as
+  if it was a ``BinAdd`` subclass of the ``BinaryOperator`` class: during AST
+  traversal of a ``BinaryOperator`` AST node that had a ``BO_Add`` opcode,
+  ``RecursiveASTVisitor`` was calling the ``TraverseBinAdd`` method instead of
+  ``TraverseBinaryOperator``. This feature was contributing a non-trivial
+  amount of complexity to the implementation of ``RecursiveASTVisitor``, it was
+  used only in a minor way in Clang, was not tested, and as a result it was
+  buggy. Furthermore, this feature was creating a non-uniformity in the API.
+  Since this feature was not documented, it was quite difficult to figure out
+  how to use ``RecursiveASTVisitor`` to visit operators.
+
+  To update your code to the new uniform API, move the code from separate
+  visitation methods into methods that correspond to the actual AST node and
+  perform case analysis based on the operator opcode as needed:
+
+  * ``TraverseUnary*() => TraverseUnaryOperator()``
+  * ``WalkUpFromUnary*() => WalkUpFromUnaryOperator()``
+  * ``VisitUnary*() => VisiUnaryOperator()``
+  * ``TraverseBin*() => TraverseBinaryOperator()``
+  * ``WalkUpFromBin*() => WalkUpFromBinaryOperator()``
+  * ``VisitBin*() => VisiBinaryOperator()``
+  * ``TraverseBin*Assign() => TraverseCompoundAssignOperator()``
+  * ``WalkUpFromBin*Assign() => WalkUpFromCompoundAssignOperator()``
+  * ``VisitBin*Assign() => VisiCompoundAssignOperator()``
+
 Build System Changes
 --------------------
 
@@ -254,44 +286,7 @@ release of Clang. Users of the build system should adjust accordingly.
 AST Matchers
 ------------
 
-- Traversal in AST Matchers was simplified to use the
-  ``TK_IgnoreUnlessSpelledInSource`` mode by default, instead of ``TK_AsIs``.
-  This means that many uses of the ``ignoringImplicit()`` and similar matchers
-  is no longer necessary.  Clients of AST Matchers which wish to match on
-  implicit AST nodes can wrap their matcher in ``traverse(TK_AsIs, ...)`` or
-  use ``TraversalKindScope`` if appropriate.  The ``clang-query`` tool also
-  uses ``IgnoreUnlessSpelledInSource`` by default.  The mode can be changed
-  using ``set traversal AsIs`` in the ``clang-query`` environment.
-
-  As this change requires downstream tools which use AST Matchers to adapt
-  to the new default, a porting guide may be useful for downstream tools
-  needing to adapt.
-
-  Note that although there are many steps below, only the first is
-  non-optional. The steps are intentionally extemely granular to facilitate
-  understanding of the guide itself. It is reasonable to do some of the
-  steps at the same time if you understand the guide:
-
-  1. Use ``(your ASTContext instance).getParentMapContext().setTraversalKind(TK_AsIs)``
-     to restore the previous behavior for your tool.  All further steps in
-     this porting guide are optional.
-  2. Wrap your existing matcher expressions with ``traverse(TK_AsIs, ...)``
-     before passing them to ``ASTMatchFinder::addMatcher``.
-  3. Remove ``(your ASTContext instance).getParentMapContext().setTraversalKind(TK_AsIs)``
-     from your tool so that the default behavior of your tool matches the
-     default behavior of upstream clang. This is made possible by wrapping
-     your matchers in ``traverse(TK_AsIs, ...)`` from step (2).
-  4. Audit your matcher expressions and remove ``traverse(TK_AsIs, ...)``
-     where not needed.
-  5. Audit your matcher expressions and remove calls to ``ignoring*()``
-     matchers where not needed.
-  6. Audit your matcher expressions and consider whether the matcher is
-     better using the ``TK_AsIs`` mode or if it can be better expressed in
-     the default mode. For example, some matchers explicitly match
-     ``has(implicitCastExpr(has(...)))``. Such matchers are sometimes
-     written by author who were unaware of the existence of the
-     ``ignoring*()`` matchers.
-
+- ...
 
 clang-format
 ------------

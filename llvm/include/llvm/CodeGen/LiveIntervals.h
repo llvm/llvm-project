@@ -22,7 +22,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -40,6 +39,7 @@ namespace llvm {
 
 extern cl::opt<bool> UseSegmentSetForPhysRegs;
 
+class AAResults;
 class BitVector;
 class LiveIntervalCalc;
 class MachineBlockFrequencyInfo;
@@ -56,7 +56,7 @@ class VirtRegMap;
     MachineRegisterInfo* MRI;
     const TargetRegisterInfo* TRI;
     const TargetInstrInfo* TII;
-    AliasAnalysis *AA;
+    AAResults *AA;
     SlotIndexes* Indexes;
     MachineDominatorTree *DomTree = nullptr;
     LiveIntervalCalc *LICalc = nullptr;
@@ -212,7 +212,7 @@ class VirtRegMap;
       return Indexes;
     }
 
-    AliasAnalysis *getAliasAnalysis() const {
+    AAResults *getAliasAnalysis() const {
       return AA;
     }
 

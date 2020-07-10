@@ -3,6 +3,11 @@
 // RUN: ld.lld --hash-style=sysv %t.o %t.o -o %t -shared
 // RUN: llvm-readobj -S --section-data %t | FileCheck %s
 
+/// Also show that the merging happens when going via a -r link.
+// RUN: ld.lld -r %t.o %t.o -o %t.r.o
+// RUN: ld.lld --hash-style=sysv %t.r.o -o %t2 -shared
+// RUN: llvm-readobj -S --section-data %t2 | FileCheck %s
+
         .section	foo,"ax",@progbits
 	.cfi_startproc
         nop

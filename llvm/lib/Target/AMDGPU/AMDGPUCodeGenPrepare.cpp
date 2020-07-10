@@ -317,10 +317,9 @@ bool AMDGPUCodeGenPrepare::canWidenScalarExtLoad(LoadInst &I) const {
   Type *Ty = I.getType();
   const DataLayout &DL = Mod->getDataLayout();
   int TySize = DL.getTypeSizeInBits(Ty);
-  unsigned Align = I.getAlignment() ?
-                   I.getAlignment() : DL.getABITypeAlignment(Ty);
+  Align Alignment = DL.getValueOrABITypeAlignment(I.getAlign(), Ty);
 
-  return I.isSimple() && TySize < 32 && Align >= 4 && DA->isUniform(&I);
+  return I.isSimple() && TySize < 32 && Alignment >= 4 && DA->isUniform(&I);
 }
 
 bool AMDGPUCodeGenPrepare::promoteUniformOpToI32(BinaryOperator &I) const {
@@ -1018,9 +1017,9 @@ static Value *getSign32(Value *V, IRBuilder<> &Builder, const DataLayout *DL) {
   return Builder.CreateAShr(V, Builder.getInt32(31));
 }
 
-Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
-                                            BinaryOperator &I,
-                                            Value *Num, Value *Den) const {
+Value *AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
+                                            BinaryOperator &I, Value *X,
+                                            Value *Y) const {
   Instruction::BinaryOps Opc = I.getOpcode();
   assert(Opc == Instruction::URem || Opc == Instruction::UDiv ||
          Opc == Instruction::SRem || Opc == Instruction::SDiv);
@@ -1029,27 +1028,27 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   FMF.setFast();
   Builder.setFastMathFlags(FMF);
 
-  if (divHasSpecialOptimization(I, Num, Den))
+  if (divHasSpecialOptimization(I, X, Y))
     return nullptr;  // Keep it for later optimization.
 
   bool IsDiv = Opc == Instruction::UDiv || Opc == Instruction::SDiv;
   bool IsSigned = Opc == Instruction::SRem || Opc == Instruction::SDiv;
 
-  Type *Ty = Num->getType();
+  Type *Ty = X->getType();
   Type *I32Ty = Builder.getInt32Ty();
   Type *F32Ty = Builder.getFloatTy();
 
   if (Ty->getScalarSizeInBits() < 32) {
     if (IsSigned) {
-      Num = Builder.CreateSExt(Num, I32Ty);
-      Den = Builder.CreateSExt(Den, I32Ty);
+      X = Builder.CreateSExt(X, I32Ty);
+      Y = Builder.CreateSExt(Y, I32Ty);
     } else {
-      Num = Builder.CreateZExt(Num, I32Ty);
-      Den = Builder.CreateZExt(Den, I32Ty);
+      X = Builder.CreateZExt(X, I32Ty);
+      Y = Builder.CreateZExt(Y, I32Ty);
     }
   }
 
-  if (Value *Res = expandDivRem24(Builder, I, Num, Den, IsDiv, IsSigned)) {
+  if (Value *Res = expandDivRem24(Builder, I, X, Y, IsDiv, IsSigned)) {
     return IsSigned ? Builder.CreateSExtOrTrunc(Res, Ty) :
                       Builder.CreateZExtOrTrunc(Res, Ty);
   }
@@ -1059,97 +1058,79 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
 
   Value *Sign = nullptr;
   if (IsSigned) {
-    Value *LHSign = getSign32(Num, Builder, DL);
-    Value *RHSign = getSign32(Den, Builder, DL);
+    Value *SignX = getSign32(X, Builder, DL);
+    Value *SignY = getSign32(Y, Builder, DL);
     // Remainder sign is the same as LHS
-    Sign = IsDiv ? Builder.CreateXor(LHSign, RHSign) : LHSign;
+    Sign = IsDiv ? Builder.CreateXor(SignX, SignY) : SignX;
 
-    Num = Builder.CreateAdd(Num, LHSign);
-    Den = Builder.CreateAdd(Den, RHSign);
+    X = Builder.CreateAdd(X, SignX);
+    Y = Builder.CreateAdd(Y, SignY);
 
-    Num = Builder.CreateXor(Num, LHSign);
-    Den = Builder.CreateXor(Den, RHSign);
+    X = Builder.CreateXor(X, SignX);
+    Y = Builder.CreateXor(Y, SignY);
   }
 
-  // RCP =  URECIP(Den) = 2^32 / Den + e
-  // e is rounding error.
-  Value *DEN_F32 = Builder.CreateUIToFP(Den, F32Ty);
+  // The algorithm here is based on ideas from "Software Integer Division", Tom
+  // Rodeheffer, August 2008.
+  //
+  // unsigned udiv(unsigned x, unsigned y) {
+  //   // Initial estimate of inv(y). The constant is less than 2^32 to ensure
+  //   // that this is a lower bound on inv(y), even if some of the calculations
+  //   // round up.
+  //   unsigned z = (unsigned)((4294967296.0 - 512.0) * v_rcp_f32((float)y));
+  //
+  //   // One round of UNR (Unsigned integer Newton-Raphson) to improve z.
+  //   // Empirically this is guaranteed to give a "two-y" lower bound on
+  //   // inv(y).
+  //   z += umulh(z, -y * z);
+  //
+  //   // Quotient/remainder estimate.
+  //   unsigned q = umulh(x, z);
+  //   unsigned r = x - q * y;
+  //
+  //   // Two rounds of quotient/remainder refinement.
+  //   if (r >= y) {
+  //     ++q;
+  //     r -= y;
+  //   }
+  //   if (r >= y) {
+  //     ++q;
+  //     r -= y;
+  //   }
+  //
+  //   return q;
+  // }
 
-  Function *RcpDecl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp,
-                                                Builder.getFloatTy());
-  Value *RCP_F32 = Builder.CreateCall(RcpDecl, { DEN_F32 });
-  Constant *UINT_MAX_PLUS_1 = ConstantFP::get(F32Ty, BitsToFloat(0x4f800000));
-  Value *RCP_SCALE = Builder.CreateFMul(RCP_F32, UINT_MAX_PLUS_1);
-  Value *RCP = Builder.CreateFPToUI(RCP_SCALE, I32Ty);
+  // Initial estimate of inv(y).
+  Value *FloatY = Builder.CreateUIToFP(Y, F32Ty);
+  Function *Rcp = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp, F32Ty);
+  Value *RcpY = Builder.CreateCall(Rcp, {FloatY});
+  Constant *Scale = ConstantFP::get(F32Ty, BitsToFloat(0x4F7FFFFE));
+  Value *ScaledY = Builder.CreateFMul(RcpY, Scale);
+  Value *Z = Builder.CreateFPToUI(ScaledY, I32Ty);
 
-  // RCP_LO, RCP_HI = mul(RCP, Den) */
-  Value *RCP_LO, *RCP_HI;
-  std::tie(RCP_LO, RCP_HI) = getMul64(Builder, RCP, Den);
+  // One round of UNR.
+  Value *NegY = Builder.CreateSub(Zero, Y);
+  Value *NegYZ = Builder.CreateMul(NegY, Z);
+  Z = Builder.CreateAdd(Z, getMulHu(Builder, Z, NegYZ));
 
-  // NEG_RCP_LO = -RCP_LO
-  Value *NEG_RCP_LO = Builder.CreateNeg(RCP_LO);
+  // Quotient/remainder estimate.
+  Value *Q = getMulHu(Builder, X, Z);
+  Value *R = Builder.CreateSub(X, Builder.CreateMul(Q, Y));
 
-  // ABS_RCP_LO = (RCP_HI == 0 ? NEG_RCP_LO : RCP_LO)
-  Value *RCP_HI_0_CC = Builder.CreateICmpEQ(RCP_HI, Zero);
-  Value *ABS_RCP_LO = Builder.CreateSelect(RCP_HI_0_CC, NEG_RCP_LO, RCP_LO);
+  // First quotient/remainder refinement.
+  Value *Cond = Builder.CreateICmpUGE(R, Y);
+  if (IsDiv)
+    Q = Builder.CreateSelect(Cond, Builder.CreateAdd(Q, One), Q);
+  R = Builder.CreateSelect(Cond, Builder.CreateSub(R, Y), R);
 
-  // Calculate the rounding error from the URECIP instruction
-  // E = mulhu(ABS_RCP_LO, RCP)
-  Value *E = getMulHu(Builder, ABS_RCP_LO, RCP);
-
-  // RCP_A_E = RCP + E
-  Value *RCP_A_E = Builder.CreateAdd(RCP, E);
-
-  // RCP_S_E = RCP - E
-  Value *RCP_S_E = Builder.CreateSub(RCP, E);
-
-  // Tmp0 = (RCP_HI == 0 ? RCP_A_E : RCP_SUB_E)
-  Value *Tmp0 = Builder.CreateSelect(RCP_HI_0_CC, RCP_A_E, RCP_S_E);
-
-  // Quotient = mulhu(Tmp0, Num)
-  Value *Quotient = getMulHu(Builder, Tmp0, Num);
-
-  // Num_S_Remainder = Quotient * Den
-  Value *Num_S_Remainder = Builder.CreateMul(Quotient, Den);
-
-  // Remainder = Num - Num_S_Remainder
-  Value *Remainder = Builder.CreateSub(Num, Num_S_Remainder);
-
-  // Remainder_GE_Den = Remainder >= Den;
-  Value *Remainder_GE_Den = Builder.CreateICmpUGE(Remainder, Den);
-
-  // Remainder_GE_Zero = Num >= Num_S_Remainder
-  Value *Remainder_GE_Zero = Builder.CreateICmpUGE(Num, Num_S_Remainder);
-
-  // Tmp1 = Remainder_GE_Den & Remainder_GE_Zero
-  Value *Tmp1 = Builder.CreateAnd(Remainder_GE_Den, Remainder_GE_Zero);
-
+  // Second quotient/remainder refinement.
+  Cond = Builder.CreateICmpUGE(R, Y);
   Value *Res;
-  if (IsDiv) {
-    // Quotient_A_One = Quotient + 1
-    Value *Quotient_A_One = Builder.CreateAdd(Quotient, One);
-
-    // Quotient_S_One = Quotient - 1
-    Value *Quotient_S_One = Builder.CreateSub(Quotient, One);
-
-    // Div = (Tmp1 ? Quotient_A_One : Quotient)
-    Value *Div = Builder.CreateSelect(Tmp1, Quotient_A_One, Quotient);
-
-    // Div = (Remainder_GE_Zero ? Div : Quotient_S_One)
-    Res = Builder.CreateSelect(Remainder_GE_Zero, Div, Quotient_S_One);
-  } else {
-    // Remainder_S_Den = Remainder - Den
-    Value *Remainder_S_Den = Builder.CreateSub(Remainder, Den);
-
-    // Remainder_A_Den = Remainder + Den
-    Value *Remainder_A_Den = Builder.CreateAdd(Remainder, Den);
-
-    // Rem = (Tmp1 ?  Remainder_S_Den : Remainder)
-    Value *Rem = Builder.CreateSelect(Tmp1, Remainder_S_Den, Remainder);
-
-    // Rem = (Remainder_GE_Zero ? Rem : Remainder_A_Den)
-    Res = Builder.CreateSelect(Remainder_GE_Zero, Rem, Remainder_A_Den);
-  }
+  if (IsDiv)
+    Res = Builder.CreateSelect(Cond, Builder.CreateAdd(Q, One), Q);
+  else
+    Res = Builder.CreateSelect(Cond, Builder.CreateSub(R, Y), R);
 
   if (IsSigned) {
     Res = Builder.CreateXor(Res, Sign);

@@ -12,6 +12,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TypeLoc.h"
@@ -22,6 +23,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Tooling/Syntax/Nodes.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "clang/Tooling/Syntax/Tree.h"
@@ -114,6 +116,86 @@ private:
 };
 } // namespace
 
+static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
+  switch (E.getOperator()) {
+  // Comparison
+  case OO_EqualEqual:
+  case OO_ExclaimEqual:
+  case OO_Greater:
+  case OO_GreaterEqual:
+  case OO_Less:
+  case OO_LessEqual:
+  case OO_Spaceship:
+  // Assignment
+  case OO_Equal:
+  case OO_SlashEqual:
+  case OO_PercentEqual:
+  case OO_CaretEqual:
+  case OO_PipeEqual:
+  case OO_LessLessEqual:
+  case OO_GreaterGreaterEqual:
+  case OO_PlusEqual:
+  case OO_MinusEqual:
+  case OO_StarEqual:
+  case OO_AmpEqual:
+  // Binary computation
+  case OO_Slash:
+  case OO_Percent:
+  case OO_Caret:
+  case OO_Pipe:
+  case OO_LessLess:
+  case OO_GreaterGreater:
+  case OO_AmpAmp:
+  case OO_PipePipe:
+  case OO_ArrowStar:
+  case OO_Comma:
+    return syntax::NodeKind::BinaryOperatorExpression;
+  case OO_Tilde:
+  case OO_Exclaim:
+    return syntax::NodeKind::PrefixUnaryOperatorExpression;
+  // Prefix/Postfix increment/decrement
+  case OO_PlusPlus:
+  case OO_MinusMinus:
+    switch (E.getNumArgs()) {
+    case 1:
+      return syntax::NodeKind::PrefixUnaryOperatorExpression;
+    case 2:
+      return syntax::NodeKind::PostfixUnaryOperatorExpression;
+    default:
+      llvm_unreachable("Invalid number of arguments for operator");
+    }
+  // Operators that can be unary or binary
+  case OO_Plus:
+  case OO_Minus:
+  case OO_Star:
+  case OO_Amp:
+    switch (E.getNumArgs()) {
+    case 1:
+      return syntax::NodeKind::PrefixUnaryOperatorExpression;
+    case 2:
+      return syntax::NodeKind::BinaryOperatorExpression;
+    default:
+      llvm_unreachable("Invalid number of arguments for operator");
+    }
+    return syntax::NodeKind::BinaryOperatorExpression;
+  // Not yet supported by SyntaxTree
+  case OO_New:
+  case OO_Delete:
+  case OO_Array_New:
+  case OO_Array_Delete:
+  case OO_Coawait:
+  case OO_Call:
+  case OO_Subscript:
+  case OO_Arrow:
+    return syntax::NodeKind::UnknownExpression;
+  case OO_Conditional: // not overloadable
+  case NUM_OVERLOADED_OPERATORS:
+  case OO_None:
+    llvm_unreachable("Not an overloadable operator");
+  }
+  llvm_unreachable("Unknown OverloadedOperatorKind enum");
+}
+
 /// Gets the range of declarator as defined by the C++ grammar. E.g.
 ///     `int a;` -> range of `a`,
 ///     `int *a;` -> range of `*a`,
@@ -135,7 +217,8 @@ static SourceRange getDeclaratorRange(const SourceManager &SM, TypeLoc T,
   }
   if (Initializer.isValid()) {
     auto InitializerEnd = Initializer.getEnd();
-    assert(SM.isBeforeInTranslationUnit(End, InitializerEnd) || End == InitializerEnd);
+    assert(SM.isBeforeInTranslationUnit(End, InitializerEnd) ||
+           End == InitializerEnd);
     End = InitializerEnd;
   }
   return SourceRange(Start, End);
@@ -470,8 +553,8 @@ private:
 namespace {
 class BuildTreeVisitor : public RecursiveASTVisitor<BuildTreeVisitor> {
 public:
-  explicit BuildTreeVisitor(ASTContext &Ctx, syntax::TreeBuilder &Builder)
-      : Builder(Builder), LangOpts(Ctx.getLangOpts()) {}
+  explicit BuildTreeVisitor(ASTContext &Context, syntax::TreeBuilder &Builder)
+      : Builder(Builder), Context(Context) {}
 
   bool shouldTraversePostOrder() const { return true; }
 
@@ -578,15 +661,19 @@ public:
     // RAV traverses it as a statement, we produce invalid node kinds in that
     // case.
     // FIXME: should do this in RAV instead?
-    if (S->getInit() && !TraverseStmt(S->getInit()))
-      return false;
-    if (S->getLoopVariable() && !TraverseDecl(S->getLoopVariable()))
-      return false;
-    if (S->getRangeInit() && !TraverseStmt(S->getRangeInit()))
-      return false;
-    if (S->getBody() && !TraverseStmt(S->getBody()))
-      return false;
-    return true;
+    bool Result = [&, this]() {
+      if (S->getInit() && !TraverseStmt(S->getInit()))
+        return false;
+      if (S->getLoopVariable() && !TraverseDecl(S->getLoopVariable()))
+        return false;
+      if (S->getRangeInit() && !TraverseStmt(S->getRangeInit()))
+        return false;
+      if (S->getBody() && !TraverseStmt(S->getBody()))
+        return false;
+      return true;
+    }();
+    WalkUpFromCXXForRangeStmt(S);
+    return Result;
   }
 
   bool TraverseStmt(Stmt *S) {
@@ -623,6 +710,54 @@ public:
     return NNS;
   }
 
+  bool TraverseUserDefinedLiteral(UserDefinedLiteral *S) {
+    // The semantic AST node `UserDefinedLiteral` (UDL) may have one child node
+    // referencing the location of the UDL suffix (`_w` in `1.2_w`). The
+    // UDL suffix location does not point to the beginning of a token, so we
+    // can't represent the UDL suffix as a separate syntax tree node.
+
+    return WalkUpFromUserDefinedLiteral(S);
+  }
+
+  syntax::UserDefinedLiteralExpression *
+  buildUserDefinedLiteral(UserDefinedLiteral *S) {
+    switch (S->getLiteralOperatorKind()) {
+    case clang::UserDefinedLiteral::LOK_Integer:
+      return new (allocator()) syntax::IntegerUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_Floating:
+      return new (allocator()) syntax::FloatUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_Character:
+      return new (allocator()) syntax::CharUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_String:
+      return new (allocator()) syntax::StringUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_Raw:
+    case clang::UserDefinedLiteral::LOK_Template:
+      // For raw literal operator and numeric literal operator template we
+      // cannot get the type of the operand in the semantic AST. We get this
+      // information from the token. As integer and floating point have the same
+      // token kind, we run `NumericLiteralParser` again to distinguish them.
+      auto TokLoc = S->getBeginLoc();
+      auto TokSpelling =
+          Builder.findToken(TokLoc)->text(Context.getSourceManager());
+      auto Literal =
+          NumericLiteralParser(TokSpelling, TokLoc, Context.getSourceManager(),
+                               Context.getLangOpts(), Context.getTargetInfo(),
+                               Context.getDiagnostics());
+      if (Literal.isIntegerLiteral())
+        return new (allocator()) syntax::IntegerUserDefinedLiteralExpression;
+      else {
+        assert(Literal.isFloatingLiteral());
+        return new (allocator()) syntax::FloatUserDefinedLiteralExpression;
+      }
+    }
+  }
+
+  bool WalkUpFromUserDefinedLiteral(UserDefinedLiteral *S) {
+    Builder.markChildToken(S->getBeginLoc(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S), buildUserDefinedLiteral(S), S);
+    return true;
+  }
+
   bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
     if (auto *NNS = BuildNestedNameSpecifier(S->getQualifierLoc()))
       Builder.markChild(NNS, syntax::NodeRole::IdExpression_qualifier);
@@ -647,10 +782,48 @@ public:
     return true;
   }
 
+  bool WalkUpFromParenExpr(ParenExpr *S) {
+    Builder.markChildToken(S->getLParen(), syntax::NodeRole::OpenParen);
+    Builder.markExprChild(S->getSubExpr(),
+                          syntax::NodeRole::ParenExpression_subExpression);
+    Builder.markChildToken(S->getRParen(), syntax::NodeRole::CloseParen);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::ParenExpression, S);
+    return true;
+  }
+
   bool WalkUpFromIntegerLiteral(IntegerLiteral *S) {
     Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
     Builder.foldNode(Builder.getExprRange(S),
                      new (allocator()) syntax::IntegerLiteralExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromCharacterLiteral(CharacterLiteral *S) {
+    Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::CharacterLiteralExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromFloatingLiteral(FloatingLiteral *S) {
+    Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::FloatingLiteralExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromStringLiteral(StringLiteral *S) {
+    Builder.markChildToken(S->getBeginLoc(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::StringLiteralExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromCXXBoolLiteralExpr(CXXBoolLiteralExpr *S) {
+    Builder.markChildToken(S->getLocation(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::BoolLiteralExpression, S);
     return true;
   }
 
@@ -691,8 +864,29 @@ public:
     return true;
   }
 
+  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
+    if (getOperatorNodeKind(*S) ==
+        syntax::NodeKind::PostfixUnaryOperatorExpression) {
+      // A postfix unary operator is declared as taking two operands. The
+      // second operand is used to distinguish from its prefix counterpart. In
+      // the semantic AST this "phantom" operand is represented as a
+      // `IntegerLiteral` with invalid `SourceLocation`. We skip visiting this
+      // operand because it does not correspond to anything written in source
+      // code
+      for (auto *child : S->children()) {
+        if (child->getSourceRange().isInvalid())
+          continue;
+        if (!TraverseStmt(child))
+          return false;
+      }
+      return WalkUpFromCXXOperatorCallExpr(S);
+    } else
+      return RecursiveASTVisitor::TraverseCXXOperatorCallExpr(S);
+  }
+
   bool WalkUpFromCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
-    if (S->isInfixBinaryOp()) {
+    switch (getOperatorNodeKind(*S)) {
+    case syntax::NodeKind::BinaryOperatorExpression:
       Builder.markExprChild(
           S->getArg(0),
           syntax::NodeRole::BinaryOperatorExpression_leftHandSide);
@@ -705,8 +899,31 @@ public:
       Builder.foldNode(Builder.getExprRange(S),
                        new (allocator()) syntax::BinaryOperatorExpression, S);
       return true;
+    case syntax::NodeKind::PrefixUnaryOperatorExpression:
+      Builder.markChildToken(
+          S->getOperatorLoc(),
+          syntax::NodeRole::OperatorExpression_operatorToken);
+      Builder.markExprChild(S->getArg(0),
+                            syntax::NodeRole::UnaryOperatorExpression_operand);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::PrefixUnaryOperatorExpression,
+                       S);
+      return true;
+    case syntax::NodeKind::PostfixUnaryOperatorExpression:
+      Builder.markChildToken(
+          S->getOperatorLoc(),
+          syntax::NodeRole::OperatorExpression_operatorToken);
+      Builder.markExprChild(S->getArg(0),
+                            syntax::NodeRole::UnaryOperatorExpression_operand);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::PostfixUnaryOperatorExpression,
+                       S);
+      return true;
+    case syntax::NodeKind::UnknownExpression:
+      return RecursiveASTVisitor::WalkUpFromCXXOperatorCallExpr(S);
+    default:
+      llvm_unreachable("getOperatorNodeKind() does not return this value");
     }
-    return RecursiveASTVisitor::WalkUpFromCXXOperatorCallExpr(S);
   }
 
   bool WalkUpFromNamespaceDecl(NamespaceDecl *S) {
@@ -1058,7 +1275,7 @@ private:
   llvm::BumpPtrAllocator &allocator() { return Builder.allocator(); }
 
   syntax::TreeBuilder &Builder;
-  const LangOptions &LangOpts;
+  const ASTContext &Context;
 };
 } // namespace
 

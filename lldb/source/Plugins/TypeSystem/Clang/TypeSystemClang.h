@@ -873,6 +873,24 @@ public:
                                                  const CompilerType &var_type,
                                                  lldb::AccessType access);
 
+  /// Initializes a variable with an integer value.
+  /// \param var The variable to initialize. Must not already have an
+  ///            initializer and must have an integer or enum type.
+  /// \param init_value The integer value that the variable should be
+  ///                   initialized to. Has to match the bit width of the
+  ///                   variable type.
+  static void SetIntegerInitializerForVariable(clang::VarDecl *var,
+                                               const llvm::APInt &init_value);
+
+  /// Initializes a variable with a floating point value.
+  /// \param var The variable to initialize. Must not already have an
+  ///            initializer and must have a floating point type.
+  /// \param init_value The float value that the variable should be
+  ///                   initialized to.
+  static void
+  SetFloatingInitializerForVariable(clang::VarDecl *var,
+                                    const llvm::APFloat &init_value);
+
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
       const char *mangled_name, const CompilerType &method_type,

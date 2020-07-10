@@ -242,7 +242,7 @@ public:
   static bool kindof(unsigned kind) { return kind == TypeKind::FIR_DIMS; }
 
   /// returns -1 if the rank is unknown
-  int getRank() const;
+  unsigned getRank() const;
 };
 
 /// The type of a field name. Implementations may defer the layout of a Fortran
@@ -435,6 +435,12 @@ void verifyIntegralType(mlir::Type type);
 /// Is `t` a FIR Real or MLIR Float type?
 inline bool isa_real(mlir::Type t) {
   return t.isa<fir::RealType>() || t.isa<mlir::FloatType>();
+}
+
+/// Is `t` an integral type?
+inline bool isa_integer(mlir::Type t) {
+  return t.isa<mlir::IndexType>() || t.isa<mlir::IntegerType>() ||
+         t.isa<fir::IntType>();
 }
 
 /// Is `t` a FIR or MLIR Complex type?

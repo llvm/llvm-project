@@ -873,9 +873,9 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; AVX2-NEXT:    vpcmpeqd %ymm6, %ymm5, %ymm5
 ; AVX2-NEXT:    vpcmpeqd %ymm6, %ymm4, %ymm4
 ; AVX2-NEXT:    vpackssdw %ymm5, %ymm4, %ymm4
-; AVX2-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm5
 ; AVX2-NEXT:    vpacksswb %xmm5, %xmm4, %xmm4
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm4, %eax
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne LBB3_1

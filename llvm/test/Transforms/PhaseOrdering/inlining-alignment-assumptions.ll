@@ -38,10 +38,10 @@ define void @caller1(i1 %c, i64* align 1 %ptr) {
 ; ASSUMPTIONS-OFF-NEXT:    ret void
 ;
 ; ASSUMPTIONS-ON-LABEL: @caller1(
-; ASSUMPTIONS-ON-NEXT:    br i1 [[C:%.*]], label [[TRUE1:%.*]], label [[FALSE1:%.*]]
-; ASSUMPTIONS-ON:       true1:
-; ASSUMPTIONS-ON-NEXT:    [[C_PR:%.*]] = phi i1 [ false, [[FALSE1]] ], [ true, [[TMP0:%.*]] ]
-; ASSUMPTIONS-ON-NEXT:    [[PTRINT:%.*]] = ptrtoint i64* [[PTR:%.*]] to i64
+; ASSUMPTIONS-ON-NEXT:    br i1 [[C:%.*]], label [[TRUE2_CRITEDGE:%.*]], label [[FALSE1:%.*]]
+; ASSUMPTIONS-ON:       false1:
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 1, i64* [[PTR:%.*]], align 8
+; ASSUMPTIONS-ON-NEXT:    [[PTRINT:%.*]] = ptrtoint i64* [[PTR]] to i64
 ; ASSUMPTIONS-ON-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 7
 ; ASSUMPTIONS-ON-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
 ; ASSUMPTIONS-ON-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
@@ -51,15 +51,20 @@ define void @caller1(i1 %c, i64* align 1 %ptr) {
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    br i1 [[C_PR]], label [[TRUE2:%.*]], label [[FALSE2:%.*]]
-; ASSUMPTIONS-ON:       false1:
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 1, i64* [[PTR]], align 4
-; ASSUMPTIONS-ON-NEXT:    br label [[TRUE1]]
-; ASSUMPTIONS-ON:       true2:
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    ret void
-; ASSUMPTIONS-ON:       false2:
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 3, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    ret void
+; ASSUMPTIONS-ON:       true2.critedge:
+; ASSUMPTIONS-ON-NEXT:    [[PTRINT_C:%.*]] = ptrtoint i64* [[PTR]] to i64
+; ASSUMPTIONS-ON-NEXT:    [[MASKEDPTR_C:%.*]] = and i64 [[PTRINT_C]], 7
+; ASSUMPTIONS-ON-NEXT:    [[MASKCOND_C:%.*]] = icmp eq i64 [[MASKEDPTR_C]], 0
+; ASSUMPTIONS-ON-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND_C]])
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    ret void
 ;
   br i1 %c, label %true1, label %false1
@@ -86,7 +91,7 @@ false2:
   ret void
 }
 
-; This test illustrates that alignment assumptions may prevent SROA.
+; This test checks that alignment assumptions do not prevent SROA.
 ; See PR45763.
 
 define internal void @callee2(i64* noalias sret align 8 %arg) {

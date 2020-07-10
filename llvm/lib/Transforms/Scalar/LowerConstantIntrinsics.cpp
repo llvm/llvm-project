@@ -15,6 +15,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -136,8 +137,12 @@ static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo *TLI) {
 
 PreservedAnalyses
 LowerConstantIntrinsicsPass::run(Function &F, FunctionAnalysisManager &AM) {
-  if (lowerConstantIntrinsics(F, AM.getCachedResult<TargetLibraryAnalysis>(F)))
-    return PreservedAnalyses::none();
+  if (lowerConstantIntrinsics(F,
+                              AM.getCachedResult<TargetLibraryAnalysis>(F))) {
+    PreservedAnalyses PA;
+    PA.preserve<GlobalsAA>();
+    return PA;
+  }
 
   return PreservedAnalyses::all();
 }
@@ -159,6 +164,10 @@ public:
     auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
     const TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
     return lowerConstantIntrinsics(F, TLI);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
 } // namespace

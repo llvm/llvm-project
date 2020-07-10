@@ -23,7 +23,6 @@ namespace llvm {
 /// and contains private RISCV-specific information for each MachineFunction.
 class RISCVMachineFunctionInfo : public MachineFunctionInfo {
 private:
-  MachineFunction &MF;
   /// FrameIndex for start of varargs area
   int VarArgsFrameIndex = 0;
   /// Size of the save area used for varargs
@@ -35,7 +34,7 @@ private:
   unsigned LibCallStackSize = 0;
 
 public:
-  RISCVMachineFunctionInfo(MachineFunction &MF) : MF(MF) {}
+  RISCVMachineFunctionInfo(const MachineFunction &MF) {}
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
@@ -43,16 +42,17 @@ public:
   unsigned getVarArgsSaveSize() const { return VarArgsSaveSize; }
   void setVarArgsSaveSize(int Size) { VarArgsSaveSize = Size; }
 
-  int getMoveF64FrameIndex() {
+  int getMoveF64FrameIndex(MachineFunction &MF) {
     if (MoveF64FrameIndex == -1)
-      MoveF64FrameIndex = MF.getFrameInfo().CreateStackObject(8, 8, false);
+      MoveF64FrameIndex =
+          MF.getFrameInfo().CreateStackObject(8, Align(8), false);
     return MoveF64FrameIndex;
   }
 
   unsigned getLibCallStackSize() const { return LibCallStackSize; }
   void setLibCallStackSize(unsigned Size) { LibCallStackSize = Size; }
 
-  bool useSaveRestoreLibCalls() const {
+  bool useSaveRestoreLibCalls(const MachineFunction &MF) const {
     // We cannot use fixed locations for the callee saved spill slots if the
     // function uses a varargs save area.
     return MF.getSubtarget<RISCVSubtarget>().enableSaveRestore() &&

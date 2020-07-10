@@ -521,13 +521,74 @@ C API Changes
   release notes so that it's clear to external users who do not follow the
   project how the C API is changing and evolving.
 
-New Targets
------------
+.. _toolchain:
+
+Updating Toolchain Requirements
+-------------------------------
+
+We intend to require newer toolchains as time goes by. This means LLVM's
+codebase can use newer versions of C++ as they get standardized. Requiring newer
+toolchains to build LLVM can be painful for those building LLVM; therefore, it
+will only be done through the following process:
+
+  * It is a general goal to support LLVM and GCC versions from the last 3 years
+    at a minimum. This time-based guideline is not strict: we may support much
+    older compilers, or decide to support fewer versions.
+
+  * An RFC is sent to the `llvm-dev mailing list`_
+
+    - Detail upsides of the version increase (e.g. which newer C++ language or
+      library features LLVM should use; avoid miscompiles in particular compiler
+      versions, etc).
+    - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+
+  * Once the RFC reaches consensus, update the CMake toolchain version checks as
+    well as the :doc:`getting started<GettingStarted>` guide.  This provides a
+    softer transition path for developers compiling LLVM, because the
+    error can be turned into a warning using a CMake flag. This is an important
+    step: LLVM still doesn't have code which requires the new toolchains, but it
+    soon will. If you compile LLVM but don't read the mailing list, we should
+    tell you!
+
+  * Ensure that at least one LLVM release has had this soft-error. Not all
+    developers compile LLVM top-of-tree. These release-bound developers should
+    also be told about upcoming changes.
+
+  * Turn the soft-error into a hard-error after said LLVM release has branched.
+
+  * Update the :doc:`coding standards<CodingStandards>` to allow the new
+    features we've explicitly approved in the RFC.
+
+  * Start using the new features in LLVM's codebase.
+
+Here's a `sample RFC
+<http://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_ and the
+`corresponding change <https://reviews.llvm.org/D57264>`_.
+
+.. _new-llvm-components:
+
+Introducing New Components into LLVM
+====================================
+
+The LLVM community is a vibrant and exciting place to be, and we look to be
+inclusive of new projects and foster new communities, and increase
+collaboration across industry and academia.
+
+That said, we need to strike a balance between being inclusive of new ideas and
+people and the cost of ongoing maintenance that new code requires.  As such, we
+have the following general policies for introducing major new components into
+the LLVM world.  However, this is really only intended to cover common cases
+that we have seen arise: different situations are different, and we are open
+to discussing unusual cases as well - just start an RFC thread on the
+`llvm-dev mailing list`_.
+
+Adding a New Target
+-------------------
 
 LLVM is very receptive to new targets, even experimental ones, but a number of
 problems can appear when adding new large portions of code, and back-ends are
-normally added in bulk.  We have found that landing large pieces of new code 
-and then trying to fix emergent problems in-tree is problematic for a variety 
+normally added in bulk.  We have found that landing large pieces of new code
+and then trying to fix emergent problems in-tree is problematic for a variety
 of reasons.
 
 For these reasons, new targets are *always* added as *experimental* until
@@ -566,8 +627,8 @@ The basic rules for a back-end to be upstreamed in **experimental** mode are:
 * The target should have either reasonable documentation on how it
   works (ISA, ABI, etc.) or a publicly available simulator/hardware
   (either free or cheap enough) - preferably both.  This allows
-  developers to validate assumptions, understand constraints and review code 
-  that can affect the target. 
+  developers to validate assumptions, understand constraints and review code
+  that can affect the target.
 
 In addition, the rules for a back-end to be promoted to **official** are:
 
@@ -606,49 +667,110 @@ In essences, these rules are necessary for targets to gain and retain their
 status, but also markers to define bit-rot, and will be used to clean up the
 tree from unmaintained targets.
 
-.. _toolchain:
+Adding an Established Project To the LLVM Monorepo
+--------------------------------------------------
 
-Updating Toolchain Requirements
--------------------------------
+The `LLVM monorepo <https://github.com/llvm/llvm-project>`_ is the centerpoint
+of development in the LLVM world, and has all of the primary LLVM components,
+including the LLVM optimizer and code generators, Clang, LLDB, etc.  `Monorepos
+in general <https://en.wikipedia.org/wiki/Monorepo>`_ are great because they
+allow atomic commits to the project, simplify CI, and make it easier for
+subcommunities to collaborate.
 
-We intend to require newer toolchains as time goes by. This means LLVM's
-codebase can use newer versions of C++ as they get standardized. Requiring newer
-toolchains to build LLVM can be painful for those building LLVM; therefore, it
-will only be done through the following process:
+That said, the burden to add things to the LLVM monorepo needs to be very high -
+code that is added to this repository is checked out by everyone in the
+community.  As such, we hold subprojects to a high bar similar to "official
+targets", they:
 
-  * Generally, try to support LLVM and GCC versions from the last 3 years at a
-    minimum. This time-based guideline is not strict: we may support much older
-    compilers, or decide to support fewer versions.
+ * Must be generally aligned with the mission of the LLVM project to advance
+   compilers, languages, tools, runtimes, etc.
+ * Must conform to all of the policies laid out in this developer policy
+   document, including license, patent, coding standards, and code of conduct.
+ * Must have an active community that maintains the code, including established
+   code owners.
+ * Should have reasonable documentation about how it works, including a high
+   quality README file.
+ * Should have CI to catch breakage within the project itself or due to
+   underlying LLVM dependencies.
+ * Should have code free of issues the community finds contentious, or be on a
+   clear path to resolving them.
+ * Must be proposed through the LLVM RFC process, and have its addition approved
+   by the LLVM community - this ultimately mediates the resolution of the
+   "should" concerns above.
 
-  * An RFC is sent to the `llvm-dev mailing list <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_
+If you have a project that you think would make sense to add to the LLVM
+monorepo, please start an RFC thread on the `llvm-dev mailing list`_ to kick off
+the discussion.  This process can take some time and iteration - please don’t
+be discouraged or intimidated by that!
 
-    - Detail upsides of the version increase (e.g. which newer C++ language or
-      library features LLVM should use; avoid miscompiles in particular compiler
-      versions, etc).
-    - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+If you have an earlier stage project that you think is aligned with LLVM, please
+see the "Incubating New Projects" section.
 
-  * Once the RFC reaches consensus, update the CMake toolchain version checks as
-    well as the :doc:`getting started<GettingStarted>` guide. We want to
-    soft-error when developers compile LLVM. We say "soft-error" because the
-    error can be turned into a warning using a CMake flag. This is an important
-    step: LLVM still doesn't have code which requires the new toolchains, but it
-    soon will. If you compile LLVM but don't read the mailing list, we should
-    tell you!
+Incubating New Projects
+-----------------------
 
-  * Ensure that at least one LLVM release has had this soft-error. Not all
-    developers compile LLVM top-of-tree. These release-bound developers should
-    also be told about upcoming changes.
+The burden to add a new project to the LLVM monorepo is intentionally very high,
+but that can have a chilling effect on new and innovative projects.  To help
+foster these sorts of projects, LLVM supports an "incubator" process that is
+much easier to get started with.  It provides space for potentially valuable,
+new top-level and sub-projects to reach a critical mass before they have enough
+code to prove their utility and grow a community.  This also allows
+collaboration between teams that already have permissions to make contributions
+to projects under the LLVM umbrella.
 
-  * Turn the soft-error into a hard-error after said LLVM release has branched.
+Projects which can be considered for the LLVM incubator meet the following
+criteria:
 
-  * Update the :doc:`coding standards<CodingStandards>` to allow the new
-    features we've explicitly approved in the RFC.
+ * Must be generally aligned with the mission of the LLVM project to advance
+   compilers, languages, tools, runtimes, etc.
+ * Must conform to the license, patent, and code of conduct policies laid out
+   in this developer policy document.
+ * Must have a documented charter and development plan, e.g. in the form of a
+   README file, mission statement, and/or manifesto.
+ * Should conform to coding standards, incremental development process, and
+   other expectations.
+ * Should have a sense of the community that it hopes to eventually foster, and
+   there should be interest from members with different affiliations /
+   organizations.
+ * Should have a feasible path to eventually graduate as a dedicated top-level
+   or sub-project within the `LLVM monorepo
+   <https://github.com/llvm/llvm-project>`_.
+ * Should include a notice (e.g. in the project README or web page) that the
+   project is in ‘incubation status’ and is not included in LLVM releases (see
+   suggested wording below).
+ * Must be proposed through the LLVM RFC process, and have its addition
+   approved by the LLVM community - this ultimately mediates the resolution of
+   the "should" concerns above.
 
-  * Start using the new features in LLVM's codebase.
+That said, the project need not have any code to get started, and need not have
+an established community at all!  Furthermore, incubating projects may pass
+through transient states that violate the "Should" guidelines above, or would
+otherwise make them unsuitable for direct inclusion in the monorepo (e.g.
+dependencies that have not yet been factored appropriately, leveraging
+experimental components or APIs that are not yet upstream, etc).
 
-Here's a `sample RFC
-<http://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_ and the
-`corresponding change <https://reviews.llvm.org/D57264>`_.
+When approved, the llvm-admin group can grant the new project:
+ * A new repository in the LLVM Github Organization - but not the LLVM monorepo.
+ * New mailing list, discourse forum, and/or discord chat hosted with other LLVM
+   forums.
+ * Other infrastructure integration can be discussed on a case-by-case basis.
+
+Graduation to the mono-repo would follow existing processes and standards for
+becoming a first-class part of the monorepo.  Similarly, an incubating project
+may be eventually retired, but no process has been established for that yet.  If
+and when this comes up, please start an RFC discussion on llvm-dev.
+
+This process is very new - please expect the details to change, it is always
+safe to ask on the `llvm-dev mailing list`_ about this.
+
+Suggested disclaimer for the project README and the main project web page:
+
+::
+
+   This project is participating in the LLVM Incubator process: as such, it is
+   not part of any official LLVM release.  While incubation status is not
+   necessarily a reflection of the completeness or stability of the code, it
+   does indicate that the project is not yet endorsed as a component of LLVM.
 
 .. _copyright-license-patents:
 
@@ -910,3 +1032,5 @@ applications to the binary redistribution clause. This also means that it is ok
 to move code from (e.g.)  libc++ to the LLVM core without concern, but that code
 cannot be moved from the LLVM core to libc++ without the copyright owner's
 permission.
+
+.. _llvm-dev mailing list: http://lists.llvm.org/mailman/listinfo/llvm-dev

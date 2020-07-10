@@ -1,4 +1,4 @@
-; RUN: opt -basicaa %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-disable-multiplicative-reductions < %s | FileCheck %s
+; RUN: opt -basic-aa %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-disable-multiplicative-reductions < %s | FileCheck %s
 ;
 ; CHECK: ReadAccess :=       [Reduction Type: +
 ; CHECK:     { Stmt_for_body[i0] -> MemRef_sum[0] };

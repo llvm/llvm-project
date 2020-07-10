@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/PatternMatch.h"
@@ -135,7 +137,19 @@ TestDialect::TestDialect(MLIRContext *context)
       >();
   addInterfaces<TestOpAsmInterface, TestOpFolderDialectInterface,
                 TestInlinerInterface>();
+  addTypes<TestType>();
   allowUnknownOperations();
+}
+
+Type TestDialect::parseType(DialectAsmParser &parser) const {
+  if (failed(parser.parseKeyword("test_type")))
+    return Type();
+  return TestType::get(getContext());
+}
+
+void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
+  assert(type.isa<TestType>() && "unexpected type");
+  printer << "test_type";
 }
 
 LogicalResult TestDialect::verifyOperationAttribute(Operation *op,
@@ -519,6 +533,77 @@ void StringAttrPrettyNameOp::getAsmResultNames(
 }
 
 //===----------------------------------------------------------------------===//
+// RegionIfOp
+//===----------------------------------------------------------------------===//
+
+static void print(OpAsmPrinter &p, RegionIfOp op) {
+  p << RegionIfOp::getOperationName() << " ";
+  p.printOperands(op.getOperands());
+  p << ": " << op.getOperandTypes();
+  p.printArrowTypeList(op.getResultTypes());
+  p << " then";
+  p.printRegion(op.thenRegion(),
+                /*printEntryBlockArgs=*/true,
+                /*printBlockTerminators=*/true);
+  p << " else";
+  p.printRegion(op.elseRegion(),
+                /*printEntryBlockArgs=*/true,
+                /*printBlockTerminators=*/true);
+  p << " join";
+  p.printRegion(op.joinRegion(),
+                /*printEntryBlockArgs=*/true,
+                /*printBlockTerminators=*/true);
+}
+
+static ParseResult parseRegionIfOp(OpAsmParser &parser,
+                                   OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 2> operandInfos;
+  SmallVector<Type, 2> operandTypes;
+
+  result.regions.reserve(3);
+  Region *thenRegion = result.addRegion();
+  Region *elseRegion = result.addRegion();
+  Region *joinRegion = result.addRegion();
+
+  // Parse operand, type and arrow type lists.
+  if (parser.parseOperandList(operandInfos) ||
+      parser.parseColonTypeList(operandTypes) ||
+      parser.parseArrowTypeList(result.types))
+    return failure();
+
+  // Parse all attached regions.
+  if (parser.parseKeyword("then") || parser.parseRegion(*thenRegion, {}, {}) ||
+      parser.parseKeyword("else") || parser.parseRegion(*elseRegion, {}, {}) ||
+      parser.parseKeyword("join") || parser.parseRegion(*joinRegion, {}, {}))
+    return failure();
+
+  return parser.resolveOperands(operandInfos, operandTypes,
+                                parser.getCurrentLocation(), result.operands);
+}
+
+OperandRange RegionIfOp::getSuccessorEntryOperands(unsigned index) {
+  assert(index < 2 && "invalid region index");
+  return getOperands();
+}
+
+void RegionIfOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  // We always branch to the join region.
+  if (index.hasValue()) {
+    if (index.getValue() < 2)
+      regions.push_back(RegionSuccessor(&joinRegion(), getJoinArgs()));
+    else
+      regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  // The then and else regions are the entry regions of this op.
+  regions.push_back(RegionSuccessor(&thenRegion(), getThenArgs()));
+  regions.push_back(RegionSuccessor(&elseRegion(), getElseArgs()));
+}
+
+//===----------------------------------------------------------------------===//
 // Dialect Registration
 //===----------------------------------------------------------------------===//
 
@@ -527,6 +612,7 @@ static mlir::DialectRegistration<mlir::TestDialect> testDialect;
 
 #include "TestOpEnums.cpp.inc"
 #include "TestOpStructs.cpp.inc"
+#include "TestTypeInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "TestOps.cpp.inc"

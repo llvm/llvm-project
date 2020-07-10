@@ -69,11 +69,11 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
   /// operation registered to the current dialect.
   bool isLegalToInline(Operation *op, Region *dest,
                        BlockAndValueMapping &) const final {
-    // TODO(antiagainst): Enable inlining structured control flows with return.
+    // TODO: Enable inlining structured control flows with return.
     if ((isa<spirv::SelectionOp, spirv::LoopOp>(op)) &&
         containsReturn(op->getRegion(0)))
       return false;
-    // TODO(antiagainst): we need to filter OpKill here to avoid inlining it to
+    // TODO: we need to filter OpKill here to avoid inlining it to
     // a loop continue construct:
     // https://github.com/KhronosGroup/SPIRV-Headers/issues/86
     // However OpKill is fragment shader specific and we don't support it yet.
@@ -330,7 +330,7 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
   return CooperativeMatrixNVType::get(elementTy, scope, dims[0], dims[1]);
 }
 
-// TODO(ravishankarm) : Reorder methods to be utilities first and parse*Type
+// TODO: Reorder methods to be utilities first and parse*Type
 // methods in alphabetical order
 //
 // storage-class ::= `UniformConstant`
@@ -438,7 +438,7 @@ static Optional<ValTy> parseAndVerify(SPIRVDialect const &dialect,
 template <>
 Optional<Type> parseAndVerify<Type>(SPIRVDialect const &dialect,
                                     DialectAsmParser &parser) {
-  // TODO(ravishankarm): Further verify that the element type can be sampled
+  // TODO: Further verify that the element type can be sampled
   auto ty = parseAndVerifyType(dialect, parser);
   if (!ty)
     return llvm::None;
@@ -723,7 +723,7 @@ static void print(CooperativeMatrixNVType type, DialectAsmPrinter &os) {
 }
 
 static void print(MatrixType type, DialectAsmPrinter &os) {
-  os << "matrix<" << type.getNumElements() << " x " << type.getElementType();
+  os << "matrix<" << type.getNumColumns() << " x " << type.getColumnType();
   os << ">";
 }
 
@@ -1054,7 +1054,7 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   StringRef symbol = attribute.first.strref();
   Attribute attr = attribute.second;
 
-  // TODO(antiagainst): figure out a way to generate the description from the
+  // TODO: figure out a way to generate the description from the
   // StructAttr definition.
   if (symbol == spirv::getEntryPointABIAttrName()) {
     if (!attr.isa<spirv::EntryPointABIAttr>())

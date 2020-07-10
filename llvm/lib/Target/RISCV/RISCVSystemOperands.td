@@ -310,6 +310,7 @@ def: SysReg<"mhpmcounter31h", 0xB9F>;
 //===--------------------------
 // Machine Counter Setup
 //===--------------------------
+def : SysReg<"mcountinhibit", 0x320>;
 def : SysReg<"mhpmevent3", 0x323>;
 def : SysReg<"mhpmevent4", 0x324>;
 def : SysReg<"mhpmevent5", 0x325>;
@@ -353,8 +354,19 @@ def : SysReg<"tdata3", 0x7A3>;
 //===-----------------------------------------------
 def : SysReg<"dcsr", 0x7B0>;
 def : SysReg<"dpc", 0x7B1>;
+
 // "dscratch" is an alternative name for "dscratch0" which appeared in earlier
 // drafts of the RISC-V debug spec
 let AltName = "dscratch" in
 def : SysReg<"dscratch0", 0x7B2>;
 def : SysReg<"dscratch1", 0x7B3>;
+
+//===-----------------------------------------------
+// User Vector CSRs
+//===-----------------------------------------------
+def : SysReg<"vstart", 0x008>;
+def : SysReg<"vxsat", 0x009>;
+def : SysReg<"vxrm", 0x00A>;
+def : SysReg<"vl", 0xC20>;
+def : SysReg<"vtype", 0xC21>;
+def : SysReg<"vlenb", 0xC22>;

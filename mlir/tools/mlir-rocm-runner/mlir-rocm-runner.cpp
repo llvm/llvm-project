@@ -198,7 +198,7 @@ static LogicalResult createHsaco(const Blob &isaBlob, StringRef name,
 
 static std::unique_ptr<llvm::Module> compileModuleToROCDLIR(Operation *m) {
   auto llvmModule = translateModuleToROCDLIR(m);
-  // TODO(whchung): Link with ROCm-Device-Libs in case needed (ex: the Module
+  // TODO: Link with ROCm-Device-Libs in case needed (ex: the Module
   // depends on math functions).
   return llvmModule;
 }

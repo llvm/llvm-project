@@ -571,7 +571,7 @@ void RegisterCoalescer::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void RegisterCoalescer::eliminateDeadDefs() {
-  SmallVector<unsigned, 8> NewRegs;
+  SmallVector<Register, 8> NewRegs;
   LiveRangeEdit(nullptr, NewRegs, *MF, *LIS,
                 nullptr, this).eliminateDeadDefs(DeadDefs);
 }
@@ -1064,7 +1064,9 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     return false;
 
   MachineBasicBlock &MBB = *CopyMI.getParent();
-  if (MBB.isEHPad())
+  // If this block is the target of an invoke/inlineasm_br, moving the copy into
+  // the predecessor is tricker, and we don't handle it.
+  if (MBB.isEHPad() || MBB.isInlineAsmBrIndirectTarget())
     return false;
 
   if (MBB.pred_size() != 2)
@@ -2429,7 +2431,7 @@ public:
   /// Add foreign virtual registers to ShrinkRegs if their live range ended at
   /// the erased instrs.
   void eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
-                   SmallVectorImpl<unsigned> &ShrinkRegs,
+                   SmallVectorImpl<Register> &ShrinkRegs,
                    LiveInterval *LI = nullptr);
 
   /// Remove liverange defs at places where implicit defs will be removed.
@@ -3171,7 +3173,7 @@ void JoinVals::removeImplicitDefs() {
 }
 
 void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
-                           SmallVectorImpl<unsigned> &ShrinkRegs,
+                           SmallVectorImpl<Register> &ShrinkRegs,
                            LiveInterval *LI) {
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
     // Get the def location before markUnused() below invalidates it.
@@ -3439,7 +3441,7 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
   // Erase COPY and IMPLICIT_DEF instructions. This may cause some external
   // registers to require trimming.
-  SmallVector<unsigned, 8> ShrinkRegs;
+  SmallVector<Register, 8> ShrinkRegs;
   LHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, &LHS);
   RHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs);
   while (!ShrinkRegs.empty())

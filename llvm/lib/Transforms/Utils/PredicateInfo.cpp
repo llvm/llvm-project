@@ -600,6 +600,9 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
         RenameIter == RenameStack.begin() ? OrigOp : (RenameIter - 1)->Def;
     ValueDFS &Result = *RenameIter;
     auto *ValInfo = Result.PInfo;
+    ValInfo->RenamedOp = (RenameStack.end() - Start) == RenameStack.begin()
+                             ? OrigOp
+                             : (RenameStack.end() - Start - 1)->Def;
     // For edge predicates, we can just place the operand in the block before
     // the terminator.  For assume, we have to place it right before the assume
     // to ensure we dominate all of our uses.  Always insert right before the
@@ -893,18 +896,21 @@ public:
         PB->From->printAsOperand(OS);
         OS << ",";
         PB->To->printAsOperand(OS);
-        OS << "] }\n";
+        OS << "]";
       } else if (const auto *PS = dyn_cast<PredicateSwitch>(PI)) {
         OS << "; switch predicate info { CaseValue: " << *PS->CaseValue
            << " Switch:" << *PS->Switch << " Edge: [";
         PS->From->printAsOperand(OS);
         OS << ",";
         PS->To->printAsOperand(OS);
-        OS << "] }\n";
+        OS << "]";
       } else if (const auto *PA = dyn_cast<PredicateAssume>(PI)) {
         OS << "; assume predicate info {"
-           << " Comparison:" << *PA->Condition << " }\n";
+           << " Comparison:" << *PA->Condition;
       }
+      OS << ", RenamedOp: ";
+      PI->RenamedOp->printAsOperand(OS, false);
+      OS << " }\n";
     }
   }
 };

@@ -599,11 +599,11 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     // We also need alignment here.
     // FIXME: this is getting the alignment of the character, not the
     // alignment of the global!
-    unsigned Align = GO->getParent()->getDataLayout().getPreferredAlignment(
+    Align Alignment = GO->getParent()->getDataLayout().getPreferredAlign(
         cast<GlobalVariable>(GO));
 
     std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
-    Name = SizeSpec + utostr(Align);
+    Name = SizeSpec + utostr(Alignment.value());
   } else if (Kind.isMergeableConst()) {
     Name = ".rodata.cst";
     Name += utostr(EntrySize);
@@ -1145,16 +1145,16 @@ MCSection *TargetLoweringObjectFileMachO::SelectSectionForGlobal(
 
   // FIXME: Alignment check should be handled by section classifier.
   if (Kind.isMergeable1ByteCString() &&
-      GO->getParent()->getDataLayout().getPreferredAlignment(
-          cast<GlobalVariable>(GO)) < 32)
+      GO->getParent()->getDataLayout().getPreferredAlign(
+          cast<GlobalVariable>(GO)) < Align(32))
     return CStringSection;
 
   // Do not put 16-bit arrays in the UString section if they have an
   // externally visible label, this runs into issues with certain linker
   // versions.
   if (Kind.isMergeable2ByteCString() && !GO->hasExternalLinkage() &&
-      GO->getParent()->getDataLayout().getPreferredAlignment(
-          cast<GlobalVariable>(GO)) < 32)
+      GO->getParent()->getDataLayout().getPreferredAlign(
+          cast<GlobalVariable>(GO)) < Align(32))
     return UStringSection;
 
   // With MachO only variables whose corresponding symbol starts with 'l' or
@@ -1765,7 +1765,7 @@ static std::string scalarConstantToHexString(const Constant *C) {
   } else {
     unsigned NumElements;
     if (auto *VTy = dyn_cast<VectorType>(Ty))
-      NumElements = VTy->getNumElements();
+      NumElements = cast<FixedVectorType>(VTy)->getNumElements();
     else
       NumElements = Ty->getArrayNumElements();
     std::string HexString;
@@ -2043,13 +2043,13 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
   }
 
   if (Kind.isMergeableCString()) {
-    unsigned Align = GO->getParent()->getDataLayout().getPreferredAlignment(
+    Align Alignment = GO->getParent()->getDataLayout().getPreferredAlign(
         cast<GlobalVariable>(GO));
 
     unsigned EntrySize = getEntrySizeForKind(Kind);
     std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
     SmallString<128> Name;
-    Name = SizeSpec + utostr(Align);
+    Name = SizeSpec + utostr(Alignment.value());
 
     return getContext().getXCOFFSection(
         Name, XCOFF::XMC_RO, XCOFF::XTY_SD,
@@ -2168,6 +2168,6 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
     const MCSymbol *Sym) const {
   return getContext().getXCOFFSection(
-      cast<MCSymbolXCOFF>(Sym)->getUnqualifiedName(), XCOFF::XMC_TC,
+      cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), XCOFF::XMC_TC,
       XCOFF::XTY_SD, XCOFF::C_HIDEXT, SectionKind::getData());
 }

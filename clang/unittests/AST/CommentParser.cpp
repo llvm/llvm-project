@@ -64,7 +64,7 @@ FullComment *CommentParserTest::parseString(const char *Source) {
 
   if (MY_DEBUG) {
     llvm::errs() << "=== Source:\n" << Source << "\n=== AST:\n";
-    FC->dump(llvm::errs(), &Traits, &SourceMgr);
+    FC->dump();
   }
 
   Token Tok;

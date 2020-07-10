@@ -25,12 +25,12 @@ public:
   bool IsWrite;
   Type *OpType;
   uint64_t TypeSize;
-  unsigned Alignment;
+  MaybeAlign Alignment;
   // The mask Value, if we're looking at a masked load/store.
   Value *MaybeMask;
 
   InterestingMemoryOperand(Instruction *I, unsigned OperandNo, bool IsWrite,
-                           class Type *OpType, unsigned Alignment,
+                           class Type *OpType, MaybeAlign Alignment,
                            Value *MaybeMask = nullptr)
       : IsWrite(IsWrite), OpType(OpType), Alignment(Alignment),
         MaybeMask(MaybeMask) {

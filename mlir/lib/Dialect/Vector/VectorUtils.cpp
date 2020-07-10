@@ -208,7 +208,7 @@ static AffineMap makePermutationMap(
 
 /// Implementation detail that walks up the parents and records the ones with
 /// the specified type.
-/// TODO(ntv): could also be implemented as a collect parents followed by a
+/// TODO: could also be implemented as a collect parents followed by a
 /// filter and made available outside this file.
 template <typename T>
 static SetVector<Operation *> getParentsOfType(Operation *op) {
@@ -252,7 +252,7 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // The ops that *may* lower a super-vector only do so if the super-vector to
   // sub-vector ratio exists. The ops that *must* lower a super-vector are
   // explicitly checked for this property.
-  /// TODO(ntv): there should be a single function for all ops to do this so we
+  /// TODO: there should be a single function for all ops to do this so we
   /// do not have to special case. Maybe a trait, or just a method, unclear atm.
   bool mustDivide = false;
   (void)mustDivide;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple aarch64-none-linux-gnu -target-feature +sve -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple aarch64-none-linux-gnu -target-feature +sve,+bf16 -fsyntax-only -verify
 
 void f() {
   int size_s8[sizeof(__SVInt8_t) == 0 ? 1 : -1];        // expected-error {{invalid application of 'sizeof' to sizeless type '__SVInt8_t'}}
@@ -33,6 +33,9 @@ void f() {
 
   int size_f64[sizeof(__SVFloat64_t) == 0 ? 1 : -1];        // expected-error {{invalid application of 'sizeof' to sizeless type '__SVFloat64_t'}}
   int align_f64[__alignof__(__SVFloat64_t) == 16 ? 1 : -1]; // expected-error {{invalid application of '__alignof' to sizeless type '__SVFloat64_t'}}
+
+  int size_bf16[sizeof(__SVBFloat16_t) == 0 ? 1 : -1];        // expected-error {{invalid application of 'sizeof' to sizeless type '__SVBFloat16_t'}}
+  int align_bf16[__alignof__(__SVBFloat16_t) == 16 ? 1 : -1]; // expected-error {{invalid application of '__alignof' to sizeless type '__SVBFloat16_t'}}
 
   int size_b8[sizeof(__SVBool_t) == 0 ? 1 : -1];       // expected-error {{invalid application of 'sizeof' to sizeless type '__SVBool_t'}}
   int align_b8[__alignof__(__SVBool_t) == 2 ? 1 : -1]; // expected-error {{invalid application of '__alignof' to sizeless type '__SVBool_t'}}

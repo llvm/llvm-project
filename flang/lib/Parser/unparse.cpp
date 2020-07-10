@@ -2017,140 +2017,148 @@ public:
   }
   void Unparse(const OmpLoopDirective &x) {
     switch (x.v) {
-    case OmpLoopDirective::Directive::Distribute:
+    case llvm::omp::Directive::OMPD_distribute:
       Word("DISTRIBUTE ");
       break;
-    case OmpLoopDirective::Directive::DistributeParallelDo:
+    case llvm::omp::Directive::OMPD_distribute_parallel_do:
       Word("DISTRIBUTE PARALLEL DO ");
       break;
-    case OmpLoopDirective::Directive::DistributeParallelDoSimd:
+    case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
       Word("DISTRIBUTE PARALLEL DO SIMD ");
       break;
-    case OmpLoopDirective::Directive::DistributeSimd:
+    case llvm::omp::Directive::OMPD_distribute_simd:
       Word("DISTRIBUTE SIMD ");
       break;
-    case OmpLoopDirective::Directive::Do:
+    case llvm::omp::Directive::OMPD_do:
       Word("DO ");
       break;
-    case OmpLoopDirective::Directive::DoSimd:
-      Word("Do SIMD ");
+    case llvm::omp::Directive::OMPD_do_simd:
+      Word("DO SIMD ");
       break;
-    case OmpLoopDirective::Directive::ParallelDo:
+    case llvm::omp::Directive::OMPD_parallel_do:
       Word("PARALLEL DO ");
       break;
-    case OmpLoopDirective::Directive::ParallelDoSimd:
+    case llvm::omp::Directive::OMPD_parallel_do_simd:
       Word("PARALLEL DO SIMD ");
       break;
-    case OmpLoopDirective::Directive::Simd:
+    case llvm::omp::Directive::OMPD_simd:
       Word("SIMD ");
       break;
-    case OmpLoopDirective::Directive::TargetParallelDo:
+    case llvm::omp::Directive::OMPD_target_parallel_do:
       Word("TARGET PARALLEL DO ");
       break;
-    case OmpLoopDirective::Directive::TargetParallelDoSimd:
+    case llvm::omp::Directive::OMPD_target_parallel_do_simd:
       Word("TARGET PARALLEL DO SIMD ");
       break;
-    case OmpLoopDirective::Directive::TargetTeamsDistribute:
+    case llvm::omp::Directive::OMPD_target_teams_distribute:
       Word("TARGET TEAMS DISTRIBUTE ");
       break;
-    case OmpLoopDirective::Directive::TargetTeamsDistributeParallelDo:
+    case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do:
       Word("TARGET TEAMS DISTRIBUTE PARALLEL DO ");
       break;
-    case OmpLoopDirective::Directive::TargetTeamsDistributeParallelDoSimd:
+    case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do_simd:
       Word("TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD ");
       break;
-    case OmpLoopDirective::Directive::TargetTeamsDistributeSimd:
+    case llvm::omp::Directive::OMPD_target_teams_distribute_simd:
       Word("TARGET TEAMS DISTRIBUTE SIMD ");
       break;
-    case OmpLoopDirective::Directive::TargetSimd:
+    case llvm::omp::Directive::OMPD_target_simd:
       Word("TARGET SIMD ");
       break;
-    case OmpLoopDirective::Directive::Taskloop:
+    case llvm::omp::Directive::OMPD_taskloop:
       Word("TASKLOOP ");
       break;
-    case OmpLoopDirective::Directive::TaskloopSimd:
+    case llvm::omp::Directive::OMPD_taskloop_simd:
       Word("TASKLOOP SIMD ");
       break;
-    case OmpLoopDirective::Directive::TeamsDistribute:
+    case llvm::omp::Directive::OMPD_teams_distribute:
       Word("TEAMS DISTRIBUTE ");
       break;
-    case OmpLoopDirective::Directive::TeamsDistributeParallelDo:
+    case llvm::omp::Directive::OMPD_teams_distribute_parallel_do:
       Word("TEAMS DISTRIBUTE PARALLEL DO ");
       break;
-    case OmpLoopDirective::Directive::TeamsDistributeParallelDoSimd:
+    case llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd:
       Word("TEAMS DISTRIBUTE PARALLEL DO SIMD ");
       break;
-    case OmpLoopDirective::Directive::TeamsDistributeSimd:
+    case llvm::omp::Directive::OMPD_teams_distribute_simd:
       Word("TEAMS DISTRIBUTE SIMD ");
+      break;
+    default:
       break;
     }
   }
   void Unparse(const OmpObjectList &x) { Walk(x.v, ","); }
   void Unparse(const OmpSimpleStandaloneDirective &x) {
     switch (x.v) {
-    case OmpSimpleStandaloneDirective::Directive::Barrier:
+    case llvm::omp::Directive::OMPD_barrier:
       Word("BARRIER ");
       break;
-    case OmpSimpleStandaloneDirective::Directive::Taskwait:
+    case llvm::omp::Directive::OMPD_taskwait:
       Word("TASKWAIT ");
       break;
-    case OmpSimpleStandaloneDirective::Directive::Taskyield:
+    case llvm::omp::Directive::OMPD_taskyield:
       Word("TASKYIELD ");
       break;
-    case OmpSimpleStandaloneDirective::Directive::TargetEnterData:
+    case llvm::omp::Directive::OMPD_target_enter_data:
       Word("TARGET ENTER DATA ");
       break;
-    case OmpSimpleStandaloneDirective::Directive::TargetExitData:
+    case llvm::omp::Directive::OMPD_target_exit_data:
       Word("TARGET EXIT DATA ");
       break;
-    case OmpSimpleStandaloneDirective::Directive::TargetUpdate:
+    case llvm::omp::Directive::OMPD_target_update:
       Word("TARGET UPDATE ");
       break;
-    case OmpSimpleStandaloneDirective::Directive::Ordered:
+    case llvm::omp::Directive::OMPD_ordered:
       Word("ORDERED ");
+      break;
+    default:
+      // Nothing to be done
       break;
     }
   }
   void Unparse(const OmpBlockDirective &x) {
     switch (x.v) {
-    case OmpBlockDirective::Directive::Master:
+    case llvm::omp::Directive::OMPD_master:
       Word("MASTER");
       break;
-    case OmpBlockDirective::Directive::Ordered:
+    case llvm::omp::Directive::OMPD_ordered:
       Word("ORDERED ");
       break;
-    case OmpBlockDirective::Directive::ParallelWorkshare:
+    case llvm::omp::Directive::OMPD_parallel_workshare:
       Word("PARALLEL WORKSHARE ");
       break;
-    case OmpBlockDirective::Directive::Parallel:
+    case llvm::omp::Directive::OMPD_parallel:
       Word("PARALLEL ");
       break;
-    case OmpBlockDirective::Directive::Single:
+    case llvm::omp::Directive::OMPD_single:
       Word("SINGLE ");
       break;
-    case OmpBlockDirective::Directive::TargetData:
+    case llvm::omp::Directive::OMPD_target_data:
       Word("TARGET DATA ");
       break;
-    case OmpBlockDirective::Directive::TargetParallel:
+    case llvm::omp::Directive::OMPD_target_parallel:
       Word("TARGET PARALLEL ");
       break;
-    case OmpBlockDirective::Directive::TargetTeams:
+    case llvm::omp::Directive::OMPD_target_teams:
       Word("TARGET TEAMS ");
       break;
-    case OmpBlockDirective::Directive::Target:
+    case llvm::omp::Directive::OMPD_target:
       Word("TARGET ");
       break;
-    case OmpBlockDirective::Directive::Taskgroup:
+    case llvm::omp::Directive::OMPD_taskgroup:
       Word("TASKGROUP ");
       break;
-    case OmpBlockDirective::Directive::Task:
+    case llvm::omp::Directive::OMPD_task:
       Word("TASK ");
       break;
-    case OmpBlockDirective::Directive::Teams:
+    case llvm::omp::Directive::OMPD_teams:
       Word("TEAMS ");
       break;
-    case OmpBlockDirective::Directive::Workshare:
+    case llvm::omp::Directive::OMPD_workshare:
       Word("WORKSHARE ");
+      break;
+    default:
+      // Nothing to be done
       break;
     }
   }
@@ -2314,11 +2322,13 @@ public:
   }
   void Unparse(const OmpSectionsDirective &x) {
     switch (x.v) {
-    case OmpSectionsDirective::Directive::Sections:
+    case llvm::omp::Directive::OMPD_sections:
       Word("SECTIONS ");
       break;
-    case OmpSectionsDirective::Directive::ParallelSections:
+    case llvm::omp::Directive::OMPD_parallel_sections:
       Word("PARALLEL SECTIONS ");
+      break;
+    default:
       break;
     }
   }
@@ -2359,10 +2369,24 @@ public:
     Put("\n");
     EndOpenMP();
   }
+  void Unparse(const OmpFlushMemoryClause &x) {
+    switch (x.v) {
+    case OmpFlushMemoryClause::FlushMemoryOrder::AcqRel:
+      Word("ACQ_REL ");
+      break;
+    case OmpFlushMemoryClause::FlushMemoryOrder::Release:
+      Word("RELEASE ");
+      break;
+    case OmpFlushMemoryClause::FlushMemoryOrder::Acquire:
+      Word("ACQUIRE ");
+      break;
+    }
+  }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP FLUSH");
-    Walk("(", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    Word("!$OMP FLUSH ");
+    Walk(std::get<std::optional<OmpFlushMemoryClause>>(x.t));
+    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
     Put("\n");
     EndOpenMP();
   }

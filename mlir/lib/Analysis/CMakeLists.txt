@@ -25,6 +25,7 @@ add_mlir_library(MLIRAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
+  MLIRPresburger
   MLIRSCF
   )
 
@@ -46,5 +47,8 @@ add_mlir_library(MLIRLoopAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
+  MLIRPresburger
   MLIRSCF
   )
+  
+add_subdirectory(Presburger)

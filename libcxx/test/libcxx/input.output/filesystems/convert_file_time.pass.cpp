@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: gcc-5
 
 // <filesystem>
 
 // typedef TrivialClock file_time_type;
 
-// ADDITIONAL_COMPILE_FLAGS: -I%{libcxx_src_root}/src/filesystem
+// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../src/filesystem
 
 #include <filesystem>
 #include <chrono>

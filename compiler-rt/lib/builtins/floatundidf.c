@@ -90,7 +90,7 @@ COMPILER_RT_ABI double __floatundidf(du_int a) {
     // a is now rounded to DBL_MANT_DIG bits
   }
   double_bits fb;
-  fb.u.s.high = ((e + 1023) << 20) |              // exponent
+  fb.u.s.high = ((su_int)(e + 1023) << 20) |      // exponent
                 ((su_int)(a >> 32) & 0x000FFFFF); // mantissa-high
   fb.u.s.low = (su_int)a;                         // mantissa-low
   return fb.f;

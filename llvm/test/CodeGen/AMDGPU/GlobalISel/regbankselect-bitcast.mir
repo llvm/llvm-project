@@ -11,9 +11,9 @@ body: |
     liveins: $sgpr0
     ; CHECK-LABEL: name: bitcast_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY]](s32)
+    ; CHECK: [[BITCAST:%[0-9]+]]:sgpr(<2 x s16>) = G_BITCAST [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = G_BITCAST %0
+    %1:_(<2 x s16>) = G_BITCAST %0
 ...
 
 ---
@@ -25,7 +25,7 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: bitcast_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[BITCAST:%[0-9]+]]:vgpr(s32) = G_BITCAST [[COPY]](s32)
+    ; CHECK: [[BITCAST:%[0-9]+]]:vgpr(<2 x s16>) = G_BITCAST [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_BITCAST %0
+    %1:_(<2 x s16>) = G_BITCAST %0
 ...

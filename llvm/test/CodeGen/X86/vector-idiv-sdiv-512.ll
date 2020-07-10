@@ -185,9 +185,8 @@ define <64 x i8> @test_div7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpackuswb %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vpsrlw $2, %zmm0, %zmm1
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
-; AVX512BW-NEXT:    vpxorq %zmm2, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpternlogq $108, {{.*}}(%rip), %zmm2, %zmm1
 ; AVX512BW-NEXT:    vpsrlw $7, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
@@ -539,9 +538,8 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpackuswb %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    vpaddb %zmm0, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsrlw $2, %zmm1, %zmm2
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm2, %zmm2
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
-; AVX512BW-NEXT:    vpxorq %zmm3, %zmm2, %zmm2
+; AVX512BW-NEXT:    vpternlogq $108, {{.*}}(%rip), %zmm3, %zmm2
 ; AVX512BW-NEXT:    vpsrlw $7, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpaddb %zmm1, %zmm2, %zmm1

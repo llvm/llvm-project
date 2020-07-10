@@ -19,6 +19,13 @@
 # CHECK-NEXT:  0000 ffffffff ffffffff 08000000 00000000
 # CHECK-NEXT:  0010 ffffffff ffffffff 08000000 00000000
 
+## -z dead-reloc-in-nonalloc= can override the tombstone value.
+# RUN: ld.lld --gc-sections -z dead-reloc-in-nonalloc=.debug_loc=42 %t.o %t1.o %t1.o -o %t42
+# RUN: llvm-objdump -s %t42 | FileCheck %s --check-prefix=OVERRIDE
+
+# OVERRIDE:      Contents of section .debug_loc:
+# OVERRIDE-NEXT:  0000 2a000000 00000000 2a000000 00000000
+
 .section .text.1,"ax"
   .byte 0
 .section .text.2,"axe"

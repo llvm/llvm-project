@@ -13,8 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
-
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
@@ -36,58 +34,53 @@ using namespace llvm::msf;
 using namespace llvm::pdb;
 using namespace llvm::codeview;
 
+// Helper class for building the public and global PDB hash table buckets.
 struct llvm::pdb::GSIHashStreamBuilder {
-  struct SymbolDenseMapInfo {
-    static inline CVSymbol getEmptyKey() {
-      static CVSymbol Empty;
-      return Empty;
-    }
-    static inline CVSymbol getTombstoneKey() {
-      static CVSymbol Tombstone(
-          DenseMapInfo<ArrayRef<uint8_t>>::getTombstoneKey());
-      return Tombstone;
-    }
-    static unsigned getHashValue(const CVSymbol &Val) {
-      return xxHash64(Val.RecordData);
-    }
-    static bool isEqual(const CVSymbol &LHS, const CVSymbol &RHS) {
-      return LHS.RecordData == RHS.RecordData;
-    }
-  };
+  // Sum of the size of all public or global records.
+  uint32_t RecordByteSize = 0;
 
-  std::vector<CVSymbol> Records;
-  llvm::DenseSet<CVSymbol, SymbolDenseMapInfo> SymbolHashes;
   std::vector<PSHashRecord> HashRecords;
+
+  // The hash bitmap has `ceil((IPHR_HASH + 1) / 32)` words in it. The
+  // reference implementation builds a hash table with IPHR_HASH buckets in it.
+  // The last bucket is used to link together free hash table cells in a linked
+  // list, but it is always empty in the compressed, on-disk format. However,
+  // the bitmap must have a bit for it.
   std::array<support::ulittle32_t, (IPHR_HASH + 32) / 32> HashBitmap;
+
   std::vector<support::ulittle32_t> HashBuckets;
 
   uint32_t calculateSerializedLength() const;
-  uint32_t calculateRecordByteSize() const;
   Error commit(BinaryStreamWriter &Writer);
 
-  void finalizeBuckets(uint32_t RecordZeroOffset);
+  void finalizePublicBuckets();
+  void finalizeGlobalBuckets(uint32_t RecordZeroOffset);
 
-  // Finalize public symbol buckets.
+  // Assign public and global symbol records into hash table buckets.
+  // Modifies the list of records to store the bucket index, but does not
+  // change the order.
   void finalizeBuckets(uint32_t RecordZeroOffset,
-                       std::vector<BulkPublic> &&Publics);
-
-  template <typename T> void addSymbol(const T &Symbol, MSFBuilder &Msf) {
-    T Copy(Symbol);
-    addSymbol(SymbolSerializer::writeOneSymbol(Copy, Msf.getAllocator(),
-                                               CodeViewContainer::Pdb));
-  }
-  void addSymbol(const CVSymbol &Symbol);
+                       MutableArrayRef<BulkPublic> Globals);
 };
 
-void GSIHashStreamBuilder::addSymbol(const codeview::CVSymbol &Symbol) {
-  // Ignore duplicate typedefs and constants.
-  if (Symbol.kind() == S_UDT || Symbol.kind() == S_CONSTANT) {
-    auto Iter = SymbolHashes.insert(Symbol);
-    if (!Iter.second)
-      return;
+// DenseMapInfo implementation for deduplicating symbol records.
+struct llvm::pdb::SymbolDenseMapInfo {
+  static inline CVSymbol getEmptyKey() {
+    static CVSymbol Empty;
+    return Empty;
   }
-  Records.push_back(Symbol);
-}
+  static inline CVSymbol getTombstoneKey() {
+    static CVSymbol Tombstone(
+        DenseMapInfo<ArrayRef<uint8_t>>::getTombstoneKey());
+    return Tombstone;
+  }
+  static unsigned getHashValue(const CVSymbol &Val) {
+    return xxHash64(Val.RecordData);
+  }
+  static bool isEqual(const CVSymbol &LHS, const CVSymbol &RHS) {
+    return LHS.RecordData == RHS.RecordData;
+  }
+};
 
 namespace {
 LLVM_PACKED_START
@@ -118,7 +111,7 @@ static CVSymbol serializePublic(uint8_t *Mem, const BulkPublic &Pub) {
   FixedMem->Prefix.RecordLen = static_cast<uint16_t>(Size - 2);
   FixedMem->Pub.Flags = Pub.Flags;
   FixedMem->Pub.Offset = Pub.Offset;
-  FixedMem->Pub.Segment = Pub.U.Segment;
+  FixedMem->Pub.Segment = Pub.Segment;
   char *NameMem = reinterpret_cast<char *>(FixedMem + 1);
   memcpy(NameMem, Pub.Name, NameLen);
   // Zero the null terminator and remaining bytes.
@@ -131,13 +124,6 @@ uint32_t GSIHashStreamBuilder::calculateSerializedLength() const {
   Size += HashRecords.size() * sizeof(PSHashRecord);
   Size += HashBitmap.size() * sizeof(uint32_t);
   Size += HashBuckets.size() * sizeof(uint32_t);
-  return Size;
-}
-
-uint32_t GSIHashStreamBuilder::calculateRecordByteSize() const {
-  uint32_t Size = 0;
-  for (const auto &Sym : Records)
-    Size += Sym.length();
   return Size;
 }
 
@@ -180,82 +166,119 @@ static int gsiRecordCmp(StringRef S1, StringRef S2) {
   return S1.compare_lower(S2.data());
 }
 
-void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
-  // Build up a list of globals to be bucketed. This repurposes the BulkPublic
-  // struct with different meanings for the fields to avoid reallocating a new
-  // vector during public symbol table hash construction.
-  std::vector<BulkPublic> Globals;
-  Globals.resize(Records.size());
-  uint32_t SymOffset = RecordZeroOffset;
-  for (size_t I = 0, E = Records.size(); I < E; ++I) {
-    StringRef Name = getSymbolName(Records[I]);
-    Globals[I].Name = Name.data();
-    Globals[I].NameLen = Name.size();
-    Globals[I].SymOffset = SymOffset;
-    SymOffset += Records[I].length();
-  }
-
-  finalizeBuckets(RecordZeroOffset, std::move(Globals));
+void GSIStreamBuilder::finalizePublicBuckets() {
+  PSH->finalizeBuckets(0, Publics);
 }
 
-void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset,
-                                           std::vector<BulkPublic> &&Globals) {
-  // Hash every name in parallel. The Segment field is no longer needed, so
-  // store the BucketIdx in a union.
-  parallelForEachN(0, Globals.size(), [&](size_t I) {
-    Globals[I].U.BucketIdx = hashStringV1(Globals[I].Name) % IPHR_HASH;
+void GSIStreamBuilder::finalizeGlobalBuckets(uint32_t RecordZeroOffset) {
+  // Build up a list of globals to be bucketed. Use the BulkPublic data
+  // structure for this purpose, even though these are global records, not
+  // public records. Most of the same fields are required:
+  // - Name
+  // - NameLen
+  // - SymOffset
+  // - BucketIdx
+  // The dead fields are Offset, Segment, and Flags.
+  std::vector<BulkPublic> Records;
+  Records.resize(Globals.size());
+  uint32_t SymOffset = RecordZeroOffset;
+  for (size_t I = 0, E = Globals.size(); I < E; ++I) {
+    StringRef Name = getSymbolName(Globals[I]);
+    Records[I].Name = Name.data();
+    Records[I].NameLen = Name.size();
+    Records[I].SymOffset = SymOffset;
+    SymOffset += Globals[I].length();
+  }
+
+  GSH->finalizeBuckets(RecordZeroOffset, Records);
+}
+
+void GSIHashStreamBuilder::finalizeBuckets(
+    uint32_t RecordZeroOffset, MutableArrayRef<BulkPublic> Records) {
+  // Hash every name in parallel.
+  parallelForEachN(0, Records.size(), [&](size_t I) {
+    Records[I].setBucketIdx(hashStringV1(Records[I].Name) % IPHR_HASH);
   });
 
-  // Parallel sort by bucket index, then name within the buckets. Within the
-  // buckets, sort each bucket by memcmp of the symbol's name.  It's important
-  // that we use the same sorting algorithm as is used by the reference
-  // implementation to ensure that the search for a record within a bucket can
-  // properly early-out when it detects the record won't be found.  The
-  // algorithm used here corredsponds to the function
+  // Count up the size of each bucket. Then, use an exclusive prefix sum to
+  // calculate the bucket start offsets. This is C++17 std::exclusive_scan, but
+  // we can't use it yet.
+  uint32_t BucketStarts[IPHR_HASH] = {0};
+  for (const BulkPublic &P : Records)
+    ++BucketStarts[P.BucketIdx];
+  uint32_t Sum = 0;
+  for (uint32_t &B : BucketStarts) {
+    uint32_t Size = B;
+    B = Sum;
+    Sum += Size;
+  }
+
+  // Place globals into the hash table in bucket order. When placing a global,
+  // update the bucket start. Every hash table slot should be filled. Always use
+  // a refcount of one for now.
+  HashRecords.resize(Records.size());
+  uint32_t BucketCursors[IPHR_HASH];
+  memcpy(BucketCursors, BucketStarts, sizeof(BucketCursors));
+  for (int I = 0, E = Records.size(); I < E; ++I) {
+    uint32_t HashIdx = BucketCursors[Records[I].BucketIdx]++;
+    HashRecords[HashIdx].Off = I;
+    HashRecords[HashIdx].CRef = 1;
+  }
+
+  // Within the buckets, sort each bucket by memcmp of the symbol's name.  It's
+  // important that we use the same sorting algorithm as is used by the
+  // reference implementation to ensure that the search for a record within a
+  // bucket can properly early-out when it detects the record won't be found.
+  // The algorithm used here corresponds to the function
   // caseInsensitiveComparePchPchCchCch in the reference implementation.
-  auto BucketCmp = [](const BulkPublic &L, const BulkPublic &R) {
-    if (L.U.BucketIdx != R.U.BucketIdx)
-      return L.U.BucketIdx < R.U.BucketIdx;
-    int Cmp = gsiRecordCmp(L.getName(), R.getName());
-    if (Cmp != 0)
-      return Cmp < 0;
-    // This comparison is necessary to make the sorting stable in the presence
-    // of two static globals with the same name. The easiest way to observe
-    // this is with S_LDATA32 records.
-    return L.SymOffset < R.SymOffset;
-  };
-  parallelSort(Globals, BucketCmp);
+  parallelForEachN(0, IPHR_HASH, [&](size_t I) {
+    auto B = HashRecords.begin() + BucketStarts[I];
+    auto E = HashRecords.begin() + BucketCursors[I];
+    if (B == E)
+      return;
+    auto BucketCmp = [Records](const PSHashRecord &LHash,
+                               const PSHashRecord &RHash) {
+      const BulkPublic &L = Records[uint32_t(LHash.Off)];
+      const BulkPublic &R = Records[uint32_t(RHash.Off)];
+      assert(L.BucketIdx == R.BucketIdx);
+      int Cmp = gsiRecordCmp(L.getName(), R.getName());
+      if (Cmp != 0)
+        return Cmp < 0;
+      // This comparison is necessary to make the sorting stable in the presence
+      // of two static globals with the same name. The easiest way to observe
+      // this is with S_LDATA32 records.
+      return L.SymOffset < R.SymOffset;
+    };
+    llvm::sort(B, E, BucketCmp);
 
-  // Zero out the bucket index bitmap.
-  for (ulittle32_t &Word : HashBitmap)
-    Word = 0;
+    // After we are done sorting, replace the global indices with the stream
+    // offsets of each global. Add one when writing symbol offsets to disk.
+    // See GSI1::fixSymRecs.
+    for (PSHashRecord &HRec : make_range(B, E))
+      HRec.Off = Records[uint32_t(HRec.Off)].SymOffset + 1;
+  });
 
-  // Compute the three tables: the hash records in bucket and chain order, the
-  // bucket presence bitmap, and the bucket chain start offsets.
-  HashRecords.reserve(Globals.size());
-  uint32_t LastBucketIdx = ~0U;
-  for (const BulkPublic &Global : Globals) {
-    // If this is a new bucket, add it to the bitmap and the start offset map.
-    uint32_t BucketIdx = Global.U.BucketIdx;
-    if (LastBucketIdx != BucketIdx) {
-      HashBitmap[BucketIdx / 32] |= 1U << (BucketIdx % 32);
+  // For each non-empty bucket, push the bucket start offset into HashBuckets
+  // and set a bit in the hash bitmap.
+  for (uint32_t I = 0; I < HashBitmap.size(); ++I) {
+    uint32_t Word = 0;
+    for (uint32_t J = 0; J < 32; ++J) {
+      // Skip empty buckets.
+      uint32_t BucketIdx = I * 32 + J;
+      if (BucketIdx >= IPHR_HASH ||
+          BucketStarts[BucketIdx] == BucketCursors[BucketIdx])
+        continue;
+      Word |= (1U << J);
 
       // Calculate what the offset of the first hash record in the chain would
       // be if it were inflated to contain 32-bit pointers. On a 32-bit system,
       // each record would be 12 bytes. See HROffsetCalc in gsi.h.
       const int SizeOfHROffsetCalc = 12;
       ulittle32_t ChainStartOff =
-          ulittle32_t(HashRecords.size() * SizeOfHROffsetCalc);
+          ulittle32_t(BucketStarts[BucketIdx] * SizeOfHROffsetCalc);
       HashBuckets.push_back(ChainStartOff);
-      LastBucketIdx = BucketIdx;
     }
-
-    // Create the hash record. Add one when writing symbol offsets to disk.
-    // See GSI1::fixSymRecs. Always use a refcount of 1 for now.
-    PSHashRecord HRec;
-    HRec.Off = Global.SymOffset + 1;
-    HRec.CRef = 1;
-    HashRecords.push_back(HRec);
+    HashBitmap[I] = Word;
   }
 }
 
@@ -269,7 +292,7 @@ uint32_t GSIStreamBuilder::calculatePublicsHashStreamSize() const {
   uint32_t Size = 0;
   Size += sizeof(PublicsStreamHeader);
   Size += PSH->calculateSerializedLength();
-  Size += PubAddrMap.size() * sizeof(uint32_t); // AddrMap
+  Size += Publics.size() * sizeof(uint32_t); // AddrMap
   // FIXME: Add thunk map and section offsets for incremental linking.
 
   return Size;
@@ -281,9 +304,8 @@ uint32_t GSIStreamBuilder::calculateGlobalsHashStreamSize() const {
 
 Error GSIStreamBuilder::finalizeMsfLayout() {
   // First we write public symbol records, then we write global symbol records.
-  uint32_t PublicsSize = PSH->calculateRecordByteSize();
-  uint32_t GlobalsSize = GSH->calculateRecordByteSize();
-  GSH->finalizeBuckets(PublicsSize);
+  finalizePublicBuckets();
+  finalizeGlobalBuckets(PSH->RecordByteSize);
 
   Expected<uint32_t> Idx = Msf.addStream(calculateGlobalsHashStreamSize());
   if (!Idx)
@@ -295,7 +317,7 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
     return Idx.takeError();
   PublicsStreamIndex = *Idx;
 
-  uint32_t RecordBytes = PublicsSize + GlobalsSize;
+  uint32_t RecordBytes = PSH->RecordByteSize + GSH->RecordByteSize;
 
   Idx = Msf.addStream(RecordBytes);
   if (!Idx)
@@ -304,72 +326,68 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   return Error::success();
 }
 
-void GSIStreamBuilder::addPublicSymbols(std::vector<BulkPublic> &&Publics) {
+void GSIStreamBuilder::addPublicSymbols(std::vector<BulkPublic> &&PublicsIn) {
+  assert(Publics.empty() && PSH->RecordByteSize == 0 &&
+         "publics can only be added once");
+  Publics = std::move(PublicsIn);
+
   // Sort the symbols by name. PDBs contain lots of symbols, so use parallelism.
   parallelSort(Publics, [](const BulkPublic &L, const BulkPublic &R) {
     return L.getName() < R.getName();
   });
 
-  // Assign offsets and allocate one contiguous block of memory for all public
-  // symbols.
+  // Assign offsets and calculate the length of the public symbol records.
   uint32_t SymOffset = 0;
   for (BulkPublic &Pub : Publics) {
     Pub.SymOffset = SymOffset;
     SymOffset += sizeOfPublic(Pub);
   }
-  uint8_t *Mem =
-      reinterpret_cast<uint8_t *>(Msf.getAllocator().Allocate(SymOffset, 4));
 
-  // Instead of storing individual CVSymbol records, store them as one giant
-  // buffer.
-  // FIXME: This is kind of a hack. This makes Records.size() wrong, and we have
-  // to account for that elsewhere.
-  PSH->Records.push_back(CVSymbol(makeArrayRef(Mem, SymOffset)));
-
-  // Serialize them in parallel.
-  parallelForEachN(0, Publics.size(), [&](size_t I) {
-    const BulkPublic &Pub = Publics[I];
-    serializePublic(Mem + Pub.SymOffset, Pub);
-  });
-
-  // Re-sort the publics by address so we can build the address map. We no
-  // longer need the original ordering.
-  auto AddrCmp = [](const BulkPublic &L, const BulkPublic &R) {
-    if (L.U.Segment != R.U.Segment)
-      return L.U.Segment < R.U.Segment;
-    if (L.Offset != R.Offset)
-      return L.Offset < R.Offset;
-    // parallelSort is unstable, so we have to do name comparison to ensure
-    // that two names for the same location come out in a determinstic order.
-    return L.getName() < R.getName();
-  };
-  parallelSort(Publics, AddrCmp);
-
-  // Fill in the symbol offsets in the appropriate order.
-  PubAddrMap.reserve(Publics.size());
-  for (const BulkPublic &Pub : Publics)
-    PubAddrMap.push_back(ulittle32_t(Pub.SymOffset));
-
-  // Finalize public symbol buckets immediately after they have been added.
-  // They should all be warm in the cache at this point, so go ahead and do it
-  // now.
-  PSH->finalizeBuckets(0, std::move(Publics));
+  // Remember the length of the public stream records.
+  PSH->RecordByteSize = SymOffset;
 }
 
 void GSIStreamBuilder::addGlobalSymbol(const ProcRefSym &Sym) {
-  GSH->addSymbol(Sym, Msf);
+  serializeAndAddGlobal(Sym);
 }
 
 void GSIStreamBuilder::addGlobalSymbol(const DataSym &Sym) {
-  GSH->addSymbol(Sym, Msf);
+  serializeAndAddGlobal(Sym);
 }
 
 void GSIStreamBuilder::addGlobalSymbol(const ConstantSym &Sym) {
-  GSH->addSymbol(Sym, Msf);
+  serializeAndAddGlobal(Sym);
 }
 
-void GSIStreamBuilder::addGlobalSymbol(const codeview::CVSymbol &Sym) {
-  GSH->addSymbol(Sym);
+template <typename T>
+void GSIStreamBuilder::serializeAndAddGlobal(const T &Symbol) {
+  T Copy(Symbol);
+  addGlobalSymbol(SymbolSerializer::writeOneSymbol(Copy, Msf.getAllocator(),
+                                                   CodeViewContainer::Pdb));
+}
+
+void GSIStreamBuilder::addGlobalSymbol(const codeview::CVSymbol &Symbol) {
+  // Ignore duplicate typedefs and constants.
+  if (Symbol.kind() == S_UDT || Symbol.kind() == S_CONSTANT) {
+    auto Iter = GlobalsSeen.insert(Symbol);
+    if (!Iter.second)
+      return;
+  }
+  GSH->RecordByteSize += Symbol.length();
+  Globals.push_back(Symbol);
+}
+
+// Serialize each public and write it.
+static Error writePublics(BinaryStreamWriter &Writer,
+                          ArrayRef<BulkPublic> Publics) {
+  std::vector<uint8_t> Storage;
+  for (const BulkPublic &Pub : Publics) {
+    Storage.resize(sizeOfPublic(Pub));
+    serializePublic(Storage.data(), Pub);
+    if (Error E = Writer.writeBytes(Storage))
+      return E;
+  }
+  return Error::success();
 }
 
 static Error writeRecords(BinaryStreamWriter &Writer,
@@ -387,12 +405,40 @@ Error GSIStreamBuilder::commitSymbolRecordStream(
   // Write public symbol records first, followed by global symbol records.  This
   // must match the order that we assume in finalizeMsfLayout when computing
   // PSHZero and GSHZero.
-  if (auto EC = writeRecords(Writer, PSH->Records))
+  if (auto EC = writePublics(Writer, Publics))
     return EC;
-  if (auto EC = writeRecords(Writer, GSH->Records))
+  if (auto EC = writeRecords(Writer, Globals))
     return EC;
 
   return Error::success();
+}
+
+static std::vector<support::ulittle32_t>
+computeAddrMap(ArrayRef<BulkPublic> Publics) {
+  // Build a parallel vector of indices into the Publics vector, and sort it by
+  // address.
+  std::vector<ulittle32_t> PubAddrMap;
+  PubAddrMap.reserve(Publics.size());
+  for (int I = 0, E = Publics.size(); I < E; ++I)
+    PubAddrMap.push_back(ulittle32_t(I));
+
+  auto AddrCmp = [Publics](const ulittle32_t &LIdx, const ulittle32_t &RIdx) {
+    const BulkPublic &L = Publics[LIdx];
+    const BulkPublic &R = Publics[RIdx];
+    if (L.Segment != R.Segment)
+      return L.Segment < R.Segment;
+    if (L.Offset != R.Offset)
+      return L.Offset < R.Offset;
+    // parallelSort is unstable, so we have to do name comparison to ensure
+    // that two names for the same location come out in a deterministic order.
+    return L.getName() < R.getName();
+  };
+  parallelSort(PubAddrMap, AddrCmp);
+
+  // Rewrite the public symbol indices into symbol offsets.
+  for (ulittle32_t &Entry : PubAddrMap)
+    Entry = Publics[Entry].SymOffset;
+  return PubAddrMap;
 }
 
 Error GSIStreamBuilder::commitPublicsHashStream(
@@ -402,7 +448,7 @@ Error GSIStreamBuilder::commitPublicsHashStream(
 
   // FIXME: Fill these in. They are for incremental linking.
   Header.SymHash = PSH->calculateSerializedLength();
-  Header.AddrMap = PubAddrMap.size() * 4;
+  Header.AddrMap = Publics.size() * 4;
   Header.NumThunks = 0;
   Header.SizeOfThunk = 0;
   Header.ISectThunkTable = 0;
@@ -415,6 +461,8 @@ Error GSIStreamBuilder::commitPublicsHashStream(
   if (auto EC = PSH->commit(Writer))
     return EC;
 
+  std::vector<support::ulittle32_t> PubAddrMap = computeAddrMap(Publics);
+  assert(PubAddrMap.size() == Publics.size());
   if (auto EC = Writer.writeArray(makeArrayRef(PubAddrMap)))
     return EC;
 

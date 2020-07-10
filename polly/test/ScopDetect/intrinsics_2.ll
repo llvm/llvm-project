@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-detect -analyze < %s | FileCheck %s
 ;
 ; Verify that we allow the lifetime markers for the tmp array.
 ;

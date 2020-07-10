@@ -1,11 +1,14 @@
 ; RUN: llc -debug-entry-values -filetype=asm -o - %s | FileCheck %s
 
-; Verify that the entry value covers both of the DW_OP_regx pieces. Previously
-; the size operand of the entry value would be hardcoded to one.
+; The q0 register does not have a DWARF register number, and is instead emitted
+; as a composite location description with two sub-registers. Previously we
+; emitted a single DW_OP_entry_value wrapping that whole composite location
+; description, but that is not valid DWARF; DW_OP_entry_value operations can
+; only hold DWARF expressions and register location descriptions.
 ;
-; XXX: Is this really what should be emitted, or should we instead emit one
-; entry value operation per DW_OP_regx? GDB can currently not understand
-; entry values containing complex expressions like this.
+; In the future we may want to emit a composite location description where each
+; DW_OP_regx operation is wrapped in an entry value operation, but for now
+; just verify that no invalid DWARF is emitted.
 
 target datalayout = "E-m:e-i64:64-n32:64-S128"
 target triple = "sparc64"
@@ -20,8 +23,11 @@ target triple = "sparc64"
 ;   return 123;
 ; }
 
-; CHECK:      .byte   243       ! DW_OP_GNU_entry_value
-; CHECK-NEXT: .byte   8         ! 8
+; Verify that we got an entry value in the DIExpression...
+; CHECK: DEBUG_VALUE: foo:p <- [DW_OP_LLVM_entry_value 1] $q0
+
+; ... but that no entry value location was emitted:
+; CHECK:      .half   8         ! Loc expr size
 ; CHECK-NEXT: .byte   144       ! sub-register DW_OP_regx
 ; CHECK-NEXT: .byte   72        ! 72
 ; CHECK-NEXT: .byte   147       ! DW_OP_piece
@@ -30,7 +36,8 @@ target triple = "sparc64"
 ; CHECK-NEXT: .byte   73        ! 73
 ; CHECK-NEXT: .byte   147       ! DW_OP_piece
 ; CHECK-NEXT: .byte   8         ! 8
-; CHECK-NEXT: .byte   159       ! DW_OP_stack_value
+; CHECK-NEXT: .xword  0
+; CHECK-NEXT: .xword  0
 
 @global = common global fp128 0xL00000000000000000000000000000000, align 16, !dbg !0
 

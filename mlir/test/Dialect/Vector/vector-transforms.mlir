@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-vector-to-vector-conversion | FileCheck %s
+// RUN: mlir-opt %s -test-vector-unrolling-patterns | FileCheck %s
 
 // CHECK-DAG: #[[MAP0:map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-DAG: #[[MAP1:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
@@ -280,7 +281,7 @@ func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
   return
 }
 
-// TODO(andydavis) Update test with VTR split transform.
+// TODO: Update test with VTR split transform.
 // CHECK-LABEL: func @vector_transfers
 // CHECK-COUNT-8: vector.transfer_read
 // CHECK-COUNT-4: addf

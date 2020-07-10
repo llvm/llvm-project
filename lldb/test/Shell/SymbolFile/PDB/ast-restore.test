@@ -4,7 +4,8 @@ RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols -dump-ast %t.exe | FileC
 RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=GLOBAL %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=BASE %s
-RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=INNER %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=TEMPLATE %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=FOO %s
@@ -46,6 +47,13 @@ CLASS:     namespace N1 {
 CLASS:         class Class : public N0::N1::Base {
 CLASS-DAG:             const N0::N1::(anonymous namespace)::Enum m_ce;
 CLASS-DAG:             static int ClassStatic;
+CLASS-DAG:             static const int ClassStaticConst = 8;
+CLASS-DAG:             static const int ClassStaticConstexpr = 9;
+CLASS-DAG:             static constexpr float ClassStaticConstexprFloat = 10.F;
+CLASS-DAG:             static constexpr double ClassStaticConstexprDouble = 11.;
+CLASS-DAG:             static constexpr double ClassStaticConstexprLongDouble = 12.;
+CLASS-DAG:             static const N0::N1::(anonymous namespace)::Enum ClassStaticConstEnum = 8;
+CLASS-DAG:             static const N0::N1::(anonymous namespace)::ScopedEnum ClassStaticConstScopedEnum = 4;
 CLASS-DAG:             N0::N1::Class::Inner m_inner;
 CLASS-DAG:             {{(inline )?}}Class(N0::N1::(anonymous namespace)::Enum);
 CLASS-DAG:             static {{(inline )?}}int StaticFunc(const N0::N1::Class &);

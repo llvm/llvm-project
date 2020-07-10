@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ; Range testing for the immediate in the reg+imm(mulvl) addressing
 ; mode is done only for one instruction. The rest of the instrucions
@@ -140,7 +143,7 @@ define <vscale x 8 x half> @ldnf1h_f16(<vscale x 8 x i1> %pg, half* %a) {
   ret <vscale x 8 x half> %load
 }
 
-define <vscale x 8 x bfloat> @ldnf1h_bf16(<vscale x 8 x i1> %pg, bfloat* %a) {
+define <vscale x 8 x bfloat> @ldnf1h_bf16(<vscale x 8 x i1> %pg, bfloat* %a) #0 {
 ; CHECK-LABEL: ldnf1h_bf16:
 ; CHECK: ldnf1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT: ret
@@ -159,7 +162,7 @@ define <vscale x 8 x half> @ldnf1h_f16_inbound(<vscale x 8 x i1> %pg, half* %a) 
   ret <vscale x 8 x half> %load
 }
 
-define <vscale x 8 x bfloat> @ldnf1h_bf16_inbound(<vscale x 8 x i1> %pg, bfloat* %a) {
+define <vscale x 8 x bfloat> @ldnf1h_bf16_inbound(<vscale x 8 x i1> %pg, bfloat* %a) #0 {
 ; CHECK-LABEL: ldnf1h_bf16_inbound:
 ; CHECK: ldnf1h { z0.h }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT: ret
@@ -473,3 +476,6 @@ declare <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1>, i1
 declare <vscale x 2 x i32> @llvm.aarch64.sve.ldnf1.nxv2i32(<vscale x 2 x i1>, i32*)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.ldnf1.nxv2i64(<vscale x 2 x i1>, i64*)
 declare <vscale x 2 x double> @llvm.aarch64.sve.ldnf1.nxv2f64(<vscale x 2 x i1>, double*)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }

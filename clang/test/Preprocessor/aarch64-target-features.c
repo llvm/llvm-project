@@ -93,7 +93,39 @@
 // RUN: %clang -target aarch64 -mtune=cyclone -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-MTUNE-CYCLONE %s
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE %s
-// CHECK-SVE-NOT: __ARM_FEATURE_SVE 1
+// CHECK-SVE: __ARM_FEATURE_SVE 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+bf16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-BF16 %s
+// CHECK-SVE-BF16: __ARM_FEATURE_BF16_SCALAR_ARITHMETIC 1
+// CHECK-SVE-BF16: __ARM_FEATURE_SVE 1
+// CHECK-SVE-BF16: __ARM_FEATURE_SVE_BF16 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+i8mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-I8MM %s
+// CHECK-SVE-I8MM: __ARM_FEATURE_SVE 1
+// CHECK-SVE-I8MM: __ARM_FEATURE_SVE_MATMUL_INT8 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-F32MM %s
+// CHECK-SVE-F32MM: __ARM_FEATURE_SVE 1
+// CHECK-SVE-F32MM: __ARM_FEATURE_SVE_MATMUL_FP32 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+f64mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-F64MM %s
+// CHECK-SVE-F64MM: __ARM_FEATURE_SVE 1
+// CHECK-SVE-F64MM: __ARM_FEATURE_SVE_MATMUL_FP64 1
+
+// The following tests may need to be revised in the future since
+// SVE2 is currently still part of Future Architecture Technologies
+// (https://developer.arm.com/docs/ddi0602/latest)
+//
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// CHECK-SVE2: __ARM_FEATURE_SVE2 1
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES %s
+// CHECK-SVE2AES: __ARM_FEATURE_SVE2_AES 1
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-sha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SHA3 %s
+// CHECK-SVE2SHA3: __ARM_FEATURE_SVE2_SHA3 1
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-sm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SM4 %s
+// CHECK-SVE2SM4: __ARM_FEATURE_SVE2_SM4 1
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
+// CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2_BITPERM 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.2a+dotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
 // CHECK-DOTPROD: __ARM_FEATURE_DOTPROD 1

@@ -308,6 +308,8 @@ Disable merging .ARM.exidx entries.
 Page align sections.
 .It Fl -no-omagic
 Do not set the text data sections to be writable, page align sections.
+.It Fl -no-relax
+Disable target-specific relaxations. This is currently a no-op.
 .It Fl -no-rosegment
 Do not put read-only non-executable sections in their own segment.
 .It Fl -no-undefined-version
@@ -622,6 +624,13 @@ Use wrapper functions for symbol.
 .It Fl z Ar option
 Linker option extensions.
 .Bl -tag -width indent -compact
+.Pp
+.It Cm dead-reloc-in-nonalloc Ns = Ns Ar section_glob=value
+Resolve a relocation in a matched non-SHF_ALLOC section referencing a discarded symbol to
+.Ar value
+Accepts globs, in the event of a section matching more than one option, the last
+option takes precedence. An order of least specific to most specific match is
+recommended.
 .Pp
 .It Cm execstack
 Make the main stack executable.

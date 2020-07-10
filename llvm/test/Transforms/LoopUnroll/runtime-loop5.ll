@@ -1,8 +1,8 @@
 ; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-count=16 | FileCheck --check-prefix=UNROLL-16 %s
 ; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-count=4 | FileCheck --check-prefix=UNROLL-4 %s
 
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll' -unroll-runtime=true -unroll-count=16 | FileCheck --check-prefix=UNROLL-16 %s
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll' -unroll-runtime=true -unroll-count=4 | FileCheck --check-prefix=UNROLL-4 %s
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime=true -unroll-count=16 | FileCheck --check-prefix=UNROLL-16 %s
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime=true -unroll-count=4 | FileCheck --check-prefix=UNROLL-4 %s
 
 ; Given that the trip-count of this loop is a 3-bit value, we cannot
 ; safely unroll it with a count of anything more than 8.

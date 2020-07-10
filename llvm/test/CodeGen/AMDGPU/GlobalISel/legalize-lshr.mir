@@ -1488,7 +1488,7 @@ body: |
     %1:_(s32) = COPY $vgpr8
     %2:_(s256) = G_ZEXT %1
     %3:_(s256) = G_LSHR %0, %2
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7  = COPY %3
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %3
 ...
 
 ---
@@ -1614,5 +1614,5 @@ body: |
     %0:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:_(<2 x s32>) = COPY $vgpr4_vgpr5
     %2:_(<2 x s128>) = G_LSHR %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7  = COPY %2
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2
 ...

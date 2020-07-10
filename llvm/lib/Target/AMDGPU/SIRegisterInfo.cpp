@@ -1015,7 +1015,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction *MF = MBB->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  DenseSet<unsigned> SGPRSpillVGPRDefinedSet;
+  DenseSet<Register> SGPRSpillVGPRDefinedSet;
   const SIFrameLowering *TFL = ST.getFrameLowering();
 
   ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills

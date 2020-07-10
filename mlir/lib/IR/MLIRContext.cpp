@@ -270,10 +270,6 @@ public:
   // Other
   //===--------------------------------------------------------------------===//
 
-  /// A general purpose mutex to lock access to parts of the context that do not
-  /// have a more specific mutex, e.g. registry operations.
-  llvm::sys::SmartRWMutex<true> contextMutex;
-
   /// This is a list of dialects that are created referring to this context.
   /// The MLIRContext owns the objects.
   std::vector<std::unique_ptr<Dialect>> dialects;
@@ -282,12 +278,11 @@ public:
   /// operations.
   llvm::StringMap<AbstractOperation> registeredOperations;
 
-  /// This is a mapping from type id to Dialect for registered attributes and
-  /// types.
-  DenseMap<TypeID, Dialect *> registeredDialectSymbols;
-
   /// These are identifiers uniqued into this MLIRContext.
   llvm::StringSet<llvm::BumpPtrAllocator &> identifiers;
+
+  /// An allocator used for AbstractAttribute and AbstractType objects.
+  llvm::BumpPtrAllocator abstractDialectSymbolAllocator;
 
   //===--------------------------------------------------------------------===//
   // Affine uniquing
@@ -311,6 +306,8 @@ public:
   //===--------------------------------------------------------------------===//
   // Type uniquing
   //===--------------------------------------------------------------------===//
+
+  DenseMap<TypeID, const AbstractType *> registeredTypes;
   StorageUniquer typeUniquer;
 
   /// Cached Type Instances.
@@ -322,6 +319,8 @@ public:
   //===--------------------------------------------------------------------===//
   // Attribute uniquing
   //===--------------------------------------------------------------------===//
+
+  DenseMap<TypeID, const AbstractAttribute *> registeredAttributes;
   StorageUniquer attributeUniquer;
 
   /// Cached Attribute Instances.
@@ -422,8 +421,6 @@ DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
 
 /// Return information about all registered IR dialects.
 std::vector<Dialect *> MLIRContext::getRegisteredDialects() {
-  // Lock access to the context registry.
-  ScopedReaderLock registryLock(impl->contextMutex, impl->threadingIsEnabled);
   std::vector<Dialect *> result;
   result.reserve(impl->dialects.size());
   for (auto &dialect : impl->dialects)
@@ -434,9 +431,6 @@ std::vector<Dialect *> MLIRContext::getRegisteredDialects() {
 /// Get a registered IR dialect with the given namespace. If none is found,
 /// then return nullptr.
 Dialect *MLIRContext::getRegisteredDialect(StringRef name) {
-  // Lock access to the context registry.
-  ScopedReaderLock registryLock(impl->contextMutex, impl->threadingIsEnabled);
-
   // Dialects are sorted by name, so we can use binary search for lookup.
   auto it = llvm::lower_bound(
       impl->dialects, name,
@@ -451,9 +445,6 @@ Dialect *MLIRContext::getRegisteredDialect(StringRef name) {
 void Dialect::registerDialect(MLIRContext *context) {
   auto &impl = context->getImpl();
   std::unique_ptr<Dialect> dialect(this);
-
-  // Lock access to the context registry.
-  ScopedWriterLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
 
   // Get the correct insertion position sorted by namespace.
   auto insertPt = llvm::lower_bound(
@@ -521,35 +512,26 @@ void MLIRContext::printStackTraceOnDiagnostic(bool enable) {
 /// efficient, typically you should ask the operations about their properties
 /// directly.
 std::vector<AbstractOperation *> MLIRContext::getRegisteredOperations() {
-  std::vector<std::pair<StringRef, AbstractOperation *>> opsToSort;
-
-  { // Lock access to the context registry.
-    ScopedReaderLock registryLock(impl->contextMutex, impl->threadingIsEnabled);
-
-    // We just have the operations in a non-deterministic hash table order. Dump
-    // into a temporary array, then sort it by operation name to get a stable
-    // ordering.
-    llvm::StringMap<AbstractOperation> &registeredOps =
-        impl->registeredOperations;
-
-    opsToSort.reserve(registeredOps.size());
-    for (auto &elt : registeredOps)
-      opsToSort.push_back({elt.first(), &elt.second});
-  }
-
-  llvm::array_pod_sort(opsToSort.begin(), opsToSort.end());
+  // We just have the operations in a non-deterministic hash table order. Dump
+  // into a temporary array, then sort it by operation name to get a stable
+  // ordering.
+  llvm::StringMap<AbstractOperation> &registeredOps =
+      impl->registeredOperations;
 
   std::vector<AbstractOperation *> result;
-  result.reserve(opsToSort.size());
-  for (auto &elt : opsToSort)
-    result.push_back(elt.second);
+  result.reserve(registeredOps.size());
+  for (auto &elt : registeredOps)
+    result.push_back(&elt.second);
+  llvm::array_pod_sort(
+      result.begin(), result.end(),
+      [](AbstractOperation *const *lhs, AbstractOperation *const *rhs) {
+        return (*lhs)->name.compare((*rhs)->name);
+      });
+
   return result;
 }
 
 bool MLIRContext::isOperationRegistered(StringRef name) {
-  // Lock access to the context registry.
-  ScopedReaderLock registryLock(impl->contextMutex, impl->threadingIsEnabled);
-
   return impl->registeredOperations.count(name);
 }
 
@@ -558,27 +540,41 @@ void Dialect::addOperation(AbstractOperation opInfo) {
          "op name doesn't start with dialect namespace");
   assert(&opInfo.dialect == this && "Dialect object mismatch");
   auto &impl = context->getImpl();
-
-  // Lock access to the context registry.
   StringRef opName = opInfo.name;
-  ScopedWriterLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
   if (!impl.registeredOperations.insert({opName, std::move(opInfo)}).second) {
-    llvm::errs() << "error: operation named '" << opName
+    llvm::errs() << "error: operation named '" << opInfo.name
                  << "' is already registered.\n";
     abort();
   }
 }
 
-/// Register a dialect-specific symbol(e.g. type) with the current context.
-void Dialect::addSymbol(TypeID typeID) {
+void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
   auto &impl = context->getImpl();
+  auto *newInfo =
+      new (impl.abstractDialectSymbolAllocator.Allocate<AbstractType>())
+          AbstractType(std::move(typeInfo));
+  if (!impl.registeredTypes.insert({typeID, newInfo}).second)
+    llvm::report_fatal_error("Dialect Type already registered.");
+}
 
-  // Lock access to the context registry.
-  ScopedWriterLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
-  if (!impl.registeredDialectSymbols.insert({typeID, this}).second) {
-    llvm::errs() << "error: dialect symbol already registered.\n";
-    abort();
-  }
+void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
+  auto &impl = context->getImpl();
+  auto *newInfo =
+      new (impl.abstractDialectSymbolAllocator.Allocate<AbstractAttribute>())
+          AbstractAttribute(std::move(attrInfo));
+  if (!impl.registeredAttributes.insert({typeID, newInfo}).second)
+    llvm::report_fatal_error("Dialect Attribute already registered.");
+}
+
+/// Get the dialect that registered the attribute with the provided typeid.
+const AbstractAttribute &AbstractAttribute::lookup(TypeID typeID,
+                                                   MLIRContext *context) {
+  auto &impl = context->getImpl();
+  auto it = impl.registeredAttributes.find(typeID);
+  if (it == impl.registeredAttributes.end())
+    llvm::report_fatal_error("Trying to create an Attribute that was not "
+                             "registered in this MLIRContext.");
+  return *it->second;
 }
 
 /// Look up the specified operation in the operation set and return a pointer
@@ -586,13 +582,20 @@ void Dialect::addSymbol(TypeID typeID) {
 const AbstractOperation *AbstractOperation::lookup(StringRef opName,
                                                    MLIRContext *context) {
   auto &impl = context->getImpl();
-
-  // Lock access to the context registry.
-  ScopedReaderLock registryLock(impl.contextMutex, impl.threadingIsEnabled);
   auto it = impl.registeredOperations.find(opName);
   if (it != impl.registeredOperations.end())
     return &it->second;
   return nullptr;
+}
+
+/// Get the dialect that registered the type with the provided typeid.
+const AbstractType &AbstractType::lookup(TypeID typeID, MLIRContext *context) {
+  auto &impl = context->getImpl();
+  auto it = impl.registeredTypes.find(typeID);
+  if (it == impl.registeredTypes.end())
+    llvm::report_fatal_error(
+        "Trying to create a Type that was not registered in this MLIRContext.");
+  return *it->second;
 }
 
 //===----------------------------------------------------------------------===//
@@ -628,23 +631,9 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 // Type uniquing
 //===----------------------------------------------------------------------===//
 
-static Dialect &lookupDialectForSymbol(MLIRContext *ctx, TypeID typeID) {
-  auto &impl = ctx->getImpl();
-  auto it = impl.registeredDialectSymbols.find(typeID);
-  if (it == impl.registeredDialectSymbols.end())
-    llvm::report_fatal_error(
-        "Trying to create a type that was not registered in this MLIRContext.");
-  return *it->second;
-}
-
 /// Returns the storage uniquer used for constructing type storage instances.
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
-
-/// Get the dialect that registered the type with the provided typeid.
-Dialect &TypeUniquer::lookupDialectForType(MLIRContext *ctx, TypeID typeID) {
-  return lookupDialectForSymbol(ctx, typeID);
-}
 
 FloatType FloatType::get(StandardTypes::Kind kind, MLIRContext *context) {
   assert(kindof(kind) && "Not a FP kind.");
@@ -738,7 +727,7 @@ StorageUniquer &MLIRContext::getAttributeUniquer() {
 void AttributeUniquer::initializeAttributeStorage(AttributeStorage *storage,
                                                   MLIRContext *ctx,
                                                   TypeID attrID) {
-  storage->initializeDialect(lookupDialectForSymbol(ctx, attrID));
+  storage->initialize(AbstractAttribute::lookup(attrID, ctx));
 
   // If the attribute did not provide a type, then default to NoneType.
   if (!storage->getType())

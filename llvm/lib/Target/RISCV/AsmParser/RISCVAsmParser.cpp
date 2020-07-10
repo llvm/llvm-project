@@ -10,10 +10,13 @@
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
+#include "RISCVInstrInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "Utils/RISCVBaseInfo.h"
 #include "Utils/RISCVMatInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -128,6 +131,9 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // 'add' is an overloaded mnemonic.
   bool checkPseudoAddTPRel(MCInst &Inst, OperandVector &Operands);
 
+  // Check instruction constraints.
+  bool validateInstruction(MCInst &Inst, OperandVector &Operands);
+
   /// Helper for processing MC instructions that have been successfully matched
   /// by MatchAndEmitInstruction. Modifications to the emitted instructions,
   /// like the expansion of pseudo instructions (e.g., "li"), can be performed
@@ -150,6 +156,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseCallSymbol(OperandVector &Operands);
   OperandMatchResultTy parsePseudoJumpSymbol(OperandVector &Operands);
   OperandMatchResultTy parseJALOffset(OperandVector &Operands);
+  OperandMatchResultTy parseVTypeI(OperandVector &Operands);
+  OperandMatchResultTy parseMaskReg(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -198,6 +206,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
     return false;
   }
 
+  std::unique_ptr<RISCVOperand> defaultMaskRegOp() const;
+
 public:
   enum RISCVMatchResultTy {
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
@@ -245,7 +255,8 @@ struct RISCVOperand : public MCParsedAsmOperand {
     Token,
     Register,
     Immediate,
-    SystemRegister
+    SystemRegister,
+    VType,
   } Kind;
 
   bool IsRV64;
@@ -266,12 +277,32 @@ struct RISCVOperand : public MCParsedAsmOperand {
     // e.g.: read/write or user/supervisor/machine privileges.
   };
 
+  enum class VSEW {
+    SEW_8 = 0,
+    SEW_16,
+    SEW_32,
+    SEW_64,
+    SEW_128,
+    SEW_256,
+    SEW_512,
+    SEW_1024,
+  };
+
+  enum class VLMUL { LMUL_1 = 0, LMUL_2, LMUL_4, LMUL_8 };
+
+  struct VTypeOp {
+    VSEW Sew;
+    VLMUL Lmul;
+    unsigned Encoding;
+  };
+
   SMLoc StartLoc, EndLoc;
   union {
     StringRef Tok;
     RegOp Reg;
     ImmOp Imm;
     struct SysRegOp SysReg;
+    struct VTypeOp VType;
   };
 
   RISCVOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
@@ -295,14 +326,21 @@ public:
     case KindTy::SystemRegister:
       SysReg = o.SysReg;
       break;
+    case KindTy::VType:
+      VType = o.VType;
+      break;
     }
   }
 
   bool isToken() const override { return Kind == KindTy::Token; }
   bool isReg() const override { return Kind == KindTy::Register; }
+  bool isV0Reg() const {
+    return Kind == KindTy::Register && Reg.RegNum == RISCV::V0;
+  }
   bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isMem() const override { return false; }
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
+  bool isVType() const { return Kind == KindTy::VType; }
 
   bool isGPR() const {
     return Kind == KindTy::Register &&
@@ -385,6 +423,8 @@ public:
   }
 
   bool isCSRSystemRegister() const { return isSystemRegister(); }
+
+  bool isVTypeI() const { return isVType(); }
 
   /// Return true if the operand is a valid for the fence instruction e.g.
   /// ('iorw').
@@ -491,6 +531,15 @@ public:
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isUInt<5>(Imm) && (Imm != 0) &&
            VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isSImm5() const {
+    if (!isImm())
+      return false;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6() const {
@@ -658,6 +707,16 @@ public:
     return IsConstantImm && (Imm == 0) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isSImm5Plus1() const {
+    if (!isImm())
+      return false;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isInt<5>(Imm - 1) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   /// getStartLoc - Gets location of the first token of this operand
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Gets location of the last token of this operand
@@ -685,6 +744,51 @@ public:
     return Tok;
   }
 
+  static StringRef getSEWStr(VSEW Sew) {
+    switch (Sew) {
+    case VSEW::SEW_8:
+      return "e8";
+    case VSEW::SEW_16:
+      return "e16";
+    case VSEW::SEW_32:
+      return "e32";
+    case VSEW::SEW_64:
+      return "e64";
+    case VSEW::SEW_128:
+      return "e128";
+    case VSEW::SEW_256:
+      return "e256";
+    case VSEW::SEW_512:
+      return "e512";
+    case VSEW::SEW_1024:
+      return "e1024";
+    }
+    return "";
+  }
+
+  static StringRef getLMULStr(VLMUL Lmul) {
+    switch (Lmul) {
+    case VLMUL::LMUL_1:
+      return "m1";
+    case VLMUL::LMUL_2:
+      return "m2";
+    case VLMUL::LMUL_4:
+      return "m4";
+    case VLMUL::LMUL_8:
+      return "m8";
+    }
+    return "";
+  }
+
+  StringRef getVType(SmallString<32> &Buf) const {
+    assert(Kind == KindTy::VType && "Invalid access!");
+    Buf.append(getSEWStr(VType.Sew));
+    Buf.append(",");
+    Buf.append(getLMULStr(VType.Lmul));
+
+    return Buf.str();
+  }
+
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case KindTy::Immediate:
@@ -699,6 +803,10 @@ public:
       break;
     case KindTy::SystemRegister:
       OS << "<sysreg: " << getSysReg() << '>';
+      break;
+    case KindTy::VType:
+      SmallString<32> VTypeBuf;
+      OS << "<vtype: " << getVType(VTypeBuf) << '>';
       break;
     }
   }
@@ -744,6 +852,20 @@ public:
     return Op;
   }
 
+  static std::unique_ptr<RISCVOperand> createVType(APInt Sew, APInt Lmul,
+                                                   SMLoc S, bool IsRV64) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
+    Sew.ashrInPlace(3);
+    unsigned SewLog2 = Sew.logBase2();
+    unsigned LmulLog2 = Lmul.logBase2();
+    Op->VType.Sew = static_cast<VSEW>(SewLog2);
+    Op->VType.Lmul = static_cast<VLMUL>(LmulLog2);
+    Op->VType.Encoding = (SewLog2 << 2) | LmulLog2;
+    Op->StartLoc = S;
+    Op->IsRV64 = IsRV64;
+    return Op;
+  }
+
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
     assert(Expr && "Expr shouldn't be null!");
     int64_t Imm = 0;
@@ -765,6 +887,16 @@ public:
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm());
+  }
+
+  void addSImm5Plus1Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    int64_t Imm = 0;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    bool IsConstant = evaluateConstantImm(getImm(), Imm, VK);
+    assert(IsConstant && "Expect constant value!");
+    (void)IsConstant;
+    Inst.addOperand(MCOperand::createImm(Imm - 1));
   }
 
   void addFenceArgOperands(MCInst &Inst, unsigned N) const {
@@ -789,6 +921,11 @@ public:
   void addCSRSystemRegisterOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(SysReg.Encoding));
+  }
+
+  void addVTypeIOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(VType.Encoding));
   }
 
   // Returns the rounding mode represented by this RISCVOperand. Should only
@@ -868,6 +1005,8 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   default:
     break;
   case Match_Success:
+    if (validateInstruction(Inst, Operands))
+      return true;
     return processInstruction(Inst, IDLoc, Operands, Out);
   case Match_MissingFeature: {
     assert(MissingFeatures.any() && "Unknown missing features!");
@@ -1039,6 +1178,20 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidTPRelAddSymbol: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a symbol with %tprel_add modifier");
+  }
+  case Match_InvalidVTypeI: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc,
+                 "operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8]");
+  }
+  case Match_InvalidVMaskRegister: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be v0.t");
+  }
+  case Match_InvalidSImm5Plus1: {
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4) + 1,
+                                      (1 << 4),
+                                      "immediate must be in the range");
   }
   }
 
@@ -1389,6 +1542,74 @@ OperandMatchResultTy RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
     return MatchOperand_NoMatch;
 
   return parseImmediate(Operands);
+}
+
+OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return MatchOperand_NoMatch;
+
+  // Parse "e8,m1"
+  StringRef Name = getLexer().getTok().getIdentifier();
+  if (!Name.consume_front("e"))
+    return MatchOperand_NoMatch;
+  APInt Sew(16, Name, 10);
+  if (Sew != 8 && Sew != 16 && Sew != 32 && Sew != 64 && Sew != 128 &&
+      Sew != 256 && Sew != 512 && Sew != 1024)
+    return MatchOperand_NoMatch;
+  getLexer().Lex();
+
+  if (getLexer().getKind() == AsmToken::EndOfStatement) {
+    Operands.push_back(
+        RISCVOperand::createVType(Sew, APInt(16, 1), S, isRV64()));
+
+    return MatchOperand_Success;
+  }
+
+  if (!getLexer().is(AsmToken::Comma))
+    return MatchOperand_NoMatch;
+  getLexer().Lex();
+
+  Name = getLexer().getTok().getIdentifier();
+  if (!Name.consume_front("m"))
+    return MatchOperand_NoMatch;
+  APInt Lmul(16, Name, 10);
+  if (Lmul != 1 && Lmul != 2 && Lmul != 4 && Lmul != 8)
+    return MatchOperand_NoMatch;
+  getLexer().Lex();
+
+  if (getLexer().getKind() != AsmToken::EndOfStatement)
+    return MatchOperand_NoMatch;
+
+  Operands.push_back(RISCVOperand::createVType(Sew, Lmul, S, isRV64()));
+
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
+  switch (getLexer().getKind()) {
+  default:
+    return MatchOperand_NoMatch;
+  case AsmToken::Identifier:
+    StringRef Name = getLexer().getTok().getIdentifier();
+    if (!Name.consume_back(".t")) {
+      Error(getLoc(), "expected '.t' suffix");
+      return MatchOperand_ParseFail;
+    }
+    Register RegNo;
+    matchRegisterNameHelper(isRV32E(), RegNo, Name);
+
+    if (RegNo == RISCV::NoRegister)
+      return MatchOperand_NoMatch;
+    if (RegNo != RISCV::V0)
+      return MatchOperand_NoMatch;
+    SMLoc S = getLoc();
+    SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+    getLexer().Lex();
+    Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
+  }
+
+  return MatchOperand_Success;
 }
 
 OperandMatchResultTy
@@ -2043,6 +2264,89 @@ bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
                            "%tprel_add modifier");
   }
 
+  return false;
+}
+
+std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultMaskRegOp() const {
+  return RISCVOperand::createReg(RISCV::NoRegister, llvm::SMLoc(),
+                                 llvm::SMLoc(), isRV64());
+}
+
+bool RISCVAsmParser::validateInstruction(MCInst &Inst,
+                                         OperandVector &Operands) {
+  const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+  unsigned TargetFlags =
+      (MCID.TSFlags >> RISCV::ConstraintOffset) & RISCV::ConstraintMask;
+  if (TargetFlags == RISCV::NoConstraint)
+    return false;
+
+  unsigned DestReg = Inst.getOperand(0).getReg();
+  // Operands[1] will be the first operand, DestReg.
+  SMLoc Loc = Operands[1]->getStartLoc();
+  if ((TargetFlags == RISCV::WidenV) || (TargetFlags == RISCV::WidenW) ||
+      (TargetFlags == RISCV::SlideUp) || (TargetFlags == RISCV::Vrgather) ||
+      (TargetFlags == RISCV::Vcompress)) {
+    if (TargetFlags != RISCV::WidenW) {
+      unsigned Src2Reg = Inst.getOperand(1).getReg();
+      if (DestReg == Src2Reg)
+        return Error(Loc, "The destination vector register group cannot overlap"
+                          " the source vector register group.");
+      if (TargetFlags == RISCV::WidenV) {
+        // Assume DestReg LMUL is 2 at least for widening/narrowing operations.
+        if (DestReg + 1 == Src2Reg)
+          return Error(Loc,
+                       "The destination vector register group cannot overlap"
+                       " the source vector register group.");
+      }
+    }
+    if (Inst.getOperand(2).isReg()) {
+      unsigned Src1Reg = Inst.getOperand(2).getReg();
+      if (DestReg == Src1Reg)
+        return Error(Loc, "The destination vector register group cannot overlap"
+                          " the source vector register group.");
+      if (TargetFlags == RISCV::WidenV || TargetFlags == RISCV::WidenW) {
+        // Assume DestReg LMUL is 2 at least for widening/narrowing operations.
+        if (DestReg + 1 == Src1Reg)
+          return Error(Loc,
+                       "The destination vector register group cannot overlap"
+                       " the source vector register group.");
+      }
+    }
+    if (Inst.getNumOperands() == 4) {
+      unsigned MaskReg = Inst.getOperand(3).getReg();
+
+      if (DestReg == MaskReg)
+        return Error(Loc, "The destination vector register group cannot overlap"
+                          " the mask register.");
+    }
+  } else if (TargetFlags == RISCV::Narrow) {
+    unsigned Src2Reg = Inst.getOperand(1).getReg();
+    if (DestReg == Src2Reg)
+      return Error(Loc, "The destination vector register group cannot overlap"
+                        " the source vector register group.");
+    // Assume Src2Reg LMUL is 2 at least for widening/narrowing operations.
+    if (DestReg == Src2Reg + 1)
+      return Error(Loc, "The destination vector register group cannot overlap"
+                        " the source vector register group.");
+  } else if (TargetFlags == RISCV::WidenCvt || TargetFlags == RISCV::Iota) {
+    unsigned Src2Reg = Inst.getOperand(1).getReg();
+    if (DestReg == Src2Reg)
+      return Error(Loc, "The destination vector register group cannot overlap"
+                        " the source vector register group.");
+    if (TargetFlags == RISCV::WidenCvt) {
+      // Assume DestReg LMUL is 2 at least for widening/narrowing operations.
+      if (DestReg + 1 == Src2Reg)
+        return Error(Loc, "The destination vector register group cannot overlap"
+                          " the source vector register group.");
+    }
+    if (Inst.getNumOperands() == 3) {
+      unsigned MaskReg = Inst.getOperand(2).getReg();
+
+      if (DestReg == MaskReg)
+        return Error(Loc, "The destination vector register group cannot overlap"
+                          " the mask register.");
+    }
+  }
   return false;
 }
 

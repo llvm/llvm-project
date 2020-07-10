@@ -365,19 +365,24 @@ defm : StorePatGlobalAddrOffOnly<i64, truncstorei8, "STORE8_I64">;
 defm : StorePatGlobalAddrOffOnly<i64, truncstorei16, "STORE16_I64">;
 defm : StorePatGlobalAddrOffOnly<i64, truncstorei32, "STORE32_I64">;
 
+multiclass MemoryOps<WebAssemblyRegClass rc, string B> {
 // Current memory size.
-defm MEMORY_SIZE_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
+defm MEMORY_SIZE_A#B : I<(outs rc:$dst), (ins i32imm:$flags),
                          (outs), (ins i32imm:$flags),
-                         [(set I32:$dst,
+                         [(set rc:$dst,
                            (int_wasm_memory_size (i32 imm:$flags)))],
                          "memory.size\t$dst, $flags", "memory.size\t$flags",
                          0x3f>;
 
 // Grow memory.
-defm MEMORY_GROW_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
+defm MEMORY_GROW_A#B : I<(outs rc:$dst), (ins i32imm:$flags, rc:$delta),
                          (outs), (ins i32imm:$flags),
-                         [(set I32:$dst,
+                         [(set rc:$dst,
                            (int_wasm_memory_grow (i32 imm:$flags),
-                             I32:$delta))],
+                             rc:$delta))],
                          "memory.grow\t$dst, $flags, $delta",
                          "memory.grow\t$flags", 0x40>;
+}
+
+defm : MemoryOps<I32, "32">;
+defm : MemoryOps<I64, "64">;

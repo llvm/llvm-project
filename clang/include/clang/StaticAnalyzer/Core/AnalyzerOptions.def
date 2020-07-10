@@ -321,10 +321,17 @@ ANALYZER_OPTION(bool, ShouldDisplayCheckerNameForText, "display-checker-name",
 ANALYZER_OPTION(unsigned, CTUImportThreshold, "ctu-import-threshold",
                 "The maximal amount of translation units that is considered "
                 "for import when inlining functions during CTU analysis. "
-                "Lowering this threshold can alleviate the memory burder of "
+                "Lowering this threshold can alleviate the memory burden of "
                 "analysis with many interdependent definitions located in "
-                "various translation units.",
-                100u)
+                "various translation units. This is valid only for non C++ "
+                "source files.",
+                24u)
+
+ANALYZER_OPTION(unsigned, CTUImportCppThreshold, "ctu-import-cpp-threshold",
+                "The maximal amount of translation units that is considered "
+                "for import when inlining functions during CTU analysis of C++ "
+                "source files.",
+                8u)
 
 ANALYZER_OPTION(
     unsigned, AlwaysInlineSize, "ipa-always-inline-size",

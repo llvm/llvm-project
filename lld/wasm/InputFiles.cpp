@@ -569,8 +569,7 @@ bool BitcodeFile::doneLTO = false;
 
 void BitcodeFile::parse() {
   if (doneLTO) {
-    error(toString(mb.getBufferIdentifier()) +
-          ": attempt to add bitcode file after LTO.");
+    error(toString(this) + ": attempt to add bitcode file after LTO.");
     return;
   }
 
@@ -578,7 +577,7 @@ void BitcodeFile::parse() {
       mb.getBuffer(), saver.save(archiveName + mb.getBufferIdentifier()))));
   Triple t(obj->getTargetTriple());
   if (t.getArch() != Triple::wasm32) {
-    error(toString(mb.getBufferIdentifier()) + ": machine type must be wasm32");
+    error(toString(this) + ": machine type must be wasm32");
     return;
   }
   std::vector<bool> keptComdats;

@@ -128,6 +128,27 @@ bool Argument::hasPassPointeeByValueAttr() const {
          Attrs.hasParamAttribute(getArgNo(), Attribute::Preallocated);
 }
 
+uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
+  AttributeSet ParamAttrs
+    = getParent()->getAttributes().getParamAttributes(getArgNo());
+
+  // FIXME: All the type carrying attributes are mutually exclusive, so there
+  // should be a single query to get the stored type that handles any of them.
+  if (Type *ByValTy = ParamAttrs.getByValType())
+    return DL.getTypeAllocSize(ByValTy);
+  if (Type *PreAllocTy = ParamAttrs.getPreallocatedType())
+    return DL.getTypeAllocSize(PreAllocTy);
+
+  // FIXME: inalloca always depends on pointee element type. It's also possible
+  // for byval to miss it.
+  if (ParamAttrs.hasAttribute(Attribute::InAlloca) ||
+      ParamAttrs.hasAttribute(Attribute::ByVal) ||
+      ParamAttrs.hasAttribute(Attribute::Preallocated))
+    return DL.getTypeAllocSize(cast<PointerType>(getType())->getElementType());
+
+  return 0;
+}
+
 unsigned Argument::getParamAlignment() const {
   assert(getType()->isPointerTy() && "Only pointers have alignments");
   return getParent()->getParamAlignment(getArgNo());
@@ -1424,32 +1445,41 @@ Intrinsic::matchIntrinsicVarArg(bool isVarArg,
   return true;
 }
 
-Optional<Function*> Intrinsic::remangleIntrinsicFunction(Function *F) {
+bool Intrinsic::getIntrinsicSignature(Function *F,
+                                      SmallVectorImpl<Type *> &ArgTys) {
   Intrinsic::ID ID = F->getIntrinsicID();
   if (!ID)
+    return false;
+
+  SmallVector<Intrinsic::IITDescriptor, 8> Table;
+  getIntrinsicInfoTableEntries(ID, Table);
+  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
+
+  if (Intrinsic::matchIntrinsicSignature(F->getFunctionType(), TableRef,
+                                         ArgTys) !=
+      Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
+    return false;
+  }
+  if (Intrinsic::matchIntrinsicVarArg(F->getFunctionType()->isVarArg(),
+                                      TableRef))
+    return false;
+  return true;
+}
+
+Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
+  SmallVector<Type *, 4> ArgTys;
+  if (!getIntrinsicSignature(F, ArgTys))
     return None;
 
-  FunctionType *FTy = F->getFunctionType();
-  // Accumulate an array of overloaded types for the given intrinsic
-  SmallVector<Type *, 4> ArgTys;
-  {
-    SmallVector<Intrinsic::IITDescriptor, 8> Table;
-    getIntrinsicInfoTableEntries(ID, Table);
-    ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-
-    if (Intrinsic::matchIntrinsicSignature(FTy, TableRef, ArgTys))
-      return None;
-    if (Intrinsic::matchIntrinsicVarArg(FTy->isVarArg(), TableRef))
-      return None;
-  }
-
+  Intrinsic::ID ID = F->getIntrinsicID();
   StringRef Name = F->getName();
   if (Name == Intrinsic::getName(ID, ArgTys))
     return None;
 
   auto NewDecl = Intrinsic::getDeclaration(F->getParent(), ID, ArgTys);
   NewDecl->setCallingConv(F->getCallingConv());
-  assert(NewDecl->getFunctionType() == FTy && "Shouldn't change the signature");
+  assert(NewDecl->getFunctionType() == F->getFunctionType() &&
+         "Shouldn't change the signature");
   return NewDecl;
 }
 

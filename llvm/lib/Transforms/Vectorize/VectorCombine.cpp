@@ -35,6 +35,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "vector-combine"
 STATISTIC(NumVecCmp, "Number of vector compares formed");
 STATISTIC(NumVecBO, "Number of vector binops formed");
+STATISTIC(NumVecCmpBO, "Number of vector compare + binop formed");
 STATISTIC(NumShufOfBitcast, "Number of shuffles moved after bitcast");
 STATISTIC(NumScalarBO, "Number of scalar binops formed");
 STATISTIC(NumScalarCmp, "Number of scalar compares formed");
@@ -49,6 +50,7 @@ static cl::opt<bool> DisableBinopExtractShuffle(
 
 static const unsigned InvalidIndex = std::numeric_limits<unsigned>::max();
 
+namespace {
 class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
@@ -63,6 +65,9 @@ private:
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
 
+  ExtractElementInst *getShuffleExtract(ExtractElementInst *Ext0,
+                                        ExtractElementInst *Ext1,
+                                        unsigned PreferredExtractIndex) const;
   bool isExtractExtractCheap(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
                              unsigned Opcode,
                              ExtractElementInst *&ConvertToShuffle,
@@ -74,11 +79,53 @@ private:
   bool foldExtractExtract(Instruction &I);
   bool foldBitcastShuf(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
+  bool foldExtractedCmps(Instruction &I);
 };
+} // namespace
 
 static void replaceValue(Value &Old, Value &New) {
   Old.replaceAllUsesWith(&New);
   New.takeName(&Old);
+}
+
+/// Determine which, if any, of the inputs should be replaced by a shuffle
+/// followed by extract from a different index.
+ExtractElementInst *VectorCombine::getShuffleExtract(
+    ExtractElementInst *Ext0, ExtractElementInst *Ext1,
+    unsigned PreferredExtractIndex = InvalidIndex) const {
+  assert(isa<ConstantInt>(Ext0->getIndexOperand()) &&
+         isa<ConstantInt>(Ext1->getIndexOperand()) &&
+         "Expected constant extract indexes");
+
+  unsigned Index0 = cast<ConstantInt>(Ext0->getIndexOperand())->getZExtValue();
+  unsigned Index1 = cast<ConstantInt>(Ext1->getIndexOperand())->getZExtValue();
+
+  // If the extract indexes are identical, no shuffle is needed.
+  if (Index0 == Index1)
+    return nullptr;
+
+  Type *VecTy = Ext0->getVectorOperand()->getType();
+  assert(VecTy == Ext1->getVectorOperand()->getType() && "Need matching types");
+  int Cost0 = TTI.getVectorInstrCost(Ext0->getOpcode(), VecTy, Index0);
+  int Cost1 = TTI.getVectorInstrCost(Ext1->getOpcode(), VecTy, Index1);
+
+  // We are extracting from 2 different indexes, so one operand must be shuffled
+  // before performing a vector operation and/or extract. The more expensive
+  // extract will be replaced by a shuffle.
+  if (Cost0 > Cost1)
+    return Ext0;
+  if (Cost1 > Cost0)
+    return Ext1;
+
+  // If the costs are equal and there is a preferred extract index, shuffle the
+  // opposite operand.
+  if (PreferredExtractIndex == Index0)
+    return Ext1;
+  if (PreferredExtractIndex == Index1)
+    return Ext0;
+
+  // Otherwise, replace the extract with the higher index.
+  return Index0 > Index1 ? Ext0 : Ext1;
 }
 
 /// Compare the relative costs of 2 extracts followed by scalar operation vs.
@@ -152,10 +199,8 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
               !Ext1->hasOneUse() * Extract1Cost;
   }
 
-  if (Ext0Index == Ext1Index) {
-    // If the extract indexes are identical, no shuffle is needed.
-    ConvertToShuffle = nullptr;
-  } else {
+  ConvertToShuffle = getShuffleExtract(Ext0, Ext1, PreferredExtractIndex);
+  if (ConvertToShuffle) {
     if (IsBinOp && DisableBinopExtractShuffle)
       return true;
 
@@ -168,20 +213,6 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
     //       (splat-from-element-0), but no option for a more general splat.
     NewCost +=
         TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
-
-    // The more expensive extract will be replaced by a shuffle. If the costs
-    // are equal and there is a preferred extract index, shuffle the opposite
-    // operand. Otherwise, replace the extract with the higher index.
-    if (Extract0Cost > Extract1Cost)
-      ConvertToShuffle = Ext0;
-    else if (Extract1Cost > Extract0Cost)
-      ConvertToShuffle = Ext1;
-    else if (PreferredExtractIndex == Ext0Index)
-      ConvertToShuffle = Ext1;
-    else if (PreferredExtractIndex == Ext1Index)
-      ConvertToShuffle = Ext0;
-    else
-      ConvertToShuffle = Ext0Index > Ext1Index ? Ext0 : Ext1;
   }
 
   // Aggressively form a vector op if the cost is equal because the transform
@@ -491,6 +522,90 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   return true;
 }
 
+/// Try to combine a scalar binop + 2 scalar compares of extracted elements of
+/// a vector into vector operations followed by extract. Note: The SLP pass
+/// may miss this pattern because of implementation problems.
+bool VectorCombine::foldExtractedCmps(Instruction &I) {
+  // We are looking for a scalar binop of booleans.
+  // binop i1 (cmp Pred I0, C0), (cmp Pred I1, C1)
+  if (!I.isBinaryOp() || !I.getType()->isIntegerTy(1))
+    return false;
+
+  // The compare predicates should match, and each compare should have a
+  // constant operand.
+  // TODO: Relax the one-use constraints.
+  Value *B0 = I.getOperand(0), *B1 = I.getOperand(1);
+  Instruction *I0, *I1;
+  Constant *C0, *C1;
+  CmpInst::Predicate P0, P1;
+  if (!match(B0, m_OneUse(m_Cmp(P0, m_Instruction(I0), m_Constant(C0)))) ||
+      !match(B1, m_OneUse(m_Cmp(P1, m_Instruction(I1), m_Constant(C1)))) ||
+      P0 != P1)
+    return false;
+
+  // The compare operands must be extracts of the same vector with constant
+  // extract indexes.
+  // TODO: Relax the one-use constraints.
+  Value *X;
+  uint64_t Index0, Index1;
+  if (!match(I0, m_OneUse(m_ExtractElt(m_Value(X), m_ConstantInt(Index0)))) ||
+      !match(I1, m_OneUse(m_ExtractElt(m_Specific(X), m_ConstantInt(Index1)))))
+    return false;
+
+  auto *Ext0 = cast<ExtractElementInst>(I0);
+  auto *Ext1 = cast<ExtractElementInst>(I1);
+  ExtractElementInst *ConvertToShuf = getShuffleExtract(Ext0, Ext1);
+  if (!ConvertToShuf)
+    return false;
+
+  // The original scalar pattern is:
+  // binop i1 (cmp Pred (ext X, Index0), C0), (cmp Pred (ext X, Index1), C1)
+  CmpInst::Predicate Pred = P0;
+  unsigned CmpOpcode = CmpInst::isFPPredicate(Pred) ? Instruction::FCmp
+                                                    : Instruction::ICmp;
+  auto *VecTy = dyn_cast<FixedVectorType>(X->getType());
+  if (!VecTy)
+    return false;
+
+  int OldCost = TTI.getVectorInstrCost(Ext0->getOpcode(), VecTy, Index0);
+  OldCost += TTI.getVectorInstrCost(Ext1->getOpcode(), VecTy, Index1);
+  OldCost += TTI.getCmpSelInstrCost(CmpOpcode, I0->getType()) * 2;
+  OldCost += TTI.getArithmeticInstrCost(I.getOpcode(), I.getType());
+
+  // The proposed vector pattern is:
+  // vcmp = cmp Pred X, VecC
+  // ext (binop vNi1 vcmp, (shuffle vcmp, Index1)), Index0
+  int CheapIndex = ConvertToShuf == Ext0 ? Index1 : Index0;
+  int ExpensiveIndex = ConvertToShuf == Ext0 ? Index0 : Index1;
+  auto *CmpTy = cast<FixedVectorType>(CmpInst::makeCmpResultType(X->getType()));
+  int NewCost = TTI.getCmpSelInstrCost(CmpOpcode, X->getType());
+  NewCost +=
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, CmpTy);
+  NewCost += TTI.getArithmeticInstrCost(I.getOpcode(), CmpTy);
+  NewCost += TTI.getVectorInstrCost(Ext0->getOpcode(), CmpTy, CheapIndex);
+
+  // Aggressively form vector ops if the cost is equal because the transform
+  // may enable further optimization.
+  // Codegen can reverse this transform (scalarize) if it was not profitable.
+  if (OldCost < NewCost)
+    return false;
+
+  // Create a vector constant from the 2 scalar constants.
+  SmallVector<Constant *, 32> CmpC(VecTy->getNumElements(),
+                                   UndefValue::get(VecTy->getElementType()));
+  CmpC[Index0] = C0;
+  CmpC[Index1] = C1;
+  Value *VCmp = Builder.CreateCmp(Pred, X, ConstantVector::get(CmpC));
+
+  Value *Shuf = createShiftShuffle(VCmp, ExpensiveIndex, CheapIndex, Builder);
+  Value *VecLogic = Builder.CreateBinOp(cast<BinaryOperator>(I).getOpcode(),
+                                        VCmp, Shuf);
+  Value *NewExt = Builder.CreateExtractElement(VecLogic, CheapIndex);
+  replaceValue(I, *NewExt);
+  ++NumVecCmpBO;
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -513,6 +628,7 @@ bool VectorCombine::run() {
       MadeChange |= foldExtractExtract(I);
       MadeChange |= foldBitcastShuf(I);
       MadeChange |= scalarizeBinopOrCmp(I);
+      MadeChange |= foldExtractedCmps(I);
     }
   }
 

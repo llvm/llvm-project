@@ -31,6 +31,8 @@ await.ready:
   %val = load i32, i32* %Result.i19
   %cast = bitcast i32* %testval to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %cast)
+  %test = load i32, i32* %testval
+  call void @print(i32 %test)
   call void @llvm.lifetime.end.p0i8(i64 4, i8*  %cast)
   call void @print(i32 %val)
   br label %exit
@@ -47,6 +49,8 @@ exit:
 ; CHECK-NEXT:    %val = load i32, i32* %Result
 ; CHECK-NEXT:    %cast = bitcast i32* %testval to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* %cast)
+; CHECK-NEXT:    %test = load i32, i32* %testval
+; CHECK-NEXT:    call void @print(i32 %test)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* %cast)
 ; CHECK-NEXT:    call void @print(i32 %val)
 ; CHECK-NEXT:    ret void

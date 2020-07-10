@@ -64,7 +64,7 @@ struct CSE : public CSEBase<CSE> {
     ScopedMapTy::ScopeTy scope;
 
     DominanceInfoNode *node;
-    DominanceInfoNode::iterator childIterator;
+    DominanceInfoNode::const_iterator childIterator;
 
     /// If this node has been fully processed yet or not.
     bool processed;
@@ -106,7 +106,7 @@ LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op) {
   if (op->getNumRegions() != 0)
     return failure();
 
-  // TODO(riverriddle) We currently only eliminate non side-effecting
+  // TODO: We currently only eliminate non side-effecting
   // operations.
   if (!MemoryEffectOpInterface::hasNoEffect(op))
     return failure();

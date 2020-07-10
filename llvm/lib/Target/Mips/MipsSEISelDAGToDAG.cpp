@@ -153,7 +153,7 @@ void MipsSEDAGToDAGISel::emitMCountABI(MachineInstr &MI, MachineBasicBlock &MBB,
 }
 
 void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
-  MF.getInfo<MipsFunctionInfo>()->initGlobalBaseReg();
+  MF.getInfo<MipsFunctionInfo>()->initGlobalBaseReg(MF);
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
 

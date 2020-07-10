@@ -4,6 +4,7 @@
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=UNCONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a\
 // RUN: -ffp-exception-behavior=strict \
+// RUN: -fexperimental-strict-floating-point \
 // RUN: -fallow-half-arguments-and-returns -flax-vector-conversions=none -S -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
@@ -13,6 +14,7 @@
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a\
 // RUN: -ffp-exception-behavior=strict \
+// RUN: -fexperimental-strict-floating-point \
 // RUN: -fallow-half-arguments-and-returns -flax-vector-conversions=none -S -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg | llc -o=- - \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s

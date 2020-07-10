@@ -290,7 +290,7 @@ func @invalid_if_conditional6() {
 }
 
 // -----
-// TODO (support affine.if (1)?
+// TODO: support affine.if (1)?
 func @invalid_if_conditional7() {
   affine.for %i = 1 to 10 {
     affine.if affine_set<(i) : (1)> // expected-error {{expected '== 0' or '>= 0' at end of affine constraint}}
@@ -474,7 +474,7 @@ func @return_type_mismatch() -> i32 {
 
 func @return_inside_loop() {
   affine.for %i = 1 to 100 {
-    // expected-error@-1 {{op expects regions to end with 'affine.terminator', found 'std.return'}}
+    // expected-error@-1 {{op expects regions to end with 'affine.yield', found 'std.return'}}
     // expected-note@-2 {{in custom textual format, the absence of terminator implies}}
     return
   }
@@ -513,7 +513,7 @@ func @foo() {
 
 func @undefined_function() {
 ^bb0:
-  %x = constant @bar : (i32) -> ()  // expected-error {{reference to undefined function 'bar'}}
+  %x = constant @qux : (i32) -> ()  // expected-error {{reference to undefined function 'qux'}}
   return
 }
 

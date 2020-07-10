@@ -174,6 +174,11 @@ def Canonicalizer : Pass<"canonicalize"> {
   let constructor = "mlir::createCanonicalizerPass()";
 }
 
+def CopyRemoval : FunctionPass<"copy-removal"> {
+  let summary = "Remove the redundant copies from input IR";
+  let constructor = "mlir::createCopyRemovalPass()";
+}
+
 def CSE : Pass<"cse"> {
   let summary = "Eliminate common sub-expressions";
   let description = [{

@@ -290,6 +290,8 @@ void Function::GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no) {
 }
 
 llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetCallEdges() {
+  std::lock_guard<std::mutex> guard(m_call_edges_lock);
+
   if (m_call_edges_resolved)
     return m_call_edges;
 

@@ -13,15 +13,14 @@
 #ifndef LLVM_MC_MCSECTIONWASM_H
 #define LLVM_MC_MCSECTIONWASM_H
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
 class MCSymbol;
+class MCSymbolWasm;
+class StringRef;
+class raw_ostream;
 
 /// This represents a section on wasm.
 class MCSectionWasm final : public MCSection {

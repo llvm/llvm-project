@@ -15,6 +15,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
   LLVM_ENABLE_PLUGINS
   LLVM_BYE_LINK_INTO_TOOLS
+  LLVM_HAVE_TF_AOT
   )
 
 configure_lit_site_cfg(

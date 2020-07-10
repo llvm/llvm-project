@@ -20,6 +20,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -498,11 +499,15 @@ static bool isEmptyField(ASTContext &Context, const FieldDecl *FD,
 
   // Constant arrays of empty records count as empty, strip them off.
   // Constant arrays of zero length always count as empty.
+  bool WasArray = false;
   if (AllowArrays)
     while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
       if (AT->getSize() == 0)
         return true;
       FT = AT->getElementType();
+      // The [[no_unique_address]] special case below does not apply to
+      // arrays of C++ empty records, so we need to remember this fact.
+      WasArray = true;
     }
 
   const RecordType *RT = FT->getAs<RecordType>();
@@ -513,7 +518,14 @@ static bool isEmptyField(ASTContext &Context, const FieldDecl *FD,
   //
   // FIXME: We should use a predicate for whether this behavior is true in the
   // current ABI.
-  if (isa<CXXRecordDecl>(RT->getDecl()))
+  //
+  // The exception to the above rule are fields marked with the
+  // [[no_unique_address]] attribute (since C++20).  Those do count as empty
+  // according to the Itanium ABI.  The exception applies only to records,
+  // not arrays of records, so we must also check whether we stripped off an
+  // array type above.
+  if (isa<CXXRecordDecl>(RT->getDecl()) &&
+      (WasArray || !FD->hasAttr<NoUniqueAddressAttr>()))
     return false;
 
   return isEmptyRecord(Context, FT, AllowArrays);
@@ -2466,7 +2478,109 @@ public:
       }
     }
   }
+
+  void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
+                            const FunctionDecl *Caller,
+                            const FunctionDecl *Callee,
+                            const CallArgList &Args) const override;
 };
+
+static void initFeatureMaps(const ASTContext &Ctx,
+                            llvm::StringMap<bool> &CallerMap,
+                            const FunctionDecl *Caller,
+                            llvm::StringMap<bool> &CalleeMap,
+                            const FunctionDecl *Callee) {
+  if (CalleeMap.empty() && CallerMap.empty()) {
+    // The caller is potentially nullptr in the case where the call isn't in a
+    // function.  In this case, the getFunctionFeatureMap ensures we just get
+    // the TU level setting (since it cannot be modified by 'target'..
+    Ctx.getFunctionFeatureMap(CallerMap, Caller);
+    Ctx.getFunctionFeatureMap(CalleeMap, Callee);
+  }
+}
+
+static bool checkAVXParamFeature(DiagnosticsEngine &Diag,
+                                 SourceLocation CallLoc,
+                                 const llvm::StringMap<bool> &CallerMap,
+                                 const llvm::StringMap<bool> &CalleeMap,
+                                 QualType Ty, StringRef Feature,
+                                 bool IsArgument) {
+  bool CallerHasFeat = CallerMap.lookup(Feature);
+  bool CalleeHasFeat = CalleeMap.lookup(Feature);
+  if (!CallerHasFeat && !CalleeHasFeat)
+    return Diag.Report(CallLoc, diag::warn_avx_calling_convention)
+           << IsArgument << Ty << Feature;
+
+  // Mixing calling conventions here is very clearly an error.
+  if (!CallerHasFeat || !CalleeHasFeat)
+    return Diag.Report(CallLoc, diag::err_avx_calling_convention)
+           << IsArgument << Ty << Feature;
+
+  // Else, both caller and callee have the required feature, so there is no need
+  // to diagnose.
+  return false;
+}
+
+static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
+                          SourceLocation CallLoc,
+                          const llvm::StringMap<bool> &CallerMap,
+                          const llvm::StringMap<bool> &CalleeMap, QualType Ty,
+                          bool IsArgument) {
+  uint64_t Size = Ctx.getTypeSize(Ty);
+  if (Size > 256)
+    return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
+                                "avx512f", IsArgument);
+
+  if (Size > 128)
+    return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty, "avx",
+                                IsArgument);
+
+  return false;
+}
+
+void X86_64TargetCodeGenInfo::checkFunctionCallABI(
+    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
+    const FunctionDecl *Callee, const CallArgList &Args) const {
+  llvm::StringMap<bool> CallerMap;
+  llvm::StringMap<bool> CalleeMap;
+  unsigned ArgIndex = 0;
+
+  // We need to loop through the actual call arguments rather than the the
+  // function's parameters, in case this variadic.
+  for (const CallArg &Arg : Args) {
+    // The "avx" feature changes how vectors >128 in size are passed. "avx512f"
+    // additionally changes how vectors >256 in size are passed. Like GCC, we
+    // warn when a function is called with an argument where this will change.
+    // Unlike GCC, we also error when it is an obvious ABI mismatch, that is,
+    // the caller and callee features are mismatched.
+    // Unfortunately, we cannot do this diagnostic in SEMA, since the callee can
+    // change its ABI with attribute-target after this call.
+    if (Arg.getType()->isVectorType() &&
+        CGM.getContext().getTypeSize(Arg.getType()) > 128) {
+      initFeatureMaps(CGM.getContext(), CallerMap, Caller, CalleeMap, Callee);
+      QualType Ty = Arg.getType();
+      // The CallArg seems to have desugared the type already, so for clearer
+      // diagnostics, replace it with the type in the FunctionDecl if possible.
+      if (ArgIndex < Callee->getNumParams())
+        Ty = Callee->getParamDecl(ArgIndex)->getType();
+
+      if (checkAVXParam(CGM.getDiags(), CGM.getContext(), CallLoc, CallerMap,
+                        CalleeMap, Ty, /*IsArgument*/ true))
+        return;
+    }
+    ++ArgIndex;
+  }
+
+  // Check return always, as we don't have a good way of knowing in codegen
+  // whether this value is used, tail-called, etc.
+  if (Callee->getReturnType()->isVectorType() &&
+      CGM.getContext().getTypeSize(Callee->getReturnType()) > 128) {
+    initFeatureMaps(CGM.getContext(), CallerMap, Caller, CalleeMap, Callee);
+    checkAVXParam(CGM.getDiags(), CGM.getContext(), CallLoc, CallerMap,
+                  CalleeMap, Callee->getReturnType(),
+                  /*IsArgument*/ false);
+  }
+}
 
 static std::string qualifyWindowsLibrary(llvm::StringRef Lib) {
   // If the argument does not end in .lib, automatically add the suffix.
@@ -7105,7 +7219,9 @@ bool SystemZABIInfo::isFPArgumentType(QualType Ty) const {
 }
 
 QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
-  if (const RecordType *RT = Ty->getAsStructureType()) {
+  const RecordType *RT = Ty->getAs<RecordType>();
+
+  if (RT && RT->isStructureOrClassType()) {
     const RecordDecl *RD = RT->getDecl();
     QualType Found;
 
@@ -7130,6 +7246,10 @@ QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
       // do count.  So do anonymous bitfields that aren't zero-sized.
       if (getContext().getLangOpts().CPlusPlus &&
           FD->isZeroLengthBitField(getContext()))
+        continue;
+      // Like isSingleElementStruct(), ignore C++20 empty data members.
+      if (FD->hasAttr<NoUniqueAddressAttr>() &&
+          isEmptyRecord(getContext(), FD->getType(), true))
         continue;
 
       // Unlike isSingleElementStruct(), arrays do not count.
@@ -7370,10 +7490,49 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
 
 namespace {
 
+class MSP430ABIInfo : public DefaultABIInfo {
+  static ABIArgInfo complexArgInfo() {
+    ABIArgInfo Info = ABIArgInfo::getDirect();
+    Info.setCanBeFlattened(false);
+    return Info;
+  }
+
+public:
+  MSP430ABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+
+  ABIArgInfo classifyReturnType(QualType RetTy) const {
+    if (RetTy->isAnyComplexType())
+      return complexArgInfo();
+
+    return DefaultABIInfo::classifyReturnType(RetTy);
+  }
+
+  ABIArgInfo classifyArgumentType(QualType RetTy) const {
+    if (RetTy->isAnyComplexType())
+      return complexArgInfo();
+
+    return DefaultABIInfo::classifyArgumentType(RetTy);
+  }
+
+  // Just copy the original implementations because
+  // DefaultABIInfo::classify{Return,Argument}Type() are not virtual
+  void computeInfo(CGFunctionInfo &FI) const override {
+    if (!getCXXABI().classifyReturnType(FI))
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    for (auto &I : FI.arguments())
+      I.info = classifyArgumentType(I.type);
+  }
+
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override {
+    return EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty));
+  }
+};
+
 class MSP430TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   MSP430TargetCodeGenInfo(CodeGenTypes &CGT)
-      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
+      : TargetCodeGenInfo(std::make_unique<MSP430ABIInfo>(CGT)) {}
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
 };

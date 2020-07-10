@@ -189,6 +189,7 @@ public:
   /// definition is found, recursively search the predecessor blocks for them.
   void getLiveOuts(MachineBasicBlock *MBB, int PhysReg, InstSet &Defs,
                    BlockSet &VisitedBBs) const;
+  void getLiveOuts(MachineBasicBlock *MBB, int PhysReg, InstSet &Defs) const;
 
   /// For the given block, collect the instructions that use the live-in
   /// value of the provided register. Return whether the value is still

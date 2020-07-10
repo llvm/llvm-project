@@ -15,6 +15,7 @@
 #define LLVM_IR_INSTRUCTION_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist_node.h"
@@ -22,6 +23,7 @@
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
@@ -49,11 +51,33 @@ class Instruction : public User,
   /// O(1) local dominance checks between instructions.
   mutable unsigned Order = 0;
 
-  enum {
-    /// This is a bit stored in the SubClassData field which indicates whether
-    /// this instruction has metadata attached to it or not.
-    HasMetadataBit = 1 << 15
-  };
+protected:
+  // The 15 first bits of `Value::SubclassData` are available for subclasses of
+  // `Instruction` to use.
+  using OpaqueField = Bitfield::Element<uint16_t, 0, 15>;
+
+  // Template alias so that all Instruction storing alignment use the same
+  // definiton.
+  // Valid alignments are powers of two from 2^0 to 2^MaxAlignmentExponent =
+  // 2^29. We store them as Log2(Alignment), so we need 5 bits to encode the 30
+  // possible values.
+  template <unsigned Offset>
+  using AlignmentBitfieldElementT =
+      typename Bitfield::Element<unsigned, Offset, 5,
+                                 Value::MaxAlignmentExponent>;
+
+  template <unsigned Offset>
+  using BoolBitfieldElementT = typename Bitfield::Element<bool, Offset, 1>;
+
+  template <unsigned Offset>
+  using AtomicOrderingBitfieldElementT =
+      typename Bitfield::Element<AtomicOrdering, Offset, 3,
+                                 AtomicOrdering::LAST>;
+
+private:
+  // The last bit is used to store whether the instruction has metadata attached
+  // or not.
+  using HasMetadataField = Bitfield::Element<bool, 15, 1>;
 
 protected:
   ~Instruction(); // Use deleteValue() to delete a generic Instruction.
@@ -471,7 +495,7 @@ public:
 private:
   /// Return true if we have an entry in the on-the-side metadata hash.
   bool hasMetadataHashEntry() const {
-    return (getSubclassDataFromValue() & HasMetadataBit) != 0;
+    return Bitfield::test<HasMetadataField>(getSubclassDataFromValue());
   }
 
   // These are all implemented in Metadata.cpp.
@@ -763,10 +787,7 @@ private:
     return Value::getSubclassDataFromValue();
   }
 
-  void setHasMetadataHashEntry(bool V) {
-    setValueSubclassData((getSubclassDataFromValue() & ~HasMetadataBit) |
-                         (V ? HasMetadataBit : 0));
-  }
+  void setHasMetadataHashEntry(bool V) { setSubclassData<HasMetadataField>(V); }
 
   void setParent(BasicBlock *P);
 
@@ -774,14 +795,24 @@ protected:
   // Instruction subclasses can stick up to 15 bits of stuff into the
   // SubclassData field of instruction with these members.
 
-  // Verify that only the low 15 bits are used.
-  void setInstructionSubclassData(unsigned short D) {
-    assert((D & HasMetadataBit) == 0 && "Out of range value put into field");
-    setValueSubclassData((getSubclassDataFromValue() & HasMetadataBit) | D);
+  template <typename BitfieldElement>
+  typename BitfieldElement::Type getSubclassData() const {
+    static_assert(
+        std::is_same<BitfieldElement, HasMetadataField>::value ||
+            !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
+        "Must not overlap with the metadata bit");
+    return Bitfield::get<BitfieldElement>(getSubclassDataFromValue());
   }
 
-  unsigned getSubclassDataFromInstruction() const {
-    return getSubclassDataFromValue() & ~HasMetadataBit;
+  template <typename BitfieldElement>
+  void setSubclassData(typename BitfieldElement::Type Value) {
+    static_assert(
+        std::is_same<BitfieldElement, HasMetadataField>::value ||
+            !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
+        "Must not overlap with the metadata bit");
+    auto Storage = getSubclassDataFromValue();
+    Bitfield::set<BitfieldElement>(Storage, Value);
+    setValueSubclassData(Storage);
   }
 
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,

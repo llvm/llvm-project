@@ -376,7 +376,7 @@ namespace References {
   int &d = c;
   constexpr int e = 42;
   int &f = const_cast<int&>(e);
-  extern int &g;
+  extern int &g; // expected-note {{here}}
   constexpr int &h(); // expected-note {{here}}
   int &i = h(); // expected-note {{here}}
   constexpr int &j() { return b; }
@@ -390,7 +390,7 @@ namespace References {
     int D2 : &d - &c + 1;
     int E : e / 2;
     int F : f - 11;
-    int G : g; // expected-error {{constant expression}}
+    int G : g; // expected-error {{constant expression}} expected-note {{initializer of 'g' is unknown}}
     int H : h(); // expected-error {{constant expression}} expected-note {{undefined function 'h'}}
     int I : i; // expected-error {{constant expression}} expected-note {{initializer of 'i' is not a constant expression}}
     int J : j();

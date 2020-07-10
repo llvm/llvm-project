@@ -653,7 +653,8 @@ CheckerManager::runCheckersForEvalAssume(ProgramStateRef state,
 void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
                                             const ExplodedNodeSet &Src,
                                             const CallEvent &Call,
-                                            ExprEngine &Eng) {
+                                            ExprEngine &Eng,
+                                            const EvalCallOptions &CallOpts) {
   for (auto *const Pred : Src) {
     bool anyEvaluated = false;
 
@@ -665,10 +666,8 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
       // TODO: Support the situation when the call doesn't correspond
       // to any Expr.
       ProgramPoint L = ProgramPoint::getProgramPoint(
-          cast<CallExpr>(Call.getOriginExpr()),
-          ProgramPoint::PostStmtKind,
-          Pred->getLocationContext(),
-          EvalCallChecker.Checker);
+          Call.getOriginExpr(), ProgramPoint::PostStmtKind,
+          Pred->getLocationContext(), EvalCallChecker.Checker);
       bool evaluated = false;
       { // CheckerContext generates transitions(populates checkDest) on
         // destruction, so introduce the scope to make sure it gets properly
@@ -690,7 +689,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
     // If none of the checkers evaluated the call, ask ExprEngine to handle it.
     if (!anyEvaluated) {
       NodeBuilder B(Pred, Dst, Eng.getBuilderContext());
-      Eng.defaultEvalCall(B, Pred, Call);
+      Eng.defaultEvalCall(B, Pred, Call, CallOpts);
     }
   }
 }

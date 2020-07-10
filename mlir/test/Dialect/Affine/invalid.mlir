@@ -266,6 +266,47 @@ func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+// CHECK-LABEL: @affine_parallel
+
+func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<100x100xf32>
+  //  expected-error@+1 {{reduction must be specified for each output}}
+  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) -> (f32) {
+    %2 = affine.load %0[%i, %j] : memref<100x100xf32>
+    affine.yield %2 : f32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @affine_parallel
+
+func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<100x100xf32>
+  //  expected-error@+1 {{invalid reduction value: "bad"}}
+  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("bad") -> (f32) {
+    %2 = affine.load %0[%i, %j] : memref<100x100xf32>
+    affine.yield %2 : f32
+  }
+  return
+}
+
+// -----
+// CHECK-LABEL: @affine_parallel
+
+func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<100x100xi32>
+  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("minf") -> (f32) {
+    %2 = affine.load %0[%i, %j] : memref<100x100xi32>
+    //  expected-error@+1 {{types mismatch between yield op and its parent}}
+    affine.yield %2 : i32
+  }
+  return
+}
+
+// -----
+
 func @vector_load_invalid_vector_type() {
   %0 = alloc() : memref<100xf32>
   affine.for %i0 = 0 to 16 step 8 {
@@ -309,3 +350,32 @@ func @vector_store_vector_memref() {
   }
   return
 }
+
+// -----
+
+func @affine_if_with_then_region_args(%N: index) {
+  %c = constant 200 : index
+  %i = constant 20: index
+  // expected-error@+1 {{affine.if' op region #0 should have no arguments}}
+  affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%c]  {
+    ^bb0(%arg:i32):
+      %w = affine.apply affine_map<(d0,d1)[s0] -> (d0+d1+s0)> (%i, %i) [%N]
+  }
+  return
+}
+
+// -----
+
+func @affine_if_with_else_region_args(%N: index) {
+  %c = constant 200 : index
+  %i = constant 20: index
+  // expected-error@+1 {{affine.if' op region #1 should have no arguments}}
+  affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%c]  {
+      %w = affine.apply affine_map<(d0,d1)[s0] -> (d0+d1+s0)> (%i, %i) [%N]
+  } else {
+    ^bb0(%arg:i32):
+      %w = affine.apply affine_map<(d0,d1)[s0] -> (d0-d1+s0)> (%i, %i) [%N]
+  }
+  return
+}
+

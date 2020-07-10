@@ -33,7 +33,6 @@ class DefaultTargetInfo(object):
     def add_cxx_compile_flags(self, flags): pass
     def add_cxx_link_flags(self, flags): pass
     def allow_cxxabi_link(self): return True
-    def use_lit_shell_default(self): return False
 
     def add_path(self, dest_env, new_path):
         if not new_path:
@@ -209,12 +208,6 @@ class LinuxRemoteTI(LinuxLocalTI):
 class WindowsLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(WindowsLocalTI, self).__init__(full_config)
-
-    def use_lit_shell_default(self):
-        # Default to the internal shell on Windows, as bash on Windows is
-        # usually very slow.
-        return True
-
 
 def make_target_info(full_config):
     default = "libcxx.test.target_info.LocalTI"

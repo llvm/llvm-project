@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=riscv32 -mattr=+c -mattr=-rvc-hints < %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv32 -mattr=+c -mattr=+no-rvc-hints < %s 2>&1 \
 # RUN:     | FileCheck %s
 
 ## GPRC

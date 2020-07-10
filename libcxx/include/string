@@ -1659,6 +1659,19 @@ private:
         _NOEXCEPT
         {}
 
+    basic_string& __assign_external(const value_type* __s);
+    basic_string& __assign_external(const value_type* __s, size_type __n);
+
+    // Assigns the value in __s, guaranteed to be __n < __min_cap in length.
+    inline basic_string& __assign_short(const value_type* __s, size_type __n) {
+      pointer __p = __is_long()
+                        ? (__set_long_size(__n), __get_long_pointer())
+                        : (__set_short_size(__n), __get_short_pointer());
+      traits_type::move(_VSTD::__to_address(__p), __s, __n);
+      traits_type::assign(__p[__n], value_type());
+      return *this;
+    }
+
     _LIBCPP_INLINE_VISIBILITY void __invalidate_all_iterators();
     _LIBCPP_INLINE_VISIBILITY void __invalidate_iterators_past(size_type);
 
@@ -2269,24 +2282,30 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(
 
 template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>&
+basic_string<_CharT, _Traits, _Allocator>::__assign_external(
+    const value_type* __s, size_type __n) {
+  size_type __cap = capacity();
+  if (__cap >= __n) {
+    value_type* __p = _VSTD::__to_address(__get_pointer());
+    traits_type::move(__p, __s, __n);
+    traits_type::assign(__p[__n], value_type());
+    __set_size(__n);
+    __invalidate_iterators_past(__n);
+  } else {
+    size_type __sz = size();
+    __grow_by_and_replace(__cap, __n - __cap, __sz, 0, __sz, __n, __s);
+  }
+  return *this;
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s, size_type __n)
 {
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::assign received nullptr");
-    size_type __cap = capacity();
-    if (__cap >= __n)
-    {
-        value_type* __p = _VSTD::__to_address(__get_pointer());
-        traits_type::move(__p, __s, __n);
-        traits_type::assign(__p[__n], value_type());
-        __set_size(__n);
-        __invalidate_iterators_past(__n);
-    }
-    else
-    {
-        size_type __sz = size();
-        __grow_by_and_replace(__cap, __n - __cap, __sz, 0, __sz, __n, __s);
-    }
-    return *this;
+    return (_LIBCPP_BUILTIN_CONSTANT_P(__n) && __n < __min_cap)
+               ? __assign_short(__s, __n)
+               : __assign_external(__s, __n);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2473,12 +2492,21 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const _Tp & __t, size_type __p
 
 template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>&
+basic_string<_CharT, _Traits, _Allocator>::__assign_external(const value_type* __s) {
+  return __assign_external(__s, traits_type::length(__s));
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s)
 {
     _LIBCPP_ASSERT(__s != nullptr, "string::assign received nullptr");
-    return assign(__s, traits_type::length(__s));
+    return _LIBCPP_BUILTIN_CONSTANT_P(*__s)
+               ? (traits_type::length(__s) < __min_cap
+                      ? __assign_short(__s, traits_type::length(__s))
+                      : __assign_external(__s, traits_type::length(__s)))
+               : __assign_external(__s);
 }
-
 // append
 
 template <class _CharT, class _Traits, class _Allocator>

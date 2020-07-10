@@ -14,7 +14,7 @@
 
 // Returns: 1 if number of bits is odd else returns 0
 
-COMPILER_RT_ABI si_int __paritydi2(di_int a) {
+COMPILER_RT_ABI int __paritydi2(di_int a) {
   dwords x;
   x.all = a;
   return __paritysi2(x.s.high ^ x.s.low);

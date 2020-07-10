@@ -95,7 +95,6 @@ config("cxx_config") {
     } else {
       cflags_cc += [ "-fno-exceptions" ]
     }
-    defines += [ "_LIBCPP_NO_EXCEPTIONS" ]
   }
   if (!libcxx_enable_rtti) {
     if (current_os == "win") {
@@ -135,6 +134,7 @@ cxx_sources = [
   "new.cpp",
   "optional.cpp",
   "random.cpp",
+  "random_shuffle.cpp",
   "regex.cpp",
   "shared_mutex.cpp",
   "stdexcept.cpp",

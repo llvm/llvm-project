@@ -59,7 +59,7 @@ template <typename CalleeTy> struct CallInfo {
   // Range should never set to empty-set, that is an invalid access range
   // that can cause empty-set to be propagated with ConstantRange::add
   ConstantRange Offset;
-  CallInfo(const CalleeTy *Callee, size_t ParamNo, ConstantRange Offset)
+  CallInfo(const CalleeTy *Callee, size_t ParamNo, const ConstantRange &Offset)
       : Callee(Callee), ParamNo(ParamNo), Offset(Offset) {}
 };
 
@@ -202,7 +202,7 @@ class StackSafetyLocalAnalysis {
 
   ConstantRange offsetFrom(Value *Addr, Value *Base);
   ConstantRange getAccessRange(Value *Addr, Value *Base,
-                               ConstantRange SizeRange);
+                               const ConstantRange &SizeRange);
   ConstantRange getAccessRange(Value *Addr, Value *Base, TypeSize Size);
   ConstantRange getMemIntrinsicAccessRange(const MemIntrinsic *MI, const Use &U,
                                            Value *Base);
@@ -237,7 +237,7 @@ ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
 
 ConstantRange
 StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
-                                         ConstantRange SizeRange) {
+                                         const ConstantRange &SizeRange) {
   // Zero-size loads and stores do not access memory.
   if (SizeRange.isEmptySet())
     return ConstantRange::getEmpty(PointerSize);
@@ -748,15 +748,16 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
   return *Info;
 }
 
-// Converts a StackSafetyFunctionInfo to the relevant FunctionSummary
-// constructor fields
 std::vector<FunctionSummary::ParamAccess>
 StackSafetyInfo::getParamAccesses() const {
-  assert(needsParamAccessSummary(*F->getParent()));
-
+  // Implementation transforms internal representation of parameter information
+  // into FunctionSummary format.
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
   for (const auto &KV : getInfo().Info.Params) {
     auto &PS = KV.second;
+    // Parameter accessed by any or unknown offset, represented as FullSet by
+    // StackSafety, is handled as the parameter for which we have no
+    // StackSafety info at all. So drop it to reduce summary size.
     if (PS.Range.isFullSet())
       continue;
 
@@ -765,6 +766,10 @@ StackSafetyInfo::getParamAccesses() const {
 
     Param.Calls.reserve(PS.Calls.size());
     for (auto &C : PS.Calls) {
+      // Parameter forwarded into another function by any or unknown offset
+      // will make ParamAccess::Range as FullSet anyway. So we can drop the
+      // entire parameter like we did above.
+      // TODO(vitalybuka): Return already filtered parameters from getInfo().
       if (C.Offset.isFullSet()) {
         ParamAccesses.pop_back();
         break;

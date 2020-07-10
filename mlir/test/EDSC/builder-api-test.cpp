@@ -419,11 +419,49 @@ TEST_FUNC(operator_and) {
   f.erase();
 }
 
+TEST_FUNC(divis_op_i32) {
+  using namespace edsc::op;
+  auto f = makeFunction("divis_op", {}, {});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  auto i32Type = builder.getI32Type();
+  std_divis(std_constant_int(10, i32Type), std_constant_int(2, i32Type));
+
+  // clang-format off
+  // CHECK-LABEL: @divis_op
+  //   CHECK-DAG:     {{.*}} = constant 10
+  //   CHECK-DAG:     {{.*}} = constant 2
+  //  CHECK-NEXT:     {{.*}} = divi_signed
+  // clang-format on
+  f.print(llvm::outs());
+  f.erase();
+}
+
+TEST_FUNC(diviu_op_i32) {
+  using namespace edsc::op;
+  auto f = makeFunction("diviu_op", {}, {});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  auto i32Type = builder.getI32Type();
+  std_diviu(std_constant_int(10, i32Type), std_constant_int(2, i32Type));
+
+  // clang-format off
+  // CHECK-LABEL: @diviu_op
+  //   CHECK-DAG:     {{.*}} = constant 10
+  //   CHECK-DAG:     {{.*}} = constant 2
+  //  CHECK-NEXT:     {{.*}} = divi_unsigned
+  // clang-format on
+  f.print(llvm::outs());
+  f.erase();
+}
+
 TEST_FUNC(select_op_i32) {
   using namespace edsc::op;
-  auto f32Type = FloatType::getF32(&globalContext());
+  auto i32Type = IntegerType::get(32, &globalContext());
   auto memrefType = MemRefType::get(
-      {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type, {}, 0);
+      {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, i32Type, {}, 0);
   auto f = makeFunction("select_op", {}, {memrefType});
 
   OpBuilder builder(f.getBody());
@@ -432,7 +470,18 @@ TEST_FUNC(select_op_i32) {
   MemRefBoundsCapture vA(f.getArgument(0));
   AffineIndexedValue A(f.getArgument(0));
   affineLoopNestBuilder({zero, zero}, {one, one}, {1, 1}, [&](ValueRange ivs) {
-    std_select(eq(ivs[0], zero), A(zero, zero), A(ivs[0], ivs[1]));
+    using namespace edsc::op;
+    Value i = ivs[0], j = ivs[1];
+    std_select(eq(i, zero), A(zero, zero), A(i, j));
+    std_select(ne(i, zero), A(zero, zero), A(i, j));
+    std_select(slt(i, zero), A(zero, zero), A(i, j));
+    std_select(sle(i, zero), A(zero, zero), A(i, j));
+    std_select(sgt(i, zero), A(zero, zero), A(i, j));
+    std_select(sge(i, zero), A(zero, zero), A(i, j));
+    std_select(ult(i, zero), A(zero, zero), A(i, j));
+    std_select(ule(i, zero), A(zero, zero), A(i, j));
+    std_select(ugt(i, zero), A(zero, zero), A(i, j));
+    std_select(uge(i, zero), A(zero, zero), A(i, j));
   });
 
   // clang-format off
@@ -440,6 +489,42 @@ TEST_FUNC(select_op_i32) {
   //      CHECK: affine.for %{{.*}} = 0 to 1 {
   // CHECK-NEXT:   affine.for %{{.*}} = 0 to 1 {
   //  CHECK-DAG:     {{.*}} = cmpi "eq"
+  //  CHECK-DAG:     {{.*}} = affine.load
+  //  CHECK-DAG:     {{.*}} = affine.load
+  // CHECK-NEXT:     {{.*}} = select
+  //  CHECK-DAG:     {{.*}} = cmpi "ne"
+  //  CHECK-DAG:     {{.*}} = affine.load
+  //  CHECK-DAG:     {{.*}} = affine.load
+  // CHECK-NEXT:     {{.*}} = select
+  //  CHECK-DAG:     {{.*}} = cmpi "slt"
+  //  CHECK-DAG:     {{.*}} = affine.load
+  //  CHECK-DAG:     {{.*}} = affine.load
+  // CHECK-NEXT:     {{.*}} = select
+  //  CHECK-DAG:     {{.*}} = cmpi "sle"
+  //  CHECK-DAG:     {{.*}} = affine.load
+  //  CHECK-DAG:     {{.*}} = affine.load
+  // CHECK-NEXT:     {{.*}} = select
+  //  CHECK-DAG:     {{.*}} = cmpi "sgt"
+  //  CHECK-DAG:     {{.*}} = affine.load
+  //  CHECK-DAG:     {{.*}} = affine.load
+  // CHECK-NEXT:     {{.*}} = select
+  //  CHECK-DAG:     {{.*}} = cmpi "sge"
+  //  CHECK-DAG:     {{.*}} = affine.load
+  //  CHECK-DAG:     {{.*}} = affine.load
+  // CHECK-NEXT:     {{.*}} = select
+  //  CHECK-DAG:     {{.*}} = cmpi "ult"
+  //  CHECK-DAG:     {{.*}} = affine.load
+  //  CHECK-DAG:     {{.*}} = affine.load
+  // CHECK-NEXT:     {{.*}} = select
+  //  CHECK-DAG:     {{.*}} = cmpi "ule"
+  //  CHECK-DAG:     {{.*}} = affine.load
+  //  CHECK-DAG:     {{.*}} = affine.load
+  // CHECK-NEXT:     {{.*}} = select
+  //  CHECK-DAG:     {{.*}} = cmpi "ugt"
+  //  CHECK-DAG:     {{.*}} = affine.load
+  //  CHECK-DAG:     {{.*}} = affine.load
+  // CHECK-NEXT:     {{.*}} = select
+  //  CHECK-DAG:     {{.*}} = cmpi "uge"
   //  CHECK-DAG:     {{.*}} = affine.load
   //  CHECK-DAG:     {{.*}} = affine.load
   // CHECK-NEXT:     {{.*}} = select
@@ -465,10 +550,14 @@ TEST_FUNC(select_op_f32) {
     Value i = ivs[0], j = ivs[1];
     std_select(eq(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
     std_select(ne(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
-    std_select(B(i, j) >= B(i + one, j), A(zero, zero), A(i, j));
-    std_select(B(i, j) <= B(i + one, j), A(zero, zero), A(i, j));
-    std_select(B(i, j) < B(i + one, j), A(zero, zero), A(i, j));
-    std_select(B(i, j) > B(i + one, j), A(zero, zero), A(i, j));
+    std_select(sge(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
+    std_select(sle(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
+    std_select(slt(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
+    std_select(sgt(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
+    std_select(uge(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
+    std_select(ule(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
+    std_select(ult(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
+    std_select(ugt(B(i, j), B(i + one, j)), A(zero, zero), A(i, j));
   });
 
   // CHECK-LABEL: @select_op
@@ -482,6 +571,34 @@ TEST_FUNC(select_op_f32) {
   //  CHECK-DAG:     affine.apply
   // CHECK-NEXT:     select
   //  CHECK-DAG:     cmpf "one"
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.apply
+  // CHECK-NEXT:     select
+  //  CHECK-DAG:     cmpf "oge"
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.apply
+  // CHECK-NEXT:     select
+  //  CHECK-DAG:     cmpf "ole"
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.apply
+  // CHECK-NEXT:     select
+  //  CHECK-DAG:     cmpf "olt"
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.load
+  //  CHECK-DAG:     affine.apply
+  // CHECK-NEXT:     select
+  //  CHECK-DAG:     cmpf "ogt"
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
   //  CHECK-DAG:     affine.load
@@ -920,6 +1037,28 @@ TEST_FUNC(linalg_tensors_test) {
   Value o1 = linalg_generic_matmul(A, B, tensorType)->getResult(0);
   linalg_generic_matmul(A, B, o1, tensorType);
 
+  f.print(llvm::outs());
+  f.erase();
+}
+
+TEST_FUNC(vector_extractelement_op_i32) {
+  using namespace edsc::op;
+  auto f = makeFunction("vector_extractelement_op", {}, {});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  auto i32Type = builder.getI32Type();
+  auto vectorType = VectorType::get(/*shape=*/{8}, i32Type);
+  vector_extractelement(
+      i32Type, std_constant(vectorType, builder.getI32VectorAttr({10})),
+      std_constant_int(0, i32Type));
+
+  // clang-format off
+  // CHECK-LABEL: @vector_extractelement_op
+  //   CHECK-DAG:     {{.*}} = constant dense<10>
+  //   CHECK-DAG:     {{.*}} = constant 0
+  //  CHECK-NEXT:     {{.*}} = vector.extractelement
+  // clang-format on
   f.print(llvm::outs());
   f.erase();
 }

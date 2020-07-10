@@ -26,6 +26,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using PassMode = HoverInfo::PassType::PassMode;
+
 TEST(Hover, Structured) {
   struct {
     const char *const Code;
@@ -708,7 +710,113 @@ class Foo {})cpp";
          HI.Definition = "X x";
          HI.Type = "struct X";
        }},
-  };
+      {// Don't crash on null types.
+       R"cpp(auto [^[[x]]] = 1; /*error-ok*/)cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "x";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.NamespaceScope = "";
+         HI.Definition = "";
+         HI.Type = "NULL TYPE";
+         // Bindings are in theory public members of an anonymous struct.
+         HI.AccessSpecifier = "public";
+       }},
+      {// Extra info for function call.
+       R"cpp(
+          void fun(int arg_a, int &arg_b) {};
+          void code() {
+            int a = 1, b = 2;
+            fun(a, [[^b]]);
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "b";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.NamespaceScope = "";
+         HI.Definition = "int b = 2";
+         HI.LocalScope = "code::";
+         HI.Value = "2";
+         HI.Type = "int";
+         HI.CalleeArgInfo.emplace();
+         HI.CalleeArgInfo->Name = "arg_b";
+         HI.CalleeArgInfo->Type = "int &";
+         HI.CallPassType.emplace();
+         HI.CallPassType->PassBy = PassMode::Ref;
+         HI.CallPassType->Converted = false;
+       }},
+      {// Extra info for method call.
+       R"cpp(
+          class C {
+           public:
+            void fun(int arg_a = 3, int arg_b = 4) {}
+          };
+          void code() {
+            int a = 1, b = 2;
+            C c;
+            c.fun([[^a]], b);
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "a";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.NamespaceScope = "";
+         HI.Definition = "int a = 1";
+         HI.LocalScope = "code::";
+         HI.Value = "1";
+         HI.Type = "int";
+         HI.CalleeArgInfo.emplace();
+         HI.CalleeArgInfo->Name = "arg_a";
+         HI.CalleeArgInfo->Type = "int";
+         HI.CalleeArgInfo->Default = "3";
+         HI.CallPassType.emplace();
+         HI.CallPassType->PassBy = PassMode::Value;
+         HI.CallPassType->Converted = false;
+       }},
+      {// Dont crash on invalid decl
+       R"cpp(
+        // error-ok
+        struct Foo {
+          Bar [[x^x]];
+        };)cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "xx";
+         HI.Kind = index::SymbolKind::Field;
+         HI.NamespaceScope = "";
+         HI.Definition = "int xx";
+         HI.LocalScope = "Foo::";
+         HI.Type = "int";
+         HI.AccessSpecifier = "public";
+       }},
+      {R"cpp(
+        // error-ok
+        struct Foo {
+          Bar xx;
+          int [[y^y]];
+        };)cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "yy";
+         HI.Kind = index::SymbolKind::Field;
+         HI.NamespaceScope = "";
+         HI.Definition = "int yy";
+         HI.LocalScope = "Foo::";
+         HI.Type = "int";
+         HI.AccessSpecifier = "public";
+       }},
+       {// No crash on InitListExpr.
+        R"cpp(
+          struct Foo {
+            int a[10];
+          };
+          constexpr Foo k2 = {
+            ^[[{]]1} // FIXME: why the hover range is 1 character?
+          };
+         )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "expression";
+         HI.Kind = index::SymbolKind::Unknown;
+         HI.Type = "int [10]";
+         HI.Value = "{1}";
+       }}};
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
 
@@ -741,6 +849,85 @@ class Foo {})cpp";
     EXPECT_EQ(H->Size, Expected.Size);
     EXPECT_EQ(H->Offset, Expected.Offset);
     EXPECT_EQ(H->AccessSpecifier, Expected.AccessSpecifier);
+    EXPECT_EQ(H->CalleeArgInfo, Expected.CalleeArgInfo);
+    EXPECT_EQ(H->CallPassType, Expected.CallPassType);
+  }
+}
+
+TEST(Hover, CallPassType) {
+  const llvm::StringRef CodePrefix = R"cpp(
+class Base {};
+class Derived : public Base {};
+class CustomClass {
+ public:
+  CustomClass() {}
+  CustomClass(const Base &x) {}
+  CustomClass(int &x) {}
+  CustomClass(float x) {}
+};
+
+void int_by_ref(int &x) {}
+void int_by_const_ref(const int &x) {}
+void int_by_value(int x) {}
+void base_by_ref(Base &x) {}
+void base_by_const_ref(const Base &x) {}
+void base_by_value(Base x) {}
+void float_by_value(float x) {}
+void custom_by_value(CustomClass x) {}
+
+void fun() {
+  int int_x;
+  int &int_ref = int_x;
+  const int &int_const_ref = int_x;
+  Base base;
+  const Base &base_const_ref = base;
+  Derived derived;
+  float float_x;
+)cpp";
+  const llvm::StringRef CodeSuffix = "}";
+
+  struct {
+    const char *const Code;
+    HoverInfo::PassType::PassMode PassBy;
+    bool Converted;
+  } Tests[] = {
+      // Integer tests
+      {"int_by_value([[^int_x]]);", PassMode::Value, false},
+      {"int_by_ref([[^int_x]]);", PassMode::Ref, false},
+      {"int_by_const_ref([[^int_x]]);", PassMode::ConstRef, false},
+      {"int_by_value([[^int_ref]]);", PassMode::Value, false},
+      {"int_by_const_ref([[^int_ref]]);", PassMode::ConstRef, false},
+      {"int_by_const_ref([[^int_ref]]);", PassMode::ConstRef, false},
+      {"int_by_const_ref([[^int_const_ref]]);", PassMode::ConstRef, false},
+      // Custom class tests
+      {"base_by_ref([[^base]]);", PassMode::Ref, false},
+      {"base_by_const_ref([[^base]]);", PassMode::ConstRef, false},
+      {"base_by_const_ref([[^base_const_ref]]);", PassMode::ConstRef, false},
+      {"base_by_value([[^base]]);", PassMode::Value, false},
+      {"base_by_value([[^base_const_ref]]);", PassMode::Value, false},
+      {"base_by_ref([[^derived]]);", PassMode::Ref, false},
+      {"base_by_const_ref([[^derived]]);", PassMode::ConstRef, false},
+      {"base_by_value([[^derived]]);", PassMode::Value, false},
+      // Converted tests
+      {"float_by_value([[^int_x]]);", PassMode::Value, true},
+      {"float_by_value([[^int_ref]]);", PassMode::Value, true},
+      {"float_by_value([[^int_const_ref]]);", PassMode::Value, true},
+      {"custom_by_value([[^int_x]]);", PassMode::Ref, true},
+      {"custom_by_value([[^float_x]]);", PassMode::Value, true},
+      {"custom_by_value([[^base]]);", PassMode::ConstRef, true},
+  };
+  for (const auto &Test : Tests) {
+    SCOPED_TRACE(Test.Code);
+
+    const auto Code = (CodePrefix + Test.Code + CodeSuffix).str();
+    Annotations T(Code);
+    TestTU TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-std=c++17");
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->CallPassType->PassBy, Test.PassBy);
+    EXPECT_EQ(H->CallPassType->Converted, Test.Converted);
   }
 }
 
@@ -2032,6 +2219,106 @@ protected: int method())",
 
 // In namespace ns1
 private: union foo {})",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Variable;
+            HI.Name = "foo";
+            HI.Definition = "int foo = 3";
+            HI.LocalScope = "test::Bar::";
+            HI.Value = "3";
+            HI.Type = "int";
+            HI.CalleeArgInfo.emplace();
+            HI.CalleeArgInfo->Name = "arg_a";
+            HI.CalleeArgInfo->Type = "int";
+            HI.CalleeArgInfo->Default = "7";
+            HI.CallPassType.emplace();
+            HI.CallPassType->PassBy = PassMode::Value;
+            HI.CallPassType->Converted = false;
+          },
+          R"(variable foo
+
+Type: int
+Value = 3
+Passed as arg_a
+
+// In test::Bar
+int foo = 3)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Variable;
+            HI.Name = "foo";
+            HI.Definition = "int foo = 3";
+            HI.LocalScope = "test::Bar::";
+            HI.Value = "3";
+            HI.Type = "int";
+            HI.CalleeArgInfo.emplace();
+            HI.CalleeArgInfo->Name = "arg_a";
+            HI.CalleeArgInfo->Type = "int";
+            HI.CalleeArgInfo->Default = "7";
+            HI.CallPassType.emplace();
+            HI.CallPassType->PassBy = PassMode::Ref;
+            HI.CallPassType->Converted = false;
+          },
+          R"(variable foo
+
+Type: int
+Value = 3
+Passed by reference as arg_a
+
+// In test::Bar
+int foo = 3)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Variable;
+            HI.Name = "foo";
+            HI.Definition = "int foo = 3";
+            HI.LocalScope = "test::Bar::";
+            HI.Value = "3";
+            HI.Type = "int";
+            HI.CalleeArgInfo.emplace();
+            HI.CalleeArgInfo->Name = "arg_a";
+            HI.CalleeArgInfo->Type = "int";
+            HI.CalleeArgInfo->Default = "7";
+            HI.CallPassType.emplace();
+            HI.CallPassType->PassBy = PassMode::Value;
+            HI.CallPassType->Converted = true;
+          },
+          R"(variable foo
+
+Type: int
+Value = 3
+Passed as arg_a (converted to int)
+
+// In test::Bar
+int foo = 3)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Variable;
+            HI.Name = "foo";
+            HI.Definition = "int foo = 3";
+            HI.LocalScope = "test::Bar::";
+            HI.Value = "3";
+            HI.Type = "int";
+            HI.CalleeArgInfo.emplace();
+            HI.CalleeArgInfo->Name = "arg_a";
+            HI.CalleeArgInfo->Type = "int";
+            HI.CalleeArgInfo->Default = "7";
+            HI.CallPassType.emplace();
+            HI.CallPassType->PassBy = PassMode::ConstRef;
+            HI.CallPassType->Converted = true;
+          },
+          R"(variable foo
+
+Type: int
+Value = 3
+Passed by const reference as arg_a (converted to int)
+
+// In test::Bar
+int foo = 3)",
       }};
 
   for (const auto &C : Cases) {

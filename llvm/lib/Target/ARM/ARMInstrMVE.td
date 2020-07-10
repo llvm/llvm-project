@@ -4782,6 +4782,11 @@ class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
   let retainsPreviousHalfElement = 1;
 }
 
+def SDTARMVCVTL    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                                         SDTCisVT<2, i32>]>;
+def MVEvcvtn       : SDNode<"ARMISD::VCVTN", SDTARMVMOVNQ>;
+def MVEvcvtl       : SDNode<"ARMISD::VCVTL", SDTARMVCVTL>;
+
 multiclass MVE_VCVT_f2h_m<string iname, int half> {
   def "": MVE_VCVT_ff<iname, "f16.f32", 0b0, half,
                       (ins MQPR:$Qd_src), vpred_n, "$Qd = $Qd_src">;
@@ -4796,6 +4801,9 @@ multiclass MVE_VCVT_f2h_m<string iname, int half> {
                          (v4i1 VCCR:$mask))),
               (v8f16 (Inst (v8f16 MQPR:$Qd_src), (v4f32 MQPR:$Qm),
                            ARMVCCThen, (v4i1 VCCR:$mask)))>;
+
+    def : Pat<(v8f16 (MVEvcvtn (v8f16 MQPR:$Qd_src), (v4f32 MQPR:$Qm), (i32 half))),
+              (v8f16 (Inst (v8f16 MQPR:$Qd_src), (v4f32 MQPR:$Qm)))>;
   }
 }
 
@@ -4811,6 +4819,9 @@ multiclass MVE_VCVT_h2f_m<string iname, int half> {
                          (v4i1 VCCR:$mask))),
               (v4f32 (Inst (v8f16 MQPR:$Qm), ARMVCCThen,
                            (v4i1 VCCR:$mask), (v4f32 MQPR:$inactive)))>;
+
+    def : Pat<(v4f32 (MVEvcvtl (v8f16 MQPR:$Qm), (i32 half))),
+              (v4f32 (Inst (v8f16 MQPR:$Qm)))>;
   }
 }
 

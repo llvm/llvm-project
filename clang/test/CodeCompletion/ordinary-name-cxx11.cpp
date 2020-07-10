@@ -57,11 +57,12 @@ void foo() {
   // CHECK-CC1: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>;
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#std::type_info#]typeid(<#expression-or-type#>)
-  // CHECK-CC1-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : typename <#name#>
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-CC1-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC1-NEXT: COMPLETION: union
   // CHECK-CC1-NEXT: COMPLETION: unsigned
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : using <#name#> = <#type#>;
   // CHECK-CC1-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-CC1-NEXT: COMPLETION: void
   // CHECK-CC1-NEXT: COMPLETION: volatile
@@ -107,12 +108,13 @@ void foo() {
   // CHECK-CC2-NEXT: COMPLETION: thread_local
   // CHECK-CC2-NEXT: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>;
-  // CHECK-CC2-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-CC2-NEXT: COMPLETION: Pattern : typename <#name#>
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC2-NEXT: COMPLETION: union
   // CHECK-CC2-NEXT: COMPLETION: unsigned
   // CHECK-CC2-NEXT: COMPLETION: Pattern : using <#qualifier#>::<#name#>;
+  // CHECK-CC2-NEXT: COMPLETION: Pattern : using <#name#> = <#type#>;
   // CHECK-CC2-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-CC2-NEXT: COMPLETION: void
   // CHECK-CC2-NEXT: COMPLETION: volatile
@@ -150,12 +152,13 @@ void foo() {
   // CHECK-CC3-NEXT: COMPLETION: Pattern : template<<#parameters#>>
   // CHECK-CC3-NEXT: COMPLETION: thread_local
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>;
-  // CHECK-CC3-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-CC3-NEXT: COMPLETION: Pattern : typename <#name#>
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC3-NEXT: COMPLETION: union
   // CHECK-CC3-NEXT: COMPLETION: unsigned
   // CHECK-CC3-NEXT: COMPLETION: Pattern : using <#qualifier#>::<#name#>
+  // CHECK-CC3-NEXT: COMPLETION: Pattern : using <#name#> = <#type#>;
   // CHECK-CC3-NEXT: COMPLETION: virtual
   // CHECK-CC3-NEXT: COMPLETION: void
   // CHECK-CC3-NEXT: COMPLETION: volatile
@@ -198,7 +201,7 @@ void foo() {
   // CHECK-CC4-NEXT: COMPLETION: Pattern : [#bool#]true
   // CHECK-CC4-NEXT: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-CC4-NEXT: COMPLETION: Pattern : [#std::type_info#]typeid(<#expression-or-type#>)
-  // CHECK-CC4-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-CC4-NEXT: COMPLETION: Pattern : typename <#name#>
   // CHECK-CC4-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-CC4-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-CC4-NEXT: COMPLETION: union
@@ -259,11 +262,12 @@ void foo() {
   // CHECK-NO-RTTI: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>;
   // CHECK-NO-RTTI-NOT: typeid
-  // CHECK-NO-RTTI: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
+  // CHECK-NO-RTTI: COMPLETION: Pattern : typename <#name#>
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : typeof <#expression#>
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : typeof(<#type#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: union
   // CHECK-NO-RTTI-NEXT: COMPLETION: unsigned
+  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : using <#name#> = <#type#>;
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : using namespace <#identifier#>;
   // CHECK-NO-RTTI-NEXT: COMPLETION: void
   // CHECK-NO-RTTI-NEXT: COMPLETION: volatile

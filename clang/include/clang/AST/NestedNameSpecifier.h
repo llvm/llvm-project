@@ -214,6 +214,9 @@ public:
   /// parameter pack (for C++11 variadic templates).
   bool containsUnexpandedParameterPack() const;
 
+  /// Whether this nested name specifier contains an error.
+  bool containsErrors() const;
+
   /// Print this nested name specifier to the given output stream. If
   /// `ResolveTemplateArguments` is true, we'll print actual types, e.g.
   /// `ns::SomeTemplate<int, MyClass>` instead of

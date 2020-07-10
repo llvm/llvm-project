@@ -78,13 +78,6 @@ static void InitializeSwiftDemangler() {
 // Attempts to demangle a Swift name. The demangler will return nullptr if a
 // non-Swift name is passed in.
 const char *DemangleSwift(const char *name) {
-  if (!name) return nullptr;
-
-  // Check if we are dealing with a Swift mangled name first.
-  if (name[0] != '_' || name[1] != 'T') {
-    return nullptr;
-  }
-
   if (swift_demangle_f)
     return swift_demangle_f(name, internal_strlen(name), 0, 0, 0);
 

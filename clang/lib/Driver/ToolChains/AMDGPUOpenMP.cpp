@@ -171,7 +171,7 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
   CmdArgs.push_back("-o");
   CmdArgs.push_back(OutputFileName);
   C.addCommand(std::make_unique<Command>(
-      JA, *this,
+      JA, *this, ResponseFileSupport::AtFileCurCP(),
       Args.MakeArgString(C.getDriver().Dir + "/clang-build-select-link"),
       CmdArgs, Inputs));
 
@@ -205,7 +205,8 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   CmdArgs.push_back(OutputFileName);
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
   return OutputFileName;
 }
 
@@ -241,7 +242,8 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   OptArgs.push_back(OutputFileName);
   const char *OptExec =
       Args.MakeArgString(getToolChain().GetProgramPath("opt"));
-  C.addCommand(std::make_unique<Command>(JA, *this, OptExec, OptArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), OptExec, OptArgs, Inputs));
   return OutputFileName;
 }
 
@@ -295,7 +297,8 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
       getOutputFileName(C, OutputFilePrefix, "", OutputIsAsm ? "s" : "o");
   LlcArgs.push_back(LlcOutputFile);
   const char *Llc = Args.MakeArgString(getToolChain().GetProgramPath("llc"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Llc, LlcArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Llc, LlcArgs, Inputs));
   return LlcOutputFile;
 }
 
@@ -310,7 +313,8 @@ void AMDGCN::OpenMPLinker::constructLldCommand(Compilation &C, const JobAction &
                         "-shared",    "-o",  Output.getFilename(),
                         InputFileName};
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Lld, LldArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Lld, LldArgs, Inputs));
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is

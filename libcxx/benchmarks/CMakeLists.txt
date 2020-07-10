@@ -18,9 +18,7 @@ if (DEFINED LIBCXX_CXX_ABI_LIBRARY_PATH)
           -L${LIBCXX_CXX_ABI_LIBRARY_PATH}
           -Wl,-rpath,${LIBCXX_CXX_ABI_LIBRARY_PATH})
 endif()
-if (LIBCXX_NEEDS_SITE_CONFIG)
-  list(APPEND BENCHMARK_LIBCXX_COMPILE_FLAGS -include "${LIBCXX_BINARY_DIR}/__config_site")
-endif()
+list(APPEND BENCHMARK_LIBCXX_COMPILE_FLAGS -include "${LIBCXX_BINARY_DIR}/__config_site")
 split_list(BENCHMARK_LIBCXX_COMPILE_FLAGS)
 
 ExternalProject_Add(google-benchmark-libcxx

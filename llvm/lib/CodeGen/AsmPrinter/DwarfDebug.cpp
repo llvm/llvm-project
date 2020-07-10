@@ -167,6 +167,11 @@ static cl::opt<LinkageNameOption>
                                             "Abstract subprograms")),
                       cl::init(DefaultLinkageNames));
 
+static cl::opt<unsigned> LocationAnalysisSizeLimit(
+    "singlevarlocation-input-bb-limit",
+    cl::desc("Maximum block size to analyze for single-location variables"),
+    cl::init(30000), cl::Hidden);
+
 static const char *const DWARFGroupName = "dwarf";
 static const char *const DWARFGroupDescription = "DWARF Emission";
 static const char *const DbgTimerName = "writer";
@@ -1643,8 +1648,10 @@ static bool validThroughout(LexicalScopes &LScopes,
 // [1-3)    [(reg0, fragment 0, 32), (reg1, fragment 32, 32)]
 // [3-4)    [(reg1, fragment 32, 32), (123, fragment 64, 32)]
 // [4-)     [(@g, fragment 0, 96)]
-bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
-                                   const DbgValueHistoryMap::Entries &Entries) {
+bool DwarfDebug::buildLocationList(
+    SmallVectorImpl<DebugLocEntry> &DebugLoc,
+    const DbgValueHistoryMap::Entries &Entries,
+    DenseSet<const MachineBasicBlock *> &VeryLargeBlocks) {
   using OpenRange =
       std::pair<DbgValueHistoryMap::EntryIndex, DbgValueLoc>;
   SmallVector<OpenRange, 4> OpenRanges;
@@ -1670,7 +1677,8 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
 
     const MCSymbol *EndLabel;
     if (std::next(EI) == Entries.end()) {
-      EndLabel = Asm->getFunctionEnd();
+      const MachineBasicBlock &EndMBB = Asm->MF->back();
+      EndLabel = Asm->MBBSectionRanges[EndMBB.getSectionIDNum()].EndLabel;
       if (EI->isClobber())
         EndMI = EI->getInstr();
     }
@@ -1739,8 +1747,14 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
       DebugLoc.pop_back();
   }
 
-  return DebugLoc.size() == 1 && isSafeForSingleLocation &&
-         validThroughout(LScopes, StartDebugMI, EndMI);
+  // If there's a single entry, safe for a single location, and not part of
+  // an over-sized basic block, then ask validThroughout whether this
+  // location can be represented as a single variable location.
+  if (DebugLoc.size() != 1 || !isSafeForSingleLocation)
+    return false;
+  if (VeryLargeBlocks.count(StartDebugMI->getParent()))
+    return false;
+  return validThroughout(LScopes, StartDebugMI, EndMI);
 }
 
 DbgEntity *DwarfDebug::createConcreteEntity(DwarfCompileUnit &TheCU,
@@ -1771,6 +1785,13 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
                                    DenseSet<InlinedEntity> &Processed) {
   // Grab the variable info that was squirreled away in the MMI side-table.
   collectVariableInfoFromMFTable(TheCU, Processed);
+
+  // Identify blocks that are unreasonably sized, so that we can later
+  // skip lexical scope analysis over them.
+  DenseSet<const MachineBasicBlock *> VeryLargeBlocks;
+  for (const auto &MBB : *CurFn)
+    if (MBB.size() > LocationAnalysisSizeLimit)
+      VeryLargeBlocks.insert(&MBB);
 
   for (const auto &I : DbgValues) {
     InlinedEntity IV = I.first;
@@ -1808,7 +1829,8 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     if (HistSize == 1 || SingleValueWithClobber) {
       const auto *End =
           SingleValueWithClobber ? HistoryMapEntries[1].getInstr() : nullptr;
-      if (validThroughout(LScopes, MInsn, End)) {
+      if (VeryLargeBlocks.count(MInsn->getParent()) == 0 &&
+          validThroughout(LScopes, MInsn, End)) {
         RegVar->initializeDbgValue(MInsn);
         continue;
       }
@@ -1823,7 +1845,8 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
 
     // Build the location list for this variable.
     SmallVector<DebugLocEntry, 8> Entries;
-    bool isValidSingleLocation = buildLocationList(Entries, HistoryMapEntries);
+    bool isValidSingleLocation =
+        buildLocationList(Entries, HistoryMapEntries, VeryLargeBlocks);
 
     // Check whether buildLocationList managed to merge all locations to one
     // that is valid throughout the variable's scope. If so, produce single
@@ -2121,7 +2144,9 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   collectEntityInfo(TheCU, SP, Processed);
 
   // Add the range of this function to the list of ranges for the CU.
-  TheCU.addRange({Asm->getFunctionBegin(), Asm->getFunctionEnd()});
+  // With basic block sections, add ranges for all basic block sections.
+  for (const auto &R : Asm->MBBSectionRanges)
+    TheCU.addRange({R.second.BeginLabel, R.second.EndLabel});
 
   // Under -gmlt, skip building the subprogram if there are no inlined
   // subroutines inside it. But with -fdebug-info-for-profiling, the subprogram

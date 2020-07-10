@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -basicaa -polly-detect -analyze \
+; RUN: opt %loadPolly -basic-aa -polly-detect -analyze \
 ; RUN:  -polly-allow-modref-calls < %s | FileCheck %s -check-prefix=MODREF
-; RUN: opt %loadPolly -basicaa -polly-detect -analyze \
+; RUN: opt %loadPolly -basic-aa -polly-detect -analyze \
 ; RUN:  < %s | FileCheck %s
 ;
 ; CHECK-NOT: Valid Region for Scop: for.body => for.end

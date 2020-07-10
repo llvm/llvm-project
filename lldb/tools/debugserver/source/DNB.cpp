@@ -1392,10 +1392,14 @@ const char *DNBGetDeploymentInfo(nub_process_t pid,
                                  uint32_t& minor_version,
                                  uint32_t& patch_version) {
   MachProcessSP procSP;
-  if (GetProcessSP(pid, procSP))
-    return procSP->GetDeploymentInfo(lc, load_command_address,
-                                     major_version, minor_version,
-                                     patch_version);
+  if (GetProcessSP(pid, procSP)) {
+    // FIXME: This doesn't correct for older ios simulator and macCatalyst.
+    auto info = procSP->GetDeploymentInfo(lc, load_command_address);
+    major_version = info.major_version;
+    minor_version = info.minor_version;
+    patch_version = info.patch_version;
+    return procSP->GetPlatformString(info.platform);
+  }
   return nullptr;
 }
 

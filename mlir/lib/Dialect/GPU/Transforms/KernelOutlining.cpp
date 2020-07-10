@@ -156,7 +156,7 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
     map.map(operand.value(), entryBlock.getArgument(operand.index()));
 
   // Clone the region of the gpu.launch operation into the gpu.func operation.
-  // TODO(ravishankarm): If cloneInto can be modified such that if a mapping for
+  // TODO: If cloneInto can be modified such that if a mapping for
   // a block exists, that block will be used to clone operations into (at the
   // end of the block), instead of creating a new block, this would be much
   // cleaner.

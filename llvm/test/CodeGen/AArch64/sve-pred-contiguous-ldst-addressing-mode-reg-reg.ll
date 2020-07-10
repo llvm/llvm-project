@@ -498,6 +498,24 @@ define void @test_masked_ldst_sv8f16(half * %base, <vscale x 8 x i1> %mask, i64 
   ret void
 }
 
+define void @test_masked_ldst_sv8bf16(bfloat * %base, <vscale x 8 x i1> %mask, i64 %offset) nounwind #0 {
+; CHECK-LABEL: test_masked_ldst_sv8bf16:
+; CHECK-NEXT: ld1h { z[[DATA:[0-9]+]].h }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT: st1h { z[[DATA]].h }, p0, [x0, x1, lsl #1]
+; CHECK-NEXT: ret
+  %base_f16 = getelementptr bfloat, bfloat* %base, i64 %offset
+  %base_addr = bitcast bfloat* %base_f16 to <vscale x 8 x bfloat>*
+  %data = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16(<vscale x 8 x bfloat>* %base_addr,
+                                                               i32 1,
+                                                               <vscale x 8 x i1> %mask,
+                                                               <vscale x 8 x bfloat> undef)
+  call void @llvm.masked.store.nxv8bf16(<vscale x 8 x bfloat> %data,
+                                        <vscale x 8 x bfloat>* %base_addr,
+                                        i32 1,
+                                        <vscale x 8 x i1> %mask)
+  ret void
+}
+
 ; 8-lane zero/sign extended contiguous loads.
 
 define <vscale x 8 x i16> @masked_zload_sv8i8_to_sv8i16(i8* %base, <vscale x 8 x i1> %mask, i64 %offset) nounwind {
@@ -584,6 +602,7 @@ declare <vscale x 4 x float> @llvm.masked.load.nxv4f32(<vscale x 4 x float>*, i3
 declare <vscale x 8 x i8>  @llvm.masked.load.nxv8i8 (<vscale x 8 x i8>* , i32, <vscale x 8 x i1>, <vscale x 8 x i8> )
 declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16(<vscale x 8 x i16>*, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare <vscale x 8 x half> @llvm.masked.load.nxv8f16(<vscale x 8 x half>*, i32, <vscale x 8 x i1>, <vscale x 8 x half>)
+declare <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16(<vscale x 8 x bfloat>*, i32, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
 
 ; 16-element contiguous loads.
 declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8(<vscale x 16 x i8>*, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
@@ -608,6 +627,10 @@ declare void @llvm.masked.store.nxv4f32(<vscale x 4 x float>, <vscale x 4 x floa
 declare void @llvm.masked.store.nxv8i8 (<vscale x 8 x i8> , <vscale x 8 x i8>* , i32, <vscale x 8 x i1>)
 declare void @llvm.masked.store.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>*, i32, <vscale x 8 x i1>)
 declare void @llvm.masked.store.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>*, i32, <vscale x 8 x i1>)
+declare void @llvm.masked.store.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>*, i32, <vscale x 8 x i1>)
 
 ; 16-element contiguous stores.
 declare void @llvm.masked.store.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>*, i32, <vscale x 16 x i1>)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }

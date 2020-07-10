@@ -153,6 +153,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ceill
+  SRCS
+    ceill.cpp
+  HDRS
+    ceill.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   floor
   SRCS
     floor.cpp
@@ -177,6 +189,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  floorl
+  SRCS
+    floorl.cpp
+  HDRS
+    floorl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   round
   SRCS
     round.cpp
@@ -184,6 +208,8 @@ add_entrypoint_object(
     round.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_entrypoint_object(
@@ -194,6 +220,20 @@ add_entrypoint_object(
     roundf.h
   DEPENDS
     libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  roundl
+  SRCS
+    roundl.cpp
+  HDRS
+    roundl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
 )
 
 add_object_library(

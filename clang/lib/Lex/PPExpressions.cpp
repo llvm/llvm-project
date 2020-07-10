@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Lex/Preprocessor.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -26,9 +25,12 @@
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -251,8 +253,24 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
         // If this identifier isn't 'defined' or one of the special
         // preprocessor keywords and it wasn't macro expanded, it turns
         // into a simple 0
-        if (ValueLive)
+        if (ValueLive) {
           PP.Diag(PeekTok, diag::warn_pp_undef_identifier) << II;
+
+          const DiagnosticsEngine &DiagEngine = PP.getDiagnostics();
+          // If 'Wundef' is enabled, do not emit 'undef-prefix' diagnostics.
+          if (DiagEngine.isIgnored(diag::warn_pp_undef_identifier,
+                                   PeekTok.getLocation())) {
+            const std::vector<std::string> UndefPrefixes =
+                DiagEngine.getDiagnosticOptions().UndefPrefixes;
+            const StringRef IdentifierName = II->getName();
+            if (llvm::any_of(UndefPrefixes,
+                             [&IdentifierName](const std::string &Prefix) {
+                               return IdentifierName.startswith(Prefix);
+                             }))
+              PP.Diag(PeekTok, diag::warn_pp_undef_prefix)
+                  << AddFlagValue{llvm::join(UndefPrefixes, ",")} << II;
+          }
+        }
         Result.Val = 0;
         Result.Val.setIsUnsigned(false); // "0" is signed intmax_t 0.
         Result.setIdentifier(II);
@@ -277,7 +295,9 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     if (NumberInvalid)
       return true; // a diagnostic was already reported
 
-    NumericLiteralParser Literal(Spelling, PeekTok.getLocation(), PP);
+    NumericLiteralParser Literal(Spelling, PeekTok.getLocation(),
+                                 PP.getSourceManager(), PP.getLangOpts(),
+                                 PP.getTargetInfo(), PP.getDiagnostics());
     if (Literal.hadError)
       return true; // a diagnostic was already reported.
 

@@ -235,12 +235,12 @@ class RegisterCommandsTestCase(TestBase):
         error = lldb.SBError()
         reg_value_fstat_initial = value.GetValueAsUnsigned(error, 0)
 
-        self.assertTrue(error.Success(), "reading a value for fstat")
+        self.assertSuccess(error, "reading a value for fstat")
         value = currentFrame.FindValue("ftag", lldb.eValueTypeRegister)
         error = lldb.SBError()
         reg_value_ftag_initial = value.GetValueAsUnsigned(error, 0)
 
-        self.assertTrue(error.Success(), "reading a value for ftag")
+        self.assertSuccess(error, "reading a value for ftag")
         fstat_top_pointer_initial = (reg_value_fstat_initial & 0x3800) >> 11
 
         # Execute 'si' aka 'thread step-inst' instruction 5 times and with
@@ -292,7 +292,7 @@ class RegisterCommandsTestCase(TestBase):
                 0, # launch flags
                 True, # stop at entry
                 error)
-        self.assertTrue(error.Success(), "Launch succeeds. Error is :" + str(error))
+        self.assertSuccess(error, "Launch succeeds")
 
         self.assertTrue(
             process.GetState() == lldb.eStateStopped,

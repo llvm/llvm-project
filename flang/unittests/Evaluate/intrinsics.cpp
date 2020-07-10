@@ -257,6 +257,40 @@ void TestIntrinsics() {
   TestCall{defaults, table, "idint"}
       .Push(Const(Scalar<Real4>{}))
       .DoCall(Int4::GetType());
+
+  TestCall{defaults, table, "num_images"}.DoCall(Int4::GetType());
+  TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Int1>{}))
+      .DoCall(Int4::GetType());
+  TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(Int4::GetType());
+  TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Int8>{}))
+      .DoCall(Int4::GetType());
+  TestCall{defaults, table, "num_images"}
+      .Push(Named("team_number", Const(Scalar<Int4>{})))
+      .DoCall(Int4::GetType());
+  TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Int4>{}))
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(); // too many args
+  TestCall{defaults, table, "num_images"}
+      .Push(Named("bad", Const(Scalar<Int4>{})))
+      .DoCall(); // bad keyword
+  TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Char>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Log4>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Complex8>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Real4>{}))
+      .DoCall(); // bad type
+
   // TODO: test other intrinsics
 }
 } // namespace Fortran::evaluate

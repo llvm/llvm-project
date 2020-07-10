@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
 ; This test is checking that (a) this doesn't crash, and (b) we don't
 ; conclude the value of %tmp17 is available in bb1.bb15_crit_edge.
 ; rdar://9429882

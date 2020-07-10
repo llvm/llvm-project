@@ -75,6 +75,7 @@ class SymbolCache {
   struct LineTableEntry {
     uint64_t Addr;
     codeview::LineInfo Line;
+    uint32_t ColumnNumber;
     uint32_t FileNameIndex;
     bool IsTerminalEntry;
   };

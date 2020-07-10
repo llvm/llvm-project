@@ -797,11 +797,12 @@ EXAMPLES:
   llvm::outs() << examples << '\n';
 }
 
-llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
+llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
+                                         opt::InputArgList &input_args) {
   if (auto *replay_path = input_args.getLastArg(OPT_replay)) {
-    const bool skip_version_check = input_args.hasArg(OPT_skip_version_check);
+    const bool no_version_check = input_args.hasArg(OPT_no_version_check);
     if (const char *error =
-            SBReproducer::Replay(replay_path->getValue(), skip_version_check)) {
+            SBReproducer::Replay(replay_path->getValue(), no_version_check)) {
       WithColor::error() << "reproducer replay failed: " << error << '\n';
       return 1;
     }
@@ -809,15 +810,21 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
   }
 
   bool capture = input_args.hasArg(OPT_capture);
-  bool auto_generate = input_args.hasArg(OPT_auto_generate);
+  bool generate_on_exit = input_args.hasArg(OPT_generate_on_exit);
   auto *capture_path = input_args.getLastArg(OPT_capture_path);
 
-  if (auto_generate && !capture) {
+  if (generate_on_exit && !capture) {
     WithColor::warning()
-        << "-reproducer-auto-generate specified without -capture\n";
+        << "-reproducer-generate-on-exit specified without -capture\n";
   }
 
   if (capture || capture_path) {
+    // Register the reproducer signal handler.
+    if (!input_args.hasArg(OPT_no_generate_on_signal)) {
+      llvm::sys::AddSignalHandler(reproducer_handler,
+                                  const_cast<char *>(argv0.data()));
+    }
+
     if (capture_path) {
       if (!capture)
         WithColor::warning() << "-capture-path specified without -capture\n";
@@ -832,7 +839,7 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
         return 1;
       }
     }
-    if (auto_generate)
+    if (generate_on_exit)
       SBReproducer::SetAutoGenerate(true);
   }
 
@@ -867,12 +874,9 @@ int main(int argc, char const *argv[]) {
     return 1;
   }
 
-  if (auto exit_code = InitializeReproducer(input_args)) {
+  if (auto exit_code = InitializeReproducer(argv[0], input_args)) {
     return *exit_code;
   }
-
-  // Register the reproducer signal handler.
-  llvm::sys::AddSignalHandler(reproducer_handler, const_cast<char *>(argv[0]));
 
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {

@@ -45,7 +45,9 @@ static const unsigned MaxMemoizationEntries = 10000;
 
 enum class MatchType {
   Ancestors,
-  Descendants
+
+  Descendants,
+  Child,
 };
 
 // We use memoization to avoid running the same matcher on the same
@@ -452,8 +454,7 @@ public:
                                   BoundNodesTreeBuilder *Builder, int MaxDepth,
                                   TraversalKind Traversal, BindKind Bind) {
     // For AST-nodes that don't have an identity, we can't memoize.
-    // When doing a single-level match, we don't need to memoize
-    if (!Node.getMemoizationData() || !Builder->isComparable() || MaxDepth == 1)
+    if (!Node.getMemoizationData() || !Builder->isComparable())
       return matchesRecursively(Node, Matcher, Builder, MaxDepth, Traversal,
                                 Bind);
 
@@ -463,7 +464,8 @@ public:
     // Note that we key on the bindings *before* the match.
     Key.BoundNodes = *Builder;
     Key.Traversal = Ctx.getParentMapContext().getTraversalKind();
-    Key.Type = MatchType::Descendants;
+    // Memoize result even doing a single-level match, it might be expensive.
+    Key.Type = MaxDepth == 1 ? MatchType::Child : MatchType::Descendants;
     MemoizationMap::iterator I = ResultCache.find(Key);
     if (I != ResultCache.end()) {
       *Builder = I->second.Nodes;
@@ -700,8 +702,10 @@ private:
                                             BoundNodesTreeBuilder *Builder,
                                             AncestorMatchMode MatchMode) {
     // For AST-nodes that don't have an identity, we can't memoize.
-    // When doing a single-level match, we don't need to memoize
-    if (!Builder->isComparable() || MatchMode == AncestorMatchMode::AMM_ParentOnly)
+    // When doing a single-level match, we don't need to memoize because
+    // ParentMap (in ASTContext) already memoizes the result.
+    if (!Builder->isComparable() ||
+        MatchMode == AncestorMatchMode::AMM_ParentOnly)
       return matchesAncestorOfRecursively(Node, Ctx, Matcher, Builder,
                                           MatchMode);
 
@@ -751,7 +755,7 @@ private:
             return D->getKind() == Decl::TranslationUnit;
           })) {
         llvm::errs() << "Tried to match orphan node:\n";
-        Node.dump(llvm::errs(), ActiveASTContext->getSourceManager());
+        Node.dump(llvm::errs(), *ActiveASTContext);
         llvm_unreachable("Parent map should be complete!");
       }
 #endif

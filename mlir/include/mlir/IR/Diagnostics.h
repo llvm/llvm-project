@@ -558,7 +558,7 @@ private:
   llvm::SMLoc convertLocToSMLoc(FileLineColLoc loc);
 
   /// The maximum depth that a call stack will be printed.
-  /// TODO(riverriddle) This should be a tunable flag.
+  /// TODO: This should be a tunable flag.
   unsigned callStackLimit = 10;
 
   std::unique_ptr<detail::SourceMgrDiagnosticHandlerImpl> impl;

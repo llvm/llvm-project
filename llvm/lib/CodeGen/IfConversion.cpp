@@ -463,10 +463,7 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
   if (!PreRegAlloc) {
     // Tail merge tend to expose more if-conversion opportunities.
     BranchFolder BF(true, false, MBFI, *MBPI, PSI);
-    auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
-    BFChange = BF.OptimizeFunction(
-        MF, TII, ST.getRegisterInfo(),
-        MMIWP ? &MMIWP->getMMI() : nullptr);
+    BFChange = BF.OptimizeFunction(MF, TII, ST.getRegisterInfo());
   }
 
   LLVM_DEBUG(dbgs() << "\nIfcvt: function (" << ++FnNum << ") \'"
@@ -605,10 +602,7 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
 
   if (MadeChange && IfCvtBranchFold) {
     BranchFolder BF(false, false, MBFI, *MBPI, PSI);
-    auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
-    BF.OptimizeFunction(
-        MF, TII, MF.getSubtarget().getRegisterInfo(),
-        MMIWP ? &MMIWP->getMMI() : nullptr);
+    BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo());
   }
 
   MadeChange |= BFChange;

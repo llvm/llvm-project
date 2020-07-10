@@ -9,6 +9,8 @@
 // This file defines the common interface used by the various execution engine
 // subclasses.
 //
+// FIXME: This file needs to be updated to support scalable vectors
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
@@ -108,7 +110,7 @@ public:
     Type *ElTy = GV->getValueType();
     size_t GVSize = (size_t)TD.getTypeAllocSize(ElTy);
     void *RawMemory = ::operator new(
-        alignTo(sizeof(GVMemoryBlock), TD.getPreferredAlignment(GV)) + GVSize);
+        alignTo(sizeof(GVMemoryBlock), TD.getPreferredAlign(GV)) + GVSize);
     new(RawMemory) GVMemoryBlock(GV);
     return static_cast<char*>(RawMemory) + sizeof(GVMemoryBlock);
   }
@@ -624,10 +626,12 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         }
       }
       break;
-      case Type::FixedVectorTyID:
       case Type::ScalableVectorTyID:
+        report_fatal_error(
+            "Scalable vector support not yet implemented in ExecutionEngine");
+      case Type::FixedVectorTyID:
         // if the whole vector is 'undef' just reserve memory for the value.
-        auto *VTy = cast<VectorType>(C->getType());
+        auto *VTy = cast<FixedVectorType>(C->getType());
         Type *ElemTy = VTy->getElementType();
         unsigned int elemNum = VTy->getNumElements();
         Result.AggregateVal.resize(elemNum);
@@ -915,8 +919,10 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     else
       llvm_unreachable("Unknown constant pointer type!");
     break;
-  case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID: {
+  case Type::ScalableVectorTyID:
+    report_fatal_error(
+        "Scalable vector support not yet implemented in ExecutionEngine");
+  case Type::FixedVectorTyID: {
     unsigned elemNum;
     Type* ElemTy;
     const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(C);
@@ -927,9 +933,9 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         elemNum = CDV->getNumElements();
         ElemTy = CDV->getElementType();
     } else if (CV || CAZ) {
-        auto* VTy = cast<VectorType>(C->getType());
-        elemNum = VTy->getNumElements();
-        ElemTy = VTy->getElementType();
+      auto *VTy = cast<FixedVectorType>(C->getType());
+      elemNum = VTy->getNumElements();
+      ElemTy = VTy->getElementType();
     } else {
         llvm_unreachable("Unknown constant vector type!");
     }
@@ -1098,9 +1104,11 @@ void ExecutionEngine::LoadValueFromMemory(GenericValue &Result,
     Result.IntVal = APInt(80, y);
     break;
   }
-  case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID: {
-    auto *VT = cast<VectorType>(Ty);
+  case Type::ScalableVectorTyID:
+    report_fatal_error(
+        "Scalable vector support not yet implemented in ExecutionEngine");
+  case Type::FixedVectorTyID: {
+    auto *VT = cast<FixedVectorType>(Ty);
     Type *ElemT = VT->getElementType();
     const unsigned numElems = VT->getNumElements();
     if (ElemT->isFloatTy()) {

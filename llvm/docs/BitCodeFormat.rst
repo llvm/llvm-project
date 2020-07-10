@@ -1058,7 +1058,16 @@ The integer codes are mapped to well-known attributes as follows.
 * code 56: ``nocf_check``
 * code 57: ``optforfuzzing``
 * code 58: ``shadowcallstack``
+* code 59: ``speculative_load_hardening``
+* code 60: ``immarg``
+* code 61: ``willreturn``
+* code 62: ``nofree``
+* code 63: ``nosync``
 * code 64: ``sanitize_memtag``
+* code 65: ``preallocated``
+* code 66: ``no_merge``
+* code 67: ``null_pointer_is_valid``
+* code 68: ``noundef``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two

@@ -2705,12 +2705,16 @@ template <class ELFT>
 static std::vector<GdbIndexSection::NameAttrEntry>
 readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
                      const std::vector<GdbIndexSection::CuEntry> &cus) {
-  const DWARFSection &pubNames = obj.getGnuPubnamesSection();
-  const DWARFSection &pubTypes = obj.getGnuPubtypesSection();
+  const LLDDWARFSection &pubNames = obj.getGnuPubnamesSection();
+  const LLDDWARFSection &pubTypes = obj.getGnuPubtypesSection();
 
   std::vector<GdbIndexSection::NameAttrEntry> ret;
-  for (const DWARFSection *pub : {&pubNames, &pubTypes}) {
-    DWARFDebugPubTable table(obj, *pub, config->isLE, true);
+  for (const LLDDWARFSection *pub : {&pubNames, &pubTypes}) {
+    DWARFDataExtractor data(obj, *pub, config->isLE, config->wordsize);
+    DWARFDebugPubTable table;
+    table.extract(data, /*GnuStyle=*/true, [&](Error e) {
+      warn(toString(pub->sec) + ": " + toString(std::move(e)));
+    });
     for (const DWARFDebugPubTable::Set &set : table.getData()) {
       // The value written into the constant pool is kind << 24 | cuIndex. As we
       // don't know how many compilation units precede this object to compute

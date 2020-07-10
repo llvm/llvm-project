@@ -1,6 +1,46 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spv.Bitcast
+//===----------------------------------------------------------------------===//
+
+func @bitcast_float_to_integer_scalar(%arg0 : f32) {
+	// CHECK: {{.*}} = llvm.bitcast {{.*}} : !llvm.float to !llvm.i32
+	%0 = spv.Bitcast %arg0: f32 to i32
+	return
+}
+
+func @bitcast_float_to_integer_vector(%arg0 : vector<3xf32>) {
+	// CHECK: {{.*}} = llvm.bitcast {{.*}} : !llvm<"<3 x float>"> to !llvm<"<3 x i32>">
+	%0 = spv.Bitcast %arg0: vector<3xf32> to vector<3xi32>
+	return
+}
+
+func @bitcast_vector_to_scalar(%arg0 : vector<2xf32>) {
+	// CHECK: {{.*}} = llvm.bitcast {{.*}} : !llvm<"<2 x float>"> to !llvm.i64
+	%0 = spv.Bitcast %arg0: vector<2xf32> to i64
+	return
+}
+
+func @bitcast_scalar_to_vector(%arg0 : f64) {
+	// CHECK: {{.*}} = llvm.bitcast {{.*}} : !llvm.double to !llvm<"<2 x i32>">
+	%0 = spv.Bitcast %arg0: f64 to vector<2xi32>
+	return
+}
+
+func @bitcast_vector_to_vector(%arg0 : vector<4xf32>) {
+	// CHECK: {{.*}} = llvm.bitcast {{.*}} : !llvm<"<4 x float>"> to !llvm<"<2 x i64>">
+	%0 = spv.Bitcast %arg0: vector<4xf32> to vector<2xi64>
+	return
+}
+
+func @bitcast_pointer(%arg0: !spv.ptr<f32, Function>) {
+	// CHECK: %{{.*}} = llvm.bitcast %{{.*}} : !llvm<"float*"> to !llvm<"i32*">
+	%0 = spv.Bitcast %arg0 : !spv.ptr<f32, Function> to !spv.ptr<i32, Function>
+	return
+}
+
+//===----------------------------------------------------------------------===//
 // spv.ConvertFToS
 //===----------------------------------------------------------------------===//
 

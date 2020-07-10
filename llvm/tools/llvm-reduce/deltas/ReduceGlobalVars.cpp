@@ -20,20 +20,17 @@ using namespace llvm;
 /// Removes all the Initialized GVs that aren't inside the desired Chunks.
 static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
                                  Module *Program) {
+  Oracle O(ChunksToKeep);
+
   // Get GVs inside desired chunks
   std::set<GlobalVariable *> GVsToKeep;
-  int I = 0, GVCount = 0;
   for (auto &GV : Program->globals())
-    if (GV.hasInitializer() && I < (int)ChunksToKeep.size()) {
-      if (ChunksToKeep[I].contains(++GVCount))
-        GVsToKeep.insert(&GV);
-      if (GVCount == ChunksToKeep[I].end)
-        ++I;
-    }
+    if (GV.hasInitializer() && O.shouldKeep())
+      GVsToKeep.insert(&GV);
 
   // Delete out-of-chunk GVs and their uses
   std::vector<GlobalVariable *> ToRemove;
-  std::vector<Instruction *> InstToRemove;
+  std::vector<WeakVH> InstToRemove;
   for (auto &GV : Program->globals())
     if (GV.hasInitializer() && !GVsToKeep.count(&GV)) {
       for (auto U : GV.users())
@@ -44,8 +41,11 @@ static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
       ToRemove.push_back(&GV);
     }
 
-  // Delete Instruction uses of unwanted GVs
-  for (auto *Inst : InstToRemove) {
+  // Delete (unique) Instruction uses of unwanted GVs
+  for (Value *V : InstToRemove) {
+    if (!V)
+      continue;
+    auto *Inst = cast<Instruction>(V);
     Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
     Inst->eraseFromParent();
   }

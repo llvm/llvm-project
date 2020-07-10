@@ -345,7 +345,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
     return apVal ? FloatAttr::get(floatType, *apVal) : Attribute();
   }
 
-  if (!type.isa<IntegerType>() && !type.isa<IndexType>())
+  if (!type.isa<IntegerType, IndexType>())
     return emitError(loc, "integer literal not valid for specified type"),
            nullptr;
 
@@ -758,13 +758,13 @@ Attribute Parser::parseDenseElementsAttr(Type attrType) {
   if (parseToken(Token::less, "expected '<' after 'dense'"))
     return nullptr;
 
-  // Parse the literal data.
+  // Parse the literal data if necessary.
   TensorLiteralParser literalParser(*this);
-  if (literalParser.parse(/*allowHex=*/true))
-    return nullptr;
-
-  if (parseToken(Token::greater, "expected '>'"))
-    return nullptr;
+  if (!consumeIf(Token::greater)) {
+    if (literalParser.parse(/*allowHex=*/true) ||
+        parseToken(Token::greater, "expected '>'"))
+      return nullptr;
+  }
 
   auto typeLoc = getToken().getLoc();
   auto type = parseElementsLiteralType(attrType);
@@ -784,7 +784,7 @@ Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
 
   auto name = getToken().getStringValue();
   auto *dialect = builder.getContext()->getRegisteredDialect(name);
-  // TODO(shpeisman): Allow for having an unknown dialect on an opaque
+  // TODO: Allow for having an unknown dialect on an opaque
   // attribute. Otherwise, it can't be roundtripped without having the dialect
   // registered.
   if (!dialect)
@@ -823,7 +823,7 @@ ShapedType Parser::parseElementsLiteralType(Type type) {
       return nullptr;
   }
 
-  if (!type.isa<RankedTensorType>() && !type.isa<VectorType>()) {
+  if (!type.isa<RankedTensorType, VectorType>()) {
     emitError("elements literal must be a ranked tensor or vector type");
     return nullptr;
   }
@@ -840,6 +840,25 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   consumeToken(Token::kw_sparse);
   if (parseToken(Token::less, "Expected '<' after 'sparse'"))
     return nullptr;
+
+  // Check for the case where all elements are sparse. The indices are
+  // represented by a 2-dimensional shape where the second dimension is the rank
+  // of the type.
+  Type indiceEltType = builder.getIntegerType(64);
+  if (consumeIf(Token::greater)) {
+    ShapedType type = parseElementsLiteralType(attrType);
+    if (!type)
+      return nullptr;
+
+    // Construct the sparse elements attr using zero element indice/value
+    // attributes.
+    ShapedType indicesType =
+        RankedTensorType::get({0, type.getRank()}, indiceEltType);
+    ShapedType valuesType = RankedTensorType::get({0}, type.getElementType());
+    return SparseElementsAttr::get(
+        type, DenseElementsAttr::get(indicesType, ArrayRef<Attribute>()),
+        DenseElementsAttr::get(valuesType, ArrayRef<Attribute>()));
+  }
 
   /// Parse the indices. We don't allow hex values here as we may need to use
   /// the inferred shape.
@@ -869,7 +888,6 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   // 2-dimensional shape where the second dimension is the rank of the type.
   // Given that the parsed indices is a splat, we know that we only have one
   // indice and thus one for the first dimension.
-  auto indiceEltType = builder.getIntegerType(64);
   ShapedType indicesType;
   if (indiceParser.getShape().empty()) {
     indicesType = RankedTensorType::get({1, type.getRank()}, indiceEltType);

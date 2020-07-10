@@ -33,8 +33,8 @@ class Value;
 /// multi-result map. The trip count expression is simplified before returning.
 /// This method only utilizes map composition to construct lower and upper
 /// bounds before computing the trip count expressions
-// TODO(mlir-team): this should be moved into 'Transforms/' and be replaced by a
-// pure analysis method relying on FlatAffineConstraints
+// TODO: this should be moved into 'Transforms/' and be replaced by a pure
+// analysis method relying on FlatAffineConstraints
 void buildTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
                                   SmallVectorImpl<Value> *operands);
 
@@ -65,7 +65,7 @@ using VectorizableLoopFun = std::function<bool(AffineForOp)>;
 /// Checks whether the loop is structurally vectorizable; i.e.:
 ///   1. no conditionals are nested under the loop;
 ///   2. all nested load/stores are to scalar MemRefs.
-/// TODO(ntv): relax the no-conditionals restriction
+/// TODO: relax the no-conditionals restriction
 bool isVectorizableLoopBody(AffineForOp loop,
                             NestedPattern &vectorTransferMatcher);
 
@@ -80,8 +80,8 @@ bool isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
 /// Checks where SSA dominance would be violated if a for op's body
 /// operations are shifted by the specified shifts. This method checks if a
 /// 'def' and all its uses have the same shift factor.
-// TODO(mlir-team): extend this to check for memory-based dependence
-// violation when we have the support.
+// TODO: extend this to check for memory-based dependence violation when we have
+// the support.
 bool isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
 } // end namespace mlir
 

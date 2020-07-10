@@ -32,10 +32,20 @@ inline RangeSelector charRange(CharSourceRange R) {
 }
 
 /// Selects from the start of \p Begin and to the end of \p End.
-RangeSelector range(RangeSelector Begin, RangeSelector End);
+RangeSelector enclose(RangeSelector Begin, RangeSelector End);
 
 /// Convenience version of \c range where end-points are bound nodes.
-RangeSelector range(std::string BeginID, std::string EndID);
+RangeSelector encloseNodes(std::string BeginID, std::string EndID);
+
+/// DEPRECATED. Use `enclose`.
+inline RangeSelector range(RangeSelector Begin, RangeSelector End) {
+  return enclose(std::move(Begin), std::move(End));
+}
+
+/// DEPRECATED. Use `encloseNodes`.
+inline RangeSelector range(std::string BeginID, std::string EndID) {
+  return encloseNodes(std::move(BeginID), std::move(EndID));
+}
 
 /// Selects the (empty) range [B,B) when \p Selector selects the range [B,E).
 RangeSelector before(RangeSelector Selector);

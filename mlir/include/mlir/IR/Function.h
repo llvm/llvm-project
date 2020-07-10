@@ -51,10 +51,8 @@ public:
                        ArrayRef<MutableDictionaryAttr> argAttrs);
 
   static void build(OpBuilder &builder, OperationState &result, StringRef name,
-                    FunctionType type, ArrayRef<NamedAttribute> attrs);
-  static void build(OpBuilder &builder, OperationState &result, StringRef name,
-                    FunctionType type, ArrayRef<NamedAttribute> attrs,
-                    ArrayRef<MutableDictionaryAttr> argAttrs);
+                    FunctionType type, ArrayRef<NamedAttribute> attrs = {},
+                    ArrayRef<MutableDictionaryAttr> argAttrs = {});
 
   /// Operation hooks.
   static ParseResult parse(OpAsmParser &parser, OperationState &result);

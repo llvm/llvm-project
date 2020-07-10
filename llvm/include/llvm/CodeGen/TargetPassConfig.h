@@ -167,8 +167,8 @@ public:
   /// If hasLimitedCodeGenPipeline is true, this method
   /// returns a string with the name of the options, separated
   /// by \p Separator that caused this pipeline to be limited.
-  std::string
-  getLimitedCodeGenPipelineReason(const char *Separator = "/") const;
+  static std::string
+  getLimitedCodeGenPipelineReason(const char *Separator = "/");
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
 

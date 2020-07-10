@@ -18,7 +18,7 @@
 
 // Precondition: a != 0
 
-COMPILER_RT_ABI si_int __ctzti2(ti_int a) {
+COMPILER_RT_ABI int __ctzti2(ti_int a) {
   twords x;
   x.all = a;
   const di_int f = -(x.s.low == 0);

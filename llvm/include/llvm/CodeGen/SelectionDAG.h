@@ -931,7 +931,8 @@ public:
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm) {
     assert(MulImm.getMinSignedBits() <= VT.getSizeInBits() &&
            "Immediate does not fit VT");
-    return getNode(ISD::VSCALE, DL, VT, getConstant(MulImm, DL, VT));
+    return getNode(ISD::VSCALE, DL, VT,
+                   getConstant(MulImm.sextOrTrunc(VT.getSizeInBits()), DL, VT));
   }
 
   /// Return a GLOBAL_OFFSET_TABLE node. This does not have a useful SDLoc.

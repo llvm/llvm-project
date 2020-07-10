@@ -905,7 +905,9 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
     UpperCmdArgs.push_back(Args.MakeArgString(TargetInfo.str()));
   }
 
-  C.addCommand(std::make_unique<Command>(JA, *this, UpperExec, UpperCmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(),
+      UpperExec, UpperCmdArgs, Inputs));
 
   // For -fsyntax-only or -E that is it
   if (Args.hasArg(options::OPT_fsyntax_only) ||
@@ -1057,11 +1059,12 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
     LowerCmdArgs.push_back(Args.MakeArgString(OutFile));
   }
 
-  C.addCommand(std::make_unique<Command>(JA, *this, LowerExec, LowerCmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(),
+      LowerExec, LowerCmdArgs, Inputs));
 }
 
-Flang::Flang(const ToolChain &TC)
-    : Tool("flang", "flang frontend", TC, RF_Full) {}
+Flang::Flang(const ToolChain &TC) : Tool("flang", "flang frontend", TC) {}
 
 Flang::~Flang() {}
 

@@ -10,7 +10,11 @@ declare float @llvm.sqrt.f32(float)
 declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)
 declare <8 x float> @llvm.sqrt.v8f32(<8 x float>)
 declare <16 x float> @llvm.sqrt.v16f32(<16 x float>)
+declare double @llvm.sqrt.f64(double)
 
+declare float @llvm.fabs.f32(float)
+declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
+declare double @llvm.fabs.f64(double)
 
 define double @finite_f64_no_estimate(double %d) #0 {
 ; SSE-LABEL: finite_f64_no_estimate:
@@ -614,6 +618,182 @@ define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
   ret <16 x float> %div
 }
 
+; x / (fabs(y) * sqrt(z)) --> x * rsqrt(y*y*z)
+
+define float @div_sqrt_fabs_f32(float %x, float %y, float %z) {
+; SSE-LABEL: div_sqrt_fabs_f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    mulss %xmm1, %xmm1
+; SSE-NEXT:    mulss %xmm2, %xmm1
+; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    rsqrtss %xmm1, %xmm2
+; SSE-NEXT:    mulss %xmm2, %xmm1
+; SSE-NEXT:    mulss %xmm2, %xmm1
+; SSE-NEXT:    addss {{.*}}(%rip), %xmm1
+; SSE-NEXT:    mulss {{.*}}(%rip), %xmm2
+; SSE-NEXT:    mulss %xmm0, %xmm2
+; SSE-NEXT:    mulss %xmm1, %xmm2
+; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: div_sqrt_fabs_f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmulss %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
+; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vmulss %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: div_sqrt_fabs_f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmulss %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
+; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
+; AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX512-NEXT:    vmulss %xmm0, %xmm2, %xmm0
+; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %s = call fast float @llvm.sqrt.f32(float %z)
+  %a = call fast float @llvm.fabs.f32(float %y)
+  %m = fmul fast float %s, %a
+  %d = fdiv fast float %x, %m
+  ret float %d
+}
+
+; x / (fabs(y) * sqrt(z)) --> x * rsqrt(y*y*z)
+
+define <4 x float> @div_sqrt_fabs_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
+; SSE-LABEL: div_sqrt_fabs_v4f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    mulps %xmm1, %xmm1
+; SSE-NEXT:    mulps %xmm2, %xmm1
+; SSE-NEXT:    rsqrtps %xmm1, %xmm2
+; SSE-NEXT:    mulps %xmm2, %xmm1
+; SSE-NEXT:    mulps %xmm2, %xmm1
+; SSE-NEXT:    addps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    mulps {{.*}}(%rip), %xmm2
+; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    mulps %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: div_sqrt_fabs_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmulps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vrsqrtps %xmm1, %xmm2
+; AVX1-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulps {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: div_sqrt_fabs_v4f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmulps %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vrsqrtps %xmm1, %xmm2
+; AVX512-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
+  %a = call <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
+  %m = fmul reassoc <4 x float> %a, %s
+  %d = fdiv reassoc arcp <4 x float> %x, %m
+  ret <4 x float> %d
+}
+
+; This has 'arcp' but does not have 'reassoc' FMF.
+; We allow converting the sqrt to an estimate, but
+; do not pull the divisor into the estimate.
+; x / (fabs(y) * sqrt(z)) --> x * rsqrt(z) / fabs(y)
+
+define <4 x float> @div_sqrt_fabs_v4f32_fmf(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
+; SSE-LABEL: div_sqrt_fabs_v4f32_fmf:
+; SSE:       # %bb.0:
+; SSE-NEXT:    rsqrtps %xmm2, %xmm3
+; SSE-NEXT:    mulps %xmm3, %xmm2
+; SSE-NEXT:    mulps %xmm3, %xmm2
+; SSE-NEXT:    addps {{.*}}(%rip), %xmm2
+; SSE-NEXT:    mulps {{.*}}(%rip), %xmm3
+; SSE-NEXT:    mulps %xmm2, %xmm3
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    divps %xmm1, %xmm3
+; SSE-NEXT:    mulps %xmm3, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: div_sqrt_fabs_v4f32_fmf:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vrsqrtps %xmm2, %xmm3
+; AVX1-NEXT:    vmulps %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vmulps %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vmulps {{.*}}(%rip), %xmm3, %xmm3
+; AVX1-NEXT:    vmulps %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vdivps %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: div_sqrt_fabs_v4f32_fmf:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vrsqrtps %xmm2, %xmm3
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vmulps %xmm4, %xmm3, %xmm4
+; AVX512-NEXT:    vmulps %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vmulps %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vaddps %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
+; AVX512-NEXT:    vmulps %xmm2, %xmm4, %xmm2
+; AVX512-NEXT:    vandps %xmm3, %xmm1, %xmm1
+; AVX512-NEXT:    vdivps %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
+  %a = call <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
+  %m = fmul <4 x float> %a, %s
+  %d = fdiv arcp <4 x float> %x, %m
+  ret <4 x float> %d
+}
+
+; No estimates for f64, so do not convert fabs into an fmul.
+
+define double @div_sqrt_fabs_f64(double %x, double %y, double %z) {
+; SSE-LABEL: div_sqrt_fabs_f64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtsd %xmm2, %xmm2
+; SSE-NEXT:    andpd {{.*}}(%rip), %xmm1
+; SSE-NEXT:    mulsd %xmm2, %xmm1
+; SSE-NEXT:    divsd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: div_sqrt_fabs_f64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtsd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vandpd {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vmulsd %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %s = call fast double @llvm.sqrt.f64(double %z)
+  %a = call fast double @llvm.fabs.f64(double %y)
+  %m = fmul fast double %s, %a
+  %d = fdiv fast double %x, %m
+  ret double %d
+}
 
 attributes #0 = { "unsafe-fp-math"="true" "reciprocal-estimates"="!sqrtf,!vec-sqrtf,!divf,!vec-divf" }
 attributes #1 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" }

@@ -124,8 +124,8 @@ std::string printType(QualType QT, const PrintingPolicy &Policy) {
   // TypePrinter doesn't resolve decltypes, so resolve them here.
   // FIXME: This doesn't handle composite types that contain a decltype in them.
   // We should rather have a printing policy for that.
-  while (const auto *DT = QT->getAs<DecltypeType>())
-    QT = DT->getUnderlyingType();
+  while (!QT.isNull() && QT->isDecltypeType())
+    QT = QT->getAs<DecltypeType>()->getUnderlyingType();
   return QT.getAsString(Policy);
 }
 
@@ -289,31 +289,27 @@ const Expr *getDefaultArg(const ParmVarDecl *PVD) {
                                             : PVD->getDefaultArg();
 }
 
+HoverInfo::Param toHoverInfoParam(const ParmVarDecl *PVD,
+                                  const PrintingPolicy &Policy) {
+  HoverInfo::Param Out;
+  Out.Type = printType(PVD->getType(), Policy);
+  if (!PVD->getName().empty())
+    Out.Name = PVD->getNameAsString();
+  if (const Expr *DefArg = getDefaultArg(PVD)) {
+    Out.Default.emplace();
+    llvm::raw_string_ostream OS(*Out.Default);
+    DefArg->printPretty(OS, nullptr, Policy);
+  }
+  return Out;
+}
+
 // Populates Type, ReturnType, and Parameters for function-like decls.
 void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
                                const FunctionDecl *FD,
                                const PrintingPolicy &Policy) {
   HI.Parameters.emplace();
-  for (const ParmVarDecl *PVD : FD->parameters()) {
-    HI.Parameters->emplace_back();
-    auto &P = HI.Parameters->back();
-    if (!PVD->getType().isNull()) {
-      P.Type = printType(PVD->getType(), Policy);
-    } else {
-      std::string Param;
-      llvm::raw_string_ostream OS(Param);
-      PVD->dump(OS);
-      OS.flush();
-      elog("Got param with null type: {0}", Param);
-    }
-    if (!PVD->getName().empty())
-      P.Name = PVD->getNameAsString();
-    if (const Expr *DefArg = getDefaultArg(PVD)) {
-      P.Default.emplace();
-      llvm::raw_string_ostream Out(*P.Default);
-      DefArg->printPretty(Out, nullptr, Policy);
-    }
-  }
+  for (const ParmVarDecl *PVD : FD->parameters())
+    HI.Parameters->emplace_back(toHoverInfoParam(PVD, Policy));
 
   // We don't want any type info, if name already contains it. This is true for
   // constructors/destructors and conversion operators.
@@ -333,13 +329,23 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
 
 llvm::Optional<std::string> printExprValue(const Expr *E,
                                            const ASTContext &Ctx) {
-  Expr::EvalResult Constant;
+  // InitListExpr has two forms, syntactic and semantic. They are the same thing
+  // (refer to a same AST node) in most cases.
+  // When they are different, RAV returns the syntactic form, and we should feed
+  // the semantic form to EvaluateAsRValue.
+  if (const auto *ILE = llvm::dyn_cast<InitListExpr>(E)) {
+    if (!ILE->isSemanticForm())
+      E = ILE->getSemanticForm();
+  }
+
   // Evaluating [[foo]]() as "&foo" isn't useful, and prevents us walking up
   // to the enclosing call.
   QualType T = E->getType();
   if (T.isNull() || T->isFunctionType() || T->isFunctionPointerType() ||
       T->isFunctionReferenceType())
     return llvm::None;
+
+  Expr::EvalResult Constant;
   // Attempt to evaluate. If expr is dependent, evaluation crashes!
   if (E->isValueDependent() || !E->EvaluateAsRValue(Constant, Ctx) ||
       // Disable printing for record-types, as they are usually confusing and
@@ -663,8 +669,10 @@ bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) {
 }
 
 void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
-  const auto &Ctx = ND.getASTContext();
+  if (ND.isInvalidDecl())
+    return;
 
+  const auto &Ctx = ND.getASTContext();
   if (auto *RD = llvm::dyn_cast<RecordDecl>(&ND)) {
     if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RD->getTypeForDecl()))
       HI.Size = Size->getQuantity();
@@ -675,15 +683,99 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
     const auto *Record = FD->getParent();
     if (Record)
       Record = Record->getDefinition();
-    if (Record && !Record->isDependentType()) {
-      uint64_t OffsetBits = Ctx.getFieldOffset(FD);
-      if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType())) {
+    if (Record && !Record->isInvalidDecl() && !Record->isDependentType()) {
+      HI.Offset = Ctx.getFieldOffset(FD) / 8;
+      if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType()))
         HI.Size = Size->getQuantity();
-        HI.Offset = OffsetBits / 8;
-      }
     }
     return;
   }
+}
+
+// If N is passed as argument to a function, fill HI.CalleeArgInfo with
+// information about that argument.
+void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
+                           const PrintingPolicy &Policy) {
+  const auto &OuterNode = N->outerImplicit();
+  if (!OuterNode.Parent)
+    return;
+  const auto *CE = OuterNode.Parent->ASTNode.get<CallExpr>();
+  if (!CE)
+    return;
+  const FunctionDecl *FD = CE->getDirectCallee();
+  // For non-function-call-like operatators (e.g. operator+, operator<<) it's
+  // not immediattely obvious what the "passed as" would refer to and, given
+  // fixed function signature, the value would be very low anyway, so we choose
+  // to not support that.
+  // Both variadic functions and operator() (especially relevant for lambdas)
+  // should be supported in the future.
+  if (!FD || FD->isOverloadedOperator() || FD->isVariadic())
+    return;
+
+  // Find argument index for N.
+  for (unsigned I = 0; I < CE->getNumArgs() && I < FD->getNumParams(); ++I) {
+    if (CE->getArg(I) != OuterNode.ASTNode.get<Expr>())
+      continue;
+
+    // Extract matching argument from function declaration.
+    if (const ParmVarDecl *PVD = FD->getParamDecl(I))
+      HI.CalleeArgInfo.emplace(toHoverInfoParam(PVD, Policy));
+    break;
+  }
+  if (!HI.CalleeArgInfo)
+    return;
+
+  // If we found a matching argument, also figure out if it's a
+  // [const-]reference. For this we need to walk up the AST from the arg itself
+  // to CallExpr and check all implicit casts, constructor calls, etc.
+  HoverInfo::PassType PassType;
+  if (const auto *E = N->ASTNode.get<Expr>()) {
+    if (E->getType().isConstQualified())
+      PassType.PassBy = HoverInfo::PassType::ConstRef;
+  }
+
+  for (auto *CastNode = N->Parent;
+       CastNode != OuterNode.Parent && !PassType.Converted;
+       CastNode = CastNode->Parent) {
+    if (const auto *ImplicitCast = CastNode->ASTNode.get<ImplicitCastExpr>()) {
+      switch (ImplicitCast->getCastKind()) {
+      case CK_NoOp:
+      case CK_DerivedToBase:
+      case CK_UncheckedDerivedToBase:
+        // If it was a reference before, it's still a reference.
+        if (PassType.PassBy != HoverInfo::PassType::Value)
+          PassType.PassBy = ImplicitCast->getType().isConstQualified()
+                                ? HoverInfo::PassType::ConstRef
+                                : HoverInfo::PassType::Ref;
+        break;
+      case CK_LValueToRValue:
+      case CK_ArrayToPointerDecay:
+      case CK_FunctionToPointerDecay:
+      case CK_NullToPointer:
+      case CK_NullToMemberPointer:
+        // No longer a reference, but we do not show this as type conversion.
+        PassType.PassBy = HoverInfo::PassType::Value;
+        break;
+      default:
+        PassType.PassBy = HoverInfo::PassType::Value;
+        PassType.Converted = true;
+        break;
+      }
+    } else if (const auto *CtorCall =
+                   CastNode->ASTNode.get<CXXConstructExpr>()) {
+      // We want to be smart about copy constructors. They should not show up as
+      // type conversion, but instead as passing by value.
+      if (CtorCall->getConstructor()->isCopyConstructor())
+        PassType.PassBy = HoverInfo::PassType::Value;
+      else
+        PassType.Converted = true;
+    } else { // Unknown implicit node, assume type conversion.
+      PassType.PassBy = HoverInfo::PassType::Value;
+      PassType.Converted = true;
+    }
+  }
+
+  HI.CallPassType.emplace(PassType);
 }
 
 } // namespace
@@ -748,6 +840,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
         // Look for a close enclosing expression to show the value of.
         if (!HI->Value)
           HI->Value = printExprValue(N, AST.getASTContext());
+        maybeAddCalleeArgInfo(N, *HI, AST.getASTContext().getPrintingPolicy());
       } else if (const Expr *E = N->ASTNode.get<Expr>()) {
         HI = getHoverContents(E, AST);
       }
@@ -828,6 +921,24 @@ markup::Document HoverInfo::present() const {
     Output.addParagraph().appendText(
         llvm::formatv("Size: {0} byte{1}", *Size, *Size == 1 ? "" : "s").str());
 
+  if (CalleeArgInfo) {
+    assert(CallPassType);
+    std::string Buffer;
+    llvm::raw_string_ostream OS(Buffer);
+    OS << "Passed ";
+    if (CallPassType->PassBy != HoverInfo::PassType::Value) {
+      OS << "by ";
+      if (CallPassType->PassBy == HoverInfo::PassType::ConstRef)
+        OS << "const ";
+      OS << "reference ";
+    }
+    if (CalleeArgInfo->Name)
+      OS << "as " << CalleeArgInfo->Name;
+    if (CallPassType->Converted && CalleeArgInfo->Type)
+      OS << " (converted to " << CalleeArgInfo->Type << ")";
+    Output.addParagraph().appendText(OS.str());
+  }
+
   if (!Documentation.empty())
     parseDocumentation(Documentation, Output);
 
@@ -852,6 +963,7 @@ markup::Document HoverInfo::present() const {
     // non-c++ projects or projects that are not making use of namespaces.
     Output.addCodeBlock(ScopeComment + DefinitionWithAccess);
   }
+
   return Output;
 }
 
