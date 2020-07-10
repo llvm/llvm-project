@@ -1,0 +1,208 @@
+; To keep this test maintainable, avoid depending on -dump-input-context's
+; default value, which is checked in dump-input-context.txt instead.
+
+;--------------------------------------------------
+; Create the input file and the check file.
+;--------------------------------------------------
+
+; line 1
+; RUN: echo start >  %t.in
+; RUN: echo foo0  >> %t.in
+; RUN: echo foo1  >> %t.in
+; RUN: echo foo2  >> %t.in
+; RUN: echo foo3  >> %t.in
+; RUN: echo foo4  >> %t.in
+; RUN: echo foo5  >> %t.in
+; RUN: echo foo6  >> %t.in
+; RUN: echo foo7  >> %t.in
+; RUN: echo foo8  >> %t.in
+; RUN: echo foo9  >> %t.in
+; line 12
+; RUN: echo hello >> %t.in
+; RUN: echo foo0  >> %t.in
+; RUN: echo foo1  >> %t.in
+; RUN: echo foo2  >> %t.in
+; RUN: echo foo3  >> %t.in
+; RUN: echo foo4  >> %t.in
+; RUN: echo foo5  >> %t.in
+; RUN: echo foo6  >> %t.in
+; RUN: echo foo7  >> %t.in
+; RUN: echo foo8  >> %t.in
+; RUN: echo foo9  >> %t.in
+; line 23
+; RUN: echo word  >> %t.in
+; RUN: echo foo0  >> %t.in
+; RUN: echo foo1  >> %t.in
+; RUN: echo foo2  >> %t.in
+; RUN: echo foo3  >> %t.in
+; RUN: echo foo4  >> %t.in
+; RUN: echo foo5  >> %t.in
+; RUN: echo foo6  >> %t.in
+; RUN: echo foo7  >> %t.in
+; RUN: echo foo8  >> %t.in
+; RUN: echo foo9  >> %t.in
+; line 34
+; RUN: echo end   >> %t.in
+
+; RUN: echo 'CHECK: start' >  %t.chk
+; RUN: echo 'CHECK: hello' >> %t.chk
+; RUN: echo 'CHECK: world' >> %t.chk
+; RUN: echo 'CHECK: end'   >> %t.chk
+
+;--------------------------------------------------
+; Directives for checking the dump.
+;--------------------------------------------------
+
+;      ALL: <<<<<<
+; ALL-NEXT:            1: start
+; ALL-NEXT: check:1       ^~~~~
+; ALL-NEXT:            2: foo0
+; ALL-NEXT:            3: foo1
+; ALL-NEXT:            4: foo2
+; ALL-NEXT:            5: foo3
+; ALL-NEXT:            6: foo4
+; ALL-NEXT:            7: foo5
+; ALL-NEXT:            8: foo6
+; ALL-NEXT:            9: foo7
+; ALL-NEXT:           10: foo8
+; ALL-NEXT:           11: foo9
+; ALL-NEXT:           12: hello
+; ALL-NEXT: check:2       ^~~~~
+; ALL-NEXT:           13: foo0
+; ALL-NEXT: check:3'0     X~~~ error: no match found
+; ALL-NEXT:           14: foo1
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           15: foo2
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           16: foo3
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           17: foo4
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           18: foo5
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           19: foo6
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           20: foo7
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           21: foo8
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           22: foo9
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           23: word
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT: check:3'1     ?     possible intended match
+; ALL-NEXT:           24: foo0
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           25: foo1
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           26: foo2
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           27: foo3
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           28: foo4
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           29: foo5
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           30: foo6
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           31: foo7
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           32: foo8
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           33: foo9
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           34: end
+; ALL-NEXT: check:3'0     ~~~
+; ALL-NEXT: >>>>>>
+
+;      ERROR: <<<<<<
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:           11: foo9
+; ERROR-NEXT:           12: hello
+; ERROR-NEXT: check:2       ^~~~~
+; ERROR-NEXT:           13: foo0
+; ERROR-NEXT: check:3'0     X~~~ error: no match found
+; ERROR-NEXT:           14: foo1
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:           15: foo2
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:           21: foo8
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:           22: foo9
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:           23: word
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT: check:3'1     ?     possible intended match
+; ERROR-NEXT:           24: foo0
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:           25: foo1
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT: >>>>>>
+
+;--------------------------------------------------
+; Check how -dump-input affects filter.
+;--------------------------------------------------
+
+; no -dump-input => include errors.
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ERROR
+
+; -dump-input=fail => include errors.
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input=fail \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ERROR
+
+; -dump-input=always => include all.
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input=always \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ALL
+
+;--------------------------------------------------
+; Check that other kinds of errors are included by -dump-input=fail.
+;
+; "error: no match found" and "possible intended match" are checked above.
+;--------------------------------------------------
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; error: no match expected.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; RUN: echo 'foo'            > %t.not-err.in
+; RUN: echo 'CHECK-NOT: foo' > %t.not-err.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=0 -dump-input=fail \
+; RUN:               %t.not-err.chk < %t.not-err.in 2>&1 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=NOT-ERR
+
+;      NOT-ERR:        1: foo
+; NOT-ERR-NEXT: not:1     !~~ error: no match expected
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; error: match on wrong line.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; RUN: echo 'foo'             >  %t.next-err.in
+; RUN: echo 'foo'             >> %t.next-err.in
+; RUN: echo 'bar'             >> %t.next-err.in
+; RUN: echo 'CHECK: foo'      >  %t.next-err.chk
+; RUN: echo 'CHECK-NEXT: bar' >> %t.next-err.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=0 -dump-input=fail \
+; RUN:               %t.next-err.chk < %t.next-err.in 2>&1 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=NEXT-ERR
+
+;      NEXT-ERR:         3: bar
+; NEXT-ERR-NEXT: next:2     !~~ error: match on wrong line
