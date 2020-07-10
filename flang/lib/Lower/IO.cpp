@@ -24,8 +24,6 @@
 
 using namespace Fortran::runtime::io;
 
-#define NAMIFY_HELPER(X) #X
-#define NAMIFY(X) NAMIFY_HELPER(IONAME(X))
 #define mkIOKey(X) mkKey(IONAME(X))
 
 namespace Fortran::lower {
