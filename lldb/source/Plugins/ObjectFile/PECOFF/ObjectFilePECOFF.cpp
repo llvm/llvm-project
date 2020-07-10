@@ -55,15 +55,12 @@ struct CVInfoPdb70 {
   llvm::support::ulittle32_t Age;
 };
 
-static UUID GetCoffUUID(llvm::object::COFFObjectFile *coff_obj) {
-  if (!coff_obj)
-    return UUID();
-
+static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
   const llvm::codeview::DebugInfo *pdb_info = nullptr;
   llvm::StringRef pdb_file;
 
   // This part is similar with what has done in minidump parser.
-  if (!coff_obj->getDebugPDBInfo(pdb_info, pdb_file) && pdb_info) {
+  if (!coff_obj.getDebugPDBInfo(pdb_info, pdb_file) && pdb_info) {
     if (pdb_info->PDB70.CVSignature == llvm::OMF::Signature::PDB70) {
       using llvm::support::endian::read16be;
       using llvm::support::endian::read32be;
@@ -172,7 +169,10 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
 
-  auto binary = llvm::object::createBinary(file.GetPath());
+  if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
+    data_sp = std::move(full_sp);
+  auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
+      toStringRef(data_sp->GetData()), file.GetFilename().GetStringRef()));
 
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
@@ -180,18 +180,15 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     return initial_count;
   }
 
-  if (!binary->getBinary()->isCOFF() &&
-      !binary->getBinary()->isCOFFImportFile())
+  auto *COFFObj = llvm::dyn_cast<llvm::object::COFFObjectFile>(binary->get());
+  if (!COFFObj)
     return initial_count;
-
-  auto COFFObj =
-    llvm::cast<llvm::object::COFFObjectFile>(binary->getBinary());
 
   ModuleSpec module_spec(file);
   ArchSpec &spec = module_spec.GetArchitecture();
   lldb_private::UUID &uuid = module_spec.GetUUID();
   if (!uuid.IsValid())
-    uuid = GetCoffUUID(COFFObj);
+    uuid = GetCoffUUID(*COFFObj);
 
   switch (COFFObj->getMachine()) {
   case MachineAmd64:
@@ -244,12 +241,13 @@ lldb::SymbolType ObjectFilePECOFF::MapSymbolType(uint16_t coff_symbol_type) {
 }
 
 bool ObjectFilePECOFF::CreateBinary() {
-  if (m_owningbin)
+  if (m_binary)
     return true;
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
 
-  auto binary = llvm::object::createBinary(m_file.GetPath());
+  auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
+      toStringRef(m_data.GetData()), m_file.GetFilename().GetStringRef()));
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", m_file);
@@ -257,19 +255,14 @@ bool ObjectFilePECOFF::CreateBinary() {
   }
 
   // Make sure we only handle COFF format.
-  if (!binary->getBinary()->isCOFF() &&
-      !binary->getBinary()->isCOFFImportFile())
+  m_binary =
+      llvm::unique_dyn_cast<llvm::object::COFFObjectFile>(std::move(*binary));
+  if (!m_binary)
     return false;
 
-  m_owningbin = OWNBINType(std::move(*binary));
-  LLDB_LOGF(log,
-            "%p ObjectFilePECOFF::CreateBinary() module = %p (%s), file = "
-            "%s, binary = %p (Bin = %p)",
-            static_cast<void *>(this), static_cast<void *>(GetModule().get()),
-            GetModule()->GetSpecificationDescription().c_str(),
-            m_file ? m_file.GetPath().c_str() : "<NULL>",
-            static_cast<void *>(m_owningbin.getPointer()),
-            static_cast<void *>(m_owningbin->getBinary()));
+  LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
+           this, GetModule().get(), GetModule()->GetSpecificationDescription(),
+           m_file.GetPath(), m_binary.get());
   return true;
 }
 
@@ -281,7 +274,7 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    lldb::offset_t length)
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
       m_dos_header(), m_coff_header(), m_sect_headers(),
-      m_entry_point_address(), m_deps_filespec(), m_owningbin() {
+      m_entry_point_address(), m_deps_filespec() {
   ::memset(&m_dos_header, 0, sizeof(m_dos_header));
   ::memset(&m_coff_header, 0, sizeof(m_coff_header));
 }
@@ -292,7 +285,7 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
       m_dos_header(), m_coff_header(), m_sect_headers(),
-      m_entry_point_address(), m_deps_filespec(), m_owningbin() {
+      m_entry_point_address(), m_deps_filespec() {
   ::memset(&m_dos_header, 0, sizeof(m_dos_header));
   ::memset(&m_coff_header, 0, sizeof(m_coff_header));
 }
@@ -931,10 +924,7 @@ UUID ObjectFilePECOFF::GetUUID() {
   if (!CreateBinary())
     return UUID();
 
-  auto COFFObj =
-    llvm::cast<llvm::object::COFFObjectFile>(m_owningbin->getBinary());
-
-  m_uuid = GetCoffUUID(COFFObj);
+  m_uuid = GetCoffUUID(*m_binary);
   return m_uuid;
 }
 
@@ -952,22 +942,13 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
     return 0;
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
-  LLDB_LOGF(log,
-            "%p ObjectFilePECOFF::ParseDependentModules() module = %p "
-            "(%s), binary = %p (Bin = %p)",
-            static_cast<void *>(this), static_cast<void *>(module_sp.get()),
-            module_sp->GetSpecificationDescription().c_str(),
-            static_cast<void *>(m_owningbin.getPointer()),
-            static_cast<void *>(m_owningbin->getBinary()));
-
-  auto COFFObj =
-      llvm::dyn_cast<llvm::object::COFFObjectFile>(m_owningbin->getBinary());
-  if (!COFFObj)
-    return 0;
+  LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
+           this, GetModule().get(), GetModule()->GetSpecificationDescription(),
+           m_file.GetPath(), m_binary.get());
 
   m_deps_filespec = FileSpecList();
 
-  for (const auto &entry : COFFObj->import_directories()) {
+  for (const auto &entry : m_binary->import_directories()) {
     llvm::StringRef dll_name;
     // Report a bogus entry.
     if (llvm::Error e = entry.getName(dll_name)) {
