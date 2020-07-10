@@ -737,20 +737,18 @@ public:
       // information from the token. As integer and floating point have the same
       // token kind, we run `NumericLiteralParser` again to distinguish them.
       auto TokLoc = S->getBeginLoc();
-      auto buffer = SmallVector<char, 16>();
-      bool invalidSpelling = false;
       auto TokSpelling =
-          Lexer::getSpelling(TokLoc, buffer, Context.getSourceManager(),
-                             Context.getLangOpts(), &invalidSpelling);
-      assert(!invalidSpelling);
+          Builder.findToken(TokLoc)->text(Context.getSourceManager());
       auto Literal =
           NumericLiteralParser(TokSpelling, TokLoc, Context.getSourceManager(),
                                Context.getLangOpts(), Context.getTargetInfo(),
                                Context.getDiagnostics());
       if (Literal.isIntegerLiteral())
         return new (allocator()) syntax::IntegerUserDefinedLiteralExpression;
-      else
+      else {
+        assert(Literal.isFloatingLiteral());
         return new (allocator()) syntax::FloatUserDefinedLiteralExpression;
+      }
     }
   }
 
