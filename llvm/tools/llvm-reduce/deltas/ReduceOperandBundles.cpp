@@ -67,8 +67,6 @@ struct OperandBundleCounter : public InstVisitor<OperandBundleCounter> {
   /// How many features (in this case, operand bundles) did we count, total?
   int OperandBundeCount = 0;
 
-  OperandBundleCounter() {}
-
   /// So far only CallBase sub-classes can have operand bundles.
   void visitCallBase(CallBase &Call) {
     // Just accumulate the total number of operand bundles.
