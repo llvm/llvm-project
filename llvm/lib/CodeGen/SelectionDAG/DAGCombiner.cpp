@@ -707,6 +707,12 @@ namespace {
         SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores,
         SDNode *RootNode);
 
+    /// This is a helper function for mergeConsecutiveStores. Given a list of
+    /// store candidates, find the first N that are consecutive in memory.
+    /// Returns 0 if there are not at least 2 consecutive stores to try merging.
+    unsigned getConsecutiveStores(SmallVectorImpl<MemOpLink> &StoreNodes,
+                                  int64_t ElementSizeBytes) const;
+
     /// Merge consecutive store operations into a wide store.
     /// This optimization uses wide integers or vectors when possible.
     /// \return true if stores were merged.
@@ -16237,6 +16243,46 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
   return true;
 }
 
+unsigned
+DAGCombiner::getConsecutiveStores(SmallVectorImpl<MemOpLink> &StoreNodes,
+                                  int64_t ElementSizeBytes) const {
+  while (true) {
+    // Find a store past the width of the first store.
+    size_t StartIdx = 0;
+    while ((StartIdx + 1 < StoreNodes.size()) &&
+           StoreNodes[StartIdx].OffsetFromBase + ElementSizeBytes !=
+              StoreNodes[StartIdx + 1].OffsetFromBase)
+      ++StartIdx;
+
+    // Bail if we don't have enough candidates to merge.
+    if (StartIdx + 1 >= StoreNodes.size())
+      return 0;
+
+    // Trim stores that overlapped with the first store.
+    if (StartIdx)
+      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + StartIdx);
+
+    // Scan the memory operations on the chain and find the first
+    // non-consecutive store memory address.
+    unsigned NumConsecutiveStores = 1;
+    int64_t StartAddress = StoreNodes[0].OffsetFromBase;
+    // Check that the addresses are consecutive starting from the second
+    // element in the list of stores.
+    for (unsigned i = 1, e = StoreNodes.size(); i < e; ++i) {
+      int64_t CurrAddress = StoreNodes[i].OffsetFromBase;
+      if (CurrAddress - StartAddress != (ElementSizeBytes * i))
+        break;
+      NumConsecutiveStores = i + 1;
+    }
+    if (NumConsecutiveStores > 1)
+      return NumConsecutiveStores;
+
+    // There are no consecutive stores at the start of the list.
+    // Remove the first store and try again.
+    StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + 1);
+  }
+}
+
 bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   if (OptLevel == CodeGenOpt::None || !EnableStoreMerging)
     return false;
@@ -16297,38 +16343,14 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
   // front of StoreNodes here.
   bool MadeChange = false;
   while (StoreNodes.size() > 1) {
-    size_t StartIdx = 0;
-    while ((StartIdx + 1 < StoreNodes.size()) &&
-           StoreNodes[StartIdx].OffsetFromBase + ElementSizeBytes !=
-               StoreNodes[StartIdx + 1].OffsetFromBase)
-      ++StartIdx;
-
-    // Bail if we don't have enough candidates to merge.
-    if (StartIdx + 1 >= StoreNodes.size())
+    unsigned NumConsecutiveStores =
+        getConsecutiveStores(StoreNodes, ElementSizeBytes);
+    // There are no more stores in the list to examine.
+    if (NumConsecutiveStores == 0)
       return MadeChange;
 
-    if (StartIdx)
-      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + StartIdx);
-
-    // Scan the memory operations on the chain and find the first
-    // non-consecutive store memory address.
-    unsigned NumConsecutiveStores = 1;
-    int64_t StartAddress = StoreNodes[0].OffsetFromBase;
-    // Check that the addresses are consecutive starting from the second
-    // element in the list of stores.
-    for (unsigned i = 1, e = StoreNodes.size(); i < e; ++i) {
-      int64_t CurrAddress = StoreNodes[i].OffsetFromBase;
-      if (CurrAddress - StartAddress != (ElementSizeBytes * i))
-        break;
-      NumConsecutiveStores = i + 1;
-    }
-
-    if (NumConsecutiveStores < 2) {
-      StoreNodes.erase(StoreNodes.begin(),
-                       StoreNodes.begin() + NumConsecutiveStores);
-      continue;
-    }
-
+    // We have at least 2 consecutive stores. Try to merge them.
+    assert(NumConsecutiveStores >= 2 && "Expected at least 2 stores");
     if (StoreSrc == StoreSource::Constant) {
       // Store the constants into memory as one consecutive store.
       while (NumConsecutiveStores >= 2) {
@@ -16518,6 +16540,7 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
     // come from multiple consecutive loads. We merge them into a single
     // wide load and a single wide store.
     assert(StoreSrc == StoreSource::Load && "Expected load source for store");
+    int64_t StartAddress = StoreNodes[0].OffsetFromBase;
 
     // Look for load nodes which are used by the stored values.
     SmallVector<MemOpLink, 8> LoadNodes;
