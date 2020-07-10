@@ -9101,6 +9101,8 @@ public:
              TemplateArgumentListInfo &Result,
              const MultiLevelTemplateArgumentList &TemplateArgs);
 
+  bool InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
+                                  ParmVarDecl *Param);
   void InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
                                 FunctionDecl *Function);
   bool CheckInstantiatedFunctionTemplateConstraints(

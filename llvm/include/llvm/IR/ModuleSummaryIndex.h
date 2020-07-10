@@ -629,7 +629,8 @@ private:
   std::unique_ptr<TypeIdInfo> TIdInfo;
 
   /// Uses for every parameter to this function.
-  std::vector<ParamAccess> ParamAccesses;
+  using ParamAccessesTy = std::vector<ParamAccess>;
+  std::unique_ptr<ParamAccessesTy> ParamAccesses;
 
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
@@ -640,19 +641,20 @@ public:
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
                   std::vector<ConstVCall> TypeTestAssumeConstVCalls,
                   std::vector<ConstVCall> TypeCheckedLoadConstVCalls,
-                  std::vector<ParamAccess> ParamAccesses)
+                  std::vector<ParamAccess> Params)
       : GlobalValueSummary(FunctionKind, Flags, std::move(Refs)),
         InstCount(NumInsts), FunFlags(FunFlags), EntryCount(EntryCount),
-        CallGraphEdgeList(std::move(CGEdges)),
-        ParamAccesses(std::move(ParamAccesses)) {
+        CallGraphEdgeList(std::move(CGEdges)) {
     if (!TypeTests.empty() || !TypeTestAssumeVCalls.empty() ||
         !TypeCheckedLoadVCalls.empty() || !TypeTestAssumeConstVCalls.empty() ||
         !TypeCheckedLoadConstVCalls.empty())
-      TIdInfo = std::make_unique<TypeIdInfo>(TypeIdInfo{
-          std::move(TypeTests), std::move(TypeTestAssumeVCalls),
-          std::move(TypeCheckedLoadVCalls),
-          std::move(TypeTestAssumeConstVCalls),
-          std::move(TypeCheckedLoadConstVCalls)});
+      TIdInfo = std::make_unique<TypeIdInfo>(
+          TypeIdInfo{std::move(TypeTests), std::move(TypeTestAssumeVCalls),
+                     std::move(TypeCheckedLoadVCalls),
+                     std::move(TypeTestAssumeConstVCalls),
+                     std::move(TypeCheckedLoadConstVCalls)});
+    if (!Params.empty())
+      ParamAccesses = std::make_unique<ParamAccessesTy>(std::move(Params));
   }
   // Gets the number of readonly and writeonly refs in RefEdgeList
   std::pair<unsigned, unsigned> specialRefCounts() const;
@@ -724,11 +726,20 @@ public:
   }
 
   /// Returns the list of known uses of pointer parameters.
-  ArrayRef<ParamAccess> paramAccesses() const { return ParamAccesses; }
+  ArrayRef<ParamAccess> paramAccesses() const {
+    if (ParamAccesses)
+      return *ParamAccesses;
+    return {};
+  }
 
   /// Sets the list of known uses of pointer parameters.
   void setParamAccesses(std::vector<ParamAccess> NewParams) {
-    ParamAccesses = std::move(NewParams);
+    if (NewParams.empty())
+      ParamAccesses.reset();
+    else if (ParamAccesses)
+      *ParamAccesses = std::move(NewParams);
+    else
+      ParamAccesses = std::make_unique<ParamAccessesTy>(std::move(NewParams));
   }
 
   /// Add a type test to the summary. This is used by WholeProgramDevirt if we

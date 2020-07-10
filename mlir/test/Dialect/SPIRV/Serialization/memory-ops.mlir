@@ -93,6 +93,18 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Volatile"] : f32
     spv.CopyMemory "Function" %0, "Function" %1 ["Volatile"] : f32
 
+    // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Volatile"], ["Volatile"] : f32
+    spv.CopyMemory "Function" %0, "Function" %1 ["Volatile"], ["Volatile"] : f32
+
+    // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4], ["Volatile"] : f32
+    spv.CopyMemory "Function" %0, "Function" %1 ["Aligned", 4], ["Volatile"] : f32
+
+    // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Volatile"], ["Aligned", 4] : f32
+    spv.CopyMemory "Function" %0, "Function" %1 ["Volatile"], ["Aligned", 4] : f32
+
+    // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 8], ["Aligned", 4] : f32
+    spv.CopyMemory "Function" %0, "Function" %1 ["Aligned", 8], ["Aligned", 4] : f32
+
     spv.Return
   }
 }
