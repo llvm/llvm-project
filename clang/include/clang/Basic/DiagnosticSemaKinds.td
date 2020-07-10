@@ -5395,9 +5395,6 @@ def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<
   "zero-length arrays are not permitted in C++">;
-def warn_typecheck_zero_static_array_size : Warning<
-  "'static' has no effect on zero-length arrays">,
-  InGroup<ArrayBounds>;
 def err_array_size_non_int : Error<"size of array has non-integer type %0">;
 def err_init_element_not_constant : Error<
   "initializer element is not a compile-time constant">;

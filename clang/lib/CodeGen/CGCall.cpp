@@ -2504,9 +2504,11 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
                   ArrSize) {
                 llvm::AttrBuilder Attrs;
                 Attrs.addDereferenceableAttr(
-                  getContext().getTypeSizeInChars(ETy).getQuantity()*ArrSize);
+                    getContext().getTypeSizeInChars(ETy).getQuantity() *
+                    ArrSize);
                 AI->addAttrs(Attrs);
-              } else if (getContext().getTargetAddressSpace(ETy) == 0 &&
+              } else if (getContext().getTargetInfo().getNullPointerValue(
+                             ETy.getAddressSpace()) == 0 &&
                          !CGM.getCodeGenOpts().NullPointerIsValid) {
                 AI->addAttr(llvm::Attribute::NonNull);
               }

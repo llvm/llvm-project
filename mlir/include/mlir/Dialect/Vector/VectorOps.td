@@ -919,6 +919,15 @@ def Vector_TransferOpUtils {
     VectorType getVectorType() {
       return vector().getType().cast<VectorType>();
     }
+    // Number of dimensions that participate in the permutation map.
+    unsigned getTransferRank() {
+      return permutation_map().getNumResults();
+    }
+    // Number of leading dimensions that do not participate in the permutation
+    // map.
+    unsigned getLeadingMemRefRank() {
+      return getMemRefType().getRank() - permutation_map().getNumResults();
+    }
   }];
 }
 
