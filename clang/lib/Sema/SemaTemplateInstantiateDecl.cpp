@@ -4273,6 +4273,13 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
     //   default argument expression appears.
     ContextRAII SavedContext(*this, FD);
     LocalInstantiationScope Local(*this);
+
+    FunctionDecl *Pattern = FD->getTemplateInstantiationPattern(
+        /*ForDefinition*/ false);
+    if (addInstantiatedParametersToScope(*this, FD, Pattern, Local,
+                                         TemplateArgs))
+      return true;
+
     runWithSufficientStackSpace(CallLoc, [&] {
       Result = SubstInitializer(UninstExpr, TemplateArgs,
                                 /*DirectInit*/false);
@@ -4338,6 +4345,10 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   MultiLevelTemplateArgumentList TemplateArgs =
     getTemplateInstantiationArgs(Decl, nullptr, /*RelativeToPrimary*/true);
 
+  // FIXME: We can't use getTemplateInstantiationPattern(false) in general
+  // here, because for a non-defining friend declaration in a class template,
+  // we don't store enough information to map back to the friend declaration in
+  // the template.
   FunctionDecl *Template = Proto->getExceptionSpecTemplate();
   if (addInstantiatedParametersToScope(*this, Decl, Template, Scope,
                                        TemplateArgs)) {
