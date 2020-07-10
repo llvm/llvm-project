@@ -54,8 +54,7 @@ ENV PATH="/analyzer/bin:${PATH}"
 
 ADD entrypoint.py /entrypoint.py
 
-# Uncomment in case of requirements
-# ADD requirements.txt /requirements.txt
-# RUN pip3 install -r /requirements.txt
+ADD requirements.txt /requirements.txt
+RUN pip3 install -r /requirements.txt
 
 ENTRYPOINT ["python", "/entrypoint.py"]
