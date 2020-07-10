@@ -1262,7 +1262,7 @@ private:
 ///   %0 = vector.extract %lhs[0]
 ///   %1 = vector.broadcast %0
 ///   %2 = vector.extract %acc[0]
-///   %3 = vector.fma %1, %arg1, %2
+///   %3 = vector.fma %1, %rhs, %2
 ///   %4 = vector.insert %3, %z[0]
 ///   ..
 ///   %x = vector.insert %.., %..[N-1]
@@ -1275,35 +1275,48 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
-    VectorType rhsType = op.getOperandVectorTypeRHS();
+    VectorType lhsType = op.getOperandVectorTypeLHS();
+    VectorType rhsType = op.getOperandTypeRHS().dyn_cast<VectorType>();
     VectorType resType = op.getVectorType();
     Type eltType = resType.getElementType();
+    bool isInt = eltType.isa<IntegerType>();
     Value acc = (op.acc().empty()) ? nullptr : op.acc()[0];
+
+    if (!rhsType) {
+      // Special case: AXPY operation.
+      Value b = rewriter.create<vector::BroadcastOp>(loc, lhsType, op.rhs());
+      rewriter.replaceOp(op, genMult(loc, op.lhs(), b, acc, isInt, rewriter));
+      return success();
+    }
 
     Value result = rewriter.create<ConstantOp>(loc, resType,
                                                rewriter.getZeroAttr(resType));
     for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
       auto pos = rewriter.getI64ArrayAttr(d);
       Value x = rewriter.create<vector::ExtractOp>(loc, eltType, op.lhs(), pos);
-      Value b = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
-      Value m;
-      if (acc) {
-        Value e = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
-        if (eltType.isa<IntegerType>())
-          m = rewriter.create<AddIOp>(
-              loc, rewriter.create<MulIOp>(loc, b, op.rhs()), e);
-        else
-          m = rewriter.create<vector::FMAOp>(loc, b, op.rhs(), e);
-      } else {
-        if (eltType.isa<IntegerType>())
-          m = rewriter.create<MulIOp>(loc, b, op.rhs());
-        else
-          m = rewriter.create<MulFOp>(loc, b, op.rhs());
-      }
+      Value a = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
+      Value r = nullptr;
+      if (acc)
+        r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
+      Value m = genMult(loc, a, op.rhs(), r, isInt, rewriter);
       result = rewriter.create<vector::InsertOp>(loc, resType, m, result, pos);
     }
     rewriter.replaceOp(op, result);
     return success();
+  }
+
+private:
+  static Value genMult(Location loc, Value x, Value y, Value acc, bool isInt,
+                       PatternRewriter &rewriter) {
+    if (acc) {
+      if (isInt)
+        return rewriter.create<AddIOp>(loc, rewriter.create<MulIOp>(loc, x, y),
+                                       acc);
+      return rewriter.create<vector::FMAOp>(loc, x, y, acc);
+    }
+    if (isInt)
+      return rewriter.create<MulIOp>(loc, x, y);
+    return rewriter.create<MulFOp>(loc, x, y);
   }
 };
 

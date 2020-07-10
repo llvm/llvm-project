@@ -326,6 +326,53 @@ func @outerproduct_acc_int(%arg0: vector<2xi32>,
   return %0: vector<2x3xi32>
 }
 
+// CHECK-LABEL: func @axpy_fp(
+// CHECK-SAME: %[[A:.*0]]: vector<16xf32>,
+// CHECK-SAME: %[[B:.*1]]: f32)
+// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xf32>
+// CHECK: %[[T1:.*]] = mulf %[[A]], %[[T0]] : vector<16xf32>
+// CHECK: return %[[T1]] : vector<16xf32>
+func @axpy_fp(%arg0: vector<16xf32>, %arg1: f32) -> vector<16xf32> {
+   %0 = vector.outerproduct %arg0, %arg1: vector<16xf32>, f32
+   return %0: vector<16xf32>
+}
+
+// CHECK-LABEL: func @axpy_fp_add(
+// CHECK-SAME: %[[A:.*0]]: vector<16xf32>,
+// CHECK-SAME: %[[B:.*1]]: f32,
+// CHECK-SAME: %[[C:.*2]]: vector<16xf32>)
+// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xf32>
+// CHECK: %[[T1:.*]] = vector.fma %[[A]], %[[T0]], %[[C]] : vector<16xf32>
+// CHECK: return %[[T1]] : vector<16xf32>
+func @axpy_fp_add(%arg0: vector<16xf32>, %arg1: f32, %arg2 : vector<16xf32>) -> vector<16xf32> {
+   %0 = vector.outerproduct %arg0, %arg1, %arg2: vector<16xf32>, f32
+   return %0: vector<16xf32>
+}
+
+// CHECK-LABEL: func @axpy_int(
+// CHECK-SAME: %[[A:.*0]]: vector<16xi32>,
+// CHECK-SAME: %[[B:.*1]]: i32)
+// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xi32>
+// CHECK: %[[T1:.*]] = muli %[[A]], %[[T0]] : vector<16xi32>
+// CHECK: return %[[T1]] : vector<16xi32>
+func @axpy_int(%arg0: vector<16xi32>, %arg1: i32) -> vector<16xi32> {
+   %0 = vector.outerproduct %arg0, %arg1: vector<16xi32>, i32
+   return %0: vector<16xi32>
+}
+
+// CHECK-LABEL: func @axpy_int_add(
+// CHECK-SAME: %[[A:.*0]]: vector<16xi32>,
+// CHECK-SAME: %[[B:.*1]]: i32,
+// CHECK-SAME: %[[C:.*2]]: vector<16xi32>)
+// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xi32>
+// CHECK: %[[T1:.*]] = muli %[[A]], %[[T0]] : vector<16xi32>
+// CHECK: %[[T2:.*]] = addi %[[T1]], %[[C]] : vector<16xi32>
+// CHECK: return %[[T2]] : vector<16xi32>
+func @axpy_int_add(%arg0: vector<16xi32>, %arg1: i32, %arg2: vector<16xi32>) -> vector<16xi32> {
+   %0 = vector.outerproduct %arg0, %arg1, %arg2: vector<16xi32>, i32
+   return %0: vector<16xi32>
+}
+
 // CHECK-LABEL: func @transpose23
 // CHECK-SAME: %[[A:.*]]: vector<2x3xf32>
 // CHECK:      %[[Z:.*]] = constant dense<0.000000e+00> : vector<3x2xf32>
