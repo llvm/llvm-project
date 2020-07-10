@@ -295,11 +295,13 @@ RecordType parseDerived(mlir::DialectAsmParser &parser, mlir::Location) {
   return verifyDerived(parser, result, lenParamList, typeList);
 }
 
+#ifndef NDEBUG
 // !fir.ptr<X> and !fir.heap<X> where X is !fir.ptr, !fir.heap, or !fir.ref
 // is undefined and disallowed.
 inline bool singleIndirectionLevel(mlir::Type ty) {
   return !fir::isa_ref_type(ty);
 }
+#endif
 
 } // namespace
 
