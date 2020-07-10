@@ -28,7 +28,11 @@
 using namespace mlir;
 
 // TODO: generate these strings using ODS.
+static constexpr const char kMemoryAccessAttrName[] = "memory_access";
+static constexpr const char kSourceMemoryAccessAttrName[] =
+    "source_memory_access";
 static constexpr const char kAlignmentAttrName[] = "alignment";
+static constexpr const char kSourceAlignmentAttrName[] = "source_alignment";
 static constexpr const char kBranchWeightAttrName[] = "branch_weights";
 static constexpr const char kCallee[] = "callee";
 static constexpr const char kClusterSize[] = "cluster_size";
@@ -157,6 +161,12 @@ parseEnumKeywordAttr(EnumClass &value, OpAsmParser &parser,
   return success();
 }
 
+/// Parses optional memory access attributes attached to a memory access
+/// operand/pointer. Specifically, parses the following syntax:
+///     (`[` memory-access `]`)?
+/// where:
+///     memory-access ::= `"None"` | `"Volatile"` | `"Aligned", `
+///         integer-literal | `"NonTemporal"`
 static ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
                                                OperationState &state) {
   // Parse an optional list of attributes staring with '['
@@ -166,7 +176,8 @@ static ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
   }
 
   spirv::MemoryAccess memoryAccessAttr;
-  if (parseEnumStrAttr(memoryAccessAttr, parser, state)) {
+  if (parseEnumStrAttr(memoryAccessAttr, parser, state,
+                       kMemoryAccessAttrName)) {
     return failure();
   }
 
@@ -183,19 +194,90 @@ static ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
   return parser.parseRSquare();
 }
 
+// TODO Make sure to merge this and the previous function into one template
+// parameterized by memroy access attribute name and alignment. Doing so now
+// results in VS2017 in producing an internal error (at the call site) that's
+// not detailed enough to understand what is happenning.
+static ParseResult parseSourceMemoryAccessAttributes(OpAsmParser &parser,
+                                                     OperationState &state) {
+  // Parse an optional list of attributes staring with '['
+  if (parser.parseOptionalLSquare()) {
+    // Nothing to do
+    return success();
+  }
+
+  spirv::MemoryAccess memoryAccessAttr;
+  if (parseEnumStrAttr(memoryAccessAttr, parser, state,
+                       kSourceMemoryAccessAttrName)) {
+    return failure();
+  }
+
+  if (spirv::bitEnumContains(memoryAccessAttr, spirv::MemoryAccess::Aligned)) {
+    // Parse integer attribute for alignment.
+    Attribute alignmentAttr;
+    Type i32Type = parser.getBuilder().getIntegerType(32);
+    if (parser.parseComma() ||
+        parser.parseAttribute(alignmentAttr, i32Type, kSourceAlignmentAttrName,
+                              state.attributes)) {
+      return failure();
+    }
+  }
+  return parser.parseRSquare();
+}
+
 template <typename MemoryOpTy>
-static void
-printMemoryAccessAttribute(MemoryOpTy memoryOp, OpAsmPrinter &printer,
-                           SmallVectorImpl<StringRef> &elidedAttrs) {
+static void printMemoryAccessAttribute(
+    MemoryOpTy memoryOp, OpAsmPrinter &printer,
+    SmallVectorImpl<StringRef> &elidedAttrs,
+    Optional<spirv::MemoryAccess> memoryAccessAtrrValue = None,
+    Optional<llvm::APInt> alignmentAttrValue = None) {
   // Print optional memory access attribute.
-  if (auto memAccess = memoryOp.memory_access()) {
-    elidedAttrs.push_back(spirv::attributeName<spirv::MemoryAccess>());
+  if (auto memAccess = (memoryAccessAtrrValue ? memoryAccessAtrrValue
+                                              : memoryOp.memory_access())) {
+    elidedAttrs.push_back(kMemoryAccessAttrName);
+
     printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"";
 
-    // Print integer alignment attribute.
-    if (auto alignment = memoryOp.alignment()) {
-      elidedAttrs.push_back(kAlignmentAttrName);
-      printer << ", " << alignment;
+    if (spirv::bitEnumContains(*memAccess, spirv::MemoryAccess::Aligned)) {
+      // Print integer alignment attribute.
+      if (auto alignment = (alignmentAttrValue ? alignmentAttrValue
+                                               : memoryOp.alignment())) {
+        elidedAttrs.push_back(kAlignmentAttrName);
+        printer << ", " << alignment;
+      }
+    }
+    printer << "]";
+  }
+  elidedAttrs.push_back(spirv::attributeName<spirv::StorageClass>());
+}
+
+// TODO Make sure to merge this and the previous function into one template
+// parameterized by memroy access attribute name and alignment. Doing so now
+// results in VS2017 in producing an internal error (at the call site) that's
+// not detailed enough to understand what is happenning.
+template <typename MemoryOpTy>
+static void printSourceMemoryAccessAttribute(
+    MemoryOpTy memoryOp, OpAsmPrinter &printer,
+    SmallVectorImpl<StringRef> &elidedAttrs,
+    Optional<spirv::MemoryAccess> memoryAccessAtrrValue = None,
+    Optional<llvm::APInt> alignmentAttrValue = None) {
+
+  printer << ", ";
+
+  // Print optional memory access attribute.
+  if (auto memAccess = (memoryAccessAtrrValue ? memoryAccessAtrrValue
+                                              : memoryOp.memory_access())) {
+    elidedAttrs.push_back(kSourceMemoryAccessAttrName);
+
+    printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"";
+
+    if (spirv::bitEnumContains(*memAccess, spirv::MemoryAccess::Aligned)) {
+      // Print integer alignment attribute.
+      if (auto alignment = (alignmentAttrValue ? alignmentAttrValue
+                                               : memoryOp.alignment())) {
+        elidedAttrs.push_back(kSourceAlignmentAttrName);
+        printer << ", " << alignment;
+      }
     }
     printer << "]";
   }
@@ -249,7 +331,7 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
   // memory-access attribute is Aligned, then the alignment attribute must be
   // present.
   auto *op = memoryOp.getOperation();
-  auto memAccessAttr = op->getAttr(spirv::attributeName<spirv::MemoryAccess>());
+  auto memAccessAttr = op->getAttr(kMemoryAccessAttrName);
   if (!memAccessAttr) {
     // Alignment attribute shouldn't be present if memory access attribute is
     // not present.
@@ -275,6 +357,50 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
     }
   } else {
     if (op->getAttr(kAlignmentAttrName)) {
+      return memoryOp.emitOpError(
+          "invalid alignment specification with non-aligned memory access "
+          "specification");
+    }
+  }
+  return success();
+}
+
+// TODO Make sure to merge this and the previous function into one template
+// parameterized by memroy access attribute name and alignment. Doing so now
+// results in VS2017 in producing an internal error (at the call site) that's
+// not detailed enough to understand what is happenning.
+template <typename MemoryOpTy>
+static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
+  // ODS checks for attributes values. Just need to verify that if the
+  // memory-access attribute is Aligned, then the alignment attribute must be
+  // present.
+  auto *op = memoryOp.getOperation();
+  auto memAccessAttr = op->getAttr(kSourceMemoryAccessAttrName);
+  if (!memAccessAttr) {
+    // Alignment attribute shouldn't be present if memory access attribute is
+    // not present.
+    if (op->getAttr(kSourceAlignmentAttrName)) {
+      return memoryOp.emitOpError(
+          "invalid alignment specification without aligned memory access "
+          "specification");
+    }
+    return success();
+  }
+
+  auto memAccessVal = memAccessAttr.template cast<IntegerAttr>();
+  auto memAccess = spirv::symbolizeMemoryAccess(memAccessVal.getInt());
+
+  if (!memAccess) {
+    return memoryOp.emitOpError("invalid memory access specifier: ")
+           << memAccessVal;
+  }
+
+  if (spirv::bitEnumContains(*memAccess, spirv::MemoryAccess::Aligned)) {
+    if (!op->getAttr(kSourceAlignmentAttrName)) {
+      return memoryOp.emitOpError("missing alignment value");
+    }
+  } else {
+    if (op->getAttr(kSourceAlignmentAttrName)) {
       return memoryOp.emitOpError(
           "invalid alignment specification with non-aligned memory access "
           "specification");
@@ -2832,6 +2958,9 @@ static void print(spirv::CopyMemoryOp copyMemory, OpAsmPrinter &printer) {
 
   SmallVector<StringRef, 4> elidedAttrs;
   printMemoryAccessAttribute(copyMemory, printer, elidedAttrs);
+  printSourceMemoryAccessAttribute(copyMemory, printer, elidedAttrs,
+                                   copyMemory.source_memory_access(),
+                                   copyMemory.source_alignment());
 
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 
@@ -2854,11 +2983,22 @@ static ParseResult parseCopyMemoryOp(OpAsmParser &parser,
       parser.parseOperand(targetPtrInfo) || parser.parseComma() ||
       parseEnumStrAttr(sourceStorageClass, parser) ||
       parser.parseOperand(sourcePtrInfo) ||
-      parseMemoryAccessAttributes(parser, state) ||
-      parser.parseOptionalAttrDict(state.attributes) || parser.parseColon() ||
-      parser.parseType(elementType)) {
+      parseMemoryAccessAttributes(parser, state)) {
     return failure();
   }
+
+  if (!parser.parseOptionalComma()) {
+    // Parse 2nd memory access attributes.
+    if (parseSourceMemoryAccessAttributes(parser, state)) {
+      return failure();
+    }
+  }
+
+  if (parser.parseColon() || parser.parseType(elementType))
+    return failure();
+
+  if (parser.parseOptionalAttrDict(state.attributes))
+    return failure();
 
   auto targetPtrType = spirv::PointerType::get(elementType, targetStorageClass);
   auto sourcePtrType = spirv::PointerType::get(elementType, sourceStorageClass);
@@ -2883,7 +3023,19 @@ static LogicalResult verifyCopyMemory(spirv::CopyMemoryOp copyMemory) {
         "both operands must be pointers to the same type");
   }
 
-  return verifyMemoryAccessAttribute(copyMemory);
+  if (failed(verifyMemoryAccessAttribute(copyMemory))) {
+    return failure();
+  }
+
+  // TODO - According to the spec:
+  //
+  // If two masks are present, the first applies to Target and cannot include
+  // MakePointerVisible, and the second applies to Source and cannot include
+  // MakePointerAvailable.
+  //
+  // Add such verification here.
+
+  return verifySourceMemoryAccessAttribute(copyMemory);
 }
 
 //===----------------------------------------------------------------------===//
