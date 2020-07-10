@@ -441,6 +441,8 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex);
 
+llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
+
 } // namespace lldb_vscode
 
 #endif
