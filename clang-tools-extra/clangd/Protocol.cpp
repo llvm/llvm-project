@@ -1029,7 +1029,7 @@ llvm::json::Value toJSON(const SemanticTokensEdit &Edit) {
       {"data", encodeTokens(Edit.tokens)}};
 }
 
-llvm::json::Value toJSON(const SemanticTokensOrEdits &TE) {
+llvm::json::Value toJSON(const SemanticTokensOrDelta &TE) {
   llvm::json::Object Result{{"resultId", TE.resultId}};
   if (TE.edits)
     Result["edits"] = *TE.edits;
@@ -1043,7 +1043,7 @@ bool fromJSON(const llvm::json::Value &Params, SemanticTokensParams &R) {
   return O && O.map("textDocument", R.textDocument);
 }
 
-bool fromJSON(const llvm::json::Value &Params, SemanticTokensEditsParams &R) {
+bool fromJSON(const llvm::json::Value &Params, SemanticTokensDeltaParams &R) {
   llvm::json::ObjectMapper O(Params);
   return O && O.map("textDocument", R.textDocument) &&
          O.map("previousResultId", R.previousResultId);

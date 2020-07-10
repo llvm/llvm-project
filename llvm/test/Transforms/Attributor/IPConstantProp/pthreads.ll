@@ -42,27 +42,16 @@ define dso_local i32 @main() {
 ; IS__TUNIT____-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @buz, i8* noalias nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[ALLOC2]])
 ; IS__TUNIT____-NEXT:    ret i32 0
 ;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@main()
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
-; IS__CGSCC_OPM-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
-; IS__CGSCC_OPM-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @foo, i8* noalias nocapture nofree readnone align 536870912 null)
-; IS__CGSCC_OPM-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @bar, i8* noalias nofree nonnull readnone align 8 dereferenceable(8) bitcast (i8** @GlobalVPtr to i8*))
-; IS__CGSCC_OPM-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @baz, i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
-; IS__CGSCC_OPM-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @buz, i8* noalias nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
-; IS__CGSCC_OPM-NEXT:    ret i32 0
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@main()
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
-; IS__CGSCC_NPM-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
-; IS__CGSCC_NPM-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @foo, i8* noalias nocapture nofree readnone align 536870912 null)
-; IS__CGSCC_NPM-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @bar, i8* noalias nofree nonnull readnone align 8 dereferenceable(8) bitcast (i8** @GlobalVPtr to i8*))
-; IS__CGSCC_NPM-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @baz, i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
-; IS__CGSCC_NPM-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @buz, i8* noalias nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
-; IS__CGSCC_NPM-NEXT:    ret i32 0
+; IS__CGSCC____-LABEL: define {{[^@]+}}@main()
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
+; IS__CGSCC____-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
+; IS__CGSCC____-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @foo, i8* noalias nocapture nofree readnone align 536870912 null)
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @bar, i8* noalias nofree nonnull readnone align 8 dereferenceable(8) bitcast (i8** @GlobalVPtr to i8*))
+; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @baz, i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
+; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias nocapture align 536870912 null, i8* (i8*)* nonnull @buz, i8* noalias nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
+; IS__CGSCC____-NEXT:    ret i32 0
 ;
 entry:
   %alloc1 = alloca i8, align 8
@@ -93,15 +82,10 @@ define internal i8* @bar(i8* %arg) {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret i8* bitcast (i8** @GlobalVPtr to i8*)
 ;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_OPM-SAME: (i8* nofree readnone returned "no-capture-maybe-returned" [[ARG:%.*]])
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    ret i8* bitcast (i8** @GlobalVPtr to i8*)
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_NPM-SAME: (i8* nofree readnone returned "no-capture-maybe-returned" [[ARG:%.*]])
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    ret i8* bitcast (i8** @GlobalVPtr to i8*)
+; IS__CGSCC____-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC____-SAME: (i8* nofree readnone returned "no-capture-maybe-returned" [[ARG:%.*]])
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    ret i8* bitcast (i8** @GlobalVPtr to i8*)
 ;
 entry:
   ret i8* %arg

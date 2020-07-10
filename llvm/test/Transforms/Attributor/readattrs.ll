@@ -195,7 +195,7 @@ declare void @escape_readonly_ptr(i8** %addr, i8* readonly %ptr)
 define void @unsound_readnone(i8* %ignored, i8* %escaped_then_written) {
 ; CHECK-LABEL: define {{[^@]+}}@unsound_readnone
 ; CHECK-SAME: (i8* nocapture nofree readnone [[IGNORED:%.*]], i8* [[ESCAPED_THEN_WRITTEN:%.*]])
-; CHECK-NEXT:    [[ADDR:%.*]] = alloca i8*
+; CHECK-NEXT:    [[ADDR:%.*]] = alloca i8*, align 8
 ; CHECK-NEXT:    call void @escape_readnone_ptr(i8** nonnull align 8 dereferenceable(8) [[ADDR]], i8* noalias readnone [[ESCAPED_THEN_WRITTEN]])
 ; CHECK-NEXT:    [[ADDR_LD:%.*]] = load i8*, i8** [[ADDR]], align 8
 ; CHECK-NEXT:    store i8 0, i8* [[ADDR_LD]], align 1
@@ -211,7 +211,7 @@ define void @unsound_readnone(i8* %ignored, i8* %escaped_then_written) {
 define void @unsound_readonly(i8* %ignored, i8* %escaped_then_written) {
 ; CHECK-LABEL: define {{[^@]+}}@unsound_readonly
 ; CHECK-SAME: (i8* nocapture nofree readnone [[IGNORED:%.*]], i8* [[ESCAPED_THEN_WRITTEN:%.*]])
-; CHECK-NEXT:    [[ADDR:%.*]] = alloca i8*
+; CHECK-NEXT:    [[ADDR:%.*]] = alloca i8*, align 8
 ; CHECK-NEXT:    call void @escape_readonly_ptr(i8** nonnull align 8 dereferenceable(8) [[ADDR]], i8* readonly [[ESCAPED_THEN_WRITTEN]])
 ; CHECK-NEXT:    [[ADDR_LD:%.*]] = load i8*, i8** [[ADDR]], align 8
 ; CHECK-NEXT:    store i8 0, i8* [[ADDR_LD]], align 1

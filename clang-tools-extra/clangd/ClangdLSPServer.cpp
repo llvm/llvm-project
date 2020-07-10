@@ -599,8 +599,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
              }},
             {"semanticTokensProvider",
              llvm::json::Object{
-                 {"documentProvider", llvm::json::Object{{"edits", true}}},
-                 {"rangeProvider", false},
+                 {"full", llvm::json::Object{{"delta", true}}},
+                 {"range", false},
                  {"legend",
                   llvm::json::Object{{"tokenTypes", semanticTokenTypes()},
                                      {"tokenModifiers", llvm::json::Array()}}},
@@ -1311,9 +1311,9 @@ void ClangdLSPServer::onSemanticTokens(const SemanticTokensParams &Params,
       });
 }
 
-void ClangdLSPServer::onSemanticTokensEdits(
-    const SemanticTokensEditsParams &Params,
-    Callback<SemanticTokensOrEdits> CB) {
+void ClangdLSPServer::onSemanticTokensDelta(
+    const SemanticTokensDeltaParams &Params,
+    Callback<SemanticTokensOrDelta> CB) {
   Server->semanticHighlights(
       Params.textDocument.uri.file(),
       [this, PrevResultID(Params.previousResultId),
@@ -1323,7 +1323,7 @@ void ClangdLSPServer::onSemanticTokensEdits(
           return CB(HT.takeError());
         std::vector<SemanticToken> Toks = toSemanticTokens(*HT);
 
-        SemanticTokensOrEdits Result;
+        SemanticTokensOrDelta Result;
         {
           std::lock_guard<std::mutex> Lock(SemanticTokensMutex);
           auto &Last = LastSemanticTokens[File];
@@ -1331,8 +1331,8 @@ void ClangdLSPServer::onSemanticTokensEdits(
           if (PrevResultID == Last.resultId) {
             Result.edits = diffTokens(Last.tokens, Toks);
           } else {
-            vlog("semanticTokens/edits: wanted edits vs {0} but last result "
-                 "had ID {1}. Returning full token list.",
+            vlog("semanticTokens/full/delta: wanted edits vs {0} but last "
+                 "result had ID {1}. Returning full token list.",
                  PrevResultID, Last.resultId);
             Result.tokens = Toks;
           }
@@ -1393,8 +1393,8 @@ ClangdLSPServer::ClangdLSPServer(
   MsgHandler->bind("typeHierarchy/resolve", &ClangdLSPServer::onResolveTypeHierarchy);
   MsgHandler->bind("textDocument/selectionRange", &ClangdLSPServer::onSelectionRange);
   MsgHandler->bind("textDocument/documentLink", &ClangdLSPServer::onDocumentLink);
-  MsgHandler->bind("textDocument/semanticTokens", &ClangdLSPServer::onSemanticTokens);
-  MsgHandler->bind("textDocument/semanticTokens/edits", &ClangdLSPServer::onSemanticTokensEdits);
+  MsgHandler->bind("textDocument/semanticTokens/full", &ClangdLSPServer::onSemanticTokens);
+  MsgHandler->bind("textDocument/semanticTokens/full/delta", &ClangdLSPServer::onSemanticTokensDelta);
   // clang-format on
 }
 

@@ -75,8 +75,8 @@ define i32 @test_inf_promote_caller(i32 %arg) {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_inf_promote_caller
 ; IS__CGSCC____-SAME: (i32 [[ARG:%.*]])
 ; IS__CGSCC____-NEXT:  bb:
-; IS__CGSCC____-NEXT:    [[TMP:%.*]] = alloca [[S:%.*]]
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = alloca [[S]]
+; IS__CGSCC____-NEXT:    [[TMP:%.*]] = alloca [[S:%.*]], align 8
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = alloca [[S]], align 8
 ; IS__CGSCC____-NEXT:    unreachable
 ;
 bb:

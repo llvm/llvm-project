@@ -329,13 +329,23 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
 
 llvm::Optional<std::string> printExprValue(const Expr *E,
                                            const ASTContext &Ctx) {
-  Expr::EvalResult Constant;
+  // InitListExpr has two forms, syntactic and semantic. They are the same thing
+  // (refer to a same AST node) in most cases.
+  // When they are different, RAV returns the syntactic form, and we should feed
+  // the semantic form to EvaluateAsRValue.
+  if (const auto *ILE = llvm::dyn_cast<InitListExpr>(E)) {
+    if (!ILE->isSemanticForm())
+      E = ILE->getSemanticForm();
+  }
+
   // Evaluating [[foo]]() as "&foo" isn't useful, and prevents us walking up
   // to the enclosing call.
   QualType T = E->getType();
   if (T.isNull() || T->isFunctionType() || T->isFunctionPointerType() ||
       T->isFunctionReferenceType())
     return llvm::None;
+
+  Expr::EvalResult Constant;
   // Attempt to evaluate. If expr is dependent, evaluation crashes!
   if (E->isValueDependent() || !E->EvaluateAsRValue(Constant, Ctx) ||
       // Disable printing for record-types, as they are usually confusing and
