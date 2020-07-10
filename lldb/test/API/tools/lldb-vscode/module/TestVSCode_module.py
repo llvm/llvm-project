@@ -20,9 +20,7 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         program_basename = "a.out.stripped"
         program= self.getBuildArtifact(program_basename)
         self.build_and_launch(program)
-        source = "main.cpp"
-        main_source_path = self.getSourcePath(source)
-        functions = ['main']
+        functions = ['foo']
         breakpoint_ids = self.set_function_breakpoints(functions)
         self.assertEquals(len(breakpoint_ids), len(functions),
                         'expect one breakpoint')
@@ -37,7 +35,7 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue('symbolFilePath' not in program_module, 'Make sure a.out.stripped has no debug info')
         self.assertEqual('Symbols not found.', program_module['symbolStatus'])
         symbol_path = self.getBuildArtifact("a.out")
-        response = self.vscode.request_evaluate('`%s' % ('target symbols add -s "%s" "%s"' % (program, symbol_path)))
+        self.vscode.request_evaluate('`%s' % ('target symbols add -s "%s" "%s"' % (program, symbol_path)))
         active_modules = self.vscode.get_active_modules()
         program_module = active_modules[program_basename]
         self.assertEqual(program_basename, program_module['name'])
