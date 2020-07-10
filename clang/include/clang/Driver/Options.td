@@ -3669,8 +3669,6 @@ def disable_O0_optnone : Flag<["-"], "disable-O0-optnone">,
   HelpText<"Disable adding the optnone attribute to functions at O0">;
 def disable_red_zone : Flag<["-"], "disable-red-zone">,
   HelpText<"Do not emit code that uses the red zone.">;
-def dwarf_column_info : Flag<["-"], "dwarf-column-info">,
-  HelpText<"Turn on column location information.">;
 def dwarf_ext_refs : Flag<["-"], "dwarf-ext-refs">,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
@@ -3739,8 +3737,6 @@ def mlimit_float_precision : Separate<["-"], "mlimit-float-precision">,
   HelpText<"Limit float precision to the given value">;
 def split_stacks : Flag<["-"], "split-stacks">,
   HelpText<"Try to use a split stack if possible.">;
-def mno_zero_initialized_in_bss : Flag<["-"], "mno-zero-initialized-in-bss">,
-  HelpText<"Do not put zero initialized data in the BSS">;
 def mregparm : Separate<["-"], "mregparm">,
   HelpText<"Limit the number of registers available for integer arguments">;
 def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
