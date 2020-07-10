@@ -32,6 +32,14 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "BoolLiteralExpression";
   case NodeKind::CxxNullPtrExpression:
     return OS << "CxxNullPtrExpression";
+  case NodeKind::IntegerUserDefinedLiteralExpression:
+    return OS << "IntegerUserDefinedLiteralExpression";
+  case NodeKind::FloatUserDefinedLiteralExpression:
+    return OS << "FloatUserDefinedLiteralExpression";
+  case NodeKind::CharUserDefinedLiteralExpression:
+    return OS << "CharUserDefinedLiteralExpression";
+  case NodeKind::StringUserDefinedLiteralExpression:
+    return OS << "StringUserDefinedLiteralExpression";
   case NodeKind::PrefixUnaryOperatorExpression:
     return OS << "PrefixUnaryOperatorExpression";
   case NodeKind::PostfixUnaryOperatorExpression:
@@ -248,6 +256,11 @@ syntax::Leaf *syntax::BoolLiteralExpression::literalToken() {
 }
 
 syntax::Leaf *syntax::CxxNullPtrExpression::nullPtrKeyword() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Leaf *syntax::UserDefinedLiteralExpression::literalToken() {
   return llvm::cast_or_null<syntax::Leaf>(
       findChild(syntax::NodeRole::LiteralToken));
 }

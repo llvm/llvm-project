@@ -1184,20 +1184,139 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, IntegerLiteral) {
+TEST_P(SyntaxTreeTest, UserDefinedLiteral) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
+typedef decltype(sizeof(void *)) size_t;
+
+unsigned operator "" _i(unsigned long long);
+unsigned operator "" _f(long double);
+unsigned operator "" _c(char);
+unsigned operator "" _s(const char*, size_t);
+unsigned operator "" _r(const char*);
+template <char...>
+unsigned operator "" _t();
+
 void test() {
-  12;
-  12u;
-  12l;
-  12ul;
-  014;
-  0XC;
+  12_i;   // call: operator "" _i(12uLL)      | kind: integer
+  1.2_f;  // call: operator "" _f(1.2L)       | kind: float
+  '2'_c;  // call: operator "" _c('2')        | kind: char
+  "12"_s; // call: operator "" _s("12")       | kind: string
+
+  12_r;   // call: operator "" _r("12")       | kind: integer
+  1.2_r;  // call: operator "" _i("1.2")      | kind: float
+  12_t;   // call: operator<'1', '2'> "" _x() | kind: integer
+  1.2_t;  // call: operator<'1', '2'> "" _x() | kind: float
 }
-)cpp",
+    )cpp",
       R"txt(
 *: TranslationUnit
+|-SimpleDeclaration
+| |-typedef
+| |-decltype
+| |-(
+| |-UnknownExpression
+| | |-sizeof
+| | |-(
+| | |-void
+| | |-*
+| | `-)
+| |-)
+| |-SimpleDeclarator
+| | `-size_t
+| `-;
+|-SimpleDeclaration
+| |-unsigned
+| |-SimpleDeclarator
+| | |-operator
+| | |-""
+| | |-_i
+| | `-ParametersAndQualifiers
+| |   |-(
+| |   |-SimpleDeclaration
+| |   | |-unsigned
+| |   | |-long
+| |   | `-long
+| |   `-)
+| `-;
+|-SimpleDeclaration
+| |-unsigned
+| |-SimpleDeclarator
+| | |-operator
+| | |-""
+| | |-_f
+| | `-ParametersAndQualifiers
+| |   |-(
+| |   |-SimpleDeclaration
+| |   | |-long
+| |   | `-double
+| |   `-)
+| `-;
+|-SimpleDeclaration
+| |-unsigned
+| |-SimpleDeclarator
+| | |-operator
+| | |-""
+| | |-_c
+| | `-ParametersAndQualifiers
+| |   |-(
+| |   |-SimpleDeclaration
+| |   | `-char
+| |   `-)
+| `-;
+|-SimpleDeclaration
+| |-unsigned
+| |-SimpleDeclarator
+| | |-operator
+| | |-""
+| | |-_s
+| | `-ParametersAndQualifiers
+| |   |-(
+| |   |-SimpleDeclaration
+| |   | |-const
+| |   | |-char
+| |   | `-SimpleDeclarator
+| |   |   `-*
+| |   |-,
+| |   |-SimpleDeclaration
+| |   | `-size_t
+| |   `-)
+| `-;
+|-SimpleDeclaration
+| |-unsigned
+| |-SimpleDeclarator
+| | |-operator
+| | |-""
+| | |-_r
+| | `-ParametersAndQualifiers
+| |   |-(
+| |   |-SimpleDeclaration
+| |   | |-const
+| |   | |-char
+| |   | `-SimpleDeclarator
+| |   |   `-*
+| |   `-)
+| `-;
+|-TemplateDeclaration
+| |-template
+| |-<
+| |-SimpleDeclaration
+| | `-char
+| |-...
+| |->
+| `-SimpleDeclaration
+|   |-unsigned
+|   |-SimpleDeclarator
+|   | |-operator
+|   | |-""
+|   | |-_t
+|   | `-ParametersAndQualifiers
+|   |   |-(
+|   |   `-)
+|   `-;
 `-SimpleDeclaration
   |-void
   |-SimpleDeclarator
@@ -1208,28 +1327,36 @@ void test() {
   `-CompoundStatement
     |-{
     |-ExpressionStatement
-    | |-IntegerLiteralExpression
-    | | `-12
+    | |-IntegerUserDefinedLiteralExpression
+    | | `-12_i
     | `-;
     |-ExpressionStatement
-    | |-IntegerLiteralExpression
-    | | `-12u
+    | |-FloatUserDefinedLiteralExpression
+    | | `-1.2_f
     | `-;
     |-ExpressionStatement
-    | |-IntegerLiteralExpression
-    | | `-12l
+    | |-CharUserDefinedLiteralExpression
+    | | `-'2'_c
     | `-;
     |-ExpressionStatement
-    | |-IntegerLiteralExpression
-    | | `-12ul
+    | |-StringUserDefinedLiteralExpression
+    | | `-"12"_s
     | `-;
     |-ExpressionStatement
-    | |-IntegerLiteralExpression
-    | | `-014
+    | |-IntegerUserDefinedLiteralExpression
+    | | `-12_r
     | `-;
     |-ExpressionStatement
-    | |-IntegerLiteralExpression
-    | | `-0XC
+    | |-FloatUserDefinedLiteralExpression
+    | | `-1.2_r
+    | `-;
+    |-ExpressionStatement
+    | |-IntegerUserDefinedLiteralExpression
+    | | `-12_t
+    | `-;
+    |-ExpressionStatement
+    | |-FloatUserDefinedLiteralExpression
+    | | `-1.2_t
     | `-;
     `-}
 )txt"));

@@ -70,8 +70,6 @@ if config.android:
     # to link. In r19 and later we just use the default which is libc++.
     config.cxx_mode_flags.append('-stdlib=libstdc++')
 
-config.environment = dict(os.environ)
-
 # Clear some environment variables that might affect Clang.
 possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'LSAN_OPTIONS',
                                'MSAN_OPTIONS', 'UBSAN_OPTIONS',

@@ -23,6 +23,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Tooling/Syntax/Nodes.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "clang/Tooling/Syntax/Tree.h"
@@ -216,7 +217,8 @@ static SourceRange getDeclaratorRange(const SourceManager &SM, TypeLoc T,
   }
   if (Initializer.isValid()) {
     auto InitializerEnd = Initializer.getEnd();
-    assert(SM.isBeforeInTranslationUnit(End, InitializerEnd) || End == InitializerEnd);
+    assert(SM.isBeforeInTranslationUnit(End, InitializerEnd) ||
+           End == InitializerEnd);
     End = InitializerEnd;
   }
   return SourceRange(Start, End);
@@ -551,8 +553,8 @@ private:
 namespace {
 class BuildTreeVisitor : public RecursiveASTVisitor<BuildTreeVisitor> {
 public:
-  explicit BuildTreeVisitor(ASTContext &Ctx, syntax::TreeBuilder &Builder)
-      : Builder(Builder), LangOpts(Ctx.getLangOpts()) {}
+  explicit BuildTreeVisitor(ASTContext &Context, syntax::TreeBuilder &Builder)
+      : Builder(Builder), Context(Context) {}
 
   bool shouldTraversePostOrder() const { return true; }
 
@@ -708,6 +710,54 @@ public:
     return NNS;
   }
 
+  bool TraverseUserDefinedLiteral(UserDefinedLiteral *S) {
+    // The semantic AST node `UserDefinedLiteral` (UDL) may have one child node
+    // referencing the location of the UDL suffix (`_w` in `1.2_w`). The
+    // UDL suffix location does not point to the beginning of a token, so we
+    // can't represent the UDL suffix as a separate syntax tree node.
+
+    return WalkUpFromUserDefinedLiteral(S);
+  }
+
+  syntax::UserDefinedLiteralExpression *
+  buildUserDefinedLiteral(UserDefinedLiteral *S) {
+    switch (S->getLiteralOperatorKind()) {
+    case clang::UserDefinedLiteral::LOK_Integer:
+      return new (allocator()) syntax::IntegerUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_Floating:
+      return new (allocator()) syntax::FloatUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_Character:
+      return new (allocator()) syntax::CharUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_String:
+      return new (allocator()) syntax::StringUserDefinedLiteralExpression;
+    case clang::UserDefinedLiteral::LOK_Raw:
+    case clang::UserDefinedLiteral::LOK_Template:
+      // For raw literal operator and numeric literal operator template we
+      // cannot get the type of the operand in the semantic AST. We get this
+      // information from the token. As integer and floating point have the same
+      // token kind, we run `NumericLiteralParser` again to distinguish them.
+      auto TokLoc = S->getBeginLoc();
+      auto TokSpelling =
+          Builder.findToken(TokLoc)->text(Context.getSourceManager());
+      auto Literal =
+          NumericLiteralParser(TokSpelling, TokLoc, Context.getSourceManager(),
+                               Context.getLangOpts(), Context.getTargetInfo(),
+                               Context.getDiagnostics());
+      if (Literal.isIntegerLiteral())
+        return new (allocator()) syntax::IntegerUserDefinedLiteralExpression;
+      else {
+        assert(Literal.isFloatingLiteral());
+        return new (allocator()) syntax::FloatUserDefinedLiteralExpression;
+      }
+    }
+  }
+
+  bool WalkUpFromUserDefinedLiteral(UserDefinedLiteral *S) {
+    Builder.markChildToken(S->getBeginLoc(), syntax::NodeRole::LiteralToken);
+    Builder.foldNode(Builder.getExprRange(S), buildUserDefinedLiteral(S), S);
+    return true;
+  }
+
   bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
     if (auto *NNS = BuildNestedNameSpecifier(S->getQualifierLoc()))
       Builder.markChild(NNS, syntax::NodeRole::IdExpression_qualifier);
@@ -817,9 +867,9 @@ public:
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
     if (getOperatorNodeKind(*S) ==
         syntax::NodeKind::PostfixUnaryOperatorExpression) {
-      // A postfix unary operator is declared as taking two operands. The second
-      // operand is used to distinguish from its prefix counterpart. In the
-      // semantic AST this "phantom" operand is represented as a
+      // A postfix unary operator is declared as taking two operands. The
+      // second operand is used to distinguish from its prefix counterpart. In
+      // the semantic AST this "phantom" operand is represented as a
       // `IntegerLiteral` with invalid `SourceLocation`. We skip visiting this
       // operand because it does not correspond to anything written in source
       // code
@@ -1225,7 +1275,7 @@ private:
   llvm::BumpPtrAllocator &allocator() { return Builder.allocator(); }
 
   syntax::TreeBuilder &Builder;
-  const LangOptions &LangOpts;
+  const ASTContext &Context;
 };
 } // namespace
 
