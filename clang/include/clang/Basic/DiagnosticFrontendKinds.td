@@ -119,6 +119,9 @@ def warn_fe_serialized_diag_merge_failure : Warning<
 def warn_fe_serialized_diag_failure : Warning<
     "unable to open file %0 for serializing diagnostics (%1)">,
     InGroup<SerializedDiagnostics>;
+def warn_fe_serialized_diag_failure_during_finalisation : Warning<
+    "Received warning after diagnostic serialization teardown was underway: %0">,
+    InGroup<SerializedDiagnostics>;
 
 def err_verify_missing_line : Error<
     "missing or invalid line number following '@' in expected %0">;
