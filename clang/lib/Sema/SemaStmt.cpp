@@ -1328,8 +1328,9 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
     }
 }
 
-StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc, ConditionResult Cond,
-                                Stmt *Body) {
+StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
+                                SourceLocation LParenLoc, ConditionResult Cond,
+                                SourceLocation RParenLoc, Stmt *Body) {
   if (Cond.isInvalid())
     return StmtError();
 
@@ -1344,7 +1345,7 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc, ConditionResult Cond,
     getCurCompoundScope().setHasEmptyLoopBodies();
 
   return WhileStmt::Create(Context, CondVal.first, CondVal.second, Body,
-                           WhileLoc);
+                           WhileLoc, LParenLoc, RParenLoc);
 }
 
 StmtResult
