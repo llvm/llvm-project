@@ -405,3 +405,27 @@
 # CHECK-BE: vinsdrx 1, 2, 3                       # encoding: [0x10,0x22,0x1b,0xcf]
 # CHECK-LE: vinsdrx 1, 2, 3                       # encoding: [0xcf,0x1b,0x22,0x10]
             vinsdrx 1, 2, 3
+# CHECK-BE: lxvrbx 32, 1, 2                       # encoding: [0x7c,0x01,0x10,0x1b]
+# CHECK-LE: lxvrbx 32, 1, 2                       # encoding: [0x1b,0x10,0x01,0x7c]
+            lxvrbx 32, 1, 2
+# CHECK-BE: lxvrhx 33, 1, 2                       # encoding: [0x7c,0x21,0x10,0x5b]
+# CHECK-LE: lxvrhx 33, 1, 2                       # encoding: [0x5b,0x10,0x21,0x7c]
+            lxvrhx 33, 1, 2
+# CHECK-BE: lxvrdx 34, 1, 2                       # encoding: [0x7c,0x41,0x10,0xdb]
+# CHECK-LE: lxvrdx 34, 1, 2                       # encoding: [0xdb,0x10,0x41,0x7c]
+            lxvrdx 34, 1, 2
+# CHECK-BE: lxvrwx 35, 1, 2                       # encoding: [0x7c,0x61,0x10,0x9b]
+# CHECK-LE: lxvrwx 35, 1, 2                       # encoding: [0x9b,0x10,0x61,0x7c]
+            lxvrwx 35, 1, 2
+# CHECK-BE: stxvrbx 32, 3, 1                      # encoding: [0x7c,0x03,0x09,0x1b]
+# CHECK-LE: stxvrbx 32, 3, 1                      # encoding: [0x1b,0x09,0x03,0x7c]
+            stxvrbx 32, 3, 1
+# CHECK-BE: stxvrhx 33, 3, 1                      # encoding: [0x7c,0x23,0x09,0x5b]
+# CHECK-LE: stxvrhx 33, 3, 1                      # encoding: [0x5b,0x09,0x23,0x7c]
+            stxvrhx 33, 3, 1
+# CHECK-BE: stxvrwx 34, 3, 1                      # encoding: [0x7c,0x43,0x09,0x9b]
+# CHECK-LE: stxvrwx 34, 3, 1                      # encoding: [0x9b,0x09,0x43,0x7c]
+            stxvrwx 34, 3, 1
+# CHECK-BE: stxvrdx 35, 3, 1                      # encoding: [0x7c,0x63,0x09,0xdb]
+# CHECK-LE: stxvrdx 35, 3, 1                      # encoding: [0xdb,0x09,0x63,0x7c]
+            stxvrdx 35, 3, 1
