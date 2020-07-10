@@ -1198,7 +1198,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   MemImport.Module = "env";
   MemImport.Field = "__linear_memory";
   MemImport.Kind = wasm::WASM_EXTERNAL_MEMORY;
-  MemImport.Memory.Flags = is64Bit() ? wasm::WASM_LIMITS_FLAG_IS_64 : 0;
+  MemImport.Memory.Flags = is64Bit() ? wasm::WASM_LIMITS_FLAG_IS_64
+                                     : wasm::WASM_LIMITS_FLAG_NONE;
   Imports.push_back(MemImport);
 
   // For now, always emit the table section, since indirect calls are not

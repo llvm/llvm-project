@@ -132,6 +132,12 @@
 # define SANITIZER_X32 0
 #endif
 
+#if defined(__i386__) || defined(_M_IX86)
+# define SANITIZER_I386 1
+#else
+# define SANITIZER_I386 0
+#endif
+
 #if defined(__mips__)
 # define SANITIZER_MIPS 1
 # if defined(__mips64)

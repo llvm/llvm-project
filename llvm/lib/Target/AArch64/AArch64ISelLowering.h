@@ -77,6 +77,7 @@ enum NodeType : unsigned {
   FADD_PRED,
   SDIV_PRED,
   UDIV_PRED,
+  FMA_PRED,
   SMIN_MERGE_OP1,
   UMIN_MERGE_OP1,
   SMAX_MERGE_OP1,
@@ -734,6 +735,16 @@ public:
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
+  /// SVE code generation for fixed length vectors does not custom lower
+  /// BUILD_VECTOR. This makes BUILD_VECTOR legalisation a source of stores to
+  /// merge. However, merging them creates a BUILD_VECTOR that is just as
+  /// illegal as the original, thus leading to an infinite legalisation loop.
+  /// NOTE: Once BUILD_VECTOR is legal or can be custom lowered for all legal
+  /// vector types this override can be removed.
+  bool mergeStoresAfterLegalization(EVT VT) const override {
+    return !useSVEForFixedLengthVectors();
+  }
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
@@ -850,6 +861,7 @@ private:
   SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,
                               unsigned NewOp) const;
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
@@ -880,6 +892,8 @@ private:
 
   SDValue LowerFixedLengthVectorLoadToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorStoreToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthVectorTruncateToSVE(SDValue Op,
+                                              SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;

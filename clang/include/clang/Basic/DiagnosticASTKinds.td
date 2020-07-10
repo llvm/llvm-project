@@ -101,8 +101,16 @@ def note_constexpr_null_subobject : Note<
   "access array element of|perform pointer arithmetic on|"
   "access real component of|"
   "access imaginary component of}0 null pointer">;
+def note_constexpr_function_param_value_unknown : Note<
+  "function parameter %0 with unknown value cannot be used in a constant "
+  "expression">;
+def note_constexpr_var_init_unknown : Note<
+  "initializer of %0 is unknown">;
 def note_constexpr_var_init_non_constant : Note<
   "initializer of %0 is not a constant expression">;
+def note_constexpr_var_init_weak : Note<
+  "initializer of weak variable %0 is not considered constant because "
+  "it may be different at runtime">;
 def note_constexpr_typeid_polymorphic : Note<
   "typeid applied to expression of polymorphic type %0 is "
   "not allowed in a constant expression in C++ standards before C++20">;
@@ -159,6 +167,9 @@ def note_constexpr_access_mutable : Note<
   "mutable member %1 is not allowed in a constant expression">;
 def note_constexpr_ltor_non_const_int : Note<
   "read of non-const variable %0 is not allowed in a constant expression">;
+def note_constexpr_ltor_non_integral : Note<
+  "read of variable %0 of non-integral, non-enumeration type %1 "
+  "is not allowed in a constant expression">;
 def note_constexpr_ltor_non_constexpr : Note<
   "read of non-constexpr variable %0 is not allowed in a constant expression">;
 def note_constexpr_ltor_incomplete_type : Note<

@@ -284,3 +284,9 @@ func @caller(%arg0: tensor<5xf32>) -> tensor<5xf32> {
 // CHECK: %[[Y1:.*]] = call @callee(%[[X0]], %[[Y0]])
 // CHECK: linalg.copy(%[[Y0]], %[[CALLER_RESULT]])
 // CHECK: return
+
+// CHECK-LABEL: func @func_with_unranked_arg
+func @func_with_unranked_arg(%arg0: tensor<*xf32>) {
+  return
+}
+// CHECK-SAME: ([[ARG:%.*]]: memref<*xf32>)

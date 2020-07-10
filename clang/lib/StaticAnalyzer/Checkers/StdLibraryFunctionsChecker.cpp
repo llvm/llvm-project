@@ -726,7 +726,8 @@ StdLibraryFunctionsChecker::findFunctionSummary(const CallEvent &Call,
   return findFunctionSummary(FD, C);
 }
 
-llvm::Optional<QualType> lookupType(StringRef Name, const ASTContext &ACtx) {
+static llvm::Optional<QualType> lookupType(StringRef Name,
+                                           const ASTContext &ACtx) {
   IdentifierInfo &II = ACtx.Idents.get(Name);
   auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
   if (LookupRes.size() == 0)

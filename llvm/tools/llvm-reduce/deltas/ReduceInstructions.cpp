@@ -19,18 +19,15 @@ using namespace llvm;
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractInstrFromModule(std::vector<Chunk> ChunksToKeep,
                                    Module *Program) {
-  int I = 0, InstCount = 0;
+  Oracle O(ChunksToKeep);
+
   std::set<Instruction *> InstToKeep;
 
   for (auto &F : *Program)
     for (auto &BB : F)
       for (auto &Inst : BB)
-        if (I < (int)ChunksToKeep.size()) {
-          if (ChunksToKeep[I].contains(++InstCount))
-            InstToKeep.insert(&Inst);
-          if (ChunksToKeep[I].end == InstCount)
-            ++I;
-        }
+        if (O.shouldKeep())
+          InstToKeep.insert(&Inst);
 
   std::vector<Instruction *> InstToDelete;
   for (auto &F : *Program)

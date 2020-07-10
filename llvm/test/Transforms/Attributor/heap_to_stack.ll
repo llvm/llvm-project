@@ -82,7 +82,7 @@ define void @test3() {
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test3()
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    tail call void @no_sync_func(i8* noalias nocapture nofree [[TMP1]])
 ; IS________NPM-NEXT:    ret void
 ;
@@ -102,7 +102,7 @@ define void @test3a(i8* %p) {
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test3a
 ; IS________NPM-SAME: (i8* nocapture [[P:%.*]])
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    tail call void @nofree_arg_only(i8* noalias nocapture nofree [[TMP1]], i8* nocapture [[P]])
 ; IS________NPM-NEXT:    ret void
 ;
@@ -157,7 +157,7 @@ define void @test0() {
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test0()
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 8
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 8, align 1
 ; IS________NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP1]] to i8*
 ; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 8, i1 false)
 ; IS________NPM-NEXT:    tail call void @no_sync_func(i8* noalias nocapture nofree [[TMP1]])
@@ -177,7 +177,7 @@ define void @test4() {
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test4()
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    tail call void @nofree_func(i8* noalias nocapture nofree [[TMP1]])
 ; IS________NPM-NEXT:    ret void
 ;
@@ -207,7 +207,7 @@ define void @test5(i32, i8* %p) {
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test5
 ; IS________NPM-SAME: (i32 [[TMP0:%.*]], i8* nocapture [[P:%.*]])
-; IS________NPM-NEXT:    [[TMP2:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP2:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IS________NPM-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; IS________NPM:       4:
@@ -256,7 +256,7 @@ define void @test6(i32) {
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test6
 ; IS________NPM-SAME: (i32 [[TMP0:%.*]])
-; IS________NPM-NEXT:    [[TMP2:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP2:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IS________NPM-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; IS________NPM:       4:
@@ -293,7 +293,7 @@ define void @test7() {
 ; IS________OPM-NEXT:    unreachable
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test7()
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = tail call i32 @no_return_call()
 ; IS________NPM-NEXT:    unreachable
 ;
@@ -359,7 +359,7 @@ define i32 @test10() {
 ; IS________OPM-NEXT:    ret i32 [[TMP3]]
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test10()
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    tail call void @no_sync_func(i8* noalias nocapture nofree [[TMP1]])
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
 ; IS________NPM-NEXT:    store i32 10, i32* [[TMP2]], align 4
@@ -387,7 +387,7 @@ define i32 @test_lifetime() {
 ; IS________OPM-NEXT:    ret i32 [[TMP3]]
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test_lifetime()
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    tail call void @no_sync_func(i8* noalias nocapture nofree [[TMP1]])
 ; IS________NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* noalias nocapture nonnull align 4 dereferenceable(4) [[TMP1]])
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
@@ -455,7 +455,7 @@ define i32 @irreducible_cfg(i32 %0) {
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@irreducible_cfg
 ; IS________NPM-SAME: (i32 [[TMP0:%.*]])
-; IS________NPM-NEXT:    [[TMP2:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP2:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
 ; IS________NPM-NEXT:    store i32 10, i32* [[TMP3]], align 4
 ; IS________NPM-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0]], 1
@@ -555,7 +555,7 @@ define i32 @malloc_in_loop(i32 %0) {
 ; IS________NPM-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP6]], 0
 ; IS________NPM-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11:%.*]]
 ; IS________NPM:       8:
-; IS________NPM-NEXT:    [[TMP9:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP9:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    [[TMP10:%.*]] = bitcast i8* [[TMP9]] to i32*
 ; IS________NPM-NEXT:    store i32 1, i32* [[TMP10]], align 8
 ; IS________NPM-NEXT:    br label [[TMP4]]
@@ -680,7 +680,7 @@ define void @test16a(i8 %v, i8** %P) {
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test16a
 ; IS________NPM-SAME: (i8 [[V:%.*]], i8** nocapture nofree readnone [[P:%.*]])
-; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    store i8 [[V]], i8* [[TMP1]], align 1
 ; IS________NPM-NEXT:    tail call void @no_sync_func(i8* noalias nocapture nofree nonnull dereferenceable(1) [[TMP1]])
 ; IS________NPM-NEXT:    ret void

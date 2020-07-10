@@ -100,7 +100,7 @@ public:
     bool StorePreamblesInMemory = true;
     /// Reuse even stale preambles, and rebuild them in the background.
     /// This improves latency at the cost of accuracy.
-    bool AsyncPreambleBuilds = false;
+    bool AsyncPreambleBuilds = true;
 
     /// If true, ClangdServer builds a dynamic in-memory index for symbols in
     /// opened files and uses the index to augment code completion results.

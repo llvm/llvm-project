@@ -192,6 +192,7 @@ protected:
   bool HasFloat128;
   bool HasFloat16;
   bool HasBFloat16;
+  bool HasStrictFP;
 
   unsigned char MaxAtomicPromoteWidth, MaxAtomicInlineWidth;
   unsigned short SimdDefaultAlign;
@@ -576,6 +577,9 @@ public:
 
   /// Determine whether the _BFloat16 type is supported on this target.
   virtual bool hasBFloat16Type() const { return HasBFloat16; }
+
+  /// Determine whether constrained floating point is supported on this target.
+  virtual bool hasStrictFP() const { return HasStrictFP; }
 
   /// Return the alignment that is suitable for storing any
   /// object with a fundamental alignment requirement.

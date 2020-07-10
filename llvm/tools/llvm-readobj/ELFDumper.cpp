@@ -1086,10 +1086,12 @@ Expected<StringRef> ELFDumper<ELFT>::getSymbolVersion(const Elf_Sym *Sym,
                       sizeof(Elf_Sym);
 
   // Get the corresponding version index entry.
-  const Elf_Versym *Versym = unwrapOrError(
-      ObjF->getFileName(), ObjF->getELFFile()->template getEntry<Elf_Versym>(
-                               SymbolVersionSection, EntryIndex));
-  return this->getSymbolVersionByIndex(Versym->vs_index, IsDefault);
+  if (Expected<const Elf_Versym *> EntryOrErr =
+          ObjF->getELFFile()->template getEntry<Elf_Versym>(
+              SymbolVersionSection, EntryIndex))
+    return this->getSymbolVersionByIndex((*EntryOrErr)->vs_index, IsDefault);
+  else
+    return EntryOrErr.takeError();
 }
 
 template <typename ELFT>
@@ -3039,7 +3041,9 @@ Error MipsGOTParser<ELFT>::findGOT(Elf_Dyn_Range DynTable,
 
   size_t DynSymTotal = DynSyms.size();
   if (*DtGotSym > DynSymTotal)
-    return createError("MIPS_GOTSYM exceeds a number of dynamic symbols");
+    return createError("DT_MIPS_GOTSYM value (" + Twine(*DtGotSym) +
+                       ") exceeds the number of dynamic symbols (" +
+                       Twine(DynSymTotal) + ")");
 
   GotSec = findNotEmptySectionByAddress(Obj, FileName, *DtPltGot);
   if (!GotSec)
@@ -3093,14 +3097,35 @@ Error MipsGOTParser<ELFT>::findPLT(Elf_Dyn_Range DynTable) {
     return createError("there is no non-empty RELPLT section at 0x" +
                        Twine::utohexstr(*DtJmpRel));
 
-  ArrayRef<uint8_t> PltContent =
-      unwrapOrError(FileName, Obj->getSectionContents(PltSec));
-  PltEntries = Entries(reinterpret_cast<const Entry *>(PltContent.data()),
-                       PltContent.size() / sizeof(Entry));
+  if (Expected<ArrayRef<uint8_t>> PltContentOrErr =
+          Obj->getSectionContents(PltSec))
+    PltEntries =
+        Entries(reinterpret_cast<const Entry *>(PltContentOrErr->data()),
+                PltContentOrErr->size() / sizeof(Entry));
+  else
+    return createError("unable to read PLTGOT section content: " +
+                       toString(PltContentOrErr.takeError()));
 
-  PltSymTable = unwrapOrError(FileName, Obj->getSection(PltRelSec->sh_link));
-  PltStrTable =
-      unwrapOrError(FileName, Obj->getStringTableForSymtab(*PltSymTable));
+  if (Expected<const Elf_Shdr *> PltSymTableOrErr =
+          Obj->getSection(PltRelSec->sh_link)) {
+    PltSymTable = *PltSymTableOrErr;
+  } else {
+    unsigned SecNdx = PltRelSec - &cantFail(Obj->sections()).front();
+    return createError("unable to get a symbol table linked to the RELPLT "
+                       "section with index " +
+                       Twine(SecNdx) + ": " +
+                       toString(PltSymTableOrErr.takeError()));
+  }
+
+  if (Expected<StringRef> StrTabOrErr =
+          Obj->getStringTableForSymtab(*PltSymTable)) {
+    PltStrTable = *StrTabOrErr;
+  } else {
+    unsigned SecNdx = PltSymTable - &cantFail(Obj->sections()).front();
+    return createError(
+        "unable to get a string table for the symbol table with index " +
+        Twine(SecNdx) + ": " + toString(StrTabOrErr.takeError()));
+  }
 
   return Error::success();
 }

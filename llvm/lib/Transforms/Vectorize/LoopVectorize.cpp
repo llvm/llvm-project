@@ -2877,6 +2877,18 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
     return B.CreateMul(X, Y);
   };
 
+  // Get a suitable insert point for SCEV expansion. For blocks in the vector
+  // loop, choose the end of the vector loop header (=LoopVectorBody), because
+  // the DomTree is not kept up-to-date for additional blocks generated in the
+  // vector loop. By using the header as insertion point, we guarantee that the
+  // expanded instructions dominate all their uses.
+  auto GetInsertPoint = [this, &B]() {
+    BasicBlock *InsertBB = B.GetInsertPoint()->getParent();
+    if (InsertBB != LoopVectorBody &&
+        LI->getLoopFor(LoopVectorBody) == LI->getLoopFor(InsertBB))
+      return LoopVectorBody->getTerminator();
+    return &*B.GetInsertPoint();
+  };
   switch (ID.getKind()) {
   case InductionDescriptor::IK_IntInduction: {
     assert(Index->getType() == StartValue->getType() &&
@@ -2884,7 +2896,7 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
     if (ID.getConstIntStepValue() && ID.getConstIntStepValue()->isMinusOne())
       return B.CreateSub(StartValue, Index);
     auto *Offset = CreateMul(
-        Index, Exp.expandCodeFor(Step, Index->getType(), &*B.GetInsertPoint()));
+        Index, Exp.expandCodeFor(Step, Index->getType(), GetInsertPoint()));
     return CreateAdd(StartValue, Offset);
   }
   case InductionDescriptor::IK_PtrInduction: {
@@ -2892,8 +2904,8 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
            "Expected constant step for pointer induction");
     return B.CreateGEP(
         StartValue->getType()->getPointerElementType(), StartValue,
-        CreateMul(Index, Exp.expandCodeFor(Step, Index->getType(),
-                                           &*B.GetInsertPoint())));
+        CreateMul(Index,
+                  Exp.expandCodeFor(Step, Index->getType(), GetInsertPoint())));
   }
   case InductionDescriptor::IK_FpInduction: {
     assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");

@@ -144,7 +144,7 @@ namespace PR45083 {
   void h(auto a, void*) {} // expected-error {{redefinition}}
 
   void i(auto a) {
-    [](auto a, int = ({decltype(a) i; i * 2;})){}(a); // expected-error {{no matching function}} expected-note {{substitution failure}}
+    [](auto a, int = ({decltype(a) i; i * 2;})){}(a); // expected-error {{invalid operands to binary expression ('decltype(a)' (aka 'void *') and 'int')}} expected-note {{in instantiation of}}
   }
   void use_i() {
     i(0);

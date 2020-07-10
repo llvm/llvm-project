@@ -612,7 +612,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldOperation(
         if (iter != scope->end()) {
           const Symbol &symbol{*iter->second};
           const auto *details{symbol.detailsIf<semantics::TypeParamDetails>()};
-          if (details && details->init()) {
+          if (details && details->init() &&
+              (details->attr() == common::TypeParamAttr::Kind ||
+                  IsConstantExpr(*details->init()))) {
             Expr<SomeInteger> expr{*details->init()};
             return Fold(context,
                 Expr<IntKIND>{

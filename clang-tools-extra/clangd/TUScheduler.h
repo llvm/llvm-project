@@ -194,7 +194,7 @@ public:
 
     /// Whether to run PreamblePeer asynchronously.
     /// No-op if AsyncThreadsCount is 0.
-    bool AsyncPreambleBuilds = false;
+    bool AsyncPreambleBuilds = true;
 
     /// Used to create a context that wraps each single operation.
     /// Typically to inject per-file configuration.

@@ -262,7 +262,7 @@ Scatterer::Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
   PtrTy = dyn_cast<PointerType>(Ty);
   if (PtrTy)
     Ty = PtrTy->getElementType();
-  Size = cast<VectorType>(Ty)->getNumElements();
+  Size = cast<FixedVectorType>(Ty)->getNumElements();
   if (!CachePtr)
     Tmp.resize(Size, nullptr);
   else if (CachePtr->empty())
@@ -465,7 +465,7 @@ bool ScalarizerVisitor::splitUnary(Instruction &I, const Splitter &Split) {
   if (!VT)
     return false;
 
-  unsigned NumElems = VT->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
   IRBuilder<> Builder(&I);
   Scatterer Op = scatter(&I, I.getOperand(0));
   assert(Op.size() == NumElems && "Mismatched unary operation");
@@ -485,7 +485,7 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
   if (!VT)
     return false;
 
-  unsigned NumElems = VT->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
   IRBuilder<> Builder(&I);
   Scatterer VOp0 = scatter(&I, I.getOperand(0));
   Scatterer VOp1 = scatter(&I, I.getOperand(1));
@@ -528,7 +528,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   if (ID == Intrinsic::not_intrinsic || !isTriviallyScalariable(ID))
     return false;
 
-  unsigned NumElems = VT->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
   unsigned NumArgs = CI.getNumArgOperands();
 
   ValueVector ScalarOperands(NumArgs);
@@ -578,7 +578,7 @@ bool ScalarizerVisitor::visitSelectInst(SelectInst &SI) {
   if (!VT)
     return false;
 
-  unsigned NumElems = VT->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
   IRBuilder<> Builder(&SI);
   Scatterer VOp1 = scatter(&SI, SI.getOperand(1));
   Scatterer VOp2 = scatter(&SI, SI.getOperand(2));
@@ -632,7 +632,7 @@ bool ScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     return false;
 
   IRBuilder<> Builder(&GEPI);
-  unsigned NumElems = VT->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
   unsigned NumIndices = GEPI.getNumIndices();
 
   // The base pointer might be scalar even if it's a vector GEP. In those cases,
@@ -677,7 +677,7 @@ bool ScalarizerVisitor::visitCastInst(CastInst &CI) {
   if (!VT)
     return false;
 
-  unsigned NumElems = VT->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
   IRBuilder<> Builder(&CI);
   Scatterer Op0 = scatter(&CI, CI.getOperand(0));
   assert(Op0.size() == NumElems && "Mismatched cast");
@@ -696,8 +696,8 @@ bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
   if (!DstVT || !SrcVT)
     return false;
 
-  unsigned DstNumElems = DstVT->getNumElements();
-  unsigned SrcNumElems = SrcVT->getNumElements();
+  unsigned DstNumElems = cast<FixedVectorType>(DstVT)->getNumElements();
+  unsigned SrcNumElems = cast<FixedVectorType>(SrcVT)->getNumElements();
   IRBuilder<> Builder(&BCI);
   Scatterer Op0 = scatter(&BCI, BCI.getOperand(0));
   ValueVector Res;
@@ -750,7 +750,7 @@ bool ScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
   if (!VT)
     return false;
 
-  unsigned NumElems = VT->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
   IRBuilder<> Builder(&IEI);
   Scatterer Op0 = scatter(&IEI, IEI.getOperand(0));
   Value *NewElt = IEI.getOperand(1);
@@ -785,7 +785,7 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
   if (!VT)
     return false;
 
-  unsigned NumSrcElems = VT->getNumElements();
+  unsigned NumSrcElems = cast<FixedVectorType>(VT)->getNumElements();
   IRBuilder<> Builder(&EEI);
   Scatterer Op0 = scatter(&EEI, EEI.getOperand(0));
   Value *ExtIdx = EEI.getOperand(1);
@@ -817,7 +817,7 @@ bool ScalarizerVisitor::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (!VT)
     return false;
 
-  unsigned NumElems = VT->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
   Scatterer Op0 = scatter(&SVI, SVI.getOperand(0));
   Scatterer Op1 = scatter(&SVI, SVI.getOperand(1));
   ValueVector Res;
@@ -841,7 +841,7 @@ bool ScalarizerVisitor::visitPHINode(PHINode &PHI) {
   if (!VT)
     return false;
 
-  unsigned NumElems = VT->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(VT)->getNumElements();
   IRBuilder<> Builder(&PHI);
   ValueVector Res;
   Res.resize(NumElems);
@@ -872,7 +872,7 @@ bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
   if (!Layout)
     return false;
 
-  unsigned NumElems = Layout->VecTy->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(Layout->VecTy)->getNumElements();
   IRBuilder<> Builder(&LI);
   Scatterer Ptr = scatter(&LI, LI.getPointerOperand());
   ValueVector Res;
@@ -898,7 +898,7 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
   if (!Layout)
     return false;
 
-  unsigned NumElems = Layout->VecTy->getNumElements();
+  unsigned NumElems = cast<FixedVectorType>(Layout->VecTy)->getNumElements();
   IRBuilder<> Builder(&SI);
   Scatterer VPtr = scatter(&SI, SI.getPointerOperand());
   Scatterer VVal = scatter(&SI, FullValue);
@@ -934,7 +934,7 @@ bool ScalarizerVisitor::finish() {
       Value *Res = UndefValue::get(Op->getType());
       if (auto *Ty = dyn_cast<VectorType>(Op->getType())) {
         BasicBlock *BB = Op->getParent();
-        unsigned Count = Ty->getNumElements();
+        unsigned Count = cast<FixedVectorType>(Ty)->getNumElements();
         IRBuilder<> Builder(Op);
         if (isa<PHINode>(Op))
           Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());

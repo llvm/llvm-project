@@ -207,6 +207,7 @@ exit:
   call void @capture(i8* %m)
   ret i8* %m
 }
+
 ; Stores to stack objects can be eliminated if they are not captured inside the function.
 define void @test_alloca_nocapture_1() {
 ; CHECK-LABEL: @test_alloca_nocapture_1(

@@ -82,7 +82,7 @@ void formatted_raw_ostream::UpdatePosition(const char *Ptr, size_t Size) {
     // the display width until we see the rest of the code point. Stash the
     // bytes we do have, so that we can reconstruct the whole code point later,
     // even if the buffer is being flushed.
-    if ((End - Ptr) < NumBytes) {
+    if ((unsigned)(End - Ptr) < NumBytes) {
       PartialUTF8Char = StringRef(Ptr, End - Ptr);
       return;
     }

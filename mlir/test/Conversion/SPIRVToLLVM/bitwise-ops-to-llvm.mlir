@@ -54,9 +54,9 @@ func @bitfield_insert_scalar_same_bit_width(%base: i32, %insert: i32, %offset: i
 // CHECK-LABEL: func @bitfield_insert_scalar_smaller_bit_width
 // CHECK-SAME: %[[BASE:.*]]: !llvm.i64, %[[INSERT:.*]]: !llvm.i64, %[[OFFSET:.*]]: !llvm.i8, %[[COUNT:.*]]: !llvm.i8
 func @bitfield_insert_scalar_smaller_bit_width(%base: i64, %insert: i64, %offset: i8, %count: i8) {
-    // CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(-1 : i64) : !llvm.i64
-    // CHECK: %[[EXT_COUNT:.*]] = llvm.zext %[[COUNT]] : !llvm.i8 to !llvm.i64
     // CHECK: %[[EXT_OFFSET:.*]] = llvm.zext %[[OFFSET]] : !llvm.i8 to !llvm.i64
+    // CHECK: %[[EXT_COUNT:.*]] = llvm.zext %[[COUNT]] : !llvm.i8 to !llvm.i64
+    // CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(-1 : i64) : !llvm.i64
     // CHECK: %[[T0:.*]] = llvm.shl %[[MINUS_ONE]], %[[EXT_COUNT]] : !llvm.i64
     // CHECK: %[[T1:.*]] = llvm.xor %[[T0]], %[[MINUS_ONE]] : !llvm.i64
     // CHECK: %[[T2:.*]] = llvm.shl %[[T1]], %[[EXT_OFFSET]] : !llvm.i64
@@ -71,9 +71,9 @@ func @bitfield_insert_scalar_smaller_bit_width(%base: i64, %insert: i64, %offset
 // CHECK-LABEL: func @bitfield_insert_scalar_greater_bit_width
 // CHECK-SAME: %[[BASE:.*]]: !llvm.i16, %[[INSERT:.*]]: !llvm.i16, %[[OFFSET:.*]]: !llvm.i32, %[[COUNT:.*]]: !llvm.i64
 func @bitfield_insert_scalar_greater_bit_width(%base: i16, %insert: i16, %offset: i32, %count: i64) {
-    // CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(-1 : i16) : !llvm.i16
-    // CHECK: %[[TRUNC_COUNT:.*]] = llvm.trunc %[[COUNT]] : !llvm.i64 to !llvm.i16
     // CHECK: %[[TRUNC_OFFSET:.*]] = llvm.trunc %[[OFFSET]] : !llvm.i32 to !llvm.i16
+    // CHECK: %[[TRUNC_COUNT:.*]] = llvm.trunc %[[COUNT]] : !llvm.i64 to !llvm.i16
+    // CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(-1 : i16) : !llvm.i16
     // CHECK: %[[T0:.*]] = llvm.shl %[[MINUS_ONE]], %[[TRUNC_COUNT]] : !llvm.i16
     // CHECK: %[[T1:.*]] = llvm.xor %[[T0]], %[[MINUS_ONE]] : !llvm.i16
     // CHECK: %[[T2:.*]] = llvm.shl %[[T1]], %[[TRUNC_OFFSET]] : !llvm.i16
@@ -107,6 +107,141 @@ func @bitfield_insert_vector(%base: vector<2xi32>, %insert: vector<2xi32>, %offs
     // CHECK: %[[SHIFTED_INSERT:.*]] = llvm.shl %[[INSERT]], %[[OFFSET_V2]] : !llvm<"<2 x i32>">
     // CHECK: %{{.*}} = llvm.or %[[NEW_BASE]], %[[SHIFTED_INSERT]] : !llvm<"<2 x i32>">
     %0 = spv.BitFieldInsert %base, %insert, %offset, %count : vector<2xi32>, i32, i32
+    return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.BitFieldSExtract
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @bitfield_sextract_scalar_same_bit_width
+// CHECK-SAME: %[[BASE:.*]]: !llvm.i64, %[[OFFSET:.*]]: !llvm.i64, %[[COUNT:.*]]: !llvm.i64
+func @bitfield_sextract_scalar_same_bit_width(%base: i64, %offset: i64, %count: i64) {
+    // CHECK: %[[SIZE:.]] = llvm.mlir.constant(64 : i64) : !llvm.i64
+    // CHECK: %[[T0:.*]] = llvm.add %[[COUNT]], %[[OFFSET]] : !llvm.i64
+    // CHECK: %[[T1:.*]] = llvm.sub %[[SIZE]], %[[T0]] : !llvm.i64
+    // CHECK: %[[SHIFTED_LEFT:.*]] = llvm.shl %[[BASE]], %[[T1]] : !llvm.i64
+    // CHECK: %[[T2:.*]] = llvm.add %[[OFFSET]], %[[T1]] : !llvm.i64
+    // CHECK: %{{.*}} = llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : !llvm.i64
+    %0 = spv.BitFieldSExtract %base, %offset, %count : i64, i64, i64
+    return
+}
+
+// CHECK-LABEL: func @bitfield_sextract_scalar_smaller_bit_width
+// CHECK-SAME: %[[BASE:.*]]: !llvm.i32, %[[OFFSET:.*]]: !llvm.i8, %[[COUNT:.*]]: !llvm.i8
+func @bitfield_sextract_scalar_smaller_bit_width(%base: i32, %offset: i8, %count: i8) {
+    // CHECK: %[[EXT_OFFSET:.*]] = llvm.zext %[[OFFSET]] : !llvm.i8 to !llvm.i32
+    // CHECK: %[[EXT_COUNT:.*]] = llvm.zext %[[COUNT]] : !llvm.i8 to !llvm.i32
+    // CHECK: %[[SIZE:.]] = llvm.mlir.constant(32 : i32) : !llvm.i32
+    // CHECK: %[[T0:.*]] = llvm.add %[[EXT_COUNT]], %[[EXT_OFFSET]] : !llvm.i32
+    // CHECK: %[[T1:.*]] = llvm.sub %[[SIZE]], %[[T0]] : !llvm.i32
+    // CHECK: %[[SHIFTED_LEFT:.*]] = llvm.shl %[[BASE]], %[[T1]] : !llvm.i32
+    // CHECK: %[[T2:.*]] = llvm.add %[[EXT_OFFSET]], %[[T1]] : !llvm.i32
+    // CHECK: %{{.*}} = llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : !llvm.i32
+    %0 = spv.BitFieldSExtract %base, %offset, %count : i32, i8, i8
+    return
+}
+
+// CHECK-LABEL: func @bitfield_sextract_scalar_greater_bit_width
+// CHECK-SAME: %[[BASE:.*]]: !llvm.i32, %[[OFFSET:.*]]: !llvm.i64, %[[COUNT:.*]]: !llvm.i64
+func @bitfield_sextract_scalar_greater_bit_width(%base: i32, %offset: i64, %count: i64) {
+    // CHECK: %[[TRUNC_OFFSET:.*]] = llvm.trunc %[[OFFSET]] : !llvm.i64 to !llvm.i32
+    // CHECK: %[[TRUNC_COUNT:.*]] = llvm.trunc %[[COUNT]] : !llvm.i64 to !llvm.i32
+    // CHECK: %[[SIZE:.]] = llvm.mlir.constant(32 : i32) : !llvm.i32
+    // CHECK: %[[T0:.*]] = llvm.add %[[TRUNC_COUNT]], %[[TRUNC_OFFSET]] : !llvm.i32
+    // CHECK: %[[T1:.*]] = llvm.sub %[[SIZE]], %[[T0]] : !llvm.i32
+    // CHECK: %[[SHIFTED_LEFT:.*]] = llvm.shl %[[BASE]], %[[T1]] : !llvm.i32
+    // CHECK: %[[T2:.*]] = llvm.add %[[TRUNC_OFFSET]], %[[T1]] : !llvm.i32
+    // CHECK: %{{.*}} = llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : !llvm.i32
+    %0 = spv.BitFieldSExtract %base, %offset, %count : i32, i64, i64
+    return
+}
+
+// CHECK-LABEL: func @bitfield_sextract_vector
+// CHECK-SAME: %[[BASE:.*]]: !llvm<"<2 x i32>">, %[[OFFSET:.*]]: !llvm.i32, %[[COUNT:.*]]: !llvm.i32
+func @bitfield_sextract_vector(%base: vector<2xi32>, %offset: i32, %count: i32) {
+    // CHECK: %[[OFFSET_V0:.*]] = llvm.mlir.undef : !llvm<"<2 x i32>">
+    // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+    // CHECK: %[[OFFSET_V1:.*]] = llvm.insertelement %[[OFFSET]], %[[OFFSET_V0]][%[[ZERO]] : !llvm.i32] : !llvm<"<2 x i32>">
+    // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+    // CHECK: %[[OFFSET_V2:.*]] = llvm.insertelement  %[[OFFSET]], %[[OFFSET_V1]][%[[ONE]] : !llvm.i32] : !llvm<"<2 x i32>">
+    // CHECK: %[[COUNT_V0:.*]] = llvm.mlir.undef : !llvm<"<2 x i32>">
+    // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+    // CHECK: %[[COUNT_V1:.*]] = llvm.insertelement %[[COUNT]], %[[COUNT_V0]][%[[ZERO]] : !llvm.i32] : !llvm<"<2 x i32>">
+    // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+    // CHECK: %[[COUNT_V2:.*]] = llvm.insertelement %[[COUNT]], %[[COUNT_V1]][%[[ONE]] : !llvm.i32] : !llvm<"<2 x i32>">
+    // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(dense<32> : vector<2xi32>) : !llvm<"<2 x i32>">
+    // CHECK: %[[T0:.*]] = llvm.add %[[COUNT_V2]], %[[OFFSET_V2]] : !llvm<"<2 x i32>">
+    // CHECK: %[[T1:.*]] = llvm.sub %[[SIZE]], %[[T0]] : !llvm<"<2 x i32>">
+    // CHECK: %[[SHIFTED_LEFT:.*]] = llvm.shl %[[BASE]], %[[T1]] : !llvm<"<2 x i32>">
+    // CHECK: %[[T2:.*]] = llvm.add %[[OFFSET_V2]], %[[T1]] : !llvm<"<2 x i32>">
+    // CHECK: %{{.*}} = llvm.ashr %[[SHIFTED_LEFT]], %[[T2]] : !llvm<"<2 x i32>">
+    %0 = spv.BitFieldSExtract %base, %offset, %count : vector<2xi32>, i32, i32
+    return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.BitFieldUExtract
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @bitfield_uextract_scalar_same_bit_width
+// CHECK-SAME: %[[BASE:.*]]: !llvm.i32, %[[OFFSET:.*]]: !llvm.i32, %[[COUNT:.*]]: !llvm.i32
+func @bitfield_uextract_scalar_same_bit_width(%base: i32, %offset: i32, %count: i32) {
+    // CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(-1 : i32) : !llvm.i32
+    // CHECK: %[[T0:.*]] = llvm.shl %[[MINUS_ONE]], %[[COUNT]] : !llvm.i32
+    // CHECK: %[[MASK:.*]] = llvm.xor %[[T0]], %[[MINUS_ONE]] : !llvm.i32
+    // CHECK: %[[SHIFTED_BASE:.*]] = llvm.lshr %[[BASE]], %[[OFFSET]] : !llvm.i32
+    // CHECK: %{{.*}} = llvm.and %[[SHIFTED_BASE]], %[[MASK]] : !llvm.i32
+    %0 = spv.BitFieldUExtract %base, %offset, %count : i32, i32, i32
+    return
+}
+
+// CHECK-LABEL: func @bitfield_uextract_scalar_smaller_bit_width
+// CHECK-SAME: %[[BASE:.*]]: !llvm.i32, %[[OFFSET:.*]]: !llvm.i16, %[[COUNT:.*]]: !llvm.i8
+func @bitfield_uextract_scalar_smaller_bit_width(%base: i32, %offset: i16, %count: i8) {
+    // CHECK: %[[EXT_OFFSET:.*]] = llvm.zext %[[OFFSET]] : !llvm.i16 to !llvm.i32
+    // CHECK: %[[EXT_COUNT:.*]] = llvm.zext %[[COUNT]] : !llvm.i8 to !llvm.i32
+    // CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(-1 : i32) : !llvm.i32
+    // CHECK: %[[T0:.*]] = llvm.shl %[[MINUS_ONE]], %[[EXT_COUNT]] : !llvm.i32
+    // CHECK: %[[MASK:.*]] = llvm.xor %[[T0]], %[[MINUS_ONE]] : !llvm.i32
+    // CHECK: %[[SHIFTED_BASE:.*]] = llvm.lshr %[[BASE]], %[[EXT_OFFSET]] : !llvm.i32
+    // CHECK: %{{.*}} = llvm.and %[[SHIFTED_BASE]], %[[MASK]] : !llvm.i32
+    %0 = spv.BitFieldUExtract %base, %offset, %count : i32, i16, i8
+    return
+}
+
+// CHECK-LABEL: func @bitfield_uextract_scalar_greater_bit_width
+// CHECK-SAME: %[[BASE:.*]]: !llvm.i8, %[[OFFSET:.*]]: !llvm.i16, %[[COUNT:.*]]: !llvm.i8
+func @bitfield_uextract_scalar_greater_bit_width(%base: i8, %offset: i16, %count: i8) {
+    // CHECK: %[[TRUNC_OFFSET:.*]] = llvm.trunc %[[OFFSET]] : !llvm.i16 to !llvm.i8
+    // CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(-1 : i8) : !llvm.i8
+    // CHECK: %[[T0:.*]] = llvm.shl %[[MINUS_ONE]], %[[COUNT]] : !llvm.i8
+    // CHECK: %[[MASK:.*]] = llvm.xor %[[T0]], %[[MINUS_ONE]] : !llvm.i8
+    // CHECK: %[[SHIFTED_BASE:.*]] = llvm.lshr %[[BASE]], %[[TRUNC_OFFSET]] : !llvm.i8
+    // CHECK: %{{.*}} = llvm.and %[[SHIFTED_BASE]], %[[MASK]] : !llvm.i8
+    %0 = spv.BitFieldUExtract %base, %offset, %count : i8, i16, i8
+    return
+}
+
+// CHECK-LABEL: func @bitfield_uextract_vector
+// CHECK-SAME: %[[BASE:.*]]: !llvm<"<2 x i32>">, %[[OFFSET:.*]]: !llvm.i32, %[[COUNT:.*]]: !llvm.i32
+func @bitfield_uextract_vector(%base: vector<2xi32>, %offset: i32, %count: i32) {
+    // CHECK: %[[OFFSET_V0:.*]] = llvm.mlir.undef : !llvm<"<2 x i32>">
+    // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+    // CHECK: %[[OFFSET_V1:.*]] = llvm.insertelement %[[OFFSET]], %[[OFFSET_V0]][%[[ZERO]] : !llvm.i32] : !llvm<"<2 x i32>">
+    // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+    // CHECK: %[[OFFSET_V2:.*]] = llvm.insertelement  %[[OFFSET]], %[[OFFSET_V1]][%[[ONE]] : !llvm.i32] : !llvm<"<2 x i32>">
+    // CHECK: %[[COUNT_V0:.*]] = llvm.mlir.undef : !llvm<"<2 x i32>">
+    // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+    // CHECK: %[[COUNT_V1:.*]] = llvm.insertelement %[[COUNT]], %[[COUNT_V0]][%[[ZERO]] : !llvm.i32] : !llvm<"<2 x i32>">
+    // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+    // CHECK: %[[COUNT_V2:.*]] = llvm.insertelement %[[COUNT]], %[[COUNT_V1]][%[[ONE]] : !llvm.i32] : !llvm<"<2 x i32>">
+    // CHECK: %[[MINUS_ONE:.*]] = llvm.mlir.constant(dense<-1> : vector<2xi32>) : !llvm<"<2 x i32>">
+    // CHECK: %[[T0:.*]] = llvm.shl %[[MINUS_ONE]], %[[COUNT_V2]] : !llvm<"<2 x i32>">
+    // CHECK: %[[MASK:.*]] = llvm.xor %[[T0]], %[[MINUS_ONE]] : !llvm<"<2 x i32>">
+    // CHECK: %[[SHIFTED_BASE:.*]] = llvm.lshr %[[BASE]], %[[OFFSET_V2]] : !llvm<"<2 x i32>">
+    // CHECK: %{{.*}} = llvm.and %[[SHIFTED_BASE]], %[[MASK]] : !llvm<"<2 x i32>">
+    %0 = spv.BitFieldUExtract %base, %offset, %count : vector<2xi32>, i32, i32
     return
 }
 

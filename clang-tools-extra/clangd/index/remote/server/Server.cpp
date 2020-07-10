@@ -11,6 +11,7 @@
 #include "index/remote/marshalling/Marshalling.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 
 #include <grpc++/grpc++.h>
@@ -31,6 +32,9 @@ awaits gRPC lookup requests from the client.
 llvm::cl::opt<std::string> IndexPath(llvm::cl::desc("<INDEX FILE>"),
                                      llvm::cl::Positional, llvm::cl::Required);
 
+llvm::cl::opt<std::string> IndexRoot(llvm::cl::desc("<PROJECT ROOT>"),
+                                     llvm::cl::Positional, llvm::cl::Required);
+
 llvm::cl::opt<std::string> ServerAddress(
     "server-address", llvm::cl::init("0.0.0.0:50051"),
     llvm::cl::desc("Address of the invoked server. Defaults to 0.0.0.0:50051"));
@@ -41,8 +45,13 @@ std::unique_ptr<clangd::SymbolIndex> openIndex(llvm::StringRef Index) {
 
 class RemoteIndexServer final : public SymbolIndex::Service {
 public:
-  RemoteIndexServer(std::unique_ptr<clangd::SymbolIndex> Index)
-      : Index(std::move(Index)) {}
+  RemoteIndexServer(std::unique_ptr<clangd::SymbolIndex> Index,
+                    llvm::StringRef IndexRoot)
+      : Index(std::move(Index)) {
+    llvm::SmallString<256> NativePath = IndexRoot;
+    llvm::sys::path::native(NativePath);
+    IndexedProjectRoot = std::string(NativePath);
+  }
 
 private:
   grpc::Status Lookup(grpc::ServerContext *Context,
@@ -57,7 +66,8 @@ private:
     }
     Index->lookup(Req, [&](const clangd::Symbol &Sym) {
       LookupReply NextMessage;
-      *NextMessage.mutable_stream_result() = toProtobuf(Sym);
+      *NextMessage.mutable_stream_result() =
+          toProtobuf(Sym, IndexedProjectRoot);
       Reply->Write(NextMessage);
     });
     LookupReply LastMessage;
@@ -69,10 +79,11 @@ private:
   grpc::Status FuzzyFind(grpc::ServerContext *Context,
                          const FuzzyFindRequest *Request,
                          grpc::ServerWriter<FuzzyFindReply> *Reply) override {
-    const auto Req = fromProtobuf(Request);
+    const auto Req = fromProtobuf(Request, IndexedProjectRoot);
     bool HasMore = Index->fuzzyFind(Req, [&](const clangd::Symbol &Sym) {
       FuzzyFindReply NextMessage;
-      *NextMessage.mutable_stream_result() = toProtobuf(Sym);
+      *NextMessage.mutable_stream_result() =
+          toProtobuf(Sym, IndexedProjectRoot);
       Reply->Write(NextMessage);
     });
     FuzzyFindReply LastMessage;
@@ -92,7 +103,7 @@ private:
     }
     bool HasMore = Index->refs(Req, [&](const clangd::Ref &Reference) {
       RefsReply NextMessage;
-      *NextMessage.mutable_stream_result() = toProtobuf(Reference);
+      *NextMessage.mutable_stream_result() = toProtobuf(Reference, IndexRoot);
       Reply->Write(NextMessage);
     });
     RefsReply LastMessage;
@@ -102,11 +113,12 @@ private:
   }
 
   std::unique_ptr<clangd::SymbolIndex> Index;
+  std::string IndexedProjectRoot;
 };
 
 void runServer(std::unique_ptr<clangd::SymbolIndex> Index,
                const std::string &ServerAddress) {
-  RemoteIndexServer Service(std::move(Index));
+  RemoteIndexServer Service(std::move(Index), IndexRoot);
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::ServerBuilder Builder;
@@ -127,6 +139,11 @@ int main(int argc, char *argv[]) {
   using namespace clang::clangd::remote;
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+
+  if (!llvm::sys::path::is_absolute(IndexRoot)) {
+    llvm::outs() << "Index root should be an absolute path.\n";
+    return -1;
+  }
 
   std::unique_ptr<clang::clangd::SymbolIndex> Index = openIndex(IndexPath);
 

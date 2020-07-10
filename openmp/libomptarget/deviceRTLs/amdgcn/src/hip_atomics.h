@@ -11,12 +11,6 @@
 
 #include "target_impl.h"
 
-// Only implemented for i32 as that's the only call site
-EXTERN uint32_t __amdgcn_atomic_inc_i32(uint32_t *, uint32_t);
-INLINE uint32_t atomicInc(uint32_t *address, uint32_t val) {
-  return __amdgcn_atomic_inc_i32(address, val);
-}
-
 namespace {
 
 template <typename T> DEVICE T atomicAdd(T *address, T val) {

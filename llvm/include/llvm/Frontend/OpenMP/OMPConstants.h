@@ -89,35 +89,6 @@ enum class IdentFlag {
 #define OMP_IDENT_FLAG(Enum, ...) constexpr auto Enum = omp::IdentFlag::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
-/// Forward declarations for LLVM-IR types (simple, function and structure) are
-/// generated below. Their names are defined and used in OpenMP/OMPKinds.def.
-/// Here we provide the forward declarations, the initializeTypes function will
-/// provide the values.
-///
-///{
-namespace types {
-
-#define OMP_TYPE(VarName, InitValue) extern Type *VarName;
-#define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
-  extern ArrayType *VarName##Ty;                                               \
-  extern PointerType *VarName##PtrTy;
-#define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
-  extern FunctionType *VarName;                                                \
-  extern PointerType *VarName##Ptr;
-#define OMP_STRUCT_TYPE(VarName, StrName, ...)                                 \
-  extern StructType *VarName;                                                  \
-  extern PointerType *VarName##Ptr;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-
-/// Helper to initialize all types defined in OpenMP/OMPKinds.def.
-void initializeTypes(Module &M);
-
-/// Helper to uninitialize all types defined in OpenMP/OMPKinds.def.
-void uninitializeTypes();
-
-} // namespace types
-///}
-
 } // end namespace omp
 
 } // end namespace llvm

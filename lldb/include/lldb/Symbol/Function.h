@@ -17,6 +17,8 @@
 #include "lldb/Utility/UserID.h"
 #include "llvm/ADT/ArrayRef.h"
 
+#include <mutex>
+
 namespace lldb_private {
 
 class ExecutionContext;
@@ -113,10 +115,11 @@ public:
   virtual size_t MemorySize() const;
 
 protected:
-  // Member variables.
-  ConstString m_name;        ///< Function method name (not a mangled name).
-  Declaration m_declaration; ///< Information describing where this function
-                             ///information was defined.
+  /// Function method name (not a mangled name).
+  ConstString m_name;
+
+  /// Information describing where this function information was defined.
+  Declaration m_declaration;
 };
 
 /// \class InlineFunctionInfo Function.h "lldb/Symbol/Function.h"
@@ -240,9 +243,10 @@ public:
   size_t MemorySize() const override;
 
 private:
-  // Member variables.
-  Mangled m_mangled; ///< Mangled inlined function name (can be empty if there
-                     ///is no mangled information).
+  /// Mangled inlined function name (can be empty if there is no mangled
+  /// information).
+  Mangled m_mangled;
+
   Declaration m_call_decl;
 };
 
@@ -634,30 +638,50 @@ public:
 
 protected:
   enum {
-    flagsCalculatedPrologueSize =
-        (1 << 0) ///< Have we already tried to calculate the prologue size?
+    /// Whether we already tried to calculate the prologue size.
+    flagsCalculatedPrologueSize = (1 << 0)
   };
 
-  // Member variables.
-  CompileUnit *m_comp_unit; ///< The compile unit that owns this function.
-  lldb::user_id_t
-      m_type_uid; ///< The user ID of for the prototype Type for this function.
-  Type *m_type; ///< The function prototype type for this function that include
-                ///the function info (FunctionInfo), return type and parameters.
-  Mangled m_mangled; ///< The mangled function name if any, if empty, there is
-                     ///no mangled information.
-  Block m_block;     ///< All lexical blocks contained in this function.
-  AddressRange m_range; ///< The function address range that covers the widest
-                        ///range needed to contain all blocks
-  DWARFExpression m_frame_base; ///< The frame base expression for variables
-                                ///that are relative to the frame pointer.
-  Flags m_flags;
-  uint32_t
-      m_prologue_byte_size; ///< Compute the prologue size once and cache it
+  /// The compile unit that owns this function.
+  CompileUnit *m_comp_unit;
 
-  bool m_call_edges_resolved = false; ///< Whether call site info has been
-                                      ///  parsed.
-  std::vector<std::unique_ptr<CallEdge>> m_call_edges; ///< Outgoing call edges.
+  /// The user ID of for the prototype Type for this function.
+  lldb::user_id_t m_type_uid;
+
+  /// The function prototype type for this function that includes the function
+  /// info (FunctionInfo), return type and parameters.
+  Type *m_type;
+
+  /// The mangled function name if any. If empty, there is no mangled
+  /// information.
+  Mangled m_mangled;
+
+  /// All lexical blocks contained in this function.
+  Block m_block;
+
+  /// The function address range that covers the widest range needed to contain
+  /// all blocks
+  AddressRange m_range;
+
+  /// The frame base expression for variables that are relative to the frame
+  /// pointer.
+  DWARFExpression m_frame_base;
+
+  Flags m_flags;
+
+  /// Compute the prologue size once and cache it.
+  uint32_t m_prologue_byte_size;
+
+  /// Exclusive lock that controls read/write access to m_call_edges and
+  /// m_call_edges_resolved.
+  std::mutex m_call_edges_lock;
+
+  /// Whether call site info has been parsed.
+  bool m_call_edges_resolved = false;
+
+  /// Outgoing call edges.
+  std::vector<std::unique_ptr<CallEdge>> m_call_edges;
+
 private:
   Function(const Function &) = delete;
   const Function &operator=(const Function &) = delete;

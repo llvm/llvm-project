@@ -224,7 +224,7 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find op
 
 ; HELP-NOT: {{.}}
 ; HELP: The following description was requested by -dump-input=help
-; HELP: try{{.*}}-color
+; HELP: - colors {{.*}}
 ; HELP-NOT: {{.}}
 
 ; Trace is sometimes suppressed.
@@ -236,7 +236,7 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find op
 
 ; NODUMP-NOT: <<<<<<
 
-; DUMP-OK:      Full input was:
+; DUMP-OK:      Input was:
 ; DUMP-OK-NEXT: <<<<<<
 ; DUMP-OK-NEXT:          1: hello
 ; DUMP-OK-NEXT: check:1     ^~~~~
@@ -244,7 +244,7 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find op
 ; DUMP-OK-NEXT: next:2      ^~~~~
 ; DUMP-OK-NEXT: >>>>>>
 
-; DUMP-ERR:        Full input was:
+; DUMP-ERR:        Input was:
 ; DUMP-ERR-NEXT:   <<<<<<
 ; DUMP-ERR-NEXT:            1: hello
 ; DUMP-ERR-V-NEXT: check:1     ^~~~~

@@ -367,7 +367,9 @@ CrossTranslationUnitContext::ASTUnitStorage::ASTUnitStorage(
     CompilerInstance &CI)
     : Loader(CI, CI.getAnalyzerOpts()->CTUDir,
              CI.getAnalyzerOpts()->CTUInvocationList),
-      LoadGuard(CI.getAnalyzerOpts()->CTUImportThreshold) {}
+      LoadGuard(CI.getASTContext().getLangOpts().CPlusPlus
+                    ? CI.getAnalyzerOpts()->CTUImportCppThreshold
+                    : CI.getAnalyzerOpts()->CTUImportThreshold) {}
 
 llvm::Expected<ASTUnit *>
 CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFile(

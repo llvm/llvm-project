@@ -54,7 +54,7 @@ void mlir::edsc::affineLoopBuilder(ValueRange lbs, ValueRange ubs, int64_t step,
           OpBuilder::InsertionGuard guard(nestedBuilder);
           bodyBuilderFn(iv);
         }
-        nestedBuilder.create<AffineTerminatorOp>(nestedLoc);
+        nestedBuilder.create<AffineYieldOp>(nestedLoc);
       });
 }
 

@@ -794,8 +794,16 @@ let Predicates = [IsISA3_1] in {
                                       (int_ppc_altivec_vsrdbi v16i8:$VRA,
                                                               v16i8:$VRB, 
                                                               i32:$SH))]>;
-  def VINSW : VXForm_VRT5_UIM5_RB5_ins<207, "vinsw", []>;
-  def VINSD : VXForm_VRT5_UIM5_RB5_ins<463, "vinsd", []>;
+  def VINSW : 
+    VXForm_VRT5_UIM5_RB5_ins<207, "vinsw",
+                             [(set v4i32:$vD,
+                                   (int_ppc_altivec_vinsw v4i32:$vDi, i64:$rB,
+                                                          timm:$UIM))]>;
+  def VINSD :
+    VXForm_VRT5_UIM5_RB5_ins<463, "vinsd",
+                             [(set v2i64:$vD,
+                                   (int_ppc_altivec_vinsd v2i64:$vDi, i64:$rB,
+                                                          timm:$UIM))]>;
   def VINSBVLX :
     VXForm_VTB5_RA5_ins<15, "vinsbvlx",
                         [(set v16i8:$vD,
@@ -934,7 +942,25 @@ let Predicates = [IsISA3_1] in {
                          "vclrrb $vD, $vA, $rB", IIC_VecGeneral,
                          [(set v16i8:$vD,
                                (int_ppc_altivec_vclrrb v16i8:$vA, i32:$rB))]>;
+
+  // The XFormMemOp flag for the following 8 instructions is set on
+  // the instruction format.
+  let mayLoad = 1, mayStore = 0 in {
+    def LXVRBX : X_XT6_RA5_RB5<31, 13, "lxvrbx", vsrc, []>;
+    def LXVRHX : X_XT6_RA5_RB5<31, 45, "lxvrhx", vsrc, []>;
+    def LXVRWX : X_XT6_RA5_RB5<31, 77, "lxvrwx", vsrc, []>;
+    def LXVRDX : X_XT6_RA5_RB5<31, 109, "lxvrdx", vsrc, []>;
+  }
+
+  let mayLoad = 0, mayStore = 1 in {
+    def STXVRBX : X_XS6_RA5_RB5<31, 141, "stxvrbx", vsrc, []>;
+    def STXVRHX : X_XS6_RA5_RB5<31, 173, "stxvrhx", vsrc, []>;
+    def STXVRWX : X_XS6_RA5_RB5<31, 205, "stxvrwx", vsrc, []>;
+    def STXVRDX : X_XS6_RA5_RB5<31, 237, "stxvrdx", vsrc, []>;
+  }
 }
+
+
 
 //---------------------------- Anonymous Patterns ----------------------------//
 let Predicates = [IsISA3_1] in {

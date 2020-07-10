@@ -868,7 +868,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
         }
         break;
       }
-      if (testFeature(X86::FEATURE_EM64T)) {
+      if (testFeature(X86::FEATURE_64BIT)) {
         *Type = X86::INTEL_CORE2; // "core2"
         *Subtype = X86::INTEL_CORE2_65;
         break;
@@ -894,7 +894,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     }
     break;
   case 15: {
-    if (testFeature(X86::FEATURE_EM64T)) {
+    if (testFeature(X86::FEATURE_64BIT)) {
       *Type = X86::INTEL_NOCONA;
       break;
     }
@@ -1140,7 +1140,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(X86::FEATURE_FMA4);
 
   if (HasExtLeaf1 && ((EDX >> 29) & 1))
-    setFeature(X86::FEATURE_EM64T);
+    setFeature(X86::FEATURE_64BIT);
 }
 
 StringRef sys::getHostCPUName() {
@@ -1361,13 +1361,8 @@ int sys::getHostNumPhysicalCores() {
 bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
   unsigned MaxLevel;
-  union {
-    unsigned u[3];
-    char c[12];
-  } text;
 
-  if (getX86CpuIDAndInfo(0, &MaxLevel, text.u + 0, text.u + 2, text.u + 1) ||
-      MaxLevel < 1)
+  if (getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX) || MaxLevel < 1)
     return false;
 
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);

@@ -4567,8 +4567,7 @@ static SDValue lowerICMPIntrinsic(const SITargetLowering &TLI,
   EVT VT = N->getValueType(0);
   const auto *CD = cast<ConstantSDNode>(N->getOperand(3));
   unsigned CondCode = CD->getZExtValue();
-  if (CondCode < ICmpInst::Predicate::FIRST_ICMP_PREDICATE ||
-      CondCode > ICmpInst::Predicate::LAST_ICMP_PREDICATE)
+  if (!ICmpInst::isIntPredicate(static_cast<ICmpInst::Predicate>(CondCode)))
     return DAG.getUNDEF(VT);
 
   ICmpInst::Predicate IcInput = static_cast<ICmpInst::Predicate>(CondCode);
@@ -4604,10 +4603,8 @@ static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI,
   const auto *CD = cast<ConstantSDNode>(N->getOperand(3));
 
   unsigned CondCode = CD->getZExtValue();
-  if (CondCode < FCmpInst::Predicate::FIRST_FCMP_PREDICATE ||
-      CondCode > FCmpInst::Predicate::LAST_FCMP_PREDICATE) {
+  if (!FCmpInst::isFPPredicate(static_cast<FCmpInst::Predicate>(CondCode)))
     return DAG.getUNDEF(VT);
-  }
 
   SDValue Src0 = N->getOperand(1);
   SDValue Src1 = N->getOperand(2);

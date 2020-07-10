@@ -26,49 +26,51 @@ using llvm::yaml::SequenceNode;
 
 class Parser {
   llvm::SourceMgr &SM;
+  bool HadError = false;
 
 public:
   Parser(llvm::SourceMgr &SM) : SM(SM) {}
 
   // Tries to parse N into F, returning false if it failed and we couldn't
-  // meaningfully recover (e.g. YAML syntax error broke the stream).
-  // The private parse() helpers follow the same pattern.
+  // meaningfully recover (YAML syntax error, or hard semantic error).
   bool parse(Fragment &F, Node &N) {
     DictParser Dict("Config", this);
-    Dict.handle("If", [&](Node &N) { return parse(F.If, N); });
-    Dict.handle("CompileFlags",
-                [&](Node &N) { return parse(F.CompileFlags, N); });
-    return Dict.parse(N);
+    Dict.handle("If", [&](Node &N) { parse(F.If, N); });
+    Dict.handle("CompileFlags", [&](Node &N) { parse(F.CompileFlags, N); });
+    Dict.parse(N);
+    return !(N.failed() || HadError);
   }
 
 private:
-  bool parse(Fragment::IfBlock &F, Node &N) {
+  void parse(Fragment::IfBlock &F, Node &N) {
     DictParser Dict("If", this);
     Dict.unrecognized(
         [&](llvm::StringRef) { F.HasUnrecognizedCondition = true; });
     Dict.handle("PathMatch", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.PathMatch = std::move(*Values);
-      return !N.failed();
     });
-    return Dict.parse(N);
+    Dict.handle("PathExclude", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.PathExclude = std::move(*Values);
+    });
+    Dict.parse(N);
   }
 
-  bool parse(Fragment::CompileFlagsBlock &F, Node &N) {
+  void parse(Fragment::CompileFlagsBlock &F, Node &N) {
     DictParser Dict("CompileFlags", this);
     Dict.handle("Add", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.Add = std::move(*Values);
-      return !N.failed();
     });
-    return Dict.parse(N);
+    Dict.parse(N);
   }
 
   // Helper for parsing mapping nodes (dictionaries).
   // We don't use YamlIO as we want to control over unknown keys.
   class DictParser {
     llvm::StringRef Description;
-    std::vector<std::pair<llvm::StringRef, std::function<bool(Node &)>>> Keys;
+    std::vector<std::pair<llvm::StringRef, std::function<void(Node &)>>> Keys;
     std::function<void(llvm::StringRef)> Unknown;
     Parser *Outer;
 
@@ -79,7 +81,7 @@ private:
     // Parse is called when Key is encountered, and passed the associated value.
     // It should emit diagnostics if the value is invalid (e.g. wrong type).
     // If Key is seen twice, Parse runs only once and an error is reported.
-    void handle(llvm::StringLiteral Key, std::function<bool(Node &)> Parse) {
+    void handle(llvm::StringLiteral Key, std::function<void(Node &)> Parse) {
       for (const auto &Entry : Keys) {
         (void) Entry;
         assert(Entry.first != Key && "duplicate key handler");
@@ -94,16 +96,17 @@ private:
     }
 
     // Process a mapping node and call handlers for each key/value pair.
-    bool parse(Node &N) const {
+    void parse(Node &N) const {
       if (N.getType() != Node::NK_Mapping) {
         Outer->error(Description + " should be a dictionary", N);
-        return false;
+        return;
       }
       llvm::SmallSet<std::string, 8> Seen;
+      // We *must* consume all items, even on error, or the parser will assert.
       for (auto &KV : llvm::cast<MappingNode>(N)) {
         auto *K = KV.getKey();
         if (!K) // YAMLParser emitted an error.
-          return false;
+          continue;
         auto Key = Outer->scalarValue(*K, "Dictionary key");
         if (!Key)
           continue;
@@ -113,13 +116,12 @@ private:
         }
         auto *Value = KV.getValue();
         if (!Value) // YAMLParser emitted an error.
-          return false;
+          continue;
         bool Matched = false;
         for (const auto &Handler : Keys) {
           if (Handler.first == **Key) {
-            if (!Handler.second(*Value))
-              return false;
             Matched = true;
+            Handler.second(*Value);
             break;
           }
         }
@@ -129,7 +131,6 @@ private:
             Unknown(**Key);
         }
       }
-      return true;
     }
   };
 
@@ -154,6 +155,7 @@ private:
     } else if (auto *S = llvm::dyn_cast<BlockScalarNode>(&N)) {
       Result.emplace_back(S->getValue().str(), N.getSourceRange());
     } else if (auto *S = llvm::dyn_cast<SequenceNode>(&N)) {
+      // We *must* consume all items, even on error, or the parser will assert.
       for (auto &Child : *S) {
         if (auto Value = scalarValue(Child, "List item"))
           Result.push_back(std::move(*Value));
@@ -167,6 +169,7 @@ private:
 
   // Report a "hard" error, reflecting a config file that can never be valid.
   void error(const llvm::Twine &Msg, const Node &N) {
+    HadError = true;
     SM.PrintMessage(N.getSourceRange().Start, llvm::SourceMgr::DK_Error, Msg,
                     N.getSourceRange());
   }
@@ -196,7 +199,7 @@ std::vector<Fragment> Fragment::parseYAML(llvm::StringRef YAML,
       &Diags);
   std::vector<Fragment> Result;
   for (auto &Doc : llvm::yaml::Stream(*Buf, *SM)) {
-    if (Node *N = Doc.parseBlockNode()) {
+    if (Node *N = Doc.getRoot()) {
       Fragment Fragment;
       Fragment.Source.Manager = SM;
       Fragment.Source.Location = N->getSourceRange().Start;

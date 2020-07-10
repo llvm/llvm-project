@@ -638,5 +638,34 @@ TEST(ConstantsTest, isElementWiseEqual) {
   EXPECT_FALSE(CP00U->isElementWiseEqual(CP00U0));
 }
 
+TEST(ConstantsTest, GetSplatValueRoundTrip) {
+  LLVMContext Context;
+
+  Type *FloatTy = Type::getFloatTy(Context);
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int8Ty = Type::getInt8Ty(Context);
+
+  for (unsigned Min : {1, 2, 8}) {
+    ElementCount ScalableEC = {Min, true};
+    ElementCount FixedEC = {Min, false};
+
+    for (auto EC : {ScalableEC, FixedEC}) {
+      for (auto *Ty : {FloatTy, Int32Ty, Int8Ty}) {
+        Constant *Zero = Constant::getNullValue(Ty);
+        Constant *One = Constant::getAllOnesValue(Ty);
+
+        for (auto *C : {Zero, One}) {
+          Constant *Splat = ConstantVector::getSplat(EC, C);
+          ASSERT_NE(nullptr, Splat);
+
+          Constant *SplatVal = Splat->getSplatValue();
+          EXPECT_NE(nullptr, SplatVal);
+          EXPECT_EQ(SplatVal, C);
+        }
+      }
+    }
+  }
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

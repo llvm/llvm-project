@@ -115,13 +115,39 @@ Sections:
 ## Check we report a warning when a SHT_GNU_versym section has an invalid entry size.
 
 # RUN: yaml2obj --docnum=5 %s -o %t5
-# RUN: llvm-readelf -V %t5 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=INVALID-ENT-SIZE-GNU
-# RUN: llvm-readobj -V %t5 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=INVALID-ENT-SIZE-LLVM
+# RUN: llvm-readelf -V --dyn-syms %t5 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=INVALID-ENT-SIZE-GNU
+# RUN: llvm-readobj -V --dyn-syms %t5 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=INVALID-ENT-SIZE-LLVM
 
+# INVALID-ENT-SIZE-GNU:      Symbol table '.dynsym' contains 2 entries:
+# INVALID-ENT-SIZE-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# INVALID-ENT-SIZE-GNU-NEXT: warning: '[[FILE]]': section [index 1] has invalid sh_entsize: expected 2, but got 3
+# INVALID-ENT-SIZE-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND @<corrupt>
+# INVALID-ENT-SIZE-GNU-NEXT:      1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo@<corrupt>
 # INVALID-ENT-SIZE-GNU:      Version symbols section '.gnu.version' contains 1 entries:
 # INVALID-ENT-SIZE-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 0 ()
 # INVALID-ENT-SIZE-GNU-NEXT: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
 
+# INVALID-ENT-SIZE-LLVM:      DynamicSymbols [
+# INVALID-ENT-SIZE-LLVM-NEXT: warning: '[[FILE]]': section [index 1] has invalid sh_entsize: expected 2, but got 3
+# INVALID-ENT-SIZE-LLVM-NEXT:   Symbol {
+# INVALID-ENT-SIZE-LLVM-NEXT:     Name: @<corrupt> (0)
+# INVALID-ENT-SIZE-LLVM-NEXT:     Value: 0x0
+# INVALID-ENT-SIZE-LLVM-NEXT:     Size: 0
+# INVALID-ENT-SIZE-LLVM-NEXT:     Binding: Local (0x0)
+# INVALID-ENT-SIZE-LLVM-NEXT:     Type: None (0x0)
+# INVALID-ENT-SIZE-LLVM-NEXT:     Other: 0
+# INVALID-ENT-SIZE-LLVM-NEXT:     Section: Undefined (0x0)
+# INVALID-ENT-SIZE-LLVM-NEXT:   }
+# INVALID-ENT-SIZE-LLVM-NEXT:   Symbol {
+# INVALID-ENT-SIZE-LLVM-NEXT:     Name: foo@<corrupt> (1)
+# INVALID-ENT-SIZE-LLVM-NEXT:     Value: 0x0
+# INVALID-ENT-SIZE-LLVM-NEXT:     Size: 0
+# INVALID-ENT-SIZE-LLVM-NEXT:     Binding: Local (0x0)
+# INVALID-ENT-SIZE-LLVM-NEXT:     Type: None (0x0)
+# INVALID-ENT-SIZE-LLVM-NEXT:     Other: 0
+# INVALID-ENT-SIZE-LLVM-NEXT:     Section: Undefined (0x0)
+# INVALID-ENT-SIZE-LLVM-NEXT:   }
+# INVALID-ENT-SIZE-LLVM-NEXT: ]
 # INVALID-ENT-SIZE-LLVM:      VersionSymbols [
 # INVALID-ENT-SIZE-LLVM-NEXT: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
 # INVALID-ENT-SIZE-LLVM-NEXT: ]
@@ -137,6 +163,8 @@ Sections:
     Type:    SHT_GNU_versym
     Entries: [ 0 ]
     EntSize: 3
+DynamicSymbols:
+  - Name: foo
 
 ## Check we report a warning when the number of version entries does not match the number of symbols in the associated symbol table.
 

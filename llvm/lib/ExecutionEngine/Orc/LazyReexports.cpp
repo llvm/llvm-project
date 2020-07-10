@@ -35,6 +35,11 @@ Expected<JITTargetAddress> LazyCallThroughManager::getCallThroughTrampoline(
   return *Trampoline;
 }
 
+JITTargetAddress LazyCallThroughManager::reportCallThroughError(Error Err) {
+  ES.reportError(std::move(Err));
+  return ErrorHandlerAddr;
+}
+
 Expected<LazyCallThroughManager::ReexportsEntry>
 LazyCallThroughManager::findReexport(JITTargetAddress TrampolineAddr) {
   std::lock_guard<std::mutex> Lock(LCTMMutex);
@@ -44,19 +49,6 @@ LazyCallThroughManager::findReexport(JITTargetAddress TrampolineAddr) {
                              "Missing reexport for trampoline address %p",
                              TrampolineAddr);
   return I->second;
-}
-
-Expected<JITTargetAddress>
-LazyCallThroughManager::resolveSymbol(const ReexportsEntry &RE) {
-  auto LookupResult =
-      ES.lookup(makeJITDylibSearchOrder(RE.SourceJD,
-                                        JITDylibLookupFlags::MatchAllSymbols),
-                RE.SymbolName, SymbolState::Ready);
-
-  if (!LookupResult)
-    return LookupResult.takeError();
-
-  return LookupResult->getAddress();
 }
 
 Error LazyCallThroughManager::notifyResolved(JITTargetAddress TrampolineAddr,
@@ -72,6 +64,37 @@ Error LazyCallThroughManager::notifyResolved(JITTargetAddress TrampolineAddr,
   }
 
   return NotifyResolved ? NotifyResolved(ResolvedAddr) : Error::success();
+}
+
+void LazyCallThroughManager::resolveTrampolineLandingAddress(
+    JITTargetAddress TrampolineAddr,
+    NotifyLandingResolvedFunction NotifyLandingResolved) {
+
+  auto Entry = findReexport(TrampolineAddr);
+  if (!Entry)
+    return NotifyLandingResolved(reportCallThroughError(Entry.takeError()));
+
+  ES.lookup(
+      LookupKind::Static,
+      makeJITDylibSearchOrder(Entry->SourceJD,
+                              JITDylibLookupFlags::MatchAllSymbols),
+      SymbolLookupSet({Entry->SymbolName}), SymbolState::Ready,
+      [this, TrampolineAddr, SymbolName = Entry->SymbolName,
+       NotifyLandingResolved = std::move(NotifyLandingResolved)](
+          Expected<SymbolMap> Result) mutable {
+        if (Result) {
+          assert(Result->size() == 1 && "Unexpected result size");
+          assert(Result->count(SymbolName) && "Unexpected result value");
+          JITTargetAddress LandingAddr = (*Result)[SymbolName].getAddress();
+
+          if (auto Err = notifyResolved(TrampolineAddr, LandingAddr))
+            NotifyLandingResolved(reportCallThroughError(std::move(Err)));
+          else
+            NotifyLandingResolved(LandingAddr);
+        } else
+          NotifyLandingResolved(reportCallThroughError(Result.takeError()));
+      },
+      NoDependenciesToRegister);
 }
 
 Expected<std::unique_ptr<LazyCallThroughManager>>

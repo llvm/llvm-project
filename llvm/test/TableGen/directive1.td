@@ -106,9 +106,17 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(Directive D, Clause C, unsigned Version) {
 // IMPL-NEXT:    assert(unsigned(D) <= llvm::tdl::Directive_enumSize);
 // IMPL-NEXT:    assert(unsigned(C) <= llvm::tdl::Clause_enumSize);
-// IMPL-NEXT:    if (D == TDLD_dira && C == TDLC_clausea && 1 <= Version && 2147483647 >= Version)
-// IMPL-NEXT:      return true;
-// IMPL-NEXT:    if (D == TDLD_dira && C == TDLC_clauseb && 1 <= Version && 2147483647 >= Version)
-// IMPL-NEXT:      return true;
-// IMPL-NEXT:    return false;
+// IMPL-NEXT:    switch (D) {
+// IMPL-NEXT:      case TDLD_dira:
+// IMPL-NEXT:        switch (C) {
+// IMPL-NEXT:          case TDLC_clausea:
+// IMPL-NEXT:            return 1 <= Version && 2147483647 >= Version;
+// IMPL-NEXT:          case TDLC_clauseb:
+// IMPL-NEXT:            return 1 <= Version && 2147483647 >= Version;
+// IMPL-NEXT:          default:
+// IMPL-NEXT:            return false;
+// IMPL-NEXT:        }
+// IMPL-NEXT:        break;
+// IMPL-NEXT:    }
+// IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }

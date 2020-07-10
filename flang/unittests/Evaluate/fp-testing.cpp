@@ -3,6 +3,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#if __x86_64__
+#include <xmmintrin.h>
+#endif
 
 using Fortran::common::RoundingMode;
 using Fortran::evaluate::RealFlag;
@@ -20,31 +23,38 @@ ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
         llvm::sys::StrError(errno).c_str());
     std::abort();
   }
-  if (fegetenv(&currentFenv_) != 0) {
+  fenv_t currentFenv;
+  if (fegetenv(&currentFenv) != 0) {
     std::fprintf(
         stderr, "fegetenv() failed: %s\n", llvm::sys::StrError(errno).c_str());
     std::abort();
   }
+
 #if __x86_64__
+  originalMxcsr = _mm_getcsr();
+  unsigned int currentMxcsr{originalMxcsr};
   if (treatSubnormalOperandsAsZero) {
-    currentFenv_.__mxcsr |= 0x0040;
+    currentMxcsr |= 0x0040;
   } else {
-    currentFenv_.__mxcsr &= ~0x0040;
+    currentMxcsr &= ~0x0040;
   }
   if (flushSubnormalResultsToZero) {
-    currentFenv_.__mxcsr |= 0x8000;
+    currentMxcsr |= 0x8000;
   } else {
-    currentFenv_.__mxcsr &= ~0x8000;
+    currentMxcsr &= ~0x8000;
   }
 #else
   // TODO others
 #endif
   errno = 0;
-  if (fesetenv(&currentFenv_) != 0) {
+  if (fesetenv(&currentFenv) != 0) {
     std::fprintf(
         stderr, "fesetenv() failed: %s\n", llvm::sys::StrError(errno).c_str());
     std::abort();
   }
+#if __x86_64__
+  _mm_setcsr(currentMxcsr);
+#endif
 }
 
 ScopedHostFloatingPointEnvironment::~ScopedHostFloatingPointEnvironment() {
@@ -54,6 +64,9 @@ ScopedHostFloatingPointEnvironment::~ScopedHostFloatingPointEnvironment() {
         stderr, "fesetenv() failed: %s\n", llvm::sys::StrError(errno).c_str());
     std::abort();
   }
+#if __x86_64__
+  _mm_setcsr(originalMxcsr);
+#endif
 }
 
 void ScopedHostFloatingPointEnvironment::ClearFlags() const {

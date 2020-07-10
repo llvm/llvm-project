@@ -23,6 +23,9 @@ else:
     # bash on Windows is usually very slow.
     execute_external = (not sys.platform in ['win32'])
 
+# Allow expanding substitutions that are based on other substitutions
+config.recursiveExpansionLimit = 10
+
 # Setup test format.
 config.test_format = lit.formats.ShTest(execute_external)
 if execute_external:

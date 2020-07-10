@@ -4203,8 +4203,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_Compatible_Conversion:
-      From = ImpCastExprToType(From, ToType, CK_NoOp,
-                               VK_RValue, /*BasePath=*/nullptr, CCK).get();
+    From = ImpCastExprToType(From, ToType, CK_NoOp, From->getValueKind(),
+                             /*BasePath=*/nullptr, CCK).get();
     break;
 
   case ICK_Writeback_Conversion:
@@ -4441,11 +4441,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_Qualification: {
-    // The qualification keeps the category of the inner expression, unless the
-    // target type isn't a reference.
-    ExprValueKind VK =
-        ToType->isReferenceType() ? From->getValueKind() : VK_RValue;
-
+    ExprValueKind VK = From->getValueKind();
     CastKind CK = CK_NoOp;
 
     if (ToType->isReferenceType() &&

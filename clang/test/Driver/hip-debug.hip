@@ -30,7 +30,7 @@
 // CHECK-NOT: "-debug-info-kind=line-tables-only"
 // CHECK-NOT: "-amdgpu-spill-cfi-saved-regs"
 // CHECK-NOT: "-disable-dwarf-locations"
-// CHECK-DAG: "-debug-info-kind=limited"
+// CHECK-DAG: "-debug-info-kind=constructor"
 // CHECK-DAG: "-debugger-tuning=gdb"
 // CHECK-NOT: "-disable-O0-optnone"
 // CHECK-NOT: "-disable-O0-noinline"

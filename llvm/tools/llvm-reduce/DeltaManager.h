@@ -14,6 +14,7 @@
 #include "TestRunner.h"
 #include "deltas/Delta.h"
 #include "deltas/ReduceArguments.h"
+#include "deltas/ReduceAttributes.h"
 #include "deltas/ReduceBasicBlocks.h"
 #include "deltas/ReduceFunctions.h"
 #include "deltas/ReduceGlobalVars.h"
@@ -32,6 +33,7 @@ inline void runDeltaPasses(TestRunner &Tester) {
   reduceArgumentsDeltaPass(Tester);
   reduceInstructionsDeltaPass(Tester);
   reduceOperandBundesDeltaPass(Tester);
+  reduceAttributesDeltaPass(Tester);
   // TODO: Implement the remaining Delta Passes
 }
 

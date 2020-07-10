@@ -505,13 +505,9 @@ set(hexagon_SOURCES
   hexagon/dfsqrt.S
   hexagon/divdi3.S
   hexagon/divsi3.S
-  hexagon/fabs_opt.S
   hexagon/fastmath2_dlib_asm.S
   hexagon/fastmath2_ldlib_asm.S
   hexagon/fastmath_dlib_asm.S
-  hexagon/fma_opt.S
-  hexagon/fmax_opt.S
-  hexagon/fmin_opt.S
   hexagon/memcpy_forward_vp4cp4n2.S
   hexagon/memcpy_likely_aligned.S
   hexagon/moddi3.S

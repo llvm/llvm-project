@@ -31,10 +31,10 @@
 // Check that -ggdb does not affect the debug-info-kind for AMDGPU.
 // RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm -g -ggdb %s 2>&1 | FileCheck -check-prefix=CHECK-GBEFORE %s
 // CHECK-GBEFORE: "-cc1"
-// CHECK-GBEFORE: "-debug-info-kind=limited"
+// CHECK-GBEFORE: "-debug-info-kind=constructor"
 // RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm -ggdb -g %s 2>&1 | FileCheck -check-prefix=CHECK-GAFTER %s
 // CHECK-GAFTER: "-cc1"
-// CHECK-GAFTER: "-debug-info-kind=limited"
+// CHECK-GAFTER: "-debug-info-kind=constructor"
 
 // Check that -ggdb composes with other tuning options
 // RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm -glldb -ggdb %s 2>&1 | FileCheck -check-prefix=CHECK-LLDBBEFORE %s

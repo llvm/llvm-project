@@ -682,12 +682,12 @@ template<bool B, typename T> struct S : T {
   }
 };
 
-extern const int n;
+extern const int n; // expected-note {{declared here}}
 template<typename T> void f() {
   // This is ill-formed, because a hypothetical instantiation at the point of
   // template definition would be ill-formed due to a construct that does not
   // depend on a template parameter.
-  constexpr int k = n; // expected-error {{must be initialized by a constant expression}}
+  constexpr int k = n; // expected-error {{must be initialized by a constant expression}} expected-note {{initializer of 'n' is unknown}}
 }
 // It doesn't matter that the instantiation could later become valid:
 constexpr int n = 4;
@@ -1258,7 +1258,7 @@ constexpr int m1b = const_cast<const int&>(n1); // expected-error {{constant exp
 constexpr int m2b = const_cast<const int&>(n2); // expected-error {{constant expression}} expected-note {{read of volatile object 'n2'}}
 
 struct T { int n; };
-const T t = { 42 };
+const T t = { 42 }; // expected-note {{declared here}}
 
 constexpr int f(volatile int &&r) {
   return r; // expected-note {{read of volatile-qualified type 'volatile int'}}
@@ -1372,7 +1372,7 @@ namespace InstantiateCaseStmt {
 
 namespace ConvertedConstantExpr {
   extern int &m;
-  extern int &n;
+  extern int &n; // expected-note 2{{declared here}}
 
   constexpr int k = 4;
   int &m = const_cast<int&>(k);
@@ -1381,9 +1381,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // expected-error {{not a constant expression}}
-    eo = (m +
-          n // expected-error {{not a constant expression}}
+    en = n, // expected-error {{not a constant expression}} expected-note {{initializer of 'n' is unknown}}
+    eo = (m + // expected-error {{not a constant expression}}
+          n // expected-note {{initializer of 'n' is unknown}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
@@ -2301,4 +2301,24 @@ namespace PR41854 {
   int a;
   f &d = reinterpret_cast<f&>(a);
   unsigned b = d.c;
+}
+
+namespace array_size {
+  template<int N> struct array {
+    static constexpr int size() { return N; }
+  };
+  template<typename T> void f1(T t) {
+    constexpr int k = t.size();
+  }
+  template<typename T> void f2(const T &t) {
+    constexpr int k = t.size(); // expected-error {{constant}} expected-note {{function parameter 't' with unknown value cannot be used in a constant expression}}
+  }
+  template<typename T> void f3(const T &t) {
+    constexpr int k = T::size();
+  }
+  void g(array<3> a) {
+    f1(a);
+    f2(a); // expected-note {{instantiation of}}
+    f3(a);
+  }
 }

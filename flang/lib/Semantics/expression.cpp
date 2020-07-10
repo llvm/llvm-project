@@ -1085,12 +1085,21 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
             symbol.name(), symbol.Corank(), numCosubscripts);
       }
     }
-    // TODO: stat=/team=/team_number=
+    for (const auto &imageSelSpec :
+        std::get<std::list<parser::ImageSelectorSpec>>(x.imageSelector.t)) {
+      std::visit(
+          common::visitors{
+              [&](const auto &x) { Analyze(x.v); },
+          },
+          imageSelSpec.u);
+    }
     // Reverse the chain of symbols so that the base is first and coarray
     // ultimate component is last.
-    return Designate(
-        DataRef{CoarrayRef{SymbolVector{reversed.crbegin(), reversed.crend()},
-            std::move(subscripts), std::move(cosubscripts)}});
+    if (cosubsOk) {
+      return Designate(
+          DataRef{CoarrayRef{SymbolVector{reversed.crbegin(), reversed.crend()},
+              std::move(subscripts), std::move(cosubscripts)}});
+    }
   }
   return std::nullopt;
 }
@@ -2022,8 +2031,10 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
       if (CheckCall(call.source, *proc, callee->arguments)) {
         bool hasAlternateReturns{
             callee->arguments.size() < actualArgList.size()};
-        callStmt.typedCall.reset(new ProcedureRef{std::move(*proc),
-            std::move(callee->arguments), hasAlternateReturns});
+        callStmt.typedCall.Reset(
+            new ProcedureRef{std::move(*proc), std::move(callee->arguments),
+                hasAlternateReturns},
+            ProcedureRef::Deleter);
       }
     }
   }
@@ -2035,7 +2046,8 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
     analyzer.Analyze(std::get<parser::Variable>(x.t));
     analyzer.Analyze(std::get<parser::Expr>(x.t));
     if (analyzer.fatalErrors()) {
-      x.typedAssignment.reset(new GenericAssignmentWrapper{});
+      x.typedAssignment.Reset(
+          new GenericAssignmentWrapper{}, GenericAssignmentWrapper::Deleter);
     } else {
       std::optional<ProcedureRef> procRef{analyzer.TryDefinedAssignment()};
       Assignment assignment{
@@ -2043,8 +2055,9 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
       if (procRef) {
         assignment.u = std::move(*procRef);
       }
-      x.typedAssignment.reset(
-          new GenericAssignmentWrapper{std::move(assignment)});
+      x.typedAssignment.Reset(
+          new GenericAssignmentWrapper{std::move(assignment)},
+          GenericAssignmentWrapper::Deleter);
     }
   }
   return common::GetPtrFromOptional(x.typedAssignment->v);
@@ -2056,7 +2069,8 @@ const Assignment *ExpressionAnalyzer::Analyze(
     MaybeExpr lhs{Analyze(std::get<parser::DataRef>(x.t))};
     MaybeExpr rhs{Analyze(std::get<parser::Expr>(x.t))};
     if (!lhs || !rhs) {
-      x.typedAssignment.reset(new GenericAssignmentWrapper{});
+      x.typedAssignment.Reset(
+          new GenericAssignmentWrapper{}, GenericAssignmentWrapper::Deleter);
     } else {
       Assignment assignment{std::move(*lhs), std::move(*rhs)};
       std::visit(common::visitors{
@@ -2083,8 +2097,9 @@ const Assignment *ExpressionAnalyzer::Analyze(
                      },
                  },
           std::get<parser::PointerAssignmentStmt::Bounds>(x.t).u);
-      x.typedAssignment.reset(
-          new GenericAssignmentWrapper{std::move(assignment)});
+      x.typedAssignment.Reset(
+          new GenericAssignmentWrapper{std::move(assignment)},
+          GenericAssignmentWrapper::Deleter);
     }
   }
   return common::GetPtrFromOptional(x.typedAssignment->v);
@@ -2925,7 +2940,7 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
     const parser::Expr &expr) {
   source_.ExtendToCover(expr.source);
   if (const Symbol * assumedTypeDummy{AssumedTypeDummy(expr)}) {
-    expr.typedExpr.reset(new GenericExprWrapper{});
+    expr.typedExpr.Reset(new GenericExprWrapper{}, GenericExprWrapper::Deleter);
     if (allowAssumedType_) {
       return ActualArgument{ActualArgument::AssumedType{*assumedTypeDummy}};
     } else {

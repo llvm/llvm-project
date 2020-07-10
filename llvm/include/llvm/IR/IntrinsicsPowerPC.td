@@ -522,6 +522,15 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
               Intrinsic<[llvm_v4i32_ty],
                         [llvm_v4i32_ty, llvm_i64_ty, llvm_v4i32_ty],
                         [IntrNoMem]>;
+  // P10 Vector Insert with immediate.
+  def int_ppc_altivec_vinsw :
+              Intrinsic<[llvm_v4i32_ty],
+                        [llvm_v4i32_ty, llvm_i64_ty, llvm_i32_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_ppc_altivec_vinsd :
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v2i64_ty, llvm_i64_ty, llvm_i32_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 }
 
 // Vector average.
