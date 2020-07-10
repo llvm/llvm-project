@@ -295,16 +295,11 @@ const PassBuilder::OptimizationLevel PassBuilder::OptimizationLevel::Oz = {
 
 namespace {
 
-// The following passes/analyses have custom names, otherwise their name will
-// include `(anonymous namespace)`. These are special since they are only for
-// testing purposes and don't live in a header file.
-
 /// No-op module pass which does nothing.
-struct NoOpModulePass : PassInfoMixin<NoOpModulePass> {
+struct NoOpModulePass {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     return PreservedAnalyses::all();
   }
-
   static StringRef name() { return "NoOpModulePass"; }
 };
 
@@ -320,7 +315,7 @@ public:
 };
 
 /// No-op CGSCC pass which does nothing.
-struct NoOpCGSCCPass : PassInfoMixin<NoOpCGSCCPass> {
+struct NoOpCGSCCPass {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
                         LazyCallGraph &, CGSCCUpdateResult &UR) {
     return PreservedAnalyses::all();
@@ -342,7 +337,7 @@ public:
 };
 
 /// No-op function pass which does nothing.
-struct NoOpFunctionPass : PassInfoMixin<NoOpFunctionPass> {
+struct NoOpFunctionPass {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }
@@ -361,7 +356,7 @@ public:
 };
 
 /// No-op loop pass which does nothing.
-struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
+struct NoOpLoopPass {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
                         LoopStandardAnalysisResults &, LPMUpdater &) {
     return PreservedAnalyses::all();
@@ -387,7 +382,7 @@ AnalysisKey NoOpCGSCCAnalysis::Key;
 AnalysisKey NoOpFunctionAnalysis::Key;
 AnalysisKey NoOpLoopAnalysis::Key;
 
-} // namespace
+} // End anonymous namespace.
 
 void PassBuilder::invokePeepholeEPCallbacks(
     FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
