@@ -385,8 +385,8 @@ ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
   assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band);
   Node = Node.child(0).child(0);
   isl::union_map SchedRelUMap = Node.get_prefix_schedule_relation();
-  isl::map ScheduleRelation = isl::map::from_union_map(SchedRelUMap);
-  isl::set ScheduleRange = ScheduleRelation.range();
+  isl::union_set ScheduleRangeUSet = SchedRelUMap.range();
+  isl::set ScheduleRange{ScheduleRangeUSet};
   isl::set IsolateDomain = getPartialTilePrefixes(ScheduleRange, VectorWidth);
   auto AtomicOption = getDimOptions(IsolateDomain.get_ctx(), "atomic");
   isl::union_set IsolateOption = getIsolateOptions(IsolateDomain, 1);
