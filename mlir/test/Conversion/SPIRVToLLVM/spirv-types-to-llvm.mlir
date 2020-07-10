@@ -26,3 +26,13 @@ func @runtime_array_vector(!spv.rtarray< vector<4xf32> >) -> ()
 
 // CHECK-LABEL: @runtime_array_scalar(!llvm<"[0 x float]">)
 func @runtime_array_scalar(!spv.rtarray<f32>) -> ()
+
+//===----------------------------------------------------------------------===//
+// Struct type
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @struct(!llvm<"<{ double }>">)
+func @struct(!spv.struct<f64>) -> ()
+
+// CHECK-LABEL: @struct_nested(!llvm<"<{ i32, <{ i64, i32 }> }>">)
+func @struct_nested(!spv.struct<i32, !spv.struct<i64, i32>>)
