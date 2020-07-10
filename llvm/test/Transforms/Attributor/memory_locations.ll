@@ -325,7 +325,7 @@ define void @callerA2(i8* %arg) {
 ; CHECK: Function Attrs: readnone
 define void @callerB1() {
 ; CHECK-LABEL: define {{[^@]+}}@callerB1()
-; CHECK-NEXT:    [[STACK:%.*]] = alloca i8
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* nonnull dereferenceable(1) [[STACK]])
 ; CHECK-NEXT:    ret void
 ;
@@ -336,7 +336,7 @@ define void @callerB1() {
 ; CHECK: Function Attrs: inaccessiblememonly
 define void @callerB2() {
 ; CHECK-LABEL: define {{[^@]+}}@callerB2()
-; CHECK-NEXT:    [[STACK:%.*]] = alloca i8
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* nonnull dereferenceable(1) [[STACK]])
 ; CHECK-NEXT:    ret void
 ;
@@ -476,7 +476,7 @@ define void @writeonly_global_via_arg_internal() {
 define i8 @recursive_not_readnone(i8* %ptr, i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@recursive_not_readnone
 ; CHECK-SAME: (i8* nocapture nofree writeonly [[PTR:%.*]], i1 [[C:%.*]])
-; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i8
+; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone(i8* noalias nocapture nofree nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false)
@@ -504,7 +504,7 @@ f:
 define internal i8 @recursive_not_readnone_internal(i8* %ptr, i1 %c) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@recursive_not_readnone_internal
 ; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]])
-; IS__TUNIT____-NEXT:    [[ALLOC:%.*]] = alloca i8
+; IS__TUNIT____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       t:
 ; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false)
@@ -516,7 +516,7 @@ define internal i8 @recursive_not_readnone_internal(i8* %ptr, i1 %c) {
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@recursive_not_readnone_internal
 ; IS__CGSCC____-SAME: (i8* nocapture nofree nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]])
-; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8
+; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false)
@@ -542,7 +542,7 @@ f:
 define i8 @readnone_caller(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@readnone_caller
 ; CHECK-SAME: (i1 [[C:%.*]])
-; CHECK-NEXT:    [[A:%.*]] = alloca i8
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree nonnull writeonly dereferenceable(1) [[A]], i1 [[C]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -558,7 +558,7 @@ define i8 @readnone_caller(i1 %c) {
 define internal i8 @recursive_not_readnone_internal2(i8* %ptr, i1 %c) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@recursive_not_readnone_internal2
 ; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull writeonly [[PTR:%.*]], i1 [[C:%.*]])
-; IS__TUNIT____-NEXT:    [[ALLOC:%.*]] = alloca i8
+; IS__TUNIT____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       t:
 ; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal2(i8* noalias nocapture nofree nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false)
@@ -570,7 +570,7 @@ define internal i8 @recursive_not_readnone_internal2(i8* %ptr, i1 %c) {
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@recursive_not_readnone_internal2
 ; IS__CGSCC____-SAME: (i8* nocapture nofree nonnull writeonly [[PTR:%.*]], i1 [[C:%.*]])
-; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8
+; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal2(i8* noalias nocapture nofree nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false)
