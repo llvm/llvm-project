@@ -1,6 +1,6 @@
 // Test code motion for affine if
 
-// RUN: tco -debug-only=flang-affine-promotion --print-ir-after-all --promote-to-affine --disable-affine-promotion=false --affine-loop-invariant-code-motion --cse %s | FileCheck %s
+// RUN: tco --promote-to-affine --disable-affine-promotion=false --affine-loop-invariant-code-motion --cse %s | FileCheck %s
 
 !arr_d1 = type !fir.ref<!fir.array<?xf32>>
 #arr_len = affine_map<()[j1,k1] -> (k1 - j1 + 1)>
