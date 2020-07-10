@@ -206,3 +206,7 @@ void test9(int n, int a[static n]) { }
 // NULL-INVALID: define void @test9(i32 %n, i32* nonnull %a)
 // NULL-VALID: define void @test9(i32 %n, i32* %a)
 
+// Make sure a zero-sized static array extent is still required to be nonnull.
+void test10(int a[static 0]) {}
+// NULL-INVALID: define void @test10(i32* nonnull %a)
+// NULL-VALID: define void @test10(i32* %a)
