@@ -1963,14 +1963,18 @@ private:
   void instantiateCommon(const Fortran::semantics::Symbol &common,
                          const Fortran::lower::pft::Variable &var) {
     auto commonName = mangleName(common);
-    if (!builder->getNamedGlobal(commonName)) {
-      Fortran::lower::pft::Variable commonVar{common, true};
-      instantiateGlobal(commonVar);
-    }
+    auto global = builder->getNamedGlobal(commonName);
+    if (!global)
+      instantiateGlobal(Fortran::lower::pft::Variable{common, true});
     auto commonAddr = lookupSymbol(common);
     const auto &varSym = var.getSymbol();
-    auto byteOffset = varSym.offset();
     auto loc = genLocation(varSym.name());
+    if (!commonAddr) {
+      commonAddr = builder->create<fir::AddrOfOp>(loc, global.resultType(),
+                                                  global.getSymbol());
+      addSymbol(common, commonAddr);
+    }
+    auto byteOffset = varSym.offset();
     auto i8Ptr = fir::ReferenceType::get(builder->getIntegerType(8));
     auto base = builder->createConvert(loc, i8Ptr, commonAddr);
     llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
