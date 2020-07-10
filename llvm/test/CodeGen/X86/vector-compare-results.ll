@@ -1453,15 +1453,13 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm1
 ; AVX2-NEXT:    vpcmpgtw %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm4 = ymm0[2,3],ymm1[2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpacksswb %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    vpcmpgtw %ymm7, %ymm3, %ymm0
 ; AVX2-NEXT:    vpcmpgtw %ymm6, %ymm2, %ymm1
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm1[2,3],ymm0[2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpacksswb %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpacksswb %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %ymm0, %edx
 ; AVX2-NEXT:    shlq $32, %rdx
 ; AVX2-NEXT:    orq %rcx, %rdx

@@ -8,6 +8,9 @@
 // implementation limits, just disable the test.
 // UNSUPPORTED: system-netbsd
 
+// asan has own stack-overflow check.
+// UNSUPPORTED: asan
+
 // expected-warning@* 0-1{{stack nearly exhausted}}
 // expected-note@* 0+{{}}
 
