@@ -99,7 +99,7 @@ bool clang::tooling::isLocalSymbol(const NamedDecl *FoundDecl,
     return false;
 
   // Local declarations are defined in a function or a method, or are anonymous.
-  if (!FoundDecl->isInLocalScope())
+  if (!FoundDecl->isInLocalScopeForInstantiation())
     return false;
 
   // A locally defined record is global when it is returned from the enclosing
