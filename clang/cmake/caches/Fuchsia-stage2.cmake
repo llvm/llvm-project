@@ -5,6 +5,7 @@ set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64;RISCV CACHE STRING "")
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
 set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld;llvm" CACHE STRING "")
+set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
 set(LLVM_ENABLE_BACKTRACES OFF CACHE BOOL "")
 if(NOT APPLE)
@@ -70,7 +71,6 @@ if(APPLE)
   set(DARWIN_iossim_ARCHS i386;x86_64 CACHE STRING "")
   set(DARWIN_osx_ARCHS x86_64 CACHE STRING "")
   set(SANITIZER_MIN_OSX_VERSION 10.7 CACHE STRING "")
-  set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 endif()
 
 if(WIN32)
