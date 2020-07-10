@@ -15,37 +15,35 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/SmallVector.h"
 
-#define MakeRuntimeEntry(X) mkKey(RTNAME(X))
+#define mkRTKey(X) mkKey(RTNAME(X))
+
+static constexpr std::tuple<mkRTKey(StopStatementText),
+                            mkRTKey(ProgramEndStatement),
+                            mkRTKey(StopStatement), mkRTKey(FailImageStatement),
+                            mkRTKey(PauseStatement)>
+    newRTTable;
+
+template <typename A>
+static constexpr const char *getName() {
+  return std::get<A>(newRTTable).name;
+}
+
+template <typename A>
+static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+  return std::get<A>(newRTTable).getTypeModel();
+}
 
 template <typename RuntimeEntry>
 static mlir::FuncOp genRuntimeFunction(mlir::Location loc,
                                        Fortran::lower::FirOpBuilder &builder) {
-  auto func = builder.getNamedFunction(RuntimeEntry::name);
+  auto name = getName<RuntimeEntry>();
+  auto func = builder.getNamedFunction(name);
   if (func)
     return func;
-  auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
-  func = builder.createFunction(loc, RuntimeEntry::name, funTy);
+  auto funTy = getTypeModel<RuntimeEntry>()(builder.getContext());
+  func = builder.createFunction(loc, name, funTy);
   func.setAttr("fir.runtime", builder.getUnitAttr());
   return func;
-}
-
-static mlir::FuncOp
-genStopStatementRuntime(mlir::Location loc,
-                        Fortran::lower::FirOpBuilder &builder) {
-  return genRuntimeFunction<MakeRuntimeEntry(StopStatement)>(loc, builder);
-}
-
-static mlir::FuncOp
-genStopStatementTextRuntime(mlir::Location loc,
-                            Fortran::lower::FirOpBuilder &builder) {
-  return genRuntimeFunction<MakeRuntimeEntry(StopStatementText)>(loc, builder);
-}
-
-static mlir::FuncOp
-genProgramEndStatementRuntime(mlir::Location loc,
-                              Fortran::lower::FirOpBuilder &builder) {
-  return genRuntimeFunction<MakeRuntimeEntry(ProgramEndStatement)>(loc,
-                                                                   builder);
 }
 
 // TODO: We don't have runtime library support for various features. When they
@@ -65,7 +63,7 @@ void Fortran::lower::genStopStatement(
     const Fortran::parser::StopStmt &stmt) {
   auto &builder = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
-  auto callee = genStopStatementRuntime(loc, builder);
+  auto callee = genRuntimeFunction<mkRTKey(StopStatement)>(loc, builder);
   auto calleeType = callee.getType();
   llvm::SmallVector<mlir::Value, 8> operands;
   assert(calleeType.getNumInputs() == 3 &&
@@ -111,8 +109,7 @@ void Fortran::lower::genFailImageStatement(
     Fortran::lower::AbstractConverter &converter) {
   auto &bldr = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
-  auto callee =
-      genRuntimeFunction<MakeRuntimeEntry(FailImageStatement)>(loc, bldr);
+  auto callee = genRuntimeFunction<mkRTKey(FailImageStatement)>(loc, bldr);
   bldr.create<mlir::CallOp>(loc, callee, llvm::None);
 }
 
@@ -175,6 +172,8 @@ void Fortran::lower::genSyncTeamStatement(
 void Fortran::lower::genPauseStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::PauseStmt &) {
-  // FIXME: There is no runtime call to make for this yet.
-  noRuntimeSupport(converter.getCurrentLocation(), "PAUSE");
+  auto &bldr = converter.getFirOpBuilder();
+  auto loc = converter.getCurrentLocation();
+  auto callee = genRuntimeFunction<mkRTKey(PauseStatement)>(loc, bldr);
+  bldr.create<mlir::CallOp>(loc, callee, llvm::None);
 }
