@@ -170,6 +170,10 @@ public:
   ///     `(d0)[s0, s1, s2] -> (d0 + s1 + s2 + 1, d0 - s0 - s2 - 1)`
   AffineMap compose(AffineMap map);
 
+  /// Applies composition by the dims of `this` to the integer `values` and
+  /// returns the resulting values. `this` must be symbol-less.
+  SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values);
+
   /// Returns true if the AffineMap represents a subset (i.e. a projection) of a
   /// symbol-less permutation map.
   bool isProjectedPermutation();
@@ -179,6 +183,11 @@ public:
 
   /// Returns the map consisting of the `resultPos` subset.
   AffineMap getSubMap(ArrayRef<unsigned> resultPos);
+
+  /// Returns the map consisting of the most major `numResults` results.
+  /// Returns the null AffineMap if `numResults` == 0.
+  /// Returns `*this` if `numResults` >= `this->getNumResults()`.
+  AffineMap getMajorSubMap(unsigned numResults);
 
   /// Returns the map consisting of the most minor `numResults` results.
   /// Returns the null AffineMap if `numResults` == 0.
