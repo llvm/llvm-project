@@ -328,19 +328,25 @@ defm CONST_F64 : I<(outs F64:$res), (ins f64imm_op:$imm),
 } // isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1
 
 def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
-          (CONST_I32 tglobaladdr:$addr)>, Requires<[IsNotPIC]>;
+          (CONST_I32 tglobaladdr:$addr)>, Requires<[IsNotPIC, HasAddr32]>;
+def : Pat<(i64 (WebAssemblywrapper tglobaladdr:$addr)),
+          (CONST_I64 tglobaladdr:$addr)>, Requires<[IsNotPIC, HasAddr64]>;
 
 def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
-          (GLOBAL_GET_I32 tglobaladdr:$addr)>, Requires<[IsPIC]>;
+          (GLOBAL_GET_I32 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr32]>;
 
 def : Pat<(i32 (WebAssemblywrapperPIC tglobaladdr:$addr)),
-          (CONST_I32 tglobaladdr:$addr)>, Requires<[IsPIC]>;
+          (CONST_I32 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr32]>;
+def : Pat<(i64 (WebAssemblywrapperPIC tglobaladdr:$addr)),
+          (CONST_I64 tglobaladdr:$addr)>, Requires<[IsPIC, HasAddr64]>;
 
 def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
-          (GLOBAL_GET_I32 texternalsym:$addr)>, Requires<[IsPIC]>;
+          (GLOBAL_GET_I32 texternalsym:$addr)>, Requires<[IsPIC, HasAddr32]>;
 
 def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
-          (CONST_I32 texternalsym:$addr)>, Requires<[IsNotPIC]>;
+          (CONST_I32 texternalsym:$addr)>, Requires<[IsNotPIC, HasAddr32]>;
+def : Pat<(i64 (WebAssemblywrapper texternalsym:$addr)),
+          (CONST_I64 texternalsym:$addr)>, Requires<[IsNotPIC, HasAddr64]>;
 
 def : Pat<(i32 (WebAssemblywrapper mcsym:$sym)), (CONST_I32 mcsym:$sym)>;
 def : Pat<(i64 (WebAssemblywrapper mcsym:$sym)), (CONST_I64 mcsym:$sym)>;

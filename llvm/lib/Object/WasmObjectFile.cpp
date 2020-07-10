@@ -791,7 +791,9 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     switch (Reloc.Type) {
     case wasm::R_WASM_FUNCTION_INDEX_LEB:
     case wasm::R_WASM_TABLE_INDEX_SLEB:
+    case wasm::R_WASM_TABLE_INDEX_SLEB64:
     case wasm::R_WASM_TABLE_INDEX_I32:
+    case wasm::R_WASM_TABLE_INDEX_I64:
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
       if (!isValidFunctionSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation function index",
@@ -871,7 +873,8 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
         Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I32 ||
         Reloc.Type == wasm::R_WASM_GLOBAL_INDEX_I32)
       Size = 4;
-    if (Reloc.Type == wasm::R_WASM_MEMORY_ADDR_I64)
+    if (Reloc.Type == wasm::R_WASM_TABLE_INDEX_I64 ||
+        Reloc.Type == wasm::R_WASM_MEMORY_ADDR_I64)
       Size = 8;
     if (Reloc.Offset + Size > EndOffset)
       return make_error<GenericBinaryError>("Bad relocation offset",
