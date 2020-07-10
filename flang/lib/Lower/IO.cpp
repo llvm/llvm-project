@@ -966,8 +966,8 @@ getFormat<Fortran::parser::PrintStmt>(
 }
 
 /// Generate a reference to a buffer and the length of buffer.There are 3 cases
-/// An IoUnit can be variable, a ScalarIntExpr (i.e FileUnitNumber) or a *.
-/// The first is handled here, rest 2 are somewhere else.
+/// An IoUnit can be variable, a ScalarIntExpr (i.e FileUnitNumber) or a *.  The
+/// first is handled here, the other 2 are somewhere else.
 static std::tuple<mlir::Value, mlir::Value>
 genBuffer(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
           const Fortran::parser::IoUnit &iounit, mlir::Type strTy,
