@@ -419,7 +419,6 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
       QualType pointeeTy = PT->getPointeeType();
       if (const BuiltinType *BT = pointeeTy->getAs<BuiltinType>())
         switch (BT->getKind()) {
-          case BuiltinType::Void:
           case BuiltinType::Char_U:
           case BuiltinType::UChar:
           case BuiltinType::Char_S:

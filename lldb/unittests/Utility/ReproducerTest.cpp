@@ -9,6 +9,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 
@@ -31,8 +32,25 @@ public:
   static char ID;
 };
 
+class YamlMultiProvider
+    : public MultiProvider<YamlRecorder, YamlMultiProvider> {
+public:
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+
+  YamlMultiProvider(const FileSpec &directory) : MultiProvider(directory) {}
+
+  static char ID;
+};
+
 const char *DummyProvider::Info::name = "dummy";
 const char *DummyProvider::Info::file = "dummy.yaml";
+const char *YamlMultiProvider::Info::name = "mutli";
+const char *YamlMultiProvider::Info::file = "mutli.yaml";
+char DummyProvider::ID = 0;
+char YamlMultiProvider::ID = 0;
 
 class DummyReproducer : public Reproducer {
 public:
@@ -42,7 +60,25 @@ public:
   using Reproducer::SetReplay;
 };
 
-char DummyProvider::ID = 0;
+struct YamlData {
+  YamlData() : i(-1) {}
+  YamlData(int i) : i(i) {}
+  int i;
+};
+
+inline bool operator==(const YamlData &LHS, const YamlData &RHS) {
+  return LHS.i == RHS.i;
+}
+
+LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(YamlData)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<YamlData> {
+  static void mapping(IO &io, YamlData &Y) { io.mapRequired("i", Y.i); };
+};
+} // namespace yaml
+} // namespace llvm
 
 TEST(ReproducerTest, SetCapture) {
   DummyReproducer reproducer;
@@ -143,4 +179,84 @@ TEST(GeneratorTest, GetOrCreate) {
 
   auto &provider_alt = generator.GetOrCreate<DummyProvider>();
   EXPECT_EQ(&provider, &provider_alt);
+}
+
+TEST(GeneratorTest, YamlMultiProvider) {
+  SmallString<128> root;
+  std::error_code ec = llvm::sys::fs::createUniqueDirectory("reproducer", root);
+  ASSERT_FALSE(static_cast<bool>(ec));
+
+  auto cleanup = llvm::make_scope_exit(
+      [&] { EXPECT_FALSE(llvm::sys::fs::remove_directories(root.str())); });
+
+  YamlData data0(0);
+  YamlData data1(1);
+  YamlData data2(2);
+  YamlData data3(3);
+
+  {
+    DummyReproducer reproducer;
+    EXPECT_THAT_ERROR(reproducer.SetCapture(FileSpec(root.str())), Succeeded());
+
+    auto &generator = *reproducer.GetGenerator();
+    auto *provider = generator.Create<YamlMultiProvider>();
+    ASSERT_NE(nullptr, provider);
+
+    auto *recorder = provider->GetNewRecorder();
+    ASSERT_NE(nullptr, recorder);
+    recorder->Record(data0);
+    recorder->Record(data1);
+
+    recorder = provider->GetNewRecorder();
+    ASSERT_NE(nullptr, recorder);
+    recorder->Record(data2);
+    recorder->Record(data3);
+
+    generator.Keep();
+  }
+
+  {
+    DummyReproducer reproducer;
+    EXPECT_THAT_ERROR(reproducer.SetReplay(FileSpec(root.str())), Succeeded());
+
+    auto &loader = *reproducer.GetLoader();
+    std::unique_ptr<repro::MultiLoader<YamlMultiProvider>> multi_loader =
+        repro::MultiLoader<YamlMultiProvider>::Create(&loader);
+
+    // Read the first file.
+    {
+      llvm::Optional<std::string> file = multi_loader->GetNextFile();
+      EXPECT_TRUE(static_cast<bool>(file));
+
+      auto buffer = llvm::MemoryBuffer::getFile(*file);
+      EXPECT_TRUE(static_cast<bool>(buffer));
+
+      yaml::Input yin((*buffer)->getBuffer());
+      std::vector<YamlData> data;
+      yin >> data;
+
+      ASSERT_EQ(data.size(), 2U);
+      EXPECT_THAT(data, testing::ElementsAre(data0, data1));
+    }
+
+    // Read the second file.
+    {
+      llvm::Optional<std::string> file = multi_loader->GetNextFile();
+      EXPECT_TRUE(static_cast<bool>(file));
+
+      auto buffer = llvm::MemoryBuffer::getFile(*file);
+      EXPECT_TRUE(static_cast<bool>(buffer));
+
+      yaml::Input yin((*buffer)->getBuffer());
+      std::vector<YamlData> data;
+      yin >> data;
+
+      ASSERT_EQ(data.size(), 2U);
+      EXPECT_THAT(data, testing::ElementsAre(data2, data3));
+    }
+
+    // There is no third file.
+    llvm::Optional<std::string> file = multi_loader->GetNextFile();
+    EXPECT_FALSE(static_cast<bool>(file));
+  }
 }
