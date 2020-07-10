@@ -74,6 +74,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   AMDGPUTTIImpl CommonTTI;
   bool IsGraphicsShader;
   bool HasFP32Denormals;
+  unsigned MaxVGPRs;
 
   const FeatureBitset InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
@@ -133,7 +134,11 @@ public:
       TLI(ST->getTargetLowering()),
       CommonTTI(TM, F),
       IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())),
-      HasFP32Denormals(AMDGPU::SIModeRegisterDefaults(F).allFP32Denormals()) {}
+      HasFP32Denormals(AMDGPU::SIModeRegisterDefaults(F).allFP32Denormals()),
+      MaxVGPRs(ST->getMaxNumVGPRs(
+          std::max(ST->getWavesPerEU(F).first,
+                   ST->getWavesPerEUForWorkGroup(
+                       ST->getFlatWorkGroupSizes(F).second)))) {}
 
   bool hasBranchDivergence() { return true; }
   bool useGPUDivergenceAnalysis() const;
@@ -148,6 +153,7 @@ public:
 
   unsigned getHardwareNumberOfRegisters(bool Vector) const;
   unsigned getNumberOfRegisters(bool Vector) const;
+  unsigned getNumberOfRegisters(unsigned RCID) const;
   unsigned getRegisterBitWidth(bool Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
