@@ -789,11 +789,13 @@ private:
         info.isStructured() ? builder->getIndexType() : info.loopVariableType;
     auto lowerValue = genFIRLoopIndex(info.lowerExpr, type);
     auto upperValue = genFIRLoopIndex(info.upperExpr, type);
+    // clang-format off
     info.stepValue =
         info.stepExpr.has_value() ? genFIRLoopIndex(*info.stepExpr, type)
         : info.isStructured()
             ? builder->create<mlir::ConstantIndexOp>(loc, 1)
             : builder->createIntegerConstant(loc, info.loopVariableType, 1);
+    // clang-format on
     assert(info.stepValue && "step value must be set");
     info.loopVariable = createTemp(loc, *info.loopVariableSym);
 
