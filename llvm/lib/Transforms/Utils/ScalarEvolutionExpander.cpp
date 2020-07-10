@@ -1292,7 +1292,8 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   if (useSubtract)
     Step = SE.getNegativeSCEV(Step);
   // Expand the step somewhere that dominates the loop header.
-  Value *StepV = expandCodeFor(Step, IntTy, &L->getHeader()->front());
+  Value *StepV = expandCodeFor(Step, IntTy,
+                               &*L->getHeader()->getFirstInsertionPt());
 
   // The no-wrap behavior proved by IsIncrement(NUW|NSW) is only applicable if
   // we actually do emit an addition.  It does not apply if we emit a
@@ -1438,7 +1439,8 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
       {
         // Expand the step somewhere that dominates the loop header.
         SCEVInsertPointGuard Guard(Builder, this);
-        StepV = expandCodeFor(Step, IntTy, &L->getHeader()->front());
+        StepV = expandCodeFor(Step, IntTy,
+                              &*L->getHeader()->getFirstInsertionPt());
       }
       Result = expandIVInc(PN, StepV, L, ExpandTy, IntTy, useSubtract);
     }
@@ -1870,11 +1872,6 @@ Value *SCEVExpander::expand(const SCEV *S) {
     }
   }
 
-  // IndVarSimplify sometimes sets the insertion point at the block start, even
-  // when there are PHIs at that point.  We must correct for this.
-  if (isa<PHINode>(*InsertPt))
-    InsertPt = &*InsertPt->getParent()->getFirstInsertionPt();
-
   // Check to see if we already expanded this here.
   auto I = InsertedExpressions.find(std::make_pair(S, InsertPt));
   if (I != InsertedExpressions.end())
@@ -1945,7 +1942,8 @@ SCEVExpander::getOrInsertCanonicalInductionVariable(const Loop *L,
   // Emit code for it.
   SCEVInsertPointGuard Guard(Builder, this);
   PHINode *V =
-      cast<PHINode>(expandCodeFor(H, nullptr, &L->getHeader()->front()));
+      cast<PHINode>(expandCodeFor(H, nullptr,
+                                  &*L->getHeader()->getFirstInsertionPt()));
 
   return V;
 }
