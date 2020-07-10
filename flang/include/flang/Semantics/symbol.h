@@ -650,6 +650,8 @@ public:
   // for a parameterized derived type instantiation with the instance's scope.
   const DerivedTypeSpec *GetParentTypeSpec(const Scope * = nullptr) const;
 
+  LLVM_DUMP_METHOD void dump() { llvm::errs() << *this << '\n'; }
+
 private:
   const Scope *owner_;
   SourceName name_;
