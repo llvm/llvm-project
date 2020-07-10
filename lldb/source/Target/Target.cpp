@@ -2422,16 +2422,6 @@ Target::GetUtilityFunctionForLanguage(const char *text,
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-ClangASTImporterSP Target::GetClangASTImporter() {
-  if (m_valid) {
-    if (!m_ast_importer_sp) {
-      m_ast_importer_sp = std::make_shared<ClangASTImporter>();
-    }
-    return m_ast_importer_sp;
-  }
-  return ClangASTImporterSP();
-}
-
 llvm::Optional<SwiftASTContextReader> Target::GetScratchSwiftASTContext(
     Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
