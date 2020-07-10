@@ -835,9 +835,9 @@ void DAGTypeLegalizer::GetSplitVector(SDValue Op, SDValue &Lo,
 void DAGTypeLegalizer::SetSplitVector(SDValue Op, SDValue Lo,
                                       SDValue Hi) {
   assert(Lo.getValueType().getVectorElementType() ==
-         Op.getValueType().getVectorElementType() &&
-         2*Lo.getValueType().getVectorNumElements() ==
-         Op.getValueType().getVectorNumElements() &&
+             Op.getValueType().getVectorElementType() &&
+         Lo.getValueType().getVectorElementCount() * 2 ==
+             Op.getValueType().getVectorElementCount() &&
          Hi.getValueType() == Lo.getValueType() &&
          "Invalid type for split vector");
   // Lo/Hi may have been newly allocated, if so, add nodeid's as relevant.
