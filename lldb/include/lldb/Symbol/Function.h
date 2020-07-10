@@ -645,7 +645,7 @@ public:
 protected:
   enum {
     /// Whether we already tried to calculate the prologue size.
-    flagsCalculatedPrologueSize = (1 << 0)
+    flagsCalculatedPrologueSize = (1 << 0),
 
     /// Whether we know this function throws.
     flagsFunctionCanThrow = (1 << 1)
