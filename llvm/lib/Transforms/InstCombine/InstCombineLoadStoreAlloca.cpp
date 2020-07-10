@@ -1425,18 +1425,33 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
+  auto IsNoopInstrForStoreMerging = [](BasicBlock::iterator BBI) {
+    return isa<DbgInfoIntrinsic>(BBI) ||
+           (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy());
+  };
+
   // If this store is the second-to-last instruction in the basic block
   // (excluding debug info and bitcasts of pointers) and if the block ends with
   // an unconditional branch, try to move the store to the successor block.
   BBI = SI.getIterator();
   do {
     ++BBI;
-  } while (isa<DbgInfoIntrinsic>(BBI) ||
-           (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy()));
+  } while (IsNoopInstrForStoreMerging(BBI));
 
   if (BranchInst *BI = dyn_cast<BranchInst>(BBI))
     if (BI->isUnconditional())
-      mergeStoreIntoSuccessor(SI);
+      if (mergeStoreIntoSuccessor(SI)) {
+        // Okay, we've managed to do that. Now, let's see if now-second-to-last
+        // instruction is also a store that we can also sink.
+        BasicBlock::iterator FirstInstr = BBI->getParent()->begin();
+        do {
+          if (BBI != FirstInstr)
+            --BBI;
+        } while (BBI != FirstInstr && IsNoopInstrForStoreMerging(BBI));
+        if (StoreInst *PrevStore = dyn_cast<StoreInst>(BBI))
+          Worklist.add(PrevStore);
+        return nullptr;
+      }
 
   return nullptr;
 }
