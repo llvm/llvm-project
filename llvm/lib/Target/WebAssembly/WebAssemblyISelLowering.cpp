@@ -1677,12 +1677,12 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
   // Only manually lower vector shifts
   assert(Op.getSimpleValueType().isVector());
 
-  auto ShiftVal = Op.getOperand(1);
-  if (!DAG.isSplatValue(ShiftVal, /*AllowUndefs=*/true))
+  auto ShiftVal = DAG.getSplatValue(Op.getOperand(1));
+  if (!ShiftVal)
     return unrollVectorShift(Op, DAG);
 
-  auto SplatVal = DAG.getSplatValue(ShiftVal);
-  assert(SplatVal != SDValue());
+  // Use anyext because none of the high bits can affect the shift
+  ShiftVal = DAG.getAnyExtOrTrunc(ShiftVal, DL, MVT::i32);
 
   unsigned Opcode;
   switch (Op.getOpcode()) {
@@ -1699,10 +1699,7 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
     llvm_unreachable("unexpected opcode");
   }
 
-  // Use anyext because none of the high bits can affect the shift
-  auto ScalarShift = DAG.getAnyExtOrTrunc(SplatVal, DL, MVT::i32);
-  return DAG.getNode(Opcode, DL, Op.getValueType(), Op.getOperand(0),
-                     ScalarShift);
+  return DAG.getNode(Opcode, DL, Op.getValueType(), Op.getOperand(0), ShiftVal);
 }
 
 //===----------------------------------------------------------------------===//
