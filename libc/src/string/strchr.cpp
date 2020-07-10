@@ -1,4 +1,4 @@
-//===-- Implementation of memchr ------------------------------------------===//
+//===-- Implementation of strchr ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/memchr.h"
+#include "src/string/strchr.h"
+#include "src/string/strlen.h"
+
 #include "src/__support/common.h"
-#include <stddef.h>
 
 namespace __llvm_libc {
 
 // TODO: Look at performance benefits of comparing words.
-void *LLVM_LIBC_ENTRYPOINT(memchr)(const void *src, int c, size_t n) {
-  const unsigned char *str = reinterpret_cast<const unsigned char *>(src);
+char *LLVM_LIBC_ENTRYPOINT(strchr)(const char *src, int c) {
+  unsigned char *str =
+      const_cast<unsigned char *>(reinterpret_cast<const unsigned char *>(src));
   const unsigned char ch = c;
-  for (; n && *str != ch; --n, ++str)
+  for (; *str && *str != ch; ++str)
     ;
-  return n ? const_cast<unsigned char *>(str) : nullptr;
+  return *str == ch ? reinterpret_cast<char *>(str) : nullptr;
 }
 
 } // namespace __llvm_libc
