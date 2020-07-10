@@ -70,7 +70,8 @@ class IntrinsicProcTable;
 struct SetExprHelper {
   explicit SetExprHelper(GenericExprWrapper &&expr) : expr_{std::move(expr)} {}
   void Set(parser::TypedExpr &x) {
-    x.reset(new GenericExprWrapper{std::move(expr_)});
+    x.Reset(new GenericExprWrapper{std::move(expr_)},
+        evaluate::GenericExprWrapper::Deleter);
   }
   void Set(const parser::Expr &x) { Set(x.typedExpr); }
   void Set(const parser::Variable &x) { Set(x.typedExpr); }

@@ -1395,8 +1395,7 @@ WRAPPER_CLASS(ContiguousStmt, std::list<ObjectName>);
 using ConstantSubobject = Constant<common::Indirection<Designator>>;
 
 // Represents an analyzed expression
-using TypedExpr = std::unique_ptr<evaluate::GenericExprWrapper,
-    common::Deleter<evaluate::GenericExprWrapper>>;
+using TypedExpr = common::ForwardOwningPointer<evaluate::GenericExprWrapper>;
 
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
@@ -1919,8 +1918,8 @@ struct DeallocateStmt {
 // R1032 assignment-stmt -> variable = expr
 struct AssignmentStmt {
   TUPLE_CLASS_BOILERPLATE(AssignmentStmt);
-  using TypedAssignment = std::unique_ptr<evaluate::GenericAssignmentWrapper,
-      common::Deleter<evaluate::GenericAssignmentWrapper>>;
+  using TypedAssignment =
+      common::ForwardOwningPointer<evaluate::GenericAssignmentWrapper>;
   mutable TypedAssignment typedAssignment;
   std::tuple<Variable, Expr> t;
 };
@@ -3140,8 +3139,7 @@ struct FunctionReference {
 // R1521 call-stmt -> CALL procedure-designator [( [actual-arg-spec-list] )]
 struct CallStmt {
   WRAPPER_CLASS_BOILERPLATE(CallStmt, Call);
-  mutable std::unique_ptr<evaluate::ProcedureRef,
-      common::Deleter<evaluate::ProcedureRef>>
+  mutable common::ForwardOwningPointer<evaluate::ProcedureRef>
       typedCall; // filled by semantics
 };
 
