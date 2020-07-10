@@ -15,7 +15,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
-#include "llvm/Analysis/OrderedInstructions.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
@@ -93,6 +92,18 @@ private:
   static bool isInverse(const Value &V1, const Value &V2);
 };
 } // namespace
+
+static bool domTreeLevelBefore(DominatorTree *DT, const Instruction *InstA,
+                               const Instruction *InstB) {
+  // Use ordered basic block in case the 2 instructions are in the same
+  // block.
+  if (InstA->getParent() == InstB->getParent())
+    return InstA->comesBefore(InstB);
+
+  DomTreeNode *DA = DT->getNode(InstA->getParent());
+  DomTreeNode *DB = DT->getNode(InstB->getParent());
+  return DA->getLevel() < DB->getLevel();
+}
 
 const Optional<ControlConditions> ControlConditions::collectControlConditions(
     const BasicBlock &BB, const BasicBlock &Dominator, const DominatorTree &DT,
@@ -332,9 +343,8 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
         if (&InsertPoint == OpInst || !DT.dominates(OpInst, &InsertPoint))
           return false;
 
-  OrderedInstructions OI(&DT);
   DT.updateDFSNumbers();
-  const bool MoveForward = OI.domTreeLevelBefore(&I, &InsertPoint);
+  const bool MoveForward = domTreeLevelBefore(&DT, &I, &InsertPoint);
   Instruction &StartInst = (MoveForward ? I : InsertPoint);
   Instruction &EndInst = (MoveForward ? InsertPoint : I);
   SmallPtrSet<Instruction *, 10> InstsToCheck;
