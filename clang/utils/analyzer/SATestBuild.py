@@ -601,7 +601,7 @@ class ProjectTester:
                    stdout=build_log_file, shell=True)
 
     def _unpack_zip(self, directory: str, build_log_file: IO):
-        zip_files = list(glob.glob(os.path.join(directory, "/*.zip")))
+        zip_files = list(glob.glob(directory + "/*.zip"))
 
         if len(zip_files) == 0:
             raise ValueError(

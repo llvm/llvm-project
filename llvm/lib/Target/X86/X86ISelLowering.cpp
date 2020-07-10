@@ -39301,8 +39301,7 @@ static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
   }
 
   // Only use (F)HADD opcodes if they aren't microcoded or minimizes codesize.
-  bool OptForSize = DAG.shouldOptForSize();
-  if (!Subtarget.hasFastHorizontalOps() && !OptForSize)
+  if (!shouldUseHorizontalOp(true, DAG, Subtarget))
     return SDValue();
 
   unsigned HorizOpcode = Opc == ISD::ADD ? X86ISD::HADD : X86ISD::FHADD;
@@ -41933,6 +41932,37 @@ static SDValue combineVectorPackWithShuffle(SDNode *N, SelectionDAG &DAG) {
         Res = DAG.getBitcast(MVT::v4i32, Res);
         Res = DAG.getVectorShuffle(MVT::v4i32, DL, Res, Res, ShuffleMask);
         return DAG.getBitcast(VT, Res);
+      }
+    }
+  }
+
+  // Attempt to fold PACK(SHUFFLE(X,Y),SHUFFLE(X,Y)) -> SHUFFLE(PACK(X,Y)).
+  // TODO: Relax shuffle scaling to support sub-128-bit subvector shuffles.
+  if (VT.is256BitVector()) {
+    if (auto *SVN0 = dyn_cast<ShuffleVectorSDNode>(N0)) {
+      if (auto *SVN1 = dyn_cast<ShuffleVectorSDNode>(N1)) {
+        SmallVector<int, 2> ShuffleMask0, ShuffleMask1;
+        if (scaleShuffleElements(SVN0->getMask(), 2, ShuffleMask0) &&
+            scaleShuffleElements(SVN1->getMask(), 2, ShuffleMask1)) {
+          SDValue Op00 = SVN0->getOperand(0);
+          SDValue Op01 = SVN0->getOperand(1);
+          SDValue Op10 = SVN1->getOperand(0);
+          SDValue Op11 = SVN1->getOperand(1);
+          if ((Op00 == Op11) && (Op01 == Op10)) {
+            std::swap(Op10, Op11);
+            ShuffleVectorSDNode::commuteMask(ShuffleMask1);
+          }
+          if ((Op00 == Op10) && (Op01 == Op11)) {
+            SmallVector<int, 4> ShuffleMask;
+            ShuffleMask.append(ShuffleMask0.begin(), ShuffleMask0.end());
+            ShuffleMask.append(ShuffleMask1.begin(), ShuffleMask1.end());
+            SDLoc DL(N);
+            SDValue Res = DAG.getNode(Opcode, DL, VT, Op00, Op01);
+            Res = DAG.getBitcast(MVT::v4i64, Res);
+            Res = DAG.getVectorShuffle(MVT::v4i64, DL, Res, Res, ShuffleMask);
+            return DAG.getBitcast(VT, Res);
+          }
+        }
       }
     }
   }

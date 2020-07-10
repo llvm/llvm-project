@@ -1,0 +1,425 @@
+; To keep this test maintainable, avoid depending on -dump-input-context's
+; default value, which is checked in dump-input-context.txt instead.
+
+;--------------------------------------------------
+; Create the input file and the check file.
+;--------------------------------------------------
+
+; line 1
+; RUN: echo start >  %t.in
+; RUN: echo foo0  >> %t.in
+; RUN: echo foo1  >> %t.in
+; RUN: echo foo2  >> %t.in
+; RUN: echo foo3  >> %t.in
+; RUN: echo foo4  >> %t.in
+; RUN: echo foo5  >> %t.in
+; RUN: echo foo6  >> %t.in
+; RUN: echo foo7  >> %t.in
+; RUN: echo foo8  >> %t.in
+; RUN: echo foo9  >> %t.in
+; line 12
+; RUN: echo hello >> %t.in
+; RUN: echo foo0  >> %t.in
+; RUN: echo foo1  >> %t.in
+; RUN: echo foo2  >> %t.in
+; RUN: echo foo3  >> %t.in
+; RUN: echo foo4  >> %t.in
+; RUN: echo foo5  >> %t.in
+; RUN: echo foo6  >> %t.in
+; RUN: echo foo7  >> %t.in
+; RUN: echo foo8  >> %t.in
+; RUN: echo foo9  >> %t.in
+; line 23
+; RUN: echo word  >> %t.in
+; RUN: echo foo0  >> %t.in
+; RUN: echo foo1  >> %t.in
+; RUN: echo foo2  >> %t.in
+; RUN: echo foo3  >> %t.in
+; RUN: echo foo4  >> %t.in
+; RUN: echo foo5  >> %t.in
+; RUN: echo foo6  >> %t.in
+; RUN: echo foo7  >> %t.in
+; RUN: echo foo8  >> %t.in
+; RUN: echo foo9  >> %t.in
+; line 34
+; RUN: echo end   >> %t.in
+
+; RUN: echo 'CHECK: start' >  %t.chk
+; RUN: echo 'CHECK: hello' >> %t.chk
+; RUN: echo 'CHECK: world' >> %t.chk
+; RUN: echo 'CHECK: end'   >> %t.chk
+
+;--------------------------------------------------
+; Directives for checking the dump.
+;--------------------------------------------------
+
+;      ALL: <<<<<<
+; ALL-NEXT:            1: start
+; ALL-NEXT: check:1       ^~~~~
+; ALL-NEXT:            2: foo0
+; ALL-NEXT:            3: foo1
+; ALL-NEXT:            4: foo2
+; ALL-NEXT:            5: foo3
+; ALL-NEXT:            6: foo4
+; ALL-NEXT:            7: foo5
+; ALL-NEXT:            8: foo6
+; ALL-NEXT:            9: foo7
+; ALL-NEXT:           10: foo8
+; ALL-NEXT:           11: foo9
+; ALL-NEXT:           12: hello
+; ALL-NEXT: check:2       ^~~~~
+; ALL-NEXT:           13: foo0
+; ALL-NEXT: check:3'0     X~~~ error: no match found
+; ALL-NEXT:           14: foo1
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           15: foo2
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           16: foo3
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           17: foo4
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           18: foo5
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           19: foo6
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           20: foo7
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           21: foo8
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           22: foo9
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           23: word
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT: check:3'1     ?     possible intended match
+; ALL-NEXT:           24: foo0
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           25: foo1
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           26: foo2
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           27: foo3
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           28: foo4
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           29: foo5
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           30: foo6
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           31: foo7
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           32: foo8
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           33: foo9
+; ALL-NEXT: check:3'0     ~~~~
+; ALL-NEXT:           34: end
+; ALL-NEXT: check:3'0     ~~~
+; ALL-NEXT: >>>>>>
+
+;      ANNOTATION-FULL: <<<<<<
+; ANNOTATION-FULL-NEXT:            1: start
+; ANNOTATION-FULL-NEXT: check:1       ^~~~~
+; ANNOTATION-FULL-NEXT:            2: foo0
+; ANNOTATION-FULL-NEXT:            3: foo1
+; ANNOTATION-FULL-NEXT:            .
+; ANNOTATION-FULL-NEXT:            .
+; ANNOTATION-FULL-NEXT:            .
+; ANNOTATION-FULL-NEXT:           10: foo8
+; ANNOTATION-FULL-NEXT:           11: foo9
+; ANNOTATION-FULL-NEXT:           12: hello
+; ANNOTATION-FULL-NEXT: check:2       ^~~~~
+; ANNOTATION-FULL-NEXT:           13: foo0
+; ANNOTATION-FULL-NEXT: check:3'0     X~~~ error: no match found
+; ANNOTATION-FULL-NEXT:           14: foo1
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           15: foo2
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           16: foo3
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           17: foo4
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           18: foo5
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           19: foo6
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           20: foo7
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           21: foo8
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           22: foo9
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           23: word
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT: check:3'1     ?     possible intended match
+; ANNOTATION-FULL-NEXT:           24: foo0
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           25: foo1
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           26: foo2
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           27: foo3
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           28: foo4
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           29: foo5
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           30: foo6
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           31: foo7
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           32: foo8
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           33: foo9
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
+; ANNOTATION-FULL-NEXT:           34: end
+; ANNOTATION-FULL-NEXT: check:3'0     ~~~
+; ANNOTATION-FULL-NEXT: >>>>>>
+
+;      ANNOTATION: <<<<<<
+; ANNOTATION-NEXT:            1: start
+; ANNOTATION-NEXT: check:1       ^~~~~
+; ANNOTATION-NEXT:            2: foo0
+; ANNOTATION-NEXT:            3: foo1
+; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT:           10: foo8
+; ANNOTATION-NEXT:           11: foo9
+; ANNOTATION-NEXT:           12: hello
+; ANNOTATION-NEXT: check:2       ^~~~~
+; ANNOTATION-NEXT:           13: foo0
+; ANNOTATION-NEXT: check:3'0     X~~~ error: no match found
+; ANNOTATION-NEXT:           14: foo1
+; ANNOTATION-NEXT: check:3'0     ~~~~
+; ANNOTATION-NEXT:           15: foo2
+; ANNOTATION-NEXT: check:3'0     ~~~~
+; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT:           21: foo8
+; ANNOTATION-NEXT: check:3'0     ~~~~
+; ANNOTATION-NEXT:           22: foo9
+; ANNOTATION-NEXT: check:3'0     ~~~~
+; ANNOTATION-NEXT:           23: word
+; ANNOTATION-NEXT: check:3'0     ~~~~
+; ANNOTATION-NEXT: check:3'1     ?     possible intended match
+; ANNOTATION-NEXT:           24: foo0
+; ANNOTATION-NEXT: check:3'0     ~~~~
+; ANNOTATION-NEXT:           25: foo1
+; ANNOTATION-NEXT: check:3'0     ~~~~
+; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT:            .
+; ANNOTATION-NEXT: >>>>>>
+
+;      ERROR: <<<<<<
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:           11: foo9
+; ERROR-NEXT:           12: hello
+; ERROR-NEXT: check:2       ^~~~~
+; ERROR-NEXT:           13: foo0
+; ERROR-NEXT: check:3'0     X~~~ error: no match found
+; ERROR-NEXT:           14: foo1
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:           15: foo2
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:           21: foo8
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:           22: foo9
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:           23: word
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT: check:3'1     ?     possible intended match
+; ERROR-NEXT:           24: foo0
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:           25: foo1
+; ERROR-NEXT: check:3'0     ~~~~
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT:            .
+; ERROR-NEXT: >>>>>>
+
+;--------------------------------------------------
+; Check -dump-input-filter=<bad value>.
+;--------------------------------------------------
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=foobar \
+; RUN: | FileCheck %s -match-full-lines -check-prefix=BADVAL
+
+BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-filter option: Cannot find option named 'foobar'!
+
+;--------------------------------------------------
+; Check -dump-input-filter explicit values.
+;--------------------------------------------------
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=all \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ALL
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=annotation-full \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ANNOTATION-FULL
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=annotation \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ANNOTATION
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=error \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ERROR
+
+;--------------------------------------------------
+; Check -dump-input-filter defaults.
+;--------------------------------------------------
+
+; no -dump-input => -dump-input-filter=error
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ERROR
+
+; -dump-input=fail => -dump-input-filter=error
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input=fail \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ERROR
+
+; -dump-input=always => -dump-input-filter=all
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input=always \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ALL
+
+;--------------------------------------------------
+; Check multiple -dump-input-filter options.
+;
+; This might occur when a test author specifies -dump-input-filter on a specific
+; FileCheck call while a test runner specifies -dump-input-filter in
+; FILECHECK_OPTS, but check the behavior generally.
+;
+; The value providing the most information wins.
+;--------------------------------------------------
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; Check duplicate.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; all, all => all
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=all -dump-input-filter=all \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ALL
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; Check precedence.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; all, annotation-full => all
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=all -dump-input-filter=annotation-full \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ALL
+
+; annotation-full, annotation => annotation-full
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=annotation-full \
+; RUN:               -dump-input-filter=annotation \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ANNOTATION-FULL
+
+; annotation, error => annotation
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=annotation -dump-input-filter=error \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ANNOTATION
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; Check that order doesn't matter.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; error, annotation => annotation
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=error -dump-input-filter=annotation \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ANNOTATION
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; Check that FILECHECK_OPTS isn't handled differently.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; annotation, error => annotation
+; RUN: %ProtectFileCheckOutput FILECHECK_OPTS=-dump-input-filter=annotation \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=error \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ANNOTATION
+
+; error, annotation => annotation
+; RUN: %ProtectFileCheckOutput FILECHECK_OPTS=-dump-input-filter=error \
+; RUN: not FileCheck -dump-input-context=2 -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-filter=annotation \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=ANNOTATION
+
+;--------------------------------------------------
+; Check the case where all input lines are filtered out.
+;--------------------------------------------------
+
+; RUN: echo 'CHECK: hello' > %t.good.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: FileCheck -dump-input=always -dump-input-filter=error -vv %t.good.chk \
+; RUN:           < %t.in 2>&1 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=EMPTY
+
+;      EMPTY: <<<<<<
+; EMPTY-NEXT:          .
+; EMPTY-NEXT:          .
+; EMPTY-NEXT:          .
+; EMPTY-NEXT: >>>>>>
+
+;--------------------------------------------------
+; Check that other kinds of errors are included by -dump-input-filter=error.
+;
+; "error: no match found" and "possible intended match" are checked above.
+;--------------------------------------------------
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; error: no match expected.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; RUN: echo 'foo'            > %t.not-err.in
+; RUN: echo 'CHECK-NOT: foo' > %t.not-err.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=0 -dump-input-filter=error \
+; RUN:               %t.not-err.chk < %t.not-err.in 2>&1 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=NOT-ERR
+
+;      NOT-ERR:        1: foo
+; NOT-ERR-NEXT: not:1     !~~ error: no match expected
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; error: match on wrong line.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; RUN: echo 'foo'             >  %t.next-err.in
+; RUN: echo 'foo'             >> %t.next-err.in
+; RUN: echo 'bar'             >> %t.next-err.in
+; RUN: echo 'CHECK: foo'      >  %t.next-err.chk
+; RUN: echo 'CHECK-NEXT: bar' >> %t.next-err.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=0 -dump-input-filter=error \
+; RUN:               %t.next-err.chk < %t.next-err.in 2>&1 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=NEXT-ERR
+
+;      NEXT-ERR:         3: bar
+; NEXT-ERR-NEXT: next:2     !~~ error: match on wrong line

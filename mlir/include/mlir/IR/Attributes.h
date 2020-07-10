@@ -286,6 +286,12 @@ public:
     return llvm::make_range(attr_value_iterator<AttrTy>(begin()),
                             attr_value_iterator<AttrTy>(end()));
   }
+  template <typename AttrTy, typename UnderlyingTy>
+  auto getAsRange() {
+    return llvm::map_range(getAsRange<AttrTy>(), [](AttrTy attr) {
+      return static_cast<UnderlyingTy>(attr.getValue());
+    });
+  }
 };
 
 //===----------------------------------------------------------------------===//

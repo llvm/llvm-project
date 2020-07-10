@@ -24,7 +24,7 @@
 ; ALIGN:{{.*}}error:{{.*}}
 ; ALIGN:{{.*}}possible intended match here{{.*}}
 
-; ALIGN:Full input was:
+; ALIGN:Input was:
 ; ALIGN-NEXT:<<<<<<
 ; ALIGN-NEXT:           1: hello world
 ; ALIGN-NEXT:check:1       ^~~~~

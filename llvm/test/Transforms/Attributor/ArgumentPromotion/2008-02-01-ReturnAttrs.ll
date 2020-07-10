@@ -14,8 +14,8 @@ define internal i32 @deref(i32* %x) nounwind {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@deref
 ; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[X_PRIV:%.*]] = alloca i32
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[X_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[X_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP2]]
 ;
@@ -34,7 +34,7 @@ define i32 @f(i32 %x) {
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@f
 ; NOT_TUNIT_NPM-SAME: (i32 [[X:%.*]])
 ; NOT_TUNIT_NPM-NEXT:  entry:
-; NOT_TUNIT_NPM-NEXT:    [[X_ADDR:%.*]] = alloca i32
+; NOT_TUNIT_NPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; NOT_TUNIT_NPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
 ; NOT_TUNIT_NPM-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X_ADDR]])
 ; NOT_TUNIT_NPM-NEXT:    ret i32 [[TMP1]]
@@ -42,7 +42,7 @@ define i32 @f(i32 %x) {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@f
 ; IS__TUNIT_NPM-SAME: (i32 [[X:%.*]])
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[X_ADDR:%.*]] = alloca i32
+; IS__TUNIT_NPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32 [[TMP0]])

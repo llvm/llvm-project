@@ -21,8 +21,8 @@ define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal5
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
-; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>
-; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -108,8 +108,8 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal5
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
-; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>
-; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -195,8 +195,8 @@ define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal5
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
-; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>
-; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -282,8 +282,8 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal5
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
-; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>
-; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -537,8 +537,8 @@ define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_p
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
-; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>
-; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -624,8 +624,8 @@ define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_p
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
-; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>
-; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1_PRIV]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; IS__TUNIT_NPM-NEXT:    ret void

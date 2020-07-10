@@ -59,7 +59,7 @@ template <typename CalleeTy> struct CallInfo {
   // Range should never set to empty-set, that is an invalid access range
   // that can cause empty-set to be propagated with ConstantRange::add
   ConstantRange Offset;
-  CallInfo(const CalleeTy *Callee, size_t ParamNo, ConstantRange Offset)
+  CallInfo(const CalleeTy *Callee, size_t ParamNo, const ConstantRange &Offset)
       : Callee(Callee), ParamNo(ParamNo), Offset(Offset) {}
 };
 
@@ -202,7 +202,7 @@ class StackSafetyLocalAnalysis {
 
   ConstantRange offsetFrom(Value *Addr, Value *Base);
   ConstantRange getAccessRange(Value *Addr, Value *Base,
-                               ConstantRange SizeRange);
+                               const ConstantRange &SizeRange);
   ConstantRange getAccessRange(Value *Addr, Value *Base, TypeSize Size);
   ConstantRange getMemIntrinsicAccessRange(const MemIntrinsic *MI, const Use &U,
                                            Value *Base);
@@ -237,7 +237,7 @@ ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
 
 ConstantRange
 StackSafetyLocalAnalysis::getAccessRange(Value *Addr, Value *Base,
-                                         ConstantRange SizeRange) {
+                                         const ConstantRange &SizeRange) {
   // Zero-size loads and stores do not access memory.
   if (SizeRange.isEmptySet())
     return ConstantRange::getEmpty(PointerSize);

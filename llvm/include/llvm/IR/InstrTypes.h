@@ -805,7 +805,9 @@ public:
   void setPredicate(Predicate P) { setSubclassData<PredicateField>(P); }
 
   static bool isFPPredicate(Predicate P) {
-    return P >= FIRST_FCMP_PREDICATE && P <= LAST_FCMP_PREDICATE;
+    assert(FIRST_FCMP_PREDICATE == 0 &&
+           "FIRST_FCMP_PREDICATE is required to be 0");
+    return P <= LAST_FCMP_PREDICATE;
   }
 
   static bool isIntPredicate(Predicate P) {
