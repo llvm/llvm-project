@@ -14,10 +14,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_LOWER_CONVERT_EXPR_H
-#define FORTRAN_LOWER_CONVERT_EXPR_H
+#ifndef FORTRAN_LOWER_CONVERTEXPR_H
+#define FORTRAN_LOWER_CONVERTEXPR_H
 
 #include "flang/Lower/Support/BoxValue.h"
+#include <cstdint>
 
 namespace mlir {
 class Location;
@@ -51,6 +52,21 @@ class AbstractConverter;
 class FirOpBuilder;
 class SymMap;
 
+/// The evaluation of some expressions implies a surrounding context. This
+/// context is abstracted by this class.
+class ExpressionContext {
+public:
+  ExpressionContext() = default;
+  ExpressionContext(llvm::ArrayRef<mlir::Value> lcvs)
+      : loopVars{lcvs.begin(), lcvs.end()} {}
+
+  bool inArrayContext() const { return loopVars.size() > 0; }
+  const std::vector<mlir::Value> &getLoopVars() const { return loopVars; }
+
+private:
+  std::vector<mlir::Value> loopVars{};
+};
+
 /// Create an expression.
 /// Lowers `expr` to the FIR dialect of MLIR. The expression is lowered to a
 /// value result.
@@ -63,7 +79,7 @@ mlir::Value createSomeExpression(mlir::Location loc,
 fir::ExtendedValue
 createSomeExtendedExpression(mlir::Location loc, AbstractConverter &converter,
                              const evaluate::Expr<evaluate::SomeType> &expr,
-                             SymMap &symMap, llvm::ArrayRef<mlir::Value> lcvs);
+                             SymMap &symMap, const ExpressionContext &context);
 
 /// Create an address.
 /// Lowers `expr` to the FIR dialect of MLIR. The expression must be an entity
@@ -76,9 +92,15 @@ mlir::Value createSomeAddress(mlir::Location loc, AbstractConverter &converter,
 fir::ExtendedValue
 createSomeExtendedAddress(mlir::Location loc, AbstractConverter &converter,
                           const evaluate::Expr<evaluate::SomeType> &expr,
-                          SymMap &symMap, llvm::ArrayRef<mlir::Value> lcvs);
+                          SymMap &symMap, const ExpressionContext &context);
+
+/// Create a string literal. Lowers `str` to the MLIR representation of a
+/// literal CHARACTER value. (KIND is assumed to be 1.)
+fir::ExtendedValue createStringLiteral(mlir::Location loc,
+                                       AbstractConverter &converter,
+                                       llvm::StringRef str, std::uint64_t len);
 
 } // namespace lower
 } // namespace Fortran
 
-#endif // FORTRAN_LOWER_CONVERT_EXPR_H
+#endif // FORTRAN_LOWER_CONVERTEXPR_H
