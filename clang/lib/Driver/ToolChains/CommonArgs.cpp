@@ -1545,20 +1545,6 @@ bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
   return FoundSDL;
 }
 
-static bool archiveContainsDeviceCode(const char *UBProgram,
-                                      std::string Archive,
-                                      std::string GpuName) {
-  std::vector<StringRef> UBArgs;
-  std::string InputArg("-input=" + Archive);
-  std::string OffloadArg("-offload-arch=" + GpuName);
-  UBArgs.push_back("clang-unbundle-archive");
-  UBArgs.push_back("-dry-run");
-  UBArgs.push_back(InputArg);
-  UBArgs.push_back(OffloadArg);
-  int ExecResult = llvm::sys::ExecuteAndWait(UBProgram, UBArgs);
-  return ExecResult == 0;
-}
-
 bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
                       const JobAction &JA, const InputInfoList &Inputs,
                       const llvm::opt::ArgList &DriverArgs,
@@ -1598,8 +1584,7 @@ bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
     const char *UBProgram = DriverArgs.MakeArgString(
         T.getToolChain().GetProgramPath("clang-unbundle-archive"));
 
-    if (ArchiveOfBundles != "" &&
-        archiveContainsDeviceCode(UBProgram, ArchiveOfBundles, gpuname)) {
+    if (ArchiveOfBundles != "") {
       std::string Err;
       llvm::SmallString<128> TmpDirString;
       llvm::sys::path::system_temp_directory(true, TmpDirString);

@@ -49,7 +49,6 @@ if(${AOMP_STANDALONE_BUILD} STREQUAL "0")
 else()
   message("------------- STANDALONE BUILD ---------------")
   # Assome rocm-device-libs repository is next to amd-llvm-project repository
-  set(ROCDL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../rocm-device-libs)
   set(ROCDL_INC_OCKL ${ROCDL}/ockl/inc)
   set(ROCDL_INC_OCML ${ROCDL}/ocml/inc)
   set(ROCDL_INC_IRIF ${ROCDL}/irif/inc)

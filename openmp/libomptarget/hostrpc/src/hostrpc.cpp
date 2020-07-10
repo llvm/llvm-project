@@ -162,6 +162,15 @@ EXTERN int vector_product_zeros(int N, int *A, int *B, int *C) {
   return num_zeros;
 }
 
+// This utility is used for printf arguments that are variable length strings
+// The clang compiler will generate calls to this only when a string length is
+// not a compile time constant.
+EXTERN uint32_t __strlen_max(char *instr, uint32_t maxstrlen) {
+  for (uint32_t i = 0; i < maxstrlen; i++)
+    if (instr[i] == (char)0)
+      return (uint32_t)(i + 1);
+  return maxstrlen;
+}
 // ---------------------------------------------------
 #else
 // ---------------------------------------------------
@@ -254,14 +263,3 @@ EXTERN int global_free(char *ptr) {
 }
 #endif
 #pragma omp end declare target
-// ---------------------------------------------------
-
-// This utility is used for printf arguments that are variable length strings
-// The clang compiler will generate calls to this only when a string length is
-// not a compile time constant.
-EXTERN uint32_t __strlen_max(char *instr, uint32_t maxstrlen) {
-  for (uint32_t i = 0; i < maxstrlen; i++)
-    if (instr[i] == (char)0)
-      return (uint32_t)(i + 1);
-  return maxstrlen;
-}

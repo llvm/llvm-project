@@ -1236,19 +1236,19 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
                                             const OMPExecutableDirective &D,
                                             llvm::Function *&OutlinedFn,
                                             bool IsGeneric) {
+  if (!CGM.getTriple().isAMDGCN())
+    return;
   int FlatAttr = 0;
-
-  if ((CGM.getTriple().isAMDGCN()) &&
-      (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
-       isOpenMPParallelDirective(D.getDirectiveKind()))) {
-    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-    bool wgs_is_constant = false;
+  bool flatAttrEmitted = false;
+  int DefaultWorkGroupSz =
+      CGM.getTarget().getGridValue(GVIDX::GV_Default_WG_Size);
+  // If constant ThreadLimit(), set reqd_work_group_size metadata
+  if (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
+      isOpenMPParallelDirective(D.getDirectiveKind())) {
     const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
     const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
     int MaxWorkGroupSz =
         CGM.getTarget().getGridValue(GVIDX::GV_Max_WG_Size);
-    int DefaultWorkGroupSz =
-        CGM.getTarget().getGridValue(GVIDX::GV_Default_WG_Size);
     int compileTimeThreadLimit = 0;
     // Only one of thread_limit or num_threads is used, cant do it for both
     if (ThreadLimitClause && !NumThreadsClause) {
@@ -1272,39 +1272,21 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
             CGM.getTarget().getGridValue(GVIDX::GV_Warp_Size);
       if (compileTimeThreadLimit > MaxWorkGroupSz)
         compileTimeThreadLimit = MaxWorkGroupSz;
-      llvm::Metadata *AttrMDArgs[] = {
-          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-              llvm::Type::getInt32Ty(Ctx), compileTimeThreadLimit)),
-          llvm::ConstantAsMetadata::get(
-              llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1)),
-          llvm::ConstantAsMetadata::get(
-              llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-      OutlinedFn->setMetadata("reqd_work_group_size",
-                              llvm::MDNode::get(Ctx, AttrMDArgs));
-      OutlinedFn->setMetadata("work_group_size_hint",
-                              llvm::MDNode::get(Ctx, AttrMDArgs));
       std::string AttrVal = llvm::utostr(compileTimeThreadLimit);
       FlatAttr = compileTimeThreadLimit;
       OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
                             AttrVal + "," + AttrVal);
-      wgs_is_constant = true;
       setPropertyWorkGroupSize(CGM, OutlinedFn->getName(),
                                compileTimeThreadLimit);
     } // end   > 0
-    // If not constant, at least hint what the hard limit will be
-    if (!wgs_is_constant) {
-      llvm::Metadata *AttrMDArgs[] = {
-          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-              llvm::Type::getInt32Ty(Ctx), DefaultWorkGroupSz)),
-          llvm::ConstantAsMetadata::get(
-              llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1)),
-          llvm::ConstantAsMetadata::get(
-              llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-      OutlinedFn->setMetadata("work_group_size_hint",
-                              llvm::MDNode::get(Ctx, AttrMDArgs));
-    }
   } // end of amdgcn teams or parallel directive
 
+  // emit amdgpu-flat-work-group-size if not emitted already.
+  if (!flatAttrEmitted) {
+    std::string FlatAttrVal = llvm::utostr(DefaultWorkGroupSz);
+    OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
+                            FlatAttrVal + "," + FlatAttrVal);
+  }
   // Emit a kernel descriptor for runtime.
   StringRef KernDescName = OutlinedFn->getName();
   CGOpenMPRuntime::emitStructureKernelDesc(CGM, KernDescName, FlatAttr,

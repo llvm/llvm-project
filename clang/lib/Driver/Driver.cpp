@@ -3019,17 +3019,19 @@ class OffloadingActionBuilder final {
         }
 
         for (unsigned I = 0; I < ToolChains.size(); ++I) {
-          bool foundDeviceCode = false;
-          for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
-            StringRef Extension =
-                llvm::sys::path::extension(FileName).drop_front();
-            if (Extension != "a") {
-              foundDeviceCode = true;
+          // fails lib_bundled_cmdline, rejecting archives on cmdline
+          if (!Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
+            bool foundDeviceCode = false;
+            for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
+              StringRef Extension =
+                  llvm::sys::path::extension(FileName).drop_front();
+              if (Extension != "a") {
+               foundDeviceCode = true;
+              }
             }
+            if (!foundDeviceCode)
+              return ABRT_Inactive;
           }
-          if (!foundDeviceCode)
-            return ABRT_Inactive;
-
           OpenMPDeviceActions.push_back(UA);
           if (GpuArchList.size())
             for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
@@ -4553,6 +4555,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
 
   // Always use the first input as the base input.
   const char *BaseInput = InputInfos[0].getBaseInput();
+  std::string NewBI = "wrapper-";
 
   // ... except dsymutil actions, which use their actual input as the base
   // input.
@@ -4645,11 +4648,22 @@ InputInfo Driver::BuildJobsForActionNoCache(
         /*CreatePrefixForHost=*/!!A->getOffloadingHostActiveKinds() &&
             !AtTopLevel);
     if (isa<OffloadWrapperJobAction>(JA)) {
-      OffloadingPrefix += "-wrapper";
-      if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
-        BaseInput = FinalOutput->getValue();
-      else
-        BaseInput = getDefaultImageName();
+      // Openmp offloading needs a name prepended for -save-temps.
+      // See examples/hip-openmp/aomp_hip_launch_test and smoke flags.
+      if (Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
+        OffloadingPrefix += "-wrapper";
+        if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
+          NewBI += FinalOutput->getValue();
+        else
+          NewBI += getDefaultImageName();
+        BaseInput = NewBI.c_str();
+      } else {
+        OffloadingPrefix += "-wrapper";
+        if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
+          BaseInput = FinalOutput->getValue();
+        else
+          BaseInput = getDefaultImageName();
+      }
     }
     Result = InputInfo(A, GetNamedOutputPath(C, *JA, BaseInput, BoundArch,
                                              AtTopLevel, MultipleArchs,

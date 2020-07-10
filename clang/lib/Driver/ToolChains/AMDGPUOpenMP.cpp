@@ -1,4 +1,4 @@
-//===- AMDGPUOpenMP.cpp - HIP Tool and ToolChain Implementations *- C++ -*-===//
+//===- AMDGPUOpenMP.cpp - AMDGPUOpenMP ToolChain Implementation -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -126,6 +126,8 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
     LibraryPaths.push_back(Args.MakeArgString(lib_debug_path));
   }
 
+  addDirectoryList(Args, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
+
   // Add compiler path libdevice last as lowest priority search
   LibraryPaths.push_back(
       Args.MakeArgString(C.getDriver().Dir + "/../amdgcn/bitcode"));
@@ -137,6 +139,11 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
   LibraryPaths.push_back(
       Args.MakeArgString(C.getDriver().Dir + "/../../lib/libdevice"));
   LibraryPaths.push_back(Args.MakeArgString(C.getDriver().Dir + "/../../lib"));
+
+  // Add bitcode library in --hip-device-lib.
+  for (auto Lib : Args.getAllArgValues(options::OPT_hip_device_lib_EQ)) {
+    BCLibs.push_back(Args.MakeArgString(Lib));
+  }
 
   llvm::StringRef WaveFrontSizeBC;
   std::string GFXVersion = SubArchName.drop_front(3).str();
@@ -168,6 +175,12 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
     addBCLib(C.getDriver(), Args, CmdArgs, LibraryPaths, Lib,
              /* PostClang Link? */ false);
 
+  // This will find .a and .bc files that match naming convention.
+  AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
+                      SubArchName,
+                      /* bitcode SDL?*/ true,
+                      /* PostClang Link? */ false);
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(OutputFileName);
   C.addCommand(std::make_unique<Command>(
@@ -198,6 +211,13 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
         CmdArgs.push_back(II.getFilename());
   } else
     CmdArgs.push_back(Args.MakeArgString(overrideInputsFile));
+
+  // for OpenMP, we already did this in clang-build-select-link
+  if (JA.getOffloadingDeviceKind() != Action::OFK_OpenMP)
+     AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
+                      SubArchName,
+                      /* bitcode SDL?*/ true,
+                      /* PostClang Link? */ false);
 
   // Add an intermediate output file.
   CmdArgs.push_back("-o");

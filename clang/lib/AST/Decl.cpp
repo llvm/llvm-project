@@ -907,7 +907,9 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     return LinkageInfo(LV.getLinkage(), DefaultVisibility, false);
 
   // Mark the symbols as hidden when compiling for the device.
-  if (Context.getLangOpts().OpenMP && Context.getLangOpts().OpenMPIsDevice)
+  // For AMDGCN we get symbol failures for offloading, spec accel 557 570
+  if (Context.getLangOpts().OpenMP && Context.getLangOpts().OpenMPIsDevice &&
+      !Context.getTargetInfo().getTriple().isAMDGCN())
     LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
 
   return LV;

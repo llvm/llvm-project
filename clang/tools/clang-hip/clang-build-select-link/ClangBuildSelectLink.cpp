@@ -448,7 +448,6 @@ int main(int argc, char **argv) {
   auto Composite = std::make_unique<Module>("clang-build-select-link", Context);
   Linker L(*Composite);
 
-  // unsigned Flags = Linker::Flags::LinkOnlyNeeded;
   unsigned Flags = Linker::Flags::None;
 
   if (!linkFiles(argv[0], Context, L, InputFilenames, Flags))
