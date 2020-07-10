@@ -2651,9 +2651,8 @@ define <16 x i8> @constant_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; AVX512VL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512VL-NEXT:    vpsllvd {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512VL-NEXT:    vpord %zmm2, %zmm0, %zmm0
-; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm2
-; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [18446744073709551360,18446744073709551360]
-; AVX512VL-NEXT:    vpternlogq $202, %xmm1, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512VL-NEXT:    vpternlogq $228, {{.*}}(%rip){1to2}, %xmm1, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;

@@ -37,6 +37,7 @@ LLVM and API reference documentation.
    PDB/index
    ScudoHardenedAllocator
    MemTagSanitizer
+   Security
    SegmentedStacks
    StackMaps
    SpeculativeLoadHardening

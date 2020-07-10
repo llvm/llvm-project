@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "VSCodeForward.h"
+#include "lldb/API/SBModule.h"
 
 namespace lldb_vscode {
 
@@ -237,6 +238,16 @@ CreateBreakpoint(lldb::SBBreakpoint &bp,
                  llvm::Optional<llvm::StringRef> request_path = llvm::None,
                  llvm::Optional<uint32_t> request_line = llvm::None);
 
+/// Converts a LLDB module to a VS Code DAP module for use in "modules" events.
+///
+/// \param[in] module
+///     A LLDB module object to convert into a JSON value
+///
+/// \return
+///     A "Module" JSON object with that follows the formal JSON
+///     definition outlined by Microsoft.
+llvm::json::Value CreateModule(lldb::SBModule &module);
+
 /// Create a "Event" JSON object using \a event_name as the event name
 ///
 /// \param[in] event_name
@@ -429,6 +440,8 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex);
+
+llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
 
 } // namespace lldb_vscode
 

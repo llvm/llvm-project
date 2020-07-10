@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strchr.h"
-#include "src/string/strlen.h"
 
 #include "src/__support/common.h"
 
