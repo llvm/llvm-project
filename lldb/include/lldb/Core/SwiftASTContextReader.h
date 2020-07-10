@@ -91,17 +91,26 @@ struct ScopedSharedMutexReader {
 /// or even separate scratch contexts for each lldb::Module. But it
 /// will only do this if no client holds on to a read lock on \b
 /// m_scratch_typesystem_lock.
-struct SwiftASTContextReader : ScopedSharedMutexReader {
-  SwiftASTContextForExpressions *m_ptr = nullptr;
-  SwiftASTContextReader() : ScopedSharedMutexReader(nullptr) {}
-  SwiftASTContextReader(SharedMutex &mutex, SwiftASTContextForExpressions *ctx)
-      : ScopedSharedMutexReader(&mutex), m_ptr(ctx) {}
+class SwiftASTContextReader : ScopedSharedMutexReader {
+  SwiftASTContextForExpressions *m_ptr;
+
+public:
+  SwiftASTContextReader(SharedMutex &mutex, SwiftASTContextForExpressions &ctx)
+      : ScopedSharedMutexReader(&mutex), m_ptr(&ctx) {
+    assert(m_ptr && "invalid context");
+  }
+
   SwiftASTContextReader(const SwiftASTContextReader &copy)
       : ScopedSharedMutexReader(copy.m_mutex), m_ptr(copy.m_ptr) {}
-  SwiftASTContextForExpressions *get() { return m_ptr; }
-  operator bool() const { return m_ptr; }
-  SwiftASTContextForExpressions *operator->() { return m_ptr; }
-  SwiftASTContextForExpressions &operator*() { return *m_ptr; }
+
+  SwiftASTContextForExpressions *get() {
+    assert(m_ptr && "invalid context");
+    return m_ptr;
+  }
+
+  SwiftASTContextForExpressions *operator->() { return get(); }
+
+  SwiftASTContextForExpressions &operator*() { return *get(); }
 };
 
 /// An RAII object that just acquires the reader lock.

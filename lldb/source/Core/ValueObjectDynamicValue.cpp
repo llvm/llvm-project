@@ -433,5 +433,7 @@ bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
     return false;
 
   auto *cached_ctx = m_value.GetCompilerType().GetTypeSystem();
-  return cached_ctx == GetScratchSwiftASTContext().get();
+  llvm::Optional<SwiftASTContextReader> scratch_ctx =
+      GetScratchSwiftASTContext();
+  return scratch_ctx ? (cached_ctx == scratch_ctx->get()) : !cached_ctx;
 }
