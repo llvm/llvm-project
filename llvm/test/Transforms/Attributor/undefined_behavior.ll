@@ -340,7 +340,7 @@ e:
 ; FIXME: Currently it doesn't propagate the undef.
 define i32 @cond_br_on_undef_uninit() {
 ; CHECK-LABEL: define {{[^@]+}}@cond_br_on_undef_uninit()
-; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i1
+; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i1, align 1
 ; CHECK-NEXT:    [[COND:%.*]] = load i1, i1* [[ALLOC]], align 1
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[E:%.*]]
 ; CHECK:       t:
