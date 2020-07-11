@@ -128,6 +128,14 @@ static cl::list<DumpInputValue> DumpInputs(
                clEnumValN(DumpInputFail, "fail", "Dump input on failure"),
                clEnumValN(DumpInputNever, "never", "Never dump input")));
 
+static cl::list<unsigned> DumpInputContexts(
+    "dump-input-context", cl::value_desc("N"),
+    cl::desc("In the dump requested by -dump-input=fail, print <N> input\n"
+             "lines before and <N> input lines after the starting line of\n"
+             "any error diagnostic.  When there are multiple occurrences of\n"
+             "this option, the largest specified <N> has precedence.  The\n"
+             "default is 5.\n"));
+
 typedef cl::list<std::string>::const_iterator prefix_iterator;
 
 
@@ -150,10 +158,16 @@ struct MarkerStyle {
   raw_ostream::Colors Color;
   /// A note to follow the marker, or empty string if none.
   std::string Note;
+  /// Does this marker indicate inclusion by the input filter implied by
+  /// -dump-input=fail?
+  bool FiltersAsError;
   MarkerStyle() {}
   MarkerStyle(char Lead, raw_ostream::Colors Color,
-              const std::string &Note = "")
-      : Lead(Lead), Color(Color), Note(Note) {}
+              const std::string &Note = "", bool FiltersAsError = false)
+      : Lead(Lead), Color(Color), Note(Note), FiltersAsError(FiltersAsError) {
+    assert((!FiltersAsError || !Note.empty()) &&
+           "expected error diagnostic to have note");
+  }
 };
 
 static MarkerStyle GetMarker(FileCheckDiag::MatchType MatchTy) {
@@ -161,18 +175,22 @@ static MarkerStyle GetMarker(FileCheckDiag::MatchType MatchTy) {
   case FileCheckDiag::MatchFoundAndExpected:
     return MarkerStyle('^', raw_ostream::GREEN);
   case FileCheckDiag::MatchFoundButExcluded:
-    return MarkerStyle('!', raw_ostream::RED, "error: no match expected");
+    return MarkerStyle('!', raw_ostream::RED, "error: no match expected",
+                       /*FiltersAsError=*/true);
   case FileCheckDiag::MatchFoundButWrongLine:
-    return MarkerStyle('!', raw_ostream::RED, "error: match on wrong line");
+    return MarkerStyle('!', raw_ostream::RED, "error: match on wrong line",
+                       /*FiltersAsError=*/true);
   case FileCheckDiag::MatchFoundButDiscarded:
     return MarkerStyle('!', raw_ostream::CYAN,
                        "discard: overlaps earlier match");
   case FileCheckDiag::MatchNoneAndExcluded:
     return MarkerStyle('X', raw_ostream::GREEN);
   case FileCheckDiag::MatchNoneButExpected:
-    return MarkerStyle('X', raw_ostream::RED, "error: no match found");
+    return MarkerStyle('X', raw_ostream::RED, "error: no match found",
+                       /*FiltersAsError=*/true);
   case FileCheckDiag::MatchFuzzy:
-    return MarkerStyle('?', raw_ostream::MAGENTA, "possible intended match");
+    return MarkerStyle('?', raw_ostream::MAGENTA, "possible intended match",
+                       /*FiltersAsError=*/true);
   }
   llvm_unreachable_internal("unexpected match type");
 }
@@ -183,6 +201,7 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
      << "\n"
      << "Related command-line options:\n"
      << "  - -dump-input=<value> enables or disables the input dump\n"
+     << "  - -dump-input-context=<N> adjusts the context of errors\n"
      << "  - -v and -vv add more annotations\n"
      << "  - -color forces colors to be enabled both in the dump and below\n"
      << "  - -help documents the above options in more detail\n"
@@ -228,6 +247,12 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
   WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "?";
   OS << "      marks fuzzy match when no match is found\n";
 
+  // Elided lines.
+  OS << "  - ";
+  WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "...";
+  OS << "    indicates elided input lines and annotations, as specified by\n"
+     << "           -dump-input=fail and -dump-input-context\n";
+
   // Colors.
   OS << "  - colors ";
   WithColor(OS, raw_ostream::GREEN, true) << "success";
@@ -248,10 +273,12 @@ struct InputAnnotation {
   unsigned DiagIndex;
   /// The label for this annotation.
   std::string Label;
+  /// Is this the initial fragment of a diagnostic that has been broken across
+  /// multiple lines?
+  bool IsFirstLine;
   /// What input line (one-origin indexing) this annotation marks.  This might
-  /// be different from the starting line of the original diagnostic if this is
-  /// a non-initial fragment of a diagnostic that has been broken across
-  /// multiple lines.
+  /// be different from the starting line of the original diagnostic if
+  /// !IsFirstLine.
   unsigned InputLine;
   /// The column range (one-origin indexing, open end) in which to mark the
   /// input line.  If InputEndCol is UINT_MAX, treat it as the last column
@@ -347,6 +374,7 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
 
     // Compute the mark location, and break annotation into multiple
     // annotations if it spans multiple lines.
+    A.IsFirstLine = true;
     A.InputLine = DiagItr->InputStartLine;
     A.InputStartCol = DiagItr->InputStartCol;
     if (DiagItr->InputStartLine == DiagItr->InputEndLine) {
@@ -370,6 +398,7 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
         InputAnnotation B;
         B.DiagIndex = A.DiagIndex;
         B.Label = A.Label;
+        B.IsFirstLine = false;
         B.InputLine = L;
         B.Marker = A.Marker;
         B.Marker.Lead = '~';
@@ -386,11 +415,27 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
   }
 }
 
+static unsigned FindInputLineInFilter(
+    bool FilterOnError, unsigned CurInputLine,
+    const std::vector<InputAnnotation>::iterator &AnnotationBeg,
+    const std::vector<InputAnnotation>::iterator &AnnotationEnd) {
+  if (!FilterOnError)
+    return CurInputLine;
+  for (auto AnnotationItr = AnnotationBeg; AnnotationItr != AnnotationEnd;
+       ++AnnotationItr) {
+    if (AnnotationItr->IsFirstLine && AnnotationItr->Marker.FiltersAsError)
+      return AnnotationItr->InputLine;
+  }
+  return UINT_MAX;
+}
+
 static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
+                               bool DumpInputFilterOnError,
+                               unsigned DumpInputContext,
                                StringRef InputFileText,
                                std::vector<InputAnnotation> &Annotations,
                                unsigned LabelWidth) {
-  OS << "Full input was:\n<<<<<<\n";
+  OS << "Input was:\n<<<<<<\n";
 
   // Sort annotations.
   std::sort(Annotations.begin(), Annotations.end(),
@@ -460,11 +505,46 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
   LabelWidth = std::max(LabelWidth, LineNoWidth) + 3;
 
   // Print annotated input lines.
+  unsigned PrevLineInFilter = 0; // 0 means none so far
+  unsigned NextLineInFilter = 0; // 0 means uncomputed, UINT_MAX means none
+  bool PrevLineElided = false;
   auto AnnotationItr = Annotations.begin(), AnnotationEnd = Annotations.end();
   for (unsigned Line = 1;
        InputFilePtr != InputFileEnd || AnnotationItr != AnnotationEnd;
        ++Line) {
     const unsigned char *InputFileLine = InputFilePtr;
+
+    // Compute the previous and next line included by the filter.
+    if (NextLineInFilter < Line)
+      NextLineInFilter = FindInputLineInFilter(DumpInputFilterOnError, Line,
+                                               AnnotationItr, AnnotationEnd);
+    assert(NextLineInFilter && "expected NextLineInFilter to be computed");
+    if (NextLineInFilter == Line)
+      PrevLineInFilter = Line;
+
+    // Elide this input line and its annotations if it's not within the
+    // context specified by -dump-input-context of an input line included by
+    // the dump filter.
+    if ((!PrevLineInFilter || PrevLineInFilter + DumpInputContext < Line) &&
+        (NextLineInFilter == UINT_MAX ||
+         Line + DumpInputContext < NextLineInFilter)) {
+      while (InputFilePtr != InputFileEnd && *InputFilePtr != '\n')
+        ++InputFilePtr;
+      if (InputFilePtr != InputFileEnd)
+        ++InputFilePtr;
+      while (AnnotationItr != AnnotationEnd && AnnotationItr->InputLine == Line)
+        ++AnnotationItr;
+      if (!PrevLineElided) {
+        for (unsigned i = 0; i < 3; ++i) {
+          WithColor(OS, raw_ostream::BLACK, /*Bold=*/true)
+              << right_justify(".", LabelWidth);
+          OS << '\n';
+        }
+        PrevLineElided = true;
+      }
+      continue;
+    }
+    PrevLineElided = false;
 
     // Print right-aligned line number.
     WithColor(OS, raw_ostream::BLACK, true)
@@ -553,10 +633,21 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv, /*Overview*/ "", /*Errs*/ nullptr,
                               "FILECHECK_OPTS");
+
+  // Select -dump-input* values.  The -help documentation specifies the default
+  // value and which value to choose if an option is specified multiple times.
+  // In the latter case, the general rule of thumb is to choose the value that
+  // provides the most information.
   DumpInputValue DumpInput =
       DumpInputs.empty()
           ? DumpInputFail
           : *std::max_element(DumpInputs.begin(), DumpInputs.end());
+  bool DumpInputFilterOnError = DumpInput == DumpInputFail;
+  unsigned DumpInputContext = DumpInputContexts.empty()
+                                  ? 5
+                                  : *std::max_element(DumpInputContexts.begin(),
+                                                      DumpInputContexts.end());
+
   if (DumpInput == DumpInputHelp) {
     DumpInputAnnotationHelp(outs());
     return 0;
@@ -689,7 +780,8 @@ int main(int argc, char **argv) {
     unsigned LabelWidth;
     BuildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange, Diags,
                           Annotations, LabelWidth);
-    DumpAnnotatedInput(errs(), Req, InputFileText, Annotations, LabelWidth);
+    DumpAnnotatedInput(errs(), Req, DumpInputFilterOnError, DumpInputContext,
+                       InputFileText, Annotations, LabelWidth);
   }
 
   return ExitCode;
