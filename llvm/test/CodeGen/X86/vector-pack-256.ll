@@ -24,10 +24,7 @@ define <16 x i16> @trunc_concat_packssdw_256(<8 x i32> %a0, <8 x i32> %a1) nounw
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrad $17, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $23, %ymm1, %ymm1
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpackssdw %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_concat_packssdw_256:
@@ -64,10 +61,7 @@ define <16 x i16> @trunc_concat_packusdw_256(<8 x i32> %a0, <8 x i32> %a1) nounw
 ; AVX2-NEXT:    vpsrld $17, %ymm0, %ymm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [15,15,15,15,15,15,15,15]
 ; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpackusdw %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_concat_packusdw_256:
@@ -103,10 +97,7 @@ define <32 x i8> @trunc_concat_packsswb_256(<16 x i16> %a0, <16 x i16> %a1) noun
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpacksswb %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_concat_packsswb_256:
@@ -155,10 +146,7 @@ define <32 x i8> @trunc_concat_packuswb_256(<16 x i16> %a0, <16 x i16> %a1) noun
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_concat_packuswb_256:
