@@ -50,6 +50,11 @@ enum class NodeKind : uint16_t {
   StringLiteralExpression,
   BoolLiteralExpression,
   CxxNullPtrExpression,
+  UnknownUserDefinedLiteralExpression,
+  IntegerUserDefinedLiteralExpression,
+  FloatUserDefinedLiteralExpression,
+  CharUserDefinedLiteralExpression,
+  StringUserDefinedLiteralExpression,
   IdExpression,
 
   // Statements.
@@ -323,6 +328,88 @@ public:
     return N->kind() == NodeKind::CxxNullPtrExpression;
   }
   syntax::Leaf *nullPtrKeyword();
+};
+
+/// Expression for user-defined literal. C++ [lex.ext]
+/// user-defined-literal:
+///   user-defined-integer-literal
+///   user-defined-floating-point-literal
+///   user-defined-string-literal
+///   user-defined-character-literal
+class UserDefinedLiteralExpression : public Expression {
+public:
+  UserDefinedLiteralExpression(NodeKind K) : Expression(K) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::UnknownUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::IntegerUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::FloatUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::CharUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::StringUserDefinedLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+// We cannot yet distinguish between user-defined-integer-literal and
+// user-defined-floating-point-literal, when using raw literal operator or
+// numeric literal operator. C++ [lex.ext]p3, p4
+/// Expression for an unknown user-defined-literal.
+class UnknownUserDefinedLiteralExpression final
+    : public UserDefinedLiteralExpression {
+public:
+  UnknownUserDefinedLiteralExpression()
+      : UserDefinedLiteralExpression(
+            NodeKind::UnknownUserDefinedLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::UnknownUserDefinedLiteralExpression;
+  }
+};
+
+/// Expression for user-defined-integer-literal. C++ [lex.ext]
+class IntegerUserDefinedLiteralExpression final
+    : public UserDefinedLiteralExpression {
+public:
+  IntegerUserDefinedLiteralExpression()
+      : UserDefinedLiteralExpression(
+            NodeKind::IntegerUserDefinedLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::IntegerUserDefinedLiteralExpression;
+  }
+};
+
+/// Expression for user-defined-floating-point-literal. C++ [lex.ext]
+class FloatUserDefinedLiteralExpression final
+    : public UserDefinedLiteralExpression {
+public:
+  FloatUserDefinedLiteralExpression()
+      : UserDefinedLiteralExpression(
+            NodeKind::FloatUserDefinedLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::FloatUserDefinedLiteralExpression;
+  }
+};
+
+/// Expression for user-defined-character-literal. C++ [lex.ext]
+class CharUserDefinedLiteralExpression final
+    : public UserDefinedLiteralExpression {
+public:
+  CharUserDefinedLiteralExpression()
+      : UserDefinedLiteralExpression(
+            NodeKind::CharUserDefinedLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::CharUserDefinedLiteralExpression;
+  }
+};
+
+/// Expression for user-defined-string-literal. C++ [lex.ext]
+class StringUserDefinedLiteralExpression final
+    : public UserDefinedLiteralExpression {
+public:
+  StringUserDefinedLiteralExpression()
+      : UserDefinedLiteralExpression(
+            NodeKind::StringUserDefinedLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::StringUserDefinedLiteralExpression;
+  }
 };
 
 /// An abstract class for prefix and postfix unary operators.
