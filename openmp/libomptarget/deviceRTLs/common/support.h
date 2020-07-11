@@ -94,6 +94,5 @@ DEVICE unsigned long PadBytes(unsigned long size, unsigned long alignment);
 ////////////////////////////////////////////////////////////////////////////////
 DEVICE unsigned int *GetTeamsReductionTimestamp();
 DEVICE char *GetTeamsReductionScratchpad();
-DEVICE void SetTeamsReductionScratchpadPtr(void *ScratchpadPtr);
 
 #endif

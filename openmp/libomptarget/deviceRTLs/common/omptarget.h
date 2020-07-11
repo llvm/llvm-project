@@ -200,7 +200,6 @@ public:
   INLINE omptarget_nvptx_WorkDescr &WorkDescr() {
     return workDescrForActiveParallel;
   }
-  INLINE uint64_t *getLastprivateIterBuffer() { return &lastprivateIterBuffer; }
 
   // init
   INLINE void InitTeamDescr();
@@ -251,7 +250,6 @@ private:
       levelZeroTaskDescr; // icv for team master initial thread
   omptarget_nvptx_WorkDescr
       workDescrForActiveParallel; // one, ONLY for the active par
-  uint64_t lastprivateIterBuffer;
 
   ALIGN(16)
   __kmpc_data_sharing_worker_slot_static worker_rootS[WARPSIZE];
@@ -277,10 +275,6 @@ public:
   INLINE uint16_t &NumThreadsForNextParallel(int tid) {
     return nextRegion.tnum[tid];
   }
-  // simd
-  INLINE uint16_t &SimdLimitForNextSimd(int tid) {
-    return nextRegion.slim[tid];
-  }
   // schedule (for dispatch)
   INLINE kmp_sched_t &ScheduleType(int tid) { return schedule[tid]; }
   INLINE int64_t &Chunk(int tid) { return chunk[tid]; }
@@ -304,8 +298,6 @@ private:
     // Only one of the two is live at the same time.
     // parallel
     uint16_t tnum[MAX_THREADS_PER_TEAM];
-    // simd limit
-    uint16_t slim[MAX_THREADS_PER_TEAM];
   } nextRegion;
   // schedule (for dispatch)
   kmp_sched_t schedule[MAX_THREADS_PER_TEAM]; // remember schedule type for #for
