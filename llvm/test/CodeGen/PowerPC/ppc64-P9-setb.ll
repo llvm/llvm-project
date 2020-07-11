@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s -check-prefix=CHECK-PWR8    \
 ; RUN:   -implicit-check-not "\<setb\>"
