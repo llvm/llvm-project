@@ -90,9 +90,6 @@ public:
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
-protected:
-  RocmInstallationDetector RocmInstallation;
-
 public:
   ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
                 const llvm::opt::ArgList &Args);

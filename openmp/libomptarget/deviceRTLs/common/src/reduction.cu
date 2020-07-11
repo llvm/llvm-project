@@ -54,6 +54,7 @@ INLINE static void gpu_irregular_warp_reduce(void *reduce_data,
   }
 }
 
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ < 700
 INLINE static uint32_t
 gpu_irregular_simd_reduce(void *reduce_data, kmp_ShuffleReductFctPtr shflFct) {
   uint32_t size, remote_id, physical_lane_id;
@@ -72,6 +73,7 @@ gpu_irregular_simd_reduce(void *reduce_data, kmp_ShuffleReductFctPtr shflFct) {
   } while (logical_lane_id % 2 == 0 && size > 1);
   return (logical_lane_id == 0);
 }
+#endif
 
 INLINE
 static int32_t nvptx_parallel_reduce_nowait(

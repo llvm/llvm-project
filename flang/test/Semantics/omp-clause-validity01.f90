@@ -458,7 +458,6 @@
   enddo
   !$omp end taskloop simd
 
-  !ERROR: REDUCTION clause is not allowed on the TASKLOOP SIMD directive
   !$omp taskloop simd reduction(+:a)
   do i = 1, N
      a = a + 3.14
