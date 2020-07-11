@@ -1180,6 +1180,9 @@ ChangeStatus Attributor::cleanupIR() {
     }
   }
 
+  LLVM_DEBUG(dbgs() << "[Attributor] DeadInsts size: " << DeadInsts.size()
+                    << "\n");
+
   RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
 
   if (unsigned NumDeadBlocks = ToBeDeletedBlocks.size()) {
@@ -1237,6 +1240,9 @@ ChangeStatus Attributor::cleanupIR() {
     CGUpdater.removeFunction(*Fn);
 
   NumFnDeleted += ToBeDeletedFunctions.size();
+
+  LLVM_DEBUG(dbgs() << "[Attributor] Deleted " << NumFnDeleted
+                    << " functions after manifest.\n");
 
 #ifdef EXPENSIVE_CHECKS
   for (Function *F : Functions) {
