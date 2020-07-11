@@ -59,9 +59,6 @@ struct TestVectorContractionConversion
       *this, "vector-outerproduct",
       llvm::cl::desc("Lower vector.contract to vector.outerproduct"),
       llvm::cl::init(false)};
-  Option<bool> lowerToAXPY{*this, "vector-axpy",
-                           llvm::cl::desc("Lower vector.contract to AXPY"),
-                           llvm::cl::init(false)};
 
   void runOnFunction() override {
     OwningRewritePatternList patterns;
@@ -80,8 +77,6 @@ struct TestVectorContractionConversion
     VectorContractLowering contractLowering = VectorContractLowering::Dot;
     if (lowerToFlatMatrix)
       contractLowering = VectorContractLowering::Matmul;
-    else if (lowerToAXPY)
-      contractLowering = VectorContractLowering::AXPY;
     VectorTransposeLowering transposeLowering =
         VectorTransposeLowering::EltWise;
     if (lowerToFlatTranspose)
