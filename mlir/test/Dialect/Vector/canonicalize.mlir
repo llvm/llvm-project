@@ -300,13 +300,48 @@ func @insert_extract_transpose_3d_2d(
 
 // CHECK-LABEL: fold_extracts
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: vector<3x4x5x6xf32>
-//  CHECK-NEXT: vector.extract %[[A]][0, 1, 2, 3] : vector<3x4x5x6xf32>
-//  CHECK-NEXT: vector.extract %[[A]][0] : vector<3x4x5x6xf32>
-//  CHECK-NEXT: return
 func @fold_extracts(%a : vector<3x4x5x6xf32>) -> (f32, vector<4x5x6xf32>) {
   %b = vector.extract %a[0] : vector<3x4x5x6xf32>
   %c = vector.extract %b[1, 2] : vector<4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][0, 1, 2, 3] : vector<3x4x5x6xf32>
   %d = vector.extract %c[3] : vector<6xf32>
+
+  //  CHECK-NEXT: vector.extract %[[A]][0] : vector<3x4x5x6xf32>
   %e = vector.extract %a[0] : vector<3x4x5x6xf32>
+
+  //  CHECK-NEXT: return
   return %d, %e : f32, vector<4x5x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_transpose
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: vector<3x4x5x6xf32>
+//  CHECK-SAME:   %[[B:[a-zA-Z0-9]*]]: vector<3x6x5x6xf32>
+func @fold_extract_transpose(
+    %a : vector<3x4x5x6xf32>, %b : vector<3x6x5x6xf32>) -> (
+      vector<6xf32>, vector<6xf32>, vector<6xf32>) {
+  // [3] is a proper most minor identity map in transpose.
+  // Permutation is a self inverse and we have.
+  // [0, 2, 1] ^ -1 o [0, 1, 2] = [0, 2, 1] o [0, 1, 2]
+  //                            = [0, 2, 1]
+  //  CHECK-NEXT: vector.extract %[[A]][0, 2, 1] : vector<3x4x5x6xf32>
+  %0 = vector.transpose %a, [0, 2, 1, 3] : vector<3x4x5x6xf32> to vector<3x5x4x6xf32>
+  %1 = vector.extract %0[0, 1, 2] : vector<3x5x4x6xf32>
+
+  // [3] is a proper most minor identity map in transpose.
+  // Permutation is a not self inverse and we have.
+  // [1, 2, 0] ^ -1 o [0, 1, 2] = [2, 0, 1] o [0, 1, 2]
+  //                            = [2, 0, 1]
+  //  CHECK-NEXT: vector.extract %[[A]][2, 0, 1] : vector<3x4x5x6xf32>
+  %2 = vector.transpose %a, [1, 2, 0, 3] : vector<3x4x5x6xf32> to vector<4x5x3x6xf32>
+  %3 = vector.extract %2[0, 1, 2] : vector<4x5x3x6xf32>
+
+  // Not a minor identity map so intra-vector level has been permuted
+  //  CHECK-NEXT: vector.transpose %[[B]], [0, 2, 3, 1]
+  //  CHECK-NEXT: vector.extract %{{.*}}[0, 1, 2]
+  %4 = vector.transpose %b, [0, 2, 3, 1] : vector<3x6x5x6xf32> to vector<3x5x6x6xf32>
+  %5 = vector.extract %4[0, 1, 2] : vector<3x5x6x6xf32>
+
+  return %1, %3, %5 : vector<6xf32>, vector<6xf32>, vector<6xf32>
 }
