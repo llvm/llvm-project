@@ -1440,6 +1440,10 @@ def fpch_instantiate_templates:
 def fno_pch_instantiate_templates:
   Flag <["-"], "fno-pch-instantiate-templates">,
   Group<f_Group>, Flags<[CC1Option]>;
+defm pch_codegen: OptInFFlag<"pch-codegen", "Generate ", "Do not generate ",
+  "code for uses of this PCH that assumes an explicit object file will be built for the PCH">;
+defm pch_debuginfo: OptInFFlag<"pch-debuginfo", "Generate ", "Do not generate ",
+  "debug info for types in an object file built from this PCH and do not generate them elsewhere">;
 
 def fmodules : Flag <["-"], "fmodules">, Group<f_Group>,
   Flags<[DriverOption, CC1Option]>,
