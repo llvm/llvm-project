@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 #include <string>
 
 namespace clang {
@@ -24,8 +24,6 @@ class IncludeSorter {
 public:
   /// Supported include styles.
   enum IncludeStyle { IS_LLVM = 0, IS_Google = 1 };
-
-  static ArrayRef<std::pair<StringRef, IncludeStyle>> getMapping();
 
   /// The classifications of inclusions, in the order they should be sorted.
   enum IncludeKinds {
@@ -66,6 +64,11 @@ private:
 };
 
 } // namespace utils
+
+template <> struct OptionEnumMapping<utils::IncludeSorter::IncludeStyle> {
+  static ArrayRef<std::pair<utils::IncludeSorter::IncludeStyle, StringRef>>
+  getEnumMapping();
+};
 } // namespace tidy
 } // namespace clang
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H
