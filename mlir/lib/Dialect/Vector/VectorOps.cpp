@@ -1203,10 +1203,13 @@ static ParseResult parseOuterProductOp(OpAsmParser &parser,
                             "expected at least 2 operands");
   VectorType vLHS = tLHS.dyn_cast<VectorType>();
   VectorType vRHS = tRHS.dyn_cast<VectorType>();
-  if (!vLHS || !vRHS)
-    return parser.emitError(parser.getNameLoc(), "expected 2 vector types");
-  VectorType resType = VectorType::get({vLHS.getDimSize(0), vRHS.getDimSize(0)},
-                                       vLHS.getElementType());
+  if (!vLHS)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected vector type for operand #1");
+  VectorType resType =
+      vRHS ? VectorType::get({vLHS.getDimSize(0), vRHS.getDimSize(0)},
+                             vLHS.getElementType())
+           : VectorType::get({vLHS.getDimSize(0)}, vLHS.getElementType());
   return failure(
       parser.resolveOperand(operandsInfo[0], tLHS, result.operands) ||
       parser.resolveOperand(operandsInfo[1], tRHS, result.operands) ||
@@ -1216,19 +1219,32 @@ static ParseResult parseOuterProductOp(OpAsmParser &parser,
 }
 
 static LogicalResult verify(OuterProductOp op) {
+  Type tRHS = op.getOperandTypeRHS();
   VectorType vLHS = op.getOperandVectorTypeLHS(),
-             vRHS = op.getOperandVectorTypeRHS(),
+             vRHS = tRHS.dyn_cast<VectorType>(),
              vACC = op.getOperandVectorTypeACC(), vRES = op.getVectorType();
+
   if (vLHS.getRank() != 1)
     return op.emitOpError("expected 1-d vector for operand #1");
-  if (vRHS.getRank() != 1)
-    return op.emitOpError("expected 1-d vector for operand #2");
-  if (vRES.getRank() != 2)
-    return op.emitOpError("expected 2-d vector result");
-  if (vLHS.getDimSize(0) != vRES.getDimSize(0))
-    return op.emitOpError("expected #1 operand dim to match result dim #1");
-  if (vRHS.getDimSize(0) != vRES.getDimSize(1))
-    return op.emitOpError("expected #2 operand dim to match result dim #2");
+
+  if (vRHS) {
+    // Proper OUTER operation.
+    if (vRHS.getRank() != 1)
+      return op.emitOpError("expected 1-d vector for operand #2");
+    if (vRES.getRank() != 2)
+      return op.emitOpError("expected 2-d vector result");
+    if (vLHS.getDimSize(0) != vRES.getDimSize(0))
+      return op.emitOpError("expected #1 operand dim to match result dim #1");
+    if (vRHS.getDimSize(0) != vRES.getDimSize(1))
+      return op.emitOpError("expected #2 operand dim to match result dim #2");
+  } else {
+    // An AXPY operation.
+    if (vRES.getRank() != 1)
+      return op.emitOpError("expected 1-d vector result");
+    if (vLHS.getDimSize(0) != vRES.getDimSize(0))
+      return op.emitOpError("expected #1 operand dim to match result dim #1");
+  }
+
   if (vACC && vACC != vRES)
     return op.emitOpError("expected operand #3 of same type as result type");
   return success();
