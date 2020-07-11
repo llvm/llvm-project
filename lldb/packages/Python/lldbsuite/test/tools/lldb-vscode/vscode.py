@@ -760,6 +760,16 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_getCompileUnits(self, moduleId):
+        args_dict = {'moduleId': moduleId}
+        command_dict = {
+            'command': 'getCompileUnits',
+            'type': 'request',
+            'arguments': args_dict
+        }
+        response = self.send_recv(command_dict)
+        return response
+        
     def request_completions(self, text):
         args_dict = {
             'text': text,

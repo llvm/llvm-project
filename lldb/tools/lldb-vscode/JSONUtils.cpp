@@ -937,4 +937,13 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   return llvm::json::Value(std::move(object));
 }
 
+llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit) {
+  llvm::json::Object object;
+  char unit_path_arr[PATH_MAX];
+  unit.GetFileSpec().GetPath(unit_path_arr, sizeof(unit_path_arr));
+  std::string unit_path(unit_path_arr);
+  object.try_emplace("compileUnitPath", unit_path);
+  return llvm::json::Value(std::move(object));
+}
+
 } // namespace lldb_vscode
