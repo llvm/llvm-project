@@ -1397,9 +1397,17 @@ void OpenMPInModule::identifyKernels(Module &M) {
 bool llvm::omp::containsOpenMP(Module &M, OpenMPInModule &OMPInModule) {
   if (OMPInModule.isKnown())
     return OMPInModule;
+
+  // MSVC doesn't like long if-else chains for some reason and instead just
+  // issues an error. Work around it..
+  do {
 #define OMP_RTL(_Enum, _Name, ...)                                             \
-  else if (M.getFunction(_Name)) OMPInModule = true;
+  if (M.getFunction(_Name)) {                                                  \
+    OMPInModule = true;                                                        \
+    break;                                                                     \
+  }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
+  } while (false);
 
   // Identify kernels once. TODO: We should split the OMPInformationCache into a
   // module and an SCC part. The kernel information, among other things, could
