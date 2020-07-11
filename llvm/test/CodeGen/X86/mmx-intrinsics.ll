@@ -311,6 +311,19 @@ entry:
   ret i64 %4
 }
 
+define i64 @test72_2(<1 x i64> %a) nounwind readnone optsize ssp {
+; ALL-LABEL: @test72_2
+; ALL-NOT: psraw
+entry:
+  %0 = bitcast <1 x i64> %a to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
+  %1 = tail call x86_mmx @llvm.x86.mmx.psrai.w(x86_mmx %mmx_var.i, i32 0) nounwind
+  %2 = bitcast x86_mmx %1 to <4 x i16>
+  %3 = bitcast <4 x i16> %2 to <1 x i64>
+  %4 = extractelement <1 x i64> %3, i32 0
+  ret i64 %4
+}
+
 declare x86_mmx @llvm.x86.mmx.psrli.q(x86_mmx, i32) nounwind readnone
 
 define i64 @test71(<1 x i64> %a) nounwind readnone optsize ssp {
@@ -333,6 +346,19 @@ entry:
   %0 = bitcast <1 x i64> %a to <2 x i32>
   %mmx_var.i = bitcast <2 x i32> %0 to x86_mmx
   %1 = tail call x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx %mmx_var.i, i32 3) nounwind
+  %2 = bitcast x86_mmx %1 to <2 x i32>
+  %3 = bitcast <2 x i32> %2 to <1 x i64>
+  %4 = extractelement <1 x i64> %3, i32 0
+  ret i64 %4
+}
+
+define i64 @test70_2(<1 x i64> %a) nounwind readnone optsize ssp {
+; ALL-LABEL: @test70_2
+; ALL-NOT: psrld
+entry:
+  %0 = bitcast <1 x i64> %a to <2 x i32>
+  %mmx_var.i = bitcast <2 x i32> %0 to x86_mmx
+  %1 = tail call x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx %mmx_var.i, i32 0) nounwind
   %2 = bitcast x86_mmx %1 to <2 x i32>
   %3 = bitcast <2 x i32> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
@@ -391,6 +417,19 @@ entry:
   %0 = bitcast <1 x i64> %a to <4 x i16>
   %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
   %1 = tail call x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx %mmx_var.i, i32 3) nounwind
+  %2 = bitcast x86_mmx %1 to <4 x i16>
+  %3 = bitcast <4 x i16> %2 to <1 x i64>
+  %4 = extractelement <1 x i64> %3, i32 0
+  ret i64 %4
+}
+
+define i64 @test66_2(<1 x i64> %a) nounwind readnone optsize ssp {
+; ALL-LABEL: @test66_2
+; ALL-NOT: psllw
+entry:
+  %0 = bitcast <1 x i64> %a to <4 x i16>
+  %mmx_var.i = bitcast <4 x i16> %0 to x86_mmx
+  %1 = tail call x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx %mmx_var.i, i32 0) nounwind
   %2 = bitcast x86_mmx %1 to <4 x i16>
   %3 = bitcast <4 x i16> %2 to <1 x i64>
   %4 = extractelement <1 x i64> %3, i32 0
