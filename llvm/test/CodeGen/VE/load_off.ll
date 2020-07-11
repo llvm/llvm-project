@@ -118,7 +118,7 @@ define zeroext i32 @loadi32z() {
 ; CHECK-NEXT:    lea %s0, bufi32+8@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, bufi32+8@hi(, %s0)
-; CHECK-NEXT:    ldl.sx %s0, (, %s0)
+; CHECK-NEXT:    ldl.zx %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
 entry:
   %0 = load i32, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @bufi32, i64 0, i64 2), align 4
