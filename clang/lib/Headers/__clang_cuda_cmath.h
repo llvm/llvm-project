@@ -12,7 +12,7 @@
 #error "This file is for CUDA compilation only."
 #endif
 
-#ifndef _OPENMP
+#ifndef __OPENMP_NVPTX__
 #include <limits>
 #endif
 
@@ -32,7 +32,7 @@
 // implementation.  Declaring in the global namespace and pulling into namespace
 // std covers all of the known knowns.
 
-#ifdef _OPENMP
+#ifdef __OPENMP_NVPTX__
 #define __DEVICE__ static constexpr __attribute__((always_inline, nothrow))
 #else
 #define __DEVICE__ static __device__ __inline__ __attribute__((always_inline))
@@ -69,7 +69,7 @@ __DEVICE__ float frexp(float __arg, int *__exp) {
 // Windows. For OpenMP we omit these as some old system headers have
 // non-conforming `isinf(float)` and `isnan(float)` implementations that return
 // an `int`. The system versions of these functions should be fine anyway.
-#if !defined(_MSC_VER) && !defined(_OPENMP)
+#if !defined(_MSC_VER) && !defined(__OPENMP_NVPTX__)
 __DEVICE__ bool isinf(float __x) { return ::__isinff(__x); }
 __DEVICE__ bool isinf(double __x) { return ::__isinf(__x); }
 __DEVICE__ bool isfinite(float __x) { return ::__finitef(__x); }
@@ -146,7 +146,7 @@ __DEVICE__ float tanh(float __x) { return ::tanhf(__x); }
 // libdevice doesn't provide an implementation, and we don't want to be in the
 // business of implementing tricky libm functions in this header.
 
-#ifndef _OPENMP
+#ifndef __OPENMP_NVPTX__
 
 // Now we've defined everything we promised we'd define in
 // __clang_cuda_math_forward_declares.h.  We need to do two additional things to
@@ -463,7 +463,7 @@ _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace std
 #endif
 
-#endif // _OPENMP
+#endif // __OPENMP_NVPTX__
 
 #undef __DEVICE__
 
