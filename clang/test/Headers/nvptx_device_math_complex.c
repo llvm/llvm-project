@@ -11,12 +11,34 @@
 #include <complex.h>
 #endif
 
-// CHECK-DAG: define weak {{.*}} @__mulsc3
-// CHECK-DAG: define weak {{.*}} @__muldc3
-// CHECK-DAG: define weak {{.*}} @__divsc3
-// CHECK-DAG: define weak {{.*}} @__divdc3
+// CHECK: define weak {{.*}} @__muldc3
+// CHECK-DAG: call i32 @__nv_isnand(
+// CHECK-DAG: call i32 @__nv_isinfd(
+// CHECK-DAG: call double @__nv_copysign(
 
+// CHECK: define weak {{.*}} @__mulsc3
+// CHECK-DAG: call i32 @__nv_isnanf(
+// CHECK-DAG: call i32 @__nv_isinff(
+// CHECK-DAG: call float @__nv_copysignf(
+
+// CHECK: define weak {{.*}} @__divdc3
+// CHECK-DAG: call i32 @__nv_isnand(
+// CHECK-DAG: call i32 @__nv_isinfd(
+// CHECK-DAG: call i32 @__nv_isfinited(
+// CHECK-DAG: call double @__nv_copysign(
+// CHECK-DAG: call double @__nv_scalbn(
+// CHECK-DAG: call double @__nv_fabs(
+// CHECK-DAG: call double @__nv_logb(
+
+// CHECK: define weak {{.*}} @__divsc3
+// CHECK-DAG: call i32 @__nv_isnanf(
+// CHECK-DAG: call i32 @__nv_isinff(
+// CHECK-DAG: call i32 @__nv_finitef(
+// CHECK-DAG: call float @__nv_copysignf(
 // CHECK-DAG: call float @__nv_scalbnf(
+// CHECK-DAG: call float @__nv_fabsf(
+// CHECK-DAG: call float @__nv_logbf(
+
 void test_scmplx(float _Complex a) {
 #pragma omp target
   {
@@ -24,7 +46,6 @@ void test_scmplx(float _Complex a) {
   }
 }
 
-// CHECK-DAG: call double @__nv_scalbn(
 void test_dcmplx(double _Complex a) {
 #pragma omp target
   {
