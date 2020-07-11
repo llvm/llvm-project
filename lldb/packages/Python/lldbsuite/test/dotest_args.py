@@ -51,7 +51,7 @@ def create_parser():
                                                            suggestions: do not lump the "-A arch1 -A arch2" together such that the -E option applies to only one of the architectures'''))
 
     group.add_argument('--dsymutil', metavar='dsymutil', dest='dsymutil', help=textwrap.dedent('Specify which dsymutil to use.'))
-
+    group.add_argument('--yaml2obj', metavar='yaml2obj', dest='yaml2obj', help=textwrap.dedent('Specify which yaml2obj binary to use.'))
     group.add_argument('--filecheck', metavar='filecheck', dest='filecheck', help=textwrap.dedent('Specify which FileCheck binary to use.'))
 
     # Test filtering options

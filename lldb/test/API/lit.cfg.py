@@ -182,6 +182,9 @@ if config.dsymutil:
 if config.filecheck:
   dotest_cmd += ['--filecheck', config.filecheck]
 
+if config.yaml2obj:
+  dotest_cmd += ['--yaml2obj', config.yaml2obj]
+
 if config.lldb_libs_dir:
   dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]
 
