@@ -39,6 +39,7 @@
 #include <set>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Option/Arg.h"
@@ -432,6 +433,30 @@ void EventThreadFunction() {
             body.try_emplace("reason", "changed");
             bp_event.try_emplace("body", std::move(body));
             g_vsc.SendJSON(llvm::json::Value(std::move(bp_event)));
+          }
+        }
+      } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
+        if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded) {
+          int num_modules = lldb::SBTarget::GetNumModulesFromEvent(event);
+          for (int i = 0; i < num_modules; i++) {
+            auto module = lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
+            auto module_event = CreateEventObject("module");
+            llvm::json::Value module_value = CreateModule(module);
+            llvm::json::Object body;
+            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
+              body.try_emplace("reason", "new");
+            } else if (event_mask &
+                        lldb::SBTarget::eBroadcastBitModulesUnloaded) {
+              body.try_emplace("reason", "removed");
+            } else if (event_mask &
+                        lldb::SBTarget::eBroadcastBitSymbolsLoaded) {
+              body.try_emplace("reason", "changed");
+            }
+            body.try_emplace("module", module_value);
+            module_event.try_emplace("body", std::move(body));
+            g_vsc.SendJSON(llvm::json::Value(std::move(module_event)));
           }
         }
       } else if (event.BroadcasterMatchesRef(g_vsc.broadcaster)) {
