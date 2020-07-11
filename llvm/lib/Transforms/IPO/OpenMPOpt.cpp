@@ -39,6 +39,8 @@ static cl::opt<bool> DisableOpenMPOptimizations(
 
 static cl::opt<bool> PrintICVValues("openmp-print-icv-values", cl::init(false),
                                     cl::Hidden);
+static cl::opt<bool> PrintOpenMPKernels("openmp-print-gpu-kernels",
+                                        cl::init(false), cl::Hidden);
 
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
@@ -48,10 +50,37 @@ STATISTIC(NumOpenMPRuntimeFunctionsIdentified,
           "Number of OpenMP runtime functions identified");
 STATISTIC(NumOpenMPRuntimeFunctionUsesIdentified,
           "Number of OpenMP runtime function uses identified");
+STATISTIC(NumOpenMPTargetRegionKernels,
+          "Number of OpenMP target region entry points (=kernels) identified");
+STATISTIC(
+    NumOpenMPParallelRegionsReplacedInGPUStateMachine,
+    "Number of OpenMP parallel regions replaced with ID in GPU state machines");
 
 #if !defined(NDEBUG)
 static constexpr auto TAG = "[" DEBUG_TYPE "]";
 #endif
+
+/// Apply \p CB to all uses of \p F. If \p LookThroughConstantExprUses is
+/// true, constant expression users are not given to \p CB but their uses are
+/// traversed transitively.
+template <typename CBTy>
+static void foreachUse(Function &F, CBTy CB,
+                       bool LookThroughConstantExprUses = true) {
+  SmallVector<Use *, 8> Worklist(make_pointer_range(F.uses()));
+
+  for (unsigned idx = 0; idx < Worklist.size(); ++idx) {
+    Use &U = *Worklist[idx];
+
+    // Allow use in constant bitcasts and simply look through them.
+    if (LookThroughConstantExprUses && isa<ConstantExpr>(U.getUser())) {
+      for (Use &CEU : cast<ConstantExpr>(U.getUser())->uses())
+        Worklist.push_back(&CEU);
+      continue;
+    }
+
+    CB(U);
+  }
+}
 
 /// Helper struct to store tracked ICV values at specif instructions.
 struct ICVValue {
@@ -98,10 +127,12 @@ struct AAICVTracker;
 /// Attributor runs.
 struct OMPInformationCache : public InformationCache {
   OMPInformationCache(Module &M, AnalysisGetter &AG,
-                      BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
-                      SmallPtrSetImpl<Function *> &ModuleSlice)
-      : InformationCache(M, AG, Allocator, CGSCC), ModuleSlice(ModuleSlice),
-        OMPBuilder(M) {
+                      BumpPtrAllocator &Allocator, SetVector<Function *> &CGSCC,
+                      SmallPtrSetImpl<Kernel> &Kernels)
+      : InformationCache(M, AG, Allocator, &CGSCC), OMPBuilder(M),
+        Kernels(Kernels) {
+    initializeModuleSlice(CGSCC);
+
     OMPBuilder.initialize();
     initializeRuntimeFunctions();
     initializeInternalControlVars();
@@ -161,6 +192,9 @@ struct OMPInformationCache : public InformationCache {
     /// Clear UsesMap for runtime function.
     void clearUsesMap() { UsesMap.clear(); }
 
+    /// Boolean conversion that is true if the runtime function was found.
+    operator bool() const { return Declaration; }
+
     /// Return the vector of uses in function \p F.
     UseVector &getOrCreateUseVector(Function *F) {
       std::shared_ptr<UseVector> &UV = UsesMap[F];
@@ -188,20 +222,20 @@ struct OMPInformationCache : public InformationCache {
     /// Run the callback \p CB on each use and forget the use if the result is
     /// true. The callback will be fed the function in which the use was
     /// encountered as second argument.
-    void foreachUse(function_ref<bool(Use &, Function &)> CB) {
-      for (auto &It : UsesMap)
-        foreachUse(CB, It.first, It.second.get());
+    void foreachUse(SmallVectorImpl<Function *> &SCC,
+                    function_ref<bool(Use &, Function &)> CB) {
+      for (Function *F : SCC)
+        foreachUse(CB, F);
     }
 
     /// Run the callback \p CB on each use within the function \p F and forget
     /// the use if the result is true.
-    void foreachUse(function_ref<bool(Use &, Function &)> CB, Function *F,
-                    UseVector *Uses = nullptr) {
+    void foreachUse(function_ref<bool(Use &, Function &)> CB, Function *F) {
       SmallVector<unsigned, 8> ToBeDeleted;
       ToBeDeleted.clear();
 
       unsigned Idx = 0;
-      UseVector &UV = Uses ? *Uses : getOrCreateUseVector(F);
+      UseVector &UV = getOrCreateUseVector(F);
 
       for (Use *U : UV) {
         if (CB(*U, *F))
@@ -210,7 +244,7 @@ struct OMPInformationCache : public InformationCache {
       }
 
       // Remove the to-be-deleted indices in reverse order as prior
-      // modifcations will not modify the smaller indices.
+      // modifications will not modify the smaller indices.
       while (!ToBeDeleted.empty()) {
         unsigned Idx = ToBeDeleted.pop_back_val();
         UV[Idx] = UV.back();
@@ -224,8 +258,45 @@ struct OMPInformationCache : public InformationCache {
     DenseMap<Function *, std::shared_ptr<UseVector>> UsesMap;
   };
 
+  /// Initialize the ModuleSlice member based on \p SCC. ModuleSlices contains
+  /// (a subset of) all functions that we can look at during this SCC traversal.
+  /// This includes functions (transitively) called from the SCC and the
+  /// (transitive) callers of SCC functions. We also can look at a function if
+  /// there is a "reference edge", i.a., if the function somehow uses (!=calls)
+  /// a function in the SCC or a caller of a function in the SCC.
+  void initializeModuleSlice(SetVector<Function *> &SCC) {
+    ModuleSlice.insert(SCC.begin(), SCC.end());
+
+    SmallPtrSet<Function *, 16> Seen;
+    SmallVector<Function *, 16> Worklist(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      for (Instruction &I : instructions(*F))
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (Function *Callee = CB->getCalledFunction())
+            if (Seen.insert(Callee).second)
+              Worklist.push_back(Callee);
+    }
+
+    Seen.clear();
+    Worklist.append(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      // Traverse all transitive uses.
+      foreachUse(*F, [&](Use &U) {
+        if (auto *UsrI = dyn_cast<Instruction>(U.getUser()))
+          if (Seen.insert(UsrI->getFunction()).second)
+            Worklist.push_back(UsrI->getFunction());
+      });
+    }
+  }
+
   /// The slice of the module we are allowed to look at.
-  SmallPtrSetImpl<Function *> &ModuleSlice;
+  SmallPtrSet<Function *, 8> ModuleSlice;
 
   /// An OpenMP-IR-Builder instance
   OpenMPIRBuilder OMPBuilder;
@@ -304,7 +375,7 @@ struct OMPInformationCache : public InformationCache {
     return true;
   }
 
-  // Helper to collect all uses of the decleration in the UsesMap.
+  // Helper to collect all uses of the declaration in the UsesMap.
   unsigned collectUses(RuntimeFunctionInfo &RFI, bool CollectStats = true) {
     unsigned NumUses = 0;
     if (!RFI.Declaration)
@@ -396,6 +467,9 @@ struct OMPInformationCache : public InformationCache {
 
     // TODO: We should attach the attributes defined in OMPKinds.def.
   }
+
+  /// Collection of known kernels (\see Kernel) in the module.
+  SmallPtrSetImpl<Kernel> &Kernels;
 };
 
 struct OpenMPOpt {
@@ -411,32 +485,21 @@ struct OpenMPOpt {
 
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
   bool run() {
+    if (SCC.empty())
+      return false;
+
     bool Changed = false;
 
     LLVM_DEBUG(dbgs() << TAG << "Run on SCC with " << SCC.size()
                       << " functions in a slice with "
                       << OMPInfoCache.ModuleSlice.size() << " functions\n");
 
-    /// Print initial ICV values for testing.
-    /// FIXME: This should be done from the Attributor once it is added.
-    if (PrintICVValues) {
-      InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel};
+    if (PrintICVValues)
+      printICVs();
+    if (PrintOpenMPKernels)
+      printKernels();
 
-      for (Function *F : OMPInfoCache.ModuleSlice) {
-        for (auto ICV : ICVs) {
-          auto ICVInfo = OMPInfoCache.ICVs[ICV];
-          auto Remark = [&](OptimizationRemark OR) {
-            return OR << "OpenMP ICV " << ore::NV("OpenMPICV", ICVInfo.Name)
-                      << " Value: "
-                      << (ICVInfo.InitValue
-                              ? ICVInfo.InitValue->getValue().toString(10, true)
-                              : "IMPLEMENTATION_DEFINED");
-          };
-
-          emitRemarkOnFunction(F, "OpenMPICVTracker", Remark);
-        }
-      }
-    }
+    Changed |= rewriteDeviceCodeStateMachine();
 
     Changed |= runAttributor();
 
@@ -447,6 +510,42 @@ struct OpenMPOpt {
     Changed |= deleteParallelRegions();
 
     return Changed;
+  }
+
+  /// Print initial ICV values for testing.
+  /// FIXME: This should be done from the Attributor once it is added.
+  void printICVs() const {
+    InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel};
+
+    for (Function *F : OMPInfoCache.ModuleSlice) {
+      for (auto ICV : ICVs) {
+        auto ICVInfo = OMPInfoCache.ICVs[ICV];
+        auto Remark = [&](OptimizationRemark OR) {
+          return OR << "OpenMP ICV " << ore::NV("OpenMPICV", ICVInfo.Name)
+                    << " Value: "
+                    << (ICVInfo.InitValue
+                            ? ICVInfo.InitValue->getValue().toString(10, true)
+                            : "IMPLEMENTATION_DEFINED");
+        };
+
+        emitRemarkOnFunction(F, "OpenMPICVTracker", Remark);
+      }
+    }
+  }
+
+  /// Print OpenMP GPU kernels for testing.
+  void printKernels() const {
+    for (Function *F : SCC) {
+      if (!OMPInfoCache.Kernels.count(F))
+        continue;
+
+      auto Remark = [&](OptimizationRemark OR) {
+        return OR << "OpenMP GPU kernel "
+                  << ore::NV("OpenMPGPUKernel", F->getName()) << "\n";
+      };
+
+      emitRemarkOnFunction(F, "OpenMPGPU", Remark);
+    }
   }
 
   /// Return the call if \p U is a callee use in a regular call. If \p RFI is
@@ -514,12 +613,12 @@ private:
       return true;
     };
 
-    RFI.foreachUse(DeleteCallCB);
+    RFI.foreachUse(SCC, DeleteCallCB);
 
     return Changed;
   }
 
-  /// Try to eliminiate runtime calls by reusing existing ones.
+  /// Try to eliminate runtime calls by reusing existing ones.
   bool deduplicateRuntimeCalls() {
     bool Changed = false;
 
@@ -599,7 +698,7 @@ private:
                                   /* GlobalOnly */ true, SingleChoice);
       return false;
     };
-    RFI.foreachUse(CombineIdentStruct);
+    RFI.foreachUse(SCC, CombineIdentStruct);
 
     if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
@@ -615,7 +714,7 @@ private:
     return Ident;
   }
 
-  /// Try to eliminiate calls of \p RFI in \p F by reusing an existing one or
+  /// Try to eliminate calls of \p RFI in \p F by reusing an existing one or
   /// \p ReplVal if given.
   bool deduplicateRuntimeCalls(Function &F,
                                OMPInformationCache::RuntimeFunctionInfo &RFI,
@@ -699,7 +798,7 @@ private:
       Changed = true;
       return true;
     };
-    RFI.foreachUse(ReplaceAndDeleteCB);
+    RFI.foreachUse(SCC, ReplaceAndDeleteCB);
 
     return Changed;
   }
@@ -742,7 +841,7 @@ private:
     OMPInformationCache::RuntimeFunctionInfo &GlobThreadNumRFI =
         OMPInfoCache.RFIs[OMPRTL___kmpc_global_thread_num];
 
-    GlobThreadNumRFI.foreachUse([&](Use &U, Function &F) {
+    GlobThreadNumRFI.foreachUse(SCC, [&](Use &U, Function &F) {
       if (CallInst *CI = getCallIfRegularCall(U, &GlobThreadNumRFI))
         AddUserArgs(*CI);
       return false;
@@ -754,6 +853,31 @@ private:
     for (unsigned u = 0; u < GTIdArgs.size(); ++u)
       AddUserArgs(*GTIdArgs[u]);
   }
+
+  /// Kernel (=GPU) optimizations and utility functions
+  ///
+  ///{{
+
+  /// Check if \p F is a kernel, hence entry point for target offloading.
+  bool isKernel(Function &F) { return OMPInfoCache.Kernels.count(&F); }
+
+  /// Cache to remember the unique kernel for a function.
+  DenseMap<Function *, Optional<Kernel>> UniqueKernelMap;
+
+  /// Find the unique kernel that will execute \p F, if any.
+  Kernel getUniqueKernelFor(Function &F);
+
+  /// Find the unique kernel that will execute \p I, if any.
+  Kernel getUniqueKernelFor(Instruction &I) {
+    return getUniqueKernelFor(*I.getFunction());
+  }
+
+  /// Rewrite the device (=GPU) code state machine create in non-SPMD mode in
+  /// the cases we can avoid taking the address of a function.
+  bool rewriteDeviceCodeStateMachine();
+
+  ///
+  ///}}
 
   /// Emit a remark generically
   ///
@@ -769,7 +893,7 @@ private:
   template <typename RemarkKind,
             typename RemarkCallBack = function_ref<RemarkKind(RemarkKind &&)>>
   void emitRemark(Instruction *Inst, StringRef RemarkName,
-                  RemarkCallBack &&RemarkCB) {
+                  RemarkCallBack &&RemarkCB) const {
     Function *F = Inst->getParent()->getParent();
     auto &ORE = OREGetter(F);
 
@@ -779,9 +903,10 @@ private:
 
   /// Emit a remark on a function. Since only OptimizationRemark is supporting
   /// this, it can't be made generic.
-  void emitRemarkOnFunction(
-      Function *F, StringRef RemarkName,
-      function_ref<OptimizationRemark(OptimizationRemark &&)> &&RemarkCB) {
+  void
+  emitRemarkOnFunction(Function *F, StringRef RemarkName,
+                       function_ref<OptimizationRemark(OptimizationRemark &&)>
+                           &&RemarkCB) const {
     auto &ORE = OREGetter(F);
 
     ORE.emit([&]() {
@@ -789,7 +914,7 @@ private:
     });
   }
 
-  /// The underyling module.
+  /// The underlying module.
   Module &M;
 
   /// The SCC we are operating on.
@@ -834,6 +959,138 @@ private:
     }
   }
 };
+
+Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
+  if (!OMPInfoCache.ModuleSlice.count(&F))
+    return nullptr;
+
+  // Use a scope to keep the lifetime of the CachedKernel short.
+  {
+    Optional<Kernel> &CachedKernel = UniqueKernelMap[&F];
+    if (CachedKernel)
+      return *CachedKernel;
+
+    // TODO: We should use an AA to create an (optimistic and callback
+    //       call-aware) call graph. For now we stick to simple patterns that
+    //       are less powerful, basically the worst fixpoint.
+    if (isKernel(F)) {
+      CachedKernel = Kernel(&F);
+      return *CachedKernel;
+    }
+
+    CachedKernel = nullptr;
+    if (!F.hasLocalLinkage())
+      return nullptr;
+  }
+
+  auto GetUniqueKernelForUse = [&](const Use &U) -> Kernel {
+    if (auto *Cmp = dyn_cast<ICmpInst>(U.getUser())) {
+      // Allow use in equality comparisons.
+      if (Cmp->isEquality())
+        return getUniqueKernelFor(*Cmp);
+      return nullptr;
+    }
+    if (auto *CB = dyn_cast<CallBase>(U.getUser())) {
+      // Allow direct calls.
+      if (CB->isCallee(&U))
+        return getUniqueKernelFor(*CB);
+      // Allow the use in __kmpc_kernel_prepare_parallel calls.
+      if (Function *Callee = CB->getCalledFunction())
+        if (Callee->getName() == "__kmpc_kernel_prepare_parallel")
+          return getUniqueKernelFor(*CB);
+      return nullptr;
+    }
+    // Disallow every other use.
+    return nullptr;
+  };
+
+  // TODO: In the future we want to track more than just a unique kernel.
+  SmallPtrSet<Kernel, 2> PotentialKernels;
+  foreachUse(F, [&](const Use &U) {
+    PotentialKernels.insert(GetUniqueKernelForUse(U));
+  });
+
+  Kernel K = nullptr;
+  if (PotentialKernels.size() == 1)
+    K = *PotentialKernels.begin();
+
+  // Cache the result.
+  UniqueKernelMap[&F] = K;
+
+  return K;
+}
+
+bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
+  OMPInformationCache::RuntimeFunctionInfo &KernelPrepareParallelRFI =
+      OMPInfoCache.RFIs[OMPRTL___kmpc_kernel_prepare_parallel];
+
+  bool Changed = false;
+  if (!KernelPrepareParallelRFI)
+    return Changed;
+
+  for (Function *F : SCC) {
+
+    // Check if the function is uses in a __kmpc_kernel_prepare_parallel call at
+    // all.
+    bool UnknownUse = false;
+    unsigned NumDirectCalls = 0;
+
+    SmallVector<Use *, 2> ToBeReplacedStateMachineUses;
+    foreachUse(*F, [&](Use &U) {
+      if (auto *CB = dyn_cast<CallBase>(U.getUser()))
+        if (CB->isCallee(&U)) {
+          ++NumDirectCalls;
+          return;
+        }
+
+      if (auto *Cmp = dyn_cast<ICmpInst>(U.getUser())) {
+        ToBeReplacedStateMachineUses.push_back(&U);
+        return;
+      }
+      if (CallInst *CI = OpenMPOpt::getCallIfRegularCall(
+              *U.getUser(), &KernelPrepareParallelRFI)) {
+        ToBeReplacedStateMachineUses.push_back(&U);
+        return;
+      }
+      UnknownUse = true;
+    });
+
+    // If this ever hits, we should investigate.
+    if (UnknownUse || NumDirectCalls != 1)
+      continue;
+
+    // TODO: This is not a necessary restriction and should be lifted.
+    if (ToBeReplacedStateMachineUses.size() != 2)
+      continue;
+
+    // Even if we have __kmpc_kernel_prepare_parallel calls, we (for now) give
+    // up if the function is not called from a unique kernel.
+    Kernel K = getUniqueKernelFor(*F);
+    if (!K)
+      continue;
+
+    // We now know F is a parallel body function called only from the kernel K.
+    // We also identified the state machine uses in which we replace the
+    // function pointer by a new global symbol for identification purposes. This
+    // ensures only direct calls to the function are left.
+
+    Module &M = *F->getParent();
+    Type *Int8Ty = Type::getInt8Ty(M.getContext());
+
+    auto *ID = new GlobalVariable(
+        M, Int8Ty, /* isConstant */ true, GlobalValue::PrivateLinkage,
+        UndefValue::get(Int8Ty), F->getName() + ".ID");
+
+    for (Use *U : ToBeReplacedStateMachineUses)
+      U->set(ConstantExpr::getBitCast(ID, U->get()->getType()));
+
+    ++NumOpenMPParallelRegionsReplacedInGPUStateMachine;
+
+    Changed = true;
+  }
+
+  return Changed;
+}
 
 /// Abstract Attribute for tracking ICV values.
 struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
@@ -903,7 +1160,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
       return true;
     };
 
-    GetterRFI.foreachUse(ReplaceAndDeleteCB);
+    GetterRFI.foreachUse(ReplaceAndDeleteCB, getAnchorScope());
     return Changed;
   }
 
@@ -1013,12 +1270,9 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
-  SmallPtrSet<Function *, 16> ModuleSlice;
   SmallVector<Function *, 16> SCC;
-  for (LazyCallGraph::Node &N : C) {
+  for (LazyCallGraph::Node &N : C)
     SCC.push_back(&N.getFunction());
-    ModuleSlice.insert(SCC.back());
-  }
 
   if (SCC.empty())
     return PreservedAnalyses::all();
@@ -1038,7 +1292,7 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   BumpPtrAllocator Allocator;
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
-                                /*CGSCC*/ &Functions, ModuleSlice);
+                                /*CGSCC*/ Functions, OMPInModule.getKernels());
 
   Attributor A(Functions, InfoCache, CGUpdater);
 
@@ -1076,14 +1330,11 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     if (DisableOpenMPOptimizations || skipSCC(CGSCC))
       return false;
 
-    SmallPtrSet<Function *, 16> ModuleSlice;
     SmallVector<Function *, 16> SCC;
     for (CallGraphNode *CGN : CGSCC)
       if (Function *Fn = CGN->getFunction())
-        if (!Fn->isDeclaration()) {
+        if (!Fn->isDeclaration())
           SCC.push_back(Fn);
-          ModuleSlice.insert(Fn);
-        }
 
     if (SCC.empty())
       return false;
@@ -1103,9 +1354,9 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     AnalysisGetter AG;
     SetVector<Function *> Functions(SCC.begin(), SCC.end());
     BumpPtrAllocator Allocator;
-    OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG,
-                                  Allocator,
-                                  /*CGSCC*/ &Functions, ModuleSlice);
+    OMPInformationCache InfoCache(
+        *(Functions.back()->getParent()), AG, Allocator,
+        /*CGSCC*/ Functions, OMPInModule.getKernels());
 
     Attributor A(Functions, InfoCache, CGUpdater);
 
@@ -1119,14 +1370,53 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
 
 } // end anonymous namespace
 
+void OpenMPInModule::identifyKernels(Module &M) {
+
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+  if (!MD)
+    return;
+
+  for (auto *Op : MD->operands()) {
+    if (Op->getNumOperands() < 2)
+      continue;
+    MDString *KindID = dyn_cast<MDString>(Op->getOperand(1));
+    if (!KindID || KindID->getString() != "kernel")
+      continue;
+
+    Function *KernelFn =
+        mdconst::dyn_extract_or_null<Function>(Op->getOperand(0));
+    if (!KernelFn)
+      continue;
+
+    ++NumOpenMPTargetRegionKernels;
+
+    Kernels.insert(KernelFn);
+  }
+}
+
 bool llvm::omp::containsOpenMP(Module &M, OpenMPInModule &OMPInModule) {
   if (OMPInModule.isKnown())
     return OMPInModule;
 
+  // MSVC doesn't like long if-else chains for some reason and instead just
+  // issues an error. Work around it..
+  do {
 #define OMP_RTL(_Enum, _Name, ...)                                             \
-  if (M.getFunction(_Name))                                                    \
-    return OMPInModule = true;
+  if (M.getFunction(_Name)) {                                                  \
+    OMPInModule = true;                                                        \
+    break;                                                                     \
+  }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
+  } while (false);
+
+  // Identify kernels once. TODO: We should split the OMPInformationCache into a
+  // module and an SCC part. The kernel information, among other things, could
+  // go into the module part.
+  if (OMPInModule.isKnown() && OMPInModule) {
+    OMPInModule.identifyKernels(M);
+    return true;
+  }
+
   return OMPInModule = false;
 }
 
