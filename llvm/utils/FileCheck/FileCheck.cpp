@@ -128,11 +128,38 @@ static cl::list<DumpInputValue> DumpInputs(
                clEnumValN(DumpInputFail, "fail", "Dump input on failure"),
                clEnumValN(DumpInputNever, "never", "Never dump input")));
 
+// The order of DumpInputFilterValue members affects their precedence, as
+// documented for -dump-input-filter below.
+enum DumpInputFilterValue {
+  DumpInputFilterError,
+  DumpInputFilterAnnotation,
+  DumpInputFilterAnnotationFull,
+  DumpInputFilterAll
+};
+
+static cl::list<DumpInputFilterValue> DumpInputFilters(
+    "dump-input-filter",
+    cl::desc("In the dump requested by -dump-input, print only input lines of\n"
+             "kind <kind> plus any context specified by -dump-input-context.\n"
+             "When there are multiple occurrences of this option, the <kind>\n"
+             "that appears earliest in the list below has precedence.  The\n"
+             "default is 'error' when -dump-input=fail, and it's 'all' when\n"
+             "-dump-input=always.\n"),
+    cl::value_desc("kind"),
+    cl::values(clEnumValN(DumpInputFilterAll, "all", "All input lines"),
+               clEnumValN(DumpInputFilterAnnotationFull, "annotation-full",
+                          "Input lines with annotations"),
+               clEnumValN(DumpInputFilterAnnotation, "annotation",
+                          "Input lines with starting points of annotations"),
+               clEnumValN(DumpInputFilterError, "error",
+                          "Input lines with starting points of error "
+                          "annotations")));
+
 static cl::list<unsigned> DumpInputContexts(
     "dump-input-context", cl::value_desc("N"),
-    cl::desc("In the dump requested by -dump-input=fail, print <N> input\n"
-             "lines before and <N> input lines after the starting line of\n"
-             "any error diagnostic.  When there are multiple occurrences of\n"
+    cl::desc("In the dump requested by -dump-input, print <N> input lines\n"
+             "before and <N> input lines after any lines specified by\n"
+             "-dump-input-filter.  When there are multiple occurrences of\n"
              "this option, the largest specified <N> has precedence.  The\n"
              "default is 5.\n"));
 
@@ -158,8 +185,7 @@ struct MarkerStyle {
   raw_ostream::Colors Color;
   /// A note to follow the marker, or empty string if none.
   std::string Note;
-  /// Does this marker indicate inclusion by the input filter implied by
-  /// -dump-input=fail?
+  /// Does this marker indicate inclusion by -dump-input-filter=error?
   bool FiltersAsError;
   MarkerStyle() {}
   MarkerStyle(char Lead, raw_ostream::Colors Color,
@@ -201,7 +227,8 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
      << "\n"
      << "Related command-line options:\n"
      << "  - -dump-input=<value> enables or disables the input dump\n"
-     << "  - -dump-input-context=<N> adjusts the context of errors\n"
+     << "  - -dump-input-filter=<kind> filters the input lines\n"
+     << "  - -dump-input-context=<N> adjusts the context of filtered lines\n"
      << "  - -v and -vv add more annotations\n"
      << "  - -color forces colors to be enabled both in the dump and below\n"
      << "  - -help documents the above options in more detail\n"
@@ -251,7 +278,7 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
   OS << "  - ";
   WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "...";
   OS << "    indicates elided input lines and annotations, as specified by\n"
-     << "           -dump-input=fail and -dump-input-context\n";
+     << "           -dump-input-filter and -dump-input-context\n";
 
   // Colors.
   OS << "  - colors ";
@@ -416,15 +443,28 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
 }
 
 static unsigned FindInputLineInFilter(
-    bool FilterOnError, unsigned CurInputLine,
+    DumpInputFilterValue DumpInputFilter, unsigned CurInputLine,
     const std::vector<InputAnnotation>::iterator &AnnotationBeg,
     const std::vector<InputAnnotation>::iterator &AnnotationEnd) {
-  if (!FilterOnError)
+  if (DumpInputFilter == DumpInputFilterAll)
     return CurInputLine;
   for (auto AnnotationItr = AnnotationBeg; AnnotationItr != AnnotationEnd;
        ++AnnotationItr) {
-    if (AnnotationItr->IsFirstLine && AnnotationItr->Marker.FiltersAsError)
+    switch (DumpInputFilter) {
+    case DumpInputFilterAll:
+      llvm_unreachable("unexpected DumpInputFilterAll");
+      break;
+    case DumpInputFilterAnnotationFull:
       return AnnotationItr->InputLine;
+    case DumpInputFilterAnnotation:
+      if (AnnotationItr->IsFirstLine)
+        return AnnotationItr->InputLine;
+      break;
+    case DumpInputFilterError:
+      if (AnnotationItr->IsFirstLine && AnnotationItr->Marker.FiltersAsError)
+        return AnnotationItr->InputLine;
+      break;
+    }
   }
   return UINT_MAX;
 }
@@ -449,7 +489,7 @@ static void DumpEllipsisOrElidedLines(raw_ostream &OS, std::string &ElidedLines,
 }
 
 static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
-                               bool DumpInputFilterOnError,
+                               DumpInputFilterValue DumpInputFilter,
                                unsigned DumpInputContext,
                                StringRef InputFileText,
                                std::vector<InputAnnotation> &Annotations,
@@ -540,7 +580,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
 
     // Compute the previous and next line included by the filter.
     if (NextLineInFilter < Line)
-      NextLineInFilter = FindInputLineInFilter(DumpInputFilterOnError, Line,
+      NextLineInFilter = FindInputLineInFilter(DumpInputFilter, Line,
                                                AnnotationItr, AnnotationEnd);
     assert(NextLineInFilter && "expected NextLineInFilter to be computed");
     if (NextLineInFilter == Line)
@@ -548,7 +588,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
 
     // Elide this input line and its annotations if it's not within the
     // context specified by -dump-input-context of an input line included by
-    // the dump filter.  However, in case the resulting ellipsis would occupy
+    // -dump-input-filter.  However, in case the resulting ellipsis would occupy
     // more lines than the input lines and annotations it elides, buffer the
     // elided lines and annotations so we can print them instead.
     raw_ostream *LineOS = &OS;
@@ -661,7 +701,13 @@ int main(int argc, char **argv) {
       DumpInputs.empty()
           ? DumpInputFail
           : *std::max_element(DumpInputs.begin(), DumpInputs.end());
-  bool DumpInputFilterOnError = DumpInput == DumpInputFail;
+  DumpInputFilterValue DumpInputFilter;
+  if (DumpInputFilters.empty())
+    DumpInputFilter = DumpInput == DumpInputAlways ? DumpInputFilterAll
+                                                   : DumpInputFilterError;
+  else
+    DumpInputFilter =
+        *std::max_element(DumpInputFilters.begin(), DumpInputFilters.end());
   unsigned DumpInputContext = DumpInputContexts.empty()
                                   ? 5
                                   : *std::max_element(DumpInputContexts.begin(),
@@ -799,7 +845,7 @@ int main(int argc, char **argv) {
     unsigned LabelWidth;
     BuildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange, Diags,
                           Annotations, LabelWidth);
-    DumpAnnotatedInput(errs(), Req, DumpInputFilterOnError, DumpInputContext,
+    DumpAnnotatedInput(errs(), Req, DumpInputFilter, DumpInputContext,
                        InputFileText, Annotations, LabelWidth);
   }
 
