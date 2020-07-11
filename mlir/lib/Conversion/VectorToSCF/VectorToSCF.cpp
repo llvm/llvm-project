@@ -89,7 +89,7 @@ public:
     // TODO: when we go to k > 1-D vectors adapt minorRank.
     minorRank = 1;
     majorRank = vectorType.getRank() - minorRank;
-    leadingRank = xferOp.getMemRefType().getRank() - (majorRank + minorRank);
+    leadingRank = xferOp.getLeadingMemRefRank();
     majorVectorType =
         VectorType::get(vectorType.getShape().take_front(majorRank),
                         vectorType.getElementType());
@@ -538,7 +538,7 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
   using namespace mlir::edsc::op;
 
   TransferReadOp transfer = cast<TransferReadOp>(op);
-  if (AffineMap::isMinorIdentity(transfer.permutation_map())) {
+  if (transfer.permutation_map().isMinorIdentity()) {
     // If > 1D, emit a bunch of loops around 1-D vector transfers.
     if (transfer.getVectorType().getRank() > 1)
       return NDTransferOpHelper<TransferReadOp>(rewriter, transfer, options)
@@ -611,7 +611,7 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   using namespace edsc::op;
 
   TransferWriteOp transfer = cast<TransferWriteOp>(op);
-  if (AffineMap::isMinorIdentity(transfer.permutation_map())) {
+  if (transfer.permutation_map().isMinorIdentity()) {
     // If > 1D, emit a bunch of loops around 1-D vector transfers.
     if (transfer.getVectorType().getRank() > 1)
       return NDTransferOpHelper<TransferWriteOp>(rewriter, transfer, options)

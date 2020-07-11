@@ -168,10 +168,10 @@ func @cast_transfers(%A: memref<4x8xf32>) -> (vector<4x8xf32>) {
   %f0 = constant 0.0 : f32
   %0 = memref_cast %A : memref<4x8xf32> to memref<?x?xf32>
 
-  // CHECK: vector.transfer_read %{{.*}} : memref<4x8xf32>, vector<4x8xf32>
+  // CHECK: vector.transfer_read %{{.*}} {masked = [false, false]} : memref<4x8xf32>, vector<4x8xf32>
   %1 = vector.transfer_read %0[%c0, %c0], %f0 : memref<?x?xf32>, vector<4x8xf32>
 
-  // CHECK: vector.transfer_write %{{.*}} : vector<4x8xf32>, memref<4x8xf32>
+  // CHECK: vector.transfer_write %{{.*}} {masked = [false, false]} : vector<4x8xf32>, memref<4x8xf32>
   vector.transfer_write %1, %0[%c0, %c0] : vector<4x8xf32>, memref<?x?xf32>
   return %1 : vector<4x8xf32>
 }
@@ -344,4 +344,31 @@ func @fold_extract_transpose(
   %5 = vector.extract %4[0, 1, 2] : vector<3x5x6x6xf32>
 
   return %1, %3, %5 : vector<6xf32>, vector<6xf32>, vector<6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: fold_vector_transfers
+func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9xf32>) {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+
+  // CHECK: vector.transfer_read %{{.*}} {masked = [true, false]}
+  %1 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x8xf32>, vector<4x8xf32>
+
+  // CHECK: vector.transfer_write %{{.*}} {masked = [true, false]}
+  vector.transfer_write %1, %A[%c0, %c0] : vector<4x8xf32>, memref<?x8xf32>
+
+  // Both dims masked, attribute is elided.
+  // CHECK: vector.transfer_read %{{.*}}
+  // CHECK-NOT: masked
+  %2 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x8xf32>, vector<4x9xf32>
+
+  // Both dims masked, attribute is elided.
+  // CHECK: vector.transfer_write %{{.*}}
+  // CHECK-NOT: masked
+  vector.transfer_write %2, %A[%c0, %c0] : vector<4x9xf32>, memref<?x8xf32>
+
+  // CHECK: return
+  return %1, %2 : vector<4x8xf32>, vector<4x9xf32>
 }
