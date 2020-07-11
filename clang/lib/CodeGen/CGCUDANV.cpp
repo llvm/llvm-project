@@ -242,7 +242,7 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
   EmittedKernels.push_back({CGF.CurFn, CGF.CurFuncDecl});
   if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
                          CudaFeature::CUDA_USES_NEW_LAUNCH) ||
-      CGF.getLangOpts().HIPUseNewLaunchAPI)
+      (CGF.getLangOpts().HIP && CGF.getLangOpts().HIPUseNewLaunchAPI))
     emitDeviceStubBodyNew(CGF, Args);
   else
     emitDeviceStubBodyLegacy(CGF, Args);

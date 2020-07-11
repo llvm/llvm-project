@@ -16,6 +16,6 @@
 // RUN:   | FileCheck -check-prefixes=COMMON,GFX902,NODEFAULTLIBS %s
 
 
-// GFX902-DEFAULTLIBS: error: cannot find device library for gfx902. Provide path to different ROCm installation via --rocm-path, or pass -nogpulib to build without linking default libraries.
+// GFX902-DEFAULTLIBS: error: cannot find ROCm device library for gfx902. Provide its path via --rocm-path or --rocm-device-lib-path, or pass -nogpulib to build without ROCm device library
 
 // NODEFAULTLIBS-NOT: error: cannot find
