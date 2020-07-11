@@ -67,6 +67,13 @@ TEST_F(ConfigCompileTests, Condition) {
   EXPECT_TRUE(compileAndApply());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
 
+  // Excluded regex.
+  Frag = {};
+  Frag.If.PathMatch.emplace_back("b.*");
+  Frag.If.PathExclude.emplace_back(".*r");
+  EXPECT_FALSE(compileAndApply()) << "Included but also excluded";
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+
   // Invalid regex.
   Frag = {};
   Frag.If.PathMatch.emplace_back("**]@theu");

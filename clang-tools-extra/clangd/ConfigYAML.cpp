@@ -50,6 +50,10 @@ private:
       if (auto Values = scalarValues(N))
         F.PathMatch = std::move(*Values);
     });
+    Dict.handle("PathExclude", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.PathExclude = std::move(*Values);
+    });
     Dict.parse(N);
   }
 

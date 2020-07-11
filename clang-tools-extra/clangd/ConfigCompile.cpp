@@ -103,6 +103,22 @@ struct FragmentCompiler {
             });
           });
     }
+
+    auto PathExclude = std::make_unique<std::vector<llvm::Regex>>();
+    for (auto &Entry : F.PathExclude) {
+      if (auto RE = compileRegex(Entry))
+        PathExclude->push_back(std::move(*RE));
+    }
+    if (!PathExclude->empty()) {
+      Out.Conditions.push_back(
+          [PathExclude(std::move(PathExclude))](const Params &P) {
+            if (P.Path.empty())
+              return false;
+            return llvm::none_of(*PathExclude, [&](const llvm::Regex &RE) {
+              return RE.match(P.Path);
+            });
+          });
+    }
   }
 
   void compile(Fragment::CompileFlagsBlock &&F) {
