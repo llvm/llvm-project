@@ -1021,8 +1021,6 @@ Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
 }
 
 bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
-  constexpr unsigned KMPC_KERNEL_PARALLEL_WORK_FN_PTR_ARG_NO = 0;
-
   OMPInformationCache::RuntimeFunctionInfo &KernelPrepareParallelRFI =
       OMPInfoCache.RFIs[OMPRTL___kmpc_kernel_prepare_parallel];
 
