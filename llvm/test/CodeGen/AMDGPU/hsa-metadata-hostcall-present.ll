@@ -15,24 +15,19 @@
 ; CHECK-NEXT:       Size:          1
 ; CHECK-NEXT:       Align:         1
 ; CHECK-NEXT:       ValueKind:     ByValue
-; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
-; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
-; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
-; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
 ; CHECK-NEXT:       ValueKind:       HiddenHostcallBuffer
-; CHECK-NEXT:       ValueType:       I8
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NOT:        ValueKind:     HiddenDefaultQueue
 ; CHECK-NOT:        ValueKind:     HiddenCompletionAction
