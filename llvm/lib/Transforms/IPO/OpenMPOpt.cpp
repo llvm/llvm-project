@@ -52,6 +52,9 @@ STATISTIC(NumOpenMPRuntimeFunctionUsesIdentified,
           "Number of OpenMP runtime function uses identified");
 STATISTIC(NumOpenMPTargetRegionKernels,
           "Number of OpenMP target region entry points (=kernels) identified");
+STATISTIC(
+    NumOpenMPParallelRegionsReplacedInGPUStateMachine,
+    "Number of OpenMP parallel regions replaced with ID in GPU state machines");
 
 #if !defined(NDEBUG)
 static constexpr auto TAG = "[" DEBUG_TYPE "]";
@@ -496,6 +499,8 @@ struct OpenMPOpt {
     if (PrintOpenMPKernels)
       printKernels();
 
+    Changed |= rewriteDeviceCodeStateMachine();
+
     Changed |= runAttributor();
 
     // Recollect uses, in case Attributor deleted any.
@@ -849,6 +854,31 @@ private:
       AddUserArgs(*GTIdArgs[u]);
   }
 
+  /// Kernel (=GPU) optimizations and utility functions
+  ///
+  ///{{
+
+  /// Check if \p F is a kernel, hence entry point for target offloading.
+  bool isKernel(Function &F) { return OMPInfoCache.Kernels.count(&F); }
+
+  /// Cache to remember the unique kernel for a function.
+  DenseMap<Function *, Optional<Kernel>> UniqueKernelMap;
+
+  /// Find the unique kernel that will execute \p F, if any.
+  Kernel getUniqueKernelFor(Function &F);
+
+  /// Find the unique kernel that will execute \p I, if any.
+  Kernel getUniqueKernelFor(Instruction &I) {
+    return getUniqueKernelFor(*I.getFunction());
+  }
+
+  /// Rewrite the device (=GPU) code state machine create in non-SPMD mode in
+  /// the cases we can avoid taking the address of a function.
+  bool rewriteDeviceCodeStateMachine();
+
+  ///
+  ///}}
+
   /// Emit a remark generically
   ///
   /// This template function can be used to generically emit a remark. The
@@ -929,6 +959,140 @@ private:
     }
   }
 };
+
+Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
+  if (!OMPInfoCache.ModuleSlice.count(&F))
+    return nullptr;
+
+  // Use a scope to keep the lifetime of the CachedKernel short.
+  {
+    Optional<Kernel> &CachedKernel = UniqueKernelMap[&F];
+    if (CachedKernel)
+      return *CachedKernel;
+
+    // TODO: We should use an AA to create an (optimistic and callback
+    //       call-aware) call graph. For now we stick to simple patterns that
+    //       are less powerful, basically the worst fixpoint.
+    if (isKernel(F)) {
+      CachedKernel = Kernel(&F);
+      return *CachedKernel;
+    }
+
+    CachedKernel = nullptr;
+    if (!F.hasLocalLinkage())
+      return nullptr;
+  }
+
+  auto GetUniqueKernelForUse = [&](const Use &U) -> Kernel {
+    if (auto *Cmp = dyn_cast<ICmpInst>(U.getUser())) {
+      // Allow use in equality comparisons.
+      if (Cmp->isEquality())
+        return getUniqueKernelFor(*Cmp);
+      return nullptr;
+    }
+    if (auto *CB = dyn_cast<CallBase>(U.getUser())) {
+      // Allow direct calls.
+      if (CB->isCallee(&U))
+        return getUniqueKernelFor(*CB);
+      // Allow the use in __kmpc_kernel_prepare_parallel calls.
+      if (Function *Callee = CB->getCalledFunction())
+        if (Callee->getName() == "__kmpc_kernel_prepare_parallel")
+          return getUniqueKernelFor(*CB);
+      return nullptr;
+    }
+    // Disallow every other use.
+    return nullptr;
+  };
+
+  // TODO: In the future we want to track more than just a unique kernel.
+  SmallPtrSet<Kernel, 2> PotentialKernels;
+  foreachUse(F, [&](const Use &U) {
+    PotentialKernels.insert(GetUniqueKernelForUse(U));
+  });
+
+  Kernel K = nullptr;
+  if (PotentialKernels.size() == 1)
+    K = *PotentialKernels.begin();
+
+  // Cache the result.
+  UniqueKernelMap[&F] = K;
+
+  return K;
+}
+
+bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
+  constexpr unsigned KMPC_KERNEL_PARALLEL_WORK_FN_PTR_ARG_NO = 0;
+
+  OMPInformationCache::RuntimeFunctionInfo &KernelPrepareParallelRFI =
+      OMPInfoCache.RFIs[OMPRTL___kmpc_kernel_prepare_parallel];
+
+  bool Changed = false;
+  if (!KernelPrepareParallelRFI)
+    return Changed;
+
+  for (Function *F : SCC) {
+
+    // Check if the function is uses in a __kmpc_kernel_prepare_parallel call at
+    // all.
+    bool UnknownUse = false;
+    unsigned NumDirectCalls = 0;
+
+    SmallVector<Use *, 2> ToBeReplacedStateMachineUses;
+    foreachUse(*F, [&](Use &U) {
+      if (auto *CB = dyn_cast<CallBase>(U.getUser()))
+        if (CB->isCallee(&U)) {
+          ++NumDirectCalls;
+          return;
+        }
+
+      if (auto *Cmp = dyn_cast<ICmpInst>(U.getUser())) {
+        ToBeReplacedStateMachineUses.push_back(&U);
+        return;
+      }
+      if (CallInst *CI = OpenMPOpt::getCallIfRegularCall(
+              *U.getUser(), &KernelPrepareParallelRFI)) {
+        ToBeReplacedStateMachineUses.push_back(&U);
+        return;
+      }
+      UnknownUse = true;
+    });
+
+    // If this ever hits, we should investigate.
+    if (UnknownUse || NumDirectCalls != 1)
+      continue;
+
+    // TODO: This is not a necessary restriction and should be lifted.
+    if (ToBeReplacedStateMachineUses.size() != 2)
+      continue;
+
+    // Even if we have __kmpc_kernel_prepare_parallel calls, we (for now) give
+    // up if the function is not called from a unique kernel.
+    Kernel K = getUniqueKernelFor(*F);
+    if (!K)
+      continue;
+
+    // We now know F is a parallel body function called only from the kernel K.
+    // We also identified the state machine uses in which we replace the
+    // function pointer by a new global symbol for identification purposes. This
+    // ensures only direct calls to the function are left.
+
+    Module &M = *F->getParent();
+    Type *Int8Ty = Type::getInt8Ty(M.getContext());
+
+    auto *ID = new GlobalVariable(
+        M, Int8Ty, /* isConstant */ true, GlobalValue::PrivateLinkage,
+        UndefValue::get(Int8Ty), F->getName() + ".ID");
+
+    for (Use *U : ToBeReplacedStateMachineUses)
+      U->set(ConstantExpr::getBitCast(ID, U->get()->getType()));
+
+    ++NumOpenMPParallelRegionsReplacedInGPUStateMachine;
+
+    Changed = true;
+  }
+
+  return Changed;
+}
 
 /// Abstract Attribute for tracking ICV values.
 struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
