@@ -272,12 +272,16 @@ def parseOptionsAndInitTestdirs():
         configuration.dsymutil = seven.get_command_output(
             'xcrun -find -toolchain default dsymutil')
 
+
+    # The lldb-dotest script produced by the CMake build passes in a path to a
+    # working FileCheck and yaml2obj binary. So does one specific Xcode
+    # project target. However, when invoking dotest.py directly, a valid
+    # --filecheck and --yaml2obj option needs to be given.
     if args.filecheck:
-        # The lldb-dotest script produced by the CMake build passes in a path
-        # to a working FileCheck binary. So does one specific Xcode project
-        # target. However, when invoking dotest.py directly, a valid --filecheck
-        # option needs to be given.
         configuration.filecheck = os.path.abspath(args.filecheck)
+
+    if args.yaml2obj:
+        configuration.yaml2obj = os.path.abspath(args.yaml2obj)
 
     if not configuration.get_filecheck_path():
         logging.warning('No valid FileCheck executable; some tests may fail...')

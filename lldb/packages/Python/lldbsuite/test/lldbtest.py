@@ -1633,20 +1633,6 @@ class Base(unittest2.TestCase):
 
         return os.environ["CC"]
 
-    def findYaml2obj(self):
-        """
-        Get the path to the yaml2obj executable, which can be used to create
-        test object files from easy to write yaml instructions.
-
-        Throws an Exception if the executable cannot be found.
-        """
-        # Tries to find yaml2obj at the same folder as clang
-        clang_dir = os.path.dirname(self.findBuiltClang())
-        path = distutils.spawn.find_executable("yaml2obj", clang_dir)
-        if path is not None:
-            return path
-        raise Exception("yaml2obj executable not found")
-
 
     def yaml2obj(self, yaml_path, obj_path):
         """
@@ -1654,8 +1640,10 @@ class Base(unittest2.TestCase):
 
         Throws subprocess.CalledProcessError if the object could not be created.
         """
-        yaml2obj = self.findYaml2obj()
-        command = [yaml2obj, "-o=%s" % obj_path, yaml_path]
+        yaml2obj_bin = configuration.get_yaml2obj_path()
+        if not yaml2obj_bin:
+            self.assertTrue(False, "No valid FileCheck executable specified")
+        command = [yaml2obj_bin, "-o=%s" % obj_path, yaml_path]
         system([command])
 
     def getBuildFlags(

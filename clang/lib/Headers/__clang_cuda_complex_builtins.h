@@ -23,20 +23,16 @@
 #define __DEVICE__ __device__ inline
 #endif
 
-// Make the algorithms available for C and C++ by selecting the right functions.
-#if defined(__cplusplus)
-// TODO: In OpenMP mode we cannot overload isinf/isnan/isfinite the way we
-// overload all other math functions because old math system headers and not
-// always conformant and return an integer instead of a boolean. Until that has
-// been addressed we need to work around it. For now, we substituate with the
-// calls we would have used to implement those three functions. Note that we
-// could use the C alternatives as well.
-#define _ISNANd ::__isnan
-#define _ISNANf ::__isnanf
-#define _ISINFd ::__isinf
-#define _ISINFf ::__isinff
-#define _ISFINITEd ::__isfinited
-#define _ISFINITEf ::__finitef
+// To make the algorithms available for C and C++ in CUDA and OpenMP we select
+// different but equivalent function versions. TODO: For OpenMP we currently
+// select the native builtins as the overload support for templates is lacking.
+#if !defined(_OPENMP)
+#define _ISNANd std::isnan
+#define _ISNANf std::isnan
+#define _ISINFd std::isinf
+#define _ISINFf std::isinf
+#define _ISFINITEd std::isfinite
+#define _ISFINITEf std::isfinite
 #define _COPYSIGNd std::copysign
 #define _COPYSIGNf std::copysign
 #define _SCALBNd std::scalbn
@@ -46,20 +42,20 @@
 #define _LOGBd std::logb
 #define _LOGBf std::logb
 #else
-#define _ISNANd isnan
-#define _ISNANf isnanf
-#define _ISINFd isinf
-#define _ISINFf isinff
-#define _ISFINITEd isfinite
-#define _ISFINITEf isfinitef
-#define _COPYSIGNd copysign
-#define _COPYSIGNf copysignf
-#define _SCALBNd scalbn
-#define _SCALBNf scalbnf
-#define _ABSd abs
-#define _ABSf absf
-#define _LOGBd logb
-#define _LOGBf logbf
+#define _ISNANd __nv_isnand
+#define _ISNANf __nv_isnanf
+#define _ISINFd __nv_isinfd
+#define _ISINFf __nv_isinff
+#define _ISFINITEd __nv_isfinited
+#define _ISFINITEf __nv_finitef
+#define _COPYSIGNd __nv_copysign
+#define _COPYSIGNf __nv_copysignf
+#define _SCALBNd __nv_scalbn
+#define _SCALBNf __nv_scalbnf
+#define _ABSd __nv_fabs
+#define _ABSf __nv_fabsf
+#define _LOGBd __nv_logb
+#define _LOGBf __nv_logbf
 #endif
 
 #if defined(__cplusplus)
