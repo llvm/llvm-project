@@ -232,8 +232,10 @@ void GSIHashStreamBuilder::finalizeBuckets(
   // The algorithm used here corresponds to the function
   // caseInsensitiveComparePchPchCchCch in the reference implementation.
   parallelForEachN(0, IPHR_HASH, [&](size_t I) {
-    auto B = &HashRecords[BucketStarts[I]];
-    auto E = &HashRecords[BucketCursors[I]];
+    auto B = HashRecords.begin() + BucketStarts[I];
+    auto E = HashRecords.begin() + BucketCursors[I];
+    if (B == E)
+      return;
     auto BucketCmp = [Records](const PSHashRecord &LHash,
                                const PSHashRecord &RHash) {
       const BulkPublic &L = Records[uint32_t(LHash.Off)];
