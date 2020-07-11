@@ -52,6 +52,15 @@ add_entrypoint_object(
     memchr.h
 )
 
+add_entrypoint_object(
+  strchr
+  SRCS
+    strchr.cpp
+  HDRS
+    strchr.h
+  DEPENDS
+    .strlen
+)
 
 # Helper to define a function with multiple implementations
 # - Computes flags to satisfy required/rejected features and arch,
