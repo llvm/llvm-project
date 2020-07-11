@@ -46,4 +46,22 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertIn('symbolFilePath', program_module)
         self.assertEqual(symbol_path, program_module['symbolFilePath'])
         self.assertIn('addressRange', program_module)
-        
+
+    def test_compile_units(self):
+        program= self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        main_source_path = self.getSourcePath(source)
+        breakpoint1_line = line_number(source, '// breakpoint 1')
+        lines = [breakpoint1_line]
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.continue_to_breakpoints(breakpoint_ids)
+        moduleId = self.vscode.get_active_modules()['a.out']['id']
+        response = self.vscode.request_getCompileUnits(moduleId)
+        print(response['body'])
+        self.assertTrue(response['body'])
+        self.assertTrue(len(response['body']['compileUnits']) == 1,
+                        'Only one source file should exist')
+        self.assertTrue(response['body']['compileUnits'][0]['compileUnitPath'] == main_source_path, 
+                        'Real path to main.cpp matches')
+ 
