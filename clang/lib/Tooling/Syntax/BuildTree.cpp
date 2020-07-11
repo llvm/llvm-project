@@ -750,6 +750,7 @@ public:
         return new (allocator()) syntax::FloatUserDefinedLiteralExpression;
       }
     }
+    llvm_unreachable("Unknown literal operator kind.");
   }
 
   bool WalkUpFromUserDefinedLiteral(UserDefinedLiteral *S) {
