@@ -78,7 +78,6 @@ int bar(int n){
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 %{{.+}}, i16 0, i16 0)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
-// CHECK-NOT: call i32 @__kmpc_nvptx_simd_reduce_nowait(
 // CHECK-NOT: call void @__kmpc_nvptx_end_reduce_nowait(
 // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
