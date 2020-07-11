@@ -7,10 +7,12 @@
 
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a57 \
 // RUN:     -ffp-exception-behavior=strict \
+// RUN:     -fexperimental-strict-floating-point \
 // RUN:     -ffreestanding -disable-O0-optnone -emit-llvm %s -o - | \
 // RUN:     opt -S -mem2reg | FileCheck -check-prefixes=COMMON,COMMONIR,CONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-linux-gnueabihf -target-feature +neon \
 // RUN:     -ffp-exception-behavior=strict \
+// RUN:     -fexperimental-strict-floating-point \
 // RUN:     -ffreestanding -disable-O0-optnone -emit-llvm %s -o - | \
 // RUN:     opt -S -mem2reg | FileCheck -check-prefixes=COMMON,COMMONIR,CONSTRAINED %s
 
@@ -23,10 +25,12 @@
 
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a57 \
 // RUN:     -ffp-exception-behavior=strict \
+// RUN:     -fexperimental-strict-floating-point \
 // RUN:     -ffreestanding -disable-O0-optnone -emit-llvm %s -o - | \
 // RUN:     opt -S -mem2reg | llc -o=- - | FileCheck -check-prefixes=COMMON,CHECK-ASM32 %s
 // RUN: %clang_cc1 -triple arm64-linux-gnueabihf -target-feature +neon \
 // RUN:     -ffp-exception-behavior=strict \
+// RUN:     -fexperimental-strict-floating-point \
 // RUN:     -ffreestanding -disable-O0-optnone -emit-llvm %s -o - | \
 // RUN:     opt -S -mem2reg | llc -o=- - | FileCheck -check-prefixes=COMMON,CHECK-ASM64 %s
 
