@@ -727,22 +727,14 @@
 ; ASM: .asciz	"t.cpp"                 # StringData
 ; ASM: .byte	242
 ; ASM: .byte	241
-; ASM: # StringId (0x1022)
-; ASM: .short	0xa                     # Record length
-; ASM: .short	0x1605                  # Record kind: LF_STRING_ID
-; ASM: .long	0x0                     # Id
-; ASM: .byte    0                       # StringData
-; ASM: .byte	243
-; ASM: .byte	242
-; ASM: .byte	241
-; ASM: # BuildInfo (0x1023)
+; ASM: # BuildInfo (0x1022)
 ; ASM: .short	0x1a                    # Record length
 ; ASM: .short	0x1603                  # Record kind: LF_BUILDINFO
 ; ASM: .short	0x5                     # NumArgs
 ; ASM: .long	0x1020                  # Argument: D:\src\llvm\build
 ; ASM: .long	0x0                     # Argument
 ; ASM: .long	0x1021                  # Argument: t.cpp
-; ASM: .long	0x1022                  # Argument
+; ASM: .long	0x0                     # Argument
 ; ASM: .long	0x0                     # Argument
 ; ASM: .byte	242
 ; ASM: .byte	241
