@@ -58,8 +58,6 @@ add_entrypoint_object(
     strchr.cpp
   HDRS
     strchr.h
-  DEPENDS
-    .strlen
 )
 
 # Helper to define a function with multiple implementations
