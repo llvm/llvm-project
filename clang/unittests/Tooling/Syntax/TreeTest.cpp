@@ -1190,31 +1190,44 @@ TEST_P(SyntaxTreeTest, UserDefinedLiteral) {
   }
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
+typedef decltype(sizeof(void *)) size_t;
+
 unsigned operator "" _i(unsigned long long);
 unsigned operator "" _f(long double);
 unsigned operator "" _c(char);
-
-unsigned operator "" _r(const char*); // raw-literal operator
-
+unsigned operator "" _s(const char*, size_t);
+unsigned operator "" _r(const char*);
 template <char...>
-unsigned operator "" _t();            // numeric literal operator template
+unsigned operator "" _t();
 
 void test() {
-  12_i;  // call: operator "" _i(12uLL)      | kind: integer
-  1.2_f; // call: operator "" _f(1.2L)       | kind: float
-  '2'_c; // call: operator "" _c('2')        | kind: char
+  12_i;   // call: operator "" _i(12uLL)      | kind: integer
+  1.2_f;  // call: operator "" _f(1.2L)       | kind: float
+  '2'_c;  // call: operator "" _c('2')        | kind: char
+  "12"_s; // call: operator "" _s("12")       | kind: string
 
-  // TODO: Generate `FloatUserDefinedLiteralExpression` and
-  // `IntegerUserDefinedLiteralExpression` instead of
-  // `UnknownUserDefinedLiteralExpression`. See `getUserDefinedLiteralKind`
-  12_r;  // call: operator "" _r("12")       | kind: integer
-  1.2_r; // call: operator "" _i("1.2")      | kind: float
-  12_t;  // call: operator<'1', '2'> "" _x() | kind: integer
-  1.2_t; // call: operator<'1', '2'> "" _x() | kind: float
+  12_r;   // call: operator "" _r("12")       | kind: integer
+  1.2_r;  // call: operator "" _i("1.2")      | kind: float
+  12_t;   // call: operator<'1', '2'> "" _x() | kind: integer
+  1.2_t;  // call: operator<'1', '2'> "" _x() | kind: float
 }
     )cpp",
       R"txt(
 *: TranslationUnit
+|-SimpleDeclaration
+| |-typedef
+| |-decltype
+| |-(
+| |-UnknownExpression
+| | |-sizeof
+| | |-(
+| | |-void
+| | |-*
+| | `-)
+| |-)
+| |-SimpleDeclarator
+| | `-size_t
+| `-;
 |-SimpleDeclaration
 | |-unsigned
 | |-SimpleDeclarator
@@ -1252,6 +1265,24 @@ void test() {
 | |   |-(
 | |   |-SimpleDeclaration
 | |   | `-char
+| |   `-)
+| `-;
+|-SimpleDeclaration
+| |-unsigned
+| |-SimpleDeclarator
+| | |-operator
+| | |-""
+| | |-_s
+| | `-ParametersAndQualifiers
+| |   |-(
+| |   |-SimpleDeclaration
+| |   | |-const
+| |   | |-char
+| |   | `-SimpleDeclarator
+| |   |   `-*
+| |   |-,
+| |   |-SimpleDeclaration
+| |   | `-size_t
 | |   `-)
 | `-;
 |-SimpleDeclaration
@@ -1308,83 +1339,24 @@ void test() {
     | | `-'2'_c
     | `-;
     |-ExpressionStatement
-    | |-UnknownUserDefinedLiteralExpression
+    | |-StringUserDefinedLiteralExpression
+    | | `-"12"_s
+    | `-;
+    |-ExpressionStatement
+    | |-IntegerUserDefinedLiteralExpression
     | | `-12_r
     | `-;
     |-ExpressionStatement
-    | |-UnknownUserDefinedLiteralExpression
+    | |-FloatUserDefinedLiteralExpression
     | | `-1.2_r
     | `-;
     |-ExpressionStatement
-    | |-UnknownUserDefinedLiteralExpression
+    | |-IntegerUserDefinedLiteralExpression
     | | `-12_t
     | `-;
     |-ExpressionStatement
-    | |-UnknownUserDefinedLiteralExpression
+    | |-FloatUserDefinedLiteralExpression
     | | `-1.2_t
-    | `-;
-    `-}
-)txt"));
-}
-
-TEST_P(SyntaxTreeTest, UserDefinedLiteralString) {
-  if (!GetParam().isCXX11OrLater()) {
-    return;
-  }
-  EXPECT_TRUE(treeDumpEqual(
-      R"cpp(
-typedef decltype(sizeof(void *)) size_t;
-unsigned operator "" _s(const char*, size_t);
-void test() {
-  "12"_s;// call: operator "" _s("12")       | kind: string
-}
-    )cpp",
-      R"txt(
-*: TranslationUnit
-|-SimpleDeclaration
-| |-typedef
-| |-decltype
-| |-(
-| |-UnknownExpression
-| | |-sizeof
-| | |-(
-| | |-void
-| | |-*
-| | `-)
-| |-)
-| |-SimpleDeclarator
-| | `-size_t
-| `-;
-|-SimpleDeclaration
-| |-unsigned
-| |-SimpleDeclarator
-| | |-operator
-| | |-""
-| | |-_s
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-SimpleDeclaration
-| |   | |-const
-| |   | |-char
-| |   | `-SimpleDeclarator
-| |   |   `-*
-| |   |-,
-| |   |-SimpleDeclaration
-| |   | `-size_t
-| |   `-)
-| `-;
-`-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
-  `-CompoundStatement
-    |-{
-    |-ExpressionStatement
-    | |-StringUserDefinedLiteralExpression
-    | | `-"12"_s
     | `-;
     `-}
 )txt"));

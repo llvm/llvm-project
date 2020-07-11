@@ -32,8 +32,6 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "BoolLiteralExpression";
   case NodeKind::CxxNullPtrExpression:
     return OS << "CxxNullPtrExpression";
-  case NodeKind::UnknownUserDefinedLiteralExpression:
-    return OS << "UnknownUserDefinedLiteralExpression";
   case NodeKind::IntegerUserDefinedLiteralExpression:
     return OS << "IntegerUserDefinedLiteralExpression";
   case NodeKind::FloatUserDefinedLiteralExpression:
