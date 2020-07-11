@@ -9,9 +9,9 @@
 ; - M: Between two input lines included by the filter.
 ; - E: At the end of the input.
 ;
-; They are all present at -dump-input-context=6.  One disappears each time
-; -dump-input-context is incremented beyond that because there are no lines
-; left to elide.
+; They are all present at -dump-input-context=4.  One becomes useless each time
+; -dump-input-context is incremented beyond that because then that ellipsis
+; becomes equal to or larger than the input lines it elides.
 ;--------------------------------------------------
 
 ; RUN: echo foo8       >  %t.in
@@ -47,6 +47,7 @@
 ; RUN: echo foo7       >> %t.in
 ; RUN: echo foo8       >> %t.in
 ; RUN: echo foo9       >> %t.in
+; RUN: echo foo0       >> %t.in
 
 ; RUN: echo 'CHECK-LABEL: lab1'  >  %t.chk
 ; RUN: echo ' CHECK-NEXT: hello' >> %t.chk
@@ -57,9 +58,9 @@
 ; CS-NEXT:            .
 ; CS-NEXT:            .
 ; CS-NEXT:            .
-; C8-NEXT:            1: foo8
-; C7-NEXT:            2: foo7
-; C6-NEXT:            3: foo6
+; C5-NEXT:            1: foo8
+; C5-NEXT:            2: foo7
+; C5-NEXT:            3: foo6
 ; C5-NEXT:            4: foo5
 ; C4-NEXT:            5: foo4
 ; C3-NEXT:            6: foo3
@@ -75,11 +76,11 @@
 ; C4-NEXT:           13: foo4
 ; C5-NEXT:           14: foo5
 ; C6-NEXT:           15: foo6
-; C7-NEXT:           16: foo7
+; C6-NEXT:           16: foo7
 ; CM-NEXT:            .
 ; CM-NEXT:            .
 ; CM-NEXT:            .
-; C7-NEXT:           17: foo7
+; C6-NEXT:           17: foo7
 ; C6-NEXT:           18: foo6
 ; C5-NEXT:           19: foo5
 ; C4-NEXT:           20: foo4
@@ -96,12 +97,64 @@
 ; C5-NEXT:           29: foo5
 ; C6-NEXT:           30: foo6
 ; C7-NEXT:           31: foo7
-; C8-NEXT:           32: foo8
-; C9-NEXT:           33: foo9
+; C7-NEXT:           32: foo8
+; C7-NEXT:           33: foo9
+; C7-NEXT:           34: foo0
 ; CE-NEXT:            .
 ; CE-NEXT:            .
 ; CE-NEXT:            .
 ; C0-NEXT: >>>>>>
+
+; Now build an alternate set of checks where input lines that might be elided by
+; ellipses have annotations.
+
+; RUN: cp %t.in %t.wide.in
+; RUN: echo 'CHECK-LABEL: lab1'    >  %t.wide.chk
+; RUN: echo '      CHECK: hello'   >> %t.wide.chk
+; RUN: echo '      CHECK: goodbye' >> %t.wide.chk
+; RUN: echo 'CHECK-LABEL: lab2'    >> %t.wide.chk
+; RUN: echo ' CHECK-NEXT: world'   >> %t.wide.chk
+
+;      W5: <<<<<<
+;      W5:            9: lab1 hello
+; W5-NEXT: label:1'0     ^~~~
+; W5-NEXT: label:1'1     ^~~~
+; W5-NEXT: check:2            ^~~~~
+; W5-NEXT:           10: foo1
+; W5-NEXT: check:3       X~~~ error: no match found
+; W5-NEXT:           11: foo2
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT:           12: foo3
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT:           13: foo4
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT:           14: foo5
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT:           15: foo6
+; W5-NEXT: check:3       ~~~~
+; W6-NEXT:           16: foo7
+; W6-NEXT: check:3       ~~~~
+; WM-NEXT:            .
+; WM-NEXT:            .
+; WM-NEXT:            .
+; W6-NEXT:           17: foo7
+; W6-NEXT: check:3       ~~~~
+; W6-NEXT:           18: foo6
+; W6-NEXT: check:3       ~~~~
+; W5-NEXT:           19: foo5
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT:           20: foo4
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT:           21: foo3
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT:           22: foo2
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT:           23: foo1
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT:           24: lab2 world
+; W5-NEXT: label:4       ^~~~
+; W5-NEXT: check:3       ~~~~
+; W5-NEXT: next:5             !~~~~ error: match on wrong line
 
 ;--------------------------------------------------
 ; Check -dump-input-context=<bad value>.
@@ -135,40 +188,35 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-context option: '[[VAL
 ; RUN:               -dump-input-context=1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,CS,CM,CE
 
-; 6 is the boundary case at which all ellipses are present in our test.
+; 4 is the boundary case at which all ellipses are present in our test.
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-context=4 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,CS,CM,CE
+
+; 5 is the boundary case at which the start ellipsis is useless.
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
+; RUN:               -dump-input-context=5 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,CM,CE
+
+; 6 is the boundary case at which the middle ellipsis is useless.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
 ; RUN:               -dump-input-context=6 \
-; RUN: | FileCheck %s -match-full-lines \
-; RUN:                -check-prefixes=C0,C1,C2,C3,C4,C5,C6,CS,CM,CE
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,C6,CE
 
-; 7 is the boundary case at which the middle ellipsis disappears.
+; 7 is the boundary case at which the end ellipsis is useless.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
 ; RUN:               -dump-input-context=7 \
-; RUN: | FileCheck %s -match-full-lines \
-; RUN:                -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7,CS,CE
-
-; 8 is the boundary case at which the start ellipsis disappears.
-; RUN: %ProtectFileCheckOutput \
-; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=8 \
-; RUN: | FileCheck %s -match-full-lines \
-; RUN:                -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7,C8,CE
-
-; 9 is the boundary case at which the end ellipsis disappears.
-; RUN: %ProtectFileCheckOutput \
-; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=9 \
-; RUN: | FileCheck %s -match-full-lines \
-; RUN:                -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7,C8,C9
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7
 
 ; Make sure all is fine when -dump-input-context is far larger than the input.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
 ; RUN:               -dump-input-context=200 \
-; RUN: | FileCheck %s -match-full-lines \
-; RUN:                -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7,C8,C9
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7
 
 ;--------------------------------------------------
 ; Check that -dump-input-context default is 5.
@@ -176,8 +224,7 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-context option: '[[VAL
 
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN: | FileCheck %s -match-full-lines \
-; RUN:                -check-prefixes=C0,C1,C2,C3,C4,C5,CS,CM,CE
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,CM,CE
 
 ;--------------------------------------------------
 ; Check multiple -dump-input-context options.
@@ -225,3 +272,22 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-context option: '[[VAL
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
 ; RUN:               -dump-input-context=0 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,CS,CM,CE
+
+;--------------------------------------------------
+; Check how annotations on input lines that might be elided by ellipses affect
+; whether they are actually elided.
+;--------------------------------------------------
+
+; At -dump-input-context=5, the ellipsis is useful but only when annotations on
+; elided input lines are considered.
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=fail -vv %t.wide.chk < %t.wide.in 2>&1 \
+; RUN:               -dump-input-context=5 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=W5,WM
+
+; At -dump-input-context=6, the ellipsis is not useful even when annotations on
+; elided input lines are considered.
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=fail -vv %t.wide.chk < %t.wide.in 2>&1 \
+; RUN:               -dump-input-context=6 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=W5,W6
