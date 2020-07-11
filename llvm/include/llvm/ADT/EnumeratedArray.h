@@ -38,6 +38,7 @@ public:
         static_cast<const EnumeratedArray<ValueType, Enumeration, LargestEnum,
                                           IndexType, Size> &>(*this)[Index]);
   }
+  inline IndexType size() { return Size; }
 
 private:
   ValueType Underlying[Size];
