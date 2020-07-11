@@ -1,6 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -enable-ppc-quad-precision -ppc-asm-full-reg-names \
-; RUN:   < %s | FileCheck %s
+; RUN:   -mcpu=future -ppc-asm-full-reg-names < %s | FileCheck %s
 
  define float @FloatConstantPool() {
 ; CHECK-LABEL: FloatConstantPool:
