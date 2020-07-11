@@ -1043,12 +1043,12 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
           return;
         }
 
-      if (auto *Cmp = dyn_cast<ICmpInst>(U.getUser())) {
+      if (isa<ICmpInst>(U.getUser())) {
         ToBeReplacedStateMachineUses.push_back(&U);
         return;
       }
-      if (CallInst *CI = OpenMPOpt::getCallIfRegularCall(
-              *U.getUser(), &KernelPrepareParallelRFI)) {
+      if (OpenMPOpt::getCallIfRegularCall(*U.getUser(),
+                                          &KernelPrepareParallelRFI)) {
         ToBeReplacedStateMachineUses.push_back(&U);
         return;
       }
