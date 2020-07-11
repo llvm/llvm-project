@@ -18,6 +18,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Function.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -602,6 +603,63 @@ static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
   return success();
 }
 
+/// Fold the result of an ExtractOp in place when it comes from a TransposeOp.
+static LogicalResult foldExtractOpFromTranspose(ExtractOp extractOp) {
+  auto transposeOp = extractOp.vector().getDefiningOp<TransposeOp>();
+  if (!transposeOp)
+    return failure();
+
+  auto permutation = extractVector<unsigned>(transposeOp.transp());
+  auto extractedPos = extractVector<int64_t>(extractOp.position());
+
+  // If transposition permutation is larger than the ExtractOp, all minor
+  // dimensions must be an identity for folding to occur. If not, individual
+  // elements within the extracted value are transposed and this is not just a
+  // simple folding.
+  unsigned minorRank = permutation.size() - extractedPos.size();
+  MLIRContext *ctx = extractOp.getContext();
+  AffineMap permutationMap = AffineMap::getPermutationMap(permutation, ctx);
+  AffineMap minorMap = permutationMap.getMinorSubMap(minorRank);
+  if (minorMap && !AffineMap::isMinorIdentity(minorMap))
+    return failure();
+
+  //   %1 = transpose %0[x, y, z] : vector<axbxcxf32>
+  //   %2 = extract %1[u, v] : vector<..xf32>
+  // may turn into:
+  //   %2 = extract %0[w, x] : vector<..xf32>
+  // iff z == 2 and [w, x] = [x, y]^-1 o [u, v] here o denotes composition and
+  // -1 denotes the inverse.
+  permutationMap = permutationMap.getMajorSubMap(extractedPos.size());
+  // The major submap has fewer results but the same number of dims. To compose
+  // cleanly, we need to drop dims to form a "square matrix". This is possible
+  // because:
+  //   (a) this is a permutation map and
+  //   (b) the minor map has already been checked to be identity.
+  // Therefore, the major map cannot contain dims of position greater or equal
+  // than the number of results.
+  assert(llvm::all_of(permutationMap.getResults(),
+                      [&](AffineExpr e) {
+                        auto dim = e.dyn_cast<AffineDimExpr>();
+                        return dim && dim.getPosition() <
+                                          permutationMap.getNumResults();
+                      }) &&
+         "Unexpected map results depend on higher rank positions");
+  // Project on the first domain dimensions to allow composition.
+  permutationMap = AffineMap::get(permutationMap.getNumResults(), 0,
+                                  permutationMap.getResults(), ctx);
+
+  extractOp.setOperand(transposeOp.vector());
+  // Compose the inverse permutation map with the extractedPos.
+  auto newExtractedPos =
+      inversePermutation(permutationMap).compose(extractedPos);
+  // OpBuilder is only used as a helper to build an I64ArrayAttr.
+  OpBuilder b(extractOp.getContext());
+  extractOp.setAttr(ExtractOp::getPositionAttrName(),
+                    b.getI64ArrayAttr(newExtractedPos));
+
+  return success();
+}
+
 /// Fold an ExtractOp that is fed by a chain of InsertOps and TransposeOps. The
 /// result is always the input to some InsertOp.
 static Value foldExtractOpFromInsertChainAndTranspose(ExtractOp extractOp) {
@@ -688,6 +746,8 @@ static Value foldExtractOpFromInsertChainAndTranspose(ExtractOp extractOp) {
 
 OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
   if (succeeded(foldExtractOpFromExtractChain(*this)))
+    return getResult();
+  if (succeeded(foldExtractOpFromTranspose(*this)))
     return getResult();
   if (auto val = foldExtractOpFromInsertChainAndTranspose(*this))
     return val;
