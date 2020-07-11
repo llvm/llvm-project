@@ -757,7 +757,7 @@ private:
             doStmtEval.parentConstruct->constructExit->block;
       }
     } else {
-      const auto *concurrentInfo =
+      [[maybe_unused]] const auto *concurrentInfo =
           std::get_if<Fortran::parser::LoopControl::Concurrent>(
               &loopControl->u);
       assert(concurrentInfo && "DO loop variant is invalid");
@@ -1694,7 +1694,7 @@ private:
           unsigned offset = 0;
           // Assume that the members of the COMMON block will appear in an order
           // that is sorted by offset.
-          std::int64_t lastByteOff = -1;
+          [[maybe_unused]] std::int64_t lastByteOff = -1;
           for (const auto &obj : details->objects()) {
             assert(lastByteOff < static_cast<std::int64_t>(obj->offset()));
             lastByteOff = static_cast<std::int64_t>(obj->offset());
@@ -1791,7 +1791,7 @@ private:
     // never having a missing column size.
     mlir::Value addr = lookupSymbol(sym);
     mlir::Value len{};
-    bool mustBeDummy = false;
+    [[maybe_unused]] bool mustBeDummy = false;
 
     if (sia.isChar) {
       // if element type is a CHARACTER, determine the LEN value
