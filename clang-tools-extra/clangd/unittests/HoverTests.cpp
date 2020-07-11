@@ -801,6 +801,21 @@ class Foo {})cpp";
          HI.LocalScope = "Foo::";
          HI.Type = "int";
          HI.AccessSpecifier = "public";
+       }},
+       {// No crash on InitListExpr.
+        R"cpp(
+          struct Foo {
+            int a[10];
+          };
+          constexpr Foo k2 = {
+            ^[[{]]1} // FIXME: why the hover range is 1 character?
+          };
+         )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "expression";
+         HI.Kind = index::SymbolKind::Unknown;
+         HI.Type = "int [10]";
+         HI.Value = "{1}";
        }}};
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
