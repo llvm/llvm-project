@@ -612,7 +612,7 @@ int baz(int f, double &a) {
 // CHECK: call void @__kmpc_end_serialized_parallel(%struct.ident_t* [[UNKNOWN]], i32 [[GTID]])
 // CHECK: br label
 
-// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* @{{.+}} to i8*), i16 1)
+// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* @{{.+}} to i8*))
 // CHECK: call void @__kmpc_begin_sharing_variables(i8*** [[SHARED_PTR:%.+]], i{{64|32}} 2)
 // CHECK: [[SHARED:%.+]] = load i8**, i8*** [[SHARED_PTR]],
 // CHECK: [[REF:%.+]] = getelementptr inbounds i8*, i8** [[SHARED]], i{{64|32}} 0

@@ -88,7 +88,7 @@ int bar(int n){
   // CHECK: [[I_ADDR:%.+]] = getelementptr inbounds [[GLOB_TY]], [[GLOB_TY]]* [[RD]], i32 0, i32 0
   //
   // CHECK: call void @__kmpc_for_static_init_4(
-  // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* @{{.+}} to i8*), i16 1)
+  // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* @{{.+}} to i8*))
   // CHECK: call void @__kmpc_begin_sharing_variables(i8*** [[SHARED_VARS_PTR:%.+]], i{{64|32}} 1)
   // CHECK: [[SHARED_VARS_BUF:%.+]] = load i8**, i8*** [[SHARED_VARS_PTR]],
   // CHECK: [[VARS_BUF:%.+]] = getelementptr inbounds i8*, i8** [[SHARED_VARS_BUF]], i{{64|32}} 0
