@@ -1,5 +1,6 @@
 // RUN: llvm-tblgen -gen-directive-decl -I %p/../../include %s | FileCheck -match-full-lines %s
 // RUN: llvm-tblgen -gen-directive-impl -I %p/../../include %s | FileCheck -match-full-lines %s -check-prefix=IMPL
+// RUN: llvm-tblgen -gen-directive-gen -I %p/../../include %s | FileCheck -match-full-lines %s -check-prefix=GEN
 
 include "llvm/Frontend/Directive/DirectiveBase.td"
 
@@ -126,3 +127,57 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }
+// IMPL-EMPTY:
+
+
+
+// GEN:       #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
+// GEN-NEXT:  #undef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
+// GEN-EMPTY:
+// GEN-NEXT:  namespace llvm {
+// GEN-NEXT:  namespace tdl {
+// GEN-EMPTY:
+// GEN-NEXT:    // Sets for dira
+// GEN-EMPTY:
+// GEN-NEXT:    static  allowedClauses_TDLD_dira {
+// GEN-NEXT:      llvm::tdl::Clause::TDLC_clausea,
+// GEN-NEXT:      llvm::tdl::Clause::TDLC_clauseb,
+// GEN-NEXT:    };
+// GEN-EMPTY:
+// GEN-NEXT:    static  allowedOnceClauses_TDLD_dira {
+// GEN-NEXT:    };
+// GEN-EMPTY:
+// GEN-NEXT:    static  allowedExclusiveClauses_TDLD_dira {
+// GEN-NEXT:    };
+// GEN-EMPTY:
+// GEN-NEXT:    static  requiredClauses_TDLD_dira {
+// GEN-NEXT:    };
+// GEN-NEXT:  } // namespace tdl
+// GEN-NEXT:  } // namespace llvm
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_DIRECTIVE_CLAUSE_SETS
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+// GEN-NEXT:  #undef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+// GEN-EMPTY:
+// GEN-NEXT:  struct TdlDirectiveClauses {
+// GEN-NEXT:    const  allowed;
+// GEN-NEXT:    const  allowedOnce;
+// GEN-NEXT:    const  allowedExclusive;
+// GEN-NEXT:    const  requiredOneOf;
+// GEN-NEXT:  };
+// GEN-EMPTY:
+// GEN-NEXT:  std::unordered_map<llvm::tdl::Directive, TdlDirectiveClauses>
+// GEN-NEXT:      directiveClausesTable = {
+// GEN-NEXT:    {llvm::tdl::Directive::TDLD_dira,
+// GEN-NEXT:      {
+// GEN-NEXT:        llvm::tdl::allowedClauses_TDLD_dira,
+// GEN-NEXT:        llvm::tdl::allowedOnceClauses_TDLD_dira,
+// GEN-NEXT:        llvm::tdl::allowedExclusiveClauses_TDLD_dira,
+// GEN-NEXT:        llvm::tdl::requiredClauses_TDLD_dira,
+// GEN-NEXT:      }
+// GEN-NEXT:    },
+// GEN-NEXT:  };
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+
