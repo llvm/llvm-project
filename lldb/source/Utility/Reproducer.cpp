@@ -272,39 +272,14 @@ DataRecorder::Create(const FileSpec &filename) {
   return std::move(recorder);
 }
 
-DataRecorder *CommandProvider::GetNewDataRecorder() {
-  std::size_t i = m_data_recorders.size() + 1;
-  std::string filename = (llvm::Twine(Info::name) + llvm::Twine("-") +
-                          llvm::Twine(i) + llvm::Twine(".yaml"))
-                             .str();
-  auto recorder_or_error =
-      DataRecorder::Create(GetRoot().CopyByAppendingPathComponent(filename));
-  if (!recorder_or_error) {
-    llvm::consumeError(recorder_or_error.takeError());
-    return nullptr;
-  }
-
-  m_data_recorders.push_back(std::move(*recorder_or_error));
-  return m_data_recorders.back().get();
-}
-
-void CommandProvider::Keep() {
-  std::vector<std::string> files;
-  for (auto &recorder : m_data_recorders) {
-    recorder->Stop();
-    files.push_back(recorder->GetFilename().GetPath());
-  }
-
-  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
+llvm::Expected<std::unique_ptr<YamlRecorder>>
+YamlRecorder::Create(const FileSpec &filename) {
   std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  auto recorder = std::make_unique<YamlRecorder>(std::move(filename), ec);
   if (ec)
-    return;
-  yaml::Output yout(os);
-  yout << files;
+    return llvm::errorCodeToError(ec);
+  return std::move(recorder);
 }
-
-void CommandProvider::Discard() { m_data_recorders.clear(); }
 
 void VersionProvider::Keep() {
   FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
