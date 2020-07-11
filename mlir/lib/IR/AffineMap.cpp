@@ -104,11 +104,9 @@ AffineMap AffineMap::getMinorIdentityMap(unsigned dims, unsigned results,
   return AffineMap::get(dims, 0, id.getResults().take_back(results), context);
 }
 
-bool AffineMap::isMinorIdentity(AffineMap map) {
-  if (!map)
-    return false;
-  return map == getMinorIdentityMap(map.getNumDims(), map.getNumResults(),
-                                    map.getContext());
+bool AffineMap::isMinorIdentity() const {
+  return *this ==
+         getMinorIdentityMap(getNumDims(), getNumResults(), getContext());
 }
 
 /// Returns an AffineMap representing a permutation.

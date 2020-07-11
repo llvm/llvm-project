@@ -620,7 +620,7 @@ static LogicalResult foldExtractOpFromTranspose(ExtractOp extractOp) {
   MLIRContext *ctx = extractOp.getContext();
   AffineMap permutationMap = AffineMap::getPermutationMap(permutation, ctx);
   AffineMap minorMap = permutationMap.getMinorSubMap(minorRank);
-  if (minorMap && !AffineMap::isMinorIdentity(minorMap))
+  if (minorMap && !minorMap.isMinorIdentity())
     return failure();
 
   //   %1 = transpose %0[x, y, z] : vector<axbxcxf32>
@@ -730,7 +730,7 @@ static Value foldExtractOpFromInsertChainAndTranspose(ExtractOp extractOp) {
         unsigned minorRank =
             permutationMap.getNumResults() - insertedPos.size();
         AffineMap minorMap = permutationMap.getMinorSubMap(minorRank);
-        if (!minorMap || AffineMap::isMinorIdentity(minorMap))
+        if (!minorMap || minorMap.isMinorIdentity())
           return insertOp.source();
       }
     }
@@ -1720,8 +1720,68 @@ static LogicalResult foldMemRefCast(Operation *op) {
   return success(folded);
 }
 
+template <typename TransferOp>
+static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
+  // TODO: support more aggressive createOrFold on:
+  // `op.indices()[indicesIdx] + vectorType < dim(op.memref(), indicesIdx)`
+  if (op.getMemRefType().isDynamicDim(indicesIdx))
+    return false;
+  Value index = op.indices()[indicesIdx];
+  auto cstOp = index.getDefiningOp<ConstantIndexOp>();
+  if (!cstOp)
+    return false;
+
+  int64_t memrefSize = op.getMemRefType().getDimSize(indicesIdx);
+  int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);
+  return cstOp.getValue() + vectorSize <= memrefSize;
+}
+
+template <typename TransferOp>
+static LogicalResult foldTransferMaskAttribute(TransferOp op) {
+  AffineMap permutationMap = op.permutation_map();
+  if (!permutationMap.isMinorIdentity())
+    return failure();
+  bool changed = false;
+  SmallVector<bool, 4> isMasked;
+  isMasked.reserve(op.getTransferRank());
+  // `permutationMap` results and `op.indices` sizes may not match and may not
+  // be aligned. The first `indicesIdx` may just be indexed and not transferred
+  // from/into the vector.
+  // For example:
+  //  vector.transfer %0[%i, %j, %k, %c0] : memref<?x?x?x?xf32>, vector<2x4xf32>
+  // with `permutation_map = (d0, d1, d2, d3) -> (d2, d3)`.
+  // The `permutationMap` results and `op.indices` are however aligned when
+  // iterating in reverse until we exhaust `permutationMap` results.
+  // As a consequence we iterate with 2 running indices: `resultIdx` and
+  // `indicesIdx`, until `resultIdx` reaches 0.
+  for (int64_t resultIdx = permutationMap.getNumResults() - 1,
+               indicesIdx = op.indices().size() - 1;
+       resultIdx >= 0; --resultIdx, --indicesIdx) {
+    // Already marked unmasked, nothing to see here.
+    if (!op.isMaskedDim(resultIdx)) {
+      isMasked.push_back(false);
+      continue;
+    }
+    // Currently masked, check whether we can statically determine it is
+    // inBounds.
+    auto inBounds = isInBounds(op, resultIdx, indicesIdx);
+    isMasked.push_back(!inBounds);
+    // We commit the pattern if it is "more inbounds".
+    changed |= inBounds;
+  }
+  if (!changed)
+    return failure();
+  // OpBuilder is only used as a helper to build an I64ArrayAttr.
+  OpBuilder b(op.getContext());
+  std::reverse(isMasked.begin(), isMasked.end());
+  op.setAttr(TransferOp::getMaskedAttrName(), b.getBoolArrayAttr(isMasked));
+  return success();
+}
+
 OpFoldResult TransferReadOp::fold(ArrayRef<Attribute>) {
   /// transfer_read(memrefcast) -> transfer_read
+  if (succeeded(foldTransferMaskAttribute(*this)))
+    return getResult();
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
   return OpFoldResult();
@@ -1819,6 +1879,8 @@ static LogicalResult verify(TransferWriteOp op) {
 
 LogicalResult TransferWriteOp::fold(ArrayRef<Attribute>,
                                     SmallVectorImpl<OpFoldResult> &) {
+  if (succeeded(foldTransferMaskAttribute(*this)))
+    return success();
   return foldMemRefCast(*this);
 }
 
