@@ -424,10 +424,8 @@ EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized);
 EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
                                     int16_t RequiresDataSharing);
 EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime);
-EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
-                                           int16_t IsOMPRuntimeInitialized);
-EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
-                                   int16_t IsOMPRuntimeInitialized);
+EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn);
+EXTERN bool __kmpc_kernel_parallel(void **WorkFn);
 EXTERN void __kmpc_kernel_end_parallel();
 
 EXTERN void __kmpc_data_sharing_init_stack();
