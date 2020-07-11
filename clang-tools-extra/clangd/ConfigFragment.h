@@ -108,6 +108,9 @@ struct Fragment {
   struct IfBlock {
     /// The file being processed must fully match a regular expression.
     std::vector<Located<std::string>> PathMatch;
+    /// The file being processed must *not* fully match a regular expression.
+    std::vector<Located<std::string>> PathExclude;
+
     /// An unrecognized key was found while parsing the condition.
     /// The condition will evaluate to false.
     bool HasUnrecognizedCondition = false;
