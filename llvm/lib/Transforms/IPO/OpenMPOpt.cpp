@@ -210,7 +210,7 @@ struct OMPInformationCache : public InformationCache {
       }
 
       // Remove the to-be-deleted indices in reverse order as prior
-      // modifcations will not modify the smaller indices.
+      // modifications will not modify the smaller indices.
       while (!ToBeDeleted.empty()) {
         unsigned Idx = ToBeDeleted.pop_back_val();
         UV[Idx] = UV.back();
@@ -304,7 +304,7 @@ struct OMPInformationCache : public InformationCache {
     return true;
   }
 
-  // Helper to collect all uses of the decleration in the UsesMap.
+  // Helper to collect all uses of the declaration in the UsesMap.
   unsigned collectUses(RuntimeFunctionInfo &RFI, bool CollectStats = true) {
     unsigned NumUses = 0;
     if (!RFI.Declaration)
@@ -519,7 +519,7 @@ private:
     return Changed;
   }
 
-  /// Try to eliminiate runtime calls by reusing existing ones.
+  /// Try to eliminate runtime calls by reusing existing ones.
   bool deduplicateRuntimeCalls() {
     bool Changed = false;
 
@@ -615,7 +615,7 @@ private:
     return Ident;
   }
 
-  /// Try to eliminiate calls of \p RFI in \p F by reusing an existing one or
+  /// Try to eliminate calls of \p RFI in \p F by reusing an existing one or
   /// \p ReplVal if given.
   bool deduplicateRuntimeCalls(Function &F,
                                OMPInformationCache::RuntimeFunctionInfo &RFI,
@@ -789,7 +789,7 @@ private:
     });
   }
 
-  /// The underyling module.
+  /// The underlying module.
   Module &M;
 
   /// The SCC we are operating on.
