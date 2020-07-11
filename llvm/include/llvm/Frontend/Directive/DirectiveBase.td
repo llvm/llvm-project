@@ -39,6 +39,10 @@ class DirectiveLanguage {
 
   // Generate include and macro to enable LLVM BitmaskEnum.
   bit enableBitmaskEnumInNamespace = 0;
+
+  // Header file included in the implementation code generated. Ususally the
+  // output file of the declaration code generation. Can be left blank.
+  string includeHeader = "";
 }
 
 // Information about a specific clause.

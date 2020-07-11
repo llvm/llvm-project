@@ -284,9 +284,23 @@ void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
   StringRef LanguageName = DirectiveLanguage->getValueAsString("name");
   StringRef ClausePrefix = DirectiveLanguage->getValueAsString("clausePrefix");
   StringRef CppNamespace = DirectiveLanguage->getValueAsString("cppNamespace");
+  StringRef IncludeHeader =
+      DirectiveLanguage->getValueAsString("includeHeader");
 
   const auto &Directives = Records.getAllDerivedDefinitions("Directive");
   const auto &Clauses = Records.getAllDerivedDefinitions("Clause");
+
+  if (!IncludeHeader.empty())
+    OS << "#include \"" << IncludeHeader << "\"\n\n";
+
+  OS << "#include \"llvm/ADT/StringRef.h\"\n";
+  OS << "#include \"llvm/ADT/StringSwitch.h\"\n";
+  OS << "\n";
+  OS << "using namespace llvm;\n";
+  llvm::SmallVector<StringRef, 2> Namespaces;
+  llvm::SplitString(CppNamespace, Namespaces, "::");
+  for (auto Ns : Namespaces)
+    OS << "using namespace " << Ns << ";\n";
 
   // getDirectiveKind(StringRef Str)
   GenerateGetKind(Directives, OS, "Directive", DirectivePrefix, LanguageName,

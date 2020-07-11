@@ -23,6 +23,7 @@ def OpenMP : DirectiveLanguage {
   let clausePrefix = "OMPC_";
   let makeEnumAvailableInNamespace = 1;
   let enableBitmaskEnumInNamespace = 1;
+  let includeHeader = "llvm/Frontend/OpenMP/OMP.h.inc";
 }
 
 //===----------------------------------------------------------------------===//
