@@ -429,6 +429,25 @@ static unsigned FindInputLineInFilter(
   return UINT_MAX;
 }
 
+/// To OS, print a vertical ellipsis (right-justified at LabelWidth) if it would
+/// occupy less lines than ElidedLines, but print ElidedLines otherwise.  Either
+/// way, clear ElidedLines.  Thus, if ElidedLines is empty, do nothing.
+static void DumpEllipsisOrElidedLines(raw_ostream &OS, std::string &ElidedLines,
+                                      unsigned LabelWidth) {
+  if (ElidedLines.empty())
+    return;
+  unsigned EllipsisLines = 3;
+  if (EllipsisLines < StringRef(ElidedLines).count('\n')) {
+    for (unsigned i = 0; i < EllipsisLines; ++i) {
+      WithColor(OS, raw_ostream::BLACK, /*Bold=*/true)
+          << right_justify(".", LabelWidth);
+      OS << '\n';
+    }
+  } else
+    OS << ElidedLines;
+  ElidedLines.clear();
+}
+
 static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
                                bool DumpInputFilterOnError,
                                unsigned DumpInputContext,
@@ -507,7 +526,12 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
   // Print annotated input lines.
   unsigned PrevLineInFilter = 0; // 0 means none so far
   unsigned NextLineInFilter = 0; // 0 means uncomputed, UINT_MAX means none
-  bool PrevLineElided = false;
+  std::string ElidedLines;
+  raw_string_ostream ElidedLinesOS(ElidedLines);
+  ColorMode TheColorMode =
+      WithColor(OS).colorsEnabled() ? ColorMode::Enable : ColorMode::Disable;
+  if (TheColorMode == ColorMode::Enable)
+    ElidedLinesOS.enable_colors(true);
   auto AnnotationItr = Annotations.begin(), AnnotationEnd = Annotations.end();
   for (unsigned Line = 1;
        InputFilePtr != InputFileEnd || AnnotationItr != AnnotationEnd;
@@ -524,37 +548,29 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
 
     // Elide this input line and its annotations if it's not within the
     // context specified by -dump-input-context of an input line included by
-    // the dump filter.
+    // the dump filter.  However, in case the resulting ellipsis would occupy
+    // more lines than the input lines and annotations it elides, buffer the
+    // elided lines and annotations so we can print them instead.
+    raw_ostream *LineOS = &OS;
     if ((!PrevLineInFilter || PrevLineInFilter + DumpInputContext < Line) &&
         (NextLineInFilter == UINT_MAX ||
-         Line + DumpInputContext < NextLineInFilter)) {
-      while (InputFilePtr != InputFileEnd && *InputFilePtr != '\n')
-        ++InputFilePtr;
-      if (InputFilePtr != InputFileEnd)
-        ++InputFilePtr;
-      while (AnnotationItr != AnnotationEnd && AnnotationItr->InputLine == Line)
-        ++AnnotationItr;
-      if (!PrevLineElided) {
-        for (unsigned i = 0; i < 3; ++i) {
-          WithColor(OS, raw_ostream::BLACK, /*Bold=*/true)
-              << right_justify(".", LabelWidth);
-          OS << '\n';
-        }
-        PrevLineElided = true;
-      }
-      continue;
+         Line + DumpInputContext < NextLineInFilter))
+      LineOS = &ElidedLinesOS;
+    else {
+      LineOS = &OS;
+      DumpEllipsisOrElidedLines(OS, ElidedLinesOS.str(), LabelWidth);
     }
-    PrevLineElided = false;
 
     // Print right-aligned line number.
-    WithColor(OS, raw_ostream::BLACK, true)
+    WithColor(*LineOS, raw_ostream::BLACK, /*Bold=*/true, /*BF=*/false,
+              TheColorMode)
         << format_decimal(Line, LabelWidth) << ": ";
 
     // For the case where -v and colors are enabled, find the annotations for
     // good matches for expected patterns in order to highlight everything
     // else in the line.  There are no such annotations if -v is disabled.
     std::vector<InputAnnotation> FoundAndExpectedMatches;
-    if (Req.Verbose && WithColor(OS).colorsEnabled()) {
+    if (Req.Verbose && TheColorMode == ColorMode::Enable) {
       for (auto I = AnnotationItr; I != AnnotationEnd && I->InputLine == Line;
            ++I) {
         if (I->FoundAndExpectedMatch)
@@ -566,7 +582,8 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
     // expected patterns.
     bool Newline = false;
     {
-      WithColor COS(OS);
+      WithColor COS(*LineOS, raw_ostream::SAVEDCOLOR, /*Bold=*/false,
+                    /*BG=*/false, TheColorMode);
       bool InMatch = false;
       if (Req.Verbose)
         COS.changeColor(raw_ostream::CYAN, true, true);
@@ -590,13 +607,14 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
         ++InputFilePtr;
       }
     }
-    OS << '\n';
+    *LineOS << '\n';
     unsigned InputLineWidth = InputFilePtr - InputFileLine - Newline;
 
     // Print any annotations.
     while (AnnotationItr != AnnotationEnd &&
            AnnotationItr->InputLine == Line) {
-      WithColor COS(OS, AnnotationItr->Marker.Color, true);
+      WithColor COS(*LineOS, AnnotationItr->Marker.Color, /*Bold=*/true,
+                    /*BG=*/false, TheColorMode);
       // The two spaces below are where the ": " appears on input lines.
       COS << left_justify(AnnotationItr->Label, LabelWidth) << "  ";
       unsigned Col;
@@ -621,6 +639,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       ++AnnotationItr;
     }
   }
+  DumpEllipsisOrElidedLines(OS, ElidedLinesOS.str(), LabelWidth);
 
   OS << ">>>>>>\n";
 }
