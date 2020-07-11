@@ -1,6 +1,8 @@
+DYLIB_NAME := foo
+DYLIB_CXX_SOURCES := foo.cpp
 CXX_SOURCES := main.cpp
 
-all:        a.out.stripped
+all: a.out.stripped
 
 include Makefile.rules
 
