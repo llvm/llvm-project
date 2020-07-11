@@ -236,27 +236,32 @@ void GenerateIsAllowedClause(const std::vector<Record *> &Directives,
   for (const auto &D : Directives) {
 
     const auto DirectiveName = D->getValueAsString("name");
+    const auto &AllowedClauses = D->getValueAsListOfDefs("allowedClauses");
+    const auto &AllowedOnceClauses =
+        D->getValueAsListOfDefs("allowedOnceClauses");
+    const auto &RequiredClauses = D->getValueAsListOfDefs("requiredClauses");
 
     OS << "    case " << DirectivePrefix << getFormattedName(DirectiveName)
        << ":\n";
-    OS << "      switch (C) {\n";
+    if (AllowedClauses.size() == 0 && AllowedOnceClauses.size() == 0 && 
+        AllowedOnceClauses.size() == 0) {
+      OS << "      return false;\n";
+    } else {
+      OS << "      switch (C) {\n";
 
-    const auto &AllowedClauses = D->getValueAsListOfDefs("allowedClauses");
-    GenerateCaseForVersionedClauses(AllowedClauses, OS, DirectiveName,
-                                    DirectivePrefix, ClausePrefix);
+      GenerateCaseForVersionedClauses(AllowedClauses, OS, DirectiveName,
+                                      DirectivePrefix, ClausePrefix);
 
-    const auto &AllowedOnceClauses =
-        D->getValueAsListOfDefs("allowedOnceClauses");
-    GenerateCaseForVersionedClauses(AllowedOnceClauses, OS, DirectiveName,
-                                    DirectivePrefix, ClausePrefix);
+      GenerateCaseForVersionedClauses(AllowedOnceClauses, OS, DirectiveName,
+                                      DirectivePrefix, ClausePrefix);
 
-    const auto &RequiredClauses = D->getValueAsListOfDefs("requiredClauses");
-    GenerateCaseForVersionedClauses(RequiredClauses, OS, DirectiveName,
-                                    DirectivePrefix, ClausePrefix);
+      GenerateCaseForVersionedClauses(RequiredClauses, OS, DirectiveName,
+                                      DirectivePrefix, ClausePrefix);
 
-    OS << "        default:\n";
-    OS << "          return false;\n";
-    OS << "      }\n"; // End of clauses switch
+      OS << "        default:\n";
+      OS << "          return false;\n";
+      OS << "      }\n"; // End of clauses switch
+    }
     OS << "      break;\n";
   }
 
@@ -284,9 +289,23 @@ void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
   StringRef LanguageName = DirectiveLanguage->getValueAsString("name");
   StringRef ClausePrefix = DirectiveLanguage->getValueAsString("clausePrefix");
   StringRef CppNamespace = DirectiveLanguage->getValueAsString("cppNamespace");
+  StringRef IncludeHeader =
+      DirectiveLanguage->getValueAsString("includeHeader");
 
   const auto &Directives = Records.getAllDerivedDefinitions("Directive");
   const auto &Clauses = Records.getAllDerivedDefinitions("Clause");
+
+  if (!IncludeHeader.empty())
+    OS << "#include \"" << IncludeHeader << "\"\n\n";
+
+  OS << "#include \"llvm/ADT/StringRef.h\"\n";
+  OS << "#include \"llvm/ADT/StringSwitch.h\"\n";
+  OS << "\n";
+  OS << "using namespace llvm;\n";
+  llvm::SmallVector<StringRef, 2> Namespaces;
+  llvm::SplitString(CppNamespace, Namespaces, "::");
+  for (auto Ns : Namespaces)
+    OS << "using namespace " << Ns << ";\n";
 
   // getDirectiveKind(StringRef Str)
   GenerateGetKind(Directives, OS, "Directive", DirectivePrefix, LanguageName,

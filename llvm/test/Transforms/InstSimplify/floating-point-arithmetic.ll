@@ -1333,3 +1333,53 @@ define float @fsub_fadd_common_op_wrong_commute_commute(float %x, float %y) {
   %r = fadd reassoc nsz float %s, %y
   ret float %r
 }
+
+define float @maxnum_with_poszero_op(float %a) {
+; CHECK-LABEL: @maxnum_with_poszero_op(
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[A:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[MAX]]
+;
+  %max = call float @llvm.maxnum.f32(float %a, float 0.0)
+  %fabs = call float @llvm.fabs.f32(float %max)
+  ret float %fabs
+}
+
+define float @maxnum_with_poszero_op_commute(float %a) {
+; CHECK-LABEL: @maxnum_with_poszero_op_commute(
+; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float 0.000000e+00, float [[SQRT]])
+; CHECK-NEXT:    ret float [[MAX]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %a)
+  %max = call float @llvm.maxnum.f32(float 0.0, float %sqrt)
+  %fabs = call float @llvm.fabs.f32(float %max)
+  ret float %fabs
+}
+
+define float @maxnum_with_negzero_op(float %a) {
+; CHECK-LABEL: @maxnum_with_negzero_op(
+; CHECK-NEXT:    [[NNAN:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABSA:%.*]] = call float @llvm.fabs.f32(float [[NNAN]])
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float -0.000000e+00, float [[FABSA]])
+; CHECK-NEXT:    ret float [[MAX]]
+;
+  %nnan = call nnan float @llvm.sqrt.f32(float %a)
+  %fabsa = call float @llvm.fabs.f32(float %nnan)
+  %max = call float @llvm.maxnum.f32(float -0.0, float %fabsa)
+  %fabs = call float @llvm.fabs.f32(float %max)
+  ret float %fabs
+}
+
+define float @maxnum_with_negzero_op_commute(float %a) {
+; CHECK-LABEL: @maxnum_with_negzero_op_commute(
+; CHECK-NEXT:    [[NNAN:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABSA:%.*]] = call float @llvm.fabs.f32(float [[NNAN]])
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[FABSA]], float -0.000000e+00)
+; CHECK-NEXT:    ret float [[MAX]]
+;
+  %nnan = call nnan float @llvm.sqrt.f32(float %a)
+  %fabsa = call float @llvm.fabs.f32(float %nnan)
+  %max = call float @llvm.maxnum.f32(float %fabsa, float -0.0)
+  %fabs = call float @llvm.fabs.f32(float %max)
+  ret float %fabs
+}

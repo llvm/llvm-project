@@ -60,6 +60,59 @@ TEST(RangeVerifier, WrongRange) {
   EXPECT_FALSE(Verifier.match("int i;", varDecl()));
 }
 
+class WhileParenLocationVerifier : public MatchVerifier<WhileStmt> {
+  unsigned ExpectLParenLine = 0, ExpectLParenColumn = 0;
+  unsigned ExpectRParenLine = 0, ExpectRParenColumn = 0;
+
+public:
+  void expectLocations(unsigned LParenLine, unsigned LParenColumn,
+                       unsigned RParenLine, unsigned RParenColumn) {
+    ExpectLParenLine = LParenLine;
+    ExpectLParenColumn = LParenColumn;
+    ExpectRParenLine = RParenLine;
+    ExpectRParenColumn = RParenColumn;
+  }
+
+protected:
+  void verify(const MatchFinder::MatchResult &Result,
+              const WhileStmt &Node) override {
+    SourceLocation LParenLoc = Node.getLParenLoc();
+    SourceLocation RParenLoc = Node.getRParenLoc();
+    unsigned LParenLine =
+        Result.SourceManager->getSpellingLineNumber(LParenLoc);
+    unsigned LParenColumn =
+        Result.SourceManager->getSpellingColumnNumber(LParenLoc);
+    unsigned RParenLine =
+        Result.SourceManager->getSpellingLineNumber(RParenLoc);
+    unsigned RParenColumn =
+        Result.SourceManager->getSpellingColumnNumber(RParenLoc);
+
+    if (LParenLine != ExpectLParenLine || LParenColumn != ExpectLParenColumn ||
+        RParenLine != ExpectRParenLine || RParenColumn != ExpectRParenColumn) {
+      std::string MsgStr;
+      llvm::raw_string_ostream Msg(MsgStr);
+      Msg << "Expected LParen Location <" << ExpectLParenLine << ":"
+          << ExpectLParenColumn << ">, found <";
+      LParenLoc.print(Msg, *Result.SourceManager);
+      Msg << ">\n";
+
+      Msg << "Expected RParen Location <" << ExpectRParenLine << ":"
+          << ExpectRParenColumn << ">, found <";
+      RParenLoc.print(Msg, *Result.SourceManager);
+      Msg << ">";
+
+      this->setFailure(Msg.str());
+    }
+  }
+};
+
+TEST(LocationVerifier, WhileParenLoc) {
+  WhileParenLocationVerifier Verifier;
+  Verifier.expectLocations(1, 17, 1, 38);
+  EXPECT_TRUE(Verifier.match("void f() { while(true/*some comment*/) {} }",
+                             whileStmt()));
+}
+
 class LabelDeclRangeVerifier : public RangeVerifier<LabelStmt> {
 protected:
   SourceRange getRange(const LabelStmt &Node) override {

@@ -194,6 +194,8 @@ void ASTStmtWriter::VisitWhileStmt(WhileStmt *S) {
     Record.AddDeclRef(S->getConditionVariable());
 
   Record.AddSourceLocation(S->getWhileLoc());
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
   Code = serialization::STMT_WHILE;
 }
 

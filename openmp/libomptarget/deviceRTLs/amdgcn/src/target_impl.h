@@ -140,8 +140,6 @@ DEVICE int GetNumberOfThreadsInBlock();
 DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
 
-DEVICE bool __kmpc_impl_is_first_active_thread();
-
 // Locks
 DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);
 DEVICE void __kmpc_impl_destroy_lock(omp_lock_t *lock);
