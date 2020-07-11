@@ -236,27 +236,32 @@ void GenerateIsAllowedClause(const std::vector<Record *> &Directives,
   for (const auto &D : Directives) {
 
     const auto DirectiveName = D->getValueAsString("name");
+    const auto &AllowedClauses = D->getValueAsListOfDefs("allowedClauses");
+    const auto &AllowedOnceClauses =
+        D->getValueAsListOfDefs("allowedOnceClauses");
+    const auto &RequiredClauses = D->getValueAsListOfDefs("requiredClauses");
 
     OS << "    case " << DirectivePrefix << getFormattedName(DirectiveName)
        << ":\n";
-    OS << "      switch (C) {\n";
+    if (AllowedClauses.size() == 0 && AllowedOnceClauses.size() == 0 && 
+        AllowedOnceClauses.size() == 0) {
+      OS << "      return false;\n";
+    } else {
+      OS << "      switch (C) {\n";
 
-    const auto &AllowedClauses = D->getValueAsListOfDefs("allowedClauses");
-    GenerateCaseForVersionedClauses(AllowedClauses, OS, DirectiveName,
-                                    DirectivePrefix, ClausePrefix);
+      GenerateCaseForVersionedClauses(AllowedClauses, OS, DirectiveName,
+                                      DirectivePrefix, ClausePrefix);
 
-    const auto &AllowedOnceClauses =
-        D->getValueAsListOfDefs("allowedOnceClauses");
-    GenerateCaseForVersionedClauses(AllowedOnceClauses, OS, DirectiveName,
-                                    DirectivePrefix, ClausePrefix);
+      GenerateCaseForVersionedClauses(AllowedOnceClauses, OS, DirectiveName,
+                                      DirectivePrefix, ClausePrefix);
 
-    const auto &RequiredClauses = D->getValueAsListOfDefs("requiredClauses");
-    GenerateCaseForVersionedClauses(RequiredClauses, OS, DirectiveName,
-                                    DirectivePrefix, ClausePrefix);
+      GenerateCaseForVersionedClauses(RequiredClauses, OS, DirectiveName,
+                                      DirectivePrefix, ClausePrefix);
 
-    OS << "        default:\n";
-    OS << "          return false;\n";
-    OS << "      }\n"; // End of clauses switch
+      OS << "        default:\n";
+      OS << "          return false;\n";
+      OS << "      }\n"; // End of clauses switch
+    }
     OS << "      break;\n";
   }
 
