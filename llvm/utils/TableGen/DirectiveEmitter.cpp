@@ -458,7 +458,6 @@ void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
       DirectiveLanguage->getValueAsString("clauseEnumSetClass");
 
   const auto &Directives = Records.getAllDerivedDefinitions("Directive");
-  const auto &Clauses = Records.getAllDerivedDefinitions("Clause");
 
   EmitDirectivesFlangImpl(Directives, OS, LanguageName, ClauseEnumSetClass,
                           DirectivePrefix, ClausePrefix, CppNamespace);
