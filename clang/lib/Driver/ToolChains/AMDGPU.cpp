@@ -489,9 +489,9 @@ bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
 /// ROCM Toolchain
 ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
-    : AMDGPUToolChain(D, Triple, Args),
-      RocmInstallation(D, Triple, Args, /*DetectHIPRuntime=*/false,
-                       /*DetectDeviceLib=*/true) {}
+    : AMDGPUToolChain(D, Triple, Args) {
+  RocmInstallation.detectDeviceLibrary();
+}
 
 void AMDGPUToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs,

@@ -224,7 +224,6 @@ HIPToolChain::HIPToolChain(const Driver &D, const llvm::Triple &Triple,
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
-  RocmInstallation.detectHIPRuntime();
 }
 
 void HIPToolChain::addClangTargetOptions(
