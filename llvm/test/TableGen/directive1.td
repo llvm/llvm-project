@@ -72,7 +72,13 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC
 
 
-// IMPL:       Directive llvm::tdl::getTdlDirectiveKind(llvm::StringRef Str) {
+// IMPL:       #include "llvm/ADT/StringRef.h"
+// IMPL-NEXT:  #include "llvm/ADT/StringSwitch.h"
+// IMPL-EMPTY:
+// IMPL-NEXT:  using namespace llvm;
+// IMPL-NEXT:  using namespace tdl;
+// IMPL-EMPTY:
+// IMPL-NEXT:  Directive llvm::tdl::getTdlDirectiveKind(llvm::StringRef Str) {
 // IMPL-NEXT:    return llvm::StringSwitch<Directive>(Str)
 // IMPL-NEXT:      .Case("dira",TDLD_dira)
 // IMPL-NEXT:      .Default(TDLD_dira);
