@@ -36,7 +36,7 @@ define <16 x i8> @splat_v16i8(i8 %x) {
 }
 
 ; CHECK-LABEL: const_splat_v16i8:
-; SIMD128: i8x16.splat
+; SIMD128: v128.const $push0=, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42{{$}}
 define <16 x i8> @const_splat_v16i8() {
   ret <16 x i8> <i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42,
                  i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42, i8 42>
@@ -299,7 +299,7 @@ define <8 x i16> @splat_v8i16(i16 %x) {
 }
 
 ; CHECK-LABEL: const_splat_v8i16:
-; SIMD128: i16x8.splat
+; SIMD128: v128.const $push0=, 42, 42, 42, 42, 42, 42, 42, 42{{$}}
 define <8 x i16> @const_splat_v8i16() {
   ret <8 x i16> <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
 }
@@ -547,7 +547,7 @@ define <4 x i32> @splat_v4i32(i32 %x) {
 }
 
 ; CHECK-LABEL: const_splat_v4i32:
-; SIMD128: i32x4.splat
+; SIMD128: v128.const $push0=, 42, 42, 42, 42{{$}}
 define <4 x i32> @const_splat_v4i32() {
   ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
 }
@@ -698,7 +698,7 @@ define <2 x i64> @splat_v2i64(i64 %x) {
 }
 
 ; CHECK-LABEL: const_splat_v2i64:
-; SIMD128: i64x2.splat
+; SIMD128: v128.const $push0=, 42, 42{{$}}
 define <2 x i64> @const_splat_v2i64() {
   ret <2 x i64> <i64 42, i64 42>
 }
@@ -847,7 +847,7 @@ define <4 x float> @splat_v4f32(float %x) {
 }
 
 ; CHECK-LABEL: const_splat_v4f32
-; SIMD128: f32x4.splat
+; SIMD128: v128.const $push0=, 0x1.5p5, 0x1.5p5, 0x1.5p5, 0x1.5p5{{$}}
 define <4 x float> @const_splat_v4f32() {
   ret <4 x float> <float 42., float 42., float 42., float 42.>
 }
@@ -998,7 +998,7 @@ define <2 x double> @splat_v2f64(double %x) {
 }
 
 ; CHECK-LABEL: const_splat_v2f64:
-; SIMD128: f64x2.splat
+; SIMD128: v128.const $push0=, 0x1.5p5, 0x1.5p5{{$}}
 define <2 x double> @const_splat_v2f64() {
   ret <2 x double> <double 42., double 42.>
 }
