@@ -129,6 +129,21 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   return hoistedIfOp;
 }
 
+/// Replace affine.for with a 1-d affine.parallel and clone the former's body
+/// into the latter while remapping values.
+void mlir::affineParallelize(AffineForOp forOp) {
+  Location loc = forOp.getLoc();
+  OpBuilder outsideBuilder(forOp);
+  // Creating empty 1-D affine.parallel op.
+  AffineParallelOp newPloop = outsideBuilder.create<AffineParallelOp>(
+      loc, llvm::None, llvm::None, forOp.getLowerBoundMap(),
+      forOp.getLowerBoundOperands(), forOp.getUpperBoundMap(),
+      forOp.getUpperBoundOperands());
+  // Steal the body of the old affine for op and erase it.
+  newPloop.region().takeBody(forOp.region());
+  forOp.erase();
+}
+
 // Returns success if any hoisting happened.
 LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   // Bail out early if the ifOp returns a result.  TODO: Consider how to
