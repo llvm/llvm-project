@@ -885,7 +885,6 @@ bool AArch64CallLowering::lowerTailCall(
   const auto &Forwards = FuncInfo->getForwardedMustTailRegParms();
 
   // Do the actual argument marshalling.
-  SmallVector<unsigned, 8> PhysRegs;
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
                              AssignFnVarArg, true, FPDiff);
   if (!handleAssignments(MIRBuilder, OutArgs, Handler))
@@ -1003,7 +1002,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     TRI->emitReservedArgRegCallError(MF);
 
   // Do the actual argument marshalling.
-  SmallVector<unsigned, 8> PhysRegs;
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
                              AssignFnVarArg, false);
   if (!handleAssignments(MIRBuilder, OutArgs, Handler))
