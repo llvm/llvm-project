@@ -50,7 +50,6 @@ enum class NodeKind : uint16_t {
   StringLiteralExpression,
   BoolLiteralExpression,
   CxxNullPtrExpression,
-  UnknownUserDefinedLiteralExpression,
   IntegerUserDefinedLiteralExpression,
   FloatUserDefinedLiteralExpression,
   CharUserDefinedLiteralExpression,
@@ -340,28 +339,12 @@ class UserDefinedLiteralExpression : public Expression {
 public:
   UserDefinedLiteralExpression(NodeKind K) : Expression(K) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::UnknownUserDefinedLiteralExpression ||
-           N->kind() == NodeKind::IntegerUserDefinedLiteralExpression ||
+    return N->kind() == NodeKind::IntegerUserDefinedLiteralExpression ||
            N->kind() == NodeKind::FloatUserDefinedLiteralExpression ||
            N->kind() == NodeKind::CharUserDefinedLiteralExpression ||
            N->kind() == NodeKind::StringUserDefinedLiteralExpression;
   }
   syntax::Leaf *literalToken();
-};
-
-// We cannot yet distinguish between user-defined-integer-literal and
-// user-defined-floating-point-literal, when using raw literal operator or
-// numeric literal operator. C++ [lex.ext]p3, p4
-/// Expression for an unknown user-defined-literal.
-class UnknownUserDefinedLiteralExpression final
-    : public UserDefinedLiteralExpression {
-public:
-  UnknownUserDefinedLiteralExpression()
-      : UserDefinedLiteralExpression(
-            NodeKind::UnknownUserDefinedLiteralExpression) {}
-  static bool classof(const Node *N) {
-    return N->kind() == NodeKind::UnknownUserDefinedLiteralExpression;
-  }
 };
 
 /// Expression for user-defined-integer-literal. C++ [lex.ext]

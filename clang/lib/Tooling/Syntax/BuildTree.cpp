@@ -23,6 +23,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Tooling/Syntax/Nodes.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "clang/Tooling/Syntax/Tree.h"
@@ -552,8 +553,8 @@ private:
 namespace {
 class BuildTreeVisitor : public RecursiveASTVisitor<BuildTreeVisitor> {
 public:
-  explicit BuildTreeVisitor(ASTContext &Ctx, syntax::TreeBuilder &Builder)
-      : Builder(Builder), LangOpts(Ctx.getLangOpts()) {}
+  explicit BuildTreeVisitor(ASTContext &Context, syntax::TreeBuilder &Builder)
+      : Builder(Builder), Context(Context) {}
 
   bool shouldTraversePostOrder() const { return true; }
 
@@ -718,30 +719,44 @@ public:
     return WalkUpFromUserDefinedLiteral(S);
   }
 
-  syntax::NodeKind getUserDefinedLiteralKind(UserDefinedLiteral *S) {
+  syntax::UserDefinedLiteralExpression *
+  buildUserDefinedLiteral(UserDefinedLiteral *S) {
     switch (S->getLiteralOperatorKind()) {
     case clang::UserDefinedLiteral::LOK_Integer:
-      return syntax::NodeKind::IntegerUserDefinedLiteralExpression;
+      return new (allocator()) syntax::IntegerUserDefinedLiteralExpression;
     case clang::UserDefinedLiteral::LOK_Floating:
-      return syntax::NodeKind::FloatUserDefinedLiteralExpression;
+      return new (allocator()) syntax::FloatUserDefinedLiteralExpression;
     case clang::UserDefinedLiteral::LOK_Character:
-      return syntax::NodeKind::CharUserDefinedLiteralExpression;
+      return new (allocator()) syntax::CharUserDefinedLiteralExpression;
     case clang::UserDefinedLiteral::LOK_String:
-      return syntax::NodeKind::StringUserDefinedLiteralExpression;
+      return new (allocator()) syntax::StringUserDefinedLiteralExpression;
     case clang::UserDefinedLiteral::LOK_Raw:
     case clang::UserDefinedLiteral::LOK_Template:
-      // FIXME: Apply `NumericLiteralParser` to the underlying token to deduce
-      // the right UDL kind. That would require a `Preprocessor` though.
-      return syntax::NodeKind::UnknownUserDefinedLiteralExpression;
+      // For raw literal operator and numeric literal operator template we
+      // cannot get the type of the operand in the semantic AST. We get this
+      // information from the token. As integer and floating point have the same
+      // token kind, we run `NumericLiteralParser` again to distinguish them.
+      auto TokLoc = S->getBeginLoc();
+      auto buffer = SmallVector<char, 16>();
+      bool invalidSpelling = false;
+      auto TokSpelling =
+          Lexer::getSpelling(TokLoc, buffer, Context.getSourceManager(),
+                             Context.getLangOpts(), &invalidSpelling);
+      assert(!invalidSpelling);
+      auto Literal =
+          NumericLiteralParser(TokSpelling, TokLoc, Context.getSourceManager(),
+                               Context.getLangOpts(), Context.getTargetInfo(),
+                               Context.getDiagnostics());
+      if (Literal.isIntegerLiteral())
+        return new (allocator()) syntax::IntegerUserDefinedLiteralExpression;
+      else
+        return new (allocator()) syntax::FloatUserDefinedLiteralExpression;
     }
   }
 
   bool WalkUpFromUserDefinedLiteral(UserDefinedLiteral *S) {
     Builder.markChildToken(S->getBeginLoc(), syntax::NodeRole::LiteralToken);
-    Builder.foldNode(Builder.getExprRange(S),
-                     new (allocator()) syntax::UserDefinedLiteralExpression(
-                         getUserDefinedLiteralKind(S)),
-                     S);
+    Builder.foldNode(Builder.getExprRange(S), buildUserDefinedLiteral(S), S);
     return true;
   }
 
@@ -1262,7 +1277,7 @@ private:
   llvm::BumpPtrAllocator &allocator() { return Builder.allocator(); }
 
   syntax::TreeBuilder &Builder;
-  const LangOptions &LangOpts;
+  const ASTContext &Context;
 };
 } // namespace
 
