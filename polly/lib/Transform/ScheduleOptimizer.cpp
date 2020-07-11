@@ -1389,7 +1389,7 @@ public:
 
   explicit IslScheduleOptimizer() : ScopPass(ID) {}
 
-  ~IslScheduleOptimizer() override { isl_schedule_free(LastSchedule); }
+  ~IslScheduleOptimizer() override { releaseMemory(); }
 
   /// Optimize the schedule of the SCoP @p S.
   bool runOnScop(Scop &S) override;
@@ -1404,9 +1404,11 @@ public:
   void releaseMemory() override {
     isl_schedule_free(LastSchedule);
     LastSchedule = nullptr;
+    IslCtx.reset();
   }
 
 private:
+  std::shared_ptr<isl_ctx> IslCtx;
   isl_schedule *LastSchedule = nullptr;
 };
 } // namespace
@@ -1630,6 +1632,8 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   ScopsOptimized++;
   NumAffineLoopsOptimized += ScopStats.NumAffineLoops;
   NumBoxedLoopsOptimized += ScopStats.NumBoxedLoops;
+  LastSchedule = NewSchedule.copy();
+  IslCtx = S.getSharedIslCtx();
 
   S.setScheduleTree(NewSchedule);
   S.markAsOptimized();
@@ -1652,6 +1656,7 @@ void IslScheduleOptimizer::printScop(raw_ostream &OS, Scop &) const {
   }
 
   p = isl_printer_to_str(isl_schedule_get_ctx(LastSchedule));
+  p = isl_printer_set_yaml_style(p, ISL_YAML_STYLE_BLOCK);
   p = isl_printer_print_schedule(p, LastSchedule);
   ScheduleStr = isl_printer_get_str(p);
   isl_printer_free(p);

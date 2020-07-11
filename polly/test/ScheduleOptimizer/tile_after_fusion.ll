@@ -17,6 +17,7 @@
 ; checks whether they are tiled after being fused when polly-opt-fusion equals
 ; "max".
 ;
+; CHECK-LABEL: Printing analysis 'Polly - Generate an AST from the SCoP (isl)' for region: 'for.cond => for.end56' in function 'tf':
 ; CHECK:       1st level tiling - Tiles
 ; CHECK-NEXT:     for (int c0 = 0; c0 <= 7; c0 += 1)
 ; CHECK-NEXT:       for (int c1 = 0; c1 <= 7; c1 += 1)
