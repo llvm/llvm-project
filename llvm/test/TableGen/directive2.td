@@ -9,6 +9,7 @@ def TestDirectiveLanguage : DirectiveLanguage {
   let cppNamespace = "tdl";
   let directivePrefix = "TDLD_";
   let clausePrefix = "TDLC_";
+  let includeHeader = "tdl.h.inc";
 }
 
 def TDLC_ClauseA : Clause<"clausea"> {
@@ -62,7 +63,14 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  } // namespace llvm
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC
 
-
+// IMPL:       #include "tdl.h.inc"
+// IMPL-EMPTY:
+// IMPL-NEXT:  #include "llvm/ADT/StringRef.h"
+// IMPL-NEXT:  #include "llvm/ADT/StringSwitch.h"
+// IMPL-EMPTY:
+// IMPL-NEXT:  using namespace llvm;
+// IMPL-NEXT:  using namespace tdl;
+// IMPL-EMPTY:
 // IMPL:       Directive llvm::tdl::getTdlDirectiveKind(llvm::StringRef Str) {
 // IMPL-NEXT:    return llvm::StringSwitch<Directive>(Str)
 // IMPL-NEXT:      .Case("dira",TDLD_dira)
