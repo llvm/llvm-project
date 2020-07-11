@@ -37,6 +37,11 @@ and use the built binaries to reproduce the failure described in the bug. Use
 a debug build (`-DCMAKE_BUILD_TYPE=Debug`) or a build with assertions
 (`-DLLVM_ENABLE_ASSERTIONS=On`, enabled for Debug builds).
 
+Reporting a Security Issue
+--------------------------
+
+There is a separate process to submit security-related bugs, see :ref:`report-security-issue`.
+
 Bigger Pieces of Work
 ---------------------
 In case you are interested in taking on a bigger piece of work, a list of
