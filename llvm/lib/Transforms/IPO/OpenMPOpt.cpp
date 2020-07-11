@@ -161,6 +161,9 @@ struct OMPInformationCache : public InformationCache {
     /// Clear UsesMap for runtime function.
     void clearUsesMap() { UsesMap.clear(); }
 
+    /// Boolean conversion that is true if the runtime function was found.
+    operator bool() const { return Declaration; }
+
     /// Return the vector of uses in function \p F.
     UseVector &getOrCreateUseVector(Function *F) {
       std::shared_ptr<UseVector> &UV = UsesMap[F];
@@ -411,6 +414,9 @@ struct OpenMPOpt {
 
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
   bool run() {
+    if (SCC.empty())
+      return false;
+
     bool Changed = false;
 
     LLVM_DEBUG(dbgs() << TAG << "Run on SCC with " << SCC.size()
