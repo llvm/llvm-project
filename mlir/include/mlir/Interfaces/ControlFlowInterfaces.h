@@ -71,12 +71,6 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// ControlFlow Interfaces
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Interfaces/ControlFlowInterfaces.h.inc"
-
-//===----------------------------------------------------------------------===//
 // ControlFlow Traits
 //===----------------------------------------------------------------------===//
 
@@ -100,5 +94,12 @@ struct ReturnLike : public TraitBase<ConcreteType, ReturnLike> {
 } // namespace OpTrait
 
 } // end namespace mlir
+
+//===----------------------------------------------------------------------===//
+// ControlFlow Interfaces
+//===----------------------------------------------------------------------===//
+
+/// Include the generated interface declarations.
+#include "mlir/Interfaces/ControlFlowInterfaces.h.inc"
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES_H

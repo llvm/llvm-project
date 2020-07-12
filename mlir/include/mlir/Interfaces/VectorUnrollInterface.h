@@ -17,10 +17,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StandardTypes.h"
 
-namespace mlir {
-
+/// Include the generated interface declarations.
 #include "mlir/Interfaces/VectorUnrollInterface.h.inc"
-
-} // namespace mlir
 
 #endif // MLIR_INTERFACES_VECTORUNROLLINTERFACE_H
