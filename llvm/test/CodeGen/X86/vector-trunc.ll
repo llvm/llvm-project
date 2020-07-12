@@ -456,7 +456,7 @@ define <8 x i16> @trunc8i32_8i16_lshr(<8 x i32> %a) {
 ;
 ; SSSE3-LABEL: trunc8i32_8i16_lshr:
 ; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2,3,6,7,10,11,14,15,10,11,14,15,14,15,255,255]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2,3,6,7,10,11,14,15,10,11,14,15,14,15,128,128]
 ; SSSE3-NEXT:    pshufb %xmm2, %xmm1
 ; SSSE3-NEXT:    pshufb %xmm2, %xmm0
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
