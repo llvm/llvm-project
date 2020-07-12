@@ -4949,8 +4949,14 @@ bool LoopVectorizationCostModel::runtimeChecksRequired() {
     return true;
   }
 
-  assert(Legal->getLAI()->getSymbolicStrides().empty() &&
-         "Specializing for stride == 1 under -Os/-Oz");
+  // FIXME: Avoid specializing for stride==1 instead of bailing out.
+  if (!Legal->getLAI()->getSymbolicStrides().empty()) {
+    reportVectorizationFailure("Runtime stride check for small trip count",
+        "runtime stride == 1 checks needed. Enable vectorization of "
+        "this loop without such check by compiling with -Os/-Oz",
+        "CantVersionLoopWithOptForSize", ORE, TheLoop);
+    return true;
+  }
 
   return false;
 }
