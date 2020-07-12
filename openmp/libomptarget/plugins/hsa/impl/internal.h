@@ -32,10 +32,6 @@
 
 #ifdef __cplusplus
 extern "C" {
-#define _CPPSTRING_ "C"
-#endif
-#ifndef __cplusplus
-#define _CPPSTRING_
 #endif
 
 // #define ATMI_MAX_TASKGROUPS            8
