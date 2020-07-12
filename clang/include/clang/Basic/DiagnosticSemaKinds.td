@@ -2367,12 +2367,22 @@ def override_keyword_hides_virtual_member_function : Error<
   "%select{function|functions}1">;
 def err_function_marked_override_not_overriding : Error<
   "%0 marked 'override' but does not override any member functions">;
-def warn_destructor_marked_not_override_overriding : Warning <
-  "%0 overrides a destructor but is not marked 'override'">,
-  InGroup<CXX11WarnOverrideDestructor>, DefaultIgnore;
-def warn_function_marked_not_override_overriding : Warning <
-  "%0 overrides a member function but is not marked 'override'">,
-  InGroup<CXX11WarnOverrideMethod>;
+def warn_destructor_marked_not_override_overriding : TextSubstitution <
+  "%0 overrides a destructor but is not marked 'override'">;
+def warn_function_marked_not_override_overriding : TextSubstitution <
+  "%0 overrides a member function but is not marked 'override'">;
+def warn_inconsistent_destructor_marked_not_override_overriding : Warning <
+  "%sub{warn_destructor_marked_not_override_overriding}0">,
+  InGroup<CXX11WarnInconsistentOverrideDestructor>, DefaultIgnore;
+def warn_inconsistent_function_marked_not_override_overriding : Warning <
+  "%sub{warn_function_marked_not_override_overriding}0">,
+  InGroup<CXX11WarnInconsistentOverrideMethod>;
+def warn_suggest_destructor_marked_not_override_overriding : Warning <
+  "%sub{warn_destructor_marked_not_override_overriding}0">,
+  InGroup<CXX11WarnSuggestOverrideDestructor>, DefaultIgnore;
+def warn_suggest_function_marked_not_override_overriding : Warning <
+  "%sub{warn_function_marked_not_override_overriding}0">,
+  InGroup<CXX11WarnSuggestOverride>, DefaultIgnore;
 def err_class_marked_final_used_as_base : Error<
   "base %0 is marked '%select{final|sealed}1'">;
 def warn_abstract_final_class : Warning<
