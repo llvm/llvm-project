@@ -664,7 +664,17 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
     return;
   }
 
-  // MapDef type is a struct type
+  // MapDef type may be a struct type or a non-pointer derived type
+  const DIType *OrigTy = Ty;
+  while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+    auto Tag = DTy->getTag();
+    if (Tag != dwarf::DW_TAG_typedef && Tag != dwarf::DW_TAG_const_type &&
+        Tag != dwarf::DW_TAG_volatile_type &&
+        Tag != dwarf::DW_TAG_restrict_type)
+      break;
+    Ty = DTy->getBaseType();
+  }
+
   const auto *CTy = dyn_cast<DICompositeType>(Ty);
   if (!CTy)
     return;
@@ -673,27 +683,15 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
   if (Tag != dwarf::DW_TAG_structure_type || CTy->isForwardDecl())
     return;
 
-  // Record this type
+  // Visit all struct members to ensure pointee type is visited
   const DINodeArray Elements = CTy->getElements();
-  bool HasBitField = false;
-  for (const auto *Element : Elements) {
-    auto E = cast<DIDerivedType>(Element);
-    if (E->isBitField()) {
-      HasBitField = true;
-      break;
-    }
-  }
-
-  auto TypeEntry =
-      std::make_unique<BTFTypeStruct>(CTy, true, HasBitField, Elements.size());
-  StructTypes.push_back(TypeEntry.get());
-  TypeId = addType(std::move(TypeEntry), CTy);
-
-  // Visit all struct members
   for (const auto *Element : Elements) {
     const auto *MemberType = cast<DIDerivedType>(Element);
     visitTypeEntry(MemberType->getBaseType());
   }
+
+  // Visit this type, struct or a const/typedef/volatile/restrict type
+  visitTypeEntry(OrigTy, TypeId, false, false);
 }
 
 /// Read file contents from the actual file or from the source
