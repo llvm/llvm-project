@@ -609,35 +609,6 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     break;
   case 6:
     switch (Model) {
-    case 0x01: // Pentium Pro processor
-      CPU = "pentiumpro";
-      break;
-    case 0x03: // Intel Pentium II OverDrive processor, Pentium II processor,
-               // model 03
-    case 0x05: // Pentium II processor, model 05, Pentium II Xeon processor,
-               // model 05, and Intel Celeron processor, model 05
-    case 0x06: // Celeron processor, model 06
-      CPU = "pentium2";
-      break;
-    case 0x07: // Pentium III processor, model 07, and Pentium III Xeon
-               // processor, model 07
-    case 0x08: // Pentium III processor, model 08, Pentium III Xeon processor,
-               // model 08, and Celeron processor, model 08
-    case 0x0a: // Pentium III Xeon processor, model 0Ah
-    case 0x0b: // Pentium III processor, model 0Bh
-      CPU = "pentium3";
-      break;
-    case 0x09: // Intel Pentium M processor, Intel Celeron M processor model 09.
-    case 0x0d: // Intel Pentium M processor, Intel Celeron M processor, model
-               // 0Dh. All processors are manufactured using the 90 nm process.
-    case 0x15: // Intel EP80579 Integrated Processor and Intel EP80579
-               // Integrated Processor with Intel QuickAssist Technology
-      CPU = "pentium-m";
-      break;
-    case 0x0e: // Intel Core Duo processor, Intel Core Solo processor, model
-               // 0Eh. All processors are manufactured using the 65 nm process.
-      CPU = "yonah";
-      break;
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
                // mobile processor, Intel Core 2 Extreme processor, Intel
