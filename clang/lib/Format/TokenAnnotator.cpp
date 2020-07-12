@@ -2844,6 +2844,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
             Left.Previous &&
             !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
                                     tok::l_square));
+  // Ensure right pointer alignement with ellipsis e.g. int *...P
+  if (Left.is(tok::ellipsis) && Left.Previous &&
+      Left.Previous->isOneOf(tok::star, tok::amp, tok::ampamp))
+    return Style.PointerAlignment != FormatStyle::PAS_Right;
+
   if (Right.is(tok::star) && Left.is(tok::l_paren))
     return false;
   if (Left.is(tok::star) && Right.isOneOf(tok::star, tok::amp, tok::ampamp))
