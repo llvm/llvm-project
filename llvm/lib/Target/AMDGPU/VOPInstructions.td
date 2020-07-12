@@ -776,6 +776,19 @@ class DivergentFragOrOp<SDPatternOperator Op, VOPProfile P> {
    !if(!isa<SDNode>(Op), getDivergentFrag<Op>.ret, Op), Op);
 }
 
+class getVSrcOp<ValueType vt> {
+  RegisterOperand ret = !if(!eq(vt.Size, 32), VSrc_b32, VSrc_b16);
+}
+
+// Class for binary integer operations with the clamp bit set for saturation
+// TODO: Add sub with negated inline constant pattern.
+class VOPBinOpClampPat<SDPatternOperator node, Instruction inst, ValueType vt> :
+  GCNPat<(node vt:$src0, vt:$src1),
+         (inst getVSrcOp<vt>.ret:$src0, getVSrcOp<vt>.ret:$src1,
+               DSTCLAMP.ENABLE)
+>;
+
+
 include "VOPCInstructions.td"
 include "VOP1Instructions.td"
 include "VOP2Instructions.td"
