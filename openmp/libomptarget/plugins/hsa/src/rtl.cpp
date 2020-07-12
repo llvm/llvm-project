@@ -566,9 +566,8 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
 
   atmi_status_t err;
   {
-    atmi_platform_type_t platform = AMDGCN;
     err = atmi_module_register_from_memory_to_place(
-        (void **)&image->ImageStart, &img_size, &platform, 1, get_gpu_place(device_id));
+        (void *)image->ImageStart, img_size, get_gpu_place(device_id));
 
     check("Module registering", err);
     if (err != ATMI_STATUS_SUCCESS) {

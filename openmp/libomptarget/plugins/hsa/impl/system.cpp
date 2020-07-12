@@ -834,42 +834,6 @@ bool isImplicit(KernelArgMD::ValueKind value_kind) {
   }
 }
 
-hsa_status_t validate_code_object(hsa_code_object_t code_object,
-                                  hsa_code_symbol_t symbol, void *data) {
-  hsa_status_t retVal = HSA_STATUS_SUCCESS;
-  std::set<std::string> *SymbolSet = static_cast<std::set<std::string> *>(data);
-  hsa_symbol_kind_t type;
-
-  uint32_t name_length;
-  hsa_status_t err;
-  err = hsa_code_symbol_get_info(symbol, HSA_CODE_SYMBOL_INFO_TYPE, &type);
-  ErrorCheck(Symbol info extraction, err);
-  DEBUG_PRINT("Exec Symbol type: %d\n", type);
-
-  if (type == HSA_SYMBOL_KIND_VARIABLE) {
-    err = hsa_code_symbol_get_info(symbol, HSA_CODE_SYMBOL_INFO_NAME_LENGTH,
-                                   &name_length);
-    ErrorCheck(Symbol info extraction, err);
-    char *name = reinterpret_cast<char *>(malloc(name_length + 1));
-    err = hsa_code_symbol_get_info(symbol, HSA_CODE_SYMBOL_INFO_NAME, name);
-    ErrorCheck(Symbol info extraction, err);
-    name[name_length] = 0;
-
-    if (SymbolSet->find(std::string(name)) != SymbolSet->end()) {
-      // Symbol already found. Return Error
-      DEBUG_PRINT("Symbol %s already found!\n", name);
-      retVal = HSA_STATUS_ERROR_VARIABLE_ALREADY_DEFINED;
-    } else {
-      SymbolSet->insert(std::string(name));
-    }
-
-    free(name);
-  } else {
-    DEBUG_PRINT("Symbol is an indirect function\n");
-  }
-  return retVal;
-}
-
 static std::pair<unsigned char *, unsigned char *>
 find_metadata(void *binary, size_t binSize) {
   std::pair<unsigned char *, unsigned char *> failure = {nullptr, nullptr};
@@ -1254,18 +1218,12 @@ hsa_status_t populate_InfoTables(hsa_executable_t executable,
   return HSA_STATUS_SUCCESS;
 }
 
-atmi_status_t Runtime::RegisterModuleFromMemory(void **modules,
-                                                size_t *module_sizes,
-                                                atmi_platform_type_t *types,
-                                                const int num_modules,
+atmi_status_t Runtime::RegisterModuleFromMemory(void *module_bytes,
+                                                size_t module_size,
                                                 atmi_place_t place) {
   hsa_status_t err;
   int gpu = place.device_id;
-  if (gpu == -1) {
-    // user is asking runtime to pick a device
-    // TODO(ashwinma): best device of this type? pick 0 for now
-    gpu = 0;
-  }
+  assert(gpu >= 0);
 
   DEBUG_PRINT("Trying to load module to GPU-%d\n", gpu);
   ATLGPUProcessor &proc = get_processor<ATLGPUProcessor>(place);
@@ -1283,24 +1241,15 @@ atmi_status_t Runtime::RegisterModuleFromMemory(void **modules,
                               &executable);
   ErrorCheck(Create the executable, err);
 
-  // initially empty symbol set for every executable
-  std::set<std::string> SymbolSet;
-
   bool module_load_success = false;
-  for (int i = 0; i < num_modules; i++) {
-    void *module_bytes = modules[i];
-    size_t module_size = module_sizes[i];
-    if (types[i] == AMDGCN) {
+  do // Existing control flow used continue, preserve that for this patch
+  {
+    {
       // Some metadata info is not available through ROCr API, so use custom
       // code object metadata parsing to collect such metadata info
-
-
       
-      void *tmp_module = malloc(module_size);
-      memcpy(tmp_module, module_bytes, module_size);
-      err = get_code_object_custom_metadata(tmp_module, module_size, gpu);
+      err = get_code_object_custom_metadata(module_bytes, module_size, gpu);
       ErrorCheckAndContinue(Getting custom code object metadata, err);
-      free(tmp_module);
 
       // Deserialize code object.
       hsa_code_object_t code_object = {0};
@@ -1309,10 +1258,6 @@ atmi_status_t Runtime::RegisterModuleFromMemory(void **modules,
       ErrorCheckAndContinue(Code Object Deserialization, err);
       assert(0 != code_object.handle);
 
-      err = hsa_code_object_iterate_symbols(code_object, validate_code_object,
-                                            static_cast<void *>(&SymbolSet));
-      ErrorCheckAndContinue(Iterating over symbols for execuatable, err);
-
       /* Load the code object.  */
       err =
           hsa_executable_load_code_object(executable, agent, code_object, NULL);
@@ -1320,12 +1265,9 @@ atmi_status_t Runtime::RegisterModuleFromMemory(void **modules,
 
       // cannot iterate over symbols until executable is frozen
 
-    } else {
-      ErrorCheckAndContinue(Loading non - AMDGCN code object,
-                            HSA_STATUS_ERROR_INVALID_CODE_OBJECT);
     }
     module_load_success = true;
-  }
+  } while (0);
   DEBUG_PRINT("Modules loaded successful? %d\n", module_load_success);
   if (module_load_success) {
     /* Freeze the executable; it can now be queried for symbols.  */

@@ -25,11 +25,11 @@ atmi_machine_t *atmi_machine_get_info() {
 /*
  * Modules
  */
-atmi_status_t atmi_module_register_from_memory_to_place(
-    void **modules, size_t *module_sizes, atmi_platform_type_t *types,
-    const int num_modules, atmi_place_t place) {
+atmi_status_t atmi_module_register_from_memory_to_place(void *module_bytes,
+                                                        size_t module_size,
+                                                        atmi_place_t place) {
   return core::Runtime::getInstance().RegisterModuleFromMemory(
-      modules, module_sizes, types, num_modules, place);
+      module_bytes, module_size, place);
 }
 
 /*

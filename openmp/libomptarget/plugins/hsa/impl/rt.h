@@ -79,8 +79,7 @@ class Runtime {
   // machine info
   atmi_machine_t *GetMachineInfo();
   // modules
-  atmi_status_t RegisterModuleFromMemory(void **, size_t *,
-                                         atmi_platform_type_t *, const int,
+  atmi_status_t RegisterModuleFromMemory(void *, size_t,
                                          atmi_place_t);
   // kernels
   virtual atmi_status_t CreateKernel(atmi_kernel_t *, const int, const size_t *,
