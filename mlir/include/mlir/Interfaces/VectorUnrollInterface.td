@@ -19,6 +19,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
   let description = [{
     Encodes properties of an operation on vectors that can be unrolled.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<[{

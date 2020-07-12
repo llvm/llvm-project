@@ -1803,6 +1803,12 @@ class Interface<string name> {
   // The name given to the c++ interface class.
   string cppClassName = name;
 
+  // The C++ namespace that this interface should be placed into.
+  //
+  // To specify nested namespaces, use "::" as the delimiter, e.g., given
+  // "A::B", ops will be placed in `namespace A { namespace B { <def> } }`.
+  string cppNamespace = "";
+
   // The list of methods defined by this interface.
   list<InterfaceMethod> methods = [];
 
@@ -1838,6 +1844,7 @@ class DeclareOpInterfaceMethods<OpInterface interface,
       : OpInterface<interface.cppClassName> {
     let description = interface.description;
     let cppClassName = interface.cppClassName;
+    let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
 
     // This field contains a set of method names that should always have their
