@@ -36,13 +36,9 @@ atmi_status_t atmi_module_register_from_memory_to_place(void *module_bytes,
  * Kernels
  */
 atmi_status_t atmi_kernel_create(atmi_kernel_t *atmi_kernel, const int num_args,
-                                 const size_t *arg_sizes, const int num_impls,
-                                 ...) {
-  va_list arguments;
-  va_start(arguments, num_impls);
-  return core::Runtime::getInstance().CreateKernel(
-      atmi_kernel, num_args, arg_sizes, num_impls, arguments);
-  va_end(arguments);
+                                 const size_t *arg_sizes, const char *name) {
+  return core::Runtime::getInstance().CreateKernel(atmi_kernel, num_args,
+                                                   arg_sizes, name);
 }
 
 atmi_status_t atmi_kernel_release(atmi_kernel_t atmi_kernel) {

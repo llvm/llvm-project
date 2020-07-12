@@ -83,7 +83,7 @@ class Runtime {
                                          atmi_place_t);
   // kernels
   virtual atmi_status_t CreateKernel(atmi_kernel_t *, const int, const size_t *,
-                                     const int, va_list);
+                                     const char *);
   virtual atmi_status_t ReleaseKernel(atmi_kernel_t);
   atmi_status_t CreateEmptyKernel(atmi_kernel_t *, const int, const size_t *);
   atmi_status_t AddGPUKernelImpl(atmi_kernel_t, const char *,

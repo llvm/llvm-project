@@ -668,8 +668,8 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
       *it = sizeof(void *);
     }
 
-    atmi_status_t stat = atmi_kernel_create(&kernel, arg_num, &arg_sizes[0], 1,
-                                            ATMI_DEVTYPE_GPU, e->name);
+    atmi_status_t stat = atmi_kernel_create(&kernel, arg_num, &arg_sizes[0],
+                                            e->name);
 
     if (stat != ATMI_STATUS_SUCCESS) {
       DP("atmi_kernel_create failed %d\n", stat);

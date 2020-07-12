@@ -33,32 +33,20 @@ atmi_status_t Runtime::ReleaseKernel(atmi_kernel_t atmi_kernel) {
 
 atmi_status_t Runtime::CreateKernel(atmi_kernel_t *atmi_kernel,
                                     const int num_args, const size_t *arg_sizes,
-                                    const int num_impls, va_list arguments) {
+                                    const char * impl) {
   atmi_status_t status;
   hsa_status_t err;
   if (!atl_is_atmi_initialized()) return ATMI_STATUS_ERROR;
   status = atmi_kernel_create_empty(atmi_kernel, num_args, arg_sizes);
   ATMIErrorCheck(Creating kernel object, status);
 
-  // va_list arguments;
-  // va_start(arguments, num_impls);
-  for (int impl_id = 0; impl_id < num_impls; impl_id++) {
-    atmi_devtype_t devtype = (atmi_devtype_t)va_arg(arguments, int);
-    if (devtype == ATMI_DEVTYPE_GPU) {
-      const char *impl = va_arg(arguments, const char *);
-      status = atmi_kernel_add_gpu_impl(*atmi_kernel, impl, impl_id);
-      ATMIErrorCheck(Adding GPU kernel implementation, status);
-      DEBUG_PRINT("GPU kernel %s added [%u]\n", impl, impl_id);
-    } else if (devtype == ATMI_DEVTYPE_CPU) {
-      fprintf(stderr, "Unsupported device type: %d\n", devtype);
-      return ATMI_STATUS_ERROR;
-    } else {
-      fprintf(stderr, "Unsupported device type: %d\n", devtype);
-      return ATMI_STATUS_ERROR;
-    }
+  int impl_id = 0;
+  {
+    status = atmi_kernel_add_gpu_impl(*atmi_kernel, impl, impl_id);
+    ATMIErrorCheck(Adding GPU kernel implementation, status);
+    DEBUG_PRINT("GPU kernel %s added [%u]\n", impl, impl_id);
     // rest of kernel impl fields will be populated at first kernel launch
   }
-  // va_end(arguments);
   return ATMI_STATUS_SUCCESS;
 }
 
@@ -78,14 +66,10 @@ atmi_status_t Runtime::AddGPUKernelImpl(atmi_kernel_t atmi_kernel,
   int gpu_count = gpu_procs.size();
 
   std::string hsaco_name = std::string(impl);
-  std::string kernel_name;
-  atmi_platform_type_t kernel_type;
   bool some_success = false;
   for (int gpu = 0; gpu < gpu_count; gpu++) {
     if (KernelInfoTable[gpu].find(hsaco_name) != KernelInfoTable[gpu].end()) {
       DEBUG_PRINT("Found kernel %s for GPU %d\n", hsaco_name.c_str(), gpu);
-      kernel_name = hsaco_name;
-      kernel_type = AMDGCN;
       some_success = true;
     } else {
       DEBUG_PRINT("Did NOT find kernel %s for GPU %d\n", hsaco_name.c_str(),
@@ -96,9 +80,7 @@ atmi_status_t Runtime::AddGPUKernelImpl(atmi_kernel_t atmi_kernel,
   if (!some_success) return ATMI_STATUS_ERROR;
 
   KernelImpl *kernel_impl =
-      new GPUKernelImpl(ID, kernel_name, kernel_type, *kernel);
-  // KernelImpl* kernel_impl = kernel->createGPUKernelImpl(ID, kernel_name,
-  // kernel_type);
+      new GPUKernelImpl(ID, hsaco_name, AMDGCN, *kernel);
 
   kernel->id_map()[ID] = kernel->impls().size();
 

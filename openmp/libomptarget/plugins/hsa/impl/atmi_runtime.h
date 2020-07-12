@@ -163,9 +163,7 @@ typedef struct atmi_kernel_s {
  *
  * @param[in] num_impls Number of implementations for this kernel.
  *
- * @param[in] ... va_list Key-value pairs separated by commas of the format
- * (@atmi_devtype_t, implementation), where implementation is either the char
- * string for GPU implementation or function pointer for CPU implementation.
+ * @param[in] name Hsaco name of this kernel
  *
  * @retval ::ATMI_STATUS_SUCCESS The function has executed successfully.
  *
@@ -175,8 +173,8 @@ typedef struct atmi_kernel_s {
  *
  */
 atmi_status_t atmi_kernel_create(atmi_kernel_t *atmi_kernel, const int num_args,
-                                 const size_t *arg_sizes, const int num_impls,
-                                 ...);
+                                 const size_t *arg_sizes,
+                                 const char * name);
 /**
  * @brief Create an empty kernel opaque structure.
  *
