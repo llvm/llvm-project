@@ -5325,7 +5325,7 @@ TEST_F(FormatTest, DeductionGuides) {
   verifyFormat("template <class... Ts> S(Ts...) -> S<Ts...>;");
   verifyFormat(
       "template <class... T>\n"
-      "array(T &&... t) -> array<std::common_type_t<T...>, sizeof...(T)>;");
+      "array(T &&...t) -> array<std::common_type_t<T...>, sizeof...(T)>;");
   verifyFormat("template <class T> A() -> A<decltype(p->foo<3>())>;");
   verifyFormat("template <class T> A() -> A<decltype(foo<traits<1>>)>;");
   verifyFormat("template <class T> A() -> A<sizeof(p->foo<1>)>;");
@@ -8179,13 +8179,20 @@ TEST_F(FormatTest, AttributePenaltyBreaking) {
 }
 
 TEST_F(FormatTest, UnderstandsEllipsis) {
+  FormatStyle Style = getLLVMStyle();
   verifyFormat("int printf(const char *fmt, ...);");
   verifyFormat("template <class... Ts> void Foo(Ts... ts) { Foo(ts...); }");
-  verifyFormat("template <class... Ts> void Foo(Ts *... ts) {}");
+  verifyFormat("template <class... Ts> void Foo(Ts *...ts) {}");
 
-  FormatStyle PointersLeft = getLLVMStyle();
-  PointersLeft.PointerAlignment = FormatStyle::PAS_Left;
-  verifyFormat("template <class... Ts> void Foo(Ts*... ts) {}", PointersLeft);
+  verifyFormat("template <int *...PP> a;", Style);
+
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("template <class... Ts> void Foo(Ts*... ts) {}", Style);
+
+  verifyFormat("template <int*... PP> a;", Style);
+
+  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  verifyFormat("template <int *... PP> a;", Style);
 }
 
 TEST_F(FormatTest, AdaptivelyFormatsPointersAndReferences) {
