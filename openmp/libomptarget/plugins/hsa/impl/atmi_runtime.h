@@ -102,39 +102,6 @@ atmi_status_t atmi_module_register_from_memory_to_place(
     void **modules, size_t *module_sizes, atmi_platform_type_t *types,
     const int num_modules, atmi_place_t place);
 
-/**
- * @brief Register the ATMI code module from memory.
- *
- * @detail Currently, only GPU devices need explicit module registration because
- * of their specific ISAs that require a separate compilation phase. On the
- * other
- * hand, CPU devices execute regular x86 functions that are compiled with the
- * host program.
- *
- * @param[in] modules A collection of memory regions that contain the GPU
- * modules
- * targeting ::AMDGCN platform types. Value cannot be NULL.
- *
- * @param[in] module_sizes Sizes of each module region in @p modules. Value
- * cannot be NULL.
- *
- * @param[in] types A collection of platform types corresponding to the modules.
- * Value cannot be NULL.
- *
- * @param[in] num_modules Size of @p modules. @p module_sizes and @p types.
- * Value should be greater than 0.
- *
- * @retval ::ATMI_STATUS_SUCCESS The function has executed successfully.
- *
- * @retval ::ATMI_STATUS_ERROR The function encountered errors.
- *
- * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
- *
- */
-atmi_status_t atmi_module_register_from_memory(void **modules,
-                                               size_t *module_sizes,
-                                               atmi_platform_type_t *types,
-                                               const int num_modules);
 /** @} */
 
 /** \defgroup machine ATMI Machine

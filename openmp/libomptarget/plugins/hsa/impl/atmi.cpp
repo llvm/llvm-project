@@ -32,14 +32,6 @@ atmi_status_t atmi_module_register_from_memory_to_place(
       modules, module_sizes, types, num_modules, place);
 }
 
-atmi_status_t atmi_module_register_from_memory(void **modules,
-                                               size_t *module_sizes,
-                                               atmi_platform_type_t *types,
-                                               const int num_modules) {
-  return core::Runtime::getInstance().RegisterModuleFromMemory(
-      modules, module_sizes, types, num_modules);
-}
-
 /*
  * Kernels
  */

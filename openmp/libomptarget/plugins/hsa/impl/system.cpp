@@ -1352,20 +1352,4 @@ atmi_status_t Runtime::RegisterModuleFromMemory(void **modules,
   }
 }
 
-atmi_status_t Runtime::RegisterModuleFromMemory(void **modules,
-                                                size_t *module_sizes,
-                                                atmi_platform_type_t *types,
-                                                const int num_modules) {
-  int gpu_count = g_atl_machine.processorCount<ATLGPUProcessor>();
-  int some_success = 0;
-  atmi_status_t status;
-  for (int gpu = 0; gpu < gpu_count; gpu++) {
-    atmi_place_t place = ATMI_PLACE_GPU(0, gpu);
-    status = core::Runtime::getInstance().RegisterModuleFromMemory(
-        modules, module_sizes, types, num_modules, place);
-    if (status == ATMI_STATUS_SUCCESS) some_success = 1;
-  }
-
-  return (some_success) ? ATMI_STATUS_SUCCESS : ATMI_STATUS_ERROR;
-}
 }  // namespace core

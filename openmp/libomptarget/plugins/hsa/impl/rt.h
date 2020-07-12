@@ -82,8 +82,6 @@ class Runtime {
   atmi_status_t RegisterModuleFromMemory(void **, size_t *,
                                          atmi_platform_type_t *, const int,
                                          atmi_place_t);
-  atmi_status_t RegisterModuleFromMemory(void **, size_t *,
-                                         atmi_platform_type_t *, const int);
   // kernels
   virtual atmi_status_t CreateKernel(atmi_kernel_t *, const int, const size_t *,
                                      const int, va_list);
