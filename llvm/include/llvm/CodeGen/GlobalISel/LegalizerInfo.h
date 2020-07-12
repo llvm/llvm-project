@@ -1214,6 +1214,12 @@ public:
   bool isLegal(const LegalityQuery &Query) const {
     return getAction(Query).Action == LegalizeAction::Legal;
   }
+
+  bool isLegalOrCustom(const LegalityQuery &Query) const {
+    auto Action = getAction(Query).Action;
+    return Action == LegalizeAction::Legal || Action == LegalizeAction::Custom;
+  }
+
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
   bool isLegalOrCustom(const MachineInstr &MI,
                        const MachineRegisterInfo &MRI) const;
