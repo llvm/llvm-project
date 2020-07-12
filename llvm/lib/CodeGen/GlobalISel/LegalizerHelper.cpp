@@ -3457,6 +3457,10 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FSHL:
   case G_FSHR:
   case G_FREEZE:
+  case G_SADDSAT:
+  case G_SSUBSAT:
+  case G_UADDSAT:
+  case G_USUBSAT:
     return reduceOperationWidth(MI, TypeIdx, NarrowTy);
   case G_SHL:
   case G_LSHR:
