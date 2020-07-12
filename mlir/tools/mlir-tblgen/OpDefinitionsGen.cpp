@@ -887,7 +887,8 @@ static bool canGenerateUnwrappedBuilder(Operator &op) {
 }
 
 static bool canInferType(Operator &op) {
-  return op.getTrait("InferTypeOpInterface::Trait") && op.getNumRegions() == 0;
+  return op.getTrait("::mlir::InferTypeOpInterface::Trait") &&
+         op.getNumRegions() == 0;
 }
 
 void OpEmitter::genSeparateArgParamBuilder() {
@@ -1917,7 +1918,7 @@ void OpEmitter::genOpAsmInterface() {
   // TODO: We could also add a flag to allow operations to opt in to this
   // generation, even if they only have a single operation.
   int numResults = op.getNumResults();
-  if (numResults <= 1 || op.getTrait("OpAsmOpInterface::Trait"))
+  if (numResults <= 1 || op.getTrait("::mlir::OpAsmOpInterface::Trait"))
     return;
 
   SmallVector<StringRef, 4> resultNames(numResults);
@@ -1927,7 +1928,7 @@ void OpEmitter::genOpAsmInterface() {
   // Don't add the trait if none of the results have a valid name.
   if (llvm::all_of(resultNames, [](StringRef name) { return name.empty(); }))
     return;
-  opClass.addTrait("OpAsmOpInterface::Trait");
+  opClass.addTrait("::mlir::OpAsmOpInterface::Trait");
 
   // Generate the right accessor for the number of results.
   auto &method = opClass.newMethod("void", "getAsmResultNames",
