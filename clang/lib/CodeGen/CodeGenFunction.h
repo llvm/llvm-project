@@ -264,6 +264,9 @@ public:
   CodeGenModule &CGM;  // Per-module state.
   const TargetInfo &Target;
 
+  // For EH/SEH outlined funclets, this field points to parent's CGF
+  CodeGenFunction *ParentCGF = nullptr;
+
   typedef std::pair<llvm::Value *, llvm::Value *> ComplexPairTy;
   LoopInfoStack LoopStack;
   CGBuilderTy Builder;
