@@ -11986,6 +11986,8 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
 
   SDNodeFlags Flags = N->getFlags();
   bool CanFuse = Options.UnsafeFPMath || isContractable(N);
+  bool CanReassociate =
+      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
   bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
                               CanFuse || HasFMAD);
   // If the addition is not contractable, do not combine.
@@ -12028,13 +12030,14 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
 
   // fadd (fma A, B, (fmul C, D)), E --> fma A, B, (fma C, D, E)
   // fadd E, (fma A, B, (fmul C, D)) --> fma A, B, (fma C, D, E)
+  // This requires reassociation because it changes the order of operations.
   SDValue FMA, E;
-  if (CanFuse && N0.getOpcode() == PreferredFusedOpcode &&
+  if (CanReassociate && N0.getOpcode() == PreferredFusedOpcode &&
       N0.getOperand(2).getOpcode() == ISD::FMUL && N0.hasOneUse() &&
       N0.getOperand(2).hasOneUse()) {
     FMA = N0;
     E = N1;
-  } else if (CanFuse && N1.getOpcode() == PreferredFusedOpcode &&
+  } else if (CanReassociate && N1.getOpcode() == PreferredFusedOpcode &&
              N1.getOperand(2).getOpcode() == ISD::FMUL && N1.hasOneUse() &&
              N1.getOperand(2).hasOneUse()) {
     FMA = N1;
