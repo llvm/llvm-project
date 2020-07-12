@@ -131,7 +131,7 @@ void AVRInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       O << getPrettyRegisterName(Op.getReg(), MRI);
     }
   } else if (Op.isImm()) {
-    O << Op.getImm();
+    O << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
     O << *Op.getExpr();

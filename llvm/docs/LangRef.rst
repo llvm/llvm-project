@@ -2778,7 +2778,9 @@ floating-point transformations.
 
 ``contract``
    Allow floating-point contraction (e.g. fusing a multiply followed by an
-   addition into a fused multiply-and-add).
+   addition into a fused multiply-and-add). This does not enable reassociating
+   to form arbitrary contractions. For example, ``(a*b) + (c*d) + e`` can not
+   be transformed into ``(a*b) + ((c*d) + e)`` to create two fma operations.
 
 ``afn``
    Approximate functions - Allow substitution of approximate calculations for
