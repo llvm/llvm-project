@@ -583,7 +583,7 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
   }
 }
 
-static void
+static StringRef
 getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                                 const unsigned *Features,
                                 unsigned *Type, unsigned *Subtype) {
@@ -591,31 +591,33 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     return (Features[F / 32] & (1U << (F % 32))) != 0;
   };
 
+  StringRef CPU;
+
   switch (Family) {
   case 3:
-    *Type = X86::INTEL_i386;
+    CPU = "i386";
     break;
   case 4:
-    *Type = X86::INTEL_i486;
+    CPU = "i486";
     break;
   case 5:
     if (testFeature(X86::FEATURE_MMX)) {
-      *Type = X86::INTEL_PENTIUM_MMX;
+      CPU = "pentium-mmx";
       break;
     }
-    *Type = X86::INTEL_PENTIUM;
+    CPU = "pentium";
     break;
   case 6:
     switch (Model) {
     case 0x01: // Pentium Pro processor
-      *Type = X86::INTEL_PENTIUM_PRO;
+      CPU = "pentiumpro";
       break;
     case 0x03: // Intel Pentium II OverDrive processor, Pentium II processor,
                // model 03
     case 0x05: // Pentium II processor, model 05, Pentium II Xeon processor,
                // model 05, and Intel Celeron processor, model 05
     case 0x06: // Celeron processor, model 06
-      *Type = X86::INTEL_PENTIUM_II;
+      CPU = "pentium2";
       break;
     case 0x07: // Pentium III processor, model 07, and Pentium III Xeon
                // processor, model 07
@@ -623,19 +625,19 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                // model 08, and Celeron processor, model 08
     case 0x0a: // Pentium III Xeon processor, model 0Ah
     case 0x0b: // Pentium III processor, model 0Bh
-      *Type = X86::INTEL_PENTIUM_III;
+      CPU = "pentium3";
       break;
     case 0x09: // Intel Pentium M processor, Intel Celeron M processor model 09.
     case 0x0d: // Intel Pentium M processor, Intel Celeron M processor, model
                // 0Dh. All processors are manufactured using the 90 nm process.
     case 0x15: // Intel EP80579 Integrated Processor and Intel EP80579
                // Integrated Processor with Intel QuickAssist Technology
-      *Type = X86::INTEL_PENTIUM_M;
+      CPU = "pentium-m";
       break;
     case 0x0e: // Intel Core Duo processor, Intel Core Solo processor, model
                // 0Eh. All processors are manufactured using the 65 nm process.
-      *Type = X86::INTEL_CORE_DUO;
-      break;   // yonah
+      CPU = "yonah";
+      break;
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
                // mobile processor, Intel Core 2 Extreme processor, Intel
@@ -643,8 +645,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                // 0Fh. All processors are manufactured using the 65 nm process.
     case 0x16: // Intel Celeron processor model 16h. All processors are
                // manufactured using the 65 nm process
-      *Type = X86::INTEL_CORE2; // "core2"
-      *Subtype = X86::INTEL_CORE2_65;
+      CPU = "core2";
+      *Type = X86::INTEL_CORE2;
       break;
     case 0x17: // Intel Core 2 Extreme processor, Intel Xeon processor, model
                // 17h. All processors are manufactured using the 45 nm process.
@@ -652,34 +654,38 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                // 45nm: Penryn , Wolfdale, Yorkfield (XE)
     case 0x1d: // Intel Xeon processor MP. All processors are manufactured using
                // the 45 nm process.
-      *Type = X86::INTEL_CORE2; // "penryn"
-      *Subtype = X86::INTEL_CORE2_45;
+      CPU = "penryn";
+      *Type = X86::INTEL_CORE2;
       break;
     case 0x1a: // Intel Core i7 processor and Intel Xeon processor. All
                // processors are manufactured using the 45 nm process.
     case 0x1e: // Intel(R) Core(TM) i7 CPU         870  @ 2.93GHz.
                // As found in a Summer 2010 model iMac.
     case 0x1f:
-    case 0x2e:             // Nehalem EX
-      *Type = X86::INTEL_COREI7; // "nehalem"
+    case 0x2e:              // Nehalem EX
+      CPU = "nehalem";
+      *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_NEHALEM;
       break;
     case 0x25: // Intel Core i7, laptop version.
     case 0x2c: // Intel Core i7 processor and Intel Xeon processor. All
                // processors are manufactured using the 32 nm process.
     case 0x2f: // Westmere EX
-      *Type = X86::INTEL_COREI7; // "westmere"
+      CPU = "westmere";
+      *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_WESTMERE;
       break;
     case 0x2a: // Intel Core i7 processor. All processors are manufactured
                // using the 32 nm process.
     case 0x2d:
-      *Type = X86::INTEL_COREI7; //"sandybridge"
+      CPU = "sandybridge";
+      *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_SANDYBRIDGE;
       break;
     case 0x3a:
-    case 0x3e:             // Ivy Bridge EP
-      *Type = X86::INTEL_COREI7; // "ivybridge"
+    case 0x3e:              // Ivy Bridge EP
+      CPU = "ivybridge";
+      *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_IVYBRIDGE;
       break;
 
@@ -688,7 +694,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x3f:
     case 0x45:
     case 0x46:
-      *Type = X86::INTEL_COREI7; // "haswell"
+      CPU = "haswell";
+      *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_HASWELL;
       break;
 
@@ -697,7 +704,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x47:
     case 0x4f:
     case 0x56:
-      *Type = X86::INTEL_COREI7; // "broadwell"
+      CPU = "broadwell";
+      *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_BROADWELL;
       break;
 
@@ -708,39 +716,47 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x9e:              // Kaby Lake desktop
     case 0xa5:              // Comet Lake-H/S
     case 0xa6:              // Comet Lake-U
-      *Type = X86::INTEL_COREI7; // "skylake"
+      CPU = "skylake";
+      *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_SKYLAKE;
       break;
 
     // Skylake Xeon:
     case 0x55:
       *Type = X86::INTEL_COREI7;
-      if (testFeature(X86::FEATURE_AVX512BF16))
-        *Subtype = X86::INTEL_COREI7_COOPERLAKE; // "cooperlake"
-      else if (testFeature(X86::FEATURE_AVX512VNNI))
-        *Subtype = X86::INTEL_COREI7_CASCADELAKE; // "cascadelake"
-      else
-        *Subtype = X86::INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
+      if (testFeature(X86::FEATURE_AVX512BF16)) {
+        CPU = "cooperlake";
+        *Subtype = X86::INTEL_COREI7_COOPERLAKE;
+      } else if (testFeature(X86::FEATURE_AVX512VNNI)) {
+        CPU = "cascadelake";
+        *Subtype = X86::INTEL_COREI7_CASCADELAKE;
+      } else {
+        CPU = "skylake-avx512";
+        *Subtype = X86::INTEL_COREI7_SKYLAKE_AVX512;
+      }
       break;
 
     // Cannonlake:
     case 0x66:
+      CPU = "cannonlake";
       *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_CANNONLAKE; // "cannonlake"
+      *Subtype = X86::INTEL_COREI7_CANNONLAKE;
       break;
 
     // Icelake:
     case 0x7d:
     case 0x7e:
+      CPU = "icelake-client";
       *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_ICELAKE_CLIENT; // "icelake-client"
+      *Subtype = X86::INTEL_COREI7_ICELAKE_CLIENT;
       break;
 
     // Icelake Xeon:
     case 0x6a:
     case 0x6c:
+      CPU = "icelake-server";
       *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_ICELAKE_SERVER; // "icelake-server"
+      *Subtype = X86::INTEL_COREI7_ICELAKE_SERVER;
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors
@@ -748,8 +764,9 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x27: // 32 nm Atom Medfield
     case 0x35: // 32 nm Atom Midview
     case 0x36: // 32 nm Atom Midview
+      CPU = "bonnell";
       *Type = X86::INTEL_BONNELL;
-      break; // "bonnell"
+      break;
 
     // Atom Silvermont codes from the Intel software optimization guide.
     case 0x37:
@@ -758,14 +775,17 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x5a:
     case 0x5d:
     case 0x4c: // really airmont
+      CPU = "silvermont";
       *Type = X86::INTEL_SILVERMONT;
-      break; // "silvermont"
+      break;
     // Goldmont:
     case 0x5c: // Apollo Lake
     case 0x5f: // Denverton
+      CPU = "goldmont";
       *Type = X86::INTEL_GOLDMONT;
-      break; // "goldmont"
+      break;
     case 0x7a:
+      CPU = "goldmont-plus";
       *Type = X86::INTEL_GOLDMONT_PLUS;
       break;
     case 0x86:
@@ -773,193 +793,140 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       break;
 
     case 0x57:
-      *Type = X86::INTEL_KNL; // knl
+      CPU = "tremont";
+      *Type = X86::INTEL_KNL;
       break;
 
     case 0x85:
-      *Type = X86::INTEL_KNM; // knm
+      CPU = "knm";
+      *Type = X86::INTEL_KNM;
       break;
 
     default: // Unknown family 6 CPU, try to guess.
+      // Don't both with Type/Subtype here, they aren't used by the caller.
+      // They're used above to keep the code in sync with compiler-rt.
       // TODO detect tigerlake host from model
       if (testFeature(X86::FEATURE_AVX512VP2INTERSECT)) {
-        *Type = X86::INTEL_COREI7;
-        *Subtype = X86::INTEL_COREI7_TIGERLAKE;
-        break;
+        CPU = "tigerlake";
+      } else if (testFeature(X86::FEATURE_AVX512VBMI2)) {
+        CPU = "icelake-client";
+      } else if (testFeature(X86::FEATURE_AVX512VBMI)) {
+        CPU = "cannonlake";
+      } else if (testFeature(X86::FEATURE_AVX512BF16)) {
+        CPU = "cooperlake";
+      } else if (testFeature(X86::FEATURE_AVX512VNNI)) {
+        CPU = "cascadelake";
+      } else if (testFeature(X86::FEATURE_AVX512VL)) {
+        CPU = "skylake-avx512";
+      } else if (testFeature(X86::FEATURE_AVX512ER)) {
+        CPU = "knl";
+      } else if (testFeature(X86::FEATURE_CLFLUSHOPT)) {
+        if (testFeature(X86::FEATURE_SHA))
+          CPU = "goldmont";
+        else
+          CPU = "skylake";
+      } else if (testFeature(X86::FEATURE_ADX)) {
+        CPU = "broadwell";
+      } else if (testFeature(X86::FEATURE_AVX2)) {
+        CPU = "haswell";
+      } else if (testFeature(X86::FEATURE_AVX)) {
+        CPU = "sandybridge";
+      } else if (testFeature(X86::FEATURE_SSE4_2)) {
+        if (testFeature(X86::FEATURE_MOVBE))
+          CPU = "silvermont";
+        else
+          CPU = "nehalem";
+      } else if (testFeature(X86::FEATURE_SSE4_1)) {
+        CPU = "penryn";
+      } else if (testFeature(X86::FEATURE_SSSE3)) {
+        if (testFeature(X86::FEATURE_MOVBE))
+          CPU = "bonnell";
+        else
+          CPU = "core2";
+      } else if (testFeature(X86::FEATURE_64BIT)) {
+        CPU = "core2";
+      } else if (testFeature(X86::FEATURE_SSE3)) {
+        CPU = "yonah";
+      } else if (testFeature(X86::FEATURE_SSE2)) {
+        CPU = "pentium-m";
+      } else if (testFeature(X86::FEATURE_SSE)) {
+        CPU = "pentium3";
+      } else if (testFeature(X86::FEATURE_MMX)) {
+        CPU = "pentium2";
+      } else {
+        CPU = "pentiumpro";
       }
-
-      if (testFeature(X86::FEATURE_AVX512VBMI2)) {
-        *Type = X86::INTEL_COREI7;
-        *Subtype = X86::INTEL_COREI7_ICELAKE_CLIENT;
-        break;
-      }
-
-      if (testFeature(X86::FEATURE_AVX512VBMI)) {
-        *Type = X86::INTEL_COREI7;
-        *Subtype = X86::INTEL_COREI7_CANNONLAKE;
-        break;
-      }
-
-      if (testFeature(X86::FEATURE_AVX512BF16)) {
-        *Type = X86::INTEL_COREI7;
-        *Subtype = X86::INTEL_COREI7_COOPERLAKE;
-        break;
-      }
-
-      if (testFeature(X86::FEATURE_AVX512VNNI)) {
-        *Type = X86::INTEL_COREI7;
-        *Subtype = X86::INTEL_COREI7_CASCADELAKE;
-        break;
-      }
-
-      if (testFeature(X86::FEATURE_AVX512VL)) {
-        *Type = X86::INTEL_COREI7;
-        *Subtype = X86::INTEL_COREI7_SKYLAKE_AVX512;
-        break;
-      }
-
-      if (testFeature(X86::FEATURE_AVX512ER)) {
-        *Type = X86::INTEL_KNL; // knl
-        break;
-      }
-
-      if (testFeature(X86::FEATURE_CLFLUSHOPT)) {
-        if (testFeature(X86::FEATURE_SHA)) {
-          *Type = X86::INTEL_GOLDMONT;
-        } else {
-          *Type = X86::INTEL_COREI7;
-          *Subtype = X86::INTEL_COREI7_SKYLAKE;
-        }
-        break;
-      }
-      if (testFeature(X86::FEATURE_ADX)) {
-        *Type = X86::INTEL_COREI7;
-        *Subtype = X86::INTEL_COREI7_BROADWELL;
-        break;
-      }
-      if (testFeature(X86::FEATURE_AVX2)) {
-        *Type = X86::INTEL_COREI7;
-        *Subtype = X86::INTEL_COREI7_HASWELL;
-        break;
-      }
-      if (testFeature(X86::FEATURE_AVX)) {
-        *Type = X86::INTEL_COREI7;
-        *Subtype = X86::INTEL_COREI7_SANDYBRIDGE;
-        break;
-      }
-      if (testFeature(X86::FEATURE_SSE4_2)) {
-        if (testFeature(X86::FEATURE_MOVBE)) {
-          *Type = X86::INTEL_SILVERMONT;
-        } else {
-          *Type = X86::INTEL_COREI7;
-          *Subtype = X86::INTEL_COREI7_NEHALEM;
-        }
-        break;
-      }
-      if (testFeature(X86::FEATURE_SSE4_1)) {
-        *Type = X86::INTEL_CORE2; // "penryn"
-        *Subtype = X86::INTEL_CORE2_45;
-        break;
-      }
-      if (testFeature(X86::FEATURE_SSSE3)) {
-        if (testFeature(X86::FEATURE_MOVBE)) {
-          *Type = X86::INTEL_BONNELL; // "bonnell"
-        } else {
-          *Type = X86::INTEL_CORE2; // "core2"
-          *Subtype = X86::INTEL_CORE2_65;
-        }
-        break;
-      }
-      if (testFeature(X86::FEATURE_64BIT)) {
-        *Type = X86::INTEL_CORE2; // "core2"
-        *Subtype = X86::INTEL_CORE2_65;
-        break;
-      }
-      if (testFeature(X86::FEATURE_SSE3)) {
-        *Type = X86::INTEL_CORE_DUO;
-        break;
-      }
-      if (testFeature(X86::FEATURE_SSE2)) {
-        *Type = X86::INTEL_PENTIUM_M;
-        break;
-      }
-      if (testFeature(X86::FEATURE_SSE)) {
-        *Type = X86::INTEL_PENTIUM_III;
-        break;
-      }
-      if (testFeature(X86::FEATURE_MMX)) {
-        *Type = X86::INTEL_PENTIUM_II;
-        break;
-      }
-      *Type = X86::INTEL_PENTIUM_PRO;
       break;
     }
     break;
   case 15: {
     if (testFeature(X86::FEATURE_64BIT)) {
-      *Type = X86::INTEL_NOCONA;
+      CPU = "nocona";
       break;
     }
     if (testFeature(X86::FEATURE_SSE3)) {
-      *Type = X86::INTEL_PRESCOTT;
+      CPU = "prescott";
       break;
     }
-    *Type = X86::INTEL_PENTIUM_IV;
+    CPU = "pentium4";
     break;
   }
   default:
-    break; /*"generic"*/
+    break; // Unknown.
   }
+
+  return CPU;
 }
 
-static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                          const unsigned *Features,
-                                          unsigned *Type, unsigned *Subtype) {
+static StringRef
+getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                              const unsigned *Features,
+                              unsigned *Type, unsigned *Subtype) {
   auto testFeature = [&](unsigned F) {
     return (Features[F / 32] & (1U << (F % 32))) != 0;
   };
 
-  // FIXME: this poorly matches the generated SubtargetFeatureKV table.  There
-  // appears to be no way to generate the wide variety of AMD-specific targets
-  // from the information returned from CPUID.
+  StringRef CPU;
+
   switch (Family) {
   case 4:
-    *Type = X86::AMD_i486;
+    CPU = "i486";
     break;
   case 5:
-    *Type = X86::AMDPENTIUM;
+    CPU = "pentium";
     switch (Model) {
     case 6:
     case 7:
-      *Subtype = X86::AMDPENTIUM_K6;
-      break; // "k6"
+      CPU = "k6";
+      break;
     case 8:
-      *Subtype = X86::AMDPENTIUM_K62;
-      break; // "k6-2"
+      CPU = "k6-2";
+      break;
     case 9:
     case 13:
-      *Subtype = X86::AMDPENTIUM_K63;
-      break; // "k6-3"
+      CPU = "k6-3";
+      break;
     case 10:
-      *Subtype = X86::AMDPENTIUM_GEODE;
-      break; // "geode"
+      CPU = "geode";
+      break;
     }
     break;
   case 6:
     if (testFeature(X86::FEATURE_SSE)) {
-      *Type = X86::AMD_ATHLON_XP;
-      break; // "athlon-xp"
+      CPU = "athlon-xp";
+      break;
     }
-    *Type = X86::AMD_ATHLON;
-    break; // "athlon"
+    CPU = "athlon";
+    break;
   case 15:
     if (testFeature(X86::FEATURE_SSE3)) {
-      *Type = X86::AMD_K8SSE3;
-      break; // "k8-sse3"
+      CPU = "k8-sse3";
+      break;
     }
-    *Type = X86::AMD_K8;
-    break; // "k8"
+    CPU = "k8";
+    break;
   case 16:
+    CPU = "amdfam10";
     *Type = X86::AMDFAM10H; // "amdfam10"
     switch (Model) {
     case 2:
@@ -974,44 +941,54 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     }
     break;
   case 20:
+    CPU = "btver1";
     *Type = X86::AMD_BTVER1;
-    break; // "btver1";
+    break;
   case 21:
+    CPU = "bdver1";
     *Type = X86::AMDFAM15H;
     if (Model >= 0x60 && Model <= 0x7f) {
+      CPU = "bdver4";
       *Subtype = X86::AMDFAM15H_BDVER4;
-      break; // "bdver4"; 60h-7Fh: Excavator
+      break; // 60h-7Fh: Excavator
     }
     if (Model >= 0x30 && Model <= 0x3f) {
+      CPU = "bdver3";
       *Subtype = X86::AMDFAM15H_BDVER3;
-      break; // "bdver3"; 30h-3Fh: Steamroller
+      break; // 30h-3Fh: Steamroller
     }
     if ((Model >= 0x10 && Model <= 0x1f) || Model == 0x02) {
+      CPU = "bdver2";
       *Subtype = X86::AMDFAM15H_BDVER2;
-      break; // "bdver2"; 02h, 10h-1Fh: Piledriver
+      break; // 02h, 10h-1Fh: Piledriver
     }
     if (Model <= 0x0f) {
       *Subtype = X86::AMDFAM15H_BDVER1;
-      break; // "bdver1"; 00h-0Fh: Bulldozer
+      break; // 00h-0Fh: Bulldozer
     }
     break;
   case 22:
+    CPU = "btver2";
     *Type = X86::AMD_BTVER2;
-    break; // "btver2"
+    break;
   case 23:
+    CPU = "znver1";
     *Type = X86::AMDFAM17H;
     if ((Model >= 0x30 && Model <= 0x3f) || Model == 0x71) {
+      CPU = "znver2";
       *Subtype = X86::AMDFAM17H_ZNVER2;
-      break; // "znver2"; 30h-3fh, 71h: Zen2
+      break; // 30h-3fh, 71h: Zen2
     }
     if (Model <= 0x0f) {
       *Subtype = X86::AMDFAM17H_ZNVER1;
-      break; // "znver1"; 00h-0Fh: Zen1
+      break; // 00h-0Fh: Zen1
     }
     break;
   default:
-    break; // "generic"
+    break; // Unknown AMD CPU.
   }
+
+  return CPU;
 }
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
@@ -1161,26 +1138,23 @@ StringRef sys::getHostCPUName() {
   detectX86FamilyModel(EAX, &Family, &Model);
   getAvailableFeatures(ECX, EDX, MaxLeaf, Features);
 
+  // These aren't consumed in this file, but we try to keep some source code the
+  // same or similar to compiler-rt.
   unsigned Type = 0;
   unsigned Subtype = 0;
 
+  StringRef CPU;
+
   if (Vendor == SIG_INTEL) {
-    getIntelProcessorTypeAndSubtype(Family, Model, Features, &Type, &Subtype);
+    CPU = getIntelProcessorTypeAndSubtype(Family, Model, Features, &Type,
+                                          &Subtype);
   } else if (Vendor == SIG_AMD) {
-    getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type, &Subtype);
+    CPU = getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type,
+                                        &Subtype);
   }
 
-  // Check subtypes first since those are more specific.
-#define X86_CPU_SUBTYPE(ARCHNAME, ENUM) \
-  if (Subtype == X86::ENUM) \
-    return ARCHNAME;
-#include "llvm/Support/X86TargetParser.def"
-
-  // Now check types.
-#define X86_CPU_TYPE(ARCHNAME, ENUM) \
-  if (Type == X86::ENUM) \
-    return ARCHNAME;
-#include "llvm/Support/X86TargetParser.def"
+  if (!CPU.empty())
+    return CPU;
 
   return "generic";
 }
