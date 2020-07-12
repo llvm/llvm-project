@@ -15,10 +15,7 @@
 
 #include "mlir/IR/OpDefinition.h"
 
-namespace mlir {
-
+/// Include the generated interface declarations.
 #include "mlir/Interfaces/LoopLikeInterface.h.inc"
-
-} // namespace mlir
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE_H_
