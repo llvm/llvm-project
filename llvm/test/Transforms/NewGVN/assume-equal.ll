@@ -7,7 +7,7 @@ define float @_Z1if(float %p) {
 ; CHECK-NEXT:    [[P_ADDR:%.*]] = alloca float, align 4
 ; CHECK-NEXT:    store float [[P:%.*]], float* [[P_ADDR]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[P]], 3.000000e+00
-; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret float [[P]]
 ;
 entry:
@@ -26,7 +26,7 @@ define i32 @_Z1ii(i32 %p) {
 ; CHECK-LABEL: @_Z1ii(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[P:%.*]], 42
-; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br i1 true, label [[BB2]], label [[BB2]]
@@ -50,7 +50,7 @@ define i32 @_Z1ij(i32 %p) {
 ; CHECK-LABEL: @_Z1ij(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[P:%.*]], 42
-; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true)
@@ -76,10 +76,10 @@ define i32 @_Z1ik(i32 %p) {
 ; CHECK-LABEL: @_Z1ik(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[P:%.*]], 42
-; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    call void @llvm.assume(i1 false)
 ; CHECK-NEXT:    ret i32 15
 ; CHECK:       bb3:
 ; CHECK-NEXT:    store i8 undef, i8* null, align 1
