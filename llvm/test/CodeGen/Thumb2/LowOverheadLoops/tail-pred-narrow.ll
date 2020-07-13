@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -disable-mve-tail-predication=false -mattr=+mve,+lob %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -tail-predication=enabled -mattr=+mve,+lob %s -S -o - | FileCheck %s
 
 ; TODO: We should be able to generate a vctp for the loads.
 ; CHECK-LABEL: trunc_v4i32_v4i16
