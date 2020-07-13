@@ -41,10 +41,13 @@ using ast_type_traits::DynTypedNode;
 void recordMetrics(const SelectionTree &S) {
   static constexpr trace::Metric SelectionUsedRecovery(
       "selection_recovery", trace::Metric::Distribution);
+  static constexpr trace::Metric RecoveryType("selection_recovery_type",
+                                              trace::Metric::Distribution);
   const auto *Common = S.commonAncestor();
   for (const auto *N = Common; N; N = N->Parent) {
-    if (N->ASTNode.get<RecoveryExpr>()) {
+    if (const auto *RE = N->ASTNode.get<RecoveryExpr>()) {
       SelectionUsedRecovery.record(1); // used recovery ast.
+      RecoveryType.record(RE->isTypeDependent() ? 0 : 1);
       return;
     }
   }

@@ -453,6 +453,8 @@ TEST(SelectionTree, Metrics) {
   auto T = makeSelectionTree(Code, AST);
   EXPECT_THAT(Tracer.takeMetric("selection_recovery"),
               testing::ElementsAreArray({1}));
+  EXPECT_THAT(Tracer.takeMetric("selection_recovery_type"),
+              testing::ElementsAreArray({1}));
 }
 
 // FIXME: Doesn't select the binary operator node in
