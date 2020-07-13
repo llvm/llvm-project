@@ -481,7 +481,7 @@ public:
 /// ```
 /// is converted to:
 /// ```
-///  llvm.intr.fma %va, %va, %va:
+///  llvm.intr.fmuladd %va, %va, %va:
 ///    (!llvm<"<8 x float>">, !llvm<"<8 x float>">, !llvm<"<8 x float>">)
 ///    -> !llvm<"<8 x float>">
 /// ```
@@ -500,8 +500,8 @@ public:
     VectorType vType = fmaOp.getVectorType();
     if (vType.getRank() != 1)
       return failure();
-    rewriter.replaceOpWithNewOp<LLVM::FMAOp>(op, adaptor.lhs(), adaptor.rhs(),
-                                             adaptor.acc());
+    rewriter.replaceOpWithNewOp<LLVM::FMulAddOp>(op, adaptor.lhs(),
+                                                 adaptor.rhs(), adaptor.acc());
     return success();
   }
 };
