@@ -58,6 +58,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<ProfileSummaryInfoWrapperPass>();
       AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+      AU.addPreserved<LazyMachineBlockFrequencyInfoPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 

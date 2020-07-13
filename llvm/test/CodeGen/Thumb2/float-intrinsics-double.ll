@@ -127,9 +127,11 @@ define double @copysign_d(double %a, double %b) {
 ; SOFT: bfi r1, [[REG]], #31, #1
 ; VFP: lsrs [[REG:r[0-9]+]], r3, #31
 ; VFP: bfi r1, [[REG]], #31, #1
-; NEON: vmov.i32 [[REG:d[0-9]+]], #0x80000000
-; NEON: vshl.i64 [[REG]], [[REG]], #32
-; NEON: vbsl [[REG]], d
+; NEON:         vmov.i32 d16, #0x80000000
+; NEON-NEXT:    vshl.i64 d16, d16, #32
+; NEON-NEXT:    vbsl d16, d1, d0
+; NEON-NEXT:    vorr d0, d16, d16
+; NEON-NEXT:    bx lr
   %1 = call double @llvm.copysign.f64(double %a, double %b)
   ret double %1
 }

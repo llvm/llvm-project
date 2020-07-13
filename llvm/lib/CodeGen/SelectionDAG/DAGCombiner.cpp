@@ -7694,6 +7694,12 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
       return DAG.getNode(N->getOpcode(), dl, VT, N0, Amt);
   }
 
+  // rot i16 X, 8 --> bswap X
+  auto *RotAmtC = isConstOrConstSplat(N1);
+  if (RotAmtC && RotAmtC->getAPIntValue() == 8 &&
+      VT.getScalarSizeInBits() == 16 && hasOperation(ISD::BSWAP, VT))
+    return DAG.getNode(ISD::BSWAP, dl, VT, N0);
+
   // Simplify the operands using demanded-bits information.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
