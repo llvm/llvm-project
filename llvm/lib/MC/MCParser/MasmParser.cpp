@@ -4084,11 +4084,8 @@ bool MasmParser::parseDirectiveEnds(StringRef Name, SMLoc NameLoc) {
     return Error(NameLoc, "mismatched name in ENDS directive; expected '" +
                               StructInProgress.back().Name + "'");
   StructInfo Structure = StructInProgress.pop_back_val();
-  if (Structure.Size % Structure.Alignment != 0) {
-    // Pad to make the structure's size divisible by its alignment.
-    Structure.Size +=
-        Structure.Alignment - (Structure.Size % Structure.Alignment);
-  }
+  // Pad to make the structure's size divisible by its alignment.
+  Structure.Size = llvm::alignTo(Structure.Size, Structure.Alignment);
   Structs[Name.lower()] = Structure;
 
   if (parseToken(AsmToken::EndOfStatement))
@@ -4107,29 +4104,49 @@ bool MasmParser::parseDirectiveNestedEnds() {
     return addErrorSuffix(" in nested ENDS directive");
 
   StructInfo Structure = StructInProgress.pop_back_val();
-  if (Structure.Size % Structure.Alignment != 0) {
-    // Pad to make the structure's size divisible by its alignment.
-    Structure.Size +=
-        Structure.Alignment - (Structure.Size % Structure.Alignment);
-  }
+  // Pad to make the structure's size divisible by its alignment.
+  Structure.Size = llvm::alignTo(Structure.Size, Structure.Alignment);
+
   StructInfo &ParentStruct = StructInProgress.back();
+  if (Structure.Name.empty()) {
+    const size_t OldFields = ParentStruct.Fields.size();
+    ParentStruct.Fields.insert(
+        ParentStruct.Fields.end(),
+        std::make_move_iterator(Structure.Fields.begin()),
+        std::make_move_iterator(Structure.Fields.end()));
+    for (const auto &FieldByName : Structure.FieldsByName) {
+      ParentStruct.FieldsByName[FieldByName.getKey()] =
+          FieldByName.getValue() + OldFields;
+    }
+    if (!ParentStruct.IsUnion) {
+      for (auto FieldIter = ParentStruct.Fields.begin() + OldFields;
+           FieldIter != ParentStruct.Fields.end(); ++FieldIter) {
+        FieldIter->Offset += ParentStruct.Size;
+      }
+    }
 
-  FieldInfo &Field = ParentStruct.addField(Structure.Name, FT_STRUCT);
-  StructFieldInfo &StructInfo = Field.Contents.StructInfo;
-  Field.Type = Structure.Size;
-  Field.LengthOf = 1;
-  Field.SizeOf = Structure.Size;
+    if (ParentStruct.IsUnion)
+      ParentStruct.Size = std::max(ParentStruct.Size, Structure.Size);
+    else
+      ParentStruct.Size += Structure.Size;
+  } else {
+    FieldInfo &Field = ParentStruct.addField(Structure.Name, FT_STRUCT);
+    StructFieldInfo &StructInfo = Field.Contents.StructInfo;
+    Field.Type = Structure.Size;
+    Field.LengthOf = 1;
+    Field.SizeOf = Structure.Size;
 
-  if (ParentStruct.IsUnion)
-    ParentStruct.Size = std::max(ParentStruct.Size, Field.SizeOf);
-  else
-    ParentStruct.Size += Field.SizeOf;
+    if (ParentStruct.IsUnion)
+      ParentStruct.Size = std::max(ParentStruct.Size, Field.SizeOf);
+    else
+      ParentStruct.Size += Field.SizeOf;
 
-  StructInfo.Structure = Structure;
-  StructInfo.Initializers.emplace_back();
-  auto &FieldInitializers = StructInfo.Initializers.back().FieldInitializers;
-  for (const auto &SubField : Structure.Fields) {
-    FieldInitializers.push_back(SubField.Contents);
+    StructInfo.Structure = Structure;
+    StructInfo.Initializers.emplace_back();
+    auto &FieldInitializers = StructInfo.Initializers.back().FieldInitializers;
+    for (const auto &SubField : Structure.Fields) {
+      FieldInitializers.push_back(SubField.Contents);
+    }
   }
 
   return false;
