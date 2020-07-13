@@ -3625,6 +3625,9 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
   if (InsertPos)
     VarTemplate->AddSpecialization(Var, InsertPos);
 
+  if (SemaRef.getLangOpts().OpenCL)
+    SemaRef.deduceOpenCLAddressSpace(Var);
+
   // Substitute the nested name specifier, if any.
   if (SubstQualifier(D, Var))
     return nullptr;
@@ -4894,6 +4897,9 @@ VarTemplateSpecializationDecl *Sema::CompleteVarTemplateSpecializationDecl(
 
   // Instantiate the initializer.
   InstantiateVariableInitializer(VarSpec, PatternDecl, TemplateArgs);
+
+  if (getLangOpts().OpenCL)
+    deduceOpenCLAddressSpace(VarSpec);
 
   return VarSpec;
 }
