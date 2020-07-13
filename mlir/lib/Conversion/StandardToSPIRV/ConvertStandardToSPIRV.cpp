@@ -97,6 +97,35 @@ static FloatAttr convertFloatAttr(FloatAttr srcAttr, FloatType dstType,
   return builder.getF32FloatAttr(dstVal.convertToFloat());
 }
 
+/// Returns signed remainder for `lhs` and `rhs` and lets the result follow
+/// the sign of `signOperand`.
+///
+/// Note that this is needed for Vulkan. Per the Vulkan's SPIR-V environment
+/// spec, "for the OpSRem and OpSMod instructions, if either operand is negative
+/// the result is undefined."  So we cannot directly use spv.SRem/spv.SMod
+/// if either operand can be negative. Emulate it via spv.UMod.
+static Value emulateSignedRemainder(Location loc, Value lhs, Value rhs,
+                                    Value signOperand, OpBuilder &builder) {
+  assert(lhs.getType() == rhs.getType());
+  assert(lhs == signOperand || rhs == signOperand);
+
+  Type type = lhs.getType();
+
+  // Calculate the remainder with spv.UMod.
+  Value lhsAbs = builder.create<spirv::GLSLSAbsOp>(loc, type, lhs);
+  Value rhsAbs = builder.create<spirv::GLSLSAbsOp>(loc, type, rhs);
+  Value abs = builder.create<spirv::UModOp>(loc, lhsAbs, rhsAbs);
+
+  // Fix the sign.
+  Value isPositive;
+  if (lhs == signOperand)
+    isPositive = builder.create<spirv::IEqualOp>(loc, lhs, lhsAbs);
+  else
+    isPositive = builder.create<spirv::IEqualOp>(loc, rhs, rhsAbs);
+  Value absNegate = builder.create<spirv::SNegateOp>(loc, type, abs);
+  return builder.create<spirv::SelectOp>(loc, type, isPositive, abs, absNegate);
+}
+
 /// Returns the offset of the value in `targetBits` representation. `srcIdx` is
 /// an index into a 1-D array with each element having `sourceBits`. When
 /// accessing an element in the array treating as having elements of
@@ -308,6 +337,19 @@ public:
   }
 };
 
+/// Converts std.remi_signed to SPIR-V ops.
+///
+/// This cannot be merged into the template unary/binary pattern due to
+/// Vulkan restrictions over spv.SRem and spv.SMod.
+class SignedRemIOpPattern final : public SPIRVOpLowering<SignedRemIOp> {
+public:
+  using SPIRVOpLowering<SignedRemIOp>::SPIRVOpLowering;
+
+  LogicalResult
+  matchAndRewrite(SignedRemIOp remOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Converts bitwise standard operations to SPIR-V operations. This is a special
 /// pattern other than the BinaryOpPatternPattern because if the operands are
 /// boolean values, SPIR-V uses different operations (`SPIRVLogicalOp`). For
@@ -505,6 +547,20 @@ public:
 };
 
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// SignedRemIOpPattern
+//===----------------------------------------------------------------------===//
+
+LogicalResult SignedRemIOpPattern::matchAndRewrite(
+    SignedRemIOp remOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  Value result = emulateSignedRemainder(remOp.getLoc(), operands[0],
+                                        operands[1], operands[0], rewriter);
+  rewriter.replaceOp(remOp, result);
+
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // ConstantOp with composite type.
@@ -1005,6 +1061,9 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
                                      SPIRVTypeConverter &typeConverter,
                                      OwningRewritePatternList &patterns) {
   patterns.insert<
+      // Unary and binary patterns
+      BitwiseOpPattern<AndOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
+      BitwiseOpPattern<OrOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
       UnaryAndBinaryOpPattern<AbsFOp, spirv::GLSLFAbsOp>,
       UnaryAndBinaryOpPattern<AddFOp, spirv::FAddOp>,
       UnaryAndBinaryOpPattern<AddIOp, spirv::IAddOp>,
@@ -1020,7 +1079,6 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       UnaryAndBinaryOpPattern<RsqrtOp, spirv::GLSLInverseSqrtOp>,
       UnaryAndBinaryOpPattern<ShiftLeftOp, spirv::ShiftLeftLogicalOp>,
       UnaryAndBinaryOpPattern<SignedDivIOp, spirv::SDivOp>,
-      UnaryAndBinaryOpPattern<SignedRemIOp, spirv::SRemOp>,
       UnaryAndBinaryOpPattern<SignedShiftRightOp,
                               spirv::ShiftRightArithmeticOp>,
       UnaryAndBinaryOpPattern<SinOp, spirv::GLSLSinOp>,
@@ -1031,19 +1089,28 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
       UnaryAndBinaryOpPattern<UnsignedDivIOp, spirv::UDivOp>,
       UnaryAndBinaryOpPattern<UnsignedRemIOp, spirv::UModOp>,
       UnaryAndBinaryOpPattern<UnsignedShiftRightOp, spirv::ShiftRightLogicalOp>,
-      AllocOpPattern, DeallocOpPattern,
-      BitwiseOpPattern<AndOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
-      BitwiseOpPattern<OrOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
-      BoolCmpIOpPattern, ConstantCompositeOpPattern, ConstantScalarOpPattern,
-      CmpFOpPattern, CmpIOpPattern, IntLoadOpPattern, LoadOpPattern,
-      ReturnOpPattern, SelectOpPattern, IntStoreOpPattern, StoreOpPattern,
+      SignedRemIOpPattern, XOrOpPattern,
+
+      // Comparison patterns
+      BoolCmpIOpPattern, CmpFOpPattern, CmpIOpPattern,
+
+      // Constant patterns
+      ConstantCompositeOpPattern, ConstantScalarOpPattern,
+
+      // Memory patterns
+      AllocOpPattern, DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern,
+      LoadOpPattern, StoreOpPattern,
+
+      ReturnOpPattern, SelectOpPattern,
+
+      // Type cast patterns
       ZeroExtendI1Pattern, TypeCastingOpPattern<IndexCastOp, spirv::SConvertOp>,
       TypeCastingOpPattern<SIToFPOp, spirv::ConvertSToFOp>,
       TypeCastingOpPattern<ZeroExtendIOp, spirv::UConvertOp>,
       TypeCastingOpPattern<TruncateIOp, spirv::SConvertOp>,
       TypeCastingOpPattern<FPToSIOp, spirv::ConvertFToSOp>,
       TypeCastingOpPattern<FPExtOp, spirv::FConvertOp>,
-      TypeCastingOpPattern<FPTruncOp, spirv::FConvertOp>, XOrOpPattern>(
-      context, typeConverter);
+      TypeCastingOpPattern<FPTruncOp, spirv::FConvertOp>>(context,
+                                                          typeConverter);
 }
 } // namespace mlir

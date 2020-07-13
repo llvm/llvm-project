@@ -844,6 +844,18 @@ static LogicalResult verifyShiftOp(Operation *op) {
   return success();
 }
 
+static void buildLogicalBinaryOp(OpBuilder &builder, OperationState &state,
+                                 Value lhs, Value rhs) {
+  assert(lhs.getType() == rhs.getType());
+
+  Type boolType = builder.getI1Type();
+  if (auto vecType = lhs.getType().dyn_cast<VectorType>())
+    boolType = VectorType::get(vecType.getShape(), boolType);
+  state.addTypes(boolType);
+
+  state.addOperands({lhs, rhs});
+}
+
 //===----------------------------------------------------------------------===//
 // spv.AccessChainOp
 //===----------------------------------------------------------------------===//
