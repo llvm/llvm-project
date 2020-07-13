@@ -935,7 +935,7 @@ func @transfer_read_1d_not_masked(%A : memref<?xf32>, %base: index) -> vector<17
 //  CHECK-SAME: !llvm<"float*"> to !llvm<"<17 x float>*">
 //
 // 2. Rewrite as a load.
-//       CHECK: %[[loaded:.*]] = llvm.load %[[vecPtr]] : !llvm<"<17 x float>*">
+//       CHECK: %[[loaded:.*]] = llvm.load %[[vecPtr]] {alignment = 4 : i64} : !llvm<"<17 x float>*">
 
 func @genbool_1d() -> vector<8xi1> {
   %0 = vector.constant_mask [4] : vector<8xi1>
