@@ -334,6 +334,20 @@ TEST(ScalarTest, SetValueFromCString) {
   EXPECT_THAT_ERROR(
       a.SetValueFromCString("-123", lldb::eEncodingUint, 8).ToError(),
       Failed());
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("-2147483648", lldb::eEncodingSint, 4).ToError(),
+      Succeeded());
+  EXPECT_EQ(-2147483648, a);
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("-2147483649", lldb::eEncodingSint, 4).ToError(),
+      Failed());
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("47.25", lldb::eEncodingIEEE754, 4).ToError(),
+      Succeeded());
+  EXPECT_EQ(47.25f, a);
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("asdf", lldb::eEncodingIEEE754, 4).ToError(),
+      Failed());
 }
 
 TEST(ScalarTest, APIntConstructor) {
