@@ -7,7 +7,7 @@
 #include <string.h>
 
 int main(void) {
-  char q[10];
+  char q[30];
   size_t n = strxfrm(q, "abcdef", sizeof(q));
   assert(n < sizeof(q));
   __msan_check_mem_is_initialized(q, n + 1);
