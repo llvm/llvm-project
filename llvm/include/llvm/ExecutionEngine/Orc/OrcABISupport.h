@@ -23,7 +23,6 @@
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cstdint>
-#include <optional>
 
 namespace llvm {
 namespace orc {
