@@ -205,14 +205,14 @@ struct ValueDFS_Compare {
     // numbering will say the placed predicaeinfos should go first (IE
     // LN_beginning), so we won't be in this function. For assumes, we will end
     // up here, beause we need to order the def we will place relative to the
-    // assume.  So for the purpose of ordering, we pretend the def is the assume
-    // because that is where we will insert the info.
+    // assume.  So for the purpose of ordering, we pretend the def is right
+    // after the assume, because that is where we will insert the info.
     if (!VD.U) {
       assert(VD.PInfo &&
              "No def, no use, and no predicateinfo should not occur");
       assert(isa<PredicateAssume>(VD.PInfo) &&
              "Middle of block should only occur for assumes");
-      return cast<PredicateAssume>(VD.PInfo)->AssumeInst;
+      return cast<PredicateAssume>(VD.PInfo)->AssumeInst->getNextNode();
     }
     return nullptr;
   }
@@ -621,7 +621,9 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
       auto *PAssume = dyn_cast<PredicateAssume>(ValInfo);
       assert(PAssume &&
              "Should not have gotten here without it being an assume");
-      IRBuilder<> B(PAssume->AssumeInst);
+      // Insert the predicate directly after the assume. While it also holds
+      // directly before it, assume(i1 true) is not a useful fact.
+      IRBuilder<> B(PAssume->AssumeInst->getNextNode());
       Function *IF = getCopyDeclaration(F.getParent(), Op->getType());
       if (IF->users().empty())
         PI.CreatedDeclarations.insert(IF);
