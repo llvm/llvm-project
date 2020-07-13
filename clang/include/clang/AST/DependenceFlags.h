@@ -16,8 +16,18 @@ namespace clang {
 struct ExprDependenceScope {
   enum ExprDependence : uint8_t {
     UnexpandedPack = 1,
+    // This expr depends in any way on
+    //   - a template parameter, it implies that the resolution of this expr may
+    //     cause instantiation to fail
+    //   - or an error (often in a non-template context)
+    //
+    // Note that C++ standard doesn't define the instantiation-dependent term,
+    // we follow the formal definition coming from the Itanium C++ ABI, and
+    // extend it to errors.
     Instantiation = 2,
+    // The type of this expr depends on a template parameter, or an error.
     Type = 4,
+    // The value of this expr depends on a template parameter, or an error.
     Value = 8,
 
     // clang extension: this expr contains or references an error, and is
@@ -42,10 +52,14 @@ struct TypeDependenceScope {
     /// Whether this type contains an unexpanded parameter pack
     /// (for C++11 variadic templates)
     UnexpandedPack = 1,
-    /// Whether this type somehow involves a template parameter, even
-    /// if the resolution of the type does not depend on a template parameter.
+    /// Whether this type somehow involves
+    ///   - a template parameter, even if the resolution of the type does not
+    ///     depend on a template parameter.
+    ///   - or an error.
     Instantiation = 2,
-    /// Whether this type is a dependent type (C++ [temp.dep.type]).
+    /// Whether this type
+    ///   - is a dependent type (C++ [temp.dep.type])
+    ///   - or it somehow involves an error, e.g. decltype(recovery-expr)
     Dependent = 4,
     /// Whether this type is a variably-modified type (C99 6.7.5).
     VariablyModified = 8,
@@ -95,16 +109,17 @@ public:
 
     // Contains a template parameter pack that wasn't expanded.
     UnexpandedPack = 1,
-    // Uses a template parameter, even if it doesn't affect the result.
-    // Validity depends on the template parameter.
+    // Depends on a template parameter or an error in some way.
+    // Validity depends on how the template is instantiated or the error is
+    // resolved.
     Instantiation = 2,
-    // Expression type depends on template context.
+    // Expression type depends on template context, or an error.
     // Value and Instantiation should also be set.
     Type = 4,
-    // Expression value depends on template context.
+    // Expression value depends on template context, or an error.
     // Instantiation should also be set.
     Value = 8,
-    // Depends on template context.
+    // Depends on template context, or an error.
     // The type/value distinction is only meaningful for expressions.
     Dependent = Type | Value,
     // Includes an error, and depends on how it is resolved.
