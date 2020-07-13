@@ -63,6 +63,10 @@ private:
       if (auto Values = scalarValues(N))
         F.Add = std::move(*Values);
     });
+    Dict.handle("Remove", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.Remove = std::move(*Values);
+    });
     Dict.parse(N);
   }
 
