@@ -2,15 +2,11 @@
 
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 // RUN: ld.lld -shared %t.o -o %t.so
-// RUN: llvm-readelf -dyn-relocations %t.so | FileCheck %s
+// RUN: llvm-readelf -dyn-relocations %t.so | FileCheck %s -allow-empty --implicit-check-not={{.}}
 
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 // RUN: ld.lld -shared %t.o -o %t.so
-// RUN: llvm-readelf -dyn-relocations %t.so | FileCheck %s
-
-
-// CHECK-NOT: foo
-// CHECK-NOT: bar
+// RUN: llvm-readelf -dyn-relocations %t.so | FileCheck %s -allow-empty --implicit-check-not={{.}}
 
 	.text
 	.abiversion 2
