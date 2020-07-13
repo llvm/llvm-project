@@ -217,7 +217,7 @@ bool ProcessKDP::GetHostArchitecture(ArchSpec &arch) {
   return false;
 }
 
-Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
+Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
   Status error;
 
   // Don't let any JIT happen when doing KDP as we can't allocate memory and we

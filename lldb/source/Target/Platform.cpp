@@ -1806,7 +1806,7 @@ lldb::ProcessSP Platform::ConnectProcess(llvm::StringRef connect_url,
   if (!process_sp)
     return nullptr;
 
-  error = process_sp->ConnectRemote(&debugger.GetOutputStream(), connect_url);
+  error = process_sp->ConnectRemote(connect_url);
   if (error.Fail())
     return nullptr;
 

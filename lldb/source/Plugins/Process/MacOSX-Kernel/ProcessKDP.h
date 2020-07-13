@@ -67,8 +67,7 @@ public:
   WillAttachToProcessWithName(const char *process_name,
                               bool wait_for_launch) override;
 
-  lldb_private::Status DoConnectRemote(lldb_private::Stream *strm,
-                                       llvm::StringRef remote_url) override;
+  lldb_private::Status DoConnectRemote(llvm::StringRef remote_url) override;
 
   lldb_private::Status DoAttachToProcessWithID(
       lldb::pid_t pid,
