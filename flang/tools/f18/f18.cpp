@@ -446,15 +446,17 @@ int main(int argc, char *const argv[]) {
         args.pop_front();
       }
       break;
-    } else if (arg == "-Mfixed") {
+    } else if (arg == "-Mfixed" || arg == "-ffixed-form") {
       driver.forcedForm = true;
       options.isFixedForm = true;
-    } else if (arg == "-Mfree") {
+    } else if (arg == "-Mfree" || arg == "-ffree-form") {
       driver.forcedForm = true;
       options.isFixedForm = false;
-    } else if (arg == "-Mextend") {
+    } else if (arg == "-Mextend" || arg == "-ffixed-line-length-132") {
       options.fixedFormColumns = 132;
-    } else if (arg == "-Munlimited") {
+    } else if (arg == "-Munlimited" || arg == "-ffree-line-length-none" ||
+        arg == "-ffree-line-length-0" || arg == "-ffixed-line-length-none" ||
+        arg == "-ffixed-line-length-0") {
       // For reparsing f18's -E output of fixed-form cooked character stream
       options.fixedFormColumns = 1000000;
     } else if (arg == "-Mbackslash") {
@@ -463,7 +465,8 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-Mnobackslash") {
       options.features.Enable(
           Fortran::common::LanguageFeature::BackslashEscapes, true);
-    } else if (arg == "-Mstandard") {
+    } else if (arg == "-Mstandard" || arg == "-std=f95" ||
+        arg == "-std=f2003" || arg == "-std=f2008" || arg == "-std=legacy") {
       driver.warnOnNonstandardUsage = true;
     } else if (arg == "-fopenmp") {
       options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
@@ -530,6 +533,8 @@ int main(int argc, char *const argv[]) {
     } else if (arg.substr(0, 2) == "-U") {
       options.predefinitions.emplace_back(
           arg.substr(2), std::optional<std::string>{});
+    } else if (arg == "-fdefault-double-8") {
+      defaultKinds.set_defaultRealKind(4);
     } else if (arg == "-r8" || arg == "-fdefault-real-8") {
       defaultKinds.set_defaultRealKind(8);
     } else if (arg == "-i8" || arg == "-fdefault-integer-8") {
@@ -580,15 +585,17 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-help" || arg == "--help" || arg == "-?") {
       llvm::errs()
           << "f18 options:\n"
-          << "  -Mfixed | -Mfree     force the source form\n"
-          << "  -Mextend             132-column fixed form\n"
+          << "  -Mfixed | -Mfree | -ffixed-form | -ffree-form   force the "
+             "source form\n"
+          << "  -Mextend | -ffixed-line-length-132   132-column fixed form\n"
           << "  -f[no-]backslash     enable[disable] \\escapes in literals\n"
           << "  -M[no]backslash      disable[enable] \\escapes in literals\n"
           << "  -Mstandard           enable conformance warnings\n"
+          << "  -std=<standard>      enable conformance warnings\n"
           << "  -fenable=<feature>   enable a language feature\n"
           << "  -fdisable=<feature>  disable a language feature\n"
-          << "  -r8 | -fdefault-real-8 | -i8 | -fdefault-integer-8  "
-             "change default kinds of intrinsic types\n"
+          << "  -r8 | -fdefault-real-8 | -i8 | -fdefault-integer-8 | "
+             "-fdefault-double-8   change default kinds of intrinsic types\n"
           << "  -Werror              treat warnings as errors\n"
           << "  -ed                  enable fixed form D lines\n"
           << "  -E                   prescan & preprocess only\n"
@@ -632,21 +639,26 @@ int main(int argc, char *const argv[]) {
   if (driver.warnOnNonstandardUsage) {
     options.features.WarnOnAllNonstandard();
   }
-  if (options.features.IsEnabled(Fortran::common::LanguageFeature::OpenMP)) {
-    driver.pgf90Args.push_back("-mp");
-  }
   if (isPGF90) {
     if (!options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes)) {
       driver.pgf90Args.push_back(
           "-Mbackslash"); // yes, this *disables* them in pgf90
     }
+    if (options.features.IsEnabled(Fortran::common::LanguageFeature::OpenMP)) {
+      driver.pgf90Args.push_back("-mp");
+    }
+
     Fortran::parser::useHexadecimalEscapeSequences = false;
   } else {
     if (options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes)) {
       driver.pgf90Args.push_back("-fbackslash");
     }
+    if (options.features.IsEnabled(Fortran::common::LanguageFeature::OpenMP)) {
+      driver.pgf90Args.push_back("-fopenmp");
+    }
+
     Fortran::parser::useHexadecimalEscapeSequences = true;
   }
 
