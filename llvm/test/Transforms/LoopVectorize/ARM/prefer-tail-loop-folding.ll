@@ -1,19 +1,19 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize -S < %s | \
+; RUN:   -tail-predication=enabled -loop-vectorize -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=-mve \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=false -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve \
-; RUN:   -disable-mve-tail-predication=true -loop-vectorize \
+; RUN:   -tail-predication=disabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
@@ -21,24 +21,24 @@
 ; 'isHardwareLoopProfitable' return false, so that we test avoiding folding for
 ; these cases.
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve,-lob \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
 ; RUN:   -prefer-predicate-over-epilog=false \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
 ; RUN:   -prefer-predicate-over-epilog=true \
-; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,FOLDING-OPT
 
