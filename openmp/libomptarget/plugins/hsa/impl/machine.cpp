@@ -27,14 +27,6 @@ void ATLMemory::free(void *ptr) {
   ErrorCheck(Allocate from memory pool, err);
 }
 
-/*atmi_task_handle_t ATLMemory::copy(void *dest, void *ATLMemory &m, bool async)
-{
-    atmi_task_handle_t ret_task;
-
-    if(async) atmi_task_wait(ret_task);
-    return ret_task;
-}*/
-
 void ATLProcessor::addMemory(const ATLMemory &mem) {
   for (auto &mem_obj : memories_) {
     // if the memory already exists, then just return
@@ -195,26 +187,6 @@ void ATLProcessor::destroyQueues() {
   }
 }
 
-hsa_queue_t *ATLProcessor::getBestQueue(atmi_scheduler_t sched) {
-  hsa_queue_t *ret = NULL;
-  switch (sched) {
-    case ATMI_SCHED_NONE:
-      ret = getQueueAt(__atomic_load_n(&next_best_queue_id_, __ATOMIC_ACQUIRE) %
-                       queues_.size());
-      break;
-    case ATMI_SCHED_RR:
-      ret = getQueueAt(
-          __atomic_fetch_add(&next_best_queue_id_, 1, __ATOMIC_ACQ_REL) %
-          queues_.size());
-      break;
-  }
-  return ret;
-}
-
-hsa_queue_t *ATLProcessor::getQueueAt(const int index) {
-  return queues_[index % queues_.size()];
-}
-
 int ATLProcessor::num_cus() const {
   hsa_status_t err;
   /* Query the number of compute units.  */
@@ -225,15 +197,4 @@ int ATLProcessor::num_cus() const {
   ErrorCheck(Querying the agent number of compute units, err);
 
   return num_cus;
-}
-
-int ATLProcessor::wavefront_size() const {
-  hsa_status_t err;
-  /* Query the number of compute units.  */
-  uint32_t w_size = 0;
-  err = hsa_agent_get_info(
-      agent_, (hsa_agent_info_t)HSA_AGENT_INFO_WAVEFRONT_SIZE, &w_size);
-  ErrorCheck(Querying the agent wavefront size, err);
-
-  return w_size;
 }

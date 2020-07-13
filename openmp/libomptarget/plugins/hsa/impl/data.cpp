@@ -16,8 +16,6 @@
 #include "internal.h"
 #include "machine.h"
 #include "rt.h"
-#include "task.h"
-#include "taskgroup.h"
 
 using core::TaskImpl;
 extern ATLMachine g_atl_machine;
@@ -98,7 +96,7 @@ hsa_agent_t get_compute_agent(atmi_place_t place) {
   return get_processor_by_compute_place(place).agent();
 }
 
-hsa_agent_t get_mem_agent(atmi_mem_place_t place) {
+static hsa_agent_t get_mem_agent(atmi_mem_place_t place) {
   return get_processor_by_mem_place(place).agent();
 }
 

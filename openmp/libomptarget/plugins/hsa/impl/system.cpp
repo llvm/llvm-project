@@ -232,7 +232,8 @@ std::map<std::string, std::string> KernelNameMap;
 std::vector<std::map<std::string, atl_kernel_info_t> > KernelInfoTable;
 std::vector<std::map<std::string, atl_symbol_info_t> > SymbolInfoTable;
 
-static atl_dep_sync_t g_dep_sync_type = ATL_SYNC_CALLBACK;
+SignalPoolT FreeSignalPool;
+pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 
 RealTimer SignalAddTimer("Signal Time");
 RealTimer HandleSignalTimer("Handle Signal Time");
@@ -312,10 +313,6 @@ atmi_status_t Runtime::Initialize() {
   if (devtype == ATMI_DEVTYPE_ALL || devtype & ATMI_DEVTYPE_GPU) {
     ATMIErrorCheck(GPU context init, atl_init_gpu_context());
   }
-
-  // create default taskgroup obj
-  atmi_taskgroup_handle_t tghandle;
-  ATMIErrorCheck(Create default taskgroup, TaskGroupCreate(&tghandle));
 
   atl_set_atmi_initialized();
   return ATMI_STATUS_SUCCESS;
@@ -491,7 +488,7 @@ static hsa_status_t get_kernarg_memory_region(hsa_region_t region, void *data) {
   return HSA_STATUS_SUCCESS;
 }
 
-hsa_status_t init_comute_and_memory() {
+static hsa_status_t init_compute_and_memory() {
   hsa_status_t err;
 
   /* Iterate over the agents and pick the gpu agent */
@@ -662,10 +659,9 @@ hsa_status_t init_hsa() {
     ErrorCheck(Initializing the hsa runtime, err);
     if (err != HSA_STATUS_SUCCESS) return err;
 
-    err = init_comute_and_memory();
+    err = init_compute_and_memory();
     if (err != HSA_STATUS_SUCCESS) return err;
     ErrorCheck(After initializing compute and memory, err);
-    init_dag_scheduler();
 
     int gpu_count = g_atl_machine.processorCount<ATLGPUProcessor>();
     KernelInfoTable.resize(gpu_count);
@@ -694,17 +690,7 @@ void init_tasks() {
   int max_signals = core::Runtime::getInstance().getMaxSignals();
   for (task_num = 0; task_num < max_signals; task_num++) {
     hsa_signal_t new_signal;
-    // For ATL_SYNC_CALLBACK, we need host to be interrupted
-    // upon task completion to resolve dependencies on the host.
-    // For ATL_SYNC_BARRIER_PKT, since barrier packets resolve
-    // dependencies within the GPU, they can be just agent signals
-    // without host interrupts.
-    // TODO(ashwinma): for barrier packet with host tasks, should we create
-    // a separate list of free signals?
-    if (g_dep_sync_type == ATL_SYNC_CALLBACK)
-      err = hsa_signal_create(0, 0, NULL, &new_signal);
-    else
-      err = hsa_signal_create(0, gpu_count, &gpu_agents[0], &new_signal);
+    err = hsa_signal_create(0, 0, NULL, &new_signal);
     ErrorCheck(Creating a HSA signal, err);
     FreeSignalPool.push(new_signal);
   }
@@ -1121,8 +1107,9 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
   return HSA_STATUS_SUCCESS;
 }
 
-hsa_status_t populate_InfoTables(hsa_executable_t executable,
-                                 hsa_executable_symbol_t symbol, void *data) {
+static hsa_status_t populate_InfoTables(hsa_executable_t executable,
+                                        hsa_executable_symbol_t symbol,
+                                        void *data) {
   int gpu = *static_cast<int *>(data);
   hsa_symbol_kind_t type;
 

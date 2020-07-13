@@ -78,12 +78,8 @@ add_library(omptarget.rtl.hsa SHARED
       impl/atmi.cpp
       impl/atmi_interop_hsa.cpp
       impl/data.cpp
-      impl/kernel.cpp
       impl/machine.cpp
-      impl/queue.cpp
       impl/system.cpp
-      impl/task.cpp
-      impl/taskgroup.cpp
       impl/utils.cpp
       impl/msgpack.cpp
       impl/atmi_hostcall.c

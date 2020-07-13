@@ -177,7 +177,44 @@ extern std::vector<core::TaskgroupImpl *> AllTaskgroups;
 // atmi_task_table_t TaskTable[SNK_MAX_TASKS];
 extern std::vector<core::TaskImpl *> AllTasks;
 extern std::queue<core::TaskImpl *> ReadyTaskQueue;
-extern std::queue<hsa_signal_t> FreeSignalPool;
+
+struct SignalPoolT {
+  SignalPoolT() = default;
+  SignalPoolT(const SignalPoolT &) = delete;
+  SignalPoolT(SignalPoolT &&) = delete;
+
+  size_t size() {
+    lock l(&mutex);
+    return state.size();
+  }
+  bool empty() {
+    lock l(&mutex);
+    return state.empty();
+  }
+  void push(hsa_signal_t s) {
+    lock l(&mutex);
+    state.push(s);
+  }
+  hsa_signal_t front() {
+    lock l(&mutex);
+    return state.front();
+  }
+  void pop(void) {
+    lock l(&mutex);
+    state.pop();
+  }
+
+private:
+  static pthread_mutex_t mutex;
+  std::queue<hsa_signal_t> state;
+  struct lock {
+    lock(pthread_mutex_t *m) : m(m) { pthread_mutex_lock(m); }
+    ~lock() { pthread_mutex_unlock(m); }
+    pthread_mutex_t *m;
+  };
+};
+
+extern SignalPoolT FreeSignalPool;
 extern std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
 
 namespace core {
@@ -224,10 +261,6 @@ extern hsa_amd_memory_pool_t get_memory_pool_by_mem_place(
     atmi_mem_place_t place);
 extern bool atl_is_atmi_initialized();
 
-// extern void atl_task_wait(TaskImpl *task);
-
-void init_dag_scheduler();
-bool handle_signal(hsa_signal_value_t value, void *arg);
 bool handle_group_signal(hsa_signal_value_t value, void *arg);
 
 void packet_store_release(uint32_t *packet, uint16_t header, uint16_t rest);
@@ -236,14 +269,6 @@ uint16_t create_header(
     atmi_task_fence_scope_t acq_fence = ATMI_FENCE_SCOPE_SYSTEM,
     atmi_task_fence_scope_t rel_fence = ATMI_FENCE_SCOPE_SYSTEM);
 
-Kernel *get_kernel_obj(atmi_kernel_t atmi_kernel);
-TaskImpl *getTaskImpl(atmi_task_handle_t t);
-core::TaskgroupImpl *getTaskgroupImpl(atmi_taskgroup_handle_t t);
-void set_task_handle_ID(atmi_task_handle_t *t, int ID);
-void lock(pthread_mutex_t *m);
-void unlock(pthread_mutex_t *m);
-
-TaskImpl *get_new_task();
 void allow_access_to_all_gpu_agents(void *ptr);
 }  // namespace core
 

@@ -32,49 +32,6 @@ atmi_status_t atmi_module_register_from_memory_to_place(void *module_bytes,
       module_bytes, module_size, place);
 }
 
-/*
- * Kernels
- */
-atmi_status_t atmi_kernel_create(atmi_kernel_t *atmi_kernel, const int num_args,
-                                 const size_t *arg_sizes, const char *name) {
-  return core::Runtime::getInstance().CreateKernel(atmi_kernel, num_args,
-                                                   arg_sizes, name);
-}
-
-atmi_status_t atmi_kernel_release(atmi_kernel_t atmi_kernel) {
-  return core::Runtime::getInstance().ReleaseKernel(atmi_kernel);
-}
-
-atmi_status_t atmi_kernel_create_empty(atmi_kernel_t *atmi_kernel,
-                                       const int num_args,
-                                       const size_t *arg_sizes) {
-  return core::Runtime::getInstance().CreateEmptyKernel(atmi_kernel, num_args,
-                                                        arg_sizes);
-}
-
-atmi_status_t atmi_kernel_add_gpu_impl(atmi_kernel_t atmi_kernel,
-                                       const char *impl,
-                                       const unsigned int ID) {
-  return core::Runtime::getInstance().AddGPUKernelImpl(atmi_kernel, impl, ID);
-}
-
-/*
- * Synchronize
- */
-
-atmi_status_t atmi_task_wait(atmi_task_handle_t task) {
-  return core::Runtime::getInstance().TaskWait(task);
-}
-
-/*
- * Tasks
- */
-
-atmi_task_handle_t atmi_task_launch(
-    atmi_lparm_t *lparm, atmi_kernel_t atmi_kernel,
-    void **args /*, more params for place info? */) {
-  return core::Runtime::getInstance().LaunchTask(lparm, atmi_kernel, args);
-}
 
 /*
  * Data

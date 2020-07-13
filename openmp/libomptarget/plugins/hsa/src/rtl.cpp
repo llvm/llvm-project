@@ -22,6 +22,8 @@
 #include <iostream>
 #include <libelf.h>
 #include <list>
+#include <memory>
+#include <unordered_map>
 #include <vector>
 
 // Header from ATMI interface
@@ -29,6 +31,8 @@
 #include "atmi_runtime.h"
 // Header from hostcall
 #include "amd_hostcall.h"
+
+#include "internal.h"
 
 #include "omptargetplugin.h"
 
@@ -61,6 +65,7 @@ static int DebugLevel = 0;
   {}
 #endif // OMPTARGET_DEBUG
 
+#undef check // Drop definition from internal.h
 #ifdef OMPTARGET_DEBUG
 #define check(msg, status)                                                     \
   if (status != ATMI_STATUS_SUCCESS) {                                         \
@@ -101,10 +106,92 @@ enum ExecutionModeType {
   NONE
 };
 
+struct KernelArgPool {
+private:
+    static pthread_mutex_t mutex;
+public:
+  uint32_t kernarg_segment_size;
+  void *kernarg_region = nullptr;
+  std::queue<int> free_kernarg_segments;
+
+  uint32_t kernarg_size_including_implicit() {
+    return kernarg_segment_size + sizeof(atmi_implicit_args_t);
+  }
+
+  ~KernelArgPool() {
+    if (kernarg_region) {
+      auto r = hsa_amd_memory_pool_free(kernarg_region);
+      assert(r == HSA_STATUS_SUCCESS);
+      ErrorCheck(Memory pool free, r);
+    }
+  }
+
+  // Can't really copy or move a mutex
+  KernelArgPool() = default;
+  KernelArgPool(const KernelArgPool &) = delete;
+  KernelArgPool(KernelArgPool &&) = delete;
+
+  KernelArgPool(uint32_t kernarg_segment_size)
+      : kernarg_segment_size(kernarg_segment_size) {
+
+    // atmi uses one pool per kernel for all gpus, with a fixed upper size
+    // preserving that exact scheme here, including the queue<int>
+    {
+      hsa_status_t err = hsa_amd_memory_pool_allocate(
+          atl_gpu_kernarg_pools[0],
+          kernarg_size_including_implicit() * MAX_NUM_KERNELS, 0,
+          &kernarg_region);
+      ErrorCheck(Allocating memory for the executable-kernel, err);
+      core::allow_access_to_all_gpu_agents(kernarg_region);
+
+      for (int i = 0; i < MAX_NUM_KERNELS; i++) {
+        free_kernarg_segments.push(i);
+      }
+    }
+  }
+
+  void *allocate(uint64_t arg_num) {
+    assert((arg_num * sizeof(void *)) == kernarg_segment_size);
+    lock l(&mutex);
+    void *res = nullptr;
+    if (!free_kernarg_segments.empty()) {
+
+      int free_idx = free_kernarg_segments.front();
+      res = static_cast<void *>(static_cast<char *>(kernarg_region) +
+                                (free_idx * kernarg_size_including_implicit()));
+      assert(free_idx == pointer_to_index(res));
+      free_kernarg_segments.pop();
+    }
+    return res;
+  }
+
+  void deallocate(void *ptr) {
+    lock l(&mutex);
+    int idx = pointer_to_index(ptr);
+    free_kernarg_segments.push(idx);
+  }
+
+private:
+  int pointer_to_index(void *ptr) {
+    ptrdiff_t bytes =
+        static_cast<char *>(ptr) - static_cast<char *>(kernarg_region);
+    assert(bytes >= 0);
+    assert(bytes % kernarg_size_including_implicit() == 0);
+    return bytes / kernarg_size_including_implicit();
+  }
+  struct lock {
+    lock(pthread_mutex_t *m) : m(m) { pthread_mutex_lock(m); }
+    ~lock() { pthread_mutex_unlock(m); }
+    pthread_mutex_t *m;
+  };
+};
+pthread_mutex_t KernelArgPool::mutex = PTHREAD_MUTEX_INITIALIZER;
+
+std::unordered_map<std::string /*kernel*/, std::unique_ptr<KernelArgPool>>
+    KernelArgPoolMap;
+
 /// Use a single entity to encode a kernel and a set of flags
 struct KernelTy {
-  atmi_kernel_t Func;
-
   // execution mode of kernel
   // 0 - SPMD mode (without master warp)
   // 1 - Generic mode (with master warp)
@@ -115,13 +202,20 @@ struct KernelTy {
   void *CallStackAddr;
   const char *Name;
 
-  KernelTy(atmi_kernel_t _Func, int8_t _ExecutionMode, int16_t _ConstWGSize,
-           int8_t _MaxParLevel, int32_t _device_id, void *_CallStackAddr,
-           const char *_Name)
-      : Func(_Func), ExecutionMode(_ExecutionMode), ConstWGSize(_ConstWGSize),
+  KernelTy(int8_t _ExecutionMode, int16_t _ConstWGSize, int8_t _MaxParLevel,
+           int32_t _device_id, void *_CallStackAddr, const char *_Name,
+           uint32_t _kernarg_segment_size)
+      : ExecutionMode(_ExecutionMode), ConstWGSize(_ConstWGSize),
         MaxParLevel(_MaxParLevel), device_id(_device_id),
         CallStackAddr(_CallStackAddr), Name(_Name) {
     DP("Construct kernelinfo: ExecMode %d\n", ExecutionMode);
+
+    std::string N(_Name);
+    if (KernelArgPoolMap.find(N) == KernelArgPoolMap.end()) {
+      KernelArgPoolMap.insert(
+          std::make_pair(N, std::unique_ptr<KernelArgPool>(
+                                new KernelArgPool(_kernarg_segment_size))));
+    }
   }
 };
 
@@ -167,6 +261,37 @@ static std::vector<hsa_agent_t> find_gpu_agents() {
   return res;
 }
 
+static void callbackQueue(hsa_status_t status, hsa_queue_t *source,
+                          void *data) {
+  if (status != HSA_STATUS_SUCCESS) {
+    const char *status_string;
+    if (hsa_status_string(status, &status_string) != HSA_STATUS_SUCCESS) {
+      status_string = "unavailable";
+    }
+    fprintf(stderr, "[%s:%d] GPU error in queue %p %d (%s)\n", __FILE__,
+            __LINE__, source, status, status_string);
+    abort();
+  }
+}
+
+namespace core {
+void packet_store_release(uint32_t *packet, uint16_t header, uint16_t rest) {
+  __atomic_store_n(packet, header | (rest << 16), __ATOMIC_RELEASE);
+}
+
+uint16_t create_header(hsa_packet_type_t type, int barrier,
+                       atmi_task_fence_scope_t acq_fence,
+                       atmi_task_fence_scope_t rel_fence) {
+  uint16_t header = type << HSA_PACKET_HEADER_TYPE;
+  header |= barrier << HSA_PACKET_HEADER_BARRIER;
+  header |= (hsa_fence_scope_t) static_cast<int>(
+      acq_fence << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
+  header |= (hsa_fence_scope_t) static_cast<int>(
+      rel_fence << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+  return header;
+}
+} // namespace core
+
 /// Class containing all the device information
 class RTLDeviceInfoTy {
   std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
@@ -176,6 +301,7 @@ public:
 
   // GPU devices
   std::vector<hsa_agent_t> HSAAgents;
+  std::vector<hsa_queue_t *> HSAQueues; // one per gpu
 
   // Device properties
   std::vector<int> ComputeUnits;
@@ -258,12 +384,7 @@ public:
            "Unexpected device id!");
     FuncGblEntries[device_id].emplace_back();
     FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
-    for (std::vector<__tgt_offload_entry>::iterator it = E.Entries.begin();
-         it != E.Entries.end(); it++) {
-      KernelTy *kernel_info = (KernelTy *)it->addr;
-      if (kernel_info->Func.handle != 0ull)
-        atmi_kernel_release(kernel_info->Func);
-    }
+    KernelArgPoolMap.clear();
     E.Entries.clear();
     E.Table.EntriesBegin = E.Table.EntriesEnd = 0;
   }
@@ -304,6 +425,7 @@ public:
     }
 
     // Init the device info
+    HSAQueues.resize(NumberOfDevices);
     FuncGblEntries.resize(NumberOfDevices);
     ThreadsPerGroup.resize(NumberOfDevices);
     ComputeUnits.resize(NumberOfDevices);
@@ -311,6 +433,27 @@ public:
     WarpSize.resize(NumberOfDevices);
     NumTeams.resize(NumberOfDevices);
     NumThreads.resize(NumberOfDevices);
+
+    for (int i = 0; i < NumberOfDevices; i++) {
+      uint32_t queue_size = 0;
+      {
+        hsa_status_t err;
+        err = hsa_agent_get_info(HSAAgents[i], HSA_AGENT_INFO_QUEUE_MAX_SIZE,
+                                 &queue_size);
+        ErrorCheck(Querying the agent maximum queue size, err);
+        if (queue_size > core::Runtime::getInstance().getMaxQueueSize()) {
+          queue_size = core::Runtime::getInstance().getMaxQueueSize();
+        }
+      }
+
+      hsa_status_t rc = hsa_queue_create(
+          HSAAgents[i], queue_size, HSA_QUEUE_TYPE_MULTI, callbackQueue, NULL,
+          UINT32_MAX, UINT32_MAX, &HSAQueues[i]);
+      if (rc != HSA_STATUS_SUCCESS) {
+        DP("Failed to create HSA queues\n");
+        return;
+      }
+    }
 
     for (int i = 0; i < NumberOfDevices; i++) {
       ThreadsPerGroup[i] = RTLDeviceInfoTy::Default_WG_Size;
@@ -352,6 +495,7 @@ public:
 
   ~RTLDeviceInfoTy() {
     DP("Finalizing the HSA-ATMI DeviceInfo.\n");
+    KernelArgPoolMap.clear(); // calls hsa to free memory
     // Terminate hostcall before finalizing ATMI
     atmi_hostcall_terminate();
     atmi_finalize();
@@ -761,27 +905,19 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
     DP("to find the kernel name: %s size: %lu\n", e->name, strlen(e->name));
 
     atmi_mem_place_t place = get_gpu_mem_place(device_id);
-    atmi_kernel_t kernel;
-    uint32_t kernel_segment_size;
+    uint32_t kernarg_segment_size;
     err = atmi_interop_hsa_get_kernel_info(
         place, e->name, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
-        &kernel_segment_size);
+        &kernarg_segment_size);
 
     // each arg is a void * in this openmp implementation
-    uint32_t arg_num = kernel_segment_size / sizeof(void *);
+    uint32_t arg_num = kernarg_segment_size / sizeof(void *);
     std::vector<size_t> arg_sizes(arg_num);
     for (std::vector<size_t>::iterator it = arg_sizes.begin();
          it != arg_sizes.end(); it++) {
       *it = sizeof(void *);
     }
 
-    atmi_status_t stat = atmi_kernel_create(&kernel, arg_num, &arg_sizes[0],
-                                            e->name);
-
-    if (stat != ATMI_STATUS_SUCCESS) {
-      DP("atmi_kernel_create failed %d\n", stat);
-      return NULL;
-    }
     // default value GENERIC (in case symbol is missing from cubin file)
     int8_t ExecModeVal = ExecutionModeType::GENERIC;
 
@@ -1049,8 +1185,9 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
       check("Loading WGSize computation property", err);
     }
 
-    KernelsList.push_back(KernelTy(kernel, ExecModeVal, WGSizeVal, MaxParLevVal,
-                                   device_id, CallStackAddr, e->name));
+    KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, MaxParLevVal,
+                                   device_id, CallStackAddr, e->name,
+                                   kernarg_segment_size));
     __tgt_offload_entry entry = *e;
     entry.addr = (void *)&KernelsList.back();
     DeviceInfo.addOffloadEntry(device_id, entry);
@@ -1346,6 +1483,18 @@ static void *AllocateNestedParallelCallMemory(int MaxParLevel, int NumGroups,
   return TgtPtr; // we need to free this after kernel.
 }
 
+static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
+  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
+  bool full = true;
+  while (full) {
+    full =
+        packet_id >= (queue->size + hsa_queue_load_read_index_acquire(queue));
+  }
+  return packet_id;
+}
+
+extern bool g_atmi_hostcall_required; // declared without header by atmi
+
 int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
                                          void **tgt_args,
                                          ptrdiff_t *tgt_offsets,
@@ -1355,6 +1504,8 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
   // Set the context we are using
   // update thread limit content in gpu memory if un-initialized or specified
   // from host
+
+  static pthread_mutex_t run_target_team_region_mutex = PTHREAD_MUTEX_INITIALIZER;
 
   DP("Run target team region thread_limit %d\n", thread_limit);
 
@@ -1404,13 +1555,119 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
             KernelInfo->Name);
 
   // Run on the device.
-  atmi_kernel_t kernel = KernelInfo->Func;
-  ATMI_LPARM_1D(lparm, num_groups * threadsPerGroup);
-  lparm->groupDim[0] = threadsPerGroup;
-  lparm->synchronous = ATMI_TRUE;
-  lparm->groupable = ATMI_FALSE;
-  lparm->place = get_gpu_place(device_id);
-  atmi_task_launch(lparm, kernel, &args[0]);
+  {
+    hsa_queue_t *queue = DeviceInfo.HSAQueues[device_id];
+    uint64_t packet_id = acquire_available_packet_id(queue);
+
+    const uint32_t mask = queue->size - 1; // size is a power of 2
+    hsa_kernel_dispatch_packet_t *packet =
+        (hsa_kernel_dispatch_packet_t *)queue->base_address +
+        (packet_id & mask);
+
+    // packet->header is written last
+    packet->setup = UINT16_C(1) << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+    packet->workgroup_size_x = threadsPerGroup;
+    packet->workgroup_size_y = 1;
+    packet->workgroup_size_z = 1;
+    packet->reserved0 = 0;
+    packet->grid_size_x = num_groups * threadsPerGroup;
+    packet->grid_size_y = 1;
+    packet->grid_size_z = 1;
+    packet->private_segment_size = 0;
+    packet->group_segment_size = 0;
+    packet->kernel_object = 0;
+    packet->kernarg_address = 0;     // use the block allocator
+    packet->reserved2 = 0;           // atmi writes id_ here
+    packet->completion_signal = {0}; // may want a pool of signals
+
+    std::string kernel_name = std::string(KernelInfo->Name);
+    {
+      assert(KernelInfoTable[device_id].find(kernel_name) !=
+             KernelInfoTable[device_id].end());
+      auto it = KernelInfoTable[device_id][kernel_name];
+      packet->kernel_object = it.kernel_object;
+      packet->private_segment_size = it.private_segment_size;
+      packet->group_segment_size = it.group_segment_size;
+      assert(arg_num == (int)it.num_args);
+    }
+
+    KernelArgPool *ArgPool = nullptr;
+    {
+      auto it = KernelArgPoolMap.find(std::string(KernelInfo->Name));
+      if (it != KernelArgPoolMap.end()) {
+        ArgPool = (it->second).get();
+      }
+    }
+
+    {
+      void *kernarg = nullptr;
+      if (ArgPool) {
+        assert(ArgPool->kernarg_segment_size == (arg_num * sizeof(void *)));
+        kernarg = ArgPool->allocate(arg_num);
+      }
+      if (!kernarg) {
+        printf("Allocate kernarg failed\n");
+        exit(1);
+      }
+
+      // Copy explicit arguments
+      for (int i = 0; i < arg_num; i++) {
+        memcpy((char *)kernarg + sizeof(void *) * i, args[i], sizeof(void *));
+      }
+
+      // Initialize implicit arguments. ATMI seems to leave most fields
+      // uninitialized
+      atmi_implicit_args_t *impl_args =
+          reinterpret_cast<atmi_implicit_args_t *>(
+              static_cast<char *>(kernarg) + ArgPool->kernarg_segment_size);
+      memset(impl_args, 0,
+             sizeof(atmi_implicit_args_t)); // may not be necessary
+      impl_args->offset_x = 0;
+      impl_args->offset_y = 0;
+      impl_args->offset_z = 0;
+
+      // assign a hostcall buffer for the selected Q
+      if (g_atmi_hostcall_required) {
+        {
+          impl_args->hostcall_ptr =
+              atmi_hostcall_assign_buffer(queue, device_id);
+        }
+      }
+
+      packet->kernarg_address = kernarg;
+    }
+
+    {
+      pthread_mutex_lock(&run_target_team_region_mutex);
+      if (FreeSignalPool.empty()) {
+        // could add to the pool, but atmi doesn't do so
+        printf("Failed to get signal instance\n");
+        pthread_mutex_unlock(&run_target_team_region_mutex);
+        exit(1);
+      }
+      packet->completion_signal = FreeSignalPool.front();
+      hsa_signal_store_relaxed(packet->completion_signal, 1);
+      FreeSignalPool.pop();
+      pthread_mutex_unlock(&run_target_team_region_mutex);
+    }
+
+    core::packet_store_release(
+        reinterpret_cast<uint32_t *>(packet),
+        core::create_header(HSA_PACKET_TYPE_KERNEL_DISPATCH, 0,
+                            ATMI_FENCE_SCOPE_SYSTEM, ATMI_FENCE_SCOPE_SYSTEM),
+        packet->setup);
+
+    hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
+
+    while (hsa_signal_wait_acquire(packet->completion_signal,
+                                   HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
+                                   HSA_WAIT_STATE_BLOCKED) != 0)
+      ;
+
+    assert(ArgPool);
+    ArgPool->deallocate(packet->kernarg_address);
+    FreeSignalPool.push(packet->completion_signal);
+  }
 
   DP("Kernel completed\n");
   // Free call stack for nested

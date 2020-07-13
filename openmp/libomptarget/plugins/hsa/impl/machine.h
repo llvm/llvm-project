@@ -17,7 +17,7 @@ class ATLProcessor {
  public:
   explicit ATLProcessor(hsa_agent_t agent,
                         atmi_devtype_t type = ATMI_DEVTYPE_ALL)
-      : next_best_queue_id_(0), agent_(agent), type_(type) {
+      : agent_(agent), type_(type) {
     queues_.clear();
     memories_.clear();
   }
@@ -31,18 +31,14 @@ class ATLProcessor {
 
   virtual void createQueues(const int count) {}
   virtual void destroyQueues();
-  virtual hsa_queue_t *getQueueAt(const int index);
   std::vector<hsa_queue_t *> queues() const { return queues_; }
-  virtual hsa_queue_t *getBestQueue(atmi_scheduler_t sched);
+
   int num_cus() const;
-  int wavefront_size() const;
 
  protected:
   hsa_agent_t agent_;
   atmi_devtype_t type_;
   std::vector<hsa_queue_t *> queues_;
-  // schedule queues by setting this to best queue ID
-  unsigned int next_best_queue_id_;
   std::vector<ATLMemory> memories_;
 };
 
@@ -70,11 +66,9 @@ class ATLMemory {
   hsa_amd_memory_pool_t memory() const { return memory_pool_; }
 
   atmi_memtype_t type() const { return type_; }
-  // uint32_t access_type() { return fine of coarse grained? ;}
-  /* memory alloc/free */
+
   void *alloc(size_t s);
   void free(void *p);
-  // atmi_task_handle_t copy(ATLMemory &m, bool async = false);
  private:
   hsa_amd_memory_pool_t memory_pool_;
   ATLProcessor processor_;
@@ -104,6 +98,16 @@ class ATLMachine {
 hsa_amd_memory_pool_t get_memory_pool(const ATLProcessor &proc,
                                       const int mem_id);
 
-#include "machine.tcc"
+extern ATLMachine g_atl_machine;
+template <typename T>
+T& get_processor(atmi_place_t place) {
+  int dev_id = place.device_id;
+  if(dev_id == -1) {
+    // user is asking runtime to pick a device
+    // TODO(ashwinma): best device of this type? pick 0 for now
+    dev_id = 0;
+  }
+  return g_atl_machine.processors<T>()[dev_id];
+}
 
 #endif  // SRC_RUNTIME_INCLUDE_MACHINE_H_
