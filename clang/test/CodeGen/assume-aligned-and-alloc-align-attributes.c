@@ -36,12 +36,8 @@ void *t2_immediate2() {
 // CHECK-NEXT:    store i32 [[ALIGNMENT:%.*]], i32* [[ALIGNMENT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ALIGNMENT_ADDR]], align 4
 // CHECK-NEXT:    [[CALL:%.*]] = call align 32 i8* @my_aligned_alloc(i32 320, i32 [[TMP0]])
-// CHECK-NEXT:    [[ALIGNMENTCAST:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[MASK:%.*]] = sub i64 [[ALIGNMENTCAST]], 1
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], [[MASK]]
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[CALL]], i64 [[TMP1]]) ]
 // CHECK-NEXT:    ret i8* [[CALL]]
 //
 void *t3_variable(int alignment) {
