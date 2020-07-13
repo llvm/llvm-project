@@ -1061,9 +1061,7 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
       BuildMI(*BB, &I, DL, TII.get(Opcode), DstReg).addImm(0);
     } else if (Value == -1) { // all ones
       Register SrcReg = Is64 ? AMDGPU::EXEC : AMDGPU::EXEC_LO;
-      const unsigned SubReg = Is64 ? AMDGPU::sub0_sub1 : AMDGPU::sub0;
-      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
-          .addReg(SrcReg, 0, SubReg);
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(SrcReg);
     } else
       return false;
   } else {
