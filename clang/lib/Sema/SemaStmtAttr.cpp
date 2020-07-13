@@ -335,15 +335,15 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
 
   if (NumArgs == 1) {
     Expr *E = A.getArgAsExpr(0);
-    Optional<llvm::APSInt> ArgVal;
+    llvm::APSInt ArgVal(32);
 
-    if (!(ArgVal = E->getIntegerConstantExpr(S.Context))) {
+    if (!E->isIntegerConstantExpr(ArgVal, S.Context)) {
       S.Diag(A.getLoc(), diag::err_attribute_argument_type)
           << A << AANT_ArgumentIntegerConstant << E->getSourceRange();
       return nullptr;
     }
 
-    int Val = ArgVal->getSExtValue();
+    int Val = ArgVal.getSExtValue();
 
     if (Val <= 0) {
       S.Diag(A.getRange().getBegin(),
