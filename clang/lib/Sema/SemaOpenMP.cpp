@@ -53,9 +53,10 @@ static const Expr *checkMapClauseExpressionBase(
 namespace {
 /// Default data sharing attributes, which can be applied to directive.
 enum DefaultDataSharingAttributes {
-  DSA_unspecified = 0, /// Data sharing attribute not specified.
-  DSA_none = 1 << 0,   /// Default data sharing attribute 'none'.
-  DSA_shared = 1 << 1, /// Default data sharing attribute 'shared'.
+  DSA_unspecified = 0,       /// Data sharing attribute not specified.
+  DSA_none = 1 << 0,         /// Default data sharing attribute 'none'.
+  DSA_shared = 1 << 1,       /// Default data sharing attribute 'shared'.
+  DSA_firstprivate = 1 << 2, /// Default data sharing attribute 'firstprivate'.
 };
 
 /// Stack for tracking declarations used in OpenMP directives and
@@ -684,6 +685,11 @@ public:
     getTopOfStack().DefaultAttr = DSA_shared;
     getTopOfStack().DefaultAttrLoc = Loc;
   }
+  /// Set default data sharing attribute to firstprivate.
+  void setDefaultDSAFirstPrivate(SourceLocation Loc) {
+    getTopOfStack().DefaultAttr = DSA_firstprivate;
+    getTopOfStack().DefaultAttrLoc = Loc;
+  }
   /// Set default data mapping attribute to Modifier:Kind
   void setDefaultDMAAttr(OpenMPDefaultmapClauseModifier M,
                          OpenMPDefaultmapClauseKind Kind,
@@ -1182,6 +1188,15 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
     DVar.ImplicitDSALoc = Iter->DefaultAttrLoc;
     return DVar;
   case DSA_none:
+    return DVar;
+  case DSA_firstprivate:
+    if (VD->getStorageDuration() == SD_Static &&
+        VD->getDeclContext()->isFileContext()) {
+      DVar.CKind = OMPC_unknown;
+    } else {
+      DVar.CKind = OMPC_firstprivate;
+    }
+    DVar.ImplicitDSALoc = Iter->DefaultAttrLoc;
     return DVar;
   case DSA_unspecified:
     // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
@@ -2058,7 +2073,13 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
         // If the variable is artificial and must be captured by value - try to
         // capture by value.
         !(isa<OMPCapturedExprDecl>(D) && !D->hasAttr<OMPCaptureNoInitAttr>() &&
-          !cast<OMPCapturedExprDecl>(D)->getInit()->isGLValue());
+          !cast<OMPCapturedExprDecl>(D)->getInit()->isGLValue()) &&
+        // If the variable is implicitly firstprivate and scalar - capture by
+        // copy
+        !(DSAStack->getDefaultDSA() == DSA_firstprivate &&
+          !DSAStack->hasExplicitDSA(
+              D, [](OpenMPClauseKind K) { return K != OMPC_unknown; }, Level) &&
+          !DSAStack->isLoopControlVariable(D, Level).first);
   }
 
   // When passing data by copy, we need to make sure it fits the uintptr size
@@ -2185,10 +2206,13 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
         DSAStack->isClauseParsingMode());
     // Global shared must not be captured.
     if (VD && !VD->hasLocalStorage() && DVarPrivate.CKind == OMPC_unknown &&
-        (DSAStack->getDefaultDSA() != DSA_none || DVarTop.CKind == OMPC_shared))
+        ((DSAStack->getDefaultDSA() != DSA_none &&
+          DSAStack->getDefaultDSA() != DSA_firstprivate) ||
+         DVarTop.CKind == OMPC_shared))
       return nullptr;
     if (DVarPrivate.CKind != OMPC_unknown ||
-        (VD && DSAStack->getDefaultDSA() == DSA_none))
+        (VD && (DSAStack->getDefaultDSA() == DSA_none ||
+                DSAStack->getDefaultDSA() == DSA_firstprivate)))
       return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
   }
   return nullptr;
@@ -3333,10 +3357,19 @@ public:
       // in the construct, and does not have a predetermined data-sharing
       // attribute, must have its data-sharing attribute explicitly determined
       // by being listed in a data-sharing attribute clause.
-      if (DVar.CKind == OMPC_unknown && Stack->getDefaultDSA() == DSA_none &&
+      if (DVar.CKind == OMPC_unknown &&
+          (Stack->getDefaultDSA() == DSA_none ||
+           Stack->getDefaultDSA() == DSA_firstprivate) &&
           isImplicitOrExplicitTaskingRegion(DKind) &&
           VarsWithInheritedDSA.count(VD) == 0) {
-        VarsWithInheritedDSA[VD] = E;
+        bool InheritedDSA = Stack->getDefaultDSA() == DSA_none;
+        if (!InheritedDSA && Stack->getDefaultDSA() == DSA_firstprivate) {
+          DSAStackTy::DSAVarData DVar =
+              Stack->getImplicitDSA(VD, /*FromParent=*/false);
+          InheritedDSA = DVar.CKind == OMPC_unknown;
+        }
+        if (InheritedDSA)
+          VarsWithInheritedDSA[VD] = E;
         return;
       }
 
@@ -3438,7 +3471,9 @@ public:
 
       // Define implicit data-sharing attributes for task.
       DVar = Stack->getImplicitDSA(VD, /*FromParent=*/false);
-      if (isOpenMPTaskingDirective(DKind) && DVar.CKind != OMPC_shared &&
+      if (((isOpenMPTaskingDirective(DKind) && DVar.CKind != OMPC_shared) ||
+           (Stack->getDefaultDSA() == DSA_firstprivate &&
+            DVar.CKind == OMPC_firstprivate && !DVar.RefExpr)) &&
           !Stack->isLoopControlVariable(VD).first) {
         ImplicitFirstprivate.push_back(E);
         return;
@@ -5342,8 +5377,10 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
 
   ErrorFound = Res.isInvalid() || ErrorFound;
 
-  // Check variables in the clauses if default(none) was specified.
-  if (DSAStack->getDefaultDSA() == DSA_none) {
+  // Check variables in the clauses if default(none) or
+  // default(firstprivate) was specified.
+  if (DSAStack->getDefaultDSA() == DSA_none ||
+      DSAStack->getDefaultDSA() == DSA_firstprivate) {
     DSAAttrChecker DSAChecker(DSAStack, *this, nullptr);
     for (OMPClause *C : Clauses) {
       switch (C->getClauseKind()) {
@@ -5454,7 +5491,8 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     if (P.getFirst()->isImplicit() || isa<OMPCapturedExprDecl>(P.getFirst()))
       continue;
     ErrorFound = true;
-    if (DSAStack->getDefaultDSA() == DSA_none) {
+    if (DSAStack->getDefaultDSA() == DSA_none ||
+        DSAStack->getDefaultDSA() == DSA_firstprivate) {
       Diag(P.second->getExprLoc(), diag::err_omp_no_dsa_for_variable)
           << P.first << P.second->getSourceRange();
       Diag(DSAStack->getDefaultDSALocation(), diag::note_omp_default_dsa_none);
@@ -12932,10 +12970,20 @@ OMPClause *Sema::ActOnOpenMPDefaultClause(DefaultKind Kind,
         << getOpenMPClauseName(OMPC_default);
     return nullptr;
   }
-  if (Kind == OMP_DEFAULT_none)
+
+  switch (Kind) {
+  case OMP_DEFAULT_none:
     DSAStack->setDefaultDSANone(KindKwLoc);
-  else if (Kind == OMP_DEFAULT_shared)
+    break;
+  case OMP_DEFAULT_shared:
     DSAStack->setDefaultDSAShared(KindKwLoc);
+    break;
+  case OMP_DEFAULT_firstprivate:
+    DSAStack->setDefaultDSAFirstPrivate(KindKwLoc);
+    break;
+  default:
+    llvm_unreachable("DSA unexpected in OpenMP default clause");
+  }
 
   return new (Context)
       OMPDefaultClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);

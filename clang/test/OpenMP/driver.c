@@ -47,6 +47,7 @@
 // RUN: %clang %s -c -E -dM -fopenmp-simd -fopenmp-version=31 | FileCheck --check-prefix=CHECK-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp-simd -fopenmp-version=40 | FileCheck --check-prefix=CHECK-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp-simd -fopenmp-version=45 | FileCheck --check-prefix=CHECK-VERSION %s
+// RUN: %clang %s -c -E -dM -fopenmp-simd -fopenmp-version=51 | FileCheck --check-prefix=CHECK-VERSION %s
 
 // CHECK-VERSION-NOT: #define _OPENMP
 
