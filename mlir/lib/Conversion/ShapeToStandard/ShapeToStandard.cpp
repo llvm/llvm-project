@@ -23,6 +23,22 @@ namespace {
 #include "ShapeToStandardPatterns.inc"
 
 /// Conversion patterns.
+class AnyOpConversion : public OpConversionPattern<AnyOp> {
+public:
+  using OpConversionPattern<AnyOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(AnyOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    AnyOp::Adaptor transformed(operands);
+
+    // Replace `any` with its first operand.
+    // Any operand would be a valid substitution.
+    rewriter.replaceOp(op, {transformed.inputs().front()});
+    return success();
+  }
+};
+
 template <typename SrcOpTy, typename DstOpTy>
 class BinaryOpConversion : public OpConversionPattern<SrcOpTy> {
 public:
@@ -181,6 +197,7 @@ void mlir::populateShapeToStandardConversionPatterns(
   populateWithGenerated(ctx, &patterns);
   // clang-format off
   patterns.insert<
+      AnyOpConversion,
       BinaryOpConversion<AddOp, AddIOp>,
       BinaryOpConversion<MulOp, MulIOp>,
       ConstSizeOpConverter,
