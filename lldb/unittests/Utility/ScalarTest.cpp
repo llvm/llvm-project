@@ -135,12 +135,8 @@ TEST(ScalarTest, GetBytes) {
   Scalar f_scalar;
   DataExtractor e_data(e, sizeof(e), endian::InlHostByteOrder(),
                        sizeof(void *));
-  Status e_error =
-      e_scalar.SetValueFromData(e_data, lldb::eEncodingUint, sizeof(e));
   DataExtractor f_data(f, sizeof(f), endian::InlHostByteOrder(),
                        sizeof(void *));
-  Status f_error =
-      f_scalar.SetValueFromData(f_data, lldb::eEncodingUint, sizeof(f));
   a_scalar.GetBytes(Storage);
   ASSERT_EQ(0, memcmp(&a, Storage, sizeof(a)));
   b_scalar.GetBytes(Storage);
@@ -149,12 +145,37 @@ TEST(ScalarTest, GetBytes) {
   ASSERT_EQ(0, memcmp(&c, Storage, sizeof(c)));
   d_scalar.GetBytes(Storage);
   ASSERT_EQ(0, memcmp(&d, Storage, sizeof(d)));
-  ASSERT_EQ(0, e_error.Fail());
+  ASSERT_THAT_ERROR(
+      e_scalar.SetValueFromData(e_data, lldb::eEncodingUint, sizeof(e))
+          .ToError(),
+      llvm::Succeeded());
   e_scalar.GetBytes(Storage);
   ASSERT_EQ(0, memcmp(e, Storage, sizeof(e)));
-  ASSERT_EQ(0, f_error.Fail());
+  ASSERT_THAT_ERROR(
+      f_scalar.SetValueFromData(f_data, lldb::eEncodingUint, sizeof(f))
+          .ToError(),
+      llvm::Succeeded());
   f_scalar.GetBytes(Storage);
   ASSERT_EQ(0, memcmp(f, Storage, sizeof(f)));
+}
+
+TEST(ScalarTest, SetValueFromData) {
+  uint8_t a[] = {1, 2, 3, 4};
+  Scalar s;
+  ASSERT_THAT_ERROR(
+      s.SetValueFromData(
+           DataExtractor(a, sizeof(a), lldb::eByteOrderLittle, sizeof(void *)),
+           lldb::eEncodingSint, sizeof(a))
+          .ToError(),
+      llvm::Succeeded());
+  EXPECT_EQ(0x04030201, s);
+  ASSERT_THAT_ERROR(
+      s.SetValueFromData(
+           DataExtractor(a, sizeof(a), lldb::eByteOrderBig, sizeof(void *)),
+           lldb::eEncodingSint, sizeof(a))
+          .ToError(),
+      llvm::Succeeded());
+  EXPECT_EQ(0x01020304, s);
 }
 
 TEST(ScalarTest, CastOperations) {
