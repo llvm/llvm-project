@@ -156,6 +156,7 @@ QUUX STRUCT
       x BYTE ?
       y BYTE ?
     ENDS
+    after_struct BYTE ?
   ENDS
   z DWORD ?
 QUUX ENDS
@@ -166,6 +167,7 @@ mov eax, [ebx].QUUX.v
 mov eax, [ebx].QUUX.w
 mov eax, [ebx].QUUX.x
 mov eax, [ebx].QUUX.y
+mov eax, [ebx].QUUX.after_struct
 mov eax, [ebx].QUUX.z
 
 ; CHECK: t9:
@@ -174,6 +176,7 @@ mov eax, [ebx].QUUX.z
 ; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
 ; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
 ; CHECK-NEXT: mov eax, dword ptr [ebx + 5]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
 ; CHECK-NEXT: mov eax, dword ptr [ebx + 8]
 
 t10:

@@ -1657,7 +1657,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (NextTok.is(AsmToken::Identifier) &&
             NextTok.getIdentifier().equals_lower("ptr")) {
           SM.onCast(Identifier);
-          // eat type and ptr
+          // Eat type and PTR.
           consumeToken();
           End = consumeToken();
           break;
