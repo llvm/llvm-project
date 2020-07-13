@@ -2310,6 +2310,10 @@ swift::IRGenOptions &SwiftASTContext::GetIRGenOptions() {
   return m_compiler_invocation_ap->getIRGenOptions();
 }
 
+swift::TBDGenOptions &SwiftASTContext::GetTBDGenOptions() {
+  return m_compiler_invocation_ap->getTBDGenOptions();
+}
+
 llvm::Triple SwiftASTContext::GetTriple() const {
   VALID_OR_RETURN(llvm::Triple());
   return llvm::Triple(m_compiler_invocation_ap->getTargetTriple());
