@@ -358,6 +358,7 @@ private:
     bool MemExpr;
     bool OffsetOperator;
     SMLoc OffsetOperatorLoc;
+    StringRef CurType;
 
     bool setSymRef(const MCExpr *Val, StringRef ID, StringRef &ErrMsg) {
       if (Sym) {
@@ -385,6 +386,7 @@ private:
     unsigned getScale() { return Scale; }
     const MCExpr *getSym() { return Sym; }
     StringRef getSymName() { return SymName; }
+    StringRef getType() { return CurType; }
     int64_t getImm() { return Imm + IC.execute(); }
     bool isValidEndState() {
       return State == IES_RBRAC || State == IES_INTEGER;
@@ -846,6 +848,7 @@ private:
       }
       return false;
     }
+    void setType(StringRef Type) { CurType = Type; }
   };
 
   bool Error(SMLoc L, const Twine &Msg, SMRange Range = None,
@@ -1641,27 +1644,25 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           break;
         }
         if (Parser.isParsingMasm()) {
-          const std::pair<StringRef, StringRef> RegField =
+          const std::pair<StringRef, StringRef> IDField =
               Tok.getString().split('.');
-          const StringRef RegName = RegField.first, Field = RegField.second;
-          SMLoc RegEndLoc =
-              SMLoc::getFromPointer(RegName.data() + RegName.size());
+          const StringRef ID = IDField.first, Field = IDField.second;
+          SMLoc IDEndLoc = SMLoc::getFromPointer(ID.data() + ID.size());
           if (!Field.empty() &&
-              !MatchRegisterByName(Reg, RegName, IdentLoc, RegEndLoc)) {
+              !MatchRegisterByName(Reg, ID, IdentLoc, IDEndLoc)) {
             if (SM.onRegister(Reg, ErrMsg))
               return Error(IdentLoc, ErrMsg);
 
+            StringRef Type;
+            unsigned Offset = 0;
             SMLoc FieldStartLoc = SMLoc::getFromPointer(Field.data());
-            const std::pair<StringRef, StringRef> BaseMember = Field.split('.');
-            const StringRef Base = BaseMember.first, Member = BaseMember.second;
-
-            unsigned Offset;
-            if (Parser.LookUpFieldOffset(Base, Member, Offset))
+            if (Parser.lookUpField(Field, Type, Offset))
               return Error(FieldStartLoc, "unknown offset");
             else if (SM.onPlus(ErrMsg))
               return Error(getTok().getLoc(), ErrMsg);
             else if (SM.onInteger(Offset, ErrMsg))
               return Error(IdentLoc, ErrMsg);
+            SM.setType(Type);
 
             End = consumeToken();
             break;
@@ -1915,9 +1916,11 @@ X86AsmParser::ParseRoundingModeOp(SMLoc Start) {
 }
 
 /// Parse the '.' operator.
-bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End) {
+bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
+                                         SMLoc &End) {
   const AsmToken &Tok = getTok();
-  unsigned Offset;
+  StringRef Type;
+  unsigned Offset = 0;
 
   // Drop the optional '.'.
   StringRef DotDispStr = Tok.getString();
@@ -1933,8 +1936,9 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End) 
              Tok.is(AsmToken::Identifier)) {
     const std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
     const StringRef Base = BaseMember.first, Member = BaseMember.second;
-    if (getParser().LookUpFieldOffset(SM.getSymName(), DotDispStr, Offset) &&
-        getParser().LookUpFieldOffset(Base, Member, Offset) &&
+    if (getParser().lookUpField(SM.getType(), DotDispStr, Type, Offset) &&
+        getParser().lookUpField(SM.getSymName(), DotDispStr, Type, Offset) &&
+        getParser().lookUpField(DotDispStr, Type, Offset) &&
         (!SemaCallback ||
          SemaCallback->LookupInlineAsmField(Base, Member, Offset)))
       return Error(Tok.getLoc(), "Unable to lookup field reference!");
@@ -1947,6 +1951,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End) 
   while (Tok.getLoc().getPointer() < DotExprEndLoc)
     Lex();
   SM.addImm(Offset);
+  SM.setType(Type);
   return false;
 }
 

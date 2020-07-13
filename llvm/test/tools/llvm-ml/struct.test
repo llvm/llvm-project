@@ -85,10 +85,8 @@ t3:
 mov eax, t2.f.h
 mov eax, [t2].f.h
 mov eax, [t2.f.h]
-mov eax, t2.FOOBAR.f.h
 
 ; CHECK: t3:
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
 ; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
 ; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
 ; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
@@ -100,5 +98,53 @@ mov eax, j.baz.b
 ; CHECK: t4:
 ; CHECK-NEXT: mov eax, dword ptr [rip + j+12]
 ; CHECK-NEXT: mov eax, dword ptr [rip + j+1]
+
+t5:
+mov eax, [ebx].FOOBAR.f.h
+mov eax, [ebx.FOOBAR].f.h
+mov eax, [ebx.FOOBAR.f.h]
+
+; CHECK: t5:
+; CHECK-NEXT: mov eax, dword ptr [ebx + 12]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 12]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 12]
+
+t6:
+mov eax, t2.FOOBAR.f.h
+mov eax, [t2].FOOBAR.f.h
+mov eax, [t2.FOOBAR].f.h
+mov eax, [t2.FOOBAR.f.h]
+
+; CHECK: t6:
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+
+t7:
+mov eax, [ebx].FOOBAR.e.b
+mov eax, [ebx.FOOBAR].e.b
+mov eax, [ebx.FOOBAR.e].b
+mov eax, [ebx.FOOBAR.e.b]
+
+; CHECK: t7:
+; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
+
+t8:
+mov eax, t2.FOOBAR.e.b
+mov eax, [t2].FOOBAR.e.b
+mov eax, [t2.FOOBAR].e.b
+mov eax, [t2.FOOBAR.e].b
+mov eax, [t2.FOOBAR.e.b]
+
+; CHECK: t8:
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
+; CHECK-NEXT: mov eax, dword ptr [rip + (t2+8)+1]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
 
 END
