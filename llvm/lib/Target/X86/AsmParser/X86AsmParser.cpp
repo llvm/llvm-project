@@ -332,6 +332,7 @@ private:
     IES_PLUS,
     IES_MINUS,
     IES_OFFSET,
+    IES_CAST,
     IES_NOT,
     IES_MULTIPLY,
     IES_DIVIDE,
@@ -632,6 +633,7 @@ private:
       default:
         State = IES_ERROR;
         break;
+      case IES_CAST:
       case IES_PLUS:
       case IES_MINUS:
       case IES_NOT:
@@ -744,6 +746,7 @@ private:
         IC.pushOperator(IC_PLUS);
         break;
       case IES_INIT:
+      case IES_CAST:
         assert(!BracCount && "BracCount should be zero on parsing's start");
         State = IES_LBRAC;
         break;
@@ -816,6 +819,7 @@ private:
       case IES_INTEGER:
       case IES_OFFSET:
       case IES_REGISTER:
+      case IES_RBRAC:
       case IES_RPAREN:
         State = IES_RPAREN;
         IC.pushOperator(IC_RPAREN);
@@ -847,6 +851,18 @@ private:
         break;
       }
       return false;
+    }
+    void onCast(StringRef Type) {
+      PrevState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_LPAREN:
+        setType(Type);
+        State = IES_CAST;
+        break;
+      }
     }
     void setType(StringRef Type) { CurType = Type; }
   };
@@ -1635,6 +1651,18 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       SMLoc IdentLoc = Tok.getLoc();
       StringRef Identifier = Tok.getString();
       UpdateLocLex = false;
+      // (MASM only) <TYPE> PTR operator
+      if (Parser.isParsingMasm()) {
+        const AsmToken &NextTok = getLexer().peekTok();
+        if (NextTok.is(AsmToken::Identifier) &&
+            NextTok.getIdentifier().equals_lower("ptr")) {
+          SM.onCast(Identifier);
+          // eat type and ptr
+          consumeToken();
+          End = consumeToken();
+          break;
+        }
+      }
       // Register, or (MASM only) <register>.<field>
       unsigned Reg;
       if (Tok.is(AsmToken::Identifier)) {
@@ -1681,7 +1709,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       const MCExpr *Val;
       if (isParsingMSInlineAsm() || Parser.isParsingMasm()) {
         // MS Dot Operator expression
-        if (Identifier.count('.') && PrevTK == AsmToken::RBrac) {
+        if (Identifier.count('.') &&
+            (PrevTK == AsmToken::RBrac || PrevTK == AsmToken::RParen)) {
           if (ParseIntelDotOperator(SM, End))
             return true;
           break;
