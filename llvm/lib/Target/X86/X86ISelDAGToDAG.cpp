@@ -160,10 +160,6 @@ namespace {
     /// make the right decision when generating code for different targets.
     const X86Subtarget *Subtarget;
 
-    /// If true, selector should try to optimize for code size instead of
-    /// performance.
-    bool OptForSize;
-
     /// If true, selector should try to optimize for minimum code size.
     bool OptForMinSize;
 
@@ -172,7 +168,7 @@ namespace {
 
   public:
     explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
-        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr), OptForSize(false),
+        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr),
           OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
     StringRef getPassName() const override {
@@ -186,7 +182,7 @@ namespace {
                              "indirect-tls-seg-refs");
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
-      OptForSize = MF.getFunction().hasOptSize();
+      bool OptForSize = MF.getFunction().hasOptSize();
       OptForMinSize = MF.getFunction().hasMinSize();
       assert((!OptForMinSize || OptForSize) &&
              "OptForMinSize implies OptForSize");
@@ -4557,7 +4553,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // the patterns on the add/sub/and/or/xor with immediate paterns in the
     // tablegen files to check immediate use count without making the patterns
     // unavailable to the fast-isel table.
-    if (!OptForSize)
+    if (!CurDAG->shouldOptForSize())
       break;
 
     // Only handle i8/i16/i32/i64.
