@@ -286,17 +286,3 @@ namespace PR45239 {
   template<int> int b;
   template<int> auto f() -> b<0>; // expected-error +{{}}
 }
-
-namespace NoCrashOnNullNNSTypoCorrection {
-
-int AddObservation(); // expected-note {{declared here}}
-
-template <typename T, typename... Args> // expected-note {{template parameter is declared here}}
-class UsingImpl {};
-class AddObservation {
-  using Using =
-    UsingImpl<AddObservationFn, const int>; // expected-error {{use of undeclared identifier 'AddObservationFn'; did you mean}} \
-                                               expected-error {{template argument for template type parameter must be a type}}
-};
-
-}
