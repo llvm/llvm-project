@@ -2960,8 +2960,8 @@ public:
     Table << MatchTable::Opcode("GIR_ConstrainOperandRC")
           << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
           << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-          << MatchTable::Comment("RC " + RC.getName())
-          << MatchTable::IntValue(RC.EnumValue) << MatchTable::LineBreak;
+          << MatchTable::NamedValue(RC.getQualifiedName() + "RegClassID")
+          << MatchTable::LineBreak;
   }
 };
 
