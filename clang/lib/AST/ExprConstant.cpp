@@ -14883,22 +14883,16 @@ bool Expr::isIntegerConstantExpr(const ASTContext &Ctx,
   return true;
 }
 
-Optional<llvm::APSInt> Expr::getIntegerConstantExpr(const ASTContext &Ctx,
-                                                    SourceLocation *Loc,
-                                                    bool isEvaluated) const {
+bool Expr::isIntegerConstantExpr(llvm::APSInt &Value, const ASTContext &Ctx,
+                                 SourceLocation *Loc, bool isEvaluated) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
-  APSInt Value;
-
-  if (Ctx.getLangOpts().CPlusPlus11) {
-    if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value, Loc))
-      return Value;
-    return None;
-  }
+  if (Ctx.getLangOpts().CPlusPlus11)
+    return EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value, Loc);
 
   if (!isIntegerConstantExpr(Ctx, Loc))
-    return None;
+    return false;
 
   // The only possible side-effects here are due to UB discovered in the
   // evaluation (for instance, INT_MAX + 1). In such a case, we are still
@@ -14912,7 +14906,8 @@ Optional<llvm::APSInt> Expr::getIntegerConstantExpr(const ASTContext &Ctx,
   if (!::EvaluateAsInt(this, ExprResult, Ctx, SE_AllowSideEffects, Info))
     llvm_unreachable("ICE cannot be evaluated!");
 
-  return ExprResult.Val.getInt();
+  Value = ExprResult.Val.getInt();
+  return true;
 }
 
 bool Expr::isCXX98IntegralConstantExpr(const ASTContext &Ctx) const {

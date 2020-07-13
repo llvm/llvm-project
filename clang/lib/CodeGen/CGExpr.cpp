@@ -3868,17 +3868,15 @@ LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
     llvm::APSInt ConstLength;
     if (Length) {
       // Idx = LowerBound + Length - 1;
-      if (Optional<llvm::APSInt> CL = Length->getIntegerConstantExpr(C)) {
-        ConstLength = CL->zextOrTrunc(PointerWidthInBits);
+      if (Length->isIntegerConstantExpr(ConstLength, C)) {
+        ConstLength = ConstLength.zextOrTrunc(PointerWidthInBits);
         Length = nullptr;
       }
       auto *LowerBound = E->getLowerBound();
       llvm::APSInt ConstLowerBound(PointerWidthInBits, /*isUnsigned=*/false);
-      if (LowerBound) {
-        if (Optional<llvm::APSInt> LB = LowerBound->getIntegerConstantExpr(C)) {
-          ConstLowerBound = LB->zextOrTrunc(PointerWidthInBits);
-          LowerBound = nullptr;
-        }
+      if (LowerBound && LowerBound->isIntegerConstantExpr(ConstLowerBound, C)) {
+        ConstLowerBound = ConstLowerBound.zextOrTrunc(PointerWidthInBits);
+        LowerBound = nullptr;
       }
       if (!Length)
         --ConstLength;
@@ -3915,10 +3913,8 @@ LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
                              : BaseTy;
       if (auto *VAT = C.getAsVariableArrayType(ArrayTy)) {
         Length = VAT->getSizeExpr();
-        if (Optional<llvm::APSInt> L = Length->getIntegerConstantExpr(C)) {
-          ConstLength = *L;
+        if (Length->isIntegerConstantExpr(ConstLength, C))
           Length = nullptr;
-        }
       } else {
         auto *CAT = C.getAsConstantArrayType(ArrayTy);
         ConstLength = CAT->getSize();

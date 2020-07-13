@@ -2476,8 +2476,8 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
                                                VectorType::GenericVector);
 
-  Optional<llvm::APSInt> VecSize = SizeExpr->getIntegerConstantExpr(Context);
-  if (!VecSize) {
+  llvm::APSInt VecSize(32);
+  if (!SizeExpr->isIntegerConstantExpr(VecSize, Context)) {
     Diag(AttrLoc, diag::err_attribute_argument_type)
         << "vector_size" << AANT_ArgumentIntegerConstant
         << SizeExpr->getSourceRange();
@@ -2489,13 +2489,13 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                                VectorType::GenericVector);
 
   // vecSize is specified in bytes - convert to bits.
-  if (!VecSize->isIntN(61)) {
+  if (!VecSize.isIntN(61)) {
     // Bit size will overflow uint64.
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
   }
-  uint64_t VectorSizeBits = VecSize->getZExtValue() * 8;
+  uint64_t VectorSizeBits = VecSize.getZExtValue() * 8;
   unsigned TypeSize = static_cast<unsigned>(Context.getTypeSize(CurType));
 
   if (VectorSizeBits == 0) {
@@ -2540,8 +2540,8 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   }
 
   if (!ArraySize->isTypeDependent() && !ArraySize->isValueDependent()) {
-    Optional<llvm::APSInt> vecSize = ArraySize->getIntegerConstantExpr(Context);
-    if (!vecSize) {
+    llvm::APSInt vecSize(32);
+    if (!ArraySize->isIntegerConstantExpr(vecSize, Context)) {
       Diag(AttrLoc, diag::err_attribute_argument_type)
         << "ext_vector_type" << AANT_ArgumentIntegerConstant
         << ArraySize->getSourceRange();
@@ -2555,7 +2555,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
     }
     // Unlike gcc's vector_size attribute, the size is specified as the
     // number of elements, not the number of bytes.
-    unsigned vectorSize = static_cast<unsigned>(vecSize->getZExtValue());
+    unsigned vectorSize = static_cast<unsigned>(vecSize.getZExtValue());
 
     if (vectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
@@ -6254,15 +6254,13 @@ static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
                                    const Expr *AddrSpace,
                                    SourceLocation AttrLoc) {
   if (!AddrSpace->isValueDependent()) {
-    Optional<llvm::APSInt> OptAddrSpace =
-        AddrSpace->getIntegerConstantExpr(S.Context);
-    if (!OptAddrSpace) {
+    llvm::APSInt addrSpace(32);
+    if (!AddrSpace->isIntegerConstantExpr(addrSpace, S.Context)) {
       S.Diag(AttrLoc, diag::err_attribute_argument_type)
           << "'address_space'" << AANT_ArgumentIntegerConstant
           << AddrSpace->getSourceRange();
       return false;
     }
-    llvm::APSInt &addrSpace = *OptAddrSpace;
 
     // Bounds checking.
     if (addrSpace.isSigned()) {
@@ -7714,9 +7712,9 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   }
   // The number of elements must be an ICE.
   Expr *numEltsExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
-  Optional<llvm::APSInt> numEltsInt;
+  llvm::APSInt numEltsInt(32);
   if (numEltsExpr->isTypeDependent() || numEltsExpr->isValueDependent() ||
-      !(numEltsInt = numEltsExpr->getIntegerConstantExpr(S.Context))) {
+      !numEltsExpr->isIntegerConstantExpr(numEltsInt, S.Context)) {
     S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
         << Attr << AANT_ArgumentIntegerConstant
         << numEltsExpr->getSourceRange();
@@ -7732,7 +7730,7 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 
   // The total size of the vector must be 64 or 128 bits.
   unsigned typeSize = static_cast<unsigned>(S.Context.getTypeSize(CurType));
-  unsigned numElts = static_cast<unsigned>(numEltsInt->getZExtValue());
+  unsigned numElts = static_cast<unsigned>(numEltsInt.getZExtValue());
   unsigned vecSize = typeSize * numElts;
   if (vecSize != 64 && vecSize != 128) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_neon_vector_size) << CurType;
