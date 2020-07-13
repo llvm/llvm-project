@@ -510,16 +510,15 @@ public:
   /// semantically correspond to a bool.
   bool isKnownToHaveBooleanValue(bool Semantic = true) const;
 
-  /// isIntegerConstantExpr - Return true if this expression is a valid integer
-  /// constant expression, and, if so, return its value in Result.  If not a
-  /// valid i-c-e, return false and fill in Loc (if specified) with the location
-  /// of the invalid expression.
+  /// isIntegerConstantExpr - Return the value if this expression is a valid
+  /// integer constant expression.  If not a valid i-c-e, return None and fill
+  /// in Loc (if specified) with the location of the invalid expression.
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
-  bool isIntegerConstantExpr(llvm::APSInt &Result, const ASTContext &Ctx,
-                             SourceLocation *Loc = nullptr,
-                             bool isEvaluated = true) const;
+  Optional<llvm::APSInt> getIntegerConstantExpr(const ASTContext &Ctx,
+                                                SourceLocation *Loc = nullptr,
+                                                bool isEvaluated = true) const;
   bool isIntegerConstantExpr(const ASTContext &Ctx,
                              SourceLocation *Loc = nullptr) const;
 
