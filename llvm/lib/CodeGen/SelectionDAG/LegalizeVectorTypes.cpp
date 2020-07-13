@@ -976,6 +976,25 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SetSplitVector(SDValue(N, ResNo), Lo, Hi);
 }
 
+void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,
+                                        MachinePointerInfo &MPI,
+                                        SDValue &Ptr) {
+  SDLoc DL(N);
+  unsigned IncrementSize = MemVT.getSizeInBits().getKnownMinSize() / 8;
+
+  if (MemVT.isScalableVector()) {
+    SDValue BytesIncrement = DAG.getVScale(
+        DL, Ptr.getValueType(),
+        APInt(Ptr.getValueSizeInBits().getFixedSize(), IncrementSize));
+    MPI = MachinePointerInfo(N->getPointerInfo().getAddrSpace());
+    Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr, BytesIncrement);
+  } else {
+    MPI = N->getPointerInfo().getWithOffset(IncrementSize);
+    // Increment the pointer to the other half.
+    Ptr = DAG.getObjectPtrOffset(DL, Ptr, IncrementSize);
+  }
+}
+
 void DAGTypeLegalizer::SplitVecRes_BinOp(SDNode *N, SDValue &Lo,
                                          SDValue &Hi) {
   SDValue LHSLo, LHSHi;
@@ -1537,19 +1556,8 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
                    LD->getPointerInfo(), LoMemVT, LD->getOriginalAlign(),
                    MMOFlags, AAInfo);
 
-  unsigned IncrementSize = LoMemVT.getSizeInBits().getKnownMinSize() / 8;
-
   MachinePointerInfo MPI;
-  if (LoVT.isScalableVector()) {
-    SDValue BytesIncrement = DAG.getVScale(
-        dl, Ptr.getValueType(),
-        APInt(Ptr.getValueSizeInBits().getFixedSize(), IncrementSize));
-    MPI = MachinePointerInfo(LD->getPointerInfo().getAddrSpace());
-    Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr, BytesIncrement);
-  } else {
-    MPI = LD->getPointerInfo().getWithOffset(IncrementSize);
-    Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
-  }
+  IncrementPointer(LD, LoMemVT, MPI, Ptr);
 
   Hi = DAG.getLoad(ISD::UNINDEXED, ExtType, HiVT, dl, Ch, Ptr, Offset, MPI,
                    HiMemVT, LD->getOriginalAlign(), MMOFlags, AAInfo);
@@ -2489,8 +2497,6 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
   if (!LoMemVT.isByteSized() || !HiMemVT.isByteSized())
     return TLI.scalarizeVectorStore(N, DAG);
 
-  unsigned IncrementSize = LoMemVT.getSizeInBits().getKnownMinSize() / 8;
-
   if (isTruncating)
     Lo = DAG.getTruncStore(Ch, DL, Lo, Ptr, N->getPointerInfo(), LoMemVT,
                            Alignment, MMOFlags, AAInfo);
@@ -2499,17 +2505,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
                       AAInfo);
 
   MachinePointerInfo MPI;
-  if (LoMemVT.isScalableVector()) {
-    SDValue BytesIncrement = DAG.getVScale(
-        DL, Ptr.getValueType(),
-        APInt(Ptr.getValueSizeInBits().getFixedSize(), IncrementSize));
-    MPI = MachinePointerInfo(N->getPointerInfo().getAddrSpace());
-    Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr, BytesIncrement);
-  } else {
-    MPI = N->getPointerInfo().getWithOffset(IncrementSize);
-    // Increment the pointer to the other half.
-    Ptr = DAG.getObjectPtrOffset(DL, Ptr, IncrementSize);
-  }
+  IncrementPointer(N, LoMemVT, MPI, Ptr);
 
   if (isTruncating)
     Hi = DAG.getTruncStore(Ch, DL, Hi, Ptr, MPI,
