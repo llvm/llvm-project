@@ -176,4 +176,20 @@ mov eax, [ebx].QUUX.z
 ; CHECK-NEXT: mov eax, dword ptr [ebx + 5]
 ; CHECK-NEXT: mov eax, dword ptr [ebx + 8]
 
+t10:
+mov eax, FOOBAR.f
+mov eax, FOOBAR.f.h
+
+; CHECK: t10:
+; CHECK-NEXT: mov eax, 10
+; CHECK-NEXT: mov eax, 12
+
+t11:
+mov eax, (FOOBAR PTR [ebx]).f
+mov eax, (FOOBAR PTR t1).f
+
+; CHECK: t11:
+; CHECK-NEXT: mov eax, dword ptr [ebx + 10]
+; CHECK-NEXT: mov eax, dword ptr [rip + t1+10]
+
 END
