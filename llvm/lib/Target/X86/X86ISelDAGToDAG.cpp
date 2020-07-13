@@ -182,9 +182,8 @@ namespace {
                              "indirect-tls-seg-refs");
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
-      bool OptForSize = MF.getFunction().hasOptSize();
       OptForMinSize = MF.getFunction().hasMinSize();
-      assert((!OptForMinSize || OptForSize) &&
+      assert((!OptForMinSize || MF.getFunction().hasOptSize()) &&
              "OptForMinSize implies OptForSize");
 
       SelectionDAGISel::runOnMachineFunction(MF);
