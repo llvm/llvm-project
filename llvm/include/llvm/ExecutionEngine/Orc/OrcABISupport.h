@@ -70,7 +70,7 @@ public:
   }
 
   static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                               JITTargetAddress TrampolineBlockTragetAddr,
+                               JITTargetAddress TrampolineBlockTargetAddr,
                                JITTargetAddress ResolverAddr,
                                unsigned NumTrampolines) {
     llvm_unreachable("writeTrampolines is not supported by the generic host "
