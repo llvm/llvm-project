@@ -490,8 +490,10 @@ public:
 
   bool isParsingMasm() const override { return true; }
 
-  bool LookUpFieldOffset(StringRef Base, StringRef Member,
-                         unsigned &Offset) override;
+  bool lookUpField(StringRef Name, StringRef &Type,
+                   unsigned &Offset) const override;
+  bool lookUpField(StringRef Base, StringRef Member, StringRef &Type,
+                   unsigned &Offset) const override;
 
   bool parseMSInlineAsm(void *AsmLoc, std::string &AsmString,
                         unsigned &NumOutputs, unsigned &NumInputs,
@@ -561,8 +563,8 @@ private:
   }
   static void DiagHandler(const SMDiagnostic &Diag, void *Context);
 
-  bool LookUpFieldOffset(const StructInfo &Structure, StringRef Member,
-                         unsigned &Offset);
+  bool lookUpField(const StructInfo &Structure, StringRef Member,
+                   StringRef &Type, unsigned &Offset) const;
 
   /// Should we emit DWARF describing this assembler source?  (Returns false if
   /// the source has .file directives, which means we don't want to generate
@@ -1397,12 +1399,13 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     }
 
     // Find the field offset if used.
+    StringRef Type;
     unsigned Offset = 0;
     Split = SymbolName.split('.');
     if (!Split.second.empty()) {
       SymbolName = Split.first;
       if (Structs.count(SymbolName.lower()) &&
-          !LookUpFieldOffset(SymbolName, Split.second, Offset)) {
+          !lookUpField(SymbolName, Split.second, Type, Offset)) {
         // This is actually a reference to a field offset.
         Res = MCConstantExpr::create(Offset, getContext());
         return false;
@@ -1410,10 +1413,10 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 
       auto TypeIt = KnownType.find(SymbolName);
       if (TypeIt == KnownType.end() ||
-          LookUpFieldOffset(*TypeIt->second, Split.second, Offset)) {
+          lookUpField(*TypeIt->second, Split.second, Type, Offset)) {
         std::pair<StringRef, StringRef> BaseMember = Split.second.split('.');
         StringRef Base = BaseMember.first, Member = BaseMember.second;
-        LookUpFieldOffset(Base, Member, Offset);
+        lookUpField(Base, Member, Type, Offset);
       }
     }
 
@@ -6519,26 +6522,46 @@ static int rewritesSort(const AsmRewrite *AsmRewriteA,
   llvm_unreachable("Unstable rewrite sort.");
 }
 
-bool MasmParser::LookUpFieldOffset(StringRef Base, StringRef Member,
-                                   unsigned &Offset) {
+bool MasmParser::lookUpField(StringRef Name, StringRef &Type,
+                             unsigned &Offset) const {
+  const std::pair<StringRef, StringRef> BaseMember = Name.split('.');
+  const StringRef Base = BaseMember.first, Member = BaseMember.second;
+  return lookUpField(Base, Member, Type, Offset);
+}
+
+bool MasmParser::lookUpField(StringRef Base, StringRef Member, StringRef &Type,
+                             unsigned &Offset) const {
   if (Base.empty())
     return true;
 
+  unsigned BaseOffset = 0;
+  if (Base.contains('.') && !lookUpField(Base, Type, BaseOffset))
+    Base = Type;
+
   auto TypeIt = KnownType.find(Base);
   if (TypeIt != KnownType.end())
-    return LookUpFieldOffset(*TypeIt->second, Member, Offset);
+    return lookUpField(*TypeIt->second, Member, Type, Offset);
 
   auto StructIt = Structs.find(Base.lower());
   if (StructIt != Structs.end())
-    return LookUpFieldOffset(StructIt->second, Member, Offset);
+    return lookUpField(StructIt->second, Member, Type, Offset);
 
   return true;
 }
 
-bool MasmParser::LookUpFieldOffset(const StructInfo &Structure,
-                                   StringRef Member, unsigned &Offset) {
+bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
+                             StringRef &Type, unsigned &Offset) const {
+  if (Member.empty()) {
+    Type = Structure.Name;
+    return false;
+  }
+
   std::pair<StringRef, StringRef> Split = Member.split('.');
   const StringRef FieldName = Split.first, FieldMember = Split.second;
+
+  auto StructIt = Structs.find(FieldName.lower());
+  if (StructIt != Structs.end())
+    return lookUpField(StructIt->second, FieldMember, Type, Offset);
 
   auto FieldIt = Structure.FieldsByName.find(FieldName.lower());
   if (FieldIt == Structure.FieldsByName.end())
@@ -6546,7 +6569,9 @@ bool MasmParser::LookUpFieldOffset(const StructInfo &Structure,
 
   const FieldInfo &Field = Structure.Fields[FieldIt->second];
   if (FieldMember.empty()) {
-    Offset = Field.Offset;
+    Offset += Field.Offset;
+    if (Field.Contents.FT == FT_STRUCT)
+      Type = Field.Contents.StructInfo.Structure.Name;
     return false;
   }
 
@@ -6554,7 +6579,7 @@ bool MasmParser::LookUpFieldOffset(const StructInfo &Structure,
     return true;
   const StructFieldInfo &StructInfo = Field.Contents.StructInfo;
 
-  bool Result = LookUpFieldOffset(StructInfo.Structure, FieldMember, Offset);
+  bool Result = lookUpField(StructInfo.Structure, FieldMember, Type, Offset);
   if (Result)
     return true;
 
