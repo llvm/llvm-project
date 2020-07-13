@@ -1600,18 +1600,7 @@ void CGOpenMPRuntimeNVPTX::emitSPMDEntryFooter(CodeGenFunction &CGF,
 // warps participate in parallel work.
 static void setPropertyExecutionMode(CodeGenModule &CGM, StringRef Name,
                                      bool Mode) {
-  auto *GVMode =
-      (CGM.getTriple().isAMDGCN())
-          ? new llvm::GlobalVariable(
-                CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
-                llvm::GlobalValue::ExternalLinkage, // FIXME: will
-                                                    // WeakAnyLinkage work?
-                llvm::ConstantInt::get(CGM.Int8Ty, Mode ? 0 : 1),
-                Name + Twine("_exec_mode"),
-                /*InsertBefore=*/nullptr, llvm::GlobalVariable::NotThreadLocal,
-                CGM.getContext().getTargetAddressSpace(LangAS::cuda_device),
-                /*isExternallyInitialized*/ false)
-          : new llvm::GlobalVariable(
+  auto *GVMode = new llvm::GlobalVariable(
                 CGM.getModule(), CGM.Int8Ty,
                 /*isConstant=*/true, llvm::GlobalValue::WeakAnyLinkage,
                 llvm::ConstantInt::get(CGM.Int8Ty, Mode ? 0 : 1),
