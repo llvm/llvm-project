@@ -147,4 +147,33 @@ mov eax, [t2.FOOBAR.e.b]
 ; CHECK-NEXT: mov eax, dword ptr [rip + (t2+8)+1]
 ; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
 
+QUUX STRUCT
+  u DWORD ?
+  UNION
+    v WORD ?
+    w DWORD ?
+    STRUCT
+      x BYTE ?
+      y BYTE ?
+    ENDS
+  ENDS
+  z DWORD ?
+QUUX ENDS
+
+t9:
+mov eax, [ebx].QUUX.u
+mov eax, [ebx].QUUX.v
+mov eax, [ebx].QUUX.w
+mov eax, [ebx].QUUX.x
+mov eax, [ebx].QUUX.y
+mov eax, [ebx].QUUX.z
+
+; CHECK: t9:
+; CHECK-NEXT: mov eax, dword ptr [ebx]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 5]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 8]
+
 END
