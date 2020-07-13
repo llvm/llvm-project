@@ -1,35 +1,17 @@
 set(CommonMLSources MLInlineAdvisor.cpp)
 set(ReleaseModeMLSources ReleaseModeModelRunner.cpp)
-set(DevelopmentModeMLSources TFUtils.cpp)
 
-if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
-  set(MLPolicySources ${CommonMLSources})
-  if (DEFINED LLVM_HAVE_TF_AOT)
-    include(TensorFlowCompile)
-    tfcompile(models/inliner serve action InlinerSizeModel llvm::InlinerSizeModel)
-    list(APPEND ReleaseModeMLSources
-      $<TARGET_OBJECTS:tf_xla_runtime_objects>
-      ${GENERATED_OBJS}
-    )
-    LIST(APPEND MLPolicySources ${ReleaseModeMLSources})
-  else()
-    LIST(APPEND LLVM_OPTIONAL_SOURCES ${ReleaseModeMLSources})
-  endif()
-
-  if (DEFINED LLVM_HAVE_TF_API)
-    LIST(APPEND MLPolicySources ${DevelopmentModeMLSources})
-    LIST(APPEND MLLinkDeps ${tensorflow_c_api})
-  else()
-    LIST(APPEND LLVM_OPTIONAL_SOURCES ${DevelopmentModeMLSources})
-  endif()
+if (DEFINED LLVM_HAVE_TF_AOT)
+  include(TensorFlowCompile)
+  tfcompile(models/inliner serve action InlinerSizeModel llvm::InlinerSizeModel)
+  list(APPEND ReleaseModeMLSources
+    $<TARGET_OBJECTS:tf_xla_runtime_objects>
+    ${GENERATED_OBJS}
+  )
+  set(MLPolicySources ${CommonMLSources} ${ReleaseModeMLSources})
 else()
-  LIST(APPEND LLVM_OPTIONAL_SOURCES 
-    ${CommonMLSources}
-    ${DevelopmentModeMLSources}
-    ${ReleaseModeMLSources}
-    )
+  set(LLVM_OPTIONAL_SOURCES ${CommonMLSources} ${ReleaseModeMLSources})
 endif()
-  
 
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
@@ -75,7 +57,6 @@ add_llvm_component_library(LLVMAnalysis
   InlineCost.cpp
   InlineAdvisor.cpp
   InlineFeaturesAnalysis.cpp
-  InlineSizeEstimatorAnalysis.cpp
   InstCount.cpp
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
@@ -143,7 +124,4 @@ add_llvm_component_library(LLVMAnalysis
 
   DEPENDS
   intrinsics_gen
-
-  LINK_LIBS
-  ${MLLinkDeps}
   )
