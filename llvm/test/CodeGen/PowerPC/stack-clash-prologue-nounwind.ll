@@ -41,7 +41,7 @@ entry:
   ret i8 %c
 }
 
-define i8 @f1() #0 "stack-probe-size"="0" {
+define i8 @f1() #0 "stack-probe-size"="0" nounwind {
 ; CHECK-LE-LABEL: f1:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    mr r12, r1
@@ -52,7 +52,6 @@ define i8 @f1() #0 "stack-probe-size"="0" {
 ; CHECK-LE-NEXT:    stdu r12, -16(r1)
 ; CHECK-LE-NEXT:    bdnz .LBB1_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 4144
 ; CHECK-LE-NEXT:    li r3, 3
 ; CHECK-LE-NEXT:    stb r3, 48(r1)
 ; CHECK-LE-NEXT:    lbz r3, 48(r1)
@@ -69,7 +68,6 @@ define i8 @f1() #0 "stack-probe-size"="0" {
 ; CHECK-BE-NEXT:    stdu r12, -16(r1)
 ; CHECK-BE-NEXT:    bdnz .LBB1_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 4160
 ; CHECK-BE-NEXT:    li r3, 3
 ; CHECK-BE-NEXT:    stb r3, 64(r1)
 ; CHECK-BE-NEXT:    lbz r3, 64(r1)
@@ -86,11 +84,10 @@ define i8 @f1() #0 "stack-probe-size"="0" {
 ; CHECK-32-NEXT:    stwu r12, -16(r1)
 ; CHECK-32-NEXT:    bdnz .LBB1_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
-; CHECK-32-NEXT:    sub r0, r1, r12
-; CHECK-32-NEXT:    sub r0, r1, r0
-; CHECK-32-NEXT:    .cfi_def_cfa_offset 4112
 ; CHECK-32-NEXT:    li r3, 3
+; CHECK-32-NEXT:    sub r0, r1, r12
 ; CHECK-32-NEXT:    stb r3, 16(r1)
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    lbz r3, 16(r1)
 ; CHECK-32-NEXT:    addi r1, r1, 4112
 ; CHECK-32-NEXT:    blr
@@ -102,7 +99,7 @@ entry:
   ret i8 %c
 }
 
-define i8 @f2() #0 {
+define i8 @f2() #0 nounwind {
 ; CHECK-LE-LABEL: f2:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    mr r12, r1
@@ -114,7 +111,6 @@ define i8 @f2() #0 {
 ; CHECK-LE-NEXT:    stdu r12, -4096(r1)
 ; CHECK-LE-NEXT:    bdnz .LBB2_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 65584
 ; CHECK-LE-NEXT:    li r3, 3
 ; CHECK-LE-NEXT:    stb r3, 48(r1)
 ; CHECK-LE-NEXT:    lbz r3, 48(r1)
@@ -132,7 +128,6 @@ define i8 @f2() #0 {
 ; CHECK-BE-NEXT:    stdu r12, -4096(r1)
 ; CHECK-BE-NEXT:    bdnz .LBB2_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 65600
 ; CHECK-BE-NEXT:    li r3, 3
 ; CHECK-BE-NEXT:    stb r3, 64(r1)
 ; CHECK-BE-NEXT:    lbz r3, 64(r1)
@@ -151,9 +146,8 @@ define i8 @f2() #0 {
 ; CHECK-32-NEXT:    bdnz .LBB2_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
 ; CHECK-32-NEXT:    sub r0, r1, r12
-; CHECK-32-NEXT:    sub r0, r1, r0
-; CHECK-32-NEXT:    .cfi_def_cfa_offset 65552
 ; CHECK-32-NEXT:    li r3, 3
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
 ; CHECK-32-NEXT:    mr r0, r31
 ; CHECK-32-NEXT:    lbz r3, 16(r1)
@@ -169,14 +163,13 @@ entry:
   ret i8 %c
 }
 
-define i8 @f3() #0 "stack-probe-size"="32768" {
+define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ; CHECK-LE-LABEL: f3:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    mr r12, r1
 ; CHECK-LE-NEXT:    stdu r12, -48(r1)
 ; CHECK-LE-NEXT:    stdu r12, -32768(r1)
 ; CHECK-LE-NEXT:    stdu r12, -32768(r1)
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 65584
 ; CHECK-LE-NEXT:    li r3, 3
 ; CHECK-LE-NEXT:    stb r3, 48(r1)
 ; CHECK-LE-NEXT:    lbz r3, 48(r1)
@@ -189,7 +182,6 @@ define i8 @f3() #0 "stack-probe-size"="32768" {
 ; CHECK-BE-NEXT:    stdu r12, -64(r1)
 ; CHECK-BE-NEXT:    stdu r12, -32768(r1)
 ; CHECK-BE-NEXT:    stdu r12, -32768(r1)
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 65600
 ; CHECK-BE-NEXT:    li r3, 3
 ; CHECK-BE-NEXT:    stb r3, 64(r1)
 ; CHECK-BE-NEXT:    lbz r3, 64(r1)
@@ -203,9 +195,8 @@ define i8 @f3() #0 "stack-probe-size"="32768" {
 ; CHECK-32-NEXT:    stwu r12, -32768(r1)
 ; CHECK-32-NEXT:    stwu r12, -32768(r1)
 ; CHECK-32-NEXT:    sub r0, r1, r12
-; CHECK-32-NEXT:    sub r0, r1, r0
-; CHECK-32-NEXT:    .cfi_def_cfa_offset 65552
 ; CHECK-32-NEXT:    li r3, 3
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
 ; CHECK-32-NEXT:    mr r0, r31
 ; CHECK-32-NEXT:    lbz r3, 16(r1)
@@ -222,13 +213,12 @@ entry:
 }
 
 ; Same as f2, but without protection.
-define i8 @f4() {
+define i8 @f4() nounwind {
 ; CHECK-LE-LABEL: f4:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    lis r0, -2
 ; CHECK-LE-NEXT:    ori r0, r0, 65488
 ; CHECK-LE-NEXT:    stdux r1, r1, r0
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 65584
 ; CHECK-LE-NEXT:    li r3, 3
 ; CHECK-LE-NEXT:    stb r3, 48(r1)
 ; CHECK-LE-NEXT:    lbz r3, 48(r1)
@@ -240,7 +230,6 @@ define i8 @f4() {
 ; CHECK-BE-NEXT:    lis r0, -2
 ; CHECK-BE-NEXT:    ori r0, r0, 65472
 ; CHECK-BE-NEXT:    stdux r1, r1, r0
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 65600
 ; CHECK-BE-NEXT:    li r3, 3
 ; CHECK-BE-NEXT:    stb r3, 64(r1)
 ; CHECK-BE-NEXT:    lbz r3, 64(r1)
@@ -252,9 +241,8 @@ define i8 @f4() {
 ; CHECK-32-NEXT:    lis r0, -2
 ; CHECK-32-NEXT:    ori r0, r0, 65520
 ; CHECK-32-NEXT:    stwux r1, r1, r0
-; CHECK-32-NEXT:    sub r0, r1, r0
-; CHECK-32-NEXT:    .cfi_def_cfa_offset 65552
 ; CHECK-32-NEXT:    li r3, 3
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
 ; CHECK-32-NEXT:    mr r0, r31
 ; CHECK-32-NEXT:    lbz r3, 16(r1)
@@ -270,7 +258,7 @@ entry:
   ret i8 %c
 }
 
-define i8 @f5() #0 "stack-probe-size"="65536" {
+define i8 @f5() #0 "stack-probe-size"="65536" nounwind {
 ; CHECK-LE-LABEL: f5:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    mr r12, r1
@@ -284,7 +272,6 @@ define i8 @f5() #0 "stack-probe-size"="65536" {
 ; CHECK-LE-NEXT:    stdux r12, r1, r0
 ; CHECK-LE-NEXT:    bdnz .LBB5_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 1048624
 ; CHECK-LE-NEXT:    li r3, 3
 ; CHECK-LE-NEXT:    stb r3, 48(r1)
 ; CHECK-LE-NEXT:    lbz r3, 48(r1)
@@ -304,7 +291,6 @@ define i8 @f5() #0 "stack-probe-size"="65536" {
 ; CHECK-BE-NEXT:    stdux r12, r1, r0
 ; CHECK-BE-NEXT:    bdnz .LBB5_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 1048640
 ; CHECK-BE-NEXT:    li r3, 3
 ; CHECK-BE-NEXT:    stb r3, 64(r1)
 ; CHECK-BE-NEXT:    lbz r3, 64(r1)
@@ -325,9 +311,8 @@ define i8 @f5() #0 "stack-probe-size"="65536" {
 ; CHECK-32-NEXT:    bdnz .LBB5_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
 ; CHECK-32-NEXT:    sub r0, r1, r12
-; CHECK-32-NEXT:    sub r0, r1, r0
-; CHECK-32-NEXT:    .cfi_def_cfa_offset 1048592
 ; CHECK-32-NEXT:    li r3, 3
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
 ; CHECK-32-NEXT:    mr r0, r31
 ; CHECK-32-NEXT:    lbz r3, 16(r1)
@@ -343,7 +328,7 @@ entry:
   ret i8 %c
 }
 
-define i8 @f6() #0 {
+define i8 @f6() #0 nounwind {
 ; CHECK-LE-LABEL: f6:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    mr r12, r1
@@ -356,7 +341,6 @@ define i8 @f6() #0 {
 ; CHECK-LE-NEXT:    stdu r12, -4096(r1)
 ; CHECK-LE-NEXT:    bdnz .LBB6_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 1073741872
 ; CHECK-LE-NEXT:    li r3, 3
 ; CHECK-LE-NEXT:    stb r3, 48(r1)
 ; CHECK-LE-NEXT:    lbz r3, 48(r1)
@@ -375,7 +359,6 @@ define i8 @f6() #0 {
 ; CHECK-BE-NEXT:    stdu r12, -4096(r1)
 ; CHECK-BE-NEXT:    bdnz .LBB6_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 1073741888
 ; CHECK-BE-NEXT:    li r3, 3
 ; CHECK-BE-NEXT:    stb r3, 64(r1)
 ; CHECK-BE-NEXT:    lbz r3, 64(r1)
@@ -395,9 +378,8 @@ define i8 @f6() #0 {
 ; CHECK-32-NEXT:    bdnz .LBB6_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
 ; CHECK-32-NEXT:    sub r0, r1, r12
-; CHECK-32-NEXT:    sub r0, r1, r0
-; CHECK-32-NEXT:    .cfi_def_cfa_offset 1073741840
 ; CHECK-32-NEXT:    li r3, 3
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
 ; CHECK-32-NEXT:    mr r0, r31
 ; CHECK-32-NEXT:    lbz r3, 16(r1)
@@ -413,7 +395,7 @@ entry:
   ret i8 %c
 }
 
-define i8 @f7() #0 "stack-probe-size"="65536" {
+define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ; CHECK-LE-LABEL: f7:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    lis r0, -1
@@ -429,7 +411,6 @@ define i8 @f7() #0 "stack-probe-size"="65536" {
 ; CHECK-LE-NEXT:    stdux r12, r1, r0
 ; CHECK-LE-NEXT:    bdnz .LBB7_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 1000000048
 ; CHECK-LE-NEXT:    li r3, 3
 ; CHECK-LE-NEXT:    stb r3, 41(r1)
 ; CHECK-LE-NEXT:    lbz r3, 41(r1)
@@ -451,7 +432,6 @@ define i8 @f7() #0 "stack-probe-size"="65536" {
 ; CHECK-BE-NEXT:    stdux r12, r1, r0
 ; CHECK-BE-NEXT:    bdnz .LBB7_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 1000000064
 ; CHECK-BE-NEXT:    li r3, 3
 ; CHECK-BE-NEXT:    stb r3, 57(r1)
 ; CHECK-BE-NEXT:    lbz r3, 57(r1)
@@ -474,9 +454,8 @@ define i8 @f7() #0 "stack-probe-size"="65536" {
 ; CHECK-32-NEXT:    bdnz .LBB7_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
 ; CHECK-32-NEXT:    sub r0, r1, r12
-; CHECK-32-NEXT:    sub r0, r1, r0
-; CHECK-32-NEXT:    .cfi_def_cfa_offset 1000000016
 ; CHECK-32-NEXT:    li r3, 3
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 9(r1)
 ; CHECK-32-NEXT:    mr r0, r31
 ; CHECK-32-NEXT:    lbz r3, 9(r1)
