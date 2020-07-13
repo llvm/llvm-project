@@ -38,6 +38,16 @@ class ScalarEvolution;
 class Type;
 class Value;
 
+namespace TailPredication {
+  enum Mode {
+    Disabled = 0,
+    EnabledNoReductions,
+    Enabled,
+    ForceEnabledNoReductions,
+    ForceEnabled
+  };
+}
+
 class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
   using BaseT = BasicTTIImplBase<ARMTTIImpl>;
   using TTI = TargetTransformInfo;

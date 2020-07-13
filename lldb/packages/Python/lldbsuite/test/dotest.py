@@ -408,19 +408,6 @@ def parseOptionsAndInitTestdirs():
     if do_help:
         usage(parser)
 
-    if args.results_file:
-        configuration.results_filename = args.results_file
-
-    if args.results_formatter:
-        configuration.results_formatter_name = args.results_formatter
-    if args.results_formatter_options:
-        configuration.results_formatter_options = args.results_formatter_options
-
-    # Default to using the BasicResultsFormatter if no formatter is specified.
-    if configuration.results_formatter_name is None:
-        configuration.results_formatter_name = (
-            "lldbsuite.test_event.formatter.results_formatter.ResultsFormatter")
-
     # Reproducer arguments
     if args.capture_path and args.replay_path:
         logging.error('Cannot specify both a capture and a replay path.')
@@ -469,16 +456,10 @@ def parseOptionsAndInitTestdirs():
 
 def setupTestResults():
     """Sets up test results-related objects based on arg settings."""
-    # Setup the results formatter configuration.
-    formatter_config = formatter.FormatterConfig()
-    formatter_config.filename = configuration.results_filename
-    formatter_config.formatter_name = configuration.results_formatter_name
-    formatter_config.formatter_options = (
-        configuration.results_formatter_options)
 
     # Create the results formatter.
     formatter_spec = formatter.create_results_formatter(
-        formatter_config)
+            "lldbsuite.test_event.formatter.results_formatter.ResultsFormatter")
     if formatter_spec is not None and formatter_spec.formatter is not None:
         configuration.results_formatter_object = formatter_spec.formatter
 

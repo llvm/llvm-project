@@ -158,3 +158,26 @@ func @get_extent_from_extent_tensor(%extents : tensor<?xindex>,
   return %result : !shape.size
 }
 
+// -----
+
+// Lower `any` to its first operand.
+// CHECK-LABEL: @any_of_three
+// CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<?xindex>) -> tensor<?xindex>
+func @any_of_three(%a : !shape.shape, %b : !shape.shape, %c : !shape.shape)
+    -> !shape.shape {
+  // CHECK: return %[[A]] : tensor<?xindex>
+  %result = shape.any %a, %b, %c
+  return %result : !shape.shape
+}
+
+// -----
+
+// Lower `any` to its first operand.
+// CHECK-LABEL: @any_of_one
+// CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>) -> tensor<?xindex>
+func @any_of_one(%a : !shape.shape) -> !shape.shape {
+  // CHECK: return %[[A]] : tensor<?xindex>
+  %result = shape.any %a
+  return %result : !shape.shape
+}
+

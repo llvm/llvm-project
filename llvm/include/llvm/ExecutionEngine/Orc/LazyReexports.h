@@ -46,6 +46,10 @@ public:
   getCallThroughTrampoline(JITDylib &SourceJD, SymbolStringPtr SymbolName,
                            NotifyResolvedFunction NotifyResolved);
 
+  void resolveTrampolineLandingAddress(
+      JITTargetAddress TrampolineAddr,
+      TrampolinePool::NotifyLandingResolvedFunction NotifyLandingResolved);
+
 protected:
   using NotifyLandingResolvedFunction =
       TrampolinePool::NotifyLandingResolvedFunction;
@@ -63,10 +67,6 @@ protected:
   Expected<ReexportsEntry> findReexport(JITTargetAddress TrampolineAddr);
   Error notifyResolved(JITTargetAddress TrampolineAddr,
                        JITTargetAddress ResolvedAddr);
-  void resolveTrampolineLandingAddress(
-      JITTargetAddress TrampolineAddr,
-      NotifyLandingResolvedFunction NotifyLandingResolved);
-
   void setTrampolinePool(std::unique_ptr<TrampolinePool> TP) {
     this->TP = std::move(TP);
   }

@@ -122,10 +122,6 @@ lldb_module_cache_dir = None
 clang_module_cache_dir = None
 
 # Test results handling globals
-results_filename = None
-results_formatter_name = None
-results_formatter_object = None
-results_formatter_options = None
 test_result = None
 
 # Reproducers

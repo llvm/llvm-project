@@ -6290,6 +6290,8 @@ bool Sema::inferObjCARCLifetime(ValueDecl *decl) {
 void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
   if (Decl->getType().hasAddressSpace())
     return;
+  if (Decl->getType()->isDependentType())
+    return;
   if (VarDecl *Var = dyn_cast<VarDecl>(Decl)) {
     QualType Type = Var->getType();
     if (Type->isSamplerT() || Type->isVoidType())
@@ -7859,6 +7861,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     if (NewVD->isFileVarDecl() || NewVD->isStaticLocal() ||
         NewVD->hasExternalStorage()) {
       if (!T->isSamplerT() &&
+          !T->isDependentType() &&
           !(T.getAddressSpace() == LangAS::opencl_constant ||
             (T.getAddressSpace() == LangAS::opencl_global &&
              (getLangOpts().OpenCLVersion == 200 ||

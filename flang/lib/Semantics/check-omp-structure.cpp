@@ -9,7 +9,6 @@
 #include "check-omp-structure.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
-#include <unordered_map>
 
 namespace Fortran::semantics {
 

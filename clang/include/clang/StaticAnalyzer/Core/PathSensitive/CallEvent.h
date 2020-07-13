@@ -554,7 +554,7 @@ public:
 
 /// Represents a call to a block.
 ///
-/// Example: <tt>^{ /* ... */ }()</tt>
+/// Example: <tt>^{ statement-body }()</tt>
 class BlockCall : public CallEvent {
   friend class CallEventManager;
 

@@ -45,7 +45,7 @@ static cl::opt<bool> DisableLowOverheadLoops(
   "disable-arm-loloops", cl::Hidden, cl::init(false),
   cl::desc("Disable the generation of low-overhead loops"));
 
-extern cl::opt<bool> DisableTailPredication;
+extern cl::opt<TailPredication::Mode> EnableTailPredication;
 
 extern cl::opt<bool> EnableMaskedGatherScatters;
 
@@ -1458,7 +1458,7 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
                                              TargetLibraryInfo *TLI,
                                              DominatorTree *DT,
                                              const LoopAccessInfo *LAI) {
-  if (DisableTailPredication)
+  if (!EnableTailPredication)
     return false;
 
   // Creating a predicated vector loop is the first step for generating a
@@ -1501,7 +1501,7 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
 }
 
 bool ARMTTIImpl::emitGetActiveLaneMask() const {
-  if (!ST->hasMVEIntegerOps() || DisableTailPredication)
+  if (!ST->hasMVEIntegerOps() || !EnableTailPredication)
     return false;
 
   // Intrinsic @llvm.get.active.lane.mask is supported.

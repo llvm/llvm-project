@@ -4568,19 +4568,20 @@ void GNUStyle<ELFT>::printDynamicRelocations(const ELFO *Obj) {
                          Obj->base(),
                      1)
        << " contains " << DynPLTRelRegion.Size << " bytes:\n";
-  }
-  if (DynPLTRelRegion.EntSize == sizeof(Elf_Rela)) {
-    printRelocHeader(ELF::SHT_RELA);
-    for (const Elf_Rela &Rela : DynPLTRelRegion.getAsArrayRef<Elf_Rela>())
-      printDynamicRelocation(Obj, Rela, true);
-  } else {
-    printRelocHeader(ELF::SHT_REL);
-    for (const Elf_Rel &Rel : DynPLTRelRegion.getAsArrayRef<Elf_Rel>()) {
-      Elf_Rela Rela;
-      Rela.r_offset = Rel.r_offset;
-      Rela.r_info = Rel.r_info;
-      Rela.r_addend = 0;
-      printDynamicRelocation(Obj, Rela, false);
+
+    if (DynPLTRelRegion.EntSize == sizeof(Elf_Rela)) {
+      printRelocHeader(ELF::SHT_RELA);
+      for (const Elf_Rela &Rela : DynPLTRelRegion.getAsArrayRef<Elf_Rela>())
+        printDynamicRelocation(Obj, Rela, true);
+    } else {
+      printRelocHeader(ELF::SHT_REL);
+      for (const Elf_Rel &Rel : DynPLTRelRegion.getAsArrayRef<Elf_Rel>()) {
+        Elf_Rela Rela;
+        Rela.r_offset = Rel.r_offset;
+        Rela.r_info = Rel.r_info;
+        Rela.r_addend = 0;
+        printDynamicRelocation(Obj, Rela, false);
+      }
     }
   }
 }

@@ -4,7 +4,7 @@
 define i32 @test1(i32 %arg) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[ARG:%.*]], 5
-; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i32 [[ARG]]
 ;
   %cmp = icmp sge i32 %arg, 5
@@ -18,7 +18,7 @@ define i32 @test2(i32 %arg, i1 %b) {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ 2, [[BB]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], [[A]]
-; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[BB]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i32 [[ARG]]

@@ -18,4 +18,3 @@ def IndexToSizeOpConversion : Pat<
 def SizeToIndexOpConversion : Pat<
     (Shape_SizeToIndexOp $arg),
     (replaceWithValue $arg)>;
-

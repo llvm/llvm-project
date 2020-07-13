@@ -566,7 +566,7 @@ lldb::SBProcess SBTarget::ConnectRemote(SBListener &listener, const char *url,
 
     if (process_sp) {
       sb_process.SetSP(process_sp);
-      error.SetError(process_sp->ConnectRemote(nullptr, url));
+      error.SetError(process_sp->ConnectRemote(url));
     } else {
       error.SetErrorString("unable to create lldb_private::Process");
     }

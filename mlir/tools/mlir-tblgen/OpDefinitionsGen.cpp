@@ -955,14 +955,51 @@ void OpEmitter::genSeparateArgParamBuilder() {
     llvm_unreachable("unhandled TypeParamKind");
   };
 
+  // A separate arg param builder method will have a signature which is
+  // ambiguous with the collective params build method (generated in
+  // `genCollectiveParamBuilder` function below) if it has a single
+  // `ArrayReg<Type>` parameter for result types and a single `ArrayRef<Value>`
+  // parameter for the operands, no parameters after that, and the collective
+  // params build method has `attributes` as its last parameter (with
+  // a default value). This will happen when all of the following are true:
+  // 1. [`attributes` as last parameter in collective params build method]:
+  //    getNumVariadicRegions must be 0 (otherwise the collective params build
+  //    method ends with a `numRegions` param, and we don't specify default
+  //    value for attributes).
+  // 2. [single `ArrayRef<Value>` parameter for operands, and no parameters
+  //    after that]: numArgs() must be 1 (if not, each arg gets a separate param
+  //    in the build methods generated here) and the single arg must be a
+  //    non-attribute variadic argument.
+  // 3. [single `ArrayReg<Type>` parameter for result types]:
+  //      3a. paramKind should be Collective, or
+  //      3b. paramKind should be Separate and there should be a single variadic
+  //          result
+  //
+  // In that case, skip generating such ambiguous build methods here.
+  bool hasSingleVariadicResult =
+      op.getNumResults() == 1 && op.getResult(0).isVariadic();
+
+  bool hasSingleVariadicArg =
+      op.getNumArgs() == 1 &&
+      op.getArg(0).is<tblgen::NamedTypeConstraint *>() &&
+      op.getOperand(0).isVariadic();
+  bool hasNoVariadicRegions = op.getNumVariadicRegions() == 0;
+
   for (auto attrType : attrBuilderType) {
-    emit(attrType, TypeParamKind::Separate, /*inferType=*/false);
+    // Case 3b above.
+    if (!(hasNoVariadicRegions && hasSingleVariadicArg &&
+          hasSingleVariadicResult))
+      emit(attrType, TypeParamKind::Separate, /*inferType=*/false);
     if (canInferType(op))
       emit(attrType, TypeParamKind::None, /*inferType=*/true);
-    // Emit separate arg build with collective type, unless there is only one
-    // variadic result, in which case the above would have already generated
-    // the same build method.
-    if (!(op.getNumResults() == 1 && op.getResult(0).isVariableLength()))
+    // The separate arg + collective param kind method will be:
+    // (a) Same as the separate arg + separate param kind method if there is
+    //     only one variadic result.
+    // (b) Ambiguous with the collective params method under conditions in (3a)
+    //     above.
+    // In either case, skip generating such build method.
+    if (!hasSingleVariadicResult &&
+        !(hasNoVariadicRegions && hasSingleVariadicArg))
       emit(attrType, TypeParamKind::Collective, /*inferType=*/false);
   }
 }
@@ -1184,8 +1221,12 @@ void OpEmitter::genCollectiveParamBuilder() {
       ", ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange "
       "operands, "
       "::llvm::ArrayRef<::mlir::NamedAttribute> attributes";
-  if (op.getNumVariadicRegions())
+  if (op.getNumVariadicRegions()) {
     params += ", unsigned numRegions";
+  } else {
+    // Provide default value for `attributes` since its the last parameter
+    params += " = {}";
+  }
   auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
 

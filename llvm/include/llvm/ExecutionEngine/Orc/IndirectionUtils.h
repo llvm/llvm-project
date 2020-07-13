@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Process.h"
@@ -139,8 +140,10 @@ private:
       return;
     }
 
-    ORCABI::writeResolverCode(static_cast<uint8_t *>(ResolverBlock.base()),
-                              &reenter, this);
+    ORCABI::writeResolverCode(static_cast<char *>(ResolverBlock.base()),
+                              pointerToJITTargetAddress(ResolverBlock.base()),
+                              pointerToJITTargetAddress(&reenter),
+                              pointerToJITTargetAddress(this));
 
     EC = sys::Memory::protectMappedMemory(ResolverBlock.getMemoryBlock(),
                                           sys::Memory::MF_READ |
@@ -166,14 +169,14 @@ private:
         (sys::Process::getPageSizeEstimate() - ORCABI::PointerSize) /
         ORCABI::TrampolineSize;
 
-    uint8_t *TrampolineMem = static_cast<uint8_t *>(TrampolineBlock.base());
-    ORCABI::writeTrampolines(TrampolineMem, ResolverBlock.base(),
-                             NumTrampolines);
+    char *TrampolineMem = static_cast<char *>(TrampolineBlock.base());
+    ORCABI::writeTrampolines(
+        TrampolineMem, pointerToJITTargetAddress(TrampolineMem),
+        pointerToJITTargetAddress(ResolverBlock.base()), NumTrampolines);
 
     for (unsigned I = 0; I < NumTrampolines; ++I)
-      this->AvailableTrampolines.push_back(
-          static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(
-              TrampolineMem + (I * ORCABI::TrampolineSize))));
+      this->AvailableTrampolines.push_back(pointerToJITTargetAddress(
+          TrampolineMem + (I * ORCABI::TrampolineSize)));
 
     if (auto EC = sys::Memory::protectMappedMemory(
                     TrampolineBlock.getMemoryBlock(),
@@ -302,6 +305,61 @@ private:
   virtual void anchor();
 };
 
+template <typename ORCABI> class LocalIndirectStubsInfo {
+public:
+  LocalIndirectStubsInfo(unsigned NumStubs, sys::OwningMemoryBlock StubsMem)
+      : NumStubs(NumStubs), StubsMem(std::move(StubsMem)) {}
+
+  static Expected<LocalIndirectStubsInfo> create(unsigned MinStubs,
+                                                 unsigned PageSize) {
+    auto ISAS = getIndirectStubsBlockSizes<ORCABI>(MinStubs, PageSize);
+
+    assert((ISAS.StubBytes % PageSize == 0) &&
+           "StubBytes is not a page size multiple");
+    uint64_t PointerAlloc = alignTo(ISAS.PointerBytes, PageSize);
+
+    // Allocate memory for stubs and pointers in one call.
+    std::error_code EC;
+    auto StubsAndPtrsMem =
+        sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
+            ISAS.StubBytes + PointerAlloc, nullptr,
+            sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
+    if (EC)
+      return errorCodeToError(EC);
+
+    sys::MemoryBlock StubsBlock(StubsAndPtrsMem.base(), ISAS.StubBytes);
+    auto StubsBlockMem = static_cast<char *>(StubsAndPtrsMem.base());
+    auto PtrBlockAddress =
+        pointerToJITTargetAddress(StubsBlockMem) + ISAS.StubBytes;
+
+    ORCABI::writeIndirectStubsBlock(StubsBlockMem,
+                                    pointerToJITTargetAddress(StubsBlockMem),
+                                    PtrBlockAddress, ISAS.NumStubs);
+
+    if (auto EC = sys::Memory::protectMappedMemory(
+            StubsBlock, sys::Memory::MF_READ | sys::Memory::MF_EXEC))
+      return errorCodeToError(EC);
+
+    return LocalIndirectStubsInfo(ISAS.NumStubs, std::move(StubsAndPtrsMem));
+  }
+
+  unsigned getNumStubs() const { return NumStubs; }
+
+  void *getStub(unsigned Idx) const {
+    return static_cast<char *>(StubsMem.base()) + Idx * ORCABI::StubSize;
+  }
+
+  void **getPtr(unsigned Idx) const {
+    char *PtrsBase =
+        static_cast<char *>(StubsMem.base()) + NumStubs * ORCABI::StubSize;
+    return reinterpret_cast<void **>(PtrsBase) + Idx;
+  }
+
+private:
+  unsigned NumStubs = 0;
+  sys::OwningMemoryBlock StubsMem;
+};
+
 /// IndirectStubsManager implementation for the host architecture, e.g.
 ///        OrcX86_64. (See OrcArchitectureSupport.h).
 template <typename TargetT>
@@ -379,13 +437,13 @@ private:
 
     unsigned NewStubsRequired = NumStubs - FreeStubs.size();
     unsigned NewBlockId = IndirectStubsInfos.size();
-    typename TargetT::IndirectStubsInfo ISI;
-    if (auto Err =
-            TargetT::emitIndirectStubsBlock(ISI, NewStubsRequired, nullptr))
-      return Err;
-    for (unsigned I = 0; I < ISI.getNumStubs(); ++I)
+    auto ISI =
+        LocalIndirectStubsInfo<TargetT>::create(NewStubsRequired, PageSize);
+    if (!ISI)
+      return ISI.takeError();
+    for (unsigned I = 0; I < ISI->getNumStubs(); ++I)
       FreeStubs.push_back(std::make_pair(NewBlockId, I));
-    IndirectStubsInfos.push_back(std::move(ISI));
+    IndirectStubsInfos.push_back(std::move(*ISI));
     return Error::success();
   }
 
@@ -394,12 +452,13 @@ private:
     auto Key = FreeStubs.back();
     FreeStubs.pop_back();
     *IndirectStubsInfos[Key.first].getPtr(Key.second) =
-        reinterpret_cast<void *>(static_cast<uintptr_t>(InitAddr));
+        jitTargetAddressToPointer<void *>(InitAddr);
     StubIndexes[StubName] = std::make_pair(Key, StubFlags);
   }
 
+  unsigned PageSize = sys::Process::getPageSizeEstimate();
   std::mutex StubsMutex;
-  std::vector<typename TargetT::IndirectStubsInfo> IndirectStubsInfos;
+  std::vector<LocalIndirectStubsInfo<TargetT>> IndirectStubsInfos;
   using StubKey = std::pair<uint16_t, uint16_t>;
   std::vector<StubKey> FreeStubs;
   StringMap<std::pair<StubKey, JITSymbolFlags>> StubIndexes;

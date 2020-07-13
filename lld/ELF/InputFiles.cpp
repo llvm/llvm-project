@@ -632,6 +632,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       break;
     case SHT_SYMTAB:
     case SHT_STRTAB:
+    case SHT_REL:
+    case SHT_RELA:
     case SHT_NULL:
       break;
     default:
@@ -639,11 +641,21 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     }
   }
 
-  // This block handles SHF_LINK_ORDER.
+  // We have a second loop. It is used to:
+  // 1) handle SHF_LINK_ORDER sections.
+  // 2) create SHT_REL[A] sections. In some cases the section header index of a
+  //    relocation section may be smaller than that of the relocated section. In
+  //    such cases, the relocation section would attempt to reference a target
+  //    section that has not yet been created. For simplicity, delay creation of
+  //    relocation sections until now.
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
+
+    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
+      this->sections[i] = createInputSection(sec);
+
     if (!(sec.sh_flags & SHF_LINK_ORDER))
       continue;
 

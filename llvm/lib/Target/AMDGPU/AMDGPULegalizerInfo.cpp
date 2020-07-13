@@ -1427,6 +1427,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     SextInReg.lowerFor({{S32}, {S64}});
   }
 
+  // FIXME: Placeholder rule. Really depends on whether the clamp modifier is
+  // available, and is selectively legal for s16, s32, v2s16.
+  getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT, G_UADDSAT, G_USUBSAT})
+    .scalarize(0)
+    .clampScalar(0, S16, S32);
+
   SextInReg
     .scalarize(0)
     .clampScalar(0, S32, S64)
