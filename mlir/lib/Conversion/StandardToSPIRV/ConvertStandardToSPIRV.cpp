@@ -331,8 +331,7 @@ public:
       return operation.emitError(
           "bitwidth emulation is not implemented yet on unsigned op");
     }
-    rewriter.template replaceOpWithNewOp<SPIRVOp>(operation, dstType, operands,
-                                                  ArrayRef<NamedAttribute>());
+    rewriter.template replaceOpWithNewOp<SPIRVOp>(operation, dstType, operands);
     return success();
   }
 };
@@ -368,11 +367,11 @@ public:
     if (!dstType)
       return failure();
     if (isBoolScalarOrVector(operands.front().getType())) {
-      rewriter.template replaceOpWithNewOp<SPIRVLogicalOp>(
-          operation, dstType, operands, ArrayRef<NamedAttribute>());
+      rewriter.template replaceOpWithNewOp<SPIRVLogicalOp>(operation, dstType,
+                                                           operands);
     } else {
-      rewriter.template replaceOpWithNewOp<SPIRVBitwiseOp>(
-          operation, dstType, operands, ArrayRef<NamedAttribute>());
+      rewriter.template replaceOpWithNewOp<SPIRVBitwiseOp>(operation, dstType,
+                                                           operands);
     }
     return success();
   }
@@ -529,8 +528,8 @@ public:
       // Then we can just erase this operation by forwarding its operand.
       rewriter.replaceOp(operation, operands.front());
     } else {
-      rewriter.template replaceOpWithNewOp<SPIRVOp>(
-          operation, dstType, operands, ArrayRef<NamedAttribute>());
+      rewriter.template replaceOpWithNewOp<SPIRVOp>(operation, dstType,
+                                                    operands);
     }
     return success();
   }
@@ -1046,8 +1045,7 @@ XOrOpPattern::matchAndRewrite(XOrOp xorOp, ArrayRef<Value> operands,
   auto dstType = typeConverter.convertType(xorOp.getType());
   if (!dstType)
     return failure();
-  rewriter.replaceOpWithNewOp<spirv::BitwiseXorOp>(xorOp, dstType, operands,
-                                                   ArrayRef<NamedAttribute>());
+  rewriter.replaceOpWithNewOp<spirv::BitwiseXorOp>(xorOp, dstType, operands);
 
   return success();
 }
