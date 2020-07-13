@@ -2666,3 +2666,20 @@ bool PassBuilder::isAAPassName(StringRef PassName) {
 #include "PassRegistry.def"
   return false;
 }
+
+bool PassBuilder::isAnalysisPassName(StringRef PassName) {
+#define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
+  if (PassName == NAME)                                                        \
+    return true;
+#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
+  if (PassName == NAME)                                                        \
+    return true;
+#define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
+  if (PassName == NAME)                                                        \
+    return true;
+#define CGSSC_ANALYSIS(NAME, CREATE_PASS)                                      \
+  if (PassName == NAME)                                                        \
+    return true;
+#include "PassRegistry.def"
+  return false;
+}

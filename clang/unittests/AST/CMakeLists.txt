@@ -26,6 +26,7 @@ add_clang_unittest(ASTTests
   DeclTest.cpp
   EvaluateAsRValueTest.cpp
   ExternalASTSourceTest.cpp
+  HasSideEffectsTest.cpp
   NamedDeclPrinterTest.cpp
   RecursiveASTVisitorTest.cpp
   SizelessTypesTest.cpp
