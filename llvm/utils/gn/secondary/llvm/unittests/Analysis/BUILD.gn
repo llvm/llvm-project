@@ -25,6 +25,7 @@ unittest("AnalysisTests") {
     "GlobalsModRefTest.cpp",
     "IVDescriptorsTest.cpp",
     "InlineFeaturesAnalysisTest.cpp",
+    "InlineSizeEstimatorAnalysisTest.cpp",
     "LazyCallGraphTest.cpp",
     "LoadsTest.cpp",
     "LoopInfoTest.cpp",

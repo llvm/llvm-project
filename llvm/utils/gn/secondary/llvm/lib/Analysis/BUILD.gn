@@ -55,6 +55,7 @@ static_library("Analysis") {
     "InlineAdvisor.cpp",
     "InlineCost.cpp",
     "InlineFeaturesAnalysis.cpp",
+    "InlineSizeEstimatorAnalysis.cpp",
     "InstCount.cpp",
     "InstructionPrecedenceTracking.cpp",
     "InstructionSimplify.cpp",
