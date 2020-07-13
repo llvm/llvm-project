@@ -1448,7 +1448,7 @@ static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B) {
 /// exp10(x) for pow(10.0, x); exp2(log2(n) * x) for pow(n, x).
 Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   Value *Base = Pow->getArgOperand(0), *Expo = Pow->getArgOperand(1);
-  AttributeList Attrs = Pow->getCalledFunction()->getAttributes();
+  AttributeList Attrs; // Attributes are only meaningful on the original call
   Module *Mod = Pow->getModule();
   Type *Ty = Pow->getType();
   bool Ignored;
@@ -1615,7 +1615,7 @@ static Value *getSqrtCall(Value *V, AttributeList Attrs, bool NoErrno,
 /// Use square root in place of pow(x, +/-0.5).
 Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   Value *Sqrt, *Base = Pow->getArgOperand(0), *Expo = Pow->getArgOperand(1);
-  AttributeList Attrs = Pow->getCalledFunction()->getAttributes();
+  AttributeList Attrs; // Attributes are only meaningful on the original call
   Module *Mod = Pow->getModule();
   Type *Ty = Pow->getType();
 
@@ -1785,6 +1785,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   Function *Callee = CI->getCalledFunction();
+  AttributeList Attrs; // Attributes are only meaningful on the original call
   StringRef Name = Callee->getName();
   Value *Ret = nullptr;
   if (UnsafeFPShrink && Name == TLI->getName(LibFunc_exp2) &&
@@ -1801,7 +1802,7 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
     if (Value *Exp = getIntToFPVal(Op, B))
       return emitBinaryFloatFnCall(ConstantFP::get(Ty, 1.0), Exp, TLI,
                                    LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl,
-                                   B, CI->getCalledFunction()->getAttributes());
+                                   B, Attrs);
   }
 
   return Ret;
@@ -1836,7 +1837,7 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Function *LogFn = Log->getCalledFunction();
-  AttributeList Attrs = LogFn->getAttributes();
+  AttributeList Attrs; // Attributes are only meaningful on the original call
   StringRef LogNm = LogFn->getName();
   Intrinsic::ID LogID = LogFn->getIntrinsicID();
   Module *Mod = Log->getModule();
