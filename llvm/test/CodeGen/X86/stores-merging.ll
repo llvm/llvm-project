@@ -246,7 +246,10 @@ define void @pr43446_1(i8* %a) {
 define void @rotate16_in_place(i8* %p) {
 ; CHECK-LABEL: rotate16_in_place:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rolw $8, (%rdi)
+; CHECK-NEXT:    movb (%rdi), %al
+; CHECK-NEXT:    movb 1(%rdi), %cl
+; CHECK-NEXT:    movb %cl, (%rdi)
+; CHECK-NEXT:    movb %al, 1(%rdi)
 ; CHECK-NEXT:    retq
   %p0 = getelementptr i8, i8* %p, i64 0
   %p1 = getelementptr i8, i8* %p, i64 1
@@ -260,9 +263,10 @@ define void @rotate16_in_place(i8* %p) {
 define void @rotate16(i8* %p, i8* %q) {
 ; CHECK-LABEL: rotate16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    rolw $8, %ax
-; CHECK-NEXT:    movw %ax, (%rsi)
+; CHECK-NEXT:    movb (%rdi), %al
+; CHECK-NEXT:    movb 1(%rdi), %cl
+; CHECK-NEXT:    movb %cl, (%rsi)
+; CHECK-NEXT:    movb %al, 1(%rsi)
 ; CHECK-NEXT:    retq
   %p0 = getelementptr i8, i8* %p, i64 0
   %p1 = getelementptr i8, i8* %p, i64 1
@@ -278,7 +282,10 @@ define void @rotate16(i8* %p, i8* %q) {
 define void @rotate32_in_place(i16* %p) {
 ; CHECK-LABEL: rotate32_in_place:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    roll $16, (%rdi)
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzwl 2(%rdi), %ecx
+; CHECK-NEXT:    movw %cx, (%rdi)
+; CHECK-NEXT:    movw %ax, 2(%rdi)
 ; CHECK-NEXT:    retq
   %p0 = getelementptr i16, i16* %p, i64 0
   %p1 = getelementptr i16, i16* %p, i64 1
@@ -292,9 +299,10 @@ define void @rotate32_in_place(i16* %p) {
 define void @rotate32(i16* %p) {
 ; CHECK-LABEL: rotate32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    roll $16, %eax
-; CHECK-NEXT:    movl %eax, 84(%rdi)
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzwl 2(%rdi), %ecx
+; CHECK-NEXT:    movw %cx, 84(%rdi)
+; CHECK-NEXT:    movw %ax, 86(%rdi)
 ; CHECK-NEXT:    retq
   %p0 = getelementptr i16, i16* %p, i64 0
   %p1 = getelementptr i16, i16* %p, i64 1
@@ -310,7 +318,10 @@ define void @rotate32(i16* %p) {
 define void @rotate64_in_place(i32* %p) {
 ; CHECK-LABEL: rotate64_in_place:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rolq $32, (%rdi)
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    movl 4(%rdi), %ecx
+; CHECK-NEXT:    movl %ecx, (%rdi)
+; CHECK-NEXT:    movl %eax, 4(%rdi)
 ; CHECK-NEXT:    retq
   %p0 = getelementptr i32, i32* %p, i64 0
   %p1 = getelementptr i32, i32* %p, i64 1
@@ -324,9 +335,10 @@ define void @rotate64_in_place(i32* %p) {
 define void @rotate64(i32* %p) {
 ; CHECK-LABEL: rotate64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    rolq $32, %rax
-; CHECK-NEXT:    movq %rax, 8(%rdi)
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    movl 4(%rdi), %ecx
+; CHECK-NEXT:    movl %ecx, 8(%rdi)
+; CHECK-NEXT:    movl %eax, 12(%rdi)
 ; CHECK-NEXT:    retq
   %p0 = getelementptr i32, i32* %p, i64 0
   %p1 = getelementptr i32, i32* %p, i64 1
@@ -342,9 +354,10 @@ define void @rotate64(i32* %p) {
 define void @rotate64_iterate(i16* %p) {
 ; CHECK-LABEL: rotate64_iterate:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    rolq $32, %rax
-; CHECK-NEXT:    movq %rax, 84(%rdi)
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    movl 4(%rdi), %ecx
+; CHECK-NEXT:    movl %ecx, 84(%rdi)
+; CHECK-NEXT:    movl %eax, 88(%rdi)
 ; CHECK-NEXT:    retq
   %p0 = getelementptr i16, i16* %p, i64 0
   %p1 = getelementptr i16, i16* %p, i64 1
@@ -364,8 +377,6 @@ define void @rotate64_iterate(i16* %p) {
   store i16 %i1, i16* %p45, align 2
   ret void
 }
-
-; TODO: recognize this as 2 rotates?
 
 define void @rotate32_consecutive(i16* %p) {
 ; CHECK-LABEL: rotate32_consecutive:
@@ -398,17 +409,17 @@ define void @rotate32_consecutive(i16* %p) {
   ret void
 }
 
-; Same as above, but now the stores are not all consecutive.
-
 define void @rotate32_twice(i16* %p) {
 ; CHECK-LABEL: rotate32_twice:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    movl 4(%rdi), %ecx
-; CHECK-NEXT:    roll $16, %eax
-; CHECK-NEXT:    roll $16, %ecx
-; CHECK-NEXT:    movl %eax, 84(%rdi)
-; CHECK-NEXT:    movl %ecx, 108(%rdi)
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzwl 2(%rdi), %ecx
+; CHECK-NEXT:    movzwl 4(%rdi), %edx
+; CHECK-NEXT:    movzwl 6(%rdi), %esi
+; CHECK-NEXT:    movw %cx, 84(%rdi)
+; CHECK-NEXT:    movw %ax, 86(%rdi)
+; CHECK-NEXT:    movw %si, 108(%rdi)
+; CHECK-NEXT:    movw %dx, 110(%rdi)
 ; CHECK-NEXT:    retq
   %p0 = getelementptr i16, i16* %p, i64 0
   %p1 = getelementptr i16, i16* %p, i64 1
