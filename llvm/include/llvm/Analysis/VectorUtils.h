@@ -224,7 +224,7 @@ class VFDatabase {
   /// a vector Function ABI.
   static void getVFABIMappings(const CallInst &CI,
                                SmallVectorImpl<VFInfo> &Mappings) {
-    if (CI.isIndirectCall())
+    if (!CI.getCalledFunction())
       return;
 
     const StringRef ScalarName = CI.getCalledFunction()->getName();
