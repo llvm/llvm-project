@@ -2200,7 +2200,8 @@ INTERCEPTOR(int, clock_settime, u32 clk_id, const void *tp) {
 #endif
 
 #if SANITIZER_INTERCEPT_CLOCK_GETCPUCLOCKID
-INTERCEPTOR(int, clock_getcpuclockid, pid_t pid, __sanitizer_clockid_t *clockid) {
+INTERCEPTOR(int, clock_getcpuclockid, pid_t pid,
+            __sanitizer_clockid_t *clockid) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, clock_getcpuclockid, pid, clockid);
   int res = REAL(clock_getcpuclockid)(pid, clockid);
