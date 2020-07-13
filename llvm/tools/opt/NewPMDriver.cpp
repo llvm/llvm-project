@@ -358,8 +358,11 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     }
   }
   for (auto PassName : NonAAPasses) {
-    if (auto Err =
-            PB.parsePassPipeline(MPM, PassName, VerifyEachPass, DebugPM)) {
+    std::string ModifiedPassName(PassName.begin(), PassName.end());
+    if (PB.isAnalysisPassName(PassName))
+      ModifiedPassName = "require<" + ModifiedPassName + ">";
+    if (auto Err = PB.parsePassPipeline(MPM, ModifiedPassName, VerifyEachPass,
+                                        DebugPM)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
       return false;
     }
