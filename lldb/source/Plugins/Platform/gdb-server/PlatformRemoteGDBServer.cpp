@@ -503,10 +503,10 @@ lldb::ProcessSP PlatformRemoteGDBServer::DebugProcess(
                                              "gdb-remote", nullptr);
 
           if (process_sp) {
-            error = process_sp->ConnectRemote(nullptr, connect_url.c_str());
+            error = process_sp->ConnectRemote(connect_url.c_str());
             // Retry the connect remote one time...
             if (error.Fail())
-              error = process_sp->ConnectRemote(nullptr, connect_url.c_str());
+              error = process_sp->ConnectRemote(connect_url.c_str());
             if (error.Success())
               error = process_sp->Launch(launch_info);
             else if (debugserver_pid != LLDB_INVALID_PROCESS_ID) {
@@ -589,7 +589,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
               target->CreateProcess(attach_info.GetListenerForProcess(debugger),
                                     "gdb-remote", nullptr);
           if (process_sp) {
-            error = process_sp->ConnectRemote(nullptr, connect_url.c_str());
+            error = process_sp->ConnectRemote(connect_url.c_str());
             if (error.Success()) {
               ListenerSP listener_sp = attach_info.GetHijackListener();
               if (listener_sp)
