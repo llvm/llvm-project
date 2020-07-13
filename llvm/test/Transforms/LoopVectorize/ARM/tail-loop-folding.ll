@@ -1,7 +1,7 @@
-; RUN: opt < %s -loop-vectorize -disable-mve-tail-predication=false -S | \
+; RUN: opt < %s -loop-vectorize -tail-predication=enabled -S | \
 ; RUN:  FileCheck %s -check-prefixes=COMMON,CHECK
 
-; RUN: opt < %s -loop-vectorize -disable-mve-tail-predication=false -prefer-predicate-over-epilog -S | \
+; RUN: opt < %s -loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilog -S | \
 ; RUN:   FileCheck -check-prefixes=COMMON,PREDFLAG %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
