@@ -211,3 +211,35 @@ define i32 @test_memory_constraint(i32* %a) nounwind {
   %1 = tail call i32 asm "ldr $0, $1", "=r,*m"(i32* %a)
   ret i32 %1
 }
+
+define i16 @test_anyext_input() {
+  ; CHECK-LABEL: name: test_anyext_input
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](s32)
+  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */, 655370 /* regdef:GPR32common */, def %0, 9 /* reguse */, [[COPY]]
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
+  ; CHECK:   $w0 = COPY [[ANYEXT1]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
+  %1 = call i16 asm sideeffect "", "=r,r"(i16 1)
+  ret i16 %1
+}
+
+define i16 @test_anyext_input_with_matching_constraint() {
+  ; CHECK-LABEL: name: test_anyext_input_with_matching_constraint
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](s32)
+  ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */, 655370 /* regdef:GPR32common */, def %0, 2147483657 /* reguse tiedto:$0 */, [[COPY]](tied-def 3)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
+  ; CHECK:   $w0 = COPY [[ANYEXT1]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
+  %1 = call i16 asm sideeffect "", "=r,0"(i16 1)
+  ret i16 %1
+}

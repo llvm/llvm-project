@@ -19180,9 +19180,6 @@ ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
 
 ExprResult Sema::CreateRecoveryExpr(SourceLocation Begin, SourceLocation End,
                                     ArrayRef<Expr *> SubExprs, QualType T) {
-  // FIXME: enable it for C++, RecoveryExpr is type-dependent to suppress
-  // bogus diagnostics and this trick does not work in C.
-  // FIXME: use containsErrors() to suppress unwanted diags in C.
   if (!Context.getLangOpts().RecoveryAST)
     return ExprError();
 

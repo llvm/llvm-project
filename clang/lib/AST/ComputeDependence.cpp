@@ -495,13 +495,16 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
 }
 
 ExprDependence clang::computeDependence(RecoveryExpr *E) {
-  // Mark the expression as value- and instantiation- dependent to reuse
-  // existing suppressions for dependent code, e.g. avoiding
-  // constant-evaluation.
-  // FIXME: drop type+value+instantiation once Error is sufficient to suppress
-  // bogus dianostics.
+  // RecoveryExpr is
+  //   - always value-dependent, and therefore instantiation dependent
+  //   - contains errors (ExprDependence::Error), by definition
+  //   - type-dependent if we don't know the type (fallback to an opaque
+  //     dependent type), or the type is known and dependent, or it has
+  //     type-dependent subexpressions.
   auto D = toExprDependence(E->getType()->getDependence()) |
            ExprDependence::ValueInstantiation | ExprDependence::Error;
+  // FIXME: remove the type-dependent bit from subexpressions, if the
+  // RecoveryExpr has a non-dependent type.
   for (auto *S : E->subExpressions())
     D |= S->getDependence();
   return D;
