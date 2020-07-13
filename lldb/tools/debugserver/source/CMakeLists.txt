@@ -41,7 +41,7 @@ function(get_debugserver_codesign_identity result)
     return()
   endif()
 
-  message(WARNING "Development code sign identiy not found: 'lldb_codesign' ${not_found_help}")
+  message(WARNING "Development code sign identity not found: 'lldb_codesign' ${not_found_help}")
 
   # LLVM pendant: fallback if available
   if(LLVM_CODESIGNING_IDENTITY)
