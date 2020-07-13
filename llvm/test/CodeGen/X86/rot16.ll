@@ -234,11 +234,16 @@ define i16 @rot16_trunc(i32 %x, i32 %y) nounwind {
 }
 
 define i16 @rotate16(i16 %x) {
-; X32-LABEL: rotate16:
-; X32:       # %bb.0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    rolw $8, %ax
-; X32-NEXT:    retl
+; BASE32-LABEL: rotate16:
+; BASE32:       # %bb.0:
+; BASE32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; BASE32-NEXT:    rolw $8, %ax
+; BASE32-NEXT:    retl
+;
+; MOVBE32-LABEL: rotate16:
+; MOVBE32:       # %bb.0:
+; MOVBE32-NEXT:    movbew {{[0-9]+}}(%esp), %ax
+; MOVBE32-NEXT:    retl
 ;
 ; X64-LABEL: rotate16:
 ; X64:       # %bb.0:
@@ -250,17 +255,32 @@ define i16 @rotate16(i16 %x) {
   ret i16 %r
 }
 
+; TODO: Should this always be rolw with memory operand?
+
 define void @rotate16_in_place_memory(i8* %p) {
-; X32-LABEL: rotate16_in_place_memory:
-; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    rolw $8, (%eax)
-; X32-NEXT:    retl
+; BASE32-LABEL: rotate16_in_place_memory:
+; BASE32:       # %bb.0:
+; BASE32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BASE32-NEXT:    rolw $8, (%eax)
+; BASE32-NEXT:    retl
 ;
-; X64-LABEL: rotate16_in_place_memory:
-; X64:       # %bb.0:
-; X64-NEXT:    rolw $8, (%rdi)
-; X64-NEXT:    retq
+; MOVBE32-LABEL: rotate16_in_place_memory:
+; MOVBE32:       # %bb.0:
+; MOVBE32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; MOVBE32-NEXT:    movzwl (%eax), %ecx
+; MOVBE32-NEXT:    movbew %cx, (%eax)
+; MOVBE32-NEXT:    retl
+;
+; BASE64-LABEL: rotate16_in_place_memory:
+; BASE64:       # %bb.0:
+; BASE64-NEXT:    rolw $8, (%rdi)
+; BASE64-NEXT:    retq
+;
+; MOVBE64-LABEL: rotate16_in_place_memory:
+; MOVBE64:       # %bb.0:
+; MOVBE64-NEXT:    movzwl (%rdi), %eax
+; MOVBE64-NEXT:    movbew %ax, (%rdi)
+; MOVBE64-NEXT:    retq
   %p0 = getelementptr i8, i8* %p, i64 0
   %p1 = getelementptr i8, i8* %p, i64 1
   %i0 = load i8, i8* %p0, align 1
@@ -271,21 +291,35 @@ define void @rotate16_in_place_memory(i8* %p) {
 }
 
 define void @rotate16_memory(i8* %p, i8* %q) {
-; X32-LABEL: rotate16_memory:
-; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movzwl (%ecx), %ecx
-; X32-NEXT:    rolw $8, %cx
-; X32-NEXT:    movw %cx, (%eax)
-; X32-NEXT:    retl
+; BASE32-LABEL: rotate16_memory:
+; BASE32:       # %bb.0:
+; BASE32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; BASE32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; BASE32-NEXT:    movzwl (%ecx), %ecx
+; BASE32-NEXT:    rolw $8, %cx
+; BASE32-NEXT:    movw %cx, (%eax)
+; BASE32-NEXT:    retl
 ;
-; X64-LABEL: rotate16_memory:
-; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    movw %ax, (%rsi)
-; X64-NEXT:    retq
+; MOVBE32-LABEL: rotate16_memory:
+; MOVBE32:       # %bb.0:
+; MOVBE32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; MOVBE32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; MOVBE32-NEXT:    movzwl (%ecx), %ecx
+; MOVBE32-NEXT:    movbew %cx, (%eax)
+; MOVBE32-NEXT:    retl
+;
+; BASE64-LABEL: rotate16_memory:
+; BASE64:       # %bb.0:
+; BASE64-NEXT:    movzwl (%rdi), %eax
+; BASE64-NEXT:    rolw $8, %ax
+; BASE64-NEXT:    movw %ax, (%rsi)
+; BASE64-NEXT:    retq
+;
+; MOVBE64-LABEL: rotate16_memory:
+; MOVBE64:       # %bb.0:
+; MOVBE64-NEXT:    movzwl (%rdi), %eax
+; MOVBE64-NEXT:    movbew %ax, (%rsi)
+; MOVBE64-NEXT:    retq
   %p0 = getelementptr i8, i8* %p, i64 0
   %p1 = getelementptr i8, i8* %p, i64 1
   %q0 = getelementptr i8, i8* %q, i64 0
