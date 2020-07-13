@@ -2286,7 +2286,7 @@ void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst, unsigned StoreBytes);
 
 /// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
 /// from Src into IntVal, which is assumed to be wide enough and to hold zero.
-void LoadIntFromMemory(APInt &IntVal, uint8_t *Src, unsigned LoadBytes);
+void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src, unsigned LoadBytes);
 
 } // namespace llvm
 
