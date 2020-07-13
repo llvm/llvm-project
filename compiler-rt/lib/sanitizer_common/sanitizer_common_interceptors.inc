@@ -2199,6 +2199,23 @@ INTERCEPTOR(int, clock_settime, u32 clk_id, const void *tp) {
 #define INIT_CLOCK_GETTIME
 #endif
 
+#if SANITIZER_INTERCEPT_CLOCK_GETCPUCLOCKID
+INTERCEPTOR(int, clock_getcpuclockid, pid_t pid, __sanitizer_clockid_t *clockid) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, clock_getcpuclockid, pid, clockid);
+  int res = REAL(clock_getcpuclockid)(pid, clockid);
+  if (!res && clockid) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, clockid, sizeof *clockid);
+  }
+  return res;
+}
+
+#define INIT_CLOCK_GETCPUCLOCKID                  \
+  COMMON_INTERCEPT_FUNCTION(clock_getcpuclockid);
+#else
+#define INIT_CLOCK_GETCPUCLOCKID
+#endif
+
 #if SANITIZER_INTERCEPT_GETITIMER
 INTERCEPTOR(int, getitimer, int which, void *curr_value) {
   void *ctx;
@@ -9914,6 +9931,7 @@ static void InitializeCommonInterceptors() {
   INIT_FGETGRENT_R;
   INIT_SETPWENT;
   INIT_CLOCK_GETTIME;
+  INIT_CLOCK_GETCPUCLOCKID;
   INIT_GETITIMER;
   INIT_TIME;
   INIT_GLOB;
