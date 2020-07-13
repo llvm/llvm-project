@@ -9471,17 +9471,15 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
           const ConstantArrayType* CAT)
           -> std::pair<bool,llvm::APInt> {
         if (VAT) {
-          llvm::APSInt TheInt;
+          Optional<llvm::APSInt> TheInt;
           Expr *E = VAT->getSizeExpr();
-          if (E && E->isIntegerConstantExpr(TheInt, *this))
-            return std::make_pair(true, TheInt);
-          else
-            return std::make_pair(false, TheInt);
-        } else if (CAT) {
-            return std::make_pair(true, CAT->getSize());
-        } else {
-            return std::make_pair(false, llvm::APInt());
+          if (E && (TheInt = E->getIntegerConstantExpr(*this)))
+            return std::make_pair(true, *TheInt);
+          return std::make_pair(false, llvm::APSInt());
         }
+        if (CAT)
+          return std::make_pair(true, CAT->getSize());
+        return std::make_pair(false, llvm::APInt());
       };
 
       bool HaveLSize, HaveRSize;

@@ -2477,8 +2477,8 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
                                                VectorType::GenericVector);
 
-  llvm::APSInt VecSize(32);
-  if (!SizeExpr->isIntegerConstantExpr(VecSize, Context)) {
+  Optional<llvm::APSInt> VecSize = SizeExpr->getIntegerConstantExpr(Context);
+  if (!VecSize) {
     Diag(AttrLoc, diag::err_attribute_argument_type)
         << "vector_size" << AANT_ArgumentIntegerConstant
         << SizeExpr->getSourceRange();
@@ -2490,13 +2490,13 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                                VectorType::GenericVector);
 
   // vecSize is specified in bytes - convert to bits.
-  if (!VecSize.isIntN(61)) {
+  if (!VecSize->isIntN(61)) {
     // Bit size will overflow uint64.
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
   }
-  uint64_t VectorSizeBits = VecSize.getZExtValue() * 8;
+  uint64_t VectorSizeBits = VecSize->getZExtValue() * 8;
   unsigned TypeSize = static_cast<unsigned>(Context.getTypeSize(CurType));
 
   if (VectorSizeBits == 0) {
@@ -2541,22 +2541,22 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   }
 
   if (!ArraySize->isTypeDependent() && !ArraySize->isValueDependent()) {
-    llvm::APSInt vecSize(32);
-    if (!ArraySize->isIntegerConstantExpr(vecSize, Context)) {
+    Optional<llvm::APSInt> vecSize = ArraySize->getIntegerConstantExpr(Context);
+    if (!vecSize) {
       Diag(AttrLoc, diag::err_attribute_argument_type)
         << "ext_vector_type" << AANT_ArgumentIntegerConstant
         << ArraySize->getSourceRange();
       return QualType();
     }
 
-    if (!vecSize.isIntN(32)) {
+    if (!vecSize->isIntN(32)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
           << ArraySize->getSourceRange() << "vector";
       return QualType();
     }
     // Unlike gcc's vector_size attribute, the size is specified as the
     // number of elements, not the number of bytes.
-    unsigned vectorSize = static_cast<unsigned>(vecSize.getZExtValue());
+    unsigned vectorSize = static_cast<unsigned>(vecSize->getZExtValue());
 
     if (vectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
@@ -2587,18 +2587,15 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
     return Context.getDependentSizedMatrixType(ElementTy, NumRows, NumCols,
                                                AttrLoc);
 
-  // Both row and column values can only be 20 bit wide currently.
-  llvm::APSInt ValueRows(32), ValueColumns(32);
-
-  bool const RowsIsInteger = NumRows->isIntegerConstantExpr(ValueRows, Context);
-  bool const ColumnsIsInteger =
-      NumCols->isIntegerConstantExpr(ValueColumns, Context);
+  Optional<llvm::APSInt> ValueRows = NumRows->getIntegerConstantExpr(Context);
+  Optional<llvm::APSInt> ValueColumns =
+      NumCols->getIntegerConstantExpr(Context);
 
   auto const RowRange = NumRows->getSourceRange();
   auto const ColRange = NumCols->getSourceRange();
 
   // Both are row and column expressions are invalid.
-  if (!RowsIsInteger && !ColumnsIsInteger) {
+  if (!ValueRows && !ValueColumns) {
     Diag(AttrLoc, diag::err_attribute_argument_type)
         << "matrix_type" << AANT_ArgumentIntegerConstant << RowRange
         << ColRange;
@@ -2606,22 +2603,22 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
   }
 
   // Only the row expression is invalid.
-  if (!RowsIsInteger) {
+  if (!ValueRows) {
     Diag(AttrLoc, diag::err_attribute_argument_type)
         << "matrix_type" << AANT_ArgumentIntegerConstant << RowRange;
     return QualType();
   }
 
   // Only the column expression is invalid.
-  if (!ColumnsIsInteger) {
+  if (!ValueColumns) {
     Diag(AttrLoc, diag::err_attribute_argument_type)
         << "matrix_type" << AANT_ArgumentIntegerConstant << ColRange;
     return QualType();
   }
 
   // Check the matrix dimensions.
-  unsigned MatrixRows = static_cast<unsigned>(ValueRows.getZExtValue());
-  unsigned MatrixColumns = static_cast<unsigned>(ValueColumns.getZExtValue());
+  unsigned MatrixRows = static_cast<unsigned>(ValueRows->getZExtValue());
+  unsigned MatrixColumns = static_cast<unsigned>(ValueColumns->getZExtValue());
   if (MatrixRows == 0 && MatrixColumns == 0) {
     Diag(AttrLoc, diag::err_attribute_zero_size)
         << "matrix" << RowRange << ColRange;
@@ -6255,13 +6252,15 @@ static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
                                    const Expr *AddrSpace,
                                    SourceLocation AttrLoc) {
   if (!AddrSpace->isValueDependent()) {
-    llvm::APSInt addrSpace(32);
-    if (!AddrSpace->isIntegerConstantExpr(addrSpace, S.Context)) {
+    Optional<llvm::APSInt> OptAddrSpace =
+        AddrSpace->getIntegerConstantExpr(S.Context);
+    if (!OptAddrSpace) {
       S.Diag(AttrLoc, diag::err_attribute_argument_type)
           << "'address_space'" << AANT_ArgumentIntegerConstant
           << AddrSpace->getSourceRange();
       return false;
     }
+    llvm::APSInt &addrSpace = *OptAddrSpace;
 
     // Bounds checking.
     if (addrSpace.isSigned()) {
@@ -7738,7 +7737,7 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 
   // The total size of the vector must be 64 or 128 bits.
   unsigned typeSize = static_cast<unsigned>(S.Context.getTypeSize(CurType));
-  unsigned numElts = static_cast<unsigned>(numEltsInt.getZExtValue());
+  unsigned numElts = static_cast<unsigned>(numEltsInt->getZExtValue());
   unsigned vecSize = typeSize * numElts;
   if (vecSize != 64 && vecSize != 128) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_neon_vector_size) << CurType;
