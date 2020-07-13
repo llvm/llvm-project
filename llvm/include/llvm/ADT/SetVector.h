@@ -263,6 +263,11 @@ public:
       remove(*SI);
   }
 
+  void swap(SetVector<T, Vector, Set> &RHS) {
+    set_.swap(RHS.set_);
+    vector_.swap(RHS.vector_);
+  }
+
 private:
   /// A wrapper predicate designed for use with std::remove_if.
   ///
@@ -307,5 +312,23 @@ public:
 };
 
 } // end namespace llvm
+
+namespace std {
+
+/// Implement std::swap in terms of SetVector swap.
+template<typename T, typename V, typename S>
+inline void
+swap(llvm::SetVector<T, V, S> &LHS, llvm::SetVector<T, V, S> &RHS) {
+  LHS.swap(RHS);
+}
+
+/// Implement std::swap in terms of SmallSetVector swap.
+template<typename T, unsigned N>
+inline void
+swap(llvm::SmallSetVector<T, N> &LHS, llvm::SmallSetVector<T, N> &RHS) {
+  LHS.swap(RHS);
+}
+
+} // end namespace std
 
 #endif // LLVM_ADT_SETVECTOR_H
