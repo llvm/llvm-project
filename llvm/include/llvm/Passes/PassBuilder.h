@@ -518,6 +518,9 @@ public:
   /// Returns true if the pass name is the name of an alias analysis pass.
   bool isAAPassName(StringRef PassName);
 
+  /// Returns true if the pass name is the name of a (non-alias) analysis pass.
+  bool isAnalysisPassName(StringRef PassName);
+
   /// Register a callback for a default optimizer pipeline extension
   /// point
   ///
