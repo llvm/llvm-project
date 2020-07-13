@@ -1958,9 +1958,9 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   ClangASTImporter::LayoutInfo layout_info;
 
   if (die.HasChildren()) {
-    LanguageType class_language = eLanguageTypeUnknown;
-    if (TypeSystemClang::IsObjCObjectOrInterfaceType(clang_type)) {
-      class_language = eLanguageTypeObjC;
+    const bool type_is_objc_object_or_interface =
+        TypeSystemClang::IsObjCObjectOrInterfaceType(clang_type);
+    if (type_is_objc_object_or_interface) {
       // For objective C we don't start the definition when the class is
       // created.
       TypeSystemClang::StartTagDeclarationDefinition(clang_type);
@@ -1986,16 +1986,15 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     std::vector<DWARFDIE> member_function_dies;
 
     DelayedPropertyList delayed_properties;
-    ParseChildMembers(die, clang_type, class_language, bases,
-                      member_accessibilities, member_function_dies,
-                      delayed_properties, default_accessibility, is_a_class,
-                      layout_info);
+    ParseChildMembers(die, clang_type, bases, member_accessibilities,
+                      member_function_dies, delayed_properties,
+                      default_accessibility, is_a_class, layout_info);
 
     // Now parse any methods if there were any...
     for (const DWARFDIE &die : member_function_dies)
       dwarf->ResolveType(die);
 
-    if (class_language == eLanguageTypeObjC) {
+    if (type_is_objc_object_or_interface) {
       ConstString class_name(clang_type.GetTypeName());
       if (class_name) {
         dwarf->GetObjCMethods(class_name, [&](DWARFDIE method_die) {
@@ -2012,7 +2011,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
     // If we have a DW_TAG_structure_type instead of a DW_TAG_class_type we
     // need to tell the clang type it is actually a class.
-    if (class_language != eLanguageTypeObjC) {
+    if (!type_is_objc_object_or_interface) {
       if (is_a_class && tag_decl_kind != clang::TTK_Class)
         m_ast.SetTagTypeKind(ClangUtil::GetQualType(clang_type),
                              clang::TTK_Class);
@@ -2346,7 +2345,6 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 void DWARFASTParserClang::ParseSingleMember(
     const DWARFDIE &die, const DWARFDIE &parent_die,
     const lldb_private::CompilerType &class_clang_type,
-    const lldb::LanguageType class_language,
     std::vector<int> &member_accessibilities,
     lldb::AccessType default_accessibility,
     DelayedPropertyList &delayed_properties,
@@ -2520,9 +2518,11 @@ void DWARFASTParserClang::ParseSingleMember(
       bit_offset = 0;
     }
 
+    const bool class_is_objc_object_or_interface =
+        TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type);
+
     // FIXME: Make Clang ignore Objective-C accessibility for expressions
-    if (class_language == eLanguageTypeObjC ||
-        class_language == eLanguageTypeObjC_plus_plus)
+    if (class_is_objc_object_or_interface)
       accessibility = eAccessNone;
 
     // Handle static members
@@ -2599,8 +2599,7 @@ void DWARFASTParserClang::ParseSingleMember(
             // unnamed bitfields if we have a new enough clang.
             bool detect_unnamed_bitfields = true;
 
-            if (class_language == eLanguageTypeObjC ||
-                class_language == eLanguageTypeObjC_plus_plus)
+            if (class_is_objc_object_or_interface)
               detect_unnamed_bitfields =
                   die.GetCU()->Supports_unnamed_objc_bitfields();
 
@@ -2754,7 +2753,6 @@ void DWARFASTParserClang::ParseSingleMember(
 
 bool DWARFASTParserClang::ParseChildMembers(
     const DWARFDIE &parent_die, CompilerType &class_clang_type,
-    const LanguageType class_language,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<int> &member_accessibilities,
     std::vector<DWARFDIE> &member_function_dies,
@@ -2778,7 +2776,7 @@ bool DWARFASTParserClang::ParseChildMembers(
     switch (tag) {
     case DW_TAG_member:
     case DW_TAG_APPLE_property:
-      ParseSingleMember(die, parent_die, class_clang_type, class_language,
+      ParseSingleMember(die, parent_die, class_clang_type,
                         member_accessibilities, default_accessibility,
                         delayed_properties, layout_info, last_field_info);
       break;
@@ -2868,7 +2866,7 @@ bool DWARFASTParserClang::ParseChildMembers(
         CompilerType base_class_clang_type =
             base_class_type->GetFullCompilerType();
         assert(base_class_clang_type);
-        if (class_language == eLanguageTypeObjC) {
+        if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type)) {
           ast->SetObjCSuperClass(class_clang_type, base_class_clang_type);
         } else {
           std::unique_ptr<clang::CXXBaseSpecifier> result =
