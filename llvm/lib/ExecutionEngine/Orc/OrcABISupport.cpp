@@ -461,9 +461,7 @@ void OrcI386::writeTrampolines(char *TrampolineWorkingMem,
   assert((ResolverAddr >> 32) == 0 && "ResolverAddr out of range");
 
   uint64_t CallRelImm = 0xF1C4C400000000e8;
-  uint64_t ResolverRel =
-      ResolverAddr - reinterpret_cast<uint64_t>(TrampolineBlockTargetAddress) -
-      5;
+  uint64_t ResolverRel = ResolverAddr - TrampolineBlockTargetAddress - 5;
 
   uint64_t *Trampolines = reinterpret_cast<uint64_t *>(TrampolineWorkingMem);
   for (unsigned I = 0; I < NumTrampolines; ++I, ResolverRel -= TrampolineSize)
