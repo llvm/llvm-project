@@ -19,7 +19,7 @@
 // RUN:   -verify ctu-on-demand-parsing.c
 //
 // FIXME: Path handling should work on all platforms.
-// REQUIRES: linux
+// REQUIRES: system-linux
 
 void clang_analyzer_eval(int);
 
