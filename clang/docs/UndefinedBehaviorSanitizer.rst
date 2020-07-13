@@ -127,6 +127,10 @@ Available checks are:
      is annotated with ``_Nonnull``.
   -  ``-fsanitize=nullability-return``: Returning null from a function with
      a return type annotated with ``_Nonnull``.
+  -  ``-fsanitize=objc-cast``: Invalid implicit cast of an ObjC object pointer
+     to an incompatible type. This is often unintentional, but is not undefined
+     behavior, therefore the check is not a part of the ``undefined`` group.
+     Currently only supported on Darwin.
   -  ``-fsanitize=object-size``: An attempt to potentially use bytes which
      the optimizer can determine are not part of the object being accessed.
      This will also detect some types of undefined behavior that may not
