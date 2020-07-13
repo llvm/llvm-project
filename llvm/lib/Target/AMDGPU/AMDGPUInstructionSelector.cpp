@@ -891,6 +891,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectDivScale(I);
   case Intrinsic::amdgcn_icmp:
     return selectIntrinsicIcmp(I);
+  case Intrinsic::amdgcn_ballot:
+    return selectBallot(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1037,6 +1039,38 @@ bool AMDGPUInstructionSelector::selectIntrinsicIcmp(MachineInstr &I) const {
   bool Ret = constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
   I.eraseFromParent();
   return Ret;
+}
+
+bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register DstReg = I.getOperand(0).getReg();
+  const unsigned Size = MRI->getType(DstReg).getSizeInBits();
+  const bool Is64 = Size == 64;
+
+  if (Size != STI.getWavefrontSize())
+    return false;
+
+  Optional<ValueAndVReg> Arg =
+      getConstantVRegValWithLookThrough(I.getOperand(2).getReg(), *MRI, true);
+
+  if (Arg.hasValue()) {
+    const int64_t Value = Arg.getValue().Value;
+    if (Value == 0) {
+      unsigned Opcode = Is64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
+      BuildMI(*BB, &I, DL, TII.get(Opcode), DstReg).addImm(0);
+    } else if (Value == -1) { // all ones
+      Register SrcReg = Is64 ? AMDGPU::EXEC : AMDGPU::EXEC_LO;
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(SrcReg);
+    } else
+      return false;
+  } else {
+    Register SrcReg = I.getOperand(2).getReg();
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(SrcReg);
+  }
+
+  I.eraseFromParent();
+  return true;
 }
 
 bool AMDGPUInstructionSelector::selectEndCfIntrinsic(MachineInstr &MI) const {

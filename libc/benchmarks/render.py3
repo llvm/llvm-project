@@ -112,7 +112,7 @@ def get_configuration(jsons):
     return config
 
 
-def setup_graphs(files):
+def setup_graphs(files, display):
     """Setups the graphs to render from the json files."""
     jsons = []
     for file in files:
@@ -122,6 +122,7 @@ def setup_graphs(files):
         sys.exit("Nothing to process")
 
     for root in jsons:
+        frequency = root["Host"]["CpuFrequency"]
         for function in root["Functions"]:
             function_name = function["Name"]
             sizes = function["Sizes"]
@@ -129,7 +130,13 @@ def setup_graphs(files):
             assert len(sizes) == len(runtimes)
             values = collections.defaultdict(lambda: [])
             for i in range(len(sizes)):
-              values[sizes[i]].append(runtimes[i])
+              value = runtimes[i]
+              if display == "cycles":
+                  value = value * frequency
+              if display == "bytespercycle":
+                  value = value * frequency
+                  value = sizes[i] / value
+              values[sizes[i]].append(value)
             add_plot(function_name, values)
 
     config = get_configuration(jsons)
@@ -148,9 +155,15 @@ def setup_graphs(files):
     axes.set_title(get_title(get_host(jsons)))
     axes.set_ylim(bottom=0)
     axes.set_xlabel("Size")
-    axes.set_ylabel("Time")
     axes.xaxis.set_major_formatter(EngFormatter(unit="B"))
-    axes.yaxis.set_major_formatter(EngFormatter(unit="s"))
+    if display == "cycles":
+          axes.set_ylabel("Cycles")
+    if display == "time":
+          axes.set_ylabel("Time")
+          axes.yaxis.set_major_formatter(EngFormatter(unit="s"))
+    if display == "bytespercycle":
+          axes.set_ylabel("bytes/cycle")
+
     plt.legend()
     plt.grid()
 
@@ -164,8 +177,14 @@ def main():
         "--headless",
         help="If set do not display the graph.",
         action="store_true")
+    parser.add_argument(
+        "--display",
+        choices= ["time", "cycles", "bytespercycle"],
+        default="time",
+        help="Use to display either 'time', 'cycles' or 'bytes/cycle'.")
+
     args = parser.parse_args()
-    setup_graphs(args.files)
+    setup_graphs(args.files, args.display)
     if args.output:
         plt.savefig(args.output)
     if not args.headless:
