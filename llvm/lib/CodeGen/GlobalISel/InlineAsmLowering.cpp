@@ -237,6 +237,39 @@ static unsigned getNumOpRegs(const MachineInstr &I, unsigned OpIdx) {
   return InlineAsm::getNumOperandRegisters(Flag);
 }
 
+static bool buildAnyextOrCopy(Register Dst, Register Src,
+                              MachineIRBuilder &MIRBuilder) {
+  const TargetRegisterInfo *TRI =
+      MIRBuilder.getMF().getSubtarget().getRegisterInfo();
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+
+  auto SrcTy = MRI->getType(Src);
+  if (!SrcTy.isValid()) {
+    LLVM_DEBUG(dbgs() << "Source type for copy is not valid\n");
+    return false;
+  }
+  unsigned SrcSize = TRI->getRegSizeInBits(Src, *MRI);
+  unsigned DstSize = TRI->getRegSizeInBits(Dst, *MRI);
+
+  if (DstSize < SrcSize) {
+    LLVM_DEBUG(dbgs() << "Input can't fit in destination reg class\n");
+    return false;
+  }
+
+  // Attempt to anyext small scalar sources.
+  if (DstSize > SrcSize) {
+    if (!SrcTy.isScalar()) {
+      LLVM_DEBUG(dbgs() << "Can't extend non-scalar input to size of"
+                           "destination register class\n");
+      return false;
+    }
+    Src = MIRBuilder.buildAnyExt(LLT::scalar(DstSize), Src).getReg(0);
+  }
+
+  MIRBuilder.buildCopy(Dst, Src);
+  return true;
+}
+
 bool InlineAsmLowering::lowerInlineAsm(
     MachineIRBuilder &MIRBuilder, const CallBase &Call,
     std::function<ArrayRef<Register>(const Value &Val)> GetOrCreateVRegs)
@@ -427,7 +460,8 @@ bool InlineAsmLowering::lowerInlineAsm(
         ArrayRef<Register> SrcRegs = GetOrCreateVRegs(*OpInfo.CallOperandVal);
         assert(SrcRegs.size() == 1 && "Single register is expected here");
         Register Tmp = MRI->createVirtualRegister(RC);
-        MIRBuilder.buildCopy(Tmp, SrcRegs[0]);
+        if (!buildAnyextOrCopy(Tmp, SrcRegs[0], MIRBuilder))
+          return false;
 
         // Add Flag and input register operand (Tmp) to Inst. Tie Tmp to Def.
         unsigned UseFlag = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, 1);
@@ -525,7 +559,8 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       unsigned Flag = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, NumRegs);
       Inst.addImm(Flag);
-      MIRBuilder.buildCopy(OpInfo.Regs[0], SourceRegs[0]);
+      if (!buildAnyextOrCopy(OpInfo.Regs[0], SourceRegs[0], MIRBuilder))
+        return false;
       Inst.addReg(OpInfo.Regs[0]);
       break;
     }
