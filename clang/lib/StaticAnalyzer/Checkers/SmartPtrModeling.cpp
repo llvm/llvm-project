@@ -73,7 +73,8 @@ bool isStdSmartPtrCall(const CallEvent &Call) {
     return false;
 
   if (RecordDecl->getDeclName().isIdentifier()) {
-    return smartptr::StdSmartPtrs.count(RecordDecl->getName().lower());
+    StringRef Name = RecordDecl->getName();
+    return Name == "shared_ptr" || Name == "unique_ptr" || Name == "weak_ptr";
   }
   return false;
 }

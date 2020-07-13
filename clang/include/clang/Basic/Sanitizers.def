@@ -156,6 +156,8 @@ SANITIZER_GROUP("implicit-integer-arithmetic-value-change",
                 ImplicitIntegerArithmeticValueChange,
                 ImplicitIntegerSignChange | ImplicitSignedIntegerTruncation)
 
+SANITIZER("objc-cast", ObjCCast)
+
 // FIXME:
 //SANITIZER_GROUP("implicit-integer-conversion", ImplicitIntegerConversion,
 //                ImplicitIntegerArithmeticValueChange |
