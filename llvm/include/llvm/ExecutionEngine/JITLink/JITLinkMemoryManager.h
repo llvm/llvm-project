@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
 
 #include <cstdint>
 #include <future>
@@ -78,7 +79,7 @@ public:
 
     /// Calls finalizeAsync and waits for completion.
     Error finalize() {
-      std::promise<Error> FinalizeResultP;
+      std::promise<MSVCPError> FinalizeResultP;
       auto FinalizeResultF = FinalizeResultP.get_future();
       finalizeAsync(
           [&](Error Err) { FinalizeResultP.set_value(std::move(Err)); });
