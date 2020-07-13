@@ -3039,7 +3039,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         LLVM_DEBUG(dbgs() << "SLP: Non-vectorizable call.\n");
         return;
       }
-      Function *Int = CI->getCalledFunction();
+      Function *F = CI->getCalledFunction();
       unsigned NumArgs = CI->getNumArgOperands();
       SmallVector<Value*, 4> ScalarArgs(NumArgs, nullptr);
       for (unsigned j = 0; j != NumArgs; ++j)
@@ -3047,7 +3047,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           ScalarArgs[j] = CI->getArgOperand(j);
       for (Value *V : VL) {
         CallInst *CI2 = dyn_cast<CallInst>(V);
-        if (!CI2 || CI2->getCalledFunction() != Int ||
+        if (!CI2 || CI2->getCalledFunction() != F ||
             getVectorIntrinsicIDForCall(CI2, TLI) != ID ||
             (VecFunc &&
              VecFunc != VFDatabase(*CI2).getVectorizedFunction(Shape)) ||
@@ -4542,9 +4542,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {
-        Module *M = F->getParent();
         Type *Tys[] = {FixedVectorType::get(CI->getType(), E->Scalars.size())};
-        CF = Intrinsic::getDeclaration(M, ID, Tys);
+        CF = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
       }
 
       SmallVector<OperandBundleDef, 1> OpBundles;
