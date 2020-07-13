@@ -2443,11 +2443,11 @@ Instruction *InstCombiner::foldVectorSelect(SelectInst &Sel) {
   return nullptr;
 }
 
-static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
-                                    InstCombiner::BuilderTy &Builder) {
+static Instruction *foldSelectToPhiImpl(SelectInst &Sel, BasicBlock *BB,
+                                        const DominatorTree &DT,
+                                        InstCombiner::BuilderTy &Builder) {
   // Find the block's immediate dominator that ends with a conditional branch
   // that matches select's condition (maybe inverted).
-  BasicBlock *BB = Sel.getParent();
   auto *IDomNode = DT[BB]->getIDom();
   if (!IDomNode)
     return nullptr;
@@ -2498,6 +2498,21 @@ static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
     PN->addIncoming(Inputs[Pred], Pred);
   PN->takeName(&Sel);
   return PN;
+}
+
+static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
+                                    InstCombiner::BuilderTy &Builder) {
+  // Try to replace this select with Phi in one of these blocks.
+  SmallSetVector<BasicBlock *, 4> CandidateBlocks;
+  CandidateBlocks.insert(Sel.getParent());
+  for (Value *V : Sel.operands())
+    if (auto *I = dyn_cast<Instruction>(V))
+      CandidateBlocks.insert(I->getParent());
+
+  for (BasicBlock *BB : CandidateBlocks)
+    if (auto *PN = foldSelectToPhiImpl(Sel, BB, DT, Builder))
+      return PN;
+  return nullptr;
 }
 
 Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
