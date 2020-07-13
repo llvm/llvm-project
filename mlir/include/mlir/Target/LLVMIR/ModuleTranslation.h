@@ -87,6 +87,8 @@ protected:
                                          llvm::IRBuilder<> &builder);
   virtual LogicalResult convertOmpOperation(Operation &op,
                                             llvm::IRBuilder<> &builder);
+  virtual LogicalResult convertOmpParallel(Operation &op,
+                                           llvm::IRBuilder<> &builder);
   static std::unique_ptr<llvm::Module> prepareLLVMModule(Operation *m);
 
   /// A helper to look up remapped operands in the value remapping table.
@@ -100,7 +102,6 @@ private:
   LogicalResult convertFunctions();
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
-  void connectPHINodes(LLVMFuncOp func);
   LogicalResult convertBlock(Block &bb, bool ignoreArguments);
 
   llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
