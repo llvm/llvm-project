@@ -1042,7 +1042,7 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
     msgpack_errors += map_lookup_string(element, ".symbol", &symbolName);
     msgpackErrorCheck(strings lookup in kernel metadata, msgpack_errors);
 
-    atl_kernel_info_t info;
+    atl_kernel_info_t info = {0,0,0,0,0,{},{},{}};
     size_t kernel_explicit_args_size = 0;
     uint64_t kernel_segment_size;
     msgpack_errors += map_lookup_uint64_t(element, ".kernarg_segment_size",
