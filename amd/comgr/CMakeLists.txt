@@ -119,7 +119,7 @@ if (UNIX)
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
     _GNU_SOURCE __STDC_LIMIT_MACROS __STDC_CONSTANT_MACROS)
   list(APPEND AMD_COMGR_PUBLIC_LINKER_OPTIONS -pthread)
-  if (NOT APPLE AND BUILD_SHARED_LIBS)
+  if (NOT APPLE AND COMGR_BUILD_SHARED_LIBS)
     list(APPEND AMD_COMGR_PRIVATE_LINKER_OPTIONS
       "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap")
     # When building a shared library with -fsanitize=address we can't be
