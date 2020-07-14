@@ -1942,6 +1942,7 @@ class BaseFlagManipulation<bit sf, bit sz, dag iops, string asm, string ops>
     : I<(outs), iops, asm, ops, "", []>,
       Sched<[WriteI, ReadI, ReadI]> {
   let Uses = [NZCV];
+  let Defs = [NZCV];
   bits<5> Rn;
   let Inst{31}    = sf;
   let Inst{30-15} = 0b0111010000000000;
