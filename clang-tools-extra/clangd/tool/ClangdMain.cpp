@@ -296,6 +296,14 @@ opt<bool> RecoveryASTType{
     Hidden,
 };
 
+opt<bool> FoldingRanges{
+    "folding-ranges",
+    cat(Features),
+    desc("Enable preview of FoldingRanges feature"),
+    init(false),
+    Hidden,
+};
+
 opt<unsigned> WorkerThreadsCount{
     "j",
     cat(Misc),
@@ -676,6 +684,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.BuildRecoveryAST = RecoveryAST;
   Opts.PreserveRecoveryASTType = RecoveryASTType;
+  Opts.FoldingRanges = FoldingRanges;
 
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
