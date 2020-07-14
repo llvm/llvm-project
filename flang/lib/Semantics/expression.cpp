@@ -1159,8 +1159,12 @@ public:
   template <typename T> Result Test() {
     if (type_ && type_->category() == T::category) {
       if constexpr (T::category == TypeCategory::Derived) {
-        return AsMaybeExpr(ArrayConstructor<T>{
-            type_->GetDerivedTypeSpec(), MakeSpecific<T>(std::move(values_))});
+        if (type_->IsUnlimitedPolymorphic()) {
+          return std::nullopt;
+        } else {
+          return AsMaybeExpr(ArrayConstructor<T>{type_->GetDerivedTypeSpec(),
+              MakeSpecific<T>(std::move(values_))});
+        }
       } else if (type_->kind() == T::kind) {
         if constexpr (T::category == TypeCategory::Character) {
           if (auto len{type_->LEN()}) {
@@ -1295,6 +1299,13 @@ void ArrayConstructorContext::Add(const parser::AcValue &x) {
             auto restorer{exprAnalyzer_.GetContextualMessages().SetLocation(
                 expr.value().source)};
             if (MaybeExpr v{exprAnalyzer_.Analyze(expr.value())}) {
+              if (auto exprType{v->GetType()}) {
+                if (exprType->IsUnlimitedPolymorphic()) {
+                  exprAnalyzer_.Say(
+                      "Cannot have an unlimited polymorphic value in an "
+                      "array constructor"_err_en_US);
+                }
+              }
               Push(std::move(*v));
             }
           },
