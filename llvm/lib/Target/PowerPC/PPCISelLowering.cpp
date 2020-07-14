@@ -9896,6 +9896,8 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   // to vector legalization will not be sent to the target combine. Try to
   // combine it here.
   if (SDValue NewShuffle = combineVectorShuffle(SVOp, DAG)) {
+    if (!isa<ShuffleVectorSDNode>(NewShuffle))
+      return NewShuffle;
     Op = NewShuffle;
     SVOp = cast<ShuffleVectorSDNode>(Op);
     V1 = Op.getOperand(0);

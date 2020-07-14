@@ -325,7 +325,7 @@ class DwarfDebug : public DebugHandlerBase {
   const MachineFunction *CurFn = nullptr;
 
   /// If nonnull, stores the CU in which the previous subprogram was contained.
-  const DwarfCompileUnit *PrevCU;
+  const DwarfCompileUnit *PrevCU = nullptr;
 
   /// As an optimization, there is no need to emit an entry in the directory
   /// table for the same directory as DW_AT_comp_dir.
