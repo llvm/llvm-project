@@ -24,7 +24,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     OldStyleParameter, ComplexConstructor, PercentLOC, SignedPrimary, FileName,
     Convert, Dispose, IOListLeadingComma, AbbreviatedEditDescriptor,
     ProgramParentheses, PercentRefAndVal, OmitFunctionDummies, CrayPointer,
-    Hollerith, ArithmeticIF, Assign, AssignedGOTO, Pause, OpenMP,
+    Hollerith, ArithmeticIF, Assign, AssignedGOTO, Pause, OpenACC, OpenMP,
     CruftAfterAmpersand, ClassicCComments, AdditionalFormats, BigIntLiterals,
     RealDoControls, EquivalenceNumericWithCharacter, AdditionalIntrinsics,
     AnonymousParents, OldLabelDoEndStatements, LogicalIntegerAssignment,
@@ -37,6 +37,7 @@ public:
   LanguageFeatureControl() {
     // These features must be explicitly enabled by command line options.
     disable_.set(LanguageFeature::OldDebugLines);
+    disable_.set(LanguageFeature::OpenACC);
     disable_.set(LanguageFeature::OpenMP);
     // These features, if enabled, conflict with valid standard usage,
     // so there are disabled here by default.
@@ -50,7 +51,9 @@ public:
   void WarnOnAllNonstandard(bool yes = true) { warnAll_ = yes; }
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const {
-    return (warnAll_ && f != LanguageFeature::OpenMP) || warn_.test(f);
+    return (warnAll_ && f != LanguageFeature::OpenMP &&
+               f != LanguageFeature::OpenACC) ||
+        warn_.test(f);
   }
   // Return all spellings of operators names, depending on features enabled
   std::vector<const char *> GetNames(LogicalOperator) const;
