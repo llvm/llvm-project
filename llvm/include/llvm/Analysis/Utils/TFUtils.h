@@ -9,6 +9,8 @@
 #ifndef LLVM_ANALYSIS_UTILS_TFUTILS_H
 #define LLVM_ANALYSIS_UTILS_TFUTILS_H
 
+#include "llvm/Config/config.h"
+
 #ifdef LLVM_HAVE_TF_API
 #include "tensorflow/c/c_api.h"
 #include "llvm/IR/LLVMContext.h"
