@@ -50,6 +50,45 @@ private:
   Memoize<llvm::StringMap<std::string>> ResolvedDriversNoFollow;
 };
 
+// Removes args from a command-line in a semantically-aware way.
+//
+// Internally this builds a large (0.5MB) table of clang options on first use.
+// Both strip() and process() are fairly cheap after that.
+//
+// FIXME: this reimplements much of OptTable, it might be nice to expose more.
+// The table-building strategy may not make sense outside clangd.
+class ArgStripper {
+public:
+  // Adds the arg to the set which should be removed.
+  //
+  // Recognized clang flags are stripped semantically. When "-I" is stripped:
+  //  - so is its value (either as -Ifoo or -I foo)
+  //  - aliases like --include-directory=foo are also stripped
+  //  - CL-style /Ifoo will be removed if the args indicate MS-compatible mode
+  // Compile args not recognized as flags are removed literally, except:
+  //  - strip("ABC*") will remove any arg with an ABC prefix.
+  //
+  // In either case, the -Xclang prefix will be dropped if present.
+  void strip(llvm::StringRef Arg);
+  // Remove the targets from a compile command, in-place.
+  void process(std::vector<std::string> &Args) const;
+
+private:
+  // Deletion rules, to be checked for each arg.
+  struct Rule {
+    llvm::StringRef Text;    // Rule applies only if arg begins with Text.
+    unsigned char Modes = 0; // Rule applies only in specified driver modes.
+    uint16_t Priority = 0;   // Lower is better.
+    uint16_t ExactArgs = 0;  // Num args consumed when Arg == Text.
+    uint16_t PrefixArgs = 0; // Num args consumed when Arg starts with Text.
+  };
+  static llvm::ArrayRef<Rule> rulesFor(llvm::StringRef Arg);
+  const Rule *matchingRule(llvm::StringRef Arg, unsigned Mode,
+                           unsigned &ArgCount) const;
+  llvm::SmallVector<Rule, 4> Rules;
+  std::vector<std::string> Storage; // Store strings not found in option table.
+};
+
 } // namespace clangd
 } // namespace clang
 
