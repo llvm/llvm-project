@@ -50,7 +50,6 @@ constexpr auto executableConstruct{
         construct<ExecutableConstruct>(indirect(whereConstruct)),
         construct<ExecutableConstruct>(indirect(forallConstruct)),
         construct<ExecutableConstruct>(indirect(ompEndLoopDirective)),
-        construct<ExecutableConstruct>(indirect(openaccConstruct)),
         construct<ExecutableConstruct>(indirect(openmpConstruct)),
         construct<ExecutableConstruct>(indirect(compilerDirective)))};
 
