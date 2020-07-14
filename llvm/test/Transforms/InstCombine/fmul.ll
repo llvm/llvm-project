@@ -1164,3 +1164,12 @@ define double @fmul_sqrt_select(double %x, i1 %c) {
   %mul = fmul fast double %sqr, %sel
   ret double %mul
 }
+
+; fastmath => z * splat(0) = splat(0), even for scalable vectors
+define <vscale x 2 x float> @mul_scalable_splat_zero(<vscale x 2 x float> %z) {
+; CHECK-LABEL: @mul_scalable_splat_zero(
+; CHECK-NEXT:    ret <vscale x 2 x float> zeroinitializer
+  %shuf = shufflevector <vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 0.0, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %t3 = fmul fast <vscale x 2 x float> %shuf, %z
+  ret <vscale x 2 x float> %t3
+}
