@@ -13,8 +13,7 @@ OCKL_MANGLE_I32(add_sat)(int x, int y)
 {
     int s;
     bool c = __builtin_sadd_overflow(x, y, &s);
-    int lim = (x >> 31) ^ INT_MAX;
-    return c ? lim : s;
+    return c ? (x < 0 ? INT_MIN : INT_MAX) : s;
 }
 
 uint
@@ -30,8 +29,7 @@ OCKL_MANGLE_I64(add_sat)(long x, long y)
 {
     long s;
     bool c = __builtin_saddl_overflow(x, y, &s);
-    long lim = (x >> 63) ^ LONG_MAX;
-    return c ? lim : s;
+    return c ? (x < 0 ? LONG_MIN : LONG_MAX) : s;
 }
 
 ulong

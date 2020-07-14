@@ -12,8 +12,7 @@ OCKL_MANGLE_I32(sub_sat)(int x, int y)
 {
     int s;
     bool c = __builtin_ssub_overflow(x, y, &s);
-    int lim = (x >> 31) ^ INT_MAX;
-    return c ? lim : s;
+    return c ? (x < 0 ? INT_MIN : INT_MAX) : s;
 }
 
 __attribute__((const)) uint
@@ -29,8 +28,7 @@ OCKL_MANGLE_I64(sub_sat)(long x, long y)
 {
     long s;
     bool c = __builtin_ssubl_overflow(x, y, &s);
-    long lim = (x >> 63) ^ LONG_MAX;
-    return c ? lim : s;
+    return c ? (x < 0 ? LONG_MIN : LONG_MAX) : s;
 }
 
 __attribute__((const)) ulong
