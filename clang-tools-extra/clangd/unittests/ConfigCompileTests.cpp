@@ -91,10 +91,12 @@ TEST_F(ConfigCompileTests, Condition) {
 
 TEST_F(ConfigCompileTests, CompileCommands) {
   Frag.CompileFlags.Add.emplace_back("-foo");
-  std::vector<std::string> Argv = {"clang", "a.cc"};
+  Frag.CompileFlags.Remove.emplace_back("--include-directory=");
+  std::vector<std::string> Argv = {"clang", "-I", "bar/", "a.cc"};
   EXPECT_TRUE(compileAndApply());
-  EXPECT_THAT(Conf.CompileFlags.Edits, SizeIs(1));
-  Conf.CompileFlags.Edits.front()(Argv);
+  EXPECT_THAT(Conf.CompileFlags.Edits, SizeIs(2));
+  for (auto &Edit : Conf.CompileFlags.Edits)
+    Edit(Argv);
   EXPECT_THAT(Argv, ElementsAre("clang", "a.cc", "-foo"));
 }
 

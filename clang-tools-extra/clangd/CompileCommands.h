@@ -59,6 +59,12 @@ private:
 // The table-building strategy may not make sense outside clangd.
 class ArgStripper {
 public:
+  ArgStripper() = default;
+  ArgStripper(ArgStripper &&) = default;
+  ArgStripper(const ArgStripper &) = delete;
+  ArgStripper &operator=(ArgStripper &&) = default;
+  ArgStripper &operator=(const ArgStripper &) = delete;
+
   // Adds the arg to the set which should be removed.
   //
   // Recognized clang flags are stripped semantically. When "-I" is stripped:
