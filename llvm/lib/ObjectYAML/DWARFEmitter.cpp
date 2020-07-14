@@ -168,7 +168,7 @@ Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
     if (DebugRanges.AddrSize)
       AddrSize = *DebugRanges.AddrSize;
     else
-      AddrSize = DI.Is64bit ? 8 : 4;
+      AddrSize = DI.Is64BitAddrSize ? 8 : 4;
     for (auto Entry : DebugRanges.Entries) {
       if (Error Err = writeVariableSizedInteger(Entry.LowOffset, AddrSize, OS,
                                                 DI.IsLittleEndian))
@@ -381,7 +381,7 @@ Error DWARFYAML::emitDebugAddr(raw_ostream &OS, const Data &DI) {
     if (TableEntry.AddrSize)
       AddrSize = *TableEntry.AddrSize;
     else
-      AddrSize = DI.Is64bit ? 8 : 4;
+      AddrSize = DI.Is64BitAddrSize ? 8 : 4;
 
     uint64_t Length;
     if (TableEntry.Length)

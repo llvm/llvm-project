@@ -1681,7 +1681,7 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   if (Object.DWARF) {
     Object.DWARF->IsLittleEndian =
         Object.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
-    Object.DWARF->Is64bit =
+    Object.DWARF->Is64BitAddrSize =
         Object.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64);
   }
   IO.setContext(nullptr);
