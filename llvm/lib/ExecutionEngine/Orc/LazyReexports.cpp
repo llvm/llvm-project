@@ -17,13 +17,14 @@ namespace llvm {
 namespace orc {
 
 LazyCallThroughManager::LazyCallThroughManager(
-    ExecutionSession &ES, JITTargetAddress ErrorHandlerAddr,
-    std::unique_ptr<TrampolinePool> TP)
-    : ES(ES), ErrorHandlerAddr(ErrorHandlerAddr), TP(std::move(TP)) {}
+    ExecutionSession &ES, JITTargetAddress ErrorHandlerAddr, TrampolinePool *TP)
+    : ES(ES), ErrorHandlerAddr(ErrorHandlerAddr), TP(TP) {}
 
 Expected<JITTargetAddress> LazyCallThroughManager::getCallThroughTrampoline(
     JITDylib &SourceJD, SymbolStringPtr SymbolName,
     NotifyResolvedFunction NotifyResolved) {
+  assert(TP && "TrampolinePool not set");
+
   std::lock_guard<std::mutex> Lock(LCTMMutex);
   auto Trampoline = TP->getTrampoline();
 
