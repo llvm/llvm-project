@@ -116,6 +116,12 @@ template <typename T> Error DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
                                 ""));
             break;
           }
+          case dwarf::DW_FORM_strx:
+          case dwarf::DW_FORM_addrx:
+          case dwarf::DW_FORM_rnglistx:
+          case dwarf::DW_FORM_loclistx:
+            onValue((uint64_t)FormVal->Value, /*LEB=*/true);
+            break;
           case dwarf::DW_FORM_data1:
           case dwarf::DW_FORM_ref1:
           case dwarf::DW_FORM_flag:
