@@ -64,12 +64,13 @@ define <3 x double> @known_positive_sign_arg_vec(<3 x double> %x, <3 x i32> %y) 
   ret <3 x double> %r
 }
 
-; FIXME: maxnum(-0.0, 0.0) can return -0.0.
+; maxnum(-0.0, 0.0) can return -0.0.
 
 define float @not_known_positive_sign_arg(float %x, float %y) {
 ; CHECK-LABEL: @not_known_positive_sign_arg(
-; CHECK-NEXT:    [[TMP1:%.*]] = call ninf float @llvm.fabs.f32(float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[R:%.*]] = call ninf float @llvm.copysign.f32(float [[Y:%.*]], float [[MAX]])
+; CHECK-NEXT:    ret float [[R]]
 ;
   %max = call float @llvm.maxnum.f32(float %x, float 0.0)
   %r = call ninf float @llvm.copysign.f32(float %y, float %max)

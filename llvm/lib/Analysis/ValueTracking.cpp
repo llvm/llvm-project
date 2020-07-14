@@ -3368,13 +3368,28 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     switch (IID) {
     default:
       break;
-    case Intrinsic::maxnum:
-      return (isKnownNeverNaN(I->getOperand(0), TLI) &&
-              cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI,
-                                              SignBitOnly, Depth + 1)) ||
-            (isKnownNeverNaN(I->getOperand(1), TLI) &&
-              cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI,
-                                              SignBitOnly, Depth + 1));
+    case Intrinsic::maxnum: {
+      Value *V0 = I->getOperand(0), *V1 = I->getOperand(1);
+      auto isPositiveNum = [&](Value *V) {
+        if (SignBitOnly) {
+          // With SignBitOnly, this is tricky because the result of
+          // maxnum(+0.0, -0.0) is unspecified. Just check if the operand is
+          // a constant strictly greater than 0.0.
+          const APFloat *C;
+          return match(V, m_APFloat(C)) &&
+                 *C > APFloat::getZero(C->getSemantics());
+        }
+
+        // -0.0 compares equal to 0.0, so if this operand is at least -0.0,
+        // maxnum can't be ordered-less-than-zero.
+        return isKnownNeverNaN(V, TLI) &&
+               cannotBeOrderedLessThanZeroImpl(V, TLI, false, Depth + 1);
+      };
+
+      // TODO: This could be improved. We could also check that neither operand
+      //       has its sign bit set (and at least 1 is not-NAN?).
+      return isPositiveNum(V0) || isPositiveNum(V1);
+    }
 
     case Intrinsic::maximum:
       return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
