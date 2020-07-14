@@ -2151,45 +2151,17 @@ public:
       return Cost;
     }
     case Intrinsic::sadd_sat:
-    case Intrinsic::ssub_sat: {
-      Type *CondTy = RetTy->getWithNewBitWidth(1);
-
-      Type *OpTy = StructType::create({RetTy, CondTy});
-      Intrinsic::ID OverflowOp = IID == Intrinsic::sadd_sat
-                                     ? Intrinsic::sadd_with_overflow
-                                     : Intrinsic::ssub_with_overflow;
-      CmpInst::Predicate Pred = CmpInst::ICMP_SGT;
-
-      // SatMax -> Overflow && SumDiff < 0
-      // SatMin -> Overflow && SumDiff >= 0
-      InstructionCost Cost = 0;
-      IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
-                                    nullptr, ScalarizationCostPassed);
-      Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                          Pred, CostKind);
-      Cost += 2 * thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
-                                              CondTy, Pred, CostKind);
-      return Cost;
-    }
+      ISD = ISD::SADDSAT;
+      break;
+    case Intrinsic::ssub_sat:
+      ISD = ISD::SSUBSAT;
+      break;
     case Intrinsic::uadd_sat:
-    case Intrinsic::usub_sat: {
-      Type *CondTy = RetTy->getWithNewBitWidth(1);
-
-      Type *OpTy = StructType::create({RetTy, CondTy});
-      Intrinsic::ID OverflowOp = IID == Intrinsic::uadd_sat
-                                     ? Intrinsic::uadd_with_overflow
-                                     : Intrinsic::usub_with_overflow;
-
-      InstructionCost Cost = 0;
-      IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
-                                    nullptr, ScalarizationCostPassed);
-      Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      Cost +=
-          thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                      CmpInst::BAD_ICMP_PREDICATE, CostKind);
-      return Cost;
-    }
+      ISD = ISD::UADDSAT;
+      break;
+    case Intrinsic::usub_sat:
+      ISD = ISD::USUBSAT;
+      break;
     case Intrinsic::smul_fix:
     case Intrinsic::umul_fix: {
       unsigned ExtSize = RetTy->getScalarSizeInBits() * 2;
