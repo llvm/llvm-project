@@ -1901,12 +1901,17 @@ std::pair<const typename ELFT::Phdr *, const typename ELFT::Shdr *>
 ELFDumper<ELFT>::findDynamic(const ELFFile<ELFT> *Obj) {
   // Try to locate the PT_DYNAMIC header.
   const Elf_Phdr *DynamicPhdr = nullptr;
-  for (const Elf_Phdr &Phdr :
-       unwrapOrError(ObjF->getFileName(), Obj->program_headers())) {
-    if (Phdr.p_type != ELF::PT_DYNAMIC)
-      continue;
-    DynamicPhdr = &Phdr;
-    break;
+  if (Expected<ArrayRef<Elf_Phdr>> PhdrsOrErr = Obj->program_headers()) {
+    for (const Elf_Phdr &Phdr : *PhdrsOrErr) {
+      if (Phdr.p_type != ELF::PT_DYNAMIC)
+        continue;
+      DynamicPhdr = &Phdr;
+      break;
+    }
+  } else {
+    this->reportUniqueWarning(createError(
+        "unable to read program headers to locate the PT_DYNAMIC segment: " +
+        toString(PhdrsOrErr.takeError())));
   }
 
   // Try to locate the .dynamic section in the sections header table.
@@ -4340,8 +4345,15 @@ void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
 
   unsigned Width = ELFT::Is64Bits ? 18 : 10;
   unsigned SizeWidth = ELFT::Is64Bits ? 8 : 7;
-  for (const auto &Phdr :
-       unwrapOrError(this->FileName, Obj->program_headers())) {
+
+  Expected<ArrayRef<Elf_Phdr>> PhdrsOrErr = Obj->program_headers();
+  if (!PhdrsOrErr) {
+    this->reportUniqueWarning(createError("unable to dump program headers: " +
+                                          toString(PhdrsOrErr.takeError())));
+    return;
+  }
+
+  for (const Elf_Phdr &Phdr : *PhdrsOrErr) {
     Fields[0].Str = getElfPtType(Header->e_machine, Phdr.p_type);
     Fields[1].Str = to_string(format_hex(Phdr.p_offset, 8));
     Fields[2].Str = to_string(format_hex(Phdr.p_vaddr, Width));
@@ -4388,8 +4400,16 @@ void GNUStyle<ELFT>::printSectionMapping(const ELFO *Obj) {
   OS << "\n Section to Segment mapping:\n  Segment Sections...\n";
   DenseSet<const Elf_Shdr *> BelongsToSegment;
   int Phnum = 0;
-  for (const Elf_Phdr &Phdr :
-       unwrapOrError(this->FileName, Obj->program_headers())) {
+
+  Expected<ArrayRef<Elf_Phdr>> PhdrsOrErr = Obj->program_headers();
+  if (!PhdrsOrErr) {
+    this->reportUniqueWarning(createError(
+        "can't read program headers to build section to segment mapping: " +
+        toString(PhdrsOrErr.takeError())));
+    return;
+  }
+
+  for (const Elf_Phdr &Phdr : *PhdrsOrErr) {
     std::string Sections;
     OS << format("   %2.2d     ", Phnum++);
     // Check if each section is in a segment and then print mapping.
@@ -5506,8 +5526,15 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
         reportError(std::move(Err), this->FileName);
     }
   } else {
-    for (const auto &P :
-         unwrapOrError(this->FileName, Obj->program_headers())) {
+    Expected<ArrayRef<Elf_Phdr>> PhdrsOrErr = Obj->program_headers();
+    if (!PhdrsOrErr) {
+      this->reportUniqueWarning(createError(
+          "unable to read program headers to locate the PT_NOTE segment: " +
+          toString(PhdrsOrErr.takeError())));
+      return;
+    }
+
+    for (const Elf_Phdr &P : *PhdrsOrErr) {
       if (P.p_type != PT_NOTE)
         continue;
       PrintHeader(/*SecName=*/None, P.p_offset, P.p_filesz);
@@ -6523,8 +6550,14 @@ template <class ELFT>
 void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
   ListScope L(W, "ProgramHeaders");
 
-  for (const Elf_Phdr &Phdr :
-       unwrapOrError(this->FileName, Obj->program_headers())) {
+  Expected<ArrayRef<Elf_Phdr>> PhdrsOrErr = Obj->program_headers();
+  if (!PhdrsOrErr) {
+    this->reportUniqueWarning(createError("unable to dump program headers: " +
+                                          toString(PhdrsOrErr.takeError())));
+    return;
+  }
+
+  for (const Elf_Phdr &Phdr : *PhdrsOrErr) {
     DictScope P(W, "ProgramHeader");
     W.printHex("Type",
                getElfSegmentType(Obj->getHeader()->e_machine, Phdr.p_type),
@@ -6819,8 +6852,15 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
         reportError(std::move(Err), this->FileName);
     }
   } else {
-    for (const auto &P :
-         unwrapOrError(this->FileName, Obj->program_headers())) {
+    Expected<ArrayRef<Elf_Phdr>> PhdrsOrErr = Obj->program_headers();
+    if (!PhdrsOrErr) {
+      this->reportUniqueWarning(createError(
+          "unable to read program headers to locate the PT_NOTE segment: " +
+          toString(PhdrsOrErr.takeError())));
+      return;
+    }
+
+    for (const Elf_Phdr &P : *PhdrsOrErr) {
       if (P.p_type != PT_NOTE)
         continue;
       DictScope D(W, "NoteSection");
