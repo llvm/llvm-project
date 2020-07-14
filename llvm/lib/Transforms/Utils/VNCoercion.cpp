@@ -403,12 +403,6 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   if (Offset == -1)
     return Offset;
 
-  // Don't coerce non-integral pointers to integers or vice versa, and the
-  // memtransfer is implicitly a raw byte code
-  if (DL.isNonIntegralPointerType(LoadTy->getScalarType()))
-    // TODO: Can allow nullptrs from constant zeros
-    return -1;
-
   unsigned AS = Src->getType()->getPointerAddressSpace();
   // Otherwise, see if we can constant fold a load from the constant with the
   // offset applied as appropriate.
