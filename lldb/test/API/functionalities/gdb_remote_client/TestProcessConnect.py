@@ -10,7 +10,7 @@ class TestProcessConnect(GDBRemoteTestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
+    @skipIfWindows
     def test_gdb_remote_sync(self):
         """Test the gdb-remote command in synchronous mode"""
         try:
@@ -20,7 +20,7 @@ class TestProcessConnect(GDBRemoteTestBase):
         finally:
             self.dbg.GetSelectedPlatform().DisconnectRemote()
 
-    @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
+    @skipIfWindows
     def test_gdb_remote_async(self):
         """Test the gdb-remote command in asynchronous mode"""
         try:
@@ -33,7 +33,7 @@ class TestProcessConnect(GDBRemoteTestBase):
         finally:
             self.dbg.GetSelectedPlatform().DisconnectRemote()
 
-    @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
+    @skipIfWindows
     def test_process_connect_sync(self):
         """Test the gdb-remote command in synchronous mode"""
         try:
@@ -44,7 +44,7 @@ class TestProcessConnect(GDBRemoteTestBase):
         finally:
             self.dbg.GetSelectedPlatform().DisconnectRemote()
 
-    @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
+    @skipIfWindows
     def test_process_connect_async(self):
         """Test the gdb-remote command in asynchronous mode"""
         try:
