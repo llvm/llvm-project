@@ -26,7 +26,7 @@ using namespace llvm;
 extern const char *TestMainArgv0;
 extern cl::opt<std::string> TFIR2NativeModelPath;
 
-#if LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TF_API
 static std::string getModelPath() {
   SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);
   llvm::sys::path::append(InputsDir, "ir2native_x86_64_model");
@@ -87,13 +87,13 @@ define internal i32 @top() {
 )IR");
 
   FunctionAnalysisManager FAM = buildFAM();
-#if LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TF_API
   TFIR2NativeModelPath = getModelPath();
 #endif
 
   InlineSizeEstimatorAnalysis FA;
   auto SizeEstimate = FA.run(*M->getFunction("branches"), FAM);
-#if LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TF_API
   EXPECT_GT(*SizeEstimate, 0);
 #else
   EXPECT_FALSE(SizeEstimate.hasValue());
