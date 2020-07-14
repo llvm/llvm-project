@@ -48,6 +48,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <chrono>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -762,6 +763,9 @@ Context ClangdServer::createProcessingContext(PathRef File) const {
     return Context::current().clone();
 
   config::Params Params;
+  // Don't reread config files excessively often.
+  // FIXME: when we see a config file change event, use the event timestamp.
+  Params.FreshTime = std::chrono::steady_clock::now() - std::chrono::seconds(5);
   llvm::SmallString<256> PosixPath;
   if (!File.empty()) {
     assert(llvm::sys::path::is_absolute(File));
