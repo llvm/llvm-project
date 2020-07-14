@@ -891,13 +891,14 @@ class Base(unittest2.TestCase):
         for p in self.subprocesses:
             p.terminate()
             del p
-        del self.subprocesses[:]
+        self.subprocesses.clear()
         # Ensure any forked processes are cleaned up
         for pid in self.forkedProcessPids:
             try:
                 os.kill(pid, signal.SIGTERM)
             except OSError:
                 pass
+        self.forkedProcessPids.clear()
 
     def spawnSubprocess(self, executable, args=[], install_remote=True):
         """ Creates a subprocess.Popen object with the specified executable and arguments,
@@ -1877,9 +1878,6 @@ class TestBase(Base):
         self.addTearDownHook(lambda: os.remove(src))
 
     def setUp(self):
-        #import traceback
-        # traceback.print_stack()
-
         # Works with the test driver to conditionally skip tests via
         # decorators.
         Base.setUp(self)
@@ -1998,9 +1996,6 @@ class TestBase(Base):
             return self.getBuildDir()
 
     def tearDown(self):
-        #import traceback
-        # traceback.print_stack()
-
         # Ensure all the references to SB objects have gone away so that we can
         # be sure that all test-specific resources have been freed before we
         # attempt to delete the targets.
