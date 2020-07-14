@@ -338,10 +338,20 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
     if (SrcSize < DestSize)
       return nullptr;
 
+    // Catch the obvious splat cases (since all-zeros can coerce non-integral
+    // pointers legally).
+    if (C->isNullValue() && !DestTy->isX86_MMXTy())
+      return Constant::getNullValue(DestTy);
+    if (C->isAllOnesValue() && !DestTy->isX86_MMXTy() &&
+        !DestTy->isPtrOrPtrVectorTy()) // Don't get ones for ptr types!
+      return Constant::getAllOnesValue(DestTy);
+
     // If the type sizes are the same and a cast is legal, just directly
     // cast the constant.
     // But be careful not to coerce non-integral pointers illegally.
-    if (SrcSize == DestSize) {
+    if (SrcSize == DestSize &&
+        DL.isNonIntegralPointerType(SrcTy->getScalarType()) ==
+            DL.isNonIntegralPointerType(DestTy->getScalarType())) {
       Instruction::CastOps Cast = Instruction::BitCast;
       // If we are going from a pointer to int or vice versa, we spell the cast
       // differently.
