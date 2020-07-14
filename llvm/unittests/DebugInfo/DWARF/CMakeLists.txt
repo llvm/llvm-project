@@ -21,6 +21,7 @@ add_llvm_unittest(DebugInfoDWARFTests
   DWARFDieTest.cpp
   DWARFExpressionCompactPrinterTest.cpp
   DWARFFormValueTest.cpp
+  DWARFListTableTest.cpp
   DWARFLocationExpressionTest.cpp
   )
 
