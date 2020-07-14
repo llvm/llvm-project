@@ -27,8 +27,7 @@ std::string lldb_private::GetInputFilePath(const llvm::Twine &name) {
 }
 
 llvm::Expected<TestFile> TestFile::fromYaml(llvm::StringRef Yaml) {
-  const auto *Info = testing::UnitTest::GetInstance()->current_test_info();
-  assert(Info);
+  assert(testing::UnitTest::GetInstance()->current_test_info());
 
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
