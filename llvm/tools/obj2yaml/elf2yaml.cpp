@@ -200,9 +200,9 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
 template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   auto Y = std::make_unique<ELFYAML::Object>();
 
-  // Dump header. We do not dump SHEntSize, SHOff, SHNum and SHStrNdx fields.
-  // When not explicitly set, the values are set by yaml2obj automatically
-  // and there is no need to dump them here.
+  // Dump header. We do not dump EPh* and SH* fields. When not explicitly set,
+  // the values are set by yaml2obj automatically and there is no need to dump
+  // them here.
   Y->Header.Class = ELFYAML::ELF_ELFCLASS(Obj.getHeader()->getFileClass());
   Y->Header.Data = ELFYAML::ELF_ELFDATA(Obj.getHeader()->getDataEncoding());
   Y->Header.OSABI = Obj.getHeader()->e_ident[ELF::EI_OSABI];

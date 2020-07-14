@@ -379,7 +379,7 @@ def AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
     operands. For example:
 
     ```mlir
-		%0 = alloca() : memref<8x64xf32>
+    %0 = alloca() : memref<8x64xf32>
     ```
 
     The optional list of dimension operands are bound to the dynamic dimensions
@@ -387,7 +387,7 @@ def AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
     bound to the second dimension of the memref (which is dynamic).
 
     ```mlir
-		%0 = alloca(%d) : memref<8x?xf32>
+    %0 = alloca(%d) : memref<8x?xf32>
     ```
 
     The optional list of symbol operands are bound to the symbols of the
@@ -395,7 +395,7 @@ def AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
     the symbol 's0' in the affine map specified in the allocs memref type.
 
     ```mlir
-		%0 = alloca()[%s] : memref<8x64xf32,
+    %0 = alloca()[%s] : memref<8x64xf32,
                                affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>>
     ```
 
@@ -439,6 +439,36 @@ def AndOp : IntArithmeticOp<"and", [Commutative]> {
     ```
   }];
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AssertOp
+//===----------------------------------------------------------------------===//
+
+def AssertOp : Std_Op<"assert"> {
+  let summary = "Assert operation with message attribute";
+  let description = [{
+    Assert operation with single boolean operand and an error message attribute.
+    If the argument is `true` this operation has no effect.
+    Otherwise, the program execution will abort.
+    The provided error message may be used by a runtime to propagate the error
+    to the user.
+
+    Example:
+
+    ```mlir
+    assert %b, "Expected ... to be true"
+    ```
+  }];
+
+  let arguments = (ins I1:$arg, StrAttr:$msg);
+
+  let assemblyFormat = "$arg `,` $msg attr-dict";
+
+  // AssertOp is fully verified by its traits.
+  let verifier = ?;
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

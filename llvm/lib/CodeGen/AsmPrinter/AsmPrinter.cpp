@@ -3057,13 +3057,16 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
 
   if (MBB.pred_empty() ||
       (!MF->hasBBLabels() && isBlockOnlyReachableByFallthrough(&MBB) &&
-       !MBB.isEHFuncletEntry())) {
+       !MBB.isEHFuncletEntry() && !MBB.hasLabelMustBeEmitted())) {
     if (isVerbose()) {
       // NOTE: Want this comment at start of line, don't emit with AddComment.
       OutStreamer->emitRawComment(" %bb." + Twine(MBB.getNumber()) + ":",
                                   false);
     }
   } else {
+    if (isVerbose() && MBB.hasLabelMustBeEmitted()) {
+      OutStreamer->AddComment("Label of block must be emitted");
+    }
     // Switch to a new section if this basic block must begin a section.
     if (MBB.isBeginSection()) {
       OutStreamer->SwitchSection(
