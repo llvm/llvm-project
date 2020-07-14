@@ -339,12 +339,10 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21C-NEXT:  // Label [[PREV_NUM]]: @[[PREV]]
 // R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]], // Rule ID 21 //
 //
-// R21O-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_frag,
 // R21O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 // R21O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // R21N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // R21N-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
-// R21N-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_frag,
 // R21N-NEXT:    // MIs[0] dst
 // R21N-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // R21N-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
@@ -354,10 +352,12 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21N-NEXT:    // MIs[0] src2
 // R21N-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 //
+// R21O-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_frag,
 // R21C-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex,
 // R21N-NEXT:    // MIs[0] src3
 // R21N-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
 // R21C-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/3, /*Renderer*/1, GICP_gi_complex,
+// R21N-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_frag,
 // R21C-NEXT:    // (select:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2, complex:{ *:[i32] }:$src3)<<P:Predicate_frag>> => (INSN2:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src2)
 
 // R21C-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN2,
