@@ -102,7 +102,6 @@ config("cxx_config") {
     } else {
       cflags_cc += [ "-fno-rtti" ]
     }
-    defines += [ "_LIBCPP_NO_RTTI" ]
   }
 }
 
