@@ -3462,24 +3462,24 @@ SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue C
   ISD::CondCode CCOpcode = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
   SDValue CmpLHS = Cond.getOperand(0);
 
-  unsigned Opc = isCttzOpc(RHS.getOpcode()) ? AMDGPUISD::FFBL_B32 :
-                                           AMDGPUISD::FFBH_U32;
-
   // select (setcc x, 0, eq), -1, (ctlz_zero_undef x) -> ffbh_u32 x
   // select (setcc x, 0, eq), -1, (cttz_zero_undef x) -> ffbl_u32 x
   if (CCOpcode == ISD::SETEQ &&
       (isCtlzOpc(RHS.getOpcode()) || isCttzOpc(RHS.getOpcode())) &&
-      RHS.getOperand(0) == CmpLHS &&
-      isNegativeOne(LHS)) {
+      RHS.getOperand(0) == CmpLHS && isNegativeOne(LHS)) {
+    unsigned Opc =
+        isCttzOpc(RHS.getOpcode()) ? AMDGPUISD::FFBL_B32 : AMDGPUISD::FFBH_U32;
     return getFFBX_U32(DAG, CmpLHS, SL, Opc);
   }
 
   // select (setcc x, 0, ne), (ctlz_zero_undef x), -1 -> ffbh_u32 x
   // select (setcc x, 0, ne), (cttz_zero_undef x), -1 -> ffbl_u32 x
   if (CCOpcode == ISD::SETNE &&
-      (isCtlzOpc(LHS.getOpcode()) || isCttzOpc(RHS.getOpcode())) &&
-      LHS.getOperand(0) == CmpLHS &&
-      isNegativeOne(RHS)) {
+      (isCtlzOpc(LHS.getOpcode()) || isCttzOpc(LHS.getOpcode())) &&
+      LHS.getOperand(0) == CmpLHS && isNegativeOne(RHS)) {
+    unsigned Opc =
+        isCttzOpc(LHS.getOpcode()) ? AMDGPUISD::FFBL_B32 : AMDGPUISD::FFBH_U32;
+
     return getFFBX_U32(DAG, CmpLHS, SL, Opc);
   }
 
