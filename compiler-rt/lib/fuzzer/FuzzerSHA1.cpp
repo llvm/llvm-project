@@ -17,6 +17,7 @@
 
 #include "FuzzerSHA1.h"
 #include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
 
 /* This code is public-domain - it is based on libcrypt
  * placed in the public domain by Wei Dai and other contributors.
