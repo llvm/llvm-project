@@ -34,29 +34,10 @@ def add(parser, args):
 
 def build(parser, args):
     import SATestBuild
-    from ProjectMap import ProjectMap
 
     SATestBuild.VERBOSE = args.verbose
 
-    project_map = ProjectMap()
-    projects = project_map.projects
-
-    if args.projects:
-        projects_arg = args.projects.split(",")
-        available_projects = [project.name
-                              for project in projects]
-
-        # validate that given projects are present in the project map file
-        for manual_project in projects_arg:
-            if manual_project not in available_projects:
-                parser.error("Project '{project}' is not found in "
-                             "the project map file. Available projects are "
-                             "{all}.".format(project=manual_project,
-                                             all=available_projects))
-
-        projects = [project.with_fields(enabled=project.name in projects_arg)
-                    for project in projects]
-
+    projects = get_projects(parser, args.projects)
     tester = SATestBuild.RegressionTester(args.jobs,
                                           projects,
                                           args.override_compiler,
@@ -98,6 +79,44 @@ def update(parser, args):
     project_map = ProjectMap()
     for project in project_map.projects:
         SATestUpdateDiffs.update_reference_results(project)
+
+
+def benchmark(parser, args):
+    from SATestBenchmark import Benchmark
+
+    projects = get_projects(parser, args.projects)
+    benchmark = Benchmark(projects, args.iterations, args.output)
+    benchmark.run()
+
+
+def benchmark_compare(parser, args):
+    import SATestBenchmark
+    SATestBenchmark.compare(args.old, args.new, args.output)
+
+
+def get_projects(parser, projects_str):
+    from ProjectMap import ProjectMap
+
+    project_map = ProjectMap()
+    projects = project_map.projects
+
+    if projects_str:
+        projects_arg = projects_str.split(",")
+        available_projects = [project.name
+                              for project in projects]
+
+        # validate that given projects are present in the project map file
+        for manual_project in projects_arg:
+            if manual_project not in available_projects:
+                parser.error("Project '{project}' is not found in "
+                             "the project map file. Available projects are "
+                             "{all}.".format(project=manual_project,
+                                             all=available_projects))
+
+        projects = [project.with_fields(enabled=project.name in projects_arg)
+                    for project in projects]
+
+    return projects
 
 
 def docker(parser, args):
@@ -283,6 +302,36 @@ def main():
                              help="Additionall args that will be forwarded "
                              "to the docker's entrypoint.")
     dock_parser.set_defaults(func=docker)
+
+    # benchmark subcommand
+    bench_parser = subparsers.add_parser(
+        "benchmark",
+        help="Run benchmarks by building a set of projects multiple times.")
+
+    bench_parser.add_argument("-i", "--iterations", action="store",
+                              type=int, default=20,
+                              help="Number of iterations for building each "
+                              "project.")
+    bench_parser.add_argument("-o", "--output", action="store",
+                              default="benchmark.csv",
+                              help="Output csv file for the benchmark results")
+    bench_parser.add_argument("--projects", action="store", default="",
+                              help="Comma-separated list of projects to test")
+    bench_parser.set_defaults(func=benchmark)
+
+    bench_subparsers = bench_parser.add_subparsers()
+    bench_compare_parser = bench_subparsers.add_parser(
+        "compare",
+        help="Compare benchmark runs.")
+    bench_compare_parser.add_argument("--old", action="store", required=True,
+                                      help="Benchmark reference results to "
+                                      "compare agains.")
+    bench_compare_parser.add_argument("--new", action="store", required=True,
+                                      help="New benchmark results to check.")
+    bench_compare_parser.add_argument("-o", "--output",
+                                      action="store", required=True,
+                                      help="Output file for plots.")
+    bench_compare_parser.set_defaults(func=benchmark_compare)
 
     args = parser.parse_args()
     args.func(parser, args)

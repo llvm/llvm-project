@@ -1818,10 +1818,8 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         bool CanUseBP = RegInfo->hasBasePointer(MF);
         if (FPOffsetFits && CanUseBP) // Both are ok. Pick the best.
           UseFP = PreferFP;
-        else if (!CanUseBP) { // Can't use BP. Forced to use FP.
-          assert(!SVEStackSize && "Expected BP to be available");
+        else if (!CanUseBP) // Can't use BP. Forced to use FP.
           UseFP = true;
-        }
         // else we can use BP and FP, but the offset from FP won't fit.
         // That will make us scavenge registers which we can probably avoid by
         // using BP. If it won't fit for BP either, we'll scavenge anyway.

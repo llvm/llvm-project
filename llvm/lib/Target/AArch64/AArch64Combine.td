@@ -79,6 +79,6 @@ def shuffle_vector_pseudos : GICombineGroup<[dup, rev, ext, zip, uzp, trn]>;
 def AArch64PostLegalizerCombinerHelper
     : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",
                        [erase_undef_store, combines_for_extload,
-                        shuffle_vector_pseudos]> {
+                        sext_already_extended, shuffle_vector_pseudos]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

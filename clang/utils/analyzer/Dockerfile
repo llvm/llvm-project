@@ -42,6 +42,16 @@ RUN apt-get install -y \
     libjsonrpccpp-dev=0.7.0-1build2 \
     uuid-dev=2.31.1-0.4ubuntu3.6
 
+# tmux dependencies
+RUN apt-get install -y \
+    autotools-dev=20180224.1 \
+    automake=1:1.15.1-3ubuntu2 \
+    libncurses5-dev=6.1-1ubuntu1.18.04 \
+    libevent-dev=2.1.8-stable-4build1 \
+    pkg-config=0.29.1-0ubuntu2 \
+    flex=2.6.4-6 \
+    bison=2:3.0.4.dfsg-1build1
+
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
 VOLUME /analyzer

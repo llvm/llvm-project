@@ -17146,6 +17146,20 @@ vec_splati_ins(vector float __a, const unsigned int __b, const float __c) {
 #endif
   return __a;
 }
+
+/* vec_test_lsbb_all_ones */
+
+static __inline__ int __ATTRS_o_ai
+vec_test_lsbb_all_ones(vector unsigned char __a) {
+  return __builtin_vsx_xvtlsbb(__a, 1);
+}
+
+/* vec_test_lsbb_all_zeros */
+
+static __inline__ int __ATTRS_o_ai
+vec_test_lsbb_all_zeros(vector unsigned char __a) {
+  return __builtin_vsx_xvtlsbb(__a, 0);
+}
 #endif /* __VSX__ */
 #endif /* __POWER10_VECTOR__ */
 
