@@ -467,6 +467,8 @@ def AssertOp : Std_Op<"assert"> {
 
   // AssertOp is fully verified by its traits.
   let verifier = ?;
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

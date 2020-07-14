@@ -440,6 +440,31 @@ OpFoldResult AndOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// AssertOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct EraseRedundantAssertions : public OpRewritePattern<AssertOp> {
+  using OpRewritePattern<AssertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AssertOp op,
+                                PatternRewriter &rewriter) const override {
+    // Erase assertion if argument is constant true.
+    if (matchPattern(op.arg(), m_One())) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+    return failure();
+  }
+};
+} // namespace
+
+void AssertOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+                                           MLIRContext *context) {
+  patterns.insert<EraseRedundantAssertions>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // AssumeAlignmentOp
 //===----------------------------------------------------------------------===//
 
