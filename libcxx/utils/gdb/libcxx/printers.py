@@ -698,7 +698,7 @@ class StdMapPrinter(AbstractRBTreePrinter):
 
     def _init_cast_type(self, val_type):
         map_it_type = gdb.lookup_type(
-            str(val_type) + "::iterator").strip_typedefs()
+            str(val_type.strip_typedefs()) + "::iterator").strip_typedefs()
         tree_it_type = map_it_type.template_argument(0)
         node_ptr_type = tree_it_type.template_argument(1)
         return node_ptr_type
@@ -717,7 +717,7 @@ class StdSetPrinter(AbstractRBTreePrinter):
 
     def _init_cast_type(self, val_type):
         set_it_type = gdb.lookup_type(
-            str(val_type) + "::iterator").strip_typedefs()
+            str(val_type.strip_typedefs()) + "::iterator").strip_typedefs()
         node_ptr_type = set_it_type.template_argument(1)
         return node_ptr_type
 

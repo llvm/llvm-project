@@ -54,7 +54,6 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.debug_monitor_exe,
             commandline_args,
             install_remote=False)
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         socket_id = lldbutil.wait_for_file_on_target(self, port_file)
 

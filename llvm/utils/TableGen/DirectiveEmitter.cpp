@@ -492,6 +492,7 @@ void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/ADT/StringSwitch.h\"\n";
+  OS << "#include \"llvm/Support/ErrorHandling.h\"\n";
   OS << "\n";
   OS << "using namespace llvm;\n";
   llvm::SmallVector<StringRef, 2> Namespaces;

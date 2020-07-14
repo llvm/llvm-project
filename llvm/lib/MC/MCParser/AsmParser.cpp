@@ -3011,20 +3011,12 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
 bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   const MCExpr *Offset;
   const MCExpr *Expr = nullptr;
-  int64_t OffsetValue;
   SMLoc OffsetLoc = Lexer.getTok().getLoc();
 
   if (parseExpression(Offset))
     return true;
-
-  if ((Offset->evaluateAsAbsolute(OffsetValue,
-                                  getStreamer().getAssemblerPtr()) &&
-       check(OffsetValue < 0, OffsetLoc, "expression is negative")) ||
-      (check(Offset->getKind() != llvm::MCExpr::Constant &&
-             Offset->getKind() != llvm::MCExpr::SymbolRef,
-             OffsetLoc, "expected non-negative number or a label")) ||
-      (parseToken(AsmToken::Comma, "expected comma") ||
-       check(getTok().isNot(AsmToken::Identifier), "expected relocation name")))
+  if (parseToken(AsmToken::Comma, "expected comma") ||
+      check(getTok().isNot(AsmToken::Identifier), "expected relocation name"))
     return true;
 
   SMLoc NameLoc = Lexer.getTok().getLoc();
@@ -3048,8 +3040,10 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
 
   const MCTargetAsmParser &MCT = getTargetParser();
   const MCSubtargetInfo &STI = MCT.getSTI();
-  if (getStreamer().emitRelocDirective(*Offset, Name, Expr, DirectiveLoc, STI))
-    return Error(NameLoc, "unknown relocation name");
+  if (Optional<std::pair<bool, std::string>> Err =
+          getStreamer().emitRelocDirective(*Offset, Name, Expr, DirectiveLoc,
+                                           STI))
+    return Error(Err->first ? NameLoc : OffsetLoc, Err->second);
 
   return false;
 }

@@ -639,7 +639,6 @@ endfunction()
 # RTTI flags ==================================================================
 function(cxx_add_rtti_flags target)
   if (NOT LIBCXX_ENABLE_RTTI)
-    target_compile_definitions(${target} PUBLIC -D_LIBCPP_NO_RTTI)
     target_add_compile_flags_if_supported(${target} PUBLIC -GR-)
     target_add_compile_flags_if_supported(${target} PUBLIC -fno-rtti)
   endif()

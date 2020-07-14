@@ -278,64 +278,67 @@ namespace Foundation1100 {
 }
   
 namespace Foundation1428 {
-  struct DataDescriptor_32 {
-    uint32_t _used : 26;
-    uint32_t _kvo : 1;
-    uint32_t _size;
-    uint32_t _buffer;
-    uint64_t GetSize() { return _size; }
-  };
-  
-  struct DataDescriptor_64 {
-    uint64_t _used : 58;
-    uint32_t _kvo : 1;
-    uint64_t _size;
-    uint64_t _buffer;
-    uint64_t GetSize() { return _size; }
-  };
-  
-  
-  
+  namespace {
+    struct DataDescriptor_32 {
+      uint32_t _used : 26;
+      uint32_t _kvo : 1;
+      uint32_t _size;
+      uint32_t _buffer;
+      uint64_t GetSize() { return _size; }
+    };
+    
+    struct DataDescriptor_64 {
+      uint64_t _used : 58;
+      uint32_t _kvo : 1;
+      uint64_t _size;
+      uint64_t _buffer;
+      uint64_t GetSize() { return _size; }
+    };
+  }
+
   using NSDictionaryMSyntheticFrontEnd =
     GenericNSDictionaryMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
 }
   
 namespace Foundation1437 {
-  static const uint64_t NSDictionaryCapacities[] = {
-      0, 3, 7, 13, 23, 41, 71, 127, 191, 251, 383, 631, 1087, 1723,
-      2803, 4523, 7351, 11959, 19447, 31231, 50683, 81919, 132607,
-      214519, 346607, 561109, 907759, 1468927, 2376191, 3845119,
-      6221311, 10066421, 16287743, 26354171, 42641881, 68996069,
-      111638519, 180634607, 292272623, 472907251
-  };
-  
-  static const size_t NSDictionaryNumSizeBuckets = sizeof(NSDictionaryCapacities) / sizeof(uint64_t);
-  
-  struct DataDescriptor_32 {
-    uint32_t _buffer;
-    uint32_t _muts;
-    uint32_t _used : 25;
-    uint32_t _kvo : 1;
-    uint32_t _szidx : 6;
+  namespace {
+    static const uint64_t NSDictionaryCapacities[] = {
+        0, 3, 7, 13, 23, 41, 71, 127, 191, 251, 383, 631, 1087, 1723,
+        2803, 4523, 7351, 11959, 19447, 31231, 50683, 81919, 132607,
+        214519, 346607, 561109, 907759, 1468927, 2376191, 3845119,
+        6221311, 10066421, 16287743, 26354171, 42641881, 68996069,
+        111638519, 180634607, 292272623, 472907251
+    };
+    
+    static const size_t NSDictionaryNumSizeBuckets =
+        sizeof(NSDictionaryCapacities) / sizeof(uint64_t);
+    
+    struct DataDescriptor_32 {
+      uint32_t _buffer;
+      uint32_t _muts;
+      uint32_t _used : 25;
+      uint32_t _kvo : 1;
+      uint32_t _szidx : 6;
 
-    uint64_t GetSize() {
-      return (_szidx) >= NSDictionaryNumSizeBuckets ?
-          0 : NSDictionaryCapacities[_szidx];
-    }
-  };
-  
-  struct DataDescriptor_64 {
-    uint64_t _buffer;
-    uint32_t _muts;
-    uint32_t _used : 25;
-    uint32_t _kvo : 1;
-    uint32_t _szidx : 6;
+      uint64_t GetSize() {
+        return (_szidx) >= NSDictionaryNumSizeBuckets ?
+            0 : NSDictionaryCapacities[_szidx];
+      }
+    };
+    
+    struct DataDescriptor_64 {
+      uint64_t _buffer;
+      uint32_t _muts;
+      uint32_t _used : 25;
+      uint32_t _kvo : 1;
+      uint32_t _szidx : 6;
 
-    uint64_t GetSize() {
-      return (_szidx) >= NSDictionaryNumSizeBuckets ?
-          0 : NSDictionaryCapacities[_szidx];
-    }
-  };
+      uint64_t GetSize() {
+        return (_szidx) >= NSDictionaryNumSizeBuckets ?
+            0 : NSDictionaryCapacities[_szidx];
+      }
+    };
+  }
   
   using NSDictionaryMSyntheticFrontEnd =
     GenericNSDictionaryMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;

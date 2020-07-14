@@ -19,6 +19,7 @@
 #include "FuzzerDictionary.h"
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
+#include "FuzzerPlatform.h"
 #include "FuzzerUtil.h"
 #include "FuzzerValueBitMap.h"
 #include <set>

@@ -85,10 +85,19 @@ std::size_t RemoveCarriageReturns(llvm::MutableArrayRef<char> buf) {
       break;
     }
     std::size_t chunk = crcp - p;
+    auto advance{chunk + 1};
+    if (chunk + 1 >= bytes || crcp[1] == '\n') {
+      // CR followed by LF or EOF: omit
+    } else if ((chunk == 0 && p == buf.data()) || crcp[-1] == '\n') {
+      // CR preceded by LF or BOF: omit
+    } else {
+      // CR in line: retain
+      ++chunk;
+    }
     std::memmove(buffer + wrote, p, chunk);
     wrote += chunk;
-    p += chunk + 1;
-    bytes -= chunk + 1;
+    p += advance;
+    bytes -= advance;
   }
   return wrote;
 }

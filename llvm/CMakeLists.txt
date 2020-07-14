@@ -832,6 +832,21 @@ configure_file(
   ${LLVM_INCLUDE_DIR}/llvm/Config/Targets.def
   )
 
+# For up-to-date instructions for installing the Tensorflow dependency, refer to
+# the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
+# In this case, the latest C API library is available for download from
+# https://www.tensorflow.org/install/lang_c.
+# We will expose the conditional compilation variable,
+# LLVM_HAVE_TF_API, through llvm-config.h, so that a user of the LLVM library may
+# also leverage the dependency.
+set(TENSORFLOW_C_LIB_PATH "" CACHE PATH "Path to TensorFlow C library install")
+find_library(tensorflow_c_api tensorflow PATHS ${TENSORFLOW_C_LIB_PATH}/lib)
+
+if (tensorflow_c_api)
+  set(LLVM_HAVE_TF_API "ON" CACHE BOOL "Full Tensorflow API available")
+  include_directories(${TENSORFLOW_C_LIB_PATH}/include)
+endif()
+
 # Configure the three LLVM configuration header files.
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/config.h.cmake
@@ -972,25 +987,16 @@ set(TENSORFLOW_AOT_PATH "" CACHE PATH "Path to TensorFlow pip install dir")
 
 if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   set(LLVM_HAVE_TF_AOT "ON" CACHE BOOL "Tensorflow AOT available")
-  set(TENSORFLOW_AOT_COMPILER 
-    "${TENSORFLOW_AOT_PATH}/../../../../bin/saved_model_cli" 
-      CACHE PATH "Path to the Tensorflow AOT compiler")
+  set(TENSORFLOW_AOT_COMPILER
+    "${TENSORFLOW_AOT_PATH}/../../../../bin/saved_model_cli"
+    CACHE PATH "Path to the Tensorflow AOT compiler")
+  # Unlike the LLVM_HAVE_TF_API case, we don't need to expose this through
+  # llvm-config.h, because it's an internal implementation detail. A user of the llvm library that wants to also
+  # use the TF AOT compiler may do so through their custom build step.
   add_definitions("-DLLVM_HAVE_TF_AOT")
   include_directories(${TENSORFLOW_AOT_PATH}/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
-endif()
-
-set(TENSORFLOW_C_LIB_PATH "" CACHE PATH "Path to TensorFlow C library install")
-find_library(tensorflow_c_api tensorflow PATHS ${TENSORFLOW_C_LIB_PATH}/lib)
-
-# Similar to the above Tensorflow dependency, please refer to the same script.
-# In this case, the latest C API library is available for download from
-# https://www.tensorflow.org/install/lang_c
-if (tensorflow_c_api)
-  set(LLVM_HAVE_TF_API "ON" CACHE BOOL "Full Tensorflow API available")
-  add_definitions("-DLLVM_HAVE_TF_API")
-  include_directories(${TENSORFLOW_C_LIB_PATH}/include)
 endif()
 
 # Put this before tblgen. Else we have a circular dependence.
