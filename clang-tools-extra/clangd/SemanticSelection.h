@@ -25,6 +25,10 @@ namespace clangd {
 /// If pos is not in any interesting range, return [Pos, Pos).
 llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos);
 
+/// Returns a list of ranges whose contents might be collapsible in an editor.
+/// This should include large scopes, preprocessor blocks etc.
+llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST);
+
 } // namespace clangd
 } // namespace clang
 

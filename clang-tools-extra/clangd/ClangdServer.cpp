@@ -674,6 +674,18 @@ void ClangdServer::documentSymbols(llvm::StringRef File,
                            TUScheduler::InvalidateOnUpdate);
 }
 
+void ClangdServer::foldingRanges(llvm::StringRef File,
+                                 Callback<std::vector<FoldingRange>> CB) {
+  auto Action =
+      [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        CB(clangd::getFoldingRanges(InpAST->AST));
+      };
+  WorkScheduler.runWithAST("foldingRanges", File, std::move(Action),
+                           TUScheduler::InvalidateOnUpdate);
+}
+
 void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
                                   Callback<ReferencesResult> CB) {
   auto Action = [Pos, Limit, CB = std::move(CB),
