@@ -885,11 +885,11 @@ class PredicateInfoAnnotatedWriter : public AssemblyAnnotationWriter {
 public:
   PredicateInfoAnnotatedWriter(const PredicateInfo *M) : PredInfo(M) {}
 
-  virtual void emitBasicBlockStartAnnot(const BasicBlock *BB,
-                                        formatted_raw_ostream &OS) {}
+  void emitBasicBlockStartAnnot(const BasicBlock *BB,
+                                formatted_raw_ostream &OS) override {}
 
-  virtual void emitInstructionAnnot(const Instruction *I,
-                                    formatted_raw_ostream &OS) {
+  void emitInstructionAnnot(const Instruction *I,
+                            formatted_raw_ostream &OS) override {
     if (const auto *PI = PredInfo->getPredicateInfoFor(I)) {
       OS << "; Has predicate info\n";
       if (const auto *PB = dyn_cast<PredicateBranch>(PI)) {
