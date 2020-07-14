@@ -147,13 +147,13 @@ define {%StructTy, %StructTy} @StructOfStruct(float *%Ptr) {
 define {%StructTy, float, float} @NonHomogeneousStruct(float *%Ptr) {
 ; CHECK-LABEL: @NonHomogeneousStruct(
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, float* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[GEP0]]
+; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[GEP0]], align 4
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 1
-; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[GEP1]]
+; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[GEP1]], align 4
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 2
-; CHECK-NEXT:    [[L2:%.*]] = load float, float* [[GEP2]]
+; CHECK-NEXT:    [[L2:%.*]] = load float, float* [[GEP2]], align 4
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load float, float* [[GEP3]]
+; CHECK-NEXT:    [[L3:%.*]] = load float, float* [[GEP3]], align 4
 ; CHECK-NEXT:    [[FADD0:%.*]] = fadd fast float [[L0]], 1.100000e+01
 ; CHECK-NEXT:    [[FADD1:%.*]] = fadd fast float [[L1]], 1.200000e+01
 ; CHECK-NEXT:    [[FADD2:%.*]] = fadd fast float [[L2]], 1.300000e+01
