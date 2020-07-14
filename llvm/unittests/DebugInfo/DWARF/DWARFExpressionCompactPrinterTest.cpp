@@ -98,3 +98,18 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_breg0_negative) {
 TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_bregx) {
   TestExprPrinter({DW_OP_bregx, 0x0d, 0x28}, "[SP+40]");
 }
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_stack_value) {
+  TestExprPrinter({DW_OP_breg13, 0x04, DW_OP_stack_value}, "SP+4");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_entry_value) {
+  TestExprPrinter({DW_OP_entry_value, 0x01, DW_OP_reg0, DW_OP_stack_value},
+                  "entry(R0)");
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_entry_value_mem) {
+  TestExprPrinter(
+      {DW_OP_entry_value, 0x02, DW_OP_breg13, 0x10, DW_OP_stack_value},
+      "entry([SP+16])");
+}
