@@ -489,10 +489,7 @@ public:
       }
     } else {
       AddressType address_type = eAddressTypeInvalid;
-      const bool scalar_is_load_address = m_is_generic; // this is the only
-                                                          // time we're dealing
-                                                          // with dynamic values
-
+      const bool scalar_is_load_address = false;
       lldb::addr_t addr_of_valobj =
           valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
 
