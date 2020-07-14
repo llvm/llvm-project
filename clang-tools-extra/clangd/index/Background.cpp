@@ -8,6 +8,7 @@
 
 #include "index/Background.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Headers.h"
 #include "ParsedAST.h"
 #include "SourceCode.h"
@@ -354,6 +355,14 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
 // staleness.
 std::vector<std::string>
 BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
+  // Drop files where background indexing is disabled in config.
+  if (ContextProvider)
+    llvm::erase_if(MainFiles, [&](const std::string &TU) {
+      // Load the config for each TU, as indexing may be selectively enabled.
+      WithContext WithProvidedContext(ContextProvider(TU));
+      return Config::current().Index.Background ==
+             Config::BackgroundPolicy::Skip;
+    });
   Rebuilder.startLoading();
   // Load shards for all of the mainfiles.
   const std::vector<LoadedShard> Result =

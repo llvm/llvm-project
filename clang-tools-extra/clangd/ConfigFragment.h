@@ -150,6 +150,17 @@ struct Fragment {
     std::vector<Located<std::string>> Remove;
   };
   CompileFlagsBlock CompileFlags;
+
+  /// Controls how clangd understands code outside the current file.
+  /// clangd's indexes provide information about symbols that isn't available
+  /// to clang's parser, such as incoming references.
+  struct IndexBlock {
+    /// Whether files are built in the background to produce a project index.
+    /// This is checked for translation units only, not headers they include.
+    /// Legal values are "Build" or "Skip".
+    llvm::Optional<Located<std::string>> Background;
+  };
+  IndexBlock Index;
 };
 
 } // namespace config

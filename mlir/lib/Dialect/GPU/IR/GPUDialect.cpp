@@ -127,9 +127,9 @@ static LogicalResult verifyAllReduce(gpu::AllReduceOp allReduce) {
     return allReduce.emitError(
         "expected either an op attribute or a non-empty body");
   if (!allReduce.body().empty()) {
-    if (allReduce.body().front().getNumArguments() != 2)
+    if (allReduce.body().getNumArguments() != 2)
       return allReduce.emitError("expected two region arguments");
-    for (auto argument : allReduce.body().front().getArguments()) {
+    for (auto argument : allReduce.body().getArguments()) {
       if (argument.getType() != allReduce.getType())
         return allReduce.emitError("incorrect region argument type");
     }
@@ -219,25 +219,25 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
 
 KernelDim3 LaunchOp::getBlockIds() {
   assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().front().getArguments();
+  auto args = body().getArguments();
   return KernelDim3{args[0], args[1], args[2]};
 }
 
 KernelDim3 LaunchOp::getThreadIds() {
   assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().front().getArguments();
+  auto args = body().getArguments();
   return KernelDim3{args[3], args[4], args[5]};
 }
 
 KernelDim3 LaunchOp::getGridSize() {
   assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().front().getArguments();
+  auto args = body().getArguments();
   return KernelDim3{args[6], args[7], args[8]};
 }
 
 KernelDim3 LaunchOp::getBlockSize() {
   assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().getBlocks().front().getArguments();
+  auto args = body().getArguments();
   return KernelDim3{args[9], args[10], args[11]};
 }
 
@@ -254,8 +254,7 @@ static LogicalResult verify(LaunchOp op) {
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
   // for block/thread identifiers and grid/block sizes.
   if (!op.body().empty()) {
-    Block &entryBlock = op.body().front();
-    if (entryBlock.getNumArguments() !=
+    if (op.body().getNumArguments() !=
         LaunchOp::kNumConfigOperands + op.getNumOperands())
       return op.emitOpError("unexpected number of region arguments");
   }
@@ -463,8 +462,8 @@ BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type) {
   auto attrName = getNumWorkgroupAttributionsAttrName();
   auto attr = getAttrOfType<IntegerAttr>(attrName);
   setAttr(attrName, IntegerAttr::get(attr.getType(), attr.getValue() + 1));
-  return getBody().front().insertArgument(
-      getType().getNumInputs() + attr.getInt(), type);
+  return getBody().insertArgument(getType().getNumInputs() + attr.getInt(),
+                                  type);
 }
 
 /// Adds a new block argument that corresponds to buffers located in
@@ -472,7 +471,7 @@ BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type) {
 BlockArgument GPUFuncOp::addPrivateAttribution(Type type) {
   // Buffers on the private memory always come after buffers on the workgroup
   // memory.
-  return getBody().front().addArgument(type);
+  return getBody().addArgument(type);
 }
 
 void GPUFuncOp::build(OpBuilder &builder, OperationState &result,

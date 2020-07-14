@@ -100,6 +100,22 @@ TEST_F(ConfigCompileTests, CompileCommands) {
   EXPECT_THAT(Argv, ElementsAre("clang", "a.cc", "-foo"));
 }
 
+TEST_F(ConfigCompileTests, Index) {
+  Frag.Index.Background.emplace("Skip");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.Index.Background, Config::BackgroundPolicy::Skip);
+
+  Frag = {};
+  Frag.Index.Background.emplace("Foo");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.Index.Background, Config::BackgroundPolicy::Build)
+      << "by default";
+  EXPECT_THAT(
+      Diags.Diagnostics,
+      ElementsAre(DiagMessage(
+          "Invalid Background value 'Foo'. Valid values are Build, Skip.")));
+}
+
 } // namespace
 } // namespace config
 } // namespace clangd

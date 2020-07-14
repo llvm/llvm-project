@@ -5718,33 +5718,34 @@ attribute on parameters and return values.
 
 It is sometimes useful to attach information to loop constructs. Currently,
 loop metadata is implemented as metadata attached to the branch instruction
-in the loop latch block. This type of metadata refer to a metadata node that is
-guaranteed to be separate for each loop. The loop identifier metadata is
-specified with the name ``llvm.loop``.
-
-The loop identifier metadata is implemented using a metadata that refers to
-itself to avoid merging it with any other identifier metadata, e.g.,
-during module linkage or function inlining. That is, each loop should refer
-to their own identification metadata even if they reside in separate functions.
-The following example contains loop identifier metadata for two separate loop
-constructs:
-
-.. code-block:: llvm
-
-    !0 = !{!0}
-    !1 = !{!1}
-
-The loop identifier metadata can be used to specify additional
-per-loop metadata. Any operands after the first operand can be treated
-as user-defined metadata. For example the ``llvm.loop.unroll.count``
-suggests an unroll factor to the loop unroller:
+in the loop latch block. The loop metadata node is a list of
+other metadata nodes, each representing a property of the loop. Usually,
+the first item of the property node is a string. For example, the
+``llvm.loop.unroll.count`` suggests an unroll factor to the loop
+unroller:
 
 .. code-block:: llvm
 
       br i1 %exitcond, label %._crit_edge, label %.lr.ph, !llvm.loop !0
     ...
-    !0 = !{!0, !1}
-    !1 = !{!"llvm.loop.unroll.count", i32 4}
+    !0 = !{!0, !1, !2}
+    !1 = !{!"llvm.loop.unroll.enable"}
+    !2 = !{!"llvm.loop.unroll.count", i32 4}
+
+For legacy reasons, the first item of a loop metadata node must be a
+reference to itself. Before the advent of the 'distinct' keyword, this
+forced the preservation of otherwise identical metadata nodes. Since
+the loop-metadata node can be attached to multiple nodes, the 'distinct'
+keyword has become unnecessary.
+
+Prior to the property nodes, one or two ``DILocation`` (debug location)
+nodes can be present in the list. The first, if present, identifies the
+source-code location where the loop begins. The second, if present,
+identifies the source-code location where the loop ends.
+
+Loop metadata nodes cannot be used as unique identifiers. They are
+neither persistent for the same loop through transformations nor
+necessarily unique to just one loop.
 
 '``llvm.loop.disable_nonforced``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

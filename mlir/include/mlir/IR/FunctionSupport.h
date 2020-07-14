@@ -216,15 +216,13 @@ public:
   }
 
   /// Gets argument.
-  BlockArgument getArgument(unsigned idx) {
-    return getBlocks().front().getArgument(idx);
-  }
+  BlockArgument getArgument(unsigned idx) { return getBody().getArgument(idx); }
 
   /// Support argument iteration.
-  using args_iterator = Block::args_iterator;
-  args_iterator args_begin() { return front().args_begin(); }
-  args_iterator args_end() { return front().args_end(); }
-  Block::BlockArgListType getArguments() { return front().getArguments(); }
+  using args_iterator = Region::args_iterator;
+  args_iterator args_begin() { return getBody().args_begin(); }
+  args_iterator args_end() { return getBody().args_end(); }
+  Block::BlockArgListType getArguments() { return getBody().getArguments(); }
 
   //===--------------------------------------------------------------------===//
   // Argument Attributes
