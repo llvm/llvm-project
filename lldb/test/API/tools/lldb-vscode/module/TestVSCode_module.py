@@ -11,7 +11,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbvscode_testcase
 
-
 class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -40,6 +39,13 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEqual('Symbols not found.', program_module['symbolStatus'])
         symbol_path = self.getBuildArtifact("a.out")
         self.vscode.request_evaluate('`%s' % ('target symbols add -s "%s" "%s"' % (program, symbol_path)))
+
+        def checkSymbolsLoaded():
+            active_modules = self.vscode.get_active_modules()
+            program_module = active_modules[program_basename]
+            return 'Symbols loaded.' == program_module['symbolStatus']
+        self.waitUntil(checkSymbolsLoaded)
+
         active_modules = self.vscode.get_active_modules()
         program_module = active_modules[program_basename]
         self.assertEqual(program_basename, program_module['name'])
@@ -63,7 +69,6 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         moduleId = self.vscode.get_active_modules()['a.out']['id']
         response = self.vscode.request_getCompileUnits(moduleId)
-        print(response['body'])
         self.assertTrue(response['body'])
         self.assertTrue(len(response['body']['compileUnits']) == 1,
                         'Only one source file should exist')
