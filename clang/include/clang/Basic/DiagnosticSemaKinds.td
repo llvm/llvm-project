@@ -7939,6 +7939,8 @@ def err_atomic_builtin_pointer_size : Error<
 def err_atomic_exclusive_builtin_pointer_size : Error<
   "address argument to load or store exclusive builtin must be a pointer to"
   " 1,2,4 or 8 byte type (%0 invalid)">;
+def err_atomic_builtin_ext_int_size : Error<
+  "Atomic memory operand must have a power-of-two size">;
 def err_atomic_op_needs_atomic : Error<
   "address argument to atomic operation must be a pointer to _Atomic "
   "type (%0 invalid)">;
