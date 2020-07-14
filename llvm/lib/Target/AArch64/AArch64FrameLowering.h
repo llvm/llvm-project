@@ -105,6 +105,12 @@ public:
     }
   }
 
+  bool isStackIdSafeForLocalArea(unsigned StackId) const override {
+    // We don't support putting SVE objects into the pre-allocated local
+    // frame block at the moment.
+    return StackId != TargetStackID::SVEVector;
+  }
+
 private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       uint64_t StackBumpBytes) const;

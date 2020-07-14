@@ -134,6 +134,12 @@ public:
   /// was called).
   virtual unsigned getStackAlignmentSkew(const MachineFunction &MF) const;
 
+  /// This method returns whether or not it is safe for an object with the
+  /// given stack id to be bundled into the local area.
+  virtual bool isStackIdSafeForLocalArea(unsigned StackId) const {
+    return true;
+  }
+
   /// getOffsetOfLocalArea - This method returns the offset of the local area
   /// from the stack pointer on entrance to a function.
   ///
