@@ -6,16 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "assume-queries"
+
 #include "llvm/Analysis/AssumeBundleQueries.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/DebugCounter.h"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
+
+STATISTIC(NumAssumeQueries, "Number of Queries into an assume assume bundles");
+STATISTIC(
+    NumUsefullAssumeQueries,
+    "Number of Queries into an assume assume bundles that were satisfied");
+
+DEBUG_COUNTER(AssumeQueryCounter, "assume-queries-counter",
+              "Controls which assumes gets created");
 
 static bool bundleHasArgument(const CallBase::BundleOpInfo &BOI, unsigned Idx) {
   return BOI.End - BOI.Begin > Idx;
@@ -158,6 +170,9 @@ llvm::getKnowledgeForValue(const Value *V,
                            function_ref<bool(RetainedKnowledge, Instruction *,
                                              const CallBase::BundleOpInfo *)>
                                Filter) {
+  NumAssumeQueries++;
+  if (!DebugCounter::shouldExecute(AssumeQueryCounter))
+    return RetainedKnowledge::none();
   if (AC) {
     for (AssumptionCache::ResultElem &Elem : AC->assumptionsFor(V)) {
       IntrinsicInst *II = cast_or_null<IntrinsicInst>(Elem.Assume);
@@ -166,20 +181,24 @@ llvm::getKnowledgeForValue(const Value *V,
       if (RetainedKnowledge RK = getKnowledgeFromBundle(
               *II, II->bundle_op_info_begin()[Elem.Index]))
         if (is_contained(AttrKinds, RK.AttrKind) &&
-            Filter(RK, II, &II->bundle_op_info_begin()[Elem.Index]))
+            Filter(RK, II, &II->bundle_op_info_begin()[Elem.Index])) {
+          NumUsefullAssumeQueries++;
           return RK;
+        }
     }
     return RetainedKnowledge::none();
   }
-  for (auto &U : V->uses()) {
+  for (const auto &U : V->uses()) {
     CallInst::BundleOpInfo* Bundle = getBundleFromUse(&U);
     if (!Bundle)
       continue;
     if (RetainedKnowledge RK =
             getKnowledgeFromBundle(*cast<CallInst>(U.getUser()), *Bundle))
       if (is_contained(AttrKinds, RK.AttrKind) &&
-          Filter(RK, cast<Instruction>(U.getUser()), Bundle))
+          Filter(RK, cast<Instruction>(U.getUser()), Bundle)) {
+        NumUsefullAssumeQueries++;
         return RK;
+      }
   }
   return RetainedKnowledge::none();
 }
