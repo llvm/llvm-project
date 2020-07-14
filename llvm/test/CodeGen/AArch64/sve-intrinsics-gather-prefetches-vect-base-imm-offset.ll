@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve --asm-verbose=false < %s 2>%t | FileCheck %s
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
 ; WARN-NOT: warning
 
 ; PRFB <prfop>, <Pg>, [<Zn>.S{, #<imm>}] -> 32-bit element

@@ -2,6 +2,7 @@
 ; RUN: llc -O0 -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
 ; WARN-NOT: warning
 
 ;
