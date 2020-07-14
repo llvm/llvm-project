@@ -38,7 +38,6 @@ class ChangeProcessGroupTestCase(TestBase):
                 (pid_file_path)))
 
         popen = self.spawnSubprocess(exe, [pid_file_path])
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
 
