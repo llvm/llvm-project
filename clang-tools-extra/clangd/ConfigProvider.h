@@ -20,6 +20,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -34,6 +35,10 @@ struct Params {
   /// Absolute path to a source file we're applying the config to. Unix slashes.
   /// Empty if not configuring a particular file.
   llvm::StringRef Path;
+  /// Hint that stale data is OK to improve performance (e.g. avoid IO).
+  /// FreshTime sets a bound for how old the data can be.
+  /// If not set, providers should validate caches against the data source.
+  llvm::Optional<std::chrono::steady_clock::time_point> FreshTime;
 };
 
 /// Used to report problems in parsing or interpreting a config.
