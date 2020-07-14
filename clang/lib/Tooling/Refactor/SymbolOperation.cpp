@@ -82,6 +82,21 @@ static bool escapesEnclosingDecl(const RecordDecl *RD,
          escapesEnclosingDecl(RD->getParentFunctionOrMethod(), RD);
 }
 
+static bool isInLocalScope(const Decl *D) {
+  const DeclContext *LDC = D->getLexicalDeclContext();
+  while (true) {
+    if (LDC->isFunctionOrMethod())
+      return true;
+    if (!isa<TagDecl>(LDC))
+      return false;
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(LDC))
+      if (CRD->isLambda())
+        return true;
+    LDC = LDC->getLexicalParent();
+  }
+  return false;
+}
+
 /// Return true if the given declaration corresponds to a local symbol.
 bool clang::tooling::isLocalSymbol(const NamedDecl *FoundDecl,
                                    const LangOptions &LangOpts) {
@@ -99,7 +114,7 @@ bool clang::tooling::isLocalSymbol(const NamedDecl *FoundDecl,
     return false;
 
   // Local declarations are defined in a function or a method, or are anonymous.
-  if (!FoundDecl->isInLocalScopeForInstantiation())
+  if (!isInLocalScope(FoundDecl))
     return false;
 
   // A locally defined record is global when it is returned from the enclosing
