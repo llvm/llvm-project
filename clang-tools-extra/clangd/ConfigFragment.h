@@ -117,9 +117,39 @@ struct Fragment {
   };
   IfBlock If;
 
+  /// Conditions in the CompileFlags block affect how a file is parsed.
+  ///
+  /// clangd emulates how clang would interpret a file.
+  /// By default, it behaves roughly like `clang $FILENAME`, but real projects
+  /// usually require setting the include path (with the `-I` flag), defining
+  /// preprocessor symbols, configuring warnings etc.
+  /// Often, a compilation database specifies these compile commands. clangd
+  /// searches for compile_commands.json in parents of the source file.
+  ///
+  /// This section modifies how the compile command is constructed.
   struct CompileFlagsBlock {
+    /// List of flags to append to the compile command.
     std::vector<Located<std::string>> Add;
-  } CompileFlags;
+    /// List of flags to remove from the compile command.
+    ///
+    /// - If the value is a recognized clang flag (like "-I") then it will be
+    ///   removed along with any arguments. Synonyms like --include-dir= will
+    ///   also be removed.
+    /// - Otherwise, if the value ends in * (like "-DFOO=*") then any argument
+    ///   with the prefix will be removed.
+    /// - Otherwise any argument exactly matching the value is removed.
+    ///
+    /// In all cases, -Xclang is also removed where needed.
+    ///
+    /// Example:
+    ///   Command: clang++ --include-directory=/usr/include -DFOO=42 foo.cc
+    ///   Remove: [-I, -DFOO=*]
+    ///   Result: clang++ foo.cc
+    ///
+    /// Flags added by the same CompileFlags entry will not be removed.
+    std::vector<Located<std::string>> Remove;
+  };
+  CompileFlagsBlock CompileFlags;
 };
 
 } // namespace config

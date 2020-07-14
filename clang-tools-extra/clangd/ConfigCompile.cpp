@@ -23,6 +23,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CompileCommands.h"
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "support/Logger.h"
@@ -122,6 +123,19 @@ struct FragmentCompiler {
   }
 
   void compile(Fragment::CompileFlagsBlock &&F) {
+    if (!F.Remove.empty()) {
+      auto Remove = std::make_shared<ArgStripper>();
+      for (auto &A : F.Remove)
+        Remove->strip(*A);
+      Out.Apply.push_back([Remove(std::shared_ptr<const ArgStripper>(
+                              std::move(Remove)))](Config &C) {
+        C.CompileFlags.Edits.push_back(
+            [Remove](std::vector<std::string> &Args) {
+              Remove->process(Args);
+            });
+      });
+    }
+
     if (!F.Add.empty()) {
       std::vector<std::string> Add;
       for (auto &A : F.Add)
