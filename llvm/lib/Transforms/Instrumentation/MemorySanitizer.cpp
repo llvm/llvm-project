@@ -2889,6 +2889,50 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Instrument generic vector reduction intrinsics
+  // by ORing together all their fields.
+  void handleVectorReduceIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *S = IRB.CreateOrReduce(getShadow(&I, 0));
+    setShadow(&I, S);
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
+  // Instrument experimental.vector.reduce.or intrinsic.
+  // Valid (non-poisoned) set bits in the operand pull low the
+  // corresponding shadow bits.
+  void handleVectorReduceOrIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *OperandShadow = getShadow(&I, 0);
+    Value *OperandUnsetBits = IRB.CreateNot(I.getOperand(0));
+    Value *OperandUnsetOrPoison = IRB.CreateOr(OperandUnsetBits, OperandShadow);
+    // Bit N is clean if any field's bit N is 1 and unpoison
+    Value *OutShadowMask = IRB.CreateAndReduce(OperandUnsetOrPoison);
+    // Otherwise, it is clean if every field's bit N is unpoison
+    Value *OrShadow = IRB.CreateOrReduce(OperandShadow);
+    Value *S = IRB.CreateAnd(OutShadowMask, OrShadow);
+
+    setShadow(&I, S);
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
+  // Instrument experimental.vector.reduce.or intrinsic.
+  // Valid (non-poisoned) unset bits in the operand pull down the
+  // corresponding shadow bits.
+  void handleVectorReduceAndIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *OperandShadow = getShadow(&I, 0);
+    Value *OperandSetOrPoison = IRB.CreateOr(I.getOperand(0), OperandShadow);
+    // Bit N is clean if any field's bit N is 0 and unpoison
+    Value *OutShadowMask = IRB.CreateAndReduce(OperandSetOrPoison);
+    // Otherwise, it is clean if every field's bit N is unpoison
+    Value *OrShadow = IRB.CreateOrReduce(OperandShadow);
+    Value *S = IRB.CreateAnd(OutShadowMask, OrShadow);
+
+    setShadow(&I, S);
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   void handleStmxcsr(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value* Addr = I.getArgOperand(0);
@@ -3106,6 +3150,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::masked_load:
       handleMaskedLoad(I);
+      break;
+    case Intrinsic::experimental_vector_reduce_and:
+      handleVectorReduceAndIntrinsic(I);
+      break;
+    case Intrinsic::experimental_vector_reduce_or:
+      handleVectorReduceOrIntrinsic(I);
+      break;
+    case Intrinsic::experimental_vector_reduce_add:
+    case Intrinsic::experimental_vector_reduce_xor:
+    case Intrinsic::experimental_vector_reduce_mul:
+      handleVectorReduceIntrinsic(I);
       break;
     case Intrinsic::x86_sse_stmxcsr:
       handleStmxcsr(I);
