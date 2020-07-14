@@ -98,7 +98,7 @@ struct SectionHeader {
 struct SectionHeaderTable {
   Optional<std::vector<SectionHeader>> Sections;
   Optional<std::vector<SectionHeader>> Excluded;
-  bool NoHeaders;
+  Optional<bool> NoHeaders;
 };
 
 struct SectionName {
