@@ -417,8 +417,8 @@ static LogicalResult processParallelLoop(
 
     if (isMappedToProcessor(processor)) {
       // Use the corresponding thread/grid index as replacement for the loop iv.
-      Value operand = launchOp.body().front().getArgument(
-          getLaunchOpArgumentNum(processor));
+      Value operand =
+          launchOp.body().getArgument(getLaunchOpArgumentNum(processor));
       // Take the indexmap and add the lower bound and step computations in.
       // This computes operand * step + lowerBound.
       // Use an affine map here so that it composes nicely with the provided
