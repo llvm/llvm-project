@@ -842,7 +842,7 @@ void MappingTraits<ELFYAML::SectionHeaderTable>::mapping(
     IO &IO, ELFYAML::SectionHeaderTable &SectionHeader) {
   IO.mapOptional("Sections", SectionHeader.Sections);
   IO.mapOptional("Excluded", SectionHeader.Excluded);
-  IO.mapOptional("NoHeaders", SectionHeader.NoHeaders, false);
+  IO.mapOptional("NoHeaders", SectionHeader.NoHeaders);
 }
 
 StringRef MappingTraits<ELFYAML::SectionHeaderTable>::validate(

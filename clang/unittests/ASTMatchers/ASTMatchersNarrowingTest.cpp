@@ -2534,19 +2534,16 @@ TEST(NullPointerConstants, Basic) {
 }
 
 TEST(HasExternalFormalLinkage, Basic) {
-  EXPECT_TRUE(matches("int a = 0;", namedDecl(hasExternalFormalLinkage())));
-  EXPECT_TRUE(
-      notMatches("static int a = 0;", namedDecl(hasExternalFormalLinkage())));
+  EXPECT_TRUE(matches("int a = 0;",
+                      namedDecl(hasName("a"), hasExternalFormalLinkage())));
+  EXPECT_TRUE(notMatches("static int a = 0;",
+                         namedDecl(hasName("a"), hasExternalFormalLinkage())));
   EXPECT_TRUE(notMatches("static void f(void) { int a = 0; }",
-                         namedDecl(hasExternalFormalLinkage())));
-  EXPECT_TRUE(matches("void f(void) { int a = 0; }",
-                      namedDecl(hasExternalFormalLinkage())));
-
-  // Despite having internal semantic linkage, the anonymous namespace member
-  // has external linkage because the member has a unique name in all
-  // translation units.
-  EXPECT_TRUE(matches("namespace { int a = 0; }",
-                      namedDecl(hasExternalFormalLinkage())));
+                         namedDecl(hasName("a"), hasExternalFormalLinkage())));
+  EXPECT_TRUE(notMatches("void f(void) { int a = 0; }",
+                         namedDecl(hasName("a"), hasExternalFormalLinkage())));
+  EXPECT_TRUE(notMatches("namespace { int a = 0; }",
+                         namedDecl(hasName("a"), hasExternalFormalLinkage())));
 }
 
 TEST(HasDefaultArgument, Basic) {

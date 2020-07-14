@@ -76,10 +76,10 @@ unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     break;
   }
 
-  if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
-      MI.getOperand(1).getImm() == 0) {
-    FrameIndex = MI.getOperand(0).getIndex();
-    return MI.getOperand(2).getReg();
+  if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+      MI.getOperand(2).getImm() == 0) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
   }
 
   return 0;
