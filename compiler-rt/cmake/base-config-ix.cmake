@@ -163,11 +163,8 @@ macro(test_targets)
 
   # Generate the COMPILER_RT_SUPPORTED_ARCH list.
   if(ANDROID)
-    if(${COMPILER_RT_DEFAULT_TARGET_ARCH} STREQUAL "i686")
-      add_default_target_arch(i386)
-    else()
-      add_default_target_arch(${COMPILER_RT_DEFAULT_TARGET_ARCH})
-    endif()
+    # Examine compiler output to determine target architecture.
+    detect_target_arch()
     set(COMPILER_RT_OS_SUFFIX "-android")
   elseif(NOT APPLE) # Supported archs for Apple platforms are generated later
     if(COMPILER_RT_DEFAULT_TARGET_ONLY)
