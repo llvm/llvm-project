@@ -413,7 +413,7 @@ class EntityVariable : public Materializer::Entity {
 public:
   EntityVariable(lldb::VariableSP &variable_sp)
       : Entity(), m_variable_sp(variable_sp), m_is_reference(false),
-        m_is_generic(false), m_temporary_allocation(LLDB_INVALID_ADDRESS),
+        m_temporary_allocation(LLDB_INVALID_ADDRESS),
         m_temporary_allocation_size(0) {
     // Hard-coding to maximum size of a pointer since all variables are
     // materialized by reference
@@ -421,12 +421,6 @@ public:
     m_alignment = 8;
     m_is_reference =
         m_variable_sp->GetType()->GetForwardCompilerType().IsReferenceType();
-#ifdef LLDB_ENABLE_SWIFT
-    m_is_generic = SwiftASTContext::IsGenericType(
-        m_variable_sp->GetType()->GetForwardCompilerType());
-#else // !LLDB_ENABLE_SWIFT
-    m_is_generic = false;
-#endif // LLDB_ENABLE_SWIFT
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
@@ -495,13 +489,10 @@ public:
       }
     } else {
       AddressType address_type = eAddressTypeInvalid;
-      const bool is_dynamic_class_type =
-          m_is_generic &&
-          (valobj_type.GetTypeClass() == lldb::eTypeClassClass);
-      const bool scalar_is_load_address = m_is_generic; // this is the only
-                                                          // time we're dealing
-                                                          // with dynamic values
-
+      const bool scalar_is_load_address = false;
+      lldb::addr_t addr_of_valobj =
+          valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
+          
       // if the dynamic type is a class, bypass the GetAddressOf() optimization
       // as it doesn't do the right thing
       lldb::addr_t addr_of_valobj =
@@ -808,7 +799,6 @@ public:
 private:
   lldb::VariableSP m_variable_sp;
   bool m_is_reference;
-  bool m_is_generic;
   lldb::addr_t m_temporary_allocation;
   size_t m_temporary_allocation_size;
   lldb::DataBufferSP m_original_data;
