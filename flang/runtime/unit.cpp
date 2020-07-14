@@ -10,6 +10,7 @@
 #include "io-error.h"
 #include "lock.h"
 #include "unit-map.h"
+#include <cstdio>
 
 namespace Fortran::runtime::io {
 
@@ -46,8 +47,36 @@ ExternalFileUnit &ExternalFileUnit::LookUpOrCrash(
 }
 
 ExternalFileUnit &ExternalFileUnit::LookUpOrCreate(
-    int unit, const Terminator &terminator, bool *wasExtant) {
+    int unit, const Terminator &terminator, bool &wasExtant) {
   return GetUnitMap().LookUpOrCreate(unit, terminator, wasExtant);
+}
+
+ExternalFileUnit &ExternalFileUnit::LookUpOrCreateAnonymous(
+    int unit, Direction dir, bool isUnformatted, const Terminator &terminator) {
+  bool exists{false};
+  ExternalFileUnit &result{
+      GetUnitMap().LookUpOrCreate(unit, terminator, exists)};
+  if (!exists) {
+    // I/O to an unconnected unit reads/creates a local file, e.g. fort.7
+    std::size_t pathMaxLen{32};
+    auto path{SizedNew<char>{terminator}(pathMaxLen)};
+    std::snprintf(path.get(), pathMaxLen, "fort.%d", unit);
+    IoErrorHandler handler{terminator};
+    result.OpenUnit(
+        dir == Direction::Input ? OpenStatus::Old : OpenStatus::Replace,
+        Position::Rewind, std::move(path), std::strlen(path.get()), handler);
+    result.isUnformatted = isUnformatted;
+  }
+  return result;
+}
+
+ExternalFileUnit &ExternalFileUnit::CreateNew(
+    int unit, const Terminator &terminator) {
+  bool wasExtant{false};
+  ExternalFileUnit &result{
+      GetUnitMap().LookUpOrCreate(unit, terminator, wasExtant)};
+  RUNTIME_CHECK(terminator, !wasExtant);
+  return result;
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpForClose(int unit) {
@@ -155,14 +184,14 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   Terminator terminator{__FILE__, __LINE__};
   IoErrorHandler handler{terminator};
   unitMap = New<UnitMap>{terminator}().release();
-  ExternalFileUnit &out{ExternalFileUnit::LookUpOrCreate(6, terminator)};
+  ExternalFileUnit &out{ExternalFileUnit::CreateNew(6, terminator)};
   out.Predefine(1);
   out.set_mayRead(false);
   out.set_mayWrite(true);
   out.set_mayPosition(false);
   out.SetDirection(Direction::Output, handler);
   defaultOutput = &out;
-  ExternalFileUnit &in{ExternalFileUnit::LookUpOrCreate(5, terminator)};
+  ExternalFileUnit &in{ExternalFileUnit::CreateNew(5, terminator)};
   in.Predefine(0);
   in.set_mayRead(true);
   in.set_mayWrite(false);
