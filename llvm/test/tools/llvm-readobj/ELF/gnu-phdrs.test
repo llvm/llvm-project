@@ -354,3 +354,30 @@ ProgramHeaders:
 ## Case 5: an arbitrary large offset that goes past the end of the file.
   - Type:   PT_INTERP
     Offset: 0xAABBCCDDEEFF1122
+
+## Check we report a warning when we are unable to read program headers.
+# RUN: yaml2obj --docnum=3 %s -o %t.phdr.err
+# RUN: llvm-readelf --program-headers %t.phdr.err 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=WARN-PHENTSIZE
+
+# WARN-PHENTSIZE:      Program Headers:
+# WARN-PHENTSIZE-NEXT:   Type Offset VirtAddr PhysAddr FileSiz  MemSiz Flg Align
+# WARN-PHENTSIZE-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
+# WARN-PHENTSIZE:      Section to Segment mapping:
+# WARN-PHENTSIZE-NEXT:   Segment Sections...
+# WARN-PHENTSIZE-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 1
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  Machine:    EM_X86_64
+  EPhEntSize: 1
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+ProgramHeaders:
+  - Type: PT_PHDR
+    Sections:
+      - Section: .foo

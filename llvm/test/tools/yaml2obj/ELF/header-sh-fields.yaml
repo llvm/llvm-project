@@ -94,6 +94,6 @@ ProgramHeaders:
 
 ## Override the e_phentsize field.
 # RUN: yaml2obj --docnum=2 %s -DPHENTSIZE=1 -o %t8
-# RUN: not llvm-readelf --file-headers %t8 2>&1 | FileCheck %s --check-prefix=PHENTSIZE
+# RUN: llvm-readelf --file-headers %t8 | FileCheck %s --check-prefix=PHENTSIZE
 
-# PHENTSIZE: invalid e_phentsize: 1{{$}}
+# PHENTSIZE: Size of program headers: 1 (bytes)
