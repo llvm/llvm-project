@@ -474,6 +474,13 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
                         SSID, Ordering, FailureOrdering);
 }
 
+MachineMemOperand *MachineFunction::getMachineMemOperand(
+    const MachineMemOperand *MMO, MachinePointerInfo &PtrInfo, uint64_t Size) {
+  return new (Allocator) MachineMemOperand(
+      PtrInfo, MMO->getFlags(), Size, Alignment, AAMDNodes(), nullptr,
+      MMO->getSyncScopeID(), MMO->getOrdering(), MMO->getFailureOrdering());
+}
+
 MachineMemOperand *
 MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                                       int64_t Offset, uint64_t Size) {
