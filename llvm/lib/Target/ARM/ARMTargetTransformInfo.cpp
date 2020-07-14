@@ -28,6 +28,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1405,12 +1406,47 @@ static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
 static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                  const DataLayout &DL,
                                  const LoopAccessInfo *LAI) {
+  LLVM_DEBUG(dbgs() << "Tail-predication: checking allowed instructions\n");
+
+  // If there are live-out values, it is probably a reduction, which needs a
+  // final reduction step after the loop. MVE has a VADDV instruction to reduce
+  // integer vectors, but doesn't have an equivalent one for float vectors. A
+  // live-out value that is not recognised as a reduction will result in the
+  // tail-predicated loop to be reverted to a non-predicated loop and this is
+  // very expensive, i.e. it has a significant performance impact. So, in this
+  // case it's better not to tail-predicate the loop, which is what we check
+  // here. Thus, we allow only 1 live-out value, which has to be an integer
+  // reduction, which matches the loops supported by ARMLowOverheadLoops.
+  // It is important to keep ARMLowOverheadLoops and canTailPredicateLoop in
+  // sync with each other.
+  SmallVector< Instruction *, 8 > LiveOuts;
+  LiveOuts = llvm::findDefsUsedOutsideOfLoop(L);
+  bool IntReductionsDisabled =
+      EnableTailPredication == TailPredication::EnabledNoReductions ||
+      EnableTailPredication == TailPredication::ForceEnabledNoReductions;
+
+  for (auto *I : LiveOuts) {
+    if (!I->getType()->isIntegerTy()) {
+      LLVM_DEBUG(dbgs() << "Don't tail-predicate loop with non-integer "
+                           "live-out value\n");
+      return false;
+    }
+    if (I->getOpcode() != Instruction::Add) {
+      LLVM_DEBUG(dbgs() << "Only add reductions supported\n");
+      return false;
+    }
+    if (IntReductionsDisabled) {
+      LLVM_DEBUG(dbgs() << "Integer add reductions not enabled\n");
+      return false;
+    }
+  }
+
+  // Next, check that all instructions can be tail-predicated.
   PredicatedScalarEvolution PSE = LAI->getPSE();
+  SmallVector<Instruction *, 16> LoadStores;
   int ICmpCount = 0;
   int Stride = 0;
 
-  LLVM_DEBUG(dbgs() << "tail-predication: checking allowed instructions\n");
-  SmallVector<Instruction *, 16> LoadStores;
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : BB->instructionsWithoutDebug()) {
       if (isa<PHINode>(&I))
@@ -1458,8 +1494,10 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
                                              TargetLibraryInfo *TLI,
                                              DominatorTree *DT,
                                              const LoopAccessInfo *LAI) {
-  if (!EnableTailPredication)
+  if (!EnableTailPredication) {
+    LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
     return false;
+  }
 
   // Creating a predicated vector loop is the first step for generating a
   // tail-predicated hardware loop, for which we need the MVE masked
