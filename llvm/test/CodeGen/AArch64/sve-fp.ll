@@ -208,6 +208,18 @@ define void @scalar_to_vector(%complex* %outval, <vscale x 2 x i1> %pred, <vscal
   ret void
 }
 
+define void @float_copy(<vscale x 4 x float>* %P1, <vscale x 4 x float>* %P2) {
+; CHECK-LABEL: float_copy:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %A = load <vscale x 4 x float>, <vscale x 4 x float>* %P1, align 16
+  store <vscale x 4 x float> %A, <vscale x 4 x float>* %P2, align 16
+  ret void
+}
+
 declare <vscale x 8 x half> @llvm.aarch64.sve.frecps.x.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float>  @llvm.aarch64.sve.frecps.x.nxv4f32(<vscale x 4 x float> , <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.frecps.x.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
