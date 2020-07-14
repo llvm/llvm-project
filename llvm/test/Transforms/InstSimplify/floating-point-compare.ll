@@ -212,6 +212,8 @@ define i1 @orderedLessZero_fdiv(float %x) {
   ret i1 %uge
 }
 
+; If x == -0.0, maxnum can return -0.0, but that still compares equal to 0.0.
+
 define i1 @orderedLessZero_maxnum(float %x) {
 ; CHECK-LABEL: @orderedLessZero_maxnum(
 ; CHECK-NEXT:    ret i1 true
