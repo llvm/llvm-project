@@ -290,11 +290,11 @@ inline int64_t LocalAddressSpace::getSLEB128(pint_t &addr, pint_t end) {
     if (p == pend)
       _LIBUNWIND_ABORT("truncated sleb128 expression");
     byte = *p++;
-    result |= ((byte & 0x7f) << bit);
+    result |= (uint64_t)(byte & 0x7f) << bit;
     bit += 7;
   } while (byte & 0x80);
   // sign extend negative numbers
-  if ((byte & 0x40) != 0)
+  if ((byte & 0x40) != 0 && bit < 64)
     result |= (-1ULL) << bit;
   addr = (pint_t) p;
   return result;
