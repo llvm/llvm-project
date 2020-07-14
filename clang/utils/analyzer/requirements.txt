@@ -1,4 +1,6 @@
 graphviz
 humanize
 matplotlib
+pandas
 psutil
+seaborn
