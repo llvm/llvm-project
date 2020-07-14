@@ -179,7 +179,7 @@ struct AddrTableEntry {
 
 struct Data {
   bool IsLittleEndian;
-  bool Is64bit;
+  bool Is64BitAddrSize;
   std::vector<Abbrev> AbbrevDecls;
   std::vector<StringRef> DebugStrings;
   std::vector<ARange> ARanges;
