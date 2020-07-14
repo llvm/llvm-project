@@ -9,40 +9,39 @@
 
 #define ATTR __attribute__((overloadable, const))
 
-#define char_lb CHAR_MIN
-#define char_ub CHAR_MAX
-#define char_max UCHAR_MAX
-#define short_lb SHRT_MIN
-#define short_ub SHRT_MAX
-#define short_max USHRT_MAX
+#define char_min CHAR_MIN
+#define char_max CHAR_MAX
+#define short_min SHRT_MIN
+#define short_max SHRT_MAX
 
-#define GENN(N,T) \
-ATTR T##N \
-sub_sat(T##N x, T##N y) \
-{ \
-    int##N s = convert_int##N(x) - convert_int##N(y); \
-    return convert_##T##N(clamp(s, (int##N) T##_lb, (int##N) T##_ub)); \
-} \
- \
-ATTR u##T##N \
-sub_sat(u##T##N x, u##T##N y) \
-{ \
-    int##N s = convert_int##N(x) - convert_int##N(y); \
-    return convert_u##T##N(max(s, (int##N) 0)); \
-}
+#define uchar_max UCHAR_MAX
+#define ushort_max USHRT_MAX
 
-#define GEN(T) \
-    GENN(16,T) \
-    GENN(8,T) \
-    GENN(4,T) \
-    GENN(3,T) \
-    GENN(2,T) \
-    GENN(,T)
+#define GENN(T)                                     \
+    ATTR T                                          \
+    sub_sat(T x, T y)                               \
+    {                                               \
+        T s;                                        \
+        bool c = __builtin_sub_overflow(x, y, &s);  \
+        return c ? (x < 0 ? T##_min : T##_max) : s; \
+    }                                               \
+                                                    \
+    ATTR u##T                                       \
+    sub_sat(u##T x, u##T y)                         \
+    {                                               \
+        u##T s;                                     \
+        bool c = __builtin_sub_overflow(x, y, &s);  \
+        return c ? u##T##_max : s;                  \
+    }
 
-GEN(char)
-GEN(short)
+GENN(char)
+GENN(short)
 
 #define BEXPATTR __attribute__((overloadable))
+BEXP(char,sub_sat)
+BEXP(uchar,sub_sat)
+BEXP(short,sub_sat)
+BEXP(ushort,sub_sat)
 BEXP(int,sub_sat)
 BEXP(uint,sub_sat)
 BEXP(long,sub_sat)
