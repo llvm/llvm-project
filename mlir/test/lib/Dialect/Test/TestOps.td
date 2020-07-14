@@ -1253,9 +1253,13 @@ def FormatAttrOp : TEST_Op<"format_attr_op"> {
 }
 
 // Test that we elide optional attributes that are within the syntax.
-def FormatOptAttrOp : TEST_Op<"format_opt_attr_op"> {
+def FormatOptAttrAOp : TEST_Op<"format_opt_attr_op_a"> {
   let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
-  let assemblyFormat = "(`(`$opt_attr^`)`)? attr-dict";
+  let assemblyFormat = "(`(` $opt_attr^ `)` )? attr-dict";
+}
+def FormatOptAttrBOp : TEST_Op<"format_opt_attr_op_b"> {
+  let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
+  let assemblyFormat = "($opt_attr^)? attr-dict";
 }
 
 // Test that we elide attributes that are within the syntax.
