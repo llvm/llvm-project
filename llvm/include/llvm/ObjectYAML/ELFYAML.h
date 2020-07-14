@@ -84,11 +84,10 @@ struct FileHeader {
   Optional<llvm::yaml::Hex64> EPhOff;
   Optional<llvm::yaml::Hex16> EPhEntSize;
   Optional<llvm::yaml::Hex16> EPhNum;
-
-  Optional<llvm::yaml::Hex16> SHEntSize;
-  Optional<llvm::yaml::Hex64> SHOff;
-  Optional<llvm::yaml::Hex16> SHNum;
-  Optional<llvm::yaml::Hex16> SHStrNdx;
+  Optional<llvm::yaml::Hex16> EShEntSize;
+  Optional<llvm::yaml::Hex64> EShOff;
+  Optional<llvm::yaml::Hex16> EShNum;
+  Optional<llvm::yaml::Hex16> EShStrNdx;
 };
 
 struct SectionHeader {
