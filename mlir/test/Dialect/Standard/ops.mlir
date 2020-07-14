@@ -18,3 +18,7 @@ func @test_index_cast_tensor_reverse(%arg0 : tensor<i64>) -> tensor<index> {
   return %0 : tensor<index>
 }
 
+func @assert(%arg : i1) {
+  assert %arg, "Some message in case this assertion fails."
+  return
+}
