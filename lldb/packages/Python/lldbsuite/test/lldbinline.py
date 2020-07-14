@@ -82,12 +82,9 @@ class CommandParser:
 
 
 class InlineTest(TestBase):
-    # Overrides
 
     def getBuildDirBasename(self):
         return self.__class__.__name__ + "." + self.testMethodName
-
-    # Internal implementation
 
     def BuildMakefile(self):
         makefilePath = self.getBuildArtifact("Makefile")
@@ -95,7 +92,6 @@ class InlineTest(TestBase):
             return
 
         categories = {}
-
         for f in os.listdir(self.getSourceDir()):
             t = source_type(f)
             if t:
@@ -104,24 +100,20 @@ class InlineTest(TestBase):
                 else:
                     categories[t] = [f]
 
-        makefile = open(makefilePath, 'w+')
+        with open(makefilePath, 'w+') as makefile:
+            for t in list(categories.keys()):
+                line = t + " := " + " ".join(categories[t])
+                makefile.write(line + "\n")
 
-        for t in list(categories.keys()):
-            line = t + " := " + " ".join(categories[t])
-            makefile.write(line + "\n")
+            if ('OBJCXX_SOURCES' in list(categories.keys())) or \
+               ('OBJC_SOURCES' in list(categories.keys())):
+                makefile.write(
+                    "LDFLAGS = $(CFLAGS) -lobjc -framework Foundation\n")
 
-        if ('OBJCXX_SOURCES' in list(categories.keys())) or (
-                'OBJC_SOURCES' in list(categories.keys())):
-            makefile.write(
-                "LDFLAGS = $(CFLAGS) -lobjc -framework Foundation\n")
+            if ('CXX_SOURCES' in list(categories.keys())):
+                makefile.write("CXXFLAGS += -std=c++11\n")
 
-        if ('CXX_SOURCES' in list(categories.keys())):
-            makefile.write("CXXFLAGS += -std=c++11\n")
-
-        makefile.write("include Makefile.rules\n")
-        makefile.write("\ncleanup:\n\trm -f Makefile *.d\n\n")
-        makefile.flush()
-        makefile.close()
+            makefile.write("include Makefile.rules\n")
 
     def _test(self):
         self.BuildMakefile()
@@ -167,8 +159,6 @@ class InlineTest(TestBase):
         self.assertTrue(process.GetState() in [lldb.eStateStopped,
                                                lldb.eStateExited],
                         PROCESS_EXITED)
-
-    # Utilities for testcases
 
     def check_expression(self, expression, expected_result, use_summary=True):
         value = self.frame().EvaluateExpression(expression)
