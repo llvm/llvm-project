@@ -384,6 +384,17 @@ public:
                                      StringRef attrName,
                                      NamedAttrList &attrs) = 0;
 
+  /// Parse an optional attribute.
+  virtual OptionalParseResult parseOptionalAttribute(Attribute &result,
+                                                     Type type,
+                                                     StringRef attrName,
+                                                     NamedAttrList &attrs) = 0;
+  OptionalParseResult parseOptionalAttribute(Attribute &result,
+                                             StringRef attrName,
+                                             NamedAttrList &attrs) {
+    return parseOptionalAttribute(result, Type(), attrName, attrs);
+  }
+
   /// Parse an attribute of a specific kind and type.
   template <typename AttrType>
   ParseResult parseAttribute(AttrType &result, Type type, StringRef attrName,
