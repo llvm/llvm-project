@@ -3242,8 +3242,8 @@ static bool IsRevOpcode(const unsigned Opcode)
   case AMDGPU::V_SUBREV_F32_e64_gfx6_gfx7:
   case AMDGPU::V_SUBREV_F32_e64_vi:
 
-  case AMDGPU::V_SUBREV_I32_e32:
-  case AMDGPU::V_SUBREV_I32_e64:
+  case AMDGPU::V_SUBREV_CO_U32_e32:
+  case AMDGPU::V_SUBREV_CO_U32_e64:
   case AMDGPU::V_SUBREV_I32_e32_gfx6_gfx7:
   case AMDGPU::V_SUBREV_I32_e64_gfx6_gfx7:
 

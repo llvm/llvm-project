@@ -274,14 +274,14 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
   default: break;
   case AMDGPU::V_ADD_U32_e32:
   case AMDGPU::V_ADD_U32_e64:
-  case AMDGPU::V_ADD_I32_e32:
-  case AMDGPU::V_ADD_I32_e64:
+  case AMDGPU::V_ADD_CO_U32_e32:
+  case AMDGPU::V_ADD_CO_U32_e64:
   case AMDGPU::V_OR_B32_e32:
   case AMDGPU::V_OR_B32_e64:
   case AMDGPU::V_SUBREV_U32_e32:
   case AMDGPU::V_SUBREV_U32_e64:
-  case AMDGPU::V_SUBREV_I32_e32:
-  case AMDGPU::V_SUBREV_I32_e64:
+  case AMDGPU::V_SUBREV_CO_U32_e32:
+  case AMDGPU::V_SUBREV_CO_U32_e64:
   case AMDGPU::V_MAX_U32_e32:
   case AMDGPU::V_MAX_U32_e64:
   case AMDGPU::V_XOR_B32_e32:

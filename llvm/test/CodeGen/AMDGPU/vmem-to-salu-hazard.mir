@@ -235,7 +235,7 @@ body:             |
 # GCN-NEXT: S_BRANCH
 # GCN:      bb.1:
 # GCN:      S_WAITCNT
-# GCN:      V_ADD_I32
+# GCN:      V_ADD_CO_U32
 # GCN:      bb.2:
 # GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
@@ -254,7 +254,7 @@ body:             |
   bb.1:
     successors: %bb.2
     S_WAITCNT 0
-    $vgpr2, $vcc_lo = V_ADD_I32_e64 $vgpr1, $vgpr1, 0, implicit $exec
+    $vgpr2, $vcc_lo = V_ADD_CO_U32_e64 $vgpr1, $vgpr1, 0, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:

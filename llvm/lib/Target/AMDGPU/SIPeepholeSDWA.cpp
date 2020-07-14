@@ -10,11 +10,11 @@
 ///
 /// E.g. original:
 ///   V_LSHRREV_B32_e32 %0, 16, %1
-///   V_ADD_I32_e32 %2, %0, %3
+///   V_ADD_CO_U32_e32 %2, %0, %3
 ///   V_LSHLREV_B32_e32 %4, 16, %2
 ///
 /// Replace:
-///   V_ADD_I32_sdwa %4, %1, %3
+///   V_ADD_CO_U32_sdwa %4, %1, %3
 ///       dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ///
 //===----------------------------------------------------------------------===//
@@ -863,19 +863,19 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
 }
 
 // Convert the V_ADDC_U32_e64 into V_ADDC_U32_e32, and
-// V_ADD_I32_e64 into V_ADD_I32_e32. This allows isConvertibleToSDWA
-// to perform its transformation on V_ADD_I32_e32 into V_ADD_I32_sdwa.
+// V_ADD_CO_U32_e64 into V_ADD_CO_U32_e32. This allows isConvertibleToSDWA
+// to perform its transformation on V_ADD_CO_U32_e32 into V_ADD_CO_U32_sdwa.
 //
 // We are transforming from a VOP3 into a VOP2 form of the instruction.
 //   %19:vgpr_32 = V_AND_B32_e32 255,
 //       killed %16:vgpr_32, implicit $exec
-//   %47:vgpr_32, %49:sreg_64_xexec = V_ADD_I32_e64
+//   %47:vgpr_32, %49:sreg_64_xexec = V_ADD_CO_U32_e64
 //       %26.sub0:vreg_64, %19:vgpr_32, implicit $exec
 //  %48:vgpr_32, dead %50:sreg_64_xexec = V_ADDC_U32_e64
 //       %26.sub1:vreg_64, %54:vgpr_32, killed %49:sreg_64_xexec, implicit $exec
 //
 // becomes
-//   %47:vgpr_32 = V_ADD_I32_sdwa
+//   %47:vgpr_32 = V_ADD_CO_U32_sdwa
 //       0, %26.sub0:vreg_64, 0, killed %16:vgpr_32, 0, 6, 0, 6, 0,
 //       implicit-def $vcc, implicit $exec
 //  %48:vgpr_32 = V_ADDC_U32_e32
@@ -883,8 +883,8 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
 void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
                                            const GCNSubtarget &ST) const {
   int Opc = MI.getOpcode();
-  assert((Opc == AMDGPU::V_ADD_I32_e64 || Opc == AMDGPU::V_SUB_I32_e64) &&
-         "Currently only handles V_ADD_I32_e64 or V_SUB_I32_e64");
+  assert((Opc == AMDGPU::V_ADD_CO_U32_e64 || Opc == AMDGPU::V_SUB_CO_U32_e64) &&
+         "Currently only handles V_ADD_CO_U32_e64 or V_SUB_CO_U32_e64");
 
   // Can the candidate MI be shrunk?
   if (!TII->canShrink(MI, *MRI))
@@ -1235,8 +1235,8 @@ bool SIPeepholeSDWA::runOnMachineFunction(MachineFunction &MF) {
         const auto &Operand = OperandPair.second;
         MachineInstr *PotentialMI = Operand->potentialToConvert(TII);
         if (PotentialMI &&
-           (PotentialMI->getOpcode() == AMDGPU::V_ADD_I32_e64 ||
-            PotentialMI->getOpcode() == AMDGPU::V_SUB_I32_e64))
+           (PotentialMI->getOpcode() == AMDGPU::V_ADD_CO_U32_e64 ||
+            PotentialMI->getOpcode() == AMDGPU::V_SUB_CO_U32_e64))
           pseudoOpConvertToVOP2(*PotentialMI, ST);
       }
       SDWAOperands.clear();

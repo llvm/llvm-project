@@ -41,9 +41,9 @@ body:             |
     %1 = COPY $sgpr1
     %0 = COPY $sgpr0
     S_CMP_LT_I32 0, %0, implicit-def $scc
-    %12 = V_ADD_I32_e32 %3, %3, implicit-def $vcc, implicit $exec
+    %12 = V_ADD_CO_U32_e32 %3, %3, implicit-def $vcc, implicit $exec
     %5 = S_CSELECT_B32 %2, %1, implicit $scc
-    %11 = V_ADD_I32_e32 %5, %12, implicit-def $vcc, implicit $exec
+    %11 = V_ADD_CO_U32_e32 %5, %12, implicit-def $vcc, implicit $exec
     $vgpr0 = WWM %11, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0
 

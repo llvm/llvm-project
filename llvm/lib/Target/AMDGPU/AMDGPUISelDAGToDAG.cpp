@@ -994,7 +994,7 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
 
   static const unsigned OpcMap[2][2][2] = {
       {{AMDGPU::S_SUB_U32, AMDGPU::S_ADD_U32},
-       {AMDGPU::V_SUB_I32_e32, AMDGPU::V_ADD_I32_e32}},
+       {AMDGPU::V_SUB_CO_U32_e32, AMDGPU::V_ADD_CO_U32_e32}},
       {{AMDGPU::S_SUBB_U32, AMDGPU::S_ADDC_U32},
        {AMDGPU::V_SUBB_U32_e32, AMDGPU::V_ADDC_U32_e32}}};
 
@@ -1073,7 +1073,7 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
     }
 
   if (IsVALU) {
-    unsigned Opc = IsAdd ? AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
+    unsigned Opc = IsAdd ? AMDGPU::V_ADD_CO_U32_e64 : AMDGPU::V_SUB_CO_U32_e64;
 
     CurDAG->SelectNodeTo(
         N, Opc, N->getVTList(),
@@ -1190,7 +1190,7 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
           Opnds.push_back(Addr.getOperand(1));
 
           // FIXME: Select to VOP3 version for with-carry.
-          unsigned SubOp = AMDGPU::V_SUB_I32_e32;
+          unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
           if (Subtarget->hasAddNoCarry()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
@@ -1269,7 +1269,7 @@ bool AMDGPUDAGToDAGISel::SelectDS64Bit4ByteAligned(SDValue Addr, SDValue &Base,
           SmallVector<SDValue, 3> Opnds;
           Opnds.push_back(Zero);
           Opnds.push_back(Addr.getOperand(1));
-          unsigned SubOp = AMDGPU::V_SUB_I32_e32;
+          unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
           if (Subtarget->hasAddNoCarry()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
@@ -1739,7 +1739,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
         SDValue Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
 
         SDNode *Add =
-            CurDAG->getMachineNode(AMDGPU::V_ADD_I32_e64, DL, VTs,
+            CurDAG->getMachineNode(AMDGPU::V_ADD_CO_U32_e64, DL, VTs,
                                    {AddOffsetLo, SDValue(N0Lo, 0), Clamp});
 
         SDNode *Addc = CurDAG->getMachineNode(
