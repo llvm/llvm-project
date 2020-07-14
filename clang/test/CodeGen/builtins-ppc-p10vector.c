@@ -581,3 +581,15 @@ vector float test_vec_vec_splati_ins_f(void) {
   // CHECK: ret <4 x float>
   return vec_splati_ins(vfa, 0, 1.0f);
 }
+
+int test_vec_test_lsbb_all_ones(void) {
+  // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i1 true
+  // CHECK-NEXT: ret i32
+  return vec_test_lsbb_all_ones(vuca);
+}
+
+int test_vec_test_lsbb_all_zeros(void) {
+  // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i1 false
+  // CHECK-NEXT: ret i32
+  return vec_test_lsbb_all_zeros(vuca);
+}
