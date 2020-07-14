@@ -76,8 +76,7 @@ public:
 
   /// A provider that includes fragments from all the supplied providers.
   /// Order is preserved; later providers take precedence over earlier ones.
-  static std::unique_ptr<Provider>
-      combine(std::vector<std::unique_ptr<Provider>>);
+  static std::unique_ptr<Provider> combine(std::vector<const Provider *>);
 
   /// Build a config based on this provider.
   Config getConfig(const Params &, DiagnosticCallback) const;
