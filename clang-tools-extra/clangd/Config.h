@@ -55,6 +55,13 @@ struct Config {
     std::vector<llvm::unique_function<void(std::vector<std::string> &) const>>
         Edits;
   } CompileFlags;
+
+  enum class BackgroundPolicy { Build, Skip };
+  /// Controls background-index behavior.
+  struct {
+    /// Whether this TU should be indexed.
+    BackgroundPolicy Background = BackgroundPolicy::Build;
+  } Index;
 };
 
 } // namespace clangd
