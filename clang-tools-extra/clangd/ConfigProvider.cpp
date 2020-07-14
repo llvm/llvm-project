@@ -193,9 +193,9 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
 }
 
 std::unique_ptr<Provider>
-Provider::combine(std::vector<std::unique_ptr<Provider>> Providers) {
+Provider::combine(std::vector<const Provider *> Providers) {
   struct CombinedProvider : Provider {
-    std::vector<std::unique_ptr<Provider>> Providers;
+    std::vector<const Provider *> Providers;
 
     std::vector<CompiledFragment>
     getFragments(const Params &P, DiagnosticCallback DC) const override {

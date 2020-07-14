@@ -57,10 +57,9 @@ std::vector<std::string> getAddedArgs(Config &C) {
 // cache their results.
 TEST(ProviderTest, Combine) {
   CapturedDiags Diags;
-  std::vector<std::unique_ptr<Provider>> Providers;
-  Providers.push_back(std::make_unique<FakeProvider>("foo"));
-  Providers.push_back(std::make_unique<FakeProvider>("bar"));
-  auto Combined = Provider::combine(std::move(Providers));
+  FakeProvider Foo("foo");
+  FakeProvider Bar("bar");
+  auto Combined = Provider::combine({&Foo, &Bar});
   Config Cfg = Combined->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
               ElementsAre(DiagMessage("foo"), DiagMessage("bar")));
