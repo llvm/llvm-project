@@ -1383,3 +1383,13 @@ define float @maxnum_with_negzero_op_commute(float %a) {
   %fabs = call float @llvm.fabs.f32(float %max)
   ret float %fabs
 }
+
+define float @maxnum_with_pos_one_op(float %a) {
+; CHECK-LABEL: @maxnum_with_pos_one_op(
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[A:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[MAX]]
+;
+  %max = call float @llvm.maxnum.f32(float %a, float 1.0)
+  %fabs = call float @llvm.fabs.f32(float %max)
+  ret float %fabs
+}
