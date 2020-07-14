@@ -104,7 +104,7 @@ body:             |
   ; GCN-LABEL: name: cndmask_cmp_cbranch_fold_undef
   ; GCN: bb.0:
   ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   $vcc = S_ANDN2_B64 $exec, undef %1:sreg_64_xexec, implicit-def $scc
+  ; GCN:   $vcc = S_ANDN2_B64 $exec, undef %1:sreg_64_xexec, implicit-def dead $scc
   ; GCN:   S_CBRANCH_VCCZ %bb.1, implicit $vcc
   ; GCN: bb.1:
   bb.0:
