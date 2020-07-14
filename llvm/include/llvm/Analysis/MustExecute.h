@@ -111,17 +111,15 @@ class SimpleLoopSafetyInfo: public LoopSafetyInfo {
   bool HeaderMayThrow = false; // Same as previous, but specific to loop header
 
 public:
-  virtual bool blockMayThrow(const BasicBlock *BB) const;
+  bool blockMayThrow(const BasicBlock *BB) const override;
 
-  virtual bool anyBlockMayThrow() const;
+  bool anyBlockMayThrow() const override;
 
-  virtual void computeLoopSafetyInfo(const Loop *CurLoop);
+  void computeLoopSafetyInfo(const Loop *CurLoop) override;
 
-  virtual bool isGuaranteedToExecute(const Instruction &Inst,
-                                     const DominatorTree *DT,
-                                     const Loop *CurLoop) const;
-
-  virtual ~SimpleLoopSafetyInfo() {};
+  bool isGuaranteedToExecute(const Instruction &Inst,
+                             const DominatorTree *DT,
+                             const Loop *CurLoop) const override;
 };
 
 /// This implementation of LoopSafetyInfo use ImplicitControlFlowTracking to
@@ -138,15 +136,15 @@ class ICFLoopSafetyInfo: public LoopSafetyInfo {
   mutable MemoryWriteTracking MW;
 
 public:
-  virtual bool blockMayThrow(const BasicBlock *BB) const;
+  bool blockMayThrow(const BasicBlock *BB) const override;
 
-  virtual bool anyBlockMayThrow() const;
+  bool anyBlockMayThrow() const override;
 
-  virtual void computeLoopSafetyInfo(const Loop *CurLoop);
+  void computeLoopSafetyInfo(const Loop *CurLoop) override;
 
-  virtual bool isGuaranteedToExecute(const Instruction &Inst,
-                                     const DominatorTree *DT,
-                                     const Loop *CurLoop) const;
+  bool isGuaranteedToExecute(const Instruction &Inst,
+                             const DominatorTree *DT,
+                             const Loop *CurLoop) const override;
 
   /// Returns true if we could not execute a memory-modifying instruction before
   /// we enter \p BB under assumption that \p CurLoop is entered.
@@ -167,8 +165,6 @@ public:
   /// from its block. It will make all cache updates to keep it correct after
   /// this removal.
   void removeInstruction(const Instruction *Inst);
-
-  virtual ~ICFLoopSafetyInfo() {};
 };
 
 bool mayContainIrreducibleControl(const Function &F, const LoopInfo *LI);

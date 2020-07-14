@@ -84,7 +84,7 @@ struct FixIrreducible : public FunctionPass {
     initializeFixIrreduciblePass(*PassRegistry::getPassRegistry());
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequiredID(LowerSwitchID);
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
@@ -93,7 +93,7 @@ struct FixIrreducible : public FunctionPass {
     AU.addPreserved<LoopInfoWrapperPass>();
   }
 
-  bool runOnFunction(Function &F);
+  bool runOnFunction(Function &F) override;
 };
 } // namespace
 
