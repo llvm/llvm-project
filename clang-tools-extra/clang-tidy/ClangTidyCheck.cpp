@@ -155,10 +155,17 @@ void ClangTidyCheck::OptionsView::store(ClangTidyOptions::OptionMap &Options,
   Options[NamePrefix + LocalName.str()] = Value;
 }
 
-void ClangTidyCheck::OptionsView::store(ClangTidyOptions::OptionMap &Options,
-                                        StringRef LocalName,
-                                        int64_t Value) const {
+void ClangTidyCheck::OptionsView::storeInt(ClangTidyOptions::OptionMap &Options,
+                                           StringRef LocalName,
+                                           int64_t Value) const {
   store(Options, LocalName, llvm::itostr(Value));
+}
+
+template <>
+void ClangTidyCheck::OptionsView::store<bool>(
+    ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+    bool Value) const {
+  store(Options, LocalName, Value ? StringRef("true") : StringRef("false"));
 }
 
 llvm::Expected<int64_t>
