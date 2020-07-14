@@ -8,7 +8,3 @@
 ; REQUIRES: have_tf_aot
 ; RUN: opt -passes=scc-oz-module-inliner -enable-ml-inliner=release -S < %S/Inputs/test-module.ll 2>&1 | FileCheck %S/Inputs/test-module.ll --check-prefix=CHECK
 ; RUN: opt -passes=scc-oz-module-inliner -enable-ml-inliner=default -S < %S/Inputs/test-module.ll 2>&1 | FileCheck %S/Inputs/test-module.ll --check-prefix=DEFAULT
-
-; CHECK-NOT: @adder
-; DEFAULT-LABEL:        @adder
-; DEFAULT-NEXT:         %2 = mul
