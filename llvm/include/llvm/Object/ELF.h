@@ -205,16 +205,18 @@ public:
     if (getHeader()->e_phnum && getHeader()->e_phentsize != sizeof(Elf_Phdr))
       return createError("invalid e_phentsize: " +
                          Twine(getHeader()->e_phentsize));
-    if (getHeader()->e_phoff +
-            (getHeader()->e_phnum * getHeader()->e_phentsize) >
-        getBufSize())
+
+    uint64_t HeadersSize =
+        (uint64_t)getHeader()->e_phnum * getHeader()->e_phentsize;
+    uint64_t PhOff = getHeader()->e_phoff;
+    if (PhOff + HeadersSize < PhOff || PhOff + HeadersSize > getBufSize())
       return createError("program headers are longer than binary of size " +
                          Twine(getBufSize()) + ": e_phoff = 0x" +
                          Twine::utohexstr(getHeader()->e_phoff) +
                          ", e_phnum = " + Twine(getHeader()->e_phnum) +
                          ", e_phentsize = " + Twine(getHeader()->e_phentsize));
-    auto *Begin =
-        reinterpret_cast<const Elf_Phdr *>(base() + getHeader()->e_phoff);
+
+    auto *Begin = reinterpret_cast<const Elf_Phdr *>(base() + PhOff);
     return makeArrayRef(Begin, Begin + getHeader()->e_phnum);
   }
 
