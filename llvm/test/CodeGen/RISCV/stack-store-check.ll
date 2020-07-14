@@ -98,7 +98,6 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw a0, 308(sp)
 ; CHECK-NEXT:    sw a3, 304(sp)
 ; CHECK-NEXT:    sw a2, 300(sp)
-; CHECK-NEXT:    lw a0, 52(sp)
 ; CHECK-NEXT:    sw a1, 296(sp)
 ; CHECK-NEXT:    sw s11, 324(sp)
 ; CHECK-NEXT:    sw s9, 320(sp)
