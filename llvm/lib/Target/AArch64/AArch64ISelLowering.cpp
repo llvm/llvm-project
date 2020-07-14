@@ -931,8 +931,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::SHL, VT, Custom);
         setOperationAction(ISD::SRL, VT, Custom);
         setOperationAction(ISD::SRA, VT, Custom);
-        if (VT.getScalarType() == MVT::i1)
+        if (VT.getScalarType() == MVT::i1) {
           setOperationAction(ISD::SETCC, VT, Custom);
+          setOperationAction(ISD::TRUNCATE, VT, Custom);
+          setOperationAction(ISD::CONCAT_VECTORS, VT, Legal);
+        }
       }
     }
 
@@ -8873,6 +8876,16 @@ static bool isVShiftRImm(SDValue Op, EVT VT, bool isNarrow, int64_t &Cnt) {
 SDValue AArch64TargetLowering::LowerTRUNCATE(SDValue Op,
                                              SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
+
+  if (VT.getScalarType() == MVT::i1) {
+    // Lower i1 truncate to `(x & 1) != 0`.
+    SDLoc dl(Op);
+    EVT OpVT = Op.getOperand(0).getValueType();
+    SDValue Zero = DAG.getConstant(0, dl, OpVT);
+    SDValue One = DAG.getConstant(1, dl, OpVT);
+    SDValue And = DAG.getNode(ISD::AND, dl, OpVT, Op.getOperand(0), One);
+    return DAG.getSetCC(dl, VT, And, Zero, ISD::SETNE);
+  }
 
   if (!VT.isVector() || VT.isScalableVector())
     return Op;
