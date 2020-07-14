@@ -446,7 +446,7 @@ opt<bool> EnableConfig{
         "\tMac OS: ~/Library/Preferences/\n"
         "\tOthers: $XDG_CONFIG_HOME, usually ~/.config\n"
         "Configuration is documented at https://clangd.llvm.org/config.html"),
-    init(false),
+    init(true),
 };
 
 /// Supports a test URI scheme with relaxed constraints for lit tests.
