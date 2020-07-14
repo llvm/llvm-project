@@ -267,3 +267,16 @@ TEST_F(TestTypeSystemSwiftTypeRef, Aggregate) {
     ASSERT_FALSE(tau.IsAggregateType());
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, Defined) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer int_node = b.GlobalTypeMangling(b.IntType());
+    CompilerType int_type = GetCompilerType(b.Mangle(int_node));
+    ASSERT_TRUE(int_type.IsDefined());
+    // It's technically not possible to construct such a CompilerType.
+    ASSERT_FALSE(m_swift_ts.IsDefined(nullptr));
+  }
+}
