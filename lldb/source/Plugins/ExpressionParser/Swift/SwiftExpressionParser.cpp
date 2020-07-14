@@ -1669,8 +1669,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
     auto GenModule = swift::performIRGeneration(
-        swift_ast_ctx->GetIRGenOptions(), &parsed_expr->module,
-        std::move(sil_module), "lldb_module",
+        &parsed_expr->module, swift_ast_ctx->GetIRGenOptions(),
+        swift_ast_ctx->GetTBDGenOptions(), std::move(sil_module), "lldb_module",
         swift::PrimarySpecificPaths("", parsed_expr->main_filename),
         llvm::ArrayRef<std::string>());
       

@@ -48,6 +48,7 @@ class IRGenOptions;
 class NominalTypeDecl;
 class SearchPathOptions;
 class SILModule;
+class TBDGenOptions;
 class VarDecl;
 class ModuleDecl;
 class SourceFile;
@@ -821,6 +822,7 @@ public:
   ConstString GetMangledTypeName(swift::TypeBase *);
 
   swift::IRGenOptions &GetIRGenOptions();
+  swift::TBDGenOptions &GetTBDGenOptions();
 
   void ModulesDidLoad(ModuleList &module_list);
 
