@@ -1086,8 +1086,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
           A->getOption().getID() == options::OPT_INPUT ||
           A->getOption().getID() == options::OPT_x ||
           A->getOption().getID() == options::OPT_fembed_bitcode ||
-          (A->getOption().getGroup().isValid() &&
-           A->getOption().getGroup().getID() == options::OPT_W_Group))
+          A->getOption().matches(options::OPT_W_Group))
         continue;
       ArgStringList ASL;
       A->render(Args, ASL);
