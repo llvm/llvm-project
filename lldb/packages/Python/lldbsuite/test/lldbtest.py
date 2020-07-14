@@ -891,23 +891,18 @@ class Base(unittest2.TestCase):
         for p in self.subprocesses:
             p.terminate()
             del p
-        self.subprocesses.clear()
+        del self.subprocesses[:]
         # Ensure any forked processes are cleaned up
         for pid in self.forkedProcessPids:
             try:
                 os.kill(pid, signal.SIGTERM)
             except OSError:
                 pass
-        self.forkedProcessPids.clear()
+        del self.forkedProcessPids[:]
 
     def spawnSubprocess(self, executable, args=[], install_remote=True):
         """ Creates a subprocess.Popen object with the specified executable and arguments,
             saves it in self.subprocesses, and returns the object.
-            NOTE: if using this function, ensure you also call:
-
-              self.addTearDownHook(self.cleanupSubprocesses)
-
-            otherwise the test suite will leak processes.
         """
         proc = _RemoteProcess(
             install_remote) if lldb.remote_platform else _LocalProcess(self.TraceOn())
@@ -917,11 +912,6 @@ class Base(unittest2.TestCase):
 
     def forkSubprocess(self, executable, args=[]):
         """ Fork a subprocess with its own group ID.
-            NOTE: if using this function, ensure you also call:
-
-              self.addTearDownHook(self.cleanupSubprocesses)
-
-            otherwise the test suite will leak processes.
         """
         child_pid = os.fork()
         if child_pid == 0:
@@ -1025,9 +1015,6 @@ class Base(unittest2.TestCase):
 
     def tearDown(self):
         """Fixture for unittest test case teardown."""
-        #import traceback
-        # traceback.print_stack()
-
         self.deletePexpectChild()
 
         # Check and run any hook functions.
@@ -1053,6 +1040,9 @@ class Base(unittest2.TestCase):
             if self.dicts:
                 for dict in reversed(self.dicts):
                     self.cleanup(dictionary=dict)
+
+        # Remove subprocesses created by the test.
+        self.cleanupSubprocesses()
 
         # This must be the last statement, otherwise teardown hooks or other
         # lines might depend on this still being active.
