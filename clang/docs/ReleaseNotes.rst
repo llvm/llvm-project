@@ -108,6 +108,13 @@ New Compiler Flags
   By default, this is ~/.cache but on some platforms or installations, this
   might be elsewhere. The -fmodules-cache-path=... flag continues to work.
 
+- -fpch-instantiate-templates tries to instantiate templates already while
+  generating a precompiled header. Such templates do not need to be
+  instantiated every time the precompiled header is used, which saves compile
+  time. This may result in an error during the precompiled header generation
+  if the source header file is not self-contained. This option is enabled
+  by default for clang-cl.
+
 Deprecated Compiler Flags
 -------------------------
 
