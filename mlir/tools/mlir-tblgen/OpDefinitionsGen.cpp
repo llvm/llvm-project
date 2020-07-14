@@ -2129,15 +2129,19 @@ void OpOperandAdaptorEmitter::emitDef(const Operator &op, raw_ostream &os) {
 // Emits the opcode enum and op classes.
 static void emitOpClasses(const std::vector<Record *> &defs, raw_ostream &os,
                           bool emitDecl) {
-  IfDefScope scope("GET_OP_CLASSES", os);
   // First emit forward declaration for each class, this allows them to refer
   // to each others in traits for example.
   if (emitDecl) {
+    os << "#if defined(GET_OP_CLASSES) || defined(GET_OP_FWD_DEFINES)\n";
+    os << "#undef GET_OP_FWD_DEFINES\n";
     for (auto *def : defs) {
       Operator op(*def);
       os << "class " << op.getCppClassName() << ";\n";
     }
+    os << "#endif\n\n";
   }
+
+  IfDefScope scope("GET_OP_CLASSES", os);
   for (auto *def : defs) {
     Operator op(*def);
     if (emitDecl) {

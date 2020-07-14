@@ -220,8 +220,7 @@ Symbols:
 )");
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
 
-  auto module_sp =
-      std::make_shared<Module>(ModuleSpec(FileSpec(ExpectedFile->name())));
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
   SectionList *list = module_sp->GetSectionList();
   ASSERT_NE(nullptr, list);
 

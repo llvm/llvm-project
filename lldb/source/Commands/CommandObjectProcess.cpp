@@ -820,9 +820,15 @@ protected:
     Status error;
     Debugger &debugger = GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
-    ProcessSP process_sp = platform_sp->ConnectProcess(
-        command.GetArgumentAtIndex(0), plugin_name, debugger,
-        debugger.GetSelectedTarget().get(), error);
+    ProcessSP process_sp =
+        debugger.GetAsyncExecution()
+            ? platform_sp->ConnectProcess(
+                  command.GetArgumentAtIndex(0), plugin_name, debugger,
+                  debugger.GetSelectedTarget().get(), error)
+            : platform_sp->ConnectProcessSynchronous(
+                  command.GetArgumentAtIndex(0), plugin_name, debugger,
+                  result.GetOutputStream(), debugger.GetSelectedTarget().get(),
+                  error);
     if (error.Fail() || process_sp == nullptr) {
       result.AppendError(error.AsCString("Error connecting to the process"));
       result.SetStatus(eReturnStatusFailed);

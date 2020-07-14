@@ -3133,21 +3133,14 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   if (F->isIntrinsic())
     return F->getIntrinsicID();
 
-  if (!TLI)
-    return Intrinsic::not_intrinsic;
-
+  // We are going to infer semantics of a library function based on mapping it
+  // to an LLVM intrinsic. Check that the library function is available from
+  // this callbase and in this environment.
   LibFunc Func;
-  // We're going to make assumptions on the semantics of the functions, check
-  // that the target knows that it's available in this environment and it does
-  // not have local linkage.
-  if (!F || F->hasLocalLinkage() || !TLI->getLibFunc(*F, Func))
+  if (F->hasLocalLinkage() || !TLI || !TLI->getLibFunc(CB, Func) ||
+      !CB.onlyReadsMemory())
     return Intrinsic::not_intrinsic;
 
-  if (!CB.onlyReadsMemory())
-    return Intrinsic::not_intrinsic;
-
-  // Otherwise check if we have a call to a function that can be turned into a
-  // vector intrinsic.
   switch (Func) {
   default:
     break;
