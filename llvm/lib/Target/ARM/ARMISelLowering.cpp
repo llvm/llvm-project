@@ -1755,7 +1755,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::BFI:           return "ARMISD::BFI";
   case ARMISD::VORRIMM:       return "ARMISD::VORRIMM";
   case ARMISD::VBICIMM:       return "ARMISD::VBICIMM";
-  case ARMISD::VBSL:          return "ARMISD::VBSL";
+  case ARMISD::VBSP:          return "ARMISD::VBSP";
   case ARMISD::MEMCPY:        return "ARMISD::MEMCPY";
   case ARMISD::VLD1DUP:       return "ARMISD::VLD1DUP";
   case ARMISD::VLD2DUP:       return "ARMISD::VLD2DUP";
@@ -13153,7 +13153,7 @@ static SDValue PerformORCombine(SDNode *N,
                 // Canonicalize the vector type to make instruction selection
                 // simpler.
                 EVT CanonicalVT = VT.is128BitVector() ? MVT::v4i32 : MVT::v2i32;
-                SDValue Result = DAG.getNode(ARMISD::VBSL, dl, CanonicalVT,
+                SDValue Result = DAG.getNode(ARMISD::VBSP, dl, CanonicalVT,
                                              N0->getOperand(1),
                                              N0->getOperand(0),
                                              N1->getOperand(0));

@@ -124,18 +124,18 @@ define float @copysign_f(float %a, float %b) {
 ; VFP: lsrs [[REG:r[0-9]+]], r{{[0-9]+}}, #31
 ; VFP: bfi r{{[0-9]+}}, [[REG]], #31, #1
 ; NEON-A7:       @ %bb.0:
-; NEON-A7-NEXT:    vmov.f32 s4, s1
+; NEON-A7-NEXT:    vmov.f32 s2, s1
 ; NEON-A7-NEXT:    @ kill: def $s0 killed $s0 def $d0
-; NEON-A7-NEXT:    vmov.i32 d1, #0x80000000
-; NEON-A7-NEXT:    vbsl d1, d2, d0
-; NEON-A7-NEXT:    vmov.f32 s0, s2
+; NEON-A7-NEXT:    vmov.i32 d16, #0x80000000
+; NEON-A7-NEXT:    vbit d0, d1, d16
+; NEON-A7-NEXT:    @ kill: def $s0 killed $s0 killed $d0
 ; NEON-A7-NEXT:    bx lr
 ; NEON-A57:       @ %bb.0:
-; NEON-A57-NEXT:    vmov.f32 s4, s1
-; NEON-A57-NEXT:    vmov.i32 d1, #0x80000000
+; NEON-A57-NEXT:    vmov.f32 s2, s1
+; NEON-A57-NEXT:    vmov.i32 d16, #0x80000000
 ; NEON-A57-NEXT:    @ kill: def $s0 killed $s0 def $d0
-; NEON-A57-NEXT:    vbsl d1, d2, d0
-; NEON-A57-NEXT:    vmov.f32 s0, s2
+; NEON-A57-NEXT:    vbit d0, d1, d16
+; NEON-A57-NEXT:    @ kill: def $s0 killed $s0 killed $d0
 ; NEON-A57-NEXT:    bx lr
   %1 = call float @llvm.copysign.f32(float %a, float %b)
   ret float %1
