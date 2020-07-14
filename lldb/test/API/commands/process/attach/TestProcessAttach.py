@@ -29,7 +29,6 @@ class ProcessAttachTestCase(TestBase):
 
         # Spawn a new process
         popen = self.spawnSubprocess(exe)
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         self.runCmd("process attach -p " + str(popen.pid))
 
@@ -55,7 +54,6 @@ class ProcessAttachTestCase(TestBase):
 
         # Spawn a new process
         popen = self.spawnSubprocess(exe)
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         os.chdir(newdir)
         self.addTearDownHook(lambda: os.chdir(testdir))
@@ -74,7 +72,6 @@ class ProcessAttachTestCase(TestBase):
 
         # Spawn a new process
         popen = self.spawnSubprocess(exe)
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         self.runCmd("process attach -n " + exe_name)
 
