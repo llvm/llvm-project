@@ -864,25 +864,28 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
 }
 
 TEST_F(TUSchedulerTests, Run) {
-  auto Opts = optsForTest();
-  Opts.ContextProvider = bindPath;
-  TUScheduler S(CDB, Opts);
-  std::atomic<int> Counter(0);
-  S.run("add 1", /*Path=*/"", [&] { ++Counter; });
-  S.run("add 2", /*Path=*/"", [&] { Counter += 2; });
-  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
-  EXPECT_EQ(Counter.load(), 3);
+  for (bool Sync : {false, true}) {
+    auto Opts = optsForTest();
+    if (Sync)
+      Opts.AsyncThreadsCount = 0;
+    TUScheduler S(CDB, Opts);
+    std::atomic<int> Counter(0);
+    S.run("add 1", /*Path=*/"", [&] { ++Counter; });
+    S.run("add 2", /*Path=*/"", [&] { Counter += 2; });
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    EXPECT_EQ(Counter.load(), 3);
 
-  Notification TaskRun;
-  Key<int> TestKey;
-  WithContextValue CtxWithKey(TestKey, 10);
-  const char *Path = "somepath";
-  S.run("props context", Path, [&] {
-    EXPECT_EQ(Context::current().getExisting(TestKey), 10);
-    EXPECT_EQ(Path, boundPath());
-    TaskRun.notify();
-  });
-  TaskRun.wait();
+    Notification TaskRun;
+    Key<int> TestKey;
+    WithContextValue CtxWithKey(TestKey, 10);
+    const char *Path = "somepath";
+    S.run("props context", Path, [&] {
+      EXPECT_EQ(Context::current().getExisting(TestKey), 10);
+      EXPECT_EQ(Path, boundPath());
+      TaskRun.notify();
+    });
+    TaskRun.wait();
+  }
 }
 
 TEST_F(TUSchedulerTests, TUStatus) {
