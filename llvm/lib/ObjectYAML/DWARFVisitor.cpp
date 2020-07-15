@@ -49,8 +49,6 @@ static unsigned getRefSize(const DWARFYAML::Unit &Unit) {
 template <typename T> Error DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
   for (auto &Unit : DebugInfo.CompileUnits) {
     onStartCompileUnit(Unit);
-    if (Unit.Entries.empty())
-      continue;
 
     for (auto &Entry : Unit.Entries) {
       onStartDIE(Unit, Entry);
