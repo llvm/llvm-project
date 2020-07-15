@@ -2219,7 +2219,7 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   // update the branch to use the new comparison; in the common case this
   // will make old comparison dead.
   BI->setCondition(Cond);
-  DeadInsts.push_back(OrigCond);
+  DeadInsts.emplace_back(OrigCond);
 
   ++NumLFTR;
   return true;
@@ -2411,7 +2411,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
                                      IsTaken ? ExitIfTrue : !ExitIfTrue);
     BI->setCondition(NewCond);
     if (OldCond->use_empty())
-      DeadInsts.push_back(OldCond);
+      DeadInsts.emplace_back(OldCond);
   };
 
   bool Changed = false;
@@ -2637,7 +2637,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     Value *OldCond = BI->getCondition();
     BI->setCondition(NewCond);
     if (OldCond->use_empty())
-      DeadInsts.push_back(OldCond);
+      DeadInsts.emplace_back(OldCond);
     Changed = true;
   }
 
