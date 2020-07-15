@@ -90,6 +90,8 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {
                    OptionalAttr<StrAttr>:$error);
   let results = (outs Shape_ShapeType:$result);
 
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
+
   let hasFolder = 1;
 }
 
@@ -488,6 +490,7 @@ def Shape_ConcatOp : Shape_Op<"concat", []> {
   let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs);
   let results = (outs Shape_ShapeType:$result);
 
+  let assemblyFormat = "$lhs `,` $rhs attr-dict";
   let hasFolder = 1;
 }
 
