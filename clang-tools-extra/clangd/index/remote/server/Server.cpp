@@ -141,14 +141,14 @@ int main(int argc, char *argv[]) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   if (!llvm::sys::path::is_absolute(IndexRoot)) {
-    llvm::outs() << "Index root should be an absolute path.\n";
+    llvm::errs() << "Index root should be an absolute path.\n";
     return -1;
   }
 
   std::unique_ptr<clang::clangd::SymbolIndex> Index = openIndex(IndexPath);
 
   if (!Index) {
-    llvm::outs() << "Failed to open the index.\n";
+    llvm::errs() << "Failed to open the index.\n";
     return -1;
   }
 

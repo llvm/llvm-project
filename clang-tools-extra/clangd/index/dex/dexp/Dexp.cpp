@@ -181,7 +181,7 @@ class Lookup : public Command {
 
   void run() override {
     if (ID.getNumOccurrences() == 0 && Name.getNumOccurrences() == 0) {
-      llvm::outs()
+      llvm::errs()
           << "Missing required argument: please provide id or -name.\n";
       return;
     }
@@ -189,7 +189,7 @@ class Lookup : public Command {
     if (ID.getNumOccurrences()) {
       auto SID = SymbolID::fromStr(ID);
       if (!SID) {
-        llvm::outs() << llvm::toString(SID.takeError()) << "\n";
+        llvm::errs() << llvm::toString(SID.takeError()) << "\n";
         return;
       }
       IDs.push_back(*SID);
@@ -205,7 +205,7 @@ class Lookup : public Command {
       llvm::outs() << toYAML(Sym);
     });
     if (!FoundSymbol)
-      llvm::outs() << "not found\n";
+      llvm::errs() << "not found\n";
   }
 };
 
@@ -228,7 +228,7 @@ class Refs : public Command {
 
   void run() override {
     if (ID.getNumOccurrences() == 0 && Name.getNumOccurrences() == 0) {
-      llvm::outs()
+      llvm::errs()
           << "Missing required argument: please provide id or -name.\n";
       return;
     }
@@ -236,14 +236,14 @@ class Refs : public Command {
     if (ID.getNumOccurrences()) {
       auto SID = SymbolID::fromStr(ID);
       if (!SID) {
-        llvm::outs() << llvm::toString(SID.takeError()) << "\n";
+        llvm::errs() << llvm::toString(SID.takeError()) << "\n";
         return;
       }
       IDs.push_back(*SID);
     } else {
       IDs = getSymbolIDsFromIndex(Name, Index);
       if (IDs.size() > 1) {
-        llvm::outs() << llvm::formatv(
+        llvm::errs() << llvm::formatv(
             "The name {0} is ambiguous, found {1} different "
             "symbols. Please use id flag to disambiguate.\n",
             Name, IDs.size());
@@ -256,7 +256,7 @@ class Refs : public Command {
     Index->refs(RefRequest, [&RegexFilter](const Ref &R) {
       auto U = URI::parse(R.Location.FileURI);
       if (!U) {
-        llvm::outs() << U.takeError();
+        llvm::errs() << U.takeError();
         return;
       }
       if (RegexFilter.match(U->body()))
@@ -358,7 +358,7 @@ bool runCommand(std::string Request, const SymbolIndex &Index) {
       return Cmd.Implementation()->parseAndRun(FakeArgv, Cmd.Description,
                                                Index);
   }
-  llvm::outs() << "Unknown command. Try 'help'.\n";
+  llvm::errs() << "Unknown command. Try 'help'.\n";
   return false;
 }
 
@@ -380,7 +380,7 @@ int main(int argc, const char *argv[]) {
              [&]() { Index = openIndex(IndexLocation); });
 
   if (!Index) {
-    llvm::outs() << "Failed to open the index.\n";
+    llvm::errs() << "Failed to open the index.\n";
     return -1;
   }
 
