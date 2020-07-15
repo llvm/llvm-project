@@ -1245,8 +1245,8 @@ static LogicalResult hoistOpsBetween(scf::ForOp outer, scf::ForOp inner) {
 // be formed.
 static LogicalResult tryIsolateBands(const TileLoops &tileLoops) {
   LogicalResult status = success();
-  auto &interTile = tileLoops.first;
-  auto &intraTile = tileLoops.second;
+  const Loops &interTile = tileLoops.first;
+  const Loops &intraTile = tileLoops.second;
   auto size = interTile.size();
   assert(size == intraTile.size());
   if (size <= 1)
@@ -2135,7 +2135,7 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
     auto updateRegion =
         [&](const SmallMapVector<Value, std::unique_ptr<MemRefRegion>, 4>
                 &targetRegions) {
-          auto it = targetRegions.find(region->memref);
+          const auto it = targetRegions.find(region->memref);
           if (it == targetRegions.end())
             return false;
 
