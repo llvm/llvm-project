@@ -21,17 +21,21 @@ subroutine assign1(lhs, rhs)
 
   ! Copy of rhs into temp
   ! CHECK: fir.do_loop %[[i:.*]] =
-    ! CHECK-DAG: %[[rhs_addr:.*]] = fir.coordinate_of %[[rhs]]#0, %[[i]]
+    ! CHECK: %[[rhs_addr2:.*]] = fir.convert %[[rhs]]#0
+    ! CHECK-DAG: %[[rhs_addr:.*]] = fir.coordinate_of %[[rhs_addr2]], %[[i]]
     ! CHECK-DAG: %[[rhs_elt:.*]] = fir.load %[[rhs_addr]]
-    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp]], %[[i]]
+    ! CHECK-DAG: %[[tmp2:.*]] = fir.convert %[[tmp]]
+    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp2]], %[[i]]
     ! CHECK: fir.store %[[rhs_elt]] to %[[tmp_addr]]
   ! CHECK-NEXT: }
 
   ! Copy of temp into lhs
   ! CHECK: fir.do_loop %[[ii:.*]] =
-    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp]], %[[ii]]
+    ! CHECK: %[[tmp2:.*]] = fir.convert %[[tmp]]
+    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp2]], %[[ii]]
     ! CHECK-DAG: %[[tmp_elt:.*]] = fir.load %[[tmp_addr]]
-    ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs]]#0, %[[ii]]
+    ! CHECK-DAG: %[[lhs_addr2:.*]] = fir.convert %[[lhs]]#0
+    ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_addr2]], %[[ii]]
     ! CHECK: fir.store %[[tmp_elt]] to %[[lhs_addr]]
   ! CHECK-NEXT: }
 
@@ -39,7 +43,8 @@ subroutine assign1(lhs, rhs)
   ! CHECK: %[[c32:.*]] = constant 32 : i8
   ! CHECK: %[[blank:.*]] = fir.convert %[[c32]] : (i8) -> !fir.char<1>
   ! CHECK: fir.do_loop %[[ij:.*]] =
-    ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs]]#0, %[[ij]]
+    ! CHECK: %[[lhs_addr2:.*]] = fir.convert %[[lhs]]#0
+    ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_addr2]], %[[ij]]
     ! CHECK: fir.store %[[blank]] to %[[lhs_addr]]
   ! CHECK-NEXT: }
 end subroutine
@@ -58,8 +63,8 @@ subroutine assign_substring1(str, rhs, lb, ub)
   ! CHECK-DAG: %[[lbi:.*]] = fir.convert %[[lb]] : (i64) -> index
   ! CHECK-DAG: %[[c1:.*]] = constant 1
   ! CHECK-DAG: %[[offset:.*]] = subi %[[lbi]], %[[c1]]
-  ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[str]]#0, %[[offset]]
-
+  ! CHECK-DAG: %[[lhs_addr2:.*]] = fir.convert %[[str]]#0
+  ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_addr2]], %[[offset]]
 
   ! Compute substring length
   ! CHECK-DAG: %[[ubi:.*]] = fir.convert %[[ub]] : (i64) -> index
@@ -76,7 +81,8 @@ subroutine assign_substring1(str, rhs, lb, ub)
   ! ...
   ! CHECK: %[[lhs:.*]]:2 = fir.unboxchar %[[lhs_box]]
   ! ...
-  ! CHECK: fir.coordinate_of %[[lhs]]#0,
+  ! CHECK: %[[lhs2:.*]] = fir.convert %[[lhs]]#0
+  ! CHECK-NEXT: fir.coordinate_of %[[lhs2]], %arg4
   ! ...
 end subroutine
 
@@ -89,10 +95,13 @@ subroutine assign_constant(lhs)
   ! CHECK-DAG: %[[tmp:.*]] = fir.address_of(@{{.*}}) :
   lhs = "Hello World"
   ! CHECK: fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} {
-    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp]], %[[i]]
+    ! CHECK: %[[tmp2:.*]] = fir.convert %[[tmp]]
+    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp2]], %[[i]]
     ! CHECK-DAG: %[[tmp_elt:.*]] = fir.load %[[tmp_addr]]
-    ! UNBOX: = fir.coordinate_of %[[lhs]]#0, %
-    ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs:.*]]#0, %[[i]]
+    ! UNBOX: %[[lhs2:.*]] = fir.convert %[[lhs]]#0
+    ! UNBOX: = fir.coordinate_of %[[lhs2]], %
+    ! CHECK-DAG: %[[lhs_addr2:.*]] = fir.convert %[[lhs:.*]]#0
+    ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_addr2:.*]], %[[i]]
     ! CHECK: fir.store %[[tmp_elt]] to %[[lhs_addr]]
   ! CHECK: }
 
@@ -100,8 +109,10 @@ subroutine assign_constant(lhs)
   ! CHECK-DAG: %[[c32:.*]] = constant 32 : i8
   ! CHECK-DAG: %[[blank:.*]] = fir.convert %[[c32]] : (i8) -> !fir.char<1>
   ! CHECK: fir.do_loop %[[j:.*]] = %{{.*}} to %{{.*}} {
-    ! UNBOX: = fir.coordinate_of %[[lhs]]#0, %
-    ! CHECK: %[[jhs_addr:.*]] = fir.coordinate_of %[[lhs]]#0, %[[j]]
+    ! UNBOX: %[[lhs2:.*]] = fir.convert %[[lhs]]#0
+    ! UNBOX: = fir.coordinate_of %[[lhs2]], %
+    ! CHECK: %[[jhs_addr2:.*]] = fir.convert %[[lhs]]#0
+    ! CHECK: %[[jhs_addr:.*]] = fir.coordinate_of %[[jhs_addr2]], %[[j]]
     ! CHECK: fir.store %[[blank]] to %[[jhs_addr]]
   ! CHECK: }
 end subroutine

@@ -108,7 +108,8 @@ static bool isExplicitShape(const Fortran::semantics::Symbol &sym) {
 
 // Retrieve a copy of a character literal string from a SomeExpr.
 template <int KIND>
-llvm::Optional<std::tuple<std::string, std::size_t>> getCharacterLiteralCopy(
+static llvm::Optional<std::tuple<std::string, std::size_t>>
+getCharacterLiteralCopy(
     const Fortran::evaluate::Expr<
         Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>
         &x) {
@@ -122,12 +123,14 @@ llvm::Optional<std::tuple<std::string, std::size_t>> getCharacterLiteralCopy(
           (std::size_t)con->LEN()};
   return llvm::None;
 }
-llvm::Optional<std::tuple<std::string, std::size_t>> getCharacterLiteralCopy(
+static llvm::Optional<std::tuple<std::string, std::size_t>>
+getCharacterLiteralCopy(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter> &x) {
   return std::visit([](const auto &e) { return getCharacterLiteralCopy(e); },
                     x.u);
 }
-llvm::Optional<std::tuple<std::string, std::size_t>> getCharacterLiteralCopy(
+static llvm::Optional<std::tuple<std::string, std::size_t>>
+getCharacterLiteralCopy(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &x) {
   if (const auto *e = Fortran::evaluate::UnwrapExpr<
           Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter>>(x))
@@ -135,7 +138,7 @@ llvm::Optional<std::tuple<std::string, std::size_t>> getCharacterLiteralCopy(
   return llvm::None;
 }
 template <typename A>
-llvm::Optional<std::tuple<std::string, std::size_t>>
+static llvm::Optional<std::tuple<std::string, std::size_t>>
 getCharacterLiteralCopy(const std::optional<A> &x) {
   if (x)
     return getCharacterLiteralCopy(*x);
@@ -1328,6 +1331,14 @@ private:
     }
   }
 
+  fir::ExtendedValue
+  genInitializerExprValue(const Fortran::lower::SomeExpr &expr) {
+    Fortran::lower::ExpressionContext context;
+    context.setInInitializer();
+    return createSomeExtendedExpression(toLocation(), *this, expr, localSymbols,
+                                        context);
+  }
+
   fir::ExtendedValue genExprEleValue(const Fortran::lower::SomeExpr &expr,
                                      llvm::ArrayRef<mlir::Value> lcvs) {
     return createSomeExtendedExpression(toLocation(), *this, expr, localSymbols,
@@ -1587,7 +1598,6 @@ private:
     bool isConst = sym.attrs().test(Fortran::semantics::Attr::PARAMETER);
     auto loc = genLocation(sym.name());
     auto idxTy = builder->getIndexType();
-    // FIXME: name returned does not consider subprogram's scope, is not unique
     if (builder->getNamedGlobal(globalName))
       return;
     if (const auto *details =
@@ -1614,8 +1624,9 @@ private:
           global = builder->createGlobal(
               loc, symTy, globalName, isConst,
               [&](Fortran::lower::FirOpBuilder &builder) {
-                auto initVal = genExprValue(details->init().value());
-                auto castTo = builder.createConvert(loc, symTy, initVal);
+                auto initVal = genInitializerExprValue(details->init().value());
+                auto castTo =
+                    builder.createConvert(loc, symTy, fir::getBase(initVal));
                 builder.create<fir::HasValueOp>(loc, castTo);
               });
         }
@@ -1979,8 +1990,10 @@ private:
       addSymbol(common, commonAddr);
     }
     auto byteOffset = varSym.offset();
-    auto i8Ptr = fir::ReferenceType::get(builder->getIntegerType(8));
-    auto base = builder->createConvert(loc, i8Ptr, commonAddr);
+    auto i8Ty = builder->getIntegerType(8);
+    auto i8Ptr = fir::ReferenceType::get(i8Ty);
+    auto seqTy = fir::ReferenceType::get(builder->getVarLenSeqTy(i8Ty));
+    auto base = builder->createConvert(loc, seqTy, commonAddr);
     llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
         loc, builder->getIndexType(), byteOffset)};
     auto varAddr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);

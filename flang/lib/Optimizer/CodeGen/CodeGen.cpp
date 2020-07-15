@@ -1727,6 +1727,15 @@ struct CoordinateOpConversion
     bool columnIsDeferred = false;
     bool hasSubdimension = hasSubDimensions(cpnTy);
 
+    // if argument 0 is complex, get the real or imaginary part
+    if (fir::isa_complex(cpnTy)) {
+      SmallVector<mlir::Value, 8> offs = {c0};
+      offs.append(std::next(operands.begin()), operands.end());
+      mlir::Value gep = genGEP(loc, unwrap(ty), rewriter, base, offs);
+      rewriter.replaceOp(coor, gep);
+      return success();
+    }
+
     // if argument 0 is boxed, get the base pointer from the box
     if (auto boxTy = firTy.dyn_cast<fir::BoxType>()) {
 

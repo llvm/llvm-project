@@ -40,14 +40,13 @@ subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   ! CHECK-LABEL: EndIoStatement
   print *, a4(ii,jj)
   ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK: %[[a5:.*]] = fir.convert %arg10 : {{.*}} -> !fir.ref<f32>
   ! CHECK: fir.load %arg5 :
   ! CHECK: %[[x5:.*]] = subi %{{.*}}, %{{.*}} :
-  ! CHECK: fir.coordinate_of %[[a5]], %[[x5]] :
+  ! CHECK: fir.coordinate_of %arg10, %[[x5]] :
   ! CHECK-LABEL: EndIoStatement
   print *, a5(kk)
   ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK: %[[a6:.*]] = fir.convert %arg11 : {{.*}} -> !fir.ref<i32>
+  ! CHECK: %[[a6:.*]] = fir.convert %arg11 : {{.*}} -> !fir.ref<!fir.array<?xi32>>
   ! CHECK: fir.load %arg3 :
   ! CHECK-DAG: %[[x6:.*]] = subi %{{.*}}, %{{.*}} :
   ! CHECK-DAG: fir.load %arg4 :
@@ -58,7 +57,7 @@ subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   ! CHECK-LABEL: EndIoStatement
   print *, a6(ii, jj)
   ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK: %[[a7:.*]] = fir.convert %arg12 : {{.*}} -> !fir.ref<f32>
+  ! CHECK: %[[a7:.*]] = fir.convert %arg12 : {{.*}} -> !fir.ref<!fir.array<?xf32>>
   ! CHECK: fir.load %arg5 :
   ! CHECK-DAG: %[[x7:.*]] = subi %{{.*}}, %{{.*}} :
   ! CHECK-DAG: fir.load %arg4 :
