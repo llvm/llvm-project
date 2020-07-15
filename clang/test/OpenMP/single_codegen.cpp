@@ -42,7 +42,7 @@ TestClass tc;
 TestClass tc2[2];
 #pragma omp threadprivate(tc, tc2)
 
-void foo() {}
+void foo() { extern void mayThrow(); mayThrow(); }
 
 struct SS {
   int a;
