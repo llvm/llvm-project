@@ -21,7 +21,7 @@ using namespace llvm;
 
 namespace {
 
-#if LLVM_ENABLE_ZLIB == 1 && HAVE_LIBZ
+#if LLVM_ENABLE_ZLIB
 
 void TestZlibCompression(StringRef Input, int Level) {
   SmallString<32> Compressed;
