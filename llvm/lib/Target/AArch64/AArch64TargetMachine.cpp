@@ -453,7 +453,11 @@ void AArch64PassConfig::addIRPasses() {
   // determine whether it succeeded. We can exploit existing control-flow in
   // ldrex/strex loops to simplify this, but it needs tidying up.
   if (TM->getOptLevel() != CodeGenOpt::None && EnableAtomicTidy)
-    addPass(createCFGSimplificationPass(1, true, true, false, true));
+    addPass(createCFGSimplificationPass(SimplifyCFGOptions()
+                                            .forwardSwitchCondToPhi(true)
+                                            .convertSwitchToLookupTable(true)
+                                            .needCanonicalLoops(false)
+                                            .sinkCommonInsts(true)));
 
   // Run LoopDataPrefetch
   //
