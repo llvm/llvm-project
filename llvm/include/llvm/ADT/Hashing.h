@@ -113,6 +113,10 @@ template <typename T> hash_code hash_value(const T *ptr);
 template <typename T, typename U>
 hash_code hash_value(const std::pair<T, U> &arg);
 
+/// Compute a hash_code for a tuple.
+template <typename... Ts>
+hash_code hash_value(const std::tuple<Ts...> &arg);
+
 /// Compute a hash_code for a standard string.
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg);
@@ -647,6 +651,26 @@ template <typename T> hash_code hash_value(const T *ptr) {
 template <typename T, typename U>
 hash_code hash_value(const std::pair<T, U> &arg) {
   return hash_combine(arg.first, arg.second);
+}
+
+// Implementation details for the hash_value overload for std::tuple<...>(...).
+namespace hashing {
+namespace detail {
+
+template <typename... Ts, std::size_t... Indices>
+hash_code hash_value_tuple_helper(const std::tuple<Ts...> &arg,
+                                  std::index_sequence<Indices...> indices) {
+  return hash_combine(std::get<Indices>(arg)...);
+}
+
+} // namespace detail
+} // namespace hashing
+
+template <typename... Ts>
+hash_code hash_value(const std::tuple<Ts...> &arg) {
+  // TODO: Use std::apply when LLVM starts using C++17.
+  return ::llvm::hashing::detail::hash_value_tuple_helper(
+      arg, typename std::index_sequence_for<Ts...>());
 }
 
 // Declared and documented above, but defined here so that any of the hashing
