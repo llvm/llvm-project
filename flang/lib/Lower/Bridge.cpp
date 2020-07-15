@@ -956,12 +956,11 @@ private:
         forall.t);
     setCurrentPosition(stmt.source);
     auto &fas = stmt.statement;
-    auto &ctrl =
+    [[maybe_unused]] auto &ctrl =
         std::get<
             Fortran::common::Indirection<Fortran::parser::ConcurrentHeader>>(
             fas.t)
             .value();
-    (void)ctrl;
     for (auto &s :
          std::get<std::list<Fortran::parser::ForallBodyConstruct>>(forall.t)) {
       std::visit(
@@ -1587,13 +1586,13 @@ private:
     if (unstructuredContext && blockIsUnterminated()) {
       // Exit from an unstructured IF or SELECT construct block.
       Fortran::lower::pft::Evaluation *successor{};
-      if (eval.isActionStmt()) {
+      if (eval.isActionStmt())
         successor = eval.controlSuccessor;
-      } else if (eval.isConstruct() &&
-                 eval.getLastNestedEvaluation()
-                     .lexicalSuccessor->isIntermediateConstructStmt()) {
+      else if (eval.isConstruct() &&
+               eval.getLastNestedEvaluation()
+                   .lexicalSuccessor->isIntermediateConstructStmt())
         successor = eval.constructExit;
-      }
+
       if (successor && successor->block)
         genBranch(successor->block);
     }
@@ -1787,14 +1786,60 @@ private:
     return local;
   }
 
+  /// This is a primary store for a set of EQUIVALENCED variables. Create the
+  /// store on the stack and add it to the map.
+  void
+  instantiatePrimaryStore(const Fortran::lower::pft::Variable &var,
+                          llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
+    assert(var.isPrimaryStore());
+    // Allocate an anonymous block of memory.
+    auto off = std::get<0>(var.getPrimaryStore());
+    auto size = std::get<1>(var.getPrimaryStore());
+    auto i8Ty = builder->getIntegerType(8);
+    auto loc = toLocation();
+    auto idxTy = builder->getIndexType();
+    llvm::SmallVector<mlir::Value, 2> shape = {
+        builder->createIntegerConstant(loc, idxTy, size)};
+    auto local =
+        builder->allocateLocal(toLocation(), i8Ty, "", shape, /*target=*/false);
+    storeMap[off] = local;
+  }
+
   /// Instantiate a local variable. Precondition: Each variable will be visited
   /// such that if it's properties depend on other variables, the variables upon
   /// which its properties depend will already have been visited.
   void instantiateLocal(const Fortran::lower::pft::Variable &var,
+                        llvm::DenseMap<std::size_t, mlir::Value> &storeMap,
                         mlir::Value *preAlloc = nullptr) {
+    mlir::Value result;
     const auto &sym = var.getSymbol();
     const auto loc = genLocation(sym.name());
     auto idxTy = builder->getIndexType();
+    if (var.isAlias()) {
+      // If var is an alias, then use the alias offset to lookup the
+      // corresponding primary storage for this alias set. The primary storage
+      // must have already been instantiated and added to the `storeMap`.  Note
+      // that this does not handle EQUIVALENCED globals. Assumably those will be
+      // like COMMON blocks.
+      if (preAlloc) {
+        llvm::errs() << "TODO: EQUIVALENCE used on variable in COMMON\n";
+        exit(1);
+      }
+      assert(!preAlloc && "cannot be in COMMON");
+      auto aliasOffset = var.getAlias();
+      assert(storeMap.count(aliasOffset));
+      auto store = storeMap.find(aliasOffset)->second;
+      auto i8Ty = builder->getIntegerType(8);
+      auto i8Ptr = builder->getRefType(i8Ty);
+      auto seqTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
+      auto base = builder->createConvert(loc, seqTy, store);
+      llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
+          loc, idxTy, sym.offset() - aliasOffset)};
+      auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
+      result =
+          builder->createConvert(loc, builder->getRefType(genType(sym)), ptr);
+      preAlloc = &result;
+    }
     const auto isDummy = Fortran::semantics::IsDummy(sym);
     const auto isResult = Fortran::semantics::IsFunctionResult(sym);
     Fortran::lower::CharacterExprHelper charHelp{*builder, loc};
@@ -1997,7 +2042,8 @@ private:
   /// within the COMMON block. Adds the address of `var` (COMMON + offset) to
   /// the symbol map.
   void instantiateCommon(const Fortran::semantics::Symbol &common,
-                         const Fortran::lower::pft::Variable &var) {
+                         const Fortran::lower::pft::Variable &var,
+                         llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
     auto commonName = mangleName(common);
     auto global = builder->getNamedGlobal(commonName);
     if (!global)
@@ -2012,25 +2058,28 @@ private:
     }
     auto byteOffset = varSym.offset();
     auto i8Ty = builder->getIntegerType(8);
-    auto i8Ptr = fir::ReferenceType::get(i8Ty);
-    auto seqTy = fir::ReferenceType::get(builder->getVarLenSeqTy(i8Ty));
+    auto i8Ptr = builder->getRefType(i8Ty);
+    auto seqTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
     auto base = builder->createConvert(loc, seqTy, commonAddr);
     llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
         loc, builder->getIndexType(), byteOffset)};
     auto varAddr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
-    auto localTy = fir::ReferenceType::get(genType(var));
+    auto localTy = builder->getRefType(genType(var));
     mlir::Value local = builder->createConvert(loc, localTy, varAddr);
-    instantiateLocal(var, &local);
+    instantiateLocal(var, storeMap, &local);
   }
 
-  void instantiateVar(const Fortran::lower::pft::Variable &var) {
-    if (auto *common =
-            Fortran::semantics::FindCommonBlockContaining(var.getSymbol()))
-      instantiateCommon(*common, var);
+  void instantiateVar(const Fortran::lower::pft::Variable &var,
+                      llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
+    if (var.isPrimaryStore())
+      instantiatePrimaryStore(var, storeMap);
+    else if (auto *common =
+                 Fortran::semantics::FindCommonBlockContaining(var.getSymbol()))
+      instantiateCommon(*common, var, storeMap);
     else if (var.isGlobal())
       instantiateGlobal(var);
     else
-      instantiateLocal(var);
+      instantiateLocal(var, storeMap);
   }
 
   void mapDummiesAndResults(const Fortran::lower::pft::FunctionLikeUnit &funit,
@@ -2047,9 +2096,9 @@ private:
         addSymbol(arg.entity.get(), arg.firArgument);
       }
     };
-    for (const auto &arg : callee.getPassedArguments()) {
+    for (const auto &arg : callee.getPassedArguments())
       mapPassedEntity(arg);
-    }
+
     // Allocate local skeleton instances of dummies from other entry points.
     // Most of these locals will not survive into final generated code, but
     // some will.  It is illegal to reference them at run time if they do.
@@ -2082,15 +2131,20 @@ private:
     mlir::Value primaryFuncResult;
     llvm::SmallVector<const Fortran::semantics::Symbol *, 4>
         deferredFuncResultList;
+    llvm::DenseMap<std::size_t, mlir::Value> storeMap;
     for (const auto &var : funit.getOrderedSymbolTable()) {
-      const Fortran::semantics::Symbol *sym = &var.getSymbol();
-      if (!sym->IsFuncResult() || !funit.primaryResult) {
-        instantiateVar(var);
-      } else if (sym == funit.primaryResult) {
-        instantiateVar(var);
-        primaryFuncResult = lookupSymbol(*sym);
+      if (var.isPrimaryStore()) {
+        instantiateVar(var, storeMap);
+        continue;
+      }
+      const Fortran::semantics::Symbol &sym = var.getSymbol();
+      if (!sym.IsFuncResult() || !funit.primaryResult) {
+        instantiateVar(var, storeMap);
+      } else if (&sym == funit.primaryResult) {
+        instantiateVar(var, storeMap);
+        primaryFuncResult = lookupSymbol(sym);
       } else {
-        deferredFuncResultList.push_back(sym);
+        deferredFuncResultList.push_back(&sym);
       }
     }
     for (auto altResult : deferredFuncResultList)
@@ -2101,7 +2155,7 @@ private:
     if (alternateEntryEval) {
       // Move to executable successor.
       alternateEntryEval = alternateEntryEval->lexicalSuccessor;
-      bool evalIsNewBlock = alternateEntryEval->isNewBlock;
+      auto evalIsNewBlock = alternateEntryEval->isNewBlock;
       alternateEntryEval->isNewBlock = true;
       createEmptyBlocks(funit.evaluationList);
       alternateEntryEval->isNewBlock = evalIsNewBlock;
