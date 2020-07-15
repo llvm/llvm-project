@@ -1422,6 +1422,7 @@ HoistTerminator:
     I2->replaceAllUsesWith(NT);
     NT->takeName(I1);
   }
+  Changed = true;
   ++NumHoistCommonInstrs;
 
   // Ensure terminator gets a debug location, even an unknown one, in case
@@ -1469,7 +1470,7 @@ HoistTerminator:
     AddPredecessorToBlock(Succ, BIParent, BB1);
 
   EraseTerminatorAndDCECond(BI);
-  return true;
+  return Changed;
 }
 
 // Check lifetime markers.
