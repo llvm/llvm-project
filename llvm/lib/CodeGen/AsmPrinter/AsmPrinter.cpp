@@ -2094,47 +2094,50 @@ void AsmPrinter::emitLLVMUsedList(const ConstantArray *InitList) {
   }
 }
 
-namespace {
-
-struct Structor {
-  int Priority = 0;
-  Constant *Func = nullptr;
-  GlobalValue *ComdatKey = nullptr;
-
-  Structor() = default;
-};
-
-} // end anonymous namespace
-
-/// EmitXXStructorList - Emit the ctor or dtor list taking into account the init
-/// priority.
-void AsmPrinter::emitXXStructorList(const DataLayout &DL, const Constant *List,
-                                    bool isCtor) {
-  // Should be an array of '{ i32, void ()*, i8* }' structs.  The first value is the
-  // init priority.
-  if (!isa<ConstantArray>(List)) return;
+void AsmPrinter::preprocessXXStructorList(const DataLayout &DL,
+                                          const Constant *List,
+                                          SmallVector<Structor, 8> &Structors) {
+  // Should be an array of '{ i32, void ()*, i8* }' structs.  The first value is
+  // the init priority.
+  if (!isa<ConstantArray>(List))
+    return;
 
   // Gather the structors in a form that's convenient for sorting by priority.
-  SmallVector<Structor, 8> Structors;
   for (Value *O : cast<ConstantArray>(List)->operands()) {
     auto *CS = cast<ConstantStruct>(O);
     if (CS->getOperand(1)->isNullValue())
-      break;  // Found a null terminator, skip the rest.
+      break; // Found a null terminator, skip the rest.
     ConstantInt *Priority = dyn_cast<ConstantInt>(CS->getOperand(0));
-    if (!Priority) continue; // Malformed.
+    if (!Priority)
+      continue; // Malformed.
     Structors.push_back(Structor());
     Structor &S = Structors.back();
     S.Priority = Priority->getLimitedValue(65535);
     S.Func = CS->getOperand(1);
-    if (!CS->getOperand(2)->isNullValue())
+    if (!CS->getOperand(2)->isNullValue()) {
+      if (TM.getTargetTriple().isOSAIX())
+        llvm::report_fatal_error(
+            "associated data of XXStructor list is not yet supported on AIX");
       S.ComdatKey =
           dyn_cast<GlobalValue>(CS->getOperand(2)->stripPointerCasts());
+    }
   }
 
   // Emit the function pointers in the target-specific order
   llvm::stable_sort(Structors, [](const Structor &L, const Structor &R) {
     return L.Priority < R.Priority;
   });
+}
+
+/// EmitXXStructorList - Emit the ctor or dtor list taking into account the init
+/// priority.
+void AsmPrinter::emitXXStructorList(const DataLayout &DL, const Constant *List,
+                                    bool IsCtor) {
+  SmallVector<Structor, 8> Structors;
+  preprocessXXStructorList(DL, List, Structors);
+  if (Structors.empty())
+    return;
+
   const Align Align = DL.getPointerPrefAlignment();
   for (Structor &S : Structors) {
     const TargetLoweringObjectFile &Obj = getObjFileLowering();
@@ -2150,8 +2153,9 @@ void AsmPrinter::emitXXStructorList(const DataLayout &DL, const Constant *List,
 
       KeySym = getSymbol(GV);
     }
+
     MCSection *OutputSection =
-        (isCtor ? Obj.getStaticCtorSection(S.Priority, KeySym)
+        (IsCtor ? Obj.getStaticCtorSection(S.Priority, KeySym)
                 : Obj.getStaticDtorSection(S.Priority, KeySym));
     OutStreamer->SwitchSection(OutputSection);
     if (OutStreamer->getCurrentSection() != OutStreamer->getPreviousSection())

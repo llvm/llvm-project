@@ -2122,13 +2122,13 @@ void TargetLoweringObjectFileXCOFF::Initialize(MCContext &Ctx,
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getStaticCtorSection(
-    unsigned Priority, const MCSymbol *KeySym) const {
-  report_fatal_error("XCOFF ctor section not yet implemented.");
+	unsigned Priority, const MCSymbol *KeySym) const {
+  report_fatal_error("no static constructor section on AIX");
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getStaticDtorSection(
-    unsigned Priority, const MCSymbol *KeySym) const {
-  report_fatal_error("XCOFF dtor section not yet implemented.");
+	unsigned Priority, const MCSymbol *KeySym) const {
+  report_fatal_error("no static destructor section on AIX");
 }
 
 const MCExpr *TargetLoweringObjectFileXCOFF::lowerRelativeReference(
