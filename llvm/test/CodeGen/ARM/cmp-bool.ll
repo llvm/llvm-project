@@ -41,17 +41,15 @@ if.end:
 define void @bool_ne(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwind {
 ; ARM-LABEL: bool_ne:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    eor r0, r0, r1
-; ARM-NEXT:    cmp r0, #1
-; ARM-NEXT:    bxne lr
+; ARM-NEXT:    cmp r0, r1
+; ARM-NEXT:    bxeq lr
 ; ARM-NEXT:    bx r2
 ;
 ; THUMB-LABEL: bool_ne:
 ; THUMB:       @ %bb.0: @ %entry
 ; THUMB-NEXT:    push {r7, lr}
-; THUMB-NEXT:    eors r0, r1
-; THUMB-NEXT:    cmp r0, #1
-; THUMB-NEXT:    bne .LBB1_2
+; THUMB-NEXT:    cmp r0, r1
+; THUMB-NEXT:    beq .LBB1_2
 ; THUMB-NEXT:  @ %bb.1: @ %if.then
 ; THUMB-NEXT:    blx r2
 ; THUMB-NEXT:  .LBB1_2: @ %if.end
@@ -59,10 +57,9 @@ define void @bool_ne(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwi
 ;
 ; THUMB2-LABEL: bool_ne:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    eors r0, r1
-; THUMB2-NEXT:    cmp r0, #1
-; THUMB2-NEXT:    it ne
-; THUMB2-NEXT:    bxne lr
+; THUMB2-NEXT:    cmp r0, r1
+; THUMB2-NEXT:    it eq
+; THUMB2-NEXT:    bxeq lr
 ; THUMB2-NEXT:    bx r2
 entry:
   %cmp = xor i1 %a, %b

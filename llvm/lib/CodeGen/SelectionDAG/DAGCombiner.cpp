@@ -14099,8 +14099,8 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
     }
   }
 
-  // Transform br(xor(x, y)) -> br(x != y)
-  // Transform br(xor(xor(x,y), 1)) -> br (x == y)
+  // Transform (brcond (xor x, y)) -> (brcond (setcc, x, y, ne))
+  // Transform (brcond (xor (xor x, y), -1)) -> (brcond (setcc, x, y, eq))
   if (N.getOpcode() == ISD::XOR) {
     // Because we may call this on a speculatively constructed
     // SimplifiedSetCC Node, we need to simplify this node first.
@@ -14124,16 +14124,17 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
     if (N.getOpcode() != ISD::XOR)
       return N;
 
-    SDNode *TheXor = N.getNode();
-
-    SDValue Op0 = TheXor->getOperand(0);
-    SDValue Op1 = TheXor->getOperand(1);
+    SDValue Op0 = N->getOperand(0);
+    SDValue Op1 = N->getOperand(1);
 
     if (Op0.getOpcode() != ISD::SETCC && Op1.getOpcode() != ISD::SETCC) {
       bool Equal = false;
-      if (isOneConstant(Op0) && Op0.hasOneUse() &&
-          Op0.getOpcode() == ISD::XOR) {
-        TheXor = Op0.getNode();
+      // (brcond (xor (xor x, y), -1)) -> (brcond (setcc x, y, eq))
+      if (isBitwiseNot(N) && Op0.hasOneUse() && Op0.getOpcode() == ISD::XOR &&
+          Op0.getValueType() == MVT::i1) {
+        N = Op0;
+        Op0 = N->getOperand(0);
+        Op1 = N->getOperand(1);
         Equal = true;
       }
 
@@ -14141,7 +14142,7 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
       if (LegalTypes)
         SetCCVT = getSetCCResultType(SetCCVT);
       // Replace the uses of XOR with SETCC
-      return DAG.getSetCC(SDLoc(TheXor), SetCCVT, Op0, Op1,
+      return DAG.getSetCC(SDLoc(N), SetCCVT, Op0, Op1,
                           Equal ? ISD::SETEQ : ISD::SETNE);
     }
   }
