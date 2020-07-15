@@ -9,8 +9,8 @@
 define i8 @get_var() {
 ; CHECK-LABEL: get_var:
 ; CHECK: adrp x[[TLVPDESC_SLOT_HI:[0-9]+]], _var@TLVPPAGE
-; CHECK: ldr x0, [x[[TLVPDESC_SLOT_HI]], _var@TLVPPAGEOFF]
-; CHECK: ldr [[TLV_GET_ADDR:x[0-9]+]], [x0]
+; CHECK: ldr x[[PTR:[0-9]+]], [x[[TLVPDESC_SLOT_HI]], _var@TLVPPAGEOFF]
+; CHECK: ldr [[TLV_GET_ADDR:x[0-9]+]], [x[[PTR]]]
 ; CHECK: blr [[TLV_GET_ADDR]]
 ; CHECK: ldrb w0, [x0]
 
