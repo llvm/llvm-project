@@ -75,11 +75,15 @@ void LazyCallThroughManager::resolveTrampolineLandingAddress(
   if (!Entry)
     return NotifyLandingResolved(reportCallThroughError(Entry.takeError()));
 
+  // Declaring SLS outside of the call to ES.lookup is a workaround to fix build
+  // failures on AIX and on z/OS platforms.
+  SymbolLookupSet SLS({Entry->SymbolName});
+
   ES.lookup(
       LookupKind::Static,
       makeJITDylibSearchOrder(Entry->SourceJD,
                               JITDylibLookupFlags::MatchAllSymbols),
-      SymbolLookupSet({Entry->SymbolName}), SymbolState::Ready,
+      std::move(SLS), SymbolState::Ready,
       [this, TrampolineAddr, SymbolName = Entry->SymbolName,
        NotifyLandingResolved = std::move(NotifyLandingResolved)](
           Expected<SymbolMap> Result) mutable {
