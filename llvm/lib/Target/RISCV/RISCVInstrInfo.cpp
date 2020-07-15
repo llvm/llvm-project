@@ -471,6 +471,9 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::KILL:
   case TargetOpcode::DBG_VALUE:
     return 0;
+  // These values are determined based on RISCVExpandAtomicPseudoInsts,
+  // RISCVExpandPseudoInsts and RISCVMCCodeEmitter, depending on where the
+  // pseudos are expanded.
   case RISCV::PseudoCALLReg:
   case RISCV::PseudoCALL:
   case RISCV::PseudoJump:
@@ -480,6 +483,26 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case RISCV::PseudoLA_TLS_IE:
   case RISCV::PseudoLA_TLS_GD:
     return 8;
+  case RISCV::PseudoAtomicLoadNand32:
+  case RISCV::PseudoAtomicLoadNand64:
+    return 20;
+  case RISCV::PseudoMaskedAtomicSwap32:
+  case RISCV::PseudoMaskedAtomicLoadAdd32:
+  case RISCV::PseudoMaskedAtomicLoadSub32:
+    return 28;
+  case RISCV::PseudoMaskedAtomicLoadNand32:
+    return 32;
+  case RISCV::PseudoMaskedAtomicLoadMax32:
+  case RISCV::PseudoMaskedAtomicLoadMin32:
+    return 44;
+  case RISCV::PseudoMaskedAtomicLoadUMax32:
+  case RISCV::PseudoMaskedAtomicLoadUMin32:
+    return 36;
+  case RISCV::PseudoCmpXchg32:
+  case RISCV::PseudoCmpXchg64:
+    return 16;
+  case RISCV::PseudoMaskedCmpXchg32:
+    return 32;
   case TargetOpcode::INLINEASM:
   case TargetOpcode::INLINEASM_BR: {
     const MachineFunction &MF = *MI.getParent()->getParent();
