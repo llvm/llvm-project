@@ -88,7 +88,7 @@ FileHeader:
   Type:       ET_EXEC
   Machine:    EM_X86_64
   EPhEntSize: [[PHENTSIZE=56]]
-  SHNum:      [[SHNUM=6]]
+  EShNum:     [[SHNUM=6]]
 Sections:
   - Name:         .note.ABI-tag
     Type:         SHT_NOTE
