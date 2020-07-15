@@ -1367,7 +1367,9 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   // TODO: Compute the module slice we are allowed to look at.
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run();
-  (void)Changed;
+  if (Changed)
+    return PreservedAnalyses::none();
+
   return PreservedAnalyses::all();
 }
 
