@@ -47,8 +47,8 @@
 
 #include "ObjectFileMachO.h"
 
-#if defined(__APPLE__) &&                                                      \
-    (defined(__arm__) || defined(__arm64__) || defined(__aarch64__))
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
 // GetLLDBSharedCacheUUID() needs to call dlsym()
 #include <dlfcn.h>
 #endif
@@ -1328,6 +1328,19 @@ void ObjectFileMachO::SanitizeSegmentCommand(segment_command_64 &seg_cmd,
   if (m_length == 0 || seg_cmd.filesize == 0)
     return;
 
+  if ((m_header.flags & MH_DYLIB_IN_CACHE) && !IsInMemory()) {
+    // In shared cache images, the load commands are relative to the
+    // shared cache file, and not the the specific image we are
+    // examining. Let's fix this up so that it looks like a normal
+    // image.
+    if (strncmp(seg_cmd.segname, "__TEXT", sizeof(seg_cmd.segname)) == 0)
+      m_text_address = seg_cmd.vmaddr;
+    if (strncmp(seg_cmd.segname, "__LINKEDIT", sizeof(seg_cmd.segname)) == 0)
+      m_linkedit_original_offset = seg_cmd.fileoff;
+
+    seg_cmd.fileoff = seg_cmd.vmaddr - m_text_address;
+  }
+
   if (seg_cmd.fileoff > m_length) {
     // We have a load command that says it extends past the end of the file.
     // This is likely a corrupt file.  We don't have any way to return an error
@@ -1663,6 +1676,10 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
 
     if (m_data.GetU32(&offset, &sect64.offset, num_u32s) == nullptr)
       break;
+
+    if ((m_header.flags & MH_DYLIB_IN_CACHE) && !IsInMemory()) {
+      sect64.offset = sect64.addr - m_text_address;
+    }
 
     // Keep a list of mach sections around in case we need to get at data that
     // isn't stored in the abstracted Sections.
@@ -2264,14 +2281,17 @@ size_t ObjectFileMachO::ParseSymtab() {
   Process *process = process_sp.get();
 
   uint32_t memory_module_load_level = eMemoryModuleLoadLevelComplete;
+  bool is_shared_cache_image = m_header.flags & MH_DYLIB_IN_CACHE;
+  bool is_local_shared_cache_image = is_shared_cache_image && !IsInMemory();
+  SectionSP linkedit_section_sp(
+      section_list->FindSectionByName(GetSegmentNameLINKEDIT()));
 
-  if (process && m_header.filetype != llvm::MachO::MH_OBJECT) {
+  if (process && m_header.filetype != llvm::MachO::MH_OBJECT &&
+      !is_local_shared_cache_image) {
     Target &target = process->GetTarget();
 
     memory_module_load_level = target.GetMemoryModuleLoadLevel();
 
-    SectionSP linkedit_section_sp(
-        section_list->FindSectionByName(GetSegmentNameLINKEDIT()));
     // Reading mach file from memory in a process or core file...
 
     if (linkedit_section_sp) {
@@ -2293,62 +2313,6 @@ size_t ObjectFileMachO::ParseSymtab() {
       strtab_addr = linkedit_load_addr + symtab_load_command.stroff -
                     linkedit_file_offset;
 
-      bool data_was_read = false;
-
-#if defined(__APPLE__) &&                                                      \
-    (defined(__arm__) || defined(__arm64__) || defined(__aarch64__))
-      if (m_header.flags & MH_DYLIB_IN_CACHE &&
-          process->GetAddressByteSize() == sizeof(void *)) {
-        // This mach-o memory file is in the dyld shared cache. If this
-        // program is not remote and this is iOS, then this process will
-        // share the same shared cache as the process we are debugging and we
-        // can read the entire __LINKEDIT from the address space in this
-        // process. This is a needed optimization that is used for local iOS
-        // debugging only since all shared libraries in the shared cache do
-        // not have corresponding files that exist in the file system of the
-        // device. They have been combined into a single file. This means we
-        // always have to load these files from memory. All of the symbol and
-        // string tables from all of the __LINKEDIT sections from the shared
-        // libraries in the shared cache have been merged into a single large
-        // symbol and string table. Reading all of this symbol and string
-        // table data across can slow down debug launch times, so we optimize
-        // this by reading the memory for the __LINKEDIT section from this
-        // process.
-
-        UUID lldb_shared_cache;
-        addr_t lldb_shared_cache_addr;
-        GetLLDBSharedCacheUUID(lldb_shared_cache_addr, lldb_shared_cache);
-        UUID process_shared_cache;
-        addr_t process_shared_cache_addr;
-        GetProcessSharedCacheUUID(process, process_shared_cache_addr,
-                                  process_shared_cache);
-        bool use_lldb_cache = true;
-        if (lldb_shared_cache.IsValid() && process_shared_cache.IsValid() &&
-            (lldb_shared_cache != process_shared_cache ||
-             process_shared_cache_addr != lldb_shared_cache_addr)) {
-          use_lldb_cache = false;
-        }
-
-        PlatformSP platform_sp(target.GetPlatform());
-        if (platform_sp && platform_sp->IsHost() && use_lldb_cache) {
-          data_was_read = true;
-          nlist_data.SetData((void *)symoff_addr, nlist_data_byte_size,
-                             eByteOrderLittle);
-          strtab_data.SetData((void *)strtab_addr, strtab_data_byte_size,
-                              eByteOrderLittle);
-          if (function_starts_load_command.cmd) {
-            const addr_t func_start_addr =
-                linkedit_load_addr + function_starts_load_command.dataoff -
-                linkedit_file_offset;
-            function_starts_data.SetData((void *)func_start_addr,
-                                         function_starts_load_command.datasize,
-                                         eByteOrderLittle);
-          }
-        }
-      }
-#endif
-
-      if (!data_was_read) {
         // Always load dyld - the dynamic linker - from memory if we didn't
         // find a binary anywhere else. lldb will not register
         // dylib/framework/bundle loads/unloads if we don't have the dyld
@@ -2379,7 +2343,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             // problem. For binaries outside the shared cache, it's faster to
             // read the entire strtab at once instead of piece-by-piece as we
             // process the nlist records.
-            if ((m_header.flags & MH_DYLIB_IN_CACHE) == 0) {
+            if (!is_shared_cache_image) {
               DataBufferSP strtab_data_sp(
                   ReadMemory(process_sp, strtab_addr, strtab_data_byte_size));
               if (strtab_data_sp) {
@@ -2388,7 +2352,6 @@ size_t ObjectFileMachO::ParseSymtab() {
               }
             }
           }
-        }
         if (memory_module_load_level >= eMemoryModuleLoadLevelPartial) {
           if (function_starts_load_command.cmd) {
             const addr_t func_start_addr =
@@ -2405,6 +2368,24 @@ size_t ObjectFileMachO::ParseSymtab() {
       }
     }
   } else {
+    if (is_local_shared_cache_image) {
+      // The load commands in shared cache images are relative to the
+      // beginning of the shared cache, not the library image. The
+      // data we get handed when creating the ObjectFileMachO starts
+      // at the beginning of a specific library and spans to the end
+      // of the cache to be able to reach the shared LINKEDIT
+      // segments. We need to convert the load command offsets to be
+      // relative to the beginning of our specific image.
+      lldb::addr_t linkedit_offset = linkedit_section_sp->GetFileOffset();
+      lldb::offset_t linkedit_slide =
+          linkedit_offset - m_linkedit_original_offset;
+      symtab_load_command.symoff += linkedit_slide;
+      symtab_load_command.stroff += linkedit_slide;
+      dyld_info.export_off += linkedit_slide;
+      m_dysymtab.indirectsymoff += linkedit_slide;
+      function_starts_load_command.dataoff += linkedit_slide;
+    }
+
     nlist_data.SetData(m_data, symtab_load_command.symoff,
                        nlist_data_byte_size);
     strtab_data.SetData(m_data, symtab_load_command.stroff,
@@ -5807,8 +5788,7 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
   uuid.Clear();
   base_addr = LLDB_INVALID_ADDRESS;
 
-#if defined(__APPLE__) &&                                                      \
-    (defined(__arm__) || defined(__arm64__) || defined(__aarch64__))
+#if defined(__APPLE__)
   uint8_t *(*dyld_get_all_image_infos)(void);
   dyld_get_all_image_infos =
       (uint8_t * (*)()) dlsym(RTLD_DEFAULT, "_dyld_get_all_image_infos");
