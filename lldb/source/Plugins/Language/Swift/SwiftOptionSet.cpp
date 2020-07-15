@@ -13,9 +13,9 @@
 #include "SwiftOptionSet.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "swift/AST/Decl.h"

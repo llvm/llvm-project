@@ -12,13 +12,10 @@
 
 #include "SwiftPersistentExpressionState.h"
 #include "SwiftExpressionVariable.h"
-#include "lldb/Expression/IRExecutionUnit.h"
 
 #include "lldb/Core/Value.h"
-
-#include "lldb/Symbol/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
+#include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Symbol/TypeSystem.h"
-
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"

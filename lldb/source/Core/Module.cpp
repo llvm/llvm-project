@@ -54,7 +54,7 @@
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
 // BEGIN SWIFT
-#include "lldb/Symbol/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 // END SWIFT
 

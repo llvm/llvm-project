@@ -9,6 +9,7 @@
 #ifndef liblldb_LineTable_h_
 #define liblldb_LineTable_h_
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/LineEntry.h"

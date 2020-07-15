@@ -12,10 +12,11 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Symbol/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
 #include "swift/Strings.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -10,7 +10,6 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -22,6 +21,8 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
+
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 
 #include <string.h>
 namespace lldb_private {

@@ -16,7 +16,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "lldb/Symbol/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
 #include "lldb/Symbol/TypeSystem.h"
 
 #include "swift/AST/Decl.h"

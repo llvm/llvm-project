@@ -125,7 +125,7 @@
 #include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
 #include "Plugins/InstrumentationRuntime/SwiftRuntimeReporting/SwiftRuntimeReporting.h"
 #include "Plugins/Language/Swift/SwiftLanguage.h"
-#include "lldb/Symbol/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 // END SWIFT
 
