@@ -50,6 +50,8 @@ public:
       JITTargetAddress TrampolineAddr,
       TrampolinePool::NotifyLandingResolvedFunction NotifyLandingResolved);
 
+  virtual ~LazyCallThroughManager() = default;
+
 protected:
   using NotifyLandingResolvedFunction =
       TrampolinePool::NotifyLandingResolvedFunction;
