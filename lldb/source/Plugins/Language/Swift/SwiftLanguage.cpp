@@ -772,6 +772,10 @@ SwiftLanguage::GetHardcodedSynthetics() {
       CompilerType type(valobj.GetCompilerType());
       Flags type_flags(type.GetTypeInfo());
       if (type_flags.AllSet(eTypeIsSwift | eTypeIsEnumeration)) {
+        // FIXME: The classification of clang-imported enums may
+        // change based on whether a Swift module is present or not.
+        if (!valobj.GetValueAsCString())
+          return nullptr;
         if (!swift_enum_synth)
           swift_enum_synth = lldb::SyntheticChildrenSP(new CXXSyntheticChildren(
               SyntheticChildren::Flags()

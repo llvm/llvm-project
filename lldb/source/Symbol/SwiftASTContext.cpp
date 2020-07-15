@@ -5511,12 +5511,9 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     LLVM_FALLTHROUGH;
   case swift::TypeKind::Enum: {
     SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
-    if (cached_enum_info) {
-      if (cached_enum_info->GetNumElementsWithPayload() == 0)
-        swift_flags |= eTypeHasValue | eTypeIsEnumeration;
-      else
-        swift_flags |= eTypeHasValue | eTypeIsEnumeration | eTypeHasChildren;
-    } else
+    if (cached_enum_info)
+      swift_flags |= eTypeHasValue | eTypeIsEnumeration | eTypeHasChildren;
+    else
       swift_flags |= eTypeIsEnumeration;
   } break;
 
@@ -5524,6 +5521,12 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     swift_flags |= eTypeIsGeneric | eTypeIsBound;
     LLVM_FALLTHROUGH;
   case swift::TypeKind::Struct:
+    if (auto *ndecl = swift_can_type.getAnyNominal())
+      if (llvm::dyn_cast_or_null<clang::EnumDecl>(ndecl->getClangDecl())) {
+        swift_flags |= eTypeHasChildren | eTypeIsEnumeration | eTypeHasValue;
+        break;
+      }
+
     swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
     break;
 
