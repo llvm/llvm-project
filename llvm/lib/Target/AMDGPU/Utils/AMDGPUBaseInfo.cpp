@@ -784,6 +784,23 @@ void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width) 
 } // namespace Hwreg
 
 //===----------------------------------------------------------------------===//
+// MTBUF Format
+//===----------------------------------------------------------------------===//
+
+namespace MTBUFFormat {
+
+int64_t encodeDfmtNfmt(unsigned Dfmt, unsigned Nfmt) {
+  return (Dfmt << DFMT_SHIFT) | (Nfmt << NFMT_SHIFT);
+}
+
+void decodeDfmtNfmt(unsigned Format, unsigned &Dfmt, unsigned &Nfmt) {
+  Dfmt = (Format >> DFMT_SHIFT) & DFMT_MASK;
+  Nfmt = (Format >> NFMT_SHIFT) & NFMT_MASK;
+}
+
+} // namespace MTBUFFormat
+
+//===----------------------------------------------------------------------===//
 // SendMsg
 //===----------------------------------------------------------------------===//
 
