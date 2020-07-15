@@ -32,6 +32,10 @@ larl %r13d, %r13d
 // CHECK: encoding: [0x44,0x0f,0x02,0x2a]        
 larl (%rdx), %r13d 
 
+// CHECK: larq %eax, %rax
+// CHECK: encoding: [0x48,0x0f,0x02,0xc0]        
+lar %rax, %rax
+
 // CHECK: lgdtq 485498096 
 // CHECK: encoding: [0x0f,0x01,0x14,0x25,0xf0,0x1c,0xf0,0x1c]         
 lgdtq 485498096 
@@ -163,6 +167,10 @@ lsll %r13d, %r13d
 // CHECK: lsll (%rdx), %r13d 
 // CHECK: encoding: [0x44,0x0f,0x03,0x2a]        
 lsll (%rdx), %r13d 
+
+// CHECK: lslq %eax, %rax
+// CHECK: encoding: [0x48,0x0f,0x03,0xc0]
+lsl %rax, %rax
 
 // CHECK: ltrw 485498096 
 // CHECK: encoding: [0x0f,0x00,0x1c,0x25,0xf0,0x1c,0xf0,0x1c]         
