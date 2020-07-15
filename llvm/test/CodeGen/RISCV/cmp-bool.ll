@@ -33,9 +33,7 @@ if.end:
 define void @bool_ne(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwind {
 ; RV32-LABEL: bool_ne:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    addi a1, zero, 1
-; RV32-NEXT:    bne a0, a1, .LBB1_2
+; RV32-NEXT:    beq a0, a1, .LBB1_2
 ; RV32-NEXT:  # %bb.1: # %if.then
 ; RV32-NEXT:    jr a2
 ; RV32-NEXT:  .LBB1_2: # %if.end
@@ -43,9 +41,7 @@ define void @bool_ne(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwi
 ;
 ; RV64-LABEL: bool_ne:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    xor a0, a0, a1
-; RV64-NEXT:    addi a1, zero, 1
-; RV64-NEXT:    bne a0, a1, .LBB1_2
+; RV64-NEXT:    beq a0, a1, .LBB1_2
 ; RV64-NEXT:  # %bb.1: # %if.then
 ; RV64-NEXT:    jr a2
 ; RV64-NEXT:  .LBB1_2: # %if.end
