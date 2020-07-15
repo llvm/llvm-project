@@ -459,6 +459,55 @@ bool RISCVDAGToDAGISel::SelectRORIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
   return false;
 }
 
+// Check that it is a FSRIW (i32 Funnel Shift Right Immediate on RV64).
+// We first check that it is the right node tree:
+//
+//  (SIGN_EXTEND_INREG (OR (SHL (AsserSext RS1, i32), VC2),
+//                         (SRL (AND (AssertSext RS2, i32), VC3), VC1)))
+//
+// Then we check that the constant operands respect these constraints:
+//
+// VC2 == 32 - VC1
+// VC3 == maskLeadingOnes<uint32_t>(VC2)
+//
+// being VC1 the Shamt we need, VC2 the complementary of Shamt over 32
+// and VC3 a 32 bit mask of (32 - VC1) leading ones.
+
+bool RISCVDAGToDAGISel::SelectFSRIW(SDValue N, SDValue &RS1, SDValue &RS2,
+                                    SDValue &Shamt) {
+  if (N.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+      Subtarget->getXLenVT() == MVT::i64 &&
+      cast<VTSDNode>(N.getOperand(1))->getVT() == MVT::i32) {
+    if (N.getOperand(0).getOpcode() == ISD::OR) {
+      SDValue Or = N.getOperand(0);
+      if (Or.getOperand(0).getOpcode() == ISD::SHL &&
+          Or.getOperand(1).getOpcode() == ISD::SRL) {
+        SDValue Shl = Or.getOperand(0);
+        SDValue Srl = Or.getOperand(1);
+        if (Srl.getOperand(0).getOpcode() == ISD::AND) {
+          SDValue And = Srl.getOperand(0);
+          if (isa<ConstantSDNode>(Srl.getOperand(1)) &&
+              isa<ConstantSDNode>(Shl.getOperand(1)) &&
+              isa<ConstantSDNode>(And.getOperand(1))) {
+            uint32_t VC1 = Srl.getConstantOperandVal(1);
+            uint32_t VC2 = Shl.getConstantOperandVal(1);
+            uint32_t VC3 = And.getConstantOperandVal(1);
+            if (VC2 == (32 - VC1) &&
+                VC3 == maskLeadingOnes<uint32_t>(VC2)) {
+              RS1 = Shl.getOperand(0);
+              RS2 = And.getOperand(0);
+              Shamt = CurDAG->getTargetConstant(VC1, SDLoc(N),
+                                              Srl.getOperand(1).getValueType());
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 // Merge an ADDI into the offset of a load/store instruction where possible.
 // (load (addi base, off1), off2) -> (load base, off1+off2)
 // (store val, (addi base, off1), off2) -> (store val, base, off1+off2)
