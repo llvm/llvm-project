@@ -482,6 +482,15 @@ void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
 
 } // namespace Hwreg
 
+namespace MTBUFFormat {
+
+LLVM_READNONE
+int64_t encodeDfmtNfmt(unsigned Dfmt, unsigned Nfmt);
+
+void decodeDfmtNfmt(unsigned Format, unsigned &Dfmt, unsigned &Nfmt);
+
+} // namespace MTBUFFormat
+
 namespace SendMsg {
 
 LLVM_READONLY
