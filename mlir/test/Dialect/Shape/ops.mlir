@@ -29,10 +29,10 @@ func @test_shape_num_elements_fixed() {
   return
 }
 
-func @test_broadcastable_fixed() {
+func @test_broadcast_fixed() {
   %0 = shape.const_shape [10, 1, 57, 92]
   %1 = shape.const_shape [4, 57, 92]
-  %2 = "shape.broadcastable"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
+  %2 = shape.broadcast %0, %1
   %3 = "shape.print"(%2) : (!shape.shape) -> !shape.shape
   return
 }

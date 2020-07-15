@@ -54,7 +54,42 @@ func @f() -> !shape.shape {
   // CHECK: shape.const_shape [7, 2]
   %0 = shape.const_shape [1, 2]
   %1 = shape.const_shape [7, 1]
-  %2 = "shape.broadcast"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
+  %2 = shape.broadcast %0, %1
+  return %2 : !shape.shape
+}
+
+// -----
+
+// Rhs is a scalar.
+// CHECK-LABEL: func @f
+func @f(%arg0 : !shape.shape) -> !shape.shape {
+  // CHECK: return %arg0
+  %0 = shape.const_shape []
+  %1 = shape.broadcast %arg0, %0
+  return %1 : !shape.shape
+}
+
+// -----
+
+// Lhs is a scalar.
+// CHECK-LABEL: func @f
+func @f(%arg0 : !shape.shape) -> !shape.shape {
+  // CHECK: return %arg0
+  %0 = shape.const_shape []
+  %1 = shape.broadcast %0, %arg0
+  return %1 : !shape.shape
+}
+
+// -----
+
+// Lhs is a scalar and rhs is constant.
+// CHECK-LABEL: func @f
+func @f() -> !shape.shape {
+  // CHECK: %[[CST:.*]] = shape.const_shape [1, 2, 3]
+  // CHECK: return %[[CST]]
+  %0 = shape.const_shape []
+  %1 = shape.const_shape [1, 2, 3]
+  %2 = shape.broadcast %0, %1
   return %2 : !shape.shape
 }
 
@@ -66,7 +101,7 @@ func @f() -> !shape.shape {
   // CHECK: shape.broadcast
   %0 = shape.const_shape [2]
   %1 = shape.const_shape [7]
-  %2 = "shape.broadcast"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
+  %2 = shape.broadcast %0, %1
   return %2 : !shape.shape
 }
 
@@ -78,7 +113,7 @@ func @f() -> !shape.shape {
   // CHECK: shape.const_shape [0, 1, 2, 3]
   %lhs = shape.const_shape [0, 1]
   %rhs = shape.const_shape [2, 3]
-  %0 = "shape.concat"(%lhs, %rhs) : (!shape.shape, !shape.shape) -> !shape.shape
+  %0 = shape.concat %lhs, %rhs
   return %0 : !shape.shape
 }
 
