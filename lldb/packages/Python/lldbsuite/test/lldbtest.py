@@ -2456,7 +2456,12 @@ FileCheck output:
             options.SetLanguage(frame.GuessLanguage())
             eval_result = self.frame().EvaluateExpression(expr, options)
         else:
-            eval_result = self.target().EvaluateExpression(expr, options)
+            target = self.target()
+            # If there is no selected target, run the expression in the dummy
+            # target.
+            if not target.IsValid():
+                target = self.dbg.GetDummyTarget()
+            eval_result = target.EvaluateExpression(expr, options)
 
         self.assertSuccess(eval_result.GetError())
 
