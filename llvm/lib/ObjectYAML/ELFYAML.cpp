@@ -872,11 +872,10 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
   IO.mapOptional("EPhOff", FileHdr.EPhOff);
   IO.mapOptional("EPhEntSize", FileHdr.EPhEntSize);
   IO.mapOptional("EPhNum", FileHdr.EPhNum);
-
-  IO.mapOptional("SHEntSize", FileHdr.SHEntSize);
-  IO.mapOptional("SHOff", FileHdr.SHOff);
-  IO.mapOptional("SHNum", FileHdr.SHNum);
-  IO.mapOptional("SHStrNdx", FileHdr.SHStrNdx);
+  IO.mapOptional("EShEntSize", FileHdr.EShEntSize);
+  IO.mapOptional("EShOff", FileHdr.EShOff);
+  IO.mapOptional("EShNum", FileHdr.EShNum);
+  IO.mapOptional("EShStrNdx", FileHdr.EShStrNdx);
 }
 
 void MappingTraits<ELFYAML::ProgramHeader>::mapping(
