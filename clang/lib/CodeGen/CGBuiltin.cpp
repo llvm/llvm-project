@@ -6400,7 +6400,7 @@ static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
             && "Can't fit 64-bit value in 32-bit register");
 
   if (AccessKind != Write) {
-    assert(AccesKind == NormalRead || AccessKind == VolatileRead);
+    assert(AccessKind == NormalRead || AccessKind == VolatileRead);
     llvm::Function *F = CGM.getIntrinsic(
         AccessKind == VolatileRead ? llvm::Intrinsic::read_volatile_register
                                    : llvm::Intrinsic::read_register,
