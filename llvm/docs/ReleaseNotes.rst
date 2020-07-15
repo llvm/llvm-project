@@ -199,7 +199,6 @@ External Open Source Projects Using LLVM 11
 
 * A project...
 
-
 Additional Information
 ======================
 
