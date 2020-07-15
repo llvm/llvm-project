@@ -147,7 +147,7 @@ STATISTIC(
     NumLookupTablesHoles,
     "Number of switch instructions turned into lookup tables (holes checked)");
 STATISTIC(NumTableCmpReuses, "Number of reused switch table lookup compares");
-STATISTIC(NumSinkCommons,
+STATISTIC(NumSinkCommonInstrs,
           "Number of common instructions sunk down to the end block");
 STATISTIC(NumSpeculations, "Number of speculative executed instructions");
 
@@ -1892,7 +1892,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
 
     if (!sinkLastInstruction(UnconditionalPreds))
       return Changed;
-    NumSinkCommons++;
+    NumSinkCommonInstrs++;
     Changed = true;
   }
   return Changed;
