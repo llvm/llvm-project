@@ -1113,6 +1113,14 @@ struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
   /// See AbstractAttribute::getName()
   const std::string getName() const override { return "AAICVTracker"; }
 
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AAICVTracker
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
   static const char ID;
 };
 
