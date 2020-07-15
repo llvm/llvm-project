@@ -524,7 +524,7 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(<16 x float> addrspace(
 
 ; GCN: {{^; %bb.[0-9]}}:
 ; GCN: s_mov_b64 exec,
-; GCN: s_cbranch_vccnz [[BB2]]
+; GCN: s_cbranch_execnz [[BB2]]
 
 define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) #0 {
 bb:
