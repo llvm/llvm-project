@@ -17,6 +17,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "tensorflow/c/c_api.h"
 #include "tensorflow/c/c_api_experimental.h"
 
 #include <cassert>
@@ -24,6 +25,11 @@
 using namespace llvm;
 
 namespace {
+
+using TFGraphPtr = std::unique_ptr<TF_Graph, decltype(&TF_DeleteGraph)>;
+using TFSessionOptionsPtr =
+    std::unique_ptr<TF_SessionOptions, decltype(&TF_DeleteSessionOptions)>;
+using TFStatusPtr = std::unique_ptr<TF_Status, decltype(&TF_DeleteStatus)>;
 
 struct TFInitializer {
   TFInitializer() {
@@ -41,24 +47,96 @@ llvm::ManagedStatic<TFInitializer> TFLibInitializer;
 
 bool ensureInitTF() { return TFLibInitializer->IsInitialized; }
 
-TFModelEvaluator::TFGraphPtr createTFGraph() {
-  return TFModelEvaluator::TFGraphPtr(TF_NewGraph(), &TF_DeleteGraph);
+TFGraphPtr createTFGraph() {
+  return TFGraphPtr(TF_NewGraph(), &TF_DeleteGraph);
 }
 
-TFModelEvaluator::TFStatusPtr createTFStatus() {
-  return TFModelEvaluator::TFStatusPtr(TF_NewStatus(), &TF_DeleteStatus);
+TFStatusPtr createTFStatus() {
+  return TFStatusPtr(TF_NewStatus(), &TF_DeleteStatus);
 }
 
-TFModelEvaluator::TFSessionOptionsPtr createTFSessionOptions() {
-  return TFModelEvaluator::TFSessionOptionsPtr(TF_NewSessionOptions(),
-                                               &TF_DeleteSessionOptions);
+TFSessionOptionsPtr createTFSessionOptions() {
+  return TFSessionOptionsPtr(TF_NewSessionOptions(), &TF_DeleteSessionOptions);
 }
 } // namespace
 
-TFModelEvaluator::TFModelEvaluator(StringRef SavedModelPath,
-                                   const std::vector<std::string> &InputNames,
-                                   const std::vector<std::string> &OutputNames,
-                                   const char *Tags)
+namespace llvm {
+class EvaluationResultImpl {
+public:
+  EvaluationResultImpl(size_t OutputSize)
+      : OutputSize(OutputSize), Output(OutputSize){};
+
+  ~EvaluationResultImpl() {
+    for (auto *P : Output)
+      if (P)
+        TF_DeleteTensor(P);
+  }
+
+  EvaluationResultImpl(const EvaluationResultImpl &) = delete;
+  EvaluationResultImpl(EvaluationResultImpl &&Other) = delete;
+  std::vector<TF_Tensor *> &getOutput() { return Output; }
+
+private:
+  const size_t OutputSize;
+  std::vector<TF_Tensor *> Output;
+};
+
+class TFModelEvaluatorImpl {
+public:
+  TFModelEvaluatorImpl(StringRef SavedModelPath,
+                       const std::vector<std::string> &InputNames,
+                       const std::vector<std::string> &OutputNames,
+                       const char *Tags);
+
+  bool isValid() const { return IsValid; }
+  size_t OutputSize() const { return OutputFeed.size(); }
+
+  void evaluate(TF_Tensor **Output, TF_Status *Status) {
+    TF_SessionRun(Session, nullptr, InputFeed.data(), Input.data(),
+                  Input.size(), OutputFeed.data(), Output, OutputFeed.size(),
+                  nullptr, 0, nullptr, Status);
+  }
+
+  void initInput(size_t Index, TF_DataType Type,
+                 const std::vector<int64_t> &Dimensions);
+  const std::vector<TF_Tensor *> &getInput() const { return Input; }
+
+  ~TFModelEvaluatorImpl();
+
+private:
+  /// The objects necessary for carrying out an evaluation of the SavedModel.
+  /// They are expensive to set up, and we maintain them accross all the
+  /// evaluations of the model.
+  TF_Session *Session = nullptr;
+  TFGraphPtr Graph;
+  TFSessionOptionsPtr Options;
+
+  /// The specification of the input nodes.
+  std::vector<TF_Output> InputFeed;
+
+  /// The input tensors. They must match by index of the corresponding InputFeed
+  /// value. We set up the tensors once and just mutate theirs scalars before
+  /// each evaluation. The input tensors keep their value after an evaluation.
+  std::vector<TF_Tensor *> Input;
+
+  /// The specification of the output nodes. When evaluating, the tensors in the
+  /// output tensor vector must match by index the corresponding element in the
+  /// OutputFeed.
+  std::vector<TF_Output> OutputFeed;
+
+  void invalidate() { IsValid = false; }
+
+  bool IsValid = true;
+
+  /// Reusable utility for ensuring we can bind the requested Name to a node in
+  /// the SavedModel Graph.
+  bool checkReportAndInvalidate(const TF_Output &Output, StringRef Name);
+};
+} // namespace llvm
+
+TFModelEvaluatorImpl::TFModelEvaluatorImpl(
+    StringRef SavedModelPath, const std::vector<std::string> &InputNames,
+    const std::vector<std::string> &OutputNames, const char *Tags)
     : Graph(createTFGraph()), Options(createTFSessionOptions()),
       InputFeed(InputNames.size()), Input(InputNames.size()),
       OutputFeed(OutputNames.size()) {
@@ -73,39 +151,36 @@ TFModelEvaluator::TFModelEvaluator(StringRef SavedModelPath,
                                          Graph.get(), nullptr, Status.get());
   if (TF_GetCode(Status.get()) != TF_Code::TF_OK) {
     errs() << TF_Message(Status.get());
-    deleteSession();
+    invalidate();
   }
   for (size_t I = 0; I < InputNames.size(); ++I) {
     InputFeed[I] = {
         TF_GraphOperationByName(Graph.get(), (InputNames[I]).c_str()), 0};
-    if (!checkReportAndReset(InputFeed[I], InputNames[I]))
+    if (!checkReportAndInvalidate(InputFeed[I], InputNames[I]))
       return;
   }
   for (size_t I = 0; I < OutputNames.size(); ++I) {
     OutputFeed[I] = {
         TF_GraphOperationByName(Graph.get(), (OutputNames[I]).c_str()), 0};
-    if (!checkReportAndReset(OutputFeed[I], OutputNames[I]))
+    if (!checkReportAndInvalidate(OutputFeed[I], OutputNames[I]))
       return;
   }
 }
 
-TFModelEvaluator::~TFModelEvaluator() {
+TFModelEvaluator::TFModelEvaluator(StringRef SavedModelPath,
+                                   const std::vector<std::string> &InputNames,
+                                   const std::vector<std::string> &OutputNames,
+                                   const char *Tags)
+    : Impl(new TFModelEvaluatorImpl(SavedModelPath, InputNames, OutputNames,
+                                    Tags)) {
+  if (!Impl->isValid())
+    Impl.reset();
+}
+
+TFModelEvaluatorImpl::~TFModelEvaluatorImpl() {
   for (auto *T : Input) {
     TF_DeleteTensor(T);
   }
-  deleteSession();
-}
-
-bool TFModelEvaluator::checkReportAndReset(const TF_Output &Output,
-                                           StringRef Name) {
-  if (Output.oper)
-    return true;
-  errs() << "Could not find TF_Output named: " + Name;
-  deleteSession();
-  return false;
-}
-
-void TFModelEvaluator::deleteSession() {
   if (Session == nullptr)
     return;
   auto Status = createTFStatus();
@@ -115,24 +190,32 @@ void TFModelEvaluator::deleteSession() {
     errs() << "Could not delete TF session";
 }
 
+bool TFModelEvaluatorImpl::checkReportAndInvalidate(const TF_Output &Output,
+                                                    StringRef Name) {
+  if (Output.oper)
+    return true;
+  errs() << "Could not find TF_Output named: " + Name;
+  IsValid = false;
+  return IsValid;
+}
+
 Optional<TFModelEvaluator::EvaluationResult> TFModelEvaluator::evaluate() {
   if (!isValid())
     return None;
-  EvaluationResult Ret(OutputFeed.size());
+  std::unique_ptr<EvaluationResultImpl> Ret =
+      std::make_unique<EvaluationResultImpl>(Impl->OutputSize());
   auto Status = createTFStatus();
-  TF_SessionRun(Session, nullptr, InputFeed.data(), Input.data(), Input.size(),
-                OutputFeed.data(), Ret.Output.data(), Ret.Output.size(),
-                nullptr, 0, nullptr, Status.get());
+  Impl->evaluate(Ret->getOutput().data(), Status.get());
   if (TF_GetCode(Status.get()) != TF_Code::TF_OK) {
     errs() << TF_Message(Status.get());
-    deleteSession();
+    Impl.reset();
     return None;
   }
-  return Ret;
+  return EvaluationResult(std::move(Ret));
 }
 
-void TFModelEvaluator::initInput(int Index, TF_DataType Type,
-                                 const std::vector<int64_t> &Dimensions) {
+void TFModelEvaluatorImpl::initInput(size_t Index, TF_DataType Type,
+                                     const std::vector<int64_t> &Dimensions) {
   int64_t TotalSize = TF_DataTypeSize(Type);
   for (auto &D : Dimensions)
     TotalSize *= D;
@@ -141,3 +224,66 @@ void TFModelEvaluator::initInput(int Index, TF_DataType Type,
       TF_AllocateTensor(Type, Dimensions.data(), Dimensions.size(), TotalSize);
   std::memset(TF_TensorData(Input[Index]), 0, TotalSize);
 }
+
+void *TFModelEvaluator::getUntypedInput(size_t Index) {
+  return TF_TensorData(Impl->getInput()[Index]);
+}
+
+TFModelEvaluator::EvaluationResult::EvaluationResult(
+    std::unique_ptr<EvaluationResultImpl> Impl)
+    : Impl(std::move(Impl)) {}
+
+TFModelEvaluator::EvaluationResult::EvaluationResult(EvaluationResult &&Other)
+    : Impl(std::move(Other.Impl)) {}
+
+void *TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) {
+  return TF_TensorData(Impl->getOutput()[Index]);
+}
+
+void TFModelEvaluator::initInput(size_t Index, int TypeIndex,
+                                 const std::vector<int64_t> &Dimensions) {
+  Impl->initInput(Index, static_cast<TF_DataType>(TypeIndex), Dimensions);
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<float>() {
+  return TF_FLOAT;
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<double>() {
+  return TF_DOUBLE;
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<int8_t>() {
+  return TF_INT8;
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<uint8_t>() {
+  return TF_UINT8;
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<int16_t>() {
+  return TF_INT16;
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<uint16_t>() {
+  return TF_UINT16;
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<int32_t>() {
+  return TF_INT32;
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<uint32_t>() {
+  return TF_UINT32;
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<int64_t>() {
+  return TF_INT64;
+}
+
+template <> int TFModelEvaluator::getModelTypeIndex<uint64_t>() {
+  return TF_UINT64;
+}
+
+TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
+TFModelEvaluator::~TFModelEvaluator() {}
