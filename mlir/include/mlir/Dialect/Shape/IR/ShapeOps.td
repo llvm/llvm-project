@@ -53,7 +53,7 @@ def Shape_WitnessType : DialectType<ShapeDialect,
 class Shape_Op<string mnemonic, list<OpTrait> traits = []> :
     Op<ShapeDialect, mnemonic, traits>;
 
-def Shape_AddOp : Shape_Op<"add", [SameOperandsAndResultType]> {
+def Shape_AddOp : Shape_Op<"add", [Commutative, SameOperandsAndResultType]> {
   let summary = "Addition of sizes";
   let description = [{
     Adds two valid sizes as follows:
@@ -67,7 +67,7 @@ def Shape_AddOp : Shape_Op<"add", [SameOperandsAndResultType]> {
   let assemblyFormat = "$lhs `,` $rhs attr-dict";
 }
 
-def Shape_BroadcastOp : Shape_Op<"broadcast", []> {
+def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {
   let summary = "Returns the broadcasted output shape of two inputs";
   let description = [{
     Computes the broadcasted output shape following:
@@ -268,7 +268,7 @@ def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [NoSideEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def Shape_JoinOp : Shape_Op<"join", []> {
+def Shape_JoinOp : Shape_Op<"join", [Commutative]> {
   let summary = "Returns the least general shape.size of its operands";
   let description = [{
     An operation that computes the least general shape of input operands.
@@ -301,7 +301,7 @@ def Shape_JoinOp : Shape_Op<"join", []> {
   let results = (outs Shape_ShapeOrSizeType:$result);
 }
 
-def Shape_MulOp : Shape_Op<"mul", [SameOperandsAndResultType]> {
+def Shape_MulOp : Shape_Op<"mul", [Commutative, SameOperandsAndResultType]> {
   let summary = "Multiplication of sizes";
   let description = [{
     Multiplies two valid sizes as follows:
