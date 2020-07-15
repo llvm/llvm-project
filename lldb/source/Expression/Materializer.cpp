@@ -12,7 +12,6 @@
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -23,6 +22,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
+
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 
 #include <memory>
 

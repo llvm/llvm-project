@@ -9,7 +9,7 @@
 #include "SwiftExpressionSourceCode.h"
 
 #include "Plugins/ExpressionParser/Swift/SwiftASTManipulator.h"
-#include "lldb/Symbol/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
