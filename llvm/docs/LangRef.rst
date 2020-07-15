@@ -11643,9 +11643,11 @@ the escaped allocas are allocated, which would break attempts to use
 '``llvm.localrecover``'.
 
 .. _int_read_register:
+.. _int_read_volatile_register:
 .. _int_write_register:
 
-'``llvm.read_register``' and '``llvm.write_register``' Intrinsics
+'``llvm.read_register``', '``llvm.read_volatile_register``', and
+'``llvm.write_register``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -11655,6 +11657,8 @@ Syntax:
 
       declare i32 @llvm.read_register.i32(metadata)
       declare i64 @llvm.read_register.i64(metadata)
+      declare i32 @llvm.read_volatile_register.i32(metadata)
+      declare i64 @llvm.read_volatile_register.i64(metadata)
       declare void @llvm.write_register.i32(metadata, i32 @value)
       declare void @llvm.write_register.i64(metadata, i64 @value)
       !0 = !{!"sp\00"}
@@ -11662,17 +11666,21 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.read_register``' and '``llvm.write_register``' intrinsics
-provides access to the named register. The register must be valid on
-the architecture being compiled to. The type needs to be compatible
-with the register being read.
+The '``llvm.read_register``', '``llvm.read_volatile_register``', and
+'``llvm.write_register``' intrinsics provide access to the named register.
+The register must be valid on the architecture being compiled to. The type
+needs to be compatible with the register being read.
 
 Semantics:
 """"""""""
 
-The '``llvm.read_register``' intrinsic returns the current value of the
-register, where possible. The '``llvm.write_register``' intrinsic sets
-the current value of the register, where possible.
+The '``llvm.read_register``' and '``llvm.read_volatile_register``' intrinsics
+return the current value of the register, where possible. The
+'``llvm.write_register``' intrinsic sets the current value of the register,
+where possible.
+
+A call to '``llvm.read_volatile_register``' is assumed to have side-effects
+and possibly return a different value each time (e.g. for a timer register).
 
 This is useful to implement named register global variables that need
 to always be mapped to a specific register, as is common practice on

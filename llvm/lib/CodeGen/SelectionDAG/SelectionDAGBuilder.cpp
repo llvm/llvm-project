@@ -5698,6 +5698,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              TLI.getFrameIndexTy(DAG.getDataLayout()),
                              getValue(I.getArgOperand(0))));
     return;
+  case Intrinsic::read_volatile_register:
   case Intrinsic::read_register: {
     Value *Reg = I.getArgOperand(0);
     SDValue Chain = getRoot();
