@@ -17,13 +17,13 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#if LLVM_ENABLE_ZLIB == 1 && HAVE_ZLIB_H
+#if LLVM_ENABLE_ZLIB
 #include <zlib.h>
 #endif
 
 using namespace llvm;
 
-#if LLVM_ENABLE_ZLIB == 1 && HAVE_LIBZ
+#if LLVM_ENABLE_ZLIB
 static Error createError(StringRef Err) {
   return make_error<StringError>(Err, inconvertibleErrorCode());
 }
