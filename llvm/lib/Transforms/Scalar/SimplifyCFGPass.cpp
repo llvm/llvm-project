@@ -39,6 +39,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/SimplifyCFGOptions.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <utility>
 using namespace llvm;
@@ -304,15 +305,7 @@ INITIALIZE_PASS_END(CFGSimplifyPass, "simplifycfg", "Simplify the CFG", false,
 
 // Public interface to the CFGSimplification pass
 FunctionPass *
-llvm::createCFGSimplificationPass(unsigned Threshold, bool ForwardSwitchCond,
-                                  bool ConvertSwitch, bool KeepLoops,
-                                  bool SinkCommon,
+llvm::createCFGSimplificationPass(SimplifyCFGOptions Options,
                                   std::function<bool(const Function &)> Ftor) {
-  return new CFGSimplifyPass(SimplifyCFGOptions()
-                                 .bonusInstThreshold(Threshold)
-                                 .forwardSwitchCondToPhi(ForwardSwitchCond)
-                                 .convertSwitchToLookupTable(ConvertSwitch)
-                                 .needCanonicalLoops(KeepLoops)
-                                 .sinkCommonInsts(SinkCommon),
-                             std::move(Ftor));
+  return new CFGSimplifyPass(Options, std::move(Ftor));
 }
