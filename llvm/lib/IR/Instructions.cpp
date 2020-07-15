@@ -1262,11 +1262,15 @@ static Value *getAISize(LLVMContext &Context, Value *Amt) {
 }
 
 static Align computeAllocaDefaultAlign(Type *Ty, BasicBlock *BB) {
+  assert(BB && "Insertion BB cannot be null when alignment not provided!");
+  assert(BB->getParent() &&
+         "BB must be in a Function when alignment not provided!");
   const DataLayout &DL = BB->getModule()->getDataLayout();
   return DL.getPrefTypeAlign(Ty);
 }
 
 static Align computeAllocaDefaultAlign(Type *Ty, Instruction *I) {
+  assert(I && "Insertion position cannot be null when alignment not provided!");
   return computeAllocaDefaultAlign(Ty, I->getParent());
 }
 
@@ -1342,11 +1346,15 @@ void LoadInst::AssertOK() {
 }
 
 static Align computeLoadStoreDefaultAlign(Type *Ty, BasicBlock *BB) {
+  assert(BB && "Insertion BB cannot be null when alignment not provided!");
+  assert(BB->getParent() &&
+         "BB must be in a Function when alignment not provided!");
   const DataLayout &DL = BB->getModule()->getDataLayout();
   return DL.getABITypeAlign(Ty);
 }
 
 static Align computeLoadStoreDefaultAlign(Type *Ty, Instruction *I) {
+  assert(I && "Insertion position cannot be null when alignment not provided!");
   return computeLoadStoreDefaultAlign(Ty, I->getParent());
 }
 
