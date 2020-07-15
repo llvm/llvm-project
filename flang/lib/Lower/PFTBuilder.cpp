@@ -12,6 +12,7 @@
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/Support/CommandLine.h"
 
 static llvm::cl::opt<bool> clDisableStructuredFir(
@@ -385,9 +386,8 @@ private:
   void markBranchTarget(lower::pft::Evaluation &sourceEvaluation,
                         lower::pft::Evaluation &targetEvaluation) {
     sourceEvaluation.isUnstructured = true;
-    if (!sourceEvaluation.controlSuccessor) {
+    if (!sourceEvaluation.controlSuccessor)
       sourceEvaluation.controlSuccessor = &targetEvaluation;
-    }
     targetEvaluation.isNewBlock = true;
     // If this is a branch into the body of a construct (usually illegal,
     // but allowed in some legacy cases), then the targetEvaluation and its
@@ -450,9 +450,8 @@ private:
     // These statements have several std::optional<parser::Name>
     if constexpr (std::is_same_v<A, parser::SelectRankStmt> ||
                   std::is_same_v<A, parser::SelectTypeStmt>) {
-      if (auto name{std::get<0>(stmt.t)}) {
+      if (auto name{std::get<0>(stmt.t)})
         return name->ToString();
-      }
     }
     return {};
   }
@@ -463,9 +462,8 @@ private:
   void insertConstructName(const A &stmt,
                            lower::pft::Evaluation *parentConstruct) {
     std::string name{getConstructName(stmt)};
-    if (!name.empty()) {
+    if (!name.empty())
       constructNameMap[name] = parentConstruct;
-    }
   }
 
   /// Insert branch links for a list of Evaluations.
@@ -518,9 +516,8 @@ private:
               markSuccessorAsNewBlock(eval);
           },
           [&](const parser::ComputedGotoStmt &s) {
-            for (auto &label : std::get<std::list<parser::Label>>(s.t)) {
+            for (auto &label : std::get<std::list<parser::Label>>(s.t))
               markBranchTarget(eval, label);
-            }
           },
           [&](const parser::ArithmeticIfStmt &s) {
             markBranchTarget(eval, std::get<1>(s.t));
@@ -600,9 +597,8 @@ private:
             }
             eval.nonNopSuccessor().isNewBlock = true;
             eval.controlSuccessor = &evaluationList.back();
-            if (std::holds_alternative<parser::ScalarLogicalExpr>(control->u)) {
+            if (std::holds_alternative<parser::ScalarLogicalExpr>(control->u))
               eval.isUnstructured = true; // while loop
-            }
             // Defer additional processing for an unstructured concurrent loop
             // to the EndDoStmt, when the loop is known to be unstructured.
           },
@@ -610,40 +606,39 @@ private:
             lower::pft::Evaluation &doEval{evaluationList.front()};
             eval.controlSuccessor = &doEval;
             doConstructStack.pop_back();
-            if (parentConstruct->lowerAsStructured()) {
+            if (parentConstruct->lowerAsStructured())
               return;
-            }
+
             // Now that the loop is known to be unstructured, finish concurrent
             // loop processing, using NonLabelDoStmt information.
             parentConstruct->constructExit->isNewBlock = true;
-            const auto &doStmt{doEval.getIf<parser::NonLabelDoStmt>()};
+            const auto &doStmt = doEval.getIf<parser::NonLabelDoStmt>();
             assert(doStmt && "missing NonLabelDoStmt");
-            auto &control{
-                std::get<std::optional<parser::LoopControl>>(doStmt->t)};
-            if (!control.has_value()) {
+            auto &control =
+                std::get<std::optional<parser::LoopControl>>(doStmt->t);
+            if (!control.has_value())
               return; // infinite loop
-            }
-            const auto *concurrent{
-                std::get_if<parser::LoopControl::Concurrent>(&control->u)};
-            if (!concurrent) {
+
+            const auto *concurrent =
+                std::get_if<parser::LoopControl::Concurrent>(&control->u);
+            if (!concurrent)
               return;
-            }
+
             // Unstructured concurrent loop.  NonLabelDoStmt code accounts
             // for one concurrent loop dimension.  Reserve preheader,
             // header, and latch blocks for the remaining dimensions, and
             // one block for a mask expression.
-            const auto &header{
-                std::get<parser::ConcurrentHeader>(concurrent->t)};
-            auto dims{std::get<std::list<parser::ConcurrentControl>>(header.t)
-                          .size()};
+            const auto &header =
+                std::get<parser::ConcurrentHeader>(concurrent->t);
+            auto dims =
+                std::get<std::list<parser::ConcurrentControl>>(header.t).size();
             for (; dims > 1; --dims) {
               doEval.localBlocks.emplace_back(nullptr); // preheader
               doEval.localBlocks.emplace_back(nullptr); // header
               eval.localBlocks.emplace_back(nullptr);   // latch
             }
-            if (std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)) {
+            if (std::get<std::optional<parser::ScalarLogicalExpr>>(header.t))
               doEval.localBlocks.emplace_back(nullptr); // mask
-            }
           },
           [&](const parser::IfThenStmt &s) {
             insertConstructName(s, parentConstruct);
@@ -662,9 +657,8 @@ private:
             lastConstructStmtEvaluation = nullptr;
           },
           [&](const parser::EndIfStmt &) {
-            if (parentConstruct->lowerAsUnstructured()) {
+            if (parentConstruct->lowerAsUnstructured())
               parentConstruct->constructExit->isNewBlock = true;
-            }
             if (lastConstructStmtEvaluation) {
               lastConstructStmtEvaluation->controlSuccessor =
                   parentConstruct->constructExit;
@@ -725,9 +719,8 @@ private:
       });
 
       // Analyze construct evaluations.
-      if (eval.evaluationList) {
+      if (eval.evaluationList)
         analyzeBranches(&eval, *eval.evaluationList);
-      }
 
       // Insert branch links for an unstructured IF statement.
       if (lastIfStmtEvaluation && lastIfStmtEvaluation != &eval) {
@@ -812,8 +805,7 @@ private:
   std::vector<lower::pft::Evaluation *> doConstructStack{};
   /// evaluationListStack is the current nested construct evaluationList state.
   std::vector<lower::pft::EvaluationList *> evaluationListStack{};
-  llvm::DenseMap<parser::Label, lower::pft::Evaluation *> *labelEvaluationMap{
-      nullptr};
+  llvm::DenseMap<parser::Label, lower::pft::Evaluation *> *labelEvaluationMap{};
   lower::pft::SymbolLabelMap *assignSymbolLabelMap{nullptr};
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
   lower::pft::Evaluation *lastLexicalEvaluation{nullptr};
@@ -821,18 +813,19 @@ private:
 
 class PFTDumper {
 public:
-  void dumpPFT(llvm::raw_ostream &outputStream, lower::pft::Program &pft) {
+  void dumpPFT(llvm::raw_ostream &outputStream,
+               const lower::pft::Program &pft) {
     for (auto &unit : pft.getUnits()) {
       std::visit(common::visitors{
-                     [&](lower::pft::BlockDataUnit &unit) {
+                     [&](const lower::pft::BlockDataUnit &unit) {
                        outputStream << getNodeIndex(unit) << " ";
                        outputStream << "BlockData: ";
                        outputStream << "\nEndBlockData\n\n";
                      },
-                     [&](lower::pft::FunctionLikeUnit &func) {
+                     [&](const lower::pft::FunctionLikeUnit &func) {
                        dumpFunctionLikeUnit(outputStream, func);
                      },
-                     [&](lower::pft::ModuleLikeUnit &unit) {
+                     [&](const lower::pft::ModuleLikeUnit &unit) {
                        dumpModuleLikeUnit(outputStream, unit);
                      },
                  },
@@ -840,85 +833,88 @@ public:
     }
   }
 
-  llvm::StringRef evaluationName(lower::pft::Evaluation &eval) {
-    return eval.visit(common::visitors{
-        [](const auto &parseTreeNode) {
-          return parser::ParseTreeDumper::GetNodeName(parseTreeNode);
-        },
+  llvm::StringRef evaluationName(const lower::pft::Evaluation &eval) {
+    return eval.visit([](const auto &parseTreeNode) {
+      return parser::ParseTreeDumper::GetNodeName(parseTreeNode);
     });
   }
 
-  void dumpEvaluationList(llvm::raw_ostream &outputStream,
-                          lower::pft::EvaluationList &evaluationList,
-                          int indent = 1) {
-    static const std::string white{"                                      ++"};
-    std::string indentString{white.substr(0, indent * 2)};
-    for (lower::pft::Evaluation &eval : evaluationList) {
-      llvm::StringRef name{evaluationName(eval)};
-      std::string bang{eval.isUnstructured ? "!" : ""};
-      if (eval.isConstruct() || eval.isDirective()) {
-        outputStream << indentString << "<<" << name << bang << ">>";
-        if (eval.constructExit) {
-          outputStream << " -> " << eval.constructExit->printIndex;
-        }
-        outputStream << '\n';
-        dumpEvaluationList(outputStream, *eval.evaluationList, indent + 1);
-        outputStream << indentString << "<<End " << name << bang << ">>\n";
-        continue;
-      }
-      outputStream << indentString;
-      if (eval.printIndex) {
-        outputStream << eval.printIndex << ' ';
-      }
-      if (eval.isNewBlock) {
-        outputStream << '^';
-      }
-      if (!eval.localBlocks.empty()) {
-        outputStream << '*';
-      }
-      outputStream << name << bang;
-      if (eval.isActionStmt() || eval.isConstructStmt()) {
-        if (eval.controlSuccessor) {
-          outputStream << " -> " << eval.controlSuccessor->printIndex;
-        }
-      } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
-        outputStream << " -> " << eval.lexicalSuccessor->printIndex;
-      }
-      if (!eval.position.empty()) {
-        outputStream << ": " << eval.position.ToString();
-      }
+  void dumpEvaluation(llvm::raw_ostream &outputStream,
+                      const lower::pft::Evaluation &eval,
+                      const std::string &indentString, int indent = 1) {
+    llvm::StringRef name = evaluationName(eval);
+    std::string bang = eval.isUnstructured ? "!" : "";
+    if (eval.isConstruct() || eval.isDirective()) {
+      outputStream << indentString << "<<" << name << bang << ">>";
+      if (eval.constructExit)
+        outputStream << " -> " << eval.constructExit->printIndex;
       outputStream << '\n';
+      dumpEvaluationList(outputStream, *eval.evaluationList, indent + 1);
+      outputStream << indentString << "<<End " << name << bang << ">>\n";
+      return;
     }
+    outputStream << indentString;
+    if (eval.printIndex)
+      outputStream << eval.printIndex << ' ';
+    if (eval.isNewBlock)
+      outputStream << '^';
+    if (eval.localBlocks.size())
+      outputStream << '*';
+    outputStream << name << bang;
+    if (eval.isActionStmt() || eval.isConstructStmt()) {
+      if (eval.controlSuccessor)
+        outputStream << " -> " << eval.controlSuccessor->printIndex;
+    } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
+      outputStream << " -> " << eval.lexicalSuccessor->printIndex;
+    }
+    if (!eval.position.empty())
+      outputStream << ": " << eval.position.ToString();
+    outputStream << '\n';
   }
 
-  void dumpFunctionLikeUnit(llvm::raw_ostream &outputStream,
-                            lower::pft::FunctionLikeUnit &functionLikeUnit) {
+  void dumpEvaluation(llvm::raw_ostream &ostream,
+                      const lower::pft::Evaluation &eval) {
+    dumpEvaluation(ostream, eval, "");
+  }
+
+  void dumpEvaluationList(llvm::raw_ostream &outputStream,
+                          const lower::pft::EvaluationList &evaluationList,
+                          int indent = 1) {
+    static const auto white = "                                      ++"s;
+    auto indentString = white.substr(0, indent * 2);
+    for (const auto &eval : evaluationList)
+      dumpEvaluation(outputStream, eval, indentString, indent);
+  }
+
+  void
+  dumpFunctionLikeUnit(llvm::raw_ostream &outputStream,
+                       const lower::pft::FunctionLikeUnit &functionLikeUnit) {
     outputStream << getNodeIndex(functionLikeUnit) << " ";
-    llvm::StringRef unitKind{};
-    std::string name{};
-    std::string header{};
+    llvm::StringRef unitKind;
+    llvm::StringRef name;
+    llvm::StringRef header;
     if (functionLikeUnit.beginStmt) {
       functionLikeUnit.beginStmt->visit(common::visitors{
-          [&](const parser::Statement<parser::ProgramStmt> &statement) {
+          [&](const parser::Statement<parser::ProgramStmt> &stmt) {
             unitKind = "Program";
-            name = statement.statement.v.ToString();
+            name = toStringRef(stmt.statement.v.source);
           },
-          [&](const parser::Statement<parser::FunctionStmt> &statement) {
+          [&](const parser::Statement<parser::FunctionStmt> &stmt) {
             unitKind = "Function";
-            name = std::get<parser::Name>(statement.statement.t).ToString();
-            header = statement.source.ToString();
+            name = toStringRef(std::get<parser::Name>(stmt.statement.t).source);
+            header = toStringRef(stmt.source);
           },
-          [&](const parser::Statement<parser::SubroutineStmt> &statement) {
+          [&](const parser::Statement<parser::SubroutineStmt> &stmt) {
             unitKind = "Subroutine";
-            name = std::get<parser::Name>(statement.statement.t).ToString();
-            header = statement.source.ToString();
+            name = toStringRef(std::get<parser::Name>(stmt.statement.t).source);
+            header = toStringRef(stmt.source);
           },
-          [&](const parser::Statement<parser::MpSubprogramStmt> &statement) {
+          [&](const parser::Statement<parser::MpSubprogramStmt> &stmt) {
             unitKind = "MpSubprogram";
-            name = statement.statement.v.ToString();
-            header = statement.source.ToString();
+            name = toStringRef(stmt.statement.v.source);
+            header = toStringRef(stmt.source);
           },
-          [&](const auto &) {},
+          [&](const auto &) { llvm_unreachable("not a valid begin stmt"); },
       });
     } else {
       unitKind = "Program";
@@ -939,7 +935,7 @@ public:
   }
 
   void dumpModuleLikeUnit(llvm::raw_ostream &outputStream,
-                          lower::pft::ModuleLikeUnit &moduleLikeUnit) {
+                          const lower::pft::ModuleLikeUnit &moduleLikeUnit) {
     outputStream << getNodeIndex(moduleLikeUnit) << " ";
     outputStream << "ModuleLike: ";
     outputStream << "\nContains\n";
@@ -950,11 +946,10 @@ public:
 
   template <typename T>
   std::size_t getNodeIndex(const T &node) {
-    auto addr{static_cast<const void *>(&node)};
-    auto it{nodeIndexes.find(addr)};
-    if (it != nodeIndexes.end()) {
+    auto addr = static_cast<const void *>(&node);
+    auto it = nodeIndexes.find(addr);
+    if (it != nodeIndexes.end())
       return it->second;
-    }
     nodeIndexes.try_emplace(addr, nextIndex);
     return nextIndex++;
   }
@@ -1025,6 +1020,29 @@ Fortran::lower::pft::Evaluation::getOwningProcedure() const {
 }
 
 namespace {
+struct IntervalSet : public llvm::IntervalMap<std::size_t, std::size_t, 16> {
+  using IntervalMap::IntervalMap;
+  using Allocator = IntervalMap::Allocator;
+
+  // Handles the merging of overlapping intervals correctly, efficiently.
+  bool merge(std::size_t lo, std::size_t up) {
+    assert(lo < up);
+    auto first = lookup(lo);
+    auto last = lookup(up);
+    if (!first && !last)
+      insert(lo, up, 1);
+    else if (!first)
+      find(up).setStart(lo);
+    else if (!last)
+      find(lo).setStop(up);
+    else
+      return false;
+    return true;
+  }
+};
+} // namespace
+
+namespace {
 /// This helper class is for sorting the symbols in the symbol table. We want
 /// the symbols in an order such that a symbol will be visited after those it
 /// depends upon. Otherwise this sort is stable and preserves the order of the
@@ -1033,6 +1051,31 @@ struct SymbolDependenceDepth {
   explicit SymbolDependenceDepth(
       std::vector<std::vector<lower::pft::Variable>> &vars)
       : vars{vars} {}
+
+  // Analyze the equivalence sets. This analysis need not be performed when the
+  // scope has no equivalence sets.
+  void analyzeAliases(const semantics::Scope &scope) {
+    IntervalSet::Allocator allocator;
+    IntervalSet intervals(allocator);
+
+    // Collect the offset ranges which have aliasing.
+    for (const auto &set : scope.equivalenceSets())
+      for (const auto &eqv : set) {
+        const auto &sym = eqv.symbol;
+        aliasSyms.insert(&sym);
+        intervals.merge(sym.offset(), sym.offset() + sym.size() - 1);
+      }
+
+    // Create a primary store for each aliased interval.
+    adjustSize(1);
+    for (auto i = intervals.begin(), end = intervals.end(); i != end; ++i) {
+      vars[0].emplace_back(
+          lower::pft::Variable::StoreInterval{i.start(),
+                                              i.stop() - i.start() + 1},
+          /*isGlobal=*/false);
+      stores.emplace_back(i.start(), i.stop() + 1);
+    }
+  }
 
   // Recursively visit each symbol to determine the height of its dependence on
   // other symbols.
@@ -1057,6 +1100,11 @@ struct SymbolDependenceDepth {
     int depth = 0;
     const auto *symTy = sym.GetType();
     assert(symTy && "symbol must have a type");
+
+    // Make sure an aliasing variable appears after its primary storage.
+    if (!aliasSyms.empty())
+      if (aliasSyms.find(&sym) != aliasSyms.end())
+        depth = std::max(1, depth);
 
     // check CHARACTER's length
     if (symTy->category() == semantics::DeclTypeSpec::Character)
@@ -1092,12 +1140,31 @@ struct SymbolDependenceDepth {
     }
     adjustSize(depth + 1);
     vars[depth].emplace_back(sym, global, depth);
-    if (Fortran::semantics::IsAllocatable(sym))
+    if (semantics::IsAllocatable(sym))
       vars[depth].back().setHeapAlloc();
-    if (Fortran::semantics::IsPointer(sym))
+    if (semantics::IsPointer(sym))
       vars[depth].back().setPointer();
-    if (sym.attrs().test(Fortran::semantics::Attr::TARGET))
+    if (sym.attrs().test(semantics::Attr::TARGET))
       vars[depth].back().setTarget();
+
+    // If there are alias sets, then link the participating variables to their
+    // primary stores when constructing the new variable on the list.
+    if (!aliasSyms.empty())
+      if (aliasSyms.find(&sym) != aliasSyms.end()) {
+        if (global)
+          llvm::report_fatal_error("TODO: EQUIVALENCE on global");
+        // Expect the total number of EQUIVALENCE sets to be small for a typical
+        // Fortran program.
+        auto findStore = [&](std::size_t off) -> std::size_t {
+          for (auto v : stores) {
+            auto bot = std::get<0>(v);
+            if (off >= bot && off < std::get<1>(v))
+              return bot;
+          }
+          llvm_unreachable("the store must be present");
+        };
+        vars[depth].back().setAlias(findStore(sym.offset()));
+      }
     return depth;
   }
 
@@ -1117,22 +1184,16 @@ private:
 
   llvm::SmallSet<const semantics::Symbol *, 32> seen;
   std::vector<std::vector<lower::pft::Variable>> &vars;
+  llvm::SmallSet<const semantics::Symbol *, 32> aliasSyms;
+  std::vector<std::tuple<std::size_t, std::size_t>> stores;
 };
 } // namespace
 
 void Fortran::lower::pft::FunctionLikeUnit::processSymbolTable(
     const semantics::Scope &scope) {
-  // TODO: handle equivalence and common blocks
-  if (!scope.equivalenceSets().empty()) {
-    llvm::errs() << "TODO: equivalence not yet handled in lowering.\n"
-                 << "note: equivalence used in "
-                 << (scope.GetName() && !scope.GetName()->empty()
-                         ? scope.GetName()->ToString()
-                         : "unnamed program"s)
-                 << "\n";
-    exit(1);
-  }
   SymbolDependenceDepth sdd{varList};
+  if (!scope.equivalenceSets().empty())
+    sdd.analyzeAliases(scope);
   for (const auto &iter : scope)
     sdd.analyze(iter.second.get());
   sdd.finalize();
@@ -1217,8 +1278,44 @@ Fortran::lower::createPFT(const parser::Program &root,
 }
 
 void Fortran::lower::dumpPFT(llvm::raw_ostream &outputStream,
-                             lower::pft::Program &pft) {
+                             const lower::pft::Program &pft) {
   PFTDumper{}.dumpPFT(outputStream, pft);
 }
 
-void Fortran::lower::pft::Program::dump() { dumpPFT(llvm::errs(), *this); }
+void Fortran::lower::pft::Program::dump() const {
+  dumpPFT(llvm::errs(), *this);
+}
+
+void Fortran::lower::pft::Evaluation::dump() const {
+  PFTDumper{}.dumpEvaluation(llvm::errs(), *this);
+}
+
+void Fortran::lower::pft::Variable::dump() const {
+  if (auto *sym = std::get_if<const Fortran::semantics::Symbol *>(&u))
+    llvm::errs() << "symbol: " << (*sym)->name();
+  else if (auto *store = std::get_if<StoreInterval>(&u))
+    llvm::errs() << "interval[" << std::get<0>(*store) << ", "
+                 << std::get<1>(*store) << "]:";
+  else
+    llvm_unreachable("not a Variable");
+  llvm::errs() << " depth: " << depth;
+  if (global)
+    llvm::errs() << ", global";
+  if (heapAlloc)
+    llvm::errs() << ", allocatable";
+  if (pointer)
+    llvm::errs() << ", pointer";
+  if (target)
+    llvm::errs() << ", target";
+  if (aliasee)
+    llvm::errs() << ", equivalence(" << aliasOffset << ")";
+  llvm::errs() << '\n';
+}
+
+void Fortran::lower::pft::FunctionLikeUnit::dump() const {
+  PFTDumper{}.dumpFunctionLikeUnit(llvm::errs(), *this);
+}
+
+void Fortran::lower::pft::ModuleLikeUnit::dump() const {
+  PFTDumper{}.dumpModuleLikeUnit(llvm::errs(), *this);
+}

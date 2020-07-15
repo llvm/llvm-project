@@ -328,9 +328,9 @@ private:
       // FIXME: make this more robust
       auto base = fir::getBase(var);
       auto ty = builder.getRefType(
-          peelType(base.getType(), context.getLoopVars().size() + 1));
+          peelType(base.getType(), exprCtx.getLoopVars().size() + 1));
       auto coor = builder.create<fir::CoordinateOp>(getLoc(), ty, base,
-                                                    context.getLoopVars());
+                                                    exprCtx.getLoopVars());
       return genLoad(coor);
     }
     return var;
@@ -1041,9 +1041,9 @@ private:
           auto tlb = builder.createConvert(loc, idxTy, std::get<0>(*trip));
           auto dlb = builder.createConvert(loc, idxTy, getLB(arr, dim));
           auto diff = builder.create<mlir::SubIOp>(loc, tlb, dlb);
-          assert(idx < context.getLoopVars().size());
+          assert(idx < exprCtx.getLoopVars().size());
           auto sum = builder.create<mlir::AddIOp>(loc, diff,
-                                                  context.getLoopVars()[idx++]);
+                                                  exprCtx.getLoopVars()[idx++]);
           auto del = builder.createConvert(loc, idxTy, std::get<2>(*trip));
           auto scaled = builder.create<mlir::MulIOp>(loc, del, delta);
           auto prod = builder.create<mlir::MulIOp>(loc, scaled, sum);
@@ -1127,7 +1127,7 @@ private:
           auto ty = builder.getIndexType();
           auto step = builder.createConvert(loc, ty, std::get<2>(*range));
           auto scale = builder.create<mlir::MulIOp>(
-              loc, ty, context.getLoopVars()[i], step);
+              loc, ty, exprCtx.getLoopVars()[i], step);
           auto off = builder.createConvert(loc, ty, std::get<0>(*range));
           args.push_back(builder.create<mlir::AddIOp>(loc, ty, off, scale));
         }

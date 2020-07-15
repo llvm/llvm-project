@@ -253,6 +253,8 @@ struct Evaluation : EvaluationVariant {
     }});
   }
 
+  LLVM_DUMP_METHOD void dump() const;
+
   /// Return the first non-nop successor of an evaluation, possibly exiting
   /// from one or more enclosing constructs.
   Evaluation &nonNopSuccessor() const {
@@ -361,33 +363,64 @@ struct ProgramUnit : ProgramVariant {
 /// A variable captures an object to be created per the declaration part of a
 /// function like unit.
 ///
+/// Fortran EQUIVALENCE statements are a mechanism that introduces aliasing
+/// between named variables. The set of overlapping aliases will materialize a
+/// generic store object with a designated offset and size. Participant
+/// symbols will simply be pointers into the primary store.
+///
 /// Properties can be applied by lowering. For example, a local array that is
 /// known to be very large may be transformed into a heap allocated entity by
 /// lowering. That decision would be tracked in its Variable instance.
 struct Variable {
+  using StoreInterval = std::tuple<std::size_t, std::size_t>;
   explicit Variable(const Fortran::semantics::Symbol &sym, bool global = false,
                     int depth = 0)
-      : sym{&sym}, depth{depth}, global{global} {}
+      : u{&sym}, depth{depth}, global{global} {}
+  explicit Variable(StoreInterval &&store, bool global = false)
+      : u{std::move(store)}, depth{0}, global{global} {}
 
-  const Fortran::semantics::Symbol &getSymbol() const { return *sym; }
+  const Fortran::semantics::Symbol &getSymbol() const {
+    assert(hasSymbol());
+    return *std::get<const Fortran::semantics::Symbol *>(u);
+  }
 
+  const StoreInterval &getPrimaryStore() const {
+    assert(isPrimaryStore());
+    return std::get<StoreInterval>(u);
+  }
+
+  bool hasSymbol() const {
+    return std::holds_alternative<const Fortran::semantics::Symbol *>(u);
+  }
+  bool isPrimaryStore() const { return !hasSymbol(); }
   bool isGlobal() const { return global; }
   bool isHeapAlloc() const { return heapAlloc; }
   bool isPointer() const { return pointer; }
   bool isTarget() const { return target; }
   int getDepth() const { return depth; }
 
+  bool isAlias() const { return aliasee; }
+  std::size_t getAlias() const { return aliasOffset; }
+  void setAlias(std::size_t offset) {
+    aliasee = true;
+    aliasOffset = offset;
+  }
+
   void setHeapAlloc(bool to = true) { heapAlloc = to; }
   void setPointer(bool to = true) { pointer = to; }
   void setTarget(bool to = true) { target = to; }
 
+  LLVM_DUMP_METHOD void dump() const;
+
 private:
-  const Fortran::semantics::Symbol *sym;
+  std::variant<const Fortran::semantics::Symbol *, StoreInterval> u;
   int depth;
   bool global;
   bool heapAlloc{false}; // variable needs deallocation on exit
   bool pointer{false};
   bool target{false};
+  bool aliasee{false}; // participates in EQUIVALENCE union
+  std::size_t aliasOffset{};
 };
 
 /// Function-like units may contain evaluations (executable statements) and
@@ -460,6 +493,8 @@ struct FunctionLikeUnit : public ProgramUnit {
     return stmt.visit(common::visitors{[](const auto &x) { return x.source; }});
   }
 
+  LLVM_DUMP_METHOD void dump() const;
+
   /// Anonymous programs do not have a begin statement
   std::optional<FunctionStatement> beginStmt;
   FunctionStatement endStmt;
@@ -502,6 +537,8 @@ struct ModuleLikeUnit : public ProgramUnit {
   ModuleLikeUnit(ModuleLikeUnit &&) = default;
   ModuleLikeUnit(const ModuleLikeUnit &) = delete;
 
+  LLVM_DUMP_METHOD void dump() const;
+
   ModuleStatement beginStmt;
   ModuleStatement endStmt;
   std::list<FunctionLikeUnit> nestedFunctions;
@@ -522,10 +559,11 @@ struct Program {
   Program(Program &&) = default;
   Program(const Program &) = delete;
 
+  const std::list<Units> &getUnits() const { return units; }
   std::list<Units> &getUnits() { return units; }
 
   /// LLVM dump method on a Program.
-  void dump();
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   std::list<Units> units;
@@ -546,7 +584,7 @@ createPFT(const parser::Program &root,
           const Fortran::semantics::SemanticsContext &semanticsContext);
 
 /// Dumper for displaying a PFT.
-void dumpPFT(llvm::raw_ostream &outputStream, pft::Program &pft);
+void dumpPFT(llvm::raw_ostream &outputStream, const pft::Program &pft);
 
 } // namespace lower
 } // namespace Fortran
