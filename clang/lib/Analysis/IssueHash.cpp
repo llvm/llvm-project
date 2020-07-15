@@ -5,7 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Core/IssueHash.h"
+
+#include "clang/Analysis/IssueHash.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -131,7 +132,7 @@ static StringRef GetNthLineOfFile(const llvm::MemoryBuffer *Buffer, int Line) {
   return *LI;
 }
 
-static std::string NormalizeLine(const SourceManager &SM, FullSourceLoc &L,
+static std::string NormalizeLine(const SourceManager &SM, const FullSourceLoc &L,
                                  const LangOptions &LangOpts) {
   static StringRef Whitespaces = " \t\n";
 
@@ -167,7 +168,7 @@ static std::string NormalizeLine(const SourceManager &SM, FullSourceLoc &L,
   return LineBuff.str();
 }
 
-static llvm::SmallString<32> GetHashOfContent(StringRef Content) {
+static llvm::SmallString<32> GetMD5HashOfContent(StringRef Content) {
   llvm::MD5 Hash;
   llvm::MD5::MD5Result MD5Res;
   SmallString<32> Res;
@@ -179,26 +180,27 @@ static llvm::SmallString<32> GetHashOfContent(StringRef Content) {
   return Res;
 }
 
-std::string clang::GetIssueString(const SourceManager &SM,
-                                  FullSourceLoc &IssueLoc,
-                                  StringRef CheckerName, StringRef BugType,
-                                  const Decl *D,
+std::string clang::getIssueString(const FullSourceLoc &IssueLoc,
+                                  StringRef CheckerName,
+                                  StringRef WarningMessage,
+                                  const Decl *IssueDecl,
                                   const LangOptions &LangOpts) {
   static StringRef Delimiter = "$";
 
   return (llvm::Twine(CheckerName) + Delimiter +
-          GetEnclosingDeclContextSignature(D) + Delimiter +
+          GetEnclosingDeclContextSignature(IssueDecl) + Delimiter +
           Twine(IssueLoc.getExpansionColumnNumber()) + Delimiter +
-          NormalizeLine(SM, IssueLoc, LangOpts) + Delimiter + BugType)
+          NormalizeLine(IssueLoc.getManager(), IssueLoc, LangOpts) +
+          Delimiter + WarningMessage)
       .str();
 }
 
-SmallString<32> clang::GetIssueHash(const SourceManager &SM,
-                                    FullSourceLoc &IssueLoc,
-                                    StringRef CheckerName, StringRef BugType,
-                                    const Decl *D,
+SmallString<32> clang::getIssueHash(const FullSourceLoc &IssueLoc,
+                                    StringRef CheckerName,
+                                    StringRef WarningMessage,
+                                    const Decl *IssueDecl,
                                     const LangOptions &LangOpts) {
 
-  return GetHashOfContent(
-      GetIssueString(SM, IssueLoc, CheckerName, BugType, D, LangOpts));
+  return GetMD5HashOfContent(getIssueString(
+      IssueLoc, CheckerName, WarningMessage, IssueDecl, LangOpts));
 }
