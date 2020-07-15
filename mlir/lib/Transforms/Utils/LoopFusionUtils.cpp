@@ -113,7 +113,7 @@ static Operation *getLastDependentOpInRange(Operation *opA, Operation *opB) {
         return WalkResult::advance();
       }
       for (auto value : op->getResults()) {
-        for (auto user : value.getUsers()) {
+        for (Operation *user : value.getUsers()) {
           SmallVector<AffineForOp, 4> loops;
           // Check if any loop in loop nest surrounding 'user' is 'opB'.
           getLoopIVs(*user, &loops);
