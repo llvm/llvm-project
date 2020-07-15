@@ -21,3 +21,7 @@
 
 # RUN: %{lit} -j 1 %{inputs}/shtest-recursive-substitution/set-to-none --show-all | FileCheck --check-prefix=CHECK-TEST6 %s
 # CHECK-TEST6: PASS: set-to-none :: test.py
+
+# RUN: %{lit} -j 1 %{inputs}/shtest-recursive-substitution/escaping --show-all | FileCheck --check-prefix=CHECK-TEST7 %s
+# CHECK-TEST7: PASS: escaping :: test.py
+# CHECK-TEST7: $ "echo" "%s" "%s" "%%s"
