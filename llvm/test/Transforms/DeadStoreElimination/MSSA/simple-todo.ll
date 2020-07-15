@@ -4,29 +4,6 @@
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes=dse -enable-dse-memoryssa -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
-declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture, i8, i64, i32) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32) nounwind
-declare void @llvm.init.trampoline(i8*, i8*, i8*)
-
-; DSE should delete the dead trampoline.
-declare void @test11f()
-define void @test11() {
-; CHECK-LABEL: @test11(
-; CHECK-NEXT:    ret void
-;
-  %storage = alloca [10 x i8], align 16		; <[10 x i8]*> [#uses=1]
-  %cast = getelementptr [10 x i8], [10 x i8]* %storage, i32 0, i32 0		; <i8*> [#uses=1]
-  call void @llvm.init.trampoline( i8* %cast, i8* bitcast (void ()* @test11f to i8*), i8* null )		; <i8*> [#uses=1]
-  ret void
-}
-
-
-declare noalias i8* @malloc(i32)
-
-declare void @unknown_func()
-
 ; Remove redundant store if loaded value is in another block inside a loop.
 define i32 @test31(i1 %c, i32* %p, i32 %i) {
 ; CHECK-LABEL: @test31(

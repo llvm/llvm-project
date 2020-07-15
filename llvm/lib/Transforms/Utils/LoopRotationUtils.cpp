@@ -740,12 +740,7 @@ bool llvm::LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
                         const SimplifyQuery &SQ, bool RotationOnly = true,
                         unsigned Threshold = unsigned(-1),
                         bool IsUtilMode = true) {
-  if (MSSAU && VerifyMemorySSA)
-    MSSAU->getMemorySSA()->verifyMemorySSA();
   LoopRotate LR(Threshold, LI, TTI, AC, DT, SE, MSSAU, SQ, RotationOnly,
                 IsUtilMode);
-  if (MSSAU && VerifyMemorySSA)
-    MSSAU->getMemorySSA()->verifyMemorySSA();
-
   return LR.processLoop(L);
 }

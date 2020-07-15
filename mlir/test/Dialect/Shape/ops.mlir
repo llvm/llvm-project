@@ -116,3 +116,18 @@ func @rank(%shape : !shape.shape) -> !shape.size {
   %rank = shape.rank %shape
   return %rank : !shape.size
 }
+
+func @shape_eq_on_shapes(%a : !shape.shape, %b : !shape.shape) -> i1 {
+  %result = shape.shape_eq %a, %b : !shape.shape, !shape.shape
+  return %result : i1
+}
+
+func @shape_eq_on_tensors(%a : tensor<?xindex>, %b : tensor<?xindex>) -> i1 {
+  %result = shape.shape_eq %a, %b : tensor<?xindex>, tensor<?xindex>
+  return %result : i1
+}
+
+func @shape_eq_on_mixed(%a : tensor<?xindex>, %b : !shape.shape) -> i1 {
+  %result = shape.shape_eq %a, %b : tensor<?xindex>, !shape.shape
+  return %result : i1
+}
