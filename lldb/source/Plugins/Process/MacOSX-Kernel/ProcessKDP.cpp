@@ -873,7 +873,7 @@ private:
   OptionGroupUInt64 m_command_byte;
   OptionGroupString m_packet_data;
 
-  virtual Options *GetOptions() { return &m_option_group; }
+  Options *GetOptions() override { return &m_option_group; }
 
 public:
   CommandObjectProcessKDPPacketSend(CommandInterpreter &interpreter)
@@ -900,7 +900,7 @@ public:
 
   ~CommandObjectProcessKDPPacketSend() {}
 
-  bool DoExecute(Args &command, CommandReturnObject &result) {
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       if (!m_command_byte.GetOptionValue().OptionWasSet()) {
