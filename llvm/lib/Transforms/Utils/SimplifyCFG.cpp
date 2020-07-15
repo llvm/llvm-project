@@ -147,6 +147,8 @@ STATISTIC(
     NumLookupTablesHoles,
     "Number of switch instructions turned into lookup tables (holes checked)");
 STATISTIC(NumTableCmpReuses, "Number of reused switch table lookup compares");
+STATISTIC(NumHoistCommonInstrs,
+          "Number of common instructions hoisted up to the begin block");
 STATISTIC(NumSinkCommonCode,
           "Number of common instruction 'blocks' sunk down to the end block");
 STATISTIC(NumSinkCommonInstrs,
@@ -1355,6 +1357,7 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
       I2->eraseFromParent();
       Changed = true;
     }
+    ++NumHoistCommonInstrs;
 
     I1 = &*BB1_Itr++;
     I2 = &*BB2_Itr++;
@@ -1409,6 +1412,7 @@ HoistTerminator:
     I2->replaceAllUsesWith(NT);
     NT->takeName(I1);
   }
+  ++NumHoistCommonInstrs;
 
   // Ensure terminator gets a debug location, even an unknown one, in case
   // it involves inlinable calls.
