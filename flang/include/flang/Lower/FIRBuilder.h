@@ -69,6 +69,9 @@ public:
   /// Safely create a reference type to the type `eleTy`.
   mlir::Type getRefType(mlir::Type eleTy);
 
+  /// Create a 1-dimensional sequence of `eleTy` of unknown size.
+  mlir::Type getVarLenSeqTy(mlir::Type eleTy);
+
   /// Create a null constant of type RefType and value 0. Need to pass in the
   /// Location information.
   mlir::Value createNullConstant(mlir::Location loc);

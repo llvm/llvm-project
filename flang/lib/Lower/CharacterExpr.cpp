@@ -79,7 +79,7 @@ Fortran::lower::CharacterExprHelper::toExtendedValue(mlir::Value character,
   auto lenType = getLengthType();
   auto type = character.getType();
   auto base = character;
-  mlir::Value resultLen = len;
+  auto resultLen = len;
   llvm::SmallVector<mlir::Value, 2> extents;
 
   if (auto refType = type.dyn_cast<fir::ReferenceType>())
@@ -129,10 +129,18 @@ Fortran::lower::CharacterExprHelper::toExtendedValue(mlir::Value character,
   return fir::CharBoxValue{base, resultLen};
 }
 
-/// Get fir.ref<fir.char<kind>> type.
+/// Get canonical `!fir.ref<!fir.char<kind>>` type.
 mlir::Type Fortran::lower::CharacterExprHelper::getReferenceType(
     const fir::CharBoxValue &box) const {
   return builder.getRefType(getCharacterType(box));
+}
+
+mlir::Type Fortran::lower::CharacterExprHelper::getSeqTy(
+    const fir::CharBoxValue &box) const {
+  auto ty = box.getBuffer().getType();
+  if (ty.isa<fir::SequenceType>())
+    return ty;
+  return builder.getRefType(builder.getVarLenSeqTy(getCharacterType(box)));
 }
 
 mlir::Value
@@ -144,16 +152,11 @@ Fortran::lower::CharacterExprHelper::createEmbox(const fir::CharBoxValue &box) {
   auto kind = getCharacterType(str).getFKind();
   auto boxCharType = fir::BoxCharType::get(builder.getContext(), kind);
   auto refType = getReferenceType(str);
-  // So far, fir.emboxChar fails lowering to llvm when it is given
-  // fir.ref<fir.array<len x fir.char<kind>>> types, so convert to
-  // fir.ref<fir.char<kind>> if needed.
-  auto buff = str.getBuffer();
-  buff = builder.createConvert(loc, refType, buff);
+  auto buff = builder.createConvert(loc, refType, str.getBuffer());
   // Convert in case the provided length is not of the integer type that must
   // be used in boxchar.
   auto lenType = getLengthType();
-  auto len = str.getLen();
-  len = builder.createConvert(loc, lenType, len);
+  auto len = builder.createConvert(loc, lenType, str.getLen());
   return builder.create<fir::EmboxCharOp>(loc, boxCharType, buff, len);
 }
 
@@ -163,16 +166,18 @@ mlir::Value Fortran::lower::CharacterExprHelper::createLoadCharAt(
   // the single character.
   if (str.getBuffer().getType().isa<fir::CharacterType>())
     return str.getBuffer();
+  auto buff = builder.createConvert(loc, getSeqTy(str), str.getBuffer());
   auto addr = builder.create<fir::CoordinateOp>(loc, getReferenceType(str),
-                                                str.getBuffer(), index);
+                                                buff, index);
   return builder.create<fir::LoadOp>(loc, addr);
 }
 
 void Fortran::lower::CharacterExprHelper::createStoreCharAt(
     const fir::CharBoxValue &str, mlir::Value index, mlir::Value c) {
   assert(!needToMaterialize(str) && "not in memory");
+  auto buff = builder.createConvert(loc, getSeqTy(str), str.getBuffer());
   auto addr = builder.create<fir::CoordinateOp>(loc, getReferenceType(str),
-                                                str.getBuffer(), index);
+                                                buff, index);
   builder.create<fir::StoreOp>(loc, c, addr);
 }
 
@@ -300,7 +305,7 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createSubstring(
   if (needToMaterialize(box))
     str = materializeValue(box);
 
-  auto nbounds{bounds.size()};
+  auto nbounds = bounds.size();
   if (nbounds < 1 || nbounds > 2) {
     mlir::emitError(loc, "Incorrect number of bounds in substring");
     return {mlir::Value{}, mlir::Value{}};
@@ -316,8 +321,9 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createSubstring(
   auto idxType = builder.getIndexType();
   if (offset.getType() != idxType)
     offset = builder.createConvert(loc, idxType, offset);
+  auto buff = builder.createConvert(loc, getSeqTy(str), str.getBuffer());
   auto substringRef = builder.create<fir::CoordinateOp>(
-      loc, getReferenceType(str), str.getBuffer(), offset);
+      loc, getReferenceType(str), buff, offset);
 
   // Compute the length.
   mlir::Value substringLen{};

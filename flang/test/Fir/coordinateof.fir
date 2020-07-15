@@ -16,9 +16,9 @@ func @foo1(%i : i32, %j : i32, %k : i32) -> !fir.ref<f32> {
 func @foo2(%i : i32, %j : i32, %k : i32) -> !fir.ref<f32> {
   %1 = fir.alloca !fir.array<10 x 20 x 30 x f32>
   // CHECK: %[[ptr:.*]] = bitcast [30 x [20 x [10 x
-  %2 = fir.convert %1 : (!fir.ref<!fir.array<10 x 20 x 30 x f32>>) -> !fir.ref<f32>
+  %2 = fir.convert %1 : (!fir.ref<!fir.array<10 x 20 x 30 x f32>>) -> !fir.ref<!fir.array<?xf32>>
   // CHECK: getelementptr float, float* %[[ptr]]
-  %3 = fir.coordinate_of %2, %i : (!fir.ref<f32>, i32) -> !fir.ref<f32>
+  %3 = fir.coordinate_of %2, %i : (!fir.ref<!fir.array<?xf32>>, i32) -> !fir.ref<f32>
   return %3 : !fir.ref<f32>
 }
 

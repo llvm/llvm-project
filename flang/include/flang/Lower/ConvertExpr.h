@@ -61,10 +61,13 @@ public:
       : loopVars{lcvs.begin(), lcvs.end()} {}
 
   bool inArrayContext() const { return loopVars.size() > 0; }
+  bool inInitializer() const { return isInitializer; }
   const std::vector<mlir::Value> &getLoopVars() const { return loopVars; }
+  void setInInitializer() { isInitializer = true; }
 
 private:
   std::vector<mlir::Value> loopVars{};
+  bool isInitializer{false};
 };
 
 /// Create an expression.

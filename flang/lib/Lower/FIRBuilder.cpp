@@ -38,6 +38,11 @@ mlir::Type Fortran::lower::FirOpBuilder::getRefType(mlir::Type eleTy) {
   return fir::ReferenceType::get(eleTy);
 }
 
+mlir::Type Fortran::lower::FirOpBuilder::getVarLenSeqTy(mlir::Type eleTy) {
+  fir::SequenceType::Shape shape = {fir::SequenceType::getUnknownExtent()};
+  return fir::SequenceType::get(shape, eleTy);
+}
+
 mlir::Value
 Fortran::lower::FirOpBuilder::createNullConstant(mlir::Location loc) {
   auto indexType = getIndexType();

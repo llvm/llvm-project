@@ -123,6 +123,7 @@ private:
   fir::CharBoxValue materializeValue(const fir::CharBoxValue &str);
   fir::CharBoxValue toDataLengthPair(mlir::Value character);
   mlir::Type getReferenceType(const fir::CharBoxValue &c) const;
+  mlir::Type getSeqTy(const fir::CharBoxValue &c) const;
   mlir::Value createEmbox(const fir::CharBoxValue &str);
   mlir::Value createLoadCharAt(const fir::CharBoxValue &str, mlir::Value index);
   void createStoreCharAt(const fir::CharBoxValue &str, mlir::Value index,
