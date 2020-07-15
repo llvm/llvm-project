@@ -971,6 +971,12 @@ public:
   operator bool() const noexcept;
   unique_ptr<T> &operator=(unique_ptr<T> &&p) noexcept;
 };
+
+// TODO :: Once the deleter parameter is added update with additional template parameter.
+template <typename T>
+void swap(unique_ptr<T> &x, unique_ptr<T> &y) noexcept {
+  x.swap(y);
+}
 } // namespace std
 #endif
 

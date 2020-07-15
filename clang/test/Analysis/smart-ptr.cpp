@@ -201,3 +201,30 @@ void derefAfterAssignment() {
     Q->foo(); // no-warning
   }
 }
+
+void derefOnSwappedNullPtr() {
+  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> PNull;
+  P.swap(PNull);
+  PNull->foo(); // No warning.
+  (*P).foo();   // expected-warning {{Dereference of null smart pointer [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefOnStdSwappedNullPtr() {
+  std::unique_ptr<A> P;
+  std::unique_ptr<A> PNull;
+  std::swap(P, PNull);
+  PNull->foo(); // expected-warning {{Dereference of null smart pointer [alpha.cplusplus.SmartPtr]}}
+  P->foo();     // expected-warning {{Dereference of null smart pointer [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefOnSwappedValidPtr() {
+  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> PValid(new A());
+  P.swap(PValid);
+  (*P).foo();    // No warning.
+  PValid->foo(); // No warning.
+  std::swap(P, PValid);
+  P->foo();      // No warning.
+  PValid->foo(); // No warning.
+}
