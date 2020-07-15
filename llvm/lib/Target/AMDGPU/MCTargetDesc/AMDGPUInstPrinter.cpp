@@ -299,14 +299,23 @@ void AMDGPUInstPrinter::printExpVM(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
-  if (unsigned Val = MI->getOperand(OpNo).getImm()) {
-    if (AMDGPU::isGFX10(STI))
-      O << " format:" << Val;
-    else {
-      O << " dfmt:" << (Val & 15);
-      O << ", nfmt:" << (Val >> 4);
-    }
+  using namespace llvm::AMDGPU::MTBUFFormat;
+
+  unsigned Val = MI->getOperand(OpNo).getImm();
+  if (AMDGPU::isGFX10(STI)) {
+    if (Val == UFMT_DEFAULT)
+      return;
+    O << " format:" << Val;
+  } else {
+    if (Val == DFMT_NFMT_DEFAULT)
+      return;
+    unsigned Dfmt;
+    unsigned Nfmt;
+    decodeDfmtNfmt(Val, Dfmt, Nfmt);
+    O << " dfmt:" << Dfmt;
+    O << ", nfmt:" << Nfmt;
   }
+  O << ',';
 }
 
 void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
