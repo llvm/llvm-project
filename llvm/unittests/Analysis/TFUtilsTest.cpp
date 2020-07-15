@@ -45,9 +45,9 @@ TEST(TFUtilsTest, LoadAndExecuteTest) {
   static const std::vector<int64_t> Dim{1, KnownSize};
 
   EXPECT_TRUE(Evaluator.isValid());
-  Evaluator.initInput(0, TF_INT32, Dim);
+  Evaluator.initInput<int32_t>(0, Dim);
 
-  int32_t *V = static_cast<int32_t *>(TF_TensorData(Evaluator.getInput()[0]));
+  int32_t *V = Evaluator.getInput<int32_t>(0);
   // Fill it up with 1's, we know the output.
   for (auto I = 0; I < KnownSize; ++I) {
     V[I] = 1;
@@ -85,9 +85,9 @@ TEST(TFUtilsTest, EvalError) {
   static const std::vector<int64_t> Dim{1, KnownSize};
 
   EXPECT_TRUE(Evaluator.isValid());
-  Evaluator.initInput(0, TF_INT32, Dim);
+  Evaluator.initInput<int32_t>(0, Dim);
 
-  int32_t *V = static_cast<int32_t *>(TF_TensorData(Evaluator.getInput()[0]));
+  int32_t *V = Evaluator.getInput<int32_t>(0);
   // Fill it up with 1's, we know the output.
   for (auto I = 0; I < KnownSize; ++I) {
     V[I] = 1;
