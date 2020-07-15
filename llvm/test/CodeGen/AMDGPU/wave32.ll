@@ -668,7 +668,7 @@ define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d
 ; GCN-LABEL: {{^}}test_loop_vcc:
 ; GFX1032: v_cmp_lt_f32_e32 vcc_lo,
 ; GFX1064: v_cmp_lt_f32_e32 vcc,
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_vccz
 define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 entry:
   br label %loop

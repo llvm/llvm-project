@@ -101,21 +101,21 @@ public:
   CVMCAdapter(MCStreamer &OS, TypeCollection &TypeTable)
       : OS(&OS), TypeTable(TypeTable) {}
 
-  void emitBytes(StringRef Data) { OS->emitBytes(Data); }
+  void emitBytes(StringRef Data) override { OS->emitBytes(Data); }
 
-  void emitIntValue(uint64_t Value, unsigned Size) {
+  void emitIntValue(uint64_t Value, unsigned Size) override {
     OS->emitIntValueInHex(Value, Size);
   }
 
-  void emitBinaryData(StringRef Data) { OS->emitBinaryData(Data); }
+  void emitBinaryData(StringRef Data) override { OS->emitBinaryData(Data); }
 
-  void AddComment(const Twine &T) { OS->AddComment(T); }
+  void AddComment(const Twine &T) override { OS->AddComment(T); }
 
-  void AddRawComment(const Twine &T) { OS->emitRawComment(T); }
+  void AddRawComment(const Twine &T) override { OS->emitRawComment(T); }
 
-  bool isVerboseAsm() { return OS->isVerboseAsm(); }
+  bool isVerboseAsm() override { return OS->isVerboseAsm(); }
 
-  std::string getTypeName(TypeIndex TI) {
+  std::string getTypeName(TypeIndex TI) override {
     std::string TypeName;
     if (!TI.isNoneType()) {
       if (TI.isSimple())

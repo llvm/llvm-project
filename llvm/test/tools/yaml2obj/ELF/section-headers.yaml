@@ -184,9 +184,9 @@ FileHeader:
   Data:      ELFDATA2LSB
   Type:      ET_REL
   Machine:   EM_X86_64
-  SHOff:     0x2
-  SHNum:     0x3
-  SHStrNdx:  0x4
+  EShOff:    0x2
+  EShNum:    0x3
+  EShStrNdx: 0x4
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS

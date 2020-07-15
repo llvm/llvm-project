@@ -47,7 +47,7 @@ public:
   /// Encode the instruction and write it to the OS.
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
-                         const MCSubtargetInfo &STI) const;
+                         const MCSubtargetInfo &STI) const override;
 
   /// \returns the encoding for an MCOperand.
   uint64_t getMachineOpValue(const MCInst &MI, const MCOperand &MO,

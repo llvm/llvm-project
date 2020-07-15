@@ -446,7 +446,7 @@ opt<bool> EnableConfig{
         "\tMac OS: ~/Library/Preferences/\n"
         "\tOthers: $XDG_CONFIG_HOME, usually ~/.config\n"
         "Configuration is documented at https://clangd.llvm.org/config.html"),
-    init(false),
+    init(true),
 };
 
 /// Supports a test URI scheme with relaxed constraints for lit tests.
@@ -703,9 +703,9 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   CCOpts.RunParser = CodeCompletionParse;
 
   RealThreadsafeFS TFS;
+  std::vector<std::unique_ptr<config::Provider>> ProviderStack;
   std::unique_ptr<config::Provider> Config;
   if (EnableConfig) {
-    std::vector<std::unique_ptr<config::Provider>> ProviderStack;
     ProviderStack.push_back(
         config::Provider::fromAncestorRelativeYAMLFiles(".clangd", TFS));
     llvm::SmallString<256> UserConfig;
@@ -716,7 +716,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     } else {
       elog("Couldn't determine user config file, not loading");
     }
-    Config = config::Provider::combine(std::move(ProviderStack));
+    std::vector<const config::Provider *> ProviderPointers;
+    for (const auto& P : ProviderStack)
+      ProviderPointers.push_back(P.get());
+    Config = config::Provider::combine(std::move(ProviderPointers));
     Opts.ConfigProvider = Config.get();
   }
 

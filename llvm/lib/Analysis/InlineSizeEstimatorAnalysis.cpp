@@ -256,7 +256,7 @@ InlineSizeEstimatorAnalysis::InlineSizeEstimatorAnalysis() {
       1, static_cast<int64_t>(
              IRToNativeSizeLearning::FunctionFeatures::FeatureCount)};
 
-  Evaluator->initInput(0, TF_INT32, Dim);
+  Evaluator->initInput<int32_t>(0, Dim);
 }
 
 InlineSizeEstimatorAnalysis::Result
@@ -266,7 +266,7 @@ InlineSizeEstimatorAnalysis::run(const Function &F,
     return None;
   auto Features = IRToNativeSizeLearning::getFunctionFeatures(
       const_cast<Function &>(F), FAM);
-  int32_t *V = static_cast<int32_t *>(TF_TensorData(Evaluator->getInput()[0]));
+  int32_t *V = Evaluator->getInput<int32_t>(0);
   Features.fillTensor(V);
   auto ER = Evaluator->evaluate();
   if (!ER)

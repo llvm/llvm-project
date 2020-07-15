@@ -89,7 +89,7 @@ static bool getExtensionVersion(const Driver &D, const ArgList &Args,
 
   if (Major.size() && In.consume_front("p")) {
     Minor = std::string(In.take_while(isDigit));
-    In = In.substr(Major.size());
+    In = In.substr(Major.size() + 1);
 
     // Expected 'p' to be followed by minor version number.
     if (Minor.empty()) {
@@ -99,6 +99,16 @@ static bool getExtensionVersion(const Driver &D, const ArgList &Args,
         << MArch << Error << Ext;
       return false;
     }
+  }
+
+  // Expected multi-character extension with version number to have no
+  // subsequent characters (i.e. must either end string or be followed by
+  // an underscore).
+  if (Ext.size() > 1 && In.size()) {
+    std::string Error =
+        "multi-character extensions must be separated by underscores";
+    D.Diag(diag::err_drv_invalid_riscv_ext_arch_name) << MArch << Error << In;
+    return false;
   }
 
   // If experimental extension, require use of current version number number

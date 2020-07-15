@@ -9,8 +9,9 @@
 #ifndef LLVM_ANALYSIS_UTILS_TFUTILS_H
 #define LLVM_ANALYSIS_UTILS_TFUTILS_H
 
+#include "llvm/Config/config.h"
+
 #ifdef LLVM_HAVE_TF_API
-#include "tensorflow/c/c_api.h"
 #include "llvm/IR/LLVMContext.h"
 
 #include <memory>
@@ -29,50 +30,34 @@ namespace llvm {
 /// - set input values by using getInput to get each input tensor, and then
 ///   setting internal scalars, for all dimensions (tensors are row-major:
 ///   https://github.com/tensorflow/tensorflow/blob/r1.5/tensorflow/c/c_api.h#L205)
-/// - prepare an output vector of TF_Output* type, with the correct number of
-/// outputs (i.e. same as OutputNames). Initialize the vector with nullptr
-/// values.
 /// - call evaluate. The input tensors' values are not consumed after this, and
 ///   may still be read.
 /// - use the outputs in the output vector
-/// - deallocate each output tensor in the output vector, using TF_DeleteTensor.
+class TFModelEvaluatorImpl;
+class EvaluationResultImpl;
+
 class TFModelEvaluator final {
 public:
   /// The result of a model evaluation. Handles the lifetime of the output
-  /// TF_Tensor objects, which means that their values need to be used before
+  /// tensors, which means that their values need to be used before
   /// the EvaluationResult's dtor is called.
   class EvaluationResult {
   public:
-    ~EvaluationResult() {
-      for (auto *P : Output)
-        if (P)
-          TF_DeleteTensor(P);
-    }
-
     EvaluationResult(const EvaluationResult &) = delete;
-    EvaluationResult(EvaluationResult &&Other)
-        : OutputSize(Other.OutputSize), Output(std::move(Other.Output)) {
-      Other.Output.clear();
-    };
+    EvaluationResult(EvaluationResult &&Other);
+    ~EvaluationResult();
 
     /// Get a pointer to the first element of the tensor at Index.
     template <typename T> T *getTensorValue(size_t Index) {
-      return static_cast<T *>(TF_TensorData(Output[Index]));
+      return static_cast<T *>(getUntypedTensorValue(Index));
     }
 
   private:
     friend class TFModelEvaluator;
-    EvaluationResult(size_t OutputSize)
-        : OutputSize(OutputSize), Output(OutputSize){};
-
-    const size_t OutputSize;
-    std::vector<TF_Tensor *> Output;
+    EvaluationResult(std::unique_ptr<EvaluationResultImpl> Impl);
+    void *getUntypedTensorValue(size_t Index);
+    std::unique_ptr<EvaluationResultImpl> Impl;
   };
-
-  using TFGraphPtr = std::unique_ptr<TF_Graph, decltype(&TF_DeleteGraph)>;
-  using TFSessionOptionsPtr =
-      std::unique_ptr<TF_SessionOptions, decltype(&TF_DeleteSessionOptions)>;
-  using TFStatusPtr = std::unique_ptr<TF_Status, decltype(&TF_DeleteStatus)>;
 
   TFModelEvaluator(StringRef SavedModelPath,
                    const std::vector<std::string> &InputNames,
@@ -85,53 +70,45 @@ public:
   /// Evaluate the model, assuming it is valid. Returns None if the evaluation
   /// fails or the model is invalid, or an EvaluationResult otherwise. The
   /// inputs are assumed to have been already provided via getInput(). When
-  /// returning None, it also marks the object invalid. Pass an Output vector
-  /// with the same size as OutputNames, but with nullptr values. evaluate()
-  /// will populate it with tensors, matching in index the corresponding
-  /// OutputNames. The caller is responsible for the deallocation of those
-  /// tensors, using TF_DeleteTensor.
+  /// returning None, it also invalidates this object.
   Optional<EvaluationResult> evaluate();
 
-  /// Provides access to the input vector. It is already dimensioned correctly,
-  /// but the values need to be allocated by the user.
-  std::vector<TF_Tensor *> &getInput() { return Input; }
+  /// Provides access to the input vector.
+  template <typename T> T *getInput(size_t Index) {
+    return static_cast<T *>(getUntypedInput(Index));
+  }
 
   /// Returns true if the tensorflow model was loaded successfully, false
   /// otherwise.
-  bool isValid() const { return !!Session; }
+  bool isValid() const { return !!Impl; }
 
-  /// Initialize the input at Index as a tensor of the given type and dimensions
-  void initInput(int Index, TF_DataType Type,
-                 const std::vector<int64_t> &Dimensions);
+  /// Initialize the input at Index as a tensor of the given type and
+  /// dimensions.
+  template <typename T>
+  void initInput(size_t Index, const std::vector<int64_t> &Dimensions) {
+    return initInput(Index, getModelTypeIndex<T>(), Dimensions);
+  }
 
 private:
-  /// The objects necessary for carrying out an evaluation of the SavedModel.
-  /// They are expensive to set up, and we maintain them accross all the
-  /// evaluations of the model.
-  TF_Session *Session = nullptr;
-  TFGraphPtr Graph;
-  TFSessionOptionsPtr Options;
+  void *getUntypedInput(size_t Index);
+  template <typename T> int getModelTypeIndex();
+  void initInput(size_t Index, int TypeIndex,
+                 const std::vector<int64_t> &Dimensions);
 
-  /// The specification of the input nodes.
-  std::vector<TF_Output> InputFeed;
-
-  /// The input tensors. They must match by index of the corresponding InputFeed
-  /// value. We set up the tensors once and just mutate theirs scalars before
-  /// each evaluation. The input tensors keep their value after an evaluation.
-  std::vector<TF_Tensor *> Input;
-
-  /// The specification of the output nodes. When evaluating, the tensors in the
-  /// output tensor vector must match by index the corresponding element in the
-  /// OutputFeed.
-  std::vector<TF_Output> OutputFeed;
-
-  /// Reusable utility for deleting the session.
-  void deleteSession();
-
-  /// Reusable utility for ensuring we can bind the requested Name to a node in
-  /// the SavedModel Graph.
-  bool checkReportAndReset(const TF_Output &Output, StringRef Name);
+  std::unique_ptr<TFModelEvaluatorImpl> Impl;
 };
+
+template <> int TFModelEvaluator::getModelTypeIndex<float>();
+template <> int TFModelEvaluator::getModelTypeIndex<double>();
+template <> int TFModelEvaluator::getModelTypeIndex<int8_t>();
+template <> int TFModelEvaluator::getModelTypeIndex<uint8_t>();
+template <> int TFModelEvaluator::getModelTypeIndex<int16_t>();
+template <> int TFModelEvaluator::getModelTypeIndex<uint16_t>();
+template <> int TFModelEvaluator::getModelTypeIndex<int32_t>();
+template <> int TFModelEvaluator::getModelTypeIndex<uint32_t>();
+template <> int TFModelEvaluator::getModelTypeIndex<int64_t>();
+template <> int TFModelEvaluator::getModelTypeIndex<uint64_t>();
+
 } // namespace llvm
 
 #endif // LLVM_HAVE_TF_API

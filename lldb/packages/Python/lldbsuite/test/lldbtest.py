@@ -800,9 +800,6 @@ class Base(unittest2.TestCase):
         # List of spawned subproces.Popen objects
         self.subprocesses = []
 
-        # List of forked process PIDs
-        self.forkedProcessPids = []
-
         # List of log files produced by the current test.
         self.log_files = []
 
@@ -892,49 +889,16 @@ class Base(unittest2.TestCase):
             p.terminate()
             del p
         del self.subprocesses[:]
-        # Ensure any forked processes are cleaned up
-        for pid in self.forkedProcessPids:
-            try:
-                os.kill(pid, signal.SIGTERM)
-            except OSError:
-                pass
 
     def spawnSubprocess(self, executable, args=[], install_remote=True):
         """ Creates a subprocess.Popen object with the specified executable and arguments,
             saves it in self.subprocesses, and returns the object.
-            NOTE: if using this function, ensure you also call:
-
-              self.addTearDownHook(self.cleanupSubprocesses)
-
-            otherwise the test suite will leak processes.
         """
         proc = _RemoteProcess(
             install_remote) if lldb.remote_platform else _LocalProcess(self.TraceOn())
         proc.launch(executable, args)
         self.subprocesses.append(proc)
         return proc
-
-    def forkSubprocess(self, executable, args=[]):
-        """ Fork a subprocess with its own group ID.
-            NOTE: if using this function, ensure you also call:
-
-              self.addTearDownHook(self.cleanupSubprocesses)
-
-            otherwise the test suite will leak processes.
-        """
-        child_pid = os.fork()
-        if child_pid == 0:
-            # If more I/O support is required, this can be beefed up.
-            fd = os.open(os.devnull, os.O_RDWR)
-            os.dup2(fd, 1)
-            os.dup2(fd, 2)
-            # This call causes the child to have its of group ID
-            os.setpgid(0, 0)
-            os.execvp(executable, [executable] + args)
-        # Give the child time to get through the execvp() call
-        time.sleep(0.1)
-        self.forkedProcessPids.append(child_pid)
-        return child_pid
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -1024,9 +988,6 @@ class Base(unittest2.TestCase):
 
     def tearDown(self):
         """Fixture for unittest test case teardown."""
-        #import traceback
-        # traceback.print_stack()
-
         self.deletePexpectChild()
 
         # Check and run any hook functions.
@@ -1052,6 +1013,9 @@ class Base(unittest2.TestCase):
             if self.dicts:
                 for dict in reversed(self.dicts):
                     self.cleanup(dictionary=dict)
+
+        # Remove subprocesses created by the test.
+        self.cleanupSubprocesses()
 
         # This must be the last statement, otherwise teardown hooks or other
         # lines might depend on this still being active.
@@ -1882,9 +1846,6 @@ class TestBase(Base):
         self.addTearDownHook(lambda: os.remove(src))
 
     def setUp(self):
-        #import traceback
-        # traceback.print_stack()
-
         # Works with the test driver to conditionally skip tests via
         # decorators.
         Base.setUp(self)
@@ -2003,9 +1964,6 @@ class TestBase(Base):
             return self.getBuildDir()
 
     def tearDown(self):
-        #import traceback
-        # traceback.print_stack()
-
         # Ensure all the references to SB objects have gone away so that we can
         # be sure that all test-specific resources have been freed before we
         # attempt to delete the targets.
@@ -2476,7 +2434,12 @@ FileCheck output:
             options.SetLanguage(frame.GuessLanguage())
             eval_result = self.frame().EvaluateExpression(expr, options)
         else:
-            eval_result = self.target().EvaluateExpression(expr, options)
+            target = self.target()
+            # If there is no selected target, run the expression in the dummy
+            # target.
+            if not target.IsValid():
+                target = self.dbg.GetDummyTarget()
+            eval_result = target.EvaluateExpression(expr, options)
 
         self.assertSuccess(eval_result.GetError())
 

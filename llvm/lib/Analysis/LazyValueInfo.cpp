@@ -330,11 +330,11 @@ public:
   LazyValueInfoAnnotatedWriter(LazyValueInfoImpl *L, DominatorTree &DTree)
       : LVIImpl(L), DT(DTree) {}
 
-  virtual void emitBasicBlockStartAnnot(const BasicBlock *BB,
-                                        formatted_raw_ostream &OS);
+  void emitBasicBlockStartAnnot(const BasicBlock *BB,
+                                formatted_raw_ostream &OS) override;
 
-  virtual void emitInstructionAnnot(const Instruction *I,
-                                    formatted_raw_ostream &OS);
+  void emitInstructionAnnot(const Instruction *I,
+                            formatted_raw_ostream &OS) override;
 };
 }
 namespace {

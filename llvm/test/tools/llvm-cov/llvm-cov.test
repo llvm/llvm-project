@@ -13,7 +13,7 @@ RUN: cp %p/Inputs/test* .
 # Basic behaviour with no flags
 RUN: llvm-cov gcov test.c 2> %t.err | FileCheck %s --check-prefixes=OUT,OUTFILE --match-full-lines --strict-whitespace
 RUN: FileCheck %s --check-prefix=C --match-full-lines --strict-whitespace < test.cpp.gcov
-RUN: diff -aub test_no_options.h.gcov test.h.gcov
+RUN: diff -ub test_no_options.h.gcov test.h.gcov
 RUN: count 0 < %t.err
 
 # Same, but specifying the object directory
@@ -156,8 +156,8 @@ H-C: unconditional  0 taken 1
 
 # Missing gcda file just gives 0 counts.
 RUN: llvm-cov gcov test.c -gcda=no_such_gcda_file | FileCheck %s --check-prefix=NO-GCDA
-RUN: diff -aub test_no_gcda.cpp.gcov test.cpp.gcov
-RUN: diff -aub test_no_gcda.h.gcov test.h.gcov
+RUN: diff -ub test_no_gcda.cpp.gcov test.cpp.gcov
+RUN: diff -ub test_no_gcda.h.gcov test.h.gcov
 NO-GCDA:       File 'test.cpp'
 NO-GCDA-NEXT:  Lines executed:0.00% of 43
 NO-GCDA-NEXT:  Creating 'test.cpp.gcov'

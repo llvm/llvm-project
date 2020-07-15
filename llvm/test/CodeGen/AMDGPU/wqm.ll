@@ -652,13 +652,11 @@ main_body:
 ; CHECK-DAG: v_mov_b32_e32 [[CTR:v[0-9]+]], 0
 ; CHECK-DAG: s_mov_b32 [[SEVEN:s[0-9]+]], 0x40e00000
 
-; CHECK: ; %body
+; CHECK: [[LOOPHDR:BB[0-9]+_[0-9]+]]: ; %body
 ; CHECK: v_add_f32_e32 [[CTR]], 2.0, [[CTR]]
-; CHECK: [[LOOPHDR:BB[0-9]+_[0-9]+]]: ; %loop
+; CHECK: [[LOOP:BB[0-9]+_[0-9]+]]: ; %loop
 ; CHECK: v_cmp_lt_f32_e32 vcc, [[SEVEN]], [[CTR]]
-; CHECK: s_cbranch_vccz
-
-; CHECK: s_cbranch_vccnz [[LOOPHDR]]
+; CHECK: s_cbranch_vccz [[LOOPHDR]]
 
 ; CHECK: ; %break
 ; CHECK: ; return

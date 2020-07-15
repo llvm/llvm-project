@@ -311,7 +311,7 @@ private:
   /// the top of the file for all alloc nodes that can be handled by this
   /// analysis.
   void placeAllocs() const {
-    for (auto &entry : allocs) {
+    for (const AllocEntry &entry : allocs) {
       Value alloc = entry.allocValue;
       // Get the actual block to place the alloc and get liveness information
       // for the placement block.
@@ -572,7 +572,7 @@ private:
     // These deallocations will be linked to their associated allocation nodes
     // since they don't have any aliases that can (potentially) increase their
     // liveness.
-    for (auto &entry : allocs) {
+    for (const AllocEntry &entry : allocs) {
       Value alloc = entry.allocValue;
       auto aliasesSet = aliases.resolve(alloc);
       assert(aliasesSet.size() > 0 && "must contain at least one alias");

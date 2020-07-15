@@ -12,6 +12,7 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringMap.h"
+#include <deque>
 #include <string>
 #include <vector>
 
@@ -59,6 +60,12 @@ private:
 // The table-building strategy may not make sense outside clangd.
 class ArgStripper {
 public:
+  ArgStripper() = default;
+  ArgStripper(ArgStripper &&) = default;
+  ArgStripper(const ArgStripper &) = delete;
+  ArgStripper &operator=(ArgStripper &&) = default;
+  ArgStripper &operator=(const ArgStripper &) = delete;
+
   // Adds the arg to the set which should be removed.
   //
   // Recognized clang flags are stripped semantically. When "-I" is stripped:
@@ -86,7 +93,7 @@ private:
   const Rule *matchingRule(llvm::StringRef Arg, unsigned Mode,
                            unsigned &ArgCount) const;
   llvm::SmallVector<Rule, 4> Rules;
-  std::vector<std::string> Storage; // Store strings not found in option table.
+  std::deque<std::string> Storage; // Store strings not found in option table.
 };
 
 } // namespace clangd

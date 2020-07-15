@@ -181,7 +181,6 @@ module attributes {
      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
 } {
 
-// CHECK-LEBEL: @int_vector4_invalid
 func @int_vector4_invalid(%arg0: vector<4xi64>) {
   // expected-error @+2 {{bitwidth emulation is not implemented yet on unsigned op}}
   // expected-error @+1 {{op requires the same type for all operands and results}}

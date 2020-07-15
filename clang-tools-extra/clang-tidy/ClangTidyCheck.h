@@ -405,9 +405,13 @@ public:
                StringRef Value) const;
 
     /// Stores an option with the check-local name \p LocalName with
-    /// ``int64_t`` value \p Value to \p Options.
-    void store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
-               int64_t Value) const;
+    /// integer value \p Value to \p Options.
+    template <typename T>
+    std::enable_if_t<std::is_integral<T>::value>
+    store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+          T Value) const {
+      storeInt(Options, LocalName, Value);
+    }
 
     /// Stores an option with the check-local name \p LocalName as the string
     /// representation of the Enum \p Value to \p Options.
@@ -447,6 +451,9 @@ public:
       }
       return Result;
     }
+
+    void storeInt(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+                  int64_t Value) const;
 
     static void logErrToStdErr(llvm::Error &&Err);
 
@@ -508,6 +515,13 @@ ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName) const;
 template <>
 bool ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName,
                                                          bool Default) const;
+
+/// Stores an option with the check-local name \p LocalName with
+/// bool value \p Value to \p Options.
+template <>
+void ClangTidyCheck::OptionsView::store<bool>(
+    ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+    bool Value) const;
 
 } // namespace tidy
 } // namespace clang

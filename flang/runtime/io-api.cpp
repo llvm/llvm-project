@@ -111,8 +111,8 @@ Cookie BeginExternalListIO(
   if (unitNumber == DefaultUnit) {
     unitNumber = DIR == Direction::Input ? 5 : 6;
   }
-  ExternalFileUnit &unit{
-      ExternalFileUnit::LookUpOrCrash(unitNumber, terminator)};
+  ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
+      unitNumber, DIR, false /*formatted*/, terminator)};
   if (unit.access == Access::Direct) {
     terminator.Crash("List-directed I/O attempted on direct access file");
     return nullptr;
@@ -150,8 +150,8 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
   if (unitNumber == DefaultUnit) {
     unitNumber = DIR == Direction::Input ? 5 : 6;
   }
-  ExternalFileUnit &unit{
-      ExternalFileUnit::LookUpOrCrash(unitNumber, terminator)};
+  ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
+      unitNumber, DIR, false /*formatted*/, terminator)};
   if (unit.isUnformatted) {
     terminator.Crash("Formatted I/O attempted on unformatted file");
     return nullptr;
@@ -185,8 +185,8 @@ template <Direction DIR>
 Cookie BeginUnformattedIO(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  ExternalFileUnit &unit{
-      ExternalFileUnit::LookUpOrCrash(unitNumber, terminator)};
+  ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
+      unitNumber, DIR, true /*unformatted*/, terminator)};
   if (!unit.isUnformatted) {
     terminator.Crash("Unformatted output attempted on formatted file");
   }
@@ -223,7 +223,7 @@ Cookie IONAME(BeginOpenUnit)( // OPEN(without NEWUNIT=)
   bool wasExtant{false};
   Terminator terminator{sourceFile, sourceLine};
   ExternalFileUnit &unit{
-      ExternalFileUnit::LookUpOrCreate(unitNumber, terminator, &wasExtant)};
+      ExternalFileUnit::LookUpOrCreate(unitNumber, terminator, wasExtant)};
   return &unit.BeginIoStatement<OpenStatementState>(
       unit, wasExtant, sourceFile, sourceLine);
 }
@@ -231,10 +231,11 @@ Cookie IONAME(BeginOpenUnit)( // OPEN(without NEWUNIT=)
 Cookie IONAME(BeginOpenNewUnit)( // OPEN(NEWUNIT=j)
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
+  bool ignored{false};
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreate(
-      ExternalFileUnit::NewUnit(terminator), terminator)};
+      ExternalFileUnit::NewUnit(terminator), terminator, ignored)};
   return &unit.BeginIoStatement<OpenStatementState>(
-      unit, false /*wasExtant*/, sourceFile, sourceLine);
+      unit, false /*was an existing file*/, sourceFile, sourceLine);
 }
 
 Cookie IONAME(BeginClose)(

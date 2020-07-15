@@ -10,10 +10,11 @@
 #include "ConfigProvider.h"
 #include "ConfigTesting.h"
 #include "TestFS.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "llvm/Support/SourceMgr.h"
 #include <atomic>
+#include <chrono>
 
 namespace clang {
 namespace clangd {
@@ -56,10 +57,9 @@ std::vector<std::string> getAddedArgs(Config &C) {
 // cache their results.
 TEST(ProviderTest, Combine) {
   CapturedDiags Diags;
-  std::vector<std::unique_ptr<Provider>> Providers;
-  Providers.push_back(std::make_unique<FakeProvider>("foo"));
-  Providers.push_back(std::make_unique<FakeProvider>("bar"));
-  auto Combined = Provider::combine(std::move(Providers));
+  FakeProvider Foo("foo");
+  FakeProvider Bar("bar");
+  auto Combined = Provider::combine({&Foo, &Bar});
   Config Cfg = Combined->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
               ElementsAre(DiagMessage("foo"), DiagMessage("bar")));
@@ -148,6 +148,43 @@ TEST(ProviderTest, FromAncestorRelativeYAMLFiles) {
   Cfg = P->getConfig(ABCParams, Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz"));
+}
+
+TEST(ProviderTest, Staleness) {
+  MockFS FS;
+
+  auto StartTime = std::chrono::steady_clock::now();
+  Params StaleOK;
+  StaleOK.FreshTime = StartTime;
+  Params MustBeFresh;
+  MustBeFresh.FreshTime = StartTime + std::chrono::hours(1);
+  CapturedDiags Diags;
+  auto P = Provider::fromYAMLFile(testPath("foo.yaml"), FS);
+
+  // Initial query always reads, regardless of policy.
+  FS.Files["foo.yaml"] = AddFooWithErr;
+  auto Cfg = P->getConfig(StaleOK, Diags.callback());
+  EXPECT_THAT(Diags.Diagnostics,
+              ElementsAre(DiagMessage("Unknown CompileFlags key Unknown")));
+  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
+  Diags.Diagnostics.clear();
+
+  // Stale value reused by policy.
+  FS.Files["foo.yaml"] = AddBarBaz;
+  Cfg = P->getConfig(StaleOK, Diags.callback());
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "Cached, not re-parsed";
+  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
+
+  // Cache revalidated by policy.
+  Cfg = P->getConfig(MustBeFresh, Diags.callback());
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "New config, no errors";
+  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz"));
+
+  // Cache revalidated by (default) policy.
+  FS.Files.erase("foo.yaml");
+  Cfg = P->getConfig(Params(), Diags.callback());
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+  EXPECT_THAT(getAddedArgs(Cfg), IsEmpty());
 }
 
 } // namespace

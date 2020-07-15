@@ -583,7 +583,7 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
   let extraClassDeclaration = [{
     // The value stored in memref[ivs].
     Value getCurrentValue() {
-      return body().front().getArgument(0);
+      return body().getArgument(0);
     }
     MemRefType getMemRefType() {
       return memref().getType().cast<MemRefType>();

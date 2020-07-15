@@ -14,29 +14,6 @@ class CreateAfterAttachTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD  # Hangs.  May be the same as Linux issue llvm.org/pr16229 but
-    # not yet investigated.  Revisit once required functionality
-    # is implemented for FreeBSD.
-    # Occasionally hangs on Windows, may be same as other issues.
-    @skipIfWindows
-    @skipIfiOSSimulator
-    @expectedFailureNetBSD
-    def test_create_after_attach_with_popen(self):
-        """Test thread creation after process attach."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
-        self.create_after_attach(use_fork=False)
-
-    @skipIfFreeBSD  # Hangs. Revisit once required functionality is implemented
-    # for FreeBSD.
-    @skipIfRemote
-    @skipIfWindows  # Windows doesn't have fork.
-    @skipIfiOSSimulator
-    @expectedFailureNetBSD
-    def test_create_after_attach_with_fork(self):
-        """Test thread creation after process attach."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
-        self.create_after_attach(use_fork=True)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -45,18 +22,21 @@ class CreateAfterAttachTestCase(TestBase):
         self.break_2 = line_number('main.cpp', '// Set second breakpoint here')
         self.break_3 = line_number('main.cpp', '// Set third breakpoint here')
 
-    def create_after_attach(self, use_fork):
+    @skipIfFreeBSD  # Hangs.  May be the same as Linux issue llvm.org/pr16229 but
+    # not yet investigated.  Revisit once required functionality
+    # is implemented for FreeBSD.
+    # Occasionally hangs on Windows, may be same as other issues.
+    @skipIfWindows
+    @skipIfiOSSimulator
+    @expectedFailureNetBSD
+    def test_create_after_attach(self):
         """Test thread creation after process attach."""
-
+        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
         exe = self.getBuildArtifact("a.out")
 
         # Spawn a new process
-        if use_fork:
-            pid = self.forkSubprocess(exe)
-        else:
-            popen = self.spawnSubprocess(exe)
-            pid = popen.pid
-        self.addTearDownHook(self.cleanupSubprocesses)
+        popen = self.spawnSubprocess(exe)
+        pid = popen.pid
 
         # Attach to the spawned process
         self.runCmd("process attach -p " + str(pid))

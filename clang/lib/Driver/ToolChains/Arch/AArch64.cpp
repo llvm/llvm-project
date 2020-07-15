@@ -380,6 +380,10 @@ fp16_fml_fallthrough:
     }
   }
 
+  auto V8_6Pos = llvm::find(Features, "+v8.6a");
+  if (V8_6Pos != std::end(Features))
+    V8_6Pos = Features.insert(std::next(V8_6Pos), {"+i8mm", "+bf16"});
+
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access))
     if (A->getOption().matches(options::OPT_mno_unaligned_access))

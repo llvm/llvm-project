@@ -159,7 +159,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret(i32 addrspace(1)* %out) {
 ; SI-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; SI-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; SI-NEXT:    s_and_b64 vcc, exec, 0
-; SI-NEXT:    s_cbranch_vccz BB3_2
+; SI-NEXT:    s_branch BB3_2
 ; SI-NEXT:  BB3_5: ; %UnifiedReturnBlock
 ; SI-NEXT:    s_endpgm
 ; IR-LABEL: @infinite_loop_nest_ret(

@@ -27,16 +27,11 @@ public:
   }
 
   ExternalFileUnit &LookUpOrCreate(
-      int n, const Terminator &terminator, bool *wasExtant) {
+      int n, const Terminator &terminator, bool &wasExtant) {
     CriticalSection critical{lock_};
     auto *p{Find(n)};
-    if (wasExtant) {
-      *wasExtant = p != nullptr;
-    }
-    if (p) {
-      return *p;
-    }
-    return Create(n, terminator);
+    wasExtant = p != nullptr;
+    return p ? *p : Create(n, terminator);
   }
 
   ExternalFileUnit &NewUnit(const Terminator &terminator) {

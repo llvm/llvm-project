@@ -32,7 +32,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUIL
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
-  set(PACKAGE_VERSION 11.0.0git)
+  set(PACKAGE_VERSION 12.0.0git)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -429,6 +429,7 @@ elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX})
 else()
   set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+  set(LIBCXX_HEADER_DIR  ${CMAKE_BINARY_DIR})
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX})
 endif()
 
@@ -638,7 +639,6 @@ endfunction()
 # RTTI flags ==================================================================
 function(cxx_add_rtti_flags target)
   if (NOT LIBCXX_ENABLE_RTTI)
-    target_compile_definitions(${target} PUBLIC -D_LIBCPP_NO_RTTI)
     target_add_compile_flags_if_supported(${target} PUBLIC -GR-)
     target_add_compile_flags_if_supported(${target} PUBLIC -fno-rtti)
   endif()
@@ -874,22 +874,11 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
   config_define(ON _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
-# We generate a __config_site header (see libcxx/include/CMakeLists.txt) and
-# we make sure to include it when building the library.
-function(cxx_add_config_site target)
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    target_compile_options(${target} PUBLIC /FI "${LIBCXX_BINARY_DIR}/__config_site")
-  else()
-    target_compile_options(${target} PUBLIC -include "${LIBCXX_BINARY_DIR}/__config_site")
-  endif()
-endfunction()
-
 # Setup all common build flags =================================================
 function(cxx_add_common_build_flags target)
   cxx_add_basic_build_flags(${target})
   cxx_add_warning_flags(${target})
   cxx_add_windows_flags(${target})
-  cxx_add_config_site(${target})
   cxx_add_exception_flags(${target})
   cxx_add_rtti_flags(${target})
   cxx_add_module_flags(${target})
@@ -899,7 +888,6 @@ endfunction()
 #===============================================================================
 # Setup Source Code And Tests
 #===============================================================================
-include_directories(include)
 add_subdirectory(include)
 add_subdirectory(src)
 

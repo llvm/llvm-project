@@ -65,26 +65,4 @@ std::string CharBuffer::Marshal() const {
   CHECK(result.size() == bytes_);
   return result;
 }
-
-std::string CharBuffer::MarshalNormalized() const {
-  std::string result;
-  std::size_t bytes{bytes_};
-  result.reserve(bytes + 1 /* for terminal line feed */);
-  char ch{'\0'};
-  for (const Block &block : blocks_) {
-    std::size_t chunk{std::min(bytes, Block::capacity)};
-    for (std::size_t j{0}; j < chunk; ++j) {
-      ch = block.data[j];
-      if (ch != '\r') {
-        result += ch;
-      }
-    }
-    bytes -= chunk;
-  }
-  if (ch != '\n') {
-    result += '\n';
-  }
-  result.shrink_to_fit();
-  return result;
-}
 } // namespace Fortran::parser

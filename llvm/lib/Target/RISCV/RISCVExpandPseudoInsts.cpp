@@ -87,6 +87,9 @@ bool RISCVExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
 bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
                                  MachineBasicBlock::iterator &NextMBBI) {
+  // RISCVInstrInfo::getInstSizeInBytes hard-codes the number of expanded
+  // instructions for each pseudo, and must be updated when adding new pseudos
+  // or changing existing ones.
   switch (MBBI->getOpcode()) {
   case RISCV::PseudoLLA:
     return expandLoadLocalAddress(MBB, MBBI, NextMBBI);

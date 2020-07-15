@@ -269,7 +269,7 @@ def buildGModules(
                      getModuleCacheSpec(),
                      getCmdLine(dictionary)])
 
-    lldbtest.system(commands, sender=sender)
+    runBuildCommands(commands, sender=sender)
     # True signifies that we can handle building with gmodules.
     return True
 

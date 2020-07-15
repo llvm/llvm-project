@@ -57,7 +57,7 @@ public:
   Callback(const NumberObjectConversionChecker *C,
            BugReporter &BR, AnalysisDeclContext *ADC)
       : C(C), BR(BR), ADC(ADC) {}
-  virtual void run(const MatchFinder::MatchResult &Result);
+  void run(const MatchFinder::MatchResult &Result) override;
 };
 } // end of anonymous namespace
 
