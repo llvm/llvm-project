@@ -482,13 +482,10 @@ ret:
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, [[LONG_BR_DEST0:BB[0-9]+_[0-9]+]]-(
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64
-
 ; GCN-NEXT: [[LONG_BR_0]]:
-; GCN: s_setpc_b64
 
-; GCN: [[LONG_BR_DEST0]]
+; GCN: [[LONG_BR_DEST0]]:
 
-; GCN: s_cbranch_vccnz
 ; GCN-DAG: v_cmp_lt_i32
 ; GCN-DAG: v_cmp_ge_i32
 
