@@ -372,7 +372,7 @@ void runtime(float *a, float *b, float *c, float *d) {
 }
 
 // TERM_DEBUG-LABEL: foo
-int foo() {return 0;};
+int foo() { extern void mayThrow(); mayThrow(); return 0; };
 
 // TERM_DEBUG-LABEL: parallel_for
 // CLEANUP: parallel_for
