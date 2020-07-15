@@ -103,7 +103,7 @@ def ACCC_Device : Clause<"device"> {
 }
 
 // 2.14.1
-def ACCC_DeviceNum : Clause<"devicenum">  {
+def ACCC_DeviceNum : Clause<"device_num">  {
   let flangClass = "ScalarIntConstantExpr";
 }
 
