@@ -138,6 +138,22 @@ def Shape_ConstSizeOp : Shape_Op<"const_size", [
   let hasFolder = 1;
 }
 
+def Shape_ShapeEqOp : Shape_Op<"shape_eq", [Commutative, NoSideEffect]> {
+  let summary = "Returns whether the input shapes or extent tensors are equal";
+  let description = [{
+    Takes two shape or extent tensor operands and determines whether they are
+    equal. When extent tensors are compared to shapes they are regarded as their
+    equivalent non-error shapes. Error shapes can be tested for equality like
+    any other shape value, meaning that the error value is equal to itself.
+  }];
+
+  let arguments = (ins Shape_ShapeOrExtentTensorType:$lhs,
+                       Shape_ShapeOrExtentTensorType:$rhs);
+  let results = (outs I1:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs)";
+}
+
 def Shape_FromExtentsOp : Shape_Op<"from_extents", [NoSideEffect]> {
   let summary = "Creates a shape from extents";
   let description = [{
