@@ -18,7 +18,7 @@
 #include "lldb/Utility/StreamString.h"
 
 #ifdef LLDB_ENABLE_SWIFT
-#include "lldb/Symbol/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
 #include "lldb/Symbol/TypeSystem.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/Pattern.h"

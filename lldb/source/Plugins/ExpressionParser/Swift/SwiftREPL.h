@@ -13,9 +13,8 @@
 #ifndef liblldb_SwiftREPL_h_
 #define liblldb_SwiftREPL_h_
 
-#include "lldb/Symbol/SwiftASTContext.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/Expression/REPL.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-public.h"
 
 #include <string>
@@ -24,6 +23,7 @@
 namespace lldb_private {
 
 class IRExecutionUnit;
+class SwiftASTContextForExpressions;
 
 //----------------------------------------------------------------------
 /// @class SwiftREPL SwiftREPL.h "lldb/Expression/SwiftREPL.h"

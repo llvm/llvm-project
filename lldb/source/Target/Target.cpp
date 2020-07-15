@@ -67,7 +67,7 @@
 #include <mutex>
 
 #ifdef LLDB_ENABLE_SWIFT
-#include "lldb/Symbol/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #endif // LLDB_ENABLE_SWIFT
 
 using namespace lldb;
