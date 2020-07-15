@@ -402,7 +402,6 @@ class GdbRemoteTestCaseBase(TestBase):
             self.debug_monitor_exe,
             commandline_args,
             install_remote=False)
-        self.addTearDownHook(self.cleanupSubprocesses)
         self.assertIsNotNone(server)
 
         # If we're receiving the stub's listening port from the named pipe, do
@@ -417,15 +416,6 @@ class GdbRemoteTestCaseBase(TestBase):
             # Create the stub.
             server = self.launch_debug_monitor(attach_pid=attach_pid)
             self.assertIsNotNone(server)
-
-            def shutdown_debug_monitor():
-                try:
-                    server.terminate()
-                except:
-                    logger.warning(
-                        "failed to terminate server for debug monitor: {}; ignoring".format(
-                            sys.exc_info()[0]))
-            self.addTearDownHook(shutdown_debug_monitor)
 
             # Schedule debug monitor to be shut down during teardown.
             logger = self.logger
@@ -444,15 +434,6 @@ class GdbRemoteTestCaseBase(TestBase):
 
             # Schedule debug monitor to be shut down during teardown.
             logger = self.logger
-
-            def shutdown_debug_monitor():
-                try:
-                    server.terminate()
-                except:
-                    logger.warning(
-                        "failed to terminate server for debug monitor: {}; ignoring".format(
-                            sys.exc_info()[0]))
-            self.addTearDownHook(shutdown_debug_monitor)
 
             connect_attemps = 0
             MAX_CONNECT_ATTEMPTS = 10
@@ -506,17 +487,7 @@ class GdbRemoteTestCaseBase(TestBase):
         if sleep_seconds:
             args.append("sleep:%d" % sleep_seconds)
 
-        inferior = self.spawnSubprocess(exe_path, args)
-
-        def shutdown_process_for_attach():
-            try:
-                inferior.terminate()
-            except:
-                logger.warning(
-                    "failed to terminate inferior process for attach: {}; ignoring".format(
-                        sys.exc_info()[0]))
-        self.addTearDownHook(shutdown_process_for_attach)
-        return inferior
+        return self.spawnSubprocess(exe_path, args)
 
     def prep_debug_monitor_and_inferior(
             self,
