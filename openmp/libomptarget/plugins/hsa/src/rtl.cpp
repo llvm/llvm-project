@@ -985,41 +985,6 @@ int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   return OFFLOAD_SUCCESS;
 }
 
-void retrieveDeviceEnv(int32_t device_id) {
-  int err;
-  const char *device_env_Name = "omptarget_device_environment";
-  omptarget_device_environmentTy host_device_env;
-  void *device_env_Ptr;
-  uint32_t varsize;
-
-  err = atmi_interop_hsa_get_symbol_info(
-      get_gpu_mem_place(device_id), device_env_Name, &device_env_Ptr, &varsize);
-
-  if (err == ATMI_STATUS_SUCCESS) {
-    if ((size_t)varsize != sizeof(host_device_env)) {
-      DP("Global device_environment '%s' - size mismatch (%u != %lu)\n",
-         device_env_Name, varsize, sizeof(int32_t));
-      return;
-    }
-
-    err = __tgt_rtl_data_retrieve(device_id, &host_device_env, device_env_Ptr,
-                                  varsize);
-    if (err != 0) {
-      DP("Error when copying data from device to host . Pointers: "
-         "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
-         DPxPTR(&host_device_env), DPxPTR(device_env_Ptr), varsize);
-      return;
-    }
-
-    DP("Retrieving device environment %lu bytes\n", (size_t)varsize);
-  } else {
-    DP("Retrieving device environment '%s' - symbol missing.\n",
-       device_env_Name);
-  }
-
-  check("Retreiving updated device environment", err);
-}
-
 // Determine launch values for threadsPerGroup and num_groups.
 // Outputs: treadsPerGroup, num_groups
 // Inputs: Max_Teams, Max_WG_Size, Warp_Size, ExecutionMode,
@@ -1259,8 +1224,6 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
   // Free call stack for nested
   if (TgtCallStack)
     atmi_free(TgtCallStack);
-
-  retrieveDeviceEnv(device_id);
 
   return OFFLOAD_SUCCESS;
 }
