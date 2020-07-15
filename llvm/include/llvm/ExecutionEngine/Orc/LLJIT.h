@@ -250,7 +250,7 @@ private:
   // Create a single-threaded LLLazyJIT instance.
   LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
 
-  std::unique_ptr<LocalLazyCallThroughManager> LCTMgr;
+  std::unique_ptr<LazyCallThroughManager> LCTMgr;
   std::unique_ptr<CompileOnDemandLayer> CODLayer;
 };
 
@@ -384,7 +384,7 @@ public:
 
   Triple TT;
   JITTargetAddress LazyCompileFailureAddr = 0;
-  std::unique_ptr<LocalLazyCallThroughManager> LCTMgr;
+  std::unique_ptr<LazyCallThroughManager> LCTMgr;
   IndirectStubsManagerBuilderFunction ISMBuilder;
 
   Error prepareForConstruction();

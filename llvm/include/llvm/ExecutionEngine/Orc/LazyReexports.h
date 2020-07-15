@@ -50,13 +50,14 @@ public:
       JITTargetAddress TrampolineAddr,
       TrampolinePool::NotifyLandingResolvedFunction NotifyLandingResolved);
 
+  virtual ~LazyCallThroughManager() = default;
+
 protected:
   using NotifyLandingResolvedFunction =
       TrampolinePool::NotifyLandingResolvedFunction;
 
   LazyCallThroughManager(ExecutionSession &ES,
                          JITTargetAddress ErrorHandlerAddr, TrampolinePool *TP);
-  ~LazyCallThroughManager() = default;
 
   struct ReexportsEntry {
     JITDylib *SourceJD;
@@ -128,7 +129,7 @@ public:
 
 /// Create a LocalLazyCallThroughManager from the given triple and execution
 /// session.
-Expected<std::unique_ptr<LocalLazyCallThroughManager>>
+Expected<std::unique_ptr<LazyCallThroughManager>>
 createLocalLazyCallThroughManager(const Triple &T, ExecutionSession &ES,
                                   JITTargetAddress ErrorHandlerAddr);
 
