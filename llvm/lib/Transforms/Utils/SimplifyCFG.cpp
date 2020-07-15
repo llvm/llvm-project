@@ -1800,7 +1800,6 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
   if (UnconditionalPreds.size() < 2)
     return false;
 
-  bool Changed = false;
   // We take a two-step approach to tail sinking. First we scan from the end of
   // each block upwards in lockstep. If the n'th instruction from the end of each
   // block can be sunk, those instructions are added to ValuesToSink and we
@@ -1820,6 +1819,12 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
     --LRI;
   }
 
+  // If no instructions can be sunk, early-return.
+  if (ScanIdx == 0)
+    return false;
+
+  bool Changed = false;
+
   auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
     unsigned NumPHIdValues = 0;
     for (auto *I : *LRI)
@@ -1834,7 +1839,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
     return NumPHIInsts <= 1;
   };
 
-  if (ScanIdx > 0 && Cond) {
+  if (Cond) {
     // Check if we would actually sink anything first! This mutates the CFG and
     // adds an extra block. The goal in doing this is to allow instructions that
     // couldn't be sunk before to be sunk - obviously, speculatable instructions
