@@ -149,8 +149,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, XLenVT, Custom);
   setOperationAction(ISD::SRA_PARTS, XLenVT, Custom);
 
-  setOperationAction(ISD::ROTL, XLenVT, Expand);
-  setOperationAction(ISD::ROTR, XLenVT, Expand);
+  if (!(Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbp())) {
+    setOperationAction(ISD::ROTL, XLenVT, Expand);
+    setOperationAction(ISD::ROTR, XLenVT, Expand);
+  }
 
   if (!Subtarget.hasStdExtZbp())
     setOperationAction(ISD::BSWAP, XLenVT, Expand);
