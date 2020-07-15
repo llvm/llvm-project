@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 
 # To use:
 #  1) Update the 'decls' list below with your fuzzing configuration.
