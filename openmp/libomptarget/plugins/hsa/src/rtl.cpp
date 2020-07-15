@@ -20,6 +20,7 @@
 #include <ffi.h>
 #include <fstream>
 #include <iostream>
+#include <libelf.h>
 #include <list>
 #include <vector>
 
@@ -551,9 +552,115 @@ int32_t __tgt_rtl_init_device(int device_id) {
   return OFFLOAD_SUCCESS;
 }
 
+namespace {
+Elf64_Shdr *find_only_SHT_HASH(Elf *elf) {
+  size_t N;
+  int rc = elf_getshdrnum(elf, &N);
+  if (rc != 0) {
+    return nullptr;
+  }
+
+  Elf64_Shdr *result = nullptr;
+  for (size_t i = 0; i < N; i++) {
+    Elf_Scn *scn = elf_getscn(elf, i);
+    if (scn) {
+      Elf64_Shdr *shdr = elf64_getshdr(scn);
+      if (shdr) {
+        if (shdr->sh_type == SHT_HASH) {
+          if (result == nullptr) {
+            result = shdr;
+          } else {
+            // multiple SHT_HASH sections not handled
+            return nullptr;
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
+const Elf64_Sym *elf_lookup(Elf *elf, char *base, Elf64_Shdr *section_hash,
+                            const char *symname) {
+
+  assert(section_hash);
+  size_t section_symtab_index = section_hash->sh_link;
+  Elf64_Shdr *section_symtab =
+      elf64_getshdr(elf_getscn(elf, section_symtab_index));
+  size_t section_strtab_index = section_symtab->sh_link;
+
+  const Elf64_Sym *symtab =
+      reinterpret_cast<const Elf64_Sym *>(base + section_symtab->sh_offset);
+
+  const uint32_t *hashtab =
+      reinterpret_cast<const uint32_t *>(base + section_hash->sh_offset);
+
+  // Layout:
+  // nbucket
+  // nchain
+  // bucket[nbucket]
+  // chain[nchain]
+  uint32_t nbucket = hashtab[0];
+  const uint32_t *bucket = &hashtab[2];
+  const uint32_t *chain = &hashtab[nbucket + 2];
+
+  const size_t max = strlen(symname) + 1;
+  const uint32_t hash = elf_hash(symname);
+  for (uint32_t i = bucket[hash % nbucket]; i != 0; i = chain[i]) {
+    char *n = elf_strptr(elf, section_strtab_index, symtab[i].st_name);
+    if (strncmp(symname, n, max) == 0) {
+      return &symtab[i];
+    }
+  }
+
+  return nullptr;
+}
+
+typedef struct {
+  void *addr = nullptr;
+  uint32_t size = UINT32_MAX;
+} symbol_info;
+
+int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
+                                    symbol_info *res) {
+  if (elf_kind(elf) != ELF_K_ELF) {
+    return 1;
+  }
+
+  Elf64_Shdr *section_hash = find_only_SHT_HASH(elf);
+  if (!section_hash) {
+    return 1;
+  }
+
+  const Elf64_Sym *sym = elf_lookup(elf, base, section_hash, symname);
+  if (!sym) {
+    return 1;
+  }
+
+  if (sym->st_size > UINT32_MAX) {
+    return 1;
+  }
+
+  res->size = static_cast<uint32_t>(sym->st_size);
+  res->addr = sym->st_value + base;
+  return 0;
+}
+
+int get_symbol_info_without_loading(char *base, size_t img_size,
+                                    const char *symname, symbol_info *res) {
+  Elf *elf = elf_memory(base, img_size);
+  if (elf) {
+    int rc = get_symbol_info_without_loading(elf, base, symname, res);
+    elf_end(elf);
+    return rc;
+  }
+  return 1;
+}
+} // namespace
+
 __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
                                           __tgt_device_image *image) {
-  size_t img_size = (char *)image->ImageEnd - (char *)image->ImageStart;
+  const size_t img_size = (char *)image->ImageEnd - (char *)image->ImageStart;
 
   DeviceInfo.clearOffloadEntriesTable(device_id);
 
@@ -704,19 +811,50 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
     void *CallStackAddr;
     err = atmi_interop_hsa_get_symbol_info(place, KernDescName, &KernDescPtr,
                                            &KernDescSize);
+
+    const bool check_loader_vs_reader = true;
+
     if (err == ATMI_STATUS_SUCCESS) {
       if ((size_t)KernDescSize != sizeof(KernDescVal))
         DP("Loading global computation properties '%s' - size mismatch (%u != "
            "%lu)\n",
            KernDescName, KernDescSize, sizeof(KernDescVal));
 
-      err = atmi_memcpy(&KernDescVal, KernDescPtr, (size_t)KernDescSize);
-      if (err != ATMI_STATUS_SUCCESS) {
-        DP("Error when copying data from device to host. Pointers: "
-           "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
-           DPxPTR(&KernDescVal), DPxPTR(KernDescPtr), KernDescSize);
-        return NULL;
+      if (check_loader_vs_reader) {
+        err = atmi_memcpy(&KernDescVal, KernDescPtr, (size_t)KernDescSize);
+
+        if (err != ATMI_STATUS_SUCCESS) {
+          DP("Error when copying data from device to host. Pointers: "
+             "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
+             DPxPTR(&KernDescVal), DPxPTR(KernDescPtr), KernDescSize);
+          return NULL;
+        }
       }
+
+      // Read the same values directly from the elf
+      {
+        symbol_info KernDescInfo;
+        int rc = get_symbol_info_without_loading(
+            (char *)image->ImageStart, img_size, KernDescName, &KernDescInfo);
+        if (rc != 0) {
+          DP("Error reading symbol %s from elf\n", KernDescName);
+          exit(1);
+        }
+
+        if (check_loader_vs_reader) {
+          // Check value read from elf matches that from hsa
+          if ((KernDescInfo.size != KernDescSize) ||
+              memcmp(KernDescInfo.addr, &KernDescVal,
+                     sizeof(KernDescVal) != 0)) {
+            DP("Values from elf do not match those from hsa\n");
+            exit(1);
+          }
+        }
+        // Explicitly overwrite the values from HSA
+        KernDescSize = KernDescInfo.size;
+        memcpy(&KernDescVal, KernDescInfo.addr, (size_t)KernDescSize);
+      }
+
       // Check structure size against recorded size.
       if ((size_t)KernDescSize != KernDescVal.TSize)
         DP("KernDescVal size %lu does not match advertized size %d for '%s'\n",
@@ -790,13 +928,41 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
           return NULL;
         }
 
-        err = atmi_memcpy(&ExecModeVal, ExecModePtr, (size_t)varsize);
-        if (err != ATMI_STATUS_SUCCESS) {
-          DP("Error when copying data from device to host. Pointers: "
-             "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
-             DPxPTR(&ExecModeVal), DPxPTR(ExecModePtr), varsize);
-          return NULL;
+        if (check_loader_vs_reader) {
+          err = atmi_memcpy(&ExecModeVal, ExecModePtr, (size_t)varsize);
+          if (err != ATMI_STATUS_SUCCESS) {
+            DP("Error when copying data from device to host. Pointers: "
+               "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
+               DPxPTR(&ExecModeVal), DPxPTR(ExecModePtr), varsize);
+            return NULL;
+          }
         }
+
+        // Read the same values directly from the elf
+        {
+          symbol_info ExecModeInfo;
+          int rc = get_symbol_info_without_loading(
+              (char *)image->ImageStart, img_size, ExecModeName, &ExecModeInfo);
+
+          if (rc != 0) {
+            DP("Error reading symbol %s from elf\n", ExecModeName);
+            exit(1);
+          }
+
+          if (check_loader_vs_reader) {
+            // Check value read from elf matches that from hsa
+            if ((ExecModeInfo.size != varsize) ||
+                memcmp(ExecModeInfo.addr, &ExecModeVal,
+                       sizeof(ExecModeVal) != 0)) {
+              DP("Values from elf do not match those from hsa\n");
+              exit(1);
+            }
+          }
+
+          // Explicitly overwrite the values from HSA
+          memcpy(&ExecModeVal, ExecModeInfo.addr, sizeof(ExecModeVal));
+        }
+
         DP("After loading global for %s ExecMode = %d\n", ExecModeName,
            ExecModeVal);
 
@@ -832,13 +998,39 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
           return NULL;
         }
 
-        err = atmi_memcpy(&WGSizeVal, WGSizePtr, (size_t)WGSize);
-        if (err != ATMI_STATUS_SUCCESS) {
-          DP("Error when copying data from device to host. Pointers: "
-             "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
-             DPxPTR(&WGSizeVal), DPxPTR(WGSizePtr), WGSize);
-          return NULL;
+        if (check_loader_vs_reader) {
+          err = atmi_memcpy(&WGSizeVal, WGSizePtr, (size_t)WGSize);
+          if (err != ATMI_STATUS_SUCCESS) {
+            DP("Error when copying data from device to host. Pointers: "
+               "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
+               DPxPTR(&WGSizeVal), DPxPTR(WGSizePtr), WGSize);
+            return NULL;
+          }
         }
+
+        // Read the same values directly from the elf
+        {
+          symbol_info WGSizeInfo;
+          int rc = get_symbol_info_without_loading(
+              (char *)image->ImageStart, img_size, WGSizeName, &WGSizeInfo);
+          if (rc != 0) {
+            DP("Error reading symbol %s from elf\n", WGSizeName);
+            exit(1);
+          }
+
+          if (check_loader_vs_reader) {
+            // Check value read from elf matches that from hsa
+            if ((WGSizeInfo.size != WGSize) ||
+                memcmp(WGSizeInfo.addr, &WGSizeVal, sizeof(WGSizeVal) != 0)) {
+              DP("Values from elf do not match those from hsa\n");
+              exit(1);
+            }
+          }
+
+          // Explicitly overwrite the values from HSA
+          memcpy(&WGSizeVal, WGSizeInfo.addr, sizeof(WGSizeVal));
+        }
+
         DP("After loading global for %s WGSize = %d\n", WGSizeName, WGSizeVal);
 
         if (WGSizeVal < RTLDeviceInfoTy::Default_WG_Size ||
