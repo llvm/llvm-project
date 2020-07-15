@@ -791,7 +791,8 @@ void mallocEscapeMalloc() {
 void mallocMalloc() {
   int *p = malloc(12);
   p = malloc(12);
-} // expected-warning {{Potential leak of memory pointed to by}}
+} // expected-warning {{Potential leak of memory pointed to by}}\
+  // expected-warning {{Potential leak of memory pointed to by}}
 
 void mallocFreeMalloc() {
   int *p = malloc(12);
