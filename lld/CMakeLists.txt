@@ -51,10 +51,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
   find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
 
-  if(LLVM_ENABLE_ZLIB)
-    find_package(ZLIB)
-  endif()
-
   include(AddLLVM)
   include(TableGen)
   include(HandleLLVMOptions)
