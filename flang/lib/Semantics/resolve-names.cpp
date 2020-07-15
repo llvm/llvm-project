@@ -2310,6 +2310,7 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
     }
     for (const auto &[name, symbol] : *useModuleScope_) {
       if (symbol->attrs().test(Attr::PUBLIC) &&
+          !symbol->attrs().test(Attr::INTRINSIC) &&
           !symbol->detailsIf<MiscDetails>()) {
         if (useNames.count(name) == 0) {
           auto *localSymbol{FindInScope(currScope(), name)};
