@@ -317,7 +317,7 @@ void initializeObjCARCAAWrapperPassPass(PassRegistry&);
 void initializeObjCARCAPElimPass(PassRegistry&);
 void initializeObjCARCContractPass(PassRegistry&);
 void initializeObjCARCExpandPass(PassRegistry&);
-void initializeObjCARCOptPass(PassRegistry&);
+void initializeObjCARCOptLegacyPassPass(PassRegistry &);
 void initializeOptimizationRemarkEmitterWrapperPassPass(PassRegistry&);
 void initializeOptimizePHIsPass(PassRegistry&);
 void initializePAEvalPass(PassRegistry&);

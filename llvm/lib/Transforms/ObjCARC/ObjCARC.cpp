@@ -30,7 +30,7 @@ void llvm::initializeObjCARCOpts(PassRegistry &Registry) {
   initializeObjCARCAPElimPass(Registry);
   initializeObjCARCExpandPass(Registry);
   initializeObjCARCContractPass(Registry);
-  initializeObjCARCOptPass(Registry);
+  initializeObjCARCOptLegacyPassPass(Registry);
   initializePAEvalPass(Registry);
 }
 
