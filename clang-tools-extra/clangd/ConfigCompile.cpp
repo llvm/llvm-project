@@ -23,11 +23,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CompileCommands.h"
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
@@ -79,9 +82,56 @@ struct FragmentCompiler {
     return Result;
   }
 
+  // Helper with similar API to StringSwitch, for parsing enum values.
+  template <typename T> class EnumSwitch {
+    FragmentCompiler &Outer;
+    llvm::StringRef EnumName;
+    const Located<std::string> &Input;
+    llvm::Optional<T> Result;
+    llvm::SmallVector<llvm::StringLiteral, 8> ValidValues;
+
+  public:
+    EnumSwitch(llvm::StringRef EnumName, const Located<std::string> &In,
+               FragmentCompiler &Outer)
+        : Outer(Outer), EnumName(EnumName), Input(In) {}
+
+    EnumSwitch &map(llvm::StringLiteral Name, T Value) {
+      assert(!llvm::is_contained(ValidValues, Name) && "Duplicate value!");
+      ValidValues.push_back(Name);
+      if (!Result && *Input == Name)
+        Result = Value;
+      return *this;
+    }
+
+    llvm::Optional<T> value() {
+      if (!Result)
+        Outer.diag(
+            Warning,
+            llvm::formatv("Invalid {0} value '{1}'. Valid values are {2}.",
+                          EnumName, *Input, llvm::join(ValidValues, ", "))
+                .str(),
+            Input.Range);
+      return Result;
+    };
+  };
+
+  // Attempt to parse a specified string into an enum.
+  // Yields llvm::None and produces a diagnostic on failure.
+  //
+  // Optional<T> Value = compileEnum<En>("Foo", Frag.Foo)
+  //    .map("Foo", Enum::Foo)
+  //    .map("Bar", Enum::Bar)
+  //    .value();
+  template <typename T>
+  EnumSwitch<T> compileEnum(llvm::StringRef EnumName,
+                            const Located<std::string> &In) {
+    return EnumSwitch<T>(EnumName, In, *this);
+  }
+
   void compile(Fragment &&F) {
     compile(std::move(F.If));
     compile(std::move(F.CompileFlags));
+    compile(std::move(F.Index));
   }
 
   void compile(Fragment::IfBlock &&F) {
@@ -122,6 +172,19 @@ struct FragmentCompiler {
   }
 
   void compile(Fragment::CompileFlagsBlock &&F) {
+    if (!F.Remove.empty()) {
+      auto Remove = std::make_shared<ArgStripper>();
+      for (auto &A : F.Remove)
+        Remove->strip(*A);
+      Out.Apply.push_back([Remove(std::shared_ptr<const ArgStripper>(
+                              std::move(Remove)))](Config &C) {
+        C.CompileFlags.Edits.push_back(
+            [Remove](std::vector<std::string> &Args) {
+              Remove->process(Args);
+            });
+      });
+    }
+
     if (!F.Add.empty()) {
       std::vector<std::string> Add;
       for (auto &A : F.Add)
@@ -134,7 +197,20 @@ struct FragmentCompiler {
     }
   }
 
+  void compile(Fragment::IndexBlock &&F) {
+    if (F.Background) {
+      if (auto Val = compileEnum<Config::BackgroundPolicy>("Background",
+                                                           **F.Background)
+                         .map("Build", Config::BackgroundPolicy::Build)
+                         .map("Skip", Config::BackgroundPolicy::Skip)
+                         .value())
+        Out.Apply.push_back([Val](Config &C) { C.Index.Background = *Val; });
+    }
+  }
+
   constexpr static llvm::SourceMgr::DiagKind Error = llvm::SourceMgr::DK_Error;
+  constexpr static llvm::SourceMgr::DiagKind Warning =
+      llvm::SourceMgr::DK_Warning;
   void diag(llvm::SourceMgr::DiagKind Kind, llvm::StringRef Message,
             llvm::SMRange Range) {
     if (Range.isValid() && SourceMgr != nullptr)

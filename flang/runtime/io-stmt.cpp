@@ -472,6 +472,10 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
   }
+  char32_t comma{','};
+  if (io.mutableModes().editingFlags & decimalComma) {
+    comma = ';';
+  }
   if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
     while (connection.currentRecordNumber > initialRecordNumber_) {
       io.BackspaceRecord();
@@ -479,6 +483,10 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     connection.HandleAbsolutePosition(initialPositionInRecord_);
     if (!imaginaryPart_) {
       edit.repeat = std::min<int>(remaining_, maxRepeat);
+      auto ch{io.GetNextNonBlank()};
+      if (!ch || *ch == ' ' || *ch == comma) { // "r*" repeated null
+        edit.descriptor = DataEdit::ListDirectedNullValue;
+      }
     }
     remaining_ -= edit.repeat;
     return edit;
@@ -502,10 +510,6 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     hitSlash_ = true;
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
-  }
-  char32_t comma{','};
-  if (io.mutableModes().editingFlags & decimalComma) {
-    comma = ';';
   }
   bool isFirstItem{isFirstItem_};
   isFirstItem_ = false;
@@ -544,9 +548,13 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     if (r > 0 && ch && *ch == '*') { // subtle: r must be nonzero
       io.HandleRelativePosition(1);
       ch = io.GetCurrentChar();
-      if (!ch || *ch == ' ' || *ch == comma || *ch == '/') { // "r*" null
+      if (ch && *ch == '/') { // r*/
+        hitSlash_ = true;
         edit.descriptor = DataEdit::ListDirectedNullValue;
         return edit;
+      }
+      if (!ch || *ch == ' ' || *ch == comma) { // "r*" null
+        edit.descriptor = DataEdit::ListDirectedNullValue;
       }
       edit.repeat = std::min<int>(r, maxRepeat);
       remaining_ = r - edit.repeat;

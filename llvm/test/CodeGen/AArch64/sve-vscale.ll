@@ -2,6 +2,7 @@
 ; RUN: opt -mtriple=aarch64 -codegenprepare -S < %s | llc -mtriple=aarch64 -mattr=+sve -asm-verbose=0 | FileCheck %s
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
 ; WARN-NOT: warning
 
 ;

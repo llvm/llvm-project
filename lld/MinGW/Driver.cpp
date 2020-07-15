@@ -251,6 +251,10 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-reproduce:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
     add("-lldltocache:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_file_alignment))
+    add("-filealign:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_section_alignment))
+    add("-align:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_o))
     add("-out:" + StringRef(a->getValue()));

@@ -25,6 +25,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   AllTargetsInfos
   FrontendOpenMP
+  Option
   )
 
 add_clang_library(clangDaemon

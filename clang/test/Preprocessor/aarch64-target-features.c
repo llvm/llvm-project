@@ -112,6 +112,24 @@
 // CHECK-SVE-F64MM: __ARM_FEATURE_SVE 1
 // CHECK-SVE-F64MM: __ARM_FEATURE_SVE_MATMUL_FP64 1
 
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.5-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-8_5 %s
+// CHECK-SVE-8_5-NOT: __ARM_FEATURE_SVE_BF16 1
+// CHECK-SVE-8_5-NOT: __ARM_FEATURE_SVE_MATMUL_FP32 1
+// CHECK-SVE-8_5-NOT: __ARM_FEATURE_SVE_MATMUL_INT8 1
+// CHECK-SVE-8_5: __ARM_FEATURE_SVE 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.6-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-8_6 %s
+// CHECK-SVE-8_6: __ARM_FEATURE_SVE 1
+// CHECK-SVE-8_6: __ARM_FEATURE_SVE_BF16 1
+// CHECK-SVE-8_6: __ARM_FEATURE_SVE_MATMUL_FP32 1
+// CHECK-SVE-8_6: __ARM_FEATURE_SVE_MATMUL_INT8 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.6-a+sve+noi8mm+nobf16+nof32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-8_6-NOFEATURES %s
+// CHECK-SVE-8_6-NOFEATURES-NOT: __ARM_FEATURE_SVE_BF16 1
+// CHECK-SVE-8_6-NOFEATURES-NOT: __ARM_FEATURE_SVE_MATMUL_FP32 1
+// CHECK-SVE-8_6-NOFEATURES-NOT: __ARM_FEATURE_SVE_MATMUL_INT8 1
+// CHECK-SVE-8_6-NOFEATURES:     __ARM_FEATURE_SVE 1
+
 // The following tests may need to be revised in the future since
 // SVE2 is currently still part of Future Architecture Technologies
 // (https://developer.arm.com/docs/ddi0602/latest)

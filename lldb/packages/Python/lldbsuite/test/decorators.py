@@ -552,13 +552,15 @@ def skipIfNoSBHeaders(func):
     return skipTestIfFn(are_sb_headers_missing)(func)
 
 
-def skipIfRosetta(func, bugnumber=None):
+def skipIfRosetta(bugnumber):
     """Skip a test when running the testsuite on macOS under the Rosetta translation layer."""
     def is_running_rosetta(self):
         if not lldbplatformutil.getPlatform() in ['darwin', 'macosx']:
-            return False
-        return platform.uname()[5] == "arm" and self.getArchitecture() == "x86_64"
-    return skipTestIfFn(is_running_rosetta, bugnumber)(func)
+            return "not on macOS"
+        if (platform.uname()[5] == "arm") and (self.getArchitecture() == "x86_64"):
+            return "skipped under Rosetta"
+        return None
+    return skipTestIfFn(is_running_rosetta)
 
 def skipIfiOSSimulator(func):
     """Decorate the item to skip tests that should be skipped on the iOS Simulator."""

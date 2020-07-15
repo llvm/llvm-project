@@ -500,7 +500,8 @@ SectionHeaderTable:
     - Name: .shstrtab
 
 ## Check we do not allow using "Excluded" together with "NoHeaders".
-# RUN: not yaml2obj %s --docnum=19 -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOHEADERS
+# RUN: not yaml2obj %s --docnum=19 -DNOHEADERS=true -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOHEADERS
+# RUN: not yaml2obj %s --docnum=19 -DNOHEADERS=false -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOHEADERS
 # NOHEADERS: NoHeaders can't be used together with Sections/Excluded
 
 --- !ELF
@@ -510,5 +511,5 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 SectionHeaderTable:
-  NoHeaders: true
+  NoHeaders: [[NOHEADERS]]
   Excluded:  []

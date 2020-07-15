@@ -440,6 +440,31 @@ OpFoldResult AndOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// AssertOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct EraseRedundantAssertions : public OpRewritePattern<AssertOp> {
+  using OpRewritePattern<AssertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AssertOp op,
+                                PatternRewriter &rewriter) const override {
+    // Erase assertion if argument is constant true.
+    if (matchPattern(op.arg(), m_One())) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+    return failure();
+  }
+};
+} // namespace
+
+void AssertOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+                                           MLIRContext *context) {
+  patterns.insert<EraseRedundantAssertions>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // AssumeAlignmentOp
 //===----------------------------------------------------------------------===//
 
@@ -500,22 +525,21 @@ void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
 
     Region *bodyRegion = result.addRegion();
     bodyRegion->push_back(new Block());
-    bodyRegion->front().addArgument(elementType);
+    bodyRegion->addArgument(elementType);
   }
 }
 
 static LogicalResult verify(GenericAtomicRMWOp op) {
-  auto &block = op.body().front();
-  if (block.getNumArguments() != 1)
+  auto &body = op.body();
+  if (body.getNumArguments() != 1)
     return op.emitOpError("expected single number of entry block arguments");
 
-  if (op.getResult().getType() != block.getArgument(0).getType())
+  if (op.getResult().getType() != body.getArgument(0).getType())
     return op.emitOpError(
         "expected block argument of the same type result type");
 
   bool hasSideEffects =
-      op.body()
-          .walk([&](Operation *nestedOp) {
+      body.walk([&](Operation *nestedOp) {
             if (MemoryEffectOpInterface::hasNoEffect(nestedOp))
               return WalkResult::advance();
             nestedOp->emitError("body of 'generic_atomic_rmw' should contain "

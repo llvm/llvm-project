@@ -343,30 +343,57 @@ test_entry:
   unreachable
 }
 
+define dso_local <16 x i8> @no_crash_bitcast(i32 %a) {
+; CHECK-P8-LABEL: no_crash_bitcast:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mtvsrwz v2, r3
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P9-LABEL: no_crash_bitcast:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    mtvsrws v2, r3
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: no_crash_bitcast:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    addis r4, r2, .LCPI14_0@toc@ha
+; CHECK-NOVSX-NEXT:    stw r3, -16(r1)
+; CHECK-NOVSX-NEXT:    addi r3, r1, -16
+; CHECK-NOVSX-NEXT:    addi r4, r4, .LCPI14_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v3, 0, r3
+; CHECK-NOVSX-NEXT:    lvx v2, 0, r4
+; CHECK-NOVSX-NEXT:    vperm v2, v3, v3, v2
+; CHECK-NOVSX-NEXT:    blr
+entry:
+  %cast = bitcast i32 %a to <4 x i8>
+  %ret = shufflevector <4 x i8> %cast, <4 x i8> undef, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <16 x i8> %ret
+}
+
 define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: replace_undefs_in_splat:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
-; CHECK-P8-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, .LCPI15_0@toc@l
 ; CHECK-P8-NEXT:    lvx v3, 0, r3
 ; CHECK-P8-NEXT:    vmrgow v2, v3, v2
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: replace_undefs_in_splat:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-P9-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
+; CHECK-P9-NEXT:    addi r3, r3, .LCPI15_0@toc@l
 ; CHECK-P9-NEXT:    lxvx v3, 0, r3
 ; CHECK-P9-NEXT:    vmrgow v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: replace_undefs_in_splat:
 ; CHECK-NOVSX:       # %bb.0: # %entry
-; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
-; CHECK-NOVSX-NEXT:    addis r4, r2, .LCPI14_1@toc@ha
-; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
+; CHECK-NOVSX-NEXT:    addis r4, r2, .LCPI15_1@toc@ha
+; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI15_0@toc@l
 ; CHECK-NOVSX-NEXT:    lvx v3, 0, r3
-; CHECK-NOVSX-NEXT:    addi r3, r4, .LCPI14_1@toc@l
+; CHECK-NOVSX-NEXT:    addi r3, r4, .LCPI15_1@toc@l
 ; CHECK-NOVSX-NEXT:    lvx v4, 0, r3
 ; CHECK-NOVSX-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-NOVSX-NEXT:    blr
@@ -378,10 +405,10 @@ entry:
 define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture readonly %ptr, i32 signext %offset) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: no_RAUW_in_combine_during_legalize:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    addis r5, r2, .LCPI15_0@toc@ha
+; CHECK-P8-NEXT:    addis r5, r2, .LCPI16_0@toc@ha
 ; CHECK-P8-NEXT:    sldi r4, r4, 2
 ; CHECK-P8-NEXT:    xxlxor v4, v4, v4
-; CHECK-P8-NEXT:    addi r5, r5, .LCPI15_0@toc@l
+; CHECK-P8-NEXT:    addi r5, r5, .LCPI16_0@toc@l
 ; CHECK-P8-NEXT:    lxsiwzx v2, r3, r4
 ; CHECK-P8-NEXT:    lvx v3, 0, r5
 ; CHECK-P8-NEXT:    vperm v2, v4, v2, v3
@@ -391,8 +418,8 @@ define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture re
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    sldi r4, r4, 2
 ; CHECK-P9-NEXT:    lxsiwzx v2, r3, r4
-; CHECK-P9-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, .LCPI15_0@toc@l
+; CHECK-P9-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
+; CHECK-P9-NEXT:    addi r3, r3, .LCPI16_0@toc@l
 ; CHECK-P9-NEXT:    lxvx v3, 0, r3
 ; CHECK-P9-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P9-NEXT:    vperm v2, v4, v2, v3

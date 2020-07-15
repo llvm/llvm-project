@@ -637,6 +637,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
         ->insert(
             {"semanticHighlighting",
              llvm::json::Object{{"scopes", buildHighlightScopeLookupTable()}}});
+  if (ClangdServerOpts.FoldingRanges)
+    Result.getObject("capabilities")->insert({"foldingRangeProvider", true});
   Reply(std::move(Result));
 }
 
@@ -929,7 +931,6 @@ void ClangdLSPServer::onDocumentFormatting(
 static std::vector<SymbolInformation>
 flattenSymbolHierarchy(llvm::ArrayRef<DocumentSymbol> Symbols,
                        const URIForFile &FileURI) {
-
   std::vector<SymbolInformation> Results;
   std::function<void(const DocumentSymbol &, llvm::StringRef)> Process =
       [&](const DocumentSymbol &S, llvm::Optional<llvm::StringRef> ParentName) {
@@ -966,6 +967,12 @@ void ClangdLSPServer::onDocumentSymbol(const DocumentSymbolParams &Params,
         else
           return Reply(flattenSymbolHierarchy(*Items, FileURI));
       });
+}
+
+void ClangdLSPServer::onFoldingRange(
+    const FoldingRangeParams &Params,
+    Callback<std::vector<FoldingRange>> Reply) {
+  Server->foldingRanges(Params.textDocument.uri.file(), std::move(Reply));
 }
 
 static llvm::Optional<Command> asCommand(const CodeAction &Action) {
@@ -1395,6 +1402,8 @@ ClangdLSPServer::ClangdLSPServer(
   MsgHandler->bind("textDocument/documentLink", &ClangdLSPServer::onDocumentLink);
   MsgHandler->bind("textDocument/semanticTokens/full", &ClangdLSPServer::onSemanticTokens);
   MsgHandler->bind("textDocument/semanticTokens/full/delta", &ClangdLSPServer::onSemanticTokensDelta);
+  if (Opts.FoldingRanges)
+    MsgHandler->bind("textDocument/foldingRange", &ClangdLSPServer::onFoldingRange);
   // clang-format on
 }
 

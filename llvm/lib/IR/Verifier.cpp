@@ -4449,21 +4449,32 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Assert(Elem.Tag->getKey() == "ignore" ||
                  Attribute::isExistingAttribute(Elem.Tag->getKey()),
              "tags must be valid attribute names");
-      Assert(Elem.End - Elem.Begin <= 2, "to many arguments");
       Attribute::AttrKind Kind =
           Attribute::getAttrKindFromName(Elem.Tag->getKey());
+      unsigned ArgCount = Elem.End - Elem.Begin;
+      if (Kind == Attribute::Alignment) {
+        Assert(ArgCount <= 3 && ArgCount >= 2,
+               "alignment assumptions should have 2 or 3 arguments");
+        Assert(Call.getOperand(Elem.Begin)->getType()->isPointerTy(),
+               "first argument should be a pointer");
+        Assert(Call.getOperand(Elem.Begin + 1)->getType()->isIntegerTy(),
+               "second argument should be an integer");
+        if (ArgCount == 3)
+          Assert(Call.getOperand(Elem.Begin + 2)->getType()->isIntegerTy(),
+                 "third argument should be an integer if present");
+        return;
+      }
+      Assert(ArgCount <= 2, "to many arguments");
       if (Kind == Attribute::None)
         break;
       if (Attribute::doesAttrKindHaveArgument(Kind)) {
-        Assert(Elem.End - Elem.Begin == 2,
-               "this attribute should have 2 arguments");
+        Assert(ArgCount == 2, "this attribute should have 2 arguments");
         Assert(isa<ConstantInt>(Call.getOperand(Elem.Begin + 1)),
                "the second argument should be a constant integral value");
       } else if (isFuncOnlyAttr(Kind)) {
-        Assert((Elem.End - Elem.Begin) == 0, "this attribute has no argument");
+        Assert((ArgCount) == 0, "this attribute has no argument");
       } else if (!isFuncOrArgAttr(Kind)) {
-        Assert((Elem.End - Elem.Begin) == 1,
-               "this attribute should have one argument");
+        Assert((ArgCount) == 1, "this attribute should have one argument");
       }
     }
     break;
@@ -5006,36 +5017,73 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::matrix_transpose:
   case Intrinsic::matrix_column_major_load:
   case Intrinsic::matrix_column_major_store: {
+    Function *IF = Call.getCalledFunction();
+    ConstantInt *Stride = nullptr;
     ConstantInt *NumRows;
     ConstantInt *NumColumns;
-    VectorType *TypeToCheck;
+    VectorType *ResultTy;
+    Type *Op0ElemTy = nullptr;
+    Type *Op1ElemTy = nullptr;
     switch (ID) {
     case Intrinsic::matrix_multiply:
       NumRows = cast<ConstantInt>(Call.getArgOperand(2));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
-      TypeToCheck = cast<VectorType>(Call.getType());
+      ResultTy = cast<VectorType>(Call.getType());
+      Op0ElemTy =
+          cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
+      Op1ElemTy =
+          cast<VectorType>(Call.getArgOperand(1)->getType())->getElementType();
       break;
     case Intrinsic::matrix_transpose:
       NumRows = cast<ConstantInt>(Call.getArgOperand(1));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(2));
-      TypeToCheck = cast<VectorType>(Call.getType());
+      ResultTy = cast<VectorType>(Call.getType());
+      Op0ElemTy =
+          cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
       break;
     case Intrinsic::matrix_column_major_load:
+      Stride = dyn_cast<ConstantInt>(Call.getArgOperand(1));
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
-      TypeToCheck = cast<VectorType>(Call.getType());
+      ResultTy = cast<VectorType>(Call.getType());
+      Op0ElemTy =
+          cast<PointerType>(Call.getArgOperand(0)->getType())->getElementType();
       break;
     case Intrinsic::matrix_column_major_store:
+      Stride = dyn_cast<ConstantInt>(Call.getArgOperand(2));
       NumRows = cast<ConstantInt>(Call.getArgOperand(4));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(5));
-      TypeToCheck = cast<VectorType>(Call.getArgOperand(0)->getType());
+      ResultTy = cast<VectorType>(Call.getArgOperand(0)->getType());
+      Op0ElemTy =
+          cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
+      Op1ElemTy =
+          cast<PointerType>(Call.getArgOperand(1)->getType())->getElementType();
       break;
     default:
       llvm_unreachable("unexpected intrinsic");
     }
-    Assert(TypeToCheck->getNumElements() ==
+
+    Assert(ResultTy->getElementType()->isIntegerTy() ||
+           ResultTy->getElementType()->isFloatingPointTy(),
+           "Result type must be an integer or floating-point type!", IF);
+
+    Assert(ResultTy->getElementType() == Op0ElemTy,
+           "Vector element type mismatch of the result and first operand "
+           "vector!", IF);
+
+    if (Op1ElemTy)
+      Assert(ResultTy->getElementType() == Op1ElemTy,
+             "Vector element type mismatch of the result and second operand "
+             "vector!", IF);
+
+    Assert(ResultTy->getNumElements() ==
                NumRows->getZExtValue() * NumColumns->getZExtValue(),
-           "result of a matrix operation does not fit in the returned vector");
+           "Result of a matrix operation does not fit in the returned vector!");
+
+    if (Stride)
+      Assert(Stride->getZExtValue() >= NumRows->getZExtValue(),
+             "Stride must be greater or equal than the number of rows!", IF);
+
     break;
   }
   };

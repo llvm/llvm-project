@@ -2734,10 +2734,38 @@ Instruction *InstCombiner::visitReturnInst(ReturnInst &RI) {
   return nullptr;
 }
 
+Instruction *InstCombiner::visitUnconditionalBranchInst(BranchInst &BI) {
+  assert(BI.isUnconditional() && "Only for unconditional branches.");
+
+  // If this store is the second-to-last instruction in the basic block
+  // (excluding debug info and bitcasts of pointers) and if the block ends with
+  // an unconditional branch, try to move the store to the successor block.
+
+  auto GetLastSinkableStore = [](BasicBlock::iterator BBI) {
+    auto IsNoopInstrForStoreMerging = [](BasicBlock::iterator BBI) {
+      return isa<DbgInfoIntrinsic>(BBI) ||
+             (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy());
+    };
+
+    BasicBlock::iterator FirstInstr = BBI->getParent()->begin();
+    do {
+      if (BBI != FirstInstr)
+        --BBI;
+    } while (BBI != FirstInstr && IsNoopInstrForStoreMerging(BBI));
+
+    return dyn_cast<StoreInst>(BBI);
+  };
+
+  if (StoreInst *SI = GetLastSinkableStore(BasicBlock::iterator(BI)))
+    if (mergeStoreIntoSuccessor(*SI))
+      return &BI;
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
-  // Nothing to do about unconditional branches.
   if (BI.isUnconditional())
-    return nullptr;
+    return visitUnconditionalBranchInst(BI);
 
   // Change br (not X), label True, label False to: br X, label False, True
   Value *X = nullptr;
@@ -3355,12 +3383,6 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(&*InsertPos);
   ++NumSunkInst;
-
-  // Drop the debug loc of non-inlinable instructions. This prevents
-  // single-stepping from going backwards. See HowToUpdateDebugInfo.rst for
-  // the full rationale.
-  if (!isa<CallBase>(I))
-    I->setDebugLoc(DebugLoc());
 
   // Also sink all related debug uses from the source basic block. Otherwise we
   // get debug use before the def. Attempt to salvage debug uses first, to

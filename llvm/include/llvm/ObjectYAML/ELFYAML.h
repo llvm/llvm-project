@@ -81,6 +81,10 @@ struct FileHeader {
   ELF_EF Flags;
   llvm::yaml::Hex64 Entry;
 
+  Optional<llvm::yaml::Hex64> EPhOff;
+  Optional<llvm::yaml::Hex16> EPhEntSize;
+  Optional<llvm::yaml::Hex16> EPhNum;
+
   Optional<llvm::yaml::Hex16> SHEntSize;
   Optional<llvm::yaml::Hex64> SHOff;
   Optional<llvm::yaml::Hex16> SHNum;
@@ -94,7 +98,7 @@ struct SectionHeader {
 struct SectionHeaderTable {
   Optional<std::vector<SectionHeader>> Sections;
   Optional<std::vector<SectionHeader>> Excluded;
-  bool NoHeaders;
+  Optional<bool> NoHeaders;
 };
 
 struct SectionName {

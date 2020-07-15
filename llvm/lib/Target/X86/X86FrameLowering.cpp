@@ -479,6 +479,29 @@ void X86FrameLowering::BuildCFI(MachineBasicBlock &MBB,
       .addCFIIndex(CFIIndex);
 }
 
+/// Emits Dwarf Info specifying offsets of callee saved registers and
+/// frame pointer. This is called only when basic block sections are enabled.
+void X86FrameLowering::emitCalleeSavedFrameMoves(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
+  MachineFunction &MF = *MBB.getParent();
+  if (!hasFP(MF)) {
+    emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
+    return;
+  }
+  const MachineModuleInfo &MMI = MF.getMMI();
+  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const unsigned FramePtr = TRI->getFrameRegister(MF);
+  const unsigned MachineFramePtr =
+      STI.isTarget64BitILP32() ? unsigned(getX86SubSuperRegister(FramePtr, 64))
+                               : FramePtr;
+  unsigned DwarfReg = MRI->getDwarfRegNum(MachineFramePtr, true);
+  // Offset = space for return address + size of the frame pointer itself.
+  unsigned Offset = (Is64Bit ? 8 : 4) + (Uses64BitFramePtr ? 8 : 4);
+  BuildCFI(MBB, MBBI, DebugLoc{},
+           MCCFIInstruction::createOffset(nullptr, DwarfReg, -Offset));
+  emitCalleeSavedFrameMoves(MBB, MBBI, DebugLoc{}, true);
+}
+
 void X86FrameLowering::emitCalleeSavedFrameMoves(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, bool IsPrologue) const {

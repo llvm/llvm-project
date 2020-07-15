@@ -405,7 +405,7 @@ struct AVRFrameAnalyzer : public MachineFunctionPass {
   static char ID;
   AVRFrameAnalyzer() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) {
+  bool runOnMachineFunction(MachineFunction &MF) override {
     const MachineFrameInfo &MFI = MF.getFrameInfo();
     AVRMachineFunctionInfo *FuncInfo = MF.getInfo<AVRMachineFunctionInfo>();
 
@@ -457,7 +457,7 @@ struct AVRFrameAnalyzer : public MachineFunctionPass {
     return false;
   }
 
-  StringRef getPassName() const { return "AVR Frame Analyzer"; }
+  StringRef getPassName() const override { return "AVR Frame Analyzer"; }
 };
 
 char AVRFrameAnalyzer::ID = 0;
@@ -473,7 +473,7 @@ struct AVRDynAllocaSR : public MachineFunctionPass {
   static char ID;
   AVRDynAllocaSR() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) {
+  bool runOnMachineFunction(MachineFunction &MF) override {
     // Early exit when there are no variable sized objects in the function.
     if (!MF.getFrameInfo().hasVarSizedObjects()) {
       return false;
@@ -506,7 +506,7 @@ struct AVRDynAllocaSR : public MachineFunctionPass {
     return true;
   }
 
-  StringRef getPassName() const {
+  StringRef getPassName() const override {
     return "AVR dynalloca stack pointer save/restore";
   }
 };

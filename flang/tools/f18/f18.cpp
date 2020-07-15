@@ -101,8 +101,8 @@ struct DriverOptions {
   bool debugNoSemantics{false};
   bool debugModuleWriter{false};
   bool measureTree{false};
-  bool unparseTypedExprsToPGF90{false};
-  std::vector<std::string> pgf90Args;
+  bool unparseTypedExprsToF18_FC{false};
+  std::vector<std::string> F18_FCArgs;
   const char *prefix{nullptr};
   bool getDefinition{false};
   GetDefinitionArgs getDefinitionArgs{0, 0, 0};
@@ -137,8 +137,8 @@ void Exec(std::vector<char *> &argv, bool verbose = false) {
 
 void RunOtherCompiler(DriverOptions &driver, char *source, char *relo) {
   std::vector<char *> argv;
-  for (size_t j{0}; j < driver.pgf90Args.size(); ++j) {
-    argv.push_back(driver.pgf90Args[j].data());
+  for (size_t j{0}; j < driver.F18_FCArgs.size(); ++j) {
+    argv.push_back(driver.F18_FCArgs[j].data());
   }
   char dashC[3] = "-c", dashO[3] = "-o";
   argv.push_back(dashC);
@@ -342,7 +342,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
         options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes),
         nullptr /* action before each statement */,
-        driver.unparseTypedExprsToPGF90 ? &asFortran : nullptr);
+        driver.unparseTypedExprsToF18_FC ? &asFortran : nullptr);
   }
 
   if (ParentProcess()) {
@@ -371,8 +371,8 @@ std::string CompileOtherLanguage(std::string path, DriverOptions &driver) {
 void Link(std::vector<std::string> &relocatables, DriverOptions &driver) {
   if (!ParentProcess()) {
     std::vector<char *> argv;
-    for (size_t j{0}; j < driver.pgf90Args.size(); ++j) {
-      argv.push_back(driver.pgf90Args[j].data());
+    for (size_t j{0}; j < driver.F18_FCArgs.size(); ++j) {
+      argv.push_back(driver.F18_FCArgs[j].data());
     }
     for (auto &relo : relocatables) {
       argv.push_back(relo.data());
@@ -391,9 +391,9 @@ int main(int argc, char *const argv[]) {
   atexit(CleanUpAtExit);
 
   DriverOptions driver;
-  const char *pgf90{getenv("F18_FC")};
-  driver.pgf90Args.push_back(pgf90 ? pgf90 : "pgf90");
-  bool isPGF90{driver.pgf90Args.back().rfind("pgf90") != std::string::npos};
+  const char *F18_FC{getenv("F18_FC")};
+  driver.F18_FCArgs.push_back(F18_FC ? F18_FC : "gfortran");
+  bool isPGF90{driver.F18_FCArgs.back().rfind("pgf90") != std::string::npos};
 
   std::list<std::string> args{argList(argc, argv)};
   std::string prefix{args.front()};
@@ -423,7 +423,7 @@ int main(int argc, char *const argv[]) {
       anyFiles = true;
       auto dot{arg.rfind(".")};
       if (dot == std::string::npos) {
-        driver.pgf90Args.push_back(arg);
+        driver.F18_FCArgs.push_back(arg);
       } else {
         std::string suffix{arg.substr(dot + 1)};
         if (suffix == "f" || suffix == "F" || suffix == "ff" ||
@@ -468,6 +468,9 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-Mstandard" || arg == "-std=f95" ||
         arg == "-std=f2003" || arg == "-std=f2008" || arg == "-std=legacy") {
       driver.warnOnNonstandardUsage = true;
+    } else if (arg == "-fopenacc") {
+      options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
+      options.predefinitions.emplace_back("_OPENACC", "201911");
     } else if (arg == "-fopenmp") {
       options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
       options.predefinitions.emplace_back("_OPENMP", "201511");
@@ -513,8 +516,8 @@ int main(int argc, char *const argv[]) {
       driver.dumpUnparse = true;
     } else if (arg == "-funparse-with-symbols") {
       driver.dumpUnparseWithSymbols = true;
-    } else if (arg == "-funparse-typed-exprs-to-pgf90") {
-      driver.unparseTypedExprsToPGF90 = true;
+    } else if (arg == "-funparse-typed-exprs-to-f18-fc") {
+      driver.unparseTypedExprsToF18_FC = true;
     } else if (arg == "-fparse-only") {
       driver.parseOnly = true;
     } else if (arg == "-c") {
@@ -623,11 +626,11 @@ int main(int argc, char *const argv[]) {
       llvm::errs() << "\nf18 compiler (under development)\n";
       return exitStatus;
     } else {
-      driver.pgf90Args.push_back(arg);
+      driver.F18_FCArgs.push_back(arg);
       if (arg == "-v") {
         driver.verbose = true;
       } else if (arg == "-I") {
-        driver.pgf90Args.push_back(args.front());
+        driver.F18_FCArgs.push_back(args.front());
         driver.searchDirectories.push_back(args.front());
         args.pop_front();
       } else if (arg.substr(0, 2) == "-I") {
@@ -642,21 +645,21 @@ int main(int argc, char *const argv[]) {
   if (isPGF90) {
     if (!options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes)) {
-      driver.pgf90Args.push_back(
+      driver.F18_FCArgs.push_back(
           "-Mbackslash"); // yes, this *disables* them in pgf90
     }
     if (options.features.IsEnabled(Fortran::common::LanguageFeature::OpenMP)) {
-      driver.pgf90Args.push_back("-mp");
+      driver.F18_FCArgs.push_back("-mp");
     }
 
     Fortran::parser::useHexadecimalEscapeSequences = false;
   } else {
     if (options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes)) {
-      driver.pgf90Args.push_back("-fbackslash");
+      driver.F18_FCArgs.push_back("-fbackslash");
     }
     if (options.features.IsEnabled(Fortran::common::LanguageFeature::OpenMP)) {
-      driver.pgf90Args.push_back("-fopenmp");
+      driver.F18_FCArgs.push_back("-fopenmp");
     }
 
     Fortran::parser::useHexadecimalEscapeSequences = true;

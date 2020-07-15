@@ -16,6 +16,7 @@
 #include "FuzzerInternal.h"
 #include "FuzzerMerge.h"
 #include "FuzzerMutate.h"
+#include "FuzzerPlatform.h"
 #include "FuzzerRandom.h"
 #include "FuzzerTracePC.h"
 #include <algorithm>

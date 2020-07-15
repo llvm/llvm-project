@@ -228,12 +228,12 @@ Sections:
     Link: .symtab
 Symbols: []
 
-## Check that llvm-readobj reports an error if the e_phentsize field is broken.
+## Check that llvm-readobj reports a warning when the e_phentsize field is broken.
 
-# RUN: not llvm-readobj --program-headers %p/Inputs/invalid-e_shnum.elf 2>&1 | \
+# RUN: llvm-readobj --program-headers %p/Inputs/invalid-e_shnum.elf 2>&1 | \
 # RUN:  FileCheck -DFILE=%p/Inputs/invalid-e_shnum.elf --check-prefix=INVALID-PH-ENTSIZE %s
 
-# INVALID-PH-ENTSIZE: error: '[[FILE]]': invalid e_phentsize: 12336
+# INVALID-PH-ENTSIZE: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 12336
 
 ## Check that llvm-readobj reports a warning when we have no SHT_SYMTAB_SHNDX section,
 ## but have a symbol referencing it.
@@ -409,10 +409,10 @@ DynamicSymbols:
 ## ELF header contains e_phentsize field with a value != sizeof(Elf_Phdr).
 ## Check llvm-readobj reports it.
 
-# RUN: not llvm-readobj -l %p/Inputs/corrupt-invalid-phentsize.elf.x86-64 2>&1 \
+# RUN: llvm-readobj -l %p/Inputs/corrupt-invalid-phentsize.elf.x86-64 2>&1 \
 # RUN:   | FileCheck -DFILE=%p/Inputs/corrupt-invalid-phentsize.elf.x86-64 --check-prefix=PHENTSIZE %s
 
-# PHENTSIZE: error: '[[FILE]]': invalid e_phentsize: 57
+# PHENTSIZE: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 57
 
 ## The dynamic table contains DT_STRTAB with a value that is not in any loadable segment.
 ## Check llvm-readobj reports it.
@@ -650,3 +650,17 @@ FileHeader:
 Sections:
   - Type: SHT_NULL
     Link: 0xff
+
+## Check the case when the e_phoff field is invalid.
+# RUN: yaml2obj --docnum=31 %s -o %t31
+# RUN: not llvm-objdump --private-headers %t31 2>&1 | FileCheck -DFILE=%t31 %s --check-prefix=INVALID-PHOFF
+
+# INVALID-PHOFF: error: '[[FILE]]': program headers are longer than binary of size 280: e_phoff = 0xffffff, e_phnum = 0, e_phentsize = 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+  EPhOff:  0xffffff

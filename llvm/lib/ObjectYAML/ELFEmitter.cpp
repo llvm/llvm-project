@@ -393,16 +393,35 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
   Header.e_machine = Doc.Header.Machine;
   Header.e_version = EV_CURRENT;
   Header.e_entry = Doc.Header.Entry;
-  Header.e_phoff = Doc.ProgramHeaders.size() ? sizeof(Header) : 0;
   Header.e_flags = Doc.Header.Flags;
   Header.e_ehsize = sizeof(Elf_Ehdr);
-  Header.e_phentsize = Doc.ProgramHeaders.size() ? sizeof(Elf_Phdr) : 0;
-  Header.e_phnum = Doc.ProgramHeaders.size();
+
+  if (Doc.Header.EPhOff)
+    Header.e_phoff = *Doc.Header.EPhOff;
+  else if (!Doc.ProgramHeaders.empty())
+    Header.e_phoff = sizeof(Header);
+  else
+    Header.e_phoff = 0;
+
+  if (Doc.Header.EPhEntSize)
+    Header.e_phentsize = *Doc.Header.EPhEntSize;
+  else if (!Doc.ProgramHeaders.empty())
+    Header.e_phentsize = sizeof(Elf_Phdr);
+  else
+    Header.e_phentsize = 0;
+
+  if (Doc.Header.EPhNum)
+    Header.e_phnum = *Doc.Header.EPhNum;
+  else if (!Doc.ProgramHeaders.empty())
+    Header.e_phnum = Doc.ProgramHeaders.size();
+  else
+    Header.e_phnum = 0;
 
   Header.e_shentsize =
       Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
 
-  const bool NoShdrs = Doc.SectionHeaders && Doc.SectionHeaders->NoHeaders;
+  const bool NoShdrs =
+      Doc.SectionHeaders && Doc.SectionHeaders->NoHeaders.getValueOr(false);
 
   if (Doc.Header.SHOff)
     Header.e_shoff = *Doc.Header.SHOff;
@@ -485,11 +504,12 @@ unsigned ELFState<ELFT>::toSectionIndex(StringRef S, StringRef LocSec,
     return 0;
   }
 
-  if (!Doc.SectionHeaders ||
-      (!Doc.SectionHeaders->NoHeaders && !Doc.SectionHeaders->Excluded))
+  if (!Doc.SectionHeaders || (Doc.SectionHeaders->NoHeaders &&
+                              !Doc.SectionHeaders->NoHeaders.getValue()))
     return Index;
 
-  assert(!Doc.SectionHeaders->NoHeaders || !Doc.SectionHeaders->Sections);
+  assert(!Doc.SectionHeaders->NoHeaders.getValueOr(false) ||
+         !Doc.SectionHeaders->Sections);
   size_t FirstExcluded =
       Doc.SectionHeaders->Sections ? Doc.SectionHeaders->Sections->size() : 0;
   if (Index >= FirstExcluded) {
@@ -1758,7 +1778,7 @@ template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {
         if (!ExcludedSectionHeaders.insert(Hdr.Name).second)
           llvm_unreachable("buildSectionIndex() failed");
 
-    if (Doc.SectionHeaders->NoHeaders)
+    if (Doc.SectionHeaders->NoHeaders.getValueOr(false))
       for (const ELFYAML::Section *S : Sections)
         if (!ExcludedSectionHeaders.insert(S->Name).second)
           llvm_unreachable("buildSectionIndex() failed");

@@ -410,7 +410,7 @@ class Configuration(object):
         enable_rtti = self.get_lit_bool('enable_rtti', True)
         if not enable_rtti:
             self.config.available_features.add('-fno-rtti')
-            self.cxx.compile_flags += ['-fno-rtti', '-D_LIBCPP_NO_RTTI']
+            self.cxx.compile_flags += ['-fno-rtti']
 
     def configure_link_flags(self):
         # Configure library path

@@ -212,6 +212,17 @@ define i1 @orderedLessZero_fdiv(float %x) {
   ret i1 %uge
 }
 
+; If x == -0.0, maxnum can return -0.0, but that still compares equal to 0.0.
+
+define i1 @orderedLessZero_maxnum(float %x) {
+; CHECK-LABEL: @orderedLessZero_maxnum(
+; CHECK-NEXT:    ret i1 true
+;
+  %d = call float @llvm.maxnum.f32(float %x, float 0.0)
+  %uge = fcmp uge float %d, 0.0
+  ret i1 %uge
+}
+
 define i1 @orderedLessZeroExpExt(float) {
 ; CHECK-LABEL: @orderedLessZeroExpExt(
 ; CHECK-NEXT:    ret i1 true

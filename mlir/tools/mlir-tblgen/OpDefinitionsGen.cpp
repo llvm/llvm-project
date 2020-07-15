@@ -943,13 +943,21 @@ void OpEmitter::genSeparateArgParamBuilder() {
              << ");\n";
       }
       return;
-    case TypeParamKind::Collective:
-      body << "  "
-           << "assert(resultTypes.size() "
-           << (op.getNumVariableLengthResults() == 0 ? "==" : ">=") << " "
-           << (op.getNumResults() - op.getNumVariableLengthResults())
-           << "u && \"mismatched number of results\");\n";
+    case TypeParamKind::Collective: {
+      int numResults = op.getNumResults();
+      int numVariadicResults = op.getNumVariableLengthResults();
+      int numNonVariadicResults = numResults - numVariadicResults;
+      bool hasVariadicResult = numVariadicResults != 0;
+
+      // Avoid emitting "resultTypes.size() >= 0u" which is always true.
+      if (!(hasVariadicResult && numNonVariadicResults == 0))
+        body << "  "
+             << "assert(resultTypes.size() "
+             << (hasVariadicResult ? ">=" : "==") << " "
+             << numNonVariadicResults
+             << "u && \"mismatched number of results\");\n";
       body << "  " << builderOpState << ".addTypes(resultTypes);\n";
+    }
       return;
     }
     llvm_unreachable("unhandled TypeParamKind");
@@ -2129,15 +2137,19 @@ void OpOperandAdaptorEmitter::emitDef(const Operator &op, raw_ostream &os) {
 // Emits the opcode enum and op classes.
 static void emitOpClasses(const std::vector<Record *> &defs, raw_ostream &os,
                           bool emitDecl) {
-  IfDefScope scope("GET_OP_CLASSES", os);
   // First emit forward declaration for each class, this allows them to refer
   // to each others in traits for example.
   if (emitDecl) {
+    os << "#if defined(GET_OP_CLASSES) || defined(GET_OP_FWD_DEFINES)\n";
+    os << "#undef GET_OP_FWD_DEFINES\n";
     for (auto *def : defs) {
       Operator op(*def);
       os << "class " << op.getCppClassName() << ";\n";
     }
+    os << "#endif\n\n";
   }
+
+  IfDefScope scope("GET_OP_CLASSES", os);
   for (auto *def : defs) {
     Operator op(*def);
     if (emitDecl) {

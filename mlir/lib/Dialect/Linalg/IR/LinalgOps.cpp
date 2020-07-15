@@ -591,6 +591,8 @@ void mlir::linalg::ReshapeOp::build(OpBuilder &b, OperationState &result,
                       b.getAffineMapArrayAttr(maps));
 }
 
+Value mlir::linalg::ReshapeOp::getViewSource() { return src(); }
+
 // Common verifier for reshape-like types. Fills `expandedType` and
 // `collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>

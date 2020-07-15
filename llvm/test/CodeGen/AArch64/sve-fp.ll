@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
 ; WARN-NOT: warning
 
 define <vscale x 8 x half> @fadd_h(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
@@ -205,6 +206,18 @@ define void @scalar_to_vector(%complex* %outval, <vscale x 2 x i1> %pred, <vscal
   %2 = call double @llvm.aarch64.sve.faddv.nxv2f64(<vscale x 2 x i1> %pred, <vscale x 2 x double> %in2)
   store double %1, double* %realp, align 8
   store double %2, double* %imagp, align 8
+  ret void
+}
+
+define void @float_copy(<vscale x 4 x float>* %P1, <vscale x 4 x float>* %P2) {
+; CHECK-LABEL: float_copy:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %A = load <vscale x 4 x float>, <vscale x 4 x float>* %P1, align 16
+  store <vscale x 4 x float> %A, <vscale x 4 x float>* %P2, align 16
   ret void
 }
 

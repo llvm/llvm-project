@@ -11,8 +11,10 @@
 #include "ConfigFragment.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
+#include <chrono>
 #include <mutex>
 
 namespace clang {
@@ -22,21 +24,18 @@ namespace config {
 // Threadsafe cache around reading a YAML config file from disk.
 class FileConfigCache {
   std::mutex Mu;
+  std::chrono::steady_clock::time_point ValidTime = {};
   llvm::SmallVector<CompiledFragment, 1> CachedValue;
   llvm::sys::TimePoint<> MTime = {};
   unsigned Size = -1;
 
-  void updateCacheLocked(const llvm::vfs::Status &Stat,
-                         llvm::vfs::FileSystem &FS, DiagnosticCallback DC) {
-    if (Size == Stat.getSize() && MTime == Stat.getLastModificationTime())
-      return; // Already valid.
-
-    Size = Stat.getSize();
-    MTime = Stat.getLastModificationTime();
+  // Called once we are sure we want to read the file.
+  // REQUIRES: Cache keys are set. Mutex must be held.
+  void fillCacheFromDisk(llvm::vfs::FileSystem &FS, DiagnosticCallback DC) {
     CachedValue.clear();
 
     auto Buf = FS.getBufferForFile(Path);
-    // If stat() succeeds but we failed to read, don't cache failure.
+    // If we failed to read (but stat succeeded), don't cache failure.
     if (!Buf) {
       Size = -1;
       MTime = {};
@@ -68,19 +67,40 @@ public:
   // - allow caches to be reused based on short elapsed walltime
   // - allow latency-sensitive operations to skip revalidating the cache
   void read(const ThreadsafeFS &TFS, DiagnosticCallback DC,
+            llvm::Optional<std::chrono::steady_clock::time_point> FreshTime,
             std::vector<CompiledFragment> &Out) {
+    std::lock_guard<std::mutex> Lock(Mu);
+    // We're going to update the cache and return whatever's in it.
+    auto Return = llvm::make_scope_exit(
+        [&] { llvm::copy(CachedValue, std::back_inserter(Out)); });
+
+    // Return any sufficiently recent result without doing any further work.
+    if (FreshTime && ValidTime >= FreshTime)
+      return;
+
+    // Ensure we bump the ValidTime at the end to allow for reuse.
+    auto MarkTime = llvm::make_scope_exit(
+        [&] { ValidTime = std::chrono::steady_clock::now(); });
+
+    // Stat is cheaper than opening the file, it's usually unchanged.
     assert(llvm::sys::path::is_absolute(Path));
     auto FS = TFS.view(/*CWD=*/llvm::None);
     auto Stat = FS->status(Path);
+    // If there's no file, the result is empty. Ensure we have an invalid key.
     if (!Stat || !Stat->isRegularFile()) {
-      // No point taking the lock to clear the cache. We know what to return.
-      // If the file comes back we'll invalidate the cache at that point.
+      MTime = {};
+      Size = -1;
+      CachedValue.clear();
       return;
     }
+    // If the modified-time and size match, assume the content does too.
+    if (Size == Stat->getSize() && MTime == Stat->getLastModificationTime())
+      return;
 
-    std::lock_guard<std::mutex> Lock(Mu);
-    updateCacheLocked(*Stat, *FS, DC);
-    llvm::copy(CachedValue, std::back_inserter(Out));
+    // OK, the file has actually changed. Update cache key, compute new value.
+    Size = Stat->getSize();
+    MTime = Stat->getLastModificationTime();
+    fillCacheFromDisk(*FS, DC);
   }
 };
 
@@ -93,7 +113,7 @@ std::unique_ptr<Provider> Provider::fromYAMLFile(llvm::StringRef AbsPath,
     std::vector<CompiledFragment>
     getFragments(const Params &P, DiagnosticCallback DC) const override {
       std::vector<CompiledFragment> Result;
-      Cache.read(FS, DC, Result);
+      Cache.read(FS, DC, P.FreshTime, Result);
       return Result;
     };
 
@@ -158,7 +178,7 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
       // This will take a (per-file) lock for each file that actually exists.
       std::vector<CompiledFragment> Result;
       for (FileConfigCache *Cache : Caches)
-        Cache->read(FS, DC, Result);
+        Cache->read(FS, DC, P.FreshTime, Result);
       return Result;
     };
 
@@ -173,9 +193,9 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
 }
 
 std::unique_ptr<Provider>
-Provider::combine(std::vector<std::unique_ptr<Provider>> Providers) {
+Provider::combine(std::vector<const Provider *> Providers) {
   struct CombinedProvider : Provider {
-    std::vector<std::unique_ptr<Provider>> Providers;
+    std::vector<const Provider *> Providers;
 
     std::vector<CompiledFragment>
     getFragments(const Params &P, DiagnosticCallback DC) const override {

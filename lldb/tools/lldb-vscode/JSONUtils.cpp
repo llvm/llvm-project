@@ -331,7 +331,8 @@ llvm::json::Value CreateModule(lldb::SBModule &module) {
   llvm::json::Object object;
   if (!module.IsValid())
     return llvm::json::Value(std::move(object));
-  object.try_emplace("id", std::string(module.GetUUIDString()));
+  const char *uuid = module.GetUUIDString();
+  object.try_emplace("id", uuid ? std::string(uuid) : std::string(""));
   object.try_emplace("name", std::string(module.GetFileSpec().GetFilename()));
   char module_path_arr[PATH_MAX];
   module.GetFileSpec().GetPath(module_path_arr, sizeof(module_path_arr));

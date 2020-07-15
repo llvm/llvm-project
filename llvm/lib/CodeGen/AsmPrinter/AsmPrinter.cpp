@@ -3057,25 +3057,40 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
 
   if (MBB.pred_empty() ||
       (!MF->hasBBLabels() && isBlockOnlyReachableByFallthrough(&MBB) &&
-       !MBB.isEHFuncletEntry())) {
+       !MBB.isEHFuncletEntry() && !MBB.hasLabelMustBeEmitted())) {
     if (isVerbose()) {
       // NOTE: Want this comment at start of line, don't emit with AddComment.
       OutStreamer->emitRawComment(" %bb." + Twine(MBB.getNumber()) + ":",
                                   false);
     }
   } else {
+    if (isVerbose() && MBB.hasLabelMustBeEmitted()) {
+      OutStreamer->AddComment("Label of block must be emitted");
+    }
+    auto *BBSymbol = MBB.getSymbol();
     // Switch to a new section if this basic block must begin a section.
     if (MBB.isBeginSection()) {
       OutStreamer->SwitchSection(
           getObjFileLowering().getSectionForMachineBasicBlock(MF->getFunction(),
                                                               MBB, TM));
-      CurrentSectionBeginSym = MBB.getSymbol();
+      CurrentSectionBeginSym = BBSymbol;
     }
-    OutStreamer->emitLabel(MBB.getSymbol());
+    OutStreamer->emitLabel(BBSymbol);
+    // With BB sections, each basic block must handle CFI information on its own
+    // if it begins a section.
+    if (MBB.isBeginSection())
+      for (const HandlerInfo &HI : Handlers)
+        HI.Handler->beginBasicBlock(MBB);
   }
 }
 
-void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {}
+void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  // Check if CFI information needs to be updated for this MBB with basic block
+  // sections.
+  if (MBB.isEndSection())
+    for (const HandlerInfo &HI : Handlers)
+      HI.Handler->endBasicBlock(MBB);
+}
 
 void AsmPrinter::emitVisibility(MCSymbol *Sym, unsigned Visibility,
                                 bool IsDefinition) const {
