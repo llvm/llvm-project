@@ -489,19 +489,12 @@ public:
       }
     } else {
       AddressType address_type = eAddressTypeInvalid;
-      const bool is_dynamic_class_type =
-          m_is_generic &&
-          (valobj_type.GetTypeClass() == lldb::eTypeClassClass);
       const bool scalar_is_load_address = m_is_generic; // this is the only
                                                           // time we're dealing
                                                           // with dynamic values
 
-      // if the dynamic type is a class, bypass the GetAddressOf() optimization
-      // as it doesn't do the right thing
       lldb::addr_t addr_of_valobj =
-          is_dynamic_class_type
-              ? LLDB_INVALID_ADDRESS
-              : valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
+          valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
 
       // BEGIN Swift.
       if (lldb::ProcessSP process_sp =
