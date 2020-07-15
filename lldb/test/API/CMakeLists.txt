@@ -38,7 +38,7 @@ set(LLDB_TEST_USER_ARGS
 set(LLDB_TEST_COMMON_ARGS
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
-  -S fm
+  -S nm
   -u CXXFLAGS
   -u CFLAGS
   )
