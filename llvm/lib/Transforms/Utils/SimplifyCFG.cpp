@@ -147,6 +147,8 @@ STATISTIC(
     NumLookupTablesHoles,
     "Number of switch instructions turned into lookup tables (holes checked)");
 STATISTIC(NumTableCmpReuses, "Number of reused switch table lookup compares");
+STATISTIC(NumSinkCommonCode,
+          "Number of common instruction 'blocks' sunk down to the end block");
 STATISTIC(NumSinkCommonInstrs,
           "Number of common instructions sunk down to the end block");
 STATISTIC(NumSpeculations, "Number of speculative executed instructions");
@@ -1880,7 +1882,8 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
   // sink presuming a later value will also be sunk, but stop half way through
   // and never actually sink it which means we produce more PHIs than intended.
   // This is unlikely in practice though.
-  for (unsigned SinkIdx = 0; SinkIdx != ScanIdx; ++SinkIdx) {
+  unsigned SinkIdx = 0;
+  for (; SinkIdx != ScanIdx; ++SinkIdx) {
     LLVM_DEBUG(dbgs() << "SINK: Sink: "
                       << *UnconditionalPreds[0]->getTerminator()->getPrevNode()
                       << "\n");
@@ -1899,11 +1902,14 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
       LLVM_DEBUG(
           dbgs()
           << "SINK: stopping here, failed to actually sink instruction!\n");
-      return Changed;
+      break;
     }
+
     NumSinkCommonInstrs++;
     Changed = true;
   }
+  if (SinkIdx != 0)
+    ++NumSinkCommonCode;
   return Changed;
 }
 
