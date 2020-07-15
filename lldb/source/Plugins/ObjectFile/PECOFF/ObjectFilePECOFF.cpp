@@ -656,7 +656,7 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
           // because it is used as offset 0 to encode a NULL string.
           uint32_t *strtab_data_start = const_cast<uint32_t *>(
               reinterpret_cast<const uint32_t *>(strtab_data.GetDataStart()));
-          strtab_data_start[0] = 0;
+          ::memset(&strtab_data_start[0], 0, sizeof(uint32_t));
 
           offset = 0;
           std::string symbol_name;
