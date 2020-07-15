@@ -1895,8 +1895,12 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB) {
       break;
     }
 
-    if (!sinkLastInstruction(UnconditionalPreds))
+    if (!sinkLastInstruction(UnconditionalPreds)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "SINK: stopping here, failed to actually sink instruction!\n");
       return Changed;
+    }
     NumSinkCommonInstrs++;
     Changed = true;
   }
