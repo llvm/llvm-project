@@ -285,9 +285,14 @@ public:
   /// Helper that contains information about regions we need to outline
   /// during finalization.
   struct OutlineInfo {
-    SmallVector<BasicBlock *, 32> Blocks;
     using PostOutlineCBTy = std::function<void(Function &)>;
     PostOutlineCBTy PostOutlineCB;
+    BasicBlock *EntryBB, *ExitBB;
+
+    /// Collect all blocks in between EntryBB and ExitBB in both the given
+    /// vector and set.
+    void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
+                       SmallVectorImpl<BasicBlock *> &BlockVector);
   };
 
   /// Collection of regions that need to be outlined during finalization.
