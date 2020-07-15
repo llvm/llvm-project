@@ -1148,11 +1148,12 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
   assert((IsAnd || Logic.getOpcode() == Instruction::Or) && "Wrong logic op");
 
   // Match an equality compare with a non-poison constant as Cmp0.
+  // Also, give up if the compare can be constant-folded to avoid looping.
   ICmpInst::Predicate Pred0;
   Value *X;
   Constant *C;
   if (!match(Cmp0, m_ICmp(Pred0, m_Value(X), m_Constant(C))) ||
-      !isGuaranteedNotToBeUndefOrPoison(C))
+      !isGuaranteedNotToBeUndefOrPoison(C) || isa<Constant>(X))
     return nullptr;
   if ((IsAnd && Pred0 != ICmpInst::ICMP_EQ) ||
       (!IsAnd && Pred0 != ICmpInst::ICMP_NE))
