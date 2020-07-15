@@ -1411,6 +1411,12 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
   SmallVector<SDValue, 8> Stores;
   unsigned TypeByteSize = MemVT.getSizeInBits() / 8;
   assert(TypeByteSize > 0 && "Vector element type too small for stack store!");
+
+  // If the destination vector element type of a BUILD_VECTOR is narrower than
+  // the source element type, only store the bits necessary.
+  bool Truncate = isa<BuildVectorSDNode>(Node) &&
+                  MemVT.bitsLT(Node->getOperand(0).getValueType());
+
   // Store (in the right endianness) the elements to memory.
   for (unsigned i = 0, e = Node->getNumOperands(); i != e; ++i) {
     // Ignore undef elements.
@@ -1420,9 +1426,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
 
     SDValue Idx = DAG.getMemBasePlusOffset(FIPtr, Offset, dl);
 
-    // If the destination vector element type is narrower than the source
-    // element type, only store the bits necessary.
-    if (MemVT.bitsLT(Node->getOperand(i).getValueType()))
+    if (Truncate)
       Stores.push_back(DAG.getTruncStore(DAG.getEntryNode(), dl,
                                          Node->getOperand(i), Idx,
                                          PtrInfo.getWithOffset(Offset), MemVT));
