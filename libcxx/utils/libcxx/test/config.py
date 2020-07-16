@@ -319,7 +319,6 @@ class Configuration(object):
         self.configure_compile_flags_header_includes()
         self.target_info.add_cxx_compile_flags(self.cxx.compile_flags)
         # Configure feature flags.
-        self.configure_compile_flags_rtti()
         enable_32bit = self.get_lit_bool('enable_32bit', False)
         if enable_32bit:
             self.cxx.flags += ['-m32']
@@ -405,12 +404,6 @@ class Configuration(object):
         if not os.path.isfile(config_site_header):
             return
         self.cxx.compile_flags += ['-include', config_site_header]
-
-    def configure_compile_flags_rtti(self):
-        enable_rtti = self.get_lit_bool('enable_rtti', True)
-        if not enable_rtti:
-            self.config.available_features.add('-fno-rtti')
-            self.cxx.compile_flags += ['-fno-rtti']
 
     def configure_link_flags(self):
         # Configure library path
