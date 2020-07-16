@@ -2,7 +2,7 @@ UNSUPPORTED: freebsd
 RUN: %cpp_compiler %S/StrcmpTest.cpp -o %t-StrcmpTest
 RUN: not %run %t-StrcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
 
-RUN: %cpp_compiler -fno-sanitize=address -fno-builtin-strcmp %S/StrcmpTest.cpp -o %t-NoAsanStrcmpTest
+RUN: %cpp_compiler -fno-sanitize=address %S/StrcmpTest.cpp -o %t-NoAsanStrcmpTest
 RUN: not %run %t-StrcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
 
 CHECK: BINGO
