@@ -75,31 +75,31 @@ void LazyCallThroughManager::resolveTrampolineLandingAddress(
   if (!Entry)
     return NotifyLandingResolved(reportCallThroughError(Entry.takeError()));
 
-  // Declaring SLS outside of the call to ES.lookup is a workaround to fix build
-  // failures on AIX and on z/OS platforms.
+  // Declaring SLS and the callback outside of the call to ES.lookup is a
+  // workaround to fix build failures on AIX and on z/OS platforms.
   SymbolLookupSet SLS({Entry->SymbolName});
+  auto Callback = [this, TrampolineAddr, SymbolName = Entry->SymbolName,
+                   NotifyLandingResolved = std::move(NotifyLandingResolved)](
+                      Expected<SymbolMap> Result) mutable {
+    if (Result) {
+      assert(Result->size() == 1 && "Unexpected result size");
+      assert(Result->count(SymbolName) && "Unexpected result value");
+      JITTargetAddress LandingAddr = (*Result)[SymbolName].getAddress();
 
-  ES.lookup(
-      LookupKind::Static,
-      makeJITDylibSearchOrder(Entry->SourceJD,
-                              JITDylibLookupFlags::MatchAllSymbols),
-      std::move(SLS), SymbolState::Ready,
-      [this, TrampolineAddr, SymbolName = Entry->SymbolName,
-       NotifyLandingResolved = std::move(NotifyLandingResolved)](
-          Expected<SymbolMap> Result) mutable {
-        if (Result) {
-          assert(Result->size() == 1 && "Unexpected result size");
-          assert(Result->count(SymbolName) && "Unexpected result value");
-          JITTargetAddress LandingAddr = (*Result)[SymbolName].getAddress();
+      if (auto Err = notifyResolved(TrampolineAddr, LandingAddr))
+        NotifyLandingResolved(reportCallThroughError(std::move(Err)));
+      else
+        NotifyLandingResolved(LandingAddr);
+    } else {
+      NotifyLandingResolved(reportCallThroughError(Result.takeError()));
+    }
+  };
 
-          if (auto Err = notifyResolved(TrampolineAddr, LandingAddr))
-            NotifyLandingResolved(reportCallThroughError(std::move(Err)));
-          else
-            NotifyLandingResolved(LandingAddr);
-        } else
-          NotifyLandingResolved(reportCallThroughError(Result.takeError()));
-      },
-      NoDependenciesToRegister);
+  ES.lookup(LookupKind::Static,
+            makeJITDylibSearchOrder(Entry->SourceJD,
+                                    JITDylibLookupFlags::MatchAllSymbols),
+            std::move(SLS), SymbolState::Ready, std::move(Callback),
+            NoDependenciesToRegister);
 }
 
 Expected<std::unique_ptr<LazyCallThroughManager>>
