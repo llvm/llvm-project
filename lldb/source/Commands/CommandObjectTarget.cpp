@@ -4332,7 +4332,6 @@ protected:
                 module_spec.GetSymbolFileSpec() = symfile_spec;
             }
 
-            ArchSpec arch;
             bool symfile_exists =
                 FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec());
 
