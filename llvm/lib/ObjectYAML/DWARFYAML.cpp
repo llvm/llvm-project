@@ -46,6 +46,8 @@ SetVector<StringRef> DWARFYAML::Data::getUsedSectionNames() const {
     SecNames.insert("debug_gnu_pubnames");
   if (GNUPubTypes)
     SecNames.insert("debug_gnu_pubtypes");
+  if (DebugStrOffsets)
+    SecNames.insert("debug_str_offsets");
   return SecNames;
 }
 
@@ -69,6 +71,7 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.mapOptional("debug_info", DWARF.CompileUnits);
   IO.mapOptional("debug_line", DWARF.DebugLines);
   IO.mapOptional("debug_addr", DWARF.DebugAddr);
+  IO.mapOptional("debug_str_offsets", DWARF.DebugStrOffsets);
   IO.setContext(OldContext);
 }
 
@@ -219,6 +222,15 @@ void MappingTraits<DWARFYAML::AddrTableEntry>::mapping(
   IO.mapOptional("AddressSize", AddrTable.AddrSize);
   IO.mapOptional("SegmentSelectorSize", AddrTable.SegSelectorSize, 0);
   IO.mapOptional("Entries", AddrTable.SegAddrPairs);
+}
+
+void MappingTraits<DWARFYAML::StringOffsetsTable>::mapping(
+    IO &IO, DWARFYAML::StringOffsetsTable &StrOffsetsTable) {
+  IO.mapOptional("Format", StrOffsetsTable.Format, dwarf::DWARF32);
+  IO.mapOptional("Length", StrOffsetsTable.Length);
+  IO.mapOptional("Version", StrOffsetsTable.Version, 5);
+  IO.mapOptional("Padding", StrOffsetsTable.Padding, 0);
+  IO.mapOptional("Offsets", StrOffsetsTable.Offsets);
 }
 
 void MappingTraits<DWARFYAML::InitialLength>::mapping(

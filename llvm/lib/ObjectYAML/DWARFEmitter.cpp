@@ -416,6 +416,31 @@ Error DWARFYAML::emitDebugAddr(raw_ostream &OS, const Data &DI) {
   return Error::success();
 }
 
+Error DWARFYAML::emitDebugStrOffsets(raw_ostream &OS, const Data &DI) {
+  assert(DI.DebugStrOffsets && "unexpected emitDebugStrOffsets() call");
+  for (const DWARFYAML::StringOffsetsTable &Table : *DI.DebugStrOffsets) {
+    uint64_t Length;
+    if (Table.Length)
+      Length = *Table.Length;
+    else
+      // sizeof(version) + sizeof(padding) = 4
+      Length =
+          4 + Table.Offsets.size() * (Table.Format == dwarf::DWARF64 ? 8 : 4);
+
+    writeInitialLength(Table.Format, Length, OS, DI.IsLittleEndian);
+    writeInteger((uint16_t)Table.Version, OS, DI.IsLittleEndian);
+    writeInteger((uint16_t)Table.Padding, OS, DI.IsLittleEndian);
+
+    for (uint64_t Offset : Table.Offsets) {
+      cantFail(writeVariableSizedInteger(Offset,
+                                         Table.Format == dwarf::DWARF64 ? 8 : 4,
+                                         OS, DI.IsLittleEndian));
+    }
+  }
+
+  return Error::success();
+}
+
 using EmitFuncType = Error (*)(raw_ostream &, const DWARFYAML::Data &);
 
 static Error
