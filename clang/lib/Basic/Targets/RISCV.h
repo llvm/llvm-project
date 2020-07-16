@@ -24,7 +24,7 @@ namespace targets {
 // RISC-V Target
 class RISCVTargetInfo : public TargetInfo {
 protected:
-  std::string ABI;
+  std::string ABI, CPU;
   bool HasM;
   bool HasA;
   bool HasF;
@@ -42,6 +42,13 @@ public:
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
+  }
+
+  bool setCPU(const std::string &Name) override {
+    if (!isValidCPUName(Name))
+      return false;
+    CPU = Name;
+    return true;
   }
 
   StringRef getABI() const override { return ABI; }
@@ -97,6 +104,9 @@ public:
     return false;
   }
 
+  bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;
 
@@ -120,6 +130,9 @@ public:
     }
     return false;
   }
+
+  bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;
