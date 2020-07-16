@@ -432,7 +432,8 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
 
   if (Doc.Header.EShNum)
     Header.e_shnum = *Doc.Header.EShNum;
-  else if (!Doc.SectionHeaders)
+  else if (!Doc.SectionHeaders ||
+           (Doc.SectionHeaders->NoHeaders && !*Doc.SectionHeaders->NoHeaders))
     Header.e_shnum = Doc.getSections().size();
   else if (NoShdrs)
     Header.e_shnum = 0;
