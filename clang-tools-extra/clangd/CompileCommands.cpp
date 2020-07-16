@@ -271,6 +271,7 @@ std::pair<unsigned, unsigned> getArgCount(const llvm::opt::Option &Opt) {
   case Option::RemainingArgsJoinedClass:
     return {Rest, Rest};
   }
+  llvm_unreachable("Unhandled option kind");
 }
 
 // Flag-parsing mode, which affects which flags are available.
@@ -321,7 +322,7 @@ unsigned char getModes(const llvm::opt::Option &Opt) {
     }
   }
   return Result;
-};
+}
 
 } // namespace
 
@@ -475,7 +476,7 @@ void ArgStripper::process(std::vector<std::string> &Args) const {
   bool WasXclang = false;
   while (Read < Args.size()) {
     unsigned ArgCount = 0;
-    if (const Rule *R = matchingRule(Args[Read], CurrentMode, ArgCount)) {
+    if (matchingRule(Args[Read], CurrentMode, ArgCount)) {
       // Delete it and its args.
       if (WasXclang) {
         assert(Write > 0);
