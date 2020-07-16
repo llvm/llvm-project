@@ -1026,8 +1026,12 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
       builderOpState +
       ", ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> "
       "attributes";
-  if (op.getNumVariadicRegions())
+  if (op.getNumVariadicRegions()) {
     params += ", unsigned numRegions";
+  } else {
+    // Provide default value for `attributes` since its the last parameter
+    params += " = {}";
+  }
   auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
 
@@ -1053,13 +1057,12 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 
 void OpEmitter::genInferredTypeCollectiveParamBuilder() {
   // TODO: Expand to support regions.
-  const char *params =
-      "::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &{0}, "
-      "::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> "
-      "attributes";
-  auto &m =
-      opClass.newMethod("void", "build", formatv(params, builderOpState).str(),
-                        OpMethod::MP_Static);
+  std::string params =
+      std::string("::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &") +
+      builderOpState +
+      ", ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> "
+      "attributes = {}";
+  auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
 
   int numResults = op.getNumResults();
