@@ -17,6 +17,14 @@
 #include "lldb/Utility/Timer.h"
 #include "llvm/Support/TargetSelect.h"
 
+// BEGIN SWIFT
+#include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
+#include "Plugins/InstrumentationRuntime/SwiftRuntimeReporting/SwiftRuntimeReporting.h"
+#include "Plugins/Language/Swift/SwiftLanguage.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
+// END SWIFT
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wglobal-constructors"
 #include "llvm/ExecutionEngine/MCJIT.h"

@@ -30,7 +30,6 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -44,6 +43,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 
 using namespace lldb_private;
 

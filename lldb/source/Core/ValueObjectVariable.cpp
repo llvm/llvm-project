@@ -16,7 +16,6 @@
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/Type.h"
@@ -32,6 +31,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
+
+#include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 
 #include "llvm/ADT/StringRef.h"
 

@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2020 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 
 // C++ Includes
 #include <mutex> // std::once
@@ -94,7 +94,6 @@
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
@@ -948,16 +947,6 @@ SwiftASTContext::~SwiftASTContext() {
 const std::string &SwiftASTContext::GetDescription() const {
   return m_description;
 }
-
-ConstString SwiftASTContext::GetPluginNameStatic() {
-  return ConstString("swift");
-}
-
-ConstString SwiftASTContext::GetPluginName() {
-  return TypeSystemClang::GetPluginNameStatic();
-}
-
-uint32_t SwiftASTContext::GetPluginVersion() { return 1; }
 
 namespace {
 struct SDKTypeMinVersion {
@@ -2255,36 +2244,6 @@ void SwiftASTContext::EnumerateSupportedLanguages(
   languages_for_expressions.insert(
       s_supported_languages_for_expressions.begin(),
       s_supported_languages_for_expressions.end());
-}
-
-static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
-                                                   Module *module,
-                                                   Target *target,
-                                                   const char *extra_options) {
-  // This should be called with either a target or a module.
-  if (module) {
-    assert(!target);
-    assert(StringRef(extra_options).empty());
-    return SwiftASTContext::CreateInstance(language, *module);
-  } else if (target) {
-    assert(!module);
-    return SwiftASTContext::CreateInstance(language, *target, extra_options);
-  }
-  llvm_unreachable("Neither type nor module given to CreateTypeSystemInstance");
-}
-
-void SwiftASTContext::Initialize() {
-  LanguageSet swift;
-  SwiftLanguageRuntime::Initialize();
-  swift.Insert(lldb::eLanguageTypeSwift);
-  PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                "swift AST context plug-in",
-                                CreateTypeSystemInstance, swift, swift);
-}
-
-void SwiftASTContext::Terminate() {
-  PluginManager::UnregisterPlugin(CreateTypeSystemInstance);
-  SwiftLanguageRuntime::Terminate();
 }
 
 bool SwiftASTContext::SupportsLanguage(lldb::LanguageType language) {
@@ -5512,12 +5471,9 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     LLVM_FALLTHROUGH;
   case swift::TypeKind::Enum: {
     SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
-    if (cached_enum_info) {
-      if (cached_enum_info->GetNumElementsWithPayload() == 0)
-        swift_flags |= eTypeHasValue | eTypeIsEnumeration;
-      else
-        swift_flags |= eTypeHasValue | eTypeIsEnumeration | eTypeHasChildren;
-    } else
+    if (cached_enum_info)
+      swift_flags |= eTypeHasValue | eTypeIsEnumeration | eTypeHasChildren;
+    else
       swift_flags |= eTypeIsEnumeration;
   } break;
 
@@ -5525,6 +5481,12 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     swift_flags |= eTypeIsGeneric | eTypeIsBound;
     LLVM_FALLTHROUGH;
   case swift::TypeKind::Struct:
+    if (auto *ndecl = swift_can_type.getAnyNominal())
+      if (llvm::dyn_cast_or_null<clang::EnumDecl>(ndecl->getClangDecl())) {
+        swift_flags |= eTypeHasChildren | eTypeIsEnumeration | eTypeHasValue;
+        break;
+      }
+
     swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
     break;
 

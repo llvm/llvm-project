@@ -4,10 +4,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   set(PLATFORM_SOURCES LocateSymbolFileMacOSX.cpp)
 endif()
 
-set(SWIFT_SOURCES
-    SwiftASTContext.cpp
-    TypeSystemSwiftTypeRef.cpp
-)
 set(SWIFT_LIBS
     swiftAST
     swiftASTSectionImporter

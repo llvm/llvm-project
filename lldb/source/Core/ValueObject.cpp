@@ -52,7 +52,7 @@
 #include "lldb/lldb-private-types.h"
 
 // BEGIN SWIFT
-#include "lldb/Symbol/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 // END SWIFT
 
 #include "llvm/Support/Compiler.h"
