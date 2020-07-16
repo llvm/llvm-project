@@ -4362,6 +4362,13 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
           Converted, /*UpdateArgsWithConversion=*/true))
     return true;
 
+  // Produce a placeholder value if the specialization is dependent.
+  bool InstantiationDependent = false;
+  if (Template->getDeclContext()->isDependentContext() ||
+      TemplateSpecializationType::anyDependentTemplateArguments(
+          TemplateArgs, InstantiationDependent))
+    return DeclResult();
+
   // Find the variable template specialization declaration that
   // corresponds to these arguments.
   void *InsertPos = nullptr;
@@ -4389,84 +4396,75 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
 
   // 1. Attempt to find the closest partial specialization that this
   // specializes, if any.
-  // If any of the template arguments is dependent, then this is probably
-  // a placeholder for an incomplete declarative context; which must be
-  // complete by instantiation time. Thus, do not search through the partial
-  // specializations yet.
   // TODO: Unify with InstantiateClassTemplateSpecialization()?
   //       Perhaps better after unification of DeduceTemplateArguments() and
   //       getMoreSpecializedPartialSpecialization().
-  bool InstantiationDependent = false;
-  if (!TemplateSpecializationType::anyDependentTemplateArguments(
-          TemplateArgs, InstantiationDependent)) {
+  SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+  Template->getPartialSpecializations(PartialSpecs);
 
-    SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
-    Template->getPartialSpecializations(PartialSpecs);
+  for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
+    VarTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
+    TemplateDeductionInfo Info(FailedCandidates.getLocation());
 
-    for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
-      VarTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
-      TemplateDeductionInfo Info(FailedCandidates.getLocation());
-
-      if (TemplateDeductionResult Result =
-              DeduceTemplateArguments(Partial, TemplateArgList, Info)) {
-        // Store the failed-deduction information for use in diagnostics, later.
-        // TODO: Actually use the failed-deduction info?
-        FailedCandidates.addCandidate().set(
-            DeclAccessPair::make(Template, AS_public), Partial,
-            MakeDeductionFailureInfo(Context, Result, Info));
-        (void)Result;
-      } else {
-        Matched.push_back(PartialSpecMatchResult());
-        Matched.back().Partial = Partial;
-        Matched.back().Args = Info.take();
-      }
-    }
-
-    if (Matched.size() >= 1) {
-      SmallVector<MatchResult, 4>::iterator Best = Matched.begin();
-      if (Matched.size() == 1) {
-        //   -- If exactly one matching specialization is found, the
-        //      instantiation is generated from that specialization.
-        // We don't need to do anything for this.
-      } else {
-        //   -- If more than one matching specialization is found, the
-        //      partial order rules (14.5.4.2) are used to determine
-        //      whether one of the specializations is more specialized
-        //      than the others. If none of the specializations is more
-        //      specialized than all of the other matching
-        //      specializations, then the use of the variable template is
-        //      ambiguous and the program is ill-formed.
-        for (SmallVector<MatchResult, 4>::iterator P = Best + 1,
-                                                   PEnd = Matched.end();
-             P != PEnd; ++P) {
-          if (getMoreSpecializedPartialSpecialization(P->Partial, Best->Partial,
-                                                      PointOfInstantiation) ==
-              P->Partial)
-            Best = P;
-        }
-
-        // Determine if the best partial specialization is more specialized than
-        // the others.
-        for (SmallVector<MatchResult, 4>::iterator P = Matched.begin(),
-                                                   PEnd = Matched.end();
-             P != PEnd; ++P) {
-          if (P != Best && getMoreSpecializedPartialSpecialization(
-                               P->Partial, Best->Partial,
-                               PointOfInstantiation) != Best->Partial) {
-            AmbiguousPartialSpec = true;
-            break;
-          }
-        }
-      }
-
-      // Instantiate using the best variable template partial specialization.
-      InstantiationPattern = Best->Partial;
-      InstantiationArgs = Best->Args;
+    if (TemplateDeductionResult Result =
+            DeduceTemplateArguments(Partial, TemplateArgList, Info)) {
+      // Store the failed-deduction information for use in diagnostics, later.
+      // TODO: Actually use the failed-deduction info?
+      FailedCandidates.addCandidate().set(
+          DeclAccessPair::make(Template, AS_public), Partial,
+          MakeDeductionFailureInfo(Context, Result, Info));
+      (void)Result;
     } else {
-      //   -- If no match is found, the instantiation is generated
-      //      from the primary template.
-      // InstantiationPattern = Template->getTemplatedDecl();
+      Matched.push_back(PartialSpecMatchResult());
+      Matched.back().Partial = Partial;
+      Matched.back().Args = Info.take();
     }
+  }
+
+  if (Matched.size() >= 1) {
+    SmallVector<MatchResult, 4>::iterator Best = Matched.begin();
+    if (Matched.size() == 1) {
+      //   -- If exactly one matching specialization is found, the
+      //      instantiation is generated from that specialization.
+      // We don't need to do anything for this.
+    } else {
+      //   -- If more than one matching specialization is found, the
+      //      partial order rules (14.5.4.2) are used to determine
+      //      whether one of the specializations is more specialized
+      //      than the others. If none of the specializations is more
+      //      specialized than all of the other matching
+      //      specializations, then the use of the variable template is
+      //      ambiguous and the program is ill-formed.
+      for (SmallVector<MatchResult, 4>::iterator P = Best + 1,
+                                                 PEnd = Matched.end();
+           P != PEnd; ++P) {
+        if (getMoreSpecializedPartialSpecialization(P->Partial, Best->Partial,
+                                                    PointOfInstantiation) ==
+            P->Partial)
+          Best = P;
+      }
+
+      // Determine if the best partial specialization is more specialized than
+      // the others.
+      for (SmallVector<MatchResult, 4>::iterator P = Matched.begin(),
+                                                 PEnd = Matched.end();
+           P != PEnd; ++P) {
+        if (P != Best && getMoreSpecializedPartialSpecialization(
+                             P->Partial, Best->Partial,
+                             PointOfInstantiation) != Best->Partial) {
+          AmbiguousPartialSpec = true;
+          break;
+        }
+      }
+    }
+
+    // Instantiate using the best variable template partial specialization.
+    InstantiationPattern = Best->Partial;
+    InstantiationArgs = Best->Args;
+  } else {
+    //   -- If no match is found, the instantiation is generated
+    //      from the primary template.
+    // InstantiationPattern = Template->getTemplatedDecl();
   }
 
   // 2. Create the canonical declaration.
@@ -4513,6 +4511,9 @@ Sema::CheckVarTemplateId(const CXXScopeSpec &SS,
                                        *TemplateArgs);
   if (Decl.isInvalid())
     return ExprError();
+
+  if (!Decl.get())
+    return ExprResult();
 
   VarDecl *Var = cast<VarDecl>(Decl.get());
   if (!Var->getTemplateSpecializationKind())
@@ -4601,18 +4602,14 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
     }
   }
 
-  auto AnyDependentArguments = [&]() -> bool {
-    bool InstantiationDependent;
-    return TemplateArgs &&
-           TemplateSpecializationType::anyDependentTemplateArguments(
-               *TemplateArgs, InstantiationDependent);
-  };
-
   // In C++1y, check variable template ids.
-  if (R.getAsSingle<VarTemplateDecl>() && !AnyDependentArguments()) {
-    return CheckVarTemplateId(SS, R.getLookupNameInfo(),
-                              R.getAsSingle<VarTemplateDecl>(),
-                              TemplateKWLoc, TemplateArgs);
+  if (R.getAsSingle<VarTemplateDecl>()) {
+    ExprResult Res = CheckVarTemplateId(SS, R.getLookupNameInfo(),
+                                        R.getAsSingle<VarTemplateDecl>(),
+                                        TemplateKWLoc, TemplateArgs);
+    if (Res.isInvalid() || Res.isUsable())
+      return Res;
+    // Result is dependent. Carry on to build an UnresolvedLookupEpxr.
   }
 
   if (R.getAsSingle<ConceptDecl>()) {
@@ -9920,6 +9917,14 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
                                           D.getIdentifierLoc(), TemplateArgs);
       if (Res.isInvalid())
         return true;
+
+      if (!Res.isUsable()) {
+        // We somehow specified dependent template arguments in an explicit
+        // instantiation. This should probably only happen during error
+        // recovery.
+        Diag(D.getIdentifierLoc(), diag::err_explicit_instantiation_dependent);
+        return true;
+      }
 
       // Ignore access control bits, we don't need them for redeclaration
       // checking.
