@@ -15580,17 +15580,17 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.matrix.transpose.*``' intrinsics treat %In as a <Rows> x <Cols> matrix
-and return the transposed matrix in the result vector.
+The '``llvm.matrix.transpose.*``' intrinsics treat ``%In`` as a ``<Rows> x
+<Cols>`` matrix and return the transposed matrix in the result vector.
 
 Arguments:
 """"""""""
 
-First argument %In is vector that corresponds to a <Rows> x <Cols> matrix.
-Thus, arguments <Rows> and <Cols> correspond to the number of rows and columns,
-respectively, and must be positive, constant integers. The returned vector must
-have <Rows> * <Cols> elements, and have the same float or integer element type
-as %In.
+The first argument ``%In`` is a vector that corresponds to a ``<Rows> x
+<Cols>`` matrix. Thus, arguments ``<Rows>`` and ``<Cols>`` correspond to the
+number of rows and columns, respectively, and must be positive, constant
+integers. The returned vector must have ``<Rows> * <Cols>`` elements, and have
+the same float or integer element type as ``%In``.
 
 '``llvm.matrix.multiply.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -15606,18 +15606,19 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.matrix.multiply.*``' intrinsics treat %A as a <OuterRows> x <Inner>
-matrix, %B as a <Inner> x <OuterColumns> matrix, and multiplies them. The result
-matrix is returned in the result vector.
+The '``llvm.matrix.multiply.*``' intrinsics treat ``%A`` as a ``<OuterRows> x
+<Inner>`` matrix, ``%B`` as a ``<Inner> x <OuterColumns>`` matrix, and
+multiplies them. The result matrix is returned in the result vector.
 
 Arguments:
 """"""""""
 
-The first vector argument %A corresponds to a matrix with <OuterRows> * <Inner>
-elements, and the second argument %B to a matrix with <Inner> * <OuterColumns>
-elements. Arguments <OuterRows>, <Inner> and <OuterColumns> must be positive,
-constant integers. The returned vector must have <OuterRows> * <OuterColumns>
-elements. Vectors %A, %B, and the returned vector all have the same float or
+The first vector argument ``%A`` corresponds to a matrix with ``<OuterRows> *
+<Inner>`` elements, and the second argument ``%B`` to a matrix with
+``<Inner> * <OuterColumns>`` elements. Arguments ``<OuterRows>``,
+``<Inner>`` and ``<OuterColumns>`` must be positive, constant integers. The
+returned vector must have ``<OuterRows> * <OuterColumns>`` elements.
+Vectors ``%A``, ``%B``, and the returned vector all have the same float or
 integer element type.
 
 
@@ -15636,29 +15637,29 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.matrix.column.major.load.*``' intrinsics load a <Rows> x <Cols>
-matrix using a stride of %Stride to compute the start address of the different
-columns.  This allows for convenient loading of sub matrixes. If <IsVolatile>
-is true, the intrinsic is considered a :ref:`volatile memory access
-<volatile>`. The result matrix is returned in the result vector. If the %Ptr
-argument is known to be aligned to some boundary, this can be specified as an
-attribute on the argument.
+The '``llvm.matrix.column.major.load.*``' intrinsics load a ``<Rows> x <Cols>``
+matrix using a stride of ``%Stride`` to compute the start address of the
+different columns.  This allows for convenient loading of sub matrixes. If
+``<IsVolatile>`` is true, the intrinsic is considered a :ref:`volatile memory
+access <volatile>`. The result matrix is returned in the result vector. If the
+``%Ptr`` argument is known to be aligned to some boundary, this can be
+specified as an attribute on the argument.
 
 Arguments:
 """"""""""
 
-The first argument %Ptr is a pointer type to the returned vector type, and
-correponds to the start address to load from. The second argument %Stride is a
-postive, constant integer with %Stride ``>=`` <Rows>. %Stride is used to compute
-the column memory addresses. I.e., for a column ``C``, its start memory
-addresses is calculated with %Ptr + ``C`` * %Stride. The third Argument
-<IsVolatile> is a boolean value.  The fourth and fifth arguments, <Rows> and
-<Cols>, correspond to the number of rows and columns, respectively, and must be
-positive, constant integers. The returned vector must have <Rows> * <Cols>
-elements.
+The first argument ``%Ptr`` is a pointer type to the returned vector type, and
+correponds to the start address to load from. The second argument ``%Stride``
+is a postive, constant integer with ``%Stride >= <Rows>``. ``%Stride`` is used
+to compute the column memory addresses. I.e., for a column ``C``, its start
+memory addresses is calculated with ``%Ptr + C * %Stride``. The third Argument
+``<IsVolatile>`` is a boolean value.  The fourth and fifth arguments,
+``<Rows>`` and ``<Cols>``, correspond to the number of rows and columns,
+respectively, and must be positive, constant integers. The returned vector must
+have ``<Rows> * <Cols>`` elements.
 
-The :ref:`align <attr_align>` parameter attribute can be provided
-for the %Ptr arguments.
+The :ref:`align <attr_align>` parameter attribute can be provided for the
+``%Ptr`` arguments.
 
 
 '``llvm.matrix.column.major.store.*``' Intrinsic
@@ -15675,29 +15676,29 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.matrix.column.major.store.*``' intrinsics store the <Rows> x <Cols>
-matrix in %In to memory using a stride of %Stride between columns. If
-<IsVolatile> is true, the intrinsic is considered a :ref:`volatile memory
-access <volatile>`.
+The '``llvm.matrix.column.major.store.*``' intrinsics store the ``<Rows> x
+<Cols>`` matrix in ``%In`` to memory using a stride of ``%Stride`` between
+columns.  If ``<IsVolatile>`` is true, the intrinsic is considered a
+:ref:`volatile memory access <volatile>`.
 
-If the %Ptr argument is known to be aligned to some boundary, this can be
+If the ``%Ptr`` argument is known to be aligned to some boundary, this can be
 specified as an attribute on the argument.
 
 Arguments:
 """"""""""
 
-The first argument %In is a vector that corresponds to a <Rows> x <Cols> matrix
-to be stored to memory. The second argument %Ptr is a pointer to the vector
-type of %In, and is the start address of the matrix in memory. The third
-argument %Stride is a positive, constant integer with %Stride ``>=`` <Rows>.
-%Stride is used to compute the column memory addresses. I.e., for a column
-``C``, its start memory addresses is calculated with %Ptr + ``C`` * %Stride.
-The fourth argument <IsVolatile> is a boolean value. The arguments <Rows> and
-<Cols> correspond to the number of rows and columns, respectively, and must be
-positive, constant integers.
+The first argument ``%In`` is a vector that corresponds to a ``<Rows> x
+<Cols>`` matrix to be stored to memory. The second argument ``%Ptr`` is a
+pointer to the vector type of ``%In``, and is the start address of the matrix
+in memory. The third argument ``%Stride`` is a positive, constant integer with
+``%Stride >= <Rows>``.  ``%Stride`` is used to compute the column memory
+addresses. I.e., for a column ``C``, its start memory addresses is calculated
+with ``%Ptr + C * %Stride``.  The fourth argument ``<IsVolatile>`` is a boolean
+value. The arguments ``<Rows>`` and ``<Cols>`` correspond to the number of rows
+and columns, respectively, and must be positive, constant integers.
 
 The :ref:`align <attr_align>` parameter attribute can be provided
-for the %Ptr arguments.
+for the ``%Ptr`` arguments.
 
 
 Half Precision Floating-Point Intrinsics
