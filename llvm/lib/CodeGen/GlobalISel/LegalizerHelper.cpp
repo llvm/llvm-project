@@ -1908,21 +1908,25 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   case TargetOpcode::G_SITOFP:
-    if (TypeIdx != 1)
-      return UnableToLegalize;
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
+
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    else
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
+
     Observer.changedInstr(MI);
     return Legalized;
-
   case TargetOpcode::G_UITOFP:
-    if (TypeIdx != 1)
-      return UnableToLegalize;
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
+
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    else
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
+
     Observer.changedInstr(MI);
     return Legalized;
-
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
