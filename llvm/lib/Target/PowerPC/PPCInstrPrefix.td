@@ -256,6 +256,23 @@ class VXForm_VRT5_RAB5_ins<bits<11> xo, string opc, list<dag> pattern>
              !strconcat(opc, " $vD, $rA, $rB"), IIC_VecGeneral, pattern>,
              RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
 
+// VX-Form: [ PO BF // VRA VRB XO ]
+class VXForm_BF3_VAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
+                      InstrItinClass itin, list<dag> pattern>
+  : I<4, OOL, IOL, asmstr, itin> {
+  bits<3> BF;
+  bits<5> VA;
+  bits<5> VB;
+
+  let Pattern = pattern;
+
+  let Inst{6-8} = BF;
+  let Inst{9-10} = 0;
+  let Inst{11-15} = VA;
+  let Inst{16-20} = VB;
+  let Inst{21-31} = xo;
+}
+
 // VN-Form: [PO VRT VRA VRB PS SD XO]
 // SD is "Shift Direction"
 class VNForm_VTAB5_SD3<bits<6> xo, bits<2> ps, dag OOL, dag IOL, string asmstr,
@@ -974,6 +991,55 @@ let Predicates = [IsISA3_1] in {
     def STXVRWX : X_XS6_RA5_RB5<31, 205, "stxvrwx", vsrc, []>;
     def STXVRDX : X_XS6_RA5_RB5<31, 237, "stxvrdx", vsrc, []>;
   }
+
+  def VMULESD : VXForm_1<968, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vmulesd $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VMULEUD : VXForm_1<712, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vmuleud $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VMULOSD : VXForm_1<456, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vmulosd $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VMULOUD : VXForm_1<200, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vmuloud $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VMSUMCUD : VAForm_1a<23, (outs vrrc:$vD),
+                           (ins vrrc:$vA, vrrc:$vB, vrrc:$vC),
+                           "vmsumcud $vD, $vA, $vB, $vC", IIC_VecGeneral, []>;
+  def VDIVSQ : VXForm_1<267, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                        "vdivsq $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VDIVUQ : VXForm_1<11, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                        "vdivuq $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VDIVESQ : VXForm_1<779, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vdivesq $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VDIVEUQ : VXForm_1<523, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                         "vdiveuq $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VCMPEQUQ : VCMP <455, "vcmpequq $vD, $vA, $vB" , v1i128>;
+  def VCMPGTSQ : VCMP <903, "vcmpgtsq $vD, $vA, $vB" , v1i128>;
+  def VCMPGTUQ : VCMP <647, "vcmpgtuq $vD, $vA, $vB" , v1i128>;
+  def VCMPEQUQ_rec : VCMPo <455, "vcmpequq. $vD, $vA, $vB" , v1i128>;
+  def VCMPGTSQ_rec : VCMPo <903, "vcmpgtsq. $vD, $vA, $vB" , v1i128>;
+  def VCMPGTUQ_rec : VCMPo <647, "vcmpgtuq. $vD, $vA, $vB" , v1i128>;
+  def VMODSQ : VXForm_1<1803, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                        "vmodsq $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VMODUQ : VXForm_1<1547, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                        "vmoduq $vD, $vA, $vB", IIC_VecGeneral, []>;
+  def VEXTSD2Q : VXForm_RD5_XO5_RS5<1538, 27, (outs vrrc:$vD), (ins vrrc:$vB),
+                                    "vextsd2q $vD, $vB", IIC_VecGeneral, []>;
+  def VCMPUQ : VXForm_BF3_VAB5<257, (outs crrc:$BF), (ins vrrc:$vA, vrrc:$vB),
+                               "vcmpuq $BF, $vA, $vB", IIC_VecGeneral, []>;
+  def VCMPSQ : VXForm_BF3_VAB5<321, (outs crrc:$BF), (ins vrrc:$vA, vrrc:$vB),
+                               "vcmpsq $BF, $vA, $vB", IIC_VecGeneral, []>;
+  def VRLQNM : VX1_VT5_VA5_VB5<325, "vrlqnm", []>;
+  def VRLQMI : VXForm_1<69, (outs vrrc:$vD),
+                        (ins vrrc:$vA, vrrc:$vB, vrrc:$vDi),
+                        "vrlqmi $vD, $vA, $vB", IIC_VecFP, []>,
+                        RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
+  def VSLQ : VX1_VT5_VA5_VB5<261, "vslq", []>;
+  def VSRAQ : VX1_VT5_VA5_VB5<773, "vsraq", []>;
+  def VSRQ : VX1_VT5_VA5_VB5<517, "vsrq", []>;
+  def VRLQ : VX1_VT5_VA5_VB5<5, "vrlq", []>;
+  def XSCVQPUQZ : X_VT5_XO5_VB5<63, 0, 836, "xscvqpuqz", []>;
+  def XSCVQPSQZ : X_VT5_XO5_VB5<63, 8, 836, "xscvqpsqz", []>;
+  def XSCVUQQP : X_VT5_XO5_VB5<63, 3, 836, "xscvuqqp", []>;
+  def XSCVSQQP : X_VT5_XO5_VB5<63, 11, 836, "xscvsqqp", []>;
 }
 
 //---------------------------- Anonymous Patterns ----------------------------//
