@@ -127,7 +127,8 @@ Error TPCTrampolinePool::grow() {
                                                 sys::Memory::MF_EXEC);
   auto PageSize = TPC.getPageSize();
   auto Alloc = TPC.getMemMgr().allocate(
-      {{TrampolinePagePermissions, {PageSize, PageSize, 0}}});
+      {{TrampolinePagePermissions,
+        {PageSize, static_cast<size_t>(PageSize), 0}}});
 
   if (!Alloc)
     return Alloc.takeError();
@@ -310,7 +311,8 @@ TPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
   auto ResolverSize = ABI->getResolverCodeSize();
 
   auto Alloc = TPC.getMemMgr().allocate(
-      {{ResolverBlockPermissions, {TPC.getPageSize(), ResolverSize, 0}}});
+      {{ResolverBlockPermissions,
+        {TPC.getPageSize(), static_cast<size_t>(ResolverSize), 0}}});
   if (!Alloc)
     return Alloc.takeError();
 
