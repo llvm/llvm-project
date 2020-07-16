@@ -48,7 +48,6 @@ add_clang_library(clangBasic
   ExpressionTraits.cpp
   FileManager.cpp
   FileSystemStatCache.cpp
-  FixedPoint.cpp
   IdentifierTable.cpp
   LangOptions.cpp
   LangStandards.cpp

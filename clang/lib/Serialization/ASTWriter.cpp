@@ -5127,7 +5127,7 @@ void ASTRecordWriter::AddAPFloat(const llvm::APFloat &Value) {
 }
 
 static void WriteFixedPointSemantics(ASTRecordWriter &Record,
-                                     FixedPointSemantics FPSema) {
+                                     llvm::FixedPointSemantics FPSema) {
   Record.push_back(FPSema.getWidth());
   Record.push_back(FPSema.getScale());
   Record.push_back(FPSema.isSigned() | FPSema.isSaturated() << 1 |

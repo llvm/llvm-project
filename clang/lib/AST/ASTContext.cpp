@@ -51,7 +51,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "clang/Basic/FixedPoint.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -65,6 +64,7 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
+#include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -11182,29 +11182,30 @@ unsigned char ASTContext::getFixedPointIBits(QualType Ty) const {
   }
 }
 
-FixedPointSemantics ASTContext::getFixedPointSemantics(QualType Ty) const {
+llvm::FixedPointSemantics
+ASTContext::getFixedPointSemantics(QualType Ty) const {
   assert((Ty->isFixedPointType() || Ty->isIntegerType()) &&
          "Can only get the fixed point semantics for a "
          "fixed point or integer type.");
   if (Ty->isIntegerType())
-    return FixedPointSemantics::GetIntegerSemantics(getIntWidth(Ty),
-                                                    Ty->isSignedIntegerType());
+    return llvm::FixedPointSemantics::GetIntegerSemantics(
+        getIntWidth(Ty), Ty->isSignedIntegerType());
 
   bool isSigned = Ty->isSignedFixedPointType();
-  return FixedPointSemantics(
+  return llvm::FixedPointSemantics(
       static_cast<unsigned>(getTypeSize(Ty)), getFixedPointScale(Ty), isSigned,
       Ty->isSaturatedFixedPointType(),
       !isSigned && getTargetInfo().doUnsignedFixedPointTypesHavePadding());
 }
 
-APFixedPoint ASTContext::getFixedPointMax(QualType Ty) const {
+llvm::APFixedPoint ASTContext::getFixedPointMax(QualType Ty) const {
   assert(Ty->isFixedPointType());
-  return APFixedPoint::getMax(getFixedPointSemantics(Ty));
+  return llvm::APFixedPoint::getMax(getFixedPointSemantics(Ty));
 }
 
-APFixedPoint ASTContext::getFixedPointMin(QualType Ty) const {
+llvm::APFixedPoint ASTContext::getFixedPointMin(QualType Ty) const {
   assert(Ty->isFixedPointType());
-  return APFixedPoint::getMin(getFixedPointSemantics(Ty));
+  return llvm::APFixedPoint::getMin(getFixedPointSemantics(Ty));
 }
 
 QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {

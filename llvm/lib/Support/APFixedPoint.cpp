@@ -1,4 +1,4 @@
-//===- FixedPoint.cpp - Fixed point constant handling -----------*- C++ -*-===//
+//===- APFixedPoint.cpp - Fixed point constant handling ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/FixedPoint.h"
+#include "llvm/ADT/APFixedPoint.h"
 
-namespace clang {
+namespace llvm {
 
 APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
                                    bool *Overflow) const {
-  llvm::APSInt NewVal = Val;
+  APSInt NewVal = Val;
   unsigned DstWidth = DstSema.getWidth();
   unsigned DstScale = DstSema.getScale();
   bool Upscaling = DstScale > getScale();
@@ -31,10 +31,10 @@ APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
     NewVal >>= (getScale() - DstScale);
   }
 
-  auto Mask = llvm::APInt::getBitsSetFrom(
+  auto Mask = APInt::getBitsSetFrom(
       NewVal.getBitWidth(),
       std::min(DstScale + DstSema.getIntegralBits(), NewVal.getBitWidth()));
-  llvm::APInt Masked(NewVal & Mask);
+  APInt Masked(NewVal & Mask);
 
   // Change in the bits above the sign
   if (!(Masked == Mask || Masked == 0)) {
@@ -61,8 +61,8 @@ APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
 }
 
 int APFixedPoint::compare(const APFixedPoint &Other) const {
-  llvm::APSInt ThisVal = getValue();
-  llvm::APSInt OtherVal = Other.getValue();
+  APSInt ThisVal = getValue();
+  APSInt OtherVal = Other.getValue();
   bool ThisSigned = Val.isSigned();
   bool OtherSigned = OtherVal.isSigned();
   unsigned OtherScale = Other.getScale();
@@ -113,14 +113,14 @@ int APFixedPoint::compare(const APFixedPoint &Other) const {
 
 APFixedPoint APFixedPoint::getMax(const FixedPointSemantics &Sema) {
   bool IsUnsigned = !Sema.isSigned();
-  auto Val = llvm::APSInt::getMaxValue(Sema.getWidth(), IsUnsigned);
+  auto Val = APSInt::getMaxValue(Sema.getWidth(), IsUnsigned);
   if (IsUnsigned && Sema.hasUnsignedPadding())
     Val = Val.lshr(1);
   return APFixedPoint(Val, Sema);
 }
 
 APFixedPoint APFixedPoint::getMin(const FixedPointSemantics &Sema) {
-  auto Val = llvm::APSInt::getMinValue(Sema.getWidth(), !Sema.isSigned());
+  auto Val = APSInt::getMinValue(Sema.getWidth(), !Sema.isSigned());
   return APFixedPoint(Val, Sema);
 }
 
@@ -154,11 +154,11 @@ APFixedPoint APFixedPoint::add(const APFixedPoint &Other,
   auto CommonFXSema = Sema.getCommonSemantics(Other.getSemantics());
   APFixedPoint ConvertedThis = convert(CommonFXSema);
   APFixedPoint ConvertedOther = Other.convert(CommonFXSema);
-  llvm::APSInt ThisVal = ConvertedThis.getValue();
-  llvm::APSInt OtherVal = ConvertedOther.getValue();
+  APSInt ThisVal = ConvertedThis.getValue();
+  APSInt OtherVal = ConvertedOther.getValue();
   bool Overflowed = false;
 
-  llvm::APSInt Result;
+  APSInt Result;
   if (CommonFXSema.isSaturated()) {
     Result = CommonFXSema.isSigned() ? ThisVal.sadd_sat(OtherVal)
                                      : ThisVal.uadd_sat(OtherVal);
@@ -178,11 +178,11 @@ APFixedPoint APFixedPoint::sub(const APFixedPoint &Other,
   auto CommonFXSema = Sema.getCommonSemantics(Other.getSemantics());
   APFixedPoint ConvertedThis = convert(CommonFXSema);
   APFixedPoint ConvertedOther = Other.convert(CommonFXSema);
-  llvm::APSInt ThisVal = ConvertedThis.getValue();
-  llvm::APSInt OtherVal = ConvertedOther.getValue();
+  APSInt ThisVal = ConvertedThis.getValue();
+  APSInt OtherVal = ConvertedOther.getValue();
   bool Overflowed = false;
 
-  llvm::APSInt Result;
+  APSInt Result;
   if (CommonFXSema.isSaturated()) {
     Result = CommonFXSema.isSigned() ? ThisVal.ssub_sat(OtherVal)
                                      : ThisVal.usub_sat(OtherVal);
@@ -202,8 +202,8 @@ APFixedPoint APFixedPoint::mul(const APFixedPoint &Other,
   auto CommonFXSema = Sema.getCommonSemantics(Other.getSemantics());
   APFixedPoint ConvertedThis = convert(CommonFXSema);
   APFixedPoint ConvertedOther = Other.convert(CommonFXSema);
-  llvm::APSInt ThisVal = ConvertedThis.getValue();
-  llvm::APSInt OtherVal = ConvertedOther.getValue();
+  APSInt ThisVal = ConvertedThis.getValue();
+  APSInt OtherVal = ConvertedOther.getValue();
   bool Overflowed = false;
 
   // Widen the LHS and RHS so we can perform a full multiplication.
@@ -223,7 +223,7 @@ APFixedPoint APFixedPoint::mul(const APFixedPoint &Other,
   // outside the representable range. We interpret the spec as allowing us to
   // perform the rounding step first, avoiding the overflow case that would
   // arise.
-  llvm::APSInt Result;
+  APSInt Result;
   if (CommonFXSema.isSigned())
     Result = ThisVal.smul_ov(OtherVal, Overflowed)
                     .ashr(CommonFXSema.getScale());
@@ -235,10 +235,10 @@ APFixedPoint APFixedPoint::mul(const APFixedPoint &Other,
 
   // If our result lies outside of the representative range of the common
   // semantic, we either have overflow or saturation.
-  llvm::APSInt Max = APFixedPoint::getMax(CommonFXSema).getValue()
-                                                       .extOrTrunc(Wide);
-  llvm::APSInt Min = APFixedPoint::getMin(CommonFXSema).getValue()
-                                                       .extOrTrunc(Wide);
+  APSInt Max = APFixedPoint::getMax(CommonFXSema).getValue()
+                                                 .extOrTrunc(Wide);
+  APSInt Min = APFixedPoint::getMin(CommonFXSema).getValue()
+                                                 .extOrTrunc(Wide);
   if (CommonFXSema.isSaturated()) {
     if (Result < Min)
       Result = Min;
@@ -259,8 +259,8 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
   auto CommonFXSema = Sema.getCommonSemantics(Other.getSemantics());
   APFixedPoint ConvertedThis = convert(CommonFXSema);
   APFixedPoint ConvertedOther = Other.convert(CommonFXSema);
-  llvm::APSInt ThisVal = ConvertedThis.getValue();
-  llvm::APSInt OtherVal = ConvertedOther.getValue();
+  APSInt ThisVal = ConvertedThis.getValue();
+  APSInt OtherVal = ConvertedOther.getValue();
   bool Overflowed = false;
 
   // Widen the LHS and RHS so we can perform a full division.
@@ -276,10 +276,10 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
   // Upscale to compensate for the loss of precision from division, and
   // perform the full division.
   ThisVal = ThisVal.shl(CommonFXSema.getScale());
-  llvm::APSInt Result;
+  APSInt Result;
   if (CommonFXSema.isSigned()) {
-    llvm::APInt Rem;
-    llvm::APInt::sdivrem(ThisVal, OtherVal, Result, Rem);
+    APInt Rem;
+    APInt::sdivrem(ThisVal, OtherVal, Result, Rem);
     // If the quotient is negative and the remainder is nonzero, round
     // towards negative infinity by subtracting epsilon from the result.
     if (ThisVal.isNegative() != OtherVal.isNegative() && !Rem.isNullValue())
@@ -290,10 +290,10 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
 
   // If our result lies outside of the representative range of the common
   // semantic, we either have overflow or saturation.
-  llvm::APSInt Max = APFixedPoint::getMax(CommonFXSema).getValue()
-                                                       .extOrTrunc(Wide);
-  llvm::APSInt Min = APFixedPoint::getMin(CommonFXSema).getValue()
-                                                       .extOrTrunc(Wide);
+  APSInt Max = APFixedPoint::getMax(CommonFXSema).getValue()
+                                                 .extOrTrunc(Wide);
+  APSInt Min = APFixedPoint::getMin(CommonFXSema).getValue()
+                                                 .extOrTrunc(Wide);
   if (CommonFXSema.isSaturated()) {
     if (Result < Min)
       Result = Min;
@@ -310,7 +310,7 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
 }
 
 APFixedPoint APFixedPoint::shl(unsigned Amt, bool *Overflow) const {
-  llvm::APSInt ThisVal = Val;
+  APSInt ThisVal = Val;
   bool Overflowed = false;
 
   // Widen the LHS.
@@ -322,13 +322,13 @@ APFixedPoint APFixedPoint::shl(unsigned Amt, bool *Overflow) const {
 
   // Clamp the shift amount at the original width, and perform the shift.
   Amt = std::min(Amt, ThisVal.getBitWidth());
-  llvm::APSInt Result = ThisVal << Amt;
+  APSInt Result = ThisVal << Amt;
   Result.setIsSigned(Sema.isSigned());
 
   // If our result lies outside of the representative range of the
   // semantic, we either have overflow or saturation.
-  llvm::APSInt Max = APFixedPoint::getMax(Sema).getValue().extOrTrunc(Wide);
-  llvm::APSInt Min = APFixedPoint::getMin(Sema).getValue().extOrTrunc(Wide);
+  APSInt Max = APFixedPoint::getMax(Sema).getValue().extOrTrunc(Wide);
+  APSInt Min = APFixedPoint::getMin(Sema).getValue().extOrTrunc(Wide);
   if (Sema.isSaturated()) {
     if (Result < Min)
       Result = Min;
@@ -343,8 +343,8 @@ APFixedPoint APFixedPoint::shl(unsigned Amt, bool *Overflow) const {
   return APFixedPoint(Result.sextOrTrunc(Sema.getWidth()), Sema);
 }
 
-void APFixedPoint::toString(llvm::SmallVectorImpl<char> &Str) const {
-  llvm::APSInt Val = getValue();
+void APFixedPoint::toString(SmallVectorImpl<char> &Str) const {
+  APSInt Val = getValue();
   unsigned Scale = getScale();
 
   if (Val.isSigned() && Val.isNegative() && Val != -Val) {
@@ -352,13 +352,13 @@ void APFixedPoint::toString(llvm::SmallVectorImpl<char> &Str) const {
     Str.push_back('-');
   }
 
-  llvm::APSInt IntPart = Val >> Scale;
+  APSInt IntPart = Val >> Scale;
 
   // Add 4 digits to hold the value after multiplying 10 (the radix)
   unsigned Width = Val.getBitWidth() + 4;
-  llvm::APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
-  llvm::APInt FractPartMask = llvm::APInt::getAllOnesValue(Scale).zext(Width);
-  llvm::APInt RadixInt = llvm::APInt(Width, 10);
+  APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
+  APInt FractPartMask = APInt::getAllOnesValue(Scale).zext(Width);
+  APInt RadixInt = APInt(Width, 10);
 
   IntPart.toString(Str, /*Radix=*/10);
   Str.push_back('.');
@@ -388,13 +388,13 @@ APFixedPoint APFixedPoint::negate(bool *Overflow) const {
     return APFixedPoint(Sema);
 }
 
-llvm::APSInt APFixedPoint::convertToInt(unsigned DstWidth, bool DstSign,
-                                        bool *Overflow) const {
-  llvm::APSInt Result = getIntPart();
+APSInt APFixedPoint::convertToInt(unsigned DstWidth, bool DstSign,
+                                  bool *Overflow) const {
+  APSInt Result = getIntPart();
   unsigned SrcWidth = getWidth();
 
-  llvm::APSInt DstMin = llvm::APSInt::getMinValue(DstWidth, !DstSign);
-  llvm::APSInt DstMax = llvm::APSInt::getMaxValue(DstWidth, !DstSign);
+  APSInt DstMin = APSInt::getMinValue(DstWidth, !DstSign);
+  APSInt DstMax = APSInt::getMaxValue(DstWidth, !DstSign);
 
   if (SrcWidth < DstWidth) {
     Result = Result.extend(DstWidth);
@@ -417,7 +417,7 @@ llvm::APSInt APFixedPoint::convertToInt(unsigned DstWidth, bool DstSign,
   return Result.extOrTrunc(DstWidth);
 }
 
-APFixedPoint APFixedPoint::getFromIntValue(const llvm::APSInt &Value,
+APFixedPoint APFixedPoint::getFromIntValue(const APSInt &Value,
                                            const FixedPointSemantics &DstFXSema,
                                            bool *Overflow) {
   FixedPointSemantics IntFXSema = FixedPointSemantics::GetIntegerSemantics(

@@ -67,6 +67,7 @@ add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
   ARMTargetParser.cpp
   AMDGPUMetadata.cpp
+  APFixedPoint.cpp
   APFloat.cpp
   APInt.cpp
   APSInt.cpp
