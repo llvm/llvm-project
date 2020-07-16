@@ -948,7 +948,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
         setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
         setOperationAction(ISD::SELECT, VT, Custom);
+        setOperationAction(ISD::FADD, VT, Custom);
+        setOperationAction(ISD::FDIV, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
+        setOperationAction(ISD::FMUL, VT, Custom);
+        setOperationAction(ISD::FSUB, VT, Custom);
       }
     }
 
@@ -1483,11 +1487,14 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FADD_PRED)
     MAKE_CASE(AArch64ISD::FADDA_PRED)
     MAKE_CASE(AArch64ISD::FADDV_PRED)
+    MAKE_CASE(AArch64ISD::FDIV_PRED)
     MAKE_CASE(AArch64ISD::FMA_PRED)
     MAKE_CASE(AArch64ISD::FMAXV_PRED)
     MAKE_CASE(AArch64ISD::FMAXNMV_PRED)
     MAKE_CASE(AArch64ISD::FMINV_PRED)
     MAKE_CASE(AArch64ISD::FMINNMV_PRED)
+    MAKE_CASE(AArch64ISD::FMUL_PRED)
+    MAKE_CASE(AArch64ISD::FSUB_PRED)
     MAKE_CASE(AArch64ISD::NOT)
     MAKE_CASE(AArch64ISD::BIT)
     MAKE_CASE(AArch64ISD::CBZ)
@@ -3468,16 +3475,23 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::UMULO:
     return LowerXALUO(Op, DAG);
   case ISD::FADD:
-    if (useSVEForFixedLengthVectorVT(Op.getValueType()))
+    if (Op.getValueType().isScalableVector() ||
+        useSVEForFixedLengthVectorVT(Op.getValueType()))
       return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_PRED);
     return LowerF128Call(Op, DAG, RTLIB::ADD_F128);
   case ISD::FSUB:
+    if (Op.getValueType().isScalableVector())
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSUB_PRED);
     return LowerF128Call(Op, DAG, RTLIB::SUB_F128);
   case ISD::FMUL:
+    if (Op.getValueType().isScalableVector())
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
     return LowerF128Call(Op, DAG, RTLIB::MUL_F128);
   case ISD::FMA:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
   case ISD::FDIV:
+    if (Op.getValueType().isScalableVector())
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FDIV_PRED);
     return LowerF128Call(Op, DAG, RTLIB::DIV_F128);
   case ISD::FP_ROUND:
   case ISD::STRICT_FP_ROUND:
