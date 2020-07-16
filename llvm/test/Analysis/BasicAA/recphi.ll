@@ -92,8 +92,8 @@ if.end: ; preds = %f.exit
 ; CHECK:         NoAlias:      i32* %arrayidx1, i8* %0
 ; CHECK:         NoAlias:      i32* %arrayidx, i32* %arrayidx1
 ; CHECK:         MayAlias:     [10 x i32]* %tab, i32* %p.addr.05.i
-; CHECK:         NoAlias:      i32* %p.addr.05.i, i8* %0
-; CHECK:         NoAlias:      i32* %arrayidx, i32* %p.addr.05.i
+; CHECK:         MayAlias:     i32* %p.addr.05.i, i8* %0
+; CHECK:         MayAlias:     i32* %arrayidx, i32* %p.addr.05.i
 ; CHECK:         MayAlias:     i32* %arrayidx1, i32* %p.addr.05.i
 ; CHECK:         MayAlias:     [10 x i32]* %tab, i32* %incdec.ptr.i
 ; CHECK:         MayAlias:     i32* %incdec.ptr.i, i8* %0
@@ -141,17 +141,17 @@ if.end: ; preds = %f.exit
 ; CHECK:         NoAlias:      [3 x i16]* %int_arr.10, i16** %argv.6.par
 ; CHECK:         NoAlias:      i16* %_tmp1, i16** %argv.6.par
 ; CHECK:         PartialAlias: [3 x i16]* %int_arr.10, i16* %_tmp1
-; CHECK:         NoAlias:      i16* %ls1.9.0, i16** %argv.6.par
+; CHECK:         MayAlias:     i16* %ls1.9.0, i16** %argv.6.par
 ; CHECK:         MayAlias:     [3 x i16]* %int_arr.10, i16* %ls1.9.0
 ; CHECK:         MayAlias:     i16* %_tmp1, i16* %ls1.9.0
-; CHECK:         NoAlias:      i16* %_tmp7, i16** %argv.6.par
+; CHECK:         MayAlias:     i16* %_tmp7, i16** %argv.6.par
 ; CHECK:         MayAlias:     [3 x i16]* %int_arr.10, i16* %_tmp7
 ; CHECK:         MayAlias:     i16* %_tmp1, i16* %_tmp7
 ; CHECK:         NoAlias:      i16* %_tmp7, i16* %ls1.9.0
 ; CHECK:         NoAlias:      i16* %_tmp11, i16** %argv.6.par
 ; CHECK:         PartialAlias: [3 x i16]* %int_arr.10, i16* %_tmp11
 ; CHECK:         NoAlias:      i16* %_tmp1, i16* %_tmp11
-; CHECK:         NoAlias:      i16* %_tmp11, i16* %ls1.9.0
+; CHECK:         MayAlias:     i16* %_tmp11, i16* %ls1.9.0
 ; CHECK:         MayAlias:     i16* %_tmp11, i16* %_tmp7
 ; CHECK:         Both ModRef:  Ptr: i16** %argv.6.par  <->  %_tmp16 = call i16 @call(i32 %_tmp13)
 ; CHECK:         NoModRef:  Ptr: [3 x i16]* %int_arr.10        <->  %_tmp16 = call i16 @call(i32 %_tmp13)
