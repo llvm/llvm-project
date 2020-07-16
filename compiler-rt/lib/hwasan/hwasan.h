@@ -75,7 +75,6 @@ extern int hwasan_report_count;
 bool InitShadow();
 void InitPrctl();
 void InitThreads();
-void MadviseShadow();
 void InitializeInterceptors();
 
 void HwasanAllocatorInit();
