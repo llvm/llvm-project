@@ -297,3 +297,11 @@ InlineSizeEstimatorAnalysis::run(const Function &F,
 }
 bool InlineSizeEstimatorAnalysis::isEvaluatorRequested() { return false; }
 #endif
+
+PreservedAnalyses
+InlineSizeEstimatorAnalysisPrinterPass::run(Function &F,
+                                            FunctionAnalysisManager &AM) {
+  OS << "[InlineSizeEstimatorAnalysis] size estimate for " << F.getName()
+     << ": " << AM.getResult<InlineSizeEstimatorAnalysis>(F) << "\n";
+  return PreservedAnalyses::all();
+}
