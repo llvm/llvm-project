@@ -289,7 +289,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Defined) {
   }
 }
 
-TEST_F(TestTypeSystemSwiftTypeRef, Float) {
+TEST_F(TestTypeSystemSwiftTypeRef, IntFloat) {
   using namespace swift::Demangle;
   Demangler dem;
   NodeBuilder b(dem);
@@ -301,6 +301,8 @@ TEST_F(TestTypeSystemSwiftTypeRef, Float) {
     ASSERT_FALSE(int_type.IsFloatingPointType(count, is_complex));
     ASSERT_EQ(count, 0);
     ASSERT_EQ(is_complex, false);
+    bool is_signed = true;
+    ASSERT_TRUE(int_type.IsIntegerType(is_signed));
   }
   {
     NodePointer float_node = b.GlobalTypeMangling(b.FloatType());
@@ -310,5 +312,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Float) {
     ASSERT_TRUE(float_type.IsFloatingPointType(count, is_complex));
     ASSERT_EQ(count, 1);
     ASSERT_EQ(is_complex, false);
+    bool is_signed = true;
+    ASSERT_FALSE(float_type.IsIntegerType(is_signed));
   }
 }

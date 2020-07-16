@@ -26,3 +26,8 @@ bool TypeSystemSwift::IsFloatingPointType(opaque_compiler_type_t type,
   }
   return false;
 }
+
+bool TypeSystemSwift::IsIntegerType(opaque_compiler_type_t type,
+                                    bool &is_signed) {
+  return (GetTypeInfo(type, nullptr) & eTypeIsInteger);
+}

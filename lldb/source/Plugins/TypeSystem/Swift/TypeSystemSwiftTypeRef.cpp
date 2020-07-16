@@ -1343,10 +1343,6 @@ bool TypeSystemSwiftTypeRef::IsFunctionPointerType(
   VALIDATE_AND_RETURN(impl, IsFunctionPointerType, type,
                       (ReconstructType(type)));
 }
-bool TypeSystemSwiftTypeRef::IsIntegerType(opaque_compiler_type_t type,
-                                           bool &is_signed) {
-  return m_swift_ast_context->IsIntegerType(ReconstructType(type), is_signed);
-}
 bool TypeSystemSwiftTypeRef::IsPossibleDynamicType(opaque_compiler_type_t type,
                                                    CompilerType *target_type,
                                                    bool check_cplusplus,

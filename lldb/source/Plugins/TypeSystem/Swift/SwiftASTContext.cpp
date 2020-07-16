@@ -5101,11 +5101,6 @@ bool SwiftASTContext::IsFunctionPointerType(opaque_compiler_type_t type) {
   return IsFunctionType(type, nullptr); // FIXME: think about this
 }
 
-bool SwiftASTContext::IsIntegerType(opaque_compiler_type_t type,
-                                    bool &is_signed) {
-  return (GetTypeInfo(type, nullptr) & eTypeIsInteger);
-}
-
 bool SwiftASTContext::IsPointerType(opaque_compiler_type_t type,
                                     CompilerType *pointee_type) {
   VALID_OR_RETURN(false);
