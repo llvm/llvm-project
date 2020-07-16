@@ -49,12 +49,8 @@ define <16 x i8> @select_v16i8(i1 zeroext %c, <16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const -1
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i8x16.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %res = select i1 %c, <16 x i8> %x, <16 x i8> %y
   ret <16 x i8> %res
@@ -67,10 +63,9 @@ define <16 x i8> @select_cmp_v16i8(i32 %i, <16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i8x16.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.lt_s
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp slt i32 %i, 0
   %res = select i1 %c, <16 x i8> %x, <16 x i8> %y
@@ -83,12 +78,8 @@ define <16 x i8> @select_ne_v16i8(i32 %i, <16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const -1
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i8x16.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp ne i32 %i, 0
   %res = select i1 %c, <16 x i8> %x, <16 x i8> %y
@@ -99,14 +90,10 @@ define <16 x i8> @select_eq_v16i8(i32 %i, <16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: select_eq_v16i8:
 ; CHECK:         .functype select_eq_v16i8 (i32, v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.const -1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i8x16.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp eq i32 %i, 0
   %res = select i1 %c, <16 x i8> %x, <16 x i8> %y
@@ -153,12 +140,8 @@ define <8 x i16> @select_v8i16(i1 zeroext %c, <8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const -1
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i16x8.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %res = select i1 %c, <8 x i16> %x, <8 x i16> %y
   ret <8 x i16> %res
@@ -171,10 +154,9 @@ define <8 x i16> @select_cmp_v8i16(i32 %i, <8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i16x8.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.lt_s
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp slt i32 %i, 0
   %res = select i1 %c, <8 x i16> %x, <8 x i16> %y
@@ -187,12 +169,8 @@ define <8 x i16> @select_ne_v8i16(i32 %i, <8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const -1
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i16x8.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp ne i32 %i, 0
   %res = select i1 %c, <8 x i16> %x, <8 x i16> %y
@@ -203,14 +181,10 @@ define <8 x i16> @select_eq_v8i16(i32 %i, <8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: select_eq_v8i16:
 ; CHECK:         .functype select_eq_v8i16 (i32, v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.const -1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i16x8.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp eq i32 %i, 0
   %res = select i1 %c, <8 x i16> %x, <8 x i16> %y
@@ -257,12 +231,8 @@ define <4 x i32> @select_v4i32(i1 zeroext %c, <4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const -1
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %res = select i1 %c, <4 x i32> %x, <4 x i32> %y
   ret <4 x i32> %res
@@ -275,10 +245,9 @@ define <4 x i32> @select_cmp_v4i32(i32 %i, <4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.lt_s
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp slt i32 %i, 0
   %res = select i1 %c, <4 x i32> %x, <4 x i32> %y
@@ -291,12 +260,8 @@ define <4 x i32> @select_ne_v4i32(i32 %i, <4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const -1
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp ne i32 %i, 0
   %res = select i1 %c, <4 x i32> %x, <4 x i32> %y
@@ -307,14 +272,10 @@ define <4 x i32> @select_eq_v4i32(i32 %i, <4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: select_eq_v4i32:
 ; CHECK:         .functype select_eq_v4i32 (i32, v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.const -1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp eq i32 %i, 0
   %res = select i1 %c, <4 x i32> %x, <4 x i32> %y
@@ -376,12 +337,8 @@ define <2 x i64> @select_v2i64(i1 zeroext %c, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %res = select i1 %c, <2 x i64> %x, <2 x i64> %y
   ret <2 x i64> %res
@@ -393,14 +350,10 @@ define <2 x i64> @select_cmp_v2i64(i32 %i, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i32.lt_s
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp slt i32 %i, 0
   %res = select i1 %c, <2 x i64> %x, <2 x i64> %y
@@ -413,12 +366,8 @@ define <2 x i64> @select_ne_v2i64(i32 %i, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp ne i32 %i, 0
   %res = select i1 %c, <2 x i64> %x, <2 x i64> %y
@@ -429,14 +378,10 @@ define <2 x i64> @select_eq_v2i64(i32 %i, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: select_eq_v2i64:
 ; CHECK:         .functype select_eq_v2i64 (i32, v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp eq i32 %i, 0
   %res = select i1 %c, <2 x i64> %x, <2 x i64> %y
@@ -483,12 +428,8 @@ define <4 x float> @select_v4f32(i1 zeroext %c, <4 x float> %x, <4 x float> %y) 
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const -1
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %res = select i1 %c, <4 x float> %x, <4 x float> %y
   ret <4 x float> %res
@@ -501,10 +442,9 @@ define <4 x float> @select_cmp_v4f32(i32 %i, <4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.lt_s
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp slt i32 %i, 0
   %res = select i1 %c, <4 x float> %x, <4 x float> %y
@@ -517,12 +457,8 @@ define <4 x float> @select_ne_v4f32(i32 %i, <4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const -1
-; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp ne i32 %i, 0
   %res = select i1 %c, <4 x float> %x, <4 x float> %y
@@ -533,14 +469,10 @@ define <4 x float> @select_eq_v4f32(i32 %i, <4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: select_eq_v4f32:
 ; CHECK:         .functype select_eq_v4f32 (i32, v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.const -1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.select
-; CHECK-NEXT:    i32x4.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp eq i32 %i, 0
   %res = select i1 %c, <4 x float> %x, <4 x float> %y
@@ -587,12 +519,8 @@ define <2 x double> @select_v2f64(i1 zeroext %c, <2 x double> %x, <2 x double> %
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %res = select i1 %c, <2 x double> %x, <2 x double> %y
   ret <2 x double> %res
@@ -604,14 +532,10 @@ define <2 x double> @select_cmp_v2f64(i32 %i, <2 x double> %x, <2 x double> %y) 
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    i32.lt_s
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp slt i32 %i, 0
   %res = select i1 %c, <2 x double> %x, <2 x double> %y
@@ -624,12 +548,8 @@ define <2 x double> @select_ne_v2f64(i32 %i, <2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp ne i32 %i, 0
   %res = select i1 %c, <2 x double> %x, <2 x double> %y
@@ -640,14 +560,10 @@ define <2 x double> @select_eq_v2f64(i32 %i, <2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: select_eq_v2f64:
 ; CHECK:         .functype select_eq_v2f64 (i32, v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.select
 ; CHECK-NEXT:    # fallthrough-return
   %c = icmp eq i32 %i, 0
   %res = select i1 %c, <2 x double> %x, <2 x double> %y

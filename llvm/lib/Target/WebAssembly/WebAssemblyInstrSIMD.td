@@ -584,6 +584,37 @@ foreach types = [[v16i8, v16i8], [v8i16, v8i16], [v4i32, v4i32], [v2i64, v2i64],
               V128:$v1, V128:$v2, V128:$c
             )>;
 
+// MVP select on v128 values
+foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
+defm SELECT_#vec_t : I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs, I32:$cond),
+                    (outs), (ins),
+                    [(set V128:$dst,
+                       (select I32:$cond,
+                         (vec_t V128:$lhs), (vec_t V128:$rhs)
+                       )
+                    )],
+                    "v128.select\t$dst, $lhs, $rhs, $cond",
+                    "v128.select", 0x1b>;
+
+// ISD::SELECT requires its operand to conform to getBooleanContents, but
+// WebAssembly's select interprets any non-zero value as true, so we can fold
+// a setne with 0 into a select.
+def : Pat<(select
+            (i32 (setne I32:$cond, 0)), (vec_t V128:$lhs), (vec_t V128:$rhs)
+          ),
+          (!cast<Instruction>("SELECT_"#vec_t)
+            V128:$lhs, V128:$rhs, I32:$cond
+          )>;
+
+// And again, this time with seteq instead of setne and the arms reversed.
+def : Pat<(select
+            (i32 (seteq I32:$cond, 0)), (vec_t V128:$lhs), (vec_t V128:$rhs)
+          ),
+          (!cast<Instruction>("SELECT_"#vec_t)
+            V128:$rhs, V128:$lhs, I32:$cond
+          )>;
+} // foreach vec_t
+
 //===----------------------------------------------------------------------===//
 // Integer unary arithmetic
 //===----------------------------------------------------------------------===//
