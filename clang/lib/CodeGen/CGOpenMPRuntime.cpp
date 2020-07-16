@@ -8008,12 +8008,12 @@ public:
                 C->isImplicit(), std::get<2>(L));
       }
     for (const auto *C : CurExecDir->getClausesOfKind<OMPToClause>())
-      for (const auto &L : C->component_lists()) {
+      for (const auto L : C->component_lists()) {
         InfoGen(std::get<0>(L), std::get<1>(L), OMPC_MAP_to, llvm::None,
                 /*ReturnDevicePointer=*/false, C->isImplicit(), std::get<2>(L));
       }
     for (const auto *C : CurExecDir->getClausesOfKind<OMPFromClause>())
-      for (const auto &L : C->component_lists()) {
+      for (const auto L : C->component_lists()) {
         InfoGen(std::get<0>(L), std::get<1>(L), OMPC_MAP_from, llvm::None,
                 /*ReturnDevicePointer=*/false, C->isImplicit(), std::get<2>(L));
       }
@@ -8029,7 +8029,7 @@ public:
 
     for (const auto *C :
          CurExecDir->getClausesOfKind<OMPUseDevicePtrClause>()) {
-      for (const auto &L : C->component_lists()) {
+      for (const auto L : C->component_lists()) {
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
             std::get<1>(L);
         assert(!Components.empty() &&
