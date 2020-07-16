@@ -12,11 +12,11 @@ define float @test1(float %x, float %y) nounwind {
 ;
 ; HARD-LABEL: test1:
 ; HARD:       @ %bb.0: @ %entry
-; HARD-NEXT:    vmov.f32 s4, s1
+; HARD-NEXT:    vmov.f32 s2, s1
 ; HARD-NEXT:    @ kill: def $s0 killed $s0 def $d0
-; HARD-NEXT:    vmov.i32 d1, #0x80000000
-; HARD-NEXT:    vbsl d1, d2, d0
-; HARD-NEXT:    vmov.f32 s0, s2
+; HARD-NEXT:    vmov.i32 d16, #0x80000000
+; HARD-NEXT:    vbit d0, d1, d16
+; HARD-NEXT:    @ kill: def $s0 killed $s0 killed $d0
 ; HARD-NEXT:    bx lr
 entry:
 
@@ -35,8 +35,7 @@ define double @test2(double %x, double %y) nounwind {
 ; HARD:       @ %bb.0: @ %entry
 ; HARD-NEXT:    vmov.i32 d16, #0x80000000
 ; HARD-NEXT:    vshl.i64 d16, d16, #32
-; HARD-NEXT:    vbsl d16, d1, d0
-; HARD-NEXT:    vorr d0, d16, d16
+; HARD-NEXT:    vbit d0, d1, d16
 ; HARD-NEXT:    bx lr
 entry:
 
@@ -53,15 +52,16 @@ define double @test3(double %x, double %y, double %z) nounwind {
 ; SOFT-NEXT:    vmov.i32 d17, #0x80000000
 ; SOFT-NEXT:    vshl.i64 d17, d17, #32
 ; SOFT-NEXT:    vldr d18, [sp]
-; SOFT-NEXT:    vbsl d17, d18, d16
-; SOFT-NEXT:    vmov r0, r1, d17
+; SOFT-NEXT:    vbit d16, d18, d17
+; SOFT-NEXT:    vmov r0, r1, d16
 ; SOFT-NEXT:    bx lr
 ;
 ; HARD-LABEL: test3:
 ; HARD:       @ %bb.0: @ %entry
 ; HARD-NEXT:    vmul.f64 d16, d0, d1
 ; HARD-NEXT:    vmov.i32 d17, #0x80000000
-; HARD-NEXT:    vshl.i64 d0, d17, #32
+; HARD-NEXT:    vshl.i64 d17, d17, #32
+; HARD-NEXT:    vorr d0, d17, d17
 ; HARD-NEXT:    vbsl d0, d2, d16
 ; HARD-NEXT:    bx lr
 entry:
@@ -81,8 +81,8 @@ define float @test4() nounwind {
 ; SOFT-NEXT:    vmov.i32 d17, #0x80000000
 ; SOFT-NEXT:    vshr.u64 d16, d16, #32
 ; SOFT-NEXT:    vmov.f32 d18, #5.000000e-01
-; SOFT-NEXT:    vbsl d17, d16, d18
-; SOFT-NEXT:    vadd.f32 d0, d0, d17
+; SOFT-NEXT:    vbif d16, d18, d17
+; SOFT-NEXT:    vadd.f32 d0, d0, d16
 ; SOFT-NEXT:    vmov r0, s0
 ; SOFT-NEXT:    pop {lr}
 ;
@@ -93,10 +93,10 @@ define float @test4() nounwind {
 ; HARD-NEXT:    bl bar
 ; HARD-NEXT:    vmov d16, r0, r1
 ; HARD-NEXT:    vcvt.f32.f64 s0, d16
-; HARD-NEXT:    vmov.i32 d1, #0x80000000
+; HARD-NEXT:    vmov.i32 d17, #0x80000000
 ; HARD-NEXT:    vshr.u64 d16, d16, #32
-; HARD-NEXT:    vmov.f32 s4, #5.000000e-01
-; HARD-NEXT:    vbsl d1, d16, d2
+; HARD-NEXT:    vmov.f32 s2, #5.000000e-01
+; HARD-NEXT:    vbit d1, d16, d17
 ; HARD-NEXT:    vadd.f32 s0, s0, s2
 ; HARD-NEXT:    pop {r11, pc}
 entry:
