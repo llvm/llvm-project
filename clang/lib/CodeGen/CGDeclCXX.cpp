@@ -246,7 +246,8 @@ llvm::Constant *CodeGenFunction::createAtExitStub(const VarDecl &VD,
   CodeGenFunction CGF(CGM);
 
   CGF.StartFunction(GlobalDecl(&VD, DynamicInitKind::AtExit),
-                    CGM.getContext().VoidTy, fn, FI, FunctionArgList());
+                    CGM.getContext().VoidTy, fn, FI, FunctionArgList(),
+                    VD.getLocation(), VD.getInit()->getExprLoc());
 
   llvm::CallInst *call = CGF.Builder.CreateCall(dtor, addr);
 
