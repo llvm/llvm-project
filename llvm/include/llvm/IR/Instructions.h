@@ -357,10 +357,6 @@ public:
     setSubclassData<AlignmentField>(Log2(Align));
   }
 
-  void setAlignment(MaybeAlign Alignment) {
-    setAlignment(Alignment.getValue());
-  }
-
   /// Returns the ordering constraint of this store instruction.
   AtomicOrdering getOrdering() const {
     return getSubclassData<OrderingField>();
