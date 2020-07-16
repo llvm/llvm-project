@@ -1,5 +1,3 @@
-// dynamic case
-
 // dynamically sized type
 func @_QQSIZEOF_a(%p1 : i64, %p2 : i64) -> i64 {
   %c1 = constant 1 : i64  // sizeof CHARACTER(1)
