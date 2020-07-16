@@ -420,7 +420,8 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
       (thread_data->td.td_deque_tail + 1) & TASK_DEQUE_MASK(thread_data->td);
   TCW_4(thread_data->td.td_deque_ntasks,
         TCR_4(thread_data->td.td_deque_ntasks) + 1); // Adjust task count
-
+  KMP_FSYNC_RELEASING(thread->th.th_current_task); // releasing self
+  KMP_FSYNC_RELEASING(taskdata); // releasing child
   KA_TRACE(20, ("__kmp_push_task: T#%d returning TASK_SUCCESSFULLY_PUSHED: "
                 "task=%p ntasks=%d head=%u tail=%u\n",
                 gtid, taskdata, thread_data->td.td_deque_ntasks,
@@ -1560,6 +1561,7 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       else
         kmp_itt_count_task = 0; // thread is not on a barrier - skip timing
     }
+    KMP_FSYNC_ACQUIRED(taskdata); // acquired self (new task)
 #endif
 
 #ifdef KMP_GOMP_COMPAT
@@ -1577,10 +1579,11 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       // Barrier imbalance - adjust arrive time with the task duration
       thread->th.th_bar_arrive_time += (__itt_get_timestamp() - cur_time);
     }
+    KMP_FSYNC_CANCEL(taskdata); // destroy self (just executed)
+    KMP_FSYNC_RELEASING(taskdata->td_parent); // releasing parent
 #endif
 
   }
-
 
   // Proxy tasks are not handled by the runtime
   if (taskdata->td_flags.proxy != TASK_PROXY) {
@@ -1883,6 +1886,7 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
 #if USE_ITT_BUILD
     if (itt_sync_obj != NULL)
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
+    KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with children
 #endif /* USE_ITT_BUILD */
 
     // Debugger:  The taskwait is completed. Location remains, but thread is
@@ -2521,6 +2525,7 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 #if USE_ITT_BUILD
     if (itt_sync_obj != NULL)
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
+    KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with descendants
 #endif /* USE_ITT_BUILD */
   }
   KMP_DEBUG_ASSERT(taskgroup->count == 0);
@@ -3341,15 +3346,25 @@ static kmp_task_team_t *__kmp_allocate_task_team(kmp_info_t *thread,
     KE_TRACE(10, ("__kmp_allocate_task_team: T#%d allocating "
                   "task team for team %p\n",
                   __kmp_gtid_from_thread(thread), team));
-    // Allocate a new task team if one is not available.
-    // Cannot use __kmp_thread_malloc() because threads not around for
-    // kmp_reap_task_team( ).
+    // Allocate a new task team if one is not available. Cannot use
+    // __kmp_thread_malloc because threads not around for kmp_reap_task_team.
     task_team = (kmp_task_team_t *)__kmp_allocate(sizeof(kmp_task_team_t));
     __kmp_init_bootstrap_lock(&task_team->tt.tt_threads_lock);
-    // AC: __kmp_allocate zeroes returned memory
-    // task_team -> tt.tt_threads_data = NULL;
-    // task_team -> tt.tt_max_threads = 0;
-    // task_team -> tt.tt_next = NULL;
+#if USE_ITT_BUILD && USE_ITT_NOTIFY && KMP_DEBUG
+    // suppress race conditions detection on synchronization flags in debug mode
+    // this helps to analyze library internals eliminating false positives
+    __itt_suppress_mark_range(
+        __itt_suppress_range, __itt_suppress_threading_errors,
+        &task_team->tt.tt_found_tasks, sizeof(task_team->tt.tt_found_tasks));
+    __itt_suppress_mark_range(__itt_suppress_range,
+                              __itt_suppress_threading_errors,
+                              CCAST(kmp_uint32 *, &task_team->tt.tt_active),
+                              sizeof(task_team->tt.tt_active));
+#endif /* USE_ITT_BUILD && USE_ITT_NOTIFY && KMP_DEBUG */
+    // Note: __kmp_allocate zeroes returned memory, othewise we would need:
+    // task_team->tt.tt_threads_data = NULL;
+    // task_team->tt.tt_max_threads = 0;
+    // task_team->tt.tt_next = NULL;
   }
 
   TCW_4(task_team->tt.tt_found_tasks, FALSE);
