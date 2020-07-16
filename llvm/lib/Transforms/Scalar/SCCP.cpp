@@ -233,7 +233,7 @@ public:
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
         TrackedMultipleRetVals.insert(
             std::make_pair(std::make_pair(F, i), ValueLatticeElement()));
-    } else
+    } else if (!F->getReturnType()->isVoidTy())
       TrackedRetVals.insert(std::make_pair(F, ValueLatticeElement()));
   }
 
