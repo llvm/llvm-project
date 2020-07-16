@@ -147,7 +147,7 @@ complicated behavior in a single node (rotate).
    code you wrote in ``LegalizeOp`` above to decompose your new node into other
    legal nodes for this target.
 
-#. ``lib/Target/TargetSelectionDAG.td``:
+#. ``include/llvm/Target/TargetSelectionDAG.td``:
 
    Most current targets supported by LLVM generate code using the DAGToDAG
    method, where SelectionDAG nodes are pattern matched to target-specific
