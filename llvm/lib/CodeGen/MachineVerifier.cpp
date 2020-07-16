@@ -1565,9 +1565,6 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
   if (MCID.getOpcode() == TargetOpcode::PATCHPOINT)
     NumDefs = (MONum == 0 && MO->isReg()) ? NumDefs : 0;
 
-  if (MCID.getOpcode() == TargetOpcode::STATEPOINT)
-    NumDefs = MI->getNumDefs();
-
   // The first MCID.NumDefs operands must be explicit register defines
   if (MONum < NumDefs) {
     const MCOperandInfo &MCOI = MCID.OpInfo[MONum];
