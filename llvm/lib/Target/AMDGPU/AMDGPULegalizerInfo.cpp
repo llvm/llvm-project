@@ -648,6 +648,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.has16BitInsts())
     IToFP.legalFor({{S16, S16}});
   IToFP.clampScalar(1, S32, S64)
+       .minScalar(0, S32)
        .scalarize(0)
        .widenScalarToNextPow2(1);
 
