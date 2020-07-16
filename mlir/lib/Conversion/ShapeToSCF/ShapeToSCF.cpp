@@ -104,15 +104,14 @@ ShapeOfOpConverter::matchAndRewrite(ShapeOfOp op, ArrayRef<Value> operands,
   // Copy shape extents to stack-allocated memory.
   auto zeroVal = rewriter.create<ConstantIndexOp>(loc, 0);
   auto oneVal = rewriter.create<ConstantIndexOp>(loc, 1);
-  auto loop = rewriter.create<scf::ForOp>(loc, zeroVal, rankVal, oneVal);
-  {
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(loop.getBody());
-    auto iVal = loop.getInductionVar();
-    auto dimVal = rewriter.create<DimOp>(loc, tensorVal, iVal);
-    auto dimIntVal = rewriter.create<IndexCastOp>(loc, dimVal, i64Ty);
-    rewriter.create<StoreOp>(loc, dimIntVal, memVal, ValueRange{iVal});
-  }
+  rewriter.create<scf::ForOp>(
+      loc, zeroVal, rankVal, oneVal, llvm::None,
+      [&](OpBuilder &b, Location loc, Value iVal, ValueRange args) {
+        auto dimVal = rewriter.create<DimOp>(loc, tensorVal, iVal);
+        auto dimIntVal = rewriter.create<IndexCastOp>(loc, dimVal, i64Ty);
+        rewriter.create<StoreOp>(loc, dimIntVal, memVal, ValueRange{iVal});
+        rewriter.create<scf::YieldOp>(loc);
+      });
 
   // Load extents to tensor value.
   auto shapeIntVal = rewriter.create<TensorLoadOp>(loc, memVal);
