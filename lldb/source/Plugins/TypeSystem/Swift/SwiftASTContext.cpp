@@ -5116,20 +5116,6 @@ bool SwiftASTContext::IsReferenceType(opaque_compiler_type_t type,
   return false;
 }
 
-bool SwiftASTContext::IsFloatingPointType(opaque_compiler_type_t type,
-                                          uint32_t &count, bool &is_complex) {
-  if (type) {
-    if (GetTypeInfo(type, nullptr) & eTypeIsFloat) {
-      count = 1;
-      is_complex = false;
-      return true;
-    }
-  }
-  count = 0;
-  is_complex = false;
-  return false;
-}
-
 bool SwiftASTContext::IsDefined(opaque_compiler_type_t type) {
   if (!type)
     return false;
