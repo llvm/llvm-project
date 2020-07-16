@@ -396,6 +396,9 @@
   !$omp taskyield
   !$omp barrier
   !$omp taskwait
+  !$omp taskwait depend(source)
+  !ERROR: Internal: no symbol found for 'i'
+  !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)
   ! !$omp target update from(arrayA) to(arrayB)
   ! !$omp target exit data map(from:arrayA) map(delete:arrayB)
