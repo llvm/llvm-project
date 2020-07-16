@@ -1209,6 +1209,9 @@ void CodeGenModule::AddGlobalCtor(llvm::Function *Ctor, int Priority,
 /// when the module is unloaded.
 void CodeGenModule::AddGlobalDtor(llvm::Function *Dtor, int Priority) {
   if (CodeGenOpts.RegisterGlobalDtorsWithAtExit) {
+    if (getCXXABI().useSinitAndSterm())
+      llvm::report_fatal_error(
+          "register global dtors with atexit() is not supported yet");
     DtorsUsingAtExit[Priority].push_back(Dtor);
     return;
   }
