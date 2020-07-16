@@ -190,7 +190,7 @@ private:
 
 struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   using SetType = MachineValueTypeSet;
-  std::vector<unsigned> AddrSpaces;
+  SmallVector<unsigned, 16> AddrSpaces;
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
