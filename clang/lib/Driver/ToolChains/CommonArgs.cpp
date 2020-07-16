@@ -333,6 +333,11 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
 
     return TargetCPUName;
   }
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+      return A->getValue();
+    return "";
 
   case llvm::Triple::bpfel:
   case llvm::Triple::bpfeb:
