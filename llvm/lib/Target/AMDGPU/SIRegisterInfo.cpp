@@ -1356,7 +1356,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               if (!IsVOP2)
                 MIB.addImm(0); // clamp bit
             } else {
-              assert(MIB->getOpcode() == AMDGPU::V_ADD_I32_e64 &&
+              assert(MIB->getOpcode() == AMDGPU::V_ADD_CO_U32_e64 &&
                      "Need to reuse carry out register");
 
               // Use scavenged unused carry out as offset register.

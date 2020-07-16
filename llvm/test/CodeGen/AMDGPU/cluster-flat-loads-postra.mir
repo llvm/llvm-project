@@ -22,7 +22,7 @@ body:             |
     $vgpr2 = IMPLICIT_DEF
     $vgpr3 = IMPLICIT_DEF
     $vgpr6 = IMPLICIT_DEF
-    $vgpr0 = V_ADD_I32_e32 16, $vgpr2, implicit-def $vcc, implicit $exec
+    $vgpr0 = V_ADD_CO_U32_e32 16, $vgpr2, implicit-def $vcc, implicit $exec
     $vgpr1 = V_ADDC_U32_e32 $vgpr3, killed $vgpr6, implicit-def dead $vcc, implicit $vcc, implicit $exec
     FLAT_STORE_DWORD $vgpr2_vgpr3, killed $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     FLAT_STORE_DWORD $vgpr0_vgpr1, killed $vgpr4, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)

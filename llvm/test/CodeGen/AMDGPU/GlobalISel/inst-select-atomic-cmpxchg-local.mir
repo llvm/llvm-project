@@ -61,7 +61,7 @@ body:             |
     ; GFX6: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX6: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX6: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
-    ; GFX6: %4:vgpr_32, dead %6:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX6: %4:vgpr_32, dead %6:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX6: $m0 = S_MOV_B32 -1
     ; GFX6: [[DS_CMPST_RTN_B32_:%[0-9]+]]:vgpr_32 = DS_CMPST_RTN_B32 %4, [[COPY1]], [[COPY2]], 0, 0, implicit $m0, implicit $exec :: (load store seq_cst 4, addrspace 3)
     ; GFX6: $vgpr0 = COPY [[DS_CMPST_RTN_B32_]]
