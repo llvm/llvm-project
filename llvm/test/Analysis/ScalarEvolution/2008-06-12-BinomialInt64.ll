@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyze -scalar-evolution 2>/dev/null
+; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution 2>/dev/null
+; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>/dev/null
 ; PR2433
 
 define i32 @main1(i32 %argc, i8** %argv) nounwind  {
