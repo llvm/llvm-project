@@ -777,11 +777,7 @@ void PassManagerBuilder::populateModulePassManager(
   // convert to more optimized IR using more aggressive simplify CFG options.
   // The extra sinking transform can create larger basic blocks, so do this
   // before SLP vectorization.
-  MPM.add(createCFGSimplificationPass(SimplifyCFGOptions()
-                                          .forwardSwitchCondToPhi(true)
-                                          .convertSwitchToLookupTable(true)
-                                          .needCanonicalLoops(false)
-                                          .sinkCommonInsts(true)));
+  MPM.add(createCFGSimplificationPass(1, true, true, false, true));
 
   if (SLPVectorize) {
     MPM.add(createSLPVectorizerPass()); // Vectorize parallel scalar chains.

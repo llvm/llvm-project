@@ -14,7 +14,6 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_H
 #define LLVM_TRANSFORMS_SCALAR_H
 
-#include "llvm/Transforms/Scalar/SimplifyCFGOptions.h"
 #include <functional>
 
 namespace llvm {
@@ -257,7 +256,8 @@ FunctionPass *createJumpThreadingPass(int Threshold = -1);
 // simplify terminator instructions, convert switches to lookup tables, etc.
 //
 FunctionPass *createCFGSimplificationPass(
-    SimplifyCFGOptions Options = SimplifyCFGOptions(),
+    unsigned Threshold = 1, bool ForwardSwitchCond = false,
+    bool ConvertSwitch = false, bool KeepLoops = true, bool SinkCommon = false,
     std::function<bool(const Function &)> Ftor = nullptr);
 
 //===----------------------------------------------------------------------===//
