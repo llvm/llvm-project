@@ -157,11 +157,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::MUL, MVT::v16i8, Expand);
 
     // There is no vector conditional select instruction
-    // TODO: Implement SELECT_V128
-    for (auto Op : {ISD::SELECT_CC, ISD::SELECT})
-      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
-                     MVT::v2f64})
-        setOperationAction(Op, T, Expand);
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
+                   MVT::v2f64})
+      setOperationAction(ISD::SELECT_CC, T, Expand);
 
     // Expand integer operations supported for scalars but not SIMD
     for (auto Op : {ISD::CTLZ, ISD::CTTZ, ISD::CTPOP, ISD::SDIV, ISD::UDIV,
