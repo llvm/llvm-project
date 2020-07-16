@@ -213,22 +213,21 @@ static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
 }
 
 // Command-line settings override compile-time settings.
+static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
+  if (UserBonusInstThreshold.getNumOccurrences())
+    Options.BonusInstThreshold = UserBonusInstThreshold;
+  if (UserForwardSwitchCond.getNumOccurrences())
+    Options.ForwardSwitchCondToPhi = UserForwardSwitchCond;
+  if (UserSwitchToLookup.getNumOccurrences())
+    Options.ConvertSwitchToLookupTable = UserSwitchToLookup;
+  if (UserKeepLoops.getNumOccurrences())
+    Options.NeedCanonicalLoop = UserKeepLoops;
+  if (UserSinkCommonInsts.getNumOccurrences())
+    Options.SinkCommonInsts = UserSinkCommonInsts;
+}
+
 SimplifyCFGPass::SimplifyCFGPass(const SimplifyCFGOptions &Opts) {
-  Options.BonusInstThreshold = UserBonusInstThreshold.getNumOccurrences()
-                                   ? UserBonusInstThreshold
-                                   : Opts.BonusInstThreshold;
-  Options.ForwardSwitchCondToPhi = UserForwardSwitchCond.getNumOccurrences()
-                                       ? UserForwardSwitchCond
-                                       : Opts.ForwardSwitchCondToPhi;
-  Options.ConvertSwitchToLookupTable = UserSwitchToLookup.getNumOccurrences()
-                                           ? UserSwitchToLookup
-                                           : Opts.ConvertSwitchToLookupTable;
-  Options.NeedCanonicalLoop = UserKeepLoops.getNumOccurrences()
-                                  ? UserKeepLoops
-                                  : Opts.NeedCanonicalLoop;
-  Options.SinkCommonInsts = UserSinkCommonInsts.getNumOccurrences()
-                                ? UserSinkCommonInsts
-                                : Opts.SinkCommonInsts;
+  applyCommandLineOverridesToOptions(Options);
 }
 
 PreservedAnalyses SimplifyCFGPass::run(Function &F,
@@ -255,20 +254,7 @@ struct CFGSimplifyPass : public FunctionPass {
     initializeCFGSimplifyPassPass(*PassRegistry::getPassRegistry());
 
     // Check for command-line overrides of options for debug/customization.
-    if (UserBonusInstThreshold.getNumOccurrences())
-      Options.BonusInstThreshold = UserBonusInstThreshold;
-
-    if (UserForwardSwitchCond.getNumOccurrences())
-      Options.ForwardSwitchCondToPhi = UserForwardSwitchCond;
-
-    if (UserSwitchToLookup.getNumOccurrences())
-      Options.ConvertSwitchToLookupTable = UserSwitchToLookup;
-
-    if (UserKeepLoops.getNumOccurrences())
-      Options.NeedCanonicalLoop = UserKeepLoops;
-
-    if (UserSinkCommonInsts.getNumOccurrences())
-      Options.SinkCommonInsts = UserSinkCommonInsts;
+    applyCommandLineOverridesToOptions(Options);
   }
 
   bool runOnFunction(Function &F) override {
