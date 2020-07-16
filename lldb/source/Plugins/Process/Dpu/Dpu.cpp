@@ -139,7 +139,7 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
 }
 
 bool Dpu::Boot() {
-  struct _dpu_context_t *tmp_context;
+  struct dpu_context_t *tmp_context;
   // Extract a potential context from the dpu structure (that could have been
   // created by the dpu_loader).
   dpu_pop_debug_context(m_dpu, &tmp_context);
@@ -726,7 +726,7 @@ lldb::StateType Dpu::GetThreadState(uint32_t thread_index,
                                     lldb::StopReason &stop_reason,
                                     bool stepping) {
   stop_reason = eStopReasonNone;
-  struct _dpu_context_t *context = m_context->Get();
+  struct dpu_context_t *context = m_context->Get();
   bool bkp_fault = context->bkp_fault;
   bool dma_fault = context->dma_fault;
   bool mem_fault = context->mem_fault;

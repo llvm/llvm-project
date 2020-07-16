@@ -41,12 +41,12 @@ static inline lldb::addr_t InstIdx2InstAddr(lldb::addr_t nb_of_inst) {
 
 class DpuContext {
 public:
-  DpuContext(dpu_t *dpu, struct _dpu_context_t *context, uint32_t nr_threads);
+  DpuContext(dpu_t *dpu, struct dpu_context_t *context, uint32_t nr_threads);
   ~DpuContext();
 
-  struct _dpu_context_t *Get();
+  struct dpu_context_t *Get();
 
-  void UpdateContext(struct _dpu_context_t *new_context);
+  void UpdateContext(struct dpu_context_t *new_context);
 
   bool StopThreads();
   bool ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list);
@@ -69,7 +69,7 @@ private:
   void UpdateRunningThreads();
 
   dpu_t *m_dpu;
-  struct _dpu_context_t *m_context;
+  struct dpu_context_t *m_context;
   uint32_t nr_threads;
   uint8_t *running_threads;
   uint8_t *last_resume_threads;

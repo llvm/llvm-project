@@ -30,6 +30,7 @@ extern "C" {
 #include <dpu_config.h>
 #include <dpu_debug.h>
 #include <dpu_description.h>
+#include <dpu_error.h>
 #include <dpu_management.h>
 }
 
@@ -103,8 +104,13 @@ void DpuRank::SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
                            host_mux_mram_state);
 }
 
-struct _dpu_context_t *DpuRank::AllocContext() {
-  return dpu_alloc_dpu_context(m_rank);
+struct dpu_context_t *DpuRank::AllocContext() {
+  struct dpu_context_t *context = new struct dpu_context_t;
+  if (dpu_context_fill_from_rank(context, m_rank) != DPU_OK) {
+    delete context;
+    return NULL;
+  }
+  return context;
 }
 
 bool DpuRank::ResumeDpus() {
