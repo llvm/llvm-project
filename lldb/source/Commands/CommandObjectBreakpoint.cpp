@@ -17,6 +17,7 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
+#include "lldb/Interpreter/OptionValueFileColonLine.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
@@ -443,7 +444,22 @@ public:
       case 'X':
         m_source_regex_func_names.insert(std::string(option_arg));
         break;
-
+        
+      case 'y':
+      {
+        OptionValueFileColonLine value;
+        Status fcl_err = value.SetValueFromString(option_arg);
+        if (!fcl_err.Success()) {
+          error.SetErrorStringWithFormat(
+              "Invalid value for file:line specifier: %s",
+              fcl_err.AsCString());
+        } else {
+          m_filenames.AppendIfUnique(value.GetFileSpec());
+          m_line_num = value.GetLineNumber();
+          m_column = value.GetColumnNumber();
+        }
+      } break;
+      
       default:
         llvm_unreachable("Unimplemented option");
       }

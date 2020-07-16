@@ -16,6 +16,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionValueFileColonLine.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -667,6 +668,22 @@ class CommandObjectSourceList : public CommandObjectParsed {
       case 'r':
         reverse = true;
         break;
+      case 'y':
+      {
+        OptionValueFileColonLine value;
+        Status fcl_err = value.SetValueFromString(option_arg);
+        if (!fcl_err.Success()) {
+          error.SetErrorStringWithFormat(
+              "Invalid value for file:line specifier: %s",
+              fcl_err.AsCString());
+        } else {
+          file_name = value.GetFileSpec().GetPath();
+          start_line = value.GetLineNumber();
+          // I don't see anything useful to do with a column number, but I don't
+          // want to complain since someone may well have cut and pasted a
+          // listing from somewhere that included a column.
+        }
+      } break;
       default:
         llvm_unreachable("Unimplemented option");
       }
