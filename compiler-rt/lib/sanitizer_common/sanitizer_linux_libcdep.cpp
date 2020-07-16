@@ -966,7 +966,7 @@ void ReExec() {
 }
 #endif  // !SANITIZER_OPENBSD
 
-static void UnmapFromTo(uptr from, uptr to) {
+void UnmapFromTo(uptr from, uptr to) {
   if (to == from)
     return;
   CHECK(to >= from);
