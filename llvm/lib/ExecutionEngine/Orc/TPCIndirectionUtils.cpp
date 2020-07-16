@@ -126,9 +126,10 @@ Error TPCTrampolinePool::grow() {
       static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
                                                 sys::Memory::MF_EXEC);
   auto PageSize = TPC.getPageSize();
-  auto Alloc = TPC.getMemMgr().allocate(
-      {{TrampolinePagePermissions,
-        {PageSize, static_cast<size_t>(PageSize), 0}}});
+  jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
+  Request[TrampolinePagePermissions] = {PageSize, static_cast<size_t>(PageSize),
+                                        0};
+  auto Alloc = TPC.getMemMgr().allocate(Request);
 
   if (!Alloc)
     return Alloc.takeError();
@@ -310,9 +311,10 @@ TPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
                                                 sys::Memory::MF_EXEC);
   auto ResolverSize = ABI->getResolverCodeSize();
 
-  auto Alloc = TPC.getMemMgr().allocate(
-      {{ResolverBlockPermissions,
-        {TPC.getPageSize(), static_cast<size_t>(ResolverSize), 0}}});
+  jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
+  Request[ResolverBlockPermissions] = {TPC.getPageSize(),
+                                       static_cast<size_t>(ResolverSize), 0};
+  auto Alloc = TPC.getMemMgr().allocate(Request);
   if (!Alloc)
     return Alloc.takeError();
 
@@ -379,10 +381,11 @@ TPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
         static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
                                                   sys::Memory::MF_WRITE);
 
-    auto Alloc = TPC.getMemMgr().allocate(
-        {{StubPagePermissions, {PageSize, static_cast<size_t>(StubBytes), 0}},
-         {PointerPagePermissions, {PageSize, 0, PointerBytes}}});
-
+    jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
+    Request[StubPagePermissions] = {PageSize, static_cast<size_t>(StubBytes),
+                                    0};
+    Request[PointerPagePermissions] = {PageSize, 0, PointerBytes};
+    auto Alloc = TPC.getMemMgr().allocate(Request);
     if (!Alloc)
       return Alloc.takeError();
 
