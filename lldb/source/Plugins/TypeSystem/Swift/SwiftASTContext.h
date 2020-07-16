@@ -473,8 +473,6 @@ public:
   bool IsPointerType(lldb::opaque_compiler_type_t type,
                      CompilerType *pointee_type) override;
 
-  bool IsScalarType(lldb::opaque_compiler_type_t type) override;
-
   bool IsVoidType(lldb::opaque_compiler_type_t type) override;
 
   static bool IsGenericType(const CompilerType &compiler_type);

@@ -31,3 +31,10 @@ bool TypeSystemSwift::IsIntegerType(opaque_compiler_type_t type,
                                     bool &is_signed) {
   return (GetTypeInfo(type, nullptr) & eTypeIsInteger);
 }
+
+bool TypeSystemSwift::IsScalarType(opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+
+  return (GetTypeInfo(type, nullptr) & eTypeIsScalar) != 0;
+}
