@@ -925,14 +925,13 @@ MaybeAlign AttributeSetNode::getStackAlignment() const {
 Type *AttributeSetNode::getByValType() const {
   if (auto A = findEnumAttribute(Attribute::ByVal))
     return A->getValueAsType();
-  return 0;
+  return nullptr;
 }
 
 Type *AttributeSetNode::getPreallocatedType() const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Attribute::Preallocated))
-      return I.getValueAsType();
-  return 0;
+  if (auto A = findEnumAttribute(Attribute::Preallocated))
+    return A->getValueAsType();
+  return nullptr;
 }
 
 uint64_t AttributeSetNode::getDereferenceableBytes() const {
