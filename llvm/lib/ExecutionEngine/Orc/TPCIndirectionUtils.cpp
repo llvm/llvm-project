@@ -378,7 +378,7 @@ TPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
                                                   sys::Memory::MF_WRITE);
 
     auto Alloc = TPC.getMemMgr().allocate(
-        {{StubPagePermissions, {PageSize, StubBytes, 0}},
+        {{StubPagePermissions, {PageSize, static_cast<size_t>(StubBytes), 0}},
          {PointerPagePermissions, {PageSize, 0, PointerBytes}}});
 
     if (!Alloc)
