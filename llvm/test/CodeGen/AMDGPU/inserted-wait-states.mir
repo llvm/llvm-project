@@ -267,7 +267,7 @@ body: |
 # GCN-LABEL: name: readwrite_lane
 
 # GCN-LABEL: bb.0:
-# GCN: V_ADD_I32
+# GCN: V_ADD_CO_U32
 # GCN: S_NOP
 # GCN: S_NOP
 # GCN: S_NOP
@@ -275,7 +275,7 @@ body: |
 # GCN: V_READLANE_B32
 
 # GCN-LABEL: bb.1:
-# GCN: V_ADD_I32
+# GCN: V_ADD_CO_U32
 # GCN: S_NOP
 # GCN: S_NOP
 # GCN: S_NOP
@@ -283,7 +283,7 @@ body: |
 # GCN: V_WRITELANE_B32
 
 # GCN-LABEL: bb.2:
-# GCN: V_ADD_I32
+# GCN: V_ADD_CO_U32
 # GCN: S_NOP
 # GCN: S_NOP
 # GCN: S_NOP
@@ -291,7 +291,7 @@ body: |
 # GCN: V_READLANE_B32
 
 # GCN-LABEL: bb.3:
-# GCN: V_ADD_I32
+# GCN: V_ADD_CO_U32
 # GCN: S_NOP
 # GCN: S_NOP
 # GCN: S_NOP
@@ -302,23 +302,23 @@ name: readwrite_lane
 
 body: |
   bb.0:
-    $vgpr0,$sgpr0_sgpr1 = V_ADD_I32_e64 $vgpr1, $vgpr2, implicit $vcc, 0, implicit $exec
+    $vgpr0,$sgpr0_sgpr1 = V_ADD_CO_U32_e64 $vgpr1, $vgpr2, implicit $vcc, 0, implicit $exec
     $sgpr4 = V_READLANE_B32 $vgpr4, $sgpr0
     S_BRANCH %bb.1
 
   bb.1:
-    $vgpr0,$sgpr0_sgpr1 = V_ADD_I32_e64 $vgpr1, $vgpr2, implicit $vcc, 0, implicit $exec
+    $vgpr0,$sgpr0_sgpr1 = V_ADD_CO_U32_e64 $vgpr1, $vgpr2, implicit $vcc, 0, implicit $exec
     $vgpr4 = V_WRITELANE_B32 $sgpr0, $sgpr0, $vgpr4
     S_BRANCH %bb.2
 
   bb.2:
-    $vgpr0,implicit $vcc = V_ADD_I32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
+    $vgpr0,implicit $vcc = V_ADD_CO_U32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     $sgpr4 = V_READLANE_B32 $vgpr4, $vcc_lo
     S_BRANCH %bb.3
 
   bb.3:
     $m0 = S_MOV_B32 $sgpr4
-    $vgpr0,implicit $vcc = V_ADD_I32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
+    $vgpr0,implicit $vcc = V_ADD_CO_U32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
     $vgpr4 = V_WRITELANE_B32 $m0, $vcc_lo, $vgpr4
     S_ENDPGM 0
 

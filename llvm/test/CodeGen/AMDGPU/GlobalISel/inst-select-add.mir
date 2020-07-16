@@ -18,9 +18,9 @@ body: |
     ; GFX6: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX6: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX6: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX6: %7:vgpr_32, dead %12:sreg_64_xexec = V_ADD_I32_e64 [[COPY2]], [[S_ADD_I32_]], 0, implicit $exec
-    ; GFX6: %8:vgpr_32, dead %11:sreg_64_xexec = V_ADD_I32_e64 [[S_ADD_I32_]], %7, 0, implicit $exec
-    ; GFX6: %9:vgpr_32, dead %10:sreg_64_xexec = V_ADD_I32_e64 %8, [[COPY2]], 0, implicit $exec
+    ; GFX6: %7:vgpr_32, dead %12:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[S_ADD_I32_]], 0, implicit $exec
+    ; GFX6: %8:vgpr_32, dead %11:sreg_64_xexec = V_ADD_CO_U32_e64 [[S_ADD_I32_]], %7, 0, implicit $exec
+    ; GFX6: %9:vgpr_32, dead %10:sreg_64_xexec = V_ADD_CO_U32_e64 %8, [[COPY2]], 0, implicit $exec
     ; GFX6: S_ENDPGM 0, implicit [[S_ADD_I32_]], implicit %7, implicit %8, implicit %9
     ; GFX9-LABEL: name: add_s32
     ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
@@ -95,7 +95,7 @@ body: |
     ; GFX6: liveins: $vgpr0
     ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX6: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4294967232, implicit $exec
-    ; GFX6: %2:vgpr_32, dead %3:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX6: %2:vgpr_32, dead %3:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX6: S_ENDPGM 0, implicit %2
     ; GFX9-LABEL: name: add_neg_inline_const_64_to_sub_s32_v
     ; GFX9: liveins: $vgpr0
@@ -152,7 +152,7 @@ body: |
     ; GFX6: liveins: $vgpr0
     ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX6: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
-    ; GFX6: %2:vgpr_32, dead %3:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX6: %2:vgpr_32, dead %3:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX6: S_ENDPGM 0, implicit %2
     ; GFX9-LABEL: name: add_neg_inline_const_16_to_sub_s32_v
     ; GFX9: liveins: $vgpr0

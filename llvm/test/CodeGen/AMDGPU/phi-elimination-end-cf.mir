@@ -37,7 +37,7 @@ body:             |
     %24:sreg_64 = PHI %20, %bb.3, %22, %bb.0
     %23:vgpr_32 = PHI %19, %bb.3, %18, %bb.0
     SI_END_CF %24, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %3:vgpr_32, dead %10:sreg_64 = nsw V_ADD_I32_e64 1, %23, 0, implicit $exec
+    %3:vgpr_32, dead %10:sreg_64 = nsw V_ADD_CO_U32_e64 1, %23, 0, implicit $exec
 
   bb.3:
     successors: %bb.3(0x40000000), %bb.2(0x40000000)
