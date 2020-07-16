@@ -1668,12 +1668,18 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     std::lock_guard<std::recursive_mutex> global_context_locker(
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
+    const auto &IRGenOpts = swift_ast_ctx->GetIRGenOptions();
+
     auto GenModule = swift::performIRGeneration(
-        &parsed_expr->module, swift_ast_ctx->GetIRGenOptions(),
-        swift_ast_ctx->GetTBDGenOptions(), std::move(sil_module), "lldb_module",
+        &parsed_expr->module, IRGenOpts, swift_ast_ctx->GetTBDGenOptions(),
+        std::move(sil_module), "lldb_module",
         swift::PrimarySpecificPaths("", parsed_expr->main_filename),
         llvm::ArrayRef<std::string>());
-      
+
+    if (GenModule) {
+      swift::performLLVMOptimizations(IRGenOpts, GenModule.getModule(),
+                                      GenModule.getTargetMachine());
+    }
     auto ContextAndModule = std::move(GenModule).release();
     m_llvm_context.reset(ContextAndModule.first);
     m_module.reset(ContextAndModule.second);
