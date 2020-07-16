@@ -15613,7 +15613,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   bool CheckInferredResultType = false;
   bool isInvalid = false;
   unsigned DiagKind = 0;
-  FixItHint Hint;
   ConversionFixItGenerator ConvHints;
   bool MayHaveConvFixit = false;
   bool MayHaveFunctionDiff = false;
@@ -15666,10 +15665,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     }
     CheckInferredResultType = DstType->isObjCObjectPointerType() &&
       SrcType->isObjCObjectPointerType();
-    if (Hint.isNull() && !CheckInferredResultType) {
+    if (!CheckInferredResultType) {
       ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
-    }
-    else if (CheckInferredResultType) {
+    } else if (CheckInferredResultType) {
       SrcType = SrcType.getUnqualifiedType();
       DstType = DstType.getUnqualifiedType();
     }
@@ -15840,13 +15838,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     FDiag << FirstType << SecondType << Action << SrcExpr->getSourceRange();
 
   // If we can fix the conversion, suggest the FixIts.
-  assert(ConvHints.isNull() || Hint.isNull());
   if (!ConvHints.isNull()) {
     for (FixItHint &H : ConvHints.Hints)
       FDiag << H;
-  } else {
-    FDiag << Hint;
   }
+
   if (MayHaveConvFixit) { FDiag << (unsigned) (ConvHints.Kind); }
 
   if (MayHaveFunctionDiff)
