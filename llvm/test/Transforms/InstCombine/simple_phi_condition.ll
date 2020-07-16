@@ -2,6 +2,7 @@
 ; RUN: opt -S < %s -instcombine | FileCheck %s
 ; RUN: opt -S < %s -passes=instcombine | FileCheck %s
 
+; TODO: Simplify to "ret cond".
 define i1 @test_direct_implication(i1 %cond) {
 ; CHECK-LABEL: @test_direct_implication(
 ; CHECK-NEXT:  entry:
@@ -11,7 +12,8 @@ define i1 @test_direct_implication(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[IF_TRUE]] ], [ false, [[IF_FALSE]] ]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -27,6 +29,7 @@ merge:
   ret i1 %ret
 }
 
+; TODO: Simplify to "ret !cond".
 define i1 @test_inverted_implication(i1 %cond) {
 ; CHECK-LABEL: @test_inverted_implication(
 ; CHECK-NEXT:  entry:
@@ -36,8 +39,8 @@ define i1 @test_inverted_implication(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ false, [[IF_TRUE]] ], [ true, [[IF_FALSE]] ]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -53,6 +56,7 @@ merge:
   ret i1 %ret
 }
 
+; TODO: Simplify to "ret cond".
 define i1 @test_direct_implication_complex_cfg(i1 %cond, i32 %cnt1) {
 ; CHECK-LABEL: @test_direct_implication_complex_cfg(
 ; CHECK-NEXT:  entry:
@@ -69,7 +73,8 @@ define i1 @test_direct_implication_complex_cfg(i1 %cond, i32 %cnt1) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[IF_TRUE_END]] ], [ false, [[IF_FALSE]] ]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -94,6 +99,7 @@ merge:
   ret i1 %ret
 }
 
+; TODO: Simplify to "ret !cond".
 define i1 @test_inverted_implication_complex_cfg(i1 %cond, i32 %cnt1) {
 ; CHECK-LABEL: @test_inverted_implication_complex_cfg(
 ; CHECK-NEXT:  entry:
@@ -110,8 +116,8 @@ define i1 @test_inverted_implication_complex_cfg(i1 %cond, i32 %cnt1) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ false, [[IF_TRUE_END]] ], [ true, [[IF_FALSE]] ]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
