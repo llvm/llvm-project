@@ -14,11 +14,15 @@
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
+#include <lldb/lldb-enumerations.h>
 
 LLDB_PLUGIN_DEFINE(TypeSystemSwift)
 
+using namespace lldb;
 using namespace lldb_private;
 
+/// TypeSystem Plugin functionality.
+/// \{
 static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
                                                    Module *module,
                                                    Target *target,
@@ -58,3 +62,17 @@ ConstString TypeSystemSwift::GetPluginName() {
 }
 
 uint32_t TypeSystemSwift::GetPluginVersion() { return 1; }
+
+/// \}
+
+
+bool TypeSystemSwift::IsFloatingPointType(opaque_compiler_type_t type,
+                                          uint32_t &count, bool &is_complex) {
+  count = 0;
+  is_complex = false;
+  if (GetTypeInfo(type, nullptr) & eTypeIsFloat) {
+    count = 1;
+    return true;
+  }
+  return false;
+}
