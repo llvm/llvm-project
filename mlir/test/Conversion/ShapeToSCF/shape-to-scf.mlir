@@ -1,10 +1,10 @@
 // RUN: mlir-opt -convert-shape-to-scf -split-input-file %s | FileCheck %s
 
-// CHECK-LABEL: shape_reduce
-// CHECK-SAME:   [[SHAPE:%.*]]: !shape.shape) -> !shape.size {
+// CHECK-LABEL: @shape_reduce
+// CHECK-SAME:  ([[SHAPE:%.*]]: !shape.shape) -> !shape.size
 func @shape_reduce(%shape : !shape.shape) -> !shape.size {
   %init = shape.const_size 1
-  %num_elements = shape.reduce(%shape, %init) -> !shape.size {
+  %num_elements = shape.reduce(%shape, %init) : !shape.shape -> !shape.size {
     ^bb0(%index: index, %dim: !shape.size, %acc: !shape.size):
       %new_acc = shape.mul %acc, %dim
       shape.yield %new_acc : !shape.size
