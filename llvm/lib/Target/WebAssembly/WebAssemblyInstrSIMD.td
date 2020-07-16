@@ -574,6 +574,16 @@ foreach vec_t = [v16i8, v8i16, v4i32, v2i64] in
             (!cast<Instruction>("BITSELECT_"#vec_t)
               V128:$v1, V128:$v2, V128:$c)>;
 
+// Also implement vselect in terms of bitselect
+foreach types = [[v16i8, v16i8], [v8i16, v8i16], [v4i32, v4i32], [v2i64, v2i64],
+                 [v4f32, v4i32], [v2f64, v2i64]] in
+  def : Pat<(types[0] (vselect
+              (types[1] V128:$c), (types[0] V128:$v1), (types[0] V128:$v2)
+            )),
+            (!cast<Instruction>("BITSELECT_"#types[0])
+              V128:$v1, V128:$v2, V128:$c
+            )>;
+
 //===----------------------------------------------------------------------===//
 // Integer unary arithmetic
 //===----------------------------------------------------------------------===//
