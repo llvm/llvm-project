@@ -448,8 +448,8 @@ define i32 @test25(i1 %c)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 10, [[JUMP]] ], [ 20, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 10, [[JUMP]] ], [ 20, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[A]]
 ;
 entry:
   br i1 %c, label %jump, label %ret
@@ -468,8 +468,8 @@ define i32 @test26(i1 %cond)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 10, [[JUMP]] ], [ 20, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 20, [[ENTRY:%.*]] ], [ 10, [[JUMP]] ]
+; CHECK-NEXT:    ret i32 [[A]]
 ;
 entry:
   br i1 %cond, label %jump, label %ret
@@ -489,8 +489,8 @@ define i32 @test27(i1 %c, i32 %A, i32 %B)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
   br i1 %c, label %jump, label %ret
@@ -509,8 +509,8 @@ define i32 @test28(i1 %cond, i32 %A, i32 %B)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
   br i1 %cond, label %jump, label %ret
@@ -530,10 +530,10 @@ define i32 @test29(i1 %cond, i32 %A, i32 %B)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
   br i1 %cond, label %jump, label %ret

@@ -416,11 +416,10 @@ bb1:        ; preds = %entry
 
 bb2:        ; preds = %bb1, %entry
     %cond = phi i1 [ true, %bb1 ], [ false, %entry ]        ; <i1> [#uses=1]
-; CHECK-NOT: phi i1
-; CHECK:     %res = phi i32 [ %0, %bb1 ], [ 0, %entry ]
-; CHECK:     ret i32 %res
+; CHECK-NOT: %val = phi i32 [ %0, %bb1 ], [ 0, %entry ]
     %val = phi i32 [ %0, %bb1 ], [ 0, %entry ]        ; <i32> [#uses=1]
     %res = select i1 %cond, i32 %val, i32 0        ; <i32> [#uses=1]
+; CHECK: ret i32 %cond
     ret i32 %res
 }
 
