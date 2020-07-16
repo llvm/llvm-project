@@ -99,6 +99,13 @@ add_compiler_rt_object_libraries(RTfuzzer_main
   CFLAGS ${LIBFUZZER_CFLAGS}
   DEPS ${LIBFUZZER_DEPS})
 
+add_compiler_rt_object_libraries(RTfuzzer_interceptors
+  OS ${FUZZER_SUPPORTED_OS}
+  ARCHS ${FUZZER_SUPPORTED_ARCH}
+  SOURCES FuzzerInterceptors.cpp
+  CFLAGS ${LIBFUZZER_CFLAGS}
+  DEPS ${LIBFUZZER_DEPS})
+
 add_compiler_rt_runtime(clang_rt.fuzzer
   STATIC
   OS ${FUZZER_SUPPORTED_OS}
@@ -112,6 +119,14 @@ add_compiler_rt_runtime(clang_rt.fuzzer_no_main
   OS ${FUZZER_SUPPORTED_OS}
   ARCHS ${FUZZER_SUPPORTED_ARCH}
   OBJECT_LIBS RTfuzzer
+  CFLAGS ${LIBFUZZER_CFLAGS}
+  PARENT_TARGET fuzzer)
+
+add_compiler_rt_runtime(clang_rt.fuzzer_interceptors
+  STATIC
+  OS ${FUZZER_SUPPORTED_OS}
+  ARCHS ${FUZZER_SUPPORTED_ARCH}
+  OBJECT_LIBS RTfuzzer_interceptors
   CFLAGS ${LIBFUZZER_CFLAGS}
   PARENT_TARGET fuzzer)
 
@@ -148,7 +163,10 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND
     add_dependencies(RTfuzzer.${arch} libcxx_fuzzer_${arch}-build)
     target_compile_options(RTfuzzer_main.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     add_dependencies(RTfuzzer_main.${arch} libcxx_fuzzer_${arch}-build)
+    target_compile_options(RTfuzzer_interceptors.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
+    add_dependencies(RTfuzzer_interceptors.${arch} libcxx_fuzzer_${arch}-build)
     partially_link_libcxx(fuzzer_no_main ${LIBCXX_${arch}_PREFIX} ${arch})
+    partially_link_libcxx(fuzzer_interceptors ${LIBCXX_${arch}_PREFIX} ${arch})
     partially_link_libcxx(fuzzer ${LIBCXX_${arch}_PREFIX} ${arch})
   endforeach()
 endif()

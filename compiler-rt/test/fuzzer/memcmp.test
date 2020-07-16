@@ -1,4 +1,8 @@
 UNSUPPORTED: freebsd
 RUN: %cpp_compiler %S/MemcmpTest.cpp -o %t-MemcmpTest
 RUN: not %run %t-MemcmpTest               -seed=1 -runs=10000000   2>&1 | FileCheck %s
+
+RUN: %cpp_compiler -fno-sanitize=address -fno-builtin-memcmp %S/MemcmpTest.cpp -o %t-NoAsanMemcmpTest
+RUN: not %run %t-MemcmpTest               -seed=1 -runs=10000000   2>&1 | FileCheck %s
+
 CHECK: BINGO
