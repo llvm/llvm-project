@@ -2807,6 +2807,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_PTR_ADD(I);
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectG_IMPLICIT_DEF(I);
+  case TargetOpcode::G_FREEZE:
+    return selectCOPY(I);
   case TargetOpcode::G_INSERT:
     return selectG_INSERT(I);
   case TargetOpcode::G_INTRINSIC:
