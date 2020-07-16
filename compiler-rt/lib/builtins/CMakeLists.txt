@@ -161,6 +161,8 @@ set(GENERIC_SOURCES
   umodti3.c
 )
 
+# TODO: Several "tf" files (and divtc3.c, but not multc3.c) are in
+# GENERIC_SOURCES instead of here.
 set(GENERIC_TF_SOURCES
   addtf3.c
   comparetf2.c
@@ -234,9 +236,19 @@ if (NOT FUCHSIA)
   )
 endif()
 
-# These sources work on all x86 variants, but only x86 variants.
-set(x86_ARCH_SOURCES
-  cpu_model.c
+# These files are used on 32-bit and 64-bit x86.
+set(x86_ARCH_SOURCES cpu_model.c)
+
+if (NOT MSVC)
+  set(x86_ARCH_SOURCES
+    ${x86_ARCH_SOURCES}
+    i386/fp_mode.c
+  )
+endif ()
+
+# Implement extended-precision builtins, assuming long double is 80 bits.
+# long double is not 80 bits on Android or MSVC.
+set(x86_80_BIT_SOURCES
   divxc3.c
   fixxfdi.c
   fixxfti.c
@@ -252,24 +264,24 @@ set(x86_ARCH_SOURCES
 )
 
 if (NOT MSVC)
-  set(x86_ARCH_SOURCES
-    ${x86_ARCH_SOURCES}
-    i386/fp_mode.c
-  )
-endif ()
-
-if (NOT MSVC)
   set(x86_64_SOURCES
     ${GENERIC_SOURCES}
     ${GENERIC_TF_SOURCES}
     ${x86_ARCH_SOURCES}
     x86_64/floatdidf.c
     x86_64/floatdisf.c
-    x86_64/floatdixf.c
     x86_64/floatundidf.S
     x86_64/floatundisf.S
-    x86_64/floatundixf.S
   )
+
+  if (NOT ANDROID)
+    set(x86_64_SOURCES
+      ${x86_64_SOURCES}
+      ${x86_80_BIT_SOURCES}
+      x86_64/floatdixf.c
+      x86_64/floatundixf.S
+    )
+  endif()
 
   # Darwin x86_64 Haswell
   set(x86_64h_SOURCES ${x86_64_SOURCES})
@@ -290,16 +302,23 @@ if (NOT MSVC)
     i386/divdi3.S
     i386/floatdidf.S
     i386/floatdisf.S
-    i386/floatdixf.S
     i386/floatundidf.S
     i386/floatundisf.S
-    i386/floatundixf.S
     i386/lshrdi3.S
     i386/moddi3.S
     i386/muldi3.S
     i386/udivdi3.S
     i386/umoddi3.S
   )
+
+  if (NOT ANDROID)
+    set(i386_SOURCES
+      ${i386_SOURCES}
+      ${x86_80_BIT_SOURCES}
+      i386/floatdixf.S
+      i386/floatundixf.S
+    )
+  endif()
 
   if (WIN32)
     set(i386_SOURCES
@@ -317,7 +336,6 @@ else () # MSVC
     ${x86_ARCH_SOURCES}
     x86_64/floatdidf.c
     x86_64/floatdisf.c
-    x86_64/floatdixf.c
   )
   set(i386_SOURCES ${GENERIC_SOURCES} ${x86_ARCH_SOURCES})
 endif () # if (NOT MSVC)
