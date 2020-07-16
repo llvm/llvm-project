@@ -17,45 +17,46 @@
 
 using namespace mlir;
 using namespace mlir::shape;
+using namespace mlir::scf;
 
 namespace {
 /// Converts `shape.reduce` to `scf.for`.
-struct ReduceOpConverter : public OpRewritePattern<ReduceOp> {
+struct ReduceOpConverter : public OpConversionPattern<shape::ReduceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using OpConversionPattern::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(ReduceOp op,
-                                PatternRewriter &rewriter) const final;
+  LogicalResult
+  matchAndRewrite(shape::ReduceOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final;
 };
 } // namespace
 
 LogicalResult
-ReduceOpConverter::matchAndRewrite(ReduceOp reduceOp,
-                                   PatternRewriter &rewriter) const {
-  auto loc = reduceOp.getLoc();
+ReduceOpConverter::matchAndRewrite(shape::ReduceOp op, ArrayRef<Value> operands,
+                                   ConversionPatternRewriter &rewriter) const {
+  // For now, this lowering is only defined on `tensor<?xindex>` operands.
+  if (!op.shape().getType().isa<RankedTensorType>())
+    return failure();
+
+  auto loc = op.getLoc();
+  shape::ReduceOp::Adaptor transformed(operands);
 
   Value zero = rewriter.create<ConstantIndexOp>(loc, 0);
   Value one = rewriter.create<ConstantIndexOp>(loc, 1);
-  Value extentTensor = rewriter.create<ToExtentTensorOp>(
-      loc,
-      RankedTensorType::get({ShapedType::kDynamicSize},
-                            rewriter.getIndexType()),
-      reduceOp.shape());
-  Value size =
-      rewriter.create<DimOp>(loc, rewriter.getIndexType(), extentTensor, zero);
+  Type indexTy = rewriter.getIndexType();
+  Value rank = rewriter.create<DimOp>(loc, indexTy, transformed.shape(), zero);
 
   auto loop = rewriter.create<scf::ForOp>(
-      loc, zero, size, one, reduceOp.initVals(),
-      [&](OpBuilder &b, Location nestedLoc, Value iv, ValueRange args) {
-        Value indexExtent = b.create<ExtractElementOp>(loc, extentTensor, iv);
-        Value sizeExtent = b.create<IndexToSizeOp>(loc, indexExtent);
+      loc, zero, rank, one, op.initVals(),
+      [&](OpBuilder &b, Location loc, Value iv, ValueRange args) {
+        Value extent = b.create<ExtractElementOp>(loc, transformed.shape(), iv);
 
-        SmallVector<Value, 2> mapped_values{iv, sizeExtent};
-        mapped_values.append(args.begin(), args.end());
+        SmallVector<Value, 2> mappedValues{iv, extent};
+        mappedValues.append(args.begin(), args.end());
 
         BlockAndValueMapping mapping;
-        Block *reduceBody = reduceOp.getBody();
-        mapping.map(reduceBody->getArguments(), mapped_values);
+        Block *reduceBody = op.getBody();
+        mapping.map(reduceBody->getArguments(), mappedValues);
         for (auto &nested : reduceBody->without_terminator())
           b.clone(nested, mapping);
 
@@ -65,7 +66,7 @@ ReduceOpConverter::matchAndRewrite(ReduceOp reduceOp,
         b.create<scf::YieldOp>(loc, mappedResults);
       });
 
-  rewriter.replaceOp(reduceOp, loop.getResults());
+  rewriter.replaceOp(op, loop.getResults());
   return success();
 }
 
@@ -138,8 +139,8 @@ void ConvertShapeToSCFPass::runOnFunction() {
 
   // Setup target legality.
   ConversionTarget target(getContext());
-  target.addLegalDialect<ShapeDialect, scf::SCFDialect, StandardOpsDialect>();
-  target.addIllegalOp<ReduceOp, ShapeOfOp>();
+  target.addLegalDialect<SCFDialect, StandardOpsDialect>();
+  target.addLegalOp<ModuleOp, FuncOp>();
 
   // Apply conversion.
   if (failed(applyPartialConversion(getFunction(), target, patterns)))
