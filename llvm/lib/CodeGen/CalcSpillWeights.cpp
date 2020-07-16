@@ -161,6 +161,17 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
 
   std::pair<unsigned, unsigned> TargetHint = mri.getRegAllocationHint(li.reg);
 
+  if (li.isSpillable() && VRM) {
+    Register Reg = li.reg;
+    Register Original = VRM->getOriginal(Reg);
+    const LiveInterval &OrigInt = LIS.getInterval(Original);
+    // li comes from a split of OrigInt. If OrigInt was marked
+    // as not spillable, make sure the new interval is marked
+    // as not spillable as well.
+    if (!OrigInt.isSpillable())
+      li.markNotSpillable();
+  }
+
   // Don't recompute spill weight for an unspillable register.
   bool Spillable = li.isSpillable();
 
