@@ -10,7 +10,7 @@ from libcxx.test.dsl import *
 
 _allStandards = ['c++98', 'c++03', 'c++11', 'c++14', 'c++17', 'c++2a']
 
-parameters = [
+DEFAULT_PARAMETERS = [
   # Core parameters of the test suite
   Parameter(name='std', choices=_allStandards, type=str,
             help="The version of the standard to compile the test suite with.",
