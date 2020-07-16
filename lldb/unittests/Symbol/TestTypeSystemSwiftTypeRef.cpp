@@ -264,6 +264,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Aggregate) {
     NodePointer n = b.GlobalType(b.Node(Node::Kind::Tuple));
     CompilerType tuple = GetCompilerType(b.Mangle(n));
     ASSERT_TRUE(tuple.IsAggregateType());
+    ASSERT_FALSE(tuple.IsScalarType());
     // Yes, Int is a struct.
     NodePointer int_node = b.GlobalTypeMangling(b.IntType());
     CompilerType int_type = GetCompilerType(b.Mangle(int_node));
@@ -289,7 +290,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Defined) {
   }
 }
 
-TEST_F(TestTypeSystemSwiftTypeRef, IntFloat) {
+TEST_F(TestTypeSystemSwiftTypeRef, Scalar) {
   using namespace swift::Demangle;
   Demangler dem;
   NodeBuilder b(dem);
@@ -303,6 +304,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, IntFloat) {
     ASSERT_EQ(is_complex, false);
     bool is_signed = true;
     ASSERT_TRUE(int_type.IsIntegerType(is_signed));
+    ASSERT_TRUE(int_type.IsScalarType());
   }
   {
     NodePointer float_node = b.GlobalTypeMangling(b.FloatType());
@@ -314,5 +316,6 @@ TEST_F(TestTypeSystemSwiftTypeRef, IntFloat) {
     ASSERT_EQ(is_complex, false);
     bool is_signed = true;
     ASSERT_FALSE(float_type.IsIntegerType(is_signed));
+    ASSERT_TRUE(float_type.IsScalarType());
   }
 }
