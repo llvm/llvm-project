@@ -335,10 +335,12 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << getName()
                     << " count=" << relocations.size() << "\n");
 
-  unsigned opcode_ptr_const =
-      config->is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
-  unsigned opcode_ptr_add =
-      config->is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
+  unsigned opcode_ptr_const = config->is64.getValueOr(false)
+                                  ? WASM_OPCODE_I64_CONST
+                                  : WASM_OPCODE_I32_CONST;
+  unsigned opcode_ptr_add = config->is64.getValueOr(false)
+                                ? WASM_OPCODE_I64_ADD
+                                : WASM_OPCODE_I32_ADD;
 
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
