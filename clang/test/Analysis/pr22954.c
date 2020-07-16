@@ -352,6 +352,8 @@ int f19(int i) {
   memcpy(J0.s1[i].s1, input, 2);
   clang_analyzer_eval(J0.s1[0].s1[0] == 1); // expected-warning{{UNKNOWN}}\
   expected-warning{{Potential leak of memory pointed to by field 's2'}}\
+  expected-warning{{Potential leak of memory pointed to by field 's2'}}\
+  expected-warning{{Potential leak of memory pointed to by field 's2'}}\
   expected-warning{{Potential leak of memory pointed to by 'J0.s2'}}
   clang_analyzer_eval(J0.s1[0].s1[1] == 2); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(J0.s1[1].s1[0] == 3); // expected-warning{{UNKNOWN}}

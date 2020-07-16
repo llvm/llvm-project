@@ -110,25 +110,25 @@ int main() {
   [&]() {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
 
-    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams(
+    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(
     // LAMBDA: call void [[OFFLOADING_FUN_1:@.+]](
 
-    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams(
+    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(
     // LAMBDA: call void [[OFFLOADING_FUN_2:@.+]](
 
-    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams(
+    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(
     // LAMBDA: call void [[OFFLOADING_FUN_3:@.+]](
 
-    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams(
+    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(
     // LAMBDA: call void [[OFFLOADING_FUN_4:@.+]](
 
-    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams(
+    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(
     // LAMBDA: call void [[OFFLOADING_FUN_5:@.+]](
 
-    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams(
+    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(
     // LAMBDA: call void [[OFFLOADING_FUN_6:@.+]](
 
-    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams(
+    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(
     // LAMBDA: call void [[OFFLOADING_FUN_7:@.+]](
 
     // no schedule clauses
@@ -877,25 +877,25 @@ int main() {
 #else
   // CHECK-LABEL: @main
 
-  // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+  // CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
   // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
 
-  // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+  // CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
   // CHECK: call void [[OFFLOADING_FUN_2:@.+]](
 
-  // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+  // CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
   // CHECK: call void [[OFFLOADING_FUN_3:@.+]](
 
-  // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+  // CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
   // CHECK: call void [[OFFLOADING_FUN_4:@.+]](
 
-  // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+  // CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
   // CHECK: call void [[OFFLOADING_FUN_5:@.+]](
 
-  // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+  // CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
   // CHECK: call void [[OFFLOADING_FUN_6:@.+]](
 
-  // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+  // CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
   // CHECK: call void [[OFFLOADING_FUN_7:@.+]](
 
   // CHECK: call{{.+}} [[TMAIN:@.+]]()
@@ -1627,25 +1627,25 @@ int main() {
 // check code
 // CHECK: define{{.+}} [[TMAIN]]()
 
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
 
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOADING_FUN_2:@.+]](
 
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOADING_FUN_3:@.+]](
 
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOADING_FUN_4:@.+]](
 
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOADING_FUN_5:@.+]](
 
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOADING_FUN_6:@.+]](
 
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOADING_FUN_7:@.+]](
 
 // CHECK: define{{.+}} void [[OFFLOADING_FUN_1]](

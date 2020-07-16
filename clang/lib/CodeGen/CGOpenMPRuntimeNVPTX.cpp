@@ -4770,6 +4770,7 @@ Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
                                                         const VarDecl *VD) {
   if (VD && VD->hasAttr<OMPAllocateDeclAttr>()) {
     const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
+    auto AS = LangAS::Default;
     switch (A->getAllocatorType()) {
       // Use the default allocator here as by default local vars are
       // threadlocal.
@@ -4783,42 +4784,30 @@ Address CGOpenMPRuntimeNVPTX::getAddressOfLocalVariable(CodeGenFunction &CGF,
     case OMPAllocateDeclAttr::OMPUserDefinedMemAlloc:
       // TODO: implement aupport for user-defined allocators.
       return Address::invalid();
-    case OMPAllocateDeclAttr::OMPConstMemAlloc: {
-      llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
-      auto *GV = new llvm::GlobalVariable(
-          CGM.getModule(), VarTy, /*isConstant=*/false,
-          llvm::GlobalValue::InternalLinkage,
-          llvm::Constant::getNullValue(VarTy), VD->getName(),
-          /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
-          CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant));
-      CharUnits Align = CGM.getContext().getDeclAlign(VD);
-      GV->setAlignment(Align.getAsAlign());
-      return Address(GV, Align);
-    }
-    case OMPAllocateDeclAttr::OMPPTeamMemAlloc: {
-      llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
-      auto *GV = new llvm::GlobalVariable(
-          CGM.getModule(), VarTy, /*isConstant=*/false,
-          llvm::GlobalValue::InternalLinkage,
-          llvm::Constant::getNullValue(VarTy), VD->getName(),
-          /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
-          CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared));
-      CharUnits Align = CGM.getContext().getDeclAlign(VD);
-      GV->setAlignment(Align.getAsAlign());
-      return Address(GV, Align);
-    }
+    case OMPAllocateDeclAttr::OMPConstMemAlloc:
+      AS = LangAS::cuda_constant;
+      break;
+    case OMPAllocateDeclAttr::OMPPTeamMemAlloc:
+      AS = LangAS::cuda_shared;
+      break;
     case OMPAllocateDeclAttr::OMPLargeCapMemAlloc:
-    case OMPAllocateDeclAttr::OMPCGroupMemAlloc: {
-      llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
-      auto *GV = new llvm::GlobalVariable(
-          CGM.getModule(), VarTy, /*isConstant=*/false,
-          llvm::GlobalValue::InternalLinkage,
-          llvm::Constant::getNullValue(VarTy), VD->getName());
-      CharUnits Align = CGM.getContext().getDeclAlign(VD);
-      GV->setAlignment(Align.getAsAlign());
-      return Address(GV, Align);
+    case OMPAllocateDeclAttr::OMPCGroupMemAlloc:
+      break;
     }
-    }
+    llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
+    auto *GV = new llvm::GlobalVariable(
+        CGM.getModule(), VarTy, /*isConstant=*/false,
+        llvm::GlobalValue::InternalLinkage, llvm::Constant::getNullValue(VarTy),
+        VD->getName(),
+        /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+        CGM.getContext().getTargetAddressSpace(AS));
+    CharUnits Align = CGM.getContext().getDeclAlign(VD);
+    GV->setAlignment(Align.getAsAlign());
+    return Address(
+        CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+            GV, VarTy->getPointerTo(CGM.getContext().getTargetAddressSpace(
+                    VD->getType().getAddressSpace()))),
+        Align);
   }
 
   if (getDataSharingMode(CGM) != CGOpenMPRuntimeNVPTX::Generic)

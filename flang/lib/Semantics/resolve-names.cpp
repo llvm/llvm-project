@@ -2310,6 +2310,7 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
     }
     for (const auto &[name, symbol] : *useModuleScope_) {
       if (symbol->attrs().test(Attr::PUBLIC) &&
+          !symbol->attrs().test(Attr::INTRINSIC) &&
           !symbol->detailsIf<MiscDetails>()) {
         if (useNames.count(name) == 0) {
           auto *localSymbol{FindInScope(currScope(), name)};
@@ -4451,6 +4452,8 @@ std::optional<MessageFixedText> DeclarationVisitor::CheckSaveAttr(
   } else if (symbol.has<ProcEntityDetails>() &&
       !symbol.attrs().test(Attr::POINTER)) {
     return "Procedure '%s' with SAVE attribute must also have POINTER attribute"_err_en_US;
+  } else if (IsAutomatic(symbol)) {
+    return "SAVE attribute may not be applied to automatic data object '%s'"_err_en_US;
   } else {
     return std::nullopt;
   }

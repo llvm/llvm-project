@@ -1244,16 +1244,131 @@ func @pretty_names() {
   return
 }
 
+// CHECK-LABEL: func @unreachable_dominance_violation_ok
 func @unreachable_dominance_violation_ok() -> i1 {
-  %c = constant false       // CHECK: [[VAL:%.*]] = constant false
-  return %c : i1    // CHECK:   return [[VAL]] : i1
-^bb1:         // CHECK: ^bb1:   // no predecessors
+// CHECK:   [[VAL:%.*]] = constant false
+// CHECK:   return [[VAL]] : i1
+// CHECK: ^bb1:   // no predecessors
+// CHECK:   [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
+// CHECK:   br ^bb3
+// CHECK: ^bb2:   // pred: ^bb2
+// CHECK:   br ^bb2
+// CHECK: ^bb3:   // pred: ^bb1
+// CHECK:   [[VAL3]] = "foo"() : () -> i64
+// CHECK:   return [[VAL2]]#1 : i1
+// CHECK: }
+  %c = constant false
+  return %c : i1
+^bb1:
   // %1 is not dominated by it's definition, but block is not reachable.
-  %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1) // CHECK: [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
-  br ^bb4     // CHECK:   br ^bb3
-^bb2:         // CHECK: ^bb2:   // pred: ^bb2
-  br ^bb2     // CHECK:   br ^bb2
-^bb4:         // CHECK: ^bb3:   // pred: ^bb1
-  %1 = "foo"() : ()->i64 // CHECK: [[VAL3]] = "foo"() : () -> i64
-  return %2#1 : i1 // CHECK: return [[VAL2]]#1 : i1
-}            // CHECK: }
+  %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
+  br ^bb3
+^bb2:
+  br ^bb2
+^bb3:
+  %1 = "foo"() : ()->i64
+  return %2#1 : i1
+}
+
+// CHECK-LABEL: func @graph_region_in_hierarchy_ok
+func @graph_region_in_hierarchy_ok() -> i64 {
+// CHECK:   br ^bb2
+// CHECK: ^bb1:
+// CHECK:   test.graph_region {
+// CHECK:     [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
+// CHECK:   }
+// CHECK:   br ^bb3
+// CHECK: ^bb2:   // pred: ^bb0
+// CHECK:   [[VAL3]] = "foo"() : () -> i64
+// CHECK:   br ^bb1
+// CHECK: ^bb3:   // pred: ^bb1
+// CHECK:   return [[VAL3]] : i64
+// CHECK: }
+  br ^bb2
+^bb1:
+  test.graph_region {
+    // %1 is well-defined here, since bb2 dominates bb1.
+    %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
+  }
+  br ^bb4
+^bb2:
+  %1 = "foo"() : ()->i64
+  br ^bb1
+^bb4:
+  return %1 : i64
+}
+
+// CHECK-LABEL: func @graph_region_kind
+func @graph_region_kind() -> () {
+// CHECK: [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
+// CHECK: [[VAL3]] = "baz"([[VAL2]]#0) : (i1) -> i64
+  test.graph_region {
+    // %1 OK here in in graph region.
+    %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
+    %1 = "baz"(%2#0) : (i1) -> (i64)
+  }
+  return
+}
+
+// CHECK-LABEL: func @graph_region_inside_ssacfg_region
+func @graph_region_inside_ssacfg_region() -> () {
+// CHECK: "test.ssacfg_region"
+// CHECK:   [[VAL3:%.*]] = "baz"() : () -> i64
+// CHECK:   test.graph_region {
+// CHECK:     [[VAL2:%.*]]:3 = "bar"([[VAL3]]) : (i64) -> (i1, i1, i1)
+// CHECK:   }
+// CHECK:   [[VAL4:.*]] = "baz"() : () -> i64
+  "test.ssacfg_region"() ({
+    %1 = "baz"() : () -> (i64)
+    test.graph_region {
+      %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
+    }
+    %3 = "baz"() : () -> (i64)
+  }) : () -> ()
+  return
+}
+
+// CHECK-LABEL: func @graph_region_in_graph_region_ok
+func @graph_region_in_graph_region_ok() -> () {
+// CHECK: test.graph_region {
+// CHECK:   test.graph_region {
+// CHECK:     [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
+// CHECK:   }
+// CHECK:   [[VAL3]] = "foo"() : () -> i64
+// CHECK: }
+test.graph_region {
+    test.graph_region {
+    // %1 is well-defined here since defined in graph region
+      %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
+    }
+    %1 = "foo"() : ()->i64
+    "test.terminator"() : ()->()
+  }
+  return
+}
+
+// CHECK: test.graph_region {
+test.graph_region {
+// CHECK:   [[VAL1:%.*]] = "op1"([[VAL3:%.*]]) : (i32) -> i32
+// CHECK:   [[VAL2:%.*]] = "test.ssacfg_region"([[VAL1]], [[VAL2]], [[VAL3]], [[VAL4:%.*]]) ( {
+// CHECK:     [[VAL5:%.*]] = "op2"([[VAL1]], [[VAL2]], [[VAL3]], [[VAL4]]) : (i32, i32, i32, i32) -> i32
+// CHECK:   }) : (i32, i32, i32, i32) -> i32
+// CHECK:   [[VAL3]] = "op2"([[VAL1]], [[VAL4]]) : (i32, i32) -> i32
+// CHECK:   [[VAL4]] = "op3"([[VAL1]]) : (i32) -> i32
+  %1 = "op1"(%3) : (i32) -> (i32)
+  %2 = "test.ssacfg_region"(%1, %2, %3, %4) ({
+    %5 = "op2"(%1, %2, %3, %4) :
+	 (i32, i32, i32, i32) -> (i32)
+  }) : (i32, i32, i32, i32) -> (i32)
+  %3 = "op2"(%1, %4) : (i32, i32) -> (i32)
+  %4 = "op3"(%1) : (i32) -> (i32)
+}
+
+// CHECK: "unregistered_func_might_have_graph_region"() ( {
+// CHECK: [[VAL1:%.*]] = "foo"([[VAL1]], [[VAL2:%.*]]) : (i64, i64) -> i64
+// CHECK: [[VAL2]] = "bar"([[VAL1]])
+"unregistered_func_might_have_graph_region"() ( {
+  %1 = "foo"(%1, %2) : (i64, i64) -> i64
+  %2 = "bar"(%1) : (i64) -> i64
+  "unregistered_terminator"() : () -> ()
+}) {sym_name = "unregistered_op_dominance_violation_ok", type = () -> i1} : () -> ()

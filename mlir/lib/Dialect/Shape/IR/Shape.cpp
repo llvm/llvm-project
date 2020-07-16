@@ -237,12 +237,22 @@ static LogicalResult verify(AssumingAllOp op) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
-  if (!operands[0] || !operands[1])
+  if (!operands[1])
     return nullptr;
-  auto lhsShape = llvm::to_vector<6>(
-      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+
   auto rhsShape = llvm::to_vector<6>(
       operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  if (rhsShape.empty())
+    return lhs();
+
+  if (!operands[0])
+    return nullptr;
+
+  auto lhsShape = llvm::to_vector<6>(
+      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+  if (lhsShape.empty())
+    return rhs();
+
   SmallVector<int64_t, 6> resultShape;
   // If the shapes are not compatible, we can't fold it.
   // TODO: Fold to an "error".

@@ -181,11 +181,11 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:     ELFCLASS64
-  Data:      ELFDATA2LSB
-  Type:      ET_REL
-  Machine:   EM_X86_64
-  SHEntSize: 1
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_REL
+  Machine:    EM_X86_64
+  EShEntSize: 1
 
 ## Check that llvm-readobj reports a warning if .symtab has sh_size
 ## that is not a multiple of sh_entsize.
@@ -306,11 +306,11 @@ Symbols: []
  
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  SHNum:   0xFF
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+  EShNum:   0xFF
 
 ## Check llvm-readobj does not crash on a truncated ELF.
 
@@ -521,11 +521,11 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:    ELFCLASS64
-  Data:     ELFDATA2LSB
-  Type:     ET_REL
-  Machine:  EM_X86_64
-  SHStrNdx: 0xFF
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+  EShStrNdx: 0xFF
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
@@ -541,11 +541,11 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  SHNum:   0x0
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+  EShNum:   0x0
 Sections:
   - Type: SHT_NULL
     Size: 288230376151711743
@@ -560,11 +560,11 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  SHNum:   0x0
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+  EShNum:   0x0
 Sections:
   - Type: SHT_NULL
     Size: 288230376151711744
@@ -578,11 +578,11 @@ Sections:
  
 --- !ELF
 FileHeader:
-  Class:    ELFCLASS64
-  Data:     ELFDATA2LSB
-  Type:     ET_REL
-  Machine:  EM_X86_64
-  SHOff:    0xffffffffffffffff
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+  EShOff:  0xffffffffffffffff
 
 ## Check that llvm-objdump reports an error when it tries to dump a
 ## symbol name and .strtab is empty.
@@ -641,12 +641,12 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:    ELFCLASS64
-  Data:     ELFDATA2LSB
-  Type:     ET_REL
-  Machine:  EM_X86_64
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
 ## SHN_XINDEX == 0xffff.
-  SHStrNdx: 0xffff
+  EShStrNdx: 0xffff
 Sections:
   - Type: SHT_NULL
     Link: 0xff

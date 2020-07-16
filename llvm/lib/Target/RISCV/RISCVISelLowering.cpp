@@ -149,12 +149,27 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, XLenVT, Custom);
   setOperationAction(ISD::SRA_PARTS, XLenVT, Custom);
 
-  setOperationAction(ISD::ROTL, XLenVT, Expand);
-  setOperationAction(ISD::ROTR, XLenVT, Expand);
-  setOperationAction(ISD::BSWAP, XLenVT, Expand);
-  setOperationAction(ISD::CTTZ, XLenVT, Expand);
-  setOperationAction(ISD::CTLZ, XLenVT, Expand);
-  setOperationAction(ISD::CTPOP, XLenVT, Expand);
+  if (!(Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbp())) {
+    setOperationAction(ISD::ROTL, XLenVT, Expand);
+    setOperationAction(ISD::ROTR, XLenVT, Expand);
+  }
+
+  if (!Subtarget.hasStdExtZbp())
+    setOperationAction(ISD::BSWAP, XLenVT, Expand);
+
+  if (!Subtarget.hasStdExtZbb()) {
+    setOperationAction(ISD::CTTZ, XLenVT, Expand);
+    setOperationAction(ISD::CTLZ, XLenVT, Expand);
+    setOperationAction(ISD::CTPOP, XLenVT, Expand);
+  }
+
+  if (Subtarget.hasStdExtZbp())
+    setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
+
+  if (Subtarget.hasStdExtZbt()) {
+    setOperationAction(ISD::FSHL, XLenVT, Legal);
+    setOperationAction(ISD::FSHR, XLenVT, Legal);
+  }
 
   ISD::CondCode FPCCToExtend[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,

@@ -417,21 +417,21 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
   else
     Header.e_phnum = 0;
 
-  Header.e_shentsize =
-      Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
+  Header.e_shentsize = Doc.Header.EShEntSize ? (uint16_t)*Doc.Header.EShEntSize
+                                             : sizeof(Elf_Shdr);
 
   const bool NoShdrs =
       Doc.SectionHeaders && Doc.SectionHeaders->NoHeaders.getValueOr(false);
 
-  if (Doc.Header.SHOff)
-    Header.e_shoff = *Doc.Header.SHOff;
+  if (Doc.Header.EShOff)
+    Header.e_shoff = *Doc.Header.EShOff;
   else if (NoShdrs)
     Header.e_shoff = 0;
   else
     Header.e_shoff = SHOff;
 
-  if (Doc.Header.SHNum)
-    Header.e_shnum = *Doc.Header.SHNum;
+  if (Doc.Header.EShNum)
+    Header.e_shnum = *Doc.Header.EShNum;
   else if (!Doc.SectionHeaders)
     Header.e_shnum = Doc.getSections().size();
   else if (NoShdrs)
@@ -442,8 +442,8 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
                                       : 0) +
         /*Null section*/ 1;
 
-  if (Doc.Header.SHStrNdx)
-    Header.e_shstrndx = *Doc.Header.SHStrNdx;
+  if (Doc.Header.EShStrNdx)
+    Header.e_shstrndx = *Doc.Header.EShStrNdx;
   else if (NoShdrs || ExcludedSectionHeaders.count(".shstrtab"))
     Header.e_shstrndx = 0;
   else

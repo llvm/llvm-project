@@ -452,8 +452,8 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     // implementation tries to generate legalize and scalarization costs. Maybe
     // we could hoist the scalarization code here?
     return BaseT::getArithmeticInstrCost(Opcode, Ty, TTI::TCK_RecipThroughput,
-                                         Opd1Info, Opd2Info,
-                                         Opd1PropInfo, Opd2PropInfo);
+                                         Opd1Info, Opd2Info, Opd1PropInfo,
+                                         Opd2PropInfo, Args, CxtI);
   }
 
   // Legalize the type.
@@ -506,9 +506,20 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     // i32
     return QuarterRateCost * NElts * LT.first;
   }
+  case ISD::FMUL:
+    // Check possible fuse {fadd|fsub}(a,fmul(b,c)) and return zero cost for
+    // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
+    // fused operation.
+    if (!HasFP32Denormals && SLT == MVT::f32 && CxtI && CxtI->hasOneUse())
+      if (const auto *FAdd = dyn_cast<BinaryOperator>(*CxtI->user_begin())) {
+        const int OPC = TLI->InstructionOpcodeToISD(FAdd->getOpcode());
+        if (OPC == ISD::FADD || OPC == ISD::FSUB) {
+          return TargetTransformInfo::TCC_Free;
+        }
+      }
+    LLVM_FALLTHROUGH;
   case ISD::FADD:
   case ISD::FSUB:
-  case ISD::FMUL:
     if (SLT == MVT::f64)
       return LT.first * NElts * get64BitInstrCost();
 
@@ -568,9 +579,8 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     break;
   }
 
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                       Opd2Info,
-                                       Opd1PropInfo, Opd2PropInfo);
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
+                                       Opd1PropInfo, Opd2PropInfo, Args, CxtI);
 }
 
 // Return true if there's a potential benefit from using v2f16 instructions for

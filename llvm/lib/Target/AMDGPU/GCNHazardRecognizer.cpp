@@ -930,10 +930,12 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
     return false;
   };
 
-  auto IsExpiredFn = [] (MachineInstr *MI, int) {
+  auto IsExpiredFn = [](MachineInstr *MI, int) {
     return MI && (SIInstrInfo::isVALU(*MI) ||
                   (MI->getOpcode() == AMDGPU::S_WAITCNT &&
-                   !MI->getOperand(0).getImm()));
+                   !MI->getOperand(0).getImm()) ||
+                  (MI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+                   MI->getOperand(0).getImm() == 0xffe3));
   };
 
   if (::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn) ==
@@ -941,7 +943,9 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
     return false;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::V_NOP_e32));
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0xffe3);
   return true;
 }
 

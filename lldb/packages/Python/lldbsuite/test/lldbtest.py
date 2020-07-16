@@ -800,9 +800,6 @@ class Base(unittest2.TestCase):
         # List of spawned subproces.Popen objects
         self.subprocesses = []
 
-        # List of forked process PIDs
-        self.forkedProcessPids = []
-
         # List of log files produced by the current test.
         self.log_files = []
 
@@ -887,18 +884,11 @@ class Base(unittest2.TestCase):
         self.addTearDownHook(lambda: self.dbg.SetAsync(old_async))
 
     def cleanupSubprocesses(self):
-        # Ensure any subprocesses are cleaned up
-        for p in self.subprocesses:
+        # Terminate subprocesses in reverse order from how they were created.
+        for p in reversed(self.subprocesses):
             p.terminate()
             del p
         del self.subprocesses[:]
-        # Ensure any forked processes are cleaned up
-        for pid in self.forkedProcessPids:
-            try:
-                os.kill(pid, signal.SIGTERM)
-            except OSError:
-                pass
-        del self.forkedProcessPids[:]
 
     def spawnSubprocess(self, executable, args=[], install_remote=True):
         """ Creates a subprocess.Popen object with the specified executable and arguments,
@@ -909,23 +899,6 @@ class Base(unittest2.TestCase):
         proc.launch(executable, args)
         self.subprocesses.append(proc)
         return proc
-
-    def forkSubprocess(self, executable, args=[]):
-        """ Fork a subprocess with its own group ID.
-        """
-        child_pid = os.fork()
-        if child_pid == 0:
-            # If more I/O support is required, this can be beefed up.
-            fd = os.open(os.devnull, os.O_RDWR)
-            os.dup2(fd, 1)
-            os.dup2(fd, 2)
-            # This call causes the child to have its of group ID
-            os.setpgid(0, 0)
-            os.execvp(executable, [executable] + args)
-        # Give the child time to get through the execvp() call
-        time.sleep(0.1)
-        self.forkedProcessPids.append(child_pid)
-        return child_pid
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -2456,7 +2429,12 @@ FileCheck output:
             options.SetLanguage(frame.GuessLanguage())
             eval_result = self.frame().EvaluateExpression(expr, options)
         else:
-            eval_result = self.target().EvaluateExpression(expr, options)
+            target = self.target()
+            # If there is no selected target, run the expression in the dummy
+            # target.
+            if not target.IsValid():
+                target = self.dbg.GetDummyTarget()
+            eval_result = target.EvaluateExpression(expr, options)
 
         self.assertSuccess(eval_result.GetError())
 

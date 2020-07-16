@@ -458,6 +458,9 @@ def int_read_register  : Intrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
                                    [IntrReadMem], "llvm.read_register">;
 def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],
                                    [], "llvm.write_register">;
+def int_read_volatile_register  : Intrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
+                                            [IntrHasSideEffects],
+                                             "llvm.read_volatile_register">;
 
 // Gets the address of the local variable area. This is typically a copy of the
 // stack, frame, or base pointer depending on the type of prologue.
