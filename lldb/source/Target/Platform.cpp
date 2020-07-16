@@ -1839,8 +1839,10 @@ lldb::ProcessSP Platform::DoConnectProcess(llvm::StringRef connect_url,
                                      nullptr);
     process_sp->RestoreProcessEvents();
     bool pop_process_io_handler = false;
+    bool pop_command_interpreter = false;
     Process::HandleProcessStateChangedEvent(event_sp, stream,
-                                            pop_process_io_handler);
+                                            pop_process_io_handler,
+                                            pop_command_interpreter);
   }
 
   return process_sp;
