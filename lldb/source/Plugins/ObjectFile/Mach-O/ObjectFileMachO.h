@@ -225,6 +225,8 @@ protected:
   typedef lldb_private::RangeVector<uint32_t, uint32_t> FileRangeArray;
   lldb_private::Address m_entry_point_address;
   FileRangeArray m_thread_context_offsets;
+  lldb::offset_t m_linkedit_original_offset;
+  lldb::addr_t m_text_address;
   bool m_thread_context_offsets_valid;
   lldb_private::FileSpecList m_reexported_dylibs;
   bool m_allow_assembly_emulation_unwind_plans;
