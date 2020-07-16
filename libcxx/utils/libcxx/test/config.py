@@ -20,6 +20,7 @@ from libcxx.compiler import CXXCompiler
 from libcxx.test.target_info import make_target_info
 import libcxx.util
 import libcxx.test.features
+import libcxx.test.newconfig
 import libcxx.test.params
 
 def loadSiteConfig(lit_config, config, param_name, env_name):
@@ -118,8 +119,8 @@ class Configuration(object):
             return 'lib' + name + '.a'
 
     def configure(self):
-        self.configure_target_info()
-        self.configure_executor()
+        self.target_info = make_target_info(self)
+        self.executor = self.get_lit_conf('executor')
         self.configure_cxx()
         self.configure_triple()
         self.configure_deployment()
@@ -139,35 +140,20 @@ class Configuration(object):
         self.configure_modules()
         self.configure_substitutions()
         self.configure_features()
-        self.configure_new_params()
-        self.configure_new_features()
 
-    def configure_new_features(self):
-        supportedFeatures = [f for f in libcxx.test.features.features if f.isSupported(self.config)]
-        for feature in supportedFeatures:
-            feature.enableIn(self.config)
-
-    def configure_new_params(self):
-        for param in libcxx.test.params.parameters:
-            feature = param.getFeature(self.config, self.lit_config.params)
-            if feature:
-                feature.enableIn(self.config)
+        libcxx.test.newconfig.configure(
+            libcxx.test.params.DEFAULT_PARAMETERS,
+            libcxx.test.features.DEFAULT_FEATURES,
+            self.config,
+            self.lit_config
+        )
 
     def print_config_info(self):
-        # Print the final compile and link flags.
-        self.lit_config.note('Using compiler: %s' % self.cxx.path)
-        self.lit_config.note('Using flags: %s' % self.cxx.flags)
         if self.cxx.use_modules:
             self.lit_config.note('Using modules flags: %s' %
                                  self.cxx.modules_flags)
-        self.lit_config.note('Using compile flags: %s'
-                             % self.cxx.compile_flags)
         if len(self.cxx.warning_flags):
             self.lit_config.note('Using warnings: %s' % self.cxx.warning_flags)
-        self.lit_config.note('Using link flags: %s' % self.cxx.link_flags)
-        # Print as list to prevent "set([...])" from being printed.
-        self.lit_config.note('Using available_features: %s' %
-                             list(sorted(self.config.available_features)))
         show_env_vars = {}
         for k,v in self.exec_env.items():
             if k not in os.environ or os.environ[k] != v:
@@ -184,13 +170,6 @@ class Configuration(object):
             self.use_clang_verify,
             self.executor,
             exec_env=self.exec_env)
-
-    def configure_executor(self):
-        self.executor = self.get_lit_conf('executor')
-        self.lit_config.note("Using executor: {}".format(self.executor))
-
-    def configure_target_info(self):
-        self.target_info = make_target_info(self)
 
     def configure_cxx(self):
         # Gather various compiler parameters.
@@ -730,11 +709,8 @@ class Configuration(object):
         arch = self.get_lit_conf('arch')
         if not arch:
             arch = self.cxx.getTriple().split('-', 1)[0]
-            self.lit_config.note("inferred arch as: %r" % arch)
 
-        inferred_platform, name, version = self.target_info.get_platform()
-        if inferred_platform:
-            self.lit_config.note("inferred platform as: %r" % (name + version))
+        _, name, version = self.target_info.get_platform()
         self.config.deployment = (arch, name, version)
 
         # Set the target triple for use by lit.
