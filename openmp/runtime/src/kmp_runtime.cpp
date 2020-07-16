@@ -4301,6 +4301,39 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
 
   TCW_SYNC_PTR(__kmp_threads[new_gtid], new_thr);
 
+#if USE_ITT_BUILD && USE_ITT_NOTIFY && KMP_DEBUG
+  // suppress race conditions detection on synchronization flags in debug mode
+  // this helps to analyze library internals eliminating false positives
+  __itt_suppress_mark_range(
+      __itt_suppress_range, __itt_suppress_threading_errors,
+      &new_thr->th.th_sleep_loc, sizeof(new_thr->th.th_sleep_loc));
+  __itt_suppress_mark_range(
+      __itt_suppress_range, __itt_suppress_threading_errors,
+      &new_thr->th.th_reap_state, sizeof(new_thr->th.th_reap_state));
+#if KMP_OS_WINDOWS
+  __itt_suppress_mark_range(
+      __itt_suppress_range, __itt_suppress_threading_errors,
+      &new_thr->th.th_suspend_init, sizeof(new_thr->th.th_suspend_init));
+#else
+  __itt_suppress_mark_range(__itt_suppress_range,
+                            __itt_suppress_threading_errors,
+                            &new_thr->th.th_suspend_init_count,
+                            sizeof(new_thr->th.th_suspend_init_count));
+#endif
+  // TODO: check if we need to also suppress b_arrived flags
+  __itt_suppress_mark_range(__itt_suppress_range,
+                            __itt_suppress_threading_errors,
+                            CCAST(kmp_uint64 *, &new_thr->th.th_bar[0].bb.b_go),
+                            sizeof(new_thr->th.th_bar[0].bb.b_go));
+  __itt_suppress_mark_range(__itt_suppress_range,
+                            __itt_suppress_threading_errors,
+                            CCAST(kmp_uint64 *, &new_thr->th.th_bar[1].bb.b_go),
+                            sizeof(new_thr->th.th_bar[1].bb.b_go));
+  __itt_suppress_mark_range(__itt_suppress_range,
+                            __itt_suppress_threading_errors,
+                            CCAST(kmp_uint64 *, &new_thr->th.th_bar[2].bb.b_go),
+                            sizeof(new_thr->th.th_bar[2].bb.b_go));
+#endif /* USE_ITT_BUILD && USE_ITT_NOTIFY && KMP_DEBUG */
   if (__kmp_storage_map) {
     __kmp_print_thread_storage_map(new_thr, new_gtid);
   }
