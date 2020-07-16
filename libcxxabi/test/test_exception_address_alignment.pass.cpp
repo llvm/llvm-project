@@ -11,11 +11,10 @@
 
 // The <unwind.h> header provided in the SDK of older Xcodes used to provide
 // an incorrectly aligned _Unwind_Exception type. That causes these tests to
-// fail with those SDKs. Note that we use the AppleClang version as a cheap
-// proxy for the SDK version.
-// XFAIL: apple-clang-11 && libcxxabi-has-system-unwinder
-// XFAIL: apple-clang-10 && libcxxabi-has-system-unwinder
-// XFAIL: apple-clang-9 && libcxxabi-has-system-unwinder
+// fail with those SDKs.
+// FIXME: We mark the test as unsupported on Apple until we have a Lit feature
+//        representing the SDK version.
+// UNSUPPORTED: darwin
 
 // Test that the address of the exception object is properly aligned as required
 // by the relevant ABI
