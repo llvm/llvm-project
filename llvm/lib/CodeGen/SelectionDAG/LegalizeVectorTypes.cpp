@@ -3610,16 +3610,15 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
   EVT InVT = N->getOperand(0).getValueType();
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDLoc dl(N);
-  unsigned WidenNumElts = WidenVT.getVectorNumElements();
-  unsigned NumInElts = InVT.getVectorNumElements();
   unsigned NumOperands = N->getNumOperands();
 
   bool InputWidened = false; // Indicates we need to widen the input.
   if (getTypeAction(InVT) != TargetLowering::TypeWidenVector) {
-    if (WidenVT.getVectorNumElements() % InVT.getVectorNumElements() == 0) {
+    unsigned WidenNumElts = WidenVT.getVectorMinNumElements();
+    unsigned NumInElts = InVT.getVectorMinNumElements();
+    if (WidenNumElts % NumInElts == 0) {
       // Add undef vectors to widen to correct length.
-      unsigned NumConcat = WidenVT.getVectorNumElements() /
-                           InVT.getVectorNumElements();
+      unsigned NumConcat = WidenNumElts / NumInElts;
       SDValue UndefVal = DAG.getUNDEF(InVT);
       SmallVector<SDValue, 16> Ops(NumConcat);
       for (unsigned i=0; i < NumOperands; ++i)
@@ -3643,6 +3642,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
         return GetWidenedVector(N->getOperand(0));
 
       if (NumOperands == 2) {
+        assert(!WidenVT.isScalableVector() &&
+               "Cannot use vector shuffles to widen CONCAT_VECTOR result");
+        unsigned WidenNumElts = WidenVT.getVectorNumElements();
+        unsigned NumInElts = InVT.getVectorNumElements();
+
         // Replace concat of two operands with a shuffle.
         SmallVector<int, 16> MaskOps(WidenNumElts, -1);
         for (unsigned i = 0; i < NumInElts; ++i) {
@@ -3656,6 +3660,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
       }
     }
   }
+
+  assert(!WidenVT.isScalableVector() &&
+         "Cannot use build vectors to widen CONCAT_VECTOR result");
+  unsigned WidenNumElts = WidenVT.getVectorNumElements();
+  unsigned NumInElts = InVT.getVectorNumElements();
 
   // Fall back to use extracts and build vector.
   EVT EltVT = WidenVT.getVectorElementType();
