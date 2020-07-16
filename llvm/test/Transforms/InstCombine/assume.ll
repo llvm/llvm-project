@@ -377,7 +377,6 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
 ; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
 ; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
