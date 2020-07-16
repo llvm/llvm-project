@@ -43,3 +43,31 @@ func @shape_of_unranked(%arg : tensor<*xf32>) {
   return
 }
 
+// -----
+
+// CHECK-LABEL:  @shape_eq
+// CHECK-SAME:   (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>) -> i1
+func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>) -> i1 {
+  // CHECK: %[[C0:.*]] = constant 0 : index
+  // CHECK: %[[RANK_A:.*]] = dim %[[A]], %[[C0]] : tensor<?xindex>
+  // CHECK: %[[RANK_B:.*]] = dim %[[B]], %[[C0]] : tensor<?xindex>
+  // CHECK: %[[RANK_EQ:.*]] = cmpi "eq", %[[RANK_A]], %[[RANK_B]]
+  // CHECK: %[[SHAPE_EQ:.*]] = scf.if %[[RANK_EQ]] -> (i1) {
+  // CHECK:   %[[C1:.*]] = constant 1 : index
+  // CHECK:   %[[INIT:.*]] = constant true
+  // CHECK:   %[[SHAPE_EQ_INNER:.*]] = scf.for %[[I:.*]] = %[[C0]] to %[[RANK_A]] step %[[C1]] iter_args(%[[CONJ:.*]] = %[[INIT]]) -> (i1) {
+  // CHECK:     %[[EXTENT_A:.*]] = extract_element %[[A]][%[[I]]] : tensor<?xindex>
+  // CHECK:     %[[EXTENT_B:.*]] = extract_element %[[B]][%[[I]]] : tensor<?xindex>
+  // CHECK:     %[[EXTENT_EQ:.*]] = cmpi "eq", %[[EXTENT_A]], %[[EXTENT_B]]
+  // CHECK:     %[[CONJ_NEXT:.*]] = and %[[CONJ]], %[[EXTENT_EQ]]
+  // CHECK:     scf.yield %[[CONJ_NEXT]] : i1
+  // CHECK:   }
+  // CHECK:   scf.yield %[[SHAPE_EQ_INNER]] : i1
+  // CHECK: } else {
+  // CHECK:   %[[SHAPE_EQ_INNER:.*]] = constant false
+  // CHECK:   scf.yield %[[SHAPE_EQ_INNER]] : i1
+  // CHECK: }
+  // CHECK: return %[[SHAPE_EQ]] : i1
+  %result = shape.shape_eq %a, %b : tensor<?xindex>, tensor<?xindex>
+  return %result : i1
+}
