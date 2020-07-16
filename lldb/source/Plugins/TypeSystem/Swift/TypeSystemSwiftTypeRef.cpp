@@ -1254,12 +1254,6 @@ bool TypeSystemSwiftTypeRef::IsDefined(opaque_compiler_type_t type) {
   auto impl = [&]() -> bool { return type; };
   VALIDATE_AND_RETURN(impl, IsDefined, type, (ReconstructType(type)));
 }
-bool TypeSystemSwiftTypeRef::IsFloatingPointType(opaque_compiler_type_t type,
-                                                 uint32_t &count,
-                                                 bool &is_complex) {
-  return m_swift_ast_context->IsFloatingPointType(ReconstructType(type), count,
-                                                  is_complex);
-}
 
 bool TypeSystemSwiftTypeRef::IsFunctionType(opaque_compiler_type_t type,
                                             bool *is_variadic_ptr) {
