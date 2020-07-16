@@ -16,19 +16,19 @@ entry:
   ; X32-LABEL: func_cf_vector_x86
   ; X32: 	     movl 12(%ebp), %eax
   ; X32: 	     movl 8(%ebp), %ecx
-  ; X32: 	     movsd 24(%eax), %xmm4         # xmm4 = mem[0],zero
-  ; X32: 	     movsd %xmm4, 24(%esp)
-  ; X32: 	     movsd 16(%eax), %xmm5         # xmm5 = mem[0],zero
-  ; X32: 	     movsd %xmm5, 16(%esp)
-  ; X32: 	     movsd (%eax), %xmm6           # xmm6 = mem[0],zero
-  ; X32: 	     movsd 8(%eax), %xmm7          # xmm7 = mem[0],zero
-  ; X32: 	     movsd %xmm7, 8(%esp)
-  ; X32: 	     movsd %xmm6, (%esp)
+  ; X32: 	     movups	(%eax), %xmm0
+  ; X32: 	     movups	16(%eax), %xmm1
+  ; X32: 	     movaps	%xmm0, (%esp)
+  ; X32: 	     movaps	%xmm1, 16(%esp)
+  ; X32: 	     movsd	(%esp), %xmm4
+  ; X32: 	     movsd	8(%esp), %xmm5
+  ; X32: 	     movsd	16(%esp), %xmm6
+  ; X32: 	     movsd	24(%esp), %xmm7
   ; X32: 	     calll *___guard_check_icall_fptr
-  ; X32: 	     movaps %xmm6, %xmm0
-  ; X32: 	     movaps %xmm7, %xmm1
-  ; X32: 	     movaps %xmm5, %xmm2
-  ; X32: 	     movaps %xmm4, %xmm3
+  ; X32: 	     movaps %xmm4, %xmm0
+  ; X32: 	     movaps %xmm5, %xmm1
+  ; X32: 	     movaps %xmm6, %xmm2
+  ; X32: 	     movaps %xmm7, %xmm3
   ; X32: 	     calll  *%ecx
 }
 attributes #0 = { "target-cpu"="pentium4" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
