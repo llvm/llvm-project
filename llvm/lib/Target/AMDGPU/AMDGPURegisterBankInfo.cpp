@@ -3302,10 +3302,10 @@ static unsigned regBankUnion(unsigned RB0, unsigned RB1) {
     AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
 }
 
-static int regBankBoolUnion(int RB0, int RB1) {
-  if (RB0 == -1)
+static unsigned regBankBoolUnion(unsigned RB0, unsigned RB1) {
+  if (RB0 == AMDGPU::InvalidRegBankID)
     return RB1;
-  if (RB1 == -1)
+  if (RB1 == AMDGPU::InvalidRegBankID)
     return RB0;
 
   // vcc, vcc -> vcc
@@ -3413,8 +3413,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   //
   // TODO: There are additional exec masking dependencies to analyze.
   if (MI.getOpcode() == TargetOpcode::G_PHI) {
-    // TODO: Generate proper invalid bank enum.
-    int ResultBank = -1;
+    unsigned ResultBank = AMDGPU::InvalidRegBankID;
     Register DstReg = MI.getOperand(0).getReg();
 
     // Sometimes the result may have already been assigned a bank.
@@ -3436,7 +3435,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       ResultBank = regBankBoolUnion(ResultBank, OpBank);
     }
 
-    assert(ResultBank != -1);
+    assert(ResultBank != AMDGPU::InvalidRegBankID);
 
     unsigned Size = MRI.getType(DstReg).getSizeInBits();
 
@@ -3465,9 +3464,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       const RegisterBank *DstBank
         = getRegBank(MI.getOperand(0).getReg(), MRI, *TRI);
 
-      unsigned TargetBankID = -1;
-      unsigned BankLHS = -1;
-      unsigned BankRHS = -1;
+      unsigned TargetBankID = AMDGPU::InvalidRegBankID;
+      unsigned BankLHS = AMDGPU::InvalidRegBankID;
+      unsigned BankRHS = AMDGPU::InvalidRegBankID;
       if (DstBank) {
         TargetBankID = DstBank->getID();
         if (DstBank == &AMDGPU::VCCRegBank) {
