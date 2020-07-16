@@ -122,12 +122,19 @@ SectionHeaderTable:
 ## Test that we are able to set NoHeaders to false. In this case the tool produces an output
 ## as if there were no `SectionHeaderTable` key at all.
 # RUN: yaml2obj %s --docnum=3 -DNOHEADERS=false -o %t3.2
-# RUN: llvm-readelf --file-headers %t3.2 | FileCheck %s --check-prefix=NO-HEADERS-FALSE
+# RUN: llvm-readelf --file-headers --sections %t3.2 | FileCheck %s --check-prefix=NO-HEADERS-FALSE
 
 # NO-HEADERS-FALSE: Start of section headers:          96 (bytes into file)
 # NO-HEADERS-FALSE: Size of section headers:           64 (bytes)
-# NO-HEADERS-FALSE: Number of section headers:         1
+# NO-HEADERS-FALSE: Number of section headers:         4
 # NO-HEADERS-FALSE: Section header string table index: 3
+
+# NO-HEADERS-FALSE:      Section Headers:
+# NO-HEADERS-FALSE-NEXT:  [Nr] Name      Type     Address          Off    Size   ES Flg Lk Inf Al
+# NO-HEADERS-FALSE-NEXT:  [ 0]           NULL     0000000000000000 000000 000000 00      0   0  0
+# NO-HEADERS-FALSE-NEXT:  [ 1] .foo      PROGBITS 0000000000000000 000040 000000 00      0   0  0
+# NO-HEADERS-FALSE-NEXT:  [ 2] .strtab   STRTAB   0000000000000000 000040 000001 00      0   0  1
+# NO-HEADERS-FALSE-NEXT:  [ 3] .shstrtab STRTAB   0000000000000000 000041 000018 00      0   0  1
 
 ## Check we do not allow using "Sections" together with "NoHeaders".
 # RUN: not yaml2obj %s --docnum=4 -DNOHEADERS=true -o /dev/null 2>&1 | FileCheck %s --check-prefix=SECTIONS-NO-HEADERS

@@ -1860,6 +1860,66 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     default:
       return false;
 
+    case ARM::VBSPd:
+    case ARM::VBSPq: {
+      Register DstReg = MI.getOperand(0).getReg();
+      if (DstReg == MI.getOperand(3).getReg()) {
+        // Expand to VBIT
+        unsigned NewOpc = Opcode == ARM::VBSPd ? ARM::VBITd : ARM::VBITq;
+        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc))
+            .add(MI.getOperand(0))
+            .add(MI.getOperand(3))
+            .add(MI.getOperand(2))
+            .add(MI.getOperand(1))
+            .addImm(MI.getOperand(4).getImm())
+            .add(MI.getOperand(5));
+      } else if (DstReg == MI.getOperand(2).getReg()) {
+        // Expand to VBIF
+        unsigned NewOpc = Opcode == ARM::VBSPd ? ARM::VBIFd : ARM::VBIFq;
+        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc))
+            .add(MI.getOperand(0))
+            .add(MI.getOperand(2))
+            .add(MI.getOperand(3))
+            .add(MI.getOperand(1))
+            .addImm(MI.getOperand(4).getImm())
+            .add(MI.getOperand(5));
+      } else {
+        // Expand to VBSL
+        unsigned NewOpc = Opcode == ARM::VBSPd ? ARM::VBSLd : ARM::VBSLq;
+        if (DstReg == MI.getOperand(1).getReg()) {
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc))
+              .add(MI.getOperand(0))
+              .add(MI.getOperand(1))
+              .add(MI.getOperand(2))
+              .add(MI.getOperand(3))
+              .addImm(MI.getOperand(4).getImm())
+              .add(MI.getOperand(5));
+        } else {
+          // Use move to satisfy constraints
+          unsigned MoveOpc = Opcode == ARM::VBSPd ? ARM::VORRd : ARM::VORRq;
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MoveOpc))
+              .addReg(DstReg,
+                      RegState::Define |
+                          getRenamableRegState(MI.getOperand(0).isRenamable()))
+              .add(MI.getOperand(1))
+              .add(MI.getOperand(1))
+              .addImm(MI.getOperand(4).getImm())
+              .add(MI.getOperand(5));
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc))
+              .add(MI.getOperand(0))
+              .addReg(DstReg,
+                      RegState::Kill |
+                          getRenamableRegState(MI.getOperand(0).isRenamable()))
+              .add(MI.getOperand(2))
+              .add(MI.getOperand(3))
+              .addImm(MI.getOperand(4).getImm())
+              .add(MI.getOperand(5));
+        }
+      }
+      MI.eraseFromParent();
+      return true;
+    }
+
     case ARM::TCRETURNdi:
     case ARM::TCRETURNri: {
       MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();

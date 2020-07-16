@@ -294,6 +294,13 @@ void PassManagerBuilder::populateFunctionPassManager(
   if (LibraryInfo)
     FPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
 
+  // The backends do not handle matrix intrinsics currently.
+  // Make sure they are also lowered in O0.
+  // FIXME: A lightweight version of the pass should run in the backend
+  //        pipeline on demand.
+  if (EnableMatrix)
+    FPM.add(createLowerMatrixIntrinsicsPass());
+
   if (OptLevel == 0) return;
 
   addInitialAliasAnalysisPasses(FPM);

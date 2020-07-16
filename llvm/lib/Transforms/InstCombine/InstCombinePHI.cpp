@@ -1191,8 +1191,11 @@ static Value *SimplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     // This Phi is actually opposite to branching condition of IDom. We invert
     // the condition that will potentially open up some opportunities for
     // sinking.
-    Self.Builder.SetInsertPoint(BB->getFirstNonPHI());
-    return Self.Builder.CreateNot(Cond);
+    auto InsertPt = BB->getFirstInsertionPt();
+    if (InsertPt != BB->end()) {
+      Self.Builder.SetInsertPoint(&*InsertPt);
+      return Self.Builder.CreateNot(Cond);
+    }
   }
 
   return nullptr;

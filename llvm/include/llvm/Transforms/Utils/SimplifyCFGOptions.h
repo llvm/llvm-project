@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_SIMPLIFYCFGOPTIONS_H
-#define LLVM_TRANSFORMS_SCALAR_SIMPLIFYCFGOPTIONS_H
+#ifndef LLVM_TRANSFORMS_UTILS_SIMPLIFYCFGOPTIONS_H
+#define LLVM_TRANSFORMS_UTILS_SIMPLIFYCFGOPTIONS_H
 
 namespace llvm {
 
@@ -69,4 +69,4 @@ struct SimplifyCFGOptions {
 
 } // namespace llvm
 
-#endif // LLVM_TRANSFORMS_SCALAR_SIMPLIFYCFGOPTIONS_H
+#endif // LLVM_TRANSFORMS_UTILS_SIMPLIFYCFGOPTIONS_H

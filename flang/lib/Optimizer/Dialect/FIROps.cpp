@@ -1395,15 +1395,28 @@ mlir::OpFoldResult fir::SubfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
 //===----------------------------------------------------------------------===//
 // WhereOp
 //===----------------------------------------------------------------------===//
-
 void fir::WhereOp::build(mlir::OpBuilder &builder, OperationState &result,
                          mlir::Value cond, bool withElseRegion) {
+  build(builder, result, llvm::None, cond, withElseRegion);
+}
+
+void fir::WhereOp::build(mlir::OpBuilder &builder, OperationState &result,
+                         mlir::TypeRange resultTypes, mlir::Value cond,
+                         bool withElseRegion) {
   result.addOperands(cond);
+  result.addTypes(resultTypes);
+
   mlir::Region *thenRegion = result.addRegion();
+  thenRegion->push_back(new mlir::Block());
+  if (resultTypes.empty())
+    WhereOp::ensureTerminator(*thenRegion, builder, result.location);
+
   mlir::Region *elseRegion = result.addRegion();
-  WhereOp::ensureTerminator(*thenRegion, builder, result.location);
-  if (withElseRegion)
-    WhereOp::ensureTerminator(*elseRegion, builder, result.location);
+  if (withElseRegion) {
+    elseRegion->push_back(new mlir::Block());
+    if (resultTypes.empty())
+      WhereOp::ensureTerminator(*elseRegion, builder, result.location);
+  }
 }
 
 static mlir::ParseResult parseWhereOp(OpAsmParser &parser,
