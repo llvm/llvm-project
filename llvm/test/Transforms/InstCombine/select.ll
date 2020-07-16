@@ -2437,14 +2437,13 @@ exit:
   ret i32 %sel
 }
 
-; Negative tests to ensure we don't remove selects with undef true/false values.
+; FIXME: We shouldn't remove selects with undef true/false values.
 ; See https://bugs.llvm.org/show_bug.cgi?id=31633
 ; https://lists.llvm.org/pipermail/llvm-dev/2016-October/106182.html
 ; https://reviews.llvm.org/D83360
 define i32 @false_undef(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @false_undef(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 undef
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %s = select i1 %cond, i32 %x, i32 undef
   ret i32 %s
@@ -2452,8 +2451,7 @@ define i32 @false_undef(i1 %cond, i32 %x) {
 
 define i32 @true_undef(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @true_undef(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 undef, i32 [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %s = select i1 %cond, i32 undef, i32 %x
   ret i32 %s
@@ -2461,8 +2459,7 @@ define i32 @true_undef(i1 %cond, i32 %x) {
 
 define <2 x i32> @false_undef_vec(i1 %cond, <2 x i32> %x) {
 ; CHECK-LABEL: @false_undef_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> [[X:%.*]], <2 x i32> undef
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
 ;
   %s = select i1 %cond, <2 x i32> %x, <2 x i32> undef
   ret <2 x i32> %s
@@ -2470,8 +2467,7 @@ define <2 x i32> @false_undef_vec(i1 %cond, <2 x i32> %x) {
 
 define <2 x i32> @true_undef_vec(i1 %cond, <2 x i32> %x) {
 ; CHECK-LABEL: @true_undef_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> undef, <2 x i32> [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
 ;
   %s = select i1 %cond, <2 x i32> undef, <2 x i32> %x
   ret <2 x i32> %s
