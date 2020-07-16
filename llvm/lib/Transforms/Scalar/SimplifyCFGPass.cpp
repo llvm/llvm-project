@@ -39,6 +39,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/SimplifyCFGOptions.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <utility>
 using namespace llvm;
@@ -247,33 +248,27 @@ struct CFGSimplifyPass : public FunctionPass {
   SimplifyCFGOptions Options;
   std::function<bool(const Function &)> PredicateFtor;
 
-  CFGSimplifyPass(unsigned Threshold = 1, bool ForwardSwitchCond = false,
-                  bool ConvertSwitch = false, bool KeepLoops = true,
-                  bool SinkCommon = false,
+  CFGSimplifyPass(SimplifyCFGOptions Options_ = SimplifyCFGOptions(),
                   std::function<bool(const Function &)> Ftor = nullptr)
-      : FunctionPass(ID), PredicateFtor(std::move(Ftor)) {
+      : FunctionPass(ID), Options(Options_), PredicateFtor(std::move(Ftor)) {
 
     initializeCFGSimplifyPassPass(*PassRegistry::getPassRegistry());
 
     // Check for command-line overrides of options for debug/customization.
-    Options.BonusInstThreshold = UserBonusInstThreshold.getNumOccurrences()
-                                    ? UserBonusInstThreshold
-                                    : Threshold;
+    if (UserBonusInstThreshold.getNumOccurrences())
+      Options.BonusInstThreshold = UserBonusInstThreshold;
 
-    Options.ForwardSwitchCondToPhi = UserForwardSwitchCond.getNumOccurrences()
-                                         ? UserForwardSwitchCond
-                                         : ForwardSwitchCond;
+    if (UserForwardSwitchCond.getNumOccurrences())
+      Options.ForwardSwitchCondToPhi = UserForwardSwitchCond;
 
-    Options.ConvertSwitchToLookupTable = UserSwitchToLookup.getNumOccurrences()
-                                             ? UserSwitchToLookup
-                                             : ConvertSwitch;
+    if (UserSwitchToLookup.getNumOccurrences())
+      Options.ConvertSwitchToLookupTable = UserSwitchToLookup;
 
-    Options.NeedCanonicalLoop =
-        UserKeepLoops.getNumOccurrences() ? UserKeepLoops : KeepLoops;
+    if (UserKeepLoops.getNumOccurrences())
+      Options.NeedCanonicalLoop = UserKeepLoops;
 
-    Options.SinkCommonInsts = UserSinkCommonInsts.getNumOccurrences()
-                                  ? UserSinkCommonInsts
-                                  : SinkCommon;
+    if (UserSinkCommonInsts.getNumOccurrences())
+      Options.SinkCommonInsts = UserSinkCommonInsts;
   }
 
   bool runOnFunction(Function &F) override {
@@ -310,10 +305,7 @@ INITIALIZE_PASS_END(CFGSimplifyPass, "simplifycfg", "Simplify the CFG", false,
 
 // Public interface to the CFGSimplification pass
 FunctionPass *
-llvm::createCFGSimplificationPass(unsigned Threshold, bool ForwardSwitchCond,
-                                  bool ConvertSwitch, bool KeepLoops,
-                                  bool SinkCommon,
+llvm::createCFGSimplificationPass(SimplifyCFGOptions Options,
                                   std::function<bool(const Function &)> Ftor) {
-  return new CFGSimplifyPass(Threshold, ForwardSwitchCond, ConvertSwitch,
-                             KeepLoops, SinkCommon, std::move(Ftor));
+  return new CFGSimplifyPass(Options, std::move(Ftor));
 }

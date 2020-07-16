@@ -912,6 +912,10 @@ public:
   /// Emit the function for the user defined mapper construct.
   void emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
                              CodeGenFunction *CGF = nullptr);
+  /// Get the function for the specified user-defined mapper. If it does not
+  /// exist, create one.
+  llvm::Function *
+  getOrCreateUserDefinedMapperFunc(const OMPDeclareMapperDecl *D);
 
   /// Emits outlined function for the specified OpenMP parallel directive
   /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
@@ -1620,6 +1624,10 @@ public:
     llvm::Value *SizesArray = nullptr;
     /// The array of map types passed to the runtime library.
     llvm::Value *MapTypesArray = nullptr;
+    /// The array of user-defined mappers passed to the runtime library.
+    llvm::Value *MappersArray = nullptr;
+    /// Indicate whether any user-defined mapper exists.
+    bool HasMapper = false;
     /// The total number of pointers passed to the runtime library.
     unsigned NumberOfPtrs = 0u;
     /// Map between the a declaration of a capture and the corresponding base
@@ -1635,12 +1643,14 @@ public:
       PointersArray = nullptr;
       SizesArray = nullptr;
       MapTypesArray = nullptr;
+      MappersArray = nullptr;
+      HasMapper = false;
       NumberOfPtrs = 0u;
     }
     /// Return true if the current target data information has valid arrays.
     bool isValid() {
       return BasePointersArray && PointersArray && SizesArray &&
-             MapTypesArray && NumberOfPtrs;
+             MapTypesArray && (!HasMapper || MappersArray) && NumberOfPtrs;
     }
     bool requiresDevicePointerInfo() { return RequiresDevicePointerInfo; }
   };

@@ -85,7 +85,7 @@ int main() {
   // LAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
-    // LAMBDA: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+    // LAMBDA: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 0, i32 0)
     // LAMBDA: call void @[[LOFFL1:.+]](i{{64|32}} %{{.+}})
     // LAMBDA:  ret
 #pragma omp target teams distribute firstprivate(g, g1, sivar)
@@ -164,7 +164,7 @@ int main() {
 }
 
 // CHECK: define {{.*}}i{{[0-9]+}} @main()
-// CHECK: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 5, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+// CHECK: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 5, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 0, i32 0)
 // CHECK: call void @[[OFFL1:.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
 // CHECK: {{%.+}} = call{{.*}} i32 @[[TMAIN_INT:.+]]()
 // CHECK:  ret
@@ -258,7 +258,7 @@ int main() {
 // CHECK: ret void
 
 // CHECK: define{{.*}} i{{[0-9]+}} @[[TMAIN_INT]]()
-// CHECK: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+// CHECK: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 0, i32 0)
 // CHECK: call void @[[TOFFL1:.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
 // CHECK:  ret
 

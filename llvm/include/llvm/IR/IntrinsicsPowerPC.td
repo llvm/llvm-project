@@ -468,27 +468,27 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   // P10 Vector Insert.
   def int_ppc_altivec_vinsblx : GCCBuiltin<"__builtin_altivec_vinsblx">,
               Intrinsic<[llvm_v16i8_ty],
-                        [llvm_v16i8_ty, llvm_i64_ty, llvm_i64_ty],
+                        [llvm_v16i8_ty, llvm_i32_ty, llvm_i32_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinsbrx : GCCBuiltin<"__builtin_altivec_vinsbrx">,
               Intrinsic<[llvm_v16i8_ty],
-                        [llvm_v16i8_ty, llvm_i64_ty, llvm_i64_ty],
+                        [llvm_v16i8_ty, llvm_i32_ty, llvm_i32_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinshlx : GCCBuiltin<"__builtin_altivec_vinshlx">,
               Intrinsic<[llvm_v8i16_ty],
-                        [llvm_v8i16_ty, llvm_i64_ty, llvm_i64_ty],
+                        [llvm_v8i16_ty, llvm_i32_ty, llvm_i32_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinshrx : GCCBuiltin<"__builtin_altivec_vinshrx">,
               Intrinsic<[llvm_v8i16_ty],
-                        [llvm_v8i16_ty, llvm_i64_ty, llvm_i64_ty],
+                        [llvm_v8i16_ty, llvm_i32_ty, llvm_i32_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinswlx : GCCBuiltin<"__builtin_altivec_vinswlx">,
               Intrinsic<[llvm_v4i32_ty],
-                        [llvm_v4i32_ty, llvm_i64_ty, llvm_i64_ty],
+                        [llvm_v4i32_ty, llvm_i32_ty, llvm_i32_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinswrx : GCCBuiltin<"__builtin_altivec_vinswrx">,
               Intrinsic<[llvm_v4i32_ty],
-                        [llvm_v4i32_ty, llvm_i64_ty, llvm_i64_ty],
+                        [llvm_v4i32_ty, llvm_i32_ty, llvm_i32_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinsdlx : GCCBuiltin<"__builtin_altivec_vinsdlx">,
               Intrinsic<[llvm_v2i64_ty],
@@ -525,7 +525,7 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   // P10 Vector Insert with immediate.
   def int_ppc_altivec_vinsw :
               Intrinsic<[llvm_v4i32_ty],
-                        [llvm_v4i32_ty, llvm_i64_ty, llvm_i32_ty],
+                        [llvm_v4i32_ty, llvm_i32_ty, llvm_i32_ty],
                         [IntrNoMem, ImmArg<ArgIndex<2>>]>;
   def int_ppc_altivec_vinsd :
               Intrinsic<[llvm_v2i64_ty],

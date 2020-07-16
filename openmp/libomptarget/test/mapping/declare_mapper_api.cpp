@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <cinttypes>
 
 // Data structure definitions copied from OpenMP RTL.
 struct MapComponentInfoTy {
@@ -42,6 +43,6 @@ int main(int argc, char *argv[]) {
   __tgt_push_mapper_component((void *)&MC, base, begin, size, type);
   int64_t num = __tgt_mapper_num_components((void *)&MC);
   // CHECK: num=2
-  printf("num=%lld\n", num);
+  printf("num=%" PRId64 "\n", num);
   return 0;
 }

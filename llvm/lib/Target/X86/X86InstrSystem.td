@@ -223,7 +223,7 @@ def LAR32rr : I<0x02, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
 let mayLoad = 1 in
 def LAR64rm : RI<0x02, MRMSrcMem, (outs GR64:$dst), (ins i16mem:$src),
                  "lar{q}\t{$src, $dst|$dst, $src}", []>, TB, NotMemoryFoldable;
-def LAR64rr : RI<0x02, MRMSrcReg, (outs GR64:$dst), (ins GR32:$src),
+def LAR64rr : RI<0x02, MRMSrcReg, (outs GR64:$dst), (ins GR32orGR64:$src),
                  "lar{q}\t{$src, $dst|$dst, $src}", []>, TB, NotMemoryFoldable;
 
 // i16mem operand in LSL32rm and GR32 operand in LSL32rr is not a typo.
@@ -245,7 +245,7 @@ def LSL32rr : I<0x03, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
 let mayLoad = 1 in
 def LSL64rm : RI<0x03, MRMSrcMem, (outs GR64:$dst), (ins i16mem:$src),
                  "lsl{q}\t{$src, $dst|$dst, $src}", []>, TB, NotMemoryFoldable;
-def LSL64rr : RI<0x03, MRMSrcReg, (outs GR64:$dst), (ins GR32:$src),
+def LSL64rr : RI<0x03, MRMSrcReg, (outs GR64:$dst), (ins GR32orGR64:$src),
                  "lsl{q}\t{$src, $dst|$dst, $src}", []>, TB, NotMemoryFoldable;
 
 def INVLPG : I<0x01, MRM7m, (outs), (ins i8mem:$addr), "invlpg\t$addr", []>, TB;

@@ -658,7 +658,8 @@ public:
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       unsigned Num = cast<FixedVectorType>(VTy)->getNumElements();
       unsigned Cost = thisT()->getArithmeticInstrCost(
-          Opcode, VTy->getScalarType(), CostKind);
+          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
+          Opd1PropInfo, Opd2PropInfo, Args, CxtI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       return getScalarizationOverhead(VTy, Args) + Num * Cost;
