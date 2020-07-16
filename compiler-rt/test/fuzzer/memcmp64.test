@@ -2,7 +2,7 @@ UNSUPPORTED: freebsd
 RUN: %cpp_compiler %S/Memcmp64BytesTest.cpp -o %t-Memcmp64BytesTest
 RUN: not %run %t-Memcmp64BytesTest        -seed=1 -runs=1000000   2>&1 | FileCheck %s
 
-RUN: %cpp_compiler -fno-sanitize=address -fno-builtin-memcmp %S/Memcmp64BytesTest.cpp -o %t-NoAsanMemcmp64BytesTest
+RUN: %cpp_compiler -fno-sanitize=address %S/Memcmp64BytesTest.cpp -o %t-NoAsanMemcmp64BytesTest
 RUN: not %run %t-Memcmp64BytesTest        -seed=1 -runs=1000000   2>&1 | FileCheck %s
 
 CHECK: BINGO
