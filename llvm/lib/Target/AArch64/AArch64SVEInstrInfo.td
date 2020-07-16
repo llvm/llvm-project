@@ -1109,6 +1109,20 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm TRN1_PPP : sve_int_perm_bin_perm_pp<0b100, "trn1", AArch64trn1>;
   defm TRN2_PPP : sve_int_perm_bin_perm_pp<0b101, "trn2", AArch64trn2>;
 
+  // Extract lo/hi halves of legal predicate types.
+  def : Pat<(nxv2i1 (extract_subvector (nxv4i1 PPR:$Ps), (i64 0))),
+            (ZIP1_PPP_S PPR:$Ps, (PFALSE))>;
+  def : Pat<(nxv2i1 (extract_subvector (nxv4i1 PPR:$Ps), (i64 2))),
+            (ZIP2_PPP_S PPR:$Ps, (PFALSE))>;
+  def : Pat<(nxv4i1 (extract_subvector (nxv8i1 PPR:$Ps), (i64 0))),
+            (ZIP1_PPP_H PPR:$Ps, (PFALSE))>;
+  def : Pat<(nxv4i1 (extract_subvector (nxv8i1 PPR:$Ps), (i64 4))),
+            (ZIP2_PPP_H PPR:$Ps, (PFALSE))>;
+  def : Pat<(nxv8i1 (extract_subvector (nxv16i1 PPR:$Ps), (i64 0))),
+            (ZIP1_PPP_B PPR:$Ps, (PFALSE))>;
+  def : Pat<(nxv8i1 (extract_subvector (nxv16i1 PPR:$Ps), (i64 8))),
+            (ZIP2_PPP_B PPR:$Ps, (PFALSE))>;
+
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", SETUGE, SETULE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", SETUGT, SETULT>;
   defm CMPGE_PPzZZ : sve_int_cmp_0<0b100, "cmpge", SETGE, SETLE>;
