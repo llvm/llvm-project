@@ -9,7 +9,7 @@
 
 // FIXME: this fails with the NPM:
 //
-// RUN: %clang -O0 -fenable-matrix -S -emit-llvm %s -o - | FileCheck  %s
+// %clang -O0 -fenable-matrix -S -emit-llvm %s -o - | FileCheck  %s
 
 typedef float m4x4_t __attribute__((matrix_type(4, 4)));
 
