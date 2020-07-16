@@ -14358,7 +14358,7 @@ minimum.
 
 
 '``llvm.sadd.sat.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14377,7 +14377,7 @@ Overview
 """""""""
 
 The '``llvm.sadd.sat``' family of intrinsic functions perform signed
-saturation addition on the 2 arguments.
+saturating addition on the 2 arguments.
 
 Arguments
 """"""""""
@@ -14406,7 +14406,7 @@ Examples
 
 
 '``llvm.uadd.sat.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14425,7 +14425,7 @@ Overview
 """""""""
 
 The '``llvm.uadd.sat``' family of intrinsic functions perform unsigned
-saturation addition on the 2 arguments.
+saturating addition on the 2 arguments.
 
 Arguments
 """"""""""
@@ -14453,7 +14453,7 @@ Examples
 
 
 '``llvm.ssub.sat.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14472,7 +14472,7 @@ Overview
 """""""""
 
 The '``llvm.ssub.sat``' family of intrinsic functions perform signed
-saturation subtraction on the 2 arguments.
+saturating subtraction on the 2 arguments.
 
 Arguments
 """"""""""
@@ -14501,7 +14501,7 @@ Examples
 
 
 '``llvm.usub.sat.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14520,7 +14520,7 @@ Overview
 """""""""
 
 The '``llvm.usub.sat``' family of intrinsic functions perform unsigned
-saturation subtraction on the 2 arguments.
+saturating subtraction on the 2 arguments.
 
 Arguments
 """"""""""
@@ -14602,7 +14602,7 @@ be less than 1/2^(scale).
 
 
 '``llvm.smul.fix.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14662,7 +14662,7 @@ Examples
 
 
 '``llvm.umul.fix.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14721,7 +14721,7 @@ Examples
 
 
 '``llvm.smul.fix.sat.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14740,7 +14740,7 @@ Overview
 """""""""
 
 The '``llvm.smul.fix.sat``' family of intrinsic functions perform signed
-fixed point saturation multiplication on 2 arguments of the same scale.
+fixed point saturating multiplication on 2 arguments of the same scale.
 
 Arguments
 """"""""""
@@ -14791,7 +14791,7 @@ Examples
 
 
 '``llvm.umul.fix.sat.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14810,7 +14810,7 @@ Overview
 """""""""
 
 The '``llvm.umul.fix.sat``' family of intrinsic functions perform unsigned
-fixed point saturation multiplication on 2 arguments of the same scale.
+fixed point saturating multiplication on 2 arguments of the same scale.
 
 Arguments
 """"""""""
@@ -14858,7 +14858,7 @@ Examples
 
 
 '``llvm.sdiv.fix.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14918,7 +14918,7 @@ Examples
 
 
 '``llvm.udiv.fix.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14978,7 +14978,7 @@ Examples
 
 
 '``llvm.sdiv.fix.sat.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -14997,7 +14997,7 @@ Overview
 """""""""
 
 The '``llvm.sdiv.fix.sat``' family of intrinsic functions perform signed
-fixed point saturation division on 2 arguments of the same scale.
+fixed point saturating division on 2 arguments of the same scale.
 
 Arguments
 """"""""""
@@ -15045,7 +15045,7 @@ Examples
 
 
 '``llvm.udiv.fix.sat.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax
 """""""
@@ -15064,7 +15064,7 @@ Overview
 """""""""
 
 The '``llvm.udiv.fix.sat``' family of intrinsic functions perform unsigned
-fixed point saturation division on 2 arguments of the same scale.
+fixed point saturating division on 2 arguments of the same scale.
 
 Arguments
 """"""""""
