@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target
+
 // RUN: %clang -O0 -fenable-matrix -S -emit-llvm %s -o - | FileCheck  %s
 // RUN: %clang -O1 -fenable-matrix -S -emit-llvm %s -o - | FileCheck  %s
 // RUN: %clang -O2 -fenable-matrix -S -emit-llvm %s -o - | FileCheck  %s
