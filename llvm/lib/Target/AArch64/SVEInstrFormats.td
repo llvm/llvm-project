@@ -340,6 +340,12 @@ class SVE_2_Op_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
 : Pat<(vtd (op vt1:$Op1, vt2:$Op2)),
       (inst $Op1, $Op2)>;
 
+class SVE_2_Op_Pred_All_Active<ValueType vtd, SDPatternOperator op,
+                               ValueType pt, ValueType vt1, ValueType vt2,
+                               Instruction inst>
+: Pat<(vtd (op (pt (AArch64ptrue 31)), vt1:$Op1, vt2:$Op2)),
+      (inst $Op1, $Op2)>;
+
 class SVE_2_Op_Pat_Reduce_To_Neon<ValueType vtd, SDPatternOperator op, ValueType vt1,
                    ValueType vt2, Instruction inst, SubRegIndex sub>
 : Pat<(vtd (op vt1:$Op1, vt2:$Op2)),
@@ -1665,7 +1671,8 @@ class sve_fp_3op_u_zd<bits<2> sz, bits<3> opc, string asm, ZPRRegOp zprty>
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve_fp_3op_u_zd<bits<3> opc, string asm, SDPatternOperator op> {
+multiclass sve_fp_3op_u_zd<bits<3> opc, string asm, SDPatternOperator op,
+                           SDPatternOperator predicated_op = null_frag> {
   def _H : sve_fp_3op_u_zd<0b01, opc, asm, ZPR16>;
   def _S : sve_fp_3op_u_zd<0b10, opc, asm, ZPR32>;
   def _D : sve_fp_3op_u_zd<0b11, opc, asm, ZPR64>;
@@ -1674,6 +1681,9 @@ multiclass sve_fp_3op_u_zd<bits<3> opc, string asm, SDPatternOperator op> {
   def : SVE_2_Op_Pat<nxv4f32, op, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv2f64, op, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 
+  def : SVE_2_Op_Pred_All_Active<nxv8f16, predicated_op, nxv8i1, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pred_All_Active<nxv4f32, predicated_op, nxv4i1, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pred_All_Active<nxv2f64, predicated_op, nxv2i1, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_fp_3op_u_zd_ftsmul<bits<3> opc, string asm, SDPatternOperator op> {
@@ -7804,7 +7814,10 @@ multiclass sve_fp_bin_pred_hfd<SDPatternOperator op> {
   def _UNDEF_D : PredTwoOpPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   def : SVE_3_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8f16, !cast<Pseudo>(NAME # _UNDEF_H)>;
+  def : SVE_3_Op_Pat<nxv4f16, op, nxv4i1, nxv4f16, nxv4f16, !cast<Pseudo>(NAME # _UNDEF_H)>;
+  def : SVE_3_Op_Pat<nxv2f16, op, nxv2i1, nxv2f16, nxv2f16, !cast<Pseudo>(NAME # _UNDEF_H)>;
   def : SVE_3_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4f32, !cast<Pseudo>(NAME # _UNDEF_S)>;
+  def : SVE_3_Op_Pat<nxv2f32, op, nxv2i1, nxv2f32, nxv2f32, !cast<Pseudo>(NAME # _UNDEF_S)>;
   def : SVE_3_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2f64, !cast<Pseudo>(NAME # _UNDEF_D)>;
 }
 
