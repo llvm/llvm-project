@@ -237,7 +237,9 @@ if (NOT FUCHSIA)
 endif()
 
 # These files are used on 32-bit and 64-bit x86.
-set(x86_ARCH_SOURCES cpu_model.c)
+set(x86_ARCH_SOURCES
+  cpu_model.c
+  )
 
 if (NOT MSVC)
   set(x86_ARCH_SOURCES
