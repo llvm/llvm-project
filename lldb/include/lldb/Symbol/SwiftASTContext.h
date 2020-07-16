@@ -51,7 +51,7 @@ class IRGenOptions;
 class NominalTypeDecl;
 class SearchPathOptions;
 class SILModule;
-class TBDGenOptions;
+struct TBDGenOptions;
 class VarDecl;
 class ModuleDecl;
 class SourceFile;
