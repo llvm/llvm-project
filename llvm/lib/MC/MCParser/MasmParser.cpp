@@ -794,8 +794,6 @@ private:
   bool emitFieldValue(const FieldInfo &Field, const RealFieldInfo &Contents);
   bool emitFieldValue(const FieldInfo &Field, const StructFieldInfo &Contents);
 
-  bool emitStructValue(const StructInfo &Structure);
-
   bool emitFieldInitializer(const FieldInfo &Field,
                             const FieldInitializer &Initializer);
   bool emitFieldInitializer(const FieldInfo &Field,
@@ -3831,20 +3829,6 @@ bool MasmParser::emitFieldValue(const FieldInfo &Field) {
     return emitFieldValue(Field, Field.Contents.StructInfo);
   }
   llvm_unreachable("Unhandled FieldType enum");
-}
-
-bool MasmParser::emitStructValue(const StructInfo &Structure) {
-  size_t Offset = 0;
-  for (const auto &Field : Structure.Fields) {
-    getStreamer().emitZeros(Field.Offset - Offset);
-    if (emitFieldValue(Field))
-      return true;
-    Offset = Field.Offset + Field.SizeOf;
-  }
-  // Add final padding.
-  if (Offset != Structure.Size)
-    getStreamer().emitZeros(Structure.Size - Offset);
-  return false;
 }
 
 bool MasmParser::emitFieldInitializer(const FieldInfo &Field,
