@@ -122,7 +122,9 @@ void MarkLive::mark() {
       // functions used for weak-undefined symbols have this behaviour (compare
       // equal to null pointer, only reachable via direct call).
       if (reloc.Type == R_WASM_TABLE_INDEX_SLEB ||
-          reloc.Type == R_WASM_TABLE_INDEX_I32) {
+          reloc.Type == R_WASM_TABLE_INDEX_SLEB64 ||
+          reloc.Type == R_WASM_TABLE_INDEX_I32 ||
+          reloc.Type == R_WASM_TABLE_INDEX_I64) {
         auto *funcSym = cast<FunctionSymbol>(sym);
         if (funcSym->hasTableIndex() && funcSym->getTableIndex() == 0)
           continue;

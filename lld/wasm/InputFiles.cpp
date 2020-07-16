@@ -126,7 +126,9 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
 uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
   switch (reloc.Type) {
   case R_WASM_TABLE_INDEX_I32:
-  case R_WASM_TABLE_INDEX_SLEB: {
+  case R_WASM_TABLE_INDEX_I64:
+  case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_TABLE_INDEX_SLEB64: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     return tableEntries[sym.Info.ElementIndex];
   }
@@ -195,7 +197,9 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
 
   switch (reloc.Type) {
   case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_TABLE_INDEX_I64:
   case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_TABLE_INDEX_SLEB64:
   case R_WASM_TABLE_INDEX_REL_SLEB: {
     if (!getFunctionSymbol(reloc.Index)->hasTableIndex())
       return 0;
