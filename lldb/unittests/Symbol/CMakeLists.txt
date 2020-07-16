@@ -18,6 +18,7 @@ add_lldb_unittest(SymbolTests
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFileSymtab
     lldbPluginTypeSystemClang
+    lldbPluginTypeSystemSwift
     lldbPluginPlatformMacOSX
     LLVMTestingSupport
   )

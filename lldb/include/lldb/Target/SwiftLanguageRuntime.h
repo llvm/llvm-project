@@ -13,23 +13,20 @@
 #ifndef liblldb_SwiftLanguageRuntime_h_
 #define liblldb_SwiftLanguageRuntime_h_
 
-// C Includes
-// C++ Includes
-#include <mutex>
-#include <tuple>
-#include <vector>
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
+
+#include <mutex>
+#include <tuple>
+#include <vector>
 
 namespace swift {
 namespace remote {

@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2020 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 
 // C++ Includes
 #include <mutex> // std::once
@@ -2238,7 +2238,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     logError("couldn't load the Swift stdlib");
     return {};
   }
-  
+
   return swift_ast_sp;
 }
 
@@ -8308,8 +8308,8 @@ bool SwiftASTContext::GetImplicitImports(
   for (ConstString name : persistent_expression_state->GetHandLoadedModules()) {
     SourceModule module_info;
     module_info.path.push_back(name);
-    auto *module = LoadOneModule(module_info, swift_ast_context, stack_frame_wp,
-                                 error);
+    auto *module =
+        LoadOneModule(module_info, swift_ast_context, stack_frame_wp, error);
     if (!module)
       return false;
 

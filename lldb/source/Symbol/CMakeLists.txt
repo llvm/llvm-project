@@ -23,7 +23,6 @@ add_lldb_library(lldbSymbol
   LocateSymbolFile.cpp
   ObjectFile.cpp
   PostfixExpression.cpp
-  SwiftASTContext.cpp
   Symbol.cpp
   SymbolContext.cpp
   SymbolFile.cpp
@@ -33,7 +32,6 @@ add_lldb_library(lldbSymbol
   TypeList.cpp
   TypeMap.cpp
   TypeSystem.cpp
-  TypeSystemSwiftTypeRef.cpp
   UnwindPlan.cpp
   UnwindTable.cpp
   Variable.cpp
