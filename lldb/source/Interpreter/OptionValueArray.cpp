@@ -52,6 +52,7 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
       case eTypeChar:
       case eTypeEnum:
       case eTypeFileSpec:
+      case eTypeFileLineColumn:
       case eTypeFormat:
       case eTypeSInt64:
       case eTypeString:
