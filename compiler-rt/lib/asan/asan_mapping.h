@@ -304,6 +304,7 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 namespace __asan {
 
+static inline uptr MemToShadowSize(uptr size) { return size >> SHADOW_SCALE; }
 static inline bool AddrIsInLowMem(uptr a) {
   PROFILE_ASAN_MAPPING();
   return a <= kLowMemEnd;
