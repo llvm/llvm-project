@@ -37,6 +37,8 @@ static_library("Orc") {
     "RTDyldObjectLinkingLayer.cpp",
     "SpeculateAnalyses.cpp",
     "Speculation.cpp",
+    "TPCIndirectionUtils.cpp",
+    "TargetProcessControl.cpp",
     "ThreadSafeModule.cpp",
   ]
 }
