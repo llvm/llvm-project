@@ -557,27 +557,27 @@ __OMP_RTL(__kmpc_destroy_allocator, false, Void, /* Int */ Int32,
           /* omp_allocator_handle_t */ VoidPtr)
 
 __OMP_RTL(__kmpc_push_target_tripcount, false, Void, Int64, Int64)
-__OMP_RTL(__tgt_target, false, Int32, Int64, VoidPtr, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr)
-__OMP_RTL(__tgt_target_nowait, false, Int32, Int64, VoidPtr, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr)
-__OMP_RTL(__tgt_target_teams, false, Int32, Int64, VoidPtr, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr, Int32, Int32)
-__OMP_RTL(__tgt_target_teams_nowait, false, Int32, Int64, VoidPtr, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, Int32, Int32)
+__OMP_RTL(__tgt_target_mapper, false, Int32, Int64, VoidPtr, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_nowait_mapper, false, Int32, Int64, VoidPtr, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_teams_mapper, false, Int32, Int64, VoidPtr, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, Int32, Int32)
+__OMP_RTL(__tgt_target_teams_nowait_mapper, false, Int32, Int64, VoidPtr, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, Int32, Int32)
 __OMP_RTL(__tgt_register_requires, false, Void, Int64)
-__OMP_RTL(__tgt_target_data_begin, false, Void, Int64, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr)
-__OMP_RTL(__tgt_target_data_begin_nowait, false, Void, Int64, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr)
-__OMP_RTL(__tgt_target_data_end, false, Void, Int64, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr)
-__OMP_RTL(__tgt_target_data_end_nowait, false, Void, Int64, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr)
-__OMP_RTL(__tgt_target_data_update, false, Void, Int64, Int32, VoidPtrPtr,
-          VoidPtrPtr, Int64Ptr, Int64Ptr)
-__OMP_RTL(__tgt_target_data_update_nowait, false, Void, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr)
+__OMP_RTL(__tgt_target_data_begin_mapper, false, Void, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_begin_nowait_mapper, false, Void, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_end_mapper, false, Void, Int64, Int32, VoidPtrPtr,
+          VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_end_nowait_mapper, false, Void, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_update_mapper, false, Void, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_update_nowait_mapper, false, Void, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
 __OMP_RTL(__tgt_mapper_num_components, false, Int64, VoidPtr)
 __OMP_RTL(__tgt_push_mapper_component, false, Void, VoidPtr, VoidPtr, VoidPtr,
           Int64, Int64)
@@ -872,37 +872,37 @@ __OMP_RTL_ATTRS(__kmpc_destroy_allocator, AttributeSet(EnumAttr(NoUnwind)),
 __OMP_RTL_ATTRS(__kmpc_push_target_tripcount,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target,
+__OMP_RTL_ATTRS(__tgt_target_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target_nowait,
+__OMP_RTL_ATTRS(__tgt_target_nowait_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target_teams,
+__OMP_RTL_ATTRS(__tgt_target_teams_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target_teams_nowait,
+__OMP_RTL_ATTRS(__tgt_target_teams_nowait_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
 __OMP_RTL_ATTRS(__tgt_register_requires,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target_data_begin,
+__OMP_RTL_ATTRS(__tgt_target_data_begin_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target_data_begin_nowait,
+__OMP_RTL_ATTRS(__tgt_target_data_begin_nowait_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target_data_end,
+__OMP_RTL_ATTRS(__tgt_target_data_end_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target_data_end_nowait,
+__OMP_RTL_ATTRS(__tgt_target_data_end_nowait_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target_data_update,
+__OMP_RTL_ATTRS(__tgt_target_data_update_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
-__OMP_RTL_ATTRS(__tgt_target_data_update_nowait,
+__OMP_RTL_ATTRS(__tgt_target_data_update_nowait_mapper,
                 AttributeSet(EnumAttr(NoUnwind)),
                 AttributeSet(), {})
 __OMP_RTL_ATTRS(__tgt_mapper_num_components,
