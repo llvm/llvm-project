@@ -562,7 +562,8 @@ def GenericOp : GenericOpBase<"generic"> {
         doc = "C(m, n) += A(m, k) * B(k, n)",
         indexing_maps = #matmul_accesses,
         library_call = "linalg_matmul",
-        n_views = [2, 1],
+        args_in = 2,
+        args_out = 1,
         iterator_types = ["parallel", "parallel", "reduction"]
       }
       ```
@@ -634,7 +635,7 @@ def GenericOp : GenericOpBase<"generic"> {
   let builders = [
     OpBuilder<
       "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
-      "ValueRange args, int64_t inputCount, int64_t outputCount, "
+      "ValueRange args, int64_t argsIn, int64_t argsOut, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">
   ];
@@ -689,7 +690,8 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
       doc = "C(m, n) += A(m, k) * B(k, n)",
       indexing_maps = #matmul_accesses,
       library_call = "linalg_matmul",
-      n_views = [2, 1],
+      args_in = 2,
+      args_out = 1,
       iterator_types = ["parallel", "parallel", "reduction"]
     }
     ```
@@ -768,7 +770,7 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
   let builders = [
     OpBuilder<
       "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
-      "ValueRange args, int64_t inputCount, int64_t outputCount, "
+      "ValueRange args, int64_t argsIn, int64_t argsOut, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> "
       "= nullptr">
