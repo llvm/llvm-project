@@ -51,7 +51,7 @@
 ; CHECK:       PtrParent: 0x0
 ; CHECK:       PtrEnd: 0x0
 ; CHECK:       PtrNext: 0x0
-; CHECK:       CodeSize: 0x39
+; CHECK:       CodeSize: 0x2A
 ; CHECK:       DbgStart: 0x0
 ; CHECK:       DbgEnd: 0x0
 ; CHECK:       FunctionType: f (0x1002)
@@ -73,7 +73,7 @@
 ; CHECK:       LocalVariableAddrRange {
 ; CHECK:         OffsetStart: .text+0x6
 ; CHECK:         ISectStart: 0x0
-; CHECK:         Range: 0x33
+; CHECK:         Range: 0x24
 ; CHECK:       }
 ; CHECK:     }
 ; CHECK:     ProcEnd {
