@@ -407,13 +407,9 @@ endif ()
 # Configure System
 #===============================================================================
 
-set(LIBCXX_COMPILER    ${CMAKE_CXX_COMPILER})
 set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
-
-string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION
-       ${PACKAGE_VERSION})
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
