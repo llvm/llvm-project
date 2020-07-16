@@ -701,13 +701,13 @@ define void @test_maximum(half* %p) #0 {
 
 ; CHECK-FP16-LABEL: test_copysign:
 ; CHECK-FP16:         ldrh r2, [r0]
-; CHECK-FP16-NEXT:    vmov.i32 d0, #0x80000000
+; CHECK-FP16-NEXT:    vmov.i32 d16, #0x80000000
 ; CHECK-FP16-NEXT:    ldrh r1, [r1]
-; CHECK-FP16-NEXT:    vmov s2, r2
-; CHECK-FP16-NEXT:    vmov s4, r1
+; CHECK-FP16-NEXT:    vmov s0, r2
+; CHECK-FP16-NEXT:    vmov s2, r1
+; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-FP16-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s4, s4
-; CHECK-FP16-NEXT:    vbsl d0, d2, d1
+; CHECK-FP16-NEXT:    vbit d0, d1, d16
 ; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-FP16-NEXT:    vmov r1, s0
 ; CHECK-FP16-NEXT:    strh r1, [r0]
@@ -729,8 +729,8 @@ define void @test_maximum(half* %p) #0 {
 ; CHECK-LIBCALL-VFP-NEXT:    mov r0, r1
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL-VFP:         vmov s0, r0
-; CHECK-LIBCALL-VFP-NEXT:    vbsl d8, d0, d9
-; CHECK-LIBCALL-VFP-NEXT:    vmov r0, s16
+; CHECK-LIBCALL-VFP-NEXT:    vbif d0, d9, d8
+; CHECK-LIBCALL-VFP-NEXT:    vmov r0, s0
 ; CHECK-LIBCALL: bl __aeabi_f2h
 ; CHECK-LIBCALL-VFP:         strh r0, [r5]
 ; CHECK-LIBCALL-VFP-NEXT:    vpop {d8, d9}

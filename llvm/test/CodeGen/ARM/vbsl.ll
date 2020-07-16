@@ -6,11 +6,11 @@
 define <8 x i8> @v_bsli8(<8 x i8>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 ; CHECK-LABEL: v_bsli8:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr d18, [r0]
 ; CHECK-NEXT:    vldr d16, [r2]
 ; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, <8 x i8>* %A
 	%tmp2 = load <8 x i8>, <8 x i8>* %B
@@ -25,11 +25,11 @@ define <8 x i8> @v_bsli8(<8 x i8>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 define <4 x i16> @v_bsli16(<4 x i16>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind {
 ; CHECK-LABEL: v_bsli16:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr d18, [r0]
 ; CHECK-NEXT:    vldr d16, [r2]
 ; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i16>, <4 x i16>* %A
 	%tmp2 = load <4 x i16>, <4 x i16>* %B
@@ -44,11 +44,11 @@ define <4 x i16> @v_bsli16(<4 x i16>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind
 define <2 x i32> @v_bsli32(<2 x i32>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind {
 ; CHECK-LABEL: v_bsli32:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr d18, [r0]
 ; CHECK-NEXT:    vldr d16, [r2]
 ; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <2 x i32>, <2 x i32>* %A
 	%tmp2 = load <2 x i32>, <2 x i32>* %B
@@ -63,11 +63,11 @@ define <2 x i32> @v_bsli32(<2 x i32>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind
 define <1 x i64> @v_bsli64(<1 x i64>* %A, <1 x i64>* %B, <1 x i64>* %C) nounwind {
 ; CHECK-LABEL: v_bsli64:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr d18, [r0]
 ; CHECK-NEXT:    vldr d16, [r2]
 ; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <1 x i64>, <1 x i64>* %A
 	%tmp2 = load <1 x i64>, <1 x i64>* %B
@@ -82,12 +82,12 @@ define <1 x i64> @v_bsli64(<1 x i64>* %A, <1 x i64>* %B, <1 x i64>* %C) nounwind
 define <16 x i8> @v_bslQi8(<16 x i8>* %A, <16 x i8>* %B, <16 x i8>* %C) nounwind {
 ; CHECK-LABEL: v_bslQi8:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
-; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q10, q9, q8
-; CHECK-NEXT:    vmov r0, r1, d20
-; CHECK-NEXT:    vmov r2, r3, d21
+; CHECK-NEXT:    vbit q8, q9, q10
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <16 x i8>, <16 x i8>* %A
 	%tmp2 = load <16 x i8>, <16 x i8>* %B
@@ -102,12 +102,12 @@ define <16 x i8> @v_bslQi8(<16 x i8>* %A, <16 x i8>* %B, <16 x i8>* %C) nounwind
 define <8 x i16> @v_bslQi16(<8 x i16>* %A, <8 x i16>* %B, <8 x i16>* %C) nounwind {
 ; CHECK-LABEL: v_bslQi16:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
-; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q10, q9, q8
-; CHECK-NEXT:    vmov r0, r1, d20
-; CHECK-NEXT:    vmov r2, r3, d21
+; CHECK-NEXT:    vbit q8, q9, q10
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i16>, <8 x i16>* %A
 	%tmp2 = load <8 x i16>, <8 x i16>* %B
@@ -122,12 +122,12 @@ define <8 x i16> @v_bslQi16(<8 x i16>* %A, <8 x i16>* %B, <8 x i16>* %C) nounwin
 define <4 x i32> @v_bslQi32(<4 x i32>* %A, <4 x i32>* %B, <4 x i32>* %C) nounwind {
 ; CHECK-LABEL: v_bslQi32:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
-; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q10, q9, q8
-; CHECK-NEXT:    vmov r0, r1, d20
-; CHECK-NEXT:    vmov r2, r3, d21
+; CHECK-NEXT:    vbit q8, q9, q10
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i32>, <4 x i32>* %A
 	%tmp2 = load <4 x i32>, <4 x i32>* %B
@@ -142,12 +142,12 @@ define <4 x i32> @v_bslQi32(<4 x i32>* %A, <4 x i32>* %B, <4 x i32>* %C) nounwin
 define <2 x i64> @v_bslQi64(<2 x i64>* %A, <2 x i64>* %B, <2 x i64>* %C) nounwind {
 ; CHECK-LABEL: v_bslQi64:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r2]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
-; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q10, q9, q8
-; CHECK-NEXT:    vmov r0, r1, d20
-; CHECK-NEXT:    vmov r2, r3, d21
+; CHECK-NEXT:    vbit q8, q9, q10
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <2 x i64>, <2 x i64>* %A
 	%tmp2 = load <2 x i64>, <2 x i64>* %B
@@ -165,8 +165,8 @@ define <8 x i8> @f1(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) nounwind readnone opt
 ; CHECK-NEXT:    vldr d16, [sp]
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
   %vbsl.i = tail call <8 x i8> @llvm.arm.neon.vbsl.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) nounwind
   ret <8 x i8> %vbsl.i
@@ -178,8 +178,8 @@ define <4 x i16> @f2(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) nounwind readnone
 ; CHECK-NEXT:    vldr d16, [sp]
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
   %vbsl3.i = tail call <4 x i16> @llvm.arm.neon.vbsl.v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) nounwind
   ret <4 x i16> %vbsl3.i
@@ -191,8 +191,8 @@ define <2 x i32> @f3(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) nounwind readnone
 ; CHECK-NEXT:    vldr d16, [sp]
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
   %vbsl3.i = tail call <2 x i32> @llvm.arm.neon.vbsl.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) nounwind
   ret <2 x i32> %vbsl3.i
@@ -204,8 +204,8 @@ define <2 x float> @f4(<2 x float> %a, <2 x float> %b, <2 x float> %c) nounwind 
 ; CHECK-NEXT:    vldr d16, [sp]
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
   %vbsl4.i = tail call <2 x float> @llvm.arm.neon.vbsl.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c) nounwind
   ret <2 x float> %vbsl4.i
@@ -214,15 +214,15 @@ define <2 x float> @f4(<2 x float> %a, <2 x float> %b, <2 x float> %c) nounwind 
 define <16 x i8> @g1(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: g1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
+; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d18, r0, r1
 ; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q9, q10, q8
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vbit q8, q10, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
   %vbsl.i = tail call <16 x i8> @llvm.arm.neon.vbsl.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) nounwind
   ret <16 x i8> %vbsl.i
@@ -231,15 +231,15 @@ define <16 x i8> @g1(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) nounwind readnone
 define <8 x i16> @g2(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: g2:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
+; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d18, r0, r1
 ; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q9, q10, q8
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vbit q8, q10, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
   %vbsl3.i = tail call <8 x i16> @llvm.arm.neon.vbsl.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) nounwind
   ret <8 x i16> %vbsl3.i
@@ -248,15 +248,15 @@ define <8 x i16> @g2(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) nounwind readnone
 define <4 x i32> @g3(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: g3:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
+; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d18, r0, r1
 ; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q9, q10, q8
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vbit q8, q10, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
   %vbsl3.i = tail call <4 x i32> @llvm.arm.neon.vbsl.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) nounwind
   ret <4 x i32> %vbsl3.i
@@ -265,15 +265,15 @@ define <4 x i32> @g3(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) nounwind readnone
 define <4 x float> @g4(<4 x float> %a, <4 x float> %b, <4 x float> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: g4:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
+; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d18, r0, r1
 ; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q9, q10, q8
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vbit q8, q10, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
   %vbsl4.i = tail call <4 x float> @llvm.arm.neon.vbsl.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) nounwind
   ret <4 x float> %vbsl4.i
@@ -285,8 +285,8 @@ define <1 x i64> @test_vbsl_s64(<1 x i64> %a, <1 x i64> %b, <1 x i64> %c) nounwi
 ; CHECK-NEXT:    vldr d16, [sp]
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
   %vbsl3.i = tail call <1 x i64> @llvm.arm.neon.vbsl.v1i64(<1 x i64> %a, <1 x i64> %b, <1 x i64> %c) nounwind
   ret <1 x i64> %vbsl3.i
@@ -298,8 +298,8 @@ define <1 x i64> @test_vbsl_u64(<1 x i64> %a, <1 x i64> %b, <1 x i64> %c) nounwi
 ; CHECK-NEXT:    vldr d16, [sp]
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vbsl d18, d17, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vbit d16, d17, d18
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
   %vbsl3.i = tail call <1 x i64> @llvm.arm.neon.vbsl.v1i64(<1 x i64> %a, <1 x i64> %b, <1 x i64> %c) nounwind
   ret <1 x i64> %vbsl3.i
@@ -308,15 +308,15 @@ define <1 x i64> @test_vbsl_u64(<1 x i64> %a, <1 x i64> %b, <1 x i64> %c) nounwi
 define <2 x i64> @test_vbslq_s64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: test_vbslq_s64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
+; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d18, r0, r1
 ; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q9, q10, q8
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vbit q8, q10, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
   %vbsl3.i = tail call <2 x i64> @llvm.arm.neon.vbsl.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) nounwind
   ret <2 x i64> %vbsl3.i
@@ -325,15 +325,15 @@ define <2 x i64> @test_vbslq_s64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) nounw
 define <2 x i64> @test_vbslq_u64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: test_vbslq_u64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
+; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vmov d18, r0, r1
 ; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q9, q10, q8
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vbit q8, q10, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
   %vbsl3.i = tail call <2 x i64> @llvm.arm.neon.vbsl.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) nounwind
   ret <2 x i64> %vbsl3.i

@@ -79,9 +79,9 @@ define <16 x i8> @v_bslQi8(<16 x i8>* %A, <16 x i8>* %B, <16 x i8>* %C) nounwind
 ; CHECK-NEXT:    vld1.32 {d16, d17}, [r2]
 ; CHECK-NEXT:    vmov.i8 q9, #0x3
 ; CHECK-NEXT:    vld1.32 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q9, q10, q8
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vbit q8, q10, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <16 x i8>, <16 x i8>* %A
 	%tmp2 = load <16 x i8>, <16 x i8>* %B
@@ -98,9 +98,9 @@ define <8 x i16> @v_bslQi16(<8 x i16>* %A, <8 x i16>* %B, <8 x i16>* %C) nounwin
 ; CHECK-NEXT:    vld1.32 {d16, d17}, [r2]
 ; CHECK-NEXT:    vmov.i16 q9, #0x3
 ; CHECK-NEXT:    vld1.32 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q9, q10, q8
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vbit q8, q10, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i16>, <8 x i16>* %A
 	%tmp2 = load <8 x i16>, <8 x i16>* %B
@@ -117,9 +117,9 @@ define <4 x i32> @v_bslQi32(<4 x i32>* %A, <4 x i32>* %B, <4 x i32>* %C) nounwin
 ; CHECK-NEXT:    vld1.32 {d16, d17}, [r2]
 ; CHECK-NEXT:    vmov.i32 q9, #0x3
 ; CHECK-NEXT:    vld1.32 {d20, d21}, [r0]
-; CHECK-NEXT:    vbsl q9, q10, q8
-; CHECK-NEXT:    vmov r0, r1, d18
-; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    vbit q8, q10, q9
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i32>, <4 x i32>* %A
 	%tmp2 = load <4 x i32>, <4 x i32>* %B
@@ -137,9 +137,9 @@ define <2 x i64> @v_bslQi64(<2 x i64>* %A, <2 x i64>* %B, <2 x i64>* %C) nounwin
 ; CHECK-NEXT:    vld1.32 {d18, d19}, [r0]
 ; CHECK-NEXT:    adr r0, LCPI7_0
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r0:128]
-; CHECK-NEXT:    vbsl q10, q9, q8
-; CHECK-NEXT:    vmov r0, r1, d20
-; CHECK-NEXT:    vmov r2, r3, d21
+; CHECK-NEXT:    vbit q8, q9, q10
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <2 x i64>, <2 x i64>* %A
 	%tmp2 = load <2 x i64>, <2 x i64>* %B
