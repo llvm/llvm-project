@@ -320,11 +320,7 @@ void HexagonPassConfig::addIRPasses() {
 
   if (!NoOpt) {
     if (EnableInitialCFGCleanup)
-      addPass(createCFGSimplificationPass(SimplifyCFGOptions()
-                                              .forwardSwitchCondToPhi(true)
-                                              .convertSwitchToLookupTable(true)
-                                              .needCanonicalLoops(false)
-                                              .sinkCommonInsts(true)));
+      addPass(createCFGSimplificationPass(1, true, true, false, true));
     if (EnableLoopPrefetch)
       addPass(createLoopDataPrefetchPass());
     if (EnableCommGEP)
