@@ -166,8 +166,8 @@ static int InitLibrary(DeviceTy& Device) {
         DP("Has pending ctors... call now\n");
         for (auto &entry : lib.second.PendingCtors) {
           void *ctor = entry;
-          int rc = target(device_id, ctor, 0, NULL, NULL, NULL,
-                          NULL, 1, 1, true /*team*/);
+          int rc = target(device_id, ctor, 0, NULL, NULL, NULL, NULL, NULL, 1,
+              1, true /*team*/);
           if (rc != OFFLOAD_SUCCESS) {
             DP("Running ctor " DPxMOD " failed.\n", DPxPTR(ctor));
             Device.PendingGlobalsMtx.unlock();
@@ -214,16 +214,71 @@ static int32_t member_of(int64_t type) {
   return ((type & OMP_TGT_MAPTYPE_MEMBER_OF) >> 48) - 1;
 }
 
+/// Call the user-defined mapper function followed by the appropriate
+// target_data_* function (target_data_{begin,end,update}).
+int target_data_mapper(DeviceTy &Device, void *arg_base,
+    void *arg, int64_t arg_size, int64_t arg_type, void *arg_mapper,
+    TargetDataFuncPtrTy target_data_function) {
+  DP("Calling the mapper function " DPxMOD "\n", DPxPTR(arg_mapper));
+
+  // The mapper function fills up Components.
+  MapperComponentsTy MapperComponents;
+  MapperFuncPtrTy MapperFuncPtr = (MapperFuncPtrTy)(arg_mapper);
+  (*MapperFuncPtr)((void *)&MapperComponents, arg_base, arg, arg_size,
+      arg_type);
+
+  // Construct new arrays for args_base, args, arg_sizes and arg_types
+  // using the information in MapperComponents and call the corresponding
+  // target_data_* function using these new arrays.
+  std::vector<void *> mapper_args_base;
+  std::vector<void *> mapper_args;
+  std::vector<int64_t> mapper_arg_sizes;
+  std::vector<int64_t> mapper_arg_types;
+
+  for (auto& C : MapperComponents.Components) {
+    mapper_args_base.push_back(C.Base);
+    mapper_args.push_back(C.Begin);
+    mapper_arg_sizes.push_back(C.Size);
+    mapper_arg_types.push_back(C.Type);
+  }
+
+  int rc = target_data_function(Device, MapperComponents.Components.size(),
+      mapper_args_base.data(), mapper_args.data(), mapper_arg_sizes.data(),
+      mapper_arg_types.data(), /*arg_mappers*/ nullptr,
+      /*__tgt_async_info*/ nullptr);
+
+  return rc;
+}
+
 /// Internal function to do the mapping and transfer the data to the device
 int target_data_begin(DeviceTy &Device, int32_t arg_num, void **args_base,
                       void **args, int64_t *arg_sizes, int64_t *arg_types,
-                      __tgt_async_info *async_info_ptr) {
+                      void **arg_mappers, __tgt_async_info *async_info_ptr) {
   // process each input.
   for (int32_t i = 0; i < arg_num; ++i) {
     // Ignore private variables and arrays - there is no mapping for them.
     if ((arg_types[i] & OMP_TGT_MAPTYPE_LITERAL) ||
         (arg_types[i] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
+
+    if (arg_mappers && arg_mappers[i]) {
+      // Instead of executing the regular path of target_data_begin, call the
+      // target_data_mapper variant which will call target_data_begin again
+      // with new arguments.
+      DP("Calling target_data_mapper for the %dth argument\n", i);
+
+      int rc = target_data_mapper(Device, args_base[i], args[i], arg_sizes[i],
+          arg_types[i], arg_mappers[i], target_data_begin);
+
+      if (rc != OFFLOAD_SUCCESS) {
+        DP("Call to target_data_begin via target_data_mapper for custom mapper"
+            " failed.\n");
+        return OFFLOAD_FAIL;
+      }
+
+      // Skip the rest of this function, continue to the next argument.
+      continue;
+    }
 
     void *HstPtrBegin = args[i];
     void *HstPtrBase = args_base[i];
@@ -353,7 +408,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num, void **args_base,
 /// Internal function to undo the mapping and retrieve the data from the device.
 int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
                     void **args, int64_t *arg_sizes, int64_t *arg_types,
-                    __tgt_async_info *async_info_ptr) {
+                    void **arg_mappers, __tgt_async_info *async_info_ptr) {
   // process each input.
   for (int32_t i = arg_num - 1; i >= 0; --i) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -361,6 +416,25 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
     if ((arg_types[i] & OMP_TGT_MAPTYPE_LITERAL) ||
         (arg_types[i] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
+
+    if (arg_mappers && arg_mappers[i]) {
+      // Instead of executing the regular path of target_data_end, call the
+      // target_data_mapper variant which will call target_data_end again
+      // with new arguments.
+      DP("Calling target_data_mapper for the %dth argument\n", i);
+
+      int rc = target_data_mapper(Device, args_base[i], args[i], arg_sizes[i],
+          arg_types[i], arg_mappers[i], target_data_end);
+
+      if (rc != OFFLOAD_SUCCESS) {
+        DP("Call to target_data_end via target_data_mapper for custom mapper"
+            " failed.\n");
+        return OFFLOAD_FAIL;
+      }
+
+      // Skip the rest of this function, continue to the next argument.
+      continue;
+    }
 
     void *HstPtrBegin = args[i];
     int64_t data_size = arg_sizes[i];
@@ -486,13 +560,35 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
 }
 
 /// Internal function to pass data to/from the target.
+// async_info_ptr is currently unused, added here so target_data_update has the
+// same signature as target_data_begin and target_data_end.
 int target_data_update(DeviceTy &Device, int32_t arg_num,
-    void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types) {
+    void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types,
+    void **arg_mappers, __tgt_async_info *async_info_ptr) {
   // process each input.
   for (int32_t i = 0; i < arg_num; ++i) {
     if ((arg_types[i] & OMP_TGT_MAPTYPE_LITERAL) ||
         (arg_types[i] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
+
+    if (arg_mappers && arg_mappers[i]) {
+      // Instead of executing the regular path of target_data_update, call the
+      // target_data_mapper variant which will call target_data_update again
+      // with new arguments.
+      DP("Calling target_data_mapper for the %dth argument\n", i);
+
+      int rc = target_data_mapper(Device, args_base[i], args[i], arg_sizes[i],
+          arg_types[i], arg_mappers[i], target_data_update);
+
+      if (rc != OFFLOAD_SUCCESS) {
+        DP("Call to target_data_update via target_data_mapper for custom mapper"
+            " failed.\n");
+        return OFFLOAD_FAIL;
+      }
+
+      // Skip the rest of this function, continue to the next argument.
+      continue;
+    }
 
     void *HstPtrBegin = args[i];
     int64_t MapSize = arg_sizes[i];
@@ -589,7 +685,8 @@ static bool isLambdaMapping(int64_t Mapping) {
 /// integer different from zero otherwise.
 int target(int64_t device_id, void *host_ptr, int32_t arg_num,
     void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types,
-    int32_t team_num, int32_t thread_limit, int IsTeamConstruct) {
+    void **arg_mappers, int32_t team_num, int32_t thread_limit,
+    int IsTeamConstruct) {
   DeviceTy &Device = Devices[device_id];
 
   // Find the table information in the map or look it up in the translation
@@ -647,7 +744,7 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
 
   // Move data to device.
   int rc = target_data_begin(Device, arg_num, args_base, args, arg_sizes,
-                             arg_types, &AsyncInfo);
+                             arg_types, arg_mappers, &AsyncInfo);
   if (rc != OFFLOAD_SUCCESS) {
     DP("Call to target_data_begin failed, abort target.\n");
     return OFFLOAD_FAIL;
@@ -811,7 +908,7 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
 
   // Move data from device.
   int rt = target_data_end(Device, arg_num, args_base, args, arg_sizes,
-                           arg_types, &AsyncInfo);
+                           arg_types, arg_mappers, &AsyncInfo);
   if (rt != OFFLOAD_SUCCESS) {
     DP("Call to target_data_end failed, abort targe.\n");
     return OFFLOAD_FAIL;
