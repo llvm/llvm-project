@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import os, signal, sys, subprocess, tempfile
 from android_common import *
