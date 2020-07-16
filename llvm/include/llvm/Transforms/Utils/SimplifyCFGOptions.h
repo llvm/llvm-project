@@ -21,29 +21,15 @@ namespace llvm {
 class AssumptionCache;
 
 struct SimplifyCFGOptions {
-  int BonusInstThreshold;
-  bool ForwardSwitchCondToPhi;
-  bool ConvertSwitchToLookupTable;
-  bool NeedCanonicalLoop;
-  bool SinkCommonInsts;
-  bool SimplifyCondBranch;
-  bool FoldTwoEntryPHINode;
+  int BonusInstThreshold = 1;
+  bool ForwardSwitchCondToPhi = false;
+  bool ConvertSwitchToLookupTable = false;
+  bool NeedCanonicalLoop = true;
+  bool SinkCommonInsts = false;
+  bool SimplifyCondBranch = true;
+  bool FoldTwoEntryPHINode = true;
 
-  AssumptionCache *AC;
-
-  SimplifyCFGOptions(unsigned BonusThreshold = 1,
-                     bool ForwardSwitchCond = false,
-                     bool SwitchToLookup = false, bool CanonicalLoops = true,
-                     bool SinkCommon = false,
-                     AssumptionCache *AssumpCache = nullptr,
-                     bool SimplifyCondBranch = true,
-                     bool FoldTwoEntryPHINode = true)
-      : BonusInstThreshold(BonusThreshold),
-        ForwardSwitchCondToPhi(ForwardSwitchCond),
-        ConvertSwitchToLookupTable(SwitchToLookup),
-        NeedCanonicalLoop(CanonicalLoops), SinkCommonInsts(SinkCommon),
-        SimplifyCondBranch(SimplifyCondBranch),
-        FoldTwoEntryPHINode(FoldTwoEntryPHINode), AC(AssumpCache) {}
+  AssumptionCache *AC = nullptr;
 
   // Support 'builder' pattern to set members by name at construction time.
   SimplifyCFGOptions &bonusInstThreshold(int I) {
