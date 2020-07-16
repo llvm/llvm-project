@@ -957,6 +957,8 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       Im.Memory = readLimits(Ctx);
+      if (Im.Memory.Flags & wasm::WASM_LIMITS_FLAG_IS_64)
+        HasMemory64 = true;
       break;
     case wasm::WASM_EXTERNAL_TABLE:
       Im.Table = readTable(Ctx);
@@ -1019,7 +1021,10 @@ Error WasmObjectFile::parseMemorySection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   Memories.reserve(Count);
   while (Count--) {
-    Memories.push_back(readLimits(Ctx));
+    auto Limits = readLimits(Ctx);
+    if (Limits.Flags & wasm::WASM_LIMITS_FLAG_IS_64)
+      HasMemory64 = true;
+    Memories.push_back(Limits);
   }
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("Memory section ended prematurely",
@@ -1576,11 +1581,15 @@ section_iterator WasmObjectFile::section_end() const {
   return section_iterator(SectionRef(Ref, this));
 }
 
-uint8_t WasmObjectFile::getBytesInAddress() const { return 4; }
+uint8_t WasmObjectFile::getBytesInAddress() const {
+  return HasMemory64 ? 8 : 4;
+}
 
 StringRef WasmObjectFile::getFileFormatName() const { return "WASM"; }
 
-Triple::ArchType WasmObjectFile::getArch() const { return Triple::wasm32; }
+Triple::ArchType WasmObjectFile::getArch() const {
+  return HasMemory64 ? Triple::wasm64 : Triple::wasm32;
+}
 
 SubtargetFeatures WasmObjectFile::getFeatures() const {
   return SubtargetFeatures();

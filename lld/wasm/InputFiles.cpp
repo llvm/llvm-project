@@ -576,10 +576,16 @@ void BitcodeFile::parse() {
   obj = check(lto::InputFile::create(MemoryBufferRef(
       mb.getBuffer(), saver.save(archiveName + mb.getBufferIdentifier()))));
   Triple t(obj->getTargetTriple());
-  if (t.getArch() != Triple::wasm32) {
-    error(toString(this) + ": machine type must be wasm32");
+  if (!t.isWasm()) {
+    error(toString(this) + ": machine type must be wasm32 or wasm64");
     return;
   }
+  bool is64 = t.getArch() == Triple::wasm64;
+  if (config->is64.hasValue() && *config->is64 != is64) {
+    error(toString(this) + ": machine type for all bitcode files must match");
+    return;
+  }
+  config->is64 = is64;
   std::vector<bool> keptComdats;
   for (StringRef s : obj->getComdatTable())
     keptComdats.push_back(symtab->addComdat(s));
