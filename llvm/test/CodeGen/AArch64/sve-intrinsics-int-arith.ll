@@ -325,6 +325,39 @@ define <vscale x 2 x i64> @uqsub_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
   ret <vscale x 2 x i64> %out
 }
 
+; ADD (tuples)
+
+define <vscale x 4 x i64> @add_i64_tuple2(<vscale x 4 x i64>* %out, <vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2) {
+; CHECK-LABEL: add_i64_tuple2
+; CHECK: add z0.d, z0.d, z0.d
+; CHECK: add z1.d, z1.d, z1.d
+  %tuple = tail call <vscale x 4 x i64> @llvm.aarch64.sve.tuple.create2.nxv4i64.nxv2i64(<vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2)
+  %res = add <vscale x 4 x i64> %tuple, %tuple
+  ret <vscale x 4 x i64> %res
+}
+
+define <vscale x 6 x i64> @add_i64_tuple3(<vscale x 6 x i64>* %out, <vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3) {
+; CHECK-LABEL: add_i64_tuple3
+; CHECK: add z0.d, z0.d, z0.d
+; CHECK: add z1.d, z1.d, z1.d
+; CHECK: add z2.d, z2.d, z2.d
+  %tuple = tail call <vscale x 6 x i64> @llvm.aarch64.sve.tuple.create3.nxv6i64.nxv2i64(<vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3)
+  %res = add <vscale x 6 x i64> %tuple, %tuple
+  ret <vscale x 6 x i64> %res
+}
+
+define <vscale x 8 x i64> @add_i64_tuple4(<vscale x 8 x i64>* %out, <vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3, <vscale x 2 x i64> %in4) {
+; CHECK-LABEL: add_i64_tuple4
+; CHECK: add z0.d, z0.d, z0.d
+; CHECK: add z1.d, z1.d, z1.d
+; CHECK: add z2.d, z2.d, z2.d
+; CHECK: add z3.d, z3.d, z3.d
+  %tuple = tail call <vscale x 8 x i64> @llvm.aarch64.sve.tuple.create4.nxv8i64.nxv2i64(<vscale x 2 x i64> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3, <vscale x 2 x i64> %in4)
+  %res = add <vscale x 8 x i64> %tuple, %tuple
+  ret <vscale x 8 x i64> %res
+}
+
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.abs.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.abs.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>)
@@ -366,3 +399,7 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.uqsub.x.nxv16i8(<vscale x 16 x i8>,
 declare <vscale x 8 x i16> @llvm.aarch64.sve.uqsub.x.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.uqsub.x.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.uqsub.x.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>)
+
+declare <vscale x 4 x i64> @llvm.aarch64.sve.tuple.create2.nxv4i64.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>)
+declare <vscale x 6 x i64> @llvm.aarch64.sve.tuple.create3.nxv6i64.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+declare <vscale x 8 x i64> @llvm.aarch64.sve.tuple.create4.nxv8i64.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
