@@ -370,6 +370,9 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   // If all the readfirstlane intrinsics are actually for uniform values and 
   // the token used in the begin/end isn't used in anything else the waterfall
   // can be removed.
+  // Alternatively, prior passes may have removed the readfirstlane intrinsics
+  // altogether, in this case the begin/end intrinsics are now redundant and can
+  // also be removed.
   // The readfirstlane intrinsics are replaced with the uniform source value,
   // the loop is removed and the defs in the end intrinsics are just replaced with
   // the input operands
@@ -399,6 +402,8 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
     }
   }
 
+  // Note: this test also returns true when there are NO RFL intrinsics, the
+  // case where a prior pass has removed all of them and the loop is now redundant
   if (Removed == Item.RFLList.size()) {
     // Removed all of the RFLs
     // We can remove the waterfall loop entirely
@@ -468,15 +473,15 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
                  "Linked WATERFALL pseudo ops found in different BBs");
         });
 
-    assert(Item.RFLList.size() &&
-           (Item.EndList.size() || Item.LastUseList.size()) &&
-           "SI_WATERFALL* pseudo instruction group must have at least 1 of "
-           "each type");
-
     if (removeRedundantWaterfall(Item)) {
       Changed = true;
       continue;
     }
+
+    assert(Item.RFLList.size() &&
+           (Item.EndList.size() || Item.LastUseList.size()) &&
+           "SI_WATERFALL* pseudo instruction group must have at least 1 of "
+           "each type");
 
     // Insert the waterfall loop code around the identified region of
     // instructions
