@@ -386,7 +386,7 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
 ; GFX1010-NEXT:    ; implicit-def: $vcc_hi
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-NEXT:    buffer_store_dword v0, off, s[0:3], s6 ; 4-byte Folded Spill
-; GFX1010-NEXT:    v_nop
+; GFX1010-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1010-NEXT:    s_mov_b32 s6, 0x20000
 ; GFX1010-NEXT:    ;;#ASMSTART
 ; GFX1010-NEXT:    ;;#ASMEND

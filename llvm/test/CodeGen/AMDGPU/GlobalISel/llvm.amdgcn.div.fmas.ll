@@ -1075,7 +1075,7 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(float addrspace(1)* %out
 ; GFX10_W32-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX10_W32-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX10_W32-NEXT:  BB13_2: ; %exit
-; GFX10_W32-NEXT:    v_nop
+; GFX10_W32-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10_W32-NEXT:    s_or_b32 exec_lo, exec_lo, s5
 ; GFX10_W32-NEXT:    s_and_b32 s0, 1, s4
 ; GFX10_W32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s0
@@ -1113,7 +1113,7 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(float addrspace(1)* %out
 ; GFX10_W64-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX10_W64-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX10_W64-NEXT:  BB13_2: ; %exit
-; GFX10_W64-NEXT:    v_nop
+; GFX10_W64-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10_W64-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX10_W64-NEXT:    s_and_b32 s0, 1, s6
 ; GFX10_W64-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s0
