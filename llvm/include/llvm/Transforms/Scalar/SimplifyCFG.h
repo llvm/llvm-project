@@ -14,9 +14,9 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_SIMPLIFYCFG_H
 #define LLVM_TRANSFORMS_SCALAR_SIMPLIFYCFG_H
 
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 
 namespace llvm {
 
