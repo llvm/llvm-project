@@ -7407,7 +7407,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
       while (SameTypeIt != E &&
              (*SameTypeIt)->getType() == EltTy &&
-             (SameTypeIt - IncIt) < MaxNumElts) {
+             static_cast<unsigned>(SameTypeIt - IncIt) < MaxNumElts) {
         VisitedInstrs.insert(*SameTypeIt);
         ++SameTypeIt;
       }
