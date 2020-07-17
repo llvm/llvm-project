@@ -7977,19 +7977,26 @@ class TransformTypos : public TreeTransform<TransformTypos> {
     }
   }
 
-  /// If corrections for the first TypoExpr have been exhausted for a
-  /// given combination of the other TypoExprs, retry those corrections against
-  /// the next combination of substitutions for the other TypoExprs by advancing
-  /// to the next potential correction of the second TypoExpr. For the second
-  /// and subsequent TypoExprs, if its stream of corrections has been exhausted,
-  /// the stream is reset and the next TypoExpr's stream is advanced by one (a
-  /// TypoExpr's correction stream is advanced by removing the TypoExpr from the
-  /// TransformCache). Returns true if there is still any untried combinations
-  /// of corrections.
+  /// Try to advance the typo correction state of the first unfinished TypoExpr.
+  /// We allow advancement of the correction stream by removing it from the
+  /// TransformCache which allows `TransformTypoExpr` to advance during the
+  /// next transformation attempt.
+  ///
+  /// Any substitution attempts for the previous TypoExprs (which must have been
+  /// finished) will need to be retried since it's possible that they will now
+  /// be invalid given the latest advancement.
+  ///
+  /// We need to be sure that we're making progress - it's possible that the
+  /// tree is so malformed that the transform never makes it to the
+  /// `TransformTypoExpr`.
+  ///
+  /// Returns true if there are any untried correction combinations.
   bool CheckAndAdvanceTypoExprCorrectionStreams() {
     for (auto TE : TypoExprs) {
       auto &State = SemaRef.getTypoExprState(TE);
       TransformCache.erase(TE);
+      if (!State.Consumer->hasMadeAnyCorrectionProgress())
+        return false;
       if (!State.Consumer->finished())
         return true;
       State.Consumer->resetCorrectionStream();
