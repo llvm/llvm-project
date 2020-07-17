@@ -841,3 +841,38 @@ define <16 x i1> @test51(<16 x i1> %arg, <16 x i1> %arg1) {
   %tmp3 = or <16 x i1> %tmp, %tmp2
   ret <16 x i1> %tmp3
 }
+
+; This would infinite loop because it reaches a transform
+; that was not expecting a constant-foldable value.
+
+define i32 @PR46712(i1 %x, i1 %y, i1 %b, i64 %z) {
+; CHECK-LABEL: @PR46712(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[TRUE:%.*]], label [[END:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[BOOL5:%.*]] = icmp eq i64 [[Z:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = zext i1 [[BOOL5]] to i32
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[T5:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SEL]], [[TRUE]] ]
+; CHECK-NEXT:    ret i32 [[T5]]
+;
+entry:
+  %t2 = or i1 %x, %y
+  %conv = sext i1 %t2 to i32
+  %cmp = icmp sge i32 %conv, 1
+  %conv2 = zext i1 %cmp to i64
+  br i1 %b, label %true, label %end
+
+true:
+  %bool4 = icmp eq i64 %conv2, 0
+  %bool5 = icmp ne i64 %z, 0
+  %and = and i1 %bool4, %bool5
+  %sel = select i1 %and, i1 false, i1 true
+  br label %end
+
+end:
+  %t5 = phi i1 [ 0, %entry ], [ %sel, %true ]
+  %conv8 = zext i1 %t5 to i32
+  ret i32 %conv8
+}
