@@ -353,7 +353,7 @@ std::optional<char32_t> IoStatementState::SkipSpaces(
     std::optional<int> &remaining) {
   while (!remaining || *remaining > 0) {
     if (auto ch{GetCurrentChar()}) {
-      if (*ch != ' ') {
+      if (*ch != ' ' && *ch != '\t') {
         return ch;
       }
       HandleRelativePosition(1);
@@ -373,6 +373,7 @@ std::optional<char32_t> IoStatementState::NextInField(
     if (auto next{GetCurrentChar()}) {
       switch (*next) {
       case ' ':
+      case '\t':
       case ',':
       case ';':
       case '/':
@@ -415,7 +416,7 @@ std::optional<char32_t> IoStatementState::NextInField(
 
 std::optional<char32_t> IoStatementState::GetNextNonBlank() {
   auto ch{GetCurrentChar()};
-  while (ch.value_or(' ') == ' ') {
+  while (!ch || *ch == ' ' || *ch == '\t') {
     if (ch) {
       HandleRelativePosition(1);
     } else if (!AdvanceRecord()) {
@@ -485,7 +486,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     if (!imaginaryPart_) {
       edit.repeat = std::min<int>(remaining_, maxRepeat);
       auto ch{io.GetNextNonBlank()};
-      if (!ch || *ch == ' ' || *ch == comma) { // "r*" repeated null
+      if (!ch || *ch == ' ' || *ch == '\t' || *ch == comma) {
+        // "r*" repeated null
         edit.descriptor = DataEdit::ListDirectedNullValue;
       }
     }
@@ -554,7 +556,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
         edit.descriptor = DataEdit::ListDirectedNullValue;
         return edit;
       }
-      if (!ch || *ch == ' ' || *ch == comma) { // "r*" null
+      if (!ch || *ch == ' ' || *ch == '\t' || *ch == comma) { // "r*" null
         edit.descriptor = DataEdit::ListDirectedNullValue;
       }
       edit.repeat = std::min<int>(r, maxRepeat);

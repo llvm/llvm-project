@@ -34,7 +34,7 @@ static bool EditBOZInput(IoStatementState &io, const DataEdit &edit, void *n,
   common::UnsignedInt128 value{0};
   for (; next; next = io.NextInField(remaining)) {
     char32_t ch{*next};
-    if (ch == ' ') {
+    if (ch == ' ' || ch == '\t') {
       continue;
     }
     int digit{0};
@@ -101,7 +101,7 @@ bool EditIntegerInput(
   common::UnsignedInt128 value;
   for (; next; next = io.NextInField(remaining)) {
     char32_t ch{*next};
-    if (ch == ' ') {
+    if (ch == ' ' || ch == '\t') {
       if (edit.modes.editingFlags & blankZero) {
         ch = '0'; // BZ mode - treat blank as if it were zero
       } else {
@@ -170,7 +170,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
   } else if (*next == decimal || (*next >= '0' && *next <= '9')) {
     for (; next; next = io.NextInField(remaining)) {
       char32_t ch{*next};
-      if (ch == ' ') {
+      if (ch == ' ' || ch == '\t') {
         if (edit.modes.editingFlags & blankZero) {
           ch = '0'; // BZ mode - treat blank as if it were zero
         } else {
@@ -229,7 +229,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     return 0;
   }
   if (remaining) {
-    while (next && *next == ' ') {
+    while (next && (*next == ' ' || *next == '\t')) {
       next = io.NextInField(remaining);
     }
     if (next) {
@@ -386,6 +386,7 @@ static bool EditListDirectedDefaultCharacterInput(
        next = io.NextInField(remaining)) {
     switch (*next) {
     case ' ':
+    case '\t':
     case ',':
     case ';':
     case '/':
