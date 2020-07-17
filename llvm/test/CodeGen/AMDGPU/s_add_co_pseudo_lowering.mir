@@ -18,12 +18,12 @@ body:             |
     ; GCN: [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; GCN: [[COPY6:%[0-9]+]]:sgpr_32 = COPY [[COPY3]]
     ; GCN: [[V_MUL_LO_U32_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32 [[COPY]], [[COPY4]], implicit $exec
-    ; GCN: [[V_ADD_I32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_I32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_I32_e64 killed [[V_MUL_LO_U32_]], [[COPY6]], 0, implicit $exec
+    ; GCN: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 killed [[V_MUL_LO_U32_]], [[COPY6]], 0, implicit $exec
     ; GCN: [[S_MUL_HI_U32_:%[0-9]+]]:sreg_32 = S_MUL_HI_U32 [[COPY4]], [[COPY5]]
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -614296167
     ; GCN: [[V_MUL_LO_U32_1:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32 [[COPY]], [[COPY3]], implicit $exec
     ; GCN: [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed [[S_MOV_B32_]]
-    ; GCN: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 killed [[V_MUL_LO_U32_1]], [[COPY7]], [[V_ADD_I32_e64_1]], 0, implicit $exec
+    ; GCN: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 killed [[V_MUL_LO_U32_1]], [[COPY7]], [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GCN: [[V_MUL_HI_U32_:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32 [[COPY4]], [[V_ADDC_U32_e64_]], implicit $exec
     ; GCN: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -181084736
     ; GCN: [[V_MUL_LO_U32_2:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32 [[V_MUL_HI_U32_]], [[S_MOV_B32_1]], implicit $exec
@@ -38,7 +38,7 @@ body:             |
     %5:sreg_32 = COPY $sgpr2
     %20:vgpr_32 = COPY %3
     %7:sreg_32 = S_MUL_I32 %6, %4
-    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_I32_e64 killed %7, %20, 0, implicit $exec
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 killed %7, %20, 0, implicit $exec
     %8:sreg_32 = S_MUL_HI_U32 %4, %5
     %11:sreg_32 = S_MOV_B32 -614296167
     %12:sreg_32 = S_MUL_I32 %6, %3

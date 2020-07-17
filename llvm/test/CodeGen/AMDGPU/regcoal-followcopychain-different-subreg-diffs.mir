@@ -78,7 +78,7 @@ body:             |
     %48:vgpr_32 = nnan arcp contract reassoc V_MAD_F32 0, killed %45, 0, killed %47, 0, 1056964608, 0, 0, implicit $exec, implicit $mode
     %49:vgpr_32 = V_FLOOR_F32_e32 killed %48, implicit $exec, implicit $mode
     %50:vgpr_32 = V_CVT_I32_F32_e32 killed %49, implicit $exec, implicit $mode
-    %81:vgpr_32 = V_ADD_I32_e32 1, killed %50, implicit-def dead $vcc, implicit $exec
+    %81:vgpr_32 = V_ADD_CO_U32_e32 1, killed %50, implicit-def dead $vcc, implicit $exec
     dead %82:vgpr_32 = V_MIN_I32_e32 31, killed %81, implicit $exec
   
   bb.7:

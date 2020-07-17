@@ -61,8 +61,8 @@ body: |
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
-    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_I32_e64 %3, [[COPY2]], 0, implicit $exec
+    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
+    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_CO_U32_e64 %3, [[COPY2]], 0, implicit $exec
     ; GFX8: S_ENDPGM 0, implicit %4
     ; GFX9-LABEL: name: add_s32_vgpr_vgpr_vgpr
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -102,8 +102,8 @@ body: |
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
-    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_I32_e64 %3, [[COPY2]], 0, implicit $exec
+    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
+    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_CO_U32_e64 %3, [[COPY2]], 0, implicit $exec
     ; GFX8: S_ENDPGM 0, implicit %4, implicit %3
     ; GFX9-LABEL: name: add_s32_vgpr_vgpr_vgpr_multi_use
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -146,8 +146,8 @@ body: |
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
-    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_I32_e64 %3, [[COPY2]], 0, implicit $exec
+    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
+    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_CO_U32_e64 %3, [[COPY2]], 0, implicit $exec
     ; GFX8: S_ENDPGM 0, implicit %4
     ; GFX9-LABEL: name: add_p3_vgpr_vgpr_vgpr
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -190,8 +190,8 @@ body: |
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
-    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_I32_e64 %3, [[COPY2]], 0, implicit $exec
+    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
+    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_CO_U32_e64 %3, [[COPY2]], 0, implicit $exec
     ; GFX8: S_ENDPGM 0, implicit %4
     ; GFX9-LABEL: name: add_p5_vgpr_vgpr_vgpr
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -234,8 +234,8 @@ body: |
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
-    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_I32_e64 [[COPY2]], %3, 0, implicit $exec
+    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
+    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], %3, 0, implicit $exec
     ; GFX8: S_ENDPGM 0, implicit %4
     ; GFX9-LABEL: name: add_p3_s32_vgpr_vgpr_vgpr
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -278,8 +278,8 @@ body: |
     ; GFX8: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_I32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
-    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_I32_e64 [[COPY2]], %3, 0, implicit $exec
+    ; GFX8: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
+    ; GFX8: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], %3, 0, implicit $exec
     ; GFX8: S_ENDPGM 0, implicit %4
     ; GFX9-LABEL: name: add_p5_s32_vgpr_vgpr_vgpr
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
