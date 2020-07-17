@@ -1,8 +1,8 @@
 ; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_membound:
-; MemoryBound: 1
-; WaveLimiterHint : 1
+; GCN: MemoryBound: 1
+; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_membound(<4 x i32> addrspace(1)* nocapture readonly %arg, <4 x i32> addrspace(1)* nocapture %arg1) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -50,8 +50,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_indirect:
-; MemoryBound: 0
-; WaveLimiterHint : 1
+; GCN: MemoryBound: 0
+; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_indirect(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 1
