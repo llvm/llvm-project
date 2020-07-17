@@ -41,4 +41,19 @@ TEST_F(OpenMPLoweringTest, Barrier) {
   EXPECT_EQ(succeeded(barrierOp.verify()), true);
 }
 
+TEST_F(OpenMPLoweringTest, TaskWait) {
+  // Construct a dummy parse tree node for `!OMP taskwait`.
+  struct Fortran::parser::OmpSimpleStandaloneDirective taskWaitDirective(
+      llvm::omp::Directive::OMPD_taskwait);
+
+  // Check and lower the `!OMP taskwait` node to `TaskwaitOp` operation of
+  // OpenMPDialect.
+  EXPECT_EQ(taskWaitDirective.v, llvm::omp::Directive::OMPD_taskwait);
+  auto taskWaitOp = mlirOpBuilder->create<mlir::omp::TaskwaitOp>(
+      mlirOpBuilder->getUnknownLoc());
+
+  EXPECT_EQ(taskWaitOp.getOperationName(), "omp.taskwait");
+  EXPECT_EQ(succeeded(taskWaitOp.verify()), true);
+}
+
 // main() from gtest_main
