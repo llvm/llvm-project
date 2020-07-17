@@ -240,10 +240,6 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
   return TrappingKinds;
 }
 
-bool SanitizerArgs::needsFuzzerInterceptors() const {
-  return needsFuzzer() && !needsAsanRt() && !needsTsanRt() && !needsMsanRt();
-}
-
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsHwasanRt() || needsTsanRt() ||
@@ -1087,22 +1083,6 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (Sanitizers.has(SanitizerKind::Memory) ||
       Sanitizers.has(SanitizerKind::Address))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
-
-  // libFuzzer wants to intercept calls to certain library functions, so the
-  // following -fno-builtin-* flags force the compiler to emit interposable
-  // libcalls to these functions. Other sanitizers effectively do the same thing
-  // by marking all library call sites with NoBuiltin attribute in their LLVM
-  // pass. (see llvm::maybeMarkSanitizerLibraryCallNoBuiltin)
-  if (Sanitizers.has(SanitizerKind::FuzzerNoLink)) {
-    CmdArgs.push_back("-fno-builtin-memcmp");
-    CmdArgs.push_back("-fno-builtin-strncmp");
-    CmdArgs.push_back("-fno-builtin-strcmp");
-    CmdArgs.push_back("-fno-builtin-strncasecmp");
-    CmdArgs.push_back("-fno-builtin-strcasecmp");
-    CmdArgs.push_back("-fno-builtin-strstr");
-    CmdArgs.push_back("-fno-builtin-strcasestr");
-    CmdArgs.push_back("-fno-builtin-memmem");
-  }
 
   // Require -fvisibility= flag on non-Windows when compiling if vptr CFI is
   // enabled.
