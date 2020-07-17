@@ -6052,20 +6052,35 @@ void GNUStyle<ELFT>::printMipsPLT(const MipsGOTParser<ELFT> &Parser) {
 }
 
 template <class ELFT>
-void GNUStyle<ELFT>::printMipsABIFlags(const ELFObjectFile<ELFT> *ObjF) {
+Expected<const Elf_Mips_ABIFlags<ELFT> *>
+getMipsAbiFlagsSection(const ELFObjectFile<ELFT> *ObjF) {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  const Elf_Shdr *Shdr =
+  const typename ELFT::Shdr *Shdr =
       findSectionByName(*Obj, ObjF->getFileName(), ".MIPS.abiflags");
   if (!Shdr)
+    return nullptr;
+
+  constexpr StringRef ErrPrefix = "unable to read the .MIPS.abiflags section: ";
+  Expected<ArrayRef<uint8_t>> DataOrErr = Obj->getSectionContents(Shdr);
+  if (!DataOrErr)
+    return createError(ErrPrefix + toString(DataOrErr.takeError()));
+
+  if (DataOrErr->size() != sizeof(Elf_Mips_ABIFlags<ELFT>))
+    return createError(ErrPrefix + "it has a wrong size (" +
+        Twine(DataOrErr->size()) + ")");
+  return reinterpret_cast<const Elf_Mips_ABIFlags<ELFT> *>(DataOrErr->data());
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printMipsABIFlags(const ELFObjectFile<ELFT> *ObjF) {
+  const Elf_Mips_ABIFlags<ELFT> *Flags = nullptr;
+  if (Expected<const Elf_Mips_ABIFlags<ELFT> *> SecOrErr =
+          getMipsAbiFlagsSection(ObjF))
+    Flags = *SecOrErr;
+  else
+    this->reportUniqueWarning(SecOrErr.takeError());
+  if (!Flags)
     return;
-
-  ArrayRef<uint8_t> Sec =
-      unwrapOrError(ObjF->getFileName(), Obj->getSectionContents(Shdr));
-  if (Sec.size() != sizeof(Elf_Mips_ABIFlags<ELFT>))
-    reportError(createError(".MIPS.abiflags section has a wrong size"),
-                ObjF->getFileName());
-
-  auto *Flags = reinterpret_cast<const Elf_Mips_ABIFlags<ELFT> *>(Sec.data());
 
   OS << "MIPS ABI Flags Version: " << Flags->version << "\n\n";
   OS << "ISA: MIPS" << int(Flags->isa_level);
@@ -7044,21 +7059,18 @@ void LLVMStyle<ELFT>::printMipsPLT(const MipsGOTParser<ELFT> &Parser) {
 
 template <class ELFT>
 void LLVMStyle<ELFT>::printMipsABIFlags(const ELFObjectFile<ELFT> *ObjF) {
-  const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  const Elf_Shdr *Shdr =
-      findSectionByName(*Obj, ObjF->getFileName(), ".MIPS.abiflags");
-  if (!Shdr) {
-    W.startLine() << "There is no .MIPS.abiflags section in the file.\n";
+  const Elf_Mips_ABIFlags<ELFT> *Flags;
+  if (Expected<const Elf_Mips_ABIFlags<ELFT> *> SecOrErr =
+          getMipsAbiFlagsSection(ObjF)) {
+    Flags = *SecOrErr;
+    if (!Flags) {
+      W.startLine() << "There is no .MIPS.abiflags section in the file.\n";
+      return;
+    }
+  } else {
+    this->reportUniqueWarning(SecOrErr.takeError());
     return;
   }
-  ArrayRef<uint8_t> Sec =
-      unwrapOrError(ObjF->getFileName(), Obj->getSectionContents(Shdr));
-  if (Sec.size() != sizeof(Elf_Mips_ABIFlags<ELFT>)) {
-    W.startLine() << "The .MIPS.abiflags section has a wrong size.\n";
-    return;
-  }
-
-  auto *Flags = reinterpret_cast<const Elf_Mips_ABIFlags<ELFT> *>(Sec.data());
 
   raw_ostream &OS = W.getOStream();
   DictScope GS(W, "MIPS ABI Flags");
