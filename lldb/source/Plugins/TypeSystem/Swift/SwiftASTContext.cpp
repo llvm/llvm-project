@@ -5085,12 +5085,6 @@ bool SwiftASTContext::IsPointerOrReferenceType(opaque_compiler_type_t type,
          IsReferenceType(type, pointee_type, nullptr);
 }
 
-bool SwiftASTContext::ShouldTreatScalarValueAsAddress(
-    opaque_compiler_type_t type) {
-  return Flags(GetTypeInfo(type, nullptr))
-      .AnySet(eTypeInstanceIsPointer | eTypeIsReference);
-}
-
 bool SwiftASTContext::IsReferenceType(opaque_compiler_type_t type,
                                       CompilerType *pointee_type,
                                       bool *is_rvalue) {
