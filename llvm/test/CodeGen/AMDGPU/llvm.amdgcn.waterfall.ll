@@ -10,7 +10,7 @@
 ; GCN-32: v_cmp_eq_u32_e64 [[EXEC:s[0-9]+]], [[VAL1]], [[VAL2]]
 ; GCN-64: s_and_saveexec_b64 [[EXEC]], [[EXEC]]
 ; GCN-32: s_and_saveexec_b32 [[EXEC]], [[EXEC]]
-; GCN: v_readlane_b32 [[RLVAL:s[0-9]+]], v1, [[VAL1]]
+; GCN: v_readlane_b32 [[RLVAL:s[0-9]+]], v{{[0-9]+}}, [[RLVAL]]
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[RLVAL]]
 ; GCN: v_or_b32_e32 [[ACCUM:v[0-9]+]], [[ACCUM]], [[VVAL]]
 ; GCN-64: s_xor_b64 exec, exec, [[EXEC]]
@@ -20,14 +20,14 @@
 ; GCN-32: s_mov_b32 exec_lo, s{{[0-9]+}}
 ; VI: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[ACCUM]]
 ; GFX9_UP: global_store_dword v[{{[0-9]+:[0-9]+}}], [[ACCUM]], off
-define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 x i32> addrspace(1)* inreg %in, i32 %tid, i32 %val) #1 {
+define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 x i32> addrspace(1)* inreg %in, i32 %tid) #1 {
   %gep.in = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 %tid
   %args = load <2 x i32>, <2 x i32> addrspace(1)* %gep.in
   %value = extractelement <2 x i32> %args, i32 0
   %lane = extractelement <2 x i32> %args, i32 1
   %wf_token = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %lane)
   %readlane = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 %wf_token, i32 %lane)
-  %readlane1 = call i32 @llvm.amdgcn.readlane(i32 %val, i32 %readlane)
+  %readlane1 = call i32 @llvm.amdgcn.readlane(i32 %value, i32 %readlane)
   %readlane2 = call i32 @llvm.amdgcn.waterfall.end.i32(i32 %wf_token, i32 %readlane1)
   ; This store instruction should be outside the waterfall loop and the value
   ; being stored generated incrementally in the loop itself

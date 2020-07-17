@@ -162,7 +162,8 @@ static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
 
   if (RegSize == 1)
     BuildMI(MBB, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RFLReg)
-        .addReg(RFLSrcReg, getUndefRegState(RFLSrcOp.isUndef()));
+        .addReg(RFLSrcReg, getUndefRegState(RFLSrcOp.isUndef()),
+                RFLSrcOp.getSubReg());
   else {
     SmallVector<unsigned, 8> TRegs;
     for (unsigned i = 0; i < RegSize; ++i) {
@@ -213,7 +214,8 @@ static unsigned compareIdx(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
   // Iterate over the index in dword chunks and'ing the result with the
   // CondReg
   unsigned IndexReg = IndexOp.getReg();
-  auto IndexRC = MRI->getRegClass(IndexReg);
+  auto IndexRC = RI->getSubRegClass(MRI->getRegClass(IndexOp.getReg()),
+                                    IndexOp.getSubReg());
   unsigned AndOpc =
       IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
   const auto *BoolXExecRC = RI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
@@ -485,7 +487,8 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     // Loop is ended after the last SI_WATERFALL_END and these instructions are
     // removed with the src replacing all dst uses
     auto Index = TII->getNamedOperand(*(Item.Begin), AMDGPU::OpName::idx);
-    auto IndexRC = MRI->getRegClass(Index->getReg());
+    auto IndexRC = RI->getSubRegClass(MRI->getRegClass(Index->getReg()),
+                                      Index->getSubReg());
 
     if (!RI->hasVGPRs(IndexRC)) {
       // Waterfall loop index is uniform! Loop can be removed
