@@ -1770,8 +1770,3 @@ bool TypeSystemSwiftTypeRef::IsReferenceType(opaque_compiler_type_t type,
   VALIDATE_AND_RETURN(impl, IsReferenceType, type,
                       (ReconstructType(type), pointee_type, is_rvalue));
 }
-bool TypeSystemSwiftTypeRef::ShouldTreatScalarValueAsAddress(
-    opaque_compiler_type_t type) {
-  return m_swift_ast_context->ShouldTreatScalarValueAsAddress(
-      ReconstructType(type));
-}

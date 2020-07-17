@@ -720,9 +720,6 @@ public:
   bool IsReferenceType(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_type, bool *is_rvalue) override;
 
-  bool
-  ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) override;
-
   uint32_t GetNumPointeeChildren(lldb::opaque_compiler_type_t type);
 
   bool IsImportedType(lldb::opaque_compiler_type_t type,
