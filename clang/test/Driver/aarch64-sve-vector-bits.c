@@ -45,8 +45,8 @@
 
 // Error if using attribute without -msve-vector-bits
 // -----------------------------------------------------------------------------
-// RUN: not %clang -c %s -target aarch64-none-linux-gnu -march=armv8-a+sve \
-// RUN:  2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
+// RUN: not %clang -c %s -o /dev/null -target aarch64-none-linux-gnu \
+// RUN:  -march=armv8-a+sve 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
 
 typedef __SVInt32_t svint32_t;
 typedef svint32_t noflag __attribute__((arm_sve_vector_bits(256)));
@@ -55,8 +55,8 @@ typedef svint32_t noflag __attribute__((arm_sve_vector_bits(256)));
 
 // Error if attribute vector size != -msve-vector-bits
 // -----------------------------------------------------------------------------
-// RUN: not %clang -c %s -target aarch64-none-linux-gnu -march=armv8-a+sve \
-// RUN:  -msve-vector-bits=128 2>&1 | FileCheck --check-prefix=CHECK-BAD-VECTOR-SIZE-ERROR %s
+// RUN: not %clang -c %s -o /dev/null -target aarch64-none-linux-gnu \
+// RUN:  -march=armv8-a+sve -msve-vector-bits=128 2>&1 | FileCheck --check-prefix=CHECK-BAD-VECTOR-SIZE-ERROR %s
 
 typedef svint32_t bad_vector_size __attribute__((arm_sve_vector_bits(256)));
 
