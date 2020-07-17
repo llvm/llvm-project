@@ -2000,6 +2000,21 @@ merge:
   ret i32 %s
 }
 
+define i32 @select_dominating_cond_same_labels(i1 %cond) {
+; CHECK-LABEL: @select_dominating_cond_same_labels(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND:%.*]], i32 123, i32 456
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %result = select i1 %cond, i32 123, i32 456
+  br i1 %cond, label %exit, label %exit
+exit:
+  ret i32 %result
+}
+
 define i32 @select_phi_same_condition(i1 %cond, i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_phi_same_condition(
 ; CHECK-NEXT:  entry:
