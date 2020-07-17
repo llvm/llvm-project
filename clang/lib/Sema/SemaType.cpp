@@ -8880,11 +8880,8 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
     else if (!T.isTriviallyCopyableType(Context))
       // Some other non-trivially-copyable type (probably a C++ class)
       DisallowedKind = 7;
-    else if (auto *ExtTy = T->getAs<ExtIntType>()) {
-      if (ExtTy->getNumBits() < 8)
+    else if (T->isExtIntType()) {
         DisallowedKind = 8;
-      else if (!llvm::isPowerOf2_32(ExtTy->getNumBits()))
-        DisallowedKind = 9;
     }
 
     if (DisallowedKind != -1) {

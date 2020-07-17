@@ -6021,9 +6021,8 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type
     : Error<"_Atomic cannot be applied to "
             "%select{incomplete |array |function |reference |atomic |qualified "
-            "|sizeless ||integer |integer }0type "
-            "%1 %select{|||||||which is not trivially copyable|with less than "
-            "1 byte of precision|with a non power of 2 precision}0">;
+            "|sizeless ||integer }0type "
+            "%1 %select{|||||||which is not trivially copyable|}0">;
 
 // Expressions.
 def ext_sizeof_alignof_function_type : Extension<
@@ -7941,6 +7940,8 @@ def err_atomic_exclusive_builtin_pointer_size : Error<
   " 1,2,4 or 8 byte type (%0 invalid)">;
 def err_atomic_builtin_ext_int_size : Error<
   "Atomic memory operand must have a power-of-two size">;
+def err_atomic_builtin_ext_int_prohibit : Error<
+  "argument to atomic builtin of type '_ExtInt' is not supported">;
 def err_atomic_op_needs_atomic : Error<
   "address argument to atomic operation must be a pointer to _Atomic "
   "type (%0 invalid)">;
