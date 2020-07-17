@@ -193,6 +193,8 @@ public:
                              size_t idx, uint32_t *bit_offset_ptr) override {
     return {};
   }
+  bool
+  ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) override;
   /// \}
 protected:
   /// Used in the logs.
