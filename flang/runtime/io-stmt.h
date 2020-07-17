@@ -294,15 +294,17 @@ public:
       : ExternalIoStatementBase{unit, sourceFile, sourceLine}, wasExtant_{
                                                                    wasExtant} {}
   bool wasExtant() const { return wasExtant_; }
-  void set_status(OpenStatus status) { status_ = status; }
+  void set_status(OpenStatus status) { status_ = status; } // STATUS=
   void set_path(const char *, std::size_t, int kind); // FILE=
   void set_position(Position position) { position_ = position; } // POSITION=
+  void set_action(Action action) { action_ = action; } // ACTION=
   int EndIoStatement();
 
 private:
   bool wasExtant_;
   OpenStatus status_{OpenStatus::Unknown};
   Position position_{Position::AsIs};
+  std::optional<Action> action_;
   OwningPtr<char> path_;
   std::size_t pathLength_;
 };
