@@ -39,7 +39,7 @@ TEST(CrashRecoveryTest, Basic) {
 struct IncrementGlobalCleanup : CrashRecoveryContextCleanup {
   IncrementGlobalCleanup(CrashRecoveryContext *CRC)
       : CrashRecoveryContextCleanup(CRC) {}
-  virtual void recoverResources() { ++GlobalInt; }
+  void recoverResources() override { ++GlobalInt; }
 };
 
 static void noop() {}

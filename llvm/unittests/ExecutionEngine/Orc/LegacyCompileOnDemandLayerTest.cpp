@@ -17,7 +17,7 @@ namespace {
 
 class DummyTrampolinePool : public orc::TrampolinePool {
 public:
-  Expected<JITTargetAddress> getTrampoline() {
+  Expected<JITTargetAddress> getTrampoline() override {
     llvm_unreachable("Unimplemented");
   }
 };
