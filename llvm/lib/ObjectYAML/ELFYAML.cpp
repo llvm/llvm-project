@@ -823,6 +823,8 @@ void ScalarBitSetTraits<ELFYAML::MIPS_AFL_ASE>::bitset(
   BCase(MIPS16);
   BCase(MICROMIPS);
   BCase(XPA);
+  BCase(CRC);
+  BCase(GINV);
 #undef BCase
 }
 
