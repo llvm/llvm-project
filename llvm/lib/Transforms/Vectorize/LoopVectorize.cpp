@@ -4224,26 +4224,68 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
   case InductionDescriptor::IK_PtrInduction: {
     // Handle the pointer induction variable case.
     assert(P->getType()->isPointerTy() && "Unexpected type.");
-    // This is the normalized GEP that starts counting at zero.
-    Value *PtrInd = Induction;
-    PtrInd = Builder.CreateSExtOrTrunc(PtrInd, II.getStep()->getType());
-    // Determine the number of scalars we need to generate for each unroll
-    // iteration. If the instruction is uniform, we only need to generate the
-    // first lane. Otherwise, we generate all VF values.
-    unsigned Lanes = Cost->isUniformAfterVectorization(P, VF) ? 1 : VF;
-    // These are the scalar results. Notice that we don't generate vector GEPs
-    // because scalar GEPs result in better code.
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
-        Constant *Idx = ConstantInt::get(PtrInd->getType(), Lane + Part * VF);
-        Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
-        Value *SclrGep =
-            emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II);
-        SclrGep->setName("next.gep");
-        VectorLoopValueMap.setScalarValue(P, {Part, Lane}, SclrGep);
+
+    if (Cost->isScalarAfterVectorization(P, VF)) {
+      // This is the normalized GEP that starts counting at zero.
+      Value *PtrInd =
+          Builder.CreateSExtOrTrunc(Induction, II.getStep()->getType());
+      // Determine the number of scalars we need to generate for each unroll
+      // iteration. If the instruction is uniform, we only need to generate the
+      // first lane. Otherwise, we generate all VF values.
+      unsigned Lanes = Cost->isUniformAfterVectorization(P, VF) ? 1 : VF;
+      for (unsigned Part = 0; Part < UF; ++Part) {
+        for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
+          Constant *Idx = ConstantInt::get(PtrInd->getType(), Lane + Part * VF);
+          Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
+          Value *SclrGep =
+              emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II);
+          SclrGep->setName("next.gep");
+          VectorLoopValueMap.setScalarValue(P, {Part, Lane}, SclrGep);
+        }
       }
+      return;
     }
-    return;
+    assert(isa<SCEVConstant>(II.getStep()) &&
+           "Induction step not a SCEV constant!");
+    Type *PhiType = II.getStep()->getType();
+
+    // Build a pointer phi
+    Value *ScalarStartValue = II.getStartValue();
+    Type *ScStValueType = ScalarStartValue->getType();
+    PHINode *NewPointerPhi =
+        PHINode::Create(ScStValueType, 2, "pointer.phi", Induction);
+    NewPointerPhi->addIncoming(ScalarStartValue, LoopVectorPreHeader);
+
+    // A pointer induction, performed by using a gep
+    BasicBlock *LoopLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
+    Instruction *InductionLoc = LoopLatch->getTerminator();
+    const SCEV *ScalarStep = II.getStep();
+    SCEVExpander Exp(*PSE.getSE(), DL, "induction");
+    Value *ScalarStepValue =
+        Exp.expandCodeFor(ScalarStep, PhiType, InductionLoc);
+    Value *InductionGEP = GetElementPtrInst::Create(
+        ScStValueType->getPointerElementType(), NewPointerPhi,
+        Builder.CreateMul(ScalarStepValue, ConstantInt::get(PhiType, VF * UF)),
+        "ptr.ind", InductionLoc);
+    NewPointerPhi->addIncoming(InductionGEP, LoopLatch);
+
+    // Create UF many actual address geps that use the pointer
+    // phi as base and a vectorized version of the step value
+    // (<step*0, ..., step*N>) as offset.
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      SmallVector<Constant *, 8> Indices;
+      // Create a vector of consecutive numbers from zero to VF.
+      for (unsigned i = 0; i < VF; ++i)
+        Indices.push_back(ConstantInt::get(PhiType, i + Part * VF));
+      Constant *StartOffset = ConstantVector::get(Indices);
+
+      Value *GEP = Builder.CreateGEP(
+          ScStValueType->getPointerElementType(), NewPointerPhi,
+          Builder.CreateMul(StartOffset,
+                            Builder.CreateVectorSplat(VF, ScalarStepValue),
+                            "vector.gep"));
+      VectorLoopValueMap.setVectorValue(P, Part, GEP);
+    }
   }
   }
 }
@@ -4479,6 +4521,7 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
   // accesses that will remain scalar.
   SmallSetVector<Instruction *, 8> ScalarPtrs;
   SmallPtrSet<Instruction *, 8> PossibleNonScalarPtrs;
+  auto *Latch = TheLoop->getLoopLatch();
 
   // A helper that returns true if the use of Ptr by MemAccess will be scalar.
   // The pointer operands of loads and stores will be scalar as long as the
@@ -4504,11 +4547,33 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
            !TheLoop->isLoopInvariant(V);
   };
 
-  // A helper that evaluates a memory access's use of a pointer. If the use
-  // will be a scalar use, and the pointer is only used by memory accesses, we
-  // place the pointer in ScalarPtrs. Otherwise, the pointer is placed in
-  // PossibleNonScalarPtrs.
+  auto isScalarPtrInduction = [&](Instruction *MemAccess, Value *Ptr) {
+    if (!isa<PHINode>(Ptr) ||
+        !Legal->getInductionVars().count(cast<PHINode>(Ptr)))
+      return false;
+    auto &Induction = Legal->getInductionVars()[cast<PHINode>(Ptr)];
+    if (Induction.getKind() != InductionDescriptor::IK_PtrInduction)
+      return false;
+    return isScalarUse(MemAccess, Ptr);
+  };
+
+  // A helper that evaluates a memory access's use of a pointer. If the
+  // pointer is actually the pointer induction of a loop, it is being
+  // inserted into Worklist. If the use will be a scalar use, and the
+  // pointer is only used by memory accesses, we place the pointer in
+  // ScalarPtrs. Otherwise, the pointer is placed in PossibleNonScalarPtrs.
   auto evaluatePtrUse = [&](Instruction *MemAccess, Value *Ptr) {
+    if (isScalarPtrInduction(MemAccess, Ptr)) {
+      Worklist.insert(cast<Instruction>(Ptr));
+      Instruction *Update = cast<Instruction>(
+          cast<PHINode>(Ptr)->getIncomingValueForBlock(Latch));
+      Worklist.insert(Update);
+      LLVM_DEBUG(dbgs() << "LV: Found new scalar instruction: " << *Ptr
+                        << "\n");
+      LLVM_DEBUG(dbgs() << "LV: Found new scalar instruction: " << *Update
+                        << "\n");
+      return;
+    }
     // We only care about bitcast and getelementptr instructions contained in
     // the loop.
     if (!isLoopVaryingBitCastOrGEP(Ptr))
@@ -4532,10 +4597,9 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
   };
 
   // We seed the scalars analysis with three classes of instructions: (1)
-  // instructions marked uniform-after-vectorization, (2) bitcast and
-  // getelementptr instructions used by memory accesses requiring a scalar use,
-  // and (3) pointer induction variables and their update instructions (we
-  // currently only scalarize these).
+  // instructions marked uniform-after-vectorization and (2) bitcast,
+  // getelementptr and (pointer) phi instructions used by memory accesses
+  // requiring a scalar use.
   //
   // (1) Add to the worklist all instructions that have been identified as
   // uniform-after-vectorization.
@@ -4560,24 +4624,6 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
       LLVM_DEBUG(dbgs() << "LV: Found scalar instruction: " << *I << "\n");
       Worklist.insert(I);
     }
-
-  // (3) Add to the worklist all pointer induction variables and their update
-  // instructions.
-  //
-  // TODO: Once we are able to vectorize pointer induction variables we should
-  //       no longer insert them into the worklist here.
-  auto *Latch = TheLoop->getLoopLatch();
-  for (auto &Induction : Legal->getInductionVars()) {
-    auto *Ind = Induction.first;
-    auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
-    if (Induction.second.getKind() != InductionDescriptor::IK_PtrInduction)
-      continue;
-    Worklist.insert(Ind);
-    Worklist.insert(IndUpdate);
-    LLVM_DEBUG(dbgs() << "LV: Found scalar instruction: " << *Ind << "\n");
-    LLVM_DEBUG(dbgs() << "LV: Found scalar instruction: " << *IndUpdate
-                      << "\n");
-  }
 
   // Insert the forced scalars.
   // FIXME: Currently widenPHIInstruction() often creates a dead vector
@@ -4613,14 +4659,6 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
   for (auto &Induction : Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
-
-    // We already considered pointer induction variables, so there's no reason
-    // to look at their users again.
-    //
-    // TODO: Once we are able to vectorize pointer induction variables we
-    //       should no longer skip over them here.
-    if (Induction.second.getKind() == InductionDescriptor::IK_PtrInduction)
-      continue;
 
     // If tail-folding is applied, the primary induction variable will be used
     // to feed a vector compare.

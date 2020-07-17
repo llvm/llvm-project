@@ -84,9 +84,8 @@ private:
 
 } // namespace
 
-llvm::Optional<llvm::InlineCost>
-getDefaultInlineAdvice(CallBase &CB, FunctionAnalysisManager &FAM,
-                       const InlineParams &Params) {
+llvm::Optional<llvm::InlineCost> static getDefaultInlineAdvice(
+    CallBase &CB, FunctionAnalysisManager &FAM, const InlineParams &Params) {
   Function &Caller = *CB.getCaller();
   ProfileSummaryInfo *PSI =
       FAM.getResult<ModuleAnalysisManagerFunctionProxy>(Caller)

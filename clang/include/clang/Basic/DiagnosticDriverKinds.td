@@ -511,4 +511,7 @@ def warn_drv_libstdcxx_not_found : Warning<
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 
 def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognized and is not a valid setting.">;
+
+def err_drv_invalid_sve_vector_bits : Error<
+  "'-msve-vector-bits' is not supported without SVE enabled">;
 }

@@ -369,6 +369,12 @@ fp16_fml_fallthrough:
   if (V8_6Pos != std::end(Features))
     V8_6Pos = Features.insert(std::next(V8_6Pos), {"+i8mm", "+bf16"});
 
+  bool HasSve = llvm::is_contained(Features, "+sve");
+  // -msve_vector_bits=<bits> flag is valid only if SVE is enabled.
+  if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ))
+    if (!HasSve)
+      D.Diag(diag::err_drv_invalid_sve_vector_bits);
+
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access))
     if (A->getOption().matches(options::OPT_mno_unaligned_access))

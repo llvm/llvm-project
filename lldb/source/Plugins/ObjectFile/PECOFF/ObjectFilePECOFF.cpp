@@ -543,12 +543,6 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   if (m_data.ValidOffsetForDataOfSize(offset, size))
     return DataExtractor(m_data, offset, size);
 
-  if (m_file) {
-    // A bit of a hack, but we intend to write to this buffer, so we can't
-    // mmap it.
-    auto buffer_sp = MapFileData(m_file, size, offset);
-    return DataExtractor(buffer_sp, GetByteOrder(), GetAddressByteSize());
-  }
   ProcessSP process_sp(m_process_wp.lock());
   DataExtractor data;
   if (process_sp) {
@@ -651,12 +645,6 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
         if (strtab_size > 0) {
           DataExtractor strtab_data = ReadImageData(
               m_coff_header.symoff + symbol_data_size, strtab_size);
-
-          // First 4 bytes should be zeroed after strtab_size has been read,
-          // because it is used as offset 0 to encode a NULL string.
-          uint32_t *strtab_data_start = const_cast<uint32_t *>(
-              reinterpret_cast<const uint32_t *>(strtab_data.GetDataStart()));
-          ::memset(&strtab_data_start[0], 0, sizeof(uint32_t));
 
           offset = 0;
           std::string symbol_name;

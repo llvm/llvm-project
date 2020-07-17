@@ -59,9 +59,8 @@ public:
   // e.g. "snb_ep::INSTRUCTION_RETIRED:e=0:i=0:c=0:t=0:u=1:k=0:mg=0:mh=1"
   StringRef getPfmEventString() const;
 
-protected:
-  PerfEvent() = default;
-  std::string EventString;
+private:
+  const std::string EventString;
   std::string FullQualifiedEventString;
   perf_event_attr *Attr;
 };
@@ -88,17 +87,11 @@ public:
   int64_t read() const;
 
   /// Returns the current value of the counter or error if it cannot be read.
-  /// FunctionBytes: The benchmark function being executed.
-  /// This is used to filter out the measurements to ensure they are only
-  /// within the benchmarked code.
-  /// If empty (or not specified), then no filtering will be done.
-  /// Not all counters choose to use this.
-  virtual llvm::Expected<llvm::SmallVector<int64_t, 4>>
-  readOrError(StringRef FunctionBytes = StringRef()) const;
+  virtual llvm::Expected<llvm::SmallVector<int64_t, 4>> readOrError() const;
 
   virtual int numValues() const;
 
-protected:
+private:
   PerfEvent Event;
 #ifdef HAVE_LIBPFM
   int FileDescriptor = -1;
