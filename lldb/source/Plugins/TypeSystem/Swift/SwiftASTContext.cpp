@@ -5580,18 +5580,11 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
-  case swift::TypeKind::Error:
-    return lldb::eTypeClassOther;
   case swift::TypeKind::BuiltinInteger:
-    return lldb::eTypeClassBuiltin;
   case swift::TypeKind::BuiltinFloat:
-    return lldb::eTypeClassBuiltin;
   case swift::TypeKind::BuiltinRawPointer:
-    return lldb::eTypeClassBuiltin;
   case swift::TypeKind::BuiltinNativeObject:
-    return lldb::eTypeClassBuiltin;
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
-    return lldb::eTypeClassBuiltin;
   case swift::TypeKind::BuiltinBridgeObject:
     return lldb::eTypeClassBuiltin;
   case swift::TypeKind::BuiltinVector:
@@ -5603,56 +5596,39 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::WeakStorage:
     return ToCompilerType(swift_can_type->getReferenceStorageReferent())
         .GetTypeClass();
-  case swift::TypeKind::GenericTypeParam:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::DependentMember:
-    return lldb::eTypeClassOther;
   case swift::TypeKind::Enum:
+  case swift::TypeKind::BoundGenericEnum:
     return lldb::eTypeClassUnion;
   case swift::TypeKind::Struct:
+  case swift::TypeKind::BoundGenericStruct:
     return lldb::eTypeClassStruct;
   case swift::TypeKind::Class:
+  case swift::TypeKind::BoundGenericClass:
     return lldb::eTypeClassClass;
+  case swift::TypeKind::GenericTypeParam:
+  case swift::TypeKind::DependentMember:
   case swift::TypeKind::Protocol:
-    return lldb::eTypeClassOther;
+  case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::Metatype:
-    return lldb::eTypeClassOther;
   case swift::TypeKind::Module:
-    return lldb::eTypeClassOther;
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::NestedArchetype:
+  case swift::TypeKind::UnboundGeneric:
+  case swift::TypeKind::TypeVariable:
+  case swift::TypeKind::ExistentialMetatype:
+  case swift::TypeKind::SILBox:
+  case swift::TypeKind::DynamicSelf:
+  case swift::TypeKind::SILBlockStorage:
+  case swift::TypeKind::Unresolved:
+  case swift::TypeKind::Error:
     return lldb::eTypeClassOther;
   case swift::TypeKind::Function:
-    return lldb::eTypeClassFunction;
   case swift::TypeKind::GenericFunction:
-    return lldb::eTypeClassFunction;
-  case swift::TypeKind::ProtocolComposition:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::LValue:
-    return lldb::eTypeClassReference;
-  case swift::TypeKind::UnboundGeneric:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::BoundGenericClass:
-    return lldb::eTypeClassClass;
-  case swift::TypeKind::BoundGenericEnum:
-    return lldb::eTypeClassUnion;
-  case swift::TypeKind::BoundGenericStruct:
-    return lldb::eTypeClassStruct;
-  case swift::TypeKind::TypeVariable:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::ExistentialMetatype:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::DynamicSelf:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::SILBox:
-    return lldb::eTypeClassOther;
   case swift::TypeKind::SILFunction:
     return lldb::eTypeClassFunction;
-  case swift::TypeKind::SILBlockStorage:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::Unresolved:
-    return lldb::eTypeClassOther;
+  case swift::TypeKind::LValue:
+    return lldb::eTypeClassReference;
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
