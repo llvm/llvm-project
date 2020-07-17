@@ -2193,6 +2193,7 @@ def municode : Joined<["-"], "municode">, Group<m_Group>, Flags<[DriverOption]>;
 def mthreads : Joined<["-"], "mthreads">, Group<m_Group>, Flags<[DriverOption]>;
 def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>;
 def mmcu_EQ : Joined<["-"], "mmcu=">, Group<m_Group>;
+def msim : Flag<["-"], "msim">, Group<m_Group>;
 def mdynamic_no_pic : Joined<["-"], "mdynamic-no-pic">, Group<m_Group>;
 def mfix_and_continue : Flag<["-"], "mfix-and-continue">, Group<clang_ignored_m_Group>;
 def mieee_fp : Flag<["-"], "mieee-fp">, Group<clang_ignored_m_Group>;
@@ -2278,9 +2279,9 @@ def m_seses : Flag<["-"], "mseses">, Group<m_Group>, Flags<[CoreOption, DriverOp
 def mno_seses : Flag<["-"], "mno-seses">, Group<m_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Disable speculative execution side effect suppression (SESES)">;
 
-def mrelax : Flag<["-"], "mrelax">, Group<m_riscv_Features_Group>,
+def mrelax : Flag<["-"], "mrelax">, Group<m_Group>,
   HelpText<"Enable linker relaxation">;
-def mno_relax : Flag<["-"], "mno-relax">, Group<m_riscv_Features_Group>,
+def mno_relax : Flag<["-"], "mno-relax">, Group<m_Group>,
   HelpText<"Disable linker relaxation">;
 def msmall_data_limit_EQ : Joined<["-"], "msmall-data-limit=">, Group<m_Group>,
   Alias<G>,
