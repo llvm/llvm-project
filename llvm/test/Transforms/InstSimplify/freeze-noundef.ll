@@ -3,8 +3,7 @@
 
 define i8 @noundef(i8 noundef %x) {
 ; CHECK-LABEL: @noundef(
-; CHECK-NEXT:    [[Y:%.*]] = freeze i8 [[X:%.*]]
-; CHECK-NEXT:    ret i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %y = freeze i8 %x
   ret i8 %y
@@ -13,14 +12,14 @@ define i8 @noundef(i8 noundef %x) {
 define i1 @icmp(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @icmp(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = freeze i1 [[C]]
-; CHECK-NEXT:    ret i1 [[F]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c = icmp eq i8 %x, %y
   %f = freeze i1 %c
   ret i1 %f
 }
 
+; TODO: should look into binary operations
 define i1 @or(i1 noundef %x, i1 noundef %x2) {
 ; CHECK-LABEL: @or(
 ; CHECK-NEXT:    [[Y:%.*]] = or i1 [[X:%.*]], [[X2:%.*]]
@@ -43,6 +42,7 @@ define i1 @or2(i1 noundef %x, i1 %x2) {
   ret i1 %z
 }
 
+; TODO: should look into binary operations
 define i8 @add(i8 noundef %x) {
 ; CHECK-LABEL: @add(
 ; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], 1
@@ -67,13 +67,13 @@ define i8 @addnsw(i8 noundef %x) {
 
 define {i8, i32} @aggr({i8, i32} noundef %x) {
 ; CHECK-LABEL: @aggr(
-; CHECK-NEXT:    [[Y:%.*]] = freeze { i8, i32 } [[X:%.*]]
-; CHECK-NEXT:    ret { i8, i32 } [[Y]]
+; CHECK-NEXT:    ret { i8, i32 } [[X:%.*]]
 ;
   %y = freeze {i8, i32} %x
   ret {i8, i32} %y
 }
 
+; TODO: should look into extract operations
 define i32 @extract({i8, i32} noundef %x) {
 ; CHECK-LABEL: @extract(
 ; CHECK-NEXT:    [[Y:%.*]] = extractvalue { i8, i32 } [[X:%.*]], 1
@@ -85,6 +85,7 @@ define i32 @extract({i8, i32} noundef %x) {
   ret i32 %z
 }
 
+; TODO: should look into extract operations
 define i32 @extract2({i8, {i8, i32}} noundef %x) {
 ; CHECK-LABEL: @extract2(
 ; CHECK-NEXT:    [[Y:%.*]] = extractvalue { i8, { i8, i32 } } [[X:%.*]], 1
