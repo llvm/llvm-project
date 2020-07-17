@@ -60,6 +60,11 @@ template <typename T, typename Ptr, typename Ref> struct __vector_iterator {
   __vector_iterator<T, Ptr, Ref> operator+(difference_type n) {
     return ptr + n;
   }
+  friend __vector_iterator<T, Ptr, Ref> operator+(
+      difference_type n,
+      const __vector_iterator<T, Ptr, Ref> &iter) {
+    return n + iter.ptr;
+  }
   __vector_iterator<T, Ptr, Ref> operator-(difference_type n) {
     return ptr - n;
   }
@@ -117,6 +122,11 @@ template <typename T, typename Ptr, typename Ref> struct __deque_iterator {
   }
   __deque_iterator<T, Ptr, Ref> operator+(difference_type n) {
     return ptr + n;
+  }
+  friend __deque_iterator<T, Ptr, Ref> operator+(
+      difference_type n,
+      const __deque_iterator<T, Ptr, Ref> &iter) {
+    return n + iter.ptr;
   }
   __deque_iterator<T, Ptr, Ref> operator-(difference_type n) {
     return ptr - n;
