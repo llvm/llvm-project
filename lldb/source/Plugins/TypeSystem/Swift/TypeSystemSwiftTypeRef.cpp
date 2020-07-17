@@ -1121,6 +1121,7 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
 #endif
 
 // This can be removed once the transition is complete.
+#ifndef NDEBUG
 #define VALIDATE_AND_RETURN(IMPL, REFERENCE, TYPE, ARGS)                       \
   do {                                                                         \
     auto result = IMPL();                                                      \
@@ -1135,6 +1136,13 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");            \
     return result;                                                             \
   } while (0)
+#else
+#define VALIDATE_AND_RETURN(IMPL, REFERENCE, TYPE, ARGS)                       \
+  do {                                                                         \
+    auto result = IMPL();                                                      \
+    return result;                                                             \
+  } while (0)
+#endif
 
 CompilerType
 TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &Dem,
