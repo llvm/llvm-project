@@ -1,4 +1,6 @@
-// RUN: %clangxx -std=c++11 -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -std=c++11 -O0 -g %s -o %t
+// RUN: %clangxx -fno-sanitize=all -std=c++11 -O0 -g %s -o %t.nosan
+// RUN: diff <(%run %t 2>&1) <(%run %t.nosan 2>&1)
 // REQUIRES: !android
 
 #include <assert.h>
@@ -46,23 +48,12 @@ void print_protoent_by_num(int num) {
 }
 
 int main() {
-  // CHECK: All protoent
-  // CHECK: ip (0)
-  // CHECK-NEXT: alias IP
-  // CHECK: ipv6 (41)
-  // CHECK-NEXT: alias IPv6
   fprintf(stderr, "All protoent\n");
   print_all_protoent();
 
-  // CHECK: Protoent by name
-  // CHECK-NEXT: ipv6 (41)
-  // CHECK-NEXT: alias IPv6
   fprintf(stderr, "Protoent by name\n");
   print_protoent_by_name("ipv6");
 
-  // CHECK: Protoent by num
-  // CHECK-NEXT: udp (17)
-  // CHECK-NEXT: alias UDP
   fprintf(stderr, "Protoent by num\n");
   print_protoent_by_num(17);
   return 0;
