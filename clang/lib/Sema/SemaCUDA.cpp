@@ -715,9 +715,8 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
                                       CallerKnownEmitted] {
     switch (IdentifyCUDAPreference(Caller, Callee)) {
     case CFP_Never:
-      return DeviceDiagBuilder::K_Immediate;
     case CFP_WrongSide:
-      assert(Caller && "WrongSide calls require a non-null caller");
+      assert(Caller && "Never/wrongSide calls require a non-null caller");
       // If we know the caller will be emitted, we know this wrong-side call
       // will be emitted, so it's an immediate error.  Otherwise, defer the
       // error until we know the caller is emitted.
@@ -740,9 +739,10 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
 
   DeviceDiagBuilder(DiagKind, Loc, diag::err_ref_bad_target, Caller, *this)
       << IdentifyCUDATarget(Callee) << Callee << IdentifyCUDATarget(Caller);
-  DeviceDiagBuilder(DiagKind, Callee->getLocation(), diag::note_previous_decl,
-                    Caller, *this)
-      << Callee;
+  if (!Callee->getBuiltinID())
+    DeviceDiagBuilder(DiagKind, Callee->getLocation(), diag::note_previous_decl,
+                      Caller, *this)
+        << Callee;
   return DiagKind != DeviceDiagBuilder::K_Immediate &&
          DiagKind != DeviceDiagBuilder::K_ImmediateWithCallStack;
 }
