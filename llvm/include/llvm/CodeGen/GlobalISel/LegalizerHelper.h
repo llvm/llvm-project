@@ -302,6 +302,7 @@ public:
 
   LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LegalizeResult lowerFPTRUNC(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerFPOWI(MachineInstr &MI);
 
   LegalizeResult lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
