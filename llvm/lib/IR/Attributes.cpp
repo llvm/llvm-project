@@ -969,7 +969,7 @@ std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
 
 /// Map from AttributeList index to the internal array index. Adding one happens
 /// to work, because -1 wraps around to 0.
-static constexpr unsigned attrIdxToArrayIdx(unsigned Index) {
+static unsigned attrIdxToArrayIdx(unsigned Index) {
   return Index + 1;
 }
 
@@ -982,9 +982,7 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
 
   // Initialize AvailableFunctionAttrs and AvailableSomewhereAttrs
   // summary bitsets.
-  static_assert(attrIdxToArrayIdx(AttributeList::FunctionIndex) == 0U,
-                "function should be stored in slot 0");
-  for (const auto &I : Sets[0])
+  for (const auto &I : Sets[attrIdxToArrayIdx(AttributeList::FunctionIndex)])
     if (!I.isStringAttribute())
       AvailableFunctionAttrs.addAttribute(I.getKindAsEnum());
 
