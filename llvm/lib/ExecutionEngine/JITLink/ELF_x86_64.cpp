@@ -23,6 +23,7 @@ using namespace llvm;
 using namespace llvm::jitlink;
 using namespace llvm::jitlink::ELF_x86_64_Edges;
 
+namespace {
 class ELF_x86_64_GOTAndStubsBuilder
     : public BasicGOTAndStubsBuilder<ELF_x86_64_GOTAndStubsBuilder> {
 public:
@@ -110,6 +111,7 @@ private:
   Section *GOTSection = nullptr;
   Section *StubsSection = nullptr;
 };
+} // namespace
 
 const uint8_t ELF_x86_64_GOTAndStubsBuilder::NullGOTEntryContent[8] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
