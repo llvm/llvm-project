@@ -79,13 +79,8 @@ New checks
 - New :doc:`abseil-string-find-str-contains
   <clang-tidy/checks/abseil-string-find-str-contains>` check.
 
-  Finds ``s.find(...) == string::npos`` comparisons (for various string-like types)
-  and suggests replacing with ``absl::StrContains()``.
-
-- New :doc:`cppcoreguidelines-avoid-non-const-global-variables
-  <clang-tidy/checks/cppcoreguidelines-avoid-non-const-global-variables>` check.
-  Finds non-const global variables as described in check I.2 of C++ Core
-  Guidelines.
+  Finds ``s.find(...) == string::npos`` comparisons (for various string-like
+  types) and suggests replacing with ``absl::StrContains()``.
 
 - New :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc
   <clang-tidy/checks/bugprone-misplaced-pointer-arithmetic-in-alloc>` check.
@@ -100,6 +95,11 @@ New checks
   Finds pointers with the ``noescape`` attribute that are captured by an
   asynchronously-executed block.
 
+- New :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone-reserved-identifier>` check.
+
+  Checks for usages of identifiers reserved for use by the implementation.
+
 - New :doc:`bugprone-spuriously-wake-up-functions
   <clang-tidy/checks/bugprone-spuriously-wake-up-functions>` check.
 
@@ -107,11 +107,6 @@ New checks
   ``wait_until`` function calls when the function is not invoked from a loop
   that checks whether a condition predicate holds or the function has a
   condition parameter.
-
-- New :doc:`bugprone-reserved-identifier
-  <clang-tidy/checks/bugprone-reserved-identifier>` check.
-
-  Checks for usages of identifiers reserved for use by the implementation.
 
 - New :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone-suspicious-include>` check.
@@ -125,6 +120,12 @@ New checks
 
   Flags use of the `C` standard library functions ``memset``, ``memcpy`` and
   ``memcmp`` and similar derivatives on non-trivial types.
+
+- New :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines-avoid-non-const-global-variables>` check.
+
+  Finds non-const global variables as described in check I.2 of C++ Core
+  Guidelines.
 
 - New :doc:`llvmlibc-callee-namespace
   <clang-tidy/checks/llvmlibc-callee-namespace>` check.
@@ -142,6 +143,11 @@ New checks
   Finds includes of system libc headers not provided by the compiler within
   llvm-libc implementations.
 
+- New :doc:`misc-no-recursion
+  <clang-tidy/checks/misc-no-recursion>` check.
+
+  Finds recursive functions and diagnoses them.
+
 - New :doc:`modernize-replace-disallow-copy-and-assign-macro
   <clang-tidy/checks/modernize-replace-disallow-copy-and-assign-macro>` check.
 
@@ -152,11 +158,6 @@ New checks
   <clang-tidy/checks/objc-dealloc-in-category>` check.
 
   Finds implementations of -dealloc in Objective-C categories.
-
-- New :doc:`misc-no-recursion
-  <clang-tidy/checks/misc-no-recursion>` check.
-
-  Finds recursive functions and diagnoses them.
 
 - New :doc:`objc-nsinvocation-argument-lifetime
   <clang-tidy/checks/objc-nsinvocation-argument-lifetime>` check.
@@ -222,11 +223,6 @@ Changes in existing checks
   Now able to rename member references in class template definitions with
   explicit access.
 
-- Improved :doc:`readability-qualified-auto
-  <clang-tidy/checks/readability-qualified-auto>` check now supports a
-  `AddConstToQualified` to enable adding ``const`` qualifiers to variables
-  typed with ``auto *`` and ``auto &``.
-
 - Improved :doc:`readability-redundant-string-init
   <clang-tidy/checks/readability-redundant-string-init>` check now supports a
   `StringNames` option enabling its application to custom string classes. The
@@ -238,6 +234,11 @@ Changes in existing checks
   release. This simplifies how one specifies the options on the command line:
   ``--config="{CheckOptions: [{ key: HeaderFileExtensions, value: h;;hpp;hxx }]}"``
 
+- Improved :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability-qualified-auto>` check now supports a
+  `AddConstToQualified` to enable adding ``const`` qualifiers to variables
+  typed with ``auto *`` and ``auto &``.
+
 Renamed checks
 ^^^^^^^^^^^^^^
 
@@ -247,7 +248,8 @@ Renamed checks
 Other improvements
 ^^^^^^^^^^^^^^^^^^
 
-- For 'run-clang-tidy.py' add option to use alpha checkers from clang-analyzer.
+- For `run-clang-tidy.py` add option to use alpha checkers from
+  `clang-analyzer`.
 
 Improvements to include-fixer
 -----------------------------
