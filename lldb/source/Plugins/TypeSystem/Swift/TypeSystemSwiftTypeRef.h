@@ -88,8 +88,6 @@ public:
                    bool *is_incomplete) override;
   bool IsAggregateType(lldb::opaque_compiler_type_t type) override;
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
-                           bool &is_complex) override;
   bool IsFunctionType(lldb::opaque_compiler_type_t type,
                       bool *is_variadic_ptr) override;
   size_t
@@ -97,8 +95,6 @@ public:
   CompilerType GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
                                           const size_t index) override;
   bool IsFunctionPointerType(lldb::opaque_compiler_type_t type) override;
-  bool IsIntegerType(lldb::opaque_compiler_type_t type,
-                     bool &is_signed) override;
   bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                              CompilerType *target_type, // Can pass NULL
                              bool check_cplusplus, bool check_objc) override;

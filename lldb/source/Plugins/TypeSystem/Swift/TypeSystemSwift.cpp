@@ -11,3 +11,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
+#include <lldb/lldb-enumerations.h>
+
+using namespace lldb;
+using namespace lldb_private;
+
+bool TypeSystemSwift::IsFloatingPointType(opaque_compiler_type_t type,
+                                          uint32_t &count, bool &is_complex) {
+  count = 0;
+  is_complex = false;
+  if (GetTypeInfo(type, nullptr) & eTypeIsFloat) {
+    count = 1;
+    return true;
+  }
+  return false;
+}
+
+bool TypeSystemSwift::IsIntegerType(opaque_compiler_type_t type,
+                                    bool &is_signed) {
+  return (GetTypeInfo(type, nullptr) & eTypeIsInteger);
+}

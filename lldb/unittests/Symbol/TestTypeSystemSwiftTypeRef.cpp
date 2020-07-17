@@ -69,6 +69,13 @@ public:
              Node(Node::Kind::Module, swift::STDLIB_NAME),
              Node(Node::Kind::Identifier, swift::BUILTIN_TYPE_NAME_INT)));
   }
+  NodePointer FloatType() {
+    return Node(
+        Node::Kind::Type,
+        Node(Node::Kind::Structure,
+             Node(Node::Kind::Module, swift::STDLIB_NAME),
+             Node(Node::Kind::Identifier, swift::BUILTIN_TYPE_NAME_FLOAT)));
+  }
   NodePointer GlobalTypeMangling(NodePointer type) {
     assert(type && type->getKind() == Node::Kind::Type);
     return Node(Node::Kind::Global, Node(Node::Kind::TypeMangling, type));
@@ -279,5 +286,33 @@ TEST_F(TestTypeSystemSwiftTypeRef, Defined) {
     ASSERT_TRUE(int_type.IsDefined());
     // It's technically not possible to construct such a CompilerType.
     ASSERT_FALSE(m_swift_ts.IsDefined(nullptr));
+  }
+}
+
+TEST_F(TestTypeSystemSwiftTypeRef, IntFloat) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer int_node = b.GlobalTypeMangling(b.IntType());
+    CompilerType int_type = GetCompilerType(b.Mangle(int_node));
+    uint32_t count = 99;
+    bool is_complex = true;
+    ASSERT_FALSE(int_type.IsFloatingPointType(count, is_complex));
+    ASSERT_EQ(count, 0);
+    ASSERT_EQ(is_complex, false);
+    bool is_signed = true;
+    ASSERT_TRUE(int_type.IsIntegerType(is_signed));
+  }
+  {
+    NodePointer float_node = b.GlobalTypeMangling(b.FloatType());
+    CompilerType float_type = GetCompilerType(b.Mangle(float_node));
+    uint32_t count = 99;
+    bool is_complex = true;
+    ASSERT_TRUE(float_type.IsFloatingPointType(count, is_complex));
+    ASSERT_EQ(count, 1);
+    ASSERT_EQ(is_complex, false);
+    bool is_signed = true;
+    ASSERT_FALSE(float_type.IsIntegerType(is_signed));
   }
 }
