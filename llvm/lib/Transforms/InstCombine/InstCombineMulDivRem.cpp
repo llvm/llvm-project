@@ -1182,6 +1182,13 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
       return BO;
     }
 
+    if (match(Op1, m_NegatedPower2())) {
+      // X sdiv (-(1 << C)) -> -(X sdiv (1 << C)) ->
+      //                    -> -(X udiv (1 << C)) -> -(X u>> C)
+      return BinaryOperator::CreateNeg(Builder.Insert(foldUDivPow2Cst(
+          Op0, ConstantExpr::getNeg(cast<Constant>(Op1)), I, *this)));
+    }
+
     if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {
       // X sdiv (1 << Y) -> X udiv (1 << Y) ( -> X u>> Y)
       // Safe because the only negative value (1 << Y) can take on is
