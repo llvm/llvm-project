@@ -357,3 +357,77 @@ TEST_F(TestTypeSystemSwiftTypeRef, LanguageVersion) {
     ASSERT_EQ(int_type.GetMinimumLanguage(), lldb::eLanguageTypeSwift);
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, TypeClass) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n = b.GlobalTypeMangling(b.IntType());
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassBuiltin);
+  }
+  {
+    std::string vec = StringRef(swift::BUILTIN_TYPE_NAME_VEC).str() + "4xInt8";
+    NodePointer n =
+        b.GlobalType(b.Node(Node::Kind::BuiltinTypeName, vec.c_str()));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassVector);
+  }
+  {
+    NodePointer n = b.GlobalType(b.Node(Node::Kind::Tuple));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassArray);
+  }
+  {
+    NodePointer n =
+        b.GlobalType(b.Node(Node::Kind::Enum, b.Node(Node::Kind::Module, "M"),
+                            b.Node(Node::Kind::Identifier, "E")));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassUnion);
+  }
+  {
+    NodePointer n = b.GlobalType(b.Node(Node::Kind::Structure,
+                                        b.Node(Node::Kind::Module, "M"),
+                                        b.Node(Node::Kind::Identifier, "S")));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassStruct);
+  }
+  {
+    NodePointer n =
+        b.GlobalType(b.Node(Node::Kind::Class, b.Node(Node::Kind::Module, "M"),
+                            b.Node(Node::Kind::Identifier, "C")));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassClass);
+  }
+  {
+    NodePointer n = b.GlobalType(b.Node(
+        Node::Kind::InOut,
+        b.Node(Node::Kind::Structure,
+               b.Node(Node::Kind::Module, swift::STDLIB_NAME),
+               b.Node(Node::Kind::Identifier, swift::BUILTIN_TYPE_NAME_INT))));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassReference);
+  }
+  {
+    NodePointer n = b.GlobalType(
+        b.Node(Node::Kind::FunctionType,
+               b.Node(Node::Kind::ArgumentTuple,
+                      b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple))),
+               b.Node(Node::Kind::ReturnType,
+                      b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple)))));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassFunction);
+  }
+  {
+    NodePointer n = b.GlobalType(b.Node(
+        Node::Kind::ProtocolList,
+        b.Node(Node::Kind::TypeList,
+               b.Node(Node::Kind::Type,
+                      b.Node(Node::Kind::Protocol,
+                             b.Node(Node::Kind::Module, swift::STDLIB_NAME),
+                             b.Node(Node::Kind::Identifier, "Error"))))));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassOther);
+  }
+}
