@@ -62,7 +62,7 @@ struct TestSwiftASTContext : public testing::Test {
 
 struct SwiftASTContextTester : public SwiftASTContext {
   #ifndef NDEBUG
-  SwiftASTContextTester() : SwiftASTContext() {}
+    SwiftASTContextTester() : SwiftASTContext() {}
   #endif
 
   static std::string GetResourceDir(llvm::StringRef platform_sdk_path,
