@@ -435,7 +435,7 @@ Session::Session(Triple TT, Error &Err)
   public:
     JITLinkSessionPlugin(Session &S) : S(S) {}
     void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
-                          PassConfiguration &PassConfig) {
+                          PassConfiguration &PassConfig) override {
       S.modifyPassConfig(TT, PassConfig);
     }
 
