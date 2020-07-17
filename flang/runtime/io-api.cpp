@@ -74,6 +74,32 @@ Cookie IONAME(BeginInternalArrayFormattedInput)(const Descriptor &descriptor,
 }
 
 template <Direction DIR>
+Cookie BeginInternalListIO(
+    std::conditional_t<DIR == Direction::Input, const char, char> *internal,
+    std::size_t internalLength, void ** /*scratchArea*/,
+    std::size_t /*scratchBytes*/, const char *sourceFile, int sourceLine) {
+  Terminator oom{sourceFile, sourceLine};
+  return &New<InternalListIoStatementState<DIR>>{oom}(
+      internal, internalLength, sourceFile, sourceLine)
+              .release()
+              ->ioStatementState();
+}
+
+Cookie IONAME(BeginInternalListOutput)(char *internal,
+    std::size_t internalLength, void **scratchArea, std::size_t scratchBytes,
+    const char *sourceFile, int sourceLine) {
+  return BeginInternalListIO<Direction::Output>(internal, internalLength,
+      scratchArea, scratchBytes, sourceFile, sourceLine);
+}
+
+Cookie IONAME(BeginInternalListInput)(const char *internal,
+    std::size_t internalLength, void **scratchArea, std::size_t scratchBytes,
+    const char *sourceFile, int sourceLine) {
+  return BeginInternalListIO<Direction::Input>(internal, internalLength,
+      scratchArea, scratchBytes, sourceFile, sourceLine);
+}
+
+template <Direction DIR>
 Cookie BeginInternalFormattedIO(
     std::conditional_t<DIR == Direction::Input, const char, char> *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
@@ -90,7 +116,6 @@ Cookie IONAME(BeginInternalFormattedOutput)(char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
     void **scratchArea, std::size_t scratchBytes, const char *sourceFile,
     int sourceLine) {
-  Terminator oom{sourceFile, sourceLine};
   return BeginInternalFormattedIO<Direction::Output>(internal, internalLength,
       format, formatLength, scratchArea, scratchBytes, sourceFile, sourceLine);
 }
@@ -99,7 +124,6 @@ Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
     void **scratchArea, std::size_t scratchBytes, const char *sourceFile,
     int sourceLine) {
-  Terminator oom{sourceFile, sourceLine};
   return BeginInternalFormattedIO<Direction::Input>(internal, internalLength,
       format, formatLength, scratchArea, scratchBytes, sourceFile, sourceLine);
 }
