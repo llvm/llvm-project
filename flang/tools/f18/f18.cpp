@@ -686,6 +686,8 @@ int main(int argc, char *const argv[]) {
   if (!anyFiles) {
     driver.measureTree = true;
     driver.dumpUnparse = true;
+    llvm::outs() << "Enter Fortran source\n"
+                 << "Use EOF character (^D) to end file\n";
     CompileFortran("-", options, driver, defaultKinds);
     return exitStatus;
   }
