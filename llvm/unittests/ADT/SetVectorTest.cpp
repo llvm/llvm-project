@@ -31,3 +31,20 @@ TEST(SetVector, EraseTest) {
   EXPECT_EQ(2, *std::next(S.begin()));
 }
 
+TEST(SetVector, ContainsTest) {
+  SetVector<int> S;
+  S.insert(0);
+  S.insert(1);
+  S.insert(2);
+
+  EXPECT_TRUE(S.contains(0));
+  EXPECT_TRUE(S.contains(1));
+  EXPECT_TRUE(S.contains(2));
+  EXPECT_FALSE(S.contains(-1));
+
+  S.insert(2);
+  EXPECT_TRUE(S.contains(2));
+
+  S.remove(2);
+  EXPECT_FALSE(S.contains(2));
+}
