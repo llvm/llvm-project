@@ -346,3 +346,14 @@ TEST_F(TestTypeSystemSwiftTypeRef, ScalarAddress) {
     ASSERT_TRUE(c.ShouldTreatScalarValueAsAddress());
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, LanguageVersion) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer int_node = b.GlobalTypeMangling(b.IntType());
+    CompilerType int_type = GetCompilerType(b.Mangle(int_node));
+    ASSERT_EQ(int_type.GetMinimumLanguage(), lldb::eLanguageTypeSwift);
+  }
+}

@@ -5537,14 +5537,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   return swift_flags;
 }
 
-lldb::LanguageType
-SwiftASTContext::GetMinimumLanguage(opaque_compiler_type_t type) {
-  if (!type)
-    return lldb::eLanguageTypeC;
-
-  return lldb::eLanguageTypeSwift;
-}
-
 lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   VALID_OR_RETURN(lldb::eTypeClassInvalid);
 
