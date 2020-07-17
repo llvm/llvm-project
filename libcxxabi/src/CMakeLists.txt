@@ -20,7 +20,9 @@ set(LIBCXXABI_SOURCES
 )
 
 if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-  list(APPEND LIBCXXABI_SOURCES stdlib_new_delete.cpp)
+  list(APPEND LIBCXXABI_SOURCES
+    stdlib_new_delete.cpp
+  )
 endif()
 
 if (LIBCXXABI_ENABLE_EXCEPTIONS)
