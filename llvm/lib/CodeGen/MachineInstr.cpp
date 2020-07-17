@@ -147,6 +147,10 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
   setFlags(MI.Flags);
 }
 
+void MachineInstr::moveBefore(MachineInstr *MovePos) {
+  MovePos->getParent()->splice(MovePos, getParent(), getIterator());
+}
+
 /// getRegInfo - If this instruction is embedded into a MachineFunction,
 /// return the MachineRegisterInfo object for the current function, otherwise
 /// return null.
