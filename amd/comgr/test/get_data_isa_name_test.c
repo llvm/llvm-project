@@ -91,6 +91,7 @@ static isa_features_t IsaFeatures[] = {
   {"amdgcn-amd-amdhsa--gfx1031", false,     false,     none,       false,     none},
   {"amdgcn-amd-amdhsa--gfx1032", false,     false,     none,       false,     none},
   {"amdgcn-amd-amdhsa--gfx1033", false,     false,     none,       false,     none},
+  {"amdgcn-amd-amdhsa--gfx1034", false,     false,     none,       false,     none},
 };
 
 static size_t IsaFeaturesSize = sizeof(IsaFeatures) / sizeof(IsaFeatures[0]);
