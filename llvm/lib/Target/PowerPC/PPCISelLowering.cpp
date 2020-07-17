@@ -5372,10 +5372,9 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
                                         UsePlt ? PPCII::MO_PLT : 0);
 
     assert(!isa<GlobalIFunc>(GV) && "IFunc is not supported on AIX.");
-    const GlobalObject *GO = cast<GlobalObject>(GV);
     const XCOFF::StorageClass SC =
-        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
-    return getAIXFuncEntryPointSymbolSDNode(GO->getName(), GO->isDeclaration(),
+        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV);
+    return getAIXFuncEntryPointSymbolSDNode(GV->getName(), GV->isDeclaration(),
                                             SC);
   }
 
