@@ -101,8 +101,6 @@ public:
   bool IsPointerType(lldb::opaque_compiler_type_t type,
                      CompilerType *pointee_type) override;
   bool IsVoidType(lldb::opaque_compiler_type_t type) override;
-  // Type Completion
-  bool GetCompleteType(lldb::opaque_compiler_type_t type) override;
   // AST related queries
   uint32_t GetPointerByteSize() override;
   // Accessors

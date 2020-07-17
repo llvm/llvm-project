@@ -5330,10 +5330,6 @@ SwiftASTContext::GetAllocationStrategy(opaque_compiler_type_t type) {
 // Type Completion
 //----------------------------------------------------------------------
 
-bool SwiftASTContext::GetCompleteType(opaque_compiler_type_t type) {
-  return true;
-}
-
 ConstString SwiftASTContext::GetTypeName(opaque_compiler_type_t type) {
   std::string type_name;
   if (type) {

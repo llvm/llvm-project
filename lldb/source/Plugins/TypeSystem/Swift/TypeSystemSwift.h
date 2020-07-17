@@ -159,6 +159,9 @@ public:
   bool IsBeingDefined(lldb::opaque_compiler_type_t type) override {
     return false;
   }
+  bool GetCompleteType(lldb::opaque_compiler_type_t type) override {
+    return true;
+  }
   bool CanPassInRegisters(const CompilerType &type) override {
     // FIXME: Implement this. There was an abort() here to figure out which
     // tests where hitting this code. At least TestSwiftReturns and
