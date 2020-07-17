@@ -38,10 +38,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}trunc_store_v16i64_v16i32:
-; GCN: global_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:48
-; GCN: global_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:32
-; GCN: global_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:16
-; GCN: global_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off
+; GCN: global_store_dwordx4 v{{\[[0-9]:[0-9]+\]}}, v{{\[[0-9]:[0-9]+\]}}, off offset:48
+; GCN: global_store_dwordx4 v{{\[[0-9]:[0-9]+\]}}, v{{\[[0-9]:[0-9]+\]}}, off offset:32
+; GCN: global_store_dwordx4 v{{\[[0-9]:[0-9]+\]}}, v{{\[[0-9]:[0-9]+\]}}, off offset:16
+; GCN: global_store_dwordx4 v{{\[[0-9]:[0-9]+\]}}, v{{\[[0-9]:[0-9]+\]}}, off
 define amdgpu_kernel void @trunc_store_v16i64_v16i32(< 16 x i32> addrspace(1)* %out, <16 x i64> %in) {
 entry:
   %trunc = trunc <16 x i64> %in to <16 x i32>
