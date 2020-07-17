@@ -319,3 +319,30 @@ TEST_F(TestTypeSystemSwiftTypeRef, Scalar) {
     ASSERT_TRUE(float_type.IsScalarType());
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, ScalarAddress) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer int_node = b.GlobalTypeMangling(b.IntType());
+    CompilerType int_type = GetCompilerType(b.Mangle(int_node));
+    ASSERT_FALSE(int_type.ShouldTreatScalarValueAsAddress());
+  }
+  {
+    NodePointer n = b.GlobalType(b.Node(
+        Node::Kind::InOut,
+        b.Node(Node::Kind::Structure,
+               b.Node(Node::Kind::Module, swift::STDLIB_NAME),
+               b.Node(Node::Kind::Identifier, swift::BUILTIN_TYPE_NAME_INT))));
+    CompilerType r = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(r.ShouldTreatScalarValueAsAddress());
+  }
+  {
+    NodePointer n =
+        b.GlobalType(b.Node(Node::Kind::Class, b.Node(Node::Kind::Module, "M"),
+                            b.Node(Node::Kind::Identifier, "C")));
+    CompilerType c = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(c.ShouldTreatScalarValueAsAddress());
+  }
+}

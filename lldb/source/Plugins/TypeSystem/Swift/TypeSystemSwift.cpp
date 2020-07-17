@@ -38,3 +38,9 @@ bool TypeSystemSwift::IsScalarType(opaque_compiler_type_t type) {
 
   return (GetTypeInfo(type, nullptr) & eTypeIsScalar) != 0;
 }
+
+bool TypeSystemSwift::ShouldTreatScalarValueAsAddress(
+    opaque_compiler_type_t type) {
+  return Flags(GetTypeInfo(type, nullptr))
+      .AnySet(eTypeInstanceIsPointer | eTypeIsReference);
+}
