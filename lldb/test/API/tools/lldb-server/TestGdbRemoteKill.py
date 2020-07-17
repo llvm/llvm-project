@@ -31,7 +31,7 @@ class TestGdbRemoteKill(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # Wait a moment for completed and now-detached inferior process to
         # clear.
-        time.sleep(self._WAIT_TIMEOUT)
+        time.sleep(self.DEFAULT_SLEEP)
 
         if not lldb.remote_platform:
             # Process should be dead now. Reap results.
