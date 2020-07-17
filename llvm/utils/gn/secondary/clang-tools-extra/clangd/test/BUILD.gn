@@ -21,8 +21,9 @@ write_lit_config("lit_site_cfg") {
   output = clangd_lit_site_cfg_file
 
   extra_values = [
-    "CMAKE_CURRENT_BINARY_DIR=" + rebase_path(
-            get_label_info("//clang-tools-extra/clangd/test", "target_out_dir")),
+    "CMAKE_CURRENT_BINARY_DIR=" +
+        rebase_path(get_label_info("//clang-tools-extra/clangd/test",
+                                   "target_out_dir")),
     "CMAKE_CURRENT_SOURCE_DIR=" +
         rebase_path("//clang-tools-extra/clangd/test"),
 

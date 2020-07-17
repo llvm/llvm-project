@@ -17,7 +17,7 @@ static_library("OpenMP") {
   ]
   public_deps = [ "//llvm/include/llvm/Frontend/OpenMP:public_tablegen" ]
   sources = [
-    "OMPContext.cpp",
-    "OMPIRBuilder.cpp",
-  ] + get_target_outputs(":OMPImpl")
+              "OMPContext.cpp",
+              "OMPIRBuilder.cpp",
+            ] + get_target_outputs(":OMPImpl")
 }
