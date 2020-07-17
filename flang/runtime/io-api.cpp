@@ -563,31 +563,31 @@ bool IONAME(SetAction)(Cookie cookie, const char *keyword, std::size_t length) {
     io.GetIoErrorHandler().Crash(
         "SetAction() called when not in an OPEN statement");
   }
-  bool mayRead{true};
-  bool mayWrite{true};
+  std::optional<Action> action;
   static const char *keywords[]{"READ", "WRITE", "READWRITE", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
-    mayWrite = false;
+    action = Action::Read;
     break;
   case 1:
-    mayRead = false;
+    action = Action::Write;
     break;
   case 2:
+    action = Action::ReadWrite;
     break;
   default:
     open->SignalError(IostatErrorInKeyword, "Invalid ACTION='%.*s'",
         static_cast<int>(length), keyword);
     return false;
   }
-  if (mayRead != open->unit().mayRead() ||
-      mayWrite != open->unit().mayWrite()) {
-    if (open->wasExtant()) {
+  RUNTIME_CHECK(io.GetIoErrorHandler(), action.has_value());
+  if (open->wasExtant()) {
+    if ((*action != Action::Write) != open->unit().mayRead() ||
+        (*action != Action::Read) != open->unit().mayWrite()) {
       open->SignalError("ACTION= may not be changed on an open unit");
     }
-    open->unit().set_mayRead(mayRead);
-    open->unit().set_mayWrite(mayWrite);
   }
+  open->set_action(*action);
   return true;
 }
 
