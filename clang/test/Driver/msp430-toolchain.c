@@ -66,11 +66,11 @@
 
 // Tests for -nostdlib, -nostartfiles, -nodefaultfiles and -f(no-)exceptions
 
-// RUN: %clang %s -### -no-canonical-prefixes -target msp430 \
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -rtlib=libgcc \
 // RUN:   --sysroot="%S/Inputs/basic_msp430_tree" > %t 2>&1
 // RUN: FileCheck -check-prefix=LIBS-DEFAULT-POS %s < %t
 // RUN: FileCheck -check-prefix=LIBS-DEFAULT-NEG %s < %t
-// RUN: %clang %s -### -no-canonical-prefixes -target msp430 \
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -rtlib=libgcc \
 // RUN:   --gcc-toolchain="%S/Inputs/basic_msp430_tree" --sysroot="" 2>&1 \
 // RUN:   | FileCheck -check-prefix=LIBS-DEFAULT-GCC-TOOLCHAIN %s
 // LIBS-DEFAULT-POS: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
@@ -112,7 +112,7 @@
 // LIBS-COMPILER-RT-NEG-NOT: crtend.o
 // LIBS-COMPILER-RT-NEG-NOT: /exceptions
 
-// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -fexceptions \
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -rtlib=libgcc -fexceptions \
 // RUN:   --sysroot="%S/Inputs/basic_msp430_tree" > %t 2>&1
 // RUN: FileCheck -check-prefix=LIBS-EXC-POS %s < %t
 // RUN: FileCheck -check-prefix=LIBS-EXC-NEG %s < %t
@@ -126,7 +126,7 @@
 // LIBS-EXC-NEG-NOT: "{{.*}}/430"
 // LIBS-EXC-NEG-NOT: "{{.*}}430/crt{{.*}}"
 
-// RUN: %clang %s -### -no-canonical-prefixes -target msp430 \
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -rtlib=libgcc \
 // RUN:   -fstack-protector  --sysroot="%S/Inputs/basic_msp430_tree" 2>&1 \
 // RUN:   | FileCheck -check-prefix=LIBS-SSP %s
 // LIBS-SSP: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
@@ -138,7 +138,7 @@
 // LIBS-SSP: "-lgcc" "--start-group" "-lmul_none" "-lc" "-lgcc" "-lcrt" "-lnosys" "--end-group"
 // LIBS-SSP: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/430{{/|\\\\}}crtend_no_eh.o" "-lgcc"
 
-// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -nodefaultlibs \
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -rtlib=libgcc -nodefaultlibs \
 // RUN:   --sysroot="%S/Inputs/basic_msp430_tree" > %t 2>&1
 // RUN: FileCheck -check-prefix=LIBS-NO-DFT-POS %s < %t
 // RUN: FileCheck -check-prefix=LIBS-NO-DFT-NEG %s < %t
@@ -155,7 +155,7 @@
 // LIBS-NO-DFT-NEG-NOT: "--start-group"
 // LIBS-NO-DFT-NEG-NOT: "--end-group"
 
-// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -nolibc \
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -rtlib=libgcc -nolibc \
 // RUN:   -fstack-protector --sysroot="%S/Inputs/basic_msp430_tree" > %t 2>&1
 // RUN: FileCheck -check-prefix=LIBS-NO-LIBC-POS %s < %t
 // RUN: FileCheck -check-prefix=LIBS-NO-LIBC-NEG %s < %t
@@ -173,7 +173,7 @@
 // LIBS-NO-LIBC-NEG-NOT: "--start-group"
 // LIBS-NO-LIBC-NEG-NOT: "--end-group"
 
-// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -nostartfiles \
+// RUN: %clang %s -### -no-canonical-prefixes -target msp430 -rtlib=libgcc -nostartfiles \
 // RUN:   --sysroot="%S/Inputs/basic_msp430_tree" > %t 2>&1
 // RUN: FileCheck -check-prefix=LIBS-NO-START-POS %s < %t
 // RUN: FileCheck -check-prefix=LIBS-NO-START-NEG %s < %t
@@ -222,7 +222,7 @@
 // Test for compiling for simulator
 
 // RUN: %clang %s -### -no-canonical-prefixes -target msp430 -mmcu=msp430g2553 \
-// RUN:   -msim --sysroot=%S/Inputs/basic_msp430_tree > %t 2>&1
+// RUN:   -msim -rtlib=libgcc --sysroot=%S/Inputs/basic_msp430_tree > %t 2>&1
 // RUN: FileCheck -check-prefix=SIMULATOR-POS %s < %t
 // RUN: FileCheck -check-prefix=SIMULATOR-NEG %s < %t
 // SIMULATOR-POS: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}msp430-elf-ld"
