@@ -139,6 +139,8 @@ uptr ReservedAddressRange::InitAligned(uptr size, uptr align,
   return start;
 }
 
+#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+
 // Reserve memory range [beg, end].
 // We need to use inclusive range because end+1 may not be representable.
 void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name,
@@ -187,6 +189,8 @@ void ProtectGap(uptr addr, uptr size, uptr zero_base_shadow_start,
   DumpProcessMap();
   Die();
 }
+
+#endif  // !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
 
 }  // namespace __sanitizer
 
