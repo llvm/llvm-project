@@ -445,9 +445,6 @@ public:
 
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
 
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
-                           bool &is_complex) override;
-
   bool IsFunctionType(lldb::opaque_compiler_type_t type,
                       bool *is_variadic_ptr) override;
 
@@ -458,9 +455,6 @@ public:
                                           const size_t index) override;
 
   bool IsFunctionPointerType(lldb::opaque_compiler_type_t type) override;
-
-  bool IsIntegerType(lldb::opaque_compiler_type_t type,
-                     bool &is_signed) override;
 
   bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                              CompilerType *target_type, // Can pass NULL

@@ -141,6 +141,10 @@ public:
     return true;
   }
   bool IsConst(lldb::opaque_compiler_type_t type) override { return false; }
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
+                           bool &is_complex) override;
+  bool IsIntegerType(lldb::opaque_compiler_type_t type,
+                     bool &is_signed) override;
   bool IsCStringType(lldb::opaque_compiler_type_t type,
                      uint32_t &length) override {
     return false;
