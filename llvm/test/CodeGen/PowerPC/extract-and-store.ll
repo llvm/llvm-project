@@ -508,9 +508,9 @@ define dso_local void @test_consecutive_i32(<4 x i32> %a, i32* nocapture %b) loc
 ; CHECK-P9-BE-LABEL: test_consecutive_i32:
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs34, 3
+; CHECK-P9-BE-NEXT:    li r3, 4
 ; CHECK-P9-BE-NEXT:    stfiwx f0, 0, r5
 ; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs34, 1
-; CHECK-P9-BE-NEXT:    li r3, 4
 ; CHECK-P9-BE-NEXT:    stfiwx f0, r5, r3
 ; CHECK-P9-BE-NEXT:    blr
 entry:
@@ -544,9 +544,9 @@ define dso_local void @test_consecutive_float(<4 x float> %a, float* nocapture %
 ; CHECK-P9-LABEL: test_consecutive_float:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    xxsldwi vs0, vs34, vs34, 1
+; CHECK-P9-NEXT:    li r3, 4
 ; CHECK-P9-NEXT:    stfiwx f0, 0, r5
 ; CHECK-P9-NEXT:    xxsldwi vs0, vs34, vs34, 3
-; CHECK-P9-NEXT:    li r3, 4
 ; CHECK-P9-NEXT:    stfiwx f0, r5, r3
 ; CHECK-P9-NEXT:    blr
 ;
@@ -597,9 +597,9 @@ define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, i32* nocapture 
 ; CHECK-P9-LABEL: test_stores_exceed_vec_size:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
+; CHECK-P9-NEXT:    xxsldwi vs0, vs34, vs34, 1
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI16_0@toc@l
 ; CHECK-P9-NEXT:    lxvx vs35, 0, r3
-; CHECK-P9-NEXT:    xxsldwi vs0, vs34, vs34, 1
 ; CHECK-P9-NEXT:    li r3, 16
 ; CHECK-P9-NEXT:    stfiwx f0, r5, r3
 ; CHECK-P9-NEXT:    li r3, 20
@@ -611,10 +611,10 @@ define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, i32* nocapture 
 ; CHECK-P9-BE-LABEL: test_stores_exceed_vec_size:
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    xxspltw vs0, vs34, 0
-; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs0, 2
 ; CHECK-P9-BE-NEXT:    li r3, 16
 ; CHECK-P9-BE-NEXT:    stxsiwx vs34, r5, r3
 ; CHECK-P9-BE-NEXT:    li r3, 20
+; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs0, 2
 ; CHECK-P9-BE-NEXT:    stxv vs0, 0(r5)
 ; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs34, 1
 ; CHECK-P9-BE-NEXT:    stfiwx f0, r5, r3
@@ -676,9 +676,9 @@ define void @test_5_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b) 
 ; CHECK-P9-LABEL: test_5_consecutive_stores_of_bytes:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 4
+; CHECK-P9-NEXT:    li r3, 1
 ; CHECK-P9-NEXT:    stxsibx vs35, 0, r5
 ; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 12
-; CHECK-P9-NEXT:    li r3, 1
 ; CHECK-P9-NEXT:    stxsibx vs35, r5, r3
 ; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 15
 ; CHECK-P9-NEXT:    li r3, 2
@@ -694,9 +694,9 @@ define void @test_5_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b) 
 ; CHECK-P9-BE-LABEL: test_5_consecutive_stores_of_bytes:
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 13
+; CHECK-P9-BE-NEXT:    li r3, 1
 ; CHECK-P9-BE-NEXT:    stxsibx vs35, 0, r5
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 5
-; CHECK-P9-BE-NEXT:    li r3, 1
 ; CHECK-P9-BE-NEXT:    stxsibx vs35, r5, r3
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 2
 ; CHECK-P9-BE-NEXT:    li r3, 2
@@ -807,9 +807,9 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ; CHECK-P9-NEXT:    li r3, 4
 ; CHECK-P9-NEXT:    stxsibx vs35, r5, r3
 ; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 4
+; CHECK-P9-NEXT:    li r3, 5
 ; CHECK-P9-NEXT:    stxsibx vs35, 0, r5
 ; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 8
-; CHECK-P9-NEXT:    li r3, 5
 ; CHECK-P9-NEXT:    stxsibx vs35, r5, r3
 ; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 13
 ; CHECK-P9-NEXT:    li r3, 6
@@ -848,9 +848,9 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ; CHECK-P9-BE-NEXT:    li r3, 4
 ; CHECK-P9-BE-NEXT:    stxsibx vs35, r5, r3
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 13
+; CHECK-P9-BE-NEXT:    li r3, 5
 ; CHECK-P9-BE-NEXT:    stxsibx vs35, 0, r5
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 9
-; CHECK-P9-BE-NEXT:    li r3, 5
 ; CHECK-P9-BE-NEXT:    stxsibx vs35, r5, r3
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 4
 ; CHECK-P9-BE-NEXT:    li r3, 6
@@ -947,8 +947,8 @@ define void @test_elements_from_two_vec(<4 x i32> %a, <4 x i32> %b, i32* nocaptu
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs34, 3
 ; CHECK-P9-BE-NEXT:    li r3, 4
-; CHECK-P9-BE-NEXT:    stfiwx f0, r7, r3
 ; CHECK-P9-BE-NEXT:    stxsiwx vs35, 0, r7
+; CHECK-P9-BE-NEXT:    stfiwx f0, r7, r3
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 0
@@ -996,9 +996,9 @@ define dso_local void @test_elements_from_three_vec(<4 x float> %a, <4 x float> 
 ; CHECK-P9-BE-LABEL: test_elements_from_three_vec:
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs34, vs34, 2
+; CHECK-P9-BE-NEXT:    li r3, 4
 ; CHECK-P9-BE-NEXT:    stfiwx f0, 0, r9
 ; CHECK-P9-BE-NEXT:    xxsldwi vs0, vs35, vs35, 1
-; CHECK-P9-BE-NEXT:    li r3, 4
 ; CHECK-P9-BE-NEXT:    stfiwx f0, r9, r3
 ; CHECK-P9-BE-NEXT:    li r3, 8
 ; CHECK-P9-BE-NEXT:    stxsiwx vs36, r9, r3

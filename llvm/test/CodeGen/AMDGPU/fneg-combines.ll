@@ -191,7 +191,7 @@ define amdgpu_kernel void @v_fneg_add_store_use_fneg_x_f32(float addrspace(1)* %
 
 ; GCN-SAFE-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
 ; GCN-SAFE-DAG: v_sub_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
-; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
+; GCN-SAFE-DAG: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
 
 ; GCN-NSZ-DAG: v_sub_f32_e32 [[NEG_ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NSZ-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
@@ -1343,9 +1343,9 @@ define amdgpu_kernel void @v_fneg_fma_store_use_fneg_x_y_f32(float addrspace(1)*
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
 
-; GCN: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
-; GCN-SAFE: v_fma_f32 [[FMA:v[0-9]+]]
-; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[FMA]]
+; GCN-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
+; GCN-SAFE-DAG: v_fma_f32 [[FMA:v[0-9]+]]
+; GCN-SAFE-DAG: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[FMA]]
 
 ; GCN-NSZ-DAG: v_fma_f32 [[NEG_FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
 ; GCN-NSZ-NEXT: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[NEG_FMA]]

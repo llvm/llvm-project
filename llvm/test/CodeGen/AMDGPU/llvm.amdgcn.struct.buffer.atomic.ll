@@ -79,7 +79,7 @@ main_body:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
-;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v2, s[0:3], 0 idxen glc
+;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen glc

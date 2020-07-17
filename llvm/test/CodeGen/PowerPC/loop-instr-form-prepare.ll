@@ -23,11 +23,11 @@ define i64 @test_no_prep(i8* %0, i32 signext %1) {
 ; CHECK:       .LBB0_2: #
 ; CHECK-NEXT:    ldx r9, r3, r6
 ; CHECK-NEXT:    ldx r10, r3, r7
-; CHECK-NEXT:    mulld r9, r10, r9
 ; CHECK-NEXT:    ldx r11, r3, r8
-; CHECK-NEXT:    mulld r9, r9, r11
 ; CHECK-NEXT:    ld r12, 0(r3)
 ; CHECK-NEXT:    addi r3, r3, 1
+; CHECK-NEXT:    mulld r9, r10, r9
+; CHECK-NEXT:    mulld r9, r9, r11
 ; CHECK-NEXT:    maddld r5, r9, r12, r5
 ; CHECK-NEXT:    bdnz .LBB0_2
   %3 = sext i32 %1 to i64
@@ -87,11 +87,11 @@ define i64 @test_ds_prep(i8* %0, i32 signext %1) {
 ; CHECK:       .LBB1_2: #
 ; CHECK-NEXT:    ldx r9, r6, r7
 ; CHECK-NEXT:    ld r10, 0(r6)
-; CHECK-NEXT:    mulld r9, r10, r9
 ; CHECK-NEXT:    ldx r11, r6, r5
-; CHECK-NEXT:    mulld r9, r9, r11
 ; CHECK-NEXT:    addi r8, r6, 1
 ; CHECK-NEXT:    ld r6, 4(r6)
+; CHECK-NEXT:    mulld r9, r10, r9
+; CHECK-NEXT:    mulld r9, r9, r11
 ; CHECK-NEXT:    maddld r3, r9, r6, r3
 ; CHECK-NEXT:    mr r6, r8
 ; CHECK-NEXT:    bdnz .LBB1_2
@@ -162,22 +162,22 @@ define i64 @test_max_number_reminder(i8* %0, i32 signext %1) {
 ; CHECK:       .LBB2_2: #
 ; CHECK-NEXT:    ldx r12, r9, r6
 ; CHECK-NEXT:    ld r0, 0(r9)
-; CHECK-NEXT:    mulld r12, r0, r12
+; CHECK-NEXT:    ldx r30, r9, r5
+; CHECK-NEXT:    ldx r29, r9, r7
 ; CHECK-NEXT:    addi r11, r9, 1
-; CHECK-NEXT:    ldx r30, r9, r7
-; CHECK-NEXT:    ld r29, 4(r9)
-; CHECK-NEXT:    ldx r28, r9, r8
-; CHECK-NEXT:    ld r27, 12(r9)
-; CHECK-NEXT:    ld r26, 8(r9)
-; CHECK-NEXT:    ldx r25, r9, r10
-; CHECK-NEXT:    ldx r9, r9, r5
-; CHECK-NEXT:    mulld r9, r12, r9
-; CHECK-NEXT:    mulld r9, r9, r30
-; CHECK-NEXT:    mulld r9, r9, r29
-; CHECK-NEXT:    mulld r9, r9, r28
-; CHECK-NEXT:    mulld r9, r9, r27
-; CHECK-NEXT:    mulld r9, r9, r26
-; CHECK-NEXT:    maddld r3, r9, r25, r3
+; CHECK-NEXT:    mulld r12, r0, r12
+; CHECK-NEXT:    ld r28, 4(r9)
+; CHECK-NEXT:    ldx r27, r9, r8
+; CHECK-NEXT:    ld r26, 12(r9)
+; CHECK-NEXT:    ld r25, 8(r9)
+; CHECK-NEXT:    ldx r9, r9, r10
+; CHECK-NEXT:    mulld r12, r12, r30
+; CHECK-NEXT:    mulld r12, r12, r29
+; CHECK-NEXT:    mulld r12, r12, r28
+; CHECK-NEXT:    mulld r12, r12, r27
+; CHECK-NEXT:    mulld r12, r12, r26
+; CHECK-NEXT:    mulld r12, r12, r25
+; CHECK-NEXT:    maddld r3, r12, r9, r3
 ; CHECK-NEXT:    mr r9, r11
 ; CHECK-NEXT:    bdnz .LBB2_2
   %3 = sext i32 %1 to i64
@@ -257,10 +257,10 @@ define dso_local i64 @test_update_ds_prep_interact(i8* %0, i32 signext %1) {
 ; CHECK:       .LBB3_2: #
 ; CHECK-NEXT:    ldu r8, 4(r3)
 ; CHECK-NEXT:    ldx r9, r3, r7
-; CHECK-NEXT:    mulld r8, r8, r9
 ; CHECK-NEXT:    ldx r10, r3, r6
-; CHECK-NEXT:    mulld r8, r8, r10
 ; CHECK-NEXT:    ld r11, 4(r3)
+; CHECK-NEXT:    mulld r8, r8, r9
+; CHECK-NEXT:    mulld r8, r8, r10
 ; CHECK-NEXT:    maddld r5, r8, r11, r5
 ; CHECK-NEXT:    bdnz .LBB3_2
   %3 = sext i32 %1 to i64
@@ -391,21 +391,21 @@ define dso_local i64 @test_ds_multiple_chains(i8* %0, i8* %1, i32 signext %2) {
 ; CHECK:       .LBB5_2: #
 ; CHECK-NEXT:    ld r8, 0(r3)
 ; CHECK-NEXT:    ldx r9, r3, r7
-; CHECK-NEXT:    mulld r8, r9, r8
-; CHECK-NEXT:    ld r9, 4(r3)
-; CHECK-NEXT:    mulld r8, r8, r9
-; CHECK-NEXT:    ld r10, 8(r3)
+; CHECK-NEXT:    ld r10, 4(r3)
+; CHECK-NEXT:    ld r11, 8(r3)
 ; CHECK-NEXT:    addi r3, r3, 1
-; CHECK-NEXT:    mulld r8, r8, r10
-; CHECK-NEXT:    ld r11, 0(r4)
-; CHECK-NEXT:    mulld r8, r8, r11
-; CHECK-NEXT:    ldx r12, r4, r7
-; CHECK-NEXT:    mulld r8, r8, r12
-; CHECK-NEXT:    ld r0, 4(r4)
-; CHECK-NEXT:    mulld r8, r8, r0
-; CHECK-NEXT:    ld r30, 8(r4)
+; CHECK-NEXT:    mulld r8, r9, r8
+; CHECK-NEXT:    ld r12, 0(r4)
+; CHECK-NEXT:    ldx r0, r4, r7
+; CHECK-NEXT:    ld r30, 4(r4)
+; CHECK-NEXT:    ld r9, 8(r4)
 ; CHECK-NEXT:    addi r4, r4, 1
-; CHECK-NEXT:    maddld r6, r8, r30, r6
+; CHECK-NEXT:    mulld r8, r8, r10
+; CHECK-NEXT:    mulld r8, r8, r11
+; CHECK-NEXT:    mulld r8, r8, r12
+; CHECK-NEXT:    mulld r8, r8, r0
+; CHECK-NEXT:    mulld r8, r8, r30
+; CHECK-NEXT:    maddld r6, r8, r9, r6
 ; CHECK-NEXT:    bdnz .LBB5_2
   %4 = sext i32 %2 to i64
   %5 = icmp eq i32 %2, 0
@@ -710,10 +710,10 @@ define float @test_ds_combine_float_int(i8* %0, i32 signext %1) {
 ; CHECK-NEXT:    lfsx f0, r3, r4
 ; CHECK-NEXT:    xscvuxdsp f4, f4
 ; CHECK-NEXT:    lfs f2, 20(r3)
-; CHECK-NEXT:    xsmulsp f0, f0, f4
-; CHECK-NEXT:    xsmulsp f0, f2, f0
 ; CHECK-NEXT:    lfs f3, 60(r3)
 ; CHECK-NEXT:    addi r3, r3, 1
+; CHECK-NEXT:    xsmulsp f0, f0, f4
+; CHECK-NEXT:    xsmulsp f0, f2, f0
 ; CHECK-NEXT:    xsmulsp f0, f3, f0
 ; CHECK-NEXT:    xsaddsp f1, f1, f0
 ; CHECK-NEXT:    bdnz .LBB8_2

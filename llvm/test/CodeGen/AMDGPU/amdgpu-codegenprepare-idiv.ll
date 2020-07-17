@@ -5059,16 +5059,16 @@ define amdgpu_kernel void @udiv_i64_pow2k_denom(i64 addrspace(1)* %out, i64 %x) 
 ;
 ; GCN-LABEL: udiv_i64_pow2k_denom:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s0, s4
-; GCN-NEXT:    s_mov_b32 s1, s5
-; GCN-NEXT:    s_lshr_b64 s[4:5], s[6:7], 12
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    s_mov_b32 s5, s1
+; GCN-NEXT:    s_lshr_b64 s[0:1], s[2:3], 12
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %r = udiv i64 %x, 4096
   store i64 %r, i64 addrspace(1)* %out
@@ -5703,20 +5703,20 @@ define amdgpu_kernel void @sdiv_i64_pow2k_denom(i64 addrspace(1)* %out, i64 %x) 
 ;
 ; GCN-LABEL: sdiv_i64_pow2k_denom:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s0, s4
-; GCN-NEXT:    s_ashr_i32 s4, s7, 31
-; GCN-NEXT:    s_lshr_b32 s4, s4, 20
-; GCN-NEXT:    s_add_u32 s4, s6, s4
-; GCN-NEXT:    s_mov_b32 s1, s5
-; GCN-NEXT:    s_addc_u32 s5, s7, 0
-; GCN-NEXT:    s_ashr_i64 s[4:5], s[4:5], 12
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    s_ashr_i32 s0, s3, 31
+; GCN-NEXT:    s_lshr_b32 s0, s0, 20
+; GCN-NEXT:    s_add_u32 s0, s2, s0
+; GCN-NEXT:    s_mov_b32 s5, s1
+; GCN-NEXT:    s_addc_u32 s1, s3, 0
+; GCN-NEXT:    s_ashr_i64 s[0:1], s[0:1], 12
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %r = sdiv i64 %x, 4096
   store i64 %r, i64 addrspace(1)* %out

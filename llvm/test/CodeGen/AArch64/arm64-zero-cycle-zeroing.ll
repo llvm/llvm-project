@@ -27,10 +27,10 @@ entry:
 ; NONE16: fmov s1, wzr
 ; NONE16: fmov d2, xzr
 ; NONE16: movi{{(.16b)?}} v3{{(.2d)?}}, #0
-; ZEROFP: ldr h0,{{.*}}
-; ZEROFP: movi v{{[0-3]+}}.2d, #0
-; ZEROFP: movi v{{[0-3]+}}.2d, #0
-; ZEROFP: movi v{{[0-3]+}}.2d, #0
+; ZEROFP-DAG: ldr h0,{{.*}}
+; ZEROFP-DAG: movi v{{[0-3]+}}.2d, #0
+; ZEROFP-DAG: movi v{{[0-3]+}}.2d, #0
+; ZEROFP-DAG: movi v{{[0-3]+}}.2d, #0
 ; ZERO16: movi v{{[0-3]+}}.2d, #0
 ; ZERO16: movi v{{[0-3]+}}.2d, #0
 ; ZERO16: movi v{{[0-3]+}}.2d, #0
