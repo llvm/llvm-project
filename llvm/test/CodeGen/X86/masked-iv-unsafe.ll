@@ -402,9 +402,9 @@ return:
 define void @another_count_down_signed(double* %d, i64 %n) nounwind {
 ; CHECK-LABEL: another_count_down_signed:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shlq $24, %rax
-; CHECK-NEXT:    leaq -10(%rsi), %rcx
+; CHECK-NEXT:    leaq -10(%rsi), %rax
+; CHECK-NEXT:    movq %rsi, %rcx
+; CHECK-NEXT:    shlq $24, %rcx
 ; CHECK-NEXT:    shlq $8, %rsi
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
@@ -417,17 +417,17 @@ define void @another_count_down_signed(double* %d, i64 %n) nounwind {
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdi,%rdx,8)
-; CHECK-NEXT:    movq %rax, %rdx
+; CHECK-NEXT:    movq %rcx, %rdx
 ; CHECK-NEXT:    sarq $24, %rdx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm1, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdi,%rdx,8)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
-; CHECK-NEXT:    movsd %xmm3, 80(%rdi,%rcx,8)
-; CHECK-NEXT:    addq $-16777216, %rax # imm = 0xFF000000
+; CHECK-NEXT:    movsd %xmm3, 80(%rdi,%rax,8)
+; CHECK-NEXT:    addq $-16777216, %rcx # imm = 0xFF000000
 ; CHECK-NEXT:    addq $-256, %rsi
-; CHECK-NEXT:    decq %rcx
+; CHECK-NEXT:    decq %rax
 ; CHECK-NEXT:    jne .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq

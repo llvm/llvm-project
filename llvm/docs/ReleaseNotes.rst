@@ -126,7 +126,7 @@ Changes to the LLVM tools
 During this release ...
 
 Changes to LLDB
-===============
+---------------------------------
 
 External Open Source Projects Using LLVM 12
 ===========================================

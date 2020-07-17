@@ -13,7 +13,7 @@ entry:
   store ppc_fp128 %0, ppc_fp128* @g, align 16
   ret void
 }
-; CHECK: @callee
+; CHECK-LABEL: @callee
 ; CHECK: ld [[REG:[0-9]+]], .LC
 ; CHECK: stfd 2, 8([[REG]])
 ; CHECK: stfd 1, 0([[REG]])
@@ -25,7 +25,7 @@ entry:
   call void @test(ppc_fp128 %0)
   ret void
 }
-; CHECK: @caller
+; CHECK-LABEL: @caller
 ; CHECK: ld [[REG:[0-9]+]], .LC
 ; CHECK: lfd 2, 8([[REG]])
 ; CHECK: lfd 1, 0([[REG]])
@@ -42,7 +42,7 @@ entry:
 ; CHECK: .long   0x3f800000
 ; CHECK: .LCPI[[LC]]_1:
 ; CHECK: .long   0
-; CHECK: @caller_const
+; CHECK-LABEL: @caller_const
 ; CHECK: addis [[REG0:[0-9]+]], 2, .LCPI[[LC]]_0@toc@ha
 ; CHECK: addis [[REG1:[0-9]+]], 2, .LCPI[[LC]]_1@toc@ha
 ; CHECK: lfs 1, .LCPI[[LC]]_0@toc@l([[REG0]])
@@ -54,7 +54,7 @@ entry:
   %0 = load ppc_fp128, ppc_fp128* @g, align 16
   ret ppc_fp128 %0
 }
-; CHECK: @result
+; CHECK-LABEL: @result
 ; CHECK: ld [[REG:[0-9]+]], .LC
 ; CHECK: lfd 1, 0([[REG]])
 ; CHECK: lfd 2, 8([[REG]])
@@ -66,7 +66,7 @@ entry:
   store ppc_fp128 %call, ppc_fp128* @g, align 16
   ret void
 }
-; CHECK: @use_result
+; CHECK-LABEL: @use_result
 ; CHECK: bl test_result
 ; CHECK: ld [[REG:[0-9]+]], .LC
 ; CHECK: stfd 2, 8([[REG]])
@@ -81,7 +81,7 @@ entry:
   tail call void @test(ppc_fp128 %call)
   ret void
 }
-; CHECK: @caller_result
+; CHECK-LABEL: @caller_result
 ; CHECK: bl test_result
 ; CHECK-NEXT: nop
 ; CHECK-NEXT: bl test
@@ -92,7 +92,7 @@ entry:
   %0 = bitcast ppc_fp128 %x to i128
   ret i128 %0
 }
-; CHECK: @convert_from
+; CHECK-LABEL: @convert_from
 ; CHECK: stfd 1, [[OFF1:.*]](1)
 ; CHECK: stfd 2, [[OFF2:.*]](1)
 ; CHECK: ld 3, [[OFF1]](1)
@@ -104,7 +104,7 @@ entry:
   %0 = bitcast i128 %x to ppc_fp128
   ret ppc_fp128 %0
 }
-; CHECK: convert_to:
+; CHECK-LABEL: convert_to:
 ; CHECK-DAG: std 3, [[OFF1:.*]](1)
 ; CHECK-DAG: std 4, [[OFF2:.*]](1)
 ; CHECK: lfd 1, [[OFF1]](1)
@@ -118,7 +118,7 @@ entry:
   ret ppc_fp128 %0
 }
 
-; CHECK: convert_to2:
+; CHECK-LABEL: convert_to2:
 ; CHECK: std 3, [[OFF1:.*]](1)
 ; CHECK: std 5, [[OFF2:.*]](1)
 ; CHECK: lfd 1, [[OFF1]](1)
@@ -131,7 +131,7 @@ entry:
   %conv = fptrunc ppc_fp128 %cast to double
   ret double %conv
 }
-; CHECK: @convert_vector
+; CHECK-LABEL: @convert_vector
 ; CHECK: addi [[REG:[0-9]+]], 1, [[OFF:.*]]
 ; CHECK: stvx 2, 0, [[REG]]
 ; CHECK: lfd 1, [[OFF]](1)
@@ -148,7 +148,7 @@ entry:
   %conv = fptrunc ppc_fp128 %arg to double
   ret double %conv
 }
-; CHECK: @vararg
+; CHECK-LABEL: @vararg
 ; CHECK: lfd 1, 0({{[0-9]+}})
 ; CHECK: blr
 

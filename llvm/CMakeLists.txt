@@ -3,11 +3,9 @@
 cmake_minimum_required(VERSION 3.4.3)
 
 if ("${CMAKE_VERSION}" VERSION_LESS "3.13.4")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 12.0.0, the "
-    "minimum version of CMake required to build LLVM will become 3.13.4, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.13.4 now to avoid issues in the future!")
+  message(FATAL_ERROR
+    "Your CMake version is ${CMAKE_VERSION}. The minimum version of CMake "
+    "required to build LLVM is now 3.13.4.")
 endif()
 
 if(POLICY CMP0068)

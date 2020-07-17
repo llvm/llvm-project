@@ -968,19 +968,12 @@ static mlir::LogicalResult verify(fir::ResultOp op) {
   auto results = parentOp->getResults();
   auto operands = op.getOperands();
 
-  if (isa<fir::WhereOp>(parentOp) || isa<fir::LoopOp>(parentOp) ||
-      isa<fir::IterWhileOp>(parentOp)) {
-    if (parentOp->getNumResults() != op.getNumOperands())
-      return op.emitOpError() << "parent of result must have same arity";
-    for (auto e : llvm::zip(results, operands)) {
-      if (std::get<0>(e).getType() != std::get<1>(e).getType())
-        return op.emitOpError()
-               << "types mismatch between result op and its parent";
-    }
-  } else {
-    return op.emitOpError()
-           << "result only terminates if, do_loop, or iterate_while regions";
-  }
+  if (parentOp->getNumResults() != op.getNumOperands())
+    return op.emitOpError() << "parent of result must have same arity";
+  for (auto e : llvm::zip(results, operands))
+    if (std::get<0>(e).getType() != std::get<1>(e).getType())
+      return op.emitOpError()
+             << "types mismatch between result op and its parent";
   return success();
 }
 
@@ -1452,16 +1445,6 @@ static mlir::ParseResult parseWhereOp(OpAsmParser &parser,
 }
 
 static LogicalResult verify(fir::WhereOp op) {
-  // Verify that the entry of each child region does not have arguments.
-  for (auto &region : op.getOperation()->getRegions()) {
-    if (region.empty())
-      continue;
-
-    for (auto &b : region)
-      if (b.getNumArguments() != 0)
-        return op.emitOpError(
-            "requires that child entry blocks have no arguments");
-  }
   if (op.getNumResults() != 0 && op.otherRegion().empty())
     return op.emitOpError("must have an else block if defining values");
 

@@ -52,4 +52,5 @@ add_flang_library(FortranSemantics
   LINK_COMPONENTS
   Support
   FrontendOpenMP
+  FrontendOpenACC
 )
