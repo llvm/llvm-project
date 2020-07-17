@@ -5050,6 +5050,11 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                 ? 0
                 : 1);
 
+  if (ValType->isExtIntType()) {
+    Diag(Ptr->getExprLoc(), diag::err_atomic_builtin_ext_int_prohibit);
+    return ExprError();
+  }
+
   return AE;
 }
 
