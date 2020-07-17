@@ -1,4 +1,5 @@
 // REQUIRES: lto
+// XFAIL: msvc
 
 // RUN: %clang_pgogen=%t.profraw -flto %s -o %t
 // RUN: %run %t
