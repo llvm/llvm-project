@@ -1494,7 +1494,7 @@ void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
 
     auto clang_arg_str = clang_argument.str();
     if (!ShouldUnique(clang_argument) || !unique_flags.count(clang_arg_str)) {
-      importer_options.ExtraArgs.push_back(clang_arg_str);
+      importer_options.ExtraArgs.push_back(std::string(clang_arg_str));
       unique_flags.insert(clang_arg_str);
     }
   }

@@ -206,7 +206,7 @@ void FormatManager::GetPossibleMatches(
 
       ConstString display_type_name(compiler_type.GetDisplayTypeName(sc));
       if (display_type_name != type_name)
-        entries.push_back({display_type_name, reason, did_strip_ptr,
+        entries.push_back({display_type_name, did_strip_ptr,
                            did_strip_ref, did_strip_typedef});
 // BEGIN SWIFT
     }
