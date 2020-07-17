@@ -24,6 +24,8 @@ add_flang_library(FortranLower
   DEPENDS
   FIROptimizer
   ${dialect_libs}
+  omp_gen
+  acc_gen
 
   LINK_LIBS
   FIROptimizer
