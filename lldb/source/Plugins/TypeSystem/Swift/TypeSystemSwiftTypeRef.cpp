@@ -1457,10 +1457,6 @@ uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
   VALIDATE_AND_RETURN(impl, GetTypeInfo, type,
                       (ReconstructType(type), nullptr));
 }
-lldb::LanguageType
-TypeSystemSwiftTypeRef::GetMinimumLanguage(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetMinimumLanguage(ReconstructType(type));
-}
 lldb::TypeClass
 TypeSystemSwiftTypeRef::GetTypeClass(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetTypeClass(ReconstructType(type));
