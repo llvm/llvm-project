@@ -1080,7 +1080,7 @@ foreach P = ["pentium4", "pentium4m"] in {
   // Since 'pentium4' is the default 32-bit CPU on Linux and Windows,
   // give it more modern tunings.
   // FIXME: This wouldn't be needed if we supported mtune.
-  def : ProcessorModel<P, GenericPostRAModel,
+  def : ProcessorModel<P, SandyBridgeModel,
                        [FeatureX87, FeatureCMPXCHG8B,
                         FeatureMMX, FeatureSSE2, FeatureFXSR, FeatureNOPL,
                         FeatureCMOV, FeatureInsertVZEROUPPER,
