@@ -130,9 +130,6 @@ s_set_gpr_idx_idx s0
 s_cbranch_join s0
 // GFX10: error: instruction not supported on this GPU
 
-s_mov_regrd_b32 s0, s1
-// GFX10: error: instruction not supported on this GPU
-
 //===----------------------------------------------------------------------===//
 // ENC_SOP2.
 //===----------------------------------------------------------------------===//
