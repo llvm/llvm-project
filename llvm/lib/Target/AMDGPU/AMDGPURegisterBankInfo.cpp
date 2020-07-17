@@ -4323,6 +4323,40 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = AMDGPU::getValueMapping(Bank, 32);
       break;
     }
+    case Intrinsic::amdgcn_waterfall_begin: {
+      unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      unsigned SizeSrc = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeDst);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeSrc);
+      break;
+    }
+    case Intrinsic::amdgcn_waterfall_readfirstlane: {
+      unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      unsigned SizeSrc1 = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned SizeSrc2 = getSizeInBits(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeDst);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc1);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeSrc2);
+      break;
+    }
+    case Intrinsic::amdgcn_waterfall_end: {
+      unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      unsigned SizeSrc1 = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned SizeSrc2 = getSizeInBits(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeDst);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc1);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeSrc2);
+      break;
+    }
+    case Intrinsic::amdgcn_waterfall_last_use: {
+      unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      unsigned SizeSrc1 = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned SizeSrc2 = getSizeInBits(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeDst);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc1);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc2);
+      break;
+    }
     default:
       return getInvalidInstructionMapping();
     }
