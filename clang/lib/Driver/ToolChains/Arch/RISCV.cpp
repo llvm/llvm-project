@@ -447,10 +447,10 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
 }
 
 // Get features except standard extension feature
-void getRISCFeaturesFromMcpu(const Driver &D, const llvm::Triple &Triple,
-                             const llvm::opt::ArgList &Args,
-                             const llvm::opt::Arg *A, StringRef Mcpu,
-                             std::vector<StringRef> &Features) {
+static void getRISCFeaturesFromMcpu(const Driver &D, const llvm::Triple &Triple,
+                                    const llvm::opt::ArgList &Args,
+                                    const llvm::opt::Arg *A, StringRef Mcpu,
+                                    std::vector<StringRef> &Features) {
   bool Is64Bit = (Triple.getArch() == llvm::Triple::riscv64);
   llvm::RISCV::CPUKind CPUKind = llvm::RISCV::parseCPUKind(Mcpu);
   if (!llvm::RISCV::checkCPUKind(CPUKind, Is64Bit) ||

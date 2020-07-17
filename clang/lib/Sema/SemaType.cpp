@@ -7686,8 +7686,8 @@ static bool isPermittedNeonBaseType(QualType &Ty,
          BTy->getKind() == BuiltinType::BFloat16;
 }
 
-bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
-                                    llvm::APSInt &Result) {
+static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
+                                           llvm::APSInt &Result) {
   const auto *AttrExpr = Attr.getArgAsExpr(0);
   if (AttrExpr->isTypeDependent() || AttrExpr->isValueDependent() ||
       !AttrExpr->isIntegerConstantExpr(Result, S.Context)) {

@@ -204,7 +204,7 @@ static bool isArchString(StringRef s) {
 // entry (the one nearest to the front of the list.)
 //
 // The file can also have line comments that start with '#'.
-void parseOrderFile(StringRef path) {
+static void parseOrderFile(StringRef path) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer) {
     error("Could not read order file at " + path);
