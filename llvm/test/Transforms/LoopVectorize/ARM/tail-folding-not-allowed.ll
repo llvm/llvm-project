@@ -1,29 +1,13 @@
-; RUN: opt < %s -loop-vectorize -tail-predication=enabled -S | \
-; RUN:  FileCheck %s -check-prefixes=COMMON,CHECK
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
+; RUN:   -tail-predication=enabled -loop-vectorize -S < %s | \
+; RUN:   FileCheck %s
 
-; RUN: opt < %s -loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilog -S | \
-; RUN:   FileCheck -check-prefixes=COMMON,PREDFLAG %s
-
-; RUN: opt < %s -loop-vectorize -tail-predication=enabled-no-reductions -S | \
-; RUN:  FileCheck %s -check-prefixes=COMMON,NORED
-
-; RUN: opt < %s -loop-vectorize -tail-predication=force-enabled-no-reductions -S | \
-; RUN:  FileCheck %s -check-prefixes=COMMON,NORED
-
-
-target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv8.1m.main-arm-unknown-eabihf"
-
-define dso_local void @tail_folding(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) #0 {
-; CHECK-LABEL: tail_folding(
-; CHECK: vector.body:
-;
-; This needs implementation of TTI::preferPredicateOverEpilogue,
-; then this will be tail-folded too:
-;
-; CHECK-NOT:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(
-; CHECK-NOT:  call void @llvm.masked.store.v4i32.p0v4i32(
-; CHECK:      br i1 %{{.*}}, label %{{.*}}, label %vector.body
+define void @trunc_not_allowed_different_vec_elemns(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i16* noalias nocapture %D) #0 {
+; CHECK-LABEL: trunc_not_allowed_different_vec_elemns(
+; CHECK:       vector.body:
+; CHECK-NOT:   llvm.masked.load
+; CHECK-NOT:   llvm.masked.store
+; CHECK:       br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body
 
@@ -31,32 +15,29 @@ for.cond.cleanup:
   ret void
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
+  %i.021 = phi i32 [ 0, %entry ], [ %add9, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %B, i32 %i.021
   %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %C, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %C, i32 %i.021
+  %1 = load i32, i32* %arrayidx1, align 4
   %add = add nsw i32 %1, %0
-  %arrayidx4 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %add, i32* %arrayidx4, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 430
+  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %i.021
+  store i32 %add, i32* %arrayidx2, align 4
+  %add.tr = trunc i32 %add to i16
+  %conv7 = shl i16 %add.tr, 1
+  %arrayidx8 = getelementptr inbounds i16, i16* %D, i32 %i.021
+  store i16 %conv7, i16* %arrayidx8, align 2
+  %add9 = add nuw nsw i32 %i.021, 1
+  %exitcond = icmp eq i32 %add9, 431
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-
-define dso_local void @tail_folding_enabled(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) local_unnamed_addr #0 {
-; COMMON-LABEL: tail_folding_enabled(
-; COMMON: vector.body:
-; COMMON:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; COMMON:   %[[ELEM0:.*]] = add i64 %index, 0
-; COMMON:   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %[[ELEM0]], i64 429)
-; COMMON:   %[[WML1:.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}<4 x i1> %active.lane.mask
-; COMMON:   %[[WML2:.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}<4 x i1> %active.lane.mask
-; COMMON:   %[[ADD:.*]] = add nsw <4 x i32> %[[WML2]], %[[WML1]]
-; COMMON:   call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %[[ADD]], {{.*}}<4 x i1> %active.lane.mask
-; COMMON:   %index.next = add i64 %index, 4
-; COMMON:   br i1 %{{.*}}, label %{{.*}}, label %vector.body
+define void @unsupported_i64_type(i64* noalias nocapture %A, i64* noalias nocapture readonly %B, i64* noalias nocapture readonly %C) #0 {
+; CHECK-LABEL: unsupported_i64_type(
+; CHECK-NOT:   vector.body:
+; CHECK-NOT:   llvm.masked.load
+; CHECK-NOT:   llvm.masked.store
+; CHECK:       for.body:
 entry:
   br label %for.body
 
@@ -64,38 +45,57 @@ for.cond.cleanup:
   ret void
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %C, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx2, align 4
-  %add = add nsw i32 %1, %0
-  %arrayidx4 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %add, i32* %arrayidx4, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 430
-  br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !6
+  %i.09 = phi i32 [ 0, %entry ], [ %add3, %for.body ]
+  %arrayidx = getelementptr inbounds i64, i64* %B, i32 %i.09
+  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds i64, i64* %C, i32 %i.09
+  %1 = load i64, i64* %arrayidx1, align 8
+  %add = add nsw i64 %1, %0
+  %arrayidx2 = getelementptr inbounds i64, i64* %A, i32 %i.09
+  store i64 %add, i64* %arrayidx2, align 8
+  %add3 = add nuw nsw i32 %i.09, 1
+  %exitcond = icmp eq i32 %add3, 431
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define dso_local void @tail_folding_disabled(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) local_unnamed_addr #0 {
-; CHECK-LABEL: tail_folding_disabled(
-; CHECK:      vector.body:
-; CHECK-NOT:  @llvm.masked.load.v8i32.p0v8i32(
-; CHECK-NOT:  @llvm.masked.store.v8i32.p0v8i32(
-; CHECK:      br i1 %{{.*}}, label {{.*}}, label %vector.body
+define void @narrowing_load_not_allowed(i8* noalias nocapture %A, i8* noalias nocapture readonly %B, i16* noalias nocapture readonly %C) #0 {
+; CHECK-LABEL: narrowing_load_not_allowed(
+; CHECK:       vector.body:
+; CHECK-NOT:   llvm.masked.load
+; CHECK-NOT:   llvm.masked.store
+; CHECK:       br i1 %{{.*}}, label %{{.*}}, label %vector.body
+entry:
+  br label %for.body
 
-; PREDFLAG-LABEL: tail_folding_disabled(
-; PREDFLAG:  vector.body:
-; PREDFLAG:  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; PREDFLAG:  %[[ELEM0:.*]] = add i64 %index, 0
-; PREDFLAG:  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %[[ELEM0]], i64 429)
-; PREDFLAG:  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %active.lane.mask
-; PREDFLAG:  %wide.masked.load1 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %active.lane.mask
-; PREDFLAG:  %{{.*}} = add nsw <4 x i32> %wide.masked.load1, %wide.masked.load
-; PREDFLAG:  call void @llvm.masked.store.v4i32.p0v4i32({{.*}}, <4 x i1> %active.lane.mask
-; PREDFLAG:  %index.next = add i64 %index, 4
-; PREDFLAG:  %[[CMP:.*]] = icmp eq i64 %index.next, 432
-; PREDFLAG:  br i1 %[[CMP]], label %middle.block, label %vector.body, !llvm.loop !6
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.012 = phi i32 [ 0, %entry ], [ %add6, %for.body ]
+  %arrayidx = getelementptr inbounds i16, i16* %C, i32 %i.012
+  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx1 = getelementptr inbounds i8, i8* %B, i32 %i.012
+  %1 = load i8, i8* %arrayidx1, align 1
+  %conv3 = trunc i16 %0 to i8
+  %add = add i8 %1, %conv3
+  %arrayidx5 = getelementptr inbounds i8, i8* %A, i32 %i.012
+  store i8 %add, i8* %arrayidx5, align 1
+  %add6 = add nuw nsw i32 %i.012, 1
+  %exitcond = icmp eq i32 %add6, 431
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; This is a trunc not connected to a store, so we don't allow this.
+; TODO: this is conservative, because the trunc is only used in the
+; loop control statements, and thus not affecting element sizes, so
+; we could allow this case.
+;
+define void @trunc_not_allowed(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) #0 {
+; CHECK-LABEL:  trunc_not_allowed(
+; CHECK:        vector.body:
+; CHECK-NOT:    llvm.masked.load
+; CHECK-NOT:    llvm.masked.store
+; CHECK:        br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body
 
@@ -103,48 +103,144 @@ for.cond.cleanup:
   ret void
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
+  %i.09 = phi i32 [ 0, %entry ], [ %add3, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %B, i32 %i.09
   %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %C, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %C, i32 %i.09
+  %1 = load i32, i32* %arrayidx1, align 4
   %add = add nsw i32 %1, %0
-  %arrayidx4 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %add, i32* %arrayidx4, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 430
+  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %i.09
+  store i32 %add, i32* %arrayidx2, align 4
+  %add3 = add nuw nsw i32 %i.09, 1
+
+  %add.iv = trunc i32 %add3 to i16
+
+  %exitcond = icmp eq i16 %add.iv, 431
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; Test directions for array indices i and N-1. I.e. check strides 1 and -1, and
+; force vectorisation with a loop hint.
+;
+define void @strides_different_direction(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32 %N) #0 {
+; CHECK-LABEL: strides_different_direction(
+; CHECK:       vector.body:
+; CHECK-NOT:   llvm.masked.load
+; CHECK-NOT:   llvm.masked.store
+; CHECK:       br i1 %{{.*}}, label %{{.*}}, label %vector.body
+entry:
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.09 = phi i32 [ 0, %entry ], [ %add3, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %B, i32 %i.09
+  %0 = load i32, i32* %arrayidx, align 4
+  %sub = sub nsw i32 %N, %i.09
+  %arrayidx1 = getelementptr inbounds i32, i32* %C, i32 %sub
+  %1 = load i32, i32* %arrayidx1, align 4
+  %add = add nsw i32 %1, %0
+  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %i.09
+  store i32 %add, i32* %arrayidx2, align 4
+  %add3 = add nuw nsw i32 %i.09, 1
+  %exitcond = icmp eq i32 %add3, 431
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !10
 }
 
-define dso_local void @interleave4(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32 %N) local_unnamed_addr #0 {
-; PREDFLAG-LABEL: interleave4(
-; PREDFLAG:  %[[ADD1:.*]] = add i32 %index, 0
-; PREDFLAG:  %[[ADD2:.*]] = add i32 %index, 4
-; PREDFLAG:  %[[ADD3:.*]] = add i32 %index, 8
-; PREDFLAG:  %[[ADD4:.*]] = add i32 %index, 12
-; PREDFLAG:  %[[BTC:.*]] = extractelement <4 x i32> %broadcast.splat, i32 0
-; PREDFLAG:  %[[ALM1:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD1]], i32 %[[BTC]])
-; PREDFLAG:  %[[ALM2:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD2]], i32 %[[BTC]])
-; PREDFLAG:  %[[ALM3:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD3]], i32 %[[BTC]])
-; PREDFLAG:  %[[ALM4:active.lane.mask.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %[[ADD4]], i32 %[[BTC]])
-;
-; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM1]],{{.*}}
-; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM2]],{{.*}}
-; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM3]],{{.*}}
-; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM4]],{{.*}}
-; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM1]],{{.*}}
-; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM2]],{{.*}}
-; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM3]],{{.*}}
-; PREDFLAG:  call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM4]],{{.*}}
-;
-; PREDFLAG:  call void @llvm.masked.store.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM1]])
-; PREDFLAG:  call void @llvm.masked.store.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM2]])
-; PREDFLAG:  call void @llvm.masked.store.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM3]])
-; PREDFLAG:  call void @llvm.masked.store.v4i32.p0v4i32({{.*}}, <4 x i1> %[[ALM4]])
-;
+define void @too_many_loop_blocks(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) #0 {
+; CHECK-LABEL: too_many_loop_blocks(
+; CHECK:       vector.body:
+; CHECK-NOT:   llvm.masked.load
+; CHECK-NOT:   llvm.masked.store
+; CHECK:       br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
-  %cmp8 = icmp sgt i32 %N, 0
-  br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.09 = phi i32 [ 0, %entry ], [ %add3, %loopincr ]
+  %arrayidx = getelementptr inbounds i32, i32* %B, i32 %i.09
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %C, i32 %i.09
+  %1 = load i32, i32* %arrayidx1, align 4
+  %add = add nsw i32 %1, %0
+  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %i.09
+  store i32 %add, i32* %arrayidx2, align 4
+  br label %loopincr
+
+loopincr:
+  %add3 = add nuw nsw i32 %i.09, 1
+  %exitcond = icmp eq i32 %add3, 431
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+define void @double(double* noalias nocapture %A, double* noalias nocapture readonly %B, double* noalias nocapture readonly %C) #0 {
+; CHECK-LABEL: double(
+; CHECK:       for.body:
+; CHECK-NOT:   vector.body:
+entry:
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.09 = phi i32 [ 0, %entry ], [ %add3, %for.body ]
+  %arrayidx = getelementptr inbounds double, double* %B, i32 %i.09
+  %0 = load double, double* %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds double, double* %C, i32 %i.09
+  %1 = load double, double* %arrayidx1, align 8
+  %add = fadd fast double %1, %0
+  %arrayidx2 = getelementptr inbounds double, double* %A, i32 %i.09
+  store double %add, double* %arrayidx2, align 8
+  %add3 = add nuw nsw i32 %i.09, 1
+  %exitcond = icmp eq i32 %add3, 431
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+define void @fptrunc_not_allowed(float* noalias nocapture %A, float* noalias nocapture readonly %B, float* noalias nocapture readonly %C, half* noalias nocapture %D) #0 {
+; CHECK-LABEL: fptrunc_not_allowed(
+; CHECK-NOT:   vector.body:
+; CHECK-NOT:   llvm.masked.load
+; CHECK-NOT:   llvm.masked.store
+; CHECK:       br i1 %{{.*}}, label %{{.*}}, label %for.body
+entry:
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.017 = phi i32 [ 0, %entry ], [ %add6, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %B, i32 %i.017
+  %0 = load float, float* %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds float, float* %C, i32 %i.017
+  %1 = load float, float* %arrayidx1, align 4
+  %add = fadd fast float %1, %0
+  %arrayidx2 = getelementptr inbounds float, float* %A, i32 %i.017
+  store float %add, float* %arrayidx2, align 4
+  %conv = fptrunc float %add to half
+  %factor = fmul fast half %conv, 0xH4000
+  %arrayidx5 = getelementptr inbounds half, half* %D, i32 %i.017
+  store half %factor, half* %arrayidx5, align 2
+  %add6 = add nuw nsw i32 %i.017, 1
+  %exitcond = icmp eq i32 %add6, 431
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; This is a select which isn't a max or min (it isn't live-out), that we don't
+; want to tail-fold. Because this select will result in some mov lanes,
+; which aren't supported by the lowoverhead loop pass, causing the tail-predication
+; to be reverted which is expensive and what we would like to avoid.
+;
+define dso_local void @select_not_allowed(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32 %N, i32* noalias nocapture readonly %Cond) {
+entry:
+  %cmp10 = icmp sgt i32 %N, 0
+  br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
   br label %for.body
@@ -156,51 +252,19 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
-  %i.09 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %B, i32 %i.09
+  %i.011 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
+  %arrayidx = getelementptr inbounds i32, i32* %Cond, i32 %i.011
   %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %C, i32 %i.09
-  %1 = load i32, i32* %arrayidx1, align 4
-  %add = add nsw i32 %1, %0
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %i.09
-  store i32 %add, i32* %arrayidx2, align 4
-  %inc = add nuw nsw i32 %i.09, 1
-  %exitcond = icmp eq i32 %inc, %N
-  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !14
+  %tobool.not = icmp eq i32 %0, 0
+  %C.B = select i1 %tobool.not, i32* %C, i32* %B
+  %cond.in = getelementptr inbounds i32, i32* %C.B, i32 %i.011
+  %cond = load i32, i32* %cond.in, align 4
+  %arrayidx3 = getelementptr inbounds i32, i32* %A, i32 %i.011
+  store i32 %cond, i32* %arrayidx3, align 4
+  %inc = add nuw nsw i32 %i.011, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
-
-define dso_local i32 @i32_add_reduction(i32* noalias nocapture readonly %B, i32 %N) local_unnamed_addr #0 {
-; COMMON-LABEL: i32_add_reduction(
-; COMMON:       entry:
-; CHECK:        @llvm.get.active.lane.mask
-; NORED-NOT:    @llvm.get.active.lane.mask
-; COMMON:       }
-entry:
-  %cmp6 = icmp sgt i32 %N, 0
-  br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
-
-for.body.preheader:
-  br label %for.body
-
-for.cond.cleanup.loopexit:
-  %add.lcssa = phi i32 [ %add, %for.body ]
-  br label %for.cond.cleanup
-
-for.cond.cleanup:
-  %S.0.lcssa = phi i32 [ 1, %entry ], [ %add.lcssa, %for.cond.cleanup.loopexit ]
-  ret i32 %S.0.lcssa
-
-for.body:
-  %i.08 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %S.07 = phi i32 [ %add, %for.body ], [ 1, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %B, i32 %i.08
-  %0 = load i32, i32* %arrayidx, align 4
-  %add = add nsw i32 %0, %S.07
-  %inc = add nuw nsw i32 %i.08, 1
-  %exitcond = icmp eq i32 %inc, %N
-  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
-}
-
 
 ; Don't tail-fold float reductions.
 ;
@@ -489,23 +553,5 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret i32 %r.0.lcssa
 }
 
-; CHECK:      !0 = distinct !{!0, !1}
-; CHECK-NEXT: !1 = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-NEXT: !2 = distinct !{!2, !3, !1}
-; CHECK-NEXT: !3 = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-NEXT: !4 = distinct !{!4, !1}
-; CHECK-NEXT: !5 = distinct !{!5, !3, !1}
-; CHECK-NEXT: !6 = distinct !{!6, !1}
-
-attributes #0 = { nofree norecurse nounwind "target-features"="+armv8.1-m.main,+mve.fp" }
-
-!6 = distinct !{!6, !7, !8}
-!7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
-!8 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-!10 = distinct !{!10, !11, !12}
-!11 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
-!12 = !{!"llvm.loop.vectorize.enable", i1 true}
-
-!14 = distinct !{!14, !15}
-!15 = !{!"llvm.loop.interleave.count", i32 4}
+!10 = distinct !{!10, !11}
+!11 = !{!"llvm.loop.vectorize.width", i32 4}
