@@ -1,8 +1,5 @@
 UNSUPPORTED: freebsd
 RUN: %cpp_compiler %S/StrncmpTest.cpp -o %t-StrncmpTest
 RUN: not %run %t-StrncmpTest              -seed=2 -runs=10000000   2>&1 | FileCheck %s
-
-RUN: %cpp_compiler -fno-sanitize=address %S/StrncmpTest.cpp -o %t-NoAsanStrncmpTest
-RUN: not %run %t-StrncmpTest              -seed=2 -runs=10000000   2>&1 | FileCheck %s
-
 CHECK: BINGO
+

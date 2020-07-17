@@ -784,9 +784,6 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       !Args.hasArg(options::OPT_shared)) {
 
     addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer", false, true);
-    if (SanArgs.needsFuzzerInterceptors())
-      addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer_interceptors", false,
-                          true);
     if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx))
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
   }
