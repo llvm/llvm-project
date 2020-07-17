@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=host,expected %s
+// RUN: %clang_cc1 -fcuda-is-device -fsyntax-only -verify=dev,expected %s
 
 #include "Inputs/cuda.h"
 
@@ -6,11 +7,11 @@
 // Test 1: host method called from device function
 
 struct S1 {
-  void method() {} // expected-note {{'method' declared here}}
+  void method() {} // dev-note {{'method' declared here}}
 };
 
 __device__ void foo1(S1& s) {
-  s.method(); // expected-error {{reference to __host__ function 'method' in __device__ function}}
+  s.method(); // dev-error {{reference to __host__ function 'method' in __device__ function}}
 }
 
 //------------------------------------------------------------------------------
@@ -29,22 +30,22 @@ __device__ void foo2(S2& s, int i, float f) {
 // Test 3: device method called from host function
 
 struct S3 {
-  __device__ void method() {} // expected-note {{'method' declared here}}
+  __device__ void method() {} // host-note {{'method' declared here}}
 };
 
 void foo3(S3& s) {
-  s.method(); // expected-error {{reference to __device__ function 'method' in __host__ function}}
+  s.method(); // host-error {{reference to __device__ function 'method' in __host__ function}}
 }
 
 //------------------------------------------------------------------------------
 // Test 4: device method called from host&device function
 
 struct S4 {
-  __device__ void method() {}  // expected-note {{'method' declared here}}
+  __device__ void method() {}  // host-note {{'method' declared here}}
 };
 
 __host__ __device__ void foo4(S4& s) {
-  s.method(); // expected-error {{reference to __device__ function 'method' in __host__ __device__ function}}
+  s.method(); // host-error {{reference to __device__ function 'method' in __host__ __device__ function}}
 }
 
 //------------------------------------------------------------------------------
@@ -63,9 +64,9 @@ __device__ void foo5(S5& s, S5& t) {
 // Test 6: call method through pointer
 
 struct S6 {
-  void method() {} // expected-note {{'method' declared here}};
+  void method() {} // dev-note {{'method' declared here}};
 };
 
 __device__ void foo6(S6* s) {
-  s->method(); // expected-error {{reference to __host__ function 'method' in __device__ function}}
+  s->method(); // dev-error {{reference to __host__ function 'method' in __device__ function}}
 }
