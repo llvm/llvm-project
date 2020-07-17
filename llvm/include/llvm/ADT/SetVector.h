@@ -205,6 +205,11 @@ public:
     return true;
   }
 
+  /// Check if the SetVector contains the given key.
+  bool contains(const key_type &key) const {
+    return set_.find(key) != set_.end();
+  }
+
   /// Count the number of elements of a given key in the SetVector.
   /// \returns 0 if the element is not in the SetVector, 1 if it is.
   size_type count(const key_type &key) const {
