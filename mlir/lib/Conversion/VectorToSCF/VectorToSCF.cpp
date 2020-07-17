@@ -252,9 +252,9 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
       auto map = TransferReadOp::getTransferMinorIdentityMap(
           xferOp.getMemRefType(), minorVectorType);
       ArrayAttr masked;
-      if (xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
+      if (!xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
         OpBuilder &b = ScopedContext::getBuilderRef();
-        masked = b.getBoolArrayAttr({true});
+        masked = b.getBoolArrayAttr({false});
       }
       return vector_transfer_read(minorVectorType, memref, indexing,
                                   AffineMapAttr::get(map), xferOp.padding(),
@@ -356,9 +356,9 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
       auto map = TransferWriteOp::getTransferMinorIdentityMap(
           xferOp.getMemRefType(), minorVectorType);
       ArrayAttr masked;
-      if (xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
+      if (!xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
         OpBuilder &b = ScopedContext::getBuilderRef();
-        masked = b.getBoolArrayAttr({true});
+        masked = b.getBoolArrayAttr({false});
       }
       vector_transfer_write(result, xferOp.memref(), indexing,
                             AffineMapAttr::get(map), masked);
