@@ -1,28 +1,44 @@
 // RUN: cc -c %S/print_complex.c
-// RUN: tco %s | llc | as -o %t 
-// RUN: cc %t print_complex.o 
-// RUN: ./a.out | FileCheck %s
+// RUN: tco %s | FileCheck %s --check-prefix=LLVMIR
+// RUN: tco %s | llc | as -o %t
+// RUN: cc %t print_complex.o
+// RUN: ./a.out | FileCheck %s --check-prefix=EXECHECK
 
-// CHECK: <0.935893, 2.252526>
+// EXECHECK: <0.935893, 2.252526>
 
+// LLVMIR-LABEL: define { float, float } @foo
 func @foo(%a : !fir.complex<4>, %b : !fir.complex<4>, %c : !fir.complex<4>, %d : !fir.complex<4>, %e : !fir.complex<4>) -> !fir.complex<4> {
+  // LLVMIR-COUNT-2: extractvalue
+  // LLVMIR: fadd float
+  // LLVMIR-COUNT-2: extractvalue
+  // LLVMIR: fadd float
+  // LLVMIR-COUNT-2: insertvalue
   %1 = fir.addc %a, %b : !fir.complex<4>
+  // LLVMIR: fmul float
   %2 = fir.mulc %1, %c : !fir.complex<4>
+  // LLVMIR: fsub float
   %3 = fir.subc %2, %d : !fir.complex<4>
+  // LLVMIR: fdiv float
   %4 = fir.divc %3, %e : !fir.complex<4>
   return %4 : !fir.complex<4>
 }
 
+// LLVMIR-LABEL: define float @real_part({ float, float } %0)
 func @real_part(%a : !fir.complex<4>) -> f32 {
   %0 = constant 0 : i32
+  // LLVMIR: extractvalue
   %1 = fir.extract_value %a, %0 : (!fir.complex<4>, i32) -> f32
   return %1 : f32
 }
 
+// LLVMIR-LABEL: define { float, float } @conj
 func @conj(%a : !fir.complex<4>) -> !fir.complex<4> {
   %0 = constant 1 : i32
+  // LLVMIR: extractvalue
   %1 = fir.extract_value %a, %0 : (!fir.complex<4>, i32) -> f32
+  // LLVMIR: fneg float
   %2 = fir.negf %1 : f32
+  // LLVMIR: insertvalue
   %3 = fir.insert_value %a, %2, %0 : (!fir.complex<4>, f32, i32) -> !fir.complex<4>
   return %3 : !fir.complex<4>
 }
