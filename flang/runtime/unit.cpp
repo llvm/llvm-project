@@ -64,7 +64,8 @@ ExternalFileUnit &ExternalFileUnit::LookUpOrCreateAnonymous(
     IoErrorHandler handler{terminator};
     result.OpenUnit(
         dir == Direction::Input ? OpenStatus::Old : OpenStatus::Replace,
-        Position::Rewind, std::move(path), std::strlen(path.get()), handler);
+        Action::ReadWrite, Position::Rewind, std::move(path),
+        std::strlen(path.get()), handler);
     result.isUnformatted = isUnformatted;
   }
   return result;
@@ -87,8 +88,8 @@ int ExternalFileUnit::NewUnit(const Terminator &terminator) {
   return GetUnitMap().NewUnit(terminator).unitNumber();
 }
 
-void ExternalFileUnit::OpenUnit(OpenStatus status, Position position,
-    OwningPtr<char> &&newPath, std::size_t newPathLength,
+void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
+    Position position, OwningPtr<char> &&newPath, std::size_t newPathLength,
     IoErrorHandler &handler) {
   if (IsOpen()) {
     if (status == OpenStatus::Old &&
@@ -105,7 +106,7 @@ void ExternalFileUnit::OpenUnit(OpenStatus status, Position position,
     Close(CloseStatus::Keep, handler);
   }
   set_path(std::move(newPath), newPathLength);
-  Open(status, position, handler);
+  Open(status, action, position, handler);
   auto totalBytes{knownSize()};
   if (access == Access::Direct) {
     if (!isFixedRecordLength || !recordLength) {
@@ -186,16 +187,10 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   unitMap = New<UnitMap>{terminator}().release();
   ExternalFileUnit &out{ExternalFileUnit::CreateNew(6, terminator)};
   out.Predefine(1);
-  out.set_mayRead(false);
-  out.set_mayWrite(true);
-  out.set_mayPosition(false);
   out.SetDirection(Direction::Output, handler);
   defaultOutput = &out;
   ExternalFileUnit &in{ExternalFileUnit::CreateNew(5, terminator)};
   in.Predefine(0);
-  in.set_mayRead(true);
-  in.set_mayWrite(false);
-  in.set_mayPosition(false);
   in.SetDirection(Direction::Input, handler);
   defaultInput = &in;
   // TODO: Set UTF-8 mode from the environment
