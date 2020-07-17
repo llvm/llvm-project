@@ -848,17 +848,17 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace
 ; GFX7-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GFX7-NEXT:    buffer_load_dword v3, v[1:2], s[0:3], 0 addr64
 ; GFX7-NEXT:    buffer_load_dword v4, v[1:2], s[0:3], 0 addr64 offset:4
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX7-NEXT:    buffer_load_dword v0, v[1:2], s[0:3], 0 addr64 offset:8
+; GFX7-NEXT:    buffer_load_dword v1, v[1:2], s[0:3], 0 addr64 offset:8
 ; GFX7-NEXT:    s_cmp_lg_u32 s8, 0
-; GFX7-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX7-NEXT:    s_and_b32 s0, 1, s6
+; GFX7-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX7-NEXT:    s_and_b32 s0, 1, s0
+; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7-NEXT:    v_cmp_ne_u32_e64 s[0:1], 0, s0
 ; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    s_and_b64 vcc, vcc, s[0:1]
 ; GFX7-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_div_fmas_f32 v0, v3, v4, v0
+; GFX7-NEXT:    v_div_fmas_f32 v0, v3, v4, v1
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[4:7], 0 offset:8
 ; GFX7-NEXT:    s_endpgm
 ;

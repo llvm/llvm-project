@@ -609,10 +609,10 @@ entry:
 ; SI-DAG:  v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
 ; SI-DAG:  v_cvt_f32_f16_e32 v[[B_F32_1:[0-9]+]], v[[B_F16_1]]
 ; SI-DAG:  v_cmp_nlt_f32_e32 vcc, v[[A_F32_1]], v[[B_F32_1]]
-; VI-DAG:  v_cmp_nlt_f16_e32 vcc, v[[A_V2_F16]], v[[B_V2_F16]]
+; VI-DAG:  v_cmp_nlt_f16_e32 vcc, v[[B_V2_F16]], v[[A_V2_F16]]
 ; GCN: v_cndmask_b32_e64 v[[R_I32_0:[0-9]+]]
 
-; VI:  v_cmp_nlt_f16_e32 vcc, v[[A_F16_1]], v[[B_F16_1]]
+; VI:  v_cmp_nlt_f16_e32 vcc, v[[B_F16_1]], v[[A_F16_1]]
 ; GCN: v_cndmask_b32_e64 v[[R_I32_1:[0-9]+]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_I32_0]]:[[R_I32_1]]{{\]}}
 ; GCN: s_endpgm
