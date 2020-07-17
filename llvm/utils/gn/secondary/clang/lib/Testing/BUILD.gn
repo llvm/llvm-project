@@ -1,8 +1,6 @@
 static_library("Testing") {
   output_name = "clangTesting"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
-  deps = [
-    "//llvm/lib/Support",
-  ]
+  deps = [ "//llvm/lib/Support" ]
   sources = [ "CommandLineArgs.cpp" ]
 }
