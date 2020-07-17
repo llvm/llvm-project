@@ -5187,13 +5187,6 @@ bool SwiftASTContext::IsPossibleDynamicType(opaque_compiler_type_t type,
   return false;
 }
 
-bool SwiftASTContext::IsScalarType(opaque_compiler_type_t type) {
-  if (!type)
-    return false;
-
-  return (GetTypeInfo(type, nullptr) & eTypeIsScalar) != 0;
-}
-
 bool SwiftASTContext::IsTypedefType(opaque_compiler_type_t type) {
   if (!type)
     return false;

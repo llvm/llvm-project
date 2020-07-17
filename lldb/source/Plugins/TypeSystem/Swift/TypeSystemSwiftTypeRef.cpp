@@ -1367,9 +1367,6 @@ bool TypeSystemSwiftTypeRef::IsPointerType(opaque_compiler_type_t type,
   VALIDATE_AND_RETURN(impl, IsPointerType, type,
                       (ReconstructType(type), pointee_type));
 }
-bool TypeSystemSwiftTypeRef::IsScalarType(opaque_compiler_type_t type) {
-  return m_swift_ast_context->IsScalarType(ReconstructType(type));
-}
 bool TypeSystemSwiftTypeRef::IsVoidType(opaque_compiler_type_t type) {
   auto impl = [&]() {
     using namespace swift::Demangle;

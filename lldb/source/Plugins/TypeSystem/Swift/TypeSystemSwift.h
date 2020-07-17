@@ -136,6 +136,7 @@ public:
                            bool &is_complex) override;
   bool IsIntegerType(lldb::opaque_compiler_type_t type,
                      bool &is_signed) override;
+  bool IsScalarType(lldb::opaque_compiler_type_t type) override;
   bool IsCStringType(lldb::opaque_compiler_type_t type,
                      uint32_t &length) override {
     return false;
