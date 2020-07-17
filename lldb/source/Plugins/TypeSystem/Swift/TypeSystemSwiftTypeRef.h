@@ -226,8 +226,6 @@ public:
                                          uint32_t *bit_offset_ptr) override;
   bool IsReferenceType(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_type, bool *is_rvalue) override;
-  bool
-  ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) override;
 
   // Swift-specific methods.
   lldb::TypeSP GetCachedType(ConstString mangled) override;
