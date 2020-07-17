@@ -1625,6 +1625,22 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       }
 #endif
 
+#if USE_ITT_BUILD
+      if (((__itt_frame_submit_v3_ptr && __itt_get_timestamp_ptr) ||
+           KMP_ITT_DEBUG) &&
+          __kmp_forkjoin_frames_mode == 3 &&
+          parent_team->t.t_active_level == 1 // only report frames at level 1
+          && master_th->th.th_teams_size.nteams == 1) {
+        kmp_uint64 tmp_time = __itt_get_timestamp();
+        master_th->th.th_frame_time = tmp_time;
+        parent_team->t.t_region_time = tmp_time;
+      }
+      if (__itt_stack_caller_create_ptr) {
+        // create new stack stitching id before entering fork barrier
+        parent_team->t.t_stack_id = __kmp_itt_stack_caller_create();
+      }
+#endif /* USE_ITT_BUILD */
+
       KF_TRACE(10, ("__kmp_fork_call: before internal fork: root=%p, team=%p, "
                     "master_th=%p, gtid=%d\n",
                     root, parent_team, master_th, gtid));
@@ -2367,14 +2383,13 @@ void __kmp_join_call(ident_t *loc, int gtid
 
 #if USE_ITT_BUILD
   if (__itt_stack_caller_create_ptr) {
-    __kmp_itt_stack_caller_destroy(
-        (__itt_caller)team->t
-            .t_stack_id); // destroy the stack stitching id after join barrier
+    // destroy the stack stitching id after join barrier
+    __kmp_itt_stack_caller_destroy((__itt_caller)team->t.t_stack_id);
   }
-
   // Mark end of "parallel" region for Intel(R) VTune(TM) analyzer.
   if (team->t.t_active_level == 1 &&
-      !master_th->th.th_teams_microtask) { /* not in teams construct */
+      (!master_th->th.th_teams_microtask || /* not in teams construct */
+       master_th->th.th_teams_size.nteams == 1)) {
     master_th->th.th_ident = loc;
     // only one notification scheme (either "submit" or "forking/joined", not
     // both)
