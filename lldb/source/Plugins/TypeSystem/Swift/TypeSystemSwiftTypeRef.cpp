@@ -1385,10 +1385,6 @@ bool TypeSystemSwiftTypeRef::IsVoidType(opaque_compiler_type_t type) {
   };
   VALIDATE_AND_RETURN(impl, IsVoidType, type, (ReconstructType(type)));
 }
-// Type Completion
-bool TypeSystemSwiftTypeRef::GetCompleteType(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetCompleteType(ReconstructType(type));
-}
 // AST related queries
 uint32_t TypeSystemSwiftTypeRef::GetPointerByteSize() {
   return m_swift_ast_context->GetPointerByteSize();
