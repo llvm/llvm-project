@@ -31,6 +31,10 @@ LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the `releases
 page <https://llvm.org/releases/>`_.
 
+Deprecated and Removed Features/APIs
+=================================================
+* BG/Q support, including QPX, will be removed in the 12.0.0 release.
+
 Non-comprehensive list of changes in this release
 =================================================
 .. NOTE
