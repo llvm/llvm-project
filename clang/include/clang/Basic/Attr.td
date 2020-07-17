@@ -1539,6 +1539,12 @@ def NeonVectorType : TypeAttr {
   let ASTNode = 0;
 }
 
+def ArmSveVectorBits : TypeAttr {
+  let Spellings = [GNU<"arm_sve_vector_bits">];
+  let Args = [IntArgument<"NumBits">];
+  let Documentation = [ArmSveVectorBitsDocs];
+}
+
 def ArmMveStrictPolymorphism : TypeAttr, TargetSpecificAttr<TargetARM> {
   let Spellings = [Clang<"__clang_arm_mve_strict_polymorphism">];
   let Documentation = [ArmMveStrictPolymorphismDocs];
