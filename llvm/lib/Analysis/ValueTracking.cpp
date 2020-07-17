@@ -4766,6 +4766,12 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
   // TODO: Some instructions are guaranteed to return neither undef
   // nor poison if their arguments are not poison/undef.
 
+  if (auto *A = dyn_cast<Argument>(V)) {
+    // NoUndef does not guarantee that paddings are not undef.
+    if (A->hasAttribute(Attribute::NoUndef))
+      return true;
+  }
+
   if (auto *C = dyn_cast<Constant>(V)) {
     // TODO: We can analyze ConstExpr by opcode to determine if there is any
     //       possibility of poison.
