@@ -298,7 +298,7 @@ void PassManagerBuilder::populateFunctionPassManager(
   // Make sure they are also lowered in O0.
   // FIXME: A lightweight version of the pass should run in the backend
   //        pipeline on demand.
-  if (EnableMatrix)
+  if (EnableMatrix && OptLevel == 0)
     FPM.add(createLowerMatrixIntrinsicsPass());
 
   if (OptLevel == 0) return;
