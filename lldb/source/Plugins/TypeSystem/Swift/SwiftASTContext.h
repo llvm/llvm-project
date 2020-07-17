@@ -509,10 +509,6 @@ public:
       const CompilerType &type, NonTriviallyManagedReferenceStrategy &strategy,
       CompilerType *underlying_type = nullptr);
 
-  // Type Completion
-
-  bool GetCompleteType(lldb::opaque_compiler_type_t type) override;
-
   // AST related queries
 
   uint32_t GetPointerByteSize() override;
