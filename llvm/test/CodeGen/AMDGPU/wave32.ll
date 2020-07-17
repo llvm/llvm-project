@@ -836,8 +836,8 @@ define amdgpu_ps void @test_wqm_vote(float %a) {
 }
 
 ; GCN-LABEL: {{^}}test_branch_true:
-; GFX1032: s_and_b32 vcc_lo, exec_lo, -1
-; GFX1064: s_and_b64 vcc, exec, -1
+; GFX1032: s_mov_b32 vcc_lo, exec_lo
+; GFX1064: s_mov_b64 vcc, exec
 define amdgpu_kernel void @test_branch_true() #2 {
 entry:
   br i1 true, label %for.end, label %for.body.lr.ph

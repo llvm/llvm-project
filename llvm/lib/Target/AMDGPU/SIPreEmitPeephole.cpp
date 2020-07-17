@@ -70,6 +70,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   const unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
   const unsigned And = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
   const unsigned AndN2 = IsWave32 ? AMDGPU::S_ANDN2_B32 : AMDGPU::S_ANDN2_B64;
+  const unsigned Mov = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
 
   MachineBasicBlock::reverse_iterator A = MI.getReverseIterator(),
                                       E = MBB.rend();
@@ -136,9 +137,20 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   if (A->getOpcode() == AndN2)
     MaskValue = ~MaskValue;
 
-  if (!ReadsCond && A->registerDefIsDead(AMDGPU::SCC) &&
-      MI.killsRegister(CondReg, TRI))
+  if (!ReadsCond && A->registerDefIsDead(AMDGPU::SCC)) {
+    if (!MI.killsRegister(CondReg, TRI)) {
+      // Replace AND with MOV
+      if (MaskValue == 0) {
+        BuildMI(*A->getParent(), *A, A->getDebugLoc(), TII->get(Mov), CondReg)
+            .addImm(0);
+      } else {
+        BuildMI(*A->getParent(), *A, A->getDebugLoc(), TII->get(Mov), CondReg)
+            .addReg(ExecReg);
+      }
+    }
+    // Remove AND instruction
     A->eraseFromParent();
+  }
 
   bool IsVCCZ = MI.getOpcode() == AMDGPU::S_CBRANCH_VCCZ;
   if (SReg == ExecReg) {
