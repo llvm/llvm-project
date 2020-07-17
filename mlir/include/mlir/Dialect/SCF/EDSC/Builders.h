@@ -36,12 +36,15 @@ scf::ValueVector loopNestBuilder(
 /// Adapters for building if conditions using the builder and the location
 /// stored in ScopedContext. 'thenBody' is mandatory, 'elseBody' can be omitted
 /// if the condition should not have an 'else' part.
-ValueRange
-conditionBuilder(TypeRange results, Value condition,
-                 function_ref<scf::ValueVector()> thenBody,
-                 function_ref<scf::ValueVector()> elseBody = nullptr);
+/// When `ifOp` is specified, the scf::IfOp is captured. This is particularly
+/// convenient for 0-result conditions.
+ValueRange conditionBuilder(TypeRange results, Value condition,
+                            function_ref<scf::ValueVector()> thenBody,
+                            function_ref<scf::ValueVector()> elseBody = nullptr,
+                            scf::IfOp *ifOp = nullptr);
 ValueRange conditionBuilder(Value condition, function_ref<void()> thenBody,
-                            function_ref<void()> elseBody = nullptr);
+                            function_ref<void()> elseBody = nullptr,
+                            scf::IfOp *ifOp = nullptr);
 
 } // namespace edsc
 } // namespace mlir
