@@ -493,6 +493,9 @@ HANDLE_TARGET_OPCODE(G_FREM)
 /// Generic FP exponentiation.
 HANDLE_TARGET_OPCODE(G_FPOW)
 
+/// Generic FP exponentiation, with an integer exponent.
+HANDLE_TARGET_OPCODE(G_FPOWI)
+
 /// Generic base-e exponential of a value.
 HANDLE_TARGET_OPCODE(G_FEXP)
 
