@@ -260,7 +260,9 @@ void DwarfCompileUnit::addLocationAttribute(
                                      : dwarf::DW_OP_const8u);
             // 2) containing the (relocated) offset of the TLS variable
             //    within the module's TLS block.
-            addExpr(*Loc, dwarf::DW_FORM_udata,
+            addExpr(*Loc,
+                    PointerSize == 4 ? dwarf::DW_FORM_data4
+                                     : dwarf::DW_FORM_data8,
                     Asm->getObjFileLowering().getDebugThreadLocalSymbol(Sym));
           } else {
             addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_const_index);
