@@ -1,4 +1,0 @@
-# LLVM-EXEGESIS-LIVEIN RDI
-# LLVM-EXEGESIS-DEFREG XMM1 42
-movq $2, %rdi
-addq $0x10, %rdi

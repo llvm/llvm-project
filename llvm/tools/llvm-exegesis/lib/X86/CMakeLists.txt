@@ -6,7 +6,6 @@ include_directories(
 add_library(LLVMExegesisX86
   STATIC
   Target.cpp
-  X86Counter.cpp
   )
 
 llvm_update_compile_flags(LLVMExegesisX86)
