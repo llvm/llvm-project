@@ -91,7 +91,7 @@ class FlagHandlerInclude : public FlagHandlerBase {
     }
     return parser_->ParseFile(value, ignore_missing_);
   }
-  bool Format(char *buffer, uptr size) {
+  bool Format(char *buffer, uptr size) override {
     // Note `original_path_` isn't actually what's parsed due to `%`
     // substitutions. Printing the substituted path would require holding onto
     // mmap'ed memory.
