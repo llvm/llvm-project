@@ -238,8 +238,8 @@ define i32 @macrofuse_alu_je(i32 %flags, i8* %p) nounwind {
 ; NOFUSION_MISCHEDPOSTRA-LABEL: macrofuse_alu_je:
 ; NOFUSION_MISCHEDPOSTRA:       # %bb.0: # %entry
 ; NOFUSION_MISCHEDPOSTRA-NEXT:    movl %edi, %eax
-; NOFUSION_MISCHEDPOSTRA-NEXT:    addl $-512, %eax # imm = 0xFE00
 ; NOFUSION_MISCHEDPOSTRA-NEXT:    movb $1, (%rsi)
+; NOFUSION_MISCHEDPOSTRA-NEXT:    addl $-512, %eax # imm = 0xFE00
 ; NOFUSION_MISCHEDPOSTRA-NEXT:    je .LBB2_2
 ; NOFUSION_MISCHEDPOSTRA-NEXT:  # %bb.1: # %if.then
 ; NOFUSION_MISCHEDPOSTRA-NEXT:    movl $1, %eax
@@ -249,8 +249,8 @@ define i32 @macrofuse_alu_je(i32 %flags, i8* %p) nounwind {
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-LABEL: macrofuse_alu_je:
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA:       # %bb.0: # %entry
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    movl %edi, %eax
-; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    addl $-512, %eax # imm = 0xFE00
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    movb $1, (%rsi)
+; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    addl $-512, %eax # imm = 0xFE00
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    je .LBB2_2
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:  # %bb.1: # %if.then
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    movl $1, %eax
@@ -340,8 +340,8 @@ define i32 @macrofuse_dec_je(i32 %flags, i8* %p) nounwind {
 ; NOFUSION_MISCHEDPOSTRA-LABEL: macrofuse_dec_je:
 ; NOFUSION_MISCHEDPOSTRA:       # %bb.0: # %entry
 ; NOFUSION_MISCHEDPOSTRA-NEXT:    movl %edi, %eax
-; NOFUSION_MISCHEDPOSTRA-NEXT:    decl %eax
 ; NOFUSION_MISCHEDPOSTRA-NEXT:    movb $1, (%rsi)
+; NOFUSION_MISCHEDPOSTRA-NEXT:    decl %eax
 ; NOFUSION_MISCHEDPOSTRA-NEXT:    je .LBB3_2
 ; NOFUSION_MISCHEDPOSTRA-NEXT:  # %bb.1: # %if.then
 ; NOFUSION_MISCHEDPOSTRA-NEXT:    movl $1, %eax
@@ -351,8 +351,8 @@ define i32 @macrofuse_dec_je(i32 %flags, i8* %p) nounwind {
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-LABEL: macrofuse_dec_je:
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA:       # %bb.0: # %entry
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    movl %edi, %eax
-; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    decl %eax
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    movb $1, (%rsi)
+; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    decl %eax
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    je .LBB3_2
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:  # %bb.1: # %if.then
 ; BRANCHFUSIONONLY_MISCHEDPOSTRA-NEXT:    movl $1, %eax

@@ -25,6 +25,10 @@ body:             |
   ; CHECK:   [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; CHECK:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[DEF]], 0, 0, 0, 0, implicit $exec
   ; CHECK:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 8, 0, 0, 0, implicit $exec
+  ; CHECK:   [[COPY1:%[0-9]+]]:vreg_64 = COPY [[GLOBAL_LOAD_DWORDX2_]]
+  ; CHECK:   undef %6.sub0:vreg_64 = V_ADD_F32_e32 [[DEF]].sub0, [[COPY1]].sub0, implicit $mode, implicit $exec
+  ; CHECK:   dead undef %6.sub1:vreg_64 = V_ADD_F32_e32 [[DEF]].sub1, [[COPY1]].sub0, implicit $mode, implicit $exec
+  ; CHECK:   [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY1]], 0, 0, 0, 0, implicit $exec
   ; CHECK:   undef %4.sub0:vreg_64 = V_MOV_B32_e32 111, implicit $exec
   ; CHECK:   [[DEF1:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; CHECK:   [[DEF2:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
@@ -32,11 +36,7 @@ body:             |
   ; CHECK:   undef %11.sub1:vreg_64 = IMPLICIT_DEF
   ; CHECK:   [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK:   [[DEF5:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK:   [[COPY1:%[0-9]+]]:vreg_64 = COPY [[GLOBAL_LOAD_DWORDX2_]]
-  ; CHECK:   undef %6.sub0:vreg_64 = V_ADD_F32_e32 [[DEF]].sub0, [[COPY1]].sub0, implicit $mode, implicit $exec
-  ; CHECK:   dead undef %6.sub1:vreg_64 = V_ADD_F32_e32 [[DEF]].sub1, [[COPY1]].sub0, implicit $mode, implicit $exec
   ; CHECK:   [[DEF6:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-  ; CHECK:   [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY1]], 0, 0, 0, 0, implicit $exec
   ; CHECK:   undef %19.sub0:vreg_64 = V_ADD_F32_e32 [[GLOBAL_LOAD_DWORD1]], [[GLOBAL_LOAD_DWORDX2_]].sub0, implicit $mode, implicit $exec
   ; CHECK:   [[DEF7:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; CHECK:   %19.sub1:vreg_64 = V_ADD_F32_e32 [[GLOBAL_LOAD_DWORD]], [[GLOBAL_LOAD_DWORD]], implicit $mode, implicit $exec

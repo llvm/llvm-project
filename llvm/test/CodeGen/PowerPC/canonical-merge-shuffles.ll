@@ -417,11 +417,11 @@ define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture re
 ; CHECK-P9-LABEL: no_RAUW_in_combine_during_legalize:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    sldi r4, r4, 2
+; CHECK-P9-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P9-NEXT:    lxsiwzx v2, r3, r4
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI16_0@toc@l
 ; CHECK-P9-NEXT:    lxvx v3, 0, r3
-; CHECK-P9-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P9-NEXT:    blr
 ;
