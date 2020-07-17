@@ -1688,33 +1688,27 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
       } else {
         // If the offset doesn't fit, put the low bits into the offset field and
         // add the rest.
+        //
+        // For a FLAT instruction the hardware decides whether to access
+        // global/scratch/shared memory based on the high bits of vaddr,
+        // ignoring the offset field, so we have to ensure that when we add
+        // remainder to vaddr it still points into the same underlying object.
+        // The easiest way to do that is to make sure that we split the offset
+        // into two pieces that are both >= 0 or both <= 0.
 
         SDLoc DL(N);
-        uint64_t ImmField;
+        uint64_t RemainderOffset = COffsetVal;
+        uint64_t ImmField = 0;
         const unsigned NumBits = TII->getNumFlatOffsetBits(AS, IsSigned);
         if (IsSigned) {
-          ImmField = SignExtend64(COffsetVal, NumBits);
-
-          // Don't use a negative offset field if the base offset is positive.
-          // Since the scheduler currently relies on the offset field, doing so
-          // could result in strange scheduling decisions.
-
-          // TODO: Should we not do this in the opposite direction as well?
-          if (static_cast<int64_t>(COffsetVal) > 0) {
-            if (static_cast<int64_t>(ImmField) < 0) {
-              const uint64_t OffsetMask =
-                  maskTrailingOnes<uint64_t>(NumBits - 1);
-              ImmField = COffsetVal & OffsetMask;
-            }
-          }
-        } else {
-          // TODO: Should we do this for a negative offset?
-          const uint64_t OffsetMask = maskTrailingOnes<uint64_t>(NumBits);
-          ImmField = COffsetVal & OffsetMask;
+          // Use signed division by a power of two to truncate towards 0.
+          int64_t D = 1LL << (NumBits - 1);
+          RemainderOffset = (static_cast<int64_t>(COffsetVal) / D) * D;
+          ImmField = COffsetVal - RemainderOffset;
+        } else if (static_cast<int64_t>(COffsetVal) >= 0) {
+          ImmField = COffsetVal & maskTrailingOnes<uint64_t>(NumBits);
+          RemainderOffset = COffsetVal - ImmField;
         }
-
-        uint64_t RemainderOffset = COffsetVal - ImmField;
-
         assert(TII->isLegalFLATOffset(ImmField, AS, IsSigned));
         assert(RemainderOffset + ImmField == COffsetVal);
 
