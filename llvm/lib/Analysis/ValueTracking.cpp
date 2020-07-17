@@ -2353,15 +2353,20 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     return false;
 
   // Check for pointer simplifications.
-  if (V->getType()->isPointerTy()) {
+
+  if (PointerType *PtrTy = dyn_cast<PointerType>(V->getType())) {
     // Alloca never returns null, malloc might.
     if (isa<AllocaInst>(V) && Q.DL.getAllocaAddrSpace() == 0)
       return true;
 
-    // A byval, inalloca, or nonnull argument is never null.
-    if (const Argument *A = dyn_cast<Argument>(V))
-      if (A->hasPassPointeeByValueAttr() || A->hasNonNullAttr())
+    // A byval, inalloca may not be null in a non-default addres space. A
+    // nonnull argument is assumed never 0.
+    if (const Argument *A = dyn_cast<Argument>(V)) {
+      if (((A->hasPassPointeeByValueCopyAttr() &&
+            !NullPointerIsDefined(A->getParent(), PtrTy->getAddressSpace())) ||
+           A->hasNonNullAttr()))
         return true;
+    }
 
     // A Load tagged with nonnull metadata is never null.
     if (const LoadInst *LI = dyn_cast<LoadInst>(V))
@@ -4760,6 +4765,12 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
     return true;
   // TODO: Some instructions are guaranteed to return neither undef
   // nor poison if their arguments are not poison/undef.
+
+  if (auto *A = dyn_cast<Argument>(V)) {
+    // NoUndef does not guarantee that paddings are not undef.
+    if (A->hasAttribute(Attribute::NoUndef))
+      return true;
+  }
 
   if (auto *C = dyn_cast<Constant>(V)) {
     // TODO: We can analyze ConstExpr by opcode to determine if there is any

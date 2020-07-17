@@ -1,5 +1,7 @@
-; RUN: opt -scalar-evolution -loop-deletion -simplifycfg -analyze < %s | FileCheck %s --check-prefix=CHECK-ANALYSIS-1
-; RUN: opt -analyze -scalar-evolution < %s | FileCheck %s --check-prefix=CHECK-ANALYSIS-2
+; RUN: opt -scalar-evolution -loop-deletion -simplifycfg -analyze -enable-new-pm=0 < %s | FileCheck %s --check-prefix=CHECK-ANALYSIS-1
+; RUN: opt "-passes=print<scalar-evolution>,loop(loop-deletion),simplifycfg" -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ANALYSIS-1
+; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s --check-prefix=CHECK-ANALYSIS-2
+; RUN: opt -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ANALYSIS-2
 
 define i32 @pr34538() local_unnamed_addr #0 {
 ; CHECK-ANALYSIS-1: Loop %do.body: backedge-taken count is 10000

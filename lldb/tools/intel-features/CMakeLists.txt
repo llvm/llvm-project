@@ -56,7 +56,7 @@ add_lldb_library(lldbIntelFeatures SHARED
 
   LINK_LIBS
     ${FEATURE_LIBS}
-    ${PYTHON_LIBRARY}
+    ${PYTHON_LIBRARIES}
   )
 
 # Add link dependencies for python wrapper

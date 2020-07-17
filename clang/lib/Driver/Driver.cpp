@@ -978,17 +978,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // FIXME: Handle environment options which affect driver behavior, somewhere
   // (client?). GCC_EXEC_PREFIX, LPATH, CC_PRINT_OPTIONS.
 
-  if (Optional<std::string> CompilerPathValue =
-          llvm::sys::Process::GetEnv("COMPILER_PATH")) {
-    StringRef CompilerPath = *CompilerPathValue;
-    while (!CompilerPath.empty()) {
-      std::pair<StringRef, StringRef> Split =
-          CompilerPath.split(llvm::sys::EnvPathSeparator);
-      PrefixDirs.push_back(std::string(Split.first));
-      CompilerPath = Split.second;
-    }
-  }
-
   // We look for the driver mode option early, because the mode can affect
   // how other options are parsed.
   ParseDriverMode(ClangExecutable, ArgList.slice(1));
@@ -1105,6 +1094,16 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   for (const Arg *A : Args.filtered(options::OPT_B)) {
     A->claim();
     PrefixDirs.push_back(A->getValue(0));
+  }
+  if (Optional<std::string> CompilerPathValue =
+          llvm::sys::Process::GetEnv("COMPILER_PATH")) {
+    StringRef CompilerPath = *CompilerPathValue;
+    while (!CompilerPath.empty()) {
+      std::pair<StringRef, StringRef> Split =
+          CompilerPath.split(llvm::sys::EnvPathSeparator);
+      PrefixDirs.push_back(std::string(Split.first));
+      CompilerPath = Split.second;
+    }
   }
   if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ))
     SysRoot = A->getValue();

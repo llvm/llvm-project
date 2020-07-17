@@ -474,27 +474,65 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       ArrayRef<const MachineOperand *> BaseOps2,
                                       unsigned NumLoads,
                                       unsigned NumBytes) const {
-  // If current mem ops pair do not have same base pointer, then they cannot be
-  // clustered.
   assert(!BaseOps1.empty() && !BaseOps2.empty());
   const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
   const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
+
   if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
     return false;
 
-  // Compute max cluster size based on average number bytes clustered till now,
-  // and decide based on it, if current mem ops pair can be clustered or not.
-  assert((NumLoads > 0) && (NumBytes > 0) && (NumBytes >= NumLoads) &&
-         "Invalid NumLoads/NumBytes values");
-  unsigned MaxNumLoads;
-  if (NumBytes <= 4 * NumLoads) {
-    // Loads are dword or smaller (on average).
-    MaxNumLoads = 5;
-  } else {
-    // Loads are bigger than a dword (on average).
-    MaxNumLoads = 4;
+  const MachineOperand *FirstDst = nullptr;
+  const MachineOperand *SecondDst = nullptr;
+
+  if ((isMUBUF(FirstLdSt) && isMUBUF(SecondLdSt)) ||
+      (isMTBUF(FirstLdSt) && isMTBUF(SecondLdSt)) ||
+      (isMIMG(FirstLdSt) && isMIMG(SecondLdSt)) ||
+      (isFLAT(FirstLdSt) && isFLAT(SecondLdSt))) {
+    const unsigned MaxGlobalLoadCluster = 7;
+    if (NumLoads > MaxGlobalLoadCluster)
+      return false;
+
+    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdata);
+    if (!FirstDst)
+      FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdst);
+    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdata);
+    if (!SecondDst)
+      SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdst);
+  } else if (isSMRD(FirstLdSt) && isSMRD(SecondLdSt)) {
+    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::sdst);
+    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::sdst);
+  } else if (isDS(FirstLdSt) && isDS(SecondLdSt)) {
+    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdst);
+    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdst);
   }
-  return NumLoads <= MaxNumLoads;
+
+  if (!FirstDst || !SecondDst)
+    return false;
+
+  // Try to limit clustering based on the total number of bytes loaded
+  // rather than the number of instructions.  This is done to help reduce
+  // register pressure.  The method used is somewhat inexact, though,
+  // because it assumes that all loads in the cluster will load the
+  // same number of bytes as FirstLdSt.
+
+  // The unit of this value is bytes.
+  // FIXME: This needs finer tuning.
+  unsigned LoadClusterThreshold = 16;
+
+  const MachineRegisterInfo &MRI =
+      FirstLdSt.getParent()->getParent()->getRegInfo();
+
+  const Register Reg = FirstDst->getReg();
+
+  const TargetRegisterClass *DstRC = Register::isVirtualRegister(Reg)
+                                         ? MRI.getRegClass(Reg)
+                                         : RI.getPhysRegClass(Reg);
+
+  // FIXME: NumLoads should not be subtracted 1. This is to match behavior
+  // of clusterNeighboringMemOps which was previosly passing cluster length
+  // less 1. LoadClusterThreshold should be tuned instead.
+  return ((NumLoads - 1) * (RI.getRegSizeInBits(*DstRC) / 8)) <=
+         LoadClusterThreshold;
 }
 
 // FIXME: This behaves strangely. If, for example, you have 32 load + stores,
@@ -531,6 +569,80 @@ static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
 
   BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_ILLEGAL_COPY), DestReg)
     .addReg(SrcReg, getKillRegState(KillSrc));
+}
+
+/// Handle copying from SGPR to AGPR, or from AGPR to AGPR. It is not possible
+/// to directly copy, so an intermediate VGPR needs to be used.
+static void indirectCopyToAGPR(const SIInstrInfo &TII,
+                               MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI,
+                               const DebugLoc &DL, MCRegister DestReg,
+                               MCRegister SrcReg, bool KillSrc,
+                               RegScavenger &RS) {
+  const SIRegisterInfo &RI = TII.getRegisterInfo();
+
+  assert(AMDGPU::SReg_32RegClass.contains(SrcReg) ||
+         AMDGPU::AGPR_32RegClass.contains(SrcReg));
+
+  // First try to find defining accvgpr_write to avoid temporary registers.
+  for (auto Def = MI, E = MBB.begin(); Def != E; ) {
+    --Def;
+    if (!Def->definesRegister(SrcReg, &RI))
+      continue;
+    if (Def->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32)
+      break;
+
+    MachineOperand &DefOp = Def->getOperand(1);
+    assert(DefOp.isReg() || DefOp.isImm());
+
+    if (DefOp.isReg()) {
+      // Check that register source operand if not clobbered before MI.
+      // Immediate operands are always safe to propagate.
+      bool SafeToPropagate = true;
+      for (auto I = Def; I != MI && SafeToPropagate; ++I)
+        if (I->modifiesRegister(DefOp.getReg(), &RI))
+          SafeToPropagate = false;
+
+      if (!SafeToPropagate)
+        break;
+
+      DefOp.setIsKill(false);
+    }
+
+    BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32), DestReg)
+      .add(DefOp);
+    return;
+  }
+
+  RS.enterBasicBlock(MBB);
+  RS.forward(MI);
+
+  // Ideally we want to have three registers for a long reg_sequence copy
+  // to hide 2 waitstates between v_mov_b32 and accvgpr_write.
+  unsigned MaxVGPRs = RI.getRegPressureLimit(&AMDGPU::VGPR_32RegClass,
+                                             *MBB.getParent());
+
+  // Registers in the sequence are allocated contiguously so we can just
+  // use register number to pick one of three round-robin temps.
+  unsigned RegNo = DestReg % 3;
+  Register Tmp = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
+  if (!Tmp)
+    report_fatal_error("Cannot scavenge VGPR to copy to AGPR");
+  RS.setRegUsed(Tmp);
+  // Only loop through if there are any free registers left, otherwise
+  // scavenger may report a fatal error without emergency spill slot
+  // or spill with the slot.
+  while (RegNo-- && RS.FindUnusedReg(&AMDGPU::VGPR_32RegClass)) {
+    Register Tmp2 = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
+    if (!Tmp2 || RI.getHWRegIndex(Tmp2) >= MaxVGPRs)
+      break;
+    Tmp = Tmp2;
+    RS.setRegUsed(Tmp);
+  }
+
+  TII.copyPhysReg(MBB, MI, DL, Tmp, SrcReg, KillSrc);
+  BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32), DestReg)
+    .addReg(Tmp, RegState::Kill);
 }
 
 void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -652,75 +764,18 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+
   if (RC == &AMDGPU::AGPR_32RegClass) {
-    assert(AMDGPU::VGPR_32RegClass.contains(SrcReg) ||
-           AMDGPU::SReg_32RegClass.contains(SrcReg) ||
-           AMDGPU::AGPR_32RegClass.contains(SrcReg));
-    if (!AMDGPU::VGPR_32RegClass.contains(SrcReg)) {
-      // First try to find defining accvgpr_write to avoid temporary registers.
-      for (auto Def = MI, E = MBB.begin(); Def != E; ) {
-        --Def;
-        if (!Def->definesRegister(SrcReg, &RI))
-          continue;
-        if (Def->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32)
-          break;
-
-        MachineOperand &DefOp = Def->getOperand(1);
-        assert(DefOp.isReg() || DefOp.isImm());
-
-        if (DefOp.isReg()) {
-          // Check that register source operand if not clobbered before MI.
-          // Immediate operands are always safe to propagate.
-          bool SafeToPropagate = true;
-          for (auto I = Def; I != MI && SafeToPropagate; ++I)
-            if (I->modifiesRegister(DefOp.getReg(), &RI))
-              SafeToPropagate = false;
-
-          if (!SafeToPropagate)
-            break;
-
-          DefOp.setIsKill(false);
-        }
-
-        BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32), DestReg)
-          .add(DefOp);
-        return;
-      }
-
-      RegScavenger RS;
-      RS.enterBasicBlock(MBB);
-      RS.forward(MI);
-
-      // Ideally we want to have three registers for a long reg_sequence copy
-      // to hide 2 waitstates between v_mov_b32 and accvgpr_write.
-      unsigned MaxVGPRs = RI.getRegPressureLimit(&AMDGPU::VGPR_32RegClass,
-                                                 *MBB.getParent());
-
-      // Registers in the sequence are allocated contiguously so we can just
-      // use register number to pick one of three round-robin temps.
-      unsigned RegNo = DestReg % 3;
-      Register Tmp = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
-      if (!Tmp)
-        report_fatal_error("Cannot scavenge VGPR to copy to AGPR");
-      RS.setRegUsed(Tmp);
-      // Only loop through if there are any free registers left, otherwise
-      // scavenger may report a fatal error without emergency spill slot
-      // or spill with the slot.
-      while (RegNo-- && RS.FindUnusedReg(&AMDGPU::VGPR_32RegClass)) {
-        unsigned Tmp2 = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
-        if (!Tmp2 || RI.getHWRegIndex(Tmp2) >= MaxVGPRs)
-          break;
-        Tmp = Tmp2;
-        RS.setRegUsed(Tmp);
-      }
-      copyPhysReg(MBB, MI, DL, Tmp, SrcReg, KillSrc);
+    if (AMDGPU::VGPR_32RegClass.contains(SrcReg)) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32), DestReg)
-        .addReg(Tmp, RegState::Kill);
+        .addReg(SrcReg, getKillRegState(KillSrc));
       return;
     }
 
-    BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32), DestReg)
-      .addReg(SrcReg, getKillRegState(KillSrc));
+    // FIXME: Pass should maintain scavenger to avoid scan through the block on
+    // every AGPR spill.
+    RegScavenger RS;
+    indirectCopyToAGPR(*this, MBB, MI, DL, DestReg, SrcReg, KillSrc, RS);
     return;
   }
 

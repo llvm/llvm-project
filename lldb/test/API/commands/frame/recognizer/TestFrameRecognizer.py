@@ -145,6 +145,50 @@ class FrameRecognizerTestCase(TestBase):
         self.expect("frame recognizer info 0",
                     substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
 
+    @skipUnlessDarwin
+    def test_frame_recognizer_target_specific(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Clear internal & plugins recognizers that get initialized at launch
+        self.runCmd("frame recognizer clear")
+
+        # Create a target.
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "foo",
+                                                                 exe_name = exe)
+
+        self.runCmd("command script import " + os.path.join(self.getSourceDir(), "recognizer.py"))
+
+        # Check that this doesn't contain our own FrameRecognizer somehow.
+        self.expect("frame recognizer list",
+                    matching=False, substrs=['MyFrameRecognizer'])
+
+        # Add a frame recognizer in that target.
+        self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar")
+
+        self.expect("frame recognizer list",
+                    substrs=['recognizer.MyFrameRecognizer, module a.out, symbol foo, symbol bar'])
+
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
+
+        # Create a second target. That one shouldn't have the frame recognizer.
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "bar",
+                                                                 exe_name = exe)
+
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 not recognized by any recognizer'])
+
+        # Add a frame recognizer to the new target.
+        self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n bar")
+
+        self.expect("frame recognizer list",
+                    substrs=['recognizer.MyFrameRecognizer, module a.out, symbol bar'])
+
+        # Now the new target should also recognize the frame.
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
+
     @no_debug_info_test
     def test_frame_recognizer_delete_invalid_arg(self):
         self.expect("frame recognizer delete a", error=True,

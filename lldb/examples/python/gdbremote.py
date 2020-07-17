@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 #----------------------------------------------------------------------
 # This module will enable GDB remote packet logging when the

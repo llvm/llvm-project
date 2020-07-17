@@ -227,6 +227,19 @@ class Feature(object):
     """
     return self._isSupported(config)
 
+  def getName(self, config):
+    """
+    Return the name of the feature.
+
+    It is an error to call `f.getName(cfg)` if the feature `f` is not supported.
+    """
+    assert self.isSupported(config), \
+      "Trying to get the name of a feature that is not supported in the given configuration"
+    name = self._name(config) if callable(self._name) else self._name
+    if not isinstance(name, str):
+      raise ValueError("Feature did not resolve to a name that's a string, got {}".format(name))
+    return name
+
   def enableIn(self, config):
     """
     Enable a feature in a TestingConfig.
@@ -249,11 +262,7 @@ class Feature(object):
     if self._linkFlag:
       linkFlag = self._linkFlag(config) if callable(self._linkFlag) else self._linkFlag
       config.substitutions = addTo(config.substitutions, '%{link_flags}', linkFlag)
-
-    name = self._name(config) if callable(self._name) else self._name
-    if not isinstance(name, str):
-      raise ValueError("Feature did not resolve to a name that's a string, got {}".format(name))
-    config.available_features.add(name)
+    config.available_features.add(self.getName(config))
 
 
 def _str_to_bool(s):

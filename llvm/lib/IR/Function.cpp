@@ -121,7 +121,7 @@ bool Argument::hasPreallocatedAttr() const {
   return hasAttribute(Attribute::Preallocated);
 }
 
-bool Argument::hasPassPointeeByValueAttr() const {
+bool Argument::hasPassPointeeByValueCopyAttr() const {
   if (!getType()->isPointerTy()) return false;
   AttributeList Attrs = getParent()->getAttributes();
   return Attrs.hasParamAttribute(getArgNo(), Attribute::ByVal) ||

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_FPUTIL_LONG_DOUBLE_BITS_X86_H
 #define LLVM_LIBC_UTILS_FPUTIL_LONG_DOUBLE_BITS_X86_H
 
-#include "utils/FPUtil/FPBits.h"
+#include "FPBits.h"
 
 #include <stdint.h>
 

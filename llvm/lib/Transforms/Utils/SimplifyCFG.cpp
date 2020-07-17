@@ -2404,11 +2404,13 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   int BudgetRemaining =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
 
+  bool Changed = false;
   for (BasicBlock::iterator II = BB->begin(); isa<PHINode>(II);) {
     PHINode *PN = cast<PHINode>(II++);
     if (Value *V = SimplifyInstruction(PN, {DL, PN})) {
       PN->replaceAllUsesWith(V);
       PN->eraseFromParent();
+      Changed = true;
       continue;
     }
 
@@ -2416,7 +2418,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
                              BudgetRemaining, TTI) ||
         !DominatesMergePoint(PN->getIncomingValue(1), BB, AggressiveInsts,
                              BudgetRemaining, TTI))
-      return false;
+      return Changed;
   }
 
   // If we folded the first phi, PN dangles at this point.  Refresh it.  If
@@ -2443,7 +2445,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
        isa<BinaryOperator>(IfCond)) &&
       !CanHoistNotFromBothValues(PN->getIncomingValue(0),
                                  PN->getIncomingValue(1)))
-    return false;
+    return Changed;
 
   // If all PHI nodes are promotable, check to make sure that all instructions
   // in the predecessor blocks can be promoted as well. If not, we won't be able
@@ -2461,7 +2463,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
         // This is not an aggressive instruction that we can promote.
         // Because of this, we won't be able to get rid of the control flow, so
         // the xform is not worth it.
-        return false;
+        return Changed;
       }
   }
 
@@ -2474,7 +2476,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
         // This is not an aggressive instruction that we can promote.
         // Because of this, we won't be able to get rid of the control flow, so
         // the xform is not worth it.
-        return false;
+        return Changed;
       }
   }
   assert(DomBlock && "Failed to find root DomBlock");

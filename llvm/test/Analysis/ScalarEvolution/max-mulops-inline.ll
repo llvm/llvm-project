@@ -1,5 +1,7 @@
-; RUN: opt -analyze -scalar-evolution -scev-mulops-inline-threshold=1 < %s | FileCheck --check-prefix=CHECK1 %s
-; RUN: opt -analyze -scalar-evolution -scev-mulops-inline-threshold=10 < %s | FileCheck --check-prefix=CHECK10 %s
+; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -scev-mulops-inline-threshold=1 < %s | FileCheck --check-prefix=CHECK1 %s
+; RUN: opt -disable-output "-passes=print<scalar-evolution>" -scev-mulops-inline-threshold=1 < %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
+; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -scev-mulops-inline-threshold=10 < %s | FileCheck --check-prefix=CHECK10 %s
+; RUN: opt -disable-output "-passes=print<scalar-evolution>" -scev-mulops-inline-threshold=10 < %s 2>&1 | FileCheck --check-prefix=CHECK10 %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

@@ -355,6 +355,8 @@ static inline bool AddrIsInShadowGap(uptr a) {
 
 namespace __asan {
 
+static inline uptr MemToShadowSize(uptr size) { return size >> SHADOW_SCALE; }
+
 static inline bool AddrIsInMem(uptr a) {
   PROFILE_ASAN_MAPPING();
   return AddrIsInLowMem(a) || AddrIsInMidMem(a) || AddrIsInHighMem(a) ||

@@ -59,6 +59,7 @@ set(PROFILE_SOURCES
   InstrProfilingMerge.c
   InstrProfilingMergeFile.c
   InstrProfilingNameVar.c
+  InstrProfilingVersionVar.c
   InstrProfilingWriter.c
   InstrProfilingPlatformDarwin.c
   InstrProfilingPlatformFuchsia.c

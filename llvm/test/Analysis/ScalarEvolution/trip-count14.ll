@@ -1,4 +1,5 @@
-; RUN: opt -S -analyze -scalar-evolution < %s | FileCheck %s
+; RUN: opt -S -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s
+; RUN: opt -S -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
 define void @s32_max1(i32 %n, i32* %p) {
 entry:

@@ -631,9 +631,7 @@ bool ToolChain::isThreadModelSupported(const StringRef Model) const {
     return Triple.getArch() == llvm::Triple::arm ||
            Triple.getArch() == llvm::Triple::armeb ||
            Triple.getArch() == llvm::Triple::thumb ||
-           Triple.getArch() == llvm::Triple::thumbeb ||
-           Triple.getArch() == llvm::Triple::wasm32 ||
-           Triple.getArch() == llvm::Triple::wasm64;
+           Triple.getArch() == llvm::Triple::thumbeb || Triple.isWasm();
   } else if (Model == "posix")
     return true;
 
@@ -999,9 +997,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
                       SanitizerKind::Nullability | SanitizerKind::LocalBounds;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
-      getTriple().getArch() == llvm::Triple::arm ||
-      getTriple().getArch() == llvm::Triple::wasm32 ||
-      getTriple().getArch() == llvm::Triple::wasm64 || getTriple().isAArch64())
+      getTriple().getArch() == llvm::Triple::arm || getTriple().isWasm() ||
+      getTriple().isAArch64())
     Res |= SanitizerKind::CFIICall;
   if (getTriple().getArch() == llvm::Triple::x86_64 || getTriple().isAArch64())
     Res |= SanitizerKind::ShadowCallStack;
