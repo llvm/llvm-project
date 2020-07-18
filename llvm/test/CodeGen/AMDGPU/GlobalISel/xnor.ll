@@ -15,14 +15,58 @@ entry:
   ret i32 %r0.val
 }
 
-; FIXME:
-; define amdgpu_ps i32 @scalar_xnor_v2i16_one_use(<2 x i16> inreg %a, <2 x i16> inreg %b) {
-; entry:
-;   %xor = xor <2 x i16> %a, %b
-;   %r0.val = xor <2 x i16> %xor, <i16 -1, i16 -1>
-;   %cast = bitcast <2 x i16> %r0.val to i32
-;   ret i32 %cast
-; }
+; FIXME: fails to match
+define amdgpu_ps i32 @scalar_xnor_v2i16_one_use(<2 x i16> inreg %a, <2 x i16> inreg %b) {
+; GFX7-LABEL: scalar_xnor_v2i16_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 s4, 0xffff
+; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX7-NEXT:    s_and_b32 s0, s0, s4
+; GFX7-NEXT:    s_or_b32 s0, s1, s0
+; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
+; GFX7-NEXT:    s_and_b32 s2, s2, s4
+; GFX7-NEXT:    s_or_b32 s1, s1, s2
+; GFX7-NEXT:    s_xor_b32 s0, s0, s1
+; GFX7-NEXT:    s_xor_b32 s0, s0, -1
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: scalar_xnor_v2i16_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_mov_b32 s2, 0xffff
+; GFX8-NEXT:    s_lshr_b32 s5, s0, 16
+; GFX8-NEXT:    s_lshr_b32 s6, s1, 16
+; GFX8-NEXT:    s_and_b32 s4, s0, s2
+; GFX8-NEXT:    s_and_b32 s0, s1, s2
+; GFX8-NEXT:    s_and_b32 s5, s5, s2
+; GFX8-NEXT:    s_and_b32 s1, s6, s2
+; GFX8-NEXT:    s_mov_b32 s3, s2
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
+; GFX8-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX8-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX8-NEXT:    s_and_b32 s0, s0, s2
+; GFX8-NEXT:    s_or_b32 s0, s1, s0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX900-LABEL: scalar_xnor_v2i16_one_use:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    s_pack_ll_b32_b16 s2, -1, -1
+; GFX900-NEXT:    s_xor_b32 s0, s0, s1
+; GFX900-NEXT:    s_xor_b32 s0, s0, s2
+; GFX900-NEXT:    ; return to shader part epilog
+;
+; GFX906-LABEL: scalar_xnor_v2i16_one_use:
+; GFX906:       ; %bb.0: ; %entry
+; GFX906-NEXT:    s_pack_ll_b32_b16 s2, -1, -1
+; GFX906-NEXT:    s_xor_b32 s0, s0, s1
+; GFX906-NEXT:    s_xor_b32 s0, s0, s2
+; GFX906-NEXT:    ; return to shader part epilog
+entry:
+  %xor = xor <2 x i16> %a, %b
+  %r0.val = xor <2 x i16> %xor, <i16 -1, i16 -1>
+  %cast = bitcast <2 x i16> %r0.val to i32
+  ret i32 %cast
+}
 
 define amdgpu_ps <2 x i32> @scalar_xnor_i32_mul_use(i32 inreg %a, i32 inreg %b) {
 ; GCN-LABEL: scalar_xnor_i32_mul_use:
@@ -51,13 +95,79 @@ define amdgpu_ps i64 @scalar_xnor_i64_one_use(i64 inreg %a, i64 inreg %b) {
   ret i64 %r0.val
 }
 
-; FIXME:
-; define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> inreg %b) {
-;   %xor = xor <4 x i16> %a, %b
-;   %ret = xor <4 x i16> %xor, <i16 -1, i16 -1, i16 -1, i16 -1>
-;   %cast = bitcast <4 x i16> %ret to i64
-;   ret i64 %cast
-; }
+; FIXME: fails to match
+define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> inreg %b) {
+; GFX7-LABEL: scalar_xnor_v4i16_one_use:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_mov_b32 s8, 0xffff
+; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX7-NEXT:    s_and_b32 s0, s0, s8
+; GFX7-NEXT:    s_or_b32 s0, s1, s0
+; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
+; GFX7-NEXT:    s_and_b32 s2, s2, s8
+; GFX7-NEXT:    s_or_b32 s1, s1, s2
+; GFX7-NEXT:    s_and_b32 s3, s4, s8
+; GFX7-NEXT:    s_lshl_b32 s2, s5, 16
+; GFX7-NEXT:    s_or_b32 s2, s2, s3
+; GFX7-NEXT:    s_lshl_b32 s3, s7, 16
+; GFX7-NEXT:    s_and_b32 s4, s6, s8
+; GFX7-NEXT:    s_or_b32 s3, s3, s4
+; GFX7-NEXT:    s_mov_b32 s4, -1
+; GFX7-NEXT:    s_mov_b32 s5, s4
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: scalar_xnor_v4i16_one_use:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_mov_b32 s4, 0xffff
+; GFX8-NEXT:    s_lshr_b32 s5, s0, 16
+; GFX8-NEXT:    s_and_b32 s7, s5, s4
+; GFX8-NEXT:    s_lshr_b32 s5, s1, 16
+; GFX8-NEXT:    s_and_b32 s6, s0, s4
+; GFX8-NEXT:    s_and_b32 s0, s1, s4
+; GFX8-NEXT:    s_and_b32 s1, s5, s4
+; GFX8-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX8-NEXT:    s_and_b32 s8, s2, s4
+; GFX8-NEXT:    s_and_b32 s9, s5, s4
+; GFX8-NEXT:    s_lshr_b32 s5, s3, 16
+; GFX8-NEXT:    s_and_b32 s2, s3, s4
+; GFX8-NEXT:    s_and_b32 s3, s5, s4
+; GFX8-NEXT:    s_xor_b64 s[6:7], s[6:7], s[8:9]
+; GFX8-NEXT:    s_mov_b32 s5, s4
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX8-NEXT:    s_and_b64 s[2:3], s[6:7], s[4:5]
+; GFX8-NEXT:    s_and_b64 s[0:1], s[0:1], s[4:5]
+; GFX8-NEXT:    s_xor_b64 s[2:3], s[2:3], s[4:5]
+; GFX8-NEXT:    s_xor_b64 s[6:7], s[0:1], s[4:5]
+; GFX8-NEXT:    s_and_b32 s1, s2, s4
+; GFX8-NEXT:    s_lshl_b32 s0, s3, 16
+; GFX8-NEXT:    s_or_b32 s0, s0, s1
+; GFX8-NEXT:    s_lshl_b32 s1, s7, 16
+; GFX8-NEXT:    s_and_b32 s2, s6, s4
+; GFX8-NEXT:    s_or_b32 s1, s1, s2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX900-LABEL: scalar_xnor_v4i16_one_use:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_pack_ll_b32_b16 s4, -1, -1
+; GFX900-NEXT:    s_mov_b32 s5, s4
+; GFX900-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX900-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX900-NEXT:    ; return to shader part epilog
+;
+; GFX906-LABEL: scalar_xnor_v4i16_one_use:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    s_pack_ll_b32_b16 s4, -1, -1
+; GFX906-NEXT:    s_mov_b32 s5, s4
+; GFX906-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX906-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX906-NEXT:    ; return to shader part epilog
+  %xor = xor <4 x i16> %a, %b
+  %ret = xor <4 x i16> %xor, <i16 -1, i16 -1, i16 -1, i16 -1>
+  %cast = bitcast <4 x i16> %ret to i64
+  ret i64 %cast
+}
 
 define amdgpu_ps <2 x i64> @scalar_xnor_i64_mul_use(i64 inreg %a, i64 inreg %b) {
 ; GCN-LABEL: scalar_xnor_i64_mul_use:
