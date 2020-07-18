@@ -495,6 +495,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i8* @mempcpy(i8*, i8*, i64)\n"
       "declare i8* @memrchr(i8*, i32, i64)\n"
 
+      "declare void @__atomic_load(i64, i8*, i8*, i32)\n"
+      "declare void @__atomic_store(i64, i8*, i8*, i32)\n"
+
       // These are similar to the FILE* fgetc/fputc.
       "declare i32 @_IO_getc(%struct*)\n"
       "declare i32 @_IO_putc(i32, %struct*)\n"
