@@ -697,14 +697,14 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
 
   struct Operand {
     Value *V;
-    Domain Domain;
+    Domain D;
   };
   std::array<Operand, 2> Ops;
-  for (const auto &I : zip(Ops, SDI->operands())) {
+  for (const auto I : zip(Ops, SDI->operands())) {
     Operand &Op = std::get<0>(I);
     Op.V = std::get<1>(I);
-    Op.Domain = getDomain(Op.V);
-    if (Op.Domain == Domain::Unknown)
+    Op.D = getDomain(Op.V);
+    if (Op.D == Domain::Unknown)
       return false;
   }
 
@@ -713,7 +713,7 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
 
   // We need operands to be non-negative, so negate each one that isn't.
   for (Operand &Op : Ops) {
-    if (Op.Domain == Domain::NonNegative)
+    if (Op.D == Domain::NonNegative)
       continue;
     auto *BO =
         BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
@@ -729,7 +729,7 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
   Value *Res = UDiv;
 
   // If the operands had two different domains, we need to negate the result.
-  if (Ops[0].Domain != Ops[1].Domain)
+  if (Ops[0].D != Ops[1].D)
     Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
 
   SDI->replaceAllUsesWith(Res);
