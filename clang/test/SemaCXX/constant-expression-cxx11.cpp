@@ -2167,6 +2167,11 @@ namespace PR21786 {
 namespace PR21859 {
   constexpr int Fun() { return; } // expected-error {{non-void constexpr function 'Fun' should return a value}}
   constexpr int Var = Fun();
+
+  template <typename T> constexpr int FunT1() { return; } // expected-error {{non-void constexpr function 'FunT1' should return a value}}
+  template <typename T> constexpr int FunT2() { return 0; }
+  template <> constexpr int FunT2<double>() { return 0; }
+  template <> constexpr int FunT2<int>() { return; } // expected-error {{non-void constexpr function 'FunT2' should return a value}}
 }
 
 struct InvalidRedef {
