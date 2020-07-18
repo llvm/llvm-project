@@ -1990,6 +1990,8 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
       if (e.entry.flags & EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER) {
         e.entry.other = data.GetULEB128(&offset);
         uint64_t resolver_addr = e.entry.other;
+        if (text_seg_base_addr != LLDB_INVALID_ADDRESS)
+          resolver_addr += text_seg_base_addr;
         if (is_arm)
           resolver_addr &= THUMB_ADDRESS_BIT_MASK;
         resolver_addresses.insert(resolver_addr);
