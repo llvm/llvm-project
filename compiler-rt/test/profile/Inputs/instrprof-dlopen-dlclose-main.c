@@ -46,21 +46,21 @@ int main(int argc, char *argv[]) {
 #endif
 
   dlerror();
-  void (*gcov_flush1)() = (void (*)())dlsym(f1_handle, "__gcov_flush");
-  if (gcov_flush1 == NULL) {
-    fprintf(stderr, "unable to find __gcov_flush in func.shared': %s\n", dlerror());
+  void (*gcov_reset1)() = (void (*)())dlsym(f1_handle, "__gcov_reset");
+  if (gcov_reset1 == NULL) {
+    fprintf(stderr, "unable to find __gcov_reset in func.shared': %s\n", dlerror());
     return EXIT_FAILURE;
   }
 
   dlerror();
-  void (*gcov_flush2)() = (void (*)())dlsym(f2_handle, "__gcov_flush");
-  if (gcov_flush2 == NULL) {
-    fprintf(stderr, "unable to find __gcov_flush in func2.shared': %s\n", dlerror());
+  void (*gcov_reset2)() = (void (*)())dlsym(f2_handle, "__gcov_reset");
+  if (gcov_reset2 == NULL) {
+    fprintf(stderr, "unable to find __gcov_reset in func2.shared': %s\n", dlerror());
     return EXIT_FAILURE;
   }
 
-  if (gcov_flush1 == gcov_flush2) {
-    fprintf(stderr, "Same __gcov_flush found in func.shared and func2.shared\n");
+  if (gcov_reset1 == gcov_reset2) {
+    fprintf(stderr, "Same __gcov_reset found in func.shared and func2.shared\n");
     return EXIT_FAILURE;
   }
 

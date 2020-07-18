@@ -64,14 +64,19 @@ int main(int argc, char *argv[]) {
   func3();
 #endif
 
-  void (*gcov_flush1)() = (void (*)())dlsym(f1_handle, "__gcov_flush");
-  if (gcov_flush1 == NULL)
-    return fprintf(stderr, "unable to find __gcov_flush in func1.so': %s\n", dlerror());
-  void (*gcov_flush2)() = (void (*)())dlsym(f2_handle, "__gcov_flush");
-  if (gcov_flush2 == NULL)
-    return fprintf(stderr, "unable to find __gcov_flush in func2.so': %s\n", dlerror());
-  if (gcov_flush1 == gcov_flush2)
-    return fprintf(stderr, "same __gcov_flush found in func1.so and func2.so\n");
+  void (*gcov_reset1)() = (void (*)())dlsym(f1_handle, "__gcov_reset");
+  if (gcov_reset1 == NULL)
+    return fprintf(stderr, "unable to find __gcov_reset in func1.so': %s\n", dlerror());
+  void (*gcov_reset2)() = (void (*)())dlsym(f2_handle, "__gcov_reset");
+  if (gcov_reset2 == NULL)
+    return fprintf(stderr, "unable to find __gcov_reset in func2.so': %s\n", dlerror());
+  if (gcov_reset1 == gcov_reset2)
+    return fprintf(stderr, "same __gcov_reset found in func1.so and func2.so\n");
+
+  /// Test that __gcov_dump is in the dynamic symbol table.
+  void (*gcov_dump1)() = (void (*)())dlsym(f1_handle, "__gcov_dump");
+  if (gcov_dump1 == NULL)
+    return fprintf(stderr, "unable to find __gcov_dump in func1.so': %s\n", dlerror());
 
   if (dlclose(f2_handle) != 0)
     return fprintf(stderr, "unable to close 'func2.so': %s\n", dlerror());

@@ -640,25 +640,6 @@ static void llvm_writeout_and_clear(void) {
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_register_flush_function(fn_ptr fn) {
-  fn_list_insert(&flush_fn_list, fn);
-}
-
-void __gcov_flush() {
-  struct fn_node* curr = flush_fn_list.head;
-
-  while (curr) {
-    curr->fn();
-    curr = curr->next;
-  }
-}
-
-COMPILER_RT_VISIBILITY
-void llvm_delete_flush_function_list(void) {
-  fn_list_remove(&flush_fn_list);
-}
-
-COMPILER_RT_VISIBILITY
 void llvm_register_reset_function(fn_ptr fn) {
   fn_list_insert(&reset_fn_list, fn);
 }
@@ -698,14 +679,11 @@ pid_t __gcov_fork() {
 #endif
 
 COMPILER_RT_VISIBILITY
-void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn, fn_ptr rfn) {
+void llvm_gcov_init(fn_ptr wfn, fn_ptr rfn) {
   static int atexit_ran = 0;
 
   if (wfn)
     llvm_register_writeout_function(wfn);
-
-  if (ffn)
-    llvm_register_flush_function(ffn);
 
   if (rfn)
     llvm_register_reset_function(rfn);
@@ -715,11 +693,20 @@ void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn, fn_ptr rfn) {
 
     /* Make sure we write out the data and delete the data structures. */
     atexit(llvm_delete_reset_function_list);
-    atexit(llvm_delete_flush_function_list);
 #ifdef _WIN32
     atexit(llvm_writeout_and_clear);
 #endif
   }
+}
+
+void __gcov_dump(void) {
+  for (struct fn_node *f = writeout_fn_list.head; f; f = f->next)
+    f->fn();
+}
+
+void __gcov_reset(void) {
+  for (struct fn_node *f = reset_fn_list.head; f; f = f->next)
+    f->fn();
 }
 
 #endif
