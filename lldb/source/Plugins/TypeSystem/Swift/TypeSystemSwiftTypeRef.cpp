@@ -1500,7 +1500,15 @@ TypeSystemSwiftTypeRef::GetArrayElementType(opaque_compiler_type_t type,
 }
 CompilerType
 TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetCanonicalType(ReconstructType(type));
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer canonical =
+        GetCanonicalDemangleTree(GetModule(), Dem, AsMangledName(type));
+    ConstString mangled(mangleNode(canonical));
+    return GetTypeFromMangledTypename(mangled);
+  };
+  VALIDATE_AND_RETURN(impl, GetCanonicalType, type, (ReconstructType(type)));
 }
 int TypeSystemSwiftTypeRef::GetFunctionArgumentCount(
     opaque_compiler_type_t type) {
