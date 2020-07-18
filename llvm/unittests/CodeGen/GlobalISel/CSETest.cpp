@@ -96,6 +96,15 @@ TEST_F(AArch64GISelMITest, TestCSE) {
   auto CSEFMul =
       CSEB.buildInstr(TargetOpcode::G_AND, {s32}, {Copies[0], Copies[1]});
   EXPECT_EQ(&*CSEFMul, &*NonCSEFMul);
+
+  auto ExtractMIB = CSEB.buildInstr(TargetOpcode::G_EXTRACT, {s16},
+                                    {Copies[0], static_cast<uint64_t>(0)});
+  auto ExtractMIB1 = CSEB.buildInstr(TargetOpcode::G_EXTRACT, {s16},
+                                     {Copies[0], static_cast<uint64_t>(0)});
+  auto ExtractMIB2 = CSEB.buildInstr(TargetOpcode::G_EXTRACT, {s16},
+                                     {Copies[0], static_cast<uint64_t>(1)});
+  EXPECT_EQ(&*ExtractMIB, &*ExtractMIB1);
+  EXPECT_NE(&*ExtractMIB, &*ExtractMIB2);
 }
 
 TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
