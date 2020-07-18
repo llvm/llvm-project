@@ -2694,8 +2694,11 @@ the configuration (without a prefix: ``Auto``).
     Use tabs whenever we need to fill whitespace that spans at least from
     one tab stop to the next one.
 
+
+
 **WhitespaceSensitiveMacros** (``std::vector<std::string>``)
-  A vector of macros which are whitespace-sensitive and should not be touched.
+  A vector of macros which are whitespace-sensitive and should not
+  be touched.
 
   These are expected to be macros of the form:
 
@@ -2709,9 +2712,7 @@ the configuration (without a prefix: ``Auto``).
 
     WhitespaceSensitiveMacros: ['STRINGIZE', 'PP_STRINGIZE']
 
-  For example: BOOST_PP_STRINGIZE.
-
-
+  For example: BOOST_PP_STRINGIZE
 
 .. END_FORMAT_STYLE_OPTIONS
 
