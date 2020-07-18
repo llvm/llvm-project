@@ -536,7 +536,7 @@ void test_precond() {
 }
 
 // TERM_DEBUG-LABEL: foo
-int foo() {return 0;};
+int foo() { extern void mayThrow(); mayThrow(); return 0;};
 
 // TERM_DEBUG-LABEL: parallel_for
 void parallel_for(float *a) {
