@@ -934,6 +934,8 @@ def err_lambda_capture_misplaced_ellipsis : Error<
   "the name of the capture">;
 def err_lambda_capture_multiple_ellipses : Error<
   "multiple ellipses in pack capture">;
+def err_capture_default_first : Error<
+  "capture default must be first">;
 // C++17 lambda expressions
 def err_expected_star_this_capture : Error<
   "expected 'this' following '*' in lambda capture list">;
