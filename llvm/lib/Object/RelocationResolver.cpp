@@ -62,6 +62,8 @@ static bool supportsAArch64(uint64_t Type) {
   switch (Type) {
   case ELF::R_AARCH64_ABS32:
   case ELF::R_AARCH64_ABS64:
+  case ELF::R_AARCH64_PREL32:
+  case ELF::R_AARCH64_PREL64:
     return true;
   default:
     return false;
@@ -74,6 +76,10 @@ static uint64_t resolveAArch64(RelocationRef R, uint64_t S, uint64_t A) {
     return (S + getELFAddend(R)) & 0xFFFFFFFF;
   case ELF::R_AARCH64_ABS64:
     return S + getELFAddend(R);
+  case ELF::R_AARCH64_PREL32:
+    return (S + getELFAddend(R) - R.getOffset()) & 0xFFFFFFFF;
+  case ELF::R_AARCH64_PREL64:
+    return S + getELFAddend(R) - R.getOffset();
   default:
     llvm_unreachable("Invalid relocation type");
   }
@@ -152,6 +158,8 @@ static bool supportsPPC64(uint64_t Type) {
   switch (Type) {
   case ELF::R_PPC64_ADDR32:
   case ELF::R_PPC64_ADDR64:
+  case ELF::R_PPC64_REL32:
+  case ELF::R_PPC64_REL64:
     return true;
   default:
     return false;
@@ -164,6 +172,10 @@ static uint64_t resolvePPC64(RelocationRef R, uint64_t S, uint64_t A) {
     return (S + getELFAddend(R)) & 0xFFFFFFFF;
   case ELF::R_PPC64_ADDR64:
     return S + getELFAddend(R);
+  case ELF::R_PPC64_REL32:
+    return (S + getELFAddend(R) - R.getOffset()) & 0xFFFFFFFF;
+  case ELF::R_PPC64_REL64:
+    return S + getELFAddend(R) - R.getOffset();
   default:
     llvm_unreachable("Invalid relocation type");
   }
@@ -259,12 +271,22 @@ static uint64_t resolveX86(RelocationRef R, uint64_t S, uint64_t A) {
 }
 
 static bool supportsPPC32(uint64_t Type) {
-  return Type == ELF::R_PPC_ADDR32;
+  switch (Type) {
+  case ELF::R_PPC_ADDR32:
+  case ELF::R_PPC_REL32:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static uint64_t resolvePPC32(RelocationRef R, uint64_t S, uint64_t A) {
-  if (R.getType() == ELF::R_PPC_ADDR32)
+  switch (R.getType()) {
+  case ELF::R_PPC_ADDR32:
     return (S + getELFAddend(R)) & 0xFFFFFFFF;
+  case ELF::R_PPC_REL32:
+    return (S + getELFAddend(R) - R.getOffset()) & 0xFFFFFFFF;
+  }
   llvm_unreachable("Invalid relocation type");
 }
 
