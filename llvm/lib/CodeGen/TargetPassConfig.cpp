@@ -879,7 +879,7 @@ bool TargetPassConfig::addISelPasses() {
     addPass(createLowerEmuTLSPass());
 
   addPass(createPreISelIntrinsicLoweringPass());
-  addPass(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
