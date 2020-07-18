@@ -7977,7 +7977,10 @@ public:
   /// CombinedInfo). Also, for each item that relates with a device pointer, a
   /// pair of the relevant declaration and index where it occurs is appended to
   /// the device pointers info array.
-  void generateAllInfo(MapCombinedInfoTy &CombinedInfo) const {
+  void generateAllInfo(
+      MapCombinedInfoTy &CombinedInfo,
+      const llvm::DenseSet<CanonicalDeclPtr<const Decl>> &SkipVarSet =
+          llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) const {
     // We have to process the component lists that relate with the same
     // declaration in a single chunk so that we can generate the map flags
     // correctly. Therefore, we organize all lists in a map.
@@ -7986,14 +7989,17 @@ public:
     // Helper function to fill the information map for the different supported
     // clauses.
     auto &&InfoGen =
-        [&Info](const ValueDecl *D,
-                OMPClauseMappableExprCommon::MappableExprComponentListRef L,
-                OpenMPMapClauseKind MapType,
-                ArrayRef<OpenMPMapModifierKind> MapModifiers,
-                bool ReturnDevicePointer, bool IsImplicit,
-                const ValueDecl *Mapper, bool ForDeviceAddr = false) {
+        [&Info, &SkipVarSet](
+            const ValueDecl *D,
+            OMPClauseMappableExprCommon::MappableExprComponentListRef L,
+            OpenMPMapClauseKind MapType,
+            ArrayRef<OpenMPMapModifierKind> MapModifiers,
+            bool ReturnDevicePointer, bool IsImplicit, const ValueDecl *Mapper,
+            bool ForDeviceAddr = false) {
           const ValueDecl *VD =
               D ? cast<ValueDecl>(D->getCanonicalDecl()) : nullptr;
+          if (SkipVarSet.count(VD))
+            return;
           Info[VD].emplace_back(L, MapType, MapModifiers, ReturnDevicePointer,
                                 IsImplicit, Mapper, ForDeviceAddr);
         };
@@ -8558,38 +8564,6 @@ public:
                                      CombinedInfo, PartialStruct,
                                      IsFirstComponentList, IsImplicit, Mapper);
       IsFirstComponentList = false;
-    }
-  }
-
-  /// Generate the base pointers, section pointers, sizes, map types, and
-  /// mappers associated with the declare target link variables (all included in
-  /// \a CombinedInfo).
-  void generateInfoForDeclareTargetLink(MapCombinedInfoTy &CombinedInfo) const {
-    assert(CurDir.is<const OMPExecutableDirective *>() &&
-           "Expect a executable directive");
-    const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();
-    // Map other list items in the map clause which are not captured variables
-    // but "declare target link" global variables.
-    for (const auto *C : CurExecDir->getClausesOfKind<OMPMapClause>()) {
-      for (const auto L : C->component_lists()) {
-        if (!std::get<0>(L))
-          continue;
-        const auto *VD = dyn_cast_or_null<VarDecl>(std::get<0>(L));
-        if (!VD)
-          continue;
-        llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-            OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
-        if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
-            !Res || *Res != OMPDeclareTargetDeclAttr::MT_Link)
-          continue;
-        StructRangeInfoTy PartialStruct;
-        generateInfoForComponentList(
-            C->getMapType(), C->getMapTypeModifiers(), std::get<1>(L),
-            CombinedInfo, PartialStruct, /*IsFirstComponentList=*/true,
-            C->isImplicit());
-        assert(!PartialStruct.Base.isValid() &&
-               "No partial structs for declare target link expected.");
-      }
     }
   }
 
@@ -9521,6 +9495,7 @@ void CGOpenMPRuntime::emitTargetCall(
     // Get mappable expression information.
     MappableExprsHandler MEHandler(D, CGF);
     llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
+    llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
 
     auto RI = CS.getCapturedRecordDecl()->field_begin();
     auto CV = CapturedVars.begin();
@@ -9546,6 +9521,10 @@ void CGOpenMPRuntime::emitTargetCall(
         // If we have any information in the map clause, we use it, otherwise we
         // just do a default mapping.
         MEHandler.generateInfoForCapture(CI, *CV, CurInfo, PartialStruct);
+        if (!CI->capturesThis())
+          MappedVarSet.insert(CI->getCapturedVar());
+        else
+          MappedVarSet.insert(nullptr);
         if (CurInfo.BasePointers.empty())
           MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo);
         // Generate correct mapping for variables captured by reference in
@@ -9575,9 +9554,9 @@ void CGOpenMPRuntime::emitTargetCall(
     MEHandler.adjustMemberOfForLambdaCaptures(
         LambdaPointers, CombinedInfo.BasePointers, CombinedInfo.Pointers,
         CombinedInfo.Types);
-    // Map other list items in the map clause which are not captured variables
-    // but "declare target link" global variables.
-    MEHandler.generateInfoForDeclareTargetLink(CombinedInfo);
+    // Map any list items in a map clause that were not captures because they
+    // weren't referenced within the construct.
+    MEHandler.generateAllInfo(CombinedInfo, MappedVarSet);
 
     TargetDataInfo Info;
     // Fill up the arrays and create the arguments.
