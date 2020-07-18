@@ -1,4 +1,5 @@
-; RUN: opt < %s -asan -S -o %t.ll
+; RUN: opt < %s -asan -enable-new-pm=0 -S -o %t.ll
+; RUN: opt < %s -passes='asan-function-pipeline' -S -o %t.ll
 ; RUN: FileCheck %s < %t.ll
 
 ; Don't do stack malloc on functions containing inline assembly on 64-bit
