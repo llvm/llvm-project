@@ -7,8 +7,7 @@
 
 ; CHECK-NOT:  warning:
 ; CHECK: FDE cie=00000000 pc=00000000...00000004
-;; TODO Take relocation into consideration
-; CHECK: FDE cie=00000000 pc=00000000...00000004
+; CHECK: FDE cie=00000000 pc=00000004...00000008
 
 define void @foo() {
 entry:
