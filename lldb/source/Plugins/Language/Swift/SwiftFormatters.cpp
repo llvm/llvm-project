@@ -1037,13 +1037,12 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   // dynamic archetype (and hence its size). Everything follows naturally
   // as the elements are laid out in a contigous buffer without padding.
   CompilerType simd_type = valobj.GetCompilerType().GetCanonicalType();
-  void *type_buffer = reinterpret_cast<void *>(simd_type.GetOpaqueQualType());
   llvm::Optional<uint64_t> opt_type_size = simd_type.GetByteSize(nullptr);
   if (!opt_type_size)
     return false;
   uint64_t type_size = *opt_type_size;
 
-  auto swift_type = reinterpret_cast<::swift::TypeBase *>(type_buffer);
+  ::swift::TypeBase *swift_type = GetSwiftType(simd_type).getPointer();
   auto bound_type = dyn_cast<::swift::BoundGenericType>(swift_type);
   if (!bound_type)
     return false;
