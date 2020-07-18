@@ -34,6 +34,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 
@@ -293,6 +294,25 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
           return true;
         } else if (Name == "check-debugify") {
           MPM.addPass(NewPMCheckDebugifyPass());
+          return true;
+        }
+        return false;
+      });
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, ModulePassManager &MPM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name == "asan-pipeline") {
+          MPM.addPass(
+              RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
+          MPM.addPass(
+              createModuleToFunctionPassAdaptor(AddressSanitizerPass()));
+          MPM.addPass(ModuleAddressSanitizerPass());
+          return true;
+        } else if (Name == "asan-function-pipeline") {
+          MPM.addPass(
+              RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
+          MPM.addPass(
+              createModuleToFunctionPassAdaptor(AddressSanitizerPass()));
           return true;
         }
         return false;
