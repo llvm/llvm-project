@@ -1425,15 +1425,20 @@ struct FormatStyle {
   /// For example: TESTSUITE
   std::vector<std::string> NamespaceMacros;
 
-  /// A vector of macros which are whitespace-sensitive and shouldn't be
-  /// touched.
+  /// A vector of macros which are whitespace-sensitive and should not
+  /// be touched.
   ///
   /// These are expected to be macros of the form:
   /// \code
   ///   STRINGIZE(...)
   /// \endcode
   ///
-  /// For example: STRINGIZE
+  /// In the .clang-format configuration file, this can be configured like:
+  /// \code{.yaml}
+  ///   WhitespaceSensitiveMacros: ['STRINGIZE', 'PP_STRINGIZE']
+  /// \endcode
+  ///
+  /// For example: BOOST_PP_STRINGIZE
   std::vector<std::string> WhitespaceSensitiveMacros;
 
   tooling::IncludeStyle IncludeStyle;
