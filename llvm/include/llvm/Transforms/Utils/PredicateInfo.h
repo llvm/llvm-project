@@ -83,37 +83,31 @@ public:
   // predicates, this is different to OriginalOp which refers to the initial
   // operand.
   Value *RenamedOp;
+  // The condition associated with this predicate.
+  Value *Condition;
+
   PredicateBase(const PredicateBase &) = delete;
   PredicateBase &operator=(const PredicateBase &) = delete;
   PredicateBase() = delete;
   virtual ~PredicateBase() = default;
-
-protected:
-  PredicateBase(PredicateType PT, Value *Op) : Type(PT), OriginalOp(Op) {}
-};
-
-class PredicateWithCondition : public PredicateBase {
-public:
-  Value *Condition;
   static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Assume || PB->Type == PT_Branch ||
            PB->Type == PT_Switch;
   }
 
 protected:
-  PredicateWithCondition(PredicateType PT, Value *Op, Value *Condition)
-      : PredicateBase(PT, Op), Condition(Condition) {}
+  PredicateBase(PredicateType PT, Value *Op, Value *Condition)
+      : Type(PT), OriginalOp(Op), Condition(Condition) {}
 };
 
 // Provides predicate information for assumes.  Since assumes are always true,
 // we simply provide the assume instruction, so you can tell your relative
 // position to it.
-class PredicateAssume : public PredicateWithCondition {
+class PredicateAssume : public PredicateBase {
 public:
   IntrinsicInst *AssumeInst;
   PredicateAssume(Value *Op, IntrinsicInst *AssumeInst, Value *Condition)
-      : PredicateWithCondition(PT_Assume, Op, Condition),
-        AssumeInst(AssumeInst) {}
+      : PredicateBase(PT_Assume, Op, Condition), AssumeInst(AssumeInst) {}
   PredicateAssume() = delete;
   static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Assume;
@@ -123,7 +117,7 @@ public:
 // Mixin class for edge predicates.  The FROM block is the block where the
 // predicate originates, and the TO block is the block where the predicate is
 // valid.
-class PredicateWithEdge : public PredicateWithCondition {
+class PredicateWithEdge : public PredicateBase {
 public:
   BasicBlock *From;
   BasicBlock *To;
@@ -135,7 +129,7 @@ public:
 protected:
   PredicateWithEdge(PredicateType PType, Value *Op, BasicBlock *From,
                     BasicBlock *To, Value *Cond)
-      : PredicateWithCondition(PType, Op, Cond), From(From), To(To) {}
+      : PredicateBase(PType, Op, Cond), From(From), To(To) {}
 };
 
 // Provides predicate information for branches.
