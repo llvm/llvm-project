@@ -601,15 +601,15 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool isPositive(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
+static bool isNonNegative(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
   Constant *Zero = ConstantInt::get(V->getType(), 0);
   auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SGE, V, Zero, CxtI);
   return Result == LazyValueInfo::True;
 }
 
-static bool hasPositiveOperands(BinaryOperator *SDI, LazyValueInfo *LVI) {
+static bool allOperandsAreNonNegative(BinaryOperator *SDI, LazyValueInfo *LVI) {
   return all_of(SDI->operands(),
-                [&](Value *Op) { return isPositive(Op, LVI, SDI); });
+                [&](Value *Op) { return isNonNegative(Op, LVI, SDI); });
 }
 
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's
@@ -655,7 +655,7 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 }
 
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() || !hasPositiveOperands(SDI, LVI))
+  if (SDI->getType()->isVectorTy() || !allOperandsAreNonNegative(SDI, LVI))
     return false;
 
   ++NumSRems;
@@ -677,7 +677,7 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
 /// conditions, this can sometimes prove conditions instcombine can't by
 /// exploiting range information.
 static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() || !hasPositiveOperands(SDI, LVI))
+  if (SDI->getType()->isVectorTy() || !allOperandsAreNonNegative(SDI, LVI))
     return false;
 
   ++NumSDivs;
@@ -698,7 +698,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
-  if (!isPositive(SDI->getOperand(0), LVI, SDI))
+  if (!isNonNegative(SDI->getOperand(0), LVI, SDI))
     return false;
 
   ++NumAShrs;
@@ -718,7 +718,7 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
 
   Value *Base = SDI->getOperand(0);
 
-  if (!isPositive(Base, LVI, SDI))
+  if (!isNonNegative(Base, LVI, SDI))
     return false;
 
   ++NumSExt;
