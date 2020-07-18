@@ -222,6 +222,7 @@ public:
   NODE(CommonStmt, Block)
   NODE(parser, CompilerDirective)
   NODE(CompilerDirective, IgnoreTKR)
+  NODE(CompilerDirective, NameValue)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)
