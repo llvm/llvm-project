@@ -521,9 +521,9 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
                                    "parsing FDE data at 0x%" PRIx64
                                    " failed due to missing CIE",
                                    StartOffset);
-        if (auto Val = Data.getEncodedPointer(
-                &Offset, Cie->getFDEPointerEncoding(),
-                EHFrameAddress ? EHFrameAddress + Offset : 0)) {
+        if (auto Val =
+                Data.getEncodedPointer(&Offset, Cie->getFDEPointerEncoding(),
+                                       EHFrameAddress + Offset)) {
           InitialLocation = *Val;
         }
         if (auto Val = Data.getEncodedPointer(
