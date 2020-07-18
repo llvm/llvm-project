@@ -162,11 +162,12 @@ void OpenStatementState::set_path(
 }
 
 int OpenStatementState::EndIoStatement() {
-  if (wasExtant_ && status_ != OpenStatus::Old) {
-    SignalError("OPEN statement for connected unit must have STATUS='OLD'");
+  if (wasExtant_ && status_ && *status_ != OpenStatus::Old) {
+    SignalError("OPEN statement for connected unit may not have STATUS= other "
+                "than 'OLD'");
   }
-  unit().OpenUnit(
-      status_, action_, position_, std::move(path_), pathLength_, *this);
+  unit().OpenUnit(status_.value_or(OpenStatus::Unknown), action_, position_,
+      std::move(path_), pathLength_, *this);
   return ExternalIoStatementBase::EndIoStatement();
 }
 

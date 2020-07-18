@@ -302,7 +302,7 @@ public:
 
 private:
   bool wasExtant_;
-  OpenStatus status_{OpenStatus::Unknown};
+  std::optional<OpenStatus> status_;
   Position position_{Position::AsIs};
   std::optional<Action> action_;
   OwningPtr<char> path_;
