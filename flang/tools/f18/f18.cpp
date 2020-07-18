@@ -600,7 +600,7 @@ int main(int argc, char *const argv[]) {
       driver.getDefinitionArgs = {arguments[0], arguments[1], arguments[2]};
     } else if (arg == "-fget-symbols-sources") {
       driver.getSymbolsSources = true;
-    } else if (arg == "-help" || arg == "--help" || arg == "-?") {
+    } else if (arg == "-h" || arg == "-help" || arg == "--help" || arg == "-?") {
       llvm::errs()
           << "f18: LLVM Fortran compiler\n"
           << "\n"

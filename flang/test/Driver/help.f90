@@ -1,3 +1,4 @@
+! RUN: %f18 -h 2>&1 | FileCheck %s
 ! RUN: %f18 -help 2>&1 | FileCheck %s
 ! RUN: %f18 --help 2>&1 | FileCheck %s
 ! RUN: %f18 -? 2>&1 | FileCheck %s
