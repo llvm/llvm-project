@@ -653,7 +653,7 @@ public:
            "New instruction already inserted into a basic block!");
     BasicBlock *BB = Old.getParent();
     BB->getInstList().insert(Old.getIterator(), New); // Insert inst
-    Worklist.push(New);
+    Worklist.add(New);
     return New;
   }
 
