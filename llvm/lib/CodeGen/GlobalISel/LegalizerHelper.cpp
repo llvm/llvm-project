@@ -1645,7 +1645,7 @@ LegalizerHelper::widenScalarExtract(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarInsert(MachineInstr &MI, unsigned TypeIdx,
                                    LLT WideTy) {
-  if (TypeIdx != 0)
+  if (TypeIdx != 0 || WideTy.isVector())
     return UnableToLegalize;
   Observer.changingInstr(MI);
   widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
