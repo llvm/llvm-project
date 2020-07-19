@@ -157,10 +157,11 @@ private:
       else
         return ToSymbolOrErr.takeError();
     } else {
-      if (auto ToSymbolOrErr = findSymbolByAddress(FixupValue))
-        ToSymbol = &*ToSymbolOrErr;
-      else
-        return ToSymbolOrErr.takeError();
+      auto ToSymbolSec = findSectionByIndex(UnsignedRI.r_symbolnum - 1);
+      if (!ToSymbolSec)
+        return ToSymbolSec.takeError();
+      ToSymbol = getSymbolByAddress(ToSymbolSec->Address);
+      assert(ToSymbol && "No symbol for section");
       FixupValue -= ToSymbol->getAddress();
     }
 

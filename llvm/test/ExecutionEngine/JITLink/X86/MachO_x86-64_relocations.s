@@ -187,19 +187,19 @@ anon_func_addr_quad:
 
 # X86_64_RELOC_SUBTRACTOR Quad/Long in named storage with anonymous minuend
 #
-# jitlink-check: *{8}anon_minuend_quad1 = section_addr(macho_reloc.o, __data) - anon_minuend_quad1 + 2
+# jitlink-check: *{8}anon_minuend_quad1 = section_addr(macho_reloc.o, __data) - anon_minuend_quad1 - 2
 # Only the form "B: .quad LA - B + C" is tested. The form "B: .quad B - LA + C" is
 # invalid because the subtrahend can not be local.
         .globl  anon_minuend_quad1
         .p2align  3
 anon_minuend_quad1:
-        .quad Lanon_data - anon_minuend_quad1 + 2
+        .quad Lanon_data - anon_minuend_quad1 - 2
 
-# jitlink-check: *{4}anon_minuend_long1 = (section_addr(macho_reloc.o, __data) - anon_minuend_long1 + 2)[31:0]
+# jitlink-check: *{4}anon_minuend_long1 = (section_addr(macho_reloc.o, __data) - anon_minuend_long1 - 2)[31:0]
         .globl  anon_minuend_long1
         .p2align  2
 anon_minuend_long1:
-        .long Lanon_data - anon_minuend_long1 + 2
+        .long Lanon_data - anon_minuend_long1 - 2
 
 # Check X86_64_RELOC_SUBTRACTOR Quad/Long in named storage with minuend and subtrahend.
 # Both forms "A: .quad A - B + C" and "A: .quad B - A + C" are tested.
