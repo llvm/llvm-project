@@ -2171,7 +2171,7 @@ namespace PR21859 {
   template <typename T> constexpr int FunT1() { return; } // expected-error {{non-void constexpr function 'FunT1' should return a value}}
   template <typename T> constexpr int FunT2() { return 0; }
   template <> constexpr int FunT2<double>() { return 0; }
-  template <> constexpr int FunT2<int>() { return; } // expected-error {{non-void constexpr function 'FunT2' should return a value}}
+  template <> constexpr int FunT2<int>() { return; } // expected-error {{non-void constexpr function 'FunT2<int>' should return a value}}
 }
 
 struct InvalidRedef {
