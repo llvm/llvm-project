@@ -77,8 +77,9 @@ protected:
             if (J->getOperand(0).getMBB() == &ReturnMBB) {
               // This is an unconditional branch to the return. Replace the
               // branch with a blr.
-              BuildMI(**PI, J, J->getDebugLoc(), TII->get(I->getOpcode()))
-                  .copyImplicitOps(*I);
+              MachineInstr *MI = ReturnMBB.getParent()->CloneMachineInstr(&*I);
+              (*PI)->insert(J, MI);
+
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
               BlockChanged = true;
@@ -89,10 +90,13 @@ protected:
             if (J->getOperand(2).getMBB() == &ReturnMBB) {
               // This is a conditional branch to the return. Replace the branch
               // with a bclr.
-              BuildMI(**PI, J, J->getDebugLoc(), TII->get(PPC::BCCLR))
+              MachineInstr *MI = ReturnMBB.getParent()->CloneMachineInstr(&*I);
+              MI->setDesc(TII->get(PPC::BCCLR));
+              MachineInstrBuilder(*ReturnMBB.getParent(), MI)
                   .add(J->getOperand(0))
-                  .add(J->getOperand(1))
-                  .copyImplicitOps(*I);
+                  .add(J->getOperand(1));
+              (*PI)->insert(J, MI);
+
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
               BlockChanged = true;
@@ -103,11 +107,13 @@ protected:
             if (J->getOperand(1).getMBB() == &ReturnMBB) {
               // This is a conditional branch to the return. Replace the branch
               // with a bclr.
-              BuildMI(
-                  **PI, J, J->getDebugLoc(),
-                  TII->get(J->getOpcode() == PPC::BC ? PPC::BCLR : PPC::BCLRn))
-                  .add(J->getOperand(0))
-                  .copyImplicitOps(*I);
+              MachineInstr *MI = ReturnMBB.getParent()->CloneMachineInstr(&*I);
+              MI->setDesc(
+                  TII->get(J->getOpcode() == PPC::BC ? PPC::BCLR : PPC::BCLRn));
+              MachineInstrBuilder(*ReturnMBB.getParent(), MI)
+                  .add(J->getOperand(0));
+              (*PI)->insert(J, MI);
+
               MachineBasicBlock::iterator K = J--;
               K->eraseFromParent();
               BlockChanged = true;
