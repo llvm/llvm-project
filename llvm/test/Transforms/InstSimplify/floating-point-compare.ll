@@ -1041,9 +1041,7 @@ define <2 x i1> @unorderedCompareWithNaNVector_undef_elt(<2 x double> %A) {
 
 define i1 @is_infinite(float %x) {
 ; CHECK-LABEL: @is_infinite(
-; CHECK-NEXT:    [[XABS:%.*]] = call ninf float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[XABS]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xabs = call ninf float @llvm.fabs.f32(float %x)
   %r = fcmp oeq float %xabs, 0x7FF0000000000000
@@ -1052,14 +1050,14 @@ define i1 @is_infinite(float %x) {
 
 define <2 x i1> @is_infinite_neg(<2 x float> %x) {
 ; CHECK-LABEL: @is_infinite_neg(
-; CHECK-NEXT:    [[X42:%.*]] = fadd ninf <2 x float> [[X:%.*]], <float 4.200000e+01, float 4.200000e+01>
-; CHECK-NEXT:    [[R:%.*]] = fcmp oeq <2 x float> [[X42]], <float 0xFFF0000000000000, float 0xFFF0000000000000>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x42 = fadd ninf <2 x float> %x, <float 42.0, float 42.0>
   %r = fcmp oeq <2 x float> %x42, <float 0xFFF0000000000000, float 0xFFF0000000000000>
   ret <2 x i1> %r
 }
+
+; Negative test - but this could be reduced to 'uno' outside of instsimplify.
 
 define i1 @is_infinite_or_nan(float %x) {
 ; CHECK-LABEL: @is_infinite_or_nan(
@@ -1074,10 +1072,7 @@ define i1 @is_infinite_or_nan(float %x) {
 
 define i1 @is_finite_or_nan(i1 %c, double %x) {
 ; CHECK-LABEL: @is_finite_or_nan(
-; CHECK-NEXT:    [[XX:%.*]] = fmul ninf double [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], double 4.200000e+01, double [[XX]]
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[S]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %xx = fmul ninf double %x, %x
   %s = select i1 %c, double 42.0, double %xx
@@ -1087,14 +1082,14 @@ define i1 @is_finite_or_nan(i1 %c, double %x) {
 
 define <2 x i1> @is_finite_or_nan_commute(<2 x i8> %x) {
 ; CHECK-LABEL: @is_finite_or_nan_commute(
-; CHECK-NEXT:    [[CAST:%.*]] = uitofp <2 x i8> [[X:%.*]] to <2 x float>
-; CHECK-NEXT:    [[R:%.*]] = fcmp une <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, [[CAST]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %cast = uitofp <2 x i8> %x to <2 x float>
   %r = fcmp une <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
   ret <2 x i1> %r
 }
+
+; Negative test - but this could be reduced to 'ord' outside of instsimplify.
 
 define i1 @is_finite_and_ordered(double %x) {
 ; CHECK-LABEL: @is_finite_and_ordered(
