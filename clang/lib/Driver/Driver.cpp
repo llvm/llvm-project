@@ -4785,8 +4785,7 @@ void Driver::generatePrefixedToolNames(
     Names.emplace_back((DefaultTargetTriple + "-" + Tool).str());
 }
 
-static bool ScanDirForExecutable(SmallString<128> &Dir,
-                                 const std::string &Name) {
+static bool ScanDirForExecutable(SmallString<128> &Dir, StringRef Name) {
   llvm::sys::path::append(Dir, Name);
   if (llvm::sys::fs::can_execute(Twine(Dir)))
     return true;
@@ -4803,9 +4802,8 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   for (const auto &PrefixDir : PrefixDirs) {
     if (llvm::sys::fs::is_directory(PrefixDir)) {
       SmallString<128> P(PrefixDir);
-      for (const auto &TargetSpecificExecutable : TargetSpecificExecutables)
-        if (ScanDirForExecutable(P, TargetSpecificExecutable))
-          return std::string(P.str());
+      if (ScanDirForExecutable(P, Name))
+        return std::string(P.str());
     } else {
       SmallString<128> P((PrefixDir + Name).str());
       if (llvm::sys::fs::can_execute(Twine(P)))
