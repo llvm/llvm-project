@@ -1748,6 +1748,13 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   if (C.getArgs().hasArg(options::OPT_print_search_dirs)) {
     llvm::outs() << "programs: =";
     bool separator = false;
+    // Print -B and COMPILER_PATH.
+    for (const std::string &Path : PrefixDirs) {
+      if (separator)
+        llvm::outs() << llvm::sys::EnvPathSeparator;
+      llvm::outs() << Path;
+      separator = true;
+    }
     for (const std::string &Path : TC.getProgramPaths()) {
       if (separator)
         llvm::outs() << llvm::sys::EnvPathSeparator;
