@@ -391,7 +391,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
       attrs = str(func_dict[checkprefix][func_name].attrs)
       attrs = '' if attrs == 'None' else attrs
       if attrs:
-        output_lines.append('%s %s: Function Attrs: %s;' % (comment_marker, checkprefix, attrs))
+        output_lines.append('%s %s: Function Attrs: %s' % (comment_marker, checkprefix, attrs))
       args_and_sig = str(func_dict[checkprefix][func_name].args_and_sig)
       args_and_sig = genericize_check_lines([args_and_sig], is_analyze, vars_seen)[0]
       if '[[' in args_and_sig:
