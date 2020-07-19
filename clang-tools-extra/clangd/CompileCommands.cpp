@@ -354,7 +354,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
 #define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELP, METAVAR, VALUES)                                          \
-  if (DriverID::OPT_##ALIAS != DriverID::OPT_INVALID && !ALIASARGS)            \
+  if (DriverID::OPT_##ALIAS != DriverID::OPT_INVALID && ALIASARGS == nullptr)  \
     AddAlias(DriverID::OPT_##ID, DriverID::OPT_##ALIAS);                       \
   Prefixes[DriverID::OPT_##ID] = PREFIX;
 #include "clang/Driver/Options.inc"
