@@ -459,7 +459,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
 
 /// True if an instruction is in tail position in its caller. Intended for
 /// legalizing libcalls as tail calls when possible.
-static bool isLibCallInTailPosition(MachineInstr &MI) {
+static bool isLibCallInTailPosition(const TargetInstrInfo &TII,
+                                    MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const Function &F = MBB.getParent()->getFunction();
 
@@ -479,7 +480,6 @@ static bool isLibCallInTailPosition(MachineInstr &MI) {
     return false;
 
   // Only tail call if the following instruction is a standard return.
-  auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
   auto Next = next_nodbg(MI.getIterator(), MBB.instr_end());
   if (Next == MBB.instr_end() || TII.isTailCall(*Next) || !Next->isReturn())
     return false;
@@ -575,7 +575,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   Info.Callee = MachineOperand::CreateES(Name);
   Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx));
   Info.IsTailCall = MI.getOperand(MI.getNumOperands() - 1).getImm() == 1 &&
-                    isLibCallInTailPosition(MI);
+                    isLibCallInTailPosition(MIRBuilder.getTII(), MI);
 
   std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
   if (!CLI.lowerCall(MIRBuilder, Info))
@@ -2189,8 +2189,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // Avoid changing the result vector type if the source element type was
     // requested.
     if (TypeIdx == 1) {
-      auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
-      MI.setDesc(TII.get(TargetOpcode::G_BUILD_VECTOR_TRUNC));
+      MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::G_BUILD_VECTOR_TRUNC));
     } else {
       widenScalarDst(MI, WideTy, 0);
     }
@@ -4289,7 +4288,7 @@ LegalizerHelper::narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   unsigned Opc = MI.getOpcode();
-  auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
+  const auto &TII = MIRBuilder.getTII();
   auto isSupported = [this](const LegalityQuery &Q) {
     auto QAction = LI.getAction(Q).Action;
     return QAction == Legal || QAction == Libcall || QAction == Custom;
