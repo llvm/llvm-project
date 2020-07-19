@@ -6363,6 +6363,36 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                               Op1, Op2, Op3, DAG, TLI));
     return;
   }
+  case Intrinsic::smax: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::SMAX, sdl, Op1.getValueType(), Op1, Op2));
+    return;
+  }
+  case Intrinsic::smin: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::SMIN, sdl, Op1.getValueType(), Op1, Op2));
+    return;
+  }
+  case Intrinsic::umax: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::UMAX, sdl, Op1.getValueType(), Op1, Op2));
+    return;
+  }
+  case Intrinsic::umin: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::UMIN, sdl, Op1.getValueType(), Op1, Op2));
+    return;
+  }
+  case Intrinsic::abs: {
+    // TODO: Preserve "int min is poison" arg in SDAG?
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    setValue(&I, DAG.getNode(ISD::ABS, sdl, Op1.getValueType(), Op1));
+    return;
+  }
   case Intrinsic::stacksave: {
     SDValue Op = getRoot();
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
