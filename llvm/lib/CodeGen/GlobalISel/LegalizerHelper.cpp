@@ -77,6 +77,8 @@ static Type *getFloatTypeForLLT(LLVMContext &Ctx, LLT Ty) {
     return Type::getFloatTy(Ctx);
   case 64:
     return Type::getDoubleTy(Ctx);
+  case 80:
+    return Type::getX86_FP80Ty(Ctx);
   case 128:
     return Type::getFP128Ty(Ctx);
   default:
@@ -386,7 +388,7 @@ void LegalizerHelper::buildWidenedRemergeToDst(Register DstReg, LLT LCMTy,
 }
 
 static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
-#define RTLIBCASE(LibcallPrefix)                                               \
+#define RTLIBCASE_INT(LibcallPrefix)                                           \
   do {                                                                         \
     switch (Size) {                                                            \
     case 32:                                                                   \
@@ -400,19 +402,33 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     }                                                                          \
   } while (0)
 
-  assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
+#define RTLIBCASE(LibcallPrefix)                                               \
+  do {                                                                         \
+    switch (Size) {                                                            \
+    case 32:                                                                   \
+      return RTLIB::LibcallPrefix##32;                                         \
+    case 64:                                                                   \
+      return RTLIB::LibcallPrefix##64;                                         \
+    case 80:                                                                   \
+      return RTLIB::LibcallPrefix##80;                                         \
+    case 128:                                                                  \
+      return RTLIB::LibcallPrefix##128;                                        \
+    default:                                                                   \
+      llvm_unreachable("unexpected size");                                     \
+    }                                                                          \
+  } while (0)
 
   switch (Opcode) {
   case TargetOpcode::G_SDIV:
-    RTLIBCASE(SDIV_I);
+    RTLIBCASE_INT(SDIV_I);
   case TargetOpcode::G_UDIV:
-    RTLIBCASE(UDIV_I);
+    RTLIBCASE_INT(UDIV_I);
   case TargetOpcode::G_SREM:
-    RTLIBCASE(SREM_I);
+    RTLIBCASE_INT(SREM_I);
   case TargetOpcode::G_UREM:
-    RTLIBCASE(UREM_I);
+    RTLIBCASE_INT(UREM_I);
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
-    RTLIBCASE(CTLZ_I);
+    RTLIBCASE_INT(CTLZ_I);
   case TargetOpcode::G_FADD:
     RTLIBCASE(ADD_F);
   case TargetOpcode::G_FSUB:
@@ -455,6 +471,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(RINT_F);
   case TargetOpcode::G_FNEARBYINT:
     RTLIBCASE(NEARBYINT_F);
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    RTLIBCASE(ROUNDEVEN_F);
   }
   llvm_unreachable("Unknown libcall function");
 }
@@ -670,10 +688,11 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FRINT:
-  case TargetOpcode::G_FNEARBYINT: {
+  case TargetOpcode::G_FNEARBYINT:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN: {
     Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
-    if (!HLTy || (Size != 32 && Size != 64 && Size != 128)) {
-      LLVM_DEBUG(dbgs() << "No libcall available for size " << Size << ".\n");
+    if (!HLTy || (Size != 32 && Size != 64 && Size != 80 && Size != 128)) {
+      LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
       return UnableToLegalize;
     }
     auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy);
@@ -2163,6 +2182,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_INTRINSIC_TRUNC:
   case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
     assert(TypeIdx == 0);
     Observer.changingInstr(MI);
 
@@ -2363,6 +2383,13 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
   }
 }
 
+// Legalize an instruction by changing the opcode in place.
+void LegalizerHelper::changeOpcode(MachineInstr &MI, unsigned NewOpcode) {
+    Observer.changingInstr(MI);
+    MI.setDesc(MIRBuilder.getTII().get(NewOpcode));
+    Observer.changedInstr(MI);
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   using namespace TargetOpcode;
@@ -2461,6 +2488,12 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerFFloor(MI);
   case TargetOpcode::G_INTRINSIC_ROUND:
     return lowerIntrinsicRound(MI);
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN: {
+    // Since round even is the assumed rounding mode for unconstrained FP
+    // operations, rint and roundeven are the same operation.
+    changeOpcode(MI, TargetOpcode::G_FRINT);
+    return Legalized;
+  }
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
     Register OldValRes = MI.getOperand(0).getReg();
     Register SuccessRes = MI.getOperand(1).getReg();
@@ -3557,6 +3590,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FFLOOR:
   case G_FRINT:
   case G_INTRINSIC_ROUND:
+  case G_INTRINSIC_ROUNDEVEN:
   case G_INTRINSIC_TRUNC:
   case G_FCOS:
   case G_FSIN:
