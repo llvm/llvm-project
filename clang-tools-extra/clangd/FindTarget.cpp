@@ -302,6 +302,8 @@ public:
       // Record the underlying decl instead, if allowed.
       D = USD->getTargetDecl();
       Flags |= Rel::Underlying; // continue with the underlying decl.
+    } else if (const auto *DG = dyn_cast<CXXDeductionGuideDecl>(D)) {
+      D = DG->getDeducedTemplate();
     }
 
     if (const Decl *Pat = getTemplatePattern(D)) {
@@ -658,6 +660,15 @@ llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
                                   ND->getLocation(),
                                   /*IsDecl=*/true,
                                   {ND}});
+    }
+
+    void VisitCXXDeductionGuideDecl(const CXXDeductionGuideDecl *DG) {
+      // The class template name in a deduction guide targets the class
+      // template.
+      Refs.push_back(ReferenceLoc{DG->getQualifierLoc(),
+                                  DG->getNameInfo().getLoc(),
+                                  /*IsDecl=*/false,
+                                  {DG->getDeducedTemplate()}});
     }
   };
 
