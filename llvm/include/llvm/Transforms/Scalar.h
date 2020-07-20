@@ -370,6 +370,13 @@ Pass *createLowerMatrixIntrinsicsPass();
 
 //===----------------------------------------------------------------------===//
 //
+// LowerMatrixIntrinsicsMinimal - Lower matrix intrinsics to vector operations
+//                               (lightweight, does not require extra analysis)
+//
+Pass *createLowerMatrixIntrinsicsMinimalPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LowerWidenableCondition - Lower widenable condition to i1 true.
 //
 Pass *createLowerWidenableConditionPass();
