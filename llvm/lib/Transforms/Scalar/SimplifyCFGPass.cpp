@@ -62,6 +62,10 @@ static cl::opt<bool> UserForwardSwitchCond(
     "forward-switch-cond", cl::Hidden, cl::init(false),
     cl::desc("Forward switch condition to phi ops (default = false)"));
 
+static cl::opt<bool> UserHoistCommonInsts(
+    "hoist-common-insts", cl::Hidden, cl::init(true),
+    cl::desc("hoist common instructions (default = true)"));
+
 static cl::opt<bool> UserSinkCommonInsts(
     "sink-common-insts", cl::Hidden, cl::init(false),
     cl::desc("Sink common instructions (default = false)"));
@@ -222,6 +226,8 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.ConvertSwitchToLookupTable = UserSwitchToLookup;
   if (UserKeepLoops.getNumOccurrences())
     Options.NeedCanonicalLoop = UserKeepLoops;
+  if (UserHoistCommonInsts.getNumOccurrences())
+    Options.HoistCommonInsts = UserHoistCommonInsts;
   if (UserSinkCommonInsts.getNumOccurrences())
     Options.SinkCommonInsts = UserSinkCommonInsts;
 }
