@@ -1,4 +1,4 @@
-// REQUIRES: arm
+// REQUIRES: arm, shell
 // RUN: llvm-mc --arm-add-build-attributes --triple=armv7a-linux-gnueabihf -filetype=obj %s -o %t.o
 // RUN: echo "SECTIONS { \
 // RUN:         . = 0x80000000; \
