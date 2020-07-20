@@ -229,3 +229,30 @@ void ValueCategory() {
   // CHECK:  RecoveryExpr {{.*}} 'int' contains-errors xvalue
   xvalue(); // call to a function (rvalue reference return type) yields an xvalue.
 }
+
+void InvalidCondition() {
+  // CHECK:      IfStmt {{.*}}
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} <col:7, col:15> '<dependent type>' contains-errors
+  // CHECK-NEXT: | `-UnresolvedLookupExpr {{.*}} <col:7>
+  if (invalid()) {}
+
+  // CHECK:      WhileStmt {{.*}}
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} <col:10, col:18> '<dependent type>' contains-errors
+  // CHECK-NEXT: | `-UnresolvedLookupExpr {{.*}} <col:10>
+  while (invalid()) {}
+
+  // CHECK:      SwitchStmt {{.*}}
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: | `-UnresolvedLookupExpr {{.*}} <col:10>
+  switch(invalid()) {
+    case 1:
+      break;
+  }
+  // FIXME: figure out why the type of ConditionalOperator is not int.
+  // CHECK:      ConditionalOperator {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: | `-UnresolvedLookupExpr {{.*}}
+  // CHECK-NEXT: |-IntegerLiteral {{.*}} 'int' 1
+  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 2
+  invalid() ? 1 : 2;
+}
