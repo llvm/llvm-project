@@ -19,5 +19,5 @@ add_mlir_dialect_library(MLIRVector
   MLIRSCF
   MLIRLoopAnalysis
   MLIRSideEffectInterfaces
-  MLIRVectorUnrollInterface
+  MLIRVectorInterfaces
   )

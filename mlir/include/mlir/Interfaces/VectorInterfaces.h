@@ -1,4 +1,4 @@
-//===- VectorUnrollInterface.h - Vector unrolling interface ---------------===//
+//===- VectorInterfaces.h - Vector interfaces -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the operation interface for vector ops that can be
-// unrolled.
+// This file implements the operation interfaces for vector ops.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INTERFACES_VECTORUNROLLINTERFACE_H
-#define MLIR_INTERFACES_VECTORUNROLLINTERFACE_H
+#ifndef MLIR_INTERFACES_VECTORINTERFACES_H
+#define MLIR_INTERFACES_VECTORINTERFACES_H
 
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StandardTypes.h"
 
 /// Include the generated interface declarations.
-#include "mlir/Interfaces/VectorUnrollInterface.h.inc"
+#include "mlir/Interfaces/VectorInterfaces.h.inc"
 
-#endif // MLIR_INTERFACES_VECTORUNROLLINTERFACE_H
+#endif // MLIR_INTERFACES_VECTORINTERFACES_H

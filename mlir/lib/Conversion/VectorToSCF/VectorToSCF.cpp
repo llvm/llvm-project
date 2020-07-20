@@ -249,8 +249,8 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
       indexing.append(majorIvsPlusOffsets.begin(), majorIvsPlusOffsets.end());
       indexing.append(minorOffsets.begin(), minorOffsets.end());
       Value memref = xferOp.memref();
-      auto map = TransferReadOp::getTransferMinorIdentityMap(
-          xferOp.getMemRefType(), minorVectorType);
+      auto map =
+          getTransferMinorIdentityMap(xferOp.getMemRefType(), minorVectorType);
       ArrayAttr masked;
       if (!xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
         OpBuilder &b = ScopedContext::getBuilderRef();
@@ -353,8 +353,8 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
         result = vector_extract(xferOp.vector(), majorIvs);
       else
         result = std_load(alloc, majorIvs);
-      auto map = TransferWriteOp::getTransferMinorIdentityMap(
-          xferOp.getMemRefType(), minorVectorType);
+      auto map =
+          getTransferMinorIdentityMap(xferOp.getMemRefType(), minorVectorType);
       ArrayAttr masked;
       if (!xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
         OpBuilder &b = ScopedContext::getBuilderRef();
