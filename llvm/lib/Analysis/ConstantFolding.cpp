@@ -342,8 +342,12 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
     // pointers legally).
     if (C->isNullValue() && !DestTy->isX86_MMXTy())
       return Constant::getNullValue(DestTy);
-    if (C->isAllOnesValue() && !DestTy->isX86_MMXTy() &&
-        !DestTy->isPtrOrPtrVectorTy()) // Don't get ones for ptr types!
+    if (C->isAllOnesValue() &&
+        (DestTy->isIntegerTy() || DestTy->isFloatingPointTy() ||
+         DestTy->isVectorTy()) &&
+        !DestTy->isX86_MMXTy() && !DestTy->isPtrOrPtrVectorTy())
+      // Get ones when the input is trivial, but
+      // only for supported types inside getAllOnesValue.
       return Constant::getAllOnesValue(DestTy);
 
     // If the type sizes are the same and a cast is legal, just directly
