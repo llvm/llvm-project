@@ -1,9 +1,11 @@
-; RUN: opt -lower-matrix-intrinsics -fuse-matrix-tile-size=2 -matrix-allow-contract -force-fuse-matrix -instcombine -verify-dom-info %s -S | FileCheck %s
+; RUN: opt -lower-matrix-intrinsics -fuse-matrix-use-loops=false -fuse-matrix-tile-size=2 -matrix-allow-contract -force-fuse-matrix -instcombine -verify-dom-info %s -S | FileCheck %s
 
 ; REQUIRES: aarch64-registered-target
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "aarch64-apple-ios"
+
+; Test tiling without generating explicit loops.
 
 define void @multiply(<16 x double> * %A, <16 x double> * %B, <16 x double>* %C) {
 ; CHECK-LABEL: @multiply(
