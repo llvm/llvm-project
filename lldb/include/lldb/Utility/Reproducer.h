@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -149,6 +150,7 @@ public:
   }
 
   void Update(llvm::StringRef path) { m_cwd = std::string(path); }
+  llvm::StringRef GetWorkingDirectory() { return m_cwd; }
 
   struct Info {
     static const char *name;
