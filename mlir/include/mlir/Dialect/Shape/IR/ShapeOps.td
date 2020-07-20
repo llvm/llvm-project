@@ -610,8 +610,9 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
 def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", [Commutative]> {
   let summary = "Determines if 2 shapes can be successfully broadcasted";
   let description = [{
-    Given 2 input shapes, return a witness specifying if they are broadcastable.
-    This broadcastable follows the same logic as what shape.broadcast documents.
+    Given two input shapes or extent tensors, return a witness specifying if
+    they are broadcastable. This broadcastable follows the same logic as what
+    shape.broadcast documents.
 
     "cstr" operations represent runtime assertions.
 
@@ -622,10 +623,11 @@ def Shape_CstrBroadcastableOp : Shape_Op<"cstr_broadcastable", [Commutative]> {
     ```
   }];
 
-  let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs);
+  let arguments = (ins Shape_ShapeOrExtentTensorType:$lhs,
+                       Shape_ShapeOrExtentTensorType:$rhs);
   let results = (outs Shape_WitnessType:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs attr-dict";
+  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict";
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
