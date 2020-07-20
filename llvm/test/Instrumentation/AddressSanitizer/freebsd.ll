@@ -1,14 +1,29 @@
-; RUN: opt < %s -asan -asan-module -S \
+; RUN: opt < %s -asan -asan-module -S -enable-new-pm=0 \
 ; RUN:     -mtriple=i386-unknown-freebsd \
 ; RUN:     -data-layout="e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-32 %s
 
-; RUN: opt < %s -asan -asan-module -S \
+; RUN: opt < %s -passes='asan-pipeline' -S \
+; RUN:     -mtriple=i386-unknown-freebsd \
+; RUN:     -data-layout="e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128" | \
+; RUN:     FileCheck --check-prefix=CHECK-32 %s
+
+; RUN: opt < %s -asan -asan-module -S -enable-new-pm=0 \
 ; RUN:     -mtriple=x86_64-unknown-freebsd \
 ; RUN:     -data-layout="e-m:e-i64:64-f80:128-n8:16:32:64-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-64 %s
 
-; RUN: opt < %s -asan -asan-module -S \
+; RUN: opt < %s -passes='asan-pipeline' -S \
+; RUN:     -mtriple=x86_64-unknown-freebsd \
+; RUN:     -data-layout="e-m:e-i64:64-f80:128-n8:16:32:64-S128" | \
+; RUN:     FileCheck --check-prefix=CHECK-64 %s
+
+; RUN: opt < %s -asan -asan-module -S -enable-new-pm=0 \
+; RUN:     -mtriple=mips64-unknown-freebsd \
+; RUN:     -data-layout="E-m:e-i64:64-n32:64-S128" | \
+; RUN:     FileCheck --check-prefix=CHECK-MIPS64 %s
+
+; RUN: opt < %s -passes='asan-pipeline' -S \
 ; RUN:     -mtriple=mips64-unknown-freebsd \
 ; RUN:     -data-layout="E-m:e-i64:64-n32:64-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-MIPS64 %s

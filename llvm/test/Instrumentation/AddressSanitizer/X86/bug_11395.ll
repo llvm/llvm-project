@@ -1,4 +1,5 @@
-; RUN: opt < %s -asan -asan-module -S | llc -o /dev/null
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -S | llc -o /dev/null
+; RUN: opt < %s -passes='asan-pipeline' -S | llc -o /dev/null
 ; The bug manifests as a reg alloc failure:
 ; error: ran out of registers during register allocation
 ; ModuleID = 'z.o'
