@@ -292,9 +292,9 @@ private:
   const Elf_Hash *HashTable = nullptr;
   const Elf_GnuHash *GnuHashTable = nullptr;
   const Elf_Shdr *DotSymtabSec = nullptr;
+  const Elf_Shdr *DotDynsymSec = nullptr;
   const Elf_Shdr *DotCGProfileSec = nullptr;
   const Elf_Shdr *DotAddrsigSec = nullptr;
-  StringRef DynSymtabName;
   ArrayRef<Elf_Word> ShndxTable;
 
   const Elf_Shdr *SymbolVersionSection = nullptr;   // .gnu.version
@@ -680,7 +680,18 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
   if (IsDynamic) {
     StrTable = DynamicStringTable;
     Syms = dynamic_symbols();
-    SymtabName = DynSymtabName;
+
+    if (DotDynsymSec) {
+      if (Expected<StringRef> NameOrErr = Obj->getSectionName(DotDynsymSec)) {
+        SymtabName = *NameOrErr;
+      } else {
+        reportUniqueWarning(
+            createError("unable to get the name of the SHT_DYNSYM section: " +
+                        toString(NameOrErr.takeError())));
+        SymtabName = "<?>";
+      }
+    }
+
     Entries = Syms.size();
   } else {
     if (!DotSymtabSec)
@@ -2075,14 +2086,13 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
         DotSymtabSec = &Sec;
       break;
     case ELF::SHT_DYNSYM:
+      if (!DotDynsymSec)
+        DotDynsymSec = &Sec;
+
       if (!DynSymRegion) {
         DynSymRegion = createDRIFrom(&Sec);
         DynSymRegion->Context =
             ("section with index " + Twine(&Sec - &Sections.front())).str();
-        // This is only used (if Elf_Shdr present)for naming section in GNU
-        // style
-        DynSymtabName =
-            unwrapOrError(ObjF->getFileName(), Obj->getSectionName(&Sec));
 
         if (Expected<StringRef> E = Obj->getStringTableForSymtab(Sec))
           DynamicStringTable = *E;
