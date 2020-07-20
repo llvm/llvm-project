@@ -15,7 +15,7 @@
 
 include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Interfaces/VectorUnrollInterface.td"
+include "mlir/Interfaces/VectorInterfaces.td"
 
 def Vector_Dialect : Dialect {
   let name = "vector";
@@ -905,34 +905,9 @@ def Vector_ExtractStridedSliceOp :
   let assemblyFormat = "$vector attr-dict `:` type($vector) `to` type(results)";
 }
 
-def Vector_TransferOpUtils {
-  code extraTransferDeclaration = [{
-    static StringRef getMaskedAttrName() { return "masked"; }
-    static StringRef getPermutationMapAttrName() { return "permutation_map"; }
-    bool isMaskedDim(unsigned dim) {
-      return !masked() ||
-        masked()->cast<ArrayAttr>()[dim].cast<BoolAttr>().getValue();
-    }
-    MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
-    }
-    VectorType getVectorType() {
-      return vector().getType().cast<VectorType>();
-    }
-    // Number of dimensions that participate in the permutation map.
-    unsigned getTransferRank() {
-      return permutation_map().getNumResults();
-    }
-    // Number of leading dimensions that do not participate in the permutation
-    // map.
-    unsigned getLeadingMemRefRank() {
-      return getMemRefType().getRank() - permutation_map().getNumResults();
-    }
-  }];
-}
-
 def Vector_TransferReadOp :
   Vector_Op<"transfer_read", [
+      DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
     Arguments<(ins AnyMemRef:$memref, Variadic<Index>:$indices,
@@ -1090,23 +1065,12 @@ def Vector_TransferReadOp :
               "ArrayRef<bool> maybeMasked = {}">
   ];
 
-  let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #
-  [{
-    /// Build the default minor identity map suitable for a vector transfer.
-    /// This also handles the case memref<... x vector<...>> -> vector<...> in
-    /// which the rank of the identity map must take the vector element type
-    /// into account.
-    static AffineMap getTransferMinorIdentityMap(
-      MemRefType memRefType, VectorType vectorType) {
-        return impl::getTransferMinorIdentityMap(memRefType, vectorType);
-      }
-  }];
-
   let hasFolder = 1;
 }
 
 def Vector_TransferWriteOp :
   Vector_Op<"transfer_write", [
+      DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
     Arguments<(ins AnyVector:$vector, AnyMemRef:$memref,
@@ -1182,18 +1146,6 @@ def Vector_TransferWriteOp :
     OpBuilder<"OpBuilder &builder, OperationState &result, Value vector, "
               "Value memref, ValueRange indices, AffineMap permutationMap">,
   ];
-
-  let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #
-  [{
-    /// Build the default minor identity map suitable for a vector transfer.
-    /// This also handles the case memref<... x vector<...>> -> vector<...> in
-    /// which the rank of the identity map must take the vector element type
-    /// into account.
-    static AffineMap getTransferMinorIdentityMap(
-      MemRefType memRefType, VectorType vectorType) {
-        return impl::getTransferMinorIdentityMap(memRefType, vectorType);
-      }
-  }];
 
   let hasFolder = 1;
 }
