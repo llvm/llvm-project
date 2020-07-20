@@ -44,17 +44,9 @@ class ResultsFormatter(object):
     ResultFormatter lifetime looks like the following:
 
     # The result formatter is created.
-    # The argparse options dictionary is generated from calling
-    # the SomeResultFormatter.arg_parser() with the options data
-    # passed to dotest.py via the "--results-formatter-options"
-    # argument.  See the help on that for syntactic requirements
-    # on getting that parsed correctly.
-    formatter = SomeResultFormatter(file_like_object, argparse_options_dict)
 
     # Single call to session start, before parsing any events.
     formatter.begin_session()
-
-    formatter.handle_event({"event":"initialize",...})
 
     # Zero or more calls specified for events recorded during the test session.
     # The parallel test runner manages getting results from all the inferior
@@ -76,10 +68,6 @@ class ResultsFormatter(object):
     The lldb test framework passes these test events in real time, so they
     arrive as they come in.
 
-    In the case of the parallel test runner, the dotest inferiors
-    add a 'pid' field to the dictionary that indicates which inferior
-    pid generated the event.
-
     Note more events may be added in the future to support richer test
     reporting functionality. One example: creating a true flaky test
     result category so that unexpected successes really mean the test
@@ -100,29 +88,13 @@ class ResultsFormatter(object):
     expectations about when the call should be chained.
 
     """
-    @classmethod
-    def arg_parser(cls):
-        """@return arg parser used to parse formatter-specific options."""
-        parser = argparse.ArgumentParser(
-            description='{} options'.format(cls.__name__),
-            usage=('dotest.py --results-formatter-options='
-                   '"--option1 value1 [--option2 value2 [...]]"'))
-        parser.add_argument(
-            "--dump-results",
-            action="store_true",
-            help=('dump the raw results data after printing '
-                  'the summary output.'))
-        return parser
-
-    def __init__(self, out_file, options):
+    def __init__(self, out_file):
         super(ResultsFormatter, self).__init__()
         self.out_file = out_file
-        self.options = options
         self.using_terminal = False
         if not self.out_file:
             raise Exception("ResultsFormatter created with no file object")
         self.start_time_by_test = {}
-        self.terminate_called = False
 
         # Track the most recent test start event by worker index.
         # We'll use this to assign TIMEOUT and exceptional
@@ -341,9 +313,7 @@ class ResultsFormatter(object):
                     self._maybe_remap_expected_failure(test_event)
                     event_type = test_event.get("event", "")
 
-                if event_type == "terminate":
-                    self.terminate_called = True
-                elif event_type in EventBuilder.RESULT_TYPES:
+                if event_type in EventBuilder.RESULT_TYPES:
                     # Clear the most recently started test for the related
                     # worker.
                     worker_index = test_event.get("worker_index", None)
@@ -439,12 +409,6 @@ class ResultsFormatter(object):
         """returns true if this results formatter is using the terminal and
         output should be avoided."""
         return self.using_terminal
-
-    def send_terminate_as_needed(self):
-        """sends the terminate event if it hasn't been received yet."""
-        if not self.terminate_called:
-            terminate_event = EventBuilder.bare_event("terminate")
-            self.handle_event(terminate_event)
 
     # Derived classes may require self access
     # pylint: disable=no-self-use
@@ -706,15 +670,6 @@ class ResultsFormatter(object):
         # Print the summary
         self._print_summary_counts(
             out_file, categories, result_events_by_status, extra_results)
-
-        if self.options.dump_results:
-            # Debug dump of the key/result info for all categories.
-            self._print_banner(out_file, "Results Dump")
-            for status, events_by_key in result_events_by_status.items():
-                out_file.write("\nSTATUS: {}\n".format(status))
-                for key, event in events_by_key:
-                    out_file.write("key:   {}\n".format(key))
-                    out_file.write("event: {}\n".format(event))
 
     def clear_file_level_issues(self, tests_for_rerun, out_file):
         """Clear file-charged issues in any of the test rerun files.
