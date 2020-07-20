@@ -976,6 +976,8 @@ Expected<uint64_t> emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
                                     DWARF.IsLittleEndian, /*IsGNUStyle=*/true);
   else if (Name == ".debug_str_offsets")
     Err = DWARFYAML::emitDebugStrOffsets(*OS, DWARF);
+  else if (Name == ".debug_rnglists")
+    Err = DWARFYAML::emitDebugRnglists(*OS, DWARF);
   else
     llvm_unreachable("unexpected emitDWARF() call");
 
