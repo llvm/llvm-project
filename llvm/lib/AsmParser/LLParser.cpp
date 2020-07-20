@@ -788,13 +788,20 @@ bool LLParser::ParseStandaloneMetadata() {
 // Skips a single module summary entry.
 bool LLParser::SkipModuleSummaryEntry() {
   // Each module summary entry consists of a tag for the entry
-  // type, followed by a colon, then the fields surrounded by nested sets of
-  // parentheses. The "tag:" looks like a Label. Once parsing support is
-  // in place we will look for the tokens corresponding to the expected tags.
+  // type, followed by a colon, then the fields which may be surrounded by
+  // nested sets of parentheses. The "tag:" looks like a Label. Once parsing
+  // support is in place we will look for the tokens corresponding to the
+  // expected tags.
   if (Lex.getKind() != lltok::kw_gv && Lex.getKind() != lltok::kw_module &&
-      Lex.getKind() != lltok::kw_typeid)
+      Lex.getKind() != lltok::kw_typeid && Lex.getKind() != lltok::kw_flags &&
+      Lex.getKind() != lltok::kw_blockcount)
     return TokError(
-        "Expected 'gv', 'module', or 'typeid' at the start of summary entry");
+        "Expected 'gv', 'module', 'typeid', 'flags' or 'blockcount' at the "
+        "start of summary entry");
+  if (Lex.getKind() == lltok::kw_flags)
+    return ParseSummaryIndexFlags();
+  if (Lex.getKind() == lltok::kw_blockcount)
+    return ParseBlockCount();
   Lex.Lex();
   if (ParseToken(lltok::colon, "expected ':' at start of summary entry") ||
       ParseToken(lltok::lparen, "expected '(' at start of summary entry"))
@@ -8169,7 +8176,8 @@ bool LLParser::ParseSummaryIndexFlags() {
   uint64_t Flags;
   if (ParseUInt64(Flags))
     return true;
-  Index->setFlags(Flags);
+  if (Index)
+    Index->setFlags(Flags);
   return false;
 }
 
@@ -8184,7 +8192,8 @@ bool LLParser::ParseBlockCount() {
   uint64_t BlockCount;
   if (ParseUInt64(BlockCount))
     return true;
-  Index->setBlockCount(BlockCount);
+  if (Index)
+    Index->setBlockCount(BlockCount);
   return false;
 }
 
