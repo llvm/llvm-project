@@ -485,7 +485,9 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
                    AffineMapArrayAttr:$indexing_maps,
                    ArrayAttr:$iterator_types,
                    OptionalAttr<StrAttr>:$doc,
-                   OptionalAttr<StrAttr>:$library_call);
+                   OptionalAttr<StrAttr>:$library_call,
+                   Confined<OptionalAttr<I64Attr>,
+                     [IntMinValue<0>]>:$symbol_source);
   let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
   let regions = (region AnyRegion:$region);
   let extraClassDeclaration = [{
@@ -493,7 +495,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
       return SmallVector<StringRef, 8>{
         getArgsInAttrName(), getArgsOutAttrName(), getDocAttrName(),
         getIndexingMapsAttrName(), getLibraryCallAttrName(),
-        getIteratorTypesAttrName()
+        getIteratorTypesAttrName(), getSymbolSourceAttrName()
       };
     }
 
@@ -508,12 +510,18 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
     llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
       llvm_unreachable(
         "No such thing as reference iterator types for a generic op.");
-     }
+    }
 
     llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
       llvm_unreachable(
         "No such thing as reference indexing maps for a generic op.");
-     }
+    }
+
+    llvm::Optional<unsigned> getSymbolSource() {
+      auto ss = symbol_source();
+      return ss.hasValue() ?
+        llvm::Optional<unsigned>(ss.getValue().getLimitedValue()) : llvm::None;
+    }
   }];
 
   let printer = [{ return ::print(p, *this); }];
@@ -549,6 +557,10 @@ def GenericOp : GenericOpBase<"generic"> {
         Each element of the list represents and iterator of one of the following
         types:
           parallel, reduction, window
+      - symbol_source: index of the operand whose dimensions will be propagated
+        as symbols to the indexing maps. When specified the number of symbols
+        in each of the indexing maps has to be either 0 or the rank of the
+        specified operand.
 
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
@@ -630,6 +642,35 @@ def GenericOp : GenericOpBase<"generic"> {
     escape naturally. Still, transformations and rewrites that take advantage of
     tensor SSA values are expected to be useful and will be added in the near
     future.
+
+    Example of 1D convolution with symbols:
+    ```mlir
+    #conv_1d_accesses = [
+      affine_map<(m, n)[dimN] -> (m + n - dimN floordiv 2)>, // in
+      affine_map<(m, n)[dimN] -> (n)>, // filter
+      affine_map<(m, n)[dimN] -> (m)> // out
+    ]
+
+    #conv_1d_trait = {
+      doc = "O(m) += I(m + n - size(n) floordiv 2) * K(n)",
+      indexing_maps = #conv_1d_accesses,
+      library_call  = "linalg_conv_1d",
+      iterator_types = ["parallel", "parallel"],
+      symbol_source = 1
+    }
+
+    linalg.generic #conv_1d_trait %in, %filter, %out {
+      ^bb0(%a: f32, %b: f32, %c: f32) :
+        %d = mulf %a, %b : f32
+        %e = addf %c, %d : f32
+        linalg.yield %e : f32
+    } : memref<?xf32>,
+        memref<?xf32>,
+        memref<?xf32>
+    ```
+    where symbol s0 will be substituted with `dim %filter, %c0` i.e. the first
+    and only dimension of the second operand as specified by the symbol_source
+    attribute.
   }];
 
   let builders = [
