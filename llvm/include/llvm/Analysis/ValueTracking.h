@@ -607,7 +607,8 @@ class Value;
   bool canCreatePoison(const Operator *Op);
 
   /// Return true if this function can prove that V is never undef value
-  /// or poison value.
+  /// or poison value. If V is an aggregate value or vector, check whether all
+  /// elements (except padding) are not undef or poison.
   /// Note that this is different from canCreateUndefOrPoison because the
   /// function assumes Op's operands are not poison/undef.
   ///
