@@ -154,6 +154,7 @@ def Shape_ShapeEqOp : Shape_Op<"shape_eq", [Commutative, NoSideEffect]> {
   let results = (outs I1:$result);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs)";
+  let hasFolder = 1;
 }
 
 def Shape_FromExtentsOp : Shape_Op<"from_extents", [NoSideEffect]> {
