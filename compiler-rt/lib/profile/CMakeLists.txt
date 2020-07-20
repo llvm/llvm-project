@@ -94,7 +94,7 @@ if(COMPILER_RT_TARGET_HAS_ATOMICS)
  set(EXTRA_FLAGS
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_HAS_ATOMICS=1)
-endif() 
+endif()
 
 if(COMPILER_RT_TARGET_HAS_FCNTL_LCK)
  set(EXTRA_FLAGS
@@ -107,6 +107,9 @@ if(COMPILER_RT_TARGET_HAS_UNAME)
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_HAS_UNAME=1)
 endif()
+
+# We don't use the C++ Standard Library here, so avoid including it by mistake.
+append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ EXTRA_FLAGS)
 
 # This appears to be a C-only warning banning the use of locals in aggregate
 # initializers. All other compilers accept this, though.
