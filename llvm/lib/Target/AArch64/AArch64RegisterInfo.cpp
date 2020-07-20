@@ -40,6 +40,14 @@ AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT)
   AArch64_MC::initLLVMToCVRegMapping(this);
 }
 
+static bool hasSVEArgsOrReturn(const MachineFunction *MF) {
+  const Function &F = MF->getFunction();
+  return isa<ScalableVectorType>(F.getReturnType()) ||
+         any_of(F.args(), [](const Argument &Arg) {
+           return isa<ScalableVectorType>(Arg.getType());
+         });
+}
+
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
@@ -75,6 +83,8 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     // This is for OSes other than Windows; Windows is a separate case further
     // above.
     return CSR_AArch64_AAPCS_X18_SaveList;
+  if (hasSVEArgsOrReturn(MF))
+    return CSR_AArch64_SVE_AAPCS_SaveList;
   return CSR_AArch64_AAPCS_SaveList;
 }
 
