@@ -27,7 +27,7 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   renamable $cr0 = CMPWI renamable $r3, 0
   ; CHECK:   BC killed renamable $cr0gt, %bb.1
-  ; CHECK:   BLR implicit $lr, implicit $rm, implicit $lr, implicit $rm, implicit killed $r3
+  ; CHECK:   BLR implicit $lr, implicit $rm, implicit killed $r3
   ; CHECK: bb.1.entry:
   ; CHECK:   renamable $r3 = ADDI killed renamable $r4, 0
   ; CHECK:   BLR implicit $lr, implicit $rm, implicit killed $r3
@@ -106,7 +106,7 @@ body:             |
   ; CHECK-LABEL: name: testBCLR
   ; CHECK: bb.0.entry:
   ; CHECK:   renamable $cr0 = FCMPUS killed renamable $f3, killed renamable $f4
-  ; CHECK:   BCLR killed renamable $cr0eq, implicit $lr, implicit $rm, implicit $lr, implicit $rm, implicit killed $v2
+  ; CHECK:   BCLR killed renamable $cr0eq, implicit $lr, implicit $rm, implicit killed $v2
   ; CHECK: bb.1.entry:
   ; CHECK:   renamable $cr0 = FCMPUS killed renamable $f1, killed renamable $f2
   ; CHECK:   BCLRn killed renamable $cr0eq, implicit $lr, implicit $rm, implicit killed $v2
@@ -139,8 +139,8 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   renamable $r4 = LI 0
   ; CHECK:   renamable $cr0 = CMPLWI killed renamable $r4, 0
-  ; CHECK:   BCCLR 68, renamable $cr0, implicit $lr, implicit $rm, implicit $lr, implicit $rm
+  ; CHECK:   BCCLR 68, renamable $cr0, implicit $lr, implicit $rm
   ; CHECK: bb.1:
-  ; CHECK:   BCCLR 68, killed renamable $cr0, implicit $lr, implicit $rm, implicit $lr, implicit $rm
+  ; CHECK:   BCCLR 68, killed renamable $cr0, implicit $lr, implicit $rm
   ; CHECK:   BLR implicit $lr, implicit $rm
 ...
