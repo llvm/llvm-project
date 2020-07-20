@@ -596,3 +596,56 @@ func @cstr_broadcastable_scalar_unranked(%arg0 : tensor<*xf32>, %arg1 : tensor<i
   "consume.witness"(%2) : (!shape.witness) -> ()
   return
 }
+
+// -----
+
+// Fold `shape_eq` for equal and constant shapes.
+// CHECK-LABEL: @shape_eq_fold_1
+func @shape_eq_fold_1() -> i1 {
+  // CHECK: %[[RESULT:.*]] = constant true
+  // CHECK: return %[[RESULT]] : i1
+  %a = shape.const_shape [1, 2, 3]
+  %b = shape.const_shape [1, 2, 3]
+  %result = shape.shape_eq %a, %b : !shape.shape, !shape.shape
+  return %result : i1
+}
+
+// -----
+
+// Fold `shape_eq` for different but constant shapes of same length.
+// CHECK-LABEL: @shape_eq_fold_0
+func @shape_eq_fold_0() -> i1 {
+  // CHECK: %[[RESULT:.*]] = constant false
+  // CHECK: return %[[RESULT]] : i1
+  %a = shape.const_shape [1, 2, 3]
+  %b = shape.const_shape [4, 5, 6]
+  %result = shape.shape_eq %a, %b : !shape.shape, !shape.shape
+  return %result : i1
+}
+
+// -----
+
+// Fold `shape_eq` for different but constant shapes of different length.
+// CHECK-LABEL: @shape_eq_fold_0
+func @shape_eq_fold_0() -> i1 {
+  // CHECK: %[[RESULT:.*]] = constant false
+  // CHECK: return %[[RESULT]] : i1
+  %a = shape.const_shape [1, 2, 3, 4, 5, 6]
+  %b = shape.const_shape [1, 2, 3]
+  %result = shape.shape_eq %a, %b : !shape.shape, !shape.shape
+  return %result : i1
+}
+
+// -----
+
+// Do not fold `shape_eq` for non-constant shapes.
+// CHECK-LABEL: @shape_eq_do_not_fold
+// CHECK-SAME: (%[[A:.*]]: !shape.shape) -> i1
+func @shape_eq_do_not_fold(%a : !shape.shape) -> i1 {
+  // CHECK: %[[B:.*]] = shape.const_shape [4, 5, 6]
+  // CHECK: %[[RESULT:.*]] = shape.shape_eq %[[A]], %[[B]] : !shape.shape, !shape.shape
+  // CHECK: return %[[RESULT]] : i1
+  %b = shape.const_shape [4, 5, 6]
+  %result = shape.shape_eq %a, %b : !shape.shape, !shape.shape
+  return %result : i1
+}

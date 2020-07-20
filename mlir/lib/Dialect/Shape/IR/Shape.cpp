@@ -476,6 +476,20 @@ void ConstSizeOp::getAsmResultNames(
 OpFoldResult ConstWitnessOp::fold(ArrayRef<Attribute>) { return passingAttr(); }
 
 //===----------------------------------------------------------------------===//
+// ShapeEqOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ShapeEqOp::fold(ArrayRef<Attribute> operands) {
+  auto lhs = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
+  if (lhs == nullptr)
+    return {};
+  auto rhs = operands[1].dyn_cast_or_null<DenseIntElementsAttr>();
+  if (rhs == nullptr)
+    return {};
+  return BoolAttr::get(lhs == rhs, getContext());
+}
+
+//===----------------------------------------------------------------------===//
 // IndexToSizeOp
 //===----------------------------------------------------------------------===//
 
