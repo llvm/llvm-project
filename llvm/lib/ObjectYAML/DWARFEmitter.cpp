@@ -510,8 +510,6 @@ writeRnglistEntry(raw_ostream &OS, const DWARFYAML::RnglistEntry &Entry,
       return std::move(Err);
     encodeULEB128(Entry.Values[1], OS);
     break;
-  default:
-    llvm_unreachable("unrecognized range list encoding");
   }
 
   return OS.tell() - BeginOffset;
