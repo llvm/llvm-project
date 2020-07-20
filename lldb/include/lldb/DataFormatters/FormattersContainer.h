@@ -180,17 +180,6 @@ public:
     return Delete_Impl(type, static_cast<KeyType *>(nullptr));
   }
 
-  bool Get(ValueObject &valobj, MapValueType &entry,
-           lldb::DynamicValueType use_dynamic) {
-    CompilerType ast_type(valobj.GetCompilerType());
-    bool ret = Get(valobj, ast_type, entry, use_dynamic);
-    if (ret)
-      entry = MapValueType(entry);
-    else
-      entry = MapValueType();
-    return ret;
-  }
-
   bool Get(ConstString type, MapValueType &entry) {
     return Get_Impl(type, entry, static_cast<KeyType *>(nullptr));
   }
