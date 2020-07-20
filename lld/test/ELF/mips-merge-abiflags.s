@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-freebsd %s -o %t.o
 # RUN: ld.lld %t.o %p/Inputs/mips-concatenated-abiflags.o -o %t.exe
 # RUN: llvm-readobj --sections -A %t.exe | FileCheck %s
-# RUN: llvm-readobj --sections -A %p/Inputs/mips-concatenated-abiflags.o \
+# RUN: llvm-readobj --sections -A %p/Inputs/mips-concatenated-abiflags.o 2>&1 \
 # RUN:   | FileCheck --check-prefix=INPUT-OBJECT %s
 
         .globl  __start
@@ -59,4 +59,4 @@ __start:
 # INPUT-OBJECT-NEXT:    AddressAlignment: 8
 # INPUT-OBJECT-NEXT:    EntrySize: 0
 # INPUT-OBJECT-NEXT:  }
-# INPUT-OBJECT:       The .MIPS.abiflags section has a wrong size.
+# INPUT-OBJECT:       unable to read the .MIPS.abiflags section: it has a wrong size (48)

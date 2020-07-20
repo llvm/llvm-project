@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sd | FileCheck  %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sd - | FileCheck  %s
 
         .2byte 42, 1, 2, 3
         .4byte 42, 1, 2, 3

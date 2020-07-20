@@ -6,8 +6,5 @@ unittest("AsmParserTests") {
     "//llvm/lib/IR",
     "//llvm/lib/Support",
   ]
-  sources = [
-    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
-    "AsmParserTest.cpp",
-  ]
+  sources = [ "AsmParserTest.cpp" ]
 }

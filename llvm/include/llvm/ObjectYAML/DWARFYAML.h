@@ -185,6 +185,26 @@ struct StringOffsetsTable {
   std::vector<yaml::Hex64> Offsets;
 };
 
+struct RnglistEntry {
+  dwarf::RnglistEntries Operator;
+  std::vector<yaml::Hex64> Values;
+};
+
+struct Rnglist {
+  std::vector<RnglistEntry> Entries;
+};
+
+struct RnglistTable {
+  dwarf::DwarfFormat Format;
+  Optional<yaml::Hex64> Length;
+  yaml::Hex16 Version;
+  Optional<yaml::Hex8> AddrSize;
+  yaml::Hex8 SegSelectorSize;
+  Optional<uint32_t> OffsetEntryCount;
+  Optional<std::vector<yaml::Hex64>> Offsets;
+  std::vector<Rnglist> Lists;
+};
+
 struct Data {
   bool IsLittleEndian;
   bool Is64BitAddrSize;
@@ -203,6 +223,7 @@ struct Data {
   std::vector<Unit> CompileUnits;
 
   std::vector<LineTable> DebugLines;
+  Optional<std::vector<RnglistTable>> DebugRnglists;
 
   bool isEmpty() const;
 
@@ -228,6 +249,9 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LineTableOpcode)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::SegAddrPair)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::AddrTableEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::StringOffsetsTable)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::RnglistTable)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Rnglist)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::RnglistEntry)
 
 namespace llvm {
 namespace yaml {
@@ -294,6 +318,18 @@ template <> struct MappingTraits<DWARFYAML::LineTable> {
 
 template <> struct MappingTraits<DWARFYAML::SegAddrPair> {
   static void mapping(IO &IO, DWARFYAML::SegAddrPair &SegAddrPair);
+};
+
+template <> struct MappingTraits<DWARFYAML::RnglistTable> {
+  static void mapping(IO &IO, DWARFYAML::RnglistTable &RnglistTable);
+};
+
+template <> struct MappingTraits<DWARFYAML::Rnglist> {
+  static void mapping(IO &IO, DWARFYAML::Rnglist &Rnglist);
+};
+
+template <> struct MappingTraits<DWARFYAML::RnglistEntry> {
+  static void mapping(IO &IO, DWARFYAML::RnglistEntry &RnglistEntry);
 };
 
 template <> struct MappingTraits<DWARFYAML::AddrTableEntry> {
@@ -380,6 +416,15 @@ template <> struct ScalarEnumerationTraits<dwarf::Constants> {
     io.enumCase(value, "DW_CHILDREN_no", dwarf::DW_CHILDREN_no);
     io.enumCase(value, "DW_CHILDREN_yes", dwarf::DW_CHILDREN_yes);
     io.enumFallback<Hex16>(value);
+  }
+};
+
+#define HANDLE_DW_RLE(unused, name)                                            \
+  io.enumCase(value, "DW_RLE_" #name, dwarf::DW_RLE_##name);
+
+template <> struct ScalarEnumerationTraits<dwarf::RnglistEntries> {
+  static void enumeration(IO &io, dwarf::RnglistEntries &value) {
+#include "llvm/BinaryFormat/Dwarf.def"
   }
 };
 

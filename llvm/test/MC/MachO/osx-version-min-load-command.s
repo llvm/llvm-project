@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-darwin %s -filetype=obj -o - | llvm-readobj --macho-version-min | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-darwin %s -filetype=obj -o - | llvm-readobj --macho-version-min - | FileCheck %s
 
 // Test the formation of the version-min load command in the MachO.
 // use a nonsense but well formed version.

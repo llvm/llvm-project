@@ -522,8 +522,11 @@ class LineConsumer {
 public:
   LineConsumer() = default;
   LineConsumer(StringRef Filename) {
+    // Open source files without requiring a NUL terminator. The concurrent
+    // modification may nullify the NUL terminator condition.
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-        MemoryBuffer::getFileOrSTDIN(Filename);
+        MemoryBuffer::getFileOrSTDIN(Filename, -1,
+                                     /*RequiresNullTerminator=*/false);
     if (std::error_code EC = BufferOrErr.getError()) {
       errs() << Filename << ": " << EC.message() << "\n";
       Remaining = "";

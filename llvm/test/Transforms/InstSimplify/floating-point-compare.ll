@@ -1038,3 +1038,66 @@ define <2 x i1> @unorderedCompareWithNaNVector_undef_elt(<2 x double> %A) {
   %cmp = fcmp ult <2 x double> %A, <double undef, double 0xFFFFFFFFFFFFFFFF>
   ret <2 x i1> %cmp
 }
+
+define i1 @is_infinite(float %x) {
+; CHECK-LABEL: @is_infinite(
+; CHECK-NEXT:    ret i1 false
+;
+  %xabs = call ninf float @llvm.fabs.f32(float %x)
+  %r = fcmp oeq float %xabs, 0x7FF0000000000000
+  ret i1 %r
+}
+
+define <2 x i1> @is_infinite_neg(<2 x float> %x) {
+; CHECK-LABEL: @is_infinite_neg(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %x42 = fadd ninf <2 x float> %x, <float 42.0, float 42.0>
+  %r = fcmp oeq <2 x float> %x42, <float 0xFFF0000000000000, float 0xFFF0000000000000>
+  ret <2 x i1> %r
+}
+
+; Negative test - but this could be reduced to 'uno' outside of instsimplify.
+
+define i1 @is_infinite_or_nan(float %x) {
+; CHECK-LABEL: @is_infinite_or_nan(
+; CHECK-NEXT:    [[X42:%.*]] = fadd ninf float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fcmp ueq float [[X42]], 0xFFF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x42 = fadd ninf float %x, 42.0
+  %r = fcmp ueq float %x42, 0xFFF0000000000000
+  ret i1 %r
+}
+
+define i1 @is_finite_or_nan(i1 %c, double %x) {
+; CHECK-LABEL: @is_finite_or_nan(
+; CHECK-NEXT:    ret i1 true
+;
+  %xx = fmul ninf double %x, %x
+  %s = select i1 %c, double 42.0, double %xx
+  %r = fcmp une double %s, 0x7FF0000000000000
+  ret i1 %r
+}
+
+define <2 x i1> @is_finite_or_nan_commute(<2 x i8> %x) {
+; CHECK-LABEL: @is_finite_or_nan_commute(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %cast = uitofp <2 x i8> %x to <2 x float>
+  %r = fcmp une <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
+  ret <2 x i1> %r
+}
+
+; Negative test - but this could be reduced to 'ord' outside of instsimplify.
+
+define i1 @is_finite_and_ordered(double %x) {
+; CHECK-LABEL: @is_finite_and_ordered(
+; CHECK-NEXT:    [[XX:%.*]] = fmul ninf double [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = fcmp one double [[XX]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xx = fmul ninf double %x, %x
+  %r = fcmp one double %xx, 0x7FF0000000000000
+  ret i1 %r
+}

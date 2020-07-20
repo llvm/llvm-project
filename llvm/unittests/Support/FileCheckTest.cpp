@@ -104,7 +104,7 @@ struct ExpressionFormatParameterisedFixture
 
   SourceMgr SM;
 
-  void SetUp() {
+  void SetUp() override {
     ExpressionFormat::Kind Kind = GetParam();
     AllowHex = Kind == ExpressionFormat::Kind::HexLower ||
                Kind == ExpressionFormat::Kind::HexUpper;

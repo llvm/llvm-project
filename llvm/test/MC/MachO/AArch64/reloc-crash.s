@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple arm64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs | FileCheck %s
+; RUN: llvm-mc -triple arm64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 
 ; Test tha we produce an external relocation. There is no apparent need for it, but
 ; ld64 (241.9) crashes if we don't.

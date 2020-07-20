@@ -37,20 +37,16 @@ class TPCTrampolinePool : public TrampolinePool {
 public:
   TPCTrampolinePool(TPCIndirectionUtils &TPCIU);
   Error deallocatePool();
-  Expected<JITTargetAddress> getTrampoline() override;
-  void releaseTrampoline(JITTargetAddress TrampolineAddr);
 
 protected:
-  Error grow();
+  Error grow() override;
 
   using Allocation = jitlink::JITLinkMemoryManager::Allocation;
 
-  std::mutex TPMutex;
   TPCIndirectionUtils &TPCIU;
   unsigned TrampolineSize = 0;
   unsigned TrampolinesPerPage = 0;
   std::vector<std::unique_ptr<Allocation>> TrampolineBlocks;
-  std::vector<JITTargetAddress> AvailableTrampolines;
 };
 
 class TPCIndirectStubsManager : public IndirectStubsManager,
@@ -96,26 +92,8 @@ Error TPCTrampolinePool::deallocatePool() {
   return Err;
 }
 
-Expected<JITTargetAddress> TPCTrampolinePool::getTrampoline() {
-  std::lock_guard<std::mutex> Lock(TPMutex);
-  if (AvailableTrampolines.empty()) {
-    if (auto Err = grow())
-      return std::move(Err);
-  }
-
-  assert(!AvailableTrampolines.empty() && "Failed to grow trampoline pool");
-  auto TrampolineAddr = AvailableTrampolines.back();
-  AvailableTrampolines.pop_back();
-  return TrampolineAddr;
-}
-
-void TPCTrampolinePool::releaseTrampoline(JITTargetAddress TrampolineAddr) {
-  std::lock_guard<std::mutex> Lock(TPMutex);
-  AvailableTrampolines.push_back(TrampolineAddr);
-}
-
 Error TPCTrampolinePool::grow() {
-  assert(this->AvailableTrampolines.empty() &&
+  assert(AvailableTrampolines.empty() &&
          "Grow called with trampolines still available");
 
   auto ResolverAddress = TPCIU.getResolverBlockAddress();
@@ -144,7 +122,7 @@ Error TPCTrampolinePool::grow() {
 
   auto TargetAddr = (*Alloc)->getTargetMemory(TrampolinePagePermissions);
   for (unsigned I = 0; I < NumTrampolines; ++I)
-    this->AvailableTrampolines.push_back(TargetAddr + (I * TrampolineSize));
+    AvailableTrampolines.push_back(TargetAddr + (I * TrampolineSize));
 
   if (auto Err = (*Alloc)->finalize())
     return Err;

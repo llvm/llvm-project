@@ -1,6 +1,6 @@
 @@ test st_value bit 0 of thumb function
 @ RUN: llvm-mc %s -triple=thumbv7-linux-gnueabi -filetype=obj -o - | \
-@ RUN: llvm-readobj --symbols | FileCheck %s
+@ RUN: llvm-readobj --symbols - | FileCheck %s
 	.syntax unified
 	.text
 	.globl	foo

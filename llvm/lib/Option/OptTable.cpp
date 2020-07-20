@@ -330,6 +330,60 @@ bool OptTable::addValues(const char *Option, const char *Values) {
   return false;
 }
 
+// Parse a single argument, return the new argument, and update Index. If
+// GroupedShortOptions is true, -a matches "-abc" and the argument in Args will
+// be updated to "-bc". This overload does not support
+// FlagsToInclude/FlagsToExclude or case insensitive options.
+Arg *OptTable::parseOneArgGrouped(InputArgList &Args, unsigned &Index) const {
+  // Anything that doesn't start with PrefixesUnion is an input, as is '-'
+  // itself.
+  const char *CStr = Args.getArgString(Index);
+  StringRef Str(CStr);
+  if (isInput(PrefixesUnion, Str))
+    return new Arg(getOption(TheInputOptionID), Str, Index++, CStr);
+
+  const Info *End = OptionInfos.data() + OptionInfos.size();
+  StringRef Name = Str.ltrim(PrefixChars);
+  const Info *Start = std::lower_bound(
+      OptionInfos.data() + FirstSearchableIndex, End, Name.data());
+  const Info *Fallback = nullptr;
+  unsigned Prev = Index;
+
+  // Search for the option which matches Str.
+  for (; Start != End; ++Start) {
+    unsigned ArgSize = matchOption(Start, Str, IgnoreCase);
+    if (!ArgSize)
+      continue;
+
+    Option Opt(Start, this);
+    if (Arg *A = Opt.accept(Args, StringRef(Args.getArgString(Index), ArgSize),
+                            false, Index))
+      return A;
+
+    // If Opt is a Flag of length 2 (e.g. "-a"), we know it is a prefix of
+    // the current argument (e.g. "-abc"). Match it as a fallback if no longer
+    // option (e.g. "-ab") exists.
+    if (ArgSize == 2 && Opt.getKind() == Option::FlagClass)
+      Fallback = Start;
+
+    // Otherwise, see if the argument is missing.
+    if (Prev != Index)
+      return nullptr;
+  }
+  if (Fallback) {
+    Option Opt(Fallback, this);
+    if (Arg *A = Opt.accept(Args, Str.substr(0, 2), true, Index)) {
+      if (Str.size() == 2)
+        ++Index;
+      else
+        Args.replaceArgString(Index, Twine('-') + Str.substr(2));
+      return A;
+    }
+  }
+
+  return new Arg(getOption(TheUnknownOptionID), Str, Index++, CStr);
+}
+
 Arg *OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
                            unsigned FlagsToInclude,
                            unsigned FlagsToExclude) const {
@@ -373,7 +427,8 @@ Arg *OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
       continue;
 
     // See if this option matches.
-    if (Arg *A = Opt.accept(Args, Index, ArgSize))
+    if (Arg *A = Opt.accept(Args, StringRef(Args.getArgString(Index), ArgSize),
+                            false, Index))
       return A;
 
     // Otherwise, see if this argument was missing values.
@@ -414,8 +469,11 @@ InputArgList OptTable::ParseArgs(ArrayRef<const char *> ArgArr,
     }
 
     unsigned Prev = Index;
-    Arg *A = ParseOneArg(Args, Index, FlagsToInclude, FlagsToExclude);
-    assert(Index > Prev && "Parser failed to consume argument.");
+    Arg *A = GroupedShortOptions
+                 ? parseOneArgGrouped(Args, Index)
+                 : ParseOneArg(Args, Index, FlagsToInclude, FlagsToExclude);
+    assert((Index > Prev || GroupedShortOptions) &&
+           "Parser failed to consume argument.");
 
     // Check for missing argument error.
     if (!A) {

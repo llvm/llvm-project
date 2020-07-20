@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj --symbols | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj --symbols - | FileCheck %s
 
 // This is a long test that checks that the aliases created by weakref are
 // never in the symbol table and that the only case it causes a symbol to

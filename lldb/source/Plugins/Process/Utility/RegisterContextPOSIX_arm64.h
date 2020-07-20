@@ -11,7 +11,6 @@
 
 #include "RegisterInfoInterface.h"
 #include "RegisterInfoPOSIX_arm64.h"
-#include "lldb-arm64-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
@@ -46,13 +45,6 @@ public:
   const char *GetRegisterName(unsigned reg);
 
 protected:
-  uint64_t m_gpr_arm64[lldb_private::k_num_gpr_registers_arm64]; // 64-bit
-                                                                 // general
-                                                                 // purpose
-                                                                 // registers.
-
-  struct RegisterInfoPOSIX_arm64::FPU
-      m_fpr; // floating-point registers including extended register sets.
   std::unique_ptr<RegisterInfoPOSIX_arm64> m_register_info_up;
 
   virtual const lldb_private::RegisterInfo *GetRegisterInfo();

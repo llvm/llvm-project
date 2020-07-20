@@ -1,4 +1,4 @@
-; RUN: llvm-mc -n -triple arm64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs | FileCheck %s
+; RUN: llvm-mc -n -triple arm64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 
 	.text
 _fred:

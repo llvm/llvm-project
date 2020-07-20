@@ -1,5 +1,5 @@
-; RUN: llc %s -o - -filetype=obj | llvm-readobj --codeview | FileCheck %s
-; RUN: llc %s -o - | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj --codeview | FileCheck %s
+; RUN: llc %s -o - -filetype=obj | llvm-readobj --codeview - | FileCheck %s
+; RUN: llc %s -o - | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj --codeview - | FileCheck %s
 
 ; CHECK: Struct (0x1000) {
 ; CHECK:   TypeLeafKind: LF_STRUCTURE (0x1505)

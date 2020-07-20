@@ -1228,6 +1228,15 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_ZdaPvmSt11align_val_t:
     return (NumParams == 3 && FTy.getParamType(0)->isPointerTy());
 
+  // void __atomic_load(size_t, void *, void *, int)
+  case LibFunc_atomic_load:
+  // void __atomic_store(size_t, void *, void *, int)
+  case LibFunc_atomic_store:
+    return (NumParams == 4 && FTy.getParamType(0)->isIntegerTy() &&
+            FTy.getParamType(1)->isPointerTy() &&
+            FTy.getParamType(2)->isPointerTy() &&
+            FTy.getParamType(3)->isIntegerTy());
+
   case LibFunc_memset_pattern16:
     return (!FTy.isVarArg() && NumParams == 3 &&
             FTy.getParamType(0)->isPointerTy() &&

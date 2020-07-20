@@ -355,6 +355,8 @@ public:
   /// Runs the CGSCC pass across every SCC in the module.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
+  static bool isRequired() { return true; }
+
 private:
   CGSCCPassT Pass;
 };
@@ -542,6 +544,8 @@ public:
 
     return PA;
   }
+
+  static bool isRequired() { return true; }
 
 private:
   FunctionPassT Pass;

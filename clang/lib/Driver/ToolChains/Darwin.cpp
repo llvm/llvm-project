@@ -1196,7 +1196,8 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   // runtime's functionality.
   if (hasExportSymbolDirective(Args)) {
     if (ForGCOV) {
-      addExportedSymbol(CmdArgs, "___gcov_flush");
+      addExportedSymbol(CmdArgs, "___gcov_dump");
+      addExportedSymbol(CmdArgs, "___gcov_reset");
       addExportedSymbol(CmdArgs, "_flush_fn_list");
       addExportedSymbol(CmdArgs, "_writeout_fn_list");
       addExportedSymbol(CmdArgs, "_reset_fn_list");

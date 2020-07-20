@@ -1748,6 +1748,13 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   if (C.getArgs().hasArg(options::OPT_print_search_dirs)) {
     llvm::outs() << "programs: =";
     bool separator = false;
+    // Print -B and COMPILER_PATH.
+    for (const std::string &Path : PrefixDirs) {
+      if (separator)
+        llvm::outs() << llvm::sys::EnvPathSeparator;
+      llvm::outs() << Path;
+      separator = true;
+    }
     for (const std::string &Path : TC.getProgramPaths()) {
       if (separator)
         llvm::outs() << llvm::sys::EnvPathSeparator;
@@ -4785,8 +4792,7 @@ void Driver::generatePrefixedToolNames(
     Names.emplace_back((DefaultTargetTriple + "-" + Tool).str());
 }
 
-static bool ScanDirForExecutable(SmallString<128> &Dir,
-                                 const std::string &Name) {
+static bool ScanDirForExecutable(SmallString<128> &Dir, StringRef Name) {
   llvm::sys::path::append(Dir, Name);
   if (llvm::sys::fs::can_execute(Twine(Dir)))
     return true;
@@ -4803,9 +4809,8 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   for (const auto &PrefixDir : PrefixDirs) {
     if (llvm::sys::fs::is_directory(PrefixDir)) {
       SmallString<128> P(PrefixDir);
-      for (const auto &TargetSpecificExecutable : TargetSpecificExecutables)
-        if (ScanDirForExecutable(P, TargetSpecificExecutable))
-          return std::string(P.str());
+      if (ScanDirForExecutable(P, Name))
+        return std::string(P.str());
     } else {
       SmallString<128> P((PrefixDir + Name).str());
       if (llvm::sys::fs::can_execute(Twine(P)))

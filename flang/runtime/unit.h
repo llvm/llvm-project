@@ -48,8 +48,8 @@ public:
   static void CloseAll(IoErrorHandler &);
   static void FlushAll(IoErrorHandler &);
 
-  void OpenUnit(OpenStatus, Position, OwningPtr<char> &&path,
-      std::size_t pathLength, IoErrorHandler &);
+  void OpenUnit(OpenStatus, std::optional<Action>, Position,
+      OwningPtr<char> &&path, std::size_t pathLength, IoErrorHandler &);
   void CloseUnit(CloseStatus, IoErrorHandler &);
   void DestroyClosed();
 

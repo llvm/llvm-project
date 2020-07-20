@@ -1,5 +1,5 @@
-! RUN: llvm-mc %s -arch=sparcv9 --position-independent -filetype=obj | llvm-readobj -r | FileCheck --check-prefix=PIC %s
-! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-readobj -r | FileCheck --check-prefix=NOPIC %s
+! RUN: llvm-mc %s -arch=sparcv9 --position-independent -filetype=obj | llvm-readobj -r - | FileCheck --check-prefix=PIC %s
+! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-readobj -r - | FileCheck --check-prefix=NOPIC %s
 
 
 ! PIC:      Relocations [

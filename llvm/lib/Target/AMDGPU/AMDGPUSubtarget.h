@@ -1046,10 +1046,6 @@ public:
     return CIInsts;
   }
 
-  bool hasSMovFedHazard() const {
-    return getGeneration() == AMDGPUSubtarget::GFX9;
-  }
-
   bool hasReadM0MovRelInterpHazard() const {
     return getGeneration() == AMDGPUSubtarget::GFX9;
   }

@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple armv7-apple-darwin %s -filetype=obj -o %t.obj
-@ RUN: llvm-readobj -S --sd < %t.obj > %t.dump
+@ RUN: llvm-readobj -S --sd - < %t.obj > %t.dump
 @ RUN: FileCheck %s < %t.dump
 
 .thumb_func x

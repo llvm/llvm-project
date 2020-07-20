@@ -99,6 +99,7 @@
 // DEFAULTDLL: "-implib:cl-outputs.lib"
 
 // RUN: %clang_cl /Fefoo -### -- %s 2>&1 | FileCheck -check-prefix=FeNOEXT %s
+// RUN: %clang_cl /Fe:foo -### -- %s 2>&1 | FileCheck -check-prefix=FeNOEXT %s
 // FeNOEXT: "-out:foo.exe"
 
 // RUN: %clang_cl /Fe -### -- %s 2>&1 | FileCheck -check-prefix=FeEMPTY %s
@@ -111,6 +112,7 @@
 // FeNOEXTDLL: "-implib:foo.lib"
 
 // RUN: %clang_cl /Fefoo.ext -### -- %s 2>&1 | FileCheck -check-prefix=FeEXT %s
+// RUN: %clang_cl /Fe:foo.ext -### -- %s 2>&1 | FileCheck -check-prefix=FeEXT %s
 // FeEXT: "-out:foo.ext"
 
 // RUN: %clang_cl /LD /Fefoo.ext -### -- %s 2>&1 | FileCheck -check-prefix=FeEXTDLL %s

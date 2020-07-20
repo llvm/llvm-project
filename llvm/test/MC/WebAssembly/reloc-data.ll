@@ -1,4 +1,4 @@
-; RUN: llc -O0 -filetype=obj %s -o - | llvm-readobj -r --expand-relocs | FileCheck %s
+; RUN: llc -O0 -filetype=obj %s -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

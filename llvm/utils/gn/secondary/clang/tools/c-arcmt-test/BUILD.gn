@@ -1,10 +1,7 @@
 executable("c-arcmt-test") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [ "//clang/tools/libclang" ]
-  sources = [
-    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
-    "c-arcmt-test.c",
-  ]
+  sources = [ "c-arcmt-test.c" ]
 
   # See comment at top of clang/tools/libclang/BUILD.gn for why this isn't
   # needed on Linux.

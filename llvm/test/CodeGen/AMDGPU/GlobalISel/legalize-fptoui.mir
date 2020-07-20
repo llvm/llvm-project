@@ -757,3 +757,64 @@ body: |
     %1:_(<2 x s64>) = G_FPTOUI %0
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
 ...
+
+---
+name: test_fptoui_s16_to_s64
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; SI-LABEL: name: test_fptoui_s16_to_s64
+    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
+    ; SI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI]](s32)
+    ; SI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    ; VI-LABEL: name: test_fptoui_s16_to_s64
+    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
+    ; VI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI]](s32)
+    ; VI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(s64) = G_FPTOUI %1
+    $vgpr0_vgpr1 = COPY %2
+...
+
+---
+name: test_fptoui_v2s16_to_v2s64
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; SI-LABEL: name: test_fptoui_v2s16_to_v2s64
+    ; SI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; SI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
+    ; SI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI]](s32)
+    ; SI: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC1]](s16)
+    ; SI: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI1]](s32)
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[ZEXT]](s64), [[ZEXT1]](s64)
+    ; SI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    ; VI-LABEL: name: test_fptoui_v2s16_to_v2s64
+    ; VI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; VI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; VI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
+    ; VI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI]](s32)
+    ; VI: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC1]](s16)
+    ; VI: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI1]](s32)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[ZEXT]](s64), [[ZEXT1]](s64)
+    ; VI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    %0:_(<2 x s16>) = COPY $vgpr0
+    %1:_(<2 x s64>) = G_FPTOUI %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+...

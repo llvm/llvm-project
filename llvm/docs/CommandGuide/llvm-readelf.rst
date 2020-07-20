@@ -14,7 +14,7 @@ DESCRIPTION
 The :program:`llvm-readelf` tool displays low-level format-specific information
 about one or more object files.
 
-If ``input`` is "``-``" or omitted, :program:`llvm-readelf` reads from standard
+If ``input`` is "``-``", :program:`llvm-readelf` reads from standard
 input. Otherwise, it will read from the specified ``filenames``.
 
 OPTIONS

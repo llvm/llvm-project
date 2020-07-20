@@ -59,6 +59,11 @@ struct TestVectorContractionConversion
       *this, "vector-outerproduct",
       llvm::cl::desc("Lower vector.contract to vector.outerproduct"),
       llvm::cl::init(false)};
+  Option<bool> lowerToFilterOuterProduct{
+      *this, "vector-filter-outerproduct",
+      llvm::cl::desc("Lower vector.contract to vector.outerproduct but not for "
+                     "vectors of size 4."),
+      llvm::cl::init(false)};
 
   void runOnFunction() override {
     OwningRewritePatternList patterns;
@@ -69,6 +74,22 @@ struct TestVectorContractionConversion
       VectorTransformsOptions options{lowering};
       patterns.insert<ContractionOpToOuterProductOpLowering>(options,
                                                              &getContext());
+      applyPatternsAndFoldGreedily(getFunction(), patterns);
+      return;
+    }
+
+    // Test on one pattern in isolation.
+    if (lowerToFilterOuterProduct) {
+      VectorContractLowering lowering = VectorContractLowering::OuterProduct;
+      VectorTransformsOptions options{lowering};
+      patterns.insert<ContractionOpToOuterProductOpLowering>(
+          options, &getContext(), [](vector::ContractionOp op) {
+            // Only lowers vector.contract where the lhs as a type vector<MxNx?>
+            // where M is not 4.
+            if (op.getRhsType().getShape()[0] == 4)
+              return failure();
+            return success();
+          });
       applyPatternsAndFoldGreedily(getFunction(), patterns);
       return;
     }

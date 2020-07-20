@@ -393,7 +393,7 @@ entry:
 
 define internal void @.omp.reduction.reduction_func(i8* %arg, i8* %arg1) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-; CHECK-SAME: (i8* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[ARG:%.*]], i8* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[ARG1:%.*]]) #10
+; CHECK-SAME: (i8* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[ARG:%.*]], i8* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[ARG1:%.*]]) #{{[0-9]+}}
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast i8* [[ARG1]] to i32**
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP]], align 8

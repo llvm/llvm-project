@@ -4085,6 +4085,33 @@ INTERCEPTOR(int, sigfillset, __sanitizer_sigset_t *set) {
 #define INIT_SIGSETOPS
 #endif
 
+#if SANITIZER_INTERCEPT_SIGSET_LOGICOPS
+INTERCEPTOR(int, sigandset, __sanitizer_sigset_t *dst, __sanitizer_sigset_t *src1, __sanitizer_sigset_t *src2) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sigandset, dst, src1, src2);
+  if (src1) COMMON_INTERCEPTOR_READ_RANGE(ctx, src1, sizeof(*src1));
+  if (src2) COMMON_INTERCEPTOR_READ_RANGE(ctx, src2, sizeof(*src2));
+  int res = REAL(sigandset)(dst, src1, src2);
+  if (!res && dst) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
+  return res;
+}
+
+INTERCEPTOR(int, sigorset, __sanitizer_sigset_t *dst, __sanitizer_sigset_t *src1, __sanitizer_sigset_t *src2) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sigorset, dst, src1, src2);
+  if (src1) COMMON_INTERCEPTOR_READ_RANGE(ctx, src1, sizeof(*src1));
+  if (src2) COMMON_INTERCEPTOR_READ_RANGE(ctx, src2, sizeof(*src2));
+  int res = REAL(sigorset)(dst, src1, src2);
+  if (!res && dst) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
+  return res;
+}
+#define INIT_SIGSET_LOGICOPS                    \
+  COMMON_INTERCEPT_FUNCTION(sigandset);   \
+  COMMON_INTERCEPT_FUNCTION(sigorset);
+#else
+#define INIT_SIGSET_LOGICOPS
+#endif
+
 #if SANITIZER_INTERCEPT_SIGPENDING
 INTERCEPTOR(int, sigpending, __sanitizer_sigset_t *set) {
   void *ctx;
@@ -9996,6 +10023,7 @@ static void InitializeCommonInterceptors() {
   INIT_SIGWAITINFO;
   INIT_SIGTIMEDWAIT;
   INIT_SIGSETOPS;
+  INIT_SIGSET_LOGICOPS;
   INIT_SIGPENDING;
   INIT_SIGPROCMASK;
   INIT_PTHREAD_SIGMASK;

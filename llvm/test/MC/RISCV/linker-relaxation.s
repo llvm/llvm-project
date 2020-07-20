@@ -1,13 +1,13 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+relax < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX-RELOC %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=-relax < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=NORELAX-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX-RELOC %s
 # RUN: llvm-mc -triple riscv32 -mattr=+relax < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=RELAX-FIXUP %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+relax < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX-RELOC %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=-relax < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=NORELAX-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX-RELOC %s
 # RUN: llvm-mc -triple riscv64 -mattr=+relax < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=RELAX-FIXUP %s
 

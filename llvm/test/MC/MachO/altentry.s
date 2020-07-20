@@ -1,4 +1,4 @@
-// RUN:  llvm-mc -triple x86_64-apple-darwin -filetype=obj %s -o - | llvm-readobj --symbols | FileCheck %s
+// RUN:  llvm-mc -triple x86_64-apple-darwin -filetype=obj %s -o - | llvm-readobj --symbols - | FileCheck %s
 
 // CHECK: Symbol {
 // CHECK: Name: _foo

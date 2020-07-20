@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu %s -o - | llvm-readobj --symbols | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-linux-gnu %s -o - | llvm-readobj --symbols - | FileCheck %s
 
 	.text
 	.globl	foobar

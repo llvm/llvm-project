@@ -1,9 +1,9 @@
 // RUN: llvm-mc -triple i386-apple-darwin10 %s -filetype=obj -o %t.o
-// RUN: llvm-readobj --file-headers -S --sd -r --symbols --macho-segment --macho-dysymtab --macho-indirect-symbols < %t.o > %t.dump
+// RUN: llvm-readobj --file-headers -S --sd -r --symbols --macho-segment --macho-dysymtab --macho-indirect-symbols < %t.o - > %t.dump
 // RUN: FileCheck --check-prefix=CHECK-I386 < %t.dump %s
 
 // RUN: llvm-mc -triple x86_64-apple-darwin10 %s -filetype=obj -o %t.o
-// RUN: llvm-readobj --file-headers -S --sd -r --symbols --macho-segment --macho-dysymtab --macho-indirect-symbols < %t.o > %t.dump
+// RUN: llvm-readobj --file-headers -S --sd -r --symbols --macho-segment --macho-dysymtab --macho-indirect-symbols < %t.o - > %t.dump
 // RUN: FileCheck --check-prefix=CHECK-X86_64 < %t.dump %s
 
 .data

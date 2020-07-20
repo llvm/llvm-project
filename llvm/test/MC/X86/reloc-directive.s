@@ -1,10 +1,10 @@
 # RUN: llvm-mc -triple i686-pc-win32 < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=ASM %s
 # RUN: llvm-mc -triple i686-pc-win32 < %s -show-encoding \
-# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r | \
+# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r - | \
 # RUN:     FileCheck -check-prefix=OBJ-32 %s
 # RUN: llvm-mc -triple x86_64-pc-win32 < %s -show-encoding \
-# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r | \
+# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r - | \
 # RUN:     FileCheck -check-prefix=OBJ-64 %s
 	.text
 foo:

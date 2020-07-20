@@ -1720,15 +1720,15 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
     StringRef Val = A->getValue();
     const Driver &D = getToolChain().getDriver();
-    if (!Val.equals("128") && !Val.equals("256") && !Val.equals("512") &&
-        !Val.equals("1024") && !Val.equals("2048")) {
+    if (Val.equals("128") || Val.equals("256") || Val.equals("512") ||
+        Val.equals("1024") || Val.equals("2048"))
+      CmdArgs.push_back(
+          Args.MakeArgString(llvm::Twine("-msve-vector-bits=") + Val));
+    // Silently drop requests for vector-length agnostic code as it's implied.
+    else if (!Val.equals("scalable"))
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getOption().getName() << Val;
-    } else if (A->getOption().matches(options::OPT_msve_vector_bits_EQ)) {
-      CmdArgs.push_back(
-          Args.MakeArgString(llvm::Twine("-msve-vector-bits=") + Val));
-    }
   }
 }
 

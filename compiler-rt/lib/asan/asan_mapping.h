@@ -206,6 +206,8 @@ static const u64 kMyriadCacheBitMask32 = 0x40000000ULL;
 #else
 #  if SANITIZER_IOS
 #    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
+#  elif SANITIZER_MAC && defined(__aarch64__)
+#    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #  elif defined(__aarch64__)
 #    define SHADOW_OFFSET kAArch64_ShadowOffset64
 #  elif defined(__powerpc64__)

@@ -1,5 +1,5 @@
 // Verify the .fix data section conveys the right offsets and the right relocations
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s -o - | llvm-readobj -r --expand-relocs -S --section-data | FileCheck %s --check-prefix=READOBJ
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s -o - | llvm-readobj -r --expand-relocs -S --section-data - | FileCheck %s --check-prefix=READOBJ
 
         .text
 	.section	.rdata,"dr"

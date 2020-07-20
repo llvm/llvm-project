@@ -73,9 +73,15 @@ define float @test_f32_reassoc(float %a, float %b, float %c) #0 {
 ;
 ; FMACALL32-LABEL: test_f32_reassoc:
 ; FMACALL32:       ## %bb.0:
-; FMACALL32-NEXT:    jmp _fmaf ## TAILCALL
-; FMACALL32-NEXT:    ## encoding: [0xeb,A]
-; FMACALL32-NEXT:    ## fixup A - offset: 1, value: _fmaf-1, kind: FK_PCRel_1
+; FMACALL32-NEXT:    pushl %eax ## encoding: [0x50]
+; FMACALL32-NEXT:    vmovss {{[0-9]+}}(%esp), %xmm0 ## encoding: [0xc5,0xfa,0x10,0x44,0x24,0x08]
+; FMACALL32-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; FMACALL32-NEXT:    vmulss {{[0-9]+}}(%esp), %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x59,0x44,0x24,0x0c]
+; FMACALL32-NEXT:    vaddss {{[0-9]+}}(%esp), %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x58,0x44,0x24,0x10]
+; FMACALL32-NEXT:    vmovss %xmm0, (%esp) ## encoding: [0xc5,0xfa,0x11,0x04,0x24]
+; FMACALL32-NEXT:    flds (%esp) ## encoding: [0xd9,0x04,0x24]
+; FMACALL32-NEXT:    popl %eax ## encoding: [0x58]
+; FMACALL32-NEXT:    retl ## encoding: [0xc3]
 ;
 ; FMA64-LABEL: test_f32_reassoc:
 ; FMA64:       ## %bb.0:
@@ -85,9 +91,9 @@ define float @test_f32_reassoc(float %a, float %b, float %c) #0 {
 ;
 ; FMACALL64-LABEL: test_f32_reassoc:
 ; FMACALL64:       ## %bb.0:
-; FMACALL64-NEXT:    jmp _fmaf ## TAILCALL
-; FMACALL64-NEXT:    ## encoding: [0xeb,A]
-; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fmaf-1, kind: FK_PCRel_1
+; FMACALL64-NEXT:    mulss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x59,0xc1]
+; FMACALL64-NEXT:    addss %xmm2, %xmm0 ## encoding: [0xf3,0x0f,0x58,0xc2]
+; FMACALL64-NEXT:    retq ## encoding: [0xc3]
 ;
 ; AVX512-LABEL: test_f32_reassoc:
 ; AVX512:       ## %bb.0:
@@ -1523,6 +1529,12 @@ define <2 x double> @test_v2f64_reassoc(<2 x double> %a, <2 x double> %b, <2 x d
 ; FMA32-NEXT:    ## xmm0 = (xmm1 * xmm0) + xmm2
 ; FMA32-NEXT:    retl ## encoding: [0xc3]
 ;
+; FMACALL32-LABEL: test_v2f64_reassoc:
+; FMACALL32:       ## %bb.0:
+; FMACALL32-NEXT:    vmulpd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x59,0xc1]
+; FMACALL32-NEXT:    vaddpd %xmm2, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x58,0xc2]
+; FMACALL32-NEXT:    retl ## encoding: [0xc3]
+;
 ; FMA64-LABEL: test_v2f64_reassoc:
 ; FMA64:       ## %bb.0:
 ; FMA64-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 ## encoding: [0xc4,0xe2,0xf1,0xa8,0xc2]
@@ -1531,37 +1543,8 @@ define <2 x double> @test_v2f64_reassoc(<2 x double> %a, <2 x double> %b, <2 x d
 ;
 ; FMACALL64-LABEL: test_v2f64_reassoc:
 ; FMACALL64:       ## %bb.0:
-; FMACALL64-NEXT:    subq $72, %rsp ## encoding: [0x48,0x83,0xec,0x48]
-; FMACALL64-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x54,0x24,0x20]
-; FMACALL64-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x4c,0x24,0x10]
-; FMACALL64-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x04,0x24]
-; FMACALL64-NEXT:    callq _fma ## encoding: [0xe8,A,A,A,A]
-; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fma-4, kind: reloc_branch_4byte_pcrel
-; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x30]
-; FMACALL64-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x04,0x24]
-; FMACALL64-NEXT:    movhlps %xmm0, %xmm0 ## encoding: [0x0f,0x12,0xc0]
-; FMACALL64-NEXT:    ## xmm0 = xmm0[1,1]
-; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
-; FMACALL64-NEXT:    movhlps %xmm1, %xmm1 ## encoding: [0x0f,0x12,0xc9]
-; FMACALL64-NEXT:    ## xmm1 = xmm1[1,1]
-; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x20]
-; FMACALL64-NEXT:    movhlps %xmm2, %xmm2 ## encoding: [0x0f,0x12,0xd2]
-; FMACALL64-NEXT:    ## xmm2 = xmm2[1,1]
-; FMACALL64-NEXT:    callq _fma ## encoding: [0xe8,A,A,A,A]
-; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fma-4, kind: reloc_branch_4byte_pcrel
-; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x30]
-; FMACALL64-NEXT:    movlhps %xmm0, %xmm1 ## encoding: [0x0f,0x16,0xc8]
-; FMACALL64-NEXT:    ## xmm1 = xmm1[0],xmm0[0]
-; FMACALL64-NEXT:    movaps %xmm1, %xmm0 ## encoding: [0x0f,0x28,0xc1]
-; FMACALL64-NEXT:    addq $72, %rsp ## encoding: [0x48,0x83,0xc4,0x48]
+; FMACALL64-NEXT:    mulpd %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x59,0xc1]
+; FMACALL64-NEXT:    addpd %xmm2, %xmm0 ## encoding: [0x66,0x0f,0x58,0xc2]
 ; FMACALL64-NEXT:    retq ## encoding: [0xc3]
 ;
 ; AVX512-LABEL: test_v2f64_reassoc:
@@ -1575,41 +1558,6 @@ define <2 x double> @test_v2f64_reassoc(<2 x double> %a, <2 x double> %b, <2 x d
 ; AVX512VL-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf1,0xa8,0xc2]
 ; AVX512VL-NEXT:    ## xmm0 = (xmm1 * xmm0) + xmm2
 ; AVX512VL-NEXT:    retq ## encoding: [0xc3]
-;
-; FMACALL32_BDVER2-LABEL: test_v2f64_reassoc:
-; FMACALL32_BDVER2:       ## %bb.0:
-; FMACALL32_BDVER2-NEXT:    subl $108, %esp ## encoding: [0x83,0xec,0x6c]
-; FMACALL32_BDVER2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x44,0x24,0x50]
-; FMACALL32_BDVER2-NEXT:    vmovlhps %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x16,0xc1]
-; FMACALL32_BDVER2-NEXT:    ## xmm0 = xmm0[0],xmm1[0]
-; FMACALL32_BDVER2-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x54,0x24,0x30]
-; FMACALL32_BDVER2-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x4c,0x24,0x40]
-; FMACALL32_BDVER2-NEXT:    vmovlps %xmm2, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xf8,0x13,0x54,0x24,0x10]
-; FMACALL32_BDVER2-NEXT:    vmovups %xmm0, (%esp) ## encoding: [0xc5,0xf8,0x11,0x04,0x24]
-; FMACALL32_BDVER2-NEXT:    calll _fma ## encoding: [0xe8,A,A,A,A]
-; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fma-4, kind: FK_PCRel_4
-; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x30]
-; FMACALL32_BDVER2-NEXT:    vmovhps %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xf8,0x17,0x44,0x24,0x10]
-; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x40]
-; FMACALL32_BDVER2-NEXT:    vmovlps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0, %xmm0 ## 16-byte Folded Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x12,0x44,0x24,0x58]
-; FMACALL32_BDVER2-NEXT:    ## xmm0 = mem[0,1],xmm0[2,3]
-; FMACALL32_BDVER2-NEXT:    vmovups %xmm0, (%esp) ## encoding: [0xc5,0xf8,0x11,0x04,0x24]
-; FMACALL32_BDVER2-NEXT:    fstpl {{[0-9]+}}(%esp) ## encoding: [0xdd,0x5c,0x24,0x28]
-; FMACALL32_BDVER2-NEXT:    calll _fma ## encoding: [0xe8,A,A,A,A]
-; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fma-4, kind: FK_PCRel_4
-; FMACALL32_BDVER2-NEXT:    fstpl {{[0-9]+}}(%esp) ## encoding: [0xdd,0x5c,0x24,0x20]
-; FMACALL32_BDVER2-NEXT:    vmovsd {{[0-9]+}}(%esp), %xmm0 ## encoding: [0xc5,0xfb,0x10,0x44,0x24,0x28]
-; FMACALL32_BDVER2-NEXT:    ## xmm0 = mem[0],zero
-; FMACALL32_BDVER2-NEXT:    vmovhps {{[0-9]+}}(%esp), %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x16,0x44,0x24,0x20]
-; FMACALL32_BDVER2-NEXT:    ## xmm0 = xmm0[0,1],mem[0,1]
-; FMACALL32_BDVER2-NEXT:    addl $108, %esp ## encoding: [0x83,0xc4,0x6c]
-; FMACALL32_BDVER2-NEXT:    retl ## encoding: [0xc3]
   %call = call reassoc <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
   ret <2 x double> %call
 }

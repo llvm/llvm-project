@@ -123,7 +123,9 @@ During this release ...
 Changes to the LLVM tools
 ---------------------------------
 
-During this release ...
+* llvm-readobj and llvm-readelf behavior has changed to report an error when
+  executed with no input files instead of reading an input from stdin.
+  Reading from stdin can still be achieved by specifying `-` as an input file.
 
 Changes to LLDB
 ---------------------------------

@@ -11,16 +11,13 @@ define i32 @switch(i32 %x) {
 ; CHECK-NEXT:    i32 2, label [[CASE_2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       case.0:
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       case.2:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], 1
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case.default:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD]], [[CASE_0]] ], [ [[SUB]], [[CASE_2]] ], [ 1, [[CASE_DEFAULT]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 1
 ;
   switch i32 %x, label %case.default [
   i32 0, label %case.0
@@ -47,7 +44,7 @@ define i1 @assume(i32 %x) {
 ; CHECK-LABEL: @assume(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp sge i32 %x, 0
   call void @llvm.assume(i1 %cmp)
@@ -59,23 +56,17 @@ define i32 @branch(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN1:%.*]], label [[IF_THEN2:%.*]]
 ; CHECK:       if.then1:
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF2_THEN1:%.*]], label [[IF2_THEN2:%.*]]
+; CHECK-NEXT:    br label [[IF2_THEN1:%.*]]
 ; CHECK:       if2.then1:
 ; CHECK-NEXT:    br label [[IF2_END:%.*]]
-; CHECK:       if2.then2:
-; CHECK-NEXT:    br label [[IF2_END]]
 ; CHECK:       if2.end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF2_THEN1]] ], [ 1, [[IF2_THEN2]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 0
 ; CHECK:       if.then2:
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF3_THEN1:%.*]], label [[IF3_THEN2:%.*]]
-; CHECK:       if3.then1:
-; CHECK-NEXT:    br label [[IF3_END:%.*]]
+; CHECK-NEXT:    br label [[IF3_THEN2:%.*]]
 ; CHECK:       if3.then2:
-; CHECK-NEXT:    br label [[IF3_END]]
+; CHECK-NEXT:    br label [[IF3_END:%.*]]
 ; CHECK:       if3.end:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ 0, [[IF3_THEN1]] ], [ 1, [[IF3_THEN2]] ]
-; CHECK-NEXT:    ret i32 [[PHI2]]
+; CHECK-NEXT:    ret i32 1
 ;
   %cmp = icmp sge i32 %x, 0
   br i1 %cmp, label %if.then1, label %if.then2

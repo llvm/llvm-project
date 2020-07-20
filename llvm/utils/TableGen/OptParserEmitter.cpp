@@ -110,7 +110,11 @@ public:
   static std::unique_ptr<MarshallingKindInfo> create(const Record &R) {
     std::unique_ptr<MarshallingFlagInfo> Ret(new MarshallingFlagInfo(R));
     Ret->IsPositive = R.getValueAsBit("IsPositive");
-    return Ret;
+    // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
+    //   The constructor that is supposed to allow for Derived to Base
+    //   conversion does not work. Remove this if we drop support for such
+    //   configurations.
+    return std::unique_ptr<MarshallingKindInfo>(Ret.release());
   }
 
 private:
@@ -204,7 +208,11 @@ struct SimpleEnumValueTable {
              "values");
     }
 
-    return Ret;
+    // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
+    //   The constructor that is supposed to allow for Derived to Base
+    //   conversion does not work. Remove this if we drop support for such
+    //   configurations.
+    return std::unique_ptr<MarshallingKindInfo>(Ret.release());
   }
 
 private:
