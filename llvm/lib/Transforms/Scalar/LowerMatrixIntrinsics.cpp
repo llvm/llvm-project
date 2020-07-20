@@ -182,10 +182,10 @@ class LowerMatrixIntrinsics {
   Function &Func;
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
-  AliasAnalysis &AA;
-  DominatorTree &DT;
-  LoopInfo &LI;
-  OptimizationRemarkEmitter &ORE;
+  AliasAnalysis *AA;
+  DominatorTree *DT;
+  LoopInfo *LI;
+  OptimizationRemarkEmitter *ORE;
 
   /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
   struct OpInfoTy {
@@ -393,8 +393,8 @@ class LowerMatrixIntrinsics {
 
 public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
-                        AliasAnalysis &AA, DominatorTree &DT, LoopInfo &LI,
-                        OptimizationRemarkEmitter &ORE)
+                        AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI,
+                        OptimizationRemarkEmitter *ORE)
       : Func(F), DL(F.getParent()->getDataLayout()), TTI(TTI), AA(AA), DT(DT),
         LI(LI), ORE(ORE) {}
 
@@ -727,8 +727,10 @@ public:
         Changed |= VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
     }
 
-    RemarkGenerator RemarkGen(Inst2ColumnMatrix, ORE, Func);
-    RemarkGen.emitRemarks();
+    if (ORE) {
+      RemarkGenerator RemarkGen(Inst2ColumnMatrix, *ORE, Func);
+      RemarkGen.emitRemarks();
+    }
 
     for (Instruction *Inst : reverse(ToRemove))
       Inst->eraseFromParent();
@@ -1085,7 +1087,7 @@ public:
     MemoryLocation StoreLoc = MemoryLocation::get(Store);
     MemoryLocation LoadLoc = MemoryLocation::get(Load);
 
-    AliasResult LdAliased = AA.alias(LoadLoc, StoreLoc);
+    AliasResult LdAliased = AA->alias(LoadLoc, StoreLoc);
 
     // If we can statically determine noalias we're good.
     if (!LdAliased)
@@ -1101,13 +1103,13 @@ public:
     // as we adjust Check0 and Check1's branches.
     SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
     for (BasicBlock *Succ : successors(Check0))
-      DTUpdates.push_back({DT.Delete, Check0, Succ});
+      DTUpdates.push_back({DT->Delete, Check0, Succ});
 
-    BasicBlock *Check1 = SplitBlock(MatMul->getParent(), MatMul, nullptr, &LI,
+    BasicBlock *Check1 = SplitBlock(MatMul->getParent(), MatMul, nullptr, LI,
                                     nullptr, "alias_cont");
     BasicBlock *Copy =
-        SplitBlock(MatMul->getParent(), MatMul, nullptr, &LI, nullptr, "copy");
-    BasicBlock *Fusion = SplitBlock(MatMul->getParent(), MatMul, nullptr, &LI,
+        SplitBlock(MatMul->getParent(), MatMul, nullptr, LI, nullptr, "copy");
+    BasicBlock *Fusion = SplitBlock(MatMul->getParent(), MatMul, nullptr, LI,
                                     nullptr, "no_alias");
 
     // Check if the loaded memory location begins before the end of the store
@@ -1152,11 +1154,11 @@ public:
     PHI->addIncoming(NewLd, Copy);
 
     // Adjust DT.
-    DTUpdates.push_back({DT.Insert, Check0, Check1});
-    DTUpdates.push_back({DT.Insert, Check0, Fusion});
-    DTUpdates.push_back({DT.Insert, Check1, Copy});
-    DTUpdates.push_back({DT.Insert, Check1, Fusion});
-    DT.applyUpdates(DTUpdates);
+    DTUpdates.push_back({DT->Insert, Check0, Check1});
+    DTUpdates.push_back({DT->Insert, Check0, Fusion});
+    DTUpdates.push_back({DT->Insert, Check1, Copy});
+    DTUpdates.push_back({DT->Insert, Check1, Fusion});
+    DT->applyUpdates(DTUpdates);
     return PHI;
   }
 
@@ -1272,7 +1274,7 @@ public:
   void LowerMatrixMultiplyFused(CallInst *MatMul,
                                 SmallPtrSetImpl<Instruction *> &FusedInsts) {
     if (!FuseMatrix || !MatMul->hasOneUse() ||
-        MatrixLayout != MatrixLayoutTy::ColumnMajor)
+        MatrixLayout != MatrixLayoutTy::ColumnMajor || !DT)
       return;
 
     auto *LoadOp0 = dyn_cast<LoadInst>(MatMul->getOperand(0));
@@ -1283,7 +1285,7 @@ public:
       // we create invalid IR.
       // FIXME: See if we can hoist the store address computation.
       auto *AddrI = dyn_cast<Instruction>(Store->getOperand(1));
-      if (AddrI && (!DT.dominates(AddrI, MatMul)))
+      if (AddrI && (!DT->dominates(AddrI, MatMul)))
         return;
 
       emitSIMDTiling(MatMul, LoadOp0, LoadOp1, Store, FusedInsts);
@@ -1868,7 +1870,7 @@ PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
 
-  LowerMatrixIntrinsics LMT(F, TTI, AA, DT, LI, ORE);
+  LowerMatrixIntrinsics LMT(F, TTI, &AA, &DT, &LI, &ORE);
   if (LMT.Visit()) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -1894,7 +1896,7 @@ public:
     auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    LowerMatrixIntrinsics LMT(F, TTI, AA, DT, LI, ORE);
+    LowerMatrixIntrinsics LMT(F, TTI, &AA, &DT, &LI, &ORE);
     bool C = LMT.Visit();
     return C;
   }
@@ -1924,4 +1926,46 @@ INITIALIZE_PASS_END(LowerMatrixIntrinsicsLegacyPass, DEBUG_TYPE, pass_name,
 
 Pass *llvm::createLowerMatrixIntrinsicsPass() {
   return new LowerMatrixIntrinsicsLegacyPass();
+}
+
+namespace {
+
+/// A lightweight version of the matrix lowering pass that only requires TTI.
+/// Advanced features that require DT, AA or ORE like tiling are disabled. This
+/// is used to lower matrix intrinsics if the main lowering pass is not run, for
+/// example with -O0.
+class LowerMatrixIntrinsicsMinimalLegacyPass : public FunctionPass {
+public:
+  static char ID;
+
+  LowerMatrixIntrinsicsMinimalLegacyPass() : FunctionPass(ID) {
+    initializeLowerMatrixIntrinsicsMinimalLegacyPassPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override {
+    auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    LowerMatrixIntrinsics LMT(F, TTI, nullptr, nullptr, nullptr, nullptr);
+    bool C = LMT.Visit();
+    return C;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.setPreservesCFG();
+  }
+};
+} // namespace
+
+static const char pass_name_minimal[] = "Lower the matrix intrinsics (minimal)";
+char LowerMatrixIntrinsicsMinimalLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(LowerMatrixIntrinsicsMinimalLegacyPass,
+                      "lower-matrix-intrinsics-minimal", pass_name_minimal,
+                      false, false)
+INITIALIZE_PASS_END(LowerMatrixIntrinsicsMinimalLegacyPass,
+                    "lower-matrix-intrinsics-minimal", pass_name_minimal, false,
+                    false)
+
+Pass *llvm::createLowerMatrixIntrinsicsMinimalPass() {
+  return new LowerMatrixIntrinsicsMinimalLegacyPass();
 }
