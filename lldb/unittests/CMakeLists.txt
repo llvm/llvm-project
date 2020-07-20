@@ -5,6 +5,10 @@ add_dependencies(lldb-test-deps LLDBUnitTests)
 include_directories(${LLDB_SOURCE_ROOT})
 include_directories(${LLDB_PROJECT_ROOT}/unittests)
 
+if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+  add_definitions("-Wno-suggest-override")
+endif()
+
 set(LLDB_GTEST_COMMON_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/gtest_common.h)
 if (MSVC)
   list(APPEND LLVM_COMPILE_FLAGS /FI ${LLDB_GTEST_COMMON_INCLUDE})
