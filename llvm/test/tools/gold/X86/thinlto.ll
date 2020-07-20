@@ -42,7 +42,7 @@
 ; RUN: llvm-bcanalyzer -dump %t4.index.bc | FileCheck %s --check-prefix=COMBINED
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
 ; Ensure ld does not emit empty combined module in default.
-; RUN: ls %t4.o* | count 2
+; RUN: ls %t4.lto.o* | count 2
 
 ; Check with --no-map-whole-files
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
