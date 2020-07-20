@@ -42,6 +42,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/MatrixUtils.h"
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -61,6 +63,9 @@ static cl::opt<unsigned> TileSize(
     "fuse-matrix-tile-size", cl::init(4), cl::Hidden,
     cl::desc(
         "Tile size for matrix instruction fusion using square-shaped tiles."));
+static cl::opt<bool> TileUseLoops("fuse-matrix-use-loops", cl::init(false),
+                                  cl::Hidden,
+                                  cl::desc("Generate loop nest for tiling."));
 static cl::opt<bool> ForceFusion(
     "force-fuse-matrix", cl::init(false), cl::Hidden,
     cl::desc("Force matrix instruction fusion even if not profitable."));
@@ -1204,6 +1209,63 @@ public:
     return Res;
   }
 
+  void createTiledLoops(CallInst *MatMul, Value *LPtr, ShapeInfo LShape,
+                        Value *RPtr, ShapeInfo RShape, StoreInst *Store,
+                        bool AllowContract) {
+    auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
+
+    // Create the main tiling loop nest.
+    TileInfo TI(LShape.NumRows, RShape.NumColumns, LShape.NumColumns, TileSize);
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    Instruction *InsertI = cast<Instruction>(MatMul);
+    BasicBlock *Start = InsertI->getParent();
+    BasicBlock *End =
+        SplitBlock(InsertI->getParent(), InsertI, DT, LI, nullptr, "continue");
+    IRBuilder<> Builder(MatMul);
+    BasicBlock *InnerBody = TI.CreateTiledLoops(Start, End, Builder, DTU, *LI);
+
+    Type *TileVecTy =
+        FixedVectorType::get(MatMul->getType()->getScalarType(), TileSize);
+    MatrixTy TileResult;
+    // Insert in the inner loop header.
+    Builder.SetInsertPoint(TI.InnerLoopHeader->getTerminator());
+    // Create PHI nodes for the result columns to accumulate across iterations.
+    SmallVector<PHINode *, 4> ColumnPhis;
+    for (unsigned I = 0; I < TileSize; I++) {
+      auto *Phi = Builder.CreatePHI(TileVecTy, 2, "result.vec." + Twine(I));
+      Phi->addIncoming(ConstantAggregateZero::get(TileVecTy),
+                       TI.RowLoopHeader->getSingleSuccessor());
+      TileResult.addVector(Phi);
+      ColumnPhis.push_back(Phi);
+    }
+
+    // Insert in the inner loop body, which computes
+    //   Res += Load(CurrentRow, K) * Load(K, CurrentColumn)
+    Builder.SetInsertPoint(InnerBody->getTerminator());
+    // Load tiles of the operands.
+    MatrixTy A = loadMatrix(LPtr, {}, false, LShape, TI.CurrentRow, TI.CurrentK,
+                            {TileSize, TileSize}, EltType, Builder);
+    MatrixTy B = loadMatrix(RPtr, {}, false, RShape, TI.CurrentK, TI.CurrentCol,
+                            {TileSize, TileSize}, EltType, Builder);
+    emitMatrixMultiply(TileResult, A, B, AllowContract, Builder, true);
+    // Store result after the inner loop is done.
+    Builder.SetInsertPoint(TI.RowLoopLatch->getTerminator());
+    storeMatrix(TileResult, Store->getPointerOperand(), Store->getAlign(),
+                Store->isVolatile(), {LShape.NumRows, RShape.NumColumns},
+                TI.CurrentRow, TI.CurrentCol, EltType, Builder);
+
+    for (unsigned I = 0; I < TileResult.getNumVectors(); I++)
+      ColumnPhis[I]->addIncoming(TileResult.getVector(I), TI.InnerLoopLatch);
+
+    // Force unrolling of a few iterations of the inner loop, to make sure there
+    // is enough work per iteration.
+    // FIXME: The unroller should make this decision directly instead, but
+    // currently the cost-model is not up to the task.
+    unsigned InnerLoopUnrollCount = std::min(10u, LShape.NumColumns / TileSize);
+    addStringMetadataToLoop(LI->getLoopFor(TI.InnerLoopHeader),
+                            "llvm.loop.unroll.count", InnerLoopUnrollCount);
+  }
+
   void emitSIMDTiling(CallInst *MatMul, LoadInst *LoadOp0, LoadInst *LoadOp1,
                       StoreInst *Store,
                       SmallPtrSetImpl<Instruction *> &FusedInsts) {
@@ -1226,28 +1288,34 @@ public:
 
     bool AllowContract = AllowContractEnabled || (isa<FPMathOperator>(MatMul) &&
                                                   MatMul->hasAllowContract());
-    IRBuilder<> Builder(Store);
-    for (unsigned J = 0; J < C; J += TileSize)
-      for (unsigned I = 0; I < R; I += TileSize) {
-        const unsigned TileR = std::min(R - I, unsigned(TileSize));
-        const unsigned TileC = std::min(C - J, unsigned(TileSize));
-        MatrixTy Res = getZeroMatrix(EltType, TileR, TileC);
+    if (TileUseLoops && (R % TileSize == 0 && C % TileSize == 0))
+      createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store,
+                       AllowContract);
+    else {
+      IRBuilder<> Builder(Store);
+      for (unsigned J = 0; J < C; J += TileSize)
+        for (unsigned I = 0; I < R; I += TileSize) {
+          const unsigned TileR = std::min(R - I, unsigned(TileSize));
+          const unsigned TileC = std::min(C - J, unsigned(TileSize));
+          MatrixTy Res = getZeroMatrix(EltType, TileR, TileC);
 
-        for (unsigned K = 0; K < M; K += TileSize) {
-          const unsigned TileM = std::min(M - K, unsigned(TileSize));
-          MatrixTy A =
-              loadMatrix(APtr, LoadOp0->getAlign(), LoadOp0->isVolatile(),
-                         LShape, Builder.getInt64(I), Builder.getInt64(K),
-                         {TileR, TileM}, EltType, Builder);
-          MatrixTy B =
-              loadMatrix(BPtr, LoadOp1->getAlign(), LoadOp1->isVolatile(),
-                         RShape, Builder.getInt64(K), Builder.getInt64(J),
-                         {TileM, TileC}, EltType, Builder);
-          emitMatrixMultiply(Res, A, B, AllowContract, Builder, true);
+          for (unsigned K = 0; K < M; K += TileSize) {
+            const unsigned TileM = std::min(M - K, unsigned(TileSize));
+            MatrixTy A =
+                loadMatrix(APtr, LoadOp0->getAlign(), LoadOp0->isVolatile(),
+                           LShape, Builder.getInt64(I), Builder.getInt64(K),
+                           {TileR, TileM}, EltType, Builder);
+            MatrixTy B =
+                loadMatrix(BPtr, LoadOp1->getAlign(), LoadOp1->isVolatile(),
+                           RShape, Builder.getInt64(K), Builder.getInt64(J),
+                           {TileM, TileC}, EltType, Builder);
+            emitMatrixMultiply(Res, A, B, AllowContract, Builder, true);
+          }
+          storeMatrix(Res, CPtr, Store->getAlign(), Store->isVolatile(), {R, M},
+                      Builder.getInt64(I), Builder.getInt64(J), EltType,
+                      Builder);
         }
-        storeMatrix(Res, CPtr, Store->getAlign(), Store->isVolatile(), {R, M},
-                    Builder.getInt64(I), Builder.getInt64(J), EltType, Builder);
-      }
+    }
 
     // Mark eliminated instructions as fused and remove them.
     FusedInsts.insert(Store);

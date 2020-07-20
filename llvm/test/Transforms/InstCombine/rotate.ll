@@ -438,8 +438,8 @@ define i9 @rotate9_not_safe(i9 %v, i32 %shamt) {
 
 define i16 @rotateleft_16_neg_mask(i16 %v, i16 %shamt) {
 ; CHECK-LABEL: @rotateleft_16_neg_mask(
-; CHECK-NEXT:    [[RET:%.*]] = call i16 @llvm.fshl.i16(i16 [[V:%.*]], i16 [[V]], i16 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i16 [[RET]]
+; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.fshl.i16(i16 [[V:%.*]], i16 [[V]], i16 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i16 [[OR]]
 ;
   %neg = sub i16 0, %shamt
   %lshamt = and i16 %shamt, 15
@@ -456,8 +456,8 @@ define i16 @rotateleft_16_neg_mask(i16 %v, i16 %shamt) {
 
 define i16 @rotateleft_16_neg_mask_commute(i16 %v, i16 %shamt) {
 ; CHECK-LABEL: @rotateleft_16_neg_mask_commute(
-; CHECK-NEXT:    [[RET:%.*]] = call i16 @llvm.fshl.i16(i16 [[V:%.*]], i16 [[V]], i16 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i16 [[RET]]
+; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.fshl.i16(i16 [[V:%.*]], i16 [[V]], i16 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i16 [[OR]]
 ;
   %neg = sub i16 0, %shamt
   %lshamt = and i16 %shamt, 15
@@ -474,8 +474,8 @@ define i16 @rotateleft_16_neg_mask_commute(i16 %v, i16 %shamt) {
 
 define i8 @rotateright_8_neg_mask(i8 %v, i8 %shamt) {
 ; CHECK-LABEL: @rotateright_8_neg_mask(
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshr.i8(i8 [[V:%.*]], i8 [[V]], i8 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    [[OR:%.*]] = call i8 @llvm.fshr.i8(i8 [[V:%.*]], i8 [[V]], i8 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %neg = sub i8 0, %shamt
   %rshamt = and i8 %shamt, 7
@@ -492,8 +492,8 @@ define i8 @rotateright_8_neg_mask(i8 %v, i8 %shamt) {
 
 define i8 @rotateright_8_neg_mask_commute(i8 %v, i8 %shamt) {
 ; CHECK-LABEL: @rotateright_8_neg_mask_commute(
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshr.i8(i8 [[V:%.*]], i8 [[V]], i8 [[SHAMT:%.*]])
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    [[OR:%.*]] = call i8 @llvm.fshr.i8(i8 [[V:%.*]], i8 [[V]], i8 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %neg = sub i8 0, %shamt
   %rshamt = and i8 %shamt, 7
@@ -687,6 +687,42 @@ define i24 @rotl_select_weird_type(i24 %x, i24 %shamt) {
   %or = or i24 %shl, %shr
   %r = select i1 %cmp, i24 %x, i24 %or
   ret i24 %r
+}
+
+define i32 @rotl_select_zext_shamt(i32 %x, i8 %y) {
+; CHECK-LABEL: @rotl_select_zext_shamt(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[TMP1]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %rem = and i8 %y, 31
+  %cmp = icmp eq i8 %rem, 0
+  %sh_prom = zext i8 %rem to i32
+  %sub = sub nuw nsw i8 32, %rem
+  %sh_prom1 = zext i8 %sub to i32
+  %shr = lshr i32 %x, %sh_prom1
+  %shl = shl i32 %x, %sh_prom
+  %or = or i32 %shl, %shr
+  %r = select i1 %cmp, i32 %x, i32 %or
+  ret i32 %r
+}
+
+define i64 @rotr_select_zext_shamt(i64 %x, i32 %y) {
+; CHECK-LABEL: @rotr_select_zext_shamt(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshr.i64(i64 [[X:%.*]], i64 [[X]], i64 [[TMP1]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %rem = and i32 %y, 63
+  %cmp = icmp eq i32 %rem, 0
+  %sh_prom = zext i32 %rem to i64
+  %shr = lshr i64 %x, %sh_prom
+  %sub = sub nuw nsw i32 64, %rem
+  %sh_prom1 = zext i32 %sub to i64
+  %shl = shl i64 %x, %sh_prom1
+  %or = or i64 %shl, %shr
+  %r = select i1 %cmp, i64 %x, i64 %or
+  ret i64 %r
 }
 
 ; Test that the transform doesn't crash when there's an "or" with a ConstantExpr operand.

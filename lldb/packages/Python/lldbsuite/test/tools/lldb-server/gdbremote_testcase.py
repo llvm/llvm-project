@@ -1537,7 +1537,7 @@ class GdbRemoteTestCaseBase(TestBase):
         g_c2_address = int(context.get("g_c2_address"), 16)
 
         # Set a breakpoint at the given address.
-        if self.getArchitecture() == "arm":
+        if self.getArchitecture().startswith("arm"):
             # TODO: Handle case when setting breakpoint in thumb code
             BREAKPOINT_KIND = 4
         else:
@@ -1601,7 +1601,17 @@ class GdbRemoteTestCaseBase(TestBase):
         # variable value
         if re.match("s390x", arch):
             expected_step_count = 2
+        # ARM64 requires "4" instructions: 2 to compute the address (adrp, add),
+        # one to materialize the constant (mov) and the store
+        if re.match("arm64", arch):
+            expected_step_count = 4
+
         self.assertEqual(step_count, expected_step_count)
+
+        # ARM64: Once addresses and constants are materialized, only one
+        # instruction is needed.
+        if re.match("arm64", arch):
+            expected_step_count = 1
 
         # Verify we hit the next state.
         args["expected_g_c1"] = "0"
