@@ -14,7 +14,6 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
 #define LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
 
-#include "CodeGenHwModes.h"
 #include "CodeGenIntrinsics.h"
 #include "CodeGenTarget.h"
 #include "SDNodeProperties.h"
