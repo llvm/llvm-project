@@ -1,10 +1,10 @@
-; RUN: llc < %s -print-machineinstrs 2>&1 | FileCheck %s
+; FIXME: use -stop-after when MIR serialization output includes needed debug info.
+; RUN: llc < %s -print-after=wasm-optimize-live-intervals 2>&1 | FileCheck %s
 
-; CHECK: After WebAssembly Optimize Live Intervals:
+; CHECK: {{.*}}After WebAssembly Optimize Live Intervals
 ; CHECK: bb.3.for.body.for.body_crit_edge:
 ; CHECK: [[REG:%[0-9]+]]:i32 = nsw ADD_I32 {{.*}} fib.c:7:7
 ; CHECK: DBG_VALUE [[REG]]:i32, $noreg, !"a", {{.*}} fib.c:5:13
-; CHECK: After WebAssembly Memory Intrinsic Results:
 
 ; ModuleID = 'fib.bc'
 source_filename = "fib.c"

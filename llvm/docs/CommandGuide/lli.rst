@@ -165,7 +165,7 @@ CODE GENERATION OPTIONS
       =simple-noitin: Simple two pass scheduling: Same as simple except using generic latency
       =list-burr: Bottom-up register reduction list scheduling
       =list-tdrr: Top-down register reduction list scheduling
-      =list-td: Top-down list scheduler -print-machineinstrs - Print generated machine code
+      =list-td: Top-down list scheduler
 
 .. option:: -regalloc=allocator
 
