@@ -89,7 +89,7 @@ class SuspendedThreadsListLinux : public SuspendedThreadsList {
  public:
   SuspendedThreadsListLinux() { thread_ids_.reserve(1024); }
 
-  tid_t GetThreadID(uptr index) override const;
+  tid_t GetThreadID(uptr index) const override;
   uptr ThreadCount() const override;
   bool ContainsTid(tid_t thread_id) const;
   void Append(tid_t tid);
