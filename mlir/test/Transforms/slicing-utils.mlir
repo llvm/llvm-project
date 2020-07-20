@@ -225,7 +225,7 @@ func @slicing_test_2() {
   %c2 = constant 2 : index
   %c16 = constant 16 : index
   affine.for %i0 = %c0 to %c16 {
-    affine.for %i1 = (i)[] -> (i)(%i0) to 10 {
+    affine.for %i1 = affine_map<(i)[] -> (i)>(%i0) to 10 {
       // BWD: matched: %[[b:.*]] {{.*}} backward static slice:
       // BWD: affine.for {{.*}}
 

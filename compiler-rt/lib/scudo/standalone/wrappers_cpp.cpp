@@ -15,7 +15,8 @@
 
 #include <stdint.h>
 
-extern scudo::Allocator<scudo::Config> *AllocatorPtr;
+extern "C" void malloc_postinit();
+extern scudo::Allocator<scudo::Config, malloc_postinit> *AllocatorPtr;
 
 namespace std {
 struct nothrow_t {};

@@ -18,6 +18,7 @@
 .arm
 .section .text_armfunc, "ax", %progbits
 .globl armfunc
+.type armfunc, %function
 armfunc:
 	b	thumbfunc
 

@@ -1,4 +1,4 @@
-// RUN:  %clang_cc1 -std=c++2a -fconcepts-ts -verify %s
+// RUN:  %clang_cc1 -std=c++2a -verify %s
 
 struct S2 {};
 // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'S1' to 'const S2' for 1st argument}}

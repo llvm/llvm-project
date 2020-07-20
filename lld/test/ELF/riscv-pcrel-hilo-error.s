@@ -4,4 +4,10 @@
 
 # CHECK: error: R_RISCV_PCREL_LO12 relocation points to an absolute symbol: external
 
+# We provide a dummy %pcrel_hi referred to by external to appease the
+# assembler, but make external weak so --defsym can still override it at link
+# time.
+.weak external
+external:
+auipc sp,%pcrel_hi(external)
 addi sp,sp,%pcrel_lo(external)

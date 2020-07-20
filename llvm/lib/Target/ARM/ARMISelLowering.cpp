@@ -466,7 +466,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
         { RTLIB::OGE_F32, "__gesf2vfp",    ISD::SETNE },
         { RTLIB::OGT_F32, "__gtsf2vfp",    ISD::SETNE },
         { RTLIB::UO_F32,  "__unordsf2vfp", ISD::SETNE },
-        { RTLIB::O_F32,   "__unordsf2vfp", ISD::SETEQ },
 
         // Double-precision comparisons.
         { RTLIB::OEQ_F64, "__eqdf2vfp",    ISD::SETNE },
@@ -476,7 +475,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
         { RTLIB::OGE_F64, "__gedf2vfp",    ISD::SETNE },
         { RTLIB::OGT_F64, "__gtdf2vfp",    ISD::SETNE },
         { RTLIB::UO_F64,  "__unorddf2vfp", ISD::SETNE },
-        { RTLIB::O_F64,   "__unorddf2vfp", ISD::SETEQ },
 
         // Floating-point to integer conversions.
         // i64 conversions are done via library routines even when generating VFP
@@ -540,7 +538,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       { RTLIB::OGE_F64, "__aeabi_dcmpge", CallingConv::ARM_AAPCS, ISD::SETNE },
       { RTLIB::OGT_F64, "__aeabi_dcmpgt", CallingConv::ARM_AAPCS, ISD::SETNE },
       { RTLIB::UO_F64,  "__aeabi_dcmpun", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::O_F64,   "__aeabi_dcmpun", CallingConv::ARM_AAPCS, ISD::SETEQ },
 
       // Single-precision floating-point arithmetic helper functions
       // RTABI chapter 4.1.2, Table 4
@@ -558,7 +555,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       { RTLIB::OGE_F32, "__aeabi_fcmpge", CallingConv::ARM_AAPCS, ISD::SETNE },
       { RTLIB::OGT_F32, "__aeabi_fcmpgt", CallingConv::ARM_AAPCS, ISD::SETNE },
       { RTLIB::UO_F32,  "__aeabi_fcmpun", CallingConv::ARM_AAPCS, ISD::SETNE },
-      { RTLIB::O_F32,   "__aeabi_fcmpun", CallingConv::ARM_AAPCS, ISD::SETEQ },
 
       // Floating-point to integer conversions.
       // RTABI chapter 4.1.2, Table 6
@@ -1077,8 +1073,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA,       MVT::i64, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
-  setOperationAction(ISD::LOAD, MVT::i64, Custom);
-  setOperationAction(ISD::STORE, MVT::i64, Custom);
 
   // MVE lowers 64 bit shifts to lsll and lsrl
   // assuming that ISD::SRL and SRA of i64 are already marked custom
@@ -1360,6 +1354,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
     }
+
+    // Strict floating-point comparisons need custom lowering.
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::f16, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Custom);
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   }
 
   // Use __sincos_stret if available.
@@ -1558,7 +1560,9 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::CMN:           return "ARMISD::CMN";
   case ARMISD::CMPZ:          return "ARMISD::CMPZ";
   case ARMISD::CMPFP:         return "ARMISD::CMPFP";
+  case ARMISD::CMPFPE:        return "ARMISD::CMPFPE";
   case ARMISD::CMPFPw0:       return "ARMISD::CMPFPw0";
+  case ARMISD::CMPFPEw0:      return "ARMISD::CMPFPEw0";
   case ARMISD::BCC_i64:       return "ARMISD::BCC_i64";
   case ARMISD::FMSTAT:        return "ARMISD::FMSTAT";
 
@@ -1601,9 +1605,6 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::MEMBARRIER_MCR: return "ARMISD::MEMBARRIER_MCR";
 
   case ARMISD::PRELOAD:       return "ARMISD::PRELOAD";
-
-  case ARMISD::LDRD:          return "ARMISD::LDRD";
-  case ARMISD::STRD:          return "ARMISD::STRD";
 
   case ARMISD::WIN__CHKSTK:   return "ARMISD::WIN__CHKSTK";
   case ARMISD::WIN__DBZCHK:   return "ARMISD::WIN__DBZCHK";
@@ -4353,13 +4354,16 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 
 /// Returns a appropriate VFP CMP (fcmp{s|d}+fmstat) for the given operands.
 SDValue ARMTargetLowering::getVFPCmp(SDValue LHS, SDValue RHS,
-                                     SelectionDAG &DAG, const SDLoc &dl) const {
+                                     SelectionDAG &DAG, const SDLoc &dl,
+                                     bool Signaling) const {
   assert(Subtarget->hasFP64() || RHS.getValueType() != MVT::f64);
   SDValue Cmp;
   if (!isFloatingPointZero(RHS))
-    Cmp = DAG.getNode(ARMISD::CMPFP, dl, MVT::Glue, LHS, RHS);
+    Cmp = DAG.getNode(Signaling ? ARMISD::CMPFPE : ARMISD::CMPFP,
+                      dl, MVT::Glue, LHS, RHS);
   else
-    Cmp = DAG.getNode(ARMISD::CMPFPw0, dl, MVT::Glue, LHS);
+    Cmp = DAG.getNode(Signaling ? ARMISD::CMPFPEw0 : ARMISD::CMPFPw0,
+                      dl, MVT::Glue, LHS);
   return DAG.getNode(ARMISD::FMSTAT, dl, MVT::Glue, Cmp);
 }
 
@@ -4545,7 +4549,7 @@ SDValue ARMTargetLowering::LowerUnsignedALUO(SDValue Op,
 static SDValue LowerSADDSUBSAT(SDValue Op, SelectionDAG &DAG,
                                const ARMSubtarget *Subtarget) {
   EVT VT = Op.getValueType();
-  if (!Subtarget->hasDSP())
+  if (!Subtarget->hasV6Ops() || !Subtarget->hasDSP())
     return SDValue();
   if (!VT.isSimple())
     return SDValue();
@@ -5417,7 +5421,12 @@ SDValue ARMTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 
   // FIXME: Remove this when we have strict fp instruction selection patterns
   if (IsStrict) {
-    DAG.mutateStrictFPToFP(Op.getNode());
+    SDLoc Loc(Op);
+    SDValue Result =
+        DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
+                                                             : ISD::FP_TO_UINT,
+                    Loc, Op.getValueType(), SrcVal);
+    return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
   }
 
   return Op;
@@ -9092,24 +9101,6 @@ static SDValue LowerPredicateLoad(SDValue Op, SelectionDAG &DAG) {
   return DAG.getMergeValues({Pred, Load.getValue(1)}, dl);
 }
 
-void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
-                                  SelectionDAG &DAG) const {
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-  EVT MemVT = LD->getMemoryVT();
-  assert(LD->isUnindexed() && "Loads should be unindexed at this point.");
-
-  if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
-      !Subtarget->isThumb1Only() && LD->isVolatile()) {
-    SDLoc dl(N);
-    SDValue Result = DAG.getMemIntrinsicNode(
-        ARMISD::LDRD, dl, DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
-        {LD->getChain(), LD->getBasePtr()}, MemVT, LD->getMemOperand());
-    SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64,
-                               Result.getValue(0), Result.getValue(1));
-    Results.append({Pair, Result.getValue(2)});
-  }
-}
-
 static SDValue LowerPredicateStore(SDValue Op, SelectionDAG &DAG) {
   StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
   EVT MemVT = ST->getMemoryVT();
@@ -9137,34 +9128,6 @@ static SDValue LowerPredicateStore(SDValue Op, SelectionDAG &DAG) {
       ST->getChain(), dl, GRP, ST->getBasePtr(),
       EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits()),
       ST->getMemOperand());
-}
-
-static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
-                          const ARMSubtarget *Subtarget) {
-  StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
-  EVT MemVT = ST->getMemoryVT();
-  assert(ST->isUnindexed() && "Stores should be unindexed at this point.");
-
-  if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
-      !Subtarget->isThumb1Only() && ST->isVolatile()) {
-    SDNode *N = Op.getNode();
-    SDLoc dl(N);
-
-    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, ST->getValue(),
-                             DAG.getTargetConstant(0, dl, MVT::i32));
-    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, ST->getValue(),
-                             DAG.getTargetConstant(1, dl, MVT::i32));
-
-    return DAG.getMemIntrinsicNode(ARMISD::STRD, dl, DAG.getVTList(MVT::Other),
-                                   {ST->getChain(), Lo, Hi, ST->getBasePtr()},
-                                   MemVT, ST->getMemOperand());
-  } else if (Subtarget->hasMVEIntegerOps() &&
-             ((MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
-               MemVT == MVT::v16i1))) {
-    return LowerPredicateStore(Op, DAG);
-  }
-
-  return SDValue();
 }
 
 static bool isZeroVector(SDValue N) {
@@ -9277,6 +9240,51 @@ static void ReplaceCMP_SWAP_64Results(SDNode *N,
   Results.push_back(SDValue(CmpSwap, 2));
 }
 
+SDValue ARMTargetLowering::LowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  EVT VT = Op.getValueType();
+  SDValue Chain = Op.getOperand(0);
+  SDValue LHS = Op.getOperand(1);
+  SDValue RHS = Op.getOperand(2);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
+  bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
+
+  // If we don't have instructions of this float type then soften to a libcall
+  // and use SETCC instead.
+  if (isUnsupportedFloatingType(LHS.getValueType())) {
+    DAG.getTargetLoweringInfo().softenSetCCOperands(
+      DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS, Chain, IsSignaling);
+    if (!RHS.getNode()) {
+      RHS = DAG.getConstant(0, dl, LHS.getValueType());
+      CC = ISD::SETNE;
+    }
+    SDValue Result = DAG.getNode(ISD::SETCC, dl, VT, LHS, RHS,
+                                 DAG.getCondCode(CC));
+    return DAG.getMergeValues({Result, Chain}, dl);
+  }
+
+  ARMCC::CondCodes CondCode, CondCode2;
+  FPCCToARMCC(CC, CondCode, CondCode2);
+
+  // FIXME: Chain is not handled correctly here. Currently the FPSCR is implicit
+  // in CMPFP and CMPFPE, but instead it should be made explicit by these
+  // instructions using a chain instead of glue. This would also fix the problem
+  // here (and also in LowerSELECT_CC) where we generate two comparisons when
+  // CondCode2 != AL.
+  SDValue True = DAG.getConstant(1, dl, VT);
+  SDValue False =  DAG.getConstant(0, dl, VT);
+  SDValue ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
+  SDValue CCR = DAG.getRegister(ARM::CPSR, MVT::i32);
+  SDValue Cmp = getVFPCmp(LHS, RHS, DAG, dl, IsSignaling);
+  SDValue Result = getCMOV(dl, VT, False, True, ARMcc, CCR, Cmp, DAG);
+  if (CondCode2 != ARMCC::AL) {
+    ARMcc = DAG.getConstant(CondCode2, dl, MVT::i32);
+    Cmp = getVFPCmp(LHS, RHS, DAG, dl, IsSignaling);
+    Result = getCMOV(dl, VT, Result, True, ARMcc, CCR, Cmp, DAG);
+  }
+  return DAG.getMergeValues({Result, Chain}, dl);
+}
+
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Lowering node: "; Op.dump());
   switch (Op.getOpcode()) {
@@ -9354,7 +9362,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::LOAD:
     return LowerPredicateLoad(Op, DAG);
   case ISD::STORE:
-    return LowerSTORE(Op, DAG, Subtarget);
+    return LowerPredicateStore(Op, DAG);
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::ATOMIC_LOAD:
@@ -9370,6 +9378,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND: return LowerFP_ROUND(Op, DAG);
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND: return LowerFP_EXTEND(Op, DAG);
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS: return LowerFSETCC(Op, DAG);
   case ARMISD::WIN__DBZCHK: return SDValue();
   }
 }
@@ -9456,9 +9466,7 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::ABS:
      lowerABS(N, Results, DAG);
      return ;
-  case ISD::LOAD:
-    LowerLOAD(N, Results, DAG);
-    break;
+
   }
   if (Res.getNode())
     Results.push_back(Res);
@@ -16377,6 +16385,18 @@ SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   assert(!(DstSz == 32 && Subtarget->hasFP16()) &&
          "With FP16, 16 to 32 conversion is legal!");
 
+  // Converting from 32 -> 64 is valid if we have FP64.
+  if (SrcSz == 32 && DstSz == 64 && Subtarget->hasFP64()) {
+    // FIXME: Remove this when we have strict fp instruction selection patterns
+    if (IsStrict) {
+      SDLoc Loc(Op);
+      SDValue Result = DAG.getNode(ISD::FP_EXTEND,
+                                   Loc, Op.getValueType(), SrcVal);
+      return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
+    }
+    return Op;
+  }
+
   // Either we are converting from 16 -> 64, without FP16 and/or
   // FP.double-precision or without Armv8-fp. So we must do it in two
   // steps.
@@ -16872,7 +16892,7 @@ bool ARMTargetLowering::isCheapToSpeculateCtlz() const {
 }
 
 bool ARMTargetLowering::shouldExpandShift(SelectionDAG &DAG, SDNode *N) const {
-  return !Subtarget->hasMinSize();
+  return !Subtarget->hasMinSize() || Subtarget->isTargetWindows();
 }
 
 Value *ARMTargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,

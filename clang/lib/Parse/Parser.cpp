@@ -1136,6 +1136,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Poison SEH identifiers so they are flagged as illegal in function bodies.
   PoisonSEHIdentifiersRAIIObject PoisonSEHIdentifiers(*this, true);
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
 
   // If this is C90 and the declspecs were completely missing, fudge in an
   // implicit int.  We do this here because this is the only place where
@@ -1261,6 +1262,15 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Break out of the ParsingDeclSpec context, too.  This const_cast is
   // safe because we're always the sole owner.
   D.getMutableDeclSpec().abort();
+
+  // With abbreviated function templates - we need to explicitly add depth to
+  // account for the implicit template parameter list induced by the template.
+  if (auto *Template = dyn_cast_or_null<FunctionTemplateDecl>(Res))
+    if (Template->isAbbreviated() &&
+        Template->getTemplateParameters()->getParam(0)->isImplicit())
+      // First template parameter is implicit - meaning no explicit template
+      // parameter list was specified.
+      CurTemplateDepthTracker.addDepth(1);
 
   if (TryConsumeToken(tok::equal)) {
     assert(getLangOpts().CPlusPlus && "Only C++ function definitions have '='");
@@ -1732,6 +1742,20 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
       return ANK_Error;
     return ANK_Success;
   }
+  case Sema::NC_Concept: {
+    UnqualifiedId Id;
+    Id.setIdentifier(Name, NameLoc);
+    if (Next.is(tok::less))
+      // We have a concept name followed by '<'. Consume the identifier token so
+      // we reach the '<' and annotate it.
+      ConsumeToken();
+    if (AnnotateTemplateIdToken(
+            TemplateTy::make(Classification.getTemplateName()),
+            Classification.getTemplateNameKind(), SS, SourceLocation(), Id,
+            /*AllowTypeAnnotation=*/false, /*TypeConstraint=*/true))
+      return ANK_Error;
+    return ANK_Success;
+  }
   }
 
   // Unable to classify the name, but maybe we can annotate a scope specifier.
@@ -1810,7 +1834,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
                                        /*EnteringContext=*/false, nullptr,
                                        /*IsTypename*/ true))
       return true;
-    if (!SS.isSet()) {
+    if (SS.isEmpty()) {
       if (Tok.is(tok::identifier) || Tok.is(tok::annot_template_id) ||
           Tok.is(tok::annot_decltype)) {
         // Attempt to recover by skipping the invalid 'typename'
@@ -1983,7 +2007,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
       // template-id annotation in a context where we weren't allowed
       // to produce a type annotation token. Update the template-id
       // annotation token to a type annotation token now.
-      AnnotateTemplateIdTokenAsType();
+      AnnotateTemplateIdTokenAsType(SS);
       return false;
     }
   }
@@ -2005,10 +2029,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
 bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
-  assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
-          (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon)) ||
-          Tok.is(tok::kw_decltype) || Tok.is(tok::kw___super)) &&
-         "Cannot be a type or scope token!");
+  assert(MightBeCXXScopeToken() && "Cannot be a type or scope token!");
 
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, nullptr, EnteringContext))

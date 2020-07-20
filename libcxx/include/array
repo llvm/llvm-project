@@ -359,7 +359,7 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template<class _Tp, class... _Args,
-         class = typename enable_if<(is_same_v<_Tp, _Args> && ...), void>::type
+         class = _EnableIf<__all<_IsSame<_Tp, _Args>::value...>::value>
          >
 array(_Tp, _Args...)
   -> array<_Tp, 1 + sizeof...(_Args)>;

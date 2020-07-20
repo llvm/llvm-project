@@ -128,6 +128,7 @@
 // CHECK-NEXT: Owner (SubjectMatchRule_record_not_is_union)
 // CHECK-NEXT: ParamTypestate (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: PassObjectSize (SubjectMatchRule_variable_is_parameter)
+// CHECK-NEXT: PatchableFunctionEntry (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: Pointer (SubjectMatchRule_record_not_is_union)
 // CHECK-NEXT: ReleaseHandle (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: RenderScriptKernel (SubjectMatchRule_function)

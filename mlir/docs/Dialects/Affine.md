@@ -22,7 +22,7 @@ Examples:
 ```mlir
 // A 2d to 3d affine mapping.
 // d0/d1 are dimensions, s0 is a symbol
-#affine_map2to3 = (d0, d1)[s0] -> (d0, d1 + s0, d1 - s0)
+#affine_map2to3 = affine_map<(d0, d1)[s0] -> (d0, d1 + s0, d1 - s0)>
 ```
 
 Dimensional identifiers correspond to the dimensions of the underlying structure
@@ -52,7 +52,7 @@ SSA values bound to dimensions and symbols must always have 'index' type.
 Example:
 
 ```mlir
-#affine_map2to3 = (d0, d1)[s0] -> (d0, d1 + s0, d1 - s0)
+#affine_map2to3 = affine_map<(d0, d1)[s0] -> (d0, d1 + s0, d1 - s0)>
 // Binds %N to the s0 symbol in affine_map2to3.
 %x = alloc()[%N] : memref<40x50xf32, #affine_map2to3>
 ```
@@ -177,14 +177,14 @@ Examples:
 
 ```mlir
 // Affine map out-of-line definition and usage example.
-#affine_map42 = (d0, d1)[s0] -> (d0, d0 + d1 + s0 floordiv 2)
+#affine_map42 = affine_map<(d0, d1)[s0] -> (d0, d0 + d1 + s0 floordiv 2)>
 
 // Use an affine mapping definition in an alloc operation, binding the
 // SSA value %N to the symbol s0.
 %a = alloc()[%N] : memref<4x4xf32, #affine_map42>
 
 // Same thing with an inline affine mapping definition.
-%b = alloc()[%N] : memref<4x4xf32, (d0, d1)[s0] -> (d0, d0 + d1 + s0 floordiv 2)>
+%b = alloc()[%N] : memref<4x4xf32, affine_map<(d0, d1)[s0] -> (d0, d0 + d1 + s0 floordiv 2)>>
 ```
 
 ### Semi-affine maps
@@ -280,8 +280,8 @@ Example:
 
 ```mlir
 // A example two-dimensional integer set with two symbols.
-#set42 = (d0, d1)[s0, s1]
-   : (d0 >= 0, -d0 + s0 - 1 >= 0, d1 >= 0, -d1 + s1 - 1 >= 0)
+#set42 = affine_set<(d0, d1)[s0, s1]
+   : (d0 >= 0, -d0 + s0 - 1 >= 0, d1 >= 0, -d1 + s1 - 1 >= 0)>
 
 // Inside a Region
 affine.if #set42(%i, %j)[%M, %N] {
@@ -299,7 +299,7 @@ affine.if #set42(%i, %j)[%M, %N] {
 Syntax:
 
 ```
-operation ::= ssa-id `=` `affine.apply` affine-map dim-and-symbol-use-list
+operation ::= ssa-id `=` `affine.apply` affine-map-attribute dim-and-symbol-use-list
 ```
 
 The `affine.apply` operation applies an
@@ -312,12 +312,12 @@ value. The input operands and result must all have 'index' type.
 Example:
 
 ```mlir
-#map10 = (d0, d1) -> (d0 floordiv 8 + d1 floordiv 128)
+#map10 = affine_map<(d0, d1) -> (d0 floordiv 8 + d1 floordiv 128)>
 ...
 %1 = affine.apply #map10 (%s, %t)
 
 // Inline example.
-%2 = affine.apply (i)[s0] -> (i+s0) (%42)[%n]
+%2 = affine.apply affine_map<(i)[s0] -> (i+s0)> (%42)[%n]
 ```
 
 #### 'affine.for' operation
@@ -328,8 +328,8 @@ Syntax:
 operation   ::= `affine.for` ssa-id `=` lower-bound `to` upper-bound
                       (`step` integer-literal)? `{` op* `}`
 
-lower-bound ::= `max`? affine-map dim-and-symbol-use-list | shorthand-bound
-upper-bound ::= `min`? affine-map dim-and-symbol-use-list | shorthand-bound
+lower-bound ::= `max`? affine-map-attribute dim-and-symbol-use-list | shorthand-bound
+upper-bound ::= `min`? affine-map-attribute dim-and-symbol-use-list | shorthand-bound
 shorthand-bound ::= ssa-id | `-`? integer-literal
 ```
 
@@ -366,7 +366,7 @@ nullary mapping function that returns the constant value (e.g. `()->(-42)()`).
 Example showing reverse iteration of the inner loop:
 
 ```mlir
-#map57 = (d0)[s0] -> (s0 - d0 - 1)
+#map57 = affine_map<(d0)[s0] -> (s0 - d0 - 1)>
 
 func @simple_example(%A: memref<?x?xf32>, %B: memref<?x?xf32>) {
   %N = dim %A, 0 : memref<?x?xf32>
@@ -387,7 +387,7 @@ Syntax:
 
 ```
 operation    ::= `affine.if` if-op-cond `{` op* `}` (`else` `{` op* `}`)?
-if-op-cond ::= integer-set dim-and-symbol-use-list
+if-op-cond ::= integer-set-attr dim-and-symbol-use-list
 ```
 
 The `affine.if` operation restricts execution to a subset of the loop iteration
@@ -410,8 +410,8 @@ blocks must not have any arguments.
 Example:
 
 ```mlir
-#set = (d0, d1)[s0]: (d0 - 10 >= 0, s0 - d0 - 9 >= 0,
-                      d1 - 10 >= 0, s0 - d1 - 9 >= 0)
+#set = affine_set<(d0, d1)[s0]: (d0 - 10 >= 0, s0 - d0 - 9 >= 0,
+                                 d1 - 10 >= 0, s0 - d1 - 9 >= 0)>
 func @reduced_domain_example(%A, %X, %N) : (memref<10xi32>, i32, i32) {
   affine.for %i = 0 to %N {
      affine.for %j = 0 to %N {
@@ -571,7 +571,7 @@ Example:
 Syntax:
 
 ```
-operation ::= ssa-id `=` `affine.min` affine-map dim-and-symbol-use-list
+operation ::= ssa-id `=` `affine.min` affine-map-attribute dim-and-symbol-use-list
 ```
 
 The `affine.min` operation applies an
@@ -585,7 +585,7 @@ Example:
 
 ```mlir
 
-%0 = affine.min (d0)[s0] -> (1000, d0 + 512, s0) (%arg0)[%arg1]
+%0 = affine.min affine_map<(d0)[s0] -> (1000, d0 + 512, s0)> (%arg0)[%arg1]
 
 ```
 

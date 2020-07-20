@@ -53,11 +53,9 @@ public:
 
   DecodeStatus getSingleInstruction(MCInst &Instr, MCInst &MCB,
                                     ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                    raw_ostream &VStream, raw_ostream &CStream,
-                                    bool &Complete) const;
+                                    raw_ostream &CStream, bool &Complete) const;
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
   void remapInstruction(MCInst &Instr) const;
 };
@@ -158,7 +156,7 @@ static MCDisassembler *createHexagonDisassembler(const Target &T,
   return new HexagonDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
-extern "C" void LLVMInitializeHexagonDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheHexagonTarget(),
                                          createHexagonDisassembler);
 }
@@ -166,7 +164,6 @@ extern "C" void LLVMInitializeHexagonDisassembler() {
 DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
-                                                 raw_ostream &os,
                                                  raw_ostream &cs) const {
   DecodeStatus Result = DecodeStatus::Success;
   bool Complete = false;
@@ -179,7 +176,7 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Bytes.size() < HEXAGON_INSTR_SIZE)
       return MCDisassembler::Fail;
     MCInst *Inst = new (getContext()) MCInst;
-    Result = getSingleInstruction(*Inst, MI, Bytes, Address, os, cs, Complete);
+    Result = getSingleInstruction(*Inst, MI, Bytes, Address, cs, Complete);
     MI.addOperand(MCOperand::createInst(Inst));
     Size += HEXAGON_INSTR_SIZE;
     Bytes = Bytes.slice(HEXAGON_INSTR_SIZE);
@@ -290,9 +287,11 @@ static void adjustDuplex(MCInst &MI, MCContext &Context) {
   }
 }
 
-DecodeStatus HexagonDisassembler::getSingleInstruction(
-    MCInst &MI, MCInst &MCB, ArrayRef<uint8_t> Bytes, uint64_t Address,
-    raw_ostream &os, raw_ostream &cs, bool &Complete) const {
+DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
+                                                       ArrayRef<uint8_t> Bytes,
+                                                       uint64_t Address,
+                                                       raw_ostream &cs,
+                                                       bool &Complete) const {
   assert(Bytes.size() >= HEXAGON_INSTR_SIZE);
 
   uint32_t Instruction = support::endian::read32le(Bytes.data());

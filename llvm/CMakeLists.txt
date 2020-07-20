@@ -22,10 +22,10 @@ if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
 endif()
 if(NOT DEFINED LLVM_VERSION_PATCH)
-  set(LLVM_VERSION_PATCH 0)
+  set(LLVM_VERSION_PATCH 1)
 endif()
 if(NOT DEFINED LLVM_VERSION_SUFFIX)
-  set(LLVM_VERSION_SUFFIX git)
+  set(LLVM_VERSION_SUFFIX "")
 endif()
 
 if (NOT PACKAGE_VERSION)
@@ -347,13 +347,7 @@ option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON
 
 option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
-if(CMAKE_SYSTEM_NAME STREQUAL Windows)
-  set(zlib_DEFAULT "OFF")
-else()
-  set(zlib_DEFAULT "ON")
-endif()
-
-set(LLVM_ENABLE_ZLIB "${zlib_DEFAULT}" CACHE STRING "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
+option(LLVM_ENABLE_ZLIB "Use zlib for compression/decompression if available." ON)
 
 set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
 
@@ -1075,6 +1069,7 @@ endif()
 # after all targets are created.
 include(LLVMDistributionSupport)
 llvm_distribution_add_targets()
+process_llvm_pass_plugins(GEN_CONFIG)
 
 # This allows us to deploy the Universal CRT DLLs by passing -DCMAKE_INSTALL_UCRT_LIBRARIES=ON to CMake
 if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_INSTALL_UCRT_LIBRARIES)
@@ -1099,5 +1094,3 @@ endif()
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
 endif()
-
-process_llvm_pass_plugins()

@@ -204,6 +204,13 @@ public:
   /// Whether the driver is generating diagnostics for debugging purposes.
   unsigned CCGenDiagnostics : 1;
 
+  /// Pointer to the ExecuteCC1Tool function, if available.
+  /// When the clangDriver lib is used through clang.exe, this provides a
+  /// shortcut for executing the -cc1 command-line directly, in the same
+  /// process.
+  typedef int (*CC1ToolFunc)(SmallVectorImpl<const char *> &ArgV);
+  CC1ToolFunc CC1Main = nullptr;
+
 private:
   /// Raw target triple.
   std::string TargetTriple;

@@ -19,7 +19,7 @@ body: |
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX7: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX7: [[COPY3:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
-    ; GFX7: [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY $sgpr10_sgpr11
+    ; GFX7: [[COPY4:%[0-9]+]]:sreg_64 = COPY $sgpr10_sgpr11
     ; GFX7: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_vgpr11
     ; GFX7: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_vgpr13
     ; GFX7: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $exec
@@ -85,7 +85,7 @@ body: |
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX7: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX7: [[COPY3:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
-    ; GFX7: [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY $sgpr10_sgpr11
+    ; GFX7: [[COPY4:%[0-9]+]]:sreg_64 = COPY $sgpr10_sgpr11
     ; GFX7: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_vgpr11
     ; GFX7: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_vgpr13
     ; GFX7: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $exec

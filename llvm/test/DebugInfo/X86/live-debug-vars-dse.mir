@@ -1,9 +1,5 @@
 # RUN: llc -start-after=machine-scheduler %s -o - | FileCheck %s
 
-# XFAIL: *
-# See PR41992, the third and final dbg.value disappears after
-# LiveDebugVariables.
-
 # C source:
 # void escape(int *);
 # extern int global;
@@ -17,12 +13,12 @@
 
 # CHECK-LABEL: f: # @f
 # CHECK: movl    %ecx, [[OFF_X:[0-9]+]](%rsp)
-# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]], DW_OP_deref] $rsp
+# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [$rsp+0]
 # CHECK: leaq [[OFF_X]](%rsp), %rsi
 # CHECK: callq   escape
 # CHECK: #DEBUG_VALUE: f:x <- 1
 # CHECK: movl    $1, global(%rip)
-# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]], DW_OP_deref] $rsp
+# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [$rsp+0]
 # CHECK: movl    $2, [[OFF_X]](%rsp)
 # CHECK: callq   escape
 # CHECK: retq
@@ -46,11 +42,11 @@
   entry:
     %x.addr = alloca i32, align 4
     store i32 %x, i32* %x.addr, align 4
-    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !13, metadata !DIExpression(DW_OP_deref)), !dbg !14
+    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !13, metadata !DIExpression()), !dbg !14
     call void @escape(i32* %x.addr), !dbg !15
     call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !DIExpression()), !dbg !16
     store i32 1, i32* @global, align 4, !dbg !17
-    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !13, metadata !DIExpression(DW_OP_deref)), !dbg !18
+    call void @llvm.dbg.value(metadata i32* %x.addr, metadata !13, metadata !DIExpression()), !dbg !18
     store i32 2, i32* %x.addr, align 4, !dbg !18
     call void @escape(i32* %x.addr), !dbg !19
     ret void, !dbg !20
@@ -132,7 +128,7 @@ body:             |
   
     %0 = COPY $ecx
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0 :: (store 4 into %ir.x.addr)
-    DBG_VALUE %stack.0.x.addr, $noreg, !13, !DIExpression(DW_OP_deref), debug-location !14
+    DBG_VALUE %stack.0.x.addr, 0, !13, !DIExpression(), debug-location !14
     ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     %1 = LEA64r %stack.0.x.addr, 1, _, 0, _
     $rcx = COPY %1, debug-location !15
@@ -140,7 +136,7 @@ body:             |
     ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     DBG_VALUE 1, _, !13, !DIExpression(), debug-location !16
     MOV32mi $rip, 1, _, @global, _, 1, debug-location !17 :: (store 4 into @global)
-    DBG_VALUE %stack.0.x.addr, $noreg, !13, !DIExpression(DW_OP_deref), debug-location !18
+    DBG_VALUE %stack.0.x.addr, 0, !13, !DIExpression(), debug-location !18
     MOV32mi %stack.0.x.addr, 1, _, 0, _, 2, debug-location !18 :: (store 4 into %ir.x.addr)
     ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !19
     $rcx = COPY %1, debug-location !19

@@ -461,38 +461,39 @@ tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
       Sel.getNameForSlot(0) != "init")
     return None;
 
-  // Okay, this is '[receiver init]', check if 'receiver' is '[cls alloc]' or
-  // we are in an ObjC class method and 'receiver' is '[self alloc]'.
+  // Okay, this is '[receiver init]', check if 'receiver' is '[cls alloc]'
+  // with 'cls' a Class.
   auto *SubOME =
       dyn_cast<ObjCMessageExpr>(OME->getInstanceReceiver()->IgnoreParenCasts());
   if (!SubOME)
     return None;
   Selector SubSel = SubOME->getSelector();
 
-  // Check if we are in an ObjC class method and the receiver expression is
-  // 'self'.
-  const Expr *SelfInClassMethod = nullptr;
-  if (const auto *CurMD = dyn_cast_or_null<ObjCMethodDecl>(CGF.CurFuncDecl))
-    if (CurMD->isClassMethod())
-      if ((SelfInClassMethod = SubOME->getInstanceReceiver()))
-        if (!SelfInClassMethod->isObjCSelfExpr())
-          SelfInClassMethod = nullptr;
-
-  if ((SubOME->getReceiverKind() != ObjCMessageExpr::Class &&
-       !SelfInClassMethod) || !SubOME->getType()->isObjCObjectPointerType() ||
+  if (!SubOME->getType()->isObjCObjectPointerType() ||
       !SubSel.isUnarySelector() || SubSel.getNameForSlot(0) != "alloc")
     return None;
 
-  llvm::Value *Receiver;
-  if (SelfInClassMethod) {
-    Receiver = CGF.EmitScalarExpr(SelfInClassMethod);
-  } else {
+  llvm::Value *Receiver = nullptr;
+  switch (SubOME->getReceiverKind()) {
+  case ObjCMessageExpr::Instance:
+    if (!SubOME->getInstanceReceiver()->getType()->isObjCClassType())
+      return None;
+    Receiver = CGF.EmitScalarExpr(SubOME->getInstanceReceiver());
+    break;
+
+  case ObjCMessageExpr::Class: {
     QualType ReceiverType = SubOME->getClassReceiver();
-    const ObjCObjectType *ObjTy = ReceiverType->getAs<ObjCObjectType>();
+    const ObjCObjectType *ObjTy = ReceiverType->castAs<ObjCObjectType>();
     const ObjCInterfaceDecl *ID = ObjTy->getInterface();
     assert(ID && "null interface should be impossible here");
     Receiver = CGF.CGM.getObjCRuntime().GetClass(CGF, ID);
+    break;
   }
+  case ObjCMessageExpr::SuperInstance:
+  case ObjCMessageExpr::SuperClass:
+    return None;
+  }
+
   return CGF.EmitObjCAllocInit(Receiver, CGF.ConvertType(OME->getType()));
 }
 
@@ -540,10 +541,7 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
   switch (E->getReceiverKind()) {
   case ObjCMessageExpr::Instance:
     ReceiverType = E->getInstanceReceiver()->getType();
-    if (auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(CurFuncDecl))
-      if (OMD->isClassMethod())
-        if (E->getInstanceReceiver()->isObjCSelfExpr())
-          isClassMessage = true;
+    isClassMessage = ReceiverType->isObjCClassType();
     if (retainSelf) {
       TryEmitResult ter = tryEmitARCRetainScalarExpr(*this,
                                                    E->getInstanceReceiver());
@@ -555,9 +553,7 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
 
   case ObjCMessageExpr::Class: {
     ReceiverType = E->getClassReceiver();
-    const ObjCObjectType *ObjTy = ReceiverType->getAs<ObjCObjectType>();
-    assert(ObjTy && "Invalid Objective-C class message send");
-    OID = ObjTy->getInterface();
+    OID = ReceiverType->castAs<ObjCObjectType>()->getInterface();
     assert(OID && "Invalid Objective-C class message send");
     Receiver = Runtime.GetClass(*this, OID);
     isClassMessage = true;

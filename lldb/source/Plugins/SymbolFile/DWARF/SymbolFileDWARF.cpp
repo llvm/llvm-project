@@ -597,15 +597,6 @@ void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
   m_objfile_sp->ReadSectionData(section_sp.get(), data);
 }
 
-const DWARFDataExtractor &SymbolFileDWARF::get_debug_loc_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugLoc, m_data_debug_loc);
-}
-
-const DWARFDataExtractor &SymbolFileDWARF::get_debug_loclists_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugLocLists,
-                              m_data_debug_loclists);
-}
-
 DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (m_abbr)
     return m_abbr.get();

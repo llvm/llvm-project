@@ -1,9 +1,9 @@
-# RUN: llc -run-pass=aarch64-ldst-opt -mattr=+reserve-x10 -mattr=+reserve-x11 \
-# RUN:     -mattr=+reserve-x15 -mtriple=arm64-apple-iphoneos -verify-machineinstrs \
+# RUN: llc -run-pass=aarch64-ldst-opt -aarch64-load-store-renaming=true -mattr=+reserve-x10 \
+# RUN:     -mattr=+reserve-x11 -mattr=+reserve-x15 -mtriple=arm64-apple-iphoneos -verify-machineinstrs \
 # RUN:     -o - %s | FileCheck --check-prefix=CHECK --check-prefix=PRESERVED %s
 
-# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs \
-# RUN:     -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOPRES %s
+# RUN: llc -run-pass=aarch64-ldst-opt -aarch64-load-store-renaming=true -mtriple=arm64-apple-iphoneos \
+# RUN:     -verify-machineinstrs -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOPRES %s
 
 
 # Make sure we do not pick reserved registers. For test1, we would pick x10,

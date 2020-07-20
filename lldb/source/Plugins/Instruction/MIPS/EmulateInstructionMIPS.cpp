@@ -981,13 +981,11 @@ EmulateInstructionMIPS::GetSizeOfInstruction(lldb_private::DataExtractor &data,
   llvm::ArrayRef<uint8_t> raw_insn(data.GetDataStart(), data.GetByteSize());
 
   if (m_use_alt_disaasm)
-    decode_status =
-        m_alt_disasm->getInstruction(mc_insn, next_inst_size, raw_insn,
-                                     inst_addr, llvm::nulls(), llvm::nulls());
+    decode_status = m_alt_disasm->getInstruction(
+        mc_insn, next_inst_size, raw_insn, inst_addr, llvm::nulls());
   else
-    decode_status =
-        m_disasm->getInstruction(mc_insn, next_inst_size, raw_insn, inst_addr,
-                                 llvm::nulls(), llvm::nulls());
+    decode_status = m_disasm->getInstruction(mc_insn, next_inst_size, raw_insn,
+                                             inst_addr, llvm::nulls());
 
   if (decode_status != llvm::MCDisassembler::Success)
     return false;
@@ -1070,11 +1068,11 @@ bool EmulateInstructionMIPS::EvaluateInstruction(uint32_t evaluate_options) {
     llvm::MCDisassembler::DecodeStatus decode_status;
     llvm::ArrayRef<uint8_t> raw_insn(data.GetDataStart(), data.GetByteSize());
     if (m_use_alt_disaasm)
-      decode_status = m_alt_disasm->getInstruction(
-          mc_insn, insn_size, raw_insn, m_addr, llvm::nulls(), llvm::nulls());
+      decode_status = m_alt_disasm->getInstruction(mc_insn, insn_size, raw_insn,
+                                                   m_addr, llvm::nulls());
     else
-      decode_status = m_disasm->getInstruction(
-          mc_insn, insn_size, raw_insn, m_addr, llvm::nulls(), llvm::nulls());
+      decode_status = m_disasm->getInstruction(mc_insn, insn_size, raw_insn,
+                                               m_addr, llvm::nulls());
 
     if (decode_status != llvm::MCDisassembler::Success)
       return false;

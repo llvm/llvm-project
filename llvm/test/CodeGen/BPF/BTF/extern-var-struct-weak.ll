@@ -35,7 +35,7 @@ entry:
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   16777248                # 0x1000020
 ; CHECK-NEXT:        .long   5                       # BTF_KIND_FUNC(id = 3)
-; CHECK-NEXT:        .long   201326592               # 0xc000000
+; CHECK-NEXT:        .long   201326593               # 0xc000001
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   55                      # BTF_KIND_TYPEDEF(id = 4)
 ; CHECK-NEXT:        .long   134217728               # 0x8000000

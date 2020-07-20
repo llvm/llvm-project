@@ -67,9 +67,11 @@ namespace orc {
 
 class PartitioningIRMaterializationUnit : public IRMaterializationUnit {
 public:
-  PartitioningIRMaterializationUnit(ExecutionSession &ES, ThreadSafeModule TSM,
-                                    VModuleKey K, CompileOnDemandLayer &Parent)
-      : IRMaterializationUnit(ES, std::move(TSM), std::move(K)),
+  PartitioningIRMaterializationUnit(ExecutionSession &ES,
+                                    const ManglingOptions &MO,
+                                    ThreadSafeModule TSM, VModuleKey K,
+                                    CompileOnDemandLayer &Parent)
+      : IRMaterializationUnit(ES, MO, std::move(TSM), std::move(K)),
         Parent(Parent) {}
 
   PartitioningIRMaterializationUnit(
@@ -111,7 +113,8 @@ CompileOnDemandLayer::compileWholeModule(GlobalValueSet Requested) {
 CompileOnDemandLayer::CompileOnDemandLayer(
     ExecutionSession &ES, IRLayer &BaseLayer, LazyCallThroughManager &LCTMgr,
     IndirectStubsManagerBuilder BuildIndirectStubsManager)
-    : IRLayer(ES), BaseLayer(BaseLayer), LCTMgr(LCTMgr),
+    : IRLayer(ES, BaseLayer.getManglingOptions()), BaseLayer(BaseLayer),
+      LCTMgr(LCTMgr),
       BuildIndirectStubsManager(std::move(BuildIndirectStubsManager)) {}
 
 void CompileOnDemandLayer::setPartitionFunction(PartitionFunction Partition) {
@@ -136,27 +139,23 @@ void CompileOnDemandLayer::emit(MaterializationResponsibility R,
   TSM.withModuleDo([&](Module &M) {
     // First, do some cleanup on the module:
     cleanUpModule(M);
-
-    MangleAndInterner Mangle(ES, M.getDataLayout());
-    for (auto &GV : M.global_values()) {
-      if (GV.isDeclaration() || GV.hasLocalLinkage() ||
-          GV.hasAppendingLinkage())
-        continue;
-
-      auto Name = Mangle(GV.getName());
-      auto Flags = JITSymbolFlags::fromGlobalValue(GV);
-      if (Flags.isCallable())
-        Callables[Name] = SymbolAliasMapEntry(Name, Flags);
-      else
-        NonCallables[Name] = SymbolAliasMapEntry(Name, Flags);
-    }
   });
+
+  for (auto &KV : R.getSymbols()) {
+    auto &Name = KV.first;
+    auto &Flags = KV.second;
+    if (Flags.isCallable())
+      Callables[Name] = SymbolAliasMapEntry(Name, Flags);
+    else
+      NonCallables[Name] = SymbolAliasMapEntry(Name, Flags);
+  }
 
   // Create a partitioning materialization unit and lodge it with the
   // implementation dylib.
   if (auto Err = PDR.getImplDylib().define(
           std::make_unique<PartitioningIRMaterializationUnit>(
-              ES, std::move(TSM), R.getVModuleKey(), *this))) {
+              ES, *getManglingOptions(), std::move(TSM), R.getVModuleKey(),
+              *this))) {
     ES.reportError(std::move(Err));
     R.failMaterialization();
     return;
@@ -316,7 +315,7 @@ void CompileOnDemandLayer::emitPartition(
   }
 
   R.replace(std::make_unique<PartitioningIRMaterializationUnit>(
-      ES, std::move(TSM), R.getVModuleKey(), *this));
+      ES, *getManglingOptions(), std::move(TSM), R.getVModuleKey(), *this));
   BaseLayer.emit(std::move(R), std::move(*ExtractedTSM));
 }
 

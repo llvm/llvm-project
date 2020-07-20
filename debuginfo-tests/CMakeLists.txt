@@ -2,6 +2,11 @@
 # various types of debug info, and then run those programs under a debugger
 # such as GDB or LLDB to verify the results.
 
+add_llvm_executable(prettyprinters
+        llvm-prettyprinters/gdb/prettyprinters.cpp
+)
+target_link_libraries(prettyprinters PRIVATE LLVMSupport)
+
 set(DEBUGINFO_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(DEBUGINFO_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -11,6 +16,7 @@ set(DEBUGINFO_TEST_DEPS
   count
   llvm-objdump
   not
+  prettyprinters
   )
 
 # The Windows builder scripts pass -fuse-ld=lld.

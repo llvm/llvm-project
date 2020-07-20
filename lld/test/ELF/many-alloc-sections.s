@@ -6,7 +6,7 @@
 
 // Test that _start is in the correct section.
 // CHECK:      Name: _start
-// CHECK-NEXT: Value: 0x120
+// CHECK-NEXT: Value:
 // CHECK-NEXT: Size: 0
 // CHECK-NEXT: Binding: Global
 // CHECK-NEXT: Type: None

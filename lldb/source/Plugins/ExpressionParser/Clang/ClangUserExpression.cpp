@@ -350,11 +350,12 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
 static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
   if (ClangModulesDeclVendor *decl_vendor =
           target->GetClangModulesDeclVendor()) {
+    auto *persistent_state = llvm::cast<ClangPersistentVariables>(
+        target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
+    if (!persistent_state)
+      return;
     const ClangModulesDeclVendor::ModuleVector &hand_imported_modules =
-        llvm::cast<ClangPersistentVariables>(
-            target->GetPersistentExpressionStateForLanguage(
-                lldb::eLanguageTypeC))
-            ->GetHandLoadedClangModules();
+        persistent_state->GetHandLoadedClangModules();
     ClangModulesDeclVendor::ModuleVector modules_for_macros;
 
     for (ClangModulesDeclVendor::ModuleID module : hand_imported_modules) {
@@ -682,10 +683,12 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       register_execution_unit = true;
     }
 
-    if (register_execution_unit)
-      exe_ctx.GetTargetPtr()
-          ->GetPersistentExpressionStateForLanguage(m_language)
-          ->RegisterExecutionUnit(m_execution_unit_sp);
+    if (register_execution_unit) {
+      if (auto *persistent_state =
+              exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(
+                  m_language))
+        persistent_state->RegisterExecutionUnit(m_execution_unit_sp);
+    }
   }
 
   if (generate_debug_info) {

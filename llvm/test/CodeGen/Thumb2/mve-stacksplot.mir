@@ -12,52 +12,51 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: func0
     ; CHECK: liveins: $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11, $lr
-    ; CHECK-NEXT: {{  }}
-    ; CHECK-NEXT: $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $r8, killed $r9, killed $r10, killed $r11, killed $lr
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 36
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -4
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r11, -8
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r10, -12
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r9, -16
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r8, -20
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r7, -24
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r6, -28
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r5, -32
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r4, -36
-    ; CHECK-NEXT: $sp = frame-setup tSUBspi $sp, 5, 14, $noreg
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 56
-    ; CHECK-NEXT: $r0 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r1 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r2 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r3 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r4 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r5 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r6 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r7 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r8 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r9 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r10 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r11 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r12 = IMPLICIT_DEF
-    ; CHECK-NEXT: $lr = IMPLICIT_DEF
-    ; CHECK-NEXT: t2STRi12 killed $r0, $sp, 0, 14, $noreg :: (store 4 into %stack.1)
-    ; CHECK-NEXT: $r0 = tMOVr killed $sp, 14, $noreg
-    ; CHECK-NEXT: renamable $q2 = MVE_VLDRBU32 killed $r0, 16, 0, $noreg :: (load 4 from %stack.0 + 12)
-    ; CHECK-NEXT: $r0 = t2LDRi12 $sp, 0, 14, $noreg :: (load 4 from %stack.1)
-    ; CHECK-NEXT: KILL $r0
-    ; CHECK-NEXT: KILL $r1
-    ; CHECK-NEXT: KILL $r2
-    ; CHECK-NEXT: KILL $r3
-    ; CHECK-NEXT: KILL $r4
-    ; CHECK-NEXT: KILL $r5
-    ; CHECK-NEXT: KILL $r6
-    ; CHECK-NEXT: KILL $r7
-    ; CHECK-NEXT: KILL $r8
-    ; CHECK-NEXT: KILL $r9
-    ; CHECK-NEXT: KILL $r10
-    ; CHECK-NEXT: KILL $r11
-    ; CHECK-NEXT: KILL $r12
-    ; CHECK-NEXT: KILL $lr
+    ; CHECK: $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $r8, killed $r9, killed $r10, killed $r11, killed $lr
+    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 36
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $lr, -4
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r11, -8
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r10, -12
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r9, -16
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r8, -20
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r7, -24
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r6, -28
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r5, -32
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r4, -36
+    ; CHECK: $sp = frame-setup tSUBspi $sp, 5, 14, $noreg
+    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 56
+    ; CHECK: $r0 = IMPLICIT_DEF
+    ; CHECK: $r1 = IMPLICIT_DEF
+    ; CHECK: $r2 = IMPLICIT_DEF
+    ; CHECK: $r3 = IMPLICIT_DEF
+    ; CHECK: $r4 = IMPLICIT_DEF
+    ; CHECK: $r5 = IMPLICIT_DEF
+    ; CHECK: $r6 = IMPLICIT_DEF
+    ; CHECK: $r7 = IMPLICIT_DEF
+    ; CHECK: $r8 = IMPLICIT_DEF
+    ; CHECK: $r9 = IMPLICIT_DEF
+    ; CHECK: $r10 = IMPLICIT_DEF
+    ; CHECK: $r11 = IMPLICIT_DEF
+    ; CHECK: $r12 = IMPLICIT_DEF
+    ; CHECK: $lr = IMPLICIT_DEF
+    ; CHECK: t2STRi12 killed $r0, $sp, 0, 14, $noreg :: (store 4 into %stack.1)
+    ; CHECK: $r0 = tMOVr killed $sp, 14, $noreg
+    ; CHECK: renamable $q2 = MVE_VLDRBU32 killed $r0, 16, 0, $noreg :: (load 4 from %stack.0 + 12)
+    ; CHECK: $r0 = t2LDRi12 $sp, 0, 14, $noreg :: (load 4 from %stack.1)
+    ; CHECK: KILL $r0
+    ; CHECK: KILL $r1
+    ; CHECK: KILL $r2
+    ; CHECK: KILL $r3
+    ; CHECK: KILL $r4
+    ; CHECK: KILL $r5
+    ; CHECK: KILL $r6
+    ; CHECK: KILL $r7
+    ; CHECK: KILL $r8
+    ; CHECK: KILL $r9
+    ; CHECK: KILL $r10
+    ; CHECK: KILL $r11
+    ; CHECK: KILL $r12
+    ; CHECK: KILL $lr
     $r0 = IMPLICIT_DEF
     $r1 = IMPLICIT_DEF
     $r2 = IMPLICIT_DEF
@@ -106,52 +105,51 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: func1
     ; CHECK: liveins: $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11, $lr
-    ; CHECK-NEXT: {{  }}
-    ; CHECK-NEXT: $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $r8, killed $r9, killed $r10, killed $r11, killed $lr
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 36
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -4
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r11, -8
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r10, -12
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r9, -16
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r8, -20
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r7, -24
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r6, -28
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r5, -32
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r4, -36
-    ; CHECK-NEXT: $sp = frame-setup t2SUBri12 killed $sp, 1220, 14, $noreg
-    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 1256
-    ; CHECK-NEXT: $r0 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r1 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r2 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r3 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r4 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r5 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r6 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r7 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r8 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r9 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r10 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r11 = IMPLICIT_DEF
-    ; CHECK-NEXT: $r12 = IMPLICIT_DEF
-    ; CHECK-NEXT: $lr = IMPLICIT_DEF
-    ; CHECK-NEXT: t2STRi12 killed $r0, $sp, 0, 14, $noreg :: (store 4 into %stack.2)
-    ; CHECK-NEXT: $r0 = t2ADDri killed $sp, 1152, 14, $noreg, $noreg
-    ; CHECK-NEXT: renamable $q2 = MVE_VLDRBU8 killed $r0, 52, 0, $noreg :: (load 4 from %stack.0)
-    ; CHECK-NEXT: $r0 = t2LDRi12 $sp, 0, 14, $noreg :: (load 4 from %stack.2)
-    ; CHECK-NEXT: KILL $r0
-    ; CHECK-NEXT: KILL $r1
-    ; CHECK-NEXT: KILL $r2
-    ; CHECK-NEXT: KILL $r3
-    ; CHECK-NEXT: KILL $r4
-    ; CHECK-NEXT: KILL $r5
-    ; CHECK-NEXT: KILL $r6
-    ; CHECK-NEXT: KILL $r7
-    ; CHECK-NEXT: KILL $r8
-    ; CHECK-NEXT: KILL $r9
-    ; CHECK-NEXT: KILL $r10
-    ; CHECK-NEXT: KILL $r11
-    ; CHECK-NEXT: KILL $r12
-    ; CHECK-NEXT: KILL $lr
+    ; CHECK: $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $r8, killed $r9, killed $r10, killed $r11, killed $lr
+    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 36
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $lr, -4
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r11, -8
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r10, -12
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r9, -16
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r8, -20
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r7, -24
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r6, -28
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r5, -32
+    ; CHECK: frame-setup CFI_INSTRUCTION offset $r4, -36
+    ; CHECK: $sp = frame-setup t2SUBspImm12 killed $sp, 1220, 14, $noreg
+    ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 1256
+    ; CHECK: $r0 = IMPLICIT_DEF
+    ; CHECK: $r1 = IMPLICIT_DEF
+    ; CHECK: $r2 = IMPLICIT_DEF
+    ; CHECK: $r3 = IMPLICIT_DEF
+    ; CHECK: $r4 = IMPLICIT_DEF
+    ; CHECK: $r5 = IMPLICIT_DEF
+    ; CHECK: $r6 = IMPLICIT_DEF
+    ; CHECK: $r7 = IMPLICIT_DEF
+    ; CHECK: $r8 = IMPLICIT_DEF
+    ; CHECK: $r9 = IMPLICIT_DEF
+    ; CHECK: $r10 = IMPLICIT_DEF
+    ; CHECK: $r11 = IMPLICIT_DEF
+    ; CHECK: $r12 = IMPLICIT_DEF
+    ; CHECK: $lr = IMPLICIT_DEF
+    ; CHECK: t2STRi12 killed $r0, $sp, 0, 14, $noreg :: (store 4 into %stack.2)
+    ; CHECK: $r0 = t2ADDri killed $sp, 1152, 14, $noreg, $noreg
+    ; CHECK: renamable $q2 = MVE_VLDRBU8 killed $r0, 52, 0, $noreg :: (load 4 from %stack.0)
+    ; CHECK: $r0 = t2LDRi12 $sp, 0, 14, $noreg :: (load 4 from %stack.2)
+    ; CHECK: KILL $r0
+    ; CHECK: KILL $r1
+    ; CHECK: KILL $r2
+    ; CHECK: KILL $r3
+    ; CHECK: KILL $r4
+    ; CHECK: KILL $r5
+    ; CHECK: KILL $r6
+    ; CHECK: KILL $r7
+    ; CHECK: KILL $r8
+    ; CHECK: KILL $r9
+    ; CHECK: KILL $r10
+    ; CHECK: KILL $r11
+    ; CHECK: KILL $r12
+    ; CHECK: KILL $lr
     $r0 = IMPLICIT_DEF
     $r1 = IMPLICIT_DEF
     $r2 = IMPLICIT_DEF

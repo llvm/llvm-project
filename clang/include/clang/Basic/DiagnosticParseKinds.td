@@ -33,10 +33,6 @@ def err_asm_goto_cannot_have_output : Error<
 
 let CategoryName = "Parse Issue" in {
 
-def warn_cxx2a_compat_explicit_bool : Warning<
-  "this expression will be parsed as explicit(bool) in C++2a">,
-  InGroup<CXX2aCompat>, DefaultIgnore;
-
 def ext_empty_translation_unit : Extension<
   "ISO C requires a translation unit to contain at least one declaration">,
   InGroup<DiagGroup<"empty-translation-unit">>;
@@ -245,10 +241,10 @@ def warn_cxx14_compat_nested_namespace_definition : Warning<
   "nested namespace definition is incompatible with C++ standards before C++17">,
   InGroup<CXXPre17Compat>, DefaultIgnore;
 def ext_inline_nested_namespace_definition : ExtWarn<
-  "inline nested namespace definition is a C++2a extension">, InGroup<CXX2a>;
+  "inline nested namespace definition is a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_inline_nested_namespace_definition : Warning<
   "inline nested namespace definition is incompatible with C++ standards before"
-  " C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+  " C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_inline_nested_namespace_definition : Error<
   "nested namespace definition cannot be 'inline'">;
 def err_expected_semi_after_attribute_list : Error<
@@ -593,11 +589,11 @@ def warn_cxx14_compat_init_statement : Warning<
   "%select{if|switch}0 initialization statements are incompatible with "
   "C++ standards before C++17">, DefaultIgnore, InGroup<CXXPre17Compat>;
 def ext_for_range_init_stmt : ExtWarn<
-  "range-based for loop initialization statements are a C++2a extension">,
-  InGroup<CXX2a>;
+  "range-based for loop initialization statements are a C++20 extension">,
+  InGroup<CXX20>;
 def warn_cxx17_compat_for_range_init_stmt : Warning<
   "range-based for loop initialization statements are incompatible with "
-  "C++ standards before C++2a">, DefaultIgnore, InGroup<CXXPre2aCompat>;
+  "C++ standards before C++20">, DefaultIgnore, InGroup<CXXPre20Compat>;
 def warn_empty_init_statement : Warning<
   "empty initialization statement of '%select{if|switch|range-based for}0' "
   "has no effect">, InGroup<EmptyInitStatement>, DefaultIgnore;
@@ -684,6 +680,15 @@ def err_ms_property_expected_comma_or_rparen : Error<
 def err_ms_property_initializer : Error<
   "property declaration cannot have an in-class initializer">;
 
+def warn_cxx2a_compat_explicit_bool : Warning<
+  "this expression will be parsed as explicit(bool) in C++20">,
+  InGroup<CXX20Compat>, DefaultIgnore;
+def warn_cxx17_compat_explicit_bool : Warning<
+  "explicit(bool) is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre20Compat>, DefaultIgnore;
+def ext_explicit_bool : ExtWarn<"explicit(bool) is a C++20 extension">,
+  InGroup<CXX20>;
+
 /// C++ Templates
 def err_expected_template : Error<"expected template">;
 def err_unknown_template_name : Error<
@@ -739,6 +744,33 @@ def err_friend_explicit_instantiation : Error<
 def err_explicit_instantiation_enum : Error<
   "enumerations cannot be explicitly instantiated">;
 def err_expected_template_parameter : Error<"expected template parameter">;
+def note_ill_formed_requires_expression_outside_template : Note<
+  "requires expression outside a template declaration may not contain invalid "
+  "types or expressions">;
+def err_empty_requires_expr : Error<
+  "a requires expression must contain at least one requirement">;
+def err_requires_expr_parameter_list_ellipsis : Error<
+  "varargs not allowed in requires expression">;
+def err_requires_expr_type_req_illegal_identifier : Error<
+  "expected identifier or template-id in type requirement">;
+def err_requires_expr_type_req_template_args_on_non_template : Error<
+  "template arguments provided for non-template '%0'">;
+def err_expected_semi_requirement : Error<
+  "expected ';' at end of requirement">;
+def err_requires_expr_missing_arrow : Error<
+  "expected '->' before expression type requirement">;
+def err_requires_expr_expected_type_constraint : Error<
+  "expected concept name with optional arguments">;
+def err_requires_expr_simple_requirement_noexcept : Error<
+  "'noexcept' can only be used in a compound requirement (with '{' '}' around "
+  "the expression)">;
+def err_requires_expr_simple_requirement_unexpected_tok : Error<
+  "unexpected %0 after expression; did you intend to use a compound "
+  "requirement (with '{' '}' around the expression)?">;
+def warn_requires_expr_in_simple_requirement : Warning<
+  "this requires expression will only be checked for syntactic validity; did "
+  "you intend to place it in a nested requirement? (add another 'requires' "
+  "before the expression)">, InGroup<DiagGroup<"requires-expression">>;
 
 def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
@@ -812,11 +844,11 @@ def warn_cxx98_compat_nonstatic_member_init : Warning<
   "in-class initialization of non-static data members is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def ext_bitfield_member_init: ExtWarn<
-  "default member initializer for bit-field is a C++2a extension">,
-  InGroup<CXX2a>;
+  "default member initializer for bit-field is a C++20 extension">,
+  InGroup<CXX20>;
 def warn_cxx17_compat_bitfield_member_init: Warning<
   "default member initializer for bit-field is incompatible with "
-  "C++ standards before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_incomplete_array_member_init: Error<
   "array bound cannot be deduced from an in-class initializer">;
 
@@ -912,13 +944,13 @@ def warn_cxx14_compat_constexpr_on_lambda : Warning<
 def ext_constexpr_on_lambda_cxx17 : ExtWarn<
   "'constexpr' on lambda expressions is a C++17 extension">, InGroup<CXX17>;
 
-// C++2a template lambdas
+// C++20 template lambdas
 def ext_lambda_template_parameter_list: ExtWarn<
-  "explicit template parameter list for lambdas is a C++2a extension">,
-  InGroup<CXX2a>;
+  "explicit template parameter list for lambdas is a C++20 extension">,
+  InGroup<CXX20>;
 def warn_cxx17_compat_lambda_template_parameter_list: Warning<
   "explicit template parameter list for lambdas is incompatible with "
-  "C++ standards before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_lambda_template_parameter_list_empty : Error<
   "lambda template parameter list cannot be empty">;
 
@@ -1337,8 +1369,10 @@ let CategoryName = "Concepts Issue" in {
 def err_concept_definition_not_identifier : Error<
   "name defined in concept definition must be an identifier">;
 def ext_concept_legacy_bool_keyword : ExtWarn<
-  "ISO C++2a does not permit the 'bool' keyword after 'concept'">,
+  "ISO C++20 does not permit the 'bool' keyword after 'concept'">,
   InGroup<DiagGroup<"concepts-ts-compat">>;
+def err_placeholder_expected_auto_or_decltype_auto : Error<
+  "expected 'auto' or 'decltype(auto)' after concept name">;
 }
 
 } // end of Parser diagnostics

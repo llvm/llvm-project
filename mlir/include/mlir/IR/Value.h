@@ -18,6 +18,7 @@
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
+class AsmState;
 class BlockArgument;
 class Operation;
 class OpResult;
@@ -90,12 +91,6 @@ public:
     return U(ownerAndKind);
   }
 
-  /// Temporary methods to enable transition of Value to being used as a
-  /// value-type.
-  /// TODO(riverriddle) Remove these when all usages have been removed.
-  Value operator*() const { return *this; }
-  Value *operator->() const { return const_cast<Value *>(this); }
-
   operator bool() const { return ownerAndKind.getPointer(); }
   bool operator==(const Value &other) const {
     return ownerAndKind == other.ownerAndKind;
@@ -122,7 +117,7 @@ public:
 
   /// If this value is the result of an operation, use it as a location,
   /// otherwise return an unknown location.
-  Location getLoc();
+  Location getLoc() const;
 
   /// Return the Region in which this Value is defined.
   Region *getParentRegion();
@@ -178,7 +173,11 @@ public:
   Kind getKind() const { return ownerAndKind.getInt(); }
 
   void print(raw_ostream &os);
+  void print(raw_ostream &os, AsmState &state);
   void dump();
+
+  /// Print this value as if it were an operand.
+  void printAsOperand(raw_ostream &os, AsmState &state);
 
   /// Methods for supporting PointerLikeTypeTraits.
   void *getAsOpaquePointer() const { return ownerAndKind.getOpaqueValue(); }
@@ -236,11 +235,6 @@ class BlockArgument : public Value {
 public:
   using Value::Value;
 
-  /// Temporary methods to enable transition of Value to being used as a
-  /// value-type.
-  /// TODO(riverriddle) Remove this when all usages have been removed.
-  BlockArgument *operator->() { return this; }
-
   static bool classof(Value value) {
     return value.getKind() == Kind::BlockArgument;
   }
@@ -287,12 +281,6 @@ private:
 class OpResult : public Value {
 public:
   using Value::Value;
-
-  /// Temporary methods to enable transition of Value to being used as a
-  /// value-type.
-  /// TODO(riverriddle) Remove these when all usages have been removed.
-  OpResult operator*() { return *this; }
-  OpResult *operator->() { return this; }
 
   static bool classof(Value value) {
     return value.getKind() != Kind::BlockArgument;

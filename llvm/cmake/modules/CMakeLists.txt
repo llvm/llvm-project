@@ -136,6 +136,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     FILES_MATCHING PATTERN *.cmake
     PATTERN .svn EXCLUDE
     PATTERN LLVMConfig.cmake EXCLUDE
+    PATTERN LLVMConfigExtensions.cmake EXCLUDE
     PATTERN LLVMConfigVersion.cmake EXCLUDE
     PATTERN LLVM-Config.cmake EXCLUDE
     PATTERN GetHostTriple.cmake EXCLUDE)

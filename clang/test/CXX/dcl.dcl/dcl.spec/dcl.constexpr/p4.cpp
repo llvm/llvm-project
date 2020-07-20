@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -std=c++11 -fcxx-exceptions -Werror=c++1y-extensions -Werror=c++2a-extensions %s
-// RUN: %clang_cc1 -verify -std=c++1y -fcxx-exceptions -DCXX1Y -Werror=c++2a-extensions %s
-// RUN: %clang_cc1 -verify -std=c++2a -fcxx-exceptions -DCXX1Y -DCXX2A %s
+// RUN: %clang_cc1 -verify -std=c++11 -fcxx-exceptions -Werror=c++14-extensions -Werror=c++20-extensions %s
+// RUN: %clang_cc1 -verify -std=c++14 -fcxx-exceptions -DCXX14 -Werror=c++20-extensions %s
+// RUN: %clang_cc1 -verify -std=c++20 -fcxx-exceptions -DCXX14 -DCXX2A %s
 
 namespace N {
   typedef char C;
@@ -52,10 +52,10 @@ struct U {
   constexpr U()
     try
 #ifndef CXX2A
-  // expected-error@-2 {{function try block in constexpr constructor is a C++2a extension}}
+  // expected-error@-2 {{function try block in constexpr constructor is a C++20 extension}}
 #endif
     : u() {
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{use of this statement in a constexpr constructor is a C++14 extension}}
 #endif
   } catch (...) {
@@ -92,43 +92,43 @@ struct V {
   constexpr V(int(&)[1]) {
     for (int n = 0; n < 10; ++n)
       /**/;
-#ifndef CXX1Y
+#ifndef CXX14
     // expected-error@-3 {{statement not allowed in constexpr constructor}}
 #endif
   }
   constexpr V(int(&)[2]) {
     constexpr int a = 0;
-#ifndef CXX1Y
+#ifndef CXX14
     // expected-error@-2 {{variable declaration in a constexpr constructor is a C++14 extension}}
 #endif
   }
   constexpr V(int(&)[3]) {
     constexpr int ForwardDecl(int);
-#ifndef CXX1Y
+#ifndef CXX14
     // expected-error@-2 {{use of this statement in a constexpr constructor is a C++14 extension}}
 #endif
   }
   constexpr V(int(&)[4]) {
     typedef struct { } S1;
-#ifndef CXX1Y
+#ifndef CXX14
     // expected-error@-2 {{type definition in a constexpr constructor is a C++14 extension}}
 #endif
   }
   constexpr V(int(&)[5]) {
     using S2 = struct { };
-#ifndef CXX1Y
+#ifndef CXX14
     // expected-error@-2 {{type definition in a constexpr constructor is a C++14 extension}}
 #endif
   }
   constexpr V(int(&)[6]) {
     struct S3 { };
-#ifndef CXX1Y
+#ifndef CXX14
     // expected-error@-2 {{type definition in a constexpr constructor is a C++14 extension}}
 #endif
   }
   constexpr V(int(&)[7]) {
     return;
-#ifndef CXX1Y
+#ifndef CXX14
     // expected-error@-2 {{use of this statement in a constexpr constructor is a C++14 extension}}
 #endif
   }

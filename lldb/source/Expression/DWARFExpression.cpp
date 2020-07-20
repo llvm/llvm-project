@@ -2071,6 +2071,10 @@ bool DWARFExpression::Evaluate(
           // not available. Fill with zeros for now by resizing the data and
           // appending it
           curr_piece.ResizeData(piece_byte_size);
+          // Note that "0" is not a correct value for the unknown bits.
+          // It would be better to also return a mask of valid bits together
+          // with the expression result, so the debugger can print missing
+          // members as "<optimized out>" or something.
           ::memset(curr_piece.GetBuffer().GetBytes(), 0, piece_byte_size);
           pieces.AppendDataToHostBuffer(curr_piece);
         } else {
@@ -2128,7 +2132,8 @@ bool DWARFExpression::Evaluate(
           case Value::eValueTypeScalar: {
             uint32_t bit_size = piece_byte_size * 8;
             uint32_t bit_offset = 0;
-            if (!curr_piece_source_value.GetScalar().ExtractBitfield(
+            Scalar &scalar = curr_piece_source_value.GetScalar();
+            if (!scalar.ExtractBitfield(
                     bit_size, bit_offset)) {
               if (error_ptr)
                 error_ptr->SetErrorStringWithFormat(
@@ -2139,7 +2144,14 @@ bool DWARFExpression::Evaluate(
                         .GetByteSize());
               return false;
             }
-            curr_piece = curr_piece_source_value;
+            // Create curr_piece with bit_size. By default Scalar
+            // grows to the nearest host integer type.
+            llvm::APInt fail_value(1, 0, false);
+            llvm::APInt ap_int = scalar.UInt128(fail_value);
+            assert(ap_int.getBitWidth() >= bit_size);
+            llvm::ArrayRef<uint64_t> buf{ap_int.getRawData(),
+                                         ap_int.getNumWords()};
+            curr_piece.GetScalar() = Scalar(llvm::APInt(bit_size, buf));
           } break;
 
           case Value::eValueTypeVector: {
@@ -2161,7 +2173,7 @@ bool DWARFExpression::Evaluate(
           if (op_piece_offset == 0) {
             // This is the first piece, we should push it back onto the stack
             // so subsequent pieces will be able to access this piece and add
-            // to it
+            // to it.
             if (pieces.AppendDataToHostBuffer(curr_piece) == 0) {
               if (error_ptr)
                 error_ptr->SetErrorString("failed to append piece data");
@@ -2169,7 +2181,7 @@ bool DWARFExpression::Evaluate(
             }
           } else {
             // If this is the second or later piece there should be a value on
-            // the stack
+            // the stack.
             if (pieces.GetBuffer().GetByteSize() != op_piece_offset) {
               if (error_ptr)
                 error_ptr->SetErrorStringWithFormat(
@@ -2185,8 +2197,8 @@ bool DWARFExpression::Evaluate(
               return false;
             }
           }
-          op_piece_offset += piece_byte_size;
         }
+        op_piece_offset += piece_byte_size;
       }
     } break;
 

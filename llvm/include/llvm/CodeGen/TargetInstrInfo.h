@@ -52,6 +52,7 @@ class MCInst;
 struct MCSchedModel;
 class Module;
 class ScheduleDAG;
+class ScheduleDAGMI;
 class ScheduleHazardRecognizer;
 class SDNode;
 class SelectionDAG;
@@ -1370,7 +1371,7 @@ public:
   /// scheduling the machine instructions before register allocation.
   virtual ScheduleHazardRecognizer *
   CreateTargetMIHazardRecognizer(const InstrItineraryData *,
-                                 const ScheduleDAG *DAG) const;
+                                 const ScheduleDAGMI *DAG) const;
 
   /// Allocate and return a hazard recognizer to use for this target when
   /// scheduling the machine instructions after register allocation.

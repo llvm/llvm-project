@@ -100,9 +100,17 @@ def Linalg_ReshapeOp : Linalg_Op<"reshape", [NoSideEffect]>,
     ```
   }];
 
-  let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value view, "
-    "ArrayAttr reassociation, ArrayRef<NamedAttribute> attrs = {}">];
+  let builders = [
+    // Builder for a contracting reshape whose result type is computed from
+    // `view` and `reassociation`.
+    OpBuilder<"Builder *b, OperationState &result, Value view, "
+    "ArrayRef<ArrayRef<AffineExpr>> reassociation, "
+    "ArrayRef<NamedAttribute> attrs = {}">,
+    // Builder for a reshape whose result type is passed explicitly. This may be
+    // either a contracting or expanding reshape.
+    OpBuilder<"Builder *b, OperationState &result, Type resultType, Value view,"
+    "ArrayRef<ArrayRef<AffineExpr>> reassociation, "
+    "ArrayRef<NamedAttribute> attrs = {}">];
 
   let extraClassDeclaration = [{
     static StringRef getReassociationAttrName() { return "reassociation"; }
@@ -165,7 +173,7 @@ def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
     Type getElementType() { return getShapedType().getElementType(); }
     ShapedType getShapedType() { return getType().cast<ShapedType>(); }
     unsigned getBaseViewRank() { return getBaseViewType().getRank(); }
-    ShapedType getBaseViewType() { return view()->getType().cast<ShapedType>();}
+    ShapedType getBaseViewType() { return view().getType().cast<ShapedType>();}
 
     // Get the underlying indexing at a given rank.
     Value indexing(unsigned rank) { return *(indexings().begin() + rank); }
@@ -174,7 +182,7 @@ def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
     SmallVector<Value, 8> getRanges() {
       SmallVector<Value, 8> res;
       for (auto operand : indexings())
-        if (!operand->getType().isa<IndexType>())
+        if (!operand.getType().isa<IndexType>())
           res.push_back(operand);
       return res;
     }
@@ -211,7 +219,7 @@ def Linalg_TransposeOp : Linalg_Op<"transpose", [NoSideEffect]>,
 
   let extraClassDeclaration = [{
     static StringRef getPermutationAttrName() { return "permutation"; }
-    ShapedType getShapedType() { return view()->getType().cast<ShapedType>(); }
+    ShapedType getShapedType() { return view().getType().cast<ShapedType>(); }
   }];
 }
 

@@ -46,6 +46,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_w);
 
+  CmdArgs.push_back("-z");
+  CmdArgs.push_back("now");
+
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   if (llvm::sys::path::filename(Exec).equals_lower("ld.lld") ||
       llvm::sys::path::stem(Exec).equals_lower("ld.lld")) {

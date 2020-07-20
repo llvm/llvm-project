@@ -212,20 +212,17 @@ def vmaxvq: Intrinsic<Scalar, (args Scalar:$prev, Vector:$vec),
     (Scalar (IRInt<"maxv", [Vector], 1> $prev, $vec))>;
 }
 
-foreach half = [ "b", "t" ] in
-foreach halfconst = [ !if(!eq(half, "b"), 0, 1) ] in {
+foreach half = [ "b", "t" ] in {
+  defvar halfconst = !if(!eq(half, "b"), 0, 1);
 
-let params = [f32], pnt = PNT_None in {
-
-def vcvt#half#q_f16: Intrinsic<
-    VecOf<f16>, (args VecOf<f16>:$inactive, Vector:$a),
-    (IRInt<"vcvt_narrow"> $inactive, $a, halfconst)>;
-def vcvt#half#q_m_f16: Intrinsic<
-    VecOf<f16>, (args VecOf<f16>:$inactive, Vector:$a, PredOf<f32>:$pred),
-    (IRInt<"vcvt_narrow_predicated"> $inactive, $a, halfconst, $pred)>;
-
-} // params = [f32], pnt = PNT_None
-
+  let params = [f32], pnt = PNT_None in {
+    def vcvt#half#q_f16: Intrinsic<
+      VecOf<f16>, (args VecOf<f16>:$inactive, Vector:$a),
+      (IRInt<"vcvt_narrow"> $inactive, $a, halfconst)>;
+    def vcvt#half#q_m_f16: Intrinsic<
+      VecOf<f16>, (args VecOf<f16>:$inactive, Vector:$a, PredOf<f32>:$pred),
+      (IRInt<"vcvt_narrow_predicated"> $inactive, $a, halfconst, $pred)>;
+  } // params = [f32], pnt = PNT_None
 } // loop over half = "b", "t"
 
 multiclass compare_with_pred<string condname, dag arguments,
@@ -653,17 +650,17 @@ defm vshlltq : vshll_imm<1>;
 
 multiclass DyadicImmShift<Type outtype, Immediate imm, string intname = NAME,
                           dag extraargs = (?)> {
-  foreach intparams = [!if(!eq(!cast<string>(outtype), !cast<string>(Vector)),
-                           [Vector], [outtype, Vector])] in {
-    def q_n: Intrinsic<
-        outtype, (args outtype:$a, Vector:$b, imm:$sh),
-        !con((IRInt<intname, intparams> $a, $b, $sh), extraargs)>;
+  defvar intparams = !if(!eq(!cast<string>(outtype), !cast<string>(Vector)),
+                         [Vector], [outtype, Vector]);
 
-    def q_m_n: Intrinsic<
-        outtype, (args outtype:$a, Vector:$b, imm:$sh, Predicate:$pred),
-        !con((IRInt<intname # "_predicated", intparams # [Predicate]>
-                 $a, $b, $sh), extraargs, (? $pred))>;
-  }
+  def q_n: Intrinsic<
+      outtype, (args outtype:$a, Vector:$b, imm:$sh),
+      !con((IRInt<intname, intparams> $a, $b, $sh), extraargs)>;
+
+  def q_m_n: Intrinsic<
+      outtype, (args outtype:$a, Vector:$b, imm:$sh, Predicate:$pred),
+      !con((IRInt<intname # "_predicated", intparams # [Predicate]>
+               $a, $b, $sh), extraargs, (? $pred))>;
 }
 
 multiclass VSHRN<Type outtype, Immediate imm, dag extraargs> {
@@ -672,12 +669,11 @@ multiclass VSHRN<Type outtype, Immediate imm, dag extraargs> {
 }
 
 let params = [s16, s32, u16, u32], pnt = PNT_NType in {
-  foreach U = [(unsignedflag Scalar)] in {
-    defm vshrn   : VSHRN<HalfVector, imm_1toHalfN, (? 0,0,U,U)>;
-    defm vqshrn  : VSHRN<HalfVector, imm_1toHalfN, (? 1,0,U,U)>;
-    defm vrshrn  : VSHRN<HalfVector, imm_1toHalfN, (? 0,1,U,U)>;
-    defm vqrshrn : VSHRN<HalfVector, imm_1toHalfN, (? 1,1,U,U)>;
-  }
+  defvar U = (unsignedflag Scalar);
+  defm vshrn   : VSHRN<HalfVector, imm_1toHalfN, (? 0,0,U,U)>;
+  defm vqshrn  : VSHRN<HalfVector, imm_1toHalfN, (? 1,0,U,U)>;
+  defm vrshrn  : VSHRN<HalfVector, imm_1toHalfN, (? 0,1,U,U)>;
+  defm vqrshrn : VSHRN<HalfVector, imm_1toHalfN, (? 1,1,U,U)>;
 }
 let params = [s16, s32], pnt = PNT_NType in {
   defm vqshrun  : VSHRN<UHalfVector, imm_1toHalfN, (? 1,0,1,0)>;

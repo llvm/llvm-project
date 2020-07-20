@@ -43,10 +43,8 @@ class IntegerSet {
 public:
   using ImplType = detail::IntegerSetStorage;
 
-  IntegerSet() : set(nullptr) {}
+  constexpr IntegerSet() : set(nullptr) {}
   explicit IntegerSet(ImplType *set) : set(set) {}
-  IntegerSet(const IntegerSet &other) : set(other.set) {}
-  IntegerSet &operator=(const IntegerSet &other) = default;
 
   static IntegerSet get(unsigned dimCount, unsigned symbolCount,
                         ArrayRef<AffineExpr> constraints,

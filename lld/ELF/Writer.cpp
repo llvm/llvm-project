@@ -135,8 +135,8 @@ StringRef getOutputSectionName(const InputSectionBase *s) {
 }
 
 static bool needsInterpSection() {
-  return !config->shared && !config->dynamicLinker.empty() &&
-         script->needsInterpSection();
+  return !config->relocatable && !config->shared &&
+         !config->dynamicLinker.empty() && script->needsInterpSection();
 }
 
 template <class ELFT> void writeResult() { Writer<ELFT>().run(); }
@@ -514,6 +514,12 @@ template <class ELFT> void createSyntheticSections() {
       config->androidPackDynRelocs ? in.relaPlt->name : relaDynName,
       /*sort=*/false);
   add(in.relaIplt);
+
+  if ((config->emachine == EM_386 || config->emachine == EM_X86_64) &&
+      (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
+    in.ibtPlt = make<IBTPltSection>();
+    add(in.ibtPlt);
+  }
 
   in.plt = make<PltSection>();
   add(in.plt);
@@ -1517,17 +1523,30 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
     // but sort must consider them all at once.
     std::vector<InputSection **> scriptSections;
     std::vector<InputSection *> sections;
+    bool started = false, stopped = false;
     for (BaseCommand *base : sec->sectionCommands) {
       if (auto *isd = dyn_cast<InputSectionDescription>(base)) {
         for (InputSection *&isec : isd->sections) {
-          scriptSections.push_back(&isec);
-          sections.push_back(isec);
+          if (!(isec->flags & SHF_LINK_ORDER)) {
+            if (started)
+              stopped = true;
+          } else if (stopped) {
+            error(toString(isec) + ": SHF_LINK_ORDER sections in " + sec->name +
+                  " are not contiguous");
+          } else {
+            started = true;
 
-          InputSection *link = isec->getLinkOrderDep();
-          if (!link->getParent())
-            error(toString(isec) + ": sh_link points to discarded section " +
-                  toString(link));
+            scriptSections.push_back(&isec);
+            sections.push_back(isec);
+
+            InputSection *link = isec->getLinkOrderDep();
+            if (!link->getParent())
+              error(toString(isec) + ": sh_link points to discarded section " +
+                    toString(link));
+          }
         }
+      } else if (started) {
+        stopped = true;
       }
     }
 

@@ -193,10 +193,10 @@ def ext_flexible_array_init : Extension<
 
 // C++20 designated initializers
 def ext_cxx_designated_init : Extension<
-  "designated initializers are a C++20 extension">, InGroup<CXX2aDesignator>;
+  "designated initializers are a C++20 extension">, InGroup<CXX20Designator>;
 def warn_cxx17_compat_designated_init : Warning<
   "designated initializers are incompatible with C++ standards before C++20">,
-  InGroup<CXXPre2aCompatPedantic>, DefaultIgnore;
+  InGroup<CXXPre20CompatPedantic>, DefaultIgnore;
 def ext_designated_init_mixed : ExtWarn<
   "mixture of designated and non-designated initializers in the same "
   "initializer list is a C99 extension">, InGroup<C99Designator>;
@@ -444,13 +444,13 @@ def err_decomp_decl_spec : Error<
   "%plural{1:'%1'|:with '%1' specifiers}0">;
 def ext_decomp_decl_spec : ExtWarn<
   "decomposition declaration declared "
-  "%plural{1:'%1'|:with '%1' specifiers}0 is a C++2a extension">,
-  InGroup<CXX2a>;
+  "%plural{1:'%1'|:with '%1' specifiers}0 is a C++20 extension">,
+  InGroup<CXX20>;
 def warn_cxx17_compat_decomp_decl_spec : Warning<
   "decomposition declaration declared "
   "%plural{1:'%1'|:with '%1' specifiers}0 "
-  "is incompatible with C++ standards before C++2a">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
+  "is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_decomp_decl_type : Error<
   "decomposition declaration cannot be declared with type %0; "
   "declared type must be 'auto' or reference to 'auto'">;
@@ -1949,7 +1949,7 @@ def err_init_list_bad_dest_type : Error<
   "list">;
 def warn_cxx2a_compat_aggregate_init_with_ctors : Warning<
   "aggregate initialization of type %0 with user-declared constructors "
-  "is incompatible with C++2a">, DefaultIgnore, InGroup<CXX2aCompat>;
+  "is incompatible with C++20">, DefaultIgnore, InGroup<CXX20Compat>;
 
 def err_reference_bind_to_bitfield : Error<
   "%select{non-const|volatile}0 reference cannot bind to "
@@ -2102,12 +2102,18 @@ def err_auto_not_allowed : Error<
   "|in template argument|in typedef|in type alias|in function return type"
   "|in conversion function type|here|in lambda parameter"
   "|in type allocated by 'new'|in K&R-style function parameter"
-  "|in template parameter|in friend declaration}1">;
+  "|in template parameter|in friend declaration|in function prototype that is "
+  "not a function declaration|in requires expression parameter}1">;
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
   "template template parameter|template}0 member in %1; "
   "argument deduction not allowed here">;
+def err_deduced_tst : Error<
+  "typename specifier refers to "
+  "%select{class template|function template|variable template|alias template|"
+  "template template parameter|template}0; argument deduction not allowed "
+  "here">;
 def err_auto_not_allowed_var_inst : Error<
   "'auto' variable template instantiation is not allowed">;
 def err_auto_var_requires_init : Error<
@@ -2372,17 +2378,17 @@ def warn_for_range_const_reference_copy : Warning<
   "loop variable %0 "
   "%diff{has type $ but is initialized with type $"
   "| is initialized with a value of a different type}1,2 resulting in a copy">,
-  InGroup<RangeLoopAnalysis>, DefaultIgnore;
+  InGroup<RangeLoopConstruct>, DefaultIgnore;
 def note_use_type_or_non_reference : Note<
   "use non-reference type %0 to keep the copy or type %1 to prevent copying">;
 def warn_for_range_variable_always_copy : Warning<
   "loop variable %0 is always a copy because the range of type %1 does not "
   "return a reference">,
-  InGroup<RangeLoopAnalysis>, DefaultIgnore;
+  InGroup<RangeLoopBindReference>, DefaultIgnore;
 def note_use_non_reference_type : Note<"use non-reference type %0">;
 def warn_for_range_copy : Warning<
   "loop variable %0 of type %1 creates a copy from type %2">,
-  InGroup<RangeLoopAnalysis>, DefaultIgnore;
+  InGroup<RangeLoopConstruct>, DefaultIgnore;
 def note_use_reference_type : Note<"use reference type %0 to prevent copying">;
 def err_objc_for_range_init_stmt : Error<
   "initialization statement is not supported when iterating over Objective-C "
@@ -2432,7 +2438,7 @@ def err_constexpr_redecl_mismatch : Error<
 def err_constexpr_virtual : Error<"virtual function cannot be constexpr">;
 def warn_cxx17_compat_constexpr_virtual : Warning<
   "virtual constexpr functions are incompatible with "
-  "C++ standards before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_constexpr_virtual_base : Error<
   "constexpr %select{member function|constructor}0 not allowed in "
   "%select{struct|interface|class}1 with virtual base "
@@ -2458,11 +2464,11 @@ def warn_cxx11_compat_constexpr_body_invalid_stmt : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def ext_constexpr_body_invalid_stmt_cxx2a : ExtWarn<
   "use of this statement in a constexpr %select{function|constructor}0 "
-  "is a C++2a extension">, InGroup<CXX2a>;
+  "is a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_constexpr_body_invalid_stmt : Warning<
   "use of this statement in a constexpr %select{function|constructor}0 "
-  "is incompatible with C++ standards before C++2a">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
+  "is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 def ext_constexpr_type_definition : ExtWarn<
   "type definition in a constexpr %select{function|constructor}0 "
   "is a C++14 extension">, InGroup<CXX14>;
@@ -2488,11 +2494,11 @@ def err_constexpr_local_var_non_literal_type : Error<
   "%select{function|constructor}0">;
 def ext_constexpr_local_var_no_init : ExtWarn<
   "uninitialized variable in a constexpr %select{function|constructor}0 "
-  "is a C++20 extension">, InGroup<CXX2a>;
+  "is a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_constexpr_local_var_no_init : Warning<
   "uninitialized variable in a constexpr %select{function|constructor}0 "
   "is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 def ext_constexpr_function_never_constant_expr : ExtWarn<
   "constexpr %select{function|constructor}0 never produces a "
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
@@ -2518,29 +2524,29 @@ def warn_cxx11_compat_constexpr_body_multiple_return : Warning<
 def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
 
-// C++2a function try blocks in constexpr
+// C++20 function try blocks in constexpr
 def ext_constexpr_function_try_block_cxx2a : ExtWarn<
   "function try block in constexpr %select{function|constructor}0 is "
-  "a C++2a extension">, InGroup<CXX2a>;
+  "a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_constexpr_function_try_block : Warning<
   "function try block in constexpr %select{function|constructor}0 is "
-  "incompatible with C++ standards before C++2a">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
+  "incompatible with C++ standards before C++20">,
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 
 def ext_constexpr_union_ctor_no_init : ExtWarn<
   "constexpr union constructor that does not initialize any member "
-  "is a C++20 extension">, InGroup<CXX2a>;
+  "is a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_constexpr_union_ctor_no_init : Warning<
   "constexpr union constructor that does not initialize any member "
   "is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 def ext_constexpr_ctor_missing_init : ExtWarn<
   "constexpr constructor that does not initialize all members "
-  "is a C++20 extension">, InGroup<CXX2a>;
+  "is a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_constexpr_ctor_missing_init : Warning<
   "constexpr constructor that does not initialize all members "
   "is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 def note_constexpr_ctor_missing_init : Note<
   "member not initialized by constructor">;
 def note_non_literal_no_constexpr_ctors : Note<
@@ -2590,28 +2596,81 @@ def note_constraints_not_satisfied : Note<
 def note_substituted_constraint_expr_is_ill_formed : Note<
   "because substituted constraint expression is ill-formed%0">;
 def note_atomic_constraint_evaluated_to_false : Note<
-  "%select{and |because }0'%1' evaluated to false">;
+  "%select{and|because}0 '%1' evaluated to false">;
 def note_concept_specialization_constraint_evaluated_to_false : Note<
-  "%select{and |because }0'%1' evaluated to false">;
+  "%select{and|because}0 '%1' evaluated to false">;
 def note_single_arg_concept_specialization_constraint_evaluated_to_false : Note<
-  "%select{and |because }0%1 does not satisfy %2">;
+  "%select{and|because}0 %1 does not satisfy %2">;
 def note_atomic_constraint_evaluated_to_false_elaborated : Note<
-  "%select{and |because }0'%1' (%2 %3 %4) evaluated to false">;
+  "%select{and|because}0 '%1' (%2 %3 %4) evaluated to false">;
 def err_constrained_virtual_method : Error<
   "virtual function cannot have a requires clause">;
 def err_trailing_requires_clause_on_deduction_guide : Error<
   "deduction guide cannot have a requires clause">;
 def err_reference_to_function_with_unsatisfied_constraints : Error<
   "invalid reference to function %0: constraints not satisfied">;
+def note_requires_expr_ill_formed_expr : Note<
+  "expression is invalid: %0">;
+def note_requires_expr_no_implicit_conversion : Note<
+  "no implicit conversion exists between expression type %0 and expected type "
+  "%1">;
+def err_requires_expr_local_parameter_default_argument : Error<
+  "default arguments not allowed for parameters of a requires expression">;
+def err_requires_expr_parameter_referenced_in_evaluated_context : Error<
+  "constraint variable %0 cannot be used in an evaluated context">;
+def note_expr_requirement_expr_substitution_error : Note<
+  "%select{and|because}0 '%1' would be invalid: %2">;
+def note_expr_requirement_expr_unknown_substitution_error : Note<
+  "%select{and|because}0 '%1' would be invalid">;
+def note_expr_requirement_noexcept_not_met : Note<
+  "%select{and|because}0 '%1' may throw an exception">;
+def note_expr_requirement_type_requirement_substitution_error : Note<
+  "%select{and|because}0 '%1' would be invalid: %2">;
+def note_expr_requirement_type_requirement_unknown_substitution_error : Note<
+  "%select{and|because}0 '%1' would be invalid">;
+def note_expr_requirement_constraints_not_satisfied : Note<
+  "%select{and|because}0 type constraint '%1' was not satisfied:">;
+def note_expr_requirement_constraints_not_satisfied_simple : Note<
+  "%select{and|because}0 %1 does not satisfy %2:">;
+def note_type_requirement_substitution_error : Note<
+  "%select{and|because}0 '%1' would be invalid: %2">;
+def note_type_requirement_unknown_substitution_error : Note<
+  "%select{and|because}0 '%1' would be invalid">;
+def err_type_requirement_non_type_template : Error<
+  "'%0' refers to a %select{class template|function template|"
+  "variable template|alias template|template template parameter|template}1, "
+  "not a type template">;
+def err_type_requirement_no_such_type : Error<
+  "'%0' does not name a type">;
+def note_nested_requirement_substitution_error : Note<
+  "%select{and|because}0 '%1' would be invalid: %2">;
+def note_nested_requirement_unknown_substitution_error : Note<
+  "%select{and|because}0 '%1' would be invalid">;
 def note_ambiguous_atomic_constraints : Note<
   "similar constraint expressions not considered equivalent; constraint "
   "expressions cannot be considered equivalent unless they originate from the "
   "same concept">;
 def note_ambiguous_atomic_constraints_similar_expression : Note<
   "similar constraint expression here">;
+def err_unsupported_placeholder_constraint : Error<
+  "constrained placeholder types other than simple 'auto' on non-type template "
+  "parameters not supported yet">;
 
 def err_template_different_requires_clause : Error<
   "requires clause differs in template redeclaration">;
+def err_template_different_type_constraint : Error<
+  "type constraint differs in template redeclaration">;
+def err_template_template_parameter_not_at_least_as_constrained : Error<
+  "template template argument %0 is more constrained than template template "
+  "parameter %1">;
+
+def err_type_constraint_non_type_concept : Error<
+  "concept named in type constraint is not a type concept">;
+def err_type_constraint_missing_arguments : Error<
+  "%0 requires more than 1 template argument; provide the remaining arguments "
+  "explicitly to use it here">;
+def err_placeholder_constraints_not_satisfied : Error<
+  "deduced type %0 does not satisfy %1">;
 
 // C++11 char16_t/char32_t
 def warn_cxx98_compat_unicode_type : Warning<
@@ -2619,7 +2678,7 @@ def warn_cxx98_compat_unicode_type : Warning<
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cxx17_compat_unicode_type : Warning<
   "'char8_t' type specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 
 // __make_integer_seq
 def err_integer_sequence_negative_length : Error<
@@ -4151,7 +4210,7 @@ def err_ovl_no_viable_literal_operator : Error<
 def err_template_param_shadow : Error<
   "declaration of %0 shadows template parameter">;
 def ext_template_param_shadow : ExtWarn<
-  err_template_param_shadow.Text>, InGroup<MicrosoftTemplate>;
+  err_template_param_shadow.Text>, InGroup<MicrosoftTemplateShadow>;
 def note_template_param_here : Note<"template parameter is declared here">;
 def warn_template_export_unsupported : Warning<
   "exported templates are unsupported">;
@@ -4230,11 +4289,11 @@ def err_template_tag_noparams : Error<
 def warn_cxx17_compat_adl_only_template_id : Warning<
   "use of function template name with no prior function template "
   "declaration in function call with explicit template arguments "
-  "is incompatible with C++ standards before C++2a">,
-  InGroup<CXXPre2aCompat>, DefaultIgnore;
+  "is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 def ext_adl_only_template_id : ExtWarn<
   "use of function template name with no prior declaration in function call "
-  "with explicit template arguments is a C++2a extension">, InGroup<CXX2a>;
+  "with explicit template arguments is a C++20 extension">, InGroup<CXX20>;
 
 // C++ Template Argument Lists
 def err_template_missing_args : Error<
@@ -4376,12 +4435,12 @@ def err_pointer_to_member_oper_value_classify: Error<
   "pointer-to-member function type %0 can only be called on an "
   "%select{rvalue|lvalue}1">;
 def ext_pointer_to_const_ref_member_on_rvalue : Extension<
-  "invoking a pointer to a 'const &' member function on an rvalue is a C++2a extension">,
-  InGroup<CXX2a>, SFINAEFailure;
+  "invoking a pointer to a 'const &' member function on an rvalue is a C++20 extension">,
+  InGroup<CXX20>, SFINAEFailure;
 def warn_cxx17_compat_pointer_to_const_ref_member_on_rvalue : Warning<
   "invoking a pointer to a 'const &' member function on an rvalue is "
-  "incompatible with C++ standards before C++2a">,
-  InGroup<CXXPre2aCompatPedantic>, DefaultIgnore;
+  "incompatible with C++ standards before C++20">,
+  InGroup<CXXPre20CompatPedantic>, DefaultIgnore;
 def ext_ms_deref_template_argument: ExtWarn<
   "non-type template argument containing a dereference operation is a "
   "Microsoft extension">, InGroup<MicrosoftTemplate>;
@@ -4577,6 +4636,8 @@ def note_template_type_alias_instantiation_here : Note<
   "in instantiation of template type alias %0 requested here">;
 def note_template_exception_spec_instantiation_here : Note<
   "in instantiation of exception specification for %0 requested here">;
+def note_template_requirement_instantiation_here : Note<
+  "in instantiation of requirement here">;
 def warn_var_template_missing : Warning<"instantiation of variable %q0 "
   "required here, but no definition is available">,
   InGroup<UndefinedVarTemplate>;
@@ -4612,6 +4673,8 @@ def note_template_default_arg_checking : Note<
   "while checking a default template argument used here">;
 def note_concept_specialization_here : Note<
   "while checking the satisfaction of concept '%0' requested here">;
+def note_nested_requirement_here : Note<
+  "while checking the satisfaction of nested requirement requested here">;
 def note_checking_constraints_for_template_id_here : Note<
   "while checking constraint satisfaction for template '%0' required here">;
 def note_checking_constraints_for_var_spec_id_here : Note<
@@ -4620,6 +4683,8 @@ def note_checking_constraints_for_var_spec_id_here : Note<
 def note_checking_constraints_for_class_spec_id_here : Note<
   "while checking constraint satisfaction for class template partial "
   "specialization '%0' required here">;
+def note_checking_constraints_for_function_here : Note<
+  "while checking constraint satisfaction for function '%0' required here">;
 def note_constraint_substitution_here : Note<
   "while substituting template arguments into constraint expression here">;
 def note_constraint_normalization_here : Note<
@@ -4745,8 +4810,12 @@ def err_typename_nested_not_found_requirement : Error<
   "declaration">;
 def err_typename_nested_not_type : Error<
     "typename specifier refers to non-type member %0 in %1">;
-def note_typename_refers_here : Note<
+def err_typename_not_type : Error<
+    "typename specifier refers to non-type %0">;
+def note_typename_member_refers_here : Note<
     "referenced member %0 is declared here">;
+def note_typename_refers_here : Note<
+    "referenced %0 is declared here">;
 def err_typename_missing : Error<
   "missing 'typename' prior to dependent type name '%0%1'">;
 def err_typename_missing_template : Error<
@@ -4819,8 +4888,8 @@ def err_unexpanded_parameter_pack : Error<
   "size|static assertion|fixed underlying type|enumerator value|"
   "using declaration|friend declaration|qualifier|initializer|default argument|"
   "non-type template parameter type|exception type|partial specialization|"
-  "__if_exists name|__if_not_exists name|lambda|block}0 contains"
-  "%plural{0: an|:}1 unexpanded parameter pack"
+  "__if_exists name|__if_not_exists name|lambda|block|type constraint}0 "
+  "contains%plural{0: an|:}1 unexpanded parameter pack"
   "%plural{0:|1: %2|2:s %2 and %3|:s %2, %3, ...}1">;
 
 def err_pack_expansion_without_parameter_packs : Error<
@@ -6120,7 +6189,7 @@ def err_array_init_utf8_string_into_char : Error<
   "UTF-8 string literal%select{ is not permitted by '-fchar8_t'|}0">;
 def warn_cxx2a_compat_utf8_string : Warning<
   "type of UTF-8 string literal will change from array of const char to "
-  "array of const char8_t in C++2a">, InGroup<CXX2aCompat>, DefaultIgnore;
+  "array of const char8_t in C++20">, InGroup<CXX20Compat>, DefaultIgnore;
 def note_cxx2a_compat_utf8_string_remove_u8 : Note<
   "remove 'u8' prefix to avoid a change of behavior; "
   "Clang encodes unprefixed narrow string literals as UTF-8">;
@@ -6679,6 +6748,10 @@ def err_bad_cxx_cast_scalar_to_vector_different_size : Error<
 def err_bad_cxx_cast_vector_to_vector_different_size : Error<
   "%select{||reinterpret_cast||C-style cast|}0 from vector %1 "
   "to vector %2 of different size">;
+def warn_bad_cxx_cast_nested_pointer_addr_space : Warning<
+  "%select{reinterpret_cast|C-style cast}0 from %1 to %2 "
+  "changes address space of nested pointers">,
+  InGroup<IncompatiblePointerTypesDiscardsQualifiers>;
 def err_bad_lvalue_to_rvalue_cast : Error<
   "cannot cast from lvalue of type %1 to rvalue reference type %2; types are "
   "not compatible">;
@@ -6944,6 +7017,14 @@ def err_conditional_vector_size : Error<
 def err_conditional_vector_element_size : Error<
   "vector condition type %0 and result type %1 do not have elements of the "
   "same size">;
+def err_conditional_vector_has_void : Error<
+  "GNU vector conditional operand cannot be %select{void|a throw expression}0">;
+def err_conditional_vector_operand_type
+    : Error<"%select{enumeration|extended vector}0 type %1 is not allowed in a "
+            "vector conditional">;
+def err_conditional_vector_mismatched_vectors
+    : Error<"vector operands to the vector conditional must be the same type "
+            "%diff{($ and $)|}0,1}">;
 
 def err_throw_incomplete : Error<
   "cannot throw object of incomplete type %0">;
@@ -7035,9 +7116,9 @@ let CategoryName = "Lambda Issue" in {
     "cannot deduce type for lambda capture %0 from initializer list">;
   def warn_cxx17_compat_init_capture_pack : Warning<
     "initialized lambda capture packs are incompatible with C++ standards "
-    "before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+    "before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
   def ext_init_capture_pack : ExtWarn<
-    "initialized lambda pack captures are a C++2a extension">, InGroup<CXX2a>;
+    "initialized lambda pack captures are a C++20 extension">, InGroup<CXX20>;
 
   // C++14 generic lambdas.
   def warn_cxx11_compat_generic_lambda : Warning<
@@ -7055,23 +7136,23 @@ let CategoryName = "Lambda Issue" in {
   def err_parameter_shadow_capture : Error<
     "a lambda parameter cannot shadow an explicitly captured entity">;
 
-  // C++2a [=, this] captures.
+  // C++20 [=, this] captures.
   def warn_cxx17_compat_equals_this_lambda_capture : Warning<
     "explicit capture of 'this' with a capture default of '=' is incompatible "
-    "with C++ standards before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+    "with C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
   def ext_equals_this_lambda_capture_cxx2a : ExtWarn<
     "explicit capture of 'this' with a capture default of '=' "
-    "is a C++2a extension">, InGroup<CXX2a>;
+    "is a C++20 extension">, InGroup<CXX20>;
   def warn_deprecated_this_capture : Warning<
     "implicit capture of 'this' with a capture default of '=' is deprecated">,
     InGroup<DeprecatedThisCapture>, DefaultIgnore;
   def note_deprecated_this_capture : Note<
     "add an explicit capture of 'this' to capture '*this' by reference">;
 
-  // C++2a default constructible / assignable lambdas.
+  // C++20 default constructible / assignable lambdas.
   def warn_cxx17_compat_lambda_def_ctor_assign : Warning<
     "%select{default construction|assignment}0 of lambda is incompatible with "
-    "C++ standards before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+    "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -7772,7 +7853,7 @@ def ext_cxx14_attr : Extension<
 def ext_cxx17_attr : Extension<
   "use of the %0 attribute is a C++17 extension">, InGroup<CXX17>;
 def ext_cxx2a_attr : Extension<
-  "use of the %0 attribute is a C++2a extension">, InGroup<CXX2a>;
+  "use of the %0 attribute is a C++20 extension">, InGroup<CXX20>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,
@@ -7786,7 +7867,7 @@ def err_incomplete_type_used_in_type_trait_expr : Error<
 // C++20 constinit and require_constant_initialization attribute
 def warn_cxx20_compat_constinit : Warning<
   "'constinit' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX2aCompat>, DefaultIgnore;
+  InGroup<CXX20Compat>, DefaultIgnore;
 def err_constinit_local_variable : Error<
   "local variable cannot be declared 'constinit'">;
 def err_require_constant_init_failed : Error<
@@ -8241,7 +8322,7 @@ def note_deleted_type_mismatch : Note<
 def warn_cxx17_compat_defaulted_method_type_mismatch : Warning<
   "explicitly defaulting this %sub{select_special_member_kind}0 with a type "
   "different from the implicit type is incompatible with C++ standards before "
-  "C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+  "C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def warn_vbase_moved_multiple_times : Warning<
   "defaulted move assignment operator of %0 will move assign virtual base "
   "class %1 multiple times">, InGroup<DiagGroup<"multiple-move-vbase">>;
@@ -8255,10 +8336,10 @@ def select_defaulted_comparison_kind : TextSubstitution<
   "%select{<ERROR>|equality|three-way|equality|relational}0 comparison "
   "operator">;
 def ext_defaulted_comparison : ExtWarn<
-  "defaulted comparison operators are a C++20 extension">, InGroup<CXX2a>;
+  "defaulted comparison operators are a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_defaulted_comparison : Warning<
   "defaulted comparison operators are incompatible with C++ standards "
-  "before C++20">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+  "before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_defaulted_comparison_template : Error<
   "comparison operator template cannot be defaulted">;
 def err_defaulted_comparison_out_of_class : Error<
@@ -8315,6 +8396,12 @@ def note_defaulted_comparison_cannot_deduce : Note<
   "return type of defaulted 'operator<=>' cannot be deduced because "
   "return type %2 of three-way comparison for %select{|member|base class}0 %1 "
   "is not a standard comparison category type">;
+def err_defaulted_comparison_cannot_deduce_undeduced_auto : Error<
+  "return type of defaulted 'operator<=>' cannot be deduced because "
+  "three-way comparison for %select{|member|base class}0 %1 "
+  "has a deduced return type and is not yet defined">;
+def note_defaulted_comparison_cannot_deduce_undeduced_auto : Note<
+  "%select{|member|base class}0 %1 declared here">;
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
 def err_incorrect_defaulted_comparison_constexpr : Error<

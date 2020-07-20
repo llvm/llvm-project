@@ -56,6 +56,10 @@ namespace llvm {
 
   /// ForeachLoop - Record the iteration state associated with a for loop.
   /// This is used to instantiate items in the loop body.
+  ///
+  /// IterVar is allowed to be null, in which case no iteration variable is
+  /// defined in the loop at all. (This happens when a ForeachLoop is
+  /// constructed by desugaring an if statement.)
   struct ForeachLoop {
     SMLoc Loc;
     VarInit *IterVar;
@@ -73,6 +77,46 @@ namespace llvm {
     RecTy *EltTy = nullptr;
     SmallVector<Init *, 16> Elements;
   };
+
+class TGLocalVarScope {
+  // A scope to hold local variable definitions from defvar.
+  std::map<std::string, Init *, std::less<>> vars;
+  std::unique_ptr<TGLocalVarScope> parent;
+
+public:
+  TGLocalVarScope() = default;
+  TGLocalVarScope(std::unique_ptr<TGLocalVarScope> parent)
+      : parent(std::move(parent)) {}
+
+  std::unique_ptr<TGLocalVarScope> extractParent() {
+    // This is expected to be called just before we are destructed, so
+    // it doesn't much matter what state we leave 'parent' in.
+    return std::move(parent);
+  }
+
+  Init *getVar(StringRef Name) const {
+    auto It = vars.find(Name);
+    if (It != vars.end())
+      return It->second;
+    if (parent)
+      return parent->getVar(Name);
+    return nullptr;
+  }
+
+  bool varAlreadyDefined(StringRef Name) const {
+    // When we check whether a variable is already defined, for the purpose of
+    // reporting an error on redefinition, we don't look up to the parent
+    // scope, because it's all right to shadow an outer definition with an
+    // inner one.
+    return vars.find(Name) != vars.end();
+  }
+
+  void addVar(StringRef Name, Init *I) {
+    bool Ins = vars.insert(std::make_pair(Name, I)).second;
+    (void)Ins;
+    assert(Ins && "Local variable already exists");
+  }
+};
 
 struct MultiClass {
   Record Rec;  // Placeholder for template args and Name.
@@ -98,6 +142,10 @@ class TGParser {
   /// CurMultiClass - If we are parsing a 'multiclass' definition, this is the
   /// current value.
   MultiClass *CurMultiClass;
+
+  /// CurLocalScope - Innermost of the current nested scopes for 'defvar' local
+  /// variables.
+  std::unique_ptr<TGLocalVarScope> CurLocalScope;
 
   // Record tracker
   RecordKeeper &Records;
@@ -133,7 +181,20 @@ public:
     return Lex.getDependencies();
   }
 
-private:  // Semantic analysis methods.
+  TGLocalVarScope *PushLocalScope() {
+    CurLocalScope = std::make_unique<TGLocalVarScope>(std::move(CurLocalScope));
+    // Returns a pointer to the new scope, so that the caller can pass it back
+    // to PopLocalScope which will check by assertion that the pushes and pops
+    // match up properly.
+    return CurLocalScope.get();
+  }
+  void PopLocalScope(TGLocalVarScope *ExpectedStackTop) {
+    assert(ExpectedStackTop == CurLocalScope.get() &&
+           "Mismatched pushes and pops of local variable scopes");
+    CurLocalScope = CurLocalScope->extractParent();
+  }
+
+private: // Semantic analysis methods.
   bool AddValue(Record *TheRec, SMLoc Loc, const RecordVal &RV);
   bool SetValue(Record *TheRec, SMLoc Loc, Init *ValName,
                 ArrayRef<unsigned> BitList, Init *V,
@@ -161,7 +222,10 @@ private:  // Parser methods.
   bool ParseDefm(MultiClass *CurMultiClass);
   bool ParseDef(MultiClass *CurMultiClass);
   bool ParseDefset();
+  bool ParseDefvar();
   bool ParseForeach(MultiClass *CurMultiClass);
+  bool ParseIf(MultiClass *CurMultiClass);
+  bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
   bool ParseTopLevelLet(MultiClass *CurMultiClass);
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);
 

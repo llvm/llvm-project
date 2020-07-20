@@ -428,13 +428,14 @@ public:
 
   void RunCommandInterpreter(bool auto_handle_events, bool spawn_thread,
                              CommandInterpreterRunOptions &options);
+
   void GetLLDBCommandsFromIOHandler(const char *prompt,
                                     IOHandlerDelegate &delegate,
-                                    bool asynchronously, void *baton);
+                                    void *baton = nullptr);
 
   void GetPythonCommandsFromIOHandler(const char *prompt,
                                       IOHandlerDelegate &delegate,
-                                      bool asynchronously, void *baton);
+                                      void *baton = nullptr);
 
   const char *GetCommandPrefix();
 

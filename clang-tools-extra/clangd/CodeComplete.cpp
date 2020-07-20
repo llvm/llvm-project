@@ -489,6 +489,9 @@ llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R,
   switch (R.Kind) {
   case CodeCompletionResult::RK_Declaration:
   case CodeCompletionResult::RK_Pattern: {
+    // Computing USR caches linkage, which may change after code completion.
+    if (hasUnstableLinkage(R.Declaration))
+      return llvm::None;
     return clang::clangd::getSymbolID(R.Declaration);
   }
   case CodeCompletionResult::RK_Macro:
@@ -1001,10 +1004,12 @@ private:
     ScoredSignature Result;
     Result.Signature = std::move(Signature);
     Result.Quality = Signal;
-    Result.IDForDoc =
-        Result.Signature.documentation.empty() && Candidate.getFunction()
-            ? clangd::getSymbolID(Candidate.getFunction())
-            : None;
+    const FunctionDecl *Func = Candidate.getFunction();
+    if (Func && Result.Signature.documentation.empty()) {
+      // Computing USR caches linkage, which may change after code completion.
+      if (!hasUnstableLinkage(Func))
+        Result.IDForDoc = clangd::getSymbolID(Func);
+    }
     return Result;
   }
 
@@ -1841,6 +1846,8 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
                                              : InsertTextFormat::PlainText;
   if (InsertInclude && InsertInclude->Insertion)
     LSP.additionalTextEdits.push_back(*InsertInclude->Insertion);
+
+  LSP.score = Score.ExcludingName;
 
   return LSP;
 }

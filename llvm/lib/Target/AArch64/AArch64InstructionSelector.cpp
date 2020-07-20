@@ -3699,8 +3699,8 @@ bool AArch64InstructionSelector::tryOptVectorDup(MachineInstr &I) const {
     return false;
 
   // The shuffle's second operand doesn't matter if the mask is all zero.
-  const Constant *Mask = I.getOperand(3).getShuffleMask();
-  if (!isa<ConstantAggregateZero>(Mask))
+  ArrayRef<int> Mask = I.getOperand(3).getShuffleMask();
+  if (!all_of(Mask, [](int Elem) { return Elem == 0; }))
     return false;
 
   // We're done, now find out what kind of splat we need.
@@ -3778,14 +3778,11 @@ bool AArch64InstructionSelector::selectShuffleVector(
   const LLT Src1Ty = MRI.getType(Src1Reg);
   Register Src2Reg = I.getOperand(2).getReg();
   const LLT Src2Ty = MRI.getType(Src2Reg);
-  const Constant *ShuffleMask = I.getOperand(3).getShuffleMask();
+  ArrayRef<int> Mask = I.getOperand(3).getShuffleMask();
 
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   LLVMContext &Ctx = MF.getFunction().getContext();
-
-  SmallVector<int, 8> Mask;
-  ShuffleVectorInst::getShuffleMask(ShuffleMask, Mask);
 
   // G_SHUFFLE_VECTOR is weird in that the source operands can be scalars, if
   // it's originated from a <1 x T> type. Those should have been lowered into

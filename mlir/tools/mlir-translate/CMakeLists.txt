@@ -9,7 +9,7 @@ set(LIBS
   MLIRTranslation
   MLIRSupport
 )
-add_llvm_executable(mlir-translate
+add_llvm_tool(mlir-translate
   mlir-translate.cpp
 )
 llvm_update_compile_flags(mlir-translate)

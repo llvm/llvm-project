@@ -2,7 +2,7 @@
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1) -> (d0, d1)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
 
 // Test with just loop IVs.
 func @test0(%arg0 : index, %arg1 : index) {
@@ -18,7 +18,7 @@ func @test0(%arg0 : index, %arg1 : index) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1) -> (d0 + 3, d1 + 7)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + 3, d1 + 7)>
 
 // Test with loop IVs and constants.
 func @test1(%arg0 : index, %arg1 : index) {
@@ -36,7 +36,7 @@ func @test1(%arg0 : index, %arg1 : index) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1, d2, d3) -> (d0 + d1, d2 + d3)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1, d2, d3) -> (d0 + d1, d2 + d3)>
 
 // Test with loop IVs and function args without 'symbol' keyword (should
 // be parsed as dim identifiers).
@@ -55,7 +55,7 @@ func @test2(%arg0 : index, %arg1 : index) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1)[s0, s1] -> (d0 + s0, d1 + s1)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> (d0 + s0, d1 + s1)>
 
 // Test with loop IVs and function args with 'symbol' keyword (should
 // be parsed as symbol identifiers).
@@ -76,7 +76,7 @@ func @test3(%arg0 : index, %arg1 : index) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1)[s0, s1] -> ((d0 + s0) floordiv 3 + 11, (d1 + s1) mod 4 + 7)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1)[s0, s1] -> ((d0 + s0) floordiv 3 + 11, (d1 + s1) mod 4 + 7)>
 
 // Test with loop IVs, symbols and constants in nested affine expressions.
 func @test4(%arg0 : index, %arg1 : index) {
@@ -96,7 +96,7 @@ func @test4(%arg0 : index, %arg1 : index) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1, d2) -> (d0, d1, d2)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 
 // Test with swizzled loop IVs.
 func @test5(%arg0 : index, %arg1 : index) {
@@ -116,7 +116,7 @@ func @test5(%arg0 : index, %arg1 : index) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1, d2, d3, d4) -> (d0 + d1, d2 + d3, d3 + d1 + d4)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0 + d1, d2 + d3, d3 + d1 + d4)>
 
 // Test with swizzled loop IVs, duplicate args, and function args used as dims.
 // Dim identifiers are assigned in parse order:
@@ -140,7 +140,7 @@ func @test6(%arg0 : index, %arg1 : index) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1, d2)[s0, s1] -> (d0 + s0, d1 + d2, d2 + s0 + s1)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1] -> (d0 + s0, d1 + d2, d2 + s0 + s1)>
 
 // Test with swizzled loop IVs, duplicate args, and function args used as syms.
 // Dim and symbol identifiers are assigned in parse order:
@@ -169,13 +169,13 @@ func @test6(%arg0 : index, %arg1 : index) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0) -> (d0 + 1)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 
 // Test with operands without special SSA name.
 func @test7() {
   %0 = alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
-    %1 = affine.apply (d1) -> (d1 + 1)(%i0)
+    %1 = affine.apply affine_map<(d1) -> (d1 + 1)>(%i0)
     %2 = affine.load %0[%1] : memref<10xf32>
     affine.store %2, %0[%1] : memref<10xf32>
 // CHECK: affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
@@ -197,8 +197,8 @@ func @zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
 
 // -----
 
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1) -> (d0 + 3, d1 + 7)
-// CHECK: [[MAP1:#map[0-9]+]] = (d0, d1) -> (d0 + 3, d1 + 11)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + 3, d1 + 7)>
+// CHECK: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + 3, d1 + 11)>
 
 // Test with loop IVs and constants.
 func @test_prefetch(%arg0 : index, %arg1 : index) {

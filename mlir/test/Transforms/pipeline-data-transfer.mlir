@@ -2,14 +2,14 @@
 
 // -----
 
-// CHECK-DAG: [[MOD_2:#map[0-9]+]] = (d0) -> (d0 mod 2)
-// CHECK-DAG: [[MAP_MINUS_1:#map[0-9]+]] = (d0) -> (d0 - 1)
+// CHECK-DAG: [[MOD_2:#map[0-9]+]] = affine_map<(d0) -> (d0 mod 2)>
+// CHECK-DAG: [[MAP_MINUS_1:#map[0-9]+]] = affine_map<(d0) -> (d0 - 1)>
 
 // CHECK-LABEL: func @loop_nest_dma() {
 func @loop_nest_dma() {
 
-  %A = alloc() : memref<256 x f32, (d0) -> (d0), 0>
-  %Ah = alloc() : memref<32 x f32, (d0) -> (d0), 1>
+  %A = alloc() : memref<256 x f32, affine_map<(d0) -> (d0)>, 0>
+  %Ah = alloc() : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
 
   %tag = alloc() : memref<1 x f32>
 
@@ -19,15 +19,15 @@ func @loop_nest_dma() {
   affine.for %i = 0 to 8 {
     affine.dma_start %A[%i], %Ah[%i], %tag[%zero], %num_elts : memref<256 x f32>, memref<32 x f32, 1>, memref<1 x f32>
     affine.dma_wait %tag[%zero], %num_elts : memref<1 x f32>
-    %v = affine.load %Ah[%i] : memref<32 x f32, (d0) -> (d0), 1>
+    %v = affine.load %Ah[%i] : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
     %r = "compute"(%v) : (f32) -> (f32)
-    affine.store %r, %Ah[%i] : memref<32 x f32, (d0) -> (d0), 1>
+    affine.store %r, %Ah[%i] : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
     affine.for %j = 0 to 32 {
       "do_more_compute"(%i, %j) : (index, index) -> ()
     }
   }
   dealloc %tag : memref<1 x f32>
-  dealloc %Ah : memref<32 x f32, (d0) -> (d0), 1>
+  dealloc %Ah : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
   return
 }
 // CHECK:       %{{.*}} = alloc() : memref<256xf32>
@@ -64,8 +64,8 @@ func @loop_nest_dma() {
 
 // -----
 
-// CHECK-DAG: [[FLOOR_MOD_2:#map[0-9]+]] = (d0) -> ((d0 floordiv 4) mod 2)
-// CHECK-DAG: [[REMAP_SHIFT_MINUS_4:#map[0-9]+]] = (d0) -> (d0 - 4)
+// CHECK-DAG: [[FLOOR_MOD_2:#map[0-9]+]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
+// CHECK-DAG: [[REMAP_SHIFT_MINUS_4:#map[0-9]+]] = affine_map<(d0) -> (d0 - 4)>
 
 // CHECK-LABEL: @loop_step
 func @loop_step(%arg0: memref<512xf32>,
@@ -105,8 +105,8 @@ func @loop_step(%arg0: memref<512xf32>,
 
 // -----
 
-#map1 = (d0, d1) -> ((d0 * 2048 + d1 * 256) floordiv 32)
-#map2 = (d0) -> ((d0 * 2048) floordiv 32)
+#map1 = affine_map<(d0, d1) -> ((d0 * 2048 + d1 * 256) floordiv 32)>
+#map2 = affine_map<(d0) -> ((d0 * 2048) floordiv 32)>
 // CHECK-LABEL: func @loop_dma_nested(%{{.*}}: memref<512x32xvector<8xf32>
 func @loop_dma_nested(%arg0: memref<512x32xvector<8xf32>>, %arg1: memref<512x32xvector<8xf32>>, %arg2: memref<512x32xvector<8xf32>>) {
   %num_elts = constant 256 : index
@@ -199,7 +199,7 @@ func @loop_dma_nested(%arg0: memref<512x32xvector<8xf32>>, %arg1: memref<512x32x
 }
 
 // -----
-#map2 = (d0) -> ((d0 * 2048) floordiv 32)
+#map2 = affine_map<(d0) -> ((d0 * 2048) floordiv 32)>
 
 // CHECK: func @loop_dma_dependent
 func @loop_dma_dependent(%arg2: memref<512x32xvector<8xf32>>) {
@@ -356,8 +356,8 @@ func @dynamic_shape_dma_buffer(%arg0: memref<512 x 32 x f32>) {
 // before performing any replacement.
 // CHECK-LABEL: func @escaping_and_indexed_use_mix
 func @escaping_and_indexed_use_mix() {
-  %A = alloc() : memref<256 x f32, (d0) -> (d0), 0>
-  %Ah = alloc() : memref<32 x f32, (d0) -> (d0), 1>
+  %A = alloc() : memref<256 x f32, affine_map<(d0) -> (d0)>, 0>
+  %Ah = alloc() : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
   %tag = alloc() : memref<1 x f32>
   %zero = constant 0 : index
   %num_elts = constant 32 : index
@@ -367,11 +367,11 @@ func @escaping_and_indexed_use_mix() {
     affine.dma_start %A[%i], %Ah[%i], %tag[%zero], %num_elts : memref<256 x f32>, memref<32 x f32, 1>, memref<1 x f32>
     affine.dma_wait %tag[%zero], %num_elts : memref<1 x f32>
     "compute"(%Ah) : (memref<32 x f32, 1>) -> ()
-    %v = affine.load %Ah[%i] : memref<32 x f32, (d0) -> (d0), 1>
+    %v = affine.load %Ah[%i] : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
     "foo"(%v) : (f32) -> ()
   }
-  dealloc %A : memref<256 x f32, (d0) -> (d0), 0>
-  dealloc %Ah : memref<32 x f32, (d0) -> (d0), 1>
+  dealloc %A : memref<256 x f32, affine_map<(d0) -> (d0)>, 0>
+  dealloc %Ah : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
   return
 }
 // No replacement.

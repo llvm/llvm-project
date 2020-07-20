@@ -13,10 +13,17 @@
 
 #ifndef LLVM_CLANG_SEMA_SEMACONCEPT_H
 #define LLVM_CLANG_SEMA_SEMACONCEPT_H
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include <string>
+#include <utility>
+
 namespace clang {
 class Sema;
 
@@ -36,11 +43,15 @@ struct AtomicConstraint {
     if (ParameterMapping->size() != Other.ParameterMapping->size())
       return false;
 
-    for (unsigned I = 0, S = ParameterMapping->size(); I < S; ++I)
-      if (!C.getCanonicalTemplateArgument((*ParameterMapping)[I].getArgument())
-               .structurallyEquals(C.getCanonicalTemplateArgument(
-                  (*Other.ParameterMapping)[I].getArgument())))
+    for (unsigned I = 0, S = ParameterMapping->size(); I < S; ++I) {
+      llvm::FoldingSetNodeID IDA, IDB;
+      C.getCanonicalTemplateArgument((*ParameterMapping)[I].getArgument())
+          .Profile(IDA, C);
+      C.getCanonicalTemplateArgument((*Other.ParameterMapping)[I].getArgument())
+          .Profile(IDB, C);
+      if (IDA != IDB)
         return false;
+    }
     return true;
   }
 

@@ -6,7 +6,6 @@
 .section myseg, mysect
 L___fcommon: 
     .word 0
-@ CHECK-ERROR: unsupported relocation on symbol
 
 c:
   .word a - b

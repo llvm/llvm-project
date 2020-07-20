@@ -81,8 +81,16 @@ ExprResult Sema::ActOnNoexceptSpec(SourceLocation NoexceptLoc,
                                    ExceptionSpecificationType &EST) {
   // FIXME: This is bogus, a noexcept expression is not a condition.
   ExprResult Converted = CheckBooleanCondition(NoexceptLoc, NoexceptExpr);
-  if (Converted.isInvalid())
-    return Converted;
+  if (Converted.isInvalid()) {
+    EST = EST_NoexceptFalse;
+
+    // Fill in an expression of 'false' as a fixup.
+    auto *BoolExpr = new (Context)
+        CXXBoolLiteralExpr(false, Context.BoolTy, NoexceptExpr->getBeginLoc());
+    llvm::APSInt Value{1};
+    Value = 0;
+    return ConstantExpr::Create(Context, BoolExpr, APValue{Value});
+  }
 
   if (Converted.get()->isValueDependent()) {
     EST = EST_DependentNoexcept;
@@ -1378,6 +1386,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::StringLiteralClass:
   case Expr::SourceLocExprClass:
   case Expr::ConceptSpecializationExprClass:
+  case Expr::RequiresExprClass:
     // These expressions can never throw.
     return CT_Cannot;
 

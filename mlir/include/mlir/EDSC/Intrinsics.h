@@ -34,9 +34,9 @@ namespace edsc {
 struct IndexHandle : public ValueHandle {
   explicit IndexHandle()
       : ValueHandle(ScopedContext::getBuilder().getIndexType()) {}
-  explicit IndexHandle(index_t v) : ValueHandle(v) {}
+  explicit IndexHandle(index_type v) : ValueHandle(v) {}
   explicit IndexHandle(Value v) : ValueHandle(v) {
-    assert(v->getType() == ScopedContext::getBuilder().getIndexType() &&
+    assert(v.getType() == ScopedContext::getBuilder().getIndexType() &&
            "Expected index type");
   }
   explicit IndexHandle(ValueHandle v) : ValueHandle(v) {
@@ -96,7 +96,7 @@ public:
   ValueHandleArray(ArrayRef<IndexHandle> vals) {
     values.append(vals.begin(), vals.end());
   }
-  ValueHandleArray(ArrayRef<index_t> vals) {
+  ValueHandleArray(ArrayRef<index_type> vals) {
     SmallVector<IndexHandle, 8> tmp(vals.begin(), vals.end());
     values.append(tmp.begin(), tmp.end());
   }
@@ -213,6 +213,8 @@ using std_store = OperationBuilder<StoreOp>;
 using subi = ValueBuilder<SubIOp>;
 using tanh = ValueBuilder<TanhOp>;
 using view = ValueBuilder<ViewOp>;
+using zero_extendi = ValueBuilder<ZeroExtendIOp>;
+using sign_extendi = ValueBuilder<SignExtendIOp>;
 
 /// Branches into the mlir::Block* captured by BlockHandle `b` with `operands`.
 ///

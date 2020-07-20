@@ -162,15 +162,15 @@ define i32 @TestComp128ONE(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    callq __gttf2
+; CHECK-NEXT:    callq __eqtf2
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    setg %bl
+; CHECK-NEXT:    setne %bl
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    callq __lttf2
+; CHECK-NEXT:    callq __unordtf2
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    sets %al
-; CHECK-NEXT:    orb %bl, %al
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    andb %bl, %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16

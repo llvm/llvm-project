@@ -410,6 +410,7 @@ public:
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
   void fetch();
+  MemoryBufferRef getMemberBuffer();
 
   // Lazy symbols can have a signature because they can replace an
   // UndefinedFunction which which case we need to be able to preserve the

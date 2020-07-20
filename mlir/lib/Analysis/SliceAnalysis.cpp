@@ -43,18 +43,18 @@ static void getForwardSliceImpl(Operation *op,
   }
 
   if (auto forOp = dyn_cast<AffineForOp>(op)) {
-    for (auto *ownerInst : forOp.getInductionVar()->getUsers())
+    for (auto *ownerInst : forOp.getInductionVar().getUsers())
       if (forwardSlice->count(ownerInst) == 0)
         getForwardSliceImpl(ownerInst, forwardSlice, filter);
   } else if (auto forOp = dyn_cast<loop::ForOp>(op)) {
-    for (auto *ownerInst : forOp.getInductionVar()->getUsers())
+    for (auto *ownerInst : forOp.getInductionVar().getUsers())
       if (forwardSlice->count(ownerInst) == 0)
         getForwardSliceImpl(ownerInst, forwardSlice, filter);
   } else {
     assert(op->getNumRegions() == 0 && "unexpected generic op with regions");
     assert(op->getNumResults() <= 1 && "unexpected multiple results");
     if (op->getNumResults() > 0) {
-      for (auto *ownerInst : op->getResult(0)->getUsers())
+      for (auto *ownerInst : op->getResult(0).getUsers())
         if (forwardSlice->count(ownerInst) == 0)
           getForwardSliceImpl(ownerInst, forwardSlice, filter);
     }
@@ -105,14 +105,14 @@ static void getBackwardSliceImpl(Operation *op,
         auto *loopOp = loopIv.getOperation();
         if (backwardSlice->count(loopOp) == 0)
           getBackwardSliceImpl(loopOp, backwardSlice, filter);
-      } else if (blockArg->getOwner() !=
+      } else if (blockArg.getOwner() !=
                  &op->getParentOfType<FuncOp>().getBody().front()) {
         op->emitError("unsupported CF for operand ") << en.index();
         llvm_unreachable("Unsupported control flow");
       }
       continue;
     }
-    auto *op = operand->getDefiningOp();
+    auto *op = operand.getDefiningOp();
     if (backwardSlice->count(op) == 0) {
       getBackwardSliceImpl(op, backwardSlice, filter);
     }
@@ -173,7 +173,7 @@ struct DFSState {
 static void DFSPostorder(Operation *current, DFSState *state) {
   assert(current->getNumResults() <= 1 && "NYI: multi-result");
   if (current->getNumResults() > 0) {
-    for (auto &u : current->getResult(0)->getUses()) {
+    for (auto &u : current->getResult(0).getUses()) {
       auto *op = u.getOwner();
       DFSPostorder(op, state);
     }

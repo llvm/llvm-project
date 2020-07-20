@@ -114,7 +114,7 @@ func @more_imperfectly_nested_loops() {
 // CHECK-NEXT: }
 func @affine_apply_loops_shorthand(%N : index) {
   affine.for %i = 0 to %N {
-    affine.for %j = (d0)[]->(d0)(%i)[] to 42 {
+    affine.for %j = affine_map<(d0)[]->(d0)>(%i)[] to 42 {
       call @body2(%i, %j) : (index, index) -> ()
     }
   }
@@ -125,8 +125,8 @@ func @affine_apply_loops_shorthand(%N : index) {
 
 func @get_idx() -> (index)
 
-#set1 = (d0) : (20 - d0 >= 0)
-#set2 = (d0) : (d0 - 10 >= 0)
+#set1 = affine_set<(d0) : (20 - d0 >= 0)>
+#set2 = affine_set<(d0) : (d0 - 10 >= 0)>
 
 // CHECK-LABEL: func @if_only
 // CHECK-NEXT:   %[[v0:.*]] = call @get_idx() : () -> index
@@ -215,7 +215,7 @@ func @nested_ifs() {
   return
 }
 
-#setN = (d0)[N,M,K,L] : (N - d0 + 1 >= 0, N - 1 >= 0, M - 1 >= 0, K - 1 >= 0, L - 42 == 0)
+#setN = affine_set<(d0)[N,M,K,L] : (N - d0 + 1 >= 0, N - 1 >= 0, M - 1 >= 0, K - 1 >= 0, L - 42 == 0)>
 
 // CHECK-LABEL: func @multi_cond
 // CHECK-NEXT:   %[[v0:.*]] = call @get_idx() : () -> index
@@ -311,8 +311,8 @@ func @if_for() {
   return
 }
 
-#lbMultiMap = (d0)[s0] -> (d0, s0 - d0)
-#ubMultiMap = (d0)[s0] -> (s0, d0 + 10)
+#lbMultiMap = affine_map<(d0)[s0] -> (d0, s0 - d0)>
+#ubMultiMap = affine_map<(d0)[s0] -> (s0, d0 + 10)>
 
 // CHECK-LABEL: func @loop_min_max
 // CHECK-NEXT:   %[[c0:.*]] = constant 0 : index
@@ -344,7 +344,7 @@ func @loop_min_max(%N : index) {
   return
 }
 
-#map_7_values = (i) -> (i, i, i, i, i, i, i)
+#map_7_values = affine_map<(i) -> (i, i, i, i, i, i, i)>
 
 // Check that the "min" (cmpi "slt" + select) reduction sequence is emitted
 // correctly for a an affine map with 7 results.
@@ -378,13 +378,13 @@ func @min_reduction_tree(%v : index) {
 
 /////////////////////////////////////////////////////////////////////
 
-#map0 = () -> (0)
-#map1 = ()[s0] -> (s0)
-#map2 = (d0) -> (d0)
-#map3 = (d0)[s0] -> (d0 + s0 + 1)
-#map4 = (d0,d1,d2,d3)[s0,s1,s2] -> (d0 + 2*d1 + 3*d2 + 4*d3 + 5*s0 + 6*s1 + 7*s2)
-#map5 = (d0,d1,d2) -> (d0,d1,d2)
-#map6 = (d0,d1,d2) -> (d0 + d1 + d2)
+#map0 = affine_map<() -> (0)>
+#map1 = affine_map<()[s0] -> (s0)>
+#map2 = affine_map<(d0) -> (d0)>
+#map3 = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
+#map4 = affine_map<(d0,d1,d2,d3)[s0,s1,s2] -> (d0 + 2*d1 + 3*d2 + 4*d3 + 5*s0 + 6*s1 + 7*s2)>
+#map5 = affine_map<(d0,d1,d2) -> (d0,d1,d2)>
+#map6 = affine_map<(d0,d1,d2) -> (d0 + d1 + d2)>
 
 // CHECK-LABEL: func @affine_applies(
 func @affine_applies(%arg0 : index) {
@@ -442,7 +442,7 @@ func @args_ret_affine_apply(index, index) -> (index, index) {
 // applying constant folding transformation after affine lowering.
 //===---------------------------------------------------------------------===//
 
-#mapmod = (i) -> (i mod 42)
+#mapmod = affine_map<(i) -> (i mod 42)>
 
 // --------------------------------------------------------------------------//
 // IMPORTANT NOTE: if you change this test, also change the @lowered_affine_mod
@@ -461,7 +461,7 @@ func @affine_apply_mod(%arg0 : index) -> (index) {
   return %0 : index
 }
 
-#mapfloordiv = (i) -> (i floordiv 42)
+#mapfloordiv = affine_map<(i) -> (i floordiv 42)>
 
 // --------------------------------------------------------------------------//
 // IMPORTANT NOTE: if you change this test, also change the @lowered_affine_mod
@@ -483,7 +483,7 @@ func @affine_apply_floordiv(%arg0 : index) -> (index) {
   return %0 : index
 }
 
-#mapceildiv = (i) -> (i ceildiv 42)
+#mapceildiv = affine_map<(i) -> (i ceildiv 42)>
 
 // --------------------------------------------------------------------------//
 // IMPORTANT NOTE: if you change this test, also change the @lowered_affine_mod

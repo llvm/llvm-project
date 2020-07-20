@@ -121,7 +121,7 @@ replacement:
 
 ```tablegen
 def createTFLLeakyRelu : NativeCodeCall<
-    "createTFLLeakyRelu($_builder, $0->getDefiningOp(), $1, $2)">;
+    "createTFLLeakyRelu($_builder, $0.getDefiningOp(), $1, $2)">;
 
 def : Pat<(TF_LeakyReluOp:$old_value, $arg, F32Attr:$a),
           (createTFLLeakyRelu $old_value, $arg, $a)>;
@@ -131,7 +131,7 @@ def : Pat<(TF_LeakyReluOp:$old_value, $arg, F32Attr:$a),
 static Value createTFLLeakyRelu(PatternRewriter &rewriter, Operation *op,
                                 Value operand, Attribute attr) {
   return rewriter.create<mlir::TFL::LeakyReluOp>(
-      op->getLoc(), operands[0]->getType(), /*arg=*/operands[0],
+      op->getLoc(), operands[0].getType(), /*arg=*/operands[0],
       /*alpha=*/attrs[0].cast<FloatAttr>());
 }
 ```
@@ -177,7 +177,7 @@ struct ConvertTFLeakyRelu : public RewritePattern {
 
   void rewrite(Operation *op, PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
-        op, op->getResult(0)->getType(), op->getOperand(0),
+        op, op->getResult(0).getType(), op->getOperand(0),
         /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
   }
 };
@@ -191,7 +191,7 @@ struct ConvertTFLeakyRelu : public RewritePattern {
   PatternMatchResult matchAndRewrite(Operation *op,
                                      PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
-        op, op->getResult(0)->getType(), op->getOperand(0),
+        op, op->getResult(0).getType(), op->getOperand(0),
         /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
     return matchSuccess();
   }

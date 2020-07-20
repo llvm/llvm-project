@@ -52,7 +52,7 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   // Does the qbarrier convert to a quantized type. This will not be true
   // if a quantized type has not yet been chosen or if the cast to an equivalent
   // storage type is not supported.
-  Type qbarrierResultType = qbarrier.getResult()->getType();
+  Type qbarrierResultType = qbarrier.getResult().getType();
   QuantizedType quantizedElementType =
       QuantizedType::getQuantizedElementType(qbarrierResultType);
   if (!quantizedElementType) {
@@ -66,7 +66,7 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   // type? This will not be true if the qbarrier is superfluous (converts
   // from and to a quantized type).
   if (!quantizedElementType.isCompatibleExpressedType(
-          qbarrier.arg()->getType())) {
+          qbarrier.arg().getType())) {
     return matchFailure();
   }
 
@@ -86,7 +86,7 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   // When creating the new const op, use a fused location that combines the
   // original const and the qbarrier that led to the quantization.
   auto fusedLoc = FusedLoc::get(
-      {qbarrier.arg()->getDefiningOp()->getLoc(), qbarrier.getLoc()},
+      {qbarrier.arg().getDefiningOp()->getLoc(), qbarrier.getLoc()},
       rewriter.getContext());
   auto newConstOp =
       rewriter.create<ConstantOp>(fusedLoc, newConstValueType, newConstValue);

@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=thumbv7-apple-ios -start-after=patchable-function | FileCheck %s
-# RUN: llc -o - %s -mtriple=thumbv6-apple-ios -start-after=patchable-function | FileCheck %s
+# RUN: llc -o - %s -mtriple=thumbv7-apple-ios -start-before=livedebugvalues | FileCheck %s
+# RUN: llc -o - %s -mtriple=thumbv6-apple-ios -start-before=livedebugvalues | FileCheck %s
 
 # struct A {
 #   A();

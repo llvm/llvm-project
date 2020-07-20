@@ -271,8 +271,6 @@ public:
 
   virtual ObjCISA GetISA(ConstString name);
 
-  virtual ConstString GetActualTypeName(ObjCISA isa);
-
   virtual ObjCISA GetParentClass(ObjCISA isa);
 
   // Finds the byte offset of the child_type ivar in parent_type.  If it can't

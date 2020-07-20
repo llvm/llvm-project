@@ -67,7 +67,7 @@ remain extremely efficient
 ([rationale](../../Rationale.md#reserving-dialect-type-kinds)). For `toy`, this
 means we need to explicitly reserve a static range of type `kind` values in the
 symbol registry file
-[DialectSymbolRegistry](https://github.com/tensorflow/mlir/blob/master/include/mlir/IR/DialectSymbolRegistry.def).
+[DialectSymbolRegistry](https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/DialectSymbolRegistry.def).
 
 ```c++
 DEFINE_SYM_KIND_RANGE(LINALG) // Linear Algebra Dialect

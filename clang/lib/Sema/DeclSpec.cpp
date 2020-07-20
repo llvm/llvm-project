@@ -784,6 +784,15 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   return false;
 }
 
+bool DeclSpec::SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
+                               unsigned &DiagID, TemplateIdAnnotation *Rep,
+                               const PrintingPolicy &Policy) {
+  assert(T == TST_auto || T == TST_decltype_auto);
+  ConstrainedAuto = true;
+  TemplateIdRep = Rep;
+  return SetTypeSpecType(T, Loc, PrevSpec, DiagID, Policy);
+}
+
 bool DeclSpec::SetTypeSpecType(TST T, SourceLocation Loc,
                                const char *&PrevSpec,
                                unsigned &DiagID,

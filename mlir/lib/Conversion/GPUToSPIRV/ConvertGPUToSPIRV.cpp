@@ -127,7 +127,7 @@ ForOpConversion::matchAndRewrite(loop::ForOp forOp, ArrayRef<Value> operands,
 
   // Create the new induction variable to use.
   BlockArgument newIndVar =
-      header->addArgument(forOperands.lowerBound()->getType());
+      header->addArgument(forOperands.lowerBound().getType());
   Block *body = forOp.getBody();
 
   // Apply signature conversion to the body of the forOp. It has a single block,
@@ -166,7 +166,7 @@ ForOpConversion::matchAndRewrite(loop::ForOp forOp, ArrayRef<Value> operands,
 
   // Add the step to the induction variable and branch to the header.
   Value updatedIndVar = rewriter.create<spirv::IAddOp>(
-      loc, newIndVar->getType(), newIndVar, forOperands.step());
+      loc, newIndVar.getType(), newIndVar, forOperands.step());
   rewriter.create<spirv::BranchOp>(loc, header, updatedIndVar);
 
   rewriter.eraseOp(forOp);

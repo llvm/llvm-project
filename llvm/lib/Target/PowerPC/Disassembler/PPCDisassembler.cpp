@@ -34,7 +34,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 } // end anonymous namespace
@@ -51,7 +50,7 @@ static MCDisassembler *createPPCLEDisassembler(const Target &T,
   return new PPCDisassembler(STI, Ctx, /*IsLittleEndian=*/true);
 }
 
-extern "C" void LLVMInitializePowerPCDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getThePPC32Target(),
                                          createPPCDisassembler);
@@ -323,7 +322,7 @@ static DecodeStatus decodeCRBitMOperand(MCInst &Inst, uint64_t Imm,
 
 DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
-                                             uint64_t Address, raw_ostream &OS,
+                                             uint64_t Address,
                                              raw_ostream &CS) const {
   // Get the four bytes of the instruction.
   Size = 4;
@@ -350,4 +349,3 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   return decodeInstruction(DecoderTable32, MI, Inst, Address, this, STI);
 }
-

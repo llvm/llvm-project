@@ -589,7 +589,7 @@ TEST(MinidumpFile, getMemoryInfoList) {
     const MinidumpFile &File = **ExpectedFile;
     auto ExpectedInfo = File.getMemoryInfoList();
     ASSERT_THAT_EXPECTED(ExpectedInfo, Succeeded());
-    ASSERT_EQ(1u, std::distance(ExpectedInfo->begin(), ExpectedInfo->end()));
+    ASSERT_EQ(1, std::distance(ExpectedInfo->begin(), ExpectedInfo->end()));
     const MemoryInfo &Info = *ExpectedInfo.get().begin();
     EXPECT_EQ(0x0706050403020100u, Info.BaseAddress);
     EXPECT_EQ(0x0504030201000908u, Info.AllocationBase);

@@ -20,6 +20,7 @@
 #define DEBUG_TYPE "lld"
 
 using namespace llvm;
+using namespace llvm::object;
 using namespace llvm::wasm;
 
 namespace lld {
@@ -333,6 +334,16 @@ const OutputSectionSymbol *SectionSymbol::getOutputSectionSymbol() const {
 }
 
 void LazySymbol::fetch() { cast<ArchiveFile>(file)->addMember(&archiveSymbol); }
+
+MemoryBufferRef LazySymbol::getMemberBuffer() {
+  Archive::Child c =
+      CHECK(archiveSymbol.getMember(),
+            "could not get the member for symbol " + toString(*this));
+
+  return CHECK(c.getMemoryBufferRef(),
+               "could not get the buffer for the member defining symbol " +
+                   toString(*this));
+}
 
 void printTraceSymbolUndefined(StringRef name, const InputFile* file) {
   message(toString(file) + ": reference to " + name);

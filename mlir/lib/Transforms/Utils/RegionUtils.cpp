@@ -20,7 +20,7 @@ using namespace mlir;
 
 void mlir::replaceAllUsesInRegionWith(Value orig, Value replacement,
                                       Region &region) {
-  for (auto &use : llvm::make_early_inc_range(orig->getUses())) {
+  for (auto &use : llvm::make_early_inc_range(orig.getUses())) {
     if (region.isAncestor(use.getOwner()->getParentRegion()))
       use.set(replacement);
   }
@@ -42,7 +42,7 @@ void mlir::visitUsedValuesDefinedAbove(
   region.walk([callback, &properAncestors](Operation *op) {
     for (OpOperand &operand : op->getOpOperands())
       // Callback on values defined in a proper ancestor of region.
-      if (properAncestors.count(operand.get()->getParentRegion()))
+      if (properAncestors.count(operand.get().getParentRegion()))
         callback(&operand);
   });
 }
@@ -180,7 +180,7 @@ static bool isUseSpeciallyKnownDead(OpOperand &use, LiveMap &liveMap) {
 }
 
 static void processValue(Value value, LiveMap &liveMap) {
-  bool provedLive = llvm::any_of(value->getUses(), [&](OpOperand &use) {
+  bool provedLive = llvm::any_of(value.getUses(), [&](OpOperand &use) {
     if (isUseSpeciallyKnownDead(use, liveMap))
       return false;
     return liveMap.wasProvenLive(use.getOwner());
@@ -320,8 +320,6 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
 // This function returns success if any operations or arguments were deleted,
 // failure otherwise.
 static LogicalResult runRegionDCE(MutableArrayRef<Region> regions) {
-  assert(regions.size() == 1);
-
   LiveMap liveMap;
   do {
     liveMap.resetChanged();

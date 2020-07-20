@@ -214,28 +214,28 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0
     ; GFX6-LABEL: name: ashr_s64_sv
-    ; GFX6: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GFX6: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX6: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX6: [[V_ASHR_I64_:%[0-9]+]]:vreg_64 = V_ASHR_I64 [[COPY]], [[COPY1]], implicit $exec
     ; GFX6: S_ENDPGM 0, implicit [[V_ASHR_I64_]]
     ; GFX7-LABEL: name: ashr_s64_sv
-    ; GFX7: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GFX7: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX7: [[V_ASHR_I64_:%[0-9]+]]:vreg_64 = V_ASHR_I64 [[COPY]], [[COPY1]], implicit $exec
     ; GFX7: S_ENDPGM 0, implicit [[V_ASHR_I64_]]
     ; GFX8-LABEL: name: ashr_s64_sv
-    ; GFX8: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GFX8: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX8: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX8: [[V_ASHRREV_I64_:%[0-9]+]]:vreg_64 = V_ASHRREV_I64 [[COPY1]], [[COPY]], implicit $exec
     ; GFX8: S_ENDPGM 0, implicit [[V_ASHRREV_I64_]]
     ; GFX9-LABEL: name: ashr_s64_sv
-    ; GFX9: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GFX9: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9: [[V_ASHRREV_I64_:%[0-9]+]]:vreg_64 = V_ASHRREV_I64 [[COPY1]], [[COPY]], implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_ASHRREV_I64_]]
     ; GFX10-LABEL: name: ashr_s64_sv
     ; GFX10: $vcc_hi = IMPLICIT_DEF
-    ; GFX10: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GFX10: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[V_ASHR_I64_:%[0-9]+]]:vreg_64 = V_ASHR_I64 [[COPY]], [[COPY1]], implicit $exec
     ; GFX10: S_ENDPGM 0, implicit [[V_ASHR_I64_]]

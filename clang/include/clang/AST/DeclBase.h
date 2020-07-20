@@ -856,14 +856,15 @@ public:
     return getParentFunctionOrMethod() == nullptr;
   }
 
-  /// Returns true if this declaration lexically is inside a function.
-  /// It recognizes non-defining declarations as well as members of local
-  /// classes:
+  /// Returns true if this declaration is lexically inside a function or inside
+  /// a variable initializer. It recognizes non-defining declarations as well
+  /// as members of local classes:
   /// \code
   ///     void foo() { void bar(); }
   ///     void foo2() { class ABC { void bar(); }; }
+  ///     inline int x = [](){ return 0; };
   /// \endcode
-  bool isLexicallyWithinFunctionOrMethod() const;
+  bool isInLocalScope() const;
 
   /// If this decl is defined inside a function/method/block it returns
   /// the corresponding DeclContext, otherwise it returns null.

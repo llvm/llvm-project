@@ -40,7 +40,7 @@ regBankSelected: true
 body: |
   bb.0:
     ; GCN-LABEL: name: implicit_def_s64_sgpr
-    ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; GCN: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; GCN: S_ENDPGM 0, implicit [[DEF]]
     %0:sgpr(s64) = G_IMPLICIT_DEF
     S_ENDPGM 0, implicit %0
@@ -69,7 +69,7 @@ regBankSelected: true
 body: |
   bb.0:
     ; GCN-LABEL: name: implicit_def_p0_sgpr
-    ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; GCN: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; GCN: S_ENDPGM 0, implicit [[DEF]]
     %0:sgpr(p0) = G_IMPLICIT_DEF
     S_ENDPGM 0, implicit %0

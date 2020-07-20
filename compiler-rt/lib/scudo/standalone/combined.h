@@ -31,14 +31,22 @@
 static gwp_asan::GuardedPoolAllocator GuardedAlloc;
 #endif // GWP_ASAN_HOOKS
 
+extern "C" inline void EmptyCallback() {}
+
 namespace scudo {
 
-template <class Params> class Allocator {
+template <class Params, void (*PostInitCallback)(void) = EmptyCallback>
+class Allocator {
 public:
   using PrimaryT = typename Params::Primary;
   using CacheT = typename PrimaryT::CacheT;
-  typedef Allocator<Params> ThisT;
+  typedef Allocator<Params, PostInitCallback> ThisT;
   typedef typename Params::template TSDRegistryT<ThisT> TSDRegistryT;
+
+  void callPostInitCallback() {
+    static pthread_once_t OnceControl = PTHREAD_ONCE_INIT;
+    pthread_once(&OnceControl, PostInitCallback);
+  }
 
   struct QuarantineCallback {
     explicit QuarantineCallback(ThisT &Instance, CacheT &LocalCache)
@@ -420,12 +428,18 @@ public:
   void disable() {
     initThreadMaybe();
     TSDRegistry.disable();
+    Stats.disable();
+    Quarantine.disable();
+    Primary.disable();
     Secondary.disable();
   }
 
   void enable() {
     initThreadMaybe();
     Secondary.enable();
+    Primary.enable();
+    Quarantine.enable();
+    Stats.enable();
     TSDRegistry.enable();
   }
 

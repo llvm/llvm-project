@@ -120,7 +120,7 @@ def err_enum_template : Error<"enumeration cannot be a template">;
 
 def warn_cxx20_compat_consteval : Warning<
   "'consteval' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX2aCompat>, DefaultIgnore;
+  InGroup<CXX20Compat>, DefaultIgnore;
 
 }
 

@@ -35,6 +35,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -134,6 +135,35 @@ const Type *getPointeeType(const Type *T) {
   return FirstArg.getAsType().getTypePtrOrNull();
 }
 
+const NamedDecl *getTemplatePattern(const NamedDecl *D) {
+  if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(D)) {
+    return CRD->getTemplateInstantiationPattern();
+  } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    return FD->getTemplateInstantiationPattern();
+  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+    // Hmm: getTIP returns its arg if it's not an instantiation?!
+    VarDecl *T = VD->getTemplateInstantiationPattern();
+    return (T == D) ? nullptr : T;
+  } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
+    return ED->getInstantiatedFromMemberEnum();
+  } else if (isa<FieldDecl>(D) || isa<TypedefNameDecl>(D)) {
+    if (const auto *Parent = llvm::dyn_cast<NamedDecl>(D->getDeclContext()))
+      if (const DeclContext *ParentPat =
+              dyn_cast_or_null<DeclContext>(getTemplatePattern(Parent)))
+        for (const NamedDecl *BaseND : ParentPat->lookup(D->getDeclName()))
+          if (!BaseND->isImplicit() && BaseND->getKind() == D->getKind())
+            return BaseND;
+  } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
+    if (const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext())) {
+      if (const EnumDecl *Pattern = ED->getInstantiatedFromMemberEnum()) {
+        for (const NamedDecl *BaseECD : Pattern->lookup(ECD->getDeclName()))
+          return BaseECD;
+      }
+    }
+  }
+  return nullptr;
+}
+
 // TargetFinder locates the entities that an AST node refers to.
 //
 // Typically this is (possibly) one declaration and (possibly) one type, but
@@ -167,37 +197,12 @@ const Type *getPointeeType(const Type *T) {
 struct TargetFinder {
   using RelSet = DeclRelationSet;
   using Rel = DeclRelation;
-  llvm::SmallDenseMap<const NamedDecl *, RelSet> Decls;
-  RelSet Flags;
 
-  static const NamedDecl *getTemplatePattern(const NamedDecl *D) {
-    if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(D)) {
-      return CRD->getTemplateInstantiationPattern();
-    } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-      return FD->getTemplateInstantiationPattern();
-    } else if (auto *VD = dyn_cast<VarDecl>(D)) {
-      // Hmm: getTIP returns its arg if it's not an instantiation?!
-      VarDecl *T = VD->getTemplateInstantiationPattern();
-      return (T == D) ? nullptr : T;
-    } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
-      return ED->getInstantiatedFromMemberEnum();
-    } else if (isa<FieldDecl>(D) || isa<TypedefNameDecl>(D)) {
-      if (const auto *Parent = llvm::dyn_cast<NamedDecl>(D->getDeclContext()))
-        if (const DeclContext *ParentPat =
-                dyn_cast_or_null<DeclContext>(getTemplatePattern(Parent)))
-          for (const NamedDecl *BaseND : ParentPat->lookup(D->getDeclName()))
-            if (!BaseND->isImplicit() && BaseND->getKind() == D->getKind())
-              return BaseND;
-    } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
-      if (const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext())) {
-        if (const EnumDecl *Pattern = ED->getInstantiatedFromMemberEnum()) {
-          for (const NamedDecl *BaseECD : Pattern->lookup(ECD->getDeclName()))
-            return BaseECD;
-        }
-      }
-    }
-    return nullptr;
-  }
+private:
+  llvm::SmallDenseMap<const NamedDecl *,
+                      std::pair<RelSet, /*InsertionOrder*/ size_t>>
+      Decls;
+  RelSet Flags;
 
   template <typename T> void debug(T &Node, RelSet Flags) {
     dlog("visit [{0}] {1}", Flags,
@@ -207,12 +212,24 @@ struct TargetFinder {
   void report(const NamedDecl *D, RelSet Flags) {
     dlog("--> [{0}] {1}", Flags,
          nodeToString(ast_type_traits::DynTypedNode::create(*D)));
-    Decls[D] |= Flags;
+    auto It = Decls.try_emplace(D, std::make_pair(Flags, Decls.size()));
+    // If already exists, update the flags.
+    if (!It.second)
+      It.first->second.first |= Flags;
   }
 
 public:
+  llvm::SmallVector<std::pair<const NamedDecl *, RelSet>, 1> takeDecls() const {
+    using ValTy = std::pair<const NamedDecl *, RelSet>;
+    llvm::SmallVector<ValTy, 1> Result;
+    Result.resize(Decls.size());
+    for (const auto &Elem : Decls)
+      Result[Elem.second.second] = {Elem.first, Elem.second.first};
+    return Result;
+  }
+
   void add(const Decl *Dcl, RelSet Flags) {
-    const NamedDecl *D = llvm::dyn_cast<NamedDecl>(Dcl);
+    const NamedDecl *D = llvm::dyn_cast_or_null<NamedDecl>(Dcl);
     if (!D)
       return;
     debug(*D, Flags);
@@ -334,6 +351,12 @@ public:
       void VisitObjCProtocolExpr(const ObjCProtocolExpr *OPE) {
         Outer.add(OPE->getProtocol(), Flags);
       }
+      void VisitOpaqueValueExpr(const OpaqueValueExpr *OVE) {
+        Outer.add(OVE->getSourceExpr(), Flags);
+      }
+      void VisitPseudoObjectExpr(const PseudoObjectExpr *POE) {
+        Outer.add(POE->getSyntacticForm(), Flags);
+      }
     };
     Visitor(*this, Flags).Visit(S);
   }
@@ -350,6 +373,15 @@ public:
       void VisitTagType(const TagType *TT) {
         Outer.add(TT->getAsTagDecl(), Flags);
       }
+
+      void VisitElaboratedType(const ElaboratedType *ET) {
+        Outer.add(ET->desugar(), Flags);
+      }
+
+      void VisitInjectedClassNameType(const InjectedClassNameType *ICNT) {
+        Outer.add(ICNT->getDecl(), Flags);
+      }
+
       void VisitDecltypeType(const DecltypeType *DTT) {
         Outer.add(DTT->getUnderlyingType(), Flags | Rel::Underlying);
       }
@@ -479,7 +511,7 @@ allTargetDecls(const ast_type_traits::DynTypedNode &N) {
   else if (const CXXCtorInitializer *CCI = N.get<CXXCtorInitializer>())
     Finder.add(CCI, Flags);
 
-  return {Finder.Decls.begin(), Finder.Decls.end()};
+  return Finder.takeDecls();
 }
 
 llvm::SmallVector<const NamedDecl *, 1>
@@ -727,15 +759,17 @@ public:
   // TemplateArgumentLoc is the only way to get locations for references to
   // template template parameters.
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc A) {
+    llvm::SmallVector<const NamedDecl *, 1> Targets;
     switch (A.getArgument().getKind()) {
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
+      if (const auto *D = A.getArgument()
+                              .getAsTemplateOrTemplatePattern()
+                              .getAsTemplateDecl())
+        Targets.push_back(D);
       reportReference(ReferenceLoc{A.getTemplateQualifierLoc(),
                                    A.getTemplateNameLoc(),
-                                   /*IsDecl=*/false,
-                                   {A.getArgument()
-                                        .getAsTemplateOrTemplatePattern()
-                                        .getAsTemplateDecl()}},
+                                   /*IsDecl=*/false, Targets},
                       DynTypedNode::create(A.getArgument()));
       break;
     case TemplateArgument::Declaration:

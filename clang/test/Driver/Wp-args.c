@@ -19,3 +19,13 @@
 // MMD: "-cc1"
 // MMD-NOT: -MMD
 // MMD: "-dependency-file" "Wp-args.d"
+
+// Ensure response files are properly expanded with -Wp
+// RUN: echo -DTEST > %t.rsp
+// RUN: %clang -Wp,@%t.rsp -E %s | FileCheck -check-prefix RSP %s
+
+#ifdef TEST
+void foo();
+#endif
+
+// RSP: foo()

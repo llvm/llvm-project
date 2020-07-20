@@ -96,9 +96,9 @@ LogicalResult FuncOp::verify() {
   auto fnInputTypes = getType().getInputs();
   Block &entryBlock = front();
   for (unsigned i = 0, e = entryBlock.getNumArguments(); i != e; ++i)
-    if (fnInputTypes[i] != entryBlock.getArgument(i)->getType())
+    if (fnInputTypes[i] != entryBlock.getArgument(i).getType())
       return emitOpError("type of entry block argument #")
-             << i << '(' << entryBlock.getArgument(i)->getType()
+             << i << '(' << entryBlock.getArgument(i).getType()
              << ") must match the type of the corresponding argument in "
              << "function signature(" << fnInputTypes[i] << ')';
 

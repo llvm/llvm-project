@@ -737,6 +737,7 @@ bool ScriptParser::readSectionDirective(OutputSection *cmd, StringRef tok1, Stri
   expect("(");
   if (consume("NOLOAD")) {
     cmd->noload = true;
+    cmd->type = SHT_NOBITS;
   } else {
     skip(); // This is "COPY", "INFO" or "OVERLAY".
     cmd->nonAlloc = true;

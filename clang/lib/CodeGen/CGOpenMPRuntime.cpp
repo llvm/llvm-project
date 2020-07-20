@@ -1438,6 +1438,7 @@ CGOpenMPRuntime::getUserDefinedReduction(const OMPDeclareReductionDecl *D) {
   return UDRMap.lookup(D);
 }
 
+namespace {
 // Temporary RAII solution to perform a push/pop stack event on the OpenMP IR
 // Builder if one is present.
 struct PushAndPopStackRAII {
@@ -1481,6 +1482,7 @@ struct PushAndPopStackRAII {
   }
   llvm::OpenMPIRBuilder *OMPBuilder;
 };
+} // namespace
 
 static llvm::Function *emitParallelOrTeamsOutlinedFunction(
     CodeGenModule &CGM, const OMPExecutableDirective &D, const CapturedStmt *CS,
@@ -11122,8 +11124,8 @@ bool checkContext<OMP_CTX_SET_device, OMP_CTX_kind, CodeGenModule &>(
   return true;
 }
 
-bool matchesContext(CodeGenModule &CGM,
-                    const CompleteOMPContextSelectorData &ContextData) {
+static bool matchesContext(CodeGenModule &CGM,
+                           const CompleteOMPContextSelectorData &ContextData) {
   for (const OMPContextSelectorData &Data : ContextData) {
     switch (Data.Ctx) {
     case OMP_CTX_vendor:

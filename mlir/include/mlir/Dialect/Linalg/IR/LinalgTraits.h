@@ -58,94 +58,21 @@ template <typename ConcreteType>
 class StructuredOpTraits
     : public OpTrait::TraitBase<ConcreteType, StructuredOpTraits> {
 private:
-  /// Return the number of inputs. For internal use only.
+  /// Return the number of inputs, irrespective of their buffer or tensor type.
+  /// For internal use only.
   unsigned nInputs() {
     return cast<ConcreteType>(this->getOperation()).getNumInputs();
   }
-  /// Return the number of outputs. For internal use only.
+  /// Return the number of outputs, irrespective of their buffer or tensor type.
+  /// For internal use only.
   unsigned nOutputs() {
     return cast<ConcreteType>(this->getOperation()).getNumOutputs();
   }
 
 public:
-  /// Return the `i`-th input value.
-  Value getInput(unsigned i) {
-    assert(i < nInputs());
-    return this->getOperation()->getOperand(i);
-  }
-  /// Return the index of `value` in the list of inputs if found, llvm::None
-  /// otherwise.
-  Optional<unsigned> getIndexOfInput(Value value) {
-    auto it = llvm::find(getInputs(), value);
-    if (it != getInputs().end())
-      return it - getInputs().begin();
-    return llvm::None;
-  }
-  /// Return the `i`-th input buffer type.
-  ShapedType getInputShapedType(unsigned i) {
-    return getInput(i)->getType().template cast<ShapedType>();
-  }
-  /// Return the range over inputs.
-  Operation::operand_range getInputs() {
-    auto range = this->getOperation()->getOperands();
-    return {range.begin(), range.begin() + nInputs()};
-  }
-  /// Return the `i`-th output.
-  Value getOutput(unsigned i) {
-    return this->getOperation()->getOperand(nInputs() + i);
-  }
-  /// Return the index of `value` in the list of output values if found,
-  /// llvm::None otherwise.
-  Optional<unsigned> getIndexOfOutput(Value value) {
-    auto it = llvm::find(getOutputs(), value);
-    if (it != getOutputs().end())
-      return it - getOutputs().begin();
-    return llvm::None;
-  }
-  /// Return the `i`-th output buffer type.
-  ShapedType getOutputShapedType(unsigned i) {
-    return getOutput(i)->getType().template cast<ShapedType>();
-  }
-  /// Query whether the op has only MemRef input and outputs.
-  bool hasBufferSemantics() {
-    return this->getOperation()->getNumResults() == 0 &&
-           llvm::all_of(getInputsAndOutputs(),
-                        [](Value v) { return v.getType().isa<MemRefType>(); });
-  }
-  /// Query the subset of input operands that are of ranked tensor type.
-  SmallVector<RankedTensorType, 4> getInputTensorTypes() {
-    SmallVector<RankedTensorType, 4> res;
-    for (Type type : getInputs().getTypes())
-      if (auto t = type.template dyn_cast<RankedTensorType>())
-        res.push_back(t);
-    return res;
-  }
-  /// Query the subset of output operands that are of ranked tensor type.
-  SmallVector<RankedTensorType, 4> getOutputTensorTypes() {
-    SmallVector<RankedTensorType, 4> res;
-    for (Type type : getOutputs().getTypes())
-      if (auto t = type.template dyn_cast<RankedTensorType>())
-        res.push_back(t);
-    return res;
-  }
-  /// Return the range over outputs.
-  Operation::operand_range getOutputs() {
-    auto range = this->getOperation()->getOperands();
-    return {range.begin() + nInputs(),
-            range.begin() + getNumInputsAndOutputs()};
-  }
-  /// Return the number of inputs and outputs.
-  unsigned getNumInputsAndOutputs() { return nInputs() + nOutputs(); }
-  /// Return the `i`-th buffer type.
-  ShapedType getShapedType(unsigned i) {
-    return (i < nInputs()) ? getInputShapedType(i)
-                           : getOutputShapedType(i - nInputs());
-  }
-  /// Return the range over inputs and outputs.
-  Operation::operand_range getInputsAndOutputs() {
-    auto range = this->getOperation()->getOperands();
-    return {range.begin(), range.begin() + getNumInputsAndOutputs()};
-  }
+  //==========================================================================//
+  // Loop types handling.
+  //==========================================================================//
   unsigned getNumParallelLoops() {
     return getNumIterators(
         getParallelIteratorTypeName(),
@@ -165,8 +92,134 @@ public:
     return getNumIterators(
         cast<ConcreteType>(this->getOperation()).iterator_types());
   }
+
+  //==========================================================================//
+  // Input arguments handling.
+  //==========================================================================//
+  // The `i^th` input argument is always the `i^th` operand regardless of
+  // whether we have tensors or buffers.
+  //
+  /// Return the `i`-th input value.
+  Value getInput(unsigned i) {
+    assert(i < nInputs());
+    return this->getOperation()->getOperand(i);
+  }
+  /// Return the index of `value` in the list of inputs if found, llvm::None
+  /// otherwise.
+  Optional<unsigned> getIndexOfInput(Value value) {
+    auto it = llvm::find(getInputs(), value);
+    if (it != getInputs().end())
+      return it - getInputs().begin();
+    return llvm::None;
+  }
+  /// Return the `i`-th input buffer type.
+  ShapedType getInputShapedType(unsigned i) {
+    return getInput(i).getType().template cast<ShapedType>();
+  }
+  /// Return the range over inputs.
+  Operation::operand_range getInputs() {
+    auto range = this->getOperation()->getOperands();
+    return {range.begin(), range.begin() + nInputs()};
+  }
+  /// Query the subset of input operands that are of ranked tensor type.
+  SmallVector<RankedTensorType, 4> getInputTensorTypes() {
+    SmallVector<RankedTensorType, 4> res;
+    for (Type type : getInputs().getTypes())
+      if (auto t = type.template dyn_cast<RankedTensorType>())
+        res.push_back(t);
+    return res;
+  }
+
+  //==========================================================================//
+  // Output arguments handling.
+  //==========================================================================//
+  // The `i^th` output argument is an operand (resp. a return value) iff it is
+  // a value of buffer type (resp. a return value of tensor type).
+
+  /// Return the `i`-th output, asserts that this is a buffer operand and not
+  /// a tensor result.
+  Value getOutputBuffer(unsigned i) {
+    assert(i + this->getOperation()->getNumResults() < nOutputs() &&
+           "overflowing output buffer index");
+    return this->getOperation()->getOperand(nInputs() + i);
+  }
+  /// Return the index of `value` in the list of output buffers if found,
+  /// llvm::None otherwise.
+  Optional<unsigned> getIndexOfOutputBuffer(Value value) {
+    auto it = llvm::find(getOutputBuffers(), value);
+    if (it != getOutputBuffers().end())
+      return it - getOutputBuffers().begin();
+    return llvm::None;
+  }
+  /// Return the `i`-th output buffer type.
+  MemRefType getOutputBufferType(unsigned i) {
+    return getOutputBuffer(i).getType().template cast<MemRefType>();
+  }
+  /// Return the `i`-th output shaped type, irrespective of buffer of tensor
+  /// type.
+  ShapedType getOutputShapedType(unsigned i) {
+    return getShapedType(i + nInputs());
+  }
+  /// Query the subset of results that are of ranked tensor type.
+  SmallVector<RankedTensorType, 4> getOutputTensorTypes() {
+    SmallVector<RankedTensorType, 4> res;
+    for (Type type : this->getOperation()->getResults().getTypes())
+      res.push_back(type.template cast<RankedTensorType>());
+    return res;
+  }
+  /// Return the range over outputs.
+  Operation::operand_range getOutputBuffers() {
+    auto range = this->getOperation()->getOperands();
+    return {range.begin() + nInputs(),
+            range.begin() + getNumInputsAndOutputBuffers()};
+  }
+
+  //==========================================================================//
+  // Input and Output arguments handling.
+  //==========================================================================//
+  /// Return the number of inputs and outputs, irrespective of their buffer or
+  /// tensor type.
+  unsigned getNumInputsAndOutputs() { return nInputs() + nOutputs(); }
+  /// Return the number of inputs, irrespective of their buffer or tensor type,
+  /// and output buffers.
+  unsigned getNumInputsAndOutputBuffers() {
+    assert(this->getOperation()->getNumResults() <= nOutputs());
+    return nInputs() + nOutputs() - this->getOperation()->getNumResults();
+  }
+  /// Return the range over inputs (irrespective of type) and output buffers.
+  Operation::operand_range getInputsAndOutputBuffers() {
+    auto range = this->getOperation()->getOperands();
+    return {range.begin(), range.begin() + getNumInputsAndOutputBuffers()};
+  }
+  /// Return the `i`-th shaped type, there are 3 cases:
+  ///   1. if `i < nInputs()` then return `getInputShapedType(i)`; otherwise
+  ///   2. if `i < getNumInputsAndOutputBuffers()` then return the
+  ///      `getOutputBufferType(i - nInputs())`; otherwise
+  ///   3. return the `i - getNumInputsAndOutputBuffers()` result type.
+  ShapedType getShapedType(unsigned i) {
+    if (i < nInputs())
+      return getInputShapedType(i);
+    if (i < getNumInputsAndOutputBuffers())
+      return getOutputBufferType(i - nInputs()).template cast<ShapedType>();
+    return getOutputTensorTypes()[i - getNumInputsAndOutputBuffers()]
+        .template cast<ShapedType>();
+  }
+
+  //==========================================================================//
+  // Other interface methods.
+  //==========================================================================//
+  /// Query whether the op has only buffer inputs and no returns.
+  bool hasBufferSemantics() {
+    return this->getOperation()->getNumResults() == 0 &&
+           llvm::all_of(getInputs(),
+                        [](Value v) { return v.getType().isa<MemRefType>(); });
+  }
+
+  //==========================================================================//
+  // Other static interface methods.
+  //==========================================================================//
   static LogicalResult verifyTrait(Operation *op) {
-    auto nOperands = cast<ConcreteType>(op).getNumInputsAndOutputs();
+    auto nOperands = cast<ConcreteType>(op).getNumInputsAndOutputBuffers();
     if (failed(OpTrait::impl::verifyAtLeastNOperands(op, nOperands)))
       return failure();
     return success();

@@ -251,7 +251,6 @@ static MCDisassembler *createAArch64Disassembler(const Target &T,
 DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
-                                                 raw_ostream &OS,
                                                  raw_ostream &CS) const {
   CommentStream = &CS;
 
@@ -278,7 +277,7 @@ createAArch64ExternalSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                                        SymbolLookUp, DisInfo);
 }
 
-extern "C" void LLVMInitializeAArch64Disassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Disassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheAArch64leTarget(),
                                          createAArch64Disassembler);
   TargetRegistry::RegisterMCDisassembler(getTheAArch64beTarget(),

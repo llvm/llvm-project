@@ -38,7 +38,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 } // end anonymous namespace
@@ -49,7 +48,7 @@ static MCDisassembler *createRISCVDisassembler(const Target &T,
   return new RISCVDisassembler(STI, Ctx);
 }
 
-extern "C" void LLVMInitializeRISCVDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getTheRISCV32Target(),
                                          createRISCVDisassembler);
@@ -315,7 +314,6 @@ static DecodeStatus decodeRVCInstrRdRs1Rs2(MCInst &Inst, unsigned Insn,
 DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                ArrayRef<uint8_t> Bytes,
                                                uint64_t Address,
-                                               raw_ostream &OS,
                                                raw_ostream &CS) const {
   // TODO: This will need modification when supporting instruction set
   // extensions with instructions > 32-bits (up to 176 bits wide).

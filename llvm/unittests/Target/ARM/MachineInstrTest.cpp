@@ -302,8 +302,6 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VORRIZ24v4i32:
     case MVE_VORRIZ8v4i32:
     case MVE_VORRIZ8v8i16:
-    case MVE_VPNOT:
-    case MVE_VPSEL:
     case MVE_VPST:	
     case MVE_VQABSs16:
     case MVE_VQABSs32:

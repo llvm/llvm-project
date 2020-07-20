@@ -67,12 +67,13 @@ static llvm::cl::list<unsigned> clTileSizes(
 // to the `loopRanges` in order to obtain view ranges.
 static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
                                     ArrayRef<SubViewOp::Range> loopRanges) {
+  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
   auto maps = loopToOperandRangesMaps(op);
   SmallVector<Value, 8> clonedViews;
   clonedViews.reserve(op.getNumInputsAndOutputs());
   // Iterate over the inputs and outputs in order.
   // Extract the subranges from the linearized ranges.
-  SmallVector<Value, 8> ios(op.getInputsAndOutputs());
+  SmallVector<Value, 8> ios(op.getInputsAndOutputBuffers());
   for (auto en : llvm::enumerate(ios)) {
     unsigned idx = en.index();
     auto map = maps[idx];
@@ -118,10 +119,11 @@ struct ViewDimension {
 // they must agree by construction (i.e. have the same size) and we just return
 // the first one.
 static ViewDimension getViewDefiningLoopRange(LinalgOp op, unsigned loopDepth) {
+  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
   auto maps = loopToOperandRangesMaps(op);
   // Iterate over the inputs and outputs in order.
   // Extract the subranges from the linearized ranges.
-  SmallVector<Value, 8> ios(op.getInputsAndOutputs());
+  SmallVector<Value, 8> ios(op.getInputsAndOutputBuffers());
   for (auto en : llvm::enumerate(ios)) {
     unsigned idx = en.index();
     auto map = maps[idx];
@@ -133,8 +135,7 @@ static ViewDimension getViewDefiningLoopRange(LinalgOp op, unsigned loopDepth) {
       if (loopDepth == en2.value().cast<AffineDimExpr>().getPosition()) {
         LLVM_DEBUG(dbgs() << "getViewDefiningLoopRange loopDepth: " << loopDepth
                           << "\n");
-        LLVM_DEBUG(dbgs() << "getViewDefiningLoopRange view: " << *view
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "getViewDefiningLoopRange view: " << view << "\n");
         return ViewDimension{view, static_cast<unsigned>(en2.index())};
       }
     }
@@ -145,10 +146,14 @@ static ViewDimension getViewDefiningLoopRange(LinalgOp op, unsigned loopDepth) {
 static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
                      unsigned consumerIdx, unsigned producerIdx,
                      OperationFolder *folder) {
+  assert(producer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
+  assert(consumer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
   auto subView = dyn_cast_or_null<SubViewOp>(
-      consumer.getInput(consumerIdx)->getDefiningOp());
-  auto slice = dyn_cast_or_null<SliceOp>(
-      consumer.getInput(consumerIdx)->getDefiningOp());
+      consumer.getInput(consumerIdx).getDefiningOp());
+  auto slice =
+      dyn_cast_or_null<SliceOp>(consumer.getInput(consumerIdx).getDefiningOp());
   assert(subView || slice);
   (void)subView;
   (void)slice;
@@ -198,6 +203,10 @@ static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
 // Some of these will be lifted in the future with better analysis.
 static bool isStructurallyFusableProducer(LinalgOp producer, Value consumedView,
                                           LinalgOp consumer) {
+  assert(producer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
+  assert(consumer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
   if (producer.getNumOutputs() != 1) {
     LLVM_DEBUG(dbgs() << "\nNot structurally fusable (multi-output)");
     return false;
@@ -218,6 +227,10 @@ bool mlir::linalg::isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
                                              LinalgOp consumer,
                                              Value consumedView,
                                              LinalgOp producer) {
+  assert(producer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
+  assert(consumer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
   // Make some simple structural checks that alleviate the need for more
   // complex analyses.
   if (!isStructurallyFusableProducer(producer, consumedView, consumer)) {
@@ -237,6 +250,10 @@ bool mlir::linalg::isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
 bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
                                  LinalgOp consumer, Value consumedView,
                                  LinalgOp producer) {
+  assert(producer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
+  assert(consumer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
   if (!isProducerLastWriteOfView(graph, consumer, consumedView, producer))
     return false;
   // Check for any fusion-preventing dependence to any view read/written that
@@ -253,6 +270,8 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
 Optional<FusionInfo> mlir::linalg::fuseProducerOf(
     OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
     const LinalgDependenceGraph &graph, OperationFolder *folder) {
+  assert(consumer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
   LLVM_DEBUG(dbgs() << "\nStart examining consumer: "
                     << *consumer.getOperation());
   for (auto dependence : graph.getDependencesInto(
@@ -269,16 +288,16 @@ Optional<FusionInfo> mlir::linalg::fuseProducerOf(
     // Consumer consumes this view, `isStructurallyFusableProducer` also checks
     // whether it is a strict subview of the producer view.
     auto producedView = dependence.dependentOpView.view;
-    auto producerIdx = producer.getIndexOfOutput(producedView).getValue();
+    auto producerIdx = producer.getIndexOfOutputBuffer(producedView).getValue();
     // `consumerIdx` and `producerIdx` exist by construction.
     LLVM_DEBUG(dbgs() << "\nRAW producer: " << *producer.getOperation()
-                      << " view: " << *producedView
+                      << " view: " << producedView
                       << " output index: " << producerIdx);
 
     // Must be a subview or a slice to guarantee there are loops we can fuse
     // into.
-    auto subView = dyn_cast_or_null<SubViewOp>(consumedView->getDefiningOp());
-    auto slice = dyn_cast_or_null<SliceOp>(consumedView->getDefiningOp());
+    auto subView = dyn_cast_or_null<SubViewOp>(consumedView.getDefiningOp());
+    auto slice = dyn_cast_or_null<SliceOp>(consumedView.getDefiningOp());
     if (!subView && !slice) {
       LLVM_DEBUG(dbgs() << "\nNot fusable (not a subview or slice)");
       continue;
@@ -310,7 +329,10 @@ static void fuseLinalgOpsGreedily(FuncOp f) {
 
   // Save original Linalg ops, we only want to make a pass over those.
   SmallVector<Operation *, 8> linalgOps;
-  f.walk([&](LinalgOp op) { linalgOps.push_back(op); });
+  f.walk([&](LinalgOp op) {
+    if (op.hasBufferSemantics())
+      linalgOps.push_back(op);
+  });
 
   Aliases aliases;
   LinalgDependenceGraph G(aliases, linalgOps);

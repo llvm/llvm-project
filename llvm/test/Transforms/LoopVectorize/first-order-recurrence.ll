@@ -607,3 +607,41 @@ cond.end:                                         ; preds = %for.body4, %cond.tr
 for.end12.loopexit:                               ; preds = %cond.end
   ret void
 }
+
+; Dead instructions, like the exit condition are not part of the actual VPlan
+; and do not need to be sunk. PR44634.
+define void @sink_dead_inst() {
+; SINK-AFTER-LABEL: define void @sink_dead_inst(
+; SINK-AFTER-LABEL: vector.body:                                      ; preds = %vector.body, %vector.ph
+; SINK-AFTER-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; SINK-AFTER-NEXT:    %vec.ind = phi <4 x i16> [ <i16 -27, i16 -26, i16 -25, i16 -24>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+; SINK-AFTER-NEXT:    %vector.recur = phi <4 x i16> [ <i16 undef, i16 undef, i16 undef, i16 0>, %vector.ph ], [ %3, %vector.body ]
+; SINK-AFTER-NEXT:    %vector.recur2 = phi <4 x i32> [ <i32 undef, i32 undef, i32 undef, i32 -27>, %vector.ph ], [ %1, %vector.body ]
+; SINK-AFTER-NEXT:    %0 = add <4 x i16> %vec.ind, <i16 1, i16 1, i16 1, i16 1>
+; SINK-AFTER-NEXT:    %1 = zext <4 x i16> %0 to <4 x i32>
+; SINK-AFTER-NEXT:    %2 = shufflevector <4 x i32> %vector.recur2, <4 x i32> %1, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; SINK-AFTER-NEXT:    %3 = add <4 x i16> %0, <i16 5, i16 5, i16 5, i16 5>
+; SINK-AFTER-NEXT:    %4 = shufflevector <4 x i16> %vector.recur, <4 x i16> %3, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; SINK-AFTER-NEXT:    %5 = sub <4 x i16> %4, <i16 10, i16 10, i16 10, i16 10>
+; SINK-AFTER-NEXT:    %index.next = add i32 %index, 4
+; SINK-AFTER-NEXT:    %vec.ind.next = add <4 x i16> %vec.ind, <i16 4, i16 4, i16 4, i16 4>
+; SINK-AFTER-NEXT:    %6 = icmp eq i32 %index.next, 40
+; SINK-AFTER-NEXT:    br i1 %6, label %middle.block, label %vector.body, !llvm.loop !43
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %iv = phi i16 [ -27, %entry ], [ %iv.next, %for.cond ]
+  %rec.1 = phi i16 [ 0, %entry ], [ %rec.1.prev, %for.cond ]
+  %rec.2 = phi i32 [ -27, %entry ], [ %rec.2.prev, %for.cond ]
+  %use.rec.1 = sub i16 %rec.1, 10
+  %cmp = icmp eq i32 %rec.2, 15
+  %iv.next = add i16 %iv, 1
+  %rec.2.prev = zext i16 %iv.next to i32
+  %rec.1.prev = add i16 %iv.next, 5
+  br i1 %cmp, label %for.end, label %for.cond
+
+for.end:
+  ret void
+}

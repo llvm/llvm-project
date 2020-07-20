@@ -60,7 +60,7 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     LLVMSupport
     ${CUDA_RUNTIME_LIBRARY}
   )
-  add_llvm_executable(mlir-cuda-runner
+  add_llvm_tool(mlir-cuda-runner
     mlir-cuda-runner.cpp
   )
   add_dependencies(mlir-cuda-runner cuda-runtime-wrappers)

@@ -4415,6 +4415,17 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (callOrInvoke)
     *callOrInvoke = CI;
 
+  // If this is within a function that has the guard(nocf) attribute and is an
+  // indirect call, add the "guard_nocf" attribute to this call to indicate that
+  // Control Flow Guard checks should not be added, even if the call is inlined.
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
+    if (const auto *A = FD->getAttr<CFGuardAttr>()) {
+      if (A->getGuard() == CFGuardAttr::GuardArg::nocf && !CI->getCalledFunction())
+        Attrs = Attrs.addAttribute(
+            getLLVMContext(), llvm::AttributeList::FunctionIndex, "guard_nocf");
+    }
+  }
+
   // Apply the attributes and calling convention.
   CI->setAttributes(Attrs);
   CI->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));

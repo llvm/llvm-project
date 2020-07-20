@@ -373,7 +373,7 @@ CXX11_KEYWORD(nullptr               , 0)
 CXX11_KEYWORD(static_assert         , KEYMSCOMPAT)
 CXX11_KEYWORD(thread_local          , 0)
 
-// C++2a / concepts TS keywords
+// C++2a keywords
 CONCEPTS_KEYWORD(concept)
 CONCEPTS_KEYWORD(requires)
 
@@ -729,7 +729,9 @@ ANNOTATION(typename)     // annotation for a C typedef name, a C++ (possibly
                          // template-id that names a type ("std::vector<int>")
 ANNOTATION(template_id)  // annotation for a C++ template-id that names a
                          // function template specialization (not a type),
-                         // e.g., "std::swap<int>"
+                         // e.g., "std::swap<int>", or a type-constraint (which
+                         // might not have explicit template arguments),
+                         // e.g. "C", "C<int>".
 ANNOTATION(non_type)     // annotation for a single non-type declaration
 ANNOTATION(non_type_undeclared) // annotation for an undeclared identifier that
                                 // was assumed to be an ADL-only function name

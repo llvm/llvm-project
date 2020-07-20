@@ -295,6 +295,7 @@ void test11(id op, void *vp) {
   b = (vp == nil);
   b = (nil == vp);
 
+  // FIXME: Shouldn't these be consistent?
   b = (vp == op); // expected-error {{implicit conversion of Objective-C pointer type 'id' to C pointer type 'void *' requires a bridged cast}} expected-note {{use __bridge}} expected-note {{use CFBridgingRetain call}}
   b = (op == vp);
 }

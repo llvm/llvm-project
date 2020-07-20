@@ -242,6 +242,13 @@ TEST_F(TargetDeclTest, Types) {
   )cpp";
   EXPECT_DECLS("TypedefTypeLoc", {"typedef S X", Rel::Alias},
                {"struct S", Rel::Underlying});
+  Code = R"cpp(
+    namespace ns { struct S{}; }
+    typedef ns::S X;
+    [[X]] x;
+  )cpp";
+  EXPECT_DECLS("TypedefTypeLoc", {"typedef ns::S X", Rel::Alias},
+               {"struct S", Rel::Underlying});
 
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.
@@ -286,6 +293,14 @@ TEST_F(TargetDeclTest, Types) {
   )cpp";
   // FIXME: We don't do a good job printing TemplateTypeParmDecls, apparently!
   EXPECT_DECLS("SizeOfPackExpr", "");
+
+  Code = R"cpp(
+    template <typename T>
+    class Foo {
+      void f([[Foo]] x);
+    };
+  )cpp";
+  EXPECT_DECLS("InjectedClassNameTypeLoc", "class Foo");
 }
 
 TEST_F(TargetDeclTest, ClassTemplate) {
@@ -503,15 +518,15 @@ TEST_F(TargetDeclTest, ObjC) {
   EXPECT_DECLS("ObjCPropertyRefExpr", "- (void)setX:(int)x");
 
   Code = R"cpp(
-    @interface Foo {}
-    @property int x;
+    @interface I {}
+    @property(retain) I* x;
+    @property(retain) I* y;
     @end
-    void test(Foo *f) {
-      [[f.x]] = 42;
+    void test(I *f) {
+      [[f.x]].y = 0;
     }
   )cpp";
-  EXPECT_DECLS("ObjCPropertyRefExpr",
-               "@property(atomic, assign, unsafe_unretained, readwrite) int x");
+  EXPECT_DECLS("OpaqueValueExpr", "@property(atomic, retain, readwrite) I *x");
 
   Code = R"cpp(
     @protocol Foo
@@ -566,16 +581,29 @@ protected:
     TU.ExtraArgs.push_back("-std=c++17");
 
     auto AST = TU.build();
+    for (auto &D : AST.getDiagnostics()) {
+      if (D.Severity > DiagnosticsEngine::Warning)
+        ADD_FAILURE() << D << Code;
+    }
 
     auto *TestDecl = &findDecl(AST, "foo");
     if (auto *T = llvm::dyn_cast<FunctionTemplateDecl>(TestDecl))
       TestDecl = T->getTemplatedDecl();
-    auto &Func = llvm::cast<FunctionDecl>(*TestDecl);
 
     std::vector<ReferenceLoc> Refs;
-    findExplicitReferences(Func.getBody(), [&Refs](ReferenceLoc R) {
-      Refs.push_back(std::move(R));
-    });
+    if (const auto *Func = llvm::dyn_cast<FunctionDecl>(TestDecl))
+      findExplicitReferences(Func->getBody(), [&Refs](ReferenceLoc R) {
+        Refs.push_back(std::move(R));
+      });
+    else if (const auto *NS = llvm::dyn_cast<NamespaceDecl>(TestDecl))
+      findExplicitReferences(NS, [&Refs, &NS](ReferenceLoc R) {
+        // Avoid adding the namespace foo decl to the results.
+        if (R.Targets.size() == 1 && R.Targets.front() == NS)
+          return;
+        Refs.push_back(std::move(R));
+      });
+    else
+      ADD_FAILURE() << "Failed to find ::foo decl for test";
 
     auto &SM = AST.getSourceManager();
     llvm::sort(Refs, [&](const ReferenceLoc &L, const ReferenceLoc &R) {
@@ -718,7 +746,7 @@ TEST_F(FindExplicitReferencesTest, All) {
         "3: targets = {vb}, decl\n"},
        // MemberExpr should know their using declaration.
        {R"cpp(
-            struct X { void func(int); }
+            struct X { void func(int); };
             struct Y : X {
               using X::func;
             };
@@ -824,7 +852,7 @@ TEST_F(FindExplicitReferencesTest, All) {
             void foo() {
               $0^TT<int> $1^x;
               $2^foo<$3^TT>();
-              $4^foo<$5^vector>()
+              $4^foo<$5^vector>();
               $6^foo<$7^TP...>();
             }
         )cpp",
@@ -924,7 +952,7 @@ TEST_F(FindExplicitReferencesTest, All) {
        // Namespace aliases should be handled properly.
        {
            R"cpp(
-                namespace ns { struct Type {} }
+                namespace ns { struct Type {}; }
                 namespace alias = ns;
                 namespace rec_alias = alias;
 
@@ -965,7 +993,24 @@ TEST_F(FindExplicitReferencesTest, All) {
               }
             )cpp",
            "0: targets = {Test}\n"
-           "1: targets = {a}, decl\n"}};
+           "1: targets = {a}, decl\n"},
+      // unknown template name should not crash.
+      // duplicate $1$2 is fixed on master.
+      {R"cpp(
+        template <template <typename> typename T>
+        struct Base {};
+        namespace foo {
+        template <typename $0^T>
+        struct $1^$2^Derive : $3^Base<$4^T::template $5^Unknown> {};
+        }
+      )cpp",
+      "0: targets = {foo::Derive::T}, decl\n"
+      "1: targets = {foo::Derive}, decl\n"
+      "2: targets = {foo::Derive}, decl\n"
+      "3: targets = {Base}\n"
+      "4: targets = {foo::Derive::T}\n"
+      "5: targets = {}, qualifier = 'T::'\n"},
+    };
 
   for (const auto &C : Cases) {
     llvm::StringRef ExpectedCode = C.first;

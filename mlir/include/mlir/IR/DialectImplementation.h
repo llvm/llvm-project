@@ -291,6 +291,12 @@ public:
     return success();
   }
 
+  /// Parse an affine map instance into 'map'.
+  virtual ParseResult parseAffineMap(AffineMap &map) = 0;
+
+  /// Parse an integer set instance into 'set'.
+  virtual ParseResult printIntegerSet(IntegerSet &set) = 0;
+
   //===--------------------------------------------------------------------===//
   // Type Parsing
   //===--------------------------------------------------------------------===//

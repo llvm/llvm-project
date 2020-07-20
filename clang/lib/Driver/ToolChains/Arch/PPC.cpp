@@ -104,6 +104,9 @@ const char *ppc::getPPCAsmModeForCPU(StringRef Name) {
 void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args,
                                std::vector<StringRef> &Features) {
+  if (Triple.getSubArch() == llvm::Triple::PPCSubArch_spe)
+    Features.push_back("+spe");
+
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_ppc_Features_Group);
 
   ppc::FloatABI FloatABI = ppc::getPPCFloatABI(D, Args);

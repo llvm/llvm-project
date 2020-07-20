@@ -569,26 +569,6 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
                      IsReserved);
 }
 
-// True if the assembler knows nothing about the final value of the symbol.
-// This doesn't cover the comdat issues, since in those cases the assembler
-// can at least know that all symbols in the section will move together.
-static bool isWeak(const MCSymbolELF &Sym) {
-  if (Sym.getType() == ELF::STT_GNU_IFUNC)
-    return true;
-
-  switch (Sym.getBinding()) {
-  default:
-    llvm_unreachable("Unknown binding");
-  case ELF::STB_LOCAL:
-    return false;
-  case ELF::STB_GLOBAL:
-    return false;
-  case ELF::STB_WEAK:
-  case ELF::STB_GNU_UNIQUE:
-    return true;
-  }
-}
-
 bool ELFWriter::isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
                            bool Used, bool Renamed) {
   if (Symbol.isVariable()) {
@@ -1534,7 +1514,8 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   const auto &SymA = cast<MCSymbolELF>(SA);
   if (IsPCRel) {
     assert(!InSet);
-    if (isWeak(SymA))
+    if (SymA.getBinding() != ELF::STB_LOCAL ||
+        SymA.getType() == ELF::STT_GNU_IFUNC)
       return false;
   }
   return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,

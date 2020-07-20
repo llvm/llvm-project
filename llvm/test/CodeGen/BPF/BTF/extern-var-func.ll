@@ -22,9 +22,9 @@ entry:
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .long   24
 ; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   116
-; CHECK-NEXT:        .long   116
-; CHECK-NEXT:        .long   80
+; CHECK-NEXT:        .long   88
+; CHECK-NEXT:        .long   88
+; CHECK-NEXT:        .long   72
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_FUNC_PROTO(id = 1)
 ; CHECK-NEXT:        .long   218103808               # 0xd000000
 ; CHECK-NEXT:        .long   2
@@ -33,7 +33,7 @@ entry:
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   16777248                # 0x1000020
 ; CHECK-NEXT:        .long   5                       # BTF_KIND_FUNC(id = 3)
-; CHECK-NEXT:        .long   201326592               # 0xc000000
+; CHECK-NEXT:        .long   201326593               # 0xc000001
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_FUNC_PROTO(id = 4)
 ; CHECK-NEXT:        .long   218103809               # 0xd000001
@@ -44,16 +44,9 @@ entry:
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   16777224                # 0x1000008
-; CHECK-NEXT:        .long   60                      # BTF_KIND_VAR(id = 6)
-; CHECK-NEXT:        .long   234881024               # 0xe000000
+; CHECK-NEXT:        .long   60                      # BTF_KIND_FUNC(id = 6)
+; CHECK-NEXT:        .long   201326594               # 0xc000002
 ; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   72                      # BTF_KIND_DATASEC(id = 7)
-; CHECK-NEXT:        .long   251658241               # 0xf000001
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   6
-; CHECK-NEXT:        .long   global_func
-; CHECK-NEXT:        .long   8
 ; CHECK-NEXT:        .byte   0                       # string offset=0
 ; CHECK-NEXT:        .ascii  "int"                   # string offset=1
 ; CHECK-NEXT:        .byte   0
@@ -66,8 +59,6 @@ entry:
 ; CHECK-NEXT:        .ascii  "char"                  # string offset=55
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "global_func"           # string offset=60
-; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  ".extern"               # string offset=72
 ; CHECK-NEXT:        .byte   0
 
 declare !dbg !4 dso_local i32 @global_func(i8 signext) local_unnamed_addr #1

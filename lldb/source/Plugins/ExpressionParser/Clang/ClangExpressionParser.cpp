@@ -583,15 +583,16 @@ ClangExpressionParser::ClangExpressionParser(
 
   if (ClangModulesDeclVendor *decl_vendor =
           target_sp->GetClangModulesDeclVendor()) {
-    ClangPersistentVariables *clang_persistent_vars =
-        llvm::cast<ClangPersistentVariables>(
+    if (auto *clang_persistent_vars = llvm::cast<ClangPersistentVariables>(
             target_sp->GetPersistentExpressionStateForLanguage(
-                lldb::eLanguageTypeC));
-    std::unique_ptr<PPCallbacks> pp_callbacks(new LLDBPreprocessorCallbacks(
-        *decl_vendor, *clang_persistent_vars, m_compiler->getSourceManager()));
-    m_pp_callbacks =
-        static_cast<LLDBPreprocessorCallbacks *>(pp_callbacks.get());
-    m_compiler->getPreprocessor().addPPCallbacks(std::move(pp_callbacks));
+                lldb::eLanguageTypeC))) {
+      std::unique_ptr<PPCallbacks> pp_callbacks(
+          new LLDBPreprocessorCallbacks(*decl_vendor, *clang_persistent_vars,
+                                        m_compiler->getSourceManager()));
+      m_pp_callbacks =
+          static_cast<LLDBPreprocessorCallbacks *>(pp_callbacks.get());
+      m_compiler->getPreprocessor().addPPCallbacks(std::move(pp_callbacks));
+    }
   }
 
   // 8. Most of this we get from the CompilerInstance, but we also want to give
@@ -1257,8 +1258,9 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
           interpret_error, interpret_function_calls);
 
       if (!can_interpret && execution_policy == eExecutionPolicyNever) {
-        err.SetErrorStringWithFormat("Can't run the expression locally: %s",
-                                     interpret_error.AsCString());
+        err.SetErrorStringWithFormat(
+            "Can't evaluate the expression without a running target due to: %s",
+            interpret_error.AsCString());
         return err;
       }
     }

@@ -50,17 +50,17 @@ private:
 
 void runJITWithCache(ObjectCache &ObjCache) {
 
-  // Create an LLJIT instance with a custom CompileFunction.
+  // Create an LLJIT instance with a custom IRCompiler.
   auto J = ExitOnErr(
       LLJITBuilder()
           .setCompileFunctionCreator(
               [&](JITTargetMachineBuilder JTMB)
-                  -> Expected<IRCompileLayer::CompileFunction> {
+                  -> Expected<std::unique_ptr<IRCompileLayer::IRCompiler>> {
                 auto TM = JTMB.createTargetMachine();
                 if (!TM)
                   return TM.takeError();
-                return IRCompileLayer::CompileFunction(
-                    TMOwningSimpleCompiler(std::move(*TM), &ObjCache));
+                return std::make_unique<TMOwningSimpleCompiler>(std::move(*TM),
+                                                                &ObjCache);
               })
           .create());
 

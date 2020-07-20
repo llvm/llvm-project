@@ -13,7 +13,7 @@ set(LLVM_LINK_COMPONENTS
   ARM
   )
 
-add_llvm_unittest(LLVMExegesisARMTests
+add_llvm_target_unittest(LLVMExegesisARMTests
   AssemblerTest.cpp
   )
 target_link_libraries(LLVMExegesisARMTests PRIVATE LLVMExegesis)

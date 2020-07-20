@@ -105,6 +105,7 @@ static bool supportsMips64(uint64_t Type) {
   case ELF::R_MIPS_32:
   case ELF::R_MIPS_64:
   case ELF::R_MIPS_TLS_DTPREL64:
+  case ELF::R_MIPS_PC32:
     return true;
   default:
     return false;
@@ -119,6 +120,8 @@ static uint64_t resolveMips64(RelocationRef R, uint64_t S, uint64_t A) {
     return S + getELFAddend(R);
   case ELF::R_MIPS_TLS_DTPREL64:
     return S + getELFAddend(R) - 0x8000;
+  case ELF::R_MIPS_PC32:
+    return S + getELFAddend(R) - R.getOffset();
   default:
     llvm_unreachable("Invalid relocation type");
   }

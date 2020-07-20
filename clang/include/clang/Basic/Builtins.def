@@ -788,6 +788,9 @@ BUILTIN(__builtin_abort, "v", "Fnr")
 BUILTIN(__builtin_index, "c*cC*i", "Fn")
 BUILTIN(__builtin_rindex, "c*cC*i", "Fn")
 
+// ignored glibc builtin, see https://sourceware.org/bugzilla/show_bug.cgi?id=25399
+BUILTIN(__warn_memset_zero_len, "v", "nU")
+
 // Microsoft builtins.  These are only active with -fms-extensions.
 LANGBUILTIN(_alloca,          "v*z", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__annotation,     "wC*.","n", ALL_MS_LANGUAGES)

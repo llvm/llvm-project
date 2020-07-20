@@ -28,7 +28,7 @@
 ; YAML-NEXT: ...
 
 ; Next try with pass remarks to stderr
-; RUN: %clang -target x86_64-scei-ps4 -O2 -x ir %t.o -fthinlto-index=%t.thinlto.bc -mllvm -pass-remarks=inline -fdiagnostics-show-hotness -o %t2.o -c 2>&1 | FileCheck %s
+; RUN: %clang -target x86_64-scei-ps4 -O2 -x ir %t.o -fthinlto-index=%t.thinlto.bc -Rpass=inline -fdiagnostics-show-hotness -o %t2.o -c 2>&1 | FileCheck %s
 
 ; CHECK: tinkywinky inlined into main with (cost=0, threshold=337) (hotness: 300)
 

@@ -269,4 +269,13 @@ TEST(DataExtractorTest, eof) {
   EXPECT_TRUE(DE.eof(C));
   EXPECT_THAT_ERROR(C.takeError(), Succeeded());
 }
+
+TEST(DataExtractorTest, size) {
+  uint8_t Data[] = {'A', 'B', 'C', 'D'};
+  DataExtractor DE1(StringRef(reinterpret_cast<char *>(Data), sizeof(Data)),
+                    false, 8);
+  EXPECT_EQ(DE1.size(), sizeof(Data));
+  DataExtractor DE2(ArrayRef<uint8_t>(Data), false, 8);
+  EXPECT_EQ(DE2.size(), sizeof(Data));
+}
 }

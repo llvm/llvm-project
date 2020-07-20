@@ -1,10 +1,14 @@
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN: aarch64-arm-none-eabi %s -o - | FileCheck %s
+; RUN: aarch64-arm-none-eabi %s -o - | FileCheck %s --check-prefixes CHECK,V8A
+; RUN-V83A: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
+; RUN-V83A: aarch64-arm-none-eabi -mattr=+v8.3a %s -o - > %t
+; RUN-V83A: FileCheck --check-prefixes CHECK,V83A < %t %s
 
 define i64 @a(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" {
 ; CHECK-LABEL:      a:                                     // @a
 ; CHECK:                .cfi_b_key_frame
-; CHECK-NEXT:           pacibsp
+; V8A-NEXT:             hint #27
+; V83A-NEXT:            pacibsp
 ; CHECK-NEXT:           .cfi_negate_ra_state
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -25,7 +29,8 @@ define i64 @a(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 define i64 @b(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" {
 ; CHECK-LABEL:      b:                                     // @b
 ; CHECK:                .cfi_b_key_frame
-; CHECK-NEXT:           pacibsp
+; V8A-NEXT:             hint #27
+; V83A-NEXT:            pacibsp
 ; CHECK-NEXT:           .cfi_negate_ra_state
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -46,7 +51,8 @@ define i64 @b(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 define i64 @c(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" {
 ; CHECK-LABEL:      c:                                     // @c
 ; CHECK:                .cfi_b_key_frame
-; CHECK-NEXT:           pacibsp
+; V8A-NEXT:             hint #27
+; V83A-NEXT:            pacibsp
 ; CHECK-NEXT:           .cfi_negate_ra_state
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -68,5 +74,6 @@ define i64 @c(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; CHECK-LABEL:      OUTLINED_FUNCTION_0:
 ; CHECK-NOT:            .cfi_b_key_frame
 ; CHECK-NOT:            paci{{[a,b]}}sp
+; CHECK-NOT:            hint #2{{[5,7]}}
 ; CHECK-NOT:            .cfi_negate_ra_state
 ; CHECK-NOT:            auti{{[a,b]}}sp

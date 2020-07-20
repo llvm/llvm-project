@@ -244,24 +244,44 @@
         add sp, sp, #512
         add r2, sp, #1024
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
-@ CHECK-ERRORS:         add sp, #-1
-@ CHECK-ERRORS:                 ^
+@ CHECK-ERRORS: add sp, #-1
+@ CHECK-ERRORS: ^
 @ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
-@ CHECK-ERRORS: note: instruction requires: thumb2
-@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
-@ CHECK-ERRORS:         add sp, #3
-@ CHECK-ERRORS:                 ^
-@ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
-@ CHECK-ERRORS: note: instruction requires: thumb2
-@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
-@ CHECK-ERRORS:         add sp, sp, #512
-@ CHECK-ERRORS:                     ^
-@ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
-@ CHECK-ERRORS: note: instruction requires: thumb2
-@ CHECK-ERRORS: error: instruction requires: thumb2
-@ CHECK-ERRORS:         add r2, sp, #1024
+@ CHECK-ERRORS: add sp, #-1
 @ CHECK-ERRORS:         ^
-
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: add sp, #-1
+@ CHECK-ERRORS:         ^
+@ CHECK-ERRORS: note: instruction requires: thumb2
+@ CHECK-ERRORS: add sp, #-1
+@ CHECK-ERRORS: ^
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: add sp, #3
+@ CHECK-ERRORS: ^
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
+@ CHECK-ERRORS: add sp, #3
+@ CHECK-ERRORS:         ^
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: add sp, #3
+@ CHECK-ERRORS:         ^
+@ CHECK-ERRORS: note: instruction requires: thumb2
+@ CHECK-ERRORS: add sp, #3
+@ CHECK-ERRORS: ^
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: add sp, sp, #512
+@ CHECK-ERRORS: ^
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
+@ CHECK-ERRORS: add sp, sp, #512
+@ CHECK-ERRORS:             ^
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: add sp, sp, #512
+@ CHECK-ERRORS:             ^
+@ CHECK-ERRORS: note: instruction requires: thumb2
+@ CHECK-ERRORS: add sp, sp, #512
+@ CHECK-ERRORS: ^
+@ CHECK-ERRORS: error: instruction requires: thumb2
+@ CHECK-ERRORS: add r2, sp, #1024
+@ CHECK-ERRORS: ^
         add r2, sp, ip
 @ CHECK-ERRORS: error: source register must be the same as destination
 @ CHECK-ERRORS:         add r2, sp, ip

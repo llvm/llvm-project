@@ -1366,9 +1366,21 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
   if (!ToDeducedTypeOrErr)
     return ToDeducedTypeOrErr.takeError();
 
-  return Importer.getToContext().getAutoType(*ToDeducedTypeOrErr,
-                                             T->getKeyword(),
-                                             /*IsDependent*/false);
+  ExpectedDecl ToTypeConstraintConcept = import(T->getTypeConstraintConcept());
+  if (!ToTypeConstraintConcept)
+    return ToTypeConstraintConcept.takeError();
+
+  SmallVector<TemplateArgument, 2> ToTemplateArgs;
+  ArrayRef<TemplateArgument> FromTemplateArgs = T->getTypeConstraintArguments();
+  if (Error Err = ImportTemplateArguments(FromTemplateArgs.data(),
+                                          FromTemplateArgs.size(),
+                                          ToTemplateArgs))
+    return std::move(Err);
+
+  return Importer.getToContext().getAutoType(
+      *ToDeducedTypeOrErr, T->getKeyword(), /*IsDependent*/false,
+      /*IsPack=*/false, cast_or_null<ConceptDecl>(*ToTypeConstraintConcept),
+      ToTemplateArgs);
 }
 
 ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
@@ -3081,7 +3093,7 @@ Error ASTNodeImporter::ImportFunctionDeclBody(FunctionDecl *FromFD,
 
 // Returns true if the given D has a DeclContext up to the TranslationUnitDecl
 // which is equal to the given DC.
-bool isAncestorDeclContextOf(const DeclContext *DC, const Decl *D) {
+static bool isAncestorDeclContextOf(const DeclContext *DC, const Decl *D) {
   const DeclContext *DCi = D->getDeclContext();
   while (DCi != D->getTranslationUnitDecl()) {
     if (DCi == DC)
@@ -5097,7 +5109,7 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   // context. This context will be fixed when the actual template declaration
   // is created.
 
-  // FIXME: Import default argument.
+  // FIXME: Import default argument  and constraint expression.
 
   ExpectedSLoc BeginLocOrErr = import(D->getBeginLoc());
   if (!BeginLocOrErr)
@@ -5108,12 +5120,47 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     return LocationOrErr.takeError();
 
   TemplateTypeParmDecl *ToD = nullptr;
-  (void)GetImportedOrCreateDecl(
+  if (GetImportedOrCreateDecl(
       ToD, D, Importer.getToContext(),
       Importer.getToContext().getTranslationUnitDecl(),
       *BeginLocOrErr, *LocationOrErr,
       D->getDepth(), D->getIndex(), Importer.Import(D->getIdentifier()),
-      D->wasDeclaredWithTypename(), D->isParameterPack());
+      D->wasDeclaredWithTypename(), D->isParameterPack(),
+      D->hasTypeConstraint()))
+    return ToD;
+
+  // Import the type-constraint
+  if (const TypeConstraint *TC = D->getTypeConstraint()) {
+    NestedNameSpecifierLoc ToNNS;
+    DeclarationName ToName;
+    SourceLocation ToNameLoc;
+    NamedDecl *ToFoundDecl;
+    ConceptDecl *ToNamedConcept;
+    Expr *ToIDC;
+    if (auto Imp = importSeq(TC->getNestedNameSpecifierLoc(),
+        TC->getConceptNameInfo().getName(), TC->getConceptNameInfo().getLoc(),
+        TC->getFoundDecl(), TC->getNamedConcept(),
+        TC->getImmediatelyDeclaredConstraint()))
+      std::tie(ToNNS, ToName, ToNameLoc, ToFoundDecl, ToNamedConcept,
+               ToIDC) = *Imp;
+    else
+      return Imp.takeError();
+
+    TemplateArgumentListInfo ToTAInfo;
+    const auto *ASTTemplateArgs = TC->getTemplateArgsAsWritten();
+    if (ASTTemplateArgs)
+      if (Error Err = ImportTemplateArgumentListInfo(*ASTTemplateArgs,
+                                                     ToTAInfo))
+        return std::move(Err);
+
+    ToD->setTypeConstraint(ToNNS, DeclarationNameInfo(ToName, ToNameLoc),
+        ToFoundDecl, ToNamedConcept,
+        ASTTemplateArgs ?
+            ASTTemplateArgumentListInfo::Create(Importer.getToContext(),
+                                                ToTAInfo) : nullptr,
+        ToIDC);
+  }
+
   return ToD;
 }
 
@@ -6677,8 +6724,9 @@ ExpectedStmt ASTNodeImporter::VisitStmtExpr(StmtExpr *E) {
   SourceLocation ToLParenLoc, ToRParenLoc;
   std::tie(ToSubStmt, ToType, ToLParenLoc, ToRParenLoc) = *Imp;
 
-  return new (Importer.getToContext()) StmtExpr(
-      ToSubStmt, ToType, ToLParenLoc, ToRParenLoc);
+  return new (Importer.getToContext())
+      StmtExpr(ToSubStmt, ToType, ToLParenLoc, ToRParenLoc,
+               E->getTemplateDepth());
 }
 
 ExpectedStmt ASTNodeImporter::VisitUnaryOperator(UnaryOperator *E) {

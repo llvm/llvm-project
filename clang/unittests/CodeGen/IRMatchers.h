@@ -58,7 +58,7 @@ public:
   /// the query also keeps the entity number in that list.
   ///
   class Query {
-    PointerUnion3<const Value *, const Metadata *, const Type *> Entity;
+    PointerUnion<const Value *, const Metadata *, const Type *> Entity;
     unsigned OperandNo;
 
   public:

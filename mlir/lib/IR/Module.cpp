@@ -82,10 +82,13 @@ LogicalResult ModuleOp::verify() {
     return emitOpError("expected body to have no arguments");
 
   // Check that none of the attributes are non-dialect attributes, except for
-  // the symbol name attribute.
+  // the symbol related attributes.
   for (auto attr : getOperation()->getAttrList().getAttrs()) {
     if (!attr.first.strref().contains('.') &&
-        attr.first.strref() != mlir::SymbolTable::getSymbolAttrName())
+        !llvm::is_contained(
+            ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),
+                                mlir::SymbolTable::getVisibilityAttrName()},
+            attr.first.strref()))
       return emitOpError(
                  "can only contain dialect-specific attributes, found: '")
              << attr.first << "'";

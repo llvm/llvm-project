@@ -538,11 +538,12 @@
 // CHECK080:      "-Wreturn-type"
 
 // -----------------------------------------------------------------------------
-// Default, not passing -fuse-ld
+// Default, hexagon-link is used
 // -----------------------------------------------------------------------------
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=fake-value-to-ignore-CLANG_DEFAULT_LINKER \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK081 %s
 // REQUIRES: hexagon-registered-target

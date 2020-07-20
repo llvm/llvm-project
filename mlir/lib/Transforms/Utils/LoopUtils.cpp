@@ -97,9 +97,8 @@ void mlir::getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
   canonicalizeMapAndOperands(map, operands);
   // Remove any affine.apply's that became dead from the simplification above.
   for (auto v : bumpValues) {
-    if (v->use_empty()) {
-      v->getDefiningOp()->erase();
-    }
+    if (v.use_empty())
+      v.getDefiningOp()->erase();
   }
   if (lb.use_empty())
     lb.erase();
@@ -120,23 +119,23 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
   // Replaces all IV uses to its single iteration value.
   auto iv = forOp.getInductionVar();
   Operation *op = forOp.getOperation();
-  if (!iv->use_empty()) {
+  if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
       OpBuilder topBuilder(op->getParentOfType<FuncOp>().getBody());
       auto constOp = topBuilder.create<ConstantIndexOp>(
           forOp.getLoc(), forOp.getConstantLowerBound());
-      iv->replaceAllUsesWith(constOp);
+      iv.replaceAllUsesWith(constOp);
     } else {
       AffineBound lb = forOp.getLowerBound();
       SmallVector<Value, 4> lbOperands(lb.operand_begin(), lb.operand_end());
       OpBuilder builder(op->getBlock(), Block::iterator(op));
       if (lb.getMap() == builder.getDimIdentityMap()) {
         // No need of generating an affine.apply.
-        iv->replaceAllUsesWith(lbOperands[0]);
+        iv.replaceAllUsesWith(lbOperands[0]);
       } else {
         auto affineApplyOp = builder.create<AffineApplyOp>(
             op->getLoc(), lb.getMap(), lbOperands);
-        iv->replaceAllUsesWith(affineApplyOp);
+        iv.replaceAllUsesWith(affineApplyOp);
       }
     }
   }
@@ -192,7 +191,7 @@ generateLoop(AffineMap lbMap, AffineMap ubMap,
     // remapped to results of cloned operations, and their IV used remapped.
     // Generate the remapping if the shift is not zero: remappedIV = newIV -
     // shift.
-    if (!srcIV->use_empty() && shift != 0) {
+    if (!srcIV.use_empty() && shift != 0) {
       auto ivRemap = bodyBuilder.create<AffineApplyOp>(
           srcForInst.getLoc(),
           bodyBuilder.getSingleDimShiftAffineMap(
@@ -352,7 +351,7 @@ LogicalResult mlir::instBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
 // in the parent loop.  Collect at most `maxLoops` loops and append them to
 // `forOps`.
 template <typename T>
-void getPerfectlyNestedLoopsImpl(
+static void getPerfectlyNestedLoopsImpl(
     SmallVectorImpl<T> &forOps, T rootForOp,
     unsigned maxLoops = std::numeric_limits<unsigned>::max()) {
   for (unsigned i = 0; i < maxLoops; ++i) {
@@ -474,7 +473,7 @@ LogicalResult mlir::loopUnrollByFactor(AffineForOp forOp,
 
     // If the induction variable is used, create a remapping to the value for
     // this unrolled instance.
-    if (!forOpIV->use_empty()) {
+    if (!forOpIV.use_empty()) {
       // iv' = iv + 1/2/3...unrollFactor-1;
       auto d0 = builder.getAffineDimExpr(0);
       auto bumpMap = AffineMap::get(1, 0, {d0 + i * step});
@@ -835,7 +834,7 @@ Loops mlir::tilePerfectlyNested(loop::ForOp rootForOp, ArrayRef<Value> sizes) {
 static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
                              int64_t divisor) {
   assert(divisor > 0 && "expected positive divisor");
-  assert(dividend->getType().isIndex() && "expected index-typed value");
+  assert(dividend.getType().isIndex() && "expected index-typed value");
 
   Value divisorMinusOneCst = builder.create<ConstantIndexOp>(loc, divisor - 1);
   Value divisorCst = builder.create<ConstantIndexOp>(loc, divisor);
@@ -849,7 +848,7 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
 // where divis is rounding-to-zero division.
 static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
                              Value divisor) {
-  assert(dividend->getType().isIndex() && "expected index-typed value");
+  assert(dividend.getType().isIndex() && "expected index-typed value");
 
   Value cstOne = builder.create<ConstantIndexOp>(loc, 1);
   Value divisorMinusOne = builder.create<SubIOp>(loc, divisor, cstOne);
@@ -968,7 +967,7 @@ TileLoops mlir::extractFixedOuterLoops(loop::ForOp rootForOp,
 static void
 replaceAllUsesExcept(Value orig, Value replacement,
                      const SmallPtrSetImpl<Operation *> &exceptions) {
-  for (auto &use : llvm::make_early_inc_range(orig->getUses())) {
+  for (auto &use : llvm::make_early_inc_range(orig.getUses())) {
     if (exceptions.count(use.getOwner()) == 0)
       use.set(replacement);
   }
@@ -992,12 +991,12 @@ static void normalizeLoop(loop::ForOp loop, loop::ForOp outer,
   // a constant one step.
   bool isZeroBased = false;
   if (auto ubCst =
-          dyn_cast_or_null<ConstantIndexOp>(loop.lowerBound()->getDefiningOp()))
+          dyn_cast_or_null<ConstantIndexOp>(loop.lowerBound().getDefiningOp()))
     isZeroBased = ubCst.getValue() == 0;
 
   bool isStepOne = false;
   if (auto stepCst =
-          dyn_cast_or_null<ConstantIndexOp>(loop.step()->getDefiningOp()))
+          dyn_cast_or_null<ConstantIndexOp>(loop.step().getDefiningOp()))
     isStepOne = stepCst.getValue() == 1;
 
   if (isZeroBased && isStepOne)
@@ -1034,8 +1033,8 @@ static void normalizeLoop(loop::ForOp loop, loop::ForOp outer,
   Value shifted =
       isZeroBased ? scaled : builder.create<AddIOp>(loc, scaled, lb);
 
-  SmallPtrSet<Operation *, 2> preserve{scaled->getDefiningOp(),
-                                       shifted->getDefiningOp()};
+  SmallPtrSet<Operation *, 2> preserve{scaled.getDefiningOp(),
+                                       shifted.getDefiningOp()};
   replaceAllUsesExcept(loop.getInductionVar(), shifted, preserve);
 }
 
@@ -1175,7 +1174,7 @@ static void getMultiLevelStrides(const MemRefRegion &region,
   int64_t numEltPerStride = 1;
   int64_t stride = 1;
   for (int d = bufferShape.size() - 1; d >= 1; d--) {
-    int64_t dimSize = region.memref->getType().cast<MemRefType>().getDimSize(d);
+    int64_t dimSize = region.memref.getType().cast<MemRefType>().getDimSize(d);
     stride *= dimSize;
     numEltPerStride *= bufferShape[d];
     // A stride is needed only if the region has a shorter extent than the
@@ -1295,7 +1294,7 @@ static LogicalResult generateCopy(
 
   auto loc = region.loc;
   auto memref = region.memref;
-  auto memRefType = memref->getType().cast<MemRefType>();
+  auto memRefType = memref.getType().cast<MemRefType>();
 
   auto layoutMaps = memRefType.getAffineMaps();
   if (layoutMaps.size() > 1 ||
@@ -1560,7 +1559,7 @@ static bool getFullMemRefAsRegion(Operation *opInst, unsigned numParamLoopIVs,
     assert(false && "expected load or store op");
     return false;
   }
-  auto memRefType = region->memref->getType().cast<MemRefType>();
+  auto memRefType = region->memref.getType().cast<MemRefType>();
   if (!memRefType.hasStaticShape())
     return false;
 

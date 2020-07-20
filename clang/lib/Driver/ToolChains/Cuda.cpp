@@ -32,37 +32,28 @@ using namespace llvm::opt;
 
 // Parses the contents of version.txt in an CUDA installation.  It should
 // contain one line of the from e.g. "CUDA Version 7.5.2".
-static CudaVersion ParseCudaVersionFile(llvm::StringRef V) {
+void CudaInstallationDetector::ParseCudaVersionFile(llvm::StringRef V) {
+  Version = CudaVersion::UNKNOWN;
   if (!V.startswith("CUDA Version "))
-    return CudaVersion::UNKNOWN;
+    return;
   V = V.substr(strlen("CUDA Version "));
-  int Major = -1, Minor = -1;
-  auto First = V.split('.');
-  auto Second = First.second.split('.');
-  if (First.first.getAsInteger(10, Major) ||
-      Second.first.getAsInteger(10, Minor))
-    return CudaVersion::UNKNOWN;
+  SmallVector<StringRef,4> VersionParts;
+  V.split(VersionParts, '.');
+  if (VersionParts.size() < 2)
+    return;
+  DetectedVersion = join_items(".", VersionParts[0], VersionParts[1]);
+  Version = CudaStringToVersion(DetectedVersion);
+  if (Version != CudaVersion::UNKNOWN)
+    return;
 
-  if (Major == 7 && Minor == 0) {
-    // This doesn't appear to ever happen -- version.txt doesn't exist in the
-    // CUDA 7 installs I've seen.  But no harm in checking.
-    return CudaVersion::CUDA_70;
-  }
-  if (Major == 7 && Minor == 5)
-    return CudaVersion::CUDA_75;
-  if (Major == 8 && Minor == 0)
-    return CudaVersion::CUDA_80;
-  if (Major == 9 && Minor == 0)
-    return CudaVersion::CUDA_90;
-  if (Major == 9 && Minor == 1)
-    return CudaVersion::CUDA_91;
-  if (Major == 9 && Minor == 2)
-    return CudaVersion::CUDA_92;
-  if (Major == 10 && Minor == 0)
-    return CudaVersion::CUDA_100;
-  if (Major == 10 && Minor == 1)
-    return CudaVersion::CUDA_101;
-  return CudaVersion::UNKNOWN;
+  Version = CudaVersion::LATEST;
+  DetectedVersionIsNotSupported = true;
+}
+
+void CudaInstallationDetector::WarnIfUnsupportedVersion() {
+  if (DetectedVersionIsNotSupported)
+    D.Diag(diag::warn_drv_unknown_cuda_version)
+        << DetectedVersion << CudaVersionToString(Version);
 }
 
 CudaInstallationDetector::CudaInstallationDetector(
@@ -160,7 +151,7 @@ CudaInstallationDetector::CudaInstallationDetector(
       // version.txt isn't present.
       Version = CudaVersion::CUDA_70;
     } else {
-      Version = ParseCudaVersionFile((*VersionFile)->getBuffer());
+      ParseCudaVersionFile((*VersionFile)->getBuffer());
     }
 
     if (Version >= CudaVersion::CUDA_90) {
@@ -578,8 +569,10 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
                              const Action::OffloadKind OK)
     : ToolChain(D, Triple, Args), HostTC(HostTC),
       CudaInstallation(D, HostTC.getTriple(), Args), OK(OK) {
-  if (CudaInstallation.isValid())
+  if (CudaInstallation.isValid()) {
+    CudaInstallation.WarnIfUnsupportedVersion();
     getProgramPaths().push_back(CudaInstallation.getBinPath());
+  }
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);

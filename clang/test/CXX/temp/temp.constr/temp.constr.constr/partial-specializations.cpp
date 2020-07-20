@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ -verify %s
+// RUN: %clang_cc1 -std=c++2a -x c++ -verify %s
 
 namespace class_templates
 {
@@ -31,6 +31,23 @@ namespace class_templates
   // expected-note@-2{{during template argument deduction for class template partial specialization 'B<T *>' [with T = int *]}}
   // expected-note@-3{{during template argument deduction for class template partial specialization 'B<T **>' [with T = int]}}
   // expected-note@-4 2{{in instantiation of template class 'class_templates::B<int **>' requested here}}
+
+  template<typename T, typename U = double>
+  concept same_as = is_same<T, U>::value;
+
+  template<same_as<bool> T> requires A<T>::type
+  struct B<T*> {};
+  // expected-note@-1{{previous}}
+
+  template<same_as<bool> T> requires A<T>::type
+  struct B<T*> {};
+  // expected-error@-1{{redefinition}}
+
+  template<same_as T> requires A<T>::type
+  struct B<T*> {};
+
+  template<same_as<int> T> requires A<T>::type
+  struct B<T*> {};
 }
 
 namespace variable_templates

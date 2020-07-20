@@ -6,7 +6,7 @@
 // Make sure we don't match the -NOT lines with the linker invocation.
 // Delimiters match the start of the cc1 and the start of the linker lines
 // for fragile tests.
-// DELIMITERS: {{^ *"}}
+// DELIMITERS: {{^ (\(in-process\)|")}}
 
 // RUN: echo "fun:foo" > %t.good
 // RUN: echo "fun:bar" > %t.second

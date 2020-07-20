@@ -39,6 +39,51 @@ module attributes {gpu.kernel_module} {
 // -----
 
 module attributes {gpu.kernel_module} {
+  // CHECK: llvm.func @_ocml_fabs_f32(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @_ocml_fabs_f64(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_fabs
+  func @gpu_fabs(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.absf %arg_f32 : f32
+    // CHECK: llvm.call @_ocml_fabs_f32(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.absf %arg_f64 : f64
+    // CHECK: llvm.call @_ocml_fabs_f64(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+module attributes {gpu.kernel_module} {
+  // CHECK: llvm.func @_ocml_ceil_f32(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @_ocml_ceil_f64(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_ceil
+  func @gpu_ceil(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.ceilf %arg_f32 : f32
+    // CHECK: llvm.call @_ocml_ceil_f32(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.ceilf %arg_f64 : f64
+    // CHECK: llvm.call @_ocml_ceil_f64(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+module attributes {gpu.kernel_module} {
+  // CHECK: llvm.func @_ocml_cos_f32(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @_ocml_cos_f64(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_cos
+  func @gpu_cos(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.cos %arg_f32 : f32
+    // CHECK: llvm.call @_ocml_cos_f32(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.cos %arg_f64 : f64
+    // CHECK: llvm.call @_ocml_cos_f64(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+module attributes {gpu.kernel_module} {
   // CHECK: llvm.func @_ocml_exp_f32(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @_ocml_exp_f64(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_exp

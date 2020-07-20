@@ -24,8 +24,8 @@ namespace mlir {
 
 namespace edsc {
 
-struct index_t {
-  explicit index_t(int64_t v) : v(v) {}
+struct index_type {
+  explicit index_type(int64_t v) : v(v) {}
   explicit operator int64_t() { return v; }
   int64_t v;
 };
@@ -303,14 +303,14 @@ public:
   /// Value. An eager Value represents both the declaration and the definition
   /// (in the PL sense) of a placeholder for an mlir::Value that has already
   /// been constructed in the past and that is captured "now" in the program.
-  explicit ValueHandle(Value v) : t(v->getType()), v(v) {}
+  explicit ValueHandle(Value v) : t(v.getType()), v(v) {}
 
   /// Builds a ConstantIndexOp of value `cst`. The constant is created at the
   /// current insertion point.
   /// This implicit constructor is provided to each build an eager Value for a
   /// constant at the current insertion point in the IR. An implicit constructor
   /// allows idiomatic expressions mixing ValueHandle and literals.
-  ValueHandle(index_t cst);
+  ValueHandle(index_type cst);
 
   /// ValueHandle is a value type, use the default copy constructor.
   ValueHandle(const ValueHandle &other) = default;
@@ -365,7 +365,7 @@ public:
   Operation *getOperation() const {
     if (!v)
       return nullptr;
-    return v->getDefiningOp();
+    return v.getDefiningOp();
   }
 
 protected:

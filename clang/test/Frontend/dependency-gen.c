@@ -21,7 +21,7 @@
 // RUN: %clang -MD -MF - %s -fsyntax-only -I ./ | FileCheck -check-prefix=CHECK-SIX %s
 // CHECK-SIX: {{ }}x.h
 // RUN: echo "fun:foo" > %t.blacklist
-// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_cfi_blacklist -fsanitize=cfi-vcall -flto -fvisibility=hidden -fsanitize-blacklist=%t.blacklist -I ./ | FileCheck -check-prefix=CHECK-SEVEN %s
+// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_sanitizer_blacklist -fsanitize=undefined -flto -fvisibility=hidden -fsanitize-blacklist=%t.blacklist -I ./ | FileCheck -check-prefix=CHECK-SEVEN %s
 // CHECK-SEVEN: .blacklist
 // CHECK-SEVEN: {{ }}x.h
 #ifndef INCLUDE_FLAG_TEST
@@ -30,17 +30,17 @@
 
 // RUN: echo "fun:foo" > %t.blacklist1
 // RUN: echo "fun:foo" > %t.blacklist2
-// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_cfi_blacklist -fsanitize=cfi-vcall -flto -fvisibility=hidden -fsanitize-blacklist=%t.blacklist1 -fsanitize-blacklist=%t.blacklist2 -I ./ | FileCheck -check-prefix=TWO-BLACK-LISTS %s
+// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_sanitizer_blacklist -fsanitize=undefined -flto -fvisibility=hidden -fsanitize-blacklist=%t.blacklist1 -fsanitize-blacklist=%t.blacklist2 -I ./ | FileCheck -check-prefix=TWO-BLACK-LISTS %s
 // TWO-BLACK-LISTS: dependency-gen.o:
 // TWO-BLACK-LISTS-DAG: blacklist1
 // TWO-BLACK-LISTS-DAG: blacklist2
 // TWO-BLACK-LISTS-DAG: x.h
 // TWO-BLACK-LISTS-DAG: dependency-gen.c
 
-// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_cfi_blacklist -fsanitize=cfi-vcall -flto -fvisibility=hidden -I ./ | FileCheck -check-prefix=USER-AND-SYS-DEPS %s
+// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_sanitizer_blacklist -fsanitize=undefined -flto -fvisibility=hidden -I ./ | FileCheck -check-prefix=USER-AND-SYS-DEPS %s
 // USER-AND-SYS-DEPS: dependency-gen.o:
-// USER-AND-SYS-DEPS-DAG: cfi_blacklist.txt
+// USER-AND-SYS-DEPS-DAG: ubsan_blacklist.txt
 
-// RUN: %clang -MMD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_cfi_blacklist -fsanitize=cfi-vcall -flto -fvisibility=hidden -I ./ | FileCheck -check-prefix=ONLY-USER-DEPS %s
+// RUN: %clang -MMD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_sanitizer_blacklist -fsanitize=undefined -flto -fvisibility=hidden -I ./ | FileCheck -check-prefix=ONLY-USER-DEPS %s
 // ONLY-USER-DEPS: dependency-gen.o:
-// NOT-ONLY-USER-DEPS: cfi_blacklist.txt
+// NOT-ONLY-USER-DEPS: ubsan_blacklist.txt

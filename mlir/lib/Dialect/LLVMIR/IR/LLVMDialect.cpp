@@ -35,16 +35,16 @@ using namespace mlir::LLVM;
 //===----------------------------------------------------------------------===//
 static void printICmpOp(OpAsmPrinter &p, ICmpOp &op) {
   p << op.getOperationName() << " \"" << stringifyICmpPredicate(op.predicate())
-    << "\" " << *op.getOperand(0) << ", " << *op.getOperand(1);
+    << "\" " << op.getOperand(0) << ", " << op.getOperand(1);
   p.printOptionalAttrDict(op.getAttrs(), {"predicate"});
-  p << " : " << op.lhs()->getType();
+  p << " : " << op.lhs().getType();
 }
 
 static void printFCmpOp(OpAsmPrinter &p, FCmpOp &op) {
   p << op.getOperationName() << " \"" << stringifyFCmpPredicate(op.predicate())
-    << "\" " << *op.getOperand(0) << ", " << *op.getOperand(1);
+    << "\" " << op.getOperand(0) << ", " << op.getOperand(1);
   p.printOptionalAttrDict(op.getAttrs(), {"predicate"});
-  p << " : " << op.lhs()->getType();
+  p << " : " << op.lhs().getType();
 }
 
 // <operation> ::= `llvm.icmp` string-literal ssa-use `,` ssa-use
@@ -120,10 +120,10 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
 static void printAllocaOp(OpAsmPrinter &p, AllocaOp &op) {
   auto elemTy = op.getType().cast<LLVM::LLVMType>().getPointerElementTy();
 
-  auto funcTy = FunctionType::get({op.arraySize()->getType()}, {op.getType()},
+  auto funcTy = FunctionType::get({op.arraySize().getType()}, {op.getType()},
                                   op.getContext());
 
-  p << op.getOperationName() << ' ' << *op.arraySize() << " x " << elemTy;
+  p << op.getOperationName() << ' ' << op.arraySize() << " x " << elemTy;
   if (op.alignment().hasValue() && op.alignment()->getSExtValue() != 0)
     p.printOptionalAttrDict(op.getAttrs());
   else
@@ -168,7 +168,7 @@ static void printGEPOp(OpAsmPrinter &p, GEPOp &op) {
   SmallVector<Type, 8> types(op.getOperandTypes());
   auto funcTy = FunctionType::get(types, op.getType(), op.getContext());
 
-  p << op.getOperationName() << ' ' << *op.base() << '['
+  p << op.getOperationName() << ' ' << op.base() << '['
     << op.getOperands().drop_front() << ']';
   p.printOptionalAttrDict(op.getAttrs());
   p << " : " << funcTy;
@@ -212,9 +212,9 @@ static ParseResult parseGEPOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 
 static void printLoadOp(OpAsmPrinter &p, LoadOp &op) {
-  p << op.getOperationName() << ' ' << *op.addr();
+  p << op.getOperationName() << ' ' << op.addr();
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.addr()->getType();
+  p << " : " << op.addr().getType();
 }
 
 // Extract the pointee type from the LLVM pointer type wrapped in MLIR.  Return
@@ -256,9 +256,9 @@ static ParseResult parseLoadOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 
 static void printStoreOp(OpAsmPrinter &p, StoreOp &op) {
-  p << op.getOperationName() << ' ' << *op.value() << ", " << *op.addr();
+  p << op.getOperationName() << ' ' << op.value() << ", " << op.addr();
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.addr()->getType();
+  p << " : " << op.addr().getType();
 }
 
 // <operation> ::= `llvm.store` ssa-use `,` ssa-use attribute-dict? `:` type
@@ -300,7 +300,7 @@ static void printCallOp(OpAsmPrinter &p, CallOp &op) {
   if (isDirect)
     p.printSymbolName(callee.getValue());
   else
-    p << *op.getOperand(0);
+    p << op.getOperand(0);
 
   p << '(' << op.getOperands().drop_front(isDirect ? 0 : 1) << ')';
   p.printOptionalAttrDict(op.getAttrs(), {"callee"});
@@ -408,17 +408,17 @@ static ParseResult parseCallOp(OpAsmParser &parser, OperationState &result) {
 void LLVM::ExtractElementOp::build(Builder *b, OperationState &result,
                                    Value vector, Value position,
                                    ArrayRef<NamedAttribute> attrs) {
-  auto wrappedVectorType = vector->getType().cast<LLVM::LLVMType>();
+  auto wrappedVectorType = vector.getType().cast<LLVM::LLVMType>();
   auto llvmType = wrappedVectorType.getVectorElementType();
   build(b, result, llvmType, vector, position);
   result.addAttributes(attrs);
 }
 
 static void printExtractElementOp(OpAsmPrinter &p, ExtractElementOp &op) {
-  p << op.getOperationName() << ' ' << *op.vector() << "[" << *op.position()
-    << " : " << op.position()->getType() << "]";
+  p << op.getOperationName() << ' ' << op.vector() << "[" << op.position()
+    << " : " << op.position().getType() << "]";
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.vector()->getType();
+  p << " : " << op.vector().getType();
 }
 
 // <operation> ::= `llvm.extractelement` ssa-use `, ` ssa-use
@@ -450,9 +450,9 @@ static ParseResult parseExtractElementOp(OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 static void printExtractValueOp(OpAsmPrinter &p, ExtractValueOp &op) {
-  p << op.getOperationName() << ' ' << *op.container() << op.position();
+  p << op.getOperationName() << ' ' << op.container() << op.position();
   p.printOptionalAttrDict(op.getAttrs(), {"position"});
-  p << " : " << op.container()->getType();
+  p << " : " << op.container().getType();
 }
 
 // Extract the type at `position` in the wrapped LLVM IR aggregate type
@@ -542,10 +542,10 @@ static ParseResult parseExtractValueOp(OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 static void printInsertElementOp(OpAsmPrinter &p, InsertElementOp &op) {
-  p << op.getOperationName() << ' ' << *op.value() << ", " << *op.vector()
-    << "[" << *op.position() << " : " << op.position()->getType() << "]";
+  p << op.getOperationName() << ' ' << op.value() << ", " << op.vector() << "["
+    << op.position() << " : " << op.position().getType() << "]";
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.vector()->getType();
+  p << " : " << op.vector().getType();
 }
 
 // <operation> ::= `llvm.insertelement` ssa-use `,` ssa-use `,` ssa-use
@@ -586,10 +586,10 @@ static ParseResult parseInsertElementOp(OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 static void printInsertValueOp(OpAsmPrinter &p, InsertValueOp &op) {
-  p << op.getOperationName() << ' ' << *op.value() << ", " << *op.container()
+  p << op.getOperationName() << ' ' << op.value() << ", " << op.container()
     << op.position();
   p.printOptionalAttrDict(op.getAttrs(), {"position"});
-  p << " : " << op.container()->getType();
+  p << " : " << op.container().getType();
 }
 
 // <operation> ::= `llvm.insertvaluevalue` ssa-use `,` ssa-use
@@ -629,10 +629,10 @@ static ParseResult parseInsertValueOp(OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 static void printSelectOp(OpAsmPrinter &p, SelectOp &op) {
-  p << op.getOperationName() << ' ' << *op.condition() << ", "
-    << *op.trueValue() << ", " << *op.falseValue();
+  p << op.getOperationName() << ' ' << op.condition() << ", " << op.trueValue()
+    << ", " << op.falseValue();
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.condition()->getType() << ", " << op.trueValue()->getType();
+  p << " : " << op.condition().getType() << ", " << op.trueValue().getType();
 }
 
 // <operation> ::= `llvm.select` ssa-use `,` ssa-use `,` ssa-use
@@ -686,7 +686,7 @@ static ParseResult parseBrOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 
 static void printCondBrOp(OpAsmPrinter &p, CondBrOp &op) {
-  p << op.getOperationName() << ' ' << *op.getOperand(0) << ", ";
+  p << op.getOperationName() << ' ' << op.getOperand(0) << ", ";
   p.printSuccessorAndUseList(op.getOperation(), 0);
   p << ", ";
   p.printSuccessorAndUseList(op.getOperation(), 1);
@@ -733,7 +733,7 @@ static void printReturnOp(OpAsmPrinter &p, ReturnOp &op) {
   if (op.getNumOperands() == 0)
     return;
 
-  p << ' ' << *op.getOperand(0) << " : " << op.getOperand(0)->getType();
+  p << ' ' << op.getOperand(0) << " : " << op.getOperand(0).getType();
 }
 
 // <operation> ::= `llvm.return` ssa-use-list attribute-dict? `:`
@@ -761,7 +761,7 @@ static ParseResult parseReturnOp(OpAsmParser &parser, OperationState &result) {
 static void printUndefOp(OpAsmPrinter &p, UndefOp &op) {
   p << op.getOperationName();
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.res()->getType();
+  p << " : " << op.res().getType();
 }
 
 // <operation> ::= `llvm.mlir.undef` attribute-dict? : type
@@ -792,7 +792,7 @@ GlobalOp AddressOfOp::getGlobal() {
 static void printAddressOfOp(OpAsmPrinter &p, AddressOfOp op) {
   p << op.getOperationName() << " @" << op.global_name();
   p.printOptionalAttrDict(op.getAttrs(), {"global_name"});
-  p << " : " << op.getResult()->getType();
+  p << " : " << op.getResult().getType();
 }
 
 static ParseResult parseAddressOfOp(OpAsmParser &parser,
@@ -816,7 +816,7 @@ static LogicalResult verify(AddressOfOp op) {
         "must reference a global defined by 'llvm.mlir.global'");
 
   if (global.getType().getPointerTo(global.addr_space().getZExtValue()) !=
-      op.getResult()->getType())
+      op.getResult().getType())
     return op.emitOpError(
         "the type must be a pointer to the type of the referred global");
 
@@ -830,7 +830,7 @@ static LogicalResult verify(AddressOfOp op) {
 static void printConstantOp(OpAsmPrinter &p, ConstantOp &op) {
   p << op.getOperationName() << '(' << op.value() << ')';
   p.printOptionalAttrDict(op.getAttrs(), {"value"});
-  p << " : " << op.res()->getType();
+  p << " : " << op.res().getType();
 }
 
 // <operation> ::= `llvm.mlir.constant` `(` attribute `)` attribute-list? : type
@@ -1060,7 +1060,7 @@ static LogicalResult verify(GlobalOp op) {
 void LLVM::ShuffleVectorOp::build(Builder *b, OperationState &result, Value v1,
                                   Value v2, ArrayAttr mask,
                                   ArrayRef<NamedAttribute> attrs) {
-  auto wrappedContainerType1 = v1->getType().cast<LLVM::LLVMType>();
+  auto wrappedContainerType1 = v1.getType().cast<LLVM::LLVMType>();
   auto vType = LLVMType::getVectorTy(
       wrappedContainerType1.getVectorElementType(), mask.size());
   build(b, result, vType, v1, v2, mask);
@@ -1068,10 +1068,10 @@ void LLVM::ShuffleVectorOp::build(Builder *b, OperationState &result, Value v1,
 }
 
 static void printShuffleVectorOp(OpAsmPrinter &p, ShuffleVectorOp &op) {
-  p << op.getOperationName() << ' ' << *op.v1() << ", " << *op.v2() << " "
+  p << op.getOperationName() << ' ' << op.v1() << ", " << op.v2() << " "
     << op.mask();
   p.printOptionalAttrDict(op.getAttrs(), {"mask"});
-  p << " : " << op.v1()->getType() << ", " << op.v2()->getType();
+  p << " : " << op.v1().getType() << ", " << op.v2().getType();
 }
 
 // <operation> ::= `llvm.shufflevector` ssa-use `, ` ssa-use
@@ -1329,7 +1329,7 @@ static LogicalResult verify(LLVMFuncOp op) {
   unsigned numArguments = funcType->getNumParams();
   Block &entryBlock = op.front();
   for (unsigned i = 0; i < numArguments; ++i) {
-    Type argType = entryBlock.getArgument(i)->getType();
+    Type argType = entryBlock.getArgument(i).getType();
     auto argLLVMType = argType.dyn_cast<LLVMType>();
     if (!argLLVMType)
       return op.emitOpError("entry block argument #")

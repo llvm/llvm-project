@@ -78,7 +78,7 @@ static StructuredData::ObjectSP ParseJSONObject(json::Object *object) {
     if (StructuredData::ObjectSP value_sp = ParseJSONValue(value))
       dict_up->AddItem(key, value_sp);
   }
-  return dict_up;
+  return std::move(dict_up);
 }
 
 static StructuredData::ObjectSP ParseJSONArray(json::Array *array) {
@@ -87,7 +87,7 @@ static StructuredData::ObjectSP ParseJSONArray(json::Array *array) {
     if (StructuredData::ObjectSP value_sp = ParseJSONValue(value))
       array_up->AddItem(value_sp);
   }
-  return array_up;
+  return std::move(array_up);
 }
 
 StructuredData::ObjectSP

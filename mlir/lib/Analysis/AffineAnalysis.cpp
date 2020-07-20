@@ -53,7 +53,7 @@ void mlir::getReachableAffineApplyOps(
 
   while (!worklist.empty()) {
     State &state = worklist.back();
-    auto *opInst = state.value->getDefiningOp();
+    auto *opInst = state.value.getDefiningOp();
     // Note: getDefiningOp will return nullptr if the operand is not an
     // Operation (i.e. block argument), which is a terminator for the search.
     if (!isa_and_nonnull<AffineApplyOp>(opInst)) {
@@ -117,6 +117,7 @@ static LogicalResult getInstIndexSet(Operation *op,
   return getIndexSet(loops, indexSet);
 }
 
+namespace {
 // ValuePositionMap manages the mapping from Values which represent dimension
 // and symbol identifiers from 'src' and 'dst' access functions to positions
 // in new space where some Values are kept separate (using addSrc/DstValue)
@@ -195,6 +196,7 @@ private:
   DenseMap<Value, unsigned> dstDimPosMap;
   DenseMap<Value, unsigned> symbolPosMap;
 };
+} // namespace
 
 // Builds a map from Value to identifier position in a new merged identifier
 // list, which is the result of merging dim/symbol lists from src/dst
@@ -240,12 +242,11 @@ static void buildDimAndSymbolPositionMaps(
 
 // Sets up dependence constraints columns appropriately, in the format:
 // [src-dim-ids, dst-dim-ids, symbol-ids, local-ids, const_term]
-void initDependenceConstraints(const FlatAffineConstraints &srcDomain,
-                               const FlatAffineConstraints &dstDomain,
-                               const AffineValueMap &srcAccessMap,
-                               const AffineValueMap &dstAccessMap,
-                               const ValuePositionMap &valuePosMap,
-                               FlatAffineConstraints *dependenceConstraints) {
+static void initDependenceConstraints(
+    const FlatAffineConstraints &srcDomain,
+    const FlatAffineConstraints &dstDomain, const AffineValueMap &srcAccessMap,
+    const AffineValueMap &dstAccessMap, const ValuePositionMap &valuePosMap,
+    FlatAffineConstraints *dependenceConstraints) {
   // Calculate number of equalities/inequalities and columns required to
   // initialize FlatAffineConstraints for 'dependenceDomain'.
   unsigned numIneq =
@@ -455,7 +456,7 @@ addMemRefAccessConstraints(const AffineValueMap &srcAccessMap,
       auto symbol = operands[i];
       assert(isValidSymbol(symbol));
       // Check if the symbol is a constant.
-      if (auto cOp = dyn_cast_or_null<ConstantIndexOp>(symbol->getDefiningOp()))
+      if (auto cOp = dyn_cast_or_null<ConstantIndexOp>(symbol.getDefiningOp()))
         dependenceDomain->setIdToConstant(valuePosMap.getSymPos(symbol),
                                           cOp.getValue());
     }

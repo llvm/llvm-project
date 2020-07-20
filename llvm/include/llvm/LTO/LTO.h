@@ -222,7 +222,7 @@ using NativeObjectCache =
 /// The details of this type definition aren't important; clients can only
 /// create a ThinBackend using one of the create*ThinBackend() functions below.
 using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
-    Config &C, ModuleSummaryIndex &CombinedIndex,
+    const Config &C, ModuleSummaryIndex &CombinedIndex,
     StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     AddStreamFn AddStream, NativeObjectCache Cache)>;
 
@@ -306,7 +306,8 @@ private:
   Config Conf;
 
   struct RegularLTOState {
-    RegularLTOState(unsigned ParallelCodeGenParallelismLevel, Config &Conf);
+    RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
+                    const Config &Conf);
     struct CommonResolution {
       uint64_t Size = 0;
       MaybeAlign Align;

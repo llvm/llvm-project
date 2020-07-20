@@ -300,8 +300,7 @@ ConvertTypeToDiagnosticString(ASTContext &Context, QualType Ty,
     // Give some additional info on vector types. These are either not desugared
     // or displaying complex __attribute__ expressions so add details of the
     // type and element count.
-    if (Ty->isVectorType()) {
-      const VectorType *VTy = Ty->getAs<VectorType>();
+    if (const auto *VTy = Ty->getAs<VectorType>()) {
       std::string DecoratedString;
       llvm::raw_string_ostream OS(DecoratedString);
       const char *Values = VTy->getNumElements() > 1 ? "values" : "value";
@@ -604,8 +603,7 @@ class TemplateDiff {
     unsigned ReadNode;
 
   public:
-    DiffTree() :
-        CurrentNode(0), NextFreeNode(1) {
+    DiffTree() : CurrentNode(0), NextFreeNode(1), ReadNode(0) {
       FlatTree.push_back(DiffNode());
     }
 

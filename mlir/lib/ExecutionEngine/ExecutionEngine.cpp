@@ -122,7 +122,7 @@ static std::string makePackedFunctionName(StringRef name) {
 // For each function in the LLVM module, define an interface function that wraps
 // all the arguments of the original function and all its results into an i8**
 // pointer to provide a unified invocation interface.
-void packFunctionArguments(Module *module) {
+static void packFunctionArguments(Module *module) {
   auto &ctx = module->getContext();
   llvm::IRBuilder<> builder(ctx);
   DenseSet<llvm::Function *> interfaceFunctions;
@@ -256,14 +256,14 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
   // Callback to inspect the cache and recompile on demand. This follows Lang's
   // LLJITWithObjectCache example.
   auto compileFunctionCreator = [&](JITTargetMachineBuilder JTMB)
-      -> Expected<IRCompileLayer::CompileFunction> {
+      -> Expected<std::unique_ptr<IRCompileLayer::IRCompiler>> {
     if (jitCodeGenOptLevel)
       JTMB.setCodeGenOptLevel(jitCodeGenOptLevel.getValue());
     auto TM = JTMB.createTargetMachine();
     if (!TM)
       return TM.takeError();
-    return IRCompileLayer::CompileFunction(
-        TMOwningSimpleCompiler(std::move(*TM), engine->cache.get()));
+    return std::make_unique<TMOwningSimpleCompiler>(std::move(*TM),
+                                                    engine->cache.get());
   };
 
   // Create the LLJIT by calling the LLJITBuilder with 2 callbacks.

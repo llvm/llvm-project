@@ -63,9 +63,9 @@ static void getARMHWDivFeatures(const Driver &D, const Arg *A,
 }
 
 // Handle -mfpu=.
-unsigned getARMFPUFeatures(const Driver &D, const Arg *A,
-                              const ArgList &Args, StringRef FPU,
-                              std::vector<StringRef> &Features) {
+static unsigned getARMFPUFeatures(const Driver &D, const Arg *A,
+                                  const ArgList &Args, StringRef FPU,
+                                  std::vector<StringRef> &Features) {
   unsigned FPUID = llvm::ARM::parseFPU(FPU);
   if (!llvm::ARM::getFPUFeatures(FPUID, Features))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);

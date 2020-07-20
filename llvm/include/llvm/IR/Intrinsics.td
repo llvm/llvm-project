@@ -1314,7 +1314,9 @@ def int_loop_decrement :
 // maximum number of elements processed in an iteration). Return the remaining
 // number of iterations still to be executed. This is effectively a sub which
 // can be used with a phi, icmp and br to control the number of iterations
-// executed, as usual.
+// executed, as usual. Any optimisations are allowed to treat it is a sub, and
+// it's scevable, so it's the backends responsibility to handle cases where it
+// may be optimised.
 def int_loop_decrement_reg :
   Intrinsic<[llvm_anyint_ty],
             [llvm_anyint_ty, llvm_anyint_ty], [IntrNoDuplicate]>;

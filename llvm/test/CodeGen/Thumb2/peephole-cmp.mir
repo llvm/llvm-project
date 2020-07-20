@@ -23,7 +23,7 @@ body:             |
     liveins: $r0
 
     %0:rgpr = COPY $r0
-    %1:gprnopc = t2ADDri %stack.0.f, 0, 14, $noreg, $noreg
+    %1:rgpr = t2ADDri %stack.0.f, 0, 14, $noreg, $noreg
     t2CMPrr %1, %0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 3, $cpsr
     t2B %bb.1, 14, $noreg
@@ -37,7 +37,7 @@ body:             |
     tBX_RET 14, $noreg
 
 # CHECK-LABEL: name: test_addir_frameindex
-# CHECK:      %1:gprnopc = t2ADDri %stack.0.f, 0, 14, $noreg, $noreg
+# CHECK:      %1:rgpr = t2ADDri %stack.0.f, 0, 14, $noreg, $noreg
 # CHECK-NEXT: t2CMPrr %1, %0, 14, $noreg, implicit-def $cpsr
 # CHECK-NEXT: t2Bcc %bb.2, 3, $cpsr
 ...

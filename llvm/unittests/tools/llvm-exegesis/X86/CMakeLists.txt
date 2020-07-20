@@ -13,7 +13,7 @@ set(LLVM_LINK_COMPONENTS
   X86
   )
 
-add_llvm_unittest(LLVMExegesisX86Tests
+add_llvm_target_unittest(LLVMExegesisX86Tests
   AssemblerTest.cpp
   BenchmarkResultTest.cpp
   RegisterAliasingTest.cpp

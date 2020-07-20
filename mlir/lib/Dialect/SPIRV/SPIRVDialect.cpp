@@ -104,7 +104,7 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
     // Replace the values directly with the return operands.
     assert(valuesToRepl.size() == 1 &&
            "spv.ReturnValue expected to only handle one result");
-    valuesToRepl.front()->replaceAllUsesWith(retValOp.value());
+    valuesToRepl.front().replaceAllUsesWith(retValOp.value());
   }
 };
 } // namespace
@@ -375,6 +375,7 @@ Optional<uint64_t> parseAndVerify<uint64_t>(SPIRVDialect const &dialect,
   return parseAndVerifyInteger<uint64_t>(dialect, parser);
 }
 
+namespace {
 // Functor object to parse a comma separated list of specs. The function
 // parseAndVerify does the actual parsing and verification of individual
 // elements. This is a functor since parsing the last element of the list
@@ -407,6 +408,7 @@ template <typename ParseType> struct parseCommaSeparatedList<ParseType> {
     return llvm::None;
   }
 };
+} // namespace
 
 // dim ::= `1D` | `2D` | `3D` | `Cube` | <and other SPIR-V Dim specifiers...>
 //
@@ -648,15 +650,26 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   StringRef symbol = attribute.first.strref();
   Attribute attr = attribute.second;
 
-  if (symbol != spirv::getEntryPointABIAttrName())
+  // TODO(antiagainst): figure out a way to generate the description from the
+  // StructAttr definition.
+  if (symbol == spirv::getEntryPointABIAttrName()) {
+    if (!attr.isa<spirv::EntryPointABIAttr>())
+      return op->emitError("'")
+             << symbol
+             << "' attribute must be a dictionary attribute containing one "
+                "32-bit integer elements attribute: 'local_size'";
+  } else if (symbol == spirv::getTargetEnvAttrName()) {
+    if (!attr.isa<spirv::TargetEnvAttr>())
+      return op->emitError("'")
+             << symbol
+             << "' must be a dictionary attribute containing one 32-bit "
+                "integer attribute 'version', one string array attribute "
+                "'extensions', and one 32-bit integer array attribute "
+                "'capabilities'";
+  } else {
     return op->emitError("found unsupported '")
            << symbol << "' attribute on operation";
-
-  if (!spirv::EntryPointABIAttr::classof(attr))
-    return op->emitError("'")
-           << symbol
-           << "' attribute must be a dictionary attribute containing one "
-              "integer elements attribute: 'local_size'";
+  }
 
   return success();
 }
@@ -673,11 +686,11 @@ verifyRegionAttribute(Location loc, NamedAttribute attribute, bool forArg) {
            << symbol << "' attribute on region "
            << (forArg ? "argument" : "result");
 
-  if (!spirv::InterfaceVarABIAttr::classof(attr))
+  if (!attr.isa<spirv::InterfaceVarABIAttr>())
     return emitError(loc, "'")
            << symbol
            << "' attribute must be a dictionary attribute containing three "
-              "integer attributes: 'descriptor_set', 'binding', and "
+              "32-bit integer attributes: 'descriptor_set', 'binding', and "
               "'storage_class'";
 
   return success();

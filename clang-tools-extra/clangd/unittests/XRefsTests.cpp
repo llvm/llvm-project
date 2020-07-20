@@ -937,6 +937,13 @@ TEST(FindReferences, WithinAST) {
           [[CAT]](Fo, o) foo4;
         }
       )cpp",
+
+      R"cpp(// Macros
+        #define [[MA^CRO]](X) (X+1)
+        void test() {
+          int x = [[MACRO]]([[MACRO]](1));
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
@@ -1011,7 +1018,7 @@ TEST(FindReferences, ExplicitSymbols) {
   }
 }
 
-TEST(FindReferences, NeedsIndex) {
+TEST(FindReferences, NeedsIndexForSymbols) {
   const char *Header = "int foo();";
   Annotations Main("int main() { [[f^oo]](); }");
   TestTU TU;
@@ -1040,11 +1047,47 @@ TEST(FindReferences, NeedsIndex) {
   EXPECT_EQ(1u, LimitRefs.References.size());
   EXPECT_TRUE(LimitRefs.HasMore);
 
-  // If the main file is in the index, we don't return duplicates.
-  // (even if the references are in a different location)
+  // Avoid indexed results for the main file. Use AST for the mainfile.
   TU.Code = ("\n\n" + Main.code()).str();
   EXPECT_THAT(findReferences(AST, Main.point(), 0, TU.index().get()).References,
               ElementsAre(RangeIs(Main.range())));
+}
+
+TEST(FindReferences, NeedsIndexForMacro) {
+  const char *Header = "#define MACRO(X) (X+1)";
+  Annotations Main(R"cpp(
+    int main() {
+      int a = [[MA^CRO]](1);
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = Main.code();
+  TU.HeaderCode = Header;
+  auto AST = TU.build();
+
+  // References in main file are returned without index.
+  EXPECT_THAT(
+      findReferences(AST, Main.point(), 0, /*Index=*/nullptr).References,
+      ElementsAre(RangeIs(Main.range())));
+
+  Annotations IndexedMain(R"cpp(
+    int indexed_main() {
+      int a = [[MACRO]](1);
+    }
+  )cpp");
+
+  // References from indexed files are included.
+  TestTU IndexedTU;
+  IndexedTU.Code = IndexedMain.code();
+  IndexedTU.Filename = "Indexed.cpp";
+  IndexedTU.HeaderCode = Header;
+  EXPECT_THAT(
+      findReferences(AST, Main.point(), 0, IndexedTU.index().get()).References,
+      ElementsAre(RangeIs(Main.range()), RangeIs(IndexedMain.range())));
+  auto LimitRefs =
+      findReferences(AST, Main.point(), /*Limit*/ 1, IndexedTU.index().get());
+  EXPECT_EQ(1u, LimitRefs.References.size());
+  EXPECT_TRUE(LimitRefs.HasMore);
 }
 
 TEST(FindReferences, NoQueryForLocalSymbols) {

@@ -32,7 +32,7 @@ public:
   virtual void writeGotPltHeader(uint8_t *buf) const {}
   virtual void writeGotHeader(uint8_t *buf) const {}
   virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {};
-  virtual void writeIgotPlt(uint8_t *buf, const Symbol &s) const;
+  virtual void writeIgotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual int64_t getImplicitAddend(const uint8_t *buf, RelType type) const;
   virtual int getTlsGdRelaxSkip(RelType type) const { return 1; }
 
@@ -48,6 +48,7 @@ public:
     // All but PPC32 and PPC64 use the same format for .plt and .iplt entries.
     writePlt(buf, sym, pltEntryAddr);
   }
+  virtual void writeIBTPlt(uint8_t *buf, size_t numEntries) const {}
   virtual void addPltHeaderSymbols(InputSection &isec) const {}
   virtual void addPltSymbols(InputSection &isec, uint64_t off) const {}
 

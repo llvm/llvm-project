@@ -305,7 +305,7 @@ def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
 }
 
 def SImm8Operand : SImmOperand<8>;
-def simm8 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -128 && Imm < 127; }]> {
+def simm8 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -128 && Imm < 127; }]> {
   let ParserMatchClass = SImm8Operand;
   let DecoderMethod = "DecodeSImm<8>";
 }
@@ -1483,6 +1483,7 @@ class RCPCLoad<bits<2> sz, string asm, RegisterClass RC>
 class AuthBase<bits<1> M, dag oops, dag iops, string asm, string operands,
                list<dag> pattern>
   : I<oops, iops, asm, operands, "", pattern>, Sched<[]> {
+  let isAuthenticated = 1;
   let Inst{31-25} = 0b1101011;
   let Inst{20-11} = 0b1111100001;
   let Inst{10} = M;
@@ -1522,6 +1523,7 @@ class BaseAuthLoad<bit M, bit W, dag oops, dag iops, string asm,
   bits<10> offset;
   bits<5> Rn;
   bits<5> Rt;
+  let isAuthenticated = 1;
   let Inst{31-24} = 0b11111000;
   let Inst{23} = M;
   let Inst{22} = offset{9};
@@ -4700,11 +4702,11 @@ class BaseFPConversion<bits<2> type, bits<2> opcode, RegisterClass dstType,
 multiclass FPConversion<string asm> {
   // Double-precision to Half-precision
   def HDr : BaseFPConversion<0b01, 0b11, FPR16, FPR64, asm,
-                             [(set FPR16:$Rd, (fpround FPR64:$Rn))]>;
+                             [(set FPR16:$Rd, (any_fpround FPR64:$Rn))]>;
 
   // Double-precision to Single-precision
   def SDr : BaseFPConversion<0b01, 0b00, FPR32, FPR64, asm,
-                             [(set FPR32:$Rd, (fpround FPR64:$Rn))]>;
+                             [(set FPR32:$Rd, (any_fpround FPR64:$Rn))]>;
 
   // Half-precision to Double-precision
   def DHr : BaseFPConversion<0b11, 0b01, FPR64, FPR16, asm,
@@ -4720,7 +4722,7 @@ multiclass FPConversion<string asm> {
 
   // Single-precision to Half-precision
   def HSr : BaseFPConversion<0b00, 0b11, FPR16, FPR32, asm,
-                             [(set FPR16:$Rd, (fpround FPR32:$Rn))]>;
+                             [(set FPR16:$Rd, (any_fpround FPR32:$Rn))]>;
 }
 
 //---

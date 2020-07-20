@@ -156,6 +156,7 @@ private:
   DenseMap<const MachineInstr *, InstrInfo> Instructions;
   DenseMap<MachineBasicBlock *, BlockInfo> Blocks;
   SmallVector<MachineInstr *, 1> LiveMaskQueries;
+  SmallVector<MachineInstr *, 4> LowerToMovInstrs;
   SmallVector<MachineInstr *, 4> LowerToCopyInstrs;
 
   void printInfo();
@@ -352,7 +353,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         // inactive lanes.
         markInstructionUses(MI, StateWWM, Worklist);
         GlobalFlags |= StateWWM;
-        LowerToCopyInstrs.push_back(&MI);
+        LowerToMovInstrs.push_back(&MI);
         continue;
       } else if (Opcode == AMDGPU::V_SET_INACTIVE_B32 ||
                  Opcode == AMDGPU::V_SET_INACTIVE_B64) {
@@ -852,9 +853,8 @@ void SIWholeQuadMode::lowerLiveMaskQueries(unsigned LiveMaskReg) {
 }
 
 void SIWholeQuadMode::lowerCopyInstrs() {
-  for (MachineInstr *MI : LowerToCopyInstrs) {
-    for (unsigned i = MI->getNumExplicitOperands() - 1; i > 1; i--)
-      MI->RemoveOperand(i);
+  for (MachineInstr *MI : LowerToMovInstrs) {
+    assert(MI->getNumExplicitOperands() == 2);
 
     const Register Reg = MI->getOperand(0).getReg();
 
@@ -872,6 +872,22 @@ void SIWholeQuadMode::lowerCopyInstrs() {
       MI->setDesc(TII->get(AMDGPU::COPY));
     }
   }
+  for (MachineInstr *MI : LowerToCopyInstrs) {
+    if (MI->getOpcode() == AMDGPU::V_SET_INACTIVE_B32 ||
+        MI->getOpcode() == AMDGPU::V_SET_INACTIVE_B64) {
+      assert(MI->getNumExplicitOperands() == 3);
+      // the only reason we should be here is V_SET_INACTIVE has
+      // an undef input so it is being replaced by a simple copy.
+      // There should be a second undef source that we should remove.
+      assert(MI->getOperand(2).isUndef());
+      MI->RemoveOperand(2);
+      MI->untieRegOperand(1);
+    } else {
+      assert(MI->getNumExplicitOperands() == 2);
+    }
+
+    MI->setDesc(TII->get(AMDGPU::COPY));
+  }
 }
 
 bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
@@ -879,6 +895,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   Blocks.clear();
   LiveMaskQueries.clear();
   LowerToCopyInstrs.clear();
+  LowerToMovInstrs.clear();
   CallingConv = MF.getFunction().getCallingConv();
 
   ST = &MF.getSubtarget<GCNSubtarget>();
@@ -893,7 +910,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   unsigned Exec = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
   if (!(GlobalFlags & StateWQM)) {
     lowerLiveMaskQueries(Exec);
-    if (!(GlobalFlags & StateWWM) && LowerToCopyInstrs.empty())
+    if (!(GlobalFlags & StateWWM) && LowerToCopyInstrs.empty() && LowerToMovInstrs.empty())
       return !LiveMaskQueries.empty();
   } else {
     // Store a copy of the original live mask when required

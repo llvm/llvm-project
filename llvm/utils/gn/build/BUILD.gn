@@ -60,6 +60,7 @@ config("compiler_defaults") {
     if (is_optimized) {
       cflags += [
         "/O2",
+        "/Gw",
         "/Zc:inline",
       ]
       ldflags += [

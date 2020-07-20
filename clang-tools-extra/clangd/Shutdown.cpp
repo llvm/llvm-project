@@ -9,6 +9,7 @@
 #include "Shutdown.h"
 
 #include <atomic>
+#include <cstdlib>
 #include <thread>
 
 namespace clang {

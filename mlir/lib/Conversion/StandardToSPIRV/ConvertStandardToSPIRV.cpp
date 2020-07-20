@@ -74,7 +74,7 @@ public:
   matchAndRewrite(StdOp operation, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto resultType =
-        this->typeConverter.convertType(operation.getResult()->getType());
+        this->typeConverter.convertType(operation.getResult().getType());
     rewriter.template replaceOpWithNewOp<SPIRVOp>(
         operation, resultType, operands, ArrayRef<NamedAttribute>());
     return this->matchSuccess();
@@ -139,10 +139,11 @@ public:
 
 // TODO(ravishankarm) : This method assumes that the `origBaseType` is a
 // MemRefType with AffineMap that has static strides. Handle dynamic strides
-spirv::AccessChainOp getElementPtr(OpBuilder &builder,
-                                   SPIRVTypeConverter &typeConverter,
-                                   Location loc, MemRefType origBaseType,
-                                   Value basePtr, ArrayRef<Value> indices) {
+static spirv::AccessChainOp getElementPtr(OpBuilder &builder,
+                                          SPIRVTypeConverter &typeConverter,
+                                          Location loc, MemRefType origBaseType,
+                                          Value basePtr,
+                                          ArrayRef<Value> indices) {
   // Get base and offset of the MemRefType and verify they are static.
   int64_t offset;
   SmallVector<int64_t, 4> strides;
@@ -178,7 +179,7 @@ spirv::AccessChainOp getElementPtr(OpBuilder &builder,
 PatternMatchResult ConstantIndexOpConversion::matchAndRewrite(
     ConstantOp constIndexOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  if (!constIndexOp.getResult()->getType().isa<IndexType>()) {
+  if (!constIndexOp.getResult().getType().isa<IndexType>()) {
     return matchFailure();
   }
   // The attribute has index type which is not directly supported in
@@ -197,7 +198,7 @@ PatternMatchResult ConstantIndexOpConversion::matchAndRewrite(
     return matchFailure();
   }
   auto spirvConstType =
-      typeConverter.convertType(constIndexOp.getResult()->getType());
+      typeConverter.convertType(constIndexOp.getResult().getType());
   auto spirvConstVal =
       rewriter.getIntegerAttr(spirvConstType, constAttr.getInt());
   rewriter.replaceOpWithNewOp<spirv::ConstantOp>(constIndexOp, spirvConstType,
@@ -217,9 +218,9 @@ CmpFOpConversion::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
   switch (cmpFOp.getPredicate()) {
 #define DISPATCH(cmpPredicate, spirvOp)                                        \
   case cmpPredicate:                                                           \
-    rewriter.replaceOpWithNewOp<spirvOp>(                                      \
-        cmpFOp, cmpFOp.getResult()->getType(), cmpFOpOperands.lhs(),           \
-        cmpFOpOperands.rhs());                                                 \
+    rewriter.replaceOpWithNewOp<spirvOp>(cmpFOp, cmpFOp.getResult().getType(), \
+                                         cmpFOpOperands.lhs(),                 \
+                                         cmpFOpOperands.rhs());                \
     return matchSuccess();
 
     // Ordered.
@@ -257,9 +258,9 @@ CmpIOpConversion::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
   switch (cmpIOp.getPredicate()) {
 #define DISPATCH(cmpPredicate, spirvOp)                                        \
   case cmpPredicate:                                                           \
-    rewriter.replaceOpWithNewOp<spirvOp>(                                      \
-        cmpIOp, cmpIOp.getResult()->getType(), cmpIOpOperands.lhs(),           \
-        cmpIOpOperands.rhs());                                                 \
+    rewriter.replaceOpWithNewOp<spirvOp>(cmpIOp, cmpIOp.getResult().getType(), \
+                                         cmpIOpOperands.lhs(),                 \
+                                         cmpIOpOperands.rhs());                \
     return matchSuccess();
 
     DISPATCH(CmpIPredicate::eq, spirv::IEqualOp);
@@ -287,7 +288,7 @@ LoadOpConversion::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   LoadOpOperandAdaptor loadOperands(operands);
   auto loadPtr = getElementPtr(rewriter, typeConverter, loadOp.getLoc(),
-                               loadOp.memref()->getType().cast<MemRefType>(),
+                               loadOp.memref().getType().cast<MemRefType>(),
                                loadOperands.memref(), loadOperands.indices());
   rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr,
                                              /*memory_access =*/nullptr,
@@ -333,7 +334,7 @@ StoreOpConversion::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
   StoreOpOperandAdaptor storeOperands(operands);
   auto storePtr =
       getElementPtr(rewriter, typeConverter, storeOp.getLoc(),
-                    storeOp.memref()->getType().cast<MemRefType>(),
+                    storeOp.memref().getType().cast<MemRefType>(),
                     storeOperands.memref(), storeOperands.indices());
   rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, storePtr,
                                               storeOperands.value(),

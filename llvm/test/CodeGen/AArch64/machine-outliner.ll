@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin -mcpu=cortex-a53 -enable-misched=false < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -aarch64-load-store-renaming=true -mtriple=aarch64-apple-darwin < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -aarch64-load-store-renaming=true -mtriple=aarch64-apple-darwin -mcpu=cortex-a53 -enable-misched=false < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -enable-linkonceodr-outlining -mtriple=aarch64-apple-darwin < %s | FileCheck %s -check-prefix=ODR
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin -stop-after=machine-outliner < %s | FileCheck %s -check-prefix=TARGET_FEATURES
 

@@ -804,6 +804,34 @@ llvm.func @vector_ops(%arg0: !llvm<"<4 x float>">, %arg1: !llvm<"<4 x i1>">, %ar
   llvm.return %1 : !llvm<"<4 x float>">
 }
 
+// CHECK-LABEL: @vector_splat_1d
+llvm.func @vector_splat_1d() -> !llvm<"<4 x float>"> {
+  // CHECK: ret <4 x float> zeroinitializer
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4xf32>) : !llvm<"<4 x float>">
+  llvm.return %0 : !llvm<"<4 x float>">
+}
+
+// CHECK-LABEL: @vector_splat_2d
+llvm.func @vector_splat_2d() -> !llvm<"[4 x <16 x float>]"> {
+  // CHECK: ret [4 x <16 x float>] zeroinitializer
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16xf32>) : !llvm<"[4 x <16 x float>]">
+  llvm.return %0 : !llvm<"[4 x <16 x float>]">
+}
+
+// CHECK-LABEL: @vector_splat_3d
+llvm.func @vector_splat_3d() -> !llvm<"[4 x [16 x <4 x float>]]"> {
+  // CHECK: ret [4 x [16 x <4 x float>]] zeroinitializer
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16x4xf32>) : !llvm<"[4 x [16 x <4 x float>]]">
+  llvm.return %0 : !llvm<"[4 x [16 x <4 x float>]]">
+}
+
+// CHECK-LABEL: @vector_splat_nonzero
+llvm.func @vector_splat_nonzero() -> !llvm<"<4 x float>"> {
+  // CHECK: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : !llvm<"<4 x float>">
+  llvm.return %0 : !llvm<"<4 x float>">
+}
+
 // CHECK-LABEL: @ops
 llvm.func @ops(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm.i32, %arg3: !llvm.i32) -> !llvm<"{ float, i32 }"> {
 // CHECK-NEXT: fsub float %0, %1

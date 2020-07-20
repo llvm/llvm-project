@@ -14,10 +14,13 @@
 #include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/ODSDialectHook.h"
+#include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -25,9 +28,34 @@
 
 #define DEBUG_TYPE "mlir-tblgen-opdefgen"
 
-using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
+
+using llvm::CodeInit;
+using llvm::DefInit;
+using llvm::formatv;
+using llvm::Init;
+using llvm::ListInit;
+using llvm::Record;
+using llvm::RecordKeeper;
+using llvm::StringInit;
+
+//===----------------------------------------------------------------------===//
+// Dialect hook registration
+//===----------------------------------------------------------------------===//
+
+static llvm::ManagedStatic<llvm::StringMap<DialectEmitFunction>> dialectHooks;
+
+ODSDialectHookRegistration::ODSDialectHookRegistration(
+    StringRef dialectName, DialectEmitFunction emitFn) {
+  bool inserted = dialectHooks->try_emplace(dialectName, emitFn).second;
+  assert(inserted && "Multiple ODS hooks for the same dialect!");
+  (void)inserted;
+}
+
+//===----------------------------------------------------------------------===//
+// Static string definitions
+//===----------------------------------------------------------------------===//
 
 static const char *const tblgenNamePrefix = "tblgen_";
 static const char *const generatedArgName = "tblgen_arg";
@@ -114,6 +142,10 @@ static bool canUseUnwrappedRawValue(const tblgen::Attribute &attr) {
          !attr.getConstBuilderTemplate().empty();
 }
 
+//===----------------------------------------------------------------------===//
+// Op emitter
+//===----------------------------------------------------------------------===//
+
 namespace {
 // Simple RAII helper for defining ifdef-undef-endif scopes.
 class IfDefScope {
@@ -130,346 +162,6 @@ private:
   raw_ostream &os;
 };
 } // end anonymous namespace
-
-//===----------------------------------------------------------------------===//
-// Classes for C++ code emission
-//===----------------------------------------------------------------------===//
-
-// We emit the op declaration and definition into separate files: *Ops.h.inc
-// and *Ops.cpp.inc. The former is to be included in the dialect *Ops.h and
-// the latter for dialect *Ops.cpp. This way provides a cleaner interface.
-//
-// In order to do this split, we need to track method signature and
-// implementation logic separately. Signature information is used for both
-// declaration and definition, while implementation logic is only for
-// definition. So we have the following classes for C++ code emission.
-
-namespace {
-// Class for holding the signature of an op's method for C++ code emission
-class OpMethodSignature {
-public:
-  OpMethodSignature(StringRef retType, StringRef name, StringRef params);
-
-  // Writes the signature as a method declaration to the given `os`.
-  void writeDeclTo(raw_ostream &os) const;
-  // Writes the signature as the start of a method definition to the given `os`.
-  // `namePrefix` is the prefix to be prepended to the method name (typically
-  // namespaces for qualifying the method definition).
-  void writeDefTo(raw_ostream &os, StringRef namePrefix) const;
-
-private:
-  // Returns true if the given C++ `type` ends with '&' or '*', or is empty.
-  static bool elideSpaceAfterType(StringRef type);
-
-  std::string returnType;
-  std::string methodName;
-  std::string parameters;
-};
-
-// Class for holding the body of an op's method for C++ code emission
-class OpMethodBody {
-public:
-  explicit OpMethodBody(bool declOnly);
-
-  OpMethodBody &operator<<(Twine content);
-  OpMethodBody &operator<<(int content);
-  OpMethodBody &operator<<(const FmtObjectBase &content);
-
-  void writeTo(raw_ostream &os) const;
-
-private:
-  // Whether this class should record method body.
-  bool isEffective;
-  std::string body;
-};
-
-// Class for holding an op's method for C++ code emission
-class OpMethod {
-public:
-  // Properties (qualifiers) of class methods. Bitfield is used here to help
-  // querying properties.
-  enum Property {
-    MP_None = 0x0,
-    MP_Static = 0x1,      // Static method
-    MP_Constructor = 0x2, // Constructor
-    MP_Private = 0x4,     // Private method
-  };
-
-  OpMethod(StringRef retType, StringRef name, StringRef params,
-           Property property, bool declOnly);
-
-  OpMethodBody &body();
-
-  // Returns true if this is a static method.
-  bool isStatic() const;
-
-  // Returns true if this is a private method.
-  bool isPrivate() const;
-
-  // Writes the method as a declaration to the given `os`.
-  void writeDeclTo(raw_ostream &os) const;
-  // Writes the method as a definition to the given `os`. `namePrefix` is the
-  // prefix to be prepended to the method name (typically namespaces for
-  // qualifying the method definition).
-  void writeDefTo(raw_ostream &os, StringRef namePrefix) const;
-
-private:
-  Property properties;
-  // Whether this method only contains a declaration.
-  bool isDeclOnly;
-  OpMethodSignature methodSignature;
-  OpMethodBody methodBody;
-};
-
-// A class used to emit C++ classes from Tablegen.  Contains a list of public
-// methods and a list of private fields to be emitted.
-class Class {
-public:
-  explicit Class(StringRef name);
-
-  // Creates a new method in this class.
-  OpMethod &newMethod(StringRef retType, StringRef name, StringRef params = "",
-                      OpMethod::Property = OpMethod::MP_None,
-                      bool declOnly = false);
-
-  OpMethod &newConstructor(StringRef params = "", bool declOnly = false);
-
-  // Creates a new field in this class.
-  void newField(StringRef type, StringRef name, StringRef defaultValue = "");
-
-  // Writes this op's class as a declaration to the given `os`.
-  void writeDeclTo(raw_ostream &os) const;
-  // Writes the method definitions in this op's class to the given `os`.
-  void writeDefTo(raw_ostream &os) const;
-
-  // Returns the C++ class name of the op.
-  StringRef getClassName() const { return className; }
-
-protected:
-  std::string className;
-  SmallVector<OpMethod, 8> methods;
-  SmallVector<std::string, 4> fields;
-};
-
-// Class for holding an op for C++ code emission
-class OpClass : public Class {
-public:
-  explicit OpClass(StringRef name, StringRef extraClassDeclaration = "");
-
-  // Sets whether this OpClass should generate the using directive for its
-  // associate operand adaptor class.
-  void setHasOperandAdaptorClass(bool has);
-
-  // Adds an op trait.
-  void addTrait(Twine trait);
-
-  // Writes this op's class as a declaration to the given `os`.  Redefines
-  // Class::writeDeclTo to also emit traits and extra class declarations.
-  void writeDeclTo(raw_ostream &os) const;
-
-private:
-  StringRef extraClassDeclaration;
-  SmallVector<std::string, 4> traits;
-  bool hasOperandAdaptor;
-};
-} // end anonymous namespace
-
-OpMethodSignature::OpMethodSignature(StringRef retType, StringRef name,
-                                     StringRef params)
-    : returnType(retType), methodName(name), parameters(params) {}
-
-void OpMethodSignature::writeDeclTo(raw_ostream &os) const {
-  os << returnType << (elideSpaceAfterType(returnType) ? "" : " ") << methodName
-     << "(" << parameters << ")";
-}
-
-void OpMethodSignature::writeDefTo(raw_ostream &os,
-                                   StringRef namePrefix) const {
-  // We need to remove the default values for parameters in method definition.
-  // TODO(antiagainst): We are using '=' and ',' as delimiters for parameter
-  // initializers. This is incorrect for initializer list with more than one
-  // element. Change to a more robust approach.
-  auto removeParamDefaultValue = [](StringRef params) {
-    std::string result;
-    std::pair<StringRef, StringRef> parts;
-    while (!params.empty()) {
-      parts = params.split("=");
-      result.append(result.empty() ? "" : ", ");
-      result.append(parts.first);
-      params = parts.second.split(",").second;
-    }
-    return result;
-  };
-
-  os << returnType << (elideSpaceAfterType(returnType) ? "" : " ") << namePrefix
-     << (namePrefix.empty() ? "" : "::") << methodName << "("
-     << removeParamDefaultValue(parameters) << ")";
-}
-
-bool OpMethodSignature::elideSpaceAfterType(StringRef type) {
-  return type.empty() || type.endswith("&") || type.endswith("*");
-}
-
-OpMethodBody::OpMethodBody(bool declOnly) : isEffective(!declOnly) {}
-
-OpMethodBody &OpMethodBody::operator<<(Twine content) {
-  if (isEffective)
-    body.append(content.str());
-  return *this;
-}
-
-OpMethodBody &OpMethodBody::operator<<(int content) {
-  if (isEffective)
-    body.append(std::to_string(content));
-  return *this;
-}
-
-OpMethodBody &OpMethodBody::operator<<(const FmtObjectBase &content) {
-  if (isEffective)
-    body.append(content.str());
-  return *this;
-}
-
-void OpMethodBody::writeTo(raw_ostream &os) const {
-  auto bodyRef = StringRef(body).drop_while([](char c) { return c == '\n'; });
-  os << bodyRef;
-  if (bodyRef.empty() || bodyRef.back() != '\n')
-    os << "\n";
-}
-
-OpMethod::OpMethod(StringRef retType, StringRef name, StringRef params,
-                   OpMethod::Property property, bool declOnly)
-    : properties(property), isDeclOnly(declOnly),
-      methodSignature(retType, name, params), methodBody(declOnly) {}
-
-OpMethodBody &OpMethod::body() { return methodBody; }
-
-bool OpMethod::isStatic() const { return properties & MP_Static; }
-
-bool OpMethod::isPrivate() const { return properties & MP_Private; }
-
-void OpMethod::writeDeclTo(raw_ostream &os) const {
-  os.indent(2);
-  if (isStatic())
-    os << "static ";
-  methodSignature.writeDeclTo(os);
-  os << ";";
-}
-
-void OpMethod::writeDefTo(raw_ostream &os, StringRef namePrefix) const {
-  if (isDeclOnly)
-    return;
-
-  methodSignature.writeDefTo(os, namePrefix);
-  os << " {\n";
-  methodBody.writeTo(os);
-  os << "}";
-}
-
-Class::Class(StringRef name) : className(name) {}
-
-OpMethod &Class::newMethod(StringRef retType, StringRef name, StringRef params,
-                           OpMethod::Property property, bool declOnly) {
-  methods.emplace_back(retType, name, params, property, declOnly);
-  return methods.back();
-}
-
-OpMethod &Class::newConstructor(StringRef params, bool declOnly) {
-  return newMethod("", getClassName(), params, OpMethod::MP_Constructor,
-                   declOnly);
-}
-
-void Class::newField(StringRef type, StringRef name, StringRef defaultValue) {
-  std::string varName = formatv("{0} {1}", type, name).str();
-  std::string field = defaultValue.empty()
-                          ? varName
-                          : formatv("{0} = {1}", varName, defaultValue).str();
-  fields.push_back(std::move(field));
-}
-
-void Class::writeDeclTo(raw_ostream &os) const {
-  bool hasPrivateMethod = false;
-  os << "class " << className << " {\n";
-  os << "public:\n";
-  for (const auto &method : methods) {
-    if (!method.isPrivate()) {
-      method.writeDeclTo(os);
-      os << '\n';
-    } else {
-      hasPrivateMethod = true;
-    }
-  }
-  os << '\n';
-  os << "private:\n";
-  if (hasPrivateMethod) {
-    for (const auto &method : methods) {
-      if (method.isPrivate()) {
-        method.writeDeclTo(os);
-        os << '\n';
-      }
-    }
-    os << '\n';
-  }
-  for (const auto &field : fields)
-    os.indent(2) << field << ";\n";
-  os << "};\n";
-}
-
-void Class::writeDefTo(raw_ostream &os) const {
-  for (const auto &method : methods) {
-    method.writeDefTo(os, className);
-    os << "\n\n";
-  }
-}
-
-OpClass::OpClass(StringRef name, StringRef extraClassDeclaration)
-    : Class(name), extraClassDeclaration(extraClassDeclaration),
-      hasOperandAdaptor(true) {}
-
-void OpClass::setHasOperandAdaptorClass(bool has) { hasOperandAdaptor = has; }
-
-// Adds the given trait to this op.
-void OpClass::addTrait(Twine trait) { traits.push_back(trait.str()); }
-
-void OpClass::writeDeclTo(raw_ostream &os) const {
-  os << "class " << className << " : public Op<" << className;
-  for (const auto &trait : traits)
-    os << ", " << trait;
-  os << "> {\npublic:\n";
-  os << "  using Op::Op;\n";
-  if (hasOperandAdaptor)
-    os << "  using OperandAdaptor = " << className << "OperandAdaptor;\n";
-
-  bool hasPrivateMethod = false;
-  for (const auto &method : methods) {
-    if (!method.isPrivate()) {
-      method.writeDeclTo(os);
-      os << "\n";
-    } else {
-      hasPrivateMethod = true;
-    }
-  }
-
-  // TODO: Add line control markers to make errors easier to debug.
-  if (!extraClassDeclaration.empty())
-    os << extraClassDeclaration << "\n";
-
-  if (hasPrivateMethod) {
-    os << "\nprivate:\n";
-    for (const auto &method : methods) {
-      if (method.isPrivate()) {
-        method.writeDeclTo(os);
-        os << "\n";
-      }
-    }
-  }
-
-  os << "};\n";
-}
-
-//===----------------------------------------------------------------------===//
-// Op emitter
-//===----------------------------------------------------------------------===//
 
 namespace {
 // Helper class to emit a record into the given output stream.
@@ -614,6 +306,7 @@ OpEmitter::OpEmitter(const Operator &op)
   verifyCtx.withOp("(*this->getOperation())");
 
   genTraits();
+
   // Generate C++ code for various op methods. The order here determines the
   // methods in the generated file.
   genOpAsmInterface();
@@ -629,6 +322,13 @@ OpEmitter::OpEmitter(const Operator &op)
   genCanonicalizerDecls();
   genFolderDecls();
   genOpInterfaceMethods();
+
+  // If a dialect hook is registered for this op's dialect, emit dialect
+  // specific content.
+  auto dialectHookIt = dialectHooks->find(op.getDialectName());
+  if (dialectHookIt != dialectHooks->end()) {
+    dialectHookIt->second(op, opClass);
+  }
 }
 
 void OpEmitter::emitDecl(const Operator &op, raw_ostream &os) {
@@ -994,7 +694,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
   }
 
   // Result types
-  SmallVector<std::string, 2> resultTypes(numResults, "operands[0]->getType()");
+  SmallVector<std::string, 2> resultTypes(numResults, "operands[0].getType()");
   body << "  " << builderOpState << ".addTypes({"
        << llvm::join(resultTypes, ", ") << "});\n\n";
 }
@@ -1033,7 +733,7 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
   // Push all result types to the operation state
   const char *index = op.getOperand(0).isVariadic() ? ".front()" : "";
   std::string resultType =
-      formatv("{0}{1}->getType()", getArgumentName(op, 0), index).str();
+      formatv("{0}{1}.getType()", getArgumentName(op, 0), index).str();
   m.body() << "  " << builderOpState << ".addTypes({" << resultType;
   for (int i = 1; i != numResults; ++i)
     m.body() << ", " << resultType;
@@ -1419,8 +1119,8 @@ void OpEmitter::genVerifier() {
     if (value.isVariadic())
       break;
     if (!value.name.empty())
-      verifyCtx.addSubst(
-          value.name, formatv("(*this->getOperation()->getOperand({0}))", i));
+      verifyCtx.addSubst(value.name,
+                         formatv("this->getOperation()->getOperand({0})", i));
   }
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
     auto &value = op.getResult(i);
@@ -1430,7 +1130,7 @@ void OpEmitter::genVerifier() {
       break;
     if (!value.name.empty())
       verifyCtx.addSubst(value.name,
-                         formatv("(*this->getOperation()->getResult({0}))", i));
+                         formatv("this->getOperation()->getResult({0})", i));
   }
 
   // Verify the attributes have the correct type.
@@ -1537,10 +1237,10 @@ void OpEmitter::genOperandResultVerifier(OpMethodBody &body,
     body << "      (void)v;\n"
          << "      if (!("
          << tgfmt(constraint.getConditionTemplate(),
-                  &fctx.withSelf("v->getType()"))
+                  &fctx.withSelf("v.getType()"))
          << ")) {\n"
          << formatv("        return emitOpError(\"{0} #\") << index "
-                    "<< \" must be {1}, but got \" << v->getType();\n",
+                    "<< \" must be {1}, but got \" << v.getType();\n",
                     valueKind, constraint.getDescription())
          << "      }\n" // if
          << "      ++index;\n"

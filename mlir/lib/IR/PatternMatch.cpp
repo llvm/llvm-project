@@ -114,7 +114,7 @@ void PatternRewriter::mergeBlocks(Block *source, Block *dest,
 
   // Replace all of the successor arguments with the provided values.
   for (auto it : llvm::zip(source->getArguments(), argValues))
-    std::get<0>(it)->replaceAllUsesWith(std::get<1>(it));
+    std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
 
   // Splice the operations of the 'source' block into the 'dest' block and erase
   // it.

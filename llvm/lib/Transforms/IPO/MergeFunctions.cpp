@@ -122,6 +122,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/MergeFunctions.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
 #include <algorithm>
 #include <cassert>
@@ -196,16 +197,12 @@ public:
 /// by considering all pointer types to be equivalent. Once identified,
 /// MergeFunctions will fold them by replacing a call to one to a call to a
 /// bitcast of the other.
-class MergeFunctions : public ModulePass {
+class MergeFunctions {
 public:
-  static char ID;
-
-  MergeFunctions()
-    : ModulePass(ID), FnTree(FunctionNodeCmp(&GlobalNumbers)) {
-    initializeMergeFunctionsPass(*PassRegistry::getPassRegistry());
+  MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {
   }
 
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M);
 
 private:
   // The function comparison operator is provided here so that FunctionNodes do
@@ -298,14 +295,39 @@ private:
   DenseMap<AssertingVH<Function>, FnTreeType::iterator> FNodesInTree;
 };
 
+class MergeFunctionsLegacyPass : public ModulePass {
+public:
+  static char ID;
+
+  MergeFunctionsLegacyPass(): ModulePass(ID) {
+    initializeMergeFunctionsLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+
+    MergeFunctions MF;
+    return MF.runOnModule(M);
+  }
+};
+
 } // end anonymous namespace
 
-char MergeFunctions::ID = 0;
-
-INITIALIZE_PASS(MergeFunctions, "mergefunc", "Merge Functions", false, false)
+char MergeFunctionsLegacyPass::ID = 0;
+INITIALIZE_PASS(MergeFunctionsLegacyPass, "mergefunc",
+                "Merge Functions", false, false)
 
 ModulePass *llvm::createMergeFunctionsPass() {
-  return new MergeFunctions();
+  return new MergeFunctionsLegacyPass();
+}
+
+PreservedAnalyses MergeFunctionsPass::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
+  MergeFunctions MF;
+  if (!MF.runOnModule(M))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }
 
 #ifndef NDEBUG
@@ -387,9 +409,6 @@ static bool isEligibleForMerging(Function &F) {
 }
 
 bool MergeFunctions::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
   bool Changed = false;
 
   // All functions in the module, ordered by hash. Functions with a unique

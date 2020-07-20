@@ -1,4 +1,4 @@
-# RUN: llvm-mc --disassemble %s -triple=thumbv7-apple-darwin9 -mcpu=cortex-a9 | FileCheck %s
+# RUN: llvm-mc --disassemble --show-encoding %s -triple=thumbv7-apple-darwin9 -mcpu=cortex-a9 | FileCheck %s
 
 # CHECK:	add	r5, sp, #68
 0x11 0xad
@@ -84,8 +84,11 @@
 # CHECK:	sub	sp, #60
 0x8f 0xb0
 
-# CHECK:	subw	r0, pc, #1
+# CHECK:	adr.w r0, #-1
 0xaf 0xf2 0x01 0x00
+
+# CHECK:	subw	r0, pc, #0
+0xaf 0xf2 0x00 0x00
 
 # CHECK:	subw	r0, sp, #835
 0xad 0xf2 0x43 0x30
@@ -155,7 +158,7 @@
 # CHECK:	ldm	r5!, {r0, r1, r2, r3, r4}
 0x1f 0xcd
 
-# CHECK:	addw	r0, pc, #1050
+# CHECK:	adr.w r0, #1050
 0x0f 0xf2 0x1a 0x40
 
 # CHECK:	ldrd	r3, r8, [r11, #-60]

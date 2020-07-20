@@ -1649,7 +1649,7 @@ Instruction *InstCombiner::narrowMathIfNoOverflow(BinaryOperator &BO) {
   return CastInst::Create(CastOpc, NarrowBO, BO.getType());
 }
 
-bool isMergedGEPInBounds(GEPOperator &GEP1, GEPOperator &GEP2) {
+static bool isMergedGEPInBounds(GEPOperator &GEP1, GEPOperator &GEP2) {
   // At least one GEP must be inbounds.
   if (!GEP1.isInBounds() && !GEP2.isInBounds())
     return false;
@@ -3568,7 +3568,8 @@ static bool combineInstructionsOverFunction(
     ProfileSummaryInfo *PSI, bool ExpensiveCombines, unsigned MaxIterations,
     LoopInfo *LI) {
   auto &DL = F.getParent()->getDataLayout();
-  ExpensiveCombines |= EnableExpensiveCombines;
+  if (EnableExpensiveCombines.getNumOccurrences())
+    ExpensiveCombines = EnableExpensiveCombines;
   MaxIterations = std::min(MaxIterations, LimitMaxIterations.getValue());
 
   /// Builder - This is an IRBuilder that automatically inserts new

@@ -25,8 +25,8 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: sendmsg_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
-    ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
-    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), 0, [[V_READFIRSTLANE_B32_]]
+    ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
+    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), 0, [[V_READFIRSTLANE_B32_]](s32)
     %0:_(s32) = COPY $vgpr0
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), 0, %0
 ...

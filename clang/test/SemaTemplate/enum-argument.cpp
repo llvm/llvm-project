@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
 
 enum Enum { val = 1 };
 template <Enum v> struct C {
@@ -30,7 +31,7 @@ namespace rdar8020920 {
     unsigned long long bitfield : e0;
 
     void f(int j) {
-      bitfield + j; // expected-warning {{expression result unused}}
+      bitfield + j;
     }
   };
 }

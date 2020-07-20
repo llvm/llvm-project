@@ -47,7 +47,7 @@ void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     OS << ')';
 }
 
-const MCFixup *RISCVMCExpr::getPCRelHiFixup() const {
+const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   MCValue AUIPCLoc;
   if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr, nullptr))
     return nullptr;
@@ -81,6 +81,8 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup() const {
     case RISCV::fixup_riscv_tls_got_hi20:
     case RISCV::fixup_riscv_tls_gd_hi20:
     case RISCV::fixup_riscv_pcrel_hi20:
+      if (DFOut)
+        *DFOut = DF;
       return &F;
     }
   }
@@ -88,74 +90,9 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup() const {
   return nullptr;
 }
 
-bool RISCVMCExpr::evaluatePCRelLo(MCValue &Res, const MCAsmLayout *Layout,
-                                  const MCFixup *Fixup) const {
-  // VK_RISCV_PCREL_LO has to be handled specially.  The MCExpr inside is
-  // actually the location of a auipc instruction with a VK_RISCV_PCREL_HI fixup
-  // pointing to the real target.  We need to generate an MCValue in the form of
-  // (<real target> + <offset from this fixup to the auipc fixup>).  The Fixup
-  // is pcrel relative to the VK_RISCV_PCREL_LO fixup, so we need to add the
-  // offset to the VK_RISCV_PCREL_HI Fixup from VK_RISCV_PCREL_LO to correct.
-
-  // Don't try to evaluate if the fixup will be forced as a relocation (e.g.
-  // as linker relaxation is enabled). If we evaluated pcrel_lo in this case,
-  // the modified fixup will be converted into a relocation that no longer
-  // points to the pcrel_hi as the linker requires.
-  auto &RAB =
-      static_cast<RISCVAsmBackend &>(Layout->getAssembler().getBackend());
-  if (RAB.willForceRelocations())
-    return false;
-
-  MCValue AUIPCLoc;
-  if (!getSubExpr()->evaluateAsValue(AUIPCLoc, *Layout))
-    return false;
-
-  const MCSymbolRefExpr *AUIPCSRE = AUIPCLoc.getSymA();
-  // Don't try to evaluate %pcrel_hi/%pcrel_lo pairs that cross fragment
-  // boundries.
-  if (!AUIPCSRE ||
-      findAssociatedFragment() != AUIPCSRE->findAssociatedFragment())
-    return false;
-
-  const MCSymbol *AUIPCSymbol = &AUIPCSRE->getSymbol();
-  if (!AUIPCSymbol)
-    return false;
-
-  const MCFixup *TargetFixup = getPCRelHiFixup();
-  if (!TargetFixup)
-    return false;
-
-  if ((unsigned)TargetFixup->getKind() != RISCV::fixup_riscv_pcrel_hi20)
-    return false;
-
-  MCValue Target;
-  if (!TargetFixup->getValue()->evaluateAsValue(Target, *Layout))
-    return false;
-
-  if (!Target.getSymA() || !Target.getSymA()->getSymbol().isInSection())
-    return false;
-
-  if (&Target.getSymA()->getSymbol().getSection() !=
-      findAssociatedFragment()->getParent())
-    return false;
-
-  // We must use TargetFixup rather than AUIPCSymbol here. They will almost
-  // always have the same offset, except for the case when AUIPCSymbol is at
-  // the end of a fragment and the fixup comes from offset 0 in the next
-  // fragment.
-  uint64_t AUIPCOffset = TargetFixup->getOffset();
-
-  Res = MCValue::get(Target.getSymA(), nullptr,
-                     Target.getConstant() + (Fixup->getOffset() - AUIPCOffset));
-  return true;
-}
-
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAsmLayout *Layout,
                                             const MCFixup *Fixup) const {
-  if (Kind == VK_RISCV_PCREL_LO && evaluatePCRelLo(Res, Layout, Fixup))
-    return true;
-
   if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
     return false;
 

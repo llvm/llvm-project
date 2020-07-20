@@ -144,17 +144,9 @@ AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const GCNSubtarget &ST)
 
   AlreadyInit = true;
 
-  const RegisterBank &RBSGPR = getRegBank(AMDGPU::SGPRRegBankID);
-  (void)RBSGPR;
-  assert(&RBSGPR == &AMDGPU::SGPRRegBank);
-
-  const RegisterBank &RBVGPR = getRegBank(AMDGPU::VGPRRegBankID);
-  (void)RBVGPR;
-  assert(&RBVGPR == &AMDGPU::VGPRRegBank);
-
-  const RegisterBank &RBAGPR = getRegBank(AMDGPU::AGPRRegBankID);
-  (void)RBAGPR;
-  assert(&RBAGPR == &AMDGPU::AGPRRegBank);
+  assert(&getRegBank(AMDGPU::SGPRRegBankID) == &AMDGPU::SGPRRegBank &&
+         &getRegBank(AMDGPU::VGPRRegBankID) == &AMDGPU::VGPRRegBank &&
+         &getRegBank(AMDGPU::AGPRRegBankID) == &AMDGPU::AGPRRegBank);
 }
 
 static bool isVectorRegisterBank(const RegisterBank &Bank) {
@@ -1029,8 +1021,9 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
     .addDef(ExecReg)
     .addReg(SaveExecReg);
 
-  // Restore the insert point before the original instruction.
-  B.setInsertPt(MBB, MBB.end());
+  // Set the insert point after the original instruction, so any new
+  // instructions will be in the remainder.
+  B.setInsertPt(*RemainderBB, RemainderBB->begin());
 
   return true;
 }
@@ -1089,6 +1082,8 @@ void AMDGPURegisterBankInfo::constrainOpWithReadfirstlane(
   B.buildInstr(AMDGPU::V_READFIRSTLANE_B32)
     .addDef(SGPR)
     .addReg(Reg);
+
+  MRI.setType(SGPR, MRI.getType(Reg));
 
   const TargetRegisterClass *Constrained =
       constrainGenericRegister(Reg, AMDGPU::VGPR_32RegClass, MRI);

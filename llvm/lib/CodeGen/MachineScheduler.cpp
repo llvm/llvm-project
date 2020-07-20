@@ -1573,6 +1573,8 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     SUnit *SUa = MemOpRecords[Idx].SU;
     SUnit *SUb = MemOpRecords[Idx+1].SU;
+    if (SUa->NodeNum > SUb->NodeNum)
+      std::swap(SUa, SUb);
     if (TII->shouldClusterMemOps(*MemOpRecords[Idx].BaseOp,
                                  *MemOpRecords[Idx + 1].BaseOp,
                                  ClusterLength) &&
@@ -1598,10 +1600,8 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
 /// Callback from DAG postProcessing to create cluster edges for loads.
 void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
-  // Map DAG NodeNum to store chain ID.
-  DenseMap<unsigned, unsigned> StoreChainIDs;
-  // Map each store chain to a set of dependent MemOps.
-  SmallVector<SmallVector<SUnit*,4>, 32> StoreChainDependents;
+  // Map DAG NodeNum to a set of dependent MemOps in store chain.
+  DenseMap<unsigned, SmallVector<SUnit *, 4>> StoreChains;
   for (SUnit &SU : DAG->SUnits) {
     if ((IsLoad && !SU.getInstr()->mayLoad()) ||
         (!IsLoad && !SU.getInstr()->mayStore()))
@@ -1614,19 +1614,14 @@ void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
         break;
       }
     }
-    // Check if this chain-like pred has been seen
-    // before. ChainPredID==MaxNodeID at the top of the schedule.
-    unsigned NumChains = StoreChainDependents.size();
-    std::pair<DenseMap<unsigned, unsigned>::iterator, bool> Result =
-      StoreChainIDs.insert(std::make_pair(ChainPredID, NumChains));
-    if (Result.second)
-      StoreChainDependents.resize(NumChains + 1);
-    StoreChainDependents[Result.first->second].push_back(&SU);
+    // Insert the SU to corresponding store chain.
+    auto &Chain = StoreChains.FindAndConstruct(ChainPredID).second;
+    Chain.push_back(&SU);
   }
 
   // Iterate over the store chains.
-  for (auto &SCD : StoreChainDependents)
-    clusterNeighboringMemOps(SCD, DAG);
+  for (auto &SCD : StoreChains)
+    clusterNeighboringMemOps(SCD.second, DAG);
 }
 
 //===----------------------------------------------------------------------===//

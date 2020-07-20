@@ -5,14 +5,24 @@ import sys
 dotest_path = '@LLDB_SOURCE_DIR@/test/API/dotest.py'
 build_dir = '@LLDB_TEST_BUILD_DIRECTORY@'
 dotest_args_str = '@LLDB_DOTEST_ARGS@'
+arch = '@LLDB_TEST_ARCH@'
+executable = '@LLDB_TEST_EXECUTABLE@'
+compiler = '@LLDB_TEST_COMPILER@'
+dsymutil = '@LLDB_TEST_DSYMUTIL@'
+filecheck = '@LLDB_TEST_FILECHECK@'
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
     dotest_args = dotest_args_str.split(';')
     # Build dotest.py command.
     cmd = [sys.executable, dotest_path]
+    cmd.extend(['--arch', arch])
     cmd.extend(dotest_args)
     cmd.extend(['--build-dir', build_dir])
+    cmd.extend(['--executable', executable])
+    cmd.extend(['--compiler', compiler])
+    cmd.extend(['--dsymutil', dsymutil])
+    cmd.extend(['--filecheck', filecheck])
     cmd.extend(wrapper_args)
     # Invoke dotest.py and return exit code.
     print(' '.join(cmd))

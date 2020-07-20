@@ -163,7 +163,8 @@ private:
   MachineInstr *ParentMI;
 
   /// Contents union - This contains the payload for the various operand types.
-  union {
+  union ContentsUnion {
+    ContentsUnion() {}
     MachineBasicBlock *MBB;  // For MO_MachineBasicBlock.
     const ConstantFP *CFP;   // For MO_FPImmediate.
     const ConstantInt *CI;   // For MO_CImmediate. Integers > 64bit.
@@ -174,7 +175,7 @@ private:
     unsigned CFIIndex;       // For MO_CFI.
     Intrinsic::ID IntrinsicID; // For MO_IntrinsicID.
     unsigned Pred;           // For MO_Predicate
-    const Constant *ShuffleMask; // For MO_ShuffleMask
+    ArrayRef<int> ShuffleMask; // For MO_ShuffleMask
 
     struct {                  // For MO_Register.
       // Register number is in SmallContents.RegNo.
@@ -587,7 +588,7 @@ public:
     return Contents.Pred;
   }
 
-  const Constant *getShuffleMask() const {
+  ArrayRef<int> getShuffleMask() const {
     assert(isShuffleMask() && "Wrong MachineOperand accessor");
     return Contents.ShuffleMask;
   }
@@ -915,9 +916,9 @@ public:
     return Op;
   }
 
-  static MachineOperand CreateShuffleMask(const Constant *C) {
+  static MachineOperand CreateShuffleMask(ArrayRef<int> Mask) {
     MachineOperand Op(MachineOperand::MO_ShuffleMask);
-    Op.Contents.ShuffleMask = C;
+    Op.Contents.ShuffleMask = Mask;
     return Op;
   }
 

@@ -96,9 +96,9 @@ static ValueLatticeElement intersect(const ValueLatticeElement &A,
                                      const ValueLatticeElement &B) {
   // Undefined is the strongest state.  It means the value is known to be along
   // an unreachable path.
-  if (A.isUndefined())
+  if (A.isUnknown())
     return A;
-  if (B.isUndefined())
+  if (B.isUnknown())
     return B;
 
   // If we gave up for one, but got a useable fact from the other, use it.
@@ -1203,7 +1203,7 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
       // false SETNE.
       if (isTrueDest == (Predicate == ICmpInst::ICMP_EQ))
         return ValueLatticeElement::get(cast<Constant>(RHS));
-      else
+      else if (!isa<UndefValue>(RHS))
         return ValueLatticeElement::getNot(cast<Constant>(RHS));
     }
   }
@@ -1722,7 +1722,7 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
   const DataLayout &DL = BB->getModule()->getDataLayout();
   ValueLatticeElement Result =
       getImpl(PImpl, AC, &DL, DT).getValueInBlock(V, BB, CxtI);
-  if (Result.isUndefined())
+  if (Result.isUnknown())
     return ConstantRange::getEmpty(Width);
   if (Result.isConstantRange())
     return Result.getConstantRange();
@@ -1761,7 +1761,7 @@ ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
   ValueLatticeElement Result =
       getImpl(PImpl, AC, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
-  if (Result.isUndefined())
+  if (Result.isUnknown())
     return ConstantRange::getEmpty(Width);
   if (Result.isConstantRange())
     return Result.getConstantRange();
@@ -1991,7 +1991,7 @@ void LazyValueInfoAnnotatedWriter::emitBasicBlockStartAnnot(
   for (auto &Arg : F->args()) {
     ValueLatticeElement Result = LVIImpl->getValueInBlock(
         const_cast<Argument *>(&Arg), const_cast<BasicBlock *>(BB));
-    if (Result.isUndefined())
+    if (Result.isUnknown())
       continue;
     OS << "; LatticeVal for: '" << Arg << "' is: " << Result << "\n";
   }

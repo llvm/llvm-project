@@ -2361,6 +2361,9 @@ public:
     return Insert(new ICmpInst(P, LHS, RHS), Name);
   }
 
+  // Create a quiet floating-point comparison (i.e. one that raises an FP
+  // exception only in the case where an input is a signaling NaN).
+  // Note that this differs from CreateFCmpS only if IsFPConstrained is true.
   Value *CreateFCmp(CmpInst::Predicate P, Value *LHS, Value *RHS,
                     const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
@@ -2373,6 +2376,9 @@ public:
     return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMF), Name);
   }
 
+  // Create a signaling floating-point comparison (i.e. one that raises an FP
+  // exception whenever an input is any NaN, signaling or quiet).
+  // Note that this differs from CreateFCmp only if IsFPConstrained is true.
   Value *CreateFCmpS(CmpInst::Predicate P, Value *LHS, Value *RHS,
                      const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)

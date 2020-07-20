@@ -426,6 +426,22 @@ def FeatureRetpolineExternalThunk
           "ourselves. Only has effect when combined with some other retpoline "
           "feature", [FeatureRetpolineIndirectCalls]>;
 
+// Mitigate LVI attacks against indirect calls/branches and call returns
+def FeatureLVIControlFlowIntegrity
+    : SubtargetFeature<
+          "lvi-cfi", "UseLVIControlFlowIntegrity", "true",
+          "Prevent indirect calls/branches from using a memory operand, and "
+          "precede all indirect calls/branches from a register with an "
+          "LFENCE instruction to serialize control flow. Also decompose RET "
+          "instructions into a POP+LFENCE+JMP sequence.">;
+
+// Mitigate LVI attacks against data loads
+def FeatureLVILoadHardening
+    : SubtargetFeature<
+          "lvi-load-hardening", "UseLVILoadHardening", "true",
+          "Insert LFENCE instructions to prevent data speculatively injected "
+          "into loads from being used maliciously.">;
+
 // Direct Move instructions.
 def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
                                        "Support movdiri instruction">;

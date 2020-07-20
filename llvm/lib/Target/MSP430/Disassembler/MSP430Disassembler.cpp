@@ -32,17 +32,14 @@ namespace {
 class MSP430Disassembler : public MCDisassembler {
   DecodeStatus getInstructionI(MCInst &MI, uint64_t &Size,
                                ArrayRef<uint8_t> Bytes, uint64_t Address,
-                               raw_ostream &VStream,
                                raw_ostream &CStream) const;
 
   DecodeStatus getInstructionII(MCInst &MI, uint64_t &Size,
                                 ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                raw_ostream &VStream,
                                 raw_ostream &CStream) const;
 
   DecodeStatus getInstructionCJ(MCInst &MI, uint64_t &Size,
                                 ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                raw_ostream &VStream,
                                 raw_ostream &CStream) const;
 
 public:
@@ -51,7 +48,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 } // end anonymous namespace
@@ -62,7 +58,7 @@ static MCDisassembler *createMSP430Disassembler(const Target &T,
   return new MSP430Disassembler(STI, Ctx);
 }
 
-extern "C" void LLVMInitializeMSP430Disassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430Disassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheMSP430Target(),
                                          createMSP430Disassembler);
 }
@@ -233,7 +229,6 @@ static const uint8_t *getDecoderTable(AddrMode SrcAM, unsigned Words) {
 DecodeStatus MSP430Disassembler::getInstructionI(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
-                                                 raw_ostream &VStream,
                                                  raw_ostream &CStream) const {
   uint64_t Insn = support::endian::read16le(Bytes.data());
   AddrMode SrcAM = DecodeSrcAddrModeI(Insn);
@@ -289,7 +284,6 @@ DecodeStatus MSP430Disassembler::getInstructionI(MCInst &MI, uint64_t &Size,
 DecodeStatus MSP430Disassembler::getInstructionII(MCInst &MI, uint64_t &Size,
                                                   ArrayRef<uint8_t> Bytes,
                                                   uint64_t Address,
-                                                  raw_ostream &VStream,
                                                   raw_ostream &CStream) const {
   uint64_t Insn = support::endian::read16le(Bytes.data());
   AddrMode SrcAM = DecodeSrcAddrModeII(Insn);
@@ -345,7 +339,6 @@ static MSP430CC::CondCodes getCondCode(unsigned Cond) {
 DecodeStatus MSP430Disassembler::getInstructionCJ(MCInst &MI, uint64_t &Size,
                                                   ArrayRef<uint8_t> Bytes,
                                                   uint64_t Address,
-                                                  raw_ostream &VStream,
                                                   raw_ostream &CStream) const {
   uint64_t Insn = support::endian::read16le(Bytes.data());
   unsigned Cond = fieldFromInstruction(Insn, 10, 3);
@@ -367,7 +360,6 @@ DecodeStatus MSP430Disassembler::getInstructionCJ(MCInst &MI, uint64_t &Size,
 DecodeStatus MSP430Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes,
                                                 uint64_t Address,
-                                                raw_ostream &VStream,
                                                 raw_ostream &CStream) const {
   if (Bytes.size() < 2) {
     Size = 0;
@@ -378,10 +370,10 @@ DecodeStatus MSP430Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
   unsigned Opc = fieldFromInstruction(Insn, 13, 3);
   switch (Opc) {
   case 0:
-    return getInstructionII(MI, Size, Bytes, Address, VStream, CStream);
+    return getInstructionII(MI, Size, Bytes, Address, CStream);
   case 1:
-    return getInstructionCJ(MI, Size, Bytes, Address, VStream, CStream);
+    return getInstructionCJ(MI, Size, Bytes, Address, CStream);
   default:
-    return getInstructionI(MI, Size, Bytes, Address, VStream, CStream);
+    return getInstructionI(MI, Size, Bytes, Address, CStream);
   }
 }

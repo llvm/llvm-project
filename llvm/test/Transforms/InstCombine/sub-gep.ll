@@ -16,7 +16,7 @@ define i64 @test_inbounds([0 x i32]* %base, i64 %idx) {
 
 define i64 @test_inbounds_nuw([0 x i32]* %base, i64 %idx) {
 ; CHECK-LABEL: @test_inbounds_nuw(
-; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nuw nsw i64 [[IDX:%.*]], 2
 ; CHECK-NEXT:    ret i64 [[P2_IDX]]
 ;
   %p1 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 0

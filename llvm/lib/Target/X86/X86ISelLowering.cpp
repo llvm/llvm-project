@@ -2693,18 +2693,16 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     assert(VA.getLocInfo() != CCValAssign::FPExt &&
            "Unexpected FP-extend for return value.");
 
-    // If this is x86-64, and we disabled SSE, we can't return FP values,
-    // or SSE or MMX vectors.
-    if ((ValVT == MVT::f32 || ValVT == MVT::f64 ||
-         VA.getLocReg() == X86::XMM0 || VA.getLocReg() == X86::XMM1) &&
-        (Subtarget.is64Bit() && !Subtarget.hasSSE1())) {
+    // Report an error if we have attempted to return a value via an XMM
+    // register and SSE was disabled.
+    if (!Subtarget.hasSSE1() && X86::FR32XRegClass.contains(VA.getLocReg())) {
       errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
       VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
-    } else if (ValVT == MVT::f64 &&
-               (Subtarget.is64Bit() && !Subtarget.hasSSE2())) {
-      // Likewise we can't return F64 values with SSE1 only.  gcc does so, but
-      // llvm-gcc has never done it right and no one has noticed, so this
-      // should be OK for now.
+    } else if (!Subtarget.hasSSE2() &&
+               X86::FR64XRegClass.contains(VA.getLocReg()) &&
+               ValVT == MVT::f64) {
+      // When returning a double via an XMM register, report an error if SSE2 is
+      // not enabled.
       errorUnsupported(DAG, dl, "SSE2 register return with SSE2 disabled");
       VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
     }
@@ -2999,7 +2997,6 @@ SDValue X86TargetLowering::LowerCallResult(
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
-  bool Is64Bit = Subtarget.is64Bit();
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
@@ -3018,16 +3015,17 @@ SDValue X86TargetLowering::LowerCallResult(
         RegMask[*SubRegs / 32] &= ~(1u << (*SubRegs % 32));
     }
 
-    // If this is x86-64, and we disabled SSE, we can't return FP values
-    if ((CopyVT == MVT::f32 || CopyVT == MVT::f64 || CopyVT == MVT::f128) &&
-        ((Is64Bit || Ins[InsIndex].Flags.isInReg()) && !Subtarget.hasSSE1())) {
+    // Report an error if there was an attempt to return FP values via XMM
+    // registers.
+    if (!Subtarget.hasSSE1() && X86::FR32XRegClass.contains(VA.getLocReg())) {
       errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
       if (VA.getLocReg() == X86::XMM1)
         VA.convertToReg(X86::FP1); // Set reg to FP1, avoid hitting asserts.
       else
         VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
-    } else if (CopyVT == MVT::f64 &&
-               (Is64Bit && !Subtarget.hasSSE2())) {
+    } else if (!Subtarget.hasSSE2() &&
+               X86::FR64XRegClass.contains(VA.getLocReg()) &&
+               CopyVT == MVT::f64) {
       errorUnsupported(DAG, dl, "SSE2 register return with SSE2 disabled");
       if (VA.getLocReg() == X86::XMM1)
         VA.convertToReg(X86::FP1); // Set reg to FP1, avoid hitting asserts.
@@ -3073,6 +3071,9 @@ SDValue X86TargetLowering::LowerCallResult(
       } else
         Val = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), Val);
     }
+
+    if (VA.getLocInfo() == CCValAssign::BCvt)
+      Val = DAG.getBitcast(VA.getValVT(), Val);
 
     InVals.push_back(Val);
   }
@@ -14887,6 +14888,36 @@ static SDValue lowerShuffleAsSplitOrBlend(const SDLoc &DL, MVT VT, SDValue V1,
                                               DAG);
 }
 
+// Lower as SHUFPD(VPERM2F128(V1, V2), VPERM2F128(V1, V2)).
+// TODO: Extend to support v8f32 (+ 512-bit shuffles).
+static SDValue lowerShuffleAsLanePermuteAndSHUFP(const SDLoc &DL, MVT VT,
+                                                 SDValue V1, SDValue V2,
+                                                 ArrayRef<int> Mask,
+                                                 SelectionDAG &DAG) {
+  assert(VT == MVT::v4f64 && "Only for v4f64 shuffles");
+
+  int LHSMask[4] = {-1, -1, -1, -1};
+  int RHSMask[4] = {-1, -1, -1, -1};
+  unsigned SHUFPMask = 0;
+
+  // As SHUFPD uses a single LHS/RHS element per lane, we can always
+  // perform the shuffle once the lanes have been shuffled in place.
+  for (int i = 0; i != 4; ++i) {
+    int M = Mask[i];
+    if (M < 0)
+      continue;
+    int LaneBase = i & ~1;
+    auto &LaneMask = (i & 1) ? RHSMask : LHSMask;
+    LaneMask[LaneBase + (M & 1)] = M;
+    SHUFPMask |= (M & 1) << i;
+  }
+
+  SDValue LHS = DAG.getVectorShuffle(VT, DL, V1, V2, LHSMask);
+  SDValue RHS = DAG.getVectorShuffle(VT, DL, V1, V2, RHSMask);
+  return DAG.getNode(X86ISD::SHUFP, DL, VT, LHS, RHS,
+                     DAG.getTargetConstant(SHUFPMask, DL, MVT::i8));
+}
+
 /// Lower a vector shuffle crossing multiple 128-bit lanes as
 /// a lane permutation followed by a per-lane permutation.
 ///
@@ -14965,13 +14996,22 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
   int Size = Mask.size();
   int LaneSize = Size / 2;
 
+  // Fold to SHUFPD(VPERM2F128(V1, V2), VPERM2F128(V1, V2)).
+  // Only do this if the elements aren't all from the lower lane,
+  // otherwise we're (probably) better off doing a split.
+  if (VT == MVT::v4f64 &&
+      !all_of(Mask, [LaneSize](int M) { return M < LaneSize; }))
+    if (SDValue V =
+            lowerShuffleAsLanePermuteAndSHUFP(DL, VT, V1, V2, Mask, DAG))
+      return V;
+
   // If there are only inputs from one 128-bit lane, splitting will in fact be
   // less expensive. The flags track whether the given lane contains an element
   // that crosses to another lane.
   if (!Subtarget.hasAVX2()) {
     bool LaneCrossing[2] = {false, false};
     for (int i = 0; i < Size; ++i)
-      if (Mask[i] >= 0 && (Mask[i] % Size) / LaneSize != i / LaneSize)
+      if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
         LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
     if (!LaneCrossing[0] || !LaneCrossing[1])
       return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
@@ -14979,7 +15019,7 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
     bool LaneUsed[2] = {false, false};
     for (int i = 0; i < Size; ++i)
       if (Mask[i] >= 0)
-        LaneUsed[(Mask[i] / LaneSize)] = true;
+        LaneUsed[(Mask[i] % Size) / LaneSize] = true;
     if (!LaneUsed[0] || !LaneUsed[1])
       return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
   }
@@ -15839,6 +15879,18 @@ static SDValue lowerV4F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Op = lowerShuffleWithSHUFPD(DL, MVT::v4f64, V1, V2, Mask,
                                           Zeroable, Subtarget, DAG))
     return Op;
+
+  // If we have lane crossing shuffles AND they don't all come from the lower
+  // lane elements, lower to SHUFPD(VPERM2F128(V1, V2), VPERM2F128(V1, V2)).
+  // TODO: Handle BUILD_VECTOR sources which getVectorShuffle currently
+  // canonicalize to a blend of splat which isn't necessary for this combine.
+  if (is128BitLaneCrossingShuffleMask(MVT::v4f64, Mask) &&
+      !all_of(Mask, [](int M) { return M < 2 || (4 <= M && M < 6); }) &&
+      (V1.getOpcode() != ISD::BUILD_VECTOR) &&
+      (V2.getOpcode() != ISD::BUILD_VECTOR))
+    if (SDValue Op = lowerShuffleAsLanePermuteAndSHUFP(DL, MVT::v4f64, V1, V2,
+                                                       Mask, DAG))
+      return Op;
 
   // If we have one input in place, then we can permute the other input and
   // blend the result.
@@ -19107,8 +19159,18 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
   if (Subtarget.hasAVX() && VecIntVT == MVT::v4i32 &&
       Op->getSimpleValueType(0) == MVT::v4f64) {
     SDValue ZExtIn = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v4i64, V);
-    SDValue VBias =
-        DAG.getConstantFP(BitsToDouble(0x4330000000000000ULL), DL, MVT::v4f64);
+    Constant *Bias = ConstantFP::get(
+        *DAG.getContext(),
+        APFloat(APFloat::IEEEdouble(), APInt(64, 0x4330000000000000ULL)));
+    auto PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+    SDValue CPIdx = DAG.getConstantPool(Bias, PtrVT, /*Alignment*/ 8);
+    SDVTList Tys = DAG.getVTList(MVT::v4f64, MVT::Other);
+    SDValue Ops[] = {DAG.getEntryNode(), CPIdx};
+    SDValue VBias = DAG.getMemIntrinsicNode(
+        X86ISD::VBROADCAST_LOAD, DL, Tys, Ops, MVT::f64,
+        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
+        /*Alignment*/ 8, MachineMemOperand::MOLoad);
+
     SDValue Or = DAG.getNode(ISD::OR, DL, MVT::v4i64, ZExtIn,
                              DAG.getBitcast(MVT::v4i64, VBias));
     Or = DAG.getBitcast(MVT::v4f64, Or);
@@ -19269,7 +19331,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 
   if (SrcVT == MVT::i64 && DstVT == MVT::f64 && X86ScalarSSEf64)
     return LowerUINT_TO_FP_i64(Op, DAG, Subtarget);
-  if (SrcVT == MVT::i32 && X86ScalarSSEf64)
+  if (SrcVT == MVT::i32 && X86ScalarSSEf64 && DstVT != MVT::f80)
     return LowerUINT_TO_FP_i32(Op, DAG, Subtarget);
   if (Subtarget.is64Bit() && SrcVT == MVT::i64 && DstVT == MVT::f32)
     return SDValue();
@@ -19316,25 +19378,24 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
                                          MVT::i64, MMO);
   Chain = Fild.getValue(1);
 
-  APInt FF(32, 0x5F800000ULL);
 
   // Check whether the sign bit is set.
   SDValue SignSet = DAG.getSetCC(
       dl, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i64),
       Op.getOperand(OpNo), DAG.getConstant(0, dl, MVT::i64), ISD::SETLT);
 
-  // Build a 64 bit pair (0, FF) in the constant pool, with FF in the lo bits.
+  // Build a 64 bit pair (FF, 0) in the constant pool, with FF in the hi bits.
+  APInt FF(64, 0x5F80000000000000ULL);
   SDValue FudgePtr = DAG.getConstantPool(
-      ConstantInt::get(*DAG.getContext(), FF.zext(64)), PtrVT);
+      ConstantInt::get(*DAG.getContext(), FF), PtrVT);
 
   // Get a pointer to FF if the sign bit was set, or to 0 otherwise.
   SDValue Zero = DAG.getIntPtrConstant(0, dl);
   SDValue Four = DAG.getIntPtrConstant(4, dl);
-  SDValue Offset = DAG.getSelect(dl, Zero.getValueType(), SignSet, Zero, Four);
+  SDValue Offset = DAG.getSelect(dl, Zero.getValueType(), SignSet, Four, Zero);
   FudgePtr = DAG.getNode(ISD::ADD, dl, PtrVT, FudgePtr, Offset);
 
   // Load the value out, extending it from f32 to f80.
-  // FIXME: Avoid the extend by constructing the right constant pool?
   SDValue Fudge = DAG.getExtLoad(
       ISD::EXTLOAD, dl, MVT::f80, Chain, FudgePtr,
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), MVT::f32,
@@ -19445,11 +19506,13 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     EVT ResVT = getSetCCResultType(DAG.getDataLayout(),
                                    *DAG.getContext(), TheVT);
     SDValue Cmp;
-    if (IsStrict)
+    if (IsStrict) {
       Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETLT,
                          Chain, /*IsSignaling*/ true);
-    else
+      Chain = Cmp.getValue(1);
+    } else {
       Cmp = DAG.getSetCC(DL, ResVT, Value, ThreshVal, ISD::SETLT);
+    }
 
     Adjust = DAG.getSelect(DL, MVT::i64, Cmp,
                            DAG.getConstant(0, DL, MVT::i64),
@@ -20993,7 +21056,7 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
   // Divide by pow2.
   SDValue SRA =
-      DAG.getNode(ISD::SRA, DL, VT, CMov, DAG.getConstant(Lg2, DL, MVT::i64));
+      DAG.getNode(ISD::SRA, DL, VT, CMov, DAG.getConstant(Lg2, DL, MVT::i8));
 
   // If we're dividing by a positive value, we're done.  Otherwise, we must
   // negate the result.
@@ -22091,9 +22154,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  if (Cond.getOpcode() == ISD::SETCC ||
-      Cond.getOpcode() == ISD::STRICT_FSETCC ||
-      Cond.getOpcode() == ISD::STRICT_FSETCCS) {
+  if (Cond.getOpcode() == ISD::SETCC) {
     if (SDValue NewCond = LowerSETCC(Cond, DAG)) {
       Cond = NewCond;
       // If the condition was updated, it's possible that the operands of the
@@ -23258,7 +23319,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
       for (unsigned i = 0; i != NumElts; ++i) {
         SDValue CurrentOp = SrcOp->getOperand(i);
         if (CurrentOp->isUndef()) {
-          Elts.push_back(CurrentOp);
+          // Must produce 0s in the correct bits.
+          Elts.push_back(DAG.getConstant(0, dl, ElementType));
           continue;
         }
         auto *ND = cast<ConstantSDNode>(CurrentOp);
@@ -23270,7 +23332,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
       for (unsigned i = 0; i != NumElts; ++i) {
         SDValue CurrentOp = SrcOp->getOperand(i);
         if (CurrentOp->isUndef()) {
-          Elts.push_back(CurrentOp);
+          // Must produce 0s in the correct bits.
+          Elts.push_back(DAG.getConstant(0, dl, ElementType));
           continue;
         }
         auto *ND = cast<ConstantSDNode>(CurrentOp);
@@ -23282,7 +23345,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
       for (unsigned i = 0; i != NumElts; ++i) {
         SDValue CurrentOp = SrcOp->getOperand(i);
         if (CurrentOp->isUndef()) {
-          Elts.push_back(CurrentOp);
+          // All shifted in bits must be the same so use 0.
+          Elts.push_back(DAG.getConstant(0, dl, ElementType));
           continue;
         }
         auto *ND = cast<ConstantSDNode>(CurrentOp);
@@ -28682,8 +28746,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case X86ISD::VPMADDWD:
   case X86ISD::AVG: {
-    // Legalize types for ISD::UADDSAT/SADDSAT/USUBSAT/SSUBSAT and
-    // X86ISD::AVG/VPMADDWD by widening.
+    // Legalize types for X86ISD::AVG/VPMADDWD by widening.
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
 
     EVT VT = N->getValueType(0);
@@ -30158,8 +30221,8 @@ bool X86TargetLowering::isVectorClearMaskLegal(ArrayRef<int> Mask,
 }
 
 bool X86TargetLowering::areJTsAllowed(const Function *Fn) const {
-  // If the subtarget is using retpolines, we need to not generate jump tables.
-  if (Subtarget.useRetpolineIndirectBranches())
+  // If the subtarget is using thunks, we need to not generate jump tables.
+  if (Subtarget.useIndirectThunkBranches())
     return false;
 
   // Otherwise, fallback on the generic logic.
@@ -31282,22 +31345,22 @@ X86TargetLowering::EmitLoweredTLSCall(MachineInstr &MI,
   return BB;
 }
 
-static unsigned getOpcodeForRetpoline(unsigned RPOpc) {
+static unsigned getOpcodeForIndirectThunk(unsigned RPOpc) {
   switch (RPOpc) {
-  case X86::RETPOLINE_CALL32:
+  case X86::INDIRECT_THUNK_CALL32:
     return X86::CALLpcrel32;
-  case X86::RETPOLINE_CALL64:
+  case X86::INDIRECT_THUNK_CALL64:
     return X86::CALL64pcrel32;
-  case X86::RETPOLINE_TCRETURN32:
+  case X86::INDIRECT_THUNK_TCRETURN32:
     return X86::TCRETURNdi;
-  case X86::RETPOLINE_TCRETURN64:
+  case X86::INDIRECT_THUNK_TCRETURN64:
     return X86::TCRETURNdi64;
   }
-  llvm_unreachable("not retpoline opcode");
+  llvm_unreachable("not indirect thunk opcode");
 }
 
-static const char *getRetpolineSymbol(const X86Subtarget &Subtarget,
-                                      unsigned Reg) {
+static const char *getIndirectThunkSymbol(const X86Subtarget &Subtarget,
+                                          unsigned Reg) {
   if (Subtarget.useRetpolineExternalThunk()) {
     // When using an external thunk for retpolines, we pick names that match the
     // names GCC happens to use as well. This helps simplify the implementation
@@ -31329,39 +31392,48 @@ static const char *getRetpolineSymbol(const X86Subtarget &Subtarget,
       assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
       return "__x86_indirect_thunk_r11";
     }
+    llvm_unreachable("unexpected reg for external indirect thunk");
+  }
+
+  if (Subtarget.useRetpolineIndirectCalls() ||
+      Subtarget.useRetpolineIndirectBranches()) {
+    // When targeting an internal COMDAT thunk use an LLVM-specific name.
+    switch (Reg) {
+    case X86::EAX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__llvm_retpoline_eax";
+    case X86::ECX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__llvm_retpoline_ecx";
+    case X86::EDX:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__llvm_retpoline_edx";
+    case X86::EDI:
+      assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
+      return "__llvm_retpoline_edi";
+    case X86::R11:
+      assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
+      return "__llvm_retpoline_r11";
+    }
     llvm_unreachable("unexpected reg for retpoline");
   }
 
-  // When targeting an internal COMDAT thunk use an LLVM-specific name.
-  switch (Reg) {
-  case X86::EAX:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_eax";
-  case X86::ECX:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_ecx";
-  case X86::EDX:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_edx";
-  case X86::EDI:
-    assert(!Subtarget.is64Bit() && "Should not be using a 32-bit thunk!");
-    return "__llvm_retpoline_edi";
-  case X86::R11:
+  if (Subtarget.useLVIControlFlowIntegrity()) {
     assert(Subtarget.is64Bit() && "Should not be using a 64-bit thunk!");
-    return "__llvm_retpoline_r11";
+    return "__llvm_lvi_thunk_r11";
   }
-  llvm_unreachable("unexpected reg for retpoline");
+  llvm_unreachable("getIndirectThunkSymbol() invoked without thunk feature");
 }
 
 MachineBasicBlock *
-X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
-                                        MachineBasicBlock *BB) const {
+X86TargetLowering::EmitLoweredIndirectThunk(MachineInstr &MI,
+                                            MachineBasicBlock *BB) const {
   // Copy the virtual register into the R11 physical register and
   // call the retpoline thunk.
   DebugLoc DL = MI.getDebugLoc();
   const X86InstrInfo *TII = Subtarget.getInstrInfo();
   Register CalleeVReg = MI.getOperand(0).getReg();
-  unsigned Opc = getOpcodeForRetpoline(MI.getOpcode());
+  unsigned Opc = getOpcodeForIndirectThunk(MI.getOpcode());
 
   // Find an available scratch register to hold the callee. On 64-bit, we can
   // just use R11, but we scan for uses anyway to ensure we don't generate
@@ -31395,7 +31467,7 @@ X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
     report_fatal_error("calling convention incompatible with retpoline, no "
                        "available registers");
 
-  const char *Symbol = getRetpolineSymbol(Subtarget, AvailableReg);
+  const char *Symbol = getIndirectThunkSymbol(Subtarget, AvailableReg);
 
   BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), AvailableReg)
       .addReg(CalleeVReg);
@@ -32171,11 +32243,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
     return EmitLoweredTLSAddr(MI, BB);
-  case X86::RETPOLINE_CALL32:
-  case X86::RETPOLINE_CALL64:
-  case X86::RETPOLINE_TCRETURN32:
-  case X86::RETPOLINE_TCRETURN64:
-    return EmitLoweredRetpoline(MI, BB);
+  case X86::INDIRECT_THUNK_CALL32:
+  case X86::INDIRECT_THUNK_CALL64:
+  case X86::INDIRECT_THUNK_TCRETURN32:
+  case X86::INDIRECT_THUNK_TCRETURN64:
+    return EmitLoweredIndirectThunk(MI, BB);
   case X86::CATCHRET:
     return EmitLoweredCatchRet(MI, BB);
   case X86::CATCHPAD:
@@ -33938,6 +34010,7 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
     return SDValue();
 
   // Shuffle the constant bits according to the mask.
+  SDLoc DL(Root);
   APInt UndefElts(NumMaskElts, 0);
   APInt ZeroElts(NumMaskElts, 0);
   APInt ConstantElts(NumMaskElts, 0);
@@ -33975,6 +34048,10 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
   }
   assert((UndefElts | ZeroElts | ConstantElts).isAllOnesValue());
 
+  // Attempt to create a zero vector.
+  if ((UndefElts | ZeroElts).isAllOnesValue())
+    return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG, DL);
+
   // Create the constant data.
   MVT MaskSVT;
   if (VT.isFloatingPoint() && (MaskSizeInBits == 32 || MaskSizeInBits == 64))
@@ -33983,8 +34060,9 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
     MaskSVT = MVT::getIntegerVT(MaskSizeInBits);
 
   MVT MaskVT = MVT::getVectorVT(MaskSVT, NumMaskElts);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(MaskVT))
+    return SDValue();
 
-  SDLoc DL(Root);
   SDValue CstOp = getConstVector(ConstantBitData, UndefElts, MaskVT, DAG, DL);
   return DAG.getBitcast(VT, CstOp);
 }
@@ -39633,14 +39711,22 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
       getTargetConstantBitsFromNode(N0, NumBitsPerElt, UndefElts, EltBits)) {
     assert(EltBits.size() == VT.getVectorNumElements() &&
            "Unexpected shift value type");
-    for (APInt &Elt : EltBits) {
-      if (X86ISD::VSHLI == Opcode)
+    // Undef elements need to fold to 0. It's possible SimplifyDemandedBits
+    // created an undef input due to no input bits being demanded, but user
+    // still expects 0 in other bits.
+    for (unsigned i = 0, e = EltBits.size(); i != e; ++i) {
+      APInt &Elt = EltBits[i];
+      if (UndefElts[i])
+        Elt = 0;
+      else if (X86ISD::VSHLI == Opcode)
         Elt <<= ShiftVal;
       else if (X86ISD::VSRAI == Opcode)
         Elt.ashrInPlace(ShiftVal);
       else
         Elt.lshrInPlace(ShiftVal);
     }
+    // Reset undef elements since they were zeroed above.
+    UndefElts = 0;
     return getConstVector(EltBits, UndefElts, VT.getSimpleVT(), DAG, SDLoc(N));
   }
 

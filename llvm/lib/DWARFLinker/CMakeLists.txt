@@ -3,4 +3,6 @@ add_llvm_component_library(LLVMDWARFLinker
   DWARFLinkerDeclContext.cpp
   DWARFLinker.cpp
 
+  DEPENDS
+  intrinsics_gen
   )

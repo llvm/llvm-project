@@ -15,6 +15,7 @@
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
+#include "Utils/RISCVBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -31,7 +32,7 @@
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
-extern "C" void LLVMInitializeRISCVTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
   auto PR = PassRegistry::getPassRegistry();
@@ -89,8 +90,17 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = std::make_unique<RISCVSubtarget>(TargetTriple, CPU, FS,
-                                         Options.MCOptions.getABIName(), *this);
+    auto ABIName = Options.MCOptions.getABIName();
+    if (const MDString *ModuleTargetABI = dyn_cast_or_null<MDString>(
+            F.getParent()->getModuleFlag("target-abi"))) {
+      auto TargetABI = RISCVABI::getTargetABI(ABIName);
+      if (TargetABI != RISCVABI::ABI_Unknown &&
+          ModuleTargetABI->getString() != ABIName) {
+        report_fatal_error("-target-abi option != target-abi module flag");
+      }
+      ABIName = ModuleTargetABI->getString();
+    }
+    I = std::make_unique<RISCVSubtarget>(TargetTriple, CPU, FS, ABIName, *this);
   }
   return I.get();
 }

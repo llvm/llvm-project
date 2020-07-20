@@ -1332,7 +1332,6 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     m_interpreter.GetPythonCommandsFromIOHandler(
         "    ",   // Prompt
         *this,    // IOHandlerDelegate
-        true,     // Run IOHandler in async mode
         options); // Baton for the "io_handler" that will be passed back into
                   // our IOHandlerDelegate functions
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -2232,7 +2231,6 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
   m_interpreter.GetPythonCommandsFromIOHandler(
       "    ",   // Prompt
       *this,    // IOHandlerDelegate
-      true,     // Run IOHandler in async mode
       options); // Baton for the "io_handler" that will be passed back into our
                 // IOHandlerDelegate functions
   result.SetStatus(eReturnStatusSuccessFinishNoResult);

@@ -64,9 +64,9 @@ blr
 # CHECK-NEXT:  2002000:       addis 2, 12, 1
 # CHECK-NEXT:                 addi 2, 2, -32728
 # CHECK-NEXT:                 bl .-33554432
-# CHECK-NEXT:                 bl .+12
+# CHECK-NEXT:                 bl .+8
 # CHECK:      __long_branch_:
-# CHECK-NEXT:  2002018:       addis 12, 2, 0
+# CHECK-NEXT:  2002014:       addis 12, 2, 0
 # CHECK-NEXT:                 ld 12, -32744(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr

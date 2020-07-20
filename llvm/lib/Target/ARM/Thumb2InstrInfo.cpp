@@ -319,15 +319,19 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
     }
     bool HasCCOut = true;
     int ImmIsT2SO = ARM_AM::getT2SOImmVal(ThisVal);
-
-    Opc = isSub ? ARM::t2SUBri : ARM::t2ADDri;
+    bool ToSP = DestReg == ARM::SP;
+    unsigned t2SUB = ToSP ? ARM::t2SUBspImm : ARM::t2SUBri;
+    unsigned t2ADD = ToSP ? ARM::t2ADDspImm : ARM::t2ADDri;
+    unsigned t2SUBi12 = ToSP ? ARM::t2SUBspImm12 : ARM::t2SUBri12;
+    unsigned t2ADDi12 = ToSP ? ARM::t2ADDspImm12 : ARM::t2ADDri12;
+    Opc = isSub ? t2SUB : t2ADD;
     // Prefer T2: sub rd, rn, so_imm | sub sp, sp, so_imm
     if (ImmIsT2SO != -1) {
       NumBytes = 0;
     } else if (ThisVal < 4096) {
       // Prefer T3 if can make it in a single go: subw rd, rn, imm12 | subw sp,
       // sp, imm12
-      Opc = isSub ? ARM::t2SUBri12 : ARM::t2ADDri12;
+      Opc = isSub ? t2SUBi12 : t2ADDi12;
       HasCCOut = false;
       NumBytes = 0;
     } else {
@@ -483,7 +487,8 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
     AddrMode = ARMII::AddrModeT2_i12; // FIXME. mode for thumb2?
 
-  if (Opcode == ARM::t2ADDri || Opcode == ARM::t2ADDri12) {
+  const bool IsSP = Opcode == ARM::t2ADDspImm12 || Opcode == ARM::t2ADDspImm;
+  if (IsSP || Opcode == ARM::t2ADDri || Opcode == ARM::t2ADDri12) {
     Offset += MI.getOperand(FrameRegIdx+1).getImm();
 
     unsigned PredReg;
@@ -500,14 +505,14 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       return true;
     }
 
-    bool HasCCOut = Opcode != ARM::t2ADDri12;
+    bool HasCCOut = (Opcode != ARM::t2ADDspImm12 && Opcode != ARM::t2ADDri12);
 
     if (Offset < 0) {
       Offset = -Offset;
       isSub = true;
-      MI.setDesc(TII.get(ARM::t2SUBri));
+      MI.setDesc(IsSP ? TII.get(ARM::t2SUBspImm) : TII.get(ARM::t2SUBri));
     } else {
-      MI.setDesc(TII.get(ARM::t2ADDri));
+      MI.setDesc(IsSP ? TII.get(ARM::t2ADDspImm) : TII.get(ARM::t2ADDri));
     }
 
     // Common case: small offset, fits into instruction.
@@ -523,7 +528,8 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     // Another common case: imm12.
     if (Offset < 4096 &&
         (!HasCCOut || MI.getOperand(MI.getNumOperands()-1).getReg() == 0)) {
-      unsigned NewOpc = isSub ? ARM::t2SUBri12 : ARM::t2ADDri12;
+      unsigned NewOpc = isSub ? IsSP ? ARM::t2SUBspImm12 : ARM::t2SUBri12
+                              : IsSP ? ARM::t2ADDspImm12 : ARM::t2ADDri12;
       MI.setDesc(TII.get(NewOpc));
       MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
       MI.getOperand(FrameRegIdx+1).ChangeToImmediate(Offset);

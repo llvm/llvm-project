@@ -368,14 +368,12 @@ def update_checks_list(clang_tidy_path):
       f.write(line)
       if line.strip() == ".. csv-table::":
         # We dump the checkers
-        f.write('   :header: "Name", "Offers fixes"\n')
-        f.write('   :widths: 50, 20\n\n')
+        f.write('   :header: "Name", "Offers fixes"\n\n')
         f.writelines(checks)
         # and the aliases
         f.write('\n\n')
         f.write('.. csv-table:: Aliases..\n')
-        f.write('   :header: "Name", "Redirect", "Offers fixes"\n')
-        f.write('   :widths: 50, 50, 10\n\n')
+        f.write('   :header: "Name", "Redirect", "Offers fixes"\n\n')
         f.writelines(checks_alias)
         break
 

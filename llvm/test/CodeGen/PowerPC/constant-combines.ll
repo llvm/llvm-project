@@ -13,8 +13,10 @@ define void @fold_constant_stores_loaddr(i8* %i8_ptr) {
 ;
 ; LE-LABEL: fold_constant_stores_loaddr:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    li 4, 170
+; LE-NEXT:    li 4, 0
+; LE-NEXT:    li 5, -86
 ; LE-NEXT:    std 4, 0(3)
+; LE-NEXT:    stb 5, 0(3)
 ; LE-NEXT:    blr
 entry:
   %i64_ptr = bitcast i8* %i8_ptr to i64*
@@ -35,8 +37,10 @@ define void @fold_constant_stores_hiaddr(i8* %i8_ptr) {
 ;
 ; LE-LABEL: fold_constant_stores_hiaddr:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    li 4, 170
+; LE-NEXT:    li 4, 0
+; LE-NEXT:    li 5, -86
 ; LE-NEXT:    std 4, 0(3)
+; LE-NEXT:    stb 5, 0(3)
 ; LE-NEXT:    blr
 entry:
   %i64_ptr = bitcast i8* %i8_ptr to i64*

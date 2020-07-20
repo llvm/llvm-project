@@ -278,7 +278,11 @@ bool Symbol::includeInDynsym() const {
   if (computeBinding() == STB_LOCAL)
     return false;
   if (!isDefined() && !isCommon())
-    return true;
+    // This should unconditionally return true, unfortunately glibc -static-pie
+    // expects undefined weak symbols not to exist in .dynsym, e.g.
+    // __pthread_mutex_lock reference in _dl_add_to_namespace_list,
+    // __pthread_initialize_minimal reference in csu/libc-start.c.
+    return !(config->noDynamicLinker && isUndefWeak());
 
   return exportDynamic || inDynamicList;
 }

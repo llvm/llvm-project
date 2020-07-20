@@ -7,7 +7,6 @@
 	.endef
 	.global invalid_relocation
 	.thumb_func
-invalid_relocation:
 	adr r0, invalid_relocation+1
 
 # CHECK: LLVM ERROR: unsupported relocation type: fixup_t2_adr_pcrel_12

@@ -298,7 +298,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class BranchCC_rri<bits<3> funct3, string opcodestr>
     : RVInstB<funct3, OPC_BRANCH, (outs),
               (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12),
-              opcodestr, "$rs1, $rs2, $imm12"> {
+              opcodestr, "$rs1, $rs2, $imm12">,
+      Sched<[WriteJmp]> {
   let isBranch = 1;
   let isTerminator = 1;
 }
@@ -320,13 +321,15 @@ class Store_rri<bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALU_ri<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1, simm12:$imm12),
-              opcodestr, "$rd, $rs1, $imm12">;
+              opcodestr, "$rd, $rs1, $imm12">,
+      Sched<[WriteIALU, ReadIALU]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class Shift_ri<bit arithshift, bits<3> funct3, string opcodestr>
     : RVInstIShift<arithshift, funct3, OPC_OP_IMM, (outs GPR:$rd),
                    (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
-                   "$rd, $rs1, $shamt">;
+                   "$rd, $rs1, $shamt">,
+      Sched<[WriteShift, ReadShift]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALU_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
@@ -336,19 +339,20 @@ class ALU_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class CSR_ir<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_SYSTEM, (outs GPR:$rd), (ins csr_sysreg:$imm12, GPR:$rs1),
-              opcodestr, "$rd, $imm12, $rs1">;
+              opcodestr, "$rd, $imm12, $rs1">, Sched<[WriteCSR, ReadCSR]>;
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class CSR_ii<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_SYSTEM, (outs GPR:$rd),
               (ins csr_sysreg:$imm12, uimm5:$rs1),
-              opcodestr, "$rd, $imm12, $rs1">;
+              opcodestr, "$rd, $imm12, $rs1">, Sched<[WriteCSR]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ShiftW_ri<bit arithshift, bits<3> funct3, string opcodestr>
     : RVInstIShiftW<arithshift, funct3, OPC_OP_IMM_32, (outs GPR:$rd),
                     (ins GPR:$rs1, uimm5:$shamt), opcodestr,
-                    "$rd, $rs1, $shamt">;
+                    "$rd, $rs1, $shamt">,
+      Sched<[WriteShift32, ReadShift32]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALUW_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
@@ -367,19 +371,20 @@ class Priv<string opcodestr, bits<7> funct7>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def LUI : RVInstU<OPC_LUI, (outs GPR:$rd), (ins uimm20_lui:$imm20),
-                  "lui", "$rd, $imm20">;
+                  "lui", "$rd, $imm20">, Sched<[WriteIALU]>;
 
 def AUIPC : RVInstU<OPC_AUIPC, (outs GPR:$rd), (ins uimm20_auipc:$imm20),
-                    "auipc", "$rd, $imm20">;
+                    "auipc", "$rd, $imm20">, Sched<[WriteIALU]>;
 
 let isCall = 1 in
 def JAL : RVInstJ<OPC_JAL, (outs GPR:$rd), (ins simm21_lsb0_jal:$imm20),
-                  "jal", "$rd, $imm20">;
+                  "jal", "$rd, $imm20">, Sched<[WriteJal]>;
 
 let isCall = 1 in
 def JALR : RVInstI<0b000, OPC_JALR, (outs GPR:$rd),
                    (ins GPR:$rs1, simm12:$imm12),
-                   "jalr", "$rd, ${imm12}(${rs1})">;
+                   "jalr", "$rd, ${imm12}(${rs1})">,
+           Sched<[WriteJalr, ReadJalr]>;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 def BEQ  : BranchCC_rri<0b000, "beq">;
@@ -389,15 +394,15 @@ def BGE  : BranchCC_rri<0b101, "bge">;
 def BLTU : BranchCC_rri<0b110, "bltu">;
 def BGEU : BranchCC_rri<0b111, "bgeu">;
 
-def LB  : Load_ri<0b000, "lb">;
-def LH  : Load_ri<0b001, "lh">;
-def LW  : Load_ri<0b010, "lw">;
-def LBU : Load_ri<0b100, "lbu">;
-def LHU : Load_ri<0b101, "lhu">;
+def LB  : Load_ri<0b000, "lb">, Sched<[WriteLDB, ReadMemBase]>;
+def LH  : Load_ri<0b001, "lh">, Sched<[WriteLDH, ReadMemBase]>;
+def LW  : Load_ri<0b010, "lw">, Sched<[WriteLDW, ReadMemBase]>;
+def LBU : Load_ri<0b100, "lbu">, Sched<[WriteLDB, ReadMemBase]>;
+def LHU : Load_ri<0b101, "lhu">, Sched<[WriteLDH, ReadMemBase]>;
 
-def SB : Store_rri<0b000, "sb">;
-def SH : Store_rri<0b001, "sh">;
-def SW : Store_rri<0b010, "sw">;
+def SB : Store_rri<0b000, "sb">, Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
+def SH : Store_rri<0b001, "sh">, Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+def SW : Store_rri<0b010, "sw">, Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
 
 // ADDI isn't always rematerializable, but isReMaterializable will be used as
 // a hint which is verified in isReallyTriviallyReMaterializable.
@@ -418,21 +423,21 @@ def SLLI : Shift_ri<0, 0b001, "slli">;
 def SRLI : Shift_ri<0, 0b101, "srli">;
 def SRAI : Shift_ri<1, 0b101, "srai">;
 
-def ADD  : ALU_rr<0b0000000, 0b000, "add">;
-def SUB  : ALU_rr<0b0100000, 0b000, "sub">;
-def SLL  : ALU_rr<0b0000000, 0b001, "sll">;
-def SLT  : ALU_rr<0b0000000, 0b010, "slt">;
-def SLTU : ALU_rr<0b0000000, 0b011, "sltu">;
-def XOR  : ALU_rr<0b0000000, 0b100, "xor">;
-def SRL  : ALU_rr<0b0000000, 0b101, "srl">;
-def SRA  : ALU_rr<0b0100000, 0b101, "sra">;
-def OR   : ALU_rr<0b0000000, 0b110, "or">;
-def AND  : ALU_rr<0b0000000, 0b111, "and">;
+def ADD  : ALU_rr<0b0000000, 0b000, "add">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SUB  : ALU_rr<0b0100000, 0b000, "sub">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SLL  : ALU_rr<0b0000000, 0b001, "sll">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SLT  : ALU_rr<0b0000000, 0b010, "slt">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SLTU : ALU_rr<0b0000000, 0b011, "sltu">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def XOR  : ALU_rr<0b0000000, 0b100, "xor">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SRL  : ALU_rr<0b0000000, 0b101, "srl">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SRA  : ALU_rr<0b0100000, 0b101, "sra">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def OR   : ALU_rr<0b0000000, 0b110, "or">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def AND  : ALU_rr<0b0000000, 0b111, "and">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 def FENCE : RVInstI<0b000, OPC_MISC_MEM, (outs),
                     (ins fencearg:$pred, fencearg:$succ),
-                    "fence", "$pred, $succ"> {
+                    "fence", "$pred, $succ">, Sched<[]> {
   bits<4> pred;
   bits<4> succ;
 
@@ -441,25 +446,26 @@ def FENCE : RVInstI<0b000, OPC_MISC_MEM, (outs),
   let imm12 = {0b0000,pred,succ};
 }
 
-def FENCE_TSO : RVInstI<0b000, OPC_MISC_MEM, (outs), (ins), "fence.tso", ""> {
+def FENCE_TSO : RVInstI<0b000, OPC_MISC_MEM, (outs), (ins), "fence.tso", "">, Sched<[]> {
   let rs1 = 0;
   let rd = 0;
   let imm12 = {0b1000,0b0011,0b0011};
 }
 
-def FENCE_I : RVInstI<0b001, OPC_MISC_MEM, (outs), (ins), "fence.i", ""> {
+def FENCE_I : RVInstI<0b001, OPC_MISC_MEM, (outs), (ins), "fence.i", "">, Sched<[]> {
   let rs1 = 0;
   let rd = 0;
   let imm12 = 0;
 }
 
-def ECALL : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ecall", ""> {
+def ECALL : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ecall", "">, Sched<[WriteJmp]> {
   let rs1 = 0;
   let rd = 0;
   let imm12 = 0;
 }
 
-def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", ""> {
+def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", "">,
+             Sched<[]> {
   let rs1 = 0;
   let rd = 0;
   let imm12 = 1;
@@ -468,7 +474,8 @@ def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", ""> {
 // This is a de facto standard (as set by GNU binutils) 32-bit unimplemented
 // instruction (i.e., it should always trap, if your implementation has invalid
 // instruction traps).
-def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", ""> {
+def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", "">,
+            Sched<[]> {
   let rs1 = 0;
   let rd = 0;
   let imm12 = 0b110000000000;
@@ -486,24 +493,30 @@ def CSRRCI : CSR_ii<0b111, "csrrci">;
 /// RV64I instructions
 
 let Predicates = [IsRV64] in {
-def LWU   : Load_ri<0b110, "lwu">;
-def LD    : Load_ri<0b011, "ld">;
-def SD    : Store_rri<0b011, "sd">;
+def LWU   : Load_ri<0b110, "lwu">, Sched<[WriteLDWU, ReadMemBase]>;
+def LD    : Load_ri<0b011, "ld">, Sched<[WriteLDD, ReadMemBase]>;
+def SD    : Store_rri<0b011, "sd">, Sched<[WriteSTD, ReadStoreData, ReadMemBase]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def ADDIW : RVInstI<0b000, OPC_OP_IMM_32, (outs GPR:$rd),
                     (ins GPR:$rs1, simm12:$imm12),
-                    "addiw", "$rd, $rs1, $imm12">;
+                    "addiw", "$rd, $rs1, $imm12">,
+            Sched<[WriteIALU32, ReadIALU32]>;
 
 def SLLIW : ShiftW_ri<0, 0b001, "slliw">;
 def SRLIW : ShiftW_ri<0, 0b101, "srliw">;
 def SRAIW : ShiftW_ri<1, 0b101, "sraiw">;
 
-def ADDW  : ALUW_rr<0b0000000, 0b000, "addw">;
-def SUBW  : ALUW_rr<0b0100000, 0b000, "subw">;
-def SLLW  : ALUW_rr<0b0000000, 0b001, "sllw">;
-def SRLW  : ALUW_rr<0b0000000, 0b101, "srlw">;
-def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">;
+def ADDW  : ALUW_rr<0b0000000, 0b000, "addw">,
+            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+def SUBW  : ALUW_rr<0b0100000, 0b000, "subw">,
+            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+def SLLW  : ALUW_rr<0b0000000, 0b001, "sllw">,
+            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+def SRLW  : ALUW_rr<0b0000000, 0b101, "srlw">,
+            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
+            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
 } // Predicates = [IsRV64]
 
 //===----------------------------------------------------------------------===//
@@ -511,26 +524,26 @@ def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">;
 //===----------------------------------------------------------------------===//
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
-def URET : Priv<"uret", 0b0000000> {
+def URET : Priv<"uret", 0b0000000>, Sched<[]> {
   let rd = 0;
   let rs1 = 0;
   let rs2 = 0b00010;
 }
 
-def SRET : Priv<"sret", 0b0001000> {
+def SRET : Priv<"sret", 0b0001000>, Sched<[]> {
   let rd = 0;
   let rs1 = 0;
   let rs2 = 0b00010;
 }
 
-def MRET : Priv<"mret", 0b0011000> {
+def MRET : Priv<"mret", 0b0011000>, Sched<[]> {
   let rd = 0;
   let rs1 = 0;
   let rs2 = 0b00010;
 }
 } // isBarrier = 1, isReturn = 1, isTerminator = 1
 
-def WFI : Priv<"wfi", 0b0001000> {
+def WFI : Priv<"wfi", 0b0001000>, Sched<[]> {
   let rd = 0;
   let rs1 = 0;
   let rs2 = 0b00101;
@@ -539,7 +552,7 @@ def WFI : Priv<"wfi", 0b0001000> {
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 def SFENCE_VMA : RVInstR<0b0001001, 0b000, OPC_SYSTEM, (outs),
                          (ins GPR:$rs1, GPR:$rs2),
-                         "sfence.vma", "$rs1, $rs2"> {
+                         "sfence.vma", "$rs1, $rs2">, Sched<[]> {
   let rd = 0;
 }
 

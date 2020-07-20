@@ -126,7 +126,7 @@ void ClangExpressionDeclMap::InstallCodeGenerator(
 }
 
 void ClangExpressionDeclMap::DidParse() {
-  if (m_parser_vars) {
+  if (m_parser_vars && m_parser_vars->m_persistent_vars) {
     for (size_t entity_index = 0, num_entities = m_found_entities.GetSize();
          entity_index < num_entities; ++entity_index) {
       ExpressionVariableSP var_sp(
@@ -262,6 +262,9 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
   if (!m_parser_vars->m_target_info.IsValid())
     return false;
 
+  if (!m_parser_vars->m_persistent_vars)
+    return false;
+
   ClangExpressionVariable *var = llvm::cast<ClangExpressionVariable>(
       m_parser_vars->m_persistent_vars
           ->CreatePersistentVariable(
@@ -327,7 +330,7 @@ bool ClangExpressionDeclMap::AddValueToStruct(const NamedDecl *decl,
   ClangExpressionVariable *var(ClangExpressionVariable::FindVariableInList(
       m_found_entities, decl, GetParserID()));
 
-  if (!var) {
+  if (!var && m_parser_vars->m_persistent_vars) {
     var = ClangExpressionVariable::FindVariableInList(
         *m_parser_vars->m_persistent_vars, decl, GetParserID());
     is_persistent_variable = true;
@@ -733,6 +736,8 @@ clang::NamedDecl *ClangExpressionDeclMap::GetPersistentDecl(ConstString name) {
 
   ClangASTContext::GetScratch(*target);
 
+  if (!m_parser_vars->m_persistent_vars)
+    return nullptr;
   return m_parser_vars->m_persistent_vars->GetPersistentDecl(name);
 }
 
@@ -1249,9 +1254,9 @@ void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
     // TODO Fix FindFunctions so that it doesn't return
     //   instance methods for eFunctionNameTypeBase.
 
-    target->GetImages().FindFunctions(name, eFunctionNameTypeFull,
-                                      include_symbols, include_inlines,
-                                      sc_list);
+    target->GetImages().FindFunctions(
+        name, eFunctionNameTypeFull | eFunctionNameTypeBase, include_symbols,
+        include_inlines, sc_list);
   }
 
   // If we found more than one function, see if we can use the frame's decl
@@ -1390,7 +1395,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
       return;
 
     // No ParserVars means we can't do register or variable lookup.
-    if (!m_parser_vars)
+    if (!m_parser_vars || !m_parser_vars->m_persistent_vars)
       return;
 
     ExpressionVariableSP pvar_sp(

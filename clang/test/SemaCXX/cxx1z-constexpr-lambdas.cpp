@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks %s -fcxx-exceptions
-// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -fblocks %s -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fblocks %s -fcxx-exceptions
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -fcxx-exceptions
 // RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER -fcxx-exceptions
 
@@ -25,7 +25,7 @@ namespace ns1 {
 namespace ns2 {
   auto L = [](int I) constexpr { if (I == 5) asm("non-constexpr");  };
 #if __cpp_constexpr < 201907L
-  //expected-warning@-2{{use of this statement in a constexpr function is a C++2a extension}}
+  //expected-warning@-2{{use of this statement in a constexpr function is a C++20 extension}}
 #endif
 } // end ns1
 

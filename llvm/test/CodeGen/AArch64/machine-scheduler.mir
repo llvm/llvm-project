@@ -18,8 +18,8 @@
 ---
 # CHECK-LABEL: name: load_imp-def
 # CHECK: bb.0.entry:
-# CHECK: LDRWui $x0, 0
 # CHECK: LDRWui $x0, 1
+# CHECK: LDRWui $x0, 0
 # CHECK: STRWui $w1, $x0, 2
 name: load_imp-def
 tracksRegLiveness: true

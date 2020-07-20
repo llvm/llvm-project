@@ -244,11 +244,6 @@ static raw_ostream& operator<<(raw_ostream &OS, const DstUnused &Un) {
   return OS;
 }
 
-static raw_ostream& operator<<(raw_ostream &OS, const SDWAOperand &Operand) {
-  Operand.print(OS);
-  return OS;
-}
-
 LLVM_DUMP_METHOD
 void SDWASrcOperand::print(raw_ostream& OS) const {
   OS << "SDWA src: " << *getTargetOperand()
@@ -849,6 +844,13 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 
   return std::unique_ptr<SDWAOperand>(nullptr);
 }
+
+#if !defined(NDEBUG)
+static raw_ostream& operator<<(raw_ostream &OS, const SDWAOperand &Operand) {
+  Operand.print(OS);
+  return OS;
+}
+#endif
 
 void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : MBB) {

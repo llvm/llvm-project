@@ -10,7 +10,7 @@ func @load_too_many_subscripts(%arg0: memref<?x?xf32>, %arg1: index, %arg2: inde
 func @load_too_many_subscripts_map(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index, %arg3: index) {
   // expected-error@+1 {{op expects as many subscripts as affine map inputs}}
   "affine.load"(%arg0, %arg1, %arg2, %arg3)
-    {map = (i, j) -> (i, j) } : (memref<?x?xf32>, index, index, index) -> f32
+    {map = affine_map<(i, j) -> (i, j)> } : (memref<?x?xf32>, index, index, index) -> f32
 }
 
 // -----
@@ -25,7 +25,7 @@ func @load_too_few_subscripts(%arg0: memref<?x?xf32>, %arg1: index) {
 func @load_too_few_subscripts_map(%arg0: memref<?x?xf32>, %arg1: index) {
   // expected-error@+1 {{op expects as many subscripts as affine map inputs}}
   "affine.load"(%arg0, %arg1)
-    {map = (i, j) -> (i, j) } : (memref<?x?xf32>, index) -> f32
+    {map = affine_map<(i, j) -> (i, j)> } : (memref<?x?xf32>, index) -> f32
 }
 
 // -----
@@ -42,7 +42,7 @@ func @store_too_many_subscripts_map(%arg0: memref<?x?xf32>, %arg1: index, %arg2:
                                     %arg3: index, %val: f32) {
   // expected-error@+1 {{op expects as many subscripts as affine map inputs}}
   "affine.store"(%val, %arg0, %arg1, %arg2, %arg3)
-    {map = (i, j) -> (i, j) } : (f32, memref<?x?xf32>, index, index, index) -> ()
+    {map = affine_map<(i, j) -> (i, j)> } : (f32, memref<?x?xf32>, index, index, index) -> ()
 }
 
 // -----
@@ -57,7 +57,7 @@ func @store_too_few_subscripts(%arg0: memref<?x?xf32>, %arg1: index, %val: f32) 
 func @store_too_few_subscripts_map(%arg0: memref<?x?xf32>, %arg1: index, %val: f32) {
   // expected-error@+1 {{op expects as many subscripts as affine map inputs}}
   "affine.store"(%val, %arg0, %arg1)
-    {map = (i, j) -> (i, j) } : (f32, memref<?x?xf32>, index) -> ()
+    {map = affine_map<(i, j) -> (i, j)> } : (f32, memref<?x?xf32>, index) -> ()
 }
 
 // -----

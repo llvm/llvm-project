@@ -6122,6 +6122,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   BasicBlock *StartBlock = SI->getParent();
   BasicBlock::iterator SplitPt = ++(BasicBlock::iterator(LastSI));
   BasicBlock *EndBlock = StartBlock->splitBasicBlock(SplitPt, "select.end");
+  BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock).getFrequency());
 
   // Delete the unconditional branch that was just created by the split.
   StartBlock->getTerminator()->eraseFromParent();
@@ -6856,12 +6857,20 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
     Value *Addr = Builder.CreateBitCast(
         SI.getOperand(1),
         SplitStoreType->getPointerTo(SI.getPointerAddressSpace()));
-    if ((IsLE && Upper) || (!IsLE && !Upper))
+    const bool IsOffsetStore = (IsLE && Upper) || (!IsLE && !Upper);
+    if (IsOffsetStore)
       Addr = Builder.CreateGEP(
           SplitStoreType, Addr,
           ConstantInt::get(Type::getInt32Ty(SI.getContext()), 1));
+    MaybeAlign Alignment(SI.getAlignment());
+    if (IsOffsetStore && Alignment) {
+      // When splitting the store in half, naturally one half will retain the
+      // alignment of the original wider store, regardless of whether it was
+      // over-aligned or not, while the other will require adjustment.
+      Alignment = commonAlignment(Alignment, HalfValBitSize / 8);
+    }
     Builder.CreateAlignedStore(
-        V, Addr, Upper ? SI.getAlignment() / 2 : SI.getAlignment());
+        V, Addr, Alignment.hasValue() ? Alignment.getValue().value() : 0);
   };
 
   CreateSplitStore(LValue, false);

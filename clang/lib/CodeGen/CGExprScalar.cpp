@@ -680,6 +680,10 @@ public:
     return Builder.getInt1(E->isSatisfied());
   }
 
+  Value *VisitRequiresExpr(const RequiresExpr *E) {
+    return Builder.getInt1(E->isSatisfied());
+  }
+
   Value *VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E) {
     return llvm::ConstantInt::get(Builder.getInt32Ty(), E->getValue());
   }
@@ -3835,8 +3839,7 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
             *SecondVecArg = RHS;
 
       QualType ElTy = LHSTy->castAs<VectorType>()->getElementType();
-      const BuiltinType *BTy = ElTy->getAs<BuiltinType>();
-      BuiltinType::Kind ElementKind = BTy->getKind();
+      BuiltinType::Kind ElementKind = ElTy->castAs<BuiltinType>()->getKind();
 
       switch(E->getOpcode()) {
       default: llvm_unreachable("is not a comparison operation");
@@ -4310,6 +4313,21 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
       tmp5 = Builder.CreateBitCast(tmp5, RHS->getType());
 
     return tmp5;
+  }
+
+  if (condExpr->getType()->isVectorType()) {
+    CGF.incrementProfileCounter(E);
+
+    llvm::Value *CondV = CGF.EmitScalarExpr(condExpr);
+    llvm::Value *LHS = Visit(lhsExpr);
+    llvm::Value *RHS = Visit(rhsExpr);
+
+    llvm::Type *CondType = ConvertType(condExpr->getType());
+    auto *VecTy = cast<llvm::VectorType>(CondType);
+    llvm::Value *ZeroVec = llvm::Constant::getNullValue(VecTy);
+
+    CondV = Builder.CreateICmpNE(CondV, ZeroVec, "vector_cond");
+    return Builder.CreateSelect(CondV, LHS, RHS, "vector_select");
   }
 
   // If this is a really simple expression (like x ? 4 : 5), emit this as a

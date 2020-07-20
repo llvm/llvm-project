@@ -78,6 +78,38 @@ void runChecks(
 
 } // anonymous namespace
 
+TEST(InstSizes, Authenticated) {
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  ASSERT_TRUE(TM);
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  auto isAuthInst = [](AArch64InstrInfo &II, MachineFunction &MF) {
+    auto I = MF.begin()->begin();
+    EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
+    EXPECT_TRUE(I->getDesc().isAuthenticated());
+  };
+
+  runChecks(TM.get(), II.get(), "",
+            "    \n"
+            "    BLRAA $x10, $x9\n",
+            isAuthInst);
+
+  runChecks(TM.get(), II.get(), "",
+            "    \n"
+            "    RETAB implicit $lr, implicit $sp, implicit killed $x0\n",
+            isAuthInst);
+
+  runChecks(TM.get(), II.get(), "",
+            "    \n"
+            "    frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp\n",
+            isAuthInst);
+
+  runChecks(TM.get(), II.get(), "",
+            "    \n"
+            "    frame-destroy AUTIBSP implicit-def $lr, implicit killed $lr, implicit $sp\n",
+            isAuthInst);
+}
+
 TEST(InstSizes, STACKMAP) {
   std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);

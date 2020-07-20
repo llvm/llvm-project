@@ -151,7 +151,7 @@ void X86_64::writePltHeader(uint8_t *buf) const {
   };
   memcpy(buf, pltData, sizeof(pltData));
   uint64_t gotPlt = in.gotPlt->getVA();
-  uint64_t plt = in.plt->getVA();
+  uint64_t plt = in.ibtPlt ? in.ibtPlt->getVA() : in.plt->getVA();
   write32le(buf + 2, gotPlt - plt + 2); // GOTPLT+8
   write32le(buf + 8, gotPlt - plt + 4); // GOTPLT+16
 }
@@ -568,6 +568,60 @@ bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   return false;
 }
 
+// If Intel Indirect Branch Tracking is enabled, we have to emit special PLT
+// entries containing endbr64 instructions. A PLT entry will be split into two
+// parts, one in .plt.sec (writePlt), and the other in .plt (writeIBTPlt).
+namespace {
+class IntelIBT : public X86_64 {
+public:
+  IntelIBT();
+  void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
+  void writeIBTPlt(uint8_t *buf, size_t numEntries) const override;
+
+  static const unsigned IBTPltHeaderSize = 16;
+};
+} // namespace
+
+IntelIBT::IntelIBT() { pltHeaderSize = 0; }
+
+void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
+  uint64_t va =
+      in.ibtPlt->getVA() + IBTPltHeaderSize + s.pltIndex * pltEntrySize;
+  write64le(buf, va);
+}
+
+void IntelIBT::writePlt(uint8_t *buf, const Symbol &sym,
+                        uint64_t pltEntryAddr) const {
+  const uint8_t Inst[] = {
+      0xf3, 0x0f, 0x1e, 0xfa,       // endbr64
+      0xff, 0x25, 0,    0,    0, 0, // jmpq *got(%rip)
+      0x66, 0x0f, 0x1f, 0x44, 0, 0, // nop
+  };
+  memcpy(buf, Inst, sizeof(Inst));
+  write32le(buf + 6, sym.getGotPltVA() - pltEntryAddr - 10);
+}
+
+void IntelIBT::writeIBTPlt(uint8_t *buf, size_t numEntries) const {
+  writePltHeader(buf);
+  buf += IBTPltHeaderSize;
+
+  const uint8_t inst[] = {
+      0xf3, 0x0f, 0x1e, 0xfa,    // endbr64
+      0x68, 0,    0,    0,    0, // pushq <relocation index>
+      0xe9, 0,    0,    0,    0, // jmpq plt[0]
+      0x66, 0x90,                // nop
+  };
+
+  for (size_t i = 0; i < numEntries; ++i) {
+    memcpy(buf, inst, sizeof(inst));
+    write32le(buf + 5, i);
+    write32le(buf + 10, -pltHeaderSize - sizeof(inst) * i - 30);
+    buf += sizeof(inst);
+  }
+}
+
 // These nonstandard PLT entries are to migtigate Spectre v2 security
 // vulnerability. In order to mitigate Spectre v2, we want to avoid indirect
 // branch instructions such as `jmp *GOTPLT(%rip)`. So, in the following PLT
@@ -692,6 +746,11 @@ static TargetInfo *getTargetInfo() {
       return &t;
     }
     static Retpoline t;
+    return &t;
+  }
+
+  if (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    static IntelIBT t;
     return &t;
   }
 

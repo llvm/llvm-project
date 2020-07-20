@@ -1020,7 +1020,7 @@ uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
 
   uint64_t new_inst_size;
   status = m_disasm_up->getInstruction(mc_inst, new_inst_size, data, pc,
-                                       llvm::nulls(), llvm::nulls());
+                                       llvm::nulls());
   if (status == llvm::MCDisassembler::Success)
     return new_inst_size;
   else

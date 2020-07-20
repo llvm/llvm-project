@@ -143,6 +143,20 @@ private:
   /// tokenfactor for them just before terminator instructions.
   SmallVector<SDValue, 8> PendingExports;
 
+  /// Similar to loads, nodes corresponding to constrained FP intrinsics are
+  /// bunched up and emitted when necessary.  These can be moved across each
+  /// other and any (normal) memory operation (load or store), but not across
+  /// calls or instructions having unspecified side effects.  As a special
+  /// case, constrained FP intrinsics using fpexcept.strict may not be deleted
+  /// even if otherwise unused, so they need to be chained before any
+  /// terminator instruction (like PendingExports).  We track the latter
+  /// set of nodes in a separate list.
+  SmallVector<SDValue, 8> PendingConstrainedFP;
+  SmallVector<SDValue, 8> PendingConstrainedFPStrict;
+
+  /// Update root to include all chains from the Pending list.
+  SDValue updateRoot(SmallVectorImpl<SDValue> &Pending);
+
   /// A unique monotonically increasing number used to order the SDNodes we
   /// create.
   unsigned SDNodeOrder;
@@ -447,12 +461,18 @@ public:
 
   /// Return the current virtual root of the Selection DAG, flushing any
   /// PendingLoad items. This must be done before emitting a store or any other
-  /// node that may need to be ordered after any prior load instructions.
+  /// memory node that may need to be ordered after any prior load instructions.
+  SDValue getMemoryRoot();
+
+  /// Similar to getMemoryRoot, but also flushes PendingConstrainedFP(Strict)
+  /// items. This must be done before emitting any call other any other node
+  /// that may need to be ordered after FP instructions due to other side
+  /// effects.
   SDValue getRoot();
 
   /// Similar to getRoot, but instead of flushing all the PendingLoad items,
-  /// flush all the PendingExports items. It is necessary to do this before
-  /// emitting a terminator instruction.
+  /// flush all the PendingExports (and PendingConstrainedFPStrict) items.
+  /// It is necessary to do this before emitting a terminator instruction.
   SDValue getControlRoot();
 
   SDLoc getCurSDLoc() const {

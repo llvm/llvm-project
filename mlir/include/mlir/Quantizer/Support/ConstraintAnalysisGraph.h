@@ -221,7 +221,7 @@ public:
     return n->getKind() == Kind::Anchor || n->getKind() == Kind::ResultAnchor;
   }
 
-  Operation *getOp() const final { return resultValue->getDefiningOp(); }
+  Operation *getOp() const final { return resultValue.getDefiningOp(); }
   Value getValue() const final { return resultValue; }
 
   void printLabel(raw_ostream &os) const override;

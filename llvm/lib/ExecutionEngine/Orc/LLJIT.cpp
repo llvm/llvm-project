@@ -96,8 +96,10 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   auto ObjLinkingLayer =
       std::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 
-  if (S.JTMB->getTargetTriple().isOSBinFormatCOFF())
+  if (S.JTMB->getTargetTriple().isOSBinFormatCOFF()) {
     ObjLinkingLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+    ObjLinkingLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+  }
 
   // FIXME: Explicit conversion to std::unique_ptr<ObjectLayer> added to silence
   //        errors from some GCC / libstdc++ bots. Remove this conversion (i.e.
@@ -105,7 +107,7 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   return std::unique_ptr<ObjectLayer>(std::move(ObjLinkingLayer));
 }
 
-Expected<IRCompileLayer::CompileFunction>
+Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>
 LLJIT::createCompileFunction(LLJITBuilderState &S,
                              JITTargetMachineBuilder JTMB) {
 
@@ -116,13 +118,13 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
   // Otherwise default to creating a SimpleCompiler, or ConcurrentIRCompiler,
   // depending on the number of threads requested.
   if (S.NumCompileThreads > 0)
-    return ConcurrentIRCompiler(std::move(JTMB));
+    return std::make_unique<ConcurrentIRCompiler>(std::move(JTMB));
 
   auto TM = JTMB.createTargetMachine();
   if (!TM)
     return TM.takeError();
 
-  return TMOwningSimpleCompiler(std::move(*TM));
+  return std::make_unique<TMOwningSimpleCompiler>(std::move(*TM));
 }
 
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)

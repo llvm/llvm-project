@@ -303,9 +303,14 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::mipsel:
   case Triple::mips64:
   case Triple::mips64el:
-    FDECFIEncoding = Ctx->getAsmInfo()->getCodePointerSize() == 4
-                         ? dwarf::DW_EH_PE_sdata4
-                         : dwarf::DW_EH_PE_sdata8;
+    // We cannot use DW_EH_PE_sdata8 for the large PositionIndependent case
+    // since there is no R_MIPS_PC64 relocation (only a 32-bit version).
+    if (PositionIndependent && !Large)
+      FDECFIEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+    else
+      FDECFIEncoding = Ctx->getAsmInfo()->getCodePointerSize() == 4
+                           ? dwarf::DW_EH_PE_sdata4
+                           : dwarf::DW_EH_PE_sdata8;
     break;
   case Triple::ppc64:
   case Triple::ppc64le:
@@ -756,7 +761,6 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
       Ctx->getWasmSection(".debug_ranges", SectionKind::getMetadata());
   DwarfMacinfoSection =
       Ctx->getWasmSection(".debug_macinfo", SectionKind::getMetadata());
-  DwarfAddrSection = Ctx->getWasmSection(".debug_addr", SectionKind::getMetadata());
   DwarfCUIndexSection = Ctx->getWasmSection(".debug_cu_index", SectionKind::getMetadata());
   DwarfTUIndexSection = Ctx->getWasmSection(".debug_tu_index", SectionKind::getMetadata());
   DwarfInfoSection =
@@ -764,6 +768,17 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
   DwarfFrameSection = Ctx->getWasmSection(".debug_frame", SectionKind::getMetadata());
   DwarfPubNamesSection = Ctx->getWasmSection(".debug_pubnames", SectionKind::getMetadata());
   DwarfPubTypesSection = Ctx->getWasmSection(".debug_pubtypes", SectionKind::getMetadata());
+
+  DwarfDebugNamesSection =
+      Ctx->getWasmSection(".debug_names", SectionKind::getMetadata());
+  DwarfStrOffSection =
+      Ctx->getWasmSection(".debug_str_offsets", SectionKind::getMetadata());
+  DwarfAddrSection =
+      Ctx->getWasmSection(".debug_addr", SectionKind::getMetadata());
+  DwarfRnglistsSection =
+      Ctx->getWasmSection(".debug_rnglists", SectionKind::getMetadata());
+  DwarfLoclistsSection =
+      Ctx->getWasmSection(".debug_loclists", SectionKind::getMetadata());
 
   // Wasm use data section for LSDA.
   // TODO Consider putting each function's exception table in a separate

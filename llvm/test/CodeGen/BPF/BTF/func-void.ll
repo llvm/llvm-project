@@ -24,7 +24,7 @@ define dso_local void @f1() local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .long   218103808               # 0xd000000
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   1                       # BTF_KIND_FUNC(id = 2)
-; CHECK-NEXT:        .long   201326592               # 0xc000000
+; CHECK-NEXT:        .long   201326593               # 0xc000001
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .byte   0                       # string offset=0
 ; CHECK-NEXT:        .ascii  "f1"                    # string offset=1

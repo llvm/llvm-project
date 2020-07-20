@@ -199,7 +199,7 @@ def quant_StatisticsOp : quant_Op<"stats", [SameOperandsAndResultType]> {
   let results = (outs quant_RealValueType);
 
   let verifier = [{
-    auto tensorArg = arg()->getType().dyn_cast<TensorType>();
+    auto tensorArg = arg().getType().dyn_cast<TensorType>();
     if (!tensorArg) return emitOpError("arg needs to be tensor type.");
 
     // Verify layerStats attribute.

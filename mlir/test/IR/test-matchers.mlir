@@ -40,3 +40,4 @@ func @test2(%a: f32) -> f32 {
 
 // CHECK-LABEL: test2
 //       CHECK:   Pattern add(add(a, constant), a) matched and bound constant to: 1.000000e+00
+//       CHECK:   Pattern add(add(a, constant), a) matched

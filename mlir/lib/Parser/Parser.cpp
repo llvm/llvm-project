@@ -334,8 +334,11 @@ public:
   // Affine Parsing
   //===--------------------------------------------------------------------===//
 
+  /// Parse a reference to either an affine map, or an integer set.
   ParseResult parseAffineMapOrIntegerSetReference(AffineMap &map,
                                                   IntegerSet &set);
+  ParseResult parseAffineMapReference(AffineMap &map);
+  ParseResult parseIntegerSetReference(IntegerSet &set);
 
   /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
   ParseResult
@@ -641,6 +644,16 @@ public:
   ParseResult parseAttribute(Attribute &result, Type type) override {
     result = parser.parseAttribute(type);
     return success(static_cast<bool>(result));
+  }
+
+  /// Parse an affine map instance into 'map'.
+  ParseResult parseAffineMap(AffineMap &map) override {
+    return parser.parseAffineMapReference(map);
+  }
+
+  /// Parse an integer set instance into 'set'.
+  ParseResult printIntegerSet(IntegerSet &set) override {
+    return parser.parseIntegerSetReference(set);
   }
 
   //===--------------------------------------------------------------------===//
@@ -1446,15 +1459,24 @@ static std::string extractSymbolReference(Token tok) {
 Attribute Parser::parseAttribute(Type type) {
   switch (getToken().getKind()) {
   // Parse an AffineMap or IntegerSet attribute.
-  case Token::l_paren: {
-    // Try to parse an affine map or an integer set reference.
+  case Token::kw_affine_map: {
+    consumeToken(Token::kw_affine_map);
+
     AffineMap map;
+    if (parseToken(Token::less, "expected '<' in affine map") ||
+        parseAffineMapReference(map) ||
+        parseToken(Token::greater, "expected '>' in affine map"))
+      return Attribute();
+    return AffineMapAttr::get(map);
+  }
+  case Token::kw_affine_set: {
+    consumeToken(Token::kw_affine_set);
+
     IntegerSet set;
-    if (parseAffineMapOrIntegerSetReference(map, set))
-      return nullptr;
-    if (map)
-      return AffineMapAttr::get(map);
-    assert(set);
+    if (parseToken(Token::less, "expected '<' in integer set") ||
+        parseIntegerSetReference(set) ||
+        parseToken(Token::greater, "expected '>' in integer set"))
+      return Attribute();
     return IntegerSetAttr::get(set);
   }
 
@@ -1687,8 +1709,14 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
 /// Construct a float attribute bitwise equivalent to the integer literal.
 static FloatAttr buildHexadecimalFloatLiteral(Parser *p, FloatType type,
                                               uint64_t value) {
-  int width = type.getIntOrFloatBitWidth();
-  APInt apInt(width, value);
+  // FIXME: bfloat is currently stored as a double internally because it doesn't
+  // have valid APFloat semantics.
+  if (type.isF64() || type.isBF16()) {
+    APFloat apFloat(type.getFloatSemantics(), APInt(/*numBits=*/64, value));
+    return p->builder.getFloatAttr(type, apFloat);
+  }
+
+  APInt apInt(type.getWidth(), value);
   if (apInt != value) {
     p->emitError("hexadecimal float constant out of range for type");
     return nullptr;
@@ -1719,11 +1747,6 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
   }
 
   if (auto floatType = type.dyn_cast<FloatType>()) {
-    // TODO(zinenko): Update once hex format for bfloat16 is supported.
-    if (type.isBF16())
-      return emitError(loc,
-                       "hexadecimal float literal not supported for bfloat16"),
-             nullptr;
     if (isNegative)
       return emitError(
                  loc,
@@ -3034,6 +3057,24 @@ ParseResult Parser::parseAffineMapOrIntegerSetReference(AffineMap &map,
                                                         IntegerSet &set) {
   return AffineParser(state).parseAffineMapOrIntegerSetInline(map, set);
 }
+ParseResult Parser::parseAffineMapReference(AffineMap &map) {
+  llvm::SMLoc curLoc = getToken().getLoc();
+  IntegerSet set;
+  if (parseAffineMapOrIntegerSetReference(map, set))
+    return failure();
+  if (set)
+    return emitError(curLoc, "expected AffineMap, but got IntegerSet");
+  return success();
+}
+ParseResult Parser::parseIntegerSetReference(IntegerSet &set) {
+  llvm::SMLoc curLoc = getToken().getLoc();
+  AffineMap map;
+  if (parseAffineMapOrIntegerSetReference(map, set))
+    return failure();
+  if (map)
+    return emitError(curLoc, "expected IntegerSet, but got AffineMap");
+  return success();
+}
 
 /// Parse an AffineMap of SSA ids. The callback 'parseElement' is used to
 /// parse SSA value uses encountered while parsing affine expressions.
@@ -3256,8 +3297,8 @@ OperationParser::~OperationParser() {
   for (auto &fwd : forwardRefPlaceholders) {
     // Drop all uses of undefined forward declared reference and destroy
     // defining operation.
-    fwd.first->dropAllUses();
-    fwd.first->getDefiningOp()->destroy();
+    fwd.first.dropAllUses();
+    fwd.first.getDefiningOp()->destroy();
   }
 }
 
@@ -3351,8 +3392,8 @@ ParseResult OperationParser::addDefinition(SSAUseInfo useInfo, Value value) {
     // If it was a forward reference, update everything that used it to use
     // the actual definition instead, delete the forward ref, and remove it
     // from our set of forward references we track.
-    existing->replaceAllUsesWith(value);
-    existing->getDefiningOp()->destroy();
+    existing.replaceAllUsesWith(value);
+    existing.getDefiningOp()->destroy();
     forwardRefPlaceholders.erase(existing);
   }
 
@@ -3412,13 +3453,13 @@ Value OperationParser::resolveSSAUse(SSAUseInfo useInfo, Type type) {
   if (useInfo.number < entries.size() && entries[useInfo.number].first) {
     auto result = entries[useInfo.number].first;
     // Check that the type matches the other uses.
-    if (result->getType() == type)
+    if (result.getType() == type)
       return result;
 
     emitError(useInfo.loc, "use of value '")
         .append(useInfo.name,
                 "' expects different type than prior uses: ", type, " vs ",
-                result->getType())
+                result.getType())
         .attachNote(getEncodedSourceLocation(entries[useInfo.number].second))
         .append("prior use here");
     return nullptr;
@@ -3954,6 +3995,16 @@ public:
     if (failed(parseOptionalKeyword("attributes")))
       return success();
     return parser.parseAttributeDict(result);
+  }
+
+  /// Parse an affine map instance into 'map'.
+  ParseResult parseAffineMap(AffineMap &map) override {
+    return parser.parseAffineMapReference(map);
+  }
+
+  /// Parse an integer set instance into 'set'.
+  ParseResult printIntegerSet(IntegerSet &set) override {
+    return parser.parseIntegerSetReference(set);
   }
 
   //===--------------------------------------------------------------------===//
@@ -4545,7 +4596,7 @@ ParseResult OperationParser::parseOptionalBlockArgList(
 
           // Finally, make sure the existing argument has the correct type.
           auto arg = owner->getArgument(nextArgument++);
-          if (arg->getType() != type)
+          if (arg.getType() != type)
             return emitError("argument and block argument type mismatch");
           return addDefinition(useInfo, arg);
         });

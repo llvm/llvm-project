@@ -39,7 +39,7 @@ entry:
 ; CHECK-NEXT:        .long   5
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   8                       # BTF_KIND_FUNC(id = 3)
-; CHECK-NEXT:        .long   201326592               # 0xc000000
+; CHECK-NEXT:        .long   201326593               # 0xc000001
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_PTR(id = 4)
 ; CHECK-NEXT:        .long   33554432                # 0x2000000

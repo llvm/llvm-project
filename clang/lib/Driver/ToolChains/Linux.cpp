@@ -986,3 +986,8 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
   ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
+
+void Linux::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
+  for (const auto &Opt : ExtraOpts)
+    CmdArgs.push_back(Opt.c_str());
+}

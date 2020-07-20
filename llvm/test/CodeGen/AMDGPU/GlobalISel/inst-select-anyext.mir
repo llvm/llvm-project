@@ -51,7 +51,7 @@ body: |
 
     ; GCN-LABEL: name: anyext_sgpr_s16_to_sgpr_s64
     ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY [[COPY]]
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[COPY]]
     ; GCN: $sgpr0_sgpr1 = COPY [[COPY1]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0

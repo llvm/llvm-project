@@ -19,17 +19,14 @@
 #define SET 1u
 
 EXTERN void __kmpc_impl_init_lock(omp_lock_t *lock) {
-  omp_unset_lock(lock);
+  __kmpc_impl_unset_lock(lock);
 }
 
 EXTERN void __kmpc_impl_destroy_lock(omp_lock_t *lock) {
-  omp_unset_lock(lock);
+  __kmpc_impl_unset_lock(lock);
 }
 
 EXTERN void __kmpc_impl_set_lock(omp_lock_t *lock) {
-  // int atomicCAS(int* address, int compare, int val);
-  // (old == compare ? val : old)
-
   // TODO: not sure spinning is a good idea here..
   while (__kmpc_atomic_cas(lock, UNSET, SET) != UNSET) {
     clock_t start = clock();
@@ -49,7 +46,5 @@ EXTERN void __kmpc_impl_unset_lock(omp_lock_t *lock) {
 }
 
 EXTERN int __kmpc_impl_test_lock(omp_lock_t *lock) {
-  // int atomicCAS(int* address, int compare, int val);
-  // (old == compare ? val : old)
-  return atomicAdd(lock, 0);
+  return __kmpc_atomic_add(lock, 0u);
 }

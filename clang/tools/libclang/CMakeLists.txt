@@ -44,7 +44,6 @@ set(LIBS
   clangSema
   clangSerialization
   clangTooling
-  LLVMSupport
 )
 
 if (CLANG_ENABLE_ARCMT)

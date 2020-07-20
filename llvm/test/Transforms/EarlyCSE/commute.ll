@@ -279,6 +279,8 @@ define i1 @umax_inverted(i8 %a, i8 %b) {
 }
 
 ; Min/max may exist with non-canonical operands. Value tracking can match those.
+; But we do not use value tracking, so we expect instcombine will canonicalize
+; this code to a form that allows CSE.
 
 define i8 @smax_nsw(i8 %a, i8 %b) {
 ; CHECK-LABEL: @smax_nsw(
@@ -286,7 +288,9 @@ define i8 @smax_nsw(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[SUB]], 0
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 0, i8 [[SUB]]
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[SUB]], i8 0
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[M2]], [[M1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sub = sub nsw i8 %a, %b
   %cmp1 = icmp slt i8 %a, %b
@@ -297,13 +301,19 @@ define i8 @smax_nsw(i8 %a, i8 %b) {
   ret i8 %r
 }
 
+; Abs/nabs may exist with non-canonical operands. Value tracking can match those.
+; But we do not use value tracking, so we expect instcombine will canonicalize
+; this code to a form that allows CSE.
+
 define i8 @abs_swapped(i8 %a) {
 ; CHECK-LABEL: @abs_swapped(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[A]], 0
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[A]], 0
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
-; CHECK-NEXT:    ret i8 [[M1]]
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[NEG]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[M2]], [[M1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %neg = sub i8 0, %a
   %cmp1 = icmp sgt i8 %a, 0
@@ -331,13 +341,19 @@ define i8 @abs_inverted(i8 %a) {
   ret i8 %r
 }
 
+; Abs/nabs may exist with non-canonical operands. Value tracking can match those.
+; But we do not use value tracking, so we expect instcombine will canonicalize
+; this code to a form that allows CSE.
+
 define i8 @nabs_swapped(i8 %a) {
 ; CHECK-LABEL: @nabs_swapped(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], 0
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[A]], 0
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[NEG]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[M2]], [[M1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %neg = sub i8 0, %a
   %cmp1 = icmp slt i8 %a, 0
@@ -365,7 +381,10 @@ define i8 @nabs_inverted(i8 %a) {
   ret i8 %r
 }
 
-; These two tests make sure we still consider it a match when the RHS of the
+; Abs/nabs may exist with non-canonical operands. Value tracking can match those.
+; But we do not use value tracking, so we expect instcombine will canonicalize
+; this code to a form that allows CSE.
+
 ; compares are different.
 define i8 @abs_different_constants(i8 %a) {
 ; CHECK-LABEL: @abs_different_constants(
@@ -373,7 +392,9 @@ define i8 @abs_different_constants(i8 %a) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[A]], -1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[A]], 0
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
-; CHECK-NEXT:    ret i8 [[M1]]
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[NEG]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[M2]], [[M1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %neg = sub i8 0, %a
   %cmp1 = icmp sgt i8 %a, -1
@@ -384,13 +405,19 @@ define i8 @abs_different_constants(i8 %a) {
   ret i8 %r
 }
 
+; Abs/nabs may exist with non-canonical operands. Value tracking can match those.
+; But we do not use value tracking, so we expect instcombine will canonicalize
+; this code to a form that allows CSE.
+
 define i8 @nabs_different_constants(i8 %a) {
 ; CHECK-LABEL: @nabs_different_constants(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], 0
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[A]], -1
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 [[NEG]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[M2]], [[M1]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %neg = sub i8 0, %a
   %cmp1 = icmp slt i8 %a, 0
@@ -688,4 +715,50 @@ define void @not_not_min(i32* %px, i32* %py, i32* %pout) {
   store volatile i32 %rc, i32* %pout
 
   ret void
+}
+
+; This would cause an assert/crash because we matched
+; a ValueTracking select pattern that required 'nsw'
+; on an operand, but we remove that flag as part of
+; CSE matching/hashing.
+
+define void @PR41083_1(i32 %span_left, i32 %clip_left) {
+; CHECK-LABEL: @PR41083_1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CLIP_LEFT:%.*]], [[SPAN_LEFT:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[CLIP_LEFT]], [[SPAN_LEFT]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 0
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp sgt i32 %clip_left, %span_left
+  %sub = sub nsw i32 %clip_left, %span_left
+  %cond = select i1 %cmp, i32 %sub, i32 0
+  %cmp83292 = icmp slt i32 %cond, undef
+  %sub2 = sub i32 %clip_left, %span_left
+  %sel2 = select i1 %cmp, i32 %sub2, i32 0
+  ret void
+}
+
+; This would cause an assert/crash because we matched
+; a ValueTracking select pattern that required 'nsw'
+; on an operand, but we remove that flag as part of
+; CSE matching/hashing.
+
+define i32 @PR41083_2(i32 %p) {
+; CHECK-LABEL: @PR41083_2(
+; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[S]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 0, [[A]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 0
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[SEL]], [[SUB]]
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %s = sub i32 0, %p
+  %a = ashr exact i32 %s, 2
+  %cmp = icmp sgt i32 0, %a
+  %sub = sub nsw i32 0, %a
+  %sel = select i1 %cmp, i32 %sub, i32 0
+  %s2 = sub i32 0, %a
+  %m = mul i32 %sel, %s2
+  ret i32 %m
 }

@@ -16,6 +16,6 @@ template<int n> struct T {
     typename S<k>::T check3; // ok, u is value-dependent
 
     const int &i = k;
-    typename S<i>::T check4; // expected-error {{not an integral constant expression}} expected-error {{qualified name}}
+    typename S<i>::T check4; // expected-error {{not an integral constant expression}}
   }
 };

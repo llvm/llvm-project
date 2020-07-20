@@ -272,16 +272,6 @@ struct PointerLikeTypeTraits<PointerUnion<PTs...>> {
       PointerUnion<PTs...>::Val)>::NumLowBitsAvailable;
 };
 
-/// A pointer union of three pointer types. See documentation for PointerUnion
-/// for usage.
-template <typename PT1, typename PT2, typename PT3>
-using PointerUnion3 = PointerUnion<PT1, PT2, PT3>;
-
-/// A pointer union of four pointer types. See documentation for PointerUnion
-/// for usage.
-template <typename PT1, typename PT2, typename PT3, typename PT4>
-using PointerUnion4 = PointerUnion<PT1, PT2, PT3, PT4>;
-
 // Teach DenseMap how to use PointerUnions as keys.
 template <typename ...PTs> struct DenseMapInfo<PointerUnion<PTs...>> {
   using Union = PointerUnion<PTs...>;

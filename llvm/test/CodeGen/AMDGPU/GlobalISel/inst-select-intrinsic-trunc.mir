@@ -53,7 +53,7 @@ body: |
 
     ; CHECK-LABEL: name: intrinsic_trunc_s64_sv
     ; CHECK: liveins: $sgpr0_sgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK: [[V_TRUNC_F64_e64_:%[0-9]+]]:vreg_64 = V_TRUNC_F64_e64 0, [[COPY]], 0, 0, implicit $exec
     ; CHECK: $vgpr0_vgpr1 = COPY [[V_TRUNC_F64_e64_]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1

@@ -3222,6 +3222,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         Builder.CreateZExt(EmitSignBit(*this, EmitScalarExpr(E->getArg(0))),
                            ConvertType(E->getType())));
   }
+  case Builtin::BI__warn_memset_zero_len:
+    return RValue::getIgnored();
   case Builtin::BI__annotation: {
     // Re-encode each wide string to UTF8 and make an MDString.
     SmallVector<Metadata *, 1> Strings;
@@ -14260,6 +14262,7 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
   }
 }
 
+namespace {
 struct BuiltinAlignArgs {
   llvm::Value *Src = nullptr;
   llvm::Type *SrcType = nullptr;
@@ -14288,6 +14291,7 @@ struct BuiltinAlignArgs {
     Mask = CGF.Builder.CreateSub(Alignment, One, "mask");
   }
 };
+} // namespace
 
 /// Generate (x & (y-1)) == 0.
 RValue CodeGenFunction::EmitBuiltinIsAligned(const CallExpr *E) {

@@ -239,8 +239,7 @@ bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
   // vectors.
   unsigned NumConcat = DstNumElts / SrcNumElts;
   SmallVector<int, 8> ConcatSrcs(NumConcat, -1);
-  SmallVector<int, 8> Mask;
-  ShuffleVectorInst::getShuffleMask(MI.getOperand(3).getShuffleMask(), Mask);
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
   for (unsigned i = 0; i != DstNumElts; ++i) {
     int Idx = Mask[i];
     // Undef value.

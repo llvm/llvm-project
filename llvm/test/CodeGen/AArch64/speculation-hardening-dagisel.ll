@@ -18,7 +18,7 @@ entry:
 ; NOSLH-NOT: dsb sy
 ; NOSLH-NOT: isb
 if.then:
-  %0 = tail call i64 asm "autia1716", "={x17},{x16},0"(i64 %b, i64 %a)
+  %0 = tail call i64 asm "hint #12", "={x17},{x16},0"(i64 %b, i64 %a)
 ; CHECK: bl g
 ; SLH: dsb sy
 ; SLH: isb

@@ -1,4 +1,4 @@
-add_llvm_executable(mlir-cpu-runner
+add_llvm_tool(mlir-cpu-runner
   mlir-cpu-runner.cpp
 )
 llvm_update_compile_flags(mlir-cpu-runner)

@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   BitWriter
   CodeGen
+  Extensions
   Core
   IPO
   IRReader
@@ -31,8 +32,6 @@ add_llvm_tool(bugpoint
   OptimizerDriver.cpp
   ToolRunner.cpp
   bugpoint.cpp
-
-  ENABLE_PLUGINS
 
   DEPENDS
   intrinsics_gen

@@ -195,7 +195,7 @@ static void initUnrolledVectorState(VectorType vectorType, Value initValue,
     auto tupleType =
         generateExtractSlicesOpResultType(vectorType, sizes, strides, builder);
     state.slicesTuple = builder.create<vector::ExtractSlicesOp>(
-        initValue->getLoc(), tupleType, initValue, sizes, strides);
+        initValue.getLoc(), tupleType, initValue, sizes, strides);
   }
 }
 
@@ -232,7 +232,7 @@ static Value getOrCreateUnrolledVectorSlice(
   if (valueSlice == nullptr) {
     // Return tuple element at 'sliceLinearIndex'.
     auto tupleIndex = builder.getI64IntegerAttr(sliceLinearIndex);
-    auto initValueType = initValue->getType().cast<VectorType>();
+    auto initValueType = initValue.getType().cast<VectorType>();
     auto vectorType =
         VectorType::get(state.unrolledShape, initValueType.getElementType());
     // Initialize 'cache' with slice from 'initValue'.
@@ -311,7 +311,7 @@ static Value unrollSingleResultStructuredOp(Operation *op,
                                             unsigned resultIndex,
                                             ArrayRef<int64_t> targetShape,
                                             PatternRewriter &builder) {
-  auto shapedType = op->getResult(0)->getType().dyn_cast_or_null<ShapedType>();
+  auto shapedType = op->getResult(0).getType().dyn_cast_or_null<ShapedType>();
   if (!shapedType || !shapedType.hasStaticShape())
     assert(false && "Expected a statically shaped result type");
 
@@ -379,7 +379,7 @@ static Value unrollSingleResultStructuredOp(Operation *op,
   SmallVector<Type, 4> vectorTupleTypes(resultValueState.numInstances);
   SmallVector<Value, 4> vectorTupleValues(resultValueState.numInstances);
   for (unsigned i = 0; i < resultValueState.numInstances; ++i) {
-    vectorTupleTypes[i] = caches[resultIndex][i]->getType().cast<VectorType>();
+    vectorTupleTypes[i] = caches[resultIndex][i].getType().cast<VectorType>();
     vectorTupleValues[i] = caches[resultIndex][i];
   }
   TupleType tupleType = builder.getTupleType(vectorTupleTypes);
@@ -387,7 +387,7 @@ static Value unrollSingleResultStructuredOp(Operation *op,
                                                   vectorTupleValues);
 
   // Create InsertSlicesOp(Tuple(result_vectors)).
-  auto resultVectorType = op->getResult(0)->getType().cast<VectorType>();
+  auto resultVectorType = op->getResult(0).getType().cast<VectorType>();
   SmallVector<int64_t, 4> sizes(resultValueState.unrolledShape);
   SmallVector<int64_t, 4> strides(resultValueState.unrollFactors.size(), 1);
 
@@ -411,7 +411,7 @@ static void getVectorContractionOpUnrollState(
   vectors.resize(numIterators);
   unsigned accOperandIndex = vector::ContractionOp::getAccOperandIndex();
   for (unsigned i = 0; i < numIterators; ++i) {
-    vectors[i].type = contractionOp.getOperand(i)->getType().cast<VectorType>();
+    vectors[i].type = contractionOp.getOperand(i).getType().cast<VectorType>();
     vectors[i].indexMap = iterationIndexMapList[i];
     vectors[i].operandIndex = i;
     vectors[i].isAcc = i == accOperandIndex ? true : false;
@@ -437,7 +437,7 @@ getVectorElementwiseOpUnrollState(Operation *op, ArrayRef<int64_t> targetShape,
                                   std::vector<VectorState> &vectors,
                                   unsigned &resultIndex) {
   // Verify that operation and operands all have the same vector shape.
-  auto resultType = op->getResult(0)->getType().dyn_cast_or_null<VectorType>();
+  auto resultType = op->getResult(0).getType().dyn_cast_or_null<VectorType>();
   assert(resultType && "Expected op with vector result type");
   auto resultShape = resultType.getShape();
   // Verify that all operands have the same vector type as result.
@@ -515,13 +515,14 @@ generateTransferOpSlices(VectorType vectorType, TupleType tupleType,
                   getAffineConstantExpr(offsets[it.index()], ctx);
       auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
       sliceIndices[it.index()] = rewriter.create<AffineApplyOp>(
-          it.value()->getLoc(), map, ArrayRef<Value>(it.value()));
+          it.value().getLoc(), map, ArrayRef<Value>(it.value()));
     }
     // Call 'fn' to generate slice 'i' at 'sliceIndices'.
     fn(i, sliceIndices);
   }
 }
 
+namespace {
 // Splits vector TransferReadOp into smaller TransferReadOps based on slicing
 // scheme of its unique ExtractSlicesOp user.
 struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
@@ -536,8 +537,8 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
     // Return unless the unique 'xferReadOp' user is an ExtractSlicesOp.
     Value xferReadResult = xferReadOp.getResult();
     auto extractSlicesOp =
-        dyn_cast<vector::ExtractSlicesOp>(*xferReadResult->getUsers().begin());
-    if (!xferReadResult->hasOneUse() || !extractSlicesOp)
+        dyn_cast<vector::ExtractSlicesOp>(*xferReadResult.getUsers().begin());
+    if (!xferReadResult.hasOneUse() || !extractSlicesOp)
       return matchFailure();
 
     // Get 'sizes' and 'strides' parameters from ExtractSlicesOp user.
@@ -587,14 +588,14 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
     if (!xferWriteOp.permutation_map().isIdentity())
       return matchFailure();
     // Return unless the 'xferWriteOp' 'vector' operand is an 'InsertSlicesOp'.
-    auto *vectorDefOp = xferWriteOp.vector()->getDefiningOp();
+    auto *vectorDefOp = xferWriteOp.vector().getDefiningOp();
     auto insertSlicesOp = dyn_cast_or_null<vector::InsertSlicesOp>(vectorDefOp);
     if (!insertSlicesOp)
       return matchFailure();
 
     // Get TupleOp operand of 'insertSlicesOp'.
     auto tupleOp = dyn_cast_or_null<vector::TupleOp>(
-        insertSlicesOp.vectors()->getDefiningOp());
+        insertSlicesOp.vectors().getDefiningOp());
     if (!tupleOp)
       return matchFailure();
 
@@ -634,19 +635,19 @@ struct TupleGetFolderOp : public OpRewritePattern<vector::TupleGetOp> {
                                      PatternRewriter &rewriter) const override {
     // Return if 'tupleGetOp.vectors' arg was not defined by ExtractSlicesOp.
     auto extractSlicesOp = dyn_cast_or_null<vector::ExtractSlicesOp>(
-        tupleGetOp.vectors()->getDefiningOp());
+        tupleGetOp.vectors().getDefiningOp());
     if (!extractSlicesOp)
       return matchFailure();
 
     // Return if 'extractSlicesOp.vector' arg was not defined by InsertSlicesOp.
     auto insertSlicesOp = dyn_cast_or_null<vector::InsertSlicesOp>(
-        extractSlicesOp.vector()->getDefiningOp());
+        extractSlicesOp.vector().getDefiningOp());
     if (!insertSlicesOp)
       return matchFailure();
 
     // Return if 'insertSlicesOp.vectors' arg was not defined by TupleOp.
     auto tupleOp = dyn_cast_or_null<vector::TupleOp>(
-        insertSlicesOp.vectors()->getDefiningOp());
+        insertSlicesOp.vectors().getDefiningOp());
     if (!tupleOp)
       return matchFailure();
 
@@ -656,6 +657,8 @@ struct TupleGetFolderOp : public OpRewritePattern<vector::TupleGetOp> {
     return matchSuccess();
   }
 };
+
+} // namespace
 
 // TODO(andydavis) Add pattern to rewrite ExtractSlices(ConstantMaskOp).
 // TODO(andydavis) Add this as DRR pattern.

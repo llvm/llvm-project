@@ -682,7 +682,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
   return (parseMany(parseOne));
 }
 
-extern "C" void LLVMInitializeAVRAsmParser() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmParser() {
   RegisterMCAsmParser<AVRAsmParser> X(getTheAVRTarget());
 }
 

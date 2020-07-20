@@ -176,6 +176,7 @@ enum Flag {
   Add,
   Trap,
   VariadicOpsAreDefs,
+  Authenticated,
 };
 }
 
@@ -414,6 +415,15 @@ public:
   /// Return true if variadic operands of this instruction are definitions.
   bool variadicOpsAreDefs() const {
     return Flags & (1ULL << MCID::VariadicOpsAreDefs);
+  }
+
+  /// Return true if this instruction authenticates a pointer (e.g. LDRAx/BRAx
+  /// from ARMv8.3, which perform loads/branches with authentication).
+  ///
+  /// An authenticated instruction may fail in an ABI-defined manner when
+  /// operating on an invalid signed pointer.
+  bool isAuthenticated() const {
+    return Flags & (1ULL << MCID::Authenticated);
   }
 
   //===--------------------------------------------------------------------===//

@@ -251,6 +251,7 @@
 // RUN:     -fexec-charset=UTF-8                                             \
 // RUN:     -fivopts -fno-ivopts                                              \
 // RUN:     -fnon-call-exceptions -fno-non-call-exceptions                    \
+// RUN:     -fno-semantic-interposition                                       \
 // RUN:     -fpermissive -fno-permissive                                      \
 // RUN:     -fdefer-pop -fno-defer-pop                                        \
 // RUN:     -fprefetch-loop-arrays -fno-prefetch-loop-arrays                  \
@@ -493,7 +494,7 @@
 // RUN: %clang -target x86_64-unknown-none-none -### -fno-short-wchar -fshort-wchar %s 2>&1 | FileCheck -check-prefix=CHECK-WCHAR2 -check-prefix=DELIMITERS %s
 // Make sure we don't match the -NOT lines with the linker invocation.
 // Delimiters match the start of the cc1 and the start of the linker lines
-// DELIMITERS: {{^ *"}}
+// DELIMITERS: {{^ (\(in-process\)|")}}
 // CHECK-WCHAR1: -fwchar-type=int
 // CHECK-WCHAR1-NOT: -fwchar-type=short
 // CHECK-WCHAR2: -fwchar-type=short
@@ -543,7 +544,9 @@
 // CHECK-NO-CF-PROTECTION-BRANCH-NOT: -fcf-protection=branch
 
 // RUN: %clang -### -S -fdebug-compilation-dir . %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
+// RUN: %clang -### -S -fdebug-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
 // RUN: %clang -### -fdebug-compilation-dir . -x assembler %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
+// RUN: %clang -### -fdebug-compilation-dir=. -x assembler %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
 // CHECK-DEBUG-COMPILATION-DIR: "-fdebug-compilation-dir" "."
 
 // RUN: %clang -### -S -fdiscard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-DISCARD-NAMES %s

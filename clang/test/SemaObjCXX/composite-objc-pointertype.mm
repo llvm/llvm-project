@@ -17,3 +17,13 @@
 }
 @end
 
+@class A;
+
+void multilevel() {
+  A **p;
+  const A **q;
+
+  using T = decltype(true ? q : p);
+  using T = const A * const *;
+}
+

@@ -106,6 +106,15 @@ namespace sys {
   /// On Unix systems, this function exits with an "IO error" exit code.
   /// This is a no-op on Windows.
   void DefaultOneShotPipeSignalHandler();
+
+  /// This function does the following:
+  /// - clean up any temporary files registered with RemoveFileOnSignal()
+  /// - dump the callstack from the exception context
+  /// - call any relevant interrupt/signal handlers
+  /// - create a core/mini dump of the exception context whenever possible
+  /// Context is a system-specific failure context: it is the signal type on
+  /// Unix; the ExceptionContext on Windows.
+  void CleanupOnSignal(uintptr_t Context);
 } // End sys namespace
 } // End llvm namespace
 

@@ -243,6 +243,17 @@ void AArch64AsmPrinter::EmitStartOfAsmFile(Module &M) {
 
 void AArch64AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)
 {
+  const Function &F = MF->getFunction();
+  if (F.hasFnAttribute("patchable-function-entry")) {
+    unsigned Num;
+    if (F.getFnAttribute("patchable-function-entry")
+            .getValueAsString()
+            .getAsInteger(10, Num))
+      return;
+    emitNops(Num);
+    return;
+  }
+
   EmitSled(MI, SledKind::FUNCTION_ENTER);
 }
 
@@ -989,6 +1000,26 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   default:
     break;
+  case AArch64::HINT: {
+    // CurrentPatchableFunctionEntrySym can be CurrentFnBegin only for
+    // -fpatchable-function-entry=N,0. The entry MBB is guaranteed to be
+    // non-empty. If MI is the initial BTI, place the
+    // __patchable_function_entries label after BTI.
+    if (CurrentPatchableFunctionEntrySym &&
+        CurrentPatchableFunctionEntrySym == CurrentFnBegin &&
+        MI == &MF->front().front()) {
+      int64_t Imm = MI->getOperand(0).getImm();
+      if ((Imm & 32) && (Imm & 6)) {
+        MCInst Inst;
+        MCInstLowering.Lower(MI, Inst);
+        EmitToStreamer(*OutStreamer, Inst);
+        CurrentPatchableFunctionEntrySym = createTempSymbol("patch");
+        OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
+        return;
+      }
+    }
+    break;
+  }
     case AArch64::MOVMCSym: {
       Register DestReg = MI->getOperand(0).getReg();
       const MachineOperand &MO_Sym = MI->getOperand(1);
@@ -1286,7 +1317,7 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeAArch64AsmPrinter() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64AsmPrinter() {
   RegisterAsmPrinter<AArch64AsmPrinter> X(getTheAArch64leTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Y(getTheAArch64beTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Z(getTheARM64Target());

@@ -116,9 +116,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @unscaled_i32_i32(i8* %base, <4 x i32>* %offptr) {
 ; CHECK-LABEL: unscaled_i32_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i32>, <4 x i32>* %offptr, align 4
@@ -131,9 +130,8 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @unscaled_f32_i32(i8* %base, <4 x i32>* %offptr) {
 ; CHECK-LABEL: unscaled_f32_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i32>, <4 x i32>* %offptr, align 4
@@ -146,9 +144,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @unsigned_unscaled_b_i32_i16(i8* %base, <4 x i16>* %offptr) {
 ; CHECK-LABEL: unsigned_unscaled_b_i32_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrh.u32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16>, <4 x i16>* %offptr, align 2
@@ -162,9 +159,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @signed_unscaled_i32_i16(i8* %base, <4 x i16>* %offptr) {
 ; CHECK-LABEL: signed_unscaled_i32_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.s32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrh.s32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16>, <4 x i16>* %offptr, align 2
@@ -178,9 +174,8 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @a_unsigned_unscaled_f32_i16(i8* %base, <4 x i16>* %offptr) {
 ; CHECK-LABEL: a_unsigned_unscaled_f32_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.u32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrh.u32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16>, <4 x i16>* %offptr, align 2
@@ -194,9 +189,8 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @b_signed_unscaled_f32_i16(i8* %base, <4 x i16>* %offptr) {
 ; CHECK-LABEL: b_signed_unscaled_f32_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.s32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrh.s32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16>, <4 x i16>* %offptr, align 2
@@ -442,9 +436,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @unsigned_unscaled_b_i32_i8(i8* %base, <4 x i8>* %offptr) {
 ; CHECK-LABEL: unsigned_unscaled_b_i32_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrb.u32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8>, <4 x i8>* %offptr, align 1
@@ -458,9 +451,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @signed_unscaled_i32_i8(i8* %base, <4 x i8>* %offptr) {
 ; CHECK-LABEL: signed_unscaled_i32_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.s32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrb.s32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8>, <4 x i8>* %offptr, align 1
@@ -474,9 +466,8 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @a_unsigned_unscaled_f32_i8(i8* %base, <4 x i8>* %offptr) {
 ; CHECK-LABEL: a_unsigned_unscaled_f32_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrb.u32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8>, <4 x i8>* %offptr, align 1
@@ -490,9 +481,8 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @b_signed_unscaled_f32_i8(i8* %base, <4 x i8>* %offptr) {
 ; CHECK-LABEL: b_signed_unscaled_f32_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.s32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    vldrb.s32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8>, <4 x i8>* %offptr, align 1
@@ -733,6 +723,31 @@ entry:
   %gather = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %ptrs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
   %gather.sext = sext <4 x i8> %gather to <4 x i32>
   ret <4 x i32> %gather.sext
+}
+
+; VLDRW.u32 Qd, [P, 4]
+define arm_aapcs_vfpcc <4 x i32> @qi4(<4 x i32*> %p) {
+; CHECK-LABEL: qi4:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q1, #0x10
+; CHECK-NEXT:    vadd.i32 q0, q0, q1
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov r3, s1
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    ldr r3, [r3]
+; CHECK-NEXT:    vmov.32 q0[0], r0
+; CHECK-NEXT:    ldr r1, [r1]
+; CHECK-NEXT:    vmov.32 q0[1], r3
+; CHECK-NEXT:    ldr r2, [r2]
+; CHECK-NEXT:    vmov.32 q0[2], r1
+; CHECK-NEXT:    vmov.32 q0[3], r2
+; CHECK-NEXT:    bx lr
+entry:
+  %g = getelementptr inbounds i32, <4 x i32*> %p, i32 4
+  %gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %g, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  ret <4 x i32> %gather
 }
 
 declare <4 x i8>  @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*>, i32, <4 x i1>, <4 x i8>)

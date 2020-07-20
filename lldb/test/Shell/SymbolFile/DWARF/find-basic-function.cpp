@@ -21,7 +21,7 @@
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck --check-prefix=METHOD %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
-// RUN:   FileCheck --check-prefix=FULL %s
+// RUN:   FileCheck --check-prefix=FULL-APPLE %s
 // RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL-MANGLED %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
@@ -55,14 +55,16 @@
 // METHOD-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
 // METHOD-DAG: name = "ffbar()::sbaz::foo()", mangled = "_ZZ5ffbarvEN4sbaz3fooEv"
 
-// FULL: Found 7 functions:
-// FULL-DAG: name = "foo()", mangled = "_Z3foov"
-// FULL-DAG: name = "foo(int)", mangled = "_Z3fooi"
-// FULL-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv"
-// FULL-DAG: name = "bar::baz::foo()", mangled = "_ZN3bar3baz3fooEv"
-// FULL-DAG: name = "sbar::foo()", mangled = "_ZN4sbar3fooEv"
-// FULL-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
-// FULL-DAG: name = "ffbar()::sbaz::foo()", mangled = "_ZZ5ffbarvEN4sbaz3fooEv"
+// FULL-APPLE: Found 7 functions:
+// FULL-APPLE-DAG: name = "foo()", mangled = "_Z3foov"
+// FULL-APPLE-DAG: name = "foo(int)", mangled = "_Z3fooi"
+// FULL-APPLE-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv"
+// FULL-APPLE-DAG: name = "bar::baz::foo()", mangled = "_ZN3bar3baz3fooEv"
+// FULL-APPLE-DAG: name = "sbar::foo()", mangled = "_ZN4sbar3fooEv"
+// FULL-APPLE-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
+// FULL-APPLE-DAG: name = "ffbar()::sbaz::foo()", mangled = "_ZZ5ffbarvEN4sbaz3fooEv"
+
+// FULL: Found 0 functions:
 
 // FULL-MANGLED: Found 1 functions:
 // FULL-MANGLED-DAG: name = "foo(int)", mangled = "_Z3fooi"

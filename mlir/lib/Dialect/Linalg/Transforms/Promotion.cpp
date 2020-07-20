@@ -47,10 +47,10 @@ static llvm::cl::opt<bool> clPromoteDynamic(
     llvm::cl::cat(clOptionsCategory), llvm::cl::init(false));
 
 static Value allocBuffer(Type elementType, Value size, bool dynamicBuffers) {
-  auto *ctx = size->getContext();
+  auto *ctx = size.getContext();
   auto width = llvm::divideCeil(elementType.getIntOrFloatBitWidth(), 8);
   if (!dynamicBuffers)
-    if (auto cst = dyn_cast_or_null<ConstantIndexOp>(size->getDefiningOp()))
+    if (auto cst = dyn_cast_or_null<ConstantIndexOp>(size.getDefiningOp()))
       return alloc(
           MemRefType::get(width * cst.getValue(), IntegerType::get(8, ctx)));
   Value mul = muli(constant_index(width), size);
@@ -116,7 +116,7 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
   res.reserve(subViews.size());
   DenseMap<Value, PromotionInfo> promotionInfoMap;
   for (auto v : subViews) {
-    SubViewOp subView = cast<SubViewOp>(v->getDefiningOp());
+    SubViewOp subView = cast<SubViewOp>(v.getDefiningOp());
     auto viewType = subView.getType();
     // TODO(ntv): support more cases than just float.
     if (!viewType.getElementType().isa<FloatType>())
@@ -128,7 +128,7 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
   }
 
   for (auto v : subViews) {
-    SubViewOp subView = cast<SubViewOp>(v->getDefiningOp());
+    SubViewOp subView = cast<SubViewOp>(v.getDefiningOp());
     auto info = promotionInfoMap.find(v);
     if (info == promotionInfoMap.end())
       continue;
@@ -146,7 +146,7 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
     auto info = promotionInfoMap.find(v);
     if (info == promotionInfoMap.end())
       continue;
-    copy(cast<SubViewOp>(v->getDefiningOp()), info->second.partialLocalView);
+    copy(cast<SubViewOp>(v.getDefiningOp()), info->second.partialLocalView);
   }
   return res;
 }
@@ -155,6 +155,8 @@ LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
                                               SetVector<Value> subViews,
                                               bool dynamicBuffers,
                                               OperationFolder *folder) {
+  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
+
   // 1. Promote the specified views and use them in the new op.
   ScopedContext scope(b, op.getLoc());
   auto promotedBufferAndViews = promoteSubViews(
@@ -164,7 +166,7 @@ LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
   SmallVector<std::pair<Value, Value>, 8> writebackViews;
   writebackViews.reserve(subViews.size());
   unsigned promotedIdx = 0;
-  for (auto view : op.getInputsAndOutputs()) {
+  for (auto view : op.getInputsAndOutputBuffers()) {
     if (subViews.count(view) != 0) {
       opViews.push_back(promotedBufferAndViews[promotedIdx].fullLocalView);
       writebackViews.emplace_back(std::make_pair(
@@ -187,7 +189,7 @@ LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
     // WARNING: MUST use the old op to determine whether the operand view is an
     // output.
     bool isOutput =
-        op.getIndexOfOutput(viewAndPartialLocalView.first).hasValue();
+        op.getIndexOfOutputBuffer(viewAndPartialLocalView.first).hasValue();
     if (isOutput)
       copy(viewAndPartialLocalView.second, viewAndPartialLocalView.first);
   }
@@ -203,12 +205,15 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
   SmallVector<LinalgOp, 8> toErase;
   OperationFolder folder(f.getContext());
   f.walk([dynamicBuffers, &folder, &toErase](LinalgOp op) {
+    if (!op.hasBufferSemantics())
+      return;
+
     // TODO(ntv) some heuristic here to decide what to promote. Atm it is all or
     // nothing.
     SetVector<Value> subViews;
     OpBuilder b(op);
-    for (auto it : op.getInputsAndOutputs())
-      if (auto sv = dyn_cast_or_null<SubViewOp>(it->getDefiningOp()))
+    for (auto it : op.getInputsAndOutputBuffers())
+      if (auto sv = dyn_cast_or_null<SubViewOp>(it.getDefiningOp()))
         subViews.insert(sv);
     if (!subViews.empty()) {
       promoteSubViewOperands(b, op, subViews, dynamicBuffers, &folder);

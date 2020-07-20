@@ -14,13 +14,13 @@ body: |
     liveins: $sgpr2_sgpr3
 
     ; WAVE64-LABEL: name: copy
-    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; WAVE64: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[COPY]]
     ; WAVE64: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; WAVE64: FLAT_STORE_DWORD [[COPY1]], [[DEF]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; WAVE32-LABEL: name: copy
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
-    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; WAVE32: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[COPY]]
     ; WAVE32: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; WAVE32: GLOBAL_STORE_DWORD [[COPY1]], [[DEF]], 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)

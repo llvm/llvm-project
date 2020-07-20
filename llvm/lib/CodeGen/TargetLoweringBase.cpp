@@ -156,7 +156,6 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::OLE_F128, "__lekf2");
     setLibcallName(RTLIB::OGT_F128, "__gtkf2");
     setLibcallName(RTLIB::UO_F128, "__unordkf2");
-    setLibcallName(RTLIB::O_F128, "__unordkf2");
   }
 
   // A few names are different on particular architectures or environments.
@@ -564,10 +563,6 @@ static void InitCmpLibcallCCs(ISD::CondCode *CCs) {
   CCs[RTLIB::UO_F64] = ISD::SETNE;
   CCs[RTLIB::UO_F128] = ISD::SETNE;
   CCs[RTLIB::UO_PPCF128] = ISD::SETNE;
-  CCs[RTLIB::O_F32] = ISD::SETEQ;
-  CCs[RTLIB::O_F64] = ISD::SETEQ;
-  CCs[RTLIB::O_F128] = ISD::SETEQ;
-  CCs[RTLIB::O_PPCF128] = ISD::SETEQ;
 }
 
 /// NOTE: The TargetMachine owns TLOF.

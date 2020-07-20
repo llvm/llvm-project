@@ -56,17 +56,17 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
                                 false, false);
 
   // Check that iteration of blocks within a section behaves as expected.
-  EXPECT_EQ(std::distance(Sec1.blocks().begin(), Sec1.blocks().end()), 2U);
+  EXPECT_EQ(std::distance(Sec1.blocks().begin(), Sec1.blocks().end()), 2);
   EXPECT_TRUE(llvm::count(Sec1.blocks(), &B1));
   EXPECT_TRUE(llvm::count(Sec1.blocks(), &B2));
 
   // Check that iteration of symbols within a section behaves as expected.
-  EXPECT_EQ(std::distance(Sec1.symbols().begin(), Sec1.symbols().end()), 2U);
+  EXPECT_EQ(std::distance(Sec1.symbols().begin(), Sec1.symbols().end()), 2);
   EXPECT_TRUE(llvm::count(Sec1.symbols(), &S1));
   EXPECT_TRUE(llvm::count(Sec1.symbols(), &S2));
 
   // Check that iteration of blocks across sections behaves as expected.
-  EXPECT_EQ(std::distance(G.blocks().begin(), G.blocks().end()), 4U);
+  EXPECT_EQ(std::distance(G.blocks().begin(), G.blocks().end()), 4);
   EXPECT_TRUE(llvm::count(G.blocks(), &B1));
   EXPECT_TRUE(llvm::count(G.blocks(), &B2));
   EXPECT_TRUE(llvm::count(G.blocks(), &B3));
@@ -75,8 +75,7 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   // Check that iteration of defined symbols across sections behaves as
   // expected.
   EXPECT_EQ(
-      std::distance(G.defined_symbols().begin(), G.defined_symbols().end()),
-      4U);
+      std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 4);
   EXPECT_TRUE(llvm::count(G.defined_symbols(), &S1));
   EXPECT_TRUE(llvm::count(G.defined_symbols(), &S2));
   EXPECT_TRUE(llvm::count(G.defined_symbols(), &S3));

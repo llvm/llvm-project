@@ -105,7 +105,7 @@ void XCorePassConfig::addPreEmitPass() {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeXCoreTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTarget() {
   RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
 }
 

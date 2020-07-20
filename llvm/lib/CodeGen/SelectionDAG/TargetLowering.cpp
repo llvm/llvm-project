@@ -344,25 +344,18 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
           (VT == MVT::f64) ? RTLIB::OGT_F64 :
           (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
     break;
+  case ISD::SETO:
+    ShouldInvertCC = true;
+    LLVM_FALLTHROUGH;
   case ISD::SETUO:
     LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
           (VT == MVT::f64) ? RTLIB::UO_F64 :
           (VT == MVT::f128) ? RTLIB::UO_F128 : RTLIB::UO_PPCF128;
     break;
-  case ISD::SETO:
-    LC1 = (VT == MVT::f32) ? RTLIB::O_F32 :
-          (VT == MVT::f64) ? RTLIB::O_F64 :
-          (VT == MVT::f128) ? RTLIB::O_F128 : RTLIB::O_PPCF128;
-    break;
   case ISD::SETONE:
-    // SETONE = SETOLT | SETOGT
-    LC1 = (VT == MVT::f32) ? RTLIB::OLT_F32 :
-          (VT == MVT::f64) ? RTLIB::OLT_F64 :
-          (VT == MVT::f128) ? RTLIB::OLT_F128 : RTLIB::OLT_PPCF128;
-    LC2 = (VT == MVT::f32) ? RTLIB::OGT_F32 :
-          (VT == MVT::f64) ? RTLIB::OGT_F64 :
-          (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
-    break;
+    // SETONE = O && UNE
+    ShouldInvertCC = true;
+    LLVM_FALLTHROUGH;
   case ISD::SETUEQ:
     LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
           (VT == MVT::f64) ? RTLIB::UO_F64 :
@@ -420,19 +413,19 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     // Update Chain.
     Chain = Call.second;
   } else {
-    SDValue Tmp = DAG.getNode(
-        ISD::SETCC, dl,
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
-        NewLHS, NewRHS, DAG.getCondCode(CCCode));
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT);
+    SDValue Tmp = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
     auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
-    NewLHS = DAG.getNode(
-        ISD::SETCC, dl,
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
-        Call2.first, NewRHS, DAG.getCondCode(getCmpLibcallCC(LC2)));
+    CCCode = getCmpLibcallCC(LC2);
+    if (ShouldInvertCC)
+      CCCode = getSetCCInverse(CCCode, RetVT);
+    NewLHS = DAG.getSetCC(dl, SetCCVT, Call2.first, NewRHS, CCCode);
     if (Chain)
       Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Call.second,
                           Call2.second);
-    NewLHS = DAG.getNode(ISD::OR, dl, Tmp.getValueType(), Tmp, NewLHS);
+    NewLHS = DAG.getNode(ShouldInvertCC ? ISD::AND : ISD::OR, dl,
+                         Tmp.getValueType(), Tmp, NewLHS);
     NewRHS = SDValue();
   }
 }
@@ -5497,9 +5490,20 @@ char TargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
   const TargetOptions &Options = DAG.getTarget().Options;
-  if (!Op.hasOneUse() && !(Op.getOpcode() == ISD::FP_EXTEND &&
-                           isFPExtFree(VT, Op.getOperand(0).getValueType())))
-    return 0;
+  if (!Op.hasOneUse()) {
+    bool IsFreeExtend = Op.getOpcode() == ISD::FP_EXTEND &&
+                        isFPExtFree(VT, Op.getOperand(0).getValueType());
+
+    // If we already have the use of the negated floating constant, it is free
+    // to negate it even it has multiple uses.
+    bool IsFreeConstant =
+        Op.getOpcode() == ISD::ConstantFP &&
+        !getNegatedExpression(Op, DAG, LegalOperations, ForCodeSize)
+             .use_empty();
+
+    if (!IsFreeExtend && !IsFreeConstant)
+      return 0;
+  }
 
   // Don't recurse exponentially.
   if (Depth > SelectionDAG::MaxRecursionDepth)
@@ -5694,14 +5698,7 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                  ForCodeSize, Depth + 1);
     char V1 = isNegatibleForFree(Op.getOperand(1), DAG, LegalOperations,
                                  ForCodeSize, Depth + 1);
-    // TODO: This is a hack. It is possible that costs have changed between now
-    //       and the initial calls to isNegatibleForFree(). That is because we
-    //       are rewriting the expression, and that may change the number of
-    //       uses (and therefore the cost) of values. If the negation costs are
-    //       equal, only negate this value if it is a constant. Otherwise, try
-    //       operand 1. A better fix would eliminate uses as a cost factor or
-    //       track the change in uses as we rewrite the expression.
-    if (V0 > V1 || (V0 == V1 && isa<ConstantFPSDNode>(Op.getOperand(0)))) {
+    if (V0 > V1) {
       // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
       SDValue Neg0 = getNegatedExpression(
           Op.getOperand(0), DAG, LegalOperations, ForCodeSize, Depth + 1);
@@ -6141,11 +6138,13 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
   SDValue Cst = DAG.getConstantFP(APF, dl, SrcVT);
   SDValue Sel;
 
-  if (Node->isStrictFPOpcode())
+  if (Node->isStrictFPOpcode()) {
     Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT,
                        Node->getOperand(0), /*IsSignaling*/ true);
-  else
+    Chain = Sel.getValue(1);
+  } else {
     Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT);
+  }
 
   bool Strict = Node->isStrictFPOpcode() ||
                 shouldUseStrictFP_TO_INT(SrcVT, DstVT, /*IsSigned*/ false);
@@ -6168,7 +6167,7 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
     SDValue SInt;
     if (Node->isStrictFPOpcode()) {
       SDValue Val = DAG.getNode(ISD::STRICT_FSUB, dl, { SrcVT, MVT::Other }, 
-                                { Node->getOperand(0), Src, FltOfs });
+                                { Chain, Src, FltOfs });
       SInt = DAG.getNode(ISD::STRICT_FP_TO_SINT, dl, { DstVT, MVT::Other }, 
                          { Val.getValue(1), Val });
       Chain = SInt.getValue(1);

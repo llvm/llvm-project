@@ -43,7 +43,7 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: trunc_sgpr_s64_to_s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN: S_ENDPGM 0, implicit [[COPY1]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
@@ -60,7 +60,7 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: trunc_sgpr_s64_to_s16
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN: S_ENDPGM 0, implicit [[COPY1]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
@@ -77,7 +77,7 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: trunc_sgpr_s64_to_s1
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
     ; GCN: S_ENDPGM 0, implicit [[COPY1]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
@@ -112,7 +112,7 @@ body: |
     liveins: $sgpr0_sgpr1_sgpr2
     ; GCN-LABEL: name: trunc_sgpr_s96_to_s64
     ; GCN: [[COPY:%[0-9]+]]:sgpr_96_with_sub0_sub1 = COPY $sgpr0_sgpr1_sgpr2
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY [[COPY]].sub0_sub1
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[COPY]].sub0_sub1
     ; GCN: S_ENDPGM 0, implicit [[COPY1]]
     %0:sgpr(s96) = COPY $sgpr0_sgpr1_sgpr2
     %1:sgpr(s64) = G_TRUNC %0

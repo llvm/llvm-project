@@ -33,7 +33,7 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN: [[S_BFE_U64_:%[0-9]+]]:sreg_64_xexec = S_BFE_U64 [[REG_SEQUENCE]], 65536, implicit-def $scc
+    ; GCN: [[S_BFE_U64_:%[0-9]+]]:sreg_64 = S_BFE_U64 [[REG_SEQUENCE]], 65536, implicit-def $scc
     ; GCN: $sgpr0_sgpr1 = COPY [[S_BFE_U64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s1) = G_TRUNC %0
@@ -94,7 +94,7 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN: [[S_BFE_U64_:%[0-9]+]]:sreg_64_xexec = S_BFE_U64 [[REG_SEQUENCE]], 1048576, implicit-def $scc
+    ; GCN: [[S_BFE_U64_:%[0-9]+]]:sreg_64 = S_BFE_U64 [[REG_SEQUENCE]], 1048576, implicit-def $scc
     ; GCN: $sgpr0_sgpr1 = COPY [[S_BFE_U64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0

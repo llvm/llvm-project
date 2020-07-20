@@ -301,7 +301,7 @@ void Instruction::dump(const MCRegisterInfo &RegInfo,
 
 InstructionsCache::InstructionsCache(const MCInstrInfo &InstrInfo,
                                      const RegisterAliasingTrackerCache &RATC)
-    : InstrInfo(InstrInfo), RATC(RATC) {}
+    : InstrInfo(InstrInfo), RATC(RATC), BVC() {}
 
 const Instruction &InstructionsCache::getInstr(unsigned Opcode) const {
   auto &Found = Instructions[Opcode];

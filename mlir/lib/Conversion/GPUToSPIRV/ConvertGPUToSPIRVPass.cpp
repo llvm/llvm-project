@@ -55,8 +55,8 @@ private:
 } // namespace
 
 void GPUToSPIRVPass::runOnModule() {
-  auto context = &getContext();
-  auto module = getModule();
+  MLIRContext *context = &getContext();
+  ModuleOp module = getModule();
 
   SmallVector<Operation *, 1> kernelModules;
   OpBuilder builder(context);
@@ -76,12 +76,12 @@ void GPUToSPIRVPass::runOnModule() {
   populateGPUToSPIRVPatterns(context, typeConverter, patterns, workGroupSize);
   populateStandardToSPIRVPatterns(context, typeConverter, patterns);
 
-  ConversionTarget target(*context);
-  target.addLegalDialect<spirv::SPIRVDialect>();
-  target.addDynamicallyLegalOp<FuncOp>(
+  std::unique_ptr<ConversionTarget> target = spirv::SPIRVConversionTarget::get(
+      spirv::lookupTargetEnvOrDefault(module), context);
+  target->addDynamicallyLegalOp<FuncOp>(
       [&](FuncOp op) { return typeConverter.isSignatureLegal(op.getType()); });
 
-  if (failed(applyFullConversion(kernelModules, target, patterns,
+  if (failed(applyFullConversion(kernelModules, *target, patterns,
                                  &typeConverter))) {
     return signalPassFailure();
   }

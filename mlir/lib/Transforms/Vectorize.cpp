@@ -797,7 +797,7 @@ template <typename LoadOrStoreOpPointer>
 static LogicalResult vectorizeRootOrTerminal(Value iv,
                                              LoadOrStoreOpPointer memoryOp,
                                              VectorizationState *state) {
-  auto memRefType = memoryOp.getMemRef()->getType().template cast<MemRefType>();
+  auto memRefType = memoryOp.getMemRef().getType().template cast<MemRefType>();
 
   auto elementType = memRefType.getElementType();
   // TODO(ntv): ponder whether we want to further vectorize a vector value.
@@ -981,10 +981,9 @@ static Value vectorizeConstant(Operation *op, ConstantOp constant, Type type) {
 /// TODO(ntv): handle more complex cases.
 static Value vectorizeOperand(Value operand, Operation *op,
                               VectorizationState *state) {
-  LLVM_DEBUG(dbgs() << "\n[early-vect]vectorize operand: ");
-  LLVM_DEBUG(operand->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "\n[early-vect]vectorize operand: " << operand);
   // 1. If this value has already been vectorized this round, we are done.
-  if (state->vectorizedSet.count(operand->getDefiningOp()) > 0) {
+  if (state->vectorizedSet.count(operand.getDefiningOp()) > 0) {
     LLVM_DEBUG(dbgs() << " -> already vector operand");
     return operand;
   }
@@ -995,24 +994,22 @@ static Value vectorizeOperand(Value operand, Operation *op,
   auto it = state->replacementMap.find(operand);
   if (it != state->replacementMap.end()) {
     auto res = it->second;
-    LLVM_DEBUG(dbgs() << "-> delayed replacement by: ");
-    LLVM_DEBUG(res->print(dbgs()));
+    LLVM_DEBUG(dbgs() << "-> delayed replacement by: " << res);
     return res;
   }
   // 2. TODO(ntv): broadcast needed.
-  if (operand->getType().isa<VectorType>()) {
+  if (operand.getType().isa<VectorType>()) {
     LLVM_DEBUG(dbgs() << "-> non-vectorizable");
     return nullptr;
   }
   // 3. vectorize constant.
-  if (auto constant = dyn_cast<ConstantOp>(operand->getDefiningOp())) {
+  if (auto constant = dyn_cast<ConstantOp>(operand.getDefiningOp())) {
     return vectorizeConstant(
         op, constant,
-        VectorType::get(state->strategy->vectorSizes, operand->getType()));
+        VectorType::get(state->strategy->vectorSizes, operand.getType()));
   }
   // 4. currently non-vectorizable.
-  LLVM_DEBUG(dbgs() << "-> non-vectorizable");
-  LLVM_DEBUG(operand->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "-> non-vectorizable: " << operand);
   return nullptr;
 }
 
@@ -1073,7 +1070,7 @@ static Operation *vectorizeOneOperation(Operation *opInst,
   SmallVector<Type, 8> vectorTypes;
   for (auto v : opInst->getResults()) {
     vectorTypes.push_back(
-        VectorType::get(state->strategy->vectorSizes, v->getType()));
+        VectorType::get(state->strategy->vectorSizes, v.getType()));
   }
   SmallVector<Value, 8> vectorOperands;
   for (auto v : opInst->getOperands()) {
@@ -1179,7 +1176,7 @@ static LogicalResult vectorizeRootMatch(NestedMatch m,
   auto clonedLoop = cast<AffineForOp>(builder.clone(*loopInst));
   struct Guard {
     LogicalResult failure() {
-      loop.getInductionVar()->replaceAllUsesWith(clonedLoop.getInductionVar());
+      loop.getInductionVar().replaceAllUsesWith(clonedLoop.getInductionVar());
       loop.erase();
       return mlir::failure();
     }

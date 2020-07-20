@@ -50,6 +50,20 @@ check_compiler_version("Clang" "Clang" ${CLANG_MIN} ${CLANG_SOFT_ERROR})
 check_compiler_version("AppleClang" "Apple Clang" ${APPLECLANG_MIN} ${APPLECLANG_SOFT_ERROR})
 check_compiler_version("MSVC" "Visual Studio" ${MSVC_MIN} ${MSVC_SOFT_ERROR})
 
+# See https://developercommunity.visualstudio.com/content/problem/845933/miscompile-boolean-condition-deduced-to-be-always.html
+# and thread "[llvm-dev] Longstanding failing tests - clang-tidy, MachO, Polly"
+# on llvm-dev Jan 21-23 2020.
+if ((${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC) AND
+    (19.24 VERSION_LESS_EQUAL ${CMAKE_CXX_COMPILER_VERSION}) AND
+    (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 19.25))
+  if(LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN)
+    message(WARNING "Host Visual Studio version 16.4 is known to miscompile part of LLVM")
+  else()
+    message(FATAL_ERROR "Host Visual Studio version 16.4 is known to miscompile part of LLVM, please use clang-cl or upgrade to 16.5 or above (use -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON to ignore)")
+  endif()
+endif()
+
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   if (CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
     if (CMAKE_CXX_SIMULATE_VERSION VERSION_LESS MSVC_MIN)

@@ -3956,6 +3956,8 @@ static bool ExpandMOVImmSExti8(MachineInstrBuilder &MIB,
     BuildMI(MBB, I, DL, TII.get(X86::PUSH32i8)).addImm(Imm);
     MIB->setDesc(TII.get(X86::POP32r));
   }
+  MIB->RemoveOperand(1);
+  MIB->addImplicitDefUseOperands(*MBB.getParent());
 
   // Build CFI if necessary.
   MachineFunction &MF = *MBB.getParent();
@@ -4703,6 +4705,10 @@ static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
   }
 
   updateOperandRegConstraints(MF, *NewMI, TII);
+
+  // Copy the NoFPExcept flag from the instruction we're fusing.
+  if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
+    NewMI->setFlag(MachineInstr::MIFlag::NoFPExcept);
 
   MachineBasicBlock *MBB = InsertPt->getParent();
   MBB->insert(InsertPt, NewMI);

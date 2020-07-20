@@ -1749,7 +1749,7 @@ _mm_sll_epi64 (__m128i __A, __m128i __B)
   lshift = vec_splat ((__v2du) __B, 0);
   shmask = vec_cmplt (lshift, shmax);
   result = vec_sl ((__v2du) __A, lshift);
-  result = vec_sel ((__v2du) shmask, result, shmask);
+  result = (__v2du)vec_sel ((__v2df) shmask, (__v2df)result, shmask);
 
   return (__m128i) result;
 }
@@ -1843,7 +1843,7 @@ _mm_srl_epi64 (__m128i __A, __m128i __B)
   rshift = vec_splat ((__v2du) __B, 0);
   shmask = vec_cmplt (rshift, shmax);
   result = vec_sr ((__v2du) __A, rshift);
-  result = vec_sel ((__v2du) shmask, result, shmask);
+  result = (__v2du)vec_sel ((__v2df) shmask, (__v2df)result, shmask);
 
   return (__m128i) result;
 }

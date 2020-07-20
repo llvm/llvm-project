@@ -252,9 +252,6 @@ void Mips16TargetLowering::setMips16HardFloatLibCalls() {
     if (HardFloatLibCalls[I].Libcall != RTLIB::UNKNOWN_LIBCALL)
       setLibcallName(HardFloatLibCalls[I].Libcall, HardFloatLibCalls[I].Name);
   }
-
-  setLibcallName(RTLIB::O_F64, "__mips16_unorddf2");
-  setLibcallName(RTLIB::O_F32, "__mips16_unordsf2");
 }
 
 //

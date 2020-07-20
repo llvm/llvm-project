@@ -8,9 +8,9 @@ func @check_arguments(%static: memref<10x20xf32>, %dynamic : memref<?x?xf32>, %m
 
 //   CHECK-LABEL: func @check_strided_memref_arguments(
 // CHECK-COUNT-3:   !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">
-func @check_strided_memref_arguments(%static: memref<10x20xf32, (i,j)->(20 * i + j + 1)>,
-                                     %dynamic : memref<?x?xf32, (i,j)[M]->(M * i + j + 1)>,
-                                     %mixed : memref<10x?xf32, (i,j)[M]->(M * i + j + 1)>) {
+func @check_strided_memref_arguments(%static: memref<10x20xf32, affine_map<(i,j)->(20 * i + j + 1)>>,
+                                     %dynamic : memref<?x?xf32, affine_map<(i,j)[M]->(M * i + j + 1)>>,
+                                     %mixed : memref<10x?xf32, affine_map<(i,j)[M]->(M * i + j + 1)>>) {
   return
 }
 

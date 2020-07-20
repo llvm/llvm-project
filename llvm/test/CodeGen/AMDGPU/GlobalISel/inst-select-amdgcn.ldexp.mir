@@ -75,7 +75,7 @@ body: |
     liveins: $sgpr0_sgpr1, $vgpr0
     ; GCN-LABEL: name: ldexp_s64_vsv
     ; GCN: liveins: $sgpr0_sgpr1, $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[V_LDEXP_F64_:%[0-9]+]]:vreg_64 = V_LDEXP_F64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $exec
     ; GCN: S_ENDPGM 0, implicit [[V_LDEXP_F64_]]

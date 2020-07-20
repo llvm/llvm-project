@@ -37,7 +37,22 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
           /*object_address_ptr*/ nullptr, result, &status))
     return status.ToError();
 
-  return result.GetScalar();
+  switch (result.GetValueType()) {
+  case Value::eValueTypeScalar:
+    return result.GetScalar();
+  case Value::eValueTypeHostAddress: {
+    // Convert small buffers to scalars to simplify the tests.
+    DataBufferHeap &buf = result.GetBuffer();
+    if (buf.GetByteSize() <= 8) {
+      uint64_t val = 0;
+      memcpy(&val, buf.GetBytes(), buf.GetByteSize());
+      return Scalar(llvm::APInt(buf.GetByteSize()*8, val, false));
+    }
+  }
+    LLVM_FALLTHROUGH;
+  default:
+    return status.ToError();
+  }
 }
 
 /// A mock module holding an object file parsed from YAML.
@@ -334,4 +349,15 @@ TEST(DWARFExpression, DW_OP_convert) {
   EXPECT_THAT_ERROR(
       t.Eval({DW_OP_const1s, 'X', DW_OP_convert, 0x1d}).takeError(),
       llvm::Failed());
+}
+
+TEST(DWARFExpression, DW_OP_piece) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const2u, 0x11, 0x22, DW_OP_piece, 2,
+                                 DW_OP_const2u, 0x33, 0x44, DW_OP_piece, 2}),
+                       llvm::HasValue(GetScalar(32, 0x44332211, true)));
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_piece, 1, DW_OP_const1u, 0xff, DW_OP_piece, 1}),
+      // Note that the "00" should really be "undef", but we can't
+      // represent that yet.
+      llvm::HasValue(GetScalar(16, 0xff00, true)));
 }

@@ -5,10 +5,10 @@
 // Verify that we pass -x cuda-cpp-output to compiler after
 // preprocessing a CUDA file
 // RUN: %clang  -Werror -### -save-temps -c %s 2>&1 | FileCheck %s
-// CHECK: "-cc1"
+// CHECK-LABEL: "-cc1"
 // CHECK: "-E"
 // CHECK: "-x" "cuda"
-// CHECK-NEXT: "-cc1"
+// CHECK-LABEL: "-cc1"
 // CHECK: "-x" "cuda-cpp-output"
 //
 // Verify that compiler accepts CUDA syntax with "-x cuda-cpp-output".

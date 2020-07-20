@@ -75,3 +75,8 @@ void vla(bool b) {
   static_assert(!noexcept((int(*)[b ? throw : 42])0), "");
   static_assert(!noexcept((int(*)[b ? throw : 42]){0}), "");
 }
+
+struct pr_44514 {
+  // expected-error@+1{{value of type 'void' is not contextually convertible to 'bool'}}
+  void foo(void) const &noexcept(f());
+};

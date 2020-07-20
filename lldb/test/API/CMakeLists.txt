@@ -36,7 +36,6 @@ set(LLDB_TEST_USER_ARGS
 # hash of filename and .text section, there *will* be conflicts inside
 # the build directory.
 set(LLDB_TEST_COMMON_ARGS
-  --arch=${LLDB_TEST_ARCH}
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
   -S nm
@@ -65,13 +64,6 @@ set(LLDB_TEST_FILECHECK "${LLDB_DEFAULT_TEST_FILECHECK}" CACHE PATH "FileCheck u
 if ("${LLDB_TEST_COMPILER}" STREQUAL "")
   message(FATAL_ERROR "LLDB test compiler not specified. Tests will not run.")
 endif()
-
-list(APPEND LLDB_TEST_COMMON_ARGS
-  --executable ${LLDB_TEST_EXECUTABLE}
-  --compiler ${LLDB_TEST_COMPILER}
-  --dsymutil ${LLDB_TEST_DSYMUTIL}
-  --filecheck ${LLDB_TEST_FILECHECK}
-  )
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   # All tests are currently flaky on Windows, so rerun them all once when they fail.

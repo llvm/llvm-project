@@ -69,7 +69,6 @@ public:
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the instruction.
   /// \param Bytes    - A reference to the actual bytes of the instruction.
-  /// \param VStream  - The stream to print warnings and diagnostic messages on.
   /// \param CStream  - The stream to print comments and annotations on.
   /// \return         - MCDisassembler::Success if the instruction is valid,
   ///                   MCDisassembler::SoftFail if the instruction was
@@ -77,7 +76,6 @@ public:
   ///                   MCDisassembler::Fail if the instruction was invalid.
   virtual DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                                       ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                      raw_ostream &VStream,
                                       raw_ostream &CStream) const = 0;
 
   /// May parse any prelude that precedes instructions after the start of a
@@ -88,13 +86,11 @@ public:
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the symbol.
   /// \param Bytes    - A reference to the actual bytes at the symbol location.
-  /// \param VStream  - The stream to print warnings and diagnostic messages on.
   /// \param CStream  - The stream to print comments and annotations on.
   /// \return         - MCDisassembler::Success if the bytes are valid,
   ///                   MCDisassembler::Fail if the bytes were invalid.
   virtual DecodeStatus onSymbolStart(StringRef Name, uint64_t &Size,
                                      ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                     raw_ostream &VStream,
                                      raw_ostream &CStream) const;
 
 private:

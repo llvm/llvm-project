@@ -113,6 +113,9 @@ public:
 
   ProfileSummaryInfo *PSI;
 
+  /// The symbol for the entry in __patchable_function_entires.
+  MCSymbol *CurrentPatchableFunctionEntrySym = nullptr;
+
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
   MCSymbol *CurrentFnSym = nullptr;
@@ -132,7 +135,6 @@ public:
   MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
 
 private:
-  MCSymbol *CurrentFnBegin = nullptr;
   MCSymbol *CurrentFnEnd = nullptr;
   MCSymbol *CurExceptionSym = nullptr;
 
@@ -145,6 +147,8 @@ private:
   static char ID;
 
 protected:
+  MCSymbol *CurrentFnBegin = nullptr;
+
   /// Protected struct HandlerInfo and Handlers permit target extended
   /// AsmPrinter adds their own handlers.
   struct HandlerInfo {
@@ -285,6 +289,9 @@ public:
 
   /// Emit a table with all XRay instrumentation points.
   void emitXRayTable();
+
+  DenseMap<const MCSection *, unsigned> PatchableFunctionEntryID;
+  void emitPatchableFunctionEntries();
 
   //===------------------------------------------------------------------===//
   // MachineFunctionPass Implementation.
@@ -445,6 +452,9 @@ public:
   /// Targets can override this to customize the output of IMPLICIT_DEF
   /// instructions in verbose mode.
   virtual void emitImplicitDef(const MachineInstr *MI) const;
+
+  /// Emit N NOP instructions.
+  void emitNops(unsigned N);
 
   //===------------------------------------------------------------------===//
   // Symbol Lowering Routines.

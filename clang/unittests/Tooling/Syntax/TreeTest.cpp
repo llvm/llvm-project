@@ -11,6 +11,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -894,6 +895,9 @@ TEST_F(SyntaxTreeTest, Mutations) {
     auto *S = cast<syntax::Statement>(nodeByRange(Input.range(), TU));
     ASSERT_TRUE(S->canModify()) << "cannot remove a statement";
     syntax::removeStatement(*Arena, S);
+    EXPECT_TRUE(S->isDetached());
+    EXPECT_FALSE(S->isOriginal())
+        << "node removed from tree cannot be marked as original";
   };
 
   std::vector<std::pair<std::string /*Input*/, std::string /*Expected*/>>
@@ -904,6 +908,23 @@ TEST_F(SyntaxTreeTest, Mutations) {
           {"void test() { [[;]] }", "void test() {  }"}};
   for (const auto &C : Cases)
     CheckTransformation(C.first, C.second, RemoveStatement);
+}
+
+TEST_F(SyntaxTreeTest, SynthesizedNodes) {
+  buildTree("");
+
+  auto *C = syntax::createPunctuation(*Arena, tok::comma);
+  ASSERT_NE(C, nullptr);
+  EXPECT_EQ(C->token()->kind(), tok::comma);
+  EXPECT_TRUE(C->canModify());
+  EXPECT_FALSE(C->isOriginal());
+  EXPECT_TRUE(C->isDetached());
+
+  auto *S = syntax::createEmptyStatement(*Arena);
+  ASSERT_NE(S, nullptr);
+  EXPECT_TRUE(S->canModify());
+  EXPECT_FALSE(S->isOriginal());
+  EXPECT_TRUE(S->isDetached());
 }
 
 } // namespace

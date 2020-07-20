@@ -113,6 +113,18 @@ namespace bullet4 {
   X<3> reversed_add = x2 + x1; // expected-error {{invalid operands}}
 }
 
+namespace PR44627 {
+  namespace ADL {
+    struct type {};
+    bool operator==(type lhs, int rhs) {
+      return true;
+    }
+  }
+
+  bool b1 = ADL::type() == 0;
+  bool b2 = 0 == ADL::type();
+}
+
 // Various C++17 cases that are known to be broken by the C++20 rules.
 namespace problem_cases {
   // We can have an ambiguity between an operator and its reversed form. This

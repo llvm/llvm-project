@@ -29,6 +29,7 @@ static_library("Checkers") {
     "CastValueChecker.cpp",
     "CheckObjCDealloc.cpp",
     "CheckObjCInstMethSignature.cpp",
+    "CheckPlacementNew.cpp",
     "CheckSecuritySyntaxOnly.cpp",
     "CheckSizeofPointer.cpp",
     "CheckerDocumentation.cpp",

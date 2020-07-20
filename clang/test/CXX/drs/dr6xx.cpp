@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
 namespace std {
   struct type_info {};
@@ -506,7 +506,7 @@ namespace dr647 { // dr647: yes
     constexpr C(NonLiteral, int) {} // expected-error {{not a literal type}}
     constexpr C() try {} catch (...) {}
 #if __cplusplus <= 201703L
-    // expected-error@-2 {{function try block in constexpr constructor is a C++2a extension}}
+    // expected-error@-2 {{function try block in constexpr constructor is a C++20 extension}}
 #endif
 #if __cplusplus < 201402L
     // expected-error@-5 {{use of this statement in a constexpr constructor is a C++14 extension}}
@@ -1070,7 +1070,7 @@ namespace dr687 { // dr687 (9 c++20, but the issue is still considered open)
     // This is valid in C++20.
     g<int>(a);
 #if __cplusplus <= 201703L
-    // expected-error@-2 {{C++2a extension}}
+    // expected-error@-2 {{C++20 extension}}
 #endif
 
     // This is not.

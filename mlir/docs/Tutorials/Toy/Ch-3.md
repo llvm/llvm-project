@@ -92,7 +92,7 @@ struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
     // Look through the input of the current transpose.
     mlir::Value transposeInput = op.getOperand();
     TransposeOp transposeInputOp =
-        llvm::dyn_cast_or_null<TransposeOp>(transposeInput->getDefiningOp());
+        llvm::dyn_cast_or_null<TransposeOp>(transposeInput.getDefiningOp());
     // If the input is defined by another Transpose, bingo!
     if (!transposeInputOp)
       return matchFailure();
@@ -194,7 +194,7 @@ An example is a transformation that eliminates reshapes when they are redundant,
 i.e. when the input and output shapes are identical.
 
 ```tablegen
-def TypesAreIdentical : Constraint<CPred<"$0->getType() == $1->getType()">>;
+def TypesAreIdentical : Constraint<CPred<"$0.getType() == $1.getType()">>;
 def RedundantReshapeOptPattern : Pat<
   (ReshapeOp:$res $arg), (replaceWithValue $arg),
   [(TypesAreIdentical $res, $arg)]>;
@@ -208,7 +208,7 @@ optimize Reshape of a constant value by reshaping the constant in place and
 eliminating the reshape operation.
 
 ```tablegen
-def ReshapeConstant : NativeCodeCall<"$0.reshape(($1->getType()).cast<ShapedType>())">;
+def ReshapeConstant : NativeCodeCall<"$0.reshape(($1.getType()).cast<ShapedType>())">;
 def FoldConstantReshapeOptPattern : Pat<
   (ReshapeOp:$res (ConstantOp $arg)),
   (ConstantOp (ReshapeConstant $arg, $res))>;

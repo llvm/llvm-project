@@ -429,6 +429,10 @@ private:
       return "ConstraintNormalization";
     case CodeSynthesisContext::ParameterMappingSubstitution:
       return "ParameterMappingSubstitution";
+    case CodeSynthesisContext::RequirementInstantiation:
+      return "RequirementInstantiation";
+    case CodeSynthesisContext::NestedRequirementConstraintsCheck:
+      return "NestedRequirementConstraintsCheck";
     }
     return "";
   }

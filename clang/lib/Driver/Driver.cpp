@@ -1035,6 +1035,10 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // -no-canonical-prefixes is used very early in main.
   Args.ClaimAllArgs(options::OPT_no_canonical_prefixes);
 
+  // f(no-)integated-cc1 is also used very early in main.
+  Args.ClaimAllArgs(options::OPT_fintegrated_cc1);
+  Args.ClaimAllArgs(options::OPT_fno_integrated_cc1);
+
   // Ignore -pipe.
   Args.ClaimAllArgs(options::OPT_pipe);
 
@@ -3752,6 +3756,11 @@ void Driver::BuildJobs(Compilation &C) const {
                        /*LinkingOutput*/ LinkingOutput, CachedResults,
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
+
+  // If we have more than one job, then disable integrated-cc1 for now.
+  if (C.getJobs().size() > 1)
+    for (auto &J : C.getJobs())
+      J.InProcess = false;
 
   // If the user passed -Qunused-arguments or there were errors, don't warn
   // about any unused arguments.

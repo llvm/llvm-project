@@ -53,14 +53,14 @@ void DfaEmitter::addTransition(state_type From, state_type To, action_type A) {
   ++NumNfaTransitions;
 }
 
-void DfaEmitter::visitDfaState(DfaState DS) {
+void DfaEmitter::visitDfaState(const DfaState &DS) {
   // For every possible action...
   auto FromId = DfaStates.idFor(DS);
   for (action_type A : Actions) {
     DfaState NewStates;
     DfaTransitionInfo TI;
     // For every represented state, word pair in the original NFA...
-    for (state_type &FromState : DS) {
+    for (state_type FromState : DS) {
       // If this action is possible from this state add the transitioned-to
       // states to NewStates.
       auto I = NfaTransitions.find({FromState, A});
@@ -90,8 +90,11 @@ void DfaEmitter::constructDfa() {
 
   // Note that UniqueVector starts indices at 1, not zero.
   unsigned DfaStateId = 1;
-  while (DfaStateId <= DfaStates.size())
-    visitDfaState(DfaStates[DfaStateId++]);
+  while (DfaStateId <= DfaStates.size()) {
+    DfaState S = DfaStates[DfaStateId];
+    visitDfaState(S);
+    DfaStateId++;
+  }
 }
 
 void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {

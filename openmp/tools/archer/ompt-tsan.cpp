@@ -82,6 +82,31 @@ public:
   }
 };
 
+class TsanFlags {
+public:
+  int ignore_noninstrumented_modules;
+
+  TsanFlags(const char *env) : ignore_noninstrumented_modules(0) {
+    if (env) {
+      std::vector<std::string> tokens;
+      std::string token;
+      std::string str(env);
+      std::istringstream iss(str);
+      while (std::getline(iss, token, ' '))
+        tokens.push_back(token);
+
+      for (std::vector<std::string>::iterator it = tokens.begin();
+           it != tokens.end(); ++it) {
+        // we are interested in ignore_noninstrumented_modules to print a
+        // warning
+        if (sscanf(it->c_str(), "ignore_noninstrumented_modules=%d",
+                   &ignore_noninstrumented_modules))
+          continue;
+      }
+    }
+  }
+};
+
 #if (LLVM_VERSION) >= 40
 extern "C" {
 int __attribute__((weak)) __archer_get_omp_status();
@@ -162,6 +187,8 @@ int __attribute__((weak)) RunningOnValgrind() {
   runOnTsan = 0;
   return 0;
 }
+void __attribute__((weak)) __tsan_func_entry(const void *call_pc) {}
+void __attribute__((weak)) __tsan_func_exit(void) {}
 #endif
 }
 
@@ -188,6 +215,10 @@ int __attribute__((weak)) RunningOnValgrind() {
 #define TsanFreeMemory(addr, size)                                             \
   AnnotateNewMemory(__FILE__, __LINE__, addr, size)
 #endif
+
+// Function entry/exit
+#define TsanFuncEntry(pc) __tsan_func_entry(pc)
+#define TsanFuncExit() __tsan_func_exit()
 
 /// Required OMPT inquiry functions.
 static ompt_get_parallel_info_t ompt_get_parallel_info;
@@ -301,10 +332,13 @@ struct ParallelData {
   /// Two addresses for relationships with barriers.
   ompt_tsan_clockid Barrier[2];
 
+  const void *codePtr;
+
   void *GetParallelPtr() { return &(Barrier[1]); }
 
   void *GetBarrierPtr(unsigned Index) { return &(Barrier[Index]); }
 
+  ParallelData(const void *codeptr) : codePtr(codeptr) {}
   ~ParallelData() {
     TsanDeleteClock(&(Barrier[0]));
     TsanDeleteClock(&(Barrier[1]));
@@ -458,7 +492,7 @@ static void ompt_tsan_parallel_begin(ompt_data_t *parent_task_data,
                                      uint32_t requested_team_size,
                                      int flag,
                                      const void *codeptr_ra) {
-  ParallelData *Data = new ParallelData;
+  ParallelData *Data = new ParallelData(codeptr_ra);
   parallel_data->ptr = Data;
 
   TsanHappensBefore(Data->GetParallelPtr());
@@ -491,8 +525,12 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
                                     int type) {
   switch (endpoint) {
   case ompt_scope_begin:
+    if (type & ompt_task_initial) {
+      parallel_data->ptr = new ParallelData(nullptr);
+    }
     task_data->ptr = new TaskData(ToParallelData(parallel_data));
     TsanHappensAfter(ToParallelData(parallel_data)->GetParallelPtr());
+    TsanFuncEntry(ToParallelData(parallel_data)->codePtr);
     break;
   case ompt_scope_end:
     TaskData *Data = ToTaskData(task_data);
@@ -501,6 +539,7 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
     assert(Data->RefCount == 1 &&
            "All tasks should have finished at the implicit barrier!");
     delete Data;
+    TsanFuncExit();
     break;
   }
 }
@@ -513,6 +552,7 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
   TaskData *Data = ToTaskData(task_data);
   switch (endpoint) {
   case ompt_scope_begin:
+    TsanFuncEntry(codeptr_ra);
     switch (kind) {
       case ompt_sync_region_barrier_implementation:
       case ompt_sync_region_barrier_implicit:
@@ -546,6 +586,7 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
     }
     break;
   case ompt_scope_end:
+    TsanFuncExit();
     switch (kind) {
       case ompt_sync_region_barrier_implementation:
       case ompt_sync_region_barrier_implicit:
@@ -641,7 +682,7 @@ static void ompt_tsan_task_create(
     ompt_data_t *parallel_data;
     int team_size = 1;
     ompt_get_parallel_info(0, &parallel_data, &team_size);
-    ParallelData *PData = new ParallelData;
+    ParallelData *PData = new ParallelData(nullptr);
     parallel_data->ptr = PData;
 
     Data = new TaskData(PData);
@@ -820,8 +861,8 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind,
 static int ompt_tsan_initialize(ompt_function_lookup_t lookup,
                                 int device_num,
                                 ompt_data_t *tool_data) {
-  const char *options = getenv("ARCHER_OPTIONS");
-  archer_flags = new ArcherFlags(options);
+  const char *options = getenv("TSAN_OPTIONS");
+  TsanFlags tsan_flags(options);
 
   ompt_set_callback_t ompt_set_callback =
       (ompt_set_callback_t)lookup("ompt_set_callback");
@@ -853,6 +894,12 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup,
   SET_CALLBACK_T(mutex_acquired, mutex);
   SET_CALLBACK_T(mutex_released, mutex);
   SET_OPTIONAL_CALLBACK_T(reduction, sync_region, hasReductionCallback, ompt_set_never);
+
+  if (!tsan_flags.ignore_noninstrumented_modules)
+    fprintf(
+        stderr,
+        "Warning: please export TSAN_OPTIONS='ignore_noninstrumented_modules=1' "
+        "to avoid false positive reports from the OpenMP runtime.!\n");
   return 1; // success
 }
 

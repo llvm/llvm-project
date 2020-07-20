@@ -207,6 +207,30 @@ func @failedSingleBlockImplicitTerminator_missing_terminator() {
 
 // -----
 
+// Test the invariants of operations with the Symbol Trait.
+
+// expected-error@+1 {{requires string attribute 'sym_name'}}
+"test.symbol"() {} : () -> ()
+
+// -----
+
+// expected-error@+1 {{requires visibility attribute 'sym_visibility' to be a string attribute}}
+"test.symbol"() {sym_name = "foo_2", sym_visibility} : () -> ()
+
+// -----
+
+// expected-error@+1 {{visibility expected to be one of ["public", "private", "nested"]}}
+"test.symbol"() {sym_name = "foo_2", sym_visibility = "foo"} : () -> ()
+
+// -----
+
+"test.symbol"() {sym_name = "foo_3", sym_visibility = "nested"} : () -> ()
+"test.symbol"() {sym_name = "foo_4", sym_visibility = "private"} : () -> ()
+"test.symbol"() {sym_name = "foo_5", sym_visibility = "public"} : () -> ()
+"test.symbol"() {sym_name = "foo_6"} : () -> ()
+
+// -----
+
 // Test that operation with the SymbolTable Trait define a new symbol scope.
 "test.symbol_scope"() ({
   func @foo() {

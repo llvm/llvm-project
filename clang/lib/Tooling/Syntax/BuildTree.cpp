@@ -92,7 +92,9 @@ public:
     Pending.foldChildren(Arena, Tokens.drop_back(),
                          new (Arena.allocator()) syntax::TranslationUnit);
 
-    return cast<syntax::TranslationUnit>(std::move(Pending).finalize());
+    auto *TU = cast<syntax::TranslationUnit>(std::move(Pending).finalize());
+    TU->assertInvariantsRecursive();
+    return TU;
   }
 
   /// getRange() finds the syntax tokens corresponding to the passed source

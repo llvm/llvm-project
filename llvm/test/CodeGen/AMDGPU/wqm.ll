@@ -117,6 +117,9 @@ main_body:
 ;CHECK: buffer_load_dword
 ;CHECK: buffer_load_dword
 ;CHECK: v_add_f32_e32
+; WQM was inserting an unecessary v_mov to self after the v_add. Make sure this
+; does not happen - the v_add should write the return reg directly.
+;CHECK-NOT: v_mov_b32_e32
 define amdgpu_ps float @test5(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
   %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)

@@ -2727,7 +2727,9 @@ void Preprocessor::HandleDefineDirective(
                              /*Syntactic=*/LangOpts.MicrosoftExt))
       Diag(MI->getDefinitionLoc(), diag::warn_pp_macro_def_mismatch_with_pch)
           << MacroNameTok.getIdentifierInfo();
-    return;
+    // Issue the diagnostic but allow the change if msvc extensions are enabled
+    if (!LangOpts.MicrosoftExt)
+      return;
   }
 
   // Finally, if this identifier already had a macro defined for it, verify that

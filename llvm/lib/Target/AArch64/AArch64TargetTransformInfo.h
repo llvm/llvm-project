@@ -183,7 +183,21 @@ public:
                                      bool &AllowPromotionWithoutCommonHeader);
 
   bool shouldExpandReduction(const IntrinsicInst *II) const {
-    return false;
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::experimental_vector_reduce_v2_fadd:
+    case Intrinsic::experimental_vector_reduce_v2_fmul:
+      // We don't have legalization support for ordered FP reductions.
+      return !II->getFastMathFlags().allowReassoc();
+
+    case Intrinsic::experimental_vector_reduce_fmax:
+    case Intrinsic::experimental_vector_reduce_fmin:
+      // Lowering asserts that there are no NaNs.
+      return !II->getFastMathFlags().noNaNs();
+
+    default:
+      // Don't expand anything else, let legalization deal with it.
+      return false;
+    }
   }
 
   unsigned getGISelRematGlobalCost() const {

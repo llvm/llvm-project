@@ -30,12 +30,12 @@ target triple = "i386-unknown-unknown"
 
 ; Function Attrs: norecurse nounwind readnone
 define dso_local %struct.bar* @func1(%struct.bar* readnone returned %0, i32 %1, i32 %2, i32* nocapture readnone %3) local_unnamed_addr #0 !dbg !8 {
-; CHECK-DAG: DBG_VALUE %fixed-stack.1, $noreg, {{.*}}, !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32),
-; CHECK-DAG: DBG_VALUE %fixed-stack.0, $noreg, {{.*}}, !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32),
-; CHECK-DAG: DBG_VALUE %fixed-stack.3, $noreg, {{.*}}, !DIExpression(DW_OP_deref),
-; CHECK-DAG: DBG_VALUE %fixed-stack.2, $noreg, {{.*}}, !DIExpression(DW_OP_deref),
-; CHECK-DAG: DBG_VALUE %fixed-stack.3, $noreg, {{.*}}, !DIExpression(DW_OP_deref_size, 4, DW_OP_plus_uconst, 144, DW_OP_stack_value),
-; CHECK-DAG: DBG_VALUE %fixed-stack.3, $noreg, {{.*}}, !DIExpression(DW_OP_deref_size, 4, DW_OP_plus_uconst, 144, DW_OP_stack_value, DW_OP_LLVM_fragment, 32, 32),
+; CHECK-DAG: DBG_VALUE %fixed-stack.1, 0, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32),
+; CHECK-DAG: DBG_VALUE %fixed-stack.0, 0, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 32, 32),
+; CHECK-DAG: DBG_VALUE %fixed-stack.3, 0, {{.*}}, !DIExpression(),
+; CHECK-DAG: DBG_VALUE %fixed-stack.2, 0, {{.*}}, !DIExpression(),
+; CHECK-DAG: DBG_VALUE %fixed-stack.3, 0, {{.*}}, !DIExpression(DW_OP_plus_uconst, 144, DW_OP_stack_value),
+; CHECK-DAG: DBG_VALUE %fixed-stack.3, 0, {{.*}}, !DIExpression(DW_OP_plus_uconst, 144, DW_OP_stack_value, DW_OP_LLVM_fragment, 32, 32),
 
   call void @llvm.dbg.value(metadata i32 %2, metadata !24, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)), !dbg !26
   call void @llvm.dbg.value(metadata i32* %3, metadata !24, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !26

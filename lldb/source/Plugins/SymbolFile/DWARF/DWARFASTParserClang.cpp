@@ -85,35 +85,6 @@ static bool DeclKindIsCXXClass(clang::Decl::Kind decl_kind) {
   return false;
 }
 
-struct BitfieldInfo {
-  uint64_t bit_size;
-  uint64_t bit_offset;
-
-  BitfieldInfo()
-      : bit_size(LLDB_INVALID_ADDRESS), bit_offset(LLDB_INVALID_ADDRESS) {}
-
-  void Clear() {
-    bit_size = LLDB_INVALID_ADDRESS;
-    bit_offset = LLDB_INVALID_ADDRESS;
-  }
-
-  bool IsValid() const {
-    return (bit_size != LLDB_INVALID_ADDRESS) &&
-           (bit_offset != LLDB_INVALID_ADDRESS);
-  }
-
-  bool NextBitfieldOffsetIsValid(const uint64_t next_bit_offset) const {
-    if (IsValid()) {
-      // This bitfield info is valid, so any subsequent bitfields must not
-      // overlap and must be at a higher bit offset than any previous bitfield
-      // + size.
-      return (bit_size + bit_offset) <= next_bit_offset;
-    } else {
-      // If the this BitfieldInfo is not valid, then any offset isOK
-      return true;
-    }
-  }
-};
 
 ClangASTImporter &DWARFASTParserClang::GetClangASTImporter() {
   if (!m_clang_ast_importer_up) {
@@ -2419,7 +2390,7 @@ void DWARFASTParserClang::ParseSingleMember(
     lldb::AccessType &default_accessibility,
     DelayedPropertyList &delayed_properties,
     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
-    BitfieldInfo &last_field_info) {
+    FieldInfo &last_field_info) {
   ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
   const dw_tag_t tag = die.Tag();
   // Get the parent byte size so we can verify any members will fit
@@ -2453,6 +2424,14 @@ void DWARFASTParserClang::ParseSingleMember(
       const dw_attr_t attr = attributes.AttributeAtIndex(i);
       DWARFFormValue form_value;
       if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+        // DW_AT_data_member_location indicates the byte offset of the
+        // word from the base address of the structure.
+        //
+        // DW_AT_bit_offset indicates how many bits into the word
+        // (according to the host endianness) the low-order bit of the
+        // field starts.  AT_bit_offset can be negative.
+        //
+        // DW_AT_bit_size indicates the size of the field in bits.
         switch (attr) {
         case DW_AT_name:
           name = form_value.AsCString();
@@ -2603,35 +2582,23 @@ void DWARFASTParserClang::ParseSingleMember(
       Type *member_type = die.ResolveTypeUID(encoding_form.Reference());
 
       clang::FieldDecl *field_decl = nullptr;
+      const uint64_t character_width = 8;
+      const uint64_t word_width = 32;
       if (tag == DW_TAG_member) {
         if (member_type) {
+          CompilerType member_clang_type = member_type->GetLayoutCompilerType();
+
           if (accessibility == eAccessNone)
             accessibility = default_accessibility;
           member_accessibilities.push_back(accessibility);
 
           uint64_t field_bit_offset =
               (member_byte_offset == UINT32_MAX ? 0 : (member_byte_offset * 8));
-          if (bit_size > 0) {
 
-            BitfieldInfo this_field_info;
+          if (bit_size > 0) {
+            FieldInfo this_field_info;
             this_field_info.bit_offset = field_bit_offset;
             this_field_info.bit_size = bit_size;
-
-            /////////////////////////////////////////////////////////////
-            // How to locate a field given the DWARF debug information
-            //
-            // AT_byte_size indicates the size of the word in which the bit
-            // offset must be interpreted.
-            //
-            // AT_data_member_location indicates the byte offset of the
-            // word from the base address of the structure.
-            //
-            // AT_bit_offset indicates how many bits into the word
-            // (according to the host endianness) the low-order bit of the
-            // field starts.  AT_bit_offset can be negative.
-            //
-            // AT_bit_size indicates the size of the field in bits.
-            /////////////////////////////////////////////////////////////
 
             if (data_bit_offset != UINT64_MAX) {
               this_field_info.bit_offset = data_bit_offset;
@@ -2649,8 +2616,9 @@ void DWARFASTParserClang::ParseSingleMember(
             }
 
             if ((this_field_info.bit_offset >= parent_bit_size) ||
-                !last_field_info.NextBitfieldOffsetIsValid(
-                    this_field_info.bit_offset)) {
+                (last_field_info.IsBitfield() &&
+                 !last_field_info.NextBitfieldOffsetIsValid(
+                     this_field_info.bit_offset))) {
               ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
               objfile->GetModule()->ReportWarning(
                   "0x%8.8" PRIx64 ": %s bitfield named \"%s\" has invalid "
@@ -2659,39 +2627,11 @@ void DWARFASTParserClang::ParseSingleMember(
                   "compiler and include the preprocessed output for %s\n",
                   die.GetID(), DW_TAG_value_to_name(tag), name,
                   this_field_info.bit_offset, GetUnitName(parent_die).c_str());
-              this_field_info.Clear();
               return;
             }
 
             // Update the field bit offset we will report for layout
             field_bit_offset = this_field_info.bit_offset;
-
-            // If the member to be emitted did not start on a character
-            // boundary and there is empty space between the last field and
-            // this one, then we need to emit an anonymous member filling
-            // up the space up to its start.  There are three cases here:
-            //
-            // 1 If the previous member ended on a character boundary, then
-            // we can emit an
-            //   anonymous member starting at the most recent character
-            //   boundary.
-            //
-            // 2 If the previous member did not end on a character boundary
-            // and the distance
-            //   from the end of the previous member to the current member
-            //   is less than a
-            //   word width, then we can emit an anonymous member starting
-            //   right after the
-            //   previous member and right before this member.
-            //
-            // 3 If the previous member did not end on a character boundary
-            // and the distance
-            //   from the end of the previous member to the current member
-            //   is greater than
-            //   or equal a word width, then we act as in Case 1.
-
-            const uint64_t character_width = 8;
-            const uint64_t word_width = 32;
 
             // Objective-C has invalid DW_AT_bit_offset values in older
             // versions of clang, so we have to be careful and only insert
@@ -2704,53 +2644,57 @@ void DWARFASTParserClang::ParseSingleMember(
                   die.GetCU()->Supports_unnamed_objc_bitfields();
 
             if (detect_unnamed_bitfields) {
-              BitfieldInfo anon_field_info;
+              clang::Optional<FieldInfo> unnamed_field_info;
+              uint64_t last_field_end = 0;
 
-              if ((this_field_info.bit_offset % character_width) !=
-                  0) // not char aligned
-              {
-                uint64_t last_field_end = 0;
+              last_field_end =
+                  last_field_info.bit_offset + last_field_info.bit_size;
 
-                if (last_field_info.IsValid())
-                  last_field_end =
-                      last_field_info.bit_offset + last_field_info.bit_size;
-
-                if (this_field_info.bit_offset != last_field_end) {
-                  if (((last_field_end % character_width) == 0) || // case 1
-                      (this_field_info.bit_offset - last_field_end >=
-                       word_width)) // case 3
-                  {
-                    anon_field_info.bit_size =
-                        this_field_info.bit_offset % character_width;
-                    anon_field_info.bit_offset =
-                        this_field_info.bit_offset - anon_field_info.bit_size;
-                  } else // case 2
-                  {
-                    anon_field_info.bit_size =
-                        this_field_info.bit_offset - last_field_end;
-                    anon_field_info.bit_offset = last_field_end;
-                  }
-                }
+              if (!last_field_info.IsBitfield()) {
+                // The last field was not a bit-field...
+                // but if it did take up the entire word then we need to extend
+                // last_field_end so the bit-field does not step into the last
+                // fields padding.
+                if (last_field_end != 0 && ((last_field_end % word_width) != 0))
+                  last_field_end += word_width - (last_field_end % word_width);
               }
 
-              if (anon_field_info.IsValid()) {
+              // If we have a gap between the last_field_end and the current
+              // field we have an unnamed bit-field
+              if (this_field_info.bit_offset != last_field_end &&
+                  !(this_field_info.bit_offset < last_field_end)) {
+                unnamed_field_info = FieldInfo{};
+                unnamed_field_info->bit_size =
+                    this_field_info.bit_offset - last_field_end;
+                unnamed_field_info->bit_offset = last_field_end;
+              }
+
+              if (unnamed_field_info) {
                 clang::FieldDecl *unnamed_bitfield_decl =
                     ClangASTContext::AddFieldToRecordType(
                         class_clang_type, llvm::StringRef(),
                         m_ast.GetBuiltinTypeForEncodingAndBitSize(eEncodingSint,
                                                                   word_width),
-                        accessibility, anon_field_info.bit_size);
+                        accessibility, unnamed_field_info->bit_size);
 
                 layout_info.field_offsets.insert(std::make_pair(
-                    unnamed_bitfield_decl, anon_field_info.bit_offset));
+                    unnamed_bitfield_decl, unnamed_field_info->bit_offset));
               }
             }
+
             last_field_info = this_field_info;
+            last_field_info.SetIsBitfield(true);
           } else {
-            last_field_info.Clear();
+            last_field_info.bit_offset = field_bit_offset;
+
+            if (llvm::Optional<uint64_t> clang_type_size =
+                    member_clang_type.GetByteSize(nullptr)) {
+              last_field_info.bit_size = *clang_type_size * character_width;
+            }
+
+            last_field_info.SetIsBitfield(false);
           }
 
-          CompilerType member_clang_type = member_type->GetLayoutCompilerType();
           if (!member_clang_type.IsCompleteType())
             member_clang_type.GetCompleteType();
 
@@ -2885,7 +2829,7 @@ bool DWARFASTParserClang::ParseChildMembers(
   if (!parent_die)
     return false;
 
-  BitfieldInfo last_field_info;
+  FieldInfo last_field_info;
 
   ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
   ClangASTContext *ast =

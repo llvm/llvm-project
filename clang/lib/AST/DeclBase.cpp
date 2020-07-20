@@ -332,13 +332,16 @@ void Decl::setDeclContextsImpl(DeclContext *SemaDC, DeclContext *LexicalDC,
   }
 }
 
-bool Decl::isLexicallyWithinFunctionOrMethod() const {
+bool Decl::isInLocalScope() const {
   const DeclContext *LDC = getLexicalDeclContext();
   while (true) {
     if (LDC->isFunctionOrMethod())
       return true;
     if (!isa<TagDecl>(LDC))
       return false;
+    if (const auto *CRD = dyn_cast<CXXRecordDecl>(LDC))
+      if (CRD->isLambda())
+        return true;
     LDC = LDC->getLexicalParent();
   }
   return false;
@@ -804,6 +807,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case OMPCapturedExpr:
     case Empty:
     case LifetimeExtendedTemporary:
+    case RequiresExprBody:
       // Never looked up by name.
       return 0;
   }
@@ -1177,6 +1181,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::Captured:
   case Decl::OMPDeclareReduction:
   case Decl::OMPDeclareMapper:
+  case Decl::RequiresExprBody:
     // There is only one DeclContext for these entities.
     return this;
 

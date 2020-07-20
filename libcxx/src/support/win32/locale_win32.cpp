@@ -32,11 +32,13 @@ decltype(MB_CUR_MAX) MB_CUR_MAX_L( locale_t __l )
 #endif
 }
 
-
-lconv *localeconv_l( locale_t loc )
+lconv *localeconv_l( locale_t &loc )
 {
     __libcpp_locale_guard __current(loc);
-    return localeconv();
+    lconv *lc = localeconv();
+    if (!lc)
+        return lc;
+    return loc.__store_lconv(lc);
 }
 size_t mbrlen_l( const char *__restrict s, size_t n,
                  mbstate_t *__restrict ps, locale_t loc )
@@ -125,5 +127,13 @@ float strtof_l(const char* nptr, char** endptr, locale_t loc) {
 long double strtold_l(const char* nptr, char** endptr, locale_t loc) {
   __libcpp_locale_guard __current(loc);
   return strtold(nptr, endptr);
+}
+#endif
+
+#if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
+size_t strftime_l(char *ret, size_t n, const char *format, const struct tm *tm,
+                  locale_t loc) {
+  __libcpp_locale_guard __current(loc);
+  return strftime(ret, n, format, tm);
 }
 #endif

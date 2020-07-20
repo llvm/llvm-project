@@ -1,4 +1,4 @@
-// RUN:  %clang_cc1 -std=c++2a -fconcepts-ts -verify %s
+// RUN:  %clang_cc1 -std=c++2a -verify %s
 
 template<typename T> requires (sizeof(T) >= 4 && sizeof(T) <= 10)
 // expected-note@-1{{because 'sizeof(char [20]) <= 10' (20 <= 10) evaluated to false}}

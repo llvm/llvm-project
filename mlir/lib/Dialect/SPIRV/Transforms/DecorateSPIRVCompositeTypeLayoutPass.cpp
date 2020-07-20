@@ -100,7 +100,7 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnModule() {
 
   // Change the type for the direct users.
   target.addDynamicallyLegalOp<spirv::AddressOfOp>([](spirv::AddressOfOp op) {
-    return VulkanLayoutUtils::isLegalType(op.pointer()->getType());
+    return VulkanLayoutUtils::isLegalType(op.pointer().getType());
   });
 
   // TODO: Change the type for the indirect users such as spv.Load, spv.Store,

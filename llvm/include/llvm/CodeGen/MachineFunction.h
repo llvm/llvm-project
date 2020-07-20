@@ -796,6 +796,8 @@ public:
   /// Allocate and initialize a register mask with @p NumRegister bits.
   uint32_t *allocateRegMask();
 
+  ArrayRef<int> allocateShuffleMask(ArrayRef<int> Mask);
+
   /// Allocate and construct an extra info structure for a `MachineInstr`.
   ///
   /// This is allocated on the function's allocator and so lives the life of

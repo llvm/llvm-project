@@ -70,8 +70,8 @@ func @should_fuse_reduction_to_pointwise() {
 
 // -----
 
-// CHECK-DAG: [[MAP_SHIFT_MINUS_ONE_R1:#map[0-9]+]] = (d0) -> (d0 - 1)
-// CHECK-DAG: [[MAP_SHIFT_BY_ONE:#map[0-9]+]] = (d0) -> (d0 + 1)
+// CHECK-DAG: [[MAP_SHIFT_MINUS_ONE_R1:#map[0-9]+]] = affine_map<(d0) -> (d0 - 1)>
+// CHECK-DAG: [[MAP_SHIFT_BY_ONE:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 
 // CHECK-LABEL: func @should_fuse_loop_nests_with_shifts() {
 func @should_fuse_loop_nests_with_shifts() {
@@ -80,8 +80,8 @@ func @should_fuse_loop_nests_with_shifts() {
 
   affine.for %i0 = 0 to 9 {
     affine.for %i1 = 0 to 9 {
-      %idx = affine.apply (d0) -> (d0 + 1) (%i0)
-      %idy = affine.apply (d0) -> (d0 + 1) (%i1)
+      %idx = affine.apply affine_map<(d0) -> (d0 + 1)> (%i0)
+      %idy = affine.apply affine_map<(d0) -> (d0 + 1)> (%i1)
       affine.store %cf7, %a[%idx, %idy] : memref<10x10xf32>
     }
   }
@@ -413,7 +413,7 @@ func @should_fuse_no_top_level_access() {
 
 // -----
 
-#set0 = (d0) : (1 == 0)
+#set0 = affine_set<(d0) : (1 == 0)>
 
 // CHECK-LABEL: func @should_not_fuse_if_inst_at_top_level() {
 func @should_not_fuse_if_inst_at_top_level() {
@@ -441,7 +441,7 @@ func @should_not_fuse_if_inst_at_top_level() {
 
 // -----
 
-#set0 = (d0) : (1 == 0)
+#set0 = affine_set<(d0) : (1 == 0)>
 
 // CHECK-LABEL: func @should_not_fuse_if_inst_in_loop_nest() {
 func @should_not_fuse_if_inst_in_loop_nest() {
@@ -508,9 +508,9 @@ func @permute_and_fuse() {
 
 // -----
 
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = (d0, d1) -> (d0 * 4 + d1)
-// CHECK-DAG: [[MAP1:#map[0-9]+]] = (d0) -> (d0 floordiv 4)
-// CHECK-DAG: [[MAP2:#map[0-9]+]] = (d0) -> (d0 mod 4)
+// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
+// CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 floordiv 4)>
+// CHECK-DAG: [[MAP2:#map[0-9]+]] = affine_map<(d0) -> (d0 mod 4)>
 
 // Reshape from a 64 x f32 to 16 x 4 x f32.
 // CHECK-LABEL: func @fuse_reshape_64_16_4
@@ -519,8 +519,8 @@ func @fuse_reshape_64_16_4(%in : memref<64xf32>) {
 
   affine.for %i0 = 0 to 64 {
     %v = affine.load %in[%i0] : memref<64xf32>
-    %idx = affine.apply (d0) -> (d0 floordiv 4) (%i0)
-    %idy = affine.apply (d0) -> (d0 mod 4) (%i0)
+    %idx = affine.apply affine_map<(d0) -> (d0 floordiv 4)> (%i0)
+    %idy = affine.apply affine_map<(d0) -> (d0 mod 4)> (%i0)
     affine.store %v, %out[%idx, %idy] : memref<16x4xf32>
   }
 
@@ -540,9 +540,9 @@ func @fuse_reshape_64_16_4(%in : memref<64xf32>) {
 }
 
 // -----
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = (d0) -> (d0 floordiv 4)
-// CHECK-DAG: [[MAP1:#map[0-9]+]] = (d0) -> (d0 mod 4)
-// CHECK-DAG: [[MAP2:#map[0-9]+]] = (d0, d1) -> (d0 * 4 + d1)
+// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 floordiv 4)>
+// CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 mod 4)>
+// CHECK-DAG: [[MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
 
 // Reshape a 16x4xf32 to 64xf32.
 // CHECK-LABEL: func @fuse_reshape_16_4_64
@@ -553,7 +553,7 @@ func @fuse_reshape_16_4_64() {
   affine.for %i0 = 0 to 16 {
     affine.for %i1 = 0 to 4 {
       %v = affine.load %in[%i0, %i1] : memref<16x4xf32>
-      %idx = affine.apply (d0, d1) -> (4*d0 + d1) (%i0, %i1)
+      %idx = affine.apply affine_map<(d0, d1) -> (4*d0 + d1)> (%i0, %i1)
       affine.store %v, %out[%idx] : memref<64xf32>
     }
   }
@@ -604,13 +604,13 @@ func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
   affine.for %ii = 0 to 64 {
     affine.for %jj = 0 to 9 {
       // Convert output coordinates to linear index.
-      %a0 = affine.apply (d0, d1) -> (d0 * 9 + d1) (%ii, %jj)
-      %0 = affine.apply (d0) -> (d0 floordiv (2 * 3 * 3 * 16 * 1))(%a0)
-      %1 = affine.apply (d0) -> ((d0 mod 288) floordiv (3 * 3 * 16 * 1))(%a0)
-      %2 = affine.apply (d0) -> (((d0 mod 288) mod 144) floordiv (3 * 16 * 1))(%a0)
-      %3 = affine.apply (d0) -> ((((d0 mod 288) mod 144) mod 48) floordiv (16 * 1))(%a0)
-      %4 = affine.apply (d0) -> ((((d0 mod 288) mod 144) mod 48) mod 16)(%a0)
-      %5 = affine.apply (d0) -> (((((d0 mod 144) mod 144) mod 48) mod 16) mod 1)(%a0)
+      %a0 = affine.apply affine_map<(d0, d1) -> (d0 * 9 + d1)> (%ii, %jj)
+      %0 = affine.apply affine_map<(d0) -> (d0 floordiv (2 * 3 * 3 * 16 * 1))>(%a0)
+      %1 = affine.apply affine_map<(d0) -> ((d0 mod 288) floordiv (3 * 3 * 16 * 1))>(%a0)
+      %2 = affine.apply affine_map<(d0) -> (((d0 mod 288) mod 144) floordiv (3 * 16 * 1))>(%a0)
+      %3 = affine.apply affine_map<(d0) -> ((((d0 mod 288) mod 144) mod 48) floordiv (16 * 1))>(%a0)
+      %4 = affine.apply affine_map<(d0) -> ((((d0 mod 288) mod 144) mod 48) mod 16)>(%a0)
+      %5 = affine.apply affine_map<(d0) -> (((((d0 mod 144) mod 144) mod 48) mod 16) mod 1)>(%a0)
       %v = affine.load %in[%0, %1, %2, %3, %4, %5] : memref<2x2x3x3x16x1xi32>
       affine.store %v, %out[%ii, %jj] : memref<64x9xi32>
     }
@@ -628,18 +628,18 @@ func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 // Everything above is fused to a single 2-d loop nest, and the 6-d tensor %in
 // is eliminated if -memref-dataflow-opt is also supplied.
 //
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = (d0, d1) -> ((d0 * 9 + d1) floordiv 288)
-// CHECK-DAG: [[MAP1:#map[0-9]+]] = (d0, d1) -> (((d0 * 9 + d1) mod 288) floordiv 144)
-// CHECK-DAG: [[MAP2:#map[0-9]+]] = (d0, d1) -> ((((d0 * 9 + d1) mod 288) mod 144) floordiv 48)
-// CHECK-DAG: [[MAP3:#map[0-9]+]] = (d0, d1) -> (((((d0 * 9 + d1) mod 288) mod 144) mod 48) floordiv 16)
-// CHECK-DAG: [[MAP4:#map[0-9]+]] = (d0, d1) -> (((((d0 * 9 + d1) mod 288) mod 144) mod 48) mod 16)
-// CHECK-DAG: [[MAP11:#map[0-9]+]] = (d0, d1) -> (d0 * 9 + d1)
-// CHECK-DAG: [[MAP12:#map[0-9]+]] = (d0) -> (d0 floordiv 288)
-// CHECK-DAG: [[MAP13:#map[0-9]+]] = (d0) -> ((d0 mod 288) floordiv 144)
-// CHECK-DAG: [[MAP14:#map[0-9]+]] = (d0) -> (((d0 mod 288) mod 144) floordiv 48)
-// CHECK-DAG: [[MAP15:#map[0-9]+]] = (d0) -> ((((d0 mod 288) mod 144) mod 48) floordiv 16)
-// CHECK-DAG: [[MAP16:#map[0-9]+]] = (d0) -> ((((d0 mod 288) mod 144) mod 48) mod 16)
-// CHECK-DAG: [[MAP17:#map[0-9]+]] = (d0) -> (0)
+// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> ((d0 * 9 + d1) floordiv 288)>
+// CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 288) floordiv 144)>
+// CHECK-DAG: [[MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> ((((d0 * 9 + d1) mod 288) mod 144) floordiv 48)>
+// CHECK-DAG: [[MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (((((d0 * 9 + d1) mod 288) mod 144) mod 48) floordiv 16)>
+// CHECK-DAG: [[MAP4:#map[0-9]+]] = affine_map<(d0, d1) -> (((((d0 * 9 + d1) mod 288) mod 144) mod 48) mod 16)>
+// CHECK-DAG: [[MAP11:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 9 + d1)>
+// CHECK-DAG: [[MAP12:#map[0-9]+]] = affine_map<(d0) -> (d0 floordiv 288)>
+// CHECK-DAG: [[MAP13:#map[0-9]+]] = affine_map<(d0) -> ((d0 mod 288) floordiv 144)>
+// CHECK-DAG: [[MAP14:#map[0-9]+]] = affine_map<(d0) -> (((d0 mod 288) mod 144) floordiv 48)>
+// CHECK-DAG: [[MAP15:#map[0-9]+]] = affine_map<(d0) -> ((((d0 mod 288) mod 144) mod 48) floordiv 16)>
+// CHECK-DAG: [[MAP16:#map[0-9]+]] = affine_map<(d0) -> ((((d0 mod 288) mod 144) mod 48) mod 16)>
+// CHECK-DAG: [[MAP17:#map[0-9]+]] = affine_map<(d0) -> (0)>
 
 //
 // CHECK-LABEL: func @R6_to_R2_reshape
@@ -675,21 +675,21 @@ func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 
 // CHECK-LABEL: func @fuse_symbolic_bounds
 func @fuse_symbolic_bounds(%M : index, %N : index) {
-  %N_plus_5 = affine.apply (d0) -> (d0 + 5)(%N)
+  %N_plus_5 = affine.apply affine_map<(d0) -> (d0 + 5)>(%N)
   %m = alloc(%M, %N_plus_5) : memref<? x ? x f32>
 
   %c0 = constant 0.0 : f32
   %s = constant 5 : index
 
   affine.for %i0 = 0 to %M {
-    affine.for %i1 = 0 to (d0) -> (d0 + 5) (%N) {
+    affine.for %i1 = 0 to affine_map<(d0) -> (d0 + 5)> (%N) {
       affine.store %c0, %m[%i0, %i1] : memref<? x ? x f32>
     }
   }
 
   affine.for %i2 = 0 to %M {
     affine.for %i3 = 0 to %N {
-      %idy = affine.apply (d0)[s0] -> (d0 + s0) (%i3)[%s]
+      %idy = affine.apply affine_map<(d0)[s0] -> (d0 + s0)> (%i3)[%s]
       %v = affine.load %m[%i2, %idy] : memref<? x ? x f32>
     }
   }
@@ -790,7 +790,7 @@ func @should_fuse_at_src_depth1_and_dst_depth1() {
 }
 
 // -----
-// CHECK: [[MAP0:#map[0-9]+]] = (d0, d1) -> (d0 * 10 + d1)
+// CHECK: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 10 + d1)>
 
 // CHECK-LABEL: func @should_fuse_src_depth1_at_dst_depth2
 func @should_fuse_src_depth1_at_dst_depth2() {
@@ -803,7 +803,7 @@ func @should_fuse_src_depth1_at_dst_depth2() {
 
   affine.for %i1 = 0 to 10 {
     affine.for %i2 = 0 to 10 {
-      %a0 = affine.apply (d0, d1) -> (d0 * 10 + d1) (%i1, %i2)
+      %a0 = affine.apply affine_map<(d0, d1) -> (d0 * 10 + d1)> (%i1, %i2)
       %v0 = affine.load %a[%a0] : memref<100xf32>
     }
   }
@@ -1207,17 +1207,17 @@ func @R3_to_R2_reshape() {
 
   affine.for %ii = 0 to 32 {
     affine.for %jj = 0 to 3 {
-      %a0 = affine.apply (d0, d1) -> (d0 * 3 + d1) (%ii, %jj)
-      %idx = affine.apply (d0) -> (d0 floordiv (3 * 16)) (%a0)
+      %a0 = affine.apply affine_map<(d0, d1) -> (d0 * 3 + d1)> (%ii, %jj)
+      %idx = affine.apply affine_map<(d0) -> (d0 floordiv (3 * 16))> (%a0)
       %v = affine.load %in[%idx, %jj, %c0]
         : memref<2x3x16xi32>
     }
   }
   return
 }
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = (d0, d1) -> ((d0 * 3 + d1) floordiv 48)
-// CHECK-DAG: [[MAP1:#map[0-9]+]] = (d0, d1) -> (d0 * 3 + d1)
-// CHECK-DAG: [[MAP2:#map[0-9]+]] = (d0) -> (d0 floordiv 48)
+// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> ((d0 * 3 + d1) floordiv 48)>
+// CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 3 + d1)>
+// CHECK-DAG: [[MAP2:#map[0-9]+]] = affine_map<(d0) -> (d0 floordiv 48)>
 
 // CHECK-LABEL: func @R3_to_R2_reshape()
 // CHECK-DAG:    %{{.*}} = alloc() : memref<1x1x1xi32>
@@ -1441,8 +1441,8 @@ func @should_fuse_and_preserve_dep_on_constant() {
 
 // -----
 
-// CHECK: [[MAP2:#map[0-9]+]] = (d0, d1) -> (d0 * 16 - d1 + 15)
-// CHECK: [[MAP3:#map[0-9]+]] = (d0, d1) -> (d0 * 16 + d1)
+// CHECK: [[MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 16 - d1 + 15)>
+// CHECK: [[MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 
 // CHECK-LABEL: func @should_fuse_at_depth_above_loop_carried_dependence(%{{.*}}: memref<64x4xf32>, %{{.*}}: memref<64x4xf32>) {
 func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4xf32>, %arg1: memref<64x4xf32>) {
@@ -1456,19 +1456,19 @@ func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4xf32>
   affine.for %i2 = 0 to 4 {
     affine.for %i3 = 0 to 4 {
       affine.for %i4 = 0 to 16 {
-        %1 = affine.apply (d0, d1) -> (d0 * 16 - d1 + 15)(%i3, %i4)
+        %1 = affine.apply affine_map<(d0, d1) -> (d0 * 16 - d1 + 15)>(%i3, %i4)
         %2 = affine.load %arg1[%1, %i2] : memref<64x4xf32>
         "op0"(%2) : (f32) -> ()
       }
       affine.for %i5 = 0 to 4 {
         affine.for %i6 = 0 to 16 {
-          %3 = affine.apply (d0, d1) -> (d0 * 16 - d1 + 15)(%i5, %i6)
+          %3 = affine.apply affine_map<(d0, d1) -> (d0 * 16 - d1 + 15)>(%i5, %i6)
           %4 = affine.load %arg0[%3, %i3] : memref<64x4xf32>
           "op1"(%4) : (f32) -> ()
         }
         affine.for %i7 = 0 to 16 {
           %5 = "op2"() : () -> (f32)
-          %6 = affine.apply (d0, d1) -> (d0 * 16 + d1)(%i5, %i7)
+          %6 = affine.apply affine_map<(d0, d1) -> (d0 * 16 + d1)>(%i5, %i7)
           %7 = affine.load %out[%6, %i2] : memref<64x4xf32>
           %8 = addf %7, %5 : f32
           affine.store %8, %out[%6, %i2] : memref<64x4xf32>
@@ -1666,10 +1666,10 @@ func @should_fuse_live_out_writer(%arg0 : memref<10xf32>) -> memref<10xf32> {
 
 // The fused slice has 16 iterations from along %i0.
 
-// CHECK-DAG: [[MAP_LB:#map[0-9]+]] = (d0) -> (d0 * 16)
-// CHECK-DAG: [[MAP_UB:#map[0-9]+]] = (d0) -> (d0 * 16 + 16)
+// CHECK-DAG: [[MAP_LB:#map[0-9]+]] = affine_map<(d0) -> (d0 * 16)>
+// CHECK-DAG: [[MAP_UB:#map[0-9]+]] = affine_map<(d0) -> (d0 * 16 + 16)>
 
-#map = (d0, d1) -> (d0 * 16 + d1)
+#map = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 
 // CHECK-LABEL: slice_tile
 func @slice_tile(%arg0: memref<128x8xf32>, %arg1: memref<32x8xf32>, %0 : f32) -> memref<32x8xf32> {
@@ -1732,9 +1732,9 @@ func @test_add_slice_bounds() {
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
       affine.for %i2 = 0 to 10 {
-        %a0 = affine.apply (d0) -> (d0) (%i0)
-        %a1 = affine.apply (d0) -> (d0) (%i0)
-        %a2 = affine.apply (d0, d1) -> (d0 - d1) (%a0, %a1)
+        %a0 = affine.apply affine_map<(d0) -> (d0)> (%i0)
+        %a1 = affine.apply affine_map<(d0) -> (d0)> (%i0)
+        %a2 = affine.apply affine_map<(d0, d1) -> (d0 - d1)> (%a0, %a1)
         affine.store %cf7, %a[%a2] : memref<10xf32>
       }
     }
@@ -1931,7 +1931,7 @@ func @should_not_slice_past_slice_barrier() {
 
 // -----
 
-#map0 = (d0, d1) -> (d0 * 16 + d1)
+#map0 = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, %arg2: memref<9xf32>) {
   %1 = alloc() : memref<144x4xf32>
   %2 = constant 0.0 : f32
@@ -1955,7 +1955,7 @@ func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9x
   }
   return
 }
-// MAXIMAL:      #map0 = (d0, d1) -> (d0 * 16 + d1)
+// MAXIMAL:      #map0 = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 // MAXIMAL-LABEL: func @fuse_across_dim_mismatch
 // MAXIMAL:        %{{.*}} = alloc() : memref<1x1xf32>
 // MAXIMAL:        affine.for %{{.*}} = 0 to 9 {
@@ -1973,14 +1973,14 @@ func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9x
 
 // -----
 
-#map3 = (d0, d1) -> ((d0 * 72 + d1) floordiv 2304)
-#map4 = (d0, d1) -> (((d0 * 72 + d1) mod 2304) floordiv 1152)
-#map5 = (d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) floordiv 9) floordiv 8)
-#map6 = (d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) floordiv 3)
-#map7 = (d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) mod 3)
-#map10 = (d0, d1) -> (d0 * 16 + d1)
-#map11 = (d0, d1) -> (d0 * 16 + d1)
-#map12 = (d0, d1) -> (d0 * 16 - d1 + 15)
+#map3 = affine_map<(d0, d1) -> ((d0 * 72 + d1) floordiv 2304)>
+#map4 = affine_map<(d0, d1) -> (((d0 * 72 + d1) mod 2304) floordiv 1152)>
+#map5 = affine_map<(d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) floordiv 9) floordiv 8)>
+#map6 = affine_map<(d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) floordiv 3)>
+#map7 = affine_map<(d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) mod 3)>
+#map10 = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+#map11 = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+#map12 = affine_map<(d0, d1) -> (d0 * 16 - d1 + 15)>
 func @fuse_across_varying_dims_complex(%arg0: f32) {
   %c0 = constant 0 : index
   %0 = alloc() : memref<2x2x3x3x16x1xf32>
@@ -2021,13 +2021,13 @@ func @fuse_across_varying_dims_complex(%arg0: f32) {
   }
   return
 }
-// MAXIMAL-DAG: [[MAP0:#map[0-9]+]] = (d0, d1) -> ((d0 * 72 + d1) floordiv 2304)
-// MAXIMAL-DAG: [[MAP1:#map[0-9]+]] = (d0, d1) -> (((d0 * 72 + d1) mod 2304) floordiv 1152)
-// MAXIMAL-DAG: [[MAP2:#map[0-9]+]] = (d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) floordiv 9) floordiv 8)
-// MAXIMAL-DAG: [[MAP3:#map[0-9]+]] = (d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) floordiv 3)
-// MAXIMAL-DAG: [[MAP4:#map[0-9]+]] = (d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) mod 3)
-// MAXIMAL-DAG: [[MAP7:#map[0-9]+]] = (d0, d1) -> (d0 * 16 + d1)
-// MAXIMAL-DAG: [[MAP8:#map[0-9]+]] = (d0, d1) -> (d0 * 16 - d1 + 15)
+// MAXIMAL-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> ((d0 * 72 + d1) floordiv 2304)>
+// MAXIMAL-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (((d0 * 72 + d1) mod 2304) floordiv 1152)>
+// MAXIMAL-DAG: [[MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) floordiv 9) floordiv 8)>
+// MAXIMAL-DAG: [[MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) floordiv 3)>
+// MAXIMAL-DAG: [[MAP4:#map[0-9]+]] = affine_map<(d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) mod 3)>
+// MAXIMAL-DAG: [[MAP7:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+// MAXIMAL-DAG: [[MAP8:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 16 - d1 + 15)>
 // MAXIMAL-LABEL: func @fuse_across_varying_dims_complex
 // MAXIMAL-NEXT:  %{{.*}} = alloc() : memref<64x1xf32>
 // MAXIMAL-NEXT:  %{{.*}} = constant 0 : index

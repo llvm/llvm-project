@@ -36,8 +36,10 @@ struct CommonFixture {
     EXPECT_FALSE(Unrecoverable);
   }
 
-  bool setupGenerator(uint16_t Version = 4) {
-    Triple T = getDefaultTargetTripleForAddrSize(8);
+  bool setupGenerator(uint16_t Version = 4, uint8_t AddrSize = 8) {
+    AddressSize = AddrSize;
+    Triple T =
+        getDefaultTargetTripleForAddrSize(AddressSize == 0 ? 8 : AddressSize);
     if (!isConfigurationSupported(T))
       return false;
     auto ExpectedGenerator = Generator::create(T, Version);
@@ -50,9 +52,11 @@ struct CommonFixture {
     Context = createContext();
     assert(Context != nullptr && "test state is not valid");
     const DWARFObject &Obj = Context->getDWARFObj();
+    uint8_t TargetAddrSize = AddressSize == 0 ? 8 : AddressSize;
     LineData = DWARFDataExtractor(
         Obj, Obj.getLineSection(),
-        getDefaultTargetTripleForAddrSize(8).isLittleEndian(), 8);
+        getDefaultTargetTripleForAddrSize(TargetAddrSize).isLittleEndian(),
+        AddressSize);
   }
 
   std::unique_ptr<DWARFContext> createContext() {
@@ -130,6 +134,7 @@ struct CommonFixture {
     checkError(ExpectedMsgs, ExpectedLineTable.takeError());
   }
 
+  uint8_t AddressSize;
   std::unique_ptr<Generator> Gen;
   std::unique_ptr<DWARFContext> Context;
   DWARFDataExtractor LineData;
@@ -468,20 +473,59 @@ TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
 }
 
 TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
-  if (!setupGenerator())
+  if (!setupGenerator(4, 8))
     return;
 
   LineTable &LT = Gen->addLineTable();
   // The line data extractor expects size 8 (Quad) addresses.
-  LT.addExtendedOpcode(5, DW_LNE_set_address, {{0x11223344, LineTable::Long}});
+  uint64_t Addr1 = 0x11223344;
+  LT.addExtendedOpcode(5, DW_LNE_set_address, {{Addr1, LineTable::Long}});
   LT.addStandardOpcode(DW_LNS_copy, {});
-  LT.addByte(0xaa);
+  // Show that the expected address size is unchanged, so later valid lines
+  // don't cause a problem.
+  uint64_t Addr2 = 0x1122334455667788;
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{Addr2, LineTable::Quad}});
   LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
 
   generate();
 
-  checkGetOrParseLineTableEmitsFatalError(
-      "mismatching address size at offset 0x00000030 expected 0x08 found 0x04");
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError(
+      "mismatching address size at offset 0x00000030 expected 0x08 found 0x04",
+      std::move(Recoverable));
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 2u);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
+  EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, Addr1);
+  EXPECT_EQ((*ExpectedLineTable)->Rows[1].Address.Address, Addr2);
+}
+
+TEST_F(DebugLineBasicFixture,
+       ErrorForMismatchedAddressSizeUnsetInitialAddress) {
+  if (!setupGenerator(4, 0))
+    return;
+
+  LineTable &LT = Gen->addLineTable();
+  uint64_t Addr1 = 0x11223344;
+  LT.addExtendedOpcode(5, DW_LNE_set_address, {{Addr1, LineTable::Long}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  uint64_t Addr2 = 0x1122334455667788;
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{Addr2, LineTable::Quad}});
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError(
+      "mismatching address size at offset 0x00000038 expected 0x04 found 0x08",
+      std::move(Recoverable));
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 2u);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
+  EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, Addr1);
+  EXPECT_EQ((*ExpectedLineTable)->Rows[1].Address.Address, Addr2);
 }
 
 TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {

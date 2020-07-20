@@ -341,9 +341,9 @@ static bool MSA3OpIntrinsicToGeneric(MachineInstr &MI, unsigned Opcode,
   return true;
 }
 
-bool MSA2OpIntrinsicToGeneric(MachineInstr &MI, unsigned Opcode,
-                              MachineIRBuilder &MIRBuilder,
-                              const MipsSubtarget &ST) {
+static bool MSA2OpIntrinsicToGeneric(MachineInstr &MI, unsigned Opcode,
+                                     MachineIRBuilder &MIRBuilder,
+                                     const MipsSubtarget &ST) {
   assert(ST.hasMSA() && "MSA intrinsic not supported on target without MSA.");
   MIRBuilder.buildInstr(Opcode)
       .add(MI.getOperand(0))

@@ -24,7 +24,6 @@ define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 ; ARM-NEXT:    uxtb r0, r0
 ; ARM-NEXT:    lsr r0, r0, r1
 ; ARM-NEXT:    mov r1, #1
-; ARM-NEXT:    uxtb r0, r0
 ; ARM-NEXT:    eor r0, r1, r0, lsr #7
 ; ARM-NEXT:    bx lr
 ;
@@ -45,7 +44,6 @@ define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 ; THUMB7-NEXT:    uxtb r0, r0
 ; THUMB7-NEXT:    lsrs r0, r1
 ; THUMB7-NEXT:    movs r1, #1
-; THUMB7-NEXT:    uxtb r0, r0
 ; THUMB7-NEXT:    eor.w r0, r1, r0, lsr #7
 ; THUMB7-NEXT:    bx lr
 ;
@@ -55,7 +53,6 @@ define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 ; THUMB8-NEXT:    uxtb r1, r1
 ; THUMB8-NEXT:    lsrs r0, r1
 ; THUMB8-NEXT:    movs r1, #1
-; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    eor.w r0, r1, r0, lsr #7
 ; THUMB8-NEXT:    bx lr
   %t0 = shl i8 128, %y
@@ -163,7 +160,6 @@ define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 ; ARM-NEXT:    uxth r0, r0
 ; ARM-NEXT:    lsr r0, r0, r1
 ; ARM-NEXT:    mov r1, #1
-; ARM-NEXT:    uxth r0, r0
 ; ARM-NEXT:    eor r0, r1, r0, lsr #15
 ; ARM-NEXT:    bx lr
 ;
@@ -185,7 +181,6 @@ define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 ; THUMB7-NEXT:    uxth r0, r0
 ; THUMB7-NEXT:    lsrs r0, r1
 ; THUMB7-NEXT:    movs r1, #1
-; THUMB7-NEXT:    uxth r0, r0
 ; THUMB7-NEXT:    eor.w r0, r1, r0, lsr #15
 ; THUMB7-NEXT:    bx lr
 ;
@@ -195,7 +190,6 @@ define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 ; THUMB8-NEXT:    uxth r1, r1
 ; THUMB8-NEXT:    lsrs r0, r1
 ; THUMB8-NEXT:    movs r1, #1
-; THUMB8-NEXT:    uxth r0, r0
 ; THUMB8-NEXT:    eor.w r0, r1, r0, lsr #15
 ; THUMB8-NEXT:    bx lr
   %t0 = shl i16 32768, %y
@@ -973,7 +967,6 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; ARM-NEXT:    uxtb r1, r1
 ; ARM-NEXT:    uxtb r0, r0
 ; ARM-NEXT:    lsr r0, r0, r1
-; ARM-NEXT:    uxtb r0, r0
 ; ARM-NEXT:    lsr r0, r0, #7
 ; ARM-NEXT:    bx lr
 ;
@@ -982,7 +975,6 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; THUMB6-NEXT:    uxtb r1, r1
 ; THUMB6-NEXT:    uxtb r0, r0
 ; THUMB6-NEXT:    lsrs r0, r1
-; THUMB6-NEXT:    uxtb r0, r0
 ; THUMB6-NEXT:    lsrs r0, r0, #7
 ; THUMB6-NEXT:    bx lr
 ;
@@ -991,7 +983,6 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; THUMB7-NEXT:    uxtb r1, r1
 ; THUMB7-NEXT:    uxtb r0, r0
 ; THUMB7-NEXT:    lsrs r0, r1
-; THUMB7-NEXT:    uxtb r0, r0
 ; THUMB7-NEXT:    lsrs r0, r0, #7
 ; THUMB7-NEXT:    bx lr
 ;
@@ -1000,7 +991,6 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    uxtb r1, r1
 ; THUMB8-NEXT:    lsrs r0, r1
-; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    lsrs r0, r0, #7
 ; THUMB8-NEXT:    bx lr
   %t0 = shl i8 128, %y
@@ -1178,13 +1168,7 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ; ARM-LABEL: scalar_i8_signbit_eq_with_nonzero:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    uxtb r1, r1
-; ARM-NEXT:    mvn r2, #127
-; ARM-NEXT:    and r0, r0, r2, lsl r1
-; ARM-NEXT:    mvn r1, #0
-; ARM-NEXT:    uxtab r0, r1, r0
-; ARM-NEXT:    clz r0, r0
-; ARM-NEXT:    lsr r0, r0, #5
+; ARM-NEXT:    mov r0, #0
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB6-LABEL: scalar_i8_signbit_eq_with_nonzero:
@@ -1202,14 +1186,7 @@ define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ;
 ; THUMB78-LABEL: scalar_i8_signbit_eq_with_nonzero:
 ; THUMB78:       @ %bb.0:
-; THUMB78-NEXT:    uxtb r1, r1
-; THUMB78-NEXT:    mvn r2, #127
-; THUMB78-NEXT:    lsl.w r1, r2, r1
-; THUMB78-NEXT:    ands r0, r1
-; THUMB78-NEXT:    mov.w r1, #-1
-; THUMB78-NEXT:    uxtab r0, r1, r0
-; THUMB78-NEXT:    clz r0, r0
-; THUMB78-NEXT:    lsrs r0, r0, #5
+; THUMB78-NEXT:    movs r0, #0
 ; THUMB78-NEXT:    bx lr
   %t0 = shl i8 128, %y
   %t1 = and i8 %t0, %x

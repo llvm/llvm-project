@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.8 -std=c++1y -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows-gnu -std=c++1y -S -emit-llvm %s -o - | FileCheck %s --check-prefix=MINGW
 
 // CHECK: @a = internal thread_local global
 // CHECK: @_Z2vtIiE = linkonce_odr thread_local global i32 5
@@ -9,6 +10,9 @@
 // CHECK-DAG: define weak_odr hidden cxx_fast_tlscc i32* @_ZTW2vtIiE()
 // CHECK-DAG: define weak_odr hidden cxx_fast_tlscc i32* @_ZTW2vtIvE()
 // CHECK-DAG: define {{.*}} @_ZTW1a
+
+// MINGW-DAG: define weak_odr hidden i32* @_ZTW2vtIiE() {{.*}} comdat
+// MINGW-DAG: define weak_odr hidden i32* @_ZTW2vtIvE() {{.*}} comdat
 
 struct A {
   ~A();

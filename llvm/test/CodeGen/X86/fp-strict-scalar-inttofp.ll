@@ -551,11 +551,10 @@ define float @uitofp_i64tof32(i64 %x) #0 {
 ; SSE-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE-X86-NEXT:    andl $-8, %esp
 ; SSE-X86-NEXT:    subl $16, %esp
+; SSE-X86-NEXT:    movl 12(%ebp), %eax
 ; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-X86-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
-; SSE-X86-NEXT:    xorl %eax, %eax
-; SSE-X86-NEXT:    cmpl $0, 12(%ebp)
-; SSE-X86-NEXT:    setns %al
+; SSE-X86-NEXT:    shrl $31, %eax
 ; SSE-X86-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
 ; SSE-X86-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -592,11 +591,10 @@ define float @uitofp_i64tof32(i64 %x) #0 {
 ; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $16, %esp
+; AVX-X86-NEXT:    movl 12(%ebp), %eax
 ; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-X86-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
-; AVX-X86-NEXT:    xorl %eax, %eax
-; AVX-X86-NEXT:    cmpl $0, 12(%ebp)
-; AVX-X86-NEXT:    setns %al
+; AVX-X86-NEXT:    shrl $31, %eax
 ; AVX-X86-NEXT:    fildll {{[0-9]+}}(%esp)
 ; AVX-X86-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
 ; AVX-X86-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -642,11 +640,9 @@ define float @uitofp_i64tof32(i64 %x) #0 {
 ; X87-NEXT:    movl 12(%ebp), %ecx
 ; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X87-NEXT:    xorl %eax, %eax
-; X87-NEXT:    testl %ecx, %ecx
-; X87-NEXT:    setns %al
+; X87-NEXT:    shrl $31, %ecx
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
-; X87-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X87-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
 ; X87-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %ebp, %esp
@@ -1285,11 +1281,9 @@ define double @uitofp_i64tof64(i64 %x) #0 {
 ; X87-NEXT:    movl 12(%ebp), %ecx
 ; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    xorl %eax, %eax
-; X87-NEXT:    testl %ecx, %ecx
-; X87-NEXT:    setns %al
+; X87-NEXT:    shrl $31, %ecx
 ; X87-NEXT:    fildll (%esp)
-; X87-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X87-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
 ; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %ebp, %esp

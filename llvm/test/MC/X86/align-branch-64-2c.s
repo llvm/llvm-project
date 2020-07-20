@@ -14,6 +14,6 @@
 # CHECK-COUNT-3:      : 64 89 04 25 01 00 00 00          movl    %eax, %fs:1
 # CHECK:            5a: 55                               pushq    %rbp
 # CHECK-COUNT-5:      : 90                               nop
-# CHECK:            60: e8 9b ff ff ff                   callq   {{.*}}
+# CHECK:            60: e8 00 00 00 00                   callq   {{.*}}
 # CHECK-COUNT-4:      : 64 89 04 25 01 00 00 00          movl    %eax, %fs:1
 # CHECK:            85: ff 14 25 00 00 00 00             callq    *0

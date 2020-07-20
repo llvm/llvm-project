@@ -1353,7 +1353,8 @@ bool UnwindCursor<A, R>::getInfoFromEHABISection(
 
   // If the high bit is set, the exception handling table entry is inline inside
   // the index table entry on the second word (aka |indexDataAddr|). Otherwise,
-  // the table points at an offset in the exception handling table (section 5 EHABI).
+  // the table points at an offset in the exception handling table (section 5
+  // EHABI).
   pint_t exceptionTableAddr;
   uint32_t exceptionTableData;
   bool isSingleWordEHT;
@@ -1452,7 +1453,7 @@ bool UnwindCursor<A, R>::getInfoFromEHABISection(
   _info.unwind_info = exceptionTableAddr;
   _info.lsda = lsda;
   // flags is pr_cache.additional. See EHABI #7.2 for definition of bit 0.
-  _info.flags = isSingleWordEHT ? 1 : 0 | scope32 ? 0x2 : 0;  // Use enum?
+  _info.flags = (isSingleWordEHT ? 1 : 0) | (scope32 ? 0x2 : 0);  // Use enum?
 
   return true;
 }

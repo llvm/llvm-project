@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ -verify %s
+// RUN: %clang_cc1 -std=c++2a -x c++ -verify %s
 
 template<typename T> requires (sizeof(T) >= 2) // expected-note{{because 'sizeof(char) >= 2' (1 >= 2) evaluated to false}}
 struct A {

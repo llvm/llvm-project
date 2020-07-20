@@ -419,7 +419,14 @@ def AArch64fccmp     : SDNode<"AArch64ISD::FCCMP", SDT_AArch64FCCMP>;
 
 def AArch64threadpointer : SDNode<"AArch64ISD::THREAD_POINTER", SDTPtrLeaf>;
 
-def AArch64fcmp      : SDNode<"AArch64ISD::FCMP", SDT_AArch64FCmp>;
+def AArch64fcmp         : SDNode<"AArch64ISD::FCMP", SDT_AArch64FCmp>;
+def AArch64strict_fcmp  : SDNode<"AArch64ISD::STRICT_FCMP", SDT_AArch64FCmp,
+                                 [SDNPHasChain]>;
+def AArch64strict_fcmpe : SDNode<"AArch64ISD::STRICT_FCMPE", SDT_AArch64FCmp,
+                                 [SDNPHasChain]>;
+def AArch64any_fcmp     : PatFrags<(ops node:$lhs, node:$rhs),
+                                   [(AArch64strict_fcmp node:$lhs, node:$rhs),
+                                    (AArch64fcmp node:$lhs, node:$rhs)]>;
 
 def AArch64dup       : SDNode<"AArch64ISD::DUP", SDT_AArch64Dup>;
 def AArch64duplane8  : SDNode<"AArch64ISD::DUPLANE8", SDT_AArch64DupLane>;
@@ -815,32 +822,56 @@ let Predicates = [HasComplxNum, HasNEON] in {
 
 // v8.3a Pointer Authentication
 // These instructions inhabit part of the hint space and so can be used for
-// armv8 targets
+// armv8 targets. Keeping the old HINT mnemonic when compiling without PA is
+// important for compatibility with other assemblers (e.g. GAS) when building
+// software compatible with both CPUs that do or don't implement PA.
 let Uses = [LR], Defs = [LR] in {
-  def PACIAZ   : SystemNoOperands<0b000, "paciaz">;
-  def PACIBZ   : SystemNoOperands<0b010, "pacibz">;
-  def AUTIAZ   : SystemNoOperands<0b100, "autiaz">;
-  def AUTIBZ   : SystemNoOperands<0b110, "autibz">;
+  def PACIAZ   : SystemNoOperands<0b000, "hint #24">;
+  def PACIBZ   : SystemNoOperands<0b010, "hint #26">;
+  let isAuthenticated = 1 in {
+    def AUTIAZ   : SystemNoOperands<0b100, "hint #28">;
+    def AUTIBZ   : SystemNoOperands<0b110, "hint #30">;
+  }
 }
 let Uses = [LR, SP], Defs = [LR] in {
-  def PACIASP  : SystemNoOperands<0b001, "paciasp">;
-  def PACIBSP  : SystemNoOperands<0b011, "pacibsp">;
-  def AUTIASP  : SystemNoOperands<0b101, "autiasp">;
-  def AUTIBSP  : SystemNoOperands<0b111, "autibsp">;
+  def PACIASP  : SystemNoOperands<0b001, "hint #25">;
+  def PACIBSP  : SystemNoOperands<0b011, "hint #27">;
+  let isAuthenticated = 1 in {
+    def AUTIASP  : SystemNoOperands<0b101, "hint #29">;
+    def AUTIBSP  : SystemNoOperands<0b111, "hint #31">;
+  }
 }
 let Uses = [X16, X17], Defs = [X17], CRm = 0b0001 in {
-  def PACIA1716  : SystemNoOperands<0b000, "pacia1716">;
-  def PACIB1716  : SystemNoOperands<0b010, "pacib1716">;
-  def AUTIA1716  : SystemNoOperands<0b100, "autia1716">;
-  def AUTIB1716  : SystemNoOperands<0b110, "autib1716">;
+  def PACIA1716  : SystemNoOperands<0b000, "hint #8">;
+  def PACIB1716  : SystemNoOperands<0b010, "hint #10">;
+  let isAuthenticated = 1 in {
+    def AUTIA1716  : SystemNoOperands<0b100, "hint #12">;
+    def AUTIB1716  : SystemNoOperands<0b110, "hint #14">;
+  }
 }
 
 let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
-  def XPACLRI   : SystemNoOperands<0b111, "xpaclri">;
+  def XPACLRI   : SystemNoOperands<0b111, "hint #7">;
 }
 
-// These pointer authentication isntructions require armv8.3a
+// These pointer authentication instructions require armv8.3a
 let Predicates = [HasPA] in {
+
+  // When compiling with PA, there is a better mnemonic for these instructions.
+  def : InstAlias<"paciaz", (PACIAZ), 1>;
+  def : InstAlias<"pacibz", (PACIBZ), 1>;
+  def : InstAlias<"autiaz", (AUTIAZ), 1>;
+  def : InstAlias<"autibz", (AUTIBZ), 1>;
+  def : InstAlias<"paciasp", (PACIASP), 1>;
+  def : InstAlias<"pacibsp", (PACIBSP), 1>;
+  def : InstAlias<"autiasp", (AUTIASP), 1>;
+  def : InstAlias<"autibsp", (AUTIBSP), 1>;
+  def : InstAlias<"pacia1716", (PACIA1716), 1>;
+  def : InstAlias<"pacib1716", (PACIB1716), 1>;
+  def : InstAlias<"autia1716", (AUTIA1716), 1>;
+  def : InstAlias<"autib1716", (AUTIB1716), 1>;
+  def : InstAlias<"xpaclri", (XPACLRI), 1>;
+
   multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm> {
     def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm, "ia")>;
     def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm, "ib")>;
@@ -3276,10 +3307,10 @@ defm FCVTNS : FPToIntegerUnscaled<0b00, 0b000, "fcvtns", int_aarch64_neon_fcvtns
 defm FCVTNU : FPToIntegerUnscaled<0b00, 0b001, "fcvtnu", int_aarch64_neon_fcvtnu>;
 defm FCVTPS : FPToIntegerUnscaled<0b01, 0b000, "fcvtps", int_aarch64_neon_fcvtps>;
 defm FCVTPU : FPToIntegerUnscaled<0b01, 0b001, "fcvtpu", int_aarch64_neon_fcvtpu>;
-defm FCVTZS : FPToIntegerUnscaled<0b11, 0b000, "fcvtzs", fp_to_sint>;
-defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", fp_to_uint>;
-defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", fp_to_sint>;
-defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", fp_to_uint>;
+defm FCVTZS : FPToIntegerUnscaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
+defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
+defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
+defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 
 multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
   def : Pat<(i32 (round f16:$Rn)), (!cast<Instruction>(INST # UWHr) $Rn)>;
@@ -3351,8 +3382,8 @@ def : Pat<(i64 (llround f64:$Rn)),
 // Scaled integer to floating point conversion instructions.
 //===----------------------------------------------------------------------===//
 
-defm SCVTF : IntegerToFP<0, "scvtf", sint_to_fp>;
-defm UCVTF : IntegerToFP<1, "ucvtf", uint_to_fp>;
+defm SCVTF : IntegerToFP<0, "scvtf", any_sint_to_fp>;
+defm UCVTF : IntegerToFP<1, "ucvtf", any_uint_to_fp>;
 
 //===----------------------------------------------------------------------===//
 // Unscaled integer to floating point conversion instruction.
@@ -3517,8 +3548,8 @@ def : Pat<(f64 (fma FPR64:$Rn, (fneg FPR64:$Rm), (fneg FPR64:$Ra))),
 // Floating point comparison instructions.
 //===----------------------------------------------------------------------===//
 
-defm FCMPE : FPComparison<1, "fcmpe">;
-defm FCMP  : FPComparison<0, "fcmp", AArch64fcmp>;
+defm FCMPE : FPComparison<1, "fcmpe", AArch64strict_fcmpe>;
+defm FCMP  : FPComparison<0, "fcmp", AArch64any_fcmp>;
 
 //===----------------------------------------------------------------------===//
 // Floating point conditional comparison instructions.

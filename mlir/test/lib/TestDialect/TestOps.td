@@ -74,8 +74,14 @@ def MultiTensorRankOf : TEST_Op<"multi_tensor_rank_of"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Test Operands
+// Test Symbols
 //===----------------------------------------------------------------------===//
+
+def SymbolOp : TEST_Op<"symbol", [Symbol]> {
+  let summary =  "operation which defines a new symbol";
+  let arguments = (ins StrAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+}
 
 def SymbolScopeOp : TEST_Op<"symbol_scope",
     [SymbolTable, SingleBlockImplicitTerminator<"TerminatorOp">]> {
@@ -230,7 +236,7 @@ def SizedRegionOp : TEST_Op<"sized_region_op", []> {
 
 def ConversionCallOp : TEST_Op<"conversion_call_op",
     [CallOpInterface]> {
-  let arguments = (ins Variadic<AnyType>:$inputs, FlatSymbolRefAttr:$callee);
+  let arguments = (ins Variadic<AnyType>:$inputs, SymbolRefAttr:$callee);
   let results = (outs Variadic<AnyType>);
 
   let extraClassDeclaration = [{
@@ -239,7 +245,7 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      return getAttrOfType<FlatSymbolRefAttr>("callee");
+      return getAttrOfType<SymbolRefAttr>("callee");
     }
   }];
 }
@@ -250,11 +256,8 @@ def FunctionalRegionOp : TEST_Op<"functional_region_op",
   let results = (outs FunctionType);
 
   let extraClassDeclaration = [{
-    Region *getCallableRegion(CallInterfaceCallable) { return &body(); }
-    void getCallableRegions(SmallVectorImpl<Region *> &callables) {
-      callables.push_back(&body());
-    }
-    ArrayRef<Type> getCallableResults(Region *) {
+    Region *getCallableRegion() { return &body(); }
+    ArrayRef<Type> getCallableResults() {
       return getType().cast<FunctionType>().getResults();
     }
   }];
@@ -651,7 +654,7 @@ def OpSymbolBindingD : TEST_Op<"symbol_binding_d", []> {
   let arguments = (ins I32:$input1, I32:$input2, I64Attr:$attr);
   let results = (outs I32);
 }
-def HasOneUse: Constraint<CPred<"$0->hasOneUse()">, "has one use">;
+def HasOneUse: Constraint<CPred<"$0.hasOneUse()">, "has one use">;
 def : Pattern<
     // Bind to source pattern op operand/attribute/result
     (OpSymbolBindingA:$res_a $operand, $attr), [

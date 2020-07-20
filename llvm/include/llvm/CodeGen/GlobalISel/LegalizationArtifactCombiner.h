@@ -113,7 +113,8 @@ public:
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       LLT SrcTy = MRI.getType(SrcReg);
       APInt Mask = APInt::getAllOnesValue(SrcTy.getScalarSizeInBits());
-      auto MIBMask = Builder.buildConstant(DstTy, Mask.getZExtValue());
+      auto MIBMask = Builder.buildConstant(
+        DstTy, Mask.zext(DstTy.getScalarSizeInBits()));
       Builder.buildAnd(DstReg, Builder.buildAnyExtOrTrunc(DstTy, TruncSrc),
                        MIBMask);
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);

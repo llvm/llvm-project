@@ -278,6 +278,7 @@ template <typename T> class ArrayRef;
     bool hasChain : 1;
     bool hasChain_Inferred : 1;
     bool variadicOpsAreDefs : 1;
+    bool isAuthenticated : 1;
 
     std::string DeprecatedReason;
     bool HasComplexDeprecationPredicate;

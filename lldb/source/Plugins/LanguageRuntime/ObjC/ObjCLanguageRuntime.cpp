@@ -222,14 +222,6 @@ ObjCLanguageRuntime::GetParentClass(ObjCLanguageRuntime::ObjCISA isa) {
   return 0;
 }
 
-ConstString
-ObjCLanguageRuntime::GetActualTypeName(ObjCLanguageRuntime::ObjCISA isa) {
-  ClassDescriptorSP objc_class_sp(GetNonKVOClassDescriptor(isa));
-  if (objc_class_sp)
-    return objc_class_sp->GetClassName();
-  return ConstString();
-}
-
 ObjCLanguageRuntime::ClassDescriptorSP
 ObjCLanguageRuntime::GetClassDescriptorFromClassName(
     ConstString class_name) {

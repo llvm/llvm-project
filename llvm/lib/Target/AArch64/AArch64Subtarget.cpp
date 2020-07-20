@@ -160,6 +160,17 @@ void AArch64Subtarget::initializeProperties() {
     PrefFunctionLogAlignment = 4;
     PrefLoopLogAlignment = 2;
     break;
+  case ThunderX3T110:
+    CacheLineSize = 64;
+    PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 2;
+    MaxInterleaveFactor = 4;
+    PrefetchDistance = 128;
+    MinPrefetchStride = 1024;
+    MaxPrefetchIterationsAhead = 4;
+    // FIXME: remove this to enable 64-bit SLP if performance looks good.
+    MinVectorRegisterBitWidth = 128;
+    break;
   }
 }
 

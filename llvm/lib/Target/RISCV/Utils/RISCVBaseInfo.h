@@ -202,6 +202,8 @@ enum ABI {
 ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
                      StringRef ABIName);
 
+ABI getTargetABI(StringRef ABIName);
+
 // Returns the register used to hold the stack pointer after realignment.
 Register getBPReg();
 

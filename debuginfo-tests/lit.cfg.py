@@ -44,6 +44,8 @@ llvm_config.use_default_substitutions()
 tools = [
     ToolSubst('%test_debuginfo', command=os.path.join(
         config.debuginfo_tests_src_root, 'llgdb-tests', 'test_debuginfo.pl')),
+    ToolSubst("%llvm_src_root", config.llvm_src_root),
+    ToolSubst("%llvm_tools_dir", config.llvm_tools_dir),
 ]
 
 def get_required_attr(config, attr_name):

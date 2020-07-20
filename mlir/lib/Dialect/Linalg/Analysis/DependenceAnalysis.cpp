@@ -48,30 +48,30 @@ Value Aliases::find(Value v) {
 
   auto it = aliases.find(v);
   if (it != aliases.end()) {
-    assert(it->getSecond()->getType().isa<MemRefType>() && "Memref expected");
+    assert(it->getSecond().getType().isa<MemRefType>() && "Memref expected");
     return it->getSecond();
   }
 
   while (true) {
     if (v.isa<BlockArgument>())
       return v;
-    if (auto alloc = dyn_cast_or_null<AllocOp>(v->getDefiningOp())) {
+    if (auto alloc = dyn_cast_or_null<AllocOp>(v.getDefiningOp())) {
       if (isStrided(alloc.getType()))
         return alloc.getResult();
     }
-    if (auto slice = dyn_cast_or_null<SliceOp>(v->getDefiningOp())) {
+    if (auto slice = dyn_cast_or_null<SliceOp>(v.getDefiningOp())) {
       auto it = aliases.insert(std::make_pair(v, find(slice.view())));
       return it.first->second;
     }
-    if (auto view = dyn_cast_or_null<ViewOp>(v->getDefiningOp())) {
+    if (auto view = dyn_cast_or_null<ViewOp>(v.getDefiningOp())) {
       auto it = aliases.insert(std::make_pair(v, view.source()));
       return it.first->second;
     }
-    if (auto view = dyn_cast_or_null<SubViewOp>(v->getDefiningOp())) {
+    if (auto view = dyn_cast_or_null<SubViewOp>(v.getDefiningOp())) {
       v = view.source();
       continue;
     }
-    llvm::errs() << "View alias analysis reduces to: " << *v << "\n";
+    llvm::errs() << "View alias analysis reduces to: " << v << "\n";
     llvm_unreachable("unsupported view alias case");
   }
 }
@@ -139,7 +139,11 @@ LinalgDependenceGraph::getDependencesInto(
 }
 
 void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
-  for (auto srcView : src.getOutputs()) { // W
+  assert(src.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
+  assert(dst.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
+  for (auto srcView : src.getOutputBuffers()) { // W
     // RAW graph
     for (auto dstView : dst.getInputs()) {   // R
       if (aliases.alias(srcView, dstView)) { // if alias, fill RAW
@@ -149,7 +153,7 @@ void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
       }
     }
     // WAW graph
-    for (auto dstView : dst.getOutputs()) {  // W
+    for (auto dstView : dst.getOutputBuffers()) { // W
       if (aliases.alias(srcView, dstView)) { // if alias, fill WAW
         addDependenceElem(DependenceType::WAW,
                           LinalgOpView{src.getOperation(), srcView},
@@ -167,7 +171,7 @@ void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
       }
     }
     // WAR graph
-    for (auto dstView : dst.getOutputs()) {  // W
+    for (auto dstView : dst.getOutputBuffers()) { // W
       if (aliases.alias(srcView, dstView)) { // if alias, fill WAR
         addDependenceElem(DependenceType::WAR,
                           LinalgOpView{src.getOperation(), srcView},
@@ -224,7 +228,7 @@ LinalgDependenceGraph::findOperationsWithCoveringDependences(
       auto *op = dependence.dependentOpView.op;
       LLVM_DEBUG(dbgs() << "\n***Found covering dependence of type "
                         << toStringRef(dt) << ": " << *src << " -> " << *op
-                        << " on " << *dependence.indexingView);
+                        << " on " << dependence.indexingView);
       res.push_back(op);
     }
   }

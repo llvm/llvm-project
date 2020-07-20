@@ -36,7 +36,7 @@ define i64 @ldp_sext_int(i32* %p) nounwind {
 ; Test ldur clustering.
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: ldur_int:%bb.0
-; CHECK: Cluster ld/st SU(2) - SU(1)
+; CHECK: Cluster ld/st SU(1) - SU(2)
 ; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDURWi
 ; CHECK: SU(2):   %{{[0-9]+}}:gpr32 = LDURWi
 define i32 @ldur_int(i32* %a) nounwind {

@@ -667,7 +667,7 @@ private:
     ArrayRef<uint8_t> SymbolBytes(SymbolMem.bytes_begin(), SymbolMem.size());
 
     MCDisassembler::DecodeStatus S =
-        Dis->getInstruction(Inst, Size, SymbolBytes, 0, nulls(), nulls());
+        Dis->getInstruction(Inst, Size, SymbolBytes, 0, nulls());
 
     return (S == MCDisassembler::Success);
   }

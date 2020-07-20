@@ -336,7 +336,7 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
   for (const ParmVarDecl *PD : MD->parameters())
     EmitDelegateCallArg(CallArgs, PD, SourceLocation());
 
-  const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
+  const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
 
 #ifndef NDEBUG
   const CGFunctionInfo &CallFnInfo = CGM.getTypes().arrangeCXXMethodCall(
@@ -437,7 +437,8 @@ void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
   // Finish the function to maintain CodeGenFunction invariants.
   // FIXME: Don't emit unreachable code.
   EmitBlock(createBasicBlock());
-  FinishFunction();
+
+  FinishThunk();
 }
 
 void CodeGenFunction::generateThunk(llvm::Function *Fn,
@@ -564,7 +565,7 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
   CGM.SetLLVMFunctionAttributesForDefinition(GD.getDecl(), ThunkFn);
 
   // Thunks for variadic methods are special because in general variadic
-  // arguments cannot be perferctly forwarded. In the general case, clang
+  // arguments cannot be perfectly forwarded. In the general case, clang
   // implements such thunks by cloning the original function body. However, for
   // thunks with no return adjustment on targets that support musttail, we can
   // use musttail to perfectly forward the variadic arguments.
@@ -676,7 +677,12 @@ void CodeGenVTables::addVTableComponent(
       // Method is acceptable, continue processing as usual.
     }
 
-    auto getSpecialVirtualFn = [&](StringRef name) {
+    auto getSpecialVirtualFn = [&](StringRef name) -> llvm::Constant * {
+      // For NVPTX devices in OpenMP emit special functon as null pointers,
+      // otherwise linking ends up with unresolved references.
+      if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMPIsDevice &&
+          CGM.getTriple().isNVPTX())
+        return llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
       llvm::Constant *fn = cast<llvm::Constant>(

@@ -66,7 +66,7 @@ struct GPUAllReduceOpLowering : public LLVMOpLowering {
     Value operand = operands.front();
 
     // TODO(csigg): Generalize to other types of accumulation.
-    assert(op->getOperand(0)->getType().isIntOrFloat());
+    assert(op->getOperand(0).getType().isIntOrFloat());
 
     // Create the reduction using an accumulator factory.
     AccumulatorFactory factory =
@@ -87,7 +87,7 @@ private:
       return getFactory(allReduce.body());
     }
     if (allReduce.op()) {
-      auto type = operand->getType().cast<LLVM::LLVMType>();
+      auto type = operand.getType().cast<LLVM::LLVMType>();
       return getFactory(*allReduce.op(), type.getUnderlyingType());
     }
     return AccumulatorFactory();
@@ -127,7 +127,7 @@ private:
 
       // Return accumulator result.
       rewriter.setInsertionPointToStart(split);
-      return split->addArgument(lhs->getType());
+      return split->addArgument(lhs.getType());
     });
   }
 
@@ -154,7 +154,7 @@ private:
   template <typename T> AccumulatorFactory getFactory() const {
     return [](Location loc, Value lhs, Value rhs,
               ConversionPatternRewriter &rewriter) {
-      return rewriter.create<T>(loc, lhs->getType(), lhs, rhs);
+      return rewriter.create<T>(loc, lhs.getType(), lhs, rhs);
     };
   }
 
@@ -197,10 +197,10 @@ private:
   Value createBlockReduce(Location loc, Value operand,
                           AccumulatorFactory &accumFactory,
                           ConversionPatternRewriter &rewriter) const {
-    auto type = operand->getType().cast<LLVM::LLVMType>();
+    auto type = operand.getType().cast<LLVM::LLVMType>();
 
     // Create shared memory array to store the warp reduction.
-    auto module = operand->getDefiningOp()->getParentOfType<ModuleOp>();
+    auto module = operand.getDefiningOp()->getParentOfType<ModuleOp>();
     assert(module && "op must belong to a module");
     Value sharedMemPtr =
         createSharedMemoryArray(loc, module, type, kWarpSize, rewriter);
@@ -295,7 +295,7 @@ private:
     assert(thenOperands.size() == elseOperands.size());
     rewriter.setInsertionPointToStart(continueBlock);
     for (auto operand : thenOperands)
-      continueBlock->addArgument(operand->getType());
+      continueBlock->addArgument(operand.getType());
   }
 
   /// Shortcut for createIf with empty else block and no block operands.
@@ -321,7 +321,7 @@ private:
         loc, int32Type, rewriter.getI32IntegerAttr(kWarpSize));
     Value isPartialWarp = rewriter.create<LLVM::ICmpOp>(
         loc, LLVM::ICmpPredicate::slt, activeWidth, warpSize);
-    auto type = operand->getType().cast<LLVM::LLVMType>();
+    auto type = operand.getType().cast<LLVM::LLVMType>();
 
     createIf(
         loc, rewriter, isPartialWarp,
@@ -453,7 +453,7 @@ private:
   /// Returns value divided by the warp size (i.e. 32).
   Value getDivideByWarpSize(Value value,
                             ConversionPatternRewriter &rewriter) const {
-    auto loc = value->getLoc();
+    auto loc = value.getLoc();
     auto warpSize = rewriter.create<LLVM::ConstantOp>(
         loc, int32Type, rewriter.getI32IntegerAttr(kWarpSize));
     return rewriter.create<LLVM::SDivOp>(loc, int32Type, value, warpSize);
@@ -492,7 +492,7 @@ struct GPUShuffleOpLowering : public LLVMOpLowering {
     gpu::ShuffleOpOperandAdaptor adaptor(operands);
 
     auto dialect = lowering.getDialect();
-    auto valueTy = adaptor.value()->getType().cast<LLVM::LLVMType>();
+    auto valueTy = adaptor.value().getType().cast<LLVM::LLVMType>();
     auto int32Type = LLVM::LLVMType::getInt32Ty(dialect);
     auto predTy = LLVM::LLVMType::getInt1Ty(dialect);
     auto resultTy = LLVM::LLVMType::getStructTy(dialect, {valueTy, predTy});
@@ -540,7 +540,7 @@ struct GPUFuncOpLowering : LLVMOpLowering {
     for (auto en : llvm::enumerate(gpuFuncOp.getWorkgroupAttributions())) {
       Value attribution = en.value();
 
-      auto type = attribution->getType().dyn_cast<MemRefType>();
+      auto type = attribution.getType().dyn_cast<MemRefType>();
       assert(type && type.hasStaticShape() && "unexpected type in attribution");
 
       uint64_t numElements = type.getNumElements();
@@ -612,7 +612,7 @@ struct GPUFuncOpLowering : LLVMOpLowering {
         // otherwise necessary given that memref sizes are fixed, but we can try
         // and canonicalize that away later.
         Value attribution = gpuFuncOp.getWorkgroupAttributions()[en.index()];
-        auto type = attribution->getType().cast<MemRefType>();
+        auto type = attribution.getType().cast<MemRefType>();
         auto descr = MemRefDescriptor::fromStaticShape(rewriter, loc, lowering,
                                                        type, memory);
         signatureConversion.remapInput(numProperArguments + en.index(), descr);
@@ -624,7 +624,7 @@ struct GPUFuncOpLowering : LLVMOpLowering {
       auto int64Ty = LLVM::LLVMType::getInt64Ty(lowering.getDialect());
       for (auto en : llvm::enumerate(gpuFuncOp.getPrivateAttributions())) {
         Value attribution = en.value();
-        auto type = attribution->getType().cast<MemRefType>();
+        auto type = attribution.getType().cast<MemRefType>();
         assert(type && type.hasStaticShape() &&
                "unexpected type in attribution");
 
@@ -712,7 +712,8 @@ public:
     populateGpuToNVVMConversionPatterns(converter, patterns);
     ConversionTarget target(getContext());
     target.addIllegalDialect<gpu::GPUDialect>();
-    target.addIllegalOp<LLVM::ExpOp>();
+    target.addIllegalOp<LLVM::FAbsOp, LLVM::FCeilOp, LLVM::CosOp,
+                        LLVM::ExpOp>();
     target.addIllegalOp<FuncOp>();
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addLegalDialect<NVVM::NVVMDialect>();
@@ -739,6 +740,12 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                           NVVM::GridDimYOp, NVVM::GridDimZOp>,
               GPUAllReduceOpLowering, GPUShuffleOpLowering, GPUFuncOpLowering,
               GPUReturnOpLowering>(converter);
+  patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__nv_fabsf",
+                                               "__nv_fabs");
+  patterns.insert<OpToFuncCallLowering<CeilFOp>>(converter, "__nv_ceilf",
+                                               "__nv_ceil");
+  patterns.insert<OpToFuncCallLowering<CosOp>>(converter, "__nv_cosf",
+                                               "__nv_cos");
   patterns.insert<OpToFuncCallLowering<ExpOp>>(converter, "__nv_expf",
                                                "__nv_exp");
 }

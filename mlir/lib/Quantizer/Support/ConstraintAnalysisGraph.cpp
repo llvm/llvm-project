@@ -37,11 +37,11 @@ void CAGNode::addOutgoing(CAGNode *toNode) {
 }
 
 CAGOperandAnchor::CAGOperandAnchor(Operation *op, unsigned operandIdx)
-    : CAGAnchorNode(Kind::OperandAnchor, op->getOperand(operandIdx)->getType()),
+    : CAGAnchorNode(Kind::OperandAnchor, op->getOperand(operandIdx).getType()),
       op(op), operandIdx(operandIdx) {}
 
 CAGResultAnchor::CAGResultAnchor(Operation *op, unsigned resultIdx)
-    : CAGAnchorNode(Kind::ResultAnchor, op->getResult(resultIdx)->getType()),
+    : CAGAnchorNode(Kind::ResultAnchor, op->getResult(resultIdx).getType()),
       resultValue(op->getResult(resultIdx)) {}
 
 CAGSlice::CAGSlice(SolverContext &context) : context(context) {}
@@ -94,7 +94,7 @@ void CAGSlice::enumerateImpliedConnections(
   for (auto &resultAnchorPair : resultAnchors) {
     CAGResultAnchor *resultAnchor = resultAnchorPair.second;
     Value resultValue = resultAnchor->getValue();
-    for (auto &use : resultValue->getUses()) {
+    for (auto &use : resultValue.getUses()) {
       Operation *operandOp = use.getOwner();
       unsigned operandIdx = use.getOperandNumber();
       auto foundIt = operandAnchors.find(std::make_pair(operandOp, operandIdx));

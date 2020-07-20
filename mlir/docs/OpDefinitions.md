@@ -734,7 +734,7 @@ is used. They serve as "hooks" to the enclosing environment.  This includes
   we want the constraints on each type definition reads naturally and we want
   to attach type constraints directly to an operand/result, `$_self` will be
   replaced by the operand/result's type. E.g., for `F32` in `F32:$operand`, its
-  `$_self` will be expanded as `getOperand(...)->getType()`.
+  `$_self` will be expanded as `getOperand(...).getType()`.
 
 TODO(b/130663252): Reconsider the leading symbol for special placeholders.
 Eventually we want to allow referencing operand/result $-names; such $-names

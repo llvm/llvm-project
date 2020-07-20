@@ -661,8 +661,9 @@ comments::FullComment *ASTContext::getCommentForDecl(
   return FC;
 }
 
-void
+void 
 ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
+                                                   const ASTContext &C,
                                                TemplateTemplateParmDecl *Parm) {
   ID.AddInteger(Parm->getDepth());
   ID.AddInteger(Parm->getPosition());
@@ -676,6 +677,16 @@ ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(*P)) {
       ID.AddInteger(0);
       ID.AddBoolean(TTP->isParameterPack());
+      const TypeConstraint *TC = TTP->getTypeConstraint();
+      ID.AddBoolean(TC != nullptr);
+      if (TC)
+        TC->getImmediatelyDeclaredConstraint()->Profile(ID, C,
+                                                        /*Canonical=*/true);
+      if (TTP->isExpandedParameterPack()) {
+        ID.AddBoolean(true);
+        ID.AddInteger(TTP->getNumExpansionParameters());
+      } else
+        ID.AddBoolean(false);
       continue;
     }
 
@@ -697,8 +708,63 @@ ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
 
     auto *TTP = cast<TemplateTemplateParmDecl>(*P);
     ID.AddInteger(2);
-    Profile(ID, TTP);
+    Profile(ID, C, TTP);
   }
+  Expr *RequiresClause = Parm->getTemplateParameters()->getRequiresClause();
+  ID.AddBoolean(RequiresClause != nullptr);
+  if (RequiresClause)
+    RequiresClause->Profile(ID, C, /*Canonical=*/true);
+}
+
+static Expr *
+canonicalizeImmediatelyDeclaredConstraint(const ASTContext &C, Expr *IDC,
+                                          QualType ConstrainedType) {
+  // This is a bit ugly - we need to form a new immediately-declared
+  // constraint that references the new parameter; this would ideally
+  // require semantic analysis (e.g. template<C T> struct S {}; - the
+  // converted arguments of C<T> could be an argument pack if C is
+  // declared as template<typename... T> concept C = ...).
+  // We don't have semantic analysis here so we dig deep into the
+  // ready-made constraint expr and change the thing manually.
+  ConceptSpecializationExpr *CSE;
+  if (const auto *Fold = dyn_cast<CXXFoldExpr>(IDC))
+    CSE = cast<ConceptSpecializationExpr>(Fold->getLHS());
+  else
+    CSE = cast<ConceptSpecializationExpr>(IDC);
+  ArrayRef<TemplateArgument> OldConverted = CSE->getTemplateArguments();
+  SmallVector<TemplateArgument, 3> NewConverted;
+  NewConverted.reserve(OldConverted.size());
+  if (OldConverted.front().getKind() == TemplateArgument::Pack) {
+    // The case:
+    // template<typename... T> concept C = true;
+    // template<C<int> T> struct S; -> constraint is C<{T, int}>
+    NewConverted.push_back(ConstrainedType);
+    for (auto &Arg : OldConverted.front().pack_elements().drop_front(1))
+      NewConverted.push_back(Arg);
+    TemplateArgument NewPack(NewConverted);
+
+    NewConverted.clear();
+    NewConverted.push_back(NewPack);
+    assert(OldConverted.size() == 1 &&
+           "Template parameter pack should be the last parameter");
+  } else {
+    assert(OldConverted.front().getKind() == TemplateArgument::Type &&
+           "Unexpected first argument kind for immediately-declared "
+           "constraint");
+    NewConverted.push_back(ConstrainedType);
+    for (auto &Arg : OldConverted.drop_front(1))
+      NewConverted.push_back(Arg);
+  }
+  Expr *NewIDC = ConceptSpecializationExpr::Create(
+      C, CSE->getNamedConcept(), NewConverted, nullptr,
+      CSE->isInstantiationDependent(), CSE->containsUnexpandedParameterPack());
+
+  if (auto *OrigFold = dyn_cast<CXXFoldExpr>(IDC))
+    NewIDC = new (C) CXXFoldExpr(OrigFold->getType(), SourceLocation(), NewIDC,
+                                 BinaryOperatorKind::BO_LAnd,
+                                 SourceLocation(), /*RHS=*/nullptr,
+                                 SourceLocation(), /*NumExpansions=*/None);
+  return NewIDC;
 }
 
 TemplateTemplateParmDecl *
@@ -706,7 +772,7 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                           TemplateTemplateParmDecl *TTP) const {
   // Check if we already have a canonical template template parameter.
   llvm::FoldingSetNodeID ID;
-  CanonicalTemplateTemplateParm::Profile(ID, TTP);
+  CanonicalTemplateTemplateParm::Profile(ID, *this, TTP);
   void *InsertPos = nullptr;
   CanonicalTemplateTemplateParm *Canonical
     = CanonTemplateTemplateParms.FindNodeOrInsertPos(ID, InsertPos);
@@ -720,15 +786,34 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
   for (TemplateParameterList::const_iterator P = Params->begin(),
                                           PEnd = Params->end();
        P != PEnd; ++P) {
-    if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(*P))
-      CanonParams.push_back(
-                  TemplateTypeParmDecl::Create(*this, getTranslationUnitDecl(),
-                                               SourceLocation(),
-                                               SourceLocation(),
-                                               TTP->getDepth(),
-                                               TTP->getIndex(), nullptr, false,
-                                               TTP->isParameterPack()));
-    else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*P)) {
+    if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(*P)) {
+      TemplateTypeParmDecl *NewTTP = TemplateTypeParmDecl::Create(*this,
+          getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+          TTP->getDepth(), TTP->getIndex(), nullptr, false,
+          TTP->isParameterPack(), TTP->hasTypeConstraint(),
+          TTP->isExpandedParameterPack() ?
+          llvm::Optional<unsigned>(TTP->getNumExpansionParameters()) : None);
+      if (const auto *TC = TTP->getTypeConstraint()) {
+        QualType ParamAsArgument(NewTTP->getTypeForDecl(), 0);
+        Expr *NewIDC = canonicalizeImmediatelyDeclaredConstraint(
+                *this, TC->getImmediatelyDeclaredConstraint(),
+                ParamAsArgument);
+        TemplateArgumentListInfo CanonArgsAsWritten;
+        if (auto *Args = TC->getTemplateArgsAsWritten())
+          for (const auto &ArgLoc : Args->arguments())
+            CanonArgsAsWritten.addArgument(
+                TemplateArgumentLoc(ArgLoc.getArgument(),
+                                    TemplateArgumentLocInfo()));
+        NewTTP->setTypeConstraint(
+            NestedNameSpecifierLoc(),
+            DeclarationNameInfo(TC->getNamedConcept()->getDeclName(),
+                                SourceLocation()), /*FoundDecl=*/nullptr,
+            // Actually canonicalizing a TemplateArgumentLoc is difficult so we
+            // simply omit the ArgsAsWritten
+            TC->getNamedConcept(), /*ArgsAsWritten=*/nullptr, NewIDC);
+      }
+      CanonParams.push_back(NewTTP);
+    } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*P)) {
       QualType T = getCanonicalType(NTTP->getType());
       TypeSourceInfo *TInfo = getTrivialTypeSourceInfo(T);
       NonTypeTemplateParmDecl *Param;
@@ -760,6 +845,13 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                                 NTTP->isParameterPack(),
                                                 TInfo);
       }
+      if (AutoType *AT = T->getContainedAutoType()) {
+        if (AT->isConstrained()) {
+          Param->setPlaceholderTypeConstraint(
+              canonicalizeImmediatelyDeclaredConstraint(
+                  *this, NTTP->getPlaceholderTypeConstraint(), T));
+        }
+      }
       CanonParams.push_back(Param);
 
     } else
@@ -767,9 +859,9 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                            cast<TemplateTemplateParmDecl>(*P)));
   }
 
-  assert(!TTP->getTemplateParameters()->getRequiresClause() &&
-         "Unexpected requires-clause on template template-parameter");
-  Expr *const CanonRequiresClause = nullptr;
+  Expr *CanonRequiresClause = nullptr;
+  if (Expr *RequiresClause = TTP->getTemplateParameters()->getRequiresClause())
+    CanonRequiresClause = RequiresClause;
 
   TemplateTemplateParmDecl *CanonTTP
     = TemplateTemplateParmDecl::Create(*this, getTranslationUnitDecl(),
@@ -864,8 +956,9 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                        Builtin::Context &builtins)
     : ConstantArrayTypes(this_()), FunctionProtoTypes(this_()),
       TemplateSpecializationTypes(this_()),
-      DependentTemplateSpecializationTypes(this_()),
-      SubstTemplateTemplateParmPacks(this_()), SourceMgr(SM), LangOpts(LOpts),
+      DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
+      SubstTemplateTemplateParmPacks(this_()),
+      CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
       SanitizerBL(new SanitizerBlacklist(LangOpts.SanitizerBlacklistFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
@@ -924,15 +1017,15 @@ class ASTContext::ParentMap {
   /// only storing a unique pointer to them.
   using ParentMapPointers = llvm::DenseMap<
       const void *,
-      llvm::PointerUnion4<const Decl *, const Stmt *,
-                          ast_type_traits::DynTypedNode *, ParentVector *>>;
+      llvm::PointerUnion<const Decl *, const Stmt *,
+                         ast_type_traits::DynTypedNode *, ParentVector *>>;
 
   /// Parent map for nodes without pointer identity. We store a full
   /// DynTypedNode for all keys.
   using ParentMapOtherNodes = llvm::DenseMap<
       ast_type_traits::DynTypedNode,
-      llvm::PointerUnion4<const Decl *, const Stmt *,
-                          ast_type_traits::DynTypedNode *, ParentVector *>>;
+      llvm::PointerUnion<const Decl *, const Stmt *,
+                         ast_type_traits::DynTypedNode *, ParentVector *>>;
 
   ParentMapPointers PointerParents;
   ParentMapOtherNodes OtherParents;
@@ -3608,10 +3701,10 @@ ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
       (void)CanonCheck;
       DependentVectorTypes.InsertNode(New, InsertPos);
     } else {
-      QualType Canon = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
-                                                      SourceLocation());
+      QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
+                                                           SourceLocation());
       New = new (*this, TypeAlignment) DependentVectorType(
-          *this, VecType, Canon, SizeExpr, AttrLoc, VecKind);
+          *this, VecType, CanonExtTy, SizeExpr, AttrLoc, VecKind);
     }
   }
 
@@ -3681,10 +3774,10 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
       (void)CanonCheck;
       DependentSizedExtVectorTypes.InsertNode(New, InsertPos);
     } else {
-      QualType Canon = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
-                                                      SourceLocation());
-      New = new (*this, TypeAlignment)
-        DependentSizedExtVectorType(*this, vecType, Canon, SizeExpr, AttrLoc);
+      QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
+                                                           SourceLocation());
+      New = new (*this, TypeAlignment) DependentSizedExtVectorType(
+          *this, vecType, CanonExtTy, SizeExpr, AttrLoc);
     }
   }
 
@@ -5044,21 +5137,29 @@ QualType ASTContext::getUnaryTransformType(QualType BaseType,
 /// getAutoType - Return the uniqued reference to the 'auto' type which has been
 /// deduced to the given type, or to the canonical undeduced 'auto' type, or the
 /// canonical deduced-but-dependent 'auto' type.
-QualType ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
-                                 bool IsDependent, bool IsPack) const {
+QualType
+ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
+                        bool IsDependent, bool IsPack,
+                        ConceptDecl *TypeConstraintConcept,
+                        ArrayRef<TemplateArgument> TypeConstraintArgs) const {
   assert((!IsPack || IsDependent) && "only use IsPack for a dependent pack");
-  if (DeducedType.isNull() && Keyword == AutoTypeKeyword::Auto && !IsDependent)
+  if (DeducedType.isNull() && Keyword == AutoTypeKeyword::Auto &&
+      !TypeConstraintConcept && !IsDependent)
     return getAutoDeductType();
 
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  AutoType::Profile(ID, DeducedType, Keyword, IsDependent, IsPack);
+  AutoType::Profile(ID, *this, DeducedType, Keyword, IsDependent,
+                    TypeConstraintConcept, TypeConstraintArgs);
   if (AutoType *AT = AutoTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(AT, 0);
 
-  auto *AT = new (*this, TypeAlignment)
-      AutoType(DeducedType, Keyword, IsDependent, IsPack);
+  void *Mem = Allocate(sizeof(AutoType) +
+                       sizeof(TemplateArgument) * TypeConstraintArgs.size(),
+                       TypeAlignment);
+  auto *AT = new (Mem) AutoType(DeducedType, Keyword, IsDependent, IsPack,
+                                TypeConstraintConcept, TypeConstraintArgs);
   Types.push_back(AT);
   if (InsertPos)
     AutoTypes.InsertNode(AT, InsertPos);
@@ -5120,7 +5221,8 @@ QualType ASTContext::getAutoDeductType() const {
   if (AutoDeductTy.isNull())
     AutoDeductTy = QualType(
       new (*this, TypeAlignment) AutoType(QualType(), AutoTypeKeyword::Auto,
-                                          /*dependent*/false, /*pack*/false),
+                                          /*dependent*/false, /*pack*/false,
+                                          /*concept*/nullptr, /*args*/{}),
       0);
   return AutoDeductTy;
 }
@@ -6875,21 +6977,19 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       S += ObjCEncodingForEnumType(this, cast<EnumType>(CT));
     return;
 
-  case Type::Complex: {
-    const auto *CT = T->castAs<ComplexType>();
+  case Type::Complex:
     S += 'j';
-    getObjCEncodingForTypeImpl(CT->getElementType(), S, ObjCEncOptions(),
+    getObjCEncodingForTypeImpl(T->castAs<ComplexType>()->getElementType(), S,
+                               ObjCEncOptions(),
                                /*Field=*/nullptr);
     return;
-  }
 
-  case Type::Atomic: {
-    const auto *AT = T->castAs<AtomicType>();
+  case Type::Atomic:
     S += 'A';
-    getObjCEncodingForTypeImpl(AT->getValueType(), S, ObjCEncOptions(),
+    getObjCEncodingForTypeImpl(T->castAs<AtomicType>()->getValueType(), S,
+                               ObjCEncOptions(),
                                /*Field=*/nullptr);
     return;
-  }
 
   // encoding for pointer or reference types.
   case Type::Pointer:
@@ -8707,8 +8807,8 @@ QualType ASTContext::mergeFunctionParameterTypes(QualType lhs, QualType rhs,
 QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
                                         bool OfBlockPointer,
                                         bool Unqualified) {
-  const auto *lbase = lhs->getAs<FunctionType>();
-  const auto *rbase = rhs->getAs<FunctionType>();
+  const auto *lbase = lhs->castAs<FunctionType>();
+  const auto *rbase = rhs->castAs<FunctionType>();
   const auto *lproto = dyn_cast<FunctionProtoType>(lbase);
   const auto *rproto = dyn_cast<FunctionProtoType>(rbase);
   bool allLTypes = true;

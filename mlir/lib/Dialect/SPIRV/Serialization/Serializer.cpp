@@ -507,10 +507,10 @@ void Serializer::printValueIDMap(raw_ostream &os) {
     Value val = valueIDPair.first;
     os << "  " << val << " "
        << "id = " << valueIDPair.second << ' ';
-    if (auto *op = val->getDefiningOp()) {
+    if (auto *op = val.getDefiningOp()) {
       os << "from op '" << op->getName() << "'";
     } else if (auto arg = val.dyn_cast<BlockArgument>()) {
-      Block *block = arg->getOwner();
+      Block *block = arg.getOwner();
       os << "from argument of block " << block << ' ';
       os << " in op '" << block->getParentOp()->getName() << "'";
     }
@@ -714,7 +714,7 @@ LogicalResult Serializer::processFuncOp(FuncOp op) {
   // Declare the parameters.
   for (auto arg : op.getArguments()) {
     uint32_t argTypeID = 0;
-    if (failed(processType(op.getLoc(), arg->getType(), argTypeID))) {
+    if (failed(processType(op.getLoc(), arg.getType(), argTypeID))) {
       return failure();
     }
     auto argValueID = getNextID();
@@ -1397,7 +1397,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
 
     // Get the type <id> and result <id> for this OpPhi instruction.
     uint32_t phiTypeID = 0;
-    if (failed(processType(arg->getLoc(), arg->getType(), phiTypeID)))
+    if (failed(processType(arg.getLoc(), arg.getType(), phiTypeID)))
       return failure();
     uint32_t phiID = getNextID();
 
@@ -1448,13 +1448,13 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   auto mergeID = getBlockID(mergeBlock);
 
   // Emit the selection header block, which dominates all other blocks, first.
-  // We need to emit an OpSelectionMerge instruction before the loop header
+  // We need to emit an OpSelectionMerge instruction before the selection header
   // block's terminator.
   auto emitSelectionMerge = [&]() {
-    // TODO(antiagainst): properly support loop control here
+    // TODO(antiagainst): properly support selection control here
     encodeInstructionInto(
         functionBody, spirv::Opcode::OpSelectionMerge,
-        {mergeID, static_cast<uint32_t>(spirv::LoopControl::None)});
+        {mergeID, static_cast<uint32_t>(spirv::SelectionControl::None)});
   };
   // For structured selection, we cannot have blocks in the selection construct
   // branching to the selection header block. Entering the selection (and

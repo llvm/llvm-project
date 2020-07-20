@@ -70,6 +70,8 @@ template<typename> int var_template = 0;
 template<typename> constexpr int const_var_template = 0;
 template<typename> static int static_var_template = 0;
 
+template<typename T> int var_template<T*>;
+
 template int var_template<int[1]>;
 int use_var_template() { return var_template<int[2]>; }
 template int var_template<int[3]>;

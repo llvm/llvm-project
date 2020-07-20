@@ -87,6 +87,9 @@ public:
       S[I] = static_cast<sptr>(S[I]) >= 0 ? S[I] : 0;
   }
 
+  void disable() { Mutex.lock(); }
+  void enable() { Mutex.unlock(); }
+
 private:
   mutable HybridMutex Mutex;
   DoublyLinkedList<LocalStats> StatsList;

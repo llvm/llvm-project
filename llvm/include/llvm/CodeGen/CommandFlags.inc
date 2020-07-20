@@ -238,6 +238,10 @@ static cl::opt<bool>
                      cl::desc("Emit functions into separate sections"),
                      cl::init(false));
 
+static cl::opt<unsigned> TLSSize("tls-size",
+                                 cl::desc("Bit size of immediate TLS offsets"),
+                                 cl::init(0));
+
 static cl::opt<bool> EmulatedTLS("emulated-tls",
                                  cl::desc("Use emulated TLS model"),
                                  cl::init(false));
@@ -305,6 +309,7 @@ static TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.DataSections = DataSections;
   Options.FunctionSections = FunctionSections;
   Options.UniqueSectionNames = UniqueSectionNames;
+  Options.TLSSize = TLSSize;
   Options.EmulatedTLS = EmulatedTLS;
   Options.ExplicitEmulatedTLS = EmulatedTLS.getNumOccurrences() > 0;
   Options.ExceptionModel = ExceptionModel;

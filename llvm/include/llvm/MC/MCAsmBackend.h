@@ -108,6 +108,14 @@ public:
     return false;
   }
 
+  virtual bool evaluateTargetFixup(const MCAssembler &Asm,
+                                   const MCAsmLayout &Layout,
+                                   const MCFixup &Fixup, const MCFragment *DF,
+                                   const MCValue &Target, uint64_t &Value,
+                                   bool &WasForced) {
+    llvm_unreachable("Need to implement hook if target has custom fixups");
+  }
+
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be

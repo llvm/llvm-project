@@ -1013,6 +1013,12 @@ canonicalizeMinMaxWithConstant(SelectInst &Sel, ICmpInst &Cmp,
       Cmp.getPredicate() == CanonicalPred)
     return nullptr;
 
+  // Bail out on unsimplified X-0 operand (due to some worklist management bug),
+  // as this may cause an infinite combine loop. Let the sub be folded first.
+  if (match(LHS, m_Sub(m_Value(), m_Zero())) ||
+      match(RHS, m_Sub(m_Value(), m_Zero())))
+    return nullptr;
+
   // Create the canonical compare and plug it into the select.
   Sel.setCondition(Builder.CreateICmp(CanonicalPred, LHS, RHS));
 

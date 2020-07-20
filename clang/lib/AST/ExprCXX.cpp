@@ -17,6 +17,7 @@
 #include "clang/AST/DeclAccessPair.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/LambdaCapture.h"
@@ -1763,84 +1764,4 @@ CUDAKernelCallExpr *CUDAKernelCallExpr::CreateEmpty(const ASTContext &Ctx,
   void *Mem = Ctx.Allocate(sizeof(CUDAKernelCallExpr) + SizeOfTrailingObjects,
                            alignof(CUDAKernelCallExpr));
   return new (Mem) CUDAKernelCallExpr(NumArgs, Empty);
-}
-
-ConceptSpecializationExpr::ConceptSpecializationExpr(ASTContext &C,
-    NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
-    SourceLocation ConceptNameLoc, NamedDecl *FoundDecl,
-    ConceptDecl *NamedConcept, const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    ArrayRef<TemplateArgument> ConvertedArgs,
-    const ConstraintSatisfaction *Satisfaction)
-    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary,
-           /*TypeDependent=*/false,
-           // All the flags below are set in setTemplateArguments.
-           /*ValueDependent=*/!Satisfaction, /*InstantiationDependent=*/false,
-           /*ContainsUnexpandedParameterPacks=*/false),
-      NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
-      ConceptNameLoc(ConceptNameLoc), FoundDecl(FoundDecl),
-      NamedConcept(NamedConcept), NumTemplateArgs(ConvertedArgs.size()),
-      Satisfaction(Satisfaction ?
-                   ASTConstraintSatisfaction::Create(C, *Satisfaction) :
-                   nullptr) {
-  setTemplateArguments(ArgsAsWritten, ConvertedArgs);
-}
-
-ConceptSpecializationExpr::ConceptSpecializationExpr(EmptyShell Empty,
-    unsigned NumTemplateArgs)
-    : Expr(ConceptSpecializationExprClass, Empty),
-      NumTemplateArgs(NumTemplateArgs) { }
-
-void ConceptSpecializationExpr::setTemplateArguments(
-    const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    ArrayRef<TemplateArgument> Converted) {
-  assert(Converted.size() == NumTemplateArgs);
-  assert(!this->ArgsAsWritten && "setTemplateArguments can only be used once");
-  this->ArgsAsWritten = ArgsAsWritten;
-  std::uninitialized_copy(Converted.begin(), Converted.end(),
-                          getTrailingObjects<TemplateArgument>());
-  bool IsInstantiationDependent = false;
-  bool ContainsUnexpandedParameterPack = false;
-  for (const TemplateArgumentLoc& LocInfo : ArgsAsWritten->arguments()) {
-    if (LocInfo.getArgument().isInstantiationDependent())
-      IsInstantiationDependent = true;
-    if (LocInfo.getArgument().containsUnexpandedParameterPack())
-      ContainsUnexpandedParameterPack = true;
-    if (ContainsUnexpandedParameterPack && IsInstantiationDependent)
-      break;
-  }
-
-  // Currently guaranteed by the fact concepts can only be at namespace-scope.
-  assert(!NestedNameSpec ||
-         (!NestedNameSpec.getNestedNameSpecifier()->isInstantiationDependent() &&
-          !NestedNameSpec.getNestedNameSpecifier()
-              ->containsUnexpandedParameterPack()));
-  setInstantiationDependent(IsInstantiationDependent);
-  setContainsUnexpandedParameterPack(ContainsUnexpandedParameterPack);
-  assert((!isValueDependent() || isInstantiationDependent()) &&
-         "should not be value-dependent");
-}
-
-ConceptSpecializationExpr *
-ConceptSpecializationExpr::Create(ASTContext &C, NestedNameSpecifierLoc NNS,
-                                  SourceLocation TemplateKWLoc,
-                                  SourceLocation ConceptNameLoc,
-                                  NamedDecl *FoundDecl,
-                                  ConceptDecl *NamedConcept,
-                               const ASTTemplateArgumentListInfo *ArgsAsWritten,
-                                  ArrayRef<TemplateArgument> ConvertedArgs,
-                                  const ConstraintSatisfaction *Satisfaction) {
-  void *Buffer = C.Allocate(totalSizeToAlloc<TemplateArgument>(
-                                ConvertedArgs.size()));
-  return new (Buffer) ConceptSpecializationExpr(C, NNS, TemplateKWLoc,
-                                                ConceptNameLoc, FoundDecl,
-                                                NamedConcept, ArgsAsWritten,
-                                                ConvertedArgs, Satisfaction);
-}
-
-ConceptSpecializationExpr *
-ConceptSpecializationExpr::Create(ASTContext &C, EmptyShell Empty,
-                                  unsigned NumTemplateArgs) {
-  void *Buffer = C.Allocate(totalSizeToAlloc<TemplateArgument>(
-                                NumTemplateArgs));
-  return new (Buffer) ConceptSpecializationExpr(Empty, NumTemplateArgs);
 }

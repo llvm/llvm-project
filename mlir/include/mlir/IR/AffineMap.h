@@ -38,10 +38,8 @@ class AffineMap {
 public:
   using ImplType = detail::AffineMapStorage;
 
-  AffineMap() : map(nullptr) {}
+  constexpr AffineMap() : map(nullptr) {}
   explicit AffineMap(ImplType *map) : map(map) {}
-  AffineMap(const AffineMap &other) : map(other.map) {}
-  AffineMap &operator=(const AffineMap &other) = default;
 
   /// Returns a zero result affine map with no dimensions or symbols: () -> ().
   static AffineMap get(MLIRContext *context);

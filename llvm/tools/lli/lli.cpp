@@ -197,6 +197,11 @@ namespace {
     cl::desc("Generate software floating point library calls"),
     cl::init(false));
 
+  cl::opt<bool> NoProcessSymbols(
+      "no-process-syms",
+      cl::desc("Do not resolve lli process symbols in JIT'd code"),
+      cl::init(false));
+
   enum class DumpKind {
     NoDump,
     DumpFuncsToStdOut,
@@ -794,12 +799,16 @@ int runOrcLazyJIT(const char *ProgName) {
   });
 
   orc::MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
-  J->getMainJITDylib().addGenerator(
-      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-          J->getDataLayout().getGlobalPrefix(),
-          [MainName = Mangle("main")](const orc::SymbolStringPtr &Name) {
-            return Name != MainName;
-          })));
+
+  // Unless they've been explicitly disabled, make process symbols available to
+  // JIT'd code.
+  if (!NoProcessSymbols)
+    J->getMainJITDylib().addGenerator(
+        ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+            J->getDataLayout().getGlobalPrefix(),
+            [MainName = Mangle("main")](const orc::SymbolStringPtr &Name) {
+              return Name != MainName;
+            })));
 
   orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
   ExitOnErr(CXXRuntimeOverrides.enable(J->getMainJITDylib(), Mangle));
@@ -854,12 +863,6 @@ int runOrcLazyJIT(const char *ProgName) {
     ExitOnErr(J->addObjectFile(std::move(Obj)));
   }
 
-  // Generate a argument string.
-  std::vector<std::string> Args;
-  Args.push_back(InputFile);
-  for (auto &Arg : InputArgv)
-    Args.push_back(Arg);
-
   // Run any static constructors.
   ExitOnErr(J->runConstructors());
 
@@ -878,8 +881,8 @@ int runOrcLazyJIT(const char *ProgName) {
 
   typedef int (*MainFnPtr)(int, char *[]);
   auto Result = orc::runAsMain(
-      jitTargetAddressToFunction<MainFnPtr>(MainSym.getAddress()), Args,
-      StringRef("lli"));
+      jitTargetAddressToFunction<MainFnPtr>(MainSym.getAddress()), InputArgv,
+      StringRef(InputFile));
 
   // Wait for -entry-point threads.
   for (auto &AltEntryThread : AltEntryThreads)

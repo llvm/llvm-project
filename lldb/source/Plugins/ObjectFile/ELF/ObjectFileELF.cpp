@@ -1572,8 +1572,10 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
         .Case("info.dwo", eSectionTypeDWARFDebugInfoDwo)
         .Cases("line", "line.dwo", eSectionTypeDWARFDebugLine)
         .Cases("line_str", "line_str.dwo", eSectionTypeDWARFDebugLineStr)
-        .Cases("loc", "loc.dwo", eSectionTypeDWARFDebugLoc)
-        .Cases("loclists", "loclists.dwo", eSectionTypeDWARFDebugLocLists)
+        .Case("loc", eSectionTypeDWARFDebugLoc)
+        .Case("loc.dwo", eSectionTypeDWARFDebugLocDwo)
+        .Case("loclists", eSectionTypeDWARFDebugLocLists)
+        .Case("loclists.dwo", eSectionTypeDWARFDebugLocListsDwo)
         .Case("macinfo", eSectionTypeDWARFDebugMacInfo)
         .Cases("macro", "macro.dwo", eSectionTypeDWARFDebugMacro)
         .Case("names", eSectionTypeDWARFDebugNames)
@@ -2258,6 +2260,8 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
         symbol_size_valid,              // Symbol size is valid
         has_suffix,                     // Contains linker annotations?
         flags);                         // Symbol flags.
+    if (symbol.getBinding() == STB_WEAK)
+      dc_symbol.SetIsWeak(true);
     symtab->AddSymbol(dc_symbol);
   }
   return i;

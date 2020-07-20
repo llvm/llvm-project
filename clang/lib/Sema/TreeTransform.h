@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -209,6 +210,14 @@ public:
   /// non-dependent types.
   bool AlreadyTransformed(QualType T) {
     return T.isNull();
+  }
+
+  /// Transform a template parameter depth level.
+  ///
+  /// During a transformation that transforms template parameters, this maps
+  /// an old template parameter depth to a new depth.
+  unsigned TransformTemplateDepth(unsigned Depth) {
+    return Depth;
   }
 
   /// Determine whether the given call argument should be dropped, e.g.,
@@ -508,6 +517,15 @@ public:
   /// override this function to provide alternate behavior.
   DeclarationNameInfo
   TransformDeclarationNameInfo(const DeclarationNameInfo &NameInfo);
+
+  bool TransformRequiresExprRequirements(ArrayRef<concepts::Requirement *> Reqs,
+      llvm::SmallVectorImpl<concepts::Requirement *> &Transformed);
+  concepts::TypeRequirement *
+  TransformTypeRequirement(concepts::TypeRequirement *Req);
+  concepts::ExprRequirement *
+  TransformExprRequirement(concepts::ExprRequirement *Req);
+  concepts::NestedRequirement *
+  TransformNestedRequirement(concepts::NestedRequirement *Req);
 
   /// Transform the given template name.
   ///
@@ -941,12 +959,16 @@ public:
   /// Build a new C++11 auto type.
   ///
   /// By default, builds a new AutoType with the given deduced type.
-  QualType RebuildAutoType(QualType Deduced, AutoTypeKeyword Keyword) {
+  QualType RebuildAutoType(QualType Deduced, AutoTypeKeyword Keyword,
+                           ConceptDecl *TypeConstraintConcept,
+                           ArrayRef<TemplateArgument> TypeConstraintArgs) {
     // Note, IsDependent is always false here: we implicitly convert an 'auto'
     // which has been deduced to a dependent type into an undeduced 'auto', so
     // that we'll retry deduction after the transformation.
     return SemaRef.Context.getAutoType(Deduced, Keyword,
-                                       /*IsDependent*/ false);
+                                       /*IsDependent*/ false, /*IsPack=*/false,
+                                       TypeConstraintConcept,
+                                       TypeConstraintArgs);
   }
 
   /// By default, builds a new DeducedTemplateSpecializationType with the given
@@ -1056,23 +1078,8 @@ public:
     }
 
     if (Keyword == ETK_None || Keyword == ETK_Typename) {
-      QualType T = SemaRef.CheckTypenameType(Keyword, KeywordLoc, QualifierLoc,
-                                             *Id, IdLoc);
-      // If a dependent name resolves to a deduced template specialization type,
-      // check that we're in one of the syntactic contexts permitting it.
-      if (!DeducedTSTContext) {
-        if (auto *Deduced = dyn_cast_or_null<DeducedTemplateSpecializationType>(
-                T.isNull() ? nullptr : T->getContainedDeducedType())) {
-          SemaRef.Diag(IdLoc, diag::err_dependent_deduced_tst)
-            << (int)SemaRef.getTemplateNameKindForDiagnostics(
-                   Deduced->getTemplateName())
-            << QualType(QualifierLoc.getNestedNameSpecifier()->getAsType(), 0);
-          if (auto *TD = Deduced->getTemplateName().getAsTemplateDecl())
-            SemaRef.Diag(TD->getLocation(), diag::note_template_decl_here);
-          return QualType();
-        }
-      }
-      return T;
+      return SemaRef.CheckTypenameType(Keyword, KeywordLoc, QualifierLoc,
+                                       *Id, IdLoc, DeducedTSTContext);
     }
 
     TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForKeyword(Keyword);
@@ -2527,10 +2534,10 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildStmtExpr(SourceLocation LParenLoc,
-                                   Stmt *SubStmt,
-                                   SourceLocation RParenLoc) {
-    return getSema().ActOnStmtExpr(LParenLoc, SubStmt, RParenLoc);
+  ExprResult RebuildStmtExpr(SourceLocation LParenLoc, Stmt *SubStmt,
+                             SourceLocation RParenLoc, unsigned TemplateDepth) {
+    return getSema().BuildStmtExpr(LParenLoc, SubStmt, RParenLoc,
+                                   TemplateDepth);
   }
 
   /// Build a new __builtin_choose_expr expression.
@@ -3064,13 +3071,13 @@ public:
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildConceptSpecializationExpr(NestedNameSpecifierLoc NNS,
-      SourceLocation TemplateKWLoc, SourceLocation ConceptNameLoc,
+      SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
       NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
       TemplateArgumentListInfo *TALI) {
     CXXScopeSpec SS;
     SS.Adopt(NNS);
     ExprResult Result = getSema().CheckConceptTemplateId(SS, TemplateKWLoc,
-                                                         ConceptNameLoc,
+                                                         ConceptNameInfo,
                                                          FoundDecl,
                                                          NamedConcept, TALI);
     if (Result.isInvalid())
@@ -3078,7 +3085,56 @@ public:
     return Result;
   }
 
-    /// \brief Build a new Objective-C boxed expression.
+  /// \brief Build a new requires expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildRequiresExpr(SourceLocation RequiresKWLoc,
+                                 RequiresExprBodyDecl *Body,
+                                 ArrayRef<ParmVarDecl *> LocalParameters,
+                                 ArrayRef<concepts::Requirement *> Requirements,
+                                 SourceLocation ClosingBraceLoc) {
+    return RequiresExpr::Create(SemaRef.Context, RequiresKWLoc, Body,
+                                LocalParameters, Requirements, ClosingBraceLoc);
+  }
+
+  concepts::TypeRequirement *
+  RebuildTypeRequirement(
+      concepts::Requirement::SubstitutionDiagnostic *SubstDiag) {
+    return SemaRef.BuildTypeRequirement(SubstDiag);
+  }
+
+  concepts::TypeRequirement *RebuildTypeRequirement(TypeSourceInfo *T) {
+    return SemaRef.BuildTypeRequirement(T);
+  }
+
+  concepts::ExprRequirement *
+  RebuildExprRequirement(
+      concepts::Requirement::SubstitutionDiagnostic *SubstDiag, bool IsSimple,
+      SourceLocation NoexceptLoc,
+      concepts::ExprRequirement::ReturnTypeRequirement Ret) {
+    return SemaRef.BuildExprRequirement(SubstDiag, IsSimple, NoexceptLoc,
+                                        std::move(Ret));
+  }
+
+  concepts::ExprRequirement *
+  RebuildExprRequirement(Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
+                         concepts::ExprRequirement::ReturnTypeRequirement Ret) {
+    return SemaRef.BuildExprRequirement(E, IsSimple, NoexceptLoc,
+                                        std::move(Ret));
+  }
+
+  concepts::NestedRequirement *
+  RebuildNestedRequirement(
+      concepts::Requirement::SubstitutionDiagnostic *SubstDiag) {
+    return SemaRef.BuildNestedRequirement(SubstDiag);
+  }
+
+  concepts::NestedRequirement *RebuildNestedRequirement(Expr *Constraint) {
+    return SemaRef.BuildNestedRequirement(Constraint);
+  }
+
+  /// \brief Build a new Objective-C boxed expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -3966,50 +4022,8 @@ template<typename Derived>
 void TreeTransform<Derived>::InventTemplateArgumentLoc(
                                          const TemplateArgument &Arg,
                                          TemplateArgumentLoc &Output) {
-  SourceLocation Loc = getDerived().getBaseLocation();
-  switch (Arg.getKind()) {
-  case TemplateArgument::Null:
-    llvm_unreachable("null template argument in TreeTransform");
-    break;
-
-  case TemplateArgument::Type:
-    Output = TemplateArgumentLoc(Arg,
-               SemaRef.Context.getTrivialTypeSourceInfo(Arg.getAsType(), Loc));
-
-    break;
-
-  case TemplateArgument::Template:
-  case TemplateArgument::TemplateExpansion: {
-    NestedNameSpecifierLocBuilder Builder;
-    TemplateName Template = Arg.getAsTemplateOrTemplatePattern();
-    if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
-      Builder.MakeTrivial(SemaRef.Context, DTN->getQualifier(), Loc);
-    else if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-      Builder.MakeTrivial(SemaRef.Context, QTN->getQualifier(), Loc);
-
-    if (Arg.getKind() == TemplateArgument::Template)
-      Output = TemplateArgumentLoc(Arg,
-                                   Builder.getWithLocInContext(SemaRef.Context),
-                                   Loc);
-    else
-      Output = TemplateArgumentLoc(Arg,
-                                   Builder.getWithLocInContext(SemaRef.Context),
-                                   Loc, Loc);
-
-    break;
-  }
-
-  case TemplateArgument::Expression:
-    Output = TemplateArgumentLoc(Arg, Arg.getAsExpr());
-    break;
-
-  case TemplateArgument::Declaration:
-  case TemplateArgument::Integral:
-  case TemplateArgument::Pack:
-  case TemplateArgument::NullPtr:
-    Output = TemplateArgumentLoc(Arg, TemplateArgumentLocInfo());
-    break;
-  }
+  Output = getSema().getTrivialTemplateArgumentLoc(
+      Arg, QualType(), getDerived().getBaseLocation());
 }
 
 template<typename Derived>
@@ -4019,11 +4033,44 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
   const TemplateArgument &Arg = Input.getArgument();
   switch (Arg.getKind()) {
   case TemplateArgument::Null:
-  case TemplateArgument::Integral:
   case TemplateArgument::Pack:
-  case TemplateArgument::Declaration:
-  case TemplateArgument::NullPtr:
     llvm_unreachable("Unexpected TemplateArgument");
+
+  case TemplateArgument::Integral:
+  case TemplateArgument::NullPtr:
+  case TemplateArgument::Declaration: {
+    // Transform a resolved template argument straight to a resolved template
+    // argument. We get here when substituting into an already-substituted
+    // template type argument during concept satisfaction checking.
+    QualType T = Arg.getNonTypeTemplateArgumentType();
+    QualType NewT = getDerived().TransformType(T);
+    if (NewT.isNull())
+      return true;
+
+    ValueDecl *D = Arg.getKind() == TemplateArgument::Declaration
+                       ? Arg.getAsDecl()
+                       : nullptr;
+    ValueDecl *NewD = D ? cast_or_null<ValueDecl>(getDerived().TransformDecl(
+                              getDerived().getBaseLocation(), D))
+                        : nullptr;
+    if (D && !NewD)
+      return true;
+
+    if (NewT == T && D == NewD)
+      Output = Input;
+    else if (Arg.getKind() == TemplateArgument::Integral)
+      Output = TemplateArgumentLoc(
+          TemplateArgument(getSema().Context, Arg.getAsIntegral(), NewT),
+          TemplateArgumentLocInfo());
+    else if (Arg.getKind() == TemplateArgument::NullPtr)
+      Output = TemplateArgumentLoc(TemplateArgument(NewT, /*IsNullPtr=*/true),
+                                   TemplateArgumentLocInfo());
+    else
+      Output = TemplateArgumentLoc(TemplateArgument(NewD, NewT),
+                                   TemplateArgumentLocInfo());
+
+    return false;
+  }
 
   case TemplateArgument::Type: {
     TypeSourceInfo *DI = Input.getTypeSourceInfo();
@@ -4456,7 +4503,10 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
         Deduced =
             SemaRef.Context.getQualifiedType(Deduced.getUnqualifiedType(), Qs);
         T = SemaRef.Context.getAutoType(Deduced, AutoTy->getKeyword(),
-                                        AutoTy->isDependentType());
+                                        AutoTy->isDependentType(),
+                                        /*isPack=*/false,
+                                        AutoTy->getTypeConstraintConcept(),
+                                        AutoTy->getTypeConstraintArguments());
       } else {
         // Otherwise, complain about the addition of a qualifier to an
         // already-qualified type.
@@ -5189,21 +5239,29 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
         PackExpansionTypeLoc ExpansionTL = TL.castAs<PackExpansionTypeLoc>();
         TypeLoc Pattern = ExpansionTL.getPatternLoc();
         SemaRef.collectUnexpandedParameterPacks(Pattern, Unexpanded);
-        assert(Unexpanded.size() > 0 && "Could not find parameter packs!");
 
         // Determine whether we should expand the parameter packs.
         bool ShouldExpand = false;
         bool RetainExpansion = false;
-        Optional<unsigned> OrigNumExpansions =
-            ExpansionTL.getTypePtr()->getNumExpansions();
-        NumExpansions = OrigNumExpansions;
-        if (getDerived().TryExpandParameterPacks(ExpansionTL.getEllipsisLoc(),
-                                                 Pattern.getSourceRange(),
-                                                 Unexpanded,
-                                                 ShouldExpand,
-                                                 RetainExpansion,
-                                                 NumExpansions)) {
-          return true;
+        Optional<unsigned> OrigNumExpansions;
+        if (Unexpanded.size() > 0) {
+          OrigNumExpansions = ExpansionTL.getTypePtr()->getNumExpansions();
+          NumExpansions = OrigNumExpansions;
+          if (getDerived().TryExpandParameterPacks(ExpansionTL.getEllipsisLoc(),
+                                                   Pattern.getSourceRange(),
+                                                   Unexpanded,
+                                                   ShouldExpand,
+                                                   RetainExpansion,
+                                                   NumExpansions)) {
+            return true;
+          }
+        } else {
+#ifndef NDEBUG
+          const AutoType *AT =
+              Pattern.getType().getTypePtr()->getContainedAutoType();
+          assert((AT && (!AT->isDeduced() || AT->getDeducedType().isNull())) &&
+                 "Could not find parameter packs or undeduced auto type!");
+#endif
         }
 
         if (ShouldExpand) {
@@ -5263,6 +5321,9 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
                                                           indexAdjustment,
                                                           NumExpansions,
                                                   /*ExpectParameterPack=*/true);
+        assert(NewParm->isParameterPack() &&
+               "Parameter pack no longer a parameter pack after "
+               "transformation.");
       } else {
         NewParm = getDerived().TransformFunctionTypeParam(
             OldParm, indexAdjustment, None, /*ExpectParameterPack=*/ false);
@@ -5768,32 +5829,6 @@ QualType TreeTransform<Derived>::TransformUnaryTransformType(
 }
 
 template<typename Derived>
-QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
-                                                   AutoTypeLoc TL) {
-  const AutoType *T = TL.getTypePtr();
-  QualType OldDeduced = T->getDeducedType();
-  QualType NewDeduced;
-  if (!OldDeduced.isNull()) {
-    NewDeduced = getDerived().TransformType(OldDeduced);
-    if (NewDeduced.isNull())
-      return QualType();
-  }
-
-  QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() || NewDeduced != OldDeduced ||
-      T->isDependentType()) {
-    Result = getDerived().RebuildAutoType(NewDeduced, T->getKeyword());
-    if (Result.isNull())
-      return QualType();
-  }
-
-  AutoTypeLoc NewTL = TLB.push<AutoTypeLoc>(Result);
-  NewTL.setNameLoc(TL.getNameLoc());
-
-  return Result;
-}
-
-template<typename Derived>
 QualType TreeTransform<Derived>::TransformDeducedTemplateSpecializationType(
     TypeLocBuilder &TLB, DeducedTemplateSpecializationTypeLoc TL) {
   const DeducedTemplateSpecializationType *T = TL.getTypePtr();
@@ -6054,6 +6089,71 @@ QualType TreeTransform<Derived>::TransformPipeType(TypeLocBuilder &TLB,
     }
   };
 
+template<typename Derived>
+QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
+                                                   AutoTypeLoc TL) {
+  const AutoType *T = TL.getTypePtr();
+  QualType OldDeduced = T->getDeducedType();
+  QualType NewDeduced;
+  if (!OldDeduced.isNull()) {
+    NewDeduced = getDerived().TransformType(OldDeduced);
+    if (NewDeduced.isNull())
+      return QualType();
+  }
+
+  ConceptDecl *NewCD = nullptr;
+  TemplateArgumentListInfo NewTemplateArgs;
+  NestedNameSpecifierLoc NewNestedNameSpec;
+  if (TL.getTypePtr()->isConstrained()) {
+    NewCD = cast_or_null<ConceptDecl>(
+        getDerived().TransformDecl(
+            TL.getConceptNameLoc(),
+            TL.getTypePtr()->getTypeConstraintConcept()));
+
+    NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
+    NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
+    typedef TemplateArgumentLocContainerIterator<AutoTypeLoc> ArgIterator;
+    if (getDerived().TransformTemplateArguments(ArgIterator(TL, 0),
+                                                ArgIterator(TL,
+                                                            TL.getNumArgs()),
+                                                NewTemplateArgs))
+      return QualType();
+
+    if (TL.getNestedNameSpecifierLoc()) {
+      NewNestedNameSpec
+        = getDerived().TransformNestedNameSpecifierLoc(
+            TL.getNestedNameSpecifierLoc());
+      if (!NewNestedNameSpec)
+        return QualType();
+    }
+  }
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || NewDeduced != OldDeduced ||
+      T->isDependentType()) {
+    llvm::SmallVector<TemplateArgument, 4> NewArgList;
+    NewArgList.reserve(NewArgList.size());
+    for (const auto &ArgLoc : NewTemplateArgs.arguments())
+      NewArgList.push_back(ArgLoc.getArgument());
+    Result = getDerived().RebuildAutoType(NewDeduced, T->getKeyword(), NewCD,
+                                          NewArgList);
+    if (Result.isNull())
+      return QualType();
+  }
+
+  AutoTypeLoc NewTL = TLB.push<AutoTypeLoc>(Result);
+  NewTL.setNameLoc(TL.getNameLoc());
+  NewTL.setNestedNameSpecifierLoc(NewNestedNameSpec);
+  NewTL.setTemplateKWLoc(TL.getTemplateKWLoc());
+  NewTL.setConceptNameLoc(TL.getConceptNameLoc());
+  NewTL.setFoundDecl(TL.getFoundDecl());
+  NewTL.setLAngleLoc(TL.getLAngleLoc());
+  NewTL.setRAngleLoc(TL.getRAngleLoc());
+  for (unsigned I = 0; I < TL.getNumArgs(); ++I)
+    NewTL.setArgLocInfo(I, NewTemplateArgs.arguments()[I].getLocInfo());
+
+  return Result;
+}
 
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformTemplateSpecializationType(
@@ -10245,16 +10345,18 @@ TreeTransform<Derived>::TransformStmtExpr(StmtExpr *E) {
     return ExprError();
   }
 
-  if (!getDerived().AlwaysRebuild() &&
+  unsigned OldDepth = E->getTemplateDepth();
+  unsigned NewDepth = getDerived().TransformTemplateDepth(OldDepth);
+
+  if (!getDerived().AlwaysRebuild() && OldDepth == NewDepth &&
       SubStmt.get() == E->getSubStmt()) {
     // Calling this an 'error' is unintuitive, but it does the right thing.
     SemaRef.ActOnStmtExprError();
     return SemaRef.MaybeBindToTemporary(E);
   }
 
-  return getDerived().RebuildStmtExpr(E->getLParenLoc(),
-                                      SubStmt.get(),
-                                      E->getRParenLoc());
+  return getDerived().RebuildStmtExpr(E->getLParenLoc(), SubStmt.get(),
+                                      E->getRParenLoc(), NewDepth);
 }
 
 template<typename Derived>
@@ -11175,10 +11277,150 @@ TreeTransform<Derived>::TransformConceptSpecializationExpr(
 
   return getDerived().RebuildConceptSpecializationExpr(
       E->getNestedNameSpecifierLoc(), E->getTemplateKWLoc(),
-      E->getConceptNameLoc(), E->getFoundDecl(), E->getNamedConcept(),
+      E->getConceptNameInfo(), E->getFoundDecl(), E->getNamedConcept(),
       &TransArgs);
 }
 
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformRequiresExpr(RequiresExpr *E) {
+  SmallVector<ParmVarDecl*, 4> TransParams;
+  SmallVector<QualType, 4> TransParamTypes;
+  Sema::ExtParameterInfoBuilder ExtParamInfos;
+
+  // C++2a [expr.prim.req]p2
+  // Expressions appearing within a requirement-body are unevaluated operands.
+  EnterExpressionEvaluationContext Ctx(
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+
+  RequiresExprBodyDecl *Body = RequiresExprBodyDecl::Create(
+      getSema().Context, getSema().CurContext,
+      E->getBody()->getBeginLoc());
+
+  Sema::ContextRAII SavedContext(getSema(), Body, /*NewThisContext*/false);
+
+  if (getDerived().TransformFunctionTypeParams(E->getRequiresKWLoc(),
+                                               E->getLocalParameters(),
+                                               /*ParamTypes=*/nullptr,
+                                               /*ParamInfos=*/nullptr,
+                                               TransParamTypes, &TransParams,
+                                               ExtParamInfos))
+    return ExprError();
+
+  for (ParmVarDecl *Param : TransParams)
+    Param->setDeclContext(Body);
+
+  SmallVector<concepts::Requirement *, 4> TransReqs;
+  if (getDerived().TransformRequiresExprRequirements(E->getRequirements(),
+                                                     TransReqs))
+    return ExprError();
+
+  for (concepts::Requirement *Req : TransReqs) {
+    if (auto *ER = dyn_cast<concepts::ExprRequirement>(Req)) {
+      if (ER->getReturnTypeRequirement().isTypeConstraint()) {
+        ER->getReturnTypeRequirement()
+                .getTypeConstraintTemplateParameterList()->getParam(0)
+                ->setDeclContext(Body);
+      }
+    }
+  }
+
+  return getDerived().RebuildRequiresExpr(E->getRequiresKWLoc(), Body,
+                                          TransParams, TransReqs,
+                                          E->getRBraceLoc());
+}
+
+template<typename Derived>
+bool TreeTransform<Derived>::TransformRequiresExprRequirements(
+    ArrayRef<concepts::Requirement *> Reqs,
+    SmallVectorImpl<concepts::Requirement *> &Transformed) {
+  for (concepts::Requirement *Req : Reqs) {
+    concepts::Requirement *TransReq = nullptr;
+    if (auto *TypeReq = dyn_cast<concepts::TypeRequirement>(Req))
+      TransReq = getDerived().TransformTypeRequirement(TypeReq);
+    else if (auto *ExprReq = dyn_cast<concepts::ExprRequirement>(Req))
+      TransReq = getDerived().TransformExprRequirement(ExprReq);
+    else
+      TransReq = getDerived().TransformNestedRequirement(
+                     cast<concepts::NestedRequirement>(Req));
+    if (!TransReq)
+      return true;
+    Transformed.push_back(TransReq);
+  }
+  return false;
+}
+
+template<typename Derived>
+concepts::TypeRequirement *
+TreeTransform<Derived>::TransformTypeRequirement(
+    concepts::TypeRequirement *Req) {
+  if (Req->isSubstitutionFailure()) {
+    if (getDerived().AlwaysRebuild())
+      return getDerived().RebuildTypeRequirement(
+              Req->getSubstitutionDiagnostic());
+    return Req;
+  }
+  TypeSourceInfo *TransType = getDerived().TransformType(Req->getType());
+  if (!TransType)
+    return nullptr;
+  return getDerived().RebuildTypeRequirement(TransType);
+}
+
+template<typename Derived>
+concepts::ExprRequirement *
+TreeTransform<Derived>::TransformExprRequirement(concepts::ExprRequirement *Req) {
+  llvm::PointerUnion<Expr *, concepts::Requirement::SubstitutionDiagnostic *> TransExpr;
+  if (Req->isExprSubstitutionFailure())
+    TransExpr = Req->getExprSubstitutionDiagnostic();
+  else {
+    ExprResult TransExprRes = getDerived().TransformExpr(Req->getExpr());
+    if (TransExprRes.isInvalid())
+      return nullptr;
+    TransExpr = TransExprRes.get();
+  }
+
+  llvm::Optional<concepts::ExprRequirement::ReturnTypeRequirement> TransRetReq;
+  const auto &RetReq = Req->getReturnTypeRequirement();
+  if (RetReq.isEmpty())
+    TransRetReq.emplace();
+  else if (RetReq.isSubstitutionFailure())
+    TransRetReq.emplace(RetReq.getSubstitutionDiagnostic());
+  else if (RetReq.isTypeConstraint()) {
+    TemplateParameterList *OrigTPL =
+        RetReq.getTypeConstraintTemplateParameterList();
+    TemplateParameterList *TPL =
+        getDerived().TransformTemplateParameterList(OrigTPL);
+    if (!TPL)
+      return nullptr;
+    TransRetReq.emplace(TPL);
+  }
+  assert(TransRetReq.hasValue() &&
+         "All code paths leading here must set TransRetReq");
+  if (Expr *E = TransExpr.dyn_cast<Expr *>())
+    return getDerived().RebuildExprRequirement(E, Req->isSimple(),
+                                               Req->getNoexceptLoc(),
+                                               std::move(*TransRetReq));
+  return getDerived().RebuildExprRequirement(
+      TransExpr.get<concepts::Requirement::SubstitutionDiagnostic *>(),
+      Req->isSimple(), Req->getNoexceptLoc(), std::move(*TransRetReq));
+}
+
+template<typename Derived>
+concepts::NestedRequirement *
+TreeTransform<Derived>::TransformNestedRequirement(
+    concepts::NestedRequirement *Req) {
+  if (Req->isSubstitutionFailure()) {
+    if (getDerived().AlwaysRebuild())
+      return getDerived().RebuildNestedRequirement(
+          Req->getSubstitutionDiagnostic());
+    return Req;
+  }
+  ExprResult TransConstraint =
+      getDerived().TransformExpr(Req->getConstraintExpr());
+  if (TransConstraint.isInvalid())
+    return nullptr;
+  return getDerived().RebuildNestedRequirement(TransConstraint.get());
+}
 
 template<typename Derived>
 ExprResult
@@ -11560,6 +11802,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     NewTrailingRequiresClause = getDerived().TransformExpr(TRC);
 
   // Create the local class that will describe the lambda.
+  // FIXME: KnownDependent below is wrong when substituting inside a templated
+  // context that isn't a DeclContext (such as a variable template).
   CXXRecordDecl *OldClass = E->getLambdaClass();
   CXXRecordDecl *Class
     = getSema().createLambdaClosureType(E->getIntroducerRange(),
@@ -11583,19 +11827,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       NewTrailingRequiresClause.get());
 
   LSI->CallOperator = NewCallOperator;
-
-  for (unsigned I = 0, NumParams = NewCallOperator->getNumParams();
-       I != NumParams; ++I) {
-    auto *P = NewCallOperator->getParamDecl(I);
-    if (P->hasUninstantiatedDefaultArg()) {
-      EnterExpressionEvaluationContext Eval(
-          getSema(),
-          Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed, P);
-      ExprResult R = getDerived().TransformExpr(
-          E->getCallOperator()->getParamDecl(I)->getDefaultArg());
-      P->setDefaultArg(R.get());
-    }
-  }
 
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
   getDerived().transformedLocalDecl(E->getCallOperator(), {NewCallOperator});

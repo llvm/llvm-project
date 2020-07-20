@@ -211,6 +211,24 @@ AArch64FrameLowering::getStackIDForScalableVectors() const {
   return TargetStackID::SVEVector;
 }
 
+/// Returns the size of the fixed object area (allocated next to sp on entry)
+/// On Win64 this may include a var args area and an UnwindHelp object for EH.
+static unsigned getFixedObjectSize(const MachineFunction &MF,
+                                   const AArch64FunctionInfo *AFI, bool IsWin64,
+                                   bool IsFunclet) {
+  if (!IsWin64 || IsFunclet) {
+    // Only Win64 uses fixed objects, and then only for the function (not
+    // funclets)
+    return 0;
+  } else {
+    // Var args are stored here in the primary function.
+    const unsigned VarArgsArea = AFI->getVarArgsGPRSize();
+    // To support EH funclets we allocate an UnwindHelp object
+    const unsigned UnwindHelpObject = (MF.hasEHFunclets() ? 8 : 0);
+    return alignTo(VarArgsArea + UnwindHelpObject, 16);
+  }
+}
+
 /// Returns the size of the entire SVE stackframe (calleesaves + spills).
 static StackOffset getSVEStackSize(const MachineFunction &MF) {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -836,8 +854,12 @@ static bool isTargetDarwin(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetDarwin();
 }
 
+static bool isTargetWindows(const MachineFunction &MF) {
+  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+}
+
 // Convenience function to determine whether I is an SVE callee save.
-bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
+static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
   default:
     return false;
@@ -955,10 +977,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
-  // Var args are accounted for in the containing function, so don't
-  // include them for funclets.
-  unsigned FixedObject = (IsWin64 && !IsFunclet) ?
-                         alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
+  unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
   // All of the remaining stack allocations are for locals.
@@ -989,32 +1008,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     ++MBBI;
   }
 
-  // The code below is not applicable to funclets. We have emitted all the SEH
-  // opcodes that we needed to emit.  The FP and BP belong to the containing
-  // function.
-  if (IsFunclet) {
-    if (NeedsWinCFI) {
-      HasWinCFI = true;
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
-          .setMIFlag(MachineInstr::FrameSetup);
-    }
-
-    // SEH funclets are passed the frame pointer in X1.  If the parent
-    // function uses the base register, then the base register is used
-    // directly, and is not retrieved from X1.
-    if (F.hasPersonalityFn()) {
-      EHPersonality Per = classifyEHPersonality(F.getPersonalityFn());
-      if (isAsynchronousEHPersonality(Per)) {
-        BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), AArch64::FP)
-            .addReg(AArch64::X1).setMIFlag(MachineInstr::FrameSetup);
-        MBB.addLiveIn(AArch64::X1);
-      }
-    }
-
-    return;
-  }
-
-  if (HasFP) {
+  // For funclets the FP belongs to the containing function.
+  if (!IsFunclet && HasFP) {
     // Only set up FP if we actually need to.
     int64_t FPOffset = isTargetDarwin(MF) ? (AFI->getCalleeSavedStackSize() - 16) : 0;
 
@@ -1157,7 +1152,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   // Allocate space for the rest of the frame.
   if (NumBytes) {
-    const bool NeedsRealignment = RegInfo->needsStackRealignment(MF);
+    // Alignment is required for the parent frame, not the funclet
+    const bool NeedsRealignment =
+        !IsFunclet && RegInfo->needsStackRealignment(MF);
     unsigned scratchSPReg = AArch64::SP;
 
     if (NeedsRealignment) {
@@ -1211,7 +1208,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // FIXME: Clarify FrameSetup flags here.
   // Note: Use emitFrameOffset() like above for FP if the FrameSetup flag is
   // needed.
-  if (RegInfo->hasBasePointer(MF)) {
+  // For funclets the BP belongs to the containing function.
+  if (!IsFunclet && RegInfo->hasBasePointer(MF)) {
     TII->copyPhysReg(MBB, MBBI, DL, RegInfo->getBaseRegister(), AArch64::SP,
                      false);
     if (NeedsWinCFI) {
@@ -1226,6 +1224,19 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (NeedsWinCFI && HasWinCFI) {
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
         .setMIFlag(MachineInstr::FrameSetup);
+  }
+
+  // SEH funclets are passed the frame pointer in X1.  If the parent
+  // function uses the base register, then the base register is used
+  // directly, and is not retrieved from X1.
+  if (IsFunclet && F.hasPersonalityFn()) {
+    EHPersonality Per = classifyEHPersonality(F.getPersonalityFn());
+    if (isAsynchronousEHPersonality(Per)) {
+      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), AArch64::FP)
+          .addReg(AArch64::X1)
+          .setMIFlag(MachineInstr::FrameSetup);
+      MBB.addLiveIn(AArch64::X1);
+    }
   }
 
   if (needsFrameMoves) {
@@ -1446,10 +1457,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
-  // Var args are accounted for in the containing function, so don't
-  // include them for funclets.
-  unsigned FixedObject =
-      (IsWin64 && !IsFunclet) ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
+  unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
   uint64_t AfterCSRPopSize = ArgumentPopSize;
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
@@ -1675,7 +1683,9 @@ static StackOffset getFPOffset(const MachineFunction &MF, int64_t ObjectOffset) 
   const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
-  unsigned FixedObject = IsWin64 ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
+
+  unsigned FixedObject =
+      getFixedObjectSize(MF, AFI, IsWin64, /*IsFunclet=*/false);
   unsigned FPAdjust = isTargetDarwin(MF)
                         ? 16 : AFI->getCalleeSavedStackSize(MF.getFrameInfo());
   return {ObjectOffset + FixedObject + FPAdjust, MVT::i8};
@@ -1870,6 +1880,8 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
 
   // TODO: LR can be paired with any register.  We don't support this yet in
   // the MCLayer.  We need to add support for the save_lrpair unwind code.
+  if (Reg2 == AArch64::FP)
+    return true;
   if (!NeedsWinCFI)
     return false;
   if (Reg2 == Reg1 + 1)
@@ -1882,9 +1894,9 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
 /// LR and FP need to be allocated together when the frame needs to save
 /// the frame-record. This means any other register pairing with LR is invalid.
 static bool invalidateRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                      bool NeedsWinCFI, bool NeedsFrameRecord) {
-  if (NeedsWinCFI)
-    return invalidateWindowsRegisterPairing(Reg1, Reg2, true);
+                                      bool UsesWinAAPCS, bool NeedsWinCFI, bool NeedsFrameRecord) {
+  if (UsesWinAAPCS)
+    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI);
 
   // If we need to store the frame record, don't pair any register
   // with LR other than FP.
@@ -1934,6 +1946,7 @@ static void computeCalleeSaveRegisterPairs(
   if (CSI.empty())
     return;
 
+  bool IsWindows = isTargetWindows(MF);
   bool NeedsWinCFI = needsWinCFI(MF);
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1976,7 +1989,7 @@ static void computeCalleeSaveRegisterPairs(
       switch (RPI.Type) {
       case RegPairInfo::GPR:
         if (AArch64::GPR64RegClass.contains(NextReg) &&
-            !invalidateRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI,
+            !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows, NeedsWinCFI,
                                        NeedsFrameRecord))
           RPI.Reg2 = NextReg;
         break;
@@ -2016,6 +2029,11 @@ static void computeCalleeSaveRegisterPairs(
 
     assert((!RPI.isPaired() || !NeedsFrameRecord || RPI.Reg2 != AArch64::FP ||
             RPI.Reg1 == AArch64::LR) &&
+           "FrameRecord must be allocated together with LR");
+
+    // Windows AAPCS has FP and LR reversed.
+    assert((!RPI.isPaired() || !NeedsFrameRecord || RPI.Reg1 != AArch64::FP ||
+            RPI.Reg2 == AArch64::LR) &&
            "FrameRecord must be allocated together with LR");
 
     // MachO's compact unwind format relies on all registers being stored in
@@ -2620,9 +2638,14 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
     ++MBBI;
 
   // Create an UnwindHelp object.
-  int UnwindHelpFI =
-      MFI.CreateStackObject(/*size*/8, /*alignment*/16, false);
+  // The UnwindHelp object is allocated at the start of the fixed object area
+  int64_t FixedObject =
+      getFixedObjectSize(MF, AFI, /*IsWin64*/ true, /*IsFunclet*/ false);
+  int UnwindHelpFI = MFI.CreateFixedObject(/*Size*/ 8,
+                                           /*SPOffset*/ -FixedObject,
+                                           /*IsImmutable=*/false);
   EHInfo.UnwindHelpFrameIdx = UnwindHelpFI;
+
   // We need to store -2 into the UnwindHelp object at the start of the
   // function.
   DebugLoc DL;
@@ -2644,10 +2667,14 @@ int AArch64FrameLowering::getFrameIndexReferencePreferSP(
     const MachineFunction &MF, int FI, unsigned &FrameReg,
     bool IgnoreSPUpdates) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  LLVM_DEBUG(dbgs() << "Offset from the SP for " << FI << " is "
-                    << MFI.getObjectOffset(FI) << "\n");
-  FrameReg = AArch64::SP;
-  return MFI.getObjectOffset(FI);
+  if (IgnoreSPUpdates) {
+    LLVM_DEBUG(dbgs() << "Offset from the SP for " << FI << " is "
+                      << MFI.getObjectOffset(FI) << "\n");
+    FrameReg = AArch64::SP;
+    return MFI.getObjectOffset(FI);
+  }
+
+  return getFrameIndexReference(MF, FI, FrameReg);
 }
 
 /// The parent frame offset (aka dispFrame) is only used on X86_64 to retrieve

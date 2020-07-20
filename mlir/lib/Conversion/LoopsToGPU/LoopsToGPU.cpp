@@ -98,7 +98,7 @@ static Value getOrEmitUpperBound(ForOp forOp, OpBuilder &) {
 // This roughly corresponds to the "matcher" part of the pattern-based
 // rewriting infrastructure.
 template <typename OpTy>
-LogicalResult checkLoopNestMappableImpl(OpTy forOp, unsigned numDims) {
+static LogicalResult checkLoopNestMappableImpl(OpTy forOp, unsigned numDims) {
   Region &limit = forOp.region();
   for (unsigned i = 0, e = numDims; i < e; ++i) {
     Operation *nested = &forOp.getBody()->front();
@@ -124,8 +124,8 @@ LogicalResult checkLoopNestMappableImpl(OpTy forOp, unsigned numDims) {
 }
 
 template <typename OpTy>
-LogicalResult checkLoopNestMappable(OpTy forOp, unsigned numBlockDims,
-                                    unsigned numThreadDims) {
+static LogicalResult checkLoopNestMappable(OpTy forOp, unsigned numBlockDims,
+                                           unsigned numThreadDims) {
   if (numBlockDims < 1 || numThreadDims < 1) {
     LLVM_DEBUG(llvm::dbgs() << "nothing to map");
     return success();
@@ -142,8 +142,8 @@ LogicalResult checkLoopNestMappable(OpTy forOp, unsigned numBlockDims,
 }
 
 template <typename OpTy>
-LogicalResult checkLoopOpMappable(OpTy forOp, unsigned numBlockDims,
-                                  unsigned numThreadDims) {
+static LogicalResult checkLoopOpMappable(OpTy forOp, unsigned numBlockDims,
+                                         unsigned numThreadDims) {
   if (numBlockDims < 1 || numThreadDims < 1) {
     LLVM_DEBUG(llvm::dbgs() << "nothing to map");
     return success();
@@ -215,7 +215,7 @@ struct LoopToGpuConverter {
 
 // Return true if the value is obviously a constant "one".
 static bool isConstantOne(Value value) {
-  if (auto def = dyn_cast_or_null<ConstantIndexOp>(value->getDefiningOp()))
+  if (auto def = dyn_cast_or_null<ConstantIndexOp>(value.getDefiningOp()))
     return def.getValue() == 1;
   return false;
 }
@@ -265,8 +265,8 @@ Optional<OpTy> LoopToGpuConverter::collectBounds(OpTy forOp,
 /// `nids`. The innermost loop is mapped to the x-dimension, followed by the
 /// next innermost loop to y-dimension, followed by z-dimension.
 template <typename OpTy>
-OpTy createGPULaunchLoops(OpTy rootForOp, ArrayRef<Value> ids,
-                          ArrayRef<Value> nids) {
+static OpTy createGPULaunchLoops(OpTy rootForOp, ArrayRef<Value> ids,
+                                 ArrayRef<Value> nids) {
   auto nDims = ids.size();
   assert(nDims == nids.size());
   for (auto dim : llvm::seq<unsigned>(0, nDims)) {
@@ -285,9 +285,10 @@ OpTy createGPULaunchLoops(OpTy rootForOp, ArrayRef<Value> ids,
 /// Utility method to convert the gpu::KernelDim3 object for representing id of
 /// each workgroup/workitem and number of workgroup/workitems along a dimension
 /// of the launch into a container.
-void packIdAndNumId(gpu::KernelDim3 kernelIds, gpu::KernelDim3 kernelNids,
-                    unsigned nDims, SmallVectorImpl<Value> &ids,
-                    SmallVectorImpl<Value> &nids) {
+static void packIdAndNumId(gpu::KernelDim3 kernelIds,
+                           gpu::KernelDim3 kernelNids, unsigned nDims,
+                           SmallVectorImpl<Value> &ids,
+                           SmallVectorImpl<Value> &nids) {
   assert(nDims <= 3 && "invalid number of launch dimensions");
   SmallVector<Value, 3> allIds = {kernelIds.z, kernelIds.y, kernelIds.x};
   SmallVector<Value, 3> allNids = {kernelNids.z, kernelNids.y, kernelNids.x};
@@ -300,9 +301,9 @@ void packIdAndNumId(gpu::KernelDim3 kernelIds, gpu::KernelDim3 kernelNids,
 
 /// Generate the body of the launch operation.
 template <typename OpTy>
-LogicalResult createLaunchBody(OpBuilder &builder, OpTy rootForOp,
-                               gpu::LaunchOp launchOp, unsigned numBlockDims,
-                               unsigned numThreadDims) {
+static LogicalResult
+createLaunchBody(OpBuilder &builder, OpTy rootForOp, gpu::LaunchOp launchOp,
+                 unsigned numBlockDims, unsigned numThreadDims) {
   OpBuilder::InsertionGuard bodyInsertionGuard(builder);
   builder.setInsertionPointToEnd(&launchOp.body().front());
   auto returnOp = builder.create<gpu::ReturnOp>(launchOp.getLoc());
@@ -337,8 +338,9 @@ LogicalResult createLaunchBody(OpBuilder &builder, OpTy rootForOp,
 // Convert the computation rooted at the `rootForOp`, into a GPU kernel with the
 // given workgroup size and number of workgroups.
 template <typename OpTy>
-LogicalResult createLaunchFromOp(OpTy rootForOp, ArrayRef<Value> numWorkGroups,
-                                 ArrayRef<Value> workGroupSizes) {
+static LogicalResult createLaunchFromOp(OpTy rootForOp,
+                                        ArrayRef<Value> numWorkGroups,
+                                        ArrayRef<Value> workGroupSizes) {
   OpBuilder builder(rootForOp.getOperation());
   if (numWorkGroups.size() > 3) {
     return rootForOp.emitError("invalid ")
@@ -457,7 +459,7 @@ void LoopToGpuConverter::createLaunch(OpTy rootForOp, OpTy innermostForOp,
 
     Value ivReplacement =
         builder.create<AddIOp>(rootForOp.getLoc(), *lbArgumentIt, id);
-    en.value()->replaceAllUsesWith(ivReplacement);
+    en.value().replaceAllUsesWith(ivReplacement);
     replaceAllUsesInRegionWith(steps[en.index()], *stepArgumentIt,
                                launchOp.body());
     std::advance(lbArgumentIt, 1);

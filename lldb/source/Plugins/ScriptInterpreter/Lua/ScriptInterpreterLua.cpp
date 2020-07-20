@@ -83,6 +83,18 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
   debugger.PushIOHandler(io_handler_sp);
 }
 
+bool ScriptInterpreterLua::LoadScriptingModule(
+    const char *filename, bool init_session, lldb_private::Status &error,
+    StructuredData::ObjectSP *module_sp) {
+
+  if (llvm::Error e = m_lua->LoadModule(filename)) {
+    error.SetErrorStringWithFormatv("lua failed to import '{0}': {1}\n",
+                                    filename, llvm::toString(std::move(e)));
+    return false;
+  }
+  return true;
+}
+
 void ScriptInterpreterLua::Initialize() {
   static llvm::once_flag g_once_flag;
 

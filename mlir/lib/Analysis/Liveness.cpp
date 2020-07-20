@@ -21,6 +21,7 @@
 
 using namespace mlir;
 
+namespace {
 /// Builds and holds block information during the construction phase.
 struct BlockInfoBuilder {
   using ValueSetT = Liveness::ValueSetT;
@@ -45,7 +46,7 @@ struct BlockInfoBuilder {
         // properties of the program, the uses must occur after
         // the definition. Therefore, we do not have to check
         // additional conditions to detect an escaping value.
-        for (OpOperand &use : result->getUses())
+        for (OpOperand &use : result.getUses())
           if (use.getOwner()->getBlock() != block) {
             outValues.insert(result);
             break;
@@ -107,6 +108,7 @@ struct BlockInfoBuilder {
   /// The set of all used values.
   ValueSetT useValues;
 };
+} // namespace
 
 /// Builds the internal liveness block mapping.
 static void buildBlockMapping(MutableArrayRef<Region> regions,
@@ -171,15 +173,15 @@ Liveness::OperationListT Liveness::resolveLiveness(Value value) const {
 
   // Start with the defining block
   Block *currentBlock;
-  if (Operation *defOp = value->getDefiningOp())
+  if (Operation *defOp = value.getDefiningOp())
     currentBlock = defOp->getBlock();
   else
-    currentBlock = value.cast<BlockArgument>()->getOwner();
+    currentBlock = value.cast<BlockArgument>().getOwner();
   toProcess.push_back(currentBlock);
   visited.insert(currentBlock);
 
   // Start with all associated blocks
-  for (OpOperand &use : value->getUses()) {
+  for (OpOperand &use : value.getUses()) {
     Block *useBlock = use.getOwner()->getBlock();
     if (visited.insert(useBlock).second)
       toProcess.push_back(useBlock);
@@ -269,12 +271,12 @@ void Liveness::print(raw_ostream &os) const {
 
   // Local printing helpers
   auto printValueRef = [&](Value value) {
-    if (Operation *defOp = value->getDefiningOp())
+    if (Operation *defOp = value.getDefiningOp())
       os << "val_" << defOp->getName();
     else {
       auto blockArg = value.cast<BlockArgument>();
-      os << "arg" << blockArg->getArgNumber() << "@"
-         << blockIds[blockArg->getOwner()];
+      os << "arg" << blockArg.getArgNumber() << "@"
+         << blockIds[blockArg.getOwner()];
     }
     os << " ";
   };
@@ -343,7 +345,7 @@ bool LivenessBlockInfo::isLiveOut(Value value) const {
 /// Gets the start operation for the given value
 /// (must be referenced in this block).
 Operation *LivenessBlockInfo::getStartOperation(Value value) const {
-  Operation *definingOp = value->getDefiningOp();
+  Operation *definingOp = value.getDefiningOp();
   // The given value is either live-in or is defined
   // in the scope of this block.
   if (isLiveIn(value) || !definingOp)
@@ -361,7 +363,7 @@ Operation *LivenessBlockInfo::getEndOperation(Value value,
 
   // Resolve the last operation (must exist by definition).
   Operation *endOperation = startOperation;
-  for (OpOperand &use : value->getUses()) {
+  for (OpOperand &use : value.getUses()) {
     Operation *useOperation = use.getOwner();
     // Check whether the use is in our block and after
     // the current end operation.

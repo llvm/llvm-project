@@ -21,9 +21,10 @@ static void createOpI(PatternRewriter &rewriter, Value input) {
   rewriter.create<OpI>(rewriter.getUnknownLoc(), input);
 }
 
-void handleNoResultOp(PatternRewriter &rewriter, OpSymbolBindingNoResult op) {
+static void handleNoResultOp(PatternRewriter &rewriter,
+                             OpSymbolBindingNoResult op) {
   // Turn the no result op to a one-result op.
-  rewriter.create<OpSymbolBindingB>(op.getLoc(), op.operand()->getType(),
+  rewriter.create<OpSymbolBindingB>(op.getLoc(), op.operand().getType(),
                                     op.operand());
 }
 
@@ -56,6 +57,7 @@ static mlir::PassRegistration<TestPatternDriver>
 // ReturnType Driver.
 //===----------------------------------------------------------------------===//
 
+namespace {
 struct ReturnTypeOpMatch : public RewritePattern {
   ReturnTypeOpMatch(MLIRContext *ctx)
       : RewritePattern(OpWithInferTypeInterfaceOp::getOperationName(), 1, ctx) {
@@ -94,7 +96,6 @@ struct ReturnTypeOpMatch : public RewritePattern {
   }
 };
 
-namespace {
 struct TestReturnTypeDriver : public FunctionPass<TestReturnTypeDriver> {
   void runOnFunction() override {
     mlir::OwningRewritePatternList patterns;
@@ -182,7 +183,7 @@ struct TestDropOpSignatureConversion : public ConversionPattern {
     TypeConverter::SignatureConversion result(entry->getNumArguments());
     for (unsigned i = 0, e = entry->getNumArguments(); i != e; ++i)
       if (failed(converter.convertSignatureArg(
-              i, entry->getArgument(i)->getType(), result)))
+              i, entry->getArgument(i).getType(), result)))
         return matchFailure();
 
     // Convert the region signature and just drop the operation.
@@ -214,12 +215,12 @@ struct TestSplitReturnType : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     // Check for a return of F32.
-    if (op->getNumOperands() != 1 || !op->getOperand(0)->getType().isF32())
+    if (op->getNumOperands() != 1 || !op->getOperand(0).getType().isF32())
       return matchFailure();
 
     // Check if the first operation is a cast operation, if it is we use the
     // results directly.
-    auto *defOp = operands[0]->getDefiningOp();
+    auto *defOp = operands[0].getDefiningOp();
     if (auto packerOp = llvm::dyn_cast_or_null<TestCastOp>(defOp)) {
       rewriter.replaceOpWithNewOp<TestReturnOp>(op, packerOp.getOperands());
       return matchSuccess();
@@ -277,7 +278,7 @@ struct TestUpdateConsumerType : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     // Verify that the incoming operand has been successfully remapped to F64.
-    if (!operands[0]->getType().isF64())
+    if (!operands[0].getType().isF64())
       return matchFailure();
     rewriter.replaceOpWithNewOp<TestTypeConsumerOp>(op, operands[0]);
     return matchSuccess();
@@ -380,7 +381,7 @@ struct TestLegalizePatternDriver
     target.addDynamicallyLegalOp<TestTypeProducerOp>(
         [](TestTypeProducerOp op) { return op.getType().isF64(); });
     target.addDynamicallyLegalOp<TestTypeConsumerOp>([](TestTypeConsumerOp op) {
-      return op.getOperand()->getType().isF64();
+      return op.getOperand().getType().isF64();
     });
 
     // Check support for marking certain operations as recursively legal.

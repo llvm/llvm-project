@@ -1978,36 +1978,6 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
   }
 }
 
-ConstString
-AppleObjCRuntimeV2::GetActualTypeName(ObjCLanguageRuntime::ObjCISA isa) {
-  if (isa == g_objc_Tagged_ISA) {
-    static const ConstString g_objc_tagged_isa_name("_lldb_Tagged_ObjC_ISA");
-    return g_objc_tagged_isa_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSAtom) {
-    static const ConstString g_objc_tagged_isa_nsatom_name("NSAtom");
-    return g_objc_tagged_isa_nsatom_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSNumber) {
-    static const ConstString g_objc_tagged_isa_nsnumber_name("NSNumber");
-    return g_objc_tagged_isa_nsnumber_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSDateTS) {
-    static const ConstString g_objc_tagged_isa_nsdatets_name("NSDateTS");
-    return g_objc_tagged_isa_nsdatets_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSManagedObject) {
-    static const ConstString g_objc_tagged_isa_nsmanagedobject_name(
-        "NSManagedObject");
-    return g_objc_tagged_isa_nsmanagedobject_name;
-  }
-  if (isa == g_objc_Tagged_ISA_NSDate) {
-    static const ConstString g_objc_tagged_isa_nsdate_name("NSDate");
-    return g_objc_tagged_isa_nsdate_name;
-  }
-  return ObjCLanguageRuntime::GetActualTypeName(isa);
-}
-
 DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
   if (!m_decl_vendor_up)
     m_decl_vendor_up.reset(new AppleObjCDeclVendor(*this));

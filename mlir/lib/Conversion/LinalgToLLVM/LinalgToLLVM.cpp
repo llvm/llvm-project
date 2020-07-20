@@ -70,6 +70,8 @@ using urem = ValueBuilder<mlir::LLVM::URemOp>;
 using llvm_alloca = ValueBuilder<LLVM::AllocaOp>;
 using llvm_return = OperationBuilder<LLVM::ReturnOp>;
 
+namespace {
+
 template <typename T>
 static LLVMType getPtrToElementType(T containerType,
                                     LLVMTypeConverter &lowering) {
@@ -104,7 +106,6 @@ static Type convertLinalgType(Type t, LLVMTypeConverter &lowering) {
   return Type();
 }
 
-namespace {
 /// EDSC-compatible wrapper for MemRefDescriptor.
 class BaseViewConversionHelper {
 public:
@@ -139,7 +140,6 @@ private:
 
   MemRefDescriptor d;
 };
-} // namespace
 
 // RangeOp creates a new range descriptor.
 class RangeOpConversion : public LLVMOpLowering {
@@ -152,7 +152,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto rangeOp = cast<RangeOp>(op);
     auto rangeDescriptorTy =
-        convertLinalgType(rangeOp.getResult()->getType(), lowering);
+        convertLinalgType(rangeOp.getResult().getType(), lowering);
 
     edsc::ScopedContext context(rewriter, op->getLoc());
 
@@ -251,7 +251,7 @@ public:
     for (int i = 0, e = memRefType.getRank(); i < e; ++i) {
       Value indexing = adaptor.indexings()[i];
       Value min = indexing;
-      if (sliceOp.indexing(i)->getType().isa<RangeType>())
+      if (sliceOp.indexing(i).getType().isa<RangeType>())
         min = extractvalue(int64Ty, indexing, pos(0));
       baseOffset = add(baseOffset, mul(min, strides[i]));
     }
@@ -274,7 +274,7 @@ public:
     int numNewDims = 0;
     for (auto en : llvm::enumerate(sliceOp.indexings())) {
       Value indexing = en.value();
-      if (indexing->getType().isa<RangeType>()) {
+      if (indexing.getType().isa<RangeType>()) {
         int rank = en.index();
         Value rangeDescriptor = adaptor.indexings()[rank];
         Value min = extractvalue(int64Ty, rangeDescriptor, pos(0));
@@ -421,11 +421,15 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
   return fnNameAttr;
 }
 
+} // namespace
+
 Type LinalgTypeConverter::convertType(Type t) {
   if (auto result = LLVMTypeConverter::convertType(t))
     return result;
   return convertLinalgType(t, *this);
 }
+
+namespace {
 
 // LinalgOpConversion<LinalgOp> creates a new call to the
 // `LinalgOp::getLibraryCallName()` function.
@@ -551,6 +555,8 @@ populateLinalgToStandardConversionPatterns(OwningRewritePatternList &patterns,
                   LinalgOpConversion<MatmulOp>, LinalgOpConversion<MatvecOp>>(
       ctx);
 }
+
+} // namespace
 
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void mlir::populateLinalgToLLVMConversionPatterns(

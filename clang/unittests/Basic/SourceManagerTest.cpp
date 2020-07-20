@@ -20,7 +20,9 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Process.h"
 #include "gtest/gtest.h"
+#include <cstddef>
 
 using namespace clang;
 
@@ -239,6 +241,28 @@ TEST_F(SourceManagerTest, getInvalidBOM) {
                 llvm::StringLiteral::withInnerNUL(
                     "\xFF\xFE\x00\x00#include <iostream>"))),
             "UTF-32 (LE)");
+}
+
+// Regression test - there was an out of bound access for buffers not terminated by zero.
+TEST_F(SourceManagerTest, getLineNumber) {
+  const unsigned pageSize = llvm::sys::Process::getPageSizeEstimate();
+  std::unique_ptr<char[]> source(new char[pageSize]);
+  for(unsigned i = 0; i < pageSize; ++i) {
+    source[i] = 'a';
+  }
+
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(
+        llvm::MemoryBufferRef(
+          llvm::StringRef(source.get(), 3), "whatever"
+        ),
+        false
+      );
+
+  FileID mainFileID = SourceMgr.createFileID(std::move(Buf));
+  SourceMgr.setMainFileID(mainFileID);
+
+  ASSERT_NO_FATAL_FAILURE(SourceMgr.getLineNumber(mainFileID, 1, nullptr));
 }
 
 #if defined(LLVM_ON_UNIX)

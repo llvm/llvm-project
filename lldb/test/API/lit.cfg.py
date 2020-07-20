@@ -33,6 +33,7 @@ if 'Address' in config.llvm_use_sanitizer:
                            'libclang_rt.asan_osx_dynamic.dylib')
     config.environment['DYLD_INSERT_LIBRARIES'] = runtime
 
+
 def find_shlibpath_var():
   if platform.system() in ['Linux', 'FreeBSD', 'NetBSD', 'SunOS']:
     yield 'LD_LIBRARY_PATH'
@@ -40,6 +41,7 @@ def find_shlibpath_var():
     yield 'DYLD_LIBRARY_PATH'
   elif platform.system() == 'Windows':
     yield 'PATH'
+
 
 # Shared library build of LLVM may require LD_LIBRARY_PATH or equivalent.
 if config.shared_libs:
@@ -64,7 +66,7 @@ if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
 # lit.py invocation is close enough.
 for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
   if os.path.isdir(cachedir):
-    print("Deleting module cache at %s."%cachedir)
+    print("Deleting module cache at %s." % cachedir)
     shutil.rmtree(cachedir)
 
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
@@ -78,17 +80,18 @@ else:
 
 # Build dotest command.
 dotest_cmd = [config.dotest_path]
+dotest_cmd += ['--arch', config.test_arch]
 dotest_cmd.extend(config.dotest_args_str.split(';'))
-
-# We don't want to force users passing arguments to lit to use `;` as a
-# separator. We use Python's simple lexical analyzer to turn the args into a
-# list.
-if config.dotest_lit_args_str:
-  dotest_cmd.extend(shlex.split(config.dotest_lit_args_str))
 
 # Library path may be needed to locate just-built clang.
 if config.llvm_libs_dir:
   dotest_cmd += ['--env', 'LLVM_LIBS_DIR=' + config.llvm_libs_dir]
+
+# Forward ASan-specific environment variables to tests, as a test may load an
+# ASan-ified dylib.
+for env_var in ('ASAN_OPTIONS', 'DYLD_INSERT_LIBRARIES'):
+  if env_var in config.environment:
+    dotest_cmd += ['--inferior-env', env_var + '=' + config.environment[env_var]]
 
 if config.lldb_build_directory:
   dotest_cmd += ['--build-dir', config.lldb_build_directory]
@@ -98,6 +101,26 @@ if config.lldb_module_cache:
 
 if config.clang_module_cache:
   dotest_cmd += ['--clang-module-cache-dir', config.clang_module_cache]
+
+if config.lldb_executable:
+  dotest_cmd += ['--executable', config.lldb_executable]
+
+if config.test_compiler:
+  dotest_cmd += ['--compiler', config.test_compiler]
+
+if config.dsymutil:
+  dotest_cmd += ['--dsymutil', config.dsymutil]
+
+if config.filecheck:
+  dotest_cmd += ['--filecheck', config.filecheck]
+
+# We don't want to force users passing arguments to lit to use `;` as a
+# separator. We use Python's simple lexical analyzer to turn the args into a
+# list. Pass there arguments last so they can override anything that was
+# already configured.
+if config.dotest_lit_args_str:
+  dotest_cmd.extend(shlex.split(config.dotest_lit_args_str))
+
 
 # Load LLDB test format.
 sys.path.append(os.path.join(config.lldb_src_root, "test", "API"))

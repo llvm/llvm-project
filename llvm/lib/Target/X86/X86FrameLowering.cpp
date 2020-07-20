@@ -765,10 +765,10 @@ void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
                                           bool InProlog) const {
   bool IsLargeCodeModel = MF.getTarget().getCodeModel() == CodeModel::Large;
 
-  // FIXME: Add retpoline support and remove this.
-  if (Is64Bit && IsLargeCodeModel && STI.useRetpolineIndirectCalls())
+  // FIXME: Add indirect thunk support and remove this.
+  if (Is64Bit && IsLargeCodeModel && STI.useIndirectThunkCalls())
     report_fatal_error("Emitting stack probe calls on 64-bit with the large "
-                       "code model and retpoline not yet implemented.");
+                       "code model and indirect thunks not yet implemented.");
 
   unsigned CallOp;
   if (Is64Bit)
@@ -2493,9 +2493,9 @@ void X86FrameLowering::adjustForSegmentedStacks(
     // is laid out within 2^31 bytes of each function body, but this seems
     // to be sufficient for JIT.
     // FIXME: Add retpoline support and remove the error here..
-    if (STI.useRetpolineIndirectCalls())
+    if (STI.useIndirectThunkCalls())
       report_fatal_error("Emitting morestack calls on 64-bit with the large "
-                         "code model and retpoline not yet implemented.");
+                         "code model and thunks not yet implemented.");
     BuildMI(allocMBB, DL, TII.get(X86::CALL64m))
         .addReg(X86::RIP)
         .addImm(0)

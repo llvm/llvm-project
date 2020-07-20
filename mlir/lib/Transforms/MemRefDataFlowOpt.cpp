@@ -93,7 +93,7 @@ void MemRefDataFlowOpt::forwardStoreToLoad(AffineLoadOp loadOp) {
   // all store ops.
   SmallVector<Operation *, 8> storeOps;
   unsigned minSurroundingLoops = getNestingDepth(*loadOpInst);
-  for (auto *user : loadOp.getMemRef()->getUsers()) {
+  for (auto *user : loadOp.getMemRef().getUsers()) {
     auto storeOp = dyn_cast<AffineStoreOp>(user);
     if (!storeOp)
       continue;
@@ -206,18 +206,18 @@ void MemRefDataFlowOpt::runOnFunction() {
   // to do this as well, but we'll do it here since we collected these anyway.
   for (auto memref : memrefsToErase) {
     // If the memref hasn't been alloc'ed in this function, skip.
-    Operation *defInst = memref->getDefiningOp();
+    Operation *defInst = memref.getDefiningOp();
     if (!defInst || !isa<AllocOp>(defInst))
       // TODO(mlir-team): if the memref was returned by a 'call' operation, we
       // could still erase it if the call had no side-effects.
       continue;
-    if (llvm::any_of(memref->getUsers(), [&](Operation *ownerInst) {
+    if (llvm::any_of(memref.getUsers(), [&](Operation *ownerInst) {
           return (!isa<AffineStoreOp>(ownerInst) && !isa<DeallocOp>(ownerInst));
         }))
       continue;
 
     // Erase all stores, the dealloc, and the alloc on the memref.
-    for (auto *user : llvm::make_early_inc_range(memref->getUsers()))
+    for (auto *user : llvm::make_early_inc_range(memref.getUsers()))
       user->erase();
     defInst->erase();
   }

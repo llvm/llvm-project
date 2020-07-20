@@ -40,7 +40,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 }
@@ -52,7 +51,7 @@ static MCDisassembler *createAVRDisassembler(const Target &T,
 }
 
 
-extern "C" void LLVMInitializeAVRDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheAVRTarget(),
                                          createAVRDisassembler);
@@ -114,7 +113,6 @@ static const uint8_t *getDecoderTable(uint64_t Size) {
 DecodeStatus AVRDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
-                                             raw_ostream &VStream,
                                              raw_ostream &CStream) const {
   uint32_t Insn;
 

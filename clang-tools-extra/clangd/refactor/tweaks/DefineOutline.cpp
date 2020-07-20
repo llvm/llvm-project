@@ -16,6 +16,7 @@
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -155,7 +156,7 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
         "define outline: couldn't find a context for target");
 
   llvm::Error Errors = llvm::Error::success();
-  tooling::Replacements QualifierInsertions;
+  tooling::Replacements DeclarationCleanups;
 
   // Finds the first unqualified name in function return type and name, then
   // qualifies those to be valid in TargetContext.
@@ -180,7 +181,7 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
     const NamedDecl *ND = Ref.Targets.front();
     const std::string Qualifier = getQualification(
         AST, *TargetContext, SM.getLocForStartOfFile(SM.getMainFileID()), ND);
-    if (auto Err = QualifierInsertions.add(
+    if (auto Err = DeclarationCleanups.add(
             tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier)))
       Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
   });
@@ -205,14 +206,72 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
       assert(Tok != Tokens.rend());
       DelRange.setBegin(Tok->location());
       if (auto Err =
-              QualifierInsertions.add(tooling::Replacement(SM, DelRange, "")))
+              DeclarationCleanups.add(tooling::Replacement(SM, DelRange, "")))
         Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+    }
+  }
+
+  auto DelAttr = [&](const Attr *A) {
+    if (!A)
+      return;
+    auto AttrTokens =
+        TokBuf.spelledForExpanded(TokBuf.expandedTokens(A->getRange()));
+    assert(A->getLocation().isValid());
+    if (!AttrTokens || AttrTokens->empty()) {
+      Errors = llvm::joinErrors(
+          std::move(Errors),
+          llvm::createStringError(
+              llvm::inconvertibleErrorCode(),
+              llvm::StringRef("define outline: Can't move out of line as "
+                              "function has a macro `") +
+                  A->getSpelling() + "` specifier."));
+      return;
+    }
+    CharSourceRange DelRange =
+        syntax::Token::range(SM, AttrTokens->front(), AttrTokens->back())
+            .toCharRange(SM);
+    if (auto Err =
+            DeclarationCleanups.add(tooling::Replacement(SM, DelRange, "")))
+      Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+  };
+
+  DelAttr(FD->getAttr<OverrideAttr>());
+  DelAttr(FD->getAttr<FinalAttr>());
+
+  if (FD->isVirtualAsWritten()) {
+    SourceRange SpecRange{FD->getBeginLoc(), FD->getLocation()};
+    bool HasErrors = true;
+
+    // Clang allows duplicating virtual specifiers so check for multiple
+    // occurances.
+    for (const auto &Tok : TokBuf.expandedTokens(SpecRange)) {
+      if (Tok.kind() != tok::kw_virtual)
+        continue;
+      auto Spelling = TokBuf.spelledForExpanded(llvm::makeArrayRef(Tok));
+      if (!Spelling) {
+        HasErrors = true;
+        break;
+      }
+      HasErrors = false;
+      CharSourceRange DelRange =
+          syntax::Token::range(SM, Spelling->front(), Spelling->back())
+              .toCharRange(SM);
+      if (auto Err =
+              DeclarationCleanups.add(tooling::Replacement(SM, DelRange, "")))
+        Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+    }
+    if (HasErrors) {
+      Errors = llvm::joinErrors(
+          std::move(Errors),
+          llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                  "define outline: Can't move out of line as "
+                                  "function has a macro `virtual` specifier."));
     }
   }
 
   if (Errors)
     return std::move(Errors);
-  return getFunctionSourceAfterReplacements(FD, QualifierInsertions);
+  return getFunctionSourceAfterReplacements(FD, DeclarationCleanups);
 }
 
 struct InsertionPoint {
@@ -247,18 +306,16 @@ SourceRange getDeletionRange(const FunctionDecl *FD,
                              const syntax::TokenBuffer &TokBuf) {
   auto DeletionRange = FD->getBody()->getSourceRange();
   if (auto *CD = llvm::dyn_cast<CXXConstructorDecl>(FD)) {
-    const auto &SM = TokBuf.sourceManager();
     // AST doesn't contain the location for ":" in ctor initializers. Therefore
     // we find it by finding the first ":" before the first ctor initializer.
     SourceLocation InitStart;
     // Find the first initializer.
     for (const auto *CInit : CD->inits()) {
-      // We don't care about in-class initializers.
-      if (CInit->isInClassMemberInitializer())
+      // SourceOrder is -1 for implicit initializers.
+      if (CInit->getSourceOrder() != 0)
         continue;
-      if (InitStart.isInvalid() ||
-          SM.isBeforeInTranslationUnit(CInit->getSourceLocation(), InitStart))
-        InitStart = CInit->getSourceLocation();
+      InitStart = CInit->getSourceLocation();
+      break;
     }
     if (InitStart.isValid()) {
       auto Toks = TokBuf.expandedTokens(CD->getSourceRange());

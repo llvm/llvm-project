@@ -15,6 +15,7 @@
 #include "Utils/RISCVMatInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAssembler.h"
@@ -37,9 +38,14 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "riscv-asm-parser"
+
 // Include the auto-generated portion of the compress emitter.
 #define GEN_COMPRESS_INSTR
 #include "RISCVGenCompressInstEmitter.inc"
+
+STATISTIC(RISCVNumInstrsCompressed,
+          "Number of RISC-V Compressed instructions emitted");
 
 namespace {
 struct RISCVOperand;
@@ -188,6 +194,19 @@ public:
     Parser.addAliasForDirective(".word", ".4byte");
     Parser.addAliasForDirective(".dword", ".8byte");
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+
+    auto ABIName = StringRef(Options.ABIName);
+    if (ABIName.endswith("f") &&
+        !getSTI().getFeatureBits()[RISCV::FeatureStdExtF]) {
+      errs() << "Hard-float 'f' ABI can't be used for a target that "
+                "doesn't support the F instruction set extension (ignoring "
+                "target-abi)\n";
+    } else if (ABIName.endswith("d") &&
+               !getSTI().getFeatureBits()[RISCV::FeatureStdExtD]) {
+      errs() << "Hard-float 'd' ABI can't be used for a target that "
+                "doesn't support the D instruction set extension (ignoring "
+                "target-abi)\n";
+    }
   }
 };
 
@@ -257,6 +276,11 @@ public:
   bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isMem() const override { return false; }
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
+
+  bool isGPR() const {
+    return Kind == KindTy::Register &&
+           RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.RegNum);
+  }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   RISCVMCExpr::VariantKind &VK) {
@@ -1610,6 +1634,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = compressInst(CInst, Inst, getSTI(), S.getContext());
+  if (Res)
+    ++RISCVNumInstrsCompressed;
   S.EmitInstruction((Res ? CInst : Inst), getSTI());
 }
 
@@ -1859,7 +1885,7 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
-extern "C" void LLVMInitializeRISCVAsmParser() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVAsmParser() {
   RegisterMCAsmParser<RISCVAsmParser> X(getTheRISCV32Target());
   RegisterMCAsmParser<RISCVAsmParser> Y(getTheRISCV64Target());
 }

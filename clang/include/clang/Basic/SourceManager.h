@@ -831,6 +831,7 @@ public:
   FileID createFileID(const FileEntry *SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
                       int LoadedID = 0, unsigned LoadedOffset = 0) {
+    assert(SourceFile && "Null source file!");
     const SrcMgr::ContentCache *IR =
         getOrCreateContentCache(SourceFile, isSystem(FileCharacter));
     assert(IR && "getOrCreateContentCache() cannot return NULL");

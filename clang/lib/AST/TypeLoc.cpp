@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/TypeLoc.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
@@ -588,4 +589,98 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(ASTContext &Context,
       break;
     }
   }
+}
+
+DeclarationNameInfo AutoTypeLoc::getConceptNameInfo() const {
+  return DeclarationNameInfo(getNamedConcept()->getDeclName(),
+                             getLocalData()->ConceptNameLoc);
+}
+
+void AutoTypeLoc::initializeLocal(ASTContext &Context, SourceLocation Loc) {
+  setNestedNameSpecifierLoc(NestedNameSpecifierLoc());
+  setTemplateKWLoc(Loc);
+  setConceptNameLoc(Loc);
+  setFoundDecl(nullptr);
+  setRAngleLoc(Loc);
+  setLAngleLoc(Loc);
+  TemplateSpecializationTypeLoc::initializeArgLocs(Context, getNumArgs(),
+                                                   getTypePtr()->getArgs(),
+                                                   getArgInfos(), Loc);
+  setNameLoc(Loc);
+}
+
+
+namespace {
+
+  class GetContainedAutoTypeLocVisitor :
+    public TypeLocVisitor<GetContainedAutoTypeLocVisitor, TypeLoc> {
+  public:
+    using TypeLocVisitor<GetContainedAutoTypeLocVisitor, TypeLoc>::Visit;
+
+    TypeLoc VisitAutoTypeLoc(AutoTypeLoc TL) {
+      return TL;
+    }
+
+    // Only these types can contain the desired 'auto' type.
+
+    TypeLoc VisitElaboratedTypeLoc(ElaboratedTypeLoc T) {
+      return Visit(T.getNamedTypeLoc());
+    }
+
+    TypeLoc VisitQualifiedTypeLoc(QualifiedTypeLoc T) {
+      return Visit(T.getUnqualifiedLoc());
+    }
+
+    TypeLoc VisitPointerTypeLoc(PointerTypeLoc T) {
+      return Visit(T.getPointeeLoc());
+    }
+
+    TypeLoc VisitBlockPointerTypeLoc(BlockPointerTypeLoc T) {
+      return Visit(T.getPointeeLoc());
+    }
+
+    TypeLoc VisitReferenceTypeLoc(ReferenceTypeLoc T) {
+      return Visit(T.getPointeeLoc());
+    }
+
+    TypeLoc VisitMemberPointerTypeLoc(MemberPointerTypeLoc T) {
+      return Visit(T.getPointeeLoc());
+    }
+
+    TypeLoc VisitArrayTypeLoc(ArrayTypeLoc T) {
+      return Visit(T.getElementLoc());
+    }
+
+    TypeLoc VisitFunctionTypeLoc(FunctionTypeLoc T) {
+      return Visit(T.getReturnLoc());
+    }
+
+    TypeLoc VisitParenTypeLoc(ParenTypeLoc T) {
+      return Visit(T.getInnerLoc());
+    }
+
+    TypeLoc VisitAttributedTypeLoc(AttributedTypeLoc T) {
+      return Visit(T.getModifiedLoc());
+    }
+
+    TypeLoc VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc T) {
+      return Visit(T.getInnerLoc());
+    }
+
+    TypeLoc VisitAdjustedTypeLoc(AdjustedTypeLoc T) {
+      return Visit(T.getOriginalLoc());
+    }
+
+    TypeLoc VisitPackExpansionTypeLoc(PackExpansionTypeLoc T) {
+      return Visit(T.getPatternLoc());
+    }
+  };
+
+} // namespace
+
+AutoTypeLoc TypeLoc::getContainedAutoTypeLoc() const {
+  TypeLoc Res = GetContainedAutoTypeLocVisitor().Visit(*this);
+  if (Res.isNull())
+    return AutoTypeLoc();
+  return Res.getAs<AutoTypeLoc>();
 }

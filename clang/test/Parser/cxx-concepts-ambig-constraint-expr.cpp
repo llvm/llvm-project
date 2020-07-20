@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -fconcepts-ts -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++2a -x c++ %s -verify
 
 // Test parsing of constraint-expressions in cases where the grammar is
 // ambiguous with the expectation that the longest token sequence which matches

@@ -19,8 +19,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -313,15 +315,46 @@ void Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
   Environment.push_back(nullptr);
 }
 
-int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
-                     std::string *ErrMsg, bool *ExecutionFailed) const {
+void Command::PrintFileNames() const {
   if (PrintInputFilenames) {
     for (const char *Arg : InputFilenames)
       llvm::outs() << llvm::sys::path::filename(Arg) << "\n";
     llvm::outs().flush();
   }
+}
 
-  SmallVector<const char*, 128> Argv;
+int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
+                     std::string *ErrMsg, bool *ExecutionFailed) const {
+  PrintFileNames();
+
+  SmallVector<const char *, 128> Argv;
+  if (ResponseFile == nullptr) {
+    Argv.push_back(Executable);
+    Argv.append(Arguments.begin(), Arguments.end());
+    Argv.push_back(nullptr);
+  } else {
+    // If the command is too large, we need to put arguments in a response file.
+    std::string RespContents;
+    llvm::raw_string_ostream SS(RespContents);
+
+    // Write file contents and build the Argv vector
+    writeResponseFile(SS);
+    buildArgvForResponseFile(Argv);
+    Argv.push_back(nullptr);
+    SS.flush();
+
+    // Save the response file in the appropriate encoding
+    if (std::error_code EC = writeFileWithEncoding(
+            ResponseFile, RespContents, Creator.getResponseFileEncoding())) {
+      if (ErrMsg)
+        *ErrMsg = EC.message();
+      if (ExecutionFailed)
+        *ExecutionFailed = true;
+      // Return -1 by convention (see llvm/include/llvm/Support/Program.h) to
+      // indicate the requested executable cannot be started.
+      return -1;
+    }
+  }
 
   Optional<ArrayRef<StringRef>> Env;
   std::vector<StringRef> ArgvVectorStorage;
@@ -332,42 +365,66 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
     Env = makeArrayRef(ArgvVectorStorage);
   }
 
-  if (ResponseFile == nullptr) {
-    Argv.push_back(Executable);
-    Argv.append(Arguments.begin(), Arguments.end());
-    Argv.push_back(nullptr);
-
-    auto Args = llvm::toStringRefArray(Argv.data());
-    return llvm::sys::ExecuteAndWait(
-        Executable, Args, Env, Redirects, /*secondsToWait*/ 0,
-        /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
-  }
-
-  // We need to put arguments in a response file (command is too large)
-  // Open stream to store the response file contents
-  std::string RespContents;
-  llvm::raw_string_ostream SS(RespContents);
-
-  // Write file contents and build the Argv vector
-  writeResponseFile(SS);
-  buildArgvForResponseFile(Argv);
-  Argv.push_back(nullptr);
-  SS.flush();
-
-  // Save the response file in the appropriate encoding
-  if (std::error_code EC = writeFileWithEncoding(
-          ResponseFile, RespContents, Creator.getResponseFileEncoding())) {
-    if (ErrMsg)
-      *ErrMsg = EC.message();
-    if (ExecutionFailed)
-      *ExecutionFailed = true;
-    return -1;
-  }
-
   auto Args = llvm::toStringRefArray(Argv.data());
   return llvm::sys::ExecuteAndWait(Executable, Args, Env, Redirects,
                                    /*secondsToWait*/ 0,
                                    /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
+}
+
+CC1Command::CC1Command(const Action &Source, const Tool &Creator,
+                       const char *Executable,
+                       const llvm::opt::ArgStringList &Arguments,
+                       ArrayRef<InputInfo> Inputs)
+    : Command(Source, Creator, Executable, Arguments, Inputs) {
+  InProcess = true;
+}
+
+void CC1Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
+                       CrashReportInfo *CrashInfo) const {
+  if (InProcess)
+    OS << " (in-process)\n";
+  Command::Print(OS, Terminator, Quote, CrashInfo);
+}
+
+int CC1Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
+                        std::string *ErrMsg, bool *ExecutionFailed) const {
+  // FIXME: Currently, if there're more than one job, we disable
+  // -fintegrate-cc1. If we're no longer a integrated-cc1 job, fallback to
+  // out-of-process execution. See discussion in https://reviews.llvm.org/D74447
+  if (!InProcess)
+    return Command::Execute(Redirects, ErrMsg, ExecutionFailed);
+
+  PrintFileNames();
+
+  SmallVector<const char *, 128> Argv;
+  Argv.push_back(getExecutable());
+  Argv.append(getArguments().begin(), getArguments().end());
+  Argv.push_back(nullptr);
+
+  // This flag simply indicates that the program couldn't start, which isn't
+  // applicable here.
+  if (ExecutionFailed)
+    *ExecutionFailed = false;
+
+  llvm::CrashRecoveryContext CRC;
+  CRC.DumpStackAndCleanupOnFailure = true;
+
+  const void *PrettyState = llvm::SavePrettyStackState();
+  const Driver &D = getCreator().getToolChain().getDriver();
+
+  int R = 0;
+  // Enter ExecuteCC1Tool() instead of starting up a new process
+  if (!CRC.RunSafely([&]() { R = D.CC1Main(Argv); })) {
+    llvm::RestorePrettyStackState(PrettyState);
+    return CRC.RetCode;
+  }
+  return R;
+}
+
+void CC1Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
+  // We don't support set a new environment when calling into ExecuteCC1Tool()
+  llvm_unreachable(
+      "The CC1Command doesn't support changing the environment vars!");
 }
 
 FallbackCommand::FallbackCommand(const Action &Source_, const Tool &Creator_,

@@ -199,8 +199,8 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
     // Otherwise, there were multiple blocks inlined. Add arguments to the post
     // insertion block to represent the results to replace.
     for (Value resultToRepl : resultsToReplace) {
-      resultToRepl->replaceAllUsesWith(
-          postInsertBlock->addArgument(resultToRepl->getType()));
+      resultToRepl.replaceAllUsesWith(
+          postInsertBlock->addArgument(resultToRepl.getType()));
     }
 
     /// Handle the terminators for each of the new blocks.
@@ -238,7 +238,7 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
     // Verify that the types of the provided values match the function argument
     // types.
     BlockArgument regionArg = entryBlock->getArgument(i);
-    if (inlinedOperands[i]->getType() != regionArg->getType())
+    if (inlinedOperands[i].getType() != regionArg.getType())
       return failure();
     mapper.map(regionArg, inlinedOperands[i]);
   }
@@ -284,7 +284,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   if (src->empty())
     return failure();
   auto *entryBlock = &src->front();
-  ArrayRef<Type> callableResultTypes = callable.getCallableResults(src);
+  ArrayRef<Type> callableResultTypes = callable.getCallableResults();
 
   // Make sure that the number of arguments and results matchup between the call
   // and the region.
@@ -302,7 +302,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   // Functor used to cleanup generated state on failure.
   auto cleanupState = [&] {
     for (auto *op : castOps) {
-      op->getResult(0)->replaceAllUsesWith(op->getOperand(0));
+      op->getResult(0).replaceAllUsesWith(op->getOperand(0));
       op->erase();
     }
     return failure();
@@ -321,8 +321,8 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
 
     // If the call operand doesn't match the expected region argument, try to
     // generate a cast.
-    Type regionArgType = regionArg->getType();
-    if (operand->getType() != regionArgType) {
+    Type regionArgType = regionArg.getType();
+    if (operand.getType() != regionArgType) {
       if (!(operand = materializeConversion(callInterface, castOps, castBuilder,
                                             operand, regionArgType, castLoc)))
         return cleanupState();
@@ -334,18 +334,18 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   castBuilder.setInsertionPointAfter(call);
   for (unsigned i = 0, e = callResults.size(); i != e; ++i) {
     Value callResult = callResults[i];
-    if (callResult->getType() == callableResultTypes[i])
+    if (callResult.getType() == callableResultTypes[i])
       continue;
 
     // Generate a conversion that will produce the original type, so that the IR
     // is still valid after the original call gets replaced.
     Value castResult =
         materializeConversion(callInterface, castOps, castBuilder, callResult,
-                              callResult->getType(), castLoc);
+                              callResult.getType(), castLoc);
     if (!castResult)
       return cleanupState();
-    callResult->replaceAllUsesWith(castResult);
-    castResult->getDefiningOp()->replaceUsesOfWith(castResult, callResult);
+    callResult.replaceAllUsesWith(castResult);
+    castResult.getDefiningOp()->replaceUsesOfWith(castResult, callResult);
   }
 
   // Attempt to inline the call.

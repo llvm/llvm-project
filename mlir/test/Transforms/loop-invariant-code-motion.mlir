@@ -70,8 +70,8 @@ func @invariant_code_inside_affine_if() {
   %cf8 = constant 8.0 : f32
 
   affine.for %arg0 = 0 to 10 {
-    %t0 = affine.apply (d1) -> (d1 + 1)(%arg0)
-    affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %t0) {
+    %t0 = affine.apply affine_map<(d1) -> (d1 + 1)>(%arg0)
+    affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %t0) {
         %cf9 = addf %cf8, %cf8 : f32
         affine.store %cf9, %m[%arg0] : memref<10xf32>
 
@@ -96,7 +96,7 @@ func @invariant_affine_if() {
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
-      affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = addf %cf8, %cf8 : f32
       }
     }
@@ -117,7 +117,7 @@ func @invariant_affine_if2() {
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
-      affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = addf %cf8, %cf8 : f32
           affine.store %cf9, %m[%arg1] : memref<10xf32>
       }
@@ -142,9 +142,9 @@ func @invariant_affine_nested_if() {
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
-      affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = addf %cf8, %cf8 : f32
-          affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+          affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
             %cf10 = addf %cf9, %cf9 : f32
           }
       }
@@ -172,10 +172,10 @@ func @invariant_affine_nested_if_else() {
   %cf8 = constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
-      affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = addf %cf8, %cf8 : f32
           affine.store %cf9, %m[%arg0] : memref<10xf32>
-          affine.if (d0, d1) : (d1 - d0 >= 0) (%arg0, %arg0) {
+          affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
             %cf10 = addf %cf9, %cf9 : f32
           } else {
             affine.store %cf9, %m[%arg1] : memref<10xf32>

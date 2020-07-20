@@ -59,7 +59,8 @@ namespace bugprone {
 
 void BranchCloneCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      ifStmt(stmt().bind("if"),
+      ifStmt(unless(allOf(isConstexpr(), isInTemplateInstantiation())),
+             stmt().bind("if"),
              hasParent(stmt(unless(ifStmt(hasElse(equalsBoundNode("if")))))),
              hasElse(stmt().bind("else"))),
       this);

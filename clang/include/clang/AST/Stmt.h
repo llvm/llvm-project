@@ -588,6 +588,18 @@ protected:
     unsigned Kind : 2;
   };
 
+  class StmtExprBitfields {
+    friend class ASTStmtReader;
+    friend class StmtExpr;
+
+    unsigned : NumExprBits;
+
+    /// The number of levels of template parameters enclosing this statement
+    /// expression. Used to determine if a statement expression remains
+    /// dependent after instantiation.
+    unsigned TemplateDepth;
+  };
+
   //===--- C++ Expression bitfields classes ---===//
 
   class CXXOperatorCallExprBitfields {
@@ -910,6 +922,17 @@ protected:
     SourceLocation NameLoc;
   };
 
+  class RequiresExprBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class RequiresExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned IsSatisfied : 1;
+    SourceLocation RequiresKWLoc;
+  };
+
   //===--- C++ Coroutines TS bitfields classes ---===//
 
   class CoawaitExprBitfields {
@@ -985,6 +1008,9 @@ protected:
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
 
+    // GNU Extensions.
+    StmtExprBitfields StmtExprBits;
+
     // C++ Expressions
     CXXOperatorCallExprBitfields CXXOperatorCallExprBits;
     CXXRewrittenBinaryOperatorBitfields CXXRewrittenBinaryOperatorBits;
@@ -1008,6 +1034,7 @@ protected:
     UnresolvedMemberExprBitfields UnresolvedMemberExprBits;
     CXXNoexceptExprBitfields CXXNoexceptExprBits;
     SubstNonTypeTemplateParmExprBitfields SubstNonTypeTemplateParmExprBits;
+    RequiresExprBitfields RequiresExprBits;
 
     // C++ Coroutines TS expressions
     CoawaitExprBitfields CoawaitBits;

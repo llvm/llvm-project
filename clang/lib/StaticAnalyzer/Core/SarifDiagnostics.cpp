@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 
@@ -27,10 +28,12 @@ using namespace ento;
 namespace {
 class SarifDiagnostics : public PathDiagnosticConsumer {
   std::string OutputFile;
+  const LangOptions &LO;
 
 public:
-  SarifDiagnostics(AnalyzerOptions &, const std::string &Output)
-      : OutputFile(Output) {}
+  SarifDiagnostics(AnalyzerOptions &, const std::string &Output,
+                   const LangOptions &LO)
+      : OutputFile(Output), LO(LO) {}
   ~SarifDiagnostics() override = default;
 
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
@@ -45,9 +48,9 @@ public:
 
 void ento::createSarifDiagnosticConsumer(
     AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
-    const std::string &Output, const Preprocessor &,
+    const std::string &Output, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &) {
-  C.push_back(new SarifDiagnostics(AnalyzerOpts, Output));
+  C.push_back(new SarifDiagnostics(AnalyzerOpts, Output, PP.getLangOpts()));
 }
 
 static StringRef getFileName(const FileEntry &FE) {
@@ -142,26 +145,56 @@ static json::Object createArtifactLocation(const FileEntry &FE,
   return json::Object{{"uri", FileURI}, {"index", Index}};
 }
 
-static json::Object createTextRegion(SourceRange R, const SourceManager &SM) {
+static unsigned int adjustColumnPos(const SourceManager &SM, SourceLocation Loc,
+                                    unsigned int TokenLen = 0) {
+  assert(!Loc.isInvalid() && "invalid Loc when adjusting column position");
+
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedExpansionLoc(Loc);
+  assert(LocInfo.second > SM.getExpansionColumnNumber(Loc) &&
+         "position in file is before column number?");
+
+  bool InvalidBuffer = false;
+  const MemoryBuffer *Buf = SM.getBuffer(LocInfo.first, &InvalidBuffer);
+  assert(!InvalidBuffer && "got an invalid buffer for the location's file");
+  assert(Buf->getBufferSize() >= (LocInfo.second + TokenLen) &&
+         "token extends past end of buffer?");
+
+  // Adjust the offset to be the start of the line, since we'll be counting
+  // Unicode characters from there until our column offset.
+  unsigned int Off = LocInfo.second - (SM.getExpansionColumnNumber(Loc) - 1);
+  unsigned int Ret = 1;
+  while (Off < (LocInfo.second + TokenLen)) {
+    Off += getNumBytesForUTF8(Buf->getBuffer()[Off]);
+    Ret++;
+  }
+
+  return Ret;
+}
+
+static json::Object createTextRegion(const LangOptions &LO, SourceRange R,
+                                     const SourceManager &SM) {
   json::Object Region{
       {"startLine", SM.getExpansionLineNumber(R.getBegin())},
-      {"startColumn", SM.getExpansionColumnNumber(R.getBegin())},
+      {"startColumn", adjustColumnPos(SM, R.getBegin())},
   };
   if (R.getBegin() == R.getEnd()) {
-    Region["endColumn"] = SM.getExpansionColumnNumber(R.getBegin());
+    Region["endColumn"] = adjustColumnPos(SM, R.getBegin());
   } else {
     Region["endLine"] = SM.getExpansionLineNumber(R.getEnd());
-    Region["endColumn"] = SM.getExpansionColumnNumber(R.getEnd()) + 1;
+    Region["endColumn"] = adjustColumnPos(
+        SM, R.getEnd(),
+        Lexer::MeasureTokenLength(R.getEnd(), SM, LO));
   }
   return Region;
 }
 
-static json::Object createPhysicalLocation(SourceRange R, const FileEntry &FE,
+static json::Object createPhysicalLocation(const LangOptions &LO,
+                                           SourceRange R, const FileEntry &FE,
                                            const SourceManager &SMgr,
                                            json::Array &Artifacts) {
   return json::Object{
       {{"artifactLocation", createArtifactLocation(FE, Artifacts)},
-       {"region", createTextRegion(R, SMgr)}}};
+       {"region", createTextRegion(LO, R, SMgr)}}};
 }
 
 enum class Importance { Important, Essential, Unimportant };
@@ -213,7 +246,8 @@ static Importance calculateImportance(const PathDiagnosticPiece &Piece) {
   return Importance::Unimportant;
 }
 
-static json::Object createThreadFlow(const PathPieces &Pieces,
+static json::Object createThreadFlow(const LangOptions &LO,
+                                     const PathPieces &Pieces,
                                      json::Array &Artifacts) {
   const SourceManager &SMgr = Pieces.front()->getLocation().getManager();
   json::Array Locations;
@@ -221,7 +255,7 @@ static json::Object createThreadFlow(const PathPieces &Pieces,
     const PathDiagnosticLocation &P = Piece->getLocation();
     Locations.push_back(createThreadFlowLocation(
         createLocation(createPhysicalLocation(
-                           P.asRange(),
+                           LO, P.asRange(),
                            *P.asLocation().getExpansionLoc().getFileEntry(),
                            SMgr, Artifacts),
                        Piece->getString()),
@@ -230,13 +264,15 @@ static json::Object createThreadFlow(const PathPieces &Pieces,
   return json::Object{{"locations", std::move(Locations)}};
 }
 
-static json::Object createCodeFlow(const PathPieces &Pieces,
+static json::Object createCodeFlow(const LangOptions &LO,
+                                   const PathPieces &Pieces,
                                    json::Array &Artifacts) {
   return json::Object{
-      {"threadFlows", json::Array{createThreadFlow(Pieces, Artifacts)}}};
+      {"threadFlows", json::Array{createThreadFlow(LO, Pieces, Artifacts)}}};
 }
 
-static json::Object createResult(const PathDiagnostic &Diag,
+static json::Object createResult(const LangOptions &LO,
+                                 const PathDiagnostic &Diag,
                                  json::Array &Artifacts,
                                  const StringMap<unsigned> &RuleMapping) {
   const PathPieces &Path = Diag.path.flatten(false);
@@ -247,10 +283,10 @@ static json::Object createResult(const PathDiagnostic &Diag,
 
   return json::Object{
       {"message", createMessage(Diag.getVerboseDescription())},
-      {"codeFlows", json::Array{createCodeFlow(Path, Artifacts)}},
+      {"codeFlows", json::Array{createCodeFlow(LO, Path, Artifacts)}},
       {"locations",
        json::Array{createLocation(createPhysicalLocation(
-           Diag.getLocation().asRange(),
+           LO, Diag.getLocation().asRange(),
            *Diag.getLocation().asLocation().getExpansionLoc().getFileEntry(),
            SMgr, Artifacts))}},
       {"ruleIndex", Iter->getValue()},
@@ -320,18 +356,20 @@ static json::Object createTool(std::vector<const PathDiagnostic *> &Diags,
                               {"rules", createRules(Diags, RuleMapping)}}}};
 }
 
-static json::Object createRun(std::vector<const PathDiagnostic *> &Diags) {
+static json::Object createRun(const LangOptions &LO,
+                              std::vector<const PathDiagnostic *> &Diags) {
   json::Array Results, Artifacts;
   StringMap<unsigned> RuleMapping;
   json::Object Tool = createTool(Diags, RuleMapping);
   
   llvm::for_each(Diags, [&](const PathDiagnostic *D) {
-    Results.push_back(createResult(*D, Artifacts, RuleMapping));
+    Results.push_back(createResult(LO, *D, Artifacts, RuleMapping));
   });
 
   return json::Object{{"tool", std::move(Tool)},
                       {"results", std::move(Results)},
-                      {"artifacts", std::move(Artifacts)}};
+                      {"artifacts", std::move(Artifacts)},
+                      {"columnKind", "unicodeCodePoints"}};
 }
 
 void SarifDiagnostics::FlushDiagnosticsImpl(
@@ -351,6 +389,6 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
       {"$schema",
        "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"},
       {"version", "2.1.0"},
-      {"runs", json::Array{createRun(Diags)}}};
+      {"runs", json::Array{createRun(LO, Diags)}}};
   OS << llvm::formatv("{0:2}\n", json::Value(std::move(Sarif)));
 }

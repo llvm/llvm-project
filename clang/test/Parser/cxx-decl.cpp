@@ -238,12 +238,11 @@ namespace PR5066 {
 
 namespace PR17255 {
 void foo() {
-  typename A::template B<>; // expected-error {{use of undeclared identifier 'A'}}
-  // expected-error@-1 {{'template' keyword not permitted here}}
+  typename A::template B<> c; // expected-error {{use of undeclared identifier 'A'}}
 #if __cplusplus <= 199711L
+  // expected-error@-2 {{'typename' occurs outside of a template}}
   // expected-error@-3 {{'template' keyword outside of a template}}
 #endif
-  // expected-error@-5 {{expected a qualified name after 'typename'}}
 }
 }
 

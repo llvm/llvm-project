@@ -1104,10 +1104,10 @@ define i128 @f20s128(double %x) nounwind strictfp {
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X87-NEXT:    movl %edi, 12(%esi)
-; X87-NEXT:    movl %edx, 8(%esi)
-; X87-NEXT:    movl %ecx, 4(%esi)
+; X87-NEXT:    movl %edi, 8(%esi)
+; X87-NEXT:    movl %edx, 12(%esi)
 ; X87-NEXT:    movl %eax, (%esi)
+; X87-NEXT:    movl %ecx, 4(%esi)
 ; X87-NEXT:    movl %esi, %eax
 ; X87-NEXT:    addl $36, %esp
 ; X87-NEXT:    popl %esi
@@ -1130,10 +1130,10 @@ define i128 @f20s128(double %x) nounwind strictfp {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:    movl %edi, 12(%esi)
-; X86-SSE-NEXT:    movl %edx, 8(%esi)
-; X86-SSE-NEXT:    movl %ecx, 4(%esi)
+; X86-SSE-NEXT:    movl %edi, 8(%esi)
+; X86-SSE-NEXT:    movl %edx, 12(%esi)
 ; X86-SSE-NEXT:    movl %eax, (%esi)
+; X86-SSE-NEXT:    movl %ecx, 4(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $36, %esp
 ; X86-SSE-NEXT:    popl %esi
@@ -1443,10 +1443,10 @@ define i128 @f20u128(double %x) nounwind strictfp {
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X87-NEXT:    movl %edi, 12(%esi)
-; X87-NEXT:    movl %edx, 8(%esi)
-; X87-NEXT:    movl %ecx, 4(%esi)
+; X87-NEXT:    movl %edi, 8(%esi)
+; X87-NEXT:    movl %edx, 12(%esi)
 ; X87-NEXT:    movl %eax, (%esi)
+; X87-NEXT:    movl %ecx, 4(%esi)
 ; X87-NEXT:    movl %esi, %eax
 ; X87-NEXT:    addl $36, %esp
 ; X87-NEXT:    popl %esi
@@ -1469,10 +1469,10 @@ define i128 @f20u128(double %x) nounwind strictfp {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:    movl %edi, 12(%esi)
-; X86-SSE-NEXT:    movl %edx, 8(%esi)
-; X86-SSE-NEXT:    movl %ecx, 4(%esi)
+; X86-SSE-NEXT:    movl %edi, 8(%esi)
+; X86-SSE-NEXT:    movl %edx, 12(%esi)
 ; X86-SSE-NEXT:    movl %eax, (%esi)
+; X86-SSE-NEXT:    movl %ecx, 4(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $36, %esp
 ; X86-SSE-NEXT:    popl %esi
@@ -2410,11 +2410,9 @@ define double @uifdl(i64 %x) #0 {
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    xorl %eax, %eax
-; X87-NEXT:    testl %ecx, %ecx
-; X87-NEXT:    setns %al
+; X87-NEXT:    shrl $31, %ecx
 ; X87-NEXT:    fildll (%esp)
-; X87-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X87-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
 ; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    addl $20, %esp
@@ -2612,11 +2610,9 @@ define float @uiffl(i64 %x) #0 {
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X87-NEXT:    xorl %eax, %eax
-; X87-NEXT:    testl %ecx, %ecx
-; X87-NEXT:    setns %al
+; X87-NEXT:    shrl $31, %ecx
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
-; X87-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X87-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
 ; X87-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    addl $20, %esp
@@ -2627,11 +2623,10 @@ define float @uiffl(i64 %x) #0 {
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    subl $20, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    xorl %eax, %eax
-; X86-SSE-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    setns %al
+; X86-SSE-NEXT:    shrl $31, %eax
 ; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)

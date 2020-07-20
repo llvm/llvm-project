@@ -2651,8 +2651,10 @@ void AssemblyWriter::printModule(const Module *M) {
   printUseLists(nullptr);
 
   // Output all of the functions.
-  for (const Function &F : *M)
+  for (const Function &F : *M) {
+    Out << '\n';
     printFunction(&F);
+  }
   assert(UseListOrders.empty() && "All use-lists should have been consumed");
 
   // Output all attribute groups.

@@ -10,11 +10,16 @@
 # CHECK: [Requesting program interpreter: foo]
 
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-readelf -program-headers %t | FileCheck --check-prefix=NO %s
+# RUN: llvm-readelf -S -l %t | FileCheck --check-prefix=NO %s
 
 # RUN: ld.lld --dynamic-linker foo --no-dynamic-linker %t.o -o %t
-# RUN: llvm-readelf --program-headers %t | FileCheck --check-prefix=NO %s
+# RUN: llvm-readelf -S -l %t | FileCheck --check-prefix=NO %s
 
+## {clang,gcc} -nostdlib -r passes --dynamic-linker, and the expected behavior is to ignore it.
+# RUN: ld.lld -r --dynamic-linker foo %t.o -o %t
+# RUN: llvm-readelf -S -l %t | FileCheck --check-prefix=NO %s
+
+# NO-NOT: .interp
 # NO-NOT: PT_INTERP
 
 .globl _start

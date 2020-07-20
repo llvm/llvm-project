@@ -52,6 +52,8 @@ StringRef ScriptLexer::getLine() {
 
 // Returns 1-based line number of the current token.
 size_t ScriptLexer::getLineNumber() {
+  if (pos == 0)
+    return 1;
   StringRef s = getCurrentMB().getBuffer();
   StringRef tok = tokens[pos - 1];
   return s.substr(0, tok.data() - s.data()).count('\n') + 1;
@@ -292,7 +294,9 @@ static bool encloses(StringRef s, StringRef t) {
 
 MemoryBufferRef ScriptLexer::getCurrentMB() {
   // Find input buffer containing the current token.
-  assert(!mbs.empty() && pos > 0);
+  assert(!mbs.empty());
+  if (pos == 0)
+    return mbs.back();
   for (MemoryBufferRef mb : mbs)
     if (encloses(mb.getBuffer(), tokens[pos - 1]))
       return mb;

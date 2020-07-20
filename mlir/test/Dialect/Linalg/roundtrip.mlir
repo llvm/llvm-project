@@ -5,24 +5,24 @@
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // DISABLED: mlir-opt %s --convert-linalg-to-llvm -o=/dev/null 2>&1
 
-// CHECK-DAG: #[[strided1D:.*]] = (d0)[s0] -> (d0 + s0)
-// CHECK-DAG: #[[strided2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
-// CHECK-DAG: #[[strided2DOFF0:.*]] = (d0, d1)[s0] -> (d0 * s0 + d1)
-// CHECK-DAG: #[[strided3D:.*]] = (d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)
-// CHECK-DAG: #[[strided3DOFF0:.*]] = (d0, d1, d2)[s0, s1] -> (d0 * s0 + d1 * s1 + d2)
-// CHECK-DAG: #[[strided6D:.*]] = (d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4 + d4 * s5 + d5)
+// CHECK-DAG: #[[strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// CHECK-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// CHECK-DAG: #[[strided2DOFF0:.*]] = affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>
+// CHECK-DAG: #[[strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
+// CHECK-DAG: #[[strided3DOFF0:.*]] = affine_map<(d0, d1, d2)[s0, s1] -> (d0 * s0 + d1 * s1 + d2)>
+// CHECK-DAG: #[[strided6D:.*]] = affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4 + d4 * s5 + d5)>
 
-// CHECK-DAG: #[[map0:.*]] = (d0, d1, d2) -> (d0, d2, d1)
-// CHECK-DAG: #[[map1:.*]] = (d0, d1, d2) -> (d2, d1, d0)
+// CHECK-DAG: #[[map0:.*]] = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
+// CHECK-DAG: #[[map1:.*]] = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
 
-// CHECK-DAG: #[[reshapeD01:.*]] = (d0, d1, d2) -> (d0, d1)
-// CHECK-DAG: #[[reshapeD2:.*]] = (d0, d1, d2) -> (d2)
-// CHECK-DAG: #[[reshapeD0:.*]] = (d0, d1, d2) -> (d0)
-// CHECK-DAG: #[[reshapeD12:.*]] = (d0, d1, d2) -> (d1, d2)
-// CHECK-DAG: #[[reshapeD012:.*]] = (d0, d1, d2) -> (d0, d1, d2)
-// CHECK-DAG: #[[reshape5D01:.*]] = (d0, d1, d2, d3, d4) -> (d0, d1)
-// CHECK-DAG: #[[reshape5D2:.*]] = (d0, d1, d2, d3, d4) -> (d2)
-// CHECK-DAG: #[[reshape5D34:.*]] = (d0, d1, d2, d3, d4) -> (d3, d4)
+// CHECK-DAG: #[[reshapeD01:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-DAG: #[[reshapeD2:.*]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK-DAG: #[[reshapeD0:.*]] = affine_map<(d0, d1, d2) -> (d0)>
+// CHECK-DAG: #[[reshapeD12:.*]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[reshapeD012:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[reshape5D01:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1)>
+// CHECK-DAG: #[[reshape5D2:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d2)>
+// CHECK-DAG: #[[reshape5D34:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>
 
 func @range(%arg0: index, %arg1: index, %arg2: index) {
   %0 = linalg.range %arg0:%arg1:%arg2 : !linalg.range
@@ -101,8 +101,8 @@ func @copy_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf
 //       CHECK:   linalg.copy(%{{.*}}, %{{.*}}) : memref<?xf32, #[[strided1D]]>, memref<?xf32, #[[strided1D]]>
 
 func @copy_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.copy(%arg0, %arg1) {inputPermutation = (i, j, k) -> (i, k, j),
-                             outputPermutation = (i, j, k) -> (k, j, i)} :
+  linalg.copy(%arg0, %arg1) {inputPermutation = affine_map<(i, j, k) -> (i, k, j)>,
+                             outputPermutation = affine_map<(i, j, k) -> (k, j, i)>} :
     memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
   return
 }
@@ -127,8 +127,8 @@ func @conv_view6(%arg0: memref<?x?x?x?x?x?xf32, offset: ?, strides: [?, ?, ?, ?,
 //       CHECK:   linalg.conv(%{{.*}}, %{{.*}}, %{{.*}}) {dilations = [4, 4, 5, 5], strides = [2, 2, 3, 3]} : memref<?x?x?x?x?x?xf32, #[[strided6D]]>, memref<?x?x?x?x?x?xf32, #[[strided6D]]>, memref<?x?x?x?x?x?xf32, #[[strided6D]]>
 
 #accesses = [
-  (i, j, k) -> (j, i),
-  (i, j, k) -> (i, k, i + j)
+  affine_map<(i, j, k) -> (j, i)>,
+  affine_map<(i, j, k) -> (i, k, i + j)>
 ]
 #trait = {
   args_in = 1,
@@ -157,23 +157,23 @@ func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>, %arg1: memref
 // CHECK-LABEL: func @generic_with_tensor_input
 //       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64, fun = @foo, indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel"], library_call = "some_external_function_name_1"} %{{.*}}, %{{.*}} {foo = 1 : i64}: tensor<?x?xvector<3x4xi4>>, memref<?x?x?xf32, #[[strided3D]]>
 
-func @generic_with_tensor_output(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, %arg1: tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>) {
-  %0 = linalg.generic #trait %arg0, %arg1 {foo = 1} : memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
-  return %0 : tensor<?x?x?xf32>
+#trait2 = {
+  args_in = 2,
+  args_out = 1,
+  indexing_maps = #accesses,
+  iterator_types = ["parallel", "parallel", "parallel"],
+  fun = @foo,
+  library_call = "some_external_function_name_1"
 }
-// CHECK-LABEL: func @generic_with_tensor_output
-//       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64, fun = @foo, indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel"], library_call = "some_external_function_name_1"} %{{.*}}, %{{.*}} {foo = 1 : i64}: memref<?x?xvector<3x4xi4>, #[[strided2D]]>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
-//       CHECK:   return {{.*}} : tensor<?x?x?xf32>
-
 func @generic_with_tensor_input_and_output(%arg0: tensor<?x?xvector<3x4xi4>>, %arg1: tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>) {
-  %0 = linalg.generic #trait %arg0, %arg1 {foo = 1} : tensor<?x?xvector<3x4xi4>>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
+  %0 = linalg.generic #trait2 %arg0, %arg1 {foo = 1} : tensor<?x?xvector<3x4xi4>>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
   return %0 : tensor<?x?x?xf32>
 }
 // CHECK-LABEL: func @generic_with_tensor_input_and_output
-//       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64, fun = @foo, indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel"], library_call = "some_external_function_name_1"} %{{.*}}, %{{.*}} {foo = 1 : i64}: tensor<?x?xvector<3x4xi4>>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
+//       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64, fun = @foo, indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel"], library_call = "some_external_function_name_1"} %{{.*}}, %{{.*}} {foo = 1 : i64}: tensor<?x?xvector<3x4xi4>>, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
 //       CHECK:   return {{.*}} : tensor<?x?x?xf32>
 
-#trait2 = {
+#trait3 = {
   args_in = 1,
   args_out = 1,
   indexing_maps = #accesses,
@@ -181,7 +181,7 @@ func @generic_with_tensor_input_and_output(%arg0: tensor<?x?xvector<3x4xi4>>, %a
   library_call = "some_external_function_name_2"
 }
 func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.generic #trait2 %arg0, %arg1 {
+  linalg.generic #trait3 %arg0, %arg1 {
     ^bb(%a: vector<3x4xi4>, %b: f32) :
       linalg.yield %b : f32
   } {foo = 1}: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
@@ -194,7 +194,7 @@ func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1
 //       CHECK:    } {foo = 1 : i64}: memref<?x?xvector<3x4xi4>, #[[strided2D]]>, memref<?x?x?xf32, #[[strided3D]]>
 func @indexed_generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,
                       %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.indexed_generic #trait2 %arg0, %arg1 {
+  linalg.indexed_generic #trait3 %arg0, %arg1 {
   ^bb(%i: index, %j: index, %k: index, %a: vector<3x4xi4>, %b: f32) :
       linalg.yield %b : f32
   } {foo = 1}: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
@@ -208,30 +208,30 @@ func @indexed_generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 
 
 func @reshape_static(%arg0: memref<3x4x5xf32>) {
   // Reshapes that collapse and expand back a contiguous tensor.
-  %0 = linalg.reshape %arg0 [(i, j, k) -> (i, j),
-                             (i, j, k) -> (k)] :
+  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>,
+                             affine_map<(i, j, k) -> (k)>] :
     memref<3x4x5xf32> into memref<12x5xf32>
-  %r0 = linalg.reshape %0 [(i, j, k) -> (i, j),
-                           (i, j, k) -> (k)] :
+  %r0 = linalg.reshape %0 [affine_map<(i, j, k) -> (i, j)>,
+                           affine_map<(i, j, k) -> (k)>] :
     memref<12x5xf32> into memref<3x4x5xf32>
-  %1 = linalg.reshape %arg0 [(i, j, k) -> (i),
-                             (i, j, k) -> (j, k)] :
+  %1 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i)>,
+                             affine_map<(i, j, k) -> (j, k)>] :
     memref<3x4x5xf32> into memref<3x20xf32>
-  %r1 = linalg.reshape %1 [(i, j, k) -> (i),
-                           (i, j, k) -> (j, k)] :
+  %r1 = linalg.reshape %1 [affine_map<(i, j, k) -> (i)>,
+                           affine_map<(i, j, k) -> (j, k)>] :
     memref<3x20xf32> into memref<3x4x5xf32>
-  %2 = linalg.reshape %arg0 [(i, j, k) -> (i, j, k)] :
+  %2 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j, k)>] :
     memref<3x4x5xf32> into memref<60xf32>
-  %r2 = linalg.reshape %2 [(i, j, k) -> (i, j, k)] :
+  %r2 = linalg.reshape %2 [affine_map<(i, j, k) -> (i, j, k)>] :
     memref<60xf32> into memref<3x4x5xf32>
   // Reshapes that expand and collapse back a contiguous tensor with some 1's.
-  %3 = linalg.reshape %arg0 [(i, j, k, l, m) -> (i, j),
-                             (i, j, k, l, m) -> (k),
-                             (i, j, k, l, m) -> (l, m)] :
+  %3 = linalg.reshape %arg0 [affine_map<(i, j, k, l, m) -> (i, j)>,
+                             affine_map<(i, j, k, l, m) -> (k)>,
+                             affine_map<(i, j, k, l, m) -> (l, m)>] :
     memref<3x4x5xf32> into memref<1x3x4x1x5xf32>
-  %r3 = linalg.reshape %3 [(i, j, k, l, m) -> (i, j),
-                           (i, j, k, l, m) -> (k),
-                           (i, j, k, l, m) -> (l, m)] :
+  %r3 = linalg.reshape %3 [affine_map<(i, j, k, l, m) -> (i, j)>,
+                           affine_map<(i, j, k, l, m) -> (k)>,
+                           affine_map<(i, j, k, l, m) -> (l, m)>] :
     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
   return
 }
@@ -256,26 +256,26 @@ func @reshape_static(%arg0: memref<3x4x5xf32>) {
 func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
                       %arg1: memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]>,
                       %arg2: memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>) {
-  %0 = linalg.reshape %arg0 [(i, j, k) -> (i, j),
-                             (i, j, k) -> (k)] :
+  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>,
+                             affine_map<(i, j, k) -> (k)>] :
     memref<?x?x?xf32> into memref<?x?xf32>
-  %r0 = linalg.reshape %0 [(i, j, k) -> (i, j),
-                           (i, j, k) -> (k)] :
+  %r0 = linalg.reshape %0 [affine_map<(i, j, k) -> (i, j)>,
+                           affine_map<(i, j, k) -> (k)>] :
     memref<?x?xf32> into memref<?x?x?xf32>
-  %1 = linalg.reshape %arg1 [(i, j, k) -> (i, j),
-                             (i, j, k) -> (k)] :
+  %1 = linalg.reshape %arg1 [affine_map<(i, j, k) -> (i, j)>,
+                             affine_map<(i, j, k) -> (k)>] :
     memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]> into
     memref<?x?xf32, offset : 0, strides : [?, 1]>
-  %r1 = linalg.reshape %1 [(i, j, k) -> (i, j),
-                           (i, j, k) -> (k)] :
+  %r1 = linalg.reshape %1 [affine_map<(i, j, k) -> (i, j)>,
+                           affine_map<(i, j, k) -> (k)>] :
     memref<?x?xf32, offset : 0, strides : [?, 1]> into
     memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]>
-  %2 = linalg.reshape %arg2 [(i, j, k) -> (i, j),
-                             (i, j, k) -> (k)] :
+  %2 = linalg.reshape %arg2 [affine_map<(i, j, k) -> (i, j)>,
+                             affine_map<(i, j, k) -> (k)>] :
     memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]> into
     memref<?x?xf32, offset : ?, strides : [?, 1]>
-  %r2 = linalg.reshape %2 [(i, j, k) -> (i, j),
-                           (i, j, k) -> (k)] :
+  %r2 = linalg.reshape %2 [affine_map<(i, j, k) -> (i, j)>,
+                           affine_map<(i, j, k) -> (k)>] :
     memref<?x?xf32, offset : ?, strides : [?, 1]> into
     memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>
   return

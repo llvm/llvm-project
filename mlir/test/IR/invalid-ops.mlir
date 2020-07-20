@@ -67,7 +67,7 @@ func @affine_apply_no_map() {
 func @affine_apply_wrong_operand_count() {
 ^bb0:
   %i = constant 0 : index
-  %x = "affine.apply" (%i) {map = (d0, d1) -> ((d0 + 1), (d1 + 2))} : (index) -> (index) //  expected-error {{'affine.apply' op operand count and affine map dimension and symbol count must match}}
+  %x = "affine.apply" (%i) {map = affine_map<(d0, d1) -> ((d0 + 1), (d1 + 2))>} : (index) -> (index) //  expected-error {{'affine.apply' op operand count and affine map dimension and symbol count must match}}
   return
 }
 
@@ -77,7 +77,7 @@ func @affine_apply_wrong_result_count() {
 ^bb0:
   %i = constant 0 : index
   %j = constant 1 : index
-  %x = "affine.apply" (%i, %j) {map = (d0, d1) -> ((d0 + 1), (d1 + 2))} : (index,index) -> (index) //  expected-error {{'affine.apply' op mapping must produce one value}}
+  %x = "affine.apply" (%i, %j) {map = affine_map<(d0, d1) -> ((d0 + 1), (d1 + 2))>} : (index,index) -> (index) //  expected-error {{'affine.apply' op mapping must produce one value}}
   return
 }
 
@@ -103,7 +103,7 @@ func @bad_alloc_wrong_dynamic_dim_count() {
 ^bb0:
   %0 = constant 7 : index
   // Test alloc with wrong number of dynamic dimensions.
-  %1 = alloc(%0)[%1] : memref<2x4xf32, (d0, d1)[s0] -> ((d0 + s0), d1), 1> // expected-error {{op 'std.alloc' dimension operand count does not equal memref dynamic dimension count}}
+  %1 = alloc(%0)[%1] : memref<2x4xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1> // expected-error {{op 'std.alloc' dimension operand count does not equal memref dynamic dimension count}}
   return
 }
 
@@ -113,7 +113,7 @@ func @bad_alloc_wrong_symbol_count() {
 ^bb0:
   %0 = constant 7 : index
   // Test alloc with wrong number of symbols
-  %1 = alloc(%0) : memref<2x?xf32, (d0, d1)[s0] -> ((d0 + s0), d1), 1> // expected-error {{operand count does not equal dimension plus symbol operand count}}
+  %1 = alloc(%0) : memref<2x?xf32, affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>, 1> // expected-error {{operand count does not equal dimension plus symbol operand count}}
   return
 }
 
@@ -121,12 +121,12 @@ func @bad_alloc_wrong_symbol_count() {
 
 func @test_store_zero_results() {
 ^bb0:
-  %0 = alloc() : memref<1024x64xf32, (d0, d1) -> (d0, d1), 1>
+  %0 = alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
   %1 = constant 0 : index
   %2 = constant 1 : index
-  %3 = load %0[%1, %2] : memref<1024x64xf32, (d0, d1) -> (d0, d1), 1>
+  %3 = load %0[%1, %2] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
   // Test that store returns zero results.
-  %4 = store %3, %0[%1, %2] : memref<1024x64xf32, (d0, d1) -> (d0, d1), 1> // expected-error {{cannot name an operation with no results}}
+  %4 = store %3, %0[%1, %2] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1> // expected-error {{cannot name an operation with no results}}
   return
 }
 
@@ -141,7 +141,7 @@ func @test_store_zero_results2(%x: i32, %p: memref<i32>) {
 
 func @test_alloc_memref_map_rank_mismatch() {
 ^bb0:
-  %0 = alloc() : memref<1024x64xf32, (d0) -> (d0), 1> // expected-error {{memref affine map dimension mismatch}}
+  %0 = alloc() : memref<1024x64xf32, affine_map<(d0) -> (d0)>, 1> // expected-error {{memref affine map dimension mismatch}}
   return
 }
 
@@ -729,7 +729,7 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8>
   // expected-error@+1 {{incorrect number of operands for type}}
   %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8> to memref<?x?xf32, (d0, d1)[s0] -> (d0 * 4 + d1 + s0)>
+    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
   return
 }
 
@@ -739,7 +739,7 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xi8>
   // expected-error@+1 {{is not strided}}
   %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8> to memref<?x?xf32, (d0, d1)[s0] -> (d0, d1, s0)>
+    : memref<2048xi8> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0, d1, s0)>>
   return
 }
 
@@ -749,18 +749,18 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xf32>
   // expected-error@+1 {{must be 1D memref of 8-bit integer values}}
   %1 = view %0[][%arg0, %arg1]
-    : memref<2048xf32> to memref<?x?xf32, (d0, d1)[s0] -> (d0 * 4 + d1 + s0)>
+    : memref<2048xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
   return
 }
 
 // -----
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<2048xi8, (d0) -> (d0 floordiv 8, d0 mod 8)>
+  %0 = alloc() : memref<2048xi8, affine_map<(d0) -> (d0 floordiv 8, d0 mod 8)>>
   // expected-error@+1 {{unsupported map for base memref}}
   %1 = view %0[][%arg0, %arg1]
-    : memref<2048xi8, (d0) -> (d0 floordiv 8, d0 mod 8)> to
-      memref<?x?xf32, (d0, d1)[s0] -> (d0 * 4 + d1 + s0)>
+    : memref<2048xi8, affine_map<(d0) -> (d0 floordiv 8, d0 mod 8)>> to
+      memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
   return
 }
 
@@ -771,7 +771,7 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{different memory spaces}}
   %1 = view %0[][%arg0, %arg1]
     : memref<2048xi8, 2> to
-      memref<?x?xf32, (d0, d1)[s0] -> (d0 * 4 + d1 + s0), 1>
+      memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>, 1>
   return
 }
 
@@ -782,7 +782,7 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{incorrect dynamic strides}}
   %1 = view %0[][%arg0, %arg1]
     : memref<2048xi8> to
-      memref<?x?x4xf32, (d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>
+      memref<?x?x4xf32, affine_map<(d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>>
   return
 }
 
@@ -793,7 +793,7 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{incorrect dynamic strides}}
   %1 = view %0[%arg0][]
     : memref<2048xi8> to
-      memref<16x4x?xf32, (d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>
+      memref<16x4x?xf32, affine_map<(d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>>
   return
 }
 
@@ -804,40 +804,40 @@ func @multiple_offsets(%arg0: index) {
   // expected-error@+1 {{expects 0 or 1 offset operand}}
   %1 = view %0[%arg0, %arg0][%arg0]
     : memref<2048xi8> to
-      memref<?x?x4xf32, (d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>
+      memref<?x?x4xf32, affine_map<(d0, d1, d2) -> (d0 * 777 + d1 * 4 + d2)>>
   return
 }
 
 // -----
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2), 2>
+  %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>, 2>
   // expected-error@+1 {{different memory spaces}}
   %1 = subview %0[][%arg2][]
-    : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2), 2> to
-      memref<8x?x4xf32, (d0, d1, d2)[s0] -> (d0 * s0 + d1 * 4 + d2)>
+    : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>, 2> to
+      memref<8x?x4xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 * 4 + d2)>>
   return
 }
 
 // -----
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>
+  %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
   // expected-error@+1 {{is not strided}}
   %1 = subview %0[][%arg2][]
-    : memref<8x16x4xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)> to
-      memref<8x?x4xf32, (d0, d1, d2)[s0] -> (d0 + s0, d1, d2)>
+    : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>> to
+      memref<8x?x4xf32, affine_map<(d0, d1, d2)[s0] -> (d0 + s0, d1, d2)>>
   return
 }
 
 // -----
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %0 = alloc() : memref<8x16x4xf32, (d0, d1, d2) -> (d0 + d1, d1 + d2, d2)>
+  %0 = alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 + d1, d1 + d2, d2)>>
   // expected-error@+1 {{is not strided}}
   %1 = subview %0[][%arg2][]
-    : memref<8x16x4xf32, (d0, d1, d2) -> (d0 + d1, d1 + d2, d2)> to
-      memref<8x?x4xf32, (d0, d1, d2)[s0] -> (d0 * s0 + d1 * 4 + d2)>
+    : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 + d1, d1 + d2, d2)>> to
+      memref<8x?x4xf32, affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 * 4 + d2)>>
   return
 }
 
@@ -966,7 +966,7 @@ func @invalid_subview(%arg0 : index, %arg1 : memref<?x8x?xf32>) {
 // -----
 
 func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]>) {
-  // expected-error@+1{{operand type 'memref<12x4x16xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2)>' and result type 'memref<12x4x16xf32, (d0, d1, d2) -> (d0 * 128 + d1 * 32 + d2 * 2)>' are cast incompatible}}
+  // expected-error@+1{{operand type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2)>>' and result type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 128 + d1 * 32 + d2 * 2)>>' are cast incompatible}}
   %0 = memref_cast %arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]> to memref<12x4x16xf32, offset:0, strides:[128, 32, 2]>
   return
 }
@@ -974,7 +974,7 @@ func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16,
 // -----
 
 func @invalid_memref_cast(%arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]>) {
-  // expected-error@+1{{operand type 'memref<12x4x16xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2)>' and result type 'memref<12x4x16xf32, (d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2 + 16)>' are cast incompatible}}
+  // expected-error@+1{{operand type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2)>>' and result type 'memref<12x4x16xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 16 + d2 + 16)>>' are cast incompatible}}
   %0 = memref_cast %arg0 : memref<12x4x16xf32, offset:0, strides:[64, 16, 1]> to memref<12x4x16xf32, offset:16, strides:[64, 16, 1]>
   return
 }

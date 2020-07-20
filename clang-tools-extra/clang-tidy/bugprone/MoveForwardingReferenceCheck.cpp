@@ -33,7 +33,7 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
 
   if (CallRange.isValid()) {
     const std::string TypeName =
-        TypeParmDecl->getIdentifier()
+        (TypeParmDecl->getIdentifier() && !TypeParmDecl->isImplicit())
             ? TypeParmDecl->getName().str()
             : (llvm::Twine("decltype(") + ParmVar->getName() + ")").str();
 

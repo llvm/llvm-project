@@ -1006,12 +1006,9 @@ ProgramStateRef CStringChecker::InvalidateBuffer(CheckerContext &C,
 
 bool CStringChecker::SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
                                      const MemRegion *MR) {
-  const TypedValueRegion *TVR = dyn_cast<TypedValueRegion>(MR);
-
   switch (MR->getKind()) {
   case MemRegion::FunctionCodeRegionKind: {
-    const NamedDecl *FD = cast<FunctionCodeRegion>(MR)->getDecl();
-    if (FD)
+    if (const auto *FD = cast<FunctionCodeRegion>(MR)->getDecl())
       os << "the address of the function '" << *FD << '\'';
     else
       os << "the address of a function";
@@ -1025,16 +1022,20 @@ bool CStringChecker::SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
     return true;
   case MemRegion::CXXThisRegionKind:
   case MemRegion::CXXTempObjectRegionKind:
-    os << "a C++ temp object of type " << TVR->getValueType().getAsString();
+    os << "a C++ temp object of type "
+       << cast<TypedValueRegion>(MR)->getValueType().getAsString();
     return true;
   case MemRegion::VarRegionKind:
-    os << "a variable of type" << TVR->getValueType().getAsString();
+    os << "a variable of type"
+       << cast<TypedValueRegion>(MR)->getValueType().getAsString();
     return true;
   case MemRegion::FieldRegionKind:
-    os << "a field of type " << TVR->getValueType().getAsString();
+    os << "a field of type "
+       << cast<TypedValueRegion>(MR)->getValueType().getAsString();
     return true;
   case MemRegion::ObjCIvarRegionKind:
-    os << "an instance variable of type " << TVR->getValueType().getAsString();
+    os << "an instance variable of type "
+       << cast<TypedValueRegion>(MR)->getValueType().getAsString();
     return true;
   default:
     return false;

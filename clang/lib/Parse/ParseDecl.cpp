@@ -2962,6 +2962,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
       case Sema::NC_ContextIndependentExpr:
       case Sema::NC_VarTemplate:
       case Sema::NC_FunctionTemplate:
+      case Sema::NC_Concept:
         // Might be a redeclaration of a prior entity.
         break;
       }
@@ -3177,7 +3178,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
              DSContext == DeclSpecContext::DSC_class) &&
             TemplateId->Name &&
             Actions.isCurrentClassName(*TemplateId->Name, getCurScope(), &SS) &&
-            isConstructorDeclarator(/*Unqualified*/ false)) {
+            isConstructorDeclarator(/*Unqualified=*/false)) {
           // The user meant this to be an out-of-line constructor
           // definition, but template arguments are not allowed
           // there.  Just allow this as a constructor; we'll
@@ -3189,7 +3190,19 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         ConsumeAnnotationToken(); // The C++ scope.
         assert(Tok.is(tok::annot_template_id) &&
                "ParseOptionalCXXScopeSpecifier not working");
-        AnnotateTemplateIdTokenAsType();
+        AnnotateTemplateIdTokenAsType(SS);
+        continue;
+      }
+
+      if (Next.is(tok::annot_template_id) &&
+          static_cast<TemplateIdAnnotation *>(Next.getAnnotationValue())
+            ->Kind == TNK_Concept_template &&
+          GetLookAheadToken(2).isOneOf(tok::kw_auto, tok::kw_decltype)) {
+        DS.getTypeSpecScope() = SS;
+        // This is a qualified placeholder-specifier, e.g., ::C<int> auto ...
+        // Consume the scope annotation and continue to consume the template-id
+        // as a placeholder-specifier.
+        ConsumeAnnotationToken();
         continue;
       }
 
@@ -3235,6 +3248,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // C++ doesn't have implicit int.  Diagnose it as a typo w.r.t. to the
       // typename.
       if (!TypeRep) {
+        if (TryAnnotateTypeConstraint())
+          goto DoneWithDeclSpec;
+        if (isTypeConstraintAnnotation())
+          continue;
+        if (NextToken().is(tok::annot_template_id))
+          // Might have been annotated by TryAnnotateTypeConstraint.
+          continue;
         // Eat the scope spec so the identifier is current.
         ConsumeAnnotationToken();
         ParsedAttributesWithRange Attrs(AttrFactory);
@@ -3384,6 +3404,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // If this is not a typedef name, don't parse it as part of the declspec,
       // it must be an implicit int or an error.
       if (!TypeRep) {
+        if (TryAnnotateTypeConstraint())
+          goto DoneWithDeclSpec;
+        if (isTypeConstraintAnnotation())
+          continue;
+        if (Tok.is(tok::annot_template_id))
+          // Might have been annotated by TryAnnotateTypeConstraint.
+          continue;
         ParsedAttributesWithRange Attrs(AttrFactory);
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
           if (!Attrs.empty()) {
@@ -3433,9 +3460,51 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue;
     }
 
-      // type-name
+      // type-name or placeholder-specifier
     case tok::annot_template_id: {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
+      if (TemplateId->Kind == TNK_Concept_template) {
+        if (NextToken().is(tok::identifier)) {
+          Diag(Loc, diag::err_placeholder_expected_auto_or_decltype_auto)
+              << FixItHint::CreateInsertion(NextToken().getLocation(), "auto");
+          // Attempt to continue as if 'auto' was placed here.
+          isInvalid = DS.SetTypeSpecType(TST_auto, Loc, PrevSpec, DiagID,
+                                         TemplateId, Policy);
+          break;
+        }
+        if (!NextToken().isOneOf(tok::kw_auto, tok::kw_decltype))
+            goto DoneWithDeclSpec;
+        ConsumeAnnotationToken();
+        SourceLocation AutoLoc = Tok.getLocation();
+        if (TryConsumeToken(tok::kw_decltype)) {
+          BalancedDelimiterTracker Tracker(*this, tok::l_paren);
+          if (Tracker.consumeOpen()) {
+            // Something like `void foo(Iterator decltype i)`
+            Diag(Tok, diag::err_expected) << tok::l_paren;
+          } else {
+            if (!TryConsumeToken(tok::kw_auto)) {
+              // Something like `void foo(Iterator decltype(int) i)`
+              Tracker.skipToEnd();
+              Diag(Tok, diag::err_placeholder_expected_auto_or_decltype_auto)
+                << FixItHint::CreateReplacement(SourceRange(AutoLoc,
+                                                            Tok.getLocation()),
+                                                "auto");
+            } else {
+              Tracker.consumeClose();
+            }
+          }
+          ConsumedEnd = Tok.getLocation();
+          // Even if something went wrong above, continue as if we've seen
+          // `decltype(auto)`.
+          isInvalid = DS.SetTypeSpecType(TST_decltype_auto, Loc, PrevSpec,
+                                         DiagID, TemplateId, Policy);
+        } else {
+          isInvalid = DS.SetTypeSpecType(TST_auto, Loc, PrevSpec, DiagID,
+                                         TemplateId, Policy);
+        }
+        break;
+      }
+
       if (TemplateId->Kind != TNK_Type_template &&
           TemplateId->Kind != TNK_Undeclared_template) {
         // This template-id does not refer to a type name, so we're
@@ -3448,12 +3517,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // constructor declaration.
       if (getLangOpts().CPlusPlus && DSContext == DeclSpecContext::DSC_class &&
           Actions.isCurrentClassName(*TemplateId->Name, getCurScope()) &&
-          isConstructorDeclarator(TemplateId->SS.isEmpty()))
+          isConstructorDeclarator(/*Unqualified=*/true))
         goto DoneWithDeclSpec;
 
       // Turn the template-id annotation token into a type annotation
       // token, then try again to parse it as a type-specifier.
-      AnnotateTemplateIdTokenAsType();
+      CXXScopeSpec SS;
+      AnnotateTemplateIdTokenAsType(SS);
       continue;
     }
 
@@ -3617,7 +3687,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       ConsumedEnd = ExplicitLoc;
       ConsumeToken(); // kw_explicit
       if (Tok.is(tok::l_paren)) {
-        if (getLangOpts().CPlusPlus2a) {
+        if (getLangOpts().CPlusPlus2a || isExplicitBool() == TPResult::True) {
+          Diag(Tok.getLocation(), getLangOpts().CPlusPlus2a
+                                      ? diag::warn_cxx17_compat_explicit_bool
+                                      : diag::ext_explicit_bool);
+
           ExprResult ExplicitExpr(static_cast<Expr *>(nullptr));
           BalancedDelimiterTracker Tracker(*this, tok::l_paren);
           Tracker.consumeOpen();
@@ -3630,8 +3704,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                 Actions.ActOnExplicitBoolSpecifier(ExplicitExpr.get());
           } else
             Tracker.skipToEnd();
-        } else
+        } else {
           Diag(Tok.getLocation(), diag::warn_cxx2a_compat_explicit_bool);
+        }
       }
       isInvalid = DS.setFunctionSpecExplicit(ExplicitLoc, PrevSpec, DiagID,
                                              ExplicitSpec, CloseParenLoc);
@@ -4991,6 +5066,8 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
     // recurse to handle whatever we get.
     if (TryAnnotateTypeOrScopeToken())
       return true;
+    if (TryAnnotateTypeConstraint())
+      return true;
     if (Tok.is(tok::identifier))
       return false;
 
@@ -5121,6 +5198,16 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
     return !DisambiguatingWithExpression ||
            !isStartOfObjCClassMessageMissingOpenBracket();
 
+    // placeholder-type-specifier
+  case tok::annot_template_id: {
+    return isTypeConstraintAnnotation() &&
+        (NextToken().is(tok::kw_auto) || NextToken().is(tok::kw_decltype));
+  }
+  case tok::annot_cxxscope:
+    if (NextToken().is(tok::identifier) && TryAnnotateTypeConstraint())
+      return true;
+    return isTypeConstraintAnnotation() &&
+        GetLookAheadToken(2).isOneOf(tok::kw_auto, tok::kw_decltype);
   case tok::kw___declspec:
   case tok::kw___cdecl:
   case tok::kw___stdcall:
@@ -6014,11 +6101,12 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
 
   while (1) {
     if (Tok.is(tok::l_paren)) {
+      bool IsFunctionDeclaration = D.isFunctionDeclaratorAFunctionDeclaration();
       // Enter function-declaration scope, limiting any declarators to the
       // function prototype scope, including parameter declarators.
       ParseScope PrototypeScope(this,
                                 Scope::FunctionPrototypeScope|Scope::DeclScope|
-                                (D.isFunctionDeclaratorAFunctionDeclaration()
+                                (IsFunctionDeclaration
                                    ? Scope::FunctionDeclarationScope : 0));
 
       // The paren may be part of a C++ direct initializer, eg. "int x(1);".
@@ -6037,7 +6125,12 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       ParsedAttributes attrs(AttrFactory);
       BalancedDelimiterTracker T(*this, tok::l_paren);
       T.consumeOpen();
+      if (IsFunctionDeclaration)
+        Actions.ActOnStartFunctionDeclarationDeclarator(D,
+                                                        TemplateParameterDepth);
       ParseFunctionDeclarator(D, attrs, T, IsAmbiguous);
+      if (IsFunctionDeclaration)
+        Actions.ActOnFinishFunctionDeclarationDeclarator(D);
       PrototypeScope.Exit();
     } else if (Tok.is(tok::l_square)) {
       ParseBracketDeclarator(D);
@@ -6353,7 +6446,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     ProhibitAttributes(FnAttrs);
   } else {
     if (Tok.isNot(tok::r_paren))
-      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo,
+      ParseParameterDeclarationClause(D.getContext(), FirstArgAttrs, ParamInfo,
                                       EllipsisLoc);
     else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
@@ -6571,9 +6664,9 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 /// after the opening parenthesis. This function will not parse a K&R-style
 /// identifier list.
 ///
-/// D is the declarator being parsed.  If FirstArgAttrs is non-null, then the
-/// caller parsed those arguments immediately after the open paren - they should
-/// be considered to be part of the first parameter.
+/// DeclContext is the context of the declarator being parsed.  If FirstArgAttrs
+/// is non-null, then the caller parsed those attributes immediately after the
+/// open paren - they should be considered to be part of the first parameter.
 ///
 /// After returning, ParamInfo will hold the parsed parameters. EllipsisLoc will
 /// be the location of the ellipsis, if any was parsed.
@@ -6599,7 +6692,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 /// [C++11] attribute-specifier-seq parameter-declaration
 ///
 void Parser::ParseParameterDeclarationClause(
-       Declarator &D,
+       DeclaratorContext DeclaratorCtx,
        ParsedAttributes &FirstArgAttrs,
        SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
        SourceLocation &EllipsisLoc) {
@@ -6648,9 +6741,11 @@ void Parser::ParseParameterDeclarationClause(
     // "LambdaExprParameterContext", because we must accept either
     // 'declarator' or 'abstract-declarator' here.
     Declarator ParmDeclarator(
-        DS, D.getContext() == DeclaratorContext::LambdaExprContext
-                ? DeclaratorContext::LambdaExprParameterContext
-                : DeclaratorContext::PrototypeContext);
+        DS, DeclaratorCtx == DeclaratorContext::RequiresExprContext
+                ? DeclaratorContext::RequiresExprContext
+                : DeclaratorCtx == DeclaratorContext::LambdaExprContext
+                      ? DeclaratorContext::LambdaExprParameterContext
+                      : DeclaratorContext::PrototypeContext);
     ParseDeclarator(ParmDeclarator);
 
     // Parse GNU attributes, if present.
@@ -6704,7 +6799,7 @@ void Parser::ParseParameterDeclarationClause(
         SourceLocation EqualLoc = Tok.getLocation();
 
         // Parse the default argument
-        if (D.getContext() == DeclaratorContext::MemberContext) {
+        if (DeclaratorCtx == DeclaratorContext::MemberContext) {
           // If we're inside a class definition, cache the tokens
           // corresponding to the default argument. We'll actually parse
           // them when we see the end of the class definition.

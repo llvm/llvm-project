@@ -316,12 +316,6 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::UO_F32] = i32_func_f32_f32;
     Table[RTLIB::UO_F64] = i32_func_f64_f64;
     Table[RTLIB::UO_F128] = i32_func_i64_i64_i64_i64;
-    // O_FXX has the weird property that it uses the same libcall name as UO_FXX
-    // This breaks our name-based lookup. Fortunately only the UO family of
-    // libcalls appears to be actually used.
-    Table[RTLIB::O_F32] = unsupported;
-    Table[RTLIB::O_F64] = unsupported;
-    Table[RTLIB::O_F128] = unsupported;
 
     // Memory
     Table[RTLIB::MEMCPY] = iPTR_func_iPTR_iPTR_iPTR;

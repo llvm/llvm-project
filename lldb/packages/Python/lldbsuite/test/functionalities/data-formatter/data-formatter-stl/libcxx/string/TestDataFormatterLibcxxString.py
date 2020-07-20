@@ -96,10 +96,11 @@ class LibcxxStringDataFormatterTestCase(TestBase):
             cappedSummary.find("someText") <= 0,
             "cappedSummary includes the full string")
 
+        self.expect_expr("s", result_type=ns+"::wstring", result_summary='L"hello world! מזל טוב!"')
+
         self.expect(
             "frame variable",
             substrs=[
-                '(%s::wstring) s = L"hello world! מזל טוב!"'%ns,
                 '(%s::wstring) S = L"!!!!!"'%ns,
                 '(const wchar_t *) mazeltov = 0x',
                 'L"מזל טוב"',

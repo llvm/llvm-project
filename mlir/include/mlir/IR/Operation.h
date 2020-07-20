@@ -149,14 +149,14 @@ public:
 
     auto valueIt = values.begin();
     for (unsigned i = 0, e = getNumResults(); i != e; ++i)
-      getResult(i)->replaceAllUsesWith(*(valueIt++));
+      getResult(i).replaceAllUsesWith(*(valueIt++));
   }
 
   /// Replace all uses of results of this operation with results of 'op'.
   void replaceAllUsesWith(Operation *op) {
     assert(getNumResults() == op->getNumResults());
     for (unsigned i = 0, e = getNumResults(); i != e; ++i)
-      getResult(i)->replaceAllUsesWith(op->getResult(i));
+      getResult(i).replaceAllUsesWith(op->getResult(i));
   }
 
   /// Destroys this operation and its subclass data.
@@ -187,6 +187,8 @@ public:
   bool isBeforeInBlock(Operation *other);
 
   void print(raw_ostream &os, OpPrintingFlags flags = llvm::None);
+  void print(raw_ostream &os, AsmState &state,
+             OpPrintingFlags flags = llvm::None);
   void dump();
 
   //===--------------------------------------------------------------------===//

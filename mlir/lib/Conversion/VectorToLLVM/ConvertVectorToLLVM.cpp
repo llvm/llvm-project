@@ -34,6 +34,8 @@
 using namespace mlir;
 using namespace mlir::vector;
 
+namespace {
+
 template <typename T>
 static LLVM::LLVMType getPtrToElementType(T containerType,
                                           LLVMTypeConverter &lowering) {
@@ -368,7 +370,7 @@ public:
     auto adaptor = vector::ExtractOpOperandAdaptor(operands);
     auto extractOp = cast<vector::ExtractOp>(op);
     auto vectorType = extractOp.getVectorType();
-    auto resultType = extractOp.getResult()->getType();
+    auto resultType = extractOp.getResult().getType();
     auto llvmResultType = lowering.convertType(resultType);
     auto positionArrayAttr = extractOp.position();
 
@@ -647,12 +649,12 @@ public:
     auto loc = op->getLoc();
     auto adaptor = vector::OuterProductOpOperandAdaptor(operands);
     auto *ctx = op->getContext();
-    auto vLHS = adaptor.lhs()->getType().cast<LLVM::LLVMType>();
-    auto vRHS = adaptor.rhs()->getType().cast<LLVM::LLVMType>();
+    auto vLHS = adaptor.lhs().getType().cast<LLVM::LLVMType>();
+    auto vRHS = adaptor.rhs().getType().cast<LLVM::LLVMType>();
     auto rankLHS = vLHS.getUnderlyingType()->getVectorNumElements();
     auto rankRHS = vRHS.getUnderlyingType()->getVectorNumElements();
     auto llvmArrayOfVectType = lowering.convertType(
-        cast<vector::OuterProductOp>(op).getResult()->getType());
+        cast<vector::OuterProductOp>(op).getResult().getType());
     Value desc = rewriter.create<LLVM::UndefOp>(loc, llvmArrayOfVectType);
     Value a = adaptor.lhs(), b = adaptor.rhs();
     Value acc = adaptor.acc().empty() ? nullptr : adaptor.acc().front();
@@ -699,9 +701,9 @@ public:
     auto loc = op->getLoc();
     vector::TypeCastOp castOp = cast<vector::TypeCastOp>(op);
     MemRefType sourceMemRefType =
-        castOp.getOperand()->getType().cast<MemRefType>();
+        castOp.getOperand().getType().cast<MemRefType>();
     MemRefType targetMemRefType =
-        castOp.getResult()->getType().cast<MemRefType>();
+        castOp.getResult().getType().cast<MemRefType>();
 
     // Only static shape casts supported atm.
     if (!sourceMemRefType.hasStaticShape() ||
@@ -709,7 +711,7 @@ public:
       return matchFailure();
 
     auto llvmSourceDescriptorTy =
-        operands[0]->getType().dyn_cast<LLVM::LLVMType>();
+        operands[0].getType().dyn_cast<LLVM::LLVMType>();
     if (!llvmSourceDescriptorTy || !llvmSourceDescriptorTy.isStructTy())
       return matchFailure();
     MemRefDescriptor sourceMemRef(operands[0]);
@@ -947,6 +949,8 @@ public:
     return matchSuccess();
   }
 };
+
+} // namespace
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::populateVectorToLLVMConversionPatterns(

@@ -271,6 +271,10 @@ private:
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
 
   bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm);
+
+  bool SelectSVESignedArithImm(SDValue N, SDValue &Imm);
+
+  bool SelectSVEArithImm(SDValue N, SDValue &Imm);
 };
 } // end anonymous namespace
 
@@ -2906,6 +2910,31 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SD
     }
   }
 
+  return false;
+}
+
+bool AArch64DAGToDAGISel::SelectSVESignedArithImm(SDValue N, SDValue &Imm) {
+  if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
+    int64_t ImmVal = CNode->getSExtValue();
+    SDLoc DL(N);
+    if (ImmVal >= -127 && ImmVal < 127) {
+      Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool AArch64DAGToDAGISel::SelectSVEArithImm(SDValue N, SDValue &Imm) {
+  if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
+    uint64_t ImmVal = CNode->getSExtValue();
+    SDLoc DL(N);
+    ImmVal = ImmVal & 0xFF;
+    if (ImmVal < 256) {
+      Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
+      return true;
+    }
+  }
   return false;
 }
 

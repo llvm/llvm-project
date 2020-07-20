@@ -67,6 +67,18 @@ static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
 }
 
 void writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
+  // Create canonical PLT entries for non-PIE code. Compilers don't generate
+  // non-GOT-non-PLT relocations referencing external functions for -fpie/-fPIE.
+  uint32_t glink = in.plt->getVA(); // VA of .glink
+  if (!config->isPic) {
+    for (const Symbol *sym : in.plt->entries)
+      if (sym->needsPltAddr) {
+        writePPC32PltCallStub(buf, sym->getGotPltVA(), nullptr, 0);
+        buf += 16;
+        glink += 16;
+      }
+  }
+
   // On PPC Secure PLT ABI, bl foo@plt jumps to a call stub, which loads an
   // absolute address from a specific .plt slot (usually called .got.plt on
   // other targets) and jumps there.
@@ -85,15 +97,14 @@ void writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   // computes the PLT index (by computing the distance from the landing b to
   // itself) and calls _dl_runtime_resolve() (in glibc).
   uint32_t got = in.got->getVA();
-  uint32_t glink = in.plt->getVA(); // VA of .glink
   const uint8_t *end = buf + 64;
   if (config->isPic) {
-    uint32_t afterBcl = in.plt->getSize() - target->pltHeaderSize + 12;
+    uint32_t afterBcl = 4 * in.plt->getNumEntries() + 12;
     uint32_t gotBcl = got + 4 - (glink + afterBcl);
     write32(buf + 0, 0x3d6b0000 | ha(afterBcl));  // addis r11,r11,1f-glink@ha
     write32(buf + 4, 0x7c0802a6);                 // mflr r0
     write32(buf + 8, 0x429f0005);                 // bcl 20,30,.+4
-    write32(buf + 12, 0x396b0000 | lo(afterBcl)); // 1: addi r11,r11,1b-.glink@l
+    write32(buf + 12, 0x396b0000 | lo(afterBcl)); // 1: addi r11,r11,1b-glink@l
     write32(buf + 16, 0x7d8802a6);                // mflr r12
     write32(buf + 20, 0x7c0803a6);                // mtlr r0
     write32(buf + 24, 0x7d6c5850);                // sub r11,r11,r12
@@ -113,16 +124,16 @@ void writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
     buf += 56;
   } else {
     write32(buf + 0, 0x3d800000 | ha(got + 4));   // lis     r12,GOT+4@ha
-    write32(buf + 4, 0x3d6b0000 | ha(-glink));    // addis   r11,r11,-Glink@ha
+    write32(buf + 4, 0x3d6b0000 | ha(-glink));    // addis   r11,r11,-glink@ha
     if (ha(got + 4) == ha(got + 8))
       write32(buf + 8, 0x800c0000 | lo(got + 4)); // lwz r0,GOT+4@l(r12)
     else
       write32(buf + 8, 0x840c0000 | lo(got + 4)); // lwzu r0,GOT+4@l(r12)
-    write32(buf + 12, 0x396b0000 | lo(-glink));   // addi    r11,r11,-Glink@l
+    write32(buf + 12, 0x396b0000 | lo(-glink));   // addi    r11,r11,-glink@l
     write32(buf + 16, 0x7c0903a6);                // mtctr   r0
     write32(buf + 20, 0x7c0b5a14);                // add     r0,r11,r11
     if (ha(got + 4) == ha(got + 8))
-      write32(buf + 24, 0x818c0000 | lo(got + 8)); // lwz r12,GOT+8@ha(r12)
+      write32(buf + 24, 0x818c0000 | lo(got + 8)); // lwz r12,GOT+8@l(r12)
     else
       write32(buf + 24, 0x818c0000 | 4);          // lwz r12,4(r12)
     write32(buf + 28, 0x7d605a14);                // add     r11,r0,r11
@@ -136,6 +147,7 @@ void writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
 }
 
 PPC::PPC() {
+  copyRel = R_PPC_COPY;
   gotRel = R_PPC_GLOB_DAT;
   noneRel = R_PPC_NONE;
   pltRel = R_PPC_JMP_SLOT;
@@ -145,7 +157,7 @@ PPC::PPC() {
   gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 3;
   gotPltHeaderEntriesNum = 0;
-  pltHeaderSize = 64; // size of PLTresolve in .glink
+  pltHeaderSize = 0;
   pltEntrySize = 4;
   ipltEntrySize = 16;
 
@@ -177,25 +189,25 @@ void PPC::writeGotHeader(uint8_t *buf) const {
 
 void PPC::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // Address of the symbol resolver stub in .glink .
-  write32(buf, in.plt->getVA() + 4 * s.pltIndex);
+  write32(buf, in.plt->getVA() + in.plt->headerSize + 4 * s.pltIndex);
 }
 
 bool PPC::needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                     uint64_t branchAddr, const Symbol &s, int64_t /*a*/) const {
-  if (type != R_PPC_REL24 && type != R_PPC_PLTREL24)
+                     uint64_t branchAddr, const Symbol &s, int64_t a) const {
+  if (type != R_PPC_LOCAL24PC && type != R_PPC_REL24 && type != R_PPC_PLTREL24)
     return false;
   if (s.isInPlt())
     return true;
   if (s.isUndefWeak())
     return false;
-  return !(expr == R_PC && PPC::inBranchRange(type, branchAddr, s.getVA()));
+  return !PPC::inBranchRange(type, branchAddr, s.getVA(a));
 }
 
 uint32_t PPC::getThunkSectionSpacing() const { return 0x2000000; }
 
 bool PPC::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   uint64_t offset = dst - src;
-  if (type == R_PPC_REL24 || type == R_PPC_PLTREL24)
+  if (type == R_PPC_LOCAL24PC || type == R_PPC_REL24 || type == R_PPC_PLTREL24)
     return isInt<26>(offset);
   llvm_unreachable("unsupported relocation type used in branch");
 }
@@ -218,13 +230,13 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
     return R_DTPREL;
   case R_PPC_REL14:
   case R_PPC_REL32:
-  case R_PPC_LOCAL24PC:
   case R_PPC_REL16_LO:
   case R_PPC_REL16_HI:
   case R_PPC_REL16_HA:
     return R_PC;
   case R_PPC_GOT16:
     return R_GOT_OFF;
+  case R_PPC_LOCAL24PC:
   case R_PPC_REL24:
     return R_PLT_PC;
   case R_PPC_PLTREL24:

@@ -96,9 +96,9 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1, $sgpr2
     ; CHECK-LABEL: name: insert_s_s64_s_s32_0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_64_xexec = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s32) = COPY $sgpr2
@@ -116,9 +116,9 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1, $sgpr2
     ; CHECK-LABEL: name: insert_s_s64_s_s32_32
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_64_xexec = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s32) = COPY $sgpr2
@@ -136,7 +136,7 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1, $vgpr0
     ; CHECK-LABEL: name: insert_s_s64_v_s32_32
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
@@ -217,7 +217,7 @@ body: |
     liveins:  $sgpr0_sgpr1_sgpr2, $sgpr4_sgpr5
     ; CHECK-LABEL: name: insert_s_s96_s_s64_0
     ; CHECK: [[COPY:%[0-9]+]]:sgpr_96_with_sub0_sub1 = COPY $sgpr0_sgpr1_sgpr2
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s96) = COPY $sgpr0_sgpr1_sgpr2
@@ -237,7 +237,7 @@ body: |
     liveins:  $sgpr0_sgpr1_sgpr2, $sgpr4_sgpr5
     ; CHECK-LABEL: name: insert_s_s96_s_s64_32
     ; CHECK: [[COPY:%[0-9]+]]:sgpr_96_with_sub1_sub2 = COPY $sgpr0_sgpr1_sgpr2
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s96) = COPY $sgpr0_sgpr1_sgpr2
@@ -257,7 +257,7 @@ body: |
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5
     ; CHECK-LABEL: name: insert_s_s128_s_s64_0
     ; CHECK: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -292,7 +292,7 @@ body: |
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5
     ; CHECK-LABEL: name: insert_s_s128_s_s64_64
     ; CHECK: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub2_sub3
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -332,7 +332,7 @@ body: |
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9
     ; CHECK-LABEL: name: insert_s_s256_s_s64_128
     ; CHECK: [[COPY:%[0-9]+]]:sreg_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub4_sub5
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s256) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7

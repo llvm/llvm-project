@@ -17,6 +17,9 @@
 # TODO ld
 # TODO sd
 
+# Needed for testing valid %pcrel_lo expressions
+.Lpcrel_hi0: auipc a0, %pcrel_hi(foo)
+
 # CHECK-INST: addi a0, zero, 0
 # CHECK-ALIAS: mv a0, zero
 li x10, 0
@@ -107,16 +110,13 @@ li t5, 0xFFFFFFFFFFFFFFFF
 
 # CHECK-EXPAND: addi a0, zero, 1110
 li a0, %lo(0x123456)
-# CHECK-OBJ-NOALIAS: addi a0, zero, 0
-# CHECK-OBJ: R_RISCV_PCREL_LO12
-li a0, %pcrel_lo(0x123456)
 
 # CHECK-OBJ-NOALIAS: addi a0, zero, 0
 # CHECK-OBJ: R_RISCV_LO12
 li a0, %lo(foo)
 # CHECK-OBJ-NOALIAS: addi a0, zero, 0
 # CHECK-OBJ: R_RISCV_PCREL_LO12
-li a0, %pcrel_lo(foo)
+li a0, %pcrel_lo(.Lpcrel_hi0)
 
 .equ CONST, 0x123456
 # CHECK-EXPAND: lui a0, 291

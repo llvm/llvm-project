@@ -18,6 +18,5 @@ static_library("Disassembler") {
   include_dirs = [ ".." ]
   sources = [
     "X86Disassembler.cpp",
-    "X86DisassemblerDecoder.cpp",
   ]
 }

@@ -12,4 +12,6 @@ namespace llvm {
 
 AddressesMap::~AddressesMap() {}
 
+DwarfEmitter::~DwarfEmitter() {}
+
 } // namespace llvm

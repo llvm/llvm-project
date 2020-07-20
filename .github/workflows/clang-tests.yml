@@ -1,0 +1,42 @@
+name: Clang Tests
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'clang/**'
+      - 'llvm/**'
+      - '.github/workflows/clang-tests.yml'
+  pull_request:
+    paths:
+      - 'clang/**'
+      - 'llvm/**'
+
+jobs:
+  build_clang:
+    name: clang check-all
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+    steps:
+    - name: Setup Windows
+      if: startsWith(matrix.os, 'windows')
+      uses: llvm/actions/setup-windows@master
+      with:
+        arch: amd64
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@master
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: Test clang
+      uses: llvm/actions/build-test-llvm-project@master
+      with:
+        cmake_args: -G Ninja  -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release
+        build_target: check-clang

@@ -605,6 +605,10 @@ segment.
 .It Cm force-bti
 Force enable AArch64 BTI instruction in PLT, warn if Input ELF file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.
 .Pp
+.It Cm force-ibt
+Force enable Intel Indirect Branch Tracking in PLT, warn if an input ELF file
+does not have GNU_PROPERTY_X86_FEATURE_1_IBT property.
+.Pp
 .It Cm global
 Sets the
 .Dv DF_1_GLOBAL flag in the
@@ -718,6 +722,9 @@ Specify whether two adjacent PT_LOAD segments are allowed to overlap in pages.
 allows overlap between two executable segments, or two non-executable segments.
 .Cm separate-loadable-segments
 disallows overlap.
+.Pp
+.It Cm shstk
+x86 only, use shadow stack.
 .Pp
 .It Cm stack-size Ns = Ns Ar size
 Set the main thread's stack size to

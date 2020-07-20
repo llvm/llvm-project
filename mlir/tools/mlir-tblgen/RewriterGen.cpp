@@ -247,7 +247,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, int depth) {
 
       os.indent(indent + 2) << formatv(
           "auto *op{0} = "
-          "(*castedOp{1}.getODSOperands({2}).begin())->getDefiningOp();\n",
+          "(*castedOp{1}.getODSOperands({2}).begin()).getDefiningOp();\n",
           depth + 1, depth, i);
       emitOpMatch(argTree, depth + 1);
       os.indent(indent + 2)
@@ -295,8 +295,8 @@ void PatternEmitter::emitOperandMatch(DagNode tree, int argIndex, int depth,
         PrintFatalError(loc, error);
       }
       auto self =
-          formatv("(*castedOp{0}.getODSOperands({1}).begin())->getType()",
-                  depth, argIndex);
+          formatv("(*castedOp{0}.getODSOperands({1}).begin()).getType()", depth,
+                  argIndex);
       os.indent(indent) << "if (!("
                         << tgfmt(matcher.getConditionTemplate(),
                                  &fmtCtx.withSelf(self))
@@ -386,7 +386,7 @@ void PatternEmitter::emitMatchLogic(DagNode tree) {
     auto cmd = "if (!({0})) return matchFailure();\n";
 
     if (isa<TypeConstraint>(constraint)) {
-      auto self = formatv("({0}->getType())",
+      auto self = formatv("({0}.getType())",
                           symbolInfoMap.getValueAndRangeUse(entities.front()));
       os.indent(4) << formatv(cmd,
                               tgfmt(condition, &fmtCtx.withSelf(self.str())));
@@ -819,7 +819,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   if (numResults != 0) {
     for (int i = 0; i < numResults; ++i)
       os.indent(6) << formatv("for (auto v : castedOp0.getODSResults({0})) {{"
-                              "tblgen_types.push_back(v->getType()); }\n",
+                              "tblgen_types.push_back(v.getType()); }\n",
                               resultIndex + i);
   }
   os.indent(6) << formatv("{0} = rewriter.create<{1}>(loc, tblgen_types, "

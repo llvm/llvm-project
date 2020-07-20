@@ -30,26 +30,75 @@ private:
 };
 } // end anonymous namespace
 
-// Generates instruction to load an immediate value into a register.
-static MCInst loadImmediate(unsigned Reg, unsigned RegBitWidth,
-                            const APInt &Value) {
-  if (Value.getActiveBits() > 16)
-    llvm_unreachable("Not implemented for Values wider than 16 bits");
-  if (Value.getBitWidth() > RegBitWidth)
-    llvm_unreachable("Value must fit in the Register");
-  return MCInstBuilder(Mips::ORi)
-      .addReg(Reg)
-      .addReg(Mips::ZERO)
-      .addImm(Value.getZExtValue());
+// Generates instructions to load an immediate value into a register.
+static std::vector<MCInst> loadImmediate(unsigned Reg, bool IsGPR32,
+                                         const APInt &Value) {
+  unsigned ZeroReg;
+  unsigned ORi, LUi, SLL;
+  if (IsGPR32) {
+    ZeroReg = Mips::ZERO;
+    ORi = Mips::ORi;
+    SLL = Mips::SLL;
+    LUi = Mips::LUi;
+  } else {
+    ZeroReg = Mips::ZERO_64;
+    ORi = Mips::ORi64;
+    SLL = Mips::SLL64_64;
+    LUi = Mips::LUi64;
+  }
+
+  if (Value.isIntN(16)) {
+    return {MCInstBuilder(ORi)
+        .addReg(Reg)
+        .addReg(ZeroReg)
+        .addImm(Value.getZExtValue())};
+  }
+
+  std::vector<MCInst> Instructions;
+  if (Value.isIntN(32)) {
+    const uint16_t HiBits = Value.getHiBits(16).getZExtValue();
+    if (!IsGPR32 && Value.getActiveBits() == 32) {
+      // Expand to an ORi instead of a LUi to avoid sign-extending into the
+      // upper 32 bits.
+      Instructions.push_back(
+          MCInstBuilder(ORi)
+              .addReg(Reg)
+              .addReg(ZeroReg)
+              .addImm(HiBits));
+      Instructions.push_back(
+          MCInstBuilder(SLL)
+              .addReg(Reg)
+              .addReg(Reg)
+              .addImm(16));
+    } else {
+      Instructions.push_back(
+          MCInstBuilder(LUi)
+              .addReg(Reg)
+              .addImm(HiBits));
+    }
+
+    const uint16_t LoBits = Value.getLoBits(16).getZExtValue();
+    if (LoBits) {
+      Instructions.push_back(
+          MCInstBuilder(ORi)
+          .addReg(Reg)
+          .addReg(ZeroReg)
+          .addImm(LoBits));
+    }
+
+    return Instructions;
+  }
+
+  llvm_unreachable("Not implemented for values wider than 32 bits");
 }
 
 std::vector<MCInst> ExegesisMipsTarget::setRegTo(const MCSubtargetInfo &STI,
                                                  unsigned Reg,
                                                  const APInt &Value) const {
   if (Mips::GPR32RegClass.contains(Reg))
-    return {loadImmediate(Reg, 32, Value)};
+    return loadImmediate(Reg, true, Value);
   if (Mips::GPR64RegClass.contains(Reg))
-    return {loadImmediate(Reg, 64, Value)};
+    return loadImmediate(Reg, false, Value);
   errs() << "setRegTo is not implemented, results will be unreliable\n";
   return {};
 }

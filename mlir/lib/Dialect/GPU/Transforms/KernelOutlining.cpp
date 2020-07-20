@@ -45,7 +45,7 @@ static void injectGpuIndexOperations(Location loc, Region &body) {
   // Replace the leading 12 function args with the respective thread/block index
   // operations. Iterate backwards since args are erased and indices change.
   for (int i = 11; i >= 0; --i) {
-    firstBlock.getArgument(i)->replaceAllUsesWith(indexOps[i]);
+    firstBlock.getArgument(i).replaceAllUsesWith(indexOps[i]);
     firstBlock.eraseArgument(i);
   }
 }
@@ -66,7 +66,7 @@ static gpu::LaunchFuncOp inlineBeneficiaryOps(gpu::GPUFuncOp kernelFunc,
     map.map(launch.getKernelOperand(i), kernelFunc.getArgument(i));
   }
   for (int i = launch.getNumKernelOperands() - 1; i >= 0; --i) {
-    auto operandOp = launch.getKernelOperand(i)->getDefiningOp();
+    auto operandOp = launch.getKernelOperand(i).getDefiningOp();
     if (!operandOp || !isInliningBeneficiary(operandOp)) {
       newLaunchArgs.push_back(launch.getKernelOperand(i));
       continue;
@@ -77,7 +77,7 @@ static gpu::LaunchFuncOp inlineBeneficiaryOps(gpu::GPUFuncOp kernelFunc,
       continue;
     }
     auto clone = kernelBuilder.clone(*operandOp, map);
-    firstBlock.getArgument(i)->replaceAllUsesWith(clone->getResult(0));
+    firstBlock.getArgument(i).replaceAllUsesWith(clone->getResult(0));
     firstBlock.eraseArgument(i);
   }
   if (newLaunchArgs.size() == launch.getNumKernelOperands())
@@ -88,7 +88,7 @@ static gpu::LaunchFuncOp inlineBeneficiaryOps(gpu::GPUFuncOp kernelFunc,
   SmallVector<Type, 8> newArgumentTypes;
   newArgumentTypes.reserve(firstBlock.getNumArguments());
   for (auto value : firstBlock.getArguments()) {
-    newArgumentTypes.push_back(value->getType());
+    newArgumentTypes.push_back(value.getType());
   }
   kernelFunc.setType(LaunchBuilder.getFunctionType(newArgumentTypes, {}));
   auto newLaunch = LaunchBuilder.create<gpu::LaunchFuncOp>(

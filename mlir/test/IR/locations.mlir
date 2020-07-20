@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -mlir-print-debuginfo | FileCheck %s
 // This test verifies that debug locations are round-trippable.
 
-#set0 = (d0) : (1 == 0)
+#set0 = affine_set<(d0) : (1 == 0)>
 
 // CHECK-LABEL: func @inline_notation
 func @inline_notation() -> i32 {

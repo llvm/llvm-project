@@ -296,7 +296,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return memref()->getType().cast<MemRefType>();
+      return memref().getType().cast<MemRefType>();
     }
 
     /// Returns the affine map used to index the memref for this operation.

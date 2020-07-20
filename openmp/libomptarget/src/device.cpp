@@ -44,16 +44,12 @@ int DeviceTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size) {
     }
   }
 
-  // Mapping does not exist, allocate it
-  HostDataToTargetTy newEntry;
-
-  // Set up missing fields
-  newEntry.HstPtrBase = (uintptr_t) HstPtrBegin;
-  newEntry.HstPtrBegin = (uintptr_t) HstPtrBegin;
-  newEntry.HstPtrEnd = (uintptr_t) HstPtrBegin + Size;
-  newEntry.TgtPtrBegin = (uintptr_t) TgtPtrBegin;
-  // refCount must be infinite
-  newEntry.RefCount = INF_REF_CNT;
+  // Mapping does not exist, allocate it with refCount=INF
+  HostDataToTargetTy newEntry((uintptr_t) HstPtrBegin /*HstPtrBase*/,
+                              (uintptr_t) HstPtrBegin /*HstPtrBegin*/,
+                              (uintptr_t) HstPtrBegin + Size /*HstPtrEnd*/,
+                              (uintptr_t) TgtPtrBegin /*TgtPtrBegin*/,
+                              true /*IsRefCountINF*/);
 
   DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD ", HstEnd="
       DPxMOD ", TgtBegin=" DPxMOD "\n", DPxPTR(newEntry.HstPtrBase),
@@ -74,7 +70,7 @@ int DeviceTy::disassociatePtr(void *HstPtrBegin) {
       ii != HostDataToTargetMap.end(); ++ii) {
     if ((uintptr_t)HstPtrBegin == ii->HstPtrBegin) {
       // Mapping exists
-      if (CONSIDERED_INF(ii->RefCount)) {
+      if (ii->isRefCountInf()) {
         DP("Association found, removing it\n");
         HostDataToTargetMap.erase(ii);
         DataMapMtx.unlock();
@@ -94,21 +90,21 @@ int DeviceTy::disassociatePtr(void *HstPtrBegin) {
 }
 
 // Get ref count of map entry containing HstPtrBegin
-long DeviceTy::getMapEntryRefCnt(void *HstPtrBegin) {
+uint64_t DeviceTy::getMapEntryRefCnt(void *HstPtrBegin) {
   uintptr_t hp = (uintptr_t)HstPtrBegin;
-  long RefCnt = -1;
+  uint64_t RefCnt = 0;
 
   DataMapMtx.lock();
   for (auto &HT : HostDataToTargetMap) {
     if (hp >= HT.HstPtrBegin && hp < HT.HstPtrEnd) {
       DP("DeviceTy::getMapEntry: requested entry found\n");
-      RefCnt = HT.RefCount;
+      RefCnt = HT.getRefCount();
       break;
     }
   }
   DataMapMtx.unlock();
 
-  if (RefCnt < 0) {
+  if (RefCnt == 0) {
     DP("DeviceTy::getMapEntry: requested entry not found\n");
   }
 
@@ -174,15 +170,14 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
     IsNew = false;
 
     if (UpdateRefCount)
-      ++HT.RefCount;
+      HT.incRefCount();
 
     uintptr_t tp = HT.TgtPtrBegin + ((uintptr_t)HstPtrBegin - HT.HstPtrBegin);
     DP("Mapping exists%s with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", "
         "Size=%ld,%s RefCount=%s\n", (IsImplicit ? " (implicit)" : ""),
         DPxPTR(HstPtrBegin), DPxPTR(tp), Size,
         (UpdateRefCount ? " updated" : ""),
-        (CONSIDERED_INF(HT.RefCount)) ? "INF" :
-            std::to_string(HT.RefCount).c_str());
+        HT.isRefCountInf() ? "INF" : std::to_string(HT.getRefCount()).c_str());
     rc = (void *)tp;
   } else if ((lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) && !IsImplicit) {
     // Explicit extension of mapped data - not allowed.
@@ -229,17 +224,16 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
 
   if (lr.Flags.IsContained || lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) {
     auto &HT = *lr.Entry;
-    IsLast = !(HT.RefCount > 1);
+    IsLast = HT.getRefCount() == 1;
 
-    if (HT.RefCount > 1 && UpdateRefCount)
-      --HT.RefCount;
+    if (!IsLast && UpdateRefCount)
+      HT.decRefCount();
 
     uintptr_t tp = HT.TgtPtrBegin + ((uintptr_t)HstPtrBegin - HT.HstPtrBegin);
     DP("Mapping exists with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", "
         "Size=%ld,%s RefCount=%s\n", DPxPTR(HstPtrBegin), DPxPTR(tp), Size,
         (UpdateRefCount ? " updated" : ""),
-        (CONSIDERED_INF(HT.RefCount)) ? "INF" :
-            std::to_string(HT.RefCount).c_str());
+        HT.isRefCountInf() ? "INF" : std::to_string(HT.getRefCount()).c_str());
     rc = (void *)tp;
   } else if (RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
@@ -280,9 +274,8 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
   if (lr.Flags.IsContained || lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) {
     auto &HT = *lr.Entry;
     if (ForceDelete)
-      HT.RefCount = 1;
-    if (--HT.RefCount <= 0) {
-      assert(HT.RefCount == 0 && "did not expect a negative ref count");
+      HT.resetRefCount();
+    if (HT.decRefCount() == 0) {
       DP("Deleting tgt data " DPxMOD " of size %ld\n",
           DPxPTR(HT.TgtPtrBegin), Size);
       RTL->data_delete(RTLDeviceID, (void *)HT.TgtPtrBegin);

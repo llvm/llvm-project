@@ -26,8 +26,6 @@ public:
   void runOnFunction() override;
 };
 
-} // end anonymous namespace
-
 /// Base class rewrites ConstFakeQuant into a qbarrier/dbarrier pair.
 template <typename ConcreteRewriteClass, typename FakeQuantOp>
 class FakeQuantRewrite : public OpRewritePattern<FakeQuantOp> {
@@ -125,6 +123,8 @@ public:
                                 fqOp.is_signed());
   }
 };
+
+} // namespace
 
 void ConvertSimulatedQuantPass::runOnFunction() {
   bool hadFailure = false;

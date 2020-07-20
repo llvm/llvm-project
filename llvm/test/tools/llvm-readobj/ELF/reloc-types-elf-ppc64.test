@@ -22,6 +22,7 @@
 # CHECK: Type: R_PPC64_GOT16_LO (15)
 # CHECK: Type: R_PPC64_GOT16_HI (16)
 # CHECK: Type: R_PPC64_GOT16_HA (17)
+# CHECK: Type: R_PPC64_COPY (19)
 # CHECK: Type: R_PPC64_GLOB_DAT (20)
 # CHECK: Type: R_PPC64_JMP_SLOT (21)
 # CHECK: Type: R_PPC64_RELATIVE (22)
@@ -143,6 +144,8 @@ Sections:
         Type:   R_PPC64_GOT16_HI
       - Offset: 0x0000000000000000
         Type:   R_PPC64_GOT16_HA
+      - Offset: 0x0000000000000000
+        Type:   R_PPC64_COPY
       - Offset: 0x0000000000000000
         Type:   R_PPC64_GLOB_DAT
       - Offset: 0x0000000000000000

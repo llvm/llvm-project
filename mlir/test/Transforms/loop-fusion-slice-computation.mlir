@@ -28,12 +28,12 @@ func @slice_depth1_loop_nest_with_offsets() {
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 2) loop bounds: [(d0) -> (d0 + 3), (d0) -> (d0 + 4)] )}}
-    %a0 = affine.apply (d0) -> (d0 + 2)(%i0)
+    %a0 = affine.apply affine_map<(d0) -> (d0 + 2)>(%i0)
     affine.store %cst, %0[%a0] : memref<100xf32>
   }
   affine.for %i1 = 4 to 8 {
     // expected-remark@-1 {{slice ( src loop: 0, dst loop: 1, depth: 1 : insert point: (1, 0) loop bounds: [(d0) -> (d0 - 3), (d0) -> (d0 - 2)] )}}
-    %a1 = affine.apply (d0) -> (d0 - 1)(%i1)
+    %a1 = affine.apply affine_map<(d0) -> (d0 - 1)>(%i1)
     %1 = affine.load %0[%a1] : memref<100xf32>
   }
   return

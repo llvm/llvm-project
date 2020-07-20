@@ -421,6 +421,16 @@ protected:
   /// than emitting one inside the compiler.
   bool UseRetpolineExternalThunk = false;
 
+  /// Prevent generation of indirect call/branch instructions from memory,
+  /// and force all indirect call/branch instructions from a register to be
+  /// preceded by an LFENCE. Also decompose RET instructions into a
+  /// POP+LFENCE+JMP sequence.
+  bool UseLVIControlFlowIntegrity = false;
+
+  /// Insert LFENCE instructions to prevent data speculatively injected into
+  /// loads from being used maliciously.
+  bool UseLVILoadHardening = false;
+
   /// Use software floating point for code generation.
   bool UseSoftFloat = false;
 
@@ -707,8 +717,21 @@ public:
     return UseRetpolineIndirectBranches;
   }
   bool useRetpolineExternalThunk() const { return UseRetpolineExternalThunk; }
+
+  // These are generic getters that OR together all of the thunk types
+  // supported by the subtarget. Therefore useIndirectThunk*() will return true
+  // if any respective thunk feature is enabled.
+  bool useIndirectThunkCalls() const {
+    return useRetpolineIndirectCalls() || useLVIControlFlowIntegrity();
+  }
+  bool useIndirectThunkBranches() const {
+    return useRetpolineIndirectBranches() || useLVIControlFlowIntegrity();
+  }
+
   bool preferMaskRegisters() const { return PreferMaskRegisters; }
   bool useGLMDivSqrtCosts() const { return UseGLMDivSqrtCosts; }
+  bool useLVIControlFlowIntegrity() const { return UseLVIControlFlowIntegrity; }
+  bool useLVILoadHardening() const { return UseLVILoadHardening; }
 
   unsigned getPreferVectorWidth() const { return PreferVectorWidth; }
   unsigned getRequiredVectorWidth() const { return RequiredVectorWidth; }
@@ -853,10 +876,10 @@ public:
   /// Return true if the subtarget allows calls to immediate address.
   bool isLegalToCallImmediateAddr() const;
 
-  /// If we are using retpolines, we need to expand indirectbr to avoid it
+  /// If we are using indirect thunks, we need to expand indirectbr to avoid it
   /// lowering to an actual indirect jump.
   bool enableIndirectBrExpand() const override {
-    return useRetpolineIndirectBranches();
+    return useIndirectThunkBranches();
   }
 
   /// Enable the MachineScheduler pass for all X86 subtargets.

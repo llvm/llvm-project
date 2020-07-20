@@ -25,7 +25,7 @@ Type mlir::getElementTypeOrSelf(Type type) {
 }
 
 Type mlir::getElementTypeOrSelf(Value val) {
-  return getElementTypeOrSelf(val->getType());
+  return getElementTypeOrSelf(val.getType());
 }
 
 Type mlir::getElementTypeOrSelf(Attribute attr) {
@@ -92,7 +92,7 @@ OperandElementTypeIterator::OperandElementTypeIterator(
           it, &unwrap) {}
 
 Type OperandElementTypeIterator::unwrap(Value value) {
-  return value->getType().cast<ShapedType>().getElementType();
+  return value.getType().cast<ShapedType>().getElementType();
 }
 
 ResultElementTypeIterator::ResultElementTypeIterator(
@@ -101,5 +101,5 @@ ResultElementTypeIterator::ResultElementTypeIterator(
           it, &unwrap) {}
 
 Type ResultElementTypeIterator::unwrap(Value value) {
-  return value->getType().cast<ShapedType>().getElementType();
+  return value.getType().cast<ShapedType>().getElementType();
 }

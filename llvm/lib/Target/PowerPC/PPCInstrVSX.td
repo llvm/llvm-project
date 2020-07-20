@@ -3343,6 +3343,23 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(v2i64 (scalar_to_vector ScalarLoads.SELi16i64)),
             (v2i64 (XXPERMDIs (VEXTSH2Ds (LXSIHZX xoaddr:$src)), 0))>;
 
+  // Load/convert and convert/store patterns for f16.
+  def : Pat<(f64 (extloadf16 xoaddr:$src)),
+            (f64 (XSCVHPDP (LXSIHZX xoaddr:$src)))>;
+  def : Pat<(truncstoref16 f64:$src, xoaddr:$dst),
+            (STXSIHX (XSCVDPHP $src), xoaddr:$dst)>;
+  def : Pat<(f32 (extloadf16 xoaddr:$src)),
+            (f32 (COPY_TO_REGCLASS (XSCVHPDP (LXSIHZX xoaddr:$src)), VSSRC))>;
+  def : Pat<(truncstoref16 f32:$src, xoaddr:$dst),
+            (STXSIHX (XSCVDPHP (COPY_TO_REGCLASS $src, VSFRC)), xoaddr:$dst)>;
+  def : Pat<(f64 (f16_to_fp i32:$A)),
+            (f64 (XSCVHPDP (MTVSRWZ $A)))>;
+  def : Pat<(f32 (f16_to_fp i32:$A)),
+            (f32 (COPY_TO_REGCLASS (XSCVHPDP (MTVSRWZ $A)), VSSRC))>;
+  def : Pat<(i32 (fp_to_f16 f32:$A)),
+            (i32 (MFVSRWZ (XSCVDPHP (COPY_TO_REGCLASS $A, VSFRC))))>;
+  def : Pat<(i32 (fp_to_f16 f64:$A)), (i32 (MFVSRWZ (XSCVDPHP $A)))>;
+
   let Predicates = [IsBigEndian, HasP9Vector] in {
   // Scalar stores of i8
   def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 0)), xoaddr:$dst),

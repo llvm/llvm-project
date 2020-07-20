@@ -35,7 +35,7 @@ class TestAllowJIT(TestBase):
                                    "Set a breakpoint here", self.main_source_file)
 
         frame = thread.GetFrameAtIndex(0)
-        
+
         # First make sure we can call the function with 
         interp = self.dbg.GetCommandInterpreter()
         self.expect("expr --allow-jit 1 -- call_me(10)",
@@ -43,8 +43,8 @@ class TestAllowJIT(TestBase):
         # Now make sure it fails with the "can't IR interpret message" if allow-jit is false:
         self.expect("expr --allow-jit 0 -- call_me(10)",
                     error=True,
-                    substrs = ["Can't run the expression locally"])
-        
+                    substrs = ["Can't evaluate the expression without a running target"])
+
     def expr_options_test(self):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                    "Set a breakpoint here", self.main_source_file)
@@ -69,7 +69,7 @@ class TestAllowJIT(TestBase):
         # Again use it and ensure we fail:
         result = frame.EvaluateExpression("call_me(10)", options)
         self.assertTrue(result.GetError().Fail(), "expression failed with no JIT")
-        self.assertTrue("Can't run the expression locally" in result.GetError().GetCString(), "Got right error")
+        self.assertTrue("Can't evaluate the expression without a running target" in result.GetError().GetCString(), "Got right error")
 
         # Finally set the allow JIT value back to true and make sure that works:
         options.SetAllowJIT(True)

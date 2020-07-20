@@ -87,7 +87,7 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
             ast_type.GetMinimumLanguage());
 
     if (!persistent_expression_state)
-      return ValueObjectSP();
+      return {};
 
     auto prefix = persistent_expression_state->GetPersistentVariablePrefix();
     ConstString persistent_variable_name =

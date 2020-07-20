@@ -138,6 +138,7 @@ struct Chunk {
     Group,
     RawContent,
     Relocation,
+    Relr,
     NoBits,
     Note,
     Hash,
@@ -437,6 +438,17 @@ struct RelocationSection : Section {
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::Relocation;
+  }
+};
+
+struct RelrSection : Section {
+  Optional<std::vector<llvm::yaml::Hex64>> Entries;
+  Optional<yaml::BinaryRef> Content;
+
+  RelrSection() : Section(ChunkKind::Relr) {}
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::Relr;
   }
 };
 

@@ -3,5 +3,6 @@
 // RUN: %clang -no-canonical-prefixes -S -o %t.s %s
 // RUN: FileCheck %s < %t.log
 
-// CHECK: [Logging clang options]{{.*}}clang{{.*}}"-S"
+// CHECK: [Logging clang options]
+// CHECK: {{.*}}clang{{.*}}"-S"
 

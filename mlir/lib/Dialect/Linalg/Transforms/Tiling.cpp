@@ -45,8 +45,8 @@ static llvm::cl::list<unsigned>
                 llvm::cl::cat(clOptionsCategory));
 
 static bool isZero(Value v) {
-  return isa_and_nonnull<ConstantIndexOp>(v->getDefiningOp()) &&
-         cast<ConstantIndexOp>(v->getDefiningOp()).getValue() == 0;
+  return isa_and_nonnull<ConstantIndexOp>(v.getDefiningOp()) &&
+         cast<ConstantIndexOp>(v.getDefiningOp()).getValue() == 0;
 }
 
 using LoopIndexToRangeIndexMap = DenseMap<int, int>;
@@ -170,9 +170,10 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
 //
 // TODO(pifon, ntv): Investigate whether mixing implicit and explicit indices
 // does not lead to losing information.
-void transformIndexedGenericOpIndices(
+static void transformIndexedGenericOpIndices(
     OpBuilder &b, LinalgOp op, ArrayRef<ValueHandle *> pivs,
     const LoopIndexToRangeIndexMap &loopIndexToRangeIndex) {
+  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
   auto indexedGenericOp = dyn_cast<IndexedGenericOp>(op.getOperation());
   if (!indexedGenericOp)
     return;
@@ -201,8 +202,8 @@ void transformIndexedGenericOpIndices(
     // variable and replace all uses of the previous value.
     Value newIndex = b.create<AddIOp>(indexedGenericOp.getLoc(), oldIndex,
                                       pivs[rangeIndex->second]->getValue());
-    for (auto &use : oldIndex->getUses()) {
-      if (use.getOwner() == newIndex->getDefiningOp())
+    for (auto &use : oldIndex.getUses()) {
+      if (use.getOwner() == newIndex.getDefiningOp())
         continue;
       use.set(newIndex);
     }
@@ -232,6 +233,8 @@ static SmallVector<Value, 4>
 makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
                ArrayRef<Value> ivs, ArrayRef<Value> tileSizes,
                ArrayRef<Value> viewSizes, OperationFolder *folder) {
+  assert(linalgOp.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
                            llvm::make_range(tileSizes.begin(), tileSizes.end()),
                            [](Value v) { return !isZero(v); })) &&
@@ -254,11 +257,11 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
 
   SmallVector<Value, 4> res;
   res.reserve(op->getNumOperands());
-  auto viewIteratorBegin = linalgOp.getInputsAndOutputs().begin();
+  auto viewIteratorBegin = linalgOp.getInputsAndOutputBuffers().begin();
   for (unsigned viewIndex = 0; viewIndex < linalgOp.getNumInputsAndOutputs();
        ++viewIndex) {
     Value view = *(viewIteratorBegin + viewIndex);
-    unsigned rank = view->getType().cast<MemRefType>().getRank();
+    unsigned rank = view.getType().cast<MemRefType>().getRank();
     auto map = loopToOperandRangesMaps(linalgOp)[viewIndex];
     // If the view is not tiled, we can use it as is.
     if (!isTiled(map, tileSizes)) {
@@ -299,8 +302,8 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
   // defined.
   if (folder)
     for (auto v : llvm::concat<Value>(lbs, subViewSizes))
-      if (v->use_empty())
-        v->getDefiningOp()->erase();
+      if (v.use_empty())
+        v.getDefiningOp()->erase();
 
   return res;
 }
@@ -309,6 +312,7 @@ Optional<TiledLinalgOp>
 mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
                            ArrayRef<unsigned> permutation,
                            OperationFolder *folder) {
+  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
   // 1. Enforce the convention that "tiling by zero" skips tiling a particular
   // dimension. This convention is significantly simpler to handle instead of
   // adjusting affine maps to account for missing dimensions.
@@ -383,6 +387,7 @@ mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
 Optional<TiledLinalgOp> mlir::linalg::tileLinalgOp(
     OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
     ArrayRef<unsigned> permutation, OperationFolder *folder) {
+  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
   if (tileSizes.empty())
     return llvm::None;
 
@@ -419,6 +424,8 @@ static void tileLinalgOps(FuncOp f, ArrayRef<int64_t> tileSizes) {
   OpBuilder b(f);
   OperationFolder folder(f.getContext());
   f.walk([tileSizes, &b, &folder](LinalgOp op) {
+    if (!op.hasBufferSemantics())
+      return;
     auto opLoopsPair =
         tileLinalgOp(b, op, tileSizes, /*permutation=*/{}, &folder);
     // If tiling occurred successfully, erase old op.

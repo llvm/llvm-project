@@ -77,7 +77,8 @@ namespace llvm {
     static constexpr size_t strLen(const char *Str) {
 #if __cplusplus > 201402L
       return std::char_traits<char>::length(Str);
-#elif __has_builtin(__builtin_strlen) || defined(__GNUC__) || defined(_MSC_VER)
+#elif __has_builtin(__builtin_strlen) || defined(__GNUC__) || \
+    (defined(_MSC_VER) && _MSC_VER >= 1916)
       return __builtin_strlen(Str);
 #else
       const char *Begin = Str;

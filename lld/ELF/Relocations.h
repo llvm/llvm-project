@@ -40,7 +40,6 @@ enum RelExpr {
   R_GOTPLT,
   R_GOTPLTREL,
   R_GOTREL,
-  R_HINT,
   R_NEG_TLS,
   R_NONE,
   R_PC,

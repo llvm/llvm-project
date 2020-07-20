@@ -125,13 +125,22 @@ public:
   }
 
   void disable() {
-    for (uptr I = 0; I < NumClasses; I++)
-      getRegionInfo(I)->Mutex.lock();
+    // The BatchClassId must be locked last since other classes can use it.
+    for (sptr I = static_cast<sptr>(NumClasses) - 1; I >= 0; I--) {
+      if (static_cast<uptr>(I) == SizeClassMap::BatchClassId)
+        continue;
+      getRegionInfo(static_cast<uptr>(I))->Mutex.lock();
+    }
+    getRegionInfo(SizeClassMap::BatchClassId)->Mutex.lock();
   }
 
   void enable() {
-    for (sptr I = static_cast<sptr>(NumClasses) - 1; I >= 0; I--)
-      getRegionInfo(static_cast<uptr>(I))->Mutex.unlock();
+    getRegionInfo(SizeClassMap::BatchClassId)->Mutex.unlock();
+    for (uptr I = 0; I < NumClasses; I++) {
+      if (I == SizeClassMap::BatchClassId)
+        continue;
+      getRegionInfo(I)->Mutex.unlock();
+    }
   }
 
   template <typename F> void iterateOverBlocks(F Callback) const {

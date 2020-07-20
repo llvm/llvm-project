@@ -738,49 +738,55 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
   // Handle constructors.
   if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
-    if (!Constructor->isImplicit()) {
-      // Note that we have a user-declared constructor.
-      data().UserDeclaredConstructor = true;
+    if (Constructor->isInheritingConstructor()) {
+      // Ignore constructor shadow declarations. They are lazily created and
+      // so shouldn't affect any properties of the class.
+    } else {
+      if (!Constructor->isImplicit()) {
+        // Note that we have a user-declared constructor.
+        data().UserDeclaredConstructor = true;
 
-      // C++ [class]p4:
-      //   A POD-struct is an aggregate class [...]
-      // Since the POD bit is meant to be C++03 POD-ness, clear it even if the
-      // type is technically an aggregate in C++0x since it wouldn't be in 03.
-      data().PlainOldData = false;
+        // C++ [class]p4:
+        //   A POD-struct is an aggregate class [...]
+        // Since the POD bit is meant to be C++03 POD-ness, clear it even if
+        // the type is technically an aggregate in C++0x since it wouldn't be
+        // in 03.
+        data().PlainOldData = false;
+      }
+
+      if (Constructor->isDefaultConstructor()) {
+        SMKind |= SMF_DefaultConstructor;
+
+        if (Constructor->isUserProvided())
+          data().UserProvidedDefaultConstructor = true;
+        if (Constructor->isConstexpr())
+          data().HasConstexprDefaultConstructor = true;
+        if (Constructor->isDefaulted())
+          data().HasDefaultedDefaultConstructor = true;
+      }
+
+      if (!FunTmpl) {
+        unsigned Quals;
+        if (Constructor->isCopyConstructor(Quals)) {
+          SMKind |= SMF_CopyConstructor;
+
+          if (Quals & Qualifiers::Const)
+            data().HasDeclaredCopyConstructorWithConstParam = true;
+        } else if (Constructor->isMoveConstructor())
+          SMKind |= SMF_MoveConstructor;
+      }
+
+      // C++11 [dcl.init.aggr]p1: DR1518
+      //   An aggregate is an array or a class with no user-provided [or]
+      //   explicit [...] constructors
+      // C++20 [dcl.init.aggr]p1:
+      //   An aggregate is an array or a class with no user-declared [...]
+      //   constructors
+      if (getASTContext().getLangOpts().CPlusPlus2a
+              ? !Constructor->isImplicit()
+              : (Constructor->isUserProvided() || Constructor->isExplicit()))
+        data().Aggregate = false;
     }
-
-    if (Constructor->isDefaultConstructor()) {
-      SMKind |= SMF_DefaultConstructor;
-
-      if (Constructor->isUserProvided())
-        data().UserProvidedDefaultConstructor = true;
-      if (Constructor->isConstexpr())
-        data().HasConstexprDefaultConstructor = true;
-      if (Constructor->isDefaulted())
-        data().HasDefaultedDefaultConstructor = true;
-    }
-
-    if (!FunTmpl) {
-      unsigned Quals;
-      if (Constructor->isCopyConstructor(Quals)) {
-        SMKind |= SMF_CopyConstructor;
-
-        if (Quals & Qualifiers::Const)
-          data().HasDeclaredCopyConstructorWithConstParam = true;
-      } else if (Constructor->isMoveConstructor())
-        SMKind |= SMF_MoveConstructor;
-    }
-
-    // C++11 [dcl.init.aggr]p1: DR1518
-    //   An aggregate is an array or a class with no user-provided [or]
-    //   explicit [...] constructors
-    // C++20 [dcl.init.aggr]p1:
-    //   An aggregate is an array or a class with no user-declared [...]
-    //   constructors
-    if (getASTContext().getLangOpts().CPlusPlus2a
-            ? !Constructor->isImplicit()
-            : (Constructor->isUserProvided() || Constructor->isExplicit()))
-      data().Aggregate = false;
   }
 
   // Handle constructors, including those inherited from base classes.
@@ -1962,6 +1968,16 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
       QualType(), nullptr, SourceLocation());
 }
 
+RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc) {
+  return new (C, DC) RequiresExprBodyDecl(C, DC, StartLoc);
+}
+
+RequiresExprBodyDecl *RequiresExprBodyDecl::CreateDeserialized(ASTContext &C,
+                                                               unsigned ID) {
+  return new (C, ID) RequiresExprBodyDecl(C, nullptr, SourceLocation());
+}
+
 void CXXMethodDecl::anchor() {}
 
 bool CXXMethodDecl::isStatic() const {
@@ -2022,17 +2038,36 @@ CXXMethodDecl::getCorrespondingMethodInClass(const CXXRecordDecl *RD,
   if (auto *MD = getCorrespondingMethodDeclaredInClass(RD, MayBeBase))
     return MD;
 
+  llvm::SmallVector<CXXMethodDecl*, 4> FinalOverriders;
+  auto AddFinalOverrider = [&](CXXMethodDecl *D) {
+    // If this function is overridden by a candidate final overrider, it is not
+    // a final overrider.
+    for (CXXMethodDecl *OtherD : FinalOverriders) {
+      if (declaresSameEntity(D, OtherD) || recursivelyOverrides(OtherD, D))
+        return;
+    }
+
+    // Other candidate final overriders might be overridden by this function.
+    FinalOverriders.erase(
+        std::remove_if(FinalOverriders.begin(), FinalOverriders.end(),
+                       [&](CXXMethodDecl *OtherD) {
+                         return recursivelyOverrides(D, OtherD);
+                       }),
+        FinalOverriders.end());
+
+    FinalOverriders.push_back(D);
+  };
+
   for (const auto &I : RD->bases()) {
     const RecordType *RT = I.getType()->getAs<RecordType>();
     if (!RT)
       continue;
     const auto *Base = cast<CXXRecordDecl>(RT->getDecl());
-    CXXMethodDecl *T = this->getCorrespondingMethodInClass(Base);
-    if (T)
-      return T;
+    if (CXXMethodDecl *D = this->getCorrespondingMethodInClass(Base))
+      AddFinalOverrider(D);
   }
 
-  return nullptr;
+  return FinalOverriders.size() == 1 ? FinalOverriders.front() : nullptr;
 }
 
 CXXMethodDecl *CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD,
@@ -2088,6 +2123,11 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // There may be a method corresponding to MD in a derived class.
   CXXMethodDecl *DevirtualizedMethod =
       getCorrespondingMethodInClass(BestDynamicDecl);
+
+  // If there final overrider in the dynamic type is ambiguous, we can't
+  // devirtualize this call.
+  if (!DevirtualizedMethod)
+    return nullptr;
 
   // If that method is pure virtual, we can't devirtualize. If this code is
   // reached, the result would be UB, not a direct call to the derived class

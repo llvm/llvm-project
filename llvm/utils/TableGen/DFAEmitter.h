@@ -99,7 +99,7 @@ private:
   void constructDfa();
   /// Visit a single DFA state and construct all possible transitions to new DFA
   /// states.
-  void visitDfaState(DfaState DS);
+  void visitDfaState(const DfaState &DS);
 };
 
 } // namespace llvm

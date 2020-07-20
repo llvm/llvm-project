@@ -1739,13 +1739,6 @@ def CVTPD2PSrm : PDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                      [(set VR128:$dst, (X86any_vfpround (memopv2f64 addr:$src)))]>,
                      Sched<[WriteCvtPD2PS.Folded]>, SIMD_EXC;
 
-let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(v4f32 (any_fpround (v4f64 VR256:$src))),
-            (VCVTPD2PSYrr VR256:$src)>;
-  def : Pat<(v4f32 (any_fpround (loadv4f64 addr:$src))),
-            (VCVTPD2PSYrm addr:$src)>;
-}
-
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Compare Instructions
 //===----------------------------------------------------------------------===//

@@ -154,7 +154,6 @@ struct Configuration {
   bool fixCortexA8;
   bool forceBTI;
   bool formatBinary = false;
-  bool requireCET;
   bool gcSections;
   bool gdbIndex;
   bool gnuHash = false;
@@ -170,6 +169,7 @@ struct Configuration {
   bool mipsN32Abi = false;
   bool mmapOutputFile;
   bool nmagic;
+  bool noDynamicLinker = false;
   bool noinhibitExec;
   bool nostdlib;
   bool oFormatBinary;
@@ -202,6 +202,7 @@ struct Configuration {
   bool writeAddends;
   bool zCombreloc;
   bool zCopyreloc;
+  bool zForceIbt;
   bool zGlobal;
   bool zHazardplt;
   bool zIfuncNoplt;
@@ -215,6 +216,7 @@ struct Configuration {
   bool zOrigin;
   bool zRelro;
   bool zRodynamic;
+  bool zShstk;
   bool zText;
   bool zRetpolineplt;
   bool zWxneeded;

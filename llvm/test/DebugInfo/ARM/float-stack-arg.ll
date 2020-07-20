@@ -19,7 +19,7 @@
 
 define arm_aapcscc float @fn1(i32 %p1, i32 %p2, i32 %p3, i32 %p4, float returned %p5) #0 !dbg !7 {
 ; CHECK-LABEL: bb.0.entry:
-; CHECK-NEXT: DBG_VALUE %fixed-stack.0, $noreg, ![[P5]], !DIExpression(DW_OP_deref)
+; CHECK-NEXT: DBG_VALUE %fixed-stack.0, 0, ![[P5]]
 entry:
   call void @llvm.dbg.value(metadata float %p5, metadata !17, metadata !DIExpression()), !dbg !18
   ret float %p5, !dbg !19

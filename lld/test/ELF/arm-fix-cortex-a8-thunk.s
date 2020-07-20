@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf --arm-add-build-attributes %s -o %t.o
 // RUN: echo "SECTIONS { \
-// RUN:          .text0 0x01200a : { *(.text.00) } \
+// RUN:          .text0 0x011006 : { *(.text.00) } \
 // RUN:          .text1 0x110000 : { *(.text.01) *(.text.02) *(.text.03) \
 // RUN:                             *(.text.04) } \
 // RUN:          .text2 0x210000 : { *(.text.05) } } " > %t.script
@@ -32,7 +32,7 @@ _start:
 // CHECK-NEXT:         bx      r12
 
  .section .text.02, "ax", %progbits
- .space 4096 - 10
+ .space 4096 - 22
 
  .section .text.03, "ax", %progbits
  .thumb_func
@@ -43,21 +43,21 @@ target:
  bl target
 
 /// Expect erratum patch inserted here
-// CHECK: 00111ffa target:
-// CHECK-NEXT: 111ffa: nop.w
+// CHECK: 00110ffa target:
+// CHECK-NEXT: 110ffa: nop.w
 // CHECK-NEXT:         bl      #2
-// CHECK: 00112004 __CortexA8657417_111FFE:
-// CHECK-NEXT: 112004: b.w     #-14
+// CHECK: 00111004 __CortexA8657417_110FFE:
+// CHECK-NEXT: 111004: b.w     #-14
 
 /// Expect range extension thunk here.
-// CHECK: 00112008 __ThumbV7PILongThunk_early:
-// CHECK-NEXT: 112008: b.w     #-1048578
+// CHECK: 00111008 __ThumbV7PILongThunk_early:
+// CHECK-NEXT: 111008: b.w     #-1048582
 
  .section .text.04, "ax", %progbits
 /// The erratum patch will push this branch out of range, so another
 /// range extension thunk will be needed.
         beq.w early
-// CHECK:   113008:            beq.w   #-4100
+// CHECK:   11100c:            beq.w   #-8
 
  .section .text.05, "ax", %progbits
  .arm

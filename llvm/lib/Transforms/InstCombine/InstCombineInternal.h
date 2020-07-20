@@ -369,7 +369,8 @@ public:
   Instruction *visitFNeg(UnaryOperator &I);
   Instruction *visitAdd(BinaryOperator &I);
   Instruction *visitFAdd(BinaryOperator &I);
-  Value *OptimizePointerDifference(Value *LHS, Value *RHS, Type *Ty);
+  Value *OptimizePointerDifference(
+      Value *LHS, Value *RHS, Type *Ty, bool isNUW);
   Instruction *visitSub(BinaryOperator &I);
   Instruction *visitFSub(BinaryOperator &I);
   Instruction *visitMul(BinaryOperator &I);
@@ -465,6 +466,9 @@ public:
   /// in different address space.
   /// \return true if successful.
   bool replacePointer(Instruction &I, Value *V);
+
+  LoadInst *combineLoadToNewType(LoadInst &LI, Type *NewTy,
+                                 const Twine &Suffix = "");
 
 private:
   bool shouldChangeType(unsigned FromBitWidth, unsigned ToBitWidth) const;

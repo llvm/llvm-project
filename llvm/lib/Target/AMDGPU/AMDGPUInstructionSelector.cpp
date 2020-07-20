@@ -1022,6 +1022,90 @@ bool AMDGPUInstructionSelector::selectStoreIntrinsic(MachineInstr &MI,
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
+static unsigned getDSShaderTypeValue(const MachineFunction &MF) {
+  switch (MF.getFunction().getCallingConv()) {
+  case CallingConv::AMDGPU_PS:
+    return 1;
+  case CallingConv::AMDGPU_VS:
+    return 2;
+  case CallingConv::AMDGPU_GS:
+    return 3;
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_ES:
+    report_fatal_error("ds_ordered_count unsupported for this calling conv");
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::C:
+  case CallingConv::Fast:
+  default:
+    // Assume other calling conventions are various compute callable functions
+    return 0;
+  }
+}
+
+bool AMDGPUInstructionSelector::selectDSOrderedIntrinsic(
+  MachineInstr &MI, Intrinsic::ID IntrID) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction *MF = MBB->getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  unsigned IndexOperand = MI.getOperand(7).getImm();
+  bool WaveRelease = MI.getOperand(8).getImm() != 0;
+  bool WaveDone = MI.getOperand(9).getImm() != 0;
+
+  if (WaveDone && !WaveRelease)
+    report_fatal_error("ds_ordered_count: wave_done requires wave_release");
+
+  unsigned OrderedCountIndex = IndexOperand & 0x3f;
+  IndexOperand &= ~0x3f;
+  unsigned CountDw = 0;
+
+  if (STI.getGeneration() >= AMDGPUSubtarget::GFX10) {
+    CountDw = (IndexOperand >> 24) & 0xf;
+    IndexOperand &= ~(0xf << 24);
+
+    if (CountDw < 1 || CountDw > 4) {
+      report_fatal_error(
+        "ds_ordered_count: dword count must be between 1 and 4");
+    }
+  }
+
+  if (IndexOperand)
+    report_fatal_error("ds_ordered_count: bad index operand");
+
+  unsigned Instruction = IntrID == Intrinsic::amdgcn_ds_ordered_add ? 0 : 1;
+  unsigned ShaderType = getDSShaderTypeValue(*MF);
+
+  unsigned Offset0 = OrderedCountIndex << 2;
+  unsigned Offset1 = WaveRelease | (WaveDone << 1) | (ShaderType << 2) |
+                     (Instruction << 4);
+
+  if (STI.getGeneration() >= AMDGPUSubtarget::GFX10)
+    Offset1 |= (CountDw - 1) << 6;
+
+  unsigned Offset = Offset0 | (Offset1 << 8);
+
+  Register M0Val = MI.getOperand(2).getReg();
+  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
+    .addReg(M0Val);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register ValReg = MI.getOperand(3).getReg();
+  MachineInstrBuilder DS =
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::DS_ORDERED_COUNT), DstReg)
+      .addReg(ValReg)
+      .addImm(Offset)
+      .cloneMemRefs(MI);
+
+  if (!RBI.constrainGenericRegister(M0Val, AMDGPU::SReg_32RegClass, *MRI))
+    return false;
+
+  bool Ret = constrainSelectedInstRegOperands(*DS, TII, TRI, RBI);
+  MI.eraseFromParent();
+  return Ret;
+}
+
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
@@ -1077,6 +1161,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectStoreIntrinsic(I, false);
   case Intrinsic::amdgcn_raw_buffer_store_format:
     return selectStoreIntrinsic(I, true);
+  case Intrinsic::amdgcn_ds_ordered_add:
+  case Intrinsic::amdgcn_ds_ordered_swap:
+    return selectDSOrderedIntrinsic(I, IntrinsicID);
   default:
     return selectImpl(I, *CoverageInfo);
   }

@@ -33,6 +33,7 @@
 # CHECK-NEXT:      "insertTextFormat": 2,
 # CHECK-NEXT:      "kind": 3,
 # CHECK-NEXT:      "label": " func_with_args(int a, int b)",
+# CHECK-NEXT:      "score": {{[0-9]+.[0-9]+}},
 # CHECK-NEXT:      "sortText": "{{.*}}func_with_args"
 # CHECK-NEXT:      "textEdit": {
 # CHECK-NEXT:        "newText": "func_with_args(${1:int a}, ${2:int b})",

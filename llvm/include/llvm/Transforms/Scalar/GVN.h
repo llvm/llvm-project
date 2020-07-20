@@ -294,8 +294,8 @@ private:
 };
 
 /// Create a legacy GVN pass. This also allows parameterizing whether or not
-/// loads are eliminated by the pass.
-FunctionPass *createGVNPass(bool NoLoads = false);
+/// MemDep is enabled.
+FunctionPass *createGVNPass(bool NoMemDepAnalysis = false);
 
 /// A simple and fast domtree-based GVN pass to hoist common expressions
 /// from sibling branches.

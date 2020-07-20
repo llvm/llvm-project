@@ -1268,9 +1268,11 @@ public:
   }
 
   /// Helper to obtain the unpromoted name for a global value (or the original
-  /// name if not promoted).
+  /// name if not promoted). Split off the rightmost ".llvm.${hash}" suffix,
+  /// because it is possible in certain clients (not clang at the moment) for
+  /// two rounds of ThinLTO optimization and therefore promotion to occur.
   static StringRef getOriginalNameBeforePromote(StringRef Name) {
-    std::pair<StringRef, StringRef> Pair = Name.split(".llvm.");
+    std::pair<StringRef, StringRef> Pair = Name.rsplit(".llvm.");
     return Pair.first;
   }
 

@@ -213,3 +213,16 @@ int lifeTimeExtensionTests(int a) {
     return b;
   }
 }
+
+void test_B44745() {
+  // This is the actual minimum test case for the crash in bug 44745. We aren't
+  // too worried about the warning or fix here, more we don't want a crash.
+  // CHECK-MESSAGES: :[[@LINE+3]]:5: warning: do not use 'else' after 'return' [readability-else-after-return]
+  if (auto X = false) {
+    return;
+  } else {
+    for (;;) {
+    }
+  }
+  return;
+}

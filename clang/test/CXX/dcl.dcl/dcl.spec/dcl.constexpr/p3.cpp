@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++11 -Werror=c++1y-extensions -Werror=c++2a-extensions %s
-// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++1y -DCXX1Y -Werror=c++2a-extensions %s
-// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++2a -DCXX1Y -DCXX2A %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++11 -Werror=c++14-extensions -Werror=c++20-extensions %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++14 -DCXX14 -Werror=c++20-extensions %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++20 -DCXX14 -DCXX20 %s
 
 namespace N {
   typedef char C;
@@ -54,11 +54,11 @@ struct T : SS, NonLiteral {
   //  - its return type shall be a literal type;
   constexpr NonLiteral NonLiteralReturn() const { return {}; } // expected-error {{constexpr function's return type 'NonLiteral' is not a literal type}}
   constexpr void VoidReturn() const { return; }
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{constexpr function's return type 'void' is not a literal type}}
 #endif
   constexpr ~T();
-#ifndef CXX2A
+#ifndef CXX20
   // expected-error@-2 {{destructor cannot be declared constexpr}}
 #endif
   typedef NonLiteral F() const;
@@ -78,7 +78,7 @@ struct T : SS, NonLiteral {
   // don't have a literal return type. Defaulted assignment operators can't be
   // constexpr since they can't be const.
   constexpr T &operator=(const T&) = default;
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{an explicitly-defaulted copy assignment operator may not have 'const', 'constexpr' or 'volatile' qualifiers}}
   // expected-warning@-3 {{C++14}}
 #else
@@ -87,14 +87,14 @@ struct T : SS, NonLiteral {
 };
 
 constexpr int T::OutOfLineVirtual() const { return 0; }
-#ifdef CXX1Y
+#ifdef CXX14
 struct T2 {
   int n = 0;
   constexpr T2 &operator=(const T2&) = default; // ok
 };
 struct T3 {
   constexpr T3 &operator=(const T3&) const = default;
-#ifndef CXX2A
+#ifndef CXX20
   // expected-error@-2 {{an explicitly-defaulted copy assignment operator may not have 'const' or 'volatile' qualifiers}}
 #else
   // expected-warning@-4 {{explicitly defaulted copy assignment operator is implicitly deleted}}
@@ -138,56 +138,56 @@ constexpr int AllowedStmtsCXX11() {
   return sizeof(K) + sizeof(C) + sizeof(K);
 }
 
-//  or a compound-statement that does not contain [CXX1Y]
-constexpr int DisallowedStmtsCXX1Y_1(bool b) {
+//  or a compound-statement that does not contain [C++14]
+constexpr int DisallowedStmtsCXX14_1(bool b) {
   //  - an asm-definition
   if (b)
     asm("int3");
-#if !defined(CXX2A)
-  // expected-error@-2 {{use of this statement in a constexpr function is a C++2a extension}}
+#if !defined(CXX20)
+  // expected-error@-2 {{use of this statement in a constexpr function is a C++20 extension}}
 #endif
   return 0;
 }
-constexpr int DisallowedStmtsCXX1Y_2() {
+constexpr int DisallowedStmtsCXX14_2() {
   //  - a goto statement
   goto x; // expected-error {{statement not allowed in constexpr function}}
 x:
   return 0;
 }
-constexpr int DisallowedStmtsCXX1Y_2_1() {
+constexpr int DisallowedStmtsCXX14_2_1() {
   try {
     return 0;
   } catch (...) {
   merp: goto merp; // expected-error {{statement not allowed in constexpr function}}
   }
 }
-constexpr int DisallowedStmtsCXX1Y_3() {
+constexpr int DisallowedStmtsCXX14_3() {
   //  - a try-block,
   try {} catch (...) {}
-#if !defined(CXX2A)
-  // expected-error@-2 {{use of this statement in a constexpr function is a C++2a extension}}
+#if !defined(CXX20)
+  // expected-error@-2 {{use of this statement in a constexpr function is a C++20 extension}}
 #endif
   return 0;
 }
-constexpr int DisallowedStmtsCXX1Y_4() {
+constexpr int DisallowedStmtsCXX14_4() {
   //  - a definition of a variable of non-literal type
   NonLiteral nl; // expected-error {{variable of non-literal type 'NonLiteral' cannot be defined in a constexpr function}}
   return 0;
 }
-constexpr int DisallowedStmtsCXX1Y_5() {
+constexpr int DisallowedStmtsCXX14_5() {
   //  - a definition of a variable of static storage duration
   static constexpr int n = 123; // expected-error {{static variable not permitted in a constexpr function}}
   return n;
 }
-constexpr int DisallowedStmtsCXX1Y_6() {
+constexpr int DisallowedStmtsCXX14_6() {
   //  - a definition of a variable of thread storage duration
   thread_local constexpr int n = 123; // expected-error {{thread_local variable not permitted in a constexpr function}}
   return n;
 }
-constexpr int DisallowedStmtsCXX1Y_7() {
+constexpr int DisallowedStmtsCXX14_7() {
   //  - a definition of a variable for which no initialization is performed
   int n;
-#ifndef CXX2A
+#ifndef CXX20
   // expected-error@-2 {{uninitialized variable in a constexpr function}}
 #endif
   return 0;
@@ -195,28 +195,28 @@ constexpr int DisallowedStmtsCXX1Y_7() {
 
 constexpr int ForStmt() {
   for (int n = 0; n < 10; ++n)
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{statement not allowed in constexpr function}}
 #endif
     return 0;
 }
 constexpr int VarDecl() {
   int a = 0;
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{variable declaration in a constexpr function is a C++14 extension}}
 #endif
   return 0;
 }
 constexpr int ConstexprVarDecl() {
   constexpr int a = 0;
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{variable declaration in a constexpr function is a C++14 extension}}
 #endif
   return 0;
 }
 constexpr int VarWithCtorDecl() {
   Literal a;
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{variable declaration in a constexpr function is a C++14 extension}}
 #endif
   return 0;
@@ -224,7 +224,7 @@ constexpr int VarWithCtorDecl() {
 NonLiteral nl;
 constexpr NonLiteral &ExternNonLiteralVarDecl() {
   extern NonLiteral nl;
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{variable declaration in a constexpr function is a C++14 extension}}
 #endif
   return nl;
@@ -232,28 +232,28 @@ constexpr NonLiteral &ExternNonLiteralVarDecl() {
 static_assert(&ExternNonLiteralVarDecl() == &nl, "");
 constexpr int FuncDecl() {
   constexpr int ForwardDecl(int);
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{use of this statement in a constexpr function is a C++14 extension}}
 #endif
   return ForwardDecl(42);
 }
 constexpr int ClassDecl1() {
   typedef struct { } S1;
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{type definition in a constexpr function is a C++14 extension}}
 #endif
   return 0;
 }
 constexpr int ClassDecl2() {
   using S2 = struct { };
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{type definition in a constexpr function is a C++14 extension}}
 #endif
   return 0;
 }
 constexpr int ClassDecl3() {
   struct S3 { };
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{type definition in a constexpr function is a C++14 extension}}
 #endif
   return 0;
@@ -262,7 +262,7 @@ constexpr int NoReturn() {} // expected-error {{no return statement in constexpr
 constexpr int MultiReturn() {
   return 0;
   return 0;
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-2 {{multiple return statements in constexpr function}}
   // expected-note@-4 {{return statement}}
 #endif
@@ -310,7 +310,7 @@ namespace std_example {
   }
   constexpr int abs(int x) {
     if (x < 0)
-#ifndef CXX1Y
+#ifndef CXX14
       // expected-error@-2 {{C++14}}
 #endif
       x = -x;
@@ -322,7 +322,7 @@ namespace std_example {
   }
   constexpr int uninit() {
     int a;
-#ifndef CXX2A
+#ifndef CXX20
     // expected-error@-2 {{uninitialized}}
 #endif
     return a;
@@ -330,7 +330,7 @@ namespace std_example {
   constexpr int prev(int x) {
     return --x;
   }
-#ifndef CXX1Y
+#ifndef CXX14
   // expected-error@-4 {{never produces a constant expression}}
   // expected-note@-4 {{subexpression}}
 #endif
@@ -339,7 +339,7 @@ namespace std_example {
     while (--n > 0) r *= x;
     return r;
   }
-#ifndef CXX1Y
+#ifndef CXX14
     // expected-error@-5 {{C++14}}
     // expected-error@-5 {{statement not allowed}}
 #endif

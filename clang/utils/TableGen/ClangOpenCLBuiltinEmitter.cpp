@@ -751,9 +751,7 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
   }
 
   // End of switch statement.
-  OS << "    default:\n"
-     << "      llvm_unreachable(\"OpenCL builtin type not handled yet\");\n"
-     << "  } // end of switch (Ty.ID)\n\n";
+  OS << "  } // end of switch (Ty.ID)\n\n";
 
   // Step 2.
   // Add ExtVector types if this was a generic type, as the switch statement

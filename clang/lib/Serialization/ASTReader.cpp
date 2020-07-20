@@ -6575,6 +6575,17 @@ void TypeLocReader::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
 
 void TypeLocReader::VisitAutoTypeLoc(AutoTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
+  if (Reader.readBool()) {
+    TL.setNestedNameSpecifierLoc(ReadNestedNameSpecifierLoc());
+    TL.setTemplateKWLoc(readSourceLocation());
+    TL.setConceptNameLoc(readSourceLocation());
+    TL.setFoundDecl(Reader.readDeclAs<NamedDecl>());
+    TL.setLAngleLoc(readSourceLocation());
+    TL.setRAngleLoc(readSourceLocation());
+    for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
+      TL.setArgLocInfo(i, Reader.readTemplateArgumentLocInfo(
+                              TL.getTypePtr()->getArg(i).getKind()));
+  }
 }
 
 void TypeLocReader::VisitDeducedTemplateSpecializationTypeLoc(
@@ -10093,14 +10104,22 @@ void ASTReader::diagnoseOdrViolations() {
         }
 
         if (IsFirstBitField && IsSecondBitField) {
-          ODRDiagError(FirstField->getLocation(), FirstField->getSourceRange(),
-                       FieldDifferentWidthBitField)
-              << FirstII << FirstField->getBitWidth()->getSourceRange();
-          ODRDiagNote(SecondField->getLocation(), SecondField->getSourceRange(),
-                      FieldDifferentWidthBitField)
-              << SecondII << SecondField->getBitWidth()->getSourceRange();
-          Diagnosed = true;
-          break;
+          unsigned FirstBitWidthHash =
+              ComputeODRHash(FirstField->getBitWidth());
+          unsigned SecondBitWidthHash =
+              ComputeODRHash(SecondField->getBitWidth());
+          if (FirstBitWidthHash != SecondBitWidthHash) {
+            ODRDiagError(FirstField->getLocation(),
+                         FirstField->getSourceRange(),
+                         FieldDifferentWidthBitField)
+                << FirstII << FirstField->getBitWidth()->getSourceRange();
+            ODRDiagNote(SecondField->getLocation(),
+                        SecondField->getSourceRange(),
+                        FieldDifferentWidthBitField)
+                << SecondII << SecondField->getBitWidth()->getSourceRange();
+            Diagnosed = true;
+            break;
+          }
         }
 
         const bool IsFirstMutable = FirstField->isMutable();

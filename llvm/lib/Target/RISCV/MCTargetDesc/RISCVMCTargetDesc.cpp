@@ -93,7 +93,7 @@ static MCTargetStreamer *createRISCVAsmTargetStreamer(MCStreamer &S,
   return new RISCVTargetAsmStreamer(S, OS);
 }
 
-extern "C" void LLVMInitializeRISCVTargetMC() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
   for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {
     TargetRegistry::RegisterMCAsmInfo(*T, createRISCVMCAsmInfo);
     TargetRegistry::RegisterMCInstrInfo(*T, createRISCVMCInstrInfo);

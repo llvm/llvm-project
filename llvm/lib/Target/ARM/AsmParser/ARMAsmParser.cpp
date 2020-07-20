@@ -6554,7 +6554,8 @@ bool ARMAsmParser::shouldOmitCCOutOperand(StringRef Mnemonic,
     // Check against T3. If the second register is the PC, this is an
     // alternate form of ADR, which uses encoding T4, so check for that too.
     if (static_cast<ARMOperand &>(*Operands[4]).getReg() != ARM::PC &&
-        static_cast<ARMOperand &>(*Operands[5]).isT2SOImm())
+        (static_cast<ARMOperand &>(*Operands[5]).isT2SOImm() ||
+         static_cast<ARMOperand &>(*Operands[5]).isT2SOImmNeg()))
       return false;
 
     // Otherwise, we use encoding T4, which does not have a cc_out
@@ -6609,9 +6610,34 @@ bool ARMAsmParser::shouldOmitCCOutOperand(StringRef Mnemonic,
       static_cast<ARMOperand &>(*Operands[1]).getReg() == 0 &&
       (static_cast<ARMOperand &>(*Operands[4]).isImm() ||
        (Operands.size() == 6 &&
-        static_cast<ARMOperand &>(*Operands[5]).isImm())))
-    return true;
-
+        static_cast<ARMOperand &>(*Operands[5]).isImm()))) {
+    // Thumb2 (add|sub){s}{p}.w GPRnopc, sp, #{T2SOImm} has cc_out
+    return (!(isThumbTwo() &&
+              (static_cast<ARMOperand &>(*Operands[4]).isT2SOImm() ||
+               static_cast<ARMOperand &>(*Operands[4]).isT2SOImmNeg())));
+  }
+  // Fixme: Should join all the thumb+thumb2 (add|sub) in a single if case
+  // Thumb2 ADD r0, #4095 -> ADDW r0, r0, #4095 (T4)
+  // Thumb2 SUB r0, #4095 -> SUBW r0, r0, #4095
+  if (isThumbTwo() && (Mnemonic == "add" || Mnemonic == "sub") &&
+      (Operands.size() == 5) &&
+      static_cast<ARMOperand &>(*Operands[3]).isReg() &&
+      static_cast<ARMOperand &>(*Operands[3]).getReg() != ARM::SP &&
+      static_cast<ARMOperand &>(*Operands[3]).getReg() != ARM::PC &&
+      static_cast<ARMOperand &>(*Operands[1]).getReg() == 0 &&
+      static_cast<ARMOperand &>(*Operands[4]).isImm()) {
+    const ARMOperand &IMM = static_cast<ARMOperand &>(*Operands[4]);
+    if (IMM.isT2SOImm() || IMM.isT2SOImmNeg())
+      return false; // add.w / sub.w
+    if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(IMM.getImm())) {
+      const int64_t Value = CE->getValue();
+      // Thumb1 imm8 sub / add
+      if ((Value < ((1 << 7) - 1) << 2) && inITBlock() && (!(Value & 3)) &&
+          isARMLowRegister(static_cast<ARMOperand &>(*Operands[3]).getReg()))
+        return false;
+      return true; // Thumb2 T4 addw / subw
+    }
+  }
   return false;
 }
 
@@ -7707,12 +7733,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     }
     break;
 
-  case ARM::t2ADDri:
-  case ARM::t2ADDri12:
   case ARM::t2ADDrr:
   case ARM::t2ADDrs:
-  case ARM::t2SUBri:
-  case ARM::t2SUBri12:
   case ARM::t2SUBrr:
   case ARM::t2SUBrs:
     if (Inst.getOperand(0).getReg() == ARM::SP &&
@@ -9750,23 +9772,33 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     }
     break;
   case ARM::t2ADDri12:
-    // If the immediate fits for encoding T3 (t2ADDri) and the generic "add"
-    // mnemonic was used (not "addw"), encoding T3 is preferred.
-    if (static_cast<ARMOperand &>(*Operands[0]).getToken() != "add" ||
-        ARM_AM::getT2SOImmVal(Inst.getOperand(2).getImm()) == -1)
-      break;
-    Inst.setOpcode(ARM::t2ADDri);
-    Inst.addOperand(MCOperand::createReg(0)); // cc_out
-    break;
   case ARM::t2SUBri12:
-    // If the immediate fits for encoding T3 (t2SUBri) and the generic "sub"
-    // mnemonic was used (not "subw"), encoding T3 is preferred.
-    if (static_cast<ARMOperand &>(*Operands[0]).getToken() != "sub" ||
+  case ARM::t2ADDspImm12:
+  case ARM::t2SUBspImm12: {
+    // If the immediate fits for encoding T3 and the generic
+    // mnemonic was used, encoding T3 is preferred.
+    const StringRef Token = static_cast<ARMOperand &>(*Operands[0]).getToken();
+    if ((Token != "add" && Token != "sub") ||
         ARM_AM::getT2SOImmVal(Inst.getOperand(2).getImm()) == -1)
       break;
-    Inst.setOpcode(ARM::t2SUBri);
+    switch (Inst.getOpcode()) {
+    case ARM::t2ADDri12:
+      Inst.setOpcode(ARM::t2ADDri);
+      break;
+    case ARM::t2SUBri12:
+      Inst.setOpcode(ARM::t2SUBri);
+      break;
+    case ARM::t2ADDspImm12:
+      Inst.setOpcode(ARM::t2ADDspImm);
+      break;
+    case ARM::t2SUBspImm12:
+      Inst.setOpcode(ARM::t2SUBspImm);
+      break;
+    }
+
     Inst.addOperand(MCOperand::createReg(0)); // cc_out
-    break;
+    return true;
+  }
   case ARM::tADDi8:
     // If the immediate is in the range 0-7, we want tADDi3 iff Rd was
     // explicitly specified. From the ARM ARM: "Encoding T1 is preferred
@@ -9808,6 +9840,25 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     TmpInst.addOperand(Inst.getOperand(0));
     TmpInst.addOperand(Inst.getOperand(2));
     TmpInst.addOperand(Inst.getOperand(3));
+    TmpInst.addOperand(Inst.getOperand(4));
+    Inst = TmpInst;
+    return true;
+  }
+  case ARM::t2ADDspImm:
+  case ARM::t2SUBspImm: {
+    // Prefer T1 encoding if possible
+    if (Inst.getOperand(5).getReg() != 0 || HasWideQualifier)
+      break;
+    unsigned V = Inst.getOperand(2).getImm();
+    if (V & 3 || V > ((1 << 7) - 1) << 2)
+      break;
+    MCInst TmpInst;
+    TmpInst.setOpcode(Inst.getOpcode() == ARM::t2ADDspImm ? ARM::tADDspi
+                                                          : ARM::tSUBspi);
+    TmpInst.addOperand(MCOperand::createReg(ARM::SP)); // destination reg
+    TmpInst.addOperand(MCOperand::createReg(ARM::SP)); // source reg
+    TmpInst.addOperand(MCOperand::createImm(V / 4));   // immediate
+    TmpInst.addOperand(Inst.getOperand(3));            // pred
     TmpInst.addOperand(Inst.getOperand(4));
     Inst = TmpInst;
     return true;
@@ -11495,7 +11546,7 @@ bool ARMAsmParser::parseDirectiveThumbSet(SMLoc L) {
 }
 
 /// Force static initialization.
-extern "C" void LLVMInitializeARMAsmParser() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMAsmParser() {
   RegisterMCAsmParser<ARMAsmParser> X(getTheARMLETarget());
   RegisterMCAsmParser<ARMAsmParser> Y(getTheARMBETarget());
   RegisterMCAsmParser<ARMAsmParser> A(getTheThumbLETarget());

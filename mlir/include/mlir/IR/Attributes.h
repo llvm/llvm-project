@@ -220,10 +220,11 @@ private:
   /// Class for underlying value iterator support.
   template <typename AttrTy>
   class attr_value_iterator final
-      : public llvm::mapped_iterator<iterator, AttrTy (*)(Attribute)> {
+      : public llvm::mapped_iterator<ArrayAttr::iterator,
+                                     AttrTy (*)(Attribute)> {
   public:
-    explicit attr_value_iterator(iterator it)
-        : llvm::mapped_iterator<iterator, AttrTy (*)(Attribute)>(
+    explicit attr_value_iterator(ArrayAttr::iterator it)
+        : llvm::mapped_iterator<ArrayAttr::iterator, AttrTy (*)(Attribute)>(
               it, [](Attribute attr) { return attr.cast<AttrTy>(); }) {}
     AttrTy operator*() { return (*this->I).template cast<AttrTy>(); }
   };

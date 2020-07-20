@@ -799,8 +799,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
           FD->getBody()->getStmtClass() == Stmt::CoroutineBodyStmtClass)
         SanOpts.Mask &= ~SanitizerKind::Null;
 
-  // Apply xray attributes to the function (as a string, for now)
   if (D) {
+    // Apply xray attributes to the function (as a string, for now)
     if (const auto *XRayAttr = D->getAttr<XRayInstrumentAttr>()) {
       if (CGM.getCodeGenOpts().XRayInstrumentationBundle.has(
               XRayInstrKind::Function)) {
@@ -818,6 +818,20 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         Fn->addFnAttr(
             "xray-instruction-threshold",
             llvm::itostr(CGM.getCodeGenOpts().XRayInstructionThreshold));
+    }
+
+    unsigned Count, Offset;
+    if (const auto *Attr = D->getAttr<PatchableFunctionEntryAttr>()) {
+      Count = Attr->getCount();
+      Offset = Attr->getOffset();
+    } else {
+      Count = CGM.getCodeGenOpts().PatchableFunctionEntryCount;
+      Offset = CGM.getCodeGenOpts().PatchableFunctionEntryOffset;
+    }
+    if (Count && Offset <= Count) {
+      Fn->addFnAttr("patchable-function-entry", std::to_string(Count - Offset));
+      if (Offset)
+        Fn->addFnAttr("patchable-function-prefix", std::to_string(Offset));
     }
   }
 
@@ -2101,7 +2115,7 @@ void CodeGenFunction::EmitDeclRefExprDbgValue(const DeclRefExpr *E,
                                               const APValue &Init) {
   assert(Init.hasValue() && "Invalid DeclRefExpr initializer!");
   if (CGDebugInfo *Dbg = getDebugInfo())
-    if (CGM.getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo)
+    if (CGM.getCodeGenOpts().hasReducedDebugInfo())
       Dbg->EmitGlobalVariable(E->getDecl(), Init);
 }
 

@@ -3,3 +3,5 @@
 
 1:
   addi a0, a0, %pcrel_lo(1b) # CHECK: :[[@LINE]]:3: error: could not find corresponding %pcrel_hi
+  addi a0, a0, %pcrel_lo(0x123456) # CHECK: :[[@LINE]]:3: error: could not find corresponding %pcrel_hi
+  addi a0, a0, %pcrel_lo(foo) # CHECK: :[[@LINE]]:3: error: could not find corresponding %pcrel_hi

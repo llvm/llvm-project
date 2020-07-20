@@ -23,7 +23,7 @@
 // CHECK-X86_64: "-fsanitize=safe-stack"
 // CHECK: "-stack-protector" "2"
 // CHECK: "-fno-common"
-// CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic" "-z" "separate-loadable-segments"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"

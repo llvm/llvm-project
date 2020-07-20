@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -46,6 +47,7 @@ class SIInstrInfo final : public AMDGPUGenInstrInfo {
 private:
   const SIRegisterInfo RI;
   const GCNSubtarget &ST;
+  TargetSchedModel SchedModel;
 
   // The inverse predicate should have the negative value.
   enum BranchPredicate {
@@ -1045,7 +1047,7 @@ public:
 
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
-                           unsigned *PredCost) const override;
+                           unsigned *PredCost = nullptr) const override;
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class

@@ -178,7 +178,7 @@ def LLVM_ICmpOp : LLVM_OneResultOp<"icmp", [NoSideEffect]>,
   let builders = [OpBuilder<
     "Builder *b, OperationState &result, ICmpPredicate predicate, Value lhs, "
     "Value rhs", [{
-      LLVMDialect *dialect = &lhs->getType().cast<LLVMType>().getDialect();
+      LLVMDialect *dialect = &lhs.getType().cast<LLVMType>().getDialect();
       build(b, result, LLVMType::getInt1Ty(dialect),
             b->getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
@@ -225,7 +225,7 @@ def LLVM_FCmpOp : LLVM_OneResultOp<"fcmp", [NoSideEffect]>,
   let builders = [OpBuilder<
     "Builder *b, OperationState &result, FCmpPredicate predicate, Value lhs, "
     "Value rhs", [{
-      LLVMDialect *dialect = &lhs->getType().cast<LLVMType>().getDialect();
+      LLVMDialect *dialect = &lhs.getType().cast<LLVMType>().getDialect();
       build(b, result, LLVMType::getInt1Ty(dialect),
             b->getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
@@ -285,7 +285,7 @@ def LLVM_LoadOp : LLVM_OneResultOp<"load">, Arguments<(ins LLVM_Type:$addr)>,
   let builders = [OpBuilder<
     "Builder *b, OperationState &result, Value addr",
     [{
-      auto type = addr->getType().cast<LLVM::LLVMType>().getPointerElementTy();
+      auto type = addr.getType().cast<LLVM::LLVMType>().getPointerElementTy();
       build(b, result, type, addr);
     }]>];
   let parser = [{ return parseLoadOp(parser, result); }];
@@ -378,7 +378,7 @@ def LLVM_InsertValueOp : LLVM_OneResultOp<"insertvalue", [NoSideEffect]>,
     "Builder *b, OperationState &result, Value container, Value value, "
     "ArrayAttr position",
     [{
-      build(b, result, container->getType(), container, value, position);
+      build(b, result, container.getType(), container, value, position);
     }]>];
   let parser = [{ return parseInsertValueOp(parser, result); }];
   let printer = [{ printInsertValueOp(p, *this); }];
@@ -392,8 +392,8 @@ def LLVM_ShuffleVectorOp
     "Builder *b, OperationState &result, Value v1, Value v2, "
     "ArrayAttr mask, ArrayRef<NamedAttribute> attrs = {}">];
   let verifier = [{
-    auto wrappedVectorType1 = v1()->getType().cast<LLVM::LLVMType>();
-    auto wrappedVectorType2 = v2()->getType().cast<LLVM::LLVMType>();
+    auto wrappedVectorType1 = v1().getType().cast<LLVM::LLVMType>();
+    auto wrappedVectorType2 = v2().getType().cast<LLVM::LLVMType>();
     if (!wrappedVectorType2.getUnderlyingType()->isVectorTy())
       return emitOpError("expected LLVM IR Dialect vector type for operand #2");
     if (wrappedVectorType1.getVectorElementType() !=
@@ -415,7 +415,7 @@ def LLVM_SelectOp
   let builders = [OpBuilder<
     "Builder *b, OperationState &result, Value condition, Value lhs, "
     "Value rhs", [{
-      build(b, result, lhs->getType(), condition, lhs, rhs);
+      build(b, result, lhs.getType(), condition, lhs, rhs);
     }]>];
   let parser = [{ return parseSelectOp(parser, result); }];
   let printer = [{ printSelectOp(p, *this); }];

@@ -97,7 +97,7 @@ LogicalResult OperationFolder::tryToFold(
 
   // Otherwise, replace all of the result values and erase the operation.
   for (unsigned i = 0, e = results.size(); i != e; ++i)
-    op->getResult(i)->replaceAllUsesWith(results[i]);
+    op->getResult(i).replaceAllUsesWith(results[i]);
   op->erase();
   return success();
 }
@@ -120,7 +120,7 @@ void OperationFolder::notifyRemoval(Operation *op) {
   auto &uniquedConstants = foldScopes[getInsertionRegion(interfaces, op)];
 
   // Erase all of the references to this operation.
-  auto type = op->getResult(0)->getType();
+  auto type = op->getResult(0).getType();
   for (auto *dialect : it->second)
     uniquedConstants.erase(std::make_tuple(dialect, constValue, type));
   referencedDialects.erase(it);
@@ -182,7 +182,7 @@ LogicalResult OperationFolder::tryToFold(
     Attribute attrRepl = foldResults[i].get<Attribute>();
     if (auto *constOp =
             tryGetOrCreateConstant(uniquedConstants, dialect, builder, attrRepl,
-                                   res->getType(), op->getLoc())) {
+                                   res.getType(), op->getLoc())) {
       results.push_back(constOp->getResult(0));
       continue;
     }

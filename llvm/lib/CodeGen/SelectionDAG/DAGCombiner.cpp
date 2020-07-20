@@ -886,6 +886,13 @@ static bool isAnyConstantBuildVector(SDValue V, bool NoOpaques = false) {
          ISD::isBuildVectorOfConstantFPSDNodes(V.getNode());
 }
 
+// Determine if this an indexed load with an opaque target constant index.
+static bool canSplitIdx(LoadSDNode *LD) {
+  return MaySplitLoadIndex &&
+         (LD->getOperand(2).getOpcode() != ISD::TargetConstant ||
+          !cast<ConstantSDNode>(LD->getOperand(2))->isOpaque());
+}
+
 bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
                                                              const SDLoc &DL,
                                                              SDValue N0,
@@ -14222,11 +14229,11 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
 
   auto ReplaceLd = [&](LoadSDNode *LD, SDValue Val, SDValue Chain) -> SDValue {
     if (LD->isIndexed()) {
-      bool IsSub = (LD->getAddressingMode() == ISD::PRE_DEC ||
-                    LD->getAddressingMode() == ISD::POST_DEC);
-      unsigned Opc = IsSub ? ISD::SUB : ISD::ADD;
-      SDValue Idx = DAG.getNode(Opc, SDLoc(LD), LD->getOperand(1).getValueType(),
-                             LD->getOperand(1), LD->getOperand(2));
+      // Cannot handle opaque target constants and we must respect the user's
+      // request not to split indexes from loads.
+      if (!canSplitIdx(LD))
+        return SDValue();
+      SDValue Idx = SplitIndexingFromLoad(LD);
       SDValue Ops[] = {Val, Idx, Chain};
       return CombineTo(LD, Ops, 3);
     }
@@ -14322,14 +14329,12 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
       // the indexing into an add/sub directly (that TargetConstant may not be
       // valid for a different type of node, and we cannot convert an opaque
       // target constant into a regular constant).
-      bool HasOTCInc = LD->getOperand(2).getOpcode() == ISD::TargetConstant &&
-                       cast<ConstantSDNode>(LD->getOperand(2))->isOpaque();
+      bool CanSplitIdx = canSplitIdx(LD);
 
-      if (!N->hasAnyUseOfValue(0) &&
-          ((MaySplitLoadIndex && !HasOTCInc) || !N->hasAnyUseOfValue(1))) {
+      if (!N->hasAnyUseOfValue(0) && (CanSplitIdx || !N->hasAnyUseOfValue(1))) {
         SDValue Undef = DAG.getUNDEF(N->getValueType(0));
         SDValue Index;
-        if (N->hasAnyUseOfValue(1) && MaySplitLoadIndex && !HasOTCInc) {
+        if (N->hasAnyUseOfValue(1) && CanSplitIdx) {
           Index = SplitIndexingFromLoad(LD);
           // Try to fold the base pointer arithmetic into subsequent loads and
           // stores.
@@ -16510,33 +16515,6 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
           CombineTo(ST1, ST1->getChain());
           return SDValue();
         }
-
-        // If ST stores to a subset of preceding store's write set, we may be
-        // able to fold ST's value into the preceding stored value. As we know
-        // the other uses of ST1's chain are unconcerned with ST, this folding
-        // will not affect those nodes.
-        int64_t BitOffset;
-        if (ChainBase.contains(DAG, ChainBitSize, STBase, STBitSize,
-                               BitOffset)) {
-          SDValue ChainValue = ST1->getValue();
-          if (auto *C1 = dyn_cast<ConstantSDNode>(ChainValue)) {
-            if (auto *C = dyn_cast<ConstantSDNode>(Value)) {
-              APInt Val = C1->getAPIntValue();
-              APInt InsertVal = C->getAPIntValue().zextOrTrunc(STBitSize);
-              // FIXME: Handle Big-endian mode.
-              if (!DAG.getDataLayout().isBigEndian()) {
-                Val.insertBits(InsertVal, BitOffset);
-                SDValue NewSDVal =
-                    DAG.getConstant(Val, SDLoc(C), ChainValue.getValueType(),
-                                    C1->isTargetOpcode(), C1->isOpaque());
-                SDNode *NewST1 = DAG.UpdateNodeOperands(
-                    ST1, ST1->getChain(), NewSDVal, ST1->getOperand(2),
-                    ST1->getOperand(3));
-                return CombineTo(ST, SDValue(NewST1, 0));
-              }
-            }
-          }
-        } // End ST subset of ST1 case.
       }
     }
   }
@@ -18606,7 +18584,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
              "Trying to extract from >1 concat operand?");
       assert(NewExtIdx % ExtNumElts == 0 &&
              "Extract index is not a multiple of the input vector length.");
-      SDValue NewIndexC = DAG.getIntPtrConstant(NewExtIdx, DL);
+      MVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
+      SDValue NewIndexC = DAG.getConstant(NewExtIdx, DL, IdxTy);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT,
                          V.getOperand(ConcatOpIdx), NewIndexC);
     }

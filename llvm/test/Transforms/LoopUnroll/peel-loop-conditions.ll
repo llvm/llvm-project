@@ -1024,8 +1024,8 @@ if.end:                                           ; preds = %if.then, %for.body
 }
 
 ; No peeling is profitable here.
-define void @test15__ivar_mod2_is_1(i32 %len) {
-; CHECK-LABEL: @test15__ivar_mod2_is_1(
+define void @test14__ivar_mod2_is_1(i32 %len) {
+; CHECK-LABEL: @test14__ivar_mod2_is_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -1074,8 +1074,8 @@ if.end:                                           ; preds = %if.then, %for.body
 }
 
 ; No peeling is profitable here.
-define void @test16__ivar_mod2_is_0(i32 %len) {
-; CHECK-LABEL: @test16__ivar_mod2_is_0(
+define void @test15__ivar_mod2_is_0(i32 %len) {
+; CHECK-LABEL: @test15__ivar_mod2_is_0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -1125,8 +1125,8 @@ if.end:                                           ; preds = %if.then, %for.body
 
 ; Similar to @test7, we need to peel one extra iteration, and we can't do that
 ; as per the -unroll-peel-max-count=4, so this shouldn't be peeled at all.
-define void @test17(i32 %k) {
-; CHECK-LABEL: @test17(
+define void @test16(i32 %k) {
+; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -1166,8 +1166,8 @@ for.end:
 
 ; Similar to @test8, we need to peel one extra iteration, and we can't do that
 ; as per the -unroll-peel-max-count=4, so this shouldn't be peeled at all.
-define void @test18(i32 %k) {
-; CHECK-LABEL: @test18(
+define void @test17(i32 %k) {
+; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

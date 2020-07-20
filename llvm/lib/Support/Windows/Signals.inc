@@ -23,7 +23,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 // The Windows.h header must be after LLVM and standard headers.
-#include "WindowsSupport.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 
 #ifdef __MINGW32__
  #include <imagehlp.h>
@@ -521,10 +521,13 @@ void sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
 extern "C" VOID WINAPI RtlCaptureContext(PCONTEXT ContextRecord);
 #endif
 
-void llvm::sys::PrintStackTrace(raw_ostream &OS) {
-  STACKFRAME64 StackFrame = {};
-  CONTEXT Context = {};
-  ::RtlCaptureContext(&Context);
+static void LocalPrintStackTrace(raw_ostream &OS, PCONTEXT C) {
+  STACKFRAME64 StackFrame{};
+  CONTEXT Context{};
+  if (!C) {
+    ::RtlCaptureContext(&Context);
+    C = &Context;
+  }
 #if defined(_M_X64)
   StackFrame.AddrPC.Offset = Context.Rip;
   StackFrame.AddrStack.Offset = Context.Rsp;
@@ -546,9 +549,12 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
   StackFrame.AddrStack.Mode = AddrModeFlat;
   StackFrame.AddrFrame.Mode = AddrModeFlat;
   PrintStackTraceForThread(OS, GetCurrentProcess(), GetCurrentThread(),
-                           StackFrame, &Context);
+                           StackFrame, C);
 }
 
+void llvm::sys::PrintStackTrace(raw_ostream &OS) {
+  LocalPrintStackTrace(OS, nullptr);
+}
 
 void llvm::sys::SetInterruptFunction(void (*IF)()) {
   RegisterHandler();
@@ -792,6 +798,10 @@ WriteWindowsDumpFile(PMINIDUMP_EXCEPTION_INFORMATION ExceptionInfo) {
   return std::error_code();
 }
 
+void sys::CleanupOnSignal(uintptr_t Context) {
+  LLVMUnhandledExceptionFilter((LPEXCEPTION_POINTERS)Context);
+}
+
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
   Cleanup();
 
@@ -810,42 +820,15 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
                    << "\n";
   }
 
-  // Initialize the STACKFRAME structure.
-  STACKFRAME64 StackFrame = {};
+  // Stack unwinding appears to modify the context. Copy it to preserve the
+  // caller's context.
+  CONTEXT ContextCopy;
+  if (ep)
+    memcpy(&ContextCopy, ep->ContextRecord, sizeof(ContextCopy));
 
-#if defined(_M_X64)
-  StackFrame.AddrPC.Offset = ep->ContextRecord->Rip;
-  StackFrame.AddrPC.Mode = AddrModeFlat;
-  StackFrame.AddrStack.Offset = ep->ContextRecord->Rsp;
-  StackFrame.AddrStack.Mode = AddrModeFlat;
-  StackFrame.AddrFrame.Offset = ep->ContextRecord->Rbp;
-  StackFrame.AddrFrame.Mode = AddrModeFlat;
-#elif defined(_M_IX86)
-  StackFrame.AddrPC.Offset = ep->ContextRecord->Eip;
-  StackFrame.AddrPC.Mode = AddrModeFlat;
-  StackFrame.AddrStack.Offset = ep->ContextRecord->Esp;
-  StackFrame.AddrStack.Mode = AddrModeFlat;
-  StackFrame.AddrFrame.Offset = ep->ContextRecord->Ebp;
-  StackFrame.AddrFrame.Mode = AddrModeFlat;
-#elif defined(_M_ARM64) || defined(_M_ARM)
-  StackFrame.AddrPC.Offset = ep->ContextRecord->Pc;
-  StackFrame.AddrPC.Mode = AddrModeFlat;
-  StackFrame.AddrStack.Offset = ep->ContextRecord->Sp;
-  StackFrame.AddrStack.Mode = AddrModeFlat;
-#if defined(_M_ARM64)
-  StackFrame.AddrFrame.Offset = ep->ContextRecord->Fp;
-#else
-  StackFrame.AddrFrame.Offset = ep->ContextRecord->R11;
-#endif
-  StackFrame.AddrFrame.Mode = AddrModeFlat;
-#endif
+  LocalPrintStackTrace(llvm::errs(), ep ? &ContextCopy : nullptr);
 
-  HANDLE hProcess = GetCurrentProcess();
-  HANDLE hThread = GetCurrentThread();
-  PrintStackTraceForThread(llvm::errs(), hProcess, hThread, StackFrame,
-                           ep->ContextRecord);
-
-  _exit(ep->ExceptionRecord->ExceptionCode);
+  return EXCEPTION_EXECUTE_HANDLER;
 }
 
 static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType) {
