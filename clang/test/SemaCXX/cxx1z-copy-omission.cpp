@@ -106,7 +106,7 @@ void test_expressions(bool b) {
   sizeof(Indestructible{}); // expected-error {{deleted}}
   sizeof(make_indestructible()); // expected-error {{deleted}}
   sizeof(make_incomplete()); // expected-error {{incomplete}}
-  typeid(Indestructible{}); // expected-error {{deleted}}
+  typeid(Indestructible{}); // expected-error {{deleted}} expected-error {{you need to include <typeinfo>}}
   typeid(make_indestructible()); // expected-error {{deleted}} \
                                  // expected-error {{need to include <typeinfo>}}
   typeid(make_incomplete()); // expected-error {{incomplete}} \

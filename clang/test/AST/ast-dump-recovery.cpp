@@ -157,11 +157,14 @@ void InvalidInitalizer(int x) {
   // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:  `-InitListExpr
   Bar b2 = {1};
-  // FIXME: preserve the invalid initializer.
-  // CHECK: `-VarDecl {{.*}} b3 'Bar'
+  // CHECK:     `-VarDecl {{.*}} b3 'Bar'
+  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar' contains-errors
+  // CHECK-NEXT:    `-DeclRefExpr {{.*}} 'x' 'int'
   Bar b3 = Bar(x);
-  // FIXME: preserve the invalid initializer.
-  // CHECK: `-VarDecl {{.*}} b4 'Bar'
+  // CHECK:     `-VarDecl {{.*}} b4 'Bar'
+  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar' contains-errors
+  // CHECK-NEXT:    `-InitListExpr {{.*}} 'void'
+  // CHECK-NEXT:      `-DeclRefExpr {{.*}} 'x' 'int'
   Bar b4 = Bar{x};
   // CHECK:     `-VarDecl {{.*}} b5 'Bar'
   // CHECK-NEXT: `-CXXUnresolvedConstructExpr {{.*}} 'Bar' contains-errors 'Bar'
@@ -174,6 +177,10 @@ void InvalidInitalizer(int x) {
   // CHECK-NEXT:   `-RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:     `-UnresolvedLookupExpr {{.*}} 'invalid'
   Bar b6 = Bar{invalid()};
+
+  // CHECK:     `-RecoveryExpr {{.*}} 'Bar' contains-errors
+  // CHECK-NEXT:  `-IntegerLiteral {{.*}} 'int' 1
+  Bar(1);
 }
 void InitializerForAuto() {
   // CHECK:     `-VarDecl {{.*}} invalid a 'auto'
