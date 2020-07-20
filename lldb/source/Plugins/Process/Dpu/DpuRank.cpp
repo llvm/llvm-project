@@ -52,7 +52,7 @@ bool DpuRank::Open(char *profile, FILE *stdout_file) {
     return false;
   m_desc = dpu_get_description(m_rank);
 
-  nr_threads = m_desc->dpu.nr_of_threads;
+  nr_threads = m_desc->hw.dpu.nr_of_threads;
 
   struct dpu_set_t rank = dpu_set_from_rank(&m_rank);
   struct dpu_set_t dpu;
@@ -130,5 +130,5 @@ bool DpuRank::StopDpus() {
 }
 
 uint8_t DpuRank::GetNrCis() {
-  return dpu_get_description(m_rank)->topology.nr_of_control_interfaces;
+  return dpu_get_description(m_rank)->hw.topology.nr_of_control_interfaces;
 }

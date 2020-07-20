@@ -77,6 +77,7 @@ def get_rank_id(rank, target):
 def get_nb_slices_and_nb_dpus_per_slice(rank, target):
     uint32_type = target.FindFirstType("uint32_t")
     topology = rank.GetChildMemberWithName("description") \
+                   .GetChildMemberWithName("hw")		  \
                    .GetChildMemberWithName("topology")
     nb_dpus_per_slice = topology \
         .GetChildMemberWithName("nr_of_dpus_per_control_interface") \

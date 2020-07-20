@@ -62,7 +62,7 @@ Dpu::Dpu(DpuRank *rank, dpu_t *dpu, FILE *stdout_file_)
       printf_buffer_last_idx((uint32_t)LLDB_INVALID_ADDRESS),
       printf_buffer_var_addr((uint32_t)LLDB_INVALID_ADDRESS) {
   nr_threads = m_rank->GetNrThreads();
-  nr_reg_per_thread = rank->GetDesc()->dpu.nr_of_work_registers_per_thread;
+  nr_reg_per_thread = rank->GetDesc()->hw.dpu.nr_of_work_registers_per_thread;
 
   m_context = new DpuContext(m_dpu, m_rank->AllocContext(), nr_threads);
 
@@ -653,7 +653,7 @@ bool Dpu::ReadMRAM(uint32_t offset, void *buf, size_t size) {
 
 bool Dpu::AllocIRAMBuffer(uint8_t **iram, uint32_t *iram_size) {
   dpu_description_t description = dpu_get_description(dpu_get_rank(m_dpu));
-  uint32_t nb_instructions = description->memories.iram_size;
+  uint32_t nb_instructions = description->hw.memories.iram_size;
   *iram_size = nb_instructions * sizeof(dpuinstruction_t);
   *iram = new uint8_t[*iram_size];
   return *iram != NULL;
@@ -668,9 +668,9 @@ bool Dpu::GenerateSaveCore(const char *exe_path, const char *core_file_path,
                            uint8_t *iram, uint32_t iram_size) {
   struct dpu_rank_t *rank = dpu_get_rank(m_dpu);
   dpu_description_t description = dpu_get_description(rank);
-  uint32_t nb_word_in_wram = description->memories.wram_size;
+  uint32_t nb_word_in_wram = description->hw.memories.wram_size;
   uint32_t wram_size = nb_word_in_wram * sizeof(dpuword_t);
-  uint32_t mram_size = description->memories.mram_size;
+  uint32_t mram_size = description->hw.memories.mram_size;
   uint8_t *wram = new uint8_t[wram_size];
   uint8_t *mram = new uint8_t[mram_size];
 

@@ -268,9 +268,10 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   SetState(StateType::eStateStopped, false);
 
   dpu_description_t desc = rank->GetDesc();
-  unsigned int iram_size = desc->memories.iram_size * sizeof(dpuinstruction_t);
-  unsigned int mram_size = desc->memories.mram_size;
-  unsigned int wram_size = desc->memories.wram_size * sizeof(dpuword_t);
+  unsigned int iram_size =
+      desc->hw.memories.iram_size * sizeof(dpuinstruction_t);
+  unsigned int mram_size = desc->hw.memories.mram_size;
+  unsigned int wram_size = desc->hw.memories.wram_size * sizeof(dpuword_t);
 
   m_iram_region.GetRange().SetRangeBase(k_dpu_iram_base);
   m_iram_region.GetRange().SetRangeEnd(k_dpu_iram_base + iram_size);
