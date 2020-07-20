@@ -172,7 +172,7 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
   bool Failed = false;
 
   llvm::SmallVector<NamedDecl*, 8> FoundDecls;
-  llvm::SmallSet<CanonicalDeclPtr<Decl>, 8> FoundDeclSet;
+  llvm::SmallPtrSet<CanonicalDeclPtr<Decl>, 8> FoundDeclSet;
 
   // If we have an object type, it's because we are in a
   // pseudo-destructor-expression or a member access expression, and
