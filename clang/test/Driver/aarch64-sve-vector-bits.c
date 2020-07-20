@@ -12,12 +12,15 @@
 // RUN:  -msve-vector-bits=1024 2>&1 | FileCheck --check-prefix=CHECK-1024 %s
 // RUN: %clang -c %s -### -target aarch64-none-linux-gnu -march=armv8-a+sve \
 // RUN:  -msve-vector-bits=2048 2>&1 | FileCheck --check-prefix=CHECK-2048 %s
+// RUN: %clang -c %s -### -target aarch64-none-linux-gnu -march=armv8-a+sve \
+// RUN:  -msve-vector-bits=scalable 2>&1 | FileCheck --check-prefix=CHECK-SCALABLE %s
 
 // CHECK-128: "-msve-vector-bits=128"
 // CHECK-256: "-msve-vector-bits=256"
 // CHECK-512: "-msve-vector-bits=512"
 // CHECK-1024: "-msve-vector-bits=1024"
 // CHECK-2048: "-msve-vector-bits=2048"
+// CHECK-SCALABLE-NOT: "-msve-vector-bits=
 
 // Bail out if -msve-vector-bits is specified without SVE enabled
 // -----------------------------------------------------------------------------
@@ -47,11 +50,13 @@
 // -----------------------------------------------------------------------------
 // RUN: not %clang -c %s -o /dev/null -target aarch64-none-linux-gnu \
 // RUN:  -march=armv8-a+sve 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
+// RUN: not %clang -c %s -o /dev/null -target aarch64-none-linux-gnu \
+// RUN:  -march=armv8-a+sve -msve-vector-bits=scalable 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
 
 typedef __SVInt32_t svint32_t;
 typedef svint32_t noflag __attribute__((arm_sve_vector_bits(256)));
 
-// CHECK-NO-FLAG-ERROR: error: 'arm_sve_vector_bits' is not supported when '-msve-vector-bits=<bits>' is not specified
+// CHECK-NO-FLAG-ERROR: error: 'arm_sve_vector_bits' is only supported when '-msve-vector-bits=<bits>' is specified with a value of 128, 256, 512, 1024 or 2048
 
 // Error if attribute vector size != -msve-vector-bits
 // -----------------------------------------------------------------------------
