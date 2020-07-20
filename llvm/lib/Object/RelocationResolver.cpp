@@ -62,6 +62,8 @@ static bool supportsAArch64(uint64_t Type) {
   switch (Type) {
   case ELF::R_AARCH64_ABS32:
   case ELF::R_AARCH64_ABS64:
+  case ELF::R_AARCH64_PREL32:
+  case ELF::R_AARCH64_PREL64:
     return true;
   default:
     return false;
@@ -74,6 +76,10 @@ static uint64_t resolveAArch64(RelocationRef R, uint64_t S, uint64_t A) {
     return (S + getELFAddend(R)) & 0xFFFFFFFF;
   case ELF::R_AARCH64_ABS64:
     return S + getELFAddend(R);
+  case ELF::R_AARCH64_PREL32:
+    return (S + getELFAddend(R) - R.getOffset()) & 0xFFFFFFFF;
+  case ELF::R_AARCH64_PREL64:
+    return S + getELFAddend(R) - R.getOffset();
   default:
     llvm_unreachable("Invalid relocation type");
   }
