@@ -4950,12 +4950,15 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
     }
     hot_teams = master->th.th_hot_teams;
     if (level < __kmp_hot_teams_max_level && hot_teams &&
-        hot_teams[level]
-            .hot_team) { // hot team has already been allocated for given level
+        hot_teams[level].hot_team) {
+      // hot team has already been allocated for given level
       use_hot_team = 1;
     } else {
       use_hot_team = 0;
     }
+  } else {
+    // check we won't access uninitialized hot_teams, just in case
+    KMP_DEBUG_ASSERT(new_nproc == 1);
   }
 #endif
   // Optimization to use a "hot" team
