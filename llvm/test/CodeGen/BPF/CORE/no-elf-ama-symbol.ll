@@ -1,7 +1,7 @@
-; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-readelf -s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=obj -o - %s | llvm-readelf -s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfel -filetype=obj -addrsig -o - %s | llvm-readelf -s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=obj -addrsig -o - %s | llvm-readelf -s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-readelf -s - | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfeb -filetype=obj -o - %s | llvm-readelf -s - | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfel -filetype=obj -addrsig -o - %s | llvm-readelf -s - | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfeb -filetype=obj -addrsig -o - %s | llvm-readelf -s - | FileCheck -check-prefixes=CHECK %s
 ;
 ; Source Code:
 ;   struct tt { int a; } __attribute__((preserve_access_index));

@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux-gnu %s -o - \
-// RUN: | llvm-readobj -S --symbols | FileCheck %s
+// RUN: | llvm-readobj -S --symbols - | FileCheck %s
 
         .section .text,    "0x806", %progbits, unique, 0
         .section .comment, "0x21"

@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r6 \
 # RUN:   | FileCheck %s -check-prefix=CHECK-FIXUP
 # RUN: llvm-mc %s -filetype=obj -triple=mips-unknown-linux -mcpu=mips32r6 \
-# RUN:   | llvm-readobj -r | FileCheck %s -check-prefix=CHECK-ELF
+# RUN:   | llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-ELF
 #------------------------------------------------------------------------------
 # Check that the assembler can handle the documented syntax for fixups.
 #------------------------------------------------------------------------------

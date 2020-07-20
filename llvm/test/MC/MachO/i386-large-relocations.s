@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r - | FileCheck %s
 
 .space 0x1ed280
        .section        __DATA,__const

@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple=riscv32 %s | FileCheck --check-prefix=PRINT %s
 # RUN: llvm-mc -triple=riscv64 %s | FileCheck --check-prefix=PRINT %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 %s | llvm-readobj -r | FileCheck %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 %s | llvm-readobj -r | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=riscv32 %s | llvm-readobj -r - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=riscv64 %s | llvm-readobj -r - | FileCheck %s
 
 # PRINT: .reloc 8, R_RISCV_NONE, .data
 # PRINT: .reloc 4, R_RISCV_NONE, foo+4

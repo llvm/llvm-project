@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -arch mipsel %s | llvm-readobj -r | FileCheck %s
+# RUN: llvm-mc -filetype=obj -arch mipsel %s | llvm-readobj -r - | FileCheck %s
 
 # Test the order of records in the relocation table.
 #

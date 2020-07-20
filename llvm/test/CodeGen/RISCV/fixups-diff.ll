@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=+relax %s -o - \
-; RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX %s
+; RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX %s
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=-relax %s -o - \
-; RUN:     | llvm-readobj -r | FileCheck -check-prefix=NORELAX %s
+; RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX %s
 
 ; Check that a difference between two symbols in the same fragment
 ; causes relocations to be emitted if and only if relaxation is enabled.

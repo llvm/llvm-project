@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -r - | FileCheck %s
 
         xorl %eax,%eax
 

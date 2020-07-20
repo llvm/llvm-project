@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-linux-gnu -filetype=obj %s | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -triple x86_64-linux-gnu -filetype=obj %s | llvm-readobj -r - | FileCheck %s
 
 // Tests that relocation value fits in the provided size
 // Original bug http://llvm.org/bugs/show_bug.cgi?id=10568

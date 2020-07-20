@@ -1,8 +1,8 @@
 // RUN: llvm-mc -triple=powerpc64le-pc-linux -filetype=obj %s -o - | \
-// RUN: llvm-readobj -r | FileCheck %s
+// RUN: llvm-readobj -r - | FileCheck %s
 
 // RUN: llvm-mc -triple=powerpc64-pc-linux -filetype=obj %s -o - | \
-// RUN: llvm-readobj -r | FileCheck %s
+// RUN: llvm-readobj -r - | FileCheck %s
 
 // Verify we can handle all the tprel symbol modifiers for local exec tls.
 // Tests 16 bit offsets on both DS-form and D-form instructions, 32 bit

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-win32 %s | llvm-readobj -S --sr | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-win32 %s | llvm-readobj -S --sr - | FileCheck %s
 
 // check that we produce the correct relocation for .secidx
 

@@ -1,4 +1,4 @@
-@ RUN: llvm-mc -triple=thumbv7-apple-darwin -show-encoding %s -filetype=obj -o - | llvm-readobj -S --sd | FileCheck %s
+@ RUN: llvm-mc -triple=thumbv7-apple-darwin -show-encoding %s -filetype=obj -o - | llvm-readobj -S --sd - | FileCheck %s
 
         ble Lfoo        @ wide encoding
 

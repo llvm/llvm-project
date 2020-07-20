@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=mips64el-pc-linux -filetype=obj -mcpu=mips64r2 < %s -o - | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -triple=mips64el-pc-linux -filetype=obj -mcpu=mips64r2 < %s -o - | llvm-readobj -r - | FileCheck %s
 
 // Check that the R_MIPS_GOT_DISP relocations were created.
 
