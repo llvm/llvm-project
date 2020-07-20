@@ -2816,7 +2816,8 @@ def err_attribute_bad_sve_vector_size : Error<
   "invalid SVE vector size '%0', must match value set by "
   "'-msve-vector-bits' ('%1')">;
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
-  "%0 is not supported when '-msve-vector-bits=<bits>' is not specified">;
+  "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
+  "value of 128, 256, 512, 1024 or 2048.">;
 def err_attribute_requires_positive_integer : Error<
   "%0 attribute requires a %select{positive|non-negative}1 "
   "integral compile time constant expression">;

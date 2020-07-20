@@ -2346,8 +2346,9 @@ foreach i = {8-15,18} in
 
 def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">,
   Group<m_aarch64_Features_Group>, Flags<[DriverOption,CC1Option]>,
-  HelpText<"Set the size of fixed-length SVE vectors in bits.">,
-  Values<"128,256,512,1024,2048">;
+  HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
+           " vector length agnostic value of \"scalable\". (AArch64 only)">,
+  Values<"128,256,512,1024,2048,scalable">;
 
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>, Values<"none,all,non-leaf">,
