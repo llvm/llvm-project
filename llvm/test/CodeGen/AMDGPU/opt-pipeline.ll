@@ -163,7 +163,9 @@
 ; GCN-O1-NEXT:         Recognize loop idioms
 ; GCN-O1-NEXT:         Delete dead loops
 ; GCN-O1-NEXT:         Unroll loops
+; GCN-O1-NEXT:       SROA
 ; GCN-O1-NEXT:       Phi Values Analysis
+; GCN-O1-NEXT:       Function Alias Analysis Results
 ; GCN-O1-NEXT:       Memory Dependence Analysis
 ; GCN-O1-NEXT:       MemCpy Optimization
 ; GCN-O1-NEXT:       Sparse Conditional Constant Propagation
@@ -481,6 +483,8 @@
 ; GCN-O2-NEXT:         Recognize loop idioms
 ; GCN-O2-NEXT:         Delete dead loops
 ; GCN-O2-NEXT:         Unroll loops
+; GCN-O2-NEXT:       SROA
+; GCN-O2-NEXT:       Function Alias Analysis Results
 ; GCN-O2-NEXT:       MergedLoadStoreMotion
 ; GCN-O2-NEXT:       Phi Values Analysis
 ; GCN-O2-NEXT:       Function Alias Analysis Results
@@ -839,6 +843,8 @@
 ; GCN-O3-NEXT:         Recognize loop idioms
 ; GCN-O3-NEXT:         Delete dead loops
 ; GCN-O3-NEXT:         Unroll loops
+; GCN-O3-NEXT:       SROA
+; GCN-O3-NEXT:       Function Alias Analysis Results
 ; GCN-O3-NEXT:       MergedLoadStoreMotion
 ; GCN-O3-NEXT:       Phi Values Analysis
 ; GCN-O3-NEXT:       Function Alias Analysis Results
