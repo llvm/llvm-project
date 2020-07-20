@@ -177,8 +177,10 @@ define i32 @test7_pos_neg(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C0]])
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sle i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    [[Y_NONNEG:%.*]] = sub i32 0, [[Y]]
+; CHECK-NEXT:    [[DIV1:%.*]] = udiv i32 [[X]], [[Y_NONNEG]]
+; CHECK-NEXT:    [[DIV1_NEG:%.*]] = sub i32 0, [[DIV1]]
+; CHECK-NEXT:    ret i32 [[DIV1_NEG]]
 ;
   %c0 = icmp sge i32 %x, 0
   call void @llvm.assume(i1 %c0)
@@ -194,8 +196,10 @@ define i32 @test8_neg_pos(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C0]])
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sge i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    [[X_NONNEG:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[DIV1:%.*]] = udiv i32 [[X_NONNEG]], [[Y]]
+; CHECK-NEXT:    [[DIV1_NEG:%.*]] = sub i32 0, [[DIV1]]
+; CHECK-NEXT:    ret i32 [[DIV1_NEG]]
 ;
   %c0 = icmp sle i32 %x, 0
   call void @llvm.assume(i1 %c0)
@@ -211,8 +215,10 @@ define i32 @test9_neg_neg(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C0]])
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sle i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    [[X_NONNEG:%.*]] = sub i32 0, [[X]]
+; CHECK-NEXT:    [[Y_NONNEG:%.*]] = sub i32 0, [[Y]]
+; CHECK-NEXT:    [[DIV1:%.*]] = udiv i32 [[X_NONNEG]], [[Y_NONNEG]]
+; CHECK-NEXT:    ret i32 [[DIV1]]
 ;
   %c0 = icmp sle i32 %x, 0
   call void @llvm.assume(i1 %c0)
