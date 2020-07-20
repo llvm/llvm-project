@@ -312,3 +312,55 @@ Sections:
 
 # FLAG2-ALL-GNU:  FLAGS 2: ffffffff
 # FLAG2-ALL-LLVM: Flags 2: 0xFFFFFFF
+
+## Check what we print when there is no .MIPS.abiflags section in the file.
+# RUN: yaml2obj --docnum=2 %s -o %t.nosection
+## Note: GNU readelf 2.31.1 prints nothing.
+# RUN: llvm-readelf -A %t.nosection 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOSEC --implicit-check-not={{.}}
+# RUN: llvm-readobj -A %t.nosection 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=NOSEC,NOSEC-LLVM --implicit-check-not=warning:
+
+# NOSEC-LLVM: There is no .MIPS.abiflags section in the file.
+# NOSEC:      There is no .MIPS.options section in the file.
+# NOSEC-NEXT: There is no .reginfo section in the file.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections: []
+
+## Check we report a warning when we are unable to read the content of the .MIPS.abiflags section.
+# RUN: yaml2obj --docnum=3 -DSHOFFSET=0xffffffff %s -o %t.err1
+# RUN: llvm-readelf -A %t.err1 2>&1 | FileCheck %s -DFILE=%t.err1 --check-prefix=CONTENT-ERR
+# RUN: llvm-readobj -A %t.err1 2>&1 | FileCheck %s -DFILE=%t.err1 --check-prefix=CONTENT-ERR
+
+# CONTENT-ERR:      warning: '[[FILE]]': unable to read the .MIPS.abiflags section: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x18) that is greater than the file size (0x240)
+# CONTENT-ERR-NEXT: There is no .MIPS.options section in the file.
+# CONTENT-ERR-NEXT: There is no .reginfo section in the file.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name:     .MIPS.abiflags
+    Type:     SHT_MIPS_ABIFLAGS
+    ISA:      MIPS32
+    Offset:   0x100
+    ShOffset: [[SHOFFSET=0x100]]
+    ShSize:   [[SHSIZE=24]]
+
+## Check we report a warning when the .MIPS.abiflags section has an unexpected size.
+# RUN: yaml2obj --docnum=3 -DSHSIZE=23 %s -o %t.err2
+# RUN: llvm-readelf -A %t.err2 2>&1 | FileCheck %s -DFILE=%t.err2 --check-prefix=SIZE-ERR
+# RUN: llvm-readobj -A %t.err2 2>&1 | FileCheck %s -DFILE=%t.err2 --check-prefix=SIZE-ERR
+
+# SIZE-ERR:      warning: '[[FILE]]': unable to read the .MIPS.abiflags section: it has a wrong size (23)
+# SIZE-ERR-NEXT: There is no .MIPS.options section in the file.
+# SIZE-ERR-NEXT: There is no .reginfo section in the file.
