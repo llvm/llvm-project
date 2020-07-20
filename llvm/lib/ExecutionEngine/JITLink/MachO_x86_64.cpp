@@ -184,6 +184,8 @@ private:
     using namespace support;
     auto &Obj = getObject();
 
+    LLVM_DEBUG(dbgs() << "Processing relocations:\n");
+
     for (auto &S : Obj.sections()) {
 
       JITTargetAddress SectionAddress = S.getAddress();
@@ -202,8 +204,8 @@ private:
             getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
         if (!NSec.GraphSection) {
           LLVM_DEBUG({
-            dbgs() << "Skipping relocations for MachO section " << NSec.SegName
-                   << "/" << NSec.SectName
+            dbgs() << "  Skipping relocations for MachO section "
+                   << NSec.SegName << "/" << NSec.SectName
                    << " which has no associated graph section\n";
           });
           continue;
@@ -225,8 +227,10 @@ private:
         JITTargetAddress FixupAddress = SectionAddress + (uint32_t)RI.r_address;
 
         LLVM_DEBUG({
-          dbgs() << "Processing relocation at "
-                 << format("0x%016" PRIx64, FixupAddress) << "\n";
+          auto &NSec =
+              getSectionByIndex(Obj.getSectionIndex(S.getRawDataRefImpl()));
+          dbgs() << "  " << NSec.SectName << " + "
+                 << formatv("{0:x8}", RI.r_address) << ":\n";
         });
 
         // Find the block that the fixup points to.
@@ -341,6 +345,7 @@ private:
         }
 
         LLVM_DEBUG({
+          dbgs() << "    ";
           Edge GE(*Kind, FixupAddress - BlockToFix->getAddress(), *TargetSymbol,
                   Addend);
           printEdge(dbgs(), *BlockToFix, GE,
