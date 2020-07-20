@@ -1389,6 +1389,9 @@ Sema::ActOnCXXTypeConstructExpr(ParsedType TypeRep,
   if (!Result.isInvalid() && Result.get()->isInstantiationDependent() &&
       !Result.get()->isTypeDependent())
     Result = CorrectDelayedTyposInExpr(Result.get());
+  else if (Result.isInvalid())
+    Result = CreateRecoveryExpr(TInfo->getTypeLoc().getBeginLoc(),
+                                RParenOrBraceLoc, exprs, Ty);
   return Result;
 }
 
