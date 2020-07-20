@@ -55,6 +55,21 @@ protected:
 
   size_t GetFPUSize() { return sizeof(RegisterInfoPOSIX_arm64::FPU); }
 
+  bool IsSVE(unsigned reg) const;
+
+  bool IsSVEZ(unsigned reg) const { return m_register_info_up->IsSVEZReg(reg); }
+  bool IsSVEP(unsigned reg) const { return m_register_info_up->IsSVEPReg(reg); }
+  bool IsSVEVG(unsigned reg) const {
+    return m_register_info_up->IsSVERegVG(reg);
+  }
+
+  uint32_t GetRegNumSVEZ0() const {
+    return m_register_info_up->GetRegNumSVEZ0();
+  }
+
+  uint32_t GetRegNumFPCR() const { return m_register_info_up->GetRegNumFPCR(); }
+  uint32_t GetRegNumFPSR() const { return m_register_info_up->GetRegNumFPSR(); }
+
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;
   virtual bool WriteGPR() = 0;

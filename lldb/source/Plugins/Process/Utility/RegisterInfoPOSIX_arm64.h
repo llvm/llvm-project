@@ -12,11 +12,21 @@
 #include "RegisterInfoAndSetInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
+#include <map>
+
+enum class SVEState { Unknown, Disabled, FPSIMD, Full };
 
 class RegisterInfoPOSIX_arm64
     : public lldb_private::RegisterInfoAndSetInterface {
 public:
-  enum { GPRegSet = 0, FPRegSet };
+  enum { GPRegSet = 0, FPRegSet, SVERegSet };
+
+  // AArch64 Register set FP/SIMD feature configuration
+  enum {
+    eVectorQuadwordAArch64,
+    eVectorQuadwordAArch64SVE,
+    eVectorQuadwordAArch64SVEMax = 256
+  };
 
   // based on RegisterContextDarwin_arm64.h
   struct GPR {
@@ -73,14 +83,31 @@ public:
 
   size_t GetRegisterSetFromRegisterIndex(uint32_t reg_index) const override;
 
-private:
-  uint32_t num_registers;
-  uint32_t num_gpr_registers;
-  uint32_t num_fpr_registers;
+  uint32_t ConfigureVectorRegisterInfos(uint32_t mode);
 
-  uint32_t last_gpr;
-  uint32_t first_fpr;
-  uint32_t last_fpr;
+  bool VectorSizeIsValid(uint32_t vq) {
+    if (vq >= eVectorQuadwordAArch64 && vq <= eVectorQuadwordAArch64SVEMax)
+      return true;
+    return false;
+  }
+
+  bool IsSVEEnabled() const { return m_vector_reg_vq > eVectorQuadwordAArch64; }
+
+  bool IsSVEZReg(unsigned reg) const;
+  bool IsSVEPReg(unsigned reg) const;
+  bool IsSVERegVG(unsigned reg) const;
+
+  uint32_t GetRegNumSVEZ0() const;
+  uint32_t GetRegNumFPCR() const;
+  uint32_t GetRegNumFPSR() const;
+
+private:
+  typedef std::map<uint32_t, std::vector<lldb_private::RegisterInfo>>
+      per_vq_register_infos;
+
+  per_vq_register_infos m_per_vq_reg_infos;
+
+  uint32_t m_vector_reg_vq = eVectorQuadwordAArch64;
 
   const lldb_private::RegisterInfo *m_register_info_p;
   uint32_t m_register_info_count;
