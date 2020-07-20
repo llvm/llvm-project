@@ -3211,8 +3211,12 @@ struct CompilerDirective {
     TUPLE_CLASS_BOILERPLATE(IgnoreTKR);
     std::tuple<std::list<const char *>, Name> t;
   };
+  struct NameValue {
+    TUPLE_CLASS_BOILERPLATE(NameValue);
+    std::tuple<Name, std::optional<std::uint64_t>> t;
+  };
   CharBlock source;
-  std::variant<std::list<IgnoreTKR>, std::list<Name>> u;
+  std::variant<std::list<IgnoreTKR>, std::list<NameValue>> u;
 };
 
 // Legacy extensions

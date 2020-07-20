@@ -1761,7 +1761,9 @@ public:
               Word("!DIR$ IGNORE_TKR"); // emitted even if tkr list is empty
               Walk(" ", tkr, ", ");
             },
-            [&](const std::list<Name> &names) { Walk("!DIR$ ", names, " "); },
+            [&](const std::list<CompilerDirective::NameValue> &names) {
+              Walk("!DIR$ ", names, " ");
+            },
         },
         x.u);
     Put('\n');
@@ -1776,6 +1778,10 @@ public:
       Put(") ");
     }
     Walk(std::get<Name>(x.t));
+  }
+  void Unparse(const CompilerDirective::NameValue &x) {
+    Walk(std::get<Name>(x.t));
+    Walk("=", std::get<std::optional<std::uint64_t>>(x.t));
   }
 
   // OpenACC Directives & Clauses
