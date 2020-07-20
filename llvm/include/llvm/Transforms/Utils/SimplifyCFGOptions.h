@@ -25,6 +25,7 @@ struct SimplifyCFGOptions {
   bool ForwardSwitchCondToPhi = false;
   bool ConvertSwitchToLookupTable = false;
   bool NeedCanonicalLoop = true;
+  bool HoistCommonInsts = true;
   bool SinkCommonInsts = false;
   bool SimplifyCondBranch = true;
   bool FoldTwoEntryPHINode = true;
@@ -46,6 +47,10 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &needCanonicalLoops(bool B) {
     NeedCanonicalLoop = B;
+    return *this;
+  }
+  SimplifyCFGOptions &hoistCommonInsts(bool B) {
+    HoistCommonInsts = B;
     return *this;
   }
   SimplifyCFGOptions &sinkCommonInsts(bool B) {

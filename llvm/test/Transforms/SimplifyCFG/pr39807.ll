@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck %s
+; RUN: opt -S -simplifycfg -hoist-common-insts=true < %s | FileCheck %s
 
 declare void @personality()
 

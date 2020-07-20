@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=aarch64-linux-gnu -simplifycfg -enable-unsafe-fp-math -S >%t
+; RUN: opt < %s -mtriple=aarch64-linux-gnu -simplifycfg -hoist-common-insts=true -enable-unsafe-fp-math -S >%t
 ; RUN: FileCheck %s < %t
 ; ModuleID = 't.cc'
 
