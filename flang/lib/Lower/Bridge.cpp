@@ -542,15 +542,15 @@ private:
   //
 
   template <typename A>
-  std::pair<mlir::OpBuilder::InsertPoint, fir::WhereOp>
-  genWhereCondition(const A *stmt, bool withElse = true) {
+  std::pair<mlir::OpBuilder::InsertPoint, fir::IfOp>
+  genIfCondition(const A *stmt, bool withElse = true) {
     auto cond = genExprValue(*Fortran::semantics::GetExpr(
         std::get<Fortran::parser::ScalarLogicalExpr>(stmt->t)));
     auto bcc = builder->createConvert(toLocation(), builder->getI1Type(), cond);
-    auto where = builder->create<fir::WhereOp>(toLocation(), bcc, withElse);
+    auto ifOp = builder->create<fir::IfOp>(toLocation(), bcc, withElse);
     auto insPt = builder->saveInsertionPoint();
-    builder->setInsertionPointToStart(&where.whereRegion().front());
-    return {insPt, where};
+    builder->setInsertionPointToStart(&ifOp.whereRegion().front());
+    return {insPt, ifOp};
   }
 
   mlir::Value genFIRLoopIndex(const Fortran::parser::ScalarExpr &x,
@@ -604,8 +604,8 @@ private:
       return;
     }
 
-    // Generate fir.where.
-    auto pair = genWhereCondition(&stmt, /*withElse=*/false);
+    // Generate fir.if.
+    auto pair = genIfCondition(&stmt, /*withElse=*/false);
     genFIR(*eval.lexicalSuccessor, /*unstructuredContext=*/false);
     eval.lexicalSuccessor->skip = true;
     builder->restoreInsertionPoint(pair.first);
@@ -889,20 +889,20 @@ private:
   void genFIR(const Fortran::parser::IfConstruct &) {
     auto &eval = getEval();
     if (eval.lowerAsStructured()) {
-      // Structured fir.where nest.
-      fir::WhereOp underWhere;
+      // Structured fir.if nest.
+      fir::IfOp nestedIf;
       mlir::OpBuilder::InsertPoint insPt;
       for (auto &e : eval.getNestedEvaluations()) {
         if (auto *s = e.getIf<Fortran::parser::IfThenStmt>()) {
-          // fir.where op
-          std::tie(insPt, underWhere) = genWhereCondition(s);
+          // fir.if op
+          std::tie(insPt, nestedIf) = genIfCondition(s);
         } else if (auto *s = e.getIf<Fortran::parser::ElseIfStmt>()) {
-          // otherwise block, then nested fir.where
-          builder->setInsertionPointToStart(&underWhere.otherRegion().front());
-          std::tie(std::ignore, underWhere) = genWhereCondition(s);
+          // otherwise block, then nested fir.if
+          builder->setInsertionPointToStart(&nestedIf.otherRegion().front());
+          std::tie(std::ignore, nestedIf) = genIfCondition(s);
         } else if (e.isA<Fortran::parser::ElseStmt>()) {
           // otherwise block
-          builder->setInsertionPointToStart(&underWhere.otherRegion().front());
+          builder->setInsertionPointToStart(&nestedIf.otherRegion().front());
         } else if (e.isA<Fortran::parser::EndIfStmt>()) {
           builder->restoreInsertionPoint(insPt);
         } else {

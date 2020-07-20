@@ -131,14 +131,13 @@ public:
 };
 
 /// Convert `fir.if` to control-flow
-class CfgIfConv : public mlir::OpRewritePattern<fir::WhereOp> {
+class CfgIfConv : public mlir::OpRewritePattern<fir::IfOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   mlir::LogicalResult
-  matchAndRewrite(WhereOp where,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto loc = where.getLoc();
+  matchAndRewrite(IfOp ifOp, mlir::PatternRewriter &rewriter) const override {
+    auto loc = ifOp.getLoc();
 
     // Split the block containing the 'fir.if' into two parts.  The part before
     // will contain the condition, the part after will be the continuation
@@ -147,31 +146,30 @@ public:
     auto opPosition = rewriter.getInsertionPoint();
     auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
     mlir::Block *continueBlock;
-    if (where.getNumResults() == 0) {
+    if (ifOp.getNumResults() == 0) {
       continueBlock = remainingOpsBlock;
     } else {
       continueBlock =
-          rewriter.createBlock(remainingOpsBlock, where.getResultTypes());
+          rewriter.createBlock(remainingOpsBlock, ifOp.getResultTypes());
       rewriter.create<mlir::BranchOp>(loc, remainingOpsBlock);
     }
 
     // Move blocks from the "then" region to the region containing 'fir.if',
     // place it before the continuation block, and branch to it.
-    auto &whereRegion = where.whereRegion();
-    auto *whereBlock = &whereRegion.front();
-    auto *whereTerminator = whereRegion.back().getTerminator();
-    auto whereTerminatorOperands = whereTerminator->getOperands();
-    rewriter.setInsertionPointToEnd(&whereRegion.back());
-    rewriter.create<mlir::BranchOp>(loc, continueBlock,
-                                    whereTerminatorOperands);
-    rewriter.eraseOp(whereTerminator);
-    rewriter.inlineRegionBefore(whereRegion, continueBlock);
+    auto &ifOpRegion = ifOp.whereRegion();
+    auto *ifOpBlock = &ifOpRegion.front();
+    auto *ifOpTerminator = ifOpRegion.back().getTerminator();
+    auto ifOpTerminatorOperands = ifOpTerminator->getOperands();
+    rewriter.setInsertionPointToEnd(&ifOpRegion.back());
+    rewriter.create<mlir::BranchOp>(loc, continueBlock, ifOpTerminatorOperands);
+    rewriter.eraseOp(ifOpTerminator);
+    rewriter.inlineRegionBefore(ifOpRegion, continueBlock);
 
     // Move blocks from the "else" region (if present) to the region containing
     // 'fir.if', place it before the continuation block and branch to it.  It
     // will be placed after the "then" regions.
     auto *otherwiseBlock = continueBlock;
-    auto &otherwiseRegion = where.otherRegion();
+    auto &otherwiseRegion = ifOp.otherRegion();
     if (!otherwiseRegion.empty()) {
       otherwiseBlock = &otherwiseRegion.front();
       auto *otherwiseTerm = otherwiseRegion.back().getTerminator();
@@ -185,9 +183,9 @@ public:
 
     rewriter.setInsertionPointToEnd(condBlock);
     rewriter.create<mlir::CondBranchOp>(
-        loc, where.condition(), whereBlock, llvm::ArrayRef<mlir::Value>(),
+        loc, ifOp.condition(), ifOpBlock, llvm::ArrayRef<mlir::Value>(),
         otherwiseBlock, llvm::ArrayRef<mlir::Value>());
-    rewriter.replaceOp(where, continueBlock->getArguments());
+    rewriter.replaceOp(ifOp, continueBlock->getArguments());
     return success();
   }
 };
@@ -282,7 +280,7 @@ public:
                            mlir::StandardOpsDialect>();
 
     // apply the patterns
-    target.addIllegalOp<ResultOp, LoopOp, WhereOp, IterWhileOp>();
+    target.addIllegalOp<ResultOp, LoopOp, IfOp, IterWhileOp>();
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
     if (mlir::failed(
             mlir::applyPartialConversion(getFunction(), target, patterns))) {
