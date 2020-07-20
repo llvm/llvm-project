@@ -11067,8 +11067,14 @@ bool Sema::CheckForConstantInitializer(Expr *Init, QualType DclT) {
   // except that the aforementioned are allowed in unevaluated
   // expressions.  Everything else falls under the
   // "may accept other forms of constant expressions" exception.
-  // (We never end up here for C++, so the constant expression
-  // rules there don't matter.)
+  //
+  // Regular C++ code will not end up here (exceptions: language extensions,
+  // OpenCL C++ etc), so the constant expression rules there don't matter.
+  if (Init->isValueDependent()) {
+    assert(Init->containsErrors() &&
+           "Dependent code should only occur in error-recovery path.");
+    return true;
+  }
   const Expr *Culprit;
   if (Init->isConstantInitializer(Context, false, &Culprit))
     return false;
