@@ -2,7 +2,7 @@
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
 # RUN: llvm-ifs -action write-bin -o - %s %S/func.ifs %S/object.ifs %S/weak.ifs | \
-# RUN: llvm-readelf --all | FileCheck %s --check-prefixes=CHECK-ELF
+# RUN: llvm-readelf --all - | FileCheck %s --check-prefixes=CHECK-ELF
 
 # CHECK-IFS: --- !experimental-ifs-v2
 # CHECK-IFS-NEXT: IfsVersion: 2.0

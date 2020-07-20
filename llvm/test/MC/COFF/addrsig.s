@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s -o - | llvm-readobj -S --symbols --sd --addrsig | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s -o - | llvm-readobj -S --symbols --sd --addrsig - | FileCheck %s
 
 // CHECK:      Name: .llvm_addrsig
 // CHECK-NEXT: VirtualSize: 0x0

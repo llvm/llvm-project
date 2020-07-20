@@ -2,7 +2,7 @@
 # RUN: llvm-mc -triple s390x-unknown-unknown --show-encoding %s | FileCheck %s
 
 # RUN: llvm-mc -triple s390x-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -r | FileCheck %s -check-prefix=CHECK-REL
+# RUN: llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
 
 # CHECK: larl %r14, target                      # encoding: [0xc0,0xe0,A,A,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target+2, kind: FK_390_PC32DBL

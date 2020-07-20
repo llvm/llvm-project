@@ -1,9 +1,9 @@
 @ RUN: llvm-mc %s -triple=armv7-unknown-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -S --sd --sr > %t
+@ RUN:   | llvm-readobj -S --sd --sr - > %t
 @ RUN: FileCheck %s < %t
 @ RUN: FileCheck --check-prefixes=RELOC,RELOC-NOAND %s < %t
 @ RUN: llvm-mc %s -triple=armv7-unknown-linux-androideabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -S --sd --sr | FileCheck --check-prefix=RELOC %s
+@ RUN:   | llvm-readobj -S --sd --sr - | FileCheck --check-prefix=RELOC %s
 
 @ Check the compact pr0 model
 

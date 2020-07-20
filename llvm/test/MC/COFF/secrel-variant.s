@@ -1,6 +1,6 @@
 // COFF section-relative relocations
 
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s | llvm-readobj -r - | FileCheck %s
 
 .data
 values:

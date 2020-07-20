@@ -1,5 +1,5 @@
-@ RUN: llvm-mc -filetype=obj -triple arm-none-linux-gnueabi %s -o - | llvm-readobj -r --symbols | FileCheck %s
-@ RUN: llvm-mc -filetype=obj -triple thumb-none-linux-gnueabi %s -o - | llvm-readobj -r --symbols | FileCheck %s
+@ RUN: llvm-mc -filetype=obj -triple arm-none-linux-gnueabi %s -o - | llvm-readobj -r --symbols - | FileCheck %s
+@ RUN: llvm-mc -filetype=obj -triple thumb-none-linux-gnueabi %s -o - | llvm-readobj -r --symbols - | FileCheck %s
 
 defined1:
 defined2:

@@ -1,8 +1,8 @@
 // RUN: llvm-mc -filetype=obj -triple=mips64el-pc-linux -mcpu=mips64 %s -o - \
-// RUN: | llvm-readobj -r \
+// RUN: | llvm-readobj -r - \
 // RUN: | FileCheck %s
 // RUN: llvm-mc -filetype=obj -triple=mips64-pc-linux -mcpu=mips64 %s -o - \
-// RUN: | llvm-readobj -r \
+// RUN: | llvm-readobj -r - \
 // RUN: | FileCheck %s
 
 // Check that the appropriate relocations were created.

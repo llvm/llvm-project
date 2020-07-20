@@ -1,4 +1,4 @@
-@ RUN: llvm-mc -triple=thumbv7-apple-darwin -filetype=obj -o - < %s | llvm-readobj -S --sd | FileCheck %s
+@ RUN: llvm-mc -triple=thumbv7-apple-darwin -filetype=obj -o - < %s | llvm-readobj -S --sd - | FileCheck %s
 .thumb
 .thumb_func t
 t:	nop

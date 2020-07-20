@@ -1,5 +1,5 @@
 ;; RUN: llc -mtriple=hexagon-unknown-elf -filetype=obj %s -o - \
-;; RUN: | llvm-readobj -h -r | FileCheck -check-prefix=OBJ %s
+;; RUN: | llvm-readobj -h -r - | FileCheck -check-prefix=OBJ %s
 
 ; OBJ: Format: elf32-hexagon
 ; OBJ: Arch: hexagon

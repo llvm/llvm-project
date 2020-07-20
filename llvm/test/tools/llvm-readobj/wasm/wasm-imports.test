@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-readobj --symbols | FileCheck %s
+# RUN: yaml2obj %s | llvm-readobj --symbols - | FileCheck %s
 
 # Test symbols with custom import module and name attributes.
 
