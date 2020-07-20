@@ -299,7 +299,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
           if (repro::Generator *g =
                   repro::Reproducer::Instance().GetGenerator()) {
             repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-            fp.recordInterestingDirectory(dsym_root);
+            fp.RecordInterestingDirectory(dsym_root);
           }
         }
         return symbol_vendor;

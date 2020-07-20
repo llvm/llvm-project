@@ -99,7 +99,7 @@ public:
     return m_collector;
   }
 
-  void recordInterestingDirectory(const llvm::Twine &dir);
+  void RecordInterestingDirectory(const llvm::Twine &dir);
 
   void Keep() override {
     auto mapping = GetRoot().CopyByAppendingPathComponent(Info::file);
