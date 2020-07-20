@@ -65,7 +65,7 @@ struct StatementExpr0 {
   void f(T t) {
     (void)({
         if (t) // expected-error{{contextually convertible}}
-          t = t + 17;
+          t = t + 17; // expected-error {{invalid operands to binary expression ('N1::X' and 'int')}}
         t + 12; // expected-error{{invalid operands}}
       });
   }
