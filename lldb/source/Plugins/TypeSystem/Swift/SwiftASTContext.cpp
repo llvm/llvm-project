@@ -218,7 +218,7 @@ swift::Type SwiftASTContext::GetSwiftType(opaque_compiler_type_t opaque_type) {
 
 swift::CanType
 SwiftASTContext::GetCanonicalSwiftType(opaque_compiler_type_t opaque_type) {
-  assert(opaque_type && *reinterpret_cast<const char *>(opaque_type) != '$' &&
+  assert(!opaque_type || *reinterpret_cast<const char *>(opaque_type) != '$' &&
          "wrong type system");
   return lldb_private::GetCanonicalSwiftType(CompilerType(this, opaque_type));
 }
@@ -5535,14 +5535,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     break;
   }
   return swift_flags;
-}
-
-lldb::LanguageType
-SwiftASTContext::GetMinimumLanguage(opaque_compiler_type_t type) {
-  if (!type)
-    return lldb::eLanguageTypeC;
-
-  return lldb::eLanguageTypeSwift;
 }
 
 lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
