@@ -667,6 +667,19 @@ LLVM_DUMP_METHOD void GVN::dump(DenseMap<uint32_t, Value*>& d) const {
 }
 #endif
 
+enum class AvaliabilityState : char {
+  /// We know the block *is not* fully available. This is a fixpoint.
+  Unavaliable = 0,
+  /// We know the block *is* fully available. This is a fixpoint.
+  Avaliable = 1,
+  /// We do not know whether the block is fully available or not,
+  /// but we are currently speculating that it will be.
+  SpeculativelyAvaliable = 2,
+  /// We are speculating for this block and have used that
+  /// to speculate for other blocks.
+  SpeculativelyAvaliableAndUsedForSpeculation = 3,
+};
+
 /// Return true if we can prove that the value
 /// we're analyzing is fully available in the specified block.  As we go, keep
 /// track of which blocks we know are fully alive in FullyAvailableBlocks.  This
@@ -677,24 +690,27 @@ LLVM_DUMP_METHOD void GVN::dump(DenseMap<uint32_t, Value*>& d) const {
 ///      currently speculating that it will be.
 ///   3) we are speculating for this block and have used that to speculate for
 ///      other blocks.
-static bool IsValueFullyAvailableInBlock(BasicBlock *BB,
-                            DenseMap<BasicBlock*, char> &FullyAvailableBlocks,
-                            uint32_t RecurseDepth) {
+static bool IsValueFullyAvailableInBlock(
+    BasicBlock *BB,
+    DenseMap<BasicBlock *, AvaliabilityState> &FullyAvailableBlocks,
+    uint32_t RecurseDepth) {
   if (RecurseDepth > MaxRecurseDepth)
     return false;
 
-  // Optimistically assume that the block is fully available and check to see
-  // if we already know about this block in one lookup.
-  std::pair<DenseMap<BasicBlock*, char>::iterator, bool> IV =
-    FullyAvailableBlocks.insert(std::make_pair(BB, 2));
+  // Optimistically assume that the block is speculatively available and check
+  // to see if we already know about this block in one lookup.
+  std::pair<DenseMap<BasicBlock *, AvaliabilityState>::iterator, bool> IV =
+      FullyAvailableBlocks.insert(
+          std::make_pair(BB, AvaliabilityState::SpeculativelyAvaliable));
 
   // If the entry already existed for this block, return the precomputed value.
   if (!IV.second) {
     // If this is a speculative "available" value, mark it as being used for
     // speculation of other blocks.
-    if (IV.first->second == 2)
-      IV.first->second = 3;
-    return IV.first->second != 0;
+    if (IV.first->second == AvaliabilityState::SpeculativelyAvaliable)
+      IV.first->second =
+          AvaliabilityState::SpeculativelyAvaliableAndUsedForSpeculation;
+    return IV.first->second != AvaliabilityState::Unavaliable;
   }
 
   // Otherwise, see if it is fully available in all predecessors.
@@ -717,29 +733,30 @@ static bool IsValueFullyAvailableInBlock(BasicBlock *BB,
 // all, a fully-available block.  We have a problem if we speculated on this and
 // used the speculation to mark other blocks as available.
 SpeculationFailure:
-  char &BBVal = FullyAvailableBlocks[BB];
+  AvaliabilityState &BBVal = FullyAvailableBlocks[BB];
 
-  // If we didn't speculate on this, just return with it set to false.
-  if (BBVal == 2) {
-    BBVal = 0;
+  // If we didn't speculate on this, just return with it set to unavaliable.
+  if (BBVal == AvaliabilityState::SpeculativelyAvaliable) {
+    BBVal = AvaliabilityState::Unavaliable;
     return false;
   }
 
-  // If we did speculate on this value, we could have blocks set to 1 that are
-  // incorrect.  Walk the (transitive) successors of this block and mark them as
-  // 0 if set to one.
+  // If we did speculate on this value, we could have blocks set to
+  // speculatively avaliable that are incorrect. Walk the (transitive)
+  // successors of this block and mark them as unavaliable instead.
   SmallVector<BasicBlock*, 32> BBWorklist;
   BBWorklist.push_back(BB);
 
   do {
     BasicBlock *Entry = BBWorklist.pop_back_val();
-    // Note that this sets blocks to 0 (unavailable) if they happen to not
+    // Note that this sets blocks to unavailable if they happen to not
     // already be in FullyAvailableBlocks.  This is safe.
-    char &EntryVal = FullyAvailableBlocks[Entry];
-    if (EntryVal == 0) continue;  // Already unavailable.
+    AvaliabilityState &EntryVal = FullyAvailableBlocks[Entry];
+    if (EntryVal == AvaliabilityState::Unavaliable)
+      continue; // Already unavailable.
 
     // Mark as unavailable.
-    EntryVal = 0;
+    EntryVal = AvaliabilityState::Unavaliable;
 
     BBWorklist.append(succ_begin(Entry), succ_end(Entry));
   } while (!BBWorklist.empty());
@@ -1107,11 +1124,11 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // Check to see how many predecessors have the loaded value fully
   // available.
   MapVector<BasicBlock *, Value *> PredLoads;
-  DenseMap<BasicBlock*, char> FullyAvailableBlocks;
+  DenseMap<BasicBlock *, AvaliabilityState> FullyAvailableBlocks;
   for (const AvailableValueInBlock &AV : ValuesPerBlock)
-    FullyAvailableBlocks[AV.BB] = true;
+    FullyAvailableBlocks[AV.BB] = AvaliabilityState::Avaliable;
   for (BasicBlock *UnavailableBB : UnavailableBlocks)
-    FullyAvailableBlocks[UnavailableBB] = false;
+    FullyAvailableBlocks[UnavailableBB] = AvaliabilityState::Unavaliable;
 
   SmallVector<BasicBlock *, 4> CriticalEdgePred;
   for (BasicBlock *Pred : predecessors(LoadBB)) {
