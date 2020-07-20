@@ -4669,6 +4669,7 @@ def _SLASH_FI : CLJoinedOrSeparate<"FI">,
 def _SLASH_Fe : CLJoined<"Fe">,
   HelpText<"Set output executable file name">,
   MetaVarName<"<file or dir/>">;
+def _SLASH_Fe_COLON : CLJoined<"Fe:">, Alias<_SLASH_Fe>;
 def _SLASH_Fi : CLCompileJoined<"Fi">,
   HelpText<"Set preprocess output file name (with /P)">,
   MetaVarName<"<file>">;
