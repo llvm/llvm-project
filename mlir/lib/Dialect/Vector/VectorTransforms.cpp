@@ -30,7 +30,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Interfaces/VectorUnrollInterface.h"
+#include "mlir/Interfaces/VectorInterfaces.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"

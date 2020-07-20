@@ -82,8 +82,8 @@ void mlir::linalg::hoistViewAllocOps(FuncOp func) {
 
 /// Return true if we can prove that the transfer operations access dijoint
 /// memory.
-template <typename TransferTypeA, typename TransferTypeB>
-static bool isDisjoint(TransferTypeA transferA, TransferTypeB transferB) {
+static bool isDisjoint(VectorTransferOpInterface transferA,
+                       VectorTransferOpInterface transferB) {
   if (transferA.memref() != transferB.memref())
     return false;
   // For simplicity only look at transfer of same type.
@@ -91,8 +91,8 @@ static bool isDisjoint(TransferTypeA transferA, TransferTypeB transferB) {
     return false;
   unsigned rankOffset = transferA.getLeadingMemRefRank();
   for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
-    auto indexA = transferA.indices()[i].template getDefiningOp<ConstantOp>();
-    auto indexB = transferB.indices()[i].template getDefiningOp<ConstantOp>();
+    auto indexA = transferA.indices()[i].getDefiningOp<ConstantOp>();
+    auto indexB = transferB.indices()[i].getDefiningOp<ConstantOp>();
     // If any of the indices are dynamic we cannot prove anything.
     if (!indexA || !indexB)
       continue;
@@ -100,15 +100,15 @@ static bool isDisjoint(TransferTypeA transferA, TransferTypeB transferB) {
     if (i < rankOffset) {
       // For dimension used as index if we can prove that index are different we
       // know we are accessing disjoint slices.
-      if (indexA.getValue().template cast<IntegerAttr>().getInt() !=
-          indexB.getValue().template cast<IntegerAttr>().getInt())
+      if (indexA.getValue().cast<IntegerAttr>().getInt() !=
+          indexB.getValue().cast<IntegerAttr>().getInt())
         return true;
     } else {
       // For this dimension, we slice a part of the memref we need to make sure
       // the intervals accessed don't overlap.
       int64_t distance =
-          std::abs(indexA.getValue().template cast<IntegerAttr>().getInt() -
-                   indexB.getValue().template cast<IntegerAttr>().getInt());
+          std::abs(indexA.getValue().cast<IntegerAttr>().getInt() -
+                   indexB.getValue().cast<IntegerAttr>().getInt());
       if (distance >= transferA.getVectorType().getDimSize(i - rankOffset))
         return true;
     }
@@ -185,11 +185,17 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
           continue;
         if (auto transferWriteUse =
                 dyn_cast<vector::TransferWriteOp>(use.getOwner())) {
-          if (!isDisjoint(transferWrite, transferWriteUse))
+          if (!isDisjoint(
+                  cast<VectorTransferOpInterface>(transferWrite.getOperation()),
+                  cast<VectorTransferOpInterface>(
+                      transferWriteUse.getOperation())))
             return WalkResult::advance();
         } else if (auto transferReadUse =
                        dyn_cast<vector::TransferReadOp>(use.getOwner())) {
-          if (!isDisjoint(transferWrite, transferReadUse))
+          if (!isDisjoint(
+                  cast<VectorTransferOpInterface>(transferWrite.getOperation()),
+                  cast<VectorTransferOpInterface>(
+                      transferReadUse.getOperation())))
             return WalkResult::advance();
         } else {
           // Unknown use, we cannot prove that it doesn't alias with the

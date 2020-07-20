@@ -1,4 +1,4 @@
-//===- VectorUnrollInterface.cpp - Unrollable vector operations -*- C++ -*-===//
+//===- VectorInterfaces.cpp - Unrollable vector operations -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Interfaces/VectorUnrollInterface.h"
+#include "mlir/Interfaces/VectorInterfaces.h"
 
 using namespace mlir;
 
@@ -15,4 +15,4 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 /// Include the definitions of the VectorUntoll interfaces.
-#include "mlir/Interfaces/VectorUnrollInterface.cpp.inc"
+#include "mlir/Interfaces/VectorInterfaces.cpp.inc"
