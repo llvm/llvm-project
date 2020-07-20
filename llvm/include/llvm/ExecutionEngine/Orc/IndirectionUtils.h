@@ -62,14 +62,33 @@ public:
       JITTargetAddress TrampolineAddr,
       NotifyLandingResolvedFunction OnLandingResolved) const>;
 
-  virtual ~TrampolinePool() {}
+  virtual ~TrampolinePool();
 
   /// Get an available trampoline address.
   /// Returns an error if no trampoline can be created.
-  virtual Expected<JITTargetAddress> getTrampoline() = 0;
+  Expected<JITTargetAddress> getTrampoline() {
+    std::lock_guard<std::mutex> Lock(TPMutex);
+    if (AvailableTrampolines.empty()) {
+      if (auto Err = grow())
+        return std::move(Err);
+    }
+    assert(!AvailableTrampolines.empty() && "Failed to grow trampoline pool");
+    auto TrampolineAddr = AvailableTrampolines.back();
+    AvailableTrampolines.pop_back();
+    return TrampolineAddr;
+  }
 
-private:
-  virtual void anchor();
+  /// Returns the given trampoline to the pool for re-use.
+  void releaseTrampoline(JITTargetAddress TrampolineAddr) {
+    std::lock_guard<std::mutex> Lock(TPMutex);
+    AvailableTrampolines.push_back(TrampolineAddr);
+  }
+
+protected:
+  virtual Error grow() = 0;
+
+  std::mutex TPMutex;
+  std::vector<JITTargetAddress> AvailableTrampolines;
 };
 
 /// A trampoline pool for trampolines within the current process.
@@ -88,26 +107,6 @@ public:
     if (Err)
       return std::move(Err);
     return std::move(LTP);
-  }
-
-  /// Get a free trampoline. Returns an error if one can not be provided (e.g.
-  /// because the pool is empty and can not be grown).
-  Expected<JITTargetAddress> getTrampoline() override {
-    std::lock_guard<std::mutex> Lock(LTPMutex);
-    if (AvailableTrampolines.empty()) {
-      if (auto Err = grow())
-        return std::move(Err);
-    }
-    assert(!AvailableTrampolines.empty() && "Failed to grow trampoline pool");
-    auto TrampolineAddr = AvailableTrampolines.back();
-    AvailableTrampolines.pop_back();
-    return TrampolineAddr;
-  }
-
-  /// Returns the given trampoline to the pool for re-use.
-  void releaseTrampoline(JITTargetAddress TrampolineAddr) {
-    std::lock_guard<std::mutex> Lock(LTPMutex);
-    AvailableTrampolines.push_back(TrampolineAddr);
   }
 
 private:
@@ -154,8 +153,8 @@ private:
     }
   }
 
-  Error grow() {
-    assert(this->AvailableTrampolines.empty() && "Growing prematurely?");
+  Error grow() override {
+    assert(AvailableTrampolines.empty() && "Growing prematurely?");
 
     std::error_code EC;
     auto TrampolineBlock =
@@ -175,7 +174,7 @@ private:
         pointerToJITTargetAddress(ResolverBlock.base()), NumTrampolines);
 
     for (unsigned I = 0; I < NumTrampolines; ++I)
-      this->AvailableTrampolines.push_back(pointerToJITTargetAddress(
+      AvailableTrampolines.push_back(pointerToJITTargetAddress(
           TrampolineMem + (I * ORCABI::TrampolineSize)));
 
     if (auto EC = sys::Memory::protectMappedMemory(
@@ -189,10 +188,8 @@ private:
 
   ResolveLandingFunction ResolveLanding;
 
-  std::mutex LTPMutex;
   sys::OwningMemoryBlock ResolverBlock;
   std::vector<sys::OwningMemoryBlock> TrampolineBlocks;
-  std::vector<JITTargetAddress> AvailableTrampolines;
 };
 
 /// Target-independent base class for compile callback management.

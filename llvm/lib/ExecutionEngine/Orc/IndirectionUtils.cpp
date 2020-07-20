@@ -54,8 +54,8 @@ private:
 namespace llvm {
 namespace orc {
 
+TrampolinePool::~TrampolinePool() {}
 void IndirectStubsManager::anchor() {}
-void TrampolinePool::anchor() {}
 
 Expected<JITTargetAddress>
 JITCompileCallbackManager::getCompileCallback(CompileFunction Compile) {
