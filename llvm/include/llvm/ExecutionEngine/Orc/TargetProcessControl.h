@@ -119,6 +119,8 @@ public:
   /// Return a MemoryAccess object for the target process.
   MemoryAccess &getMemoryAccess() const { return *MemAccess; }
 
+  /// Load the library at the given path.
+
 protected:
   TargetProcessControl(Triple TT, unsigned PageSize);
 
