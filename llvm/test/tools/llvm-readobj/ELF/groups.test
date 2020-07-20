@@ -61,7 +61,7 @@ Sections:
     Info: bar
     Members:
       - SectionOrType: GRP_COMDAT
-      - SectionOrType: .text.bar
+      - SectionOrType: [[TEXTBARNAME=.text.bar]]
       - SectionOrType: .rela.text.bar
   - Name:  .text.foo
     Type:  SHT_PROGBITS
@@ -80,3 +80,47 @@ Symbols:
     Section: .text.foo
   - Name:    bar
     Section: .text.bar
+
+## Check that we report a warning and continue dumping when a section is included
+## in two group sections at the same time.
+
+# RUN: yaml2obj %s -DTEXTBARNAME=.text.foo -o %t.dup.o
+# RUN: llvm-readobj --elf-section-groups %t.dup.o 2>&1 | FileCheck %s -DFILE=%t.dup.o --check-prefix=DUP-LLVM
+# RUN: llvm-readelf --elf-section-groups %t.dup.o 2>&1 | FileCheck %s -DFILE=%t.dup.o --check-prefix=DUP-GNU
+
+# DUP-LLVM:      Group {
+# DUP-LLVM-NEXT:   Name: .group
+# DUP-LLVM-NEXT:   Index: 1
+# DUP-LLVM-NEXT:   Link: 7
+# DUP-LLVM-NEXT:   Info: 1
+# DUP-LLVM-NEXT:   Type: COMDAT
+# DUP-LLVM-NEXT:   Signature: foo
+# DUP-LLVM-NEXT:   Section(s) in group [
+# DUP-LLVM-NEXT:     .text.foo (3)
+# DUP-LLVM-NEXT:     .rela.text.foo (4)
+# DUP-LLVM-NEXT:   ]
+# DUP-LLVM-NEXT: }
+# DUP-LLVM:      Group {
+# DUP-LLVM-NEXT:   Name: .group1
+# DUP-LLVM-NEXT:   Index: 2
+# DUP-LLVM-NEXT:   Link: 7
+# DUP-LLVM-NEXT:   Info: 2
+# DUP-LLVM-NEXT:   Type: COMDAT
+# DUP-LLVM-NEXT:   Signature: bar
+# DUP-LLVM-NEXT:   Section(s) in group [
+# DUP-LLVM-NEXT: warning: '[[FILE]]': section with index 3, included in the group section with index 1, was also found in the group section with index 2
+# DUP-LLVM-NEXT:     .text.foo (3)
+# DUP-LLVM-NEXT:     .rela.text.bar (6)
+# DUP-LLVM-NEXT:   ]
+# DUP-LLVM-NEXT: }
+
+# DUP-GNU:      COMDAT group section [    1] `.group' [foo] contains 2 sections:
+# DUP-GNU-NEXT:  [Index]    Name
+# DUP-GNU-NEXT:  [    3]   .text.foo
+# DUP-GNU-NEXT:  [    4]   .rela.text.foo
+
+# DUP-GNU:      COMDAT group section [    2] `.group1' [bar] contains 2 sections:
+# DUP-GNU-NEXT:    [Index]    Name
+# DUP-GNU-NEXT: warning: '[[FILE]]': section with index 3, included in the group section with index 1, was also found in the group section with index 2
+# DUP-GNU-NEXT:    [    3]   .text.foo
+# DUP-GNU-NEXT:    [    6]   .rela.text.bar
