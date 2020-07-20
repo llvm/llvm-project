@@ -696,6 +696,13 @@ public:
     markAllIdxsAsCovered();
     return actionIf(LegalizeAction::NarrowScalar, Predicate, Mutation);
   }
+  /// Narrow the scalar, specified in mutation, when type indexes 0 and 1 is any
+  /// type pair in the given list.
+  LegalizeRuleSet &
+  narrowScalarFor(std::initializer_list<std::pair<LLT, LLT>> Types,
+                  LegalizeMutation Mutation) {
+    return actionFor(LegalizeAction::NarrowScalar, Types, Mutation);
+  }
 
   /// Add more elements to reach the type selected by the mutation if the
   /// predicate is true.
