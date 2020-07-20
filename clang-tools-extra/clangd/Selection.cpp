@@ -220,14 +220,26 @@ public:
         SelFirst, AllSpelledTokens.end(), [&](const syntax::Token &Tok) {
           return SM.getFileOffset(Tok.location()) < SelEnd;
         });
+    auto Sel = llvm::makeArrayRef(SelFirst, SelLimit);
+    // Find which of these are preprocessed to nothing and should be ignored.
+    std::vector<bool> PPIgnored(Sel.size(), false);
+    for (const syntax::TokenBuffer::Expansion &X :
+         Buf.expansionsOverlapping(Sel)) {
+      if (X.Expanded.empty()) {
+        for (const syntax::Token &Tok : X.Spelled) {
+          if (&Tok >= SelFirst && &Tok < SelLimit)
+            PPIgnored[&Tok - SelFirst] = true;
+        }
+      }
+    }
     // Precompute selectedness and offset for selected spelled tokens.
-    for (const syntax::Token *T = SelFirst; T < SelLimit; ++T) {
-      if (shouldIgnore(*T))
+    for (unsigned I = 0; I < Sel.size(); ++I) {
+      if (shouldIgnore(Sel[I]) || PPIgnored[I])
         continue;
       SpelledTokens.emplace_back();
       Tok &S = SpelledTokens.back();
-      S.Offset = SM.getFileOffset(T->location());
-      if (S.Offset >= SelBegin && S.Offset + T->length() <= SelEnd)
+      S.Offset = SM.getFileOffset(Sel[I].location());
+      if (S.Offset >= SelBegin && S.Offset + Sel[I].length() <= SelEnd)
         S.Selected = SelectionTree::Complete;
       else
         S.Selected = SelectionTree::Partial;

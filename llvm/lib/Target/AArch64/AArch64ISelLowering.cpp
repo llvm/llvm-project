@@ -1073,6 +1073,10 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   // Lower fixed length vector operations to scalable equivalents.
   setOperationAction(ISD::ADD, VT, Custom);
   setOperationAction(ISD::FADD, VT, Custom);
+  setOperationAction(ISD::FDIV, VT, Custom);
+  setOperationAction(ISD::FMA, VT, Custom);
+  setOperationAction(ISD::FMUL, VT, Custom);
+  setOperationAction(ISD::FSUB, VT, Custom);
   setOperationAction(ISD::LOAD, VT, Custom);
   setOperationAction(ISD::STORE, VT, Custom);
   setOperationAction(ISD::TRUNCATE, VT, Custom);
@@ -3474,24 +3478,23 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::UMULO:
     return LowerXALUO(Op, DAG);
   case ISD::FADD:
-    if (Op.getValueType().isScalableVector() ||
-        useSVEForFixedLengthVectorVT(Op.getValueType()))
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_PRED);
-    return LowerF128Call(Op, DAG, RTLIB::ADD_F128);
+    if (Op.getValueType() == MVT::f128)
+      return LowerF128Call(Op, DAG, RTLIB::ADD_F128);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_PRED);
   case ISD::FSUB:
-    if (Op.getValueType().isScalableVector())
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSUB_PRED);
-    return LowerF128Call(Op, DAG, RTLIB::SUB_F128);
+    if (Op.getValueType() == MVT::f128)
+      return LowerF128Call(Op, DAG, RTLIB::SUB_F128);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSUB_PRED);
   case ISD::FMUL:
-    if (Op.getValueType().isScalableVector())
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
-    return LowerF128Call(Op, DAG, RTLIB::MUL_F128);
+    if (Op.getValueType() == MVT::f128)
+      return LowerF128Call(Op, DAG, RTLIB::MUL_F128);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
   case ISD::FMA:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
   case ISD::FDIV:
-    if (Op.getValueType().isScalableVector())
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FDIV_PRED);
-    return LowerF128Call(Op, DAG, RTLIB::DIV_F128);
+    if (Op.getValueType() == MVT::f128)
+      return LowerF128Call(Op, DAG, RTLIB::DIV_F128);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FDIV_PRED);
   case ISD::FP_ROUND:
   case ISD::STRICT_FP_ROUND:
     return LowerFP_ROUND(Op, DAG);

@@ -846,8 +846,9 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
     return failure();
 
   b.setInsertionPoint(module.getBody(), getFuncInsertPt());
-  LLVMFuncOp fop = b.create<LLVMFuncOp>(UnknownLoc::get(context), f->getName(),
-                                        functionType);
+  LLVMFuncOp fop =
+      b.create<LLVMFuncOp>(UnknownLoc::get(context), f->getName(), functionType,
+                           convertLinkageFromLLVM(f->getLinkage()));
 
   if (FlatSymbolRefAttr personality = getPersonalityAsAttr(f))
     fop.setAttr(b.getIdentifier("personality"), personality);
