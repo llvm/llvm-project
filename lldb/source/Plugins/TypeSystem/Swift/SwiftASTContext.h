@@ -525,9 +525,6 @@ public:
   uint32_t GetTypeInfo(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_or_element_clang_type) override;
 
-  lldb::LanguageType
-  GetMinimumLanguage(lldb::opaque_compiler_type_t type) override;
-
   lldb::TypeClass GetTypeClass(lldb::opaque_compiler_type_t type) override;
 
   // Creating related types
