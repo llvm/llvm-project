@@ -308,8 +308,8 @@ public:
   /// We need a check if one is a pointer for a candidate load and the other is
   /// a pointer for a possibly intervening store.
   bool needsChecking(unsigned PtrIdx1, unsigned PtrIdx2,
-                     const SmallPtrSet<Value *, 4> &PtrsWrittenOnFwdingPath,
-                     const std::set<Value *> &CandLoadPtrs) {
+                     const SmallPtrSetImpl<Value *> &PtrsWrittenOnFwdingPath,
+                     const SmallPtrSetImpl<Value *> &CandLoadPtrs) {
     Value *Ptr1 =
         LAI.getRuntimePointerChecking()->getPointerInfo(PtrIdx1).PointerValue;
     Value *Ptr2 =
@@ -384,11 +384,9 @@ public:
         findPointersWrittenOnForwardingPath(Candidates);
 
     // Collect the pointers of the candidate loads.
-    // FIXME: SmallPtrSet does not work with std::inserter.
-    std::set<Value *> CandLoadPtrs;
-    transform(Candidates,
-                   std::inserter(CandLoadPtrs, CandLoadPtrs.begin()),
-                   std::mem_fn(&StoreToLoadForwardingCandidate::getLoadPtr));
+    SmallPtrSet<Value *, 4> CandLoadPtrs;
+    for (const auto &Candidate : Candidates)
+      CandLoadPtrs.insert(Candidate.getLoadPtr());
 
     const auto &AllChecks = LAI.getRuntimePointerChecking()->getChecks();
     SmallVector<RuntimePointerCheck, 4> Checks;
