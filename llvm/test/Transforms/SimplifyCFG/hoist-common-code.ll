@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | not grep br
+; RUN: opt < %s -simplifycfg -S -hoist-common-insts=true | not grep br
 
 declare void @bar(i32)
 

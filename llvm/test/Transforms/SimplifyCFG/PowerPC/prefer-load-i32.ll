@@ -1,5 +1,4 @@
-; RUN: opt < %s -mtriple=powerpc64le-unknown-linux-gnu -simplifycfg -S | \
-; RUN: FileCheck %s
+; RUN: opt < %s -mtriple=powerpc64le-unknown-linux-gnu -simplifycfg -hoist-common-insts=true -S | FileCheck %s
 
 define float @foo(float* %src, float* %dest, i32 signext %count, i32 signext %cond) {
 ; CHECK-LABEL: @foo(

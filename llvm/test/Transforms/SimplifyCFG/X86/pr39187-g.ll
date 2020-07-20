@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -simplifycfg | FileCheck %s
+; RUN: opt < %s -S -simplifycfg -hoist-common-insts=true | FileCheck %s
 
 ; SimplifyCFG can hoist any common code in the 'then' and 'else' blocks to
 ; the 'if' basic block.
