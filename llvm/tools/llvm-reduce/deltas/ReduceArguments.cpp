@@ -73,7 +73,8 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
         continue;
       auto *I = cast<Instruction>(V);
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
-      I->eraseFromParent();
+      if (!I->isTerminator())
+        I->eraseFromParent();
     }
 
     // No arguments to reduce
