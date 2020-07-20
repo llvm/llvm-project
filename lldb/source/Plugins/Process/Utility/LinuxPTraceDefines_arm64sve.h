@@ -6,15 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_LinuxPTraceDefines_arm64sve_h
-#define lldb_LinuxPTraceDefines_arm64sve_h
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H
+
+#include <stdint.h>
+
+struct _aarch64_context {
+  uint16_t magic;
+  uint16_t size;
+};
 
 #define SVE_MAGIC 0x53564501
 
 struct sve_context {
-  struct _aarch64_ctx head;
-  __u16 vl;
-  __u16 __reserved[3];
+  struct _aarch64_context head;
+  uint16_t vl;
+  uint16_t __reserved[3];
 };
 
 /*
@@ -92,8 +99,8 @@ struct sve_context {
  * Additional data might be appended in the future.
  */
 
-#define SVE_SIG_ZREG_SIZE(vq) ((__u32)(vq)*SVE_VQ_BYTES)
-#define SVE_SIG_PREG_SIZE(vq) ((__u32)(vq) * (SVE_VQ_BYTES / 8))
+#define SVE_SIG_ZREG_SIZE(vq) ((uint32_t)(vq)*SVE_VQ_BYTES)
+#define SVE_SIG_PREG_SIZE(vq) ((uint32_t)(vq) * (SVE_VQ_BYTES / 8))
 #define SVE_SIG_FFR_SIZE(vq) SVE_SIG_PREG_SIZE(vq)
 
 #define SVE_SIG_REGS_OFFSET                                                    \
@@ -123,12 +130,12 @@ struct sve_context {
 /* SVE/FP/SIMD state (NT_ARM_SVE) */
 
 struct user_sve_header {
-  __u32 size;     /* total meaningful regset content in bytes */
-  __u32 max_size; /* maxmium possible size for this thread */
-  __u16 vl;       /* current vector length */
-  __u16 max_vl;   /* maximum possible vector length */
-  __u16 flags;
-  __u16 __reserved;
+  uint32_t size;     /* total meaningful regset content in bytes */
+  uint32_t max_size; /* maxmium possible size for this thread */
+  uint16_t vl;       /* current vector length */
+  uint16_t max_vl;   /* maximum possible vector length */
+  uint16_t flags;
+  uint16_t __reserved;
 };
 
 /* Definitions for user_sve_header.flags: */
@@ -206,8 +213,8 @@ struct user_sve_header {
 #define SVE_PT_SVE_ZREG_SIZE(vq) SVE_SIG_ZREG_SIZE(vq)
 #define SVE_PT_SVE_PREG_SIZE(vq) SVE_SIG_PREG_SIZE(vq)
 #define SVE_PT_SVE_FFR_SIZE(vq) SVE_SIG_FFR_SIZE(vq)
-#define SVE_PT_SVE_FPSR_SIZE sizeof(__u32)
-#define SVE_PT_SVE_FPCR_SIZE sizeof(__u32)
+#define SVE_PT_SVE_FPSR_SIZE sizeof(uint32_t)
+#define SVE_PT_SVE_FPCR_SIZE sizeof(uint32_t)
 
 #define __SVE_SIG_TO_PT(offset)                                                \
   ((offset)-SVE_SIG_REGS_OFFSET + SVE_PT_REGS_OFFSET)
@@ -250,4 +257,4 @@ struct user_sve_header {
        ? SVE_PT_SVE_OFFSET + SVE_PT_SVE_SIZE(vq, flags)                        \
        : SVE_PT_FPSIMD_OFFSET + SVE_PT_FPSIMD_SIZE(vq, flags))
 
-#endif
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H
