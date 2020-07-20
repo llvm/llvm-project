@@ -224,7 +224,7 @@ public:
     // Find which of these are preprocessed to nothing and should be ignored.
     std::vector<bool> PPIgnored(Sel.size(), false);
     for (const syntax::TokenBuffer::Expansion &X :
-         Buf.expansionsAffecting(Sel)) {
+         Buf.expansionsOverlapping(Sel)) {
       if (X.Expanded.empty()) {
         for (const syntax::Token &Tok : X.Spelled) {
           if (&Tok >= SelFirst && &Tok < SelLimit)
