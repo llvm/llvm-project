@@ -884,6 +884,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
         function.getName(),
         cast<llvm::FunctionType>(function.getType().getUnderlyingType()));
     llvm::Function *llvmFunc = cast<llvm::Function>(llvmFuncCst.getCallee());
+    llvmFunc->setLinkage(convertLinkageToLLVM(function.linkage()));
     functionMapping[function.getName()] = llvmFunc;
 
     // Forward the pass-through attributes to LLVM.
