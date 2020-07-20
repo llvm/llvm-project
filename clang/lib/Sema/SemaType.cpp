@@ -37,6 +37,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <bitset>
 
 using namespace clang;
 
@@ -6858,32 +6859,32 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
     break;
   }
 
-  llvm::SmallSet<attr::Kind, 2> Attrs;
+  std::bitset<attr::LastAttr> Attrs;
   attr::Kind NewAttrKind = A->getKind();
   QualType Desugared = Type;
   const AttributedType *AT = dyn_cast<AttributedType>(Type);
   while (AT) {
-    Attrs.insert(AT->getAttrKind());
+    Attrs[AT->getAttrKind()] = true;
     Desugared = AT->getModifiedType();
     AT = dyn_cast<AttributedType>(Desugared);
   }
 
   // You cannot specify duplicate type attributes, so if the attribute has
   // already been applied, flag it.
-  if (Attrs.count(NewAttrKind)) {
+  if (Attrs[NewAttrKind]) {
     S.Diag(PAttr.getLoc(), diag::warn_duplicate_attribute_exact) << PAttr;
     return true;
   }
-  Attrs.insert(NewAttrKind);
+  Attrs[NewAttrKind] = true;
 
   // You cannot have both __sptr and __uptr on the same type, nor can you
   // have __ptr32 and __ptr64.
-  if (Attrs.count(attr::Ptr32) && Attrs.count(attr::Ptr64)) {
+  if (Attrs[attr::Ptr32] && Attrs[attr::Ptr64]) {
     S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
         << "'__ptr32'"
         << "'__ptr64'";
     return true;
-  } else if (Attrs.count(attr::SPtr) && Attrs.count(attr::UPtr)) {
+  } else if (Attrs[attr::SPtr] && Attrs[attr::UPtr]) {
     S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
         << "'__sptr'"
         << "'__uptr'";
@@ -6909,12 +6910,12 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   LangAS ASIdx = LangAS::Default;
   uint64_t PtrWidth = S.Context.getTargetInfo().getPointerWidth(0);
   if (PtrWidth == 32) {
-    if (Attrs.count(attr::Ptr64))
+    if (Attrs[attr::Ptr64])
       ASIdx = LangAS::ptr64;
-    else if (Attrs.count(attr::UPtr))
+    else if (Attrs[attr::UPtr])
       ASIdx = LangAS::ptr32_uptr;
-  } else if (PtrWidth == 64 && Attrs.count(attr::Ptr32)) {
-    if (Attrs.count(attr::UPtr))
+  } else if (PtrWidth == 64 && Attrs[attr::Ptr32]) {
+    if (Attrs[attr::UPtr])
       ASIdx = LangAS::ptr32_uptr;
     else
       ASIdx = LangAS::ptr32_sptr;

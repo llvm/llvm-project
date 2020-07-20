@@ -431,7 +431,7 @@ func @f() {
   // CHECK-NEXT: return
   %cs0 = shape.const_shape [3, 1]
   %cs1 = shape.const_shape [1, 5]
-  %0 = shape.cstr_broadcastable %cs0, %cs1
+  %0 = shape.cstr_broadcastable %cs0, %cs1 : !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -447,7 +447,7 @@ func @static_non_broadcastable() {
   // CHECK-NEXT: return
   %cs0 = shape.const_shape [1, 3]
   %cs1 = shape.const_shape [1, 5]
-  %0 = shape.cstr_broadcastable %cs0, %cs1
+  %0 = shape.cstr_broadcastable %cs0, %cs1 : !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -461,7 +461,7 @@ func @f(%arg0 : !shape.shape) {
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
   %cs0 = shape.const_shape [1,3]
-  %0 = shape.cstr_broadcastable %arg0, %cs0
+  %0 = shape.cstr_broadcastable %arg0, %cs0 : !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -473,7 +473,20 @@ func @f(%arg0 : !shape.shape) {
   // CHECK-NEXT: shape.const_witness true
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
-  %0 = shape.cstr_broadcastable %arg0, %arg0
+  %0 = shape.cstr_broadcastable %arg0, %arg0 : !shape.shape, !shape.shape
+  "consume.witness"(%0) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+
+// Broadcastable canonicalization also works on extent tensors.
+// CHECK-LABEL: func @broadcastable_on_extent_tensors
+func @broadcastable_on_extent_tensors(%arg : tensor<?xindex>) {
+  // CHECK-NEXT: shape.const_witness true
+  // CHECK-NEXT: consume.witness
+  // CHECK-NEXT: return
+  %0 = shape.cstr_broadcastable %arg, %arg : tensor<?xindex>, tensor<?xindex>
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -486,7 +499,7 @@ func @fold_rank() -> !shape.size {
   // CHECK-DAG: %[[RESULT:.*]] = shape.const_size 5
   // CHECK-DAG: return %[[RESULT]] : !shape.size
   %shape = shape.const_shape [3, 4, 5, 6, 7]
-  %rank = shape.rank %shape
+  %rank = shape.rank %shape : !shape.shape
   return %rank : !shape.size
 }
 
@@ -498,7 +511,7 @@ func @fold_rank() -> !shape.size {
 func @dont_fold_rank(%shape : !shape.shape) -> !shape.size {
   // CHECK-DAG: %[[RESULT:.*]] = shape.rank %[[SHAPE]]
   // CHECK-DAG: return %[[RESULT]] : !shape.size
-  %rank = shape.rank %shape
+  %rank = shape.rank %shape : !shape.shape
   return %rank : !shape.size
 }
 
@@ -507,11 +520,11 @@ func @dont_fold_rank(%shape : !shape.shape) -> !shape.size {
 // Canonicalize `rank` when shape is derived from ranked tensor.
 // CHECK-LABEL: @canonicalize_rank
 func @canonicalize_rank(%arg : tensor<1x2x?xf32>) -> !shape.size {
-// CHECK-DAG: %[[RESULT:.*]] = shape.const_size 3
-// CHECK-DAG: return %[[RESULT]] : !shape.size
-%shape = shape.shape_of %arg : tensor<1x2x?xf32>
-%rank = shape.rank %shape
-return %rank : !shape.size
+  // CHECK-DAG: %[[RESULT:.*]] = shape.const_size 3
+  // CHECK-DAG: return %[[RESULT]] : !shape.size
+  %shape = shape.shape_of %arg : tensor<1x2x?xf32>
+  %rank = shape.rank %shape : !shape.shape
+  return %rank : !shape.size
 }
 
 // -----
@@ -520,12 +533,12 @@ return %rank : !shape.size
 // CHECK-LABEL: @dont_canonicalize_rank
 // CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>) -> !shape.size
 func @dont_canonicalize_rank(%arg : tensor<*xf32>) -> !shape.size {
-// CHECK-DAG: %[[SHAPE:.*]] = shape.shape_of %[[ARG]] : tensor<*xf32>
-// CHECK-DAG: %[[SIZE:.*]] = shape.rank %[[SHAPE]]
-// CHECK-DAG: return %[[SIZE]] : !shape.size
-%shape = shape.shape_of %arg : tensor<*xf32>
-%rank = shape.rank %shape
-return %rank : !shape.size
+  // CHECK-DAG: %[[SHAPE:.*]] = shape.shape_of %[[ARG]] : tensor<*xf32>
+  // CHECK-DAG: %[[SIZE:.*]] = shape.rank %[[SHAPE]]
+  // CHECK-DAG: return %[[SIZE]] : !shape.size
+  %shape = shape.shape_of %arg : tensor<*xf32>
+  %rank = shape.rank %shape : !shape.shape
+  return %rank : !shape.size
 }
 
 // Canonicalize redundant conversion from `index` to `size` and back.
@@ -560,7 +573,7 @@ func @cstr_broadcastable_scalar(%arg0 : tensor<?xf32>) {
   // CHECK-NEXT: return
   %0 = shape.const_shape []
   %1 = shape.shape_of %arg0 : tensor<?xf32>
-  %2 = shape.cstr_broadcastable %0, %1
+  %2 = shape.cstr_broadcastable %0, %1 : !shape.shape, !shape.shape
   "consume.witness"(%2) : (!shape.witness) -> ()
   return
 }
@@ -577,7 +590,7 @@ func @cstr_broadcastable_unknown(%arg0 : tensor<?xf32>, %arg1 : tensor<?xf32>) {
   // CHECK-NEXT: return
   %0 = shape.shape_of %arg0 : tensor<?xf32>
   %1 = shape.shape_of %arg1 : tensor<?xf32>
-  %2 = shape.cstr_broadcastable %0, %1
+  %2 = shape.cstr_broadcastable %0, %1 : !shape.shape, !shape.shape
   "consume.witness"(%2) : (!shape.witness) -> ()
   return
 }
@@ -592,7 +605,7 @@ func @cstr_broadcastable_scalar_unranked(%arg0 : tensor<*xf32>, %arg1 : tensor<i
   // CHECK-NEXT: return
   %0 = shape.shape_of %arg1 : tensor<index>
   %1 = shape.shape_of %arg0 : tensor<*xf32>
-  %2 = shape.cstr_broadcastable %0, %1
+  %2 = shape.cstr_broadcastable %0, %1 : !shape.shape, !shape.shape
   "consume.witness"(%2) : (!shape.witness) -> ()
   return
 }

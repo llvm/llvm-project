@@ -1035,6 +1035,16 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
     AssertDI(N.getTag() == dwarf::DW_TAG_array_type,
              "dataLocation can only appear in array type");
   }
+
+  if (N.getRawAssociated()) {
+    AssertDI(N.getTag() == dwarf::DW_TAG_array_type,
+             "associated can only appear in array type");
+  }
+
+  if (N.getRawAllocated()) {
+    AssertDI(N.getTag() == dwarf::DW_TAG_array_type,
+             "allocated can only appear in array type");
+  }
 }
 
 void Verifier::visitDISubroutineType(const DISubroutineType &N) {
@@ -1652,9 +1662,10 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   AttrCount += Attrs.hasAttribute(Attribute::StructRet) ||
                Attrs.hasAttribute(Attribute::InReg);
   AttrCount += Attrs.hasAttribute(Attribute::Nest);
+  AttrCount += Attrs.hasAttribute(Attribute::ByRef);
   Assert(AttrCount <= 1,
          "Attributes 'byval', 'inalloca', 'preallocated', 'inreg', 'nest', "
-         "and 'sret' are incompatible!",
+         "'byref', and 'sret' are incompatible!",
          V);
 
   Assert(!(Attrs.hasAttribute(Attribute::InAlloca) &&
@@ -1720,9 +1731,10 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     SmallPtrSet<Type*, 4> Visited;
     if (!PTy->getElementType()->isSized(&Visited)) {
       Assert(!Attrs.hasAttribute(Attribute::ByVal) &&
-                 !Attrs.hasAttribute(Attribute::InAlloca) &&
-                 !Attrs.hasAttribute(Attribute::Preallocated),
-             "Attributes 'byval', 'inalloca', and 'preallocated' do not "
+             !Attrs.hasAttribute(Attribute::ByRef) &&
+             !Attrs.hasAttribute(Attribute::InAlloca) &&
+             !Attrs.hasAttribute(Attribute::Preallocated),
+             "Attributes 'byval', 'byref', 'inalloca', and 'preallocated' do not "
              "support unsized types!",
              V);
     }
@@ -1731,9 +1743,17 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
              "Attribute 'swifterror' only applies to parameters "
              "with pointer to pointer type!",
              V);
+
+    if (Attrs.hasAttribute(Attribute::ByRef)) {
+      Assert(Attrs.getByRefType() == PTy->getElementType(),
+             "Attribute 'byref' type does not match parameter!", V);
+    }
   } else {
     Assert(!Attrs.hasAttribute(Attribute::ByVal),
            "Attribute 'byval' only applies to parameters with pointer type!",
+           V);
+    Assert(!Attrs.hasAttribute(Attribute::ByRef),
+           "Attribute 'byref' only applies to parameters with pointer type!",
            V);
     Assert(!Attrs.hasAttribute(Attribute::SwiftError),
            "Attribute 'swifterror' only applies to parameters "
@@ -1765,10 +1785,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
           !RetAttrs.hasAttribute(Attribute::Returned) &&
           !RetAttrs.hasAttribute(Attribute::InAlloca) &&
           !RetAttrs.hasAttribute(Attribute::Preallocated) &&
+          !RetAttrs.hasAttribute(Attribute::ByRef) &&
           !RetAttrs.hasAttribute(Attribute::SwiftSelf) &&
           !RetAttrs.hasAttribute(Attribute::SwiftError)),
-         "Attributes 'byval', 'inalloca', 'preallocated', 'nest', 'sret', "
-         "'nocapture', 'nofree', "
+         "Attributes 'byval', 'inalloca', 'preallocated', 'byref', "
+         "'nest', 'sret', 'nocapture', 'nofree', "
          "'returned', 'swiftself', and 'swifterror' do not apply to return "
          "values!",
          V);
@@ -2292,6 +2313,28 @@ void Verifier::visitFunction(const Function &F) {
   case CallingConv::AMDGPU_CS:
     Assert(!F.hasStructRetAttr(),
            "Calling convention does not allow sret", &F);
+    if (F.getCallingConv() != CallingConv::SPIR_KERNEL) {
+      const unsigned StackAS = DL.getAllocaAddrSpace();
+      unsigned i = 0;
+      for (const Argument &Arg : F.args()) {
+        Assert(!Attrs.hasParamAttribute(i, Attribute::ByVal),
+               "Calling convention disallows byval", &F);
+        Assert(!Attrs.hasParamAttribute(i, Attribute::Preallocated),
+               "Calling convention disallows preallocated", &F);
+        Assert(!Attrs.hasParamAttribute(i, Attribute::InAlloca),
+               "Calling convention disallows inalloca", &F);
+
+        if (Attrs.hasParamAttribute(i, Attribute::ByRef)) {
+          // FIXME: Should also disallow LDS and GDS, but we don't have the enum
+          // value here.
+          Assert(Arg.getType()->getPointerAddressSpace() != StackAS,
+                 "Calling convention disallows stack byref", &F);
+        }
+
+        ++i;
+      }
+    }
+
     LLVM_FALLTHROUGH;
   case CallingConv::Fast:
   case CallingConv::Cold:
@@ -3174,17 +3217,19 @@ static bool isTypeCongruent(Type *L, Type *R) {
 
 static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
-      Attribute::StructRet,   Attribute::ByVal,     Attribute::InAlloca,
-      Attribute::InReg,       Attribute::SwiftSelf, Attribute::SwiftError,
-      Attribute::Preallocated};
+      Attribute::StructRet,    Attribute::ByVal,     Attribute::InAlloca,
+      Attribute::InReg,        Attribute::SwiftSelf, Attribute::SwiftError,
+      Attribute::Preallocated, Attribute::ByRef};
   AttrBuilder Copy;
   for (auto AK : ABIAttrs) {
     if (Attrs.hasParamAttribute(I, AK))
       Copy.addAttribute(AK);
   }
-  // `align` is ABI-affecting only in combination with `byval`.
+
+  // `align` is ABI-affecting only in combination with `byval` or `byref`.
   if (Attrs.hasParamAttribute(I, Attribute::Alignment) &&
-      Attrs.hasParamAttribute(I, Attribute::ByVal))
+      (Attrs.hasParamAttribute(I, Attribute::ByVal) ||
+       Attrs.hasParamAttribute(I, Attribute::ByRef)))
     Copy.addAlignmentAttr(Attrs.getParamAlignment(I));
   return Copy;
 }

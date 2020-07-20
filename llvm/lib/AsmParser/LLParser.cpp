@@ -788,13 +788,20 @@ bool LLParser::ParseStandaloneMetadata() {
 // Skips a single module summary entry.
 bool LLParser::SkipModuleSummaryEntry() {
   // Each module summary entry consists of a tag for the entry
-  // type, followed by a colon, then the fields surrounded by nested sets of
-  // parentheses. The "tag:" looks like a Label. Once parsing support is
-  // in place we will look for the tokens corresponding to the expected tags.
+  // type, followed by a colon, then the fields which may be surrounded by
+  // nested sets of parentheses. The "tag:" looks like a Label. Once parsing
+  // support is in place we will look for the tokens corresponding to the
+  // expected tags.
   if (Lex.getKind() != lltok::kw_gv && Lex.getKind() != lltok::kw_module &&
-      Lex.getKind() != lltok::kw_typeid)
+      Lex.getKind() != lltok::kw_typeid && Lex.getKind() != lltok::kw_flags &&
+      Lex.getKind() != lltok::kw_blockcount)
     return TokError(
-        "Expected 'gv', 'module', or 'typeid' at the start of summary entry");
+        "Expected 'gv', 'module', 'typeid', 'flags' or 'blockcount' at the "
+        "start of summary entry");
+  if (Lex.getKind() == lltok::kw_flags)
+    return ParseSummaryIndexFlags();
+  if (Lex.getKind() == lltok::kw_blockcount)
+    return ParseBlockCount();
   Lex.Lex();
   if (ParseToken(lltok::colon, "expected ':' at start of summary entry") ||
       ParseToken(lltok::lparen, "expected '(' at start of summary entry"))
@@ -1382,6 +1389,7 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_swifterror:
     case lltok::kw_swiftself:
     case lltok::kw_immarg:
+    case lltok::kw_byref:
       HaveError |=
         Error(Lex.getLoc(),
               "invalid use of parameter-only attribute on a function");
@@ -1675,6 +1683,13 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
       B.addDereferenceableOrNullAttr(Bytes);
       continue;
     }
+    case lltok::kw_byref: {
+      Type *Ty;
+      if (ParseByRef(Ty))
+        return true;
+      B.addByRefAttr(Ty);
+      continue;
+    }
     case lltok::kw_inalloca:        B.addAttribute(Attribute::InAlloca); break;
     case lltok::kw_inreg:           B.addAttribute(Attribute::InReg); break;
     case lltok::kw_nest:            B.addAttribute(Attribute::Nest); break;
@@ -1795,6 +1810,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_swifterror:
     case lltok::kw_swiftself:
     case lltok::kw_immarg:
+    case lltok::kw_byref:
       HaveError |= Error(Lex.getLoc(), "invalid use of parameter-only attribute");
       break;
 
@@ -2568,11 +2584,11 @@ bool LLParser::ParseByValWithOptionalType(Type *&Result) {
   return false;
 }
 
-/// ParsePreallocated
-///   ::= preallocated(<ty>)
-bool LLParser::ParsePreallocated(Type *&Result) {
+/// ParseRequiredTypeAttr
+///   ::= attrname(<ty>)
+bool LLParser::ParseRequiredTypeAttr(Type *&Result, lltok::Kind AttrName) {
   Result = nullptr;
-  if (!EatIfPresent(lltok::kw_preallocated))
+  if (!EatIfPresent(AttrName))
     return true;
   if (!EatIfPresent(lltok::lparen))
     return Error(Lex.getLoc(), "expected '('");
@@ -2581,6 +2597,18 @@ bool LLParser::ParsePreallocated(Type *&Result) {
   if (!EatIfPresent(lltok::rparen))
     return Error(Lex.getLoc(), "expected ')'");
   return false;
+}
+
+/// ParsePreallocated
+///   ::= preallocated(<ty>)
+bool LLParser::ParsePreallocated(Type *&Result) {
+  return ParseRequiredTypeAttr(Result, lltok::kw_preallocated);
+}
+
+/// ParseByRef
+///   ::= byref(<type>)
+bool LLParser::ParseByRef(Type *&Result) {
+  return ParseRequiredTypeAttr(Result, lltok::kw_byref);
 }
 
 /// ParseOptionalOperandBundles
@@ -4661,7 +4689,9 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(identifier, MDStringField, );                                       \
   OPTIONAL(discriminator, MDField, );                                          \
-  OPTIONAL(dataLocation, MDField, );
+  OPTIONAL(dataLocation, MDField, );                                           \
+  OPTIONAL(associated, MDField, );                                             \
+  OPTIONAL(allocated, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4671,7 +4701,8 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
             elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
-            discriminator.Val, dataLocation.Val)) {
+            discriminator.Val, dataLocation.Val, associated.Val,
+            allocated.Val)) {
       Result = CT;
       return false;
     }
@@ -4683,7 +4714,7 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
-       discriminator.Val, dataLocation.Val));
+       discriminator.Val, dataLocation.Val, associated.Val, allocated.Val));
   return false;
 }
 
@@ -8145,7 +8176,8 @@ bool LLParser::ParseSummaryIndexFlags() {
   uint64_t Flags;
   if (ParseUInt64(Flags))
     return true;
-  Index->setFlags(Flags);
+  if (Index)
+    Index->setFlags(Flags);
   return false;
 }
 
@@ -8160,7 +8192,8 @@ bool LLParser::ParseBlockCount() {
   uint64_t BlockCount;
   if (ParseUInt64(BlockCount))
     return true;
-  Index->setBlockCount(BlockCount);
+  if (Index)
+    Index->setBlockCount(BlockCount);
   return false;
 }
 

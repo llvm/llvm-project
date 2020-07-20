@@ -206,15 +206,6 @@ public:
   explicit operator bool() const { return callback; }
 };
 
-// deleter - Very very very simple method that is used to invoke operator
-// delete on something.  It is used like this:
-//
-//   for_each(V.begin(), B.end(), deleter<Interval>);
-template <class T>
-inline void deleter(T *Ptr) {
-  delete Ptr;
-}
-
 //===----------------------------------------------------------------------===//
 //     Extra additions to <iterator>
 //===----------------------------------------------------------------------===//

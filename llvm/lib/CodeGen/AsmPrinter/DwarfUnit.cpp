@@ -1445,6 +1445,28 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     addBlock(Buffer, dwarf::DW_AT_data_location, DwarfExpr.finalize());
   }
 
+  if (DIVariable *Var = CTy->getAssociated()) {
+    if (auto *VarDIE = getDIE(Var))
+      addDIEEntry(Buffer, dwarf::DW_AT_associated, *VarDIE);
+  } else if (DIExpression *Expr = CTy->getAssociatedExp()) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
+    DwarfExpr.setMemoryLocationKind();
+    DwarfExpr.addExpression(Expr);
+    addBlock(Buffer, dwarf::DW_AT_associated, DwarfExpr.finalize());
+  }
+
+  if (DIVariable *Var = CTy->getAllocated()) {
+    if (auto *VarDIE = getDIE(Var))
+      addDIEEntry(Buffer, dwarf::DW_AT_allocated, *VarDIE);
+  } else if (DIExpression *Expr = CTy->getAllocatedExp()) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
+    DwarfExpr.setMemoryLocationKind();
+    DwarfExpr.addExpression(Expr);
+    addBlock(Buffer, dwarf::DW_AT_allocated, DwarfExpr.finalize());
+  }
+
   // Emit the element type.
   addType(Buffer, CTy->getBaseType());
 

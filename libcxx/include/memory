@@ -338,7 +338,7 @@ public:
     pointer release() noexcept;
     void reset(pointer p = pointer()) noexcept;
     void reset(nullptr_t) noexcept;
-    template <class U> void reset(U) = delete;
+  template <class U> void reset(U) = delete;
     void swap(unique_ptr& u) noexcept;
 };
 
@@ -2316,8 +2316,14 @@ struct __unique_ptr_deleter_sfinae<_Deleter&> {
   typedef false_type __enable_rval_overload;
 };
 
+#if defined(_LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI)
+#  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI __attribute__((trivial_abi))
+#else
+#  define _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI
+#endif
+
 template <class _Tp, class _Dp = default_delete<_Tp> >
-class _LIBCPP_TEMPLATE_VIS unique_ptr {
+class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
@@ -2525,7 +2531,7 @@ public:
 
 
 template <class _Tp, class _Dp>
-class _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp> {
+class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp> {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
@@ -3537,8 +3543,14 @@ struct __compatible_with
     : is_convertible<_Tp*, _Up*> {};
 #endif // _LIBCPP_STD_VER > 14
 
+#if defined(_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI)
+#  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI __attribute__((trivial_abi))
+#else
+#  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI
+#endif
+
 template<class _Tp>
-class _LIBCPP_TEMPLATE_VIS shared_ptr
+class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS shared_ptr
 {
 public:
 #if _LIBCPP_STD_VER > 14
@@ -4526,7 +4538,7 @@ get_deleter(const shared_ptr<_Tp>& __p) _NOEXCEPT
 #endif  // _LIBCPP_NO_RTTI
 
 template<class _Tp>
-class _LIBCPP_TEMPLATE_VIS weak_ptr
+class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS weak_ptr
 {
 public:
     typedef _Tp element_type;

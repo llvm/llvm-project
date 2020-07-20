@@ -65,6 +65,9 @@ public:
   /// Return true if this argument has the byval attribute.
   bool hasByValAttr() const;
 
+  /// Return true if this argument has the byref attribute.
+  bool hasByRefAttr() const;
+
   /// Return true if this argument has the swiftself attribute.
   bool hasSwiftSelfAttr() const;
 
@@ -80,6 +83,15 @@ public:
   /// in-memory ABI size copied to the stack for the call. Otherwise, return 0.
   uint64_t getPassPointeeByValueCopySize(const DataLayout &DL) const;
 
+  /// Return true if this argument has the byval, inalloca, preallocated, or
+  /// byref attribute. These attributes represent arguments being passed by
+  /// value (which may or may not involve a stack copy)
+  bool hasPointeeInMemoryValueAttr() const;
+
+  /// If hasPointeeInMemoryValueAttr returns true, the in-memory ABI type is
+  /// returned. Otherwise, nullptr.
+  Type *getPointeeInMemoryValueType() const;
+
   /// If this is a byval or inalloca argument, return its alignment.
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getParamAlign() instead.
@@ -90,6 +102,9 @@ public:
 
   /// If this is a byval argument, return its type.
   Type *getParamByValType() const;
+
+  /// If this is a byref argument, return its type.
+  Type *getParamByRefType() const;
 
   /// Return true if this argument has the nest attribute.
   bool hasNestAttr() const;

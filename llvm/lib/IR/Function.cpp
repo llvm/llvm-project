@@ -102,6 +102,12 @@ bool Argument::hasByValAttr() const {
   return hasAttribute(Attribute::ByVal);
 }
 
+bool Argument::hasByRefAttr() const {
+  if (!getType()->isPointerTy())
+    return false;
+  return hasAttribute(Attribute::ByRef);
+}
+
 bool Argument::hasSwiftSelfAttr() const {
   return getParent()->hasParamAttribute(getArgNo(), Attribute::SwiftSelf);
 }
@@ -129,25 +135,50 @@ bool Argument::hasPassPointeeByValueCopyAttr() const {
          Attrs.hasParamAttribute(getArgNo(), Attribute::Preallocated);
 }
 
-uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
-  AttributeSet ParamAttrs
-    = getParent()->getAttributes().getParamAttributes(getArgNo());
+bool Argument::hasPointeeInMemoryValueAttr() const {
+  if (!getType()->isPointerTy())
+    return false;
+  AttributeList Attrs = getParent()->getAttributes();
+  return Attrs.hasParamAttribute(getArgNo(), Attribute::ByVal) ||
+         Attrs.hasParamAttribute(getArgNo(), Attribute::InAlloca) ||
+         Attrs.hasParamAttribute(getArgNo(), Attribute::Preallocated) ||
+         Attrs.hasParamAttribute(getArgNo(), Attribute::ByRef);
+}
 
+/// For a byval, inalloca, or preallocated parameter, get the in-memory
+/// parameter type.
+static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
   // FIXME: All the type carrying attributes are mutually exclusive, so there
   // should be a single query to get the stored type that handles any of them.
   if (Type *ByValTy = ParamAttrs.getByValType())
-    return DL.getTypeAllocSize(ByValTy);
+    return ByValTy;
+  if (Type *ByRefTy = ParamAttrs.getByRefType())
+    return ByRefTy;
   if (Type *PreAllocTy = ParamAttrs.getPreallocatedType())
-    return DL.getTypeAllocSize(PreAllocTy);
+    return PreAllocTy;
 
   // FIXME: inalloca always depends on pointee element type. It's also possible
   // for byval to miss it.
   if (ParamAttrs.hasAttribute(Attribute::InAlloca) ||
       ParamAttrs.hasAttribute(Attribute::ByVal) ||
       ParamAttrs.hasAttribute(Attribute::Preallocated))
-    return DL.getTypeAllocSize(cast<PointerType>(getType())->getElementType());
+    return cast<PointerType>(ArgTy)->getElementType();
 
+  return nullptr;
+}
+
+uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
+  AttributeSet ParamAttrs =
+      getParent()->getAttributes().getParamAttributes(getArgNo());
+  if (Type *MemTy = getMemoryParamAllocType(ParamAttrs, getType()))
+    return DL.getTypeAllocSize(MemTy);
   return 0;
+}
+
+Type *Argument::getPointeeInMemoryValueType() const {
+  AttributeSet ParamAttrs =
+      getParent()->getAttributes().getParamAttributes(getArgNo());
+  return getMemoryParamAllocType(ParamAttrs, getType());
 }
 
 unsigned Argument::getParamAlignment() const {
@@ -163,6 +194,11 @@ MaybeAlign Argument::getParamAlign() const {
 Type *Argument::getParamByValType() const {
   assert(getType()->isPointerTy() && "Only pointers have byval types");
   return getParent()->getParamByValType(getArgNo());
+}
+
+Type *Argument::getParamByRefType() const {
+  assert(getType()->isPointerTy() && "Only pointers have byval types");
+  return getParent()->getParamByRefType(getArgNo());
 }
 
 uint64_t Argument::getDereferenceableBytes() const {

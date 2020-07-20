@@ -42,7 +42,7 @@
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
@@ -1490,7 +1490,7 @@ public:
   typedef UsedDeclVisitor<DeferredDiagnosticsEmitter> Inherited;
 
   // Whether the function is already in the current use-path.
-  llvm::SmallSet<CanonicalDeclPtr<Decl>, 4> InUsePath;
+  llvm::SmallPtrSet<CanonicalDeclPtr<Decl>, 4> InUsePath;
 
   // The current use-path.
   llvm::SmallVector<CanonicalDeclPtr<FunctionDecl>, 4> UsePath;
@@ -1499,7 +1499,7 @@ public:
   // case not in OpenMP device context. Done[1] is for the case in OpenMP
   // device context. We need two sets because diagnostics emission may be
   // different depending on whether it is in OpenMP device context.
-  llvm::SmallSet<CanonicalDeclPtr<Decl>, 4> DoneMap[2];
+  llvm::SmallPtrSet<CanonicalDeclPtr<Decl>, 4> DoneMap[2];
 
   // Emission state of the root node of the current use graph.
   bool ShouldEmitRootNode;
