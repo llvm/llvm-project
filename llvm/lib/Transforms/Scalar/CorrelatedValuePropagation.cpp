@@ -601,14 +601,15 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool isPositive(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
+  Constant *Zero = ConstantInt::get(V->getType(), 0);
+  auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SGE, V, Zero, CxtI);
+  return Result == LazyValueInfo::True;
+}
+
 static bool hasPositiveOperands(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  Constant *Zero = ConstantInt::get(SDI->getType(), 0);
-  for (Value *O : SDI->operands()) {
-    auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SGE, O, Zero, SDI);
-    if (Result != LazyValueInfo::True)
-      return false;
-  }
-  return true;
+  return all_of(SDI->operands(),
+                [&](Value *Op) { return isPositive(Op, LVI, SDI); });
 }
 
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's
@@ -697,9 +698,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
-  Constant *Zero = ConstantInt::get(SDI->getType(), 0);
-  if (LVI->getPredicateAt(ICmpInst::ICMP_SGE, SDI->getOperand(0), Zero, SDI) !=
-      LazyValueInfo::True)
+  if (!isPositive(SDI->getOperand(0), LVI, SDI))
     return false;
 
   ++NumAShrs;
@@ -719,9 +718,7 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
 
   Value *Base = SDI->getOperand(0);
 
-  Constant *Zero = ConstantInt::get(Base->getType(), 0);
-  if (LVI->getPredicateAt(ICmpInst::ICMP_SGE, Base, Zero, SDI) !=
-      LazyValueInfo::True)
+  if (!isPositive(Base, LVI, SDI))
     return false;
 
   ++NumSExt;
