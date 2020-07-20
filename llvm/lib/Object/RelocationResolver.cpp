@@ -291,12 +291,22 @@ static uint64_t resolvePPC32(RelocationRef R, uint64_t S, uint64_t A) {
 }
 
 static bool supportsARM(uint64_t Type) {
-  return Type == ELF::R_ARM_ABS32;
+  switch (Type) {
+  case ELF::R_ARM_ABS32:
+  case ELF::R_ARM_REL32:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static uint64_t resolveARM(RelocationRef R, uint64_t S, uint64_t A) {
-  if (R.getType() == ELF::R_ARM_ABS32)
+  switch (R.getType()) {
+  case ELF::R_ARM_ABS32:
     return (S + A) & 0xFFFFFFFF;
+  case ELF::R_ARM_REL32:
+    return (S + A - R.getOffset()) & 0xFFFFFFFF;
+  }
   llvm_unreachable("Invalid relocation type");
 }
 
