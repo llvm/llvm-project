@@ -756,7 +756,7 @@ static uint32_t collectTypeInfo(Module *M, swift::Demangle::Demangler &Dem,
         else if (node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT)
           swift_flags |=
               eTypeHasChildren | eTypeIsPointer | eTypeIsScalar | eTypeIsObjC;
-        else if (node->getText() == swift::BUILTIN_TYPE_NAME_VEC)
+        else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_VEC))
           swift_flags |= eTypeHasChildren | eTypeIsVector;
       }
       break;
@@ -1459,7 +1459,31 @@ uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
 }
 lldb::TypeClass
 TypeSystemSwiftTypeRef::GetTypeClass(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetTypeClass(ReconstructType(type));
+  auto impl = [&]() {
+    uint32_t flags = GetTypeInfo(type, nullptr);
+    // The ordering is significant since GetTypeInfo() returns many flags.
+    if ((flags & eTypeIsScalar))
+      return eTypeClassBuiltin;
+    if ((flags & eTypeIsVector))
+      return eTypeClassVector;
+    if ((flags & eTypeIsTuple))
+      return eTypeClassArray;
+    if ((flags & eTypeIsEnumeration))
+      return eTypeClassUnion;
+    if ((flags & eTypeIsProtocol))
+      return eTypeClassOther;
+    if ((flags & eTypeIsStructUnion))
+      return eTypeClassStruct;
+    if ((flags & eTypeIsClass))
+      return eTypeClassClass;
+    if ((flags & eTypeIsReference))
+      return eTypeClassReference;
+    // This only works because we excluded all other options.
+    if ((flags & eTypeIsPointer))
+      return eTypeClassFunction;
+    return eTypeClassOther;
+  };
+  VALIDATE_AND_RETURN(impl, GetTypeClass, type, (ReconstructType(type)));
 }
 
 // Creating related types
