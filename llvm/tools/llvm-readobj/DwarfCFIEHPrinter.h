@@ -13,23 +13,22 @@
 #include "llvm-readobj.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Object/ELF.h"
-#include "llvm/Object/ELFTypes.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
+#include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/ELFTypes.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/type_traits.h"
 
 namespace llvm {
 namespace DwarfCFIEH {
 
-template <typename ELFT>
-class PrinterContext {
+template <typename ELFT> class PrinterContext {
   using Elf_Shdr = typename ELFT::Shdr;
   using Elf_Phdr = typename ELFT::Phdr;
 
@@ -156,7 +155,7 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
   unsigned NumEntries = 0;
   uint64_t PrevPC = 0;
   while (Offset + 8 <= EHFramePHdr->p_memsz && NumEntries < FDECount) {
-    DictScope D(W, std::string("entry ")  + std::to_string(NumEntries));
+    DictScope D(W, std::string("entry ") + std::to_string(NumEntries));
 
     auto InitialPC = DE.getSigned(&Offset, 4) + EHFrameHdrAddress;
     W.startLine() << format("initial_location: 0x%" PRIx64 "\n", InitialPC);
@@ -232,7 +231,7 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
 
   W.unindent();
 }
-}
-}
+} // namespace DwarfCFIEH
+} // namespace llvm
 
 #endif
