@@ -489,7 +489,7 @@ struct SalvageDebugInfoTest : ::testing::Test {
   std::unique_ptr<Module> M;
   Function *F = nullptr;
 
-  void SetUp() {
+  void SetUp() override {
     M = parseIR(C,
                 R"(
       define void @f() !dbg !8 {
