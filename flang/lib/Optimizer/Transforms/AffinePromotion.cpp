@@ -169,7 +169,7 @@ private:
 /// Analysis for affine promotion of fir.if
 class AffineIfAnalysis {
 public:
-  AffineIfAnalysis(fir::WhereOp op, AffineFunctionAnalysis &afa)
+  AffineIfAnalysis(fir::IfOp op, AffineFunctionAnalysis &afa)
       : legality(analyzeIf(op, afa)) {}
   bool canPromoteToAffine() { return legality; }
   friend AffineFunctionAnalysis;
@@ -177,10 +177,10 @@ public:
 private:
   bool legality;
   AffineIfAnalysis(bool forcedLegality) : legality(forcedLegality) {}
-  bool analyzeIf(fir::WhereOp, AffineFunctionAnalysis &);
+  bool analyzeIf(fir::IfOp, AffineFunctionAnalysis &);
 };
 
-/// Stores analysis objects for all loops and where operations inside a function
+/// Stores analysis objects for all loops and if operations inside a function
 ///  these analysis are used twice, first for marking operations for rewrite and
 ///  second when doing rewrite.
 class AffineFunctionAnalysis {
@@ -200,7 +200,7 @@ public:
     }
     return it->getSecond();
   }
-  AffineIfAnalysis getChildIfAnalysis(fir::WhereOp op) const {
+  AffineIfAnalysis getChildIfAnalysis(fir::IfOp op) const {
     auto it = ifAnalysisMap.find_as(op);
     if (it == ifAnalysisMap.end()) {
       LLVM_DEBUG(llvm::dbgs() << "AffineFunctionAnalysis: not computed for:\n";
@@ -255,13 +255,12 @@ bool AffineLoopAnalysis::analyzeBody(fir::LoopOp loopOperation,
     if (!analysis.canPromoteToAffine())
       return false;
   }
-  for (auto whereOp : loopOperation.getOps<fir::WhereOp>())
-    functionAnalysis.ifAnalysisMap.try_emplace(whereOp, whereOp,
-                                               functionAnalysis);
+  for (auto ifOp : loopOperation.getOps<fir::IfOp>())
+    functionAnalysis.ifAnalysisMap.try_emplace(ifOp, ifOp, functionAnalysis);
   return true;
 }
 
-bool AffineIfAnalysis::analyzeIf(fir::WhereOp op, AffineFunctionAnalysis &afa) {
+bool AffineIfAnalysis::analyzeIf(fir::IfOp op, AffineFunctionAnalysis &afa) {
   if (op.getNumResults() == 0)
     return true;
   LLVM_DEBUG(
@@ -454,17 +453,17 @@ private:
   AffineFunctionAnalysis &functionAnalysis;
 };
 
-class AffineIfConversion : public mlir::OpRewritePattern<fir::WhereOp> {
+class AffineIfConversion : public mlir::OpRewritePattern<fir::IfOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   AffineIfConversion(mlir::MLIRContext *context, AffineFunctionAnalysis &afa)
       : OpRewritePattern(context), functionAnalysis(afa) {}
   mlir::LogicalResult
-  matchAndRewrite(fir::WhereOp op,
+  matchAndRewrite(fir::IfOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: rewriting where:\n";
+    LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: rewriting if:\n";
                op.dump(););
-    auto &whereOps = op.whereRegion().front().getOperations();
+    auto &ifOps = op.whereRegion().front().getOperations();
     auto affineCondition = AffineIfCondition(op.condition());
     if (!affineCondition.integerSet) {
       LLVM_DEBUG(
@@ -477,8 +476,7 @@ public:
         affineCondition.affineArgs, !op.otherRegion().empty());
     rewriter.startRootUpdate(affineIf);
     affineIf.getThenBlock()->getOperations().splice(
-        --affineIf.getThenBlock()->end(), whereOps, whereOps.begin(),
-        --whereOps.end());
+        --affineIf.getThenBlock()->end(), ifOps, ifOps.begin(), --ifOps.end());
     if (!op.otherRegion().empty()) {
       auto &otherOps = op.otherRegion().front().getOperations();
       affineIf.getElseBlock()->getOperations().splice(
@@ -488,7 +486,7 @@ public:
     rewriter.finalizeRootUpdate(affineIf);
     rewriteMemoryOps(affineIf.getBody(), rewriter);
 
-    LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: where converted to:\n";
+    LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: if converted to:\n";
                affineIf.dump(););
     rewriter.replaceOp(op, affineIf.getOperation()->getResults());
     return success();
@@ -498,7 +496,7 @@ private:
   AffineFunctionAnalysis &functionAnalysis;
 };
 
-/// Promote fir.loop and fir.where to affine.for and affine.if, in the cases
+/// Promote fir.loop and fir.if to affine.for and affine.if, in the cases
 /// where such a promotion is possible.
 class AffineDialectPromotion
     : public AffineDialectPromotionBase<AffineDialectPromotion> {
@@ -516,7 +514,7 @@ public:
     mlir::ConversionTarget target = *context;
     target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
                            mlir::scf::SCFDialect, mlir::StandardOpsDialect>();
-    target.addDynamicallyLegalOp<WhereOp>([&functionAnalysis](fir::WhereOp op) {
+    target.addDynamicallyLegalOp<IfOp>([&functionAnalysis](fir::IfOp op) {
       return !(functionAnalysis.getChildIfAnalysis(op).canPromoteToAffine());
     });
     target.addDynamicallyLegalOp<LoopOp>([&functionAnalysis](fir::LoopOp op) {
