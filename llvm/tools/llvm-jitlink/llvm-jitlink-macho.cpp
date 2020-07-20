@@ -49,12 +49,6 @@ static Expected<Symbol &> getMachOGOTTarget(LinkGraph &G, Block &B) {
             "\" points to anonymous "
             "symbol",
         inconvertibleErrorCode());
-  if (TargetSym.isDefined() || TargetSym.isAbsolute())
-    return make_error<StringError>(
-        "GOT entry \"" + TargetSym.getName() + "\" in " + G.getName() + ", \"" +
-            TargetSym.getBlock().getSection().getName() +
-            "\" does not point to an external symbol",
-        inconvertibleErrorCode());
   return TargetSym;
 }
 
