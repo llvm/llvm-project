@@ -872,6 +872,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectBallot(I);
   case Intrinsic::amdgcn_reloc_constant:
     return selectRelocConstant(I);
+  case Intrinsic::returnaddress:
+    return selectReturnAddress(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1073,6 +1075,54 @@ bool AMDGPUInstructionSelector::selectRelocConstant(MachineInstr &I) const {
           TII.get(IsVALU ? AMDGPU::V_MOV_B32_e32 : AMDGPU::S_MOV_B32), DstReg)
     .addGlobalAddress(RelocSymbol, 0, SIInstrInfo::MO_ABS32_LO);
 
+  I.eraseFromParent();
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
+  MachineBasicBlock *MBB = I.getParent();
+  MachineFunction &MF = *MBB->getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+
+  MachineOperand &Dst = I.getOperand(0);
+  Register DstReg = Dst.getReg();
+  unsigned Depth = I.getOperand(2).getImm();
+
+  const TargetRegisterClass *RC
+    = TRI.getConstrainedRegClassForOperand(Dst, *MRI);
+  if (!RC->hasSubClassEq(&AMDGPU::SGPR_64RegClass) ||
+      !RBI.constrainGenericRegister(DstReg, *RC, *MRI))
+    return false;
+
+  MachineBasicBlock &EntryMBB = MF.front();
+
+  // Check for kernel and shader functions
+  if (Depth != 0 ||
+      MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction()) {
+    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_MOV_B64), DstReg)
+      .addImm(0);
+    I.eraseFromParent();
+    return true;
+  }
+
+  Register ReturnAddrReg = TRI.getReturnAddressReg(MF);
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // There is a call to @llvm.returnaddress in this function
+  MFI.setReturnAddressIsTaken(true);
+
+  // Get the return address reg and mark it as an implicit live-in
+  Register LiveIn = MRI->getLiveInVirtReg(ReturnAddrReg);
+  if (!LiveIn) {
+    LiveIn = MF.addLiveIn(ReturnAddrReg, RC);
+    BuildMI(EntryMBB, EntryMBB.begin(), DL, TII.get(AMDGPU::COPY), LiveIn)
+      .addReg(ReturnAddrReg);
+    if (!EntryMBB.isLiveIn(ReturnAddrReg))
+      EntryMBB.addLiveIn(ReturnAddrReg);
+  }
+
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
+    .addReg(LiveIn);
   I.eraseFromParent();
   return true;
 }
