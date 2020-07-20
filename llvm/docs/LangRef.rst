@@ -4886,7 +4886,12 @@ DIExpression that describes how to get from an object's address to the actual
 raw data, if they aren't equivalent. This is only supported for array types,
 particularly to describe Fortran arrays, which have an array descriptor in
 addition to the array data. Alternatively it can also be DIVariable which
-has the address of the actual raw data.
+has the address of the actual raw data. The Fortran language supports pointer
+arrays which can be attached to actual arrays, this attachement between pointer
+and pointee is called association.  The optional ``associated`` is a
+DIExpression that describes whether the pointer array is currently associated.
+The optional ``allocated`` is a DIExpression that describes whether the
+allocatable array is currently allocated.
 
 For ``DW_TAG_enumeration_type``, the ``elements:`` should be :ref:`enumerator
 descriptors <DIEnumerator>`, each representing the definition of an enumeration

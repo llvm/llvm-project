@@ -803,6 +803,10 @@ static SmallVector<const DIVariable *, 2> dependencies(DbgVariable *Var) {
     return Result;
   if (auto *DLVar = Array->getDataLocation())
     Result.push_back(DLVar);
+  if (auto *AsVar = Array->getAssociated())
+    Result.push_back(AsVar);
+  if (auto *AlVar = Array->getAllocated())
+    Result.push_back(AlVar);
   for (auto *El : Array->getElements()) {
     if (auto *Subrange = dyn_cast<DISubrange>(El)) {
       if (auto Count = Subrange->getCount())

@@ -1962,6 +1962,8 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printString("identifier", N->getIdentifier());
   Printer.printMetadata("discriminator", N->getRawDiscriminator());
   Printer.printMetadata("dataLocation", N->getRawDataLocation());
+  Printer.printMetadata("associated", N->getRawAssociated());
+  Printer.printMetadata("allocated", N->getRawAllocated());
   Out << ")";
 }
 
