@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ConstCorrectnessCheck.h"
 #include "../utils/FixItHintUtils.h"
+#include "ConstCorrectnessCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -138,7 +138,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   if (VC == VariableCategory::Value && TransformValues) {
     if (Optional<FixItHint> Fix = addQualifierToVarDecl(
             *Variable, *Result.Context, DeclSpec::TQ_const,
-            QualifierTarget::Value, QualifierPolicy::Right)) {
+            QualifierTarget::Value, QualifierPolicy::Left)) {
       Diag << *Fix;
       // FIXME: Add '{}' for default initialization if no user-defined default
       // constructor exists and there is no initializer.
@@ -149,7 +149,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   if (VC == VariableCategory::Reference && TransformReferences) {
     if (Optional<FixItHint> Fix = addQualifierToVarDecl(
             *Variable, *Result.Context, DeclSpec::TQ_const,
-            QualifierTarget::Value, QualifierPolicy::Right))
+            QualifierTarget::Value, QualifierPolicy::Left))
       Diag << *Fix;
     return;
   }
@@ -158,7 +158,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (WarnPointersAsValues && TransformPointersAsValues) {
       if (Optional<FixItHint> Fix = addQualifierToVarDecl(
               *Variable, *Result.Context, DeclSpec::TQ_const,
-              QualifierTarget::Value, QualifierPolicy::Right))
+              QualifierTarget::Value, QualifierPolicy::Left))
         Diag << *Fix;
     }
     return;
