@@ -8,8 +8,10 @@
 ; RUN: opt -asan -asan-module -mtriple=i386-apple-ios-simulator --data-layout="e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128" -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC -DPTR_SIZE=32
 ; RUN: opt -asan -asan-module -mtriple=x86_64-apple-ios-simulator --data-layout="e-m:o-i64:64-f80:128-n8:16:32:64-S128" -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC -DPTR_SIZE=64
 ;
-; // macOS does not use dynamic shadow placement
+; // macOS does not use dynamic shadow placement on x86_64
 ; RUN: opt -asan -asan-module -mtriple=x86_64-apple-macosx --data-layout="e-m:o-i64:64-f80:128-n8:16:32:64-S128" -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NONDYNAMIC -DPTR_SIZE=64
+; // macOS does use dynamic shadow placement on arm64
+; RUN: opt -asan -asan-module -mtriple=arm64-apple-macosx --data-layout="e-m:o-i64:64-i128:128-n32:64-S128" -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC -DPTR_SIZE=64
 
 define i32 @test_load(i32* %a) sanitize_address {
 ; First instrumentation in the function must be to load the dynamic shadow
