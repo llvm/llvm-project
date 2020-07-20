@@ -3219,13 +3219,13 @@ TEST_P(ASTMatchersTest, IsArray) {
 }
 
 TEST_P(ASTMatchersTest, HasArraySize) {
-  if (GetParam().Language != Lang_CXX03) {
-    // FIXME: Fix this test to work in all C++ language modes.
+  if (!GetParam().isCXX()) {
     return;
   }
 
   EXPECT_TRUE(matches("struct MyClass {}; MyClass *p1 = new MyClass[10];",
-                      cxxNewExpr(hasArraySize(integerLiteral(equals(10))))));
+                      cxxNewExpr(hasArraySize(
+                          ignoringParenImpCasts(integerLiteral(equals(10)))))));
 }
 
 TEST_P(ASTMatchersTest, HasDefinition_MatchesStructDefinition) {
