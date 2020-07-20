@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-linux-gnu -filetype=obj %s | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -triple x86_64-linux-gnu -filetype=obj %s | llvm-readobj -r - | FileCheck %s
 
 
 				// CHECK:      Relocations [

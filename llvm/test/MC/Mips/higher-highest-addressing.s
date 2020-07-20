@@ -2,7 +2,7 @@
 # RUN:   | llvm-objdump -d - | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=mips64el-unknown-linux -mcpu=mips64r2 %s \
-# RUN:   | llvm-readobj -r | FileCheck %s -check-prefix=CHECK-REL
+# RUN:   | llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
 
 
 # Test that R_MIPS_HIGHER and R_MIPS_HIGHEST relocations are created.  By using

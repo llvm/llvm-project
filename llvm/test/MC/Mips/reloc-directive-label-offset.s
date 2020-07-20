@@ -5,11 +5,11 @@
 # RUN: llvm-mc -triple mips64-unknown-linux %s -show-encoding -target-abi=n64 \
 # RUN:     | FileCheck --check-prefixes=ASM,ASM-64 %s
 # RUN: llvm-mc -triple mips-unknown-linux %s -show-encoding -target-abi=o32 \
-# RUN:     -filetype=obj | llvm-readobj -r | FileCheck -check-prefix=OBJ-O32 %s
+# RUN:     -filetype=obj | llvm-readobj -r - | FileCheck -check-prefix=OBJ-O32 %s
 # RUN: llvm-mc -triple mips64-unknown-linux %s -show-encoding -target-abi=n32 \
-# RUN:     -filetype=obj | llvm-readobj -r | FileCheck -check-prefix=OBJ-N32 %s
+# RUN:     -filetype=obj | llvm-readobj -r - | FileCheck -check-prefix=OBJ-N32 %s
 # RUN: llvm-mc -triple mips64-unknown-linux %s -show-encoding -target-abi=n64 \
-# RUN:     -filetype=obj | llvm-readobj -r | FileCheck -check-prefix=OBJ-N64 %s
+# RUN:     -filetype=obj | llvm-readobj -r - | FileCheck -check-prefix=OBJ-N64 %s
 
   .text
 foo: # ASM-LABEL: foo:

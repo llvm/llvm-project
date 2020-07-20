@@ -1,94 +1,94 @@
 # Default ABI for MIPS32 is O32.
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips1                                    %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS1 %s
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips2                                    %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS2 %s
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips3                                    %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS3,32BITMODE %s
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips4                                    %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS4,32BITMODE %s
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips5                                    %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS5,32BITMODE %s
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux                                                    %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS32R1 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux                                                  %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux                                                  %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r2                                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R2 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r3                                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R3 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r5                                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R5 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r2                 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R2 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r3                 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R3 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r5                 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R5 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r6                                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R6 %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips1                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS1 %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips2                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS2 %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips3                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS3,32BITMODE %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips4                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS4,32BITMODE %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips5                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS5,32BITMODE %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux                                                    %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS32R1 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux                                                  %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux                                                  %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r2                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R2 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r3                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R3 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r5                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R5 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r2                 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R2 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r3                 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R3 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r5                 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R5 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips32r6                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R6 %s
 
 # Selected ABI O32 takes precedence over target triple.
-# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips1    -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS1 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips2    -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS2 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips3    -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS3,32BITMODE %s
-# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips4    -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS4,32BITMODE %s
-# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips5    -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS5,32BITMODE %s
-# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux                  -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS32R1 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux                -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux                -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r2 -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R2 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r3 -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R3 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r5 -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R5 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r2 -target-abi=o32 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R2 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r3 -target-abi=o32 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R3 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r5 -target-abi=o32 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R5 %s
-# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r6 -target-abi=o32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R6 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips1    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS1 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips2    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS2 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips3    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS3,32BITMODE %s
+# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips4    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS4,32BITMODE %s
+# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips5    -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS5,32BITMODE %s
+# FIXME: llvm-mc -filetype=obj -triple mips64-unknown-linux                  -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,O32,NAN1985,MIPS32R1 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux                -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux                -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R1 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r2 -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R2 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r3 -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R3 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r5 -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN1985,MIPS32R5 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r2 -target-abi=o32 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R2 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r3 -target-abi=o32 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R3 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r5 -target-abi=o32 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R5 %s
+# FIXME: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips32r6 -target-abi=o32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,O32,NAN2008,MIPS32R6 %s
 
 # Default ABI for MIPS64 is N64 as opposed to GCC/GAS (N32).
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips3    -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS3 %s
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips4    -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS4 %s
-# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips5    -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS5 %s
-# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux                    -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS64R1 %s
-# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux                  -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R1 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r2 -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R2 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r3 -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R3 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r5 -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R5 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r2 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R2 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r3 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R3 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r5 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R5 %s
-# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r6 -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R6 %s
-# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips3    -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS3 %s
-# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips4    -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS4 %s
-# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips5    -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS5 %s
-# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux                  -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS64R1 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux                -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R1 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r2 -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R2 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r3 -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R3 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r5 -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R5 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r2 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R2 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r3 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R3 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r5 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R5 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r6 -target-abi=n32                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R6 %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips3    -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS3 %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips4    -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS4 %s
+# RUN: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips5    -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS5 %s
+# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux                    -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS64R1 %s
+# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux                  -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R1 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r2 -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R2 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r3 -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R3 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r5 -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R5 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r2 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R2 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r3 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R3 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r5 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R5 %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r6 -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R6 %s
+# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips3    -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS3 %s
+# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips4    -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS4 %s
+# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips5    -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS5 %s
+# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux                  -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,BE,N32,NAN1985,MIPS64R1 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux                -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R1 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r2 -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R2 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r3 -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R3 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r5 -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN1985,MIPS64R5 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r2 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R2 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r3 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R3 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r5 -target-abi=n32 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R5 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r6 -target-abi=n32                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF32,LE,N32,NAN2008,MIPS64R6 %s
 
 # Default ABI for MIPS64 is N64 as opposed to GCC/GAS (N32).
-# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips3    -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS3    %s
-# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips4    -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS4    %s
-# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips5    -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS5    %s
-# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux                    -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS64R1 %s
-# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux                  -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R1 %s
-# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r2 -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R2 %s
-# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r3 -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R3 %s
-# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r5 -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R5 %s
-# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r2 -target-abi=n64 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R2 %s
-# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r3 -target-abi=n64 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R3 %s
-# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r5 -target-abi=n64 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R5 %s
-# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r6 -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R6 %s
-# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips3    -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS3    %s
-# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips4    -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS4    %s
-# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips5    -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS5    %s
+# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips3    -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS3    %s
+# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips4    -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS4    %s
+# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux     -mcpu=mips5    -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS5    %s
+# FIXME: llvm-mc -filetype=obj -triple mips-unknown-linux                    -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS64R1 %s
+# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux                  -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R1 %s
+# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r2 -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R2 %s
+# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r3 -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R3 %s
+# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r5 -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R5 %s
+# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r2 -target-abi=n64 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R2 %s
+# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r3 -target-abi=n64 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R3 %s
+# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r5 -target-abi=n64 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R5 %s
+# FIXME: llvm-mc -filetype=obj -triple mipsel-unknown-linux   -mcpu=mips64r6 -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R6 %s
+# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips3    -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS3    %s
+# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips4    -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS4    %s
+# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux   -mcpu=mips5    -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS5    %s
 
-# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux                                                  %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS64R1 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux                                                %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R1 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r2                                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R2 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r3                                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R3 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r5                                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R5 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r2                 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R2 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r3                 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R3 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r5                 -mattr=+nan2008 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R5 %s
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r6                                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R6 %s
+# RUN: llvm-mc -filetype=obj -triple mips64-unknown-linux                                                  %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,BE,N64,NAN1985,MIPS64R1 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux                                                %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R1 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r2                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R2 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r3                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R3 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r5                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,MIPS64R5 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r2                 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R2 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r3                 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R3 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r5                 -mattr=+nan2008 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R5 %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r6                                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R6 %s
 
-# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=octeon   -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,OCTEON   %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=octeon   -target-abi=n64                 %s -o - | llvm-readobj -h - | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,OCTEON   %s
 # RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux \
 # RUN:         -mcpu=octeon+ -target-abi=n64 %s -o - \
-# RUN:   | llvm-readobj -h \
+# RUN:   | llvm-readobj -h - \
 # RUN:   | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,OCTEON %s
 
 # ALL:        ElfHeader {

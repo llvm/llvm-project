@@ -2,7 +2,7 @@
 # and proper section types.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o - \
-# RUN:   | llvm-readobj -S | FileCheck %s
+# RUN:   | llvm-readobj -S - | FileCheck %s
 
   .sdata
   .word 0

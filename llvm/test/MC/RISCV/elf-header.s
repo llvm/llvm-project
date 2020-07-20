@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -filetype=obj -triple=riscv32 | llvm-readobj -h \
+# RUN: llvm-mc %s -filetype=obj -triple=riscv32 | llvm-readobj -h - \
 # RUN:     | FileCheck -check-prefix=RV32 %s
-# RUN: llvm-mc %s -filetype=obj -triple=riscv64 | llvm-readobj -h \
+# RUN: llvm-mc %s -filetype=obj -triple=riscv64 | llvm-readobj -h - \
 # RUN:     | FileCheck -check-prefix=RV64 %s
 
 # RV32: Format: elf32-littleriscv

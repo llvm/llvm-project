@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux %s               -o - 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=ASM
 ; RUN: llc -mtriple=aarch64-linux %s -filetype=obj -o -      |  \
-; RUN:   llvm-readelf -S | FileCheck %s --check-prefix=OBJ
+; RUN:   llvm-readelf -S - | FileCheck %s --check-prefix=OBJ
 
 define dso_local i32 @f() #0 {
 entry:

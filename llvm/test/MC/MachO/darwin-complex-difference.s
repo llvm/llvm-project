@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple x86_64-apple-darwin10 %s -filetype=obj -o %t.o
-// RUN: llvm-readobj --file-headers -S --sd -r --symbols --macho-segment --macho-dysymtab --macho-indirect-symbols < %t.o > %t.dump
+// RUN: llvm-readobj --file-headers -S --sd -r --symbols --macho-segment --macho-dysymtab --macho-indirect-symbols < %t.o - > %t.dump
 // RUN: FileCheck < %t.dump %s
         
 _a:

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj %s -o - -triple x86_64-pc-linux | llvm-readobj -S | FileCheck %s
+// RUN: llvm-mc -filetype=obj %s -o - -triple x86_64-pc-linux | llvm-readobj -S - | FileCheck %s
 
 // CHECK:      Name: .text
 // CHECK-NEXT: Type: SHT_PROGBITS

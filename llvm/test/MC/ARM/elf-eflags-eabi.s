@@ -1,5 +1,5 @@
 @ RUN: llvm-mc %s -triple=armv7-linux-gnueabi -filetype=obj -o - | \
-@ RUN:    llvm-readobj -h | FileCheck -check-prefix=OBJ %s
+@ RUN:    llvm-readobj -h - | FileCheck -check-prefix=OBJ %s
 	.syntax unified
 	.text
 	.globl	barf

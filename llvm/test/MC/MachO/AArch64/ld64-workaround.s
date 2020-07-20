@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple arm64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs | FileCheck %s
+; RUN: llvm-mc -triple arm64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 
 ; Test that we produce an external relocation. This is a known and temporary bug
 ; in ld64, where it mishandles pointer-sized internal relocations. We should be
