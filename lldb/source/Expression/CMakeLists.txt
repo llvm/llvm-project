@@ -1,7 +1,3 @@
-if(NOT LLDB_BUILT_STANDALONE)
-  set(tablegen_deps intrinsics_gen)
-endif()
-
 set(SWIFT_LIBS lldbPluginExpressionParserSwift)
 if(NOT LLDB_ENABLE_SWIFT_SUPPORT)
   unset(SWIFT_LIBS)
@@ -23,7 +19,7 @@ add_lldb_library(lldbExpression
   UtilityFunction.cpp
 
   DEPENDS
-  ${tablegen_deps}
+  intrinsics_gen
 
   LINK_LIBS
     lldbCore
