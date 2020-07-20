@@ -192,3 +192,45 @@ body: |
     %1:_(<4 x s64>) = G_FPEXT %0
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
 ...
+
+---
+name: test_fpext_f16_to_f64
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_fpext_f16_to_f64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; CHECK: [[FPEXT1:%[0-9]+]]:_(s64) = G_FPEXT [[FPEXT]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[FPEXT1]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(s64) = G_FPEXT %1
+    $vgpr0_vgpr1 = COPY %2
+...
+
+---
+name: test_fpext_v2f16_to_v2f64
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_fpext_v2f16_to_v2f64
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC]](s16)
+    ; CHECK: [[FPEXT1:%[0-9]+]]:_(s64) = G_FPEXT [[FPEXT]](s32)
+    ; CHECK: [[FPEXT2:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC1]](s16)
+    ; CHECK: [[FPEXT3:%[0-9]+]]:_(s64) = G_FPEXT [[FPEXT2]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FPEXT1]](s64), [[FPEXT3]](s64)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    %0:_(<2 x s16>) = COPY $vgpr0
+    %1:_(<2 x s64>) = nnan G_FPEXT %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+...
