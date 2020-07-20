@@ -291,14 +291,24 @@ size_t ModuleList::RemoveOrphans(bool mandatory) {
     if (!lock.try_lock())
       return 0;
   }
-  collection::iterator pos = m_modules.begin();
   size_t remove_count = 0;
-  while (pos != m_modules.end()) {
-    if (pos->unique()) {
-      pos = RemoveImpl(pos);
-      ++remove_count;
-    } else {
-      ++pos;
+  // Modules might hold shared pointers to other modules, so removing one
+  // module might make other other modules orphans. Keep removing modules until
+  // there are no further modules that can be removed.
+  bool made_progress = true;
+  while (made_progress) {
+    // Keep track if we make progress this iteration.
+    made_progress = false;
+    collection::iterator pos = m_modules.begin();
+    while (pos != m_modules.end()) {
+      if (pos->unique()) {
+        pos = RemoveImpl(pos);
+        ++remove_count;
+        // We did make progress.
+        made_progress = true;
+      } else {
+        ++pos;
+      }
     }
   }
   return remove_count;
