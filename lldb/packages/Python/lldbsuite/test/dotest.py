@@ -47,6 +47,7 @@ from . import test_categories
 from lldbsuite.test_event import formatter
 from . import test_result
 from lldbsuite.test_event.event_builder import EventBuilder
+from lldbsuite.test_event.formatter.results_formatter import ResultsFormatter
 from ..support import seven
 
 
@@ -455,27 +456,6 @@ def parseOptionsAndInitTestdirs():
         configuration.testdirs = [os.path.realpath(os.path.abspath(x)) for x in args.args]
 
     lldbtest_config.codesign_identity = args.codesign_identity
-
-
-def setupTestResults():
-    """Sets up test results-related objects based on arg settings."""
-
-    # Create the results formatter.
-    formatter_spec = formatter.create_results_formatter(
-            "lldbsuite.test_event.formatter.results_formatter.ResultsFormatter")
-    if formatter_spec is not None and formatter_spec.formatter is not None:
-        configuration.results_formatter_object = formatter_spec.formatter
-
-        # Send an initialize message to the formatter.
-        initialize_event = EventBuilder.bare_event("initialize")
-        initialize_event["worker_count"] = 1
-
-        formatter_spec.formatter.handle_event(initialize_event)
-
-        # Make sure we clean up the formatter on shutdown.
-        if formatter_spec.cleanup_func is not None:
-            atexit.register(formatter_spec.cleanup_func)
-
 
 def setupSysPath():
     """
@@ -936,8 +916,7 @@ def run_suite():
     #
     parseOptionsAndInitTestdirs()
 
-    # Setup test results (test results formatter and output handling).
-    setupTestResults()
+    configuration.results_formatter_object = ResultsFormatter(sys.stdout)
 
     setupSysPath()
 
