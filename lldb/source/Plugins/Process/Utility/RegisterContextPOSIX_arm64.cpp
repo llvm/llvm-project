@@ -43,10 +43,7 @@ RegisterContextPOSIX_arm64::RegisterContextPOSIX_arm64(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfoPOSIX_arm64> register_info)
     : lldb_private::RegisterContext(thread, 0),
-      m_register_info_up(std::move(register_info)) {
-
-  ::memset(&m_fpr, 0, sizeof m_fpr);
-}
+      m_register_info_up(std::move(register_info)) {}
 
 RegisterContextPOSIX_arm64::~RegisterContextPOSIX_arm64() {}
 
