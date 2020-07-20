@@ -19,7 +19,6 @@ import lldb
 from . import configuration
 from . import test_categories
 from . import lldbtest_config
-from lldbsuite.test_event.event_builder import EventBuilder
 from lldbsuite.support import funcutils
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
@@ -100,10 +99,6 @@ def expectedFailure(expected_fn, bugnumber=None):
             else:
                 xfail_reason = expected_fn()
             if xfail_reason is not None:
-                if configuration.results_formatter_object is not None:
-                    # Mark this test as expected to fail.
-                    configuration.results_formatter_object.handle_event(
-                        EventBuilder.event_for_mark_test_expected_failure(self))
                 xfail_func = unittest2.expectedFailure(func)
                 xfail_func(*args, **kwargs)
             else:
@@ -445,21 +440,11 @@ def expectedFailureNetBSD(bugnumber=None):
         ['netbsd'],
         bugnumber)
 
-# Flakey tests get two chances to run. If they fail the first time round, the result formatter
-# makes sure it is run one more time.
-
-
+# TODO: This decorator does not do anything. Remove it.
 def expectedFlakey(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            self = args[0]
-            if expected_fn(self):
-                # Send event marking test as explicitly eligible for rerunning.
-                if configuration.results_formatter_object is not None:
-                    # Mark this test as rerunnable.
-                    configuration.results_formatter_object.handle_event(
-                        EventBuilder.event_for_mark_test_rerun_eligible(self))
             func(*args, **kwargs)
         return wrapper
     # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
