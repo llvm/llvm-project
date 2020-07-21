@@ -343,9 +343,15 @@ private:
   genval(const Fortran::evaluate::ProcedureDesignator &proc) {
     if (const auto *intrinsic = proc.GetSpecificIntrinsic()) {
       auto signature = Fortran::lower::translateSignature(proc, converter);
+      // Intrinsic lowering is based on the generic name, so retrieve it here in
+      // case it is different from the specific name. The type of the specific
+      // intrinsic is retained in the signature.
+      auto genericName =
+          converter.getFoldingContext().intrinsics().GetGenericIntrinsicName(
+              intrinsic->name);
       auto symbolRefAttr =
           Fortran::lower::getUnrestrictedIntrinsicSymbolRefAttr(
-              builder, getLoc(), intrinsic->name, signature);
+              builder, getLoc(), genericName, signature);
       mlir::Value funcPtr =
           builder.create<mlir::ConstantOp>(getLoc(), signature, symbolRefAttr);
       return funcPtr;
