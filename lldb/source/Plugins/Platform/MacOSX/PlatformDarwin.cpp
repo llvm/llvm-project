@@ -570,10 +570,21 @@ bool PlatformDarwin::ARMGetSupportedArchitectureAtIndex(uint32_t idx,
 #define OSNAME "watchos"
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
 #define OSNAME "bridgeos"
-#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
-#define OSNAME "macosx"
 #else
 #define OSNAME "ios"
+#endif
+
+#if TARGET_OS_OSX
+  if (IsHost()) {
+    if (idx == 0) {
+      arch.SetTriple("arm64e-apple-macosx");
+      return true;
+    } else if (idx == 1) {
+      arch.SetTriple("arm64-apple-macosx");
+      return true;
+    }
+    return false;
+  }
 #endif
 
   const ArchSpec::Core system_core = system_arch.GetCore();
