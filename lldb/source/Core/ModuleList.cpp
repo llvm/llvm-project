@@ -978,7 +978,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
             error.SetErrorStringWithFormat(
                 "cannot locate a module for UUID '%s'", uuid_str.c_str());
           else
-            error.SetErrorStringWithFormat("cannot locate a module");
+            error.SetErrorString("cannot locate a module");
         }
       }
     }
