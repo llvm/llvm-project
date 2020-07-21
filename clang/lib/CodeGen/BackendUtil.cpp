@@ -74,6 +74,7 @@
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
@@ -1372,6 +1373,13 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     }
 
     if (CodeGenOpts.OptimizationLevel == 0) {
+      // FIXME: the backends do not handle matrix intrinsics currently. Make
+      // sure they are also lowered in O0. A lightweight version of the pass
+      // should run in the backend pipeline on demand.
+      if (LangOpts.MatrixTypes)
+        MPM.addPass(
+            createModuleToFunctionPassAdaptor(LowerMatrixIntrinsicsPass()));
+
       addCoroutinePassesAtO0(MPM, LangOpts, CodeGenOpts);
       addSanitizersAtO0(MPM, TargetTriple, LangOpts, CodeGenOpts);
     }

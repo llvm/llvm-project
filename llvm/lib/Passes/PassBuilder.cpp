@@ -275,6 +275,8 @@ extern cl::opt<bool> FlattenedProfileUsed;
 extern cl::opt<AttributorRunOption> AttributorRun;
 extern cl::opt<bool> EnableKnowledgeRetention;
 
+extern cl::opt<bool> EnableMatrix;
+
 const PassBuilder::OptimizationLevel PassBuilder::OptimizationLevel::O0 = {
     /*SpeedLevel*/ 0,
     /*SizeLevel*/ 0};
@@ -1092,6 +1094,11 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   FunctionPassManager OptimizePM(DebugLogging);
   OptimizePM.addPass(Float2IntPass());
   OptimizePM.addPass(LowerConstantIntrinsicsPass());
+
+  if (EnableMatrix) {
+    OptimizePM.addPass(LowerMatrixIntrinsicsPass());
+    OptimizePM.addPass(EarlyCSEPass());
+  }
 
   // FIXME: We need to run some loop optimizations to re-rotate loops after
   // simplify-cfg and others undo their rotation.
