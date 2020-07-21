@@ -29,6 +29,7 @@
 # include "gwp_asan/guarded_pool_allocator.h"
 # include "gwp_asan/optional/backtrace.h"
 # include "gwp_asan/optional/options_parser.h"
+#include "gwp_asan/optional/segv_handler.h"
 #endif // GWP_ASAN_HOOKS
 
 #include <errno.h>
@@ -679,7 +680,8 @@ void initScudo() {
   if (Opts.InstallSignalHandlers)
     gwp_asan::crash_handler::installSignalHandlers(
         &GuardedAlloc, __sanitizer::Printf,
-        gwp_asan::options::getPrintBacktraceFunction(), Opts.Backtrace);
+        gwp_asan::options::getPrintBacktraceFunction(),
+        gwp_asan::crash_handler::getSegvBacktraceFunction());
 #endif // GWP_ASAN_HOOKS
 }
 
