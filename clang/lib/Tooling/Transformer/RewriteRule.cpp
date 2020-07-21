@@ -44,13 +44,10 @@ translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
     auto Replacement = E.Replacement->eval(Result);
     if (!Replacement)
       return Replacement.takeError();
-    auto Metadata = E.Metadata(Result);
-    if (!Metadata)
-      return Metadata.takeError();
     transformer::Edit T;
     T.Range = *EditRange;
     T.Replacement = std::move(*Replacement);
-    T.Metadata = std::move(*Metadata);
+    T.Metadata = E.Metadata;
     Edits.push_back(std::move(T));
   }
   return Edits;
