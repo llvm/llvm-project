@@ -24,6 +24,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include "DeclMatcher.h"
+#include "MatchVerifier.h"
 
 #include <sstream>
 
@@ -201,6 +202,229 @@ class ASTImporterOptionSpecificTestBase
 protected:
   std::vector<std::string> getExtraArgs() const override { return GetParam(); }
 };
+
+// Base class for those tests which use the family of `testImport` functions.
+class TestImportBase
+    : public CompilerOptionSpecificTest,
+      public ::testing::WithParamInterface<std::vector<std::string>> {
+
+  template <typename NodeType>
+  llvm::Expected<NodeType> importNode(ASTUnit *From, ASTUnit *To,
+                                      ASTImporter &Importer, NodeType Node) {
+    ASTContext &ToCtx = To->getASTContext();
+
+    // Add 'From' file to virtual file system so importer can 'find' it
+    // while importing SourceLocations. It is safe to add same file multiple
+    // times - it just isn't replaced.
+    StringRef FromFileName = From->getMainFileName();
+    createVirtualFileIfNeeded(To, FromFileName,
+                              From->getBufferForFile(FromFileName));
+
+    auto Imported = Importer.Import(Node);
+
+    if (Imported) {
+      // This should dump source locations and assert if some source locations
+      // were not imported.
+      SmallString<1024> ImportChecker;
+      llvm::raw_svector_ostream ToNothing(ImportChecker);
+      ToCtx.getTranslationUnitDecl()->print(ToNothing);
+
+      // This traverses the AST to catch certain bugs like poorly or not
+      // implemented subtrees.
+      (*Imported)->dump(ToNothing);
+    }
+
+    return Imported;
+  }
+
+  template <typename NodeType>
+  testing::AssertionResult
+  testImport(const std::string &FromCode,
+             const std::vector<std::string> &FromArgs,
+             const std::string &ToCode, const std::vector<std::string> &ToArgs,
+             MatchVerifier<NodeType> &Verifier,
+             const internal::BindableMatcher<NodeType> &SearchMatcher,
+             const internal::BindableMatcher<NodeType> &VerificationMatcher) {
+    const char *const InputFileName = "input.cc";
+    const char *const OutputFileName = "output.cc";
+
+    std::unique_ptr<ASTUnit> FromAST = tooling::buildASTFromCodeWithArgs(
+                                 FromCode, FromArgs, InputFileName),
+                             ToAST = tooling::buildASTFromCodeWithArgs(
+                                 ToCode, ToArgs, OutputFileName);
+
+    ASTContext &FromCtx = FromAST->getASTContext(),
+               &ToCtx = ToAST->getASTContext();
+
+    ASTImporter Importer(ToCtx, ToAST->getFileManager(), FromCtx,
+                         FromAST->getFileManager(), false);
+
+    auto FoundNodes = match(SearchMatcher, FromCtx);
+    if (FoundNodes.size() != 1)
+      return testing::AssertionFailure()
+             << "Multiple potential nodes were found!";
+
+    auto ToImport = selectFirst<NodeType>(DeclToImportID, FoundNodes);
+    if (!ToImport)
+      return testing::AssertionFailure() << "Node type mismatch!";
+
+    // Sanity check: the node being imported should match in the same way as
+    // the result node.
+    internal::BindableMatcher<NodeType> WrapperMatcher(VerificationMatcher);
+    EXPECT_TRUE(Verifier.match(ToImport, WrapperMatcher));
+
+    auto Imported = importNode(FromAST.get(), ToAST.get(), Importer, ToImport);
+    if (!Imported) {
+      std::string ErrorText;
+      handleAllErrors(
+          Imported.takeError(),
+          [&ErrorText](const ImportError &Err) { ErrorText = Err.message(); });
+      return testing::AssertionFailure()
+             << "Import failed, error: \"" << ErrorText << "\"!";
+    }
+
+    return Verifier.match(*Imported, WrapperMatcher);
+  }
+
+  template <typename NodeType>
+  testing::AssertionResult
+  testImport(const std::string &FromCode,
+             const std::vector<std::string> &FromArgs,
+             const std::string &ToCode, const std::vector<std::string> &ToArgs,
+             MatchVerifier<NodeType> &Verifier,
+             const internal::BindableMatcher<NodeType> &VerificationMatcher) {
+    return testImport(
+        FromCode, FromArgs, ToCode, ToArgs, Verifier,
+        translationUnitDecl(
+            has(namedDecl(hasName(DeclToImportID)).bind(DeclToImportID))),
+        VerificationMatcher);
+  }
+
+protected:
+  std::vector<std::string> getExtraArgs() const override { return GetParam(); }
+
+public:
+  /// Test how AST node named "declToImport" located in the translation unit
+  /// of "FromCode" virtual file is imported to "ToCode" virtual file.
+  /// The verification is done by running AMatcher over the imported node.
+  template <typename NodeType, typename MatcherType>
+  void testImport(const std::string &FromCode, TestLanguage FromLang,
+                  const std::string &ToCode, TestLanguage ToLang,
+                  MatchVerifier<NodeType> &Verifier,
+                  const MatcherType &AMatcher) {
+    std::vector<std::string> FromArgs = getCommandLineArgsForLanguage(FromLang);
+    std::vector<std::string> ToArgs = getCommandLineArgsForLanguage(ToLang);
+    EXPECT_TRUE(
+        testImport(FromCode, FromArgs, ToCode, ToArgs, Verifier, AMatcher));
+  }
+
+  struct ImportAction {
+    StringRef FromFilename;
+    StringRef ToFilename;
+    // FIXME: Generalize this to support other node kinds.
+    internal::BindableMatcher<Decl> ImportPredicate;
+
+    ImportAction(StringRef FromFilename, StringRef ToFilename,
+                 DeclarationMatcher ImportPredicate)
+        : FromFilename(FromFilename), ToFilename(ToFilename),
+          ImportPredicate(ImportPredicate) {}
+
+    ImportAction(StringRef FromFilename, StringRef ToFilename,
+                 const std::string &DeclName)
+        : FromFilename(FromFilename), ToFilename(ToFilename),
+          ImportPredicate(namedDecl(hasName(DeclName))) {}
+  };
+
+  using SingleASTUnit = std::unique_ptr<ASTUnit>;
+  using AllASTUnits = llvm::StringMap<SingleASTUnit>;
+
+  struct CodeEntry {
+    std::string CodeSample;
+    TestLanguage Lang;
+  };
+
+  using CodeFiles = llvm::StringMap<CodeEntry>;
+
+  /// Builds an ASTUnit for one potential compile options set.
+  SingleASTUnit createASTUnit(StringRef FileName, const CodeEntry &CE) const {
+    std::vector<std::string> Args = getCommandLineArgsForLanguage(CE.Lang);
+    auto AST = tooling::buildASTFromCodeWithArgs(CE.CodeSample, Args, FileName);
+    EXPECT_TRUE(AST.get());
+    return AST;
+  }
+
+  /// Test an arbitrary sequence of imports for a set of given in-memory files.
+  /// The verification is done by running VerificationMatcher against a
+  /// specified AST node inside of one of given files.
+  /// \param CodeSamples Map whose key is the file name and the value is the
+  /// file content.
+  /// \param ImportActions Sequence of imports. Each import in sequence
+  /// specifies "from file" and "to file" and a matcher that is used for
+  /// searching a declaration for import in "from file".
+  /// \param FileForFinalCheck Name of virtual file for which the final check is
+  /// applied.
+  /// \param FinalSelectPredicate Matcher that specifies the AST node in the
+  /// FileForFinalCheck for which the verification will be done.
+  /// \param VerificationMatcher Matcher that will be used for verification
+  /// after all imports in sequence are done.
+  void testImportSequence(const CodeFiles &CodeSamples,
+                          const std::vector<ImportAction> &ImportActions,
+                          StringRef FileForFinalCheck,
+                          internal::BindableMatcher<Decl> FinalSelectPredicate,
+                          internal::BindableMatcher<Decl> VerificationMatcher) {
+    AllASTUnits AllASTs;
+    using ImporterKey = std::pair<const ASTUnit *, const ASTUnit *>;
+    llvm::DenseMap<ImporterKey, std::unique_ptr<ASTImporter>> Importers;
+
+    auto GenASTsIfNeeded = [this, &AllASTs, &CodeSamples](StringRef Filename) {
+      if (!AllASTs.count(Filename)) {
+        auto Found = CodeSamples.find(Filename);
+        assert(Found != CodeSamples.end() && "Wrong file for import!");
+        AllASTs[Filename] = createASTUnit(Filename, Found->getValue());
+      }
+    };
+
+    for (const ImportAction &Action : ImportActions) {
+      StringRef FromFile = Action.FromFilename, ToFile = Action.ToFilename;
+      GenASTsIfNeeded(FromFile);
+      GenASTsIfNeeded(ToFile);
+
+      ASTUnit *From = AllASTs[FromFile].get();
+      ASTUnit *To = AllASTs[ToFile].get();
+
+      // Create a new importer if needed.
+      std::unique_ptr<ASTImporter> &ImporterRef = Importers[{From, To}];
+      if (!ImporterRef)
+        ImporterRef.reset(new ASTImporter(
+            To->getASTContext(), To->getFileManager(), From->getASTContext(),
+            From->getFileManager(), false));
+
+      // Find the declaration and import it.
+      auto FoundDecl = match(Action.ImportPredicate.bind(DeclToImportID),
+                             From->getASTContext());
+      EXPECT_TRUE(FoundDecl.size() == 1);
+      const Decl *ToImport = selectFirst<Decl>(DeclToImportID, FoundDecl);
+      auto Imported = importNode(From, To, *ImporterRef, ToImport);
+      EXPECT_TRUE(static_cast<bool>(Imported));
+      if (!Imported)
+        llvm::consumeError(Imported.takeError());
+    }
+
+    // Find the declaration and import it.
+    auto FoundDecl = match(FinalSelectPredicate.bind(DeclToVerifyID),
+                           AllASTs[FileForFinalCheck]->getASTContext());
+    EXPECT_TRUE(FoundDecl.size() == 1);
+    const Decl *ToVerify = selectFirst<Decl>(DeclToVerifyID, FoundDecl);
+    MatchVerifier<Decl> Verifier;
+    EXPECT_TRUE(Verifier.match(
+        ToVerify, internal::BindableMatcher<Decl>(VerificationMatcher)));
+  }
+};
+
+template <typename T> RecordDecl *getRecordDecl(T *D) {
+  auto *ET = cast<ElaboratedType>(D->getType().getTypePtr());
+  return cast<RecordType>(ET->getNamedType().getTypePtr())->getDecl();
+}
 
 template <class T>
 ::testing::AssertionResult isSuccess(llvm::Expected<T> &ValOrErr) {
