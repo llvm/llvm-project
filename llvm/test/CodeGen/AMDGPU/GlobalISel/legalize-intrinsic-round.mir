@@ -126,7 +126,7 @@ body: |
     ; GFX6: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; GFX6: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; GFX6: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV1]](s32), [[C]](s32), [[C1]](s32)
     ; GFX6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; GFX6: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C2]]
     ; GFX6: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -143,8 +143,7 @@ body: |
     ; GFX6: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; GFX6: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; GFX6: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[COPY]], [[SELECT]]
-    ; GFX6: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[COPY]]
-    ; GFX6: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[INTRINSIC_TRUNC]]
+    ; GFX6: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[SELECT1]]
     ; GFX6: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[COPY]], [[FNEG]]
     ; GFX6: [[FABS:%[0-9]+]]:_(s64) = G_FABS [[FADD]]
     ; GFX6: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
@@ -154,8 +153,8 @@ body: |
     ; GFX6: [[AND2:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C10]]
     ; GFX6: [[OR:%[0-9]+]]:_(s64) = G_OR [[C11]], [[AND2]]
     ; GFX6: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oge), [[FABS]](s64), [[C9]]
-    ; GFX6: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[OR]], [[C8]]
-    ; GFX6: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], [[SELECT1]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[OR]], [[C8]]
+    ; GFX6: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[SELECT1]], [[SELECT2]]
     ; GFX6: $vgpr0_vgpr1 = COPY [[FADD1]](s64)
     ; GFX8-LABEL: name: test_intrinsic_round_s64
     ; GFX8: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
@@ -292,7 +291,7 @@ body: |
     ; GFX6: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](s64)
     ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; GFX6: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; GFX6: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV3]](s32), [[C]](s32), [[C1]](s32)
     ; GFX6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; GFX6: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C2]]
     ; GFX6: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -309,8 +308,7 @@ body: |
     ; GFX6: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; GFX6: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; GFX6: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[UV]], [[SELECT]]
-    ; GFX6: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV]]
-    ; GFX6: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[INTRINSIC_TRUNC]]
+    ; GFX6: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[SELECT1]]
     ; GFX6: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[UV]], [[FNEG]]
     ; GFX6: [[FABS:%[0-9]+]]:_(s64) = G_FABS [[FADD]]
     ; GFX6: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
@@ -320,10 +318,10 @@ body: |
     ; GFX6: [[AND2:%[0-9]+]]:_(s64) = G_AND [[UV]], [[C10]]
     ; GFX6: [[OR:%[0-9]+]]:_(s64) = G_OR [[C11]], [[AND2]]
     ; GFX6: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oge), [[FABS]](s64), [[C9]]
-    ; GFX6: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[OR]], [[C8]]
-    ; GFX6: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], [[SELECT1]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[OR]], [[C8]]
+    ; GFX6: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[SELECT1]], [[SELECT2]]
     ; GFX6: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
-    ; GFX6: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; GFX6: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV5]](s32), [[C]](s32), [[C1]](s32)
     ; GFX6: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[INT1]], [[C2]]
     ; GFX6: [[AND3:%[0-9]+]]:_(s32) = G_AND [[UV5]], [[C3]]
     ; GFX6: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C5]](s32), [[AND3]](s32)
@@ -332,17 +330,16 @@ body: |
     ; GFX6: [[AND4:%[0-9]+]]:_(s64) = G_AND [[UV1]], [[XOR1]]
     ; GFX6: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB1]](s32), [[C5]]
     ; GFX6: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB1]](s32), [[C7]]
-    ; GFX6: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[MV1]], [[AND4]]
-    ; GFX6: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[UV1]], [[SELECT2]]
-    ; GFX6: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV1]]
-    ; GFX6: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[INTRINSIC_TRUNC1]]
+    ; GFX6: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[MV1]], [[AND4]]
+    ; GFX6: [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[UV1]], [[SELECT3]]
+    ; GFX6: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[SELECT4]]
     ; GFX6: [[FADD2:%[0-9]+]]:_(s64) = G_FADD [[UV1]], [[FNEG1]]
     ; GFX6: [[FABS1:%[0-9]+]]:_(s64) = G_FABS [[FADD2]]
     ; GFX6: [[AND5:%[0-9]+]]:_(s64) = G_AND [[UV1]], [[C10]]
     ; GFX6: [[OR1:%[0-9]+]]:_(s64) = G_OR [[C11]], [[AND5]]
     ; GFX6: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oge), [[FABS1]](s64), [[C9]]
-    ; GFX6: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[OR1]], [[C8]]
-    ; GFX6: [[FADD3:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC1]], [[SELECT3]]
+    ; GFX6: [[SELECT5:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[OR1]], [[C8]]
+    ; GFX6: [[FADD3:%[0-9]+]]:_(s64) = G_FADD [[SELECT4]], [[SELECT5]]
     ; GFX6: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FADD1]](s64), [[FADD3]](s64)
     ; GFX6: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; GFX8-LABEL: name: test_intrinsic_round_v2s64
