@@ -1071,9 +1071,8 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
   // compilation directory.
   if (!Asm->OutStreamer->hasRawTextSupport() || SingleCU)
     Asm->OutStreamer->emitDwarfFile0Directive(
-        CompilationDir, DIUnit->getFilename(),
-        NewCU.getMD5AsBytes(DIUnit->getFile()), DIUnit->getSource(),
-        NewCU.getUniqueID());
+        CompilationDir, DIUnit->getFilename(), getMD5AsBytes(DIUnit->getFile()),
+        DIUnit->getSource(), NewCU.getUniqueID());
 
   if (useSplitDwarf()) {
     NewCU.setSkeleton(constructSkeletonCU(NewCU));
@@ -3200,7 +3199,7 @@ MCDwarfDwoLineTable *DwarfDebug::getDwoLineTable(const DwarfCompileUnit &CU) {
   const DICompileUnit *DIUnit = CU.getCUNode();
   SplitTypeUnitFileTable.maybeSetRootFile(
       DIUnit->getDirectory(), DIUnit->getFilename(),
-      CU.getMD5AsBytes(DIUnit->getFile()), DIUnit->getSource());
+      getMD5AsBytes(DIUnit->getFile()), DIUnit->getSource());
   return &SplitTypeUnitFileTable;
 }
 
@@ -3382,4 +3381,21 @@ void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
   if (SectionLabels.insert(std::make_pair(&S->getSection(), S)).second)
     if (useSplitDwarf() || getDwarfVersion() >= 5)
       AddrPool.getIndex(S);
+}
+
+Optional<MD5::MD5Result> DwarfDebug::getMD5AsBytes(const DIFile *File) const {
+  assert(File);
+  if (getDwarfVersion() < 5)
+    return None;
+  Optional<DIFile::ChecksumInfo<StringRef>> Checksum = File->getChecksum();
+  if (!Checksum || Checksum->Kind != DIFile::CSK_MD5)
+    return None;
+
+  // Convert the string checksum to an MD5Result for the streamer.
+  // The verifier validates the checksum so we assume it's okay.
+  // An MD5 checksum is 16 bytes.
+  std::string ChecksumString = fromHex(Checksum->Value);
+  MD5::MD5Result CKMem;
+  std::copy(ChecksumString.begin(), ChecksumString.end(), CKMem.Bytes.data());
+  return CKMem;
 }
