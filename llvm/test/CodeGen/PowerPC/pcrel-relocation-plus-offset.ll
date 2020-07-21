@@ -50,12 +50,15 @@ define dso_local signext i32 @getElementExtern4() local_unnamed_addr {
 ; CHECK-S-LABEL: getElementExtern4:
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    pld r3, array1@got@pcrel(0), 1
+; CHECK-S-NEXT:  .Lpcrel:
+; CHECK-S-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
 ; CHECK-S-NEXT:    lwa r3, 16(r3)
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <getElementExtern4>:
 ; CHECK-O:         pld 3, 0(0), 1
 ; CHECK-O-NEXT:      R_PPC64_GOT_PCREL34  array1
-; CHECK-O-NEXT:    lwa 3, 16(3)
+; CHECK-O-NEXT:      R_PPC64_PCREL_OPT *ABS*+0x8
+; CHECK-O:         lwa 3, 16(3)
 ; CHECK-O-NEXT:    blr
 entry:
   %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @array1, i64 0, i64 4), align 4
@@ -66,12 +69,15 @@ define dso_local signext i32 @getElementExternNegative() local_unnamed_addr {
 ; CHECK-S-LABEL: getElementExternNegative:
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    pld r3, array1@got@pcrel(0), 1
+; CHECK-S-NEXT:  .Lpcrel0:
+; CHECK-S-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; CHECK-S-NEXT:    lwa r3, -4(r3)
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <getElementExternNegative>:
 ; CHECK-O:         pld 3, 0(0), 1
 ; CHECK-O-NEXT:      R_PPC64_GOT_PCREL34  array1
-; CHECK-O-NEXT:    lwa 3, -4(3)
+; CHECK-O-NEXT:      R_PPC64_PCREL_OPT *ABS*+0x8
+; CHECK-O:         lwa 3, -4(3)
 ; CHECK-O-NEXT:    blr
 entry:
   %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @array1, i64 0, i64 -1), align 4
