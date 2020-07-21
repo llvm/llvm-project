@@ -206,6 +206,20 @@ llvm.func @masked_intrinsics(%A: !llvm<"<7 x float>*">, %mask: !llvm<"<7 x i1>">
   llvm.return
 }
 
+// CHECK-LABEL: @masked_gather_scatter_intrinsics
+llvm.func @masked_gather_scatter_intrinsics(%M: !llvm<"<7 x float*>">, %mask: !llvm<"<7 x i1>">) {
+  // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0f32(<7 x float*> %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> undef)
+  %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i32} :
+      (!llvm<"<7 x float*>">, !llvm<"<7 x i1>">) -> !llvm<"<7 x float>">
+  // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0f32(<7 x float*> %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
+  %b = llvm.intr.masked.gather %M, %mask, %a { alignment = 1: i32} :
+      (!llvm<"<7 x float*>">, !llvm<"<7 x i1>">, !llvm<"<7 x float>">) -> !llvm<"<7 x float>">
+  // CHECK: call void @llvm.masked.scatter.v7f32.v7p0f32(<7 x float> %{{.*}}, <7 x float*> %{{.*}}, i32 1, <7 x i1> %{{.*}})
+  llvm.intr.masked.scatter %b, %M, %mask { alignment = 1: i32} :
+      !llvm<"<7 x float>">, !llvm<"<7 x i1>"> into !llvm<"<7 x float*>">
+  llvm.return
+}
+
 // CHECK-LABEL: @memcpy_test
 llvm.func @memcpy_test(%arg0: !llvm.i32, %arg1: !llvm.i1, %arg2: !llvm<"i8*">, %arg3: !llvm<"i8*">) {
   // CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %{{.*}}, i8* %{{.*}}, i32 %{{.*}}, i1 %{{.*}})

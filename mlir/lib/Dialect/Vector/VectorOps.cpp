@@ -1859,6 +1859,49 @@ Optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
 }
 
 //===----------------------------------------------------------------------===//
+// GatherOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(GatherOp op) {
+  VectorType indicesVType = op.getIndicesVectorType();
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType resVType = op.getResultVectorType();
+
+  if (resVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and result element type should match");
+
+  if (resVType.getDimSize(0) != indicesVType.getDimSize(0))
+    return op.emitOpError("expected result dim to match indices dim");
+  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected result dim to match mask dim");
+  if (llvm::size(op.pass_thru()) != 0) {
+    VectorType passVType = op.getPassThruVectorType();
+    if (resVType != passVType)
+      return op.emitOpError("expected pass_thru of same type as result type");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ScatterOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(ScatterOp op) {
+  VectorType indicesVType = op.getIndicesVectorType();
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType valueVType = op.getValueVectorType();
+
+  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and value element type should match");
+
+  if (valueVType.getDimSize(0) != indicesVType.getDimSize(0))
+    return op.emitOpError("expected value dim to match indices dim");
+  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected value dim to match mask dim");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ShapeCastOp
 //===----------------------------------------------------------------------===//
 
