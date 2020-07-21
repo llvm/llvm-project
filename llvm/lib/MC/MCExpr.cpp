@@ -47,6 +47,8 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     auto Value = cast<MCConstantExpr>(*this).getValue();
     auto PrintInHex = cast<MCConstantExpr>(*this).useHexFormat();
     auto SizeInBytes = cast<MCConstantExpr>(*this).getSizeInBytes();
+    if (Value < 0 && MAI && !MAI->supportsSignedData())
+      PrintInHex = true;
     if (PrintInHex)
       switch (SizeInBytes) {
       default:
