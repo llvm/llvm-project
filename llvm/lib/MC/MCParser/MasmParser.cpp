@@ -812,9 +812,6 @@ private:
                              const StructInitializer &Initializer);
 
   // User-defined types (structs, unions):
-  bool emitStructValue(const StructInfo &Structure,
-                       const StructInitializer &Initializer,
-                       size_t InitialOffset = 0, size_t InitialField = 0);
   bool emitStructValues(const StructInfo &Structure);
   bool addStructField(StringRef Name, const StructInfo &Structure);
   bool parseDirectiveStructValue(const StructInfo &Structure,
