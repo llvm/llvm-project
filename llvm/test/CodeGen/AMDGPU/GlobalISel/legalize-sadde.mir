@@ -86,9 +86,9 @@ body: |
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
     ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG %13, 16
-    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[SEXT_INREG]], [[SEXT_INREG1]], [[ICMP]]
-    ; CHECK-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[UADDE]], 16
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UADDE]](s32), [[SEXT_INREG2]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SEXT_INREG1]](s32)
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[SEXT_INREG]], [[COPY2]], [[ICMP]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UADDE]](s32), [[SEXT_INREG1]]
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP1]](s1)
     ; CHECK-NEXT: $vgpr0 = COPY [[UADDE]](s32)
     ; CHECK-NEXT: $vgpr1 = COPY [[ZEXT]](s32)
