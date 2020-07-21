@@ -408,6 +408,39 @@ public:
   }
 };
 
+class BranchConversionPattern : public SPIRVToLLVMConversion<spirv::BranchOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::BranchOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::BranchOp branchOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::BrOp>(branchOp, operands,
+                                            branchOp.getTarget());
+    return success();
+  }
+};
+
+class BranchConditionalConversionPattern
+    : public SPIRVToLLVMConversion<spirv::BranchConditionalOp> {
+public:
+  using SPIRVToLLVMConversion<
+      spirv::BranchConditionalOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::BranchConditionalOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // There is no support of branch weights in LLVM dialect at the moment.
+    if (auto weights = op.branch_weights())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
+        op, op.condition(), op.getTrueBlock(), op.getTrueBlockArguments(),
+        op.getFalseBlock(), op.getFalseBlockArguments());
+    return success();
+  }
+};
+
 /// Converts SPIR-V operations that have straightforward LLVM equivalent
 /// into LLVM dialect operations.
 template <typename SPIRVOp, typename LLVMOp>
@@ -807,6 +840,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Constant op
       ConstantScalarAndVectorPattern,
+
+      // Control Flow ops
+      BranchConversionPattern, BranchConditionalConversionPattern,
 
       // Function Call op
       FunctionCallPattern,
