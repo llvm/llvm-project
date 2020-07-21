@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <mutex>
 #include <set>
+#include <unordered_set>
 #include <vector>
 
 using namespace llvm;
@@ -389,11 +390,16 @@ template <class ELFT> void InputSection::copyShtGroup(uint8_t *buf) {
   // The first entry is not a section number but a flag.
   *to++ = from[0];
 
-  // Adjust section numbers because section numbers in an input object
-  // files are different in the output.
+  // Adjust section numbers because section numbers in an input object files are
+  // different in the output. We also need to handle combined or discarded
+  // members.
   ArrayRef<InputSectionBase *> sections = file->getSections();
-  for (uint32_t idx : from.slice(1))
-    *to++ = sections[idx]->getOutputSection()->sectionIndex;
+  std::unordered_set<uint32_t> seen;
+  for (uint32_t idx : from.slice(1)) {
+    OutputSection *osec = sections[idx]->getOutputSection();
+    if (osec && seen.insert(osec->sectionIndex).second)
+      *to++ = osec->sectionIndex;
+  }
 }
 
 InputSectionBase *InputSection::getRelocatedSection() const {
