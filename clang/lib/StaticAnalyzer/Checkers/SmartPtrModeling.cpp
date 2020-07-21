@@ -108,6 +108,17 @@ removeTrackedSubregions(TrackedRegionMapTy RegionMap,
   return RegionMap;
 }
 
+static ProgramStateRef updateSwappedRegion(ProgramStateRef State,
+                                           const MemRegion *Region,
+                                           const SVal *RegionInnerPointerVal) {
+  if (RegionInnerPointerVal) {
+    State = State->set<TrackedRegionMap>(Region, *RegionInnerPointerVal);
+  } else {
+    State = State->remove<TrackedRegionMap>(Region);
+  }
+  return State;
+}
+
 bool SmartPtrModeling::isNullAfterMoveMethod(const CallEvent &Call) const {
   // TODO: Update CallDescription to support anonymous calls?
   // TODO: Handle other methods, such as .get() or .release().
@@ -129,7 +140,8 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
         cast<CXXInstanceCall>(&Call)->getCXXThisVal().getAsRegion();
 
     if (!move::isMovedFrom(State, ThisR)) {
-      // TODO: Model this case as well. At least, avoid invalidation of globals.
+      // TODO: Model this case as well. At least, avoid invalidation of
+      // globals.
       return false;
     }
 
@@ -204,7 +216,7 @@ void SmartPtrModeling::handleReset(const CallEvent &Call,
     return;
   auto State = updateTrackedRegion(Call, C, ThisValRegion);
   C.addTransition(State);
-  // TODO: Make sure to ivalidate the the region in the Store if we don't have
+  // TODO: Make sure to ivalidate the region in the Store if we don't have
   // time to model all methods.
 }
 
@@ -232,7 +244,30 @@ void SmartPtrModeling::handleRelease(const CallEvent &Call,
 
 void SmartPtrModeling::handleSwap(const CallEvent &Call,
                                   CheckerContext &C) const {
-  // TODO: Add support to handle swap method.
+  // To model unique_ptr::swap() method.
+  const auto *IC = dyn_cast<CXXInstanceCall>(&Call);
+  if (!IC)
+    return;
+
+  const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
+  if (!ThisRegion)
+    return;
+
+  const auto *ArgRegion = Call.getArgSVal(0).getAsRegion();
+  if (!ArgRegion)
+    return;
+
+  auto State = C.getState();
+  const auto *ThisRegionInnerPointerVal =
+      State->get<TrackedRegionMap>(ThisRegion);
+  const auto *ArgRegionInnerPointerVal =
+      State->get<TrackedRegionMap>(ArgRegion);
+
+  // Swap the tracked region values.
+  State = updateSwappedRegion(State, ThisRegion, ArgRegionInnerPointerVal);
+  State = updateSwappedRegion(State, ArgRegion, ThisRegionInnerPointerVal);
+
+  C.addTransition(State);
 }
 
 ProgramStateRef
