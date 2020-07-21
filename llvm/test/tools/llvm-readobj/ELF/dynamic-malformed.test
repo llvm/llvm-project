@@ -8,7 +8,7 @@
 # RUN:   | FileCheck %s -DFILE=%t.bad-size --implicit-check-not=warning: --check-prefix WARN-GNU
 
 # WARN: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x4){{$}}
-# WARN: warning: '[[FILE]]': section with index 1 has invalid size (0x4){{$}}
+# WARN: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 has invalid size (0x4){{$}}
 # WARN: warning: '[[FILE]]': no valid dynamic table was found
 # WARN-EMPTY:
 # WARN: File:
@@ -17,7 +17,7 @@
 # WARN: ]
 
 # WARN-GNU: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x4){{$}}
-# WARN-GNU: warning: '[[FILE]]': section with index 1 has invalid size (0x4){{$}}
+# WARN-GNU: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 has invalid size (0x4){{$}}
 # WARN-GNU: warning: '[[FILE]]': no valid dynamic table was found
 # WARN-GNU-NEXT: ELF Header:
 # WARN-GNU:      Symbol table '.symtab' contains 1 entries:

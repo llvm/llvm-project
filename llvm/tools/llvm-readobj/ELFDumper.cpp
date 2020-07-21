@@ -309,6 +309,8 @@ private:
 
   std::unordered_set<std::string> Warnings;
 
+  std::string describe(const Elf_Shdr &Sec) const;
+
 public:
   Elf_Dyn_Range dynamic_table() const {
     // A valid .dynamic section contains an array of entries terminated
@@ -381,25 +383,33 @@ public:
 };
 
 template <class ELFT>
+static std::string describe(const ELFFile<ELFT> *Obj,
+                            const typename ELFT::Shdr &Sec) {
+  unsigned SecNdx = &Sec - &cantFail(Obj->sections()).front();
+  return (object::getELFSectionTypeName(Obj->getHeader()->e_machine,
+                                        Sec.sh_type) +
+          " section with index " + Twine(SecNdx))
+      .str();
+}
+
+template <class ELFT>
+std::string ELFDumper<ELFT>::describe(const Elf_Shdr &Sec) const {
+  return ::describe(ObjF->getELFFile(), Sec);
+}
+
+template <class ELFT>
 static Expected<StringRef> getLinkAsStrtab(const ELFFile<ELFT> *Obj,
-                                           const typename ELFT::Shdr *Sec,
-                                           unsigned SecNdx) {
+                                           const typename ELFT::Shdr *Sec) {
   Expected<const typename ELFT::Shdr *> StrTabSecOrErr =
       Obj->getSection(Sec->sh_link);
   if (!StrTabSecOrErr)
-    return createError("invalid section linked to " +
-                       object::getELFSectionTypeName(
-                           Obj->getHeader()->e_machine, Sec->sh_type) +
-                       " section with index " + Twine(SecNdx) + ": " +
-                       toString(StrTabSecOrErr.takeError()));
+    return createError("invalid section linked to " + describe(Obj, *Sec) +
+                       ": " + toString(StrTabSecOrErr.takeError()));
 
   Expected<StringRef> StrTabOrErr = Obj->getStringTable(*StrTabSecOrErr);
   if (!StrTabOrErr)
-    return createError("invalid string table linked to " +
-                       object::getELFSectionTypeName(
-                           Obj->getHeader()->e_machine, Sec->sh_type) +
-                       " section with index " + Twine(SecNdx) + ": " +
-                       toString(StrTabOrErr.takeError()));
+    return createError("invalid string table linked to " + describe(Obj, *Sec) +
+                       ": " + toString(StrTabOrErr.takeError()));
   return *StrTabOrErr;
 }
 
@@ -407,43 +417,33 @@ static Expected<StringRef> getLinkAsStrtab(const ELFFile<ELFT> *Obj,
 template <class ELFT>
 static Expected<std::pair<typename ELFT::SymRange, StringRef>>
 getLinkAsSymtab(const ELFFile<ELFT> *Obj, const typename ELFT::Shdr *Sec,
-                   unsigned SecNdx, unsigned ExpectedType) {
+                unsigned ExpectedType) {
   Expected<const typename ELFT::Shdr *> SymtabOrErr =
       Obj->getSection(Sec->sh_link);
   if (!SymtabOrErr)
-    return createError("invalid section linked to " +
-                       object::getELFSectionTypeName(
-                           Obj->getHeader()->e_machine, Sec->sh_type) +
-                       " section with index " + Twine(SecNdx) + ": " +
-                       toString(SymtabOrErr.takeError()));
+    return createError("invalid section linked to " + describe(Obj, *Sec) +
+                       ": " + toString(SymtabOrErr.takeError()));
 
   if ((*SymtabOrErr)->sh_type != ExpectedType)
     return createError(
-        "invalid section linked to " +
-        object::getELFSectionTypeName(Obj->getHeader()->e_machine,
-                                      Sec->sh_type) +
-        " section with index " + Twine(SecNdx) + ": expected " +
+        "invalid section linked to " + describe(Obj, *Sec) + ": expected " +
         object::getELFSectionTypeName(Obj->getHeader()->e_machine,
                                       ExpectedType) +
         ", but got " +
         object::getELFSectionTypeName(Obj->getHeader()->e_machine,
                                       (*SymtabOrErr)->sh_type));
 
-  Expected<StringRef> StrTabOrErr =
-      getLinkAsStrtab(Obj, *SymtabOrErr, Sec->sh_link);
+  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, *SymtabOrErr);
   if (!StrTabOrErr)
     return createError(
         "can't get a string table for the symbol table linked to " +
-        object::getELFSectionTypeName(Obj->getHeader()->e_machine,
-                                      Sec->sh_type) +
-        " section with index " + Twine(SecNdx) + ": " +
-        toString(StrTabOrErr.takeError()));
+        describe(Obj, *Sec) + ": " + toString(StrTabOrErr.takeError()));
 
   Expected<typename ELFT::SymRange> SymsOrErr = Obj->symbols(*SymtabOrErr);
   if (!SymsOrErr)
-    return createError(
-        "unable to read symbols from the symbol table with index " +
-        Twine(Sec->sh_link) + ": " + toString(SymsOrErr.takeError()));
+    return createError("unable to read symbols from the " +
+                       describe(Obj, *Sec) + ": " +
+                       toString(SymsOrErr.takeError()));
 
   return std::make_pair(*SymsOrErr, *StrTabOrErr);
 }
@@ -454,21 +454,18 @@ ELFDumper<ELFT>::getVersionTable(const Elf_Shdr *Sec, ArrayRef<Elf_Sym> *SymTab,
                                  StringRef *StrTab) const {
   assert((!SymTab && !StrTab) || (SymTab && StrTab));
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
 
   if (uintptr_t(Obj->base() + Sec->sh_offset) % sizeof(uint16_t) != 0)
-    return createError("the SHT_GNU_versym section with index " +
-                       Twine(SecNdx) + " is misaligned");
+    return createError("the " + describe(*Sec) + " is misaligned");
 
   Expected<ArrayRef<Elf_Versym>> VersionsOrErr =
       Obj->template getSectionContentsAsArray<Elf_Versym>(Sec);
   if (!VersionsOrErr)
-    return createError(
-        "cannot read content of SHT_GNU_versym section with index " +
-        Twine(SecNdx) + ": " + toString(VersionsOrErr.takeError()));
+    return createError("cannot read content of " + describe(*Sec) + ": " +
+                       toString(VersionsOrErr.takeError()));
 
   Expected<std::pair<ArrayRef<Elf_Sym>, StringRef>> SymTabOrErr =
-      getLinkAsSymtab(Obj, Sec, SecNdx, SHT_DYNSYM);
+      getLinkAsSymtab(Obj, Sec, SHT_DYNSYM);
   if (!SymTabOrErr) {
     reportUniqueWarning(SymTabOrErr.takeError());
     return *VersionsOrErr;
@@ -476,8 +473,8 @@ ELFDumper<ELFT>::getVersionTable(const Elf_Shdr *Sec, ArrayRef<Elf_Sym> *SymTab,
 
   if (SymTabOrErr->first.size() != VersionsOrErr->size())
     reportUniqueWarning(
-        createError("SHT_GNU_versym section with index " + Twine(SecNdx) +
-                    ": the number of entries (" + Twine(VersionsOrErr->size()) +
+        createError(describe(*Sec) + ": the number of entries (" +
+                    Twine(VersionsOrErr->size()) +
                     ") does not match the number of symbols (" +
                     Twine(SymTabOrErr->first.size()) +
                     ") in the symbol table with index " + Twine(Sec->sh_link)));
@@ -491,17 +488,15 @@ template <class ELFT>
 Expected<std::vector<VerDef>>
 ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr *Sec) const {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
 
-  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, Sec, SecNdx);
+  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, Sec);
   if (!StrTabOrErr)
     return StrTabOrErr.takeError();
 
   Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj->getSectionContents(Sec);
   if (!ContentsOrErr)
-    return createError(
-        "cannot read content of SHT_GNU_verdef section with index " +
-        Twine(SecNdx) + ": " + toString(ContentsOrErr.takeError()));
+    return createError("cannot read content of " + describe(*Sec) + ": " +
+                       toString(ContentsOrErr.takeError()));
 
   const uint8_t *Start = ContentsOrErr->data();
   const uint8_t *End = Start + ContentsOrErr->size();
@@ -509,8 +504,7 @@ ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr *Sec) const {
   auto ExtractNextAux = [&](const uint8_t *&VerdauxBuf,
                             unsigned VerDefNdx) -> Expected<VerdAux> {
     if (VerdauxBuf + sizeof(Elf_Verdaux) > End)
-      return createError("invalid SHT_GNU_verdef section with index " +
-                         Twine(SecNdx) + ": version definition " +
+      return createError("invalid " + describe(*Sec) + ": version definition " +
                          Twine(VerDefNdx) +
                          " refers to an auxiliary entry that goes past the end "
                          "of the section");
@@ -531,21 +525,19 @@ ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr *Sec) const {
   const uint8_t *VerdefBuf = Start;
   for (unsigned I = 1; I <= /*VerDefsNum=*/Sec->sh_info; ++I) {
     if (VerdefBuf + sizeof(Elf_Verdef) > End)
-      return createError("invalid SHT_GNU_verdef section with index " +
-                         Twine(SecNdx) + ": version definition " + Twine(I) +
-                         " goes past the end of the section");
+      return createError("invalid " + describe(*Sec) + ": version definition " +
+                         Twine(I) + " goes past the end of the section");
 
     if (uintptr_t(VerdefBuf) % sizeof(uint32_t) != 0)
       return createError(
-          "invalid SHT_GNU_verdef section with index " + Twine(SecNdx) +
+          "invalid " + describe(*Sec) +
           ": found a misaligned version definition entry at offset 0x" +
           Twine::utohexstr(VerdefBuf - Start));
 
     unsigned Version = *reinterpret_cast<const Elf_Half *>(VerdefBuf);
     if (Version != 1)
-      return createError("unable to dump SHT_GNU_verdef section with index " +
-                         Twine(SecNdx) + ": version " + Twine(Version) +
-                         " is not yet supported");
+      return createError("unable to dump " + describe(*Sec) + ": version " +
+                         Twine(Version) + " is not yet supported");
 
     const Elf_Verdef *D = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
     VerDef &VD = *Ret.emplace(Ret.end());
@@ -559,8 +551,7 @@ ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr *Sec) const {
     const uint8_t *VerdauxBuf = VerdefBuf + D->vd_aux;
     for (unsigned J = 0; J < D->vd_cnt; ++J) {
       if (uintptr_t(VerdauxBuf) % sizeof(uint32_t) != 0)
-        return createError("invalid SHT_GNU_verdef section with index " +
-                           Twine(SecNdx) +
+        return createError("invalid " + describe(*Sec) +
                            ": found a misaligned auxiliary entry at offset 0x" +
                            Twine::utohexstr(VerdauxBuf - Start));
 
@@ -584,10 +575,8 @@ template <class ELFT>
 Expected<std::vector<VerNeed>>
 ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr *Sec) const {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
-
   StringRef StrTab;
-  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, Sec, SecNdx);
+  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, Sec);
   if (!StrTabOrErr)
     reportUniqueWarning(StrTabOrErr.takeError());
   else
@@ -595,9 +584,8 @@ ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr *Sec) const {
 
   Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj->getSectionContents(Sec);
   if (!ContentsOrErr)
-    return createError(
-        "cannot read content of SHT_GNU_verneed section with index " +
-        Twine(SecNdx) + ": " + toString(ContentsOrErr.takeError()));
+    return createError("cannot read content of " + describe(*Sec) + ": " +
+                       toString(ContentsOrErr.takeError()));
 
   const uint8_t *Start = ContentsOrErr->data();
   const uint8_t *End = Start + ContentsOrErr->size();
@@ -606,21 +594,19 @@ ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr *Sec) const {
   std::vector<VerNeed> Ret;
   for (unsigned I = 1; I <= /*VerneedNum=*/Sec->sh_info; ++I) {
     if (VerneedBuf + sizeof(Elf_Verdef) > End)
-      return createError("invalid SHT_GNU_verneed section with index " +
-                         Twine(SecNdx) + ": version dependency " + Twine(I) +
-                         " goes past the end of the section");
+      return createError("invalid " + describe(*Sec) + ": version dependency " +
+                         Twine(I) + " goes past the end of the section");
 
     if (uintptr_t(VerneedBuf) % sizeof(uint32_t) != 0)
       return createError(
-          "invalid SHT_GNU_verneed section with index " + Twine(SecNdx) +
+          "invalid " + describe(*Sec) +
           ": found a misaligned version dependency entry at offset 0x" +
           Twine::utohexstr(VerneedBuf - Start));
 
     unsigned Version = *reinterpret_cast<const Elf_Half *>(VerneedBuf);
     if (Version != 1)
-      return createError("unable to dump SHT_GNU_verneed section with index " +
-                         Twine(SecNdx) + ": version " + Twine(Version) +
-                         " is not yet supported");
+      return createError("unable to dump " + describe(*Sec) + ": version " +
+                         Twine(Version) + " is not yet supported");
 
     const Elf_Verneed *Verneed =
         reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
@@ -638,15 +624,13 @@ ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr *Sec) const {
     const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
     for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
       if (uintptr_t(VernauxBuf) % sizeof(uint32_t) != 0)
-        return createError("invalid SHT_GNU_verneed section with index " +
-                           Twine(SecNdx) +
+        return createError("invalid " + describe(*Sec) +
                            ": found a misaligned auxiliary entry at offset 0x" +
                            Twine::utohexstr(VernauxBuf - Start));
 
       if (VernauxBuf + sizeof(Elf_Vernaux) > End)
         return createError(
-            "invalid SHT_GNU_verneed section with index " + Twine(SecNdx) +
-            ": version dependency " + Twine(I) +
+            "invalid " + describe(*Sec) + ": version dependency " + Twine(I) +
             " refers to an auxiliary entry that goes past the end "
             "of the section");
 
@@ -2001,9 +1985,7 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
     FromSec =
         checkDRI({ObjF->getELFFile()->base() + DynamicSec->sh_offset,
                   DynamicSec->sh_size, sizeof(Elf_Dyn), ObjF->getFileName()});
-    FromSec.Context = ("section with index " +
-                       Twine(DynamicSec - &cantFail(Obj->sections()).front()))
-                          .str();
+    FromSec.Context = describe(*DynamicSec);
     FromSec.EntSizePrintName = "";
 
     IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
@@ -2091,8 +2073,7 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
 
       if (!DynSymRegion) {
         DynSymRegion = createDRIFrom(&Sec);
-        DynSymRegion->Context =
-            ("section with index " + Twine(&Sec - &Sections.front())).str();
+        DynSymRegion->Context = describe(Sec);
 
         if (Expected<StringRef> E = Obj->getStringTableForSymtab(Sec))
           DynamicStringTable = *E;
@@ -3130,25 +3111,20 @@ Error MipsGOTParser<ELFT>::findPLT(Elf_Dyn_Range DynTable) {
                        toString(PltContentOrErr.takeError()));
 
   if (Expected<const Elf_Shdr *> PltSymTableOrErr =
-          Obj->getSection(PltRelSec->sh_link)) {
+          Obj->getSection(PltRelSec->sh_link))
     PltSymTable = *PltSymTableOrErr;
-  } else {
-    unsigned SecNdx = PltRelSec - &cantFail(Obj->sections()).front();
-    return createError("unable to get a symbol table linked to the RELPLT "
-                       "section with index " +
-                       Twine(SecNdx) + ": " +
+  else
+    return createError("unable to get a symbol table linked to the " +
+                       describe(Obj, *PltRelSec) + ": " +
                        toString(PltSymTableOrErr.takeError()));
-  }
 
   if (Expected<StringRef> StrTabOrErr =
-          Obj->getStringTableForSymtab(*PltSymTable)) {
+          Obj->getStringTableForSymtab(*PltSymTable))
     PltStrTable = *StrTabOrErr;
-  } else {
-    unsigned SecNdx = PltSymTable - &cantFail(Obj->sections()).front();
-    return createError(
-        "unable to get a string table for the symbol table with index " +
-        Twine(SecNdx) + ": " + toString(StrTabOrErr.takeError()));
-  }
+  else
+    return createError("unable to get a string table for the " +
+                       describe(Obj, *PltSymTable) + ": " +
+                       toString(StrTabOrErr.takeError()));
 
   return Error::success();
 }
@@ -4627,21 +4603,16 @@ void GNUStyle<ELFT>::printGNUVersionSectionProlog(
   OS << Label << " section '" << SecName << "' "
      << "contains " << EntriesNum << " entries:\n";
 
-  unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
   StringRef SymTabName = "<corrupt>";
-
   Expected<const typename ELFT::Shdr *> SymTabOrErr =
       Obj->getSection(Sec->sh_link);
   if (SymTabOrErr)
     SymTabName =
         unwrapOrError(this->FileName, Obj->getSectionName(*SymTabOrErr));
   else
-    this->reportUniqueWarning(
-        createError("invalid section linked to " +
-                    object::getELFSectionTypeName(Obj->getHeader()->e_machine,
-                                                  Sec->sh_type) +
-                    " section with index " + Twine(SecNdx) + ": " +
-                    toString(SymTabOrErr.takeError())));
+    this->reportUniqueWarning(createError("invalid section linked to " +
+                                          describe(Obj, *Sec) + ": " +
+                                          toString(SymTabOrErr.takeError())));
 
   OS << " Addr: " << format_hex_no_prefix(Sec->sh_addr, 16)
      << "  Offset: " << format_hex(Sec->sh_offset, 8)
@@ -4677,13 +4648,10 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
     Expected<StringRef> NameOrErr =
         this->dumper()->getSymbolVersionByIndex(Ndx, IsDefault);
     if (!NameOrErr) {
-      if (!NameOrErr) {
-        unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
+      if (!NameOrErr)
         this->reportUniqueWarning(createError(
-            "unable to get a version for entry " + Twine(I) +
-            " of SHT_GNU_versym section with index " + Twine(SecNdx) + ": " +
-            toString(NameOrErr.takeError())));
-      }
+            "unable to get a version for entry " + Twine(I) + " of " +
+            describe(Obj, *Sec) + ": " + toString(NameOrErr.takeError())));
       Versions.emplace_back("<corrupt>");
       continue;
     }
