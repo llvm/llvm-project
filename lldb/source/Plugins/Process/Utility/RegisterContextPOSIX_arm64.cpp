@@ -39,6 +39,13 @@ bool RegisterContextPOSIX_arm64::IsFPR(unsigned reg) {
   return false;
 }
 
+bool RegisterContextPOSIX_arm64::IsSVE(unsigned reg) const {
+  if (m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
+      RegisterInfoPOSIX_arm64::SVERegSet)
+    return true;
+  return false;
+}
+
 RegisterContextPOSIX_arm64::RegisterContextPOSIX_arm64(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfoPOSIX_arm64> register_info)
@@ -79,8 +86,8 @@ const lldb_private::RegisterInfo *
 RegisterContextPOSIX_arm64::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < GetRegisterCount())
     return &GetRegisterInfo()[reg];
-  else
-    return nullptr;
+
+  return nullptr;
 }
 
 size_t RegisterContextPOSIX_arm64::GetRegisterSetCount() {
