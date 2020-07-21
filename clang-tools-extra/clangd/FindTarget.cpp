@@ -175,6 +175,8 @@ std::vector<const NamedDecl *> resolveDependentExprToDecls(const Expr *E) {
     if (ME->isArrow()) {
       BaseType = getPointeeType(BaseType);
     }
+    if (!BaseType)
+      return {};
     if (const auto *BT = BaseType->getAs<BuiltinType>()) {
       // If BaseType is the type of a dependent expression, it's just
       // represented as BultinType::Dependent which gives us no information. We
