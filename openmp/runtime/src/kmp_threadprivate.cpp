@@ -244,9 +244,8 @@ void __kmp_common_destroy_gtid(int gtid) {
 
         d_tn = __kmp_find_shared_task_common(&__kmp_threadprivate_d_table, gtid,
                                              tn->gbl_addr);
-
-        KMP_DEBUG_ASSERT(d_tn);
-
+        if (d_tn == NULL)
+          continue;
         if (d_tn->is_vec) {
           if (d_tn->dt.dtorv != 0) {
             (void)(*d_tn->dt.dtorv)(tn->par_addr, d_tn->vec_len);
