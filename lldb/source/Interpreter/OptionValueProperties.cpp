@@ -517,11 +517,10 @@ bool OptionValueProperties::SetPropertyAtIndexAsUInt64(
   return false;
 }
 
-bool OptionValueProperties::Clear() {
+void OptionValueProperties::Clear() {
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i)
     m_properties[i].GetValue()->Clear();
-  return true;
 }
 
 Status OptionValueProperties::SetValueFromString(llvm::StringRef value,

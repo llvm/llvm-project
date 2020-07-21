@@ -35,11 +35,10 @@ public:
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
-  bool Clear() override {
+  void Clear() override {
     m_file_spec.Clear();
     m_line_number = LLDB_INVALID_LINE_NUMBER;
     m_column_number = LLDB_INVALID_COLUMN_NUMBER;
-    return true;
   }
 
   lldb::OptionValueSP DeepCopy() const override;

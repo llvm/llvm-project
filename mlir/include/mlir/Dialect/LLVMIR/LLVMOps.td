@@ -991,6 +991,35 @@ def LLVM_MaskedStoreOp
   let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` type($data)";
 }
+
+/// Create a call to Masked Gather intrinsic.
+def LLVM_masked_gather
+    : LLVM_OneResultOp<"intr.masked.gather">,
+      Arguments<(ins LLVM_Type:$ptrs, LLVM_Type:$mask,
+                 Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment)> {
+  string llvmBuilder = [{
+    $res = $pass_thru.empty() ? builder.CreateMaskedGather(
+      $ptrs, llvm::Align($alignment.getZExtValue()), $mask) :
+      builder.CreateMaskedGather(
+        $ptrs, llvm::Align($alignment.getZExtValue()), $mask, $pass_thru[0]);
+  }];
+  let assemblyFormat =
+    "operands attr-dict `:` functional-type(operands, results)";
+}
+
+/// Create a call to Masked Scatter intrinsic.
+def LLVM_masked_scatter
+    : LLVM_ZeroResultOp<"intr.masked.scatter">,
+      Arguments<(ins LLVM_Type:$value, LLVM_Type:$ptrs, LLVM_Type:$mask,
+                 I32Attr:$alignment)> {
+  string llvmBuilder = [{
+    builder.CreateMaskedScatter(
+      $value, $ptrs, llvm::Align($alignment.getZExtValue()), $mask);
+  }];
+  let assemblyFormat = "$value `,` $ptrs `,` $mask attr-dict `:` "
+    "type($value) `,` type($mask) `into` type($ptrs)";
+}
+
 //
 // Atomic operations.
 //
