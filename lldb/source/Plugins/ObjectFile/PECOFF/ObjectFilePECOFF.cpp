@@ -686,7 +686,7 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
 
             if (symbol.naux > 0) {
               i += symbol.naux;
-              offset += symbol_size;
+              offset += symbol.naux * symbol_size;
             }
           }
         }

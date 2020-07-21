@@ -1,6 +1,9 @@
 # RUN: yaml2obj %s > %t
 # RUN: lldb-test symbols %t | FileCheck %s
 
+## The .file symbol isn't checked, but is included to test that the symbol
+## table iteration handles cases with a symbol with more than one aux symbol.
+
 # CHECK: Type File Address/Value {{.*}} Size            Flags           Name
 # CHECK: Code 0x0000000040001000        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} entry
 # CHECK:      0x0000000040002000        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} variable
@@ -101,6 +104,13 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .file
+    Value:           0
+    SectionNumber:   -2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_FILE
+    File:            longfilenameusingtwoauxsymbols
   - Name:            entry
     Value:           0
     SectionNumber:   1
