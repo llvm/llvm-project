@@ -27,6 +27,7 @@
 #include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
@@ -47,6 +48,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -147,6 +149,10 @@ public:
 
 class PPCAIXAsmPrinter : public PPCAsmPrinter {
 private:
+  /// Symbols lowered from ExternalSymbolSDNodes, we will need to emit extern
+  /// linkage for them in AIX.
+  SmallPtrSet<MCSymbol *, 8> ExtSymSDNodeSymbols;
+
   static void ValidateGV(const GlobalVariable *GV);
 
 public:
@@ -170,6 +176,10 @@ public:
   void emitEndOfAsmFile(Module &) override;
 
   void emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const override;
+
+  void emitInstruction(const MachineInstr *MI) override;
+
+  bool doFinalization(Module &M) override;
 };
 
 } // end anonymous namespace
@@ -1810,6 +1820,55 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     setCsectAlignment(&F);
 
   return Result;
+}
+
+void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  switch (MI->getOpcode()) {
+  default:
+    break;
+  case PPC::BL8:
+  case PPC::BL:
+  case PPC::BL8_NOP:
+  case PPC::BL_NOP: {
+    const MachineOperand &MO = MI->getOperand(0);
+    if (MO.isSymbol()) {
+      MCSymbolXCOFF *S =
+          cast<MCSymbolXCOFF>(OutContext.getOrCreateSymbol(MO.getSymbolName()));
+      if (!S->hasRepresentedCsectSet()) {
+        // On AIX, an undefined symbol needs to be associated with a
+        // MCSectionXCOFF to get the correct storage mapping class.
+        // In this case, XCOFF::XMC_PR.
+        MCSectionXCOFF *Sec = OutContext.getXCOFFSection(
+            S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER, XCOFF::C_EXT,
+            SectionKind::getMetadata());
+        S->setRepresentedCsect(Sec);
+      }
+      ExtSymSDNodeSymbols.insert(S);
+    }
+  } break;
+  case PPC::BL_TLS:
+  case PPC::BL8_TLS:
+  case PPC::BL8_TLS_:
+  case PPC::BL8_NOP_TLS:
+    report_fatal_error("TLS call not yet implemented");
+  case PPC::TAILB:
+  case PPC::TAILB8:
+  case PPC::TAILBA:
+  case PPC::TAILBA8:
+  case PPC::TAILBCTR:
+  case PPC::TAILBCTR8:
+    if (MI->getOperand(0).isSymbol())
+      report_fatal_error("Tail call for extern symbol not yet supported.");
+    break;
+  }
+  return PPCAsmPrinter::emitInstruction(MI);
+}
+
+bool PPCAIXAsmPrinter::doFinalization(Module &M) {
+  bool Ret = PPCAsmPrinter::doFinalization(M);
+  for (MCSymbol *Sym : ExtSymSDNodeSymbols)
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);
+  return Ret;
 }
 
 /// createPPCAsmPrinterPass - Returns a pass that prints the PPC assembly code

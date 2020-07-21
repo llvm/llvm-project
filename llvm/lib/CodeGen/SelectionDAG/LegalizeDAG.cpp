@@ -3903,6 +3903,23 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
           == TargetLowering::Legal)
         return true;
       break;
+    case ISD::STRICT_FSUB: {
+      if (TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                         Node->getValueType(0))
+          == TargetLowering::Legal)
+        return true;
+
+      EVT VT = Node->getValueType(0);
+      const SDNodeFlags Flags = Node->getFlags();
+      SDValue Neg = DAG.getNode(ISD::FNEG, dl, VT, Node->getOperand(2), Flags);
+      SDValue Fadd = DAG.getNode(ISD::STRICT_FADD, dl, Node->getVTList(),
+                                 {Node->getOperand(0), Node->getOperand(1), Neg},
+                         Flags);
+
+      Results.push_back(Fadd);
+      Results.push_back(Fadd.getValue(1));
+      break;
+    }
     case ISD::STRICT_LRINT:
     case ISD::STRICT_LLRINT:
     case ISD::STRICT_LROUND:

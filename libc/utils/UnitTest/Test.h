@@ -78,7 +78,7 @@ protected:
   // |Cond| on mismatched |LHS| and |RHS| types can potentially succeed because
   // of type promotion.
   template <typename ValType,
-            cpp::EnableIfType<cpp::IsIntegral<ValType>::Value, ValType> = 0>
+            cpp::EnableIfType<cpp::IsArithmetic<ValType>::Value, int> = 0>
   static bool test(RunContext &Ctx, TestCondition Cond, ValType LHS,
                    ValType RHS, const char *LHSStr, const char *RHSStr,
                    const char *File, unsigned long Line) {

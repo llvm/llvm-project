@@ -42,6 +42,10 @@ OPTIONS
 
   Specify the output file name. Must be specified exactly once.
 
+.. option:: -static
+
+ Produces a static library from the input files.
+
 EXIT STATUS
 -----------
 
