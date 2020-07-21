@@ -137,6 +137,26 @@ public:
   fir::StringLitOp createStringLit(mlir::Location loc, mlir::Type eleTy,
                                    llvm::StringRef string);
 
+  //===--------------------------------------------------------------------===//
+  // Linkage helpers (inline). The default linkage is external.
+  //===--------------------------------------------------------------------===//
+
+  mlir::StringAttr createCommonLinkage() {
+    return getStringAttr("common");
+  }
+
+  mlir::StringAttr createInternalLinkage() {
+    return getStringAttr("internal");
+  }
+
+  mlir::StringAttr createLinkOnceLinkage() {
+    return getStringAttr("linkonce");
+  }
+
+  mlir::StringAttr createWeakLinkage() {
+    return getStringAttr("weak");
+  }
+
   /// Get a function by name. If the function exists in the current module, it
   /// is returned. Otherwise, a null FuncOp is returned.
   mlir::FuncOp getNamedFunction(llvm::StringRef name) {

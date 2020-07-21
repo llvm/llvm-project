@@ -731,7 +731,7 @@ private:
           [&](Fortran::lower::FirOpBuilder &builder) {
             auto str = consLit();
             builder.create<fir::HasValueOp>(getLoc(), str);
-          });
+          }, builder.createLinkOnceLinkage());
     auto addr = builder.create<fir::AddrOfOp>(getLoc(), global.resultType(),
                                               global.getSymbol());
     auto lenp = builder.createIntegerConstant(
