@@ -152,3 +152,137 @@ entry:
   store <3 x i15> %in, <3 x i15> addrspace(1)* %out, align 4
   ret void
 }
+
+; Byref pointers should only be treated as offsets from kernarg
+; GCN-LABEL: {{^}}byref_constant_i8_arg:
+; GCN: kernarg_segment_byte_size = 12
+; GCN: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], s4
+; GCN: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], s5
+; GCN: global_load_ubyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]{{\]}}, off offset:8
+define amdgpu_kernel void @byref_constant_i8_arg(i32 addrspace(1)* nocapture %out, i8 addrspace(4)* byref(i8) %in.byref) {
+  %in = load i8, i8 addrspace(4)* %in.byref
+  %ext = zext i8 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}byref_constant_i16_arg:
+; GCN: kernarg_segment_byte_size = 12
+; GCN: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], s4
+; GCN: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], s5
+; GCN: global_load_ushort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]{{\]}}, off offset:8
+define amdgpu_kernel void @byref_constant_i16_arg(i32 addrspace(1)* nocapture %out, i16 addrspace(4)* byref(i16) %in.byref) {
+  %in = load i16, i16 addrspace(4)* %in.byref
+  %ext = zext i16 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}byref_constant_i32_arg:
+; GCN: kernarg_segment_byte_size = 16
+; GCN: s_load_dword [[IN:s[0-9]+]], s[4:5], 0x8{{$}}
+; GCN: s_load_dword [[OFFSET:s[0-9]+]], s[4:5], 0xc{{$}}
+define amdgpu_kernel void @byref_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) %in.byref, i32 %after.offset) {
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store volatile i32 %in, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}byref_constant_v4i32_arg:
+; GCN: kernarg_segment_byte_size = 36
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x10{{$}}
+; GCN: s_load_dword s{{[0-9]+}}, s[4:5], 0x20{{$}}
+define amdgpu_kernel void @byref_constant_v4i32_arg(<4 x i32> addrspace(1)* nocapture %out, <4 x i32> addrspace(4)* byref(<4 x i32>) %in.byref, i32 %after.offset) {
+  %in = load <4 x i32>, <4 x i32> addrspace(4)* %in.byref
+  store volatile <4 x i32> %in, <4 x i32> addrspace(1)* %out, align 4
+  %out.cast = bitcast <4 x i32> addrspace(1)* %out to i32 addrspace(1)*
+  store volatile i32 %after.offset, i32 addrspace(1)* %out.cast, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}byref_align_constant_i32_arg:
+; GCN: kernarg_segment_byte_size = 264
+; GCN-DAG: s_load_dword [[IN:s[0-9]+]], s[4:5], 0x100{{$}}
+; GCN-DAG: s_load_dword [[AFTER_OFFSET:s[0-9]+]], s[4:5], 0x104{{$}}
+; GCN-DAG: v_mov_b32_e32 [[V_IN:v[0-9]+]], [[IN]]
+; GCN-DAG: v_mov_b32_e32 [[V_AFTER_OFFSET:v[0-9]+]], [[AFTER_OFFSET]]
+; GCN: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[V_IN]]
+; GCN: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[V_AFTER_OFFSET]]
+define amdgpu_kernel void @byref_align_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) align(256) %in.byref, i32 %after.offset) {
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store volatile i32 %in, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}byref_natural_align_constant_v16i32_arg:
+; GCN: kernarg_segment_byte_size = 132
+; GCN-DAG: s_load_dword s{{[0-9]+}}, s[4:5], 0x80
+; GCN-DAG: s_load_dwordx16 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x40{{$}}
+define amdgpu_kernel void @byref_natural_align_constant_v16i32_arg(i32 addrspace(1)* nocapture %out, i8, <16 x i32> addrspace(4)* byref(<16 x i32>) align(64) %in.byref, i32 %after.offset) {
+  %in = load <16 x i32>, <16 x i32> addrspace(4)* %in.byref
+  %cast.out = bitcast i32 addrspace(1)* %out to <16 x i32> addrspace(1)*
+  store volatile <16 x i32> %in, <16 x i32> addrspace(1)* %cast.out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; Also accept byref kernel arguments with other global address spaces.
+; GCN-LABEL: {{^}}byref_global_i32_arg:
+; GCN: kernarg_segment_byte_size = 12
+; GCN: s_load_dword [[IN:s[0-9]+]], s[4:5], 0x8{{$}}
+define amdgpu_kernel void @byref_global_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* byref(i32) %in.byref) {
+  %in = load i32, i32 addrspace(1)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}byref_flat_i32_arg:
+; GCN: flat_load_dword [[IN:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}} offset:8{{$}}
+define amdgpu_kernel void @byref_flat_i32_arg(i32 addrspace(1)* nocapture %out, i32* byref(i32) %in.byref) {
+  %in = load i32, i32* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}byref_constant_32bit_i32_arg:
+; GCN: s_add_i32 s[[PTR_LO:[0-9]+]], s4, 8
+; GCN: s_mov_b32 s[[PTR_HI:[0-9]+]], 0{{$}}
+; GCN: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x0{{$}}
+define amdgpu_kernel void @byref_constant_32bit_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(6)* byref(i32) %in.byref) {
+  %in = load i32, i32 addrspace(6)* %in.byref
+  store i32 %in, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; define amdgpu_kernel void @byref_unknown_as_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(999)* byref %in.byref) {
+;   %in = load i32, i32 addrspace(999)* %in.byref
+;   store i32 %in, i32 addrspace(1)* %out, align 4
+;   ret void
+; }
+
+; GCN-LABEL: {{^}}multi_byref_constant_i32_arg:
+; GCN: kernarg_segment_byte_size = 20
+; GCN: s_load_dword {{s[0-9]+}}, s[4:5], 0x8
+; GCN: s_load_dword {{s[0-9]+}}, s[4:5], 0xc
+; GCN: s_load_dword {{s[0-9]+}}, s[4:5], 0x10
+define amdgpu_kernel void @multi_byref_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) %in0.byref, i32 addrspace(4)* byref(i32) %in1.byref, i32 %after.offset) {
+  %in0 = load i32, i32 addrspace(4)* %in0.byref
+  %in1 = load i32, i32 addrspace(4)* %in1.byref
+  store volatile i32 %in0, i32 addrspace(1)* %out, align 4
+  store volatile i32 %in1, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}byref_constant_i32_arg_offset0:
+; GCN: kernarg_segment_byte_size = 4
+; GCN-NOT: s4
+; GCN-NOT: s5
+; GCN: s_load_dword {{s[0-9]+}}, s[4:5], 0x0{{$}}
+define amdgpu_kernel void @byref_constant_i32_arg_offset0(i32 addrspace(4)* byref(i32) %in.byref) {
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store i32 %in, i32 addrspace(1)* undef, align 4
+  ret void
+}

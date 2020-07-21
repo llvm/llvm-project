@@ -56,6 +56,80 @@ define amdgpu_kernel void @test_char(i8 %a) #0
 ; CHECK:        - .args:
 ; CHECK-NEXT:       - .name:           a
 ; CHECK-NEXT:         .offset:         0
+; CHECK-NEXT:         .size:           1
+; CHECK-NEXT:         .type_name:      char
+; CHECK-NEXT:         .value_kind:     by_value
+; CHECK-NEXT:       - .offset:         8
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
+; CHECK-NEXT:       - .offset:         16
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
+; CHECK-NEXT:       - .offset:         24
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         32
+; CHECK-NEXT:         .size:           8
+; CHECK-NOT:          .value_kind:     hidden_default_queue
+; CHECK-NOT:          .value_kind:     hidden_completion_action
+; CHECK-NOT:          .value_kind:     hidden_hostcall_buffer
+; CHECK-NEXT:         .value_kind:     hidden_printf_buffer
+; CHECK:              .value_kind:     hidden_multigrid_sync_arg
+; CHECK:          .language:       OpenCL C
+; CHECK-NEXT:     .language_version:
+; CHECK-NEXT:       - 2
+; CHECK-NEXT:       - 0
+; CHECK:          .name:           test_char_byref_constant
+; CHECK:          .symbol:         test_char_byref_constant.kd
+define amdgpu_kernel void @test_char_byref_constant(i8 addrspace(4)* byref(i8) %a) #0
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !9
+    !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
+  ret void
+}
+
+; CHECK:        - .args:
+; CHECK-NEXT:       - .offset:         0
+; CHECK-NEXT:         .size:           1
+; CHECK-NEXT:         .type_name:      char
+; CHECK-NEXT:         .value_kind:     by_value
+; CHECK-NEXT:       - .name:           a
+; CHECK-NEXT:         .offset:         512
+; CHECK-NEXT:         .size:           1
+; CHECK-NEXT:         .type_name:      char
+; CHECK-NEXT:         .value_kind:     by_value
+; CHECK-NEXT:       - .offset:         520
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
+; CHECK-NEXT:       - .offset:         528
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
+; CHECK-NEXT:       - .offset:         536
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         544
+; CHECK-NEXT:         .size:           8
+; CHECK-NOT:          .value_kind:     hidden_default_queue
+; CHECK-NOT:          .value_kind:     hidden_completion_action
+; CHECK-NOT:          .value_kind:     hidden_hostcall_buffer
+; CHECK-NEXT:         .value_kind:     hidden_printf_buffer
+; CHECK:              .value_kind:     hidden_multigrid_sync_arg
+; CHECK:          .language:       OpenCL C
+; CHECK-NEXT:     .language_version:
+; CHECK-NEXT:       - 2
+; CHECK-NEXT:       - 0
+; CHECK:          .name:           test_char_byref_constant_align512
+; CHECK:          .symbol:         test_char_byref_constant_align512.kd
+define amdgpu_kernel void @test_char_byref_constant_align512(i8, i8 addrspace(4)* byref(i8) align(512) %a) #0
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !111
+    !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
+  ret void
+}
+
+; CHECK:        - .args:
+; CHECK-NEXT:       - .name:           a
+; CHECK-NEXT:         .offset:         0
 ; CHECK-NEXT:         .size:           4
 ; CHECK-NEXT:         .type_name:      ushort2
 ; CHECK-NEXT:         .value_kind:     by_value
@@ -532,6 +606,49 @@ define amdgpu_kernel void @test_struct(%struct.A %a) #0
 ; CHECK:        - .args:
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         0
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .type_name:      struct A
+; CHECK-NEXT:         .value_kind:     by_value
+; CHECK-NEXT:       - .offset:         8
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
+; CHECK-NEXT:       - .offset:         16
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
+; CHECK-NEXT:       - .offset:         24
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         32
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_printf_buffer
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         40
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         48
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         56
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_multigrid_sync_arg
+; CHECK:          .language:       OpenCL C
+; CHECK-NEXT:     .language_version:
+; CHECK-NEXT:       - 2
+; CHECK-NEXT:       - 0
+; CHECK:          .name:           test_struct_byref_constant
+; CHECK:          .symbol:         test_struct_byref_constant.kd
+define amdgpu_kernel void @test_struct_byref_constant(%struct.A addrspace(4)* byref(%struct.A) %a) #0
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
+    !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
+  ret void
+}
+
+; CHECK:        - .args:
+; CHECK-NEXT:         .name:           a
+; CHECK-NEXT:         .offset:         0
 ; CHECK-NEXT:         .size:           32
 ; CHECK-NEXT:         .type_name:      struct A
 ; CHECK-NEXT:         .value_kind:     by_value
@@ -567,6 +684,49 @@ define amdgpu_kernel void @test_struct(%struct.A %a) #0
 ; CHECK:          .name:           test_array
 ; CHECK:          .symbol:         test_array.kd
 define amdgpu_kernel void @test_array([32 x i8] %a) #0
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
+    !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
+  ret void
+}
+
+; CHECK:        - .args:
+; CHECK-NEXT:         .name:           a
+; CHECK-NEXT:         .offset:         0
+; CHECK-NEXT:         .size:           32
+; CHECK-NEXT:         .type_name:      struct A
+; CHECK-NEXT:         .value_kind:     by_value
+; CHECK-NEXT:       - .offset:         32
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
+; CHECK-NEXT:       - .offset:         40
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
+; CHECK-NEXT:       - .offset:         48
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         56
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_printf_buffer
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         64
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         72
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         80
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_multigrid_sync_arg
+; CHECK:          .language:       OpenCL C
+; CHECK-NEXT:     .language_version:
+; CHECK-NEXT:       - 2
+; CHECK-NEXT:       - 0
+; CHECK:          .name:           test_array_byref_constant
+; CHECK:          .symbol:         test_array_byref_constant.kd
+define amdgpu_kernel void @test_array_byref_constant([32 x i8] addrspace(4)* byref([32 x i8]) %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
     !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
   ret void
@@ -1792,5 +1952,6 @@ attributes #2 = { "amdgpu-implicitarg-num-bytes"="56" "calls-enqueue-kernel" }
 !100 = !{!"1:1:4:%d\5Cn"}
 !101 = !{!"2:1:8:%g\5Cn"}
 !110 = !{!"__block_literal"}
+!111 = !{!"char", !"char"}
 
 ; PARSER: AMDGPU HSA Metadata Parser Test: PASS
