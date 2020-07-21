@@ -1,10 +1,10 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-S
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
+; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   --filetype=obj < %s | \
-; RUN:   llvm-objdump --mcpu=future -dr - | FileCheck %s --check-prefix=CHECK-O
+; RUN:   llvm-objdump --mcpu=pwr10 -dr - | FileCheck %s --check-prefix=CHECK-O
 
 ; Constant Pool Index.
 ; CHECK-S-LABEL: ConstPool
