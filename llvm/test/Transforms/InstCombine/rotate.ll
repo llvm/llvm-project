@@ -691,15 +691,8 @@ define i24 @rotl_select_weird_type(i24 %x, i24 %shamt) {
 
 define i32 @rotl_select_zext_shamt(i32 %x, i8 %y) {
 ; CHECK-LABEL: @rotl_select_zext_shamt(
-; CHECK-NEXT:    [[REM:%.*]] = and i8 [[Y:%.*]], 31
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[REM]], 0
-; CHECK-NEXT:    [[SH_PROM:%.*]] = zext i8 [[REM]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i8 32, [[REM]]
-; CHECK-NEXT:    [[SH_PROM1:%.*]] = zext i8 [[SUB]] to i32
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], [[SH_PROM1]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X]], [[SH_PROM]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %rem = and i8 %y, 31
@@ -716,15 +709,8 @@ define i32 @rotl_select_zext_shamt(i32 %x, i8 %y) {
 
 define i64 @rotr_select_zext_shamt(i64 %x, i32 %y) {
 ; CHECK-LABEL: @rotr_select_zext_shamt(
-; CHECK-NEXT:    [[REM:%.*]] = and i32 [[Y:%.*]], 63
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 0
-; CHECK-NEXT:    [[SH_PROM:%.*]] = zext i32 [[REM]] to i64
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[X:%.*]], [[SH_PROM]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 64, [[REM]]
-; CHECK-NEXT:    [[SH_PROM1:%.*]] = zext i32 [[SUB]] to i64
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X]], [[SH_PROM1]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SHL]], [[SHR]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i64 [[X]], i64 [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshr.i64(i64 [[X:%.*]], i64 [[X]], i64 [[TMP1]])
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %rem = and i32 %y, 63
