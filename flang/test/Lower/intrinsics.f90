@@ -147,6 +147,28 @@ subroutine floor_test2(i, a)
   ! CHECK: fir.convert %[[f]] : (f32) -> i64
 end subroutine
 
+! IABS
+! CHECK-LABEL: iabs_test
+subroutine iabs_test(a, b)
+  integer :: a, b
+  ! CHECK: shift_right_signed
+  ! CHECK: xor
+  ! CHECK: subi
+  b = iabs(a)
+end subroutine
+
+! IABS - Check if the return type (RT) has default kind.
+! CHECK-LABEL: iabs_test
+subroutine iabs_testRT(a, b)
+  integer(KIND=4) :: a
+  integer(KIND=16) :: b
+  ! CHECK: shift_right_signed
+  ! CHECK: xor
+  ! CHECK: %[[RT:.*]] =  subi
+  ! CHECK: fir.convert %[[RT]] : (i32)
+  b = iabs(a)
+end subroutine
+
 ! IAND
 ! CHECK-LABEL: iand_test
 subroutine iand_test(a, b)

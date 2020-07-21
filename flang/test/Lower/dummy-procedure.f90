@@ -124,6 +124,16 @@ end subroutine
   !CHECK: %[[len:.*]] = fir.convert %[[unboxed]]#1 : (index) -> i32
   !CHECK: return %[[len]] : i32
 
+! Intrinsic implemented inlined with specific name different from generic
+! CHECK-LABEL: func @_QPtest_iabs
+subroutine test_iabs()
+  intrinsic :: iabs
+  ! CHECK: %[[f:.*]] = constant @fir.abs.i32.ref_i32 : (!fir.ref<i32>) -> i32
+  ! CHECK: %[[fcast:.*]] = fir.convert %f : ((!fir.ref<i32>) -> i32) -> (() -> ())
+  ! CHECK: fir.call @_QPfoo_iabs(%[[fcast]]) : (() -> ()) -> ()
+  call foo_iabs(iabs)
+end subroutine
+
 
 ! TODO: exhaustive test of unrestricted intrinsic table 16.2 
 

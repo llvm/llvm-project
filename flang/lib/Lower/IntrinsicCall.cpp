@@ -727,8 +727,10 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef name, mlir::Type resultType,
       getFunctionType(resultType, mlirArgs, builder);
 
   auto runtimeCallGenerator = getRuntimeCallGenerator(name, soughtFuncType);
+  // FIXME: set outline back to true and use linkOnce for the wrapper
+  // instead.
   return genElementalCall(runtimeCallGenerator, name, resultType, args,
-                          /* outline */ true);
+                          /* outline */ false);
 }
 
 mlir::Value
