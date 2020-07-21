@@ -2,7 +2,7 @@
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    -shared %t.o -o %t.so
-; RUN: llvm-readobj -r %t.so.o | FileCheck %s
+; RUN: llvm-readobj -r %t.so.lto.o | FileCheck %s
 
 ; Test that we produce R_X86_64_GOTPCREL instead of R_X86_64_GOTPCRELX
 ; CHECK: R_X86_64_GOTPCREL foo
