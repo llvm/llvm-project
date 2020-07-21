@@ -29,6 +29,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcmp
     libc.src.string.memchr
     libc.src.string.strchr
+    libc.src.string.strstr
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
