@@ -759,8 +759,14 @@ bool AMDGPUPromoteAlloca::hasSufficientLocalMem(const Function &F) {
 
     for (const User *U : GV.users()) {
       const Instruction *Use = dyn_cast<Instruction>(U);
-      if (!Use)
-        continue;
+      if (!Use) {
+        // FIXME: This is probably a constant expression use. We should
+        // recursively search the users of it for the parent function instead of
+        // bailing.
+        LLVM_DEBUG(dbgs() << "Giving up on LDS size estimate "
+                             "due to constant expression\n");
+        return false;
+      }
 
       if (Use->getParent()->getParent() == &F) {
         Align Alignment =
