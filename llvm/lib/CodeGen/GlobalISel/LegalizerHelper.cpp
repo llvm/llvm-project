@@ -252,7 +252,7 @@ LLT LegalizerHelper::extractGCDType(SmallVectorImpl<Register> &Parts, LLT DstTy,
                                     LLT NarrowTy, Register SrcReg) {
   LLT SrcTy = MRI.getType(SrcReg);
 
-  LLT GCDTy = getGCDType(DstTy, getGCDType(SrcTy, NarrowTy));
+  LLT GCDTy = getGCDType(getGCDType(SrcTy, NarrowTy), DstTy);
   if (SrcTy == GCDTy) {
     // If the source already evenly divides the result type, we don't need to do
     // anything.
