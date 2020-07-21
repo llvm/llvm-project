@@ -542,22 +542,45 @@ LLT llvm::getLCMType(LLT Ty0, LLT Ty1) {
 }
 
 LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
-  if (OrigTy.isVector() && TargetTy.isVector()) {
-    assert(OrigTy.getElementType() == TargetTy.getElementType());
-    int GCD = greatestCommonDivisor(OrigTy.getNumElements(),
-                                    TargetTy.getNumElements());
-    return LLT::scalarOrVector(GCD, OrigTy.getElementType());
+  const unsigned OrigSize = OrigTy.getSizeInBits();
+  const unsigned TargetSize = TargetTy.getSizeInBits();
+
+  if (OrigSize == TargetSize)
+    return OrigTy;
+
+  if (OrigTy.isVector()) {
+    LLT OrigElt = OrigTy.getElementType();
+    if (TargetTy.isVector()) {
+      LLT TargetElt = TargetTy.getElementType();
+      if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
+        int GCD = greatestCommonDivisor(OrigTy.getNumElements(),
+                                        TargetTy.getNumElements());
+        return LLT::scalarOrVector(GCD, OrigElt);
+      }
+    } else {
+      // If the source is a vector of pointers, return a pointer element.
+      if (OrigElt.getSizeInBits() == TargetSize)
+        return OrigElt;
+    }
+
+    unsigned GCD = greatestCommonDivisor(OrigSize, TargetSize);
+    if (GCD == OrigElt.getSizeInBits())
+      return OrigElt;
+
+    // If we can't produce the original element type, we have to use a smaller
+    // scalar.
+    if (GCD < OrigElt.getSizeInBits())
+      return LLT::scalar(GCD);
+    return LLT::vector(GCD / OrigElt.getSizeInBits(), OrigElt);
   }
 
-  if (OrigTy.isVector() && !TargetTy.isVector()) {
-    assert(OrigTy.getElementType() == TargetTy);
-    return TargetTy;
+  if (TargetTy.isVector()) {
+    // Try to preserve the original element type.
+    LLT TargetElt = TargetTy.getElementType();
+    if (TargetElt.getSizeInBits() == OrigSize)
+      return OrigTy;
   }
 
-  assert(!OrigTy.isVector() && !TargetTy.isVector() &&
-         "GCD type of vector and scalar not implemented");
-
-  int GCD = greatestCommonDivisor(OrigTy.getSizeInBits(),
-                                  TargetTy.getSizeInBits());
+  unsigned GCD = greatestCommonDivisor(OrigSize, TargetSize);
   return LLT::scalar(GCD);
 }
