@@ -18,7 +18,7 @@ using namespace llvm::pdb;
 
 NativePublicSymbol::NativePublicSymbol(NativeSession &Session, SymIndexId Id,
                                        const codeview::PublicSym32 &Sym)
-    : NativeRawSymbol(Session, PDB_SymType::Data, Id), Sym(Sym) {}
+    : NativeRawSymbol(Session, PDB_SymType::PublicSymbol, Id), Sym(Sym) {}
 
 NativePublicSymbol::~NativePublicSymbol() {}
 
@@ -37,10 +37,6 @@ uint32_t NativePublicSymbol::getAddressSection() const { return Sym.Segment; }
 
 std::string NativePublicSymbol::getName() const {
   return std::string(Sym.Name);
-}
-
-PDB_SymType NativePublicSymbol::getSymTag() const {
-  return PDB_SymType::PublicSymbol;
 }
 
 uint32_t NativePublicSymbol::getRelativeVirtualAddress() const {
