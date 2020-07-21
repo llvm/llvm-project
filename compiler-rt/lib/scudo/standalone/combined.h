@@ -192,7 +192,7 @@ public:
     if (Opt.InstallSignalHandlers)
       gwp_asan::crash_handler::installSignalHandlers(
           &GuardedAlloc, Printf, gwp_asan::options::getPrintBacktraceFunction(),
-          gwp_asan::crash_handler::getSegvBacktraceFunction());
+          Opt.Backtrace);
 #endif // GWP_ASAN_HOOKS
   }
 
