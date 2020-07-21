@@ -551,10 +551,6 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   return true;
 }
 
-ConstString FormatManager::GetValidTypeName(ConstString type) {
-  return ::GetValidTypeName_Impl(type);
-}
-
 ConstString FormatManager::GetTypeForCache(ValueObject &valobj,
                                            lldb::DynamicValueType use_dynamic) {
   ValueObjectSP valobj_sp = valobj.GetQualifiedRepresentationIfAvailable(
