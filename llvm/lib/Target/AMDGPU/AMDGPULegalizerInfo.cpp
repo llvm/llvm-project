@@ -1754,7 +1754,7 @@ bool AMDGPULegalizerInfo::legalizeFceil(
   return true;
 }
 
-static MachineInstrBuilder extractF64Exponent(unsigned Hi,
+static MachineInstrBuilder extractF64Exponent(Register Hi,
                                               MachineIRBuilder &B) {
   const unsigned FractBits = 52;
   const unsigned ExpBits = 11;
@@ -1764,6 +1764,7 @@ static MachineInstrBuilder extractF64Exponent(unsigned Hi,
   auto Const1 = B.buildConstant(S32, ExpBits);
 
   auto ExpPart = B.buildIntrinsic(Intrinsic::amdgcn_ubfe, {S32}, false)
+    .addUse(Hi)
     .addUse(Const0.getReg(0))
     .addUse(Const1.getReg(0));
 
@@ -1811,6 +1812,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
 
   auto Tmp1 = B.buildSelect(S64, ExpLt0, SignBit64, Tmp0);
   B.buildSelect(MI.getOperand(0).getReg(), ExpGt51, Src, Tmp1);
+  MI.eraseFromParent();
   return true;
 }
 
