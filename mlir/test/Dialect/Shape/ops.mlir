@@ -86,7 +86,7 @@ func @test_shape_of(%arg0: tensor<?xf32>) -> !shape.shape {
 func @test_constraints() {
   %0 = shape.const_shape []
   %1 = shape.const_shape [1, 2, 3]
-  %w0 = shape.cstr_broadcastable %0, %1
+  %w0 = shape.cstr_broadcastable %0, %1 : !shape.shape, !shape.shape
   %w1 = shape.cstr_eq %0, %1
   %w2 = shape.const_witness true
   %w3 = shape.const_witness false
@@ -95,6 +95,12 @@ func @test_constraints() {
     %2 = shape.any %0, %1
     shape.assuming_yield %2 : !shape.shape
   }
+  return
+}
+
+func @broadcastable_on_extent_tensors(%lhs : tensor<?xindex>,
+                                      %rhs : tensor<?xindex>) {
+  %w0 = shape.cstr_broadcastable %lhs, %rhs : tensor<?xindex>, tensor<?xindex>
   return
 }
 
