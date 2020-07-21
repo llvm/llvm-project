@@ -261,7 +261,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     }
   }
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI;
+  StandardInstrumentations SI(DebugPM);
   SI.registerCallbacks(PIC);
 
   PipelineTuningOptions PTO;

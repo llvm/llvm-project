@@ -1393,14 +1393,18 @@ public:
   ///
   void setAttributes(AttributeList A) { Attrs = A; }
 
-  /// Determine whether this call has the given attribute.
+  /// Determine whether this call has the given attribute. If it does not
+  /// then determine if the called function has the attribute, but only if
+  /// the attribute is allowed for the call.
   bool hasFnAttr(Attribute::AttrKind Kind) const {
     assert(Kind != Attribute::NoBuiltin &&
            "Use CallBase::isNoBuiltin() to check for Attribute::NoBuiltin");
     return hasFnAttrImpl(Kind);
   }
 
-  /// Determine whether this call has the given attribute.
+  /// Determine whether this call has the given attribute. If it does not
+  /// then determine if the called function has the attribute, but only if
+  /// the attribute is allowed for the call.
   bool hasFnAttr(StringRef Kind) const { return hasFnAttrImpl(Kind); }
 
   /// adds the attribute to the list of attributes.

@@ -1,5 +1,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -ppc-asm-full-reg-names < %s \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK-S,CHECK-ALL
+; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK-S,CHECK-ALL
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names < %s \
