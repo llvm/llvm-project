@@ -2170,6 +2170,15 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_FPOWI: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_INTTOPTR:
     if (TypeIdx != 1)
       return UnableToLegalize;
@@ -2673,6 +2682,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerFPTOSI(MI);
   case G_FPTRUNC:
     return lowerFPTRUNC(MI, TypeIdx, Ty);
+  case G_FPOWI:
+    return lowerFPOWI(MI);
   case G_SMIN:
   case G_SMAX:
   case G_UMIN:
@@ -4819,6 +4830,20 @@ LegalizerHelper::lowerFPTRUNC(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerFPTRUNC_F64_TO_F16(MI);
 
   return UnableToLegalize;
+}
+
+// TODO: If RHS is a constant SelectionDAGBuilder expands this into a
+// multiplication tree.
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(Dst);
+
+  auto CvtSrc1 = MIRBuilder.buildSITOFP(Ty, Src1);
+  MIRBuilder.buildFPow(Dst, Src0, CvtSrc1, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 static CmpInst::Predicate minMaxToCompare(unsigned Opc) {
