@@ -3112,19 +3112,13 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
-                                                 MachineRegisterInfo &MRI,
-                                                 MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B) const {
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  if (!MFI->isEntryFunction()) {
-    return legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR);
-  }
-
   uint64_t Offset =
     ST.getTargetLowering()->getImplicitParameterOffset(
       B.getMF(), AMDGPUTargetLowering::FIRST_IMPLICIT);
-  Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT IdxTy = LLT::scalar(DstTy.getSizeInBits());
 
@@ -3140,7 +3134,24 @@ bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
   if (!loadInputValue(KernargPtrReg, B, Arg))
     return false;
 
+  // FIXME: This should be nuw
   B.buildPtrAdd(DstReg, KernargPtrReg, B.buildConstant(IdxTy, Offset).getReg(0));
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineIRBuilder &B) const {
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  if (!MFI->isEntryFunction()) {
+    return legalizePreloadedArgIntrin(MI, MRI, B,
+                                      AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR);
+  }
+
+  Register DstReg = MI.getOperand(0).getReg();
+  if (!getImplicitArgPtr(DstReg, MRI, B))
+    return false;
+
   MI.eraseFromParent();
   return true;
 }
