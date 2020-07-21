@@ -5,7 +5,8 @@ set(GWP_ASAN_UNITTEST_CFLAGS
   ${COMPILER_RT_GTEST_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/lib/
   -O2
-  -g)
+  -g
+  -fno-omit-frame-pointer)
 
 file(GLOB GWP_ASAN_HEADERS ../*.h)
 set(GWP_ASAN_UNITTESTS
