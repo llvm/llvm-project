@@ -121,3 +121,9 @@ define amdgpu_kernel void @preallocated_as0_cc_amdgpu_kernel(i32* preallocated(i
 define amdgpu_kernel void @inalloca_as0_cc_amdgpu_kernel(i32* inalloca %ptr) {
   ret void
 }
+
+; CHECK: Calling convention disallows stack byref
+; CHECK-NEXT: void (i32 addrspace(5)*)* @byref_as5_cc_amdgpu_kernel
+define amdgpu_kernel void @byref_as5_cc_amdgpu_kernel(i32 addrspace(5)* byref(i32) %ptr) {
+  ret void
+}
