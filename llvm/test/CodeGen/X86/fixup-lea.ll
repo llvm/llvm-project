@@ -109,31 +109,18 @@ for.end:
 }
 
 define void @foo_pgso(i32 inreg %dns) !prof !14 {
-; SLOW-LABEL: foo_pgso:
-; SLOW:       # %bb.0: # %entry
-; SLOW-NEXT:    xorl %ecx, %ecx
-; SLOW-NEXT:    decl %ecx
-; SLOW-NEXT:  .LBB4_1: # %for.body
-; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
-; SLOW-NEXT:    movzwl %cx, %edx
-; SLOW-NEXT:    decl %ecx
-; SLOW-NEXT:    cmpl %eax, %edx
-; SLOW-NEXT:    jl .LBB4_1
-; SLOW-NEXT:  # %bb.2: # %for.end
-; SLOW-NEXT:    retl
-;
-; FAST-LABEL: foo_pgso:
-; FAST:       # %bb.0: # %entry
-; FAST-NEXT:    xorl %ecx, %ecx
-; FAST-NEXT:    decl %ecx
-; FAST-NEXT:  .LBB4_1: # %for.body
-; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
-; FAST-NEXT:    movzwl %cx, %edx
-; FAST-NEXT:    addl $-1, %ecx
-; FAST-NEXT:    cmpl %eax, %edx
-; FAST-NEXT:    jl .LBB4_1
-; FAST-NEXT:  # %bb.2: # %for.end
-; FAST-NEXT:    retl
+; CHECK-LABEL: foo_pgso:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    decl %ecx
+; CHECK-NEXT:  .LBB4_1: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movzwl %cx, %edx
+; CHECK-NEXT:    decl %ecx
+; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    jl .LBB4_1
+; CHECK-NEXT:  # %bb.2: # %for.end
+; CHECK-NEXT:    retl
 entry:
   br label %for.body
 
@@ -149,31 +136,18 @@ for.end:
 }
 
 define void @bar_pgso(i32 inreg %dns) !prof !14 {
-; SLOW-LABEL: bar_pgso:
-; SLOW:       # %bb.0: # %entry
-; SLOW-NEXT:    xorl %ecx, %ecx
-; SLOW-NEXT:    incl %ecx
-; SLOW-NEXT:  .LBB5_1: # %for.body
-; SLOW-NEXT:    # =>This Inner Loop Header: Depth=1
-; SLOW-NEXT:    movzwl %cx, %edx
-; SLOW-NEXT:    incl %ecx
-; SLOW-NEXT:    cmpl %eax, %edx
-; SLOW-NEXT:    jl .LBB5_1
-; SLOW-NEXT:  # %bb.2: # %for.end
-; SLOW-NEXT:    retl
-;
-; FAST-LABEL: bar_pgso:
-; FAST:       # %bb.0: # %entry
-; FAST-NEXT:    xorl %ecx, %ecx
-; FAST-NEXT:    incl %ecx
-; FAST-NEXT:  .LBB5_1: # %for.body
-; FAST-NEXT:    # =>This Inner Loop Header: Depth=1
-; FAST-NEXT:    movzwl %cx, %edx
-; FAST-NEXT:    addl $1, %ecx
-; FAST-NEXT:    cmpl %eax, %edx
-; FAST-NEXT:    jl .LBB5_1
-; FAST-NEXT:  # %bb.2: # %for.end
-; FAST-NEXT:    retl
+; CHECK-LABEL: bar_pgso:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    incl %ecx
+; CHECK-NEXT:  .LBB5_1: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movzwl %cx, %edx
+; CHECK-NEXT:    incl %ecx
+; CHECK-NEXT:    cmpl %eax, %edx
+; CHECK-NEXT:    jl .LBB5_1
+; CHECK-NEXT:  # %bb.2: # %for.end
+; CHECK-NEXT:    retl
 entry:
   br label %for.body
 

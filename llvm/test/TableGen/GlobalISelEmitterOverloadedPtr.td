@@ -11,11 +11,13 @@ let TargetPrefix = "mytarget" in {
 // Ensure that llvm_anyptr_ty on an intrinsic results in a
 // GIM_CheckPointerToAny rather than a GIM_CheckType.
 //
-// CHECK: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_frag_anyptr,
+// CHECK: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, Intrinsic::mytarget_anyptr,
+// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT: // MIs[0] src
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/2, /*SizeInBits*/32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_frag_anyptr,
 // CHECK-NEXT: // (intrinsic_w_chain:{ *:[i32] } {{[0-9]+}}:{ *:[iPTR] }, GPR32:{ *:[i32] }:$src)<<P:Predicate_frag_anyptr>>  =>  (ANYLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::ANYLOAD,
 let hasSideEffects = 1 in {

@@ -313,8 +313,8 @@ struct PrimitiveTypeNode : public TypeNode {
   explicit PrimitiveTypeNode(PrimitiveKind K)
       : TypeNode(NodeKind::PrimitiveType), PrimKind(K) {}
 
-  void outputPre(OutputStream &OS, OutputFlags Flags) const;
-  void outputPost(OutputStream &OS, OutputFlags Flags) const {}
+  void outputPre(OutputStream &OS, OutputFlags Flags) const override;
+  void outputPost(OutputStream &OS, OutputFlags Flags) const override {}
 
   PrimitiveKind PrimKind;
 };
@@ -474,8 +474,8 @@ struct PointerTypeNode : public TypeNode {
 struct TagTypeNode : public TypeNode {
   explicit TagTypeNode(TagKind Tag) : TypeNode(NodeKind::TagType), Tag(Tag) {}
 
-  void outputPre(OutputStream &OS, OutputFlags Flags) const;
-  void outputPost(OutputStream &OS, OutputFlags Flags) const;
+  void outputPre(OutputStream &OS, OutputFlags Flags) const override;
+  void outputPost(OutputStream &OS, OutputFlags Flags) const override;
 
   QualifiedNameNode *QualifiedName = nullptr;
   TagKind Tag;
@@ -484,8 +484,8 @@ struct TagTypeNode : public TypeNode {
 struct ArrayTypeNode : public TypeNode {
   ArrayTypeNode() : TypeNode(NodeKind::ArrayType) {}
 
-  void outputPre(OutputStream &OS, OutputFlags Flags) const;
-  void outputPost(OutputStream &OS, OutputFlags Flags) const;
+  void outputPre(OutputStream &OS, OutputFlags Flags) const override;
+  void outputPost(OutputStream &OS, OutputFlags Flags) const override;
 
   void outputDimensionsImpl(OutputStream &OS, OutputFlags Flags) const;
   void outputOneDimension(OutputStream &OS, OutputFlags Flags, Node *N) const;

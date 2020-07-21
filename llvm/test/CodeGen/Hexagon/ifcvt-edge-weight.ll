@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -hexagon-eif=0 -print-machineinstrs=if-converter %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -hexagon-eif=0 -stop-after=if-converter < %s | FileCheck %s
 ; Check that the edge weights are updated correctly after if-conversion.
 
 ; CHECK: bb.3.if{{[0-9a-zA-Z.]*}}:

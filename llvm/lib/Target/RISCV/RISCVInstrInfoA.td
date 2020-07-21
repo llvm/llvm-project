@@ -235,13 +235,13 @@ class PseudoMaskedAMOUMinUMax
 
 class PseudoMaskedAMOPat<Intrinsic intrin, Pseudo AMOInst>
     : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
-          (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, imm:$ordering)>;
+          (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering)>;
 
 class PseudoMaskedAMOMinMaxPat<Intrinsic intrin, Pseudo AMOInst>
     : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
            timm:$ordering),
           (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
-           imm:$ordering)>;
+           timm:$ordering)>;
 
 def PseudoMaskedAtomicSwap32 : PseudoMaskedAMO;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i32,
@@ -310,7 +310,7 @@ def PseudoMaskedCmpXchg32
 def : Pat<(int_riscv_masked_cmpxchg_i32
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
           (PseudoMaskedCmpXchg32
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, imm:$ordering)>;
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
 
 } // Predicates = [HasStdExtA]
 
@@ -387,5 +387,5 @@ defm : PseudoCmpXchgPat<"atomic_cmp_swap_64", PseudoCmpXchg64>;
 def : Pat<(int_riscv_masked_cmpxchg_i64
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
           (PseudoMaskedCmpXchg32
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, imm:$ordering)>;
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
 } // Predicates = [HasStdExtA, IsRV64]

@@ -99,9 +99,9 @@ public:
   /// dimensional identifiers.
   bool isIdentity() const;
 
-  /// Returns true if the map is a minor identity map, i.e. an identity affine
-  /// map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
-  static bool isMinorIdentity(AffineMap map);
+  /// Returns true if this affine map is a minor identity, i.e. an identity
+  /// affine map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
+  bool isMinorIdentity() const;
 
   /// Returns true if this affine map is an empty map, i.e., () -> ().
   bool isEmpty() const;

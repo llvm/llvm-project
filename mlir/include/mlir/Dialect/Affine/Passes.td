@@ -112,6 +112,11 @@ def AffineVectorize : FunctionPass<"affine-super-vectorize"> {
   ];
 }
 
+def AffineParallelize : FunctionPass<"affine-parallelize"> {
+  let summary = "Convert affine.for ops into 1-D affine.parallel";
+  let constructor = "mlir::createAffineParallelizePass()";
+}
+
 def SimplifyAffineStructures : FunctionPass<"simplify-affine-structures"> {
   let summary = "Simplify affine expressions in maps/sets and normalize "
                 "memrefs";

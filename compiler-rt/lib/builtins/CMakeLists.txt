@@ -161,6 +161,8 @@ set(GENERIC_SOURCES
   umodti3.c
 )
 
+# TODO: Several "tf" files (and divtc3.c, but not multc3.c) are in
+# GENERIC_SOURCES instead of here.
 set(GENERIC_TF_SOURCES
   addtf3.c
   comparetf2.c
@@ -234,9 +236,21 @@ if (NOT FUCHSIA)
   )
 endif()
 
-# These sources work on all x86 variants, but only x86 variants.
+# These files are used on 32-bit and 64-bit x86.
 set(x86_ARCH_SOURCES
   cpu_model.c
+  )
+
+if (NOT MSVC)
+  set(x86_ARCH_SOURCES
+    ${x86_ARCH_SOURCES}
+    i386/fp_mode.c
+  )
+endif ()
+
+# Implement extended-precision builtins, assuming long double is 80 bits.
+# long double is not 80 bits on Android or MSVC.
+set(x86_80_BIT_SOURCES
   divxc3.c
   fixxfdi.c
   fixxfti.c
@@ -252,23 +266,26 @@ set(x86_ARCH_SOURCES
 )
 
 if (NOT MSVC)
-  set(x86_ARCH_SOURCES
-    ${x86_ARCH_SOURCES}
-    i386/fp_mode.c
-  )
-endif ()
-
-if (NOT MSVC)
   set(x86_64_SOURCES
+    ${GENERIC_SOURCES}
     ${GENERIC_TF_SOURCES}
+    ${x86_ARCH_SOURCES}
     x86_64/floatdidf.c
     x86_64/floatdisf.c
-    x86_64/floatdixf.c
     x86_64/floatundidf.S
     x86_64/floatundisf.S
-    x86_64/floatundixf.S
   )
-  filter_builtin_sources(x86_64_SOURCES EXCLUDE x86_64_SOURCES "${x86_64_SOURCES};${GENERIC_SOURCES}")
+
+  if (NOT ANDROID)
+    set(x86_64_SOURCES
+      ${x86_64_SOURCES}
+      ${x86_80_BIT_SOURCES}
+      x86_64/floatdixf.c
+      x86_64/floatundixf.S
+    )
+  endif()
+
+  # Darwin x86_64 Haswell
   set(x86_64h_SOURCES ${x86_64_SOURCES})
 
   if (WIN32)
@@ -280,22 +297,30 @@ if (NOT MSVC)
   endif()
 
   set(i386_SOURCES
+    ${GENERIC_SOURCES}
+    ${x86_ARCH_SOURCES}
     i386/ashldi3.S
     i386/ashrdi3.S
     i386/divdi3.S
     i386/floatdidf.S
     i386/floatdisf.S
-    i386/floatdixf.S
     i386/floatundidf.S
     i386/floatundisf.S
-    i386/floatundixf.S
     i386/lshrdi3.S
     i386/moddi3.S
     i386/muldi3.S
     i386/udivdi3.S
     i386/umoddi3.S
   )
-  filter_builtin_sources(i386_SOURCES EXCLUDE i386_SOURCES "${i386_SOURCES};${GENERIC_SOURCES}")
+
+  if (NOT ANDROID)
+    set(i386_SOURCES
+      ${i386_SOURCES}
+      ${x86_80_BIT_SOURCES}
+      i386/floatdixf.S
+      i386/floatundixf.S
+    )
+  endif()
 
   if (WIN32)
     set(i386_SOURCES
@@ -309,19 +334,13 @@ else () # MSVC
   # MSVC's assembler takes Intel syntax, not AT&T syntax.
   # Also use only MSVC compilable builtin implementations.
   set(x86_64_SOURCES
+    ${GENERIC_SOURCES}
+    ${x86_ARCH_SOURCES}
     x86_64/floatdidf.c
     x86_64/floatdisf.c
-    x86_64/floatdixf.c
-    ${GENERIC_SOURCES}
   )
-  set(x86_64h_SOURCES ${x86_64_SOURCES})
-  set(i386_SOURCES ${GENERIC_SOURCES})
+  set(i386_SOURCES ${GENERIC_SOURCES} ${x86_ARCH_SOURCES})
 endif () # if (NOT MSVC)
-
-set(x86_64h_SOURCES ${x86_64h_SOURCES} ${x86_ARCH_SOURCES})
-set(x86_64_SOURCES ${x86_64_SOURCES} ${x86_ARCH_SOURCES})
-set(i386_SOURCES ${i386_SOURCES} ${x86_ARCH_SOURCES})
-set(i686_SOURCES ${i686_SOURCES} ${x86_ARCH_SOURCES})
 
 set(arm_SOURCES
   arm/fp_mode.c
@@ -356,8 +375,8 @@ set(arm_SOURCES
   arm/udivmodsi4.S
   arm/udivsi3.S
   arm/umodsi3.S
+  ${GENERIC_SOURCES}
 )
-filter_builtin_sources(arm_SOURCES EXCLUDE arm_SOURCES "${arm_SOURCES};${GENERIC_SOURCES}")
 
 set(thumb1_SOURCES
   arm/divsi3.S
@@ -451,8 +470,8 @@ if(MINGW)
     arm/aeabi_uldivmod.S
     arm/chkstk.S
     mingw_fixfloat.c
+    ${GENERIC_SOURCES}
   )
-  filter_builtin_sources(arm_SOURCES EXCLUDE arm_SOURCES "${arm_SOURCES};${GENERIC_SOURCES}")
 elseif(NOT WIN32)
   # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
@@ -619,25 +638,8 @@ else ()
         endif()
       endif()
 
-      # Filter out generic versions of routines that are re-implemented in
-      # architecture specific manner.  This prevents multiple definitions of the
-      # same symbols, making the symbol selection non-deterministic.
-      foreach (_file ${${arch}_SOURCES})
-        get_filename_component(_file_dir "${_file}" DIRECTORY)
-        if (NOT "${_file_dir}" STREQUAL "")
-          # Architecture specific file. We follow the convention that a source
-          # file that exists in a sub-directory (e.g. `ppc/divtc3.c`) is
-          # architecture specific and that if a generic implementation exists
-          # it will be a top-level source file with the same name modulo the
-          # file extension (e.g. `divtc3.c`).
-          get_filename_component(_name ${_file} NAME)
-          string(REPLACE ".S" ".c" _cname "${_name}")
-          if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_cname}")
-            message(STATUS "For ${arch} builtins preferring ${_file} to ${_cname}")
-            list(REMOVE_ITEM ${arch}_SOURCES ${_cname})
-          endif()
-        endif ()
-      endforeach ()
+      # Remove a generic C builtin when an arch-specific builtin is specified.
+      filter_builtin_sources(${arch}_SOURCES ${arch})
 
       # Needed for clear_cache on debug mode, due to r7's usage in inline asm.
       # Release mode already sets it via -O2/3, Debug mode doesn't.

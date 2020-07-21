@@ -3,11 +3,9 @@
 cmake_minimum_required(VERSION 3.4.3)
 
 if ("${CMAKE_VERSION}" VERSION_LESS "3.13.4")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 12.0.0, the "
-    "minimum version of CMake required to build LLVM will become 3.13.4, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.13.4 now to avoid issues in the future!")
+  message(FATAL_ERROR
+    "Your CMake version is ${CMAKE_VERSION}. The minimum version of CMake "
+    "required to build LLVM is now 3.13.4.")
 endif()
 
 if(POLICY CMP0068)
@@ -24,7 +22,7 @@ if(POLICY CMP0077)
 endif()
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 11)
+  set(LLVM_VERSION_MAJOR 12)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -832,6 +830,21 @@ configure_file(
   ${LLVM_INCLUDE_DIR}/llvm/Config/Targets.def
   )
 
+# For up-to-date instructions for installing the Tensorflow dependency, refer to
+# the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
+# In this case, the latest C API library is available for download from
+# https://www.tensorflow.org/install/lang_c.
+# We will expose the conditional compilation variable,
+# LLVM_HAVE_TF_API, through llvm-config.h, so that a user of the LLVM library may
+# also leverage the dependency.
+set(TENSORFLOW_C_LIB_PATH "" CACHE PATH "Path to TensorFlow C library install")
+find_library(tensorflow_c_api tensorflow PATHS ${TENSORFLOW_C_LIB_PATH}/lib)
+
+if (tensorflow_c_api)
+  set(LLVM_HAVE_TF_API "ON" CACHE BOOL "Full Tensorflow API available")
+  include_directories(${TENSORFLOW_C_LIB_PATH}/include)
+endif()
+
 # Configure the three LLVM configuration header files.
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/config.h.cmake
@@ -972,9 +985,12 @@ set(TENSORFLOW_AOT_PATH "" CACHE PATH "Path to TensorFlow pip install dir")
 
 if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   set(LLVM_HAVE_TF_AOT "ON" CACHE BOOL "Tensorflow AOT available")
-  set(TENSORFLOW_AOT_COMPILER 
-    "${TENSORFLOW_AOT_PATH}/../../../../bin/saved_model_cli" 
-      CACHE PATH "Path to the Tensorflow AOT compiler")
+  set(TENSORFLOW_AOT_COMPILER
+    "${TENSORFLOW_AOT_PATH}/../../../../bin/saved_model_cli"
+    CACHE PATH "Path to the Tensorflow AOT compiler")
+  # Unlike the LLVM_HAVE_TF_API case, we don't need to expose this through
+  # llvm-config.h, because it's an internal implementation detail. A user of the llvm library that wants to also
+  # use the TF AOT compiler may do so through their custom build step.
   add_definitions("-DLLVM_HAVE_TF_AOT")
   include_directories(${TENSORFLOW_AOT_PATH}/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src

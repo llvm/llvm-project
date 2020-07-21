@@ -672,7 +672,7 @@ private:
     if (!BinaryOperator::isComparisonOp(CurrentOP) || (CurrentOP == BO_Cmp))
       return EmptyRangeSet;
 
-    static const OperatorRelationsTable CmpOpTable;
+    static const OperatorRelationsTable CmpOpTable{};
 
     const SymExpr *LHS = SSE->getLHS();
     const SymExpr *RHS = SSE->getRHS();

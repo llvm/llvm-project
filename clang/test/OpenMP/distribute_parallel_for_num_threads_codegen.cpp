@@ -22,7 +22,7 @@ void foo();
 struct S {
   intptr_t a, b, c;
   S(intptr_t a) : a(a) {}
-  operator char() { return a; }
+  operator char() { extern void mayThrow(); mayThrow(); return a; }
   ~S() {}
 };
 
@@ -44,9 +44,9 @@ int tmain() {
 int main() {
   S s(0);
   char a = s;
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOADING_FUN_0:@.+]](
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
 // CHECK: invoke{{.+}} [[TMAIN_5:@.+]]()
 // CHECK: invoke{{.+}} [[TMAIN_1:@.+]]()
@@ -82,16 +82,16 @@ int main() {
 
 // tmain 5
 // CHECK-DAG: define {{.*}}i{{[0-9]+}} [[TMAIN_5]]()
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[T_OFFLOADING_FUN_0:@.+]](
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[T_OFFLOADING_FUN_1:@.+]](
 
 // tmain 1
 // CHECK-DAG: define {{.*}}i{{[0-9]+}} [[TMAIN_1]]()
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[T_OFFLOADING_FUN_2:@.+]](
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[T_OFFLOADING_FUN_3:@.+]](
 
 // CHECK: define internal void [[T_OFFLOADING_FUN_0]](

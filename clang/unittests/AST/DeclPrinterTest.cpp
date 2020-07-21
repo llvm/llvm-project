@@ -76,14 +76,16 @@ public:
 PrintedDeclMatches(StringRef Code, const std::vector<std::string> &Args,
                    const DeclarationMatcher &NodeMatch,
                    StringRef ExpectedPrinted, StringRef FileName,
-                   PrintingPolicyModifier PolicyModifier = nullptr) {
+                   PrintingPolicyModifier PolicyModifier = nullptr,
+                   bool AllowError = false) {
   PrintMatch Printer(PolicyModifier);
   MatchFinder Finder;
   Finder.addMatcher(NodeMatch, &Printer);
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory(&Finder));
 
-  if (!runToolOnCodeWithArgs(Factory->create(), Code, Args, FileName))
+  if (!runToolOnCodeWithArgs(Factory->create(), Code, Args, FileName) &&
+      !AllowError)
     return testing::AssertionFailure()
       << "Parsing error in \"" << Code.str() << "\"";
 
@@ -170,16 +172,12 @@ PrintedDeclCXX1ZMatches(StringRef Code, const DeclarationMatcher &NodeMatch,
                             "input.cc");
 }
 
-::testing::AssertionResult PrintedDeclObjCMatches(
-                                  StringRef Code,
-                                  const DeclarationMatcher &NodeMatch,
-                                  StringRef ExpectedPrinted) {
+::testing::AssertionResult
+PrintedDeclObjCMatches(StringRef Code, const DeclarationMatcher &NodeMatch,
+                       StringRef ExpectedPrinted, bool AllowError = false) {
   std::vector<std::string> Args(1, "");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            NodeMatch,
-                            ExpectedPrinted,
-                            "input.m");
+  return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.m",
+                            /*PolicyModifier=*/nullptr, AllowError);
 }
 
 } // unnamed namespace
@@ -1320,4 +1318,18 @@ TEST(DeclPrinter, TestObjCProtocol2) {
     "@protocol P1<P2> @end",
     namedDecl(hasName("P1")).bind("id"),
     "@protocol P1<P2>\n@end"));
+}
+
+TEST(DeclPrinter, TestObjCCategoryInvalidInterface) {
+  ASSERT_TRUE(PrintedDeclObjCMatches(
+      "@interface I (Extension) @end",
+      namedDecl(hasName("Extension")).bind("id"),
+      "@interface <<error-type>>(Extension)\n@end", /*AllowError=*/true));
+}
+
+TEST(DeclPrinter, TestObjCCategoryImplInvalidInterface) {
+  ASSERT_TRUE(PrintedDeclObjCMatches(
+      "@implementation I (Extension) @end",
+      namedDecl(hasName("Extension")).bind("id"),
+      "@implementation <<error-type>>(Extension)\n@end", /*AllowError=*/true));
 }

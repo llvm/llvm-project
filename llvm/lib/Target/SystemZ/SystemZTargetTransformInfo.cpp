@@ -294,6 +294,10 @@ void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.Force = true;
 }
 
+void SystemZTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                           TTI::PeelingPreferences &PP) {
+  BaseT::getPeelingPreferences(L, SE, PP);
+}
 
 bool SystemZTTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                                    TargetTransformInfo::LSRCost &C2) {

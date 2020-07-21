@@ -86,7 +86,10 @@ class Display(object):
                                      errors="replace")
                 except UnicodeDecodeError:
                     pass
-                out = out.decode(encoding=sys.stdout.encoding)
+                # Python 2 can raise UnicodeDecodeError here too in cases
+                # where the stdout encoding is ASCII. Ignore decode errors
+                # in this case.
+                out = out.decode(encoding=sys.stdout.encoding, errors="ignore")
             print(out)
             print("*" * 20)
 

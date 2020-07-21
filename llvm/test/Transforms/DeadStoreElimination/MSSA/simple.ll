@@ -181,6 +181,18 @@ define double @test10(i8* %X) {
   ret double %tmp.0
 }
 
+; DSE should delete the dead trampoline.
+declare void @test11f()
+define void @test11() {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:    ret void
+;
+  %storage = alloca [10 x i8], align 16		; <[10 x i8]*> [#uses=1]
+  %cast = getelementptr [10 x i8], [10 x i8]* %storage, i32 0, i32 0		; <i8*> [#uses=1]
+  call void @llvm.init.trampoline( i8* %cast, i8* bitcast (void ()* @test11f to i8*), i8* null )		; <i8*> [#uses=1]
+  ret void
+}
+
 ; %P doesn't escape, the DEAD instructions should be removed.
 declare void @test13f()
 define i32* @test13() {

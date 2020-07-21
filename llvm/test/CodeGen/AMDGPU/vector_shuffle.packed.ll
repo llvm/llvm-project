@@ -108,12 +108,12 @@ define <4 x half> @shuffle_v4f16_35u5(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v2, v[2:3], off
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:4
-; GFX9-NEXT:    v_mov_b32_e32 v3, 0xffff
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-NEXT:    v_and_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -128,11 +128,11 @@ define <4 x half> @shuffle_v4f16_357u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:4
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0xffff
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_and_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v3
 ; GFX9-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

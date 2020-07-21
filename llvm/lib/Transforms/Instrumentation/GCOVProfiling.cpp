@@ -130,7 +130,6 @@ private:
   Function *
   insertCounterWriteout(ArrayRef<std::pair<GlobalVariable *, MDNode *>>);
   Function *insertReset(ArrayRef<std::pair<GlobalVariable *, MDNode *>>);
-  Function *insertFlush(Function *ResetF);
 
   bool AddFlushBeforeForkAndExec();
 
@@ -909,7 +908,6 @@ bool GCOVProfiler::emitProfileArcs() {
 
     Function *WriteoutF = insertCounterWriteout(CountersBySP);
     Function *ResetF = insertReset(CountersBySP);
-    Function *FlushF = insertFlush(ResetF);
 
     // Create a small bit of code that registers the "__llvm_gcov_writeout" to
     // be executed at exit and the "__llvm_gcov_flush" function to be executed
@@ -927,14 +925,13 @@ bool GCOVProfiler::emitProfileArcs() {
     IRBuilder<> Builder(BB);
 
     FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-    Type *Params[] = {PointerType::get(FTy, 0), PointerType::get(FTy, 0),
-                      PointerType::get(FTy, 0)};
-    FTy = FunctionType::get(Builder.getVoidTy(), Params, false);
+    auto *PFTy = PointerType::get(FTy, 0);
+    FTy = FunctionType::get(Builder.getVoidTy(), {PFTy, PFTy}, false);
 
     // Initialize the environment and register the local writeout, flush and
     // reset functions.
     FunctionCallee GCOVInit = M->getOrInsertFunction("llvm_gcov_init", FTy);
-    Builder.CreateCall(GCOVInit, {WriteoutF, FlushF, ResetF});
+    Builder.CreateCall(GCOVInit, {WriteoutF, ResetF});
     Builder.CreateRetVoid();
 
     appendToGlobalCtors(*M, F, 0);
@@ -1265,37 +1262,4 @@ Function *GCOVProfiler::insertReset(
     report_fatal_error("invalid return type for __llvm_gcov_reset");
 
   return ResetF;
-}
-
-Function *GCOVProfiler::insertFlush(Function *ResetF) {
-  FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-  Function *FlushF = M->getFunction("__llvm_gcov_flush");
-  if (!FlushF)
-    FlushF = Function::Create(FTy, GlobalValue::InternalLinkage,
-                              "__llvm_gcov_flush", M);
-  FlushF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  FlushF->addFnAttr(Attribute::NoInline);
-  if (Options.NoRedZone)
-    FlushF->addFnAttr(Attribute::NoRedZone);
-
-  BasicBlock *Entry = BasicBlock::Create(*Ctx, "entry", FlushF);
-
-  // Write out the current counters.
-  Function *WriteoutF = M->getFunction("__llvm_gcov_writeout");
-  assert(WriteoutF && "Need to create the writeout function first!");
-
-  IRBuilder<> Builder(Entry);
-  Builder.CreateCall(WriteoutF, {});
-  Builder.CreateCall(ResetF, {});
-
-  Type *RetTy = FlushF->getReturnType();
-  if (RetTy->isVoidTy())
-    Builder.CreateRetVoid();
-  else if (RetTy->isIntegerTy())
-    // Used if __llvm_gcov_flush was implicitly declared.
-    Builder.CreateRet(ConstantInt::get(RetTy, 0));
-  else
-    report_fatal_error("invalid return type for __llvm_gcov_flush");
-
-  return FlushF;
 }

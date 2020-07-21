@@ -59,6 +59,15 @@ typedef void (*PrintBacktrace_t)(uintptr_t *TraceBuffer, size_t TraceLength,
 // without any symbolization.
 PrintBacktrace_t getBasicPrintBacktraceFunction();
 
+// Returns a function pointer to a backtrace function that's suitable for
+// unwinding through a signal handler. This is important primarily for frame-
+// pointer based unwinders, DWARF or other unwinders can simply provide the
+// normal backtrace function as the implementation here. On POSIX, SignalContext
+// should be the `ucontext_t` from the signal handler.
+typedef size_t (*SegvBacktrace_t)(uintptr_t *TraceBuffer, size_t Size,
+                                  void *SignalContext);
+SegvBacktrace_t getSegvBacktraceFunction();
+
 // Install the SIGSEGV crash handler for printing use-after-free and heap-
 // buffer-{under|over}flow exceptions if the user asked for it. This is platform
 // specific as even though POSIX and Windows both support registering handlers
@@ -67,14 +76,14 @@ PrintBacktrace_t getBasicPrintBacktraceFunction();
 // before this function.
 void installSignalHandlers(gwp_asan::GuardedPoolAllocator *GPA, Printf_t Printf,
                            PrintBacktrace_t PrintBacktrace,
-                           options::Backtrace_t Backtrace);
+                           SegvBacktrace_t SegvBacktrace);
 
 void uninstallSignalHandlers();
 
 void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
                 const gwp_asan::AllocationMetadata *Metadata,
-                options::Backtrace_t Backtrace, Printf_t Printf,
-                PrintBacktrace_t PrintBacktrace);
+                SegvBacktrace_t SegvBacktrace, Printf_t Printf,
+                PrintBacktrace_t PrintBacktrace, void *Context);
 } // namespace crash_handler
 } // namespace gwp_asan
 

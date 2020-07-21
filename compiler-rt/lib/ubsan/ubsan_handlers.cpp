@@ -16,6 +16,7 @@
 #include "ubsan_diag.h"
 #include "ubsan_flags.h"
 #include "ubsan_monitor.h"
+#include "ubsan_value.h"
 
 #include "sanitizer_common/sanitizer_common.h"
 
@@ -637,6 +638,36 @@ void __ubsan::__ubsan_handle_invalid_builtin(InvalidBuiltinData *Data) {
 void __ubsan::__ubsan_handle_invalid_builtin_abort(InvalidBuiltinData *Data) {
   GET_REPORT_OPTIONS(true);
   handleInvalidBuiltin(Data, Opts);
+  Die();
+}
+
+static void handleInvalidObjCCast(InvalidObjCCast *Data, ValueHandle Pointer,
+                                  ReportOptions Opts) {
+  SourceLocation Loc = Data->Loc.acquire();
+  ErrorType ET = ErrorType::InvalidObjCCast;
+
+  if (ignoreReport(Loc, Opts, ET))
+    return;
+
+  ScopedReport R(Opts, Loc, ET);
+
+  const char *GivenClass = getObjCClassName(Pointer);
+  const char *GivenClassStr = GivenClass ? GivenClass : "<unknown type>";
+
+  Diag(Loc, DL_Error, ET,
+       "invalid ObjC cast, object is a '%0', but expected a %1")
+      << GivenClassStr << Data->ExpectedType;
+}
+
+void __ubsan::__ubsan_handle_invalid_objc_cast(InvalidObjCCast *Data,
+                                               ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(false);
+  handleInvalidObjCCast(Data, Pointer, Opts);
+}
+void __ubsan::__ubsan_handle_invalid_objc_cast_abort(InvalidObjCCast *Data,
+                                                     ValueHandle Pointer) {
+  GET_REPORT_OPTIONS(true);
+  handleInvalidObjCCast(Data, Pointer, Opts);
   Die();
 }
 

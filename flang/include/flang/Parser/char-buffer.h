@@ -58,9 +58,6 @@ public:
 
   std::string Marshal() const;
 
-  // Removes carriage returns ('\r') and ensures a final line feed ('\n').
-  std::string MarshalNormalized() const;
-
 private:
   struct Block {
     static constexpr std::size_t capacity{1 << 20};

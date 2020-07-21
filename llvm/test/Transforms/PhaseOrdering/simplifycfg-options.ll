@@ -18,16 +18,16 @@ define i1 @PR33605(i32 %a, i32 %b, i32* %c) {
 ; ALL-NEXT:    call void @foo()
 ; ALL-NEXT:    br label [[IF_END]]
 ; ALL:       if.end:
-; ALL-NEXT:    [[CHANGED_1_OFF0:%.*]] = phi i1 [ true, [[IF_THEN]] ], [ false, [[ENTRY:%.*]] ]
-; ALL-NEXT:    [[TMP1:%.*]] = load i32, i32* [[C]], align 4
-; ALL-NEXT:    [[CMP_1:%.*]] = icmp eq i32 [[OR]], [[TMP1]]
+; ALL-NEXT:    [[TMP1:%.*]] = xor i1 [[CMP]], true
+; ALL-NEXT:    [[TMP2:%.*]] = load i32, i32* [[C]], align 4
+; ALL-NEXT:    [[CMP_1:%.*]] = icmp eq i32 [[OR]], [[TMP2]]
 ; ALL-NEXT:    br i1 [[CMP_1]], label [[IF_END_1:%.*]], label [[IF_THEN_1:%.*]]
 ; ALL:       if.then.1:
 ; ALL-NEXT:    store i32 [[OR]], i32* [[C]], align 4
 ; ALL-NEXT:    call void @foo()
 ; ALL-NEXT:    br label [[IF_END_1]]
 ; ALL:       if.end.1:
-; ALL-NEXT:    [[CHANGED_1_OFF0_1:%.*]] = phi i1 [ true, [[IF_THEN_1]] ], [ [[CHANGED_1_OFF0]], [[IF_END]] ]
+; ALL-NEXT:    [[CHANGED_1_OFF0_1:%.*]] = phi i1 [ true, [[IF_THEN_1]] ], [ [[TMP1]], [[IF_END]] ]
 ; ALL-NEXT:    ret i1 [[CHANGED_1_OFF0_1]]
 ;
 entry:

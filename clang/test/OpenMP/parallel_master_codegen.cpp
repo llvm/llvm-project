@@ -18,7 +18,7 @@
 // CK1-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CK1-LABEL: foo
-void foo() {}
+void foo() { extern void mayThrow(); mayThrow(); }
 
 void parallel_master() {
 #pragma omp parallel master
@@ -115,6 +115,162 @@ void parallel_master_private() {
 // CK3:       store i32 [[INC]], i32* [[ZERO]]
 // CK3-NOT:   __kmpc_global_thread_num
 // CK3:       call void @__kmpc_end_master({{.+}})
+
+#endif
+
+#ifdef CK31
+///==========================================================================///
+// RUN: %clang_cc1 -DCK31 -fopenmp-version=51 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefix CK31
+// RUN: %clang_cc1 -DCK31 -fopenmp-version=51 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK31 -fopenmp-version=51 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK31
+
+// RUN: %clang_cc1 -DCK31 -fopenmp-version=51 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK31 -fopenmp-version=51 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK31 -fopenmp-version=51 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
+// CK31-DAG:   %struct.ident_t = type { i32, i32, i32, i32, i8* }
+// CK31-DAG:   [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
+
+void parallel_master_default_firstprivate() {
+  int a;
+#pragma omp parallel master default(firstprivate)
+  a++;
+}
+
+// CK31-LABEL: define void @{{.+}}parallel_master{{.+}}
+// CK31:       [[A_VAL:%.+]] = alloca i32{{.+}}
+// CK31:       [[A_CASTED:%.+]] = alloca i64
+// CK31:       [[ZERO_VAL:%.+]] = load i32, i32* [[A_VAL]]
+// CK31:       [[CONV:%.+]] = bitcast i64* [[A_CASTED]] to i32*
+// CK31:       store i32 [[ZERO_VAL]], i32* [[CONV]]
+// CK31:       [[ONE_VAL:%.+]] = load i64, i64* [[A_CASTED]]
+// CK31:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @0, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i64 [[ONE_VAL]])
+// CK31:       ret void
+
+// CK31:       [[GLOBAL_TID_ADDR:%.+]] = alloca i32*
+// CK31:       [[BOUND_TID_ADDR:%.+]] = alloca i32*
+// CK31:       [[A_ADDR:%.+]] = alloca i64{{.+}}
+// CK31:       store i32* [[GLOBAL_TID:%.+]], i32** [[GLOBAL_TID_ADDR]]{{.+}}
+// CK31:       store i32* [[BOUND_TID:%.+]], i32** [[BOUND_TID_ADDR]]
+// CK31:       store i64 [[A_VAL]], i64* [[A_ADDR]]
+// CK31:       [[CONV]] = bitcast i64* [[A_ADDR]]
+// CK31:       [[ZERO_VAL]] = load i32*, i32** [[GLOBAL_TID_ADDR]]
+// CK31:       [[ONE_VAL]] = load i32, i32* [[ZERO_VAL]]
+// CK31:       [[TWO_VAL:%.+]] = call i32 @__kmpc_master(%struct.ident_t* @0, i32 [[ONE_VAL]])
+// CK31:       [[THREE:%.+]] = icmp ne i32 [[TWO_VAL]], 0
+// CK31:       br i1 %3, label [[OMP_IF_THEN:%.+]], label [[OMP_IF_END:%.+]]
+
+// CK31:       [[FOUR:%.+]] = load i32, i32* [[CONV:%.+]]
+// CK31:       [[INC:%.+]] = add nsw i32 [[FOUR]]
+// CK31:       store i32 [[INC]], i32* [[CONV]]
+// CK31:       call void @__kmpc_end_master(%struct.ident_t* @0, i32 [[ONE_VAL]])
+// CK31:       br label [[OMP_IF_END]]
+
+// CK31:       ret void
+
+#endif
+
+#ifdef CK32
+///==========================================================================///
+// RUN: %clang_cc1 -DCK32 -fopenmp-version=51 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefix CK32
+// RUN: %clang_cc1 -DCK32 -fopenmp-version=51 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK32 -fopenmp-version=51 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK32
+
+// RUN: %clang_cc1 -DCK32 -fopenmp-version=51 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK32 -fopenmp-version=51 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK32 -fopenmp-version=51 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
+// CK32-DAG:   %struct.ident_t = type { i32, i32, i32, i32, i8* }
+// CK32-DAG:   [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
+
+struct St {
+  int a, b;
+  static int y;
+  St() : a(0), b(0) {}
+  ~St() {}
+};
+int St::y = 0;
+
+void parallel_master_default_firstprivate() {
+  St a = St();
+  static int y = 0;
+#pragma omp parallel master default(firstprivate)
+  {
+    a.a += 1;
+    a.b += 1;
+    y++;
+    a.y++;
+  }
+}
+
+// CK32-LABEL: define {{.+}} @{{.+}}parallel_master_default_firstprivate{{.+}}
+// CK32: [[A_VAL:%.+]] = alloca %struct.St{{.+}}
+// CK32: [[Y_CASTED:%.+]] = alloca i64
+// CK32: call void @[[CTOR:.+]](%struct.St* [[A_VAL]])
+// CK32: [[ZERO:%.+]] = load i32, i32* @{{.+}}parallel_master_default_firstprivate{{.+}}
+// CK32: [[CONV:%.+]] = bitcast i64* [[Y_CASTED]] to i32*
+// CK32: store i32 [[ZERO]], i32* [[CONV]]
+// CK32: [[ONE:%.+]] = load i64, i64* [[Y_CASTED]]
+// CK32: call void {{.+}}@{{.+}} %struct.St* [[A_VAL]], i64 [[ONE]])
+// CK32: call void [[DTOR:@.+]](%struct.St* [[A_VAL]])
+
+// CK32: [[THIS_ADDR:%.+]] = alloca %struct.St*
+// CK32: store %struct.St* [[THIS:%.+]], %struct.St** [[THIS_ADDR]]
+// CK32: [[THIS_ONE:%.+]] = load %struct.St*, %struct.St** [[THIS_ADDR]]
+// CK32: call void [[CTOR_2:.+]](%struct.St* [[THIS_ONE]])
+// CK32: ret void
+
+// CK32: [[GLOBAL_TID_ADDR:%.+]] = alloca i32*
+// CK32: [[BOUND_TID_ADDR:%.+]] = alloca i32*
+// CK32: [[A_ADDR:%.+]] = alloca %struct.St
+// CK32: [[Y_ADDR:%.+]] = alloca i64
+// CK32: store i32* [[GLOBAL_TID:%.+]], i32** [[GLOBAL_TID_ADDR]]
+// CK32: store i32* %.bound_tid., i32** [[BOUND_TID_ADDR]]
+// CK32: store %struct.St* [[A_VAL]], %struct.St** [[A_ADDR]]{{.+}}
+// CK32: store i64 [[Y:%.+]], i64* [[Y_ADDR]]
+// CK32: [[ONE:%.+]] = load i32*, i32** [[GLOBAL_TID_ADDR]]
+// CK32: [[TWO:%.+]] = load i32, i32* [[ONE]]
+// CK32: [[THREE:%.+]] = call i32 @{{.+}} i32 [[TWO]])
+// CK32: [[FOUR:%.+]] = icmp ne i32 [[THREE]], 0
+// CK32: br i1 [[FOUR]], label [[IF_THEN:%.+]], label [[IF_END:%.+]]
+
+// CK32: [[A_1:%.+]] = getelementptr inbounds %struct.St, %struct.St* [[ZERO]], i32 0, i32 0
+// CK32: [[FIVE:%.+]] = load i32, i32* [[A_1]]
+// CK32: [[ADD:%.+]] = add nsw i32 [[FIVE]], 1
+// CK32: store i32 [[ADD]], i32* [[A_1]]
+// CK32: [[B:%.+]] = getelementptr inbounds %struct.St, %struct.St* [[ZERO]], i32 0, i32 1
+// CK32: [[SIX:%.+]] = load i32, i32* [[B]]
+// CK32: [[ADD_2:%.+]] = add nsw i32 [[SIX]], 1
+// CK32: store i32 [[ADD_2]], i32* [[B]]
+// CK32: [[SEVEN:%.+]] = load i32, i32* [[CONV]]
+// CK32: [[INC:%.+]] = add nsw i32 [[SEVEN]], 1
+// CK32: store i32 [[INC]], i32* [[CONV]]
+// CK32: [[EIGHT:%.+]] = load i32, i32* [[FUNC:@.+]]
+// CK32: [[INC_3:%.+]] = add nsw i32 [[EIGHT]], 1
+// CK32: store i32 [[INC_3]], i32* @{{.+}}
+// CK32: call void @{{.+}} i32 [[TWO]])
+// CK32: br label [[IF_END]]
+
+// CK32: [[DTOR]](%struct.St* [[THIS]])
+// CK32: [[THIS_ADDR]] = alloca %struct.St*
+// CK32: store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]]
+// CK32: [[THIS_ONE]] = load %struct.St*, %struct.St** [[THIS_ADDR]]
+// CK32: call void @_ZN2StD2Ev(%struct.St* [[THIS_ONE]])
+
+// CK32: [[THIS_ADDR]] = alloca %struct.St*
+// CK32: store %struct.St* [[THIS]], %struct.St** [[THIS_ADDR]]
+// CK32: [[THIS_ONE]] = load %struct.St*, %struct.St** [[THIS_ADDR]]
+// CK32: [[A_VAL]] = getelementptr inbounds %struct.St, %struct.St* [[THIS_ONE]], i32 0, i32 0
+// CK32: store i32 0, i32* [[A_VAL]]
+// CK32: [[B_VAL:%.+]] = getelementptr inbounds %struct.St, %struct.St* [[THIS_ONE]], i32 0, i32 1
+// CK32: store i32 0, i32* [[B_VAL]]
+// CK32: ret void
+
+// CK32: [[THIS_ADDR:%.+]] = alloca %struct.St*
+// CK32: store %struct.St* %this, %struct.St** [[THIS_ADDR]]
+// CK32: [[THIS_ONE]] = load %struct.St*, %struct.St** [[THIS_ADDR]]
 
 #endif
 

@@ -171,6 +171,80 @@ def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
 // CHECK-LABEL: class GOp :
 // CHECK: static ::mlir::LogicalResult inferReturnTypes
 
+// Check default value for collective params builder. Check that other builders
+// are generated as well.
+def NS_HCollectiveParamsOp : NS_Op<"op_collective_params", []> {
+  let arguments = (ins AnyType:$a);
+  let results = (outs AnyType:$b);
+}
+
+// CHECK_LABEL: class NS_HCollectiveParamsOp :
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type b, ::mlir::Value a);
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::Value a);
+// CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {})
+
+// Check suppression of "separate arg, separate result" build method for an op
+// with single variadic arg and single variadic result (since it will be
+// ambiguous with the collective params build method).
+def NS_HCollectiveParamsSuppress0Op : NS_Op<"op_collective_suppress0", []> {
+  let arguments = (ins Variadic<I32>:$a);
+  let results = (outs Variadic<I32>:$b);
+}
+
+// CHECK_LABEL: class NS_HCollectiveParamsSuppress0Op :
+// CHECK-NOT: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> b, ::mlir::ValueRange a);
+// CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+
+// Check suppression of "separate arg, collective result" build method for an op
+// with single variadic arg and non variadic result (since it will be
+// ambiguous with the collective params build method).
+def NS_HCollectiveParamsSuppress1Op : NS_Op<"op_collective_suppress1", []> {
+  let arguments = (ins Variadic<I32>:$a);
+  let results = (outs I32:$b);
+}
+
+// CHECK_LABEL: class NS_HCollectiveParamsSuppress1Op :
+// CHECK-NOT: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> b, ::mlir::ValueRange a);
+// CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+
+// Check suppression of "separate arg, collective result" build method for an op
+// with single variadic arg and > 1 variadic result (since it will be
+// ambiguous with the collective params build method). Note that "separate arg,
+// separate result" build method should be generated in this case as its not
+// ambiguous with the collective params build method.
+def NS_HCollectiveParamsSuppress2Op : NS_Op<"op_collective_suppress2", [SameVariadicResultSize]> {
+  let arguments = (ins Variadic<I32>:$a);
+  let results = (outs Variadic<I32>:$b, Variadic<F32>:$c);
+}
+// CHECK_LABEL: class NS_HCollectiveParamsSuppress2Op :
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> b, ::llvm::ArrayRef<::mlir::Type> c, ::mlir::ValueRange a);
+// CHECK-NOT: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> b, ::mlir::ValueRange a);
+// CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+
+// Check default value of `attributes` for the `genUseOperandAsResultTypeCollectiveParamBuilder` builder
+def NS_IOp : NS_Op<"op_with_same_operands_and_result_types_trait", [SameOperandsAndResultType]> {
+  let arguments = (ins AnyType:$a, AnyType:$b);
+  let results = (outs AnyType:$r);
+}
+// CHECK_LABEL: class NS_IOp :
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type r, ::mlir::Value a, ::mlir::Value b);
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::Value a, ::mlir::Value b);
+// CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Value a, ::mlir::Value b);
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+
+// Check default value of `attributes` for the `genInferredTypeCollectiveParamBuilder` builder
+def NS_JOp : NS_Op<"op_with_InferTypeOpInterface_interface", [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let arguments = (ins AnyType:$a, AnyType:$b);
+  let results = (outs AnyType:$r);
+}
+// CHECK_LABEL: class NS_JOp :
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type r, ::mlir::Value a, ::mlir::Value b);
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Value a, ::mlir::Value b);
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::Value a, ::mlir::Value b);
+// CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+// CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
+
 // Check that default builders can be suppressed.
 // ---
 

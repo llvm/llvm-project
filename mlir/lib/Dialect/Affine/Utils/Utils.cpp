@@ -44,7 +44,7 @@ static void promoteIfBlock(AffineIfOp ifOp, bool elseBlock) {
 static Operation *getOutermostInvariantForOp(AffineIfOp ifOp) {
   // Walk up the parents past all for op that this conditional is invariant on.
   auto ifOperands = ifOp.getOperands();
-  auto res = ifOp.getOperation();
+  auto *res = ifOp.getOperation();
   while (!isa<FuncOp>(res->getParentOp())) {
     auto *parentOp = res->getParentOp();
     if (auto forOp = dyn_cast<AffineForOp>(parentOp)) {
@@ -127,6 +127,21 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
       Block::iterator(hoistOverOpClone));
 
   return hoistedIfOp;
+}
+
+/// Replace affine.for with a 1-d affine.parallel and clone the former's body
+/// into the latter while remapping values.
+void mlir::affineParallelize(AffineForOp forOp) {
+  Location loc = forOp.getLoc();
+  OpBuilder outsideBuilder(forOp);
+  // Creating empty 1-D affine.parallel op.
+  AffineParallelOp newPloop = outsideBuilder.create<AffineParallelOp>(
+      loc, llvm::None, llvm::None, forOp.getLowerBoundMap(),
+      forOp.getLowerBoundOperands(), forOp.getUpperBoundMap(),
+      forOp.getUpperBoundOperands());
+  // Steal the body of the old affine for op and erase it.
+  newPloop.region().takeBody(forOp.region());
+  forOp.erase();
 }
 
 // Returns success if any hoisting happened.

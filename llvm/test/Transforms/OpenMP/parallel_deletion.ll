@@ -39,24 +39,47 @@ entry:
 }
 
 define internal void @.omp_outlined.willreturn(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #0
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @unknown() #0
+; CHECK-NEXT:    ret void
+;
 entry:
   call void @unknown() willreturn
   ret void
 }
 
 define internal void @.omp_outlined.willreturn.0(i32* noalias %.global_tid., i32* noalias %.bound_tid.) willreturn {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn.0
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #1
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @readonly() #4
+; CHECK-NEXT:    ret void
+;
 entry:
   call void @readonly()
   ret void
 }
 
 define internal void @.omp_outlined.willreturn.1(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn.1
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #2
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @readnone() #0
+; CHECK-NEXT:    ret void
+;
 entry:
   call void @readnone() willreturn
   ret void
 }
 
 define internal void @.omp_outlined.willreturn.2(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn.2
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #3
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
 entry:
   ret void
 }
@@ -90,24 +113,47 @@ entry:
 }
 
 define internal void @.omp_outlined.(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
+;
 entry:
   call void @unknown()
   ret void
 }
 
 define internal void @.omp_outlined..0(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..0
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #4
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @readonly() #4
+; CHECK-NEXT:    ret void
+;
 entry:
   call void @readonly()
   ret void
 }
 
 define internal void @.omp_outlined..1(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..1
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #5
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @readnone()
+; CHECK-NEXT:    ret void
+;
 entry:
   call void @readnone()
   ret void
 }
 
 define internal void @.omp_outlined..2(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..2
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #3
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
 entry:
   ret void
 }
@@ -167,6 +213,20 @@ entry:
 }
 
 define internal void @.omp_outlined..3(i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* dereferenceable(4) %a) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..3
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture nofree nonnull align 4 dereferenceable(4) [[A:%.*]]) #6
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP]], 1
+; CHECK-NEXT:    store i32 [[INC]], i32* [[A]], align 4
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
 entry:
   %call = call i32 @omp_get_thread_num()
   %cmp = icmp eq i32 %call, 0
@@ -183,6 +243,22 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 define internal void @.omp_outlined..4(i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* dereferenceable(4) %a) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..4
+; CHECK-SAME: (i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture nonnull align 4 dereferenceable(4) [[A:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_master(%struct.ident_t* nonnull @0, i32 [[TMP]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[OMP_IF_END:%.*]], label [[OMP_IF_THEN:%.*]]
+; CHECK:       omp_if.then:
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP3]], 1
+; CHECK-NEXT:    store i32 [[INC]], i32* [[A]], align 4
+; CHECK-NEXT:    call void @__kmpc_end_master(%struct.ident_t* nonnull @0, i32 [[TMP]])
+; CHECK-NEXT:    br label [[OMP_IF_END]]
+; CHECK:       omp_if.end:
+; CHECK-NEXT:    ret void
+;
 entry:
   %tmp = load i32, i32* %.global_tid., align 4
   %tmp1 = call i32 @__kmpc_master(%struct.ident_t* nonnull @0, i32 %tmp)
@@ -209,6 +285,24 @@ declare i32 @__kmpc_master(%struct.ident_t*, i32)
 declare void @__kmpc_end_master(%struct.ident_t*, i32)
 
 define internal void @.omp_outlined..5(i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* dereferenceable(4) %a) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..5
+; CHECK-SAME: (i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture nonnull align 4 dereferenceable(4) [[A:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* nonnull @0)
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_single(%struct.ident_t* nonnull @0, i32 [[TMP]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[OMP_IF_END:%.*]], label [[OMP_IF_THEN:%.*]]
+; CHECK:       omp_if.then:
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP3]], 1
+; CHECK-NEXT:    store i32 [[INC]], i32* [[A]], align 4
+; CHECK-NEXT:    call void @__kmpc_end_single(%struct.ident_t* nonnull @0, i32 [[TMP]])
+; CHECK-NEXT:    br label [[OMP_IF_END]]
+; CHECK:       omp_if.end:
+; CHECK-NEXT:    call void @__kmpc_barrier(%struct.ident_t* nonnull @1, i32 [[OMP_GLOBAL_THREAD_NUM]])
+; CHECK-NEXT:    ret void
+;
 entry:
   %omp_global_thread_num = call i32 @__kmpc_global_thread_num(%struct.ident_t* nonnull @0)
   %tmp = load i32, i32* %.global_tid., align 4
@@ -229,6 +323,39 @@ omp_if.end:                                       ; preds = %entry, %omp_if.then
 }
 
 define internal void @.omp_outlined..6(i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* dereferenceable(4) %a) {
+; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..6
+; CHECK-SAME: (i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], i32* nocapture nonnull align 4 dereferenceable(4) [[A:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A1:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
+; CHECK-NEXT:    [[TMP:%.*]] = bitcast i32* [[A1]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull align 4 [[TMP]]) #0
+; CHECK-NEXT:    store i32 1, i32* [[A1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i32**
+; CHECK-NEXT:    store i32* [[A1]], i32** [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* nonnull @2, i32 [[TMP2]], i32 1, i64 8, i8* nonnull align 8 [[TMP3]], void (i8*, i8*)* nonnull @.omp.reduction.reduction_func, [8 x i32]* nonnull @.gomp_critical_user_.reduction.var)
+; CHECK-NEXT:    switch i32 [[TMP4]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+; CHECK-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+; CHECK-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       .omp.reduction.case1:
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A1]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    store i32 [[ADD]], i32* [[A]], align 4
+; CHECK-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* nonnull @2, i32 [[TMP2]], [8 x i32]* nonnull @.gomp_critical_user_.reduction.var)
+; CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
+; CHECK:       .omp.reduction.case2:
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[A1]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = atomicrmw add i32* [[A]], i32 [[TMP7]] monotonic
+; CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
+; CHECK:       .omp.reduction.default:
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[A1]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[TMP9]])
+; CHECK-NEXT:    ret void
+;
 entry:
   %a1 = alloca i32, align 4
   %.omp.reduction.red_list = alloca [1 x i8*], align 8
@@ -241,8 +368,8 @@ entry:
   %tmp3 = bitcast [1 x i8*]* %.omp.reduction.red_list to i8*
   %tmp4 = call i32 @__kmpc_reduce_nowait(%struct.ident_t* nonnull @2, i32 %tmp2, i32 1, i64 8, i8* nonnull %tmp3, void (i8*, i8*)* nonnull @.omp.reduction.reduction_func, [8 x i32]* nonnull @.gomp_critical_user_.reduction.var)
   switch i32 %tmp4, label %.omp.reduction.default [
-    i32 1, label %.omp.reduction.case1
-    i32 2, label %.omp.reduction.case2
+  i32 1, label %.omp.reduction.case1
+  i32 2, label %.omp.reduction.case2
   ]
 
 .omp.reduction.case1:                             ; preds = %entry
@@ -265,6 +392,19 @@ entry:
 }
 
 define internal void @.omp.reduction.reduction_func(i8* %arg, i8* %arg1) {
+; CHECK-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
+; CHECK-SAME: (i8* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[ARG:%.*]], i8* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[ARG1:%.*]]) #{{[0-9]+}}
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = bitcast i8* [[ARG1]] to i32**
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[ARG]] to i32**
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP2]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    store i32 [[ADD]], i32* [[TMP4]], align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   %tmp = bitcast i8* %arg1 to i32**
   %tmp2 = load i32*, i32** %tmp, align 8

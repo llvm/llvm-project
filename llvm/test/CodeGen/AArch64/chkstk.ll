@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=aarch64-windows -verify-machineinstrs %s -o - \
 ; RUN:  | FileCheck -check-prefix CHECK-DEFAULT-CODE-MODEL %s
-; RUN: llc -mtriple=aarch64-windows -print-machineinstrs=prologepilog %s -o - 2>&1 \
+; RUN: llc < %s -mtriple=aarch64-windows -stop-after=prologepilog \
 ; RUN:  | FileCheck -check-prefix CHECK-REGSTATE %s
 
 ; RUN: llc -mtriple=aarch64-windows -verify-machineinstrs -code-model=large %s -o - \
 ; RUN:  | FileCheck -check-prefix CHECK-LARGE-CODE-MODEL %s
-; RUN: llc -mtriple=aarch64-windows -print-machineinstrs=prologepilog -code-model=large %s -o - 2>&1 \
+; RUN: llc < %s -mtriple=aarch64-windows -stop-after=prologepilog -code-model=large \
 ; RUN:  | FileCheck -check-prefix CHECK-REGSTATE-LARGE %s
 
 define void @check_watermark() {

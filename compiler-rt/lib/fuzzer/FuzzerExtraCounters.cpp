@@ -8,7 +8,8 @@
 // Extra coverage counters defined by user code.
 //===----------------------------------------------------------------------===//
 
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
+#include <cstdint>
 
 #if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FREEBSD ||                \
     LIBFUZZER_OPENBSD || LIBFUZZER_FUCHSIA || LIBFUZZER_EMSCRIPTEN

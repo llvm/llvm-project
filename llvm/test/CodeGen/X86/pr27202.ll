@@ -14,6 +14,19 @@ define i1 @foo(i32 %i) optsize {
   ret i1 %cmp
 }
 
+define i1 @foo_pgso(i32 %i) !prof !14 {
+; CHECK-LABEL: foo_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $305419896, %eax # imm = 0x12345678
+; CHECK-NEXT:    andl %eax, %edi
+; CHECK-NEXT:    cmpl %eax, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %i, 305419896
+  %cmp = icmp eq i32 %and, 305419896
+  ret i1 %cmp
+}
+
 ; 8-bit ALU immediates probably have small encodings.
 ; We do not want to hoist the constant into a register here.
 
@@ -52,3 +65,20 @@ define i64 @PR46237(i64 %x, i64 %y, i64 %z) optsize {
   %or4 = or i64 %or, %shl
   ret i64 %or4
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

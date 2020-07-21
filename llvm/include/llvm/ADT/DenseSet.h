@@ -173,6 +173,11 @@ public:
     return ConstIterator(TheMap.find(V));
   }
 
+  /// Check if the set contains the given element.
+  bool contains(const_arg_type_t<ValueT> V) const {
+    return TheMap.find(V) != TheMap.end();
+  }
+
   /// Alternative version of find() which allows a different, and possibly less
   /// expensive, key type.
   /// The DenseMapInfo is responsible for supplying methods

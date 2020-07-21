@@ -14,7 +14,8 @@
 ; CHECK:      .b8 3    // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1    // DW_AT_byte_size
 ; CHECK-NEXT: .b8 6    // DW_AT_bit_size
-; CHECK-NEXT: .b64 -1  // DW_AT_bit_offset
+; Negative offset must be encoded as an unsigned integer.
+; CHECK-NEXT: .b64 0xffffffffffffffff // DW_AT_bit_offset
 ; CHECK-NEXT: .b8 2    // DW_AT_data_member_location
 
 %struct.anon = type { i16 }

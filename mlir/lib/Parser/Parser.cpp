@@ -1011,6 +1011,17 @@ public:
     return success();
   }
 
+  /// Parse an optional attribute.
+  OptionalParseResult parseOptionalAttribute(Attribute &result, Type type,
+                                             StringRef attrName,
+                                             NamedAttrList &attrs) override {
+    OptionalParseResult parseResult =
+        parser.parseOptionalAttribute(result, type);
+    if (parseResult.hasValue() && succeeded(*parseResult))
+      attrs.push_back(parser.builder.getNamedAttr(attrName, result));
+    return parseResult;
+  }
+
   /// Parse a named dictionary into 'result' if it is present.
   ParseResult parseOptionalAttrDict(NamedAttrList &result) override {
     if (parser.getToken().isNot(Token::l_brace))
@@ -1504,7 +1515,8 @@ ParseResult OperationParser::parseRegion(
   pushSSANameScope(isIsolatedNameScope);
 
   // Parse the first block directly to allow for it to be unnamed.
-  Block *block = new Block();
+  auto owning_block = std::make_unique<Block>();
+  Block *block = owning_block.get();
 
   // Add arguments to the entry block.
   if (!entryArguments.empty()) {
@@ -1519,7 +1531,6 @@ ParseResult OperationParser::parseRegion(
       }
       if (addDefinition(placeholderArgPair.first,
                         block->addArgument(placeholderArgPair.second))) {
-        delete block;
         return failure();
       }
     }
@@ -1530,19 +1541,17 @@ ParseResult OperationParser::parseRegion(
   }
 
   if (parseBlock(block)) {
-    delete block;
     return failure();
   }
 
   // Verify that no other arguments were parsed.
   if (!entryArguments.empty() &&
       block->getNumArguments() > entryArguments.size()) {
-    delete block;
     return emitError("entry block arguments were already defined");
   }
 
   // Parse the rest of the region.
-  region.push_back(block);
+  region.push_back(owning_block.release());
   if (parseRegionBody(region))
     return failure();
 

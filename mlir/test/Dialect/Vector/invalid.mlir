@@ -187,7 +187,7 @@ func @outerproduct_num_operands(%arg0: f32) {
 // -----
 
 func @outerproduct_non_vector_operand(%arg0: f32) {
-  // expected-error@+1 {{expected 2 vector types}}
+  // expected-error@+1 {{expected vector type for operand #1}}
   %1 = vector.outerproduct %arg0, %arg0 : f32, f32
 }
 
@@ -224,6 +224,27 @@ func @outerproduct_operand_1_dim_generic(%arg0: vector<4xf32>, %arg1: vector<8xf
 func @outerproduct_operand_2_dim_generic(%arg0: vector<4xf32>, %arg1: vector<8xf32>) {
   // expected-error@+1 {{expected #2 operand dim to match result dim #2}}
   %1 = "vector.outerproduct" (%arg0, %arg1) : (vector<4xf32>, vector<8xf32>) -> (vector<4x16xf32>)
+}
+
+// -----
+
+func @outerproduct_axpy_operand(%arg0: vector<4x8xf32>, %arg1: f32) {
+  // expected-error@+1 {{expected 1-d vector for operand #1}}
+  %1 = vector.outerproduct %arg0, %arg1 : vector<4x8xf32>, f32
+}
+
+// -----
+
+func @outerproduct_axpy_result_generic(%arg0: vector<4xf32>, %arg1: f32) {
+  // expected-error@+1 {{expected 1-d vector result}}
+  %1 = "vector.outerproduct" (%arg0, %arg1) : (vector<4xf32>, f32) -> (vector<4x8xf32>)
+}
+
+// -----
+
+func @outerproduct_axpy_operand_dim_generic(%arg0: vector<8xf32>, %arg1: f32) {
+  // expected-error@+1 {{expected #1 operand dim to match result dim #1}}
+  %1 = "vector.outerproduct" (%arg0, %arg1) : (vector<8xf32>, f32) -> (vector<16xf32>)
 }
 
 // -----

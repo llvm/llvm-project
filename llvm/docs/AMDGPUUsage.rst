@@ -2318,29 +2318,10 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                   multi-grid synchronization is
                                                   passed in the kernarg.
 
-     "ValueType"       string         Required  Kernel argument value type. Only
-                                                present if "ValueKind" is
-                                                "ByValue". For vector data
-                                                types, the value is for the
-                                                element type. Values include:
+     "ValueType"       string                   Unused and deprecated. This should no longer
+                                                be emitted, but is accepted for compatibility.
 
-                                                - "Struct"
-                                                - "I8"
-                                                - "U8"
-                                                - "I16"
-                                                - "U16"
-                                                - "F16"
-                                                - "I32"
-                                                - "U32"
-                                                - "F32"
-                                                - "I64"
-                                                - "U64"
-                                                - "F64"
 
-                                                .. TODO::
-                                                   How can it be determined if a
-                                                   vector type, and what size
-                                                   vector?
      "PointeeAlign"    integer                  Alignment in bytes of pointee
                                                 type for pointer type kernel
                                                 argument. Must be a power
@@ -2817,29 +2798,9 @@ same *vendor-name*.
                                                        multi-grid synchronization is
                                                        passed in the kernarg.
 
-     ".value_type"          string         Required  Kernel argument value type. Only
-                                                     present if ".value_kind" is
-                                                     "by_value". For vector data
-                                                     types, the value is for the
-                                                     element type. Values include:
+     ".value_type"          string                    Unused and deprecated. This should no longer
+                                                      be emitted, but is accepted for compatibility.
 
-                                                     - "struct"
-                                                     - "i8"
-                                                     - "u8"
-                                                     - "i16"
-                                                     - "u16"
-                                                     - "f16"
-                                                     - "i32"
-                                                     - "u32"
-                                                     - "f32"
-                                                     - "i64"
-                                                     - "u64"
-                                                     - "f64"
-
-                                                     .. TODO::
-                                                        How can it be determined if a
-                                                        vector type, and what size
-                                                        vector?
      ".pointee_align"       integer                  Alignment in bytes of pointee
                                                      type for pointer type kernel
                                                      argument. Must be a power

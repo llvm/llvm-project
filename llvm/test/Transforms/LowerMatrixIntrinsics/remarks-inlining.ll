@@ -92,10 +92,10 @@ target triple = "aarch64-apple-ios"
 ; CHECK-LABEL: remark: transpose.h:13:11: Lowered with 0 stores, 0 loads, 8 compute ops
 ; CHECK-NEXT:  transpose.1x2.float(transpose.2x1.float(addr %D))
 
-define void @toplevel(<15 x double>* %A, <15 x double>* %B, <15 x double>* %C, <2 x float>* %D) !dbg !16 {
+define void @toplevel(<15 x double>* %A, double* %B, <15 x double>* %C, <2 x float>* %D) !dbg !16 {
 entry:
   %a = load <15 x double>, <15 x double> *%A, align 16, !dbg !3791
-  %b = call <15 x double> @llvm.matrix.column.major.load(<15 x double>* %B, i64 5, i1 false, i32 3, i32 5), !dbg !3793
+  %b = call <15 x double> @llvm.matrix.column.major.load(double* %B, i64 5, i1 false, i32 3, i32 5), !dbg !3793
   %c  = fadd <15 x double> %a, %b, !dbg !100
   store <15 x double> %c, <15 x double> *%C, align 16, !dbg !102
 
@@ -106,7 +106,7 @@ entry:
   ret void
 }
 
-declare <15 x double> @llvm.matrix.column.major.load(<15 x double>*, i64, i1, i32, i32)
+declare <15 x double> @llvm.matrix.column.major.load(double*, i64, i1, i32, i32)
 declare <2 x float> @llvm.matrix.transpose(<2 x float>, i32, i32)
 
 !llvm.dbg.cu = !{!0}

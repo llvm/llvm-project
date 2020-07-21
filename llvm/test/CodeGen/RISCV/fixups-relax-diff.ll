@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=+relax %s -o - \
-; RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX %s
+; RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX %s
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=-relax %s -o - \
-; RUN:     | llvm-readobj -r | FileCheck -check-prefix=NORELAX %s
+; RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX %s
 
 ; This test checks that a diff inserted via inline assembly only causes
 ; relocations when relaxation is enabled. This isn't an assembly test

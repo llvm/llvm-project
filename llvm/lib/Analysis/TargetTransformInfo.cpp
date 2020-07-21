@@ -327,6 +327,11 @@ void TargetTransformInfo::getUnrollingPreferences(
   return TTIImpl->getUnrollingPreferences(L, SE, UP);
 }
 
+void TargetTransformInfo::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                                PeelingPreferences &PP) const {
+  return TTIImpl->getPeelingPreferences(L, SE, PP);
+}
+
 bool TargetTransformInfo::isLegalAddImmediate(int64_t Imm) const {
   return TTIImpl->isLegalAddImmediate(Imm);
 }

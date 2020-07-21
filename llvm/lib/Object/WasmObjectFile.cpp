@@ -791,7 +791,9 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     switch (Reloc.Type) {
     case wasm::R_WASM_FUNCTION_INDEX_LEB:
     case wasm::R_WASM_TABLE_INDEX_SLEB:
+    case wasm::R_WASM_TABLE_INDEX_SLEB64:
     case wasm::R_WASM_TABLE_INDEX_I32:
+    case wasm::R_WASM_TABLE_INDEX_I64:
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
       if (!isValidFunctionSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation function index",
@@ -871,7 +873,8 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
         Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I32 ||
         Reloc.Type == wasm::R_WASM_GLOBAL_INDEX_I32)
       Size = 4;
-    if (Reloc.Type == wasm::R_WASM_MEMORY_ADDR_I64)
+    if (Reloc.Type == wasm::R_WASM_TABLE_INDEX_I64 ||
+        Reloc.Type == wasm::R_WASM_MEMORY_ADDR_I64)
       Size = 8;
     if (Reloc.Offset + Size > EndOffset)
       return make_error<GenericBinaryError>("Bad relocation offset",
@@ -957,6 +960,8 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       Im.Memory = readLimits(Ctx);
+      if (Im.Memory.Flags & wasm::WASM_LIMITS_FLAG_IS_64)
+        HasMemory64 = true;
       break;
     case wasm::WASM_EXTERNAL_TABLE:
       Im.Table = readTable(Ctx);
@@ -1019,7 +1024,10 @@ Error WasmObjectFile::parseMemorySection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   Memories.reserve(Count);
   while (Count--) {
-    Memories.push_back(readLimits(Ctx));
+    auto Limits = readLimits(Ctx);
+    if (Limits.Flags & wasm::WASM_LIMITS_FLAG_IS_64)
+      HasMemory64 = true;
+    Memories.push_back(Limits);
   }
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("Memory section ended prematurely",
@@ -1576,11 +1584,15 @@ section_iterator WasmObjectFile::section_end() const {
   return section_iterator(SectionRef(Ref, this));
 }
 
-uint8_t WasmObjectFile::getBytesInAddress() const { return 4; }
+uint8_t WasmObjectFile::getBytesInAddress() const {
+  return HasMemory64 ? 8 : 4;
+}
 
 StringRef WasmObjectFile::getFileFormatName() const { return "WASM"; }
 
-Triple::ArchType WasmObjectFile::getArch() const { return Triple::wasm32; }
+Triple::ArchType WasmObjectFile::getArch() const {
+  return HasMemory64 ? Triple::wasm64 : Triple::wasm32;
+}
 
 SubtargetFeatures WasmObjectFile::getFeatures() const {
   return SubtargetFeatures();

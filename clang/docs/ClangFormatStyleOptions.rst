@@ -794,6 +794,43 @@ the configuration (without a prefix: ``Auto``).
            int aaaaaaaaaaaaaaaaaaaa,
            int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
 
+**BitFieldColonSpacing** (``BitFieldColonSpacingStyle``)
+  The BitFieldColonSpacingStyle to use for bitfields.
+
+  Possible values:
+
+  * ``BFCS_Both`` (in configuration: ``Both``)
+    Add one space on each side of the ``:``
+
+    .. code-block:: c++
+
+      unsigned bf : 2;
+
+  * ``BFCS_None`` (in configuration: ``None``)
+    Add no space around the ``:`` (except when needed for
+    ``AlignConsecutiveBitFields``).
+
+    .. code-block:: c++
+
+      unsigned bf:2;
+
+  * ``BFCS_Before`` (in configuration: ``Before``)
+    Add space before the ``:`` only
+
+    .. code-block:: c++
+
+      unsigned bf :2;
+
+  * ``BFCS_After`` (in configuration: ``After``)
+    Add space after the ``:`` only (space may be added before if
+    needed for ``AlignConsecutiveBitFields``).
+
+    .. code-block:: c++
+
+      unsigned bf: 2;
+
+
+
 **BraceWrapping** (``BraceWrappingFlags``)
   Control of individual brace wrapping cases.
 
@@ -2694,8 +2731,11 @@ the configuration (without a prefix: ``Auto``).
     Use tabs whenever we need to fill whitespace that spans at least from
     one tab stop to the next one.
 
+
+
 **WhitespaceSensitiveMacros** (``std::vector<std::string>``)
-  A vector of macros which are whitespace-sensitive and should not be touched.
+  A vector of macros which are whitespace-sensitive and should not
+  be touched.
 
   These are expected to be macros of the form:
 
@@ -2709,9 +2749,7 @@ the configuration (without a prefix: ``Auto``).
 
     WhitespaceSensitiveMacros: ['STRINGIZE', 'PP_STRINGIZE']
 
-  For example: BOOST_PP_STRINGIZE.
-
-
+  For example: BOOST_PP_STRINGIZE
 
 .. END_FORMAT_STYLE_OPTIONS
 

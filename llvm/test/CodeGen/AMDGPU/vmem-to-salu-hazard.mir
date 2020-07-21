@@ -2,7 +2,7 @@
 
 # GCN-LABEL: name: vmem_write_sgpr
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_write_sgpr
@@ -16,7 +16,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_exec
 # GCN:      BUFFER_STORE_DWORD_OFFEN_exact
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_write_exec
@@ -35,7 +35,7 @@ body:             |
 # GCN-NEXT: S_MOV_B32
 # GCN-NEXT: S_MOV_B32
 # GCN-NEXT: S_MOV_B32
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_write_sgpr_chain
@@ -54,7 +54,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_smem_write_sgpr
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_LOAD_DWORD_IMM
 ---
 name:            vmem_smem_write_sgpr
@@ -69,7 +69,7 @@ body:             |
 # GCN-LABEL: name: vmem_snop_write_sgpr
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 # GCN-NEXT: S_NOP
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_snop_write_sgpr
@@ -115,7 +115,7 @@ body:             |
 # GCN-LABEL: name: vmem_swait_any_write_sgpr
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 # GCN-NEXT: S_WAITCNT
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_swait_any_write_sgpr
@@ -130,7 +130,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_exec_impread
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
-# GCN:      V_NOP
+# GCN:      S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B64
 ---
 name:            vmem_write_exec_impread
@@ -144,7 +144,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_exec_expread
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B64
 ---
 name:            vmem_write_exec_expread
@@ -157,7 +157,7 @@ body:             |
 ...
 # GCN-LABEL: name: ds_write_m0
 # GCN:      DS_READ_B32
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            ds_write_m0
@@ -171,7 +171,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_sgpr_fall_through
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
-# GCN:      V_NOP
+# GCN:      S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_write_sgpr_fall_through
@@ -189,7 +189,7 @@ body:             |
 # GCN-LABEL: name: vmem_write_sgpr_branch
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 # GCN-NEXT: S_BRANCH
-# GCN:      V_NOP
+# GCN:      S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch
@@ -209,7 +209,7 @@ body:             |
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 # GCN-NEXT: S_BRANCH
 # GCN:      bb.2:
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch_around
@@ -235,9 +235,9 @@ body:             |
 # GCN-NEXT: S_BRANCH
 # GCN:      bb.1:
 # GCN:      S_WAITCNT
-# GCN:      V_ADD_I32
+# GCN:      V_ADD_CO_U32
 # GCN:      bb.2:
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_write_sgpr_cbranch_around
@@ -254,7 +254,7 @@ body:             |
   bb.1:
     successors: %bb.2
     S_WAITCNT 0
-    $vgpr2, $vcc_lo = V_ADD_I32_e64 $vgpr1, $vgpr1, 0, implicit $exec
+    $vgpr2, $vcc_lo = V_ADD_CO_U32_e64 $vgpr1, $vgpr1, 0, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
@@ -262,7 +262,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_sgpr_branch_backedge
 # GCN:      $vgpr0 = IMPLICIT_DEF
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_write_sgpr_branch_backedge
@@ -280,7 +280,7 @@ body:             |
 ...
 # GCN-LABEL: name: ds_write_exec
 # GCN:      DS_WRITE_B32_gfx9
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            ds_write_exec
@@ -293,7 +293,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_scratch_exec
 # GCN:      SCRATCH_LOAD_DWORD
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_scratch_exec
@@ -305,7 +305,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_flat_exec
 # GCN:      FLAT_LOAD_DWORD
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_flat_exec
@@ -318,7 +318,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_global_exec
 # GCN:      GLOBAL_LOAD_DWORD
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_global_exec
@@ -331,7 +331,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_global_atomic_exec
 # GCN: GLOBAL_ATOMIC_ADD_RTN
-# GCN-NEXT: V_NOP
+# GCN-NEXT: S_WAITCNT_DEPCTR 65507
 # GCN-NEXT: S_MOV_B32
 ---
 name:            vmem_global_atomic_exec

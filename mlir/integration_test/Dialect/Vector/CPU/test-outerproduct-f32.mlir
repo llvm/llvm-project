@@ -11,6 +11,8 @@
 !vector_type_Y = type vector<3xf32>
 !vector_type_Z = type vector<2x3xf32>
 
+!vector_type_R = type vector<7xf32>
+
 func @vector_outerproduct_splat_8x8(%fa: f32, %fb: f32, %fc: f32) -> !vector_type_C {
   %a = splat %fa: !vector_type_A
   %b = splat %fb: !vector_type_B
@@ -33,6 +35,7 @@ func @vector_outerproduct_vec_2x3_acc(%x : !vector_type_X,
 }
 
 func @entry() {
+  %f0 = constant 0.0: f32
   %f1 = constant 1.0: f32
   %f2 = constant 2.0: f32
   %f3 = constant 3.0: f32
@@ -71,6 +74,27 @@ func @entry() {
   // outer product 2x3:
   //
   // CHECK: ( ( 6, 8, 10 ), ( 12, 16, 20 ) )
+
+  %3 = vector.broadcast %f0 : f32 to !vector_type_R
+  %4 = vector.insert %f1,  %3[1] : f32 into !vector_type_R
+  %5 = vector.insert %f2,  %4[2] : f32 into !vector_type_R
+  %6 = vector.insert %f3,  %5[3] : f32 into !vector_type_R
+  %7 = vector.insert %f4,  %6[4] : f32 into !vector_type_R
+  %8 = vector.insert %f5,  %7[5] : f32 into !vector_type_R
+  %9 = vector.insert %f10, %8[6] : f32 into !vector_type_R
+
+  %o = vector.broadcast %f1 : f32 to !vector_type_R
+
+  %axpy1 = vector.outerproduct %9, %f2     : !vector_type_R, f32
+  %axpy2 = vector.outerproduct %9, %f2, %o : !vector_type_R, f32
+
+  vector.print %axpy1 : !vector_type_R
+  vector.print %axpy2 : !vector_type_R
+  //
+  // axpy operations:
+  //
+  // CHECK: ( 0, 2, 4, 6, 8, 10, 20 )
+  // CHECK: ( 1, 3, 5, 7, 9, 11, 21 )
 
   return
 }

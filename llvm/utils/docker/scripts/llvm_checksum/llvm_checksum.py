@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """ A small program to compute checksums of LLVM checkout.
 """
 from __future__ import absolute_import

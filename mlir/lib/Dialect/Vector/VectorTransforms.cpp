@@ -30,7 +30,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Interfaces/VectorUnrollInterface.h"
+#include "mlir/Interfaces/VectorInterfaces.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1262,7 +1262,7 @@ private:
 ///   %0 = vector.extract %lhs[0]
 ///   %1 = vector.broadcast %0
 ///   %2 = vector.extract %acc[0]
-///   %3 = vector.fma %1, %arg1, %2
+///   %3 = vector.fma %1, %rhs, %2
 ///   %4 = vector.insert %3, %z[0]
 ///   ..
 ///   %x = vector.insert %.., %..[N-1]
@@ -1275,35 +1275,48 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
-    VectorType rhsType = op.getOperandVectorTypeRHS();
+    VectorType lhsType = op.getOperandVectorTypeLHS();
+    VectorType rhsType = op.getOperandTypeRHS().dyn_cast<VectorType>();
     VectorType resType = op.getVectorType();
     Type eltType = resType.getElementType();
+    bool isInt = eltType.isa<IntegerType>();
     Value acc = (op.acc().empty()) ? nullptr : op.acc()[0];
+
+    if (!rhsType) {
+      // Special case: AXPY operation.
+      Value b = rewriter.create<vector::BroadcastOp>(loc, lhsType, op.rhs());
+      rewriter.replaceOp(op, genMult(loc, op.lhs(), b, acc, isInt, rewriter));
+      return success();
+    }
 
     Value result = rewriter.create<ConstantOp>(loc, resType,
                                                rewriter.getZeroAttr(resType));
     for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
       auto pos = rewriter.getI64ArrayAttr(d);
       Value x = rewriter.create<vector::ExtractOp>(loc, eltType, op.lhs(), pos);
-      Value b = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
-      Value m;
-      if (acc) {
-        Value e = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
-        if (eltType.isa<IntegerType>())
-          m = rewriter.create<AddIOp>(
-              loc, rewriter.create<MulIOp>(loc, b, op.rhs()), e);
-        else
-          m = rewriter.create<vector::FMAOp>(loc, b, op.rhs(), e);
-      } else {
-        if (eltType.isa<IntegerType>())
-          m = rewriter.create<MulIOp>(loc, b, op.rhs());
-        else
-          m = rewriter.create<MulFOp>(loc, b, op.rhs());
-      }
+      Value a = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
+      Value r = nullptr;
+      if (acc)
+        r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
+      Value m = genMult(loc, a, op.rhs(), r, isInt, rewriter);
       result = rewriter.create<vector::InsertOp>(loc, resType, m, result, pos);
     }
     rewriter.replaceOp(op, result);
     return success();
+  }
+
+private:
+  static Value genMult(Location loc, Value x, Value y, Value acc, bool isInt,
+                       PatternRewriter &rewriter) {
+    if (acc) {
+      if (isInt)
+        return rewriter.create<AddIOp>(loc, rewriter.create<MulIOp>(loc, x, y),
+                                       acc);
+      return rewriter.create<vector::FMAOp>(loc, x, y, acc);
+    }
+    if (isInt)
+      return rewriter.create<MulIOp>(loc, x, y);
+    return rewriter.create<MulFOp>(loc, x, y);
   }
 };
 
@@ -1568,6 +1581,9 @@ ContractionOpToMatmulOpLowering::match(vector::ContractionOp op) const {
       vector::VectorContractLowering::Matmul)
     return failure();
 
+  if (failed(filter(op)))
+    return failure();
+
   auto iteratorTypes = op.iterator_types().getValue();
   if (!isParallelIterator(iteratorTypes[0]) ||
       !isParallelIterator(iteratorTypes[1]) ||
@@ -1625,7 +1641,7 @@ void ContractionOpToMatmulOpLowering::rewrite(vector::ContractionOp op,
 /// This only kicks in when VectorTransformsOptions is set to OuterProduct but
 /// otherwise supports any layout permutation of the matrix-multiply.
 LogicalResult
-ContractionOpToOuterProductOpLowering ::match(vector::ContractionOp op) const {
+ContractionOpToOuterProductOpLowering::match(vector::ContractionOp op) const {
   // TODO: implement masks
   if (llvm::size(op.masks()) != 0)
     return failure();
@@ -1634,30 +1650,49 @@ ContractionOpToOuterProductOpLowering ::match(vector::ContractionOp op) const {
       vector::VectorContractLowering::OuterProduct)
     return failure();
 
-  // Transpose arguments to make them ready for lowering to OuterProduct. The
-  // constraint to match is that we must load full rows at a time with
-  // vector::ExtractOp.
+  if (failed(filter(op)))
+    return failure();
+
+  // Determine if the parallel/reduction structure matches something
+  // that can be expressed a reduction_size unrolled sequence.
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
   auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
   AffineExpr m, n, k;
   bindDims(op.getContext(), m, n, k);
   auto iteratorTypes = op.iterator_types().getValue();
-  if (!isParallelIterator(iteratorTypes[0]) ||
-      !isParallelIterator(iteratorTypes[1]) ||
-      !isReductionIterator(iteratorTypes[2]))
-    return failure();
   SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
-  // When lowering to outerproduct we can support all permutations.
-  if (maps != infer({{m, k}, {k, n}, {m, n}}) &&
-      maps != infer({{m, k}, {n, k}, {m, n}}) &&
-      maps != infer({{k, m}, {k, n}, {m, n}}) &&
-      maps != infer({{k, m}, {n, k}, {m, n}}) &&
-      maps != infer({{m, k}, {k, n}, {n, m}}) &&
-      maps != infer({{m, k}, {n, k}, {n, m}}) &&
-      maps != infer({{k, m}, {k, n}, {n, m}}) &&
-      maps != infer({{k, m}, {n, k}, {n, m}}))
-    return failure();
-  return success();
+  if (isParallelIterator(iteratorTypes[0]) &&
+      isParallelIterator(iteratorTypes[1]) &&
+      isReductionIterator(iteratorTypes[2])) {
+    //
+    // Two outer parallel, one inner reduction (matmat flavor).
+    // When lowering to outerproduct we can support all permutations.
+    //
+    if (maps != infer({{m, k}, {k, n}, {m, n}}) &&
+        maps != infer({{m, k}, {n, k}, {m, n}}) &&
+        maps != infer({{k, m}, {k, n}, {m, n}}) &&
+        maps != infer({{k, m}, {n, k}, {m, n}}) &&
+        maps != infer({{m, k}, {k, n}, {n, m}}) &&
+        maps != infer({{m, k}, {n, k}, {n, m}}) &&
+        maps != infer({{k, m}, {k, n}, {n, m}}) &&
+        maps != infer({{k, m}, {n, k}, {n, m}}))
+      return failure();
+    return success();
+  } else if (isParallelIterator(iteratorTypes[0]) &&
+             isReductionIterator(iteratorTypes[1])) {
+    //
+    // One outer parallel, one inner reduction (matvec flavor)
+    // See if a series of AXPY operations chained through FMA operations
+    // could replace the default DOT implementation.
+    //
+    if (maps != infer({{m, n}, {n}, {m}}) && // mat-vec
+        maps != infer({{n, m}, {n}, {m}}) && // mat-trans-vec
+        maps != infer({{n}, {m, n}, {m}}) && // vec-mat
+        maps != infer({{n}, {n, m}, {m}}))   // vec-mat-trans
+      return failure();
+    return success();
+  }
+  return failure();
 }
 
 void ContractionOpToOuterProductOpLowering::rewrite(
@@ -1667,146 +1702,90 @@ void ContractionOpToOuterProductOpLowering::rewrite(
   VectorType lhsType = op.getLhsType();
   Value lhs = op.lhs(), rhs = op.rhs(), res = op.acc();
 
-  // Transpose arguments to make them ready for lowering to OuterProduct. The
-  // constraint to match is that we must load full rows at a time with
-  // vector::ExtractOp.
+  // Set up the parallel/reduction structure in right form.
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
   auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
   AffineExpr m, n, k;
   bindDims(rewriter.getContext(), m, n, k);
   SmallVector<int64_t, 2> perm{1, 0};
+  auto iteratorTypes = op.iterator_types().getValue();
   SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
-  // First batch of cases, no need to output permute.
-  if (maps == infer({{m, k}, {k, n}, {m, n}})) {
-    // This is the classical row-major matmul. Just permute the lhs.
-    reductionSize = lhsType.getDimSize(1);
-    lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-  } else if (maps == infer({{m, k}, {n, k}, {m, n}})) {
-    // TODO: may be better to fail and use some vector<k> -> scalar reduction.
-    reductionSize = lhsType.getDimSize(1);
-    lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-    rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
-  } else if (maps == infer({{k, m}, {k, n}, {m, n}})) {
-    // No need to permute anything.
-    reductionSize = lhsType.getDimSize(0);
-  } else if (maps == infer({{k, m}, {n, k}, {m, n}})) {
-    // Just permute the rhs.
-    reductionSize = lhsType.getDimSize(0);
-    rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
-  }
-  // Second batch of cases, reshuffle to avoid output permute.
-  else if (maps == infer({{m, k}, {k, n}, {n, m}})) {
-    // This is the classical row-major matmul. Just permute the lhs.
-    reductionSize = lhsType.getDimSize(1);
-    Value tmp = rhs;
-    rhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-    lhs = tmp;
-  } else if (maps == infer({{m, k}, {n, k}, {n, m}})) {
-    // TODO: may be better to fail and use some vector<k> -> scalar reduction.
-    reductionSize = lhsType.getDimSize(1);
-    Value tmp = rhs;
-    rhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-    lhs = rewriter.create<vector::TransposeOp>(loc, tmp, perm);
-  } else if (maps == infer({{k, m}, {k, n}, {n, m}})) {
-    // No need to permute anything, but still swap lhs and rhs.
-    reductionSize = lhsType.getDimSize(0);
-    std::swap(lhs, rhs);
-  } else if (maps == infer({{k, m}, {n, k}, {n, m}})) {
-    // Just permute the rhs.
-    reductionSize = lhsType.getDimSize(0);
-    Value tmp = lhs;
-    lhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
-    rhs = tmp;
+  if (isParallelIterator(iteratorTypes[0]) &&
+      isParallelIterator(iteratorTypes[1]) &&
+      isReductionIterator(iteratorTypes[2])) {
+    //
+    // Two outer parallel, one inner reduction (matmat flavor).
+    //
+    if (maps == infer({{m, k}, {k, n}, {m, n}})) {
+      // This is the classical row-major matmul. Just permute the lhs.
+      reductionSize = lhsType.getDimSize(1);
+      lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+    } else if (maps == infer({{m, k}, {n, k}, {m, n}})) {
+      // TODO: may be better to fail and use some vector<k> -> scalar reduction.
+      reductionSize = lhsType.getDimSize(1);
+      lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+      rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
+    } else if (maps == infer({{k, m}, {k, n}, {m, n}})) {
+      // No need to permute anything.
+      reductionSize = lhsType.getDimSize(0);
+    } else if (maps == infer({{k, m}, {n, k}, {m, n}})) {
+      // Just permute the rhs.
+      reductionSize = lhsType.getDimSize(0);
+      rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
+    } else if (maps == infer({{m, k}, {k, n}, {n, m}})) {
+      // This is the classical row-major matmul. Just permute the lhs.
+      reductionSize = lhsType.getDimSize(1);
+      Value tmp = rhs;
+      rhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+      lhs = tmp;
+    } else if (maps == infer({{m, k}, {n, k}, {n, m}})) {
+      // TODO: may be better to fail and use some vector<k> -> scalar reduction.
+      reductionSize = lhsType.getDimSize(1);
+      Value tmp = rhs;
+      rhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+      lhs = rewriter.create<vector::TransposeOp>(loc, tmp, perm);
+    } else if (maps == infer({{k, m}, {k, n}, {n, m}})) {
+      // No need to permute anything, but still swap lhs and rhs.
+      reductionSize = lhsType.getDimSize(0);
+      std::swap(lhs, rhs);
+    } else if (maps == infer({{k, m}, {n, k}, {n, m}})) {
+      // Just permute the rhs.
+      reductionSize = lhsType.getDimSize(0);
+      Value tmp = lhs;
+      lhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
+      rhs = tmp;
+    }
+  } else {
+    //
+    // One outer parallel, one inner reduction (matvec flavor)
+    //
+    assert(isParallelIterator(iteratorTypes[0]) &&
+           isReductionIterator(iteratorTypes[1]));
+    if (maps == infer({{m, n}, {n}, {m}})) {
+      // Case mat-vec: transpose.
+      reductionSize = lhsType.getDimSize(1);
+      lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+    } else if (maps == infer({{n, m}, {n}, {m}})) {
+      // Case mat-trans-vec: ready to go.
+      reductionSize = lhsType.getDimSize(0);
+    } else if (maps == infer({{n}, {m, n}, {m}})) {
+      // Case vec-mat: swap and transpose.
+      reductionSize = lhsType.getDimSize(0);
+      std::swap(lhs, rhs);
+      lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+    } else if (maps == infer({{n}, {n, m}, {m}})) {
+      // Case vec-mat-trans: swap and ready to go.
+      reductionSize = lhsType.getDimSize(0);
+      std::swap(lhs, rhs);
+    }
   }
   assert(reductionSize > 0);
 
-  // ExtractOp does not allow dynamic indexing, we must unroll explicitly.
-  for (unsigned k = 0; k < reductionSize; ++k) {
+  // Unroll outer-products along reduction.
+  for (int64_t k = 0; k < reductionSize; ++k) {
     Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, k);
     Value b = rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, k);
     res = rewriter.create<vector::OuterProductOp>(op.getLoc(), a, b, res);
-  }
-  rewriter.replaceOp(op, res);
-}
-
-/// Progressive lowering of a `vector.contract %a, %b, %c` with
-/// matvec semantics to series of AXPY operations that are chained
-/// through FMA operations.
-///
-/// This only kicks in when VectorTransformsOptions is set to AXPY.
-//
-// TODO: this is very similar, but not quite the same as the outerproduct
-// lowering above; merge the two?
-LogicalResult
-ContractionOpToAXPYLowering::match(vector::ContractionOp op) const {
-  // TODO: implement masks
-  if (llvm::size(op.masks()) != 0)
-    return failure();
-
-  if (vectorTransformsOptions.vectorContractLowering !=
-      vector::VectorContractLowering::AXPY)
-    return failure();
-
-  auto iteratorTypes = op.iterator_types().getValue();
-  if (!isParallelIterator(iteratorTypes[0]) ||
-      !isReductionIterator(iteratorTypes[1]))
-    return failure();
-
-  // See if a series of AXPY operations chained through FMA operations
-  // could replace the default DOT implementation.
-  using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-  auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
-  AffineExpr m, n;
-  bindDims(op.getContext(), m, n);
-  SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
-  if (maps != infer({{m, n}, {n}, {m}}) && // mat-vec
-      maps != infer({{n, m}, {n}, {m}}) && // mat-trans-vec
-      maps != infer({{n}, {m, n}, {m}}) && // vec-mat
-      maps != infer({{n}, {n, m}, {m}}))   // vec-mat-trans
-    return failure();
-  return success();
-}
-
-void ContractionOpToAXPYLowering::rewrite(vector::ContractionOp op,
-                                          PatternRewriter &rewriter) const {
-  Location loc = op.getLoc();
-  VectorType lhsType = op.getLhsType();
-  Value lhs = op.lhs(), rhs = op.rhs(), res = op.acc();
-
-  using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-  auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
-  AffineExpr m, n;
-  bindDims(op.getContext(), m, n);
-  SmallVector<int64_t, 2> perm{1, 0};
-  //
-  SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
-  int64_t reductionSize = 0;
-  if (maps == infer({{m, n}, {n}, {m}})) {
-    // Case mat-vec: transpose.
-    reductionSize = lhsType.getDimSize(1);
-    lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-  } else if (maps == infer({{n, m}, {n}, {m}})) {
-    // Case mat-trans-vec: ready to go.
-    reductionSize = lhsType.getDimSize(0);
-  } else if (maps == infer({{n}, {m, n}, {m}})) {
-    // Case vec-mat: swap and transpose.
-    reductionSize = lhsType.getDimSize(0);
-    std::swap(lhs, rhs);
-    lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
-  } else if (maps == infer({{n}, {n, m}, {m}})) {
-    // Case vec-mat-trans: swap and ready to go.
-    reductionSize = lhsType.getDimSize(0);
-    std::swap(lhs, rhs);
-  }
-  assert(reductionSize > 0);
-
-  // A direct series of AXPY operations, chained through FMA.
-  Type resType = op.getResultType();
-  for (int64_t k = 0; k < reductionSize; ++k) {
-    Value a = rewriter.create<vector::ExtractOp>(loc, lhs, k);
-    Value s = rewriter.create<vector::ExtractOp>(loc, rhs, k);
-    Value b = rewriter.create<vector::BroadcastOp>(loc, resType, s);
-    res = rewriter.create<vector::FMAOp>(loc, a, b, res);
   }
   rewriter.replaceOp(op, res);
 }
@@ -1835,6 +1814,10 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
   // TODO: implement masks.
   if (llvm::size(op.masks()) != 0)
     return failure();
+
+  if (failed(filter(op)))
+    return failure();
+
   // TODO: support mixed mode contract lowering.
   if (op.getLhsType().getElementType() !=
           getElementTypeOrSelf(op.getAccType()) ||
@@ -1848,9 +1831,6 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
     return failure();
   ContractionOpToOuterProductOpLowering pat2(vectorTransformsOptions, ctx);
   if (succeeded(pat2.match(op)))
-    return failure();
-  ContractionOpToAXPYLowering pat3(vectorTransformsOptions, ctx);
-  if (succeeded(pat3.match(op)))
     return failure();
 
   // Find first batch dimension in LHS/RHS, and lower when found.
@@ -2037,7 +2017,6 @@ void mlir::vector::populateVectorContractLoweringPatterns(
   patterns.insert<TransposeOpLowering,
                   ContractionOpLowering,
                   ContractionOpToMatmulOpLowering,
-                  ContractionOpToOuterProductOpLowering,
-                  ContractionOpToAXPYLowering>(parameters, context);
+                  ContractionOpToOuterProductOpLowering>(parameters, context);
   // clang-format on
 }

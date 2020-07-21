@@ -17,6 +17,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestDialect
     MLIRTestIR
     MLIRTestPass
+    MLIRTestReducer
     MLIRTestTransforms
     )
 endif()

@@ -1,6 +1,6 @@
 ; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -ppc-vsr-nums-as-vr \
-; RUN:   -verify-machineinstrs -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN:   -ppc-vsr-nums-as-vr -verify-machineinstrs -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s
 
 @mem = global [5 x i64] [i64 56, i64 63, i64 3, i64 5, i64 6], align 8
 @umem = global [5 x i64] [i64 560, i64 100, i64 34, i64 2, i64 5], align 8
@@ -444,10 +444,10 @@ define void @qpConv2dp_03(double* nocapture %res, i32 signext %idx) {
 ; CHECK-LABEL: qpConv2dp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC7@toc@ha
+; CHECK-NEXT:    sldi r4, r4, 3
 ; CHECK-NEXT:    ld r5, .LC7@toc@l(r5)
 ; CHECK-NEXT:    lxvx v2, 0, r5
 ; CHECK-NEXT:    xscvqpdp v2, v2
-; CHECK-NEXT:    sldi r4, r4, 3
 ; CHECK-NEXT:    stxsdx v2, r3, r4
 ; CHECK-NEXT:    blr
 entry:
@@ -517,11 +517,11 @@ define void @qpConv2sp_03(float* nocapture %res, i32 signext %idx) {
 ; CHECK-LABEL: qpConv2sp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC7@toc@ha
+; CHECK-NEXT:    sldi r4, r4, 2
 ; CHECK-NEXT:    ld r5, .LC7@toc@l(r5)
 ; CHECK-NEXT:    lxv v2, 48(r5)
 ; CHECK-NEXT:    xscvqpdpo v2, v2
 ; CHECK-NEXT:    xsrsp f0, v2
-; CHECK-NEXT:    sldi r4, r4, 2
 ; CHECK-NEXT:    stfsx f0, r3, r4
 ; CHECK-NEXT:    blr
 entry:

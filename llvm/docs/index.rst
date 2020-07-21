@@ -83,6 +83,10 @@ LLVM welcomes contributions of all kinds. To learn more, see the following artic
 * :ref:`meetups-social-events`
 * :ref:`community-proposals`
 
+  Reporting a security issue
+
+* :ref:`report-security-issue`
+
 Indices and tables
 ==================
 

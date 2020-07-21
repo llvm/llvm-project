@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-apple-darwin14 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs | FileCheck %s
+// RUN: llvm-mc -triple aarch64-apple-darwin14 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 // FIXME: the final relocation should be internal, but the linker doesn't
 // currently handle the it correctly.
 

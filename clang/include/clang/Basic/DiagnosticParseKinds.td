@@ -934,6 +934,8 @@ def err_lambda_capture_misplaced_ellipsis : Error<
   "the name of the capture">;
 def err_lambda_capture_multiple_ellipses : Error<
   "multiple ellipses in pack capture">;
+def err_capture_default_first : Error<
+  "capture default must be first">;
 // C++17 lambda expressions
 def err_expected_star_this_capture : Error<
   "expected 'this' following '*' in lambda capture list">;
@@ -1334,6 +1336,8 @@ def warn_omp_more_one_device_type_clause
       InGroup<OpenMPClauses>;
 def err_omp_variant_ctx_second_match_extension : Error<
   "only a single match extension allowed per OpenMP context selector">;
+def err_omp_invalid_dsa: Error<
+  "data-sharing attribute '%0' in '%1' clause requires OpenMP version %2 or above">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

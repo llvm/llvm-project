@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/SideEffects.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
@@ -24,8 +25,11 @@ StringRef SideEffect::getBaseEffectName() const {
   return def->getValueAsString("baseEffectName");
 }
 
-StringRef SideEffect::getInterfaceTrait() const {
-  return def->getValueAsString("interfaceTrait");
+std::string SideEffect::getInterfaceTrait() const {
+  StringRef trait = def->getValueAsString("interfaceTrait");
+  StringRef cppNamespace = def->getValueAsString("cppNamespace");
+  return cppNamespace.empty() ? trait.str()
+                              : (cppNamespace + "::" + trait).str();
 }
 
 StringRef SideEffect::getResource() const {

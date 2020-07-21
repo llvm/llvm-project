@@ -540,7 +540,9 @@ struct DevirtModule {
 
   bool areRemarksEnabled();
 
-  void scanTypeTestUsers(Function *TypeTestFunc);
+  void
+  scanTypeTestUsers(Function *TypeTestFunc,
+                    DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap);
   void scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc);
 
   void buildTypeIdentifierMap(
@@ -1705,7 +1707,9 @@ bool DevirtModule::areRemarksEnabled() {
   return false;
 }
 
-void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc) {
+void DevirtModule::scanTypeTestUsers(
+    Function *TypeTestFunc,
+    DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap) {
   // Find all virtual calls via a virtual table pointer %p under an assumption
   // of the form llvm.assume(llvm.type.test(%p, %md)). This indicates that %p
   // points to a member of the type identifier %md. Group calls by (type ID,
@@ -1724,22 +1728,59 @@ void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc) {
     auto &DT = LookupDomTree(*CI->getFunction());
     findDevirtualizableCallsForTypeTest(DevirtCalls, Assumes, CI, DT);
 
+    Metadata *TypeId =
+        cast<MetadataAsValue>(CI->getArgOperand(1))->getMetadata();
     // If we found any, add them to CallSlots.
     if (!Assumes.empty()) {
-      Metadata *TypeId =
-          cast<MetadataAsValue>(CI->getArgOperand(1))->getMetadata();
       Value *Ptr = CI->getArgOperand(0)->stripPointerCasts();
       for (DevirtCallSite Call : DevirtCalls)
         CallSlots[{TypeId, Call.Offset}].addCallSite(Ptr, Call.CB, nullptr);
     }
 
-    // We no longer need the assumes or the type test.
-    for (auto Assume : Assumes)
-      Assume->eraseFromParent();
-    // We can't use RecursivelyDeleteTriviallyDeadInstructions here because we
-    // may use the vtable argument later.
-    if (CI->use_empty())
-      CI->eraseFromParent();
+    auto RemoveTypeTestAssumes = [&]() {
+      // We no longer need the assumes or the type test.
+      for (auto Assume : Assumes)
+        Assume->eraseFromParent();
+      // We can't use RecursivelyDeleteTriviallyDeadInstructions here because we
+      // may use the vtable argument later.
+      if (CI->use_empty())
+        CI->eraseFromParent();
+    };
+
+    // At this point we could remove all type test assume sequences, as they
+    // were originally inserted for WPD. However, we can keep these in the
+    // code stream for later analysis (e.g. to help drive more efficient ICP
+    // sequences). They will eventually be removed by a second LowerTypeTests
+    // invocation that cleans them up. In order to do this correctly, the first
+    // LowerTypeTests invocation needs to know that they have "Unknown" type
+    // test resolution, so that they aren't treated as Unsat and lowered to
+    // False, which will break any uses on assumes. Below we remove any type
+    // test assumes that will not be treated as Unknown by LTT.
+
+    // The type test assumes will be treated by LTT as Unsat if the type id is
+    // not used on a global (in which case it has no entry in the TypeIdMap).
+    if (!TypeIdMap.count(TypeId))
+      RemoveTypeTestAssumes();
+
+    // For ThinLTO importing, we need to remove the type test assumes if this is
+    // an MDString type id without a corresponding TypeIdSummary. Any
+    // non-MDString type ids are ignored and treated as Unknown by LTT, so their
+    // type test assumes can be kept. If the MDString type id is missing a
+    // TypeIdSummary (e.g. because there was no use on a vcall, preventing the
+    // exporting phase of WPD from analyzing it), then it would be treated as
+    // Unsat by LTT and we need to remove its type test assumes here. If not
+    // used on a vcall we don't need them for later optimization use in any
+    // case.
+    else if (ImportSummary && isa<MDString>(TypeId)) {
+      const TypeIdSummary *TidSummary =
+          ImportSummary->getTypeIdSummary(cast<MDString>(TypeId)->getString());
+      if (!TidSummary)
+        RemoveTypeTestAssumes();
+      else
+        // If one was created it should not be Unsat, because if we reached here
+        // the type id was used on a global.
+        assert(TidSummary->TTRes.TheKind != TypeTestResolution::Unsat);
+    }
   }
 }
 
@@ -1931,8 +1972,13 @@ bool DevirtModule::run() {
       (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()))
     return false;
 
+  // Rebuild type metadata into a map for easy lookup.
+  std::vector<VTableBits> Bits;
+  DenseMap<Metadata *, std::set<TypeMemberInfo>> TypeIdMap;
+  buildTypeIdentifierMap(Bits, TypeIdMap);
+
   if (TypeTestFunc && AssumeFunc)
-    scanTypeTestUsers(TypeTestFunc);
+    scanTypeTestUsers(TypeTestFunc, TypeIdMap);
 
   if (TypeCheckedLoadFunc)
     scanTypeCheckedLoadUsers(TypeCheckedLoadFunc);
@@ -1954,10 +2000,6 @@ bool DevirtModule::run() {
     return true;
   }
 
-  // Rebuild type metadata into a map for easy lookup.
-  std::vector<VTableBits> Bits;
-  DenseMap<Metadata *, std::set<TypeMemberInfo>> TypeIdMap;
-  buildTypeIdentifierMap(Bits, TypeIdMap);
   if (TypeIdMap.empty())
     return true;
 
@@ -2014,14 +2056,22 @@ bool DevirtModule::run() {
     // function implementation at offset S.first.ByteOffset, and add to
     // TargetsForSlot.
     std::vector<VirtualCallTarget> TargetsForSlot;
-    if (tryFindVirtualCallTargets(TargetsForSlot, TypeIdMap[S.first.TypeID],
+    WholeProgramDevirtResolution *Res = nullptr;
+    const std::set<TypeMemberInfo> &TypeMemberInfos = TypeIdMap[S.first.TypeID];
+    if (ExportSummary && isa<MDString>(S.first.TypeID) &&
+        TypeMemberInfos.size())
+      // For any type id used on a global's type metadata, create the type id
+      // summary resolution regardless of whether we can devirtualize, so that
+      // lower type tests knows the type id is not Unsat. If it was not used on
+      // a global's type metadata, the TypeIdMap entry set will be empty, and
+      // we don't want to create an entry (with the default Unknown type
+      // resolution), which can prevent detection of the Unsat.
+      Res = &ExportSummary
+                 ->getOrInsertTypeIdSummary(
+                     cast<MDString>(S.first.TypeID)->getString())
+                 .WPDRes[S.first.ByteOffset];
+    if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
                                   S.first.ByteOffset)) {
-      WholeProgramDevirtResolution *Res = nullptr;
-      if (ExportSummary && isa<MDString>(S.first.TypeID))
-        Res = &ExportSummary
-                   ->getOrInsertTypeIdSummary(
-                       cast<MDString>(S.first.TypeID)->getString())
-                   .WPDRes[S.first.ByteOffset];
 
       if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res)) {
         DidVirtualConstProp |=
@@ -2135,11 +2185,14 @@ void DevirtIndex::run() {
     std::vector<ValueInfo> TargetsForSlot;
     auto TidSummary = ExportSummary.getTypeIdCompatibleVtableSummary(S.first.TypeID);
     assert(TidSummary);
+    // Create the type id summary resolution regardlness of whether we can
+    // devirtualize, so that lower type tests knows the type id is used on
+    // a global and not Unsat.
+    WholeProgramDevirtResolution *Res =
+        &ExportSummary.getOrInsertTypeIdSummary(S.first.TypeID)
+             .WPDRes[S.first.ByteOffset];
     if (tryFindVirtualCallTargets(TargetsForSlot, *TidSummary,
                                   S.first.ByteOffset)) {
-      WholeProgramDevirtResolution *Res =
-          &ExportSummary.getOrInsertTypeIdSummary(S.first.TypeID)
-               .WPDRes[S.first.ByteOffset];
 
       if (!trySingleImplDevirt(TargetsForSlot, S.first, S.second, Res,
                                DevirtTargets))

@@ -1,8 +1,11 @@
 ; Test that the scale (-asan-mapping-scale) and offset (-asan-mapping-offset) command-line options work as expected
 ;
-; RUN: opt < %s -asan -asan-module -asan-mapping-offset 0xdeadbeef -S | FileCheck --check-prefix=CHECK-OFFSET %s
-; RUN: opt < %s -asan -asan-module -asan-mapping-scale 1 -S | FileCheck --check-prefix=CHECK-SCALE %s
-; RUN: opt < %s -asan -asan-module -asan-mapping-offset 0xc0ffee -asan-mapping-scale 0 -S | FileCheck --check-prefix=CHECK-BOTH %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-mapping-offset 0xdeadbeef -S | FileCheck --check-prefix=CHECK-OFFSET %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-mapping-offset 0xdeadbeef -S | FileCheck --check-prefix=CHECK-OFFSET %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-mapping-scale 1 -S | FileCheck --check-prefix=CHECK-SCALE %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-mapping-scale 1 -S | FileCheck --check-prefix=CHECK-SCALE %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-mapping-offset 0xc0ffee -asan-mapping-scale 0 -S | FileCheck --check-prefix=CHECK-BOTH %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-mapping-offset 0xc0ffee -asan-mapping-scale 0 -S | FileCheck --check-prefix=CHECK-BOTH %s
 target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @read_offset(i32* %a) sanitize_address {

@@ -252,10 +252,9 @@ public:
 };
 
 } // end namespace OpTrait
+} // end namespace mlir
 
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.h.inc"
-
-} // end namespace mlir
 
 #endif // MLIR_IR_SYMBOLTABLE_H

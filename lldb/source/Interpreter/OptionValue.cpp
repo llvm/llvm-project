@@ -39,7 +39,7 @@ Status OptionValue::SetSubValue(const ExecutionContext *exe_ctx,
                                 VarSetOperationType op, llvm::StringRef name,
                                 llvm::StringRef value) {
   Status error;
-  error.SetErrorStringWithFormat("SetSubValue is not supported");
+  error.SetErrorString("SetSubValue is not supported");
   return error;
 }
 
@@ -471,6 +471,8 @@ const char *OptionValue::GetBuiltinTypeAsCString(Type t) {
     return "dictionary";
   case eTypeEnum:
     return "enum";
+  case eTypeFileLineColumn:
+    return "file:line:column specifier";
   case eTypeFileSpec:
     return "file";
   case eTypeFileSpecList:

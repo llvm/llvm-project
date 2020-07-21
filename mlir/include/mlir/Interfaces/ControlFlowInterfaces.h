@@ -18,6 +18,7 @@
 
 namespace mlir {
 class BranchOpInterface;
+class RegionBranchOpInterface;
 
 //===----------------------------------------------------------------------===//
 // BranchOpInterface
@@ -40,12 +41,21 @@ LogicalResult verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
+namespace detail {
+/// Verify that types match along control flow edges described the given op.
+LogicalResult verifyTypesAlongControlFlowEdges(Operation *op);
+} //  namespace detail
+
 /// This class represents a successor of a region. A region successor can either
 /// be another region, or the parent operation. If the successor is a region,
-/// this class accepts the destination region, as well as a set of arguments
+/// this class represents the destination region, as well as a set of arguments
 /// from that region that will be populated by values from the current region.
-/// If the successor is the parent operation, this class accepts an optional set
-/// of results that will be populated by values from the current region.
+/// If the successor is the parent operation, this class represents an optional
+/// set of results that will be populated by values from the current region.
+///
+/// This interface assumes that the values from the current region that are used
+/// to populate the successor inputs are the operands of the return-like
+/// terminator operations in the blocks within this region.
 class RegionSuccessor {
 public:
   /// Initialize a successor that branches to another region of the parent
@@ -61,6 +71,9 @@ public:
   /// parent operation.
   Region *getSuccessor() const { return region; }
 
+  /// Return true if the successor is the parent operation.
+  bool isParent() const { return region == nullptr; }
+
   /// Return the inputs to the successor that are remapped by the exit values of
   /// the current region.
   ValueRange getSuccessorInputs() const { return inputs; }
@@ -69,12 +82,6 @@ private:
   Region *region;
   ValueRange inputs;
 };
-
-//===----------------------------------------------------------------------===//
-// ControlFlow Interfaces
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Interfaces/ControlFlowInterfaces.h.inc"
 
 //===----------------------------------------------------------------------===//
 // ControlFlow Traits
@@ -100,5 +107,12 @@ struct ReturnLike : public TraitBase<ConcreteType, ReturnLike> {
 } // namespace OpTrait
 
 } // end namespace mlir
+
+//===----------------------------------------------------------------------===//
+// ControlFlow Interfaces
+//===----------------------------------------------------------------------===//
+
+/// Include the generated interface declarations.
+#include "mlir/Interfaces/ControlFlowInterfaces.h.inc"
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES_H

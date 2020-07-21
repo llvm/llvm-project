@@ -83,10 +83,12 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  Machine:    EM_X86_64
+  EPhEntSize: [[PHENTSIZE=56]]
+  EShNum:     [[SHNUM=6]]
 Sections:
   - Name:         .note.ABI-tag
     Type:         SHT_NOTE
@@ -193,3 +195,16 @@ ProgramHeaders:
     FileSize: 0xffff0000
     Sections:
       - Section: .note
+
+## Check we report a warning when we are unable to locate the PT_NOTE
+## segment because of broken program headers.
+# RUN: yaml2obj --docnum=1 -DPHENTSIZE=1 -DSHNUM=0 %s -o %t6.so
+# RUN: llvm-readelf --notes %t6.so 2>&1 | FileCheck %s -DFILE=%t6.so --check-prefix=PHENTSIZE-WARN-GNU
+# RUN: llvm-readobj --notes %t6.so 2>&1 | FileCheck %s -DFILE=%t6.so --check-prefix=PHENTSIZE-WARN-LLVM
+
+# PHENTSIZE-WARN-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
+# PHENTSIZE-WARN-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_NOTE segment: invalid e_phentsize: 1
+
+# PHENTSIZE-WARN-LLVM:      Notes [
+# PHENTSIZE-WARN-LLVM-NEXT: warning: '[[FILE]]': unable to read program headers to locate the PT_NOTE segment: invalid e_phentsize: 1
+# PHENTSIZE-WARN-LLVM-NEXT: ]

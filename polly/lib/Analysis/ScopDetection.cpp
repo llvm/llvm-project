@@ -383,7 +383,7 @@ ScopDetection::ScopDetection(Function &F, const DominatorTree &DT,
 
 template <class RR, typename... Args>
 inline bool ScopDetection::invalid(DetectionContext &Context, bool Assert,
-                                   Args &&... Arguments) const {
+                                   Args &&...Arguments) const {
   if (!Context.Verifying) {
     RejectLog &Log = Context.Log;
     std::shared_ptr<RR> RejectReason = std::make_shared<RR>(Arguments...);

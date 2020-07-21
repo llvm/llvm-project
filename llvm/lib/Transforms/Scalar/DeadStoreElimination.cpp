@@ -848,7 +848,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
   // Treat byval or inalloca arguments the same, stores to them are dead at the
   // end of the function.
   for (Argument &AI : BB.getParent()->args())
-    if (AI.hasPassPointeeByValueAttr())
+    if (AI.hasPassPointeeByValueCopyAttr())
       DeadStackObjects.insert(&AI);
 
   const DataLayout &DL = BB.getModule()->getDataLayout();
@@ -1563,7 +1563,7 @@ struct DSEState {
     // Treat byval or inalloca arguments the same as Allocas, stores to them are
     // dead at the end of the function.
     for (Argument &AI : F.args())
-      if (AI.hasPassPointeeByValueAttr()) {
+      if (AI.hasPassPointeeByValueCopyAttr()) {
         // For byval, the caller doesn't know the address of the allocation.
         if (AI.hasByValAttr())
           State.InvisibleToCallerBeforeRet.insert(&AI);
@@ -1592,6 +1592,12 @@ struct DSEState {
         default:
           break;
         }
+      }
+      switch (CB->getIntrinsicID()) {
+      case Intrinsic::init_trampoline:
+        return {MemoryLocation(CB->getArgOperand(0))};
+      default:
+        break;
       }
       return None;
     }

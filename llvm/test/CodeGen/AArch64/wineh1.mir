@@ -1,5 +1,5 @@
 # RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog -filetype=obj  \
-# RUN:   | llvm-readobj --unwind | FileCheck %s
+# RUN:   | llvm-readobj --unwind - | FileCheck %s
 # RUN: llc -o - %s -mtriple=aarch64-windows -run-pass=aarch64-ldst-opt \
 # RUN:   | FileCheck %s --check-prefix=CHECK-LDSTOPT
 # This test case checks the basic validity of the .xdata section.  It's

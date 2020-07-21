@@ -72,6 +72,7 @@ void InputChunk::verifyRelocTargets() const {
       existingValue = decodeULEB128(loc, &bytesRead);
       break;
     case R_WASM_TABLE_INDEX_SLEB:
+    case R_WASM_TABLE_INDEX_SLEB64:
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB64:
@@ -86,6 +87,7 @@ void InputChunk::verifyRelocTargets() const {
     case R_WASM_GLOBAL_INDEX_I32:
       existingValue = read32le(loc);
       break;
+    case R_WASM_TABLE_INDEX_I64:
     case R_WASM_MEMORY_ADDR_I64:
       existingValue = read64le(loc);
       break;
@@ -151,6 +153,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
     case R_WASM_MEMORY_ADDR_REL_SLEB:
       encodeSLEB128(static_cast<int32_t>(value), loc, 5);
       break;
+    case R_WASM_TABLE_INDEX_SLEB64:
     case R_WASM_MEMORY_ADDR_SLEB64:
     case R_WASM_MEMORY_ADDR_REL_SLEB64:
       encodeSLEB128(static_cast<int64_t>(value), loc, 10);
@@ -162,6 +165,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
     case R_WASM_GLOBAL_INDEX_I32:
       write32le(loc, value);
       break;
+    case R_WASM_TABLE_INDEX_I64:
     case R_WASM_MEMORY_ADDR_I64:
       write64le(loc, value);
       break;
@@ -219,6 +223,7 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
   case R_WASM_MEMORY_ADDR_LEB64:
     return encodeULEB128(value, buf);
   case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_TABLE_INDEX_SLEB64:
   case R_WASM_MEMORY_ADDR_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB64:
     return encodeSLEB128(static_cast<int64_t>(value), buf);
@@ -237,6 +242,7 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB:
     return 5;
+  case R_WASM_TABLE_INDEX_SLEB64:
   case R_WASM_MEMORY_ADDR_LEB64:
   case R_WASM_MEMORY_ADDR_SLEB64:
     return 10;
@@ -335,10 +341,12 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << getName()
                     << " count=" << relocations.size() << "\n");
 
-  unsigned opcode_ptr_const =
-      config->is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
-  unsigned opcode_ptr_add =
-      config->is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
+  unsigned opcode_ptr_const = config->is64.getValueOr(false)
+                                  ? WASM_OPCODE_I64_CONST
+                                  : WASM_OPCODE_I32_CONST;
+  unsigned opcode_ptr_add = config->is64.getValueOr(false)
+                                ? WASM_OPCODE_I64_ADD
+                                : WASM_OPCODE_I32_ADD;
 
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
@@ -380,7 +388,8 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
       }
     } else {
       const GlobalSymbol* baseSymbol = WasmSym::memoryBase;
-      if (rel.Type == R_WASM_TABLE_INDEX_I32)
+      if (rel.Type == R_WASM_TABLE_INDEX_I32 ||
+          rel.Type == R_WASM_TABLE_INDEX_I64)
         baseSymbol = WasmSym::tableBase;
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, baseSymbol->getGlobalIndex(), "base");

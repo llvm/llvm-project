@@ -722,57 +722,67 @@ TEST(ValueTracking, propagatesPoison) {
   }
 }
 
-TEST(ValueTracking, canCreatePoison) {
+TEST(ValueTracking, canCreatePoisonOrUndef) {
   std::string AsmHead =
       "declare i32 @g(i32)\n"
       "define void @f(i32 %x, i32 %y, float %fx, float %fy, i1 %cond, "
       "<4 x i32> %vx, <4 x i32> %vx2, <vscale x 4 x i32> %svx, i8* %p) {\n";
   std::string AsmTail = "  ret void\n}";
-  // (can create poison?, IR instruction)
-  SmallVector<std::pair<bool, std::string>, 32> Data = {
-      {false, "add i32 %x, %y"},
-      {true, "add nsw nuw i32 %x, %y"},
-      {true, "shl i32 %x, %y"},
-      {true, "shl <4 x i32> %vx, %vx2"},
-      {true, "shl nsw i32 %x, %y"},
-      {true, "shl nsw <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 3>"},
-      {false, "shl i32 %x, 31"},
-      {true, "shl i32 %x, 32"},
-      {false, "shl <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 3>"},
-      {true, "shl <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 32>"},
-      {true, "ashr i32 %x, %y"},
-      {true, "ashr exact i32 %x, %y"},
-      {false, "ashr i32 %x, 31"},
-      {true, "ashr exact i32 %x, 31"},
-      {false, "ashr <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 3>"},
-      {true, "ashr <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 32>"},
-      {true, "ashr exact <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 3>"},
-      {true, "lshr i32 %x, %y"},
-      {true, "lshr exact i32 %x, 31"},
-      {false, "udiv i32 %x, %y"},
-      {true, "udiv exact i32 %x, %y"},
-      {false, "getelementptr i8, i8* %p, i32 %x"},
-      {true, "getelementptr inbounds i8, i8* %p, i32 %x"},
-      {true, "fneg nnan float %fx"},
-      {false, "fneg float %fx"},
-      {false, "fadd float %fx, %fy"},
-      {true, "fadd nnan float %fx, %fy"},
-      {false, "urem i32 %x, %y"},
-      {true, "fptoui float %fx to i32"},
-      {true, "fptosi float %fx to i32"},
-      {false, "bitcast float %fx to i32"},
-      {false, "select i1 %cond, i32 %x, i32 %y"},
-      {true, "select nnan i1 %cond, float %fx, float %fy"},
-      {true, "extractelement <4 x i32> %vx, i32 %x"},
-      {false, "extractelement <4 x i32> %vx, i32 3"},
-      {true, "extractelement <vscale x 4 x i32> %svx, i32 4"},
-      {true, "insertelement <4 x i32> %vx, i32 %x, i32 %y"},
-      {false, "insertelement <4 x i32> %vx, i32 %x, i32 3"},
-      {true, "insertelement <vscale x 4 x i32> %svx, i32 %x, i32 4"},
-      {false, "freeze i32 %x"},
-      {true, "call i32 @g(i32 %x)"},
-      {true, "fcmp nnan oeq float %fx, %fy"},
-      {false, "fcmp oeq float %fx, %fy"}};
+  // (can create poison?, can create undef?, IR instruction)
+  SmallVector<std::pair<std::pair<bool, bool>, std::string>, 32> Data = {
+      {{false, false}, "add i32 %x, %y"},
+      {{true, false}, "add nsw nuw i32 %x, %y"},
+      {{true, false}, "shl i32 %x, %y"},
+      {{true, false}, "shl <4 x i32> %vx, %vx2"},
+      {{true, false}, "shl nsw i32 %x, %y"},
+      {{true, false}, "shl nsw <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 3>"},
+      {{false, false}, "shl i32 %x, 31"},
+      {{true, false}, "shl i32 %x, 32"},
+      {{false, false}, "shl <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 3>"},
+      {{true, false}, "shl <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 32>"},
+      {{true, false}, "ashr i32 %x, %y"},
+      {{true, false}, "ashr exact i32 %x, %y"},
+      {{false, false}, "ashr i32 %x, 31"},
+      {{true, false}, "ashr exact i32 %x, 31"},
+      {{false, false}, "ashr <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 3>"},
+      {{true, false}, "ashr <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 32>"},
+      {{true, false}, "ashr exact <4 x i32> %vx, <i32 0, i32 1, i32 2, i32 3>"},
+      {{true, false}, "lshr i32 %x, %y"},
+      {{true, false}, "lshr exact i32 %x, 31"},
+      {{false, false}, "udiv i32 %x, %y"},
+      {{true, false}, "udiv exact i32 %x, %y"},
+      {{false, false}, "getelementptr i8, i8* %p, i32 %x"},
+      {{true, false}, "getelementptr inbounds i8, i8* %p, i32 %x"},
+      {{true, false}, "fneg nnan float %fx"},
+      {{false, false}, "fneg float %fx"},
+      {{false, false}, "fadd float %fx, %fy"},
+      {{true, false}, "fadd nnan float %fx, %fy"},
+      {{false, false}, "urem i32 %x, %y"},
+      {{true, false}, "fptoui float %fx to i32"},
+      {{true, false}, "fptosi float %fx to i32"},
+      {{false, false}, "bitcast float %fx to i32"},
+      {{false, false}, "select i1 %cond, i32 %x, i32 %y"},
+      {{true, false}, "select nnan i1 %cond, float %fx, float %fy"},
+      {{true, false}, "extractelement <4 x i32> %vx, i32 %x"},
+      {{false, false}, "extractelement <4 x i32> %vx, i32 3"},
+      {{true, false}, "extractelement <vscale x 4 x i32> %svx, i32 4"},
+      {{true, false}, "insertelement <4 x i32> %vx, i32 %x, i32 %y"},
+      {{false, false}, "insertelement <4 x i32> %vx, i32 %x, i32 3"},
+      {{true, false}, "insertelement <vscale x 4 x i32> %svx, i32 %x, i32 4"},
+      {{false, false}, "freeze i32 %x"},
+      {{false, false},
+       "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
+       "<4 x i32> <i32 0, i32 1, i32 2, i32 3>"},
+      {{false, true},
+       "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
+       "<4 x i32> <i32 0, i32 1, i32 2, i32 undef>"},
+      {{false, true},
+       "shufflevector <vscale x 4 x i32> %svx, "
+       "<vscale x 4 x i32> %svx, <vscale x 4 x i32> undef"},
+      {{true, false}, "call i32 @g(i32 %x)"},
+      {{false, false}, "call noundef i32 @g(i32 %x)"},
+      {{true, false}, "fcmp nnan oeq float %fx, %fy"},
+      {{false, false}, "fcmp oeq float %fx, %fy"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)
@@ -793,8 +803,14 @@ TEST(ValueTracking, canCreatePoison) {
   for (auto &I : BB) {
     if (isa<ReturnInst>(&I))
       break;
-    EXPECT_EQ(canCreatePoison(&I), Data[Index].first)
-        << "Incorrect answer at instruction " << Index << " = " << I;
+    bool Poison = Data[Index].first.first;
+    bool Undef = Data[Index].first.second;
+    EXPECT_EQ(canCreatePoison(cast<Operator>(&I)), Poison)
+        << "Incorrect answer of canCreatePoison at instruction " << Index
+        << " = " << I;
+    EXPECT_EQ(canCreateUndefOrPoison(cast<Operator>(&I)), Undef || Poison)
+        << "Incorrect answer of canCreateUndef at instruction " << Index
+        << " = " << I;
     Index++;
   }
 }

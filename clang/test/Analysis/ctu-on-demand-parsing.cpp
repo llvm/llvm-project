@@ -30,7 +30,7 @@
 // CHECK: CTU loaded AST file: {{.*}}ctu-chain.cpp
 //
 // FIXME: Path handling should work on all platforms.
-// REQUIRES: linux
+// REQUIRES: system-linux
 
 #include "ctu-hdr.h"
 

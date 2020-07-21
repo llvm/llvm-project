@@ -30,6 +30,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 #include <cstdint>
 #include <limits>
 
@@ -57,73 +58,6 @@ class PHINode;
 class StoreInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
-
-/// A set of parameters used to control the transforms in the SimplifyCFG pass.
-/// Options may change depending on the position in the optimization pipeline.
-/// For example, canonical form that includes switches and branches may later be
-/// replaced by lookup tables and selects.
-struct SimplifyCFGOptions {
-  int BonusInstThreshold;
-  bool ForwardSwitchCondToPhi;
-  bool ConvertSwitchToLookupTable;
-  bool NeedCanonicalLoop;
-  bool SinkCommonInsts;
-  bool SimplifyCondBranch;
-  bool FoldTwoEntryPHINode;
-
-  AssumptionCache *AC;
-
-  SimplifyCFGOptions(unsigned BonusThreshold = 1,
-                     bool ForwardSwitchCond = false,
-                     bool SwitchToLookup = false, bool CanonicalLoops = true,
-                     bool SinkCommon = false,
-                     AssumptionCache *AssumpCache = nullptr,
-                     bool SimplifyCondBranch = true,
-                     bool FoldTwoEntryPHINode = true)
-      : BonusInstThreshold(BonusThreshold),
-        ForwardSwitchCondToPhi(ForwardSwitchCond),
-        ConvertSwitchToLookupTable(SwitchToLookup),
-        NeedCanonicalLoop(CanonicalLoops),
-        SinkCommonInsts(SinkCommon),
-        SimplifyCondBranch(SimplifyCondBranch),
-        FoldTwoEntryPHINode(FoldTwoEntryPHINode),
-        AC(AssumpCache) {}
-
-  // Support 'builder' pattern to set members by name at construction time.
-  SimplifyCFGOptions &bonusInstThreshold(int I) {
-    BonusInstThreshold = I;
-    return *this;
-  }
-  SimplifyCFGOptions &forwardSwitchCondToPhi(bool B) {
-    ForwardSwitchCondToPhi = B;
-    return *this;
-  }
-  SimplifyCFGOptions &convertSwitchToLookupTable(bool B) {
-    ConvertSwitchToLookupTable = B;
-    return *this;
-  }
-  SimplifyCFGOptions &needCanonicalLoops(bool B) {
-    NeedCanonicalLoop = B;
-    return *this;
-  }
-  SimplifyCFGOptions &sinkCommonInsts(bool B) {
-    SinkCommonInsts = B;
-    return *this;
-  }
-  SimplifyCFGOptions &setAssumptionCache(AssumptionCache *Cache) {
-    AC = Cache;
-    return *this;
-  }
-  SimplifyCFGOptions &setSimplifyCondBranch(bool B) {
-    SimplifyCondBranch = B;
-    return *this;
-  }
-
-  SimplifyCFGOptions &setFoldTwoEntryPHINode(bool B) {
-    FoldTwoEntryPHINode = B;
-    return *this;
-  }
-};
 
 //===----------------------------------------------------------------------===//
 //  Local constant propagation.
@@ -160,7 +94,9 @@ bool wouldInstructionBeTriviallyDead(Instruction *I,
 /// recursively. Return true if any instructions were deleted.
 bool RecursivelyDeleteTriviallyDeadInstructions(
     Value *V, const TargetLibraryInfo *TLI = nullptr,
-    MemorySSAUpdater *MSSAU = nullptr);
+    MemorySSAUpdater *MSSAU = nullptr,
+    std::function<void(Value *)> AboutToDeleteCallback =
+        std::function<void(Value *)>());
 
 /// Delete all of the instructions in `DeadInsts`, and all other instructions
 /// that deleting these in turn causes to be trivially dead.
@@ -172,7 +108,9 @@ bool RecursivelyDeleteTriviallyDeadInstructions(
 /// empty afterward.
 void RecursivelyDeleteTriviallyDeadInstructions(
     SmallVectorImpl<WeakTrackingVH> &DeadInsts,
-    const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr);
+    const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr,
+    std::function<void(Value *)> AboutToDeleteCallback =
+        std::function<void(Value *)>());
 
 /// Same functionality as RecursivelyDeleteTriviallyDeadInstructions, but allow
 /// instructions that are not trivially dead. These will be ignored.
@@ -180,7 +118,9 @@ void RecursivelyDeleteTriviallyDeadInstructions(
 /// were found and deleted.
 bool RecursivelyDeleteTriviallyDeadInstructionsPermissive(
     SmallVectorImpl<WeakTrackingVH> &DeadInsts,
-    const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr);
+    const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr,
+    std::function<void(Value *)> AboutToDeleteCallback =
+        std::function<void(Value *)>());
 
 /// If the specified value is an effectively dead PHI node, due to being a
 /// def-use chain of single-use nodes that either forms a cycle or is terminated

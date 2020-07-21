@@ -26,7 +26,7 @@ entry:
   ret void
 ; CHECK-LABEL: test2
 ; CHECK: addi 3, 3, 8
-; CHECK: lxvx [[LD:[0-9]+]], 0, 3
 ; CHECK: addi [[REG:[0-9]+]], 4, 4
+; CHECK: lxvx [[LD:[0-9]+]], 0, 3
 ; CHECK: stxvx [[LD]], 0, [[REG]] 
 }

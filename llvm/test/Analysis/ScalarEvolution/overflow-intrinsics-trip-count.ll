@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyze -scalar-evolution | FileCheck %s
+; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
+; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
 declare { i16, i1 } @llvm.sadd.with.overflow.i16(i16, i16) nounwind readnone
 declare { i16, i1 } @llvm.uadd.with.overflow.i16(i16, i16) nounwind readnone

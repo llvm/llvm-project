@@ -1,4 +1,4 @@
-// RUN: llvm-mc -g -dwarf-version 2 -triple  i686-pc-linux-gnu %s -filetype=obj -o - | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -g -dwarf-version 2 -triple  i686-pc-linux-gnu %s -filetype=obj -o - | llvm-readobj -r - | FileCheck %s
 // RUN: not llvm-mc -g -dwarf-version 1  -triple  i686-pc-linux-gnu %s -filetype=asm -o - 2>&1 | FileCheck --check-prefix=DWARF1 %s
 // RUN: llvm-mc -g -dwarf-version 2 -triple  i686-pc-linux-gnu %s -filetype=asm -o - | FileCheck --check-prefix=ASM --check-prefix=DWARF2 %s
 // RUN: llvm-mc -g -dwarf-version 3 -triple  i686-pc-linux-gnu %s -filetype=asm -o - | FileCheck --check-prefix=ASM --check-prefix=DWARF3 %s

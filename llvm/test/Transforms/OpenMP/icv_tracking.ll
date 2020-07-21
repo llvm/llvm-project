@@ -11,16 +11,12 @@ define dso_local i32 @foo(i32 %0, i32 %1) {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @omp_get_max_threads()
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @omp_get_max_threads()
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @omp_get_max_threads()
-; CHECK-NEXT:    tail call void @use(i32 [[TMP4]])
-; CHECK-NEXT:    tail call void @use(i32 [[TMP5]])
+; CHECK-NEXT:    tail call void @use(i32 [[TMP1]])
+; CHECK-NEXT:    tail call void @use(i32 [[TMP1]])
 ; CHECK-NEXT:    tail call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call i32 @omp_get_max_threads()
-; CHECK-NEXT:    tail call void @use(i32 [[TMP7]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @omp_get_max_threads()
+; CHECK-NEXT:    tail call void @use(i32 [[TMP3]])
 ; CHECK-NEXT:    ret i32 0
 ;
   tail call void @omp_set_num_threads(i32 %0)
@@ -51,15 +47,13 @@ define internal void @.omp_outlined.(i32* %0, i32* %1) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP4]])
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 10)
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @omp_get_max_threads()
-; CHECK-NEXT:    tail call void @use(i32 [[TMP5]])
+; CHECK-NEXT:    tail call void @use(i32 10)
 ; CHECK-NEXT:    ret void
 ;
 ; FIXME: this value should be tracked and the rest of the getters deduplicated and replaced with it.
   %3 = tail call i32 @omp_get_max_threads()
   %4 = tail call i32 @omp_get_max_threads()
   tail call void @use(i32 %4)
-; FIXME: this value ( min(%3, 10) ) should be tracked and the rest of the getters deduplicated and replaced with it.
   tail call void @omp_set_num_threads(i32 10)
   %5 = tail call i32 @omp_get_max_threads()
   tail call void @use(i32 %5)
@@ -74,10 +68,9 @@ define dso_local i32 @bar(i32 %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 [[TMP4]])
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @omp_get_max_threads()
-; CHECK-NEXT:    tail call void @use(i32 [[TMP6]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @omp_get_max_threads()
+; CHECK-NEXT:    tail call void @use(i32 [[TMP5]])
 ; CHECK-NEXT:    ret i32 0
 ;
   %3 = icmp sgt i32 %0, %1
@@ -97,10 +90,9 @@ define internal void @.omp_outlined..1(i32* %0, i32*  %1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP3]])
 ; CHECK-NEXT:    tail call void @omp_set_num_threads(i32 10)
+; CHECK-NEXT:    tail call void @use(i32 10)
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @omp_get_max_threads()
 ; CHECK-NEXT:    tail call void @use(i32 [[TMP4]])
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @omp_get_max_threads()
-; CHECK-NEXT:    tail call void @use(i32 [[TMP5]])
 ; CHECK-NEXT:    ret void
 ;
   %3 = tail call i32 @omp_get_max_threads()

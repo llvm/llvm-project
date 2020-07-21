@@ -1374,7 +1374,12 @@ void DeclPrinter::VisitObjCProtocolDecl(ObjCProtocolDecl *PID) {
 }
 
 void DeclPrinter::VisitObjCCategoryImplDecl(ObjCCategoryImplDecl *PID) {
-  Out << "@implementation " << *PID->getClassInterface() << '(' << *PID <<")\n";
+  Out << "@implementation ";
+  if (const auto *CID = PID->getClassInterface())
+    Out << *CID;
+  else
+    Out << "<<error-type>>";
+  Out << '(' << *PID << ")\n";
 
   VisitDeclContext(PID, false);
   Out << "@end";
@@ -1382,7 +1387,11 @@ void DeclPrinter::VisitObjCCategoryImplDecl(ObjCCategoryImplDecl *PID) {
 }
 
 void DeclPrinter::VisitObjCCategoryDecl(ObjCCategoryDecl *PID) {
-  Out << "@interface " << *PID->getClassInterface();
+  Out << "@interface ";
+  if (const auto *CID = PID->getClassInterface())
+    Out << *CID;
+  else
+    Out << "<<error-type>>";
   if (auto TypeParams = PID->getTypeParamList()) {
     PrintObjCTypeParams(TypeParams);
   }

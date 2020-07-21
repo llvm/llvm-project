@@ -1,14 +1,19 @@
 ; RUN: llc < %s -ppc-vsr-nums-as-vr -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr9 --ppc-enable-pipeliner \
 ; RUN:       -pass-remarks-analysis=pipeliner -pass-remarks=pipeliner -o /dev/null 2>&1 \
-; RUN:       | FileCheck %s
+; RUN:       | FileCheck %s --check-prefix=ENABLED
+; RUN: llc < %s -ppc-vsr-nums-as-vr -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr8 --ppc-enable-pipeliner \
+; RUN:       -pass-remarks-analysis=pipeliner -pass-remarks=pipeliner -o /dev/null 2>&1 \
+; RUN:       | FileCheck %s --allow-empty --check-prefix=DISABLED
 
 @x = dso_local local_unnamed_addr global <{ i32, i32, i32, i32, [1020 x i32] }> <{ i32 1, i32 2, i32 3, i32 4, [1020 x i32] zeroinitializer }>, align 4
 @y = dso_local global [1024 x i32] zeroinitializer, align 4
 
 define dso_local i32* @foo() local_unnamed_addr {
-;CHECK: Schedule found with Initiation Interval
-;CHECK: Pipelined succesfully!
+;ENABLED: Schedule found with Initiation Interval
+;ENABLED: Pipelined succesfully!
+;DISABLED-NOT: remark
 entry:
   %.pre = load i32, i32* getelementptr inbounds ([1024 x i32], [1024 x i32]* @y, i64 0, i64 0), align 4
   br label %for.body

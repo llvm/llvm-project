@@ -213,14 +213,16 @@ public:
   /// Index to the position where argument parsing should resume
   /// (even if the argument is missing values).
   ///
-  /// \param ArgSize The number of bytes taken up by the matched Option prefix
-  ///                and name. This is used to determine where joined values
-  ///                start.
-  Arg *accept(const ArgList &Args, unsigned &Index, unsigned ArgSize) const;
+  /// \p CurArg The argument to be matched. It may be shorter than the
+  /// underlying storage to represent a Joined argument.
+  /// \p GroupedShortOption If true, we are handling the fallback case of
+  /// parsing a prefix of the current argument as a short option.
+  Arg *accept(const ArgList &Args, StringRef CurArg, bool GroupedShortOption,
+              unsigned &Index) const;
 
 private:
-  Arg *acceptInternal(const ArgList &Args, unsigned &Index,
-                      unsigned ArgSize) const;
+  Arg *acceptInternal(const ArgList &Args, StringRef CurArg,
+                      unsigned &Index) const;
 
 public:
   void print(raw_ostream &O) const;

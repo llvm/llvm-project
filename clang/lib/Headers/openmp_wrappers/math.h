@@ -41,7 +41,9 @@
     device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
 
 #define __CUDA__
+#define __OPENMP_NVPTX__
 #include <__clang_cuda_math.h>
+#undef __OPENMP_NVPTX__
 #undef __CUDA__
 
 #pragma omp end declare variant

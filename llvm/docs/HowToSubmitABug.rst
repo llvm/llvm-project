@@ -10,6 +10,8 @@ If you're working with LLVM and run into a bug, we definitely want to know
 about it.  This document describes what you can do to increase the odds of
 getting it fixed quickly.
 
+🔒 If you believe that the bug is security related, please follow :ref:`report-security-issue`. 🔒
+
 Basically you have to do two things at a minimum.  First, decide whether
 the bug `crashes the compiler`_ (or an LLVM pass), or if the
 compiler is `miscompiling`_ the program (i.e., the

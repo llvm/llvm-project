@@ -52,9 +52,16 @@ struct Config {
   /// Controls how the compile command for the current file is determined.
   struct {
     // Edits to apply to the compile command, in sequence.
-    // FIXME: these functions need to be const-callable. For now, const_cast.
-    std::vector<llvm::unique_function<void(std::vector<std::string> &)>> Edits;
+    std::vector<llvm::unique_function<void(std::vector<std::string> &) const>>
+        Edits;
   } CompileFlags;
+
+  enum class BackgroundPolicy { Build, Skip };
+  /// Controls background-index behavior.
+  struct {
+    /// Whether this TU should be indexed.
+    BackgroundPolicy Background = BackgroundPolicy::Build;
+  } Index;
 };
 
 } // namespace clangd

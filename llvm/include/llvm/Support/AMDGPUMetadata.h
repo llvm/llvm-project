@@ -79,7 +79,8 @@ enum class ValueKind : uint8_t {
   Unknown                = 0xff
 };
 
-/// Value types.
+/// Value types. This is deprecated and only remains for compatibility parsing
+/// of old metadata.
 enum class ValueType : uint8_t {
   Struct  = 0,
   I8      = 1,
@@ -164,7 +165,7 @@ constexpr char Offset[] = "Offset";
 constexpr char Align[] = "Align";
 /// Key for Kernel::Arg::Metadata::mValueKind.
 constexpr char ValueKind[] = "ValueKind";
-/// Key for Kernel::Arg::Metadata::mValueType.
+/// Key for Kernel::Arg::Metadata::mValueType. (deprecated)
 constexpr char ValueType[] = "ValueType";
 /// Key for Kernel::Arg::Metadata::mPointeeAlign.
 constexpr char PointeeAlign[] = "PointeeAlign";
@@ -198,8 +199,6 @@ struct Metadata final {
   uint32_t mAlign = 0;
   /// Value kind. Required.
   ValueKind mValueKind = ValueKind::Unknown;
-  /// Value type. Required.
-  ValueType mValueType = ValueType::Unknown;
   /// Pointee alignment in bytes. Optional.
   uint32_t mPointeeAlign = 0;
   /// Address space qualifier. Optional.

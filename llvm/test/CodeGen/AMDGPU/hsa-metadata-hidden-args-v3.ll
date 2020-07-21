@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck --check-prefix=CHECK --check-prefix=GFX803 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK --check-prefix=GFX803 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
 
 ; CHECK:              ---
 ; CHECK:      amdhsa.kernels:
@@ -11,19 +11,16 @@
 ; CHECK-NEXT:         .offset:         0
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         8
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           b
 ; CHECK-NEXT:         .offset:         16
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK:          .name:           test0
 ; CHECK:          .symbol:         test0.kd
 define amdgpu_kernel void @test0(
@@ -44,23 +41,19 @@ entry:
 ; CHECK-NEXT:         .offset:         0
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         8
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           b
 ; CHECK-NEXT:         .offset:         16
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .offset:         24
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK:          .name:           test8
 ; CHECK:          .symbol:         test8.kd
 define amdgpu_kernel void @test8(
@@ -81,27 +74,22 @@ entry:
 ; CHECK-NEXT:         .offset:         0
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         8
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           b
 ; CHECK-NEXT:         .offset:         16
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .offset:         24
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         32
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK:          .name:           test16
 ; CHECK:          .symbol:         test16.kd
 define amdgpu_kernel void @test16(
@@ -122,31 +110,25 @@ entry:
 ; CHECK-NEXT:         .offset:         0
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         8
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           b
 ; CHECK-NEXT:         .offset:         16
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .offset:         24
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         32
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK:          .name:           test24
 ; CHECK:          .symbol:         test24.kd
 define amdgpu_kernel void @test24(
@@ -167,36 +149,29 @@ entry:
 ; CHECK-NEXT:         .offset:         0
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         8
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           b
 ; CHECK-NEXT:         .offset:         16
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .offset:         24
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         32
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK:          .name:           test32
 ; CHECK:          .symbol:         test32.kd
 define amdgpu_kernel void @test32(
@@ -217,46 +192,37 @@ entry:
 ; CHECK-NEXT:         .offset:         0
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         8
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           b
 ; CHECK-NEXT:         .offset:         16
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .offset:         24
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         32
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         56
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         64
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK:          .name:           test48
 ; CHECK:          .symbol:         test48.kd
 define amdgpu_kernel void @test48(
@@ -277,51 +243,41 @@ entry:
 ; CHECK-NEXT:         .offset:         0
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           a
 ; CHECK-NEXT:         .offset:         8
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           b
 ; CHECK-NEXT:         .offset:         16
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f16
 ; CHECK-NEXT:       - .offset:         24
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         32
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:         .value_type:     i64
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         56
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         64
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         72
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_multigrid_sync_arg
-; CHECK-NEXT:         .value_type:     i8
 ; CHECK:          .name:           test56
 ; CHECK:          .symbol:         test56.kd
 define amdgpu_kernel void @test56(

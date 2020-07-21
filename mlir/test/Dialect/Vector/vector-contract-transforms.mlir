@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -test-vector-contraction-conversion | FileCheck %s
 // RUN: mlir-opt %s -test-vector-contraction-conversion=vector-lower-matrix-intrinsics=1 | FileCheck %s --check-prefix=MATRIX
 // RUN: mlir-opt %s -test-vector-contraction-conversion=vector-outerproduct=1 | FileCheck %s --check-prefix=OUTERPRODUCT
+// RUN: mlir-opt %s -test-vector-contraction-conversion=vector-filter-outerproduct=1 | FileCheck %s --check-prefix=FILTEROUTERPRODUCT
 
 #dotp_accesses = [
   affine_map<(i) -> (i)>,
@@ -324,6 +325,53 @@ func @outerproduct_acc_int(%arg0: vector<2xi32>,
                            %arg2: vector<2x3xi32>) -> vector<2x3xi32> {
   %0 = vector.outerproduct %arg0, %arg1, %arg2 : vector<2xi32>, vector<3xi32>
   return %0: vector<2x3xi32>
+}
+
+// CHECK-LABEL: func @axpy_fp(
+// CHECK-SAME: %[[A:.*0]]: vector<16xf32>,
+// CHECK-SAME: %[[B:.*1]]: f32)
+// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xf32>
+// CHECK: %[[T1:.*]] = mulf %[[A]], %[[T0]] : vector<16xf32>
+// CHECK: return %[[T1]] : vector<16xf32>
+func @axpy_fp(%arg0: vector<16xf32>, %arg1: f32) -> vector<16xf32> {
+   %0 = vector.outerproduct %arg0, %arg1: vector<16xf32>, f32
+   return %0: vector<16xf32>
+}
+
+// CHECK-LABEL: func @axpy_fp_add(
+// CHECK-SAME: %[[A:.*0]]: vector<16xf32>,
+// CHECK-SAME: %[[B:.*1]]: f32,
+// CHECK-SAME: %[[C:.*2]]: vector<16xf32>)
+// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xf32>
+// CHECK: %[[T1:.*]] = vector.fma %[[A]], %[[T0]], %[[C]] : vector<16xf32>
+// CHECK: return %[[T1]] : vector<16xf32>
+func @axpy_fp_add(%arg0: vector<16xf32>, %arg1: f32, %arg2 : vector<16xf32>) -> vector<16xf32> {
+   %0 = vector.outerproduct %arg0, %arg1, %arg2: vector<16xf32>, f32
+   return %0: vector<16xf32>
+}
+
+// CHECK-LABEL: func @axpy_int(
+// CHECK-SAME: %[[A:.*0]]: vector<16xi32>,
+// CHECK-SAME: %[[B:.*1]]: i32)
+// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xi32>
+// CHECK: %[[T1:.*]] = muli %[[A]], %[[T0]] : vector<16xi32>
+// CHECK: return %[[T1]] : vector<16xi32>
+func @axpy_int(%arg0: vector<16xi32>, %arg1: i32) -> vector<16xi32> {
+   %0 = vector.outerproduct %arg0, %arg1: vector<16xi32>, i32
+   return %0: vector<16xi32>
+}
+
+// CHECK-LABEL: func @axpy_int_add(
+// CHECK-SAME: %[[A:.*0]]: vector<16xi32>,
+// CHECK-SAME: %[[B:.*1]]: i32,
+// CHECK-SAME: %[[C:.*2]]: vector<16xi32>)
+// CHECK: %[[T0:.*]] = splat %[[B]] : vector<16xi32>
+// CHECK: %[[T1:.*]] = muli %[[A]], %[[T0]] : vector<16xi32>
+// CHECK: %[[T2:.*]] = addi %[[T1]], %[[C]] : vector<16xi32>
+// CHECK: return %[[T2]] : vector<16xi32>
+func @axpy_int_add(%arg0: vector<16xi32>, %arg1: i32, %arg2: vector<16xi32>) -> vector<16xi32> {
+   %0 = vector.outerproduct %arg0, %arg1, %arg2: vector<16xi32>, i32
+   return %0: vector<16xi32>
 }
 
 // CHECK-LABEL: func @transpose23
@@ -982,3 +1030,33 @@ func @matmul_7(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<3x2
     : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
   return %0 : vector<3x2xf32>
 }
+
+// FILTEROUTERPRODUCT-LABEL: func @matmul_4_filtered
+// FILTEROUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<4x4xf32>,
+// FILTEROUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<4x4xf32>,
+// FILTEROUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<4x4xf32>
+//      FILTEROUTERPRODUCT: %[[c0:.*]] = vector.contract {{{.*}}} %[[A]], %[[B]], %[[C]]
+func @matmul_4_filtered(%arg0: vector<4x4xf32>, %arg1: vector<4x4xf32>, %arg2: vector<4x4xf32>)
+-> vector<4x4xf32>
+{
+  %0 = vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
+    : vector<4x4xf32>, vector<4x4xf32> into vector<4x4xf32>
+  return %0 : vector<4x4xf32>
+}
+
+// FILTEROUTERPRODUCT-LABEL: func @matmul_4_not_filtered
+// FILTEROUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<3x4xf32>,
+// FILTEROUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<4x4xf32>,
+// FILTEROUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x4xf32>
+//      FILTEROUTERPRODUCT: %[[c0:.*]] = vector.contract {{{.*}}} %[[A]], %[[B]], %[[C]]
+func @matmul_4_not_filtered(%arg0: vector<3x4xf32>, %arg1: vector<4x4xf32>, %arg2: vector<3x4xf32>)
+-> vector<3x4xf32>
+{
+  %0 = vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
+    : vector<3x4xf32>, vector<4x4xf32> into vector<3x4xf32>
+  return %0 : vector<3x4xf32>
+}
+
+
+
+

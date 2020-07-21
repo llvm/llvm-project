@@ -73,7 +73,8 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
         continue;
       auto *I = cast<Instruction>(V);
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
-      I->eraseFromParent();
+      if (!I->isTerminator())
+        I->eraseFromParent();
     }
 
     // No arguments to reduce
@@ -81,10 +82,9 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
       continue;
 
     std::set<int> ArgIndexesToKeep;
-    int ArgI = 0;
-    for (auto &Arg : F->args())
-      if (ArgsToKeep.count(&Arg))
-        ArgIndexesToKeep.insert(++ArgI);
+    for (auto &Arg : enumerate(F->args()))
+      if (ArgsToKeep.count(&Arg.value()))
+        ArgIndexesToKeep.insert(Arg.index());
 
     auto *ClonedFunc = CloneFunction(F, VMap);
     // In order to preserve function order, we move Clone after old Function

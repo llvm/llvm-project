@@ -857,6 +857,16 @@ struct DenseMapInfo<clang::DeclarationName> {
   }
 };
 
+template <> struct PointerLikeTypeTraits<clang::DeclarationName> {
+  static inline void *getAsVoidPointer(clang::DeclarationName P) {
+    return P.getAsOpaquePtr();
+  }
+  static inline clang::DeclarationName getFromVoidPointer(void *P) {
+    return clang::DeclarationName::getFromOpaquePtr(P);
+  }
+  static constexpr int NumLowBitsAvailable = 0;
+};
+
 } // namespace llvm
 
 // The definition of AssumedTemplateStorage is factored out of TemplateName to

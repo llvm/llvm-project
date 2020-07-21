@@ -111,3 +111,12 @@ TEST(MemChrTest, SingleRepeatedCharacterShouldReturnFirst) {
   // Should return original string since X is first character.
   ASSERT_STREQ(call_memchr(dups, 'X', size), dups);
 }
+
+TEST(MemChrTest, SignedCharacterFound) {
+  char c = -1;
+  const size_t size = 1;
+  char src[size] = {c};
+  const char *actual = call_memchr(src, c, size);
+  // Should find the first character 'c'.
+  ASSERT_EQ(actual[0], c);
+}

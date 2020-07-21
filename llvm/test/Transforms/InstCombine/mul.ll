@@ -247,8 +247,8 @@ define i32 @mul_bools_sext_use3(i1 %x, i1 %y) {
 
 define <3 x i32> @mul_bools_mixed_ext(<3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @mul_bools_mixed_ext(
-; CHECK-NEXT:    [[NARROW:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sext <3 x i1> [[NARROW]] to <3 x i32>
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext <3 x i1> [[MULBOOL]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[R]]
 ;
   %zx = zext <3 x i1> %x to <3 x i32>
@@ -261,8 +261,8 @@ define i32 @mul_bools_mixed_ext_use1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @mul_bools_mixed_ext_use1(
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[NARROW:%.*]] = and i1 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NARROW]] to i32
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[MULBOOL]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = sext i1 %x to i32
@@ -276,7 +276,8 @@ define i32 @mul_bools_mixed_ext_use2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @mul_bools_mixed_ext_use2(
 ; CHECK-NEXT:    [[SY:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SY]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[X:%.*]], i32 [[SY]], i32 0
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[MULBOOL]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i1 %x to i32
@@ -855,4 +856,13 @@ define <4 x i32> @combine_mul_nabs_v4i32(<4 x i32> %0) {
   %r = select <4 x i1> %c, <4 x i32> %0, <4 x i32> %s
   %m = mul <4 x i32> %r, %r
   ret <4 x i32> %m
+}
+
+; z * splat(0) = splat(0), even for scalable vectors
+define <vscale x 2 x i64> @mul_scalable_splat_zero(<vscale x 2 x i64> %z) {
+; CHECK-LABEL: @mul_scalable_splat_zero(
+; CHECK-NEXT:    ret <vscale x 2 x i64> zeroinitializer
+  %shuf = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 0, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %t3 = mul <vscale x 2 x i64> %shuf, %z
+  ret <vscale x 2 x i64> %t3
 }

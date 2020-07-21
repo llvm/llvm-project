@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=powerpc64-pc-linux -filetype=obj %s -o - | \
-// RUN: llvm-readobj -r | FileCheck %s
+// RUN: llvm-readobj -r - | FileCheck %s
 
 // Test correct relocation generation for thread-local storage
 // using the initial-exec model and integrated assembly.

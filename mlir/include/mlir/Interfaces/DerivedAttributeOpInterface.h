@@ -15,8 +15,7 @@
 
 #include "mlir/IR/OpDefinition.h"
 
-namespace mlir {
+/// Include the generated interface declarations.
 #include "mlir/Interfaces/DerivedAttributeOpInterface.h.inc"
-} // namespace mlir
 
 #endif // MLIR_INTERFACES_DERIVEDATTRIBUTEOPINTERFACE_H_

@@ -467,6 +467,11 @@ public:
     return Ty ? Ty : (arg_begin() + ArgNo)->getType()->getPointerElementType();
   }
 
+  /// Extract the byref type for a parameter.
+  Type *getParamByRefType(unsigned ArgNo) const {
+    return AttributeSets.getParamByRefType(ArgNo);
+  }
+
   /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   /// @param i AttributeList index, referring to a return value or argument.
@@ -830,9 +835,11 @@ public:
 
   /// hasAddressTaken - returns true if there are any uses of this function
   /// other than direct calls or invokes to it, or blockaddress expressions.
-  /// Optionally passes back an offending user for diagnostic purposes.
+  /// Optionally passes back an offending user for diagnostic purposes and
+  /// ignores callback uses.
   ///
-  bool hasAddressTaken(const User** = nullptr) const;
+  bool hasAddressTaken(const User ** = nullptr,
+                       bool IgnoreCallbackUses = false) const;
 
   /// isDefTriviallyDead - Return true if it is trivially safe to remove
   /// this function definition from the module (because it isn't externally

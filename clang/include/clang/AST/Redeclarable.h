@@ -370,6 +370,7 @@ public:
 
 private:
   friend struct llvm::DenseMapInfo<CanonicalDeclPtr<decl_type>>;
+  friend struct llvm::PointerLikeTypeTraits<CanonicalDeclPtr<decl_type>>;
 
   decl_type *Ptr = nullptr;
 };
@@ -405,6 +406,20 @@ struct DenseMapInfo<clang::CanonicalDeclPtr<decl_type>> {
                       const CanonicalDeclPtr &RHS) {
     return BaseInfo::isEqual(LHS, RHS);
   }
+};
+
+template <typename decl_type>
+struct PointerLikeTypeTraits<clang::CanonicalDeclPtr<decl_type>> {
+  static inline void *getAsVoidPointer(clang::CanonicalDeclPtr<decl_type> P) {
+    return P.Ptr;
+  }
+  static inline clang::CanonicalDeclPtr<decl_type> getFromVoidPointer(void *P) {
+    clang::CanonicalDeclPtr<decl_type> C;
+    C.Ptr = PointerLikeTypeTraits<decl_type *>::getFromVoidPtr(P);
+    return C;
+  }
+  static constexpr int NumLowBitsAvailable =
+      PointerLikeTypeTraits<decl_type *>::NumLowBitsAvailable;
 };
 
 } // namespace llvm

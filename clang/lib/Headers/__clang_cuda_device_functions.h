@@ -10,7 +10,7 @@
 #ifndef __CLANG_CUDA_DEVICE_FUNCTIONS_H__
 #define __CLANG_CUDA_DEVICE_FUNCTIONS_H__
 
-#ifndef _OPENMP
+#ifndef __OPENMP_NVPTX__
 #if CUDA_VERSION < 9000
 #error This file is intended to be used with CUDA-9+ only.
 #endif
@@ -20,7 +20,7 @@
 // we implement in this file. We need static in order to avoid emitting unused
 // functions and __forceinline__ helps inlining these wrappers at -O1.
 #pragma push_macro("__DEVICE__")
-#ifdef _OPENMP
+#ifdef __OPENMP_NVPTX__
 #define __DEVICE__ static __attribute__((always_inline, nothrow))
 #else
 #define __DEVICE__ static __device__ __forceinline__
@@ -1466,14 +1466,14 @@ __DEVICE__ unsigned int __vsubus4(unsigned int __a, unsigned int __b) {
 
 // For OpenMP we require the user to include <time.h> as we need to know what
 // clock_t is on the system.
-#ifndef _OPENMP
+#ifndef __OPENMP_NVPTX__
 __DEVICE__ /* clock_t= */ int clock() { return __nvvm_read_ptx_sreg_clock(); }
 #endif
 __DEVICE__ long long clock64() { return __nvvm_read_ptx_sreg_clock64(); }
 
 // These functions shouldn't be declared when including this header
 // for math function resolution purposes.
-#ifndef _OPENMP
+#ifndef __OPENMP_NVPTX__
 __DEVICE__ void *memcpy(void *__a, const void *__b, size_t __c) {
   return __builtin_memcpy(__a, __b, __c);
 }

@@ -23,6 +23,7 @@ def DerivedAttributeOpInterface : OpInterface<"DerivedAttributeOpInterface"> {
     from information of the operation. ODS generates convenience accessors for
     derived attributes and can be used to simplify translations.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     StaticInterfaceMethod<

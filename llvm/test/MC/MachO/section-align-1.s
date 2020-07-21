@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj --symbols --file-headers -S --macho-indirect-symbols --macho-dysymtab --macho-segment | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj --symbols --file-headers -S --macho-indirect-symbols --macho-dysymtab --macho-segment - | FileCheck %s
 
 name:
         .byte 0

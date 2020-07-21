@@ -351,7 +351,8 @@
 // RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-arcs -Xlinker -exported_symbols_list -Xlinker /dev/null -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
-// GCOV_EXPORT: "-exported_symbol" "___gcov_flush"
+// GCOV_EXPORT: "-exported_symbol" "___gcov_dump"
+// GCOV_EXPORT: "-exported_symbol" "___gcov_reset"
 //
 // Check that we can pass the outliner down to the linker.
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \

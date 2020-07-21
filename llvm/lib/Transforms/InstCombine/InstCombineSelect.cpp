@@ -2297,7 +2297,8 @@ static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
 /// funnel shift intrinsic. Example:
 /// rotl32(a, b) --> (b == 0 ? a : ((a >> (32 - b)) | (a << b)))
 ///              --> call llvm.fshl.i32(a, a, b)
-static Instruction *foldSelectRotate(SelectInst &Sel) {
+static Instruction *foldSelectRotate(SelectInst &Sel,
+                                     InstCombiner::BuilderTy &Builder) {
   // The false value of the select must be a rotate of the true value.
   Value *Or0, *Or1;
   if (!match(Sel.getFalseValue(), m_OneUse(m_Or(m_Value(Or0), m_Value(Or1)))))
@@ -2305,8 +2306,10 @@ static Instruction *foldSelectRotate(SelectInst &Sel) {
 
   Value *TVal = Sel.getTrueValue();
   Value *SA0, *SA1;
-  if (!match(Or0, m_OneUse(m_LogicalShift(m_Specific(TVal), m_Value(SA0)))) ||
-      !match(Or1, m_OneUse(m_LogicalShift(m_Specific(TVal), m_Value(SA1)))))
+  if (!match(Or0, m_OneUse(m_LogicalShift(m_Specific(TVal),
+                                          m_ZExtOrSelf(m_Value(SA0))))) ||
+      !match(Or1, m_OneUse(m_LogicalShift(m_Specific(TVal),
+                                          m_ZExtOrSelf(m_Value(SA1))))))
     return nullptr;
 
   auto ShiftOpcode0 = cast<BinaryOperator>(Or0)->getOpcode();
@@ -2344,6 +2347,7 @@ static Instruction *foldSelectRotate(SelectInst &Sel) {
                 (ShAmt == SA1 && ShiftOpcode1 == BinaryOperator::Shl);
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
   Function *F = Intrinsic::getDeclaration(Sel.getModule(), IID, Sel.getType());
+  ShAmt = Builder.CreateZExt(ShAmt, Sel.getType());
   return IntrinsicInst::Create(F, { TVal, TVal, ShAmt });
 }
 
@@ -2443,11 +2447,11 @@ Instruction *InstCombiner::foldVectorSelect(SelectInst &Sel) {
   return nullptr;
 }
 
-static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
-                                    InstCombiner::BuilderTy &Builder) {
+static Instruction *foldSelectToPhiImpl(SelectInst &Sel, BasicBlock *BB,
+                                        const DominatorTree &DT,
+                                        InstCombiner::BuilderTy &Builder) {
   // Find the block's immediate dominator that ends with a conditional branch
   // that matches select's condition (maybe inverted).
-  BasicBlock *BB = Sel.getParent();
   auto *IDomNode = DT[BB]->getIDom();
   if (!IDomNode)
     return nullptr;
@@ -2467,6 +2471,10 @@ static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
     IfTrue = Sel.getFalseValue();
     IfFalse = Sel.getTrueValue();
   } else
+    return nullptr;
+
+  // Make sure the branches are actually different.
+  if (TrueSucc == FalseSucc)
     return nullptr;
 
   // We want to replace select %cond, %a, %b with a phi that takes value %a
@@ -2498,6 +2506,21 @@ static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
     PN->addIncoming(Inputs[Pred], Pred);
   PN->takeName(&Sel);
   return PN;
+}
+
+static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
+                                    InstCombiner::BuilderTy &Builder) {
+  // Try to replace this select with Phi in one of these blocks.
+  SmallSetVector<BasicBlock *, 4> CandidateBlocks;
+  CandidateBlocks.insert(Sel.getParent());
+  for (Value *V : Sel.operands())
+    if (auto *I = dyn_cast<Instruction>(V))
+      CandidateBlocks.insert(I->getParent());
+
+  for (BasicBlock *BB : CandidateBlocks)
+    if (auto *PN = foldSelectToPhiImpl(Sel, BB, DT, Builder))
+      return PN;
+  return nullptr;
 }
 
 Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
@@ -2941,7 +2964,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   if (Instruction *Select = foldSelectBinOpIdentity(SI, TLI, *this))
     return Select;
 
-  if (Instruction *Rot = foldSelectRotate(SI))
+  if (Instruction *Rot = foldSelectRotate(SI, Builder))
     return Rot;
 
   if (Instruction *Copysign = foldSelectToCopysign(SI, Builder))

@@ -44,16 +44,39 @@ define i32 @load_range_single_volatile(i32* %p) {
   ret i32 %v
 }
 
-define void @load_nonnull(i32** %p) {
+define void @load_nonnull(i32** %p, i32** %p2) {
 ; CHECK-LABEL: @load_nonnull(
 ; CHECK-NEXT:    [[V:%.*]] = load i32*, i32** [[P:%.*]], align 8, !nonnull !2
+; CHECK-NEXT:    [[V2:%.*]] = load i32*, i32** [[P2:%.*]], align 8, !nonnull !2
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32* [[V]], null
 ; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32* [[V]], null
+; CHECK-NEXT:    call void @use(i1 [[C2]])
+; CHECK-NEXT:    [[C3:%.*]] = icmp ne i32* null, [[V]]
+; CHECK-NEXT:    call void @use(i1 [[C3]])
+; CHECK-NEXT:    [[C4:%.*]] = icmp eq i32* null, [[V]]
+; CHECK-NEXT:    call void @use(i1 [[C4]])
+; CHECK-NEXT:    [[C5:%.*]] = icmp eq i32* [[V]], [[V2]]
+; CHECK-NEXT:    call void @use(i1 [[C5]])
+; CHECK-NEXT:    [[C6:%.*]] = icmp ne i32* [[V]], [[V2]]
+; CHECK-NEXT:    call void @use(i1 [[C6]])
 ; CHECK-NEXT:    ret void
 ;
   %v = load i32*, i32** %p, !nonnull !{}
+  %v2 = load i32*, i32** %p2, !nonnull !{}
   %c1 = icmp ne i32* %v, null
   call void @use(i1 %c1)
+  %c2 = icmp eq i32* %v, null
+  call void @use(i1 %c2)
+  %c3 = icmp ne i32* null, %v
+  call void @use(i1 %c3)
+  %c4 = icmp eq i32* null, %v
+  call void @use(i1 %c4)
+  ; There is no particular relationship between two nonnull values.
+  %c5 = icmp eq i32* %v, %v2
+  call void @use(i1 %c5)
+  %c6 = icmp ne i32* %v, %v2
+  call void @use(i1 %c6)
   ret void
 }
 

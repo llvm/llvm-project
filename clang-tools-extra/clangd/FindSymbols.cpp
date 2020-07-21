@@ -136,17 +136,11 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
   SourceLocation NameLoc = nameLocation(ND, SM);
-  // getFileLoc is a good choice for us, but we also need to make sure
-  // sourceLocToPosition won't switch files, so we call getSpellingLoc on top of
-  // that to make sure it does not switch files.
-  // FIXME: sourceLocToPosition should not switch files!
   SourceLocation BeginLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
   SourceLocation EndLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getEndLoc()));
-  if (NameLoc.isInvalid() || BeginLoc.isInvalid() || EndLoc.isInvalid())
-    return llvm::None;
-
-  if (!SM.isWrittenInMainFile(NameLoc) || !SM.isWrittenInMainFile(BeginLoc) ||
-      !SM.isWrittenInMainFile(EndLoc))
+  const auto SymbolRange =
+      toHalfOpenFileRange(SM, Ctx.getLangOpts(), {BeginLoc, EndLoc});
+  if (!SymbolRange)
     return llvm::None;
 
   Position NameBegin = sourceLocToPosition(SM, NameLoc);
@@ -162,8 +156,8 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   SI.name = printName(Ctx, ND);
   SI.kind = SK;
   SI.deprecated = ND.isDeprecated();
-  SI.range =
-      Range{sourceLocToPosition(SM, BeginLoc), sourceLocToPosition(SM, EndLoc)};
+  SI.range = Range{sourceLocToPosition(SM, SymbolRange->getBegin()),
+                   sourceLocToPosition(SM, SymbolRange->getEnd())};
   SI.selectionRange = Range{NameBegin, NameEnd};
   if (!SI.range.contains(SI.selectionRange)) {
     // 'selectionRange' must be contained in 'range', so in cases where clang

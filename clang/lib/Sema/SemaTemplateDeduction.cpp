@@ -355,7 +355,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
       TemplateArgument Merged = checkDeducedTemplateArguments(
           Context, DeducedTemplateArgument(*XA, X.wasDeducedFromArrayBound()),
           DeducedTemplateArgument(*YA, Y.wasDeducedFromArrayBound()));
-      if (Merged.isNull())
+      if (Merged.isNull() && !(XA->isNull() && YA->isNull()))
         return DeducedTemplateArgument();
       NewPack.push_back(Merged);
     }

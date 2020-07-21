@@ -56,6 +56,7 @@ enum ActionType {
   GenAutomata,
   GenDirectivesEnumDecl,
   GenDirectivesEnumImpl,
+  GenDirectivesEnumGen,
 };
 
 namespace llvm {
@@ -132,9 +133,11 @@ cl::opt<ActionType> Action(
                    "Generate llvm-exegesis tables"),
         clEnumValN(GenAutomata, "gen-automata", "Generate generic automata"),
         clEnumValN(GenDirectivesEnumDecl, "gen-directive-decl",
-                   "Generate directive related declaration code"),
+                   "Generate directive related declaration code (header file)"),
         clEnumValN(GenDirectivesEnumImpl, "gen-directive-impl",
-                   "Generate directive related implementation code")));
+                   "Generate directive related implementation code"),
+        clEnumValN(GenDirectivesEnumGen, "gen-directive-gen",
+                   "Generate directive related implementation code part")));
 
 cl::OptionCategory PrintEnumsCat("Options for -print-enums");
 cl::opt<std::string> Class("class", cl::desc("Print Enum list for this class"),
@@ -264,6 +267,9 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenDirectivesEnumImpl:
     EmitDirectivesImpl(Records, OS);
+    break;
+  case GenDirectivesEnumGen:
+    EmitDirectivesGen(Records, OS);
     break;
   }
 

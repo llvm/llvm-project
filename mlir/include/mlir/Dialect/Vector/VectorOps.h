@@ -19,7 +19,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/VectorUnrollInterface.h"
+#include "mlir/Interfaces/VectorInterfaces.h"
 
 namespace mlir {
 class MLIRContext;
@@ -53,8 +53,6 @@ enum class VectorContractLowering {
   Matmul = 1,
   /// Lower to `vector.outerproduct`.
   OuterProduct = 2,
-  /// Lower to series of AXPY chained through FMA.
-  AXPY = 3,
 };
 /// Enum to control the lowering of `vector.transpose` operations.
 enum class VectorTransposeLowering {

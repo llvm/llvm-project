@@ -169,8 +169,9 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
 
-  if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
-    data_sp = std::move(full_sp);
+  if (data_sp->GetByteSize() < length)
+    if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
+      data_sp = std::move(full_sp);
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
       toStringRef(data_sp->GetData()), file.GetFilename().GetStringRef()));
 
@@ -539,12 +540,9 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   if (!size)
     return {};
 
-  if (m_file) {
-    // A bit of a hack, but we intend to write to this buffer, so we can't
-    // mmap it.
-    auto buffer_sp = MapFileData(m_file, size, offset);
-    return DataExtractor(buffer_sp, GetByteOrder(), GetAddressByteSize());
-  }
+  if (m_data.ValidOffsetForDataOfSize(offset, size))
+    return DataExtractor(m_data, offset, size);
+
   ProcessSP process_sp(m_process_wp.lock());
   DataExtractor data;
   if (process_sp) {
@@ -562,13 +560,11 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
 }
 
 DataExtractor ObjectFilePECOFF::ReadImageDataByRVA(uint32_t rva, size_t size) {
-  if (m_file) {
-    Address addr = GetAddress(rva);
-    SectionSP sect = addr.GetSection();
-    if (!sect)
-      return {};
-    rva = sect->GetFileOffset() + addr.GetOffset();
-  }
+  Address addr = GetAddress(rva);
+  SectionSP sect = addr.GetSection();
+  if (!sect)
+    return {};
+  rva = sect->GetFileOffset() + addr.GetOffset();
 
   return ReadImageData(rva, size);
 }
@@ -650,12 +646,6 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
           DataExtractor strtab_data = ReadImageData(
               m_coff_header.symoff + symbol_data_size, strtab_size);
 
-          // First 4 bytes should be zeroed after strtab_size has been read,
-          // because it is used as offset 0 to encode a NULL string.
-          uint32_t *strtab_data_start = const_cast<uint32_t *>(
-              reinterpret_cast<const uint32_t *>(strtab_data.GetDataStart()));
-          strtab_data_start[0] = 0;
-
           offset = 0;
           std::string symbol_name;
           Symbol *symbols = m_symtab_up->Resize(num_syms);
@@ -696,7 +686,7 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
 
             if (symbol.naux > 0) {
               i += symbol.naux;
-              offset += symbol_size;
+              offset += symbol.naux * symbol_size;
             }
           }
         }

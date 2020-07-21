@@ -41,10 +41,13 @@ using ast_type_traits::DynTypedNode;
 void recordMetrics(const SelectionTree &S) {
   static constexpr trace::Metric SelectionUsedRecovery(
       "selection_recovery", trace::Metric::Distribution);
+  static constexpr trace::Metric RecoveryType("selection_recovery_type",
+                                              trace::Metric::Distribution);
   const auto *Common = S.commonAncestor();
   for (const auto *N = Common; N; N = N->Parent) {
-    if (N->ASTNode.get<RecoveryExpr>()) {
+    if (const auto *RE = N->ASTNode.get<RecoveryExpr>()) {
       SelectionUsedRecovery.record(1); // used recovery ast.
+      RecoveryType.record(RE->isTypeDependent() ? 0 : 1);
       return;
     }
   }
@@ -217,14 +220,26 @@ public:
         SelFirst, AllSpelledTokens.end(), [&](const syntax::Token &Tok) {
           return SM.getFileOffset(Tok.location()) < SelEnd;
         });
+    auto Sel = llvm::makeArrayRef(SelFirst, SelLimit);
+    // Find which of these are preprocessed to nothing and should be ignored.
+    std::vector<bool> PPIgnored(Sel.size(), false);
+    for (const syntax::TokenBuffer::Expansion &X :
+         Buf.expansionsOverlapping(Sel)) {
+      if (X.Expanded.empty()) {
+        for (const syntax::Token &Tok : X.Spelled) {
+          if (&Tok >= SelFirst && &Tok < SelLimit)
+            PPIgnored[&Tok - SelFirst] = true;
+        }
+      }
+    }
     // Precompute selectedness and offset for selected spelled tokens.
-    for (const syntax::Token *T = SelFirst; T < SelLimit; ++T) {
-      if (shouldIgnore(*T))
+    for (unsigned I = 0; I < Sel.size(); ++I) {
+      if (shouldIgnore(Sel[I]) || PPIgnored[I])
         continue;
       SpelledTokens.emplace_back();
       Tok &S = SpelledTokens.back();
-      S.Offset = SM.getFileOffset(T->location());
-      if (S.Offset >= SelBegin && S.Offset + T->length() <= SelEnd)
+      S.Offset = SM.getFileOffset(Sel[I].location());
+      if (S.Offset >= SelBegin && S.Offset + Sel[I].length() <= SelEnd)
         S.Selected = SelectionTree::Complete;
       else
         S.Selected = SelectionTree::Partial;

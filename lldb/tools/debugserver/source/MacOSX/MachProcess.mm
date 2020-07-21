@@ -780,11 +780,11 @@ bool MachProcess::GetMachOInformationFromMemory(
     if (DeploymentInfo deployment_info = GetDeploymentInfo(lc, load_cmds_p)) {
       // Simulator support. If the platform is ambiguous, use the dyld info.
       if (deployment_info.maybe_simulator) {
-        // If dyld doesn't return a platform, use a heuristic.
-#if (defined(__x86_64__) || defined(__i386__))
-        // If we are running on Intel macOS, it is safe to assume
-        // this is really a back-deploying simulator binary.
         if (deployment_info.maybe_simulator) {
+#if (defined(__x86_64__) || defined(__i386__))
+          // If dyld doesn't return a platform, use a heuristic.
+          // If we are running on Intel macOS, it is safe to assume
+          // this is really a back-deploying simulator binary.
           switch (deployment_info.platform) {
           case PLATFORM_IOS:
             deployment_info.platform = PLATFORM_IOSSIMULATOR;
@@ -797,12 +797,12 @@ bool MachProcess::GetMachOInformationFromMemory(
             break;
           }
 #else
-        // On an Apple Silicon macOS host, there is no
-        // ambiguity. The only binaries that use legacy load
-        // commands are back-deploying native iOS binaries. All
-        // simulator binaries use the newer, unambiguous
-        // LC_BUILD_VERSION load commands.
-        deployment_info.maybe_simulator = false;
+          // On an Apple Silicon macOS host, there is no
+          // ambiguity. The only binaries that use legacy load
+          // commands are back-deploying native iOS binaries. All
+          // simulator binaries use the newer, unambiguous
+          // LC_BUILD_VERSION load commands.
+          deployment_info.maybe_simulator = false;
 #endif
         }
       }

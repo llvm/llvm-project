@@ -191,9 +191,9 @@ define amdgpu_kernel void @store_flat_i8_max_offset_p1(i8* %fptr, i8 %x) #0 {
 ; CHECK-LABEL: {{^}}store_flat_i8_neg_offset:
 ; CIVI: flat_store_byte v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}{{$}}
 
-; GFX9: v_add_co_u32_e32 v{{[0-9]+}}, vcc, 0xfffff000, v
+; GFX9: v_add_co_u32_e64 v{{[0-9]+}}, vcc, -2, s
 ; GFX9: v_addc_co_u32_e32 v{{[0-9]+}}, vcc, -1,
-; GFX9: flat_store_byte v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:4094{{$}}
+; GFX9: flat_store_byte v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @store_flat_i8_neg_offset(i8* %fptr, i8 %x) #0 {
   %fptr.offset = getelementptr inbounds i8, i8* %fptr, i64 -2
   store volatile i8 %x, i8* %fptr.offset
@@ -220,9 +220,9 @@ define amdgpu_kernel void @load_flat_i8_max_offset_p1(i8* %fptr) #0 {
 ; CHECK-LABEL: {{^}}load_flat_i8_neg_offset:
 ; CIVI: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}{{$}}
 
-; GFX9: v_add_co_u32_e32 v{{[0-9]+}}, vcc, 0xfffff000, v
+; GFX9: v_add_co_u32_e64 v{{[0-9]+}}, vcc, -2, s
 ; GFX9: v_addc_co_u32_e32 v{{[0-9]+}}, vcc, -1,
-; GFX9: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}} offset:4094{{$}}
+; GFX9: flat_load_ubyte v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}{{$}}
 define amdgpu_kernel void @load_flat_i8_neg_offset(i8* %fptr) #0 {
   %fptr.offset = getelementptr inbounds i8, i8* %fptr, i64 -2
   %val = load volatile i8, i8* %fptr.offset

@@ -796,23 +796,23 @@ define void @arm_fir_f32_1_4_mve(%struct.arm_fir_instance_f32* nocapture readonl
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    ldrh r5, [r0]
-; CHECK-NEXT:    ldr.w r12, [r0, #4]
+; CHECK-NEXT:    ldr.w r9, [r0, #4]
 ; CHECK-NEXT:    subs r6, r5, #1
 ; CHECK-NEXT:    cmp r6, #3
 ; CHECK-NEXT:    bhi .LBB15_6
 ; CHECK-NEXT:  @ %bb.1: @ %if.then
 ; CHECK-NEXT:    ldr r7, [r0, #8]
-; CHECK-NEXT:    add.w r4, r12, r6, lsl #1
+; CHECK-NEXT:    add.w r4, r9, r6, lsl #1
 ; CHECK-NEXT:    lsr.w lr, r3, #2
 ; CHECK-NEXT:    ldrh.w r8, [r7, #6]
-; CHECK-NEXT:    ldrh.w r9, [r7, #4]
+; CHECK-NEXT:    ldrh.w r12, [r7, #4]
 ; CHECK-NEXT:    ldrh r6, [r7, #2]
 ; CHECK-NEXT:    ldrh r7, [r7]
 ; CHECK-NEXT:    wls lr, lr, .LBB15_5
 ; CHECK-NEXT:  @ %bb.2: @ %while.body.lr.ph
 ; CHECK-NEXT:    str r5, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    bic r5, r3, #3
-; CHECK-NEXT:    add.w r10, r12, #2
+; CHECK-NEXT:    add.w r10, r9, #2
 ; CHECK-NEXT:    str r5, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    add.w r5, r2, r5, lsl #1
 ; CHECK-NEXT:    str r5, [sp, #4] @ 4-byte Spill
@@ -828,7 +828,7 @@ define void @arm_fir_f32_1_4_mve(%struct.arm_fir_instance_f32* nocapture readonl
 ; CHECK-NEXT:    vmul.f16 q0, q0, r7
 ; CHECK-NEXT:    vfma.f16 q0, q1, r6
 ; CHECK-NEXT:    vldrw.u32 q1, [r5]
-; CHECK-NEXT:    vfma.f16 q0, q1, r9
+; CHECK-NEXT:    vfma.f16 q0, q1, r12
 ; CHECK-NEXT:    vldrw.u32 q1, [r10, #4]
 ; CHECK-NEXT:    add.w r10, r10, #8
 ; CHECK-NEXT:    vfma.f16 q0, q1, r8
@@ -838,7 +838,7 @@ define void @arm_fir_f32_1_4_mve(%struct.arm_fir_instance_f32* nocapture readonl
 ; CHECK-NEXT:    ldr r2, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r5, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    add.w r12, r12, r2, lsl #1
+; CHECK-NEXT:    add.w r9, r9, r2, lsl #1
 ; CHECK-NEXT:    add.w r1, r1, r2, lsl #1
 ; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:  .LBB15_5: @ %while.end
@@ -847,35 +847,35 @@ define void @arm_fir_f32_1_4_mve(%struct.arm_fir_instance_f32* nocapture readonl
 ; CHECK-NEXT:    vctp.16 lr
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrht.16 q0, [r4]
-; CHECK-NEXT:    vldrw.u32 q0, [r12]
-; CHECK-NEXT:    add.w r1, r12, #2
+; CHECK-NEXT:    vldrw.u32 q0, [r9]
+; CHECK-NEXT:    add.w r1, r9, #2
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    add.w r1, r12, #6
+; CHECK-NEXT:    add.w r1, r9, #6
 ; CHECK-NEXT:    vmul.f16 q0, q0, r7
 ; CHECK-NEXT:    vfma.f16 q0, q1, r6
-; CHECK-NEXT:    vldrw.u32 q1, [r12, #4]
-; CHECK-NEXT:    vfma.f16 q0, q1, r9
+; CHECK-NEXT:    vldrw.u32 q1, [r9, #4]
+; CHECK-NEXT:    vfma.f16 q0, q1, r12
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r8
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrht.16 q0, [r2]
-; CHECK-NEXT:    ldr.w r12, [r0, #4]
+; CHECK-NEXT:    ldr.w r9, [r0, #4]
 ; CHECK-NEXT:  .LBB15_6: @ %if.end
-; CHECK-NEXT:    add.w r0, r12, r3, lsl #1
+; CHECK-NEXT:    add.w r0, r9, r3, lsl #1
 ; CHECK-NEXT:    lsr.w lr, r5, #2
 ; CHECK-NEXT:    wls lr, lr, .LBB15_10
 ; CHECK-NEXT:  @ %bb.7: @ %while.body51.preheader
 ; CHECK-NEXT:    bic r2, r5, #3
 ; CHECK-NEXT:    adds r1, r2, r3
-; CHECK-NEXT:    mov r3, r12
-; CHECK-NEXT:    add.w r1, r12, r1, lsl #1
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    add.w r1, r9, r1, lsl #1
 ; CHECK-NEXT:  .LBB15_8: @ %while.body51
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #8
 ; CHECK-NEXT:    vstrb.8 q0, [r3], #8
 ; CHECK-NEXT:    le lr, .LBB15_8
 ; CHECK-NEXT:  @ %bb.9: @ %while.end55.loopexit
-; CHECK-NEXT:    add.w r12, r12, r2, lsl #1
+; CHECK-NEXT:    add.w r9, r9, r2, lsl #1
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:  .LBB15_10: @ %while.end55
 ; CHECK-NEXT:    ands r1, r5, #3
@@ -884,7 +884,7 @@ define void @arm_fir_f32_1_4_mve(%struct.arm_fir_instance_f32* nocapture readonl
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vctp.16 r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r12]
+; CHECK-NEXT:    vstrht.16 q0, [r9]
 ; CHECK-NEXT:  .LBB15_12: @ %if.end61
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}

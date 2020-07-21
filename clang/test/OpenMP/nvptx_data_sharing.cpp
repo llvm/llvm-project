@@ -55,7 +55,7 @@ void test_ds(){
 // CK1: [[A:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[GLOBALSTACK2]], i32 0, i32 0
 // CK1: [[B:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[GLOBALSTACK2]], i32 0, i32 1
 // CK1: store i32 10, i32* [[A]]
-// CK1: call void @__kmpc_kernel_prepare_parallel({{.*}}, i16 1)
+// CK1: call void @__kmpc_kernel_prepare_parallel({{.*}})
 // CK1: call void @__kmpc_begin_sharing_variables(i8*** [[SHAREDARGS1]], i64 1)
 // CK1: [[SHARGSTMP1:%.+]] = load i8**, i8*** [[SHAREDARGS1]]
 // CK1: [[SHARGSTMP2:%.+]] = getelementptr inbounds i8*, i8** [[SHARGSTMP1]], i64 0
@@ -65,7 +65,7 @@ void test_ds(){
 // CK1: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CK1: call void @__kmpc_end_sharing_variables()
 // CK1: store i32 100, i32* [[B]]
-// CK1: call void @__kmpc_kernel_prepare_parallel({{.*}}, i16 1)
+// CK1: call void @__kmpc_kernel_prepare_parallel({{.*}})
 // CK1: call void @__kmpc_begin_sharing_variables(i8*** [[SHAREDARGS2]], i64 2)
 // CK1: [[SHARGSTMP3:%.+]] = load i8**, i8*** [[SHAREDARGS2]]
 // CK1: [[SHARGSTMP4:%.+]] = getelementptr inbounds i8*, i8** [[SHARGSTMP3]], i64 0

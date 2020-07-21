@@ -1,6 +1,6 @@
 ; Verify that the .toc section is aligned on an 8-byte boundary.
 
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -filetype=obj -o - | llvm-readobj --sections | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -filetype=obj -o - | llvm-readobj --sections - | FileCheck %s
 
 define void @test(i32* %a) {
 entry:

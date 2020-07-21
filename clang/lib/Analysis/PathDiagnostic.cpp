@@ -327,6 +327,10 @@ static Optional<bool> comparePath(const PathPieces &X, const PathPieces &Y) {
 }
 
 static bool compareCrossTUSourceLocs(FullSourceLoc XL, FullSourceLoc YL) {
+  if (XL.isInvalid() && YL.isValid())
+    return true;
+  if (XL.isValid() && YL.isInvalid())
+    return false;
   std::pair<FileID, unsigned> XOffs = XL.getDecomposedLoc();
   std::pair<FileID, unsigned> YOffs = YL.getDecomposedLoc();
   const SourceManager &SM = XL.getManager();
@@ -349,6 +353,10 @@ static bool compare(const PathDiagnostic &X, const PathDiagnostic &Y) {
   FullSourceLoc YL = Y.getLocation().asLocation();
   if (XL != YL)
     return compareCrossTUSourceLocs(XL, YL);
+  FullSourceLoc XUL = X.getUniqueingLoc().asLocation();
+  FullSourceLoc YUL = Y.getUniqueingLoc().asLocation();
+  if (XUL != YUL)
+    return compareCrossTUSourceLocs(XUL, YUL);
   if (X.getBugType() != Y.getBugType())
     return X.getBugType() < Y.getBugType();
   if (X.getCategory() != Y.getCategory())
@@ -357,20 +365,27 @@ static bool compare(const PathDiagnostic &X, const PathDiagnostic &Y) {
     return X.getVerboseDescription() < Y.getVerboseDescription();
   if (X.getShortDescription() != Y.getShortDescription())
     return X.getShortDescription() < Y.getShortDescription();
-  if (X.getDeclWithIssue() != Y.getDeclWithIssue()) {
-    const Decl *XD = X.getDeclWithIssue();
-    if (!XD)
+  auto CompareDecls = [&XL](const Decl *D1, const Decl *D2) -> Optional<bool> {
+    if (D1 == D2)
+      return None;
+    if (!D1)
       return true;
-    const Decl *YD = Y.getDeclWithIssue();
-    if (!YD)
+    if (!D2)
       return false;
-    SourceLocation XDL = XD->getLocation();
-    SourceLocation YDL = YD->getLocation();
-    if (XDL != YDL) {
+    SourceLocation D1L = D1->getLocation();
+    SourceLocation D2L = D2->getLocation();
+    if (D1L != D2L) {
       const SourceManager &SM = XL.getManager();
-      return compareCrossTUSourceLocs(FullSourceLoc(XDL, SM),
-                                      FullSourceLoc(YDL, SM));
+      return compareCrossTUSourceLocs(FullSourceLoc(D1L, SM),
+                                      FullSourceLoc(D2L, SM));
     }
+    return None;
+  };
+  if (auto Result = CompareDecls(X.getDeclWithIssue(), Y.getDeclWithIssue()))
+    return *Result;
+  if (XUL.isValid()) {
+    if (auto Result = CompareDecls(X.getUniqueingDecl(), Y.getUniqueingDecl()))
+      return *Result;
   }
   PathDiagnostic::meta_iterator XI = X.meta_begin(), XE = X.meta_end();
   PathDiagnostic::meta_iterator YI = Y.meta_begin(), YE = Y.meta_end();
@@ -1118,6 +1133,8 @@ void PathDiagnosticPopUpPiece::Profile(llvm::FoldingSetNodeID &ID) const {
 
 void PathDiagnostic::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.Add(getLocation());
+  ID.Add(getUniqueingLoc());
+  ID.AddPointer(getUniqueingLoc().isValid() ? getUniqueingDecl() : nullptr);
   ID.AddString(BugType);
   ID.AddString(VerboseDesc);
   ID.AddString(Category);

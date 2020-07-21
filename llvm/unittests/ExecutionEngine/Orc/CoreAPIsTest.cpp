@@ -1044,7 +1044,7 @@ TEST_F(CoreAPIsStandardTest, GeneratorTest) {
     TestGenerator(SymbolMap Symbols) : Symbols(std::move(Symbols)) {}
     Error tryToGenerate(LookupKind K, JITDylib &JD,
                         JITDylibLookupFlags JDLookupFlags,
-                        const SymbolLookupSet &Names) {
+                        const SymbolLookupSet &Names) override {
       SymbolMap NewDefs;
 
       for (const auto &KV : Names) {

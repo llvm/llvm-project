@@ -36,13 +36,13 @@ static SmallVector<Value, 8> makeCanonicalAffineApplies(OpBuilder &b,
                                                         ArrayRef<Value> vals) {
   if (map.isEmpty())
     return {};
-  assert(map.getNumSymbols() == 0);
+
   assert(map.getNumInputs() == vals.size());
   SmallVector<Value, 8> res;
   res.reserve(map.getNumResults());
   auto dims = map.getNumDims();
   for (auto e : map.getResults()) {
-    auto exprMap = AffineMap::get(dims, 0, e);
+    auto exprMap = AffineMap::get(dims, map.getNumSymbols(), e);
     SmallVector<Value, 4> operands(vals.begin(), vals.end());
     canonicalizeMapAndOperands(&exprMap, &operands);
     res.push_back(affine_apply(exprMap, operands));
@@ -165,19 +165,29 @@ void emitScalarImplementation(ArrayRef<Value> allIvs,
   SmallVector<Value, 4> indexedValues;
   indexedValues.reserve(nInputs + nOutputs);
 
+  auto attr = linalgOp.template getAttrOfType<IntegerAttr>("symbol_source");
+  auto allIvsPlusDims = SmallVector<Value, 4>(allIvs.begin(), allIvs.end());
+  if (attr) {
+    auto operand = linalgOp.getOperand(attr.getInt());
+    auto shapedType = operand.getType().template cast<ShapedType>();
+    allIvsPlusDims.reserve(allIvs.size() + shapedType.getRank());
+    for (unsigned idx = 0, e = shapedType.getRank(); idx < e; ++idx)
+      allIvsPlusDims.push_back(b.create<DimOp>(loc, operand, idx));
+  }
+
   // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
   // 1.a. Emit load from input views.
   for (unsigned i = 0; i < nInputs; ++i) {
     auto indexing = makeCanonicalAffineApplies(
-        b, loc, linalgOp.getInputIndexingMap(i), allIvs);
+        b, loc, linalgOp.getInputIndexingMap(i), allIvsPlusDims);
     // Passing through IndexedValueType emits the proper load operation.
     indexedValues.push_back(IndexedValueType(linalgOp.getInput(i))(indexing));
   }
   // 1.b. Emit load from output views.
   for (unsigned i = 0; i < nOutputs; ++i) {
     auto indexing = makeCanonicalAffineApplies(
-        b, loc, linalgOp.getOutputIndexingMap(i), allIvs);
+        b, loc, linalgOp.getOutputIndexingMap(i), allIvsPlusDims);
     // Passing through IndexedValueType emits the proper load operation.
     indexedValues.push_back(
         IndexedValueType(linalgOp.getOutputBuffer(i))(indexing));
@@ -190,7 +200,7 @@ void emitScalarImplementation(ArrayRef<Value> allIvs,
   SmallVector<Value, 8> outputBuffers;
   for (unsigned i = 0; i < nOutputs; ++i) {
     indexing.push_back(makeCanonicalAffineApplies(
-        b, loc, linalgOp.getOutputIndexingMap(i), allIvs));
+        b, loc, linalgOp.getOutputIndexingMap(i), allIvsPlusDims));
     outputBuffers.push_back(linalgOp.getOutputBuffer(i));
   }
   inlineRegionAndEmitStore<IndexedValueType>(linalgOp, indexedValues, indexing,
@@ -457,7 +467,24 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
       linalgOp.indexing_maps().template getAsRange<AffineMapAttr>();
   auto maps = llvm::to_vector<8>(
       llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
-  AffineMap invertedMap = inversePermutation(concatAffineMaps(maps));
+  SmallVector<Value, 8> sizes = getViewSizes(builder, linalgOp);
+  AffineMap map = concatAffineMaps(maps);
+  if (map.getNumSymbols()) {
+    // Ignore symbols for now as they are not supported by inversePermutation.
+    unsigned dims = map.getNumDims();
+    SmallVector<AffineExpr, 8> zeros(
+        map.getNumSymbols(), getAffineConstantExpr(0, map.getContext()));
+    SmallVector<AffineExpr, 8> res;
+    for (auto result : map.getResults())
+      res.push_back(result.replaceDimsAndSymbols({}, zeros));
+
+    map = AffineMap::get(dims, 0, res, map.getContext());
+
+    // Cut off values that would have been applied to symbols
+    sizes.resize(res.size());
+  }
+
+  AffineMap invertedMap = inversePermutation(map);
   if (!invertedMap)
     return {};
   if (invertedMap.isEmpty()) {
@@ -466,9 +493,8 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
   }
 
   SmallVector<Value, 4> allIvs;
-  auto loopRanges =
-      emitLoopRanges(scope.getBuilderRef(), scope.getLocation(), invertedMap,
-                     getViewSizes(builder, linalgOp));
+  auto loopRanges = emitLoopRanges(scope.getBuilderRef(), scope.getLocation(),
+                                   invertedMap, sizes);
   GenerateLoopNest<LoopTy>::doit(
       loopRanges, linalgOp.iterator_types().getValue(), [&](ValueRange ivs) {
         allIvs.append(ivs.begin(), ivs.end());

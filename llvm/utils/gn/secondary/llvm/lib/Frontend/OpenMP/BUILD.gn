@@ -1,14 +1,23 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("OMPImpl") {
+  visibility = [ ":OpenMP" ]
+  args = [ "-gen-directive-impl" ]
+  td_file = "//llvm/include/llvm/Frontend/OpenMP/OMP.td"
+  output_name = "OMP.cpp"
+}
+
 static_library("OpenMP") {
   output_name = "LLVMFrontendOpenMP"
   deps = [
+    ":OMPImpl",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
   ]
   public_deps = [ "//llvm/include/llvm/Frontend/OpenMP:public_tablegen" ]
   sources = [
-    "OMPConstants.cpp",
-    "OMPContext.cpp",
-    "OMPIRBuilder.cpp",
-  ]
+              "OMPContext.cpp",
+              "OMPIRBuilder.cpp",
+            ] + get_target_outputs(":OMPImpl")
 }

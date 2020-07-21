@@ -127,25 +127,6 @@ bool MetadataVerifier::verifyKernelArgs(msgpack::DocNode &Node) {
                                .Default(false);
                          }))
     return false;
-  if (!verifyScalarEntry(ArgsMap, ".value_type", true,
-                         msgpack::Type::String,
-                         [](msgpack::DocNode &SNode) {
-                           return StringSwitch<bool>(SNode.getString())
-                               .Case("struct", true)
-                               .Case("i8", true)
-                               .Case("u8", true)
-                               .Case("i16", true)
-                               .Case("u16", true)
-                               .Case("f16", true)
-                               .Case("i32", true)
-                               .Case("u32", true)
-                               .Case("f32", true)
-                               .Case("i64", true)
-                               .Case("u64", true)
-                               .Case("f64", true)
-                               .Default(false);
-                         }))
-    return false;
   if (!verifyIntegerEntry(ArgsMap, ".pointee_align", false))
     return false;
   if (!verifyScalarEntry(ArgsMap, ".address_space", false,

@@ -29,13 +29,13 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
   uint8_t OffsetByteSize = Format == dwarf::DWARF64 ? 8 : 4;
   uint64_t FullLength =
       HeaderData.Length + dwarf::getUnitLengthFieldByteSize(Format);
-  assert(FullLength == length());
   if (FullLength < getHeaderSize(Format))
     return createStringError(errc::invalid_argument,
                        "%s table at offset 0x%" PRIx64
                        " has too small length (0x%" PRIx64
                        ") to contain a complete header",
                        SectionName.data(), HeaderOffset, FullLength);
+  assert(FullLength == length() && "Inconsistent calculation of length.");
   uint64_t End = HeaderOffset + FullLength;
   if (!Data.isValidOffsetForDataOfSize(HeaderOffset, FullLength))
     return createStringError(errc::invalid_argument,

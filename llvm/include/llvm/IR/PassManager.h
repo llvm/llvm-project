@@ -559,6 +559,8 @@ public:
     Passes.emplace_back(new PassModelT(std::move(Pass)));
   }
 
+  static bool isRequired() { return true; }
+
 private:
   using PassConceptT =
       detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
@@ -1259,6 +1261,8 @@ public:
     PA.preserve<FunctionAnalysisManagerModuleProxy>();
     return PA;
   }
+
+  static bool isRequired() { return true; }
 
 private:
   FunctionPassT Pass;

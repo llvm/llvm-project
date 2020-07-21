@@ -34,6 +34,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 
@@ -260,7 +261,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     }
   }
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI;
+  StandardInstrumentations SI(DebugPM);
   SI.registerCallbacks(PIC);
 
   PipelineTuningOptions PTO;
@@ -293,6 +294,25 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
           return true;
         } else if (Name == "check-debugify") {
           MPM.addPass(NewPMCheckDebugifyPass());
+          return true;
+        }
+        return false;
+      });
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, ModulePassManager &MPM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name == "asan-pipeline") {
+          MPM.addPass(
+              RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
+          MPM.addPass(
+              createModuleToFunctionPassAdaptor(AddressSanitizerPass()));
+          MPM.addPass(ModuleAddressSanitizerPass());
+          return true;
+        } else if (Name == "asan-function-pipeline") {
+          MPM.addPass(
+              RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
+          MPM.addPass(
+              createModuleToFunctionPassAdaptor(AddressSanitizerPass()));
           return true;
         }
         return false;
@@ -358,8 +378,11 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     }
   }
   for (auto PassName : NonAAPasses) {
-    if (auto Err =
-            PB.parsePassPipeline(MPM, PassName, VerifyEachPass, DebugPM)) {
+    std::string ModifiedPassName(PassName.begin(), PassName.end());
+    if (PB.isAnalysisPassName(PassName))
+      ModifiedPassName = "require<" + ModifiedPassName + ">";
+    if (auto Err = PB.parsePassPipeline(MPM, ModifiedPassName, VerifyEachPass,
+                                        DebugPM)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
       return false;
     }

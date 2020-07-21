@@ -24,6 +24,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 using llvm::APFloat;
+using llvm::APInt;
 
 namespace {
 enum class Category { Void, Integral, Float };
@@ -1002,116 +1003,60 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     error.SetErrorString("Invalid encoding.");
     break;
 
-  case eEncodingUint:
-    if (byte_size <= sizeof(uint64_t)) {
-      uint64_t uval64;
-      if (!llvm::to_integer(value_str, uval64))
-        error.SetErrorStringWithFormat(
-            "'%s' is not a valid unsigned integer string value", value_str);
-      else if (!UIntValueIsValidForSize(uval64, byte_size))
-        error.SetErrorStringWithFormat(
-            "value 0x%" PRIx64 " is too large to fit in a %" PRIu64
-            " byte unsigned integer value",
-            uval64, static_cast<uint64_t>(byte_size));
-      else {
-        m_type = Scalar::GetValueTypeForUnsignedIntegerWithByteSize(byte_size);
-        switch (m_type) {
-        case e_uint:
-          m_integer = llvm::APInt(sizeof(uint_t) * 8, uval64, false);
-          break;
-        case e_ulong:
-          m_integer = llvm::APInt(sizeof(ulong_t) * 8, uval64, false);
-          break;
-        case e_ulonglong:
-          m_integer = llvm::APInt(sizeof(ulonglong_t) * 8, uval64, false);
-          break;
-        default:
-          error.SetErrorStringWithFormat(
-              "unsupported unsigned integer byte size: %" PRIu64 "",
-              static_cast<uint64_t>(byte_size));
-          break;
-        }
-      }
-    } else {
-      error.SetErrorStringWithFormat(
-          "unsupported unsigned integer byte size: %" PRIu64 "",
-          static_cast<uint64_t>(byte_size));
-      return error;
-    }
-    break;
-
   case eEncodingSint:
-    if (byte_size <= sizeof(int64_t)) {
-      int64_t sval64;
-      if (!llvm::to_integer(value_str, sval64))
-        error.SetErrorStringWithFormat(
-            "'%s' is not a valid signed integer string value", value_str);
-      else if (!SIntValueIsValidForSize(sval64, byte_size))
-        error.SetErrorStringWithFormat(
-            "value 0x%" PRIx64 " is too large to fit in a %" PRIu64
-            " byte signed integer value",
-            sval64, static_cast<uint64_t>(byte_size));
-      else {
-        m_type = Scalar::GetValueTypeForSignedIntegerWithByteSize(byte_size);
-        switch (m_type) {
-        case e_sint:
-          m_integer = llvm::APInt(sizeof(sint_t) * 8, sval64, true);
-          break;
-        case e_slong:
-          m_integer = llvm::APInt(sizeof(slong_t) * 8, sval64, true);
-          break;
-        case e_slonglong:
-          m_integer = llvm::APInt(sizeof(slonglong_t) * 8, sval64, true);
-          break;
-        default:
-          error.SetErrorStringWithFormat(
-              "unsupported signed integer byte size: %" PRIu64 "",
-              static_cast<uint64_t>(byte_size));
-          break;
-        }
-      }
-    } else {
-      error.SetErrorStringWithFormat(
-          "unsupported signed integer byte size: %" PRIu64 "",
-          static_cast<uint64_t>(byte_size));
-      return error;
+  case eEncodingUint: {
+    llvm::StringRef str = value_str;
+    bool is_signed = encoding == eEncodingSint;
+    bool is_negative = is_signed && str.consume_front("-");
+    APInt integer;
+    if (str.getAsInteger(0, integer)) {
+      error.SetErrorStringWithFormatv(
+          "'{0}' is not a valid integer string value", value_str);
+      break;
     }
+    bool fits;
+    if (is_signed) {
+      integer = integer.zext(integer.getBitWidth() + 1);
+      if (is_negative)
+        integer.negate();
+      fits = integer.isSignedIntN(byte_size * 8);
+    } else
+      fits = integer.isIntN(byte_size * 8);
+    if (!fits) {
+      error.SetErrorStringWithFormatv(
+          "value {0} is too large to fit in a {1} byte integer value",
+          value_str, byte_size);
+      break;
+    }
+    m_type = GetBestTypeForBitSize(8 * byte_size, is_signed);
+    if (m_type == e_void) {
+      error.SetErrorStringWithFormatv("unsupported integer byte size: {0}",
+                                      byte_size);
+      break;
+    }
+    if (is_signed)
+      m_integer = integer.sextOrTrunc(GetBitSize(m_type));
+    else
+      m_integer = integer.zextOrTrunc(GetBitSize(m_type));
     break;
+  }
 
-  case eEncodingIEEE754:
-    static float f_val;
-    static double d_val;
-    static long double l_val;
-    if (byte_size == sizeof(float)) {
-      if (::sscanf(value_str, "%f", &f_val) == 1) {
-        m_float = llvm::APFloat(f_val);
-        m_type = e_float;
-      } else
-        error.SetErrorStringWithFormat("'%s' is not a valid float string value",
-                                       value_str);
-    } else if (byte_size == sizeof(double)) {
-      if (::sscanf(value_str, "%lf", &d_val) == 1) {
-        m_float = llvm::APFloat(d_val);
-        m_type = e_double;
-      } else
-        error.SetErrorStringWithFormat("'%s' is not a valid float string value",
-                                       value_str);
-    } else if (byte_size == sizeof(long double)) {
-      if (::sscanf(value_str, "%Lf", &l_val) == 1) {
-        m_float = llvm::APFloat(
-            llvm::APFloat::x87DoubleExtended(),
-            llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                        (reinterpret_cast<type128 *>(&l_val))->x));
-        m_type = e_long_double;
-      } else
-        error.SetErrorStringWithFormat("'%s' is not a valid float string value",
-                                       value_str);
-    } else {
-      error.SetErrorStringWithFormat("unsupported float byte size: %" PRIu64 "",
-                                     static_cast<uint64_t>(byte_size));
-      return error;
+  case eEncodingIEEE754: {
+    Type type = GetValueTypeForFloatWithByteSize(byte_size);
+    if (type == e_void) {
+      error.SetErrorStringWithFormatv("unsupported float byte size: {0}",
+                                      byte_size);
+      break;
     }
+    APFloat f(GetFltSemantics(type));
+    if (llvm::Expected<APFloat::opStatus> op =
+            f.convertFromString(value_str, APFloat::rmNearestTiesToEven)) {
+      m_type = type;
+      m_float = std::move(f);
+    } else
+      error = op.takeError();
     break;
+  }
 
   case eEncodingVector:
     error.SetErrorString("vector encoding unsupported.");
@@ -1123,12 +1068,9 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
   return error;
 }
 
-Status Scalar::SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
-                                size_t byte_size) {
+Status Scalar::SetValueFromData(const DataExtractor &data,
+                                lldb::Encoding encoding, size_t byte_size) {
   Status error;
-
-  type128 int128;
-  type256 int256;
   switch (encoding) {
   case lldb::eEncodingInvalid:
     error.SetErrorString("invalid encoding");
@@ -1136,100 +1078,26 @@ Status Scalar::SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
   case lldb::eEncodingVector:
     error.SetErrorString("vector encoding unsupported");
     break;
-  case lldb::eEncodingUint: {
-    lldb::offset_t offset = 0;
-
-    switch (byte_size) {
-    case 1:
-      operator=(data.GetU8(&offset));
-      break;
-    case 2:
-      operator=(data.GetU16(&offset));
-      break;
-    case 4:
-      operator=(data.GetU32(&offset));
-      break;
-    case 8:
-      operator=(data.GetU64(&offset));
-      break;
-    case 16:
-      if (data.GetByteOrder() == eByteOrderBig) {
-        int128.x[1] = data.GetU64(&offset);
-        int128.x[0] = data.GetU64(&offset);
-      } else {
-        int128.x[0] = data.GetU64(&offset);
-        int128.x[1] = data.GetU64(&offset);
-      }
-      operator=(llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, int128.x));
-      break;
-    case 32:
-      if (data.GetByteOrder() == eByteOrderBig) {
-        int256.x[3] = data.GetU64(&offset);
-        int256.x[2] = data.GetU64(&offset);
-        int256.x[1] = data.GetU64(&offset);
-        int256.x[0] = data.GetU64(&offset);
-      } else {
-        int256.x[0] = data.GetU64(&offset);
-        int256.x[1] = data.GetU64(&offset);
-        int256.x[2] = data.GetU64(&offset);
-        int256.x[3] = data.GetU64(&offset);
-      }
-      operator=(llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, int256.x));
-      break;
-    default:
-      error.SetErrorStringWithFormat(
-          "unsupported unsigned integer byte size: %" PRIu64 "",
-          static_cast<uint64_t>(byte_size));
-      break;
-    }
-  } break;
+  case lldb::eEncodingUint:
   case lldb::eEncodingSint: {
-    lldb::offset_t offset = 0;
-
-    switch (byte_size) {
-    case 1:
-      operator=(static_cast<int8_t>(data.GetU8(&offset)));
-      break;
-    case 2:
-      operator=(static_cast<int16_t>(data.GetU16(&offset)));
-      break;
-    case 4:
-      operator=(static_cast<int32_t>(data.GetU32(&offset)));
-      break;
-    case 8:
-      operator=(static_cast<int64_t>(data.GetU64(&offset)));
-      break;
-    case 16:
-      if (data.GetByteOrder() == eByteOrderBig) {
-        int128.x[1] = data.GetU64(&offset);
-        int128.x[0] = data.GetU64(&offset);
-      } else {
-        int128.x[0] = data.GetU64(&offset);
-        int128.x[1] = data.GetU64(&offset);
-      }
-      operator=(llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, int128.x));
-      break;
-    case 32:
-      if (data.GetByteOrder() == eByteOrderBig) {
-        int256.x[3] = data.GetU64(&offset);
-        int256.x[2] = data.GetU64(&offset);
-        int256.x[1] = data.GetU64(&offset);
-        int256.x[0] = data.GetU64(&offset);
-      } else {
-        int256.x[0] = data.GetU64(&offset);
-        int256.x[1] = data.GetU64(&offset);
-        int256.x[2] = data.GetU64(&offset);
-        int256.x[3] = data.GetU64(&offset);
-      }
-      operator=(llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, int256.x));
-      break;
-    default:
-      error.SetErrorStringWithFormat(
-          "unsupported signed integer byte size: %" PRIu64 "",
-          static_cast<uint64_t>(byte_size));
-      break;
+    if (data.GetByteSize() < byte_size)
+      return Status("insufficient data");
+    Type type = GetBestTypeForBitSize(byte_size*8, encoding == lldb::eEncodingSint);
+    if (type == e_void) {
+      return Status("unsupported integer byte size: %" PRIu64 "",
+                    static_cast<uint64_t>(byte_size));
     }
-  } break;
+    m_type = type;
+    if (data.GetByteOrder() == endian::InlHostByteOrder()) {
+      m_integer = APInt::getNullValue(8 * byte_size);
+      llvm::LoadIntFromMemory(m_integer, data.GetDataStart(), byte_size);
+    } else {
+      std::vector<uint8_t> buffer(byte_size);
+      std::copy_n(data.GetDataStart(), byte_size, buffer.rbegin());
+      llvm::LoadIntFromMemory(m_integer, buffer.data(), byte_size);
+    }
+    break;
+  }
   case lldb::eEncodingIEEE754: {
     lldb::offset_t offset = 0;
 

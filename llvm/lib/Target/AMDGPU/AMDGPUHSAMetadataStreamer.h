@@ -67,8 +67,6 @@ private:
   StringRef getValueKind(Type *Ty, StringRef TypeQual,
                          StringRef BaseTypeName) const;
 
-  StringRef getValueType(Type *Ty, StringRef TypeName) const;
-
   std::string getTypeName(Type *Ty, bool Signed) const;
 
   msgpack::ArrayDocNode getWorkGroupDimensions(MDNode *Node) const;
@@ -134,8 +132,6 @@ private:
 
   ValueKind getValueKind(Type *Ty, StringRef TypeQual,
                          StringRef BaseTypeName) const;
-
-  ValueType getValueType(Type *Ty, StringRef TypeName) const;
 
   std::string getTypeName(Type *Ty, bool Signed) const;
 

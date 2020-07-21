@@ -286,8 +286,6 @@ void __hwasan_init() {
   // initialized when InitInstrumentation() was called.
   GetCurrentThread()->InitRandomState();
 
-  MadviseShadow();
-
   SetPrintfAndReportCallback(AppendToErrorMessageBuffer);
   // This may call libc -> needs initialized shadow.
   AndroidLogInit();

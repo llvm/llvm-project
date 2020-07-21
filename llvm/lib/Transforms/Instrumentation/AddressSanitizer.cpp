@@ -434,6 +434,7 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
                                       bool IsKasan) {
   bool IsAndroid = TargetTriple.isAndroid();
   bool IsIOS = TargetTriple.isiOS() || TargetTriple.isWatchOS();
+  bool IsMacOS = TargetTriple.isMacOSX();
   bool IsFreeBSD = TargetTriple.isOSFreeBSD();
   bool IsNetBSD = TargetTriple.isOSNetBSD();
   bool IsPS4CPU = TargetTriple.isPS4CPU();
@@ -509,6 +510,8 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
     } else if (IsMIPS64)
       Mapping.Offset = kMIPS64_ShadowOffset64;
     else if (IsIOS)
+      Mapping.Offset = kDynamicShadowSentinel;
+    else if (IsMacOS && IsAArch64)
       Mapping.Offset = kDynamicShadowSentinel;
     else if (IsAArch64)
       Mapping.Offset = kAArch64_ShadowOffset64;
@@ -2103,23 +2106,10 @@ void ModuleAddressSanitizer::InstrumentGlobalsELF(
     SetComdatForGlobalMetadata(G, Metadata, UniqueModuleId);
   }
 
-  // This should never be called when there are no globals, by the logic that
-  // computes the UniqueModuleId string, which is "" when there are no globals.
-  // It's important that this path is only used when there are actually some
-  // globals, because that means that there will certainly be a live
-  // `asan_globals` input section at link time and thus `__start_asan_globals`
-  // and `__stop_asan_globals` symbols will definitely be defined at link time.
-  // This means there's no need for the references to them to be weak, which
-  // enables better code generation because ExternalWeakLinkage implies
-  // isInterposable() and thus requires GOT indirection for PIC.  Since these
-  // are known-defined hidden/dso_local symbols, direct PIC accesses without
-  // dynamic relocation are always sufficient.
-  assert(!MetadataGlobals.empty());
-  assert(!UniqueModuleId.empty());
-
   // Update llvm.compiler.used, adding the new metadata globals. This is
   // needed so that during LTO these variables stay alive.
-  appendToCompilerUsed(M, MetadataGlobals);
+  if (!MetadataGlobals.empty())
+    appendToCompilerUsed(M, MetadataGlobals);
 
   // RegisteredFlag serves two purposes. First, we can pass it to dladdr()
   // to look up the loaded image that contains it. Second, we can store in it
@@ -2132,18 +2122,15 @@ void ModuleAddressSanitizer::InstrumentGlobalsELF(
       ConstantInt::get(IntptrTy, 0), kAsanGlobalsRegisteredFlagName);
   RegisteredFlag->setVisibility(GlobalVariable::HiddenVisibility);
 
-  // Create start and stop symbols.  These are known to be defined by
-  // the linker, see comment above.
-  auto MakeStartStopGV = [&](const char *Prefix) {
-    GlobalVariable *StartStop =
-        new GlobalVariable(M, IntptrTy, false, GlobalVariable::ExternalLinkage,
-                           nullptr, Prefix + getGlobalMetadataSection());
-    StartStop->setVisibility(GlobalVariable::HiddenVisibility);
-    assert(StartStop->isImplicitDSOLocal());
-    return StartStop;
-  };
-  GlobalVariable *StartELFMetadata = MakeStartStopGV("__start_");
-  GlobalVariable *StopELFMetadata = MakeStartStopGV("__stop_");
+  // Create start and stop symbols.
+  GlobalVariable *StartELFMetadata = new GlobalVariable(
+      M, IntptrTy, false, GlobalVariable::ExternalWeakLinkage, nullptr,
+      "__start_" + getGlobalMetadataSection());
+  StartELFMetadata->setVisibility(GlobalVariable::HiddenVisibility);
+  GlobalVariable *StopELFMetadata = new GlobalVariable(
+      M, IntptrTy, false, GlobalVariable::ExternalWeakLinkage, nullptr,
+      "__stop_" + getGlobalMetadataSection());
+  StopELFMetadata->setVisibility(GlobalVariable::HiddenVisibility);
 
   // Create a call to register the globals with the runtime.
   IRB.CreateCall(AsanRegisterElfGlobals,

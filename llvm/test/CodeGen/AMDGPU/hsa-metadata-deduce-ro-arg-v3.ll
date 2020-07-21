@@ -1,6 +1,6 @@
-; RUN: llc -mattr=+code-object-v3 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck %s
+; RUN: llc -mattr=+code-object-v3 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
 
-; CHECK:        - .args:           
+; CHECK:        - .args:
 ; CHECK-NEXT:       - .access:         read_only
 ; CHECK-NEXT:         .address_space:  global
 ; CHECK-NEXT:         .is_const:       true
@@ -10,14 +10,12 @@
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .type_name:      'float*'
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f32
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .name:           out
 ; CHECK-NEXT:         .offset:         8
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .type_name:      'float*'
 ; CHECK-NEXT:         .value_kind:     global_buffer
-; CHECK-NEXT:         .value_type:     f32
 ; CHECK:          .name:           test_ro_arg
 ; CHECK:          .symbol:         test_ro_arg.kd
 

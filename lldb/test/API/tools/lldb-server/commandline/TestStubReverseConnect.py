@@ -14,8 +14,6 @@ class TestStubReverseConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    _DEFAULT_TIMEOUT = 20 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
-
     def setUp(self):
         # Set up the test.
         gdbremote_testcase.GdbRemoteTestCaseBase.setUp(self)
@@ -25,11 +23,11 @@ class TestStubReverseConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(self.listener_socket)
         self.listener_port = self.listener_socket.getsockname()[1]
 
-    def create_listener_socket(self, timeout_seconds=_DEFAULT_TIMEOUT):
+    def create_listener_socket(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.assertIsNotNone(sock)
 
-        sock.settimeout(timeout_seconds)
+        sock.settimeout(self.DEFAULT_TIMEOUT)
         sock.bind(("127.0.0.1", 0))
         sock.listen(1)
 
@@ -77,7 +75,7 @@ class TestStubReverseConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
             address, stub_socket.getsockname()))
 
         # Verify we can do the handshake.  If that works, we'll call it good.
-        self.do_handshake(stub_socket, timeout_seconds=self._DEFAULT_TIMEOUT)
+        self.do_handshake(stub_socket)
 
         # Clean up.
         stub_socket.shutdown(socket.SHUT_RDWR)

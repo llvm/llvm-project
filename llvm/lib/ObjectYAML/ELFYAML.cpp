@@ -823,6 +823,8 @@ void ScalarBitSetTraits<ELFYAML::MIPS_AFL_ASE>::bitset(
   BCase(MIPS16);
   BCase(MICROMIPS);
   BCase(XPA);
+  BCase(CRC);
+  BCase(GINV);
 #undef BCase
 }
 
@@ -842,7 +844,7 @@ void MappingTraits<ELFYAML::SectionHeaderTable>::mapping(
     IO &IO, ELFYAML::SectionHeaderTable &SectionHeader) {
   IO.mapOptional("Sections", SectionHeader.Sections);
   IO.mapOptional("Excluded", SectionHeader.Excluded);
-  IO.mapOptional("NoHeaders", SectionHeader.NoHeaders, false);
+  IO.mapOptional("NoHeaders", SectionHeader.NoHeaders);
 }
 
 StringRef MappingTraits<ELFYAML::SectionHeaderTable>::validate(
@@ -866,10 +868,16 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
   IO.mapOptional("Flags", FileHdr.Flags, ELFYAML::ELF_EF(0));
   IO.mapOptional("Entry", FileHdr.Entry, Hex64(0));
 
-  IO.mapOptional("SHEntSize", FileHdr.SHEntSize);
-  IO.mapOptional("SHOff", FileHdr.SHOff);
-  IO.mapOptional("SHNum", FileHdr.SHNum);
-  IO.mapOptional("SHStrNdx", FileHdr.SHStrNdx);
+  // obj2yaml does not dump these fields.
+  assert(!IO.outputting() ||
+         (!FileHdr.EPhOff && !FileHdr.EPhEntSize && !FileHdr.EPhNum));
+  IO.mapOptional("EPhOff", FileHdr.EPhOff);
+  IO.mapOptional("EPhEntSize", FileHdr.EPhEntSize);
+  IO.mapOptional("EPhNum", FileHdr.EPhNum);
+  IO.mapOptional("EShEntSize", FileHdr.EShEntSize);
+  IO.mapOptional("EShOff", FileHdr.EShOff);
+  IO.mapOptional("EShNum", FileHdr.EShNum);
+  IO.mapOptional("EShStrNdx", FileHdr.EShStrNdx);
 }
 
 void MappingTraits<ELFYAML::ProgramHeader>::mapping(
@@ -1681,7 +1689,7 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   if (Object.DWARF) {
     Object.DWARF->IsLittleEndian =
         Object.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
-    Object.DWARF->Is64bit =
+    Object.DWARF->Is64BitAddrSize =
         Object.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64);
   }
   IO.setContext(nullptr);

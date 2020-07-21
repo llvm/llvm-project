@@ -23,6 +23,7 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -77,6 +78,12 @@ static cl::opt<bool>
                          cl::desc("Allow the Attributor to create shallow "
                                   "wrappers for non-exact definitions."),
                          cl::init(false));
+
+static cl::list<std::string>
+    SeedAllowList("attributor-seed-allow-list", cl::Hidden,
+                  cl::desc("Comma seperated list of attrbute names that are "
+                           "allowed to be seeded."),
+                  cl::ZeroOrMore, cl::CommaSeparated);
 
 /// Logic operators for the change status enum class.
 ///
@@ -1180,6 +1187,9 @@ ChangeStatus Attributor::cleanupIR() {
     }
   }
 
+  LLVM_DEBUG(dbgs() << "[Attributor] DeadInsts size: " << DeadInsts.size()
+                    << "\n");
+
   RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
 
   if (unsigned NumDeadBlocks = ToBeDeletedBlocks.size()) {
@@ -1238,6 +1248,9 @@ ChangeStatus Attributor::cleanupIR() {
 
   NumFnDeleted += ToBeDeletedFunctions.size();
 
+  LLVM_DEBUG(dbgs() << "[Attributor] Deleted " << NumFnDeleted
+                    << " functions after manifest.\n");
+
 #ifdef EXPENSIVE_CHECKS
   for (Function *F : Functions) {
     if (ToBeDeletedFunctions.count(F))
@@ -1250,6 +1263,7 @@ ChangeStatus Attributor::cleanupIR() {
 }
 
 ChangeStatus Attributor::run() {
+  SeedingPeriod = false;
   runTillFixpoint();
   ChangeStatus ManifestChange = manifestAttributes();
   ChangeStatus CleanupChange = cleanupIR();
@@ -1444,6 +1458,12 @@ bool Attributor::registerFunctionSignatureRewrite(
                                         std::move(ACSRepairCB)));
 
   return true;
+}
+
+bool Attributor::shouldSeedAttribute(AbstractAttribute &AA) {
+  if (SeedAllowList.size() == 0)
+    return true;
+  return std::count(SeedAllowList.begin(), SeedAllowList.end(), AA.getName());
 }
 
 ChangeStatus Attributor::rewriteFunctionSignatures(

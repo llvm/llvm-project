@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o - | \
-// RUN:   llvm-readobj -r | FileCheck %s
+// RUN:   llvm-readobj -r - | FileCheck %s
 
         .section .data
 this:

@@ -841,6 +841,41 @@ void ReExec() {
 }
 #endif  // !SANITIZER_OPENBSD
 
+void UnmapFromTo(uptr from, uptr to) {
+  if (to == from)
+    return;
+  CHECK(to >= from);
+  uptr res = internal_munmap(reinterpret_cast<void *>(from), to - from);
+  if (UNLIKELY(internal_iserror(res))) {
+    Report("ERROR: %s failed to unmap 0x%zx (%zd) bytes at address %p\n",
+           SanitizerToolName, to - from, to - from, (void *)from);
+    CHECK("unable to unmap" && 0);
+  }
+}
+
+uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
+                      uptr min_shadow_base_alignment,
+                      UNUSED uptr &high_mem_end) {
+  const uptr granularity = GetMmapGranularity();
+  const uptr alignment =
+      Max<uptr>(granularity << shadow_scale, 1ULL << min_shadow_base_alignment);
+  const uptr left_padding =
+      Max<uptr>(granularity, 1ULL << min_shadow_base_alignment);
+
+  const uptr shadow_size = RoundUpTo(shadow_size_bytes, granularity);
+  const uptr map_size = shadow_size + left_padding + alignment;
+
+  const uptr map_start = (uptr)MmapNoAccess(map_size);
+  CHECK_NE(map_start, ~(uptr)0);
+
+  const uptr shadow_start = RoundUpTo(map_start + left_padding, alignment);
+
+  UnmapFromTo(map_start, shadow_start - left_padding);
+  UnmapFromTo(shadow_start + shadow_size, map_start + map_size);
+
+  return shadow_start;
+}
+
 } // namespace __sanitizer
 
 #endif

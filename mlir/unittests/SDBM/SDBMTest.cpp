@@ -17,7 +17,7 @@
 
 using namespace mlir;
 
-// Load the SDBM dialect
+/// Load the SDBM dialect.
 static DialectRegistration<SDBMDialect> SDBMRegistration;
 
 static MLIRContext *ctx() {

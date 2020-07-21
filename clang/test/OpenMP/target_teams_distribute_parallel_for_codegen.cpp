@@ -61,7 +61,7 @@ int target_teams_fun(int *g){
   // HCK1: [[TE_PAR:%.+]] = load{{.+}}, {{.+}} [[TE_CAST]],
   // HCK1: [[TH_PAR:%.+]] = load{{.+}}, {{.+}} [[TH_CAST]],
   // HCK1: call void @__kmpc_push_target_tripcount(i64 -1, i64 %{{.+}})
-  // HCK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}},
+  // HCK1: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}},
 
   // HCK1: call void @[[OFFL1:.+]](i{{32|64}} [[N_PAR]], {{.+}}, i{{32|64}} [[TE_PAR]], i{{32|64}} [[TH_PAR]])
   #pragma omp target teams distribute parallel for num_teams(te), thread_limit(th)
@@ -70,7 +70,7 @@ int target_teams_fun(int *g){
     #pragma omp cancel for
   }
 
-  // HCK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0),
+  // HCK1: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null,
   // HCK1: call void @[[OFFL2:.+]](i{{64|32}} %{{.+}})
   {{{
   #pragma omp target teams distribute parallel for is_device_ptr(g)

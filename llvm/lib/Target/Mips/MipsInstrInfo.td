@@ -242,7 +242,7 @@ def HasEVA       :    Predicate<"Subtarget->hasEVA()">,
 def HasMSA : Predicate<"Subtarget->hasMSA()">,
              AssemblerPredicate<(all_of FeatureMSA)>;
 def HasMadd4 : Predicate<"!Subtarget->disableMadd4()">,
-               AssemblerPredicate<(all_of (not FeatureMadd4))>;
+               AssemblerPredicate<(all_of (not FeatureNoMadd4))>;
 def HasMT  : Predicate<"Subtarget->hasMT()">,
              AssemblerPredicate<(all_of FeatureMT)>;
 def UseIndirectJumpsHazard : Predicate<"Subtarget->useIndirectJumpsHazard()">,

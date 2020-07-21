@@ -84,6 +84,7 @@ write_lit_config("lit_site_cfg") {
     "OCAMLFLAGS=",
     "LLVM_BUILD_EXAMPLES=0",
     "LLVM_HAVE_TF_AOT=0",
+    "LLVM_HAVE_TF_API=0",
   ]
 
   if (host_cpu == "x64") {
@@ -227,6 +228,7 @@ group("test") {
     "//llvm/tools/llvm-ifs",
     "//llvm/tools/llvm-isel-fuzzer",
     "//llvm/tools/llvm-jitlink",
+    "//llvm/tools/llvm-libtool-darwin",
     "//llvm/tools/llvm-link",
     "//llvm/tools/llvm-lipo",
     "//llvm/tools/llvm-lto",

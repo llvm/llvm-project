@@ -68,7 +68,6 @@ end
 
 module m5b
   use m5a, only: k2 => k1, l2 => l1, f2 => f1
-  character(l2, k2) :: x
   interface
     subroutine s(x, y)
       import f2, l2
@@ -82,7 +81,6 @@ end
 ! use m5a,only:k2=>k1
 ! use m5a,only:l2=>l1
 ! use m5a,only:f2=>f1
-! character(l2,4)::x
 ! interface
 !  subroutine s(x,y)
 !   import::f2

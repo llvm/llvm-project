@@ -1,6 +1,5 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -ppc-vsr-nums-as-vr \
-; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 
 define void @qpFmadd(fp128* nocapture readonly %a, fp128* nocapture %b,
                    fp128* nocapture readonly %c, fp128* nocapture %res) {

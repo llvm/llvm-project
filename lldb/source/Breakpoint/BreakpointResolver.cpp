@@ -81,8 +81,7 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
       GetSerializationSubclassKey(), subclass_name);
 
   if (!success) {
-    error.SetErrorStringWithFormat(
-        "Resolver data missing subclass resolver key");
+    error.SetErrorString("Resolver data missing subclass resolver key");
     return result_sp;
   }
 

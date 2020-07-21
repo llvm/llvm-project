@@ -28,7 +28,9 @@
     device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
 
 #define __CUDA__
+#define __OPENMP_NVPTX__
 #include <__clang_cuda_cmath.h>
+#undef __OPENMP_NVPTX__
 #undef __CUDA__
 
 // Overloads not provided by the CUDA wrappers but by the CUDA system headers.

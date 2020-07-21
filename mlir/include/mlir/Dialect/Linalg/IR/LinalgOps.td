@@ -61,8 +61,8 @@ def Linalg_RangeOp :
   let assemblyFormat = "$min `:` $max `:` $step attr-dict `:` type(results)";
 }
 
-class Linalg_ReshapeLikeOp<string mnemonic> :
-    Linalg_Op<mnemonic, [NoSideEffect]> {
+class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
+    Linalg_Op<mnemonic, !listconcat(traits, [NoSideEffect])> {
   let builders = [
     // Builders for a contracting reshape whose result type is computed from
     // `src` and `reassociation`.
@@ -103,7 +103,8 @@ class Linalg_ReshapeLikeOp<string mnemonic> :
   }];
 }
 
-def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape">,
+def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape",
+    [DeclareOpInterfaceMethods<ViewLikeOpInterface>]>,
     Arguments<(ins AnyStridedMemRef:$src, AffineMapArrayAttr:$reassociation)>,
     Results<(outs AnyStridedMemRef:$result)> {
   let summary = "linalg.reshape produces a new view into the operand view";

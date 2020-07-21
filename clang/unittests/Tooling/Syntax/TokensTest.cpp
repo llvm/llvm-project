@@ -53,6 +53,7 @@ using namespace clang;
 using namespace clang::syntax;
 
 using llvm::ValueIs;
+using ::testing::_;
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
@@ -755,7 +756,7 @@ TEST_F(TokenBufferTest, ExpandedTokensForRange) {
   EXPECT_THAT(Buffer.expandedTokens(SourceRange()), testing::IsEmpty());
 }
 
-TEST_F(TokenBufferTest, ExpansionStartingAt) {
+TEST_F(TokenBufferTest, ExpansionsOverlapping) {
   // Object-like macro expansions.
   recordTokens(R"cpp(
     #define FOO 3+4
@@ -763,17 +764,25 @@ TEST_F(TokenBufferTest, ExpansionStartingAt) {
     int b = FOO 2;
   )cpp");
 
-  llvm::ArrayRef<syntax::Token> Foo1 = findSpelled("FOO 1").drop_back();
+  llvm::ArrayRef<syntax::Token> Foo1 = findSpelled("FOO 1");
   EXPECT_THAT(
       Buffer.expansionStartingAt(Foo1.data()),
-      ValueIs(IsExpansion(SameRange(Foo1),
+      ValueIs(IsExpansion(SameRange(Foo1.drop_back()),
                           SameRange(findExpanded("3 + 4 1").drop_back()))));
+  EXPECT_THAT(
+      Buffer.expansionsOverlapping(Foo1),
+      ElementsAre(IsExpansion(SameRange(Foo1.drop_back()),
+                              SameRange(findExpanded("3 + 4 1").drop_back()))));
 
-  llvm::ArrayRef<syntax::Token> Foo2 = findSpelled("FOO 2").drop_back();
+  llvm::ArrayRef<syntax::Token> Foo2 = findSpelled("FOO 2");
   EXPECT_THAT(
       Buffer.expansionStartingAt(Foo2.data()),
-      ValueIs(IsExpansion(SameRange(Foo2),
+      ValueIs(IsExpansion(SameRange(Foo2.drop_back()),
                           SameRange(findExpanded("3 + 4 2").drop_back()))));
+  EXPECT_THAT(Buffer.expansionsOverlapping(
+                  llvm::makeArrayRef(Foo1.begin(), Foo2.end())),
+              ElementsAre(IsExpansion(SameRange(Foo1.drop_back()), _),
+                          IsExpansion(SameRange(Foo2.drop_back()), _)));
 
   // Function-like macro expansions.
   recordTokens(R"cpp(
@@ -797,6 +806,11 @@ TEST_F(TokenBufferTest, ExpansionStartingAt) {
   // Only the first spelled token should be found.
   for (const auto &T : ID2.drop_front())
     EXPECT_EQ(Buffer.expansionStartingAt(&T), llvm::None);
+
+  EXPECT_THAT(Buffer.expansionsOverlapping(llvm::makeArrayRef(
+                  findSpelled("1 + 2").data(), findSpelled("4").data())),
+              ElementsAre(IsExpansion(SameRange(ID1), _),
+                          IsExpansion(SameRange(ID2), _)));
 
   // PP directives.
   recordTokens(R"cpp(
@@ -823,6 +837,11 @@ int b = 1;
   // Only the first spelled token should be found.
   for (const auto &T : PragmaOnce.drop_front())
     EXPECT_EQ(Buffer.expansionStartingAt(&T), llvm::None);
+
+  EXPECT_THAT(
+      Buffer.expansionsOverlapping(findSpelled("FOO ; # pragma")),
+      ElementsAre(IsExpansion(SameRange(findSpelled("FOO ;").drop_back()), _),
+                  IsExpansion(SameRange(PragmaOnce), _)));
 }
 
 TEST_F(TokenBufferTest, TokensToFileRange) {

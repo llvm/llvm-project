@@ -601,14 +601,21 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool hasPositiveOperands(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  Constant *Zero = ConstantInt::get(SDI->getType(), 0);
-  for (Value *O : SDI->operands()) {
-    auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SGE, O, Zero, SDI);
-    if (Result != LazyValueInfo::True)
-      return false;
-  }
-  return true;
+static bool isNonNegative(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
+  Constant *Zero = ConstantInt::get(V->getType(), 0);
+  auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SGE, V, Zero, CxtI);
+  return Result == LazyValueInfo::True;
+}
+
+static bool isNonPositive(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
+  Constant *Zero = ConstantInt::get(V->getType(), 0);
+  auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SLE, V, Zero, CxtI);
+  return Result == LazyValueInfo::True;
+}
+
+static bool allOperandsAreNonNegative(BinaryOperator *SDI, LazyValueInfo *LVI) {
+  return all_of(SDI->operands(),
+                [&](Value *Op) { return isNonNegative(Op, LVI, SDI); });
 }
 
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's
@@ -654,7 +661,7 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 }
 
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() || !hasPositiveOperands(SDI, LVI))
+  if (SDI->getType()->isVectorTy() || !allOperandsAreNonNegative(SDI, LVI))
     return false;
 
   ++NumSRems;
@@ -671,24 +678,65 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
 }
 
 /// See if LazyValueInfo's ability to exploit edge conditions or range
-/// information is sufficient to prove the both operands of this SDiv are
-/// positive.  If this is the case, replace the SDiv with a UDiv. Even for local
+/// information is sufficient to prove the signs of both operands of this SDiv.
+/// If this is the case, replace the SDiv with a UDiv. Even for local
 /// conditions, this can sometimes prove conditions instcombine can't by
 /// exploiting range information.
 static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() || !hasPositiveOperands(SDI, LVI))
+  if (SDI->getType()->isVectorTy())
     return false;
 
+  enum class Domain { NonNegative, NonPositive, Unknown };
+  auto getDomain = [&](Value *V) {
+    if (isNonNegative(V, LVI, SDI))
+      return Domain::NonNegative;
+    if (isNonPositive(V, LVI, SDI))
+      return Domain::NonPositive;
+    return Domain::Unknown;
+  };
+
+  struct Operand {
+    Value *V;
+    Domain D;
+  };
+  std::array<Operand, 2> Ops;
+  for (const auto I : zip(Ops, SDI->operands())) {
+    Operand &Op = std::get<0>(I);
+    Op.V = std::get<1>(I);
+    Op.D = getDomain(Op.V);
+    if (Op.D == Domain::Unknown)
+      return false;
+  }
+
+  // We know domains of both of the operands!
   ++NumSDivs;
-  auto *BO = BinaryOperator::CreateUDiv(SDI->getOperand(0), SDI->getOperand(1),
-                                        SDI->getName(), SDI);
-  BO->setDebugLoc(SDI->getDebugLoc());
-  BO->setIsExact(SDI->isExact());
-  SDI->replaceAllUsesWith(BO);
+
+  // We need operands to be non-negative, so negate each one that isn't.
+  for (Operand &Op : Ops) {
+    if (Op.D == Domain::NonNegative)
+      continue;
+    auto *BO =
+        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    BO->setDebugLoc(SDI->getDebugLoc());
+    Op.V = BO;
+  }
+
+  auto *UDiv =
+      BinaryOperator::CreateUDiv(Ops[0].V, Ops[1].V, SDI->getName(), SDI);
+  UDiv->setDebugLoc(SDI->getDebugLoc());
+  UDiv->setIsExact(SDI->isExact());
+
+  Value *Res = UDiv;
+
+  // If the operands had two different domains, we need to negate the result.
+  if (Ops[0].D != Ops[1].D)
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+
+  SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
 
   // Try to simplify our new udiv.
-  processUDivOrURem(BO, LVI);
+  processUDivOrURem(UDiv, LVI);
 
   return true;
 }
@@ -697,9 +745,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
-  Constant *Zero = ConstantInt::get(SDI->getType(), 0);
-  if (LVI->getPredicateAt(ICmpInst::ICMP_SGE, SDI->getOperand(0), Zero, SDI) !=
-      LazyValueInfo::True)
+  if (!isNonNegative(SDI->getOperand(0), LVI, SDI))
     return false;
 
   ++NumAShrs;
@@ -719,9 +765,7 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
 
   Value *Base = SDI->getOperand(0);
 
-  Constant *Zero = ConstantInt::get(Base->getType(), 0);
-  if (LVI->getPredicateAt(ICmpInst::ICMP_SGE, Base, Zero, SDI) !=
-      LazyValueInfo::True)
+  if (!isNonNegative(Base, LVI, SDI))
     return false;
 
   ++NumSExt;
