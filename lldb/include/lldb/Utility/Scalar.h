@@ -217,7 +217,7 @@ public:
   Status SetValueFromCString(const char *s, lldb::Encoding encoding,
                              size_t byte_size);
 
-  Status SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
+  Status SetValueFromData(const DataExtractor &data, lldb::Encoding encoding,
                           size_t byte_size);
 
   static bool UIntValueIsValidForSize(uint64_t uval64, size_t total_byte_size) {
