@@ -1761,6 +1761,11 @@ class SBBreakpoint(_object):
         return _lldb.SBBreakpoint_AddName(self, new_name)
 
 
+    def AddNameWithErrorHandling(self, new_name):
+        """AddNameWithErrorHandling(SBBreakpoint self, char const * new_name) -> SBError"""
+        return _lldb.SBBreakpoint_AddNameWithErrorHandling(self, new_name)
+
+
     def RemoveName(self, name_to_remove):
         """RemoveName(SBBreakpoint self, char const * name_to_remove)"""
         return _lldb.SBBreakpoint_RemoveName(self, name_to_remove)
@@ -7889,6 +7894,21 @@ class SBModule(_object):
         return _lldb.SBModule_GetObjectFileEntryPointAddress(self)
 
 
+    def GetNumberAllocatedModules():
+        """
+        GetNumberAllocatedModules() -> uint32_t
+
+
+        Returns the number of modules in the module cache. This is an
+        implementation detail exposed for testing and should not be relied upon.
+
+        @return
+            The number of modules in the module cache.
+        """
+        return _lldb.SBModule_GetNumberAllocatedModules()
+
+    GetNumberAllocatedModules = staticmethod(GetNumberAllocatedModules)
+
     def __str__(self):
         """__str__(SBModule self) -> std::string"""
         return _lldb.SBModule___str__(self)
@@ -8108,6 +8128,19 @@ class SBModule(_object):
 
 SBModule_swigregister = _lldb.SBModule_swigregister
 SBModule_swigregister(SBModule)
+
+def SBModule_GetNumberAllocatedModules():
+    """
+    SBModule_GetNumberAllocatedModules() -> uint32_t
+
+
+    Returns the number of modules in the module cache. This is an
+    implementation detail exposed for testing and should not be relied upon.
+
+    @return
+        The number of modules in the module cache.
+    """
+    return _lldb.SBModule_GetNumberAllocatedModules()
 
 class SBModuleSpec(_object):
     """Proxy of C++ lldb::SBModuleSpec class."""

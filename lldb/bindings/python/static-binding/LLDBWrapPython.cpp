@@ -3279,16 +3279,17 @@ void LLDBSwigPythonCallPythonLogOutputCallback(const char *str, void *baton);
 #define SWIGTYPE_p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t swig_types[245]
 #define SWIGTYPE_p_std__weak_ptrT_lldb_private__SymbolFileType_t swig_types[246]
 #define SWIGTYPE_p_std__weak_ptrT_lldb_private__Target_t swig_types[247]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Thread_t swig_types[248]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Type_t swig_types[249]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__UnixSignals_t swig_types[250]
-#define SWIGTYPE_p_unsigned_char swig_types[251]
-#define SWIGTYPE_p_unsigned_int swig_types[252]
-#define SWIGTYPE_p_unsigned_long_long swig_types[253]
-#define SWIGTYPE_p_unsigned_short swig_types[254]
-#define SWIGTYPE_p_void swig_types[255]
-static swig_type_info *swig_types[257];
-static swig_module_info swig_module = {swig_types, 256, 0, 0, 0, 0};
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__ThreadPlan_t swig_types[248]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Thread_t swig_types[249]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Type_t swig_types[250]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__UnixSignals_t swig_types[251]
+#define SWIGTYPE_p_unsigned_char swig_types[252]
+#define SWIGTYPE_p_unsigned_int swig_types[253]
+#define SWIGTYPE_p_unsigned_long_long swig_types[254]
+#define SWIGTYPE_p_unsigned_short swig_types[255]
+#define SWIGTYPE_p_void swig_types[256]
+static swig_type_info *swig_types[258];
+static swig_module_info swig_module = {swig_types, 257, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -9088,6 +9089,44 @@ SWIGINTERN PyObject *_wrap_SBBreakpoint_AddName(PyObject *SWIGUNUSEDPARM(self), 
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBBreakpoint_AddNameWithErrorHandling(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
+  char *arg2 = (char *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  lldb::SBError result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBBreakpoint_AddNameWithErrorHandling",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBBreakpoint, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBBreakpoint_AddNameWithErrorHandling" "', argument " "1"" of type '" "lldb::SBBreakpoint *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBBreakpoint * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBBreakpoint_AddNameWithErrorHandling" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->AddNameWithErrorHandling((char const *)arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBError(static_cast< const lldb::SBError& >(result))), SWIGTYPE_p_lldb__SBError, SWIG_POINTER_OWN |  0 );
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
   return resultobj;
 fail:
@@ -41474,6 +41513,23 @@ SWIGINTERN PyObject *_wrap_SBModule_GetObjectFileEntryPointAddress(PyObject *SWI
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_NewPointerObj((new lldb::SBAddress(static_cast< const lldb::SBAddress& >(result))), SWIGTYPE_p_lldb__SBAddress, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBModule_GetNumberAllocatedModules(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  uint32_t result;
+  
+  if (!PyArg_ParseTuple(args,(char *)":SBModule_GetNumberAllocatedModules")) SWIG_fail;
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (uint32_t)lldb::SBModule::GetNumberAllocatedModules();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_unsigned_SS_int(static_cast< unsigned int >(result));
   return resultobj;
 fail:
   return NULL;
@@ -81213,9 +81269,6 @@ LLDBSwigPythonCreateScriptedThreadPlan
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
 
-    // I do not want the SBThreadPlan to be deallocated when going out of scope because python
-    // has ownership of it and will manage memory for this object by itself
-    lldb::SBThreadPlan *tp_value = new lldb::SBThreadPlan(thread_plan_sp);
 
     PyErr_Cleaner py_err_cleaner(true);
 
@@ -81228,7 +81281,10 @@ LLDBSwigPythonCreateScriptedThreadPlan
         return nullptr;
     }
 
-    PythonObject tp_arg(PyRefType::Owned, SBTypeToSWIGWrapper(tp_value));
+    // I do not want the SBThreadPlan to be deallocated when going out of scope
+    // because python has ownership of it and will manage memory for this
+    // object by itself
+    PythonObject tp_arg(PyRefType::Owned, SBTypeToSWIGWrapper(new lldb::SBThreadPlan(thread_plan_sp)));
 
     if (!tp_arg.IsAllocated())
         Py_RETURN_NONE;
@@ -81254,8 +81310,7 @@ LLDBSwigPythonCreateScriptedThreadPlan
         }
         result = pfunc(tp_arg, dict);
     } else if (arg_info.get().max_positional_args >= 3) {
-        lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
-        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(args_value));
+        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(new lldb::SBStructuredData(args_impl)));
         result = pfunc(tp_arg, args_arg, dict);
     } else {
         error_string.assign("wrong number of arguments in __init__, should be 2 or 3 (not including self)");
@@ -82216,6 +82271,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBBreakpoint_SetCommandLineCommands", _wrap_SBBreakpoint_SetCommandLineCommands, METH_VARARGS, (char *)"SBBreakpoint_SetCommandLineCommands(SBBreakpoint self, SBStringList commands)"},
 	 { (char *)"SBBreakpoint_GetCommandLineCommands", _wrap_SBBreakpoint_GetCommandLineCommands, METH_VARARGS, (char *)"SBBreakpoint_GetCommandLineCommands(SBBreakpoint self, SBStringList commands) -> bool"},
 	 { (char *)"SBBreakpoint_AddName", _wrap_SBBreakpoint_AddName, METH_VARARGS, (char *)"SBBreakpoint_AddName(SBBreakpoint self, char const * new_name) -> bool"},
+	 { (char *)"SBBreakpoint_AddNameWithErrorHandling", _wrap_SBBreakpoint_AddNameWithErrorHandling, METH_VARARGS, (char *)"SBBreakpoint_AddNameWithErrorHandling(SBBreakpoint self, char const * new_name) -> SBError"},
 	 { (char *)"SBBreakpoint_RemoveName", _wrap_SBBreakpoint_RemoveName, METH_VARARGS, (char *)"SBBreakpoint_RemoveName(SBBreakpoint self, char const * name_to_remove)"},
 	 { (char *)"SBBreakpoint_MatchesName", _wrap_SBBreakpoint_MatchesName, METH_VARARGS, (char *)"SBBreakpoint_MatchesName(SBBreakpoint self, char const * name) -> bool"},
 	 { (char *)"SBBreakpoint_GetNames", _wrap_SBBreakpoint_GetNames, METH_VARARGS, (char *)"SBBreakpoint_GetNames(SBBreakpoint self, SBStringList names)"},
@@ -83680,6 +83736,16 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBModule_GetObjectFileHeaderAddress", _wrap_SBModule_GetObjectFileHeaderAddress, METH_VARARGS, (char *)"SBModule_GetObjectFileHeaderAddress(SBModule self) -> SBAddress"},
 	 { (char *)"SBModule_IsTypeSystemCompatible", _wrap_SBModule_IsTypeSystemCompatible, METH_VARARGS, (char *)"SBModule_IsTypeSystemCompatible(SBModule self, lldb::LanguageType language) -> SBError"},
 	 { (char *)"SBModule_GetObjectFileEntryPointAddress", _wrap_SBModule_GetObjectFileEntryPointAddress, METH_VARARGS, (char *)"SBModule_GetObjectFileEntryPointAddress(SBModule self) -> SBAddress"},
+	 { (char *)"SBModule_GetNumberAllocatedModules", _wrap_SBModule_GetNumberAllocatedModules, METH_VARARGS, (char *)"\n"
+		"SBModule_GetNumberAllocatedModules() -> uint32_t\n"
+		"\n"
+		"\n"
+		"Returns the number of modules in the module cache. This is an\n"
+		"implementation detail exposed for testing and should not be relied upon.\n"
+		"\n"
+		"@return\n"
+		"    The number of modules in the module cache.\n"
+		""},
 	 { (char *)"SBModule___str__", _wrap_SBModule___str__, METH_VARARGS, (char *)"SBModule___str__(SBModule self) -> std::string"},
 	 { (char *)"SBModule_swigregister", SBModule_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_SBModuleSpec", _wrap_new_SBModuleSpec, METH_VARARGS, (char *)"\n"
@@ -86126,6 +86192,7 @@ static swig_type_info _swigt__p_std__weak_ptrT_lldb_private__Stream_t = {"_p_std
 static swig_type_info _swigt__p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t = {"_p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t", "lldb::StructuredDataPluginWP *|std::weak_ptr< lldb_private::StructuredDataPlugin > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__weak_ptrT_lldb_private__SymbolFileType_t = {"_p_std__weak_ptrT_lldb_private__SymbolFileType_t", "std::weak_ptr< lldb_private::SymbolFileType > *|lldb::SymbolFileTypeWP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__weak_ptrT_lldb_private__Target_t = {"_p_std__weak_ptrT_lldb_private__Target_t", "std::weak_ptr< lldb_private::Target > *|lldb::TargetWP *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__weak_ptrT_lldb_private__ThreadPlan_t = {"_p_std__weak_ptrT_lldb_private__ThreadPlan_t", "std::weak_ptr< lldb_private::ThreadPlan > *|lldb::ThreadPlanWP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__weak_ptrT_lldb_private__Thread_t = {"_p_std__weak_ptrT_lldb_private__Thread_t", "std::weak_ptr< lldb_private::Thread > *|lldb::ThreadWP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__weak_ptrT_lldb_private__Type_t = {"_p_std__weak_ptrT_lldb_private__Type_t", "std::weak_ptr< lldb_private::Type > *|lldb::TypeWP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__weak_ptrT_lldb_private__UnixSignals_t = {"_p_std__weak_ptrT_lldb_private__UnixSignals_t", "std::weak_ptr< lldb_private::UnixSignals > *|lldb::UnixSignalsWP *", 0, 0, (void*)0, 0};
@@ -86384,6 +86451,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t,
   &_swigt__p_std__weak_ptrT_lldb_private__SymbolFileType_t,
   &_swigt__p_std__weak_ptrT_lldb_private__Target_t,
+  &_swigt__p_std__weak_ptrT_lldb_private__ThreadPlan_t,
   &_swigt__p_std__weak_ptrT_lldb_private__Thread_t,
   &_swigt__p_std__weak_ptrT_lldb_private__Type_t,
   &_swigt__p_std__weak_ptrT_lldb_private__UnixSignals_t,
@@ -86642,6 +86710,7 @@ static swig_cast_info _swigc__p_std__weak_ptrT_lldb_private__Stream_t[] = {  {&_
 static swig_cast_info _swigc__p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t[] = {  {&_swigt__p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__weak_ptrT_lldb_private__SymbolFileType_t[] = {  {&_swigt__p_std__weak_ptrT_lldb_private__SymbolFileType_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__weak_ptrT_lldb_private__Target_t[] = {  {&_swigt__p_std__weak_ptrT_lldb_private__Target_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__weak_ptrT_lldb_private__ThreadPlan_t[] = {  {&_swigt__p_std__weak_ptrT_lldb_private__ThreadPlan_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__weak_ptrT_lldb_private__Thread_t[] = {  {&_swigt__p_std__weak_ptrT_lldb_private__Thread_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__weak_ptrT_lldb_private__Type_t[] = {  {&_swigt__p_std__weak_ptrT_lldb_private__Type_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__weak_ptrT_lldb_private__UnixSignals_t[] = {  {&_swigt__p_std__weak_ptrT_lldb_private__UnixSignals_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -86900,6 +86969,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t,
   _swigc__p_std__weak_ptrT_lldb_private__SymbolFileType_t,
   _swigc__p_std__weak_ptrT_lldb_private__Target_t,
+  _swigc__p_std__weak_ptrT_lldb_private__ThreadPlan_t,
   _swigc__p_std__weak_ptrT_lldb_private__Thread_t,
   _swigc__p_std__weak_ptrT_lldb_private__Type_t,
   _swigc__p_std__weak_ptrT_lldb_private__UnixSignals_t,
