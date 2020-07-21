@@ -39,6 +39,9 @@ def Builtin : EnumAttr<"builtin">;
 /// Pass structure by value.
 def ByVal : TypeAttr<"byval">;
 
+/// Mark in-memory ABI type.
+def ByRef : TypeAttr<"byref">;
+
 /// Parameter or return value may not contain uninitialized or poison bits.
 def NoUndef : EnumAttr<"noundef">;
 
