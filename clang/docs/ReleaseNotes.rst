@@ -149,7 +149,33 @@ AST Matchers
 clang-format
 ------------
 
-- ...
+- Option ``BitFieldColonSpacing`` has been added that decides how
+  space should be added around identifier, colon and bit-width in
+  bitfield definitions.
+
+  .. code-block:: c++
+
+    // Both (default)
+    struct F {
+      unsigned dscp : 6;
+      unsigned ecn  : 2; // AlignConsecutiveBitFields=true
+    };
+    // None
+    struct F {
+      unsigned dscp:6;
+      unsigned ecn :2;
+    };
+    // Before
+    struct F {
+      unsigned dscp :6;
+      unsigned ecn  :2;
+    };
+    // After
+    struct F {
+      unsigned dscp: 6;
+      unsigned ecn : 2;
+    };
+
 
 libclang
 --------

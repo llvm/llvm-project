@@ -2165,6 +2165,33 @@ TEST_F(FormatTest, FormatsBitfields) {
                "  uchar : 8;\n"
                "  uchar other;\n"
                "};");
+  FormatStyle Style = getLLVMStyle();
+  Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
+  verifyFormat("struct Bitfields {\n"
+               "  unsigned sClass:8;\n"
+               "  unsigned ValueKind:2;\n"
+               "  uchar other;\n"
+               "};",
+               Style);
+  verifyFormat("struct A {\n"
+               "  int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:1,\n"
+               "      bbbbbbbbbbbbbbbbbbbbbbbbb:2;\n"
+               "};",
+               Style);
+  Style.BitFieldColonSpacing = FormatStyle::BFCS_Before;
+  verifyFormat("struct Bitfields {\n"
+               "  unsigned sClass :8;\n"
+               "  unsigned ValueKind :2;\n"
+               "  uchar other;\n"
+               "};",
+               Style);
+  Style.BitFieldColonSpacing = FormatStyle::BFCS_After;
+  verifyFormat("struct Bitfields {\n"
+               "  unsigned sClass: 8;\n"
+               "  unsigned ValueKind: 2;\n"
+               "  uchar other;\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, FormatsNamespaces) {
@@ -12156,6 +12183,21 @@ TEST_F(FormatTest, AlignConsecutiveBitFields) {
                "int       oneTwoThree : 23 = 0;",
                Alignment);
 
+  Alignment.BitFieldColonSpacing = FormatStyle::BFCS_None;
+  verifyFormat("int const a          :5;\n"
+               "int       oneTwoThree:23;",
+               Alignment);
+
+  Alignment.BitFieldColonSpacing = FormatStyle::BFCS_Before;
+  verifyFormat("int const a           :5;\n"
+               "int       oneTwoThree :23;",
+               Alignment);
+
+  Alignment.BitFieldColonSpacing = FormatStyle::BFCS_After;
+  verifyFormat("int const a          : 5;\n"
+               "int       oneTwoThree: 23;",
+               Alignment);
+
   // Known limitations: ':' is only recognized as a bitfield colon when
   // followed by a number.
   /*
@@ -14003,6 +14045,16 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::IEBS_Indent);
   CHECK_PARSE("IndentExternBlock: false", IndentExternBlock,
               FormatStyle::IEBS_NoIndent);
+
+  Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
+  CHECK_PARSE("BitFieldColonSpacing: Both", BitFieldColonSpacing,
+              FormatStyle::BFCS_Both);
+  CHECK_PARSE("BitFieldColonSpacing: None", BitFieldColonSpacing,
+              FormatStyle::BFCS_None);
+  CHECK_PARSE("BitFieldColonSpacing: Before", BitFieldColonSpacing,
+              FormatStyle::BFCS_Before);
+  CHECK_PARSE("BitFieldColonSpacing: After", BitFieldColonSpacing,
+              FormatStyle::BFCS_After);
 
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.
