@@ -195,13 +195,13 @@ def Shape_FromExtentTensorOp : Shape_Op<"from_extent_tensor", [NoSideEffect]> {
 def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
   let summary = "Gets the rank of a shape";
   let description = [{
-    Returns the rank of the shape, i.e. the number of extents.
+    Returns the rank of the shape or extent tensor, i.e. the number of extents.
   }];
 
-  let arguments = (ins Shape_ShapeType:$shape);
+  let arguments = (ins Shape_ShapeOrExtentTensorType:$shape);
   let results = (outs Shape_SizeType:$rank);
 
-  let assemblyFormat = "attr-dict $shape";
+  let assemblyFormat = "$shape `:` type($shape) attr-dict";
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;

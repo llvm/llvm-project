@@ -124,7 +124,7 @@ func @rank(%shape : !shape.shape) -> !shape.size {
   // CHECK-DAG: %[[C0:.*]] = constant 0 : index
   // CHECK-DAG: %[[RESULT:.*]] = dim %[[SHAPE]], %[[C0]]
   // CHECK-DAG: return %[[RESULT]] : index
-  %rank = shape.rank %shape
+  %rank = shape.rank %shape : !shape.shape
   return %rank : !shape.size
 }
 
