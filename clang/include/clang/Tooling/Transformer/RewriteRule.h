@@ -47,6 +47,8 @@ using EditGenerator = MatchConsumer<llvm::SmallVector<Edit, 1>>;
 
 using TextGenerator = std::shared_ptr<MatchComputation<std::string>>;
 
+using AnyGenerator = MatchConsumer<llvm::Any>;
+
 // Description of a source-code edit, expressed in terms of an AST node.
 // Includes: an ID for the (bound) node, a selector for source related to the
 // node, a replacement and, optionally, an explanation for the edit.
@@ -87,7 +89,12 @@ struct ASTEdit {
   RangeSelector TargetRange;
   TextGenerator Replacement;
   TextGenerator Note;
-  llvm::Any Metadata;
+  // Not all transformations will want or need to attach metadata and therefore
+  // should not be requierd to do so.
+  AnyGenerator Metadata = [](const ast_matchers::MatchFinder::MatchResult &)
+      -> llvm::Expected<llvm::Any> {
+    return llvm::Expected<llvm::Any>(llvm::Any());
+  };
 };
 
 /// Lifts a list of `ASTEdit`s into an `EditGenerator`.
@@ -261,9 +268,27 @@ inline ASTEdit insertAfter(RangeSelector S, TextGenerator Replacement) {
 /// Removes the source selected by \p S.
 ASTEdit remove(RangeSelector S);
 
-inline ASTEdit withMetadata(ASTEdit edit, llvm::Any Metadata) {
-  edit.Metadata = std::move(Metadata);
-  return edit;
+// FIXME: If `Metadata` returns an `llvm::Expected<T>` the `AnyGenerator` will
+// construct an `llvm::Expected<llvm::Any>` where no error is present but the
+// `llvm::Any` holds the error. This is unlikely but potentially surprising.
+// Perhaps the `llvm::Expected` should be unwrapped, or perhaps this should be a
+// compile-time error. No solution here is perfect.
+//
+// Note: This function template accepts any type callable with a MatchResult
+// rather than a `std::function` because the return-type needs to be deduced. If
+// it accepted a `std::function<R(MatchResult)>`, lambdas or other callable types
+// would not be able to deduce `R`, and users would be forced to specify
+// explicitly the type they intended to return by wrapping the lambda at the
+// call-site.
+template <typename Callable>
+inline ASTEdit withMetadata(ASTEdit Edit, Callable Metadata) {
+  Edit.Metadata =
+      [Gen = std::move(Metadata)](
+          const ast_matchers::MatchFinder::MatchResult &R) -> llvm::Any {
+    return Gen(R);
+  };
+
+  return Edit;
 }
 
 /// The following three functions are a low-level part of the RewriteRule
