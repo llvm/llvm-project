@@ -96,7 +96,9 @@ public:
 
     CommandArgumentData(lldb::CommandArgumentType type = lldb::eArgTypeNone,
                         ArgumentRepetitionType repetition = eArgRepeatPlain,
-                        uint32_t opt_set = LLDB_OPT_SET_ALL) {}
+                        uint32_t opt_set = LLDB_OPT_SET_ALL)
+        : arg_type(type), arg_repetition(repetition),
+          arg_opt_set_association(opt_set) {}
   };
 
   typedef std::vector<CommandArgumentData>
