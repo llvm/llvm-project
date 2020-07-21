@@ -457,6 +457,44 @@ TEST_FUNC(diviu_op_i32) {
   f.erase();
 }
 
+TEST_FUNC(fpext_f32_f64) {
+  using namespace edsc::op;
+  auto f = makeFunction("fpext", {}, {});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  auto f32Type = builder.getF32Type();
+  auto f64Type = builder.getF64Type();
+  std_fpext(std_constant_float(llvm::APFloat(10.0f), f32Type), f64Type);
+
+  // clang-format off
+  // CHECK-LABEL: @fpext
+  //       CHECK: {{.*}} = constant 1.0
+  //  CHECK-NEXT: {{.*}} = fpext
+  // clang-format on
+  f.print(llvm::outs());
+  f.erase();
+}
+
+TEST_FUNC(fptrunc_f32_bf16) {
+  using namespace edsc::op;
+  auto f = makeFunction("fptrunc", {}, {});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  auto f32Type = builder.getF32Type();
+  auto bf16Type = builder.getBF16Type();
+  std_fptrunc(std_constant_float(llvm::APFloat(10.0f), f32Type), bf16Type);
+
+  // clang-format off
+  // CHECK-LABEL: @fptrunc
+  //       CHECK: {{.*}} = constant 1.0
+  //  CHECK-NEXT: {{.*}} = fptrunc
+  // clang-format on
+  f.print(llvm::outs());
+  f.erase();
+}
+
 TEST_FUNC(select_op_i32) {
   using namespace edsc::op;
   auto i32Type = IntegerType::get(32, &globalContext());
