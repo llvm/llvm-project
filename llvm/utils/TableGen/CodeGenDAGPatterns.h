@@ -41,7 +41,6 @@ class SDNodeInfo;
 class TreePattern;
 class TreePatternNode;
 class CodeGenDAGPatterns;
-class ComplexPattern;
 
 /// Shared pointer for TreePatternNode.
 using TreePatternNodePtr = std::shared_ptr<TreePatternNode>;
