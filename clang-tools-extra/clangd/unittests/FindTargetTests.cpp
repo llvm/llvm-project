@@ -561,6 +561,74 @@ TEST_F(TargetDeclTest, OverloadExpr) {
   EXPECT_DECLS("UnresolvedMemberExpr", "void func(int *)", "void func(char *)");
 }
 
+TEST_F(TargetDeclTest, DependentExprs) {
+  Flags = {"-fno-delayed-template-parsing"};
+
+  // Heuristic resolution of method of dependent field
+  Code = R"cpp(
+        struct A { void foo() {} };
+        template <typename T>
+        struct B {
+          A a;
+          void bar() {
+            this->a.[[foo]]();
+          }
+        };
+      )cpp";
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+
+  // Similar to above but base expression involves a function call.
+  Code = R"cpp(
+        struct A {
+          void foo() {}
+        };
+        struct B {
+          A getA();
+        };
+        template <typename T>
+        struct C {
+          B c;
+          void bar() {
+            this->c.getA().[[foo]]();
+          }
+        };
+      )cpp";
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+
+  // Similar to above but uses a function pointer.
+  Code = R"cpp(
+        struct A {
+          void foo() {}
+        };
+        struct B {
+          using FPtr = A(*)();
+          FPtr fptr;
+        };
+        template <typename T>
+        struct C {
+          B c;
+          void bar() {
+            this->c.fptr().[[foo]]();
+          }
+        };
+      )cpp";
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+
+  // Base expression involves a member access into this.
+  Code = R"cpp(
+        struct Bar {
+          int aaaa;
+        };
+        template <typename T> struct Foo {
+          Bar func(int);
+          void test() {
+            func(1).[[aaaa]];
+          }
+        };
+      )cpp";
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "int aaaa");
+}
+
 TEST_F(TargetDeclTest, ObjC) {
   Flags = {"-xobjective-c"};
   Code = R"cpp(
@@ -718,36 +786,37 @@ protected:
 
 TEST_F(FindExplicitReferencesTest, All) {
   std::pair</*Code*/ llvm::StringRef, /*References*/ llvm::StringRef> Cases[] =
-      {// Simple expressions.
-       {R"cpp(
+      {
+          // Simple expressions.
+          {R"cpp(
         int global;
         int func();
         void foo(int param) {
           $0^global = $1^param + $2^func();
         }
         )cpp",
-        "0: targets = {global}\n"
-        "1: targets = {param}\n"
-        "2: targets = {func}\n"},
-       {R"cpp(
+           "0: targets = {global}\n"
+           "1: targets = {param}\n"
+           "2: targets = {func}\n"},
+          {R"cpp(
         struct X { int a; };
         void foo(X x) {
           $0^x.$1^a = 10;
         }
         )cpp",
-        "0: targets = {x}\n"
-        "1: targets = {X::a}\n"},
-       {R"cpp(
+           "0: targets = {x}\n"
+           "1: targets = {X::a}\n"},
+          {R"cpp(
         // error-ok: testing with broken code
         int bar();
         int foo() {
           return $0^bar() + $1^bar(42);
         }
         )cpp",
-        "0: targets = {bar}\n"
-        "1: targets = {bar}\n"},
-       // Namespaces and aliases.
-       {R"cpp(
+           "0: targets = {bar}\n"
+           "1: targets = {bar}\n"},
+          // Namespaces and aliases.
+          {R"cpp(
           namespace ns {}
           namespace alias = ns;
           void foo() {
@@ -755,19 +824,19 @@ TEST_F(FindExplicitReferencesTest, All) {
             using namespace $1^alias;
           }
         )cpp",
-        "0: targets = {ns}\n"
-        "1: targets = {alias}\n"},
-       // Using declarations.
-       {R"cpp(
+           "0: targets = {ns}\n"
+           "1: targets = {alias}\n"},
+          // Using declarations.
+          {R"cpp(
           namespace ns { int global; }
           void foo() {
             using $0^ns::$1^global;
           }
         )cpp",
-        "0: targets = {ns}\n"
-        "1: targets = {ns::global}, qualifier = 'ns::'\n"},
-       // Simple types.
-       {R"cpp(
+           "0: targets = {ns}\n"
+           "1: targets = {ns::global}, qualifier = 'ns::'\n"},
+          // Simple types.
+          {R"cpp(
          struct Struct { int a; };
          using Typedef = int;
          void foo() {
@@ -776,13 +845,13 @@ TEST_F(FindExplicitReferencesTest, All) {
            static_cast<$4^Struct*>(0);
          }
        )cpp",
-        "0: targets = {Struct}\n"
-        "1: targets = {x}, decl\n"
-        "2: targets = {Typedef}\n"
-        "3: targets = {y}, decl\n"
-        "4: targets = {Struct}\n"},
-       // Name qualifiers.
-       {R"cpp(
+           "0: targets = {Struct}\n"
+           "1: targets = {x}, decl\n"
+           "2: targets = {Typedef}\n"
+           "3: targets = {y}, decl\n"
+           "4: targets = {Struct}\n"},
+          // Name qualifiers.
+          {R"cpp(
          namespace a { namespace b { struct S { typedef int type; }; } }
          void foo() {
            $0^a::$1^b::$2^S $3^x;
@@ -790,16 +859,16 @@ TEST_F(FindExplicitReferencesTest, All) {
            $6^S::$7^type $8^y;
          }
         )cpp",
-        "0: targets = {a}\n"
-        "1: targets = {a::b}, qualifier = 'a::'\n"
-        "2: targets = {a::b::S}, qualifier = 'a::b::'\n"
-        "3: targets = {x}, decl\n"
-        "4: targets = {a}\n"
-        "5: targets = {a::b}, qualifier = 'a::'\n"
-        "6: targets = {a::b::S}\n"
-        "7: targets = {a::b::S::type}, qualifier = 'struct S::'\n"
-        "8: targets = {y}, decl\n"},
-       {R"cpp(
+           "0: targets = {a}\n"
+           "1: targets = {a::b}, qualifier = 'a::'\n"
+           "2: targets = {a::b::S}, qualifier = 'a::b::'\n"
+           "3: targets = {x}, decl\n"
+           "4: targets = {a}\n"
+           "5: targets = {a::b}, qualifier = 'a::'\n"
+           "6: targets = {a::b::S}\n"
+           "7: targets = {a::b::S::type}, qualifier = 'struct S::'\n"
+           "8: targets = {y}, decl\n"},
+          {R"cpp(
          void foo() {
            $0^ten: // PRINT "HELLO WORLD!"
            goto $1^ten;
@@ -816,12 +885,12 @@ TEST_F(FindExplicitReferencesTest, All) {
             $2^vector<bool> $3^vb;
           }
         )cpp",
-        "0: targets = {vector<int>}\n"
-        "1: targets = {vi}, decl\n"
-        "2: targets = {vector<bool>}\n"
-        "3: targets = {vb}, decl\n"},
-       // Template type aliases.
-       {R"cpp(
+           "0: targets = {vector<int>}\n"
+           "1: targets = {vi}, decl\n"
+           "2: targets = {vector<bool>}\n"
+           "3: targets = {vb}, decl\n"},
+          // Template type aliases.
+          {R"cpp(
             template <class T> struct vector { using value_type = T; };
             template <> struct vector<bool> { using value_type = bool; };
             template <class T> using valias = vector<T>;
@@ -830,12 +899,12 @@ TEST_F(FindExplicitReferencesTest, All) {
               $2^valias<bool> $3^vb;
             }
           )cpp",
-        "0: targets = {valias}\n"
-        "1: targets = {vi}, decl\n"
-        "2: targets = {valias}\n"
-        "3: targets = {vb}, decl\n"},
-       // Injected class name.
-       {R"cpp(
+           "0: targets = {valias}\n"
+           "1: targets = {vi}, decl\n"
+           "2: targets = {valias}\n"
+           "3: targets = {vb}, decl\n"},
+          // Injected class name.
+          {R"cpp(
             namespace foo {
               template <typename $0^T>
               class $1^Bar {
@@ -844,13 +913,13 @@ TEST_F(FindExplicitReferencesTest, All) {
               };
             }
           )cpp",
-        "0: targets = {foo::Bar::T}, decl\n"
-        "1: targets = {foo::Bar}, decl\n"
-        "2: targets = {foo::Bar}\n"
-        "3: targets = {foo::Bar::f}, decl\n"
-        "4: targets = {foo::Bar}\n"},
-       // MemberExpr should know their using declaration.
-       {R"cpp(
+           "0: targets = {foo::Bar::T}, decl\n"
+           "1: targets = {foo::Bar}, decl\n"
+           "2: targets = {foo::Bar}\n"
+           "3: targets = {foo::Bar::f}, decl\n"
+           "4: targets = {foo::Bar}\n"},
+          // MemberExpr should know their using declaration.
+          {R"cpp(
             struct X { void func(int); };
             struct Y : X {
               using X::func;
@@ -859,10 +928,10 @@ TEST_F(FindExplicitReferencesTest, All) {
               $0^y.$1^func(1);
             }
         )cpp",
-        "0: targets = {y}\n"
-        "1: targets = {Y::func}\n"},
-       // DeclRefExpr should know their using declaration.
-       {R"cpp(
+           "0: targets = {y}\n"
+           "1: targets = {Y::func}\n"},
+          // DeclRefExpr should know their using declaration.
+          {R"cpp(
             namespace ns { void bar(int); }
             using ns::bar;
 
@@ -870,9 +939,9 @@ TEST_F(FindExplicitReferencesTest, All) {
               $0^bar(10);
             }
         )cpp",
-        "0: targets = {bar}\n"},
-       // References from a macro.
-       {R"cpp(
+           "0: targets = {bar}\n"},
+          // References from a macro.
+          {R"cpp(
             #define FOO a
             #define BAR b
 
@@ -880,10 +949,10 @@ TEST_F(FindExplicitReferencesTest, All) {
               $0^FOO+$1^BAR;
             }
         )cpp",
-        "0: targets = {a}\n"
-        "1: targets = {b}\n"},
-       // No references from implicit nodes.
-       {R"cpp(
+           "0: targets = {a}\n"
+           "1: targets = {b}\n"},
+          // No references from implicit nodes.
+          {R"cpp(
             struct vector {
               int *begin();
               int *end();
@@ -895,15 +964,15 @@ TEST_F(FindExplicitReferencesTest, All) {
               }
             }
         )cpp",
-        "0: targets = {x}, decl\n"
-        "1: targets = {vector}\n"
-        "2: targets = {x}\n"},
+           "0: targets = {x}, decl\n"
+           "1: targets = {vector}\n"
+           "2: targets = {x}\n"},
 // Handle UnresolvedLookupExpr.
 // FIXME
 // This case fails when expensive checks are enabled.
 // Seems like the order of ns1::func and ns2::func isn't defined.
 #ifndef EXPENSIVE_CHECKS
-       {R"cpp(
+          {R"cpp(
             namespace ns1 { void func(char*); }
             namespace ns2 { void func(int*); }
             using namespace ns1;
@@ -914,11 +983,11 @@ TEST_F(FindExplicitReferencesTest, All) {
               $0^func($1^t);
             }
         )cpp",
-        "0: targets = {ns1::func, ns2::func}\n"
-        "1: targets = {t}\n"},
+           "0: targets = {ns1::func, ns2::func}\n"
+           "1: targets = {t}\n"},
 #endif
-       // Handle UnresolvedMemberExpr.
-       {R"cpp(
+          // Handle UnresolvedMemberExpr.
+          {R"cpp(
             struct X {
               void func(char*);
               void func(int*);
@@ -929,11 +998,11 @@ TEST_F(FindExplicitReferencesTest, All) {
               $0^x.$1^func($2^t);
             }
         )cpp",
-        "0: targets = {x}\n"
-        "1: targets = {X::func, X::func}\n"
-        "2: targets = {t}\n"},
-       // Handle DependentScopeDeclRefExpr.
-       {R"cpp(
+           "0: targets = {x}\n"
+           "1: targets = {X::func, X::func}\n"
+           "2: targets = {t}\n"},
+          // Handle DependentScopeDeclRefExpr.
+          {R"cpp(
             template <class T>
             struct S {
               static int value;
@@ -944,11 +1013,11 @@ TEST_F(FindExplicitReferencesTest, All) {
               $0^S<$1^T>::$2^value;
             }
        )cpp",
-        "0: targets = {S}\n"
-        "1: targets = {T}\n"
-        "2: targets = {S::value}, qualifier = 'S<T>::'\n"},
-       // Handle CXXDependentScopeMemberExpr.
-       {R"cpp(
+           "0: targets = {S}\n"
+           "1: targets = {T}\n"
+           "2: targets = {S::value}, qualifier = 'S<T>::'\n"},
+          // Handle CXXDependentScopeMemberExpr.
+          {R"cpp(
             template <class T>
             struct S {
               int value;
@@ -959,10 +1028,10 @@ TEST_F(FindExplicitReferencesTest, All) {
               $0^t.$1^value;
             }
        )cpp",
-        "0: targets = {t}\n"
-        "1: targets = {S::value}\n"},
-       // Type template parameters.
-       {R"cpp(
+           "0: targets = {t}\n"
+           "1: targets = {S::value}\n"},
+          // Type template parameters.
+          {R"cpp(
             template <class T>
             void foo() {
               static_cast<$0^T>(0);
@@ -970,21 +1039,21 @@ TEST_F(FindExplicitReferencesTest, All) {
               $2^T $3^t;
             }
         )cpp",
-        "0: targets = {T}\n"
-        "1: targets = {T}\n"
-        "2: targets = {T}\n"
-        "3: targets = {t}, decl\n"},
-       // Non-type template parameters.
-       {R"cpp(
+           "0: targets = {T}\n"
+           "1: targets = {T}\n"
+           "2: targets = {T}\n"
+           "3: targets = {t}, decl\n"},
+          // Non-type template parameters.
+          {R"cpp(
             template <int I>
             void foo() {
               int $0^x = $1^I;
             }
         )cpp",
-        "0: targets = {x}, decl\n"
-        "1: targets = {I}\n"},
-       // Template template parameters.
-       {R"cpp(
+           "0: targets = {x}, decl\n"
+           "1: targets = {I}\n"},
+          // Template template parameters.
+          {R"cpp(
             template <class T> struct vector {};
 
             template <template<class> class TT, template<class> class ...TP>
@@ -995,16 +1064,16 @@ TEST_F(FindExplicitReferencesTest, All) {
               $6^foo<$7^TP...>();
             }
         )cpp",
-        "0: targets = {TT}\n"
-        "1: targets = {x}, decl\n"
-        "2: targets = {foo}\n"
-        "3: targets = {TT}\n"
-        "4: targets = {foo}\n"
-        "5: targets = {vector}\n"
-        "6: targets = {foo}\n"
-        "7: targets = {TP}\n"},
-       // Non-type template parameters with declarations.
-       {R"cpp(
+           "0: targets = {TT}\n"
+           "1: targets = {x}, decl\n"
+           "2: targets = {foo}\n"
+           "3: targets = {TT}\n"
+           "4: targets = {foo}\n"
+           "5: targets = {vector}\n"
+           "6: targets = {foo}\n"
+           "7: targets = {TP}\n"},
+          // Non-type template parameters with declarations.
+          {R"cpp(
             int func();
             template <int(*)()> struct wrapper {};
 
@@ -1014,12 +1083,12 @@ TEST_F(FindExplicitReferencesTest, All) {
               $3^FuncParam();
             }
         )cpp",
-        "0: targets = {wrapper<&func>}\n"
-        "1: targets = {func}\n"
-        "2: targets = {w}, decl\n"
-        "3: targets = {FuncParam}\n"},
-       // declaration references.
-       {R"cpp(
+           "0: targets = {wrapper<&func>}\n"
+           "1: targets = {func}\n"
+           "2: targets = {w}, decl\n"
+           "3: targets = {FuncParam}\n"},
+          // declaration references.
+          {R"cpp(
              namespace ns {}
              class S {};
              void foo() {
@@ -1031,19 +1100,19 @@ TEST_F(FindExplicitReferencesTest, All) {
                namespace $9^NS = $10^ns;
              }
            )cpp",
-        "0: targets = {Foo}, decl\n"
-        "1: targets = {foo()::Foo::Foo}, decl\n"
-        "2: targets = {Foo}\n"
-        "3: targets = {foo()::Foo::field}, decl\n"
-        "4: targets = {Var}, decl\n"
-        "5: targets = {E}, decl\n"
-        "6: targets = {foo()::ABC}, decl\n"
-        "7: targets = {INT}, decl\n"
-        "8: targets = {INT2}, decl\n"
-        "9: targets = {NS}, decl\n"
-        "10: targets = {ns}\n"},
-       // User-defined conversion operator.
-       {R"cpp(
+           "0: targets = {Foo}, decl\n"
+           "1: targets = {foo()::Foo::Foo}, decl\n"
+           "2: targets = {Foo}\n"
+           "3: targets = {foo()::Foo::field}, decl\n"
+           "4: targets = {Var}, decl\n"
+           "5: targets = {E}, decl\n"
+           "6: targets = {foo()::ABC}, decl\n"
+           "7: targets = {INT}, decl\n"
+           "8: targets = {INT2}, decl\n"
+           "9: targets = {NS}, decl\n"
+           "10: targets = {ns}\n"},
+          // User-defined conversion operator.
+          {R"cpp(
             void foo() {
                class $0^Bar {};
                class $1^Foo {
@@ -1056,18 +1125,18 @@ TEST_F(FindExplicitReferencesTest, All) {
                $7^f.$8^operator $9^Bar();
             }
         )cpp",
-        "0: targets = {Bar}, decl\n"
-        "1: targets = {Foo}, decl\n"
-        "2: targets = {foo()::Foo::operator Bar}, decl\n"
-        "3: targets = {Bar}\n"
-        "4: targets = {Bar}\n"
-        "5: targets = {Foo}\n"
-        "6: targets = {f}, decl\n"
-        "7: targets = {f}\n"
-        "8: targets = {foo()::Foo::operator Bar}\n"
-        "9: targets = {Bar}\n"},
-       // Destructor.
-       {R"cpp(
+           "0: targets = {Bar}, decl\n"
+           "1: targets = {Foo}, decl\n"
+           "2: targets = {foo()::Foo::operator Bar}, decl\n"
+           "3: targets = {Bar}\n"
+           "4: targets = {Bar}\n"
+           "5: targets = {Foo}\n"
+           "6: targets = {f}, decl\n"
+           "7: targets = {f}\n"
+           "8: targets = {foo()::Foo::operator Bar}\n"
+           "9: targets = {Bar}\n"},
+          // Destructor.
+          {R"cpp(
              void foo() {
                class $0^Foo {
                public:
@@ -1082,18 +1151,18 @@ TEST_F(FindExplicitReferencesTest, All) {
                $6^f.~ /*...*/ $7^Foo();
              }
            )cpp",
-        "0: targets = {Foo}, decl\n"
-        // FIXME: It's better to target destructor's FunctionDecl instead of
-        // the type itself (similar to constructor).
-        "1: targets = {Foo}\n"
-        "2: targets = {foo()::Foo::destructMe}, decl\n"
-        "3: targets = {Foo}\n"
-        "4: targets = {Foo}\n"
-        "5: targets = {f}, decl\n"
-        "6: targets = {f}\n"
-        "7: targets = {Foo}\n"},
-       // cxx constructor initializer.
-       {R"cpp(
+           "0: targets = {Foo}, decl\n"
+           // FIXME: It's better to target destructor's FunctionDecl instead of
+           // the type itself (similar to constructor).
+           "1: targets = {Foo}\n"
+           "2: targets = {foo()::Foo::destructMe}, decl\n"
+           "3: targets = {Foo}\n"
+           "4: targets = {Foo}\n"
+           "5: targets = {f}, decl\n"
+           "6: targets = {f}\n"
+           "7: targets = {Foo}\n"},
+          // cxx constructor initializer.
+          {R"cpp(
              class Base {};
              void foo() {
                // member initializer
@@ -1113,34 +1182,34 @@ TEST_F(FindExplicitReferencesTest, All) {
                };
              }
            )cpp",
-        "0: targets = {X}, decl\n"
-        "1: targets = {foo()::X::abc}, decl\n"
-        "2: targets = {foo()::X::X}, decl\n"
-        "3: targets = {foo()::X::abc}\n"
-        "4: targets = {Derived}, decl\n"
-        "5: targets = {Base}\n"
-        "6: targets = {Base}\n"
-        "7: targets = {foo()::Derived::B}, decl\n"
-        "8: targets = {foo()::Derived::Derived}, decl\n"
-        "9: targets = {Base}\n"
-        "10: targets = {Foo}, decl\n"
-        "11: targets = {foo()::Foo::Foo}, decl\n"
-        "12: targets = {foo()::Foo::Foo}, decl\n"
-        "13: targets = {Foo}\n"},
-       // Anonymous entities should not be reported.
-       {
-           R"cpp(
+           "0: targets = {X}, decl\n"
+           "1: targets = {foo()::X::abc}, decl\n"
+           "2: targets = {foo()::X::X}, decl\n"
+           "3: targets = {foo()::X::abc}\n"
+           "4: targets = {Derived}, decl\n"
+           "5: targets = {Base}\n"
+           "6: targets = {Base}\n"
+           "7: targets = {foo()::Derived::B}, decl\n"
+           "8: targets = {foo()::Derived::Derived}, decl\n"
+           "9: targets = {Base}\n"
+           "10: targets = {Foo}, decl\n"
+           "11: targets = {foo()::Foo::Foo}, decl\n"
+           "12: targets = {foo()::Foo::Foo}, decl\n"
+           "13: targets = {Foo}\n"},
+          // Anonymous entities should not be reported.
+          {
+              R"cpp(
              void foo() {
               class {} $0^x;
               int (*$1^fptr)(int $2^a, int) = nullptr;
              }
            )cpp",
-           "0: targets = {x}, decl\n"
-           "1: targets = {fptr}, decl\n"
-           "2: targets = {a}, decl\n"},
-       // Namespace aliases should be handled properly.
-       {
-           R"cpp(
+              "0: targets = {x}, decl\n"
+              "1: targets = {fptr}, decl\n"
+              "2: targets = {a}, decl\n"},
+          // Namespace aliases should be handled properly.
+          {
+              R"cpp(
                 namespace ns { struct Type {}; }
                 namespace alias = ns;
                 namespace rec_alias = alias;
@@ -1151,28 +1220,28 @@ TEST_F(FindExplicitReferencesTest, All) {
                   $6^rec_alias::$7^Type $8^c;
                 }
            )cpp",
-           "0: targets = {ns}\n"
-           "1: targets = {ns::Type}, qualifier = 'ns::'\n"
-           "2: targets = {a}, decl\n"
-           "3: targets = {alias}\n"
-           "4: targets = {ns::Type}, qualifier = 'alias::'\n"
-           "5: targets = {b}, decl\n"
-           "6: targets = {rec_alias}\n"
-           "7: targets = {ns::Type}, qualifier = 'rec_alias::'\n"
-           "8: targets = {c}, decl\n"},
-       // Handle SizeOfPackExpr.
-       {
-           R"cpp(
+              "0: targets = {ns}\n"
+              "1: targets = {ns::Type}, qualifier = 'ns::'\n"
+              "2: targets = {a}, decl\n"
+              "3: targets = {alias}\n"
+              "4: targets = {ns::Type}, qualifier = 'alias::'\n"
+              "5: targets = {b}, decl\n"
+              "6: targets = {rec_alias}\n"
+              "7: targets = {ns::Type}, qualifier = 'rec_alias::'\n"
+              "8: targets = {c}, decl\n"},
+          // Handle SizeOfPackExpr.
+          {
+              R"cpp(
                 template <typename... E>
                 void foo() {
                   constexpr int $0^size = sizeof...($1^E);
                 };
             )cpp",
-           "0: targets = {size}, decl\n"
-           "1: targets = {E}\n"},
-       // Class template argument deduction
-       {
-           R"cpp(
+              "0: targets = {size}, decl\n"
+              "1: targets = {E}\n"},
+          // Class template argument deduction
+          {
+              R"cpp(
                 template <typename T>
                 struct Test {
                 Test(T);
@@ -1181,51 +1250,51 @@ TEST_F(FindExplicitReferencesTest, All) {
                 $0^Test $1^a(5);
               }
             )cpp",
-           "0: targets = {Test}\n"
-           "1: targets = {a}, decl\n"},
-       // Templates
-       {R"cpp(
+              "0: targets = {Test}\n"
+              "1: targets = {a}, decl\n"},
+          // Templates
+          {R"cpp(
             namespace foo {
               template <typename $0^T>
               class $1^Bar {};
             }
           )cpp",
-        "0: targets = {foo::Bar::T}, decl\n"
-        "1: targets = {foo::Bar}, decl\n"},
-       // Templates
-       {R"cpp(
+           "0: targets = {foo::Bar::T}, decl\n"
+           "1: targets = {foo::Bar}, decl\n"},
+          // Templates
+          {R"cpp(
             namespace foo {
               template <typename $0^T>
               void $1^func();
             }
           )cpp",
-        "0: targets = {T}, decl\n"
-        "1: targets = {foo::func}, decl\n"},
-       // Templates
-       {R"cpp(
+           "0: targets = {T}, decl\n"
+           "1: targets = {foo::func}, decl\n"},
+          // Templates
+          {R"cpp(
             namespace foo {
               template <typename $0^T>
               $1^T $2^x;
             }
           )cpp",
-        "0: targets = {foo::T}, decl\n"
-        "1: targets = {foo::T}\n"
-        "2: targets = {foo::x}, decl\n"},
-       // Templates
-       {R"cpp(
+           "0: targets = {foo::T}, decl\n"
+           "1: targets = {foo::T}\n"
+           "2: targets = {foo::x}, decl\n"},
+          // Templates
+          {R"cpp(
             template<typename T> class vector {};
             namespace foo {
               template <typename $0^T>
               using $1^V = $2^vector<$3^T>;
             }
           )cpp",
-        "0: targets = {foo::T}, decl\n"
-        "1: targets = {foo::V}, decl\n"
-        "2: targets = {vector}\n"
-        "3: targets = {foo::T}\n"},
-       // Concept
-       {
-           R"cpp(
+           "0: targets = {foo::T}, decl\n"
+           "1: targets = {foo::V}, decl\n"
+           "2: targets = {vector}\n"
+           "3: targets = {foo::T}\n"},
+          // Concept
+          {
+              R"cpp(
               template <typename T>
               concept Drawable = requires (T t) { t.draw(); };
 
@@ -1236,17 +1305,17 @@ TEST_F(FindExplicitReferencesTest, All) {
                 }
               }
           )cpp",
-           "0: targets = {T}, decl\n"
-           "1: targets = {Drawable}\n"
-           "2: targets = {T}\n"
-           "3: targets = {foo::bar}, decl\n"
-           "4: targets = {T}\n"
-           "5: targets = {t}, decl\n"
-           "6: targets = {t}\n"
-           "7: targets = {}\n"},
-       // Objective-C: properties
-       {
-           R"cpp(
+              "0: targets = {T}, decl\n"
+              "1: targets = {Drawable}\n"
+              "2: targets = {T}\n"
+              "3: targets = {foo::bar}, decl\n"
+              "4: targets = {T}\n"
+              "5: targets = {t}, decl\n"
+              "6: targets = {t}\n"
+              "7: targets = {}\n"},
+          // Objective-C: properties
+          {
+              R"cpp(
             @interface I {}
             @property(retain) I* x;
             @property(retain) I* y;
@@ -1256,12 +1325,12 @@ TEST_F(FindExplicitReferencesTest, All) {
               $0^f.$1^x.$2^y = 0;
             }
           )cpp",
-           "0: targets = {f}\n"
-           "1: targets = {I::x}\n"
-           "2: targets = {I::y}\n"},
-       // Objective-C: implicit properties
-       {
-           R"cpp(
+              "0: targets = {f}\n"
+              "1: targets = {I::x}\n"
+              "2: targets = {I::y}\n"},
+          // Objective-C: implicit properties
+          {
+              R"cpp(
             @interface I {}
             -(I*)x;
             -(void)setY:(I*)y;
@@ -1271,11 +1340,11 @@ TEST_F(FindExplicitReferencesTest, All) {
               $0^f.$1^x.$2^y = 0;
             }
           )cpp",
-           "0: targets = {f}\n"
-           "1: targets = {I::x}\n"
-           "2: targets = {I::setY:}\n"},
-       // Designated initializers.
-       {R"cpp(
+              "0: targets = {f}\n"
+              "1: targets = {I::x}\n"
+              "2: targets = {I::setY:}\n"},
+          // Designated initializers.
+          {R"cpp(
             void foo() {
               struct $0^Foo {
                 int $1^Bar;
@@ -1283,12 +1352,12 @@ TEST_F(FindExplicitReferencesTest, All) {
               $2^Foo $3^f { .$4^Bar = 42 };
             }
         )cpp",
-        "0: targets = {Foo}, decl\n"
-        "1: targets = {foo()::Foo::Bar}, decl\n"
-        "2: targets = {Foo}\n"
-        "3: targets = {f}, decl\n"
-        "4: targets = {foo()::Foo::Bar}\n"},
-       {R"cpp(
+           "0: targets = {Foo}, decl\n"
+           "1: targets = {foo()::Foo::Bar}, decl\n"
+           "2: targets = {Foo}\n"
+           "3: targets = {f}, decl\n"
+           "4: targets = {foo()::Foo::Bar}\n"},
+          {R"cpp(
             void foo() {
               struct $0^Baz {
                 int $1^Field;
