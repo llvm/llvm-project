@@ -319,7 +319,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
     else {
       ScriptInterpreter *interp = target.GetDebugger().GetScriptInterpreter();
       if (!interp) {
-        error.SetErrorStringWithFormat(
+        error.SetErrorString(
             "Can't set script commands - no script interpreter");
         return nullptr;
       }
