@@ -294,6 +294,8 @@ normf(int __dim,
 __DEVICE__
 inline float powf(float __x, float __y) { return __ocml_pow_f32(__x, __y); }
 __DEVICE__
+inline float powif(float __x, int __y) { return __ocml_pown_f32(__x, __y); }
+__DEVICE__
 inline float rcbrtf(float __x) { return __ocml_rcbrt_f32(__x); }
 __DEVICE__
 inline float remainderf(float __x, float __y) {
@@ -759,6 +761,8 @@ inline double normcdfinv(double __x) { return __ocml_ncdfinv_f64(__x); }
 __DEVICE__
 inline double pow(double __x, double __y) { return __ocml_pow_f64(__x, __y); }
 __DEVICE__
+inline double powi(double __x, int __y) { return __ocml_pown_f64(__x, __y); }
+__DEVICE__
 inline double rcbrt(double __x) { return __ocml_rcbrt_f64(__x); }
 __DEVICE__
 inline double remainder(double __x, double __y) {
@@ -1134,6 +1138,7 @@ __DEF_FUN1(double, trunc);
   __DEVICE__                                                                   \
   inline float __func(float __x, int __y) { return __func##f(__x, __y); }
 __DEF_FLOAT_FUN2I(scalbn)
+__DEF_FLOAT_FUN2I(ldexp)
 
 template <class T> __DEVICE__ inline T min(T __arg1, T __arg2) {
   return (__arg1 < __arg2) ? __arg1 : __arg2;
@@ -1171,6 +1176,17 @@ __host__ inline static int min(int __arg1, int __arg2) {
 
 __host__ inline static int max(int __arg1, int __arg2) {
   return std::max(__arg1, __arg2);
+}
+
+__DEVICE__
+inline float pow(float __base, int __iexp) { return powif(__base, __iexp); }
+
+__DEVICE__
+inline double pow(double __base, int __iexp) { return powi(__base, __iexp); }
+
+__DEVICE__
+inline _Float16 pow(_Float16 __base, int __iexp) {
+  return __ocml_pown_f16(__base, __iexp);
 }
 
 #pragma pop_macro("__DEF_FUN1")
