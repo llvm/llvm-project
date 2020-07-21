@@ -29,16 +29,6 @@ class IndexClient : public clangd::SymbolIndex {
   using StreamingCall = std::unique_ptr<grpc::ClientReader<ReplyT>> (
       remote::SymbolIndex::Stub::*)(grpc::ClientContext *, const RequestT &);
 
-  template <typename ClangdRequestT, typename RequestT>
-  RequestT serializeRequest(ClangdRequestT Request) const {
-    return toProtobuf(Request);
-  }
-
-  template <>
-  FuzzyFindRequest serializeRequest(clangd::FuzzyFindRequest Request) const {
-    return toProtobuf(Request, ProjectRoot);
-  }
-
   template <typename RequestT, typename ReplyT, typename ClangdRequestT,
             typename CallbackT>
   bool streamRPC(ClangdRequestT Request,
@@ -46,24 +36,23 @@ class IndexClient : public clangd::SymbolIndex {
                  CallbackT Callback) const {
     bool FinalResult = false;
     trace::Span Tracer(RequestT::descriptor()->name());
-    const auto RPCRequest = serializeRequest<ClangdRequestT, RequestT>(Request);
+    const auto RPCRequest = ProtobufMarshaller->toProtobuf(Request);
     grpc::ClientContext Context;
     std::chrono::system_clock::time_point Deadline =
         std::chrono::system_clock::now() + DeadlineWaitingTime;
     Context.set_deadline(Deadline);
     auto Reader = (Stub.get()->*RPCCall)(&Context, RPCRequest);
-    llvm::BumpPtrAllocator Arena;
-    llvm::UniqueStringSaver Strings(Arena);
     ReplyT Reply;
     while (Reader->Read(&Reply)) {
       if (!Reply.has_stream_result()) {
         FinalResult = Reply.final_result();
         continue;
       }
-      auto Response =
-          fromProtobuf(Reply.stream_result(), &Strings, ProjectRoot);
-      if (!Response)
+      auto Response = ProtobufMarshaller->fromProtobuf(Reply.stream_result());
+      if (!Response) {
         elog("Received invalid {0}", ReplyT::descriptor()->name());
+        continue;
+      }
       Callback(*Response);
     }
     SPAN_ATTACH(Tracer, "status", Reader->Finish().ok());
@@ -74,7 +63,9 @@ public:
   IndexClient(
       std::shared_ptr<grpc::Channel> Channel, llvm::StringRef ProjectRoot,
       std::chrono::milliseconds DeadlineTime = std::chrono::milliseconds(1000))
-      : Stub(remote::SymbolIndex::NewStub(Channel)), ProjectRoot(ProjectRoot),
+      : Stub(remote::SymbolIndex::NewStub(Channel)),
+        ProtobufMarshaller(new Marshaller(/*RemoteIndexRoot=*/"",
+                                          /*LocalIndexRoot=*/ProjectRoot)),
         DeadlineWaitingTime(DeadlineTime) {}
 
   void lookup(const clangd::LookupRequest &Request,
@@ -105,7 +96,7 @@ public:
 
 private:
   std::unique_ptr<remote::SymbolIndex::Stub> Stub;
-  std::string ProjectRoot;
+  std::unique_ptr<Marshaller> ProtobufMarshaller;
   // Each request will be terminated if it takes too long.
   std::chrono::milliseconds DeadlineWaitingTime;
 };

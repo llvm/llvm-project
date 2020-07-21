@@ -118,3 +118,10 @@ static_library("Analysis") {
     "VectorUtils.cpp",
   ]
 }
+
+static_library("TensorFlow") {
+  sources = [
+    "DevelopmentModeInlineAdvisor.cpp",
+    "TFUtils.cpp",
+  ]
+}

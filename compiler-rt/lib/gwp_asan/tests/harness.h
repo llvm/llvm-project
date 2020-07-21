@@ -86,8 +86,7 @@ public:
 
     gwp_asan::crash_handler::installSignalHandlers(
         &GPA, gwp_asan::test::getPrintfFunction(),
-        gwp_asan::options::getPrintBacktraceFunction(),
-        gwp_asan::crash_handler::getSegvBacktraceFunction());
+        gwp_asan::options::getPrintBacktraceFunction(), Opts.Backtrace);
   }
 
   void TearDown() override {

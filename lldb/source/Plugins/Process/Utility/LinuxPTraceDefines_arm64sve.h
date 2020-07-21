@@ -9,9 +9,14 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H
 
+// LinuxPTraceDefines_arm64sve.h defines essential macros for manipulating
+// AArch64 SVE core dump registers. Add guard for aarch64/Linux hosts where
+// newer versions of ptrace.h or sigcontext.h might already define SVE macros.
+#ifndef SVE_SIG_REGS_OFFSET
+
 #include <stdint.h>
 
-struct _aarch64_context {
+struct aarch64_context {
   uint16_t magic;
   uint16_t size;
 };
@@ -19,9 +24,9 @@ struct _aarch64_context {
 #define SVE_MAGIC 0x53564501
 
 struct sve_context {
-  struct _aarch64_context head;
+  struct aarch64_context head;
   uint16_t vl;
-  uint16_t __reserved[3];
+  uint16_t reserved[3];
 };
 
 /*
@@ -135,7 +140,7 @@ struct user_sve_header {
   uint16_t vl;       /* current vector length */
   uint16_t max_vl;   /* maximum possible vector length */
   uint16_t flags;
-  uint16_t __reserved;
+  uint16_t reserved;
 };
 
 /* Definitions for user_sve_header.flags: */
@@ -256,5 +261,7 @@ struct user_sve_header {
   (((flags)&SVE_PT_REGS_MASK) == SVE_PT_REGS_SVE                               \
        ? SVE_PT_SVE_OFFSET + SVE_PT_SVE_SIZE(vq, flags)                        \
        : SVE_PT_FPSIMD_OFFSET + SVE_PT_FPSIMD_SIZE(vq, flags))
+
+#endif // SVE_SIG_REGS_OFFSET
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H

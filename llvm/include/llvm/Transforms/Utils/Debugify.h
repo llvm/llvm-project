@@ -13,8 +13,11 @@
 #ifndef LLVM_TRANSFORM_UTILS_DEBUGIFY_H
 #define LLVM_TRANSFORM_UTILS_DEBUGIFY_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -88,5 +91,56 @@ struct NewPMCheckDebugifyPass
     : public llvm::PassInfoMixin<NewPMCheckDebugifyPass> {
   llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
+
+namespace llvm {
+/// DebugifyCustomPassManager wraps each pass with the debugify passes if
+/// needed.
+/// NOTE: We support legacy custom pass manager only.
+/// TODO: Add New PM support for custom pass manager.
+class DebugifyCustomPassManager : public legacy::PassManager {
+  DebugifyStatsMap DIStatsMap;
+  bool EnableDebugifyEach = false;
+
+public:
+  using super = legacy::PassManager;
+
+  void add(Pass *P) override {
+    // Wrap each pass with (-check)-debugify passes if requested, making
+    // exceptions for passes which shouldn't see -debugify instrumentation.
+    bool WrapWithDebugify = EnableDebugifyEach && !P->getAsImmutablePass() &&
+                            !isIRPrintingPass(P) && !isBitcodeWriterPass(P);
+    if (!WrapWithDebugify) {
+      super::add(P);
+      return;
+    }
+
+    // Apply -debugify/-check-debugify before/after each pass and collect
+    // debug info loss statistics.
+    PassKind Kind = P->getPassKind();
+    StringRef Name = P->getPassName();
+
+    // TODO: Implement Debugify for LoopPass.
+    switch (Kind) {
+    case PT_Function:
+      super::add(createDebugifyFunctionPass());
+      super::add(P);
+      super::add(createCheckDebugifyFunctionPass(true, Name, &DIStatsMap));
+      break;
+    case PT_Module:
+      super::add(createDebugifyModulePass());
+      super::add(P);
+      super::add(createCheckDebugifyModulePass(true, Name, &DIStatsMap));
+      break;
+    default:
+      super::add(P);
+      break;
+    }
+  }
+
+  void enableDebugifyEach() { EnableDebugifyEach = true; }
+
+  const DebugifyStatsMap &getDebugifyStatsMap() const { return DIStatsMap; }
+};
+} // namespace llvm
 
 #endif // LLVM_TRANSFORM_UTILS_DEBUGIFY_H

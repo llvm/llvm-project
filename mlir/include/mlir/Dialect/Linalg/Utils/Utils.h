@@ -119,9 +119,12 @@ SmallVector<Value, 8> getViewSizes(OpBuilder &builder, ConcreteOp linalgOp) {
     // Append or rewrite the end of the value list that corresponds to the
     // values mapping to symbols. Since inside concatinated map symbols are
     // repeated we have to repeat the sizes as well.
-    for (unsigned idx = 0, s = ranks.size(); idx < s; ++idx)
-      for (unsigned idx2 = 0; idx2 < numSymb; ++idx2)
-        res.push_back(res[symbolsPos + idx2]);
+    for (unsigned idx = 0, s = ranks.size(); idx < s; ++idx) {
+      for (unsigned idx2 = 0; idx2 < numSymb; ++idx2) {
+        Value viewSize = res[symbolsPos + idx2];
+        res.push_back(viewSize);
+      }
+    }
   }
   return res;
 }

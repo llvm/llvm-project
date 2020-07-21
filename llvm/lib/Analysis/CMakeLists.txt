@@ -1,7 +1,7 @@
 set(CommonMLSources MLInlineAdvisor.cpp)
 set(ReleaseModeMLSources ReleaseModeModelRunner.cpp)
 set(DevelopmentModeMLSources
-  DevelopmentModeInlineAdvisor.cpp 
+  DevelopmentModeInlineAdvisor.cpp
   TFUtils.cpp
   )
 
