@@ -25,11 +25,12 @@ namespace lldb_private {
 
 template <typename FormatterImpl> class FormatterContainerPair {
 public:
-  typedef FormattersContainer<FormatterImpl> ExactMatchContainer;
-  typedef FormattersContainer<FormatterImpl> RegexMatchContainer;
+  typedef FormattersContainer<ConstString, FormatterImpl> ExactMatchContainer;
+  typedef FormattersContainer<RegularExpression, FormatterImpl>
+      RegexMatchContainer;
 
-  typedef TypeMatcher ExactMatchMap;
-  typedef TypeMatcher RegexMatchMap;
+  typedef typename ExactMatchContainer::MapType ExactMatchMap;
+  typedef typename RegexMatchContainer::MapType RegexMatchMap;
 
   typedef typename ExactMatchContainer::MapValueType MapValueType;
 
@@ -347,13 +348,19 @@ private:
   friend class LanguageCategory;
   friend class TypeCategoryMap;
 
-  friend class FormattersContainer<TypeFormatImpl>;
+  friend class FormattersContainer<ConstString, TypeFormatImpl>;
+  friend class FormattersContainer<lldb::RegularExpressionSP, TypeFormatImpl>;
 
-  friend class FormattersContainer<TypeSummaryImpl>;
+  friend class FormattersContainer<ConstString, TypeSummaryImpl>;
+  friend class FormattersContainer<lldb::RegularExpressionSP, TypeSummaryImpl>;
 
-  friend class FormattersContainer<TypeFilterImpl>;
+  friend class FormattersContainer<ConstString, TypeFilterImpl>;
+  friend class FormattersContainer<lldb::RegularExpressionSP, TypeFilterImpl>;
 
-  friend class FormattersContainer<ScriptedSyntheticChildren>;
+  friend class FormattersContainer<ConstString, ScriptedSyntheticChildren>;
+  friend class FormattersContainer<lldb::RegularExpressionSP,
+                                   ScriptedSyntheticChildren>;
+
 };
 
 } // namespace lldb_private
