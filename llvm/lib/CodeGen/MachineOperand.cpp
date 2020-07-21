@@ -1142,7 +1142,7 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       const MIRFormatter *Formatter = TII->getMIRFormatter();
       // FIXME: This is not necessarily the correct MIR serialization format for
       // a custom pseudo source value, but at least it allows
-      // -print-machineinstrs to work on a target with custom pseudo source
+      // MIR printing to work on a target with custom pseudo source
       // values.
       OS << "custom \"";
       Formatter->printCustomPseudoSourceValue(OS, MST, *PVal);

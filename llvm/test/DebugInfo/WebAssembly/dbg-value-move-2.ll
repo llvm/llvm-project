@@ -1,10 +1,10 @@
-; RUN: llc < %s -print-machineinstrs 2>&1 | FileCheck %s
+; FIXME: use -stop-after when MIR serialization output includes needed debug info.
+; RUN: llc < %s -print-after=wasm-reg-stackify 2>&1 | FileCheck %s
 
-; CHECK: After WebAssembly Register Stackify:
+; CHECK: {{.*}}After WebAssembly Register Stackify
 ; CHECK: bb.2.for.body:
 ; CHECK: [[REG:%[0-9]+]]:i32 = TEE_I32 {{.*}} fib2.c:6:7
 ; CHECK-NEXT: DBG_VALUE [[REG]]:i32, $noreg, !"a", {{.*}} fib2.c:2:13
-; CHECK: After WebAssembly Register Coloring:
 
 ; ModuleID = 'fib2.bc'
 ; The test generated via: clang --target=wasm32-unknown-unknown-wasm fib2.c -g -O2
