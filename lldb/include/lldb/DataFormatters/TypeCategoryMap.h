@@ -103,7 +103,7 @@ private:
 
   std::recursive_mutex &mutex() { return m_map_mutex; }
 
-  friend class FormattersContainer<KeyType, ValueType>;
+  friend class FormattersContainer<ValueType>;
   friend class FormatManager;
 };
 } // namespace lldb_private
