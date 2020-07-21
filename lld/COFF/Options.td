@@ -235,6 +235,17 @@ def dash_dash_version : Flag<["--"], "version">,
 def threads
     : P<"threads", "Number of threads. '1' disables multi-threading. By "
                    "default all available hardware threads are used">;
+def call_graph_ordering_file: P<
+    "call-graph-ordering-file", 
+    "Layout sections to optimize the given callgraph">;
+defm call_graph_profile_sort: B<
+    "call-graph-profile-sort",
+    "Reorder sections with call graph profile (default)",
+    "Do not reorder sections with call graph profile">;
+def print_symbol_order: P<
+    "print-symbol-order",
+    "Print a symbol order specified by /call-graph-ordering-file and "
+    "/call-graph-profile-sort into the specified file">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;
