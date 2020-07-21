@@ -90,14 +90,13 @@ public:
   {
     lldb::CommandArgumentType arg_type;
     ArgumentRepetitionType arg_repetition;
-    uint32_t arg_opt_set_association; // This arg might be associated only with
-                                      // some particular option set(s).
-    CommandArgumentData()
-        : arg_type(lldb::eArgTypeNone), arg_repetition(eArgRepeatPlain),
-          arg_opt_set_association(LLDB_OPT_SET_ALL) // By default, the arg
-                                                    // associates to all option
-                                                    // sets.
-    {}
+    /// This arg might be associated only with some particular option set(s). By
+    /// default the arg associates to all option sets.
+    uint32_t arg_opt_set_association;
+
+    CommandArgumentData(lldb::CommandArgumentType type = lldb::eArgTypeNone,
+                        ArgumentRepetitionType repetition = eArgRepeatPlain,
+                        uint32_t opt_set = LLDB_OPT_SET_ALL) {}
   };
 
   typedef std::vector<CommandArgumentData>
