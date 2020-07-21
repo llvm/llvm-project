@@ -10,10 +10,9 @@
 # CHECK:        Program:
 # CHECK-NEXT: DW_CFA_def_cfa: reg13 +0
 
-## FIXME Use getEHFrameSection() so that the address is decoded correctly.
 # CHECK:      [0x14] FDE length=16 cie=[0x0]
-# CHECK-NEXT:   initial_location: 0x1c
-# CHECK-NEXT:   address_range: 0x4 (end : 0x20)
+# CHECK-NEXT:   initial_location: 0x0
+# CHECK-NEXT:   address_range: 0x4 (end : 0x4)
 
 # CHECK:        Program:
 # CHECK-NEXT: DW_CFA_nop:
