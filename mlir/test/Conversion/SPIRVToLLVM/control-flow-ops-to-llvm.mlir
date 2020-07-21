@@ -80,3 +80,93 @@ spv.module Logical GLSL450 {
     spv.Return
   }
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.selection
+//===----------------------------------------------------------------------===//
+
+spv.module Logical GLSL450 {
+  spv.func @selection_empty() -> () "None" {
+    // CHECK: llvm.return
+    spv.selection {
+    }
+    spv.Return
+  }
+
+  spv.func @selection_with_merge_block_only() -> () "None" {
+    %cond = spv.constant true
+    // CHECK: llvm.return
+    spv.selection {
+      spv.BranchConditional %cond, ^merge, ^merge
+    ^merge:
+      spv._merge
+    }
+    spv.Return
+  }
+
+  spv.func @selection_with_true_block_only() -> () "None" {
+    // CHECK: %[[COND:.*]] = llvm.mlir.constant(true) : !llvm.i1
+    %cond = spv.constant true
+    // CHECK: llvm.cond_br %[[COND]], ^bb1, ^bb2
+    spv.selection {
+      spv.BranchConditional %cond, ^true, ^merge
+    // CHECK: ^bb1:
+    ^true:
+    // CHECK: llvm.br ^bb2
+      spv.Branch ^merge
+    // CHECK: ^bb2:
+    ^merge:
+      // CHECK: llvm.br ^bb3
+      spv._merge
+    }
+    // CHECK: ^bb3:
+    // CHECK-NEXT: llvm.return
+    spv.Return
+  }
+
+  spv.func @selection_with_both_true_and_false_block() -> () "None" {
+    // CHECK: %[[COND:.*]] = llvm.mlir.constant(true) : !llvm.i1
+    %cond = spv.constant true
+    // CHECK: llvm.cond_br %[[COND]], ^bb1, ^bb2
+    spv.selection {
+      spv.BranchConditional %cond, ^true, ^false
+    // CHECK: ^bb1:
+    ^true:
+    // CHECK: llvm.br ^bb3
+      spv.Branch ^merge
+    // CHECK: ^bb2:
+    ^false:
+    // CHECK: llvm.br ^bb3
+      spv.Branch ^merge
+    // CHECK: ^bb3:
+    ^merge:
+      // CHECK: llvm.br ^bb4
+      spv._merge
+    }
+    // CHECK: ^bb4:
+    // CHECK-NEXT: llvm.return
+    spv.Return
+  }
+
+  spv.func @selection_with_early_return(%arg0: i1) -> i32 "None" {
+    // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+    %0 = spv.constant 0 : i32
+    // CHECK: llvm.cond_br %{{.*}}, ^bb1(%[[ZERO]] : !llvm.i32), ^bb2
+    spv.selection {
+      spv.BranchConditional %arg0, ^true(%0 : i32), ^merge
+    // CHECK: ^bb1(%[[ARG:.*]]: !llvm.i32):
+    ^true(%arg1: i32):
+      // CHECK: llvm.return %[[ARG]] : !llvm.i32
+      spv.ReturnValue %arg1 : i32
+    // CHECK: ^bb2:
+    ^merge:
+      // CHECK: llvm.br ^bb3
+      spv._merge
+    }
+    // CHECK: ^bb3:
+    %one = spv.constant 1 : i32
+    spv.ReturnValue %one : i32
+  }
+}
