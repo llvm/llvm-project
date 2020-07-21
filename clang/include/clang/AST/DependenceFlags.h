@@ -41,6 +41,7 @@ struct ExprDependenceScope {
     TypeInstantiation = Type | Instantiation,
     ValueInstantiation = Value | Instantiation,
     TypeValueInstantiation = Type | Value | Instantiation,
+    ErrorDependent = Error | ValueInstantiation,
 
     LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Error)
   };
