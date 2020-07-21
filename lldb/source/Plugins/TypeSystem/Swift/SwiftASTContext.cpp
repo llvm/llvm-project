@@ -1492,7 +1492,7 @@ void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
     if (!IsMacroDefinition(clang_argument))
       ApplyWorkingDir(clang_argument, cur_working_dir);
 
-    auto clang_arg_str = clang_argument.str();
+    std::string clang_arg_str = clang_argument.str().str();
     if (!ShouldUnique(clang_argument) || !unique_flags.count(clang_arg_str)) {
       importer_options.ExtraArgs.push_back(clang_arg_str);
       unique_flags.insert(clang_arg_str);
