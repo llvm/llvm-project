@@ -14,8 +14,8 @@
 using namespace lldb_private;
 
 void CheckSetting(const char *input, bool success, const char *path = nullptr,
-                  uint32_t line_number = LLDB_INVALID_ADDRESS,
-                  uint32_t column_number = 0) {
+                  uint32_t line_number = LLDB_INVALID_LINE_NUMBER,
+                  uint32_t column_number = LLDB_INVALID_COLUMN_NUMBER) {
 
   OptionValueFileColonLine value;
   Status error;
@@ -38,8 +38,10 @@ TEST(OptionValueFileColonLine, setFromString) {
   Status error;
 
   // Make sure a default constructed value is invalid:
-  ASSERT_EQ(value.GetLineNumber(), LLDB_INVALID_LINE_NUMBER);
-  ASSERT_EQ(value.GetColumnNumber(), 0);
+  ASSERT_EQ(value.GetLineNumber(),
+            static_cast<uint32_t>(LLDB_INVALID_LINE_NUMBER));
+  ASSERT_EQ(value.GetColumnNumber(),
+            static_cast<uint32_t>(LLDB_INVALID_COLUMN_NUMBER));
   ASSERT_FALSE(value.GetFileSpec());
 
   // Make sure it is an error to pass a specifier with no line number:
