@@ -301,6 +301,11 @@ void WorkingDirectoryProvider::Keep() {
 
 void FileProvider::RecordInterestingDirectory(const llvm::Twine &dir) {
   if (m_collector)
+    m_collector->addFile(dir);
+}
+
+void FileProvider::RecordInterestingDirectoryRecursive(const llvm::Twine &dir) {
+  if (m_collector)
     m_collector->addDirectory(dir);
 }
 
