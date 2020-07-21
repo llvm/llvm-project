@@ -130,6 +130,32 @@ IsaVersion getIsaVersion(StringRef GPU);
 
 } // namespace AMDGPU
 
+namespace RISCV {
+
+enum CPUKind : unsigned {
+#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH) CK_##ENUM,
+#include "RISCVTargetParser.def"
+};
+
+enum FeatureKind : unsigned {
+  FK_INVALID = 0,
+  FK_NONE = 1,
+  FK_STDEXTM = 1 << 2,
+  FK_STDEXTA = 1 << 3,
+  FK_STDEXTF = 1 << 4,
+  FK_STDEXTD = 1 << 5,
+  FK_STDEXTC = 1 << 6,
+  FK_64BIT = 1 << 7,
+};
+
+bool checkCPUKind(CPUKind Kind, bool IsRV64);
+CPUKind parseCPUKind(StringRef CPU);
+StringRef getMArchFromMcpu(StringRef CPU);
+void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
+bool getCPUFeaturesExceptStdExt(CPUKind Kind, std::vector<StringRef> &Features);
+
+} // namespace RISCV
+
 } // namespace llvm
 
 #endif

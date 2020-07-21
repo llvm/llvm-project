@@ -446,6 +446,19 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
   return true;
 }
 
+// Get features except standard extension feature
+void getRISCFeaturesFromMcpu(const Driver &D, const llvm::Triple &Triple,
+                             const llvm::opt::ArgList &Args,
+                             const llvm::opt::Arg *A, StringRef Mcpu,
+                             std::vector<StringRef> &Features) {
+  bool Is64Bit = (Triple.getArch() == llvm::Triple::riscv64);
+  llvm::RISCV::CPUKind CPUKind = llvm::RISCV::parseCPUKind(Mcpu);
+  if (!llvm::RISCV::checkCPUKind(CPUKind, Is64Bit) ||
+      !llvm::RISCV::getCPUFeaturesExceptStdExt(CPUKind, Features)) {
+    D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
+  }
+}
+
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args,
                                    std::vector<StringRef> &Features) {
@@ -453,6 +466,11 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   if (!getArchFeatures(D, MArch, Features, Args))
     return;
+
+  // If users give march and mcpu, get std extension feature from MArch
+  // and other features (ex. mirco architecture feature) from mcpu
+  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+    getRISCFeaturesFromMcpu(D, Triple, Args, A, A->getValue(), Features);
 
   // Handle features corresponding to "-ffixed-X" options
   if (Args.hasArg(options::OPT_ffixed_x1))
@@ -543,11 +561,9 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
 
   // GCC's logic around choosing a default `-mabi=` is complex. If GCC is not
   // configured using `--with-abi=`, then the logic for the default choice is
-  // defined in config.gcc. This function is based on the logic in GCC 9.2.0. We
-  // deviate from GCC's default only on baremetal targets (UnknownOS) where
-  // neither `-march` nor `-mabi` is specified.
+  // defined in config.gcc. This function is based on the logic in GCC 9.2.0.
   //
-  // The logic uses the following, in order:
+  // The logic used in GCC 9.2.0 is the following, in order:
   // 1. Explicit choices using `--with-abi=`
   // 2. A default based on `--with-arch=`, if provided
   // 3. A default based on the target triple's arch
@@ -556,38 +572,40 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   //
   // Clang does not have `--with-arch=` or `--with-abi=`, so we use `-march=`
   // and `-mabi=` respectively instead.
+  //
+  // In order to make chosing logic more clear, Clang uses the following logic,
+  // in order:
+  // 1. Explicit choices using `-mabi=`
+  // 2. A default based on the architecture as determined by getRISCVArch
+  // 3. Choose a default based on the triple
 
   // 1. If `-mabi=` is specified, use it.
   if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
     return A->getValue();
 
-  // 2. Choose a default based on `-march=`
+  // 2. Choose a default based on the target architecture.
   //
   // rv32g | rv32*d -> ilp32d
   // rv32e -> ilp32e
   // rv32* -> ilp32
   // rv64g | rv64*d -> lp64d
   // rv64* -> lp64
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    StringRef MArch = A->getValue();
+  StringRef MArch = getRISCVArch(Args, Triple);
 
-    if (MArch.startswith_lower("rv32")) {
-      // FIXME: parse `March` to find `D` extension properly
-      if (MArch.substr(4).contains_lower("d") ||
-          MArch.startswith_lower("rv32g"))
-        return "ilp32d";
-      else if (MArch.startswith_lower("rv32e"))
-        return "ilp32e";
-      else
-        return "ilp32";
-    } else if (MArch.startswith_lower("rv64")) {
-      // FIXME: parse `March` to find `D` extension properly
-      if (MArch.substr(4).contains_lower("d") ||
-          MArch.startswith_lower("rv64g"))
-        return "lp64d";
-      else
-        return "lp64";
-    }
+  if (MArch.startswith_lower("rv32")) {
+    // FIXME: parse `March` to find `D` extension properly
+    if (MArch.substr(4).contains_lower("d") || MArch.startswith_lower("rv32g"))
+      return "ilp32d";
+    else if (MArch.startswith_lower("rv32e"))
+      return "ilp32e";
+    else
+      return "ilp32";
+  } else if (MArch.startswith_lower("rv64")) {
+    // FIXME: parse `March` to find `D` extension properly
+    if (MArch.substr(4).contains_lower("d") || MArch.startswith_lower("rv64g"))
+      return "lp64d";
+    else
+      return "lp64";
   }
 
   // 3. Choose a default based on the triple
@@ -617,10 +635,11 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // GCC's logic around choosing a default `-march=` is complex. If GCC is not
   // configured using `--with-arch=`, then the logic for the default choice is
   // defined in config.gcc. This function is based on the logic in GCC 9.2.0. We
-  // deviate from GCC's default only on baremetal targets (UnknownOS) where
-  // neither `-march` nor `-mabi` is specified.
+  // deviate from GCC's default on additional `-mcpu` option (GCC does not
+  // support `-mcpu`) and baremetal targets (UnknownOS) where neither `-march`
+  // nor `-mabi` is specified.
   //
-  // The logic uses the following, in order:
+  // The logic used in GCC 9.2.0 is the following, in order:
   // 1. Explicit choices using `--with-arch=`
   // 2. A default based on `--with-abi=`, if provided
   // 3. A default based on the target triple's arch
@@ -630,6 +649,12 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // Clang does not have `--with-arch=` or `--with-abi=`, so we use `-march=`
   // and `-mabi=` respectively instead.
   //
+  // Clang uses the following logic, in order:
+  // 1. Explicit choices using `-march=`
+  // 2. Based on `-mcpu` if the target CPU has a default ISA string
+  // 3. A default based on `-mabi`, if provided
+  // 4. A default based on the target triple's arch
+  //
   // Clang does not yet support MULTILIB_REUSE, so we use `rv{XLEN}imafdc`
   // instead of `rv{XLEN}gc` though they are (currently) equivalent.
 
@@ -637,7 +662,15 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
     return A->getValue();
 
-  // 2. Choose a default based on `-mabi=`
+  // 2. Get march (isa string) based on `-mcpu=`
+  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
+    StringRef MArch = llvm::RISCV::getMArchFromMcpu(A->getValue());
+    // Bypass if target cpu's default march is empty.
+    if (MArch != "")
+      return MArch;
+  }
+
+  // 3. Choose a default based on `-mabi=`
   //
   // ilp32e -> rv32e
   // ilp32 | ilp32f | ilp32d -> rv32imafdc
@@ -653,7 +686,7 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
       return "rv64imafdc";
   }
 
-  // 3. Choose a default based on the triple
+  // 4. Choose a default based on the triple
   //
   // We deviate from GCC's defaults here:
   // - On `riscv{XLEN}-unknown-elf` we default to `rv{XLEN}imac`
