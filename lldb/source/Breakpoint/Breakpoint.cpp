@@ -144,8 +144,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   bool success = breakpoint_dict->GetValueForKeyAsDictionary(
       BreakpointResolver::GetSerializationKey(), resolver_dict);
   if (!success) {
-    error.SetErrorStringWithFormat(
-        "Breakpoint data missing toplevel resolver key");
+    error.SetErrorString("Breakpoint data missing toplevel resolver key");
     return result_sp;
   }
 
