@@ -282,16 +282,16 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
 
 TEST(RemoteMarshallingTest, FuzzyFindRequestSerialization) {
   clangd::FuzzyFindRequest Request;
-  Request.ProximityPaths = {testPath("remote/Header.h"),
-                            testPath("remote/subdir/OtherHeader.h"),
-                            testPath("notremote/File.h"), "Not a Path."};
-  Marshaller ProtobufMarshaller(testPath("remote/"), testPath("home/"));
+  Request.ProximityPaths = {testPath("local/Header.h"),
+                            testPath("local/subdir/OtherHeader.h"),
+                            testPath("remote/File.h"), "Not a Path."};
+  Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
   auto Serialized = ProtobufMarshaller.toProtobuf(Request);
   EXPECT_EQ(Serialized.proximity_paths_size(), 2);
   auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
   EXPECT_THAT(Deserialized.ProximityPaths,
-              testing::ElementsAre(testPath("home/Header.h"),
-                                   testPath("home/subdir/OtherHeader.h")));
+              testing::ElementsAre(testPath("remote/Header.h"),
+                                   testPath("remote/subdir/OtherHeader.h")));
 }
 
 TEST(RemoteMarshallingTest, RelativePathToURITranslation) {
