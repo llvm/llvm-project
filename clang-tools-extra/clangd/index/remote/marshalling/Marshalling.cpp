@@ -51,7 +51,7 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
 
 clangd::FuzzyFindRequest
 Marshaller::fromProtobuf(const FuzzyFindRequest *Request) {
-  assert(LocalIndexRoot);
+  assert(RemoteIndexRoot);
   clangd::FuzzyFindRequest Result;
   Result.Query = Request->query();
   for (const auto &Scope : Request->scopes())
@@ -146,7 +146,7 @@ LookupRequest Marshaller::toProtobuf(const clangd::LookupRequest &From) {
 }
 
 FuzzyFindRequest Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
-  assert(RemoteIndexRoot);
+  assert(LocalIndexRoot);
   FuzzyFindRequest RPCRequest;
   RPCRequest.set_query(From.Query);
   for (const auto &Scope : From.Scopes)
