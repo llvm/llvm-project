@@ -1,6 +1,9 @@
 set(CommonMLSources MLInlineAdvisor.cpp)
 set(ReleaseModeMLSources ReleaseModeModelRunner.cpp)
-set(DevelopmentModeMLSources TFUtils.cpp)
+set(DevelopmentModeMLSources
+  DevelopmentModeInlineAdvisor.cpp 
+  TFUtils.cpp
+  )
 
 if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
   set(MLPolicySources ${CommonMLSources})
