@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -stop-after=finalize-isel < %s 2>%t | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -stop-after=prologepilog < %s 2>%t | FileCheck %s --check-prefix=CHECKCSR
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
 ; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
@@ -122,4 +123,26 @@ define <vscale x 4 x i32> @sve_signature_vec_caller(<vscale x 4 x i32> %arg1, <v
 define <vscale x 4 x i1> @sve_signature_pred_caller(<vscale x 4 x i1> %arg1, <vscale x 4 x i1> %arg2) nounwind {
   %res = call <vscale x 4 x i1> @sve_signature_pred(<vscale x 4 x i1> %arg2, <vscale x 4 x i1> %arg1)
   ret <vscale x 4 x i1> %res
+}
+
+; Test that functions returning or taking SVE arguments use the correct
+; callee-saved set when using the default C calling convention (as opposed
+; to aarch64_sve_vector_pcs)
+
+; CHECKCSR-LABEL: name: sve_signature_vec_ret_callee
+; CHECKCSR: callee-saved-register: '$z8'
+; CHECKCSR: callee-saved-register: '$p4'
+; CHECKCSR: RET_ReallyLR
+define <vscale x 4 x i32> @sve_signature_vec_ret_callee() nounwind {
+  call void asm sideeffect "nop", "~{z8},~{p4}"()
+  ret <vscale x 4 x i32> zeroinitializer
+}
+
+; CHECKCSR-LABEL: name: sve_signature_vec_arg_callee
+; CHECKCSR: callee-saved-register: '$z8'
+; CHECKCSR: callee-saved-register: '$p4'
+; CHECKCSR: RET_ReallyLR
+define void @sve_signature_vec_arg_callee(<vscale x 4 x i32> %v) nounwind {
+  call void asm sideeffect "nop", "~{z8},~{p4}"()
+  ret void
 }
