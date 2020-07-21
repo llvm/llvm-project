@@ -5335,13 +5335,18 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
   // On AIX, direct function calls reference the symbol for the function's
   // entry point, which is named by prepending a "." before the function's
   // C-linkage name.
+  const auto getFunctionEntryPointSymbol = [&](StringRef SymName) {
+    auto &Context = DAG.getMachineFunction().getMMI().getContext();
+    return cast<MCSymbolXCOFF>(
+        Context.getOrCreateSymbol(Twine(".") + Twine(SymName)));
+  };
+
   const auto getAIXFuncEntryPointSymbolSDNode =
       [&](StringRef FuncName, bool IsDeclaration,
           const XCOFF::StorageClass &SC) {
-        auto &Context = DAG.getMachineFunction().getMMI().getContext();
+        MCSymbolXCOFF *S = getFunctionEntryPointSymbol(FuncName);
 
-        MCSymbolXCOFF *S = cast<MCSymbolXCOFF>(
-            Context.getOrCreateSymbol(Twine(".") + Twine(FuncName)));
+        auto &Context = DAG.getMachineFunction().getMMI().getContext();
 
         if (IsDeclaration && !S->hasRepresentedCsectSet()) {
           // On AIX, an undefined symbol needs to be associated with a
@@ -5376,22 +5381,21 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
 
   if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
     const char *SymName = S->getSymbol();
-    if (!Subtarget.isAIXABI())
-      return DAG.getTargetExternalSymbol(SymName, Callee.getValueType(),
-                                         UsePlt ? PPCII::MO_PLT : 0);
-
-    // If there exists a user-declared function whose name is the same as the
-    // ExternalSymbol's, then we pick up the user-declared version.
-    const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
-    if (const Function *F =
-            dyn_cast_or_null<Function>(Mod->getNamedValue(SymName))) {
-      const XCOFF::StorageClass SC =
-          TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(F);
-      return getAIXFuncEntryPointSymbolSDNode(F->getName(), F->isDeclaration(),
-                                              SC);
+    if (Subtarget.isAIXABI()) {
+      // If there exists a user-declared function whose name is the same as the
+      // ExternalSymbol's, then we pick up the user-declared version.
+      const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
+      if (const Function *F =
+              dyn_cast_or_null<Function>(Mod->getNamedValue(SymName))) {
+        const XCOFF::StorageClass SC =
+            TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(F);
+        return getAIXFuncEntryPointSymbolSDNode(F->getName(),
+                                                F->isDeclaration(), SC);
+      }
+      SymName = getFunctionEntryPointSymbol(SymName)->getName().data();
     }
-
-    return getAIXFuncEntryPointSymbolSDNode(SymName, true, XCOFF::C_EXT);
+    return DAG.getTargetExternalSymbol(SymName, Callee.getValueType(),
+                                       UsePlt ? PPCII::MO_PLT : 0);
   }
 
   // No transformation needed.
