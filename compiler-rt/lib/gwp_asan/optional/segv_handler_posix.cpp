@@ -23,14 +23,14 @@ using gwp_asan::Error;
 using gwp_asan::GuardedPoolAllocator;
 using gwp_asan::crash_handler::PrintBacktrace_t;
 using gwp_asan::crash_handler::Printf_t;
-using gwp_asan::crash_handler::SegvBacktrace_t;
+using gwp_asan::options::Backtrace_t;
 
 struct sigaction PreviousHandler;
 bool SignalHandlerInstalled;
 gwp_asan::GuardedPoolAllocator *GPAForSignalHandler;
 Printf_t PrintfForSignalHandler;
 PrintBacktrace_t PrintBacktraceForSignalHandler;
-SegvBacktrace_t BacktraceForSignalHandler;
+Backtrace_t BacktraceForSignalHandler;
 
 static void sigSegvHandler(int sig, siginfo_t *info, void *ucontext) {
   if (GPAForSignalHandler) {
@@ -40,7 +40,7 @@ static void sigSegvHandler(int sig, siginfo_t *info, void *ucontext) {
         reinterpret_cast<uintptr_t>(info->si_addr),
         GPAForSignalHandler->getAllocatorState(),
         GPAForSignalHandler->getMetadataRegion(), BacktraceForSignalHandler,
-        PrintfForSignalHandler, PrintBacktraceForSignalHandler, ucontext);
+        PrintfForSignalHandler, PrintBacktraceForSignalHandler);
   }
 
   // Process any previous handlers.
@@ -138,11 +138,11 @@ PrintBacktrace_t getBasicPrintBacktraceFunction() {
 
 void installSignalHandlers(gwp_asan::GuardedPoolAllocator *GPA, Printf_t Printf,
                            PrintBacktrace_t PrintBacktrace,
-                           SegvBacktrace_t SegvBacktrace) {
+                           options::Backtrace_t Backtrace) {
   GPAForSignalHandler = GPA;
   PrintfForSignalHandler = Printf;
   PrintBacktraceForSignalHandler = PrintBacktrace;
-  BacktraceForSignalHandler = SegvBacktrace;
+  BacktraceForSignalHandler = Backtrace;
 
   struct sigaction Action;
   Action.sa_sigaction = sigSegvHandler;
@@ -160,8 +160,8 @@ void uninstallSignalHandlers() {
 
 void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
                 const gwp_asan::AllocationMetadata *Metadata,
-                SegvBacktrace_t SegvBacktrace, Printf_t Printf,
-                PrintBacktrace_t PrintBacktrace, void *Context) {
+                options::Backtrace_t Backtrace, Printf_t Printf,
+                PrintBacktrace_t PrintBacktrace) {
   assert(State && "dumpReport missing Allocator State.");
   assert(Metadata && "dumpReport missing Metadata.");
   assert(Printf && "dumpReport missing Printf.");
@@ -194,8 +194,7 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
   // Print the fault backtrace.
   static constexpr unsigned kMaximumStackFramesForCrashTrace = 512;
   uintptr_t Trace[kMaximumStackFramesForCrashTrace];
-  size_t TraceLength =
-      SegvBacktrace(Trace, kMaximumStackFramesForCrashTrace, Context);
+  size_t TraceLength = Backtrace(Trace, kMaximumStackFramesForCrashTrace);
 
   PrintBacktrace(Trace, TraceLength, Printf);
 
