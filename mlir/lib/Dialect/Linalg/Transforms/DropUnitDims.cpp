@@ -319,7 +319,8 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
         genericOp.args_out(), rewriter.getAffineMapArrayAttr(newIndexingMaps),
         genericOp.iterator_types(),
         /*doc = */ nullptr,
-        /*library_call = */ nullptr);
+        /*library_call = */ nullptr,
+        /*symbol_source = */ nullptr);
     rewriter.inlineRegionBefore(genericOp.region(), replacementOp.region(),
                                 replacementOp.region().begin());
 

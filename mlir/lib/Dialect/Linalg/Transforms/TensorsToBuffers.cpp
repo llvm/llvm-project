@@ -65,7 +65,8 @@ public:
     auto linalgOp = rewriter.create<linalg::GenericOp>(
         loc, llvm::None, newArgs, rewriter.getI64IntegerAttr(operands.size()),
         rewriter.getI64IntegerAttr(results.size()), op.indexing_maps(),
-        op.iterator_types(), op.docAttr(), op.library_callAttr());
+        op.iterator_types(), op.docAttr(), op.library_callAttr(),
+        op.symbol_sourceAttr());
 
     // Create a new block in the region of the new Generic Op.
     Block &oldBlock = op.getRegion().front();

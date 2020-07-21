@@ -510,7 +510,8 @@ struct FuseGenericOpsOnTensors {
                   rewriter.getArrayAttr(fusedIndexMaps),
                   consumer.iterator_types(),
                   /*doc=*/nullptr,
-                  /*library_call=*/nullptr)
+                  /*library_call=*/nullptr,
+                  /*symbol_source=*/nullptr)
               .getOperation();
     } else {
       fusedOp =
@@ -524,7 +525,8 @@ struct FuseGenericOpsOnTensors {
                   rewriter.getArrayAttr(fusedIndexMaps),
                   consumer.iterator_types(),
                   /*doc=*/nullptr,
-                  /*library_call=*/nullptr)
+                  /*library_call=*/nullptr,
+                  /*symbol_source=*/nullptr)
               .getOperation();
     }
 
@@ -787,7 +789,8 @@ template <typename LinalgOpTy> struct FuseTensorReshapeOpAsProducer {
         rewriter.getI64IntegerAttr(consumer.getNumResults()),
         rewriter.getArrayAttr(indexMapAttrs), consumer.iterator_types(),
         /*doc=*/nullptr,
-        /*library_call=*/nullptr);
+        /*library_call=*/nullptr,
+        /*symbol_source=*/nullptr);
     auto &fusedRegion = fusedOp.region();
     rewriter.cloneRegionBefore(consumer.region(), fusedRegion,
                                fusedRegion.begin());
@@ -843,7 +846,8 @@ template <typename LinalgOpTy> struct FuseTensorReshapeOpAsConsumer {
         rewriter.getI64IntegerAttr(1), rewriter.getArrayAttr(indexMapAttrs),
         producer.iterator_types(),
         /*doc=*/nullptr,
-        /*library_call=*/nullptr);
+        /*library_call=*/nullptr,
+        /*symbol_source=*/nullptr);
     auto &fusedRegion = fusedOp.region();
     rewriter.cloneRegionBefore(producer.region(), fusedRegion,
                                fusedRegion.begin());
@@ -893,7 +897,8 @@ template <typename LinalgOpTy> struct FuseConstantOpAsProducer {
         rewriter.getAffineMapArrayAttr(fusedIndexMaps),
         consumer.iterator_types(),
         /*doc=*/nullptr,
-        /*library_call=*/nullptr);
+        /*library_call=*/nullptr,
+        /*symbol_source=*/nullptr);
 
     // Map the block argument corresponding to the replaced argument with the
     // scalar constant.
