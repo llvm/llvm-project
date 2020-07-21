@@ -22,5 +22,6 @@
 
 # Check auto generate.
 # RUN: rm -rf %t.repro
+# RUN: %lldb --capture --capture-path %t.repro -b --reproducer-generate-on-exit -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix AUTOGEN
 # RUN: cat %t.repro/index.yaml
 # AUTOGEN: Auto generate: on
