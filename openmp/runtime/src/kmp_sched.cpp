@@ -85,6 +85,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   kmp_uint32 nth;
   UT trip_count;
   kmp_team_t *team;
+  __kmp_assert_valid_gtid(gtid);
   kmp_info_t *th = __kmp_threads[gtid];
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
@@ -438,6 +439,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
 
   KMP_DEBUG_ASSERT(plastiter && plower && pupper && pupperDist && pstride);
   KE_TRACE(10, ("__kmpc_dist_for_static_init called (%d)\n", gtid));
+  __kmp_assert_valid_gtid(gtid);
 #ifdef KMP_DEBUG
   {
     char *buff;
@@ -681,6 +683,7 @@ static void __kmp_team_static_init(ident_t *loc, kmp_int32 gtid,
 
   KMP_DEBUG_ASSERT(p_last && p_lb && p_ub && p_st);
   KE_TRACE(10, ("__kmp_team_static_init called (%d)\n", gtid));
+  __kmp_assert_valid_gtid(gtid);
 #ifdef KMP_DEBUG
   {
     char *buff;
