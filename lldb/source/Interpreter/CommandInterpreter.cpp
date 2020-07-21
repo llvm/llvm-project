@@ -1708,7 +1708,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         command_string = command_line;
         original_command_string = command_line;
         if (m_repeat_command.empty()) {
-          result.AppendError("No auto repeat.\n");
+          result.AppendError("No auto repeat.");
           result.SetStatus(eReturnStatusFailed);
           return false;
         }

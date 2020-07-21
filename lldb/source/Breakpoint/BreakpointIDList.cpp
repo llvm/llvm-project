@@ -223,7 +223,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
       result.AppendError("Invalid breakpoint id range:  Either "
                          "both ends of range must specify"
                          " a breakpoint location, or neither can "
-                         "specify a breakpoint location.\n");
+                         "specify a breakpoint location.");
       result.SetStatus(eReturnStatusFailed);
       return;
     }
