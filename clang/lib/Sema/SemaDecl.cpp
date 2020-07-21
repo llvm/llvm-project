@@ -12039,7 +12039,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // Try to correct any TypoExprs in the initialization arguments.
     for (size_t Idx = 0; Idx < Args.size(); ++Idx) {
       ExprResult Res = CorrectDelayedTyposInExpr(
-          Args[Idx], VDecl, /*RecoverUncorrectedTypos=*/false,
+          Args[Idx], VDecl, /*RecoverUncorrectedTypos=*/true,
           [this, Entity, Kind](Expr *E) {
             InitializationSequence Init(*this, Entity, Kind, MultiExprArg(E));
             return Init.Failed() ? ExprError() : E;

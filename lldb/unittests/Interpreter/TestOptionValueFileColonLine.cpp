@@ -13,7 +13,7 @@
 
 using namespace lldb_private;
 
-void CheckSetting(const char *input, bool success, const char *path = nullptr,
+void CheckSetting(const char *input, bool success, FileSpec path = {},
                   uint32_t line_number = LLDB_INVALID_LINE_NUMBER,
                   uint32_t column_number = LLDB_INVALID_COLUMN_NUMBER) {
 
@@ -29,8 +29,7 @@ void CheckSetting(const char *input, bool success, const char *path = nullptr,
 
   ASSERT_EQ(value.GetLineNumber(), line_number);
   ASSERT_EQ(value.GetColumnNumber(), column_number);
-  std::string value_path = value.GetFileSpec().GetPath();
-  ASSERT_STREQ(value_path.c_str(), path);
+  ASSERT_EQ(value.GetFileSpec(), path);
 }
 
 TEST(OptionValueFileColonLine, setFromString) {
@@ -48,11 +47,11 @@ TEST(OptionValueFileColonLine, setFromString) {
   CheckSetting("foo.c", false);
 
   // Now try with just a file & line:
-  CheckSetting("foo.c:12", true, "foo.c", 12);
-  CheckSetting("foo.c:12:20", true, "foo.c", 12, 20);
+  CheckSetting("foo.c:12", true, FileSpec("foo.c"), 12);
+  CheckSetting("foo.c:12:20", true, FileSpec("foo.c"), 12, 20);
   // Make sure a colon doesn't mess us up:
-  CheckSetting("foo:bar.c:12", true, "foo:bar.c", 12);
-  CheckSetting("foo:bar.c:12:20", true, "foo:bar.c", 12, 20);
+  CheckSetting("foo:bar.c:12", true, FileSpec("foo:bar.c"), 12);
+  CheckSetting("foo:bar.c:12:20", true, FileSpec("foo:bar.c"), 12, 20);
   // Try errors in the line number:
   CheckSetting("foo.c:12c", false);
   CheckSetting("foo.c:12:20c", false);

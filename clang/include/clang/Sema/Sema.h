@@ -587,7 +587,7 @@ public:
   PragmaStack<StringLiteral *> CodeSegStack;
 
   // This stack tracks the current state of Sema.CurFPFeatures.
-  PragmaStack<unsigned> FpPragmaStack;
+  PragmaStack<FPOptionsOverride::storage_type> FpPragmaStack;
   FPOptionsOverride CurFPFeatureOverrides() {
     FPOptionsOverride result;
     if (!FpPragmaStack.hasValue()) {
@@ -1405,12 +1405,12 @@ public:
       S.CurFPFeatures = OldFPFeaturesState;
       S.FpPragmaStack.CurrentValue = OldOverrides;
     }
-    unsigned getOverrides() { return OldOverrides; }
+    FPOptionsOverride::storage_type getOverrides() { return OldOverrides; }
 
   private:
     Sema& S;
     FPOptions OldFPFeaturesState;
-    unsigned OldOverrides;
+    FPOptionsOverride::storage_type OldOverrides;
   };
 
   void addImplicitTypedef(StringRef Name, QualType T);
