@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -58,17 +59,53 @@ static Error verifyMachOObject(const NewArchiveMember &Member) {
   return Error::success();
 }
 
-static Error addMember(std::vector<NewArchiveMember> &Members,
-                       StringRef FileName) {
+static Error addChildMember(std::vector<NewArchiveMember> &Members,
+                            const object::Archive::Child &M) {
+  Expected<NewArchiveMember> NMOrErr =
+      NewArchiveMember::getOldMember(M, /*Deterministic=*/true);
+  if (!NMOrErr)
+    return NMOrErr.takeError();
+
+  // Verify that Member is a Mach-O object file.
+  if (Error E = verifyMachOObject(*NMOrErr))
+    return E;
+
+  Members.push_back(std::move(*NMOrErr));
+  return Error::success();
+}
+
+static Error
+addMember(std::vector<NewArchiveMember> &Members, StringRef FileName,
+          std::vector<std::unique_ptr<MemoryBuffer>> &ArchiveBuffers) {
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getFile(FileName, /*Deterministic=*/true);
-
   if (!NMOrErr)
     return createFileError(FileName, NMOrErr.takeError());
 
   // For regular archives, use the basename of the object path for the member
   // name.
   NMOrErr->MemberName = sys::path::filename(NMOrErr->MemberName);
+
+  // Flatten archives.
+  if (identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
+    Expected<std::unique_ptr<Archive>> LibOrErr =
+        object::Archive::create(NMOrErr->Buf->getMemBufferRef());
+    if (!LibOrErr)
+      return createFileError(FileName, LibOrErr.takeError());
+    object::Archive &Lib = **LibOrErr;
+
+    Error Err = Error::success();
+    for (const object::Archive::Child &Child : Lib.children(Err))
+      if (Error E = addChildMember(Members, Child))
+        return createFileError(FileName, std::move(E));
+    if (Err)
+      return createFileError(FileName, std::move(Err));
+
+    // Update vector ArchiveBuffers with the MemoryBuffers to transfer
+    // ownership.
+    ArchiveBuffers.push_back(std::move(NMOrErr->Buf));
+    return Error::success();
+  }
 
   // Verify that Member is a Mach-O object file.
   if (Error E = verifyMachOObject(*NMOrErr))
@@ -80,8 +117,9 @@ static Error addMember(std::vector<NewArchiveMember> &Members,
 
 static Error createStaticLibrary() {
   std::vector<NewArchiveMember> NewMembers;
+  std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
   for (StringRef Member : InputFiles)
-    if (Error E = addMember(NewMembers, Member))
+    if (Error E = addMember(NewMembers, Member, ArchiveBuffers))
       return E;
 
   if (Error E = writeArchive(OutputFile, NewMembers,
