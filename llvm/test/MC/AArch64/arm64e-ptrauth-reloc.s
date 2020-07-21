@@ -2,7 +2,7 @@
 // RUN: FileCheck %s --check-prefix=ASM
 
 // RUN: llvm-mc -triple=arm64-apple-ios -filetype=obj < %s | \
-// RUN: llvm-readobj --expand-relocs -sections -section-relocations -section-data | \
+// RUN: llvm-readobj --expand-relocs -sections -section-relocations -section-data - | \
 // RUN: FileCheck %s --check-prefix=RELOC
 
 
