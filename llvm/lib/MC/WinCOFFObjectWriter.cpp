@@ -375,6 +375,7 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
   COFFSymbol *Local = nullptr;
   if (cast<MCSymbolCOFF>(MCSym).isWeakExternal()) {
     Sym->Data.StorageClass = COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
+    Sym->Section = nullptr;
 
     COFFSymbol *WeakDefault = getLinkedSymbol(MCSym);
     if (!WeakDefault) {
