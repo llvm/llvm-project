@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 
-struct _aarch64_context {
+struct aarch64_context {
   uint16_t magic;
   uint16_t size;
 };
@@ -24,9 +24,9 @@ struct _aarch64_context {
 #define SVE_MAGIC 0x53564501
 
 struct sve_context {
-  struct _aarch64_context head;
+  struct aarch64_context head;
   uint16_t vl;
-  uint16_t __reserved[3];
+  uint16_t reserved[3];
 };
 
 /*
@@ -140,7 +140,7 @@ struct user_sve_header {
   uint16_t vl;       /* current vector length */
   uint16_t max_vl;   /* maximum possible vector length */
   uint16_t flags;
-  uint16_t __reserved;
+  uint16_t reserved;
 };
 
 /* Definitions for user_sve_header.flags: */
