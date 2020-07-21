@@ -1631,7 +1631,7 @@ private:
             len.push_back(std::get<std::size_t>(*chLit));
             symTy = fir::SequenceType::get(len, symTy);
             auto init = builder->getStringAttr(std::get<std::string>(*chLit));
-            auto linkage = builder->getStringAttr("internal");
+            auto linkage = builder->createInternalLinkage();
             global = builder->createGlobal(loc, symTy, globalName, linkage,
                                            init, isConst);
           } else {
@@ -1698,7 +1698,7 @@ private:
       if (!sym.name().size() || !hasInit) {
         // anonymous COMMON must always be initialized to zero
         // a named COMMON sans initializers is also initialized to zero
-        auto linkage = builder->getStringAttr("common");
+        auto linkage = builder->createCommonLinkage();
         fir::SequenceType::Shape shape = {sz};
         auto i8Ty = builder->getIntegerType(8);
         auto commonTy = fir::SequenceType::get(shape, i8Ty);
@@ -1721,7 +1721,7 @@ private:
             members.push_back(genType(*obj));
           return mlir::TupleType::get(members, builder->getContext());
         }();
-        auto linkage = builder->getStringAttr("linkonce");
+        auto linkage = builder->createLinkOnceLinkage();
         auto initFunc = [&](Fortran::lower::FirOpBuilder &builder) {
           mlir::Value cb = builder.create<fir::UndefOp>(loc, commonTy);
           unsigned offset = 0;
