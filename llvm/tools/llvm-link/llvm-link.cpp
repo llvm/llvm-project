@@ -11,11 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-<<<<<<< HEAD
-#include "llvm//Object/Archive.h"
-=======
 #include "llvm/Object/Archive.h"
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -144,13 +140,8 @@ static std::unique_ptr<Module> loadFile(const char *argv0,
   return Result;
 }
 
-<<<<<<< HEAD
-static std::unique_ptr<Module> loadArFile(const char *argv0,
-                                          const std::string ArchiveName,
-=======
 static std::unique_ptr<Module> loadArFile(const char *Argv0,
                                           const std::string &ArchiveName,
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
                                           LLVMContext &Context, Linker &L,
                                           unsigned OrigFlags,
                                           unsigned ApplicableFlags) {
@@ -159,33 +150,6 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
     errs() << "Reading library archive file '" << ArchiveName
            << "' to memory\n";
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-<<<<<<< HEAD
-      MemoryBuffer::getFile(ArchiveName, -1, false);
-  ExitOnErr(errorCodeToError(Buf.getError()));
-  Error Err = Error::success();
-  object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
-  object::Archive *ArchivePtr = &Archive;
-  ExitOnErr(std::move(Err));
-  for (auto &C : ArchivePtr->children(Err)) {
-    Expected<StringRef> ename = C.getName();
-    if (Error E = ename.takeError()) {
-      errs() << argv0 << ": ";
-      WithColor::error()
-          << " could not get member name of archive library failed'"
-          << ArchiveName << "'\n";
-      return nullptr;
-    };
-    std::string goodname = ename.get().str();
-    if (Verbose)
-      errs() << "Parsing member '" << goodname
-             << "' of archive library to module.\n";
-    SMDiagnostic ParseErr;
-    StringRef DataLayoutString;
-    Expected<MemoryBufferRef> MemBuf = C.getMemoryBufferRef();
-    if (Error E = MemBuf.takeError()) {
-      errs() << argv0 << ": ";
-      WithColor::error() << " loading memory for member '" << goodname
-=======
     MemoryBuffer::getFile(ArchiveName, -1, false);
   ExitOnErr(errorCodeToError(Buf.getError()));
   Error Err = Error::success();
@@ -209,18 +173,11 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
     if (Error E = MemBuf.takeError()) {
       errs() << Argv0 << ": ";
       WithColor::error() << " loading memory for member '" << ChildName
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
                          << "' of archive library failed'" << ArchiveName
                          << "'\n";
       return nullptr;
     };
 
-<<<<<<< HEAD
-    std::unique_ptr<Module> M = parseIR(MemBuf.get(), ParseErr, Context);
-    if (!M.get()) {
-      errs() << argv0 << ": ";
-      WithColor::error() << " parsing member '" << goodname
-=======
     if (!isBitcode(reinterpret_cast<const unsigned char *>
                    (MemBuf.get().getBufferStart()),
                    reinterpret_cast<const unsigned char *>
@@ -236,21 +193,13 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
     if (!M.get()) {
       errs() << Argv0 << ": ";
       WithColor::error() << " parsing member '" << ChildName
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
                          << "' of archive library failed'" << ArchiveName
                          << "'\n";
       return nullptr;
     }
     if (Verbose)
-<<<<<<< HEAD
-      errs() << "Linking member '" << goodname << "' of archive library.\n";
-    // bool Err = L.linkInModule(std::move(M), ApplicableFlags);
-    bool Err = L.linkModules(*Result, std::move(M), ApplicableFlags);
-    if (Err)
-=======
       errs() << "Linking member '" << ChildName << "' of archive library.\n";
     if (L.linkModules(*Result, std::move(M), ApplicableFlags))
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
       return nullptr;
     ApplicableFlags = OrigFlags;
   } // end for each child

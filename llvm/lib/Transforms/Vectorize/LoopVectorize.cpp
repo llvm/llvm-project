@@ -4989,16 +4989,10 @@ bool LoopVectorizationCostModel::runtimeChecksRequired() {
 
   // FIXME: Avoid specializing for stride==1 instead of bailing out.
   if (!Legal->getLAI()->getSymbolicStrides().empty()) {
-<<<<<<< HEAD
     reportVectorizationFailure("Runtime stride check is required with -Os/-Oz",
         "runtime stride == 1 checks needed. Enable vectorization of "
         "this loop with '#pragma clang loop vectorize(enable)' when "
         "compiling with -Os/-Oz",
-=======
-    reportVectorizationFailure("Runtime stride check for small trip count",
-        "runtime stride == 1 checks needed. Enable vectorization of "
-        "this loop without such check by compiling with -Os/-Oz",
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
         "CantVersionLoopWithOptForSize", ORE, TheLoop);
     return true;
   }
