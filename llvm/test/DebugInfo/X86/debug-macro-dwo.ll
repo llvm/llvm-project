@@ -11,6 +11,8 @@
 ; CHECK-NEXT: 0x00000000:
 ; CHECK-NEXT: macro header: version = 0x0005, flags = 0x02, format = DWARF32
 ; CHECK-NEXT: DW_MACRO_start_file - lineno: 0 filenum: 0
+; FIXME: This should be filenum 1 (and 2 below) if this was using debug_loc.dwo
+;        (rather than currently incorrectly using debug_loc)
 ; CHECK-NEXT:   DW_MACRO_start_file - lineno: 1 filenum: 2
 ; CHECK-NEXT:     DW_MACRO_define_strx - lineno: 1 macro: FOO 5
 ; CHECK-NEXT:   DW_MACRO_end_file
