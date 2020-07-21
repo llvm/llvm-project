@@ -76,6 +76,12 @@ public:
   ///     \b true if the breakpoint is enabled, \b false if disabled.
   bool IsEnabled() const;
 
+  /// Check if it is a hardware breakpoint.
+  ///
+  /// \return
+  ///     \b true if the breakpoint is a harware breakpoint.
+  bool IsHardware() const override;
+
   /// If \a auto_continue is \b true, set the breakpoint to continue when hit.
   void SetAutoContinue(bool auto_continue);
 

@@ -15,6 +15,7 @@
 
 #include "lldb/Breakpoint/BreakpointLocationCollection.h"
 #include "lldb/Breakpoint/StoppointLocation.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-forward.h"
 
@@ -183,6 +184,12 @@ public:
   ///     \b true if all breakpoint locations are owned by internal breakpoints,
   ///     \b false otherwise.
   bool IsInternal() const;
+
+  bool IsHardware() const override {
+    lldbassert(BreakpointSite::Type::eHardware == GetType() ||
+               !HardwareRequired());
+    return BreakpointSite::Type::eHardware == GetType();
+  }
 
   BreakpointSite::Type GetType() const { return m_type; }
 
