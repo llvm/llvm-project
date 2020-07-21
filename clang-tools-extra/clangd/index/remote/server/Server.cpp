@@ -50,7 +50,9 @@ public:
       : Index(std::move(Index)) {
     llvm::SmallString<256> NativePath = IndexRoot;
     llvm::sys::path::native(NativePath);
-    IndexedProjectRoot = std::string(NativePath);
+    ProtobufMarshaller = std::unique_ptr<Marshaller>(new Marshaller(
+        /*RemoteIndexRoot=*/llvm::StringRef(NativePath),
+        /*LocalIndexRoot=*/""));
   }
 
 private:
@@ -65,9 +67,11 @@ private:
       Req.IDs.insert(*SID);
     }
     Index->lookup(Req, [&](const clangd::Symbol &Sym) {
+      auto SerializedSymbol = ProtobufMarshaller->toProtobuf(Sym);
+      if (!SerializedSymbol)
+        return;
       LookupReply NextMessage;
-      *NextMessage.mutable_stream_result() =
-          toProtobuf(Sym, IndexedProjectRoot);
+      *NextMessage.mutable_stream_result() = *SerializedSymbol;
       Reply->Write(NextMessage);
     });
     LookupReply LastMessage;
@@ -79,11 +83,13 @@ private:
   grpc::Status FuzzyFind(grpc::ServerContext *Context,
                          const FuzzyFindRequest *Request,
                          grpc::ServerWriter<FuzzyFindReply> *Reply) override {
-    const auto Req = fromProtobuf(Request, IndexedProjectRoot);
+    const auto Req = ProtobufMarshaller->fromProtobuf(Request);
     bool HasMore = Index->fuzzyFind(Req, [&](const clangd::Symbol &Sym) {
+      auto SerializedSymbol = ProtobufMarshaller->toProtobuf(Sym);
+      if (!SerializedSymbol)
+        return;
       FuzzyFindReply NextMessage;
-      *NextMessage.mutable_stream_result() =
-          toProtobuf(Sym, IndexedProjectRoot);
+      *NextMessage.mutable_stream_result() = *SerializedSymbol;
       Reply->Write(NextMessage);
     });
     FuzzyFindReply LastMessage;
@@ -102,8 +108,11 @@ private:
       Req.IDs.insert(*SID);
     }
     bool HasMore = Index->refs(Req, [&](const clangd::Ref &Reference) {
+      auto SerializedRef = ProtobufMarshaller->toProtobuf(Reference);
+      if (!SerializedRef)
+        return;
       RefsReply NextMessage;
-      *NextMessage.mutable_stream_result() = toProtobuf(Reference, IndexRoot);
+      *NextMessage.mutable_stream_result() = *SerializedRef;
       Reply->Write(NextMessage);
     });
     RefsReply LastMessage;
@@ -113,7 +122,7 @@ private:
   }
 
   std::unique_ptr<clangd::SymbolIndex> Index;
-  std::string IndexedProjectRoot;
+  std::unique_ptr<Marshaller> ProtobufMarshaller;
 };
 
 void runServer(std::unique_ptr<clangd::SymbolIndex> Index,
