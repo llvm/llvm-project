@@ -598,7 +598,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_FPEXT)
     .legalFor({{S64, S32}, {S32, S16}})
-    .lowerFor({{S64, S16}}) // FIXME: Implement
+    .narrowScalarFor({{S64, S16}}, changeTo(0, S32))
     .scalarize(0);
 
   getActionDefinitionsBuilder(G_FSUB)
