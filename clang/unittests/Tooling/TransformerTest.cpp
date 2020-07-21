@@ -10,6 +10,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
+#include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -378,6 +379,41 @@ TEST_F(TransformerTest, NodePartMemberMultiToken) {
            Input, Expected);
 }
 
+TEST_F(TransformerTest, NoEdits) {
+  using transformer::noEdits;
+  std::string Input = "int f(int x) { return x; }";
+  testRule(makeRule(returnStmt().bind("return"), noEdits()), Input, Input);
+}
+
+TEST_F(TransformerTest, IfBound2Args) {
+  using transformer::ifBound;
+  std::string Input = "int f(int x) { return x; }";
+  std::string Expected = "int f(int x) { CHANGE; }";
+  testRule(makeRule(returnStmt().bind("return"),
+                    ifBound("return", changeTo(cat("CHANGE;")))),
+           Input, Expected);
+}
+
+TEST_F(TransformerTest, IfBound3Args) {
+  using transformer::ifBound;
+  std::string Input = "int f(int x) { return x; }";
+  std::string Expected = "int f(int x) { CHANGE; }";
+  testRule(makeRule(returnStmt().bind("return"),
+                    ifBound("nothing", changeTo(cat("ERROR")),
+                            changeTo(cat("CHANGE;")))),
+           Input, Expected);
+}
+
+TEST_F(TransformerTest, ShrinkTo) {
+  using transformer::shrinkTo;
+  std::string Input = "int f(int x) { return x; }";
+  std::string Expected = "return x;";
+  testRule(makeRule(functionDecl(hasDescendant(returnStmt().bind("return")))
+                        .bind("function"),
+                    shrinkTo(node("function"), node("return"))),
+           Input, Expected);
+}
+
 TEST_F(TransformerTest, InsertBeforeEdit) {
   std::string Input = R"cc(
     int f() {
@@ -495,6 +531,90 @@ TEST_F(TransformerTest, MultiChange) {
                 changeTo(statement(std::string(T)), cat("{ /* then */ }")),
                 changeTo(statement(std::string(E)), cat("{ /* else */ }"))}),
       Input, Expected);
+}
+
+TEST_F(TransformerTest, EditList) {
+  using clang::transformer::editList;
+  std::string Input = R"cc(
+    void foo() {
+      if (10 > 1.0)
+        log(1) << "oh no!";
+      else
+        log(0) << "ok";
+    }
+  )cc";
+  std::string Expected = R"(
+    void foo() {
+      if (true) { /* then */ }
+      else { /* else */ }
+    }
+  )";
+
+  StringRef C = "C", T = "T", E = "E";
+  testRule(makeRule(ifStmt(hasCondition(expr().bind(C)),
+                           hasThen(stmt().bind(T)), hasElse(stmt().bind(E))),
+                    editList({changeTo(node(std::string(C)), cat("true")),
+                              changeTo(statement(std::string(T)),
+                                       cat("{ /* then */ }")),
+                              changeTo(statement(std::string(E)),
+                                       cat("{ /* else */ }"))})),
+           Input, Expected);
+}
+
+TEST_F(TransformerTest, Flatten) {
+  using clang::transformer::editList;
+  std::string Input = R"cc(
+    void foo() {
+      if (10 > 1.0)
+        log(1) << "oh no!";
+      else
+        log(0) << "ok";
+    }
+  )cc";
+  std::string Expected = R"(
+    void foo() {
+      if (true) { /* then */ }
+      else { /* else */ }
+    }
+  )";
+
+  StringRef C = "C", T = "T", E = "E";
+  testRule(
+      makeRule(
+          ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
+                 hasElse(stmt().bind(E))),
+          flatten(changeTo(node(std::string(C)), cat("true")),
+                  changeTo(statement(std::string(T)), cat("{ /* then */ }")),
+                  changeTo(statement(std::string(E)), cat("{ /* else */ }")))),
+      Input, Expected);
+}
+
+TEST_F(TransformerTest, FlattenWithMixedArgs) {
+  using clang::transformer::editList;
+  std::string Input = R"cc(
+    void foo() {
+      if (10 > 1.0)
+        log(1) << "oh no!";
+      else
+        log(0) << "ok";
+    }
+  )cc";
+  std::string Expected = R"(
+    void foo() {
+      if (true) { /* then */ }
+      else { /* else */ }
+    }
+  )";
+
+  StringRef C = "C", T = "T", E = "E";
+  testRule(makeRule(ifStmt(hasCondition(expr().bind(C)),
+                           hasThen(stmt().bind(T)), hasElse(stmt().bind(E))),
+                    flatten(changeTo(node(std::string(C)), cat("true")),
+                            edit(changeTo(statement(std::string(T)),
+                                          cat("{ /* then */ }"))),
+                            editList({changeTo(statement(std::string(E)),
+                                               cat("{ /* else */ }"))}))),
+           Input, Expected);
 }
 
 TEST_F(TransformerTest, OrderedRuleUnrelated) {
