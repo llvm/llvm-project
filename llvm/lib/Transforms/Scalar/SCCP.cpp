@@ -33,6 +33,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -2021,9 +2022,47 @@ bool llvm::runIPSCCP(
 
   for (const auto &I : Solver.getTrackedRetVals()) {
     Function *F = I.first;
-    if (isOverdefined(I.second) || F->getReturnType()->isVoidTy())
+    const ValueLatticeElement &ReturnValue = I.second;
+
+    // If there is a known constant range for the return value, add !range
+    // metadata to the function's call sites.
+    if (ReturnValue.isConstantRange() &&
+        !ReturnValue.getConstantRange().isSingleElement()) {
+      // Do not add range metadata if the return value may include undef.
+      if (ReturnValue.isConstantRangeIncludingUndef())
+        continue;
+
+      auto &CR = ReturnValue.getConstantRange();
+      for (User *User : F->users()) {
+        auto *CB = dyn_cast<CallBase>(User);
+        if (!CB || CB->getCalledFunction() != F)
+          continue;
+
+        // Limit to cases where the return value is guaranteed to be neither
+        // poison nor undef. Poison will be outside any range and currently
+        // values outside of the specified range cause immediate undefined
+        // behavior.
+        if (!isGuaranteedNotToBeUndefOrPoison(CB, CB))
+          continue;
+
+        // Do not touch existing metadata for now.
+        // TODO: We should be able to take the intersection of the existing
+        // metadata and the inferred range.
+        if (CB->getMetadata(LLVMContext::MD_range))
+          continue;
+
+        LLVMContext &Context = CB->getParent()->getContext();
+        Metadata *RangeMD[] = {
+            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getLower())),
+            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getUpper()))};
+        CB->setMetadata(LLVMContext::MD_range, MDNode::get(Context, RangeMD));
+      }
       continue;
-    findReturnsToZap(*F, ReturnsToZap, Solver);
+    }
+    if (F->getReturnType()->isVoidTy())
+      continue;
+    if (isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
+      findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
   for (auto F : Solver.getMRVFunctionsTracked()) {
