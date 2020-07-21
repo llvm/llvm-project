@@ -10,6 +10,8 @@
 // This file implements utilities for interfacing with tensorflow C APIs.
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Config/config.h"
+#if defined(LLVM_HAVE_TF_API)
 
 #include "llvm/Analysis/Utils/TFUtils.h"
 #include "llvm/ADT/Twine.h"
@@ -287,3 +289,4 @@ template <> int TFModelEvaluator::getModelTypeIndex<uint64_t>() {
 
 TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
 TFModelEvaluator::~TFModelEvaluator() {}
+#endif // defined(LLVM_HAVE_TF_API)
