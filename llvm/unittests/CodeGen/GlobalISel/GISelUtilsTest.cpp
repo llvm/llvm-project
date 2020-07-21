@@ -22,6 +22,7 @@ static const LLT P1 = LLT::pointer(1, 32);
 
 static const LLT V2S8 = LLT::vector(2, 8);
 static const LLT V4S8 = LLT::vector(4, 8);
+static const LLT V8S8 = LLT::vector(8, 8);
 
 static const LLT V2S16 = LLT::vector(2, 16);
 static const LLT V3S16 = LLT::vector(3, 16);
@@ -33,6 +34,7 @@ static const LLT V4S32 = LLT::vector(4, 32);
 static const LLT V6S32 = LLT::vector(6, 32);
 
 static const LLT V2S64 = LLT::vector(2, 64);
+static const LLT V3S64 = LLT::vector(3, 64);
 static const LLT V4S64 = LLT::vector(4, 64);
 
 static const LLT V2P0 = LLT::vector(2, P0);
@@ -157,18 +159,18 @@ TEST(GISelUtilsTest, getLCMType) {
   EXPECT_EQ(S32, getLCMType(S16, S32));
 
   EXPECT_EQ(S64, getLCMType(S64, P0));
-  EXPECT_EQ(S64, getLCMType(P0, S64));
+  EXPECT_EQ(P0, getLCMType(P0, S64));
 
-  EXPECT_EQ(S64, getLCMType(S32, P0));
-  EXPECT_EQ(S64, getLCMType(P0, S32));
+  EXPECT_EQ(P0, getLCMType(S32, P0));
+  EXPECT_EQ(P0, getLCMType(P0, S32));
 
   EXPECT_EQ(S32, getLCMType(S32, P1));
-  EXPECT_EQ(S32, getLCMType(P1, S32));
-  EXPECT_EQ(S64, getLCMType(P0, P0));
-  EXPECT_EQ(S32, getLCMType(P1, P1));
+  EXPECT_EQ(P1, getLCMType(P1, S32));
+  EXPECT_EQ(P0, getLCMType(P0, P0));
+  EXPECT_EQ(P1, getLCMType(P1, P1));
 
-  EXPECT_EQ(S64, getLCMType(P0, P1));
-  EXPECT_EQ(S64, getLCMType(P1, P0));
+  EXPECT_EQ(P0, getLCMType(P0, P1));
+  EXPECT_EQ(P0, getLCMType(P1, P0));
 
   EXPECT_EQ(V2S32, getLCMType(V2S32, V2S32));
   EXPECT_EQ(V2S32, getLCMType(V2S32, S32));
@@ -188,11 +190,55 @@ TEST(GISelUtilsTest, getLCMType) {
   EXPECT_EQ(LLT::vector(12, P0), getLCMType(V4P0, V3P0));
   EXPECT_EQ(LLT::vector(12, P0), getLCMType(V3P0, V4P0));
 
-  // FIXME
-  // EXPECT_EQ(V2S32, getLCMType(V2S32, S64));
+  EXPECT_EQ(LLT::vector(12, S64), getLCMType(V4S64, V3P0));
+  EXPECT_EQ(LLT::vector(12, P0), getLCMType(V3P0, V4S64));
 
-  // FIXME
-  //EXPECT_EQ(S64, getLCMType(S64, V2S32));
+  EXPECT_EQ(LLT::vector(12, P0), getLCMType(V4P0, V3S64));
+  EXPECT_EQ(LLT::vector(12, S64), getLCMType(V3S64, V4P0));
+
+  EXPECT_EQ(V2P0, getLCMType(V2P0, S32));
+  EXPECT_EQ(V4S32, getLCMType(S32, V2P0));
+  EXPECT_EQ(V2P0, getLCMType(V2P0, S64));
+  EXPECT_EQ(V2S64, getLCMType(S64, V2P0));
+
+
+  EXPECT_EQ(V2P0, getLCMType(V2P0, V2P1));
+  EXPECT_EQ(V4P1, getLCMType(V2P1, V2P0));
+
+  EXPECT_EQ(V2P0, getLCMType(V2P0, V4P1));
+  EXPECT_EQ(V4P1, getLCMType(V4P1, V2P0));
+
+
+  EXPECT_EQ(V2S32, getLCMType(V2S32, S64));
+  EXPECT_EQ(S64, getLCMType(S64, V2S32));
+
+  EXPECT_EQ(V4S16, getLCMType(V4S16, V2S32));
+  EXPECT_EQ(V2S32, getLCMType(V2S32, V4S16));
+
+  EXPECT_EQ(V2S32, getLCMType(V2S32, V4S8));
+  EXPECT_EQ(V8S8, getLCMType(V4S8, V2S32));
+
+  EXPECT_EQ(V2S16, getLCMType(V2S16, V4S8));
+  EXPECT_EQ(V4S8, getLCMType(V4S8, V2S16));
+
+  EXPECT_EQ(LLT::vector(6, S16), getLCMType(V3S16, V4S8));
+  EXPECT_EQ(LLT::vector(12, S8), getLCMType(V4S8, V3S16));
+  EXPECT_EQ(V4S16, getLCMType(V4S16, V4S8));
+  EXPECT_EQ(V8S8, getLCMType(V4S8, V4S16));
+
+  EXPECT_EQ(LLT::vector(6, 4), getLCMType(LLT::vector(3, 4), S8));
+  EXPECT_EQ(LLT::vector(3, 8), getLCMType(S8, LLT::vector(3, 4)));
+
+  EXPECT_EQ(LLT::vector(6, 4),
+            getLCMType(LLT::vector(3, 4), LLT::pointer(4, 8)));
+  EXPECT_EQ(LLT::vector(3, LLT::pointer(4, 8)),
+            getLCMType(LLT::pointer(4, 8), LLT::vector(3, 4)));
+
+  EXPECT_EQ(V2S64, getLCMType(V2S64, P0));
+  EXPECT_EQ(V2P0, getLCMType(P0, V2S64));
+
+  EXPECT_EQ(V2S64, getLCMType(V2S64, P1));
+  EXPECT_EQ(V4P1, getLCMType(P1, V2S64));
 }
 
 }
