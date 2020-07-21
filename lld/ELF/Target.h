@@ -213,6 +213,11 @@ unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
 // the .toc section.
 bool isPPC64SmallCodeModelTocReloc(RelType type);
 
+// Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
+// instruction (regardless of endianness). Therefore, the prefix is always in
+// lower memory than the instruction.
+void writePrefixedInstruction(uint8_t *loc, uint64_t insn);
+
 void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);

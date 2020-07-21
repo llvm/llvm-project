@@ -48,6 +48,12 @@ static inline Error createError(const Twine &Err) {
   return make_error<StringError>(Err, object_error::parse_failed);
 }
 
+enum PPCInstrMasks : uint64_t {
+  PADDI_R12_NO_DISP = 0x0610000039800000,
+  MTCTR_R12 = 0x7D8903A6,
+  BCTR = 0x4E800420,
+};
+
 template <class ELFT> class ELFFile;
 
 template <class ELFT>
