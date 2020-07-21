@@ -11,7 +11,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlen
     libc.src.string.memchr
     libc.src.string.strchr
-    libc.str.string.strstr
+    libc.src.string.strstr
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
