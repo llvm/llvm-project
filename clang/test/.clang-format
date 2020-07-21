@@ -1,5 +1,3 @@
 BasedOnStyle: LLVM
 ColumnLimit: 0
-AlignTrailingComments: false
-CommentPragmas: "(^ ?CHECK|^ ?expected-)"
 AlwaysBreakTemplateDeclarations: No
