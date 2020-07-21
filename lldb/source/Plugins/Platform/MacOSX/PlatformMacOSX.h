@@ -79,8 +79,6 @@ public:
 private:
   PlatformMacOSX(const PlatformMacOSX &) = delete;
   const PlatformMacOSX &operator=(const PlatformMacOSX &) = delete;
-
-  int m_num_arches = 0;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
