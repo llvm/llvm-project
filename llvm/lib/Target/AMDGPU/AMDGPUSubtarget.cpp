@@ -508,12 +508,15 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
   MaxAlign = Align(1);
 
   for (const Argument &Arg : F.args()) {
-    Type *ArgTy = Arg.getType();
+    const bool IsByRef = Arg.hasByRefAttr();
+    Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
+    MaybeAlign Alignment = IsByRef ? Arg.getParamAlign() : None;
+    if (!Alignment)
+      Alignment = DL.getABITypeAlign(ArgTy);
 
-    const Align Alignment = DL.getABITypeAlign(ArgTy);
     uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
     ExplicitArgBytes = alignTo(ExplicitArgBytes, Alignment) + AllocSize;
-    MaxAlign = std::max(MaxAlign, Alignment);
+    MaxAlign = max(MaxAlign, Alignment);
   }
 
   return ExplicitArgBytes;

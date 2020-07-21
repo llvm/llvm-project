@@ -1017,10 +1017,14 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   unsigned InIndex = 0;
 
   for (const Argument &Arg : Fn.args()) {
+    const bool IsByRef = Arg.hasByRefAttr();
     Type *BaseArgTy = Arg.getType();
-    Align Alignment = DL.getABITypeAlign(BaseArgTy);
-    MaxAlign = std::max(Alignment, MaxAlign);
-    unsigned AllocSize = DL.getTypeAllocSize(BaseArgTy);
+    Type *MemArgTy = IsByRef ? Arg.getParamByRefType() : BaseArgTy;
+    MaybeAlign Alignment = IsByRef ? Arg.getParamAlign() : None;
+    if (!Alignment)
+      Alignment = DL.getABITypeAlign(MemArgTy);
+    MaxAlign = max(Alignment, MaxAlign);
+    uint64_t AllocSize = DL.getTypeAllocSize(MemArgTy);
 
     uint64_t ArgOffset = alignTo(ExplicitArgOffset, Alignment) + ExplicitOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, Alignment) + AllocSize;

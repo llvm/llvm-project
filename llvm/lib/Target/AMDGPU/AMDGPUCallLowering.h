@@ -23,8 +23,8 @@ class AMDGPUTargetLowering;
 class MachineInstrBuilder;
 
 class AMDGPUCallLowering: public CallLowering {
-  Register lowerParameterPtr(MachineIRBuilder &B, Type *ParamTy,
-                             uint64_t Offset) const;
+  void lowerParameterPtr(Register DstReg, MachineIRBuilder &B, Type *ParamTy,
+                         uint64_t Offset) const;
 
   void lowerParameter(MachineIRBuilder &B, Type *ParamTy, uint64_t Offset,
                       Align Alignment, Register DstReg) const;
