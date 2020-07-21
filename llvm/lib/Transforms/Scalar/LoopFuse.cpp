@@ -387,26 +387,25 @@ struct FusionCandidateCompare {
   bool operator()(const FusionCandidate &LHS,
                   const FusionCandidate &RHS) const {
     const DominatorTree *DT = LHS.DT;
-    const PostDominatorTree *PDT = LHS.PDT;
 
     BasicBlock *LHSEntryBlock = LHS.getEntryBlock();
     BasicBlock *RHSEntryBlock = RHS.getEntryBlock();
 
     // Do not save PDT to local variable as it is only used in asserts and thus
     // will trigger an unused variable warning if building without asserts.
-    assert(DT && PDT && "Expecting valid dominator tree");
+    assert(DT && LHS.PDT && "Expecting valid dominator tree");
 
     // Do this compare first so if LHS == RHS, function returns false.
     if (DT->dominates(RHSEntryBlock, LHSEntryBlock)) {
       // RHS dominates LHS
       // Verify LHS post-dominates RHS
-      assert(PDT->dominates(LHSEntryBlock, RHSEntryBlock));
+      assert(LHS.PDT->dominates(LHSEntryBlock, RHSEntryBlock));
       return false;
     }
 
     if (DT->dominates(LHSEntryBlock, RHSEntryBlock)) {
       // Verify RHS Postdominates LHS
-      assert(PDT->dominates(RHSEntryBlock, LHSEntryBlock));
+      assert(LHS.PDT->dominates(RHSEntryBlock, LHSEntryBlock));
       return true;
     }
 
