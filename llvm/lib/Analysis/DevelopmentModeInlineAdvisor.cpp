@@ -11,6 +11,9 @@
 // loading of a model from a command line option.
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Config/config.h"
+#if defined(LLVM_HAVE_TF_API)
+
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/MLInlineAdvisor.h"
@@ -483,3 +486,4 @@ std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
   return std::make_unique<DevelopmentModeMLInlineAdvisor>(
       M, MAM, std::move(Runner), GetDefaultAdvice, IsDoingInference);
 }
+#endif // defined(LLVM_HAVE_TF_API)

@@ -41,6 +41,7 @@ static_library("Analysis") {
     "DemandedBits.cpp",
     "DependenceAnalysis.cpp",
     "DependenceGraphBuilder.cpp",
+    "DevelopmentModeInlineAdvisor.cpp",
     "DivergenceAnalysis.cpp",
     "DomPrinter.cpp",
     "DomTreeUpdater.cpp",
@@ -75,6 +76,7 @@ static_library("Analysis") {
     "LoopNestAnalysis.cpp",
     "LoopPass.cpp",
     "LoopUnrollAnalyzer.cpp",
+    "MLInlineAdvisor.cpp",
     "MemDepPrinter.cpp",
     "MemDerefPrinter.cpp",
     "MemoryBuiltins.cpp",
@@ -97,6 +99,7 @@ static_library("Analysis") {
     "RegionInfo.cpp",
     "RegionPass.cpp",
     "RegionPrinter.cpp",
+    "ReleaseModeModelRunner.cpp",
     "ScalarEvolution.cpp",
     "ScalarEvolutionAliasAnalysis.cpp",
     "ScalarEvolutionDivision.cpp",
@@ -106,6 +109,7 @@ static_library("Analysis") {
     "StackSafetyAnalysis.cpp",
     "SyncDependenceAnalysis.cpp",
     "SyntheticCountsUtils.cpp",
+    "TFUtils.cpp",
     "TargetLibraryInfo.cpp",
     "TargetTransformInfo.cpp",
     "Trace.cpp",
@@ -116,12 +120,5 @@ static_library("Analysis") {
     "ValueLatticeUtils.cpp",
     "ValueTracking.cpp",
     "VectorUtils.cpp",
-  ]
-}
-
-static_library("TensorFlow") {
-  sources = [
-    "DevelopmentModeInlineAdvisor.cpp",
-    "TFUtils.cpp",
   ]
 }

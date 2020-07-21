@@ -10,6 +10,8 @@
 // Only inference is supported.
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Config/config.h"
+#if defined(LLVM_HAVE_TF_AOT)
 
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
 #include "llvm/Analysis/MLInlineAdvisor.h"
@@ -85,3 +87,4 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM) {
   auto AOTRunner = std::make_unique<ReleaseModeModelRunner>(M.getContext());
   return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner));
 }
+#endif // defined(LLVM_HAVE_TF_AOT)
