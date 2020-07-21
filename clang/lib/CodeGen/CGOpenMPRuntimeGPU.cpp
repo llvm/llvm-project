@@ -20,6 +20,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Cuda.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 using namespace clang;
@@ -195,11 +196,9 @@ public:
 /// code.  For all practical purposes this is fine because the configuration
 /// is the same for all known NVPTX architectures.
 enum MachineConfiguration : unsigned {
-  WarpSize = 32,
-  /// Number of bits required to represent a lane identifier, which is
-  /// computed as log_2(WarpSize).
-  LaneIDBits = 5,
-  LaneIDMask = WarpSize - 1,
+  /// See "llvm/Frontend/OpenMP/OMPGridValues.h" for various related target
+  /// specific Grid Values like GV_Warp_Size, GV_Warp_Size_Log2,
+  /// and GV_Warp_Size_Log2_Mask.
 
   /// Global memory alignment for performance.
   GlobalMemoryAlignment = 128,
@@ -431,6 +430,7 @@ class CheckVarsEscapingDeclContext final
     assert(!GlobalizedRD &&
            "Record for globalized variables is built already.");
     ArrayRef<const ValueDecl *> EscapedDeclsForParallel, EscapedDeclsForTeams;
+    unsigned WarpSize = CGF.getTarget().getGridValue(llvm::omp::GV_Warp_Size);
     if (IsInTTDRegion)
       EscapedDeclsForTeams = EscapedDecls.getArrayRef();
     else
@@ -634,6 +634,8 @@ static llvm::Value *getNVPTXThreadID(CodeGenFunction &CGF) {
 /// on the NVPTX device, to generate more efficient code.
 static llvm::Value *getNVPTXWarpID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
+  unsigned LaneIDBits =
+      CGF.getTarget().getGridValue(llvm::omp::GV_Warp_Size_Log2);
   return Bld.CreateAShr(getNVPTXThreadID(CGF), LaneIDBits, "nvptx_warp_id");
 }
 
@@ -642,6 +644,8 @@ static llvm::Value *getNVPTXWarpID(CodeGenFunction &CGF) {
 /// on the NVPTX device, to generate more efficient code.
 static llvm::Value *getNVPTXLaneID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
+  unsigned LaneIDMask = CGF.getContext().getTargetInfo().getGridValue(
+      llvm::omp::GV_Warp_Size_Log2_Mask);
   return Bld.CreateAnd(getNVPTXThreadID(CGF), Bld.getInt32(LaneIDMask),
                        "nvptx_lane_id");
 }
@@ -2058,6 +2062,7 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
   const RecordDecl *GlobalizedRD = nullptr;
   llvm::SmallVector<const ValueDecl *, 4> LastPrivatesReductions;
   llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *> MappedDeclsFields;
+  unsigned WarpSize = CGM.getTarget().getGridValue(llvm::omp::GV_Warp_Size);
   // Globalize team reductions variable unconditionally in all modes.
   if (getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD)
     getTeamsReductionVars(CGM.getContext(), D, LastPrivatesReductions);
@@ -3233,6 +3238,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
       "__openmp_nvptx_data_transfer_temporary_storage";
   llvm::GlobalVariable *TransferMedium =
       M.getGlobalVariable(TransferMediumName);
+  unsigned WarpSize = CGF.getTarget().getGridValue(llvm::omp::GV_Warp_Size);
   if (!TransferMedium) {
     auto *Ty = llvm::ArrayType::get(CGM.Int32Ty, WarpSize);
     unsigned SharedAddressSpace = C.getTargetAddressSpace(LangAS::cuda_shared);
