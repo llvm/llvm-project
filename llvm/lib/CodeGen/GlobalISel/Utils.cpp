@@ -510,35 +510,55 @@ void llvm::getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU) {
   AU.addPreserved<StackProtector>();
 }
 
-LLT llvm::getLCMType(LLT Ty0, LLT Ty1) {
-  if (!Ty0.isVector() && !Ty1.isVector()) {
-    unsigned Mul = Ty0.getSizeInBits() * Ty1.getSizeInBits();
-    int GCDSize = greatestCommonDivisor(Ty0.getSizeInBits(),
-                                        Ty1.getSizeInBits());
-    return LLT::scalar(Mul / GCDSize);
+static unsigned getLCMSize(unsigned OrigSize, unsigned TargetSize) {
+  unsigned Mul = OrigSize * TargetSize;
+  unsigned GCDSize = greatestCommonDivisor(OrigSize, TargetSize);
+  return Mul / GCDSize;
+}
+
+LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
+  const unsigned OrigSize = OrigTy.getSizeInBits();
+  const unsigned TargetSize = TargetTy.getSizeInBits();
+
+  if (OrigSize == TargetSize)
+    return OrigTy;
+
+  if (OrigTy.isVector()) {
+    const LLT OrigElt = OrigTy.getElementType();
+
+    if (TargetTy.isVector()) {
+      const LLT TargetElt = TargetTy.getElementType();
+
+      if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
+        int GCDElts = greatestCommonDivisor(OrigTy.getNumElements(),
+                                            TargetTy.getNumElements());
+        // Prefer the original element type.
+        int Mul = OrigTy.getNumElements() * TargetTy.getNumElements();
+        return LLT::vector(Mul / GCDElts, OrigTy.getElementType());
+      }
+    } else {
+      if (OrigElt.getSizeInBits() == TargetSize)
+        return OrigTy;
+    }
+
+    unsigned LCMSize = getLCMSize(OrigSize, TargetSize);
+    return LLT::vector(LCMSize / OrigElt.getSizeInBits(), OrigElt);
   }
 
-  if (Ty0.isVector() && !Ty1.isVector()) {
-    assert(Ty0.getElementType() == Ty1 && "not yet handled");
-    return Ty0;
+  if (TargetTy.isVector()) {
+    unsigned LCMSize = getLCMSize(OrigSize, TargetSize);
+    return LLT::vector(LCMSize / OrigSize, OrigTy);
   }
 
-  if (Ty1.isVector() && !Ty0.isVector()) {
-    assert(Ty1.getElementType() == Ty0 && "not yet handled");
-    return Ty1;
-  }
+  unsigned LCMSize = getLCMSize(OrigSize, TargetSize);
 
-  if (Ty0.isVector() && Ty1.isVector()) {
-    assert(Ty0.getElementType() == Ty1.getElementType() && "not yet handled");
+  // Preserve pointer types.
+  if (LCMSize == OrigSize)
+    return OrigTy;
+  if (LCMSize == TargetSize)
+    return TargetTy;
 
-    int GCDElts = greatestCommonDivisor(Ty0.getNumElements(),
-                                        Ty1.getNumElements());
-
-    int Mul = Ty0.getNumElements() * Ty1.getNumElements();
-    return LLT::vector(Mul / GCDElts, Ty0.getElementType());
-  }
-
-  llvm_unreachable("not yet handled");
+  return LLT::scalar(LCMSize);
 }
 
 LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
