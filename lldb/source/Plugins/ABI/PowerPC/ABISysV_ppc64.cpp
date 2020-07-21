@@ -567,7 +567,7 @@ private:
   ReturnValueExtractor(Thread &thread, CompilerType &type,
                        RegisterContext *reg_ctx, ProcessSP process_sp)
       : m_thread(thread), m_type(type),
-        m_byte_size(m_type.GetByteSize(nullptr).getValueOr(0)),
+        m_byte_size(m_type.GetByteSize(&thread).getValueOr(0)),
         m_data_up(new DataBufferHeap(m_byte_size, 0)), m_reg_ctx(reg_ctx),
         m_process_sp(process_sp), m_byte_order(process_sp->GetByteOrder()),
         m_addr_size(
@@ -643,7 +643,7 @@ private:
     DataExtractor de(&raw_data, sizeof(raw_data), m_byte_order, m_addr_size);
 
     offset_t offset = 0;
-    llvm::Optional<uint64_t> byte_size = type.GetByteSize(nullptr);
+    llvm::Optional<uint64_t> byte_size = type.GetByteSize(m_process_sp.get());
     if (!byte_size)
       return {};
     switch (*byte_size) {
@@ -777,7 +777,8 @@ private:
     CompilerType elem_type;
     if (m_type.IsHomogeneousAggregate(&elem_type)) {
       uint32_t type_flags = elem_type.GetTypeInfo();
-      llvm::Optional<uint64_t> elem_size = elem_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> elem_size =
+          elem_type.GetByteSize(m_process_sp.get());
       if (!elem_size)
         return {};
       if (type_flags & eTypeIsComplex || !(type_flags & eTypeIsFloat)) {

@@ -1624,7 +1624,8 @@ static size_t LookupFunctionInModule(CommandInterpreter &interpreter,
   return 0;
 }
 
-static size_t LookupTypeInModule(CommandInterpreter &interpreter, Stream &strm,
+static size_t LookupTypeInModule(Target *target,
+                                 CommandInterpreter &interpreter, Stream &strm,
                                  Module *module, const char *name_cstr,
                                  bool name_is_regex) {
   TypeList type_list;
@@ -1652,7 +1653,7 @@ static size_t LookupTypeInModule(CommandInterpreter &interpreter, Stream &strm,
       // Resolve the clang type so that any forward references to types
       // that haven't yet been parsed will get parsed.
       type_sp->GetFullCompilerType();
-      type_sp->GetDescription(&strm, eDescriptionLevelFull, true);
+      type_sp->GetDescription(&strm, eDescriptionLevelFull, true, target);
       // Print all typedef chains
       TypeSP typedef_type_sp(type_sp);
       TypeSP typedefed_type_sp(typedef_type_sp->GetTypedefType());
@@ -1661,7 +1662,8 @@ static size_t LookupTypeInModule(CommandInterpreter &interpreter, Stream &strm,
         strm.Printf("     typedef '%s': ",
                     typedef_type_sp->GetName().GetCString());
         typedefed_type_sp->GetFullCompilerType();
-        typedefed_type_sp->GetDescription(&strm, eDescriptionLevelFull, true);
+        typedefed_type_sp->GetDescription(&strm, eDescriptionLevelFull, true,
+                                          target);
         typedef_type_sp = typedefed_type_sp;
         typedefed_type_sp = typedef_type_sp->GetTypedefType();
       }
@@ -1671,9 +1673,9 @@ static size_t LookupTypeInModule(CommandInterpreter &interpreter, Stream &strm,
   return type_list.GetSize();
 }
 
-static size_t LookupTypeHere(CommandInterpreter &interpreter, Stream &strm,
-                             Module &module, const char *name_cstr,
-                             bool name_is_regex) {
+static size_t LookupTypeHere(Target *target, CommandInterpreter &interpreter,
+                             Stream &strm, Module &module,
+                             const char *name_cstr, bool name_is_regex) {
   TypeList type_list;
   const uint32_t max_num_matches = UINT32_MAX;
   bool name_is_fully_qualified = false;
@@ -1696,8 +1698,8 @@ static size_t LookupTypeHere(CommandInterpreter &interpreter, Stream &strm,
     // Resolve the clang type so that any forward references to types that
     // haven't yet been parsed will get parsed.
     type_sp->GetFullCompilerType();
-    type_sp->GetDescription(&strm, eDescriptionLevelFull, true);
-    // Print all typedef chains
+    type_sp->GetDescription(&strm, eDescriptionLevelFull, true, target);
+    // Print all typedef chains.
     TypeSP typedef_type_sp(type_sp);
     TypeSP typedefed_type_sp(typedef_type_sp->GetTypedefType());
     while (typedefed_type_sp) {
@@ -1705,7 +1707,8 @@ static size_t LookupTypeHere(CommandInterpreter &interpreter, Stream &strm,
       strm.Printf("     typedef '%s': ",
                   typedef_type_sp->GetName().GetCString());
       typedefed_type_sp->GetFullCompilerType();
-      typedefed_type_sp->GetDescription(&strm, eDescriptionLevelFull, true);
+      typedefed_type_sp->GetDescription(&strm, eDescriptionLevelFull, true,
+                                        target);
       typedef_type_sp = typedefed_type_sp;
       typedefed_type_sp = typedef_type_sp->GetTypedefType();
     }
@@ -3745,9 +3748,9 @@ public:
       return false;
     case eLookupTypeType:
       if (!m_options.m_str.empty()) {
-        if (LookupTypeHere(m_interpreter, result.GetOutputStream(),
-                           *sym_ctx.module_sp, m_options.m_str.c_str(),
-                           m_options.m_use_regex)) {
+        if (LookupTypeHere(&GetSelectedTarget(), m_interpreter,
+                           result.GetOutputStream(), *sym_ctx.module_sp,
+                           m_options.m_str.c_str(), m_options.m_use_regex)) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
           return true;
         }
@@ -3817,9 +3820,9 @@ public:
 
     case eLookupTypeType:
       if (!m_options.m_str.empty()) {
-        if (LookupTypeInModule(m_interpreter, result.GetOutputStream(), module,
-                               m_options.m_str.c_str(),
-                               m_options.m_use_regex)) {
+        if (LookupTypeInModule(
+                &GetSelectedTarget(), m_interpreter, result.GetOutputStream(),
+                module, m_options.m_str.c_str(), m_options.m_use_regex)) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
           return true;
         }
