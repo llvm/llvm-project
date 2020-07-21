@@ -3246,8 +3246,12 @@ def : Pat<(PPCcall (i32 texternalsym:$dst)),
 // Calls for AIX only
 def : Pat<(PPCcall (i32 mcsym:$dst)),
           (BL mcsym:$dst)>;
+
 def : Pat<(PPCcall_nop (i32 mcsym:$dst)),
           (BL_NOP mcsym:$dst)>;
+
+def : Pat<(PPCcall_nop (i32 texternalsym:$dst)),
+          (BL_NOP texternalsym:$dst)>;
 
 def : Pat<(PPCtc_return (i32 tglobaladdr:$dst),  imm:$imm),
           (TCRETURNdi tglobaladdr:$dst, imm:$imm)>;
