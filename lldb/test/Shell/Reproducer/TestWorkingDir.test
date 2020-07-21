@@ -27,6 +27,6 @@
 # RUN: %lldb -x -b -o 'reproducer generate' --capture --capture-path %t.repro
 # RUN: cat %t.repro/cwd.txt | FileCheck %s
 # CHECK: probably_unique
-# RUN: cat %t.repro/files.yaml | FileCHeck %s --check-prefix VFS
+# RUN: cat %t.repro/files.yaml | FileCheck %s --check-prefix VFS
 # VFS: probably_unique
 # VFS-NOT: dont_include_me
