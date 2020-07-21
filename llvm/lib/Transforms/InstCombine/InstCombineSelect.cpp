@@ -2469,6 +2469,10 @@ static Instruction *foldSelectToPhiImpl(SelectInst &Sel, BasicBlock *BB,
   } else
     return nullptr;
 
+  // Make sure the branches are actually different.
+  if (TrueSucc == FalseSucc)
+    return nullptr;
+
   // We want to replace select %cond, %a, %b with a phi that takes value %a
   // for all incoming edges that are dominated by condition `%cond == true`,
   // and value %b for edges dominated by condition `%cond == false`. If %a
