@@ -462,7 +462,7 @@ struct S2 {
 
 void test_close_modifier(int arg) {
   S2 *ps;
-  // CK5: private unnamed_addr constant [5 x i64] [i64 1059, i64 32, {{.*}}, i64 16, i64 1043]
+  // CK5: private unnamed_addr constant [6 x i64] [i64 1059, i64 32, i64 562949953422339, i64 562949953421328, i64 16, i64 1043]
   #pragma omp target data map(close,tofrom: arg, ps->ps->ps->ps->s)
   {
     ++(arg);
