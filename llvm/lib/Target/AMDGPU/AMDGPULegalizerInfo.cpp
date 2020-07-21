@@ -1726,6 +1726,7 @@ bool AMDGPULegalizerInfo::legalizeFrint(
 
   auto Cond = B.buildFCmp(CmpInst::FCMP_OGT, LLT::scalar(1), Fabs, C2);
   B.buildSelect(MI.getOperand(0).getReg(), Cond, Src, Tmp2);
+  MI.eraseFromParent();
   return true;
 }
 
