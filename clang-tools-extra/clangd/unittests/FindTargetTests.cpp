@@ -376,6 +376,8 @@ TEST_F(TargetDeclTest, ClassTemplate) {
                {"template<> class Foo<int *>", Rel::TemplateInstantiation},
                {"template <typename T> class Foo<T *>", Rel::TemplatePattern});
 
+  Flags.push_back("-std=c++17"); // for CTAD tests
+
   Code = R"cpp(
     // Class template argument deduction
     template <typename T>
@@ -386,9 +388,20 @@ TEST_F(TargetDeclTest, ClassTemplate) {
       [[Test]] a(5);
     }
   )cpp";
-  Flags.push_back("-std=c++17");
   EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
                {"struct Test", Rel::TemplatePattern});
+
+  Code = R"cpp(
+    // Deduction guide
+    template <typename T>
+    struct Test {
+      template <typename I>
+      Test(I, I);
+    };
+    template <typename I>
+    [[Test]](I, I) -> Test<typename I::type>;
+  )cpp";
+  EXPECT_DECLS("CXXDeductionGuideDecl", {"template <typename T> struct Test"});
 }
 
 TEST_F(TargetDeclTest, Concept) {
@@ -792,8 +805,8 @@ TEST_F(FindExplicitReferencesTest, All) {
            goto $1^ten;
          }
        )cpp",
-       "0: targets = {ten}, decl\n"
-       "1: targets = {ten}\n"},
+        "0: targets = {ten}, decl\n"
+        "1: targets = {ten}\n"},
        // Simple templates.
        {R"cpp(
           template <class T> struct vector { using value_type = T; };
@@ -1295,7 +1308,7 @@ TEST_F(FindExplicitReferencesTest, All) {
         "6: targets = {bar}, decl\n"
         "7: targets = {foo()::Bar::Foo}\n"
         "8: targets = {foo()::Baz::Field}\n"},
-      {R"cpp(
+       {R"cpp(
            template<typename T>
            void crash(T);
            template<typename T>
@@ -1305,10 +1318,9 @@ TEST_F(FindExplicitReferencesTest, All) {
         )cpp",
         "0: targets = {crash}\n"
         "1: targets = {}\n"
-        "2: targets = {T}\n"
-      },
-      // unknown template name should not crash.
-      {R"cpp(
+        "2: targets = {T}\n"},
+       // unknown template name should not crash.
+       {R"cpp(
         template <template <typename> typename T>
         struct Base {};
         namespace foo {
@@ -1316,12 +1328,34 @@ TEST_F(FindExplicitReferencesTest, All) {
         struct $1^Derive : $2^Base<$3^T::template $4^Unknown> {};
         }
       )cpp",
-      "0: targets = {foo::Derive::T}, decl\n"
-      "1: targets = {foo::Derive}, decl\n"
-      "2: targets = {Base}\n"
-      "3: targets = {foo::Derive::T}\n"
-      "4: targets = {}, qualifier = 'T::'\n"},
-    };
+        "0: targets = {foo::Derive::T}, decl\n"
+        "1: targets = {foo::Derive}, decl\n"
+        "2: targets = {Base}\n"
+        "3: targets = {foo::Derive::T}\n"
+        "4: targets = {}, qualifier = 'T::'\n"},
+       // deduction guide
+       {R"cpp(
+          namespace foo {
+            template <typename $0^T>
+            struct $1^Test {
+              template <typename $2^I>
+              $3^Test($4^I);
+            };
+            template <typename $5^I>
+            $6^Test($7^I) -> $8^Test<typename $9^I::$10^type>;
+          }
+        )cpp",
+        "0: targets = {T}, decl\n"
+        "1: targets = {foo::Test}, decl\n"
+        "2: targets = {I}, decl\n"
+        "3: targets = {foo::Test::Test<T>}, decl\n"
+        "4: targets = {I}\n"
+        "5: targets = {I}, decl\n"
+        "6: targets = {foo::Test}\n"
+        "7: targets = {I}\n"
+        "8: targets = {foo::Test}\n"
+        "9: targets = {I}\n"
+        "10: targets = {}, qualifier = 'I::'\n"}};
 
   for (const auto &C : Cases) {
     llvm::StringRef ExpectedCode = C.first;
