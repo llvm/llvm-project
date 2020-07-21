@@ -24,8 +24,11 @@ void test_invalid_call(int s) {
   // CHECK-NEXT:   |-UnresolvedLookupExpr {{.*}} 'some_func'
   // CHECK-NEXT:   `-RecoveryExpr {{.*}} contains-errors
   s = some_func(undef1);
-  // CHECK: `-VarDecl {{.*}} invalid var 'int'
-  // FIXME: preserve the broken call.
+
+  // CHECK:     VarDecl {{.*}} var 'int'
+  // CHECK-NEXT: `-CallExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:   |-UnresolvedLookupExpr {{.*}} 'some_func'
+  // CHECK-NEXT:   `-RecoveryExpr {{.*}} contains-errors
   int var = some_func(undef1);
 }
 
@@ -178,9 +181,15 @@ void InvalidInitalizer(int x) {
   // CHECK-NEXT:     `-UnresolvedLookupExpr {{.*}} 'invalid'
   Bar b6 = Bar{invalid()};
 
-  // CHECK:     `-RecoveryExpr {{.*}} 'Bar' contains-errors
+  // CHECK:     RecoveryExpr {{.*}} 'Bar' contains-errors
   // CHECK-NEXT:  `-IntegerLiteral {{.*}} 'int' 1
   Bar(1);
+
+  // CHECK:     `-VarDecl {{.*}} var1
+  // CHECK-NEXT: `-BinaryOperator {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:   |-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:   `-IntegerLiteral {{.*}} 'int' 1
+  int var1 = undef + 1;
 }
 void InitializerForAuto() {
   // CHECK:     `-VarDecl {{.*}} invalid a 'auto'
