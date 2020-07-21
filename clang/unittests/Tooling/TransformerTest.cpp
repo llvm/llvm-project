@@ -440,6 +440,12 @@ TEST_F(TransformerTest, RemoveEdit) {
 }
 
 TEST_F(TransformerTest, WithMetadata) {
+  auto makeMetadata = [](const MatchFinder::MatchResult &R) -> llvm::Any {
+    int N =
+        R.Nodes.getNodeAs<IntegerLiteral>("int")->getValue().getLimitedValue();
+    return N;
+  };
+
   std::string Input = R"cc(
     int f() {
       int x = 5;
@@ -448,8 +454,11 @@ TEST_F(TransformerTest, WithMetadata) {
   )cc";
 
   Transformer T(
-      makeRule(declStmt().bind("decl"),
-               withMetadata(remove(statement(std::string("decl"))), 17)),
+      makeRule(
+          declStmt(containsDeclaration(0, varDecl(hasInitializer(
+                                              integerLiteral().bind("int")))))
+              .bind("decl"),
+          withMetadata(remove(statement(std::string("decl"))), makeMetadata)),
       consumer());
   T.registerMatchers(&MatchFinder);
   auto Factory = newFrontendActionFactory(&MatchFinder);
@@ -459,7 +468,7 @@ TEST_F(TransformerTest, WithMetadata) {
   ASSERT_EQ(Changes.size(), 1u);
   const llvm::Any &Metadata = Changes[0].getMetadata();
   ASSERT_TRUE(llvm::any_isa<int>(Metadata));
-  EXPECT_THAT(llvm::any_cast<int>(Metadata), 17);
+  EXPECT_THAT(llvm::any_cast<int>(Metadata), 5);
 }
 
 TEST_F(TransformerTest, MultiChange) {
