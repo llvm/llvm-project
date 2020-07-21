@@ -15,6 +15,10 @@ add_llvm_library(LLVMTestingSupport
   Support
   )
 
+if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+  add_definitions("-Wno-suggest-override")
+endif()
+
 include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)
 include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock/include)
 target_link_libraries(LLVMTestingSupport PRIVATE gtest)
