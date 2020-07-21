@@ -359,7 +359,7 @@ operations.
 ### Functions
 
 An MLIR Function is an operation with a name containing a single [SSACFG
-region)[#control-flow-and-ssacfg-regions].  Operations within this region
+region](#control-flow-and-ssacfg-regions).  Operations within this region
 cannot implicitly capture values defined outside of the function,
 i.e. Functions are [IsolatedFromAbove](Traits.md#isolatedfromabove).  All
 external references must use function arguments or attributes that establish a
