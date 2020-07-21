@@ -49,7 +49,10 @@ int main(int, char**) {
   //
   // With trivial_abi, local_addr is the address of a local variable in
   // make_val, and hence different from &ret.
+#ifndef __arm__
+  // On ARM32, structs larger than 4 bytes cannot be returned in registers.
+  // Thus, weak_ptr will be passed indrectly even if it is trivial.
   assert((void*)&ret != local_addr);
-
+#endif
   return 0;
 }
