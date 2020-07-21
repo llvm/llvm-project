@@ -13,6 +13,7 @@
 #include "llvm-readobj.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/Object/ELF.h"
@@ -185,7 +186,10 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
   if (!DataOrErr)
     reportError(DataOrErr.takeError(), ObjF->getFileName());
 
-  DWARFDataExtractor DE(*DataOrErr,
+  // Construct DWARFDataExtractor to handle relocations ("PC Begin" fields).
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*ObjF, nullptr);
+  DWARFDataExtractor DE(DICtx->getDWARFObj(),
+                        DICtx->getDWARFObj().getEHFrameSection(),
                         ELFT::TargetEndianness == support::endianness::little,
                         ELFT::Is64Bits ? 8 : 4);
   DWARFDebugFrame EHFrame(Triple::ArchType(ObjF->getArch()), /*IsEH=*/true,
