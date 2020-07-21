@@ -920,3 +920,25 @@ define amdgpu_kernel void @small_array_round_down_offset(i8, [1 x i8] %arg) {
   store volatile i8 %val, i8 addrspace(1)* undef
   ret void
 }
+
+; GCN-LABEL: {{^}}byref_align_constant_i32_arg:
+; HSA-GFX9: kernarg_segment_byte_size = 264
+; HSA-GFX9-DAG: s_load_dwordx2 {{s\[[0-9]+:[0-9]+\]}}, s[4:5], 0x100{{$}}
+define amdgpu_kernel void @byref_align_constant_i32_arg(i32 addrspace(1)* nocapture %out, i32 addrspace(4)* byref(i32) align(256) %in.byref, i32 %after.offset) {
+  %in = load i32, i32 addrspace(4)* %in.byref
+  store volatile i32 %in, i32 addrspace(1)* %out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}byref_natural_align_constant_v16i32_arg:
+; HSA-GFX9: kernarg_segment_byte_size = 132
+; HSA-GFX9-DAG: s_load_dword s{{[0-9]+}}, s[4:5], 0x80
+; HSA-GFX9-DAG: s_load_dwordx16 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x40{{$}}
+define amdgpu_kernel void @byref_natural_align_constant_v16i32_arg(i32 addrspace(1)* nocapture %out, i8, <16 x i32> addrspace(4)* byref(<16 x i32>) %in.byref, i32 %after.offset) {
+  %in = load <16 x i32>, <16 x i32> addrspace(4)* %in.byref
+  %cast.out = bitcast i32 addrspace(1)* %out to <16 x i32> addrspace(1)*
+  store volatile <16 x i32> %in, <16 x i32> addrspace(1)* %cast.out, align 4
+  store volatile i32 %after.offset, i32 addrspace(1)* %out, align 4
+  ret void
+}

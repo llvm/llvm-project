@@ -732,6 +732,13 @@ def G_FPOW : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Floating point exponentiation, with an integer power.
+def G_FPOWI : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type1:$src1);
+  let hasSideEffects = 0;
+}
+
 // Floating point base-e exponential of a value.
 def G_FEXP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);

@@ -457,8 +457,12 @@ public:
   /// Determine whether this module is a submodule.
   bool isSubModule() const { return Parent != nullptr; }
 
-  /// Determine whether this module is a submodule of the given other
-  /// module.
+  /// Check if this module is a (possibly transitive) submodule of \p Other.
+  ///
+  /// The 'A is a submodule of B' relation is a partial order based on the
+  /// the parent-child relationship between individual modules.
+  ///
+  /// Returns \c false if \p Other is \c nullptr.
   bool isSubModuleOf(const Module *Other) const;
 
   /// Determine whether this module is a part of a framework,

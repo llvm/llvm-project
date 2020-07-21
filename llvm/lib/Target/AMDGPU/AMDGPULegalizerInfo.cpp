@@ -747,6 +747,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   ExpOps.clampScalar(0, MinScalarFPTy, S32)
         .scalarize(0);
 
+  getActionDefinitionsBuilder(G_FPOWI)
+    .clampScalar(0, MinScalarFPTy, S32)
+    .lower();
+
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder(G_CTPOP)
     .legalFor({{S32, S32}, {S32, S64}})
@@ -1722,6 +1726,7 @@ bool AMDGPULegalizerInfo::legalizeFrint(
 
   auto Cond = B.buildFCmp(CmpInst::FCMP_OGT, LLT::scalar(1), Fabs, C2);
   B.buildSelect(MI.getOperand(0).getReg(), Cond, Src, Tmp2);
+  MI.eraseFromParent();
   return true;
 }
 
