@@ -176,14 +176,18 @@ private:
     resetFunctionState();
   }
 
-  /// Ensure that a function has a branch target after the last user statement.
+  /// Ensure that a function ends with a valid branch target (and is nonempty).
   void endFunctionBody() {
-    if (lastLexicalEvaluation) {
+    if (evaluationListStack.empty())
+      return;
+    auto evaluationList = evaluationListStack.back();
+    if (evaluationList->empty() ||
+        !evaluationList->back().isA<parser::ContinueStmt>()) {
       static const parser::ContinueStmt endTarget{};
       addEvaluation(
           lower::pft::Evaluation{endTarget, parentVariantStack.back(), {}, {}});
-      lastLexicalEvaluation = nullptr;
     }
+    lastLexicalEvaluation = nullptr;
   }
 
   /// Initialize a new function-like unit and make it the builder's focus.
@@ -204,6 +208,7 @@ private:
   void exitFunction() {
     endFunctionBody();
     analyzeBranches(nullptr, *evaluationListStack.back()); // add branch links
+    processEntryPoints();
     popEvaluationList();
     labelEvaluationMap = nullptr;
     assignSymbolLabelMap = nullptr;
@@ -281,10 +286,10 @@ private:
   /// Append an Evaluation to the end of the current list.
   lower::pft::Evaluation &addEvaluation(lower::pft::Evaluation &&eval) {
     assert(functionList && "not in a function");
-    assert(evaluationListStack.size() > 0);
-    if (constructAndDirectiveStack.size() > 0) {
+    assert(!evaluationListStack.empty() && "empty evaluation list stack");
+    if (!constructAndDirectiveStack.empty())
       eval.parentConstruct = constructAndDirectiveStack.back();
-    }
+    auto &entryPointList = eval.getOwningProcedure()->entryPointList;
     evaluationListStack.back()->emplace_back(std::move(eval));
     lower::pft::Evaluation *p = &evaluationListStack.back()->back();
     if (p->isActionStmt() || p->isConstructStmt()) {
@@ -295,6 +300,19 @@ private:
         p->printIndex = 1;
       }
       lastLexicalEvaluation = p;
+      for (auto entryIndex = entryPointList.size() - 1;
+           entryIndex && !entryPointList[entryIndex].second->lexicalSuccessor;
+           --entryIndex)
+        // Link to the entry's first executable statement.
+        entryPointList[entryIndex].second->lexicalSuccessor = p;
+    } else if (const auto *entryStmt = p->getIf<parser::EntryStmt>()) {
+      const auto *sym = std::get<Fortran::parser::Name>(entryStmt->t).symbol;
+      if (sym->IsFuncResult())
+        // Switch to the function sym.
+        sym = sym->owner().parent().FindSymbol(sym->name());
+      assert(sym->has<semantics::SubprogramDetails>() &&
+             "entry must be a subprogram");
+      entryPointList.push_back(std::pair{sym, p});
     }
     if (p->label.has_value()) {
       labelEvaluationMap->try_emplace(*p->label, p);
@@ -743,6 +761,46 @@ private:
     }
   }
 
+  /// For multiple entry subprograms, build a list of the dummy arguments that
+  /// appear in some, but not all entry points.  For those that are functions,
+  /// also find one of the largest function results, since a single result
+  /// container holds the result for all entries.
+  void processEntryPoints() {
+    auto *unit = evaluationListStack.back()->front().getOwningProcedure();
+    int entryCount = unit->entryPointList.size();
+    if (entryCount == 1)
+      return;
+    llvm::DenseMap<Fortran::semantics::Symbol *, int> dummyCountMap;
+    for (int entryIndex = 0; entryIndex < entryCount; ++entryIndex) {
+      unit->setActiveEntry(entryIndex);
+      const auto &details = unit->getSubprogramSymbol()
+                                .get<Fortran::semantics::SubprogramDetails>();
+      for (auto *arg : details.dummyArgs()) {
+        if (!arg)
+          continue; // alternate return specifier (no actual argument)
+        const auto iter = dummyCountMap.find(arg);
+        if (iter == dummyCountMap.end())
+          dummyCountMap.try_emplace(arg, 1);
+        else
+          ++iter->second;
+      }
+      if (details.isFunction()) {
+        const auto *resultSym = &details.result();
+        assert(resultSym && "missing result symbol");
+        if (!unit->primaryResult ||
+            unit->primaryResult->size() < resultSym->size())
+          unit->primaryResult = resultSym;
+      }
+    }
+    unit->setActiveEntry(0);
+    for (auto arg : dummyCountMap)
+      if (arg.second < entryCount)
+        unit->nonUniversalDummyArguments.push_back(arg.first);
+    // Sort to provide generated code order stability.
+    std::sort(unit->nonUniversalDummyArguments.begin(),
+              unit->nonUniversalDummyArguments.end(), std::greater<>());
+  }
+
   std::unique_ptr<lower::pft::Program> pgm;
   std::vector<lower::pft::ParentVariant> parentVariantStack;
   const semantics::SemanticsContext &semanticsContext;
@@ -815,7 +873,7 @@ public:
       if (eval.isNewBlock) {
         outputStream << '^';
       }
-      if (eval.localBlocks.size()) {
+      if (!eval.localBlocks.empty()) {
         outputStream << '*';
       }
       outputStream << name << bang;
@@ -823,8 +881,10 @@ public:
         if (eval.controlSuccessor) {
           outputStream << " -> " << eval.controlSuccessor->printIndex;
         }
+      } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
+        outputStream << " -> " << eval.lexicalSuccessor->printIndex;
       }
-      if (eval.position.size()) {
+      if (!eval.position.empty()) {
         outputStream << ": " << eval.position.ToString();
       }
       outputStream << '\n';
@@ -865,7 +925,7 @@ public:
       name = "<anonymous>";
     }
     outputStream << unitKind << ' ' << name;
-    if (header.size())
+    if (!header.empty())
       outputStream << ": " << header;
     outputStream << '\n';
     dumpEvaluationList(outputStream, functionLikeUnit.evaluationList);
@@ -1084,12 +1144,12 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     : ProgramUnit{func, parent}, endStmt{
                                      getFunctionStmt<parser::EndProgramStmt>(
                                          func)} {
-  const auto &ps{
+  const auto &programStmt{
       std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(func.t)};
-  if (ps.has_value()) {
-    FunctionStatement begin{ps.value()};
-    beginStmt = begin;
-    symbol = getSymbol(beginStmt);
+  if (programStmt.has_value()) {
+    beginStmt = programStmt.value();
+    auto symbol = getSymbol(beginStmt);
+    entryPointList[0].first = symbol;
     processSymbolTable(*symbol->scope());
   } else {
     processSymbolTable(semanticsContext.FindScope(
@@ -1103,8 +1163,9 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const semantics::SemanticsContext &)
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::FunctionStmt>(func)},
-      endStmt{getFunctionStmt<parser::EndFunctionStmt>(func)}, symbol{getSymbol(
-                                                                   beginStmt)} {
+      endStmt{getFunctionStmt<parser::EndFunctionStmt>(func)} {
+  auto symbol = getSymbol(beginStmt);
+  entryPointList[0].first = symbol;
   processSymbolTable(*symbol->scope());
 }
 
@@ -1114,8 +1175,9 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const semantics::SemanticsContext &)
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::SubroutineStmt>(func)},
-      endStmt{getFunctionStmt<parser::EndSubroutineStmt>(func)},
-      symbol{getSymbol(beginStmt)} {
+      endStmt{getFunctionStmt<parser::EndSubroutineStmt>(func)} {
+  auto symbol = getSymbol(beginStmt);
+  entryPointList[0].first = symbol;
   processSymbolTable(*symbol->scope());
 }
 
@@ -1125,8 +1187,9 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const semantics::SemanticsContext &)
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::MpSubprogramStmt>(func)},
-      endStmt{getFunctionStmt<parser::EndMpSubprogramStmt>(func)},
-      symbol{getSymbol(beginStmt)} {
+      endStmt{getFunctionStmt<parser::EndMpSubprogramStmt>(func)} {
+  auto symbol = getSymbol(beginStmt);
+  entryPointList[0].first = symbol;
   processSymbolTable(*symbol->scope());
 }
 

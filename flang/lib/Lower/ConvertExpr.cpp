@@ -310,15 +310,27 @@ private:
   fir::ExtendedValue genval(Fortran::semantics::SymbolRef sym) {
     auto var = gen(sym);
     if (auto *s = var.getUnboxed())
-      if (fir::isReferenceLike(s->getType()))
-        return genLoad(*s);
+      if (fir::isReferenceLike(s->getType())) {
+        // A function with multiple entry points returning different types
+        // tags all result variables with one of the largest types to allow
+        // them to share the same storage.  A reference to a result variable
+        // of one of the other types requires conversion to the actual type.
+        auto addr = *s;
+        if (Fortran::semantics::IsFunctionResult(sym)) {
+          auto resultType = converter.genType(*sym);
+          if (addr.getType() != resultType)
+            addr = builder.createConvert(getLoc(),
+                                         builder.getRefType(resultType), addr);
+        }
+        return genLoad(addr);
+      }
     if (inArrayContext()) {
       // FIXME: make this more robust
       auto base = fir::getBase(var);
       auto ty = builder.getRefType(
-          peelType(base.getType(), exprCtx.getLoopVars().size() + 1));
+          peelType(base.getType(), context.getLoopVars().size() + 1));
       auto coor = builder.create<fir::CoordinateOp>(getLoc(), ty, base,
-                                                    exprCtx.getLoopVars());
+                                                    context.getLoopVars());
       return genLoad(coor);
     }
     return var;
@@ -1029,9 +1041,9 @@ private:
           auto tlb = builder.createConvert(loc, idxTy, std::get<0>(*trip));
           auto dlb = builder.createConvert(loc, idxTy, getLB(arr, dim));
           auto diff = builder.create<mlir::SubIOp>(loc, tlb, dlb);
-          assert(idx < exprCtx.getLoopVars().size());
+          assert(idx < context.getLoopVars().size());
           auto sum = builder.create<mlir::AddIOp>(loc, diff,
-                                                  exprCtx.getLoopVars()[idx++]);
+                                                  context.getLoopVars()[idx++]);
           auto del = builder.createConvert(loc, idxTy, std::get<2>(*trip));
           auto scaled = builder.create<mlir::MulIOp>(loc, del, delta);
           auto prod = builder.create<mlir::MulIOp>(loc, scaled, sum);
@@ -1115,7 +1127,7 @@ private:
           auto ty = builder.getIndexType();
           auto step = builder.createConvert(loc, ty, std::get<2>(*range));
           auto scale = builder.create<mlir::MulIOp>(
-              loc, ty, exprCtx.getLoopVars()[i], step);
+              loc, ty, context.getLoopVars()[i], step);
           auto off = builder.createConvert(loc, ty, std::get<0>(*range));
           args.push_back(builder.create<mlir::AddIOp>(loc, ty, off, scale));
         }

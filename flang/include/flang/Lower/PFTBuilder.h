@@ -437,11 +437,22 @@ struct FunctionLikeUnit : public ProgramUnit {
     return stmtSourceLoc(endStmt);
   }
 
-  /// Returns reference to the subprogram symbol of this FunctionLikeUnit.
-  /// Dies if the FunctionLikeUnit is not a subprogram.
+  void setActiveEntry(int entryIndex) {
+    assert(entryIndex >= 0 && entryIndex < (int)entryPointList.size() &&
+           "invalid entry point index");
+    activeEntry = entryIndex;
+  }
+
+  /// Return a reference to the subprogram symbol of this FunctionLikeUnit.
   const semantics::Symbol &getSubprogramSymbol() const {
+    auto *symbol = entryPointList[activeEntry].first;
     assert(symbol && "not inside a procedure");
     return *symbol;
+  }
+  /// Return a pointer to the current entry point Evaluation.
+  /// This is null for a primary entry point.
+  Evaluation *getEntryEval() const {
+    return entryPointList[activeEntry].second;
   }
 
   /// Helper to get location from FunctionLikeUnit begin/end statements.
@@ -456,11 +467,20 @@ struct FunctionLikeUnit : public ProgramUnit {
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
   std::list<FunctionLikeUnit> nestedFunctions;
-  /// Symbol associated to this FunctionLikeUnit.
-  /// Null if the FunctionLikeUnit is an anonymous program.
-  /// The symbol has MainProgramDetails for named programs, otherwise it has
-  /// SubprogramDetails.
-  const semantics::Symbol *symbol{nullptr};
+  /// <Symbol, Evaluation> pairs for each entry point.  The pair at index 0
+  /// is the primary entry point; remaining pairs are alternate entry points.
+  /// The primary entry point symbol is Null for an anonymous program.
+  /// A named program symbol has MainProgramDetails.  Other symbols have
+  /// SubprogramDetails.  Evaluations are filled in for alternate entries.
+  llvm::SmallVector<std::pair<const semantics::Symbol *, Evaluation *>, 1>
+      entryPointList{std::pair{nullptr, nullptr}};
+  /// Current index into entryPointList.  Index 0 is the primary entry point.
+  int activeEntry = 0;
+  /// Dummy arguments that are not universal across entry points.
+  llvm::SmallVector<const semantics::Symbol *, 3> nonUniversalDummyArguments;
+  /// Primary result for function subprograms with alternate entries.  This
+  /// is one of the largest result values, not necessarily the first one.
+  const semantics::Symbol *primaryResult{nullptr};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   std::vector<std::vector<Variable>> varList;
