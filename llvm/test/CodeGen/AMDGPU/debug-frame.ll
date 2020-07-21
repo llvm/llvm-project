@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
 
-; XFAIL: *
-
 ; CHECK-LABEL: kern1:
 ; CHECK: .cfi_startproc
 
@@ -524,8 +522,12 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind }
-attributes #1 = { nounwind "frame-pointer"="all" }
+; NOTE: Number of VGPRs available to kernel, and in turn number of corresponding CFIs generated,
+; is dependent on waves/WG size. Since the intent here is to check whether we generate the correct
+; CFIs, doing it for any one set of details is sufficient which also makes the test insensitive to
+; changes in those details.
+attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="128,128" }
+attributes #1 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="128,128" "frame-pointer"="all" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}
