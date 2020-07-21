@@ -105,7 +105,6 @@ public:
   getInstrMappingForLoad(const MachineInstr &MI) const;
 
   unsigned getRegBankID(Register Reg, const MachineRegisterInfo &MRI,
-                        const TargetRegisterInfo &TRI,
                         unsigned Default = AMDGPU::VGPRRegBankID) const;
 
   // Return a value mapping for an operand that is required to be an SGPR.
