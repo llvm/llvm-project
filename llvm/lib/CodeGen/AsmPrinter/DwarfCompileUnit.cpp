@@ -117,7 +117,7 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
     return Asm->OutStreamer->emitDwarfFileDirective(0, "", "", None, None,
                                                     CUID);
   return Asm->OutStreamer->emitDwarfFileDirective(
-      0, File->getDirectory(), File->getFilename(), getMD5AsBytes(File),
+      0, File->getDirectory(), File->getFilename(), DD->getMD5AsBytes(File),
       File->getSource(), CUID);
 }
 
