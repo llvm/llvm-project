@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <limits>
 #include <memory>
 #include <stdlib.h>
 #include <string>
@@ -31,6 +32,7 @@
 #include "Commands/CommandObjectQuit.h"
 #include "Commands/CommandObjectRegister.h"
 #include "Commands/CommandObjectReproducer.h"
+#include "Commands/CommandObjectSession.h"
 #include "Commands/CommandObjectSettings.h"
 #include "Commands/CommandObjectSource.h"
 #include "Commands/CommandObjectStats.h"
@@ -52,6 +54,8 @@
 #if LLDB_ENABLE_LIBEDIT
 #include "lldb/Host/Editline.h"
 #endif
+#include "lldb/Host/File.h"
+#include "lldb/Host/FileCache.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 
@@ -74,6 +78,7 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -116,7 +121,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),
       m_command_io_handler_sp(), m_comment_char('#'),
       m_batch_command_mode(false), m_truncation_warning(eNoTruncation),
-      m_command_source_depth(0), m_result() {
+      m_command_source_depth(0), m_result(), m_transcript_stream() {
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
@@ -139,6 +144,17 @@ bool CommandInterpreter::GetPromptOnQuit() const {
 
 void CommandInterpreter::SetPromptOnQuit(bool enable) {
   const uint32_t idx = ePropertyPromptOnQuit;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
+}
+
+bool CommandInterpreter::GetSaveSessionOnQuit() const {
+  const uint32_t idx = ePropertySaveSessionOnQuit;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+}
+
+void CommandInterpreter::SetSaveSessionOnQuit(bool enable) {
+  const uint32_t idx = ePropertySaveSessionOnQuit;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
 }
 
@@ -493,6 +509,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       CommandObjectSP(new CommandObjectReproducer(*this));
   m_command_dict["script"] =
       CommandObjectSP(new CommandObjectScript(*this, script_language));
+  m_command_dict["session"] = std::make_shared<CommandObjectSession>(*this);
   m_command_dict["settings"] =
       CommandObjectSP(new CommandObjectMultiwordSettings(*this));
   m_command_dict["source"] =
@@ -1667,6 +1684,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   else
     add_to_history = (lazy_add_to_history == eLazyBoolYes);
 
+  m_transcript_stream << "(lldb) " << command_line << '\n';
+
   bool empty_command = false;
   bool comment_command = false;
   if (command_string.empty())
@@ -1798,6 +1817,9 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
   LLDB_LOGF(log, "HandleCommand, command %s",
             (result.Succeeded() ? "succeeded" : "did not succeed"));
+
+  m_transcript_stream << result.GetOutputData();
+  m_transcript_stream << result.GetErrorData();
 
   return result.Succeeded();
 }
@@ -2875,6 +2897,50 @@ bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
       return true;
   }
   return false;
+}
+
+bool CommandInterpreter::SaveTranscript(
+    CommandReturnObject &result, llvm::Optional<std::string> output_file) {
+  if (output_file == llvm::None || output_file->empty()) {
+    std::string now = llvm::to_string(std::chrono::system_clock::now());
+    std::replace(now.begin(), now.end(), ' ', '_');
+    const std::string file_name = "lldb_session_" + now + ".log";
+    FileSpec tmp = HostInfo::GetGlobalTempDir();
+    tmp.AppendPathComponent(file_name);
+    output_file = tmp.GetPath();
+  }
+
+  auto error_out = [&](llvm::StringRef error_message, std::string description) {
+    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMANDS), "{0} ({1}:{2})",
+             error_message, output_file, description);
+    result.AppendErrorWithFormatv(
+        "Failed to save session's transcripts to {0}!", *output_file);
+    return false;
+  };
+
+  File::OpenOptions flags = File::eOpenOptionWrite |
+                            File::eOpenOptionCanCreate |
+                            File::eOpenOptionTruncate;
+
+  auto opened_file = FileSystem::Instance().Open(FileSpec(*output_file), flags);
+
+  if (!opened_file)
+    return error_out("Unable to create file",
+                     llvm::toString(opened_file.takeError()));
+
+  FileUP file = std::move(opened_file.get());
+
+  size_t byte_size = m_transcript_stream.GetSize();
+
+  Status error = file->Write(m_transcript_stream.GetData(), byte_size);
+
+  if (error.Fail() || byte_size != m_transcript_stream.GetSize())
+    return error_out("Unable to write to destination file",
+                     "Bytes written do not match transcript size.");
+
+  result.AppendMessageWithFormat("Session's transcripts saved to %s\n", output_file->c_str());
+
+  return true;
 }
 
 void CommandInterpreter::GetLLDBCommandsFromIOHandler(
