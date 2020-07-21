@@ -39,7 +39,7 @@ Status OptionValue::SetSubValue(const ExecutionContext *exe_ctx,
                                 VarSetOperationType op, llvm::StringRef name,
                                 llvm::StringRef value) {
   Status error;
-  error.SetErrorStringWithFormat("SetSubValue is not supported");
+  error.SetErrorString("SetSubValue is not supported");
   return error;
 }
 
