@@ -1,4 +1,4 @@
-//===-- OptionValueFileColonLine.h -----------------------------------*- C++ -*-===//
+//===-- OptionValueFileColonLine.h ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,7 +38,8 @@ public:
   bool Clear() override {
     m_file_spec.Clear();
     m_line_number = LLDB_INVALID_LINE_NUMBER;
-    m_column_number = 0;
+    m_column_number = LLDB_INVALID_COLUMN_NUMBER;
+    return true;
   }
 
   lldb::OptionValueSP DeepCopy() const override;
@@ -49,7 +50,7 @@ public:
   FileSpec &GetFileSpec() { return m_file_spec; }
   uint32_t GetLineNumber() { return m_line_number; }
   uint32_t GetColumnNumber() { return m_column_number; }
-  
+
   void SetCompletionMask(uint32_t mask) { m_completion_mask = mask; }
 
 protected:
