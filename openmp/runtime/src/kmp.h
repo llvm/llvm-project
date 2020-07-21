@@ -136,6 +136,10 @@ typedef unsigned int kmp_hwloc_depth_t;
 #include "ompt-internal.h"
 #endif
 
+#ifndef UNLIKELY
+#define UNLIKELY(x) (x)
+#endif
+
 // Affinity format function
 #include "kmp_str.h"
 
