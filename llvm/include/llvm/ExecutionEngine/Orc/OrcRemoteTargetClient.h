@@ -454,7 +454,7 @@ public:
     RemoteTrampolinePool(OrcRemoteTargetClient &Client) : Client(Client) {}
 
   private:
-    Error grow() {
+    Error grow() override {
       JITTargetAddress BlockAddr = 0;
       uint32_t NumTrampolines = 0;
       if (auto TrampolineInfoOrErr = Client.emitTrampolineBlock())
