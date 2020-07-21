@@ -1462,10 +1462,11 @@ inline void sort(Container &&C, Compare Comp) {
 /// which is only enabled when the operation is O(1).
 template <typename R>
 auto size(R &&Range,
-          std::enable_if_t<std::is_same<typename std::iterator_traits<decltype(
-                                            Range.begin())>::iterator_category,
-                                        std::random_access_iterator_tag>::value,
-                           void> * = nullptr) {
+          std::enable_if_t<
+              std::is_base_of<std::random_access_iterator_tag,
+                              typename std::iterator_traits<decltype(
+                                  Range.begin())>::iterator_category>::value,
+              void> * = nullptr) {
   return std::distance(Range.begin(), Range.end());
 }
 
@@ -1902,16 +1903,16 @@ decltype(auto) apply_tuple(F &&f, Tuple &&t) {
 /// Return true if the sequence [Begin, End) has exactly N items. Runs in O(N)
 /// time. Not meant for use with random-access iterators.
 /// Can optionally take a predicate to filter lazily some items.
-template<typename IterTy,
-         typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
+template <typename IterTy,
+          typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
 bool hasNItems(
     IterTy &&Begin, IterTy &&End, unsigned N,
     Pred &&ShouldBeCounted =
         [](const decltype(*std::declval<IterTy>()) &) { return true; },
     std::enable_if_t<
-        !std::is_same<typename std::iterator_traits<std::remove_reference_t<
-                          decltype(Begin)>>::iterator_category,
-                      std::random_access_iterator_tag>::value,
+        !std::is_base_of<std::random_access_iterator_tag,
+                         typename std::iterator_traits<std::remove_reference_t<
+                             decltype(Begin)>>::iterator_category>::value,
         void> * = nullptr) {
   for (; N; ++Begin) {
     if (Begin == End)
@@ -1927,16 +1928,16 @@ bool hasNItems(
 /// Return true if the sequence [Begin, End) has N or more items. Runs in O(N)
 /// time. Not meant for use with random-access iterators.
 /// Can optionally take a predicate to lazily filter some items.
-template<typename IterTy,
-         typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
+template <typename IterTy,
+          typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
 bool hasNItemsOrMore(
     IterTy &&Begin, IterTy &&End, unsigned N,
     Pred &&ShouldBeCounted =
         [](const decltype(*std::declval<IterTy>()) &) { return true; },
     std::enable_if_t<
-        !std::is_same<typename std::iterator_traits<std::remove_reference_t<
-                          decltype(Begin)>>::iterator_category,
-                      std::random_access_iterator_tag>::value,
+        !std::is_base_of<std::random_access_iterator_tag,
+                         typename std::iterator_traits<std::remove_reference_t<
+                             decltype(Begin)>>::iterator_category>::value,
         void> * = nullptr) {
   for (; N; ++Begin) {
     if (Begin == End)
