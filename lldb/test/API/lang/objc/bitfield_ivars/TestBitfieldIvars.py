@@ -27,7 +27,9 @@ class TestBitfieldIvars(TestBase):
                                              'field2 =', '3',
                                              'field3 =', '4'])
 
-    @expectedFailureAll()
+    # This test is meant to be xfailed, but running the test triggers an ASan
+    # issue, so it must be skipped for now.
+    @skipIf
     def testExprWholeObject(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.m"))
