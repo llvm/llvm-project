@@ -46,6 +46,7 @@ add_llvm_component_library(LLVMTransformUtils
   LowerInvoke.cpp
   LowerMemIntrinsics.cpp
   LowerSwitch.cpp
+  MatrixUtils.cpp
   Mem2Reg.cpp
   MetaRenamer.cpp
   MisExpect.cpp
