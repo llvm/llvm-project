@@ -1708,7 +1708,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         command_string = command_line;
         original_command_string = command_line;
         if (m_repeat_command.empty()) {
-          result.AppendErrorWithFormat("No auto repeat.\n");
+          result.AppendError("No auto repeat.");
           result.SetStatus(eReturnStatusFailed);
           return false;
         }
@@ -2141,7 +2141,7 @@ void CommandInterpreter::SourceInitFileCwd(CommandReturnObject &result) {
         llvm::sys::path::parent_path(home_init_file)) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      result.AppendErrorWithFormat(InitFileWarning);
+      result.AppendError(InitFileWarning);
       result.SetStatus(eReturnStatusFailed);
     }
   }

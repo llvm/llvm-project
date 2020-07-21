@@ -3154,7 +3154,7 @@ Status Process::PrivateResume() {
     if (m_thread_list.WillResume()) {
       // Last thing, do the PreResumeActions.
       if (!RunPreResumeActions()) {
-        error.SetErrorStringWithFormat(
+        error.SetErrorString(
             "Process::PrivateResume PreResumeActions failed, not resuming.");
       } else {
         m_mod_id.BumpResumeID();

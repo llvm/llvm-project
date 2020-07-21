@@ -101,6 +101,7 @@ public:
   }
 
   void RecordInterestingDirectory(const llvm::Twine &dir);
+  void RecordInterestingDirectoryRecursive(const llvm::Twine &dir);
 
   void Keep() override {
     auto mapping = GetRoot().CopyByAppendingPathComponent(Info::file);
