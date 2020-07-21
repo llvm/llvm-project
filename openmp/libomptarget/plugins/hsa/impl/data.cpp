@@ -22,11 +22,8 @@ extern ATLMachine g_atl_machine;
 extern hsa_signal_t IdentityCopySignal;
 
 namespace core {
-#ifndef USE_ROCR_PTR_INFO
 ATLPointerTracker g_data_map;  // Track all am pointer allocations.
-#endif
 void allow_access_to_all_gpu_agents(void *ptr);
-// std::map<void *, ATLData *> MemoryMap;
 
 const char *getPlaceStr(atmi_devtype_t type) {
   switch (type) {
@@ -47,7 +44,6 @@ std::ostream &operator<<(std::ostream &os, const ATLData *ap) {
   return os;
 }
 
-#ifndef USE_ROCR_PTR_INFO
 void ATLPointerTracker::insert(void *pointer, ATLData *p) {
   std::lock_guard<std::mutex> l(mutex_);
 
@@ -70,7 +66,6 @@ ATLData *ATLPointerTracker::find(const void *pointer) {
     ret = iter->second;
   return ret;
 }
-#endif
 
 ATLProcessor &get_processor_by_compute_place(atmi_place_t place) {
   int dev_id = place.device_id;
@@ -106,15 +101,8 @@ hsa_amd_memory_pool_t get_memory_pool_by_mem_place(atmi_mem_place_t place) {
 }
 
 void register_allocation(void *ptr, size_t size, atmi_mem_place_t place) {
-#ifndef USE_ROCR_PTR_INFO
   ATLData *data = new ATLData(ptr, NULL, size, place, ATMI_IN_OUT);
   g_data_map.insert(ptr, data);
-#else
-  ATLData *data = new ATLData(ptr, NULL, size, place, ATMI_IN_OUT);
-
-  hsa_status_t err = hsa_amd_pointer_info_set_userdata(ptr, data);
-  ErrorCheck(Setting pointer info with user data, err);
-#endif
   if (place.dev_type == ATMI_DEVTYPE_CPU) allow_access_to_all_gpu_agents(ptr);
   // TODO(ashwinma): what if one GPU wants to access another GPU?
 }
@@ -137,28 +125,12 @@ atmi_status_t Runtime::Malloc(void **ptr, size_t size, atmi_mem_place_t place) {
 atmi_status_t Runtime::Memfree(void *ptr) {
   atmi_status_t ret = ATMI_STATUS_SUCCESS;
   hsa_status_t err;
-#ifndef USE_ROCR_PTR_INFO
   ATLData *data = g_data_map.find(ptr);
-#else
-  hsa_amd_pointer_info_t ptr_info;
-  ptr_info.size = sizeof(hsa_amd_pointer_info_t);
-  err = hsa_amd_pointer_info(reinterpret_cast<void *>(ptr), &ptr_info,
-                             NULL,  /* alloc fn ptr */
-                             NULL,  /* num_agents_accessible */
-                             NULL); /* accessible agents */
-  ErrorCheck(Checking pointer info, err);
-
-  ATLData *data = reinterpret_cast<ATLData *>(ptr_info.userData);
-#endif
   if (!data)
     ErrorCheck(Checking pointer info userData,
                HSA_STATUS_ERROR_INVALID_ALLOCATION);
 
-#ifndef USE_ROCR_PTR_INFO
   g_data_map.remove(ptr);
-#else
-// is there a way to unset a userdata with AMD pointer before deleting 'data'?
-#endif
   delete data;
 
   err = hsa_amd_memory_pool_free(ptr);
@@ -172,30 +144,8 @@ atmi_status_t Runtime::Memfree(void *ptr) {
 atmi_status_t Runtime::Memcpy(void *dest, const void *src, size_t size) {
   atmi_status_t ret;
   hsa_status_t err;
-
-#ifndef USE_ROCR_PTR_INFO
   ATLData *volatile src_data = g_data_map.find(src);
   ATLData *volatile dest_data = g_data_map.find(dest);
-#else
-  hsa_amd_pointer_info_t src_ptr_info;
-  hsa_amd_pointer_info_t dest_ptr_info;
-  src_ptr_info.size = sizeof(hsa_amd_pointer_info_t);
-  dest_ptr_info.size = sizeof(hsa_amd_pointer_info_t);
-  err = hsa_amd_pointer_info(reinterpret_cast<void *>(src), &src_ptr_info,
-                             NULL,  /* alloc fn ptr */
-                             NULL,  /* num_agents_accessible */
-                             NULL); /* accessible agents */
-  ErrorCheck(Checking src pointer info, err);
-  err = hsa_amd_pointer_info(reinterpret_cast<void *>(dest), &dest_ptr_info,
-                             NULL,  /* alloc fn ptr */
-                             NULL,  /* num_agents_accessible */
-                             NULL); /* accessible agents */
-  ErrorCheck(Checking dest pointer info, err);
-  ATLData *volatile src_data =
-      reinterpret_cast<ATLData *>(src_ptr_info.userData);
-  ATLData *volatile dest_data =
-      reinterpret_cast<ATLData *>(dest_ptr_info.userData);
-#endif
   atmi_mem_place_t cpu = ATMI_MEM_PLACE_CPU_MEM(0, 0, 0);
   hsa_agent_t cpu_agent = get_mem_agent(cpu);
   hsa_agent_t src_agent;
@@ -245,7 +195,6 @@ atmi_status_t Runtime::Memcpy(void *dest, const void *src, size_t size) {
   DEBUG_PRINT("Memcpy source agent: %lu\n", src_agent.handle);
   DEBUG_PRINT("Memcpy dest agent: %lu\n", dest_agent.handle);
   hsa_signal_store_release(IdentityCopySignal, 1);
-  // hsa_signal_add_acq_rel(IdentityCopySignal, 1);
   err = hsa_amd_memory_async_copy(dest_ptr, dest_agent, src_ptr, src_agent,
                                   size, 0, NULL, IdentityCopySignal);
   ErrorCheck(Copy async between memory pools, err);

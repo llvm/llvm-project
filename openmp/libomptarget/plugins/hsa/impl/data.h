@@ -11,13 +11,11 @@
 #include <map>
 #include <mutex>
 #include "atmi.h"
-// #define USE_ROCR_PTR_INFO
-// There seems to be a bug with ROCr's hsa_amd_pointer_info_set_userdata for
-// variable
-// symbols. If/when that bug is fixed, we can uncomment the above line to
-// USE_ROCR_PTR_INFO.
-// Until then, we maintain our own mapping of device addr to a user specified
-// data object
+// we maintain our own mapping of device addr to a user specified data object
+// in order to work around a (possibly historic) bug in ROCr's
+// hsa_amd_pointer_info_set_userdata for variable symbols
+// this is expected to be temporary
+
 namespace core {
 // Internal representation of any data that is created and managed by ATMI.
 // Data can be located on any device memory or host memory.
@@ -53,7 +51,6 @@ class ATLData {
   atmi_arg_type_t arg_type_;
 };
 
-#ifndef USE_ROCR_PTR_INFO
 //---
 struct ATLMemoryRange {
   const void *base_pointer;
@@ -97,7 +94,6 @@ class ATLPointerTracker {
 };
 
 extern ATLPointerTracker g_data_map;  // Track all am pointer allocations.
-#endif
 
 enum class Direction { ATMI_H2D, ATMI_D2H, ATMI_D2D, ATMI_H2H };
 
