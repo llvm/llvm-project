@@ -19,37 +19,6 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <stdarg.h>
-
-// This is the host fallback version of hostrpc_fptr0
-EXTERN void hostrpc_fptr0(void* fnptr) {
-  void (*fptr)() = (void (*)()) fnptr;
-  DP("host fallback for device function hostrpc_fptr0 fptr:%p\n",fptr);
-  (*fptr)();
-}
-
-typedef uint hostrpc_varfn_uint_t(void *, ...);
-typedef uint64_t hostrpc_varfn_uint64_t(void *, ...);
-typedef double hostrpc_varfn_double_t(void *, ...);
-
-// These hostrpc_varfn_* function definitions are called
-// directly if the target region is run on the host as a fallback.
-
-EXTERN uint hostrpc_varfn_uint(void *fnptr, ...) {
-  hostrpc_varfn_uint_t *local_fnptr = (hostrpc_varfn_uint_t *)fnptr;
-  uint rc = local_fnptr(fnptr);
-  return rc;
-}
-EXTERN uint64_t hostrpc_varfn_uint64(void *fnptr, ...) {
-  hostrpc_varfn_uint64_t *local_fnptr = (hostrpc_varfn_uint64_t *)fnptr;
-  uint64_t rc = local_fnptr(fnptr);
-  return rc;
-}
-EXTERN double hostrpc_varfn_double(void *fnptr, ...) {
-  hostrpc_varfn_double_t *local_fnptr = (hostrpc_varfn_double_t *)fnptr;
-  double rc = local_fnptr(fnptr);
-  return rc;
-}
 
 EXTERN int omp_get_num_devices(void) {
   RTLsMtx->lock();
@@ -61,15 +30,13 @@ EXTERN int omp_get_num_devices(void) {
   return Devices_size;
 }
 
-EXTERN int omp_get_device_num(void) {
-
-  DP("Call to omp_get_device_num returning %d\n", HOST_DEVICE);
-
+EXTERN int omp_get_initial_device(void) {
+  DP("Call to omp_get_initial_device returning %d\n", HOST_DEVICE);
   return HOST_DEVICE;
 }
 
-EXTERN int omp_get_initial_device(void) {
-  DP("Call to omp_get_initial_device returning %d\n", HOST_DEVICE);
+EXTERN int omp_get_device_num(void) {
+  DP("Call to omp_get_device_num returning %d\n", HOST_DEVICE);
   return HOST_DEVICE;
 }
 
