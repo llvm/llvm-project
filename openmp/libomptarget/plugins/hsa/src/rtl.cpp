@@ -805,6 +805,20 @@ int get_symbol_info_without_loading(char *base, size_t img_size,
   }
   return 1;
 }
+
+atmi_status_t interop_get_symbol_info(char *base, size_t img_size,
+                                      const char *symname, void **var_addr,
+                                      uint32_t *var_size) {
+  symbol_info si;
+  int rc = get_symbol_info_without_loading(base, img_size, symname, &si);
+  if (rc == 0) {
+    *var_addr = si.addr;
+    *var_size = si.size;
+    return ATMI_STATUS_SUCCESS;
+  } else {
+    return ATMI_STATUS_ERROR;
+  }
+}
 } // namespace
 
 __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
@@ -950,10 +964,9 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
     void *KernDescPtr;
     uint32_t KernDescSize;
     void *CallStackAddr;
-    err = atmi_interop_hsa_get_symbol_info(place, KernDescName, &KernDescPtr,
-                                           &KernDescSize);
+    err = interop_get_symbol_info((char *)image->ImageStart, img_size,
+                                  KernDescName, &KernDescPtr, &KernDescSize);
 
-    const bool check_loader_vs_reader = true;
 
     if (err == ATMI_STATUS_SUCCESS) {
       if ((size_t)KernDescSize != sizeof(KernDescVal))
@@ -961,40 +974,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
            "%lu)\n",
            KernDescName, KernDescSize, sizeof(KernDescVal));
 
-      if (check_loader_vs_reader) {
-        err = atmi_memcpy(&KernDescVal, KernDescPtr, (size_t)KernDescSize);
-
-        if (err != ATMI_STATUS_SUCCESS) {
-          DP("Error when copying data from device to host. Pointers: "
-             "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
-             DPxPTR(&KernDescVal), DPxPTR(KernDescPtr), KernDescSize);
-          return NULL;
-        }
-      }
-
-      // Read the same values directly from the elf
-      {
-        symbol_info KernDescInfo;
-        int rc = get_symbol_info_without_loading(
-            (char *)image->ImageStart, img_size, KernDescName, &KernDescInfo);
-        if (rc != 0) {
-          DP("Error reading symbol %s from elf\n", KernDescName);
-          exit(1);
-        }
-
-        if (check_loader_vs_reader) {
-          // Check value read from elf matches that from hsa
-          if ((KernDescInfo.size != KernDescSize) ||
-              memcmp(KernDescInfo.addr, &KernDescVal,
-                     sizeof(KernDescVal) != 0)) {
-            DP("Values from elf do not match those from hsa\n");
-            exit(1);
-          }
-        }
-        // Explicitly overwrite the values from HSA
-        KernDescSize = KernDescInfo.size;
-        memcpy(&KernDescVal, KernDescInfo.addr, (size_t)KernDescSize);
-      }
+      memcpy(&KernDescVal, KernDescPtr, (size_t)KernDescSize);
 
       // Check structure size against recorded size.
       if ((size_t)KernDescSize != KernDescVal.TSize)
@@ -1059,8 +1039,9 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
 
       void *ExecModePtr;
       uint32_t varsize;
-      err = atmi_interop_hsa_get_symbol_info(place, ExecModeName, &ExecModePtr,
-                                             &varsize);
+      err = interop_get_symbol_info((char *)image->ImageStart, img_size,
+                                    ExecModeName, &ExecModePtr, &varsize);
+
       if (err == ATMI_STATUS_SUCCESS) {
         if ((size_t)varsize != sizeof(int8_t)) {
           DP("Loading global computation properties '%s' - size mismatch(%u != "
@@ -1069,40 +1050,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
           return NULL;
         }
 
-        if (check_loader_vs_reader) {
-          err = atmi_memcpy(&ExecModeVal, ExecModePtr, (size_t)varsize);
-          if (err != ATMI_STATUS_SUCCESS) {
-            DP("Error when copying data from device to host. Pointers: "
-               "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
-               DPxPTR(&ExecModeVal), DPxPTR(ExecModePtr), varsize);
-            return NULL;
-          }
-        }
-
-        // Read the same values directly from the elf
-        {
-          symbol_info ExecModeInfo;
-          int rc = get_symbol_info_without_loading(
-              (char *)image->ImageStart, img_size, ExecModeName, &ExecModeInfo);
-
-          if (rc != 0) {
-            DP("Error reading symbol %s from elf\n", ExecModeName);
-            exit(1);
-          }
-
-          if (check_loader_vs_reader) {
-            // Check value read from elf matches that from hsa
-            if ((ExecModeInfo.size != varsize) ||
-                memcmp(ExecModeInfo.addr, &ExecModeVal,
-                       sizeof(ExecModeVal) != 0)) {
-              DP("Values from elf do not match those from hsa\n");
-              exit(1);
-            }
-          }
-
-          // Explicitly overwrite the values from HSA
-          memcpy(&ExecModeVal, ExecModeInfo.addr, sizeof(ExecModeVal));
-        }
+        memcpy(&ExecModeVal, ExecModePtr, (size_t)varsize);
 
         DP("After loading global for %s ExecMode = %d\n", ExecModeName,
            ExecModeVal);
@@ -1128,8 +1076,9 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
 
       void *WGSizePtr;
       uint32_t WGSize;
-      err = atmi_interop_hsa_get_symbol_info(place, WGSizeName, &WGSizePtr,
-                                             &WGSize);
+      err = interop_get_symbol_info((char *)image->ImageStart, img_size, WGSizeName,
+                              &WGSizePtr, &WGSize);
+
       if (err == ATMI_STATUS_SUCCESS) {
         if ((size_t)WGSize != sizeof(int16_t)) {
           DP("Loading global computation properties '%s' - size mismatch (%u "
@@ -1139,38 +1088,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
           return NULL;
         }
 
-        if (check_loader_vs_reader) {
-          err = atmi_memcpy(&WGSizeVal, WGSizePtr, (size_t)WGSize);
-          if (err != ATMI_STATUS_SUCCESS) {
-            DP("Error when copying data from device to host. Pointers: "
-               "host = " DPxMOD ", device = " DPxMOD ", size = %u\n",
-               DPxPTR(&WGSizeVal), DPxPTR(WGSizePtr), WGSize);
-            return NULL;
-          }
-        }
-
-        // Read the same values directly from the elf
-        {
-          symbol_info WGSizeInfo;
-          int rc = get_symbol_info_without_loading(
-              (char *)image->ImageStart, img_size, WGSizeName, &WGSizeInfo);
-          if (rc != 0) {
-            DP("Error reading symbol %s from elf\n", WGSizeName);
-            exit(1);
-          }
-
-          if (check_loader_vs_reader) {
-            // Check value read from elf matches that from hsa
-            if ((WGSizeInfo.size != WGSize) ||
-                memcmp(WGSizeInfo.addr, &WGSizeVal, sizeof(WGSizeVal) != 0)) {
-              DP("Values from elf do not match those from hsa\n");
-              exit(1);
-            }
-          }
-
-          // Explicitly overwrite the values from HSA
-          memcpy(&WGSizeVal, WGSizeInfo.addr, sizeof(WGSizeVal));
-        }
+        memcpy(&WGSizeVal, WGSizePtr, (size_t)WGSize);
 
         DP("After loading global for %s WGSize = %d\n", WGSizeName, WGSizeVal);
 
