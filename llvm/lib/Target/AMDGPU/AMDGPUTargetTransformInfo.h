@@ -33,6 +33,7 @@
 namespace llvm {
 
 class AMDGPUTargetLowering;
+class InstCombiner;
 class Loop;
 class ScalarEvolution;
 class Type;
@@ -222,6 +223,14 @@ public:
                                   Intrinsic::ID IID) const;
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const;
+
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) const;
+  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
+      APInt &UndefElts2, APInt &UndefElts3,
+      std::function<void(Instruction *, unsigned, APInt, APInt &)>
+          SimplifyAndSetOp) const;
 
   unsigned getVectorSplitCost() { return 0; }
 

@@ -20,6 +20,7 @@
 
 
 #include "PPCELFStreamer.h"
+#include "PPCFixupKinds.h"
 #include "PPCInstrInfo.h"
 #include "PPCMCCodeEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -89,18 +90,135 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
   PPCMCCodeEmitter *Emitter =
       static_cast<PPCMCCodeEmitter*>(getAssembler().getEmitterPtr());
 
+  // If the instruction is a part of the GOT to PC-Rel link time optimization
+  // instruction pair, return a value, otherwise return None. A true returned
+  // value means the instruction is the PLDpc and a false value means it is
+  // the user instruction.
+  Optional<bool> IsPartOfGOTToPCRelPair = isPartOfGOTToPCRelPair(Inst, STI);
+
+  // User of the GOT-indirect address.
+  // For example, the load that will get the relocation as follows:
+  // .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
+  //  lwa 3, 4(3)
+  if (IsPartOfGOTToPCRelPair.hasValue() && !IsPartOfGOTToPCRelPair.getValue())
+    emitGOTToPCRelReloc(Inst);
+
   // Special handling is only for prefixed instructions.
   if (!Emitter->isPrefixedInstruction(Inst)) {
     MCELFStreamer::emitInstruction(Inst, STI);
     return;
   }
   emitPrefixedInstruction(Inst, STI);
+
+  // Producer of the GOT-indirect address.
+  // For example, the prefixed load from the got that will get the label as
+  // follows:
+  //  pld 3, vec@got@pcrel(0), 1
+  // .Lpcrel1:
+  if (IsPartOfGOTToPCRelPair.hasValue() && IsPartOfGOTToPCRelPair.getValue())
+    emitGOTToPCRelLabel(Inst);
 }
 
 void PPCELFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   LastLabel = Symbol;
   LastLabelLoc = Loc;
   MCELFStreamer::emitLabel(Symbol);
+}
+
+// This linker time GOT PC Relative optimization relocation will look like this:
+//   pld <reg> symbol@got@pcrel
+// <Label###>:
+//   .reloc Label###-8,R_PPC64_PCREL_OPT,.-(Label###-8)
+//   load <loadedreg>, 0(<reg>)
+// The reason we place the label after the PLDpc instruction is that there
+// may be an alignment nop before it since prefixed instructions must not
+// cross a 64-byte boundary (please see
+// PPCELFStreamer::emitPrefixedInstruction()). When referring to the
+// label, we subtract the width of a prefixed instruction (8 bytes) to ensure
+// we refer to the PLDpc.
+void PPCELFStreamer::emitGOTToPCRelReloc(const MCInst &Inst) {
+  // Get the last operand which contains the symbol.
+  const MCOperand &Operand = Inst.getOperand(Inst.getNumOperands() - 1);
+  assert(Operand.isExpr() && "Expecting an MCExpr.");
+  // Cast the last operand to MCSymbolRefExpr to get the symbol.
+  const MCExpr *Expr = Operand.getExpr();
+  const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
+  assert(SymExpr->getKind() == MCSymbolRefExpr::VK_PPC_PCREL_OPT &&
+         "Expecting a symbol of type VK_PPC_PCREL_OPT");
+  MCSymbol *LabelSym =
+      getContext().getOrCreateSymbol(SymExpr->getSymbol().getName());
+  const MCExpr *LabelExpr = MCSymbolRefExpr::create(LabelSym, getContext());
+  const MCExpr *Eight = MCConstantExpr::create(8, getContext());
+  // SubExpr is just Label###-8
+  const MCExpr *SubExpr =
+      MCBinaryExpr::createSub(LabelExpr, Eight, getContext());
+  MCSymbol *CurrentLocation = getContext().createTempSymbol();
+  const MCExpr *CurrentLocationExpr =
+      MCSymbolRefExpr::create(CurrentLocation, getContext());
+  // SubExpr2 is .-(Label###-8)
+  const MCExpr *SubExpr2 =
+      MCBinaryExpr::createSub(CurrentLocationExpr, SubExpr, getContext());
+
+  MCDataFragment *DF = static_cast<MCDataFragment *>(LabelSym->getFragment());
+  assert(DF && "Expecting a valid data fragment.");
+  MCFixupKind FixupKind = static_cast<MCFixupKind>(FirstLiteralRelocationKind +
+                                                   ELF::R_PPC64_PCREL_OPT);
+  DF->getFixups().push_back(
+      MCFixup::create(LabelSym->getOffset() - 8, SubExpr2,
+                      FixupKind, Inst.getLoc()));
+  emitLabel(CurrentLocation, Inst.getLoc());
+}
+
+// Emit the label that immediately follows the PLDpc for a link time GOT PC Rel
+// optimization.
+void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
+  // Get the last operand which contains the symbol.
+  const MCOperand &Operand = Inst.getOperand(Inst.getNumOperands() - 1);
+  assert(Operand.isExpr() && "Expecting an MCExpr.");
+  // Cast the last operand to MCSymbolRefExpr to get the symbol.
+  const MCExpr *Expr = Operand.getExpr();
+  const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
+  assert(SymExpr->getKind() == MCSymbolRefExpr::VK_PPC_PCREL_OPT &&
+         "Expecting a symbol of type VK_PPC_PCREL_OPT");
+  MCSymbol *LabelSym =
+      getContext().getOrCreateSymbol(SymExpr->getSymbol().getName());
+  emitLabel(LabelSym, Inst.getLoc());
+}
+
+// This funciton checks if the parameter Inst is part of the setup for a link
+// time GOT PC Relative optimization. For example in this situation:
+// <MCInst PLDpc <MCOperand Reg:282> <MCOperand Expr:(glob_double@got@pcrel)>
+//   <MCOperand Imm:0> <MCOperand Expr:(.Lpcrel@<<invalid>>)>>
+// <MCInst SOME_LOAD <MCOperand Reg:22> <MCOperand Imm:0> <MCOperand Reg:282>
+//   <MCOperand Expr:(.Lpcrel@<<invalid>>)>>
+// The above is a pair of such instructions and this function will not return
+// None for either one of them. In both cases we are looking for the last
+// operand <MCOperand Expr:(.Lpcrel@<<invalid>>)> which needs to be an MCExpr
+// and has the flag MCSymbolRefExpr::VK_PPC_PCREL_OPT. After that we just look
+// at the opcode and in the case of PLDpc we will return true. For the load
+// (or store) this function will return false indicating it has found the second
+// instruciton in the pair.
+Optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
+                                            const MCSubtargetInfo &STI) {
+  // Need at least two operands.
+  if (Inst.getNumOperands() < 2)
+    return None;
+
+  unsigned LastOp = Inst.getNumOperands() - 1;
+  // The last operand needs to be an MCExpr and it needs to have a variant kind
+  // of VK_PPC_PCREL_OPT. If it does not satisfy these conditions it is not a
+  // link time GOT PC Rel opt instruction and we can ignore it and return None.
+  const MCOperand &Operand = Inst.getOperand(LastOp);
+  if (!Operand.isExpr())
+    return None;
+
+  // Check for the variant kind VK_PPC_PCREL_OPT in this expression.
+  const MCExpr *Expr = Operand.getExpr();
+  const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
+  if (!SymExpr || SymExpr->getKind() != MCSymbolRefExpr::VK_PPC_PCREL_OPT)
+    return None;
+
+  return (Inst.getOpcode() == PPC::PLDpc);
 }
 
 MCELFStreamer *llvm::createPPCELFStreamer(

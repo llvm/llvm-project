@@ -1,5 +1,5 @@
 # RUN: clangd -compile_args_from=lsp -lit-test < %s 2> %t | FileCheck -strict-whitespace %s
-# RUN: cat %t | FileCheck --check-prefix=ERR %s
+# RUN: FileCheck --check-prefix=ERR --input-file=%t %s
 # UNSUPPORTED: windows-gnu,windows-msvc
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
 ---

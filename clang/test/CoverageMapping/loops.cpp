@@ -1,7 +1,6 @@
-// RUN: %strip_comments > %t.stripped.cpp
-// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name loops.cpp %t.stripped.cpp | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name loops.cpp %s | FileCheck %s
 
-// CHECK: rangedFor
+                                    // CHECK: rangedFor
 void rangedFor() {                  // CHECK-NEXT: File 0, [[@LINE]]:18 -> {{[0-9]+}}:2 = #0
   int arr[] = { 1, 2, 3, 4, 5 };
   int sum = 0;                      // CHECK: Gap,File 0, [[@LINE+1]]:20 -> [[@LINE+1]]:21 = #1

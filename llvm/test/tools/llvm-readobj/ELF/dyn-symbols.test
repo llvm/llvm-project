@@ -83,14 +83,42 @@ ProgramHeaders:
 # RUN: llvm-readelf --dyn-symbols %t1.so > %t.readelf-dyn-symbols
 # RUN: cmp %t.readelf-dyn-symbols %t.readelf-dyn-syms
 
-## Case 3: Check that we are able to dump the dynamic symbol table even when we have no program headers.
+## Case 3.1: Check that we are able to dump the dynamic symbol table even when we have no program headers.
 ## In this case we find the table by it's type (SHT_DYNSYM) and ignore the DT_SYMTAB value.
 # RUN: yaml2obj --docnum=2 %s -o %t2.so
-# RUN: llvm-readobj %t2.so --dyn-symbols | FileCheck %s --check-prefix=NOPHDRS-LLVM
-# RUN: llvm-readelf %t2.so --dyn-symbols | FileCheck %s --check-prefix=NOPHDRS-GNU
+# RUN: llvm-readobj %t2.so --dyn-symbols 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2.so --implicit-check-not=warning: --check-prefix=NOPHDRS-LLVM
+# RUN: llvm-readelf %t2.so --dyn-symbols 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2.so --implicit-check-not=warning: -DNAME=.dynsym --check-prefix=NOPHDRS-GNU
 
-# NOPHDRS-LLVM: Name: foo
-# NOPHDRS-GNU:  1: 0000000000000000 0 NOTYPE LOCAL DEFAULT UND foo
+# NOPHDRS-LLVM: warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# NOPHDRS-LLVM:      DynamicSymbols [
+# NOPHDRS-LLVM-NEXT:   Symbol {
+# NOPHDRS-LLVM-NEXT:     Name:  (0)
+# NOPHDRS-LLVM-NEXT:     Value: 0x0
+# NOPHDRS-LLVM-NEXT:     Size: 0
+# NOPHDRS-LLVM-NEXT:     Binding: Local (0x0)
+# NOPHDRS-LLVM-NEXT:     Type: None (0x0)
+# NOPHDRS-LLVM-NEXT:     Other: 0
+# NOPHDRS-LLVM-NEXT:     Section: Undefined (0x0)
+# NOPHDRS-LLVM-NEXT:   }
+# NOPHDRS-LLVM-NEXT:   Symbol {
+# NOPHDRS-LLVM-NEXT:     Name: foo (1)
+# NOPHDRS-LLVM-NEXT:     Value: 0x0
+# NOPHDRS-LLVM-NEXT:     Size: 0
+# NOPHDRS-LLVM-NEXT:     Binding: Local (0x0)
+# NOPHDRS-LLVM-NEXT:     Type: None (0x0)
+# NOPHDRS-LLVM-NEXT:     Other: 0
+# NOPHDRS-LLVM-NEXT:     Section: Undefined (0x0)
+# NOPHDRS-LLVM-NEXT:   }
+# NOPHDRS-LLVM-NEXT: ]
+
+# NOPHDRS-GNU:      warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# NOPHDRS-NAMEWARN: warning: '[[FILE]]': unable to get the name of SHT_DYNSYM section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
+# NOPHDRS-GNU:      Symbol table '[[NAME]]' contains 2 entries:
+# NOPHDRS-GNU-NEXT:  Num:    Value          Size Type    Bind   Vis       Ndx Name
+# NOPHDRS-GNU-NEXT:    0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# NOPHDRS-GNU-NEXT:    1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo
 
 --- !ELF
 FileHeader:
@@ -109,9 +137,38 @@ Sections:
 DynamicSymbols:
   - Name: foo
 
+## Case 3.2: the same as 3.1, but the sh_name field of the SHT_DYNSYM section is invalid.
+##           Check we are still able to dump symbols.
+# RUN: yaml2obj --docnum=3 %s -o %t2.broken.name
+# RUN: llvm-readobj %t2.broken.name --dyn-symbols 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2.broken.name --check-prefix=NOPHDRS-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf %t2.broken.name --dyn-symbols 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2.broken.name -DNAME="<?>" \
+# RUN:     --check-prefixes=NOPHDRS-GNU,NOPHDRS-NAMEWARN --implicit-check-not=warning:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0xffff1234
+      - Tag:   DT_NULL
+        Value: 0
+  - Name:   .dynsym
+    Type:   SHT_DYNSYM
+    ShName: 0xffffffff
+DynamicSymbols:
+  - Name: foo
+
 ## Case 4: Check we report a warning when there is no SHT_DYNSYM section and we can't map the DT_SYMTAB value
 ## to an address because of the absence of a corresponding PT_LOAD program header.
-# RUN: yaml2obj --docnum=3 %s -o %t3.so
+# RUN: yaml2obj --docnum=4 %s -o %t3.so
 # RUN: llvm-readobj %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefixes=NOSHT-DYNSYM,NOSHT-DYNSYM-LLVM
 # RUN: llvm-readelf %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefix=NOSHT-DYNSYM
 
@@ -140,7 +197,7 @@ DynamicSymbols:
 
 ## Case 5: Check that when we can't map the value of the DT_SYMTAB tag to an address, we report a warning and
 ## use the information in the section header table to locate the dynamic symbol table.
-# RUN: yaml2obj --docnum=4 %s -o %t4.so
+# RUN: yaml2obj --docnum=5 %s -o %t4.so
 # RUN: llvm-readobj %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-LLVM
 # RUN: llvm-readelf %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-GNU
 
@@ -172,7 +229,7 @@ ProgramHeaders:
 
 ## Case 6: Check that if we can get the location of the dynamic symbol table using both the DT_SYMTAB value
 ## and the section headers table then we prefer the former and report a warning.
-# RUN: yaml2obj --docnum=5 %s -o %t5.so
+# RUN: yaml2obj --docnum=6 %s -o %t5.so
 # RUN: llvm-readobj %t5.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefixes=PREFER-DTSYMTAB,PREFER-DTSYMTAB-LLVM
 # RUN: llvm-readelf %t5.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefixes=PREFER-DTSYMTAB,PREFER-DTSYMTAB-GNU
 
@@ -210,7 +267,7 @@ ProgramHeaders:
 
 ## Case 7: Check how we dump versioned symbols. Use both -V and --dyn-symbols
 ## to check that printed version is consistent.
-# RUN: yaml2obj %s --docnum=6 -o %t6
+# RUN: yaml2obj %s --docnum=7 -o %t6
 # RUN: llvm-readobj -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-LLVM
 # RUN: llvm-readelf -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-GNU
 
@@ -293,15 +350,15 @@ DynamicSymbols:
 
 ## Case 8: Check what we print when:
 ## a) The dynamic symbol table does not exist.
-# RUN: yaml2obj %s --docnum=7 -o %t7
+# RUN: yaml2obj %s --docnum=8 -o %t7
 # RUN: llvm-readobj --dyn-symbols %t7 | FileCheck %s --check-prefix=NO-DYNSYM-LLVM
 # RUN: llvm-readelf --dyn-symbols %t7 | count 0
 ## b) The dynamic symbol table has a size of 0.
-# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: yaml2obj %s --docnum=9 -o %t8
 # RUN: llvm-readobj --dyn-symbols %t8 | FileCheck %s --check-prefix=NO-DYNSYM-LLVM
 # RUN: llvm-readelf --dyn-symbols %t8 | count 0
 ## c) The dynamic symbol table only contains the null symbol.
-# RUN: yaml2obj %s --docnum=9 -o %t9
+# RUN: yaml2obj %s --docnum=10 -o %t9
 # RUN: llvm-readobj --dyn-symbols %t9 | FileCheck %s --check-prefix=DYNSYM-EMPTY-LLVM
 # RUN: llvm-readelf --dyn-symbols %t9 | FileCheck %s --check-prefix=DYNSYM-EMPTY-GNU
 
@@ -352,28 +409,28 @@ DynamicSymbols: []
 
 ## Case 9: Check what we print when:
 ## a) The size of the dynamic symbol table is not a multiple of its entry size.
-# RUN: yaml2obj %s --docnum=10 -o %t10
+# RUN: yaml2obj %s --docnum=11 -o %t10
 # RUN: llvm-readobj --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
 # RUN: llvm-readelf --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
 
-# DYNSYM-SIZE-INVALID1: warning: '[[FILE]]': section with index 1 has invalid size (0x1) or entry size (0x10)
+# DYNSYM-SIZE-INVALID1: warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x1) or entry size (0x10)
 
 ## b) The same, but the DT_SYMTAB tag is present. In this case the dynamic tag has priority over the
 ##    information about a location and an entity size of the dynamic symbol table from the section header.
 ##    The code uses sizeof(Elf_Sym) for an entity size, so it can't be incorrect and
 ##    the message printed is a bit shorter.
-# RUN: yaml2obj %s --docnum=11 -o %t11
+# RUN: yaml2obj %s --docnum=12 -o %t11
 # RUN: llvm-readobj --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
 # RUN: llvm-readelf --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
 
-# DYNSYM-SIZE-INVALID2: warning: '[[FILE]]': section with index 2 has invalid size (0x1){{$}}
+# DYNSYM-SIZE-INVALID2: warning: '[[FILE]]': SHT_DYNSYM section with index 2 has invalid size (0x1){{$}}
 
 ## c) In the case when the DT_SYMENT tag is present, we report when it's value does not match the
 #     value of the symbol size for the platform.
-# RUN: yaml2obj %s -D BITS=32 --docnum=12 -o %t12
+# RUN: yaml2obj %s -D BITS=32 --docnum=13 -o %t12
 # RUN: llvm-readobj --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
 # RUN: llvm-readelf --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
-# RUN: yaml2obj %s -D BITS=64 --docnum=12 -o %t13
+# RUN: yaml2obj %s -D BITS=64 --docnum=13 -o %t13
 # RUN: llvm-readobj --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
 # RUN: llvm-readelf --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
 
@@ -433,7 +490,7 @@ Sections:
 ## Check we report a warning when the DT_STRSZ value is broken so that the dynamic string
 ## table goes past the end of the file. Document we stop dumping symbols and report an error.
 
-# RUN: yaml2obj %s --docnum=13 -o %t14
+# RUN: yaml2obj %s --docnum=14 -o %t14
 # RUN: llvm-readobj --dyn-symbols %t14 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t14 --check-prefix=DYNSTR-INVALID-LLVM
 # RUN: llvm-readelf --dyn-symbols %t14 2>&1 | \
@@ -513,16 +570,16 @@ ProgramHeaders:
       - Section: .dynamic
 
 ## Check we report a warning when the entry size of the dynamic symbol table is zero.
-# RUN: yaml2obj %s --docnum=14 -o %t15
+# RUN: yaml2obj %s --docnum=15 -o %t15
 # RUN: llvm-readobj --dyn-symbols %t15 2>&1 | FileCheck %s -DFILE=%t15 --check-prefix=DYNSYM-ZERO-ENTSIZE-LLVM
 # RUN: llvm-readelf --dyn-symbols %t15 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t15 --check-prefix=DYNSYM-ZERO-ENTSIZE-GNU --implicit-check-not="Symbol table"
 
 # DYNSYM-ZERO-ENTSIZE-LLVM:      DynamicSymbols [
-# DYNSYM-ZERO-ENTSIZE-LLVM-NEXT:  warning: '[[FILE]]': section with index 1 has invalid size (0x10) or entry size (0x0)
+# DYNSYM-ZERO-ENTSIZE-LLVM-NEXT:  warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x10) or entry size (0x0)
 # DYNSYM-ZERO-ENTSIZE-LLVM-NEXT: ]
 
-# DYNSYM-ZERO-ENTSIZE-GNU:  warning: '[[FILE]]': section with index 1 has invalid size (0x10) or entry size (0x0)
+# DYNSYM-ZERO-ENTSIZE-GNU:  warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x10) or entry size (0x0)
 
 --- !ELF
 FileHeader:

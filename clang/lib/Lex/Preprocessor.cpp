@@ -969,8 +969,7 @@ void Preprocessor::Lex(Token &Result) {
   LastTokenWasAt = Result.is(tok::at);
   --LexLevel;
 
-  if ((LexLevel == 0 || PreprocessToken) &&
-      !Result.getFlag(Token::IsReinjected)) {
+  if (LexLevel == 0 && !Result.getFlag(Token::IsReinjected)) {
     ++TokenCount;
     if (OnToken)
       OnToken(Result);

@@ -1,0 +1,49 @@
+# RUN: llvm-mc -triple=thumbv7 -disassemble %s 2>&1 | \
+# RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V7
+# RUN: llvm-mc -triple=thumbv8 -disassemble %s 2>&1 | \
+# RUN: FileCheck %s --check-prefix=CHECK
+
+# tbb [r0, sp]
+0xd0 0xe8 0x0d 0xf0
+#      CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: 0xd0 0xe8 0x0d 0xf0
+
+# tbb [r0, pc]
+0xd0 0xe8 0x0f 0xf0
+#      CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: 0xd0 0xe8 0x0f 0xf0
+
+# tbb [sp, r0]
+0xdd 0xe8 0x00 0xf0
+#      CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: 0xdd 0xe8 0x00 0xf0
+
+# tbb [pc, r0]
+0xdf 0xe8 0x00 0xf0
+
+# tbh [r0, sp, lsl #1]
+0xd0 0xe8 0x1d 0xf0
+#      CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: 0xd0 0xe8 0x1d 0xf0
+
+# tbh [r0, pc, lsl #1]
+0xd0 0xe8 0x1f 0xf0
+#      CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: 0xd0 0xe8 0x1f 0xf0
+
+# tbh [sp, r0, lsl #1]
+0xdd 0xe8 0x10 0xf0
+#      CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: 0xdd 0xe8 0x10 0xf0
+
+# tbh [pc, r0, lsl #1]
+0xdf 0xe8 0x10 0xf0
+
+# CHECK: tbb [r0, sp]
+# CHECK: tbb [r0, pc]
+# CHECK: tbb [sp, r0]
+# CHECK: tbb [pc, r0]
+# CHECK: tbh [r0, sp, lsl #1]
+# CHECK: tbh [r0, pc, lsl #1]
+# CHECK: tbh [sp, r0, lsl #1]
+# CHECK: tbh [pc, r0, lsl #1]

@@ -137,7 +137,7 @@ Symbols:
 # RUN: yaml2obj %s --docnum=7 -o %t7
 # RUN: llvm-readobj --dyn-symbols %t7 2>&1 | FileCheck -DFILE=%t7 --check-prefix=INVALID-DYNSYM-SIZE %s
 
-# INVALID-DYNSYM-SIZE: warning: '[[FILE]]': section with index 1 has invalid size (0x30) or entry size (0x20)
+# INVALID-DYNSYM-SIZE: warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x30) or entry size (0x20)
 
 --- !ELF
 FileHeader:
@@ -276,13 +276,22 @@ Sections:
     Type:     SHT_RELA
     ShOffset: 0x10000
 
-## Check that llvm-objdump reports a warning when we try to print symbols and
+## Check that llvm-readobj reports a warning when we try to print section symbols and
 ## .shstrtab has a broken sh_offset so large that sh_offset + sh_size overflows the platform address size type.
 
 # RUN: yaml2obj %s --docnum=14 -o %t14
 # RUN: llvm-readobj --symbols %t14 2>&1 | FileCheck -DFILE=%t14 --check-prefix=INVALID-SECTION-SIZE2 %s
 
-# INVALID-SECTION-SIZE2: warning: '[[FILE]]': unable to get the name of the SHT_SYMTAB section: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x1b) that cannot be represented
+# INVALID-SECTION-SIZE2:      Symbol {
+# INVALID-SECTION-SIZE2:       Name: symbol (1)
+# INVALID-SECTION-SIZE2-NEXT:  Value: 0x123
+# INVALID-SECTION-SIZE2-NEXT:  Size: 0
+# INVALID-SECTION-SIZE2-NEXT:  Binding: Local (0x0)
+# INVALID-SECTION-SIZE2-NEXT:  Type: None (0x0)
+# INVALID-SECTION-SIZE2-NEXT:  Other: 0
+# INVALID-SECTION-SIZE2-NEXT: warning: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x1b) that cannot be represented
+# INVALID-SECTION-SIZE2-NEXT:  Section: <?> (0x1)
+# INVALID-SECTION-SIZE2-NEXT: }
 
 --- !ELF
 FileHeader:
@@ -294,7 +303,10 @@ Sections:
   - Name:     .shstrtab
     Type:     SHT_STRTAB
     ShOffset: 0xFFFFFFFF
-Symbols: []
+Symbols:
+  - Name:    symbol
+    Section: .shstrtab
+    Value:   0x123
 
 ## Check that llvm-readobj reports an error when trying to dump sections
 ## when the e_shnum field is broken (is greater than the actual number of sections).
@@ -458,7 +470,7 @@ ProgramHeaders:
 # RUN: yaml2obj %s --docnum=21 -o %t21
 # RUN: llvm-readobj --dyn-relocations %t21 2>&1 | FileCheck -DFILE=%t21 --check-prefix=DYN-TABLE-SIZE %s
 
-# DYN-TABLE-SIZE: warning: '[[FILE]]': section with index 1 has invalid size (0x1){{$}}
+# DYN-TABLE-SIZE: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 has invalid size (0x1){{$}}
 
 --- !ELF
 FileHeader:

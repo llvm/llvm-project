@@ -2283,7 +2283,8 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_PLT, "ppc-plt"},
       {MO_PIC_FLAG, "ppc-pic"},
       {MO_PCREL_FLAG, "ppc-pcrel"},
-      {MO_GOT_FLAG, "ppc-got"}};
+      {MO_GOT_FLAG, "ppc-got"},
+      {MO_PCREL_OPT_FLAG, "ppc-opt-pcrel"}};
   return makeArrayRef(TargetFlags);
 }
 
@@ -2668,6 +2669,15 @@ const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
 
 void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
                                      unsigned RegNo) const {
+  // Conservatively clear kill flag for the register if the instructions are in
+  // different basic blocks and in SSA form, because the kill flag may no longer
+  // be right. There is no need to bother with dead flags since defs with no
+  // uses will be handled by DCE.
+  MachineRegisterInfo &MRI = StartMI.getParent()->getParent()->getRegInfo();
+  if (MRI.isSSA() && (StartMI.getParent() != EndMI.getParent())) {
+    MRI.clearKillFlags(RegNo);
+    return;
+  }
 
   // Instructions between [StartMI, EndMI] should be in same basic block.
   assert((StartMI.getParent() == EndMI.getParent()) &&
