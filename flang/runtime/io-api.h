@@ -211,8 +211,10 @@ bool IONAME(SetSign)(Cookie, const char *, std::size_t);
 // and avoid the following items when they might crash.
 bool IONAME(OutputDescriptor)(Cookie, const Descriptor &);
 bool IONAME(InputDescriptor)(Cookie, const Descriptor &);
-bool IONAME(OutputUnformattedBlock)(Cookie, const char *, std::size_t);
-bool IONAME(InputUnformattedBlock)(Cookie, char *, std::size_t);
+bool IONAME(OutputUnformattedBlock)(
+    Cookie, const char *, std::size_t, std::size_t elementBytes);
+bool IONAME(InputUnformattedBlock)(
+    Cookie, char *, std::size_t, std::size_t elementBytes);
 bool IONAME(OutputInteger64)(Cookie, std::int64_t);
 bool IONAME(InputInteger)(Cookie, std::int64_t &, int kind = 8);
 bool IONAME(OutputReal32)(Cookie, float);
@@ -236,6 +238,8 @@ bool IONAME(SetAccess)(Cookie, const char *, std::size_t);
 bool IONAME(SetAction)(Cookie, const char *, std::size_t);
 // ASYNCHRONOUS=YES, NO
 bool IONAME(SetAsynchronous)(Cookie, const char *, std::size_t);
+// CONVERT=NATIVE, LITTLE_ENDIAN, BIG_ENDIAN, or SWAP
+bool IONAME(SetConvert)(Cookie, const char *, std::size_t);
 // ENCODING=UTF-8, DEFAULT
 bool IONAME(SetEncoding)(Cookie, const char *, std::size_t);
 // FORM=FORMATTED, UNFORMATTED

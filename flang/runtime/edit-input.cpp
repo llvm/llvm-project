@@ -177,8 +177,8 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
           continue;
         }
       }
-      if (ch == '0' && got == start) {
-        // omit leading zeroes
+      if (ch == '0' && got == start && !decimalPoint) {
+        // omit leading zeroes before the decimal
       } else if (ch >= '0' && ch <= '9') {
         if (got < bufferSize) {
           buffer[got++] = ch;

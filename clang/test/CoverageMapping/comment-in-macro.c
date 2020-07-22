@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s | FileCheck %s
+// RUN: %strip_comments > %t.stripped.c
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %t.stripped.c | FileCheck %s
 
 #define x1 "" // ...
 #define x2 return 0
@@ -7,5 +8,5 @@ int main() { // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+3]]:2 = #0
   x1;        // CHECK-NEXT: Expansion,File 0, [[@LINE]]:3 -> [[@LINE]]:5 = #0
   x2;        // CHECK-NEXT: Expansion,File 0, [[@LINE]]:3 -> [[@LINE]]:5 = #0
 }
-// CHECK-NEXT: File 1, 3:12 -> 3:14 = #0
-// CHECK-NEXT: File 2, 4:12 -> 4:20 = #0
+// CHECK-NEXT: File 1, 4:12 -> 4:14 = #0
+// CHECK-NEXT: File 2, 5:12 -> 5:20 = #0

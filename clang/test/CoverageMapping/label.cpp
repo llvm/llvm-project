@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name label.cpp %s | FileCheck %s
+// RUN: %strip_comments > %t.stripped.cpp
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name label.cpp %t.stripped.cpp | FileCheck %s
 
-                             // CHECK: func
+// CHECK: func
 void func() {                // CHECK-NEXT: File 0, [[@LINE]]:13 -> {{[0-9]+}}:2 = #0
   int i = 0;                 // CHECK-NEXT: File 0, [[@LINE+2]]:14 -> [[@LINE+2]]:20 = (#0 + #3)
                              // CHECK-NEXT: File 0, [[@LINE+1]]:22 -> [[@LINE+1]]:25 = #3
