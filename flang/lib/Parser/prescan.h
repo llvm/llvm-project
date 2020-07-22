@@ -220,8 +220,6 @@ private:
       cooked_.allSources().CompilerInsertionProvenance(' ')};
   const Provenance backslashProvenance_{
       cooked_.allSources().CompilerInsertionProvenance('\\')};
-  const ProvenanceRange sixSpaceProvenance_{
-      cooked_.allSources().AddCompilerInsertion("      "s)};
 
   // To avoid probing the set of active compiler directive sentinel strings
   // on every comment line, they're checked first with a cheap Bloom filter.
