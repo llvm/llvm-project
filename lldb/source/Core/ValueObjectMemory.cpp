@@ -140,9 +140,12 @@ size_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {
 }
 
 uint64_t ValueObjectMemory::GetByteSize() {
+  ExecutionContext exe_ctx(GetExecutionContextRef());
   if (m_type_sp)
-    return m_type_sp->GetByteSize().getValueOr(0);
-  return m_compiler_type.GetByteSize(nullptr).getValueOr(0);
+    return m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope())
+        .getValueOr(0);
+  return m_compiler_type.GetByteSize(exe_ctx.GetBestExecutionContextScope())
+      .getValueOr(0);
 }
 
 lldb::ValueType ValueObjectMemory::GetValueType() const {
