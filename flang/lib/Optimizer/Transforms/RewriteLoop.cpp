@@ -38,21 +38,22 @@ namespace {
 // `fir.do_loop` operations.  These can be converted to control-flow operations.
 
 /// Convert `fir.do_loop` to CFG
-class CfgLoopConv : public mlir::OpRewritePattern<fir::LoopOp> {
+class CfgLoopConv : public mlir::OpRewritePattern<fir::DoLoopOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   mlir::LogicalResult
-  matchAndRewrite(LoopOp loop, mlir::PatternRewriter &rewriter) const override {
+  matchAndRewrite(DoLoopOp loop,
+                  mlir::PatternRewriter &rewriter) const override {
     auto loc = loop.getLoc();
 
-    // Create the start and end blocks that will wrap the LoopOp with an
+    // Create the start and end blocks that will wrap the DoLoopOp with an
     // initalizer and an end point
     auto *initBlock = rewriter.getInsertionBlock();
     auto initPos = rewriter.getInsertionPoint();
     auto *endBlock = rewriter.splitBlock(initBlock, initPos);
 
-    // Split the first LoopOp block in two parts. The part before will be the
+    // Split the first DoLoopOp block in two parts. The part before will be the
     // conditional block since it already has the induction variable and
     // loop-carried values as arguments.
     auto *conditionalBlock = &loop.region().front();
@@ -61,10 +62,10 @@ public:
         rewriter.splitBlock(conditionalBlock, conditionalBlock->begin());
     auto *lastBlock = &loop.region().back();
 
-    // Move the blocks from the LoopOp between initBlock and endBlock
+    // Move the blocks from the DoLoopOp between initBlock and endBlock
     rewriter.inlineRegionBefore(loop.region(), endBlock);
 
-    // Get loop values from the LoopOp
+    // Get loop values from the DoLoopOp
     auto low = loop.lowerBound();
     auto high = loop.upperBound();
     assert(low && high && "must be a Value");
@@ -280,7 +281,7 @@ public:
                            mlir::StandardOpsDialect>();
 
     // apply the patterns
-    target.addIllegalOp<ResultOp, LoopOp, IfOp, IterWhileOp>();
+    target.addIllegalOp<ResultOp, DoLoopOp, IfOp, IterWhileOp>();
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
     if (mlir::failed(
             mlir::applyPartialConversion(getFunction(), target, patterns))) {
