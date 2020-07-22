@@ -1402,6 +1402,9 @@ TEST_F(SymbolCollectorTest, Origin) {
   runSymbolCollector("class Foo {};", /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            Field(&Symbol::Origin, SymbolOrigin::Static)));
+  runSymbolCollector("#define FOO", /*Main=*/"");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           Field(&Symbol::Origin, SymbolOrigin::Static)));
 }
 
 TEST_F(SymbolCollectorTest, CollectMacros) {
@@ -1504,6 +1507,13 @@ TEST_F(SymbolCollectorTest, BadUTF8) {
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "PUNCT").ID, _)));
 }
 
+TEST_F(SymbolCollectorTest, MacrosInHeaders) {
+  CollectorOpts.CollectMacro = true;
+  TestFileName = testPath("test.h");
+  runSymbolCollector("", "#define X");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(QName("X"), ForCodeCompletion(true))));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
