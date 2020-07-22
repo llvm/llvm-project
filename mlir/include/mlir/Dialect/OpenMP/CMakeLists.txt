@@ -1,3 +1,7 @@
+set(LLVM_TARGET_DEFINITIONS ${LLVM_MAIN_INCLUDE_DIR}/llvm/Frontend/OpenMP/OMP.td)
+mlir_tablegen(OmpCommon.td --gen-directive-decl)
+add_public_tablegen_target(omp_common_td)
+
 set(LLVM_TARGET_DEFINITIONS OpenMPOps.td)
 mlir_tablegen(OpenMPOpsDialect.h.inc -gen-dialect-decls -dialect=omp)
 mlir_tablegen(OpenMPOps.h.inc -gen-op-decls)
