@@ -14,10 +14,6 @@ function(add_llvm_target_unittest test_dir_name)
   add_llvm_unittest(${test_dir_name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
 endfunction()
 
-if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
-  add_definitions("-Wno-suggest-override")
-endif()
-
 add_subdirectory(ADT)
 add_subdirectory(Analysis)
 add_subdirectory(AsmParser)
