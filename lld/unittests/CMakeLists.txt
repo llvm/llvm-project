@@ -12,5 +12,9 @@ function(add_lld_unittest test_dirname)
   target_link_libraries(${test_dirname} ${LLVM_COMMON_LIBS})
 endfunction()
 
+if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+  add_definitions("-Wno-suggest-override")
+endif()
+
 add_subdirectory(DriverTests)
 add_subdirectory(MachOTests)
