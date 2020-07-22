@@ -15,7 +15,4 @@ from lldbsuite.test.decorators import *
 # This test depends on NSObject, so it is not available on non-Darwin
 # platforms.
 lldbinline.MakeInlineTest(__file__, globals(),
-                          decorators=[swiftTest,skipUnlessDarwin,
-        expectedFailureAll(bugnumber="rdar://60396797",
-                           setting=('symbols.use-swift-clangimporter', 'false'))
-])
+                          decorators=[swiftTest,skipUnlessDarwin])
