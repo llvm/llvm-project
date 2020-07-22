@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name builtinmacro.c %s | FileCheck %s
+// RUN: %strip_comments > %t.stripped.c
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name builtinmacro.c %t.stripped.c | FileCheck %s
 
 // Test the coverage mapping generation for built-in macroes.
 
