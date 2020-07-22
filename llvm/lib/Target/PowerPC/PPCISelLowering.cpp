@@ -16381,31 +16381,56 @@ bool PPCTargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
   }
 }
 
-// Currently this is a copy from AArch64TargetLowering::isProfitableToHoist.
-// FIXME: add more patterns which are profitable to hoist.
+// FIXME: add more patterns which are not profitable to hoist.
 bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
-  if (I->getOpcode() != Instruction::FMul)
-    return true;
-
   if (!I->hasOneUse())
     return true;
 
   Instruction *User = I->user_back();
   assert(User && "A single use instruction with no uses.");
 
-  if (User->getOpcode() != Instruction::FSub &&
-      User->getOpcode() != Instruction::FAdd)
+  switch (I->getOpcode()) {
+  case Instruction::FMul: {
+    // Don't break FMA, PowerPC prefers FMA.
+    if (User->getOpcode() != Instruction::FSub &&
+        User->getOpcode() != Instruction::FAdd)
+      return true;
+
+    const TargetOptions &Options = getTargetMachine().Options;
+    const Function *F = I->getFunction();
+    const DataLayout &DL = F->getParent()->getDataLayout();
+    Type *Ty = User->getOperand(0)->getType();
+
+    return !(
+        isFMAFasterThanFMulAndFAdd(*F, Ty) &&
+        isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
+        (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath));
+  }
+  case Instruction::Load: {
+    // Don't break "store (load float*)" pattern, this pattern will be combined
+    // to "store (load int32)" in later InstCombine pass. See function
+    // combineLoadToOperationType. On PowerPC, loading a float point takes more
+    // cycles than loading a 32 bit integer.
+    LoadInst *LI = cast<LoadInst>(I);
+    // For the loads that combineLoadToOperationType does nothing, like
+    // ordered load, it should be profitable to hoist them.
+    // For swifterror load, it can only be used for pointer to pointer type, so
+    // later type check should get rid of this case.
+    if (!LI->isUnordered())
+      return true;
+
+    if (User->getOpcode() != Instruction::Store)
+      return true;
+
+    if (I->getType()->getTypeID() != Type::FloatTyID)
+      return true;
+
+    return false;
+  }
+  default:
     return true;
-
-  const TargetOptions &Options = getTargetMachine().Options;
-  const Function *F = I->getFunction();
-  const DataLayout &DL = F->getParent()->getDataLayout();
-  Type *Ty = User->getOperand(0)->getType();
-
-  return !(
-      isFMAFasterThanFMulAndFAdd(*F, Ty) &&
-      isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath));
+  }
+  return true;
 }
 
 const MCPhysReg *
