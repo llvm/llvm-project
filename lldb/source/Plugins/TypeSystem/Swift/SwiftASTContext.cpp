@@ -3337,7 +3337,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
 
   // 3. Create and install the serialized module loader.
   std::unique_ptr<swift::ModuleLoader> serialized_module_loader_ap(
-      swift::SerializedModuleLoader::create(
+      swift::ImplicitSerializedModuleLoader::create(
           *m_ast_context_ap, m_dependency_tracker.get(), loading_mode));
   if (serialized_module_loader_ap)
     m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
