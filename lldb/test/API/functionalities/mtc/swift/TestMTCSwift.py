@@ -45,6 +45,7 @@ class MTCSwiftTestCase(TestBase):
 
         self.expect(
             "thread info -s",
+            ordered=False,
             substrs=["instrumentation_class", "api_name", "class_name", "selector", "description"])
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonInstrumentation)
         output_lines = self.res.GetOutput().split('\n')

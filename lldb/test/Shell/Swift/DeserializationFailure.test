@@ -4,7 +4,7 @@
 # write this as a dotest.py test.
 
 # RUN: rm -rf %t && mkdir %t && cd %t
-# RUN: cp %p/../../../packages/Python/lldbsuite/test/lang/swift/deserialization_failure/Inputs/main.swift %t/main.swift
+# RUN: cp %p/../../API/lang/swift/deserialization_failure/Inputs/main.swift %t/main.swift
 # RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options -c %t/main.swift -o %t/a.o
 # RUN: rm %t/main.swift
 # RUN: echo "I am damaged." >%t/a.swiftmodule
