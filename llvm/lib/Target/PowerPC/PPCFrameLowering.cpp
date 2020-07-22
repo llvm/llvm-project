@@ -1466,11 +1466,10 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
           .addImm(0)
           .addImm(32 - Log2(MaxAlign))
           .addImm(31);
-    BuildMI(PrologMBB, {MI}, DL, TII.get(isPPC64 ? PPC::STDUX : PPC::STWUX),
+    BuildMI(PrologMBB, {MI}, DL, TII.get(isPPC64 ? PPC::SUBFC8 : PPC::SUBFC),
             SPReg)
-        .addReg(FPReg)
-        .addReg(SPReg)
-        .addReg(ScratchReg);
+        .addReg(ScratchReg)
+        .addReg(SPReg);
   }
   // Probe residual part.
   if (NegResidualSize) {
