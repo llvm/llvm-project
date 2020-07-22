@@ -1102,8 +1102,8 @@ static bool addCallTargetOperands(MachineInstrBuilder &CallInst,
                                   MachineIRBuilder &MIRBuilder,
                                   AMDGPUCallLowering::CallLoweringInfo &Info) {
   if (Info.Callee.isReg()) {
+    CallInst.addReg(Info.Callee.getReg());
     CallInst.addImm(0);
-    CallInst.add(Info.Callee);
   } else if (Info.Callee.isGlobal() && Info.Callee.getOffset() == 0) {
     // The call lowering lightly assumed we can directly encode a call target in
     // the instruction, which is not the case. Materialize the address here.
