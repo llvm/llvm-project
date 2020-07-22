@@ -1414,8 +1414,24 @@ protected:
 
     // Create an LLVM function, use external linkage by default until MLIR
     // functions have linkage.
+    // TODO: Add some code to work around the linkage limitation, but it's not
+    // clear what MLIR's intented design should be.
+    auto convertLinkage = [&]() -> mlir::LLVM::Linkage {
+      if (auto link = funcOp.getAttrOfType<mlir::StringAttr>("linkName")) {
+        auto name = link.getValue();
+        if (name == "internal")
+          return mlir::LLVM::Linkage::Internal;
+        if (name == "linkonce")
+          return mlir::LLVM::Linkage::Linkonce;
+        if (name == "common")
+          return mlir::LLVM::Linkage::Common;
+        if (name == "weak")
+          return mlir::LLVM::Linkage::Weak;
+      }
+      return mlir::LLVM::Linkage::External;
+    };
     auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
-        funcOp.getLoc(), funcOp.getName(), llvmType, LLVM::Linkage::External,
+        funcOp.getLoc(), funcOp.getName(), llvmType, convertLinkage(),
         attributes);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
