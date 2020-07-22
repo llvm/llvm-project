@@ -137,7 +137,7 @@ Symbols:
 # RUN: yaml2obj %s --docnum=7 -o %t7
 # RUN: llvm-readobj --dyn-symbols %t7 2>&1 | FileCheck -DFILE=%t7 --check-prefix=INVALID-DYNSYM-SIZE %s
 
-# INVALID-DYNSYM-SIZE: warning: '[[FILE]]': section with index 1 has invalid size (0x30) or entry size (0x20)
+# INVALID-DYNSYM-SIZE: warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x30) or entry size (0x20)
 
 --- !ELF
 FileHeader:
@@ -458,7 +458,7 @@ ProgramHeaders:
 # RUN: yaml2obj %s --docnum=21 -o %t21
 # RUN: llvm-readobj --dyn-relocations %t21 2>&1 | FileCheck -DFILE=%t21 --check-prefix=DYN-TABLE-SIZE %s
 
-# DYN-TABLE-SIZE: warning: '[[FILE]]': section with index 1 has invalid size (0x1){{$}}
+# DYN-TABLE-SIZE: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 has invalid size (0x1){{$}}
 
 --- !ELF
 FileHeader:

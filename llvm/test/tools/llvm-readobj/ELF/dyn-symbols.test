@@ -408,7 +408,7 @@ DynamicSymbols: []
 # RUN: llvm-readobj --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
 # RUN: llvm-readelf --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
 
-# DYNSYM-SIZE-INVALID1: warning: '[[FILE]]': section with index 1 has invalid size (0x1) or entry size (0x10)
+# DYNSYM-SIZE-INVALID1: warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x1) or entry size (0x10)
 
 ## b) The same, but the DT_SYMTAB tag is present. In this case the dynamic tag has priority over the
 ##    information about a location and an entity size of the dynamic symbol table from the section header.
@@ -418,7 +418,7 @@ DynamicSymbols: []
 # RUN: llvm-readobj --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
 # RUN: llvm-readelf --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
 
-# DYNSYM-SIZE-INVALID2: warning: '[[FILE]]': section with index 2 has invalid size (0x1){{$}}
+# DYNSYM-SIZE-INVALID2: warning: '[[FILE]]': SHT_DYNSYM section with index 2 has invalid size (0x1){{$}}
 
 ## c) In the case when the DT_SYMENT tag is present, we report when it's value does not match the
 #     value of the symbol size for the platform.
@@ -571,10 +571,10 @@ ProgramHeaders:
 # RUN:   FileCheck %s -DFILE=%t15 --check-prefix=DYNSYM-ZERO-ENTSIZE-GNU --implicit-check-not="Symbol table"
 
 # DYNSYM-ZERO-ENTSIZE-LLVM:      DynamicSymbols [
-# DYNSYM-ZERO-ENTSIZE-LLVM-NEXT:  warning: '[[FILE]]': section with index 1 has invalid size (0x10) or entry size (0x0)
+# DYNSYM-ZERO-ENTSIZE-LLVM-NEXT:  warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x10) or entry size (0x0)
 # DYNSYM-ZERO-ENTSIZE-LLVM-NEXT: ]
 
-# DYNSYM-ZERO-ENTSIZE-GNU:  warning: '[[FILE]]': section with index 1 has invalid size (0x10) or entry size (0x0)
+# DYNSYM-ZERO-ENTSIZE-GNU:  warning: '[[FILE]]': SHT_DYNSYM section with index 1 has invalid size (0x10) or entry size (0x0)
 
 --- !ELF
 FileHeader:
