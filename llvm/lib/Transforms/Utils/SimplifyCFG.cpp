@@ -2233,6 +2233,12 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   for (Instruction &I : BB->instructionsWithoutDebug()) {
     if (Size > MaxSmallBlockSize)
       return false; // Don't clone large BB's.
+
+    // Can't fold blocks that contain noduplicate or convergent calls.
+    if (CallInst *CI = dyn_cast<CallInst>(&I))
+      if (CI->cannotDuplicate() || CI->isConvergent())
+        return false;
+
     // We will delete Phis while threading, so Phis should not be accounted in
     // block's size
     if (!isa<PHINode>(I))
@@ -2272,13 +2278,6 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, const DataLayout &DL,
 
   // Now we know that this block has multiple preds and two succs.
   if (!BlockIsSimpleEnoughToThreadThrough(BB))
-    return false;
-
-  // Can't fold blocks that contain noduplicate or convergent calls.
-  if (any_of(*BB, [](const Instruction &I) {
-        const CallInst *CI = dyn_cast<CallInst>(&I);
-        return CI && (CI->cannotDuplicate() || CI->isConvergent());
-      }))
     return false;
 
   // Okay, this is a simple enough basic block.  See if any phi values are
