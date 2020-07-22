@@ -672,7 +672,7 @@ protected:
 
       // In case of a vector need to pick the max between the min
       // required size for each element
-      auto *VT = cast<VectorType>(Val->getType());
+      auto *VT = cast<FixedVectorType>(Val->getType());
 
       // Assume unsigned elements
       isSigned = false;
