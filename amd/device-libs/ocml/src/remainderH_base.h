@@ -128,11 +128,10 @@ MATH_MANGLE(remainder)(half x, half y)
         q7 = y == 0.0h ? 0 : q7;
 #endif
 
-        bool c = BUILTIN_ISNAN_F16(y) |
-                 BUILTIN_CLASS_F16(x, CLASS_NINF|CLASS_PINF|CLASS_SNAN|CLASS_QNAN);
-        ret = c ? AS_HALF((short)QNANBITPATT_HP16) : ret;
+        bool c = !BUILTIN_ISNAN_F16(y) && BUILTIN_ISFINITE_F16(x);
+        ret = c ? ret : AS_HALF((short)QNANBITPATT_HP16);
 #if defined(COMPILING_REMQUO)
-        q7 = c ? 0 : q7;
+        q7 = c ? q7 : 0;
 #endif
     }
 
