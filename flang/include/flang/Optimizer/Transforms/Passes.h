@@ -31,6 +31,9 @@ std::unique_ptr<mlir::Pass> createCSEPass();
 /// Convert FIR loop constructs to the Affine dialect
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 
+/// Convert Affine operations back to FIR
+std::unique_ptr<mlir::Pass> createAffineDemotionPass();
+
 /// Convert `fir.do_loop` and `fir.if` to a CFG.  This
 /// conversion enables the `createLowerToCFGPass` to transform these to CFG
 /// form.

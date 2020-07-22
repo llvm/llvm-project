@@ -21,6 +21,7 @@ add_flang_library(FIROptimizer
   Transforms/Inliner.cpp
   Transforms/MemToReg.cpp
   Transforms/AffinePromotion.cpp
+  Transforms/AffineDemotion.cpp
   Transforms/RewriteLoop.cpp
 
   DEPENDS

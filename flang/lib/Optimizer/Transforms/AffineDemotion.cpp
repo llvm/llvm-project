@@ -1,0 +1,124 @@
+//===-- AffineDemotion.cpp -----------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "PassDetail.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/Visitors.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/Support/CommandLine.h"
+#define DEBUG_TYPE "flang-affine-demotion"
+
+using namespace fir;
+
+namespace {
+
+class AffineLoadConversion : public OpRewritePattern<mlir::AffineLoadOp> {
+public:
+  using OpRewritePattern<mlir::AffineLoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(mlir::AffineLoadOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value, 8> indices(op.getMapOperands());
+    auto maybeExpandedMap =
+        expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
+    if (!maybeExpandedMap)
+      return failure();
+
+    auto coorOp = rewriter.create<fir::CoordinateOp>(
+        op.getLoc(), fir::ReferenceType::get(op.getResult().getType()),
+        op.getMemRef(), *maybeExpandedMap);
+
+    rewriter.replaceOpWithNewOp<fir::LoadOp>(op, coorOp.getResult());
+    return success();
+  }
+};
+
+class AffineStoreConversion : public OpRewritePattern<mlir::AffineStoreOp> {
+public:
+  using OpRewritePattern<mlir::AffineStoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(mlir::AffineStoreOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value, 8> indices(op.getMapOperands());
+    auto maybeExpandedMap =
+        expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
+    if (!maybeExpandedMap)
+      return failure();
+
+    auto coorOp = rewriter.create<fir::CoordinateOp>(
+        op.getLoc(), fir::ReferenceType::get(op.getValueToStore().getType()),
+        op.getMemRef(), *maybeExpandedMap);
+    rewriter.replaceOpWithNewOp<fir::StoreOp>(op, op.getValueToStore(),
+                                              coorOp.getResult());
+    return success();
+  }
+};
+
+class ConvertConversion : public mlir::OpRewritePattern<fir::ConvertOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  mlir::LogicalResult
+  matchAndRewrite(fir::ConvertOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (op.res().getType().isa<mlir::MemRefType>()) {
+      rewriter.startRootUpdate(op.getParentOp());
+      op.getResult().replaceAllUsesWith(op.value());
+      rewriter.finalizeRootUpdate(op.getParentOp());
+      rewriter.eraseOp(op);
+    }
+    return success();
+  }
+};
+
+class AffineDialectDemotion
+    : public AffineDialectDemotionBase<AffineDialectDemotion> {
+public:
+  void runOnFunction() override {
+    auto *context = &getContext();
+    auto function = getFunction();
+    LLVM_DEBUG(llvm::dbgs() << "AffineDemotion: running on function:\n";
+               function.print(llvm::dbgs()););
+
+    mlir::OwningRewritePatternList patterns;
+    patterns.insert<ConvertConversion>(context);
+    patterns.insert<AffineLoadConversion>(context);
+    patterns.insert<AffineStoreConversion>(context);
+    mlir::ConversionTarget target = *context;
+    target.addDynamicallyLegalOp<fir::ConvertOp>([](fir::ConvertOp op) {
+      if (op.res().getType().isa<mlir::MemRefType>())
+        return false;
+      return true;
+    });
+    target.addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
+                           mlir::StandardOpsDialect>();
+
+    if (mlir::failed(mlir::applyPartialConversion(function, target,
+                                                  std::move(patterns)))) {
+      mlir::emitError(mlir::UnknownLoc::get(context),
+                      "error in converting affine dialect\n");
+      signalPassFailure();
+    }
+  }
+};
+
+} // namespace
+
+std::unique_ptr<mlir::Pass> fir::createAffineDemotionPass() {
+  return std::make_unique<AffineDialectDemotion>();
+}
