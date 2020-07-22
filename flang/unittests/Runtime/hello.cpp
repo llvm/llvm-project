@@ -38,16 +38,16 @@ static void hello() {
 }
 
 static void multiline() {
-  char buffer[4][32];
+  char buffer[5][32];
   StaticDescriptor<1> staticDescriptor[2];
   Descriptor &whole{staticDescriptor[0].descriptor()};
-  SubscriptValue extent[]{4};
+  SubscriptValue extent[]{5};
   whole.Establish(TypeCode{CFI_type_char}, sizeof buffer[0], &buffer, 1, extent,
       CFI_attribute_pointer);
   whole.Dump();
   whole.Check();
   Descriptor &section{staticDescriptor[1].descriptor()};
-  SubscriptValue lowers[]{0}, uppers[]{3}, strides[]{1};
+  SubscriptValue lowers[]{0}, uppers[]{4}, strides[]{1};
   section.Establish(whole.type(), whole.ElementBytes(), nullptr, 1, extent,
       CFI_attribute_pointer);
   if (auto error{
@@ -57,12 +57,16 @@ static void multiline() {
   }
   section.Dump();
   section.Check();
-  const char *format{"('?abcde,',T1,'>',T9,A,TL12,A,TR25,'<'//G0,25X,'done')"};
+  const char *format{
+      "('?abcde,',T1,'>',T9,A,TL12,A,TR25,'<'//G0,17X,'abcd',1(2I4))"};
   auto cookie{IONAME(BeginInternalArrayFormattedOutput)(
       section, format, std::strlen(format))};
   IONAME(OutputAscii)(cookie, "WORLD", 5);
   IONAME(OutputAscii)(cookie, "HELLO", 5);
   IONAME(OutputInteger64)(cookie, 789);
+  for (int j{666}; j <= 999; j += 111) {
+    IONAME(OutputInteger64)(cookie, j);
+  }
   if (auto status{IONAME(EndIoStatement)(cookie)}) {
     Fail() << "multiline: '" << format << "' failed, status "
            << static_cast<int>(status) << '\n';
@@ -70,7 +74,8 @@ static void multiline() {
     test(format,
         ">HELLO, WORLD                  <"
         "                                "
-        "789                         done"
+        "789                 abcd 666 777"
+        " 888 999                        "
         "                                ",
         std::string{buffer[0], sizeof buffer});
   }
