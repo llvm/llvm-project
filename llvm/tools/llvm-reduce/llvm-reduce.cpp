@@ -28,30 +28,39 @@
 
 using namespace llvm;
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-static cl::opt<bool> Version("v", cl::desc("Alias for -version"), cl::Hidden);
+static cl::OptionCategory Options("llvm-reduce options");
+
+static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
+                          cl::cat(Options));
+static cl::opt<bool> Version("v", cl::desc("Alias for -version"), cl::Hidden,
+                             cl::cat(Options));
 
 static cl::opt<std::string> InputFilename(cl::Positional, cl::Required,
-                                          cl::desc("<input llvm ll/bc file>"));
+                                          cl::desc("<input llvm ll/bc file>"),
+                                          cl::cat(Options));
 
 static cl::opt<std::string>
     TestFilename("test", cl::Required,
-                 cl::desc("Name of the interesting-ness test to be run"));
+                 cl::desc("Name of the interesting-ness test to be run"),
+                 cl::cat(Options));
 
 static cl::list<std::string>
     TestArguments("test-arg", cl::ZeroOrMore,
-                  cl::desc("Arguments passed onto the interesting-ness test"));
+                  cl::desc("Arguments passed onto the interesting-ness test"),
+                  cl::cat(Options));
 
 static cl::opt<std::string>
     OutputFilename("output",
                    cl::desc("Specify the output file. default: reduced.ll"));
 static cl::alias OutputFileAlias("o", cl::desc("Alias for -output"),
-                                 cl::aliasopt(OutputFilename));
+                                 cl::aliasopt(OutputFilename),
+                                 cl::cat(Options));
 
 static cl::opt<bool>
     ReplaceInput("in-place",
                  cl::desc("WARNING: This option will replace your input file "
-                          "with the reduced version!"));
+                          "with the reduced version!"),
+                 cl::cat(Options));
 
 // Parses IR into a Module and verifies it
 static std::unique_ptr<Module> parseInputFile(StringRef Filename,
