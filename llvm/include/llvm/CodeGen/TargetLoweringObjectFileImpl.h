@@ -246,7 +246,7 @@ public:
                                    const Constant *C,
                                    Align &Alignment) const override;
 
-  static XCOFF::StorageClass getStorageClassForGlobal(const GlobalObject *GO);
+  static XCOFF::StorageClass getStorageClassForGlobal(const GlobalValue *GV);
 
   MCSection *
   getSectionForFunctionDescriptor(const Function *F,
@@ -263,7 +263,7 @@ public:
   MCSymbol *getTargetSymbol(const GlobalValue *GV,
                             const TargetMachine &TM) const override;
 
-  MCSymbol *getFunctionEntryPointSymbol(const Function *F,
+  MCSymbol *getFunctionEntryPointSymbol(const GlobalValue *Func,
                                         const TargetMachine &TM) const override;
 };
 

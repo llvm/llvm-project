@@ -86,11 +86,13 @@ ProgramHeaders:
 ## Case 3.1: Check that we are able to dump the dynamic symbol table even when we have no program headers.
 ## In this case we find the table by it's type (SHT_DYNSYM) and ignore the DT_SYMTAB value.
 # RUN: yaml2obj --docnum=2 %s -o %t2.so
-# RUN: llvm-readobj %t2.so --dyn-symbols | FileCheck %s --check-prefix=NOPHDRS-LLVM
-# RUN: llvm-readelf %t2.so --dyn-symbols | FileCheck %s -DNAME=.dynsym --check-prefix=NOPHDRS-GNU
+# RUN: llvm-readobj %t2.so --dyn-symbols 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2.so --implicit-check-not=warning: --check-prefix=NOPHDRS-LLVM
+# RUN: llvm-readelf %t2.so --dyn-symbols 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2.so --implicit-check-not=warning: -DNAME=.dynsym --check-prefix=NOPHDRS-GNU
 
+# NOPHDRS-LLVM: warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # NOPHDRS-LLVM:      DynamicSymbols [
-# NOPHDRS-WARN:      warning: '[[FILE]]': unable to get the name of the SHT_DYNSYM section: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
 # NOPHDRS-LLVM-NEXT:   Symbol {
 # NOPHDRS-LLVM-NEXT:     Name:  (0)
 # NOPHDRS-LLVM-NEXT:     Value: 0x0
@@ -111,6 +113,8 @@ ProgramHeaders:
 # NOPHDRS-LLVM-NEXT:   }
 # NOPHDRS-LLVM-NEXT: ]
 
+# NOPHDRS-GNU:      warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# NOPHDRS-NAMEWARN: warning: '[[FILE]]': unable to get the name of SHT_DYNSYM section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
 # NOPHDRS-GNU:      Symbol table '[[NAME]]' contains 2 entries:
 # NOPHDRS-GNU-NEXT:  Num:    Value          Size Type    Bind   Vis       Ndx Name
 # NOPHDRS-GNU-NEXT:    0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
@@ -137,9 +141,10 @@ DynamicSymbols:
 ##           Check we are still able to dump symbols.
 # RUN: yaml2obj --docnum=3 %s -o %t2.broken.name
 # RUN: llvm-readobj %t2.broken.name --dyn-symbols 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t2.broken.name --check-prefixes=NOPHDRS-LLVM,NOPHDRS-WARN
+# RUN:   FileCheck %s -DFILE=%t2.broken.name --check-prefix=NOPHDRS-LLVM --implicit-check-not=warning:
 # RUN: llvm-readelf %t2.broken.name --dyn-symbols 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t2.broken.name -DNAME="<?>" --check-prefixes=NOPHDRS-GNU,NOPHDRS-WARN
+# RUN:   FileCheck %s -DFILE=%t2.broken.name -DNAME="<?>" \
+# RUN:     --check-prefixes=NOPHDRS-GNU,NOPHDRS-NAMEWARN --implicit-check-not=warning:
 
 --- !ELF
 FileHeader:

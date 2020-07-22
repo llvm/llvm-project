@@ -2,11 +2,14 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O0 \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   FileCheck %s
 
 ; These test cases aims to test the builtins for the Power10 VSX vector
 ; instructions introduced in ISA 3.1.
 
-declare i32 @llvm.ppc.vsx.xvtlsbb(<16 x i8>, i1)
+declare i32 @llvm.ppc.vsx.xvtlsbb(<16 x i8>, i32)
 
 define signext i32 @test_vec_test_lsbb_all_ones(<16 x i8> %vuca) {
 ; CHECK-LABEL: test_vec_test_lsbb_all_ones:
@@ -17,7 +20,7 @@ define signext i32 @test_vec_test_lsbb_all_ones(<16 x i8> %vuca) {
 ; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = tail call i32 @llvm.ppc.vsx.xvtlsbb(<16 x i8> %vuca, i1 1)
+  %0 = tail call i32 @llvm.ppc.vsx.xvtlsbb(<16 x i8> %vuca, i32 1)
   ret i32 %0
 }
 
@@ -30,6 +33,6 @@ define signext i32 @test_vec_test_lsbb_all_zeros(<16 x i8> %vuca) {
 ; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = tail call i32 @llvm.ppc.vsx.xvtlsbb(<16 x i8> %vuca, i1 0)
+  %0 = tail call i32 @llvm.ppc.vsx.xvtlsbb(<16 x i8> %vuca, i32 0)
   ret i32 %0
 }

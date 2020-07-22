@@ -322,6 +322,29 @@ bool TargetTransformInfo::emitGetActiveLaneMask() const {
   return TTIImpl->emitGetActiveLaneMask();
 }
 
+Optional<Instruction *>
+TargetTransformInfo::instCombineIntrinsic(InstCombiner &IC,
+                                          IntrinsicInst &II) const {
+  return TTIImpl->instCombineIntrinsic(IC, II);
+}
+
+Optional<Value *> TargetTransformInfo::simplifyDemandedUseBitsIntrinsic(
+    InstCombiner &IC, IntrinsicInst &II, APInt DemandedMask, KnownBits &Known,
+    bool &KnownBitsComputed) const {
+  return TTIImpl->simplifyDemandedUseBitsIntrinsic(IC, II, DemandedMask, Known,
+                                                   KnownBitsComputed);
+}
+
+Optional<Value *> TargetTransformInfo::simplifyDemandedVectorEltsIntrinsic(
+    InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
+    APInt &UndefElts2, APInt &UndefElts3,
+    std::function<void(Instruction *, unsigned, APInt, APInt &)>
+        SimplifyAndSetOp) const {
+  return TTIImpl->simplifyDemandedVectorEltsIntrinsic(
+      IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
+      SimplifyAndSetOp);
+}
+
 void TargetTransformInfo::getUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, UnrollingPreferences &UP) const {
   return TTIImpl->getUnrollingPreferences(L, SE, UP);

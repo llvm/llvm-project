@@ -95,14 +95,13 @@ bool X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
 
 namespace {
 
-struct OutgoingValueHandler : public CallLowering::ValueHandler {
-  OutgoingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                       MachineInstrBuilder &MIB, CCAssignFn *AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
+struct X86OutgoingValueHandler : public CallLowering::IncomingValueHandler {
+  X86OutgoingValueHandler(MachineIRBuilder &MIRBuilder,
+                          MachineRegisterInfo &MRI, MachineInstrBuilder &MIB,
+                          CCAssignFn *AssignFn)
+      : IncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
         DL(MIRBuilder.getMF().getDataLayout()),
         STI(MIRBuilder.getMF().getSubtarget<X86Subtarget>()) {}
-
-  bool isIncomingArgumentHandler() const override { return false; }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -215,7 +214,7 @@ bool X86CallLowering::lowerReturn(
         return false;
     }
 
-    OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, RetCC_X86);
+    X86OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, RetCC_X86);
     if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
       return false;
   }
@@ -226,13 +225,11 @@ bool X86CallLowering::lowerReturn(
 
 namespace {
 
-struct IncomingValueHandler : public CallLowering::ValueHandler {
-  IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                       CCAssignFn *AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn),
+struct X86IncomingValueHandler : public CallLowering::IncomingValueHandler {
+  X86IncomingValueHandler(MachineIRBuilder &MIRBuilder,
+                          MachineRegisterInfo &MRI, CCAssignFn *AssignFn)
+      : IncomingValueHandler(MIRBuilder, MRI, AssignFn),
         DL(MIRBuilder.getMF().getDataLayout()) {}
-
-  bool isIncomingArgumentHandler() const override { return true; }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -298,10 +295,10 @@ protected:
   const DataLayout &DL;
 };
 
-struct FormalArgHandler : public IncomingValueHandler {
+struct FormalArgHandler : public X86IncomingValueHandler {
   FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                    CCAssignFn *AssignFn)
-      : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
+      : X86IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
@@ -309,10 +306,10 @@ struct FormalArgHandler : public IncomingValueHandler {
   }
 };
 
-struct CallReturnHandler : public IncomingValueHandler {
+struct CallReturnHandler : public X86IncomingValueHandler {
   CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                     CCAssignFn *AssignFn, MachineInstrBuilder &MIB)
-      : IncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
+      : X86IncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
@@ -421,7 +418,7 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
   // Do the actual argument marshalling.
-  OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, CC_X86);
+  X86OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, CC_X86);
   if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
     return false;
 

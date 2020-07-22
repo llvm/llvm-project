@@ -170,7 +170,7 @@ Type::Type()
 }
 
 void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                          bool show_name) {
+                          bool show_name, ExecutionContextScope *exe_scope) {
   *s << "id = " << (const UserID &)*this;
 
   // Call the name accessor to make sure we resolve the type name
@@ -186,7 +186,7 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
   }
 
   // Call the get byte size accesor so we resolve our byte size
-  if (GetByteSize())
+  if (GetByteSize(exe_scope))
     s->Printf(", byte-size = %" PRIu64, m_byte_size);
   bool show_fullpaths = (level == lldb::eDescriptionLevelVerbose);
   m_decl.Dump(s, show_fullpaths);
@@ -323,7 +323,9 @@ void Type::DumpValue(ExecutionContext *exe_ctx, Stream *s,
 
     GetForwardCompilerType().DumpValue(
         exe_ctx, s, format == lldb::eFormatDefault ? GetFormat() : format, data,
-        data_byte_offset, GetByteSize().getValueOr(0),
+        data_byte_offset,
+        GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
+            .getValueOr(0),
         0, // Bitfield bit size
         0, // Bitfield bit offset
         show_types, show_summary, verbose, 0);
@@ -352,8 +354,7 @@ llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   case eEncodingIsTypedefUID: {
     Type *encoding_type = GetEncodingType();
     if (encoding_type)
-      if (llvm::Optional<uint64_t> size =
-              encoding_type->GetByteSize(exe_scope)) {
+      if (llvm::Optional<uint64_t> size = encoding_type->GetByteSize(exe_scope)) {
         m_byte_size = *size;
         m_byte_size_has_value = true;
         return m_byte_size;

@@ -51,6 +51,8 @@ define dso_local void @TailCallExtrnFuncPtr() local_unnamed_addr {
 ; CHECK:         .localentry TailCallExtrnFuncPtr, 1
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, Func@got@pcrel(0), 1
+; CHECK-NEXT:  .Lpcrel:
+; CHECK-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
 ; CHECK-NEXT:    ld r12, 0(r3)
 ; CHECK-NEXT:    mtctr r12
 ; CHECK-NEXT:    bctr

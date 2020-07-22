@@ -25,7 +25,6 @@ class BasicBlock;
 class BlockFrequencyInfo;
 class CallBase;
 class Function;
-class ProfileSummary;
 
 /// Analysis providing profile information.
 ///

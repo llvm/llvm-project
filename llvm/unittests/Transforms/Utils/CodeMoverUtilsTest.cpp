@@ -514,8 +514,8 @@ TEST(CodeMoverUtils, IsSafeToMoveTest1) {
 
         // Moving instruction to non control flow equivalent places are not
         // supported.
-        EXPECT_FALSE(isSafeToMoveBefore(*SI_A5, *Entry->getTerminator(), DT,
-                                        &PDT, &DI));
+        EXPECT_FALSE(
+            isSafeToMoveBefore(*SI_A5, *Entry->getTerminator(), DT, &PDT, &DI));
 
         // Moving PHINode is not supported.
         EXPECT_FALSE(isSafeToMoveBefore(PN, *PN.getNextNode()->getNextNode(),
@@ -650,5 +650,207 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
         // Cannot move as %sub_op0 is an operand of %sub and %add doesn't
         // dominates %sub_op0.
         EXPECT_FALSE(isSafeToMoveBefore(*SubInst, *AddInst, DT, &PDT, &DI));
+      });
+}
+
+TEST(CodeMoverUtils, IsSafeToMoveTest5) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M =
+      parseIR(C, R"(define void @dependence(i32* noalias %A, i32* noalias %B){
+entry:
+    store i32 0, i32* %A, align 4 ; storeA0
+    store i32 2, i32* %A, align 4 ; storeA1
+    %tmp0 = load i32, i32* %A, align 4 ; loadA0
+    store i32 1, i32* %B, align 4 ; storeB0
+    %tmp1 = load i32, i32* %A, align 4 ; loadA1
+    store i32 2, i32* %A, align 4 ; storeA2 
+    store i32 4, i32* %B, align 4 ; StoreB1 
+    %tmp2 = load i32, i32* %A, align 4 ; loadA2 
+    %tmp3 = load i32, i32* %A, align 4 ; loadA3 
+    %tmp4 = load i32, i32* %B, align 4 ; loadB2
+    %tmp5 = load i32, i32* %B, align 4 ; loadB3
+    ret void
+})");
+
+  run(*M, "dependence",
+      [&](Function &F, DominatorTree &DT, PostDominatorTree &PDT,
+          DependenceInfo &DI) {
+        Instruction *LoadA0 = getInstructionByName(F, "tmp0");
+        Instruction *LoadA1 = getInstructionByName(F, "tmp1");
+        Instruction *LoadA2 = getInstructionByName(F, "tmp2");
+        Instruction *LoadA3 = getInstructionByName(F, "tmp3");
+        Instruction *LoadB2 = getInstructionByName(F, "tmp4");
+        Instruction *LoadB3 = getInstructionByName(F, "tmp5");
+        Instruction *StoreA1 = LoadA0->getPrevNode();
+        Instruction *StoreA0 = StoreA1->getPrevNode();
+        Instruction *StoreB0 = LoadA0->getNextNode();
+        Instruction *StoreB1 = LoadA2->getPrevNode();
+        Instruction *StoreA2 = StoreB1->getPrevNode();
+
+        // Input forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA2, *LoadB2, DT, &PDT, &DI));
+        // Input backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA3, *LoadA2, DT, &PDT, &DI));
+
+        // Output forward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(*StoreA0, *LoadA0, DT, &PDT, &DI));
+        // Output backward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(*StoreA1, *StoreA0, DT, &PDT, &DI));
+
+        // Flow forward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(*StoreA1, *StoreB0, DT, &PDT, &DI));
+        // Flow backward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(*LoadA0, *StoreA1, DT, &PDT, &DI));
+
+        // Anti forward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(*LoadA1, *StoreB1, DT, &PDT, &DI));
+        // Anti backward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(*StoreA2, *LoadA1, DT, &PDT, &DI));
+
+        // No input backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadB2, *LoadA3, DT, &PDT, &DI));
+        // No input forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA3, *LoadB3, DT, &PDT, &DI));
+
+        // No Output forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*StoreA2, *LoadA2, DT, &PDT, &DI));
+        // No Output backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*StoreB1, *StoreA2, DT, &PDT, &DI));
+
+        // No flow forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*StoreB0, *StoreA2, DT, &PDT, &DI));
+        // No flow backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA1, *StoreB0, DT, &PDT, &DI));
+
+        // No anti backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*StoreB0, *LoadA0, DT, &PDT, &DI));
+        // No anti forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA0, *LoadA1, DT, &PDT, &DI));
+      });
+}
+
+TEST(CodeMoverUtils, IsSafeToMoveTest6) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M = parseIR(
+      C, R"(define void @dependence(i1 %cond, i32* noalias %A, i32* noalias %B){
+   entry:
+        br i1 %cond, label %bb0, label %bb1
+   bb0:
+        br label %bb1
+    bb1:
+        store i32 0, i32* %A, align 4 ; storeA0
+        br i1 %cond, label %bb2, label %bb3
+    bb2:
+        br label %bb3
+    bb3:
+        store i32 2, i32* %A, align 4 ; storeA1
+        br i1 %cond, label %bb4, label %bb5
+    bb4:
+        br label %bb5
+    bb5:
+        %tmp0 = load i32, i32* %A, align 4 ; loadA0
+        br i1 %cond, label %bb6, label %bb7
+    bb6:
+        br label %bb7
+    bb7:
+        store i32 1, i32* %B, align 4 ; storeB0
+        br i1 %cond, label %bb8, label %bb9
+    bb8:
+        br label %bb9
+    bb9:
+        %tmp1 = load i32, i32* %A, align 4 ; loadA1
+        br i1 %cond, label %bb10, label %bb11
+    bb10:
+        br label %bb11
+    bb11:
+        store i32 2, i32* %A, align 4 ; storeA2
+        br i1 %cond, label %bb12, label %bb13
+    bb12:
+        br label %bb13
+    bb13:
+        store i32 4, i32* %B, align 4 ; StoreB1
+        br i1 %cond, label %bb14, label %bb15
+    bb14:
+        br label %bb15
+    bb15:
+        %tmp2 = load i32, i32* %A, align 4 ; loadA2
+        br i1 %cond, label %bb16, label %bb17
+    bb16:
+        br label %bb17
+    bb17:
+        %tmp3 = load i32, i32* %A, align 4 ; loadA3
+        br i1 %cond, label %bb18, label %bb19
+    bb18:
+        br label %bb19
+    bb19:
+        %tmp4 = load i32, i32* %B, align 4 ; loadB2
+        br i1 %cond, label %bb20, label %bb21
+    bb20:
+       br label %bb21
+    bb21:
+       %tmp5 = load i32, i32* %B, align 4 ; loadB3
+       ret void
+   })");
+  run(*M, "dependence",
+      [&](Function &F, DominatorTree &DT, PostDominatorTree &PDT,
+          DependenceInfo &DI) {
+        BasicBlock *BB1 = getBasicBlockByName(F, "bb1");
+        BasicBlock *BB3 = getBasicBlockByName(F, "bb3");
+        BasicBlock *BB7 = getBasicBlockByName(F, "bb7");
+        BasicBlock *BB11 = getBasicBlockByName(F, "bb11");
+        BasicBlock *BB13 = getBasicBlockByName(F, "bb13");
+        Instruction *LoadA0 = getInstructionByName(F, "tmp0");
+        Instruction *LoadA1 = getInstructionByName(F, "tmp1");
+        Instruction *LoadA2 = getInstructionByName(F, "tmp2");
+        Instruction *LoadA3 = getInstructionByName(F, "tmp3");
+        Instruction *LoadB2 = getInstructionByName(F, "tmp4");
+        Instruction *LoadB3 = getInstructionByName(F, "tmp5");
+        Instruction &StoreA1 = BB3->front();
+        Instruction &StoreA0 = BB1->front();
+        Instruction &StoreB0 = BB7->front();
+        Instruction &StoreB1 = BB13->front();
+        Instruction &StoreA2 = BB11->front();
+
+        // Input forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA2, *LoadB2, DT, &PDT, &DI));
+        // Input backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA3, *LoadA2, DT, &PDT, &DI));
+
+        // Output forward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(StoreA0, *LoadA0, DT, &PDT, &DI));
+        // Output backward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(StoreA1, StoreA0, DT, &PDT, &DI));
+
+        // Flow forward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(StoreA1, StoreB0, DT, &PDT, &DI));
+        // Flow backward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(*LoadA0, StoreA1, DT, &PDT, &DI));
+
+        // Anti forward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(*LoadA1, StoreB1, DT, &PDT, &DI));
+        // Anti backward dependency
+        EXPECT_FALSE(isSafeToMoveBefore(StoreA2, *LoadA1, DT, &PDT, &DI));
+
+        // No input backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadB2, *LoadA3, DT, &PDT, &DI));
+        // No input forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA3, *LoadB3, DT, &PDT, &DI));
+
+        // No Output forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(StoreA2, *LoadA2, DT, &PDT, &DI));
+        // No Output backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(StoreB1, StoreA2, DT, &PDT, &DI));
+
+        // No flow forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(StoreB0, StoreA2, DT, &PDT, &DI));
+        // No flow backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA1, StoreB0, DT, &PDT, &DI));
+
+        // No anti backward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(StoreB0, *LoadA0, DT, &PDT, &DI));
+        // No anti forward dependency
+        EXPECT_TRUE(isSafeToMoveBefore(*LoadA0, *LoadA1, DT, &PDT, &DI));
       });
 }
