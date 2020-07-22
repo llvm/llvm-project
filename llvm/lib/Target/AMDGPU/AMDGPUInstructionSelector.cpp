@@ -77,8 +77,9 @@ void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits &KB,
 
 bool AMDGPUInstructionSelector::isVCC(Register Reg,
                                       const MachineRegisterInfo &MRI) const {
-  if (Register::isPhysicalRegister(Reg))
-    return Reg == TRI.getVCC();
+  // The verifier is oblivious to s1 being a valid value for wavesize registers.
+  if (Reg.isPhysical())
+    return false;
 
   auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
   const TargetRegisterClass *RC =
