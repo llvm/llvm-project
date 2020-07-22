@@ -1,4 +1,4 @@
-//===- FunctionPropertiesAnalysisTest.cpp - function properties unit tests-===//
+//===- InlineFeaturesAnalysisTest.cpp - inline features unit tests --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/FunctionPropertiesAnalysis.h"
+#include "llvm/Analysis/InlineFeaturesAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -24,7 +24,7 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   return Mod;
 }
 
-TEST(FunctionPropertiesTest, BasicTest) {
+TEST(InlineFeaturesTest, BasicTest) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"IR(
@@ -59,7 +59,7 @@ define internal i32 @top() {
 )IR");
 
   FunctionAnalysisManager FAM;
-  FunctionPropertiesAnalysis FA;
+  InlineFeaturesAnalysis FA;
 
   auto BranchesFeatures = FA.run(*M->getFunction("branches"), FAM);
   EXPECT_EQ(BranchesFeatures.BasicBlockCount, 4);
