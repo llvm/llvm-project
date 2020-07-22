@@ -49,7 +49,7 @@ class NominalType;
 class NominalTypeDecl;
 class ProtocolDecl;
 class SearchPathOptions;
-class SerializedModuleLoader;
+class ImplicitSerializedModuleLoader;
 class ParseableInterfaceModuleLoader;
 class SILModule;
 class SILOptions;
