@@ -864,7 +864,10 @@ public:
     return actionIf(
         LegalizeAction::NarrowScalar,
         [=](const LegalityQuery &Query) {
-          return scalarWiderThan(TypeIdx, Ty.getSizeInBits()) && Predicate(Query);
+          const LLT QueryTy = Query.Types[TypeIdx];
+          return QueryTy.isScalar() &&
+                 QueryTy.getSizeInBits() > Ty.getSizeInBits() &&
+                 Predicate(Query);
         },
         changeElementTo(typeIdx(TypeIdx), Ty));
   }
