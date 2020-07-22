@@ -598,9 +598,9 @@ void SIFoldOperands::foldOperand(
     Register RegSeqDstReg = UseMI->getOperand(0).getReg();
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
-    MachineRegisterInfo::use_iterator Next;
-    for (MachineRegisterInfo::use_iterator
-           RSUse = MRI->use_begin(RegSeqDstReg), RSE = MRI->use_end();
+    MachineRegisterInfo::use_nodbg_iterator Next;
+    for (MachineRegisterInfo::use_nodbg_iterator
+           RSUse = MRI->use_nodbg_begin(RegSeqDstReg), RSE = MRI->use_nodbg_end();
          RSUse != RSE; RSUse = Next) {
       Next = std::next(RSUse);
 
@@ -668,10 +668,10 @@ void SIFoldOperands::foldOperand(
     const TargetRegisterClass *DestRC = TRI->getRegClassForReg(*MRI, DestReg);
     if (!DestReg.isPhysical()) {
       if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
-        MachineRegisterInfo::use_iterator NextUse;
+        MachineRegisterInfo::use_nodbg_iterator NextUse;
         SmallVector<FoldCandidate, 4> CopyUses;
-        for (MachineRegisterInfo::use_iterator Use = MRI->use_begin(DestReg),
-               E = MRI->use_end();
+        for (MachineRegisterInfo::use_nodbg_iterator Use = MRI->use_nodbg_begin(DestReg),
+               E = MRI->use_nodbg_end();
              Use != E; Use = NextUse) {
           NextUse = std::next(Use);
           // There's no point trying to fold into an implicit operand.
@@ -1193,9 +1193,9 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     MachineOperand *NonInlineUse = nullptr;
     int NonInlineUseOpNo = -1;
 
-    MachineRegisterInfo::use_iterator NextUse;
-    for (MachineRegisterInfo::use_iterator
-           Use = MRI->use_begin(Dst.getReg()), E = MRI->use_end();
+    MachineRegisterInfo::use_nodbg_iterator NextUse;
+    for (MachineRegisterInfo::use_nodbg_iterator
+           Use = MRI->use_nodbg_begin(Dst.getReg()), E = MRI->use_nodbg_end();
          Use != E; Use = NextUse) {
       NextUse = std::next(Use);
       MachineInstr *UseMI = Use->getParent();
@@ -1217,7 +1217,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
         // instruction, e.g. and x, 0 -> 0. Make sure we re-visit the user
         // again. The same constant folded instruction could also have a second
         // use operand.
-        NextUse = MRI->use_begin(Dst.getReg());
+        NextUse = MRI->use_nodbg_begin(Dst.getReg());
         FoldList.clear();
         continue;
       }
@@ -1256,9 +1256,9 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     }
   } else {
     // Folding register.
-    SmallVector <MachineRegisterInfo::use_iterator, 4> UsesToProcess;
-    for (MachineRegisterInfo::use_iterator
-           Use = MRI->use_begin(Dst.getReg()), E = MRI->use_end();
+    SmallVector <MachineRegisterInfo::use_nodbg_iterator, 4> UsesToProcess;
+    for (MachineRegisterInfo::use_nodbg_iterator
+           Use = MRI->use_nodbg_begin(Dst.getReg()), E = MRI->use_nodbg_end();
          Use != E; ++Use) {
       UsesToProcess.push_back(Use);
     }
