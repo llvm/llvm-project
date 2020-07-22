@@ -20,6 +20,7 @@
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
@@ -485,8 +486,10 @@ public:
   bool GetExpandRegexAliases() const;
 
   bool GetPromptOnQuit() const;
-
   void SetPromptOnQuit(bool enable);
+
+  bool GetSaveSessionOnQuit() const;
+  void SetSaveSessionOnQuit(bool enable);
 
   bool GetEchoCommands() const;
   void SetEchoCommands(bool enable);
@@ -525,6 +528,18 @@ public:
                CommandInterpreterRunOptions *options = nullptr);
 
   bool GetSpaceReplPrompts() const;
+
+  /// Save the current debugger session transcript to a file on disk.
+  /// \param output_file
+  ///     The file path to which the session transcript will be written. Since
+  ///     the argument is optional, an arbitrary temporary file will be create
+  ///     when no argument is passed.
+  /// \param result
+  ///     This is used to pass function output and error messages.
+  /// \return \b true if the session transcript was successfully written to
+  /// disk, \b false otherwise.
+  bool SaveTranscript(CommandReturnObject &result,
+                      llvm::Optional<std::string> output_file = llvm::None);
 
 protected:
   friend class Debugger;
@@ -621,6 +636,8 @@ private:
   llvm::Optional<int> m_quit_exit_code;
   // If the driver is accepts custom exit codes for the 'quit' command.
   bool m_allow_exit_code = false;
+
+  StreamString m_transcript_stream;
 };
 
 } // namespace lldb_private
