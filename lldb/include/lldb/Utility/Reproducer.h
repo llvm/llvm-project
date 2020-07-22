@@ -18,6 +18,7 @@
 
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace lldb_private {
@@ -435,7 +436,7 @@ private:
 /// return the path to the files in the index.
 template <typename T> class MultiLoader {
 public:
-  MultiLoader(std::vector<std::string> files) : m_files(files) {}
+  MultiLoader(std::vector<std::string> files) : m_files(std::move(files)) {}
 
   static std::unique_ptr<MultiLoader> Create(Loader *loader) {
     if (!loader)

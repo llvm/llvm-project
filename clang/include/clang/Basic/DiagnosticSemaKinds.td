@@ -8148,6 +8148,10 @@ def warn_cast_pointer_from_sel : Warning<
 def warn_function_def_in_objc_container : Warning<
   "function definition inside an Objective-C container is deprecated">,
   InGroup<FunctionDefInObjCContainer>;
+def err_typecheck_call_requires_real_fp : Error<
+  "argument type %0 is not a real floating point type">;
+def err_typecheck_call_different_arg_types : Error<
+  "arguments are of different types%diff{ ($ vs $)|}0,1">;
 
 def warn_cast_calling_conv : Warning<
   "cast between incompatible calling conventions '%0' and '%1'; "

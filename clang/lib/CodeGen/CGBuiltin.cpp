@@ -1978,6 +1978,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result = Builder.CreateSelect(CmpResult, NegOp, ArgValue, "abs");
     return RValue::get(Result);
   }
+  case Builtin::BI__builtin_complex: {
+    Value *Real = EmitScalarExpr(E->getArg(0));
+    Value *Imag = EmitScalarExpr(E->getArg(1));
+    return RValue::getComplex({Real, Imag});
+  }
   case Builtin::BI__builtin_conj:
   case Builtin::BI__builtin_conjf:
   case Builtin::BI__builtin_conjl:
