@@ -419,9 +419,6 @@ class Preprocessor {
   /// The number of (LexLevel 0) preprocessor tokens.
   unsigned TokenCount = 0;
 
-  /// Preprocess every token regardless of LexLevel.
-  bool PreprocessToken = false;
-
   /// The maximum number of (LexLevel 0) tokens before issuing a -Wmax-tokens
   /// warning, or zero for unlimited.
   unsigned MaxTokens = 0;
@@ -1040,8 +1037,6 @@ public:
   void setTokenWatcher(llvm::unique_function<void(const clang::Token &)> F) {
     OnToken = std::move(F);
   }
-
-  void setPreprocessToken(bool Preprocess) { PreprocessToken = Preprocess; }
 
   bool isMacroDefined(StringRef Id) {
     return isMacroDefined(&Identifiers.get(Id));

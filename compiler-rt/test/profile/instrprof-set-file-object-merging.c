@@ -34,7 +34,7 @@ int main(int argc, const char *argv[]) {
 // CHECK:   17|      2|
 // CHECK:   18|      2|  FILE *F = fopen(argv[1], "r+b");
 // CHECK:   19|      2|  if (!F) {
-// CHECK:   20|       |    // File might not exist, try opening with truncation
+// CHECK:   20|      1|    // File might not exist, try opening with truncation
 // CHECK:   21|      1|    F = fopen(argv[1], "w+b");
 // CHECK:   22|      1|  }
 // CHECK:   23|      2|  __llvm_profile_set_file_object(F, 1);
