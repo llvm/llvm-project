@@ -174,8 +174,7 @@ bool DataVisualization::NamedSummaryFormats::GetSummaryFormat(
 
 void DataVisualization::NamedSummaryFormats::Add(
     ConstString type, const lldb::TypeSummaryImplSP &entry) {
-  GetFormatManager().GetNamedSummaryContainer().Add(
-      FormatManager::GetValidTypeName(type), entry);
+  GetFormatManager().GetNamedSummaryContainer().Add(type, entry);
 }
 
 bool DataVisualization::NamedSummaryFormats::Delete(ConstString type) {
@@ -187,7 +186,7 @@ void DataVisualization::NamedSummaryFormats::Clear() {
 }
 
 void DataVisualization::NamedSummaryFormats::ForEach(
-    std::function<bool(ConstString, const lldb::TypeSummaryImplSP &)>
+    std::function<bool(const TypeMatcher &, const lldb::TypeSummaryImplSP &)>
         callback) {
   GetFormatManager().GetNamedSummaryContainer().ForEach(callback);
 }

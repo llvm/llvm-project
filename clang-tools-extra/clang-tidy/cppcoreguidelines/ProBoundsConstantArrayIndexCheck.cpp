@@ -65,9 +65,9 @@ void ProBoundsConstantArrayIndexCheck::check(
   if (IndexExpr->isValueDependent())
     return; // We check in the specialization.
 
-  llvm::APSInt Index;
-  if (!IndexExpr->isIntegerConstantExpr(Index, *Result.Context, nullptr,
-                                        /*isEvaluated=*/true)) {
+  Optional<llvm::APSInt> Index =
+      IndexExpr->getIntegerConstantExpr(*Result.Context);
+  if (!Index) {
     SourceRange BaseRange;
     if (const auto *ArraySubscriptE = dyn_cast<ArraySubscriptExpr>(Matched))
       BaseRange = ArraySubscriptE->getBase()->getSourceRange();
@@ -101,9 +101,9 @@ void ProBoundsConstantArrayIndexCheck::check(
   if (!StdArrayDecl)
     return;
 
-  if (Index.isSigned() && Index.isNegative()) {
+  if (Index->isSigned() && Index->isNegative()) {
     diag(Matched->getExprLoc(), "std::array<> index %0 is negative")
-        << Index.toString(10);
+        << Index->toString(10);
     return;
   }
 
@@ -118,11 +118,11 @@ void ProBoundsConstantArrayIndexCheck::check(
 
   // Get uint64_t values, because different bitwidths would lead to an assertion
   // in APInt::uge.
-  if (Index.getZExtValue() >= ArraySize.getZExtValue()) {
+  if (Index->getZExtValue() >= ArraySize.getZExtValue()) {
     diag(Matched->getExprLoc(),
          "std::array<> index %0 is past the end of the array "
          "(which contains %1 elements)")
-        << Index.toString(10) << ArraySize.toString(10, false);
+        << Index->toString(10) << ArraySize.toString(10, false);
   }
 }
 

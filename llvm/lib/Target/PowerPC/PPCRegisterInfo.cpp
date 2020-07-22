@@ -624,21 +624,30 @@ void PPCRegisterInfo::lowerPrepareProbedAlloca(
   bool LP64 = TM.isPPC64();
   DebugLoc dl = MI.getDebugLoc();
   Register FramePointer = MI.getOperand(0).getReg();
-  Register FinalStackPtr = MI.getOperand(1).getReg();
+  const Register ActualNegSizeReg = MI.getOperand(1).getReg();
   bool KillNegSizeReg = MI.getOperand(2).isKill();
   Register NegSizeReg = MI.getOperand(2).getReg();
-  prepareDynamicAlloca(II, NegSizeReg, KillNegSizeReg, FramePointer);
-  if (LP64) {
-    BuildMI(MBB, II, dl, TII.get(PPC::ADD8), FinalStackPtr)
-        .addReg(PPC::X1)
-        .addReg(NegSizeReg, getKillRegState(KillNegSizeReg));
-
-  } else {
-    BuildMI(MBB, II, dl, TII.get(PPC::ADD4), FinalStackPtr)
-        .addReg(PPC::R1)
-        .addReg(NegSizeReg, getKillRegState(KillNegSizeReg));
+  const MCInstrDesc &CopyInst = TII.get(LP64 ? PPC::OR8 : PPC::OR);
+  // RegAllocator might allocate FramePointer and NegSizeReg in the same phyreg.
+  if (FramePointer == NegSizeReg) {
+    assert(KillNegSizeReg && "FramePointer is a def and NegSizeReg is an use, "
+                             "NegSizeReg should be killed");
+    // FramePointer is clobbered earlier than the use of NegSizeReg in
+    // prepareDynamicAlloca, save NegSizeReg in ActualNegSizeReg to avoid
+    // misuse.
+    BuildMI(MBB, II, dl, CopyInst, ActualNegSizeReg)
+        .addReg(NegSizeReg)
+        .addReg(NegSizeReg);
+    NegSizeReg = ActualNegSizeReg;
+    KillNegSizeReg = false;
   }
-
+  prepareDynamicAlloca(II, NegSizeReg, KillNegSizeReg, FramePointer);
+  // NegSizeReg might be updated in prepareDynamicAlloca if MaxAlign >
+  // TargetAlign.
+  if (NegSizeReg != ActualNegSizeReg)
+    BuildMI(MBB, II, dl, CopyInst, ActualNegSizeReg)
+        .addReg(NegSizeReg)
+        .addReg(NegSizeReg);
   MBB.erase(II);
 }
 
@@ -1084,7 +1093,9 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   if (FPSI && FrameIndex == FPSI &&
       (OpC == PPC::PREPARE_PROBED_ALLOCA_64 ||
-       OpC == PPC::PREPARE_PROBED_ALLOCA_32)) {
+       OpC == PPC::PREPARE_PROBED_ALLOCA_32 ||
+       OpC == PPC::PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_64 ||
+       OpC == PPC::PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_32)) {
     lowerPrepareProbedAlloca(II);
     return;
   }
