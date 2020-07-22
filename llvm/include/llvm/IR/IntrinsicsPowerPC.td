@@ -1069,7 +1069,7 @@ def int_ppc_vsx_xxinsertw :
                             [IntrNoMem]>;
 def int_ppc_vsx_xvtlsbb :
       PowerPC_VSX_Intrinsic<"xvtlsbb", [llvm_i32_ty],
-                            [llvm_v16i8_ty, llvm_i1_ty], [IntrNoMem]>;
+                            [llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem]>;
 def int_ppc_vsx_xxeval :
       PowerPC_VSX_Intrinsic<"xxeval", [llvm_v2i64_ty],
                            [llvm_v2i64_ty, llvm_v2i64_ty,

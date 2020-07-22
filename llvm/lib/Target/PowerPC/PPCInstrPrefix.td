@@ -1085,7 +1085,7 @@ let Predicates = [IsISA3_1] in {
             (v4i32 (COPY_TO_REGCLASS (XXGENPCVWM $VRB, imm:$IMM), VRRC))>;
   def : Pat<(v2i64 (int_ppc_vsx_xxgenpcvdm v2i64:$VRB, imm:$IMM)),
             (v2i64 (COPY_TO_REGCLASS (XXGENPCVDM $VRB, imm:$IMM), VRRC))>;
-  def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, -1)),
+  def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, 1)),
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_lt)>;
   def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, 0)),
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_eq)>;
