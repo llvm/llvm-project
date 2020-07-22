@@ -2,25 +2,33 @@
 ; -gdwarf-5 -gsplit-dwarf -fdebug-macro is specified.
 
 ; RUN: %llc_dwarf -dwarf-version=5 -O0 -filetype=obj \
-; RUN: -split-dwarf-file=foo.dwo < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: -split-dwarf-file=foo.dwo < %s | llvm-dwarfdump -debug-macro -debug-info -debug-line -v - | FileCheck %s
 
 ; CHECK-LABEL:  .debug_info contents:
 ; CHECK: DW_AT_macros [DW_FORM_sec_offset] (0x00000000)
 
 ; CHECK-LABEL:  .debug_macro.dwo contents:
 ; CHECK-NEXT: 0x00000000:
-; CHECK-NEXT: macro header: version = 0x0005, flags = 0x02, format = DWARF32
+; CHECK-NEXT: macro header: version = 0x0005, flags = 0x02, format = DWARF32, debug_line_offset = 0x00000000
 ; CHECK-NEXT: DW_MACRO_start_file - lineno: 0 filenum: 0
-; FIXME: This should be filenum 1 (and 2 below) if this was using debug_loc.dwo
-;        (rather than currently incorrectly using debug_loc)
-; CHECK-NEXT:   DW_MACRO_start_file - lineno: 1 filenum: 2
+; CHECK-NEXT:   DW_MACRO_start_file - lineno: 1 filenum: 1
 ; CHECK-NEXT:     DW_MACRO_define_strx - lineno: 1 macro: FOO 5
 ; CHECK-NEXT:   DW_MACRO_end_file
-; CHECK-NEXT:   DW_MACRO_start_file - lineno: 2 filenum: 3
+; CHECK-NEXT:   DW_MACRO_start_file - lineno: 2 filenum: 2
 ; CHECK-NEXT:     DW_MACRO_undef_strx - lineno: 14 macro: YEA
 ; CHECK-NEXT:   DW_MACRO_end_file
 ; CHECK-NEXT:   DW_MACRO_undef_strx - lineno: 14 macro: YEA
 ; CHECK-NEXT: DW_MACRO_end_file
+
+; CHECK-LABEL: .debug_line.dwo contents:
+; CHECK: file_names[  0]:
+; CHECK:            name: "test.c"
+; CHECK: file_names[  1]:
+; CHECK:            name: "foo.h"
+; CHECK: file_names[  2]:
+; CHECK:            name: "bar.h"
+
+
 
 ; ModuleID = 'test.c'
 source_filename = "test.c"
