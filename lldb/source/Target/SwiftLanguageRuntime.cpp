@@ -410,6 +410,7 @@ SwiftLanguageRuntimeImpl::SwiftLanguageRuntimeImpl(Process &process)
   SetupSwiftError();
   Target &target = m_process.GetTarget();
   m_modules_to_add.Append(target.GetImages());
+  RegisterSwiftRuntimeFailureRecognizer(m_process);
 }
 
 LanguageRuntime *
@@ -1999,7 +2000,6 @@ void SwiftLanguageRuntime::Initialize() {
         return CommandObjectSP(new CommandObjectMultiwordSwift(interpreter));
       },
       SwiftLanguageRuntimeImpl::GetBreakpointExceptionPrecondition);
-  RegisterSwiftRuntimeFailureRecognizer();
 }
 
 void SwiftLanguageRuntime::Terminate() {
