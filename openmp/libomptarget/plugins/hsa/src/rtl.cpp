@@ -29,8 +29,13 @@
 // Header from ATMI interface
 #include "atmi_interop_hsa.h"
 #include "atmi_runtime.h"
-// Header from hostcall
-#include "amd_hostcall.h"
+
+// hostrpc interface, FIXME: consider moving to its own include
+extern "C" unsigned long hostrpc_assign_buffer(hsa_agent_t agent,
+                                               hsa_queue_t *this_Q,
+                                               uint32_t device_id);
+extern "C" hsa_status_t hostrpc_init();
+extern "C" hsa_status_t hostrpc_terminate();
 
 #include "internal.h"
 
@@ -573,7 +578,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
   // this is per device id init
   DP("Initialize the device id: %d\n", device_id);
 
-  hsa_agent_t &agent = DeviceInfo.HSAAgents[device_id];
+  hsa_agent_t agent = DeviceInfo.HSAAgents[device_id];
 
   // Get number of Compute Unit
   uint32_t compute_units = 0;
@@ -823,8 +828,8 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
     check("Module registering", err);
     if (err != ATMI_STATUS_SUCCESS) {
       char GPUName[64] = "--unknown gpu--";
-      hsa_agent_t &agent = DeviceInfo.HSAAgents[device_id];
-      (void) hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME,
+      hsa_agent_t agent = DeviceInfo.HSAAgents[device_id];
+      (void)hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME,
                                (void *)GPUName);
       fprintf(stderr,
               "Possible gpu arch mismatch: %s, please check"
@@ -1629,8 +1634,8 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
       // assign a hostcall buffer for the selected Q
       if (g_atmi_hostcall_required) {
         {
-          impl_args->hostcall_ptr =
-              atmi_hostcall_assign_buffer(queue, device_id);
+          impl_args->hostcall_ptr = hostrpc_assign_buffer(
+              DeviceInfo.HSAAgents[device_id], queue, device_id);
         }
       }
 

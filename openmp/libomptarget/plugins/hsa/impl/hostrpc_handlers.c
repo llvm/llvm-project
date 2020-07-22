@@ -32,6 +32,7 @@ SOFTWARE.
 #include "atmi_runtime.h"
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
