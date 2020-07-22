@@ -19,7 +19,7 @@ using namespace llvm::pdb;
 NativeFunctionSymbol::NativeFunctionSymbol(NativeSession &Session,
                                            SymIndexId Id,
                                            const codeview::ProcSym &Sym)
-    : NativeRawSymbol(Session, PDB_SymType::Data, Id), Sym(Sym) {}
+    : NativeRawSymbol(Session, PDB_SymType::Function, Id), Sym(Sym) {}
 
 NativeFunctionSymbol::~NativeFunctionSymbol() {}
 
@@ -40,10 +40,6 @@ uint32_t NativeFunctionSymbol::getAddressOffset() const {
 uint32_t NativeFunctionSymbol::getAddressSection() const { return Sym.Segment; }
 std::string NativeFunctionSymbol::getName() const {
   return std::string(Sym.Name);
-}
-
-PDB_SymType NativeFunctionSymbol::getSymTag() const {
-  return PDB_SymType::Function;
 }
 
 uint64_t NativeFunctionSymbol::getLength() const { return Sym.CodeSize; }
