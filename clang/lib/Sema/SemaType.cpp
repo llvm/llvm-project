@@ -7741,15 +7741,17 @@ static bool isPermittedNeonBaseType(QualType &Ty,
 static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
                                            llvm::APSInt &Result) {
   const auto *AttrExpr = Attr.getArgAsExpr(0);
-  Optional<llvm::APSInt> ICE = AttrExpr->getIntegerConstantExpr(S.Context);
-  if (AttrExpr->isTypeDependent() || AttrExpr->isValueDependent() || !ICE) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
-        << Attr << AANT_ArgumentIntegerConstant << AttrExpr->getSourceRange();
-    Attr.setInvalid();
-    return false;
+  if (!AttrExpr->isTypeDependent() && !AttrExpr->isValueDependent()) {
+    if (Optional<llvm::APSInt> Res =
+            AttrExpr->getIntegerConstantExpr(S.Context)) {
+      Result = *Res;
+      return true;
+    }
   }
-  Result = *ICE;
-  return true;
+  S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
+      << Attr << AANT_ArgumentIntegerConstant << AttrExpr->getSourceRange();
+  Attr.setInvalid();
+  return false;
 }
 
 /// HandleNeonVectorTypeAttr - The "neon_vector_type" and
