@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name macroscopes.cpp %s | FileCheck %s
-
+// RUN: %strip_comments > %t.stripped.cpp
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name macroscopes.cpp %t.stripped.cpp | FileCheck %s
 #define starts_a_scope for (int i = 0; i < 2; ++i) {
 
 #define ends_a_scope \
