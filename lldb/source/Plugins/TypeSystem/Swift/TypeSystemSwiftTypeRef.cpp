@@ -1491,14 +1491,15 @@ TypeSystemSwiftTypeRef::GetTypeClass(opaque_compiler_type_t type) {
 // Creating related types
 CompilerType
 TypeSystemSwiftTypeRef::GetArrayElementType(opaque_compiler_type_t type,
-                                            uint64_t *stride) {
+                                            uint64_t *stride,
+                                            ExecutionContextScope *exe_scope) {
   auto impl = [&]() {
     CompilerType element_type;
     IsArrayType(type, &element_type, nullptr, nullptr);
     return element_type;
   };
   VALIDATE_AND_RETURN(impl, GetArrayElementType, type,
-                      (ReconstructType(type), nullptr));
+                      (ReconstructType(type), nullptr, exe_scope));
 }
 CompilerType
 TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {

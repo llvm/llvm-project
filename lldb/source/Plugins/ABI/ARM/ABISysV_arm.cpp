@@ -1718,7 +1718,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
       if (homogeneous_count > 0 && homogeneous_count <= 4) {
         llvm::Optional<uint64_t> base_byte_size =
-            base_type.GetByteSize(nullptr);
+            base_type.GetByteSize(&thread);
         if (base_type.IsVectorType(nullptr, nullptr)) {
           if (base_byte_size &&
               (*base_byte_size == 8 || *base_byte_size == 16)) {
@@ -1747,7 +1747,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
             if (base_type.IsFloatingPointType(float_count, is_complex)) {
               llvm::Optional<uint64_t> base_byte_size =
-                  base_type.GetByteSize(nullptr);
+                  base_type.GetByteSize(&thread);
               if (float_count == 2 && is_complex) {
                 if (index != 0 && base_byte_size &&
                     vfp_byte_size != *base_byte_size)

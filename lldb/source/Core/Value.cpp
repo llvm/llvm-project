@@ -603,8 +603,9 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
       Status error(GetValueAsData(exe_ctx, data, nullptr));
       if (error.Success()) {
         Scalar scalar;
-        if (compiler_type.GetValueAsScalar(data, 0, data.GetByteSize(),
-                                           scalar)) {
+        if (compiler_type.GetValueAsScalar(
+                data, 0, data.GetByteSize(), scalar,
+                exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)) {
           m_value = scalar;
           m_value_type = eValueTypeScalar;
         } else {
