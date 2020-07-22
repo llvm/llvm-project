@@ -44,6 +44,12 @@
 #define MAP_NORESERVE 0
 #endif
 
+#if SANITIZER_SOLARIS
+// Illumos' declaration of madvie cannot be made visible if _XOPEN_SOURCE
+// is defined as g++ does on Solaris.
+extern "C" int madvise(caddr_t, size_t, int);
+#endif
+
 typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
 
 namespace __sanitizer {
