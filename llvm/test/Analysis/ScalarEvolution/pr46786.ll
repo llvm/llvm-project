@@ -34,4 +34,100 @@ bb:
   ret i8* %i9
 }
 
+define i8* @test_01(i8* %p) {
+; CHECK-LABEL: 'test_01'
+; CHECK-NEXT:  Classifying expressions for: @test_01
+; CHECK-NEXT:    %p1 = getelementptr i8, i8* %p, i32 2
+; CHECK-NEXT:    --> (2 + %p) U: full-set S: full-set
+; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
+; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
+; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
+; CHECK-NEXT:    --> ((-1 * %p) + ((1 + %p) umax (2 + %p))) U: full-set S: full-set
+; CHECK-NEXT:    %neg_index = sub i32 0, %index
+; CHECK-NEXT:    --> ((-1 * ((1 + %p) umax (2 + %p))) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
+; CHECK-NEXT:    --> ((2 * %p) + (-1 * ((1 + %p) umax (2 + %p)))) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @test_01
+;
+  %p1 = getelementptr i8, i8* %p, i32 2
+  %p2 = getelementptr i8, i8* %p, i32 1
+  %cmp = icmp ugt i8* %p1, %p2
+  %index = select i1 %cmp, i32 2, i32 1
+  %neg_index = sub i32 0, %index
+  %gep = getelementptr i8, i8* %p, i32 %neg_index
+  ret i8* %gep
+}
+
+define i8* @test_02(i8* %p) {
+; CHECK-LABEL: 'test_02'
+; CHECK-NEXT:  Classifying expressions for: @test_02
+; CHECK-NEXT:    %p1 = getelementptr i8, i8* %p, i32 2
+; CHECK-NEXT:    --> (2 + %p) U: full-set S: full-set
+; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
+; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
+; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
+; CHECK-NEXT:    --> ((-1 * %p) + ((1 + %p) smax (2 + %p))) U: full-set S: full-set
+; CHECK-NEXT:    %neg_index = sub i32 0, %index
+; CHECK-NEXT:    --> ((-1 * ((1 + %p) smax (2 + %p))) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
+; CHECK-NEXT:    --> ((2 * %p) + (-1 * ((1 + %p) smax (2 + %p)))) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @test_02
+;
+  %p1 = getelementptr i8, i8* %p, i32 2
+  %p2 = getelementptr i8, i8* %p, i32 1
+  %cmp = icmp sgt i8* %p1, %p2
+  %index = select i1 %cmp, i32 2, i32 1
+  %neg_index = sub i32 0, %index
+  %gep = getelementptr i8, i8* %p, i32 %neg_index
+  ret i8* %gep
+}
+
+define i8* @test_03(i8* %p) {
+; CHECK-LABEL: 'test_03'
+; CHECK-NEXT:  Classifying expressions for: @test_03
+; CHECK-NEXT:    %p1 = getelementptr i8, i8* %p, i32 2
+; CHECK-NEXT:    --> (2 + %p) U: full-set S: full-set
+; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
+; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
+; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
+; CHECK-NEXT:    --> ((-1 * %p) + ((1 + %p) umin (2 + %p))) U: full-set S: full-set
+; CHECK-NEXT:    %neg_index = sub i32 0, %index
+; CHECK-NEXT:    --> ((-1 * ((1 + %p) umin (2 + %p))) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
+; CHECK-NEXT:    --> ((2 * %p) + (-1 * ((1 + %p) umin (2 + %p)))) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @test_03
+;
+  %p1 = getelementptr i8, i8* %p, i32 2
+  %p2 = getelementptr i8, i8* %p, i32 1
+  %cmp = icmp ult i8* %p1, %p2
+  %index = select i1 %cmp, i32 2, i32 1
+  %neg_index = sub i32 0, %index
+  %gep = getelementptr i8, i8* %p, i32 %neg_index
+  ret i8* %gep
+}
+
+define i8* @test_04(i8* %p) {
+; CHECK-LABEL: 'test_04'
+; CHECK-NEXT:  Classifying expressions for: @test_04
+; CHECK-NEXT:    %p1 = getelementptr i8, i8* %p, i32 2
+; CHECK-NEXT:    --> (2 + %p) U: full-set S: full-set
+; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
+; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
+; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
+; CHECK-NEXT:    --> ((-1 * %p) + ((1 + %p) smin (2 + %p))) U: full-set S: full-set
+; CHECK-NEXT:    %neg_index = sub i32 0, %index
+; CHECK-NEXT:    --> ((-1 * ((1 + %p) smin (2 + %p))) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
+; CHECK-NEXT:    --> ((2 * %p) + (-1 * ((1 + %p) smin (2 + %p)))) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @test_04
+;
+  %p1 = getelementptr i8, i8* %p, i32 2
+  %p2 = getelementptr i8, i8* %p, i32 1
+  %cmp = icmp slt i8* %p1, %p2
+  %index = select i1 %cmp, i32 2, i32 1
+  %neg_index = sub i32 0, %index
+  %gep = getelementptr i8, i8* %p, i32 %neg_index
+  ret i8* %gep
+}
+
 attributes #0 = { nofree }
