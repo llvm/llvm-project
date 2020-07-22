@@ -112,7 +112,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
     // Handle a vector->scalar integer/fp cast.
     if (isa<IntegerType>(DestTy) || DestTy->isFloatingPointTy()) {
-      unsigned NumSrcElts = VTy->getNumElements();
+      unsigned NumSrcElts = cast<FixedVectorType>(VTy)->getNumElements();
       Type *SrcEltTy = VTy->getElementType();
 
       // If the vector is a vector of floating point, convert it to vector of int
@@ -155,8 +155,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     return ConstantExpr::getBitCast(C, DestTy);
 
   // If the element types match, IR can fold it.
-  unsigned NumDstElt = DestVTy->getNumElements();
-  unsigned NumSrcElt = cast<VectorType>(C->getType())->getNumElements();
+  unsigned NumDstElt = cast<FixedVectorType>(DestVTy)->getNumElements();
+  unsigned NumSrcElt = cast<FixedVectorType>(C->getType())->getNumElements();
   if (NumDstElt == NumSrcElt)
     return ConstantExpr::getBitCast(C, DestTy);
 
@@ -490,8 +490,8 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
       NumElts = AT->getNumElements();
       EltTy = AT->getElementType();
     } else {
-      NumElts = cast<VectorType>(C->getType())->getNumElements();
-      EltTy = cast<VectorType>(C->getType())->getElementType();
+      NumElts = cast<FixedVectorType>(C->getType())->getNumElements();
+      EltTy = cast<FixedVectorType>(C->getType())->getElementType();
     }
     uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     uint64_t Index = ByteOffset / EltSize;
