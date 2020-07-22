@@ -36,6 +36,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add warning flags.
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+  add_definitions("-Wno-suggest-override")
+endif()
 
 add_library(
     acxxel
