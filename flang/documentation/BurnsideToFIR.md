@@ -428,7 +428,7 @@ Fortran into FIR in a semantics preserving way.
     // create a temporary to hold E(V)
     %v = ... : !fir.array<4:i32>
     %8 = fir.alloca !fir.array<4:f32> : !fir.ref<!fir.array<4:f32>>
-    fir.doloop %i = %c1 to %c4 unordered {
+    fir.do_loop %i = %c1 to %c4 unordered {
       %9 = fir.extract_value %v, %i : (!fir.array<4:i32>, index) -> i32
       %10 = fir.extract_value %e, %9 : (!fir.array<?:f32>, i32) -> f32
       %11 = fir.coordinate_of %8, %i : (!fir.ref<!fir.array<4:f32>>, index) -> !fir.ref<f32>
@@ -615,7 +615,7 @@ One must also specify to LLVM that these operations will not be reassociated.
 ```mlir
     %arr = ... : !fir.array<?:!T>
     %threshold = ... : !fir.array<?:!T>
-    fir.doloop %i = %c1 to %size {
+    fir.do_loop %i = %c1 to %size {
       %arr_i = fir.extract_value %arr, %i : ... -> !T
       %threshold_i = fir.extract_value %threshold, %i : ... -> !T
       %1 = cmp "lt" %arr_i, %threshold_i : ... -> i1
@@ -639,7 +639,7 @@ One must also specify to LLVM that these operations will not be reassociated.
 ```
 ----
 ```mlir
-    fir.doloop %i = %c1 to %c100 unordered {
+    fir.do_loop %i = %c1 to %c100 unordered {
       %1 = fir.extract_value %b, %i : (!fir.array<?:f32>, index) -> f32
       %2 = fir.extract_value %c, %i : (!fir.array<?:f32>, index) -> f32
       %3 = divf %1, %2 : f32
@@ -686,8 +686,8 @@ One must also specify to LLVM that these operations will not be reassociated.
     %1 = fir.gendims %c1, %c1000, %c100 : !fir.dims<1>
     %2 = fir.gendims %c1, %c10, %c1 : !fir.dims<1>
 
-    fir.doloop %i = %c1 to %m {
-      fir.doloop %i = %c1 to %n {
+    fir.do_loop %i = %c1 to %m {
+      fir.do_loop %i = %c1 to %n {
         %13 = fir.coordinate_of %a, %i, %j : !fir.ref<!fir.array<?:f32>>
         %14 = fir.embox %13, %1 : (!fir.ref<!fir.array<?:f32>>, !fir.dims<1>) -> !fir.box<!fir.array<?:f32>>
         %15 = fir.coordinate_of %b, %c1, %i, %j : !fir.ref<f32>

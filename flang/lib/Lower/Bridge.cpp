@@ -813,7 +813,7 @@ private:
     assert(info.stepValue && "step value must be set");
     info.loopVariable = createTemp(loc, *info.loopVariableSym);
 
-    // Structured loop - generate fir.doloop.
+    // Structured loop - generate fir.do_loop.
     if (info.isStructured()) {
       // Perform the default initial assignment of the DO variable.
       info.insertionPoint = builder->saveInsertionPoint();
@@ -864,7 +864,7 @@ private:
   void genFIRIncrementLoopEnd(IncrementLoopInfo &info) {
     auto loc = toLocation();
     if (info.isStructured()) {
-      // End fir.doloop.
+      // End fir.do_loop.
       mlir::Value inc = builder->create<mlir::AddIOp>(
           loc, info.doLoop.getInductionVar(), info.doLoop.step());
       builder->create<fir::ResultOp>(loc, inc);
