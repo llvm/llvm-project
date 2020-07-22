@@ -2463,8 +2463,8 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
                                                VectorType::GenericVector);
 
-  llvm::APSInt VecSize(32);
-  if (!SizeExpr->isIntegerConstantExpr(VecSize, Context)) {
+  Optional<llvm::APSInt> VecSize = SizeExpr->getIntegerConstantExpr(Context);
+  if (!VecSize) {
     Diag(AttrLoc, diag::err_attribute_argument_type)
         << "vector_size" << AANT_ArgumentIntegerConstant
         << SizeExpr->getSourceRange();
@@ -2476,13 +2476,13 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                                VectorType::GenericVector);
 
   // vecSize is specified in bytes - convert to bits.
-  if (!VecSize.isIntN(61)) {
+  if (!VecSize->isIntN(61)) {
     // Bit size will overflow uint64.
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
   }
-  uint64_t VectorSizeBits = VecSize.getZExtValue() * 8;
+  uint64_t VectorSizeBits = VecSize->getZExtValue() * 8;
   unsigned TypeSize = static_cast<unsigned>(Context.getTypeSize(CurType));
 
   if (VectorSizeBits == 0) {
@@ -2527,22 +2527,22 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   }
 
   if (!ArraySize->isTypeDependent() && !ArraySize->isValueDependent()) {
-    llvm::APSInt vecSize(32);
-    if (!ArraySize->isIntegerConstantExpr(vecSize, Context)) {
+    Optional<llvm::APSInt> vecSize = ArraySize->getIntegerConstantExpr(Context);
+    if (!vecSize) {
       Diag(AttrLoc, diag::err_attribute_argument_type)
         << "ext_vector_type" << AANT_ArgumentIntegerConstant
         << ArraySize->getSourceRange();
       return QualType();
     }
 
-    if (!vecSize.isIntN(32)) {
+    if (!vecSize->isIntN(32)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
           << ArraySize->getSourceRange() << "vector";
       return QualType();
     }
     // Unlike gcc's vector_size attribute, the size is specified as the
     // number of elements, not the number of bytes.
-    unsigned vectorSize = static_cast<unsigned>(vecSize.getZExtValue());
+    unsigned vectorSize = static_cast<unsigned>(vecSize->getZExtValue());
 
     if (vectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
@@ -2573,18 +2573,15 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
     return Context.getDependentSizedMatrixType(ElementTy, NumRows, NumCols,
                                                AttrLoc);
 
-  // Both row and column values can only be 20 bit wide currently.
-  llvm::APSInt ValueRows(32), ValueColumns(32);
-
-  bool const RowsIsInteger = NumRows->isIntegerConstantExpr(ValueRows, Context);
-  bool const ColumnsIsInteger =
-      NumCols->isIntegerConstantExpr(ValueColumns, Context);
+  Optional<llvm::APSInt> ValueRows = NumRows->getIntegerConstantExpr(Context);
+  Optional<llvm::APSInt> ValueColumns =
+      NumCols->getIntegerConstantExpr(Context);
 
   auto const RowRange = NumRows->getSourceRange();
   auto const ColRange = NumCols->getSourceRange();
 
   // Both are row and column expressions are invalid.
-  if (!RowsIsInteger && !ColumnsIsInteger) {
+  if (!ValueRows && !ValueColumns) {
     Diag(AttrLoc, diag::err_attribute_argument_type)
         << "matrix_type" << AANT_ArgumentIntegerConstant << RowRange
         << ColRange;
@@ -2592,22 +2589,22 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
   }
 
   // Only the row expression is invalid.
-  if (!RowsIsInteger) {
+  if (!ValueRows) {
     Diag(AttrLoc, diag::err_attribute_argument_type)
         << "matrix_type" << AANT_ArgumentIntegerConstant << RowRange;
     return QualType();
   }
 
   // Only the column expression is invalid.
-  if (!ColumnsIsInteger) {
+  if (!ValueColumns) {
     Diag(AttrLoc, diag::err_attribute_argument_type)
         << "matrix_type" << AANT_ArgumentIntegerConstant << ColRange;
     return QualType();
   }
 
   // Check the matrix dimensions.
-  unsigned MatrixRows = static_cast<unsigned>(ValueRows.getZExtValue());
-  unsigned MatrixColumns = static_cast<unsigned>(ValueColumns.getZExtValue());
+  unsigned MatrixRows = static_cast<unsigned>(ValueRows->getZExtValue());
+  unsigned MatrixColumns = static_cast<unsigned>(ValueColumns->getZExtValue());
   if (MatrixRows == 0 && MatrixColumns == 0) {
     Diag(AttrLoc, diag::err_attribute_zero_size)
         << "matrix" << RowRange << ColRange;
@@ -6260,13 +6257,15 @@ static bool BuildAddressSpaceIndex(Sema &S, LangAS &ASIdx,
                                    const Expr *AddrSpace,
                                    SourceLocation AttrLoc) {
   if (!AddrSpace->isValueDependent()) {
-    llvm::APSInt addrSpace(32);
-    if (!AddrSpace->isIntegerConstantExpr(addrSpace, S.Context)) {
+    Optional<llvm::APSInt> OptAddrSpace =
+        AddrSpace->getIntegerConstantExpr(S.Context);
+    if (!OptAddrSpace) {
       S.Diag(AttrLoc, diag::err_attribute_argument_type)
           << "'address_space'" << AANT_ArgumentIntegerConstant
           << AddrSpace->getSourceRange();
       return false;
     }
+    llvm::APSInt &addrSpace = *OptAddrSpace;
 
     // Bounds checking.
     if (addrSpace.isSigned()) {
@@ -7742,13 +7741,14 @@ static bool isPermittedNeonBaseType(QualType &Ty,
 static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
                                            llvm::APSInt &Result) {
   const auto *AttrExpr = Attr.getArgAsExpr(0);
-  if (AttrExpr->isTypeDependent() || AttrExpr->isValueDependent() ||
-      !AttrExpr->isIntegerConstantExpr(Result, S.Context)) {
+  Optional<llvm::APSInt> ICE = AttrExpr->getIntegerConstantExpr(S.Context);
+  if (AttrExpr->isTypeDependent() || AttrExpr->isValueDependent() || !ICE) {
     S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
         << Attr << AANT_ArgumentIntegerConstant << AttrExpr->getSourceRange();
     Attr.setInvalid();
     return false;
   }
+  Result = *ICE;
   return true;
 }
 
@@ -7828,8 +7828,8 @@ static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
   auto checkArg = [&](Expr *arg, unsigned argIndex) -> unsigned {
     if (!arg) return 0;
 
-    llvm::APSInt result;
-    if (!arg->isIntegerConstantExpr(result, S.Context)) {
+    Optional<llvm::APSInt> result = arg->getIntegerConstantExpr(S.Context);
+    if (!result) {
       isInvalid = true;
       S.Diag(arg->getExprLoc(), diag::err_ptrauth_qualifier_arg_not_ice);
       return 0;
@@ -7837,10 +7837,10 @@ static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
 
     unsigned max =
       (argIndex == 1 ? 1 : PointerAuthQualifier::MaxDiscriminator);
-    if (result < 0 || result > max) {
+    if (*result < 0 || *result > max) {
       llvm::SmallString<32> value; {
         llvm::raw_svector_ostream str(value);
-        str << result;
+        str << *result;
       }
 
       if (argIndex == 1) {
@@ -7854,7 +7854,7 @@ static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
       }
       isInvalid = true;
     }
-    return result.getZExtValue();
+    return result->getZExtValue();
   };
   bool isAddressDiscriminated = checkArg(isAddressDiscriminatedArg, 1);
   unsigned extraDiscriminator = checkArg(extraDiscriminatorArg, 2);
