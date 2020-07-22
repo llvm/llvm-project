@@ -20,8 +20,7 @@ using namespace lldb_private;
 
 // CommandObjectScript
 
-CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter,
-                                         ScriptLanguage script_lang)
+CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter)
     : CommandObjectRaw(
           interpreter, "script",
           "Invoke the script interpreter with provided code and display any "
