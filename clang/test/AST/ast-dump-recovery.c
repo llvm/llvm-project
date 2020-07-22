@@ -39,3 +39,14 @@ void test1() {
   // CHECK-NEXT:  `-DeclRefExpr {{.*}} 'a' 'const int'
   static int foo = a++; // verify no crash on local static var decl.
 }
+
+void test2() {
+  int* ptr;
+  // FIXME: the top-level expr should be a binary operator.
+  // CHECK:      ImplicitCastExpr {{.*}} contains-errors <LValueToRValue>
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors lvalue
+  // CHECK-NEXT:   |-DeclRefExpr {{.*}} 'ptr' 'int *'
+  // CHECK-NEXT:   `-RecoveryExpr {{.*}}
+  // CHECK-NEXT:     `-DeclRefExpr {{.*}} 'some_func'
+  ptr = some_func(); // should not crash
+}
