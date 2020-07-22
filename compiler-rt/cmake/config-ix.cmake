@@ -106,7 +106,6 @@ check_cxx_compiler_flag("-Werror -Wnon-virtual-dtor"   COMPILER_RT_HAS_WNON_VIRT
 check_cxx_compiler_flag("-Werror -Wvariadic-macros"    COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG)
 check_cxx_compiler_flag("-Werror -Wunused-parameter"   COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG)
 check_cxx_compiler_flag("-Werror -Wcovered-switch-default" COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG)
-check_cxx_compiler_flag("-Werror -Wsuggest-override"   COMPILER_RT_HAS_WSUGGEST_OVERRIDE_FLAG)
 check_cxx_compiler_flag(-Wno-pedantic COMPILER_RT_HAS_WNO_PEDANTIC)
 
 check_cxx_compiler_flag(/W4 COMPILER_RT_HAS_W4_FLAG)
