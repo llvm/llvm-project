@@ -50,13 +50,13 @@ class TestSwiftObjCMainConflictingDylibsBridgingHeader(TestBase):
 
         self.expect("fr var bar", "expected result", substrs=["42"])
         self.expect("p bar", "expected result", substrs=["$R0", "42"])
-        self.expect("p $R0", "expected result", substrs=["$R2", "42"])
-        self.expect("p $R2", "expected result", substrs=["$R4", "42"])
+        self.expect("p $R0", "expected result", substrs=["$R1", "42"])
+        self.expect("p $R1", "expected result", substrs=["$R2", "42"])
         
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('Foo.swift'))
         process.Continue()
         self.expect("fr var foo", "expected result", substrs=["23"])
-        self.expect("p foo", "expected result", substrs=["23"])
-        self.expect("p $R6", "expected result", substrs=["23"])
-        self.expect("p $R8", "expected result", substrs=["23"])
+        self.expect("p foo", "expected result", substrs=["$R3", "23"])
+        self.expect("p $R3", "expected result", substrs=["23"])
+        self.expect("p $R4", "expected result", substrs=["23"])

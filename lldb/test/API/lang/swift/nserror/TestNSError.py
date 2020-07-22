@@ -48,6 +48,7 @@ class SwiftNSErrorTest(TestBase):
 
         self.expect(
             "frame variable -d run --ptr-depth=2",
+            ordered=False,
             substrs=[
               '0 = " "',
               '0 = "x+y"',

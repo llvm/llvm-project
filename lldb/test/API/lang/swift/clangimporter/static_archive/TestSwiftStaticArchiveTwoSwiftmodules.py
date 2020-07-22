@@ -27,6 +27,7 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
+    @expectedFailureAll(bugnumber='rdar://65960456')
     @swiftTest
     def test(self):
         self.build()
@@ -42,8 +43,8 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
             'break here', lldb.SBFileSpec('Foo.swift'))
         bar_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('Bar.swift'))
-        self.assertTrue(bar_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
         self.assertTrue(foo_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
+        self.assertTrue(bar_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch.
         process = target.LaunchSimple(None, None, os.getcwd())

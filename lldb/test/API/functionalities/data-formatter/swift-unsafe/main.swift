@@ -132,14 +132,14 @@ func main() {
     let alias = rawbuf as ByteBuffer
     //% self.expect("frame variable -d run-target alias",
     //%            patterns=[
-    //%            '\((.*)\.ByteBuffer\) alias = 256 values \(0[xX][0-9a-fA-F]+\) {',
-    //%            '\[([0-9]+)\] = (\\1)'
+    //%            '\(ByteBuffer\) alias = 256 values \(0[xX][0-9a-fA-F]+\) {',
+    //%            '\[([0-9]+)\] = (\\1)',
     //%            ])
     typealias ByteBufferAlias = ByteBuffer
     let secondAlias = alias as ByteBufferAlias
     //% self.expect("frame variable -d run-target secondAlias",
     //%            patterns=[
-    //%            '\((.*)\.ByteBufferAlias\) secondAlias = 256 values \(0[xX][0-9a-fA-F]+\) {',
+    //%            '\(ByteBufferAlias\) secondAlias = 256 values \(0[xX][0-9a-fA-F]+\) {',
     //%            '\[([0-9]+)\] = (\\1)'
     //%            ])
   }

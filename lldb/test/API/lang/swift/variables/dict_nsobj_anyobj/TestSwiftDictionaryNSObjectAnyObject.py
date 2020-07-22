@@ -40,6 +40,7 @@ class TestDictionaryNSObjectAnyObject(TestBase):
         if self.getArchitecture() in ['arm', 'armv7', 'armv7k', 'i386']:
             self.expect(
                 "frame variable -d run -- d2",
+                ordered=False,
                 substrs=[
                     'Int32(1)',
                     'Int32(2)',
@@ -48,6 +49,7 @@ class TestDictionaryNSObjectAnyObject(TestBase):
         else:
             self.expect(
                 "frame variable -d run -- d2",
+                ordered=False,
                 substrs=[
                     'Int64(1)',
                     'Int64(2)',
