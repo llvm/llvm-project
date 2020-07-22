@@ -23,9 +23,8 @@ void zeroImpliesEquality(int a, int b) {
     return;
   }
   clang_analyzer_eval((a - b) == 0); // expected-warning{{FALSE}}
-  // FIXME: we should track disequality information as well
-  clang_analyzer_eval(b == a); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(b != a); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(b == a);       // expected-warning{{FALSE}}
+  clang_analyzer_eval(b != a);       // expected-warning{{TRUE}}
 }
 
 void zeroImpliesReversedEqual(int a, int b) {
@@ -36,9 +35,8 @@ void zeroImpliesReversedEqual(int a, int b) {
     return;
   }
   clang_analyzer_eval((b - a) == 0); // expected-warning{{FALSE}}
-  // FIXME: we should track disequality information as well
-  clang_analyzer_eval(b == a); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(b != a); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(b == a);       // expected-warning{{FALSE}}
+  clang_analyzer_eval(b != a);       // expected-warning{{TRUE}}
 }
 
 void canonicalEqual(int a, int b) {
@@ -73,8 +71,7 @@ void test(int a, int b, int c, int d) {
   if (a != b && b == c) {
     if (c == 42) {
       clang_analyzer_eval(b == 42); // expected-warning{{TRUE}}
-      // FIXME: we should track disequality information as well
-      clang_analyzer_eval(a != 42); // expected-warning{{UNKNOWN}}
+      clang_analyzer_eval(a != 42); // expected-warning{{TRUE}}
     }
   }
 }
@@ -144,8 +141,31 @@ void testPointers(int *a, int *b, int *c, int *d) {
 
   if (a != b && b == c) {
     if (c == NULL) {
-      // FIXME: we should track disequality information as well
-      clang_analyzer_eval(a != NULL); // expected-warning{{UNKNOWN}}
+      clang_analyzer_eval(a != NULL); // expected-warning{{TRUE}}
+    }
+  }
+}
+
+void testDisequalitiesAfter(int a, int b, int c) {
+  if (a >= 10 && b <= 42) {
+    if (a == b && c == 15 && c != a) {
+      clang_analyzer_eval(b != c);  // expected-warning{{TRUE}}
+      clang_analyzer_eval(a != 15); // expected-warning{{TRUE}}
+      clang_analyzer_eval(b != 15); // expected-warning{{TRUE}}
+      clang_analyzer_eval(b >= 10); // expected-warning{{TRUE}}
+      clang_analyzer_eval(a <= 42); // expected-warning{{TRUE}}
+    }
+  }
+}
+
+void testDisequalitiesBefore(int a, int b, int c) {
+  if (a >= 10 && b <= 42 && c == 15) {
+    if (a == b && c != a) {
+      clang_analyzer_eval(b != c);  // expected-warning{{TRUE}}
+      clang_analyzer_eval(a != 15); // expected-warning{{TRUE}}
+      clang_analyzer_eval(b != 15); // expected-warning{{TRUE}}
+      clang_analyzer_eval(b >= 10); // expected-warning{{TRUE}}
+      clang_analyzer_eval(a <= 42); // expected-warning{{TRUE}}
     }
   }
 }
