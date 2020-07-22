@@ -672,8 +672,20 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # Enable -Wdelete-non-virtual-dtor if available.
   add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
 
-  # Enable -Wsuggest-override if available.
-  add_flag_if_supported("-Wsuggest-override" SUGGEST_OVERRIDE_FLAG)
+  # Enable -Wsuggest-override if it's available, and only if it doesn't
+  # suggest adding 'override' to functions that are already marked 'final'
+  # (which means it is disabled for GCC < 9.2).
+  check_cxx_compiler_flag("-Wsuggest-override" CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+  if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+    set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror=suggest-override")
+    CHECK_CXX_SOURCE_COMPILES("class base {public: virtual void anchor();};
+                               class derived : base {public: void anchor() final;};
+                               int main() { return 0; }"
+                              CXX_WSUGGEST_OVERRIDE_ALLOWS_ONLY_FINAL)
+    set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+    append_if(CXX_WSUGGEST_OVERRIDE_ALLOWS_ONLY_FINAL "-Wsuggest-override" CMAKE_CXX_FLAGS)
+  endif()
 
   # Check if -Wcomment is OK with an // comment ending with '\' if the next
   # line is also a // comment.
