@@ -4,7 +4,6 @@
 
 declare void @foo() convergent
 
-; FIXME: We should not be inserting a PR Phi here.
 define i32 @test_01(i32 %a) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
@@ -14,9 +13,8 @@ define i32 @test_01(i32 %a) {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[COND_PR:%.*]] = phi i1 [ [[COND]], [[IF_FALSE]] ], [ true, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br i1 [[COND_PR]], label [[EXIT:%.*]], label [[IF_FALSE_2:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[IF_FALSE_2:%.*]]
 ; CHECK:       if.false.2:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[EXIT]]
