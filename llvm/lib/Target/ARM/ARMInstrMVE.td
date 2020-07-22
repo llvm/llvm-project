@@ -325,7 +325,18 @@ multiclass MVE_TwoOpPattern<MVEVectorVTInfo VTI, PatFrag Op, Intrinsic PredInt,
   def : Pat<(VTI.Vec (Op (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn))),
             (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
 
-  // Predicated
+  // Predicated with select
+  if !ne(VTI.Size, 0b11) then {
+    def : Pat<(VTI.Vec (vselect (VTI.Pred VCCR:$mask),
+                                (VTI.Vec (Op (VTI.Vec MQPR:$Qm),
+                                             (VTI.Vec MQPR:$Qn))),
+                                (VTI.Vec MQPR:$inactive))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
+                              ARMVCCThen, (VTI.Pred VCCR:$mask),
+                              (VTI.Vec MQPR:$inactive)))>;
+  }
+
+  // Predicated with intrinsic
   def : Pat<(VTI.Vec !con((PredInt (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)),
                           PredOperands,
                           (? (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive)))),
@@ -340,7 +351,18 @@ multiclass MVE_TwoOpPatternDup<MVEVectorVTInfo VTI, PatFrag Op, Intrinsic PredIn
   def : Pat<(VTI.Vec (Op (VTI.Vec MQPR:$Qm), (VTI.Vec (ARMvdup rGPR:$Rn)))),
             (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), rGPR:$Rn))>;
 
-  // Predicated
+  // Predicated with select
+  if !ne(VTI.Size, 0b11) then {
+    def : Pat<(VTI.Vec (vselect (VTI.Pred VCCR:$mask),
+                                (VTI.Vec (Op (VTI.Vec MQPR:$Qm),
+                                             (VTI.Vec (ARMvdup rGPR:$Rn)))),
+                                (VTI.Vec MQPR:$inactive))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), rGPR:$Rn,
+                              ARMVCCThen, (VTI.Pred VCCR:$mask),
+                              (VTI.Vec MQPR:$inactive)))>;
+  }
+
+  // Predicated with intrinsic
   def : Pat<(VTI.Vec !con((PredInt (VTI.Vec MQPR:$Qm), (VTI.Vec (ARMvdup rGPR:$Rn))),
                           PredOperands,
                           (? (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive)))),
