@@ -166,6 +166,7 @@ private:
   const char *IsPreprocessorDirectiveLine(const char *) const;
   const char *FixedFormContinuationLine(bool mightNeedSpace);
   const char *FreeFormContinuationLine(bool ampersand);
+  bool IsImplicitContinuation() const;
   bool FixedFormContinuation(bool mightNeedSpace);
   bool FreeFormContinuation();
   bool Continuation(bool mightNeedFixedFormSpace);
