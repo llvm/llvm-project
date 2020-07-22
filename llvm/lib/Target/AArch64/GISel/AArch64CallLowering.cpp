@@ -96,7 +96,7 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
   /// How the physical register gets marked varies between formal
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
-  virtual void markPhysRegUsed(unsigned PhysReg) = 0;
+  virtual void markPhysRegUsed(MCRegister PhysReg) = 0;
 
   uint64_t StackUsed;
 };
@@ -106,7 +106,7 @@ struct FormalArgHandler : public IncomingArgHandler {
                    CCAssignFn *AssignFn)
     : IncomingArgHandler(MIRBuilder, MRI, AssignFn) {}
 
-  void markPhysRegUsed(unsigned PhysReg) override {
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
@@ -117,7 +117,7 @@ struct CallReturnHandler : public IncomingArgHandler {
                     MachineInstrBuilder MIB, CCAssignFn *AssignFn)
     : IncomingArgHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
-  void markPhysRegUsed(unsigned PhysReg) override {
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
   }
 
@@ -414,7 +414,7 @@ static void handleMustTailForwardedRegisters(MachineIRBuilder &MIRBuilder,
   // Conservatively forward X8, since it might be used for an aggregate
   // return.
   if (!CCInfo.isAllocated(AArch64::X8)) {
-    unsigned X8VReg = MF.addLiveIn(AArch64::X8, &AArch64::GPR64RegClass);
+    Register X8VReg = MF.addLiveIn(AArch64::X8, &AArch64::GPR64RegClass);
     Forwards.push_back(ForwardedRegister(X8VReg, AArch64::X8, MVT::i64));
   }
 
