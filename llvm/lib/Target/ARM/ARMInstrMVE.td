@@ -5312,8 +5312,10 @@ class MVE_VMUL_qr_int<string iname, string suffix, bits<2> size>
 
 multiclass MVE_VMUL_qr_int_m<MVEVectorVTInfo VTI> {
   def "" : MVE_VMUL_qr_int<"vmul", VTI.Suffix, VTI.Size>;
-  defm : MVE_TwoOpPatternDup<VTI, mul, int_arm_mve_mul_predicated, (? ),
-                             !cast<Instruction>(NAME), ARMimmOneV>;
+  let Predicates = [HasMVEInt] in {
+    defm : MVE_TwoOpPatternDup<VTI, mul, int_arm_mve_mul_predicated, (? ),
+                               !cast<Instruction>(NAME), ARMimmOneV>;
+  }
 }
 
 defm MVE_VMUL_qr_i8  : MVE_VMUL_qr_int_m<MVE_v16i8>;
