@@ -124,6 +124,16 @@ struct StorageUniquerImpl {
     storageTypes.erase(existing);
   }
 
+  /// Mutates an instance of a derived storage in a thread-safe way.
+  LogicalResult
+  mutate(function_ref<LogicalResult(StorageAllocator &)> mutationFn) {
+    if (!threadingIsEnabled)
+      return mutationFn(allocator);
+
+    llvm::sys::SmartScopedWriter<true> lock(mutex);
+    return mutationFn(allocator);
+  }
+
   //===--------------------------------------------------------------------===//
   // Instance Storage
   //===--------------------------------------------------------------------===//
@@ -213,4 +223,10 @@ void StorageUniquer::eraseImpl(unsigned kind, unsigned hashValue,
                                function_ref<bool(const BaseStorage *)> isEqual,
                                function_ref<void(BaseStorage *)> cleanupFn) {
   impl->erase(kind, hashValue, isEqual, cleanupFn);
+}
+
+/// Implementation for mutating an instance of a derived storage.
+LogicalResult StorageUniquer::mutateImpl(
+    function_ref<LogicalResult(StorageAllocator &)> mutationFn) {
+  return impl->mutate(mutationFn);
 }

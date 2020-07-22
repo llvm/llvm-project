@@ -27,15 +27,17 @@ struct FunctionTypeStorage;
 struct OpaqueTypeStorage;
 } // namespace detail
 
-/// Instances of the Type class are immutable and uniqued.  They wrap a pointer
-/// to the storage object owned by MLIRContext.  Therefore, instances of Type
-/// are passed around by value.
+/// Instances of the Type class are uniqued, have an immutable identifier and an
+/// optional mutable component.  They wrap a pointer to the storage object owned
+/// by MLIRContext.  Therefore, instances of Type are passed around by value.
 ///
 /// Some types are "primitives" meaning they do not have any parameters, for
 /// example the Index type.  Parametric types have additional information that
 /// differentiates the types of the same kind between them, for example the
 /// Integer type has bitwidth, making i8 and i16 belong to the same kind by be
-/// different instances of the IntegerType.
+/// different instances of the IntegerType.  Type parameters are part of the
+/// unique immutable key.  The mutable component of the type can be modified
+/// after the type is created, but cannot affect the identity of the type.
 ///
 /// Types are constructed and uniqued via the 'detail::TypeUniquer' class.
 ///
@@ -62,6 +64,7 @@ struct OpaqueTypeStorage;
 ///    - The type kind (for LLVM-style RTTI).
 ///    - The dialect that defined the type.
 ///    - Any parameters of the type.
+///    - An optional mutable component.
 /// For non-parametric types, a convenience DefaultTypeStorage is provided.
 /// Parametric storage types must derive TypeStorage and respect the following:
 ///    - Define a type alias, KeyTy, to a type that uniquely identifies the
@@ -75,11 +78,14 @@ struct OpaqueTypeStorage;
 ///    - Provide a method, 'bool operator==(const KeyTy &) const', to
 ///      compare the storage instance against an instance of the key type.
 ///
-///    - Provide a construction method:
+///    - Provide a static construction method:
 ///        'DerivedStorage *construct(TypeStorageAllocator &, const KeyTy &key)'
 ///      that builds a unique instance of the derived storage. The arguments to
 ///      this function are an allocator to store any uniqued data within the
 ///      context and the key type for this storage.
+///
+///    - If they have a mutable component, this component must not be a part of
+//       the key.
 class Type {
 public:
   /// Integer identifier for all the concrete type kinds.
