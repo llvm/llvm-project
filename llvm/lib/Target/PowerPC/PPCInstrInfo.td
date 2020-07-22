@@ -1406,9 +1406,14 @@ def PROBED_ALLOCA_32 : PPCCustomInserterPseudo<(outs gprc:$result),
                          (ins gprc:$negsize, memri:$fpsi), "#PROBED_ALLOCA_32",
                            [(set i32:$result,
                              (PPCprobedalloca i32:$negsize, iaddr:$fpsi))]>;
-def PREPARE_PROBED_ALLOCA_32 : PPCEmitTimePseudo<(outs gprc:$fp,
-    gprc:$sp),
+def PREPARE_PROBED_ALLOCA_32 : PPCEmitTimePseudo<(outs
+    gprc:$fp, gprc:$actual_negsize),
     (ins gprc:$negsize, memri:$fpsi), "#PREPARE_PROBED_ALLOCA_32", []>;
+def PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_32 : PPCEmitTimePseudo<(outs
+    gprc:$fp, gprc:$actual_negsize),
+    (ins gprc:$negsize, memri:$fpsi),
+    "#PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_32", []>,
+    RegConstraint<"$actual_negsize = $negsize">;
 def PROBED_STACKALLOC_32 : PPCEmitTimePseudo<(outs gprc:$scratch, gprc:$temp),
     (ins i64imm:$stacksize),
     "#PROBED_STACKALLOC_32", []>;
