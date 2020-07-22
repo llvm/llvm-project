@@ -60,13 +60,11 @@
 ; ASM:         .cv_def_range    [[p_ecx_esi]] [[func_end]], reg, 23
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "c"
-; ASM:         .cv_def_range    [[after_if]] [[func_finished]], reg, 17
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "a"
 ; ASM:         .cv_def_range    [[after_je]] [[after_inc_eax]], reg, 17
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "b"
-; ASM:         .cv_def_range    [[after_if]] [[after_if]], reg, 17
 
 ; Note: "b" is a victim of tail de-duplication / branch folding.
 
@@ -109,17 +107,10 @@
 ; OBJ:   }
 ; OBJ:   LocalSym {
 ; OBJ:     Type: int (0x74)
-; OBJ:     Flags [ (0x0)
+; OBJ:     Flags [ (0x100)
+; OBJ:       IsOptimizedOut (0x100)
 ; OBJ:     ]
 ; OBJ:     VarName: c
-; OBJ:   }
-; OBJ:   DefRangeRegisterSym {
-; OBJ:     Register: EAX (0x11)
-; OBJ:     LocalVariableAddrRange {
-; OBJ:       OffsetStart: .text+0x1A
-; OBJ:       ISectStart: 0x0
-; OBJ:       Range: 0xC
-; OBJ:     }
 ; OBJ:   }
 ; OBJ:   LocalSym {
 ; OBJ:     Type: int (0x74)
