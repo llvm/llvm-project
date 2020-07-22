@@ -887,10 +887,8 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
         return nextLine_ + 6;
       }
     }
-    if (delimiterNesting_ > 0) {
-      if (!IsFixedFormCommentChar(col1)) {
-        return nextLine_;
-      }
+    if (IsImplicitContinuation()) {
+      return nextLine_;
     }
   }
   return nullptr; // not a continuation line
@@ -927,7 +925,7 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
       return p + 1;
     } else if (*p == '!' || *p == '\n' || *p == '#') {
       return nullptr;
-    } else if (ampersand || delimiterNesting_ > 0) {
+    } else if (ampersand || IsImplicitContinuation()) {
       if (p > nextLine_) {
         --p;
       } else {
@@ -979,6 +977,14 @@ bool Prescanner::FreeFormContinuation() {
     }
   } while (SkipCommentLine(ampersand));
   return false;
+}
+
+// Implicit line continuation allows a preprocessor macro call with
+// arguments to span multiple lines.
+bool Prescanner::IsImplicitContinuation() const {
+  return !inPreprocessorDirective_ && !inCharLiteral_ &&
+      delimiterNesting_ > 0 && nextLine_ < limit_ &&
+      ClassifyLine(nextLine_).kind == LineClassification::Kind::Source;
 }
 
 bool Prescanner::Continuation(bool mightNeedFixedFormSpace) {
