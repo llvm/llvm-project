@@ -191,8 +191,8 @@ protected:
   /// Processor has RDSEED instructions.
   bool HasRDSEED = false;
 
-  /// Processor has LAHF/SAHF instructions.
-  bool HasLAHFSAHF = false;
+  /// Processor has LAHF/SAHF instructions in 64-bit mode.
+  bool HasLAHFSAHF64 = false;
 
   /// Processor has MONITORX/MWAITX instructions.
   bool HasMWAITX = false;
@@ -671,7 +671,7 @@ public:
     return hasSSE1() || (hasPRFCHW() && !has3DNow()) || hasPREFETCHWT1();
   }
   bool hasRDSEED() const { return HasRDSEED; }
-  bool hasLAHFSAHF() const { return HasLAHFSAHF; }
+  bool hasLAHFSAHF() const { return HasLAHFSAHF64 || !is64Bit(); }
   bool hasMWAITX() const { return HasMWAITX; }
   bool hasCLZERO() const { return HasCLZERO; }
   bool hasCLDEMOTE() const { return HasCLDEMOTE; }
