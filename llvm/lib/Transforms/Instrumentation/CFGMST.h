@@ -20,7 +20,6 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Support/BranchProbability.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -30,9 +29,6 @@
 #define DEBUG_TYPE "cfgmst"
 
 using namespace llvm;
-static cl::opt<bool> PGOInstrumentEntry(
-    "pgo-instrument-entry", cl::init(false), cl::Hidden,
-    cl::desc("Force to instrument function entry basicblock."));
 
 namespace llvm {
 
@@ -107,7 +103,7 @@ public:
     const BasicBlock *Entry = &(F.getEntryBlock());
     uint64_t EntryWeight = (BFI != nullptr ? BFI->getEntryFreq() : 2);
     // If we want to instrument the entry count, lower the weight to 0.
-    if (PGOInstrumentEntry)
+    if (InstrumentFuncEntry)
       EntryWeight = 0;
     Edge *EntryIncoming = nullptr, *EntryOutgoing = nullptr,
          *ExitOutgoing = nullptr, *ExitIncoming = nullptr;
@@ -282,14 +278,19 @@ public:
   BranchProbabilityInfo *BPI;
   BlockFrequencyInfo *BFI;
 
+  // If function entry will be always instrumented.
+  bool InstrumentFuncEntry;
+
 public:
-  CFGMST(Function &Func, BranchProbabilityInfo *BPI_ = nullptr,
+  CFGMST(Function &Func, bool InstrumentFuncEntry_,
+         BranchProbabilityInfo *BPI_ = nullptr,
          BlockFrequencyInfo *BFI_ = nullptr)
-      : F(Func), BPI(BPI_), BFI(BFI_) {
+      : F(Func), BPI(BPI_), BFI(BFI_),
+        InstrumentFuncEntry(InstrumentFuncEntry_) {
     buildEdges();
     sortEdgesByWeight();
     computeMinimumSpanningTree();
-    if (PGOInstrumentEntry && (AllEdges.size() > 1))
+    if (AllEdges.size() > 1 && InstrumentFuncEntry)
       std::iter_swap(std::move(AllEdges.begin()),
                      std::move(AllEdges.begin() + AllEdges.size() - 1));
   }
