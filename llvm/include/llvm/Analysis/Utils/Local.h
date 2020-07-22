@@ -78,7 +78,7 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
     // Splat the index if needed.
     if (IntIdxTy->isVectorTy() && !Op->getType()->isVectorTy())
       Op = Builder->CreateVectorSplat(
-          cast<VectorType>(IntIdxTy)->getNumElements(), Op);
+          cast<FixedVectorType>(IntIdxTy)->getNumElements(), Op);
 
     // Convert to correct type.
     if (Op->getType() != IntIdxTy)
