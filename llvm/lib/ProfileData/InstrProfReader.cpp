@@ -154,23 +154,29 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
 Error TextInstrProfReader::readHeader() {
   Symtab.reset(new InstrProfSymtab());
   bool IsIRInstr = false;
-  if (!Line->startswith(":")) {
-    IsIRLevelProfile = false;
-    return success();
-  }
-  StringRef Str = (Line)->substr(1);
-  if (Str.equals_lower("ir"))
-    IsIRInstr = true;
-  else if (Str.equals_lower("fe"))
-    IsIRInstr = false;
-  else if (Str.equals_lower("csir")) {
-    IsIRInstr = true;
-    HasCSIRLevelProfile = true;
-  } else
-    return error(instrprof_error::bad_header);
+  bool IsEntryFirst = false;
+  bool IsCS = false;
 
-  ++Line;
+  while (Line->startswith(":")) {
+    StringRef Str = Line->substr(1);
+    if (Str.equals_lower("ir"))
+      IsIRInstr = true;
+    else if (Str.equals_lower("fe"))
+      IsIRInstr = false;
+    else if (Str.equals_lower("csir")) {
+      IsIRInstr = true;
+      IsCS = true;
+    } else if (Str.equals_lower("entry_first"))
+      IsEntryFirst = true;
+    else if (Str.equals_lower("not_entry_first"))
+      IsEntryFirst = false;
+    else
+      return error(instrprof_error::bad_header);
+    ++Line;
+  }
   IsIRLevelProfile = IsIRInstr;
+  InstrEntryBBEnabled = IsEntryFirst;
+  HasCSIRLevelProfile = IsCS;
   return success();
 }
 

@@ -1,8 +1,14 @@
-; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
-; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
+; RUN: opt < %s -pgo-instr-gen -pgo-instrument-entry=false -S | FileCheck %s --check-prefixes=GEN,NOTENTRY
+; RUN: opt < %s -passes=pgo-instr-gen -pgo-instrument-entry=false -S | FileCheck %s --check-prefixes=GEN,NOTENTRY
 ; RUN: llvm-profdata merge %S/Inputs/landingpad.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+;
+; RUN: opt < %s -pgo-instr-gen -pgo-instrument-entry=true -S | FileCheck %s --check-prefixes=GEN,ENTRY
+; RUN: opt < %s -passes=pgo-instr-gen -pgo-instrument-entry=true -S | FileCheck %s --check-prefixes=GEN,ENTRY
+; RUN: llvm-profdata merge %S/Inputs/landingpad_entry.proftext -o %t2.profdata
+; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S | FileCheck %s --check-prefix=USE
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -46,7 +52,8 @@ declare void @__cxa_throw(i8*, i8*, i8*)
 define i32 @foo(i32 %i) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
 ; GEN: entry:
-; GEN-NOT: call void @llvm.instrprof.increment
+; NOTENTRY-NOT: call void @llvm.instrprof.increment
+; ENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 0)
   %rem = srem i32 %i, 2
   %tobool = icmp ne i32 %rem, 0
   br i1 %tobool, label %if.then, label %if.end
@@ -102,7 +109,8 @@ try.cont:
 
 if.end:
 ; GEN: if.end:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 0)
+; NOTENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 59130013419, i32 4, i32 0)
+; ENTRY-NOT: call void @llvm.instrprof.increment
   %tmp8 = load i32, i32* @val, align 4
   %add = add nsw i32 %tmp8, %i
   store i32 %add, i32* @val, align 4
