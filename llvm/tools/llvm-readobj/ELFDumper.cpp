@@ -657,30 +657,16 @@ ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr *Sec) const {
 template <class ELFT>
 void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
   Optional<StringRef> StrTable;
-  StringRef SymtabName;
   size_t Entries = 0;
   Elf_Sym_Range Syms(nullptr, nullptr);
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
+  const Elf_Shdr *SymtabSec = IsDynamic ? DotDynsymSec : DotSymtabSec;
+
   if (IsDynamic) {
     StrTable = DynamicStringTable;
     Syms = dynamic_symbols();
-
-    if (DotDynsymSec) {
-      if (Expected<StringRef> NameOrErr = Obj->getSectionName(DotDynsymSec)) {
-        SymtabName = *NameOrErr;
-      } else {
-        reportUniqueWarning(
-            createError("unable to get the name of the SHT_DYNSYM section: " +
-                        toString(NameOrErr.takeError())));
-        SymtabName = "<?>";
-      }
-    }
-
     Entries = Syms.size();
-  } else {
-    if (!DotSymtabSec)
-      return;
-
+  } else if (DotSymtabSec) {
     if (Expected<StringRef> StrTableOrErr =
             Obj->getStringTableForSymtab(*DotSymtabSec))
       StrTable = *StrTableOrErr;
@@ -695,17 +681,6 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
       reportUniqueWarning(
           createError("unable to read symbols from the SHT_SYMTAB section: " +
                       toString(SymsOrErr.takeError())));
-
-    if (Expected<StringRef> SymtabNameOrErr =
-            Obj->getSectionName(DotSymtabSec)) {
-      SymtabName = *SymtabNameOrErr;
-    } else {
-      reportUniqueWarning(
-          createError("unable to get the name of the SHT_SYMTAB section: " +
-                      toString(SymtabNameOrErr.takeError())));
-      SymtabName = "<?>";
-    }
-
     Entries = DotSymtabSec->getEntityCount();
   }
   if (Syms.begin() == Syms.end())
@@ -717,7 +692,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
                                  return S.st_other & ~0x3;
                                }) != Syms.end();
 
-  ELFDumperStyle->printSymtabMessage(Obj, SymtabName, Entries,
+  ELFDumperStyle->printSymtabMessage(Obj, SymtabSec, Entries,
                                      NonVisibilityBitsUsed);
   for (const auto &Sym : Syms)
     ELFDumperStyle->printSymbol(Obj, &Sym, Syms.begin(), StrTable, IsDynamic,
@@ -748,8 +723,9 @@ public:
   virtual void printDependentLibs(const ELFFile<ELFT> *Obj) = 0;
   virtual void printDynamic(const ELFFile<ELFT> *Obj) {}
   virtual void printDynamicRelocations(const ELFFile<ELFT> *Obj) = 0;
-  virtual void printSymtabMessage(const ELFFile<ELFT> *Obj, StringRef Name,
-                                  size_t Offset, bool NonVisibilityBitsUsed) {}
+  virtual void printSymtabMessage(const ELFFile<ELFT> *Obj,
+                                  const Elf_Shdr *Symtab, size_t Offset,
+                                  bool NonVisibilityBitsUsed) {}
   virtual void printSymbol(const ELFFile<ELFT> *Obj, const Elf_Sym *Symbol,
                            const Elf_Sym *FirstSym,
                            Optional<StringRef> StrTable, bool IsDynamic,
@@ -822,8 +798,8 @@ public:
   void printDependentLibs(const ELFFile<ELFT> *Obj) override;
   void printDynamic(const ELFFile<ELFT> *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
-  void printSymtabMessage(const ELFO *Obj, StringRef Name, size_t Offset,
-                          bool NonVisibilityBitsUsed) override;
+  void printSymtabMessage(const ELFO *Obj, const Elf_Shdr *Symtab,
+                          size_t Offset, bool NonVisibilityBitsUsed) override;
   void printProgramHeaders(const ELFO *Obj, bool PrintProgramHeaders,
                            cl::boolOrDefault PrintSectionMapping) override;
   void printVersionSymbolSection(const ELFFile<ELFT> *Obj,
@@ -3967,9 +3943,21 @@ void GNUStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
 }
 
 template <class ELFT>
-void GNUStyle<ELFT>::printSymtabMessage(const ELFO *Obj, StringRef Name,
+void GNUStyle<ELFT>::printSymtabMessage(const ELFO *Obj, const Elf_Shdr *Symtab,
                                         size_t Entries,
                                         bool NonVisibilityBitsUsed) {
+  StringRef Name;
+  if (Symtab) {
+    if (Expected<StringRef> NameOrErr = Obj->getSectionName(Symtab)) {
+      Name = *NameOrErr;
+    } else {
+      this->reportUniqueWarning(createError("unable to get the name of " +
+                                            describe(Obj, *Symtab) + ": " +
+                                            toString(NameOrErr.takeError())));
+      Name = "<?>";
+    }
+  }
+
   if (!Name.empty())
     OS << "\nSymbol table '" << Name << "'";
   else
