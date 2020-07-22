@@ -18,6 +18,7 @@
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
@@ -1198,25 +1199,38 @@ void Vectorize::runOnFunction() {
     return signalPassFailure();
   }
 
-  // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
-  NestedPatternContext mlContext;
-
   DenseSet<Operation *> parallelLoops;
   f.walk([&parallelLoops](AffineForOp loop) {
     if (isLoopParallel(loop))
       parallelLoops.insert(loop);
   });
 
+  vectorizeAffineLoops(f, parallelLoops, vectorSizes, fastestVaryingPattern);
+}
+
+namespace mlir {
+
+/// Vectorizes affine loops in 'loops' using the n-D vectorization factors in
+/// 'vectorSizes'. By default, each vectorization factor is applied
+/// inner-to-outer to the loops of each loop nest. 'fastestVaryingPattern' can
+/// be optionally used to provide a different loop vectorization order.
+void vectorizeAffineLoops(Operation *parentOp, DenseSet<Operation *> &loops,
+                          ArrayRef<int64_t> vectorSizes,
+                          ArrayRef<int64_t> fastestVaryingPattern) {
+  // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
+  NestedPatternContext mlContext;
+
   for (auto &pat :
-       makePatterns(parallelLoops, vectorSizes.size(), fastestVaryingPattern)) {
+       makePatterns(loops, vectorSizes.size(), fastestVaryingPattern)) {
     LLVM_DEBUG(dbgs() << "\n******************************************");
     LLVM_DEBUG(dbgs() << "\n******************************************");
-    LLVM_DEBUG(dbgs() << "\n[early-vect] new pattern on Function\n");
-    LLVM_DEBUG(f.print(dbgs()));
+    LLVM_DEBUG(dbgs() << "\n[early-vect] new pattern on parent op\n");
+    LLVM_DEBUG(parentOp->print(dbgs()));
+
     unsigned patternDepth = pat.getDepth();
 
     SmallVector<NestedMatch, 8> matches;
-    pat.match(f, &matches);
+    pat.match(parentOp, &matches);
     // Iterate over all the top-level matches and vectorize eagerly.
     // This automatically prunes intersecting matches.
     for (auto m : matches) {
@@ -1239,9 +1253,11 @@ void Vectorize::runOnFunction() {
 }
 
 std::unique_ptr<OperationPass<FuncOp>>
-mlir::createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
+createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
   return std::make_unique<Vectorize>(virtualVectorSize);
 }
-std::unique_ptr<OperationPass<FuncOp>> mlir::createSuperVectorizePass() {
+std::unique_ptr<OperationPass<FuncOp>> createSuperVectorizePass() {
   return std::make_unique<Vectorize>();
 }
+
+} // namespace mlir
