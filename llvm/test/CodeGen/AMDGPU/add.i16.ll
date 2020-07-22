@@ -36,7 +36,7 @@ define amdgpu_kernel void @v_test_add_i16_constant(i16 addrspace(1)* %out, i16 a
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_add_i16_neg_constant:
 ; VI: flat_load_ushort [[A:v[0-9]+]]
-; VI: v_add_u16_e32 [[ADD:v[0-9]+]], 0xfffffcb3, [[A]]
+; VI: v_add_u16_e32 [[ADD:v[0-9]+]], 0xfcb3, [[A]]
 ; VI-NEXT: buffer_store_short [[ADD]]
 define amdgpu_kernel void @v_test_add_i16_neg_constant(i16 addrspace(1)* %out, i16 addrspace(1)* %in0) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
