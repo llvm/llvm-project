@@ -50,6 +50,33 @@ end:
   ret i32 %phi
 }
 
+define i32 @test_duplicate_successors_phi_2(i1 %c, i32 %x) {
+; CHECK-LABEL: @test_duplicate_successors_phi_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[SWITCH:%.*]], label [[END:%.*]]
+; CHECK:       switch:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ 1, [[SWITCH]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %switch, label %end
+
+switch:
+  switch i32 0, label %switch.default [
+  i32 0, label %end
+  i32 1, label %end
+  ]
+
+switch.default:
+  ret i32 -1
+
+end:
+  %phi = phi i32 [ %x, %entry ], [ 1, %switch ], [ 1, %switch ]
+  ret i32 %phi
+}
+
 define i32 @test_local_range(i32 %x) {
 ; CHECK-LABEL: @test_local_range(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], 3
