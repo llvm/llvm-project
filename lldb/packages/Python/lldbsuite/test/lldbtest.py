@@ -426,7 +426,7 @@ def system(commands, **kwargs):
         process = Popen(
             shellCommand,
             stdout=PIPE,
-            stderr=PIPE,
+            stderr=STDOUT,
             shell=True,
             **kwargs)
         pid = process.pid
@@ -440,14 +440,12 @@ def system(commands, **kwargs):
             cpe = CalledProcessError(retcode, cmd)
             # Ensure caller can access the stdout/stderr.
             cpe.lldb_extensions = {
-                "stdout_content": this_output,
-                "stderr_content": this_error,
+                "combined_output": this_output,
                 "command": shellCommand
             }
             raise cpe
         output = output + this_output.decode("utf-8")
-        error = error + this_error.decode("utf-8")
-    return (output, error)
+    return output
 
 
 def getsource_if_available(obj):
@@ -1280,7 +1278,7 @@ class Base(unittest2.TestCase):
         version = 'unknown'
 
         compiler = self.getCompilerBinary()
-        version_output = system([[compiler, "-v"]])[1]
+        version_output = system([[compiler, "-v"]])
         for line in version_output.split(os.linesep):
             m = re.search('version ([0-9\.]+)', line)
             if m:
