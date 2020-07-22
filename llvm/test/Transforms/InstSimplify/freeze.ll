@@ -381,6 +381,23 @@ EXIT:
   ret i32 %fr2
 }
 
+declare i32 @any_num()
+
+define i32 @brcond_call() {
+; CHECK-LABEL: @brcond_call(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @any_num()
+; CHECK-NEXT:    switch i32 [[X]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = call i32 @any_num()
+  switch i32 %x, label %EXIT []
+EXIT:
+  %y = freeze i32 %x
+  ret i32 %y
+}
+
 define i1 @brcond_noopt(i1 %c, i1 %c2) {
 ; CHECK-LABEL: @brcond_noopt(
 ; CHECK-NEXT:    [[F:%.*]] = freeze i1 [[C:%.*]]
