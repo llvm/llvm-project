@@ -22,10 +22,6 @@ if(CLANG_BUILT_STANDALONE)
   endif()
 endif()
 
-if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
-  add_compile_options("-Wno-suggest-override")
-endif()
-
 if (CLANGD_ENABLE_REMOTE)
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/../index/remote)
   add_definitions(-DGOOGLE_PROTOBUF_NO_RTTI=1)
