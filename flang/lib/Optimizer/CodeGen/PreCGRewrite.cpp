@@ -44,18 +44,60 @@ public:
   mlir::LogicalResult
   matchAndRewrite(EmboxOp embox,
                   mlir::PatternRewriter &rewriter) const override {
-    auto loc = embox.getLoc();
-    auto dimsVal = embox.getShape();
+    auto shapeVal = embox.getShape();
     // If the embox does not include a shape, then do not convert it
-    if (!dimsVal)
-      return mlir::failure();
-    auto shapeOp = dyn_cast<ShapeOp>(dimsVal.getDefiningOp());
+    if (shapeVal)
+      return rewriteDynamicShape(embox, rewriter, shapeVal);
+    if (auto boxTy = embox.getType().dyn_cast<BoxType>())
+      if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
+        if (seqTy.hasConstantShape())
+          return rewriteStaticShape(embox, rewriter, seqTy);
+    return mlir::failure();
+  }
+
+  mlir::LogicalResult rewriteStaticShape(EmboxOp embox,
+                                         mlir::PatternRewriter &rewriter,
+                                         fir::SequenceType seqTy) const {
+    auto loc = embox.getLoc();
+    llvm::SmallVector<mlir::Value, 8> shapeOpers;
+    auto idxTy = rewriter.getIndexType();
+    for (auto ext : seqTy.getShape()) {
+      auto iAttr = rewriter.getIndexAttr(ext);
+      auto extVal = rewriter.create<mlir::ConstantOp>(loc, idxTy, iAttr);
+      shapeOpers.push_back(extVal);
+    }
+    mlir::NamedAttrList attrs;
+    auto rank = seqTy.getDimension();
+    auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
+    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::rankAttrName(), rankAttr));
+    auto zeroAttr = rewriter.getIntegerAttr(idxTy, 0);
+    attrs.push_back(
+        rewriter.getNamedAttr(XEmboxOp::lenParamAttrName(), zeroAttr));
+    auto shapeAttr = rewriter.getIntegerAttr(idxTy, shapeOpers.size());
+    attrs.push_back(
+        rewriter.getNamedAttr(XEmboxOp::shapeAttrName(), shapeAttr));
+    attrs.push_back(
+        rewriter.getNamedAttr(XEmboxOp::shiftAttrName(), zeroAttr));
+    attrs.push_back(
+        rewriter.getNamedAttr(XEmboxOp::sliceAttrName(), zeroAttr));
+    auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
+                                          shapeOpers, llvm::None, llvm::None,
+                                          llvm::None, attrs);
+    rewriter.replaceOp(embox, xbox.getOperation()->getResults());
+    return mlir::success();
+  }
+
+  mlir::LogicalResult rewriteDynamicShape(EmboxOp embox,
+                                          mlir::PatternRewriter &rewriter,
+                                          mlir::Value shapeVal) const {
+    auto loc = embox.getLoc();
+    auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp());
     llvm::SmallVector<mlir::Value, 8> shapeOpers;
     llvm::SmallVector<mlir::Value, 8> shiftOpers;
     if (shapeOp) {
       populateShape(shapeOpers, shapeOp);
     } else {
-      auto shiftOp = dyn_cast<ShapeShiftOp>(dimsVal.getDefiningOp());
+      auto shiftOp = dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp());
       assert(shiftOp && "shape is neither fir.shape nor fir.shape_shift");
       populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
     }
@@ -76,8 +118,7 @@ public:
         rewriter.getNamedAttr(XEmboxOp::shiftAttrName(), shiftAttr));
     llvm::SmallVector<mlir::Value, 8> sliceOpers;
     if (auto s = embox.getSlice())
-      if (auto sliceOp =
-          dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
+      if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
     auto sliceAttr = rewriter.getIntegerAttr(idxTy, sliceOpers.size());
     attrs.push_back(
@@ -130,16 +171,14 @@ public:
         rewriter.getNamedAttr(XArrayCoorOp::shapeAttrName(), dimAttr));
     llvm::SmallVector<mlir::Value, 8> sliceOpers;
     if (auto s = arrCoor.getSlice())
-      if (auto sliceOp =
-          dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
+      if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
     auto sliceAttr = rewriter.getIntegerAttr(idxTy, sliceOpers.size());
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::sliceAttrName(), sliceAttr));
     auto xArrCoor = rewriter.create<XArrayCoorOp>(
-        loc, arrCoor.getType(), arrCoor.memref(), shapeOpers,
-        shiftOpers, sliceOpers,
-        arrCoor.getIndices(), arrCoor.getLenParams(), attrs);
+        loc, arrCoor.getType(), arrCoor.memref(), shapeOpers, shiftOpers,
+        sliceOpers, arrCoor.getIndices(), arrCoor.getLenParams(), attrs);
     rewriter.replaceOp(arrCoor, xArrCoor.getOperation()->getResults());
     return mlir::success();
   }
@@ -155,8 +194,11 @@ public:
     mlir::ConversionTarget target(context);
     target.addLegalDialect<FIROpsDialect, mlir::StandardOpsDialect>();
     target.addIllegalOp<ArrayCoorOp>();
-    target.addDynamicallyLegalOp<EmboxOp>(
-        [](EmboxOp embox) { return !embox.getShape(); });
+    target.addDynamicallyLegalOp<EmboxOp>([](EmboxOp embox) {
+      return !(
+          embox.getShape() ||
+          embox.getType().cast<BoxType>().getEleTy().isa<fir::SequenceType>());
+    });
 
     // Do the conversions.
     if (mlir::failed(mlir::applyPartialConversion(getFunction(), target,
