@@ -1,4 +1,4 @@
-//===- InlineFeaturesAnalysis.h - ML Policy Feature extraction  -*- C++ -*-===//
+//=- FunctionPropertiesAnalysis.h - Function Properties extraction  -*- C++ -=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_INLINEFEATURESANALYSIS_H_
-#define LLVM_INLINEFEATURESANALYSIS_H_
+#ifndef LLVM_FUNCTIONPROPERTIESANALYSIS_H_
+#define LLVM_FUNCTIONPROPERTIESANALYSIS_H_
 
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 class Function;
 
-class InlineFeaturesAnalysis
-    : public AnalysisInfoMixin<InlineFeaturesAnalysis> {
+class FunctionPropertiesAnalysis
+    : public AnalysisInfoMixin<FunctionPropertiesAnalysis> {
 public:
   static AnalysisKey Key;
   struct Result {
@@ -42,4 +42,4 @@ public:
 };
 
 } // namespace llvm
-#endif // LLVM_INLINEFEATURESANALYSIS_H_
+#endif // LLVM_FUNCTIONPROPERTIESANALYSIS_H_
