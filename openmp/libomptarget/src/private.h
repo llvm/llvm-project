@@ -80,18 +80,8 @@ typedef int (*TargetDataFuncPtrTy)(DeviceTy &, int32_t, void **, void **,
     int64_t *, int64_t *, void **, __tgt_async_info *);
 
 ////////////////////////////////////////////////////////////////////////////////
-// implementation for messages
+// implementation for fatal messages
 ////////////////////////////////////////////////////////////////////////////////
-
-#define MESSAGE0(_str)                                                         \
-  do {                                                                         \
-    fprintf(stderr, "Libomptarget message: %s\n", _str);                       \
-  } while (0)
-
-#define MESSAGE(_str, ...)                                                     \
-  do {                                                                         \
-    fprintf(stderr, "Libomptarget message: " _str "\n", __VA_ARGS__);          \
-  } while (0)
 
 #define FATAL_MESSAGE0(_num, _str)                                    \
   do {                                                                \
