@@ -362,7 +362,7 @@ void rewriteMemoryOps(Block *block, mlir::PatternRewriter &rewriter) {
   }
 }
 
-/// Convert `fir.doloop` to `affine.for`, creates fir.convert for arrays to
+/// Convert `fir.do_loop` to `affine.for`, creates fir.convert for arrays to
 /// memref, rewrites array_coor to affine.apply with affine_map. Rewrites fir
 /// loads and stores to affine.
 class AffineLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
@@ -493,7 +493,7 @@ public:
   }
 };
 
-/// Promote fir.doloop and fir.if to affine.for and affine.if, in the cases
+/// Promote fir.do_loop and fir.if to affine.for and affine.if, in the cases
 /// where such a promotion is possible.
 class AffineDialectPromotion
     : public AffineDialectPromotionBase<AffineDialectPromotion> {

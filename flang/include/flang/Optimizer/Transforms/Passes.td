@@ -66,14 +66,6 @@ def MemRefDataFlowOpt : FunctionPass<"fir-memref-dataflow-opt"> {
   let constructor = "::fir::createMemDataFlowOptPass()";
 }
 
-def AffineDialectDemotion : FunctionPass<"demote-to-affine"> {
-  let summary = "Converts affine.load and affine.store back to fir operations";
-  let description = [{
-    TODO
-  }];
-  let constructor = "fir::createAffineDemotionPass()";
-}
-
 def BasicCSE : FunctionPass<"basic-cse"> {
   let summary = "Basic common sub-expression elimination.";
   let description = [{
