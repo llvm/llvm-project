@@ -10,6 +10,10 @@ if(CLANG_BUILT_STANDALONE)
   endif()
 endif()
 
+if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+  add_definitions("-Wno-suggest-override")
+endif()
+
 # add_clang_unittest(test_dirname file1.cpp file2.cpp)
 #
 # Will compile the list of files together and link against the clang
