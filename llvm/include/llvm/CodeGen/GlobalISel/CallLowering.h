@@ -147,6 +147,7 @@ public:
     virtual void assignValueToAddress(const ArgInfo &Arg, Register Addr,
                                       uint64_t Size, MachinePointerInfo &MPO,
                                       CCValAssign &VA) {
+      assert(Arg.Regs.size() == 1);
       assignValueToAddress(Arg.Regs[0], Addr, Size, MPO, VA);
     }
 

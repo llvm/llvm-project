@@ -1925,6 +1925,9 @@ public:
   bool isSizelessType() const;
   bool isSizelessBuiltinType() const;
 
+  /// Determines if this is a vector-length-specific type (VLST), i.e. a
+  /// sizeless type with the 'arm_sve_vector_bits' attribute applied.
+  bool isVLST() const;
   /// Determines if this is a sizeless type supported by the
   /// 'arm_sve_vector_bits' type attribute, which can be applied to a single
   /// SVE vector or predicate, excluding tuple types such as svint32x4_t.

@@ -1869,6 +1869,50 @@ TypeInfo ASTContext::getTypeInfo(const Type *T) const {
   return TI;
 }
 
+static unsigned getSveVectorWidth(const Type *T) {
+  // Get the vector size from the 'arm_sve_vector_bits' attribute via the
+  // AttributedTypeLoc associated with the typedef decl.
+  if (const auto *TT = T->getAs<TypedefType>()) {
+    const TypedefNameDecl *Typedef = TT->getDecl();
+    TypeSourceInfo *TInfo = Typedef->getTypeSourceInfo();
+    TypeLoc TL = TInfo->getTypeLoc();
+    if (AttributedTypeLoc ATL = TL.getAs<AttributedTypeLoc>())
+      if (const auto *Attr = ATL.getAttrAs<ArmSveVectorBitsAttr>())
+        return Attr->getNumBits();
+  }
+
+  llvm_unreachable("bad 'arm_sve_vector_bits' attribute!");
+}
+
+static unsigned getSvePredWidth(const ASTContext &Context, const Type *T) {
+  return getSveVectorWidth(T) / Context.getCharWidth();
+}
+
+unsigned ASTContext::getBitwidthForAttributedSveType(const Type *T) const {
+  assert(T->isVLST() &&
+         "getBitwidthForAttributedSveType called for non-attributed type!");
+
+  switch (T->castAs<BuiltinType>()->getKind()) {
+  default:
+    llvm_unreachable("unknown builtin type!");
+  case BuiltinType::SveInt8:
+  case BuiltinType::SveInt16:
+  case BuiltinType::SveInt32:
+  case BuiltinType::SveInt64:
+  case BuiltinType::SveUint8:
+  case BuiltinType::SveUint16:
+  case BuiltinType::SveUint32:
+  case BuiltinType::SveUint64:
+  case BuiltinType::SveFloat16:
+  case BuiltinType::SveFloat32:
+  case BuiltinType::SveFloat64:
+  case BuiltinType::SveBFloat16:
+    return getSveVectorWidth(T);
+  case BuiltinType::SveBool:
+    return getSvePredWidth(*this, T);
+  }
+}
+
 /// getTypeInfoImpl - Return the size of the specified type, in bits.  This
 /// method does not work on incomplete types.
 ///
@@ -2273,7 +2317,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = Info.Align;
       AlignIsRequired = Info.AlignIsRequired;
     }
-    Width = Info.Width;
+    if (T->isVLST())
+      Width = getBitwidthForAttributedSveType(T);
+    else
+      Width = Info.Width;
     break;
   }
 

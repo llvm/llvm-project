@@ -144,13 +144,17 @@ struct IncomingArgHandler : public AMDGPUValueHandler {
     }
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
+    // The reported memory location may be wider than the value.
+    const LLT RegTy = MRI.getType(ValVReg);
+    MemSize = std::min(static_cast<uint64_t>(RegTy.getSizeInBytes()), MemSize);
+
     // FIXME: Get alignment
     auto MMO = MF.getMachineMemOperand(
-        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size,
+        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, MemSize,
         inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
@@ -1102,8 +1106,8 @@ static bool addCallTargetOperands(MachineInstrBuilder &CallInst,
                                   MachineIRBuilder &MIRBuilder,
                                   AMDGPUCallLowering::CallLoweringInfo &Info) {
   if (Info.Callee.isReg()) {
+    CallInst.addReg(Info.Callee.getReg());
     CallInst.addImm(0);
-    CallInst.add(Info.Callee);
   } else if (Info.Callee.isGlobal() && Info.Callee.getOffset() == 0) {
     // The call lowering lightly assumed we can directly encode a call target in
     // the instruction, which is not the case. Materialize the address here.

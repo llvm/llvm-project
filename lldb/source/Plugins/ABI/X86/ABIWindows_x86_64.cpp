@@ -414,7 +414,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
     if (type_flags & eTypeIsInteger) {
       // Extract the register context so we can read arguments from registers
       llvm::Optional<uint64_t> byte_size =
-          return_compiler_type.GetByteSize(nullptr);
+          return_compiler_type.GetByteSize(&thread);
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
@@ -461,7 +461,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
         // Don't handle complex yet.
       } else {
         llvm::Optional<uint64_t> byte_size =
-            return_compiler_type.GetByteSize(nullptr);
+            return_compiler_type.GetByteSize(&thread);
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *xmm0_info =
               reg_ctx->GetRegisterInfoByName("xmm0", 0);
@@ -499,7 +499,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
     llvm::Optional<uint64_t> byte_size =
-        return_compiler_type.GetByteSize(nullptr);
+        return_compiler_type.GetByteSize(&thread);
     if (byte_size && *byte_size > 0) {
       const RegisterInfo *xmm_reg =
           reg_ctx->GetRegisterInfoByName("xmm0", 0);

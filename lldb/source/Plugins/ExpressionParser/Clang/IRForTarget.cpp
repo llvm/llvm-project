@@ -305,9 +305,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   }
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
-  lldb_private::ExecutionContext exe_ctx(target_sp, true);
-  llvm::Optional<uint64_t> bit_size =
-      m_result_type.GetBitSize(exe_ctx.GetBestExecutionContextScope());
+  llvm::Optional<uint64_t> bit_size = m_result_type.GetBitSize(target_sp.get());
   if (!bit_size) {
     lldb_private::StreamString type_desc_stream;
     m_result_type.DumpTypeDescription(&type_desc_stream);
@@ -330,7 +328,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   m_result_name = lldb_private::ConstString("$RESULT_NAME");
 
   LLDB_LOG(log, "Creating a new result global: \"{0}\" with size {1}",
-           m_result_name, m_result_type.GetByteSize(nullptr).getValueOr(0));
+           m_result_name,
+           m_result_type.GetByteSize(target_sp.get()).getValueOr(0));
 
   // Construct a new result global and set up its metadata
 
@@ -1242,10 +1241,12 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       value_type = global_variable->getType();
     }
 
-    llvm::Optional<uint64_t> value_size = compiler_type.GetByteSize(nullptr);
+    auto *target = m_execution_unit.GetTarget().get();
+    llvm::Optional<uint64_t> value_size = compiler_type.GetByteSize(target);
     if (!value_size)
       return false;
-    llvm::Optional<size_t> opt_alignment = compiler_type.GetTypeBitAlign(nullptr);
+    llvm::Optional<size_t> opt_alignment =
+        compiler_type.GetTypeBitAlign(target);
     if (!opt_alignment)
       return false;
     lldb::offset_t value_alignment = (*opt_alignment + 7ull) / 8ull;

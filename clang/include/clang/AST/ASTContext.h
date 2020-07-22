@@ -2086,6 +2086,10 @@ public:
     return getTypeSizeInCharsIfKnown(QualType(Ty, 0));
   }
 
+  /// Returns the bitwidth of \p T, an SVE type attributed with
+  /// 'arm_sve_vector_bits'. Should only be called if T->isVLST().
+  unsigned getBitwidthForAttributedSveType(const Type *T) const;
+
   /// Return the ABI-specified alignment of a (complete) type \p T, in
   /// bits.
   unsigned getTypeAlign(QualType T) const { return getTypeInfo(T).Align; }
