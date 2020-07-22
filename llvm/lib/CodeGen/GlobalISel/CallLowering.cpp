@@ -313,80 +313,87 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     EVT VAVT = VA.getValVT();
     const LLT OrigTy = getLLTForType(*Args[i].Ty, DL);
 
-    if (VA.isRegLoc()) {
-      if (Handler.isIncomingArgumentHandler() && VAVT != OrigVT) {
-        if (VAVT.getSizeInBits() < OrigVT.getSizeInBits()) {
-          // Expected to be multiple regs for a single incoming arg.
-          unsigned NumArgRegs = Args[i].Regs.size();
-          if (NumArgRegs < 2)
-            return false;
+    // Expected to be multiple regs for a single incoming arg.
+    // There should be Regs.size() ArgLocs per argument.
+    unsigned NumArgRegs = Args[i].Regs.size();
 
-          assert((j + (NumArgRegs - 1)) < ArgLocs.size() &&
-                 "Too many regs for number of args");
-          for (unsigned Part = 0; Part < NumArgRegs; ++Part) {
-            // There should be Regs.size() ArgLocs per argument.
-            VA = ArgLocs[j + Part];
-            Handler.assignValueToReg(Args[i].Regs[Part], VA.getLocReg(), VA);
-          }
-          j += NumArgRegs - 1;
-          // Merge the split registers into the expected larger result vreg
-          // of the original call.
-          MIRBuilder.buildMerge(Args[i].OrigRegs[0], Args[i].Regs);
-          continue;
-        }
-        const LLT VATy(VAVT.getSimpleVT());
-        Register NewReg =
-            MIRBuilder.getMRI()->createGenericVirtualRegister(VATy);
-        Handler.assignValueToReg(NewReg, VA.getLocReg(), VA);
-        // If it's a vector type, we either need to truncate the elements
-        // or do an unmerge to get the lower block of elements.
-        if (VATy.isVector() &&
-            VATy.getNumElements() > OrigVT.getVectorNumElements()) {
-          // Just handle the case where the VA type is 2 * original type.
-          if (VATy.getNumElements() != OrigVT.getVectorNumElements() * 2) {
-            LLVM_DEBUG(dbgs()
-                       << "Incoming promoted vector arg has too many elts");
-            return false;
-          }
-          auto Unmerge = MIRBuilder.buildUnmerge({OrigTy, OrigTy}, {NewReg});
-          MIRBuilder.buildCopy(ArgReg, Unmerge.getReg(0));
-        } else {
-          MIRBuilder.buildTrunc(ArgReg, {NewReg}).getReg(0);
-        }
-      } else if (!Handler.isIncomingArgumentHandler()) {
-        assert((j + (Args[i].Regs.size() - 1)) < ArgLocs.size() &&
-               "Too many regs for number of args");
-        // This is an outgoing argument that might have been split.
-        for (unsigned Part = 0; Part < Args[i].Regs.size(); ++Part) {
-          // There should be Regs.size() ArgLocs per argument.
-          VA = ArgLocs[j + Part];
-          Handler.assignValueToReg(Args[i].Regs[Part], VA.getLocReg(), VA);
-        }
-        j += Args[i].Regs.size() - 1;
-      } else {
-        Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA);
-      }
-    } else if (VA.isMemLoc()) {
-      // Don't currently support loading/storing a type that needs to be split
-      // to the stack. Should be easy, just not implemented yet.
-      if (Args[i].Regs.size() > 1) {
-        LLVM_DEBUG(
+    assert((j + (NumArgRegs - 1)) < ArgLocs.size() &&
+           "Too many regs for number of args");
+    for (unsigned Part = 0; Part < NumArgRegs; ++Part) {
+      // There should be Regs.size() ArgLocs per argument.
+      VA = ArgLocs[j + Part];
+      if (VA.isMemLoc()) {
+        // Don't currently support loading/storing a type that needs to be split
+        // to the stack. Should be easy, just not implemented yet.
+        if (NumArgRegs > 1) {
+          LLVM_DEBUG(
             dbgs()
-            << "Load/store a split arg to/from the stack not implemented yet");
-        return false;
+            << "Load/store a split arg to/from the stack not implemented yet\n");
+          return false;
+        }
+
+        // FIXME: Use correct address space for pointer size
+        EVT LocVT = VA.getValVT();
+        unsigned MemSize = LocVT == MVT::iPTR ? DL.getPointerSize()
+                                              : LocVT.getStoreSize();
+        unsigned Offset = VA.getLocMemOffset();
+        MachinePointerInfo MPO;
+        Register StackAddr = Handler.getStackAddress(MemSize, Offset, MPO);
+        Handler.assignValueToAddress(Args[i], StackAddr,
+                                     MemSize, MPO, VA);
+        continue;
       }
-      MVT VT = MVT::getVT(Args[i].Ty);
-      unsigned Size = VT == MVT::iPTR ? DL.getPointerSize()
-                                      : alignTo(VT.getSizeInBits(), 8) / 8;
-      unsigned Offset = VA.getLocMemOffset();
-      MachinePointerInfo MPO;
-      Register StackAddr = Handler.getStackAddress(Size, Offset, MPO);
-      Handler.assignValueToAddress(Args[i], StackAddr, Size, MPO, VA);
-    } else {
-      // FIXME: Support byvals and other weirdness
-      return false;
+
+      assert(VA.isRegLoc() && "custom loc should have been handled already");
+
+      if (OrigVT.getSizeInBits() >= VAVT.getSizeInBits() ||
+          !Handler.isIncomingArgumentHandler()) {
+        // This is an argument that might have been split. There should be
+        // Regs.size() ArgLocs per argument.
+
+        // Insert the argument copies. If VAVT < OrigVT, we'll insert the merge
+        // to the original register after handling all of the parts.
+        Handler.assignValueToReg(Args[i].Regs[Part], VA.getLocReg(), VA);
+        continue;
+      }
+
+      // This ArgLoc covers multiple pieces, so we need to split it.
+      const LLT VATy(VAVT.getSimpleVT());
+      Register NewReg =
+        MIRBuilder.getMRI()->createGenericVirtualRegister(VATy);
+      Handler.assignValueToReg(NewReg, VA.getLocReg(), VA);
+      // If it's a vector type, we either need to truncate the elements
+      // or do an unmerge to get the lower block of elements.
+      if (VATy.isVector() &&
+          VATy.getNumElements() > OrigVT.getVectorNumElements()) {
+        // Just handle the case where the VA type is 2 * original type.
+        if (VATy.getNumElements() != OrigVT.getVectorNumElements() * 2) {
+          LLVM_DEBUG(dbgs()
+                     << "Incoming promoted vector arg has too many elts");
+          return false;
+        }
+        auto Unmerge = MIRBuilder.buildUnmerge({OrigTy, OrigTy}, {NewReg});
+        MIRBuilder.buildCopy(ArgReg, Unmerge.getReg(0));
+      } else {
+        MIRBuilder.buildTrunc(ArgReg, {NewReg}).getReg(0);
+      }
     }
+
+    // Now that all pieces have been handled, re-pack any arguments into any
+    // wider, original registers.
+    if (Handler.isIncomingArgumentHandler()) {
+      if (VAVT.getSizeInBits() < OrigVT.getSizeInBits()) {
+        assert(NumArgRegs >= 2);
+
+        // Merge the split registers into the expected larger result vreg
+        // of the original call.
+        MIRBuilder.buildMerge(Args[i].OrigRegs[0], Args[i].Regs);
+      }
+    }
+
+    j += NumArgRegs - 1;
   }
+
   return true;
 }
 
