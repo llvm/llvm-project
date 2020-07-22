@@ -1,4 +1,4 @@
-//===- InlineFeaturesAnalysis.cpp - Feature extraction for ML Policies ----===//
+//===- FunctionPropertiesAnalysis.cpp - Function properties extraction ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,15 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/InlineFeaturesAnalysis.h"
+#include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
-AnalysisKey InlineFeaturesAnalysis::Key;
+AnalysisKey FunctionPropertiesAnalysis::Key;
 
-InlineFeaturesAnalysis::Result
-InlineFeaturesAnalysis::run(const Function &F, FunctionAnalysisManager &FAM) {
+FunctionPropertiesAnalysis::Result
+FunctionPropertiesAnalysis::run(const Function &F,
+                                FunctionAnalysisManager &FAM) {
   Result Ret;
   Ret.Uses = ((!F.hasLocalLinkage()) ? 1 : 0) + F.getNumUses();
   for (const auto &BB : F) {
