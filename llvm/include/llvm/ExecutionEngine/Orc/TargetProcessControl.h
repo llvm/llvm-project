@@ -13,11 +13,16 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESSCONTROL_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESSCONTROL_H
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
 #include <future>
+#include <vector>
 
 namespace llvm {
 namespace orc {
@@ -105,6 +110,22 @@ public:
     }
   };
 
+  using DynamicLibraryHandle = JITTargetAddress;
+
+  /// Request lookup within a single library.
+  /// If Library is None then the whole target process should be searched.
+  struct LookupRequestElement {
+    LookupRequestElement(DynamicLibraryHandle Handle,
+                         const SymbolLookupSet &Symbols)
+        : Handle(Handle), Symbols(Symbols) {}
+    DynamicLibraryHandle Handle;
+    const SymbolLookupSet &Symbols;
+  };
+
+  using LookupRequest = ArrayRef<LookupRequestElement>;
+
+  using LookupResult = std::vector<std::vector<JITTargetAddress>>;
+
   virtual ~TargetProcessControl();
 
   /// Return the Triple for the target process.
@@ -119,7 +140,16 @@ public:
   /// Return a MemoryAccess object for the target process.
   MemoryAccess &getMemoryAccess() const { return *MemAccess; }
 
-  /// Load the library at the given path.
+  /// Load the library at the given path. Returns a handle to the loaded
+  /// library. If LibraryPath is null this function will return the global
+  /// handle for the target process.
+  virtual Expected<DynamicLibraryHandle>
+  loadLibrary(const char *LibraryPath) = 0;
+
+  /// Search for symbols in the target process.
+  /// The result of the lookup is a 2-dimentional array of target addresses
+  /// that correspond to the lookup order.
+  virtual Expected<LookupResult> lookupSymbols(LookupRequest Request) = 0;
 
 protected:
   TargetProcessControl(Triple TT, unsigned PageSize);
@@ -137,6 +167,10 @@ public:
   SelfTargetProcessControl(Triple TT, unsigned PageSize);
 
   static Expected<std::unique_ptr<SelfTargetProcessControl>> Create();
+
+  Expected<DynamicLibraryHandle> loadLibrary(const char *LibraryPath) override;
+
+  Expected<LookupResult> lookupSymbols(LookupRequest Request) override;
 
 private:
   void writeUInt8s(ArrayRef<UInt8Write> Ws,
@@ -156,6 +190,9 @@ private:
 
   std::unique_ptr<jitlink::InProcessMemoryManager> IPMM =
       std::make_unique<jitlink::InProcessMemoryManager>();
+
+  char GlobalManglingPrefix = 0;
+  std::vector<std::unique_ptr<sys::DynamicLibrary>> DynamicLibraries;
 };
 
 } // end namespace orc
