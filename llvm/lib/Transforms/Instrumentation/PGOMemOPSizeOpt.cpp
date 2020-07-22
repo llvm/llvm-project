@@ -38,8 +38,6 @@
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/ProfileData/InstrProf.h"
-#define INSTR_PROF_VALUE_PROF_MEMOP_API
-#include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -91,24 +89,16 @@ static cl::opt<bool>
                     cl::desc("Scale the memop size counts using the basic "
                              " block count value"));
 
-// FIXME: These are to be removed after switching to the new memop value
-// profiling.
 // This option sets the rangge of precise profile memop sizes.
 extern cl::opt<std::string> MemOPSizeRange;
 
 // This option sets the value that groups large memop sizes
 extern cl::opt<unsigned> MemOPSizeLarge;
 
-extern cl::opt<bool> UseOldMemOpValueProf;
-
 cl::opt<bool>
     MemOPOptMemcmpBcmp("pgo-memop-optimize-memcmp-bcmp", cl::init(true),
                        cl::Hidden,
                        cl::desc("Size-specialize memcmp and bcmp calls"));
-
-static cl::opt<unsigned>
-    MemOpMaxOptSize("memop-value-prof-max-opt-size", cl::Hidden, cl::init(128),
-                    cl::desc("Optimize the memop size <= this value"));
 
 namespace {
 class PGOMemOPSizeOptLegacyPass : public FunctionPass {
@@ -279,8 +269,6 @@ private:
   TargetLibraryInfo &TLI;
   bool Changed;
   std::vector<MemOp> WorkList;
-  // FIXME: These are to be removed after switching to the new memop value
-  // profiling.
   // Start of the previse range.
   int64_t PreciseRangeStart;
   // Last value of the previse range.
@@ -289,8 +277,6 @@ private:
   std::unique_ptr<InstrProfValueData[]> ValueDataArray;
   bool perform(MemOp MO);
 
-  // FIXME: This is to be removed after switching to the new memop value
-  // profiling.
   // This kind shows which group the value falls in. For PreciseValue, we have
   // the profile count for that value. LargeGroup groups the values that are in
   // range [LargeValue, +inf). NonLargeGroup groups the rest of values.
@@ -379,11 +365,8 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     if (MemOPScaleCount)
       C = getScaledCount(C, ActualCount, SavedTotalCount);
 
-    if (UseOldMemOpValueProf) {
-      // Only care precise value here.
-      if (getMemOPSizeKind(V) != PreciseValue)
-        continue;
-    } else if (!InstrProfIsSingleValRange(V) || V > MemOpMaxOptSize)
+    // Only care precise value here.
+    if (getMemOPSizeKind(V) != PreciseValue)
       continue;
 
     // ValueCounts are sorted on the count. Break at the first un-profitable
