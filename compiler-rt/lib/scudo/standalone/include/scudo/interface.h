@@ -10,6 +10,7 @@
 #define SCUDO_INTERFACE_H_
 
 #include <stddef.h>
+#include <stdint.h>
 
 extern "C" {
 
@@ -104,6 +105,29 @@ size_t __scudo_get_stack_depot_size();
 
 const char *__scudo_get_region_info_addr();
 size_t __scudo_get_region_info_size();
+
+#ifndef M_DECAY_TIME
+#define M_DECAY_TIME -100
+#endif
+
+#ifndef M_PURGE
+#define M_PURGE -101
+#endif
+
+// Tune the allocator's choice of memory tags to make it more likely that
+// a certain class of memory errors will be detected. The value argument should
+// be one of the enumerators of the scudo_memtag_tuning enum below.
+#ifndef M_MEMTAG_TUNING
+#define M_MEMTAG_TUNING -102
+#endif
+
+enum scudo_memtag_tuning {
+  // Tune for buffer overflows.
+  M_MEMTAG_TUNING_BUFFER_OVERFLOW,
+
+  // Tune for use-after-free.
+  M_MEMTAG_TUNING_UAF,
+};
 
 } // extern "C"
 

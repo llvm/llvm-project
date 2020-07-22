@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "scudo/interface.h"
 #include "tests/scudo_unit_test.h"
 
 #include <errno.h>
@@ -187,14 +188,6 @@ TEST(ScudoWrappersCTest, Realloc) {
     free(P);
   }
 }
-
-#ifndef M_DECAY_TIME
-#define M_DECAY_TIME -100
-#endif
-
-#ifndef M_PURGE
-#define M_PURGE -101
-#endif
 
 #if !SCUDO_FUCHSIA
 TEST(ScudoWrappersCTest, MallOpt) {
