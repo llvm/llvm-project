@@ -64,7 +64,7 @@ public:
   Optional<uint64_t> getBlockProfileCount(const MachineBasicBlock *MBB) const;
   Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
 
-  bool isIrrLoopHeader(const MachineBasicBlock *MBB);
+  bool isIrrLoopHeader(const MachineBasicBlock *MBB) const;
 
   void setBlockFreq(const MachineBasicBlock *MBB, uint64_t Freq);
 
