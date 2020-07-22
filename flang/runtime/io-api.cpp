@@ -614,6 +614,24 @@ bool IONAME(SetAsynchronous)(
   }
 }
 
+bool IONAME(SetConvert)(
+    Cookie cookie, const char *keyword, std::size_t length) {
+  IoStatementState &io{*cookie};
+  auto *open{io.get_if<OpenStatementState>()};
+  if (!open) {
+    io.GetIoErrorHandler().Crash(
+        "SetConvert() called when not in an OPEN statement");
+  }
+  if (auto convert{GetConvertFromString(keyword, length)}) {
+    open->set_convert(*convert);
+    return true;
+  } else {
+    open->SignalError(IostatErrorInKeyword, "Invalid CONVERT='%.*s'",
+        static_cast<int>(length), keyword);
+    return false;
+  }
+}
+
 bool IONAME(SetEncoding)(
     Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
@@ -818,21 +836,27 @@ bool IONAME(OutputDescriptor)(Cookie cookie, const Descriptor &) {
   io.GetIoErrorHandler().Crash("OutputDescriptor: not yet implemented"); // TODO
 }
 
-bool IONAME(OutputUnformattedBlock)(
-    Cookie cookie, const char *x, std::size_t length) {
+bool IONAME(InputDescriptor)(Cookie cookie, const Descriptor &) {
+  IoStatementState &io{*cookie};
+  io.GetIoErrorHandler().Crash("InputDescriptor: not yet implemented"); // TODO
+}
+
+bool IONAME(OutputUnformattedBlock)(Cookie cookie, const char *x,
+    std::size_t length, std::size_t elementBytes) {
   IoStatementState &io{*cookie};
   if (auto *unf{io.get_if<UnformattedIoStatementState<Direction::Output>>()}) {
-    return unf->Emit(x, length);
+    return unf->Emit(x, length, elementBytes);
   }
   io.GetIoErrorHandler().Crash("OutputUnformattedBlock() called for an I/O "
                                "statement that is not unformatted output");
   return false;
 }
 
-bool IONAME(InputUnformattedBlock)(Cookie cookie, char *x, std::size_t length) {
+bool IONAME(InputUnformattedBlock)(
+    Cookie cookie, char *x, std::size_t length, std::size_t elementBytes) {
   IoStatementState &io{*cookie};
   if (auto *unf{io.get_if<UnformattedIoStatementState<Direction::Input>>()}) {
-    return unf->Receive(x, length);
+    return unf->Receive(x, length, elementBytes);
   }
   io.GetIoErrorHandler().Crash("InputUnformattedBlock() called for an I/O "
                                "statement that is not unformatted output");

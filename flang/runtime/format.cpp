@@ -15,7 +15,8 @@ DataEdit DefaultFormatControlCallbacks::GetNextDataEdit(int) {
         "non-formatted I/O statement");
   return {};
 }
-bool DefaultFormatControlCallbacks::Emit(const char *, std::size_t) {
+bool DefaultFormatControlCallbacks::Emit(
+    const char *, std::size_t, std::size_t) {
   Crash("DefaultFormatControlCallbacks::Emit(char) called for non-output I/O "
         "statement");
   return {};
