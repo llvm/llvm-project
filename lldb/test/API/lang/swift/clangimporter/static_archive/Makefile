@@ -6,9 +6,13 @@ EXE := a.out
 all: a.out
 
 # This test builds an Objective-C main program that imports two Swift
-# .dylibs with conflicting ClangImporter search paths.
+# .a archives.
 
 include Makefile.rules
+
+ifeq "$(OS)" "Darwin"
+SWIFTFLAGS += -sdk "$(SWIFTSDKROOT)"
+endif
 
 a.out: main.o
 	$(SWIFTC) $(SWIFTFLAGS) $< -lFoo -lBar -L$(shell pwd) -o $@ \

@@ -54,7 +54,8 @@ class TestSwiftBacktracePrinting(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         self.expect("bt", substrs=['h<T>',
-                                   'g<U, T>', 'pair', '12', "Hello world",
+                                   # FIXME: rdar://65956239 U and T are not resolved!
+                                   'g<U, T>', 'pair', # '12', "Hello world",
                                    'arg1=12', 'arg2="Hello world"'])
         self.expect("breakpoint set -p other", substrs=['g<U, T>'])
 

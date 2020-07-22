@@ -60,6 +60,7 @@ class TestSwiftMixAnyObjectType(TestBase):
 
         self.expect(
             'frame variable -d run -- dict',
+            ordered=False,
             substrs=[
                 'key = "One"',
                 'text = "Instance One"',
@@ -69,6 +70,7 @@ class TestSwiftMixAnyObjectType(TestBase):
                 'text = "Instance Two"'])
         self.expect(
             'expr -d run -- dict',
+            ordered=False,
             substrs=[
                 'key = "One"',
                 'text = "Instance One"',

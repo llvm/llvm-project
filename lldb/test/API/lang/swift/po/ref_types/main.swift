@@ -58,10 +58,10 @@ func main() {
   //% self.expect("po (dm as Any,cm as Any, 48 as Any)", substrs=['y12', 'q24'], matching=False)
   //% self.expect("po td", substrs=['TheDescendant', 'y12','q24'])
   //% self.expect("po td", substrs=['t36'], matching=False)
-  //% self.expect("po tr", substrs=['TheReflectiveDescendant', 'w48', 'q24', 'y12'])
+  //% self.expect("po tr", substrs=['TheReflectiveDescendant', 'super', 'y12', 'q24', 'w48'])
   //% self.expect("po tr", substrs=['t36'], matching=False)
   //% self.expect("script lldb.frame.FindVariable('tr').GetObjectDescription()", substrs=['t36'], matching=False)
-  //% self.expect("script lldb.frame.FindVariable('tr').GetObjectDescription()", substrs=['TheReflectiveDescendant', 'w48', 'q24', 'y12'])
+  //% self.expect("script lldb.frame.FindVariable('tr').GetObjectDescription()", substrs=['TheReflectiveDescendant', 'y12', 'q24', 'w48'])
 }
 
 main()
