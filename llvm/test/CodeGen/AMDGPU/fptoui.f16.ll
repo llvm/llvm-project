@@ -38,8 +38,11 @@ entry:
 ; test checks code generated for 'i64 = fp_to_uint f32'.
 
 ; GCN-LABEL: {{^}}fptoui_f16_to_i64
-; GCN: buffer_load_ushort
-; GCN: v_cvt_f32_f16_e32
+; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
+; GCN: v_mov_b32_e32 v[[R_I64_High:[0-9]+]], 0
+; GCN: v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
+; GCN: v_cvt_u32_f32_e32 v[[R_I64_Low:[0-9]+]], v[[A_F32]]
+; GCN: buffer_store_dwordx2 v{{\[}}[[R_I64_Low]]{{\:}}[[R_I64_High]]{{\]}}
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptoui_f16_to_i64(
     i64 addrspace(1)* %r,
@@ -104,10 +107,19 @@ entry:
 ; test checks code generated for 'i64 = fp_to_uint f32'.
 
 ; GCN-LABEL: {{^}}fptoui_v2f16_to_v2i64
-; GCN: buffer_load_dword
-; GCN: v_cvt_f32_f16_e32
-; SI: v_cvt_f32_f16_e32
-; VI: v_cvt_f32_f16_sdwa
+; GCN: buffer_load_dword v[[A_F16_0:[0-9]+]]
+; GCN: v_mov_b32_e32 v[[R_I64_1_High:[0-9]+]], 0
+; SI: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_F16_0]]
+; SI: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_F16_0]]
+; SI: v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
+; SI: v_cvt_u32_f32_e32 v[[R_I64_0_Low:[0-9]+]], v[[A_F32_0]]
+; SI: v_cvt_u32_f32_e32 v[[R_I64_1_Low:[0-9]+]], v[[A_F32_1]]
+; VI: v_cvt_f32_f16_sdwa v[[A_F32_1:[0-9]+]], v[[A_F16_0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; VI: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_F16_0]]
+; VI: v_cvt_u32_f32_e32 v[[R_I64_1_Low:[0-9]+]], v[[A_F32_1]]
+; VI: v_cvt_u32_f32_e32 v[[R_I64_0_Low:[0-9]+]], v[[A_F32_0]]
+; GCN: v_mov_b32_e32 v[[R_I64_0_High:[0-9]+]], 0
+; GCN: buffer_store_dwordx4 v{{\[}}[[R_I64_0_Low]]{{\:}}[[R_I64_1_High]]{{\]}}
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptoui_v2f16_to_v2i64(
     <2 x i64> addrspace(1)* %r,
