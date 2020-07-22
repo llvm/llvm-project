@@ -85,12 +85,11 @@ namespace {
 
 /// Helper class for values going out through an ABI boundary (used for handling
 /// function return values and call parameters).
-struct OutgoingValueHandler : public CallLowering::ValueHandler {
-  OutgoingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                       MachineInstrBuilder &MIB, CCAssignFn *AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
-
-  bool isIncomingArgumentHandler() const override { return false; }
+struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
+  ARMOutgoingValueHandler(MachineIRBuilder &MIRBuilder,
+                          MachineRegisterInfo &MRI, MachineInstrBuilder &MIB,
+                          CCAssignFn *AssignFn)
+      : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -258,7 +257,8 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForReturn(F.getCallingConv(), F.isVarArg());
 
-  OutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret, AssignFn);
+  ARMOutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret,
+                                     AssignFn);
   return handleAssignments(MIRBuilder, SplitRetInfos, RetHandler);
 }
 
@@ -282,12 +282,10 @@ namespace {
 
 /// Helper class for values coming in through an ABI boundary (used for handling
 /// formal arguments and call return values).
-struct IncomingValueHandler : public CallLowering::ValueHandler {
-  IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                       CCAssignFn AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn) {}
-
-  bool isIncomingArgumentHandler() const override { return true; }
+struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
+  ARMIncomingValueHandler(MachineIRBuilder &MIRBuilder,
+                          MachineRegisterInfo &MRI, CCAssignFn AssignFn)
+      : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -399,10 +397,10 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
   virtual void markPhysRegUsed(unsigned PhysReg) = 0;
 };
 
-struct FormalArgHandler : public IncomingValueHandler {
+struct FormalArgHandler : public ARMIncomingValueHandler {
   FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                    CCAssignFn AssignFn)
-      : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
+      : ARMIncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
@@ -469,10 +467,10 @@ bool ARMCallLowering::lowerFormalArguments(
 
 namespace {
 
-struct CallReturnHandler : public IncomingValueHandler {
+struct CallReturnHandler : public ARMIncomingValueHandler {
   CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                     MachineInstrBuilder MIB, CCAssignFn *AssignFn)
-      : IncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
+      : ARMIncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
@@ -554,7 +552,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &
   }
 
   auto ArgAssignFn = TLI.CCAssignFnForCall(Info.CallConv, IsVarArg);
-  OutgoingValueHandler ArgHandler(MIRBuilder, MRI, MIB, ArgAssignFn);
+  ARMOutgoingValueHandler ArgHandler(MIRBuilder, MRI, MIB, ArgAssignFn);
   if (!handleAssignments(MIRBuilder, ArgInfos, ArgHandler))
     return false;
 

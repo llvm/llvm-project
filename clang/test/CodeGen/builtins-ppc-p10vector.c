@@ -583,13 +583,13 @@ vector float test_vec_vec_splati_ins_f(void) {
 }
 
 int test_vec_test_lsbb_all_ones(void) {
-  // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i1 true
+  // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i32 1
   // CHECK-NEXT: ret i32
   return vec_test_lsbb_all_ones(vuca);
 }
 
 int test_vec_test_lsbb_all_zeros(void) {
-  // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i1 false
+  // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i32 0
   // CHECK-NEXT: ret i32
   return vec_test_lsbb_all_zeros(vuca);
 }

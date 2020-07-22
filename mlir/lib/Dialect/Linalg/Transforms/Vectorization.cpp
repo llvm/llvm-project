@@ -96,7 +96,7 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
     if (!outputTensorType.cast<ShapedType>().hasStaticShape())
       return failure();
 
-  if (isa<linalg::FillOp>(op))
+  if (isa<linalg::FillOp, linalg::CopyOp>(op))
     return success();
 
   return isContraction(op);
@@ -119,12 +119,6 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
     return;
   }
 
-  assert(succeeded(isContraction(op)) && "Expected contraction");
-
-  // Vectorize other ops as vector contraction.
-  // TODO: interface.
-  LLVM_DEBUG(dbgs() << dbgPref
-                    << "Rewrite linalg op as vector.contract: " << *op);
   // In the case of 0-D memrefs, return null and special case to scalar load or
   // store later.
   auto extractVectorTypeFromScalarView = [](Value v) {
@@ -133,6 +127,49 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
                ? VectorType()
                : VectorType::get(mt.getShape(), mt.getElementType());
   };
+
+  if (auto copyOp = dyn_cast<linalg::CopyOp>(op)) {
+    // Vectorize copy as a vector.transfer_read+vector.transfer_write.
+    LLVM_DEBUG(dbgs() << dbgPref
+                      << "Rewrite linalg.copy as vector.transfer_read + "
+                         "vector.transfer_write: "
+                      << *op);
+    Value zero = std_constant_index(0);
+    Value viewInput = copyOp.input();
+    Value viewOutput = copyOp.output();
+    Value vector;
+    if (VectorType inputType = extractVectorTypeFromScalarView(viewInput)) {
+      SmallVector<Value, 4> indicesInput(inputType.getRank(), zero);
+      if (copyOp.inputPermutation())
+        vector = vector_transfer_read(
+            extractVectorTypeFromScalarView(viewInput), viewInput, indicesInput,
+            copyOp.inputPermutation().getValue());
+      else
+        vector =
+            vector_transfer_read(extractVectorTypeFromScalarView(viewInput),
+                                 viewInput, indicesInput);
+    } else {
+      vector = std_load(viewInput).value;
+    }
+    if (VectorType outputType = extractVectorTypeFromScalarView(viewOutput)) {
+      SmallVector<Value, 4> indicesOutput(outputType.getRank(), zero);
+      if (copyOp.outputPermutation())
+        vector_transfer_write(vector, viewOutput, indicesOutput,
+                              copyOp.outputPermutation().getValue());
+      else
+        vector_transfer_write(vector, viewOutput, indicesOutput);
+    } else {
+      std_store(vector, viewOutput);
+    }
+    return;
+  }
+
+  assert(succeeded(isContraction(op)) && "Expected contraction");
+
+  // Vectorize other ops as vector contraction.
+  // TODO: interface.
+  LLVM_DEBUG(dbgs() << dbgPref
+                    << "Rewrite linalg op as vector.contract: " << *op);
   auto linalgOp = cast<linalg::LinalgOp>(op);
   Value viewA = linalgOp.getInput(0);
   Value viewB = linalgOp.getInput(1);

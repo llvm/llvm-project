@@ -10473,37 +10473,6 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   else
     return false;
 
-  if (D->isFromASTFile() && !LangOpts.BuildingPCHWithObjectFile) {
-    assert(getExternalSource() && "It's from an AST file; must have a source.");
-    // On Windows, PCH files are built together with an object file. If this
-    // declaration comes from such a PCH and DeclMustBeEmitted would return
-    // true, it would have returned true and the decl would have been emitted
-    // into that object file, so it doesn't need to be emitted here.
-    // Note that decls are still emitted if they're referenced, as usual;
-    // DeclMustBeEmitted is used to decide whether a decl must be emitted even
-    // if it's not referenced.
-    //
-    // Explicit template instantiation definitions are tricky. If there was an
-    // explicit template instantiation decl in the PCH before, it will look like
-    // the definition comes from there, even if that was just the declaration.
-    // (Explicit instantiation defs of variable templates always get emitted.)
-    bool IsExpInstDef =
-        isa<FunctionDecl>(D) &&
-        cast<FunctionDecl>(D)->getTemplateSpecializationKind() ==
-            TSK_ExplicitInstantiationDefinition;
-
-    // Implicit member function definitions, such as operator= might not be
-    // marked as template specializations, since they're not coming from a
-    // template but synthesized directly on the class.
-    IsExpInstDef |=
-        isa<CXXMethodDecl>(D) &&
-        cast<CXXMethodDecl>(D)->getParent()->getTemplateSpecializationKind() ==
-            TSK_ExplicitInstantiationDefinition;
-
-    if (getExternalSource()->DeclIsFromPCHWithObjectFile(D) && !IsExpInstDef)
-      return false;
-  }
-
   // If this is a member of a class template, we do not need to emit it.
   if (D->getDeclContext()->isDependentContext())
     return false;
