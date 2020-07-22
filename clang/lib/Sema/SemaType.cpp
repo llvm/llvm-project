@@ -7689,14 +7689,17 @@ static bool isPermittedNeonBaseType(QualType &Ty,
 static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
                                            llvm::APSInt &Result) {
   const auto *AttrExpr = Attr.getArgAsExpr(0);
-  if (AttrExpr->isTypeDependent() || AttrExpr->isValueDependent() ||
-      !AttrExpr->isIntegerConstantExpr(Result, S.Context)) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
-        << Attr << AANT_ArgumentIntegerConstant << AttrExpr->getSourceRange();
-    Attr.setInvalid();
-    return false;
+  if (!AttrExpr->isTypeDependent() && !AttrExpr->isValueDependent()) {
+    if (Optional<llvm::APSInt> Res =
+            AttrExpr->getIntegerConstantExpr(S.Context)) {
+      Result = *Res;
+      return true;
+    }
   }
-  return true;
+  S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
+      << Attr << AANT_ArgumentIntegerConstant << AttrExpr->getSourceRange();
+  Attr.setInvalid();
+  return false;
 }
 
 /// HandleNeonVectorTypeAttr - The "neon_vector_type" and
@@ -7737,7 +7740,7 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 
   // The total size of the vector must be 64 or 128 bits.
   unsigned typeSize = static_cast<unsigned>(S.Context.getTypeSize(CurType));
-  unsigned numElts = static_cast<unsigned>(numEltsInt->getZExtValue());
+  unsigned numElts = static_cast<unsigned>(numEltsInt.getZExtValue());
   unsigned vecSize = typeSize * numElts;
   if (vecSize != 64 && vecSize != 128) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_neon_vector_size) << CurType;
