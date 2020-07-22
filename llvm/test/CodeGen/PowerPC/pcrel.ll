@@ -41,12 +41,15 @@ define dso_local signext i32 @ReadGlobalVarInt() local_unnamed_addr  {
 ; CHECK-S-LABEL: ReadGlobalVarInt
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    pld r3, valIntGlob@got@pcrel(0), 1
+; CHECK-S-NEXT: .Lpcrel:
+; CHECK-S-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
 ; CHECK-S-NEXT:    lwa r3, 0(r3)
 ; CHECK-S-NEXT:    blr
 
 ; CHECK-O-LABEL: ReadGlobalVarInt
 ; CHECK-O:         pld 3, 0(0), 1
 ; CHECK-O-NEXT:    R_PPC64_GOT_PCREL34 valIntGlob
+; CHECK-O-NEXT:    R_PPC64_PCREL_OPT *ABS*+0x8
 ; CHECK-O-NEXT:    lwa 3, 0(3)
 ; CHECK-O-NEXT:    blr
 entry:
