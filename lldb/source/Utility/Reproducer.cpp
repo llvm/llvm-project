@@ -157,7 +157,7 @@ FileSpec Reproducer::GetReproducerPath() const {
   return {};
 }
 
-static FileSpec MakeAbsolute(FileSpec file_spec) {
+static FileSpec MakeAbsolute(const FileSpec &file_spec) {
   SmallString<128> path;
   file_spec.GetPath(path, false);
   llvm::sys::fs::make_absolute(path);
