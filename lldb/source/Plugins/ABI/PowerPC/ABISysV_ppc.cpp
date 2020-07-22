@@ -527,7 +527,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
       // Extract the register context so we can read arguments from registers
 
       llvm::Optional<uint64_t> byte_size =
-          return_compiler_type.GetByteSize(nullptr);
+          return_compiler_type.GetByteSize(&thread);
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
@@ -574,7 +574,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         // Don't handle complex yet.
       } else {
         llvm::Optional<uint64_t> byte_size =
-            return_compiler_type.GetByteSize(nullptr);
+            return_compiler_type.GetByteSize(&thread);
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
           RegisterValue f1_value;
@@ -608,7 +608,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
     llvm::Optional<uint64_t> byte_size =
-        return_compiler_type.GetByteSize(nullptr);
+        return_compiler_type.GetByteSize(&thread);
     if (byte_size && *byte_size > 0) {
       const RegisterInfo *altivec_reg = reg_ctx->GetRegisterInfoByName("v2", 0);
       if (altivec_reg) {
