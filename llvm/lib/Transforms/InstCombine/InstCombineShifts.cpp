@@ -15,6 +15,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -31,7 +32,7 @@ using namespace PatternMatch;
 //
 // AnalyzeForSignBitExtraction indicates that we will only analyze whether this
 // pattern has any 2 right-shifts that sum to 1 less than original bit width.
-Value *InstCombiner::reassociateShiftAmtsOfTwoSameDirectionShifts(
+Value *InstCombinerImpl::reassociateShiftAmtsOfTwoSameDirectionShifts(
     BinaryOperator *Sh0, const SimplifyQuery &SQ,
     bool AnalyzeForSignBitExtraction) {
   // Look for a shift of some instruction, ignore zext of shift amount if any.
@@ -360,7 +361,7 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
   return BinaryOperator::Create(LogicInst->getOpcode(), NewShift1, NewShift2);
 }
 
-Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
+Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   assert(Op0->getType() == Op1->getType());
 
@@ -420,8 +421,8 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
 /// Return true if we can simplify two logical (either left or right) shifts
 /// that have constant shift amounts: OuterShift (InnerShift X, C1), C2.
 static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
-                                    Instruction *InnerShift, InstCombiner &IC,
-                                    Instruction *CxtI) {
+                                    Instruction *InnerShift,
+                                    InstCombinerImpl &IC, Instruction *CxtI) {
   assert(InnerShift->isLogicalShift() && "Unexpected instruction type");
 
   // We need constant scalar or constant splat shifts.
@@ -472,7 +473,7 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
 /// where the client will ask if E can be computed shifted right by 64-bits. If
 /// this succeeds, getShiftedValue() will be called to produce the value.
 static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
-                               InstCombiner &IC, Instruction *CxtI) {
+                               InstCombinerImpl &IC, Instruction *CxtI) {
   // We can always evaluate constants shifted.
   if (isa<Constant>(V))
     return true;
@@ -608,7 +609,7 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
 /// When canEvaluateShifted() returns true for an expression, this function
 /// inserts the new computation that produces the shifted value.
 static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
-                              InstCombiner &IC, const DataLayout &DL) {
+                              InstCombinerImpl &IC, const DataLayout &DL) {
   // We can always evaluate constants shifted.
   if (Constant *C = dyn_cast<Constant>(V)) {
     if (isLeftShift)
@@ -618,7 +619,7 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   }
 
   Instruction *I = cast<Instruction>(V);
-  IC.Worklist.push(I);
+  IC.addToWorklist(I);
 
   switch (I->getOpcode()) {
   default: llvm_unreachable("Inconsistency with CanEvaluateShifted");
@@ -672,8 +673,8 @@ static bool canShiftBinOpWithConstantRHS(BinaryOperator &Shift,
   }
 }
 
-Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
-                                               BinaryOperator &I) {
+Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
+                                                   BinaryOperator &I) {
   bool isLeftShift = I.getOpcode() == Instruction::Shl;
 
   const APInt *Op1C;
@@ -915,7 +916,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
   return nullptr;
 }
 
-Instruction *InstCombiner::visitShl(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   if (Value *V = SimplifyShlInst(I.getOperand(0), I.getOperand(1),
@@ -1037,7 +1038,7 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
   return nullptr;
 }
 
-Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   if (Value *V = SimplifyLShrInst(I.getOperand(0), I.getOperand(1), I.isExact(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
@@ -1167,7 +1168,7 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
 }
 
 Instruction *
-InstCombiner::foldVariableSignZeroExtensionOfVariableHighBitExtract(
+InstCombinerImpl::foldVariableSignZeroExtensionOfVariableHighBitExtract(
     BinaryOperator &OldAShr) {
   assert(OldAShr.getOpcode() == Instruction::AShr &&
          "Must be called with arithmetic right-shift instruction only.");
@@ -1235,7 +1236,7 @@ InstCombiner::foldVariableSignZeroExtensionOfVariableHighBitExtract(
   return TruncInst::CreateTruncOrBitCast(NewAShr, OldAShr.getType());
 }
 
-Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
   if (Value *V = SimplifyAShrInst(I.getOperand(0), I.getOperand(1), I.isExact(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);

@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine %s | FileCheck %s
+; RUN: opt -S -instcombine -mtriple=amdgcn-amd-amdhsa %s | FileCheck %s
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.buffer.load

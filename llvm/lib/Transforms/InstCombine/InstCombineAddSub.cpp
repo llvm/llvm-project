@@ -29,6 +29,7 @@
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
 #include <utility>
 
@@ -860,7 +861,7 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
   return nullptr;
 }
 
-Instruction *InstCombiner::foldAddWithConstant(BinaryOperator &Add) {
+Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   Value *Op0 = Add.getOperand(0), *Op1 = Add.getOperand(1);
   Constant *Op1C;
   if (!match(Op1, m_Constant(Op1C)))
@@ -886,15 +887,15 @@ Instruction *InstCombiner::foldAddWithConstant(BinaryOperator &Add) {
   // zext(bool) + C -> bool ? C + 1 : C
   if (match(Op0, m_ZExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    return SelectInst::Create(X, AddOne(Op1C), Op1);
+    return SelectInst::Create(X, InstCombiner::AddOne(Op1C), Op1);
   // sext(bool) + C -> bool ? C - 1 : C
   if (match(Op0, m_SExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    return SelectInst::Create(X, SubOne(Op1C), Op1);
+    return SelectInst::Create(X, InstCombiner::SubOne(Op1C), Op1);
 
   // ~X + C --> (C-1) - X
   if (match(Op0, m_Not(m_Value(X))))
-    return BinaryOperator::CreateSub(SubOne(Op1C), X);
+    return BinaryOperator::CreateSub(InstCombiner::SubOne(Op1C), X);
 
   const APInt *C;
   if (!match(Op1, m_APInt(C)))
@@ -1021,7 +1022,7 @@ static bool MulWillOverflow(APInt &C0, APInt &C1, bool IsSigned) {
 
 // Simplifies X % C0 + (( X / C0 ) % C1) * C0 to X % (C0 * C1), where (C0 * C1)
 // does not overflow.
-Value *InstCombiner::SimplifyAddWithRemainder(BinaryOperator &I) {
+Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Value *X, *MulOpV;
   APInt C0, MulOpC;
@@ -1097,9 +1098,9 @@ static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {
   return nullptr;
 }
 
-Instruction *
-InstCombiner::canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
-    BinaryOperator &I) {
+Instruction *InstCombinerImpl::
+    canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
+        BinaryOperator &I) {
   assert((I.getOpcode() == Instruction::Add ||
           I.getOpcode() == Instruction::Or ||
           I.getOpcode() == Instruction::Sub) &&
@@ -1198,7 +1199,7 @@ InstCombiner::canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
   return TruncInst::CreateTruncOrBitCast(NewAShr, I.getType());
 }
 
-Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Value *V = SimplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
                                  SQ.getWithInstruction(&I)))
@@ -1486,7 +1487,7 @@ static Instruction *factorizeFAddFSub(BinaryOperator &I,
                 : BinaryOperator::CreateFDivFMF(XY, Z, &I);
 }
 
-Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   if (Value *V = SimplifyFAddInst(I.getOperand(0), I.getOperand(1),
                                   I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
@@ -1600,8 +1601,8 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
 /// Optimize pointer differences into the same array into a size.  Consider:
 ///  &A[10] - &A[0]: we should compile this to "10".  LHS/RHS are the pointer
 /// operands to the ptrtoint instructions for the LHS/RHS of the subtract.
-Value *InstCombiner::OptimizePointerDifference(Value *LHS, Value *RHS,
-                                               Type *Ty, bool IsNUW) {
+Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
+                                                   Type *Ty, bool IsNUW) {
   // If LHS is a gep based on RHS or RHS is a gep based on LHS, we can optimize
   // this.
   bool Swapped = false;
@@ -1692,7 +1693,7 @@ Value *InstCombiner::OptimizePointerDifference(Value *LHS, Value *RHS,
   return Builder.CreateIntCast(Result, Ty, true);
 }
 
-Instruction *InstCombiner::visitSub(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (Value *V = SimplifySubInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
                                  SQ.getWithInstruction(&I)))
@@ -1806,14 +1807,14 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     Value *X;
     if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
       // C - (zext bool) --> bool ? C - 1 : C
-      return SelectInst::Create(X, SubOne(C), C);
+      return SelectInst::Create(X, InstCombiner::SubOne(C), C);
     if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
       // C - (sext bool) --> bool ? C + 1 : C
-      return SelectInst::Create(X, AddOne(C), C);
+      return SelectInst::Create(X, InstCombiner::AddOne(C), C);
 
     // C - ~X == X + (1+C)
     if (match(Op1, m_Not(m_Value(X))))
-      return BinaryOperator::CreateAdd(X, AddOne(C));
+      return BinaryOperator::CreateAdd(X, InstCombiner::AddOne(C));
 
     // Try to fold constant sub into select arguments.
     if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
@@ -2094,11 +2095,11 @@ static Instruction *hoistFNegAboveFMulFDiv(Instruction &I,
   return nullptr;
 }
 
-Instruction *InstCombiner::visitFNeg(UnaryOperator &I) {
+Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
   Value *Op = I.getOperand(0);
 
   if (Value *V = SimplifyFNegInst(Op, I.getFastMathFlags(),
-                                  SQ.getWithInstruction(&I)))
+                                  getSimplifyQuery().getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldFNegIntoConstant(I))
@@ -2117,10 +2118,10 @@ Instruction *InstCombiner::visitFNeg(UnaryOperator &I) {
   return nullptr;
 }
 
-Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   if (Value *V = SimplifyFSubInst(I.getOperand(0), I.getOperand(1),
                                   I.getFastMathFlags(),
-                                  SQ.getWithInstruction(&I)))
+                                  getSimplifyQuery().getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldVectorBinop(I))

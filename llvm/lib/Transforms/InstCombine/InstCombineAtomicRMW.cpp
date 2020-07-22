@@ -9,8 +9,10 @@
 // This file implements the visit functions for atomic rmw instructions.
 //
 //===----------------------------------------------------------------------===//
+
 #include "InstCombineInternal.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 
 using namespace llvm;
 
@@ -30,7 +32,7 @@ bool isIdempotentRMW(AtomicRMWInst& RMWI) {
     default:
       return false;
     };
-  
+
   auto C = dyn_cast<ConstantInt>(RMWI.getValOperand());
   if(!C)
     return false;
@@ -93,11 +95,11 @@ bool isSaturating(AtomicRMWInst& RMWI) {
 }
 }
 
-Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
+Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
 
   // Volatile RMWs perform a load and a store, we cannot replace this by just a
   // load or just a store. We chose not to canonicalize out of general paranoia
-  // about user expectations around volatile. 
+  // about user expectations around volatile.
   if (RMWI.isVolatile())
     return nullptr;
 
@@ -115,7 +117,7 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
          "AtomicRMWs don't make sense with Unordered or NotAtomic");
 
   // Any atomicrmw xchg with no uses can be converted to a atomic store if the
-  // ordering is compatible. 
+  // ordering is compatible.
   if (RMWI.getOperation() == AtomicRMWInst::Xchg &&
       RMWI.use_empty()) {
     if (Ordering != AtomicOrdering::Release &&
@@ -127,14 +129,14 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
     SI->setAlignment(DL.getABITypeAlign(RMWI.getType()));
     return eraseInstFromFunction(RMWI);
   }
-  
+
   if (!isIdempotentRMW(RMWI))
     return nullptr;
 
   // We chose to canonicalize all idempotent operations to an single
   // operation code and constant.  This makes it easier for the rest of the
   // optimizer to match easily.  The choices of or w/0 and fadd w/-0.0 are
-  // arbitrary. 
+  // arbitrary.
   if (RMWI.getType()->isIntegerTy() &&
       RMWI.getOperation() != AtomicRMWInst::Or) {
     RMWI.setOperation(AtomicRMWInst::Or);
@@ -149,7 +151,7 @@ Instruction *InstCombiner::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   if (Ordering != AtomicOrdering::Acquire &&
       Ordering != AtomicOrdering::Monotonic)
     return nullptr;
-  
+
   LoadInst *Load = new LoadInst(RMWI.getType(), RMWI.getPointerOperand(), "",
                                 false, DL.getABITypeAlign(RMWI.getType()),
                                 Ordering, RMWI.getSyncScopeID());
