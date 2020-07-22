@@ -1462,6 +1462,8 @@ TypeSystemSwiftTypeRef::GetTypeClass(opaque_compiler_type_t type) {
   auto impl = [&]() {
     uint32_t flags = GetTypeInfo(type, nullptr);
     // The ordering is significant since GetTypeInfo() returns many flags.
+    if ((flags & eTypeIsGenericTypeParam))
+      return eTypeClassOther;
     if ((flags & eTypeIsScalar))
       return eTypeClassBuiltin;
     if ((flags & eTypeIsVector))
