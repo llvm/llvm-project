@@ -12,7 +12,7 @@ define void @foo(i32 %vla_size) #0 {
 ; CHECK-LE-NEXT:    mr r12, r1
 ; CHECK-LE-NEXT:    .cfi_def_cfa r12, 0
 ; CHECK-LE-NEXT:    clrldi r0, r12, 53
-; CHECK-LE-NEXT:    stdux r12, r1, r0
+; CHECK-LE-NEXT:    subc r1, r1, r0
 ; CHECK-LE-NEXT:    stdu r12, -2048(r1)
 ; CHECK-LE-NEXT:    stdu r12, -4096(r1)
 ; CHECK-LE-NEXT:    .cfi_def_cfa_register r1
