@@ -1582,6 +1582,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (checkArgCount(*this, TheCall, 1)) return true;
     TheCall->setType(Context.IntTy);
     break;
+  case Builtin::BI__builtin_complex:
+    if (SemaBuiltinComplex(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_constant_p: {
     if (checkArgCount(*this, TheCall, 1)) return true;
     ExprResult Arg = DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
@@ -5783,6 +5787,61 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
                 diag::err_typecheck_call_invalid_unary_fp)
            << OrigArg->getType() << OrigArg->getSourceRange();
 
+  return false;
+}
+
+/// Perform semantic analysis for a call to __builtin_complex.
+bool Sema::SemaBuiltinComplex(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 2))
+    return true;
+
+  bool Dependent = false;
+  for (unsigned I = 0; I != 2; ++I) {
+    Expr *Arg = TheCall->getArg(I);
+    QualType T = Arg->getType();
+    if (T->isDependentType()) {
+      Dependent = true;
+      continue;
+    }
+
+    // Despite supporting _Complex int, GCC requires a real floating point type
+    // for the operands of __builtin_complex.
+    if (!T->isRealFloatingType()) {
+      return Diag(Arg->getBeginLoc(), diag::err_typecheck_call_requires_real_fp)
+             << Arg->getType() << Arg->getSourceRange();
+    }
+
+    ExprResult Converted = DefaultLvalueConversion(Arg);
+    if (Converted.isInvalid())
+      return true;
+    TheCall->setArg(I, Converted.get());
+  }
+
+  if (Dependent) {
+    TheCall->setType(Context.DependentTy);
+    return false;
+  }
+
+  Expr *Real = TheCall->getArg(0);
+  Expr *Imag = TheCall->getArg(1);
+  if (!Context.hasSameType(Real->getType(), Imag->getType())) {
+    return Diag(Real->getBeginLoc(),
+                diag::err_typecheck_call_different_arg_types)
+           << Real->getType() << Imag->getType()
+           << Real->getSourceRange() << Imag->getSourceRange();
+  }
+
+  // We don't allow _Complex _Float16 nor _Complex __fp16 as type specifiers;
+  // don't allow this builtin to form those types either.
+  // FIXME: Should we allow these types?
+  if (Real->getType()->isFloat16Type())
+    return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
+           << "_Float16";
+  if (Real->getType()->isHalfType())
+    return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
+           << "half";
+
+  TheCall->setType(Context.getComplexType(Real->getType()));
   return false;
 }
 

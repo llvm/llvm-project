@@ -356,3 +356,22 @@ int test_cxx_builtin() {
   // expected-error@+1 {{use of unknown builtin '__builtin_is_constant_evaluated'}}
   return __builtin_is_constant_evaluated();
 }
+
+void test_builtin_complex() {
+  __builtin_complex(); // expected-error {{too few}}
+  __builtin_complex(1); // expected-error {{too few}}
+  __builtin_complex(1, 2, 3); // expected-error {{too many}}
+
+  _Static_assert(_Generic(__builtin_complex(1.0f, 2.0f), _Complex float: 1, default: 0), "");
+  _Static_assert(_Generic(__builtin_complex(1.0, 2.0), _Complex double: 1, default: 0), "");
+  _Static_assert(_Generic(__builtin_complex(1.0l, 2.0l), _Complex long double: 1, default: 0), "");
+
+  __builtin_complex(1, 2); // expected-error {{argument type 'int' is not a real floating point type}}
+  __builtin_complex(1, 2.0); // expected-error {{argument type 'int' is not a real floating point type}}
+  __builtin_complex(1.0, 2); // expected-error {{argument type 'int' is not a real floating point type}}
+
+  __builtin_complex(1.0, 2.0f); // expected-error {{arguments are of different types ('double' vs 'float')}}
+  __builtin_complex(1.0f, 2.0); // expected-error {{arguments are of different types ('float' vs 'double')}}
+}
+
+_Complex double builtin_complex_static_init = __builtin_complex(1.0, 2.0);
