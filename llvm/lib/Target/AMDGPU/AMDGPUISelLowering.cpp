@@ -2702,14 +2702,12 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_SINT(SDValue Op,
   // TODO: Factor out code common with LowerFP_TO_UINT.
 
   EVT SrcVT = Src.getValueType();
-  if (Subtarget->has16BitInsts() && SrcVT == MVT::f16) {
+  if (SrcVT == MVT::f16 ||
+      (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP)) {
     SDLoc DL(Op);
 
-    SDValue FPExtend = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
-    SDValue FpToInt32 =
-        DAG.getNode(Op.getOpcode(), DL, MVT::i64, FPExtend);
-
-    return FpToInt32;
+    SDValue FpToInt32 = DAG.getNode(Op.getOpcode(), DL, MVT::i32, Src);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, FpToInt32);
   }
 
   if (Op.getValueType() == MVT::i64 && Src.getValueType() == MVT::f64)
@@ -2725,14 +2723,12 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_UINT(SDValue Op,
   // TODO: Factor out code common with LowerFP_TO_SINT.
 
   EVT SrcVT = Src.getValueType();
-  if (Subtarget->has16BitInsts() && SrcVT == MVT::f16) {
+  if (SrcVT == MVT::f16 ||
+      (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP)) {
     SDLoc DL(Op);
 
-    SDValue FPExtend = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
-    SDValue FpToInt32 =
-        DAG.getNode(Op.getOpcode(), DL, MVT::i64, FPExtend);
-
-    return FpToInt32;
+    SDValue FpToUInt32 = DAG.getNode(Op.getOpcode(), DL, MVT::i32, Src);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, FpToUInt32);
   }
 
   if (Op.getValueType() == MVT::i64 && Src.getValueType() == MVT::f64)
