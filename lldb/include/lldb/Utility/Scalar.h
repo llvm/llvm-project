@@ -9,14 +9,15 @@
 #ifndef LLDB_UTILITY_SCALAR_H
 #define LLDB_UTILITY_SCALAR_H
 
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-types.h"
-#include "lldb/Utility/LLDBAssert.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 
 namespace lldb_private {
 class DataExtractor;
@@ -89,7 +90,7 @@ public:
                 llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
                             (reinterpret_cast<type128 *>(&v))->x)) {}
   Scalar(llvm::APInt v) : m_type(), m_float(static_cast<float>(0)) {
-    m_integer = llvm::APInt(v);
+    m_integer = llvm::APInt(std::move(v));
     m_type = GetBestTypeForBitSize(m_integer.getBitWidth(), true);
   }
   // Scalar(const RegisterValue& reg_value);
