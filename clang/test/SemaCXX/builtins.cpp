@@ -144,3 +144,12 @@ void test_noexcept(int *i) {
 }
 #undef TEST_TYPE
 } // end namespace test_launder
+
+template<typename T> void test_builtin_complex(T v, double d) {
+  (void)__builtin_complex(v, d); // expected-error {{different types}} expected-error {{not a real floating}}
+  (void)__builtin_complex(d, v); // expected-error {{different types}} expected-error {{not a real floating}}
+  (void)__builtin_complex(v, v); // expected-error {{not a real floating}}
+}
+template void test_builtin_complex(double, double);
+template void test_builtin_complex(float, double); // expected-note {{instantiation of}}
+template void test_builtin_complex(int, double); // expected-note {{instantiation of}}
