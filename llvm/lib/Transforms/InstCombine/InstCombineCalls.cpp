@@ -1711,7 +1711,7 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
   return nullptr;
 }
 
-Instruction *InstCombiner::tryCombinePtrAuthCall(CallBase &Call) {
+Instruction *InstCombinerImpl::tryCombinePtrAuthCall(CallBase &Call) {
   Value *Callee = Call.getCalledOperand();
   auto *IPC = dyn_cast<IntToPtrInst>(Callee);
   if (!IPC || !IPC->isNoopCast(DL))
