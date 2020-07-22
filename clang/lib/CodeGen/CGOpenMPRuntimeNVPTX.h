@@ -26,11 +26,7 @@ class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntimeGPU {
 
 public:
   explicit CGOpenMPRuntimeNVPTX(CodeGenModule &CGM);
-<<<<<<< HEAD
-  llvm::Value *getGPUWarpSize(CodeGenFunction &CGF);
-=======
   llvm::Value *getGPUWarpSize(CodeGenFunction &CGF) override;
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
 };
 
 } // CodeGen namespace.

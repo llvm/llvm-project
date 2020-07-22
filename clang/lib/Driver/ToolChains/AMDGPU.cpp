@@ -132,17 +132,6 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     ParentName = llvm::sys::path::filename(ParentDir);
   }
 
-<<<<<<< HEAD
-    if (ParentName == "llvm") {
-      // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
-      Candidates.emplace_back(llvm::sys::path::parent_path(ParentDir).str(),
-                              /*StrictChecking=*/true);
-    }
-    if (ParentName.startswith("aomp")) {
-      // Some versions of the aomp package install to /opt/rocm/aomp/bin
-      Candidates.emplace_back(ParentDir.str());
-    }
-=======
   // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
   if (ParentName == "llvm")
     ParentDir = llvm::sys::path::parent_path(ParentDir);
@@ -153,9 +142,12 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   Candidates.emplace_back(D.ResourceDir, /*StrictChecking=*/true);
 
   Candidates.emplace_back(D.SysRoot + "/opt/rocm", /*StrictChecking=*/true);
+  if (ParentName.startswith("aomp")) {
+    // Some versions of the aomp package install to /opt/rocm/aomp/bin
+    Candidates.emplace_back(ParentDir.str());
+  }
   return Candidates;
 }
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
 
 RocmInstallationDetector::RocmInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,

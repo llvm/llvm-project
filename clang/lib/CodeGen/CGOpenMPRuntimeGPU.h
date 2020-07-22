@@ -33,7 +33,6 @@ public:
     /// Unknown execution mode (orphaned directive).
     EM_Unknown,
   };
-<<<<<<< HEAD
   /// Pairs of workgroup barriers control the master and worker warps.
   /// The context where they are used causes additional control logic
   /// around the workgroup barrier.  This enum is used to determine which
@@ -54,8 +53,6 @@ public:
     CTA_BarrierTerminate,
   };
 
-=======
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
 private:
   /// Parallel outlined function work for workers to execute.
   llvm::SmallVector<llvm::Function *, 16> Work;
@@ -81,12 +78,8 @@ private:
   bool requiresFullRuntime() const { return RequiresFullRuntime; }
 
   /// Get barrier to synchronize all threads in a block.
-<<<<<<< HEAD
   void syncCTAThreads(CodeGenFunction &CGF,
                       CGOpenMPRuntimeGPU::CTA_BarrierType barrier_type);
-=======
-  void syncCTAThreads(CodeGenFunction &CGF);
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
 
   /// Emit the worker function for the current target region.
   void emitWorkerFunction(WorkerFunctionState &WST);
@@ -103,12 +96,9 @@ private:
   /// function.
   void emitNonSPMDEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
 
-<<<<<<< HEAD
   void GenerateMetaData(CodeGenModule &CGM, const OMPExecutableDirective &D,
                         llvm::Function *&OutlinedFn, bool isSPMD);
 
-=======
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
   /// Helper for generic variables globalization prolog.
   void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc,
                              bool WithSPMDCheck = false);
@@ -235,11 +225,7 @@ public:
   /// Declare generalized virtual functions which need to be defined
   /// by all specializations of OpenMPGPURuntime Targets.
   virtual llvm::Value *getGPUWarpSize(CodeGenFunction &CGF) = 0;
-<<<<<<< HEAD
   
-=======
-
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
   virtual void emitProcBindClause(CodeGenFunction &CGF,
@@ -455,12 +441,9 @@ private:
   bool IsInTTDRegion = false;
   /// true if we're definitely in the parallel region.
   bool IsInParallelRegion = false;
-<<<<<<< HEAD
   /// Nesting level of parallel region.
   int ParallelLevel = 0;
   int MaxParallelLevel = 0;
-=======
->>>>>>> e031eda08df471c67f9a37289072d338517457a9
 
   /// Map between an outlined function and its wrapper.
   llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;

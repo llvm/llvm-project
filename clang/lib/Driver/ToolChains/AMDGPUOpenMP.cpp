@@ -439,7 +439,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 
   // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
   for (auto Path :
-       DriverArgs.getAllArgValues(options::OPT_hip_device_lib_path_EQ))
+       RocmInstallation.getRocmDeviceLibPathArg())
     LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
@@ -452,8 +452,8 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
                /* PostClang Link? */ true);
 
   } else {
-    if (!RocmInstallation.isValid()) {
-      getDriver().Diag(diag::err_drv_no_rocm_installation);
+    if (!RocmInstallation.hasDeviceLibrary()) {
+      getDriver().Diag(diag::err_drv_no_rocm_device_lib);
       return;
     }
 
