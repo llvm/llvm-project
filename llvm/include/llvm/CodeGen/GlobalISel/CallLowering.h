@@ -111,15 +111,18 @@ public:
   /// argument should go, exactly what happens can vary slightly. This
   /// class abstracts the differences.
   struct ValueHandler {
-    ValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                 CCAssignFn *AssignFn)
-      : MIRBuilder(MIRBuilder), MRI(MRI), AssignFn(AssignFn) {}
+    ValueHandler(bool IsIncoming, MachineIRBuilder &MIRBuilder,
+                 MachineRegisterInfo &MRI, CCAssignFn *AssignFn)
+        : MIRBuilder(MIRBuilder), MRI(MRI), AssignFn(AssignFn),
+          IsIncomingArgumentHandler(IsIncoming) {}
 
     virtual ~ValueHandler() = default;
 
     /// Returns true if the handler is dealing with incoming arguments,
     /// i.e. those that move values from some physical location to vregs.
-    virtual bool isIncomingArgumentHandler() const = 0;
+    bool isIncomingArgumentHandler() const {
+      return IsIncomingArgumentHandler;
+    }
 
     /// Materialize a VReg containing the address of the specified
     /// stack-based object. This is either based on a FrameIndex or
@@ -178,7 +181,20 @@ public:
     CCAssignFn *AssignFn;
 
   private:
+    bool IsIncomingArgumentHandler;
     virtual void anchor();
+  };
+
+  struct IncomingValueHandler : public ValueHandler {
+    IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                         CCAssignFn *AssignFn)
+        : ValueHandler(true, MIRBuilder, MRI, AssignFn) {}
+  };
+
+  struct OutgoingValueHandler : public ValueHandler {
+    OutgoingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                         CCAssignFn *AssignFn)
+        : ValueHandler(false, MIRBuilder, MRI, AssignFn) {}
   };
 
 protected:

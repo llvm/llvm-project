@@ -35,9 +35,9 @@ using namespace llvm;
 namespace {
 
 struct AMDGPUValueHandler : public CallLowering::ValueHandler {
-  AMDGPUValueHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                     CCAssignFn *AssignFn)
-    : ValueHandler(B, MRI, AssignFn) {}
+  AMDGPUValueHandler(bool IsIncoming, MachineIRBuilder &B,
+                     MachineRegisterInfo &MRI, CCAssignFn *AssignFn)
+      : ValueHandler(IsIncoming, B, MRI, AssignFn) {}
 
   /// Wrapper around extendRegister to ensure we extend to a full 32-bit
   /// register.
@@ -52,14 +52,12 @@ struct AMDGPUValueHandler : public CallLowering::ValueHandler {
   }
 };
 
-struct OutgoingValueHandler : public AMDGPUValueHandler {
-  OutgoingValueHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                       MachineInstrBuilder MIB, CCAssignFn *AssignFn)
-      : AMDGPUValueHandler(B, MRI, AssignFn), MIB(MIB) {}
+struct AMDGPUOutgoingValueHandler : public AMDGPUValueHandler {
+  AMDGPUOutgoingValueHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                             MachineInstrBuilder MIB, CCAssignFn *AssignFn)
+      : AMDGPUValueHandler(false, B, MRI, AssignFn), MIB(MIB) {}
 
   MachineInstrBuilder MIB;
-
-  bool isIncomingArgumentHandler() const override { return false; }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -100,12 +98,12 @@ struct OutgoingValueHandler : public AMDGPUValueHandler {
   }
 };
 
-struct IncomingArgHandler : public AMDGPUValueHandler {
+struct AMDGPUIncomingArgHandler : public AMDGPUValueHandler {
   uint64_t StackUsed = 0;
 
-  IncomingArgHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                     CCAssignFn *AssignFn)
-    : AMDGPUValueHandler(B, MRI, AssignFn) {}
+  AMDGPUIncomingArgHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                           CCAssignFn *AssignFn)
+      : AMDGPUValueHandler(true, B, MRI, AssignFn) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -163,25 +161,22 @@ struct IncomingArgHandler : public AMDGPUValueHandler {
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
   virtual void markPhysRegUsed(unsigned PhysReg) = 0;
-
-  // FIXME: What is the point of this being a callback?
-  bool isIncomingArgumentHandler() const override { return true; }
 };
 
-struct FormalArgHandler : public IncomingArgHandler {
+struct FormalArgHandler : public AMDGPUIncomingArgHandler {
   FormalArgHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                    CCAssignFn *AssignFn)
-    : IncomingArgHandler(B, MRI, AssignFn) {}
+      : AMDGPUIncomingArgHandler(B, MRI, AssignFn) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
 };
 
-struct CallReturnHandler : public IncomingArgHandler {
+struct CallReturnHandler : public AMDGPUIncomingArgHandler {
   CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                     MachineInstrBuilder MIB, CCAssignFn *AssignFn)
-    : IncomingArgHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
+      : AMDGPUIncomingArgHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
@@ -190,7 +185,7 @@ struct CallReturnHandler : public IncomingArgHandler {
   MachineInstrBuilder MIB;
 };
 
-struct OutgoingArgHandler : public AMDGPUValueHandler {
+struct AMDGPUOutgoingArgHandler : public AMDGPUValueHandler {
   MachineInstrBuilder MIB;
   CCAssignFn *AssignFnVarArg;
 
@@ -203,15 +198,13 @@ struct OutgoingArgHandler : public AMDGPUValueHandler {
 
   bool IsTailCall;
 
-  OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                     MachineInstrBuilder MIB, CCAssignFn *AssignFn,
-                     CCAssignFn *AssignFnVarArg, bool IsTailCall = false,
-                     int FPDiff = 0)
-      : AMDGPUValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
-        AssignFnVarArg(AssignFnVarArg),
-        FPDiff(FPDiff), IsTailCall(IsTailCall) {}
-
-  bool isIncomingArgumentHandler() const override { return false; }
+  AMDGPUOutgoingArgHandler(MachineIRBuilder &MIRBuilder,
+                           MachineRegisterInfo &MRI, MachineInstrBuilder MIB,
+                           CCAssignFn *AssignFn, CCAssignFn *AssignFnVarArg,
+                           bool IsTailCall = false, int FPDiff = 0)
+      : AMDGPUValueHandler(false, MIRBuilder, MRI, AssignFn), MIB(MIB),
+        AssignFnVarArg(AssignFnVarArg), FPDiff(FPDiff), IsTailCall(IsTailCall) {
+  }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -443,7 +436,7 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
     });
 
   CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(CC, F.isVarArg());
-  OutgoingValueHandler RetHandler(B, *MRI, Ret, AssignFn);
+  AMDGPUOutgoingValueHandler RetHandler(B, *MRI, Ret, AssignFn);
   return handleAssignments(B, SplitRetInfos, RetHandler);
 }
 
@@ -1217,8 +1210,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Do the actual argument marshalling.
   SmallVector<Register, 8> PhysRegs;
-  OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
-                             AssignFnVarArg, false);
+  AMDGPUOutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
+                                   AssignFnVarArg, false);
   if (!handleAssignments(CCInfo, ArgLocs, MIRBuilder, OutArgs, Handler))
     return false;
 

@@ -87,9 +87,10 @@ bool MipsCallLowering::MipsHandler::handle(
 }
 
 namespace {
-class IncomingValueHandler : public MipsCallLowering::MipsHandler {
+class MipsIncomingValueHandler : public MipsCallLowering::MipsHandler {
 public:
-  IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+  MipsIncomingValueHandler(MachineIRBuilder &MIRBuilder,
+                           MachineRegisterInfo &MRI)
       : MipsHandler(MIRBuilder, MRI) {}
 
 private:
@@ -117,11 +118,11 @@ private:
   }
 };
 
-class CallReturnHandler : public IncomingValueHandler {
+class CallReturnHandler : public MipsIncomingValueHandler {
 public:
   CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                     MachineInstrBuilder &MIB)
-      : IncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
+      : MipsIncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
 private:
   void markPhysRegUsed(unsigned PhysReg) override {
@@ -133,9 +134,9 @@ private:
 
 } // end anonymous namespace
 
-void IncomingValueHandler::assignValueToReg(Register ValVReg,
-                                            const CCValAssign &VA,
-                                            const EVT &VT) {
+void MipsIncomingValueHandler::assignValueToReg(Register ValVReg,
+                                                const CCValAssign &VA,
+                                                const EVT &VT) {
   Register PhysReg = VA.getLocReg();
   if (VT == MVT::f64 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
     const MipsSubtarget &STI =
@@ -167,8 +168,8 @@ void IncomingValueHandler::assignValueToReg(Register ValVReg,
   }
 }
 
-Register IncomingValueHandler::getStackAddress(const CCValAssign &VA,
-                                               MachineMemOperand *&MMO) {
+Register MipsIncomingValueHandler::getStackAddress(const CCValAssign &VA,
+                                                   MachineMemOperand *&MMO) {
   MachineFunction &MF = MIRBuilder.getMF();
   unsigned Size = alignTo(VA.getValVT().getSizeInBits(), 8) / 8;
   unsigned Offset = VA.getLocMemOffset();
@@ -186,8 +187,8 @@ Register IncomingValueHandler::getStackAddress(const CCValAssign &VA,
   return MIRBuilder.buildFrameIndex(LLT::pointer(0, 32), FI).getReg(0);
 }
 
-void IncomingValueHandler::assignValueToAddress(Register ValVReg,
-                                                const CCValAssign &VA) {
+void MipsIncomingValueHandler::assignValueToAddress(Register ValVReg,
+                                                    const CCValAssign &VA) {
   if (VA.getLocInfo() == CCValAssign::SExt ||
       VA.getLocInfo() == CCValAssign::ZExt ||
       VA.getLocInfo() == CCValAssign::AExt) {
@@ -197,10 +198,10 @@ void IncomingValueHandler::assignValueToAddress(Register ValVReg,
     buildLoad(ValVReg, VA);
 }
 
-bool IncomingValueHandler::handleSplit(SmallVectorImpl<Register> &VRegs,
-                                       ArrayRef<CCValAssign> ArgLocs,
-                                       unsigned ArgLocsStartIndex,
-                                       Register ArgsReg, const EVT &VT) {
+bool MipsIncomingValueHandler::handleSplit(SmallVectorImpl<Register> &VRegs,
+                                           ArrayRef<CCValAssign> ArgLocs,
+                                           unsigned ArgLocsStartIndex,
+                                           Register ArgsReg, const EVT &VT) {
   if (!assignVRegs(VRegs, ArgLocs, ArgLocsStartIndex, VT))
     return false;
   setLeastSignificantFirst(VRegs);
@@ -209,10 +210,10 @@ bool IncomingValueHandler::handleSplit(SmallVectorImpl<Register> &VRegs,
 }
 
 namespace {
-class OutgoingValueHandler : public MipsCallLowering::MipsHandler {
+class MipsOutgoingValueHandler : public MipsCallLowering::MipsHandler {
 public:
-  OutgoingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                       MachineInstrBuilder &MIB)
+  MipsOutgoingValueHandler(MachineIRBuilder &MIRBuilder,
+                           MachineRegisterInfo &MRI, MachineInstrBuilder &MIB)
       : MipsHandler(MIRBuilder, MRI), MIB(MIB) {}
 
 private:
@@ -234,9 +235,9 @@ private:
 };
 } // end anonymous namespace
 
-void OutgoingValueHandler::assignValueToReg(Register ValVReg,
-                                            const CCValAssign &VA,
-                                            const EVT &VT) {
+void MipsOutgoingValueHandler::assignValueToReg(Register ValVReg,
+                                                const CCValAssign &VA,
+                                                const EVT &VT) {
   Register PhysReg = VA.getLocReg();
   if (VT == MVT::f64 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
     const MipsSubtarget &STI =
@@ -254,8 +255,8 @@ void OutgoingValueHandler::assignValueToReg(Register ValVReg,
   }
 }
 
-Register OutgoingValueHandler::getStackAddress(const CCValAssign &VA,
-                                               MachineMemOperand *&MMO) {
+Register MipsOutgoingValueHandler::getStackAddress(const CCValAssign &VA,
+                                                   MachineMemOperand *&MMO) {
   MachineFunction &MF = MIRBuilder.getMF();
   const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
 
@@ -278,16 +279,16 @@ Register OutgoingValueHandler::getStackAddress(const CCValAssign &VA,
   return AddrReg.getReg(0);
 }
 
-void OutgoingValueHandler::assignValueToAddress(Register ValVReg,
-                                                const CCValAssign &VA) {
+void MipsOutgoingValueHandler::assignValueToAddress(Register ValVReg,
+                                                    const CCValAssign &VA) {
   MachineMemOperand *MMO;
   Register Addr = getStackAddress(VA, MMO);
   Register ExtReg = extendRegister(ValVReg, VA);
   MIRBuilder.buildStore(ExtReg, Addr, *MMO);
 }
 
-Register OutgoingValueHandler::extendRegister(Register ValReg,
-                                              const CCValAssign &VA) {
+Register MipsOutgoingValueHandler::extendRegister(Register ValReg,
+                                                  const CCValAssign &VA) {
   LLT LocTy{VA.getLocVT()};
   switch (VA.getLocInfo()) {
   case CCValAssign::SExt: {
@@ -308,10 +309,10 @@ Register OutgoingValueHandler::extendRegister(Register ValReg,
   llvm_unreachable("unable to extend register");
 }
 
-bool OutgoingValueHandler::handleSplit(SmallVectorImpl<Register> &VRegs,
-                                       ArrayRef<CCValAssign> ArgLocs,
-                                       unsigned ArgLocsStartIndex,
-                                       Register ArgsReg, const EVT &VT) {
+bool MipsOutgoingValueHandler::handleSplit(SmallVectorImpl<Register> &VRegs,
+                                           ArrayRef<CCValAssign> ArgLocs,
+                                           unsigned ArgLocsStartIndex,
+                                           Register ArgsReg, const EVT &VT) {
   MIRBuilder.buildUnmerge(VRegs, ArgsReg);
   setLeastSignificantFirst(VRegs);
   if (!assignVRegs(VRegs, ArgLocs, ArgLocsStartIndex, VT))
@@ -403,7 +404,7 @@ bool MipsCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     CCInfo.AnalyzeReturn(Outs, TLI.CCAssignFnForReturn());
     setLocInfo(ArgLocs, Outs);
 
-    OutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret);
+    MipsOutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret);
     if (!RetHandler.handle(ArgLocs, RetInfos)) {
       return false;
     }
@@ -455,7 +456,7 @@ bool MipsCallLowering::lowerFormalArguments(
   CCInfo.AnalyzeFormalArguments(Ins, TLI.CCAssignFnForCall());
   setLocInfo(ArgLocs, Ins);
 
-  IncomingValueHandler Handler(MIRBuilder, MF.getRegInfo());
+  MipsIncomingValueHandler Handler(MIRBuilder, MF.getRegInfo());
   if (!Handler.handle(ArgLocs, ArgInfos))
     return false;
 
@@ -579,7 +580,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   CCInfo.AnalyzeCallOperands(Outs, TLI.CCAssignFnForCall(), FuncOrigArgs, Call);
   setLocInfo(ArgLocs, Outs);
 
-  OutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), MIB);
+  MipsOutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), MIB);
   if (!RetHandler.handle(ArgLocs, ArgInfos)) {
     return false;
   }
