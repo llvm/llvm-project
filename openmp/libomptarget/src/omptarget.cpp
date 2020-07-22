@@ -308,6 +308,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num, void **args_base,
     // Force the creation of a device side copy of the data when:
     // a close map modifier was associated with a map that contained a to.
     bool HasCloseModifier = arg_types[i] & OMP_TGT_MAPTYPE_CLOSE;
+    bool HasPresentModifier = arg_types[i] & OMP_TGT_MAPTYPE_PRESENT;
     // UpdateRef is based on MEMBER_OF instead of TARGET_PARAM because if we
     // have reached this point via __tgt_target_data_begin and not __tgt_target
     // then no argument is marked as TARGET_PARAM ("omp target data map" is not
@@ -316,13 +317,26 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num, void **args_base,
     bool UpdateRef = !(arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF);
     if (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
       DP("Has a pointer entry: \n");
-      // base is address of pointer.
-      Pointer_TgtPtrBegin = Device.getOrAllocTgtPtr(HstPtrBase, HstPtrBase,
-          sizeof(void *), Pointer_IsNew, IsHostPtr, IsImplicit, UpdateRef,
-          HasCloseModifier);
+      // Base is address of pointer.
+      //
+      // Usually, the pointer is already allocated by this time.  For example:
+      //
+      //   #pragma omp target map(s.p[0:N])
+      //
+      // The map entry for s comes first, and the PTR_AND_OBJ entry comes
+      // afterward, so the pointer is already allocated by the time the
+      // PTR_AND_OBJ entry is handled below, and Pointer_TgtPtrBegin is thus
+      // non-null.  However, "declare target link" can produce a PTR_AND_OBJ
+      // entry for a global that might not already be allocated by the time the
+      // PTR_AND_OBJ entry is handled below, and so the allocation might fail
+      // when HasPresentModifier.
+      Pointer_TgtPtrBegin = Device.getOrAllocTgtPtr(
+          HstPtrBase, HstPtrBase, sizeof(void *), Pointer_IsNew, IsHostPtr,
+          IsImplicit, UpdateRef, HasCloseModifier, HasPresentModifier);
       if (!Pointer_TgtPtrBegin) {
-        DP("Call to getOrAllocTgtPtr returned null pointer (device failure or "
-            "illegal mapping).\n");
+        DP("Call to getOrAllocTgtPtr returned null pointer (%s).\n",
+           HasPresentModifier ? "'present' map type modifier"
+                              : "device failure or illegal mapping");
         return OFFLOAD_FAIL;
       }
       DP("There are %zu bytes allocated at target address " DPxMOD " - is%s new"
@@ -334,13 +348,15 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num, void **args_base,
       UpdateRef = true; // subsequently update ref count of pointee
     }
 
-    void *TgtPtrBegin = Device.getOrAllocTgtPtr(HstPtrBegin, HstPtrBase,
-        data_size, IsNew, IsHostPtr, IsImplicit, UpdateRef, HasCloseModifier);
-    if (!TgtPtrBegin && data_size) {
-      // If data_size==0, then the argument could be a zero-length pointer to
-      // NULL, so getOrAlloc() returning NULL is not an error.
-      DP("Call to getOrAllocTgtPtr returned null pointer (device failure or "
-          "illegal mapping).\n");
+    void *TgtPtrBegin = Device.getOrAllocTgtPtr(
+        HstPtrBegin, HstPtrBase, data_size, IsNew, IsHostPtr, IsImplicit,
+        UpdateRef, HasCloseModifier, HasPresentModifier);
+    // If data_size==0, then the argument could be a zero-length pointer to
+    // NULL, so getOrAlloc() returning NULL is not an error.
+    if (!TgtPtrBegin && (data_size || HasPresentModifier)) {
+      DP("Call to getOrAllocTgtPtr returned null pointer (%s).\n",
+         HasPresentModifier ? "'present' map type modifier"
+                            : "device failure or illegal mapping");
       return OFFLOAD_FAIL;
     }
     DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
@@ -459,13 +475,27 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
         (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ);
     bool ForceDelete = arg_types[i] & OMP_TGT_MAPTYPE_DELETE;
     bool HasCloseModifier = arg_types[i] & OMP_TGT_MAPTYPE_CLOSE;
+    bool HasPresentModifier = arg_types[i] & OMP_TGT_MAPTYPE_PRESENT;
 
     // If PTR_AND_OBJ, HstPtrBegin is address of pointee
     void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, data_size, IsLast,
         UpdateRef, IsHostPtr);
-    DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
-        " - is%s last\n", data_size, DPxPTR(TgtPtrBegin),
-        (IsLast ? "" : " not"));
+    if (!TgtPtrBegin && (data_size || HasPresentModifier)) {
+      DP("Mapping does not exist (%s)\n",
+         (HasPresentModifier ? "'present' map type modifier" : "ignored"));
+      if (HasPresentModifier) {
+        // FIXME: This should not be an error on exit from "omp target data",
+        // but it should be an error upon entering an "omp target exit data".
+        MESSAGE("device mapping required by 'present' map type modifier does "
+                "not exist for host address " DPxMOD " (%ld bytes)",
+                DPxPTR(HstPtrBegin), data_size);
+        return OFFLOAD_FAIL;
+      }
+    } else {
+      DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
+         " - is%s last\n",
+         data_size, DPxPTR(TgtPtrBegin), (IsLast ? "" : " not"));
+    }
 
     bool DelEntry = IsLast || ForceDelete;
 
