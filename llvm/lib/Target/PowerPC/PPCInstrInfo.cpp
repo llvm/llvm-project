@@ -1675,6 +1675,10 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       bool isPPC64 = Subtarget.isPPC64();
       MI.setDesc(get(Pred[0].getImm() ? (isPPC64 ? PPC::BDNZLR8 : PPC::BDNZLR)
                                       : (isPPC64 ? PPC::BDZLR8 : PPC::BDZLR)));
+      // Need add Def and Use for CTR implicit operand.
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg(), RegState::Implicit)
+          .addReg(Pred[1].getReg(), RegState::ImplicitDefine);
     } else if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
       MI.setDesc(get(PPC::BCLR));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
@@ -1694,6 +1698,10 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       bool isPPC64 = Subtarget.isPPC64();
       MI.setDesc(get(Pred[0].getImm() ? (isPPC64 ? PPC::BDNZ8 : PPC::BDNZ)
                                       : (isPPC64 ? PPC::BDZ8 : PPC::BDZ)));
+      // Need add Def and Use for CTR implicit operand.
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg(), RegState::Implicit)
+          .addReg(Pred[1].getReg(), RegState::ImplicitDefine);
     } else if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
       MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
       MI.RemoveOperand(0);
@@ -1734,19 +1742,24 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8 : PPC::BCCTR8)
                              : (setLR ? PPC::BCCTRL : PPC::BCCTR)));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
-      return true;
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
       MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8n : PPC::BCCTR8n)
                              : (setLR ? PPC::BCCTRLn : PPC::BCCTRn)));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
-      return true;
+    } else {
+      MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCCTRL8 : PPC::BCCCTR8)
+                             : (setLR ? PPC::BCCCTRL : PPC::BCCCTR)));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addImm(Pred[0].getImm())
+          .add(Pred[1]);
     }
 
-    MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCCTRL8 : PPC::BCCCTR8)
-                           : (setLR ? PPC::BCCCTRL : PPC::BCCCTR)));
-    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-        .addImm(Pred[0].getImm())
-        .add(Pred[1]);
+    // Need add Def and Use for LR implicit operand.
+    if (setLR)
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(isPPC64 ? PPC::LR8 : PPC::LR, RegState::Implicit)
+          .addReg(isPPC64 ? PPC::LR8 : PPC::LR, RegState::ImplicitDefine);
+
     return true;
   }
 

@@ -49,5 +49,5 @@ body:             |
 
 
   ; CHECK-LABEL: name: testBDZLR
-  ; CHECK: BDZLR implicit $lr, implicit $rm
+  ; CHECK: BDZLR implicit $lr, implicit $rm, implicit $ctr, implicit-def $ctr
 ...
