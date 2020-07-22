@@ -23,7 +23,7 @@
 
 // Create PCH's object file for -fpch-codegen.
 // RUN: touch %t/foo-cg.pch
-// RUN: %clang -c %t/foo-cg.pch -o %t/foo-cg.o -### 2>&1 | FileCheck %s -check-prefix=CHECK-PCH-CODEGEN-OBJ
+// RUN: %clang -c -fintegrated-as %t/foo-cg.pch -o %t/foo-cg.o -### 2>&1 | FileCheck %s -check-prefix=CHECK-PCH-CODEGEN-OBJ
 // CHECK-PCH-CODEGEN-OBJ: -emit-obj
 // CHECK-PCH-CODEGEN-OBJ: "-main-file-name" "foo-cg.pch"
 // CHECK-PCH-CODEGEN-OBJ: "-o" "{{.*}}foo-cg.o"
@@ -31,7 +31,7 @@
 
 // Create PCH's object file for -fpch-debuginfo.
 // RUN: touch %t/foo-di.pch
-// RUN: %clang -c %t/foo-di.pch -g -o %t/foo-di.o -### 2>&1 | FileCheck %s -check-prefix=CHECK-PCH-DEBUGINFO-OBJ
+// RUN: %clang -c -fintegrated-as %t/foo-di.pch -g -o %t/foo-di.o -### 2>&1 | FileCheck %s -check-prefix=CHECK-PCH-DEBUGINFO-OBJ
 // CHECK-PCH-DEBUGINFO-OBJ: -emit-obj
 // CHECK-PCH-DEBUGINFO-OBJ: "-main-file-name" "foo-di.pch"
 // CHECK-PCH-DEBUGINFO-OBJ: "-o" "{{.*}}foo-di.o"
