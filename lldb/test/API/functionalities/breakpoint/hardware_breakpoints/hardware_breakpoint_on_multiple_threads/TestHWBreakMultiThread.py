@@ -9,15 +9,18 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class HardwareBreakpointMultiThreadTestCase(TestBase):
-    NO_DEBUG_INFO_TESTCASE = True
+from functionalities.breakpoint.hardware_breakpoints.base import *
 
+class HardwareBreakpointMultiThreadTestCase(HardwareBreakpointTestBase):
     mydir = TestBase.compute_mydir(__file__)
+
+    def does_not_support_hw_breakpoints(self):
+        return not super().supports_hw_breakpoints()
 
     # LLDB on linux supports hardware breakpoints for arm and aarch64
     # architectures.
     @skipUnlessPlatform(oslist=['linux'])
-    @skipIf(archs=no_match(['arm', 'aarch64']))
+    @skipTestIfFn(does_not_support_hw_breakpoints)
     def test_hw_break_set_delete_multi_thread_linux(self):
         self.build()
         self.setTearDownCleanup()
@@ -26,7 +29,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     # LLDB on linux supports hardware breakpoints for arm and aarch64
     # architectures.
     @skipUnlessPlatform(oslist=['linux'])
-    @skipIf(archs=no_match(['arm', 'aarch64']))
+    @skipTestIfFn(does_not_support_hw_breakpoints)
     def test_hw_break_set_disable_multi_thread_linux(self):
         self.build()
         self.setTearDownCleanup()
@@ -36,7 +39,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     # architectures.
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
-    @expectedFailureAll(archs=["arm64"])
+    @skipTestIfFn(does_not_support_hw_breakpoints)
     def test_hw_break_set_delete_multi_thread_macos(self):
         self.build()
         self.setTearDownCleanup()
@@ -46,7 +49,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     # architectures.
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
-    @expectedFailureAll(archs=["arm64"])
+    @skipTestIfFn(does_not_support_hw_breakpoints)
     def test_hw_break_set_disable_multi_thread_macos(self):
         self.build()
         self.setTearDownCleanup()

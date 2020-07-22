@@ -8,20 +8,13 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+from functionalities.breakpoint.hardware_breakpoints.base import *
 
-class BreakpointLocationsTestCase(TestBase):
-    NO_DEBUG_INFO_TESTCASE = True
+class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def supports_hw_breakpoints(self):
-        self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"),
-                    CURRENT_EXECUTABLE_SET)
-        self.runCmd("breakpoint set -b main --hardware")
-        self.runCmd("run")
-        if 'stopped' in self.res.GetOutput():
-            return 'Hardware breakpoints are supported'
-        return None
+        return super().supports_hw_breakpoints()
 
     def test_breakpoint(self):
         """Test regular breakpoints when hardware breakpoints are required."""
