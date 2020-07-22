@@ -391,10 +391,12 @@ void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   int16_t SImm = static_cast<int16_t>(Imm);
-  if (isInlinableIntLiteral(SImm))
+  if (isInlinableIntLiteral(SImm)) {
     O << SImm;
-  else
-    O << formatHex(static_cast<uint64_t>(Imm));
+  } else {
+    uint64_t Imm16 = static_cast<uint16_t>(Imm);
+    O << formatHex(Imm16);
+  }
 }
 
 void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
@@ -425,8 +427,10 @@ void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
   else if (Imm == 0x3118) {
     assert(STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm]);
     O << "0.15915494";
-  } else
-    O << formatHex(static_cast<uint64_t>(Imm));
+  } else {
+    uint64_t Imm16 = static_cast<uint16_t>(Imm);
+    O << formatHex(Imm16);
+  }
 }
 
 void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm,
