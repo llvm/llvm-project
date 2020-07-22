@@ -39,7 +39,7 @@ class AffineIfConversion;
 
 class AffineLoopAnalysis {
 public:
-  AffineLoopAnalysis(fir::LoopOp op, AffineFunctionAnalysis &afa)
+  AffineLoopAnalysis(fir::DoLoopOp op, AffineFunctionAnalysis &afa)
       : legality(analyzeLoop(op, afa)) {}
   bool canPromoteToAffine() { return legality; }
   friend AffineFunctionAnalysis;
@@ -49,15 +49,15 @@ private:
   struct MemoryLoadAnalysis {};
   DenseMap<Operation *, MemoryLoadAnalysis> loadAnalysis;
   AffineLoopAnalysis(bool forcedLegality) : legality(forcedLegality) {}
-  bool analyzeBody(fir::LoopOp, AffineFunctionAnalysis &);
-  bool analyzeLoop(fir::LoopOp loopOperation,
+  bool analyzeBody(fir::DoLoopOp, AffineFunctionAnalysis &);
+  bool analyzeLoop(fir::DoLoopOp loopOperation,
                    AffineFunctionAnalysis &functionAnalysis) {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: \n"; loopOperation.dump(););
     return analyzeMemoryAccess(loopOperation) &&
            analyzeBody(loopOperation, functionAnalysis);
   }
   bool analyzeArrayReference(mlir::Value);
-  bool analyzeMemoryAccess(fir::LoopOp loopOperation) {
+  bool analyzeMemoryAccess(fir::DoLoopOp loopOperation) {
     for (auto loadOp : loopOperation.getOps<fir::LoadOp>())
       if (!analyzeArrayReference(loadOp.memref()))
         return false;
@@ -125,7 +125,7 @@ private:
         return toAffineExpr(intConstant.getInt());
     if (auto blockArg = value.dyn_cast<mlir::BlockArgument>()) {
       affineArgs.push_back(value);
-      if (isa<fir::LoopOp>(blockArg.getOwner()->getParentOp()) ||
+      if (isa<fir::DoLoopOp>(blockArg.getOwner()->getParentOp()) ||
           isa<mlir::AffineForOp>(blockArg.getOwner()->getParentOp()))
         return {mlir::getAffineDimExpr(dimCount++, value.getContext())};
       return {mlir::getAffineSymbolExpr(symCount++, value.getContext())};
@@ -186,10 +186,10 @@ private:
 class AffineFunctionAnalysis {
 public:
   AffineFunctionAnalysis(mlir::FuncOp funcOp) {
-    for (fir::LoopOp op : funcOp.getOps<fir::LoopOp>())
+    for (fir::DoLoopOp op : funcOp.getOps<fir::DoLoopOp>())
       loopAnalysisMap.try_emplace(op, op, *this);
   }
-  AffineLoopAnalysis getChildLoopAnalysis(fir::LoopOp op) const {
+  AffineLoopAnalysis getChildLoopAnalysis(fir::DoLoopOp op) const {
     auto it = loopAnalysisMap.find_as(op);
     if (it == loopAnalysisMap.end()) {
       LLVM_DEBUG(llvm::dbgs() << "AffineFunctionAnalysis: not computed for:\n";
@@ -220,7 +220,7 @@ private:
 
 bool analyzeCoordinate(mlir::Value coordinate) {
   if (auto blockArg = coordinate.dyn_cast<mlir::BlockArgument>()) {
-    if (isa<fir::LoopOp>(blockArg.getOwner()->getParentOp())) {
+    if (isa<fir::DoLoopOp>(blockArg.getOwner()->getParentOp())) {
       return true;
     } else {
       llvm::dbgs() << "AffineLoopAnalysis: array coordinate is not a "
@@ -246,9 +246,9 @@ bool AffineLoopAnalysis::analyzeArrayReference(mlir::Value arrayRef) {
   return canPromote;
 }
 
-bool AffineLoopAnalysis::analyzeBody(fir::LoopOp loopOperation,
+bool AffineLoopAnalysis::analyzeBody(fir::DoLoopOp loopOperation,
                                      AffineFunctionAnalysis &functionAnalysis) {
-  for (auto loopOp : loopOperation.getOps<fir::LoopOp>()) {
+  for (auto loopOp : loopOperation.getOps<fir::DoLoopOp>()) {
     auto analysis = functionAnalysis.loopAnalysisMap
                         .try_emplace(loopOp, loopOp, functionAnalysis)
                         .first->getSecond();
@@ -362,17 +362,17 @@ void rewriteMemoryOps(Block *block, mlir::PatternRewriter &rewriter) {
   }
 }
 
-/// Convert `fir.loop` to `affine.for`, creates fir.convert for arrays to
+/// Convert `fir.doloop` to `affine.for`, creates fir.convert for arrays to
 /// memref, rewrites array_coor to affine.apply with affine_map. Rewrites fir
 /// loads and stores to affine.
-class AffineLoopConversion : public mlir::OpRewritePattern<fir::LoopOp> {
+class AffineLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   AffineLoopConversion(mlir::MLIRContext *context, AffineFunctionAnalysis &afa)
       : OpRewritePattern(context), functionAnalysis(afa) {}
 
   mlir::LogicalResult
-  matchAndRewrite(fir::LoopOp loop,
+  matchAndRewrite(fir::DoLoopOp loop,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: rewriting loop:\n";
                loop.dump(););
@@ -402,7 +402,7 @@ public:
 
 private:
   std::pair<mlir::AffineForOp, mlir::Value>
-  createAffineFor(fir::LoopOp op, mlir::PatternRewriter &rewriter) const {
+  createAffineFor(fir::DoLoopOp op, mlir::PatternRewriter &rewriter) const {
     if (auto constantStep = constantIntegerLike(op.step()))
       if (constantStep.getValue() > 0)
         return positiveConstantStep(op, constantStep.getValue(), rewriter);
@@ -410,7 +410,7 @@ private:
   }
   // when step for the loop is positive compile time constant
   std::pair<mlir::AffineForOp, mlir::Value>
-  positiveConstantStep(fir::LoopOp op, int64_t step,
+  positiveConstantStep(fir::DoLoopOp op, int64_t step,
                        mlir::PatternRewriter &rewriter) const {
     auto affineFor = rewriter.create<mlir::AffineForOp>(
         op.getLoc(), ValueRange(op.lowerBound()),
@@ -423,7 +423,7 @@ private:
     return std::make_pair(affineFor, affineFor.getInductionVar());
   }
   std::pair<mlir::AffineForOp, mlir::Value>
-  genericBounds(fir::LoopOp op, mlir::PatternRewriter &rewriter) const {
+  genericBounds(fir::DoLoopOp op, mlir::PatternRewriter &rewriter) const {
     auto lowerBound = mlir::getAffineSymbolExpr(0, op.getContext());
     auto upperBound = mlir::getAffineSymbolExpr(1, op.getContext());
     auto step = mlir::getAffineSymbolExpr(2, op.getContext());
@@ -496,7 +496,7 @@ private:
   AffineFunctionAnalysis &functionAnalysis;
 };
 
-/// Promote fir.loop and fir.if to affine.for and affine.if, in the cases
+/// Promote fir.doloop and fir.if to affine.for and affine.if, in the cases
 /// where such a promotion is possible.
 class AffineDialectPromotion
     : public AffineDialectPromotionBase<AffineDialectPromotion> {
@@ -517,7 +517,8 @@ public:
     target.addDynamicallyLegalOp<IfOp>([&functionAnalysis](fir::IfOp op) {
       return !(functionAnalysis.getChildIfAnalysis(op).canPromoteToAffine());
     });
-    target.addDynamicallyLegalOp<LoopOp>([&functionAnalysis](fir::LoopOp op) {
+    target.addDynamicallyLegalOp<DoLoopOp>([&functionAnalysis](
+                                               fir::DoLoopOp op) {
       return !(functionAnalysis.getChildLoopAnalysis(op).canPromoteToAffine());
     });
 

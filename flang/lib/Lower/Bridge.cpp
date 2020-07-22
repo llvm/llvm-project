@@ -80,7 +80,7 @@ struct IncrementLoopInfo {
   mlir::Value stepValue{}; // possible uses in multiple blocks
 
   // Data members for structured loops.
-  fir::LoopOp doLoop{};
+  fir::DoLoopOp doLoop{};
   mlir::OpBuilder::InsertPoint insertionPoint{};
 
   // Data members for unstructured loops.
@@ -813,11 +813,11 @@ private:
     assert(info.stepValue && "step value must be set");
     info.loopVariable = createTemp(loc, *info.loopVariableSym);
 
-    // Structured loop - generate fir.loop.
+    // Structured loop - generate fir.doloop.
     if (info.isStructured()) {
       // Perform the default initial assignment of the DO variable.
       info.insertionPoint = builder->saveInsertionPoint();
-      info.doLoop = builder->create<fir::LoopOp>(
+      info.doLoop = builder->create<fir::DoLoopOp>(
           loc, lowerValue, upperValue, info.stepValue, /*unordered=*/false,
           ArrayRef<mlir::Value>{lowerValue});
       builder->setInsertionPointToStart(info.doLoop.getBody());
@@ -864,7 +864,7 @@ private:
   void genFIRIncrementLoopEnd(IncrementLoopInfo &info) {
     auto loc = toLocation();
     if (info.isStructured()) {
-      // End fir.loop.
+      // End fir.doloop.
       mlir::Value inc = builder->create<mlir::AddIOp>(
           loc, info.doLoop.getInductionVar(), info.doLoop.step());
       builder->create<fir::ResultOp>(loc, inc);
@@ -1269,8 +1269,8 @@ private:
     genLockStatement(*this, stmt);
   }
 
-  fir::LoopOp createLoopNest(llvm::SmallVectorImpl<mlir::Value> &lcvs,
-                             const Fortran::evaluate::Shape &shape) {
+  fir::DoLoopOp createLoopNest(llvm::SmallVectorImpl<mlir::Value> &lcvs,
+                               const Fortran::evaluate::Shape &shape) {
     auto loc = toLocation();
     auto idxTy = builder->getIndexType();
     auto zero = builder->createIntegerConstant(loc, idxTy, 0);
@@ -1290,12 +1290,12 @@ private:
     }
     // Iteration space is created with outermost columns, innermost rows
     std::reverse(extents.begin(), extents.end());
-    fir::LoopOp inner;
+    fir::DoLoopOp inner;
     auto insPt = builder->saveInsertionPoint();
     for (auto e : extents) {
       if (inner)
         builder->setInsertionPointToStart(inner.getBody());
-      auto loop = builder->create<fir::LoopOp>(loc, zero, e, one);
+      auto loop = builder->create<fir::DoLoopOp>(loc, zero, e, one);
       lcvs.push_back(loop.getInductionVar());
       if (!inner)
         insPt = builder->saveInsertionPoint();
