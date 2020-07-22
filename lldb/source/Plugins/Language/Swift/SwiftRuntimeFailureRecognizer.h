@@ -13,7 +13,7 @@
 
 namespace lldb_private {
 
-void RegisterSwiftRuntimeFailureRecognizer();
+void RegisterSwiftRuntimeFailureRecognizer(Process &process);
 
 /// Holds the stack frame that caused the runtime failure and the inlined stop
 /// reason message.
