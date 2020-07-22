@@ -1620,6 +1620,8 @@ private:
     }
     if (const auto *details =
             sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+      // FIXME: an exported module variable will have external linkage.
+      auto linkage = builder->createInternalLinkage();
       if (details->init()) {
         if (!sym.GetType()->AsIntrinsic()) {
           TODO(); // Derived type / polymorphic
@@ -1631,7 +1633,6 @@ private:
             len.push_back(std::get<std::size_t>(*chLit));
             symTy = fir::SequenceType::get(len, symTy);
             auto init = builder->getStringAttr(std::get<std::string>(*chLit));
-            auto linkage = builder->createInternalLinkage();
             global = builder->createGlobal(loc, symTy, globalName, linkage,
                                            init, isConst);
           } else {
@@ -1646,10 +1647,10 @@ private:
                 auto castTo =
                     builder.createConvert(loc, symTy, fir::getBase(initVal));
                 builder.create<fir::HasValueOp>(loc, castTo);
-              });
+              }, linkage);
         }
       } else {
-        global = builder->createGlobal(loc, genType(var), globalName);
+        global = builder->createGlobal(loc, genType(var), globalName, linkage);
       }
       auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
                                                    global.getSymbol());
