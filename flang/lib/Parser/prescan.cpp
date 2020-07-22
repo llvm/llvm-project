@@ -246,6 +246,7 @@ void Prescanner::NextLine() {
 }
 
 void Prescanner::LabelField(TokenSequence &token, int outCol) {
+  bool badLabel{false};
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -255,6 +256,11 @@ void Prescanner::LabelField(TokenSequence &token, int outCol) {
     if (*at_ != ' ' &&
         !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
+      if (!IsDecimalDigit(*at_) && !badLabel) {
+        Say(GetProvenance(at_),
+            "Character in fixed-form label field must be a digit"_en_US);
+        badLabel = true;
+      }
       ++outCol;
     }
     ++column_;
@@ -262,17 +268,11 @@ void Prescanner::LabelField(TokenSequence &token, int outCol) {
   if (outCol > 1) {
     token.CloseToken();
   }
-  if (outCol < 7) {
-    if (outCol == 1) {
-      token.Put("      ", 6, sixSpaceProvenance_.start());
-    } else {
-      for (; outCol < 7; ++outCol) {
-        token.PutNextTokenChar(' ', spaceProvenance_);
-      }
-      token.CloseToken();
-    }
-  }
   SkipToNextSignificantCharacter();
+  if (IsDecimalDigit(*at_)) {
+    Say(GetProvenance(at_),
+        "Label digit is not in fixed-form label field"_en_US);
+  }
 }
 
 void Prescanner::SkipToEndOfLine() {
