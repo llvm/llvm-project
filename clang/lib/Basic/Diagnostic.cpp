@@ -40,8 +40,9 @@
 
 using namespace clang;
 
-const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
-                                           DiagNullabilityKind nullability) {
+const StreamableDiagnosticBase &clang::
+operator<<(const StreamableDiagnosticBase &DB,
+           DiagNullabilityKind nullability) {
   StringRef string;
   switch (nullability.first) {
   case NullabilityKind::NonNull:
@@ -61,8 +62,8 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
   return DB;
 }
 
-const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
-                                           llvm::Error &&E) {
+const StreamableDiagnosticBase &clang::
+operator<<(const StreamableDiagnosticBase &DB, llvm::Error &&E) {
   DB.AddString(toString(std::move(E)));
   return DB;
 }

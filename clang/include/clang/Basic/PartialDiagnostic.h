@@ -31,7 +31,7 @@ namespace clang {
 class DeclContext;
 class IdentifierInfo;
 
-class PartialDiagnostic {
+class PartialDiagnostic : public StreamableDiagnosticBase {
 public:
   enum {
       // The MaxArguments and MaxFixItHints member enum values from
@@ -163,14 +163,15 @@ private:
     DiagStorage = nullptr;
   }
 
-  void AddSourceRange(const CharSourceRange &R) const {
+public:
+  void AddSourceRange(const CharSourceRange &R) const override {
     if (!DiagStorage)
       DiagStorage = getStorage();
 
     DiagStorage->DiagRanges.push_back(R);
   }
 
-  void AddFixItHint(const FixItHint &Hint) const {
+  void AddFixItHint(const FixItHint &Hint) const override {
     if (Hint.isNull())
       return;
 
@@ -180,7 +181,6 @@ private:
     DiagStorage->FixItHints.push_back(Hint);
   }
 
-public:
   struct NullDiagnostic {};
 
   /// Create a null partial diagnostic, which cannot carry a payload,
@@ -196,6 +196,23 @@ public:
       DiagStorage = getStorage();
       *DiagStorage = *Other.DiagStorage;
     }
+  }
+
+  template <typename T> const PartialDiagnostic &operator<<(const T &V) const {
+    const StreamableDiagnosticBase &DB = *this;
+    DB << V;
+    return *this;
+  }
+
+  // It is necessary to limit this to rvalue reference to avoid calling this
+  // function with a bitfield lvalue argument since non-const reference to
+  // bitfield is not allowed.
+  template <typename T, typename = typename std::enable_if<
+                            !std::is_lvalue_reference<T>::value>::type>
+  const PartialDiagnostic &operator<<(T &&V) const {
+    const StreamableDiagnosticBase &DB = *this;
+    DB << std::move(V);
+    return *this;
   }
 
   PartialDiagnostic(PartialDiagnostic &&Other)
@@ -255,9 +272,7 @@ public:
     return *this;
   }
 
-  ~PartialDiagnostic() {
-    freeStorage();
-  }
+  virtual ~PartialDiagnostic() { freeStorage(); }
 
   void swap(PartialDiagnostic &PD) {
     std::swap(DiagID, PD.DiagID);
@@ -267,7 +282,8 @@ public:
 
   unsigned getDiagID() const { return DiagID; }
 
-  void AddTaggedVal(intptr_t V, DiagnosticsEngine::ArgumentKind Kind) const {
+  void AddTaggedVal(intptr_t V,
+                    DiagnosticsEngine::ArgumentKind Kind) const override {
     if (!DiagStorage)
       DiagStorage = getStorage();
 
@@ -277,7 +293,7 @@ public:
     DiagStorage->DiagArgumentsVal[DiagStorage->NumDiagArgs++] = V;
   }
 
-  void AddString(StringRef V) const {
+  void AddString(StringRef V) const override {
     if (!DiagStorage)
       DiagStorage = getStorage();
 
@@ -339,70 +355,6 @@ public:
     assert(DiagStorage->DiagArgumentsKind[I]
              == DiagnosticsEngine::ak_std_string && "Not a string arg");
     return DiagStorage->DiagArgumentsStr[I];
-  }
-
-  friend const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                             unsigned I) {
-    PD.AddTaggedVal(I, DiagnosticsEngine::ak_uint);
-    return PD;
-  }
-
-  friend const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                             int I) {
-    PD.AddTaggedVal(I, DiagnosticsEngine::ak_sint);
-    return PD;
-  }
-
-  friend inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                                    const char *S) {
-    PD.AddTaggedVal(reinterpret_cast<intptr_t>(S),
-                    DiagnosticsEngine::ak_c_string);
-    return PD;
-  }
-
-  friend inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                                    StringRef S) {
-
-    PD.AddString(S);
-    return PD;
-  }
-
-  friend inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                                    const IdentifierInfo *II) {
-    PD.AddTaggedVal(reinterpret_cast<intptr_t>(II),
-                    DiagnosticsEngine::ak_identifierinfo);
-    return PD;
-  }
-
-  // Adds a DeclContext to the diagnostic. The enable_if template magic is here
-  // so that we only match those arguments that are (statically) DeclContexts;
-  // other arguments that derive from DeclContext (e.g., RecordDecls) will not
-  // match.
-  template <typename T>
-  friend inline std::enable_if_t<std::is_same<T, DeclContext>::value,
-                                 const PartialDiagnostic &>
-  operator<<(const PartialDiagnostic &PD, T *DC) {
-    PD.AddTaggedVal(reinterpret_cast<intptr_t>(DC),
-                    DiagnosticsEngine::ak_declcontext);
-    return PD;
-  }
-
-  friend inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                                    SourceRange R) {
-    PD.AddSourceRange(CharSourceRange::getTokenRange(R));
-    return PD;
-  }
-
-  friend inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                                    const CharSourceRange &R) {
-    PD.AddSourceRange(R);
-    return PD;
-  }
-
-  friend const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                             const FixItHint &Hint) {
-    PD.AddFixItHint(Hint);
-    return PD;
   }
 };
 
