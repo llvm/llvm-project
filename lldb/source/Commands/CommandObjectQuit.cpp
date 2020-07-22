@@ -104,7 +104,6 @@ bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
   m_interpreter.BroadcastEvent(event_type);
   result.SetStatus(eReturnStatusQuit);
 
-
   if (m_interpreter.GetSaveSessionOnQuit())
     m_interpreter.SaveTranscript(result);
 
