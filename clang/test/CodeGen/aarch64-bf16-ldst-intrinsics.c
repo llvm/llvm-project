@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple armv8.6a-arm-none-eabi -target-feature +neon -target-feature +bf16 -mfloat-abi hard \
 // RUN:  -O2 -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK32
 
+// REQUIRES: arm-registered-target,aarch64-registered-target
+
 #include "arm_neon.h"
 
 bfloat16x4_t test_vld1_bf16(bfloat16_t const *ptr) {
