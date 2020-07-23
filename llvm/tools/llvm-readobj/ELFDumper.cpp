@@ -3757,11 +3757,6 @@ static std::string getSectionTypeString(unsigned Machine, unsigned Type) {
   if (Name == "SHT_SYMTAB_SHNDX")
     return "SYMTAB SECTION INDICES";
 
-  // The SHT_ANDROID_RELR is special, all other SHT_ANDROID_* types are handled
-  // in the common block below.
-  if (Name == "SHT_ANDROID_RELR")
-    return "RELR";
-
   if (Name.startswith("SHT_"))
     return Name.drop_front(4).str();
   return getSectionTypeOffsetString(Type);
