@@ -3551,6 +3551,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       maybeMarkSanitizerLibraryCallNoBuiltin(Call, TLI);
     }
     IRBuilder<> IRB(&CB);
+    bool MayCheckCall = ClEagerChecks;
+    if (Function *Func = CB.getCalledFunction()) {
+      // __sanitizer_unaligned_{load,store} functions may be called by users
+      // and always expects shadows in the TLS. So don't check them.
+      MayCheckCall &= !Func->getName().startswith("__sanitizer_unaligned_");
+    }
 
     unsigned ArgOffset = 0;
     LLVM_DEBUG(dbgs() << "  CallSite: " << CB << "\n");
@@ -3576,7 +3582,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
       bool ByVal = CB.paramHasAttr(i, Attribute::ByVal);
       bool NoUndef = CB.paramHasAttr(i, Attribute::NoUndef);
-      bool EagerCheck = ClEagerChecks && !ByVal && NoUndef;
+      bool EagerCheck = MayCheckCall && !ByVal && NoUndef;
 
       if (EagerCheck) {
         insertShadowCheck(A, &CB);
@@ -3632,7 +3638,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (isa<CallInst>(CB) && cast<CallInst>(CB).isMustTailCall())
       return;
 
-    if (ClEagerChecks && CB.hasRetAttr(Attribute::NoUndef)) {
+    if (MayCheckCall && CB.hasRetAttr(Attribute::NoUndef)) {
       setShadow(&CB, getCleanShadow(&CB));
       setOrigin(&CB, getCleanOrigin());
       return;
