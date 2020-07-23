@@ -434,25 +434,25 @@ vector unsigned long long test_vec_insertl_ul(void) {
 }
 
 vector unsigned char test_vec_insertl_ucv(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinsbvlx(<16 x i8> %{{.+}}, i64 %{{.+}}, <16 x i8>
+  // CHECK-BE: @llvm.ppc.altivec.vinsbvlx(<16 x i8> %{{.+}}, i32 %{{.+}}, <16 x i8>
   // CHECK-BE-NEXT: ret <16 x i8>
-  // CHECK-LE: @llvm.ppc.altivec.vinsbvrx(<16 x i8> %{{.+}}, i64 %{{.+}}, <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsbvrx(<16 x i8> %{{.+}}, i32 %{{.+}}, <16 x i8>
   // CHECK-LE-NEXT: ret <16 x i8>
   return vec_insertl(vuca, vucb, uia);
 }
 
 vector unsigned short test_vec_insertl_usv(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinshvlx(<8 x i16> %{{.+}}, i64 %{{.+}}, <8 x i16>
+  // CHECK-BE: @llvm.ppc.altivec.vinshvlx(<8 x i16> %{{.+}}, i32 %{{.+}}, <8 x i16>
   // CHECK-BE-NEXT: ret <8 x i16>
-  // CHECK-LE: @llvm.ppc.altivec.vinshvrx(<8 x i16> %{{.+}}, i64 %{{.+}}, <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vinshvrx(<8 x i16> %{{.+}}, i32 %{{.+}}, <8 x i16>
   // CHECK-LE-NEXT: ret <8 x i16>
   return vec_insertl(vusa, vusb, uia);
 }
 
 vector unsigned int test_vec_insertl_uiv(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinswvlx(<4 x i32> %{{.+}}, i64 %{{.+}}, <4 x i32>
+  // CHECK-BE: @llvm.ppc.altivec.vinswvlx(<4 x i32> %{{.+}}, i32 %{{.+}}, <4 x i32>
   // CHECK-BE-NEXT: ret <4 x i32>
-  // CHECK-LE: @llvm.ppc.altivec.vinswvrx(<4 x i32> %{{.+}}, i64 %{{.+}}, <4 x i32>
+  // CHECK-LE: @llvm.ppc.altivec.vinswvrx(<4 x i32> %{{.+}}, i32 %{{.+}}, <4 x i32>
   // CHECK-LE-NEXT: ret <4 x i32>
   return vec_insertl(vuia, vuib, uia);
 }
@@ -490,25 +490,25 @@ vector unsigned long long test_vec_inserth_ul(void) {
 }
 
 vector unsigned char test_vec_inserth_ucv(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinsbvrx(<16 x i8> %{{.+}}, i64 %{{.+}}, <16 x i8>
+  // CHECK-BE: @llvm.ppc.altivec.vinsbvrx(<16 x i8> %{{.+}}, i32 %{{.+}}, <16 x i8>
   // CHECK-BE-NEXT: ret <16 x i8>
-  // CHECK-LE: @llvm.ppc.altivec.vinsbvlx(<16 x i8> %{{.+}}, i64 %{{.+}}, <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsbvlx(<16 x i8> %{{.+}}, i32 %{{.+}}, <16 x i8>
   // CHECK-LE-NEXT: ret <16 x i8>
   return vec_inserth(vuca, vucb, uia);
 }
 
 vector unsigned short test_vec_inserth_usv(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinshvrx(<8 x i16> %{{.+}}, i64 %{{.+}}, <8 x i16>
+  // CHECK-BE: @llvm.ppc.altivec.vinshvrx(<8 x i16> %{{.+}}, i32 %{{.+}}, <8 x i16>
   // CHECK-BE-NEXT: ret <8 x i16>
-  // CHECK-LE: @llvm.ppc.altivec.vinshvlx(<8 x i16> %{{.+}}, i64 %{{.+}}, <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vinshvlx(<8 x i16> %{{.+}}, i32 %{{.+}}, <8 x i16>
   // CHECK-LE-NEXT: ret <8 x i16>
   return vec_inserth(vusa, vusb, uia);
 }
 
 vector unsigned int test_vec_inserth_uiv(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinswvrx(<4 x i32> %{{.+}}, i64 %{{.+}}, <4 x i32>
+  // CHECK-BE: @llvm.ppc.altivec.vinswvrx(<4 x i32> %{{.+}}, i32 %{{.+}}, <4 x i32>
   // CHECK-BE-NEXT: ret <4 x i32>
-  // CHECK-LE: @llvm.ppc.altivec.vinswvlx(<4 x i32> %{{.+}}, i64 %{{.+}}, <4 x i32>
+  // CHECK-LE: @llvm.ppc.altivec.vinswvlx(<4 x i32> %{{.+}}, i32 %{{.+}}, <4 x i32>
   // CHECK-LE-NEXT: ret <4 x i32>
   return vec_inserth(vuia, vuib, uia);
 }

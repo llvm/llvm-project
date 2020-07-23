@@ -245,7 +245,7 @@ class VXForm_RD5_N3_VB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
 // VX-Form: [PO VRT RA VRB XO].
 // Destructive (insert) forms are suffixed with _ins.
 class VXForm_VTB5_RA5_ins<bits<11> xo, string opc, list<dag> pattern>
-  : VXForm_1<xo, (outs vrrc:$vD), (ins vrrc:$vDi, g8rc:$rA, vrrc:$vB),
+  : VXForm_1<xo, (outs vrrc:$vD), (ins vrrc:$vDi, gprc:$rA, vrrc:$vB),
              !strconcat(opc, " $vD, $rA, $vB"), IIC_VecGeneral, pattern>,
              RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
 
@@ -836,32 +836,32 @@ let Predicates = [IsISA3_1] in {
   def VINSBVLX :
     VXForm_VTB5_RA5_ins<15, "vinsbvlx",
                         [(set v16i8:$vD,
-                              (int_ppc_altivec_vinsbvlx v16i8:$vDi, i64:$rA,
+                              (int_ppc_altivec_vinsbvlx v16i8:$vDi, i32:$rA,
                                                         v16i8:$vB))]>;
   def VINSBVRX :
     VXForm_VTB5_RA5_ins<271, "vinsbvrx",
                         [(set v16i8:$vD,
-                              (int_ppc_altivec_vinsbvrx v16i8:$vDi, i64:$rA,
+                              (int_ppc_altivec_vinsbvrx v16i8:$vDi, i32:$rA,
                                                         v16i8:$vB))]>;
   def VINSHVLX :
     VXForm_VTB5_RA5_ins<79, "vinshvlx",
                         [(set v8i16:$vD,
-                              (int_ppc_altivec_vinshvlx v8i16:$vDi, i64:$rA,
+                              (int_ppc_altivec_vinshvlx v8i16:$vDi, i32:$rA,
                                                         v8i16:$vB))]>;
   def VINSHVRX :
     VXForm_VTB5_RA5_ins<335, "vinshvrx",
                         [(set v8i16:$vD,
-                              (int_ppc_altivec_vinshvrx v8i16:$vDi, i64:$rA,
+                              (int_ppc_altivec_vinshvrx v8i16:$vDi, i32:$rA,
                                                         v8i16:$vB))]>;
   def VINSWVLX :
     VXForm_VTB5_RA5_ins<143, "vinswvlx",
                         [(set v4i32:$vD,
-                              (int_ppc_altivec_vinswvlx v4i32:$vDi, i64:$rA,
+                              (int_ppc_altivec_vinswvlx v4i32:$vDi, i32:$rA,
                                                         v4i32:$vB))]>;
   def VINSWVRX :
     VXForm_VTB5_RA5_ins<399, "vinswvrx",
                         [(set v4i32:$vD,
-                              (int_ppc_altivec_vinswvrx v4i32:$vDi, i64:$rA,
+                              (int_ppc_altivec_vinswvrx v4i32:$vDi, i32:$rA,
                                                         v4i32:$vB))]>;
   def VINSBLX :
     VXForm_VRT5_RAB5_ins<527, "vinsblx",
