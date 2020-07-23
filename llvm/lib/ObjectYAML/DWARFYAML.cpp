@@ -143,7 +143,7 @@ void MappingTraits<DWARFYAML::PubSection>::mapping(
 
 void MappingTraits<DWARFYAML::Unit>::mapping(IO &IO, DWARFYAML::Unit &Unit) {
   IO.mapOptional("Format", Unit.Format, dwarf::DWARF32);
-  IO.mapOptional("Length", Unit.Length, 0);
+  IO.mapOptional("Length", Unit.Length);
   IO.mapRequired("Version", Unit.Version);
   if (Unit.Version >= 5)
     IO.mapRequired("UnitType", Unit.Type);

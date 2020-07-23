@@ -1377,7 +1377,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
                          "      - AbbrCode:        0x00000000\n"
                          "        Values:\n";
 
-  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata), true);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);
