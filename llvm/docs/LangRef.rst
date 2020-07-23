@@ -12258,13 +12258,171 @@ Example:
         call void @llvm.call.preallocated.teardown(token %cs)
         ret void
 
-Standard C Library Intrinsics
------------------------------
+Standard C/C++ Library Intrinsics
+---------------------------------
 
-LLVM provides intrinsics for a few important standard C library
+LLVM provides intrinsics for a few important standard C/C++ library
 functions. These intrinsics allow source-language front-ends to pass
 information about the alignment of the pointer arguments to the code
 generator, providing opportunity for more efficient code generation.
+
+
+'``llvm.abs.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.abs`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i32 @llvm.abs.i32(i32 <src>, i1 <is_int_min_poison>)
+      declare <4 x i32> @llvm.abs.v4i32(<4 x i32> <src>, i1 <is_int_min_poison>)
+
+Overview:
+"""""""""
+
+The '``llvm.abs``' family of intrinsic functions returns the absolute value
+of an argument.
+
+Arguments:
+""""""""""
+
+The first argument is the value for which the absolute value is to be returned.
+This argument may be of any integer type or a vector with integer element type.
+The return type must match the first argument type.
+
+The second argument must be a constant and is a flag to indicate whether the
+result value of the '``llvm.abs``' intrinsic is a
+:ref:`poison value <poisonvalues>` if the argument is statically or dynamically
+an ``INT_MIN`` value.
+
+Semantics:
+""""""""""
+
+The '``llvm.abs``' intrinsic returns the magnitude (always positive) of the
+argument or each element of a vector argument.". If the argument is ``INT_MIN``,
+then the result is also ``INT_MIN`` if ``is_int_min_poison == 0`` and
+``poison`` otherwise.
+
+
+'``llvm.smax.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.smax`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i32 @llvm.smax.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.smax.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return the larger of ``%a`` and ``%b`` comparing the values as signed integers.
+Vector intrinsics operate on a per-element basis. The larger element of ``%a``
+and ``%b`` at a given index is returned for that index.
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must match the argument type.
+
+
+'``llvm.smin.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.smin`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i32 @llvm.smin.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.smin.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return the smaller of ``%a`` and ``%b`` comparing the values as signed integers.
+Vector intrinsics operate on a per-element basis. The smaller element of ``%a``
+and ``%b`` at a given index is returned for that index.
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must match the argument type.
+
+
+'``llvm.umax.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.umax`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i32 @llvm.umax.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.umax.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return the larger of ``%a`` and ``%b`` comparing the values as unsigned
+integers. Vector intrinsics operate on a per-element basis. The larger element
+of ``%a`` and ``%b`` at a given index is returned for that index.
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must match the argument type.
+
+
+'``llvm.umin.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.umin`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i32 @llvm.umin.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.umin.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return the smaller of ``%a`` and ``%b`` comparing the values as unsigned
+integers. Vector intrinsics operate on a per-element basis. The smaller element
+of ``%a`` and ``%b`` at a given index is returned for that index.
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must match the argument type.
+
 
 .. _int_memcpy:
 
