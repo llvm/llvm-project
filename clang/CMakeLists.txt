@@ -114,10 +114,6 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   option(CLANG_ENABLE_BOOTSTRAP "Generate the clang bootstrap target" OFF)
   option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
 
-  if(LLVM_ENABLE_ZLIB)
-    find_package(ZLIB)
-  endif()
-
   include(AddLLVM)
   include(TableGen)
   include(HandleLLVMOptions)
