@@ -1,11 +1,4 @@
 UNSUPPORTED: freebsd
 RUN: %cpp_compiler %S/StrstrTest.cpp -o %t-StrstrTest
 RUN: not %run %t-StrstrTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
-
-RUN: %cpp_compiler -fno-sanitize=address -fno-builtin-strstr %S/StrstrTest.cpp -o %t-NoAsanStrstrTest
-RUN: not %run %t-NoAsanStrstrTest         -seed=1 -runs=2000000   2>&1 | FileCheck %s
-
-RUN: %cpp_compiler -fno-sanitize=address -fno-builtin-calloc -fno-builtin-strstr %S/CustomAllocator.cpp %S/StrstrTest.cpp -o %t-NoAsanCustomAllocatorStrstrTest
-RUN: not %run %t-NoAsanCustomAllocatorStrstrTest -seed=1 -runs=2000000   2>&1 | FileCheck %s
-
 CHECK: BINGO
