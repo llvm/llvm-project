@@ -578,6 +578,7 @@ function(cxx_add_warning_flags target)
     target_add_compile_flags_if_supported(${target} PRIVATE
       -Wno-user-defined-literals
       -Wno-covered-switch-default
+      -Wno-suggest-override
       -Wno-ignored-attributes # FIXME: Caused by _LIBCPP_NODEBUG_TYPE not being supported on older clangs
     )
     if (LIBCXX_TARGETING_CLANG_CL)
@@ -602,7 +603,8 @@ function(cxx_add_warning_flags target)
     target_add_compile_flags_if_supported(${target} PRIVATE
       -Wno-literal-suffix
       -Wno-c++14-compat
-      -Wno-noexcept-type)
+      -Wno-noexcept-type
+      -Wno-suggest-override)
   endif()
   if (LIBCXX_ENABLE_WERROR)
     target_add_compile_flags_if_supported(${target} PRIVATE -Werror)
