@@ -1022,8 +1022,12 @@ class Proc<string Name, list<SubtargetFeature> Features>
 
 // NOTE: CMPXCHG8B is here for legacy compatibility so that it is only disabled
 // if i386/i486 is specifically requested.
+// NOTE: 64Bit is here as "generic" is the default llc CPU. The X86Subtarget
+// constructor checks that any CPU used in 64-bit mode has Feature64Bit enabled.
+// It has no effect on code generation.
 def : Proc<"generic",         [FeatureX87, FeatureSlowUAMem16,
-                               FeatureCMPXCHG8B, FeatureInsertVZEROUPPER]>;
+                               FeatureCMPXCHG8B, Feature64Bit,
+                               FeatureInsertVZEROUPPER]>;
 def : Proc<"i386",            [FeatureX87, FeatureSlowUAMem16,
                                FeatureInsertVZEROUPPER]>;
 def : Proc<"i486",            [FeatureX87, FeatureSlowUAMem16,

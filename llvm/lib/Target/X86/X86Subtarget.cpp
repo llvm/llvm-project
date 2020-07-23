@@ -239,14 +239,6 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       FullFS = "+sse2," + FullFS;
     else
       FullFS = "+sse2";
-
-    // If no CPU was specified, enable 64bit feature to satisy later check.
-    if (CPU == "generic") {
-      if (!FullFS.empty())
-        FullFS = "+64bit," + FullFS;
-      else
-        FullFS = "+64bit";
-    }
   }
 
   // Parse features string and set the CPU.
