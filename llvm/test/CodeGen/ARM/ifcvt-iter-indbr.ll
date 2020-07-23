@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple thumbv7s-apple-darwin  -asm-verbose=false | FileCheck %s
-; RUN: llc < %s -mtriple thumbv7s-apple-darwin  -asm-verbose=false -print-machineinstrs=if-converter 2>&1 | FileCheck --check-prefix=CHECK-PROB %s
+; RUN: llc < %s -mtriple thumbv7s-apple-darwin  -asm-verbose=false -stop-after=if-converter | FileCheck --check-prefix=CHECK-PROB %s
 
 declare i32 @foo(i32)
 declare i8* @bar(i32, i8*, i8*)

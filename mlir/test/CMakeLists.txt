@@ -97,5 +97,5 @@ add_lit_testsuite(check-mlir "Running the MLIR regression tests"
 set_target_properties(check-mlir PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
-  DEPENDS ${MLIR_TEST_DEPS}
+  DEPENDS ${MLIR_TEST_DEPENDS}
 )

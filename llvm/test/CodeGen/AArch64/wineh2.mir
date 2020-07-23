@@ -1,5 +1,5 @@
 # RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
-# RUN:    -filetype=obj | llvm-readobj --unwind | FileCheck %s
+# RUN:    -filetype=obj | llvm-readobj --unwind - | FileCheck %s
 # Test that the pre/post increment save of a flating point register is correct.
 
 # CHECK:        ExceptionData {

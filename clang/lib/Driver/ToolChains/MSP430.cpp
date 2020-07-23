@@ -128,7 +128,7 @@ MSP430ToolChain::MSP430ToolChain(const Driver &D, const llvm::Triple &Triple,
   }
 
   SmallString<128> SysRootDir(computeSysRoot());
-  llvm::sys::path::append(SysRootDir, "lib", MultilibSuf);
+  llvm::sys::path::append(SysRootDir, "msp430-elf", "lib", MultilibSuf);
   addPathIfExists(D, SysRootDir, getFilePaths());
 }
 
@@ -138,10 +138,9 @@ std::string MSP430ToolChain::computeSysRoot() const {
 
   SmallString<128> Dir;
   if (GCCInstallation.isValid())
-    llvm::sys::path::append(Dir, GCCInstallation.getParentLibPath(), "..",
-                            GCCInstallation.getTriple().str());
+    llvm::sys::path::append(Dir, GCCInstallation.getParentLibPath(), "..");
   else
-    llvm::sys::path::append(Dir, getDriver().Dir, "..", getTriple().str());
+    llvm::sys::path::append(Dir, getDriver().Dir, "..");
 
   return std::string(Dir.str());
 }
@@ -153,7 +152,7 @@ void MSP430ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
 
   SmallString<128> Dir(computeSysRoot());
-  llvm::sys::path::append(Dir, "include");
+  llvm::sys::path::append(Dir, "msp430-elf", "include");
   addSystemInclude(DriverArgs, CC1Args, Dir.str());
 }
 
@@ -180,6 +179,87 @@ Tool *MSP430ToolChain::buildLinker() const {
   return new tools::msp430::Linker(*this);
 }
 
+void msp430::Linker::AddStartFiles(bool UseExceptions, const ArgList &Args,
+                                   ArgStringList &CmdArgs) const {
+  const ToolChain &ToolChain = getToolChain();
+
+  CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
+  const char *crtbegin = UseExceptions ? "crtbegin.o" : "crtbegin_no_eh.o";
+  CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
+}
+
+void msp430::Linker::AddDefaultLibs(const llvm::opt::ArgList &Args,
+                                    llvm::opt::ArgStringList &CmdArgs) const {
+  const ToolChain &ToolChain = getToolChain();
+  const Driver &D = ToolChain.getDriver();
+
+  CmdArgs.push_back("--start-group");
+  CmdArgs.push_back(Args.MakeArgString(getHWMultLib(Args)));
+  CmdArgs.push_back("-lc");
+  AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
+  CmdArgs.push_back("-lcrt");
+
+  if (Args.hasArg(options::OPT_msim)) {
+    CmdArgs.push_back("-lsim");
+
+    // msp430-sim.ld relies on __crt0_call_exit being implicitly .refsym-ed
+    // in main() by msp430-gcc.
+    // This workaround should work seamlessly unless the compilation unit that
+    // contains main() is compiled by clang and then passed to
+    // gcc compiler driver for linkage.
+    CmdArgs.push_back("--undefined=__crt0_call_exit");
+  } else
+    CmdArgs.push_back("-lnosys");
+
+  CmdArgs.push_back("--end-group");
+  AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
+}
+
+void msp430::Linker::AddEndFiles(bool UseExceptions, const ArgList &Args,
+                                 ArgStringList &CmdArgs) const {
+  const ToolChain &ToolChain = getToolChain();
+  const Driver &D = ToolChain.getDriver();
+
+  const char *crtend = UseExceptions ? "crtend.o" : "crtend_no_eh.o";
+  CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
+  AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
+}
+
+static void AddSspArgs(const ArgList &Args, ArgStringList &CmdArgs) {
+  Arg *SspFlag = Args.getLastArg(
+      options::OPT_fno_stack_protector, options::OPT_fstack_protector,
+      options::OPT_fstack_protector_all, options::OPT_fstack_protector_strong);
+
+  if (SspFlag &&
+      !SspFlag->getOption().matches(options::OPT_fno_stack_protector)) {
+    CmdArgs.push_back("-lssp_nonshared");
+    CmdArgs.push_back("-lssp");
+  }
+}
+
+static void AddImplicitLinkerScript(const std::string SysRoot,
+                                    const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  if (Args.hasArg(options::OPT_T))
+    return;
+
+  if (Args.hasArg(options::OPT_msim)) {
+    CmdArgs.push_back("-Tmsp430-sim.ld");
+    return;
+  }
+
+  const Arg *MCUArg = Args.getLastArg(options::OPT_mmcu_EQ);
+  if (!MCUArg)
+    return;
+
+  SmallString<128> MCULinkerScriptPath(SysRoot);
+  llvm::sys::path::append(MCULinkerScriptPath, "include");
+  // -L because <mcu>.ld INCLUDEs <mcu>_symbols.ld
+  CmdArgs.push_back(Args.MakeArgString("-L" + MCULinkerScriptPath));
+  CmdArgs.push_back(
+      Args.MakeArgString("-T" + StringRef(MCUArg->getValue()) + ".ld"));
+}
+
 void msp430::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -189,44 +269,49 @@ void msp430::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = ToolChain.getDriver();
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
+  bool UseExceptions = Args.hasFlag(options::OPT_fexceptions,
+                                    options::OPT_fno_exceptions, false);
+  bool UseStartAndEndFiles = !Args.hasArg(options::OPT_nostdlib, options::OPT_r,
+                                          options::OPT_nostartfiles);
 
-  if (!D.SysRoot.empty())
-    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+  if (Args.hasArg(options::OPT_mrelax))
+    CmdArgs.push_back("--relax");
+  if (!Args.hasArg(options::OPT_r, options::OPT_g_Group))
+    CmdArgs.push_back("--gc-sections");
+
+  Args.AddAllArgs(CmdArgs, {
+                               options::OPT_e,
+                               options::OPT_n,
+                               options::OPT_s,
+                               options::OPT_t,
+                               options::OPT_u,
+                           });
+
+  if (UseStartAndEndFiles)
+    AddStartFiles(UseExceptions, Args, CmdArgs);
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
-
-  if (!Args.hasArg(options::OPT_T)) {
-    if (const Arg *MCUArg = Args.getLastArg(options::OPT_mmcu_EQ))
-      CmdArgs.push_back(
-          Args.MakeArgString("-T" + StringRef(MCUArg->getValue()) + ".ld"));
-  } else {
-    Args.AddAllArgs(CmdArgs, options::OPT_T);
-  }
-
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtbegin.o")));
-  }
-
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
-  CmdArgs.push_back("--start-group");
-  CmdArgs.push_back(Args.MakeArgString(getHWMultLib(Args)));
-  CmdArgs.push_back("-lgcc");
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    CmdArgs.push_back("-lc");
-    CmdArgs.push_back("-lcrt");
-    CmdArgs.push_back("-lnosys");
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_r,
+                   options::OPT_nodefaultlibs)) {
+    AddSspArgs(Args, CmdArgs);
+    AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
+    if (!Args.hasArg(options::OPT_nolibc)) {
+      AddDefaultLibs(Args, CmdArgs);
+      AddImplicitLinkerScript(D.SysRoot, Args, CmdArgs);
+    }
   }
-  CmdArgs.push_back("--end-group");
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
-  }
+  if (UseStartAndEndFiles)
+    AddEndFiles(UseExceptions, Args, CmdArgs);
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
+
+  Args.AddAllArgs(CmdArgs, options::OPT_T);
+
   C.addCommand(
       std::make_unique<Command>(JA, *this, ResponseFileSupport::AtFileCurCP(),
                                 Args.MakeArgString(Linker), CmdArgs, Inputs));

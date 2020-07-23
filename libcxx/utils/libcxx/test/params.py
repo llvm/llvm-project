@@ -10,7 +10,7 @@ from libcxx.test.dsl import *
 
 _allStandards = ['c++98', 'c++03', 'c++11', 'c++14', 'c++17', 'c++2a']
 
-parameters = [
+DEFAULT_PARAMETERS = [
   # Core parameters of the test suite
   Parameter(name='std', choices=_allStandards, type=str,
             help="The version of the standard to compile the test suite with.",
@@ -23,6 +23,11 @@ parameters = [
             help="Whether to enable exceptions when compiling the test suite.",
             feature=lambda exceptions: None if exceptions else
               Feature(name='no-exceptions', compileFlag='-fno-exceptions')),
+
+  Parameter(name='enable_rtti', choices=[True, False], type=bool, default=True,
+            help="Whether to enable RTTI when compiling the test suite.",
+            feature=lambda rtti: None if rtti else
+              Feature(name='-fno-rtti', compileFlag='-fno-rtti')),
 
   Parameter(name='stdlib', choices=['libc++', 'libstdc++', 'msvc'], type=str, default='libc++',
             help="The C++ Standard Library implementation being tested.",

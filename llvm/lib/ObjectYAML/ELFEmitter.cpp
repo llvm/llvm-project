@@ -393,27 +393,47 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
   Header.e_machine = Doc.Header.Machine;
   Header.e_version = EV_CURRENT;
   Header.e_entry = Doc.Header.Entry;
-  Header.e_phoff = Doc.ProgramHeaders.size() ? sizeof(Header) : 0;
   Header.e_flags = Doc.Header.Flags;
   Header.e_ehsize = sizeof(Elf_Ehdr);
-  Header.e_phentsize = Doc.ProgramHeaders.size() ? sizeof(Elf_Phdr) : 0;
-  Header.e_phnum = Doc.ProgramHeaders.size();
 
-  Header.e_shentsize =
-      Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
+  if (Doc.Header.EPhOff)
+    Header.e_phoff = *Doc.Header.EPhOff;
+  else if (!Doc.ProgramHeaders.empty())
+    Header.e_phoff = sizeof(Header);
+  else
+    Header.e_phoff = 0;
 
-  const bool NoShdrs = Doc.SectionHeaders && Doc.SectionHeaders->NoHeaders;
+  if (Doc.Header.EPhEntSize)
+    Header.e_phentsize = *Doc.Header.EPhEntSize;
+  else if (!Doc.ProgramHeaders.empty())
+    Header.e_phentsize = sizeof(Elf_Phdr);
+  else
+    Header.e_phentsize = 0;
 
-  if (Doc.Header.SHOff)
-    Header.e_shoff = *Doc.Header.SHOff;
+  if (Doc.Header.EPhNum)
+    Header.e_phnum = *Doc.Header.EPhNum;
+  else if (!Doc.ProgramHeaders.empty())
+    Header.e_phnum = Doc.ProgramHeaders.size();
+  else
+    Header.e_phnum = 0;
+
+  Header.e_shentsize = Doc.Header.EShEntSize ? (uint16_t)*Doc.Header.EShEntSize
+                                             : sizeof(Elf_Shdr);
+
+  const bool NoShdrs =
+      Doc.SectionHeaders && Doc.SectionHeaders->NoHeaders.getValueOr(false);
+
+  if (Doc.Header.EShOff)
+    Header.e_shoff = *Doc.Header.EShOff;
   else if (NoShdrs)
     Header.e_shoff = 0;
   else
     Header.e_shoff = SHOff;
 
-  if (Doc.Header.SHNum)
-    Header.e_shnum = *Doc.Header.SHNum;
-  else if (!Doc.SectionHeaders)
+  if (Doc.Header.EShNum)
+    Header.e_shnum = *Doc.Header.EShNum;
+  else if (!Doc.SectionHeaders ||
+           (Doc.SectionHeaders->NoHeaders && !*Doc.SectionHeaders->NoHeaders))
     Header.e_shnum = Doc.getSections().size();
   else if (NoShdrs)
     Header.e_shnum = 0;
@@ -423,8 +443,8 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
                                       : 0) +
         /*Null section*/ 1;
 
-  if (Doc.Header.SHStrNdx)
-    Header.e_shstrndx = *Doc.Header.SHStrNdx;
+  if (Doc.Header.EShStrNdx)
+    Header.e_shstrndx = *Doc.Header.EShStrNdx;
   else if (NoShdrs || ExcludedSectionHeaders.count(".shstrtab"))
     Header.e_shstrndx = 0;
   else
@@ -485,11 +505,12 @@ unsigned ELFState<ELFT>::toSectionIndex(StringRef S, StringRef LocSec,
     return 0;
   }
 
-  if (!Doc.SectionHeaders ||
-      (!Doc.SectionHeaders->NoHeaders && !Doc.SectionHeaders->Excluded))
+  if (!Doc.SectionHeaders || (Doc.SectionHeaders->NoHeaders &&
+                              !Doc.SectionHeaders->NoHeaders.getValue()))
     return Index;
 
-  assert(!Doc.SectionHeaders->NoHeaders || !Doc.SectionHeaders->Sections);
+  assert(!Doc.SectionHeaders->NoHeaders.getValueOr(false) ||
+         !Doc.SectionHeaders->Sections);
   size_t FirstExcluded =
       Doc.SectionHeaders->Sections ? Doc.SectionHeaders->Sections->size() : 0;
   if (Index >= FirstExcluded) {
@@ -953,6 +974,10 @@ Expected<uint64_t> emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
   else if (Name == ".debug_gnu_pubtypes")
     Err = DWARFYAML::emitPubSection(*OS, *DWARF.GNUPubTypes,
                                     DWARF.IsLittleEndian, /*IsGNUStyle=*/true);
+  else if (Name == ".debug_str_offsets")
+    Err = DWARFYAML::emitDebugStrOffsets(*OS, DWARF);
+  else if (Name == ".debug_rnglists")
+    Err = DWARFYAML::emitDebugRnglists(*OS, DWARF);
   else
     llvm_unreachable("unexpected emitDWARF() call");
 
@@ -1758,7 +1783,7 @@ template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {
         if (!ExcludedSectionHeaders.insert(Hdr.Name).second)
           llvm_unreachable("buildSectionIndex() failed");
 
-    if (Doc.SectionHeaders->NoHeaders)
+    if (Doc.SectionHeaders->NoHeaders.getValueOr(false))
       for (const ELFYAML::Section *S : Sections)
         if (!ExcludedSectionHeaders.insert(S->Name).second)
           llvm_unreachable("buildSectionIndex() failed");

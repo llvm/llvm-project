@@ -281,6 +281,42 @@ void test21(const int *ptr) {
   __atomic_fetch_add(ptr, 1, 0);  // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
 }
 
+void test_ei_i42i(_ExtInt(42) *ptr, int value) {
+  __sync_fetch_and_add(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
+  // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
+  __sync_nand_and_fetch(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
+}
+
+void test_ei_i64i(_ExtInt(64) *ptr, int value) {
+  __sync_fetch_and_add(ptr, value); // expect success
+  // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
+  __sync_nand_and_fetch(ptr, value); // expect success
+}
+
+void test_ei_ii42(int *ptr, _ExtInt(42) value) {
+  __sync_fetch_and_add(ptr, value); // expect success
+  // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
+  __sync_nand_and_fetch(ptr, value); // expect success
+}
+
+void test_ei_ii64(int *ptr, _ExtInt(64) value) {
+  __sync_fetch_and_add(ptr, value); // expect success
+  // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
+  __sync_nand_and_fetch(ptr, value); // expect success
+}
+
+void test_ei_i42i42(_ExtInt(42) *ptr, _ExtInt(42) value) {
+  __sync_fetch_and_add(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
+  // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
+  __sync_nand_and_fetch(ptr, value); // expected-error {{Atomic memory operand must have a power-of-two size}}
+}
+
+void test_ei_i64i64(_ExtInt(64) *ptr, _ExtInt(64) value) {
+  __sync_fetch_and_add(ptr, value); // expect success
+  // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
+  __sync_nand_and_fetch(ptr, value); // expect success
+}
+
 void test22(void) {
   (void)__builtin_signbit(); // expected-error{{too few arguments to function call, expected 1, have 0}}
   (void)__builtin_signbit(1.0, 2.0, 3.0); // expected-error{{too many arguments to function call, expected 1, have 3}}

@@ -177,11 +177,11 @@ define amdgpu_kernel void @v_cttz_zero_undef_i32_with_select(i32 addrspace(1)* n
 ; SI-NOSDWA: v_or_b32_e32 [[VAL2:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL1]]
 ; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL2]]
-; SI-SDWA: v_or_b32_e32
 ; SI-SDWA: v_or_b32_sdwa
+; SI-SDWA: v_or_b32_e32
+; SI-SDWA: v_or_b32_e32
 ; SI-SDWA: v_or_b32_e32 [[VAL1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; SI-SDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL1]]
-; SI-SDWA: v_or_b32_e32
 ; SI-SDWA: v_or_b32_sdwa
 ; SI-SDWA: v_or_b32_e32 [[VAL2:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; SI-SDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL2]]
@@ -198,8 +198,8 @@ define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(i64 addrspace(1)* n
 }
 
 ; FUNC-LABEL: {{^}}v_cttz_i32_sel_eq_neg1:
-; SI: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL:v[0-9]+]]
-; SI: v_cmp_ne_u32_e32 vcc, 0, [[VAL]]
+; SI: v_ffbl_b32_e32 [[VAL:v[0-9]+]], v{{[0-9]+}}
+; SI: buffer_store_dword [[VAL]],
 ; SI: s_endpgm
 ; EG: MEM_RAT_CACHELESS STORE_RAW
 ; EG: FFBL_INT
@@ -213,8 +213,8 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(i32 addrspace(1)* noalias %out
 }
 
 ; FUNC-LABEL: {{^}}v_cttz_i32_sel_ne_neg1:
-; SI: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL:v[0-9]+]]
-; SI: v_cmp_ne_u32_e32 vcc, 0, [[VAL]]
+; SI: v_ffbl_b32_e32 [[VAL:v[0-9]+]], v{{[0-9]+}}
+; SI: buffer_store_dword [[VAL]],
 ; SI: s_endpgm
 ; EG: MEM_RAT_CACHELESS STORE_RAW
 ; EG: FFBL_INT

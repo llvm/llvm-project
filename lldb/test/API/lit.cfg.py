@@ -124,6 +124,7 @@ if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
 lldb_repro_mode = lit_config.params.get('lldb-run-with-repro', None)
 if lldb_repro_mode:
   lit_config.note("Running API tests in {} mode.".format(lldb_repro_mode))
+  mkdir_p(config.lldb_reproducer_directory)
   if lldb_repro_mode == 'capture':
     config.available_features.add('lldb-repro-capture')
   elif lldb_repro_mode == 'replay':
@@ -181,6 +182,9 @@ if config.dsymutil:
 
 if config.filecheck:
   dotest_cmd += ['--filecheck', config.filecheck]
+
+if config.yaml2obj:
+  dotest_cmd += ['--yaml2obj', config.yaml2obj]
 
 if config.lldb_libs_dir:
   dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]

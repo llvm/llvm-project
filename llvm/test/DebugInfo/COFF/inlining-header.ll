@@ -1,5 +1,5 @@
 ; RUN: llc -mcpu=core2 -mtriple=i686-pc-win32 < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -mcpu=core2 -mtriple=i686-pc-win32 < %s -filetype=obj | llvm-readobj --codeview | FileCheck %s --check-prefix=OBJ
+; RUN: llc -mcpu=core2 -mtriple=i686-pc-win32 < %s -filetype=obj | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 
 ; This C++ source should run and you should be able to step through the volatile
 ; modifications to x in windbg.

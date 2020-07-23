@@ -325,13 +325,13 @@ func @reduceReturn_not_inside_reduce(%arg0 : f32) {
 
 func @std_if_incorrect_yield(%arg0: i1, %arg1: f32)
 {
+  // expected-error@+1 {{region control flow edge from Region #0 to scf.if has 1 source operands, but target successor needs 2}}
   %x, %y = scf.if %arg0 -> (f32, f32) {
     %0 = addf %arg1, %arg1 : f32
-    // expected-error@+1 {{parent of yield must have same number of results as the yield operands}}
     scf.yield %0 : f32
   } else {
     %0 = subf %arg1, %arg1 : f32
-    scf.yield %0 : f32
+    scf.yield %0, %0 : f32, f32
   }
   return
 }
@@ -398,12 +398,37 @@ func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %s0 = constant 0.0 : f32
+  %t0 = constant 1.0 : f32
+  // expected-error @+1 {{along control flow edge from Region #0 to Region #0 source #1 type 'i32' should match input #1 type 'f32'}}
+  %result1:2 = scf.for %i0 = %arg0 to %arg1 step %arg2
+                    iter_args(%si = %s0, %ti = %t0) -> (f32, f32) {
+    %sn = addf %si, %si : f32
+    %ic = constant 1 : i32
+    scf.yield %sn, %ic : f32, i32
+  }
+  return
+}
+
+
+// -----
+
 func @parallel_invalid_yield(
     %arg0: index, %arg1: index, %arg2: index) {
   scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
     %c0 = constant 1.0 : f32
-    // expected-error@+1 {{yield inside scf.parallel is not allowed to have operands}}
+    // expected-error@+1 {{'scf.yield' op not allowed to have operands inside 'scf.parallel'}}
     scf.yield %c0 : f32
   }
+  return
+}
+
+// -----
+func @yield_invalid_parent_op() {
+  "my.op"() ({
+   // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.if, scf.for, scf.parallel'}}
+   scf.yield
+  }) : () -> ()
   return
 }

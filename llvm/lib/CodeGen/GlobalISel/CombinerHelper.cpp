@@ -576,6 +576,24 @@ bool CombinerHelper::dominates(const MachineInstr &DefMI,
   return isPredecessor(DefMI, UseMI);
 }
 
+bool CombinerHelper::matchSextAlreadyExtended(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  Register SrcReg = MI.getOperand(1).getReg();
+  unsigned SrcSignBits = KB->computeNumSignBits(SrcReg);
+  unsigned NumSextBits =
+      MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits() -
+      MI.getOperand(2).getImm();
+  return SrcSignBits >= NumSextBits;
+}
+
+bool CombinerHelper::applySextAlreadyExtended(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  MachineIRBuilder MIB(MI);
+  MIB.buildCopy(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
                                             Register &Base, Register &Offset) {
   auto &MF = *MI.getParent()->getParent();

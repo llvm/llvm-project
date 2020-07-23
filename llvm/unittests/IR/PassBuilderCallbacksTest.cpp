@@ -524,10 +524,10 @@ TEST_F(ModuleCallbacksTest, InstrumentedSkippedPasses) {
   // Non-mock instrumentation run here can safely be ignored.
   CallbacksHandle.ignoreNonMockPassInstrumentation("<string>");
 
-  // Skip the pass by returning false.
-  EXPECT_CALL(CallbacksHandle, runBeforePass(HasNameRegex("MockPassHandle"),
-                                             HasName("<string>")))
-      .WillOnce(Return(false));
+  // Skip all passes by returning false. Pass managers and adaptor passes are
+  // also passes that observed by the callbacks.
+  EXPECT_CALL(CallbacksHandle, runBeforePass(_, _))
+      .WillRepeatedly(Return(false));
 
   EXPECT_CALL(AnalysisHandle, run(HasName("<string>"), _)).Times(0);
   EXPECT_CALL(PassHandle, run(HasName("<string>"), _)).Times(0);
@@ -543,7 +543,60 @@ TEST_F(ModuleCallbacksTest, InstrumentedSkippedPasses) {
               runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), _))
       .Times(0);
 
-  StringRef PipelineText = "test-transform";
+  // Order is important here. `Adaptor` expectations should be checked first
+  // because the its argument contains 'PassManager' (for example:
+  // ModuleToFunctionPassAdaptor{{.*}}PassManager{{.*}}). Here only check
+  // `runAfterPass` to show that they are not skipped.
+
+  // Pass managers are not ignored.
+  // 5 = (1) ModulePassManager + (2) FunctionPassMangers + (1) LoopPassManager +
+  //     (1) CGSCCPassManager
+  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("PassManager"), _))
+      .Times(5);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("ModuleToFunctionPassAdaptor"), _))
+      .Times(1);
+  EXPECT_CALL(
+      CallbacksHandle,
+      runAfterPass(HasNameRegex("ModuleToPostOrderCGSCCPassAdaptor"), _))
+      .Times(1);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("CGSCCToFunctionPassAdaptor"), _))
+      .Times(1);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterPass(HasNameRegex("FunctionToLoopPassAdaptor"), _))
+      .Times(1);
+
+  // Ignore analyses introduced by adaptor passes.
+  EXPECT_CALL(CallbacksHandle,
+              runBeforeAnalysis(Not(HasNameRegex("MockAnalysisHandle")), _))
+      .Times(AnyNumber());
+  EXPECT_CALL(CallbacksHandle,
+              runAfterAnalysis(Not(HasNameRegex("MockAnalysisHandle")), _))
+      .Times(AnyNumber());
+
+  // Register Funtion and Loop version of "test-transform" for testing
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, FunctionPassManager &FPM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name == "test-transform") {
+          FPM.addPass(MockPassHandle<Function>().getPass());
+          return true;
+        }
+        return false;
+      });
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, LoopPassManager &LPM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name == "test-transform") {
+          LPM.addPass(MockPassHandle<Loop>().getPass());
+          return true;
+        }
+        return false;
+      });
+
+  StringRef PipelineText = "test-transform,function(test-transform),cgscc("
+                           "function(loop(test-transform)))";
   ASSERT_THAT_ERROR(PB.parsePassPipeline(PM, PipelineText, true), Succeeded())
       << "Pipeline was: " << PipelineText;
 

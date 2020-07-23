@@ -168,15 +168,15 @@ class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[]> {
 
 class getMTBUFAsmOps<int addrKind> {
   string Pfx =
-    !if(!eq(addrKind, BUFAddrKind.Offset), "off, $srsrc, $format, $soffset",
+    !if(!eq(addrKind, BUFAddrKind.Offset), "off, $srsrc,$format $soffset",
     !if(!eq(addrKind, BUFAddrKind.OffEn),
-            "$vaddr, $srsrc, $format, $soffset offen",
+            "$vaddr, $srsrc,$format $soffset offen",
     !if(!eq(addrKind, BUFAddrKind.IdxEn),
-            "$vaddr, $srsrc, $format, $soffset idxen",
+            "$vaddr, $srsrc,$format $soffset idxen",
     !if(!eq(addrKind, BUFAddrKind.BothEn),
-            "$vaddr, $srsrc, $format, $soffset idxen offen",
+            "$vaddr, $srsrc,$format $soffset idxen offen",
     !if(!eq(addrKind, BUFAddrKind.Addr64),
-            "$vaddr, $srsrc, $format, $soffset addr64",
+            "$vaddr, $srsrc,$format $soffset addr64",
     "")))));
   string ret = Pfx # "$offset";
 }

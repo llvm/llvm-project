@@ -1,4 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=GFX10 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=GFX10 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX10-ERR %s
 
 // GFX10: tbuffer_load_format_d16_x v0, off, s[0:3], format:22, 0 ; encoding: [0x00,0x00,0xb0,0xe8,0x00,0x00,0x20,0x80]
 tbuffer_load_format_d16_x v0, off, s[0:3], format:22, 0
@@ -66,3 +67,49 @@ tbuffer_store_format_xyzw v[0:3], v6, s[0:3], format:46, 0 idxen
 tbuffer_store_format_x v0, v1, s[0:3], format:125, 0 idxen
 // GFX10: tbuffer_store_format_xy v[0:1], v2, s[0:3], format:33, 0 idxen ; encoding: [0x00,0x20,0x0d,0xe9,0x02,0x00,0x00,0x80]
 tbuffer_store_format_xy v[0:1], v2, s[0:3], format:33, 0 idxen
+
+// GFX10: tbuffer_store_format_x v0, v1, s[0:3], format:127, 0 idxen ; encoding: [0x00,0x20,0xfc,0xeb,0x01,0x00,0x00,0x80]
+tbuffer_store_format_x v0, v1, s[0:3], format:127, 0 idxen
+
+// GFX10: tbuffer_store_format_x v0, v1, s[0:3], format:127, 0 idxen ; encoding: [0x00,0x20,0xfc,0xeb,0x01,0x00,0x00,0x80]
+tbuffer_store_format_x v0, v1, s[0:3] format:127 0 idxen
+
+// GFX10: tbuffer_store_format_x v0, v1, s[0:3], format:0, s0 idxen ; encoding: [0x00,0x20,0x04,0xe8,0x01,0x00,0x00,0x00]
+tbuffer_store_format_x v0, v1, s[0:3] format:0 s0 idxen
+
+// GFX10: tbuffer_store_format_x v0, v1, s[0:3], s0 idxen ; encoding: [0x00,0x20,0x0c,0xe8,0x01,0x00,0x00,0x00]
+tbuffer_store_format_x v0, v1, s[0:3] format:1 s0 idxen
+
+// GFX10: tbuffer_store_format_x v0, v1, s[0:3], 0 idxen ; encoding: [0x00,0x20,0x0c,0xe8,0x01,0x00,0x00,0x80]
+tbuffer_store_format_x v0, v1, s[0:3], 0 idxen
+
+// GFX10: tbuffer_load_format_d16_x v0, off, s[0:3], s0 ; encoding: [0x00,0x00,0x08,0xe8,0x00,0x00,0x20,0x00]
+tbuffer_load_format_d16_x v0, off, s[0:3] s0
+
+//===----------------------------------------------------------------------===//
+// Errors handling.
+//===----------------------------------------------------------------------===//
+
+// GFX10-ERR: error: out of range format
+tbuffer_load_format_d16_x v0, off, s[0:3], format:-1, 0
+
+// GFX10-ERR: error: out of range format
+tbuffer_load_format_d16_x v0, off, s[0:3], format:128, s0
+
+// GFX10-ERR: error: too few operands for instruction
+tbuffer_load_format_d16_x v0, off, s[0:3], format:127
+
+// GFX10-ERR: error: too few operands for instruction
+tbuffer_load_format_d16_x v0, off, s[0:3]
+
+// GFX10-ERR: error: invalid operand for instruction
+tbuffer_load_format_d16_x v0, off, s[0:3] idxen
+
+// GFX10-ERR: error: unknown token in expression
+tbuffer_load_format_d16_x v0, off, s[0:3], format:1,, s0
+
+// GFX10-ERR: error: unknown token in expression
+tbuffer_load_format_d16_x v0, off, s[0:3], format:1:, s0
+
+// GFX10-ERR: error: not a valid operand
+tbuffer_load_format_d16_x v0, off, s[0:3],, format:1, s0

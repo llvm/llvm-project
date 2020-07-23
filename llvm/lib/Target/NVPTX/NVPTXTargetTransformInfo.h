@@ -95,6 +95,10 @@ public:
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
+
+  void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                             TTI::PeelingPreferences &PP);
+
   bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) {
     // Volatile loads/stores are only supported for shared and global address
     // spaces, or for generic AS that maps to them.

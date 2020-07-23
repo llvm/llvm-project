@@ -206,15 +206,6 @@ public:
   explicit operator bool() const { return callback; }
 };
 
-// deleter - Very very very simple method that is used to invoke operator
-// delete on something.  It is used like this:
-//
-//   for_each(V.begin(), B.end(), deleter<Interval>);
-template <class T>
-inline void deleter(T *Ptr) {
-  delete Ptr;
-}
-
 //===----------------------------------------------------------------------===//
 //     Extra additions to <iterator>
 //===----------------------------------------------------------------------===//
@@ -745,14 +736,14 @@ detail::zippy<detail::zip_first, T, U, Args...> zip_first(T &&t, U &&u,
 
 namespace detail {
 template <typename Iter>
-static Iter next_or_end(const Iter &I, const Iter &End) {
+Iter next_or_end(const Iter &I, const Iter &End) {
   if (I == End)
     return End;
   return std::next(I);
 }
 
 template <typename Iter>
-static auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
+auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
     std::remove_const_t<std::remove_reference_t<decltype(*I)>>> {
   if (I == End)
     return None;
@@ -1471,18 +1462,19 @@ inline void sort(Container &&C, Compare Comp) {
 /// which is only enabled when the operation is O(1).
 template <typename R>
 auto size(R &&Range,
-          std::enable_if_t<std::is_same<typename std::iterator_traits<decltype(
-                                            Range.begin())>::iterator_category,
-                                        std::random_access_iterator_tag>::value,
-                           void> * = nullptr) {
+          std::enable_if_t<
+              std::is_base_of<std::random_access_iterator_tag,
+                              typename std::iterator_traits<decltype(
+                                  Range.begin())>::iterator_category>::value,
+              void> * = nullptr) {
   return std::distance(Range.begin(), Range.end());
 }
 
 /// Provide wrappers to std::for_each which take ranges instead of having to
 /// pass begin/end explicitly.
-template <typename R, typename UnaryPredicate>
-UnaryPredicate for_each(R &&Range, UnaryPredicate P) {
-  return std::for_each(adl_begin(Range), adl_end(Range), P);
+template <typename R, typename UnaryFunction>
+UnaryFunction for_each(R &&Range, UnaryFunction F) {
+  return std::for_each(adl_begin(Range), adl_end(Range), F);
 }
 
 /// Provide wrappers to std::all_of which take ranges instead of having to pass
@@ -1577,9 +1569,9 @@ auto count_if(R &&Range, UnaryPredicate P) {
 
 /// Wrapper function around std::transform to apply a function to a range and
 /// store the result elsewhere.
-template <typename R, typename OutputIt, typename UnaryPredicate>
-OutputIt transform(R &&Range, OutputIt d_first, UnaryPredicate P) {
-  return std::transform(adl_begin(Range), adl_end(Range), d_first, P);
+template <typename R, typename OutputIt, typename UnaryFunction>
+OutputIt transform(R &&Range, OutputIt d_first, UnaryFunction F) {
+  return std::transform(adl_begin(Range), adl_end(Range), d_first, F);
 }
 
 /// Provide wrappers to std::partition which take ranges instead of having to
@@ -1911,16 +1903,16 @@ decltype(auto) apply_tuple(F &&f, Tuple &&t) {
 /// Return true if the sequence [Begin, End) has exactly N items. Runs in O(N)
 /// time. Not meant for use with random-access iterators.
 /// Can optionally take a predicate to filter lazily some items.
-template<typename IterTy,
-         typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
+template <typename IterTy,
+          typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
 bool hasNItems(
     IterTy &&Begin, IterTy &&End, unsigned N,
     Pred &&ShouldBeCounted =
         [](const decltype(*std::declval<IterTy>()) &) { return true; },
     std::enable_if_t<
-        !std::is_same<typename std::iterator_traits<std::remove_reference_t<
-                          decltype(Begin)>>::iterator_category,
-                      std::random_access_iterator_tag>::value,
+        !std::is_base_of<std::random_access_iterator_tag,
+                         typename std::iterator_traits<std::remove_reference_t<
+                             decltype(Begin)>>::iterator_category>::value,
         void> * = nullptr) {
   for (; N; ++Begin) {
     if (Begin == End)
@@ -1936,16 +1928,16 @@ bool hasNItems(
 /// Return true if the sequence [Begin, End) has N or more items. Runs in O(N)
 /// time. Not meant for use with random-access iterators.
 /// Can optionally take a predicate to lazily filter some items.
-template<typename IterTy,
-         typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
+template <typename IterTy,
+          typename Pred = bool (*)(const decltype(*std::declval<IterTy>()) &)>
 bool hasNItemsOrMore(
     IterTy &&Begin, IterTy &&End, unsigned N,
     Pred &&ShouldBeCounted =
         [](const decltype(*std::declval<IterTy>()) &) { return true; },
     std::enable_if_t<
-        !std::is_same<typename std::iterator_traits<std::remove_reference_t<
-                          decltype(Begin)>>::iterator_category,
-                      std::random_access_iterator_tag>::value,
+        !std::is_base_of<std::random_access_iterator_tag,
+                         typename std::iterator_traits<std::remove_reference_t<
+                             decltype(Begin)>>::iterator_category>::value,
         void> * = nullptr) {
   for (; N; ++Begin) {
     if (Begin == End)

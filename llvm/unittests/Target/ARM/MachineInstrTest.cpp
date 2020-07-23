@@ -1103,8 +1103,8 @@ TEST(MachineInstr, HasSideEffects) {
 
   for (unsigned Op = 0; Op < ARM::INSTRUCTION_LIST_END; ++Op) {
     const MCInstrDesc &Desc = TII->get(Op);
-    if ((Desc.TSFlags & ARMII::DomainMask) != ARMII::DomainMVE &&
-        (Desc.TSFlags & ARMII::DomainMask) != ARMII::DomainVFP)
+    if ((Desc.TSFlags &
+         (ARMII::DomainMVE | ARMII::DomainVFP | ARMII::DomainNEONA8)) == 0)
       continue;
     if (UnpredictableOpcodes.count(Op))
       continue;

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-macosx10.12.0 %s -filetype=obj | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-macosx10.12.0 %s -filetype=obj | llvm-readobj -r - | FileCheck %s
 
 l_a:
 l_b = l_a

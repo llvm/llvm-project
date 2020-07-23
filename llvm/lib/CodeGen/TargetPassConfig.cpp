@@ -141,9 +141,11 @@ static cl::opt<cl::boolOrDefault> EnableGlobalISelOption(
     "global-isel", cl::Hidden,
     cl::desc("Enable the \"global\" instruction selector"));
 
-static cl::opt<std::string> PrintMachineInstrs(
-    "print-machineinstrs", cl::ValueOptional, cl::desc("Print machine instrs"),
-    cl::value_desc("pass-name"), cl::init("option-unspecified"), cl::Hidden);
+// FIXME: remove this after switching to NPM or GlobalISel, whichever gets there
+//        first...
+static cl::opt<bool>
+    PrintAfterISel("print-after-isel", cl::init(false), cl::Hidden,
+                   cl::desc("Print machine instrs after ISel"));
 
 static cl::opt<GlobalISelAbortMode> EnableGlobalISelAbort(
     "global-isel-abort", cl::Hidden,
@@ -294,12 +296,11 @@ struct InsertedPass {
   AnalysisID TargetPassID;
   IdentifyingPassPtr InsertedPassID;
   bool VerifyAfter;
-  bool PrintAfter;
 
   InsertedPass(AnalysisID TargetPassID, IdentifyingPassPtr InsertedPassID,
-               bool VerifyAfter, bool PrintAfter)
+               bool VerifyAfter)
       : TargetPassID(TargetPassID), InsertedPassID(InsertedPassID),
-        VerifyAfter(VerifyAfter), PrintAfter(PrintAfter) {}
+        VerifyAfter(VerifyAfter) {}
 
   Pass *getInsertedPass() const {
     assert(InsertedPassID.isValid() && "Illegal Pass ID!");
@@ -411,9 +412,6 @@ TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
   initializeBasicAAWrapperPassPass(*PassRegistry::getPassRegistry());
   initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
 
-  if (StringRef(PrintMachineInstrs.getValue()).equals(""))
-    TM.Options.PrintMachineCode = true;
-
   if (EnableIPRA.getNumOccurrences())
     TM.Options.EnableIPRA = EnableIPRA;
   else {
@@ -437,14 +435,13 @@ CodeGenOpt::Level TargetPassConfig::getOptLevel() const {
 /// Insert InsertedPassID pass after TargetPassID.
 void TargetPassConfig::insertPass(AnalysisID TargetPassID,
                                   IdentifyingPassPtr InsertedPassID,
-                                  bool VerifyAfter, bool PrintAfter) {
+                                  bool VerifyAfter) {
   assert(((!InsertedPassID.isInstance() &&
            TargetPassID != InsertedPassID.getID()) ||
           (InsertedPassID.isInstance() &&
            TargetPassID != InsertedPassID.getInstance()->getPassID())) &&
          "Insert a pass after itself!");
-  Impl->InsertedPasses.emplace_back(TargetPassID, InsertedPassID, VerifyAfter,
-                                    PrintAfter);
+  Impl->InsertedPasses.emplace_back(TargetPassID, InsertedPassID, VerifyAfter);
 }
 
 /// createPassConfig - Create a pass configuration object to be used by
@@ -522,7 +519,7 @@ bool TargetPassConfig::isPassSubstitutedOrOverridden(AnalysisID ID) const {
 /// a later pass or that it should stop after an earlier pass, then do not add
 /// the pass.  Finally, compare the current pass against the StartAfter
 /// and StopAfter options and change the Started/Stopped flags accordingly.
-void TargetPassConfig::addPass(Pass *P, bool verifyAfter, bool printAfter) {
+void TargetPassConfig::addPass(Pass *P, bool verifyAfter) {
   assert(!Initialized && "PassConfig is immutable");
 
   // Cache the Pass ID here in case the pass manager finds this pass is
@@ -540,17 +537,16 @@ void TargetPassConfig::addPass(Pass *P, bool verifyAfter, bool printAfter) {
       addMachinePrePasses();
     std::string Banner;
     // Construct banner message before PM->add() as that may delete the pass.
-    if (AddingMachinePasses && (printAfter || verifyAfter))
+    if (AddingMachinePasses && verifyAfter)
       Banner = std::string("After ") + std::string(P->getPassName());
     PM->add(P);
     if (AddingMachinePasses)
-      addMachinePostPasses(Banner, /*AllowPrint*/ printAfter,
-                           /*AllowVerify*/ verifyAfter);
+      addMachinePostPasses(Banner, /*AllowVerify*/ verifyAfter);
 
     // Add the passes after the pass P if there is any.
     for (auto IP : Impl->InsertedPasses) {
       if (IP.TargetPassID == PassID)
-        addPass(IP.getInsertedPass(), IP.VerifyAfter, IP.PrintAfter);
+        addPass(IP.getInsertedPass(), IP.VerifyAfter);
     }
   } else {
     delete P;
@@ -570,8 +566,7 @@ void TargetPassConfig::addPass(Pass *P, bool verifyAfter, bool printAfter) {
 ///
 /// addPass cannot return a pointer to the pass instance because is internal the
 /// PassManager and the instance we create here may already be freed.
-AnalysisID TargetPassConfig::addPass(AnalysisID PassID, bool verifyAfter,
-                                     bool printAfter) {
+AnalysisID TargetPassConfig::addPass(AnalysisID PassID, bool verifyAfter) {
   IdentifyingPassPtr TargetID = getPassSubstitution(PassID);
   IdentifyingPassPtr FinalPtr = overridePass(PassID, TargetID);
   if (!FinalPtr.isValid())
@@ -586,7 +581,7 @@ AnalysisID TargetPassConfig::addPass(AnalysisID PassID, bool verifyAfter,
       llvm_unreachable("Pass ID not registered");
   }
   AnalysisID FinalID = P->getPassID();
-  addPass(P, verifyAfter, printAfter); // Ends the lifetime of P.
+  addPass(P, verifyAfter); // Ends the lifetime of P.
 
   return FinalID;
 }
@@ -597,7 +592,7 @@ void TargetPassConfig::printAndVerify(const std::string &Banner) {
 }
 
 void TargetPassConfig::addPrintPass(const std::string &Banner) {
-  if (TM->shouldPrintMachineCode())
+  if (PrintAfterISel)
     PM->add(createMachineFunctionPrinterPass(dbgs(), Banner));
 }
 
@@ -625,12 +620,9 @@ void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
 }
 
 void TargetPassConfig::addMachinePostPasses(const std::string &Banner,
-                                            bool AllowPrint, bool AllowVerify,
-                                            bool AllowStrip) {
+                                            bool AllowVerify, bool AllowStrip) {
   if (DebugifyAndStripAll == cl::BOU_TRUE && DebugifyIsSafe)
     addStripDebugPass();
-  if (AllowPrint)
-    addPrintPass(Banner);
   if (AllowVerify)
     addVerifyPass(Banner);
 }
@@ -879,7 +871,7 @@ bool TargetPassConfig::addISelPasses() {
     addPass(createLowerEmuTLSPass());
 
   addPass(createPreISelIntrinsicLoweringPass());
-  addPass(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
@@ -915,20 +907,6 @@ static cl::opt<RegisterRegAlloc::FunctionPassCtor, false,
 /// before/after any target-independent pass. But it's currently overkill.
 void TargetPassConfig::addMachinePasses() {
   AddingMachinePasses = true;
-
-  // Insert a machine instr printer pass after the specified pass.
-  StringRef PrintMachineInstrsPassName = PrintMachineInstrs.getValue();
-  if (!PrintMachineInstrsPassName.equals("") &&
-      !PrintMachineInstrsPassName.equals("option-unspecified")) {
-    if (const PassInfo *TPI = getPassInfo(PrintMachineInstrsPassName)) {
-      const PassRegistry *PR = PassRegistry::getPassRegistry();
-      const PassInfo *IPI = PR->getPassInfo(StringRef("machineinstr-printer"));
-      assert(IPI && "failed to get \"machineinstr-printer\" PassInfo!");
-      const char *TID = (const char *)(TPI->getTypeInfo());
-      const char *IID = (const char *)(IPI->getTypeInfo());
-      insertPass(TID, IID);
-    }
-  }
 
   // Add passes that optimize machine instructions in SSA form.
   if (getOptLevel() != CodeGenOpt::None) {
@@ -1000,7 +978,7 @@ void TargetPassConfig::addMachinePasses() {
   // GC
   if (addGCPasses()) {
     if (PrintGCInfo)
-      addPass(createGCInfoPrinter(dbgs()), false, false);
+      addPass(createGCInfoPrinter(dbgs()), false);
   }
 
   // Basic block placement.

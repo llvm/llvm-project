@@ -44,6 +44,12 @@
 // CHECK-NOT: __ARM_BF16_FORMAT_ALTERNATIVE 1
 // CHECK-NOT: __ARM_FEATURE_BF16 1
 // CHECK-NOT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
+// CHECK-NOT: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 0
+// CHECK-NOT: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 128
+// CHECK-NOT: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 256
+// CHECK-NOT: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 512
+// CHECK-NOT: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 1024
+// CHECK-NOT: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 2048
 
 // RUN: %clang -target aarch64_be-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-BIGENDIAN
 // CHECK-BIGENDIAN: __ARM_BIG_ENDIAN 1
@@ -111,6 +117,24 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+f64mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-F64MM %s
 // CHECK-SVE-F64MM: __ARM_FEATURE_SVE 1
 // CHECK-SVE-F64MM: __ARM_FEATURE_SVE_MATMUL_FP64 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.5-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-8_5 %s
+// CHECK-SVE-8_5-NOT: __ARM_FEATURE_SVE_BF16 1
+// CHECK-SVE-8_5-NOT: __ARM_FEATURE_SVE_MATMUL_FP32 1
+// CHECK-SVE-8_5-NOT: __ARM_FEATURE_SVE_MATMUL_INT8 1
+// CHECK-SVE-8_5: __ARM_FEATURE_SVE 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.6-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-8_6 %s
+// CHECK-SVE-8_6: __ARM_FEATURE_SVE 1
+// CHECK-SVE-8_6: __ARM_FEATURE_SVE_BF16 1
+// CHECK-SVE-8_6: __ARM_FEATURE_SVE_MATMUL_FP32 1
+// CHECK-SVE-8_6: __ARM_FEATURE_SVE_MATMUL_INT8 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.6-a+sve+noi8mm+nobf16+nof32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-8_6-NOFEATURES %s
+// CHECK-SVE-8_6-NOFEATURES-NOT: __ARM_FEATURE_SVE_BF16 1
+// CHECK-SVE-8_6-NOFEATURES-NOT: __ARM_FEATURE_SVE_MATMUL_FP32 1
+// CHECK-SVE-8_6-NOFEATURES-NOT: __ARM_FEATURE_SVE_MATMUL_INT8 1
+// CHECK-SVE-8_6-NOFEATURES:     __ARM_FEATURE_SVE 1
 
 // The following tests may need to be revised in the future since
 // SVE2 is currently still part of Future Architecture Technologies
@@ -413,3 +437,17 @@
 // CHECK-BFLOAT: __ARM_FEATURE_BF16 1
 // CHECK-BFLOAT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
 
+// ================== Check sve-vector-bits flag.
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=128 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS-128 %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=256 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS-256 %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=512 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS-512 %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=1024 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS-1024 %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=2048 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS-2048 %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=2048 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS-2048 %s
+// NOTE: The __ARM_FEATURE_SVE_BITS feature macro is experimental until the
+// feature is complete.
+// CHECK-SVE-VECTOR-BITS-128: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 128
+// CHECK-SVE-VECTOR-BITS-256: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 256
+// CHECK-SVE-VECTOR-BITS-512: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 512
+// CHECK-SVE-VECTOR-BITS-1024: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 1024
+// CHECK-SVE-VECTOR-BITS-2048: __ARM_FEATURE_SVE_BITS_EXPERIMENTAL 2048

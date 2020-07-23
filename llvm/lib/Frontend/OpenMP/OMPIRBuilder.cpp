@@ -127,13 +127,16 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
 void OpenMPIRBuilder::finalize() {
+  SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
+  SmallVector<BasicBlock *, 32> Blocks;
   for (OutlineInfo &OI : OutlineInfos) {
-    assert(!OI.Blocks.empty() &&
-           "Outlined regions should have at least a single block!");
-    BasicBlock *RegEntryBB = OI.Blocks.front();
-    Function *OuterFn = RegEntryBB->getParent();
+    ParallelRegionBlockSet.clear();
+    Blocks.clear();
+    OI.collectBlocks(ParallelRegionBlockSet, Blocks);
+
+    Function *OuterFn = OI.EntryBB->getParent();
     CodeExtractorAnalysisCache CEAC(*OuterFn);
-    CodeExtractor Extractor(OI.Blocks, /* DominatorTree */ nullptr,
+    CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
                             /* AggregateArgs */ false,
                             /* BlockFrequencyInfo */ nullptr,
                             /* BranchProbabilityInfo */ nullptr,
@@ -143,6 +146,8 @@ void OpenMPIRBuilder::finalize() {
                             /* Suffix */ ".omp_par");
 
     LLVM_DEBUG(dbgs() << "Before     outlining: " << *OuterFn << "\n");
+    LLVM_DEBUG(dbgs() << "Entry " << OI.EntryBB->getName()
+                      << " Exit: " << OI.ExitBB->getName() << "\n");
     assert(Extractor.isEligible() &&
            "Expected OpenMP outlining to be possible!");
 
@@ -162,12 +167,12 @@ void OpenMPIRBuilder::finalize() {
     // made our own entry block after all.
     {
       BasicBlock &ArtificialEntry = OutlinedFn->getEntryBlock();
-      assert(ArtificialEntry.getUniqueSuccessor() == RegEntryBB);
-      assert(RegEntryBB->getUniquePredecessor() == &ArtificialEntry);
-      RegEntryBB->moveBefore(&ArtificialEntry);
+      assert(ArtificialEntry.getUniqueSuccessor() == OI.EntryBB);
+      assert(OI.EntryBB->getUniquePredecessor() == &ArtificialEntry);
+      OI.EntryBB->moveBefore(&ArtificialEntry);
       ArtificialEntry.eraseFromParent();
     }
-    assert(&OutlinedFn->getEntryBlock() == RegEntryBB);
+    assert(&OutlinedFn->getEntryBlock() == OI.EntryBB);
     assert(OutlinedFn && OutlinedFn->getNumUses() == 1);
 
     // Run a user callback, e.g. to add attributes.
@@ -614,20 +619,12 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
   InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
   FiniCB(PreFiniIP);
 
-  SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
-  SmallVector<BasicBlock *, 32> Worklist;
-  ParallelRegionBlockSet.insert(PRegEntryBB);
-  ParallelRegionBlockSet.insert(PRegExitBB);
+  OI.EntryBB = PRegEntryBB;
+  OI.ExitBB = PRegExitBB;
 
-  // Collect all blocks in-between PRegEntryBB and PRegExitBB.
-  Worklist.push_back(PRegEntryBB);
-  while (!Worklist.empty()) {
-    BasicBlock *BB = Worklist.pop_back_val();
-    OI.Blocks.push_back(BB);
-    for (BasicBlock *SuccBB : successors(BB))
-      if (ParallelRegionBlockSet.insert(SuccBB).second)
-        Worklist.push_back(SuccBB);
-  }
+  SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
+  SmallVector<BasicBlock *, 32> Blocks;
+  OI.collectBlocks(ParallelRegionBlockSet, Blocks);
 
   // Ensure a single exit node for the outlined region by creating one.
   // We might have multiple incoming edges to the exit now due to finalizations,
@@ -635,10 +632,10 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
   BasicBlock *PRegOutlinedExitBB = PRegExitBB;
   PRegExitBB = SplitBlock(PRegExitBB, &*PRegExitBB->getFirstInsertionPt());
   PRegOutlinedExitBB->setName("omp.par.outlined.exit");
-  OI.Blocks.push_back(PRegOutlinedExitBB);
+  Blocks.push_back(PRegOutlinedExitBB);
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
-  CodeExtractor Extractor(OI.Blocks, /* DominatorTree */ nullptr,
+  CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
                           /* AggregateArgs */ false,
                           /* BlockFrequencyInfo */ nullptr,
                           /* BranchProbabilityInfo */ nullptr,
@@ -694,7 +691,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
 
   LLVM_DEBUG(dbgs() << "After  privatization: " << *OuterFn << "\n");
   LLVM_DEBUG({
-    for (auto *BB : OI.Blocks)
+    for (auto *BB : Blocks)
       dbgs() << " PBR: " << BB->getName() << "\n";
   });
 
@@ -1111,4 +1108,21 @@ void OpenMPIRBuilder::initializeTypes(Module &M) {
   VarName = T;                                                                 \
   VarName##Ptr = PointerType::getUnqual(T);
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
+}
+
+void OpenMPIRBuilder::OutlineInfo::collectBlocks(
+    SmallPtrSetImpl<BasicBlock *> &BlockSet,
+    SmallVectorImpl<BasicBlock *> &BlockVector) {
+  SmallVector<BasicBlock *, 32> Worklist;
+  BlockSet.insert(EntryBB);
+  BlockSet.insert(ExitBB);
+
+  Worklist.push_back(EntryBB);
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    BlockVector.push_back(BB);
+    for (BasicBlock *SuccBB : successors(BB))
+      if (BlockSet.insert(SuccBB).second)
+        Worklist.push_back(SuccBB);
+  }
 }

@@ -33,6 +33,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -233,7 +234,7 @@ public:
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
         TrackedMultipleRetVals.insert(
             std::make_pair(std::make_pair(F, i), ValueLatticeElement()));
-    } else
+    } else if (!F->getReturnType()->isVoidTy())
       TrackedRetVals.insert(std::make_pair(F, ValueLatticeElement()));
   }
 
@@ -1262,55 +1263,22 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
       auto *PI = getPredicateInfoFor(&CB);
       assert(PI && "Missing predicate info for ssa.copy");
 
-      CmpInst *Cmp;
-      bool TrueEdge;
-      if (auto *PBranch = dyn_cast<PredicateBranch>(PI)) {
-        Cmp = dyn_cast<CmpInst>(PBranch->Condition);
-        TrueEdge = PBranch->TrueEdge;
-      } else if (auto *PAssume = dyn_cast<PredicateAssume>(PI)) {
-        Cmp = dyn_cast<CmpInst>(PAssume->Condition);
-        TrueEdge = true;
-      } else {
+      const Optional<PredicateConstraint> &Constraint = PI->getConstraint();
+      if (!Constraint) {
         mergeInValue(ValueState[&CB], &CB, CopyOfVal);
         return;
       }
 
-      // Everything below relies on the condition being a comparison.
-      if (!Cmp) {
-        mergeInValue(ValueState[&CB], &CB, CopyOfVal);
+      CmpInst::Predicate Pred = Constraint->Predicate;
+      Value *OtherOp = Constraint->OtherOp;
+
+      // Wait until OtherOp is resolved.
+      if (getValueState(OtherOp).isUnknown()) {
+        addAdditionalUser(OtherOp, &CB);
         return;
       }
 
-      Value *RenamedOp = PI->RenamedOp;
-      Value *CmpOp0 = Cmp->getOperand(0);
-      Value *CmpOp1 = Cmp->getOperand(1);
-      // Bail out if neither of the operands matches RenamedOp.
-      if (CmpOp0 != RenamedOp && CmpOp1 != RenamedOp) {
-        mergeInValue(ValueState[&CB], &CB, getValueState(CopyOf));
-        return;
-      }
-
-      auto Pred = Cmp->getPredicate();
-      if (CmpOp1 == RenamedOp) {
-        std::swap(CmpOp0, CmpOp1);
-        Pred = Cmp->getSwappedPredicate();
-      }
-
-      // Wait until CmpOp1 is resolved.
-      if (getValueState(CmpOp1).isUnknown()) {
-        addAdditionalUser(CmpOp1, &CB);
-        return;
-      }
-
-      // The code below relies on PredicateInfo only inserting copies for the
-      // true branch when the branch condition is an AND and only inserting
-      // copies for the false branch when the branch condition is an OR. This
-      // ensures we can intersect the range from the condition with the range of
-      // CopyOf.
-      if (!TrueEdge)
-        Pred = CmpInst::getInversePredicate(Pred);
-
-      ValueLatticeElement CondVal = getValueState(CmpOp1);
+      ValueLatticeElement CondVal = getValueState(OtherOp);
       ValueLatticeElement &IV = ValueState[&CB];
       if (CondVal.isConstantRange() || CopyOfVal.isConstantRange()) {
         auto ImposedCR =
@@ -1334,7 +1302,7 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
         if (!CopyOfCR.contains(NewCR) && CopyOfCR.getSingleMissingElement())
           NewCR = CopyOfCR;
 
-        addAdditionalUser(CmpOp1, &CB);
+        addAdditionalUser(OtherOp, &CB);
         // TODO: Actually filp MayIncludeUndef for the created range to false,
         // once most places in the optimizer respect the branches on
         // undef/poison are UB rule. The reason why the new range cannot be
@@ -1351,7 +1319,7 @@ void SCCPSolver::handleCallResult(CallBase &CB) {
       } else if (Pred == CmpInst::ICMP_EQ && CondVal.isConstant()) {
         // For non-integer values or integer constant expressions, only
         // propagate equal constants.
-        addAdditionalUser(CmpOp1, &CB);
+        addAdditionalUser(OtherOp, &CB);
         mergeInValue(IV, &CB, CondVal);
         return;
       }
@@ -2054,9 +2022,47 @@ bool llvm::runIPSCCP(
 
   for (const auto &I : Solver.getTrackedRetVals()) {
     Function *F = I.first;
-    if (isOverdefined(I.second) || F->getReturnType()->isVoidTy())
+    const ValueLatticeElement &ReturnValue = I.second;
+
+    // If there is a known constant range for the return value, add !range
+    // metadata to the function's call sites.
+    if (ReturnValue.isConstantRange() &&
+        !ReturnValue.getConstantRange().isSingleElement()) {
+      // Do not add range metadata if the return value may include undef.
+      if (ReturnValue.isConstantRangeIncludingUndef())
+        continue;
+
+      auto &CR = ReturnValue.getConstantRange();
+      for (User *User : F->users()) {
+        auto *CB = dyn_cast<CallBase>(User);
+        if (!CB || CB->getCalledFunction() != F)
+          continue;
+
+        // Limit to cases where the return value is guaranteed to be neither
+        // poison nor undef. Poison will be outside any range and currently
+        // values outside of the specified range cause immediate undefined
+        // behavior.
+        if (!isGuaranteedNotToBeUndefOrPoison(CB, CB))
+          continue;
+
+        // Do not touch existing metadata for now.
+        // TODO: We should be able to take the intersection of the existing
+        // metadata and the inferred range.
+        if (CB->getMetadata(LLVMContext::MD_range))
+          continue;
+
+        LLVMContext &Context = CB->getParent()->getContext();
+        Metadata *RangeMD[] = {
+            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getLower())),
+            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getUpper()))};
+        CB->setMetadata(LLVMContext::MD_range, MDNode::get(Context, RangeMD));
+      }
       continue;
-    findReturnsToZap(*F, ReturnsToZap, Solver);
+    }
+    if (F->getReturnType()->isVoidTy())
+      continue;
+    if (isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
+      findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
   for (auto F : Solver.getMRVFunctionsTracked()) {

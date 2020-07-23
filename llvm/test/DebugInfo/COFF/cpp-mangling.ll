@@ -1,5 +1,5 @@
 ; RUN: llc -mcpu=core2 -mtriple=i686-pc-win32 -o - -O0 -filetype=obj < %s \
-; RUN:   | llvm-readobj --codeview | FileCheck %s
+; RUN:   | llvm-readobj --codeview - | FileCheck %s
 
 ; C++ source to regenerate:
 ; namespace foo {

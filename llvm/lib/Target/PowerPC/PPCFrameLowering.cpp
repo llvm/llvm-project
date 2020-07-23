@@ -1371,6 +1371,10 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
   const PPCTargetLowering &TLI = *Subtarget.getTargetLowering();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineModuleInfo &MMI = MF.getMMI();
+  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  // AIX assembler does not support cfi directives.
+  const bool needsCFI = MF.needsFrameMoves() && !Subtarget.isAIXABI();
   auto StackAllocMIPos = llvm::find_if(PrologMBB, [](MachineInstr &MI) {
     int Opc = MI.getOpcode();
     return Opc == PPC::PROBED_STACKALLOC_64 || Opc == PPC::PROBED_STACKALLOC_32;
@@ -1394,6 +1398,24 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
   // Initialize current frame pointer.
   const MCInstrDesc &CopyInst = TII.get(isPPC64 ? PPC::OR8 : PPC::OR);
   BuildMI(PrologMBB, {MI}, DL, CopyInst, FPReg).addReg(SPReg).addReg(SPReg);
+  // Subroutines to generate .cfi_* directives.
+  auto buildDefCFAReg = [&](MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI, Register Reg) {
+    unsigned RegNum = MRI->getDwarfRegNum(Reg, true);
+    unsigned CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createDefCfaRegister(nullptr, RegNum));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+  };
+  auto buildDefCFA = [&](MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI, Register Reg,
+                         int Offset) {
+    unsigned RegNum = MRI->getDwarfRegNum(Reg, true);
+    unsigned CFIIndex = MBB.getParent()->addFrameInst(
+        MCCFIInstruction::cfiDefCfa(nullptr, RegNum, Offset));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+  };
   // Subroutine to determine if we can use the Imm as part of d-form.
   auto CanUseDForm = [](int64_t Imm) { return isInt<16>(Imm) && Imm % 4 == 0; };
   // Subroutine to materialize the Imm into TempReg.
@@ -1427,6 +1449,9 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
           .addReg(SPReg)
           .addReg(NegSizeReg);
   };
+  // Use FPReg to calculate CFA.
+  if (needsCFI)
+    buildDefCFA(PrologMBB, {MI}, FPReg, 0);
   // For case HasBP && MaxAlign > 1, we have to align the SP by performing
   // SP = SP - SP % MaxAlign.
   if (HasBP && MaxAlign > 1) {
@@ -1462,6 +1487,10 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
       MaterializeImm(PrologMBB, {MI}, NegProbeSize, ScratchReg);
     for (int i = 0; i < NumBlocks; ++i)
       allocateAndProbe(PrologMBB, {MI}, NegProbeSize, ScratchReg, UseDForm);
+    if (needsCFI) {
+      // Restore using SPReg to calculate CFA.
+      buildDefCFAReg(PrologMBB, {MI}, SPReg);
+    }
   } else {
     // Since CTR is a volatile register and current shrinkwrap implementation
     // won't choose an MBB in a loop as the PrologMBB, it's safe to synthesize a
@@ -1492,6 +1521,10 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
                     PrologMBB.end());
     ExitMBB->transferSuccessorsAndUpdatePHIs(&PrologMBB);
     PrologMBB.addSuccessor(LoopMBB);
+    if (needsCFI) {
+      // Restore using SPReg to calculate CFA.
+      buildDefCFAReg(*ExitMBB, ExitMBB->begin(), SPReg);
+    }
     // Update liveins.
     recomputeLiveIns(*LoopMBB);
     recomputeLiveIns(*ExitMBB);

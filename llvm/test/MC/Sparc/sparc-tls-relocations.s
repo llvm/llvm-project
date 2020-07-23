@@ -3,8 +3,8 @@
 !
 ! RUN: llvm-mc %s -arch=sparc -show-encoding | FileCheck %s --check-prefix=ASM
 ! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s --check-prefix=ASM
-! RUN: llvm-mc %s -arch=sparc -filetype=obj | llvm-readobj -r | FileCheck %s --check-prefix=REL
-! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-readobj -r | FileCheck %s --check-prefix=REL
+! RUN: llvm-mc %s -arch=sparc -filetype=obj | llvm-readobj -r - | FileCheck %s --check-prefix=REL
+! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-readobj -r - | FileCheck %s --check-prefix=REL
 ! RUN: llvm-mc %s -arch=sparc -filetype=obj | llvm-objdump -r -d - | FileCheck %s --check-prefix=OBJDUMP
 ! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-objdump -r -d - | FileCheck %s --check-prefix=OBJDUMP
 

@@ -776,6 +776,11 @@ private:
   void GetSplitVector(SDValue Op, SDValue &Lo, SDValue &Hi);
   void SetSplitVector(SDValue Op, SDValue Lo, SDValue Hi);
 
+  // Helper function for incrementing the pointer when splitting
+  // memory operations
+  void IncrementPointer(MemSDNode *N, EVT MemVT,
+                        MachinePointerInfo &MPI, SDValue &Ptr);
+
   // Vector Result Splitting: <128 x ty> -> 2 x <64 x ty>.
   void SplitVectorResult(SDNode *N, unsigned ResNo);
   void SplitVecRes_BinOp(SDNode *N, SDValue &Lo, SDValue &Hi);

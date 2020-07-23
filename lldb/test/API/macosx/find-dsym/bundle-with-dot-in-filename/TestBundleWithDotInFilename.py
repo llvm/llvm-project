@@ -38,7 +38,6 @@ class BundleWithDotInFilenameTestCase(TestBase):
         self.build()
         os.chdir(self.getBuildDir());
         popen = self.spawnSubprocess(exe)
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         # Give the inferior time to start up, dlopen a bundle, remove the bundle it linked in
         sleep(5)

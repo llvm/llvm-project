@@ -604,6 +604,7 @@ int main(int argc, char **argv) {
   const int (&l)[5] = da;
   SC1 s;
   SC1 *p;
+  int Arr[10];
 #pragma omp target data map // expected-error {{expected '(' after 'map'}} le45-error {{expected at least one 'map' or 'use_device_ptr' clause for '#pragma omp target data'}} le50-error {{expected at least one 'map', 'use_device_ptr', or 'use_device_addr' clause for '#pragma omp target data'}}
 #pragma omp target data map( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
 #pragma omp target data map() // expected-error {{expected expression}}
@@ -749,6 +750,12 @@ int main(int argc, char **argv) {
   {}
 #pragma omp target map(iarr[:2:d]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   {}
+
+#pragma omp target data map(Arr[0:4]) // le45-note {{used here}}
+  {
+#pragma omp target
+    Arr[0] = 2; // le45-error {{original storage of expression in data environment is shared but data environment do not fully contain mapped expression storage}}
+  }
 
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
 }

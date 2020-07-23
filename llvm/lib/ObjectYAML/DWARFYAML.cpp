@@ -46,6 +46,10 @@ SetVector<StringRef> DWARFYAML::Data::getUsedSectionNames() const {
     SecNames.insert("debug_gnu_pubnames");
   if (GNUPubTypes)
     SecNames.insert("debug_gnu_pubtypes");
+  if (DebugStrOffsets)
+    SecNames.insert("debug_str_offsets");
+  if (DebugRnglists)
+    SecNames.insert("debug_rnglists");
   return SecNames;
 }
 
@@ -69,6 +73,8 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.mapOptional("debug_info", DWARF.CompileUnits);
   IO.mapOptional("debug_line", DWARF.DebugLines);
   IO.mapOptional("debug_addr", DWARF.DebugAddr);
+  IO.mapOptional("debug_str_offsets", DWARF.DebugStrOffsets);
+  IO.mapOptional("debug_rnglists", DWARF.DebugRnglists);
   IO.setContext(OldContext);
 }
 
@@ -219,6 +225,38 @@ void MappingTraits<DWARFYAML::AddrTableEntry>::mapping(
   IO.mapOptional("AddressSize", AddrTable.AddrSize);
   IO.mapOptional("SegmentSelectorSize", AddrTable.SegSelectorSize, 0);
   IO.mapOptional("Entries", AddrTable.SegAddrPairs);
+}
+
+void MappingTraits<DWARFYAML::StringOffsetsTable>::mapping(
+    IO &IO, DWARFYAML::StringOffsetsTable &StrOffsetsTable) {
+  IO.mapOptional("Format", StrOffsetsTable.Format, dwarf::DWARF32);
+  IO.mapOptional("Length", StrOffsetsTable.Length);
+  IO.mapOptional("Version", StrOffsetsTable.Version, 5);
+  IO.mapOptional("Padding", StrOffsetsTable.Padding, 0);
+  IO.mapOptional("Offsets", StrOffsetsTable.Offsets);
+}
+
+void MappingTraits<DWARFYAML::RnglistEntry>::mapping(
+    IO &IO, DWARFYAML::RnglistEntry &RnglistEntry) {
+  IO.mapRequired("Operator", RnglistEntry.Operator);
+  IO.mapOptional("Values", RnglistEntry.Values);
+}
+
+void MappingTraits<DWARFYAML::Rnglist>::mapping(IO &IO,
+                                                DWARFYAML::Rnglist &Rnglist) {
+  IO.mapOptional("Entries", Rnglist.Entries);
+}
+
+void MappingTraits<DWARFYAML::RnglistTable>::mapping(
+    IO &IO, DWARFYAML::RnglistTable &RnglistTable) {
+  IO.mapOptional("Format", RnglistTable.Format, dwarf::DWARF32);
+  IO.mapOptional("Length", RnglistTable.Length);
+  IO.mapOptional("Version", RnglistTable.Version, 5);
+  IO.mapOptional("AddressSize", RnglistTable.AddrSize);
+  IO.mapOptional("SegmentSelectorSize", RnglistTable.SegSelectorSize, 0);
+  IO.mapOptional("OffsetEntryCount", RnglistTable.OffsetEntryCount);
+  IO.mapOptional("Offsets", RnglistTable.Offsets);
+  IO.mapOptional("Lists", RnglistTable.Lists);
 }
 
 void MappingTraits<DWARFYAML::InitialLength>::mapping(

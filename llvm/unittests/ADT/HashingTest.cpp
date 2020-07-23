@@ -101,6 +101,17 @@ TEST(HashingTest, HashValueStdPair) {
             hash_value(std::make_pair(obj1, std::make_pair(obj2, obj3))));
 }
 
+TEST(HashingTest, HashValueStdTuple) {
+  EXPECT_EQ(hash_combine(), hash_value(std::make_tuple()));
+  EXPECT_EQ(hash_combine(42), hash_value(std::make_tuple(42)));
+  EXPECT_EQ(hash_combine(42, 'c'), hash_value(std::make_tuple(42, 'c')));
+
+  EXPECT_NE(hash_combine(43, 42), hash_value(std::make_tuple(42, 43)));
+  EXPECT_NE(hash_combine(42, 43), hash_value(std::make_tuple(42ull, 43ull)));
+  EXPECT_NE(hash_combine(42, 43), hash_value(std::make_tuple(42, 43ull)));
+  EXPECT_NE(hash_combine(42, 43), hash_value(std::make_tuple(42ull, 43)));
+}
+
 TEST(HashingTest, HashValueStdString) {
   std::string s = "Hello World!";
   EXPECT_EQ(hash_combine_range(s.c_str(), s.c_str() + s.size()), hash_value(s));

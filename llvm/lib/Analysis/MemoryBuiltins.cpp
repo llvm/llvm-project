@@ -676,13 +676,14 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
+  Type *MemoryTy = A.getPointeeInMemoryValueType();
   // No interprocedural analysis is done at the moment.
-  if (!A.hasPassPointeeByValueAttr()) {
+  if (!MemoryTy) {
     ++ObjectVisitorArgument;
     return unknown();
   }
-  PointerType *PT = cast<PointerType>(A.getType());
-  APInt Size(IntTyBits, DL.getTypeAllocSize(PT->getElementType()));
+
+  APInt Size(IntTyBits, DL.getTypeAllocSize(MemoryTy));
   return std::make_pair(align(Size, A.getParamAlignment()), Zero);
 }
 

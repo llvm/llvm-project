@@ -327,6 +327,42 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
   return llvm::json::Value(std::move(object));
 }
 
+llvm::json::Value CreateModule(lldb::SBModule &module) {
+  llvm::json::Object object;
+  if (!module.IsValid())
+    return llvm::json::Value(std::move(object));
+  const char *uuid = module.GetUUIDString();
+  object.try_emplace("id", uuid ? std::string(uuid) : std::string(""));
+  object.try_emplace("name", std::string(module.GetFileSpec().GetFilename()));
+  char module_path_arr[PATH_MAX];
+  module.GetFileSpec().GetPath(module_path_arr, sizeof(module_path_arr));
+  std::string module_path(module_path_arr);
+  object.try_emplace("path", module_path);
+  if (module.GetNumCompileUnits() > 0) {
+    object.try_emplace("symbolStatus", "Symbols loaded.");
+    char symbol_path_arr[PATH_MAX];
+    module.GetSymbolFileSpec().GetPath(symbol_path_arr, sizeof(symbol_path_arr));
+    std::string symbol_path(symbol_path_arr);
+    object.try_emplace("symbolFilePath", symbol_path);
+  } else {
+    object.try_emplace("symbolStatus", "Symbols not found.");
+  }
+  std::string loaded_addr = std::to_string(
+      module.GetObjectFileHeaderAddress().GetLoadAddress(g_vsc.target));
+  object.try_emplace("addressRange", loaded_addr);
+  std::string version_str;
+  uint32_t version_nums[3];
+  uint32_t num_versions = module.GetVersion(version_nums, sizeof(version_nums)/sizeof(uint32_t));
+  for (uint32_t i=0; i<num_versions; ++i) {
+    if (!version_str.empty())
+      version_str += ".";
+    version_str += std::to_string(version_nums[i]);
+  }
+  if (!version_str.empty())
+    object.try_emplace("version", version_str);
+  return llvm::json::Value(std::move(object));
+}
+
 void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
                       llvm::Optional<llvm::StringRef> request_path,
                       llvm::Optional<uint32_t> request_line) {
@@ -899,6 +935,15 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   const char *evaluateName = evaluateStream.GetData();
   if (evaluateName && evaluateName[0])
     EmplaceSafeString(object, "evaluateName", std::string(evaluateName));
+  return llvm::json::Value(std::move(object));
+}
+
+llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit) {
+  llvm::json::Object object;
+  char unit_path_arr[PATH_MAX];
+  unit.GetFileSpec().GetPath(unit_path_arr, sizeof(unit_path_arr));
+  std::string unit_path(unit_path_arr);
+  object.try_emplace("compileUnitPath", unit_path);
   return llvm::json::Value(std::move(object));
 }
 

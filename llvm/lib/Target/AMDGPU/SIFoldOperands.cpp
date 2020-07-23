@@ -399,9 +399,9 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
       return false;
 
     if (!TII->isOperandLegal(*MI, CommuteOpNo, OpToFold)) {
-      if ((Opc == AMDGPU::V_ADD_I32_e64 ||
-           Opc == AMDGPU::V_SUB_I32_e64 ||
-           Opc == AMDGPU::V_SUBREV_I32_e64) && // FIXME
+      if ((Opc == AMDGPU::V_ADD_CO_U32_e64 ||
+           Opc == AMDGPU::V_SUB_CO_U32_e64 ||
+           Opc == AMDGPU::V_SUBREV_CO_U32_e64) && // FIXME
           (OpToFold->isImm() || OpToFold->isFI() || OpToFold->isGlobal())) {
         MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
 

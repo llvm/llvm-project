@@ -94,6 +94,8 @@ llvm::Error SystemInitializerCommon::Initialize() {
     vp.SetVersion(lldb_private::GetVersion());
     repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
     FileSystem::Initialize(fp.GetFileCollector());
+    repro::WorkingDirectoryProvider &wp = g->GetOrCreate<repro::WorkingDirectoryProvider>();
+    fp.RecordInterestingDirectory(wp.GetWorkingDirectory());
   } else {
     FileSystem::Initialize();
   }

@@ -161,7 +161,7 @@ FileHeader:
   Data:      ELFDATA2LSB
   Type:      ET_REL
   Machine:   EM_X86_64
-  SHStrNdx:  [[SHSTRTAB=2]]
+  EShStrNdx: [[SHSTRTAB=2]]
 Sections:
   - Name:    .symtab
     Type:    SHT_SYMTAB

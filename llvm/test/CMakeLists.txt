@@ -16,6 +16,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_PLUGINS
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_HAVE_TF_AOT
+  LLVM_HAVE_TF_API
   )
 
 configure_lit_site_cfg(
@@ -82,6 +83,7 @@ set(LLVM_TEST_DEPENDS
           llvm-install-name-tool
           llvm-jitlink
           llvm-lib
+          llvm-libtool-darwin
           llvm-link
           llvm-lipo
           llvm-locstats

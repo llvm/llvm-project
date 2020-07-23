@@ -59,9 +59,6 @@ class Configuration(LibcxxConfiguration):
                                   % libunwind_headers)
         self.cxx.compile_flags += ['-I' + libunwind_headers]
 
-    def configure_compile_flags_rtti(self):
-        pass
-
     def configure_link_flags_cxx_library(self):
         # libunwind tests should not link with libc++
         pass

@@ -1,4 +1,5 @@
-; RUN: opt -analyze -scalar-evolution < %s | FileCheck %s
+; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s
+; RUN: opt -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
 define i32 @slt_trip_count_with_range(i32 *%ptr0, i32 *%ptr1) {
 ; CHECK-LABEL: slt_trip_count_with_range

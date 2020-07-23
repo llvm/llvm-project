@@ -403,6 +403,7 @@ set(COMPILER_RT_GMOCK_CFLAGS
 
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 COMPILER_RT_UNITTEST_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG -Wno-covered-switch-default COMPILER_RT_UNITTEST_CFLAGS)
+append_list_if(COMPILER_RT_HAS_WSUGGEST_OVERRIDE_FLAG -Wno-suggest-override COMPILER_RT_UNITTEST_CFLAGS)
 
 if(MSVC)
   # gtest use a lot of stuff marked as deprecated on Windows.

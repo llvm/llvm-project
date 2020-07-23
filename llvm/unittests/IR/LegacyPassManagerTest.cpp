@@ -355,12 +355,12 @@ namespace llvm {
     struct CustomOptPassGate : public OptPassGate {
       bool Skip;
       CustomOptPassGate(bool Skip) : Skip(Skip) { }
-      bool shouldRunPass(const Pass *P, StringRef IRDescription) {
+      bool shouldRunPass(const Pass *P, StringRef IRDescription) override {
         if (P->getPassKind() == PT_Module)
           return !Skip;
         return OptPassGate::shouldRunPass(P, IRDescription);
       }
-      bool isEnabled() const { return true; }
+      bool isEnabled() const override { return true; }
     };
 
     // Optional module pass.
@@ -680,7 +680,7 @@ namespace llvm {
       ASSERT_EQ(M->getFunctionList().size(), 4U);
       Function *F = M->getFunction("test2");
       Function *SF = splitSimpleFunction(*F);
-      CallInst::Create(F, "", &SF->getEntryBlock());
+      CallInst::Create(F, "", &*SF->getEntryBlock().getFirstInsertionPt());
       ASSERT_EQ(M->getFunctionList().size(), 5U);
       CGModifierPass *P = new CGModifierPass();
       legacy::PassManager Passes;

@@ -357,7 +357,6 @@ TEST_F(ProgramEnvTest, TestExecuteAndWaitStatistics) {
                                &ExecutionFailed, &ProcStat);
   ASSERT_EQ(0, RetCode);
   ASSERT_TRUE(ProcStat);
-  ASSERT_GT(ProcStat->PeakMemory, 0U);
   ASSERT_GE(ProcStat->UserTime, std::chrono::microseconds(0));
   ASSERT_GE(ProcStat->TotalTime, ProcStat->UserTime);
 }

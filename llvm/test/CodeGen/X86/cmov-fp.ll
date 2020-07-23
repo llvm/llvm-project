@@ -1056,11 +1056,11 @@ define float @test16(i32 %a, i32 %b, float %x) nounwind {
 define x86_fp80 @test17(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test17:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    flds {{\.LCPI.*}}
 ; SSE-NEXT:    fxch %st(1)
-; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fcmovnbe %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
 ; SSE-NEXT:    retl
@@ -1109,11 +1109,11 @@ define x86_fp80 @test17(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 define x86_fp80 @test18(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test18:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    flds {{\.LCPI.*}}
 ; SSE-NEXT:    fxch %st(1)
-; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fcmovnb %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
 ; SSE-NEXT:    retl
@@ -1162,11 +1162,11 @@ define x86_fp80 @test18(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 define x86_fp80 @test19(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test19:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    flds {{\.LCPI.*}}
 ; SSE-NEXT:    fxch %st(1)
-; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fcmovb %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
 ; SSE-NEXT:    retl
@@ -1215,11 +1215,11 @@ define x86_fp80 @test19(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 define x86_fp80 @test20(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test20:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    flds {{\.LCPI.*}}
 ; SSE-NEXT:    fxch %st(1)
-; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fcmovbe %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
 ; SSE-NEXT:    retl
@@ -1268,13 +1268,13 @@ define x86_fp80 @test20(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 define x86_fp80 @test21(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test21:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
-; SSE-NEXT:    flds {{\.LCPI.*}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    setg %al
 ; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    flds {{\.LCPI.*}}
+; SSE-NEXT:    fxch %st(1)
 ; SSE-NEXT:    fcmovne %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
 ; SSE-NEXT:    retl
@@ -1328,13 +1328,13 @@ define x86_fp80 @test21(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 define x86_fp80 @test22(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test22:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
-; SSE-NEXT:    flds {{\.LCPI.*}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    setge %al
 ; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    flds {{\.LCPI.*}}
+; SSE-NEXT:    fxch %st(1)
 ; SSE-NEXT:    fcmovne %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
 ; SSE-NEXT:    retl
@@ -1387,13 +1387,13 @@ define x86_fp80 @test22(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 define x86_fp80 @test23(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test23:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
-; SSE-NEXT:    flds {{\.LCPI.*}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    setl %al
 ; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    flds {{\.LCPI.*}}
+; SSE-NEXT:    fxch %st(1)
 ; SSE-NEXT:    fcmovne %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
 ; SSE-NEXT:    retl
@@ -1446,13 +1446,13 @@ define x86_fp80 @test23(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 define x86_fp80 @test24(i32 %a, i32 %b, x86_fp80 %x) nounwind {
 ; SSE-LABEL: test24:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    fldt {{[0-9]+}}(%esp)
-; SSE-NEXT:    flds {{\.LCPI.*}}
-; SSE-NEXT:    fxch %st(1)
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    setle %al
 ; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    flds {{\.LCPI.*}}
+; SSE-NEXT:    fxch %st(1)
 ; SSE-NEXT:    fcmovne %st(1), %st
 ; SSE-NEXT:    fstp %st(1)
 ; SSE-NEXT:    retl

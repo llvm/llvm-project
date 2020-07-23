@@ -260,10 +260,13 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   // `in` is the subview that linalg.copy reads. Replace it.
   Value in = copyOp.getInput(0);
 
+  // linalg.copy + linalg.fill can be used to create a padded local buffer.
+  // The `masked` attribute is only valid on this padded buffer.
+  // When forwarding to vector.transfer_read, the attribute must be reset
+  // conservatively.
   Value res = rewriter.create<vector::TransferReadOp>(
       xferOp.getLoc(), xferOp.getVectorType(), in, xferOp.indices(),
-      xferOp.permutation_map(), xferOp.padding(),
-      xferOp.masked() ? *xferOp.masked() : ArrayAttr());
+      xferOp.permutation_map(), xferOp.padding(), ArrayAttr());
 
   if (maybeFillOp)
     rewriter.eraseOp(maybeFillOp);
@@ -308,10 +311,13 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
   Value out = copyOp.getOutputBuffer(0);
 
   // Forward vector.transfer into copy.
+  // linalg.copy + linalg.fill can be used to create a padded local buffer.
+  // The `masked` attribute is only valid on this padded buffer.
+  // When forwarding to vector.transfer_write, the attribute must be reset
+  // conservatively.
   rewriter.create<vector::TransferWriteOp>(
       xferOp.getLoc(), xferOp.vector(), out, xferOp.indices(),
-      xferOp.permutation_map(),
-      xferOp.masked() ? *xferOp.masked() : ArrayAttr());
+      xferOp.permutation_map(), ArrayAttr());
 
   rewriter.eraseOp(copyOp);
   rewriter.eraseOp(xferOp);

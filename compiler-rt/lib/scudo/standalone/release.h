@@ -69,7 +69,8 @@ public:
     BufferSize = (roundUpTo(N, static_cast<uptr>(1U) << PackingRatioLog) >>
                   PackingRatioLog) *
                  sizeof(*Buffer);
-    if (BufferSize <= StaticBufferSize && Mutex.tryLock()) {
+    if (BufferSize <= (StaticBufferCount * sizeof(Buffer[0])) &&
+        Mutex.tryLock()) {
       Buffer = &StaticBuffer[0];
       memset(Buffer, 0, BufferSize);
     } else {
@@ -114,6 +115,8 @@ public:
 
   uptr getBufferSize() const { return BufferSize; }
 
+  static const uptr StaticBufferCount = 1024U;
+
 private:
   const uptr N;
   uptr CounterSizeBitsLog;
@@ -125,8 +128,7 @@ private:
   uptr *Buffer;
 
   static HybridMutex Mutex;
-  static const uptr StaticBufferSize = 1024U;
-  static uptr StaticBuffer[StaticBufferSize];
+  static uptr StaticBuffer[StaticBufferCount];
 };
 
 template <class ReleaseRecorderT> class FreePagesRangeTracker {

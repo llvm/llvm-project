@@ -113,7 +113,7 @@ TEST_F(BackgroundIndexTest, Config) {
   // Set up two identical TUs, foo and bar.
   // They define foo::one and bar::one.
   std::vector<tooling::CompileCommand> Cmds;
-  for (std::string Name : {"foo", "bar"}) {
+  for (std::string Name : {"foo", "bar", "baz"}) {
     std::string Filename = Name + ".cpp";
     std::string Header = Name + ".h";
     FS.Files[Filename] = "#include \"" + Header + "\"";
@@ -126,11 +126,14 @@ TEST_F(BackgroundIndexTest, Config) {
   }
   // Context provider that installs a configuration mutating foo's command.
   // This causes it to define foo::two instead of foo::one.
+  // It also disables indexing of baz entirely.
   auto ContextProvider = [](PathRef P) {
     Config C;
     if (P.endswith("foo.cpp"))
       C.CompileFlags.Edits.push_back(
           [](std::vector<std::string> &Argv) { Argv.push_back("-Done=two"); });
+    if (P.endswith("baz.cpp"))
+      C.Index.Background = Config::BackgroundPolicy::Skip;
     return Context::current().derive(Config::Key, std::move(C));
   };
   // Create the background index.

@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj < %s | llvm-readobj --codeview | FileCheck %s
-; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj --codeview | FileCheck %s
+; RUN: llc -filetype=obj < %s | llvm-readobj --codeview - | FileCheck %s
+; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj --codeview - | FileCheck %s
 
 ; We should emit two array types: one used to describe the static data member,
 ; and the other used by the S_GDATA32 for the definition.

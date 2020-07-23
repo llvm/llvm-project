@@ -156,11 +156,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // There is no i8x16.mul instruction
     setOperationAction(ISD::MUL, MVT::v16i8, Expand);
 
-    // There are no vector select instructions
-    for (auto Op : {ISD::VSELECT, ISD::SELECT_CC, ISD::SELECT})
-      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
-                     MVT::v2f64})
-        setOperationAction(Op, T, Expand);
+    // There is no vector conditional select instruction
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
+                   MVT::v2f64})
+      setOperationAction(ISD::SELECT_CC, T, Expand);
 
     // Expand integer operations supported for scalars but not SIMD
     for (auto Op : {ISD::CTLZ, ISD::CTTZ, ISD::CTPOP, ISD::SDIV, ISD::UDIV,
@@ -441,6 +440,19 @@ static MachineBasicBlock *LowerCallResults(MachineInstr &CallResults,
   MachineFunction &MF = *BB->getParent();
   const MCInstrDesc &MCID = TII.get(CallOp);
   MachineInstrBuilder MIB(MF, MF.CreateMachineInstr(MCID, DL));
+
+  // See if we must truncate the function pointer.
+  // CALL_INDIRECT takes an i32, but in wasm64 we represent function pointers
+  // as 64-bit for uniformity with other pointer types.
+  if (IsIndirect && MF.getSubtarget<WebAssemblySubtarget>().hasAddr64()) {
+    Register Reg32 =
+        MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
+    auto &FnPtr = CallParams.getOperand(0);
+    BuildMI(*BB, CallResults.getIterator(), DL,
+            TII.get(WebAssembly::I32_WRAP_I64), Reg32)
+        .addReg(FnPtr.getReg());
+    FnPtr.setReg(Reg32);
+  }
 
   // Move the function pointer to the end of the arguments for indirect calls
   if (IsIndirect) {

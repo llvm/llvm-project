@@ -208,6 +208,12 @@ std::unique_ptr<InlineAdvisor>
 getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM);
 #endif
 
+#ifdef LLVM_HAVE_TF_API
+std::unique_ptr<InlineAdvisor>
+getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
+                          std::function<bool(CallBase &)> GetDefaultAdvice);
+#endif
+
 // Default (manual policy) decision making helper APIs. Shared with the legacy
 // pass manager inliner.
 

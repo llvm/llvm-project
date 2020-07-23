@@ -358,6 +358,11 @@ void VSCode::SetTarget(const lldb::SBTarget target) {
         lldb::SBTarget::eBroadcastBitBreakpointChanged);
     listener.StartListeningForEvents(this->broadcaster,
                                      eBroadcastBitStopEventThread);
+    listener.StartListeningForEvents(
+      this->target.GetBroadcaster(),
+      lldb::SBTarget::eBroadcastBitModulesLoaded |
+          lldb::SBTarget::eBroadcastBitModulesUnloaded |
+          lldb::SBTarget::eBroadcastBitSymbolsLoaded);                                
   }
 }
 

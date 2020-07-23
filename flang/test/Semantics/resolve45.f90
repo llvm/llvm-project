@@ -68,3 +68,14 @@ subroutine s7
   !ERROR: 'x' appears as a COMMON block in a SAVE statement but not in a COMMON statement
   save /x/
 end
+
+subroutine s8a(n)
+  integer :: n
+  real :: x(n)  ! OK: save statement doesn't affect x
+  save
+end
+subroutine s8b(n)
+  integer :: n
+  !ERROR: SAVE attribute may not be applied to automatic data object 'x'
+  real, save :: x(n)
+end

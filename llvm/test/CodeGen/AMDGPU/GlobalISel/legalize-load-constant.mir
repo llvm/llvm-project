@@ -4331,42 +4331,32 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; CI: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 3, align 4, addrspace 4)
     ; CI: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; CI: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; CI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; CI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; CI: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; CI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; CI: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     ; VI-LABEL: name: test_load_constant_v3s8_align4
     ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; VI: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 3, align 4, addrspace 4)
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; VI: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; VI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; VI: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; VI: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     ; GFX9-LABEL: name: test_load_constant_v3s8_align4
     ; GFX9: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; GFX9: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 3, align 4, addrspace 4)
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; GFX9: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; GFX9: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; GFX9: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     ; CI-MESA-LABEL: name: test_load_constant_v3s8_align4
     ; CI-MESA: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; CI-MESA: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 3, align 4, addrspace 4)
     ; CI-MESA: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; CI-MESA: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; CI-MESA: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; CI-MESA: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; CI-MESA: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; CI-MESA: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; CI-MESA: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     ; GFX9-MESA-LABEL: name: test_load_constant_v3s8_align4
     ; GFX9-MESA: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; GFX9-MESA: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 3, align 4, addrspace 4)
     ; GFX9-MESA: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; GFX9-MESA: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; GFX9-MESA: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; GFX9-MESA: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; GFX9-MESA: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; GFX9-MESA: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; GFX9-MESA: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     %0:_(p4) = COPY $vgpr0_vgpr1
     %1:_(<3 x s8>) = G_LOAD %0 :: (load 3, align 4, addrspace 4)
     %2:_(<4 x s8>) = G_IMPLICIT_DEF
@@ -4384,42 +4374,32 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; CI: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 2, align 1, addrspace 4)
     ; CI: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; CI: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; CI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; CI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; CI: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; CI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; CI: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     ; VI-LABEL: name: test_load_constant_v3s8_align1
     ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; VI: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 2, align 1, addrspace 4)
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; VI: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; VI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; VI: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; VI: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     ; GFX9-LABEL: name: test_load_constant_v3s8_align1
     ; GFX9: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; GFX9: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 2, align 1, addrspace 4)
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; GFX9: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; GFX9: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; GFX9: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     ; CI-MESA-LABEL: name: test_load_constant_v3s8_align1
     ; CI-MESA: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; CI-MESA: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 2, align 1, addrspace 4)
     ; CI-MESA: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; CI-MESA: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; CI-MESA: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; CI-MESA: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; CI-MESA: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; CI-MESA: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; CI-MESA: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     ; GFX9-MESA-LABEL: name: test_load_constant_v3s8_align1
     ; GFX9-MESA: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; GFX9-MESA: [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[COPY]](p4) :: (load 2, align 1, addrspace 4)
     ; GFX9-MESA: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; GFX9-MESA: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF]](<4 x s8>)
-    ; GFX9-MESA: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[LOAD]](<3 x s8>), 0
-    ; GFX9-MESA: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
-    ; GFX9-MESA: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
+    ; GFX9-MESA: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF]], [[LOAD]](<3 x s8>), 0
+    ; GFX9-MESA: $vgpr0 = COPY [[INSERT]](<4 x s8>)
     %0:_(p4) = COPY $vgpr0_vgpr1
     %1:_(<3 x s8>) = G_LOAD %0 :: (load 2, align 1, addrspace 4)
     %2:_(<4 x s8>) = G_IMPLICIT_DEF

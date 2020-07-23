@@ -232,6 +232,13 @@ public:
     return {Set.end()};
   }
 
+  /// Check if the SmallSet contains the given element.
+  bool contains(const T &V) const {
+    if (isSmall())
+      return vfind(V) != Vector.end();
+    return Set.find(V) != Set.end();
+  }
+
 private:
   bool isSmall() const { return Set.empty(); }
 

@@ -16,6 +16,9 @@
 #include "mlir/IR/Block.h"
 
 namespace mlir {
+class TypeRange;
+template <typename ValueRangeT>
+class ValueTypeRange;
 class BlockAndValueMapping;
 
 /// This class contains a list of basic blocks and a link to the parent
@@ -61,6 +64,48 @@ public:
   static BlockListType Region::*getSublistAccess(Block *) {
     return &Region::blocks;
   }
+
+  //===--------------------------------------------------------------------===//
+  // Argument Handling
+  //===--------------------------------------------------------------------===//
+
+  // This is the list of arguments to the block.
+  using BlockArgListType = MutableArrayRef<BlockArgument>;
+  BlockArgListType getArguments() {
+    return empty() ? BlockArgListType() : front().getArguments();
+  }
+  using args_iterator = BlockArgListType::iterator;
+  using reverse_args_iterator = BlockArgListType::reverse_iterator;
+  args_iterator args_begin() { return getArguments().begin(); }
+  args_iterator args_end() { return getArguments().end(); }
+  reverse_args_iterator args_rbegin() { return getArguments().rbegin(); }
+  reverse_args_iterator args_rend() { return getArguments().rend(); }
+
+  bool args_empty() { return getArguments().empty(); }
+
+  /// Add one value to the argument list.
+  BlockArgument addArgument(Type type) { return front().addArgument(type); }
+
+  /// Insert one value to the position in the argument list indicated by the
+  /// given iterator. The existing arguments are shifted. The block is expected
+  /// not to have predecessors.
+  BlockArgument insertArgument(args_iterator it, Type type) {
+    return front().insertArgument(it, type);
+  }
+
+  /// Add one argument to the argument list for each type specified in the list.
+  iterator_range<args_iterator> addArguments(TypeRange types);
+
+  /// Add one value to the argument list at the specified position.
+  BlockArgument insertArgument(unsigned index, Type type) {
+    return front().insertArgument(index, type);
+  }
+
+  /// Erase the argument at 'index' and remove it from the argument list.
+  void eraseArgument(unsigned index) { front().eraseArgument(index); }
+
+  unsigned getNumArguments() { return getArguments().size(); }
+  BlockArgument getArgument(unsigned i) { return getArguments()[i]; }
 
   //===--------------------------------------------------------------------===//
   // Operation list utilities

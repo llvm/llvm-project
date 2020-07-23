@@ -106,12 +106,28 @@ func @generic_mismatched_num_returns(%arg0: memref<f32>) {
 // -----
 
 func @generic_symbol_in_map(%arg0: memref<i32>) {
-  // expected-error @+1 {{op expected indexing_map #0 to have no symbols}}
+  // expected-error @+1 {{expected the number of symbols in indexing_map #0 to match target rank}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
     indexing_maps =  [ affine_map<()[N] -> (0)> ],
     iterator_types = ["parallel"]
+  } %arg0 {
+    ^bb(%i : i32):
+    linalg.yield %i : i32
+  }: memref<i32>
+}
+
+// -----
+
+func @generic_symbol_source_out_of_range(%arg0: memref<i32>) {
+  // expected-error @+1 {{symbol_source index out of range}}
+  linalg.generic {
+    args_in = 0,
+    args_out = 1,
+    indexing_maps =  [ affine_map<()[N] -> (0)> ],
+    iterator_types = ["parallel"],
+    symbol_source = 1
   } %arg0 {
     ^bb(%i : i32):
     linalg.yield %i : i32

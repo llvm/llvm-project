@@ -17,8 +17,8 @@
 ; FIXME: Should probably test this, but sometimes selecting fmac is painful to match.
 ; XUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx906 -denormal-fp-math-f32=ieee -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,GFX9-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-STRICT,GFX906 %s
 
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx1030 -mattr=-fp32-denormals -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH-STRICT,GCN-FLUSH-FMAC,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-STRICT %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx1030 -mattr=+fp32-denormals -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-FASTFMA-STRICT,GCN-DENORM-STRICT %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx1030 -denormal-fp-math-f32=preserve-sign -mattr=+mad-mac-f32-insts -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-STRICT,GCN-FLUSH-FMAC,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-STRICT,GFX1030 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx1030 -denormal-fp-math-f32=ieee -mattr=+mad-mac-f32-insts -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,GCN-DENORM-FASTFMA-STRICT,GFX1030 %s
 
 ; Test all permutations of: fp32 denormals, fast fp contract, fp contract enabled for fmuladd, fmaf fast/slow.
 

@@ -687,14 +687,48 @@ define amdgpu_kernel void @bfe_sext_in_reg_i24(i32 addrspace(1)* %out, i32 addrs
   ret void
 }
 
-; FIXME
-; define amdgpu_kernel void @simplify_demanded_bfe_sdiv(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-;   %src = load i32, i32 addrspace(1)* %in, align 4
-;   %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %src, i32 1, i32 16)
-;   %div = sdiv i32 %bfe, 2
-;   store i32 %div, i32 addrspace(1)* %out, align 4
-;   ret void
-; }
+define amdgpu_kernel void @simplify_demanded_bfe_sdiv(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+; GFX6-LABEL: simplify_demanded_bfe_sdiv:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v0, 2
+; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
+; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; GFX6-NEXT:    s_mov_b32 s6, -1
+; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
+; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GFX6-NEXT:    s_mov_b32 s7, 0xf000
+; GFX6-NEXT:    v_mul_lo_u32 v1, -2, v0
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_bfe_i32 s2, s2, 0x100001
+; GFX6-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX6-NEXT:    v_mul_hi_u32 v1, v0, v1
+; GFX6-NEXT:    s_add_i32 s2, s2, s3
+; GFX6-NEXT:    s_xor_b32 s2, s2, s3
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; GFX6-NEXT:    v_mul_hi_u32 v0, s2, v0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GFX6-NEXT:    v_sub_i32_e32 v1, vcc, s2, v1
+; GFX6-NEXT:    v_cmp_le_u32_e32 vcc, 2, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GFX6-NEXT:    v_subrev_i32_e64 v2, s[0:1], 2, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GFX6-NEXT:    v_cmp_le_u32_e32 vcc, 2, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, s3, v0
+; GFX6-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
+; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX6-NEXT:    s_endpgm
+  %src = load i32, i32 addrspace(1)* %in, align 4
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %src, i32 1, i32 16)
+  %div = sdiv i32 %bfe, 2
+  store i32 %div, i32 addrspace(1)* %out, align 4
+  ret void
+}
 
 define amdgpu_kernel void @bfe_0_width(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
 ; GFX6-LABEL: bfe_0_width:

@@ -36,7 +36,7 @@ int teams_argument_global(int n) {
   // CK1: [[TH_PAR:%.+]] = load{{.+}}, {{.+}} [[TH_CAST]],
 
   // CK1: call void @__kmpc_push_target_tripcount(i64 -1, i64 %{{.+}})
-  // CK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 5, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 {{.+}}, i32 1)
+  // CK1: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 5, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 {{.+}}, i32 1)
 
   // CK1: call void @[[OFFL1:.+]](i{{32|64}} [[TE_PAR]], i{{32|64}} [[TH_PAR]],
   #pragma omp target
@@ -45,7 +45,7 @@ int teams_argument_global(int n) {
     a[i] = 0;
   }
 
-  // CK1: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
+  // CK1: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 0, i32 1)
   // CK1: call void @[[OFFL2:.+]](i{{64|32}} %{{.+}})
   #pragma omp target
   {{{
@@ -116,7 +116,7 @@ int teams_local_arg(void) {
   int n = 100;
   int a[n];
 
-  // CK2: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
+  // CK2: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 0, i32 1)
   // CK2: call void @[[OFFL1:.+]](i{{64|32}} %{{.+}})
   #pragma omp target
   #pragma omp teams distribute simd
@@ -177,7 +177,7 @@ struct SS{
   // CK3: define {{.*}}i32 @{{.+}}foo{{.+}}(
   int foo(void) {
 
-  // CK3: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* %{{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
+  // CK3: call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* %{{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 0, i32 1)
   // CK3: call void @[[OFFL1:.+]]([[SSI]]* %{{.+}})
     #pragma omp target
 #ifdef OMP5
@@ -275,8 +275,8 @@ int main (int argc, char **argv) {
 }
 
 // CK4:  define {{.*}}i32 @{{[^,]+}}(i{{.+}}{{.+}} %[[ARGC:.+]], {{.+}})
-// OMP4_45:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
-// OMP4_50:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 1)
+// OMP4_45:   call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 0, i32 1)
+// OMP4_50:   call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 4, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 0, i32 1)
 // CK4: call void @[[OFFL1:.+]]({{.+}})
 // CK4: {{%.+}} = call{{.*}} i32 @[[TMAIN:.+]]({{.+}})
 // CK4:  ret
@@ -292,7 +292,7 @@ int main (int argc, char **argv) {
 // CK4: ret void
 
 // CK4:  define {{.*}}i32 @[[TMAIN]]({{.+}})
-// CK4:   call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 {{.+}}, i32 1)
+// CK4:   call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i8** null, i32 {{.+}}, i32 1)
 // CK4: call void @[[OFFLT:.+]]({{.+}})
 // CK4:  ret
 // CK4-NEXT: }

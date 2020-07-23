@@ -159,6 +159,7 @@ private:
     DCHECK_GT(B->getCount(), 0);
     C->Count = B->getCount();
     B->copyToArray(C->Chunks);
+    B->clear();
     destroyBatch(ClassId, B);
     return true;
   }

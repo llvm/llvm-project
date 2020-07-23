@@ -429,3 +429,84 @@
 # CHECK-BE: stxvrdx 35, 3, 1                      # encoding: [0x7c,0x63,0x09,0xdb]
 # CHECK-LE: stxvrdx 35, 3, 1                      # encoding: [0xdb,0x09,0x63,0x7c]
             stxvrdx 35, 3, 1
+# CHECK-BE: vmulesd 1, 2, 3                       # encoding: [0x10,0x22,0x1b,0xc8]
+# CHECK-LE: vmulesd 1, 2, 3                       # encoding: [0xc8,0x1b,0x22,0x10]
+            vmulesd 1, 2, 3
+# CHECK-BE: vmulosd 1, 2, 3                       # encoding: [0x10,0x22,0x19,0xc8]
+# CHECK-LE: vmulosd 1, 2, 3                       # encoding: [0xc8,0x19,0x22,0x10]
+            vmulosd 1, 2, 3
+# CHECK-BE: vmuleud 1, 2, 3                       # encoding: [0x10,0x22,0x1a,0xc8]
+# CHECK-LE: vmuleud 1, 2, 3                       # encoding: [0xc8,0x1a,0x22,0x10]
+            vmuleud 1, 2, 3
+# CHECK-BE: vmuloud 1, 2, 3                       # encoding: [0x10,0x22,0x18,0xc8]
+# CHECK-LE: vmuloud 1, 2, 3                       # encoding: [0xc8,0x18,0x22,0x10]
+            vmuloud 1, 2, 3
+# CHECK-BE: vmsumcud 1, 2, 3, 4                   # encoding: [0x10,0x22,0x19,0x17]
+# CHECK-LE: vmsumcud 1, 2, 3, 4                   # encoding: [0x17,0x19,0x22,0x10]
+            vmsumcud 1, 2, 3, 4
+# CHECK-BE: vdivsq 3, 4, 5                        # encoding: [0x10,0x64,0x29,0x0b]
+# CHECK-LE: vdivsq 3, 4, 5                        # encoding: [0x0b,0x29,0x64,0x10]
+            vdivsq 3, 4, 5
+# CHECK-BE: vdivuq 3, 4, 5                        # encoding: [0x10,0x64,0x28,0x0b]
+# CHECK-LE: vdivuq 3, 4, 5                        # encoding: [0x0b,0x28,0x64,0x10]
+            vdivuq 3, 4, 5
+# CHECK-BE: vdivesq 3, 4, 5                       # encoding: [0x10,0x64,0x2b,0x0b]
+# CHECK-LE: vdivesq 3, 4, 5                       # encoding: [0x0b,0x2b,0x64,0x10]
+            vdivesq 3, 4, 5
+# CHECK-BE: vdiveuq 3, 4, 5                       # encoding: [0x10,0x64,0x2a,0x0b]
+# CHECK-LE: vdiveuq 3, 4, 5                       # encoding: [0x0b,0x2a,0x64,0x10]
+            vdiveuq 3, 4, 5
+# CHECK-BE: vcmpequq 4, 5, 6                      # encoding: [0x10,0x85,0x31,0xc7]
+# CHECK-LE: vcmpequq 4, 5, 6                      # encoding: [0xc7,0x31,0x85,0x10]
+            vcmpequq 4, 5, 6
+# CHECK-BE: vcmpequq. 4, 5, 6                     # encoding: [0x10,0x85,0x35,0xc7]
+# CHECK-LE: vcmpequq. 4, 5, 6                     # encoding: [0xc7,0x35,0x85,0x10]
+            vcmpequq. 4, 5, 6
+# CHECK-BE: vcmpgtsq 4, 5, 6                      # encoding: [0x10,0x85,0x33,0x87]
+# CHECK-LE: vcmpgtsq 4, 5, 6                      # encoding: [0x87,0x33,0x85,0x10]
+            vcmpgtsq 4, 5, 6
+# CHECK-BE: vcmpgtsq. 4, 5, 6                     # encoding: [0x10,0x85,0x37,0x87]
+# CHECK-LE: vcmpgtsq. 4, 5, 6                     # encoding: [0x87,0x37,0x85,0x10]
+            vcmpgtsq. 4, 5, 6
+# CHECK-BE: vcmpgtuq 4, 5, 6                      # encoding: [0x10,0x85,0x32,0x87]
+# CHECK-LE: vcmpgtuq 4, 5, 6                      # encoding: [0x87,0x32,0x85,0x10]
+            vcmpgtuq 4, 5, 6
+# CHECK-BE: vcmpgtuq. 4, 5, 6                     # encoding: [0x10,0x85,0x36,0x87]
+# CHECK-LE: vcmpgtuq. 4, 5, 6                     # encoding: [0x87,0x36,0x85,0x10]
+            vcmpgtuq. 4, 5, 6
+# CHECK-BE: vmoduq 3, 4, 5                        # encoding: [0x10,0x64,0x2e,0x0b]
+# CHECK-LE: vmoduq 3, 4, 5                        # encoding: [0x0b,0x2e,0x64,0x10]
+            vmoduq 3, 4, 5
+# CHECK-BE: vextsd2q 20, 25                       # encoding: [0x12,0x9b,0xce,0x02]
+# CHECK-LE: vextsd2q 20, 25                       # encoding: [0x02,0xce,0x9b,0x12]
+            vextsd2q 20, 25
+# CHECK-BE: vrlq 4, 5, 6                          # encoding: [0x10,0x85,0x30,0x05]
+# CHECK-LE: vrlq 4, 5, 6                          # encoding: [0x05,0x30,0x85,0x10]
+            vrlq 4, 5, 6
+# CHECK-BE: vrlqnm 4, 5, 6                        # encoding: [0x10,0x85,0x31,0x45]
+# CHECK-LE: vrlqnm 4, 5, 6                        # encoding: [0x45,0x31,0x85,0x10]
+            vrlqnm 4, 5, 6
+# CHECK-BE: vrlqmi 4, 5, 6                        # encoding: [0x10,0x85,0x30,0x45]
+# CHECK-LE: vrlqmi 4, 5, 6                        # encoding: [0x45,0x30,0x85,0x10]
+            vrlqmi 4, 5, 6
+# CHECK-BE: vslq 4, 5, 6                          # encoding: [0x10,0x85,0x31,0x05]
+# CHECK-LE: vslq 4, 5, 6                          # encoding: [0x05,0x31,0x85,0x10]
+            vslq 4, 5, 6
+# CHECK-BE: vsrq 4, 5, 6                          # encoding: [0x10,0x85,0x32,0x05]
+# CHECK-LE: vsrq 4, 5, 6                          # encoding: [0x05,0x32,0x85,0x10]
+            vsrq 4, 5, 6
+# CHECK-BE: vsraq 4, 5, 6                         # encoding: [0x10,0x85,0x33,0x05]
+# CHECK-LE: vsraq 4, 5, 6                         # encoding: [0x05,0x33,0x85,0x10]
+            vsraq 4, 5, 6
+# CHECK-BE: xscvqpuqz 8, 28                       # encoding: [0xfd,0x00,0xe6,0x88]
+# CHECK-LE: xscvqpuqz 8, 28                       # encoding: [0x88,0xe6,0x00,0xfd]
+            xscvqpuqz 8, 28
+# CHECK-BE: xscvqpsqz 8, 28                       # encoding: [0xfd,0x08,0xe6,0x88]
+# CHECK-LE: xscvqpsqz 8, 28                       # encoding: [0x88,0xe6,0x08,0xfd]
+            xscvqpsqz 8, 28
+# CHECK-BE: xscvuqqp 8, 28                        # encoding: [0xfd,0x03,0xe6,0x88]
+# CHECK-LE: xscvuqqp 8, 28                        # encoding: [0x88,0xe6,0x03,0xfd]
+            xscvuqqp 8, 28
+# CHECK-BE: xscvsqqp 8, 28                        # encoding: [0xfd,0x0b,0xe6,0x88]
+# CHECK-LE: xscvsqqp 8, 28                        # encoding: [0x88,0xe6,0x0b,0xfd]
+            xscvsqqp 8, 28

@@ -190,16 +190,27 @@ inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
 
 Align inferAlignFromPtrInfo(MachineFunction &MF, const MachinePointerInfo &MPO);
 
-/// Return the least common multiple type of \p Ty0 and \p Ty1, by changing
-/// the number of vector elements or scalar bitwidth. The intent is a
-/// G_MERGE_VALUES can be constructed from \p Ty0 elements, and unmerged into
-/// \p Ty1.
-LLT getLCMType(LLT Ty0, LLT Ty1);
+/// Return the least common multiple type of \p OrigTy and \p TargetTy, by changing the
+/// number of vector elements or scalar bitwidth. The intent is a
+/// G_MERGE_VALUES, G_BUILD_VECTOR, or G_CONCAT_VECTORS can be constructed from
+/// \p OrigTy elements, and unmerged into \p TargetTy
+LLVM_READNONE
+LLT getLCMType(LLT OrigTy, LLT TargetTy);
 
-/// Return a type that is greatest common divisor of \p OrigTy and \p
-/// TargetTy. This will either change the number of vector elements, or
-/// bitwidth of scalars. The intent is the result type can be used as the
-/// result of a G_UNMERGE_VALUES from \p OrigTy.
+/// Return a type where the total size is the greatest common divisor of \p
+/// OrigTy and \p TargetTy. This will try to either change the number of vector
+/// elements, or bitwidth of scalars. The intent is the result type can be used
+/// as the result of a G_UNMERGE_VALUES from \p OrigTy, and then some
+/// combination of G_MERGE_VALUES, G_BUILD_VECTOR and G_CONCAT_VECTORS (possibly
+/// with intermediate casts) can re-form \p TargetTy.
+///
+/// If these are vectors with different element types, this will try to produce
+/// a vector with a compatible total size, but the element type of \p OrigTy. If
+/// this can't be satisfied, this will produce a scalar smaller than the
+/// original vector elements.
+///
+/// In the worst case, this returns LLT::scalar(1)
+LLVM_READNONE
 LLT getGCDType(LLT OrigTy, LLT TargetTy);
 
 } // End namespace llvm.

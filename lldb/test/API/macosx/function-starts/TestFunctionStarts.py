@@ -53,7 +53,6 @@ class FunctionStartsTestCase(TestBase):
                 (pid_file_path)))
 
         popen = self.spawnSubprocess(exe, [pid_file_path])
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         # Wait until process has fully started up.
         pid = lldbutil.wait_for_file_on_target(self, pid_file_path)

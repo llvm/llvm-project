@@ -53,6 +53,7 @@ static_library("Utils") {
     "LowerInvoke.cpp",
     "LowerMemIntrinsics.cpp",
     "LowerSwitch.cpp",
+    "MatrixUtils.cpp",
     "Mem2Reg.cpp",
     "MetaRenamer.cpp",
     "MisExpect.cpp",

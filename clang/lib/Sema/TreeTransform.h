@@ -1347,9 +1347,10 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  StmtResult RebuildWhileStmt(SourceLocation WhileLoc,
-                              Sema::ConditionResult Cond, Stmt *Body) {
-    return getSema().ActOnWhileStmt(WhileLoc, Cond, Body);
+  StmtResult RebuildWhileStmt(SourceLocation WhileLoc, SourceLocation LParenLoc,
+                              Sema::ConditionResult Cond,
+                              SourceLocation RParenLoc, Stmt *Body) {
+    return getSema().ActOnWhileStmt(WhileLoc, LParenLoc, Cond, RParenLoc, Body);
   }
 
   /// Build a new do-while statement.
@@ -7335,7 +7336,8 @@ TreeTransform<Derived>::TransformWhileStmt(WhileStmt *S) {
       Body.get() == S->getBody())
     return Owned(S);
 
-  return getDerived().RebuildWhileStmt(S->getWhileLoc(), Cond, Body.get());
+  return getDerived().RebuildWhileStmt(S->getWhileLoc(), S->getLParenLoc(),
+                                       Cond, S->getRParenLoc(), Body.get());
 }
 
 template<typename Derived>

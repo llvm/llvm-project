@@ -84,7 +84,7 @@ struct FixIrreducible : public FunctionPass {
     initializeFixIrreduciblePass(*PassRegistry::getPassRegistry());
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequiredID(LowerSwitchID);
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
@@ -93,7 +93,7 @@ struct FixIrreducible : public FunctionPass {
     AU.addPreserved<LoopInfoWrapperPass>();
   }
 
-  bool runOnFunction(Function &F);
+  bool runOnFunction(Function &F) override;
 };
 } // namespace
 
@@ -281,6 +281,9 @@ static bool makeReducible(LoopInfo &LI, DominatorTree &DT, Graph &&G) {
     LLVM_DEBUG(dbgs() << "Found headers:");
     for (auto BB : reverse(Blocks)) {
       for (const auto P : predecessors(BB)) {
+        // Skip unreachable predecessors.
+        if (!DT.isReachableFromEntry(P))
+          continue;
         if (!Blocks.count(P)) {
           LLVM_DEBUG(dbgs() << " " << BB->getName());
           Headers.insert(BB);

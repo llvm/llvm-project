@@ -30,6 +30,7 @@
   define void @test_address_sve_fp() nounwind { entry: unreachable }
   define void @test_stack_arg_sve() nounwind { entry: unreachable }
   define void @test_address_sve_out_of_range() nounwind { entry: unreachable }
+  define void @test_address_gpr_vla_nobp() nounwind { entry: unreachable }
   define aarch64_sve_vector_pcs void @save_restore_pregs_sve() nounwind { entry: unreachable }
   define aarch64_sve_vector_pcs void @save_restore_zregs_sve() nounwind { entry: unreachable }
   define aarch64_sve_vector_pcs void @save_restore_sve() nounwind { entry: unreachable }
@@ -330,6 +331,39 @@ body:             |
 
     STR_ZXI $z0, %fixed-stack.0, 0
     STR_PXI $p0, %fixed-stack.1, 0
+
+    RET_ReallyLR
+---
+...
+# Test that non-SVE objects are accessed from FP when there is no BP,
+# but the SP cannot be used because of variable-length arrays.
+#
+# +----------+ <- FP
+# | %fstack.0|  // 16 scalable bytes
+# +----------+ <- @FP - 16 scalable bytes
+# | %stack.0 |  // 16 bytes
+# +----------+ <- @FP - 16 scalable bytes - 16b
+# : %stack.1 :  // variable length
+# +----------+ <- SP
+
+# CHECK-LABEL: name: test_address_gpr_vla_nobp
+# CHECK:      bb.0.entry:
+# CHECK:      $[[TMP:x[0-9]+]] = ADDVL_XXI $fp, -1
+# CHECK-NEXT: STURXi $xzr, killed $[[TMP]], -16
+# CHECK:      RET_ReallyLR
+name:            test_address_gpr_vla_nobp
+frameInfo:
+  maxAlignment:  16
+fixedStack:
+  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8, offset: -16 }
+stack:
+  - { id: 0, stack-id: default, size: 16, alignment: 8 }
+  - { id: 1, stack-id: default, type: variable-sized }
+body:             |
+  bb.0.entry:
+    liveins: $xzr
+
+    STRXui $xzr, %stack.0, 0
 
     RET_ReallyLR
 ---

@@ -19,11 +19,16 @@
 #include "flang/Semantics/semantics.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
+#include <unordered_map>
+
 using OmpDirectiveSet = Fortran::common::EnumSet<llvm::omp::Directive,
     llvm::omp::Directive_enumSize>;
 
 using OmpClauseSet =
     Fortran::common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
+
+#define GEN_FLANG_DIRECTIVE_CLAUSE_SETS
+#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
 
 namespace llvm {
 namespace omp {
@@ -151,6 +156,9 @@ public:
   void Enter(const parser::OmpScheduleClause &);
 
 private:
+#define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+
   struct OmpContext {
     OmpContext(parser::CharBlock source, llvm::omp::Directive d)
         : directiveSource{source}, directive{d} {}
@@ -216,7 +224,20 @@ private:
   void PushContext(const parser::CharBlock &source, llvm::omp::Directive dir) {
     ompContext_.emplace_back(source, dir);
   }
-
+  void SetClauseSets(llvm::omp::Directive dir) {
+    ompContext_.back().allowedClauses = directiveClausesTable[dir].allowed;
+    ompContext_.back().allowedOnceClauses =
+        directiveClausesTable[dir].allowedOnce;
+    ompContext_.back().allowedExclusiveClauses =
+        directiveClausesTable[dir].allowedExclusive;
+    ompContext_.back().requiredClauses =
+        directiveClausesTable[dir].requiredOneOf;
+  }
+  void PushContextAndClauseSets(
+      const parser::CharBlock &source, llvm::omp::Directive dir) {
+    PushContext(source, dir);
+    SetClauseSets(dir);
+  }
   void RequiresConstantPositiveParameter(
       const llvm::omp::Clause &clause, const parser::ScalarIntConstantExpr &i);
   void RequiresPositiveParameter(

@@ -479,3 +479,198 @@ body: |
     %2:_(s32) = G_UITOFP %1
     $vgpr0 = COPY %2
 ...
+
+---
+name: test_uitofp_s64_to_s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; GFX6-LABEL: name: test_uitofp_s64_to_s16
+    ; GFX6: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX6: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; GFX6: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s64)
+    ; GFX6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 190
+    ; GFX6: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ_ZERO_UNDEF]]
+    ; GFX6: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s64), [[C1]]
+    ; GFX6: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SUB]], [[C]]
+    ; GFX6: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
+    ; GFX6: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[CTLZ_ZERO_UNDEF]](s32)
+    ; GFX6: [[AND:%[0-9]+]]:_(s64) = G_AND [[SHL]], [[C3]]
+    ; GFX6: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 1099511627775
+    ; GFX6: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C4]]
+    ; GFX6: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
+    ; GFX6: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[C5]](s32)
+    ; GFX6: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
+    ; GFX6: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SELECT]], [[C6]](s32)
+    ; GFX6: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; GFX6: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[TRUNC]]
+    ; GFX6: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 549755813888
+    ; GFX6: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[AND1]](s64), [[C7]]
+    ; GFX6: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND1]](s64), [[C7]]
+    ; GFX6: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; GFX6: [[AND2:%[0-9]+]]:_(s32) = G_AND [[OR]], [[C8]]
+    ; GFX6: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C8]], [[SELECT1]]
+    ; GFX6: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
+    ; GFX6: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[ADD]](s32)
+    ; GFX6: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
+    ; GFX6: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX8-LABEL: name: test_uitofp_s64_to_s16
+    ; GFX8: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX8: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; GFX8: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s64)
+    ; GFX8: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 190
+    ; GFX8: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ_ZERO_UNDEF]]
+    ; GFX8: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s64), [[C1]]
+    ; GFX8: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SUB]], [[C]]
+    ; GFX8: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
+    ; GFX8: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[CTLZ_ZERO_UNDEF]](s32)
+    ; GFX8: [[AND:%[0-9]+]]:_(s64) = G_AND [[SHL]], [[C3]]
+    ; GFX8: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 1099511627775
+    ; GFX8: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C4]]
+    ; GFX8: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
+    ; GFX8: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[C5]](s32)
+    ; GFX8: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
+    ; GFX8: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SELECT]], [[C6]](s32)
+    ; GFX8: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; GFX8: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[TRUNC]]
+    ; GFX8: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 549755813888
+    ; GFX8: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[AND1]](s64), [[C7]]
+    ; GFX8: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND1]](s64), [[C7]]
+    ; GFX8: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; GFX8: [[AND2:%[0-9]+]]:_(s32) = G_AND [[OR]], [[C8]]
+    ; GFX8: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C]]
+    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C8]], [[SELECT1]]
+    ; GFX8: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
+    ; GFX8: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[ADD]](s32)
+    ; GFX8: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
+    ; GFX8: $vgpr0 = COPY [[ANYEXT]](s32)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s16) = G_UITOFP %0
+    %2:_(s32) = G_ANYEXT %1
+    $vgpr0 = COPY %2
+...
+
+---
+name: test_sitofp_v2s64_to_v2s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; GFX6-LABEL: name: test_sitofp_v2s64_to_v2s16
+    ; GFX6: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX6: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
+    ; GFX6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX6: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; GFX6: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UV]](s64)
+    ; GFX6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 190
+    ; GFX6: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ_ZERO_UNDEF]]
+    ; GFX6: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s64), [[C1]]
+    ; GFX6: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SUB]], [[C]]
+    ; GFX6: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
+    ; GFX6: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[CTLZ_ZERO_UNDEF]](s32)
+    ; GFX6: [[AND:%[0-9]+]]:_(s64) = G_AND [[SHL]], [[C3]]
+    ; GFX6: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 1099511627775
+    ; GFX6: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C4]]
+    ; GFX6: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
+    ; GFX6: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[C5]](s32)
+    ; GFX6: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
+    ; GFX6: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SELECT]], [[C6]](s32)
+    ; GFX6: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; GFX6: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[TRUNC]]
+    ; GFX6: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 549755813888
+    ; GFX6: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[AND1]](s64), [[C7]]
+    ; GFX6: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND1]](s64), [[C7]]
+    ; GFX6: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; GFX6: [[AND2:%[0-9]+]]:_(s32) = G_AND [[OR]], [[C8]]
+    ; GFX6: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C]]
+    ; GFX6: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C8]], [[SELECT1]]
+    ; GFX6: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
+    ; GFX6: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[ADD]](s32)
+    ; GFX6: [[CTLZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UV1]](s64)
+    ; GFX6: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ_ZERO_UNDEF1]]
+    ; GFX6: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s64), [[C1]]
+    ; GFX6: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[SUB1]], [[C]]
+    ; GFX6: [[SHL2:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[CTLZ_ZERO_UNDEF1]](s32)
+    ; GFX6: [[AND3:%[0-9]+]]:_(s64) = G_AND [[SHL2]], [[C3]]
+    ; GFX6: [[AND4:%[0-9]+]]:_(s64) = G_AND [[AND3]], [[C4]]
+    ; GFX6: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND3]], [[C5]](s32)
+    ; GFX6: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[SELECT3]], [[C6]](s32)
+    ; GFX6: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)
+    ; GFX6: [[OR1:%[0-9]+]]:_(s32) = G_OR [[SHL3]], [[TRUNC1]]
+    ; GFX6: [[ICMP4:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[AND4]](s64), [[C7]]
+    ; GFX6: [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND4]](s64), [[C7]]
+    ; GFX6: [[AND5:%[0-9]+]]:_(s32) = G_AND [[OR1]], [[C8]]
+    ; GFX6: [[SELECT4:%[0-9]+]]:_(s32) = G_SELECT [[ICMP5]](s1), [[AND5]], [[C]]
+    ; GFX6: [[SELECT5:%[0-9]+]]:_(s32) = G_SELECT [[ICMP4]](s1), [[C8]], [[SELECT4]]
+    ; GFX6: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[OR1]], [[SELECT5]]
+    ; GFX6: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[ADD1]](s32)
+    ; GFX6: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
+    ; GFX6: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
+    ; GFX6: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX6: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C9]](s32)
+    ; GFX6: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL4]]
+    ; GFX6: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
+    ; GFX6: $vgpr0 = COPY [[BITCAST]](<2 x s16>)
+    ; GFX8-LABEL: name: test_sitofp_v2s64_to_v2s16
+    ; GFX8: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX8: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
+    ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX8: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; GFX8: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UV]](s64)
+    ; GFX8: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 190
+    ; GFX8: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ_ZERO_UNDEF]]
+    ; GFX8: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s64), [[C1]]
+    ; GFX8: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SUB]], [[C]]
+    ; GFX8: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
+    ; GFX8: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[CTLZ_ZERO_UNDEF]](s32)
+    ; GFX8: [[AND:%[0-9]+]]:_(s64) = G_AND [[SHL]], [[C3]]
+    ; GFX8: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 1099511627775
+    ; GFX8: [[AND1:%[0-9]+]]:_(s64) = G_AND [[AND]], [[C4]]
+    ; GFX8: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
+    ; GFX8: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[C5]](s32)
+    ; GFX8: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 23
+    ; GFX8: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SELECT]], [[C6]](s32)
+    ; GFX8: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; GFX8: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[TRUNC]]
+    ; GFX8: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 549755813888
+    ; GFX8: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[AND1]](s64), [[C7]]
+    ; GFX8: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND1]](s64), [[C7]]
+    ; GFX8: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; GFX8: [[AND2:%[0-9]+]]:_(s32) = G_AND [[OR]], [[C8]]
+    ; GFX8: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[AND2]], [[C]]
+    ; GFX8: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[C8]], [[SELECT1]]
+    ; GFX8: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[OR]], [[SELECT2]]
+    ; GFX8: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[ADD]](s32)
+    ; GFX8: [[CTLZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[UV1]](s64)
+    ; GFX8: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ_ZERO_UNDEF1]]
+    ; GFX8: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s64), [[C1]]
+    ; GFX8: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[SUB1]], [[C]]
+    ; GFX8: [[SHL2:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[CTLZ_ZERO_UNDEF1]](s32)
+    ; GFX8: [[AND3:%[0-9]+]]:_(s64) = G_AND [[SHL2]], [[C3]]
+    ; GFX8: [[AND4:%[0-9]+]]:_(s64) = G_AND [[AND3]], [[C4]]
+    ; GFX8: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND3]], [[C5]](s32)
+    ; GFX8: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[SELECT3]], [[C6]](s32)
+    ; GFX8: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)
+    ; GFX8: [[OR1:%[0-9]+]]:_(s32) = G_OR [[SHL3]], [[TRUNC1]]
+    ; GFX8: [[ICMP4:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[AND4]](s64), [[C7]]
+    ; GFX8: [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AND4]](s64), [[C7]]
+    ; GFX8: [[AND5:%[0-9]+]]:_(s32) = G_AND [[OR1]], [[C8]]
+    ; GFX8: [[SELECT4:%[0-9]+]]:_(s32) = G_SELECT [[ICMP5]](s1), [[AND5]], [[C]]
+    ; GFX8: [[SELECT5:%[0-9]+]]:_(s32) = G_SELECT [[ICMP4]](s1), [[C8]], [[SELECT4]]
+    ; GFX8: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[OR1]], [[SELECT5]]
+    ; GFX8: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[ADD1]](s32)
+    ; GFX8: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
+    ; GFX8: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
+    ; GFX8: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX8: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C9]](s32)
+    ; GFX8: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL4]]
+    ; GFX8: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
+    ; GFX8: $vgpr0 = COPY [[BITCAST]](<2 x s16>)
+    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x s16>) = G_UITOFP %0
+    $vgpr0 = COPY %1
+...

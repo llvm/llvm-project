@@ -449,6 +449,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->has16BitInsts()) {
     setOperationAction(ISD::FPOW, MVT::f16, Promote);
+    setOperationAction(ISD::FPOWI, MVT::f16, Promote);
     setOperationAction(ISD::FLOG, MVT::f16, Custom);
     setOperationAction(ISD::FEXP, MVT::f16, Custom);
     setOperationAction(ISD::FLOG10, MVT::f16, Custom);
@@ -3849,7 +3850,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MachineOperand SrcReg1Sub1 = TII->buildExtractSubRegOrImm(
         MI, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
 
-    unsigned LoOpc = IsAdd ? AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
+    unsigned LoOpc = IsAdd ? AMDGPU::V_ADD_CO_U32_e64 : AMDGPU::V_SUB_CO_U32_e64;
     MachineInstr *LoHalf = BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
                                .addReg(CarryReg, RegState::Define)
                                .add(SrcReg0Sub0)
@@ -4111,9 +4112,9 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
-  case AMDGPU::V_ADD_I32_e32:
-  case AMDGPU::V_SUB_I32_e32:
-  case AMDGPU::V_SUBREV_I32_e32: {
+  case AMDGPU::V_ADD_CO_U32_e32:
+  case AMDGPU::V_SUB_CO_U32_e32:
+  case AMDGPU::V_SUBREV_CO_U32_e32: {
     // TODO: Define distinct V_*_I32_Pseudo instructions instead.
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc = MI.getOpcode();

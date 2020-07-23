@@ -237,6 +237,34 @@ static void print(OpAsmPrinter &p, IsolatedRegionOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// Test SSACFGRegionOp
+//===----------------------------------------------------------------------===//
+
+RegionKind SSACFGRegionOp::getRegionKind(unsigned index) {
+  return RegionKind::SSACFG;
+}
+
+//===----------------------------------------------------------------------===//
+// Test GraphRegionOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseGraphRegionOp(OpAsmParser &parser,
+                                      OperationState &result) {
+  // Parse the body region, and reuse the operand info as the argument info.
+  Region *body = result.addRegion();
+  return parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{});
+}
+
+static void print(OpAsmPrinter &p, GraphRegionOp op) {
+  p << "test.graph_region ";
+  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+}
+
+RegionKind GraphRegionOp::getRegionKind(unsigned index) {
+  return RegionKind::Graph;
+}
+
+//===----------------------------------------------------------------------===//
 // Test AffineScopeOp
 //===----------------------------------------------------------------------===//
 
@@ -368,7 +396,7 @@ OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-LogicalResult mlir::OpWithInferTypeInterfaceOp::inferReturnTypes(
+LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, Optional<Location> location, ValueRange operands,
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
@@ -401,7 +429,7 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::reifyReturnTypeShapes(
     OpBuilder &builder, llvm::SmallVectorImpl<Value> &shapes) {
   shapes = SmallVector<Value, 1>{
-      builder.createOrFold<mlir::DimOp>(getLoc(), getOperand(0), 0)};
+      builder.createOrFold<DimOp>(getLoc(), getOperand(0), 0)};
   return success();
 }
 
@@ -608,7 +636,7 @@ void RegionIfOp::getSuccessorRegions(
 //===----------------------------------------------------------------------===//
 
 // Static initialization for Test dialect registration.
-static mlir::DialectRegistration<mlir::TestDialect> testDialect;
+static DialectRegistration<TestDialect> testDialect;
 
 #include "TestOpEnums.cpp.inc"
 #include "TestOpStructs.cpp.inc"

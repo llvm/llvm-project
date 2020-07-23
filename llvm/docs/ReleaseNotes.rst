@@ -1,12 +1,12 @@
 =========================
-LLVM 11.0.0 Release Notes
+LLVM 12.0.0 Release Notes
 =========================
 
 .. contents::
     :local:
 
 .. warning::
-   These are in-progress notes for the upcoming LLVM 11 release.
+   These are in-progress notes for the upcoming LLVM 12 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -15,7 +15,7 @@ Introduction
 ============
 
 This document contains the release notes for the LLVM Compiler Infrastructure,
-release 11.0.0.  Here we describe the status of LLVM, including major improvements
+release 12.0.0.  Here we describe the status of LLVM, including major improvements
 from the previous release, improvements in various subprojects of LLVM, and
 some of the current users of the code.  All LLVM releases may be downloaded
 from the `LLVM releases web site <https://llvm.org/releases/>`_.
@@ -57,22 +57,10 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
-* The callsite attribute `vector-function-abi-variant
-  <https://llvm.org/docs/LangRef.html#call-site-attributes>`_ has been
-  added to describe the mapping between scalar functions and vector
-  functions, to enable vectorization of call sites. The information
-  provided by the attribute is interfaced via the API provided by the
-  ``VFDatabase`` class.
+* ...
 
-* `dereferenceable` attributes and metadata on pointers no longer imply
-  anything about the alignment of the pointer in question. Previously, some
-  optimizations would make assumptions based on the type of the pointer. This
-  behavior was undocumented. To preserve optimizations, frontends may need to
-  be updated to generate appropriate `align` attributes and metadata.
-
-* The DIModule metadata is extended to contain file and line number
-  information. This information is used to represent Fortran modules debug
-  info at IR level.
+* Added the ``byref`` attribute to better represent argument passing
+  for the `amdgpu_kernel` calling convention.
 
 Changes to building LLVM
 ------------------------
@@ -81,21 +69,6 @@ Changes to the ARM Backend
 --------------------------
 
 During this release ...
-
-* Implemented C-language intrinsics for the full Arm v8.1-M MVE instruction
-  set. ``<arm_mve.h>`` now supports the complete API defined in the Arm C
-  Language Extensions.
-
-* Added support for assembly for the optional Custom Datapath Extension (CDE)
-  for Arm M-profile targets.
-
-* Implemented C-language intrinsics ``<arm_cde.h>`` for the CDE instruction set.
-
-* Clang now defaults to ``-fomit-frame-pointer`` when targeting non-Android
-  Linux for arm and thumb when optimizations are enabled. Users that were
-  previously not specifying a value and relying on the implicit compiler
-  default may wish to specify ``-fno-omit-frame-pointer`` to get the old
-  behavior. This improves compatibility with GCC.
 
 Changes to the MIPS Target
 --------------------------
@@ -113,45 +86,23 @@ Changes to the X86 Target
 
 During this release ...
 
-
-* Functions with the probe-stack attribute set to "inline-asm" are now protected
-  against stack clash without the need of a third-party probing function and
-  with limited impact on performance.
-* -x86-enable-old-knl-abi command line switch has been removed. v32i16/v64i8
-  vectors are always passed in ZMM register when avx512f is enabled and avx512bw
-  is disabled.
-* Vectors larger than 512 bits with i16 or i8 elements will be passed in
-  multiple ZMM registers when avx512f is enabled. Previously this required
-  avx512bw otherwise they would split into multiple YMM registers. This means
-  vXi16/vXi8 vectors are consistently treated the same as
-  vXi32/vXi64/vXf64/vXf32 vectors of the same total width.
-
 Changes to the AMDGPU Target
 -----------------------------
 
-* The backend default denormal handling mode has been switched to on
-  for all targets for all compute function types. Frontends wishing to
-  retain the old behavior should explicitly request f32 denormal
-  flushing.
+During this release ...
+
+* The new ``byref`` attribute is now the preferred method for
+  representing aggregate kernel arguments.
 
 Changes to the AVR Target
 -----------------------------
 
-* Moved from an experimental backend to an official backend. AVR support is now
-  included by default in all LLVM builds and releases and is available under
-  the "avr-unknown-unknown" target triple.
+During this release ...
 
 Changes to the WebAssembly Target
 ---------------------------------
 
-* Programs which don't have a "main" function, called "reactors" are now
-  properly supported, with a new `-mexec-model=reactor` flag. Programs which
-  previously used `-Wl,--no-entry` to avoid having a main function should
-  switch to this new flag, so that static initialization is properly
-  performed.
-
-* `__attribute__((visibility("protected")))` now evokes a warning, as
-  WebAssembly does not support "protected" visibility.
+During this release ...
 
 Changes to the OCaml bindings
 -----------------------------
@@ -173,28 +124,19 @@ Changes to the DAG infrastructure
 Changes to the Debug Info
 ---------------------------------
 
-* LLVM now supports the debug entry values (DW_OP_entry_value) production for
-  the x86, ARM, and AArch64 targets by default. Other targets can use
-  the utility by using the experimental option ("-debug-entry-values").
-  This is a debug info feature that allows debuggers to recover the value of
-  optimized-out parameters by going up a stack frame and interpreting the values
-  passed to the callee. The feature improves the debugging user experience when
-  debugging optimized code.
+During this release ...
 
 Changes to the LLVM tools
 ---------------------------------
 
-* Added an option (--show-section-sizes) to llvm-dwarfdump to show the sizes
-  of all debug sections within a file.
-
-* llvm-nm now implements the flag ``--special-syms`` and will filter out special
-  symbols, i.e. mapping symbols on ARM and AArch64, by default. This matches
-  the GNU nm behavior.
+* llvm-readobj and llvm-readelf behavior has changed to report an error when
+  executed with no input files instead of reading an input from stdin.
+  Reading from stdin can still be achieved by specifying `-` as an input file.
 
 Changes to LLDB
-===============
+---------------------------------
 
-External Open Source Projects Using LLVM 11
+External Open Source Projects Using LLVM 12
 ===========================================
 
 * A project...

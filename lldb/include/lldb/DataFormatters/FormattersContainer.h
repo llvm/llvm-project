@@ -169,8 +169,7 @@ public:
 
   friend class TypeCategoryImpl;
 
-  FormattersContainer(std::string name, IFormatChangeListener *lst)
-      : m_format_map(lst), m_name(name) {}
+  FormattersContainer(IFormatChangeListener *lst) : m_format_map(lst) {}
 
   void Add(MapKeyType type, const MapValueType &entry) {
     Add_Impl(std::move(type), entry, static_cast<KeyType *>(nullptr));
@@ -178,17 +177,6 @@ public:
 
   bool Delete(ConstString type) {
     return Delete_Impl(type, static_cast<KeyType *>(nullptr));
-  }
-
-  bool Get(ValueObject &valobj, MapValueType &entry,
-           lldb::DynamicValueType use_dynamic) {
-    CompilerType ast_type(valobj.GetCompilerType());
-    bool ret = Get(valobj, ast_type, entry, use_dynamic);
-    if (ret)
-      entry = MapValueType(entry);
-    else
-      entry = MapValueType();
-    return ret;
   }
 
   bool Get(ConstString type, MapValueType &entry) {
@@ -216,7 +204,6 @@ public:
 
 protected:
   BackEndType m_format_map;
-  std::string m_name;
 
   FormattersContainer(const FormattersContainer &) = delete;
   const FormattersContainer &operator=(const FormattersContainer &) = delete;

@@ -53,13 +53,13 @@ using namespace lldb_private;
 SBThreadPlan::SBThreadPlan() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBThreadPlan); }
 
 SBThreadPlan::SBThreadPlan(const ThreadPlanSP &lldb_object_sp)
-    : m_opaque_sp(lldb_object_sp) {
+    : m_opaque_wp(lldb_object_sp) {
   LLDB_RECORD_CONSTRUCTOR(SBThreadPlan, (const lldb::ThreadPlanSP &),
                           lldb_object_sp);
 }
 
 SBThreadPlan::SBThreadPlan(const SBThreadPlan &rhs)
-    : m_opaque_sp(rhs.m_opaque_sp) {
+    : m_opaque_wp(rhs.m_opaque_wp) {
   LLDB_RECORD_CONSTRUCTOR(SBThreadPlan, (const lldb::SBThreadPlan &), rhs);
 }
 
@@ -69,8 +69,8 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name) {
 
   Thread *thread = sb_thread.get();
   if (thread)
-    m_opaque_sp = std::make_shared<ThreadPlanPython>(*thread, class_name, 
-                                                     nullptr);
+    m_opaque_wp =
+        std::make_shared<ThreadPlanPython>(*thread, class_name, nullptr);
 }
 
 SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name,
@@ -81,7 +81,7 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name,
 
   Thread *thread = sb_thread.get();
   if (thread)
-    m_opaque_sp = std::make_shared<ThreadPlanPython>(*thread, class_name, 
+    m_opaque_wp = std::make_shared<ThreadPlanPython>(*thread, class_name,
                                                      args_data.m_impl_up.get());
 }
 
@@ -92,13 +92,11 @@ const lldb::SBThreadPlan &SBThreadPlan::operator=(const SBThreadPlan &rhs) {
                      SBThreadPlan, operator=,(const lldb::SBThreadPlan &), rhs);
 
   if (this != &rhs)
-    m_opaque_sp = rhs.m_opaque_sp;
+    m_opaque_wp = rhs.m_opaque_wp;
   return LLDB_RECORD_RESULT(*this);
 }
 // Destructor
 SBThreadPlan::~SBThreadPlan() = default;
-
-lldb_private::ThreadPlan *SBThreadPlan::get() { return m_opaque_sp.get(); }
 
 bool SBThreadPlan::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadPlan, IsValid);
@@ -107,13 +105,13 @@ bool SBThreadPlan::IsValid() const {
 SBThreadPlan::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadPlan, operator bool);
 
-  return m_opaque_sp.get() != nullptr;
+  return static_cast<bool>(GetSP());
 }
 
 void SBThreadPlan::Clear() {
   LLDB_RECORD_METHOD_NO_ARGS(void, SBThreadPlan, Clear);
 
-  m_opaque_sp.reset();
+  m_opaque_wp.reset();
 }
 
 lldb::StopReason SBThreadPlan::GetStopReason() {
@@ -138,9 +136,10 @@ uint64_t SBThreadPlan::GetStopReasonDataAtIndex(uint32_t idx) {
 SBThread SBThreadPlan::GetThread() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBThread, SBThreadPlan, GetThread);
 
-  if (m_opaque_sp) {
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
     return LLDB_RECORD_RESULT(
-        SBThread(m_opaque_sp->GetThread().shared_from_this()));
+        SBThread(thread_plan_sp->GetThread().shared_from_this()));
   } else
     return LLDB_RECORD_RESULT(SBThread());
 }
@@ -149,50 +148,52 @@ bool SBThreadPlan::GetDescription(lldb::SBStream &description) const {
   LLDB_RECORD_METHOD_CONST(bool, SBThreadPlan, GetDescription,
                            (lldb::SBStream &), description);
 
-  if (m_opaque_sp) {
-    m_opaque_sp->GetDescription(description.get(), eDescriptionLevelFull);
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
+    thread_plan_sp->GetDescription(description.get(), eDescriptionLevelFull);
   } else {
     description.Printf("Empty SBThreadPlan");
   }
   return true;
 }
 
-void SBThreadPlan::SetThreadPlan(const ThreadPlanSP &lldb_object_sp) {
-  m_opaque_sp = lldb_object_sp;
+void SBThreadPlan::SetThreadPlan(const ThreadPlanSP &lldb_object_wp) {
+  m_opaque_wp = lldb_object_wp;
 }
 
 void SBThreadPlan::SetPlanComplete(bool success) {
   LLDB_RECORD_METHOD(void, SBThreadPlan, SetPlanComplete, (bool), success);
 
-  if (m_opaque_sp)
-    m_opaque_sp->SetPlanComplete(success);
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp)
+    thread_plan_sp->SetPlanComplete(success);
 }
 
 bool SBThreadPlan::IsPlanComplete() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBThreadPlan, IsPlanComplete);
 
-  if (m_opaque_sp)
-    return m_opaque_sp->IsPlanComplete();
-  else
-    return true;
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp)
+    return thread_plan_sp->IsPlanComplete();
+  return true;
 }
 
 bool SBThreadPlan::IsPlanStale() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBThreadPlan, IsPlanStale);
 
-  if (m_opaque_sp)
-    return m_opaque_sp->IsPlanStale();
-  else
-    return true;
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp)
+    return thread_plan_sp->IsPlanStale();
+  return true;
 }
 
 bool SBThreadPlan::IsValid() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBThreadPlan, IsValid);
 
-  if (m_opaque_sp)
-    return m_opaque_sp->ValidatePlan(nullptr);
-  else
-    return false;
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp)
+    return thread_plan_sp->ValidatePlan(nullptr);
+  return false;
 }
 
 // This section allows an SBThreadPlan to push another of the common types of
@@ -220,7 +221,8 @@ SBThreadPlan SBThreadPlan::QueueThreadPlanForStepOverRange(
                      (lldb::SBAddress &, lldb::addr_t, lldb::SBError &),
                      sb_start_address, size, error);
 
-  if (m_opaque_sp) {
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
     Address *start_address = sb_start_address.get();
     if (!start_address) {
       return LLDB_RECORD_RESULT(SBThreadPlan());
@@ -231,19 +233,18 @@ SBThreadPlan SBThreadPlan::QueueThreadPlanForStepOverRange(
     start_address->CalculateSymbolContext(&sc);
     Status plan_status;
 
-    SBThreadPlan plan =
-        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepOverRange(
+    SBThreadPlan plan = SBThreadPlan(
+        thread_plan_sp->GetThread().QueueThreadPlanForStepOverRange(
             false, range, sc, eAllThreads, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());
     else
-      plan.m_opaque_sp->SetPrivate(true);
-    
+      plan.GetSP()->SetPrivate(true);
+
     return LLDB_RECORD_RESULT(plan);
-  } else {
-    return LLDB_RECORD_RESULT(SBThreadPlan());
   }
+  return LLDB_RECORD_RESULT(SBThreadPlan());
 }
 
 SBThreadPlan
@@ -266,7 +267,8 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
                      (lldb::SBAddress &, lldb::addr_t, lldb::SBError &),
                      sb_start_address, size, error);
 
-  if (m_opaque_sp) {
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
     Address *start_address = sb_start_address.get();
     if (!start_address) {
       return LLDB_RECORD_RESULT(SBThreadPlan());
@@ -278,18 +280,17 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
 
     Status plan_status;
     SBThreadPlan plan =
-        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepInRange(
+        SBThreadPlan(thread_plan_sp->GetThread().QueueThreadPlanForStepInRange(
             false, range, sc, nullptr, eAllThreads, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());
     else
-      plan.m_opaque_sp->SetPrivate(true);
+      plan.GetSP()->SetPrivate(true);
 
     return LLDB_RECORD_RESULT(plan);
-  } else {
-    return LLDB_RECORD_RESULT(SBThreadPlan());
   }
+  return LLDB_RECORD_RESULT(SBThreadPlan());
 }
 
 SBThreadPlan
@@ -312,26 +313,26 @@ SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
                      (uint32_t, bool, lldb::SBError &), frame_idx_to_step_to,
                      first_insn, error);
 
-  if (m_opaque_sp) {
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
     SymbolContext sc;
-    sc = m_opaque_sp->GetThread().GetStackFrameAtIndex(0)->GetSymbolContext(
+    sc = thread_plan_sp->GetThread().GetStackFrameAtIndex(0)->GetSymbolContext(
         lldb::eSymbolContextEverything);
 
     Status plan_status;
     SBThreadPlan plan =
-        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepOut(
+        SBThreadPlan(thread_plan_sp->GetThread().QueueThreadPlanForStepOut(
             false, &sc, first_insn, false, eVoteYes, eVoteNoOpinion,
             frame_idx_to_step_to, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());
     else
-      plan.m_opaque_sp->SetPrivate(true);
+      plan.GetSP()->SetPrivate(true);
 
     return LLDB_RECORD_RESULT(plan);
-  } else {
-    return LLDB_RECORD_RESULT(SBThreadPlan());
   }
+  return LLDB_RECORD_RESULT(SBThreadPlan());
 }
 
 SBThreadPlan
@@ -350,25 +351,25 @@ SBThreadPlan SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address,
                      QueueThreadPlanForRunToAddress,
                      (lldb::SBAddress, lldb::SBError &), sb_address, error);
 
-  if (m_opaque_sp) {
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
     Address *address = sb_address.get();
     if (!address)
       return LLDB_RECORD_RESULT(SBThreadPlan());
 
     Status plan_status;
     SBThreadPlan plan =
-        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForRunToAddress(
+        SBThreadPlan(thread_plan_sp->GetThread().QueueThreadPlanForRunToAddress(
             false, *address, false, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());
     else
-      plan.m_opaque_sp->SetPrivate(true);
+      plan.GetSP()->SetPrivate(true);
 
     return LLDB_RECORD_RESULT(plan);
-  } else {
-    return LLDB_RECORD_RESULT(SBThreadPlan());
   }
+  return LLDB_RECORD_RESULT(SBThreadPlan());
 }
 
 SBThreadPlan
@@ -389,22 +390,22 @@ SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name,
                      QueueThreadPlanForStepScripted,
                      (const char *, lldb::SBError &), script_class_name, error);
 
-  if (m_opaque_sp) {
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
     Status plan_status;
     StructuredData::ObjectSP empty_args;
     SBThreadPlan plan =
-        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepScripted(
+        SBThreadPlan(thread_plan_sp->GetThread().QueueThreadPlanForStepScripted(
             false, script_class_name, empty_args, false, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());
     else
-      plan.m_opaque_sp->SetPrivate(true);
+      plan.GetSP()->SetPrivate(true);
 
     return LLDB_RECORD_RESULT(plan);
-  } else {
-    return LLDB_RECORD_RESULT(SBThreadPlan());
   }
+  return LLDB_RECORD_RESULT(SBThreadPlan());
 }
 
 SBThreadPlan
@@ -416,17 +417,18 @@ SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name,
                      (const char *, lldb::SBStructuredData &, lldb::SBError &), 
                      script_class_name, args_data, error);
 
-  if (m_opaque_sp) {
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
     Status plan_status;
     StructuredData::ObjectSP args_obj = args_data.m_impl_up->GetObjectSP();
     SBThreadPlan plan =
-        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepScripted(
+        SBThreadPlan(thread_plan_sp->GetThread().QueueThreadPlanForStepScripted(
             false, script_class_name, args_obj, false, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());
     else
-      plan.m_opaque_sp->SetPrivate(true);
+      plan.GetSP()->SetPrivate(true);
 
     return LLDB_RECORD_RESULT(plan);
   } else {

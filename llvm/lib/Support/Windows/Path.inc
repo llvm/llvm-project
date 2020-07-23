@@ -957,9 +957,9 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &IT,
     return EC;
 
   // Convert path to the format that Windows is happy with.
-  if (PathUTF16.size() > 0 &&
-      !is_separator(PathUTF16[Path.size() - 1]) &&
-      PathUTF16[Path.size() - 1] != L':') {
+  size_t PathUTF16Len = PathUTF16.size();
+  if (PathUTF16Len > 0 && !is_separator(PathUTF16[PathUTF16Len - 1]) &&
+      PathUTF16[PathUTF16Len - 1] != L':') {
     PathUTF16.push_back(L'\\');
     PathUTF16.push_back(L'*');
   } else {

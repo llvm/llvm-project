@@ -236,6 +236,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
+void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                          TTI::PeelingPreferences &PP) {
+  BaseT::getPeelingPreferences(L, SE, PP);
+}
 unsigned GCNTTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
   // The concept of vector registers doesn't really exist. Some packed vector
   // operations operate on the normal 32-bit registers.
@@ -448,8 +452,8 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     // implementation tries to generate legalize and scalarization costs. Maybe
     // we could hoist the scalarization code here?
     return BaseT::getArithmeticInstrCost(Opcode, Ty, TTI::TCK_RecipThroughput,
-                                         Opd1Info, Opd2Info,
-                                         Opd1PropInfo, Opd2PropInfo);
+                                         Opd1Info, Opd2Info, Opd1PropInfo,
+                                         Opd2PropInfo, Args, CxtI);
   }
 
   // Legalize the type.
@@ -502,9 +506,20 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     // i32
     return QuarterRateCost * NElts * LT.first;
   }
+  case ISD::FMUL:
+    // Check possible fuse {fadd|fsub}(a,fmul(b,c)) and return zero cost for
+    // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
+    // fused operation.
+    if (!HasFP32Denormals && SLT == MVT::f32 && CxtI && CxtI->hasOneUse())
+      if (const auto *FAdd = dyn_cast<BinaryOperator>(*CxtI->user_begin())) {
+        const int OPC = TLI->InstructionOpcodeToISD(FAdd->getOpcode());
+        if (OPC == ISD::FADD || OPC == ISD::FSUB) {
+          return TargetTransformInfo::TCC_Free;
+        }
+      }
+    LLVM_FALLTHROUGH;
   case ISD::FADD:
   case ISD::FSUB:
-  case ISD::FMUL:
     if (SLT == MVT::f64)
       return LT.first * NElts * get64BitInstrCost();
 
@@ -564,9 +579,8 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     break;
   }
 
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                       Opd2Info,
-                                       Opd1PropInfo, Opd2PropInfo);
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
+                                       Opd1PropInfo, Opd2PropInfo, Args, CxtI);
 }
 
 // Return true if there's a potential benefit from using v2f16 instructions for
@@ -709,10 +723,9 @@ static bool isArgPassedInSGPR(const Argument *A) {
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
-    // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
+    // For non-compute shaders, SGPR inputs are marked with either inreg.
     // Everything else is in VGPRs.
-    return F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg) ||
-           F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::ByVal);
+    return F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg);
   default:
     // TODO: Should calls support inreg for SGPR inputs?
     return false;
@@ -997,6 +1010,11 @@ void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   CommonTTI.getUnrollingPreferences(L, SE, UP);
 }
 
+void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                       TTI::PeelingPreferences &PP) {
+  CommonTTI.getPeelingPreferences(L, SE, PP);
+}
+
 unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
   return 4 * 128; // XXX - 4 channels. Should these count as vector instead?
 }
@@ -1102,4 +1120,9 @@ int R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 void R600TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                           TTI::UnrollingPreferences &UP) {
   CommonTTI.getUnrollingPreferences(L, SE, UP);
+}
+
+void R600TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                        TTI::PeelingPreferences &PP) {
+  CommonTTI.getPeelingPreferences(L, SE, PP);
 }

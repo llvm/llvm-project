@@ -105,9 +105,9 @@ public:
   /// \name Cache TTI Implementation
   /// @{
   llvm::Optional<unsigned> getCacheSize(
-    TargetTransformInfo::CacheLevel Level) const;
+    TargetTransformInfo::CacheLevel Level) const override;
   llvm::Optional<unsigned> getCacheAssociativity(
-    TargetTransformInfo::CacheLevel Level) const;
+    TargetTransformInfo::CacheLevel Level) const override;
   /// @}
 
   /// \name Vector TTI Implementations

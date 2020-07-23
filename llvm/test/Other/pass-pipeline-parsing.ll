@@ -173,6 +173,37 @@
 ; CHECK-NESTED-FP-LP: Finished llvm::Function pass manager run
 ; CHECK-NESTED-FP-LP: Finished llvm::Module pass manager run
 
+; RUN: opt -disable-output -debug-pass-manager \
+; RUN:     -passes='module(no-op-function,no-op-loop,no-op-cgscc,cgscc(no-op-function,no-op-loop),function(no-op-loop))' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-ADAPTORS
+; CHECK-ADAPTORS: Starting llvm::Module pass manager run
+; CHECK-ADAPTORS: Starting llvm::Module pass manager run
+; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor<{{.*}}NoOpFunctionPass>
+; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor<{{.*}}FunctionToLoopPassAdaptor<{{.*}}NoOpLoopPass>{{.*}}>
+; CHECK-ADAPTORS: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}NoOpCGSCCPass>
+; CHECK-ADAPTORS: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}LazyCallGraph{{.*}}>
+; CHECK-ADAPTORS: Starting CGSCC pass manager run
+; CHECK-ADAPTORS: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}NoOpFunctionPass>
+; CHECK-ADAPTORS: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}FunctionToLoopPassAdaptor<{{.*}}NoOpLoopPass>{{.*}}>
+; CHECK-ADAPTORS: Finished CGSCC pass manager run
+; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
+; CHECK-ADAPTORS: Starting llvm::Function pass manager run
+; CHECK-ADAPTORS: Running pass: FunctionToLoopPassAdaptor<{{.*}}NoOpLoopPass>
+; CHECK-ADAPTORS: Finished llvm::Function pass manager run
+; CHECK-ADAPTORS: Finished llvm::Module pass manager run
+; CHECK-ADAPTORS: Finished llvm::Module pass manager run
+
+; RUN: opt -disable-output -debug-pass-manager \
+; RUN:     -passes='cgscc(print)' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-PRINT-IN-CGSCC
+; CHECK-PRINT-IN-CGSCC: Starting llvm::Module pass manager run
+; CHECK-PRINT-IN-CGSCC: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}LazyCallGraph{{.*}}>
+; CHECK-PRINT-IN-CGSCC: Starting CGSCC pass manager run
+; CHECK-PRINT-IN-CGSCC: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PrintFunctionPass>
+; CHECK-PRINT-IN-CGSCC: Finished CGSCC pass manager run
+; CHECK-PRINT-IN-CGSCC: Running pass: VerifierPass
+; CHECK-PRINT-IN-CGSCC: Finished llvm::Module pass manager run
+
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='function(no-op-function)function(no-op-function)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MISSING-COMMA1

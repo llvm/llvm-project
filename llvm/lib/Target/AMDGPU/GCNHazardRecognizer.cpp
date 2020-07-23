@@ -191,9 +191,6 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (MI->isInlineAsm() && checkInlineAsmHazards(MI) > 0)
     return NoopHazard;
 
-  if (checkAnyInstHazards(MI) > 0)
-    return NoopHazard;
-
   return NoHazard;
 }
 
@@ -241,7 +238,7 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
   if (MI->isBundle())
     return 0;
 
-  int WaitStates = std::max(0, checkAnyInstHazards(MI));
+  int WaitStates = 0;
 
   if (SIInstrInfo::isSMRD(*MI))
     return std::max(WaitStates, checkSMRDHazards(MI));
@@ -821,34 +818,6 @@ int GCNHazardRecognizer::checkRFEHazards(MachineInstr *RFE) {
   return RFEWaitStates - WaitStatesNeeded;
 }
 
-int GCNHazardRecognizer::checkAnyInstHazards(MachineInstr *MI) {
-  if (MI->isDebugInstr())
-    return 0;
-
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  if (!ST.hasSMovFedHazard())
-    return 0;
-
-  // Check for any instruction reading an SGPR after a write from
-  // s_mov_fed_b32.
-  int MovFedWaitStates = 1;
-  int WaitStatesNeeded = 0;
-
-  for (const MachineOperand &Use : MI->uses()) {
-    if (!Use.isReg() || TRI->isVGPR(MF.getRegInfo(), Use.getReg()))
-      continue;
-    auto IsHazardFn = [] (MachineInstr *MI) {
-      return MI->getOpcode() == AMDGPU::S_MOV_FED_B32;
-    };
-    int WaitStatesNeededForUse =
-        MovFedWaitStates - getWaitStatesSinceDef(Use.getReg(), IsHazardFn,
-                                                 MovFedWaitStates);
-    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
-  }
-
-  return WaitStatesNeeded;
-}
-
 int GCNHazardRecognizer::checkReadM0Hazards(MachineInstr *MI) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   const int SMovRelWaitStates = 1;
@@ -930,10 +899,12 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
     return false;
   };
 
-  auto IsExpiredFn = [] (MachineInstr *MI, int) {
+  auto IsExpiredFn = [](MachineInstr *MI, int) {
     return MI && (SIInstrInfo::isVALU(*MI) ||
                   (MI->getOpcode() == AMDGPU::S_WAITCNT &&
-                   !MI->getOperand(0).getImm()));
+                   !MI->getOperand(0).getImm()) ||
+                  (MI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+                   MI->getOperand(0).getImm() == 0xffe3));
   };
 
   if (::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn) ==
@@ -941,7 +912,9 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
     return false;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::V_NOP_e32));
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0xffe3);
   return true;
 }
 

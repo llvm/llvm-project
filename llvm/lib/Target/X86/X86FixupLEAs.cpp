@@ -16,8 +16,11 @@
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/Debug.h"
@@ -109,6 +112,12 @@ public:
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoVRegs);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 
 private:
@@ -205,21 +214,27 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &MF) {
   TSM.init(&ST);
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
+  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto *MBFI = (PSI && PSI->hasProfileSummary())
+                   ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+                   : nullptr;
 
   LLVM_DEBUG(dbgs() << "Start X86FixupLEAs\n";);
   for (MachineBasicBlock &MBB : MF) {
     // First pass. Try to remove or optimize existing LEAs.
+    bool OptIncDecPerBB =
+        OptIncDec || llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
       if (!isLEA(I->getOpcode()))
         continue;
 
-      if (optTwoAddrLEA(I, MBB, OptIncDec, UseLEAForSP))
+      if (optTwoAddrLEA(I, MBB, OptIncDecPerBB, UseLEAForSP))
         continue;
 
       if (IsSlowLEA)
         processInstructionForSlowLEA(I, MBB);
       else if (IsSlow3OpsLEA)
-        processInstrForSlow3OpLEA(I, MBB, OptIncDec);
+        processInstrForSlow3OpLEA(I, MBB, OptIncDecPerBB);
     }
 
     // Second pass for creating LEAs. This may reverse some of the

@@ -5,18 +5,18 @@ define dso_local i64 @test1(i8* nocapture readonly %p, i32 signext %count) local
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 5, -13
-; CHECK-NEXT:    lxvx 0, 3, 5
-; CHECK-NEXT:    li 5, 19
-; CHECK-NEXT:    lxvx 1, 3, 5
-; CHECK-NEXT:    li 5, 3
 ; CHECK-NEXT:    li 6, 7
 ; CHECK-NEXT:    li 7, 11
 ; CHECK-NEXT:    li 8, 15
-; CHECK-NEXT:    mfvsrld 9, 0
-; CHECK-NEXT:    ldx 5, 3, 5
+; CHECK-NEXT:    lxvx 0, 3, 5
+; CHECK-NEXT:    li 5, 19
 ; CHECK-NEXT:    ldx 6, 3, 6
 ; CHECK-NEXT:    ldx 7, 3, 7
+; CHECK-NEXT:    lxvx 1, 3, 5
+; CHECK-NEXT:    li 5, 3
+; CHECK-NEXT:    ldx 5, 3, 5
 ; CHECK-NEXT:    ldx 3, 3, 8
+; CHECK-NEXT:    mfvsrld 9, 0
 ; CHECK-NEXT:    mffprd 8, 0
 ; CHECK-NEXT:    mfvsrld 10, 1
 ; CHECK-NEXT:    mffprd 11, 1

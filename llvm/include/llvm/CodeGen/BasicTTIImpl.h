@@ -451,6 +451,14 @@ public:
     UP.BEInsns = 2;
   }
 
+  void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                             TTI::PeelingPreferences &PP) {
+    PP.PeelCount = 0;
+    PP.AllowPeeling = true;
+    PP.AllowLoopNestsPeeling = false;
+    PP.PeelProfiledIterations = true;
+  }
+
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC,
                                 TargetLibraryInfo *LibInfo,
@@ -650,7 +658,8 @@ public:
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       unsigned Num = cast<FixedVectorType>(VTy)->getNumElements();
       unsigned Cost = thisT()->getArithmeticInstrCost(
-          Opcode, VTy->getScalarType(), CostKind);
+          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
+          Opd1PropInfo, Opd2PropInfo, Args, CxtI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       return getScalarizationOverhead(VTy, Args) + Num * Cost;
@@ -694,8 +703,8 @@ public:
     std::pair<unsigned, MVT> SrcLT = TLI->getTypeLegalizationCost(DL, Src);
     std::pair<unsigned, MVT> DstLT = TLI->getTypeLegalizationCost(DL, Dst);
 
-    unsigned SrcSize = SrcLT.second.getSizeInBits();
-    unsigned DstSize = DstLT.second.getSizeInBits();
+    TypeSize SrcSize = SrcLT.second.getSizeInBits();
+    TypeSize DstSize = DstLT.second.getSizeInBits();
     bool IntOrPtrSrc = Src->isIntegerTy() || Src->isPointerTy();
     bool IntOrPtrDst = Dst->isIntegerTy() || Dst->isPointerTy();
 
@@ -769,8 +778,7 @@ public:
     // Check vector-to-vector casts.
     if (DstVTy && SrcVTy) {
       // If the cast is between same-sized registers, then the check is simple.
-      if (SrcLT.first == DstLT.first &&
-          SrcLT.second.getSizeInBits() == DstLT.second.getSizeInBits()) {
+      if (SrcLT.first == DstLT.first && SrcSize == DstSize) {
 
         // Assume that Zext is done using AND.
         if (Opcode == Instruction::ZExt)

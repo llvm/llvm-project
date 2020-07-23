@@ -2199,6 +2199,24 @@ INTERCEPTOR(int, clock_settime, u32 clk_id, const void *tp) {
 #define INIT_CLOCK_GETTIME
 #endif
 
+#if SANITIZER_INTERCEPT_CLOCK_GETCPUCLOCKID
+INTERCEPTOR(int, clock_getcpuclockid, pid_t pid,
+            __sanitizer_clockid_t *clockid) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, clock_getcpuclockid, pid, clockid);
+  int res = REAL(clock_getcpuclockid)(pid, clockid);
+  if (!res && clockid) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, clockid, sizeof *clockid);
+  }
+  return res;
+}
+
+#define INIT_CLOCK_GETCPUCLOCKID                  \
+  COMMON_INTERCEPT_FUNCTION(clock_getcpuclockid);
+#else
+#define INIT_CLOCK_GETCPUCLOCKID
+#endif
+
 #if SANITIZER_INTERCEPT_GETITIMER
 INTERCEPTOR(int, getitimer, int which, void *curr_value) {
   void *ctx;
@@ -4065,6 +4083,33 @@ INTERCEPTOR(int, sigfillset, __sanitizer_sigset_t *set) {
   COMMON_INTERCEPT_FUNCTION(sigfillset);
 #else
 #define INIT_SIGSETOPS
+#endif
+
+#if SANITIZER_INTERCEPT_SIGSET_LOGICOPS
+INTERCEPTOR(int, sigandset, __sanitizer_sigset_t *dst, __sanitizer_sigset_t *src1, __sanitizer_sigset_t *src2) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sigandset, dst, src1, src2);
+  if (src1) COMMON_INTERCEPTOR_READ_RANGE(ctx, src1, sizeof(*src1));
+  if (src2) COMMON_INTERCEPTOR_READ_RANGE(ctx, src2, sizeof(*src2));
+  int res = REAL(sigandset)(dst, src1, src2);
+  if (!res && dst) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
+  return res;
+}
+
+INTERCEPTOR(int, sigorset, __sanitizer_sigset_t *dst, __sanitizer_sigset_t *src1, __sanitizer_sigset_t *src2) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sigorset, dst, src1, src2);
+  if (src1) COMMON_INTERCEPTOR_READ_RANGE(ctx, src1, sizeof(*src1));
+  if (src2) COMMON_INTERCEPTOR_READ_RANGE(ctx, src2, sizeof(*src2));
+  int res = REAL(sigorset)(dst, src1, src2);
+  if (!res && dst) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
+  return res;
+}
+#define INIT_SIGSET_LOGICOPS                    \
+  COMMON_INTERCEPT_FUNCTION(sigandset);   \
+  COMMON_INTERCEPT_FUNCTION(sigorset);
+#else
+#define INIT_SIGSET_LOGICOPS
 #endif
 
 #if SANITIZER_INTERCEPT_SIGPENDING
@@ -9914,6 +9959,7 @@ static void InitializeCommonInterceptors() {
   INIT_FGETGRENT_R;
   INIT_SETPWENT;
   INIT_CLOCK_GETTIME;
+  INIT_CLOCK_GETCPUCLOCKID;
   INIT_GETITIMER;
   INIT_TIME;
   INIT_GLOB;
@@ -9977,6 +10023,7 @@ static void InitializeCommonInterceptors() {
   INIT_SIGWAITINFO;
   INIT_SIGTIMEDWAIT;
   INIT_SIGSETOPS;
+  INIT_SIGSET_LOGICOPS;
   INIT_SIGPENDING;
   INIT_SIGPROCMASK;
   INIT_PTHREAD_SIGMASK;

@@ -126,7 +126,7 @@ struct DebugLineBasicFixture : public Test, public CommonFixture {};
 struct DebugLineParameterisedFixture
     : public TestWithParam<std::pair<uint16_t, DwarfFormat>>,
       public CommonFixture {
-  void SetUp() { std::tie(Version, Format) = GetParam(); }
+  void SetUp() override { std::tie(Version, Format) = GetParam(); }
 
   uint16_t Version;
   DwarfFormat Format;
@@ -328,7 +328,7 @@ TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {
 
 struct DebugLineUnsupportedVersionFixture : public TestWithParam<uint16_t>,
                                             public CommonFixture {
-  void SetUp() { Version = GetParam(); }
+  void SetUp() override { Version = GetParam(); }
 
   uint16_t Version;
 };
@@ -1384,7 +1384,7 @@ struct TruncatedPrologueFixture
     : public TestWithParam<
           std::tuple<uint64_t, uint64_t, uint16_t, DwarfFormat, StringRef>>,
       public CommonFixture {
-  void SetUp() {
+  void SetUp() override {
     std::tie(Length, ExpectedOffset, Version, Format, ExpectedErr) = GetParam();
   }
 
@@ -1554,7 +1554,7 @@ struct TruncatedStandardOpcodeFixture
     : public TestWithParam<
           std::tuple<uint64_t, uint8_t, ValueAndLengths, StringRef, StringRef>>,
       public TruncatedOpcodeFixtureBase {
-  void SetUp() {
+  void SetUp() override {
     std::tie(BodyLength, Opcode, Operands, ExpectedOutput, ExpectedErr) =
         GetParam();
   }
@@ -1564,7 +1564,7 @@ struct TruncatedExtendedOpcodeFixture
     : public TestWithParam<std::tuple<uint64_t, uint64_t, uint8_t,
                                       ValueAndLengths, StringRef, StringRef>>,
       public TruncatedOpcodeFixtureBase {
-  void SetUp() {
+  void SetUp() override {
     std::tie(BodyLength, OpcodeLength, Opcode, Operands, ExpectedOutput,
              ExpectedErr) = GetParam();
   }

@@ -63,6 +63,8 @@
 ; Test the other kinds of type test resoultions
 ^27 = typeid: (name: "_ZTS1D", summary: (typeTestRes: (kind: byteArray, sizeM1BitWidth: 0)))
 ^28 = typeid: (name: "_ZTS1E", summary: (typeTestRes: (kind: unsat, sizeM1BitWidth: 0)))
+^29 = flags: 8
+^30 = blockcount: 1888
 
 ; Make sure we get back from llvm-dis essentially what we put in via llvm-as.
 ; CHECK: ^0 = module: (path: "thinlto-summary1.o", hash: (1369602428, 2747878711, 259090915, 2507395659, 1141468049))
@@ -94,6 +96,8 @@
 ; CHECK: ^26 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi")), (offset: 16, wpdRes: (kind: indir, resByArg: (args: (1, 2), byArg: (kind: indir, byte: 2, bit: 3), args: (3), byArg: (kind: uniformRetVal, info: 1), args: (4), byArg: (kind: uniqueRetVal, info: 1), args: (5), byArg: (kind: virtualConstProp))))))) ; guid = 7004155349499253778
 ; CHECK: ^27 = typeid: (name: "_ZTS1D", summary: (typeTestRes: (kind: byteArray, sizeM1BitWidth: 0))) ; guid = 9614786172484273522
 ; CHECK: ^28 = typeid: (name: "_ZTS1E", summary: (typeTestRes: (kind: unsat, sizeM1BitWidth: 0))) ; guid = 17437243864166745132
+; CHECK: ^29 = flags: 8
+; CHECK: ^30 = blockcount: 1888
 
 ; Make sure parsing of a non-summary entry containing a ":" does not fail
 ; after summary parsing, which handles colons differently.

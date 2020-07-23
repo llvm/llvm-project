@@ -181,7 +181,7 @@ public:
       : CrashRecoveryContextCleanupBase<
             CrashRecoveryContextDestructorCleanup<T>, T>(context, resource) {}
 
-  virtual void recoverResources() {
+  void recoverResources() override {
     this->resource->~T();
   }
 };

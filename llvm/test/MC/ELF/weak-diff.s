@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu < %s | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu < %s | llvm-readobj -r - | FileCheck %s
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.text {

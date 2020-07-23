@@ -278,7 +278,7 @@ void test_precond() {
 
 // HCHECK: load i16, i16*
 // HCHECK: store i16 %
-// HCHECK: call i32 @__tgt_target_teams(
+// HCHECK: call i32 @__tgt_target_teams_mapper(
 // HCHECK: call void @__kmpc_for_static_init_4(
 template <typename T>
 T ftemplate() {

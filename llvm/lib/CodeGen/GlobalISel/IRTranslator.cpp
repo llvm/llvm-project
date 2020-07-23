@@ -1598,6 +1598,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::sideeffect:
     // Discard annotate attributes, assumptions, and artificial side-effects.
     return true;
+  case Intrinsic::read_volatile_register:
   case Intrinsic::read_register: {
     Value *Arg = CI.getArgOperand(0);
     MIRBuilder

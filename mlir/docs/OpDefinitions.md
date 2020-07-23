@@ -713,7 +713,8 @@ of the assembly format can be marked as `optional` based on the presence of this
 information. An optional group is defined by wrapping a set of elements within
 `()` followed by a `?` and has the following requirements:
 
-*   The first element of the group must either be a literal or an operand.
+*   The first element of the group must either be a literal, attribute, or an
+    operand.
     -   This is because the first element must be optionally parsable.
 *   Exactly one argument variable within the group must be marked as the anchor
     of the group.

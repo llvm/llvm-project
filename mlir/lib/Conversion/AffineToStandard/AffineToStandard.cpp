@@ -357,6 +357,43 @@ public:
   }
 };
 
+/// Convert an `affine.parallel` (loop nest) operation into a `scf.parallel`
+/// operation.
+class AffineParallelLowering : public OpRewritePattern<AffineParallelOp> {
+public:
+  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineParallelOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    SmallVector<Value, 8> steps;
+    SmallVector<Value, 8> upperBoundTuple;
+    SmallVector<Value, 8> lowerBoundTuple;
+    // Finding lower and upper bound by expanding the map expression.
+    // Checking if expandAffineMap is not giving NULL.
+    Optional<SmallVector<Value, 8>> upperBound = expandAffineMap(
+        rewriter, loc, op.upperBoundsMap(), op.getUpperBoundsOperands());
+    Optional<SmallVector<Value, 8>> lowerBound = expandAffineMap(
+        rewriter, loc, op.lowerBoundsMap(), op.getLowerBoundsOperands());
+    if (!lowerBound || !upperBound)
+      return failure();
+    upperBoundTuple = *upperBound;
+    lowerBoundTuple = *lowerBound;
+    steps.reserve(op.steps().size());
+    for (Attribute step : op.steps())
+      steps.push_back(rewriter.create<ConstantIndexOp>(
+          loc, step.cast<IntegerAttr>().getInt()));
+    // Creating empty scf.parallel op body with appropriate bounds.
+    auto parallelOp = rewriter.create<scf::ParallelOp>(loc, lowerBoundTuple,
+                                                       upperBoundTuple, steps);
+    rewriter.eraseBlock(parallelOp.getBody());
+    rewriter.inlineRegionBefore(op.region(), parallelOp.region(),
+                                parallelOp.region().end());
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 class AffineIfLowering : public OpRewritePattern<AffineIfOp> {
 public:
   using OpRewritePattern<AffineIfOp>::OpRewritePattern;
@@ -615,6 +652,7 @@ void mlir::populateAffineToStdConversionPatterns(
       AffineLoadLowering,
       AffineMinLowering,
       AffineMaxLowering,
+      AffineParallelLowering,
       AffinePrefetchLowering,
       AffineStoreLowering,
       AffineForLowering,

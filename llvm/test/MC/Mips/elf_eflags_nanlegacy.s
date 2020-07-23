@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux -mcpu=mips32 %s -o - | \
-# RUN:   llvm-readobj -h | \
+# RUN:   llvm-readobj -h - | \
 # RUN:     FileCheck %s -check-prefix=CHECK-OBJ
 # RUN: llvm-mc -triple mipsel-unknown-linux -mcpu=mips32 %s -o -| \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM

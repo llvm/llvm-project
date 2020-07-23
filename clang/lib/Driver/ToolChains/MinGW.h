@@ -11,6 +11,7 @@
 
 #include "Cuda.h"
 #include "Gnu.h"
+#include "ROCm.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Support/ErrorOr.h"
@@ -81,6 +82,8 @@ public:
 
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
+  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CC1Args) const override;
 
   void printVerboseInfo(raw_ostream &OS) const override;
 
@@ -91,6 +94,7 @@ protected:
 
 private:
   CudaInstallationDetector CudaInstallation;
+  RocmInstallationDetector RocmInstallation;
 
   std::string Base;
   std::string GccLibDir;

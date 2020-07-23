@@ -22,11 +22,15 @@ extern "C" {
 #endif
 
 #define __CUDA__
+#define __OPENMP_NVPTX__
+
 /// Include declarations for libdevice functions.
 #include <__clang_cuda_libdevice_declares.h>
 
 /// Provide definitions for these functions.
 #include <__clang_cuda_device_functions.h>
+
+#undef __OPENMP_NVPTX__
 #undef __CUDA__
 
 #ifdef __cplusplus

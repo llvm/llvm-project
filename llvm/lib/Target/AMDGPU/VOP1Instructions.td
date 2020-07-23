@@ -338,8 +338,6 @@ defm V_MOVRELS_B32 : VOP1Inst <"v_movrels_b32", VOP_MOVRELS>;
 defm V_MOVRELSD_B32 : VOP1Inst <"v_movrelsd_b32", VOP_MOVRELSD>;
 } // End Uses = [M0, EXEC]
 
-defm V_MOV_FED_B32 : VOP1Inst <"v_mov_fed_b32", VOP_I32_I32>;
-
 let SubtargetPredicate = isGFX6GFX7 in {
   let SchedRW = [WriteTrans32] in {
     defm V_LOG_CLAMP_F32 :
@@ -650,7 +648,6 @@ defm V_CVT_F32_I32       : VOP1_Real_gfx6_gfx7_gfx10<0x005>;
 defm V_CVT_F32_U32       : VOP1_Real_gfx6_gfx7_gfx10<0x006>;
 defm V_CVT_U32_F32       : VOP1_Real_gfx6_gfx7_gfx10<0x007>;
 defm V_CVT_I32_F32       : VOP1_Real_gfx6_gfx7_gfx10<0x008>;
-defm V_MOV_FED_B32       : VOP1_Real_gfx6_gfx7_gfx10<0x009>;
 defm V_CVT_F16_F32       : VOP1_Real_gfx6_gfx7_gfx10<0x00a>;
 defm V_CVT_F32_F16       : VOP1_Real_gfx6_gfx7_gfx10<0x00b>;
 defm V_CVT_RPI_I32_F32   : VOP1_Real_gfx6_gfx7_gfx10<0x00c>;
@@ -754,7 +751,6 @@ defm V_CVT_F32_I32       : VOP1_Real_vi <0x5>;
 defm V_CVT_F32_U32       : VOP1_Real_vi <0x6>;
 defm V_CVT_U32_F32       : VOP1_Real_vi <0x7>;
 defm V_CVT_I32_F32       : VOP1_Real_vi <0x8>;
-defm V_MOV_FED_B32       : VOP1_Real_vi <0x9>;
 defm V_CVT_F16_F32       : VOP1_Real_vi <0xa>;
 defm V_CVT_F32_F16       : VOP1_Real_vi <0xb>;
 defm V_CVT_RPI_I32_F32   : VOP1_Real_vi <0xc>;

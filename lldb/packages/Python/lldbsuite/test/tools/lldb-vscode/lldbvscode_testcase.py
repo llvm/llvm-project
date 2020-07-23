@@ -2,6 +2,7 @@
 from lldbsuite.test.lldbtest import *
 import os
 import vscode
+import time
 
 
 class VSCodeTestCaseBase(TestBase):
@@ -51,6 +52,12 @@ class VSCodeTestCaseBase(TestBase):
         for breakpoint in breakpoints:
             breakpoint_ids.append('%i' % (breakpoint['id']))
         return breakpoint_ids
+
+    def waitUntil(self, condition):
+        while True:
+            if condition():
+                break
+            time.sleep(0.5)
 
     def verify_breakpoint_hit(self, breakpoint_ids):
         '''Wait for the process we are debugging to stop, and verify we hit

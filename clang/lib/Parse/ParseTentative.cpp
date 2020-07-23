@@ -1110,8 +1110,9 @@ class TentativeParseCCC final : public CorrectionCandidateCallback {
 public:
   TentativeParseCCC(const Token &Next) {
     WantRemainingKeywords = false;
-    WantTypeSpecifiers = Next.isOneOf(tok::l_paren, tok::r_paren, tok::greater,
-                                      tok::l_brace, tok::identifier);
+    WantTypeSpecifiers =
+        Next.isOneOf(tok::l_paren, tok::r_paren, tok::greater, tok::l_brace,
+                     tok::identifier, tok::comma);
   }
 
   bool ValidateCandidate(const TypoCorrection &Candidate) override {

@@ -1,6 +1,6 @@
 ; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -verify-machineinstrs -enable-ppc-quad-precision \
-; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN:   -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s
 
 @f128Array = global [4 x fp128] [fp128 0xL00000000000000004004C00000000000,
                                  fp128 0xLF000000000000000400808AB851EB851,

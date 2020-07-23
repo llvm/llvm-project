@@ -11,8 +11,5 @@ executable("clang-import-test") {
     "//llvm/lib/IR",
     "//llvm/lib/Support",
   ]
-  sources = [
-    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
-    "clang-import-test.cpp",
-  ]
+  sources = [ "clang-import-test.cpp" ]
 }

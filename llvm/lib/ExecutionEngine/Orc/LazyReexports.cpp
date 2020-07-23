@@ -17,13 +17,14 @@ namespace llvm {
 namespace orc {
 
 LazyCallThroughManager::LazyCallThroughManager(
-    ExecutionSession &ES, JITTargetAddress ErrorHandlerAddr,
-    std::unique_ptr<TrampolinePool> TP)
-    : ES(ES), ErrorHandlerAddr(ErrorHandlerAddr), TP(std::move(TP)) {}
+    ExecutionSession &ES, JITTargetAddress ErrorHandlerAddr, TrampolinePool *TP)
+    : ES(ES), ErrorHandlerAddr(ErrorHandlerAddr), TP(TP) {}
 
 Expected<JITTargetAddress> LazyCallThroughManager::getCallThroughTrampoline(
     JITDylib &SourceJD, SymbolStringPtr SymbolName,
     NotifyResolvedFunction NotifyResolved) {
+  assert(TP && "TrampolinePool not set");
+
   std::lock_guard<std::mutex> Lock(LCTMMutex);
   auto Trampoline = TP->getTrampoline();
 
@@ -74,27 +75,31 @@ void LazyCallThroughManager::resolveTrampolineLandingAddress(
   if (!Entry)
     return NotifyLandingResolved(reportCallThroughError(Entry.takeError()));
 
-  ES.lookup(
-      LookupKind::Static,
-      makeJITDylibSearchOrder(Entry->SourceJD,
-                              JITDylibLookupFlags::MatchAllSymbols),
-      SymbolLookupSet({Entry->SymbolName}), SymbolState::Ready,
-      [this, TrampolineAddr, SymbolName = Entry->SymbolName,
-       NotifyLandingResolved = std::move(NotifyLandingResolved)](
-          Expected<SymbolMap> Result) mutable {
-        if (Result) {
-          assert(Result->size() == 1 && "Unexpected result size");
-          assert(Result->count(SymbolName) && "Unexpected result value");
-          JITTargetAddress LandingAddr = (*Result)[SymbolName].getAddress();
+  // Declaring SLS and the callback outside of the call to ES.lookup is a
+  // workaround to fix build failures on AIX and on z/OS platforms.
+  SymbolLookupSet SLS({Entry->SymbolName});
+  auto Callback = [this, TrampolineAddr, SymbolName = Entry->SymbolName,
+                   NotifyLandingResolved = std::move(NotifyLandingResolved)](
+                      Expected<SymbolMap> Result) mutable {
+    if (Result) {
+      assert(Result->size() == 1 && "Unexpected result size");
+      assert(Result->count(SymbolName) && "Unexpected result value");
+      JITTargetAddress LandingAddr = (*Result)[SymbolName].getAddress();
 
-          if (auto Err = notifyResolved(TrampolineAddr, LandingAddr))
-            NotifyLandingResolved(reportCallThroughError(std::move(Err)));
-          else
-            NotifyLandingResolved(LandingAddr);
-        } else
-          NotifyLandingResolved(reportCallThroughError(Result.takeError()));
-      },
-      NoDependenciesToRegister);
+      if (auto Err = notifyResolved(TrampolineAddr, LandingAddr))
+        NotifyLandingResolved(reportCallThroughError(std::move(Err)));
+      else
+        NotifyLandingResolved(LandingAddr);
+    } else {
+      NotifyLandingResolved(reportCallThroughError(Result.takeError()));
+    }
+  };
+
+  ES.lookup(LookupKind::Static,
+            makeJITDylibSearchOrder(Entry->SourceJD,
+                                    JITDylibLookupFlags::MatchAllSymbols),
+            std::move(SLS), SymbolState::Ready, std::move(Callback),
+            NoDependenciesToRegister);
 }
 
 Expected<std::unique_ptr<LazyCallThroughManager>>

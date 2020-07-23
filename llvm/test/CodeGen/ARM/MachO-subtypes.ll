@@ -1,57 +1,57 @@
 ; Check that MachO ARM CPU Subtypes are respected
 
 ; RUN: llc -mtriple=armv4t-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V4T
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V4T
 
 ; RUN: llc -mtriple=armv5-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V5
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V5
 ; RUN: llc -mtriple=armv5e-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V5
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V5
 ; RUN: llc -mtriple=armv5t-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V5
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V5
 ; RUN: llc -mtriple=armv5te-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V5
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V5
 ; RUN: llc -mtriple=armv5tej-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V5
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V5
 
 ; RUN: llc -mtriple=armv6-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V6
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V6
 ; RUN: llc -mtriple=armv6k-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V6
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V6
 ; RUN: llc -mtriple=thumbv6-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V6
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V6
 ; RUN: llc -mtriple=thumbv6k-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V6
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V6
 
 ; RUN: llc -mtriple=armv6m-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V6M
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V6M
 ; RUN: llc -mtriple=thumbv6m-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V6M
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V6M
 
 ; RUN: llc -mtriple=armv7-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7
 ; RUN: llc -mtriple=thumbv7-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7
 
 ; RUN: llc -mtriple=thumbv7em-apple-darwin -mcpu=cortex-m4 -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7EM
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7EM
 ; RUN: llc -mtriple=thumbv7em-apple-darwin -mcpu=cortex-m7 -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7EM
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7EM
 
 ; RUN: llc -mtriple=armv7k-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7K
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7K
 ; RUN: llc -mtriple=thumbv7k-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7K
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7K
 
 ; RUN: llc -mtriple=thumbv7m-apple-darwin -mcpu=sc300 -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7M
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7M
 ; RUN: llc -mtriple=thumbv7m-apple-darwin -mcpu=cortex-m3 -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7M
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7M
 
 ; RUN: llc -mtriple=armv7s-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7S
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7S
 ; RUN: llc -mtriple=thumbv7s-apple-darwin -filetype=obj -o - < %s \
-; RUN: | llvm-readobj --file-headers | FileCheck %s --check-prefix=CHECK-V7S
+; RUN: | llvm-readobj --file-headers - | FileCheck %s --check-prefix=CHECK-V7S
 
 define void @_test() {
   ret void

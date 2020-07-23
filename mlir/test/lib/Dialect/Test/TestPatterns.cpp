@@ -284,7 +284,7 @@ struct TestUndoBlockArgReplace : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     auto illegalOp =
         rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
-    rewriter.replaceUsesOfBlockArgument(op->getRegion(0).front().getArgument(0),
+    rewriter.replaceUsesOfBlockArgument(op->getRegion(0).getArgument(0),
                                         illegalOp);
     rewriter.updateRootInPlace(op, [] {});
     return success();

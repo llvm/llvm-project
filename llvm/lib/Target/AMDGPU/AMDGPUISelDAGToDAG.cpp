@@ -994,7 +994,7 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
 
   static const unsigned OpcMap[2][2][2] = {
       {{AMDGPU::S_SUB_U32, AMDGPU::S_ADD_U32},
-       {AMDGPU::V_SUB_I32_e32, AMDGPU::V_ADD_I32_e32}},
+       {AMDGPU::V_SUB_CO_U32_e32, AMDGPU::V_ADD_CO_U32_e32}},
       {{AMDGPU::S_SUBB_U32, AMDGPU::S_ADDC_U32},
        {AMDGPU::V_SUBB_U32_e32, AMDGPU::V_ADDC_U32_e32}}};
 
@@ -1073,7 +1073,7 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
     }
 
   if (IsVALU) {
-    unsigned Opc = IsAdd ? AMDGPU::V_ADD_I32_e64 : AMDGPU::V_SUB_I32_e64;
+    unsigned Opc = IsAdd ? AMDGPU::V_ADD_CO_U32_e64 : AMDGPU::V_SUB_CO_U32_e64;
 
     CurDAG->SelectNodeTo(
         N, Opc, N->getVTList(),
@@ -1190,7 +1190,7 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
           Opnds.push_back(Addr.getOperand(1));
 
           // FIXME: Select to VOP3 version for with-carry.
-          unsigned SubOp = AMDGPU::V_SUB_I32_e32;
+          unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
           if (Subtarget->hasAddNoCarry()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
@@ -1269,7 +1269,7 @@ bool AMDGPUDAGToDAGISel::SelectDS64Bit4ByteAligned(SDValue Addr, SDValue &Base,
           SmallVector<SDValue, 3> Opnds;
           Opnds.push_back(Zero);
           Opnds.push_back(Addr.getOperand(1));
-          unsigned SubOp = AMDGPU::V_SUB_I32_e32;
+          unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
           if (Subtarget->hasAddNoCarry()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
@@ -1688,33 +1688,27 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
       } else {
         // If the offset doesn't fit, put the low bits into the offset field and
         // add the rest.
+        //
+        // For a FLAT instruction the hardware decides whether to access
+        // global/scratch/shared memory based on the high bits of vaddr,
+        // ignoring the offset field, so we have to ensure that when we add
+        // remainder to vaddr it still points into the same underlying object.
+        // The easiest way to do that is to make sure that we split the offset
+        // into two pieces that are both >= 0 or both <= 0.
 
         SDLoc DL(N);
-        uint64_t ImmField;
+        uint64_t RemainderOffset = COffsetVal;
+        uint64_t ImmField = 0;
         const unsigned NumBits = TII->getNumFlatOffsetBits(AS, IsSigned);
         if (IsSigned) {
-          ImmField = SignExtend64(COffsetVal, NumBits);
-
-          // Don't use a negative offset field if the base offset is positive.
-          // Since the scheduler currently relies on the offset field, doing so
-          // could result in strange scheduling decisions.
-
-          // TODO: Should we not do this in the opposite direction as well?
-          if (static_cast<int64_t>(COffsetVal) > 0) {
-            if (static_cast<int64_t>(ImmField) < 0) {
-              const uint64_t OffsetMask =
-                  maskTrailingOnes<uint64_t>(NumBits - 1);
-              ImmField = COffsetVal & OffsetMask;
-            }
-          }
-        } else {
-          // TODO: Should we do this for a negative offset?
-          const uint64_t OffsetMask = maskTrailingOnes<uint64_t>(NumBits);
-          ImmField = COffsetVal & OffsetMask;
+          // Use signed division by a power of two to truncate towards 0.
+          int64_t D = 1LL << (NumBits - 1);
+          RemainderOffset = (static_cast<int64_t>(COffsetVal) / D) * D;
+          ImmField = COffsetVal - RemainderOffset;
+        } else if (static_cast<int64_t>(COffsetVal) >= 0) {
+          ImmField = COffsetVal & maskTrailingOnes<uint64_t>(NumBits);
+          RemainderOffset = COffsetVal - ImmField;
         }
-
-        uint64_t RemainderOffset = COffsetVal - ImmField;
-
         assert(TII->isLegalFLATOffset(ImmField, AS, IsSigned));
         assert(RemainderOffset + ImmField == COffsetVal);
 
@@ -1739,7 +1733,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
         SDValue Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
 
         SDNode *Add =
-            CurDAG->getMachineNode(AMDGPU::V_ADD_I32_e64, DL, VTs,
+            CurDAG->getMachineNode(AMDGPU::V_ADD_CO_U32_e64, DL, VTs,
                                    {AddOffsetLo, SDValue(N0Lo, 0), Clamp});
 
         SDNode *Addc = CurDAG->getMachineNode(

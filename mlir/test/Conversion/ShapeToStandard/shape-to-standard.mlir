@@ -124,7 +124,7 @@ func @rank(%shape : !shape.shape) -> !shape.size {
   // CHECK-DAG: %[[C0:.*]] = constant 0 : index
   // CHECK-DAG: %[[RESULT:.*]] = dim %[[SHAPE]], %[[C0]]
   // CHECK-DAG: return %[[RESULT]] : index
-  %rank = shape.rank %shape
+  %rank = shape.rank %shape : !shape.shape
   return %rank : !shape.size
 }
 
@@ -156,5 +156,28 @@ func @get_extent_from_extent_tensor(%extents : tensor<?xindex>,
   %shape = shape.from_extent_tensor %extents : tensor<?xindex>
   %result = shape.get_extent %shape, %idx
   return %result : !shape.size
+}
+
+// -----
+
+// Lower `any` to its first operand.
+// CHECK-LABEL: @any_of_three
+// CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<?xindex>) -> tensor<?xindex>
+func @any_of_three(%a : !shape.shape, %b : !shape.shape, %c : !shape.shape)
+    -> !shape.shape {
+  // CHECK: return %[[A]] : tensor<?xindex>
+  %result = shape.any %a, %b, %c
+  return %result : !shape.shape
+}
+
+// -----
+
+// Lower `any` to its first operand.
+// CHECK-LABEL: @any_of_one
+// CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>) -> tensor<?xindex>
+func @any_of_one(%a : !shape.shape) -> !shape.shape {
+  // CHECK: return %[[A]] : tensor<?xindex>
+  %result = shape.any %a
+  return %result : !shape.shape
 }
 

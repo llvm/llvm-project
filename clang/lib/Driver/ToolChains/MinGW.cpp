@@ -398,7 +398,8 @@ llvm::ErrorOr<std::string> toolchains::MinGW::findClangRelativeSysroot() {
 
 toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
-    : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args) {
+    : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
+      RocmInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
   if (getDriver().SysRoot.size())
@@ -500,8 +501,14 @@ void toolchains::MinGW::AddCudaIncludeArgs(const ArgList &DriverArgs,
   CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
+void toolchains::MinGW::AddHIPIncludeArgs(const ArgList &DriverArgs,
+                                          ArgStringList &CC1Args) const {
+  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
+}
+
 void toolchains::MinGW::printVerboseInfo(raw_ostream &OS) const {
   CudaInstallation.print(OS);
+  RocmInstallation.print(OS);
 }
 
 // Include directories for various hosts:

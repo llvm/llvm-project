@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s \
-@ RUN:   | llvm-readobj --arch-specific | FileCheck %s -check-prefix CHECK-ATTR
+@ RUN:   | llvm-readobj --arch-specific - | FileCheck %s -check-prefix CHECK-ATTR
 
 	.syntax unified
 	.thumb

@@ -15,7 +15,8 @@ namespace __llvm_libc {
 // TODO: Look at performance benefits of comparing words.
 void *LLVM_LIBC_ENTRYPOINT(memchr)(const void *src, int c, size_t n) {
   const unsigned char *str = reinterpret_cast<const unsigned char *>(src);
-  for (; n && *str != c; --n, ++str)
+  const unsigned char ch = c;
+  for (; n && *str != ch; --n, ++str)
     ;
   return n ? const_cast<unsigned char *>(str) : nullptr;
 }

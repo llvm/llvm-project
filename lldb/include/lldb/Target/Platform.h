@@ -372,9 +372,13 @@ public:
 
   virtual lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
                                          llvm::StringRef plugin_name,
-                                         lldb_private::Debugger &debugger,
-                                         lldb_private::Target *target,
-                                         lldb_private::Status &error);
+                                         Debugger &debugger, Target *target,
+                                         Status &error);
+
+  virtual lldb::ProcessSP
+  ConnectProcessSynchronous(llvm::StringRef connect_url,
+                            llvm::StringRef plugin_name, Debugger &debugger,
+                            Stream &stream, Target *target, Status &error);
 
   /// Attach to an existing process using a process ID.
   ///
@@ -848,6 +852,12 @@ public:
   }
 
 protected:
+  /// Private implementation of connecting to a process. If the stream is set
+  /// we connect synchronously.
+  lldb::ProcessSP DoConnectProcess(llvm::StringRef connect_url,
+                                   llvm::StringRef plugin_name,
+                                   Debugger &debugger, Stream *stream,
+                                   Target *target, Status &error);
   bool m_is_host;
   // Set to true when we are able to actually set the OS version while being
   // connected. For remote platforms, we might set the version ahead of time

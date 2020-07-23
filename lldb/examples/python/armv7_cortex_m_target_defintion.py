@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #===-- armv7_cortex_m_target_definition.py.py ------------------*- C++ -*-===//
 #
 #                     The LLVM Compiler Infrastructure

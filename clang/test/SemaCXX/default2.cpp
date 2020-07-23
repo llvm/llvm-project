@@ -117,6 +117,12 @@ class C2 {
   static int f(int = 10); // expected-note{{default argument declared here}}
 };
 
+template <typename T> class C3;
+template <> class C3<int> {
+  static void g(int = f()); // expected-error {{use of default argument to function 'f' that is declared later in class 'C3'}}
+  static int f(int = 10); // expected-note {{default argument declared here}}
+};
+
 // Make sure we actually parse the default argument for an inline definition
 class XX {
   void A(int length = -1 ) {  } 

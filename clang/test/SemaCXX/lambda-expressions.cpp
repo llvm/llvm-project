@@ -649,3 +649,14 @@ void Run(const int& points) {
 void operator_parens() {
   [&](int x){ operator()(); }(0); // expected-error {{undeclared 'operator()'}}
 }
+
+namespace captured_name {
+void Test() {
+  union {           // expected-note {{'' declared here}}
+    int i;
+  };
+  [] { return i; }; // expected-error {{variable '' cannot be implicitly captured in a lambda with no capture-default specified}}
+                    // expected-note@-1 {{lambda expression begins here}}
+
+}
+};

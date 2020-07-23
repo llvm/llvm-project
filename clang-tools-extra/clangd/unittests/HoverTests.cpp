@@ -957,6 +957,16 @@ TEST(Hover, NoHover) {
           template <typename T> void foo() {
             (void)[[size^of]](T);
           })cpp",
+      R"cpp(// should not crash on invalid semantic form of init-list-expr.
+            /*error-ok*/
+            struct Foo {
+              int xyz = 0;
+            };
+            class Bar {};
+            constexpr Foo s = ^{
+              .xyz = Bar(),
+            };
+          )cpp",
       // literals
       "auto x = t^rue;",
       "auto x = '^A';",

@@ -78,12 +78,17 @@ HexagonTTIImpl::getPopcntSupport(unsigned IntTyWidthInBit) const {
 void HexagonTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                              TTI::UnrollingPreferences &UP) {
   UP.Runtime = UP.Partial = true;
+}
+
+void HexagonTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                           TTI::PeelingPreferences &PP) {
+  BaseT::getPeelingPreferences(L, SE, PP);
   // Only try to peel innermost loops with small runtime trip counts.
   if (L && L->empty() && canPeel(L) &&
       SE.getSmallConstantTripCount(L) == 0 &&
       SE.getSmallConstantMaxTripCount(L) > 0 &&
       SE.getSmallConstantMaxTripCount(L) <= 5) {
-    UP.PeelCount = 2;
+    PP.PeelCount = 2;
   }
 }
 

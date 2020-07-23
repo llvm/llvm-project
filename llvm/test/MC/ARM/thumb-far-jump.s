@@ -1,5 +1,5 @@
 @ RUN: llvm-mc < %s -triple thumbv5-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -r | FileCheck %s
+@ RUN:   | llvm-readobj -r - | FileCheck %s
 	.syntax	unified
 
 	.text

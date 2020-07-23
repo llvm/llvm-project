@@ -279,19 +279,20 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::UnrollingPreferences &UP,
+                            TargetTransformInfo::PeelingPreferences &PP,
                             unsigned &TripCount, ScalarEvolution &SE) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
-  // Save the UP.PeelCount value set by the target in
-  // TTI.getUnrollingPreferences or by the flag -unroll-peel-count.
-  unsigned TargetPeelCount = UP.PeelCount;
-  UP.PeelCount = 0;
+  // Save the PP.PeelCount value set by the target in
+  // TTI.getPeelingPreferences or by the flag -unroll-peel-count.
+  unsigned TargetPeelCount = PP.PeelCount;
+  PP.PeelCount = 0;
   if (!canPeel(L))
     return;
 
   // Only try to peel innermost loops by default.
   // The constraint can be relaxed by the target in TTI.getUnrollingPreferences
   // or by the flag -unroll-allow-loop-nests-peeling.
-  if (!UP.AllowLoopNestsPeeling && !L->empty())
+  if (!PP.AllowLoopNestsPeeling && !L->empty())
     return;
 
   // If the user provided a peel count, use that.
@@ -299,13 +300,13 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (UserPeelCount) {
     LLVM_DEBUG(dbgs() << "Force-peeling first " << UnrollForcePeelCount
                       << " iterations.\n");
-    UP.PeelCount = UnrollForcePeelCount;
-    UP.PeelProfiledIterations = true;
+    PP.PeelCount = UnrollForcePeelCount;
+    PP.PeelProfiledIterations = true;
     return;
   }
 
   // Skip peeling if it's disabled.
-  if (!UP.AllowPeeling)
+  if (!PP.AllowPeeling)
     return;
 
   unsigned AlreadyPeeled = 0;
@@ -354,8 +355,8 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
         LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
                           << " iteration(s) to turn"
                           << " some Phis into invariants.\n");
-        UP.PeelCount = DesiredPeelCount;
-        UP.PeelProfiledIterations = false;
+        PP.PeelCount = DesiredPeelCount;
+        PP.PeelProfiledIterations = false;
         return;
       }
     }
@@ -367,7 +368,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     return;
 
   // Do not apply profile base peeling if it is disabled.
-  if (!UP.PeelProfiledIterations)
+  if (!PP.PeelProfiledIterations)
     return;
   // If we don't know the trip count, but have reason to believe the average
   // trip count is low, peeling should be beneficial, since we will usually
@@ -387,7 +388,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
           (LoopSize * (*PeelCount + 1) <= UP.Threshold)) {
         LLVM_DEBUG(dbgs() << "Peeling first " << *PeelCount
                           << " iterations.\n");
-        UP.PeelCount = *PeelCount;
+        PP.PeelCount = *PeelCount;
         return;
       }
       LLVM_DEBUG(dbgs() << "Requested peel count: " << *PeelCount << "\n");

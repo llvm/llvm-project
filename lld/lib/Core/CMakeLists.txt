@@ -1,7 +1,3 @@
-if(NOT LLD_BUILT_STANDALONE)
-  set(tablegen_deps intrinsics_gen)
-endif()
-
 add_lld_library(lldCore
   DefinedAtom.cpp
   Error.cpp
@@ -24,5 +20,5 @@ add_lld_library(lldCore
   ${LLVM_PTHREAD_LIB}
 
   DEPENDS
-  ${tablegen_deps}
+  intrinsics_gen
   )

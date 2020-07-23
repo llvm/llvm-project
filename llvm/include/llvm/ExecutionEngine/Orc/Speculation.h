@@ -185,7 +185,7 @@ public:
       : IRLayer(ES, BaseLayer.getManglingOptions()), NextLayer(BaseLayer),
         S(Spec), Mangle(Mangle), QueryAnalysis(Interpreter) {}
 
-  void emit(MaterializationResponsibility R, ThreadSafeModule TSM);
+  void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
 
 private:
   TargetAndLikelies

@@ -332,6 +332,7 @@ private:
     IES_PLUS,
     IES_MINUS,
     IES_OFFSET,
+    IES_CAST,
     IES_NOT,
     IES_MULTIPLY,
     IES_DIVIDE,
@@ -358,6 +359,7 @@ private:
     bool MemExpr;
     bool OffsetOperator;
     SMLoc OffsetOperatorLoc;
+    StringRef CurType;
 
     bool setSymRef(const MCExpr *Val, StringRef ID, StringRef &ErrMsg) {
       if (Sym) {
@@ -385,6 +387,7 @@ private:
     unsigned getScale() { return Scale; }
     const MCExpr *getSym() { return Sym; }
     StringRef getSymName() { return SymName; }
+    StringRef getType() { return CurType; }
     int64_t getImm() { return Imm + IC.execute(); }
     bool isValidEndState() {
       return State == IES_RBRAC || State == IES_INTEGER;
@@ -630,6 +633,7 @@ private:
       default:
         State = IES_ERROR;
         break;
+      case IES_CAST:
       case IES_PLUS:
       case IES_MINUS:
       case IES_NOT:
@@ -742,6 +746,7 @@ private:
         IC.pushOperator(IC_PLUS);
         break;
       case IES_INIT:
+      case IES_CAST:
         assert(!BracCount && "BracCount should be zero on parsing's start");
         State = IES_LBRAC;
         break;
@@ -814,6 +819,7 @@ private:
       case IES_INTEGER:
       case IES_OFFSET:
       case IES_REGISTER:
+      case IES_RBRAC:
       case IES_RPAREN:
         State = IES_RPAREN;
         IC.pushOperator(IC_RPAREN);
@@ -846,6 +852,19 @@ private:
       }
       return false;
     }
+    void onCast(StringRef Type) {
+      PrevState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_LPAREN:
+        setType(Type);
+        State = IES_CAST;
+        break;
+      }
+    }
+    void setType(StringRef Type) { CurType = Type; }
   };
 
   bool Error(SMLoc L, const Twine &Msg, SMRange Range = None,
@@ -1632,6 +1651,18 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       SMLoc IdentLoc = Tok.getLoc();
       StringRef Identifier = Tok.getString();
       UpdateLocLex = false;
+      // (MASM only) <TYPE> PTR operator
+      if (Parser.isParsingMasm()) {
+        const AsmToken &NextTok = getLexer().peekTok();
+        if (NextTok.is(AsmToken::Identifier) &&
+            NextTok.getIdentifier().equals_lower("ptr")) {
+          SM.onCast(Identifier);
+          // Eat type and PTR.
+          consumeToken();
+          End = consumeToken();
+          break;
+        }
+      }
       // Register, or (MASM only) <register>.<field>
       unsigned Reg;
       if (Tok.is(AsmToken::Identifier)) {
@@ -1641,27 +1672,25 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           break;
         }
         if (Parser.isParsingMasm()) {
-          const std::pair<StringRef, StringRef> RegField =
+          const std::pair<StringRef, StringRef> IDField =
               Tok.getString().split('.');
-          const StringRef RegName = RegField.first, Field = RegField.second;
-          SMLoc RegEndLoc =
-              SMLoc::getFromPointer(RegName.data() + RegName.size());
+          const StringRef ID = IDField.first, Field = IDField.second;
+          SMLoc IDEndLoc = SMLoc::getFromPointer(ID.data() + ID.size());
           if (!Field.empty() &&
-              !MatchRegisterByName(Reg, RegName, IdentLoc, RegEndLoc)) {
+              !MatchRegisterByName(Reg, ID, IdentLoc, IDEndLoc)) {
             if (SM.onRegister(Reg, ErrMsg))
               return Error(IdentLoc, ErrMsg);
 
+            StringRef Type;
+            unsigned Offset = 0;
             SMLoc FieldStartLoc = SMLoc::getFromPointer(Field.data());
-            const std::pair<StringRef, StringRef> BaseMember = Field.split('.');
-            const StringRef Base = BaseMember.first, Member = BaseMember.second;
-
-            unsigned Offset;
-            if (Parser.LookUpFieldOffset(Base, Member, Offset))
+            if (Parser.lookUpField(Field, Type, Offset))
               return Error(FieldStartLoc, "unknown offset");
             else if (SM.onPlus(ErrMsg))
               return Error(getTok().getLoc(), ErrMsg);
             else if (SM.onInteger(Offset, ErrMsg))
               return Error(IdentLoc, ErrMsg);
+            SM.setType(Type);
 
             End = consumeToken();
             break;
@@ -1680,7 +1709,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       const MCExpr *Val;
       if (isParsingMSInlineAsm() || Parser.isParsingMasm()) {
         // MS Dot Operator expression
-        if (Identifier.count('.') && PrevTK == AsmToken::RBrac) {
+        if (Identifier.count('.') &&
+            (PrevTK == AsmToken::RBrac || PrevTK == AsmToken::RParen)) {
           if (ParseIntelDotOperator(SM, End))
             return true;
           break;
@@ -1915,9 +1945,11 @@ X86AsmParser::ParseRoundingModeOp(SMLoc Start) {
 }
 
 /// Parse the '.' operator.
-bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End) {
+bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
+                                         SMLoc &End) {
   const AsmToken &Tok = getTok();
-  unsigned Offset;
+  StringRef Type;
+  unsigned Offset = 0;
 
   // Drop the optional '.'.
   StringRef DotDispStr = Tok.getString();
@@ -1933,8 +1965,9 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End) 
              Tok.is(AsmToken::Identifier)) {
     const std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
     const StringRef Base = BaseMember.first, Member = BaseMember.second;
-    if (getParser().LookUpFieldOffset(SM.getSymName(), DotDispStr, Offset) &&
-        getParser().LookUpFieldOffset(Base, Member, Offset) &&
+    if (getParser().lookUpField(SM.getType(), DotDispStr, Type, Offset) &&
+        getParser().lookUpField(SM.getSymName(), DotDispStr, Type, Offset) &&
+        getParser().lookUpField(DotDispStr, Type, Offset) &&
         (!SemaCallback ||
          SemaCallback->LookupInlineAsmField(Base, Member, Offset)))
       return Error(Tok.getLoc(), "Unable to lookup field reference!");
@@ -1947,6 +1980,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End) 
   while (Tok.getLoc().getPointer() < DotExprEndLoc)
     Lex();
   SM.addImm(Offset);
+  SM.setType(Type);
   return false;
 }
 

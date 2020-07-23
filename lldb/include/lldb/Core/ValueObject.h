@@ -963,9 +963,14 @@ protected:
 
   void SetPreferredDisplayLanguageIfNeeded(lldb::LanguageType);
 
+protected:
+  virtual void DoUpdateChildrenAddressType(ValueObject &valobj) { return; };
+
 private:
   virtual CompilerType MaybeCalculateCompleteType();
-  void UpdateChildrenAddressType();
+  void UpdateChildrenAddressType() {
+    GetRoot()->DoUpdateChildrenAddressType(*this);
+  }
 
   lldb::ValueObjectSP GetValueForExpressionPath_Impl(
       llvm::StringRef expression_cstr,

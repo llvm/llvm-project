@@ -935,3 +935,7 @@ void postfix_minus_assign_2_begin_ptr_iterator(
           // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
+void ptr_iter_diff(cont_with_ptr_iterator<S> &c) {
+  auto i0 = c.begin(), i1 = c.end();
+  ptrdiff_t len = i1 - i0; // no-crash
+}

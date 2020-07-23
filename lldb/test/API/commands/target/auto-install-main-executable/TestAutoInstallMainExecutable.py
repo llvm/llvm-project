@@ -48,7 +48,6 @@ class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.debug_monitor_exe,
             commandline_args,
             install_remote=False)
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         # Wait for the new process gets ready.
         time.sleep(0.1)

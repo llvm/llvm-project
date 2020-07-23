@@ -103,7 +103,7 @@ public:
   LogicalResult deserialize();
 
   /// Collects the final SPIR-V ModuleOp.
-  Optional<spirv::ModuleOp> collect();
+  spirv::OwningSPIRVModuleRef collect();
 
 private:
   //===--------------------------------------------------------------------===//
@@ -111,7 +111,7 @@ private:
   //===--------------------------------------------------------------------===//
 
   /// Initializes the `module` ModuleOp in this deserializer instance.
-  spirv::ModuleOp createModuleOp();
+  spirv::OwningSPIRVModuleRef createModuleOp();
 
   /// Processes SPIR-V module header in `binary`.
   LogicalResult processHeader();
@@ -425,7 +425,7 @@ private:
   Location unknownLoc;
 
   /// The SPIR-V ModuleOp.
-  Optional<spirv::ModuleOp> module;
+  spirv::OwningSPIRVModuleRef module;
 
   /// The current function under construction.
   Optional<spirv::FuncOp> curFunction;
@@ -556,13 +556,15 @@ LogicalResult Deserializer::deserialize() {
   return success();
 }
 
-Optional<spirv::ModuleOp> Deserializer::collect() { return module; }
+spirv::OwningSPIRVModuleRef Deserializer::collect() {
+  return std::move(module);
+}
 
 //===----------------------------------------------------------------------===//
 // Module structure
 //===----------------------------------------------------------------------===//
 
-spirv::ModuleOp Deserializer::createModuleOp() {
+spirv::OwningSPIRVModuleRef Deserializer::createModuleOp() {
   OpBuilder builder(context);
   OperationState state(unknownLoc, spirv::ModuleOp::getOperationName());
   spirv::ModuleOp::build(builder, state);
@@ -1912,10 +1914,10 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
   // Go through all ops and remap the operands.
   auto remapOperands = [&](Operation *op) {
     for (auto &operand : op->getOpOperands())
-      if (auto mappedOp = mapper.lookupOrNull(operand.get()))
+      if (Value mappedOp = mapper.lookupOrNull(operand.get()))
         operand.set(mappedOp);
     for (auto &succOp : op->getBlockOperands())
-      if (auto mappedOp = mapper.lookupOrNull(succOp.get()))
+      if (Block *mappedOp = mapper.lookupOrNull(succOp.get()))
         succOp.set(mappedOp);
   };
   for (auto &block : body) {
@@ -2354,7 +2356,7 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
     return emitError(unknownLoc,
                      "missing Execution Model specification in OpEntryPoint");
   }
-  auto exec_model = opBuilder.getI32IntegerAttr(words[wordIndex++]);
+  auto execModel = opBuilder.getI32IntegerAttr(words[wordIndex++]);
   if (wordIndex >= words.size()) {
     return emitError(unknownLoc, "missing <id> in OpEntryPoint");
   }
@@ -2382,7 +2384,7 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
     interface.push_back(opBuilder.getSymbolRefAttr(arg.getOperation()));
     wordIndex++;
   }
-  opBuilder.create<spirv::EntryPointOp>(unknownLoc, exec_model,
+  opBuilder.create<spirv::EntryPointOp>(unknownLoc, execModel,
                                         opBuilder.getSymbolRefAttr(fnName),
                                         opBuilder.getArrayAttr(interface));
   return success();
@@ -2594,5 +2596,5 @@ spirv::OwningSPIRVModuleRef spirv::deserialize(ArrayRef<uint32_t> binary,
   if (failed(deserializer.deserialize()))
     return nullptr;
 
-  return deserializer.collect().getValueOr(nullptr);
+  return deserializer.collect();
 }

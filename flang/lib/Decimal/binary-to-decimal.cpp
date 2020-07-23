@@ -70,42 +70,8 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::BigRadixFloatingPointNumber(
     overflow |= MultiplyBy<2>();
   }
 
-  while (twoPow < 0) {
-    int shift{common::TrailingZeroBitCount(digit_[0])};
-    if (shift == 0) {
-      break;
-    }
-    if (shift > log10Radix) {
-      shift = log10Radix;
-    }
-    if (shift > -twoPow) {
-      shift = -twoPow;
-    }
-    // (D*(2**S)) * 10.**E * 2.**twoPow -> D * 10.**E * 2.**(twoPow+S)
-    DivideByPowerOfTwo(shift);
-    twoPow += shift;
-  }
-
-  for (; twoPow <= -4; twoPow += 4) {
-    // D * 10.**E * 2.**twoPow -> 625D * 10.**(E-4) * 2.**(twoPow+4)
-    overflow |= MultiplyBy<(5 * 5 * 5 * 5)>();
-    exponent_ -= 4;
-  }
-  if (twoPow <= -2) {
-    // D * 10.**E * 2.**twoPow -> 25D * 10.**(E-2) * 2.**(twoPow+2)
-    overflow |= MultiplyBy<5 * 5>();
-    twoPow += 2;
-    exponent_ -= 2;
-  }
-  for (; twoPow < 0; ++twoPow) {
-    // D * 10.**E * 2.**twoPow -> 5D * 10.**(E-1) * 2.**(twoPow+1)
-    overflow |= MultiplyBy<5>();
-    --exponent_;
-  }
-
+  overflow |= DivideByPowerOfTwoInPlace(-twoPow);
   assert(overflow == 0);
-
-  // twoPow == 0, the decimal encoding is complete.
   Normalize();
 }
 
@@ -153,7 +119,7 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToDecimal(char *buffer,
     for (int k{0}; k < log10Radix; k += 2) {
       Digit d{common::DivideUnsignedBy<Digit, hundredth>(dig)};
       dig = 100 * (dig - d * hundredth);
-      const char *q = lut + 2 * d;
+      const char *q{lut + 2 * d};
       *p++ = q[0];
       *p++ = q[1];
     }

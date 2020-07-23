@@ -1632,6 +1632,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
     break;
+  case attr::ArmSveVectorBits:
+    OS << "arm_sve_vector_bits";
+    break;
   }
   OS << "))";
 }

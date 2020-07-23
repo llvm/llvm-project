@@ -116,11 +116,26 @@ define <2 x float> @constvector_FP_noopt() {
 
 define float @constant_expr() {
 ; CHECK-LABEL: @constant_expr(
-; CHECK-NEXT:    [[R:%.*]] = freeze float bitcast (i32 ptrtoint (i16* @g to i32) to float)
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float bitcast (i32 ptrtoint (i16* @g to i32) to float)
 ;
   %r = freeze float bitcast (i32 ptrtoint (i16* @g to i32) to float)
   ret float %r
+}
+
+define i8* @constant_expr2() {
+; CHECK-LABEL: @constant_expr2(
+; CHECK-NEXT:    ret i8* bitcast (i16* @g to i8*)
+;
+  %r = freeze i8* bitcast (i16* @g to i8*)
+  ret i8* %r
+}
+
+define i32* @constant_expr3() {
+; CHECK-LABEL: @constant_expr3(
+; CHECK-NEXT:    ret i32* getelementptr (i32, i32* @glb, i64 3)
+;
+  %r = freeze i32* getelementptr (i32, i32* @glb, i64 3)
+  ret i32* %r
 }
 
 ; Negative test
@@ -136,7 +151,7 @@ define <2 x i31> @vector_element_constant_expr() {
 
 define void @alloca() {
 ; CHECK-LABEL: @alloca(
-; CHECK-NEXT:    [[P:%.*]] = alloca i8
+; CHECK-NEXT:    [[P:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @f3(i8* [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -148,7 +163,7 @@ define void @alloca() {
 
 define i8* @gep() {
 ; CHECK-LABEL: @gep(
-; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8]
+; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr [4 x i8], [4 x i8]* [[P]], i32 0, i32 6
 ; CHECK-NEXT:    ret i8* [[Q]]
 ;
@@ -171,7 +186,7 @@ define i8* @gep_noopt(i32 %arg) {
 
 define i8* @gep_inbounds() {
 ; CHECK-LABEL: @gep_inbounds(
-; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8]
+; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[P]], i32 0, i32 0
 ; CHECK-NEXT:    ret i8* [[Q]]
 ;
@@ -183,7 +198,7 @@ define i8* @gep_inbounds() {
 
 define i8* @gep_inbounds_noopt(i32 %arg) {
 ; CHECK-LABEL: @gep_inbounds_noopt(
-; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8]
+; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[P]], i32 0, i32 [[ARG:%.*]]
 ; CHECK-NEXT:    [[Q2:%.*]] = freeze i8* [[Q]]
 ; CHECK-NEXT:    ret i8* [[Q2]]

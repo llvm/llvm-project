@@ -12,6 +12,7 @@
 include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -1188,6 +1189,30 @@ def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
   let printer = [{ return ::print(p, *this); }];
 }
 
+def SSACFGRegionOp : TEST_Op<"ssacfg_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>]> {
+  let summary =  "operation with an SSACFG region";
+  let description = [{
+    Test op that defines an SSACFG region.
+  }];
+
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>);
+}
+
+def GraphRegionOp : TEST_Op<"graph_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>]> {
+  let summary =  "operation with a graph region";
+  let description = [{
+    Test op that defines a graph region.
+  }];
+
+  let regions = (region AnyRegion:$region);
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+}
+
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
   let summary =  "affine scope operation";
   let description = [{
@@ -1253,9 +1278,13 @@ def FormatAttrOp : TEST_Op<"format_attr_op"> {
 }
 
 // Test that we elide optional attributes that are within the syntax.
-def FormatOptAttrOp : TEST_Op<"format_opt_attr_op"> {
+def FormatOptAttrAOp : TEST_Op<"format_opt_attr_op_a"> {
   let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
-  let assemblyFormat = "(`(`$opt_attr^`)`)? attr-dict";
+  let assemblyFormat = "(`(` $opt_attr^ `)` )? attr-dict";
+}
+def FormatOptAttrBOp : TEST_Op<"format_opt_attr_op_b"> {
+  let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
+  let assemblyFormat = "($opt_attr^)? attr-dict";
 }
 
 // Test that we elide attributes that are within the syntax.

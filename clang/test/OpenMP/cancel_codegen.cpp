@@ -175,7 +175,7 @@ for (int i = 0; i < argc; ++i) {
 
 // IRBUILDER: define internal void @main
 
-// IRBUILDER: [[RETURN:omp.par.exit[^:]*]]
+// IRBUILDER: [[RETURN:omp.par.outlined.exit[^:]*]]
 // IRBUILDER-NEXT: ret void
 // IRBUILDER: [[FLAG:%.+]] = load float, float* @{{.+}},
 
@@ -192,10 +192,8 @@ for (int i = 0; i < argc; ++i) {
 // IRBUILDER: [[CMP:%.+]] = icmp eq i32 [[RES]], 0
 // IRBUILDER: br i1 [[CMP]], label %[[CONTINUE:[^,].+]], label %[[EXIT:.+]]
 // IRBUILDER: [[EXIT]]
-// IRBUILDER: br label %[[EXIT2:.+]]
-// IRBUILDER: [[CONTINUE]]
-// IRBUILDER: br label %[[ELSE:.+]]
-// IRBUILDER: [[EXIT2]]
 // IRBUILDER: br label %[[RETURN]]
+// IRBUILDER: [[CONTINUE]]
+// IRBUILDER: br label %[[ELSE2:.+]]
 
 #endif

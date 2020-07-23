@@ -244,3 +244,15 @@ DISABLE_RUNTIME_PSEUDO_RELOC: -runtime-pseudo-reloc:no
 
 RUN: ld.lld -### foo.o -m i386pe --thinlto-cache-dir=_foo | FileCheck -check-prefix=THINLTO_CACHEDIR %s
 THINLTO_CACHEDIR: -lldltocache:_foo
+
+RUN: ld.lld -### -m i386pep foo.o --file-alignment 0x1000 | FileCheck -check-prefix FILEALIGN %s
+RUN: ld.lld -### -m i386pep foo.o -file-alignment 0x1000 | FileCheck -check-prefix FILEALIGN %s
+RUN: ld.lld -### -m i386pep foo.o --file-alignment=0x1000 | FileCheck -check-prefix FILEALIGN %s
+RUN: ld.lld -### -m i386pep foo.o -file-alignment=0x1000 | FileCheck -check-prefix FILEALIGN %s
+FILEALIGN: -filealign:0x1000
+
+RUN: ld.lld -### -m i386pep foo.o --section-alignment 0x2000 | FileCheck -check-prefix ALIGN %s
+RUN: ld.lld -### -m i386pep foo.o -section-alignment 0x2000 | FileCheck -check-prefix ALIGN %s
+RUN: ld.lld -### -m i386pep foo.o --section-alignment=0x2000 | FileCheck -check-prefix ALIGN %s
+RUN: ld.lld -### -m i386pep foo.o -section-alignment=0x2000 | FileCheck -check-prefix ALIGN %s
+ALIGN: -align:0x2000

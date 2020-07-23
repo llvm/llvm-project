@@ -39,6 +39,13 @@ class DirectiveLanguage {
 
   // Generate include and macro to enable LLVM BitmaskEnum.
   bit enableBitmaskEnumInNamespace = 0;
+
+  // Header file included in the implementation code generated. Ususally the
+  // output file of the declaration code generation. Can be left blank.
+  string includeHeader = "";
+
+  // EnumSet class name used for clauses to generated the allowed clauses map.
+  string clauseEnumSetClass = "";
 }
 
 // Information about a specific clause.
@@ -51,6 +58,9 @@ class Clause<string c> {
 
   // Optional class holding value of the clause in clang AST.
   string clangClass = ?;
+
+  // Optional class holding value of the clause in flang AST.
+  string flangClass = ?;
 
   // Is clause implicit? If clause is set as implicit, the default kind will
   // be return in get<LanguageName>ClauseKind instead of their own kind.
@@ -87,6 +97,9 @@ class Directive<string d> {
 
   // List of clauses that are allowed to appear only once.
   list<VersionedClause> allowedOnceClauses = [];
+
+  // List of clauses that are allowed but mutually exclusive.
+  list<VersionedClause> allowedExclusiveClauses = [];
 
   // List of clauses that are required.
   list<VersionedClause> requiredClauses = [];

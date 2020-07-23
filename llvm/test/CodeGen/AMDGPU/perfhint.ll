@@ -1,8 +1,8 @@
 ; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_membound:
-; MemoryBound: 1
-; WaveLimiterHint : 1
+; GCN: MemoryBound: 1
+; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_membound(<4 x i32> addrspace(1)* nocapture readonly %arg, <4 x i32> addrspace(1)* nocapture %arg1) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -30,28 +30,31 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_large_stride:
-; MemoryBound: 0
-; WaveLimiterHint : 1
+; GCN: MemoryBound: 0
+; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_large_stride(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 4096
   %tmp1 = load i32, i32 addrspace(1)* %tmp, align 4
+  %mul1 = mul i32 %tmp1, %tmp1
   %tmp2 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 1
-  store i32 %tmp1, i32 addrspace(1)* %tmp2, align 4
+  store i32 %mul1, i32 addrspace(1)* %tmp2, align 4
   %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 8192
   %tmp4 = load i32, i32 addrspace(1)* %tmp3, align 4
+  %mul4 = mul i32 %tmp4, %tmp4
   %tmp5 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 2
-  store i32 %tmp4, i32 addrspace(1)* %tmp5, align 4
+  store i32 %mul4, i32 addrspace(1)* %tmp5, align 4
   %tmp6 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 12288
   %tmp7 = load i32, i32 addrspace(1)* %tmp6, align 4
+  %mul7 = mul i32 %tmp7, %tmp7
   %tmp8 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 3
-  store i32 %tmp7, i32 addrspace(1)* %tmp8, align 4
+  store i32 %mul7, i32 addrspace(1)* %tmp8, align 4
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_indirect:
-; MemoryBound: 0
-; WaveLimiterHint : 1
+; GCN: MemoryBound: 0
+; GCN: WaveLimiterHint : 1
 define amdgpu_kernel void @test_indirect(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 1

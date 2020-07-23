@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | \
+; RUN: opt < %s -simplifycfg -hoist-common-insts=true -S | \
 ; RUN: not grep "br label"
 
 define void @test(i1 %C) {

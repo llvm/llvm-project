@@ -51,7 +51,6 @@ int test2(int b) {
 // Check that the noredzone flag is set on the generated functions.
 
 // CHECK: void @__llvm_gcov_writeout() unnamed_addr [[NRZ:#[0-9]+]]
-// CHECK: void @__llvm_gcov_flush() unnamed_addr [[NRZ]]
 // CHECK: void @__llvm_gcov_init() unnamed_addr [[NRZ]]
 
 // CHECK: attributes [[NRZ]] = { {{.*}}noredzone{{.*}} }

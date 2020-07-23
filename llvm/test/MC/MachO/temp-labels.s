@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-darwin10 %s -filetype=obj -save-temp-labels -o - | llvm-readobj --symbols | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-darwin10 %s -filetype=obj -save-temp-labels -o - | llvm-readobj --symbols - | FileCheck %s
 
 _f0:
         .long 0

@@ -61,7 +61,8 @@ llvm.mlir.global external @external() : !llvm.i32
 
 
 //
-// Declarations of the allocation functions to be linked against.
+// Declarations of the allocation functions to be linked against. These are
+// inserted before other functions in the module.
 //
 
 // CHECK: declare i8* @malloc(i64)
@@ -387,6 +388,17 @@ llvm.func @more_imperfectly_nested_loops() {
   %17 = llvm.add %2, %16 : !llvm.i64
   llvm.br ^bb2(%17 : !llvm.i64)
 ^bb12:	// pred: ^bb2
+  llvm.return
+}
+
+
+//
+// Check that linkage is translated for functions. No need to check all linkage
+// flags since the logic is the same as for globals.
+//
+
+// CHECK: define internal void @func_internal
+llvm.func internal @func_internal() {
   llvm.return
 }
 

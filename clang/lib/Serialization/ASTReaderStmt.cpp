@@ -271,6 +271,8 @@ void ASTStmtReader::VisitWhileStmt(WhileStmt *S) {
     S->setConditionVariable(Record.getContext(), readDeclAs<VarDecl>());
 
   S->setWhileLoc(readSourceLocation());
+  S->setLParenLoc(readSourceLocation());
+  S->setRParenLoc(readSourceLocation());
 }
 
 void ASTStmtReader::VisitDoStmt(DoStmt *S) {

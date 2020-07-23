@@ -35,7 +35,7 @@
 # GCN-LABEL: name: fold_fi_vgpr{{$}}
 # GCN: %1:vgpr_32 = IMPLICIT_DEF
 
-# GCN: %2:vgpr_32 = V_ADD_I32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
+# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
 name: fold_fi_vgpr
 tracksRegLiveness: true
 registers:
@@ -50,13 +50,13 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = IMPLICIT_DEF
-    %2, $vcc = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+    %2, $vcc = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_vgpr_fi{{$}}
 # GCN: %1:vgpr_32 = IMPLICIT_DEF
-# GCN: %2:vgpr_32 = V_ADD_I32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
+# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
 name: fold_vgpr_fi
 tracksRegLiveness: true
 registers:
@@ -71,14 +71,14 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = IMPLICIT_DEF
-    %2, $vcc = V_ADD_I32_e64 %1, %0, 0, implicit $exec
+    %2, $vcc = V_ADD_CO_U32_e64 %1, %0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_sgpr_fi{{$}}
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
 # GCN: %1:sgpr_32 = IMPLICIT_DEF
-# GCN: %2:vgpr_32 = V_ADD_I32_e32 %1, %0, implicit-def $vcc, implicit $exec
+# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %1, %0, implicit-def $vcc, implicit $exec
 name: fold_sgpr_fi
 tracksRegLiveness: true
 registers:
@@ -93,14 +93,14 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = IMPLICIT_DEF
-    %2, $vcc = V_ADD_I32_e64 %1, %0, 0, implicit $exec
+    %2, $vcc = V_ADD_CO_U32_e64 %1, %0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_fi_sgpr{{$}}
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
 # GCN: %1:sgpr_32 = IMPLICIT_DEF
-# GCN: %2:vgpr_32 = V_ADD_I32_e32 %1, %0, implicit-def $vcc, implicit $exec
+# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %1, %0, implicit-def $vcc, implicit $exec
 name: fold_fi_sgpr
 tracksRegLiveness: true
 registers:
@@ -115,13 +115,13 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = IMPLICIT_DEF
-    %2, $vcc = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+    %2, $vcc = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
     S_ENDPGM 0
 ...
 # TODO: Should probably prefer folding immediate first
 # GCN-LABEL: name: fold_fi_imm{{$}}
 # GCN: %1:vgpr_32 = V_MOV_B32_e32 999, implicit $exec
-# GCN: %2:vgpr_32 = V_ADD_I32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
+# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 %stack.0.alloca, %1, implicit-def $vcc, implicit $exec
 name: fold_fi_imm
 tracksRegLiveness: true
 registers:
@@ -136,13 +136,13 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = V_MOV_B32_e32 999, implicit $exec
-    %2, $vcc = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+    %2, $vcc = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_imm_fi{{$}}
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
-# GCN: %2:vgpr_32 = V_ADD_I32_e32 999, %0, implicit-def $vcc, implicit $exec
+# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 999, %0, implicit-def $vcc, implicit $exec
 name: fold_imm_fi
 tracksRegLiveness: true
 registers:
@@ -157,5 +157,5 @@ body:             |
   bb.0:
     %0 = V_MOV_B32_e32 %stack.0.alloca, implicit $exec
     %1 = V_MOV_B32_e32 999, implicit $exec
-    %2, $vcc = V_ADD_I32_e64 %1, %0, 0, implicit $exec
+    %2, $vcc = V_ADD_CO_U32_e64 %1, %0, 0, implicit $exec
     S_ENDPGM 0

@@ -57,63 +57,86 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   return fd;
 }
 
-void OpenFile::Open(
-    OpenStatus status, Position position, IoErrorHandler &handler) {
-  int flags{mayRead_ ? mayWrite_ ? O_RDWR : O_RDONLY : O_WRONLY};
-  switch (status) {
-  case OpenStatus::Old:
-    if (fd_ >= 0) {
-      return;
+void OpenFile::Open(OpenStatus status, std::optional<Action> action,
+    Position position, IoErrorHandler &handler) {
+  if (fd_ >= 0 &&
+      (status == OpenStatus::Old || status == OpenStatus::Unknown)) {
+    return;
+  }
+  if (fd_ >= 0) {
+    if (fd_ <= 2) {
+      // don't actually close a standard file descriptor, we might need it
+    } else {
+      if (::close(fd_) != 0) {
+        handler.SignalErrno();
+      }
     }
-    knownSize_.reset();
-    break;
-  case OpenStatus::New:
-    flags |= O_CREAT | O_EXCL;
-    knownSize_ = 0;
-    break;
-  case OpenStatus::Scratch:
+    fd_ = -1;
+  }
+  if (status == OpenStatus::Scratch) {
     if (path_.get()) {
       handler.SignalError("FILE= must not appear with STATUS='SCRATCH'");
       path_.reset();
     }
+    if (!action) {
+      action = Action::ReadWrite;
+    }
     fd_ = openfile_mkstemp(handler);
-    knownSize_ = 0;
-    return;
-  case OpenStatus::Replace:
-    flags |= O_CREAT | O_TRUNC;
-    knownSize_ = 0;
-    break;
-  case OpenStatus::Unknown:
-    if (fd_ >= 0) {
+  } else {
+    if (!path_.get()) {
+      handler.SignalError(
+          "FILE= is required unless STATUS='OLD' and unit is connected");
       return;
     }
-    flags |= O_CREAT;
-    knownSize_.reset();
-    break;
-  }
-  // If we reach this point, we're opening a new file.
-  // TODO: Fortran shouldn't create a new file until the first WRITE.
-  if (fd_ >= 0) {
-    if (fd_ <= 2) {
-      // don't actually close a standard file descriptor, we might need it
-    } else if (::close(fd_) != 0) {
-      handler.SignalErrno();
+    int flags{0};
+    if (status != OpenStatus::Old) {
+      flags |= O_CREAT;
+    }
+    if (status == OpenStatus::New) {
+      flags |= O_EXCL;
+    } else if (status == OpenStatus::Replace) {
+      flags |= O_TRUNC;
+    }
+    if (!action) {
+      // Try to open read/write, back off to read-only on failure
+      fd_ = ::open(path_.get(), flags | O_RDWR, 0600);
+      if (fd_ >= 0) {
+        action = Action::ReadWrite;
+      } else {
+        action = Action::Read;
+      }
+    }
+    if (fd_ < 0) {
+      switch (*action) {
+      case Action::Read:
+        flags |= O_RDONLY;
+        break;
+      case Action::Write:
+        flags |= O_WRONLY;
+        break;
+      case Action::ReadWrite:
+        flags |= O_RDWR;
+        break;
+      }
+      fd_ = ::open(path_.get(), flags, 0600);
+      if (fd_ < 0) {
+        handler.SignalErrno();
+      }
     }
   }
-  if (!path_.get()) {
-    handler.SignalError(
-        "FILE= is required unless STATUS='OLD' and unit is connected");
-    return;
-  }
-  fd_ = ::open(path_.get(), flags, 0600);
-  if (fd_ < 0) {
-    handler.SignalErrno();
-  }
+  RUNTIME_CHECK(handler, action.has_value());
   pending_.reset();
   if (position == Position::Append && !RawSeekToEnd()) {
     handler.SignalErrno();
   }
   isTerminal_ = ::isatty(fd_) == 1;
+  mayRead_ = *action != Action::Write;
+  mayWrite_ = *action != Action::Read;
+  if (status == OpenStatus::Old || status == OpenStatus::Unknown) {
+    knownSize_.reset();
+  } else {
+    knownSize_ = 0;
+  }
 }
 
 void OpenFile::Predefine(int fd) {
@@ -124,6 +147,9 @@ void OpenFile::Predefine(int fd) {
   knownSize_.reset();
   nextId_ = 0;
   pending_.reset();
+  mayRead_ = fd == 0;
+  mayWrite_ = fd != 0;
+  mayPosition_ = false;
 }
 
 void OpenFile::Close(CloseStatus status, IoErrorHandler &handler) {

@@ -231,13 +231,12 @@ void __kmpc_push_num_threads(ident_t *loc, kmp_int32 global_tid,
                              kmp_int32 num_threads) {
   KA_TRACE(20, ("__kmpc_push_num_threads: enter T#%d num_threads=%d\n",
                 global_tid, num_threads));
-
+  __kmp_assert_valid_gtid(global_tid);
   __kmp_push_num_threads(loc, global_tid, num_threads);
 }
 
 void __kmpc_pop_num_threads(ident_t *loc, kmp_int32 global_tid) {
   KA_TRACE(20, ("__kmpc_pop_num_threads: enter\n"));
-
   /* the num_threads are automatically popped */
 }
 
@@ -245,7 +244,7 @@ void __kmpc_push_proc_bind(ident_t *loc, kmp_int32 global_tid,
                            kmp_int32 proc_bind) {
   KA_TRACE(20, ("__kmpc_push_proc_bind: enter T#%d proc_bind=%d\n", global_tid,
                 proc_bind));
-
+  __kmp_assert_valid_gtid(global_tid);
   __kmp_push_proc_bind(loc, global_tid, (kmp_proc_bind_t)proc_bind);
 }
 
@@ -353,7 +352,7 @@ void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
   KA_TRACE(20,
            ("__kmpc_push_num_teams: enter T#%d num_teams=%d num_threads=%d\n",
             global_tid, num_teams, num_threads));
-
+  __kmp_assert_valid_gtid(global_tid);
   __kmp_push_num_teams(loc, global_tid, num_teams, num_threads);
 }
 
@@ -474,9 +473,10 @@ conditional parallel region, like this,
 when the condition is false.
 */
 void __kmpc_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
-// The implementation is now in kmp_runtime.cpp so that it can share static
-// functions with kmp_fork_call since the tasks to be done are similar in
-// each case.
+  // The implementation is now in kmp_runtime.cpp so that it can share static
+  // functions with kmp_fork_call since the tasks to be done are similar in
+  // each case.
+  __kmp_assert_valid_gtid(global_tid);
 #if OMPT_SUPPORT
   OMPT_STORE_RETURN_ADDRESS(global_tid);
 #endif
@@ -504,6 +504,7 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     return;
 
   // Not autopar code
+  __kmp_assert_valid_gtid(global_tid);
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
@@ -713,6 +714,7 @@ Execute a barrier.
 void __kmpc_barrier(ident_t *loc, kmp_int32 global_tid) {
   KMP_COUNT_BLOCK(OMP_BARRIER);
   KC_TRACE(10, ("__kmpc_barrier: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
@@ -762,6 +764,7 @@ kmp_int32 __kmpc_master(ident_t *loc, kmp_int32 global_tid) {
   int status = 0;
 
   KC_TRACE(10, ("__kmpc_master: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
@@ -816,7 +819,7 @@ thread that executes the <tt>master</tt> region.
 */
 void __kmpc_end_master(ident_t *loc, kmp_int32 global_tid) {
   KC_TRACE(10, ("__kmpc_end_master: called T#%d\n", global_tid));
-
+  __kmp_assert_valid_gtid(global_tid);
   KMP_DEBUG_ASSERT(KMP_MASTER_GTID(global_tid));
   KMP_POP_PARTITIONED_TIMER();
 
@@ -833,9 +836,6 @@ void __kmpc_end_master(ident_t *loc, kmp_int32 global_tid) {
 #endif
 
   if (__kmp_env_consistency_check) {
-    if (global_tid < 0)
-      KMP_WARNING(ThreadIdentInvalid);
-
     if (KMP_MASTER_GTID(global_tid))
       __kmp_pop_sync(global_tid, ct_master, loc);
   }
@@ -854,6 +854,7 @@ void __kmpc_ordered(ident_t *loc, kmp_int32 gtid) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
 
   KC_TRACE(10, ("__kmpc_ordered: called T#%d\n", gtid));
+  __kmp_assert_valid_gtid(gtid);
 
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
@@ -925,6 +926,7 @@ void __kmpc_end_ordered(ident_t *loc, kmp_int32 gtid) {
   kmp_info_t *th;
 
   KC_TRACE(10, ("__kmpc_end_ordered: called T#%d\n", gtid));
+  __kmp_assert_valid_gtid(gtid);
 
 #if USE_ITT_BUILD
   __kmp_itt_ordered_end(gtid);
@@ -1147,7 +1149,7 @@ static kmp_user_lock_p __kmp_get_critical_section_ptr(kmp_critical_name *crit,
 /*!
 @ingroup WORK_SHARING
 @param loc  source location information.
-@param global_tid  global thread number .
+@param global_tid  global thread number.
 @param crit identity of the critical section. This could be a pointer to a lock
 associated with the critical section, or some other suitably unique value.
 
@@ -1170,6 +1172,7 @@ void __kmpc_critical(ident_t *loc, kmp_int32 global_tid,
   kmp_user_lock_p lck;
 
   KC_TRACE(10, ("__kmpc_critical: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   // TODO: add THR_OVHD_STATE
 
@@ -1392,6 +1395,7 @@ void __kmpc_critical_with_hint(ident_t *loc, kmp_int32 global_tid,
 #endif
 
   KC_TRACE(10, ("__kmpc_critical: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   kmp_dyna_lock_t *lk = (kmp_dyna_lock_t *)crit;
   // Check if it is initialized.
@@ -1607,8 +1611,8 @@ this function.
 */
 kmp_int32 __kmpc_barrier_master(ident_t *loc, kmp_int32 global_tid) {
   int status;
-
   KC_TRACE(10, ("__kmpc_barrier_master: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
@@ -1651,7 +1655,7 @@ still be waiting at the barrier and this call releases them.
 */
 void __kmpc_end_barrier_master(ident_t *loc, kmp_int32 global_tid) {
   KC_TRACE(10, ("__kmpc_end_barrier_master: called T#%d\n", global_tid));
-
+  __kmp_assert_valid_gtid(global_tid);
   __kmp_end_split_barrier(bs_plain_barrier, global_tid);
 }
 
@@ -1667,8 +1671,8 @@ There is no equivalent "end" function, since the
 */
 kmp_int32 __kmpc_barrier_master_nowait(ident_t *loc, kmp_int32 global_tid) {
   kmp_int32 ret;
-
   KC_TRACE(10, ("__kmpc_barrier_master_nowait: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
@@ -1706,14 +1710,9 @@ kmp_int32 __kmpc_barrier_master_nowait(ident_t *loc, kmp_int32 global_tid) {
   if (__kmp_env_consistency_check) {
     /*  there's no __kmpc_end_master called; so the (stats) */
     /*  actions of __kmpc_end_master are done here          */
-
-    if (global_tid < 0) {
-      KMP_WARNING(ThreadIdentInvalid);
-    }
     if (ret) {
       /* only one thread should do the pop since only */
       /* one did the push (see __kmpc_master())       */
-
       __kmp_pop_sync(global_tid, ct_master, loc);
     }
   }
@@ -1734,6 +1733,7 @@ should introduce an explicit barrier if it is required.
 */
 
 kmp_int32 __kmpc_single(ident_t *loc, kmp_int32 global_tid) {
+  __kmp_assert_valid_gtid(global_tid);
   kmp_int32 rc = __kmp_enter_single(global_tid, loc, TRUE);
 
   if (rc) {
@@ -1786,6 +1786,7 @@ only be called by the thread that executed the block of code protected
 by the `single` construct.
 */
 void __kmpc_end_single(ident_t *loc, kmp_int32 global_tid) {
+  __kmp_assert_valid_gtid(global_tid);
   __kmp_exit_single(global_tid);
   KMP_POP_PARTITIONED_TIMER();
 
@@ -2065,8 +2066,8 @@ void __kmpc_copyprivate(ident_t *loc, kmp_int32 gtid, size_t cpy_size,
                         void *cpy_data, void (*cpy_func)(void *, void *),
                         kmp_int32 didit) {
   void **data_ptr;
-
   KC_TRACE(10, ("__kmpc_copyprivate: called T#%d\n", gtid));
+  __kmp_assert_valid_gtid(gtid);
 
   KMP_MB();
 
@@ -3382,6 +3383,7 @@ __kmpc_reduce_nowait(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
   kmp_team_t *team;
   int teams_swapped = 0, task_state;
   KA_TRACE(10, ("__kmpc_reduce_nowait() enter: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   // why do we need this initialization here at all?
   // Reduction clause can not be used as a stand-alone directive.
@@ -3535,6 +3537,7 @@ void __kmpc_end_reduce_nowait(ident_t *loc, kmp_int32 global_tid,
   PACKED_REDUCTION_METHOD_T packed_reduction_method;
 
   KA_TRACE(10, ("__kmpc_end_reduce_nowait() enter: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   packed_reduction_method = __KMP_GET_REDUCTION_METHOD(global_tid);
 
@@ -3609,6 +3612,7 @@ kmp_int32 __kmpc_reduce(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
   int teams_swapped = 0, task_state;
 
   KA_TRACE(10, ("__kmpc_reduce() enter: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   // why do we need this initialization here at all?
   // Reduction clause can not be a stand-alone directive.
@@ -3727,6 +3731,7 @@ void __kmpc_end_reduce(ident_t *loc, kmp_int32 global_tid,
   int teams_swapped = 0, task_state;
 
   KA_TRACE(10, ("__kmpc_end_reduce() enter: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
 
   th = __kmp_thread_from_gtid(global_tid);
   teams_swapped = __kmp_swap_teams_for_teams_reduction(th, &team, &task_state);
@@ -3883,6 +3888,7 @@ e.g. for(i=2;i<9;i+=2) lo=2, up=8, st=2.
 */
 void __kmpc_doacross_init(ident_t *loc, int gtid, int num_dims,
                           const struct kmp_dim *dims) {
+  __kmp_assert_valid_gtid(gtid);
   int j, idx;
   kmp_int64 last, trace_count;
   kmp_info_t *th = __kmp_threads[gtid];
@@ -4002,6 +4008,7 @@ void __kmpc_doacross_init(ident_t *loc, int gtid, int num_dims,
 }
 
 void __kmpc_doacross_wait(ident_t *loc, int gtid, const kmp_int64 *vec) {
+  __kmp_assert_valid_gtid(gtid);
   kmp_int32 shft, num_dims, i;
   kmp_uint32 flag;
   kmp_int64 iter_number; // iteration number of "collapsed" loop nest
@@ -4112,6 +4119,7 @@ void __kmpc_doacross_wait(ident_t *loc, int gtid, const kmp_int64 *vec) {
 }
 
 void __kmpc_doacross_post(ident_t *loc, int gtid, const kmp_int64 *vec) {
+  __kmp_assert_valid_gtid(gtid);
   kmp_int32 shft, num_dims, i;
   kmp_uint32 flag;
   kmp_int64 iter_number; // iteration number of "collapsed" loop nest
@@ -4183,6 +4191,7 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, const kmp_int64 *vec) {
 }
 
 void __kmpc_doacross_fini(ident_t *loc, int gtid) {
+  __kmp_assert_valid_gtid(gtid);
   kmp_int32 num_done;
   kmp_info_t *th = __kmp_threads[gtid];
   kmp_team_t *team = th->th.th_team;

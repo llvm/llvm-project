@@ -84,6 +84,11 @@ StringRef Interface::getName() const {
   return def->getValueAsString("cppClassName");
 }
 
+// Return the C++ namespace of this interface.
+StringRef Interface::getCppNamespace() const {
+  return def->getValueAsString("cppNamespace");
+}
+
 // Return the methods of this interface.
 ArrayRef<InterfaceMethod> Interface::getMethods() const { return methods; }
 

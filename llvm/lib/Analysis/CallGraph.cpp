@@ -77,9 +77,10 @@ bool CallGraph::invalidate(Module &, const PreservedAnalyses &PA,
 void CallGraph::addToCallGraph(Function *F) {
   CallGraphNode *Node = getOrInsertFunction(F);
 
-  // If this function has external linkage or has its address taken, anything
-  // could call it.
-  if (!F->hasLocalLinkage() || F->hasAddressTaken())
+  // If this function has external linkage or has its address taken and
+  // it is not a callback, then anything could call it.
+  if (!F->hasLocalLinkage() ||
+      F->hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true))
     ExternalCallingNode->addCalledFunction(nullptr, Node);
 
   populateCallGraphNode(Node);

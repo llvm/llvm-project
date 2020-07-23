@@ -106,6 +106,11 @@ bool elf::isPPC64SmallCodeModelTocReloc(RelType type) {
   return type == R_PPC64_TOC16 || type == R_PPC64_TOC16_DS;
 }
 
+void elf::writePrefixedInstruction(uint8_t *loc, uint64_t insn) {
+  insn = config->isLE ? insn << 32 | insn >> 32 : insn;
+  write64(loc, insn);
+}
+
 static bool addOptional(StringRef name, uint64_t value,
                         std::vector<Defined *> &defined) {
   Symbol *sym = symtab->find(name);
@@ -374,15 +379,6 @@ static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
 
 static uint32_t readFromHalf16(const uint8_t *loc) {
   return read32(config->isLE ? loc : loc - 2);
-}
-
-// The prefixed instruction is always a 4 byte prefix followed by a 4 byte
-// instruction. Therefore, the prefix is always in lower memory than the
-// instruction (regardless of endianness).
-// As a result, we need to shift the pieces around on little endian machines.
-static void writePrefixedInstruction(uint8_t *loc, uint64_t insn) {
-  insn = config->isLE ? insn << 32 | insn >> 32 : insn;
-  write64(loc, insn);
 }
 
 static uint64_t readPrefixedInstruction(const uint8_t *loc) {
@@ -1048,15 +1044,13 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (s.isInPlt())
     return true;
 
-  // FIXME: Remove the fatal error once the call protocol is implemented.
-  if (type == R_PPC64_REL24_NOTOC && (s.stOther >> 5) > 1)
-    fatal("unimplemented feature: local function call with the reltype"
-          " R_PPC64_REL24_NOTOC and the callee needs toc-pointer setup");
-
   // This check looks at the st_other bits of the callee with relocation
   // R_PPC64_REL14 or R_PPC64_REL24. If the value is 1, then the callee
   // clobbers the TOC and we need an R2 save stub.
   if (type != R_PPC64_REL24_NOTOC && (s.stOther >> 5) == 1)
+    return true;
+
+  if (type == R_PPC64_REL24_NOTOC && (s.stOther >> 5) > 1)
     return true;
 
   // If a symbol is a weak undefined and we are compiling an executable

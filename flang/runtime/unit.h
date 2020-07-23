@@ -39,14 +39,17 @@ public:
   static ExternalFileUnit *LookUp(int unit);
   static ExternalFileUnit &LookUpOrCrash(int unit, const Terminator &);
   static ExternalFileUnit &LookUpOrCreate(
-      int unit, const Terminator &, bool *wasExtant = nullptr);
+      int unit, const Terminator &, bool &wasExtant);
+  static ExternalFileUnit &LookUpOrCreateAnonymous(
+      int unit, Direction, bool isUnformatted, const Terminator &);
+  static ExternalFileUnit &CreateNew(int unit, const Terminator &);
   static ExternalFileUnit *LookUpForClose(int unit);
   static int NewUnit(const Terminator &);
   static void CloseAll(IoErrorHandler &);
   static void FlushAll(IoErrorHandler &);
 
-  void OpenUnit(OpenStatus, Position, OwningPtr<char> &&path,
-      std::size_t pathLength, IoErrorHandler &);
+  void OpenUnit(OpenStatus, std::optional<Action>, Position,
+      OwningPtr<char> &&path, std::size_t pathLength, IoErrorHandler &);
   void CloseUnit(CloseStatus, IoErrorHandler &);
   void DestroyClosed();
 

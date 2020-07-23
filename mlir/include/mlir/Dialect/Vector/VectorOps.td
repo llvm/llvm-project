@@ -15,7 +15,7 @@
 
 include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Interfaces/VectorUnrollInterface.td"
+include "mlir/Interfaces/VectorInterfaces.td"
 
 def Vector_Dialect : Dialect {
   let name = "vector";
@@ -91,7 +91,7 @@ def Vector_ContractionOp :
     Example:
 
     ```mlir
-    // Simple dot product (K = 0).
+    // Simple DOT product (K = 0).
     #contraction_accesses = [
      affine_map<(i) -> (i)>,
      affine_map<(i) -> (i)>,
@@ -668,19 +668,36 @@ def Vector_InsertStridedSliceOp :
 }
 
 def Vector_OuterProductOp :
-  Vector_Op<"outerproduct", [NoSideEffect, SameOperandsAndResultElementType]>,
-    Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, Variadic<AnyVector>:$acc)>,
+  Vector_Op<"outerproduct", [NoSideEffect,
+    PredOpTrait<"lhs operand and result have same element type",
+                TCresVTEtIsSameAsOpBase<0, 0>>,
+    PredOpTrait<"rhs operand and result have same element type",
+                TCresVTEtIsSameAsOpBase<0, 1>>]>,
+    Arguments<(ins AnyVector:$lhs, AnyType:$rhs, Variadic<AnyVector>:$acc)>,
     Results<(outs AnyVector)> {
   let summary = "vector outerproduct with optional fused add";
   let description = [{
-    Takes 2 1-D vectors and returns the 2-D vector containing the outer-product.
+    Takes 2 1-D vectors and returns the 2-D vector containing the outer-product,
+    as illustrated below:
+    ```
+     outer |   [c, d]
+     ------+------------
+       [a, | [ [a*c, a*d],
+        b] |   [b*c, b*d] ]
+    ```
+    This operation also accepts a 1-D vector lhs and a scalar rhs. In this
+    case a simple AXPY operation is performed, which returns a 1-D vector.
+    ```
+        [a, b] * c = [a*c, b*c]
+    ```
 
-    An optional extra 2-D vector argument may be specified in which case the
-    operation returns the sum of the outer-product and the extra vector. In this
-    multiply-accumulate scenario, the rounding mode is that obtained by
-    guaranteeing that a fused-multiply add operation is emitted. When lowered to
-    the LLVMIR dialect, this form emits `llvm.intr.fma`, which is guaranteed to
-    lower to actual `fma` instructions on x86.
+    An optional extra vector argument with the same shape as the output
+    vector may be specified in which case the operation returns the sum of
+    the outer-product and the extra vector. In this multiply-accumulate
+    scenario for floating-point arguments, the rounding mode is enforced
+    by guaranteeing that a fused-multiply add operation is emitted. When
+    lowered to the LLVMIR dialect, this form emits `llvm.intr.fma`, which
+    is guaranteed to lower to actual `fma` instructions on x86.
 
     Example:
 
@@ -691,6 +708,10 @@ def Vector_OuterProductOp :
     %3 = vector.outerproduct %0, %1, %2:
       vector<4xf32>, vector<8xf32>, vector<4x8xf32>
     return %3: vector<4x8xf32>
+
+    %6 = vector.outerproduct %4, %5: vector<10xf32>, f32
+    return %6: vector<10xf32>
+
     ```
   }];
   let builders = [
@@ -702,12 +723,13 @@ def Vector_OuterProductOp :
     VectorType getOperandVectorTypeLHS() {
       return lhs().getType().cast<VectorType>();
     }
-    VectorType getOperandVectorTypeRHS() {
-      return rhs().getType().cast<VectorType>();
+    Type getOperandTypeRHS() {
+      return rhs().getType();
     }
     VectorType getOperandVectorTypeACC() {
-      return (llvm::size(acc()) == 0) ? VectorType() :
-        (*acc().begin()).getType().cast<VectorType>();
+      return (llvm::size(acc()) == 0)
+        ? VectorType()
+        : (*acc().begin()).getType().cast<VectorType>();
     }
     VectorType getVectorType() {
       return getResult().getType().cast<VectorType>();
@@ -883,25 +905,9 @@ def Vector_ExtractStridedSliceOp :
   let assemblyFormat = "$vector attr-dict `:` type($vector) `to` type(results)";
 }
 
-def Vector_TransferOpUtils {
-  code extraTransferDeclaration = [{
-    static StringRef getMaskedAttrName() { return "masked"; }
-    static StringRef getPermutationMapAttrName() { return "permutation_map"; }
-    bool isMaskedDim(unsigned dim) {
-      return !masked() ||
-        masked()->cast<ArrayAttr>()[dim].cast<BoolAttr>().getValue();
-    }
-    MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
-    }
-    VectorType getVectorType() {
-      return vector().getType().cast<VectorType>();
-    }
-  }];
-}
-
 def Vector_TransferReadOp :
   Vector_Op<"transfer_read", [
+      DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
     Arguments<(ins AnyMemRef:$memref, Variadic<Index>:$indices,
@@ -1059,23 +1065,12 @@ def Vector_TransferReadOp :
               "ArrayRef<bool> maybeMasked = {}">
   ];
 
-  let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #
-  [{
-    /// Build the default minor identity map suitable for a vector transfer.
-    /// This also handles the case memref<... x vector<...>> -> vector<...> in
-    /// which the rank of the identity map must take the vector element type
-    /// into account.
-    static AffineMap getTransferMinorIdentityMap(
-      MemRefType memRefType, VectorType vectorType) {
-        return impl::getTransferMinorIdentityMap(memRefType, vectorType);
-      }
-  }];
-
   let hasFolder = 1;
 }
 
 def Vector_TransferWriteOp :
   Vector_Op<"transfer_write", [
+      DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
     Arguments<(ins AnyVector:$vector, AnyMemRef:$memref,
@@ -1151,18 +1146,6 @@ def Vector_TransferWriteOp :
     OpBuilder<"OpBuilder &builder, OperationState &result, Value vector, "
               "Value memref, ValueRange indices, AffineMap permutationMap">,
   ];
-
-  let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #
-  [{
-    /// Build the default minor identity map suitable for a vector transfer.
-    /// This also handles the case memref<... x vector<...>> -> vector<...> in
-    /// which the rank of the identity map must take the vector element type
-    /// into account.
-    static AffineMap getTransferMinorIdentityMap(
-      MemRefType memRefType, VectorType vectorType) {
-        return impl::getTransferMinorIdentityMap(memRefType, vectorType);
-      }
-  }];
 
   let hasFolder = 1;
 }

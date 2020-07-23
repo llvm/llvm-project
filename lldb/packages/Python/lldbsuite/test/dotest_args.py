@@ -51,7 +51,7 @@ def create_parser():
                                                            suggestions: do not lump the "-A arch1 -A arch2" together such that the -E option applies to only one of the architectures'''))
 
     group.add_argument('--dsymutil', metavar='dsymutil', dest='dsymutil', help=textwrap.dedent('Specify which dsymutil to use.'))
-
+    group.add_argument('--yaml2obj', metavar='yaml2obj', dest='yaml2obj', help=textwrap.dedent('Specify which yaml2obj binary to use.'))
     group.add_argument('--filecheck', metavar='filecheck', dest='filecheck', help=textwrap.dedent('Specify which FileCheck binary to use.'))
 
     # Test filtering options
@@ -243,28 +243,6 @@ def create_parser():
         action='store_false',
         help='(Windows only) When LLDB crashes, display the Windows crash dialog.')
     group.set_defaults(disable_crash_dialog=True)
-
-    # Test results support.
-    group = parser.add_argument_group('Test results options')
-    group.add_argument(
-        '--results-file',
-        action='store',
-        help=('Specifies the file where test results will be written '
-              'according to the results-formatter class used'))
-    group.add_argument(
-        '--results-formatter',
-        action='store',
-        help=('Specifies the full package/module/class name used to translate '
-              'test events into some kind of meaningful report, written to '
-              'the designated output results file-like object'))
-    group.add_argument(
-        '--results-formatter-option',
-        '-O',
-        action='append',
-        dest='results_formatter_options',
-        help=('Specify an option to pass to the formatter. '
-              'Use --results-formatter-option="--option1=val1" '
-              'syntax.  Note the "=" is critical, don\'t include whitespace.'))
 
     # Re-run related arguments
     group = parser.add_argument_group('Test Re-run Options')

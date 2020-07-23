@@ -71,6 +71,10 @@ public:
 
   std::size_t SkipBlanks(std::size_t) const;
 
+  // True if anything remains in the sequence at & after the given offset
+  // except blanks and line-ending C++ and Fortran free-form comments.
+  bool IsAnythingLeft(std::size_t) const;
+
   void PutNextTokenChar(char ch, Provenance provenance) {
     char_.emplace_back(ch);
     provenances_.Put({provenance, 1});

@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -triple=mipsel-unknown-linux -mcpu=mips32r2 \
-# RUN:   -mattr=+micromips -filetype=obj -o - | llvm-readobj --symbols | FileCheck %s
+# RUN:   -mattr=+micromips -filetype=obj -o - | llvm-readobj --symbols - | FileCheck %s
   .text
   .set micromips
 f:

@@ -818,13 +818,14 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   static const ConstString g___NSDate("__NSDate");
   static const ConstString g___NSTaggedDate("__NSTaggedDate");
   static const ConstString g_NSCalendarDate("NSCalendarDate");
+  static const ConstString g_NSConstantDate("NSConstantDate");
 
   if (class_name.IsEmpty())
     return false;
 
   uint64_t info_bits = 0, value_bits = 0;
   if ((class_name == g_NSDate) || (class_name == g___NSDate) ||
-      (class_name == g___NSTaggedDate)) {
+      (class_name == g___NSTaggedDate) || (class_name == g_NSConstantDate)) {
     if (descriptor->GetTaggedPointerInfo(&info_bits, &value_bits)) {
       date_value_bits = ((value_bits << 8) | (info_bits << 4));
       memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
@@ -850,8 +851,14 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   } else
     return false;
 
-  if (date_value == -63114076800) {
-    stream.Printf("0001-12-30 00:00:00 +0000");
+  // FIXME: It seems old dates are not formatted according to NSDate's calendar
+  // so we hardcode distantPast's value so that it looks like LLDB is doing
+  // the right thing.
+
+  // The relative time in seconds from Cocoa Epoch to [NSDate distantPast].
+  const double RelSecondsFromCocoaEpochToNSDateDistantPast = -63114076800;
+  if (date_value == RelSecondsFromCocoaEpochToNSDateDistantPast) {
+    stream.Printf("0001-01-01 00:00:00 UTC");
     return true;
   }
 

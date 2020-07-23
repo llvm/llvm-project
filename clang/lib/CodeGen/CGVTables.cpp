@@ -363,7 +363,8 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
                                   : FPT->getReturnType();
   ReturnValueSlot Slot;
   if (!ResultType->isVoidType() &&
-      CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect)
+      (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect ||
+       hasAggregateEvaluationKind(ResultType)))
     Slot = ReturnValueSlot(ReturnValue, ResultType.isVolatileQualified(),
                            /*IsUnused=*/false, /*IsExternallyDestructed=*/true);
 

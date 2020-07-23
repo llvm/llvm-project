@@ -918,7 +918,7 @@ func @negative_in_tensor_size() -> tensor<1x-1xi32>
 // -----
 
 func @invalid_nested_dominance() {
-  "foo.region"() ({
+  "test.ssacfg_region"() ({
     // expected-error @+1 {{operand #0 does not dominate this use}}
     "foo.use" (%1) : (i32) -> ()
     br ^bb2
@@ -1106,7 +1106,7 @@ func @bad_complex(complex<i32)
 // -----
 
 func @invalid_region_dominance() {
-  "foo.region"() ({
+  "test.ssacfg_region"() ({
     // expected-error @+1 {{operand #0 does not dominate this use}}
     "foo.use" (%def) : (i32) -> ()
     "foo.yield" () : () -> ()
@@ -1121,7 +1121,7 @@ func @invalid_region_dominance() {
 
 func @invalid_region_dominance() {
   // expected-note @+1 {{operand defined here}}
-  %def = "foo.region_with_def"() ({
+  %def = "test.ssacfg_region"() ({
     // expected-error @+1 {{operand #0 does not dominate this use}}
     "foo.use" (%def) : (i32) -> ()
     "foo.yield" () : () -> ()
@@ -1534,7 +1534,7 @@ func @dominance_error_in_unreachable_op() -> i1 {
   %c = constant false
   return %c : i1
 ^bb0:
-  "dummy" () ({  // unreachable
+  "test.ssacfg_region" () ({ // unreachable
     ^bb1:
 // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
@@ -1545,4 +1545,20 @@ func @dominance_error_in_unreachable_op() -> i1 {
       %1 = "foo"() : ()->i64   // expected-note {{operand defined here}}
   }) : () -> ()
   return %c : i1
+}
+
+// -----
+
+func @invalid_region_dominance_with_dominance_free_regions() {
+  test.graph_region {
+    "foo.use" (%1) : (i32) -> ()
+    "foo.region"() ({
+      %1 = constant 0 : i32  // This value is used outside of the region.
+      "foo.yield" () : () -> ()
+    }, {
+      // expected-error @+1 {{expected operation name in quotes}}
+      %2 = constant 1 i32  // Syntax error causes region deletion.
+    }) : () -> ()
+  }
+  return
 }

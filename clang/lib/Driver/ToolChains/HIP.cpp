@@ -280,8 +280,7 @@ void HIPToolChain::addClangTargetOptions(
   ArgStringList LibraryPaths;
 
   // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
-  for (auto Path :
-       DriverArgs.getAllArgValues(options::OPT_hip_device_lib_path_EQ))
+  for (auto Path : RocmInstallation.getRocmDeviceLibPathArg())
     LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
@@ -292,14 +291,14 @@ void HIPToolChain::addClangTargetOptions(
     for (auto Lib : BCLibs)
       addBCLib(getDriver(), DriverArgs, CC1Args, LibraryPaths, Lib);
   } else {
-    if (!RocmInstallation.isValid()) {
-      getDriver().Diag(diag::err_drv_no_rocm_installation);
+    if (!RocmInstallation.hasDeviceLibrary()) {
+      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
       return;
     }
 
     std::string LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
     if (LibDeviceFile.empty()) {
-      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << GpuArch;
+      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 1 << GpuArch;
       return;
     }
 

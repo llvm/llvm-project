@@ -672,6 +672,9 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # Enable -Wdelete-non-virtual-dtor if available.
   add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
 
+  # Enable -Wsuggest-override if available.
+  add_flag_if_supported("-Wsuggest-override" SUGGEST_OVERRIDE_FLAG)
+
   # Check if -Wcomment is OK with an // comment ending with '\' if the next
   # line is also a // comment.
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})

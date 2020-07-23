@@ -194,7 +194,7 @@ define i16 @n11(i32 %x, i16 %y) {
   ret i16 %t5
 }
 
-; Bit width mismatch of shit amount
+; Bit width mismatch of shift amount
 
 @Y32 = global i32 42
 @Y16 = global i16 42

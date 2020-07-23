@@ -70,7 +70,7 @@ body: |
     ; GFX6: liveins: $vgpr0
     ; GFX6: %src0:vgpr_32 = COPY $vgpr0
     ; GFX6: %zero:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX6: %ineg:vgpr_32, dead %4:sreg_64_xexec = V_SUB_I32_e64 %zero, %src0, 0, implicit $exec
+    ; GFX6: %ineg:vgpr_32, dead %4:sreg_64_xexec = V_SUB_CO_U32_e64 %zero, %src0, 0, implicit $exec
     ; GFX6: %smax:vgpr_32 = V_MAX_I32_e64 %src0, %ineg, implicit $exec
     ; GFX6: S_ENDPGM 0, implicit %smax
     ; GFX9-LABEL: name: smax_neg_abs_pattern_s32_vv

@@ -1043,6 +1043,28 @@ public:
     for (const auto &Predicate : predicates())
       Predicate->emitPredicateOpcodes(Table, std::forward<Args>(args)...);
   }
+
+  /// Provide a function to avoid emitting certain predicates. This is used to
+  /// defer some predicate checks until after others
+  using PredicateFilterFunc = std::function<bool(const PredicateTy&)>;
+
+  /// Emit MatchTable opcodes for predicates which satisfy \p
+  /// ShouldEmitPredicate. This should be called multiple times to ensure all
+  /// predicates are eventually added to the match table.
+  template <class... Args>
+  void emitFilteredPredicateListOpcodes(PredicateFilterFunc ShouldEmitPredicate,
+                                        MatchTable &Table, Args &&... args) {
+    if (Predicates.empty() && !Optimized) {
+      Table << MatchTable::Comment(getNoPredicateComment())
+            << MatchTable::LineBreak;
+      return;
+    }
+
+    for (const auto &Predicate : predicates()) {
+      if (ShouldEmitPredicate(*Predicate))
+        Predicate->emitPredicateOpcodes(Table, std::forward<Args>(args)...);
+    }
+  }
 };
 
 class PredicateMatcher {
@@ -1099,6 +1121,13 @@ public:
                                     RuleMatcher &Rule) const = 0;
 
   PredicateKind getKind() const { return Kind; }
+
+  bool dependsOnOperands() const {
+    // Custom predicates really depend on the context pattern of the
+    // instruction, not just the individual instruction. This therefore
+    // implicitly depends on all other pattern constraints.
+    return Kind == IPM_GenericPredicate;
+  }
 
   virtual bool isIdentical(const PredicateMatcher &B) const {
     return B.getKind() == getKind() && InsnVarID == B.InsnVarID &&
@@ -2127,10 +2156,23 @@ public:
       InstructionNumOperandsMatcher(InsnVarID, getNumOperands())
           .emitPredicateOpcodes(Table, Rule);
 
-    emitPredicateListOpcodes(Table, Rule);
+    // First emit all instruction level predicates need to be verified before we
+    // can verify operands.
+    emitFilteredPredicateListOpcodes(
+      [](const PredicateMatcher &P) {
+        return !P.dependsOnOperands();
+      }, Table, Rule);
 
+    // Emit all operand constraints.
     for (const auto &Operand : Operands)
       Operand->emitPredicateOpcodes(Table, Rule);
+
+    // All of the tablegen defined predicates should now be matched. Now emit
+    // any custom predicates that rely on all generated checks.
+    emitFilteredPredicateListOpcodes(
+      [](const PredicateMatcher &P) {
+        return P.dependsOnOperands();
+      }, Table, Rule);
   }
 
   /// Compare the priority of this object and B.
@@ -2960,8 +3002,8 @@ public:
     Table << MatchTable::Opcode("GIR_ConstrainOperandRC")
           << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
           << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-          << MatchTable::Comment("RC " + RC.getName())
-          << MatchTable::IntValue(RC.EnumValue) << MatchTable::LineBreak;
+          << MatchTable::NamedValue(RC.getQualifiedName() + "RegClassID")
+          << MatchTable::LineBreak;
   }
 };
 

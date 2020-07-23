@@ -11,6 +11,9 @@
 // 'release' mode) or a runtime-loaded model (the 'development' case).
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Config/config.h"
+#if defined(LLVM_HAVE_TF_AOT) || defined(LLVM_HAVE_TF_API)
+
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
@@ -299,3 +302,4 @@ void MLInlineAdvice::recordUnattemptedInliningImpl() {
     return R;
   });
 }
+#endif // defined(LLVM_HAVE_TF_AOT) || defined(LLVM_HAVE_TF_API)

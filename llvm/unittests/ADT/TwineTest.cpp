@@ -105,7 +105,7 @@ TEST(TwineTest, LazyEvaluation) {
     explicit formatter(int &Count) : FormatAdapter(0), Count(Count) {}
     int &Count;
 
-    void format(raw_ostream &OS, StringRef Style) { ++Count; }
+    void format(raw_ostream &OS, StringRef Style) override { ++Count; }
   };
 
   int Count = 0;

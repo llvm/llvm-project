@@ -80,6 +80,42 @@ void mlir::linalg::hoistViewAllocOps(FuncOp func) {
   }
 }
 
+/// Return true if we can prove that the transfer operations access dijoint
+/// memory.
+static bool isDisjoint(VectorTransferOpInterface transferA,
+                       VectorTransferOpInterface transferB) {
+  if (transferA.memref() != transferB.memref())
+    return false;
+  // For simplicity only look at transfer of same type.
+  if (transferA.getVectorType() != transferB.getVectorType())
+    return false;
+  unsigned rankOffset = transferA.getLeadingMemRefRank();
+  for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
+    auto indexA = transferA.indices()[i].getDefiningOp<ConstantOp>();
+    auto indexB = transferB.indices()[i].getDefiningOp<ConstantOp>();
+    // If any of the indices are dynamic we cannot prove anything.
+    if (!indexA || !indexB)
+      continue;
+
+    if (i < rankOffset) {
+      // For dimension used as index if we can prove that index are different we
+      // know we are accessing disjoint slices.
+      if (indexA.getValue().cast<IntegerAttr>().getInt() !=
+          indexB.getValue().cast<IntegerAttr>().getInt())
+        return true;
+    } else {
+      // For this dimension, we slice a part of the memref we need to make sure
+      // the intervals accessed don't overlap.
+      int64_t distance =
+          std::abs(indexA.getValue().cast<IntegerAttr>().getInt() -
+                   indexB.getValue().cast<IntegerAttr>().getInt());
+      if (distance >= transferA.getVectorType().getDimSize(i - rankOffset))
+        return true;
+    }
+  }
+  return false;
+}
+
 void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
   bool changed = true;
   while (changed) {
@@ -129,10 +165,11 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
 
       // Approximate aliasing by checking that:
       //   1. indices are the same,
-      //   2. no other use either dominates the transfer_read or is dominated
-      //   by the transfer_write (i.e. aliasing between the write and the read
-      //   across the loop).
-      if (transferRead.indices() != transferWrite.indices())
+      //   2. no other operations in the loop access the same memref except
+      //      for transfer_read/transfer_write accessing statically disjoint
+      //      slices.
+      if (transferRead.indices() != transferWrite.indices() &&
+          transferRead.getVectorType() == transferWrite.getVectorType())
         return WalkResult::advance();
 
       // TODO: may want to memoize this information for performance but it
@@ -140,11 +177,32 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       DominanceInfo dom(loop);
       if (!dom.properlyDominates(transferRead.getOperation(), transferWrite))
         return WalkResult::advance();
-      for (auto &use : transferRead.memref().getUses())
-        if (dom.properlyDominates(use.getOwner(),
-                                  transferRead.getOperation()) ||
-            dom.properlyDominates(transferWrite, use.getOwner()))
+      for (auto &use : transferRead.memref().getUses()) {
+        if (!dom.properlyDominates(loop, use.getOwner()))
+          continue;
+        if (use.getOwner() == transferRead.getOperation() ||
+            use.getOwner() == transferWrite.getOperation())
+          continue;
+        if (auto transferWriteUse =
+                dyn_cast<vector::TransferWriteOp>(use.getOwner())) {
+          if (!isDisjoint(
+                  cast<VectorTransferOpInterface>(transferWrite.getOperation()),
+                  cast<VectorTransferOpInterface>(
+                      transferWriteUse.getOperation())))
+            return WalkResult::advance();
+        } else if (auto transferReadUse =
+                       dyn_cast<vector::TransferReadOp>(use.getOwner())) {
+          if (!isDisjoint(
+                  cast<VectorTransferOpInterface>(transferWrite.getOperation()),
+                  cast<VectorTransferOpInterface>(
+                      transferReadUse.getOperation())))
+            return WalkResult::advance();
+        } else {
+          // Unknown use, we cannot prove that it doesn't alias with the
+          // transferRead/transferWrite operations.
           return WalkResult::advance();
+        }
+      }
 
       // Hoist read before.
       if (failed(loop.moveOutOfLoop({transferRead})))

@@ -807,6 +807,7 @@ void MSVCToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {
   CudaInstallation.print(OS);
+  RocmInstallation.print(OS);
 }
 
 // Windows SDKs and VC Toolchains group their contents into subdirectories based

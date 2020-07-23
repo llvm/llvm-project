@@ -98,42 +98,46 @@ private:
 };
   
 namespace Foundation1010 {
-  struct DataDescriptor_32 {
-    uint32_t _used;
-    uint32_t _offset;
-    uint32_t _size : 28;
-    uint64_t _priv1 : 4;
-    uint32_t _priv2;
-    uint32_t _data;
-  };
-  
-  struct DataDescriptor_64 {
-    uint64_t _used;
-    uint64_t _offset;
-    uint64_t _size : 60;
-    uint64_t _priv1 : 4;
-    uint32_t _priv2;
-    uint64_t _data;
-  };
+  namespace {
+    struct DataDescriptor_32 {
+      uint32_t _used;
+      uint32_t _offset;
+      uint32_t _size : 28;
+      uint64_t _priv1 : 4;
+      uint32_t _priv2;
+      uint32_t _data;
+    };
+    
+    struct DataDescriptor_64 {
+      uint64_t _used;
+      uint64_t _offset;
+      uint64_t _size : 60;
+      uint64_t _priv1 : 4;
+      uint32_t _priv2;
+      uint64_t _data;
+    };
+  }
   
   using NSArrayMSyntheticFrontEnd =
       GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
 }
   
 namespace Foundation1428 {
-  struct DataDescriptor_32 {
-    uint32_t _used;
-    uint32_t _offset;
-    uint32_t _size;
-    uint32_t _data;
-  };
-  
-  struct DataDescriptor_64 {
-    uint64_t _used;
-    uint64_t _offset;
-    uint64_t _size;
-    uint64_t _data;
-  };
+  namespace {
+    struct DataDescriptor_32 {
+      uint32_t _used;
+      uint32_t _offset;
+      uint32_t _size;
+      uint32_t _data;
+    };
+    
+    struct DataDescriptor_64 {
+      uint64_t _used;
+      uint64_t _offset;
+      uint64_t _size;
+      uint64_t _data;
+    };
+  }
   
   using NSArrayMSyntheticFrontEnd =
       GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;

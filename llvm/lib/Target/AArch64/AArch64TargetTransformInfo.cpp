@@ -859,6 +859,11 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     getFalkorUnrollingPreferences(L, SE, UP);
 }
 
+void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                           TTI::PeelingPreferences &PP) {
+  BaseT::getPeelingPreferences(L, SE, PP);
+}
+
 Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                                          Type *ExpectedType) {
   switch (Inst->getIntrinsicID()) {

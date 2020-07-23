@@ -82,11 +82,9 @@ endif
 # we strictly required double-quotes
 #----------------------------------------------------------------------
 ifeq "$(HOST_OS)" "Windows_NT"
-	JOIN_CMD = &
 	QUOTE = "
 	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = "
 else
-	JOIN_CMD = ;
 	QUOTE = '
 	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = '
 endif
@@ -729,28 +727,16 @@ endif
 # and the -MM option will list all non-system dependencies.
 #----------------------------------------------------------------------
 %.d: %.c
-	@rm -f $@ $(JOIN_CMD) \
-	$(CC) -M $(CFLAGS) $< > $@.tmp && \
-	sed $(QUOTE)s,\($*\)\.o[ :]*,\1.o $@ : ,g$(QUOTE) < $@.tmp > $@ $(JOIN_CMD) \
-	rm -f $@.tmp
+	$(CC) -M $(CFLAGS) $< -MF $@ -MT $@ -MT $*.o
 
 %.d: %.cpp
-	@rm -f $@ $(JOIN_CMD) \
-	$(CXX) -M $(CXXFLAGS) $< > $@.tmp && \
-	sed $(QUOTE)s,\($*\)\.o[ :]*,\1.o $@ : ,g$(QUOTE) < $@.tmp > $@ $(JOIN_CMD) \
-	rm -f $@.tmp
+	@$(CXX) -M $(CXXFLAGS) $< -MF $@ -MT $@ -MT $*.o
 
 %.d: %.m
-	@rm -f $@ $(JOIN_CMD) \
-	$(CC) -M $(CFLAGS) $< > $@.tmp && \
-	sed $(QUOTE)s,\($*\)\.o[ :]*,\1.o $@ : ,g$(QUOTE) < $@.tmp > $@ $(JOIN_CMD) \
-	rm -f $@.tmp
+	@$(CC) -M $(CFLAGS) $< -MF $@ -MT $@ -MT $*.o
 
 %.d: %.mm
-	@rm -f $@ $(JOIN_CMD) \
-	$(CXX) -M $(CXXFLAGS) $< > $@.tmp && \
-	sed $(QUOTE)s,\($*\)\.o[ :]*,\1.o $@ : ,g$(QUOTE) < $@.tmp > $@ $(JOIN_CMD) \
-	rm -f $@.tmp
+	@$(CXX) -M $(CXXFLAGS) $< -MF $@ -MT $@ -MT $*.o
 
 #----------------------------------------------------------------------
 # Include all of the makefiles for each source file so we don't have

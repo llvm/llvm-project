@@ -773,7 +773,7 @@ void Scanner::init(MemoryBufferRef Buffer) {
   IsSimpleKeyAllowed = true;
   Failed = false;
   std::unique_ptr<MemoryBuffer> InputBufferOwner =
-      MemoryBuffer::getMemBuffer(Buffer);
+      MemoryBuffer::getMemBuffer(Buffer, false);
   SM.AddNewSourceBuffer(std::move(InputBufferOwner), SMLoc());
 }
 

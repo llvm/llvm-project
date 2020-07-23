@@ -42,10 +42,9 @@ public:
   typedef
       typename RegexMatchContainer::ForEachCallback RegexMatchForEachCallback;
 
-  FormatterContainerPair(const char *exact_name, const char *regex_name,
-                         IFormatChangeListener *clist)
-      : m_exact_sp(new ExactMatchContainer(std::string(exact_name), clist)),
-        m_regex_sp(new RegexMatchContainer(std::string(regex_name), clist)) {}
+  FormatterContainerPair(IFormatChangeListener *clist)
+      : m_exact_sp(new ExactMatchContainer(clist)),
+        m_regex_sp(new RegexMatchContainer(clist)) {}
 
   ~FormatterContainerPair() = default;
 

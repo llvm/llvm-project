@@ -6117,11 +6117,13 @@ ExpectedStmt ASTNodeImporter::VisitWhileStmt(WhileStmt *S) {
   auto ToCond = importChecked(Err, S->getCond());
   auto ToBody = importChecked(Err, S->getBody());
   auto ToWhileLoc = importChecked(Err, S->getWhileLoc());
+  auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
+  auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
   if (Err)
     return std::move(Err);
 
   return WhileStmt::Create(Importer.getToContext(), ToConditionVariable, ToCond,
-                           ToBody, ToWhileLoc);
+                           ToBody, ToWhileLoc, ToLParenLoc, ToRParenLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitDoStmt(DoStmt *S) {

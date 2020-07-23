@@ -104,7 +104,13 @@ def Shape_ValueShapeType : DialectType<ShapeDialect,
   }];
 }
 
-def Shape_ShapeOrSizeType: AnyTypeOf<[Shape_SizeType, Shape_ShapeType],
+def Shape_ShapeOrSizeType : AnyTypeOf<[Shape_SizeType, Shape_ShapeType],
   "shape or size">;
+
+def Shape_ExtentTensorType : 1DTensorOf<[Index]>;
+
+def Shape_ShapeOrExtentTensorType : AnyTypeOf<[Shape_ShapeType,
+                                               Shape_ExtentTensorType],
+                                              "shape or extent tensor">;
 
 #endif // SHAPE_BASE_TD

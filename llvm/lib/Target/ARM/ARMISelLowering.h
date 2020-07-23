@@ -271,8 +271,8 @@ class VectorType;
       // Vector AND with NOT of immediate
       VBICIMM,
 
-      // Vector bitwise select
-      VBSL,
+      // Pseudo vector bitwise select
+      VBSP,
 
       // Pseudo-instruction representing a memory copy using ldm/stm
       // instructions.

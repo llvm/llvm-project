@@ -229,12 +229,15 @@ public:
     return const_cast<SparseSet*>(this)->findIndex(KeyIndexOf(Key));
   }
 
+  /// Check if the set contains the given \c Key.
+  ///
+  /// @param Key A valid key to find.
+  bool contains(const KeyT &Key) const { return find(Key) == end() ? 0 : 1; }
+
   /// count - Returns 1 if this set contains an element identified by Key,
   /// 0 otherwise.
   ///
-  size_type count(const KeyT &Key) const {
-    return find(Key) == end() ? 0 : 1;
-  }
+  size_type count(const KeyT &Key) const { return contains(Key) ? 1 : 0; }
 
   /// insert - Attempts to insert a new element.
   ///

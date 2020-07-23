@@ -618,3 +618,29 @@ TEST_F(VFABIParserTest, ZeroIsInvalidVLEN) {
   EXPECT_FALSE(invokeParser("_ZGVsM0v_sin"));
   EXPECT_FALSE(invokeParser("_ZGVsN0v_sin"));
 }
+
+static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
+  if (!Mod)
+    Err.print("VectorFunctionABITests", errs());
+  return Mod;
+}
+
+TEST(VFABIGetMappingsTest, IndirectCallInst) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @call(void () * %f) {
+entry:
+  call void %f()
+  ret void
+}
+)IR");
+  auto F = dyn_cast_or_null<Function>(M->getNamedValue("call"));
+  ASSERT_TRUE(F);
+  auto CI = dyn_cast<CallInst>(&F->front().front());
+  ASSERT_TRUE(CI);
+  ASSERT_TRUE(CI->isIndirectCall());
+  auto Mappings = VFDatabase::getMappings(*CI);
+  EXPECT_EQ(Mappings.size(), (unsigned)0);
+}

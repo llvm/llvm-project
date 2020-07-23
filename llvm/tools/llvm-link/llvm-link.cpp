@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm//Object/Archive.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -140,8 +140,8 @@ static std::unique_ptr<Module> loadFile(const char *argv0,
   return Result;
 }
 
-static std::unique_ptr<Module> loadArFile(const char *argv0,
-                                          const std::string ArchiveName,
+static std::unique_ptr<Module> loadArFile(const char *Argv0,
+                                          const std::string &ArchiveName,
                                           LLVMContext &Context, Linker &L,
                                           unsigned OrigFlags,
                                           unsigned ApplicableFlags) {
@@ -150,49 +150,56 @@ static std::unique_ptr<Module> loadArFile(const char *argv0,
     errs() << "Reading library archive file '" << ArchiveName
            << "' to memory\n";
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-      MemoryBuffer::getFile(ArchiveName, -1, false);
+    MemoryBuffer::getFile(ArchiveName, -1, false);
   ExitOnErr(errorCodeToError(Buf.getError()));
   Error Err = Error::success();
   object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
-  object::Archive *ArchivePtr = &Archive;
   ExitOnErr(std::move(Err));
-  for (auto &C : ArchivePtr->children(Err)) {
-    Expected<StringRef> ename = C.getName();
-    if (Error E = ename.takeError()) {
-      errs() << argv0 << ": ";
+  for (const object::Archive::Child &C : Archive.children(Err)) {
+    Expected<StringRef> Ename = C.getName();
+    if (Error E = Ename.takeError()) {
+      errs() << Argv0 << ": ";
       WithColor::error()
-          << " could not get member name of archive library failed'"
+          << " failed to read name of archive member"
           << ArchiveName << "'\n";
       return nullptr;
     };
-    std::string goodname = ename.get().str();
+    std::string ChildName = Ename.get().str();
     if (Verbose)
-      errs() << "Parsing member '" << goodname
+      errs() << "Parsing member '" << ChildName
              << "' of archive library to module.\n";
     SMDiagnostic ParseErr;
-    StringRef DataLayoutString;
     Expected<MemoryBufferRef> MemBuf = C.getMemoryBufferRef();
     if (Error E = MemBuf.takeError()) {
-      errs() << argv0 << ": ";
-      WithColor::error() << " loading memory for member '" << goodname
+      errs() << Argv0 << ": ";
+      WithColor::error() << " loading memory for member '" << ChildName
                          << "' of archive library failed'" << ArchiveName
                          << "'\n";
       return nullptr;
     };
 
+    if (!isBitcode(reinterpret_cast<const unsigned char *>
+                   (MemBuf.get().getBufferStart()),
+                   reinterpret_cast<const unsigned char *>
+                   (MemBuf.get().getBufferEnd()))) {
+      errs() << Argv0 << ": ";
+      WithColor::error() << "  member of archive is not a bitcode file: '"
+                         << ChildName << "'\n";
+      return nullptr;
+    }
+
     std::unique_ptr<Module> M = parseIR(MemBuf.get(), ParseErr, Context);
+
     if (!M.get()) {
-      errs() << argv0 << ": ";
-      WithColor::error() << " parsing member '" << goodname
+      errs() << Argv0 << ": ";
+      WithColor::error() << " parsing member '" << ChildName
                          << "' of archive library failed'" << ArchiveName
                          << "'\n";
       return nullptr;
     }
     if (Verbose)
-      errs() << "Linking member '" << goodname << "' of archive library.\n";
-    // bool Err = L.linkInModule(std::move(M), ApplicableFlags);
-    bool Err = L.linkModules(*Result, std::move(M), ApplicableFlags);
-    if (Err)
+      errs() << "Linking member '" << ChildName << "' of archive library.\n";
+    if (L.linkModules(*Result, std::move(M), ApplicableFlags))
       return nullptr;
     ApplicableFlags = OrigFlags;
   } // end for each child

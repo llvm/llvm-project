@@ -1115,7 +1115,7 @@ def LWE : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
 def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
 def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 
-def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT">>;
+def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT", 0>>;
 
 def DMask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
 def Dim : NamedOperandU8<"Dim", NamedMatchClass<"Dim", 0>>;

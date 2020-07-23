@@ -76,6 +76,9 @@ public:
   // Return the name of this interface.
   StringRef getName() const;
 
+  // Return the C++ namespace of this interface.
+  StringRef getCppNamespace() const;
+
   // Return the methods of this interface.
   ArrayRef<InterfaceMethod> getMethods() const;
 

@@ -1102,8 +1102,7 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
                                                      unsigned argIndex,
                                                      NamedAttribute attribute) {
   return verifyRegionAttribute(
-      op->getLoc(),
-      op->getRegion(regionIndex).front().getArgument(argIndex).getType(),
+      op->getLoc(), op->getRegion(regionIndex).getArgument(argIndex).getType(),
       attribute);
 }
 

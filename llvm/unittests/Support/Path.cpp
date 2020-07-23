@@ -1149,6 +1149,39 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
 }
 #endif
 
+#ifdef _WIN32
+TEST_F(FileSystemTest, UTF8ToUTF16DirectoryIteration) {
+  // The Windows filesystem support uses UTF-16 and converts paths from the
+  // input UTF-8. The UTF-16 equivalent of the input path can be shorter in
+  // length.
+
+  // This test relies on TestDirectory not being so long such that MAX_PATH
+  // would be exceeded (see widenPath). If that were the case, the UTF-16
+  // path is likely to be longer than the input.
+  const char *Pi = "\xcf\x80"; // UTF-8 lower case pi.
+  std::string RootDir = (TestDirectory + "/" + Pi).str();
+
+  // Create test directories.
+  ASSERT_NO_ERROR(fs::create_directories(Twine(RootDir) + "/a"));
+  ASSERT_NO_ERROR(fs::create_directories(Twine(RootDir) + "/b"));
+
+  std::error_code EC;
+  unsigned Count = 0;
+  for (fs::directory_iterator I(Twine(RootDir), EC), E; I != E;
+       I.increment(EC)) {
+    ASSERT_NO_ERROR(EC);
+    StringRef DirName = path::filename(I->path());
+    EXPECT_TRUE(DirName == "a" || DirName == "b");
+    ++Count;
+  }
+  EXPECT_EQ(Count, 2U);
+
+  ASSERT_NO_ERROR(fs::remove(Twine(RootDir) + "/a"));
+  ASSERT_NO_ERROR(fs::remove(Twine(RootDir) + "/b"));
+  ASSERT_NO_ERROR(fs::remove(Twine(RootDir)));
+}
+#endif
+
 TEST_F(FileSystemTest, Remove) {
   SmallString<64> BaseDir;
   SmallString<64> Paths[4];

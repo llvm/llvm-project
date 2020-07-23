@@ -52,6 +52,8 @@ def main():
                       help='Keep function signature information around for the check line')
   parser.add_argument('--scrub-attributes', action='store_true',
                       help='Remove attribute annotations (#0) from the end of check line')
+  parser.add_argument('--check-attributes', action='store_true',
+                      help='Check "Function Attributes" for functions')
   parser.add_argument('tests', nargs='+')
   initial_args = common.parse_commandline_args(parser)
 
@@ -111,7 +113,7 @@ def main():
       common.build_function_body_dictionary(
               common.OPT_FUNCTION_RE, common.scrub_body, [],
               raw_tool_output, prefixes, func_dict, ti.args.verbose,
-              ti.args.function_signature)
+              ti.args.function_signature, ti.args.check_attributes)
 
     is_in_function = False
     is_in_function_start = False

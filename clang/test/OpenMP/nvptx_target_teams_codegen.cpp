@@ -68,7 +68,7 @@ int bar(int n){
   //
   // CHECK: [[AWAIT_WORK]]
   // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
-  // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]], i16 1)
+  // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]])
   // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
   // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
@@ -154,7 +154,7 @@ int bar(int n){
   //
   // CHECK: [[AWAIT_WORK]]
   // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
-  // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]], i16 1)
+  // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]])
   // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
   // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],

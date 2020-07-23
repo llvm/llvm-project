@@ -288,13 +288,11 @@ def S_MOVRELD_B64 : SOP1_64_movreld <"s_movreld_b64">;
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9 in {
 def S_CBRANCH_JOIN : SOP1_0_32R <"s_cbranch_join">;
-def S_MOV_REGRD_B32 : SOP1_32 <"s_mov_regrd_b32">;
 } // End SubtargetPredicate = isGFX6GFX7GFX8GFX9
 
 let Defs = [SCC] in {
 def S_ABS_I32 : SOP1_32 <"s_abs_i32">;
 } // End Defs = [SCC]
-def S_MOV_FED_B32 : SOP1_32 <"s_mov_fed_b32">;
 
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_IDX : SOP1_0_32<"s_set_gpr_idx_idx"> {
@@ -1381,7 +1379,6 @@ multiclass SOP1_Real_gfx6_gfx7_gfx10<bits<8> op> :
   SOP1_Real_gfx6_gfx7<op>, SOP1_Real_gfx10<op>;
 
 defm S_CBRANCH_JOIN  : SOP1_Real_gfx6_gfx7<0x032>;
-defm S_MOV_REGRD_B32 : SOP1_Real_gfx6_gfx7<0x033>;
 
 defm S_MOV_B32            : SOP1_Real_gfx6_gfx7_gfx10<0x003>;
 defm S_MOV_B64            : SOP1_Real_gfx6_gfx7_gfx10<0x004>;
@@ -1430,7 +1427,6 @@ defm S_MOVRELS_B64        : SOP1_Real_gfx6_gfx7_gfx10<0x02f>;
 defm S_MOVRELD_B32        : SOP1_Real_gfx6_gfx7_gfx10<0x030>;
 defm S_MOVRELD_B64        : SOP1_Real_gfx6_gfx7_gfx10<0x031>;
 defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10<0x034>;
-defm S_MOV_FED_B32        : SOP1_Real_gfx6_gfx7_gfx10<0x035>;
 
 //===----------------------------------------------------------------------===//
 // SOP2 - GFX10.
@@ -1643,9 +1639,7 @@ def S_MOVRELS_B64_vi       : SOP1_Real_vi <0x2b, S_MOVRELS_B64>;
 def S_MOVRELD_B32_vi       : SOP1_Real_vi <0x2c, S_MOVRELD_B32>;
 def S_MOVRELD_B64_vi       : SOP1_Real_vi <0x2d, S_MOVRELD_B64>;
 def S_CBRANCH_JOIN_vi      : SOP1_Real_vi <0x2e, S_CBRANCH_JOIN>;
-def S_MOV_REGRD_B32_vi     : SOP1_Real_vi <0x2f, S_MOV_REGRD_B32>;
 def S_ABS_I32_vi           : SOP1_Real_vi <0x30, S_ABS_I32>;
-def S_MOV_FED_B32_vi       : SOP1_Real_vi <0x31, S_MOV_FED_B32>;
 def S_SET_GPR_IDX_IDX_vi   : SOP1_Real_vi <0x32, S_SET_GPR_IDX_IDX>;
 
 def S_ADD_U32_vi           : SOP2_Real_vi <0x00, S_ADD_U32>;

@@ -156,3 +156,10 @@
 // AVR-SAME: ttiny4, attiny5, attiny9, attiny10, attiny20, attiny40, attiny102,
 // AVR-SAME: attiny104
 
+// RUN: not %clang_cc1 -triple riscv32 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV32
+// RISCV32: error: unknown target CPU 'not-a-cpu'
+// RISCV32: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-e31
+
+// RUN: not %clang_cc1 -triple riscv64 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV64
+// RISCV64: error: unknown target CPU 'not-a-cpu'
+// RISCV64: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-u54

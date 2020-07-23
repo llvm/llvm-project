@@ -10,44 +10,44 @@
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --shared \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
-; RUN: llvm-readobj -r %t-out.o | FileCheck %s --check-prefix=PIC
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --export-dynamic --noinhibit-exec -pie \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
-; RUN: llvm-readobj -r %t-out.o | FileCheck %s --check-prefix=PIC
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --export-dynamic --noinhibit-exec \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
-; RUN: llvm-readobj -r %t-out.o | FileCheck %s --check-prefix=STATIC
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=STATIC
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -r \
 ; RUN:    --plugin-opt=save-temps %t.o -o %t-out
-; RUN: llvm-readobj -r %t-out.o | FileCheck %s --check-prefix=STATIC
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=STATIC
 
 ;; PIC source.
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --shared \
 ; RUN:    --plugin-opt=save-temps %t.pic.o -o %t-out
-; RUN: llvm-readobj -r %t-out.o | FileCheck %s --check-prefix=PIC
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --export-dynamic --noinhibit-exec -pie \
 ; RUN:    --plugin-opt=save-temps %t.pic.o -o %t-out
-; RUN: llvm-readobj -r %t-out.o | FileCheck %s --check-prefix=PIC
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --export-dynamic --noinhibit-exec \
 ; RUN:    --plugin-opt=save-temps %t.pic.o -o %t-out
-; RUN: llvm-readobj -r %t-out.o | FileCheck %s --check-prefix=STATIC
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=STATIC
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -r \
 ; RUN:    --plugin-opt=save-temps %t.pic.o -o %t-out
-; RUN: llvm-readobj -r %t-out.o | FileCheck %s --check-prefix=PIC
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 
 ; PIC: R_X86_64_GOTPCREL foo

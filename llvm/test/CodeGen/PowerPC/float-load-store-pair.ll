@@ -32,10 +32,19 @@ define signext i32 @test() nounwind {
 ; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -192(1)
 ; CHECK-NEXT:    addis 3, 2, a1@toc@ha
+; CHECK-NEXT:    addis 5, 2, a16@toc@ha
+; CHECK-NEXT:    addis 6, 2, a17@toc@ha
+; CHECK-NEXT:    addis 4, 2, a15@toc@ha
 ; CHECK-NEXT:    lfd 1, a1@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a2@toc@ha
+; CHECK-NEXT:    addi 5, 5, a16@toc@l
+; CHECK-NEXT:    addi 6, 6, a17@toc@l
+; CHECK-NEXT:    ld 4, a15@toc@l(4)
 ; CHECK-NEXT:    lfd 2, a2@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a3@toc@ha
+; CHECK-NEXT:    lxvx 34, 0, 6
+; CHECK-NEXT:    lxvx 0, 0, 5
+; CHECK-NEXT:    li 5, 152
 ; CHECK-NEXT:    lfd 3, a3@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a4@toc@ha
 ; CHECK-NEXT:    lfd 4, a4@toc@l(3)
@@ -52,15 +61,6 @@ define signext i32 @test() nounwind {
 ; CHECK-NEXT:    addis 3, 2, a10@toc@ha
 ; CHECK-NEXT:    lfd 10, a10@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a11@toc@ha
-; CHECK-NEXT:    addis 6, 2, a17@toc@ha
-; CHECK-NEXT:    addis 5, 2, a16@toc@ha
-; CHECK-NEXT:    addi 6, 6, a17@toc@l
-; CHECK-NEXT:    addi 5, 5, a16@toc@l
-; CHECK-NEXT:    lxvx 34, 0, 6
-; CHECK-NEXT:    addis 4, 2, a15@toc@ha
-; CHECK-NEXT:    lxvx 0, 0, 5
-; CHECK-NEXT:    ld 4, a15@toc@l(4)
-; CHECK-NEXT:    li 5, 168
 ; CHECK-NEXT:    lfd 11, a11@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a12@toc@ha
 ; CHECK-NEXT:    lfd 12, a12@toc@l(3)
@@ -68,8 +68,6 @@ define signext i32 @test() nounwind {
 ; CHECK-NEXT:    lfd 13, a13@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a14@toc@ha
 ; CHECK-NEXT:    ld 3, a14@toc@l(3)
-; CHECK-NEXT:    stxvx 34, 1, 5
-; CHECK-NEXT:    li 5, 152
 ; CHECK-NEXT:    stxvx 0, 1, 5
 ; CHECK-NEXT:    std 4, 144(1)
 ; CHECK-NEXT:    std 3, 136(1)

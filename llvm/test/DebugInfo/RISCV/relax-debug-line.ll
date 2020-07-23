@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=+relax %s -o - \
-; RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX %s
+; RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX %s
 ;
 ; RELAX: .rela.debug_line {
 ; RELAX: R_RISCV_ADD16

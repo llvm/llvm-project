@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-code-object-v3 -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-code-object-v3 -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-code-object-v3 -mcpu=gfx900 -amdgpu-dump-hsa-metadata -amdgpu-verify-hsa-metadata -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
 
 ; CHECK: ---
@@ -15,20 +15,16 @@
 ; CHECK-NEXT:       Size:          1
 ; CHECK-NEXT:       Align:         1
 ; CHECK-NEXT:       ValueKind:     ByValue
-; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AccQual:       Default
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
-; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
-; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NEXT:     - Size:          8
 ; CHECK-NEXT:       Align:         8
 ; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
-; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NOT:        ValueKind:     HiddenHostcallBuffer
 ; CHECK-NOT:        ValueKind:     HiddenDefaultQueue
 ; CHECK-NOT:        ValueKind:     HiddenCompletionAction

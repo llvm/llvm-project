@@ -83,7 +83,6 @@ private:
   int checkRWLaneHazards(MachineInstr *RWLane);
   int checkRFEHazards(MachineInstr *RFE);
   int checkInlineAsmHazards(MachineInstr *IA);
-  int checkAnyInstHazards(MachineInstr *MI);
   int checkReadM0Hazards(MachineInstr *SMovRel);
   int checkNSAtoVMEMHazard(MachineInstr *MI);
   int checkFPAtomicToDenormModeHazard(MachineInstr *MI);

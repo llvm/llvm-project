@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=asm -mcpu=gfx900 -triple amdgcn-amd-amdhsa %s -o - | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -filetype=obj -mcpu=gfx900 -triple amdgcn-amd-amdhsa %s -o - | llvm-readobj -S --sr --sd | FileCheck --check-prefix=READOBJ %s
+// RUN: llvm-mc -filetype=obj -mcpu=gfx900 -triple amdgcn-amd-amdhsa %s -o - | llvm-readobj -S --sr --sd - | FileCheck --check-prefix=READOBJ %s
 
 f:
 	.cfi_sections .debug_frame

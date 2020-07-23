@@ -568,6 +568,10 @@ void PPCTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getUnrollingPreferences(L, SE, UP);
 }
 
+void PPCTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                       TTI::PeelingPreferences &PP) {
+  BaseT::getPeelingPreferences(L, SE, PP);
+}
 // This function returns true to allow using coldcc calling convention.
 // Returning true results in coldcc being used for functions which are cold at
 // all call sites when the callers of the functions are not calling any other

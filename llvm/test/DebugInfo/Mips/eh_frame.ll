@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips \
 ; RUN:     -relocation-model=static -O3 -filetype=obj -o - %s | \
-; RUN:     llvm-readelf -r | FileCheck %s --check-prefixes=STATIC
+; RUN:     llvm-readelf -r - | FileCheck %s --check-prefixes=STATIC
 ; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips \
 ; RUN:     -relocation-model=pic -O3 -filetype=obj -o - %s | \
-; RUN:     llvm-readelf -r | FileCheck %s --check-prefixes=PIC
+; RUN:     llvm-readelf -r - | FileCheck %s --check-prefixes=PIC
 ; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips \
 ; RUN:     -relocation-model=static -O3 -filetype=obj -o - %s | \
 ; RUN:     llvm-objdump -s -j .gcc_except_table - | FileCheck %s --check-prefix=EXCEPT-TABLE-STATIC

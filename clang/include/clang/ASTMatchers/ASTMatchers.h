@@ -7190,10 +7190,12 @@ AST_MATCHER_P(OMPExecutableDirective, hasAnyClause,
 /// \code
 ///   #pragma omp parallel default(none)
 ///   #pragma omp parallel default(shared)
+///   #pragma omp parallel default(firstprivate)
 ///   #pragma omp parallel
 /// \endcode
 ///
-/// ``ompDefaultClause()`` matches ``default(none)`` and ``default(shared)``.
+/// ``ompDefaultClause()`` matches ``default(none)``, ``default(shared)``, and
+/// ``default(firstprivate)``
 extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
     ompDefaultClause;
 
@@ -7205,6 +7207,7 @@ extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
 ///   #pragma omp parallel
 ///   #pragma omp parallel default(none)
 ///   #pragma omp parallel default(shared)
+///   #pragma omp parallel default(firstprivate)
 /// \endcode
 ///
 /// ``ompDefaultClause(isNoneKind())`` matches only ``default(none)``.
@@ -7220,11 +7223,30 @@ AST_MATCHER(OMPDefaultClause, isNoneKind) {
 ///   #pragma omp parallel
 ///   #pragma omp parallel default(none)
 ///   #pragma omp parallel default(shared)
+///   #pragma omp parallel default(firstprivate)
 /// \endcode
 ///
 /// ``ompDefaultClause(isSharedKind())`` matches only ``default(shared)``.
 AST_MATCHER(OMPDefaultClause, isSharedKind) {
   return Node.getDefaultKind() == llvm::omp::OMP_DEFAULT_shared;
+}
+
+/// Matches if the OpenMP ``default`` clause has ``firstprivate`` kind
+/// specified.
+///
+/// Given
+///
+/// \code
+///   #pragma omp parallel
+///   #pragma omp parallel default(none)
+///   #pragma omp parallel default(shared)
+///   #pragma omp parallel default(firstprivate)
+/// \endcode
+///
+/// ``ompDefaultClause(isFirstPrivateKind())`` matches only
+/// ``default(firstprivate)``.
+AST_MATCHER(OMPDefaultClause, isFirstPrivateKind) {
+  return Node.getDefaultKind() == llvm::omp::OMP_DEFAULT_firstprivate;
 }
 
 /// Matches if the OpenMP directive is allowed to contain the specified OpenMP

@@ -49,8 +49,6 @@ static unsigned getRefSize(const DWARFYAML::Unit &Unit) {
 template <typename T> Error DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
   for (auto &Unit : DebugInfo.CompileUnits) {
     onStartCompileUnit(Unit);
-    if (Unit.Entries.empty())
-      continue;
 
     for (auto &Entry : Unit.Entries) {
       onStartDIE(Unit, Entry);
@@ -116,6 +114,16 @@ template <typename T> Error DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
                                 ""));
             break;
           }
+          case dwarf::DW_FORM_strx:
+          case dwarf::DW_FORM_addrx:
+          case dwarf::DW_FORM_rnglistx:
+          case dwarf::DW_FORM_loclistx:
+          case dwarf::DW_FORM_udata:
+          case dwarf::DW_FORM_ref_udata:
+          case dwarf::DW_FORM_GNU_addr_index:
+          case dwarf::DW_FORM_GNU_str_index:
+            onValue((uint64_t)FormVal->Value, /*LEB=*/true);
+            break;
           case dwarf::DW_FORM_data1:
           case dwarf::DW_FORM_ref1:
           case dwarf::DW_FORM_flag:
@@ -139,14 +147,11 @@ template <typename T> Error DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
           case dwarf::DW_FORM_data8:
           case dwarf::DW_FORM_ref8:
           case dwarf::DW_FORM_ref_sup8:
+          case dwarf::DW_FORM_ref_sig8:
             onValue((uint64_t)FormVal->Value);
             break;
           case dwarf::DW_FORM_sdata:
             onValue((int64_t)FormVal->Value, true);
-            break;
-          case dwarf::DW_FORM_udata:
-          case dwarf::DW_FORM_ref_udata:
-            onValue((uint64_t)FormVal->Value, true);
             break;
           case dwarf::DW_FORM_string:
             onValue(FormVal->CStr);
@@ -164,13 +169,6 @@ template <typename T> Error DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
           case dwarf::DW_FORM_line_strp:
           case dwarf::DW_FORM_strp_sup:
             onVariableSizeValue(FormVal->Value, getOffsetSize(Unit));
-            break;
-          case dwarf::DW_FORM_ref_sig8:
-            onValue((uint64_t)FormVal->Value);
-            break;
-          case dwarf::DW_FORM_GNU_addr_index:
-          case dwarf::DW_FORM_GNU_str_index:
-            onValue((uint64_t)FormVal->Value, true);
             break;
           default:
             break;

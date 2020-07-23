@@ -631,7 +631,7 @@ body: |
     ; GFX7: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX7: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1020, implicit $exec
-    ; GFX7: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_I32_e64 [[COPY1]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX7: %3:vgpr_32, dead %6:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY1]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX7: $m0 = S_MOV_B32 -1
     ; GFX7: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
     ; GFX7: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0

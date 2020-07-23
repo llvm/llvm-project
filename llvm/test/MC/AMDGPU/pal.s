@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple amdgcn--amdpal -mcpu=kaveri -show-encoding %s | FileCheck %s --check-prefix=ASM
-// RUN: llvm-mc -filetype=obj -triple amdgcn--amdpal -mcpu=kaveri -show-encoding %s | llvm-readobj --symbols -S --sd | FileCheck %s --check-prefix=ELF
+// RUN: llvm-mc -filetype=obj -triple amdgcn--amdpal -mcpu=kaveri -show-encoding %s | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
 
 .amd_amdgpu_pal_metadata 0x12345678, 0xfedcba98, 0x2468ace0, 0xfdb97531
 // ASM: .amd_amdgpu_pal_metadata 0x12345678,0xfedcba98,0x2468ace0,0xfdb97531

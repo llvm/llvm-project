@@ -52,6 +52,7 @@ static_library("profile") {
     "InstrProfilingUtil.c",
     "InstrProfilingUtil.h",
     "InstrProfilingValue.c",
+    "InstrProfilingVersionVar.c",
     "InstrProfilingWriter.c",
   ]
   if (current_os == "win") {

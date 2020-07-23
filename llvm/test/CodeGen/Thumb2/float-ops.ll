@@ -278,8 +278,10 @@ define double @select_d(double %a, double %b, i1 %c) {
 ; CHECK-LABEL: select_d:
 ; NONE: ldr{{(.w)?}}     [[REG:r[0-9]+]], [sp]
 ; NONE: ands    [[REG]], [[REG]], #1
-; NONE-DAG: moveq   r0, r2
-; NONE-DAG: moveq   r1, r3
+; NOREGS-DAG: moveq   r0, r2
+; NOREGS-DAG: moveq   r1, r3
+; ONLYREGS-DAG: csel   r0, r0, r2
+; ONLYREGS-DAG: csel   r1, r1, r3
 ; SP: ands r0, r0, #1
 ; SP-DAG: vmov [[ALO:r[0-9]+]], [[AHI:r[0-9]+]], d0
 ; SP-DAG: vmov [[BLO:r[0-9]+]], [[BHI:r[0-9]+]], d1

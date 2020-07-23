@@ -1,8 +1,8 @@
 ; The purpose of this test is to verify that various module level assembly
 ; constructs work.
 
-; RUN: llc -filetype=obj -mtriple i686-pc-win32 %s -o - | llvm-readobj -S --sd | FileCheck %s
-; RUN: llc -filetype=obj -mtriple x86_64-pc-win32 %s -o - | llvm-readobj -S --sd | FileCheck %s
+; RUN: llc -filetype=obj -mtriple i686-pc-win32 %s -o - | llvm-readobj -S --sd - | FileCheck %s
+; RUN: llc -filetype=obj -mtriple x86_64-pc-win32 %s -o - | llvm-readobj -S --sd - | FileCheck %s
 
 module asm ".text"
 module asm "_foo:"

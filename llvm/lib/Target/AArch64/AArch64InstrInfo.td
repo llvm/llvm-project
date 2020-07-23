@@ -556,6 +556,8 @@ def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
 
 def AArch64srhadd   : SDNode<"AArch64ISD::SRHADD", SDT_AArch64binvec>;
 def AArch64urhadd   : SDNode<"AArch64ISD::URHADD", SDT_AArch64binvec>;
+def AArch64shadd   : SDNode<"AArch64ISD::SHADD", SDT_AArch64binvec>;
+def AArch64uhadd   : SDNode<"AArch64ISD::UHADD", SDT_AArch64binvec>;
 
 def SDT_AArch64SETTAG : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def AArch64stg : SDNode<"AArch64ISD::STG", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
@@ -4064,7 +4066,7 @@ defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (int_aarch64_neon_sabd node:$MHS, node:$RHS))> >;
 defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", int_aarch64_neon_sabd>;
-defm SHADD    : SIMDThreeSameVectorBHS<0,0b00000,"shadd", int_aarch64_neon_shadd>;
+defm SHADD    : SIMDThreeSameVectorBHS<0,0b00000,"shadd", AArch64shadd>;
 defm SHSUB    : SIMDThreeSameVectorBHS<0,0b00100,"shsub", int_aarch64_neon_shsub>;
 defm SMAXP    : SIMDThreeSameVectorBHS<0,0b10100,"smaxp", int_aarch64_neon_smaxp>;
 defm SMAX     : SIMDThreeSameVectorBHS<0,0b01100,"smax", smax>;
@@ -4083,7 +4085,7 @@ defm SUB      : SIMDThreeSameVector<1,0b10000,"sub", sub>;
 defm UABA     : SIMDThreeSameVectorBHSTied<1, 0b01111, "uaba",
       TriOpFrag<(add node:$LHS, (int_aarch64_neon_uabd node:$MHS, node:$RHS))> >;
 defm UABD     : SIMDThreeSameVectorBHS<1,0b01110,"uabd", int_aarch64_neon_uabd>;
-defm UHADD    : SIMDThreeSameVectorBHS<1,0b00000,"uhadd", int_aarch64_neon_uhadd>;
+defm UHADD    : SIMDThreeSameVectorBHS<1,0b00000,"uhadd", AArch64uhadd>;
 defm UHSUB    : SIMDThreeSameVectorBHS<1,0b00100,"uhsub", int_aarch64_neon_uhsub>;
 defm UMAXP    : SIMDThreeSameVectorBHS<1,0b10100,"umaxp", int_aarch64_neon_umaxp>;
 defm UMAX     : SIMDThreeSameVectorBHS<1,0b01100,"umax", umax>;
@@ -6663,7 +6665,7 @@ def : Pat<(i32 (trunc GPR64sp:$src)),
 
 // __builtin_trap() uses the BRK instruction on AArch64.
 def : Pat<(trap), (BRK 1)>;
-def : Pat<(debugtrap), (BRK 0xF000)>, Requires<[IsWindows]>;
+def : Pat<(debugtrap), (BRK 0xF000)>;
 
 // Multiply high patterns which multiply the lower subvector using smull/umull
 // and the upper subvector with smull2/umull2. Then shuffle the high the high

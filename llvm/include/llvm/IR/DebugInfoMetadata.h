@@ -942,13 +942,14 @@ class DICompositeType : public DIType {
           DINodeArray Elements, unsigned RuntimeLang, DIType *VTableHolder,
           DITemplateParameterArray TemplateParams, StringRef Identifier,
           DIDerivedType *Discriminator, Metadata *DataLocation,
-          StorageType Storage, bool ShouldCreate = true) {
+          Metadata *Associated, Metadata *Allocated, StorageType Storage,
+          bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
                    Flags, Elements.get(), RuntimeLang, VTableHolder,
                    TemplateParams.get(),
                    getCanonicalMDString(Context, Identifier), Discriminator,
-                   DataLocation, Storage, ShouldCreate);
+                   DataLocation, Associated, Allocated, Storage, ShouldCreate);
   }
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
@@ -957,15 +958,16 @@ class DICompositeType : public DIType {
           DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
           Metadata *VTableHolder, Metadata *TemplateParams,
           MDString *Identifier, Metadata *Discriminator, Metadata *DataLocation,
-          StorageType Storage, bool ShouldCreate = true);
+          Metadata *Associated, Metadata *Allocated, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDICompositeType cloneImpl() const {
-    return getTemporary(getContext(), getTag(), getName(), getFile(), getLine(),
-                        getScope(), getBaseType(), getSizeInBits(),
-                        getAlignInBits(), getOffsetInBits(), getFlags(),
-                        getElements(), getRuntimeLang(), getVTableHolder(),
-                        getTemplateParams(), getIdentifier(),
-                        getDiscriminator(), getRawDataLocation());
+    return getTemporary(
+        getContext(), getTag(), getName(), getFile(), getLine(), getScope(),
+        getBaseType(), getSizeInBits(), getAlignInBits(), getOffsetInBits(),
+        getFlags(), getElements(), getRuntimeLang(), getVTableHolder(),
+        getTemplateParams(), getIdentifier(), getDiscriminator(),
+        getRawDataLocation(), getRawAssociated(), getRawAllocated());
   }
 
 public:
@@ -977,10 +979,11 @@ public:
        DINodeArray Elements, unsigned RuntimeLang, DIType *VTableHolder,
        DITemplateParameterArray TemplateParams = nullptr,
        StringRef Identifier = "", DIDerivedType *Discriminator = nullptr,
-       Metadata *DataLocation = nullptr),
+       Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
+       Metadata *Allocated = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
-       Identifier, Discriminator, DataLocation))
+       Identifier, Discriminator, DataLocation, Associated, Allocated))
   DEFINE_MDNODE_GET(
       DICompositeType,
       (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
@@ -988,10 +991,11 @@ public:
        uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
        Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
        Metadata *TemplateParams = nullptr, MDString *Identifier = nullptr,
-       Metadata *Discriminator = nullptr, Metadata *DataLocation = nullptr),
+       Metadata *Discriminator = nullptr, Metadata *DataLocation = nullptr,
+       Metadata *Associated = nullptr, Metadata *Allocated = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
-       Identifier, Discriminator, DataLocation))
+       Identifier, Discriminator, DataLocation, Associated, Allocated))
 
   TempDICompositeType clone() const { return cloneImpl(); }
 
@@ -1009,7 +1013,7 @@ public:
              uint64_t OffsetInBits, DIFlags Flags, Metadata *Elements,
              unsigned RuntimeLang, Metadata *VTableHolder,
              Metadata *TemplateParams, Metadata *Discriminator,
-             Metadata *DataLocation);
+             Metadata *DataLocation, Metadata *Associated, Metadata *Allocated);
   static DICompositeType *getODRTypeIfExists(LLVMContext &Context,
                                              MDString &Identifier);
 
@@ -1022,14 +1026,13 @@ public:
   ///
   /// If not \a LLVMContext::isODRUniquingDebugTypes(), this function returns
   /// nullptr.
-  static DICompositeType *
-  buildODRType(LLVMContext &Context, MDString &Identifier, unsigned Tag,
-               MDString *Name, Metadata *File, unsigned Line, Metadata *Scope,
-               Metadata *BaseType, uint64_t SizeInBits, uint32_t AlignInBits,
-               uint64_t OffsetInBits, DIFlags Flags, Metadata *Elements,
-               unsigned RuntimeLang, Metadata *VTableHolder,
-               Metadata *TemplateParams, Metadata *Discriminator,
-               Metadata *DataLocation);
+  static DICompositeType *buildODRType(
+      LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
+      Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
+      uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
+      DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
+      Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
+      Metadata *DataLocation, Metadata *Associated, Metadata *Allocated);
 
   DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
   DINodeArray getElements() const {
@@ -1057,6 +1060,20 @@ public:
   }
   DIExpression *getDataLocationExp() const {
     return dyn_cast_or_null<DIExpression>(getRawDataLocation());
+  }
+  Metadata *getRawAssociated() const { return getOperand(10); }
+  DIVariable *getAssociated() const {
+    return dyn_cast_or_null<DIVariable>(getRawAssociated());
+  }
+  DIExpression *getAssociatedExp() const {
+    return dyn_cast_or_null<DIExpression>(getRawAssociated());
+  }
+  Metadata *getRawAllocated() const { return getOperand(11); }
+  DIVariable *getAllocated() const {
+    return dyn_cast_or_null<DIVariable>(getRawAllocated());
+  }
+  DIExpression *getAllocatedExp() const {
+    return dyn_cast_or_null<DIExpression>(getRawAllocated());
   }
 
   /// Replace operands.

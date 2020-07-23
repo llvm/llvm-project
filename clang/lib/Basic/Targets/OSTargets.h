@@ -821,7 +821,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyOSTargetInfo
     : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const {
+                    MacroBuilder &Builder) const override {
     // A common platform macro.
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");

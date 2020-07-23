@@ -19,6 +19,7 @@ def CopyOpInterface : OpInterface<"CopyOpInterface"> {
   let description = [{
     A copy-like operation is one that copies from source value to target value.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<

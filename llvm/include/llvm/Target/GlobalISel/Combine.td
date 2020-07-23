@@ -125,6 +125,12 @@ def extending_loads : GICombineRule<
   (apply [{ Helper.applyCombineExtendingLoads(*${root}, ${matchinfo}); }])>;
 def combines_for_extload: GICombineGroup<[extending_loads]>;
 
+def sext_already_extended : GICombineRule<
+  (defs root:$d),
+  (match (wip_match_opcode G_SEXT_INREG):$d,
+         [{ return Helper.matchSextAlreadyExtended(*${d}); }]),
+  (apply [{ Helper.applySextAlreadyExtended(*${d}); }])>;
+
 def combine_indexed_load_store : GICombineRule<
   (defs root:$root, indexed_load_store_matchdata:$matchinfo),
   (match (wip_match_opcode G_LOAD, G_SEXTLOAD, G_ZEXTLOAD, G_STORE):$root,

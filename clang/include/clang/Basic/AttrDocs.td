@@ -4855,6 +4855,43 @@ close the handle. It is also assumed to require an open handle to work with.
   }];
 }
 
+def ArmSveVectorBitsDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``arm_sve_vector_bits(N)`` attribute is defined by the Arm C Language
+Extensions (ACLE) for SVE. It is used to define fixed-length (VLST) variants of
+sizeless types (VLAT).
+
+For example:
+
+.. code-block:: c
+
+  #include <arm_sve.h>
+
+  #if __ARM_FEATURE_SVE_BITS==512
+  typedef svint32_t fixed_svint32_t __attribute__((arm_sve_vector_bits(512)));
+  #endif
+
+Creates a type ``fixed_svint32_t`` that is a fixed-length variant of
+``svint32_t`` that contains exactly 512-bits. Unlike ``svint32_t``, this type
+can be used in globals, structs, unions, and arrays, all of which are
+unsupported for sizeless types.
+
+The attribute can be attached to a single SVE vector (such as ``svint32_t``) or
+to the SVE predicate type ``svbool_t``, this excludes tuple types such as
+``svint32x4_t``. The behavior of the attribute is undefined unless
+``N==__ARM_FEATURE_SVE_BITS``, the implementation defined feature macro that is
+enabled under the ``-msve-vector-bits`` flag.
+
+NOTE: This feature is currently WIP, the ``-msve-vector-bits=`` flag defines
+the ``__ARM_FEATURE_SVE_BITS_EXPERIMENTAL`` macro. This feature is complete
+when experimental is dropped.
+
+For more information See `Arm C Language Extensions for SVE
+<https://developer.arm.com/documentation/100987/latest>`_ for more information.
+}];
+}
+
 def ArmMveStrictPolymorphismDocs : Documentation {
     let Category = DocCatType;
     let Content = [{

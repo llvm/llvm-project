@@ -629,8 +629,7 @@ Status ProcessGDBRemote::WillAttachToProcessWithName(const char *process_name,
   return WillLaunchOrAttach();
 }
 
-Status ProcessGDBRemote::DoConnectRemote(Stream *strm,
-                                         llvm::StringRef remote_url) {
+Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   Status error(WillLaunchOrAttach());
 

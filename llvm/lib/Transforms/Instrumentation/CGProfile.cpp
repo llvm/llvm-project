@@ -18,7 +18,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Instrumentation.h"
 
 #include <array>

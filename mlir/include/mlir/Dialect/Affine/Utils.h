@@ -15,8 +15,15 @@
 
 namespace mlir {
 
+class AffineForOp;
 class AffineIfOp;
+class AffineParallelOp;
 struct LogicalResult;
+
+/// Replaces parallel affine.for op with 1-d affine.parallel op.
+/// mlir::isLoopParallel detect the parallel affine.for ops.
+/// There is no cost model currently used to drive this parallelization.
+void affineParallelize(AffineForOp forOp);
 
 /// Hoists out affine.if/else to as high as possible, i.e., past all invariant
 /// affine.fors/parallel's. Returns success if any hoisting happened; folded` is

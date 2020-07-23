@@ -163,7 +163,7 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
 /// if it's not already in there.  Stop predecessor traversal when we reach
 /// StopBlock.
 static void addBlockAndPredsToSet(BasicBlock *InputBB, BasicBlock *StopBlock,
-                                  std::set<BasicBlock*> &Blocks) {
+                                  SmallPtrSetImpl<BasicBlock *> &Blocks) {
   SmallVector<BasicBlock *, 8> Worklist;
   Worklist.push_back(InputBB);
   do {
@@ -171,8 +171,7 @@ static void addBlockAndPredsToSet(BasicBlock *InputBB, BasicBlock *StopBlock,
     if (Blocks.insert(BB).second && BB != StopBlock)
       // If BB is not already processed and it is not a stop block then
       // insert its predecessor in the work list
-      for (pred_iterator I = pred_begin(BB), E = pred_end(BB); I != E; ++I) {
-        BasicBlock *WBB = *I;
+      for (BasicBlock *WBB : predecessors(BB)) {
         Worklist.push_back(WBB);
       }
   } while (!Worklist.empty());
@@ -308,9 +307,8 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
 
   // Determine which blocks should stay in L and which should be moved out to
   // the Outer loop now.
-  std::set<BasicBlock*> BlocksInL;
-  for (pred_iterator PI=pred_begin(Header), E = pred_end(Header); PI!=E; ++PI) {
-    BasicBlock *P = *PI;
+  SmallPtrSet<BasicBlock *, 4> BlocksInL;
+  for (BasicBlock *P : predecessors(Header)) {
     if (DT->dominates(Header, P))
       addBlockAndPredsToSet(P, Header, BlocksInL);
   }

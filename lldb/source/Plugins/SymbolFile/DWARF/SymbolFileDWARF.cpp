@@ -1036,18 +1036,20 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   // FIXME: Rather than parsing the whole line table and then copying it over
   // into LLDB, we should explore using a callback to populate the line table
   // while we parse to reduce memory usage.
-  std::unique_ptr<LineSequence> sequence =
-      LineTable::CreateLineSequenceContainer();
   std::vector<std::unique_ptr<LineSequence>> sequences;
-  for (auto &row : line_table->Rows) {
-    LineTable::AppendLineEntryToSequence(
-        sequence.get(), row.Address.Address, row.Line, row.Column, row.File,
-        row.IsStmt, row.BasicBlock, row.PrologueEnd, row.EpilogueBegin,
-        row.EndSequence);
-    if (row.EndSequence) {
-      sequences.push_back(std::move(sequence));
-      sequence = LineTable::CreateLineSequenceContainer();
+  // The Sequences view contains only valid line sequences. Don't iterate over
+  // the Rows directly.
+  for (const llvm::DWARFDebugLine::Sequence &seq : line_table->Sequences) {
+    std::unique_ptr<LineSequence> sequence =
+        LineTable::CreateLineSequenceContainer();
+    for (unsigned idx = seq.FirstRowIndex; idx < seq.LastRowIndex; ++idx) {
+      const llvm::DWARFDebugLine::Row &row = line_table->Rows[idx];
+      LineTable::AppendLineEntryToSequence(
+          sequence.get(), row.Address.Address, row.Line, row.Column, row.File,
+          row.IsStmt, row.BasicBlock, row.PrologueEnd, row.EpilogueBegin,
+          row.EndSequence);
     }
+    sequences.push_back(std::move(sequence));
   }
 
   std::unique_ptr<LineTable> line_table_up =

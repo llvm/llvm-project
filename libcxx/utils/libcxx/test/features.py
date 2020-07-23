@@ -13,7 +13,7 @@ _isClang      = lambda cfg: '__clang__' in compilerMacros(cfg) and '__apple_buil
 _isAppleClang = lambda cfg: '__apple_build_version__' in compilerMacros(cfg)
 _isGCC        = lambda cfg: '__GNUC__' in compilerMacros(cfg) and '__clang__' not in compilerMacros(cfg)
 
-features = [
+DEFAULT_FEATURES = [
   Feature(name='fcoroutines-ts', compileFlag='-fcoroutines-ts',
           when=lambda cfg: hasCompileFlag(cfg, '-fcoroutines-ts') and
                            featureTestMacros(cfg, flags='-fcoroutines-ts').get('__cpp_coroutines', 0) >= 201703),
@@ -76,7 +76,7 @@ macros = {
   '_LIBCPP_ABI_UNSTABLE': 'libcpp-abi-unstable'
 }
 for macro, feature in macros.items():
-  features += [
+  DEFAULT_FEATURES += [
     Feature(name=lambda cfg, m=macro, f=feature: f + (
               '={}'.format(compilerMacros(cfg)[m]) if compilerMacros(cfg)[m] else ''
             ),
@@ -104,14 +104,14 @@ locales = {
   'cs_CZ.ISO8859-2': ['cs_CZ.ISO8859-2', 'Czech_Czech Republic.1250']
 }
 for locale, alts in locales.items():
-  features += [
+  DEFAULT_FEATURES += [
     Feature(name='locale.{}'.format(locale),
             when=lambda cfg: any(hasLocale(cfg, alt) for alt in alts))
   ]
 
 
 # Add features representing the platform name: darwin, linux, windows, etc...
-features += [
+DEFAULT_FEATURES += [
   Feature(name='darwin', when=lambda cfg: '__APPLE__' in compilerMacros(cfg)),
   Feature(name='windows', when=lambda cfg: '_WIN32' in compilerMacros(cfg)),
   Feature(name='linux', when=lambda cfg: '__linux__' in compilerMacros(cfg)),

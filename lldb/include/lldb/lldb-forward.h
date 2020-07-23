@@ -402,6 +402,8 @@ typedef std::weak_ptr<lldb_private::StackFrame> StackFrameWP;
 typedef std::shared_ptr<lldb_private::StackFrameList> StackFrameListSP;
 typedef std::shared_ptr<lldb_private::StackFrameRecognizer>
     StackFrameRecognizerSP;
+typedef std::unique_ptr<lldb_private::StackFrameRecognizerManager>
+    StackFrameRecognizerManagerUP;
 typedef std::shared_ptr<lldb_private::StopInfo> StopInfoSP;
 typedef std::shared_ptr<lldb_private::StoppointLocation> StoppointLocationSP;
 typedef std::shared_ptr<lldb_private::Stream> StreamSP;
@@ -430,6 +432,7 @@ typedef std::shared_ptr<lldb_private::Thread> ThreadSP;
 typedef std::weak_ptr<lldb_private::Thread> ThreadWP;
 typedef std::shared_ptr<lldb_private::ThreadCollection> ThreadCollectionSP;
 typedef std::shared_ptr<lldb_private::ThreadPlan> ThreadPlanSP;
+typedef std::weak_ptr<lldb_private::ThreadPlan> ThreadPlanWP;
 typedef std::shared_ptr<lldb_private::ThreadPlanTracer> ThreadPlanTracerSP;
 typedef std::shared_ptr<lldb_private::TraceOptions> TraceOptionsSP;
 typedef std::shared_ptr<lldb_private::Type> TypeSP;

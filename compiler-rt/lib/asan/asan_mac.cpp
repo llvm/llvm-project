@@ -55,46 +55,8 @@ void *AsanDoesNotSupportStaticLinkage() {
 }
 
 uptr FindDynamicShadowStart() {
-  uptr granularity = GetMmapGranularity();
-  uptr alignment = 8 * granularity;
-  uptr left_padding = granularity;
-  uptr space_size = kHighShadowEnd + left_padding;
-
-  uptr largest_gap_found = 0;
-  uptr max_occupied_addr = 0;
-  VReport(2, "FindDynamicShadowStart, space_size = %p\n", space_size);
-  uptr shadow_start =
-      FindAvailableMemoryRange(space_size, alignment, granularity,
-                               &largest_gap_found, &max_occupied_addr);
-  // If the shadow doesn't fit, restrict the address space to make it fit.
-  if (shadow_start == 0) {
-    VReport(
-        2,
-        "Shadow doesn't fit, largest_gap_found = %p, max_occupied_addr = %p\n",
-        largest_gap_found, max_occupied_addr);
-    uptr new_max_vm = RoundDownTo(largest_gap_found << SHADOW_SCALE, alignment);
-    if (new_max_vm < max_occupied_addr) {
-      Report("Unable to find a memory range for dynamic shadow.\n");
-      Report(
-          "space_size = %p, largest_gap_found = %p, max_occupied_addr = %p, "
-          "new_max_vm = %p\n",
-          space_size, largest_gap_found, max_occupied_addr, new_max_vm);
-      CHECK(0 && "cannot place shadow");
-    }
-    RestrictMemoryToMaxAddress(new_max_vm);
-    kHighMemEnd = new_max_vm - 1;
-    space_size = kHighShadowEnd + left_padding;
-    VReport(2, "FindDynamicShadowStart, space_size = %p\n", space_size);
-    shadow_start = FindAvailableMemoryRange(space_size, alignment, granularity,
-                                            nullptr, nullptr);
-    if (shadow_start == 0) {
-      Report("Unable to find a memory range after restricting VM.\n");
-      CHECK(0 && "cannot place shadow after restricting vm");
-    }
-  }
-  CHECK_NE((uptr)0, shadow_start);
-  CHECK(IsAligned(shadow_start, alignment));
-  return shadow_start;
+  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), SHADOW_SCALE,
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
 // No-op. Mac does not support static linkage anyway.

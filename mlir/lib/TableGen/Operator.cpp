@@ -336,7 +336,7 @@ void tblgen::Operator::populateTypeInferenceInfo(
             llvm::formatv("{0}::Trait", inferTypeOpInterface).str()))
       return;
     if (const auto *opTrait = dyn_cast<tblgen::InterfaceOpTrait>(&trait))
-      if (opTrait->getTrait().startswith(inferTypeOpInterface))
+      if (&opTrait->getDef() == inferTrait)
         return;
 
     if (!def.isSubClassOf("AllTypesMatch"))

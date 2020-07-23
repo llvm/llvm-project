@@ -215,19 +215,36 @@ def LLVM_FDivOp : LLVM_ArithmeticOp<"fdiv", "CreateFDiv">;
 def LLVM_FRemOp : LLVM_ArithmeticOp<"frem", "CreateFRem">;
 def LLVM_FNegOp : LLVM_UnaryArithmeticOp<"fneg", "CreateFNeg">;
 
-// Memory-related operations.
-def LLVM_AllocaOp :
-    LLVM_OneResultOp<"alloca">,
-    Arguments<(ins LLVM_Type:$arraySize, OptionalAttr<I64Attr>:$alignment)> {
-  string llvmBuilder = [{
-    auto *alloca = builder.CreateAlloca(
-      $_resultType->getPointerElementType(), $arraySize);
+// Common code definition that is used to verify and set the alignment attribute
+// of LLVM ops that accept such an attribute.
+class MemoryOpWithAlignmentBase {
+  code alignmentVerifierCode = [{
+    if (alignment().hasValue()) {
+      auto align = alignment().getValue().getSExtValue();
+      if (align < 0)
+        return emitOpError("expected positive alignment");
+    }
+    return success();
+  }];
+  code setAlignmentCode = [{
     if ($alignment.hasValue()) {
       auto align = $alignment.getValue().getZExtValue();
       if (align != 0)
-        alloca->setAlignment(llvm::Align(align));
+        inst->setAlignment(llvm::Align(align));
     }
-    $res = alloca;
+  }];
+}
+
+// Memory-related operations.
+def LLVM_AllocaOp :
+    MemoryOpWithAlignmentBase,
+    LLVM_OneResultOp<"alloca">,
+    Arguments<(ins LLVM_Type:$arraySize, OptionalAttr<I64Attr>:$alignment)> {
+  string llvmBuilder = [{
+    auto *inst = builder.CreateAlloca(
+      $_resultType->getPointerElementType(), $arraySize);
+    }] # setAlignmentCode # [{
+    $res = inst;
   }];
   let builders = [OpBuilder<
     "OpBuilder &b, OperationState &result, Type resultType, Value arraySize, "
@@ -239,14 +256,7 @@ def LLVM_AllocaOp :
   }]>];
   let parser = [{ return parseAllocaOp(parser, result); }];
   let printer = [{ printAllocaOp(p, *this); }];
-  let verifier = [{
-    if (alignment().hasValue()) {
-      auto align = alignment().getValue().getSExtValue();
-      if (align < 0)
-        return emitOpError("expected positive alignment");
-    }
-    return success();
-  }];
+  let verifier = alignmentVerifierCode;
 }
 def LLVM_GEPOp : LLVM_OneResultOp<"getelementptr", [NoSideEffect]>,
                  Arguments<(ins LLVM_Type:$base, Variadic<LLVM_Type>:$indices)>,
@@ -255,22 +265,56 @@ def LLVM_GEPOp : LLVM_OneResultOp<"getelementptr", [NoSideEffect]>,
     $base `[` $indices `]` attr-dict `:` functional-type(operands, results)
   }];
 }
-def LLVM_LoadOp : LLVM_OneResultOp<"load">, Arguments<(ins LLVM_Type:$addr)>,
-                  LLVM_Builder<"$res = builder.CreateLoad($addr);"> {
+def LLVM_LoadOp :
+    MemoryOpWithAlignmentBase,
+    LLVM_OneResultOp<"load">,
+    Arguments<(ins LLVM_Type:$addr, OptionalAttr<I64Attr>:$alignment)> {
+  string llvmBuilder = [{
+    auto *inst = builder.CreateLoad($addr);
+  }] # setAlignmentCode # [{
+    $res = inst;
+  }];
   let builders = [OpBuilder<
-    "OpBuilder &b, OperationState &result, Value addr",
+    "OpBuilder &b, OperationState &result, Value addr, unsigned alignment = 0",
     [{
       auto type = addr.getType().cast<LLVM::LLVMType>().getPointerElementTy();
-      build(b, result, type, addr);
+      build(b, result, type, addr, alignment);
+    }]>,
+    OpBuilder<
+    "OpBuilder &b, OperationState &result, Type t, Value addr, "
+    "unsigned alignment = 0",
+    [{
+      if (alignment == 0)
+        return build(b, result, t, addr, IntegerAttr());
+      build(b, result, t, addr, b.getI64IntegerAttr(alignment));
     }]>];
   let parser = [{ return parseLoadOp(parser, result); }];
   let printer = [{ printLoadOp(p, *this); }];
+  let verifier = alignmentVerifierCode;
 }
-def LLVM_StoreOp : LLVM_ZeroResultOp<"store">,
-                   Arguments<(ins LLVM_Type:$value, LLVM_Type:$addr)>,
-                   LLVM_Builder<"builder.CreateStore($value, $addr);"> {
+def LLVM_StoreOp :
+    MemoryOpWithAlignmentBase,
+    LLVM_ZeroResultOp<"store">,
+    Arguments<(ins LLVM_Type:$value,
+                   LLVM_Type:$addr,
+                   OptionalAttr<I64Attr>:$alignment)> {
+  string llvmBuilder = [{
+    auto *inst = builder.CreateStore($value, $addr);
+  }] # setAlignmentCode;
+  let builders = [
+    OpBuilder<
+    "OpBuilder &b, OperationState &result, Value value, Value addr, "
+    "unsigned alignment = 0",
+    [{
+      if (alignment == 0)
+        return build(b, result, ArrayRef<Type>{}, value, addr, IntegerAttr());
+      build(b, result, ArrayRef<Type>{}, value, addr, 
+            b.getI64IntegerAttr(alignment));
+    }]
+  >];
   let parser = [{ return parseStoreOp(parser, result); }];
   let printer = [{ printStoreOp(p, *this); }];
+  let verifier = alignmentVerifierCode;
 }
 
 // Casts.

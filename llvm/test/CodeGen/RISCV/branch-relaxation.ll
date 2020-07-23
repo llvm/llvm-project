@@ -11,7 +11,7 @@ define void @relax_bcc(i1 %a) nounwind {
 ; CHECK-NEXT:    j .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: # %iftrue
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    .space 4096
+; CHECK-NEXT:    .zero 4096
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  .LBB0_2: # %tail
 ; CHECK-NEXT:    ret
@@ -38,7 +38,7 @@ define i32 @relax_jal(i1 %a) nounwind {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    .space 1048576
+; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    addi a0, zero, 1
 ; CHECK-NEXT:    ret

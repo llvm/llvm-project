@@ -22,7 +22,7 @@
 #ifndef HEADER
 #define HEADER
 
-long long get_val() { return 0; }
+long long get_val() { extern void mayThrow(); mayThrow(); return 0; }
 double *g_ptr;
 
 // CHECK-LABEL: define {{.*void}} @{{.*}}simple{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
@@ -801,7 +801,7 @@ for (int i = 0; i < 10; ++i);
 // OMP50-DAG: ![[NOVM]] = !{!"llvm.loop.vectorize.enable", i1 false}
 
 // TERM_DEBUG-LABEL: bar
-int bar() {return 0;};
+int bar() { extern void mayThrow(); mayThrow(); return 0; };
 
 // TERM_DEBUG-LABEL: parallel_simd
 void parallel_simd(float *a) {

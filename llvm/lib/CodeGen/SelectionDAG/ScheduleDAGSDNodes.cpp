@@ -1034,7 +1034,29 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   }
 
   InsertPos = Emitter.getInsertPos();
-  return Emitter.getBlock();
+  // In some cases, DBG_VALUEs might be inserted after the first terminator,
+  // which results in an invalid MBB. If that happens, move the DBG_VALUEs
+  // before the first terminator.
+  MachineBasicBlock *InsertBB = Emitter.getBlock();
+  auto FirstTerm = InsertBB->getFirstTerminator();
+  if (FirstTerm != InsertBB->end()) {
+    assert(!FirstTerm->isDebugValue() &&
+           "first terminator cannot be a debug value");
+    for (MachineInstr &MI : make_early_inc_range(
+             make_range(std::next(FirstTerm), InsertBB->end()))) {
+      if (!MI.isDebugValue())
+        continue;
+
+      if (&MI == InsertPos)
+        InsertPos = std::prev(InsertPos->getIterator());
+
+      // The DBG_VALUE was referencing a value produced by a terminator. By
+      // moving the DBG_VALUE, the referenced value also needs invalidating.
+      MI.getOperand(0).ChangeToRegister(0, false);
+      MI.moveBefore(&*FirstTerm);
+    }
+  }
+  return InsertBB;
 }
 
 /// Return the basic block label.

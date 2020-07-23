@@ -435,7 +435,7 @@ bool ARMCallLowering::lowerFormalArguments(
   for (auto &Arg : F.args()) {
     if (!isSupportedType(DL, TLI, Arg.getType()))
       return false;
-    if (Arg.hasPassPointeeByValueAttr())
+    if (Arg.hasPassPointeeByValueCopyAttr())
       return false;
   }
 

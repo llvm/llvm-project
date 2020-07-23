@@ -168,6 +168,11 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
               And->getOperand(0).getReg())
           .addReg(ExecReg)
           .addReg(CCReg, getUndefRegState(CC->isUndef()), CC->getSubReg());
+  MachineOperand &AndSCC = And->getOperand(3);
+  assert(AndSCC.getReg() == AMDGPU::SCC);
+  MachineOperand &Andn2SCC = Andn2->getOperand(3);
+  assert(Andn2SCC.getReg() == AMDGPU::SCC);
+  Andn2SCC.setIsDead(AndSCC.isDead());
   And->eraseFromParent();
   LIS->InsertMachineInstrInMaps(*Andn2);
 

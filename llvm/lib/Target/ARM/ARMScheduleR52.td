@@ -787,8 +787,8 @@ def : InstRW<[R52Write2FPALU_F3, R52Read_F2, R52Read_F2], (instregex "(VAND|VBIC
 def : InstRW<[R52WriteFPALU_F3, R52Read_F2], (instregex "VBICi(v4i16|v2i32)")>;
 def : InstRW<[R52Write2FPALU_F3, R52Read_F2], (instregex "VBICi(v8i16|v4i32)")>;
 
-def : InstRW<[R52WriteFPALU_F3, R52Read_F1, R52Read_F2, R52Read_F2], (instregex "(VBIF|VBIT|VBSL)d")>;
-def : InstRW<[R52Write2FPALU_F3, R52Read_F1, R52Read_F2, R52Read_F2], (instregex "(VBIF|VBIT|VBSL)q")>;
+def : InstRW<[R52WriteFPALU_F3, R52Read_F1, R52Read_F2, R52Read_F2], (instregex "(VBIF|VBIT|VBSL|VBSP)d")>;
+def : InstRW<[R52Write2FPALU_F3, R52Read_F1, R52Read_F2, R52Read_F2], (instregex "(VBIF|VBIT|VBSL|VBSP)q")>;
 
 def : InstRW<[R52WriteFPALU_F3, R52Read_F1, R52Read_F1],
       (instregex "(VCEQ|VCGE|VCGT|VCLE|VCLT|VCLZ|VCMP|VCMPE|VCNT)")>;

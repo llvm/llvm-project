@@ -18,6 +18,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 using namespace llvm;
@@ -664,12 +665,13 @@ void MCObjectStreamer::emitGPRel64Value(const MCExpr *Value) {
   DF->getContents().resize(DF->getContents().size() + 8, 0);
 }
 
-bool MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                          const MCExpr *Expr, SMLoc Loc,
-                                          const MCSubtargetInfo &STI) {
+Optional<std::pair<bool, std::string>>
+MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                                     const MCExpr *Expr, SMLoc Loc,
+                                     const MCSubtargetInfo &STI) {
   Optional<MCFixupKind> MaybeKind = Assembler->getBackend().getFixupKind(Name);
   if (!MaybeKind.hasValue())
-    return true;
+    return std::make_pair(true, std::string("unknown relocation name"));
 
   MCFixupKind Kind = *MaybeKind;
 
@@ -680,27 +682,33 @@ bool MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
   MCDataFragment *DF = getOrCreateDataFragment(&STI);
   flushPendingLabels(DF, DF->getContents().size());
 
-  int64_t OffsetValue;
-  if (Offset.evaluateAsAbsolute(OffsetValue)) {
-    if (OffsetValue < 0)
-      llvm_unreachable(".reloc offset is negative");
-    DF->getFixups().push_back(MCFixup::create(OffsetValue, Expr, Kind, Loc));
-    return false;
+  MCValue OffsetVal;
+  if (!Offset.evaluateAsRelocatable(OffsetVal, nullptr, nullptr))
+    return std::make_pair(false,
+                          std::string(".reloc offset is not relocatable"));
+  if (OffsetVal.isAbsolute()) {
+    if (OffsetVal.getConstant() < 0)
+      return std::make_pair(false, std::string(".reloc offset is negative"));
+    DF->getFixups().push_back(
+        MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
+    return None;
   }
+  if (OffsetVal.getSymB())
+    return std::make_pair(false,
+                          std::string(".reloc offset is not representable"));
 
-  if (Offset.getKind() != llvm::MCExpr::SymbolRef)
-    llvm_unreachable(".reloc offset is not absolute nor a label");
-
-  const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(Offset);
+  const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*OffsetVal.getSymA());
   if (SRE.getSymbol().isDefined()) {
-    DF->getFixups().push_back(MCFixup::create(SRE.getSymbol().getOffset(),
-                                              Expr, Kind, Loc));
-    return false;
+    // FIXME SRE.getSymbol() may not be relative to DF.
+    DF->getFixups().push_back(
+        MCFixup::create(SRE.getSymbol().getOffset() + OffsetVal.getConstant(),
+                        Expr, Kind, Loc));
+    return None;
   }
 
   PendingFixups.emplace_back(&SRE.getSymbol(), DF,
-                                         MCFixup::create(-1, Expr, Kind, Loc));
-  return false;
+                             MCFixup::create(-1, Expr, Kind, Loc));
+  return None;
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,

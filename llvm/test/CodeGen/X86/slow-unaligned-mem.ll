@@ -3,8 +3,6 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium3      2>&1 | FileCheck %s --check-prefix=SLOW
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium3m     2>&1 | FileCheck %s --check-prefix=SLOW
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium-m     2>&1 | FileCheck %s --check-prefix=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium4      2>&1 | FileCheck %s --check-prefix=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium4m     2>&1 | FileCheck %s --check-prefix=SLOW
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=yonah         2>&1 | FileCheck %s --check-prefix=SLOW
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=prescott      2>&1 | FileCheck %s --check-prefix=SLOW
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=nocona        2>&1 | FileCheck %s --check-prefix=SLOW
@@ -13,6 +11,10 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bonnell       2>&1 | FileCheck %s --check-prefix=SLOW
 
 ; Intel chips with fast unaligned memory accesses
+
+; Marked fast because this is the default 32-bit mode CPU in clang.
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium4      2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium4m     2>&1 | FileCheck %s --check-prefix=FAST
 
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=silvermont     2>&1 | FileCheck %s --check-prefix=FAST
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=nehalem        2>&1 | FileCheck %s --check-prefix=FAST

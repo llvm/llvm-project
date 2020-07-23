@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=mipsel-unknown-linux -show-encoding \
 # RUN: -mattr=micromips | FileCheck %s -check-prefix=CHECK-FIXUP
 # RUN: llvm-mc %s -filetype=obj -triple=mipsel-unknown-linux \
-# RUN: -mattr=micromips | llvm-readobj -r \
+# RUN: -mattr=micromips | llvm-readobj -r - \
 # RUN: | FileCheck %s -check-prefix=CHECK-ELF
 #------------------------------------------------------------------------------
 # Check that the assembler can handle the documented syntax

@@ -11,8 +11,5 @@ executable("llvm-cfi-verify") {
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",
   ]
-  sources = [
-    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
-    "llvm-cfi-verify.cpp",
-  ]
+  sources = [ "llvm-cfi-verify.cpp" ]
 }

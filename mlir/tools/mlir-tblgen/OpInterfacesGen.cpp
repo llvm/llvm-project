@@ -150,11 +150,16 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
 static void emitInterfaceDef(Interface interface, StringRef valueType,
                              raw_ostream &os) {
   StringRef interfaceName = interface.getName();
+  StringRef cppNamespace = interface.getCppNamespace();
+  cppNamespace.consume_front("::");
 
   // Insert the method definitions.
   bool isOpInterface = isa<OpInterface>(interface);
   for (auto &method : interface.getMethods()) {
-    emitCPPType(method.getReturnType(), os) << interfaceName << "::";
+    emitCPPType(method.getReturnType(), os);
+    if (!cppNamespace.empty())
+      os << cppNamespace << "::";
+    os << interfaceName << "::";
     emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
                           /*addConst=*/!isOpInterface);
 
@@ -287,6 +292,11 @@ void InterfaceGenerator::emitTraitDecl(Interface &interface,
 }
 
 void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
+  for (StringRef ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
   StringRef interfaceName = interface.getName();
   auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
 
@@ -321,6 +331,9 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
     os << *extraDecls << "\n";
 
   os << "};\n";
+
+  for (StringRef ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
 }
 
 bool InterfaceGenerator::emitInterfaceDecls() {

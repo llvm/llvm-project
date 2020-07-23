@@ -1925,6 +1925,11 @@ public:
   bool isSizelessType() const;
   bool isSizelessBuiltinType() const;
 
+  /// Determines if this is a sizeless type supported by the
+  /// 'arm_sve_vector_bits' type attribute, which can be applied to a single
+  /// SVE vector or predicate, excluding tuple types such as svint32x4_t.
+  bool isVLSTBuiltinType() const;
+
   /// Types are partitioned into 3 broad categories (C99 6.2.5p1):
   /// object types, function types, and incomplete types.
 

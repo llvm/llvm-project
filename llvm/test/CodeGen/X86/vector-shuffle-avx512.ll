@@ -337,11 +337,15 @@ define <32 x i16> @test_mm512_mask_blend_epi16(<32 x i16> %A, <32 x i16> %W){
 ; SKX-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX-NEXT:    ret{{[l|q]}}
 ;
-; KNL-LABEL: test_mm512_mask_blend_epi16:
-; KNL:       # %bb.0: # %entry
-; KNL-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535]
-; KNL-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
-; KNL-NEXT:    ret{{[l|q]}}
+; KNL64-LABEL: test_mm512_mask_blend_epi16:
+; KNL64:       # %bb.0: # %entry
+; KNL64-NEXT:    vpternlogd $216, {{.*}}(%rip){1to16}, %zmm1, %zmm0
+; KNL64-NEXT:    retq
+;
+; KNL32-LABEL: test_mm512_mask_blend_epi16:
+; KNL32:       # %bb.0: # %entry
+; KNL32-NEXT:    vpternlogd $216, {{\.LCPI.*}}{1to16}, %zmm1, %zmm0
+; KNL32-NEXT:    retl
 entry:
   %0 = shufflevector <32 x i16> %A, <32 x i16> %W, <32 x i32>  <i32 32, i32 1, i32 34, i32 3, i32 36, i32 5, i32 38, i32 7, i32 40, i32 9, i32 42, i32 11, i32 44, i32 13, i32 46, i32 15, i32 48, i32 17, i32 50, i32 19, i32 52, i32 21, i32 54, i32 23, i32 56, i32 25, i32 58, i32 27, i32 60, i32 29, i32 62, i32 31>
   ret <32 x i16> %0

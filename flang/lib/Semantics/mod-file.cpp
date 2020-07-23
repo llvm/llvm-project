@@ -8,6 +8,7 @@
 
 #include "mod-file.h"
 #include "resolve-names.h"
+#include "flang/Common/restorer.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parsing.h"
@@ -99,6 +100,9 @@ private:
 };
 
 bool ModFileWriter::WriteAll() {
+  // this flag affects character literals: force it to be consistent
+  auto restorer{
+      common::ScopedSet(parser::useHexadecimalEscapeSequences, false)};
   WriteAll(context_.globalScope());
   return !context_.AnyFatalError();
 }

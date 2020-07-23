@@ -2,7 +2,7 @@
 ; RUN:    | FileCheck %s -check-prefix CHECK-ASM
 
 ; RUN: llc -mtriple arm64-windows -filetype obj -o - %s \
-; RUN:    | llvm-readobj --symbols | FileCheck %s -check-prefix CHECK-OBJECT
+; RUN:    | llvm-readobj --symbols - | FileCheck %s -check-prefix CHECK-OBJECT
 
 define arm_aapcs_vfpcc void @external() {
 entry:

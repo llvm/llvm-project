@@ -77,7 +77,8 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   if (CI.isNoBuiltin() || !CI.getCalledFunction())
     return;
 
-  const std::string ScalarName = std::string(CI.getCalledFunction()->getName());
+  StringRef ScalarName = CI.getCalledFunction()->getName();
+
   // Nothing to be done if the TLI thinks the function is not
   // vectorizable.
   if (!TLI.isFunctionVectorizable(ScalarName))

@@ -7,10 +7,7 @@ static_library("conversions") {
     "//llvm/lib/Support",
   ]
   include_dirs = [ ".." ]
-  sources = [
-    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
-    "Conversion.cpp",
-  ]
+  sources = [ "Conversion.cpp" ]
 }
 
 static_library("transport") {
@@ -23,8 +20,5 @@ static_library("transport") {
     "//llvm/lib/Support",
   ]
   include_dirs = [ ".." ]
-  sources = [
-    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
-    "XPCTransport.cpp",
-  ]
+  sources = [ "XPCTransport.cpp" ]
 }

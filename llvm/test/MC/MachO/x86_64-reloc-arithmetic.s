@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --symbols | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --symbols - | FileCheck %s
 
 // rdar://9906375
 .org 0x100

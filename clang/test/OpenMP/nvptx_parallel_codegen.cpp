@@ -92,7 +92,7 @@ int bar(int n){
 //
 // CHECK: [[AWAIT_WORK]]
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0) #[[#CONVERGENT:]]
-// CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]]
+// CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]])
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
 // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
@@ -166,13 +166,13 @@ int bar(int n){
 // CHECK-DAG: [[MWS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK: [[MTMP1:%.+]] = sub nuw i32 [[MNTH]], [[MWS]]
 // CHECK: call void @__kmpc_kernel_init(i32 [[MTMP1]]
-// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN1]]_wrapper to i8*),
+// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN1]]_wrapper to i8*))
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_serialized_parallel(
 // CHECK: {{call|invoke}} void [[PARALLEL_FN3:@.+]](
 // CHECK: call void @__kmpc_end_serialized_parallel(
-// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN2]]_wrapper to i8*),
+// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN2]]_wrapper to i8*))
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK-64-DAG: load i32, i32* [[REF_A]]
@@ -211,7 +211,7 @@ int bar(int n){
 //
 // CHECK: [[AWAIT_WORK]]
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
-// CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]],
+// CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]])
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
 // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
@@ -291,7 +291,7 @@ int bar(int n){
 // CHECK: br i1 [[CMP]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK: [[IF_THEN]]
-// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN4]]_wrapper to i8*),
+// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN4]]_wrapper to i8*))
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[IF_END:.+]]

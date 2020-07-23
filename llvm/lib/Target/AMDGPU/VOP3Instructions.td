@@ -649,8 +649,8 @@ def V_MAD_I32_I16 : VOP3Inst <"v_mad_i32_i16", VOP3_Profile<VOP_I32_I16_I16_I32,
 def V_CVT_PKNORM_I16_F16 : VOP3Inst <"v_cvt_pknorm_i16_f16", VOP3_Profile<VOP_B32_F16_F16, VOP3_OPSEL>>;
 def V_CVT_PKNORM_U16_F16 : VOP3Inst <"v_cvt_pknorm_u16_f16", VOP3_Profile<VOP_B32_F16_F16, VOP3_OPSEL>>;
 
-def V_ADD_I32_gfx9 : VOP3Inst <"v_add_i32_gfx9", VOP3_Profile<VOP_I32_I32_I32_ARITH>>;
-def V_SUB_I32_gfx9 : VOP3Inst <"v_sub_i32_gfx9", VOP3_Profile<VOP_I32_I32_I32_ARITH>>;
+def V_ADD_I32 : VOP3Inst <"v_add_i32", VOP3_Profile<VOP_I32_I32_I32_ARITH>>;
+def V_SUB_I32 : VOP3Inst <"v_sub_i32", VOP3_Profile<VOP_I32_I32_I32_ARITH>>;
 
 
 class ThreeOp_i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
@@ -868,9 +868,9 @@ defm V_ADD_NC_I16 :
 defm V_SUB_NC_I16 :
   VOP3OpSel_Real_gfx10_with_name<0x30e, "V_SUB_I16", "v_sub_nc_i16">;
 defm V_SUB_NC_I32 :
-  VOP3_Real_gfx10_with_name<0x376, "V_SUB_I32_gfx9", "v_sub_nc_i32">;
+  VOP3_Real_gfx10_with_name<0x376, "V_SUB_I32", "v_sub_nc_i32">;
 defm V_ADD_NC_I32 :
-  VOP3_Real_gfx10_with_name<0x37f, "V_ADD_I32_gfx9", "v_add_nc_i32">;
+  VOP3_Real_gfx10_with_name<0x37f, "V_ADD_I32", "v_add_nc_i32">;
 
 defm V_INTERP_P1_F32_e64  : VOP3Interp_Real_gfx10<0x200>;
 defm V_INTERP_P2_F32_e64  : VOP3Interp_Real_gfx10<0x201>;
@@ -1177,8 +1177,8 @@ defm V_FMA_F16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x206, "v_fma_f16">;
 defm V_DIV_FIXUP_F16_gfx9   : VOP3OpSel_F16_Real_gfx9 <0x207, "v_div_fixup_f16">;
 defm V_INTERP_P2_F16_gfx9   : VOP3Interp_F16_Real_gfx9 <0x277, "V_INTERP_P2_F16_gfx9", "v_interp_p2_f16">;
 
-defm V_ADD_I32_gfx9         : VOP3_Real_gfx9 <0x29c, "v_add_i32">;
-defm V_SUB_I32_gfx9         : VOP3_Real_gfx9 <0x29d, "v_sub_i32">;
+defm V_ADD_I32         : VOP3_Real_vi <0x29c>;
+defm V_SUB_I32         : VOP3_Real_vi <0x29d>;
 
 defm V_INTERP_P1_F32_e64  : VOP3Interp_Real_vi <0x270>;
 defm V_INTERP_P2_F32_e64  : VOP3Interp_Real_vi <0x271>;

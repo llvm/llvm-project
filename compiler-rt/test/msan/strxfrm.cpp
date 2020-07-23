@@ -12,7 +12,7 @@ int main(void) {
   assert(n < sizeof(q));
   __msan_check_mem_is_initialized(q, n + 1);
 
-  locale_t loc = newlocale(LC_ALL_MASK, "", (locale_t)0);
+  locale_t loc = newlocale(LC_ALL_MASK, "C", (locale_t)0);
 
   __msan_poison(&q, sizeof(q));
   n = strxfrm_l(q, "qwerty", sizeof(q), loc);

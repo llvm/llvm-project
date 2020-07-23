@@ -1,9 +1,8 @@
 ; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
-; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN:   -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s
 ; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
-; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
+; RUN:   -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
 ; RUN:   | FileCheck -check-prefix=CHECK-BE %s
 
 ; Testing homogeneous aggregates.
@@ -229,8 +228,8 @@ define fp128 @testMixedAggregate_03([4 x i128] %sa.coerce) {
 ; CHECK-LABEL: testMixedAggregate_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK:         mtvsrwa v2, r3
-; CHECK:         xscvsdqp v2, v2
-; CHECK:         mtvsrdd v3, r6, r5
+; CHECK-DAG:     xscvsdqp v2, v2
+; CHECK-DAG:     mtvsrdd v3, r6, r5
 ; CHECK:         xsaddqp v2, v3, v2
 ; CHECK:         mtvsrd v[[REG1:[0-9]+]], r10
 ; CHECK:         xscvsdqp v[[REG:[0-9]+]], v[[REG1]]
@@ -351,12 +350,12 @@ define fp128 @sum_float128(i32 signext %count, ...) {
 ; CHECK-NEXT:    bltlr cr0
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    addi r3, r1, 40
+; CHECK-NEXT:    addi [[REG2:r[0-9]+]], r1, 72
 ; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    std [[REG2]], -8(r1)
 ; CHECK-NEXT:    xsaddqp v2, v3, v2
 ; CHECK-NEXT:    lxv v3, 16(r3)
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
-; CHECK-NEXT:    addi [[REG2:r[0-9]+]], r1, 72
-; CHECK-NEXT:    std [[REG2]], -8(r1)
 ; CHECK-NEXT:    blr
 entry:
   %ap = alloca i8*, align 8

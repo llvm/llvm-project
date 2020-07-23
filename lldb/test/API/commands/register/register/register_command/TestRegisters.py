@@ -457,7 +457,6 @@ class RegisterCommandsTestCase(TestBase):
 
         # Spawn a new process
         pid = self.spawnSubprocess(exe, ['wait_for_attach']).pid
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         if self.TraceOn():
             print("pid of spawned process: %d" % pid)

@@ -15,7 +15,7 @@
 // CHECK-LABEL: define {{.*}}void @{{.+}}gtid_test
 void gtid_test() {
 // CHECK: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
-// CHECK: %0 = call i32 @__tgt_target_teams(i64 -1, i8* @{{.+}}, i32 0, i8** null, i8** null, i64* null, i64* null, i32 0, i32 0)
+// CHECK: %0 = call i32 @__tgt_target_teams_mapper(i64 -1, i8* @{{.+}}, i32 0, i8** null, i8** null, i64* null, i64* null, i8** null, i32 0, i32 0)
 // CHECK: call void [[TARGET_OUTLINE:@.+]]()
 // CHECK: ret void
 #pragma omp target teams distribute parallel for order(concurrent)

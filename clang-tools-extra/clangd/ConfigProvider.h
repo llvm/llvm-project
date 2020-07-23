@@ -20,6 +20,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -34,6 +35,10 @@ struct Params {
   /// Absolute path to a source file we're applying the config to. Unix slashes.
   /// Empty if not configuring a particular file.
   llvm::StringRef Path;
+  /// Hint that stale data is OK to improve performance (e.g. avoid IO).
+  /// FreshTime sets a bound for how old the data can be.
+  /// If not set, providers should validate caches against the data source.
+  llvm::Optional<std::chrono::steady_clock::time_point> FreshTime;
 };
 
 /// Used to report problems in parsing or interpreting a config.
@@ -71,8 +76,7 @@ public:
 
   /// A provider that includes fragments from all the supplied providers.
   /// Order is preserved; later providers take precedence over earlier ones.
-  static std::unique_ptr<Provider>
-      combine(std::vector<std::unique_ptr<Provider>>);
+  static std::unique_ptr<Provider> combine(std::vector<const Provider *>);
 
   /// Build a config based on this provider.
   Config getConfig(const Params &, DiagnosticCallback) const;

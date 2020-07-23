@@ -107,9 +107,7 @@ define i32 @csel_var(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: csel_var:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, #45
-; CHECK-NEXT:    it le
-; CHECK-NEXT:    movle r1, r2
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    csel r0, r1, r2, gt
 ; CHECK-NEXT:    bx lr
 entry:
   %cmp = icmp sgt i32 %a, 45

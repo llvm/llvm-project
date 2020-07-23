@@ -24,6 +24,7 @@ INLINE static bool IsMasterThread(bool isSPMDExecutionMode) {
   return !isSPMDExecutionMode && GetMasterThreadID() == GetThreadIdInBlock();
 }
 
+<<<<<<< HEAD
 /// Return the provided size aligned to the size of a pointer.
 INLINE static size_t AlignVal(size_t Val) {
   const size_t Align = (size_t)sizeof(void *);
@@ -316,6 +317,8 @@ __kmpc_get_data_sharing_environment_frame(int32_t SourceThreadID,
   return P;
 }
 
+=======
+>>>>>>> e031eda08df471c67f9a37289072d338517457a9
 ////////////////////////////////////////////////////////////////////////////////
 // Runtime functions for trunk data sharing scheme.
 ////////////////////////////////////////////////////////////////////////////////

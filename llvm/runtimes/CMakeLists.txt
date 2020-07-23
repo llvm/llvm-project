@@ -413,7 +413,7 @@ else() # if this is included from LLVM's CMake
   # runtime_register_target(target)
   #   Utility function to register external runtime target.
   function(runtime_register_target name target)
-    cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
+    cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS" ${ARGN})
     include(${LLVM_BINARY_DIR}/runtimes/${name}/Components.cmake OPTIONAL)
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/${name}/Components.cmake)
 
@@ -457,6 +457,7 @@ else() # if this is included from LLVM's CMake
       set(test_targets "${test_targets}" PARENT_SCOPE)
     endif()
 
+    set(${name}_extra_args ${ARG_CMAKE_ARGS})
     get_cmake_property(variableNames VARIABLES)
     foreach(variableName ${variableNames})
       string(FIND "${variableName}" "RUNTIMES_${target}_" out)

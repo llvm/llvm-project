@@ -1056,10 +1056,10 @@ BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
 }
 
 void BranchProbabilityInfo::eraseBlock(const BasicBlock *BB) {
-  for (auto I = Probs.begin(), E = Probs.end(); I != E; ++I) {
-    auto Key = I->first;
-    if (Key.first == BB)
-      Probs.erase(Key);
+  for (const_succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+    auto MapI = Probs.find(std::make_pair(BB, I.getSuccessorIndex()));
+    if (MapI != Probs.end())
+      Probs.erase(MapI);
   }
 }
 

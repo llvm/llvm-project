@@ -5,7 +5,7 @@
 # RUN:  | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-INSTR
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s \
-# RUN:  | llvm-readobj -r | FileCheck %s -check-prefix=CHECK-REL
+# RUN:  | llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
 
 
 # Check that 1 is added to the high 16 bits if bit 15 of the low part is 1.

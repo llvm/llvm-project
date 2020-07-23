@@ -754,6 +754,7 @@ void __kmpc_for_static_init_8u_simple_generic(
 EXTERN void __kmpc_for_static_fini(kmp_Ident *loc, int32_t global_tid) {
   PRINT0(LD_IO, "call kmpc_for_static_fini\n");
 }
+<<<<<<< HEAD
 
 namespace {
 INLINE void syncWorkersInGenericMode(uint32_t NumThreads) {
@@ -820,3 +821,5 @@ EXTERN void __kmpc_reduce_conditional_lastprivate(kmp_Ident *loc, int32_t gtid,
     syncWorkersInGenericMode(NumThreads);
   }
 }
+=======
+>>>>>>> e031eda08df471c67f9a37289072d338517457a9

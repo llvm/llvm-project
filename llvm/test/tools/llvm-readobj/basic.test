@@ -4,6 +4,11 @@ RUN: not llvm-readelf %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=read
 
 ENOENT: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}.blah': {{[Nn]}}o such file or directory
 
+# Test case with no input file.
+RUN: not llvm-readobj 2>&1 | FileCheck %s --check-prefix=NO-FILE
+RUN: not llvm-readelf 2>&1  | FileCheck %s --check-prefix=NO-FILE
+NO-FILE: error: no input files specified
+
 # Test case where input file is too small to be a recognised object file.
 RUN: touch %t.empty
 RUN: not llvm-readobj %t.empty 2>&1 | FileCheck --check-prefix=EMPTY %s

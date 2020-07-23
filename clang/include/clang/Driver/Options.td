@@ -643,15 +643,19 @@ defm cuda_short_ptr : OptInFFlag<"cuda-short-ptr",
   "Use 32-bit pointers for accessing const/local/shared address spaces">;
 def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<i_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
-def hip_device_lib_path_EQ : Joined<["--"], "hip-device-lib-path=">, Group<Link_Group>,
-  HelpText<"HIP device library path. Alternative to rocm-path.">;
+def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<Link_Group>,
+  HelpText<"ROCm device library path. Alternative to rocm-path.">;
+def : Joined<["--"], "hip-device-lib-path=">, Alias<rocm_device_lib_path_EQ>;
 def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<Link_Group>,
   HelpText<"HIP device library">;
+def hip_version_EQ : Joined<["--"], "hip-version=">,
+  HelpText<"HIP version in the format of major.minor.patch">;
 def fhip_dump_offload_linker_script : Flag<["-"], "fhip-dump-offload-linker-script">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>;
 defm hip_new_launch_api : OptInFFlag<"hip-new-launch-api",
-  "Use new kernel launching API for HIP">;
-defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init", "Allow device side init function in HIP">;
+  "Use", "Don't use", " new kernel launching API for HIP">;
+defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init",
+  "Allow", "Don't allow", " device side init function in HIP">;
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">;
@@ -2195,6 +2199,7 @@ def municode : Joined<["-"], "municode">, Group<m_Group>, Flags<[DriverOption]>;
 def mthreads : Joined<["-"], "mthreads">, Group<m_Group>, Flags<[DriverOption]>;
 def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>;
 def mmcu_EQ : Joined<["-"], "mmcu=">, Group<m_Group>;
+def msim : Flag<["-"], "msim">, Group<m_Group>;
 def mdynamic_no_pic : Joined<["-"], "mdynamic-no-pic">, Group<m_Group>;
 def mfix_and_continue : Flag<["-"], "mfix-and-continue">, Group<clang_ignored_m_Group>;
 def mieee_fp : Flag<["-"], "mieee-fp">, Group<clang_ignored_m_Group>;
@@ -2280,9 +2285,9 @@ def m_seses : Flag<["-"], "mseses">, Group<m_Group>, Flags<[CoreOption, DriverOp
 def mno_seses : Flag<["-"], "mno-seses">, Group<m_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Disable speculative execution side effect suppression (SESES)">;
 
-def mrelax : Flag<["-"], "mrelax">, Group<m_riscv_Features_Group>,
+def mrelax : Flag<["-"], "mrelax">, Group<m_Group>,
   HelpText<"Enable linker relaxation">;
-def mno_relax : Flag<["-"], "mno-relax">, Group<m_riscv_Features_Group>,
+def mno_relax : Flag<["-"], "mno-relax">, Group<m_Group>,
   HelpText<"Disable linker relaxation">;
 def msmall_data_limit_EQ : Joined<["-"], "msmall-data-limit=">, Group<m_Group>,
   Alias<G>,
@@ -2344,6 +2349,12 @@ foreach i = {1-31} in
 foreach i = {8-15,18} in
   def fcall_saved_x#i : Flag<["-"], "fcall-saved-x"#i>, Group<m_aarch64_Features_Group>,
     HelpText<"Make the x"#i#" register call-saved (AArch64 only)">;
+
+def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">,
+  Group<m_aarch64_Features_Group>, Flags<[DriverOption,CC1Option]>,
+  HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
+           " vector length agnostic value of \"scalable\". (AArch64 only)">,
+  Values<"128,256,512,1024,2048,scalable">;
 
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>, Values<"none,all,non-leaf">,
@@ -3275,6 +3286,7 @@ defm : BooleanFFlag<"keep-inline-functions">, Group<clang_ignored_gcc_optimizati
 def fprofile_dir : Joined<["-"], "fprofile-dir=">, Group<f_Group>;
 
 def fuse_ld_EQ : Joined<["-"], "fuse-ld=">, Group<f_Group>, Flags<[CoreOption]>;
+def ld_path_EQ : Joined<["--"], "ld-path=">;
 
 defm align_labels : BooleanFFlag<"align-labels">, Group<clang_ignored_gcc_optimization_f_Group>;
 def falign_labels_EQ : Joined<["-"], "falign-labels=">, Group<clang_ignored_gcc_optimization_f_Group>;
@@ -4805,6 +4817,7 @@ def _SLASH_FI : CLJoinedOrSeparate<"FI">,
 def _SLASH_Fe : CLJoined<"Fe">,
   HelpText<"Set output executable file name">,
   MetaVarName<"<file or dir/>">;
+def _SLASH_Fe_COLON : CLJoined<"Fe:">, Alias<_SLASH_Fe>;
 def _SLASH_Fi : CLCompileJoined<"Fi">,
   HelpText<"Set preprocess output file name (with /P)">,
   MetaVarName<"<file>">;
