@@ -242,21 +242,23 @@ void MappingTraits<DWARFYAML::RnglistEntry>::mapping(
   IO.mapOptional("Values", RnglistEntry.Values);
 }
 
-void MappingTraits<DWARFYAML::Rnglist>::mapping(IO &IO,
-                                                DWARFYAML::Rnglist &Rnglist) {
-  IO.mapOptional("Entries", Rnglist.Entries);
+template <typename EntryType>
+void MappingTraits<DWARFYAML::ListEntries<EntryType>>::mapping(
+    IO &IO, DWARFYAML::ListEntries<EntryType> &ListEntries) {
+  IO.mapOptional("Entries", ListEntries.Entries);
 }
 
-void MappingTraits<DWARFYAML::RnglistTable>::mapping(
-    IO &IO, DWARFYAML::RnglistTable &RnglistTable) {
-  IO.mapOptional("Format", RnglistTable.Format, dwarf::DWARF32);
-  IO.mapOptional("Length", RnglistTable.Length);
-  IO.mapOptional("Version", RnglistTable.Version, 5);
-  IO.mapOptional("AddressSize", RnglistTable.AddrSize);
-  IO.mapOptional("SegmentSelectorSize", RnglistTable.SegSelectorSize, 0);
-  IO.mapOptional("OffsetEntryCount", RnglistTable.OffsetEntryCount);
-  IO.mapOptional("Offsets", RnglistTable.Offsets);
-  IO.mapOptional("Lists", RnglistTable.Lists);
+template <typename EntryType>
+void MappingTraits<DWARFYAML::ListTable<EntryType>>::mapping(
+    IO &IO, DWARFYAML::ListTable<EntryType> &ListTable) {
+  IO.mapOptional("Format", ListTable.Format, dwarf::DWARF32);
+  IO.mapOptional("Length", ListTable.Length);
+  IO.mapOptional("Version", ListTable.Version, 5);
+  IO.mapOptional("AddressSize", ListTable.AddrSize);
+  IO.mapOptional("SegmentSelectorSize", ListTable.SegSelectorSize, 0);
+  IO.mapOptional("OffsetEntryCount", ListTable.OffsetEntryCount);
+  IO.mapOptional("Offsets", ListTable.Offsets);
+  IO.mapOptional("Lists", ListTable.Lists);
 }
 
 void MappingTraits<DWARFYAML::InitialLength>::mapping(

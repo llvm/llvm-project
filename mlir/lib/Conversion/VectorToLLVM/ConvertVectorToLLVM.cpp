@@ -147,28 +147,13 @@ LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
       offset != 0 || memRefType.getMemorySpace() != 0)
     return failure();
 
-  // Base pointer.
+  // Create a vector of pointers from base and indices.
   MemRefDescriptor memRefDescriptor(memref);
   Value base = memRefDescriptor.alignedPtr(rewriter, loc);
-
-  // Create a vector of pointers from base and indices.
-  //
-  // TODO: this step serializes the address computations unfortunately,
-  //       ideally we would like to add splat(base) + index_vector
-  //       in SIMD form, but this does not match well with current
-  //       constraints of the standard and vector dialect....
-  //
   int64_t size = vType.getDimSize(0);
   auto pType = memRefDescriptor.getElementType();
   auto ptrsType = LLVM::LLVMType::getVectorTy(pType, size);
-  auto idxType = typeConverter.convertType(iType);
-  ptrs = rewriter.create<LLVM::UndefOp>(loc, ptrsType);
-  for (int64_t i = 0; i < size; i++) {
-    Value off =
-        extractOne(rewriter, typeConverter, loc, indices, idxType, 1, i);
-    Value ptr = rewriter.create<LLVM::GEPOp>(loc, pType, base, off);
-    ptrs = insertOne(rewriter, typeConverter, loc, ptrs, ptr, ptrsType, 1, i);
-  }
+  ptrs = rewriter.create<LLVM::GEPOp>(loc, ptrsType, base, indices);
   return success();
 }
 

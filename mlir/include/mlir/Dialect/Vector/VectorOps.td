@@ -1244,7 +1244,7 @@ def Vector_ScatterOp :
 
     ```mlir
     vector.scatter %base, %indices, %mask, %value
-        : vector<16xi32>, vector<16xi1>, vector<16xf32> into memref<?f32>
+        : vector<16xi32>, vector<16xi1>, vector<16xf32> into memref<?xf32>
     ```
   }];
   let extraClassDeclaration = [{

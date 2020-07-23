@@ -116,15 +116,16 @@ SmallVector<Value, 8> getViewSizes(OpBuilder &builder, ConcreteOp linalgOp) {
     for (unsigned idx = 0; idx < attr.getInt(); idx++)
       symbolsPos += ranks[idx];
 
-    // Append or rewrite the end of the value list that corresponds to the
+    // Append the end of the value list that corresponds to the
     // values mapping to symbols. Since inside concatinated map symbols are
     // repeated we have to repeat the sizes as well.
-    for (unsigned idx = 0, s = ranks.size(); idx < s; ++idx) {
-      for (unsigned idx2 = 0; idx2 < numSymb; ++idx2) {
-        Value viewSize = res[symbolsPos + idx2];
-        res.push_back(viewSize);
-      }
-    }
+
+    // Reserve is mandatory to avoid a potential undefined behavior with
+    // pushing back to smallvector from itself.
+    res.reserve(res.size() + ranks.size() * numSymb);
+    for (unsigned idx = 0, s = ranks.size(); idx < s; ++idx)
+      for (unsigned idx2 = 0; idx2 < numSymb; ++idx2)
+        res.push_back(res[symbolsPos + idx2]);
   }
   return res;
 }
@@ -134,7 +135,7 @@ SmallVector<Value, 8> getViewSizes(OpBuilder &builder, ConcreteOp linalgOp) {
 /// `createAndFold` builder method. If `folder` is null, the regular `create`
 /// method is called.
 SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
-                                       AffineMap map, ArrayRef<Value> values,
+                                       AffineMap map, ValueRange values,
                                        OperationFolder *folder = nullptr);
 
 /// Returns all the operands of `linalgOp` that are not views.
