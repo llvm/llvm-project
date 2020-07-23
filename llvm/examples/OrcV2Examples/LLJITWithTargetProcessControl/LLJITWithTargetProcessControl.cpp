@@ -134,7 +134,8 @@ int main(int argc, char *argv[]) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   // (1) Create LLJIT instance.
-  auto J = ExitOnErr(LLJITBuilder().create());
+  auto TPC = ExitOnErr(SelfTargetProcessControl::Create());
+  auto J = ExitOnErr(LLJITBuilder().setTargetProcessControl(*TPC).create());
 
   // (2) Install transform to print modules as they are compiled:
   J->getIRTransformLayer().setTransform(
@@ -145,8 +146,6 @@ int main(int argc, char *argv[]) {
       });
 
   // (3) Create stubs and call-through managers:
-
-  auto TPC = ExitOnErr(SelfTargetProcessControl::Create());
   auto TPCIU = ExitOnErr(TPCIndirectionUtils::Create(*TPC));
   ExitOnErr(TPCIU->writeResolverBlock(pointerToJITTargetAddress(&reenter),
                                       pointerToJITTargetAddress(TPCIU.get())));
