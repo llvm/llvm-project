@@ -5394,6 +5394,36 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
     }
   }
 
+  // "Upgrade" older incorrect branch weights by dropping them.
+  for (auto &I : instructions(F)) {
+    if (auto *MD = I.getMetadata(LLVMContext::MD_prof)) {
+      if (MD->getOperand(0) != nullptr && isa<MDString>(MD->getOperand(0))) {
+        MDString *MDS = cast<MDString>(MD->getOperand(0));
+        StringRef ProfName = MDS->getString();
+        // Check consistency of !prof branch_weights metadata.
+        if (!ProfName.equals("branch_weights"))
+          continue;
+        unsigned ExpectedNumOperands = 0;
+        if (BranchInst *BI = dyn_cast<BranchInst>(&I))
+          ExpectedNumOperands = BI->getNumSuccessors();
+        else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))
+          ExpectedNumOperands = SI->getNumSuccessors();
+        else if (isa<CallInst>(&I))
+          ExpectedNumOperands = 1;
+        else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(&I))
+          ExpectedNumOperands = IBI->getNumDestinations();
+        else if (isa<SelectInst>(&I))
+          ExpectedNumOperands = 2;
+        else
+          continue; // ignore and continue.
+
+        // If branch weight doesn't match, just strip branch weight.
+        if (MD->getNumOperands() != 1 + ExpectedNumOperands)
+          I.setMetadata(LLVMContext::MD_prof, nullptr);
+      }
+    }
+  }
+
   // Look for functions that rely on old function attribute behavior.
   UpgradeFunctionAttributes(*F);
 
