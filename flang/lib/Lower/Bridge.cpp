@@ -322,6 +322,25 @@ public:
     return fir::getBase(lookupSymbol(sym));
   }
 
+  bool lookupLabelSet(Fortran::lower::SymbolRef sym, Fortran::lower::pft::LabelSet &labelSet) override final {
+    auto &owningProc = *getEval().getOwningProcedure();
+    auto iter = owningProc.assignSymbolLabelMap.find(sym);
+    if (iter == owningProc.assignSymbolLabelMap.end()) {
+      return false;
+    }
+    labelSet = iter->second;
+    return true;
+  }
+
+  Fortran::lower::pft::Evaluation* lookupLabel(Fortran::lower::pft::Label label) override final {
+    auto &owningProc = *getEval().getOwningProcedure();
+    auto iter = owningProc.labelEvaluationMap.find(label);
+    if (iter == owningProc.labelEvaluationMap.end()) {
+      return nullptr;
+    }
+    return iter->second;
+  }
+
   mlir::Value genExprAddr(const Fortran::lower::SomeExpr &expr,
                           mlir::Location *loc = nullptr) override final {
     return createFIRAddr(loc ? *loc : toLocation(), &expr);
@@ -1181,14 +1200,10 @@ private:
     genIoConditionBranches(getEval(), stmt.v, iostat);
   }
   void genFIR(const Fortran::parser::PrintStmt &stmt) {
-    auto &owningProc = *getEval().getOwningProcedure();
-    genPrintStatement(*this, stmt, owningProc.labelEvaluationMap,
-                      owningProc.assignSymbolLabelMap);
+    genPrintStatement(*this, stmt);
   }
   void genFIR(const Fortran::parser::ReadStmt &stmt) {
-    auto &owningProc = *getEval().getOwningProcedure();
-    auto iostat = genReadStatement(*this, stmt, owningProc.labelEvaluationMap,
-                                   owningProc.assignSymbolLabelMap);
+    auto iostat = genReadStatement(*this, stmt);
     genIoConditionBranches(getEval(), stmt.controls, iostat);
   }
   void genFIR(const Fortran::parser::RewindStmt &stmt) {
@@ -1200,9 +1215,7 @@ private:
     genIoConditionBranches(getEval(), stmt.v, iostat);
   }
   void genFIR(const Fortran::parser::WriteStmt &stmt) {
-    auto &owningProc = *getEval().getOwningProcedure();
-    auto iostat = genWriteStatement(*this, stmt, owningProc.labelEvaluationMap,
-                                    owningProc.assignSymbolLabelMap);
+    auto iostat = genWriteStatement(*this, stmt);
     genIoConditionBranches(getEval(), stmt.controls, iostat);
   }
 

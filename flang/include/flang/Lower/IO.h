@@ -17,6 +17,8 @@
 #include "flang/Semantics/symbol.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "SymbolMap.h"
+#include "Utils.h"
 
 namespace mlir {
 class Value;
@@ -43,14 +45,6 @@ namespace lower {
 class AbstractConverter;
 class BridgeImpl;
 
-namespace pft {
-struct Evaluation;
-using LabelEvalMap = llvm::DenseMap<Fortran::parser::Label, Evaluation *>;
-using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
-using LabelSet = llvm::SmallSet<Fortran::parser::Label, 5>;
-using SymbolLabelMap = llvm::DenseMap<SymbolRef, LabelSet>;
-} // namespace pft
-
 /// Generate IO call(s) for BACKSPACE; return the IOSTAT code
 mlir::Value genBackspaceStatement(AbstractConverter &,
                                   const parser::BackspaceStmt &);
@@ -74,15 +68,11 @@ mlir::Value genOpenStatement(AbstractConverter &, const parser::OpenStmt &);
 
 /// Generate IO call(s) for PRINT
 void genPrintStatement(AbstractConverter &converter,
-                       const parser::PrintStmt &stmt,
-                       pft::LabelEvalMap &labelMap,
-                       pft::SymbolLabelMap &assignMap);
+                       const parser::PrintStmt &stmt);
 
 /// Generate IO call(s) for READ; return the IOSTAT code
 mlir::Value genReadStatement(AbstractConverter &converter,
-                             const parser::ReadStmt &stmt,
-                             pft::LabelEvalMap &labelMap,
-                             pft::SymbolLabelMap &assignMap);
+                             const parser::ReadStmt &stmt);
 
 /// Generate IO call(s) for REWIND; return the IOSTAT code
 mlir::Value genRewindStatement(AbstractConverter &, const parser::RewindStmt &);
@@ -92,9 +82,7 @@ mlir::Value genWaitStatement(AbstractConverter &, const parser::WaitStmt &);
 
 /// Generate IO call(s) for WRITE; return the IOSTAT code
 mlir::Value genWriteStatement(AbstractConverter &converter,
-                              const parser::WriteStmt &stmt,
-                              pft::LabelEvalMap &labelMap,
-                              pft::SymbolLabelMap &assignMap);
+                              const parser::WriteStmt &stmt);
 
 } // namespace lower
 } // namespace Fortran
