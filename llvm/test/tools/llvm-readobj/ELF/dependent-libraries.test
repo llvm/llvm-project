@@ -72,7 +72,7 @@ Sections:
 # MIX-GNU-NEXT:   [     0]  bar
 # MIX-GNU-NEXT:   [     4]  xxx
 # MIX-GNU-EMPTY:
-# MIX-GNU-NEXT: warning: '[[FILE]]': cannot get section name of SHT_LLVM_DEPENDENT_LIBRARIES section: a section [index 6] has an invalid sh_name (0x10000) offset which goes past the end of the section name string table
+# MIX-GNU-NEXT: warning: '[[FILE]]': unable to get the name of SHT_LLVM_DEPENDENT_LIBRARIES section with index 6: a section [index 6] has an invalid sh_name (0x10000) offset which goes past the end of the section name string table
 # MIX-GNU-NEXT: Dependent libraries section <?> at offset 0x53 contains 1 entries:
 # MIX-GNU-NEXT:   [     0]  baz
 
