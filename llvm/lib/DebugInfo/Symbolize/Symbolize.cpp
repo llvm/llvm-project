@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Config/config.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
@@ -555,9 +556,12 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     if (!EC && DebugInfo != nullptr && !PDBFileName.empty()) {
       using namespace pdb;
       std::unique_ptr<IPDBSession> Session;
-      PDB_ReaderType ReaderType = Opts.UseNativePDBReader
-                                      ? PDB_ReaderType::Native
-                                      : PDB_ReaderType::DIA;
+
+      PDB_ReaderType ReaderType = PDB_ReaderType::Native;
+#if LLVM_ENABLE_DIA_SDK
+      if (!Opts.UseNativePDBReader)
+        ReaderType = PDB_ReaderType::DIA;
+#endif
       if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
                                     Session)) {
         Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
