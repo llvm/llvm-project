@@ -727,10 +727,8 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef name, mlir::Type resultType,
       getFunctionType(resultType, mlirArgs, builder);
 
   auto runtimeCallGenerator = getRuntimeCallGenerator(name, soughtFuncType);
-  // FIXME: set outline back to true and use linkOnce for the wrapper
-  // instead.
   return genElementalCall(runtimeCallGenerator, name, resultType, args,
-                          /* outline */ false);
+                          /* outline */ true);
 }
 
 mlir::Value
@@ -772,6 +770,7 @@ mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     // First time this wrapper is needed, build it.
     function = builder.createFunction(loc, wrapperName, funcType);
     function->setAttr("fir.intrinsic", builder.getUnitAttr());
+    function->setAttr("linkName", builder.createInternalLinkage());
     function.addEntryBlock();
 
     // Create local context to emit code into the newly created function
