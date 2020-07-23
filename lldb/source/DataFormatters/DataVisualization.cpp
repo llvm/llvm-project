@@ -169,7 +169,7 @@ DataVisualization::Categories::GetCategoryAtIndex(size_t index) {
 
 bool DataVisualization::NamedSummaryFormats::GetSummaryFormat(
     ConstString type, lldb::TypeSummaryImplSP &entry) {
-  return GetFormatManager().GetNamedSummaryContainer().Get(type, entry);
+  return GetFormatManager().GetNamedSummaryContainer().GetExact(type, entry);
 }
 
 void DataVisualization::NamedSummaryFormats::Add(

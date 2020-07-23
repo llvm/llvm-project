@@ -34,7 +34,7 @@ namespace lldb_private {
 // this file's objects directly
 
 class FormatManager : public IFormatChangeListener {
-  typedef FormatMap<TypeSummaryImpl> NamedSummariesMap;
+  typedef FormattersContainer<TypeSummaryImpl> NamedSummariesMap;
   typedef TypeCategoryMap::MapType::iterator CategoryMapIterator;
 
 public:
