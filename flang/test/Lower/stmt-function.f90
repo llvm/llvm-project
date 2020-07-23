@@ -81,6 +81,7 @@ real function test_stmt_no_args(x, y)
 end function
   
 ! Test statement function with character arguments
+! CHECK-LABEL: @_QPtest_stmt_character
 integer function test_stmt_character(c, j)
    integer :: i, j, func, argj
    character(10) :: c, argc
@@ -95,3 +96,12 @@ integer function test_stmt_character(c, j)
    !CHECK: addi %[[len_trim]], %[[j]]
    test_stmt_character = func(c, j)
 end function  
+
+! issue #247
+! CHECK-LABEL: @_QPbug247
+subroutine bug247(r)
+  I(R) = R
+  ! CHECK: call {{.*}}OutputInteger
+  PRINT *, I(2.5)
+  ! CHECK: call {{.*}}EndIo
+END subroutine bug247
