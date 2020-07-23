@@ -317,6 +317,8 @@ public:
   LegalizeResult lowerExtract(MachineInstr &MI);
   LegalizeResult lowerInsert(MachineInstr &MI);
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
+  LegalizeResult lowerAddSubSatToMinMax(MachineInstr &MI);
+  LegalizeResult lowerAddSubSatToAddoSubo(MachineInstr &MI);
   LegalizeResult lowerBswap(MachineInstr &MI);
   LegalizeResult lowerBitreverse(MachineInstr &MI);
   LegalizeResult lowerReadWriteRegister(MachineInstr &MI);
