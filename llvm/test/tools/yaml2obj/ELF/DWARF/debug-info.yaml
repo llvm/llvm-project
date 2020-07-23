@@ -735,3 +735,110 @@ DWARF:
       AbbrOffset: 0x1234
       AddrSize:   8
       Entries:    []
+
+## k) Test that yaml2obj is able to emit a correct length for compilation units.
+
+# RUN: yaml2obj --docnum=13 %s -o %t13.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t13.o | \
+# RUN:   FileCheck %s --check-prefix=INFER-LENGTH
+
+#      INFER-LENGTH: Hex dump of section '.debug_info':
+# INFER-LENGTH-NEXT: 0x00000000 37000000 04000000 00000801 00000000 7...............
+##                              ^-------                            unit_length (0x37)
+##                                       ^---                       version (2-byte)
+##                                           ^--------              debug_abbrev_offset (4-byte)
+##                                                    ^-            address_size (1-byte)
+##                                                      ^-          abbrev code (ULEB128) 0x01
+##                                                         ^------- Form: DW_FORM_strp (4-byte)
+# INFER-LENGTH-NEXT: 0x00000010 0c001600 00000000 00001e00 00002011 .............. .
+##                              ^---                                Form: DW_FORM_data2 (2-byte)
+##                                  ^--------                       Form: DW_FORM_strp (4-byte)
+##                                           ^--------              Form: DW_FORM_sec_offset (4-byte)
+##                                                    ^--------     Form: DW_FORM_strp (4-byte)
+##                                                             ^--- Form: DW_FORM_addr (8-byte)
+# INFER-LENGTH-NEXT: 0x00000020 00000000 00003300 00000220 11000000 ......3.... ....
+##                              -------------
+##                                           ^--------              Form: DW_FORM_data4 (4-byte)
+##                                                    ^-            abbrev code (ULEB128) 0x02
+##                                                      ^---------- Form: DW_FORM_addr (8-byte)
+# INFER-LENGTH-NEXT: 0x00000030 00000006 00000038 000000            .......8...
+##                              ------
+##                                    ^--------                     Form: DW_FORM_data4 (4-byte)
+##                                             ^--------            Form: DW_FORM_strp (4-byte)
+
+## The handwritten DIEs should look like:
+
+## 0x0000000b: DW_TAG_compile_unit [1] *
+##               DW_AT_producer [DW_FORM_strp]        ( .debug_str[0x00000000] = "clang version 10.0.0 ")
+##               DW_AT_language [DW_FORM_data2]       (DW_LANG_C99)
+##               DW_AT_name [DW_FORM_strp]            ( .debug_str[0x00000016] = "hello.c")
+##               DW_AT_stmt_list [DW_FORM_sec_offset] (0x00000000)
+##               DW_AT_comp_dir [DW_FORM_strp]        ( .debug_str[0x0000001e] = "/home/v/x/llvm/playground")
+##               DW_AT_low_pc [DW_FORM_addr]          (0x0000000000001120)
+##               DW_AT_high_pc [DW_FORM_data4]        (0x00000033)
+## 
+## 0x0000002a:   DW_TAG_subprogram [2]  
+##                 DW_AT_low_pc [DW_FORM_addr]        (0x0000000000001120)
+##                 DW_AT_high_pc [DW_FORM_data4]      (0x00000006)
+##                 DW_AT_name [DW_FORM_strp]          ( .debug_str[0x00000038] = "main")
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_str:
+    - "clang version 10.0.0 "
+    - "hello.c"
+    - "/home/v/x/llvm/playground"
+    - "main"
+  debug_abbrev:
+    - Code:     1
+      Tag:      DW_TAG_compile_unit
+      Children: DW_CHILDREN_yes
+      Attributes:
+        - Attribute: DW_AT_producer
+          Form:      DW_FORM_strp
+        - Attribute: DW_AT_language
+          Form:      DW_FORM_data2
+        - Attribute: DW_AT_name
+          Form:      DW_FORM_strp
+        - Attribute: DW_AT_stmt_list
+          Form:      DW_FORM_sec_offset
+        - Attribute: DW_AT_comp_dir
+          Form:      DW_FORM_strp
+        - Attribute: DW_AT_low_pc
+          Form:      DW_FORM_addr
+        - Attribute: DW_AT_high_pc
+          Form:      DW_FORM_data4
+    - Code: 2
+      Tag:  DW_TAG_subprogram
+      Children: DW_CHILDREN_no
+      Attributes:
+        - Attribute: DW_AT_low_pc
+          Form:      DW_FORM_addr
+        - Attribute: DW_AT_high_pc
+          Form:      DW_FORM_data4
+        - Attribute: DW_AT_name
+          Form:      DW_FORM_strp
+  debug_info:
+    - Version:    4
+      AbbrOffset: 0x00
+      AddrSize:   0x08
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x00   ## DW_AT_producer [DW_FORM_strp]
+            - Value: 0x0c   ## DW_LANG_C99, DW_AT_language [DW_FORM_data2]
+            - Value: 0x16   ## DW_AT_name [DW_FORM_strp]
+            - Value: 0x00   ## DW_AT_stmt_list [DW_FORM_sec_offset]
+            - Value: 0x1e   ## DW_AT_comp_dir [DW_FORM_strp]
+            - Value: 0x1120 ## DW_AT_low_pc [DW_FORM_addr]
+            - Value: 0x33   ## DW_AT_high_pc [DW_FORM_data4]
+        - AbbrCode: 2
+          Values:
+            - Value: 0x1120 ## DW_AT_low_pc [DW_FORM_addr]
+            - Value: 0x06   ## DW_AT_high_pc [DW_FORM_data4]
+            - Value: 0x38   ## DW_AT_name [DW_FORM_strp]

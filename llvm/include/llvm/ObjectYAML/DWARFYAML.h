@@ -120,7 +120,7 @@ struct DWARFContext {
 
 struct Unit {
   dwarf::DwarfFormat Format;
-  yaml::Hex64 Length;
+  Optional<yaml::Hex64> Length;
   uint16_t Version;
   llvm::dwarf::UnitType Type; // Added in DWARF 5
   yaml::Hex64 AbbrOffset;
