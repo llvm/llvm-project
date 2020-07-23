@@ -2153,11 +2153,11 @@ TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(const GlobalValue *GV) {
 MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
     const GlobalValue *Func, const TargetMachine &TM) const {
   assert(
-      isa<Function>(Func) ||
-      (isa<GlobalAlias>(Func) &&
-       isa_and_nonnull<Function>(cast<GlobalAlias>(Func)->getBaseObject())) &&
-          "Func must be a function or an alias which has a function as base "
-          "object.");
+      (isa<Function>(Func) ||
+       (isa<GlobalAlias>(Func) &&
+        isa_and_nonnull<Function>(cast<GlobalAlias>(Func)->getBaseObject()))) &&
+      "Func must be a function or an alias which has a function as base "
+      "object.");
   SmallString<128> NameStr;
   NameStr.push_back('.');
   getNameWithPrefix(NameStr, Func, TM);

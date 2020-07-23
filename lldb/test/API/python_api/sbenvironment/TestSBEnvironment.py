@@ -53,6 +53,11 @@ class SBEnvironmentAPICase(TestBase):
         launch_info.SetEnvironment(env, append=True)
         self.assertEqual(launch_info.GetEnvironment().GetNumValues(), env_count + 1)
 
+        env.Set("FOO", "baz", overwrite=True)
+        launch_info.SetEnvironment(env, append=True)
+        self.assertEqual(launch_info.GetEnvironment().GetNumValues(), env_count + 1)
+        self.assertEqual(launch_info.GetEnvironment().Get("FOO"), "baz")
+
         # Make sure we can replace the launchInfo's environment
         env.Clear()
         env.Set("BAR", "foo", overwrite=True)
@@ -119,6 +124,11 @@ class SBEnvironmentAPICase(TestBase):
 
         env.SetEntries(entries, append=False)
         self.assertEqualEntries(env, ["X=x", "Y=y"])
+
+        entries.Clear()
+        entries.AppendList(["X=y", "Y=x"], 2)
+        env.SetEntries(entries, append=True)
+        self.assertEqualEntries(env, ["X=y", "Y=x"])
 
         # Test clear
         env.Clear()

@@ -238,7 +238,6 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
     BO->setHasNoUnsignedWrap();
   if (Flags & SCEV::FlagNSW)
     BO->setHasNoSignedWrap();
-  rememberInstruction(BO);
 
   return BO;
 }
@@ -564,10 +563,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     }
 
     // Emit a GEP.
-    Value *GEP = Builder.CreateGEP(Builder.getInt8Ty(), V, Idx, "uglygep");
-    rememberInstruction(GEP);
-
-    return GEP;
+    return Builder.CreateGEP(Builder.getInt8Ty(), V, Idx, "uglygep");
   }
 
   {
@@ -598,7 +594,6 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
       Casted = InsertNoopCastOfTo(Casted, PTy);
     Value *GEP = Builder.CreateGEP(OriginalElTy, Casted, GepIndices, "scevgep");
     Ops.push_back(SE.getUnknown(GEP));
-    rememberInstruction(GEP);
   }
 
   return expand(SE.getAddExpr(Ops));
@@ -1073,15 +1068,12 @@ Value *SCEVExpander::expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
       GEPPtrTy = PointerType::get(Type::getInt1Ty(SE.getContext()),
                                   GEPPtrTy->getAddressSpace());
     IncV = expandAddToGEP(SE.getSCEV(StepV), GEPPtrTy, IntTy, PN);
-    if (IncV->getType() != PN->getType()) {
+    if (IncV->getType() != PN->getType())
       IncV = Builder.CreateBitCast(IncV, PN->getType());
-      rememberInstruction(IncV);
-    }
   } else {
     IncV = useSubtract ?
       Builder.CreateSub(PN, StepV, Twine(IVName) + ".iv.next") :
       Builder.CreateAdd(PN, StepV, Twine(IVName) + ".iv.next");
-    rememberInstruction(IncV);
   }
   return IncV;
 }
@@ -1307,7 +1299,6 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   pred_iterator HPB = pred_begin(Header), HPE = pred_end(Header);
   PHINode *PN = Builder.CreatePHI(ExpandTy, std::distance(HPB, HPE),
                                   Twine(IVName) + ".iv");
-  rememberInstruction(PN);
 
   // Create the step instructions and populate the PHI.
   for (pred_iterator HPI = HPB; HPI != HPE; ++HPI) {
@@ -1454,16 +1445,13 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
     if (ResTy != SE.getEffectiveSCEVType(ResTy))
       Result = InsertNoopCastOfTo(Result, SE.getEffectiveSCEVType(ResTy));
     // Truncate the result.
-    if (TruncTy != Result->getType()) {
+    if (TruncTy != Result->getType())
       Result = Builder.CreateTrunc(Result, TruncTy);
-      rememberInstruction(Result);
-    }
+
     // Invert the result.
-    if (InvertStep) {
+    if (InvertStep)
       Result = Builder.CreateSub(expandCodeFor(Normalized->getStart(), TruncTy),
                                  Result);
-      rememberInstruction(Result);
-    }
   }
 
   // Re-apply any non-loop-dominating scale.
@@ -1472,7 +1460,6 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
     Result = InsertNoopCastOfTo(Result, IntTy);
     Result = Builder.CreateMul(Result,
                                expandCodeFor(PostLoopScale, IntTy));
-    rememberInstruction(Result);
   }
 
   // Re-apply any non-loop-dominating offset.
@@ -1488,7 +1475,6 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
       Result = InsertNoopCastOfTo(Result, IntTy);
       Result = Builder.CreateAdd(Result,
                                  expandCodeFor(PostLoopOffset, IntTy));
-      rememberInstruction(Result);
     }
   }
 
@@ -1648,27 +1634,21 @@ Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   Value *V = expandCodeFor(S->getOperand(),
                            SE.getEffectiveSCEVType(S->getOperand()->getType()));
-  Value *I = Builder.CreateTrunc(V, Ty);
-  rememberInstruction(I);
-  return I;
+  return Builder.CreateTrunc(V, Ty);
 }
 
 Value *SCEVExpander::visitZeroExtendExpr(const SCEVZeroExtendExpr *S) {
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   Value *V = expandCodeFor(S->getOperand(),
                            SE.getEffectiveSCEVType(S->getOperand()->getType()));
-  Value *I = Builder.CreateZExt(V, Ty);
-  rememberInstruction(I);
-  return I;
+  return Builder.CreateZExt(V, Ty);
 }
 
 Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   Value *V = expandCodeFor(S->getOperand(),
                            SE.getEffectiveSCEVType(S->getOperand()->getType()));
-  Value *I = Builder.CreateSExt(V, Ty);
-  rememberInstruction(I);
-  return I;
+  return Builder.CreateSExt(V, Ty);
 }
 
 Value *SCEVExpander::visitSMaxExpr(const SCEVSMaxExpr *S) {
@@ -1684,9 +1664,7 @@ Value *SCEVExpander::visitSMaxExpr(const SCEVSMaxExpr *S) {
     }
     Value *RHS = expandCodeFor(S->getOperand(i), Ty);
     Value *ICmp = Builder.CreateICmpSGT(LHS, RHS);
-    rememberInstruction(ICmp);
     Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "smax");
-    rememberInstruction(Sel);
     LHS = Sel;
   }
   // In the case of mixed integer and pointer types, cast the
@@ -1709,9 +1687,7 @@ Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
     }
     Value *RHS = expandCodeFor(S->getOperand(i), Ty);
     Value *ICmp = Builder.CreateICmpUGT(LHS, RHS);
-    rememberInstruction(ICmp);
     Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "umax");
-    rememberInstruction(Sel);
     LHS = Sel;
   }
   // In the case of mixed integer and pointer types, cast the
@@ -1734,9 +1710,7 @@ Value *SCEVExpander::visitSMinExpr(const SCEVSMinExpr *S) {
     }
     Value *RHS = expandCodeFor(S->getOperand(i), Ty);
     Value *ICmp = Builder.CreateICmpSLT(LHS, RHS);
-    rememberInstruction(ICmp);
     Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "smin");
-    rememberInstruction(Sel);
     LHS = Sel;
   }
   // In the case of mixed integer and pointer types, cast the
@@ -1759,9 +1733,7 @@ Value *SCEVExpander::visitUMinExpr(const SCEVUMinExpr *S) {
     }
     Value *RHS = expandCodeFor(S->getOperand(i), Ty);
     Value *ICmp = Builder.CreateICmpULT(LHS, RHS);
-    rememberInstruction(ICmp);
     Value *Sel = Builder.CreateSelect(ICmp, LHS, RHS, "umin");
-    rememberInstruction(Sel);
     LHS = Sel;
   }
   // In the case of mixed integer and pointer types, cast the
@@ -2443,8 +2415,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     EndCheck = Builder.CreateOr(EndCheck, BackedgeCheck);
   }
 
-  EndCheck = Builder.CreateOr(EndCheck, OfMul);
-  return EndCheck;
+  return Builder.CreateOr(EndCheck, OfMul);
 }
 
 Value *SCEVExpander::expandWrapPredicate(const SCEVWrapPredicate *Pred,

@@ -94,7 +94,7 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   /// "expanded" form.
   bool LSRMode;
 
-  typedef IRBuilder<TargetFolder> BuilderType;
+  typedef IRBuilder<TargetFolder, IRBuilderCallbackInserter> BuilderType;
   BuilderType Builder;
 
   // RAII object that stores the current insertion point and restores it when
@@ -149,7 +149,9 @@ public:
                         const char *name)
       : SE(se), DL(DL), IVName(name), IVIncInsertLoop(nullptr),
         IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
-        Builder(se.getContext(), TargetFolder(DL)) {
+        Builder(se.getContext(), TargetFolder(DL),
+                IRBuilderCallbackInserter(
+                    [this](Instruction *I) { rememberInstruction(I); })) {
 #ifndef NDEBUG
     DebugType = "";
 #endif
