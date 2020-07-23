@@ -20,7 +20,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
-
+#include "llvm/IR/Module.h"
 
 namespace llvm {
 

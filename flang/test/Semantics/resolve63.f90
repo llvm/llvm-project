@@ -44,12 +44,32 @@ module m1
   type(t) :: x, y
   real :: r
   logical :: l
+  integer :: iVar
+  complex :: cvar
+  character :: charVar
 contains
   subroutine test_relational()
     l = x == y  !OK
     l = x .eq. y  !OK
+    l = x .eq. y  !OK
+    l = iVar == z'fe' !OK
+    l = z'fe' == iVar !OK
+    l = r == z'fe' !OK
+    l = z'fe' == r !OK
+    l = cVar == z'fe' !OK
+    l = z'fe' == cVar !OK
+    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types CHARACTER(KIND=1) and INTEGER(4)
+    l = charVar == z'fe'
+    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types INTEGER(4) and CHARACTER(KIND=1)
+    l = z'fe' == charVar
+    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types LOGICAL(4) and INTEGER(4)
+    l = l == z'fe' !OK
+    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types INTEGER(4) and LOGICAL(4)
+    l = z'fe' == l !OK
     !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types TYPE(t) and REAL(4)
     l = x == r
+
+    lVar = z'a' == b'1010' !OK
   end
   subroutine test_numeric()
     l = x + r  !OK

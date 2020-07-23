@@ -59,7 +59,6 @@
 namespace llvm {
 
 class DominanceFrontier;
-class DominatorTree;
 class Loop;
 class LoopInfo;
 class PostDominatorTree;
@@ -876,8 +875,6 @@ public:
 
   void verifyAnalysis() const;
 };
-
-class Region;
 
 class RegionNode : public RegionNodeBase<RegionTraits<Function>> {
 public:

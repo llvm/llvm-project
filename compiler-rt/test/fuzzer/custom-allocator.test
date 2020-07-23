@@ -1,0 +1,8 @@
+UNSUPPORTED: darwin, freebsd, windows
+RUN: %cpp_compiler -fno-sanitize=address -fno-builtin %S/CustomAllocator.cpp %S/EmptyTest.cpp -o %t-NoAsanCustomAllocatorTest
+RUN: %run %t-NoAsanCustomAllocatorTest -runs=1 2>&1 | FileCheck %s
+
+CHECK: CALLOC-MEMCMP
+CHECK-NEXT: CALLOC-STRNCMP
+CHECK-NEXT: CALLOC-STRCMP
+CHECK-NEXT: CALLOC-STRSTR
