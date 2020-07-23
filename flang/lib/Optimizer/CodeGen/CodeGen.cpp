@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "DescriptorModel.h"
+#include "flang/Lower/Support/TypeCode.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -1228,66 +1229,26 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
                      mlir::Type boxEleTy) const {
     auto doInteger =
         [&](unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
-      int typeCode;
-      switch (width) {
-      case 8:
-        typeCode = CFI_type_int8_t;
-        break;
-      case 16:
-        typeCode = CFI_type_int16_t;
-        break;
-      case 32:
-        typeCode = CFI_type_int32_t;
-        break;
-      case 64:
-        typeCode = CFI_type_int64_t;
-        break;
-      case 128:
-        typeCode = CFI_type_int128_t;
-        break;
-      default:
-        llvm_unreachable("unsupported integer size");
-      }
+      int typeCode = fir::integerBitsToTypeCode(width);
       return {this->genConstantOffset(loc, rewriter, width / 8),
               this->genConstantOffset(loc, rewriter, typeCode)};
     };
     auto doFloat = [&](unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
-      int typeCode;
-      switch (width) {
-      case 32:
-        typeCode = CFI_type_float;
-        break;
-      case 64:
-        typeCode = CFI_type_double;
-        break;
-      case 80:
-      case 128:
-        typeCode = CFI_type_long_double;
-        break;
-      default:
-        llvm_unreachable("unsupported real size");
-      }
+      int typeCode = fir::realBitsToTypeCode(width);
       return {this->genConstantOffset(loc, rewriter, width / 8),
               this->genConstantOffset(loc, rewriter, typeCode)};
     };
     auto doComplex =
         [&](unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
-      int typeCode;
-      switch (width) {
-      case 32:
-        typeCode = CFI_type_float_Complex;
-        break;
-      case 64:
-        typeCode = CFI_type_double_Complex;
-        break;
-      case 80:
-      case 128:
-        typeCode = CFI_type_long_double_Complex;
-        break;
-      default:
-        llvm_unreachable("unsupported complex size");
-      }
-      return {this->genConstantOffset(loc, rewriter, width / 4),
+      auto typeCode = fir::complexBitsToTypeCode(width);
+      return {this->genConstantOffset(loc, rewriter, width / 8 * 2),
+              this->genConstantOffset(loc, rewriter, typeCode)};
+    };
+    auto doCharacter =
+        [&](unsigned width,
+            int64_t len) -> std::tuple<mlir::Value, mlir::Value> {
+      auto typeCode = fir::characterBitsToTypeCode(width);
+      return {this->genConstantOffset(loc, rewriter, len),
               this->genConstantOffset(loc, rewriter, typeCode)};
     };
     auto getKindMap = [&]() -> fir::KindMapping & {
@@ -1313,13 +1274,26 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       auto ty = boxEleTy.cast<fir::CplxType>();
       return doComplex(getKindMap().getRealBitsize(ty.getFKind()));
     }
-    if (auto ty = boxEleTy.dyn_cast<fir::CharacterType>()) {
-      TODO();
-    }
-    if (auto ty = boxEleTy.dyn_cast<fir::LogicalType>())
+    if (auto ty = boxEleTy.dyn_cast<fir::CharacterType>())
+      return doCharacter(getKindMap().getCharacterBitsize(ty.getFKind()),
+                         ty.getLen());
+    if (auto ty = boxEleTy.dyn_cast<fir::LogicalType>()) {
+      // TODO: doesn't the runtime need to know these are LOGICAL? Pretend they
+      // are INTEGER for now.
       return doInteger(getKindMap().getLogicalBitsize(ty.getFKind()));
-    if (auto seqTy = boxEleTy.dyn_cast<fir::SequenceType>())
+    }
+    if (auto seqTy = boxEleTy.dyn_cast<fir::SequenceType>()) {
+      if (auto charTy = seqTy.getEleTy().dyn_cast<fir::CharacterType>()) {
+        // TODO: assumes the row is the length of the CHARACTER. This is true by
+        // construction, but it may not hold after optimizations have run.
+        auto rowSize = seqTy.getShape()[0];
+        assert(rowSize != fir::SequenceType::getUnknownExtent());
+        auto strTy = fir::CharacterType::get(rewriter.getContext(),
+                                             charTy.getFKind(), rowSize);
+        return getSizeAndTypeCode(loc, rewriter, strTy);
+      }
       return getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy());
+    }
     if (boxEleTy.isa<fir::RecordType>()) {
       TODO();
     }
