@@ -41,7 +41,7 @@ extern "C" size_t android_unsafe_frame_pointer_chase(scudo::uptr *buf,
 
 namespace scudo {
 
-enum class Option { ReleaseInterval };
+enum class Option { ReleaseInterval, MemtagTuning };
 
 template <class Params, void (*PostInitCallback)(void) = EmptyCallback>
 class Allocator {
@@ -154,6 +154,7 @@ public:
     Options.DeallocTypeMismatch = getFlags()->dealloc_type_mismatch;
     Options.DeleteSizeMismatch = getFlags()->delete_size_mismatch;
     Options.TrackAllocationStacks = false;
+    Options.UseOddEvenTags = true;
     Options.QuarantineMaxChunkSize =
         static_cast<u32>(getFlags()->quarantine_max_chunk_size);
 
@@ -249,6 +250,19 @@ public:
 #else
     return 0;
 #endif
+  }
+
+  uptr computeOddEvenMaskForPointerMaybe(uptr Ptr, uptr Size) {
+    if (!Options.UseOddEvenTags)
+      return 0;
+
+    // If a chunk's tag is odd, we want the tags of the surrounding blocks to be
+    // even, and vice versa. Blocks are laid out Size bytes apart, and adding
+    // Size to Ptr will flip the least significant set bit of Size in Ptr, so
+    // that bit will have the pattern 010101... for consecutive blocks, which we
+    // can use to determine which tag mask to use.
+    return (Ptr & (1ULL << getLeastSignificantSetBitIndex(Size))) ? 0xaaaa
+                                                                  : 0x5555;
   }
 
   NOINLINE void *allocate(uptr Size, Chunk::Origin Origin,
@@ -350,7 +364,8 @@ public:
       if (UNLIKELY(useMemoryTagging())) {
         uptr PrevUserPtr;
         Chunk::UnpackedHeader Header;
-        const uptr BlockEnd = BlockUptr + PrimaryT::getSizeByClassId(ClassId);
+        const uptr BlockSize = PrimaryT::getSizeByClassId(ClassId);
+        const uptr BlockEnd = BlockUptr + BlockSize;
         // If possible, try to reuse the UAF tag that was set by deallocate().
         // For simplicity, only reuse tags if we have the same start address as
         // the previous allocation. This handles the majority of cases since
@@ -400,7 +415,9 @@ public:
             memset(TaggedPtr, 0, archMemoryTagGranuleSize());
           }
         } else {
-          TaggedPtr = prepareTaggedChunk(Ptr, Size, BlockEnd);
+          const uptr OddEvenMask =
+              computeOddEvenMaskForPointerMaybe(BlockUptr, BlockSize);
+          TaggedPtr = prepareTaggedChunk(Ptr, Size, OddEvenMask, BlockEnd);
         }
         storeAllocationStackMaybe(Ptr);
       } else if (UNLIKELY(FillContents != NoFill)) {
@@ -680,6 +697,23 @@ public:
       Secondary.setReleaseToOsIntervalMs(static_cast<s32>(Value));
       return true;
     }
+    if (O == Option::MemtagTuning) {
+      // Enabling odd/even tags involves a tradeoff between use-after-free
+      // detection and buffer overflow detection. Odd/even tags make it more
+      // likely for buffer overflows to be detected by increasing the size of
+      // the guaranteed "red zone" around the allocation, but on the other hand
+      // use-after-free is less likely to be detected because the tag space for
+      // any particular chunk is cut in half. Therefore we use this tuning
+      // setting to control whether odd/even tags are enabled.
+      if (Value == M_MEMTAG_TUNING_BUFFER_OVERFLOW) {
+        Options.UseOddEvenTags = true;
+        return true;
+      }
+      if (Value == M_MEMTAG_TUNING_UAF) {
+        Options.UseOddEvenTags = false;
+        return true;
+      }
+    }
     return false;
   }
 
@@ -921,6 +955,7 @@ private:
     u8 DeallocTypeMismatch : 1; // dealloc_type_mismatch
     u8 DeleteSizeMismatch : 1;  // delete_size_mismatch
     u8 TrackAllocationStacks : 1;
+    u8 UseOddEvenTags : 1;
     u32 QuarantineMaxChunkSize; // quarantine_max_chunk_size
   } Options;
 
@@ -987,9 +1022,13 @@ private:
     if (UNLIKELY(NewHeader.ClassId && useMemoryTagging())) {
       u8 PrevTag = extractTag(loadTag(reinterpret_cast<uptr>(Ptr)));
       uptr TaggedBegin, TaggedEnd;
+      const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
+          reinterpret_cast<uptr>(getBlockBegin(Ptr, &NewHeader)),
+          SizeClassMap::getSizeByClassId(NewHeader.ClassId));
       // Exclude the previous tag so that immediate use after free is detected
       // 100% of the time.
-      setRandomTag(Ptr, Size, 1UL << PrevTag, &TaggedBegin, &TaggedEnd);
+      setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
+                   &TaggedEnd);
       storeDeallocationStackMaybe(Ptr, PrevTag);
     }
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
