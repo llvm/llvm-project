@@ -248,7 +248,7 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   int exponent{0};
   int got{ScanRealInput(buffer, maxDigits + 2, io, edit, exponent)};
   if (got >= maxDigits + 2) {
-    io.GetIoErrorHandler().Crash("EditRealInput: buffer was too small");
+    io.GetIoErrorHandler().Crash("EditCommonRealInput: buffer was too small");
     return false;
   }
   if (got == 0) {
@@ -277,6 +277,8 @@ template <int binaryPrecision>
 bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
+  case DataEdit::ListDirectedRealPart:
+  case DataEdit::ListDirectedImaginaryPart:
   case 'F':
   case 'E': // incl. EN, ES, & EX
   case 'D':
