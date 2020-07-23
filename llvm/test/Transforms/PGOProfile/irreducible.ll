@@ -1,6 +1,9 @@
 ; RUN: llvm-profdata merge %S/Inputs/irreducible.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: llvm-profdata merge %S/Inputs/irreducible_entry.proftext -o %t2.profdata
+; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S | FileCheck %s --check-prefix=USE
 
 ; GEN: $__llvm_profile_raw_version = comdat any
 
