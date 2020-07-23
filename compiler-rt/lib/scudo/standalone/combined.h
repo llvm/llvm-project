@@ -196,6 +196,10 @@ public:
 #endif // GWP_ASAN_HOOKS
   }
 
+  ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
+    TSDRegistry.initThreadMaybe(this, MinimalInit);
+  }
+
   void reset() { memset(this, 0, sizeof(*this)); }
 
   void unmapTestOnly() {
@@ -975,10 +979,6 @@ private:
       return SizeOrUnusedBytes;
     return SecondaryT::getBlockEnd(getBlockBegin(Ptr, Header)) -
            reinterpret_cast<uptr>(Ptr) - SizeOrUnusedBytes;
-  }
-
-  ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
-    TSDRegistry.initThreadMaybe(this, MinimalInit);
   }
 
   void quarantineOrDeallocateChunk(void *Ptr, Chunk::UnpackedHeader *Header,

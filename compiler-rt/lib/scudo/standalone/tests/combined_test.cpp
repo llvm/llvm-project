@@ -67,15 +67,17 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
       "");
 }
 
+template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
+  TestAllocator() {
+    this->reset();
+    this->initThreadMaybe();
+  }
+  ~TestAllocator() { this->unmapTestOnly(); }
+};
+
 template <class Config> static void testAllocator() {
-  using AllocatorT = scudo::Allocator<Config>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<Config>;
+  auto Allocator = std::make_unique<AllocatorT>();
 
   EXPECT_FALSE(Allocator->isOwned(&Mutex));
   EXPECT_FALSE(Allocator->isOwned(&Allocator));
@@ -348,14 +350,8 @@ template <typename AllocatorT> static void stressAllocator(AllocatorT *A) {
 }
 
 template <class Config> static void testAllocatorThreaded() {
-  using AllocatorT = scudo::Allocator<Config>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<Config>;
+  auto Allocator = std::make_unique<AllocatorT>();
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
     Threads[I] = std::thread(stressAllocator<AllocatorT>, Allocator.get());
@@ -401,14 +397,8 @@ struct DeathConfig {
 };
 
 TEST(ScudoCombinedTest, DeathCombined) {
-  using AllocatorT = scudo::Allocator<DeathConfig>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<DeathConfig>;
+  auto Allocator = std::make_unique<AllocatorT>();
 
   const scudo::uptr Size = 1000U;
   void *P = Allocator->allocate(Size, Origin);
@@ -442,14 +432,8 @@ TEST(ScudoCombinedTest, DeathCombined) {
 // Ensure that releaseToOS can be called prior to any other allocator
 // operation without issue.
 TEST(ScudoCombinedTest, ReleaseToOS) {
-  using AllocatorT = scudo::Allocator<DeathConfig>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<DeathConfig>;
+  auto Allocator = std::make_unique<AllocatorT>();
 
   Allocator->releaseToOS();
 }
@@ -457,14 +441,8 @@ TEST(ScudoCombinedTest, ReleaseToOS) {
 // Verify that when a region gets full, the allocator will still manage to
 // fulfill the allocation through a larger size class.
 TEST(ScudoCombinedTest, FullRegion) {
-  using AllocatorT = scudo::Allocator<DeathConfig>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<DeathConfig>;
+  auto Allocator = std::make_unique<AllocatorT>();
 
   std::vector<void *> V;
   scudo::uptr FailedAllocationsCount = 0;
