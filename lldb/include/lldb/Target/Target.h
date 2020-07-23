@@ -1345,6 +1345,10 @@ public:
   /// has not already been displayed.
   bool RegisterSwiftContextMessageKey(std::string Key);
 
+  StackFrameRecognizerManager &GetFrameRecognizerManager() {
+    return *m_frame_recognizer_manager_up;
+  }
+
 protected:
   /// Implementing of ModuleList::Notifier.
 
@@ -1420,6 +1424,8 @@ protected:
   bool m_suppress_stop_hooks;
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
+  /// Stores the frame recognizers of this target.
+  lldb::StackFrameRecognizerManagerUP m_frame_recognizer_manager_up;
 
   bool m_use_scratch_typesystem_per_module = false;
   bool m_did_display_scratch_fallback_warning = false;
