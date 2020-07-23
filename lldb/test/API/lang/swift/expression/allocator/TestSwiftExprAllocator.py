@@ -11,7 +11,6 @@ class TestSwiftExprAllocator(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @expectedFailureAll(bugnumber='rdar://65960331')
     def test_allocator_self(self):
         """Test expressions involving self in a allocating constructor. In an
         allocator, self is just a local variable, not being passed in, but
