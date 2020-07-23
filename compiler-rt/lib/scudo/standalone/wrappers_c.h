@@ -41,12 +41,4 @@ struct __scudo_mallinfo {
 #define SCUDO_MALLINFO __scudo_mallinfo
 #endif
 
-#ifndef M_DECAY_TIME
-#define M_DECAY_TIME -100
-#endif
-
-#ifndef M_PURGE
-#define M_PURGE -101
-#endif
-
 #endif // SCUDO_WRAPPERS_C_H_

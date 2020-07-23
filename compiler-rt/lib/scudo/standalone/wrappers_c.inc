@@ -173,6 +173,9 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, UNUSED int value) {
   } else if (param == M_PURGE) {
     SCUDO_ALLOCATOR.releaseToOS();
     return 1;
+  } else if (param == M_MEMTAG_TUNING) {
+    return SCUDO_ALLOCATOR.setOption(scudo::Option::MemtagTuning,
+                                     static_cast<scudo::sptr>(value));
   }
   return 0;
 }
