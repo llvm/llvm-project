@@ -132,10 +132,7 @@ constexpr TypeBuilderFunc getModel<double &>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<double *>() {
-  return [](mlir::MLIRContext *context) -> mlir::Type {
-    TypeBuilderFunc f{getModel<double>()};
-    return fir::PointerType::get(f(context));
-  };
+  return getModel<double &>();
 }
 template <>
 constexpr TypeBuilderFunc getModel<float>() {
@@ -152,10 +149,7 @@ constexpr TypeBuilderFunc getModel<float &>() {
 }
 template <>
 constexpr TypeBuilderFunc getModel<float *>() {
-  return [](mlir::MLIRContext *context) -> mlir::Type {
-    TypeBuilderFunc f{getModel<float>()};
-    return fir::PointerType::get(f(context));
-  };
+  return getModel<float &>();
 }
 template <>
 constexpr TypeBuilderFunc getModel<bool>() {
