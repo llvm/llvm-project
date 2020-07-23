@@ -1730,10 +1730,16 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VADDLVApu:     return "ARMISD::VADDLVApu";
   case ARMISD::VMLAVs:        return "ARMISD::VMLAVs";
   case ARMISD::VMLAVu:        return "ARMISD::VMLAVu";
+  case ARMISD::VMLAVps:       return "ARMISD::VMLAVps";
+  case ARMISD::VMLAVpu:       return "ARMISD::VMLAVpu";
   case ARMISD::VMLALVs:       return "ARMISD::VMLALVs";
   case ARMISD::VMLALVu:       return "ARMISD::VMLALVu";
+  case ARMISD::VMLALVps:      return "ARMISD::VMLALVps";
+  case ARMISD::VMLALVpu:      return "ARMISD::VMLALVpu";
   case ARMISD::VMLALVAs:      return "ARMISD::VMLALVAs";
   case ARMISD::VMLALVAu:      return "ARMISD::VMLALVAu";
+  case ARMISD::VMLALVAps:     return "ARMISD::VMLALVAps";
+  case ARMISD::VMLALVApu:     return "ARMISD::VMLALVApu";
   case ARMISD::UMAAL:         return "ARMISD::UMAAL";
   case ARMISD::UMLAL:         return "ARMISD::UMLAL";
   case ARMISD::SMLAL:         return "ARMISD::SMLAL";
@@ -12261,6 +12267,14 @@ static SDValue PerformADDVecReduce(SDNode *N,
     return M;
   if (SDValue M = MakeVecReduce(ARMISD::VMLALVu, ARMISD::VMLALVAu, N1, N0))
     return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VMLALVps, ARMISD::VMLALVAps, N0, N1))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VMLALVpu, ARMISD::VMLALVApu, N0, N1))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VMLALVps, ARMISD::VMLALVAps, N1, N0))
+    return M;
+  if (SDValue M = MakeVecReduce(ARMISD::VMLALVpu, ARMISD::VMLALVApu, N1, N0))
+    return M;
   return SDValue();
 }
 
@@ -14760,6 +14774,26 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
       return true;
     return false;
   };
+  auto IsPredVMLAV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes,
+                     SDValue &A, SDValue &B, SDValue &Mask) {
+    if (ResVT != RetTy || N0->getOpcode() != ISD::VSELECT ||
+        !ISD::isBuildVectorAllZeros(N0->getOperand(2).getNode()))
+      return false;
+    Mask = N0->getOperand(0);
+    SDValue Mul = N0->getOperand(1);
+    if (Mul->getOpcode() != ISD::MUL)
+      return false;
+    SDValue ExtA = Mul->getOperand(0);
+    SDValue ExtB = Mul->getOperand(1);
+    if (ExtA->getOpcode() != ExtendCode && ExtB->getOpcode() != ExtendCode)
+      return false;
+    A = ExtA->getOperand(0);
+    B = ExtB->getOperand(0);
+    if (A.getValueType() == B.getValueType() &&
+        llvm::any_of(ExtTypes, [&A](MVT Ty) { return A.getValueType() == Ty; }))
+      return true;
+    return false;
+  };
   auto Create64bitNode = [&](unsigned Opcode, ArrayRef<SDValue> Ops) {
     SDValue Node = DAG.getNode(Opcode, dl, {MVT::i32, MVT::i32}, Ops);
     return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Node,
@@ -14794,6 +14828,15 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
     return Create64bitNode(ARMISD::VMLALVs, {A, B});
   if (IsVMLAV(MVT::i64, ISD::ZERO_EXTEND, {MVT::v8i16, MVT::v4i32}, A, B))
     return Create64bitNode(ARMISD::VMLALVu, {A, B});
+
+  if (IsPredVMLAV(MVT::i32, ISD::SIGN_EXTEND, {MVT::v8i16, MVT::v16i8}, A, B, Mask))
+    return DAG.getNode(ARMISD::VMLAVps, dl, ResVT, A, B, Mask);
+  if (IsPredVMLAV(MVT::i32, ISD::ZERO_EXTEND, {MVT::v8i16, MVT::v16i8}, A, B, Mask))
+    return DAG.getNode(ARMISD::VMLAVpu, dl, ResVT, A, B, Mask);
+  if (IsPredVMLAV(MVT::i64, ISD::SIGN_EXTEND, {MVT::v8i16, MVT::v4i32}, A, B, Mask))
+    return Create64bitNode(ARMISD::VMLALVps, {A, B, Mask});
+  if (IsPredVMLAV(MVT::i64, ISD::ZERO_EXTEND, {MVT::v8i16, MVT::v4i32}, A, B, Mask))
+    return Create64bitNode(ARMISD::VMLALVpu, {A, B, Mask});
   return SDValue();
 }
 

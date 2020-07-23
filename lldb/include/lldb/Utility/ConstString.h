@@ -42,15 +42,7 @@ public:
   /// Default constructor
   ///
   /// Initializes the string to an empty string.
-  ConstString() : m_string(nullptr) {}
-
-  /// Copy constructor
-  ///
-  /// Copies the string value in \a rhs into this object.
-  ///
-  /// \param[in] rhs
-  ///     Another string object to copy.
-  ConstString(const ConstString &rhs) : m_string(rhs.m_string) {}
+  ConstString() = default;
 
   explicit ConstString(const llvm::StringRef &s);
 
@@ -86,12 +78,6 @@ public:
   ///     from \a cstr.
   explicit ConstString(const char *cstr, size_t max_cstr_len);
 
-  /// Destructor
-  ///
-  /// Since constant string values are currently not reference counted, there
-  /// isn't much to do here.
-  ~ConstString() = default;
-
   /// C string equality binary predicate function object for ConstString
   /// objects.
   struct StringIsEqual {
@@ -123,20 +109,6 @@ public:
   ///     /b True this object contains a valid non-empty C string, \b
   ///     false otherwise.
   explicit operator bool() const { return !IsEmpty(); }
-
-  /// Assignment operator
-  ///
-  /// Assigns the string in this object with the value from \a rhs.
-  ///
-  /// \param[in] rhs
-  ///     Another string object to copy into this object.
-  ///
-  /// \return
-  ///     A const reference to this object.
-  ConstString operator=(ConstString rhs) {
-    m_string = rhs.m_string;
-    return *this;
-  }
 
   /// Equal to operator
   ///
@@ -445,8 +417,7 @@ protected:
     return s;
   };
 
-  // Member variables
-  const char *m_string;
+  const char *m_string = nullptr;
 };
 
 /// Stream the string value \a str to the stream \a s
