@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/raw_ostream.h"
+#include "Utils.h"
 
 namespace mlir {
 class Block;
@@ -171,10 +172,6 @@ static constexpr bool isFunctionLike{common::HasMember<
     A, std::tuple<parser::MainProgram, parser::FunctionSubprogram,
                   parser::SubroutineSubprogram,
                   parser::SeparateModuleSubprogram>>};
-
-using LabelSet = llvm::SmallSet<parser::Label, 5>;
-using SymbolRef = common::Reference<const semantics::Symbol>;
-using SymbolLabelMap = llvm::DenseMap<SymbolRef, LabelSet>;
 
 template <typename A>
 struct MakeReferenceVariantHelper {};
