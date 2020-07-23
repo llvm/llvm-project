@@ -190,11 +190,11 @@ struct RnglistEntry {
   std::vector<yaml::Hex64> Values;
 };
 
-struct Rnglist {
-  std::vector<RnglistEntry> Entries;
+template <typename EntryType> struct ListEntries {
+  std::vector<EntryType> Entries;
 };
 
-struct RnglistTable {
+template <typename EntryType> struct ListTable {
   dwarf::DwarfFormat Format;
   Optional<yaml::Hex64> Length;
   yaml::Hex16 Version;
@@ -202,7 +202,7 @@ struct RnglistTable {
   yaml::Hex8 SegSelectorSize;
   Optional<uint32_t> OffsetEntryCount;
   Optional<std::vector<yaml::Hex64>> Offsets;
-  std::vector<Rnglist> Lists;
+  std::vector<ListEntries<EntryType>> Lists;
 };
 
 struct Data {
@@ -223,7 +223,7 @@ struct Data {
   std::vector<Unit> CompileUnits;
 
   std::vector<LineTable> DebugLines;
-  Optional<std::vector<RnglistTable>> DebugRnglists;
+  Optional<std::vector<ListTable<RnglistEntry>>> DebugRnglists;
 
   bool isEmpty() const;
 
@@ -249,8 +249,10 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LineTableOpcode)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::SegAddrPair)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::AddrTableEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::StringOffsetsTable)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::RnglistTable)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Rnglist)
+LLVM_YAML_IS_SEQUENCE_VECTOR(
+    llvm::DWARFYAML::ListTable<DWARFYAML::RnglistEntry>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(
+    llvm::DWARFYAML::ListEntries<DWARFYAML::RnglistEntry>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::RnglistEntry)
 
 namespace llvm {
@@ -320,12 +322,14 @@ template <> struct MappingTraits<DWARFYAML::SegAddrPair> {
   static void mapping(IO &IO, DWARFYAML::SegAddrPair &SegAddrPair);
 };
 
-template <> struct MappingTraits<DWARFYAML::RnglistTable> {
-  static void mapping(IO &IO, DWARFYAML::RnglistTable &RnglistTable);
+template <typename EntryType>
+struct MappingTraits<DWARFYAML::ListTable<EntryType>> {
+  static void mapping(IO &IO, DWARFYAML::ListTable<EntryType> &ListTable);
 };
 
-template <> struct MappingTraits<DWARFYAML::Rnglist> {
-  static void mapping(IO &IO, DWARFYAML::Rnglist &Rnglist);
+template <typename EntryType>
+struct MappingTraits<DWARFYAML::ListEntries<EntryType>> {
+  static void mapping(IO &IO, DWARFYAML::ListEntries<EntryType> &ListEntries);
 };
 
 template <> struct MappingTraits<DWARFYAML::RnglistEntry> {
