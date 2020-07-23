@@ -59,9 +59,9 @@ define internal i32 @top() {
 )IR");
 
   FunctionAnalysisManager FAM;
-  FunctionPropertiesAnalysis FA;
+  FunctionPropertiesAnalysis FPA;
 
-  auto BranchesFeatures = FA.run(*M->getFunction("branches"), FAM);
+  auto BranchesFeatures = FPA.run(*M->getFunction("branches"), FAM);
   EXPECT_EQ(BranchesFeatures.BasicBlockCount, 4);
   EXPECT_EQ(BranchesFeatures.BlocksReachedFromConditionalInstruction, 2);
   EXPECT_EQ(BranchesFeatures.DirectCallsToDefinedFunctions, 0);
@@ -69,7 +69,7 @@ define internal i32 @top() {
   // so it may have external callers.
   EXPECT_EQ(BranchesFeatures.Uses, 2);
 
-  auto TopFeatures = FA.run(*M->getFunction("top"), FAM);
+  auto TopFeatures = FPA.run(*M->getFunction("top"), FAM);
   EXPECT_EQ(TopFeatures.BasicBlockCount, 1);
   EXPECT_EQ(TopFeatures.BlocksReachedFromConditionalInstruction, 0);
   EXPECT_EQ(TopFeatures.DirectCallsToDefinedFunctions, 1);
