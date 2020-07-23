@@ -3547,6 +3547,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       return getDefaultMappingSOP(MI);
     LLVM_FALLTHROUGH;
 
+  case AMDGPU::G_SADDSAT: // FIXME: Could lower sat ops for SALU
+  case AMDGPU::G_SSUBSAT:
+  case AMDGPU::G_UADDSAT:
+  case AMDGPU::G_USUBSAT:
   case AMDGPU::G_FADD:
   case AMDGPU::G_FSUB:
   case AMDGPU::G_FPTOSI:
