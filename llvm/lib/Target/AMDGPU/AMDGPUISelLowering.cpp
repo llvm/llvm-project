@@ -1228,7 +1228,7 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   switch (Op.getOpcode()) {
   default:
     Op->print(errs(), &DAG);
-    llvm_unreachable("Custom lowering code for this"
+    llvm_unreachable("Custom lowering code for this "
                      "instruction is not implemented yet!");
     break;
   case ISD::SIGN_EXTEND_INREG: return LowerSIGN_EXTEND_INREG(Op, DAG);
