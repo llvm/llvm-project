@@ -5,11 +5,11 @@
 define void @barney() {
 ; CHECK-LABEL: @barney(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label %bb9
+; CHECK-NEXT:    br label [[BB9:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb9:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br label [[BB6:%.*]]
 ;
 bb:
   br label %bb9
@@ -29,9 +29,9 @@ bb9:                                              ; preds = %bb
 define void @blam() {
 ; CHECK-LABEL: @blam(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label %bb16
+; CHECK-NEXT:    br label [[BB16:%.*]]
 ; CHECK:       bb16:
-; CHECK-NEXT:    br label %bb38
+; CHECK-NEXT:    br label [[BB38:%.*]]
 ; CHECK:       bb38:
 ; CHECK-NEXT:    unreachable
 ;
@@ -62,9 +62,9 @@ bb38:                                             ; preds = %bb16
 define void @hoge() {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label %bb2
+; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    unreachable
 ;

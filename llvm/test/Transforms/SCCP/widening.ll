@@ -216,11 +216,11 @@ define void @rotated_loop_2(i32 %x) {
 ; IPSCCP:       bb3:
 ; IPSCCP-NEXT:    br label [[EXIT]]
 ; IPSCCP:       exit:
-; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[BB1]] ], [ 2, [[BB2]] ], [ 5, [[BB3]] ], [ [[A:%.*]], [[EXIT]] ]
-; IPSCCP-NEXT:    [[A]] = add i32 [[P]], 1
+; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[BB1]] ], [ 2, [[BB2]] ], [ 5, [[BB3]] ]
+; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
 ; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    call void @use(i1 false)
-; IPSCCP-NEXT:    br i1 false, label [[EXIT]], label [[EXIT_1:%.*]]
+; IPSCCP-NEXT:    br label [[EXIT_1:%.*]]
 ; IPSCCP:       exit.1:
 ; IPSCCP-NEXT:    ret void
 ;
@@ -451,10 +451,10 @@ define void @foo(i64* %arg) {
 ; SCCP-NEXT:    [[TMP7:%.*]] = sub i64 3, [[TMP6]]
 ; SCCP-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 1
 ; SCCP-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
-; SCCP-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
+; SCCP-NEXT:    [[TMP0:%.*]] = zext i32 [[TMP9]] to i64
 ; SCCP-NEXT:    br label [[BB11:%.*]]
 ; SCCP:       bb11:
-; SCCP-NEXT:    [[TMP12:%.*]] = phi i64 [ [[TMP10]], [[BB4]] ], [ [[TMP17:%.*]], [[BB18:%.*]] ]
+; SCCP-NEXT:    [[TMP12:%.*]] = phi i64 [ [[TMP0]], [[BB4]] ], [ [[TMP17:%.*]], [[BB18:%.*]] ]
 ; SCCP-NEXT:    br label [[BB13:%.*]]
 ; SCCP:       bb13:
 ; SCCP-NEXT:    [[C_1:%.*]] = icmp eq i64 [[TMP12]], 6
@@ -489,10 +489,10 @@ define void @foo(i64* %arg) {
 ; IPSCCP-NEXT:    [[TMP7:%.*]] = sub i64 3, [[TMP6]]
 ; IPSCCP-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 1
 ; IPSCCP-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
-; IPSCCP-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
+; IPSCCP-NEXT:    [[TMP0:%.*]] = zext i32 [[TMP9]] to i64
 ; IPSCCP-NEXT:    br label [[BB11:%.*]]
 ; IPSCCP:       bb11:
-; IPSCCP-NEXT:    [[TMP12:%.*]] = phi i64 [ [[TMP10]], [[BB4]] ], [ [[TMP17:%.*]], [[BB18:%.*]] ]
+; IPSCCP-NEXT:    [[TMP12:%.*]] = phi i64 [ [[TMP0]], [[BB4]] ], [ [[TMP17:%.*]], [[BB18:%.*]] ]
 ; IPSCCP-NEXT:    br label [[BB13:%.*]]
 ; IPSCCP:       bb13:
 ; IPSCCP-NEXT:    [[C_1:%.*]] = icmp eq i64 [[TMP12]], 6

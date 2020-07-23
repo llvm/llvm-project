@@ -136,13 +136,12 @@ define internal i1 @test2_g(%t1* %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test2_g
 ; CHECK-SAME: (%t1* [[H:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
+; CHECK-NEXT:    br label [[LAND_RHS:%.*]]
 ; CHECK:       land.rhs:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 (...) @test2_j()
 ; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp ne i32 [[CALL]], 0
-; CHECK-NEXT:    br label [[LAND_END]]
+; CHECK-NEXT:    br label [[LAND_END:%.*]]
 ; CHECK:       land.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TOBOOL1]], [[LAND_RHS]] ]
 ; CHECK-NEXT:    ret i1 undef
 ;
 entry:
@@ -196,10 +195,9 @@ define internal i32 @test3_k(i8 %h, i32 %i) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[CONV]] to %t1*
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ undef, [[ENTRY:%.*]] ], [ false, [[LOOP]] ]
 ; CHECK-NEXT:    [[CALL:%.*]] = call i1 @test3_g(%t1* [[TMP1]], i32 0)
 ; CHECK-NEXT:    call void @use.1(i1 false)
-; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 undef
 ;
