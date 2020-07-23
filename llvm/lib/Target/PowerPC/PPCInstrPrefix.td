@@ -973,7 +973,8 @@ let Predicates = [IsISA3_1] in {
                          [(set v16i8:$vD,
                                (int_ppc_altivec_vclrrb v16i8:$vA, i32:$rB))]>;
   def VMULLD : VXForm_1<457, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmulld $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmulld $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v2i64:$vD, (mul v2i64:$vA, v2i64:$vB))]>;
   def VMULHSW : VXForm_1<905, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vmulhsw $vD, $vA, $vB", IIC_VecGeneral, []>;
   def VMULHUW : VXForm_1<649, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
@@ -983,21 +984,29 @@ let Predicates = [IsISA3_1] in {
   def VMULHUD : VXForm_1<713, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vmulhud $vD, $vA, $vB", IIC_VecGeneral, []>;
   def VMODSW : VXForm_1<1931, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmodsw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmodsw $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v4i32:$vD, (srem v4i32:$vA, v4i32:$vB))]>;
   def VMODUW : VXForm_1<1675, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmoduw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmoduw $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v4i32:$vD, (urem v4i32:$vA, v4i32:$vB))]>;
   def VMODSD : VXForm_1<1995, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmodsd $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmodsd $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v2i64:$vD, (srem v2i64:$vA, v2i64:$vB))]>;
   def VMODUD : VXForm_1<1739, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmodud $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmodud $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v2i64:$vD, (urem v2i64:$vA, v2i64:$vB))]>;
   def VDIVSW : VXForm_1<395, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vdivsw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vdivsw $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v4i32:$vD, (sdiv v4i32:$vA, v4i32:$vB))]>;
   def VDIVUW : VXForm_1<139, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vdivuw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vdivuw $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v4i32:$vD, (udiv v4i32:$vA, v4i32:$vB))]>;
   def VDIVSD : VXForm_1<459, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vdivsd $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vdivsd $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v2i64:$vD, (sdiv v2i64:$vA, v2i64:$vB))]>;
   def VDIVUD : VXForm_1<203, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vdivud $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vdivud $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v2i64:$vD, (udiv v2i64:$vA, v2i64:$vB))]>;
   def VDIVESW : VXForm_1<907, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vdivesw $vD, $vA, $vB", IIC_VecGeneral, []>;
   def VDIVEUW : VXForm_1<651, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
