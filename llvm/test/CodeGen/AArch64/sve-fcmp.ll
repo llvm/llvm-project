@@ -257,3 +257,58 @@ define <vscale x 4 x i32> @oeq_4f32_zext(<vscale x 4 x float> %x, <vscale x 4 x 
   %r = zext <vscale x 4 x i1> %y to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %r
 }
+
+define <vscale x 4 x i1> @eq_fast(<vscale x 4 x float> %x, <vscale x 4 x float> %x2) {
+; CHECK-LABEL: eq_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %y = fcmp fast oeq <vscale x 4 x float> %x, %x2
+  ret <vscale x 4 x i1> %y
+}
+define <vscale x 4 x i1> @gt_fast(<vscale x 4 x float> %x, <vscale x 4 x float> %x2) {
+; CHECK-LABEL: gt_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmgt p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %y = fcmp fast ogt <vscale x 4 x float> %x, %x2
+  ret <vscale x 4 x i1> %y
+}
+define <vscale x 4 x i1> @ge_fast(<vscale x 4 x float> %x, <vscale x 4 x float> %x2) {
+; CHECK-LABEL: ge_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmge p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %y = fcmp fast oge <vscale x 4 x float> %x, %x2
+  ret <vscale x 4 x i1> %y
+}
+define <vscale x 4 x i1> @lt_fast(<vscale x 4 x float> %x, <vscale x 4 x float> %x2) {
+; CHECK-LABEL: lt_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmgt p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    ret
+  %y = fcmp fast olt <vscale x 4 x float> %x, %x2
+  ret <vscale x 4 x i1> %y
+}
+define <vscale x 4 x i1> @le_fast(<vscale x 4 x float> %x, <vscale x 4 x float> %x2) {
+; CHECK-LABEL: le_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmge p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    ret
+  %y = fcmp fast ole <vscale x 4 x float> %x, %x2
+  ret <vscale x 4 x i1> %y
+}
+define <vscale x 4 x i1> @ne_fast(<vscale x 4 x float> %x, <vscale x 4 x float> %x2) {
+; CHECK-LABEL: ne_fast:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %y = fcmp fast one <vscale x 4 x float> %x, %x2
+  ret <vscale x 4 x i1> %y
+}
