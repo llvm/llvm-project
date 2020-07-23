@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only -fdebug-pre-fir-tree -fopenacc %s | FileCheck %s
+! RUN: bbc -I %moddir -pft-test -fopenacc -o %t %s | FileCheck %s
 
 ! Test structure of the Pre-FIR tree with OpenACC construct
 
