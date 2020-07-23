@@ -105,7 +105,7 @@ define void @pr46814(i32 %a) {
 ; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C1]], [[C2]]
 ; CHECK-NEXT:    br i1 [[C3]], label [[IF_1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if.1:
-; CHECK-NEXT:    br i1 true, label [[IF_2:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[IF_2:%.*]]
 ; CHECK:       if.2:
 ; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[EXIT]]
 ; CHECK:       exit:
