@@ -290,11 +290,10 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
   if (!FS.empty())
     ArchFS = (Twine(ArchFS) + "," + FS).str();
 
-  std::string CPUName = std::string(CPU);
-  if (CPUName.empty())
-    CPUName = "generic";
+  if (CPU.empty())
+    CPU = "generic";
 
-  return createX86MCSubtargetInfoImpl(TT, CPUName, ArchFS);
+  return createX86MCSubtargetInfoImpl(TT, CPU, ArchFS);
 }
 
 static MCInstrInfo *createX86MCInstrInfo() {
