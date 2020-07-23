@@ -104,18 +104,18 @@ public:
   }
 };
 
-template <typename ValueType> class FormattersContainer;
-
-template <typename ValueType> class FormatMap {
+template <typename ValueType> class FormattersContainer {
 public:
-  typedef typename ValueType::SharedPointer ValueSP;
+  typedef typename std::shared_ptr<ValueType> ValueSP;
   typedef std::vector<std::pair<TypeMatcher, ValueSP>> MapType;
-  typedef typename MapType::iterator MapIterator;
   typedef std::function<bool(const TypeMatcher &, const ValueSP &)>
       ForEachCallback;
+  typedef typename std::shared_ptr<FormattersContainer<ValueType>>
+      SharedPointer;
 
-  FormatMap(IFormatChangeListener *lst)
-      : m_map(), m_map_mutex(), listener(lst) {}
+  friend class TypeCategoryImpl;
+
+  FormattersContainer(IFormatChangeListener *lst) : listener(lst) {}
 
   void Add(TypeMatcher matcher, const ValueSP &entry) {
     if (listener)
@@ -130,9 +130,9 @@ public:
       listener->Changed();
   }
 
-  bool Delete(const TypeMatcher &matcher) {
+  bool Delete(TypeMatcher matcher) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    for (MapIterator iter = m_map.begin(); iter != m_map.end(); ++iter)
+    for (auto iter = m_map.begin(); iter != m_map.end(); ++iter)
       if (iter->first.CreatedBySameMatchString(matcher)) {
         m_map.erase(iter);
         if (listener)
@@ -142,14 +142,18 @@ public:
     return false;
   }
 
-  void Clear() {
+  bool Get(ConstString type, ValueSP &entry) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    m_map.clear();
-    if (listener)
-      listener->Changed();
+    for (auto &formatter : llvm::reverse(m_map)) {
+      if (formatter.first.Matches(type)) {
+        entry = formatter.second;
+        return true;
+      }
+    }
+    return false;
   }
 
-  bool Get(const TypeMatcher &matcher, ValueSP &entry) {
+  bool GetExact(TypeMatcher matcher, ValueSP &entry) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     for (const auto &pos : m_map)
       if (pos.first.CreatedBySameMatchString(matcher)) {
@@ -157,6 +161,29 @@ public:
         return true;
       }
     return false;
+  }
+
+  ValueSP GetAtIndex(size_t index) {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    if (index >= m_map.size())
+      return ValueSP();
+    return m_map[index].second;
+  }
+
+  lldb::TypeNameSpecifierImplSP GetTypeNameSpecifierAtIndex(size_t index) {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    if (index >= m_map.size())
+      return lldb::TypeNameSpecifierImplSP();
+    TypeMatcher type_matcher = m_map[index].first;
+    return std::make_shared<TypeNameSpecifierImpl>(
+        type_matcher.GetMatchString().GetStringRef(), true);
+  }
+
+  void Clear() {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    m_map.clear();
+    if (listener)
+      listener->Changed();
   }
 
   void ForEach(ForEachCallback callback) {
@@ -170,97 +197,16 @@ public:
     }
   }
 
-  uint32_t GetCount() { return m_map.size(); }
-
-  ValueSP GetValueAtIndex(size_t index) {
+  uint32_t GetCount() {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    if (index >= m_map.size())
-      return ValueSP();
-    return m_map[index].second;
-  }
-
-  // If caller holds the mutex we could return a reference without copy ctor.
-  llvm::Optional<TypeMatcher> GetKeyAtIndex(size_t index) {
-    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    if (index >= m_map.size())
-      return llvm::None;
-    return m_map[index].first;
+    return m_map.size();
   }
 
 protected:
-  MapType m_map;
-  std::recursive_mutex m_map_mutex;
-  IFormatChangeListener *listener;
-
-  MapType &map() { return m_map; }
-
-  std::recursive_mutex &mutex() { return m_map_mutex; }
-
-  friend class FormattersContainer<ValueType>;
-  friend class FormatManager;
-};
-
-template <typename ValueType> class FormattersContainer {
-protected:
-  typedef FormatMap<ValueType> BackEndType;
-
-public:
-  typedef std::shared_ptr<ValueType> MapValueType;
-  typedef typename BackEndType::ForEachCallback ForEachCallback;
-  typedef typename std::shared_ptr<FormattersContainer<ValueType>>
-      SharedPointer;
-
-  friend class TypeCategoryImpl;
-
-  FormattersContainer(IFormatChangeListener *lst) : m_format_map(lst) {}
-
-  void Add(TypeMatcher type, const MapValueType &entry) {
-    m_format_map.Add(std::move(type), entry);
-  }
-
-  bool Delete(TypeMatcher type) { return m_format_map.Delete(type); }
-
-  bool Get(ConstString type, MapValueType &entry) {
-    std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
-    for (auto &formatter : llvm::reverse(m_format_map.map())) {
-      if (formatter.first.Matches(type)) {
-        entry = formatter.second;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool GetExact(ConstString type, MapValueType &entry) {
-    return m_format_map.Get(type, entry);
-  }
-
-  MapValueType GetAtIndex(size_t index) {
-    return m_format_map.GetValueAtIndex(index);
-  }
-
-  lldb::TypeNameSpecifierImplSP GetTypeNameSpecifierAtIndex(size_t index) {
-    llvm::Optional<TypeMatcher> type_matcher =
-        m_format_map.GetKeyAtIndex(index);
-    if (!type_matcher)
-      return lldb::TypeNameSpecifierImplSP();
-    return lldb::TypeNameSpecifierImplSP(new TypeNameSpecifierImpl(
-        type_matcher->GetMatchString().GetStringRef(), true));
-  }
-
-  void Clear() { m_format_map.Clear(); }
-
-  void ForEach(ForEachCallback callback) { m_format_map.ForEach(callback); }
-
-  uint32_t GetCount() { return m_format_map.GetCount(); }
-
-protected:
-  BackEndType m_format_map;
-
   FormattersContainer(const FormattersContainer &) = delete;
   const FormattersContainer &operator=(const FormattersContainer &) = delete;
 
-  bool Get(const FormattersMatchVector &candidates, MapValueType &entry) {
+  bool Get(const FormattersMatchVector &candidates, ValueSP &entry) {
     for (const FormattersMatchCandidate &candidate : candidates) {
       if (Get(candidate.GetTypeName(), entry)) {
         if (candidate.IsMatch(entry) == false) {
@@ -273,6 +219,10 @@ protected:
     }
     return false;
   }
+
+  MapType m_map;
+  std::recursive_mutex m_map_mutex;
+  IFormatChangeListener *listener;
 };
 
 } // namespace lldb_private
