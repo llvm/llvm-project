@@ -204,7 +204,8 @@ class StreamChecker : public Checker<check::PreCall, eval::Call,
   BugType BT_IllegalWhence{this, "Illegal whence argument",
                            "Stream handling error"};
   BugType BT_StreamEof{this, "Stream already in EOF", "Stream handling error"};
-  BugType BT_ResourceLeak{this, "Resource leak", "Stream handling error"};
+  BugType BT_ResourceLeak{this, "Resource leak", "Stream handling error",
+                          /*SuppressOnSink =*/true};
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
@@ -965,11 +966,6 @@ void StreamChecker::reportFEofWarning(CheckerContext &C,
 ExplodedNode *
 StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
                            CheckerContext &C, ExplodedNode *Pred) const {
-  // Do not warn for non-closed stream at program exit.
-  // FIXME: Use BugType::SuppressOnSink instead.
-  if (Pred && Pred->getCFGBlock() && Pred->getCFGBlock()->hasNoReturnElement())
-    return Pred;
-
   ExplodedNode *Err = C.generateNonFatalErrorNode(C.getState(), Pred);
   if (!Err)
     return Pred;
