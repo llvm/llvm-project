@@ -86,6 +86,10 @@ Changes to the X86 Target
 
 During this release ...
 
+* The 'mpx' feature was removed from the backend. It had been removed from clang
+  frontend in 10.0. Mention of the 'mpx' feature in an IR file will print a
+  message to stderr, but IR should still compile.
+
 Changes to the AMDGPU Target
 -----------------------------
 
