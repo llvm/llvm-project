@@ -997,6 +997,8 @@ private:
     mlir::emitWarning(toLocation(), "ignoring all compiler directives");
   }
 
+  void genFIR(const Fortran::parser::OpenACCConstruct &) { TODO(); }
+
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     genOpenMPConstruct(*this, getEval(), omp);
   }
