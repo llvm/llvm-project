@@ -2512,6 +2512,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     // TODO TargetIndexLocation is a target-independent. Currently only the WebAssembly-specific
     // encoding is supported.
     DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
+      DwarfExpr.addExpression(std::move(ExprCursor));
+      return;
   } else if (Value.isConstantFP()) {
     if (AP.getDwarfVersion() >= 4 && AP.getDwarfDebug()->tuneForGDB()) {
       DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF());
