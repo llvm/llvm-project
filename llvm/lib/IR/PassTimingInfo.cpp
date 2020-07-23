@@ -16,9 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/PassTimingInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -26,9 +24,8 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/Timer.h"
+#include "llvm/Support/TypeName.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
 #include <string>
 
 using namespace llvm;
