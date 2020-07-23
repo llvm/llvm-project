@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements an analysis extracting function features, which may be
+// This file implements an analysis extracting function properties, which may be
 // used by ML-driven policies, for example.
 //
 //===----------------------------------------------------------------------===//
@@ -16,27 +16,38 @@
 
 using namespace llvm;
 
-AnalysisKey FunctionPropertiesAnalysis::Key;
+FunctionPropertiesInfo
+FunctionPropertiesInfo::getFunctionPropertiesInfo(const Function &F) {
 
-FunctionPropertiesAnalysis::Result
-FunctionPropertiesAnalysis::run(const Function &F,
-                                FunctionAnalysisManager &FAM) {
-  Result Ret;
-  Ret.Uses = ((!F.hasLocalLinkage()) ? 1 : 0) + F.getNumUses();
+  FunctionPropertiesInfo FPI;
+
+  FPI.Uses = ((!F.hasLocalLinkage()) ? 1 : 0) + F.getNumUses();
+
   for (const auto &BB : F) {
-    ++Ret.BasicBlockCount;
+    ++FPI.BasicBlockCount;
+
     if (const auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
       if (BI->isConditional())
-        Ret.BlocksReachedFromConditionalInstruction += BI->getNumSuccessors();
-    } else if (const auto *SI = dyn_cast<SwitchInst>(BB.getTerminator()))
-      Ret.BlocksReachedFromConditionalInstruction +=
+        FPI.BlocksReachedFromConditionalInstruction += BI->getNumSuccessors();
+    } else if (const auto *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
+      FPI.BlocksReachedFromConditionalInstruction +=
           (SI->getNumCases() + (nullptr != SI->getDefaultDest()));
-    for (const auto &I : BB)
+    }
+
+    for (const auto &I : BB) {
       if (auto *CS = dyn_cast<CallBase>(&I)) {
         const auto *Callee = CS->getCalledFunction();
         if (Callee && !Callee->isIntrinsic() && !Callee->isDeclaration())
-          ++Ret.DirectCallsToDefinedFunctions;
+          ++FPI.DirectCallsToDefinedFunctions;
       }
+    }
   }
-  return Ret;
+  return FPI;
+}
+
+AnalysisKey FunctionPropertiesAnalysis::Key;
+
+FunctionPropertiesInfo
+FunctionPropertiesAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
+  return FunctionPropertiesInfo::getFunctionPropertiesInfo(F);
 }
