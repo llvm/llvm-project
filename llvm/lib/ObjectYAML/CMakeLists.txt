@@ -6,7 +6,6 @@ add_llvm_component_library(LLVMObjectYAML
   COFFEmitter.cpp
   COFFYAML.cpp
   DWARFEmitter.cpp
-  DWARFVisitor.cpp
   DWARFYAML.cpp
   ELFEmitter.cpp
   ELFYAML.cpp
