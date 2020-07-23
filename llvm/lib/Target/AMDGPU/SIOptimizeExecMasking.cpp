@@ -300,9 +300,20 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
     if (I == E)
       continue;
 
-    // TODO: It's possible to see other terminator copies after the exec copy.
-    Register CopyToExec = isCopyToExec(*I, ST);
-    if (!CopyToExec.isValid())
+    // It's possible to see other terminator copies after the exec copy. This
+    // can happen if control flow pseudos had their outputs used by phis.
+    Register CopyToExec;
+
+    unsigned SearchCount = 0;
+    const unsigned SearchLimit = 5;
+    while (I != E && SearchCount++ < SearchLimit) {
+      CopyToExec = isCopyToExec(*I, ST);
+      if (CopyToExec)
+        break;
+      ++I;
+    }
+
+    if (!CopyToExec)
       continue;
 
     // Scan backwards to find the def.
