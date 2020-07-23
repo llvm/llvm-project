@@ -267,66 +267,82 @@ public:
   syntax::Leaf *closeParen();
 };
 
-/// Expression for integer literals. C++ [lex.icon]
-class IntegerLiteralExpression final : public Expression {
+/// Expression for literals. C++ [lex.literal]
+class LiteralExpression : public Expression {
 public:
-  IntegerLiteralExpression() : Expression(NodeKind::IntegerLiteralExpression) {}
+  LiteralExpression(NodeKind K) : Expression(K) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::IntegerLiteralExpression ||
+           N->kind() == NodeKind::CharacterLiteralExpression ||
+           N->kind() == NodeKind::FloatingLiteralExpression ||
+           N->kind() == NodeKind::StringLiteralExpression ||
+           N->kind() == NodeKind::BoolLiteralExpression ||
+           N->kind() == NodeKind::CxxNullPtrExpression ||
+           N->kind() == NodeKind::IntegerUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::FloatUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::CharUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::StringUserDefinedLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for integer literals. C++ [lex.icon]
+class IntegerLiteralExpression final : public LiteralExpression {
+public:
+  IntegerLiteralExpression()
+      : LiteralExpression(NodeKind::IntegerLiteralExpression) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::IntegerLiteralExpression;
   }
-  syntax::Leaf *literalToken();
 };
 
 /// Expression for character literals. C++ [lex.ccon]
-class CharacterLiteralExpression final : public Expression {
+class CharacterLiteralExpression final : public LiteralExpression {
 public:
   CharacterLiteralExpression()
-      : Expression(NodeKind::CharacterLiteralExpression) {}
+      : LiteralExpression(NodeKind::CharacterLiteralExpression) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::CharacterLiteralExpression;
   }
-  syntax::Leaf *literalToken();
 };
 
 /// Expression for floating-point literals. C++ [lex.fcon]
-class FloatingLiteralExpression final : public Expression {
+class FloatingLiteralExpression final : public LiteralExpression {
 public:
   FloatingLiteralExpression()
-      : Expression(NodeKind::FloatingLiteralExpression) {}
+      : LiteralExpression(NodeKind::FloatingLiteralExpression) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::FloatingLiteralExpression;
   }
-  syntax::Leaf *literalToken();
 };
 
 /// Expression for string-literals. C++ [lex.string]
-class StringLiteralExpression final : public Expression {
+class StringLiteralExpression final : public LiteralExpression {
 public:
-  StringLiteralExpression() : Expression(NodeKind::StringLiteralExpression) {}
+  StringLiteralExpression()
+      : LiteralExpression(NodeKind::StringLiteralExpression) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::StringLiteralExpression;
   }
-  syntax::Leaf *literalToken();
 };
 
 /// Expression for boolean literals. C++ [lex.bool]
-class BoolLiteralExpression final : public Expression {
+class BoolLiteralExpression final : public LiteralExpression {
 public:
-  BoolLiteralExpression() : Expression(NodeKind::BoolLiteralExpression) {}
+  BoolLiteralExpression()
+      : LiteralExpression(NodeKind::BoolLiteralExpression) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::BoolLiteralExpression;
   }
-  syntax::Leaf *literalToken();
 };
 
 /// Expression for the `nullptr` literal. C++ [lex.nullptr]
-class CxxNullPtrExpression final : public Expression {
+class CxxNullPtrExpression final : public LiteralExpression {
 public:
-  CxxNullPtrExpression() : Expression(NodeKind::CxxNullPtrExpression) {}
+  CxxNullPtrExpression() : LiteralExpression(NodeKind::CxxNullPtrExpression) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::CxxNullPtrExpression;
   }
-  syntax::Leaf *nullPtrKeyword();
 };
 
 /// Expression for user-defined literal. C++ [lex.ext]
@@ -335,16 +351,15 @@ public:
 ///   user-defined-floating-point-literal
 ///   user-defined-string-literal
 ///   user-defined-character-literal
-class UserDefinedLiteralExpression : public Expression {
+class UserDefinedLiteralExpression : public LiteralExpression {
 public:
-  UserDefinedLiteralExpression(NodeKind K) : Expression(K) {}
+  UserDefinedLiteralExpression(NodeKind K) : LiteralExpression(K) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::IntegerUserDefinedLiteralExpression ||
            N->kind() == NodeKind::FloatUserDefinedLiteralExpression ||
            N->kind() == NodeKind::CharUserDefinedLiteralExpression ||
            N->kind() == NodeKind::StringUserDefinedLiteralExpression;
   }
-  syntax::Leaf *literalToken();
 };
 
 /// Expression for user-defined-integer-literal. C++ [lex.ext]
