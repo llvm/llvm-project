@@ -156,6 +156,10 @@ else()
     add_cxx_compiler_flag(-fno-exceptions)
   endif()
 
+  if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+    add_cxx_compiler_flag(-Wno-suggest-override)
+  endif()
+
   if (HAVE_CXX_FLAG_FSTRICT_ALIASING)
     if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Intel") #ICC17u2: Many false positives for Wstrict-aliasing
       add_cxx_compiler_flag(-Wstrict-aliasing)
