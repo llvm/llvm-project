@@ -140,3 +140,27 @@ define i32 @indbrtest5_callee(i1 %c) {
   %r = call i32 @indbrtest5(i1 %c)
   ret i32 %r
 }
+
+define i32 @indbr_duplicate_successors_phi(i1 %c, i32 %x) {
+; CHECK-LABEL: @indbr_duplicate_successors_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[INDBR:%.*]], label [[BB0:%.*]]
+; CHECK:       indbr:
+; CHECK-NEXT:    br label [[BB0]]
+; CHECK:       BB0:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ 0, [[INDBR]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %indbr, label %BB0
+
+indbr:
+  indirectbr i8* blockaddress(@indbr_duplicate_successors_phi, %BB0), [label %BB0, label %BB0, label %BB1]
+
+BB0:
+  %phi = phi i32 [ %x, %entry ], [ 0, %indbr ], [ 0, %indbr ]
+  ret i32 %phi
+
+BB1:
+  ret i32 0
+}
