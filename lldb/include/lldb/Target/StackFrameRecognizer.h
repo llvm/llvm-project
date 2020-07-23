@@ -125,7 +125,6 @@ public:
 private:
   struct RegisteredEntry {
     uint32_t recognizer_id;
-    bool deleted;
     lldb::StackFrameRecognizerSP recognizer;
     bool is_regexp;
     ConstString module;

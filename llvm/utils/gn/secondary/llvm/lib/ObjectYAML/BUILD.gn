@@ -14,7 +14,6 @@ static_library("ObjectYAML") {
     "CodeViewYAMLTypeHashing.cpp",
     "CodeViewYAMLTypes.cpp",
     "DWARFEmitter.cpp",
-    "DWARFVisitor.cpp",
     "DWARFYAML.cpp",
     "ELFEmitter.cpp",
     "ELFYAML.cpp",

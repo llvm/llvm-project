@@ -24,6 +24,7 @@ int foo(int a, int b) {
 int main(int argc, char *argv[]) {
   // Death tests for unsupported API usage.
   const char *command = (argc < 2) ? "" : argv[1];
+  fprintf(stderr, "Running with command %s\n", command);
   // CREATE-LABEL: FATAL: DataFlowSanitizer: dfsan_create_label is unsupported
   if (strcmp(command, "dfsan_create_label") == 0)
     dfsan_create_label("", NULL);
@@ -41,12 +42,18 @@ int main(int argc, char *argv[]) {
   dfsan_set_label(8, &a, sizeof(a));
   dfsan_set_label(512, &b, sizeof(b));
   int c = foo(a, b);
-  printf("A: 0x%x\n", dfsan_get_label(a));
-  printf("B: 0x%x\n", dfsan_get_label(b));
+  fprintf(stderr, "A: 0x%x\n", dfsan_get_label(a));
+  fprintf(stderr, "B: 0x%x\n", dfsan_get_label(b));
   dfsan_label l = dfsan_get_label(c);
-  printf("C: 0x%x\n", l);
+  fprintf(stderr, "C: 0x%x\n", l);
+  fprintf(stderr, "Testing l == 520\n");
   assert(l == 520);  // OR of the other two labels.
+  fprintf(stderr, "Testing dfsan_has_label(l, 8)\n");
   assert(dfsan_has_label(l, 8));
+  fprintf(stderr, "Testing dfsan_has_label(l, 512)\n");
   assert(dfsan_has_label(l, 512));
+  fprintf(stderr, "Testing !dfsan_has_label(l, 1)\n");
   assert(!dfsan_has_label(l, 1));
+  fprintf(stderr, "returning...\n");
+  return 0;
 }
