@@ -1155,12 +1155,6 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       });
   }
 
-  SmallVector<ArgInfo, 8> InArgs;
-  if (!Info.OrigRet.Ty->isVoidTy()) {
-    LLVM_DEBUG(dbgs() << "Call return values not yet handled\n");
-    return false;
-  }
-
   // If we can lower as a tail call, do that instead.
   bool CanTailCallOpt = false;
 
@@ -1232,9 +1226,6 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getNextStackOffset();
 
-  // Now we can add the actual call instruction to the correct position.
-  MIRBuilder.insertInstr(MIB);
-
   // If Callee is a reg, since it is used by a target specific
   // instruction, it must have a register class matching the
   // constraint of that instruction.
@@ -1248,6 +1239,31 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         1));
   }
 
+  auto OrigInsertPt = MIRBuilder.getInsertPt();
+
+  // Now we can add the actual call instruction to the correct position.
+  MIRBuilder.insertInstr(MIB);
+
+  // Insert this now to give us an anchor point for managing the insert point.
+  MachineInstrBuilder CallSeqEnd =
+    MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN);
+
+  SmallVector<ArgInfo, 8> InArgs;
+  if (!Info.OrigRet.Ty->isVoidTy()) {
+    splitToValueTypes(
+      MIRBuilder, Info.OrigRet, InArgs, DL, Info.CallConv, false,
+      [&](ArrayRef<Register> Regs, Register DstReg,
+          LLT LLTy, LLT PartLLT, int VTSplitIdx) {
+        assert(DstReg == Info.OrigRet.Regs[VTSplitIdx]);
+        packSplitRegsToOrigType(MIRBuilder,  Info.OrigRet.Regs[VTSplitIdx],
+                                Regs, LLTy, PartLLT);
+      });
+  }
+
+  // Make sure the raw argument copies are inserted before the marshalling to
+  // the original types.
+  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), CallSeqEnd);
+
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arguments, the physical register must be an
   // implicit-define of the call instruction.
@@ -1260,9 +1276,10 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   uint64_t CalleePopBytes = NumBytes;
-  MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN)
-    .addImm(0)
-    .addImm(CalleePopBytes);
+  CallSeqEnd.addImm(0)
+            .addImm(CalleePopBytes);
 
+  // Restore the insert point to after the call sequence.
+  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), OrigInsertPt);
   return true;
 }
