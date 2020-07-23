@@ -13,6 +13,7 @@
 
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "DWARFVisitor.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -441,9 +442,10 @@ Error DWARFYAML::emitDebugStrOffsets(raw_ostream &OS, const Data &DI) {
   return Error::success();
 }
 
-static Expected<uint64_t>
-writeRnglistEntry(raw_ostream &OS, const DWARFYAML::RnglistEntry &Entry,
-                  uint8_t AddrSize, bool IsLittleEndian) {
+static Expected<uint64_t> writeListEntry(raw_ostream &OS,
+                                         const DWARFYAML::RnglistEntry &Entry,
+                                         uint8_t AddrSize,
+                                         bool IsLittleEndian) {
   uint64_t BeginOffset = OS.tell();
   writeInteger((uint8_t)Entry.Operator, OS, IsLittleEndian);
 
@@ -515,9 +517,11 @@ writeRnglistEntry(raw_ostream &OS, const DWARFYAML::RnglistEntry &Entry,
   return OS.tell() - BeginOffset;
 }
 
-Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
-  assert(DI.DebugRnglists && "unexpected emitDebugRnglists() call");
-  for (const DWARFYAML::RnglistTable &Table : *DI.DebugRnglists) {
+template <typename EntryType>
+Error writeDWARFLists(raw_ostream &OS,
+                      ArrayRef<DWARFYAML::ListTable<EntryType>> Tables,
+                      bool IsLittleEndian, bool Is64BitAddrSize) {
+  for (const DWARFYAML::ListTable<EntryType> &Table : Tables) {
     // sizeof(version) + sizeof(address_size) + sizeof(segment_selector_size) +
     // sizeof(offset_entry_count) = 8
     uint64_t Length = 8;
@@ -526,24 +530,25 @@ Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
     if (Table.AddrSize)
       AddrSize = *Table.AddrSize;
     else
-      AddrSize = DI.Is64BitAddrSize ? 8 : 4;
+      AddrSize = Is64BitAddrSize ? 8 : 4;
 
-    // Since the length of the current range lists entry is undetermined yet, we
-    // firstly write the content of the range lists to a buffer to calculate the
-    // length and then serialize the buffer content to the actual output stream.
+    // Since the length of the current range/location lists entry is
+    // undetermined yet, we firstly write the content of the range/location
+    // lists to a buffer to calculate the length and then serialize the buffer
+    // content to the actual output stream.
     std::string ListBuffer;
     raw_string_ostream ListBufferOS(ListBuffer);
 
-    // Offsets holds offsets for each range list. The i-th element is the offset
-    // from the beginning of the first range list to the location of the i-th
-    // range list.
+    // Offsets holds offsets for each range/location list. The i-th element is
+    // the offset from the beginning of the first range/location list to the
+    // location of the i-th range list.
     std::vector<uint64_t> Offsets;
 
-    for (const DWARFYAML::Rnglist &List : Table.Lists) {
+    for (const DWARFYAML::ListEntries<EntryType> &List : Table.Lists) {
       Offsets.push_back(ListBufferOS.tell());
-      for (const DWARFYAML::RnglistEntry &Entry : List.Entries) {
+      for (const EntryType &Entry : List.Entries) {
         Expected<uint64_t> EntrySize =
-            writeRnglistEntry(ListBufferOS, Entry, AddrSize, DI.IsLittleEndian);
+            writeListEntry(ListBufferOS, Entry, AddrSize, IsLittleEndian);
         if (!EntrySize)
           return EntrySize.takeError();
         Length += *EntrySize;
@@ -568,17 +573,17 @@ Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
     if (Table.Length)
       Length = *Table.Length;
 
-    writeInitialLength(Table.Format, Length, OS, DI.IsLittleEndian);
-    writeInteger((uint16_t)Table.Version, OS, DI.IsLittleEndian);
-    writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
-    writeInteger((uint8_t)Table.SegSelectorSize, OS, DI.IsLittleEndian);
-    writeInteger((uint32_t)OffsetEntryCount, OS, DI.IsLittleEndian);
+    writeInitialLength(Table.Format, Length, OS, IsLittleEndian);
+    writeInteger((uint16_t)Table.Version, OS, IsLittleEndian);
+    writeInteger((uint8_t)AddrSize, OS, IsLittleEndian);
+    writeInteger((uint8_t)Table.SegSelectorSize, OS, IsLittleEndian);
+    writeInteger((uint32_t)OffsetEntryCount, OS, IsLittleEndian);
 
     auto EmitOffsets = [&](ArrayRef<uint64_t> Offsets, uint64_t OffsetsSize) {
       for (uint64_t Offset : Offsets) {
         cantFail(writeVariableSizedInteger(
             OffsetsSize + Offset, Table.Format == dwarf::DWARF64 ? 8 : 4, OS,
-            DI.IsLittleEndian));
+            IsLittleEndian));
       }
     };
 
@@ -593,6 +598,12 @@ Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
   }
 
   return Error::success();
+}
+
+Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
+  assert(DI.DebugRnglists && "unexpected emitDebugRnglists() call");
+  return writeDWARFLists<DWARFYAML::RnglistEntry>(
+      OS, *DI.DebugRnglists, DI.IsLittleEndian, DI.Is64BitAddrSize);
 }
 
 using EmitFuncType = Error (*)(raw_ostream &, const DWARFYAML::Data &);
