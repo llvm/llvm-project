@@ -1,4 +1,4 @@
-//==- FunctionPropertiesAnalysis.h - Function Properties Analysis -*-C++ -*-==//
+//=- FunctionPropertiesAnalysis.h - Function Properties Analysis --*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,6 +41,8 @@ public:
   int64_t DirectCallsToDefinedFunctions = 0;
 
   static FunctionPropertiesInfo getFunctionPropertiesInfo(const Function &F);
+
+  void print(raw_ostream &OS) const;
 };
 
 // Analysis pass
@@ -53,6 +55,17 @@ public:
   using Result = FunctionPropertiesInfo;
 
   Result run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+/// Printer pass for the FunctionPropertiesAnalysis results.
+class FunctionPropertiesPrinterPass
+    : public PassInfoMixin<FunctionPropertiesPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit FunctionPropertiesPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm
