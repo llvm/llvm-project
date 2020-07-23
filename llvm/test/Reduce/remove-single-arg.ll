@@ -3,7 +3,7 @@
 
 define i32 @t(i32 %a0) {
 ; CHECK-ALL-LABEL: @t
-; CHECK-FINAL: (i32 %a0) {
+; CHECK-FINAL: () {
 ;
 ; CHECK-INTERESTINGNESS: ret i32
 ; CHECK-FINAL: ret i32 42
