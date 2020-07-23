@@ -31,7 +31,7 @@ public:
   typedef TypeMatcher ExactMatchMap;
   typedef TypeMatcher RegexMatchMap;
 
-  typedef typename ExactMatchContainer::MapValueType MapValueType;
+  typedef typename ExactMatchContainer::ValueSP MapValueType;
 
   typedef typename ExactMatchContainer::SharedPointer ExactMatchContainerSP;
   typedef typename RegexMatchContainer::SharedPointer RegexMatchContainerSP;
