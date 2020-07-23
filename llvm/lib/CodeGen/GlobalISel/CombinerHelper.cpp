@@ -604,8 +604,8 @@ bool CombinerHelper::matchSextTruncSextLoad(MachineInstr &MI) {
 
 bool CombinerHelper::applySextTruncSextLoad(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
-  MachineIRBuilder MIB(MI);
-  MIB.buildCopy(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildCopy(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
   MI.eraseFromParent();
   return true;
 }
