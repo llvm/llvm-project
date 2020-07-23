@@ -442,6 +442,31 @@ Error DWARFYAML::emitDebugStrOffsets(raw_ostream &OS, const Data &DI) {
   return Error::success();
 }
 
+static Error checkListEntryOperands(StringRef EncodingString,
+                                    ArrayRef<yaml::Hex64> Values,
+                                    uint64_t ExpectedOperands) {
+  if (Values.size() != ExpectedOperands)
+    return createStringError(
+        errc::invalid_argument,
+        "invalid number (%zu) of operands for the operator: %s, %" PRIu64
+        " expected",
+        Values.size(), EncodingString.str().c_str(), ExpectedOperands);
+
+  return Error::success();
+}
+
+static Error writeListEntryAddress(StringRef EncodingName, raw_ostream &OS,
+                                   uint64_t Addr, uint8_t AddrSize,
+                                   bool IsLittleEndian) {
+  if (Error Err = writeVariableSizedInteger(Addr, AddrSize, OS, IsLittleEndian))
+    return createStringError(errc::invalid_argument,
+                             "unable to write address for the operator %s: %s",
+                             EncodingName.str().c_str(),
+                             toString(std::move(Err)).c_str());
+
+  return Error::success();
+}
+
 static Expected<uint64_t> writeListEntry(raw_ostream &OS,
                                          const DWARFYAML::RnglistEntry &Entry,
                                          uint8_t AddrSize,
@@ -449,29 +474,15 @@ static Expected<uint64_t> writeListEntry(raw_ostream &OS,
   uint64_t BeginOffset = OS.tell();
   writeInteger((uint8_t)Entry.Operator, OS, IsLittleEndian);
 
-  auto CheckOperands = [&](uint64_t ExpectedOperands) -> Error {
-    if (Entry.Values.size() != ExpectedOperands) {
-      return createStringError(
-          errc::invalid_argument,
-          "invalid number (%zu) of operands for the operator: %s, %" PRIu64
-          " expected",
-          Entry.Values.size(),
-          dwarf::RangeListEncodingString(Entry.Operator).str().c_str(),
-          ExpectedOperands);
-    }
+  StringRef EncodingName = dwarf::RangeListEncodingString(Entry.Operator);
 
-    return Error::success();
+  auto CheckOperands = [&](uint64_t ExpectedOperands) -> Error {
+    return checkListEntryOperands(EncodingName, Entry.Values, ExpectedOperands);
   };
 
   auto WriteAddress = [&](uint64_t Addr) -> Error {
-    if (Error Err =
-            writeVariableSizedInteger(Addr, AddrSize, OS, IsLittleEndian))
-      return createStringError(
-          errc::not_supported,
-          "unable to write address for the operator %s: %s",
-          dwarf::RangeListEncodingString(Entry.Operator).str().c_str(),
-          toString(std::move(Err)).c_str());
-    return Error::success();
+    return writeListEntryAddress(EncodingName, OS, Addr, AddrSize,
+                                 IsLittleEndian);
   };
 
   switch (Entry.Operator) {
