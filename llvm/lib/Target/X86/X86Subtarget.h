@@ -366,9 +366,6 @@ protected:
   /// Processor has AVX-512 vp2intersect instructions
   bool HasVP2INTERSECT = false;
 
-  /// Deprecated flag for MPX instructions.
-  bool DeprecatedHasMPX = false;
-
   /// Processor supports CET SHSTK - Control-Flow Enforcement Technology
   /// using Shadow Stack
   bool HasSHSTK = false;

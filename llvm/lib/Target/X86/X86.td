@@ -244,11 +244,6 @@ def FeatureCLDEMOTE  : SubtargetFeature<"cldemote", "HasCLDEMOTE", "true",
                                       "Enable Cache Demote">;
 def FeaturePTWRITE  : SubtargetFeature<"ptwrite", "HasPTWRITE", "true",
                                       "Support ptwrite instruction">;
-// FIXME: This feature is deprecated in 10.0 and should not be used for
-// anything, but removing it would break IR files that may contain it in a
-// target-feature attribute.
-def FeatureDeprecatedMPX : SubtargetFeature<"mpx", "DeprecatedHasMPX", "false",
-                                      "Deprecated. Support MPX instructions">;
 def FeatureAMXTILE     : SubtargetFeature<"amx-tile", "HasAMXTILE", "true",
                                       "Support AMX-TILE instructions">;
 def FeatureAMXINT8     : SubtargetFeature<"amx-int8", "HasAMXINT8", "true",
