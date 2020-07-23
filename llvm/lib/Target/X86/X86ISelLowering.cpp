@@ -6916,25 +6916,16 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     DecodeZeroMoveLowMask(NumElems, Mask);
     IsUnary = true;
     break;
-  case X86ISD::VBROADCAST: {
-    SDValue N0 = N->getOperand(0);
-    // See if we're broadcasting from index 0 of an EXTRACT_SUBVECTOR. If so,
-    // add the pre-extracted value to the Ops vector.
-    if (N0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        N0.getOperand(0).getValueType() == VT &&
-        N0.getConstantOperandVal(1) == 0)
-      Ops.push_back(N0.getOperand(0));
-
-    // We only decode broadcasts of same-sized vectors, unless the broadcast
-    // came from an extract from the original width. If we found one, we
-    // pushed it the Ops vector above.
-    if (N0.getValueType() == VT || !Ops.empty()) {
+  case X86ISD::VBROADCAST:
+    // We only decode broadcasts of same-sized vectors, peeking through to
+    // extracted subvectors is likely to cause hasOneUse issues with
+    // SimplifyDemandedBits etc.
+    if (N->getOperand(0).getValueType() == VT) {
       DecodeVectorBroadcast(NumElems, Mask);
       IsUnary = true;
       break;
     }
     return false;
-  }
   case X86ISD::VPERMILPV: {
     assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     IsUnary = true;
