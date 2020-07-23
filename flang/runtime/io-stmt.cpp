@@ -509,6 +509,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   } else if (realPart_) {
     realPart_ = false;
     imaginaryPart_ = true;
+    edit.descriptor = DataEdit::ListDirectedImaginaryPart;
   }
   if (!ch) {
     return std::nullopt;
@@ -574,6 +575,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   if (!imaginaryPart_ && ch && *ch == '(') {
     realPart_ = true;
     io.HandleRelativePosition(1);
+    edit.descriptor = DataEdit::ListDirectedRealPart;
   }
   return edit;
 }
