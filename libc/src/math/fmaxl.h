@@ -1,4 +1,4 @@
-//===-- Implementation of fminf function ----------------------------------===//
+//===-- Implementation header for fmaxl -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/common.h"
-#include "utils/FPUtil/BasicOperations.h"
+#ifndef LLVM_LIBC_SRC_MATH_FMAXL_H
+#define LLVM_LIBC_SRC_MATH_FMAXL_H
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(fminf)(float x, float y) {
-  return fputil::fmin(x, y);
-}
+long double fmaxl(long double x, long double y);
 
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_MATH_FMAXL_H

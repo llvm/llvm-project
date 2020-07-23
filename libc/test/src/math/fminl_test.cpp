@@ -6,8 +6,6 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include <vector>
-
 #include "include/math.h"
 #include "src/math/fminl.h"
 #include "utils/FPUtil/FPBits.h"

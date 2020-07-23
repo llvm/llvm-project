@@ -1,4 +1,4 @@
-//===-- Implementation of fminf function ----------------------------------===//
+//===-- Implementation of fmax function -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(fminf)(float x, float y) {
-  return fputil::fmin(x, y);
+double LLVM_LIBC_ENTRYPOINT(fmax)(double x, double y) {
+  return fputil::fmax(x, y);
 }
 
 } // namespace __llvm_libc

@@ -35,7 +35,7 @@ struct FoldCandidate {
     int FrameIndexToFold;
   };
   int ShrinkOpcode;
-  unsigned char UseOpNo;
+  unsigned UseOpNo;
   MachineOperand::MachineOperandType Kind;
   bool Commuted;
 
@@ -662,6 +662,11 @@ void SIFoldOperands::foldOperand(
           Use = MRI->use_begin(DestReg), E = MRI->use_end();
           Use != E; Use = NextUse) {
           NextUse = std::next(Use);
+
+          // There's no point trying to fold into an implicit operand.
+          if (Use->isImplicit())
+            continue;
+
           FoldCandidate FC = FoldCandidate(Use->getParent(),
            Use.getOperandNo(), &UseMI->getOperand(1));
           CopyUses.push_back(FC);
