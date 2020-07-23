@@ -53,9 +53,7 @@ FunctionPropertiesInfo::getFunctionPropertiesInfo(const Function &F,
     if (FPI.MaxLoopDepth < LoopDepth)
       FPI.MaxLoopDepth = LoopDepth;
   }
-  for (Loop *L : LI) {
-    ++FPI.TopLevelLoopCount;
-  }
+  FPI.TopLevelLoopCount += llvm::size(LI);
   return FPI;
 }
 
