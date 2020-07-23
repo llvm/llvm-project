@@ -190,9 +190,10 @@ void SBLaunchInfo::SetEnvironment(const SBEnvironment &env, bool append) {
   LLDB_RECORD_METHOD(void, SBLaunchInfo, SetEnvironment,
                      (const lldb::SBEnvironment &, bool), env, append);
   Environment &refEnv = env.ref();
-  if (append)
-    m_opaque_sp->GetEnvironment().insert(refEnv.begin(), refEnv.end());
-  else
+  if (append) {
+    for (auto &KV : refEnv)
+      m_opaque_sp->GetEnvironment().insert_or_assign(KV.first(), KV.second);
+  } else
     m_opaque_sp->GetEnvironment() = refEnv;
   m_opaque_sp->RegenerateEnvp();
 }
