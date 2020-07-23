@@ -260,6 +260,10 @@ public:
 
   /// Convert the PFT to FIR
   void run(Fortran::lower::pft::Program &pft) {
+    // Declare mlir::FuncOp for all the FunctionLikeUnit defined in the PFT
+    // before lowering any function bodies so that the definition signatures
+    // prevail on call spot signatures.
+    declareFunctions(pft);
     // do translation
     for (auto &u : pft.getUnits()) {
       std::visit(
@@ -273,6 +277,44 @@ public:
           },
           u);
     }
+  }
+
+  /// Declare mlir::FuncOp for all the FunctionLikeUnit defined in the PFT
+  /// without any other side-effects.
+  void declareFunctions(Fortran::lower::pft::Program &pft) {
+    for (auto &u : pft.getUnits()) {
+      std::visit(Fortran::common::visitors{
+                     [&](Fortran::lower::pft::FunctionLikeUnit &f) {
+                       declareFunction(f);
+                     },
+                     [&](Fortran::lower::pft::ModuleLikeUnit &m) {
+                       for (auto &f : m.nestedFunctions)
+                         declareFunction(f);
+                     },
+                     [&](Fortran::lower::pft::BlockDataUnit &) {
+                       // No functions defined in block data.
+                     },
+                 },
+                 u);
+    }
+  }
+  void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
+    for (int entryIndex = 0, last = funit.entryPointList.size();
+         entryIndex < last; ++entryIndex) {
+      funit.setActiveEntry(entryIndex);
+      // Calling CalleeInterface ctor will build the mlir::FuncOp with no other
+      // side effects.
+      // TODO: when doing some compiler profiling on real apps, it may be worth
+      // to check it's better to save the CalleeInterface instead of recomputing
+      // it later when lowering the body. CalleeInterface ctor should be linear
+      // with the number of arguments, so it is not awful to do it that way for
+      // now, but the linear coefficient might be non negligible. Until
+      // measured, stick to the solution that impacts the code less.
+      Fortran::lower::CalleeInterface{funit, *this};
+    }
+    funit.setActiveEntry(0);
+    for (auto &f : funit.nestedFunctions)
+      declareFunction(f); // internal procedure
   }
 
   //===--------------------------------------------------------------------===//
@@ -1649,7 +1691,8 @@ private:
                 auto castTo =
                     builder.createConvert(loc, symTy, fir::getBase(initVal));
                 builder.create<fir::HasValueOp>(loc, castTo);
-              }, linkage);
+              },
+              linkage);
         }
       } else {
         global = builder->createGlobal(loc, genType(var), globalName, linkage);
@@ -2124,7 +2167,7 @@ private:
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
     Fortran::lower::CalleeInterface callee(funit, *this);
-    mlir::FuncOp func = callee.getFuncOp();
+    mlir::FuncOp func = callee.addEntryBlockAndMapArguments();
     builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setInsertionPointToStart(&func.front());

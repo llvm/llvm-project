@@ -174,10 +174,16 @@ public:
   void
   buildExplicitInterface(const Fortran::evaluate::characteristics::Procedure &);
 
-private:
+protected:
+  CallInterface(Fortran::lower::AbstractConverter &c) : converter{c} {}
   /// CRTP handle.
   T &side() { return *static_cast<T *>(this); }
-  /// Second pass entry point, once the mlir::FuncOp is created
+  /// Entry point to be called by child ctor to analyze the signature and
+  /// create/find the mlir::FuncOp. Child needs to be initialized first.
+  void declare();
+  /// Second pass entry point, once the mlir::FuncOp is created.
+  /// Nothing is done if it was already called.
+  void mapPassedEntities();
   void mapBackInputToPassedEntity(const FirPlaceHolder &, FirValue);
 
   llvm::SmallVector<FirPlaceHolder, 1> outputs;
@@ -186,11 +192,6 @@ private:
   llvm::SmallVector<PassedEntity, 4> passedArguments;
   std::optional<PassedEntity> passedResult;
 
-protected:
-  CallInterface(Fortran::lower::AbstractConverter &c) : converter{c} {}
-  /// Entry point to be called by child ctor (childs need to be initialized
-  /// first).
-  void init();
   Fortran::lower::AbstractConverter &converter;
   /// Store characteristic once created, it is required for further information
   /// (e.g. getting the length of character result)
@@ -210,7 +211,8 @@ public:
   CallerInterface(const Fortran::evaluate::ProcedureRef &p,
                   Fortran::lower::AbstractConverter &c)
       : CallInterface{c}, procRef{p} {
-    init();
+    declare();
+    mapPassedEntities();
     actualInputs = llvm::SmallVector<mlir::Value, 3>(getNumFIRArguments());
   }
   /// CRTP callbacks
@@ -261,7 +263,7 @@ public:
   CalleeInterface(Fortran::lower::pft::FunctionLikeUnit &f,
                   Fortran::lower::AbstractConverter &c)
       : CallInterface{c}, funit{f} {
-    init();
+    declare();
   }
   bool hasAlternateReturns() const;
   std::string getMangledName() const;
@@ -274,6 +276,10 @@ public:
   /// On the callee side it does not matter whether the procedure is
   /// called through pointers or not.
   bool isIndirectCall() const { return false; }
+
+  /// Add mlir::FuncOp entry block and map fir block arguments to Fortran dummy
+  /// argument symbols.
+  mlir::FuncOp addEntryBlockAndMapArguments();
 
 private:
   Fortran::lower::pft::FunctionLikeUnit &funit;

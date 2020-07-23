@@ -17,7 +17,6 @@ function foo()
 ! CHECK: }
 end function
 
-! CHECK-LABEL: fir.global internal @_QFfooEpi : f32 {
 
 ! CHECK-LABEL: func @_QPfunctn() -> f32 {
 function functn
@@ -25,7 +24,6 @@ function functn
 ! CHECK: }
 end function
 
-! CHECK-LABEL: fir.global internal @_QFfunctnECpi constant : f32 {
 
 module testMod
 contains
@@ -126,3 +124,7 @@ end submodule
 program test
 ! CHECK: }
 end program
+
+! CHECK-LABEL: fir.global internal @_QFfooEpi : f32 {
+! CHECK-LABEL: fir.global internal @_QFfunctnECpi constant : f32 {
+

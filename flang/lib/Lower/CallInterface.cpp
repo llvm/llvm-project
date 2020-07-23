@@ -178,15 +178,23 @@ bool Fortran::lower::CalleeInterface::isMainProgram() const {
   return funit.isMainProgram();
 }
 
+mlir::FuncOp Fortran::lower::CalleeInterface::addEntryBlockAndMapArguments() {
+  // On the callee side, directly map the mlir::value argument of
+  // the function block to the Fortran symbols.
+  func.addEntryBlock();
+  mapPassedEntities();
+  return func;
+}
+
 //===----------------------------------------------------------------------===//
 // CallInterface implementation: this part is common to both caller and caller
 // sides.
 //===----------------------------------------------------------------------===//
 
-/// Init drives the different actions to be performed while building a
-/// CallInterface, it does not decide anything about the interface.
+/// Declare drives the different actions to be performed while analyzing the
+/// signature and building/finding the mlir::FuncOp.
 template <typename T>
-void Fortran::lower::CallInterface<T>::init() {
+void Fortran::lower::CallInterface<T>::declare() {
   if (!side().isMainProgram()) {
     characteristic =
         std::make_unique<Fortran::evaluate::characteristics::Procedure>(
@@ -212,12 +220,14 @@ void Fortran::lower::CallInterface<T>::init() {
           Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);
     }
   }
+}
 
+/// Once the signature has been analyzed and the mlir::FuncOp was built/found,
+/// map the fir inputs to Fortran entities (the symbols or expressions).
+template <typename T>
+void Fortran::lower::CallInterface<T>::mapPassedEntities() {
   // map back fir inputs to passed entities
   if constexpr (std::is_same_v<T, Fortran::lower::CalleeInterface>) {
-    // On the callee side, directly map the mlir::value argument of
-    // the function block to the Fortran symbols.
-    func.addEntryBlock();
     assert(inputs.size() == func.front().getArguments().size() &&
            "function previously created with different number of arguments");
     for (const auto &pair : llvm::zip(inputs, func.front().getArguments()))

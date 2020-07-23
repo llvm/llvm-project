@@ -7,7 +7,6 @@ subroutine stop_test(b)
  ! CHECK: call @_Fortran{{.*}}StopStatement(%[[c0]], %[[false]], %[[false]])
  stop
 end subroutine
-! CHECK: func @_Fortran{{.*}}StopStatement(i32, i1, i1) -> none
 
 ! CHECK-LABEL stop_code
 subroutine stop_code()
@@ -47,3 +46,5 @@ subroutine stop_error_code_quiet(b)
  ! CHECK-DAG: %[[bi1:.*]] = fir.convert %[[b]] : (!fir.logical<4>) -> i1
  ! CHECK: call @_Fortran{{.*}}StopStatement(%[[c66]], %[[true]], %[[bi1]])
 end subroutine
+
+! CHECK: func @_Fortran{{.*}}StopStatement(i32, i1, i1) -> none
