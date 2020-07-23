@@ -28,7 +28,7 @@ struct Node {
 __attribute__((noinline)) std::unique_ptr<Node> make_val(void** local_addr) {
   call_something();
 
-  auto ret = std::make_unique<Node>();
+  auto ret = std::unique_ptr<Node>(new Node);
 
   // Capture the local address of ret.
   *local_addr = &ret;
