@@ -14,6 +14,7 @@
 #ifndef LLVM_FUNCTIONPROPERTIESANALYSIS_H_
 #define LLVM_FUNCTIONPROPERTIESANALYSIS_H_
 
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -21,6 +22,11 @@ class Function;
 
 class FunctionPropertiesInfo {
 public:
+  static FunctionPropertiesInfo getFunctionPropertiesInfo(const Function &F,
+                                                          const LoopInfo &LI);
+
+  void print(raw_ostream &OS) const;
+
   /// Number of basic blocks
   int64_t BasicBlockCount = 0;
 
@@ -40,9 +46,17 @@ public:
   /// defined in this module.
   int64_t DirectCallsToDefinedFunctions = 0;
 
-  static FunctionPropertiesInfo getFunctionPropertiesInfo(const Function &F);
+  // Load Instruction Count
+  int64_t LoadInstCount = 0;
 
-  void print(raw_ostream &OS) const;
+  // Store Instruction Count
+  int64_t StoreInstCount = 0;
+
+  // Maximum Loop Depth in the Function
+  int64_t MaxLoopDepth = 0;
+
+  // Number of Top Level Loops in the Function
+  int64_t TopLevelLoopCount = 0;
 };
 
 // Analysis pass

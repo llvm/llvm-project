@@ -17,7 +17,8 @@
 using namespace llvm;
 
 FunctionPropertiesInfo
-FunctionPropertiesInfo::getFunctionPropertiesInfo(const Function &F) {
+FunctionPropertiesInfo::getFunctionPropertiesInfo(const Function &F,
+                                                  const LoopInfo &LI) {
 
   FunctionPropertiesInfo FPI;
 
@@ -40,7 +41,20 @@ FunctionPropertiesInfo::getFunctionPropertiesInfo(const Function &F) {
         if (Callee && !Callee->isIntrinsic() && !Callee->isDeclaration())
           ++FPI.DirectCallsToDefinedFunctions;
       }
+      if (I.getOpcode() == Instruction::Load) {
+        ++FPI.LoadInstCount;
+      } else if (I.getOpcode() == Instruction::Store) {
+        ++FPI.StoreInstCount;
+      }
     }
+    // Loop Depth of the Basic Block
+    int64_t LoopDepth;
+    LoopDepth = LI.getLoopDepth(&BB);
+    if (FPI.MaxLoopDepth < LoopDepth)
+      FPI.MaxLoopDepth = LoopDepth;
+  }
+  for (Loop *L : LI) {
+    ++FPI.TopLevelLoopCount;
   }
   return FPI;
 }
@@ -51,14 +65,19 @@ void FunctionPropertiesInfo::print(raw_ostream &OS) const {
      << BlocksReachedFromConditionalInstruction << "\n"
      << "Uses: " << Uses << "\n"
      << "DirectCallsToDefinedFunctions: " << DirectCallsToDefinedFunctions
-     << "\n\n";
+     << "\n"
+     << "LoadInstCount: " << LoadInstCount << "\n"
+     << "StoreInstCount: " << StoreInstCount << "\n"
+     << "MaxLoopDepth: " << MaxLoopDepth << "\n"
+     << "TopLevelLoopCount: " << TopLevelLoopCount << "\n\n";
 }
 
 AnalysisKey FunctionPropertiesAnalysis::Key;
 
 FunctionPropertiesInfo
 FunctionPropertiesAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
-  return FunctionPropertiesInfo::getFunctionPropertiesInfo(F);
+  return FunctionPropertiesInfo::getFunctionPropertiesInfo(
+      F, FAM.getResult<LoopAnalysis>(F));
 }
 
 PreservedAnalyses
