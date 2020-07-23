@@ -837,7 +837,10 @@ Optional<PredicateConstraint> PredicateBase::getConstraint() const {
     }
 
     CmpInst *Cmp = dyn_cast<CmpInst>(Condition);
-    assert(Cmp && "Condition should be a CmpInst");
+    if (!Cmp) {
+      // TODO: Make this an assertion once RenamedOp is fully accurate.
+      return None;
+    }
 
     CmpInst::Predicate Pred;
     Value *OtherOp;
