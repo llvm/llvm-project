@@ -37042,7 +37042,13 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (SimplifyDemandedVectorElts(Src, DemandedElts, SrcUndef, KnownZero, TLO,
                                    Depth + 1))
       return true;
-    // TODO convert SrcUndef to KnownUndef.
+
+    // Aggressively peek through ops to get at the demanded elts.
+    if (!DemandedElts.isAllOnesValue())
+      if (SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
+              Src, DemandedElts, TLO.DAG, Depth + 1))
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc, Op.getOperand(1)));
     break;
   }
   case X86ISD::KSHIFTL: {
