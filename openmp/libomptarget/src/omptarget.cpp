@@ -927,6 +927,14 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
     return OFFLOAD_FAIL;
   }
 
+  if (Device.RTL->synchronize) {
+    rc = Device.RTL->synchronize(device_id, &AsyncInfo);
+    if (rc != OFFLOAD_SUCCESS) {
+      DP("Failed to synchronize.\n");
+      return OFFLOAD_FAIL;
+    }
+  }
+
   // Deallocate (first-)private arrays
   for (auto it : fpArrays) {
     int rt = Device.RTL->data_delete(Device.RTLDeviceID, it);
@@ -943,9 +951,6 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
     DP("Call to target_data_end failed, abort targe.\n");
     return OFFLOAD_FAIL;
   }
-
-  if (Device.RTL->synchronize)
-    return Device.RTL->synchronize(device_id, &AsyncInfo);
 
   return OFFLOAD_SUCCESS;
 }
