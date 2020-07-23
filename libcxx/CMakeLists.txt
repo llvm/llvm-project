@@ -526,6 +526,11 @@ function(cxx_add_basic_build_flags target)
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO)
 
+  # When building the dylib, don't warn for unavailable aligned allocation
+  # functions based on the deployment target -- they are always available
+  # because they are provided by the dylib itself.
+  target_add_compile_flags_if_supported(${target} PRIVATE -faligned-allocation)
+
   # On all systems the system c++ standard library headers need to be excluded.
   # MSVC only has -X, which disables all default includes; including the crt.
   # Thus, we do nothing and hope we don't accidentally include any of the C++
