@@ -81,6 +81,43 @@ static void multiline() {
   }
 }
 
+static void listInputTest() {
+  static const char input[]{",1*,(5.,6..)"};
+  auto cookie{IONAME(BeginInternalListInput)(input, sizeof input - 1)};
+  float z[6];
+  for (int j{0}; j < 6; ++j) {
+    z[j] = -(j + 1);
+  }
+  for (int j{0}; j < 6; j += 2) {
+    if (!IONAME(InputComplex32)(cookie, &z[j])) {
+      Fail() << "InputComplex32 failed\n";
+    }
+  }
+  auto status{IONAME(EndIoStatement)(cookie)};
+  if (status) {
+    Fail() << "Failed complex list-directed input, status "
+           << static_cast<int>(status) << '\n';
+  } else {
+    char output[33];
+    output[32] = '\0';
+    cookie = IONAME(BeginInternalListOutput)(output, 32);
+    for (int j{0}; j < 6; j += 2) {
+      if (!IONAME(OutputComplex32)(cookie, z[j], z[j + 1])) {
+        Fail() << "OutputComplex32 failed\n";
+      }
+    }
+    status = IONAME(EndIoStatement)(cookie);
+    static const char expect[33]{" (-1.,-2.) (-3.,-4.) (5.,6.)    "};
+    if (status) {
+      Fail() << "Failed complex list-directed output, status "
+             << static_cast<int>(status) << '\n';
+    } else if (std::strncmp(output, expect, 33) != 0) {
+      Fail() << "Failed complex list-directed output, expected '" << expect
+             << "', but got '" << output << "'\n";
+    }
+  }
+}
+
 static void realTest(const char *format, double x, const char *expect) {
   char buffer[800];
   auto cookie{IONAME(BeginInternalFormattedOutput)(
@@ -443,6 +480,8 @@ int main() {
   realInTest("(1P,F18.0)", "               125", 0x4029000000000000); // 12.5
   realInTest("(BZ,F18.0)", "              125 ", 0x4093880000000000); // 1250
   realInTest("(DC,F18.0)", "              12,5", 0x4029000000000000);
+
+  listInputTest();
 
   return EndTests();
 }
