@@ -62,6 +62,7 @@ declare hidden void @external_void_func_v8i32(<8 x i32>) #0
 declare hidden void @external_void_func_v16i32(<16 x i32>) #0
 declare hidden void @external_void_func_v32i32(<32 x i32>) #0
 declare hidden void @external_void_func_v32i32_i32(<32 x i32>, i32) #0
+declare hidden void @external_void_func_v32i32_p3_p5(<32 x i32>, i8 addrspace(3)*, i8 addrspace(5)*) #0
 declare hidden void @external_void_func_v32i32_i8_i8_i16(<32 x i32>, i8, i8, i16) #0
 
 ; Structs
@@ -3644,6 +3645,110 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   %val2 = load i8, i8 addrspace(1)* undef
   %val3 = load i16, i16 addrspace(1)* undef
   call void @external_void_func_v32i32_i8_i8_i16(<32 x i32> %val0, i8 %val1, i8 %val2, i16 %val3)
+  ret void
+}
+
+define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
+  ; CHECK-LABEL: name: test_call_external_void_func_v32i32_p3_p5
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
+  ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
+  ; CHECK:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
+  ; CHECK:   [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15
+  ; CHECK:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14
+  ; CHECK:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11
+  ; CHECK:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
+  ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+  ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[COPY10:%[0-9]+]]:_(p1) = COPY [[DEF1]](p1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr0, addrspace 1)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(p3) = G_LOAD [[DEF1]](p1) :: (load 4 from `i8 addrspace(3)* addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(p5) = G_LOAD [[COPY10]](p1) :: (load 4 from `i8 addrspace(5)* addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
+  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v32i32_p3_p5
+  ; CHECK:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY8]]
+  ; CHECK:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY7]]
+  ; CHECK:   [[COPY13:%[0-9]+]]:_(p4) = COPY [[COPY9]](p4)
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY13]], [[C]](s64)
+  ; CHECK:   [[COPY14:%[0-9]+]]:_(s64) = COPY [[COPY6]]
+  ; CHECK:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY5]]
+  ; CHECK:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY4]]
+  ; CHECK:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY3]]
+  ; CHECK:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
+  ; CHECK:   [[COPY19:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+  ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C1]](s32)
+  ; CHECK:   [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY18]], [[SHL]]
+  ; CHECK:   [[COPY20:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+  ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY20]], [[C2]](s32)
+  ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
+  ; CHECK:   $vgpr0 = COPY [[UV]](s32)
+  ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK:   $vgpr2 = COPY [[UV2]](s32)
+  ; CHECK:   $vgpr3 = COPY [[UV3]](s32)
+  ; CHECK:   $vgpr4 = COPY [[UV4]](s32)
+  ; CHECK:   $vgpr5 = COPY [[UV5]](s32)
+  ; CHECK:   $vgpr6 = COPY [[UV6]](s32)
+  ; CHECK:   $vgpr7 = COPY [[UV7]](s32)
+  ; CHECK:   $vgpr8 = COPY [[UV8]](s32)
+  ; CHECK:   $vgpr9 = COPY [[UV9]](s32)
+  ; CHECK:   $vgpr10 = COPY [[UV10]](s32)
+  ; CHECK:   $vgpr11 = COPY [[UV11]](s32)
+  ; CHECK:   $vgpr12 = COPY [[UV12]](s32)
+  ; CHECK:   $vgpr13 = COPY [[UV13]](s32)
+  ; CHECK:   $vgpr14 = COPY [[UV14]](s32)
+  ; CHECK:   $vgpr15 = COPY [[UV15]](s32)
+  ; CHECK:   $vgpr16 = COPY [[UV16]](s32)
+  ; CHECK:   $vgpr17 = COPY [[UV17]](s32)
+  ; CHECK:   $vgpr18 = COPY [[UV18]](s32)
+  ; CHECK:   $vgpr19 = COPY [[UV19]](s32)
+  ; CHECK:   $vgpr20 = COPY [[UV20]](s32)
+  ; CHECK:   $vgpr21 = COPY [[UV21]](s32)
+  ; CHECK:   $vgpr22 = COPY [[UV22]](s32)
+  ; CHECK:   $vgpr23 = COPY [[UV23]](s32)
+  ; CHECK:   $vgpr24 = COPY [[UV24]](s32)
+  ; CHECK:   $vgpr25 = COPY [[UV25]](s32)
+  ; CHECK:   $vgpr26 = COPY [[UV26]](s32)
+  ; CHECK:   $vgpr27 = COPY [[UV27]](s32)
+  ; CHECK:   $vgpr28 = COPY [[UV28]](s32)
+  ; CHECK:   $vgpr29 = COPY [[UV29]](s32)
+  ; CHECK:   $vgpr30 = COPY [[UV30]](s32)
+  ; CHECK:   [[COPY21:%[0-9]+]]:_(p5) = COPY $sp_reg
+  ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C3]](s32)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C4]](s32)
+  ; CHECK:   G_STORE [[LOAD2]](p3), [[PTR_ADD2]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C5]](s32)
+  ; CHECK:   G_STORE [[LOAD3]](p5), [[PTR_ADD3]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
+  ; CHECK:   [[COPY22:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY22]](<4 x s32>)
+  ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)
+  ; CHECK:   $sgpr6_sgpr7 = COPY [[COPY12]](p4)
+  ; CHECK:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
+  ; CHECK:   $sgpr10_sgpr11 = COPY [[COPY14]](s64)
+  ; CHECK:   $sgpr12 = COPY [[COPY15]](s32)
+  ; CHECK:   $sgpr13 = COPY [[COPY16]](s32)
+  ; CHECK:   $sgpr14 = COPY [[COPY17]](s32)
+  ; CHECK:   $vgpr31 = COPY [[OR1]](s32)
+  ; CHECK:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_void_func_v32i32_p3_p5, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; CHECK:   ADJCALLSTACKDOWN 0, 12, implicit-def $scc
+  ; CHECK:   S_ENDPGM 0
+  %ptr0 = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(4)* undef
+  %val0 = load <32 x i32>, <32 x i32> addrspace(1)* %ptr0
+  %val1 = load i8 addrspace(3)*, i8 addrspace(3)* addrspace(1)* undef
+  %val2 = load i8 addrspace(5)*, i8 addrspace(5)* addrspace(1)* undef
+  call void @external_void_func_v32i32_p3_p5(<32 x i32> %val0, i8 addrspace(3)* %val1, i8 addrspace(5)* %val2)
   ret void
 }
 
