@@ -1965,7 +1965,7 @@ bool llvm::runIPSCCP(
                                             /*PreserveLCSSA=*/false, &DTU);
 
     for (BasicBlock &BB : F)
-      removeNonFeasibleEdges(Solver, &BB, DTU);
+      MadeChanges |= removeNonFeasibleEdges(Solver, &BB, DTU);
 
     for (BasicBlock *DeadBB : BlocksToErase)
       DTU.deleteBB(DeadBB);
