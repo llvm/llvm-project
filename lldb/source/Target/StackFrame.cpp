@@ -1956,8 +1956,11 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
 
 RecognizedStackFrameSP StackFrame::GetRecognizedFrame() {
   if (!m_recognized_frame_sp) {
-    m_recognized_frame_sp =
-        StackFrameRecognizerManager::RecognizeFrame(CalculateStackFrame());
+    m_recognized_frame_sp = GetThread()
+                                ->GetProcess()
+                                ->GetTarget()
+                                .GetFrameRecognizerManager()
+                                .RecognizeFrame(CalculateStackFrame());
   }
   return m_recognized_frame_sp;
 }
