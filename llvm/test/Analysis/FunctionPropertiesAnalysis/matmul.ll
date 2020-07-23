@@ -21,6 +21,10 @@ entry:
 ; CHECK-DAG: BlocksReachedFromConditionalInstruction: 0
 ; CHECK-DAG: Uses: 1
 ; CHECK-DAG: DirectCallsToDefinedFunctions: 1
+; CHECK-DAG: LoadInstCount: 0
+; CHECK-DAG: StoreInstCount: 1
+; CHECK-DAG: MaxLoopDepth: 0
+; CHECK-DAG: TopLevelLoopCount: 0
 
 define void @multiply([2 x i32]* %mat1, [2 x i32]* %mat2, [2 x i32]* %res) {
 ; CHECK-DAG: Printing analysis results of CFA for function 'multiply':
@@ -130,3 +134,7 @@ for.end26:                                        ; preds = %for.cond
 ; CHECK-DAG: BlocksReachedFromConditionalInstruction: 6
 ; CHECK-DAG: Uses: 2
 ; CHECK-DAG: DirectCallsToDefinedFunctions: 0
+; CHECK-DAG: LoadInstCount: 21
+; CHECK-DAG: StoreInstCount: 11
+; CHECK-DAG: MaxLoopDepth: 3
+; CHECK-DAG: TopLevelLoopCount: 1
