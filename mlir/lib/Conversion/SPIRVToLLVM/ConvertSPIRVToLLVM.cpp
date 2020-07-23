@@ -64,10 +64,8 @@ static unsigned getBitWidth(Type type) {
 
 /// Returns the bit width of LLVMType integer or vector.
 static unsigned getLLVMTypeBitWidth(LLVM::LLVMType type) {
-  return type.isVectorTy() ? type.getVectorElementType()
-                                 .getUnderlyingType()
-                                 ->getIntegerBitWidth()
-                           : type.getUnderlyingType()->getIntegerBitWidth();
+  return type.isVectorTy() ? type.getVectorElementType().getIntegerBitWidth()
+                           : type.getIntegerBitWidth();
 }
 
 /// Creates `IntegerAttribute` with all bits set for given type
