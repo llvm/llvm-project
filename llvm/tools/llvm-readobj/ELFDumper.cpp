@@ -3743,122 +3743,28 @@ static std::string getSectionTypeOffsetString(unsigned Type) {
   return "0x" + to_hexString(Type) + ": <unknown>";
 }
 
-static std::string getSectionTypeString(unsigned Arch, unsigned Type) {
-  using namespace ELF;
+static std::string getSectionTypeString(unsigned Machine, unsigned Type) {
+  StringRef Name = getELFSectionTypeName(Machine, Type);
 
-  switch (Arch) {
-  case EM_ARM:
-    switch (Type) {
-    case SHT_ARM_EXIDX:
-      return "ARM_EXIDX";
-    case SHT_ARM_PREEMPTMAP:
-      return "ARM_PREEMPTMAP";
-    case SHT_ARM_ATTRIBUTES:
-      return "ARM_ATTRIBUTES";
-    case SHT_ARM_DEBUGOVERLAY:
-      return "ARM_DEBUGOVERLAY";
-    case SHT_ARM_OVERLAYSECTION:
-      return "ARM_OVERLAYSECTION";
-    }
-    break;
-  case EM_X86_64:
-    switch (Type) {
-    case SHT_X86_64_UNWIND:
-      return "X86_64_UNWIND";
-    }
-    break;
-  case EM_MIPS:
-  case EM_MIPS_RS3_LE:
-    switch (Type) {
-    case SHT_MIPS_REGINFO:
-      return "MIPS_REGINFO";
-    case SHT_MIPS_OPTIONS:
-      return "MIPS_OPTIONS";
-    case SHT_MIPS_DWARF:
-      return "MIPS_DWARF";
-    case SHT_MIPS_ABIFLAGS:
-      return "MIPS_ABIFLAGS";
-    }
-    break;
-  case EM_RISCV:
-    switch (Type) {
-    case SHT_RISCV_ATTRIBUTES:
-      return "RISCV_ATTRIBUTES";
-    }
+  // Handle SHT_GNU_* type names.
+  if (Name.startswith("SHT_GNU_")) {
+    if (Name == "SHT_GNU_HASH")
+      return "GNU_HASH";
+    // E.g. SHT_GNU_verneed -> VERNEED.
+    return Name.drop_front(8).upper();
   }
-  switch (Type) {
-  case SHT_NULL:
-    return "NULL";
-  case SHT_PROGBITS:
-    return "PROGBITS";
-  case SHT_SYMTAB:
-    return "SYMTAB";
-  case SHT_STRTAB:
-    return "STRTAB";
-  case SHT_RELA:
-    return "RELA";
-  case SHT_HASH:
-    return "HASH";
-  case SHT_DYNAMIC:
-    return "DYNAMIC";
-  case SHT_NOTE:
-    return "NOTE";
-  case SHT_NOBITS:
-    return "NOBITS";
-  case SHT_REL:
-    return "REL";
-  case SHT_SHLIB:
-    return "SHLIB";
-  case SHT_DYNSYM:
-    return "DYNSYM";
-  case SHT_INIT_ARRAY:
-    return "INIT_ARRAY";
-  case SHT_FINI_ARRAY:
-    return "FINI_ARRAY";
-  case SHT_PREINIT_ARRAY:
-    return "PREINIT_ARRAY";
-  case SHT_GROUP:
-    return "GROUP";
-  case SHT_SYMTAB_SHNDX:
+
+  if (Name == "SHT_SYMTAB_SHNDX")
     return "SYMTAB SECTION INDICES";
-  case SHT_ANDROID_REL:
-    return "ANDROID_REL";
-  case SHT_ANDROID_RELA:
-    return "ANDROID_RELA";
-  case SHT_RELR:
-  case SHT_ANDROID_RELR:
+
+  // The SHT_ANDROID_RELR is special, all other SHT_ANDROID_* types are handled
+  // in the common block below.
+  if (Name == "SHT_ANDROID_RELR")
     return "RELR";
-  case SHT_LLVM_ODRTAB:
-    return "LLVM_ODRTAB";
-  case SHT_LLVM_LINKER_OPTIONS:
-    return "LLVM_LINKER_OPTIONS";
-  case SHT_LLVM_CALL_GRAPH_PROFILE:
-    return "LLVM_CALL_GRAPH_PROFILE";
-  case SHT_LLVM_ADDRSIG:
-    return "LLVM_ADDRSIG";
-  case SHT_LLVM_DEPENDENT_LIBRARIES:
-    return "LLVM_DEPENDENT_LIBRARIES";
-  case SHT_LLVM_SYMPART:
-    return "LLVM_SYMPART";
-  case SHT_LLVM_PART_EHDR:
-    return "LLVM_PART_EHDR";
-  case SHT_LLVM_PART_PHDR:
-    return "LLVM_PART_PHDR";
-  // FIXME: Parse processor specific GNU attributes
-  case SHT_GNU_ATTRIBUTES:
-    return "ATTRIBUTES";
-  case SHT_GNU_HASH:
-    return "GNU_HASH";
-  case SHT_GNU_verdef:
-    return "VERDEF";
-  case SHT_GNU_verneed:
-    return "VERNEED";
-  case SHT_GNU_versym:
-    return "VERSYM";
-  default:
-    return getSectionTypeOffsetString(Type);
-  }
-  return "";
+
+  if (Name.startswith("SHT_"))
+    return Name.drop_front(4).str();
+  return getSectionTypeOffsetString(Type);
 }
 
 static void printSectionDescription(formatted_raw_ostream &OS,
