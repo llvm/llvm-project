@@ -25,12 +25,12 @@ class TestHistoryRecall(TestBase):
     def sample_test(self):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
-        interp.HandleCommand("command history", result, True)
+        interp.HandleCommand("session history", result, True)
         interp.HandleCommand("platform list", result, True)
 
         interp.HandleCommand("!0", result, False)
         self.assertTrue(result.Succeeded(), "!0 command did not work: %s"%(result.GetError()))
-        self.assertTrue("command history" in result.GetOutput(), "!0 didn't rerun command history")
+        self.assertTrue("session history" in result.GetOutput(), "!0 didn't rerun session history")
 
         interp.HandleCommand("!-1", result, False)
         self.assertTrue(result.Succeeded(), "!-1 command did not work: %s"%(result.GetError()))
