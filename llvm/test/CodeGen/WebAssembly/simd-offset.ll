@@ -295,12 +295,14 @@ define void @store_v16i8_with_unfolded_offset(<16 x i8> %v, <16 x i8>* %p) {
 ; CHECK:         .functype store_v16i8_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const -16
+; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <16 x i8>, <16 x i8>* %p, i32 -1
+  %q = ptrtoint <16 x i8>* %p to i32
+  %r = add nsw i32 %q, 16
+  %s = inttoptr i32 %r to <16 x i8>*
   store <16 x i8> %v , <16 x i8>* %s
   ret void
 }
@@ -964,12 +966,14 @@ define void @store_v8i16_with_unfolded_offset(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK:         .functype store_v8i16_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const -16
+; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i32 -1
+  %q = ptrtoint <8 x i16>* %p to i32
+  %r = add nsw i32 %q, 16
+  %s = inttoptr i32 %r to <8 x i16>*
   store <8 x i16> %v , <8 x i16>* %s
   ret void
 }
@@ -1632,12 +1636,14 @@ define void @store_v4i32_with_unfolded_offset(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK:         .functype store_v4i32_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const -16
+; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i32 -1
+  %q = ptrtoint <4 x i32>* %p to i32
+  %r = add nsw i32 %q, 16
+  %s = inttoptr i32 %r to <4 x i32>*
   store <4 x i32> %v , <4 x i32>* %s
   ret void
 }
@@ -2300,12 +2306,14 @@ define void @store_v2i64_with_unfolded_offset(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK:         .functype store_v2i64_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const -16
+; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x i64>, <2 x i64>* %p, i32 -1
+  %q = ptrtoint <2 x i64>* %p to i32
+  %r = add nsw i32 %q, 16
+  %s = inttoptr i32 %r to <2 x i64>*
   store <2 x i64> %v , <2 x i64>* %s
   ret void
 }
@@ -2639,12 +2647,14 @@ define void @store_v4f32_with_unfolded_offset(<4 x float> %v, <4 x float>* %p) {
 ; CHECK:         .functype store_v4f32_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const -16
+; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <4 x float>, <4 x float>* %p, i32 -1
+  %q = ptrtoint <4 x float>* %p to i32
+  %r = add nsw i32 %q, 16
+  %s = inttoptr i32 %r to <4 x float>*
   store <4 x float> %v , <4 x float>* %s
   ret void
 }
@@ -2978,12 +2988,14 @@ define void @store_v2f64_with_unfolded_offset(<2 x double> %v, <2 x double>* %p)
 ; CHECK:         .functype store_v2f64_with_unfolded_offset (v128, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const -16
+; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
-  %s = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 -1
+  %q = ptrtoint <2 x double>* %p to i32
+  %r = add nsw i32 %q, 16
+  %s = inttoptr i32 %r to <2 x double>*
   store <2 x double> %v , <2 x double>* %s
   ret void
 }
