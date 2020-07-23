@@ -449,3 +449,39 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O2
 )
+
+add_entrypoint_object(
+  fmax
+  SRCS
+    fmax.cpp
+  HDRS
+    fmax.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fmaxf
+  SRCS
+    fmaxf.cpp
+  HDRS
+    fmaxf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fmaxl
+  SRCS
+    fmaxl.cpp
+  HDRS
+    fmaxl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
