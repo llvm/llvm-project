@@ -558,6 +558,11 @@ bool InlineAsmLowering::lowerInlineAsm(
       }
 
       unsigned Flag = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, NumRegs);
+      if (OpInfo.Regs.front().isVirtual()) {
+        // Put the register class of the virtual registers in the flag word.
+        const TargetRegisterClass *RC = MRI->getRegClass(OpInfo.Regs.front());
+        Flag = InlineAsm::getFlagWordForRegClass(Flag, RC->getID());
+      }
       Inst.addImm(Flag);
       if (!buildAnyextOrCopy(OpInfo.Regs[0], SourceRegs[0], MIRBuilder))
         return false;
