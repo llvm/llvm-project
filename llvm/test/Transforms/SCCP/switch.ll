@@ -73,6 +73,53 @@ end:
   ret i32 %phi
 }
 
+define i32 @test_duplicate_successors_phi_3(i1 %c1, i32 %x) {
+; CHECK-LABEL: @test_duplicate_successors_phi_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[SWITCH:%.*]], label [[SWITCH_1:%.*]]
+; CHECK:       switch:
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
+; CHECK-NEXT:    switch i32 [[X]], label [[SWITCH_DEFAULT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[SWITCH_DEFAULT]]
+; CHECK-NEXT:    i32 1, label [[SWITCH_0:%.*]]
+; CHECK-NEXT:    i32 2, label [[SWITCH_0]]
+; CHECK-NEXT:    i32 3, label [[SWITCH_1]]
+; CHECK-NEXT:    i32 4, label [[SWITCH_1]]
+; CHECK-NEXT:    ]
+; CHECK:       switch.default:
+; CHECK-NEXT:    ret i32 -1
+; CHECK:       switch.0:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       switch.1:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ 0, [[SWITCH]] ], [ 0, [[SWITCH]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c1, label %switch, label %switch.1
+
+switch:
+  %c2 = icmp ult i32 %x, 3
+  call void @llvm.assume(i1 %c2)
+  switch i32 %x, label %switch.default [
+  i32 0, label %switch.default
+  i32 1, label %switch.0
+  i32 2, label %switch.0
+  i32 3, label %switch.1
+  i32 4, label %switch.1
+  ]
+
+switch.default:
+  ret i32 -1
+
+switch.0:
+  ret i32 0
+
+switch.1:
+  %phi = phi i32 [ %x, %entry ], [ 0, %switch ], [ 0, %switch ]
+  ret i32 %phi
+}
+
 define i32 @test_local_range(i32 %x) {
 ; CHECK-LABEL: @test_local_range(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], 3
