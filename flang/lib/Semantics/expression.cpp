@@ -633,7 +633,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::BOZLiteralConstant &x) {
   ++p;
   auto value{BOZLiteralConstant::Read(p, base, false /*unsigned*/)};
   if (*p != '"') {
-    Say("Invalid digit ('%c') in BOZ literal '%s'"_err_en_US, *p, x.v);
+    Say("Invalid digit ('%c') in BOZ literal '%s'"_err_en_US, *p,
+        x.v); // C7107, C7108
     return std::nullopt;
   }
   if (value.overflow) {
