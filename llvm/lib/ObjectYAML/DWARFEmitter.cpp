@@ -85,6 +85,12 @@ static void writeInitialLength(const dwarf::DwarfFormat Format,
       writeVariableSizedInteger(Length, IsDWARF64 ? 8 : 4, OS, IsLittleEndian));
 }
 
+static void writeDWARFOffset(uint64_t Offset, dwarf::DwarfFormat Format,
+                             raw_ostream &OS, bool IsLittleEndian) {
+  cantFail(writeVariableSizedInteger(Offset, Format == dwarf::DWARF64 ? 8 : 4,
+                                     OS, IsLittleEndian));
+}
+
 Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto Str : DI.DebugStrings) {
     OS.write(Str.data(), Str.size());
@@ -123,10 +129,7 @@ Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
     auto HeaderStart = OS.tell();
     writeInitialLength(Range.Format, Range.Length, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Range.Version, OS, DI.IsLittleEndian);
-    if (Range.Format == dwarf::DWARF64)
-      writeInteger((uint64_t)Range.CuOffset, OS, DI.IsLittleEndian);
-    else
-      writeInteger((uint32_t)Range.CuOffset, OS, DI.IsLittleEndian);
+    writeDWARFOffset(Range.CuOffset, Range.Format, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.AddrSize, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.SegSize, OS, DI.IsLittleEndian);
 
@@ -344,12 +347,6 @@ static Expected<uint64_t> writeDIE(ArrayRef<DWARFYAML::Abbrev> AbbrevDecls,
   return OS.tell() - EntryBegin;
 }
 
-static void writeDWARFOffset(uint64_t Offset, dwarf::DwarfFormat Format,
-                             raw_ostream &OS, bool IsLittleEndian) {
-  cantFail(writeVariableSizedInteger(Offset, Format == dwarf::DWARF64 ? 8 : 4,
-                                     OS, IsLittleEndian));
-}
-
 Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (const DWARFYAML::Unit &Unit : DI.CompileUnits) {
     uint64_t Length = 3; // sizeof(version) + sizeof(address_size)
@@ -546,11 +543,8 @@ Error DWARFYAML::emitDebugStrOffsets(raw_ostream &OS, const Data &DI) {
     writeInteger((uint16_t)Table.Version, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Table.Padding, OS, DI.IsLittleEndian);
 
-    for (uint64_t Offset : Table.Offsets) {
-      cantFail(writeVariableSizedInteger(Offset,
-                                         Table.Format == dwarf::DWARF64 ? 8 : 4,
-                                         OS, DI.IsLittleEndian));
-    }
+    for (uint64_t Offset : Table.Offsets)
+      writeDWARFOffset(Offset, Table.Format, OS, DI.IsLittleEndian);
   }
 
   return Error::success();
@@ -705,11 +699,9 @@ Error writeDWARFLists(raw_ostream &OS,
     writeInteger((uint32_t)OffsetEntryCount, OS, IsLittleEndian);
 
     auto EmitOffsets = [&](ArrayRef<uint64_t> Offsets, uint64_t OffsetsSize) {
-      for (uint64_t Offset : Offsets) {
-        cantFail(writeVariableSizedInteger(
-            OffsetsSize + Offset, Table.Format == dwarf::DWARF64 ? 8 : 4, OS,
-            IsLittleEndian));
-      }
+      for (uint64_t Offset : Offsets)
+        writeDWARFOffset(OffsetsSize + Offset, Table.Format, OS,
+                         IsLittleEndian);
     };
 
     if (Table.Offsets)
