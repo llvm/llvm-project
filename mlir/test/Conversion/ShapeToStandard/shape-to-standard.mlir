@@ -139,7 +139,7 @@ func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : !shape.size)
   // CHECK: %[[RESULT:.*]] = dim %[[ARG]], %[[IDX]] : tensor<2x3xf32>
   // CHECK: return %[[RESULT]] : index
   %shape = shape.shape_of %arg : tensor<2x3xf32>
-  %result = shape.get_extent %shape, %idx
+  %result = shape.get_extent %shape, %idx : !shape.shape
   return %result : !shape.size
 }
 
@@ -154,7 +154,7 @@ func @get_extent_from_extent_tensor(%extents : tensor<?xindex>,
   // CHECK: %[[RESULT:.*]] = extract_element %[[EXTENTS]][%[[IDX]]] : tensor<?xindex>
   // CHECK: return %[[RESULT]] : index
   %shape = shape.from_extent_tensor %extents : tensor<?xindex>
-  %result = shape.get_extent %shape, %idx
+  %result = shape.get_extent %shape, %idx : !shape.shape
   return %result : !shape.size
 }
 

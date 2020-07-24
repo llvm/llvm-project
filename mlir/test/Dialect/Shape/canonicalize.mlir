@@ -239,9 +239,9 @@ func @nonfoldable_num_elements(%shape : !shape.shape) -> !shape.size {
 // CHECK-LABEL: func @basic
 func @basic() -> !shape.size {
   // CHECK: shape.const_size 2
-  %0 = shape.const_shape [0, 1, 2] : !shape.shape
+  %0 = shape.const_shape [0, 1, 2] : tensor<?xindex>
   %c2 = shape.const_size 2
-  %1 = shape.get_extent %0, %c2
+  %1 = shape.get_extent %0, %c2 : tensor<?xindex>
   return %1 : !shape.size
 }
 
@@ -252,9 +252,9 @@ func @basic() -> !shape.size {
 func @out_of_bounds() -> !shape.size {
   // CHECK: shape.const_shape
   // CHECK: shape.get_extent
-  %0 = shape.const_shape [0, 1, 2] : !shape.shape
+  %0 = shape.const_shape [0, 1, 2] : tensor<?xindex>
   %c3 = shape.const_size 3
-  %1 = shape.get_extent %0, %c3
+  %1 = shape.get_extent %0, %c3 : tensor<?xindex>
   return %1 : !shape.size
 }
 
@@ -262,10 +262,10 @@ func @out_of_bounds() -> !shape.size {
 
 // Should not fold.
 // CHECK-LABEL: func @not_const
-func @not_const(%arg0: !shape.shape) -> !shape.size {
+func @not_const(%arg0: tensor<?xindex>) -> !shape.size {
   // CHECK: shape.get_extent
   %c3 = shape.const_size 3
-  %0 = shape.get_extent %arg0, %c3
+  %0 = shape.get_extent %arg0, %c3 : tensor<?xindex>
   return %0 : !shape.size
 }
 
