@@ -1653,6 +1653,14 @@ void erase_if(Container &C, UnaryPredicate P) {
   C.erase(remove_if(C, P), C.end());
 }
 
+/// Wrapper function to remove a value from a container:
+///
+/// C.erase(remove(C.begin(), C.end(), V), C.end());
+template <typename Container, typename ValueType>
+void erase_value(Container &C, ValueType V) {
+  C.erase(std::remove(C.begin(), C.end(), V), C.end());
+}
+
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
 /// the range [ValIt, ValEnd) (which is not from the same container).
 template<typename Container, typename RandomAccessIterator>
