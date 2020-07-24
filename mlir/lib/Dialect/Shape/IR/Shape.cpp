@@ -23,6 +23,11 @@ namespace {
 #include "ShapeCanonicalization.inc"
 }
 
+static RankedTensorType getExtentTensorType(OpBuilder &builder) {
+  return RankedTensorType::get({ShapedType::kDynamicSize},
+                               builder.getIndexType());
+}
+
 ShapeDialect::ShapeDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addOperations<
@@ -40,12 +45,12 @@ ShapeDialect::ShapeDialect(MLIRContext *context)
 Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  if (auto shapeType = type.dyn_cast<ShapeType>())
+  if (type.isa<ShapeType>() || type == getExtentTensorType(builder))
     return builder.create<ConstShapeOp>(loc, type,
                                         value.cast<DenseIntElementsAttr>());
-  if (auto sizeType = type.dyn_cast<SizeType>())
+  if (type.isa<SizeType>())
     return builder.create<ConstSizeOp>(loc, type, value.cast<IntegerAttr>());
-  if (auto witnessType = type.dyn_cast<WitnessType>())
+  if (type.isa<WitnessType>())
     return builder.create<ConstWitnessOp>(loc, type, value.cast<BoolAttr>());
   return nullptr;
 }
@@ -290,7 +295,8 @@ static void print(OpAsmPrinter &p, ConstShapeOp &op) {
   p << "[";
   interleaveComma(op.shape().getValues<int64_t>(), p,
                   [&](int64_t i) { p << i; });
-  p << "]";
+  p << "] : ";
+  p.printType(op.getType());
 }
 
 static ParseResult parseConstShapeOp(OpAsmParser &parser,
@@ -316,8 +322,10 @@ static ParseResult parseConstShapeOp(OpAsmParser &parser,
   }
   Builder &builder = parser.getBuilder();
   result.addAttribute("shape", builder.getIndexTensorAttr(ints));
-
-  result.types.push_back(ShapeType::get(builder.getContext()));
+  Type resultTy;
+  if (parser.parseColonType(resultTy))
+    return failure();
+  result.types.push_back(resultTy);
   return success();
 }
 
