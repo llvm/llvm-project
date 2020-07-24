@@ -95,6 +95,9 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
         return false;
       if (!onlyUsedByLifetimeMarkers(GEPI))
         return false;
+    } else if (const AddrSpaceCastInst *ASCI = dyn_cast<AddrSpaceCastInst>(U)) {
+      if (!onlyUsedByLifetimeMarkers(ASCI))
+        return false;
     } else {
       return false;
     }
