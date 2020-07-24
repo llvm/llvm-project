@@ -15,6 +15,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/QueueItem.h"
 #include "lldb/Target/QueueList.h"
+#include "lldb/Target/Runtime.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
@@ -39,7 +40,7 @@ namespace lldb_private {
 /// can be asked to provide that information.
 ///
 
-class SystemRuntime : public PluginInterface {
+class SystemRuntime : public Runtime, public PluginInterface {
 public:
   /// Find a system runtime plugin for a given process.
   ///
@@ -52,7 +53,7 @@ public:
   static SystemRuntime *FindPlugin(Process *process);
 
   /// Construct with a process.
-  SystemRuntime(lldb_private::Process *process);
+  SystemRuntime(Process *process);
 
   /// Destructor.
   ///
@@ -76,7 +77,7 @@ public:
   ///
   /// Allow the SystemRuntime plugin to enable logging features in the system
   /// runtime libraries.
-  virtual void ModulesDidLoad(lldb_private::ModuleList &module_list);
+  virtual void ModulesDidLoad(const ModuleList &module_list) override;
 
   /// Called before detaching from a process.
   ///
@@ -294,9 +295,6 @@ public:
   }
 
 protected:
-  // Member variables.
-  Process *m_process;
-
   std::vector<ConstString> m_types;
 
 private:
