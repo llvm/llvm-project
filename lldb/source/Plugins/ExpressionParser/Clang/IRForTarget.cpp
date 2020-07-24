@@ -433,7 +433,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
         m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str, 
                                     missing_weak);
     if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS || missing_weak) {
-        log->PutCString("Couldn't find CFStringCreateWithBytes in the target");
+      LLDB_LOG(log, "Couldn't find CFStringCreateWithBytes in the target");
 
       m_error_stream.Printf("Error [IRForTarget]: Rewriting an Objective-C "
                             "constant string requires "
