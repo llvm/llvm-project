@@ -18,7 +18,6 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -26,7 +25,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
-
 using namespace llvm;
 
 //---------------------------------------------------------------------------

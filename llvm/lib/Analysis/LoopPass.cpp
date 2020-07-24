@@ -17,7 +17,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassTimingInfo.h"
@@ -26,7 +25,6 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-pass-manager"

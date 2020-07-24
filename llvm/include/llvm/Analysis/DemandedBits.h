@@ -36,8 +36,6 @@ class Function;
 class Instruction;
 struct KnownBits;
 class raw_ostream;
-class Use;
-class Value;
 
 class DemandedBits {
 public:

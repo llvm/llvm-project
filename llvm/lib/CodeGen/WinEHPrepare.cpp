@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCSymbol.h"
