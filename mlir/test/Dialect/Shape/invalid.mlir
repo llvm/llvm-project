@@ -78,3 +78,20 @@ func @assuming_all_op_too_few_operands() {
   %w0 = shape.assuming_all
   return
 }
+
+// -----
+
+func @shape_of(%value_arg : !shape.value_shape,
+               %shaped_arg : tensor<?x3x4xf32>) {
+  // expected-error@+1 {{if operand is of type `value_shape` then the result must be of type `shape` to propagate potential error shapes}}
+  %0 = shape.shape_of %value_arg : !shape.value_shape -> tensor<?xindex>
+}
+
+// -----
+
+func @shape_of(%value_arg : !shape.value_shape,
+               %shaped_arg : tensor<?x3x4xf32>) {
+  // expected-error@+1 {{if operand is a shaped type then the result must be an extent tensor}}
+  %1 = shape.shape_of %shaped_arg : tensor<?x3x4xf32> -> !shape.shape
+}
+
