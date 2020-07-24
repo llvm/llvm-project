@@ -597,3 +597,27 @@ mlir::FunctionType Fortran::lower::translateSignature(
   return SignatureBuilder{characteristics.value(), converter, forceImplicit}
       .getFunctionType();
 }
+
+mlir::FuncOp Fortran::lower::getOrDeclareFunction(
+    llvm::StringRef name, const Fortran::evaluate::ProcedureDesignator &proc,
+    Fortran::lower::AbstractConverter &converter) {
+  auto module = converter.getModuleOp();
+  mlir::FuncOp func =
+      Fortran::lower::FirOpBuilder::getNamedFunction(module, name);
+  if (func)
+    return func;
+
+  const auto *symbol = proc.GetSymbol();
+  assert(symbol && "non user function in getOrDeclareFunction");
+  // getOrDeclareFunction is only used for functions not defined in the current
+  // program unit, so use the location of the procedure designator symbol, which
+  // is the first occurrence of the procedure in the program unit.
+  auto loc = converter.genLocation(symbol->name());
+  auto characteristics =
+      Fortran::evaluate::characteristics::Procedure::Characterize(
+          proc, converter.getFoldingContext().intrinsics());
+  auto ty = SignatureBuilder{characteristics.value(), converter,
+                             /* forceImplicit */ false}
+                .getFunctionType();
+  return Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);
+}
