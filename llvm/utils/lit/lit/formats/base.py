@@ -115,3 +115,20 @@ class OneCommandPerFileTest(TestFormat):
         report += """Output:\n--\n%s--""" % diags
 
         return lit.Test.FAIL, report
+
+
+###
+
+# Check exit code of a simple executable with no input
+class ExecutableTest(FileBasedTest):
+    def execute(self, test, litConfig):
+        if test.config.unsupported:
+            return lit.Test.UNSUPPORTED
+
+        out, err, exitCode = lit.util.executeCommand(test.getSourcePath())
+
+        if not exitCode:
+            return lit.Test.PASS, ''
+
+        return lit.Test.FAIL, out+err
+

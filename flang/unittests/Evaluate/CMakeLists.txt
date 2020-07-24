@@ -8,43 +8,22 @@ target_link_libraries(FortranEvaluateTesting
   LLVMSupport
 )
 
-add_executable(leading-zero-bit-count-test
-  leading-zero-bit-count.cpp
-)
-
-target_link_libraries(leading-zero-bit-count-test
+add_flang_nongtest_unittest(leading-zero-bit-count
   FortranEvaluateTesting
   LLVMSupport
 )
 
-add_executable(bit-population-count-test
-  bit-population-count.cpp
-)
-
-target_link_libraries(bit-population-count-test
+add_flang_nongtest_unittest(bit-population-count
   FortranEvaluateTesting
   LLVMSupport
 )
 
-add_executable(uint128-test
-  uint128.cpp
-)
-
-target_link_libraries(uint128-test
+add_flang_nongtest_unittest(uint128
   FortranEvaluateTesting
   LLVMSupport
 )
 
-# These routines live in lib/Common but we test them here.
-add_test(UINT128 uint128-test)
-add_test(Leadz leading-zero-bit-count-test)
-add_test(PopPar bit-population-count-test)
-
-add_executable(expression-test
-  expression.cpp
-)
-
-target_link_libraries(expression-test
+add_flang_nongtest_unittest(expression
   FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
@@ -53,22 +32,14 @@ target_link_libraries(expression-test
   LLVMSupport
 )
 
-add_executable(integer-test
-  integer.cpp
-)
-
-target_link_libraries(integer-test
+add_flang_nongtest_unittest(integer
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics
   LLVMSupport
 )
 
-add_executable(intrinsics-test
-  intrinsics.cpp
-)
-
-target_link_libraries(intrinsics-test
+add_flang_nongtest_unittest(intrinsics
   FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
@@ -79,11 +50,7 @@ target_link_libraries(intrinsics-test
   LLVMSupport
 )
 
-add_executable(logical-test
-  logical.cpp
-)
-
-target_link_libraries(logical-test
+add_flang_nongtest_unittest(logical
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics
@@ -96,24 +63,16 @@ target_link_libraries(logical-test
 # C++ exceptions are enabled for this test.
 set(LLVM_REQUIRES_EH ON)
 set(LLVM_REQUIRES_RTTI ON)
-add_executable(real-test
-  real.cpp
-)
-llvm_update_compile_flags(real-test)
-
-target_link_libraries(real-test
+add_flang_nongtest_unittest(real
   FortranEvaluateTesting
   FortranEvaluate
   FortranDecimal
   FortranSemantics
   LLVMSupport
 )
+llvm_update_compile_flags(real.test)
 
-add_executable(reshape-test
-  reshape.cpp
-)
-
-target_link_libraries(reshape-test
+add_flang_nongtest_unittest(reshape
   FortranEvaluateTesting
   FortranSemantics
   FortranEvaluate
@@ -121,11 +80,7 @@ target_link_libraries(reshape-test
   LLVMSupport
 )
 
-add_executable(ISO-Fortran-binding-test
-  ISO-Fortran-binding.cpp
-)
-
-target_link_libraries(ISO-Fortran-binding-test
+add_flang_nongtest_unittest(ISO-Fortran-binding
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics
@@ -133,23 +88,10 @@ target_link_libraries(ISO-Fortran-binding-test
   LLVMSupport
 )
 
-add_executable(folding-test
-  folding.cpp
-)
-
-target_link_libraries(folding-test
+add_flang_nongtest_unittest(folding
   FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics
   LLVMSupport
 )
-
-add_test(Expression expression-test)
-add_test(Integer integer-test)
-add_test(Intrinsics intrinsics-test)
-add_test(Logical logical-test)
-add_test(Real real-test)
-add_test(RESHAPE reshape-test)
-add_test(ISO-binding ISO-Fortran-binding-test)
-add_test(folding folding-test)

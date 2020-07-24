@@ -9,6 +9,7 @@ func @shape_num_elements(%shape : !shape.shape) -> !shape.size {
   %num_elements = shape.reduce(%shape, %init) : !shape.shape -> !shape.size {
     ^bb0(%index : index, %extent : !shape.size, %acc : !shape.size):
       %acc_next = shape.mul %acc, %extent
+          : !shape.size, !shape.size -> !shape.size
       shape.yield %acc_next : !shape.size
   }
   return %num_elements : !shape.size
@@ -19,7 +20,7 @@ func @extent_tensor_num_elements(%shape : tensor<?xindex>) -> index {
   %init = constant 1 : index
   %num_elements = shape.reduce(%shape, %init) : tensor<?xindex> -> index {
     ^bb0(%index : index, %extent : index, %acc : index):
-      %acc_next = muli %acc, %extent : index
+      %acc_next = shape.mul %acc, %extent : index, index -> index
       shape.yield %acc_next : index
   }
   return %num_elements : index
@@ -110,9 +111,13 @@ func @broadcastable_on_extent_tensors(%lhs : tensor<?xindex>,
   return
 }
 
-func @test_mul(%lhs: !shape.size, %rhs: !shape.size) -> !shape.size {
-  %product = shape.mul %lhs, %rhs
-  return %product: !shape.size
+func @mul(%size_arg : !shape.size, %index_arg : index) {
+  %size_prod = shape.mul %size_arg, %size_arg
+      : !shape.size, !shape.size -> !shape.size
+  %index_prod = shape.mul %index_arg, %index_arg : index, index -> index
+  %mixed_prod = shape.mul %size_arg, %index_arg
+      : !shape.size, index -> !shape.size
+  return
 }
 
 func @const_size() {

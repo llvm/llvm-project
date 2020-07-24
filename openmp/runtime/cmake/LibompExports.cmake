@@ -78,7 +78,7 @@ if(NOT LIBOMP_OUTPUT_DIRECTORY)
 endif()
 add_custom_command(TARGET omp POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_LIB_DIR}
-  COMMAND ${CMAKE_COMMAND} -E copy ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE} ${LIBOMP_EXPORTS_LIB_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:omp> ${LIBOMP_EXPORTS_LIB_DIR}
 )
 
 # Copy Windows import library into exports/ directory post build

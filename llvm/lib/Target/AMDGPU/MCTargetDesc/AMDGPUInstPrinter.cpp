@@ -299,23 +299,48 @@ void AMDGPUInstPrinter::printExpVM(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
+}
+
+void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
   using namespace llvm::AMDGPU::MTBUFFormat;
+
+  int OpNo =
+    AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::format);
+  assert(OpNo != -1);
 
   unsigned Val = MI->getOperand(OpNo).getImm();
   if (AMDGPU::isGFX10(STI)) {
     if (Val == UFMT_DEFAULT)
       return;
-    O << " format:" << Val;
+    if (isValidUnifiedFormat(Val)) {
+      O << " format:[" << getUnifiedFormatName(Val) << ']';
+    } else {
+      O << " format:" << Val;
+    }
   } else {
     if (Val == DFMT_NFMT_DEFAULT)
       return;
-    unsigned Dfmt;
-    unsigned Nfmt;
-    decodeDfmtNfmt(Val, Dfmt, Nfmt);
-    O << " dfmt:" << Dfmt;
-    O << ", nfmt:" << Nfmt;
+    if (isValidDfmtNfmt(Val, STI)) {
+      unsigned Dfmt;
+      unsigned Nfmt;
+      decodeDfmtNfmt(Val, Dfmt, Nfmt);
+      O << " format:[";
+      if (Dfmt != DFMT_DEFAULT) {
+        O << getDfmtName(Dfmt);
+        if (Nfmt != NFMT_DEFAULT) {
+          O << ',';
+        }
+      }
+      if (Nfmt != NFMT_DEFAULT) {
+        O << getNfmtName(Nfmt, STI);
+      }
+      O << ']';
+    } else {
+      O << " format:" << Val;
+    }
   }
-  O << ',';
 }
 
 void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
@@ -681,6 +706,14 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                                 AMDGPU::OpName::src1))
       printDefaultVccOperand(OpNo, STI, O);
     break;
+  }
+
+  if (Desc.TSFlags & SIInstrFlags::MTBUF) {
+    int SOffsetIdx =
+      AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::soffset);
+    assert(SOffsetIdx != -1);
+    if ((int)OpNo == SOffsetIdx)
+      printSymbolicFormat(MI, STI, O);
   }
 }
 

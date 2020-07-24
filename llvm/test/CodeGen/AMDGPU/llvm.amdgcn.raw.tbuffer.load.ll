@@ -3,14 +3,14 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefix=GCN -check-prefix=GFX10 %s
 
 ; GCN-LABEL: {{^}}tbuffer_load:
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:14, nfmt:4, 0
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:15, nfmt:3, 0 glc
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:6, nfmt:1, 0 slc
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:6, nfmt:1, 0 glc
-; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:78, 0
-; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:63, 0 glc
-; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:22, 0 slc
-; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:22, 0 glc dlc
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT]
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] glc
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] slc
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] glc
+; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:78
+; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_FMT_32_32_SINT] glc
+; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_FMT_32_FLOAT] slc
+; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_FMT_32_FLOAT] glc dlc
 ; GCN: s_waitcnt
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>, <4 x float>} @tbuffer_load(<4 x i32> inreg) {
 main_body:
@@ -29,8 +29,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_load_immoffs:
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:14, nfmt:4, 0 offset:42
-; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:78, 0 offset:42
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT] offset:42
+; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:78 offset:42
 define amdgpu_vs <4 x float> @tbuffer_load_immoffs(<4 x i32> inreg) {
 main_body:
     %vdata   = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32(<4 x i32> %0, i32 42, i32 0, i32 78, i32 0)
@@ -39,12 +39,12 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_load_immoffs_large
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:15, nfmt:2, 61 offset:4095
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:14, nfmt:3, {{s[0-9]+}} offset:73
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:13, nfmt:4, {{s[0-9]+}} offset:1
-; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:47, 61 offset:4095
-; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:62, {{s[0-9]+}} offset:73
-; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:77, {{s[0-9]+}} offset:1
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 61 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_USCALED] offset:4095
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_SSCALED] offset:73
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] offset:1
+; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 61 format:[BUF_FMT_10_10_10_2_SSCALED] offset:4095
+; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_FMT_32_32_UINT] offset:73
+; GFX10-DAG: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_FMT_32_32_32_32_FLOAT] offset:1
 ; GCN: s_waitcnt
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_large(<4 x i32> inreg, i32 inreg %soffs) {
     %vdata     = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32(<4 x i32> %0, i32 4095, i32 61, i32 47, i32 0)
@@ -60,8 +60,8 @@ define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_l
 }
 
 ; GCN-LABEL: {{^}}tbuffer_load_ofs:
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, dfmt:14, nfmt:4, 0 offen
-; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, format:78, 0 offen
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT] offen
+; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 format:78 offen
 define amdgpu_vs <4 x float> @tbuffer_load_ofs(<4 x i32> inreg, i32 %voffs) {
 main_body:
     %vdata   = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32(<4 x i32> %0, i32 %voffs, i32 0, i32 78, i32 0)
@@ -70,8 +70,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_load_ofs_imm:
-; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, dfmt:14, nfmt:4, 0 offen offset:52
-; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, format:78, 0 offen offset:52
+; PREGFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT] offen offset:52
+; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 format:78 offen offset:52
 define amdgpu_vs <4 x float> @tbuffer_load_ofs_imm(<4 x i32> inreg, i32 %voffs) {
 main_body:
     %ofs = add i32 %voffs, 52
@@ -81,8 +81,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}buffer_load_xy:
-; PREGFX10: tbuffer_load_format_xy {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:13, nfmt:4, 0
-; GFX10: tbuffer_load_format_xy {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:77, 0
+; PREGFX10: tbuffer_load_format_xy {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT]
+; GFX10: tbuffer_load_format_xy {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_FMT_32_32_32_32_FLOAT]
 define amdgpu_vs <2 x float> @buffer_load_xy(<4 x i32> inreg %rsrc) {
     %vdata = call <2 x i32> @llvm.amdgcn.raw.tbuffer.load.v2i32(<4 x i32> %rsrc, i32 0, i32 0, i32 77, i32 0)
     %vdata.f = bitcast <2 x i32> %vdata to <2 x float>
@@ -90,8 +90,8 @@ define amdgpu_vs <2 x float> @buffer_load_xy(<4 x i32> inreg %rsrc) {
 }
 
 ; GCN-LABEL: {{^}}buffer_load_x:
-; PREGFX10: tbuffer_load_format_x {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, dfmt:13, nfmt:4, 0
-; GFX10: tbuffer_load_format_x {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, format:77, 0
+; PREGFX10: tbuffer_load_format_x {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT]
+; GFX10: tbuffer_load_format_x {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_FMT_32_32_32_32_FLOAT]
 define amdgpu_vs float @buffer_load_x(<4 x i32> inreg %rsrc) {
     %vdata = call i32 @llvm.amdgcn.raw.tbuffer.load.i32(<4 x i32> %rsrc, i32 0, i32 0, i32 77, i32 0)
     %vdata.f = bitcast i32 %vdata to float
