@@ -163,13 +163,20 @@ func @shape_eq_on_mixed(%a : tensor<?xindex>, %b : !shape.shape) -> i1 {
 
 func @get_extent_on_shape(%arg : !shape.shape) -> !shape.size {
   %c0 = shape.const_size 0
-  %result = shape.get_extent %arg, %c0 : !shape.shape
+  %result = shape.get_extent %arg, %c0 :
+      !shape.shape, !shape.size -> !shape.size
   return %result : !shape.size
 }
 
-func @get_extent_on_extent_tensor(%arg : tensor<?xindex>) -> !shape.size {
+func @get_extent_on_extent_tensor(%arg : tensor<?xindex>) -> index {
+  %c0 = constant 0 : index
+  %result = shape.get_extent %arg, %c0 : tensor<?xindex>, index -> index
+  return %result : index
+}
+
+func @get_extent_on_mixed_operands(%arg : tensor<?xindex>) -> !shape.size {
   %c0 = shape.const_size 0
-  %result = shape.get_extent %arg, %c0 : tensor<?xindex>
+  %result = shape.get_extent %arg, %c0 : tensor<?xindex>, !shape.size -> !shape.size
   return %result : !shape.size
 }
 

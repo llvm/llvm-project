@@ -535,10 +535,30 @@ OpFoldResult FromExtentsOp::fold(ArrayRef<Attribute> operands) {
 // GetExtentOp
 //===----------------------------------------------------------------------===//
 
-Optional<int64_t> GetExtentOp::getConstantDim() {
-  if (auto constSizeOp = dim().getDefiningOp<ConstSizeOp>()) {
-    return constSizeOp.value().getLimitedValue();
+static LogicalResult verify(GetExtentOp op) {
+  Type shapeTy = op.shape().getType();
+  Type dimTy = op.dim().getType();
+  Type extentTy = op.extent().getType();
+  bool errorPropagationPossible =
+      shapeTy.isa<ShapeType>() || dimTy.isa<SizeType>();
+  if (errorPropagationPossible) {
+    if (!extentTy.isa<SizeType>())
+      op.emitError()
+          << "if at least one of the operands can hold error values then the "
+             "result must be of type `size` to propagate them";
+  } else {
+    if (extentTy.isa<SizeType>())
+      op.emitError() << "if none of the operands can hold error values then "
+                        "the result must be of type `index`";
   }
+  return success();
+}
+
+Optional<int64_t> GetExtentOp::getConstantDim() {
+  if (auto constSizeOp = dim().getDefiningOp<ConstSizeOp>())
+    return constSizeOp.value().getLimitedValue();
+  if (auto constantOp = dim().getDefiningOp<ConstantOp>())
+    return constantOp.value().cast<IntegerAttr>().getInt();
   return llvm::None;
 }
 
@@ -558,8 +578,14 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
                         int64_t dim) {
   auto loc = result.location;
   auto dimAttr = builder.getIndexAttr(dim);
-  Value dimValue = builder.create<ConstSizeOp>(loc, dimAttr);
-  build(builder, result, shape, dimValue);
+  if (shape.getType().isa<ShapeType>()) {
+    Value dim = builder.create<ConstSizeOp>(loc, dimAttr);
+    build(builder, result, builder.getType<SizeType>(), shape, dim);
+  } else {
+    Value dim =
+        builder.create<ConstantOp>(loc, builder.getIndexType(), dimAttr);
+    build(builder, result, builder.getIndexType(), shape, dim);
+  }
 }
 
 //===----------------------------------------------------------------------===//
