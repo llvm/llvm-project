@@ -114,6 +114,7 @@ class MTBUF_Real <MTBUF_Pseudo ps> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let Constraints        = ps.Constraints;
