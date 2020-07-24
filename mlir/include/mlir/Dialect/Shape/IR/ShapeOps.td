@@ -235,9 +235,10 @@ def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
     an error then it returns an error size.
   }];
   let arguments = (ins Shape_ShapeOrExtentTensorType:$shape,
-                       Shape_SizeType:$dim);
-  let results = (outs Shape_SizeType:$extent);
-  let assemblyFormat = "$shape `,` $dim `:` type($shape)  attr-dict";
+                       Shape_SizeOrIndexType:$dim);
+  let results = (outs Shape_SizeOrIndexType:$extent);
+  let assemblyFormat = "$shape `,` $dim `:` type($shape) `,` type($dim) `->` "
+                       "type($extent) attr-dict";
 
   let builders = [
     // Builder that allows passing a constant dimension as a simple integer.
@@ -251,6 +252,7 @@ def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
   }];
 
   let hasFolder = 1;
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def Shape_IndexToSizeOp : Shape_Op<"index_to_size", [NoSideEffect]> {

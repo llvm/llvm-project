@@ -102,3 +102,21 @@ func @rank(%arg : !shape.shape) {
   %0 = shape.rank %arg : !shape.shape -> index
 }
 
+// -----
+
+func @get_extent_error_free(%arg : tensor<?xindex>) -> !shape.size {
+  %c0 = constant 0 : index
+  // expected-error@+1 {{if none of the operands can hold error values then the result must be of type `index`}}
+  %result = shape.get_extent %arg, %c0 : tensor<?xindex>, index -> !shape.size
+  return %result : !shape.size
+}
+
+// -----
+
+func @get_extent_error_possible(%arg : tensor<?xindex>) -> index {
+  %c0 = shape.const_size 0
+  // expected-error@+1 {{if at least one of the operands can hold error values then the result must be of type `size` to propagate them}}
+  %result = shape.get_extent %arg, %c0 : tensor<?xindex>, !shape.size -> index
+  return %result : index
+}
+
