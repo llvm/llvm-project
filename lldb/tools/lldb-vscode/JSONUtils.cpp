@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
-#include <iomanip>
-#include <sstream>
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -329,50 +327,6 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
   return llvm::json::Value(std::move(object));
 }
 
-static uint64_t GetDebugInfoSizeInSection(lldb::SBSection section) {
-  uint64_t debug_info_size = 0;
-  llvm::StringRef section_name(section.GetName());
-  if (section_name.startswith(".debug") || section_name.startswith("__debug") ||
-      section_name.startswith(".apple") || section_name.startswith("__apple"))
-    debug_info_size += section.GetFileByteSize();
-  size_t num_sub_sections = section.GetNumSubSections();
-  for (size_t i = 0; i < num_sub_sections; i++) {
-    debug_info_size +=
-        GetDebugInfoSizeInSection(section.GetSubSectionAtIndex(i));
-  }
-  return debug_info_size;
-}
-
-static uint64_t GetDebugInfoSize(lldb::SBModule module) {
-  uint64_t debug_info_size = 0;
-  size_t num_sections = module.GetNumSections();
-  for (size_t i = 0; i < num_sections; i++) {
-    debug_info_size += GetDebugInfoSizeInSection(module.GetSectionAtIndex(i));
-  }
-  return debug_info_size;
-}
-
-static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
-  std::ostringstream oss;
-  oss << " (";
-  oss << std::fixed << std::setprecision(1);
-
-  if (debug_info < 1024) {
-    oss << debug_info << "B";
-  } else if (debug_info < 1024 * 1024) {
-    double kb = double(debug_info) / 1024.0;
-    oss << kb << "KB";
-  } else if (debug_info < 1024 * 1024 * 1024) {
-    double mb = double(debug_info) / (1024.0 * 1024.0);
-    oss << mb << "MB";
-  } else {
-    double gb = double(debug_info) / (1024.0 * 1024.0 * 1024.0);
-    oss << gb << "GB";
-    ;
-  }
-  oss << ")";
-  return oss.str();
-}
 llvm::json::Value CreateModule(lldb::SBModule &module) {
   llvm::json::Object object;
   if (!module.IsValid())
@@ -385,15 +339,9 @@ llvm::json::Value CreateModule(lldb::SBModule &module) {
   std::string module_path(module_path_arr);
   object.try_emplace("path", module_path);
   if (module.GetNumCompileUnits() > 0) {
-    std::string symbol_str = "Symbols loaded.";
-    uint64_t debug_info = GetDebugInfoSize(module);
-    if (debug_info > 0) {
-      symbol_str += ConvertDebugInfoSizeToString(debug_info);
-    }
-    object.try_emplace("symbolStatus", symbol_str);
+    object.try_emplace("symbolStatus", "Symbols loaded.");
     char symbol_path_arr[PATH_MAX];
-    module.GetSymbolFileSpec().GetPath(symbol_path_arr,
-                                       sizeof(symbol_path_arr));
+    module.GetSymbolFileSpec().GetPath(symbol_path_arr, sizeof(symbol_path_arr));
     std::string symbol_path(symbol_path_arr);
     object.try_emplace("symbolFilePath", symbol_path);
   } else {
@@ -404,9 +352,8 @@ llvm::json::Value CreateModule(lldb::SBModule &module) {
   object.try_emplace("addressRange", loaded_addr);
   std::string version_str;
   uint32_t version_nums[3];
-  uint32_t num_versions =
-      module.GetVersion(version_nums, sizeof(version_nums) / sizeof(uint32_t));
-  for (uint32_t i = 0; i < num_versions; ++i) {
+  uint32_t num_versions = module.GetVersion(version_nums, sizeof(version_nums)/sizeof(uint32_t));
+  for (uint32_t i=0; i<num_versions; ++i) {
     if (!version_str.empty())
       version_str += ".";
     version_str += std::to_string(version_nums[i]);
