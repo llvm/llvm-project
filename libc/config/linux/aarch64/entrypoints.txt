@@ -4,16 +4,16 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # string.h entrypoints
     libc.src.string.bzero
+    libc.src.string.memchr
     libc.src.string.memcpy
     libc.src.string.memset
-    libc.src.string.strcpy
-    libc.src.string.strcat
-    libc.src.string.strlen
-    libc.src.string.memchr
-    libc.src.string.strchr
-    libc.src.string.strstr
-    libc.src.string.strnlen
     libc.src.string.memrchr
+    libc.src.string.strcat
+    libc.src.string.strchr
+    libc.src.string.strcpy
+    libc.src.string.strlen
+    libc.src.string.strnlen
+    libc.src.string.strstr
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
