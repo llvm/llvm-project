@@ -1,4 +1,5 @@
 ; RUN: opt < %s -sroa -S | FileCheck %s
+; RUN: opt < %s -passes=sroa -S | FileCheck %s
 target datalayout = "e-p:64:64:64-p1:16:16:16-p2:32:32-p3:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64-A2"
 
 declare void @llvm.memcpy.p2i8.p2i8.i32(i8 addrspace(2)* nocapture, i8 addrspace(2)* nocapture readonly, i32, i1)
@@ -127,3 +128,15 @@ define void @test_load_store_diff_addr_space([2 x float] addrspace(1)* %complex1
   store i64 %v2, i64 addrspace(1)* %p2
   ret void
 }
+
+define void @addressspace_alloca_lifetime() {
+; CHECK-LABEL: @addressspace_alloca_lifetime(
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca i8, align 8, addrspace(2)
+  %cast = addrspacecast i8 addrspace(2)* %alloca to i8*
+  call void @llvm.lifetime.start.p0i8(i64 2, i8* %cast)
+  ret void
+}
+
+declare void @llvm.lifetime.start.p0i8(i64 %size, i8* nocapture %ptr)
