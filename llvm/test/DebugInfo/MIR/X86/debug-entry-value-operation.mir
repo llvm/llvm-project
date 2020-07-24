@@ -1,15 +1,21 @@
 # RUN: llc -start-before=livedebugvalues -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
 # RUN: llvm-dwarfdump %t | FileCheck %s
-#
-# int global;
-# int foo(int p, int q, int r) {
-#   global = p + 1;
-#   asm __volatile("" : : : "edi", "esi", "edx");
-#   return 123;
-# }
+
+# RUN: llc -start-before=livedebugvalues -debugger-tune=sce -mtriple=x86_64-sce-ps4 -o %t1 %s -filetype=obj
+# RUN: llvm-dwarfdump %t1 | FileCheck %s -check-prefix=SCE
+
+## Based on:
+## int global;
+## int foo(int p, int q, int r) {
+##   global = p + 1;
+##   asm __volatile("" : : : "edi", "esi", "edx");
+##   return 123;
+## }
 
 # CHECK: DW_TAG_formal_parameter
 # CHECK:   DW_OP_entry_value
+
+# SCE-NOT: DW_OP_{{.*}}entry_value
 
 --- |
   ; ModuleID = 'multiple-param-dbg-value-entry.ll'
