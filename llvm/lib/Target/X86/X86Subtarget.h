@@ -498,13 +498,13 @@ private:
   unsigned RequiredVectorWidth;
 
   /// True if compiling for 64-bit, false for 16-bit or 32-bit.
-  bool In64BitMode;
+  bool In64BitMode = false;
 
   /// True if compiling for 32-bit, false for 16-bit or 64-bit.
-  bool In32BitMode;
+  bool In32BitMode = false;
 
   /// True if compiling for 16-bit, false for 32-bit or 64-bit.
-  bool In16BitMode;
+  bool In16BitMode = false;
 
   /// Contains the Overhead of gather\scatter instructions
   int GatherOverhead = 1024;
