@@ -734,3 +734,43 @@ func @shape_eq_do_not_fold(%a : !shape.shape) -> i1 {
   %result = shape.shape_eq %a, %b : !shape.shape, !shape.shape
   return %result : i1
 }
+
+// -----
+
+// Fold `mul` for constant sizes.
+// CHECK-LABEL: @fold_mul_size
+func @fold_mul_size() -> !shape.size {
+  // CHECK: %[[RESULT:.*]] = shape.const_size 6
+  // CHECK: return %[[RESULT]] : !shape.size
+  %c2 = shape.const_size 2
+  %c3 = shape.const_size 3
+  %result = shape.mul %c2, %c3 : !shape.size, !shape.size -> !shape.size
+  return %result : !shape.size
+}
+
+// -----
+
+// Fold `mul` for constant indices.
+// CHECK-LABEL: @fold_mul_index
+func @fold_mul_index() -> index {
+  // CHECK: %[[RESULT:.*]] = constant 6 : index
+  // CHECK: return %[[RESULT]] : index
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %result = shape.mul %c2, %c3 : index, index -> index
+  return %result : index
+}
+
+// -----
+
+// Fold `mul` for mixed constants.
+// CHECK-LABEL: @fold_mul_mixed
+func @fold_mul_mixed() -> !shape.size {
+  // CHECK: %[[RESULT:.*]] = shape.const_size 6
+  // CHECK: return %[[RESULT]] : !shape.size
+  %c2 = shape.const_size 2
+  %c3 = constant 3 : index
+  %result = shape.mul %c2, %c3 : !shape.size, index -> !shape.size
+  return %result : !shape.size
+}
+
