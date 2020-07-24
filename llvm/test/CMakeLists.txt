@@ -52,6 +52,7 @@ set(LLVM_TEST_DEPENDS
           UnitTests
           bugpoint
           count
+          extract
           llc
           lli
           lli-child-target

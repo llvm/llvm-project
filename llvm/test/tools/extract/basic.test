@@ -1,0 +1,32 @@
+# AA-NOT: {{.}}
+# AA: {{^}}aa{{$}}
+#--- aa
+aa
+; BB-NOT: {{.}}
+; BB: {{^}}bb{{$}}
+;--- bb
+bb
+
+// CC: // Comments are preserved.
+//--- cc
+cc
+// Comments are preserved.
+;--- dup
+;--- dup
+
+# RUN: extract aa %s | diff %S/Inputs/basic-aa.txt -
+# RUN: extract bb - < %s | diff %S/Inputs/basic-bb.txt -
+# RUN: extract cc %s -o %t
+# RUN: FileCheck %s --check-prefix=CC < %t
+
+# RUN: not %extract aa 2>&1 | FileCheck %s --check-prefix=NO_INPUT
+
+# NO_INPUT: extract: error: input filename is not specified
+
+# RUN: not %extract dup %s 2>&1 | FileCheck %s --check-prefix=DUP
+
+# DUP: extract: error: {{.*}}.test: ';--- dup' occurs more than once
+
+# RUN: not %extract not_exist %s 2>&1 | FileCheck %s --check-prefix=NOT_EXIST
+
+# NOT_EXIST: extract: error: {{.*}}.test: ';--- not_exist' was not found
