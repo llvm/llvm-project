@@ -22,6 +22,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <iterator>
 
 using namespace clang;
 using namespace ento;
@@ -99,47 +101,63 @@ public:
     return CmpOpTable[getIndexFromOp(CurrentOP)][CmpOpCount];
   }
 };
+
 //===----------------------------------------------------------------------===//
 //                           RangeSet implementation
 //===----------------------------------------------------------------------===//
 
-void RangeSet::IntersectInRange(BasicValueFactory &BV, Factory &F,
-                                const llvm::APSInt &Lower,
-                                const llvm::APSInt &Upper,
-                                PrimRangeSet &newRanges,
-                                PrimRangeSet::iterator &i,
-                                PrimRangeSet::iterator &e) const {
-  // There are six cases for each range R in the set:
-  //   1. R is entirely before the intersection range.
-  //   2. R is entirely after the intersection range.
-  //   3. R contains the entire intersection range.
-  //   4. R starts before the intersection range and ends in the middle.
-  //   5. R starts in the middle of the intersection range and ends after it.
-  //   6. R is entirely contained in the intersection range.
-  // These correspond to each of the conditions below.
-  for (/* i = begin(), e = end() */; i != e; ++i) {
-    if (i->To() < Lower) {
-      continue;
-    }
-    if (i->From() > Upper) {
-      break;
-    }
+RangeSet::ContainerType RangeSet::Factory::EmptySet{};
 
-    if (i->Includes(Lower)) {
-      if (i->Includes(Upper)) {
-        newRanges =
-            F.add(newRanges, Range(BV.getValue(Lower), BV.getValue(Upper)));
-        break;
-      } else
-        newRanges = F.add(newRanges, Range(BV.getValue(Lower), i->To()));
-    } else {
-      if (i->Includes(Upper)) {
-        newRanges = F.add(newRanges, Range(i->From(), BV.getValue(Upper)));
-        break;
-      } else
-        newRanges = F.add(newRanges, *i);
-    }
+RangeSet RangeSet::Factory::add(RangeSet Original, Range Element) {
+  ContainerType Result;
+  Result.reserve(Original.size() + 1);
+
+  const_iterator Lower = llvm::lower_bound(Original, Element);
+  Result.insert(Result.end(), Original.begin(), Lower);
+  Result.push_back(Element);
+  Result.insert(Result.end(), Lower, Original.end());
+
+  return makePersistent(std::move(Result));
+}
+
+RangeSet RangeSet::Factory::add(RangeSet Original, const llvm::APSInt &Point) {
+  return add(Original, Range(Point));
+}
+
+RangeSet RangeSet::Factory::getRangeSet(Range From) {
+  ContainerType Result;
+  Result.push_back(From);
+  return makePersistent(std::move(Result));
+}
+
+RangeSet RangeSet::Factory::makePersistent(ContainerType &&From) {
+  llvm::FoldingSetNodeID ID;
+  void *InsertPos;
+
+  From.Profile(ID);
+  ContainerType *Result = Cache.FindNodeOrInsertPos(ID, InsertPos);
+
+  if (!Result) {
+    // It is cheaper to fully construct the resulting range on stack
+    // and move it to the freshly allocated buffer if we don't have
+    // a set like this already.
+    Result = construct(std::move(From));
+    Cache.InsertNode(Result, InsertPos);
   }
+
+  return Result;
+}
+
+RangeSet::ContainerType *RangeSet::Factory::construct(ContainerType &&From) {
+  void *Buffer = Arena.Allocate();
+  return new (Buffer) ContainerType(std::move(From));
+}
+
+RangeSet RangeSet::Factory::add(RangeSet LHS, RangeSet RHS) {
+  ContainerType Result;
+  std::merge(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
+             std::back_inserter(Result));
+  return makePersistent(std::move(Result));
 }
 
 const llvm::APSInt &RangeSet::getMinValue() const {
@@ -149,22 +167,31 @@ const llvm::APSInt &RangeSet::getMinValue() const {
 
 const llvm::APSInt &RangeSet::getMaxValue() const {
   assert(!isEmpty());
-  // NOTE: It's a shame that we can't implement 'getMaxValue' without scanning
-  //       the whole tree to get to the last element.
-  //       llvm::ImmutableSet should support decrement for 'end' iterators
-  //       or reverse order iteration.
-  auto It = begin();
-  for (auto End = end(); std::next(It) != End; ++It) {
-  }
-  return It->To();
+  return std::prev(end())->To();
+}
+
+bool RangeSet::containsImpl(llvm::APSInt &Point) const {
+  if (isEmpty() || !pin(Point))
+    return false;
+
+  Range Dummy(Point);
+  const_iterator It = llvm::upper_bound(*this, Dummy);
+  if (It == begin())
+    return false;
+
+  return std::prev(It)->Includes(Point);
+}
+
+bool RangeSet::pin(llvm::APSInt &Point) const {
+  APSIntType Type(getMinValue());
+  if (Type.testInRange(Point, true) != APSIntType::RTR_Within)
+    return false;
+
+  Type.apply(Point);
+  return true;
 }
 
 bool RangeSet::pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const {
-  if (isEmpty()) {
-    // This range is already infeasible.
-    return false;
-  }
-
   // This function has nine cases, the cartesian product of range-testing
   // both the upper and lower bounds against the symbol's type.
   // Each case requires a different pinning operation.
@@ -245,129 +272,216 @@ bool RangeSet::pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const {
   return true;
 }
 
-// Returns a set containing the values in the receiving set, intersected with
-// the closed range [Lower, Upper]. Unlike the Range type, this range uses
-// modular arithmetic, corresponding to the common treatment of C integer
-// overflow. Thus, if the Lower bound is greater than the Upper bound, the
-// range is taken to wrap around. This is equivalent to taking the
-// intersection with the two ranges [Min, Upper] and [Lower, Max],
-// or, alternatively, /removing/ all integers between Upper and Lower.
-RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
-                             llvm::APSInt Lower, llvm::APSInt Upper) const {
-  PrimRangeSet newRanges = F.getEmptySet();
+RangeSet RangeSet::Factory::intersect(RangeSet What, llvm::APSInt Lower,
+                                      llvm::APSInt Upper) {
+  if (What.isEmpty() || !What.pin(Lower, Upper))
+    return getEmptySet();
 
-  if (isEmpty() || !pin(Lower, Upper))
-    return newRanges;
+  ContainerType DummyContainer;
 
-  PrimRangeSet::iterator i = begin(), e = end();
-  if (Lower <= Upper)
-    IntersectInRange(BV, F, Lower, Upper, newRanges, i, e);
-  else {
-    // The order of the next two statements is important!
-    // IntersectInRange() does not reset the iteration state for i and e.
-    // Therefore, the lower range most be handled first.
-    IntersectInRange(BV, F, BV.getMinValue(Upper), Upper, newRanges, i, e);
-    IntersectInRange(BV, F, Lower, BV.getMaxValue(Lower), newRanges, i, e);
+  if (Lower <= Upper) {
+    // [Lower, Upper] is a regular range.
+    //
+    // Shortcut: check that there is even a possibility of the intersection
+    //           by checking the two following situations:
+    //
+    //               <---[  What  ]---[------]------>
+    //                              Lower  Upper
+    //                            -or-
+    //               <----[------]----[  What  ]---->
+    //                  Lower  Upper
+    if (What.getMaxValue() < Lower || Upper < What.getMinValue())
+      return getEmptySet();
+
+    DummyContainer.push_back(
+        Range(ValueFactory.getValue(Lower), ValueFactory.getValue(Upper)));
+  } else {
+    // [Lower, Upper] is an inverted range, i.e. [MIN, Upper] U [Lower, MAX]
+    //
+    // Shortcut: check that there is even a possibility of the intersection
+    //           by checking the following situation:
+    //
+    //               <------]---[  What  ]---[------>
+    //                    Upper             Lower
+    if (What.getMaxValue() < Lower && Upper < What.getMinValue())
+      return getEmptySet();
+
+    DummyContainer.push_back(
+        Range(ValueFactory.getMinValue(Upper), ValueFactory.getValue(Upper)));
+    DummyContainer.push_back(
+        Range(ValueFactory.getValue(Lower), ValueFactory.getMaxValue(Lower)));
   }
 
-  return newRanges;
+  return intersect(*What.Impl, DummyContainer);
 }
 
-// Returns a set containing the values in the receiving set, intersected with
-// the range set passed as parameter.
-RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
-                             const RangeSet &Other) const {
-  PrimRangeSet newRanges = F.getEmptySet();
+RangeSet RangeSet::Factory::intersect(const RangeSet::ContainerType &LHS,
+                                      const RangeSet::ContainerType &RHS) {
+  ContainerType Result;
+  Result.reserve(std::max(LHS.size(), RHS.size()));
 
-  for (iterator i = Other.begin(), e = Other.end(); i != e; ++i) {
-    RangeSet newPiece = Intersect(BV, F, i->From(), i->To());
-    for (iterator j = newPiece.begin(), ee = newPiece.end(); j != ee; ++j) {
-      newRanges = F.add(newRanges, *j);
-    }
+  const_iterator First = LHS.begin(), Second = RHS.begin(),
+                 FirstEnd = LHS.end(), SecondEnd = RHS.end();
+
+  const auto SwapIterators = [&First, &FirstEnd, &Second, &SecondEnd]() {
+    std::swap(First, Second);
+    std::swap(FirstEnd, SecondEnd);
+  };
+
+  // If we ran out of ranges in one set, but not in the other,
+  // it means that those elements are definitely not in the
+  // intersection.
+  while (First != FirstEnd && Second != SecondEnd) {
+    // We want to keep the following invariant at all times:
+    //
+    //    ----[ First ---------------------->
+    //    --------[ Second ----------------->
+    if (Second->From() < First->From())
+      SwapIterators();
+
+    // Loop where the invariant holds:
+    do {
+      // Check for the following situation:
+      //
+      //    ----[ First ]--------------------->
+      //    ---------------[ Second ]--------->
+      //
+      // which means that...
+      if (Second->From() > First->To()) {
+        // ...First is not in the intersection.
+        //
+        // We should move on to the next range after First and break out of the
+        // loop because the invariant might not be true.
+        ++First;
+        break;
+      }
+
+      // We have a guaranteed intersection at this point!
+      // And this is the current situation:
+      //
+      //    ----[   First   ]----------------->
+      //    -------[ Second ------------------>
+      //
+      // Additionally, it definitely starts with Second->From().
+      const llvm::APSInt &IntersectionStart = Second->From();
+
+      // It is important to know which of the two ranges' ends
+      // is greater.  That "longer" range might have some other
+      // intersections, while the "shorter" range might not.
+      if (Second->To() > First->To()) {
+        // Here we make a decision to keep First as the "longer"
+        // range.
+        SwapIterators();
+      }
+
+      // At this point, we have the following situation:
+      //
+      //    ---- First      ]-------------------->
+      //    ---- Second ]--[  Second+1 ---------->
+      //
+      // We don't know the relationship between First->From and
+      // Second->From and we don't know whether Second+1 intersects
+      // with First.
+      //
+      // However, we know that [IntersectionStart, Second->To] is
+      // a part of the intersection...
+      Result.push_back(Range(IntersectionStart, Second->To()));
+      ++Second;
+      // ...and that the invariant will hold for a valid Second+1
+      // because First->From <= Second->To < (Second+1)->From.
+    } while (Second != SecondEnd);
   }
 
-  return newRanges;
+  if (Result.empty())
+    return getEmptySet();
+
+  return makePersistent(std::move(Result));
 }
 
-// Turn all [A, B] ranges to [-B, -A], when "-" is a C-like unary minus
-// operation under the values of the type.
-//
-// We also handle MIN because applying unary minus to MIN does not change it.
-// Example 1:
-// char x = -128;        // -128 is a MIN value in a range of 'char'
-// char y = -x;          // y: -128
-// Example 2:
-// unsigned char x = 0;  // 0 is a MIN value in a range of 'unsigned char'
-// unsigned char y = -x; // y: 0
-//
-// And it makes us to separate the range
-// like [MIN, N] to [MIN, MIN] U [-N,MAX].
-// For instance, whole range is {-128..127} and subrange is [-128,-126],
-// thus [-128,-127,-126,.....] negates to [-128,.....,126,127].
-//
-// Negate restores disrupted ranges on bounds,
-// e.g. [MIN, B] => [MIN, MIN] U [-B, MAX] => [MIN, B].
-RangeSet RangeSet::Negate(BasicValueFactory &BV, Factory &F) const {
-  PrimRangeSet newRanges = F.getEmptySet();
+RangeSet RangeSet::Factory::intersect(RangeSet LHS, RangeSet RHS) {
+  // Shortcut: let's see if the intersection is even possible.
+  if (LHS.isEmpty() || RHS.isEmpty() || LHS.getMaxValue() < RHS.getMinValue() ||
+      RHS.getMaxValue() < LHS.getMinValue())
+    return getEmptySet();
 
-  if (isEmpty())
-    return newRanges;
+  return intersect(*LHS.Impl, *RHS.Impl);
+}
 
-  const llvm::APSInt sampleValue = getMinValue();
-  const llvm::APSInt &MIN = BV.getMinValue(sampleValue);
-  const llvm::APSInt &MAX = BV.getMaxValue(sampleValue);
+RangeSet RangeSet::Factory::intersect(RangeSet LHS, llvm::APSInt Point) {
+  if (LHS.containsImpl(Point))
+    return getRangeSet(ValueFactory.getValue(Point));
+
+  return getEmptySet();
+}
+
+RangeSet RangeSet::Factory::negate(RangeSet What) {
+  if (What.isEmpty())
+    return getEmptySet();
+
+  const llvm::APSInt SampleValue = What.getMinValue();
+  const llvm::APSInt &MIN = ValueFactory.getMinValue(SampleValue);
+  const llvm::APSInt &MAX = ValueFactory.getMaxValue(SampleValue);
+
+  ContainerType Result;
+  Result.reserve(What.size() + (SampleValue == MIN));
 
   // Handle a special case for MIN value.
-  iterator i = begin();
-  const llvm::APSInt &from = i->From();
-  const llvm::APSInt &to = i->To();
-  if (from == MIN) {
-    // If [from, to] are [MIN, MAX], then just return the same [MIN, MAX].
-    if (to == MAX) {
-      newRanges = ranges;
-    } else {
-      // Add separate range for the lowest value.
-      newRanges = F.add(newRanges, Range(MIN, MIN));
-      // Skip adding the second range in case when [from, to] are [MIN, MIN].
-      if (to != MIN) {
-        newRanges = F.add(newRanges, Range(BV.getValue(-to), MAX));
-      }
+  const_iterator It = What.begin();
+  const_iterator End = What.end();
+
+  const llvm::APSInt &From = It->From();
+  const llvm::APSInt &To = It->To();
+
+  if (From == MIN) {
+    // If the range [From, To] is [MIN, MAX], then result is also [MIN, MAX].
+    if (To == MAX) {
+      return What;
     }
+
+    const_iterator Last = std::prev(End);
+
+    // Try to find and unite the following ranges:
+    // [MIN, MIN] & [MIN + 1, N] => [MIN, N].
+    if (Last->To() == MAX) {
+      // It means that in the original range we have ranges
+      //   [MIN, A], ... , [B, MAX]
+      // And the result should be [MIN, -B], ..., [-A, MAX]
+      Result.emplace_back(MIN, ValueFactory.getValue(-Last->From()));
+      // We already negated Last, so we can skip it.
+      End = Last;
+    } else {
+      // Add a separate range for the lowest value.
+      Result.emplace_back(MIN, MIN);
+    }
+
+    // Skip adding the second range in case when [From, To] are [MIN, MIN].
+    if (To != MIN) {
+      Result.emplace_back(ValueFactory.getValue(-To), MAX);
+    }
+
     // Skip the first range in the loop.
-    ++i;
+    ++It;
   }
 
   // Negate all other ranges.
-  for (iterator e = end(); i != e; ++i) {
+  for (; It != End; ++It) {
     // Negate int values.
-    const llvm::APSInt &newFrom = BV.getValue(-i->To());
-    const llvm::APSInt &newTo = BV.getValue(-i->From());
+    const llvm::APSInt &NewFrom = ValueFactory.getValue(-It->To());
+    const llvm::APSInt &NewTo = ValueFactory.getValue(-It->From());
+
     // Add a negated range.
-    newRanges = F.add(newRanges, Range(newFrom, newTo));
+    Result.emplace_back(NewFrom, NewTo);
   }
 
-  if (newRanges.isSingleton())
-    return newRanges;
-
-  // Try to find and unite next ranges:
-  // [MIN, MIN] & [MIN + 1, N] => [MIN, N].
-  iterator iter1 = newRanges.begin();
-  iterator iter2 = std::next(iter1);
-
-  if (iter1->To() == MIN && (iter2->From() - 1) == MIN) {
-    const llvm::APSInt &to = iter2->To();
-    // remove adjacent ranges
-    newRanges = F.remove(newRanges, *iter1);
-    newRanges = F.remove(newRanges, *newRanges.begin());
-    // add united range
-    newRanges = F.add(newRanges, Range(MIN, to));
-  }
-
-  return newRanges;
+  llvm::sort(Result);
+  return makePersistent(std::move(Result));
 }
 
-RangeSet RangeSet::Delete(BasicValueFactory &BV, Factory &F,
-                          const llvm::APSInt &Point) const {
+RangeSet RangeSet::Factory::deletePoint(RangeSet From,
+                                        const llvm::APSInt &Point) {
+  if (!From.contains(Point))
+    return From;
+
   llvm::APSInt Upper = Point;
   llvm::APSInt Lower = Point;
 
@@ -375,22 +489,17 @@ RangeSet RangeSet::Delete(BasicValueFactory &BV, Factory &F,
   --Lower;
 
   // Notice that the lower bound is greater than the upper bound.
-  return Intersect(BV, F, Upper, Lower);
+  return intersect(From, Upper, Lower);
 }
 
-void RangeSet::print(raw_ostream &os) const {
-  bool isFirst = true;
-  os << "{ ";
-  for (iterator i = begin(), e = end(); i != e; ++i) {
-    if (isFirst)
-      isFirst = false;
-    else
-      os << ", ";
+void Range::dump(raw_ostream &OS) const {
+  OS << '[' << From().toString(10) << ", " << To().toString(10) << ']';
+}
 
-    os << '[' << i->From().toString(10) << ", " << i->To().toString(10)
-       << ']';
-  }
-  os << " }";
+void RangeSet::dump(raw_ostream &OS) const {
+  OS << "{ ";
+  llvm::interleaveComma(*this, OS, [&OS](const Range &R) { R.dump(OS); });
+  OS << " }";
 }
 
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(SymbolSet, SymbolRef)
@@ -662,7 +771,7 @@ LLVM_NODISCARD inline RangeSet intersect(BasicValueFactory &BV,
                                          RangeSet Second, RestTy... Tail) {
   // Here we call either the <RangeSet,RangeSet,...> or <RangeSet,...> version
   // of the function and can be sure that the result is RangeSet.
-  return intersect(BV, F, Head.Intersect(BV, F, Second), Tail...);
+  return intersect(BV, F, F.intersect(Head, Second), Tail...);
 }
 
 template <class SecondTy, class... RestTy>
@@ -951,7 +1060,7 @@ private:
   /// Return a range set subtracting zero from \p Domain.
   RangeSet assumeNonZero(RangeSet Domain, QualType T) {
     APSIntType IntType = ValueFactory.getAPSIntType(T);
-    return Domain.Delete(ValueFactory, RangeFactory, IntType.getZeroValue());
+    return RangeFactory.deletePoint(Domain, IntType.getZeroValue());
   }
 
   // FIXME: Once SValBuilder supports unary minus, we should use SValBuilder to
@@ -974,7 +1083,7 @@ private:
             SymMgr.getSymSymExpr(SSE->getRHS(), BO_Sub, SSE->getLHS(), T);
 
         if (const RangeSet *NegatedRange = getConstraint(State, NegatedSym)) {
-          return NegatedRange->Negate(ValueFactory, RangeFactory);
+          return RangeFactory.negate(*NegatedRange);
         }
       }
     }
@@ -1268,7 +1377,7 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
 class RangeConstraintManager : public RangedConstraintManager {
 public:
   RangeConstraintManager(ExprEngine *EE, SValBuilder &SVB)
-      : RangedConstraintManager(EE, SVB) {}
+      : RangedConstraintManager(EE, SVB), F(getBasicVals()) {}
 
   //===------------------------------------------------------------------===//
   // Implementation for interface from ConstraintManager.
@@ -1424,8 +1533,8 @@ private:
     // be simply a constant because we can't reason about range disequalities.
     if (const llvm::APSInt *Point = Constraint.getConcreteValue())
       for (EquivalenceClass DisequalClass : Class.getDisequalClasses(State)) {
-        RangeSet UpdatedConstraint =
-            getRange(State, DisequalClass).Delete(getBasicVals(), F, *Point);
+        RangeSet UpdatedConstraint = getRange(State, DisequalClass);
+        UpdatedConstraint = F.deletePoint(UpdatedConstraint, *Point);
 
         // If we end up with at least one of the disequal classes to be
         // constrained with an empty range-set, the state is infeasible.
@@ -1740,7 +1849,7 @@ inline bool EquivalenceClass::addToDisequalityInfo(
       RangeSet FirstConstraint = SymbolicRangeInferrer::inferRange(
           VF, RF, State, First.getRepresentativeSymbol());
 
-      FirstConstraint = FirstConstraint.Delete(VF, RF, *Point);
+      FirstConstraint = RF.deletePoint(FirstConstraint, *Point);
 
       // If the First class is about to be constrained with an empty
       // range-set, the state is infeasible.
@@ -1899,7 +2008,7 @@ ConditionTruthVal RangeConstraintManager::checkNull(ProgramStateRef State,
   llvm::APSInt Zero = IntType.getZeroValue();
 
   // Check if zero is in the set of possible values.
-  if (Ranges->Intersect(BV, F, Zero, Zero).isEmpty())
+  if (!Ranges->contains(Zero))
     return false;
 
   // Zero is a possible value, but it is not the /only/ possible value.
@@ -2085,7 +2194,8 @@ RangeConstraintManager::assumeSymNE(ProgramStateRef St, SymbolRef Sym,
 
   llvm::APSInt Point = AdjustmentType.convert(Int) - Adjustment;
 
-  RangeSet New = getRange(St, Sym).Delete(getBasicVals(), F, Point);
+  RangeSet New = getRange(St, Sym);
+  New = F.deletePoint(New, Point);
 
   return trackNE(New, St, Sym, Int, Adjustment);
 }
@@ -2101,7 +2211,8 @@ RangeConstraintManager::assumeSymEQ(ProgramStateRef St, SymbolRef Sym,
 
   // [Int-Adjustment, Int-Adjustment]
   llvm::APSInt AdjInt = AdjustmentType.convert(Int) - Adjustment;
-  RangeSet New = getRange(St, Sym).Intersect(getBasicVals(), F, AdjInt, AdjInt);
+  RangeSet New = getRange(St, Sym);
+  New = F.intersect(New, AdjInt);
 
   return trackEQ(New, St, Sym, Int, Adjustment);
 }
@@ -2131,7 +2242,8 @@ RangeSet RangeConstraintManager::getSymLTRange(ProgramStateRef St,
   llvm::APSInt Upper = ComparisonVal - Adjustment;
   --Upper;
 
-  return getRange(St, Sym).Intersect(getBasicVals(), F, Lower, Upper);
+  RangeSet Result = getRange(St, Sym);
+  return F.intersect(Result, Lower, Upper);
 }
 
 ProgramStateRef
@@ -2167,7 +2279,8 @@ RangeSet RangeConstraintManager::getSymGTRange(ProgramStateRef St,
   llvm::APSInt Upper = Max - Adjustment;
   ++Lower;
 
-  return getRange(St, Sym).Intersect(getBasicVals(), F, Lower, Upper);
+  RangeSet SymRange = getRange(St, Sym);
+  return F.intersect(SymRange, Lower, Upper);
 }
 
 ProgramStateRef
@@ -2203,7 +2316,8 @@ RangeSet RangeConstraintManager::getSymGERange(ProgramStateRef St,
   llvm::APSInt Lower = ComparisonVal - Adjustment;
   llvm::APSInt Upper = Max - Adjustment;
 
-  return getRange(St, Sym).Intersect(getBasicVals(), F, Lower, Upper);
+  RangeSet SymRange = getRange(St, Sym);
+  return F.intersect(SymRange, Lower, Upper);
 }
 
 ProgramStateRef
@@ -2239,7 +2353,8 @@ RangeConstraintManager::getSymLERange(llvm::function_ref<RangeSet()> RS,
   llvm::APSInt Lower = Min - Adjustment;
   llvm::APSInt Upper = ComparisonVal - Adjustment;
 
-  return RS().Intersect(getBasicVals(), F, Lower, Upper);
+  RangeSet Default = RS();
+  return F.intersect(Default, Lower, Upper);
 }
 
 RangeSet RangeConstraintManager::getSymLERange(ProgramStateRef St,
@@ -2272,7 +2387,7 @@ ProgramStateRef RangeConstraintManager::assumeSymOutsideInclusiveRange(
     const llvm::APSInt &To, const llvm::APSInt &Adjustment) {
   RangeSet RangeLT = getSymLTRange(State, Sym, From, Adjustment);
   RangeSet RangeGT = getSymGTRange(State, Sym, To, Adjustment);
-  RangeSet New(RangeLT.addRange(F, RangeGT));
+  RangeSet New(F.add(RangeLT, RangeGT));
   return New.isEmpty() ? nullptr : setConstraint(State, Sym, New);
 }
 
@@ -2307,7 +2422,7 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
       }
       Indent(Out, Space, IsDot)
           << "{ \"symbol\": \"" << ClassMember << "\", \"range\": \"";
-      P.second.print(Out);
+      P.second.dump(Out);
       Out << "\" }";
     }
   }
