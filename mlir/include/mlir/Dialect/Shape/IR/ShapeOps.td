@@ -201,12 +201,13 @@ def Shape_RankOp : Shape_Op<"rank", [NoSideEffect]> {
   }];
 
   let arguments = (ins Shape_ShapeOrExtentTensorType:$shape);
-  let results = (outs Shape_SizeType:$rank);
+  let results = (outs Shape_SizeOrIndexType:$rank);
 
-  let assemblyFormat = "$shape `:` type($shape) attr-dict";
+  let assemblyFormat = "$shape `:` type($shape) `->` type($rank) attr-dict";
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {

@@ -496,10 +496,10 @@ func @broadcastable_on_extent_tensors(%arg : tensor<?xindex>) {
 // Fold `rank` based on constant shape.
 // CHECK-LABEL: @fold_rank
 func @fold_rank() -> !shape.size {
-  // CHECK-DAG: %[[RESULT:.*]] = shape.const_size 5
-  // CHECK-DAG: return %[[RESULT]] : !shape.size
+  // CHECK: %[[RESULT:.*]] = shape.const_size 5
+  // CHECK: return %[[RESULT]] : !shape.size
   %shape = shape.const_shape [3, 4, 5, 6, 7] : !shape.shape
-  %rank = shape.rank %shape : !shape.shape
+  %rank = shape.rank %shape : !shape.shape -> !shape.size
   return %rank : !shape.size
 }
 
@@ -509,37 +509,63 @@ func @fold_rank() -> !shape.size {
 // CHECK-LABEL: @dont_fold_rank
 // CHECK-SAME: (%[[SHAPE:.*]]: !shape.shape) -> !shape.size
 func @dont_fold_rank(%shape : !shape.shape) -> !shape.size {
-  // CHECK-DAG: %[[RESULT:.*]] = shape.rank %[[SHAPE]]
-  // CHECK-DAG: return %[[RESULT]] : !shape.size
-  %rank = shape.rank %shape : !shape.shape
+  // CHECK: %[[RESULT:.*]] = shape.rank %[[SHAPE]]
+  // CHECK: return %[[RESULT]] : !shape.size
+  %rank = shape.rank %shape : !shape.shape -> !shape.size
   return %rank : !shape.size
+}
+
+// -----
+
+// Fold `rank` based on constant extent tensor.
+// CHECK-LABEL: @fold_rank
+func @fold_rank() -> index {
+  // CHECK: %[[RESULT:.*]] = constant 5 : index
+  // CHECK: return %[[RESULT]] : index
+  %shape = shape.const_shape [3, 4, 5, 6, 7] : tensor<?xindex>
+  %rank = shape.rank %shape : tensor<?xindex> -> index
+  return %rank : index
+}
+
+// -----
+
+// Do not fold `rank` for non-constant extent tensors.
+// CHECK-LABEL: @dont_fold_rank
+// CHECK-SAME: (%[[SHAPE:.*]]: tensor<?xindex>) -> index
+func @dont_fold_rank(%shape : tensor<?xindex>) -> index {
+  // CHECK: %[[RESULT:.*]] = shape.rank %[[SHAPE]] : tensor<?xindex> -> index
+  // CHECK: return %[[RESULT]] : index
+  %rank = shape.rank %shape : tensor<?xindex> -> index
+  return %rank : index
 }
 
 // -----
 
 // Canonicalize `rank` when shape is derived from ranked tensor.
 // CHECK-LABEL: @canonicalize_rank
-func @canonicalize_rank(%arg : tensor<1x2x?xf32>) -> !shape.size {
-  // CHECK-DAG: %[[RESULT:.*]] = shape.const_size 3
-  // CHECK-DAG: return %[[RESULT]] : !shape.size
+func @canonicalize_rank(%arg : tensor<1x2x?xf32>) -> index {
+  // CHECK: %[[RESULT:.*]] = constant 3 : index
+  // CHECK: return %[[RESULT]] : index
   %shape = shape.shape_of %arg : tensor<1x2x?xf32> -> tensor<?xindex>
-  %rank = shape.rank %shape : tensor<?xindex>
-  return %rank : !shape.size
+  %rank = shape.rank %shape : tensor<?xindex> -> index
+  return %rank : index
 }
 
 // -----
 
 // Do not canonicalize `rank` when shape is derived from unranked tensor.
 // CHECK-LABEL: @dont_canonicalize_rank
-// CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>) -> !shape.size
-func @dont_canonicalize_rank(%arg : tensor<*xf32>) -> !shape.size {
-  // CHECK-DAG: %[[SHAPE:.*]] = shape.shape_of %[[ARG]] : tensor<*xf32> -> tensor<?xindex>
-  // CHECK-DAG: %[[SIZE:.*]] = shape.rank %[[SHAPE]]
-  // CHECK-DAG: return %[[SIZE]] : !shape.size
+// CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>) -> index
+func @dont_canonicalize_rank(%arg : tensor<*xf32>) -> index {
+  // CHECK: %[[SHAPE:.*]] = shape.shape_of %[[ARG]] : tensor<*xf32> -> tensor<?xindex>
+  // CHECK: %[[SIZE:.*]] = shape.rank %[[SHAPE]]
+  // CHECK: return %[[SIZE]] : index
   %shape = shape.shape_of %arg : tensor<*xf32> -> tensor<?xindex>
-  %rank = shape.rank %shape : tensor<?xindex>
-  return %rank : !shape.size
+  %rank = shape.rank %shape : tensor<?xindex> -> index
+  return %rank : index
 }
+
+// -----
 
 // Canonicalize redundant conversion from `index` to `size` and back.
 // CHECK-LABEL: @index_to_size_to_index
