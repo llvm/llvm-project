@@ -130,6 +130,7 @@ config.substitutions.append(
 config.llvm_locstats_used = os.path.exists(llvm_locstats_tool)
 
 tools = [
+    ToolSubst('%extract', FindTool('extract')),
     ToolSubst('%lli', FindTool('lli'), post='.', extra_args=lli_args),
     ToolSubst('%llc_dwarf', FindTool('llc'), extra_args=llc_args),
     ToolSubst('%go', config.go_executable, unresolved='ignore'),
