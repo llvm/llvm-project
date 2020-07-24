@@ -107,8 +107,41 @@ struct ASTEdit {
 /// clients.  We recommend use of the \c AtomicChange or \c Replacements classes
 /// for assistance in detecting such conflicts.
 EditGenerator editList(llvm::SmallVector<ASTEdit, 1> Edits);
-// Convenience form of `editList` for a single edit.
+/// Convenience form of `editList` for a single edit.
 EditGenerator edit(ASTEdit);
+
+/// Convenience generator for a no-op edit generator.
+inline EditGenerator noEdits() { return editList({}); }
+
+/// Convenience version of `ifBound` specialized to `ASTEdit`.
+inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit,
+                             ASTEdit FalseEdit) {
+  return ifBound(std::move(ID), edit(std::move(TrueEdit)),
+                 edit(std::move(FalseEdit)));
+}
+
+/// Convenience version of `ifBound` that has no "False" branch. If the node is
+/// not bound, then no edits are produced.
+inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit) {
+  return ifBound(std::move(ID), edit(std::move(TrueEdit)), noEdits());
+}
+
+/// Flattens a list of generators into a single generator whose elements are the
+/// concatenation of the results of the argument generators.
+EditGenerator flattenVector(SmallVector<EditGenerator, 2> Generators);
+
+namespace detail {
+/// Convenience function to construct an \c EditGenerator. Overloaded for common
+/// cases so that user doesn't need to specify which factory function to
+/// use. This pattern gives benefits similar to implicit constructors, while
+/// maintaing a higher degree of explicitness.
+inline EditGenerator injectEdits(ASTEdit E) { return edit(std::move(E)); }
+inline EditGenerator injectEdits(EditGenerator G) { return G; }
+} // namespace detail
+
+template <typename... Ts> EditGenerator flatten(Ts &&...Edits) {
+  return flattenVector({detail::injectEdits(std::forward<Ts>(Edits))...});
+}
 
 /// Format of the path in an include directive -- angle brackets or quotes.
 enum class IncludeFormat {
@@ -289,6 +322,14 @@ inline ASTEdit withMetadata(ASTEdit Edit, Callable Metadata) {
   };
 
   return Edit;
+}
+
+/// Assuming that the inner range is enclosed by the outer range, creates
+/// precision edits to remove the parts of the outer range that are not included
+/// in the inner range.
+inline EditGenerator shrinkTo(RangeSelector outer, RangeSelector inner) {
+  return editList({remove(enclose(before(outer), before(inner))),
+                   remove(enclose(after(inner), after(outer)))});
 }
 
 /// The following three functions are a low-level part of the RewriteRule

@@ -68,6 +68,24 @@ EditGenerator transformer::edit(ASTEdit Edit) {
   };
 }
 
+EditGenerator
+transformer::flattenVector(SmallVector<EditGenerator, 2> Generators) {
+  if (Generators.size() == 1)
+    return std::move(Generators[0]);
+  return
+      [Gs = std::move(Generators)](
+          const MatchResult &Result) -> llvm::Expected<SmallVector<Edit, 1>> {
+        SmallVector<Edit, 1> AllEdits;
+        for (const auto &G : Gs) {
+          llvm::Expected<SmallVector<Edit, 1>> Edits = G(Result);
+          if (!Edits)
+            return Edits.takeError();
+          AllEdits.append(Edits->begin(), Edits->end());
+        }
+        return AllEdits;
+      };
+}
+
 ASTEdit transformer::changeTo(RangeSelector Target, TextGenerator Replacement) {
   ASTEdit E;
   E.TargetRange = std::move(Target);
