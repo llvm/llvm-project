@@ -122,12 +122,12 @@ func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
 // Convert `rank` to `dim` of the first dimension.
 // CHECK-LABEL: @rank
 // CHECK-SAME: (%[[SHAPE:.*]]: tensor<?xindex>) -> index
-func @rank(%shape : !shape.shape) -> !shape.size {
-  // CHECK-DAG: %[[C0:.*]] = constant 0 : index
-  // CHECK-DAG: %[[RESULT:.*]] = dim %[[SHAPE]], %[[C0]]
-  // CHECK-DAG: return %[[RESULT]] : index
-  %rank = shape.rank %shape : !shape.shape
-  return %rank : !shape.size
+func @rank(%shape : tensor<?xindex>) -> index {
+  // CHECK: %[[C0:.*]] = constant 0 : index
+  // CHECK: %[[RESULT:.*]] = dim %[[SHAPE]], %[[C0]]
+  // CHECK: return %[[RESULT]] : index
+  %rank = shape.rank %shape : tensor<?xindex> -> index
+  return %rank : index
 }
 
 // -----

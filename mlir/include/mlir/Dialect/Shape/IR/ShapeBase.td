@@ -122,4 +122,6 @@ def Shape_ShapeOrExtentTensorType : AnyTypeOf<[Shape_ShapeType,
                                                Shape_ExtentTensorType],
                                               "shape or extent tensor">;
 
+def Shape_SizeOrIndexType : AnyTypeOf<[Shape_SizeType, Index], "size or index">;
+
 #endif // SHAPE_BASE_TD

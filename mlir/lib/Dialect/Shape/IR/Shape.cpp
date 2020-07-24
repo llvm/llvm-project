@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Shape/IR/Shape.h"
 
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -52,6 +53,8 @@ Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
     return builder.create<ConstSizeOp>(loc, type, value.cast<IntegerAttr>());
   if (type.isa<WitnessType>())
     return builder.create<ConstWitnessOp>(loc, type, value.cast<BoolAttr>());
+  if (type.isa<IndexType>())
+    return builder.create<ConstantOp>(loc, type, value);
   return nullptr;
 }
 
@@ -563,7 +566,17 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
 // RankOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
+static LogicalResult verify(shape::RankOp op) {
+  Type argTy = op.shape().getType();
+  Type resultTy = op.rank().getType();
+  if (argTy.isa<ShapeType>() && !resultTy.isa<SizeType>())
+    return op.emitOpError()
+           << "if operand is of type `shape` then the result must be of type "
+              "`size` to propagate potential errors";
+  return success();
+}
+
+OpFoldResult shape::RankOp::fold(ArrayRef<Attribute> operands) {
   auto shape = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
   if (!shape)
     return {};
@@ -587,10 +600,11 @@ OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
 /// %rank = shape.const_size 3
 
 namespace {
-struct RankShapeOfCanonicalizationPattern : public OpRewritePattern<RankOp> {
-  using OpRewritePattern<RankOp>::OpRewritePattern;
+struct RankShapeOfCanonicalizationPattern
+    : public OpRewritePattern<shape::RankOp> {
+  using OpRewritePattern<shape::RankOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(RankOp op,
+  LogicalResult matchAndRewrite(shape::RankOp op,
                                 PatternRewriter &rewriter) const override {
     auto shapeOfOp = op.shape().getDefiningOp<ShapeOfOp>();
     if (!shapeOfOp)
@@ -599,15 +613,18 @@ struct RankShapeOfCanonicalizationPattern : public OpRewritePattern<RankOp> {
         shapeOfOp.arg().getType().dyn_cast<RankedTensorType>();
     if (!rankedTensorType)
       return failure();
+    assert(op.getType().isa<IndexType>() &&
+           "expected `rank(shape_of( ... )]` based on a shaped argument to "
+           "yield an index type");
     int64_t rank = rankedTensorType.getRank();
-    rewriter.replaceOpWithNewOp<ConstSizeOp>(op.getOperation(), rank);
+    rewriter.replaceOpWithNewOp<ConstantIndexOp>(op.getOperation(), rank);
     return success();
   }
 };
 } // namespace
 
-void RankOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
-                                         MLIRContext *context) {
+void shape::RankOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
   patterns.insert<RankShapeOfCanonicalizationPattern>(context);
 }
 
