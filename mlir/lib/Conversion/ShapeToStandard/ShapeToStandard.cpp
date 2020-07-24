@@ -86,9 +86,11 @@ public:
       }
     }
 
-    // Materialize shape as ranked tensor.
-    rewriter.replaceOpWithNewOp<TensorFromElementsOp>(op.getOperation(),
-                                                      dimValues);
+    // Materialize extent tensor.
+    Value staticExtentTensor =
+        rewriter.create<TensorFromElementsOp>(loc, dimValues);
+    rewriter.replaceOpWithNewOp<TensorCastOp>(op, staticExtentTensor,
+                                              op.getType());
     return success();
   }
 };

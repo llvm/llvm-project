@@ -23,9 +23,8 @@ namespace {
 #include "ShapeCanonicalization.inc"
 }
 
-static RankedTensorType getExtentTensorType(OpBuilder &builder) {
-  return RankedTensorType::get({ShapedType::kDynamicSize},
-                               builder.getIndexType());
+static RankedTensorType getExtentTensorType(MLIRContext *ctx) {
+  return RankedTensorType::get({ShapedType::kDynamicSize}, IndexType::get(ctx));
 }
 
 ShapeDialect::ShapeDialect(MLIRContext *context)
@@ -45,7 +44,8 @@ ShapeDialect::ShapeDialect(MLIRContext *context)
 Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  if (type.isa<ShapeType>() || type == getExtentTensorType(builder))
+  if (type.isa<ShapeType>() ||
+      type == getExtentTensorType(builder.getContext()))
     return builder.create<ConstShapeOp>(loc, type,
                                         value.cast<DenseIntElementsAttr>());
   if (type.isa<SizeType>())
@@ -639,6 +639,23 @@ OpFoldResult ShapeOfOp::fold(ArrayRef<Attribute>) {
     return nullptr;
   Builder builder(getContext());
   return builder.getIndexTensorAttr(type.getShape());
+}
+
+static LogicalResult verify(ShapeOfOp op) {
+  Type argTy = op.arg().getType();
+  Type resultTy = op.result().getType();
+  if (argTy.isa<ValueShapeType>()) {
+    if (!resultTy.isa<ShapeType>())
+      return op.emitOpError()
+             << "if operand is of type `value_shape` then the result must be "
+                "of type `shape` to propagate potential error shapes";
+  } else {
+    assert(argTy.isa<ShapedType>());
+    if (resultTy != getExtentTensorType(op.getContext()))
+      return op.emitOpError() << "if operand is a shaped type then the result "
+                                 "must be an extent tensor";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

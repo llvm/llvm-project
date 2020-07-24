@@ -85,9 +85,9 @@ func @test_parse_const_shape() {
   return
 }
 
-func @test_shape_of(%arg0: tensor<?xf32>) -> !shape.shape {
-  %0 = shape.shape_of %arg0 : tensor<?xf32>
-  return %0 : !shape.shape
+func @test_shape_of(%arg0: tensor<?xf32>) -> tensor<?xindex> {
+  %0 = shape.shape_of %arg0 : tensor<?xf32> -> tensor<?xindex>
+  return %0 : tensor<?xindex>
 }
 
 func @test_constraints() {

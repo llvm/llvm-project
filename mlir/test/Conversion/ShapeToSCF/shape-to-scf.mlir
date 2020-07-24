@@ -39,7 +39,7 @@ func @shape_of_unranked(%arg : tensor<*xf32>) {
   // CHECK:     }
   // CHECK-DAG: %[[SHAPE_INT:.*]] = tensor_load %[[SHAPE_MEM]] : memref<?xi64>
   // CHECK-DAG: %[[SHAPE:.*]] = index_cast %[[SHAPE_INT]] : tensor<?xi64> to tensor<?xindex>
-  %shape = shape.shape_of %arg : tensor<*xf32>
+  %shape = shape.shape_of %arg : tensor<*xf32> -> tensor<?xindex>
   return
 }
 
