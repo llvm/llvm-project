@@ -30,6 +30,7 @@
 
 namespace llvm {
 
+class BasicBlock;
 class Function;
 class raw_ostream;
 

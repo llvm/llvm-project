@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include <deque>
@@ -35,7 +36,6 @@ class APInt;
 class BasicBlock;
 class BinaryOperator;
 class Function;
-class Instruction;
 class IRBuilderBase;
 class Value;
 
