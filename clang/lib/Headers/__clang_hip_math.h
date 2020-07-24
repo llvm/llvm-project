@@ -95,8 +95,10 @@ inline uint64_t __make_mantissa(const char *__tagp) {
 }
 
 // BEGIN FLOAT
+#ifdef __cplusplus
 __DEVICE__
 inline float abs(float __x) { return __ocml_fabs_f32(__x); }
+#endif
 __DEVICE__
 inline float acosf(float __x) { return __ocml_acos_f32(__x); }
 __DEVICE__
@@ -251,7 +253,7 @@ inline float nanf(const char *__tagp) {
       uint32_t sign : 1;
     } bits;
 
-    static_assert(sizeof(float) == sizeof(ieee_float), "");
+    static_assert(sizeof(float) == sizeof(struct ieee_float), "");
   } __tmp;
 
   __tmp.bits.sign = 0u;
@@ -553,8 +555,10 @@ inline float __tanf(float __x) { return __ocml_tan_f32(__x); }
 // END FLOAT
 
 // BEGIN DOUBLE
+#ifdef __cplusplus
 __DEVICE__
 inline double abs(double __x) { return __ocml_fabs_f64(__x); }
+#endif
 __DEVICE__
 inline double acos(double __x) { return __ocml_acos_f64(__x); }
 __DEVICE__
@@ -712,7 +716,7 @@ inline double nan(const char *__tagp) {
       uint32_t exponent : 11;
       uint32_t sign : 1;
     } bits;
-    static_assert(sizeof(double) == sizeof(ieee_double), "");
+    static_assert(sizeof(double) == sizeof(struct ieee_double), "");
   } __tmp;
 
   __tmp.bits.sign = 0u;
@@ -1178,6 +1182,7 @@ __host__ inline static int max(int __arg1, int __arg2) {
   return std::max(__arg1, __arg2);
 }
 
+#ifdef __cplusplus
 __DEVICE__
 inline float pow(float __base, int __iexp) { return powif(__base, __iexp); }
 
@@ -1188,6 +1193,7 @@ __DEVICE__
 inline _Float16 pow(_Float16 __base, int __iexp) {
   return __ocml_pown_f16(__base, __iexp);
 }
+#endif
 
 #pragma pop_macro("__DEF_FUN1")
 #pragma pop_macro("__DEF_FUN2")
