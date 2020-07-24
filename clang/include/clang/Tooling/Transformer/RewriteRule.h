@@ -332,6 +332,23 @@ inline EditGenerator shrinkTo(RangeSelector outer, RangeSelector inner) {
                    remove(enclose(after(inner), after(outer)))});
 }
 
+/// Applies `Rule` to all descendants of the node bound to `NodeId`. `Rule` can
+/// refer to nodes bound by the calling rule. `Rule` is not applied to the node
+/// itself.
+///
+/// For example,
+/// ```
+/// auto InlineX =
+///     makeRule(declRefExpr(to(varDecl(hasName("x")))), changeTo(cat("3")));
+/// makeRule(functionDecl(hasName("f"), hasBody(stmt().bind("body"))).bind("f"),
+///          flatten(
+///            changeTo(name("f"), cat("newName")),
+///            rewriteDescendants("body", InlineX)));
+/// ```
+/// Here, we find the function `f`, change its name to `newName` and change all
+/// appearances of `x` in its body to `3`.
+EditGenerator rewriteDescendants(std::string NodeId, RewriteRule Rule);
+
 /// The following three functions are a low-level part of the RewriteRule
 /// API. We expose them for use in implementing the fixtures that interpret
 /// RewriteRule, like Transformer and TransfomerTidy, or for more advanced

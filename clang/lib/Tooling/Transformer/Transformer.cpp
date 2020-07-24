@@ -38,13 +38,8 @@ void Transformer::run(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  if (Transformations->empty()) {
-    // No rewrite applied (but no error encountered either).
-    transformer::detail::getRuleMatchLoc(Result).print(
-        llvm::errs() << "note: skipping match at loc ", *Result.SourceManager);
-    llvm::errs() << "\n";
+  if (Transformations->empty())
     return;
-  }
 
   // Group the transformations, by file, into AtomicChanges, each anchored by
   // the location of the first change in that file.
