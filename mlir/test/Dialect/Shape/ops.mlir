@@ -137,13 +137,13 @@ func @test_from_extent_tensor(%arg: tensor<?xindex>) -> !shape.shape {
 }
 
 func @rank(%shape : !shape.shape) -> !shape.size {
-  %rank = shape.rank %shape : !shape.shape
+  %rank = shape.rank %shape : !shape.shape -> !shape.size
   return %rank : !shape.size
 }
 
-func @rank_on_extent_tensor(%shape : tensor<?xindex>) -> !shape.size {
-  %rank = shape.rank %shape : tensor<?xindex>
-  return %rank : !shape.size
+func @rank_on_extent_tensor(%shape : tensor<?xindex>) -> index {
+  %rank = shape.rank %shape : tensor<?xindex> -> index
+  return %rank : index
 }
 
 

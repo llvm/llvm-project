@@ -95,3 +95,10 @@ func @shape_of(%value_arg : !shape.value_shape,
   %1 = shape.shape_of %shaped_arg : tensor<?x3x4xf32> -> !shape.shape
 }
 
+// -----
+
+func @rank(%arg : !shape.shape) {
+  // expected-error@+1 {{if operand is of type `shape` then the result must be of type `size` to propagate potential errors}}
+  %0 = shape.rank %arg : !shape.shape -> index
+}
+
