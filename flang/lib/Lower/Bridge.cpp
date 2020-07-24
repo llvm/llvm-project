@@ -270,10 +270,7 @@ public:
           Fortran::common::visitors{
               [&](Fortran::lower::pft::FunctionLikeUnit &f) { lowerFunc(f); },
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
-              [&](Fortran::lower::pft::BlockDataUnit &) {
-                mlir::emitError(toLocation(), "BLOCK DATA not handled");
-                exit(1);
-              },
+              [&](Fortran::lower::pft::BlockDataUnit &b) { lowerBlockData(b); },
           },
           u);
     }
@@ -1645,7 +1642,8 @@ private:
   /// Instantiate a global variable. If it hasn't already been processed, add
   /// the global to the ModuleOp as a new uniqued symbol and initialize it with
   /// the correct value. It will be referenced on demand using `fir.addr_of`.
-  void instantiateGlobal(const Fortran::lower::pft::Variable &var) {
+  void instantiateGlobal(const Fortran::lower::pft::Variable &var,
+                         llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
     const auto &sym = var.getSymbol();
     auto globalName = mangleName(sym);
     bool isConst = sym.attrs().test(Fortran::semantics::Attr::PARAMETER);
@@ -1699,39 +1697,12 @@ private:
       }
       auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
                                                    global.getSymbol());
-      SymbolBoxAnalyzer sba(sym);
-      sba.analyze();
-      if (sba.isTrivial()) {
-        addSymbol(sym, addrOf);
-        return;
-      }
-      mlir::Value len;
-      if (sba.isChar) {
-        auto c = sba.getCharLenConst();
-        assert(c.hasValue());
-        len = builder->createIntegerConstant(loc, idxTy, *c);
-      }
-      llvm::SmallVector<mlir::Value, 8> extents;
-      llvm::SmallVector<mlir::Value, 8> lbounds;
-      if (sba.isArray) {
-        assert(sba.staticSize);
-        for (auto i : sba.staticShape)
-          extents.push_back(builder->createIntegerConstant(loc, idxTy, i));
-        if (!sba.lboundIsAllOnes())
-          for (auto i : sba.staticLBound)
-            lbounds.push_back(builder->createIntegerConstant(loc, idxTy, i));
-      }
-      if (sba.isChar && sba.isArray) {
-        localSymbols.addCharSymbolWithBounds(sym, addrOf, len, extents,
-                                             lbounds);
-      } else if (sba.isChar) {
-        localSymbols.addCharSymbol(sym, addrOf, len);
-      } else {
-        assert(sba.isArray);
-        localSymbols.addSymbolWithBounds(sym, addrOf, extents, lbounds);
-      }
+      mapSymbolAttributes(var, storeMap, addrOf);
     } else if (const auto *details =
                    sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+      //===----------------------------------------------------------------===//
+      // COMMON blocks
+      //===----------------------------------------------------------------===//
       const int64_t sz = static_cast<int64_t>(sym.size());
       bool hasInit = [&]() {
         for (const auto &obj : details->objects())
@@ -1763,8 +1734,21 @@ private:
         // the build machine.
         mlir::Type commonTy = [&]() {
           llvm::SmallVector<mlir::Type, 8> members;
-          for (const auto &obj : details->objects())
-            members.push_back(genType(*obj));
+          for (const auto &obj : details->objects()) {
+            auto memTy = genType(*obj);
+            if (memTy.isa<fir::CharacterType>()) {
+              auto paramVal = obj->GetType()->characterTypeSpec().length();
+              auto expr = paramVal.GetExplicit();
+              assert(expr);
+              auto eval = Fortran::evaluate::AsGenericExpr(std::move(*expr));
+              auto lenVal = Fortran::evaluate::ToInt64(eval);
+              assert(lenVal);
+              fir::SequenceType::Shape len;
+              len.push_back(*lenVal);
+              memTy = fir::SequenceType::get(len, memTy);
+            }
+            members.push_back(memTy);
+          }
           return mlir::TupleType::get(members, builder->getContext());
         }();
         auto linkage = builder->createLinkOnceLinkage();
@@ -1780,10 +1764,10 @@ private:
             if (const auto *objDet =
                     obj->detailsIf<Fortran::semantics::ObjectEntityDetails>())
               if (objDet->init()) {
-                auto initVal = genExprValue(objDet->init().value());
+                auto initVal = genInitializerExprValue(objDet->init().value());
                 auto off = builder.createIntegerConstant(loc, idxTy, offset++);
-                cb = builder.create<fir::InsertValueOp>(loc, commonTy, cb,
-                                                        initVal, off);
+                cb = builder.create<fir::InsertValueOp>(
+                    loc, commonTy, cb, fir::getBase(initVal), off);
               }
           }
           builder.create<fir::HasValueOp>(loc, cb);
@@ -1804,10 +1788,10 @@ private:
   /// constructed.
   mlir::Value createNewLocal(mlir::Location loc,
                              const Fortran::lower::pft::Variable &var,
-                             mlir::Value *preAlloc,
+                             mlir::Value preAlloc,
                              llvm::ArrayRef<mlir::Value> shape = {}) {
     if (preAlloc)
-      return *preAlloc;
+      return preAlloc;
     auto nm = var.getSymbol().name().ToString();
     auto ty = genType(var);
     if (shape.size())
@@ -1855,9 +1839,8 @@ private:
   /// such that if it's properties depend on other variables, the variables upon
   /// which its properties depend will already have been visited.
   void instantiateLocal(const Fortran::lower::pft::Variable &var,
-                        llvm::DenseMap<std::size_t, mlir::Value> &storeMap,
-                        mlir::Value *preAlloc = nullptr) {
-    mlir::Value result;
+                        llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
+    mlir::Value preAlloc;
     const auto &sym = var.getSymbol();
     const auto loc = genLocation(sym.name());
     auto idxTy = builder->getIndexType();
@@ -1882,10 +1865,18 @@ private:
       llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
           loc, idxTy, sym.offset() - aliasOffset)};
       auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
-      result =
+      preAlloc =
           builder->createConvert(loc, builder->getRefType(genType(sym)), ptr);
-      preAlloc = &result;
     }
+    mapSymbolAttributes(var, storeMap, preAlloc);
+  }
+
+  void mapSymbolAttributes(const Fortran::lower::pft::Variable &var,
+                           llvm::DenseMap<std::size_t, mlir::Value> &storeMap,
+                           mlir::Value preAlloc) {
+    const auto &sym = var.getSymbol();
+    const auto loc = genLocation(sym.name());
+    auto idxTy = builder->getIndexType();
     const auto isDummy = Fortran::semantics::IsDummy(sym);
     const auto isResult = Fortran::semantics::IsFunctionResult(sym);
     Fortran::lower::CharacterExprHelper charHelp{*builder, loc};
@@ -2071,8 +2062,11 @@ private:
       assert(!mustBeDummy);
       auto charTy = genType(var);
       auto c = sba.getCharLenConst();
-      mlir::Value local = c ? charHelp.createCharacterTemp(charTy, *c)
-                            : charHelp.createCharacterTemp(charTy, len);
+      // Note: `len` is the mlir ConstantOp with value `c`, if `c` is an int.
+      mlir::Value local = preAlloc
+                              ? preAlloc
+                              : (c ? charHelp.createCharacterTemp(charTy, *c)
+                                   : charHelp.createCharacterTemp(charTy, len));
       addCharSymbol(sym, local, len);
       return;
     }
@@ -2093,7 +2087,7 @@ private:
     auto commonName = mangleName(common);
     auto global = builder->getNamedGlobal(commonName);
     if (!global)
-      instantiateGlobal(Fortran::lower::pft::Variable{common, true});
+      instantiateGlobal(Fortran::lower::pft::Variable{common, true}, storeMap);
     auto commonAddr = lookupSymbol(common);
     const auto &varSym = var.getSymbol();
     auto loc = genLocation(varSym.name());
@@ -2112,7 +2106,7 @@ private:
     auto varAddr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
     auto localTy = builder->getRefType(genType(var));
     mlir::Value local = builder->createConvert(loc, localTy, varAddr);
-    instantiateLocal(var, storeMap, &local);
+    mapSymbolAttributes(var, storeMap, local);
   }
 
   void instantiateVar(const Fortran::lower::pft::Variable &var,
@@ -2123,7 +2117,7 @@ private:
                  Fortran::semantics::FindCommonBlockContaining(var.getSymbol()))
       instantiateCommon(*common, var, storeMap);
     else if (var.isGlobal())
-      instantiateGlobal(var);
+      instantiateGlobal(var, storeMap);
     else
       instantiateLocal(var, storeMap);
   }
@@ -2290,6 +2284,26 @@ private:
     delete builder;
     builder = nullptr;
     localSymbols.clear();
+  }
+
+  /// Instantiate the data from a BLOCK DATA unit.
+  void lowerBlockData(Fortran::lower::pft::BlockDataUnit &bdunit) {
+    // FIXME: get rid of the bogus function context and instantiate the globals
+    // directly into the module.
+    auto *context = &getMLIRContext();
+    auto func = Fortran::lower::FirOpBuilder::createFunction(
+        mlir::UnknownLoc::get(context), getModuleOp(),
+        uniquer.doGenerated("Sham"),
+        mlir::FunctionType::get(llvm::None, llvm::None, context));
+    builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
+    llvm::DenseMap<std::size_t, mlir::Value> fakeMap;
+    for (const auto &[_, sym] : bdunit.symTab) {
+      Fortran::lower::pft::Variable var(*sym, true);
+      instantiateVar(var, fakeMap);
+    }
+    func.erase();
+    delete builder;
+    builder = nullptr;
   }
 
   /// Lower a procedure (nest).

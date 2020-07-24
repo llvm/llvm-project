@@ -65,7 +65,7 @@ public:
 
   template <typename B>
   constexpr BaseType<B> &get() const {
-    return std::get<Ref<B>> > (u).get();
+    return std::get<Ref<B>>> (u).get();
   }
   template <typename B>
   constexpr BaseType<B> *getIf() const {
@@ -544,11 +544,17 @@ struct ModuleLikeUnit : public ProgramUnit {
   std::list<FunctionLikeUnit> nestedFunctions;
 };
 
+/// Block data units contain the variables and data initializers for common
+/// blocks, etc.
 struct BlockDataUnit : public ProgramUnit {
-  BlockDataUnit(const parser::BlockData &bd,
-                const ParentVariant &parentVariant);
+  BlockDataUnit(const parser::BlockData &bd, const ParentVariant &parentVariant,
+                const Fortran::semantics::SemanticsContext &semanticsContext);
   BlockDataUnit(BlockDataUnit &&) = default;
   BlockDataUnit(const BlockDataUnit &) = delete;
+
+  LLVM_DUMP_METHOD void dump() const;
+  
+  const Fortran::semantics::Scope &symTab; // symbol table
 };
 
 /// A Program is the top-level root of the PFT.
