@@ -96,18 +96,20 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {
 }
 
 def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
-  let summary = "Creates a constant of !shape.shape type";
+  let summary = "Creates a constant shape or extent tensor";
   let description = [{
-    Creates a !shape.shape with rank given by the length of `shape` and with
-    dimension sizes given by the values of `shape`.
+    Creates a constant shape or extent tensor. The individual extents are given
+    as the `shape` attribute. The number of these values equals the shape's
+    rank.
 
     ```mlir
-    %0 = shape.const_shape []
-    %1 = shape.const_shape [1, 2, 3]
+    %0 = shape.const_shape [] : !shape.shape
+    %1 = shape.const_shape [1, 2, 3] : !shape.shape
+    %2 = shape.const_shape [4, 5, 6] : tensor<?xindex>
     ```
   }];
   let arguments = (ins IndexElementsAttr:$shape);
-  let results = (outs Shape_ShapeType:$result);
+  let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
   // TODO: Move this to main so that all shape ops implement these.
   let printer = [{ return ::print(p, *this); }];
