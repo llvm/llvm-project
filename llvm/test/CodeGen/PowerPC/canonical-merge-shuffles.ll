@@ -446,5 +446,93 @@ entry:
   ret <16 x i8> %shuffle
 }
 
+define dso_local <4 x i32> @testSplat4Low(<8 x i8>* nocapture readonly %ptr) local_unnamed_addr #0 {
+; CHECK-P8-LABEL: testSplat4Low:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    ld r3, 0(r3)
+; CHECK-P8-NEXT:    mtfprd f0, r3
+; CHECK-P8-NEXT:    xxspltw v2, vs0, 0
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P9-LABEL: testSplat4Low:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    addi r3, r3, 4
+; CHECK-P9-NEXT:    lxvwsx v2, 0, r3
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testSplat4Low:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
+; CHECK-NOVSX-NEXT:    addi r4, r1, -16
+; CHECK-NOVSX-NEXT:    std r3, -16(r1)
+; CHECK-NOVSX-NEXT:    lvx v2, 0, r4
+; CHECK-NOVSX-NEXT:    vspltw v2, v2, 2
+; CHECK-NOVSX-NEXT:    blr
+entry:
+  %0 = load <8 x i8>, <8 x i8>* %ptr, align 8
+  %vecinit18 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %1 = bitcast <16 x i8> %vecinit18 to <4 x i32>
+  ret <4 x i32> %1
+}
+
+; Function Attrs: norecurse nounwind readonly
+define dso_local <4 x i32> @testSplat4hi(<8 x i8>* nocapture readonly %ptr) local_unnamed_addr #0 {
+; CHECK-P8-LABEL: testSplat4hi:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    ld r3, 0(r3)
+; CHECK-P8-NEXT:    mtfprd f0, r3
+; CHECK-P8-NEXT:    xxspltw v2, vs0, 1
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P9-LABEL: testSplat4hi:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    lxvwsx v2, 0, r3
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testSplat4hi:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
+; CHECK-NOVSX-NEXT:    addi r4, r1, -16
+; CHECK-NOVSX-NEXT:    std r3, -16(r1)
+; CHECK-NOVSX-NEXT:    lvx v2, 0, r4
+; CHECK-NOVSX-NEXT:    vspltw v2, v2, 3
+; CHECK-NOVSX-NEXT:    blr
+entry:
+  %0 = load <8 x i8>, <8 x i8>* %ptr, align 8
+  %vecinit22 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %1 = bitcast <16 x i8> %vecinit22 to <4 x i32>
+  ret <4 x i32> %1
+}
+
+; Function Attrs: norecurse nounwind readonly
+define dso_local <2 x i64> @testSplat8(<8 x i8>* nocapture readonly %ptr) local_unnamed_addr #0 {
+; CHECK-P8-LABEL: testSplat8:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    lxvdsx v2, 0, r3
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P9-LABEL: testSplat8:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    lxvdsx v2, 0, r3
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testSplat8:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
+; CHECK-NOVSX-NEXT:    addis r4, r2, .LCPI19_0@toc@ha
+; CHECK-NOVSX-NEXT:    addi r4, r4, .LCPI19_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v2, 0, r4
+; CHECK-NOVSX-NEXT:    std r3, -16(r1)
+; CHECK-NOVSX-NEXT:    addi r3, r1, -16
+; CHECK-NOVSX-NEXT:    lvx v3, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v3, v3, v2
+; CHECK-NOVSX-NEXT:    blr
+entry:
+  %0 = load <8 x i8>, <8 x i8>* %ptr, align 8
+  %vecinit30 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %1 = bitcast <16 x i8> %vecinit30 to <2 x i64>
+  ret <2 x i64> %1
+}
+
 declare double @dummy() local_unnamed_addr
 attributes #0 = { nounwind }
