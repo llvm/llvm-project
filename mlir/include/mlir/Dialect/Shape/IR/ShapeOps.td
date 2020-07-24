@@ -391,11 +391,17 @@ def Shape_ReduceOp : Shape_Op<"reduce",
 def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
   let summary = "Returns shape of a value or shaped type operand";
 
+  let description = [{
+    The operation takes a value or a shaped operand as an argument and it
+    returns a shape or extent tensor.
+  }];
+
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
-  let results = (outs Shape_ShapeType:$result);
+  let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
-  let assemblyFormat = "$arg `:` type($arg) attr-dict";
+  let assemblyFormat = "$arg `:` type($arg) `->` type($result) attr-dict";
 
+  let verifier = [{ return ::verify(*this); }];
   let hasFolder = 1;
 }
 
