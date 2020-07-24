@@ -19,7 +19,6 @@
 
 namespace llvm {
   class AssumptionCache;
-  class BasicBlock;
   class Constant;
   class ConstantRange;
   class DataLayout;
