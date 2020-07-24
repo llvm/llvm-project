@@ -203,6 +203,7 @@ group("test") {
     "//llvm/lib/Testing/Support",
     "//llvm/tools/bugpoint",
     "//llvm/tools/dsymutil",
+    "//llvm/tools/extract",
     "//llvm/tools/llc",
     "//llvm/tools/lli",
     "//llvm/tools/lli/ChildTarget:lli-child-target",

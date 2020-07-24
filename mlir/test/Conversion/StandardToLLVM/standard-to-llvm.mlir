@@ -75,15 +75,3 @@ func @rsqrt_multidim_vector(%arg0 : vector<4x3xf32>) {
   %0 = rsqrt %arg0 : vector<4x3xf32>
   std.return
 }
-
-// -----
-
-// This should not crash. The first operation cannot be converted, so the
-// second should not match. This attempts to convert `return` to `llvm.return`
-// and complains about non-LLVM types.
-func @unknown_source() -> i32 {
-  %0 = "foo"() : () -> i32
-  %1 = addi %0, %0 : i32
-  // expected-error@+1 {{must be LLVM dialect type}}
-  return %1 : i32
-}
