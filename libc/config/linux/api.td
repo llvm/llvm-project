@@ -216,7 +216,8 @@ def StringAPI : PublicAPI<"string.h"> {
     "strtok",
     "strerror",
     "strlen",
-    "strnlen"
+    "strnlen",
+    "memrchr"
   ];
 
   let TypeDeclarations = [
