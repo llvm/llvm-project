@@ -295,20 +295,10 @@ write_cmake_config("config") {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
-  # FIXME: Once https://reviews.llvm.org/D79219 is in, remove the two
-  # redundant HAVE_ variables.
   if (llvm_enable_zlib) {
-    values += [
-      "HAVE_LIBZ=1",
-      "HAVE_ZLIB_H=1",
-      "LLVM_ENABLE_ZLIB=1",
-    ]
+    values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
-    values += [
-      "HAVE_LIBZ=",
-      "HAVE_ZLIB_H=",
-      "LLVM_ENABLE_ZLIB=",
-    ]
+    values += [ "LLVM_ENABLE_ZLIB=" ]
   }
 
   if (llvm_enable_libxml2) {
