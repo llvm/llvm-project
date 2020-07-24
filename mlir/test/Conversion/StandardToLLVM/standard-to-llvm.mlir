@@ -75,3 +75,21 @@ func @rsqrt_multidim_vector(%arg0 : vector<4x3xf32>) {
   %0 = rsqrt %arg0 : vector<4x3xf32>
   std.return
 }
+
+// -----
+
+// Lowers `assert` to a function call to `abort` if the assertion is violated.
+// CHECK: llvm.func @abort()
+// CHECK-LABEL: @assert_test_function
+// CHECK-SAME:  (%[[ARG:.*]]: !llvm.i1)
+func @assert_test_function(%arg : i1) {
+  // CHECK: llvm.cond_br %[[ARG]], ^[[CONTINUATION_BLOCK:.*]], ^[[FAILURE_BLOCK:.*]]
+  // CHECK: ^[[CONTINUATION_BLOCK]]:
+  // CHECK: llvm.return
+  // CHECK: ^[[FAILURE_BLOCK]]:
+  // CHECK: llvm.call @abort() : () -> ()
+  // CHECK: llvm.unreachable
+  assert %arg, "Computer says no"
+  return
+}
+
