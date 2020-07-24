@@ -210,6 +210,19 @@ def index_vector : SDNode<"AArch64ISD::INDEX_VECTOR", SDT_IndexVector, []>;
 
 def reinterpret_cast : SDNode<"AArch64ISD::REINTERPRET_CAST", SDTUnaryOp>;
 
+def setoge_or_setge : PatFrags<(ops node:$lhs, node:$rhs),
+                               [(setoge node:$lhs, node:$rhs),
+                                (setge node:$lhs, node:$rhs)]>;
+def setogt_or_setgt : PatFrags<(ops node:$lhs, node:$rhs),
+                                [(setogt node:$lhs, node:$rhs),
+                                 (setgt node:$lhs, node:$rhs)]>;
+def setoeq_or_seteq : PatFrags<(ops node:$lhs, node:$rhs),
+                                [(setoeq node:$lhs, node:$rhs),
+                                 (seteq node:$lhs, node:$rhs)]>;
+def setone_or_setne : PatFrags<(ops node:$lhs, node:$rhs),
+                                [(setone node:$lhs, node:$rhs),
+                                 (setne node:$lhs, node:$rhs)]>;
+
 let Predicates = [HasSVE] in {
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
   def  RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
@@ -1172,10 +1185,10 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm CMPLO_PPzZI : sve_int_ucmp_vi<0b10, "cmplo", SETULT, SETUGT>;
   defm CMPLS_PPzZI : sve_int_ucmp_vi<0b11, "cmpls", SETULE, SETUGE>;
 
-  defm FCMGE_PPzZZ : sve_fp_3op_p_pd_cc<0b000, "fcmge", int_aarch64_sve_fcmpge, setoge>;
-  defm FCMGT_PPzZZ : sve_fp_3op_p_pd_cc<0b001, "fcmgt", int_aarch64_sve_fcmpgt, setogt>;
-  defm FCMEQ_PPzZZ : sve_fp_3op_p_pd_cc<0b010, "fcmeq", int_aarch64_sve_fcmpeq, setoeq>;
-  defm FCMNE_PPzZZ : sve_fp_3op_p_pd_cc<0b011, "fcmne", int_aarch64_sve_fcmpne, setone>;
+  defm FCMGE_PPzZZ : sve_fp_3op_p_pd_cc<0b000, "fcmge", int_aarch64_sve_fcmpge, setoge_or_setge>;
+  defm FCMGT_PPzZZ : sve_fp_3op_p_pd_cc<0b001, "fcmgt", int_aarch64_sve_fcmpgt, setogt_or_setgt>;
+  defm FCMEQ_PPzZZ : sve_fp_3op_p_pd_cc<0b010, "fcmeq", int_aarch64_sve_fcmpeq, setoeq_or_seteq>;
+  defm FCMNE_PPzZZ : sve_fp_3op_p_pd_cc<0b011, "fcmne", int_aarch64_sve_fcmpne, setone_or_setne>;
   defm FCMUO_PPzZZ : sve_fp_3op_p_pd_cc<0b100, "fcmuo", int_aarch64_sve_fcmpuo, setuo>;
   defm FACGE_PPzZZ : sve_fp_3op_p_pd<0b101, "facge", int_aarch64_sve_facge>;
   defm FACGT_PPzZZ : sve_fp_3op_p_pd<0b111, "facgt", int_aarch64_sve_facgt>;
