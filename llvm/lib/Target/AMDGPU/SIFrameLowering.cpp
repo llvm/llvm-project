@@ -274,6 +274,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
       return;
     }
 
+    // For GFX9.
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), AMDGPU::FLAT_SCR_LO)
       .addReg(FlatScrInitLo)
       .addReg(ScratchWaveOffsetReg);
@@ -284,7 +285,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
     return;
   }
 
-  assert(ST.getGeneration() < AMDGPUSubtarget::GFX10);
+  assert(ST.getGeneration() < AMDGPUSubtarget::GFX9);
 
   // Copy the size in bytes.
   BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), AMDGPU::FLAT_SCR_LO)
