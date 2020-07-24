@@ -1,6 +1,56 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spv.Load
+//===----------------------------------------------------------------------===//
+
+func @load() {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  //  CHECK: %{{.*}} = llvm.load %{{.*}} : !llvm<"float*">
+  %1 = spv.Load "Function" %0 : f32
+  return
+}
+
+func @load_none() {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  //  CHECK: %{{.*}} = llvm.load %{{.*}} : !llvm<"float*">
+  %1 = spv.Load "Function" %0 ["None"] : f32
+  return
+}
+
+func @load_with_alignment() {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  // CHECK: %{{.*}} = llvm.load %{{.*}} {alignment = 4 : i64} : !llvm<"float*">
+  %1 = spv.Load "Function" %0 ["Aligned", 4] : f32
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.Store
+//===----------------------------------------------------------------------===//
+
+func @store(%arg0 : f32) -> () {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  // CHECK: llvm.store %{{.*}}, %{{.*}} : !llvm<"float*">
+  spv.Store "Function" %0, %arg0 : f32
+  return
+}
+
+func @store_composite(%arg0 : !spv.struct<f64>) -> () {
+  %0 = spv.Variable : !spv.ptr<!spv.struct<f64>, Function>
+  // CHECK: llvm.store %{{.*}}, %{{.*}} : !llvm<"<{ double }>*">
+  spv.Store "Function" %0, %arg0 : !spv.struct<f64>
+  return
+}
+
+func @store_with_alignment(%arg0 : f32) -> () {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 4 : i64} : !llvm<"float*">
+  spv.Store "Function" %0, %arg0 ["Aligned", 4] : f32
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // spv.Variable
 //===----------------------------------------------------------------------===//
 
