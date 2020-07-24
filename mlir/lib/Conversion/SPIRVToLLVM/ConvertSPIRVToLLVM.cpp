@@ -177,6 +177,14 @@ static Type convertStructTypePacked(spirv::StructType type,
                                      /*isPacked=*/true);
 }
 
+/// Creates LLVM dialect constant with the given value.
+static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
+                                 LLVMTypeConverter &converter, unsigned value) {
+  return rewriter.create<LLVM::ConstantOp>(
+      loc, LLVM::LLVMType::getInt32Ty(converter.getDialect()),
+      rewriter.getIntegerAttr(rewriter.getI32Type(), value));
+}
+
 //===----------------------------------------------------------------------===//
 // Type conversion
 //===----------------------------------------------------------------------===//
@@ -733,6 +741,37 @@ public:
   }
 };
 
+class VariablePattern : public SPIRVToLLVMConversion<spirv::VariableOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::VariableOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::VariableOp varOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = varOp.getType();
+    // Initialization is supported for scalars and vectors only.
+    auto pointerTo = srcType.cast<spirv::PointerType>().getPointeeType();
+    auto init = varOp.initializer();
+    if (init && !pointerTo.isIntOrFloat() && !pointerTo.isa<VectorType>())
+      return failure();
+
+    auto dstType = typeConverter.convertType(srcType);
+    if (!dstType)
+      return failure();
+
+    Location loc = varOp.getLoc();
+    Value size = createI32ConstantOf(loc, rewriter, typeConverter, 1);
+    if (!init) {
+      rewriter.replaceOpWithNewOp<LLVM::AllocaOp>(varOp, dstType, size);
+      return success();
+    }
+    Value allocated = rewriter.create<LLVM::AllocaOp>(loc, dstType, size);
+    rewriter.create<LLVM::StoreOp>(loc, init, allocated);
+    rewriter.replaceOp(varOp, allocated);
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // FuncOp conversion
 //===----------------------------------------------------------------------===//
@@ -932,6 +971,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::LogicalEqualOp, LLVM::ICmpPredicate::eq>,
       IComparePattern<spirv::LogicalNotEqualOp, LLVM::ICmpPredicate::ne>,
       NotPattern<spirv::LogicalNotOp>,
+
+      // Memory ops
+      VariablePattern,
 
       // Miscellaneous ops
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
