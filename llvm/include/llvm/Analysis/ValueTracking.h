@@ -416,6 +416,10 @@ class Value;
   /// Return true if the only users of this pointer are lifetime markers.
   bool onlyUsedByLifetimeMarkers(const Value *V);
 
+  /// Return true if the only users of this pointer are lifetime markers or
+  /// droppable instructions.
+  bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
+
   /// Return true if speculation of the given load must be suppressed to avoid
   /// ordering or interfering with an active sanitizer.  If not suppressed,
   /// dereferenceability and alignment must be proven separately.  Note: This
