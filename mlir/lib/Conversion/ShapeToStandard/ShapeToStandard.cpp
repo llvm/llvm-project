@@ -17,11 +17,6 @@
 using namespace mlir;
 using namespace mlir::shape;
 
-namespace {
-/// Generated conversion patterns.
-#include "ShapeToStandardPatterns.inc"
-} // namespace
-
 /// Conversion patterns.
 namespace {
 class AnyOpConversion : public OpConversionPattern<AnyOp> {
@@ -105,24 +100,6 @@ LogicalResult ShapeOfOpConversion::matchAndRewrite(
       rewriter.create<TensorFromElementsOp>(loc, dimValues);
   rewriter.replaceOpWithNewOp<TensorCastOp>(op, staticExtentTensor,
                                             op.getType());
-  return success();
-}
-
-namespace {
-class ConstSizeOpConverter : public OpConversionPattern<ConstSizeOp> {
-public:
-  using OpConversionPattern<ConstSizeOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(ConstSizeOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override;
-};
-} // namespace
-
-LogicalResult ConstSizeOpConverter::matchAndRewrite(
-    ConstSizeOp op, ArrayRef<Value> operands,
-    ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<ConstantIndexOp>(op, op.value().getSExtValue());
   return success();
 }
 
@@ -228,13 +205,11 @@ void ConvertShapeToStandardPass::runOnOperation() {
 
 void mlir::populateShapeToStandardConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  populateWithGenerated(ctx, &patterns);
   // clang-format off
   patterns.insert<
       AnyOpConversion,
       BinaryOpConversion<AddOp, AddIOp>,
       BinaryOpConversion<MulOp, MulIOp>,
-      ConstSizeOpConverter,
       GetExtentOpConverter,
       RankOpConverter,
       ShapeOfOpConversion>(ctx);
