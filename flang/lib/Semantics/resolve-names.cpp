@@ -1547,7 +1547,7 @@ bool AttrsVisitor::IsConflictingAttr(Attr attrName) {
   return HaveAttrConflict(attrName, Attr::INTENT_IN, Attr::INTENT_INOUT) ||
       HaveAttrConflict(attrName, Attr::INTENT_IN, Attr::INTENT_OUT) ||
       HaveAttrConflict(attrName, Attr::INTENT_INOUT, Attr::INTENT_OUT) ||
-      HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) ||
+      HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) || // C781
       HaveAttrConflict(attrName, Attr::PURE, Attr::IMPURE) ||
       HaveAttrConflict(attrName, Attr::PUBLIC, Attr::PRIVATE) ||
       HaveAttrConflict(attrName, Attr::RECURSIVE, Attr::NON_RECURSIVE);
