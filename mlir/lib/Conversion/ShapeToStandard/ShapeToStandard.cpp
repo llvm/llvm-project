@@ -55,8 +55,7 @@ public:
   matchAndRewrite(SrcOpTy op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     typename SrcOpTy::Adaptor adaptor(operands);
-    rewriter.replaceOpWithNewOp<DstOpTy>(op.getOperation(), adaptor.lhs(),
-                                         adaptor.rhs());
+    rewriter.replaceOpWithNewOp<DstOpTy>(op, adaptor.lhs(), adaptor.rhs());
     return success();
   }
 };
@@ -123,8 +122,7 @@ public:
 LogicalResult ConstSizeOpConverter::matchAndRewrite(
     ConstSizeOp op, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<ConstantIndexOp>(op.getOperation(),
-                                               op.value().getSExtValue());
+  rewriter.replaceOpWithNewOp<ConstantIndexOp>(op, op.value().getSExtValue());
   return success();
 }
 
@@ -171,7 +169,7 @@ LogicalResult
 RankOpConverter::matchAndRewrite(shape::RankOp op, ArrayRef<Value> operands,
                                  ConversionPatternRewriter &rewriter) const {
   shape::RankOp::Adaptor transformed(operands);
-  rewriter.replaceOpWithNewOp<DimOp>(op.getOperation(), transformed.shape(), 0);
+  rewriter.replaceOpWithNewOp<DimOp>(op, transformed.shape(), 0);
   return success();
 }
 
