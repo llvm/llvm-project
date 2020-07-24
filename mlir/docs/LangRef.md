@@ -980,9 +980,10 @@ Example:
 
 ```mlir
 // With static ranks, we need a function for each possible argument type
-%A = alloc() : memref<16x32xf32> %B = alloc() :
-memref<16x32x64xf32> call @helper_2D(%A) : (memref<16x32xf32>)->() call
-@helper_3D(%B) : (memref<16x32x64xf32>)->()
+%A = alloc() : memref<16x32xf32>
+%B = alloc() : memref<16x32x64xf32>
+call @helper_2D(%A) : (memref<16x32xf32>)->()
+call @helper_3D(%B) : (memref<16x32x64xf32>)->()
 
 // With unknown rank, the functions can be unified under one unranked type
 %A = alloc() : memref<16x32xf32>
