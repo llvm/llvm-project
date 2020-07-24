@@ -347,7 +347,4 @@
 /* Whether Timers signpost passes in Xcode Instruments */
 #cmakedefine01 LLVM_SUPPORT_XCODE_SIGNPOSTS
 
-/* Define if LLVM was built with a dependency to the tensorflow compiler */
-#cmakedefine LLVM_HAVE_TF_AOT
-
 #endif
