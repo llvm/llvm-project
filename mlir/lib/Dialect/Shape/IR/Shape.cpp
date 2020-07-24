@@ -28,6 +28,13 @@ static RankedTensorType getExtentTensorType(MLIRContext *ctx) {
   return RankedTensorType::get({ShapedType::kDynamicSize}, IndexType::get(ctx));
 }
 
+static bool isErrorPropagationPossible(ArrayRef<Type> operandTypes) {
+  for (Type ty : operandTypes)
+    if (ty.isa<SizeType>() || ty.isa<ShapeType>() || ty.isa<ValueShapeType>())
+      return true;
+  return false;
+}
+
 ShapeDialect::ShapeDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addOperations<
@@ -539,9 +546,7 @@ static LogicalResult verify(GetExtentOp op) {
   Type shapeTy = op.shape().getType();
   Type dimTy = op.dim().getType();
   Type extentTy = op.extent().getType();
-  bool errorPropagationPossible =
-      shapeTy.isa<ShapeType>() || dimTy.isa<SizeType>();
-  if (errorPropagationPossible) {
+  if (isErrorPropagationPossible({shapeTy, dimTy})) {
     if (!extentTy.isa<SizeType>())
       op.emitError()
           << "if at least one of the operands can hold error values then the "
@@ -593,9 +598,8 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(shape::RankOp op) {
-  Type argTy = op.shape().getType();
-  Type resultTy = op.rank().getType();
-  if (argTy.isa<ShapeType>() && !resultTy.isa<SizeType>())
+  if (op.shape().getType().isa<ShapeType>() &&
+      !op.rank().getType().isa<SizeType>())
     return op.emitOpError()
            << "if operand is of type `shape` then the result must be of type "
               "`size` to propagate potential errors";
@@ -673,6 +677,25 @@ OpFoldResult NumElementsOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// MulOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(MulOp op) {
+  Type resultTy = op.result().getType();
+  if (isErrorPropagationPossible({op.lhs().getType(), op.rhs().getType()})) {
+    if (!resultTy.isa<SizeType>())
+      return op.emitOpError()
+             << "if at least one of the operands can hold error values then "
+                "the result must be of type `size` to propagate them";
+  } else {
+    if (resultTy.isa<SizeType>())
+      return op.emitError() << "if none of the operands can hold error values "
+                               "then the result must be of type `index`";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ShapeOfOp
 //===----------------------------------------------------------------------===//
 
@@ -685,15 +708,13 @@ OpFoldResult ShapeOfOp::fold(ArrayRef<Attribute>) {
 }
 
 static LogicalResult verify(ShapeOfOp op) {
-  Type argTy = op.arg().getType();
   Type resultTy = op.result().getType();
-  if (argTy.isa<ValueShapeType>()) {
+  if (isErrorPropagationPossible(op.arg().getType())) {
     if (!resultTy.isa<ShapeType>())
       return op.emitOpError()
              << "if operand is of type `value_shape` then the result must be "
                 "of type `shape` to propagate potential error shapes";
   } else {
-    assert(argTy.isa<ShapedType>());
     if (resultTy != getExtentTensorType(op.getContext()))
       return op.emitOpError() << "if operand is a shaped type then the result "
                                  "must be an extent tensor";
