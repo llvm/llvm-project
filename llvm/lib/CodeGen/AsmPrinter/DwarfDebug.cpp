@@ -95,10 +95,6 @@ static cl::opt<bool> UseDwarfRangesBaseAddressSpecifier(
     "use-dwarf-ranges-base-address-specifier", cl::Hidden,
     cl::desc("Use base address specifiers in debug_ranges"), cl::init(false));
 
-static cl::opt<bool> EmitDwarfDebugEntryValues(
-    "emit-debug-entry-values", cl::Hidden,
-    cl::desc("Emit the debug entry values"), cl::init(false));
-
 static cl::opt<bool> GenerateARangeSection("generate-arange-section",
                                            cl::Hidden,
                                            cl::desc("Generate dwarf aranges"),
@@ -430,9 +426,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
 
   // Emit call-site-param debug info for GDB and LLDB, if the target supports
   // the debug entry values feature. It can also be enabled explicitly.
-  EmitDebugEntryValues = (Asm->TM.Options.ShouldEmitDebugEntryValues() &&
-                          (tuneForGDB() || tuneForLLDB())) ||
-                         EmitDwarfDebugEntryValues;
+  EmitDebugEntryValues = Asm->TM.Options.ShouldEmitDebugEntryValues();
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
 }
