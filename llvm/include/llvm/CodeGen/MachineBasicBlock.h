@@ -872,6 +872,14 @@ public:
   void print(raw_ostream &OS, ModuleSlotTracker &MST,
              const SlotIndexes * = nullptr, bool IsStandalone = true) const;
 
+  enum PrintNameFlag {
+    PrintNameIr = (1 << 0), ///< Add IR name where available
+    PrintNameAttributes = (1 << 1), ///< Print attributes
+  };
+
+  void printName(raw_ostream &os, unsigned printNameFlags = PrintNameIr,
+                 ModuleSlotTracker *moduleSlotTracker = nullptr) const;
+
   // Printing method used by LoopInfo.
   void printAsOperand(raw_ostream &OS, bool PrintType = true) const;
 
