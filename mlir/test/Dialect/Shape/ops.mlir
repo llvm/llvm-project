@@ -1,4 +1,3 @@
-// RUN: mlir-opt -split-input-file %s | mlir-opt | FileCheck %s
 // Verify the printed output can be parsed.
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 // Verify the generic form can be parsed.
@@ -99,7 +98,7 @@ func @test_constraints() {
   %w3 = shape.const_witness false
   %w4 = shape.assuming_all %w0, %w1, %w2, %w3
   shape.assuming %w4 -> !shape.shape {
-    %2 = shape.any %0, %1
+    %2 = shape.any %0, %1 : !shape.shape
     shape.assuming_yield %2 : !shape.shape
   }
   return
@@ -173,3 +172,14 @@ func @get_extent_on_extent_tensor(%arg : tensor<?xindex>) -> !shape.size {
   %result = shape.get_extent %arg, %c0 : tensor<?xindex>
   return %result : !shape.size
 }
+
+func @any() {
+  %0 = shape.const_shape [1, 2, 3] : !shape.shape
+  %1 = shape.const_shape [4, 5, 6] : !shape.shape
+  %2 = shape.any %0, %1 : !shape.shape
+  %3 = shape.const_shape [1, 2, 3] : tensor<?xindex>
+  %4 = shape.const_shape [4, 5, 6] : tensor<?xindex>
+  %5 = shape.any %3, %4 : tensor<?xindex>
+  return
+}
+
