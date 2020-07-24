@@ -495,6 +495,9 @@ def SImmS4XForm : SDNodeXForm<imm, [{
 def SImmS16XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue() / 16, SDLoc(N), MVT::i64);
 }]>;
+def SImmS32XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 32, SDLoc(N), MVT::i64);
+}]>;
 
 // simm6sN predicate - True if the immediate is a multiple of N in the range
 // [-32 * N, 31 * N].
@@ -546,7 +549,7 @@ def simm4s16 : Operand<i64>, ImmLeaf<i64,
   let DecoderMethod = "DecodeSImm<4>";
 }
 def simm4s32 : Operand<i64>, ImmLeaf<i64,
-[{ return Imm >=-256  && Imm <= 224 && (Imm % 32) == 0x0; }]> {
+[{ return Imm >=-256  && Imm <= 224 && (Imm % 32) == 0x0; }], SImmS32XForm> {
   let PrintMethod = "printImmScale<32>";
   let ParserMatchClass = SImm4s32Operand;
   let DecoderMethod = "DecodeSImm<4>";
