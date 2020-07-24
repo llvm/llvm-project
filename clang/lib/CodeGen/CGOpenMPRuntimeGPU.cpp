@@ -2867,7 +2867,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDParallelCall(
       auto HashCode = llvm::hash_value(WFn->getName());
       auto Size = llvm::ConstantInt::get(CGM.SizeTy, HashCode);
       llvm::Value *ID = Bld.CreateIntToPtr(Size, CGM.Int8PtrTy);
-      llvm::Value *Args[] = {ID, /*RequiresOMPRuntime=*/Bld.getInt16(1)};
+      llvm::Value *Args[] = {ID};
       CGF.EmitRuntimeCall(createNVPTXRuntimeFunction(
                               OMPRTL_NVPTX__kmpc_kernel_prepare_parallel),
                           Args);
