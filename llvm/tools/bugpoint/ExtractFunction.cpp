@@ -386,7 +386,7 @@ BugDriver::extractMappedBlocksFromModule(const std::vector<BasicBlock *> &BBs,
   for (Function &F : *M)
     for (BasicBlock &BB : F)
       // Check if this block is going to be extracted.
-      if (std::find(BBs.begin(), BBs.end(), &BB) == BBs.end())
+      if (!llvm::is_contained(BBs, &BB))
         BlocksToExtract.push_back(&BB);
 
   raw_fd_ostream OS(Temp->FD, /*shouldClose*/ false);
