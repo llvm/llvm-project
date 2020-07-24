@@ -185,6 +185,25 @@ static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
       rewriter.getIntegerAttr(rewriter.getI32Type(), value));
 }
 
+/// Utility for `spv.Load` and `spv.Store` conversion.
+static LogicalResult replaceWithLoadOrStore(Operation *op,
+                                            ConversionPatternRewriter &rewriter,
+                                            LLVMTypeConverter &typeConverter,
+                                            unsigned alignment) {
+  if (auto loadOp = dyn_cast<spirv::LoadOp>(op)) {
+    auto dstType = typeConverter.convertType(loadOp.getType());
+    if (!dstType)
+      return failure();
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, dstType, loadOp.ptr(),
+                                              alignment);
+    return success();
+  }
+  auto storeOp = cast<spirv::StoreOp>(op);
+  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(storeOp, storeOp.value(),
+                                             storeOp.ptr(), alignment);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Type conversion
 //===----------------------------------------------------------------------===//
@@ -562,6 +581,31 @@ public:
         operation, dstType,
         rewriter.getI64IntegerAttr(static_cast<int64_t>(predicate)),
         operation.operand1(), operation.operand2());
+    return success();
+  }
+};
+
+/// Converts `spv.Load` and `spv.Store` to LLVM dialect.
+template <typename SPIRVop>
+class LoadStorePattern : public SPIRVToLLVMConversion<SPIRVop> {
+public:
+  using SPIRVToLLVMConversion<SPIRVop>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVop op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.memory_access().hasValue() &&
+        op.memory_access().getValue() != spirv::MemoryAccess::None) {
+      auto memoryAccess = op.memory_access().getValue();
+      if (memoryAccess == spirv::MemoryAccess::Aligned) {
+        unsigned alignment = op.alignment().getValue().getZExtValue();
+        replaceWithLoadOrStore(op, rewriter, this->typeConverter, alignment);
+        return success();
+      }
+      // There is no support of other memory access attributes.
+      return failure();
+    }
+    replaceWithLoadOrStore(op, rewriter, this->typeConverter, 0);
     return success();
   }
 };
@@ -973,6 +1017,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       NotPattern<spirv::LogicalNotOp>,
 
       // Memory ops
+      LoadStorePattern<spirv::LoadOp>, LoadStorePattern<spirv::StoreOp>,
       VariablePattern,
 
       // Miscellaneous ops
