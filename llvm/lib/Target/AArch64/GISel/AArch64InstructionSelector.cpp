@@ -2306,10 +2306,17 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // If we're storing a 0, use WZR/XZR.
     if (auto CVal = getConstantVRegVal(ValReg, MRI)) {
       if (*CVal == 0 && Opcode == TargetOpcode::G_STORE) {
-        if (I.getOpcode() == AArch64::STRWui)
-          I.getOperand(0).setReg(AArch64::WZR);
-        else if (I.getOpcode() == AArch64::STRXui)
-          I.getOperand(0).setReg(AArch64::XZR);
+        unsigned Opc = I.getOpcode();
+        switch(Opc) {
+          case AArch64::STRWui:
+          case AArch64::STRHHui:
+          case AArch64::STRBBui:
+            I.getOperand(0).setReg(AArch64::WZR);
+            break;
+          case AArch64::STRXui:
+            I.getOperand(0).setReg(AArch64::XZR);
+            break;
+        }
       }
     }
 
