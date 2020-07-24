@@ -38,8 +38,8 @@ NumElementsOpConverter::matchAndRewrite(NumElementsOp op,
   // Generate reduce operator.
   Block *body = reduce.getBody();
   OpBuilder b = OpBuilder::atBlockEnd(body);
-  Value product =
-      b.create<MulOp>(loc, body->getArgument(1), body->getArgument(2));
+  Value product = b.create<MulOp>(loc, b.getType<SizeType>(),
+                                  body->getArgument(1), body->getArgument(2));
   b.create<YieldOp>(loc, product);
 
   rewriter.replaceOp(op, reduce.result());
