@@ -481,7 +481,7 @@ private:
 
     ReleaseRecorder Recorder(Region->RegionBeg, &Region->Data);
     releaseFreeMemoryToOS(Region->FreeList, Region->RegionBeg,
-                          Region->AllocatedUser, BlockSize, &Recorder);
+                          Region->AllocatedUser, 1U, BlockSize, &Recorder);
 
     if (Recorder.getReleasedRangesCount() > 0) {
       Region->ReleaseInfo.PushedBlocksAtLastRelease =
