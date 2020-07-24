@@ -165,11 +165,12 @@ func @get_extent_from_extent_tensor(%extents : tensor<?xindex>,
 // Lower `any` to its first operand.
 // CHECK-LABEL: @any_of_three
 // CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<?xindex>) -> tensor<?xindex>
-func @any_of_three(%a : !shape.shape, %b : !shape.shape, %c : !shape.shape)
-    -> !shape.shape {
+func @any_of_three(%a : tensor<?xindex>,
+                   %b : tensor<?xindex>,
+                   %c : tensor<?xindex>) -> tensor<?xindex> {
   // CHECK: return %[[A]] : tensor<?xindex>
-  %result = shape.any %a, %b, %c
-  return %result : !shape.shape
+  %result = shape.any %a, %b, %c : tensor<?xindex>
+  return %result : tensor<?xindex>
 }
 
 // -----
@@ -177,9 +178,9 @@ func @any_of_three(%a : !shape.shape, %b : !shape.shape, %c : !shape.shape)
 // Lower `any` to its first operand.
 // CHECK-LABEL: @any_of_one
 // CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>) -> tensor<?xindex>
-func @any_of_one(%a : !shape.shape) -> !shape.shape {
+func @any_of_one(%a : tensor<?xindex>) -> tensor<?xindex> {
   // CHECK: return %[[A]] : tensor<?xindex>
-  %result = shape.any %a
-  return %result : !shape.shape
+  %result = shape.any %a : tensor<?xindex>
+  return %result : tensor<?xindex>
 }
 

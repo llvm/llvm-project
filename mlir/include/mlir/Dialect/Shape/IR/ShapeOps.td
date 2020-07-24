@@ -509,11 +509,14 @@ def Shape_ConcatOp : Shape_Op<"concat", []> {
 //===----------------------------------------------------------------------===//
 
 // TODO: Move the code below and witnesses to a different file.
-def Shape_AnyOp : Shape_Op<"any", [Commutative, NoSideEffect]> {
+def Shape_AnyOp : Shape_Op<"any", [Commutative,
+                                   NoSideEffect,
+                                   SameOperandsAndResultType]> {
   let summary = "Return any combination of the input shapes";
   let description = [{
-    This operation takes multiple input shapes and returns some combination of
-    their dimensions. This can be best seen with examples below.
+    This operation takes multiple input shapes or extent tensors and returns
+    some combination of their dimensions. This can be best seen with examples
+    below.
 
     The result is undefined, but still side-effect free, in cases where the
     inputs have differing ranks or differ in extents of shared dimensions.
@@ -525,11 +528,10 @@ def Shape_AnyOp : Shape_Op<"any", [Commutative, NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins Variadic<Shape_ShapeType>:$inputs);
-  let results = (outs Shape_ShapeType:$result);
+  let arguments = (ins Variadic<Shape_ShapeOrExtentTensorType>:$inputs);
+  let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
-  let assemblyFormat = "$inputs attr-dict";
-
+  let assemblyFormat = "$inputs `:` type($result)  attr-dict";
   let hasFolder = 1;
 }
 
