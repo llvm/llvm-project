@@ -4794,8 +4794,8 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy())
-      return !C->containsUndefElement() && !C->containsConstantExpression();
+    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C))
+      return !C->containsConstantExpression() && !C->containsUndefElement();
   }
 
   // Strip cast operations from a pointer value.
