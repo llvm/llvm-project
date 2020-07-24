@@ -43,6 +43,16 @@ LegalizeMutation LegalizeMutations::changeElementTo(unsigned TypeIdx,
   };
 }
 
+LegalizeMutation LegalizeMutations::changeElementSizeTo(unsigned TypeIdx,
+                                                        unsigned FromTypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT OldTy = Query.Types[TypeIdx];
+    const LLT NewTy = Query.Types[FromTypeIdx];
+    const LLT NewEltTy = LLT::scalar(NewTy.getScalarSizeInBits());
+    return std::make_pair(TypeIdx, OldTy.changeElementType(NewEltTy));
+  };
+}
+
 LegalizeMutation LegalizeMutations::widenScalarOrEltToNextPow2(unsigned TypeIdx,
                                                                unsigned Min) {
   return [=](const LegalityQuery &Query) {
