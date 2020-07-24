@@ -53,12 +53,15 @@ class BlockFrequencyInfo;
 class Constant;
 class ConstantInt;
 class ConstantExpr;
+class DataLayout;
 class DominatorTree;
 class Function;
 class GlobalVariable;
 class Instruction;
+class LLVMContext;
 class ProfileSummaryInfo;
 class TargetTransformInfo;
+class Type;
 
 /// A private "module" namespace for types and utilities used by
 /// ConstantHoisting. These are implementation details and should not be used by

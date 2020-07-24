@@ -8,7 +8,9 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerImpl.h"
 
 using namespace llvm;
