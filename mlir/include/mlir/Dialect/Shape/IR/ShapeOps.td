@@ -228,17 +228,15 @@ def Shape_ToExtentTensorOp : Shape_Op<"to_extent_tensor", [NoSideEffect]> {
 }
 
 def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
-  let summary = "Gets the specified extent from a shape";
+  let summary = "Gets the specified extent from a shape or extent tensor";
   let description = [{
-    Gets the extent indexed by `dim` from `shape`.
-    If the shape is an error, it returns an error size.
+    Gets the extent indexed by `dim` from the `shape` operand. If the shape is
+    an error then it returns an error size.
   }];
-  let arguments = (ins
-    Shape_ShapeType:$shape,
-    Shape_SizeType:$dim
-  );
+  let arguments = (ins Shape_ShapeOrExtentTensorType:$shape,
+                       Shape_SizeType:$dim);
   let results = (outs Shape_SizeType:$extent);
-  let assemblyFormat = "$shape `,` $dim attr-dict";
+  let assemblyFormat = "$shape `,` $dim `:` type($shape)  attr-dict";
 
   let builders = [
     // Builder that allows passing a constant dimension as a simple integer.

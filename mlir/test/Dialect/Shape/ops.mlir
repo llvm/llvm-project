@@ -161,3 +161,15 @@ func @shape_eq_on_mixed(%a : tensor<?xindex>, %b : !shape.shape) -> i1 {
   %result = shape.shape_eq %a, %b : tensor<?xindex>, !shape.shape
   return %result : i1
 }
+
+func @get_extent_on_shape(%arg : !shape.shape) -> !shape.size {
+  %c0 = shape.const_size 0
+  %result = shape.get_extent %arg, %c0 : !shape.shape
+  return %result : !shape.size
+}
+
+func @get_extent_on_extent_tensor(%arg : tensor<?xindex>) -> !shape.size {
+  %c0 = shape.const_size 0
+  %result = shape.get_extent %arg, %c0 : tensor<?xindex>
+  return %result : !shape.size
+}
