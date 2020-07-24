@@ -23,11 +23,15 @@ define i32 @test_duplicate_successors_phi(i1 %c, i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[SWITCH:%.*]], label [[END:%.*]]
 ; CHECK:       switch:
-; CHECK-NEXT:    br label [[SWITCH_DEFAULT:%.*]]
+; CHECK-NEXT:    switch i32 -1, label [[SWITCH_DEFAULT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[END]]
+; CHECK-NEXT:    i32 1, label [[END]]
+; CHECK-NEXT:    ]
 ; CHECK:       switch.default:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       end:
-; CHECK-NEXT:    ret i32 [[X:%.*]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ 1, [[SWITCH]] ], [ 1, [[SWITCH]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
   br i1 %c, label %switch, label %end

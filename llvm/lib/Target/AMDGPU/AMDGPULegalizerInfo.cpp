@@ -738,10 +738,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0);
 
   getActionDefinitionsBuilder(G_PTRMASK)
-    .legalIf(typeInSet(1, {S64, S32}))
-    .minScalar(1, S32)
-    .maxScalarIf(sizeIs(0, 32), 1, S32)
-    .maxScalarIf(sizeIs(0, 64), 1, S64)
+    .legalIf(all(sameSize(0, 1), typeInSet(1, {S64, S32})))
+    .scalarSameSizeAs(1, 0)
     .scalarize(0);
 
   auto &CmpBuilder =

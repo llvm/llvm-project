@@ -36,7 +36,7 @@ public:
       Layer.ReturnObjectBuffer(std::move(ObjBuffer));
   }
 
-  JITLinkMemoryManager &getMemoryManager() override { return *Layer.MemMgr; }
+  JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
   MemoryBufferRef getObjectBuffer() const override {
     return ObjBuffer->getMemBufferRef();
@@ -447,9 +447,13 @@ private:
 
 ObjectLinkingLayer::Plugin::~Plugin() {}
 
+ObjectLinkingLayer::ObjectLinkingLayer(ExecutionSession &ES,
+                                       JITLinkMemoryManager &MemMgr)
+    : ObjectLayer(ES), MemMgr(MemMgr) {}
+
 ObjectLinkingLayer::ObjectLinkingLayer(
     ExecutionSession &ES, std::unique_ptr<JITLinkMemoryManager> MemMgr)
-    : ObjectLayer(ES), MemMgr(std::move(MemMgr)) {}
+    : ObjectLayer(ES), MemMgr(*MemMgr), MemMgrOwnership(std::move(MemMgr)) {}
 
 ObjectLinkingLayer::~ObjectLinkingLayer() {
   if (auto Err = removeAllModules())
