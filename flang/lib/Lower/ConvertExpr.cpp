@@ -339,6 +339,9 @@ private:
   fir::ExtendedValue genval(const Fortran::evaluate::BOZLiteralConstant &) {
     TODO();
   }
+  /// Return indirection to function designated in ProcedureDesignator.
+  /// The type of the function indirection is not guaranteed to match the one
+  /// of the ProcedureDesignator due to Fortran implicit typing rules.
   fir::ExtendedValue
   genval(const Fortran::evaluate::ProcedureDesignator &proc) {
     if (const auto *intrinsic = proc.GetSpecificIntrinsic()) {
@@ -364,12 +367,7 @@ private:
       return val;
     }
     auto name = converter.mangleName(*symbol);
-    auto func = builder.getNamedFunction(name);
-    // TODO: If this is an external not called/defined in this file
-    // (e.g, it is just being passed as a dummy procedure argument)
-    // we need to create a funcOp for it with the interface we have.
-    if (!func)
-      TODO();
+    auto func = Fortran::lower::getOrDeclareFunction(name, proc, converter);
     mlir::Value funcPtr = builder.create<mlir::ConstantOp>(
         getLoc(), func.getType(), builder.getSymbolRefAttr(name));
     return funcPtr;
@@ -737,7 +735,8 @@ private:
           [&](Fortran::lower::FirOpBuilder &builder) {
             auto str = consLit();
             builder.create<fir::HasValueOp>(getLoc(), str);
-          }, builder.createLinkOnceLinkage());
+          },
+          builder.createLinkOnceLinkage());
     auto addr = builder.create<fir::AddrOfOp>(getLoc(), global.resultType(),
                                               global.getSymbol());
     auto lenp = builder.createIntegerConstant(
@@ -1361,6 +1360,13 @@ private:
       }
     }
 
+    // In older Fortran, procedure argument types are inferred. This may lead
+    // different view of what the function signature is in different locations.
+    // Casts are inserted as needed below to acomodate this.
+
+    // The mlir::FuncOp type prevails, unless it has a different number of
+    // arguments which can happen in legal program if it was passed as a dummy
+    // procedure argument earlier with no further type information.
     mlir::Value funcPointer;
     mlir::SymbolRefAttr funcSymbolAttr;
     if (const auto *sym = caller.getIfIndirectCallSymbol()) {
@@ -1368,9 +1374,18 @@ private:
       assert(funcPointer &&
              "dummy procedure or procedure pointer not in symbol map");
     } else {
-      funcSymbolAttr = builder.getSymbolRefAttr(caller.getMangledName());
+      auto funcOpType = caller.getFuncOp().getType();
+      auto callSiteType = caller.genFunctionType();
+      // Deal with argument number mismatch by making a function pointer so that
+      // function type cast can be inserted.
+      auto symbolAttr = builder.getSymbolRefAttr(caller.getMangledName());
+      if (callSiteType.getNumResults() != funcOpType.getNumResults() ||
+          callSiteType.getNumInputs() != funcOpType.getNumInputs())
+        funcPointer =
+            builder.create<mlir::ConstantOp>(getLoc(), funcOpType, symbolAttr);
+      else
+        funcSymbolAttr = symbolAttr;
     }
-
     auto funcType =
         funcPointer ? caller.genFunctionType() : caller.getFuncOp().getType();
     llvm::SmallVector<mlir::Value, 8> operands;
@@ -1381,9 +1396,9 @@ private:
     if (funcPointer)
       operands.push_back(
           builder.createConvert(getLoc(), funcType, funcPointer));
-    // In older Fortran, procedure argument types are inferenced. Deal with
-    // the potential mismatches by adding casts to the arguments when the
-    // inferenced types do not match exactly.
+
+    // Deal with potential mismatches in arguments types. Passing an array to
+    // a scalar argument should for instance be tolerated here.
     for (const auto &op : llvm::zip(caller.getInputs(), funcType.getInputs())) {
       auto cast = builder.convertWithSemantics(getLoc(), std::get<1>(op),
                                                std::get<0>(op));

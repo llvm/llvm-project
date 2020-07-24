@@ -290,6 +290,17 @@ mlir::FunctionType
 translateSignature(const Fortran::evaluate::ProcedureDesignator &,
                    Fortran::lower::AbstractConverter &);
 
+/// Declare or find the mlir::FuncOp named \p name. If the mlir::FuncOp does
+/// not exist yet, declare it with the signature translated from the
+/// ProcedureDesignator argument.
+/// Due to Fortran implicit function typing rules, the returned FuncOp is not
+/// guaranteed to have the signature from ProcedureDesignator if the FuncOp was
+/// already declared.
+mlir::FuncOp
+getOrDeclareFunction(llvm::StringRef name,
+                     const Fortran::evaluate::ProcedureDesignator &,
+                     Fortran::lower::AbstractConverter &);
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_FIRBUILDER_H
