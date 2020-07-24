@@ -380,7 +380,6 @@ endif()
 add_subdirectory(runtime)
 
 if (FLANG_INCLUDE_TESTS)
-  enable_testing()
   add_subdirectory(test)
   if (FLANG_GTEST_AVAIL)
     add_subdirectory(unittests)
