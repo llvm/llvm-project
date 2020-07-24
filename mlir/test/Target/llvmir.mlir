@@ -1252,3 +1252,17 @@ llvm.mlir.global internal constant @taker_of_address() : !llvm<"void()*"> {
   %0 = llvm.mlir.addressof @address_taken : !llvm<"void()*">
   llvm.return %0 : !llvm<"void()*">
 }
+
+// -----
+
+// Check that branch weight attributes are exported properly as metadata.
+llvm.func @cond_br_weights(%cond : !llvm.i1, %arg0 : !llvm.i32,  %arg1 : !llvm.i32) -> !llvm.i32 {
+  // CHECK: !prof ![[NODE:[0-9]+]]
+  llvm.cond_br %cond weights(dense<[5, 10]> : vector<2xi32>), ^bb1, ^bb2
+^bb1:  // pred: ^bb0
+  llvm.return %arg0 : !llvm.i32
+^bb2:  // pred: ^bb0
+  llvm.return %arg1 : !llvm.i32
+}
+
+// CHECK: ![[NODE]] = !{!"branch_weights", i32 5, i32 10}
