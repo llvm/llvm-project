@@ -485,8 +485,9 @@ struct TestTypeConverter : public TypeConverter {
   using TypeConverter::TypeConverter;
   TestTypeConverter() {
     addConversion(convertType);
-    addMaterialization(materializeCast);
-    addMaterialization(materializeOneToOneCast);
+    addArgumentMaterialization(materializeCast);
+    addArgumentMaterialization(materializeOneToOneCast);
+    addSourceMaterialization(materializeCast);
   }
 
   static LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) {
@@ -519,21 +520,20 @@ struct TestTypeConverter : public TypeConverter {
 
   /// Hook for materializing a conversion. This is necessary because we generate
   /// 1->N type mappings.
-  static Optional<Value> materializeCast(PatternRewriter &rewriter,
-                                         Type resultType, ValueRange inputs,
-                                         Location loc) {
+  static Optional<Value> materializeCast(OpBuilder &builder, Type resultType,
+                                         ValueRange inputs, Location loc) {
     if (inputs.size() == 1)
       return inputs[0];
-    return rewriter.create<TestCastOp>(loc, resultType, inputs).getResult();
+    return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
   }
 
   /// Materialize the cast for one-to-one conversion from i64 to f64.
-  static Optional<Value> materializeOneToOneCast(PatternRewriter &rewriter,
+  static Optional<Value> materializeOneToOneCast(OpBuilder &builder,
                                                  IntegerType resultType,
                                                  ValueRange inputs,
                                                  Location loc) {
     if (resultType.getWidth() == 42 && inputs.size() == 1)
-      return rewriter.create<TestCastOp>(loc, resultType, inputs).getResult();
+      return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
     return llvm::None;
   }
 };
@@ -742,6 +742,102 @@ struct TestUnknownRootOpDriver
 };
 } // end anonymous namespace
 
+//===----------------------------------------------------------------------===//
+// Test type conversions
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TestTypeConversionProducer
+    : public OpConversionPattern<TestTypeProducerOp> {
+  using OpConversionPattern<TestTypeProducerOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(TestTypeProducerOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    Type resultType = op.getType();
+    if (resultType.isa<FloatType>())
+      resultType = rewriter.getF64Type();
+    else if (resultType.isInteger(16))
+      resultType = rewriter.getIntegerType(64);
+    else
+      return failure();
+
+    rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, resultType);
+    return success();
+  }
+};
+
+struct TestTypeConversionDriver
+    : public PassWrapper<TestTypeConversionDriver, OperationPass<ModuleOp>> {
+  void runOnOperation() override {
+    // Initialize the type converter.
+    TypeConverter converter;
+
+    /// Add the legal set of type conversions.
+    converter.addConversion([](Type type) -> Type {
+      // Treat F64 as legal.
+      if (type.isF64())
+        return type;
+      // Allow converting BF16/F16/F32 to F64.
+      if (type.isBF16() || type.isF16() || type.isF32())
+        return FloatType::getF64(type.getContext());
+      // Otherwise, the type is illegal.
+      return nullptr;
+    });
+    converter.addConversion([](IntegerType type, SmallVectorImpl<Type> &) {
+      // Drop all integer types.
+      return success();
+    });
+
+    /// Add the legal set of type materializations.
+    converter.addSourceMaterialization([](OpBuilder &builder, Type resultType,
+                                          ValueRange inputs,
+                                          Location loc) -> Value {
+      // Allow casting from F64 back to F32.
+      if (!resultType.isF16() && inputs.size() == 1 &&
+          inputs[0].getType().isF64())
+        return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+      // Allow producing an i32 or i64 from nothing.
+      if ((resultType.isInteger(32) || resultType.isInteger(64)) &&
+          inputs.empty())
+        return builder.create<TestTypeProducerOp>(loc, resultType);
+      // Allow producing an i64 from an integer.
+      if (resultType.isa<IntegerType>() && inputs.size() == 1 &&
+          inputs[0].getType().isa<IntegerType>())
+        return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+      // Otherwise, fail.
+      return nullptr;
+    });
+
+    // Initialize the conversion target.
+    mlir::ConversionTarget target(getContext());
+    target.addDynamicallyLegalOp<TestTypeProducerOp>([](TestTypeProducerOp op) {
+      return op.getType().isF64() || op.getType().isInteger(64);
+    });
+    target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+      return converter.isSignatureLegal(op.getType()) &&
+             converter.isLegal(&op.getBody());
+    });
+    target.addDynamicallyLegalOp<TestCastOp>([&](TestCastOp op) {
+      // Allow casts from F64 to F32.
+      return (*op.operand_type_begin()).isF64() && op.getType().isF32();
+    });
+
+    // Initialize the set of rewrite patterns.
+    OwningRewritePatternList patterns;
+    patterns.insert<TestTypeConversionProducer>(converter, &getContext());
+    mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(),
+                                              converter);
+
+    if (failed(applyPartialConversion(getOperation(), target, patterns)))
+      signalPassFailure();
+  }
+};
+} // end anonymous namespace
+
+//===----------------------------------------------------------------------===//
+// PassRegistration
+//===----------------------------------------------------------------------===//
+
 namespace mlir {
 void registerPatternsTestPass() {
   PassRegistration<TestReturnTypeDriver>("test-return-type",
@@ -766,5 +862,9 @@ void registerPatternsTestPass() {
   PassRegistration<TestUnknownRootOpDriver>(
       "test-legalize-unknown-root-patterns",
       "Test public remapped value mechanism in ConversionPatternRewriter");
+
+  PassRegistration<TestTypeConversionDriver>(
+      "test-legalize-type-conversion",
+      "Test various type conversion functionalities in DialectConversion");
 }
 } // namespace mlir
