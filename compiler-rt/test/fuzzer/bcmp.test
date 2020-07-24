@@ -1,4 +1,4 @@
-UNSUPPORTED: freebsd
+UNSUPPORTED: freebsd, windows
 RUN: %cpp_compiler -DMEMCMP=bcmp %S/MemcmpTest.cpp -o %t
 RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s
 CHECK: BINGO
