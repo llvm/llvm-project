@@ -489,6 +489,30 @@ int64_t encodeDfmtNfmt(unsigned Dfmt, unsigned Nfmt);
 
 void decodeDfmtNfmt(unsigned Format, unsigned &Dfmt, unsigned &Nfmt);
 
+int64_t getDfmt(const StringRef Name);
+
+StringRef getDfmtName(unsigned Id);
+
+int64_t getNfmt(const StringRef Name, const MCSubtargetInfo &STI);
+
+StringRef getNfmtName(unsigned Id, const MCSubtargetInfo &STI);
+
+bool isValidDfmtNfmt(unsigned Val, const MCSubtargetInfo &STI);
+
+bool isValidNfmt(unsigned Val, const MCSubtargetInfo &STI);
+
+int64_t getUnifiedFormat(const StringRef Name);
+
+StringRef getUnifiedFormatName(unsigned Id);
+
+bool isValidUnifiedFormat(unsigned Val);
+
+int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt);
+
+bool isValidFormatEncoding(unsigned Val, const MCSubtargetInfo &STI);
+
+unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI);
+
 } // namespace MTBUFFormat
 
 namespace SendMsg {
