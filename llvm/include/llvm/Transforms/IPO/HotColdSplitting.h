@@ -16,7 +16,6 @@
 
 namespace llvm {
 
-class BasicBlock;
 class Module;
 class ProfileSummaryInfo;
 class BlockFrequencyInfo;
