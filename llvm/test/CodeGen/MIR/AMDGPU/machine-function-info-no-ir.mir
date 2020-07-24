@@ -12,6 +12,8 @@
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     true
 # FULL-NEXT: waveLimiter:     true
+# FULL-NEXT: hasSpilledSGPRs: false
+# FULL-NEXT: hasSpilledVGPRs: false
 # FULL-NEXT: scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
 # FULL-NEXT: frameOffsetReg:  '$sgpr12'
 # FULL-NEXT: stackPtrOffsetReg:  '$sgpr13'
@@ -83,6 +85,8 @@ body:             |
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
+# FULL-NEXT: hasSpilledSGPRs: false
+# FULL-NEXT: hasSpilledVGPRs: false
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
@@ -121,6 +125,8 @@ body:             |
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
+# FULL-NEXT: hasSpilledSGPRs: false
+# FULL-NEXT: hasSpilledVGPRs: false
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
@@ -160,6 +166,8 @@ body:             |
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
+# FULL-NEXT: hasSpilledSGPRs: false
+# FULL-NEXT: hasSpilledVGPRs: false
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
@@ -253,6 +261,24 @@ machineFunctionInfo:
     fp32-output-denormals: false
     fp64-fp16-input-denormals: false
     fp64-fp16-output-denormals: false
+
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+
+---
+# ALL-LABEL: name: parse_spilled_regs
+# ALL: machineFunctionInfo:
+# ALL: hasSpilledSGPRs: true
+# ALL-NEXT: hasSpilledVGPRs: true
+
+name: parse_spilled_regs
+machineFunctionInfo:
+  hasSpilledSGPRs: true
+  hasSpilledVGPRs: true
 
 body:             |
   bb.0:
