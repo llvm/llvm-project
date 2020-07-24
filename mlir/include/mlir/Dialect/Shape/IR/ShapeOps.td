@@ -326,6 +326,7 @@ def Shape_MulOp : Shape_Op<"mul", [Commutative, NoSideEffect]> {
   }];
 
   let verifier = [{ return ::verify(*this); }];
+  let hasFolder = 1;
 }
 
 def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
