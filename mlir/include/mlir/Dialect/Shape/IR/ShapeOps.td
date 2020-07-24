@@ -307,18 +307,25 @@ def Shape_JoinOp : Shape_Op<"join", [Commutative]> {
   let results = (outs Shape_ShapeOrSizeType:$result);
 }
 
-def Shape_MulOp : Shape_Op<"mul", [Commutative, SameOperandsAndResultType]> {
-  let summary = "Multiplication of sizes";
+def Shape_MulOp : Shape_Op<"mul", [Commutative, NoSideEffect]> {
+  let summary = "Multiplication of sizes and indices";
   let description = [{
-    Multiplies two valid sizes as follows:
-    - lhs * rhs = unknown if either lhs or rhs unknown;
-    - lhs * rhs = (int)lhs * (int)rhs if both known;
+    Multiplies two sizes or indices. If either operand is an error it will be
+    propagated to the result. The operands can be of type `size` or `index`. If
+    at least one of the operands can hold an error, i.e. if it is of type `size`,
+    then also the result must be of type `size`. If error propagation is not
+    possible because both operands are of type `index` then the result must also
+    be of type `index`.
   }];
 
-  let arguments = (ins Shape_SizeType:$lhs, Shape_SizeType:$rhs);
-  let results = (outs Shape_SizeType:$result);
+  let arguments = (ins Shape_SizeOrIndexType:$lhs, Shape_SizeOrIndexType:$rhs);
+  let results = (outs Shape_SizeOrIndexType:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs attr-dict";
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` type($lhs) `,` type($rhs) `->` type($result) attr-dict
+  }];
+
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
