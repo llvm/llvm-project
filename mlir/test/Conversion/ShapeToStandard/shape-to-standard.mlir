@@ -136,28 +136,25 @@ func @rank(%shape : tensor<?xindex>) -> index {
 // `shape_of` operation.
 // CHECK-LABEL: @get_extent_shape_of
 // CHECK-SAME:  (%[[ARG:.*]]: tensor<2x3xf32>, %[[IDX:.*]]: index) -> index
-func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : !shape.size)
-    -> !shape.size {
+func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : index) -> index {
   // CHECK: %[[RESULT:.*]] = dim %[[ARG]], %[[IDX]] : tensor<2x3xf32>
   // CHECK: return %[[RESULT]] : index
   %shape = shape.shape_of %arg : tensor<2x3xf32> -> tensor<?xindex>
-  %result = shape.get_extent %shape, %idx : tensor<?xindex>
-  return %result : !shape.size
+  %result = shape.get_extent %shape, %idx : tensor<?xindex>, index -> index
+  return %result : index
 }
 
 // -----
 
-// Express `get_extent` as `std.extract_element` when it relies directly on the
-// outcome of a `from_extent_tensor` operation.
+// Express `get_extent` as `std.extract_element`.
 // CHECK-LABEL: @get_extent_from_extent_tensor
 // CHECK-SAME: (%[[EXTENTS:.*]]: tensor<?xindex>, %[[IDX:.*]]: index) -> index
-func @get_extent_from_extent_tensor(%extents : tensor<?xindex>,
-                                    %idx : !shape.size) -> !shape.size {
+func @get_extent_from_extent_tensor(%extents : tensor<?xindex>, %idx : index)
+    -> index {
   // CHECK: %[[RESULT:.*]] = extract_element %[[EXTENTS]][%[[IDX]]] : tensor<?xindex>
   // CHECK: return %[[RESULT]] : index
-  %shape = shape.from_extent_tensor %extents : tensor<?xindex>
-  %result = shape.get_extent %shape, %idx : !shape.shape
-  return %result : !shape.size
+  %result = shape.get_extent %extents, %idx : tensor<?xindex>, index -> index
+  return %result : index
 }
 
 // -----
