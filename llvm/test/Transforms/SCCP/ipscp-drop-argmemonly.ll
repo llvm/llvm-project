@@ -128,3 +128,38 @@ define i32 @caller.5(i32 %n) {
   %g.val = load i32, i32* @g
   ret i32 %g.val
 }
+
+
+; Make sure callsite attributes are also dropped when a pointer argument is
+; replaced.
+define internal void @ptrarg.6.cs.attributes(i32* %arg, i32 %val) {
+; CHECK-LABEL: @ptrarg.6.cs.attributes(
+; CHECK-NEXT:    unreachable
+;
+  store i32 %val, i32* %arg
+  ret void
+}
+
+define i32 @caller.6.cs.attributes(i32 %n) {
+; CHECK-LABEL: @caller.6.cs.attributes(
+; CHECK-NEXT:    store i32 1, i32* @g, align 4
+; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[ARGMEMONLY_INACCESSIBLEMEM_OR_ARGMEMONLY_NOUNWIND:#[0-9]+]]
+; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[INACCESSIBLEMEM_OR_ARGMEMONLY_NOUNWIND:#[0-9]+]]
+; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[ARGMEMONLY_NOUNWIND:#[0-9]+]]
+; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[NOUNWIND:#[0-9]+]]
+; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @g, align 4
+; CHECK-NEXT:    ret i32 [[G_VAL]]
+;
+  store i32 1, i32* @g
+  tail call void @ptrarg.5(i32* @g, i32 10) argmemonly inaccessiblemem_or_argmemonly nounwind
+  tail call void @ptrarg.5(i32* @g, i32 10) inaccessiblemem_or_argmemonly nounwind
+  tail call void @ptrarg.5(i32* @g, i32 10) argmemonly nounwind
+  tail call void @ptrarg.5(i32* @g, i32 10) nounwind
+  %g.val = load i32, i32* @g
+  ret i32 %g.val
+}
+
+; CHECK-DAG: [[ARGMEMONLY_INACCESSIBLEMEM_OR_ARGMEMONLY_NOUNWIND]] = { argmemonly inaccessiblemem_or_argmemonly nounwind }
+; CHECK-DAG: [[INACCESSIBLEMEM_OR_ARGMEMONLY_NOUNWIND]] = { inaccessiblemem_or_argmemonly nounwind }
+; CHECK-DAG: [[ARGMEMONLY_NOUNWIND]] = { argmemonly nounwind }
+; CHECK-DAG: [[NOUNWIND]] = { nounwind }
