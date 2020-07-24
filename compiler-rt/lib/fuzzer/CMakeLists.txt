@@ -46,6 +46,8 @@ set(LIBFUZZER_HEADERS
   FuzzerUtil.h
   FuzzerValueBitMap.h)
 
+include_directories(../../include)
+
 CHECK_CXX_SOURCE_COMPILES("
   static thread_local int blah;
   int main() {
