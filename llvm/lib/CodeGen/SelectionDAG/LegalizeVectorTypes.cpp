@@ -4912,7 +4912,8 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
 
   int LdWidth = LdVT.getSizeInBits();
   int WidthDiff = WidenWidth - LdWidth;
-  // Allow wider loads.
+  // Allow wider loads if they are sufficiently aligned to avoid memory faults
+  // and if the original load is simple.
   unsigned LdAlign = (!LD->isSimple()) ? 0 : LD->getAlignment();
 
   // Find the vector type that can load from.
@@ -4964,19 +4965,6 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
                       LD->getPointerInfo().getWithOffset(Offset),
                       LD->getOriginalAlign(), MMOFlags, AAInfo);
       LdChain.push_back(L.getValue(1));
-      if (L->getValueType(0).isVector() && NewVTWidth >= LdWidth) {
-        // Later code assumes the vector loads produced will be mergeable, so we
-        // must pad the final entry up to the previous width. Scalars are
-        // combined separately.
-        SmallVector<SDValue, 16> Loads;
-        Loads.push_back(L);
-        unsigned size = L->getValueSizeInBits(0);
-        while (size < LdOp->getValueSizeInBits(0)) {
-          Loads.push_back(DAG.getUNDEF(L->getValueType(0)));
-          size += L->getValueSizeInBits(0);
-        }
-        L = DAG.getNode(ISD::CONCAT_VECTORS, dl, LdOp->getValueType(0), Loads);
-      }
     } else {
       L = DAG.getLoad(NewVT, dl, Chain, BasePtr,
                       LD->getPointerInfo().getWithOffset(Offset),
@@ -5017,8 +5005,17 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
     EVT NewLdTy = LdOps[i].getValueType();
     if (NewLdTy != LdTy) {
       // Create a larger vector.
+      unsigned NumOps = NewLdTy.getSizeInBits() / LdTy.getSizeInBits();
+      assert(NewLdTy.getSizeInBits() % LdTy.getSizeInBits() == 0);
+      SmallVector<SDValue, 16> WidenOps(NumOps);
+      unsigned j = 0;
+      for (; j != End-Idx; ++j)
+        WidenOps[j] = ConcatOps[Idx+j];
+      for (; j != NumOps; ++j)
+        WidenOps[j] = DAG.getUNDEF(LdTy);
+
       ConcatOps[End-1] = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewLdTy,
-                                     makeArrayRef(&ConcatOps[Idx], End - Idx));
+                                     WidenOps);
       Idx = End - 1;
       LdTy = NewLdTy;
     }
