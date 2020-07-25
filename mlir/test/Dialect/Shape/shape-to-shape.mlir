@@ -1,9 +1,9 @@
 // RUN: mlir-opt -shape-to-shape-lowering -split-input-file %s | FileCheck %s
 
-// CHECK-LABEL: func @num_elements_to_reduce(
-// CHECK-SAME:    [[ARG:%.*]]: !shape.shape) -> !shape.size {
+// CHECK-LABEL: func @num_elements_to_reduce
+// CHECK-SAME:  ([[ARG:%.*]]: !shape.shape) -> !shape.size
 func @num_elements_to_reduce(%shape : !shape.shape) -> !shape.size {
-  %num_elements = shape.num_elements %shape
+  %num_elements = shape.num_elements %shape : !shape.shape -> !shape.size
   return %num_elements : !shape.size
 }
 // CHECK: [[C1:%.*]] = shape.const_size 1
