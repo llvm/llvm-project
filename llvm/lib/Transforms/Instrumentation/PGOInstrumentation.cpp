@@ -1131,18 +1131,11 @@ bool PGOUseFunc::setInstrumentedCounts(
   if (NumCounters != CountFromProfile.size()) {
     return false;
   }
-  auto *FuncEntry = &*F.begin();
-
   // Set the profile count to the Instrumented BBs.
   uint32_t I = 0;
   for (BasicBlock *InstrBB : InstrumentBBs) {
     uint64_t CountValue = CountFromProfile[I++];
     UseBBInfo &Info = getBBInfo(InstrBB);
-    // If we reach here, we know that we have some nonzero count
-    // values in this function. The entry count should not be 0.
-    // Fix it if necessary.
-    if (InstrBB == FuncEntry && CountValue == 0)
-      CountValue = 1;
     Info.setBBInfoCount(CountValue);
   }
   ProfileCountSize = CountFromProfile.size();
@@ -1333,6 +1326,7 @@ void PGOUseFunc::populateCounters() {
   }
 #endif
   uint64_t FuncEntryCount = getBBInfo(&*F.begin()).CountValue;
+  F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
   uint64_t FuncMaxCount = FuncEntryCount;
   for (auto &BB : F) {
     auto BI = findBBInfo(&BB);
@@ -1340,11 +1334,6 @@ void PGOUseFunc::populateCounters() {
       continue;
     FuncMaxCount = std::max(FuncMaxCount, BI->CountValue);
   }
-
-  // Fix the obviously inconsistent entry count.
-  if (FuncMaxCount > 0 && FuncEntryCount == 0)
-    FuncEntryCount = 1;
-  F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
   markFunctionAttributes(FuncEntryCount, FuncMaxCount);
 
   // Now annotate select instructions
