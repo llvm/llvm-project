@@ -24,7 +24,6 @@ class CallInst;
 class DataLayout;
 class Instruction;
 class IRBuilderBase;
-class TargetLibraryInfo;
 class Function;
 class OptimizationRemarkEmitter;
 class BlockFrequencyInfo;
