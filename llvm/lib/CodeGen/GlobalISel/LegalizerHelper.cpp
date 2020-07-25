@@ -3469,6 +3469,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_ADD:
   case G_SUB:
   case G_MUL:
+  case G_PTR_ADD:
   case G_SMULH:
   case G_UMULH:
   case G_FADD:
