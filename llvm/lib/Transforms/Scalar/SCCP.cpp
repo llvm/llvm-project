@@ -1911,14 +1911,34 @@ bool llvm::runIPSCCP(
 
     SmallVector<BasicBlock *, 512> BlocksToErase;
 
-    if (Solver.isBlockExecutable(&F.front()))
-      for (Function::arg_iterator AI = F.arg_begin(), E = F.arg_end(); AI != E;
-           ++AI) {
-        if (!AI->use_empty() && tryToReplaceWithConstant(Solver, &*AI)) {
+    if (Solver.isBlockExecutable(&F.front())) {
+      bool ReplacedPointerArg = false;
+      for (Argument &Arg : F.args()) {
+        if (!Arg.use_empty() && tryToReplaceWithConstant(Solver, &Arg)) {
+          ReplacedPointerArg |= Arg.getType()->isPointerTy();
           ++IPNumArgsElimed;
-          continue;
         }
       }
+
+      // If we replaced an argument, the argmemonly and
+      // inaccessiblemem_or_argmemonly attributes do not hold any longer. Remove
+      // them from both the function and callsites.
+      if (ReplacedPointerArg) {
+        SmallVector<Attribute::AttrKind, 2> AttributesToRemove = {
+            Attribute::ArgMemOnly, Attribute::InaccessibleMemOrArgMemOnly};
+        for (auto Attr : AttributesToRemove)
+          F.removeFnAttr(Attr);
+
+        for (User *U : F.users()) {
+          auto *CB = dyn_cast<CallBase>(U);
+          if (!CB || CB->getCalledFunction() != &F)
+            continue;
+
+          for (auto Attr : AttributesToRemove)
+            CB->removeAttribute(AttributeList::FunctionIndex, Attr);
+        }
+      }
+    }
 
     SmallPtrSet<Value *, 32> InsertedValues;
     for (BasicBlock &BB : F) {

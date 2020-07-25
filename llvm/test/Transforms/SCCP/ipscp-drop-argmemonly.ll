@@ -11,7 +11,7 @@
 ; Here the pointer argument %arg will be replaced by a constant. We need to
 ; drop argmemonly.
 define internal void @ptrarg.1(i32* %arg, i32 %val) argmemonly nounwind {
-; CHECK: Function Attrs: argmemonly nounwind
+; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: @ptrarg.1(
 ; CHECK-NEXT:    store i32 10, i32* @g, align 4
 ; CHECK-NEXT:    ret void
@@ -59,7 +59,7 @@ define void @caller.2(i32* %ptr) {
 ; Here the pointer argument %arg will be replaced by a constant. We need to
 ; drop inaccessiblemem_or_argmemonly.
 define internal void @ptrarg.3(i32* %arg, i32 %val) inaccessiblemem_or_argmemonly nounwind {
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nounwind
+; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: @ptrarg.3(
 ; CHECK-NEXT:    store i32 10, i32* @g, align 4
 ; CHECK-NEXT:    ret void
@@ -107,7 +107,7 @@ define void @caller.4(i32* %ptr) {
 ; Here the pointer argument %arg will be replaced by a constant. We need to
 ; drop inaccessiblemem_or_argmemonly.
 define internal void @ptrarg.5(i32* %arg, i32 %val) argmemonly inaccessiblemem_or_argmemonly nounwind {
-; CHECK: Function Attrs: argmemonly inaccessiblemem_or_argmemonly nounwind
+; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: @ptrarg.5(
 ; CHECK-NEXT:    store i32 10, i32* @g, align 4
 ; CHECK-NEXT:    ret void
@@ -143,9 +143,9 @@ define internal void @ptrarg.6.cs.attributes(i32* %arg, i32 %val) {
 define i32 @caller.6.cs.attributes(i32 %n) {
 ; CHECK-LABEL: @caller.6.cs.attributes(
 ; CHECK-NEXT:    store i32 1, i32* @g, align 4
-; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[ARGMEMONLY_INACCESSIBLEMEM_OR_ARGMEMONLY_NOUNWIND:#[0-9]+]]
-; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[INACCESSIBLEMEM_OR_ARGMEMONLY_NOUNWIND:#[0-9]+]]
-; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[ARGMEMONLY_NOUNWIND:#[0-9]+]]
+; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[NOUNWIND:#[0-9]+]]
+; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[NOUNWIND:#[0-9]+]]
+; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[NOUNWIND:#[0-9]+]]
 ; CHECK-NEXT:    tail call void @ptrarg.5(i32* @g, i32 10) [[NOUNWIND:#[0-9]+]]
 ; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @g, align 4
 ; CHECK-NEXT:    ret i32 [[G_VAL]]
@@ -159,7 +159,4 @@ define i32 @caller.6.cs.attributes(i32 %n) {
   ret i32 %g.val
 }
 
-; CHECK-DAG: [[ARGMEMONLY_INACCESSIBLEMEM_OR_ARGMEMONLY_NOUNWIND]] = { argmemonly inaccessiblemem_or_argmemonly nounwind }
-; CHECK-DAG: [[INACCESSIBLEMEM_OR_ARGMEMONLY_NOUNWIND]] = { inaccessiblemem_or_argmemonly nounwind }
-; CHECK-DAG: [[ARGMEMONLY_NOUNWIND]] = { argmemonly nounwind }
-; CHECK-DAG: [[NOUNWIND]] = { nounwind }
+; CHECK: [[NOUNWIND]] = { nounwind }
