@@ -35346,6 +35346,9 @@ static SDValue combineX86ShufflesRecursively(
   assert(RootMask.size() > 0 &&
          (RootMask.size() > 1 || (RootMask[0] == 0 && SrcOpIndex == 0)) &&
          "Illegal shuffle root mask");
+  assert(Root.getSimpleValueType().isVector() &&
+         "Shuffles operate on vector types!");
+  unsigned RootSizeInBits = Root.getSimpleValueType().getSizeInBits();
 
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
@@ -35361,9 +35364,6 @@ static SDValue combineX86ShufflesRecursively(
   if (!VT.isVector())
     return SDValue(); // Bail if we hit a non-vector.
 
-  assert(Root.getSimpleValueType().isVector() &&
-         "Shuffles operate on vector types!");
-  unsigned RootSizeInBits = Root.getSimpleValueType().getSizeInBits();
   assert(VT.getSizeInBits() == RootSizeInBits &&
          "Can only combine shuffles of the same vector register size.");
 
