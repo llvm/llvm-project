@@ -811,6 +811,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
     if (Subtarget.isISA3_1()) {
       setOperationAction(ISD::MUL, MVT::v2i64, Legal);
+      setOperationAction(ISD::MULHS, MVT::v2i64, Legal);
+      setOperationAction(ISD::MULHU, MVT::v2i64, Legal);
+      setOperationAction(ISD::MULHS, MVT::v4i32, Legal);
+      setOperationAction(ISD::MULHU, MVT::v4i32, Legal);
       setOperationAction(ISD::UDIV, MVT::v2i64, Legal);
       setOperationAction(ISD::SDIV, MVT::v2i64, Legal);
       setOperationAction(ISD::UDIV, MVT::v4i32, Legal);

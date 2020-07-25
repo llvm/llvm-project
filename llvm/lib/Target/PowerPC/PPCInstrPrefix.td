@@ -976,13 +976,17 @@ let Predicates = [IsISA3_1] in {
                         "vmulld $vD, $vA, $vB", IIC_VecGeneral,
                         [(set v2i64:$vD, (mul v2i64:$vA, v2i64:$vB))]>;
   def VMULHSW : VXForm_1<905, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmulhsw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmulhsw $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v4i32:$vD, (mulhs v4i32:$vA, v4i32:$vB))]>;
   def VMULHUW : VXForm_1<649, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmulhuw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmulhuw $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v4i32:$vD, (mulhu v4i32:$vA, v4i32:$vB))]>;
   def VMULHSD : VXForm_1<969, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmulhsd $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmulhsd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD, (mulhs v2i64:$vA, v2i64:$vB))]>;
   def VMULHUD : VXForm_1<713, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmulhud $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmulhud $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD, (mulhu v2i64:$vA, v2i64:$vB))]>;
   def VMODSW : VXForm_1<1931, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                         "vmodsw $vD, $vA, $vB", IIC_VecGeneral,
                         [(set v4i32:$vD, (srem v4i32:$vA, v4i32:$vB))]>;
