@@ -14,7 +14,7 @@ namespace orc {
 Expected<std::unique_ptr<TPCDynamicLibrarySearchGenerator>>
 TPCDynamicLibrarySearchGenerator::Load(TargetProcessControl &TPC,
                                        const char *LibraryPath) {
-  auto Handle = TPC.loadLibrary(LibraryPath);
+  auto Handle = TPC.loadDylib(LibraryPath);
   if (!Handle)
     return Handle.takeError();
 
@@ -30,7 +30,7 @@ Error TPCDynamicLibrarySearchGenerator::tryToGenerate(
 
   SymbolMap NewSymbols;
 
-  TargetProcessControl::LookupRequestElement Request(DylibHandle, Symbols);
+  TargetProcessControl::LookupRequestElement Request(H, Symbols);
   auto Result = TPC.lookupSymbols(Request);
   if (!Result)
     return Result.takeError();
