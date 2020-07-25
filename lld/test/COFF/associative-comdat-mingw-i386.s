@@ -30,7 +30,7 @@ _main:
         .scl            2;
         .type           32;
         .endef
-        .section        .text$foo,"xr",discard,foo
+        .section        .text$foo,"xr",discard,_foo
         .globl          _foo
         .p2align        4
 _foo:
