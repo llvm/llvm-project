@@ -551,8 +551,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({{PrivatePtr, S32}});
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
-    .unsupportedFor({PrivatePtr})
-    .custom();
+    .customIf(typeIsNot(0, PrivatePtr));
+
   setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
   auto &FPOpActions = getActionDefinitionsBuilder(
