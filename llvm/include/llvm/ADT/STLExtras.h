@@ -1535,6 +1535,13 @@ OutputIt copy(R &&Range, OutputIt Out) {
   return std::copy(adl_begin(Range), adl_end(Range), Out);
 }
 
+/// Provide wrappers to std::move which take ranges instead of having to
+/// pass begin/end explicitly.
+template <typename R, typename OutputIt>
+OutputIt move(R &&Range, OutputIt Out) {
+  return std::move(adl_begin(Range), adl_end(Range), Out);
+}
+
 /// Wrapper function around std::find to detect if an element exists
 /// in a container.
 template <typename R, typename E>
