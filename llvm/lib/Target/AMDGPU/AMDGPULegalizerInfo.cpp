@@ -733,10 +733,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
   }
 
-  // FIXME: Clamp offset operand.
   getActionDefinitionsBuilder(G_PTR_ADD)
-    .legalIf(isPointer(0))
-    .scalarize(0);
+    .legalIf(all(isPointer(0), sameSize(0, 1)))
+    .scalarize(0)
+    .scalarSameSizeAs(1, 0);
 
   getActionDefinitionsBuilder(G_PTRMASK)
     .legalIf(all(sameSize(0, 1), typeInSet(1, {S64, S32})))
