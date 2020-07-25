@@ -120,3 +120,11 @@ func @mul_error_possible(%lhs : !shape.size, %rhs : index) -> index {
   return %result : index
 }
 
+// -----
+
+func @num_elements_error_possible(%arg : !shape.shape) -> index {
+  // expected-error@+1 {{if at least one of the operands can hold error values then the result must be of type `size` to propagate them}}
+  %result = shape.num_elements %arg : !shape.shape -> index
+  return %result : index
+}
+
