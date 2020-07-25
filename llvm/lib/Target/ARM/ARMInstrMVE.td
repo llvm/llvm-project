@@ -3773,7 +3773,14 @@ multiclass MVE_VABD_fp_m<MVEVectorVTInfo VTI>
   : MVE_VABDT_fp_m<VTI, int_arm_mve_vabd, int_arm_mve_abd_predicated>;
 
 defm MVE_VABDf32 : MVE_VABD_fp_m<MVE_v4f32>;
-defm MVE_VABDf16 : MVE_VABD_fp_m<MVE_v8f16>;
+defm MVE_VABDf16 : MVE_VABD_fp_m<MVE_v8f16>; 
+
+let Predicates = [HasMVEFloat] in {
+  def : Pat<(v8f16 (fabs (fsub (v8f16 MQPR:$Qm), (v8f16 MQPR:$Qn)))),
+        (MVE_VABDf16 MQPR:$Qm, MQPR:$Qn)>;
+  def : Pat<(v4f32 (fabs (fsub (v4f32 MQPR:$Qm), (v4f32 MQPR:$Qn)))),
+        (MVE_VABDf32 MQPR:$Qm, MQPR:$Qn)>;
+}
 
 class MVE_VCVT_fix<string suffix, bit fsi, bit U, bit op,
                    Operand imm_operand_type>

@@ -70,6 +70,23 @@
 
 namespace llvm {
 
+namespace detail {
+template <typename Range>
+auto reverse_if_helper(Range &&R, std::integral_constant<bool, false>) {
+  return std::forward<Range>(R);
+}
+
+template <typename Range>
+auto reverse_if_helper(Range &&R, std::integral_constant<bool, true>) {
+  return llvm::reverse(std::forward<Range>(R));
+}
+
+template <bool B, typename Range> auto reverse_if(Range &&R) {
+  return reverse_if_helper(std::forward<Range>(R),
+                           std::integral_constant<bool, B>{});
+}
+} // namespace detail
+
 // GraphDiff defines a CFG snapshot: given a set of Update<NodePtr>, provide
 // utilities to skip edges marked as deleted and return a set of edges marked as
 // newly inserted. The current diff treats the CFG as a graph rather than a
@@ -113,8 +130,7 @@ public:
   GraphDiff() : UpdatedAreReverseApplied(false) {}
   GraphDiff(ArrayRef<cfg::Update<NodePtr>> Updates,
             bool ReverseApplyUpdates = false) {
-    cfg::LegalizeUpdates<NodePtr>(Updates, LegalizedUpdates, InverseGraph,
-                                  /*ReverseResultOrder=*/true);
+    cfg::LegalizeUpdates<NodePtr>(Updates, LegalizedUpdates, InverseGraph);
     // The legalized updates are stored in reverse so we can pop_back when doing
     // incremental updates.
     for (auto U : LegalizedUpdates) {
@@ -174,6 +190,25 @@ public:
     return make_range(It->second.begin(), It->second.end());
   }
 
+  using VectRet = SmallVector<NodePtr, 8>;
+
+  template <bool InverseEdge> VectRet getChildren(NodePtr N) const {
+    using DirectedNodeT =
+        std::conditional_t<InverseEdge, Inverse<NodePtr>, NodePtr>;
+    auto R = children<DirectedNodeT>(N);
+    auto CurrentCFGChildren = detail::reverse_if<!InverseEdge>(R);
+
+    VectRet UpdatedCFGChildren;
+    for (auto Child : CurrentCFGChildren)
+      if (Child && !ignoreChild(N, Child, InverseEdge))
+        UpdatedCFGChildren.push_back(Child);
+
+    auto AddedCFGChildren = getAddedChildren(N, InverseEdge);
+    UpdatedCFGChildren.insert(UpdatedCFGChildren.end(),
+                              AddedCFGChildren.begin(), AddedCFGChildren.end());
+    return UpdatedCFGChildren;
+  }
+
   void print(raw_ostream &OS) const {
     OS << "===== GraphDiff: CFG edge changes to create a CFG snapshot. \n"
           "===== (Note: notion of children/inverse_children depends on "
@@ -210,9 +245,10 @@ struct CFGViewChildren {
 
     // filter iterator init:
     auto R = make_range(GT::child_begin(N.second), GT::child_end(N.second));
+    auto RR = detail::reverse_if<!InverseEdge>(R);
     // This lambda is copied into the iterators and persists to callers, ensure
     // captures are by value or otherwise have sufficient lifetime.
-    auto First = make_filter_range(makeChildRange(R, N.first), [N](NodeRef C) {
+    auto First = make_filter_range(makeChildRange(RR, N.first), [N](NodeRef C) {
       return !C.first->ignoreChild(N.second, C.second, InverseEdge);
     });
 

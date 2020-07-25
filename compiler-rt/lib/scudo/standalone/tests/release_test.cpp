@@ -21,14 +21,14 @@
 TEST(ScudoReleaseTest, PackedCounterArray) {
   for (scudo::uptr I = 0; I < SCUDO_WORDSIZE; I++) {
     // Various valid counter's max values packed into one word.
-    scudo::PackedCounterArray Counters2N(1, 1UL << I);
+    scudo::PackedCounterArray Counters2N(1U, 1U, 1UL << I);
     EXPECT_EQ(sizeof(scudo::uptr), Counters2N.getBufferSize());
     // Check the "all bit set" values too.
-    scudo::PackedCounterArray Counters2N1_1(1, ~0UL >> I);
+    scudo::PackedCounterArray Counters2N1_1(1U, 1U, ~0UL >> I);
     EXPECT_EQ(sizeof(scudo::uptr), Counters2N1_1.getBufferSize());
     // Verify the packing ratio, the counter is Expected to be packed into the
     // closest power of 2 bits.
-    scudo::PackedCounterArray Counters(SCUDO_WORDSIZE, 1UL << I);
+    scudo::PackedCounterArray Counters(1U, SCUDO_WORDSIZE, 1UL << I);
     EXPECT_EQ(sizeof(scudo::uptr) * scudo::roundUpToPowerOfTwo(I + 1),
               Counters.getBufferSize());
   }
@@ -38,19 +38,20 @@ TEST(ScudoReleaseTest, PackedCounterArray) {
     // Make sure counters request one memory page for the buffer.
     const scudo::uptr NumCounters =
         (scudo::getPageSizeCached() / 8) * (SCUDO_WORDSIZE >> I);
-    scudo::PackedCounterArray Counters(NumCounters, 1UL << ((1UL << I) - 1));
-    Counters.inc(0);
+    scudo::PackedCounterArray Counters(1U, NumCounters,
+                                       1UL << ((1UL << I) - 1));
+    Counters.inc(0U, 0U);
     for (scudo::uptr C = 1; C < NumCounters - 1; C++) {
-      EXPECT_EQ(0UL, Counters.get(C));
-      Counters.inc(C);
-      EXPECT_EQ(1UL, Counters.get(C - 1));
+      EXPECT_EQ(0UL, Counters.get(0U, C));
+      Counters.inc(0U, C);
+      EXPECT_EQ(1UL, Counters.get(0U, C - 1));
     }
-    EXPECT_EQ(0UL, Counters.get(NumCounters - 1));
-    Counters.inc(NumCounters - 1);
+    EXPECT_EQ(0UL, Counters.get(0U, NumCounters - 1));
+    Counters.inc(0U, NumCounters - 1);
     if (I > 0) {
-      Counters.incRange(0, NumCounters - 1);
+      Counters.incRange(0u, 0U, NumCounters - 1);
       for (scudo::uptr C = 0; C < NumCounters; C++)
-        EXPECT_EQ(2UL, Counters.get(C));
+        EXPECT_EQ(2UL, Counters.get(0U, C));
     }
   }
 }
@@ -190,7 +191,7 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
 
     // Release the memory.
     ReleasedPagesRecorder Recorder;
-    releaseFreeMemoryToOS(FreeList, 0, MaxBlocks * BlockSize, BlockSize,
+    releaseFreeMemoryToOS(FreeList, 0, MaxBlocks * BlockSize, 1U, BlockSize,
                           &Recorder);
 
     // Verify that there are no released pages touched by used chunks and all

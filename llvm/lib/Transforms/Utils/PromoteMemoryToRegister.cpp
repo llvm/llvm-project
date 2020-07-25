@@ -62,10 +62,6 @@ STATISTIC(NumDeadAlloca,    "Number of dead alloca's removed");
 STATISTIC(NumPHIInsert,     "Number of PHI nodes inserted");
 
 bool llvm::isAllocaPromotable(const AllocaInst *AI) {
-  // FIXME: If the memory unit is of pointer or integer type, we can permit
-  // assignments to subsections of the memory unit.
-  unsigned AS = AI->getType()->getAddressSpace();
-
   // Only allow direct and non-volatile loads and stores...
   for (const User *U : AI->users()) {
     if (const LoadInst *LI = dyn_cast<LoadInst>(U)) {
@@ -81,19 +77,18 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
       if (SI->isVolatile())
         return false;
     } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
-      if (!II->isLifetimeStartOrEnd())
+      if (!II->isLifetimeStartOrEnd() && !II->isDroppable())
         return false;
     } else if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
-      if (BCI->getType() != Type::getInt8PtrTy(U->getContext(), AS))
-        return false;
-      if (!onlyUsedByLifetimeMarkers(BCI))
+      if (!onlyUsedByLifetimeMarkersOrDroppableInsts(BCI))
         return false;
     } else if (const GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U)) {
-      if (GEPI->getType() != Type::getInt8PtrTy(U->getContext(), AS))
-        return false;
       if (!GEPI->hasAllZeroIndices())
         return false;
-      if (!onlyUsedByLifetimeMarkers(GEPI))
+      if (!onlyUsedByLifetimeMarkersOrDroppableInsts(GEPI))
+        return false;
+    } else if (const AddrSpaceCastInst *ASCI = dyn_cast<AddrSpaceCastInst>(U)) {
+      if (!onlyUsedByLifetimeMarkers(ASCI))
         return false;
     } else {
       return false;
@@ -312,15 +307,37 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
   AC->registerAssumption(CI);
 }
 
-static void removeLifetimeIntrinsicUsers(AllocaInst *AI) {
+static void removeIntrinsicUsers(AllocaInst *AI) {
   // Knowing that this alloca is promotable, we know that it's safe to kill all
   // instructions except for load and store.
+
+  // Helper to drop the uses of \p I in \p UserI.
+  auto DropUsesIn = [](Instruction *UserI, Instruction *I,
+                       Instruction::user_iterator &UI,
+                       const Instruction::user_iterator &UE) {
+    // TODO For now we forget assumed information, this can be improved.
+    assert(isa<IntrinsicInst>(UserI) &&
+           cast<IntrinsicInst>(UserI)->getIntrinsicID() == Intrinsic::assume &&
+           "Expected assume");
+
+    // Skip ahead if User has multiple uses of I.
+    while (UI != UE && *UI == UserI)
+      ++UI;
+
+    I->dropDroppableUsesByUser(*UserI);
+  };
 
   for (auto UI = AI->user_begin(), UE = AI->user_end(); UI != UE;) {
     Instruction *I = cast<Instruction>(*UI);
     ++UI;
     if (isa<LoadInst>(I) || isa<StoreInst>(I))
       continue;
+
+    // Drop the use of AI in droppable instructions.
+    if (I->isDroppable()) {
+      DropUsesIn(I, AI, UI, UE);
+      continue;
+    }
 
     if (!I->getType()->isVoidTy()) {
       // The only users of this bitcast/GEP instruction are lifetime intrinsics.
@@ -329,6 +346,12 @@ static void removeLifetimeIntrinsicUsers(AllocaInst *AI) {
       for (auto UUI = I->user_begin(), UUE = I->user_end(); UUI != UUE;) {
         Instruction *Inst = cast<Instruction>(*UUI);
         ++UUI;
+
+        // Drop the use of I in droppable instructions.
+        if (Inst->isDroppable()) {
+          DropUsesIn(Inst, I, UUI, UUE);
+          continue;
+        }
         Inst->eraseFromParent();
       }
     }
@@ -544,7 +567,7 @@ void PromoteMem2Reg::run() {
     assert(AI->getParent()->getParent() == &F &&
            "All allocas should be in the same function, which is same as DF!");
 
-    removeLifetimeIntrinsicUsers(AI);
+    removeIntrinsicUsers(AI);
 
     if (AI->use_empty()) {
       // If there are no uses of the alloca, just delete it now.

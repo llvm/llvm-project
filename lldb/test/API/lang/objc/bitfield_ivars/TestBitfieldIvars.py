@@ -14,9 +14,8 @@ class TestBitfieldIvars(TestBase):
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.m"))
 
         self.expect_expr("chb->hb->field1", result_type="unsigned int", result_value="0")
-
-        ## FIXME field2 should have a value of 1
-        self.expect("expr chb->hb->field2", matching=False, substrs = ["= 1"]) # this must happen second
+        ## This should happen second
+        self.expect_expr("chb->hb->field2", result_type="unsigned int", result_value="1")
 
         self.expect_expr("hb2->field1", result_type="unsigned int", result_value="10")
         self.expect_expr("hb2->field2", result_type="unsigned int", result_value="3")

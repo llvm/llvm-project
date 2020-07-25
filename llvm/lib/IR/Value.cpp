@@ -192,6 +192,10 @@ void Value::dropDroppableUses(
   }
 }
 
+void Value::dropDroppableUsesByUser(const User &Usr) {
+  dropDroppableUses([&](const Use *U) { return U->getUser() == &Usr; });
+}
+
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
   // This can be computed either by scanning the instructions in BB, or by
   // scanning the use list of this Value. Both lists can be very long, but

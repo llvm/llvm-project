@@ -537,3 +537,7 @@ D: PowerPC Backend Developer
 N: Djordje Todorovic
 E: djordje.todorovic@rt-rk.com
 D: Debug Information
+
+N: Biplob Mishra
+E: biplmish@in.ibm.com
+D: PowerPC Analysis

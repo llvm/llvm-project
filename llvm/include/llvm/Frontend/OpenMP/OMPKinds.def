@@ -10,100 +10,12 @@
 /// This file defines the list of supported OpenMP directives, clauses, runtime
 /// calls, and other things that need to be listed in enums.
 ///
+/// This file is under transition to OMP.td with TableGen code generation.
+///
 //===----------------------------------------------------------------------===//
 
 /// OpenMP Directives and combined directives
-///
-///{
-
-#ifndef OMP_DIRECTIVE
-#define OMP_DIRECTIVE(Enum, Str)
-#endif
-
-#define __OMP_DIRECTIVE_EXT(Name, Str) OMP_DIRECTIVE(OMPD_##Name, Str)
-#define __OMP_DIRECTIVE(Name) __OMP_DIRECTIVE_EXT(Name, #Name)
-
-__OMP_DIRECTIVE(threadprivate)
-__OMP_DIRECTIVE(parallel)
-__OMP_DIRECTIVE(task)
-__OMP_DIRECTIVE(simd)
-__OMP_DIRECTIVE(for)
-__OMP_DIRECTIVE(sections)
-__OMP_DIRECTIVE(section)
-__OMP_DIRECTIVE(single)
-__OMP_DIRECTIVE(master)
-__OMP_DIRECTIVE(critical)
-__OMP_DIRECTIVE(taskyield)
-__OMP_DIRECTIVE(barrier)
-__OMP_DIRECTIVE(taskwait)
-__OMP_DIRECTIVE(taskgroup)
-__OMP_DIRECTIVE(flush)
-__OMP_DIRECTIVE(ordered)
-__OMP_DIRECTIVE(atomic)
-__OMP_DIRECTIVE(target)
-__OMP_DIRECTIVE(teams)
-__OMP_DIRECTIVE(cancel)
-__OMP_DIRECTIVE(requires)
-__OMP_DIRECTIVE_EXT(target_data, "target data")
-__OMP_DIRECTIVE_EXT(target_enter_data, "target enter data")
-__OMP_DIRECTIVE_EXT(target_exit_data, "target exit data")
-__OMP_DIRECTIVE_EXT(target_parallel, "target parallel")
-__OMP_DIRECTIVE_EXT(target_parallel_for, "target parallel for")
-__OMP_DIRECTIVE_EXT(target_update, "target update")
-__OMP_DIRECTIVE_EXT(parallel_for, "parallel for")
-__OMP_DIRECTIVE_EXT(parallel_for_simd, "parallel for simd")
-__OMP_DIRECTIVE_EXT(parallel_master, "parallel master")
-__OMP_DIRECTIVE_EXT(parallel_sections, "parallel sections")
-__OMP_DIRECTIVE_EXT(for_simd, "for simd")
-__OMP_DIRECTIVE_EXT(cancellation_point, "cancellation point")
-__OMP_DIRECTIVE_EXT(declare_reduction, "declare reduction")
-__OMP_DIRECTIVE_EXT(declare_mapper, "declare mapper")
-__OMP_DIRECTIVE_EXT(declare_simd, "declare simd")
-__OMP_DIRECTIVE(taskloop)
-__OMP_DIRECTIVE_EXT(taskloop_simd, "taskloop simd")
-__OMP_DIRECTIVE(distribute)
-__OMP_DIRECTIVE_EXT(declare_target, "declare target")
-__OMP_DIRECTIVE_EXT(end_declare_target, "end declare target")
-__OMP_DIRECTIVE_EXT(distribute_parallel_for, "distribute parallel for")
-__OMP_DIRECTIVE_EXT(distribute_parallel_for_simd,
-                    "distribute parallel for simd")
-__OMP_DIRECTIVE_EXT(distribute_simd, "distribute simd")
-__OMP_DIRECTIVE_EXT(target_parallel_for_simd, "target parallel for simd")
-__OMP_DIRECTIVE_EXT(target_simd, "target simd")
-__OMP_DIRECTIVE_EXT(teams_distribute, "teams distribute")
-__OMP_DIRECTIVE_EXT(teams_distribute_simd, "teams distribute simd")
-__OMP_DIRECTIVE_EXT(teams_distribute_parallel_for_simd,
-                    "teams distribute parallel for simd")
-__OMP_DIRECTIVE_EXT(teams_distribute_parallel_for,
-                    "teams distribute parallel for")
-__OMP_DIRECTIVE_EXT(target_teams, "target teams")
-__OMP_DIRECTIVE_EXT(target_teams_distribute, "target teams distribute")
-__OMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for,
-                    "target teams distribute parallel for")
-__OMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for_simd,
-                    "target teams distribute parallel for simd")
-__OMP_DIRECTIVE_EXT(target_teams_distribute_simd,
-                    "target teams distribute simd")
-__OMP_DIRECTIVE(allocate)
-__OMP_DIRECTIVE_EXT(declare_variant, "declare variant")
-__OMP_DIRECTIVE_EXT(master_taskloop, "master taskloop")
-__OMP_DIRECTIVE_EXT(parallel_master_taskloop, "parallel master taskloop")
-__OMP_DIRECTIVE_EXT(master_taskloop_simd, "master taskloop simd")
-__OMP_DIRECTIVE_EXT(parallel_master_taskloop_simd,
-                    "parallel master taskloop simd")
-__OMP_DIRECTIVE(depobj)
-__OMP_DIRECTIVE(scan)
-__OMP_DIRECTIVE_EXT(begin_declare_variant, "begin declare variant")
-__OMP_DIRECTIVE_EXT(end_declare_variant, "end declare variant")
-
-// Has to be the last because Clang implicitly expects it to be.
-__OMP_DIRECTIVE(unknown)
-
-#undef __OMP_DIRECTIVE_EXT
-#undef __OMP_DIRECTIVE
-#undef OMP_DIRECTIVE
-
-///}
+/// - Moved to OMP.td
 
 /// OpenMP Clauses
 ///

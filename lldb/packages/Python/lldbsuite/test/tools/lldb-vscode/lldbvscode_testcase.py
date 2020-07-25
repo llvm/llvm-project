@@ -53,11 +53,12 @@ class VSCodeTestCaseBase(TestBase):
             breakpoint_ids.append('%i' % (breakpoint['id']))
         return breakpoint_ids
 
-    def waitUntil(self, condition):
-        while True:
-            if condition():
-                break
+    def waitUntil(self, condition_callback):
+        for _ in range(20):
+            if condition_callback():
+                return True
             time.sleep(0.5)
+        return False
 
     def verify_breakpoint_hit(self, breakpoint_ids):
         '''Wait for the process we are debugging to stop, and verify we hit
