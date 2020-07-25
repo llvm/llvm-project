@@ -458,6 +458,10 @@
 
 // RUN: %clang -target x86_64-apple-darwin -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-DARWIN
 // CHECK-TSAN-X86-64-DARWIN-NOT: unsupported option
+// RUN: %clang -target x86_64-apple-macos -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-MACOS
+// CHECK-TSAN-X86-64-MACOS-NOT: unsupported option
+// RUN: %clang -target arm64-apple-macos -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ARM64-MACOS
+// CHECK-TSAN-ARM64-MACOS-NOT: unsupported option
 
 // RUN: %clang -target x86_64-apple-iossimulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-IOSSIMULATOR
 // CHECK-TSAN-X86-64-IOSSIMULATOR-NOT: unsupported option
