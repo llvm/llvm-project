@@ -217,7 +217,7 @@ func @num_elements() -> !shape.size {
   // CHECK-NOT: shape.const_shape
   %shape = shape.const_shape [4, 5, 6] : !shape.shape
   // CHECK-NOT: shape.num_elements
-  %num_elements = shape.num_elements %shape : !shape.shape -> !shape.size
+  %num_elements = shape.num_elements %shape
   // CHECK: %[[NUM:.*]] = shape.const_size 120
   // CHECK-NEXT: return %[[NUM]] : !shape.size
   return %num_elements : !shape.size
@@ -229,7 +229,7 @@ func @num_elements() -> !shape.size {
 // CHECK-LABEL: func @nonfoldable_num_elements
 func @nonfoldable_num_elements(%shape : !shape.shape) -> !shape.size {
   // CHECK-NOT: shape.const_{{.*}}
-  %num_elements = shape.num_elements %shape : !shape.shape -> !shape.size
+  %num_elements = shape.num_elements %shape
   return %num_elements : !shape.size
 }
 

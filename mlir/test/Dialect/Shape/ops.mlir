@@ -195,14 +195,3 @@ func @any() {
   return
 }
 
-func @num_elements_extent_tensor(%arg : tensor<?xindex>) -> index {
-  %result = shape.num_elements %arg : tensor<?xindex> -> index
-  return %result : index
-}
-
-func @num_elements_shape(%arg : !shape.shape) -> !shape.size {
-  %result = shape.num_elements %arg : !shape.shape -> !shape.size
-  return %result : !shape.size
-}
-
-
