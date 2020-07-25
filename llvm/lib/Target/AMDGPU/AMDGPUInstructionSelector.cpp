@@ -1952,7 +1952,7 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
     const APInt &Imm = ImmOp.getFPImm()->getValueAPF().bitcastToAPInt();
     ImmOp.ChangeToImmediate(Imm.getZExtValue());
   } else if (ImmOp.isCImm()) {
-    ImmOp.ChangeToImmediate(ImmOp.getCImm()->getZExtValue());
+    ImmOp.ChangeToImmediate(ImmOp.getCImm()->getSExtValue());
   }
 
   Register DstReg = I.getOperand(0).getReg();
