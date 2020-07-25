@@ -42,11 +42,11 @@ SelfTargetProcessControl::Create() {
   return std::make_unique<SelfTargetProcessControl>(std::move(TT), *PageSize);
 }
 
-Expected<TargetProcessControl::DynamicLibraryHandle>
-SelfTargetProcessControl::loadLibrary(const char *LibraryPath) {
+Expected<TargetProcessControl::DylibHandle>
+SelfTargetProcessControl::loadDylib(const char *DylibPath) {
   std::string ErrMsg;
   auto Dylib = std::make_unique<sys::DynamicLibrary>(
-      sys::DynamicLibrary::getPermanentLibrary(LibraryPath, &ErrMsg));
+      sys::DynamicLibrary::getPermanentLibrary(DylibPath, &ErrMsg));
   if (!Dylib->isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
   DynamicLibraries.push_back(std::move(Dylib));
