@@ -1389,9 +1389,9 @@ def HWREG {
 }
 
 class getHwRegImm<int Reg, int Offset = 0, int Size = 32> {
-  int ret = !or(Reg,
-                !or(!shl(Offset, 6),
-                    !shl(!add(Size, -1), 11)));
+  int ret = !and(!or(Reg,
+                  !or(!shl(Offset, 6),
+                      !shl(!add(Size, -1), 11))), 65535);
 }
 
 //===----------------------------------------------------------------------===//
