@@ -22,13 +22,20 @@ class DylibFile;
 class InputSection;
 class Symbol;
 
+/*
+ * Note that the SymbolTable handles name collisions by calling
+ * replaceSymbol(), which does an in-place update of the Symbol via `placement
+ * new`. Therefore, there is no need to update any relocations that hold
+ * pointers the "old" Symbol -- they will automatically point to the new one.
+ */
 class SymbolTable {
 public:
-  Symbol *addDefined(StringRef name, InputSection *isec, uint32_t value);
+  Symbol *addDefined(StringRef name, InputSection *isec, uint32_t value,
+                     bool isWeakDef);
 
   Symbol *addUndefined(StringRef name);
 
-  Symbol *addDylib(StringRef name, DylibFile *file);
+  Symbol *addDylib(StringRef name, DylibFile *file, bool isWeakDef);
 
   Symbol *addLazy(StringRef name, ArchiveFile *file,
                   const llvm::object::Archive::Symbol &sym);

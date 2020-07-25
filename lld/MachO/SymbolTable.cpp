@@ -37,15 +37,23 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
 }
 
 Symbol *SymbolTable::addDefined(StringRef name, InputSection *isec,
-                                uint32_t value) {
+                                uint32_t value, bool isWeakDef) {
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
 
-  if (!wasInserted && isa<Defined>(s))
-    error("duplicate symbol: " + name);
+  if (!wasInserted) {
+    if (auto *defined = dyn_cast<Defined>(s)) {
+      if (isWeakDef)
+        return s;
+      if (!defined->isWeakDef())
+        error("duplicate symbol: " + name);
+    }
+    // Defined symbols take priority over other types of symbols, so in case
+    // of a name conflict, we fall through to the replaceSymbol() call below.
+  }
 
-  replaceSymbol<Defined>(s, name, isec, value);
+  replaceSymbol<Defined>(s, name, isec, value, isWeakDef);
   return s;
 }
 
@@ -61,13 +69,15 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
   return s;
 }
 
-Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file) {
+Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef) {
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
 
-  if (wasInserted || isa<Undefined>(s))
-    replaceSymbol<DylibSymbol>(s, file, name);
+  if (wasInserted || isa<Undefined>(s) ||
+      (isa<DylibSymbol>(s) && !isWeakDef && s->isWeakDef()))
+    replaceSymbol<DylibSymbol>(s, file, name, isWeakDef);
+
   return s;
 }
 
@@ -79,7 +89,7 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
 
   if (wasInserted)
     replaceSymbol<LazySymbol>(s, file, sym);
-  else if (isa<Undefined>(s))
+  else if (isa<Undefined>(s) || (isa<DylibSymbol>(s) && s->isWeakDef()))
     file->fetch(sym);
   return s;
 }
