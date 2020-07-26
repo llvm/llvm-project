@@ -1083,7 +1083,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
 /// target cpu.  15-bytes is the longest single NOP instruction, but some
 /// platforms can't decode the longest forms efficiently.
 static unsigned maxLongNopLength(const X86Subtarget *Subtarget) {
-  if (Subtarget->getFeatureBits()[X86::ProcIntelSLM])
+  if (Subtarget->getFeatureBits()[X86::FeatureFast7ByteNOP])
     return 7;
   if (Subtarget->getFeatureBits()[X86::FeatureFast15ByteNOP])
     return 15;

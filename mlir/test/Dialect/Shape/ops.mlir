@@ -49,7 +49,7 @@ func @test_shape_num_elements_fixed() {
 func @test_broadcast_fixed() {
   %0 = shape.const_shape [10, 1, 57, 92] : !shape.shape
   %1 = shape.const_shape [4, 57, 92] : !shape.shape
-  %2 = shape.broadcast %0, %1
+  %2 = shape.broadcast %0, %1 : !shape.shape, !shape.shape
   %3 = "shape.print"(%2) : (!shape.shape) -> !shape.shape
   return
 }
@@ -99,7 +99,7 @@ func @test_constraints() {
   %w3 = shape.const_witness false
   %w4 = shape.assuming_all %w0, %w1, %w2, %w3
   shape.assuming %w4 -> !shape.shape {
-    %2 = shape.any %0, %1 : !shape.shape
+    %2 = "shape.any"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
     shape.assuming_yield %2 : !shape.shape
   }
   return
@@ -131,7 +131,7 @@ func @const_size() {
 }
 
 func @test_to_extent_tensor(%arg: !shape.shape) -> tensor<3xindex> {
-  %0 = shape.to_extent_tensor %arg : tensor<3xindex>
+  %0 = shape.to_extent_tensor %arg : !shape.shape -> tensor<3xindex>
   return %0 : tensor<3xindex>
 }
 
@@ -188,10 +188,21 @@ func @get_extent_on_mixed_operands(%arg : tensor<?xindex>) -> !shape.size {
 func @any() {
   %0 = shape.const_shape [1, 2, 3] : !shape.shape
   %1 = shape.const_shape [4, 5, 6] : !shape.shape
-  %2 = shape.any %0, %1 : !shape.shape
+  %2 = "shape.any"(%0, %1) : (!shape.shape, !shape.shape) -> !shape.shape
   %3 = shape.const_shape [1, 2, 3] : tensor<?xindex>
   %4 = shape.const_shape [4, 5, 6] : tensor<?xindex>
-  %5 = shape.any %3, %4 : tensor<?xindex>
+  %5 = "shape.any"(%3, %4) : (tensor<?xindex>, tensor<?xindex>) -> tensor<?xindex>
   return
 }
+
+func @num_elements_extent_tensor(%arg : tensor<?xindex>) -> index {
+  %result = shape.num_elements %arg : tensor<?xindex> -> index
+  return %result : index
+}
+
+func @num_elements_shape(%arg : !shape.shape) -> !shape.size {
+  %result = shape.num_elements %arg : !shape.shape -> !shape.size
+  return %result : !shape.size
+}
+
 

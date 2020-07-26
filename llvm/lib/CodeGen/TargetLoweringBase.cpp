@@ -1041,9 +1041,19 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
   // Inherit previous memory operands.
   MIB.cloneMemRefs(*MI);
 
-  for (auto &MO : MI->operands()) {
+  for (unsigned i = 0; i < MI->getNumOperands(); ++i) {
+    MachineOperand &MO = MI->getOperand(i);
     if (!MO.isFI()) {
+      // Index of Def operand this Use it tied to.
+      // Since Defs are coming before Uses, if Use is tied, then
+      // index of Def must be smaller that index of that Use.
+      // Also, Defs preserve their position in new MI.
+      unsigned TiedTo = i;
+      if (MO.isReg() && MO.isTied())
+        TiedTo = MI->findTiedOperandIdx(i);
       MIB.add(MO);
+      if (TiedTo < i)
+        MIB->tieOperands(TiedTo, MIB->getNumOperands() - 1);
       continue;
     }
 
