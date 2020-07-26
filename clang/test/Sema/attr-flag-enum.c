@@ -6,6 +6,10 @@ enum __attribute__((flag_enum)) flag {
   ec = 0x8,
 };
 
+enum __attribute__((flag_enum)) {
+  g = 0x7,  // expected-warning {{enumeration value 'g' is out of range of flags in enumeration type ''}}
+};
+
 enum __attribute__((flag_enum)) flag2 {
   ga = 0x1,
   gb = 0x4,
