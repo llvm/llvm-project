@@ -674,6 +674,16 @@ OpFoldResult NumElementsOp::fold(ArrayRef<Attribute> operands) {
   return builder.getIndexAttr(product.getLimitedValue());
 }
 
+void NumElementsOp::build(OpBuilder &builder, OperationState &result,
+                          Value shape) {
+  if (shape.getType().isa<ShapedType>()) {
+    auto type = builder.getIndexType();
+    return build(builder, result, type, shape);
+  }
+  auto type = SizeType::get(builder.getContext());
+  return build(builder, result, type, shape);
+}
+
 //===----------------------------------------------------------------------===//
 // MulOp
 //===----------------------------------------------------------------------===//
@@ -700,6 +710,38 @@ OpFoldResult ShapeOfOp::fold(ArrayRef<Attribute>) {
     return nullptr;
   Builder builder(getContext());
   return builder.getIndexTensorAttr(type.getShape());
+}
+
+void ShapeOfOp::build(OpBuilder &builder, OperationState &result, Value arg) {
+  if (arg.getType().isa<ShapedType>()) {
+    auto type = RankedTensorType::get({ShapedType::kDynamicSize},
+                                      builder.getIndexType());
+    return ShapeOfOp::build(builder, result, type, arg);
+  }
+  auto type = ShapeType::get(builder.getContext());
+  return ShapeOfOp::build(builder, result, type, arg);
+}
+
+namespace {
+struct ShapeOfWithTensor : public OpRewritePattern<shape::ShapeOfOp> {
+  using OpRewritePattern<shape::ShapeOfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(shape::ShapeOfOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!op.arg().getType().isa<ShapedType>())
+      return failure();
+    if (op.getType().isa<ShapedType>())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<shape::ShapeOfOp>(op.getOperation(), op.arg());
+    return success();
+  }
+};
+} // namespace
+
+void ShapeOfOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+                                            MLIRContext *context) {
+  patterns.insert<ShapeOfWithTensor>(context);
 }
 
 //===----------------------------------------------------------------------===//
