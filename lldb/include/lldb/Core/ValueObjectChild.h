@@ -30,7 +30,7 @@ class ValueObjectChild : public ValueObject {
 public:
   ~ValueObjectChild() override;
 
-  llvm::Optional<uint64_t> GetByteSize() override { return m_byte_size; }
+  uint64_t GetByteSize() override { return m_byte_size; }
 
   lldb::offset_t GetByteOffset() override { return m_byte_offset; }
 

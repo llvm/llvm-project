@@ -67,7 +67,7 @@ public:
     const bool zero_memory = false;
 
     lldb::addr_t mem = map.Malloc(
-        m_persistent_variable_sp->GetByteSize().getValueOr(0), 8,
+        m_persistent_variable_sp->GetByteSize(), 8,
         lldb::ePermissionsReadable | lldb::ePermissionsWritable,
         IRMemoryMap::eAllocationPolicyMirror, zero_memory, allocate_error);
 
@@ -106,8 +106,7 @@ public:
     Status write_error;
 
     map.WriteMemory(mem, m_persistent_variable_sp->GetValueBytes(),
-                    m_persistent_variable_sp->GetByteSize().getValueOr(0),
-                    write_error);
+                    m_persistent_variable_sp->GetByteSize(), write_error);
 
     if (!write_error.Success()) {
       err.SetErrorStringWithFormat(
@@ -235,7 +234,7 @@ public:
             map.GetBestExecutionContextScope(),
             m_persistent_variable_sp.get()->GetCompilerType(),
             m_persistent_variable_sp->GetName(), location, eAddressTypeLoad,
-            m_persistent_variable_sp->GetByteSize().getValueOr(0));
+            m_persistent_variable_sp->GetByteSize());
 
         if (frame_top != LLDB_INVALID_ADDRESS &&
             frame_bottom != LLDB_INVALID_ADDRESS && location >= frame_bottom &&
@@ -280,8 +279,7 @@ public:
         LLDB_LOGF(log, "Dematerializing %s from 0x%" PRIx64 " (size = %llu)",
                   m_persistent_variable_sp->GetName().GetCString(),
                   (uint64_t)mem,
-                  (unsigned long long)m_persistent_variable_sp->GetByteSize()
-                      .getValueOr(0));
+                  (unsigned long long)m_persistent_variable_sp->GetByteSize());
 
         // Read the contents of the spare memory area
 
@@ -290,7 +288,7 @@ public:
         Status read_error;
 
         map.ReadMemory(m_persistent_variable_sp->GetValueBytes(), mem,
-                       m_persistent_variable_sp->GetByteSize().getValueOr(0), read_error);
+                       m_persistent_variable_sp->GetByteSize(), read_error);
 
         if (!read_error.Success()) {
           err.SetErrorStringWithFormat(
@@ -371,11 +369,10 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataBufferHeap data(
-            m_persistent_variable_sp->GetByteSize().getValueOr(0), 0);
+        DataBufferHeap data(m_persistent_variable_sp->GetByteSize(), 0);
 
         map.ReadMemory(data.GetBytes(), target_address,
-                       m_persistent_variable_sp->GetByteSize().getValueOr(0), err);
+                       m_persistent_variable_sp->GetByteSize(), err);
 
         if (!err.Success()) {
           dump_stream.Printf("  <could not be read>\n");
@@ -624,8 +621,8 @@ public:
 
       Status extract_error;
 
-      map.GetMemoryData(data, m_temporary_allocation,
-                        valobj_sp->GetByteSize().getValueOr(0), extract_error);
+      map.GetMemoryData(data, m_temporary_allocation, valobj_sp->GetByteSize(),
+                        extract_error);
 
       if (!extract_error.Success()) {
         err.SetErrorStringWithFormat("couldn't get the data for variable %s",
@@ -922,7 +919,7 @@ public:
 
     ret->ValueUpdated();
 
-    const size_t pvar_byte_size = ret->GetByteSize().getValueOr(0);
+    const size_t pvar_byte_size = ret->GetByteSize();
     uint8_t *pvar_data = ret->GetValueBytes();
 
     map.ReadMemory(pvar_data, address, pvar_byte_size, read_error);

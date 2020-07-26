@@ -36,7 +36,7 @@ class ValueObjectSynthetic : public ValueObject {
 public:
   ~ValueObjectSynthetic() override;
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  uint64_t GetByteSize() override;
 
   ConstString GetTypeName() override;
 
