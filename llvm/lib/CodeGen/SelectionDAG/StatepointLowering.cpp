@@ -1087,13 +1087,12 @@ void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
 }
 
 void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
-  const BasicBlock *StatepointBB = Relocate.getStatepoint()->getParent();
 #ifndef NDEBUG
   // Consistency check
   // We skip this check for relocates not in the same basic block as their
   // statepoint. It would be too expensive to preserve validation info through
   // different basic blocks.
-  if (StatepointBB == Relocate.getParent())
+  if (Relocate.getStatepoint()->getParent() == Relocate.getParent())
     StatepointLowering.relocCallVisited(Relocate);
 
   auto *Ty = Relocate.getType()->getScalarType();
@@ -1117,7 +1116,8 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   auto It = DPtrMap.find(DerivedPtr);
   if (It != DPtrMap.end()) {
     setValue(&Relocate, It->second);
-    assert(Relocate.getParent() == StatepointBB && "unexpected DPtrMap entry");
+    assert(Relocate.getParent() == Relocate.getStatepoint()->getParent() &&
+           "unexpected DPtrMap entry");
     return;
   }
 
