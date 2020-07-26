@@ -2,7 +2,8 @@
 name: 功能要求
 about: 建議這個專案的想法
 title: ''
-labels: ''
+labels: bug, depfu, documentation, duplicate, enhancement, good first issue, help
+  wanted, invalid, question, wontfix
 assignees: abc52090241
 
 ---
