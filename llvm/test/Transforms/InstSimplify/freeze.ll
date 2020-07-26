@@ -111,8 +111,7 @@ define <2 x float> @constvector_FP_noopt() {
 }
 
 @g = external global i16, align 1
-
-; Negative test
+@g2 = external global i16, align 1
 
 define float @constant_expr() {
 ; CHECK-LABEL: @constant_expr(
@@ -136,6 +135,17 @@ define i32* @constant_expr3() {
 ;
   %r = freeze i32* getelementptr (i32, i32* @glb, i64 3)
   ret i32* %r
+}
+
+define i64 @ptrdiff() {
+; CHECK-LABEL: @ptrdiff(
+; CHECK-NEXT:    ret i64 sub (i64 ptrtoint (i16* @g to i64), i64 ptrtoint (i16* @g2 to i64))
+;
+  %i = ptrtoint i16* @g to i64
+  %i2 = ptrtoint i16* @g2 to i64
+  %diff = sub i64 %i, %i2
+  %r = freeze i64 %diff
+  ret i64 %r
 }
 
 ; Negative test

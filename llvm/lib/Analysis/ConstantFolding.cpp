@@ -1071,6 +1071,8 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   default: return nullptr;
   case Instruction::ICmp:
   case Instruction::FCmp: llvm_unreachable("Invalid for compares");
+  case Instruction::Freeze:
+    return isGuaranteedNotToBeUndefOrPoison(Ops[0]) ? Ops[0] : nullptr;
   case Instruction::Call:
     if (auto *F = dyn_cast<Function>(Ops.back())) {
       const auto *Call = cast<CallBase>(InstOrCE);

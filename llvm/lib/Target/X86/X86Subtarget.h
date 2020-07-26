@@ -787,8 +787,6 @@ public:
 
   bool isXRaySupported() const override { return is64Bit(); }
 
-  X86ProcFamilyEnum getProcFamily() const { return X86ProcFamily; }
-
   /// TODO: to be removed later and replaced with suitable properties
   bool isAtom() const { return X86ProcFamily == IntelAtom; }
   bool isSLM() const { return X86ProcFamily == IntelSLM; }
