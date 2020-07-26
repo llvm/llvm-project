@@ -32,7 +32,7 @@ public:
 
   virtual ~ExpressionVariable();
 
-  llvm::Optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
+  size_t GetByteSize() { return m_frozen_sp->GetByteSize(); }
 
   ConstString GetName() { return m_frozen_sp->GetName(); }
 

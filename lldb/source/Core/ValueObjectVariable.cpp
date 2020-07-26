@@ -105,15 +105,15 @@ size_t ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   return child_count <= max ? child_count : max;
 }
 
-llvm::Optional<uint64_t> ValueObjectVariable::GetByteSize() {
+uint64_t ValueObjectVariable::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   CompilerType type(GetCompilerType());
 
   if (!type.IsValid())
-    return {};
+    return 0;
 
-  return type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  return type.GetByteSize(exe_ctx.GetBestExecutionContextScope()).getValueOr(0);
 }
 
 lldb::ValueType ValueObjectVariable::GetValueType() const {

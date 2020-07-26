@@ -34,7 +34,7 @@ class ValueObjectDynamicValue : public ValueObject {
 public:
   ~ValueObjectDynamicValue() override;
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  uint64_t GetByteSize() override;
 
   ConstString GetTypeName() override;
 
