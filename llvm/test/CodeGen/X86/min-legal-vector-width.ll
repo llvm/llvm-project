@@ -197,7 +197,7 @@ define i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly
 ; CHECK-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -263,7 +263,7 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -327,7 +327,7 @@ define i32 @sad_16i8_256() "min-legal-vector-width"="256" {
 ; CHECK-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -388,7 +388,7 @@ define i32 @sad_16i8_512() "min-legal-vector-width"="512" {
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -955,10 +955,10 @@ define void @zext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal
 ; CHECK-LABEL: zext_v16i8_v16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    vpmovzxwq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
 ; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    vpmovzxwq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
 ; CHECK-NEXT:    vpmovzxwq {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; CHECK-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
@@ -977,10 +977,10 @@ define void @sext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal
 ; CHECK-LABEL: sext_v16i8_v16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovsxbw %xmm0, %ymm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    vpmovsxwq %xmm1, %ymm1
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
 ; CHECK-NEXT:    vpmovsxwq %xmm3, %ymm3
 ; CHECK-NEXT:    vpmovsxwq %xmm0, %ymm0
 ; CHECK-NEXT:    vpmovsxwq %xmm2, %ymm2

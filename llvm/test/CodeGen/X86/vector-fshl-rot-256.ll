@@ -24,11 +24,11 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %amt) nounwind {
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
 ; AVX1-NEXT:    vpsllq %xmm4, %xmm2, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
 ; AVX1-NEXT:    vpsllq %xmm4, %xmm2, %xmm4
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1,2,3],xmm4[4,5,6,7]
 ; AVX1-NEXT:    vpsllq %xmm3, %xmm0, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
 ; AVX1-NEXT:    vpsllq %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm5[0,1,2,3],xmm3[4,5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
@@ -38,13 +38,13 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %amt) nounwind {
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [63,63]
 ; AVX1-NEXT:    vpand %xmm6, %xmm4, %xmm4
 ; AVX1-NEXT:    vpsrlq %xmm4, %xmm2, %xmm7
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
 ; AVX1-NEXT:    vpsrlq %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm7[0,1,2,3],xmm2[4,5,6,7]
 ; AVX1-NEXT:    vpsubq %xmm1, %xmm5, %xmm1
 ; AVX1-NEXT:    vpand %xmm6, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlq %xmm1, %xmm0, %xmm4
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; AVX1-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm4[0,1,2,3],xmm0[4,5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
@@ -520,7 +520,7 @@ define <4 x i64> @splatvar_funnnel_v4i64(<4 x i64> %x, <4 x i64> %amt) nounwind 
 ; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vpsrlq %xmm2, %xmm4, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm2[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm2[2,3,2,3]
 ; AVX1-NEXT:    vpsrlq %xmm6, %xmm4, %xmm7
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3],xmm7[4,5,6,7]
 ; AVX1-NEXT:    vpsrlq %xmm2, %xmm0, %xmm2

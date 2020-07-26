@@ -522,7 +522,7 @@ define <8 x i16> @test13(<8 x i16> %x, <8 x i32> %y) nounwind {
 ;
 ; SSE41-LABEL: test13:
 ; SSE41:       # %bb.0: # %vector.ph
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE41-NEXT:    movdqa %xmm5, %xmm3
@@ -697,7 +697,7 @@ define <16 x i8> @test14(<16 x i8> %x, <16 x i32> %y) nounwind {
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[1,1,2,3]
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm8 = xmm5[0],zero,zero,zero,xmm5[1],zero,zero,zero,xmm5[2],zero,zero,zero,xmm5[3],zero,zero,zero
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm5 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; SSE41-NEXT:    pshufd {{.*#+}} xmm7 = xmm0[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm7 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm7 = xmm7[0],zero,zero,zero,xmm7[1],zero,zero,zero,xmm7[2],zero,zero,zero,xmm7[3],zero,zero,zero
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm0[3,1,2,3]
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm6 = xmm6[0],zero,zero,zero,xmm6[1],zero,zero,zero,xmm6[2],zero,zero,zero,xmm6[3],zero,zero,zero
@@ -735,9 +735,9 @@ define <16 x i8> @test14(<16 x i8> %x, <16 x i32> %y) nounwind {
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm4 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm5[0],zero,zero,zero,xmm5[1],zero,zero,zero,xmm5[2],zero,zero,zero,xmm5[3],zero,zero,zero
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm0[3,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm0[3,3,2,3]
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm6 = xmm6[0],zero,zero,zero,xmm6[1],zero,zero,zero,xmm6[2],zero,zero,zero,xmm6[3],zero,zero,zero
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm7
 ; AVX1-NEXT:    vpmaxud %xmm6, %xmm7, %xmm6
@@ -772,7 +772,7 @@ define <16 x i8> @test14(<16 x i8> %x, <16 x i32> %y) nounwind {
 ;
 ; AVX2-LABEL: test14:
 ; AVX2:       # %bb.0: # %vector.ph
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero,xmm3[4],zero,zero,zero,xmm3[5],zero,zero,zero,xmm3[6],zero,zero,zero,xmm3[7],zero,zero,zero
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm4 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpmaxud %ymm4, %ymm1, %ymm4
@@ -873,7 +873,7 @@ define <8 x i16> @test15(<8 x i16> %x, <8 x i32> %y) nounwind {
 ;
 ; SSE41-LABEL: test15:
 ; SSE41:       # %bb.0: # %vector.ph
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE41-NEXT:    movdqa %xmm4, %xmm5
@@ -1005,7 +1005,7 @@ define <8 x i16> @test16(<8 x i16> %x, <8 x i32> %y) nounwind {
 ;
 ; SSE41-LABEL: test16:
 ; SSE41:       # %bb.0: # %vector.ph
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE41-NEXT:    pmaxud %xmm1, %xmm4
@@ -1871,10 +1871,10 @@ define <16 x i16> @psubus_16i32_max(<16 x i16> %x, <16 x i32> %y) nounwind {
 ;
 ; SSE41-LABEL: psubus_16i32_max:
 ; SSE41:       # %bb.0: # %vector.ph
-; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm6 = xmm6[0],zero,xmm6[1],zero,xmm6[2],zero,xmm6[3],zero
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SSE41-NEXT:    pshufd {{.*#+}} xmm7 = xmm0[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm7 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm7 = xmm7[0],zero,xmm7[1],zero,xmm7[2],zero,xmm7[3],zero
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE41-NEXT:    pmaxud %xmm2, %xmm0

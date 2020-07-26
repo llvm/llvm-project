@@ -73,7 +73,7 @@ define <2 x i32> @test4(<8 x i32> %v) {
 define <2 x i32> @test5(<8 x i32> %v) {
 ; SSE2-LABEL: test5:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,2,2]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    retq
 ;
@@ -175,7 +175,7 @@ define <2 x i32> @test9(<8 x i32> %v) {
 define <2 x i32> @test10(<8 x i32> %v) {
 ; SSE2-LABEL: test10:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,2,2]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    retq
 ;

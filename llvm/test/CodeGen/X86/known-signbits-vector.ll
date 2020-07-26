@@ -252,7 +252,7 @@ define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) 
 ; X86-LABEL: signbits_sext_shuffle_sitofp:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpmovsxdq %xmm0, %xmm1
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X86-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X86-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
@@ -264,7 +264,7 @@ define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) 
 ; X64-AVX1-LABEL: signbits_sext_shuffle_sitofp:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X64-AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
@@ -478,7 +478,7 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm5[2,3],xmm2[4,5],xmm5[6,7]
 ; X64-AVX1-NEXT:    vpmovsxdq %xmm3, %xmm5
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
+; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
 ; X64-AVX1-NEXT:    vpmovsxdq %xmm3, %xmm3
 ; X64-AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm6
 ; X64-AVX1-NEXT:    vblendvpd %xmm6, %xmm4, %xmm5, %xmm4

@@ -2478,7 +2478,7 @@ define void @compressstore_v2i64_v2i1(i64* %base, <2 x i64> %V, <2 x i1> %mask) 
 ; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    je LBB7_4
 ; SSE2-NEXT:  LBB7_3: ## %cond.store1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -2574,7 +2574,7 @@ define void @compressstore_v4i64_v4i1(i64* %base, <4 x i64> %V, <4 x i1> %mask) 
 ; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    je LBB8_4
 ; SSE2-NEXT:  LBB8_3: ## %cond.store1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:    testb $4, %al
@@ -2585,7 +2585,7 @@ define void @compressstore_v4i64_v4i1(i64* %base, <4 x i64> %V, <4 x i1> %mask) 
 ; SSE2-NEXT:    testb $8, %al
 ; SSE2-NEXT:    je LBB8_8
 ; SSE2-NEXT:  LBB8_7: ## %cond.store7
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -2762,7 +2762,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    je LBB9_4
 ; SSE2-NEXT:  LBB9_3: ## %cond.store1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:    testb $4, %al
@@ -2773,7 +2773,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; SSE2-NEXT:    testb $8, %al
 ; SSE2-NEXT:    je LBB9_8
 ; SSE2-NEXT:  LBB9_7: ## %cond.store7
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:    testb $16, %al
@@ -2784,7 +2784,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; SSE2-NEXT:    testb $32, %al
 ; SSE2-NEXT:    je LBB9_12
 ; SSE2-NEXT:  LBB9_11: ## %cond.store13
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:    testb $64, %al
@@ -2795,7 +2795,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; SSE2-NEXT:    testb $-128, %al
 ; SSE2-NEXT:    je LBB9_16
 ; SSE2-NEXT:  LBB9_15: ## %cond.store19
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -3068,7 +3068,7 @@ define void @compressstore_v4i32_v4i32(i32* %base, <4 x i32> %V, <4 x i32> %trig
 ; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    je LBB10_6
 ; SSE2-NEXT:  LBB10_5: ## %cond.store4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm1, (%rdi)
 ; SSE2-NEXT:    addq $4, %rdi
 ; SSE2-NEXT:    testb $8, %al

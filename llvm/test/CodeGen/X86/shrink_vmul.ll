@@ -2094,9 +2094,9 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %esi
 ; X86-SSE-NEXT:    movd %edx, %xmm3
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[2,3,0,1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[2,3,2,3]
 ; X86-SSE-NEXT:    movd %xmm7, %eax
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[2,3,0,1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[2,3,2,3]
 ; X86-SSE-NEXT:    movd %xmm7, %esi
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %esi
@@ -2137,9 +2137,9 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %esi
 ; X86-SSE-NEXT:    movd %edx, %xmm4
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; X86-SSE-NEXT:    movd %xmm2, %eax
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; X86-SSE-NEXT:    movd %xmm1, %esi
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %esi
@@ -2336,9 +2336,9 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %ecx
 ; X64-SSE-NEXT:    movd %edx, %xmm3
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[2,3,0,1]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm7, %eax
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[2,3,0,1]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm7, %ecx
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %ecx
@@ -2379,9 +2379,9 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %ecx
 ; X64-SSE-NEXT:    movd %edx, %xmm4
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm2, %eax
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm1, %ecx
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %ecx

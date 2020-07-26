@@ -314,7 +314,7 @@ define void @extract_i64_1(i64* nocapture %dst, <2 x i64> %foo) nounwind {
 ;
 ; SSE2-X64-LABEL: extract_i64_1:
 ; SSE2-X64:       # %bb.0:
-; SSE2-X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-X64-NEXT:    movq %xmm0, (%rdi)
 ; SSE2-X64-NEXT:    retq
 ;

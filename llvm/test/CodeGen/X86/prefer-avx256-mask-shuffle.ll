@@ -135,7 +135,7 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX256VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX256VL-NEXT:    vpmovsxbd %xmm1, %ymm1
 ; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k1
-; AVX256VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX256VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX256VL-NEXT:    vpmovsxbd %xmm1, %ymm1
 ; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k2
 ; AVX256VL-NEXT:    vpmovsxbd %xmm0, %ymm0
