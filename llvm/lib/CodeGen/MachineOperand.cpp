@@ -909,7 +909,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << printJumpTableEntryReference(getIndex());
     break;
   case MachineOperand::MO_GlobalAddress:
-    getGlobal()->printAsOperand(OS, /*PrintType=*/false, MST);
+    if (const auto *GV = getGlobal())
+      getGlobal()->printAsOperand(OS, /*PrintType=*/false, MST);
+    else
+      OS << "globaladdress(null)";
+
     printOperandOffset(OS, getOffset());
     break;
   case MachineOperand::MO_ExternalSymbol: {
