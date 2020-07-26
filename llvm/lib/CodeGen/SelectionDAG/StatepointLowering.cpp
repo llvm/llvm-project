@@ -678,27 +678,24 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     SDValue SDV = Builder.getValue(V);
     SDValue Loc = Builder.StatepointLowering.getLocation(SDV);
 
-    if (LowerAsVReg.count(SDV)) {
-      SpillMap[V] = None;
-    } else if (Loc.getNode()) {
+    if (Loc.getNode()) {
+      // If this is a value we spilled, remember where for when we visit the
+      // gc.relocate corresponding to this gc.statepoint
       SpillMap[V] = cast<FrameIndexSDNode>(Loc)->getIndex();
     } else {
-      // Record value as visited, but not spilled. This is case for allocas
-      // and constants. For this values we can avoid emitting spill load while
-      // visiting corresponding gc_relocate.
-      // Actually we do not need to record them in this map at all.
-      // We do this only to check that we are not relocating any unvisited
-      // value.
+      // If we didn't spill the value - allocas, constants, and values lowered
+      // as tied vregs - mark them as visited, but not spilled.  Marking them
+      // visited (as opposed to simply missing in the map), allows tighter
+      // assertion checking.  
       SpillMap[V] = None;
 
-      // Default llvm mechanisms for exporting values which are used in
-      // different basic blocks does not work for gc relocates.
-      // Note that it would be incorrect to teach llvm that all relocates are
-      // uses of the corresponding values so that it would automatically
-      // export them. Relocates of the spilled values does not use original
-      // value.
-      if (Relocate->getParent() != StatepointInstr->getParent())
+      // Conservatively export all values used by gc.relocates outside this
+      // block.  This is currently only needed for expressions which don't need
+      // relocation, but will likely be extended for vreg case shortly.
+      if (Relocate->getParent() != StatepointInstr->getParent()) {
         Builder.ExportFromCurrentBlock(V);
+        assert(!LowerAsVReg.count(SDV));
+      }
     }
   }
 }
@@ -844,9 +841,9 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   SmallVector<EVT, 8> NodeTys;
   for (auto &Ptr : SI.Ptrs) {
     SDValue SD = getValue(Ptr);
-    if (LowerAsVReg.count(SD)) {
-      NodeTys.push_back(SD.getValueType());
-    }
+    if (!LowerAsVReg.count(SD))
+      continue;
+    NodeTys.push_back(SD.getValueType());
   }
   LLVM_DEBUG(dbgs() << "Statepoint has " << NodeTys.size() << " results\n");
   assert(NodeTys.size() == LowerAsVReg.size() && "Inconsistent GC Ptr lowering");
@@ -866,8 +863,9 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   for (const auto *Relocate : SI.GCRelocates) {
     Value *Derived = Relocate->getDerivedPtr();
     SDValue SD = getValue(Derived);
-    if (LowerAsVReg.count(SD))
-      DPtrMap[Derived] = SDValue(StatepointMCNode, LowerAsVReg[SD]);
+    if (!LowerAsVReg.count(SD))
+      continue;
+    DPtrMap[Derived] = SDValue(StatepointMCNode, LowerAsVReg[SD]);
   }
 
   // Build the GC_TRANSITION_END node if necessary.
