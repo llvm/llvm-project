@@ -2015,7 +2015,8 @@ void ScopeHandler::Say2(const parser::Name &name, MessageFixedText &&msg1,
 
 Scope &ScopeHandler::InclusiveScope() {
   for (auto *scope{&currScope()};; scope = &scope->parent()) {
-    if (scope->kind() != Scope::Kind::Block && !scope->IsDerivedType()) {
+    if (scope->kind() != Scope::Kind::Block && !scope->IsDerivedType() &&
+        !scope->IsStmtFunction()) {
       return *scope;
     }
   }
@@ -2692,6 +2693,7 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
     return true;
   }
   auto &symbol{PushSubprogramScope(name, Symbol::Flag::Function)};
+  symbol.set(Symbol::Flag::StmtFunction);
   EraseSymbol(symbol); // removes symbol added by PushSubprogramScope
   auto &details{symbol.get<SubprogramDetails>()};
   for (const auto &dummyName : std::get<std::list<parser::Name>>(x.t)) {
