@@ -25,7 +25,7 @@ class LLVMContext;
 class GCNSubtarget;
 
 /// This class provides the information for the target register banks.
-class AMDGPULegalizerInfo : public LegalizerInfo {
+class AMDGPULegalizerInfo final : public LegalizerInfo {
   const GCNSubtarget &ST;
 
 public:

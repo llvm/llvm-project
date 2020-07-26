@@ -47,7 +47,7 @@ class SIInstrInfo;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
 
-class AMDGPUInstructionSelector : public InstructionSelector {
+class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
   MachineRegisterInfo *MRI;
 
