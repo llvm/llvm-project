@@ -6,8 +6,7 @@
 
 define i64 @ptrdiff1() {
 ; CHECK-LABEL: @ptrdiff1(
-; CHECK-NEXT:    [[R:%.*]] = freeze i64 sub (i64 ptrtoint (i16* @g to i64), i64 ptrtoint (i16* @g2 to i64))
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    ret i64 sub (i64 ptrtoint (i16* @g to i64), i64 ptrtoint (i16* @g2 to i64))
 ;
   %i = ptrtoint i16* @g to i64
   %i2 = ptrtoint i16* @g2 to i64
@@ -18,8 +17,7 @@ define i64 @ptrdiff1() {
 
 define i64 @ptrdiff2() {
 ; CHECK-LABEL: @ptrdiff2(
-; CHECK-NEXT:    [[R:%.*]] = freeze i64 -2
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    ret i64 -2
 ;
   %i = ptrtoint i16* @g to i64
   %gep = getelementptr i16, i16* @g, i64 1
