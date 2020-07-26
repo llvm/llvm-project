@@ -30,6 +30,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -94,6 +95,32 @@ static Optional<std::string> findLibrary(StringRef name) {
       if (fs::exists(location))
         return location.str().str();
     }
+  }
+  return {};
+}
+
+static Optional<std::string> findFramework(StringRef name) {
+  // TODO: support .tbd files
+  llvm::SmallString<260> symlink;
+  llvm::SmallString<260> location;
+  StringRef suffix;
+  std::tie(name, suffix) = name.split(",");
+  for (StringRef dir : config->frameworkSearchPaths) {
+    symlink = dir;
+    path::append(symlink, name + ".framework", name);
+    // If the symlink fails to resolve, skip to the next search path.
+    // NOTE: we must resolve the symlink before trying the suffixes, because
+    // there are no symlinks for the suffixed paths.
+    if (fs::real_path(symlink, location))
+      continue;
+    if (!suffix.empty()) {
+      llvm::Twine suffixed = location + suffix;
+      if (fs::exists(suffixed))
+        return suffixed.str();
+      // Suffix lookup failed, fall through to the no-suffix case.
+    }
+    if (fs::exists(location))
+      return location.str().str();
   }
   return {};
 }
@@ -393,13 +420,24 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       error("library not found for -l" + name);
       break;
     }
+    case OPT_framework: {
+      StringRef name = arg->getValue();
+      if (Optional<std::string> path = findFramework(name)) {
+        addFile(*path);
+        break;
+      }
+      error("framework not found for -framework " + name);
+      break;
+    }
     case OPT_platform_version:
       handlePlatformVersion(arg);
       break;
     case OPT_o:
     case OPT_dylib:
     case OPT_e:
+    case OPT_F:
     case OPT_L:
+    case OPT_install_name:
     case OPT_Z:
     case OPT_arch:
       // handled elsewhere
