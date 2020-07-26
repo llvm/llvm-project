@@ -47,7 +47,11 @@ def AffineLoopInvariantCodeMotion
   let summary = "Hoist loop invariant instructions outside of affine loops";
   let constructor = "mlir::createAffineLoopInvariantCodeMotionPass()";
 }
-
+def AffineLoopInterchange
+  : FunctionPass<"affine-loop-interchange"> {
+  let summary = "Hoist loop invariant instructions outside of affine loops";
+  let constructor = "mlir::createAffineLoopInterchange()";
+}
 def AffineLoopTiling : FunctionPass<"affine-loop-tile"> {
   let summary = "Tile affine loop nests";
   let constructor = "mlir::createLoopTilingPass()";
