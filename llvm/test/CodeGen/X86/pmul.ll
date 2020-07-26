@@ -1083,7 +1083,7 @@ define <4 x i32> @mul_v4i64_zero_upper_left(<4 x i32> %val1, <4 x i64> %val2) {
 ;
 ; SSE41-LABEL: mul_v4i64_zero_upper_left:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero
 ; SSE41-NEXT:    movdqa %xmm4, %xmm0
@@ -1252,14 +1252,14 @@ define <8 x i64> @mul_v8i64_sext(<8 x i16> %val1, <8 x i32> %val2) {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm11
 ; SSE2-NEXT:    punpckhdq {{.*#+}} xmm11 = xmm11[2],xmm15[2],xmm11[3],xmm15[3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm15[0],xmm0[1],xmm15[1]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    pxor %xmm14, %xmm14
 ; SSE2-NEXT:    pcmpgtd %xmm3, %xmm14
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm14[0],xmm3[1],xmm14[1]
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    pcmpgtd %xmm2, %xmm5
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    pxor %xmm6, %xmm6
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm6
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm6[0],xmm1[1],xmm6[1]
@@ -1306,7 +1306,7 @@ define <8 x i64> @mul_v8i64_sext(<8 x i16> %val1, <8 x i32> %val2) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,1,2,3]
 ; SSE41-NEXT:    pmovsxwq %xmm3, %xmm4
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwq %xmm3, %xmm5
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
 ; SSE41-NEXT:    pmovsxwq %xmm3, %xmm6
@@ -1324,7 +1324,7 @@ define <8 x i64> @mul_v8i64_sext(<8 x i16> %val1, <8 x i32> %val2) {
 ;
 ; AVX2-LABEL: mul_v8i64_sext:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpmovsxwq %xmm2, %ymm2
 ; AVX2-NEXT:    vpmovsxwq %xmm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3

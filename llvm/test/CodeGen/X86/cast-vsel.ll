@@ -31,7 +31,7 @@ define <8 x i32> @sext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; SSE41-NEXT:    packssdw %xmm1, %xmm0
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm4, %xmm5
 ; SSE41-NEXT:    pmovsxwd %xmm5, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm1, %xmm1
 ; SSE41-NEXT:    retq
 ;
@@ -39,9 +39,9 @@ define <8 x i32> @sext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxwd %xmm4, %xmm4
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm3[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm3[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxwd %xmm5, %xmm5
 ; AVX1-NEXT:    vblendvps %xmm1, %xmm4, %xmm5, %xmm1
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2
@@ -87,7 +87,7 @@ define <8 x i32> @zext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; SSE41-NEXT:    packssdw %xmm1, %xmm0
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm4, %xmm5
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[2,3,2,3]
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; SSE41-NEXT:    retq
 ;
@@ -459,7 +459,7 @@ define void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; SSE41-NEXT:    packssdw %xmm3, %xmm0
 ; SSE41-NEXT:    movdqa %xmm2, %xmm3
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm1, %xmm3
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwd %xmm0, %xmm0
 ; SSE41-NEXT:    pmovsxwd %xmm3, %xmm3
 ; SSE41-NEXT:    movdqa %xmm3, dj+4096(%rax)
@@ -480,9 +480,9 @@ define void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; AVX1-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm0
 ; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm3
 ; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB6_1: # %vector.body

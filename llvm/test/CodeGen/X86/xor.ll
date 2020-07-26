@@ -407,7 +407,7 @@ define i32 @PR17487(i1 %tobool) {
 ; X32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X32-NEXT:    pandn {{\.LCPI.*}}, %xmm0
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X32-NEXT:    movd %xmm0, %ecx
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    cmpl $1, %ecx

@@ -351,7 +351,7 @@ define i64 @extractelement_v2i64_0(<2 x i64> %a, i256 %i) nounwind {
 define i64 @extractelement_v2i64_1(<2 x i64> %a, i256 %i) nounwind {
 ; SSE2-LABEL: extractelement_v2i64_1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    retq
 ;
@@ -371,7 +371,7 @@ define i64 @extractelement_v2i64_1(<2 x i64> %a, i256 %i) nounwind {
 define i64 @extractelement_v4i64_1(<4 x i64> %a, i256 %i) nounwind {
 ; SSE2-LABEL: extractelement_v4i64_1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    retq
 ;
@@ -392,7 +392,7 @@ define i64 @extractelement_v4i64_1(<4 x i64> %a, i256 %i) nounwind {
 define i64 @extractelement_v4i64_3(<4 x i64> %a, i256 %i) nounwind {
 ; SSE2-LABEL: extractelement_v4i64_3:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    retq
 ;

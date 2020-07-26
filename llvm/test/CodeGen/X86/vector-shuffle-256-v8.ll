@@ -3216,7 +3216,7 @@ entry:
 define <8 x float> @broadcast_concat_crash(<4 x float> %x, <4 x float> %y, float %z) {
 ; AVX1-LABEL: broadcast_concat_crash:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm1[3,3,1,1]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq

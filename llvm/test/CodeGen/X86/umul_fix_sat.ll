@@ -151,9 +151,9 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movl $-1, %eax
 ; X64-NEXT:    cmoval %eax, %ecx
 ; X64-NEXT:    movd %ecx, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; X64-NEXT:    movd %xmm3, %ecx
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; X64-NEXT:    movd %xmm3, %edx
 ; X64-NEXT:    imulq %rcx, %rdx
 ; X64-NEXT:    movq %rdx, %rcx
@@ -361,9 +361,9 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movl $-1, %ecx
 ; X64-NEXT:    cmovol %ecx, %eax
 ; X64-NEXT:    movd %eax, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; X64-NEXT:    movd %xmm3, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; X64-NEXT:    movd %xmm3, %edx
 ; X64-NEXT:    mull %edx
 ; X64-NEXT:    cmovol %ecx, %eax

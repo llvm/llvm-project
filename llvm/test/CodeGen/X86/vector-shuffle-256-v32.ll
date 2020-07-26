@@ -4053,7 +4053,7 @@ define <32 x i8> @shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz
 ; AVX1-LABEL: shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz_zz_60_zz_zz_zz_61_zz_zz_zz_62_zz_zz_zz_63_zz_zz_zz:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
@@ -4083,7 +4083,7 @@ define <32 x i8> @shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz
 ; XOPAVX1-LABEL: shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz_zz_60_zz_zz_zz_61_zz_zz_zz_62_zz_zz_zz_63_zz_zz_zz:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; XOPAVX1-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; XOPAVX1-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero

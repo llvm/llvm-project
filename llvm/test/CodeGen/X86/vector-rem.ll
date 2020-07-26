@@ -11,9 +11,9 @@ define <4 x i32> @foo(<4 x i32> %t, <4 x i32> %u) nounwind {
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm3, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm3, %ecx
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
@@ -49,9 +49,9 @@ define <4 x i32> @bar(<4 x i32> %t, <4 x i32> %u) nounwind {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm3, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm3, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx

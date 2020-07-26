@@ -838,7 +838,7 @@ define void @store_v2i64_v2i64(<2 x i64> %trigger, <2 x i64>* %addr, <2 x i64> %
 ; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    je LBB7_4
 ; SSE2-NEXT:  LBB7_3: ## %cond.store1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, 8(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -922,7 +922,7 @@ define void @store_v4i64_v4i64(<4 x i64> %trigger, <4 x i64>* %addr, <4 x i64> %
 ; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    je LBB8_4
 ; SSE2-NEXT:  LBB8_3: ## %cond.store1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, 8(%rdi)
 ; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    je LBB8_6
@@ -931,7 +931,7 @@ define void @store_v4i64_v4i64(<4 x i64> %trigger, <4 x i64>* %addr, <4 x i64> %
 ; SSE2-NEXT:    testb $8, %al
 ; SSE2-NEXT:    je LBB8_8
 ; SSE2-NEXT:  LBB8_7: ## %cond.store5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, 24(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -1158,7 +1158,7 @@ define void @store_v4i32_v4i32(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %
 ; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    je LBB11_6
 ; SSE2-NEXT:  LBB11_5: ## %cond.store3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, 8(%rdi)
 ; SSE2-NEXT:    testb $8, %al
 ; SSE2-NEXT:    je LBB11_8
@@ -1280,7 +1280,7 @@ define void @store_v8i32_v8i32(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %
 ; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    je LBB12_6
 ; SSE2-NEXT:  LBB12_5: ## %cond.store3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, 8(%rdi)
 ; SSE2-NEXT:    testb $8, %al
 ; SSE2-NEXT:    je LBB12_8
@@ -1299,7 +1299,7 @@ define void @store_v8i32_v8i32(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    je LBB12_14
 ; SSE2-NEXT:  LBB12_13: ## %cond.store11
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, 24(%rdi)
 ; SSE2-NEXT:    testb $-128, %al
 ; SSE2-NEXT:    je LBB12_16
@@ -4674,7 +4674,7 @@ define void @masked_store_bool_mask_demand_trunc_sext(<4 x double> %x, <4 x doub
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vpslld $31, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmovsxdq %xmm1, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxdq %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vmaskmovpd %ymm0, %ymm1, (%rdi)
@@ -4853,7 +4853,7 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; SSE2-NEXT:    testb $4, %cl
 ; SSE2-NEXT:    je LBB25_6
 ; SSE2-NEXT:  LBB25_5: ## %cond.store3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, 8(%rdi)
 ; SSE2-NEXT:    retq
 ;
