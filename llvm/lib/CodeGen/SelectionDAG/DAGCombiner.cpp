@@ -1805,6 +1805,10 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
   if (OptLevel == CodeGenOpt::None)
     return SDValue();
 
+  // Don't simplify the token factor if the node itself has too many operands.
+  if (N->getNumOperands() > TokenFactorInlineLimit)
+    return SDValue();
+
   // If the sole user is a token factor, we should make sure we have a
   // chance to merge them together. This prevents TF chains from inhibiting
   // optimizations.
