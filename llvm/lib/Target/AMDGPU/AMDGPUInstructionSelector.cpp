@@ -1313,12 +1313,15 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
 
   BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
     .addReg(PtrBase);
-  BuildMI(*MBB, &MI, DL, TII.get(Opc), MI.getOperand(0).getReg())
+  if (!RBI.constrainGenericRegister(PtrBase, AMDGPU::SReg_32RegClass, *MRI))
+    return false;
+
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), MI.getOperand(0).getReg())
     .addImm(Offset)
     .addImm(IsGDS ? -1 : 0)
     .cloneMemRefs(MI);
   MI.eraseFromParent();
-  return true;
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
 static bool parseTexFail(uint64_t TexFailCtrl, bool &TFE, bool &LWE,
