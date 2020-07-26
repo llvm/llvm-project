@@ -50,7 +50,6 @@ func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
   // CHECK-DAG: %[[C2:.*]] = constant 2 : index
   // CHECK-DAG: %[[C3:.*]] = constant 3 : index
   // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor_from_elements(%[[C1]], %[[C2]], %[[C3]]) : tensor<3xindex>
-  // CHECK-DAG: %[[SHAPE:.*]] = tensor_cast %[[SHAPE_UNCASTED]] : tensor<3xindex> to tensor<?xindex>
   %shape = shape.shape_of %arg : tensor<1x2x3xf32> -> tensor<?xindex>
   return
 }
@@ -66,7 +65,6 @@ func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
   // CHECK-DAG: %[[C2:.*]] = constant 2 : index
   // CHECK-DAG: %[[DYN_DIM:.*]] = dim %[[ARG]], %[[C2]] : tensor<1x5x?xf32>
   // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor_from_elements(%[[C1]], %[[C5]], %[[DYN_DIM]]) : tensor<3xindex>
-  // CHECK-DAG: %[[SHAPE:.*]] = tensor_cast %[[SHAPE_UNCASTED]] : tensor<3xindex> to tensor<?xindex>
   %shape = shape.shape_of %arg : tensor<1x5x?xf32> -> tensor<?xindex>
   return
 }
@@ -120,7 +118,7 @@ func @any_of_three(%a : tensor<?xindex>,
                    %b : tensor<?xindex>,
                    %c : tensor<?xindex>) -> tensor<?xindex> {
   // CHECK: return %[[A]] : tensor<?xindex>
-  %result = shape.any %a, %b, %c : tensor<?xindex>
+  %result = "shape.any"(%a, %b, %c) : (tensor<?xindex>, tensor<?xindex>, tensor<?xindex>) -> tensor<?xindex>
   return %result : tensor<?xindex>
 }
 
@@ -131,7 +129,7 @@ func @any_of_three(%a : tensor<?xindex>,
 // CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>) -> tensor<?xindex>
 func @any_of_one(%a : tensor<?xindex>) -> tensor<?xindex> {
   // CHECK: return %[[A]] : tensor<?xindex>
-  %result = shape.any %a : tensor<?xindex>
+  %result = "shape.any"(%a) : (tensor<?xindex>) -> tensor<?xindex>
   return %result : tensor<?xindex>
 }
 
