@@ -3209,6 +3209,37 @@ bool AMDGPULegalizerInfo::legalizeRsqClampIntrinsic(MachineInstr &MI,
   return true;
 }
 
+static unsigned getDSFPAtomicOpcode(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::amdgcn_ds_fadd:
+    return AMDGPU::G_ATOMICRMW_FADD;
+  case Intrinsic::amdgcn_ds_fmin:
+    return AMDGPU::G_AMDGPU_ATOMIC_FMIN;
+  case Intrinsic::amdgcn_ds_fmax:
+    return AMDGPU::G_AMDGPU_ATOMIC_FMAX;
+  default:
+    llvm_unreachable("not a DS FP intrinsic");
+  }
+}
+
+bool AMDGPULegalizerInfo::legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
+                                                      MachineInstr &MI,
+                                                      Intrinsic::ID IID) const {
+  GISelChangeObserver &Observer = Helper.Observer;
+  Observer.changingInstr(MI);
+
+  MI.setDesc(ST.getInstrInfo()->get(getDSFPAtomicOpcode(IID)));
+
+  // The remaining operands were used to set fields in the MemOperand on
+  // construction.
+  for (int I = 6; I > 3; --I)
+    MI.RemoveOperand(I);
+
+  MI.RemoveOperand(1); // Remove the intrinsic ID.
+  Observer.changedInstr(MI);
+  return true;
+}
+
 bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
@@ -4444,6 +4475,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeDebugTrapIntrinsic(MI, MRI, B);
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
+  case Intrinsic::amdgcn_ds_fadd:
+  case Intrinsic::amdgcn_ds_fmin:
+  case Intrinsic::amdgcn_ds_fmax:
+    return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
