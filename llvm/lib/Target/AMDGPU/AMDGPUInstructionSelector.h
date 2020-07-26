@@ -110,6 +110,7 @@ private:
   bool selectIntrinsicIcmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;
+  bool selectGroupStaticSize(MachineInstr &I) const;
   bool selectReturnAddress(MachineInstr &I) const;
   bool selectG_INTRINSIC(MachineInstr &I) const;
 

@@ -930,6 +930,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectBallot(I);
   case Intrinsic::amdgcn_reloc_constant:
     return selectRelocConstant(I);
+  case Intrinsic::amdgcn_groupstaticsize:
+    return selectGroupStaticSize(I);
   case Intrinsic::returnaddress:
     return selectReturnAddress(I);
   default:
@@ -1135,6 +1137,33 @@ bool AMDGPUInstructionSelector::selectRelocConstant(MachineInstr &I) const {
 
   I.eraseFromParent();
   return true;
+}
+
+bool AMDGPUInstructionSelector::selectGroupStaticSize(MachineInstr &I) const {
+  Triple::OSType OS = MF->getTarget().getTargetTriple().getOS();
+
+  Register DstReg = I.getOperand(0).getReg();
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  unsigned Mov = DstRB->getID() == AMDGPU::SGPRRegBankID ?
+    AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
+
+  MachineBasicBlock *MBB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+
+  auto MIB = BuildMI(*MBB, &I, DL, TII.get(Mov), DstReg);
+
+  if (OS == Triple::AMDHSA || OS == Triple::AMDPAL) {
+    const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+    MIB.addImm(MFI->getLDSSize());
+  } else {
+    Module *M = MF->getFunction().getParent();
+    const GlobalValue *GV
+      = Intrinsic::getDeclaration(M, Intrinsic::amdgcn_groupstaticsize);
+    MIB.addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS32_LO);
+  }
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
 bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
