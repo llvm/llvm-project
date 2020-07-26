@@ -22,7 +22,7 @@ bool DWARFYAML::Data::isEmpty() const {
          !GNUPubTypes && CompileUnits.empty() && DebugLines.empty();
 }
 
-SetVector<StringRef> DWARFYAML::Data::getUsedSectionNames() const {
+SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
   SetVector<StringRef> SecNames;
   if (!DebugStrings.empty())
     SecNames.insert("debug_str");
