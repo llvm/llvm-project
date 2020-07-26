@@ -563,6 +563,8 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc))
     addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/local/include");
 
+  addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
+
   SmallString<128> ResourceDirInclude(D.ResourceDir);
   llvm::sys::path::append(ResourceDirInclude, "include");
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc) &&
@@ -755,8 +757,6 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   // system GCCs, but is often used with cross-compiling GCCs, and harmless to
   // add even when Clang is acting as-if it were a system compiler.
   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/include");
-
-  addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc) && getTriple().isMusl())
     addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
