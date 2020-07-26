@@ -482,6 +482,7 @@ public:
       Error, // an error has been reported on this symbol
       Function, // symbol is a function
       Subroutine, // symbol is a subroutine
+      StmtFunction, // symbol is a statement function (Function is set too)
       Implicit, // symbol is implicitly typed
       ModFile, // symbol came from .mod file
       ParentComp, // symbol is the "parent component" of an extended type
