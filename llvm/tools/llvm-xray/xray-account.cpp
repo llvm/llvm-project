@@ -226,7 +226,7 @@ struct ResultRow {
   std::string Function;
 };
 
-ResultRow getStats(std::vector<uint64_t> &Timings) {
+ResultRow getStats(MutableArrayRef<uint64_t> Timings) {
   assert(!Timings.empty());
   ResultRow R;
   R.Sum = std::accumulate(Timings.begin(), Timings.end(), 0.0);
@@ -240,11 +240,13 @@ ResultRow getStats(std::vector<uint64_t> &Timings) {
   R.Median = Timings[MedianOff];
 
   auto Pct90Off = std::floor(Timings.size() * 0.9);
-  std::nth_element(Timings.begin(), Timings.begin() + Pct90Off, Timings.end());
+  std::nth_element(Timings.begin(), Timings.begin() + (uint64_t)Pct90Off,
+                   Timings.end());
   R.Pct90 = Timings[Pct90Off];
 
   auto Pct99Off = std::floor(Timings.size() * 0.99);
-  std::nth_element(Timings.begin(), Timings.begin() + Pct99Off, Timings.end());
+  std::nth_element(Timings.begin(), Timings.begin() + (uint64_t)Pct99Off,
+                   Timings.end());
   R.Pct99 = Timings[Pct99Off];
   return R;
 }
