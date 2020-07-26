@@ -244,6 +244,9 @@ private:
   int getGSVectorCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
                       Align Alignment, unsigned AddressSpace);
 
+  int getGatherOverhead() const;
+  int getScatterOverhead() const;
+
   /// @}
 };
 
