@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -falkor-hwpf-fix -mtriple aarch64 -mcpu=falkor | FileCheck %s
-; RUN: opt < %s -S -falkor-hwpf-fix -mtriple aarch64 -mcpu=cortex-a57 | FileCheck %s --check-prefix=NOHWPF
+; RUN: opt < %s -S -aarch64-falkor-hwpf-fix -mtriple aarch64 -mcpu=falkor | FileCheck %s
+; RUN: opt < %s -S -aarch64-falkor-hwpf-fix -mtriple aarch64 -mcpu=cortex-a57 | FileCheck %s --check-prefix=NOHWPF
 
 ; Check that strided access metadata is added to loads in inner loops when compiling for Falkor.
 
