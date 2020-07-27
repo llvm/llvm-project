@@ -27,10 +27,9 @@ public:
   /// If the Allow predicate is given then only symbols matching the predicate
   /// will be searched for. If the predicate is not given then all symbols will
   /// be searched for.
-  TPCDynamicLibrarySearchGenerator(
-      TargetProcessControl &TPC,
-      TargetProcessControl::DynamicLibraryHandle DylibHandle)
-      : TPC(TPC), DylibHandle(DylibHandle) {}
+  TPCDynamicLibrarySearchGenerator(TargetProcessControl &TPC,
+                                   TargetProcessControl::DylibHandle H)
+      : TPC(TPC), H(H) {}
 
   /// Permanently loads the library at the given path and, on success, returns
   /// a DynamicLibrarySearchGenerator that will search it for symbol definitions
@@ -51,7 +50,7 @@ public:
 
 private:
   TargetProcessControl &TPC;
-  TargetProcessControl::DynamicLibraryHandle DylibHandle;
+  TargetProcessControl::DylibHandle H;
 };
 
 } // end namespace orc
