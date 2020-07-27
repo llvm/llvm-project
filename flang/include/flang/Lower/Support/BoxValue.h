@@ -203,6 +203,7 @@ using RangeBoxValue = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
 class ExtendedValue;
 
 mlir::Value getBase(const ExtendedValue &exv);
+mlir::Value getLen(const ExtendedValue &exv);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ExtendedValue &);
 ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 
@@ -230,6 +231,7 @@ public:
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const ExtendedValue &);
   friend mlir::Value getBase(const ExtendedValue &exv);
+  friend mlir::Value getLen(const ExtendedValue &exv);
   friend ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 
 private:
