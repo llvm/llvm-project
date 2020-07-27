@@ -16,8 +16,9 @@ diffs=$temp/diffs
 
 # Strip out blank lines and all comments except "!DEF:", "!REF:", and "!$omp"
 sed -e 's/!\([DR]EF:\)/KEEP \1/' -e 's/!\($omp\)/KEEP \1/' \
-  -e 's/!.*//' -e 's/ *$//' -e '/^$/d' -e 's/KEEP \([DR]EF:\)/!\1/' \
-  -e 's/KEEP \($omp\)/!\1/' \
+  -e 's/!\($acc\)/KEEP \1/' -e 's/!.*//' -e 's/ *$//' -e '/^$/d' \
+  -e 's/KEEP \([DR]EF:\)/!\1/' -e 's/KEEP \($omp\)/!\1/' \
+  -e 's/KEEP \($acc\)/!\1/' \
   $src > $src1
 egrep -v '![DR]EF:' $src1 > $src2  # strip out DEF and REF comments
 # compile, inserting comments for symbols:
