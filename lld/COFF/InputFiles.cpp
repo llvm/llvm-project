@@ -348,13 +348,13 @@ void ObjFile::recordPrevailingSymbolForMingw(
   // of the section chunk we actually include instead of discarding it,
   // add the symbol to a map to allow using it for implicitly
   // associating .[px]data$<func> sections to it.
+  // Use the suffix from the .text$<func> instead of the leader symbol
+  // name, for cases where the names differ (i386 mangling/decorations,
+  // cases where the leader is a weak symbol named .weak.func.default*).
   int32_t sectionNumber = sym.getSectionNumber();
   SectionChunk *sc = sparseChunks[sectionNumber];
   if (sc && sc->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE) {
-    StringRef name;
-    name = check(coffObj->getSymbolName(sym));
-    if (getMachineType() == I386)
-      name.consume_front("_");
+    StringRef name = sc->getSectionName().split('$').second;
     prevailingSectionMap[name] = sectionNumber;
   }
 }
