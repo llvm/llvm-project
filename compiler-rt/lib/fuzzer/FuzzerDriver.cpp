@@ -858,6 +858,12 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   exit(0);  // Don't let F destroy itself.
 }
 
+extern "C" ATTRIBUTE_INTERFACE int
+LLVMFuzzerRunDriver(int *argc, char ***argv,
+                    int (*UserCb)(const uint8_t *Data, size_t Size)) {
+  return FuzzerDriver(argc, argv, UserCb);
+}
+
 // Storage for global ExternalFunctions object.
 ExternalFunctions *EF = nullptr;
 
