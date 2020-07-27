@@ -414,8 +414,8 @@ define amdgpu_kernel void @bfe_i32_constant_fold_test_4(i32 addrspace(1)* %out) 
 ; GFX6-LABEL: bfe_i32_constant_fold_test_4:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; GFX6-NEXT:    s_bfe_i32 s3, -1, 0x10000
-; GFX6-NEXT:    v_mov_b32_e32 v0, s3
+; GFX6-NEXT:    s_bfe_i32 s2, -1, 0x10000
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
@@ -617,8 +617,8 @@ define amdgpu_kernel void @bfe_i32_constant_fold_test_16(i32 addrspace(1)* %out)
 ; GFX6-LABEL: bfe_i32_constant_fold_test_16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; GFX6-NEXT:    s_bfe_i32 s3, -1, 0x70001
-; GFX6-NEXT:    v_mov_b32_e32 v0, s3
+; GFX6-NEXT:    s_bfe_i32 s2, -1, 0x70001
+; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)

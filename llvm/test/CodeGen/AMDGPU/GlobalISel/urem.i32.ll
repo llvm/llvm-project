@@ -286,7 +286,7 @@ define <2 x i32> @v_urem_v2i32_pow2k_denom(<2 x i32> %num) {
 ; CGP-NEXT:    s_movk_i32 s4, 0x1000
 ; CGP-NEXT:    v_mov_b32_e32 v2, 0x1000
 ; CGP-NEXT:    s_mov_b32 s5, 0x4f7ffffe
-; CGP-NEXT:    s_mov_b32 s6, 0xfffff000
+; CGP-NEXT:    s_movk_i32 s6, 0xf000
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v3, s4
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v4, v2
 ; CGP-NEXT:    v_rcp_iflag_f32_e32 v3, v3
