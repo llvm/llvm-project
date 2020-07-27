@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncludeInserter.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 
 namespace clang {
@@ -26,7 +28,7 @@ public:
                           StringRef /*SearchPath*/, StringRef /*RelativePath*/,
                           const Module * /*ImportedModule*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
-    Inserter->AddInclude(FileNameRef, IsAngled, HashLocation,
+    Inserter->addInclude(FileNameRef, IsAngled, HashLocation,
                          IncludeToken.getEndLoc());
   }
 
@@ -34,45 +36,61 @@ private:
   IncludeInserter *Inserter;
 };
 
-IncludeInserter::IncludeInserter(const SourceManager &SourceMgr,
-                                 const LangOptions &LangOpts,
-                                 IncludeSorter::IncludeStyle Style)
-    : SourceMgr(SourceMgr), Style(Style) {}
+IncludeInserter::IncludeInserter(IncludeSorter::IncludeStyle Style)
+    : Style(Style) {}
 
-IncludeInserter::~IncludeInserter() {}
+void IncludeInserter::registerPreprocessor(Preprocessor *PP) {
+  assert(PP && "PP shouldn't be null");
+  SourceMgr = &PP->getSourceManager();
 
-std::unique_ptr<PPCallbacks> IncludeInserter::CreatePPCallbacks() {
-  return std::make_unique<IncludeInserterCallback>(this);
+  // If this gets registered multiple times, clear the maps
+  if (!IncludeSorterByFile.empty())
+    IncludeSorterByFile.clear();
+  if (!InsertedHeaders.empty())
+    InsertedHeaders.clear();
+  PP->addPPCallbacks(std::make_unique<IncludeInserterCallback>(this));
 }
 
 IncludeSorter &IncludeInserter::getOrCreate(FileID FileID) {
+  assert(SourceMgr && "SourceMgr shouldn't be null; did you remember to call "
+                      "registerPreprocessor()?");
   // std::unique_ptr is cheap to construct, so force a construction now to save
   // the lookup needed if we were to insert into the map.
   std::unique_ptr<IncludeSorter> &Entry = IncludeSorterByFile[FileID];
   if (!Entry) {
     // If it wasn't found, Entry will be default constructed to nullptr.
     Entry = std::make_unique<IncludeSorter>(
-        &SourceMgr, FileID,
-        SourceMgr.getFilename(SourceMgr.getLocForStartOfFile(FileID)), Style);
+        SourceMgr, FileID,
+        SourceMgr->getFilename(SourceMgr->getLocForStartOfFile(FileID)), Style);
   }
   return *Entry;
 }
 
 llvm::Optional<FixItHint>
-IncludeInserter::CreateIncludeInsertion(FileID FileID, StringRef Header,
+IncludeInserter::createIncludeInsertion(FileID FileID, StringRef Header,
                                         bool IsAngled) {
   // We assume the same Header will never be included both angled and not
   // angled.
-  if (!InsertedHeaders[FileID].insert(std::string(Header)).second)
+  if (!InsertedHeaders[FileID].insert(Header).second)
     return llvm::None;
 
   return getOrCreate(FileID).CreateIncludeInsertion(Header, IsAngled);
 }
 
-void IncludeInserter::AddInclude(StringRef FileName, bool IsAngled,
+llvm::Optional<FixItHint>
+IncludeInserter::createMainFileIncludeInsertion(StringRef Header,
+                                                bool IsAngled) {
+  assert(SourceMgr && "SourceMgr shouldn't be null; did you remember to call "
+                      "registerPreprocessor()?");
+  return createIncludeInsertion(SourceMgr->getMainFileID(), Header, IsAngled);
+}
+
+void IncludeInserter::addInclude(StringRef FileName, bool IsAngled,
                                  SourceLocation HashLocation,
                                  SourceLocation EndLocation) {
-  FileID FileID = SourceMgr.getFileID(HashLocation);
+  assert(SourceMgr && "SourceMgr shouldn't be null; did you remember to call "
+                      "registerPreprocessor()?");
+  FileID FileID = SourceMgr->getFileID(HashLocation);
   getOrCreate(FileID).AddInclude(FileName, IsAngled, HashLocation, EndLocation);
 }
 
