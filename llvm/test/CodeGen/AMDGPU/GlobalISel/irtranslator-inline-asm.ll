@@ -326,4 +326,13 @@ entry:
   ret i32 %asm1
 }
 
+define amdgpu_kernel void @asm_constraint_n_n()  {
+  ; CHECK-LABEL: name: asm_constraint_n_n
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   INLINEASM &"s_trap ${0:n}", 1 /* sideeffect attdialect */, 13 /* imm */, 10
+  ; CHECK:   S_ENDPGM 0
+  tail call void asm sideeffect "s_trap ${0:n}", "n"(i32 10) #1
+  ret void
+}
+
 !0 = !{i32 70}
