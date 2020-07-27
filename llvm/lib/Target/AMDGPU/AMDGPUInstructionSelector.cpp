@@ -736,6 +736,10 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   if (Offset % 32 != 0 || InsSize % 32 != 0)
     return false;
 
+  // Currently not handled by getSubRegFromChannel.
+  if (InsSize > 128)
+    return false;
+
   unsigned SubReg = TRI.getSubRegFromChannel(Offset / 32, InsSize / 32);
   if (SubReg == AMDGPU::NoSubRegister)
     return false;
