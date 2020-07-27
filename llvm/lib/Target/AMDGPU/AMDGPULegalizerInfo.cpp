@@ -423,7 +423,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0);
 
   if (ST.hasVOP3PInsts()) {
-    assert(ST.hasIntClamp() && "all targets with VOP3P should support clamp");
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32, S16, V2S16})
       .clampScalar(0, S16, S32)
@@ -444,8 +443,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampScalar(0, S16, S32)
       .scalarize(0)
       .widenScalarToNextPow2(0, 32); // FIXME: min should be 16
-
-    assert(ST.hasIntClamp() && "all targets with 16-bit should support clamp");
 
     // Technically the saturating operations require clamp bit support, but this
     // was introduced at the same time as 16-bit operations.
