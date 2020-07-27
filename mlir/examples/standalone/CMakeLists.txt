@@ -29,10 +29,6 @@ set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
 list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 
-if(LLVM_ENABLE_ZLIB)
-  find_package(ZLIB)
-endif()
-
 include(TableGen)
 include(AddLLVM)
 include(AddMLIR)
