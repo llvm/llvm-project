@@ -371,13 +371,16 @@ public:
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
       SuitableAlign = 64;
+      LongDoubleWidth = 64;
+      LongDoubleAlign = DoubleAlign = 32;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
       break;
     default:
       break;
     }
 
     if (Triple.isOSFreeBSD() || Triple.isOSNetBSD() || Triple.isOSOpenBSD() ||
-        Triple.getOS() == llvm::Triple::AIX || Triple.isMusl()) {
+        Triple.isMusl()) {
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     }
@@ -406,6 +409,9 @@ public:
       // TODO: Set appropriate ABI for AIX platform.
       resetDataLayout("E-m:a-i64:64-n32:64");
       SuitableAlign = 64;
+      LongDoubleWidth = 64;
+      LongDoubleAlign = DoubleAlign = 32;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     } else if ((Triple.getArch() == llvm::Triple::ppc64le)) {
       resetDataLayout("e-m:e-i64:64-n32:64");
       ABI = "elfv2";
@@ -414,8 +420,7 @@ public:
       ABI = "elfv1";
     }
 
-    if (Triple.isOSFreeBSD() || Triple.getOS() == llvm::Triple::AIX ||
-        Triple.isMusl()) {
+    if (Triple.isOSFreeBSD() || Triple.isMusl()) {
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     }
