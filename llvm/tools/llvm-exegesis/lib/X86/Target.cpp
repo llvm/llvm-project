@@ -14,14 +14,39 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
+#include "X86Counter.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace llvm {
 namespace exegesis {
+
+static cl::OptionCategory
+    BenchmarkOptions("llvm-exegesis benchmark x86-options");
+
+// If a positive value is specified, we are going to use the LBR in
+// latency-mode.
+//
+// Note:
+//  -  A small value is preferred, but too low a value could result in
+//     throttling.
+//  -  A prime number is preferred to avoid always skipping certain blocks.
+//
+static cl::opt<unsigned> LbrSamplingPeriod(
+    "x86-lbr-sample-period",
+    cl::desc("The sample period (nbranches/sample), used for LBR sampling"),
+    cl::cat(BenchmarkOptions), cl::init(0));
+
+// FIXME: Validates that repetition-mode is loop if LBR is requested.
 
 // Returns a non-null reason if we cannot handle the memory references in this
 // instruction.
@@ -568,9 +593,31 @@ void ConstantInliner::initStack(unsigned Bytes) {
 #include "X86GenExegesis.inc"
 
 namespace {
+
 class ExegesisX86Target : public ExegesisTarget {
 public:
   ExegesisX86Target() : ExegesisTarget(X86CpuPfmCounters) {}
+
+  Expected<std::unique_ptr<pfm::Counter>>
+  createCounter(StringRef CounterName, const LLVMState &State) const override {
+    // If LbrSamplingPeriod was provided, then ignore the
+    // CounterName because we only have one for LBR.
+    if (LbrSamplingPeriod > 0) {
+      // Can't use LBR without HAVE_LIBPFM, LIBPFM_HAS_FIELD_CYCLES, or without
+      // __linux__ (for now)
+#if defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES) &&                \
+    defined(__linux__)
+      return std::make_unique<X86LbrCounter>(
+          X86LbrPerfEvent(LbrSamplingPeriod));
+#else
+      return llvm::make_error<llvm::StringError>(
+          "LBR counter requested without HAVE_LIBPFM, LIBPFM_HAS_FIELD_CYCLES, "
+          "or running on Linux.",
+          llvm::errc::invalid_argument);
+#endif
+    }
+    return ExegesisTarget::createCounter(CounterName, State);
+  }
 
 private:
   void addTargetSpecificPasses(PassManagerBase &PM) const override;
