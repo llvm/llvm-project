@@ -48435,6 +48435,14 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
       SDValue Ext2 = extractSubVector(InVec.getOperand(2), 0, DAG, DL, 128);
       return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1, Ext2);
     }
+    if (InOpcode == ISD::TRUNCATE && Subtarget.hasVLX() &&
+        (VT.is128BitVector() || VT.is256BitVector())) {
+      SDLoc DL(N);
+      SDValue InVecSrc = InVec.getOperand(0);
+      unsigned Scale = InVecSrc.getValueSizeInBits() / InSizeInBits;
+      SDValue Ext = extractSubVector(InVecSrc, 0, DAG, DL, Scale * SizeInBits);
+      return DAG.getNode(InOpcode, DL, VT, Ext);
+    }
   }
 
   return SDValue();
