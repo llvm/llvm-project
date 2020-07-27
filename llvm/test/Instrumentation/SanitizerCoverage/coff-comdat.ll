@@ -1,4 +1,4 @@
-; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-inline-8bit-counters=1 -sanitizer-coverage-pc-table=1 -S | FileCheck %s
+; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-inline-8bit-counters=1 -sanitizer-coverage-pc-table=1 -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -sanitizer-coverage-inline-8bit-counters=1 -sanitizer-coverage-pc-table=1 -S | FileCheck %s
 
 ; Make sure we use the right comdat groups for COFF to avoid relocations
