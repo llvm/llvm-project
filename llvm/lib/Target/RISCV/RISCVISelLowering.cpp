@@ -166,6 +166,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbp())
     setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
 
+  if (Subtarget.hasStdExtZbt()) {
+    setOperationAction(ISD::FSHL, XLenVT, Legal);
+    setOperationAction(ISD::FSHR, XLenVT, Legal);
+  }
+
   ISD::CondCode FPCCToExtend[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
       ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE, ISD::SETGT,
