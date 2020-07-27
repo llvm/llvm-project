@@ -991,8 +991,7 @@ define <4 x i32> @ternlog_xor_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_or_and_mask(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: ternlog_or_and_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpternlogd $236, {{.*}}(%rip), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %b = or <4 x i32> %a, %y
@@ -1002,8 +1001,7 @@ define <4 x i32> @ternlog_or_and_mask(<4 x i32> %x, <4 x i32> %y) {
 define <8 x i32> @ternlog_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: ternlog_or_and_mask_ymm:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; CHECK-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpternlogd $236, {{.*}}(%rip), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = and <8 x i32> %x, <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
   %b = or <8 x i32> %a, %y
@@ -1013,8 +1011,7 @@ define <8 x i32> @ternlog_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y) {
 define <2 x i64> @ternlog_xor_and_mask(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: ternlog_xor_and_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    vxorps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpternlogq $108, {{.*}}(%rip), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = and <2 x i64> %x, <i64 1099511627775, i64 1099511627775>
   %b = xor <2 x i64> %a, %y
@@ -1024,8 +1021,7 @@ define <2 x i64> @ternlog_xor_and_mask(<2 x i64> %x, <2 x i64> %y) {
 define <4 x i64> @ternlog_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y) {
 ; CHECK-LABEL: ternlog_xor_and_mask_ymm:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; CHECK-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpternlogq $108, {{.*}}(%rip), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = and <4 x i64> %x, <i64 72057594037927935, i64 72057594037927935, i64 72057594037927935, i64 72057594037927935>
   %b = xor <4 x i64> %a, %y
