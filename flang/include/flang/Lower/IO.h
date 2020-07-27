@@ -17,8 +17,7 @@
 #include "flang/Semantics/symbol.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
-#include "SymbolMap.h"
-#include "Utils.h"
+#include "flang/Lower/Utils.h"
 
 namespace mlir {
 class Value;
