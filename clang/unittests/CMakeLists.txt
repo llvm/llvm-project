@@ -1,10 +1,6 @@
 add_custom_target(ClangUnitTests)
 set_target_properties(ClangUnitTests PROPERTIES FOLDER "Clang tests")
 
-if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
-  add_compile_options("-Wno-suggest-override")
-endif()
-
 if(CLANG_BUILT_STANDALONE)
   # LLVMTestingSupport library is needed for some of the unittests.
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
