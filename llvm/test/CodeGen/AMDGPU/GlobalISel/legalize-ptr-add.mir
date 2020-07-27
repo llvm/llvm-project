@@ -143,3 +143,45 @@ body: |
     %2:_(p999) = G_PTR_ADD %0, %1
     $vgpr0_vgpr1 = COPY %2
 ...
+
+---
+name: test_gep_v2p1_v2i64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+
+    ; CHECK-LABEL: name: test_gep_v2p1_v2i64
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x p1>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[UV:%[0-9]+]]:_(p1), [[UV1:%[0-9]+]]:_(p1) = G_UNMERGE_VALUES [[COPY]](<2 x p1>)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[UV]], [[UV2]](s64)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[UV1]], [[UV3]](s64)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[PTR_ADD]](p1), [[PTR_ADD1]](p1)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p1>)
+    %0:_(<2 x p1>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(<2 x p1>) = G_PTR_ADD %0, %1
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+...
+
+---
+name: test_gep_v2p3_v2s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_gep_v2p3_v2s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY]](<2 x p3>)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p3) = G_PTR_ADD [[UV]], [[UV2]](s32)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p3) = G_PTR_ADD [[UV1]], [[UV3]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[PTR_ADD]](p3), [[PTR_ADD1]](p3)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x p3>)
+    %0:_(<2 x p3>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x p3>) = G_PTR_ADD %0, %1
+    $vgpr0_vgpr1 = COPY %2
+...
