@@ -214,7 +214,7 @@ LanguageRuntime *LanguageRuntime::FindPlugin(Process *process,
   return nullptr;
 }
 
-LanguageRuntime::LanguageRuntime(Process *process) : m_process(process) {}
+LanguageRuntime::LanguageRuntime(Process *process) : Runtime(process) {}
 
 LanguageRuntime::~LanguageRuntime() = default;
 
