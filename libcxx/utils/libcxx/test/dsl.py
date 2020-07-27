@@ -52,7 +52,7 @@ def _executeScriptInternal(test, commands):
     res = ('', '', 127, None)
   return res
 
-def _makeConfigTest(config, testPrefix=None):
+def _makeConfigTest(config, testPrefix=''):
   sourceRoot = os.path.join(config.test_exec_root, '__config_src__')
   execRoot = os.path.join(config.test_exec_root, '__config_exec__')
   suite = lit.Test.TestSuite('__config__', sourceRoot, execRoot, config)
@@ -83,7 +83,7 @@ def sourceBuilds(config, source):
     _executeScriptInternal(test, ['rm %t.exe'])
     return exitCode == 0
 
-def programOutput(config, program, args=[], testPrefix=None):
+def programOutput(config, program, args=[], testPrefix=''):
   """
   Compiles a program for the test target, run it on the test target and return
   the output.
