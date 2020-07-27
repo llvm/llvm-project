@@ -44,10 +44,6 @@
 ///      of a pass. For those callbacks returning false means pass will not be
 ///      executed.
 ///
-/// TODO: currently there is no way for a pass to opt-out of execution control
-/// (e.g. become unskippable). PassManager is the only entity that determines
-/// how pass instrumentation affects pass execution.
-///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_PASSINSTRUMENTATION_H
