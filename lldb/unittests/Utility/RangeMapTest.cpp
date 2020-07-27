@@ -12,6 +12,32 @@
 
 using namespace lldb_private;
 
+TEST(RangeVector, CombineConsecutiveRanges) {
+  using RangeVector = RangeVector<uint32_t, uint32_t>;
+  using Entry = RangeVector::Entry;
+
+  RangeVector V;
+  V.Append(0, 1);
+  V.Append(5, 1);
+  V.Append(6, 1);
+  V.Append(10, 9);
+  V.Append(15, 1);
+  V.Append(20, 9);
+  V.Append(21, 9);
+  V.Sort();
+  V.CombineConsecutiveRanges();
+  EXPECT_THAT(V, testing::ElementsAre(Entry(0, 1), Entry(5, 2), Entry(10, 9),
+                                      Entry(20, 10)));
+
+  V.Clear();
+  V.Append(0, 20);
+  V.Append(5, 1);
+  V.Append(10, 1);
+  V.Sort();
+  V.CombineConsecutiveRanges();
+  EXPECT_THAT(V, testing::ElementsAre(Entry(0, 20)));
+}
+
 using RangeDataVectorT = RangeDataVector<uint32_t, uint32_t, uint32_t>;
 using EntryT = RangeDataVectorT::Entry;
 
