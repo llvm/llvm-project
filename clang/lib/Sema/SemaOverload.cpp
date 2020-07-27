@@ -14193,12 +14193,12 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
       Diag(MemExpr->getBeginLoc(),
            diag::warn_call_to_pure_virtual_member_function_from_ctor_dtor)
           << MD->getDeclName() << isa<CXXDestructorDecl>(CurContext)
-          << MD->getParent()->getDeclName();
+          << MD->getParent();
 
       Diag(MD->getBeginLoc(), diag::note_previous_decl) << MD->getDeclName();
       if (getLangOpts().AppleKext)
         Diag(MemExpr->getBeginLoc(), diag::note_pure_qualified_call_kext)
-            << MD->getParent()->getDeclName() << MD->getDeclName();
+            << MD->getParent() << MD->getDeclName();
     }
   }
 

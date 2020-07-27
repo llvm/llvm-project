@@ -8,9 +8,10 @@ void a2 [[noreturn]] () {
 }
 
 template <typename T> void a3 [[noreturn]] () {}
-template <> void a3<int> () { return; } // expected-warning {{function 'a3' declared 'noreturn' should not return}}
+template <> void a3<int>() { return; } // expected-warning {{function 'a3<int>' declared 'noreturn' should not return}}
 
-template <typename T> void a4 [[noreturn]] () { return; } // expected-warning 2{{function 'a4' declared 'noreturn' should not return}}
+template <typename T> void a4 [[noreturn]] () { return; } // expected-warning {{function 'a4' declared 'noreturn' should not return}}
+                                                          // expected-warning@-1 {{function 'a4<long>' declared 'noreturn' should not return}}
 void a4_test() { a4<long>(); } // expected-note {{in instantiation of function template specialization 'a4<long>' requested here}}
 
 [[noreturn, noreturn]] void b() { throw 0; } // expected-error {{attribute 'noreturn' cannot appear multiple times in an attribute specifier}}

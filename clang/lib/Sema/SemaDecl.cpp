@@ -1926,7 +1926,7 @@ static void CheckPoppedLabel(LabelDecl *L, Sema &S) {
   else
     Diagnose = L->getStmt() == nullptr;
   if (Diagnose)
-    S.Diag(L->getLocation(), diag::err_undeclared_label_use) <<L->getDeclName();
+    S.Diag(L->getLocation(), diag::err_undeclared_label_use) << L;
 }
 
 void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
@@ -7194,9 +7194,10 @@ NamedDecl *Sema::ActOnVariableDeclarator(
         << FixItHint::CreateRemoval(D.getDeclSpec().getModulePrivateSpecLoc());
     else if (NewVD->hasLocalStorage())
       Diag(NewVD->getLocation(), diag::err_module_private_local)
-        << 0 << NewVD->getDeclName()
-        << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
-        << FixItHint::CreateRemoval(D.getDeclSpec().getModulePrivateSpecLoc());
+          << 0 << NewVD
+          << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
+          << FixItHint::CreateRemoval(
+                 D.getDeclSpec().getModulePrivateSpecLoc());
     else {
       NewVD->setModulePrivate();
       if (NewTemplate)
@@ -12429,7 +12430,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
             !Context.getTargetInfo().getCXXABI().isMicrosoft()) {
           Diag(Var->getLocation(),
                diag::err_constexpr_static_mem_var_requires_init)
-            << Var->getDeclName();
+              << Var;
           Var->setInvalidDecl();
           return;
         }
@@ -12562,8 +12563,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     // definitions with reference type.
     if (Type->isReferenceType()) {
       Diag(Var->getLocation(), diag::err_reference_var_requires_init)
-        << Var->getDeclName()
-        << SourceRange(Var->getLocation(), Var->getLocation());
+          << Var << SourceRange(Var->getLocation(), Var->getLocation());
       Var->setInvalidDecl();
       return;
     }
@@ -12696,7 +12696,7 @@ void Sema::ActOnCXXForRangeDecl(Decl *D) {
   }
   if (Error != -1) {
     Diag(VD->getOuterLocStart(), diag::err_for_range_storage_class)
-      << VD->getDeclName() << Error;
+        << VD << Error;
     D->setInvalidDecl();
   }
 }
@@ -13477,9 +13477,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
 
   if (D.getDeclSpec().isModulePrivateSpecified())
     Diag(New->getLocation(), diag::err_module_private_local)
-      << 1 << New->getDeclName()
-      << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
-      << FixItHint::CreateRemoval(D.getDeclSpec().getModulePrivateSpecLoc());
+        << 1 << New << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
+        << FixItHint::CreateRemoval(D.getDeclSpec().getModulePrivateSpecLoc());
 
   if (New->hasAttr<BlocksAttr>()) {
     Diag(New->getLocation(), diag::err_block_on_nonlocal);
@@ -13531,8 +13530,7 @@ void Sema::DiagnoseSizeOfParametersAndReturnValue(
   if (!ReturnTy->isDependentType() && ReturnTy.isPODType(Context)) {
     unsigned Size = Context.getTypeSizeInChars(ReturnTy).getQuantity();
     if (Size > LangOpts.NumLargeByValueCopy)
-      Diag(D->getLocation(), diag::warn_return_value_size)
-          << D->getDeclName() << Size;
+      Diag(D->getLocation(), diag::warn_return_value_size) << D << Size;
   }
 
   // Warn if any parameter is pass-by-value and larger than the specified
@@ -13544,7 +13542,7 @@ void Sema::DiagnoseSizeOfParametersAndReturnValue(
     unsigned Size = Context.getTypeSizeInChars(T).getQuantity();
     if (Size > LangOpts.NumLargeByValueCopy)
       Diag(Parameter->getLocation(), diag::warn_parameter_size)
-          << Parameter->getDeclName() << Size;
+          << Parameter << Size;
   }
 }
 
@@ -13852,9 +13850,9 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
   if (getLangOpts().GNUMode && Definition->isInlineSpecified() &&
       Definition->getStorageClass() == SC_Extern)
     Diag(FD->getLocation(), diag::err_redefinition_extern_inline)
-        << FD->getDeclName() << getLangOpts().CPlusPlus;
+        << FD << getLangOpts().CPlusPlus;
   else
-    Diag(FD->getLocation(), diag::err_redefinition) << FD->getDeclName();
+    Diag(FD->getLocation(), diag::err_redefinition) << FD;
 
   Diag(Definition->getLocation(), diag::note_previous_definition);
   FD->setInvalidDecl();
@@ -14909,9 +14907,10 @@ TypedefDecl *Sema::ParseTypedefDecl(Scope *S, Declarator &D, QualType T,
   if (D.getDeclSpec().isModulePrivateSpecified()) {
     if (CurContext->isFunctionOrMethod())
       Diag(NewTD->getLocation(), diag::err_module_private_local)
-        << 2 << NewTD->getDeclName()
-        << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
-        << FixItHint::CreateRemoval(D.getDeclSpec().getModulePrivateSpecLoc());
+          << 2 << NewTD
+          << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
+          << FixItHint::CreateRemoval(
+                 D.getDeclSpec().getModulePrivateSpecLoc());
     else
       NewTD->setModulePrivate();
   }

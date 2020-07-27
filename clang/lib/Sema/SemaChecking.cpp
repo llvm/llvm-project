@@ -13962,8 +13962,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
 
   if (ND)
     DiagRuntimeBehavior(ND->getBeginLoc(), BaseExpr,
-                        PDiag(diag::note_array_declared_here)
-                            << ND->getDeclName());
+                        PDiag(diag::note_array_declared_here) << ND);
 }
 
 void Sema::CheckArrayAccess(const Expr *expr) {

@@ -40,7 +40,7 @@ void g() {
   A (B::*mfp)() = 0;
   (b.*mfp)(); // expected-error {{calling function with incomplete return type 'A'}}
 
-  ft(42); // expected-error {{calling 'ft' with incomplete return type 'A'}}
+  ft(42); // expected-error {{calling 'ft<int>' with incomplete return type 'A'}}
 }
 
 
