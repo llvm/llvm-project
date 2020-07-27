@@ -13,11 +13,7 @@
 #ifndef FORTRAN_LOWER_IO_H
 #define FORTRAN_LOWER_IO_H
 
-#include "flang/Common/reference.h"
-#include "flang/Semantics/symbol.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
-#include "flang/Lower/Utils.h"
+#include <cstdint>
 
 namespace mlir {
 class Value;
@@ -42,7 +38,6 @@ struct WriteStmt;
 namespace lower {
 
 class AbstractConverter;
-class BridgeImpl;
 
 /// Generate IO call(s) for BACKSPACE; return the IOSTAT code
 mlir::Value genBackspaceStatement(AbstractConverter &,
