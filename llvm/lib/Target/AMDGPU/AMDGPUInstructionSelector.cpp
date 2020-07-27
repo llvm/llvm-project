@@ -616,11 +616,6 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   return true;
 }
 
-static bool isZero(Register Reg, const MachineRegisterInfo &MRI) {
-  int64_t Val;
-  return mi_match(Reg, MRI, m_ICst(Val)) && Val == 0;
-}
-
 bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
   MachineInstr &MI) const {
   if (selectImpl(MI, *CoverageInfo))
@@ -644,6 +639,20 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
 
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock *BB = MI.getParent();
+
+  auto ConstSrc1 = getConstantVRegValWithLookThrough(Src1, *MRI, true, true);
+  if (ConstSrc1) {
+    auto ConstSrc0 = getConstantVRegValWithLookThrough(Src0, *MRI, true, true);
+    if (ConstSrc0) {
+      uint32_t Lo16 = static_cast<uint32_t>(ConstSrc0->Value) & 0xffff;
+      uint32_t Hi16 = static_cast<uint32_t>(ConstSrc1->Value) & 0xffff;
+
+      BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), Dst)
+        .addImm(Lo16 | (Hi16 << 16));
+      MI.eraseFromParent();
+      return RBI.constrainGenericRegister(Dst, AMDGPU::SReg_32RegClass, *MRI);
+    }
+  }
 
   // TODO: This should probably be a combine somewhere
   // (build_vector_trunc $src0, undef -> copy $src0
@@ -686,7 +695,7 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
   } else if (Shift1) {
     Opc = AMDGPU::S_PACK_LH_B32_B16;
     MI.getOperand(2).setReg(ShiftSrc1);
-  } else if (Shift0 && isZero(Src1, *MRI)) {
+  } else if (Shift0 && ConstSrc1 && ConstSrc1->Value == 0) {
     // build_vector_trunc (lshr $src0, 16), 0 -> s_lshr_b32 $src0, 16
     auto MIB = BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst)
       .addReg(ShiftSrc0)
