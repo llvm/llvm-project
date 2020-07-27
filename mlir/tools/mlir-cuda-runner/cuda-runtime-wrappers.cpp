@@ -83,7 +83,7 @@ extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
 // Allows to register a MemRef with the CUDA runtime. Initializes array with
 // value. Helpful until we have transfer functions implemented.
 template <typename T>
-void mcuMemHostRegisterMemRef(const DynamicMemRefType<T> &mem_ref, T value) {
+void mgpuMemHostRegisterMemRef(const DynamicMemRefType<T> &mem_ref, T value) {
   llvm::SmallVector<int64_t, 4> denseStrides(mem_ref.rank);
   llvm::ArrayRef<int64_t> sizes(mem_ref.sizes, mem_ref.rank);
   llvm::ArrayRef<int64_t> strides(mem_ref.strides, mem_ref.rank);
@@ -103,12 +103,12 @@ void mcuMemHostRegisterMemRef(const DynamicMemRefType<T> &mem_ref, T value) {
   mgpuMemHostRegister(pointer, count * sizeof(T));
 }
 
-extern "C" void mcuMemHostRegisterFloat(int64_t rank, void *ptr) {
+extern "C" void mgpuMemHostRegisterFloat(int64_t rank, void *ptr) {
   UnrankedMemRefType<float> mem_ref = {rank, ptr};
-  mcuMemHostRegisterMemRef(DynamicMemRefType<float>(mem_ref), 1.23f);
+  mgpuMemHostRegisterMemRef(DynamicMemRefType<float>(mem_ref), 1.23f);
 }
 
-extern "C" void mcuMemHostRegisterInt32(int64_t rank, void *ptr) {
+extern "C" void mgpuMemHostRegisterInt32(int64_t rank, void *ptr) {
   UnrankedMemRefType<int32_t> mem_ref = {rank, ptr};
-  mcuMemHostRegisterMemRef(DynamicMemRefType<int32_t>(mem_ref), 123);
+  mgpuMemHostRegisterMemRef(DynamicMemRefType<int32_t>(mem_ref), 123);
 }
