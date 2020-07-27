@@ -1653,7 +1653,13 @@ void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
 
     unsigned ChainPredID = DAG->SUnits.size();
     for (const SDep &Pred : SU.Preds) {
-      if (Pred.isCtrl() && !Pred.isArtificial()) {
+      // We only want to cluster the mem ops that have the same ctrl(non-data)
+      // pred so that they didn't have ctrl dependency for each other. But for
+      // store instrs, we can still cluster them if the pred is load instr.
+      if ((Pred.isCtrl() &&
+           (IsLoad ||
+            (Pred.getSUnit() && Pred.getSUnit()->getInstr()->mayStore()))) &&
+          !Pred.isArtificial()) {
         ChainPredID = Pred.getSUnit()->NodeNum;
         break;
       }
