@@ -3473,6 +3473,59 @@ LegalizerHelper::fewerElementsVectorBuildVector(MachineInstr &MI,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVectorExtractVectorElt(MachineInstr &MI,
+                                                     unsigned TypeIdx,
+                                                     LLT NarrowVecTy) {
+  assert(TypeIdx == 1 && "not a vector type index");
+
+  // TODO: Handle total scalarization case.
+  if (!NarrowVecTy.isVector())
+    return UnableToLegalize;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcVec = MI.getOperand(1).getReg();
+  Register Idx = MI.getOperand(2).getReg();
+  LLT VecTy = MRI.getType(SrcVec);
+
+  // If the index is a constant, we can really break this down as you would
+  // expect, and index into the target size pieces.
+  int64_t IdxVal;
+  if (mi_match(Idx, MRI, m_ICst(IdxVal))) {
+    // Avoid out of bounds indexing the pieces.
+    if (IdxVal >= VecTy.getNumElements()) {
+      MIRBuilder.buildUndef(DstReg);
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
+    SmallVector<Register, 8> VecParts;
+    LLT GCDTy = extractGCDType(VecParts, VecTy, NarrowVecTy, SrcVec);
+
+    // Build a sequence of NarrowTy pieces in VecParts for this operand.
+    buildLCMMergePieces(VecTy, NarrowVecTy, GCDTy, VecParts,
+                        TargetOpcode::G_ANYEXT);
+
+    unsigned NewNumElts = NarrowVecTy.getNumElements();
+
+    LLT IdxTy = MRI.getType(Idx);
+    int64_t PartIdx = IdxVal / NewNumElts;
+    auto NewIdx =
+        MIRBuilder.buildConstant(IdxTy, IdxVal - NewNumElts * PartIdx);
+
+    MIRBuilder.buildExtractVectorElement(DstReg, VecParts[PartIdx], NewIdx);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  // With a variable index, we can't perform the extract in a smaller type, so
+  // we're forced to expand this.
+  //
+  // TODO: We could emit a chain of compare/select to figure out which piece to
+  // index.
+  return lowerExtractVectorElt(MI);
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
                                       LLT NarrowTy) {
   // FIXME: Don't know how to handle secondary types yet.
@@ -3801,6 +3854,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorUnmergeValues(MI, TypeIdx, NarrowTy);
   case G_BUILD_VECTOR:
     return fewerElementsVectorBuildVector(MI, TypeIdx, NarrowTy);
+  case G_EXTRACT_VECTOR_ELT:
+    return fewerElementsVectorExtractVectorElt(MI, TypeIdx, NarrowTy);
   case G_LOAD:
   case G_STORE:
     return reduceLoadStoreWidth(MI, TypeIdx, NarrowTy);
