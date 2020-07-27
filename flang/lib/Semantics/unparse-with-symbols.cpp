@@ -35,6 +35,11 @@ public:
   template <typename T> void Post(const parser::Statement<T> &) {
     currStmt_ = std::nullopt;
   }
+  bool Pre(const parser::AccClause &clause) {
+    currStmt_ = clause.source;
+    return true;
+  }
+  void Post(const parser::AccClause &) { currStmt_ = std::nullopt; }
   bool Pre(const parser::OmpClause &clause) {
     currStmt_ = clause.source;
     return true;
