@@ -3815,8 +3815,11 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
     //   If P is a forwarding reference and the argument is an lvalue, the type
     //   "lvalue reference to A" is used in place of A for type deduction.
     if (isForwardingReference(QualType(ParamRefType, 0), FirstInnerIndex) &&
-        Arg->isLValue())
+        Arg->isLValue()) {
+      if (S.getLangOpts().OpenCL)
+        ArgType = S.Context.getAddrSpaceQualType(ArgType, LangAS::opencl_generic);
       ArgType = S.Context.getLValueReferenceType(ArgType);
+    }
   } else {
     // C++ [temp.deduct.call]p2:
     //   If P is not a reference type:
