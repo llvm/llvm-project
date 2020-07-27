@@ -94,7 +94,7 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
     replaceFunctionCalls(*F, *ClonedFunc, ArgIndexesToKeep);
     // Rename Cloned Function to Old's name
     std::string FName = std::string(F->getName());
-    F->replaceAllUsesWith(UndefValue::get(F->getType()));
+    F->replaceAllUsesWith(ConstantExpr::getBitCast(ClonedFunc, F->getType()));
     F->eraseFromParent();
     ClonedFunc->setName(FName);
   }

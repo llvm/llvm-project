@@ -23,7 +23,7 @@ define void @caller(i32 %arg) personality i8* bitcast (i32 (...)* @__gxx_persona
 ; CHECK-ALL: bb:
 bb:
 ; CHECK-INTERESTINGNESS: %i0 = invoke i32
-; CHECK-FINAL: %i0 = invoke i32 undef(i32 %arg)
+; CHECK-FINAL: %i0 = invoke i32 bitcast (i32 ()* @maybe_throwing_callee to i32 (i32)*)(i32 %arg)
 ; CHECK-ALL: to label %bb3 unwind label %bb1
   %i0 = invoke i32 @maybe_throwing_callee(i32 %arg)
           to label %bb3 unwind label %bb1
