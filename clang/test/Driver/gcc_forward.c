@@ -1,3 +1,8 @@
+// RUN: %clang -### %s -target aarch64-none-elf \
+// RUN:   --coverage -fuse-ld=lld --ld-path=ld -nostdlib -r -rdynamic -static -static-pie \
+// RUN:   2>&1 | FileCheck --check-prefix=FORWARD %s
+// FORWARD: gcc{{[^"]*}}" "--coverage" "-fuse-ld=lld" "--ld-path=ld" "-nostdlib" "-r" "-rdynamic" "-static" "-static-pie"
+
 // Check that we don't try to forward -Xclang or -mlinker-version to GCC.
 // PR12920 -- Check also we may not forward W_Group options to GCC.
 //
@@ -5,7 +10,7 @@
 // RUN:   %s \
 // RUN:   -Wall -Wdocumentation \
 // RUN:   -Xclang foo-bar \
-// RUN:   -march=x86-64 \
+// RUN:   -pie -march=x86-64 \
 // RUN:   -mlinker-version=10 -### 2> %t
 // RUN: FileCheck < %t %s
 //
@@ -15,13 +20,13 @@
 // CHECK: "-o" "{{[^"]+}}.o"
 //
 // gcc as ld.
-// CHECK: gcc{{[^"]*}}"
+// CHECK: gcc{{[^"]*}}" "-pie"
 // CHECK-NOT: "-mlinker-version=10"
 // CHECK-NOT: "-Xclang"
 // CHECK-NOT: "foo-bar"
 // CHECK-NOT: "-Wall"
 // CHECK-NOT: "-Wdocumentation"
-// CHECK: -march
+// CHECK-NOT: -march
 // CHECK-NOT: "-mlinker-version=10"
 // CHECK-NOT: "-Xclang"
 // CHECK-NOT: "foo-bar"
@@ -34,9 +39,3 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ASM %s
 // CHECK-ASM: as
 // CHECK-ASM-NOT: "-g"
-
-// Check that we're not forwarding -mno-unaligned-access.
-// RUN: %clang -target aarch64-none-elf -mno-unaligned-access %s -### 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ARM %s
-// CHECK-ARM: gcc{{[^"]*}}"
-// CHECK-ARM-NOT: -mno-unaligned-access
