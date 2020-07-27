@@ -124,7 +124,7 @@ bool VPlanSlp::areVectorizable(ArrayRef<VPValue *> Operands) const {
     for (auto &I : *Parent) {
       auto *VPI = cast<VPInstruction>(&I);
       if (VPI->getOpcode() == Instruction::Load &&
-          std::find(Operands.begin(), Operands.end(), VPI) != Operands.end())
+          llvm::is_contained(Operands, VPI))
         LoadsSeen++;
 
       if (LoadsSeen == Operands.size())
