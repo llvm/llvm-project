@@ -12,9 +12,9 @@ define <8 x i32> @foo(<8 x i32> %t, <8 x i32> %u) {
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm5, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm5, %ecx
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
@@ -41,9 +41,9 @@ define <8 x i32> @foo(<8 x i32> %t, <8 x i32> %u) {
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm4, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm4, %ecx
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
@@ -79,9 +79,9 @@ define <8 x i32> @bar(<8 x i32> %t, <8 x i32> %u) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm5, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm5, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx
@@ -108,9 +108,9 @@ define <8 x i32> @bar(<8 x i32> %t, <8 x i32> %u) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx
 ; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm4, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
 ; CHECK-NEXT:    movd %xmm4, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ecx

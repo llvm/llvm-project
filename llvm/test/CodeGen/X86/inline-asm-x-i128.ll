@@ -16,7 +16,7 @@ define { i64, i64 } @foo(i64 %0, i64 %1) {
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    movq %xmm0, %rax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movq %xmm0, %rdx
 ; CHECK-NEXT:    retq
   %3 = zext i64 %1 to i128

@@ -17,7 +17,7 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; LIN-SSE2-NEXT:    movd %xmm0, %eax
 ; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; LIN-SSE2-NEXT:    movd %xmm1, %ecx
-; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; LIN-SSE2-NEXT:    movd %xmm1, %edx
 ; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; LIN-SSE2-NEXT:    movd %xmm0, %esi
@@ -56,7 +56,7 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; WIN-SSE2-NEXT:    movd %xmm0, %r8d
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; WIN-SSE2-NEXT:    movd %xmm1, %r9d
-; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; WIN-SSE2-NEXT:    movd %xmm1, %r10d
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; WIN-SSE2-NEXT:    movd %xmm0, %edx
@@ -141,7 +141,7 @@ define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind
 ; LIN-SSE2-NEXT:    movd %xmm0, %eax
 ; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; LIN-SSE2-NEXT:    movd %xmm1, %edx
-; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; LIN-SSE2-NEXT:    movd %xmm1, %esi
 ; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; LIN-SSE2-NEXT:    movd %xmm0, %edi
@@ -184,7 +184,7 @@ define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind
 ; WIN-SSE2-NEXT:    movd %xmm0, %eax
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; WIN-SSE2-NEXT:    movd %xmm1, %ecx
-; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; WIN-SSE2-NEXT:    movd %xmm1, %r8d
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; WIN-SSE2-NEXT:    movd %xmm0, %edx

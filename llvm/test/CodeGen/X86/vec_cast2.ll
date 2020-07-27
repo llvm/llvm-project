@@ -18,7 +18,7 @@ define <8 x float> @cvt_v8i16_v8f32(<8 x i16> %src) {
 ; CHECK-LABEL: cvt_v8i16_v8f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpmovsxwd %xmm0, %xmm1
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0

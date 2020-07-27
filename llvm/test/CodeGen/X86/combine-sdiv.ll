@@ -2959,7 +2959,7 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ;
 ; SSE41-LABEL: pr38658:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovsxbw %xmm1, %xmm2
 ; SSE41-NEXT:    pmullw {{.*}}(%rip), %xmm2
 ; SSE41-NEXT:    psrlw $8, %xmm2
@@ -2984,7 +2984,7 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ;
 ; AVX1-LABEL: pr38658:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxbw %xmm1, %xmm1
 ; AVX1-NEXT:    vpmullw {{.*}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
@@ -3058,7 +3058,7 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ;
 ; XOP-LABEL: pr38658:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; XOP-NEXT:    vpmovsxbw %xmm1, %xmm1
 ; XOP-NEXT:    vpmullw {{.*}}(%rip), %xmm1, %xmm1
 ; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
