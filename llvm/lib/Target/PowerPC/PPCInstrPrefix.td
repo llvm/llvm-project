@@ -1100,6 +1100,17 @@ let Predicates = [IsISA3_1] in {
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_eq)>;
 }
 
+let AddedComplexity = 400, Predicates = [IsISA3_1] in {
+  def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$rS, 0)), xoaddr:$src),
+            (STXVRBX (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$src)>;
+  def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$rS, 0)), xoaddr:$src),
+            (STXVRHX (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$src)>;
+  def : Pat<(store (i32 (vector_extract v4i32:$rS, 0)), xoaddr:$src),
+            (STXVRWX (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$src)>;
+  def : Pat<(store (i64 (vector_extract v2i64:$rS, 0)), xoaddr:$src),
+            (STXVRDX (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$src)>;
+}
+
 let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
  def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
                                 i32immNonAllOneNonZero:$A,

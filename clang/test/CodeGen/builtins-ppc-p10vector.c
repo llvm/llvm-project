@@ -582,6 +582,54 @@ vector float test_vec_vec_splati_ins_f(void) {
   return vec_splati_ins(vfa, 0, 1.0f);
 }
 
+void test_vec_xst_trunc_sc(vector signed __int128 __a, signed long long __b,
+                           signed char *__c) {
+  // CHECK: store i8 %{{.+}}, i8* %{{.+}}, align 1
+  vec_xst_trunc(__a, __b, __c);
+}
+
+void test_vec_xst_trunc_uc(vector unsigned __int128 __a, signed long long __b,
+                           unsigned char *__c) {
+  // CHECK: store i8 %{{.+}}, i8* %{{.+}}, align 1
+  vec_xst_trunc(__a, __b, __c);
+}
+
+void test_vec_xst_trunc_ss(vector signed __int128 __a, signed long long __b,
+                           signed short *__c) {
+  // CHECK: store i16 %{{.+}}, i16* %{{.+}}, align 2
+  vec_xst_trunc(__a, __b, __c);
+}
+
+void test_vec_xst_trunc_us(vector unsigned __int128 __a, signed long long __b,
+                           unsigned short *__c) {
+  // CHECK: store i16 %{{.+}}, i16* %{{.+}}, align 2
+  vec_xst_trunc(__a, __b, __c);
+}
+
+void test_vec_xst_trunc_si(vector signed __int128 __a, signed long long __b,
+                           signed int *__c) {
+  // CHECK: store i32 %{{.+}}, i32* %{{.+}}, align 4
+  vec_xst_trunc(__a, __b, __c);
+}
+
+void test_vec_xst_trunc_ui(vector unsigned __int128 __a, signed long long __b,
+                           unsigned int *__c) {
+  // CHECK: store i32 %{{.+}}, i32* %{{.+}}, align 4
+  vec_xst_trunc(__a, __b, __c);
+}
+
+void test_vec_xst_trunc_sll(vector signed __int128 __a, signed long long __b,
+                            signed long long *__c) {
+  // CHECK: store i64 %{{.+}}, i64* %{{.+}}, align 8
+  vec_xst_trunc(__a, __b, __c);
+}
+
+void test_vec_xst_trunc_ull(vector unsigned __int128 __a, signed long long __b,
+                            unsigned long long *__c) {
+  // CHECK: store i64 %{{.+}}, i64* %{{.+}}, align 8
+  vec_xst_trunc(__a, __b, __c);
+}
+
 int test_vec_test_lsbb_all_ones(void) {
   // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i32 1
   // CHECK-NEXT: ret i32
