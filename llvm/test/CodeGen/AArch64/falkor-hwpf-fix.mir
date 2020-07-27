@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -mcpu=falkor -run-pass falkor-hwpf-fix-late -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -mcpu=falkor -run-pass aarch64-falkor-hwpf-fix-late -o - %s | FileCheck %s
 ---
 # Verify that the tag collision between the loads is resolved for various load opcodes.
 
