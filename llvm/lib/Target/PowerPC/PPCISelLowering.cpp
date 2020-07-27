@@ -9311,7 +9311,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   if (!BVNIsConstantSplat || SplatBitSize > 32) {
 
     bool IsPermutedLoad = false;
-    const SDValue *InputLoad = getNormalLoadInput(Op.getOperand(0), IsPermutedLoad);
+    const SDValue *InputLoad =
+        getNormalLoadInput(Op.getOperand(0), IsPermutedLoad);
     // Handle load-and-splat patterns as we have instructions that will do this
     // in one go.
     if (InputLoad && DAG.isSplatValue(Op, true)) {
@@ -9949,7 +9950,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     if (IsPermutedLoad) {
       assert(isLittleEndian && "Unexpected permuted load on big endian target");
       SplatIdx += IsFourByte ? 2 : 1;
-      assert(SplatIdx < IsFourByte ? 4 : 2 &&
+      assert((SplatIdx < (IsFourByte ? 4 : 2)) &&
              "Splat of a value outside of the loaded memory");
     }
 
