@@ -13,7 +13,7 @@ function formatAssign()
        assign 200 to label
     end if
 
-    ! CHECK: fir.select
+    ! CHECK: fir.select {{.*\[100, \^bb[0-9]+, 200, \^bb[0-9]+, unit, \^bb[0-9]+\]}}
     ! CHECK-LABEL: ^bb{{[0-9]+}}:
     ! CHECK: fir.address_of
     ! CHECK: br [[END_BLOCK:\^bb[0-9]+]]{{(.*)}}
