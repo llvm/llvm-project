@@ -1204,6 +1204,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_PTRMASK: {
     if (TypeIdx != 1)
       return UnableToLegalize;
