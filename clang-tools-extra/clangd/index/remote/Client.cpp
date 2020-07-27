@@ -37,12 +37,15 @@ class IndexClient : public clangd::SymbolIndex {
     bool FinalResult = false;
     trace::Span Tracer(RequestT::descriptor()->name());
     const auto RPCRequest = ProtobufMarshaller->toProtobuf(Request);
+    SPAN_ATTACH(Tracer, "Request", RPCRequest.DebugString());
     grpc::ClientContext Context;
     std::chrono::system_clock::time_point Deadline =
         std::chrono::system_clock::now() + DeadlineWaitingTime;
     Context.set_deadline(Deadline);
     auto Reader = (Stub.get()->*RPCCall)(&Context, RPCRequest);
     ReplyT Reply;
+    unsigned Successful = 0;
+    unsigned FailedToParse = 0;
     while (Reader->Read(&Reply)) {
       if (!Reply.has_stream_result()) {
         FinalResult = Reply.final_result();
@@ -51,11 +54,15 @@ class IndexClient : public clangd::SymbolIndex {
       auto Response = ProtobufMarshaller->fromProtobuf(Reply.stream_result());
       if (!Response) {
         elog("Received invalid {0}", ReplyT::descriptor()->name());
+        ++FailedToParse;
         continue;
       }
       Callback(*Response);
+      ++Successful;
     }
-    SPAN_ATTACH(Tracer, "status", Reader->Finish().ok());
+    SPAN_ATTACH(Tracer, "Status", Reader->Finish().ok());
+    SPAN_ATTACH(Tracer, "Successful", Successful);
+    SPAN_ATTACH(Tracer, "Failed to parse", FailedToParse);
     return FinalResult;
   }
 
