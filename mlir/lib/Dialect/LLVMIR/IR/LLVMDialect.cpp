@@ -31,6 +31,9 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
+static constexpr const char kVolatileAttrName[] = "volatile_";
+static constexpr const char kNonTemporalAttrName[] = "nontemporal";
+
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 
 //===----------------------------------------------------------------------===//
@@ -178,12 +181,28 @@ CondBrOp::getMutableSuccessorOperands(unsigned index) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::LoadOp.
+// Builder, printer and parser for for LLVM::LoadOp.
 //===----------------------------------------------------------------------===//
 
+void LoadOp::build(OpBuilder &builder, OperationState &result, Type t,
+                   Value addr, unsigned alignment, bool isVolatile,
+                   bool isNonTemporal) {
+  result.addOperands(addr);
+  result.addTypes(t);
+  if (isVolatile)
+    result.addAttribute(kVolatileAttrName, builder.getUnitAttr());
+  if (isNonTemporal)
+    result.addAttribute(kNonTemporalAttrName, builder.getUnitAttr());
+  if (alignment != 0)
+    result.addAttribute("alignment", builder.getI64IntegerAttr(alignment));
+}
+
 static void printLoadOp(OpAsmPrinter &p, LoadOp &op) {
-  p << op.getOperationName() << ' ' << op.addr();
-  p.printOptionalAttrDict(op.getAttrs());
+  p << op.getOperationName() << ' ';
+  if (op.volatile_())
+    p << "volatile ";
+  p << op.addr();
+  p.printOptionalAttrDict(op.getAttrs(), {kVolatileAttrName});
   p << " : " << op.addr().getType();
 }
 
@@ -201,11 +220,14 @@ static Type getLoadStoreElementType(OpAsmParser &parser, Type type,
   return llvmTy.getPointerElementTy();
 }
 
-// <operation> ::= `llvm.load` ssa-use attribute-dict? `:` type
+// <operation> ::= `llvm.load` `volatile` ssa-use attribute-dict? `:` type
 static ParseResult parseLoadOp(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType addr;
   Type type;
   llvm::SMLoc trailingTypeLoc;
+
+  if (succeeded(parser.parseOptionalKeyword("volatile")))
+    result.addAttribute(kVolatileAttrName, parser.getBuilder().getUnitAttr());
 
   if (parser.parseOperand(addr) ||
       parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
@@ -220,20 +242,40 @@ static ParseResult parseLoadOp(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::StoreOp.
+// Builder, printer and parser for LLVM::StoreOp.
 //===----------------------------------------------------------------------===//
 
+void StoreOp::build(OpBuilder &builder, OperationState &result, Value value,
+                    Value addr, unsigned alignment, bool isVolatile,
+                    bool isNonTemporal) {
+  result.addOperands({value, addr});
+  result.addTypes(ArrayRef<Type>{});
+  if (isVolatile)
+    result.addAttribute(kVolatileAttrName, builder.getUnitAttr());
+  if (isNonTemporal)
+    result.addAttribute(kNonTemporalAttrName, builder.getUnitAttr());
+  if (alignment != 0)
+    result.addAttribute("alignment", builder.getI64IntegerAttr(alignment));
+}
+
 static void printStoreOp(OpAsmPrinter &p, StoreOp &op) {
-  p << op.getOperationName() << ' ' << op.value() << ", " << op.addr();
-  p.printOptionalAttrDict(op.getAttrs());
+  p << op.getOperationName() << ' ';
+  if (op.volatile_())
+    p << "volatile ";
+  p << op.value() << ", " << op.addr();
+  p.printOptionalAttrDict(op.getAttrs(), {kVolatileAttrName});
   p << " : " << op.addr().getType();
 }
 
-// <operation> ::= `llvm.store` ssa-use `,` ssa-use attribute-dict? `:` type
+// <operation> ::= `llvm.store` `volatile` ssa-use `,` ssa-use
+//                 attribute-dict? `:` type
 static ParseResult parseStoreOp(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType addr, value;
   Type type;
   llvm::SMLoc trailingTypeLoc;
+
+  if (succeeded(parser.parseOptionalKeyword("volatile")))
+    result.addAttribute(kVolatileAttrName, parser.getBuilder().getUnitAttr());
 
   if (parser.parseOperand(value) || parser.parseComma() ||
       parser.parseOperand(addr) ||
