@@ -2272,12 +2272,12 @@ public:
   /// Is FPFeatures in Trailing Storage?
   bool hasStoredFPFeatures() const { return UnaryOperatorBits.HasFPFeatures; }
 
-protected:
-  /// Get FPFeatures from trailing storage
+  /// Get FPFeatures from trailing storage.
   FPOptionsOverride getStoredFPFeatures() const {
     return getTrailingFPFeatures();
   }
 
+protected:
   /// Set FPFeatures in trailing storage, used only by Serialization
   void setStoredFPFeatures(FPOptionsOverride F) { getTrailingFPFeatures() = F; }
 
@@ -2787,6 +2787,8 @@ class CallExpr : public Expr {
   //
   // * An array of getNumArgs() "Stmt *" for the argument expressions.
   //
+  // * An optional of type FPOptionsOverride.
+  //
   // Note that we store the offset in bytes from the this pointer to the start
   // of the trailing objects. It would be perfectly possible to compute it
   // based on the dynamic kind of the CallExpr. However 1.) we have plenty of
@@ -2808,6 +2810,15 @@ class CallExpr : public Expr {
   /// this pointer to the trailing objects.
   static unsigned offsetToTrailingObjects(StmtClass SC);
 
+  unsigned getSizeOfTrailingStmts() const {
+    return (1 + getNumPreArgs() + getNumArgs()) * sizeof(Stmt *);
+  }
+
+  size_t getOffsetOfTrailingFPFeatures() const {
+    assert(hasStoredFPFeatures());
+    return CallExprBits.OffsetToTrailingObjects + getSizeOfTrailingStmts();
+  }
+
 public:
   enum class ADLCallKind : bool { NotADL, UsesADL };
   static constexpr ADLCallKind NotADL = ADLCallKind::NotADL;
@@ -2818,16 +2829,19 @@ protected:
   /// allocated for the trailing objects.
   CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
            ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
-           SourceLocation RParenLoc, unsigned MinNumArgs, ADLCallKind UsesADL);
+           SourceLocation RParenLoc, FPOptionsOverride FPFeatures,
+           unsigned MinNumArgs, ADLCallKind UsesADL);
 
   /// Build an empty call expression, for deserialization.
   CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
-           EmptyShell Empty);
+           bool hasFPFeatures, EmptyShell Empty);
 
   /// Return the size in bytes needed for the trailing objects.
   /// Used by the derived classes to allocate the right amount of storage.
-  static unsigned sizeOfTrailingObjects(unsigned NumPreArgs, unsigned NumArgs) {
-    return (1 + NumPreArgs + NumArgs) * sizeof(Stmt *);
+  static unsigned sizeOfTrailingObjects(unsigned NumPreArgs, unsigned NumArgs,
+                                        bool HasFPFeatures) {
+    return (1 + NumPreArgs + NumArgs) * sizeof(Stmt *) +
+           HasFPFeatures * sizeof(FPOptionsOverride);
   }
 
   Stmt *getPreArg(unsigned I) {
@@ -2845,22 +2859,43 @@ protected:
 
   unsigned getNumPreArgs() const { return CallExprBits.NumPreArgs; }
 
+  /// Return a pointer to the trailing FPOptions
+  FPOptionsOverride *getTrailingFPFeatures() {
+    assert(hasStoredFPFeatures());
+    return reinterpret_cast<FPOptionsOverride *>(
+        reinterpret_cast<char *>(this) + CallExprBits.OffsetToTrailingObjects +
+        getSizeOfTrailingStmts());
+  }
+  const FPOptionsOverride *getTrailingFPFeatures() const {
+    assert(hasStoredFPFeatures());
+    return reinterpret_cast<const FPOptionsOverride *>(
+        reinterpret_cast<const char *>(this) +
+        CallExprBits.OffsetToTrailingObjects + getSizeOfTrailingStmts());
+  }
+
 public:
-  /// Create a call expression. Fn is the callee expression, Args is the
-  /// argument array, Ty is the type of the call expression (which is *not*
-  /// the return type in general), VK is the value kind of the call expression
-  /// (lvalue, rvalue, ...), and RParenLoc is the location of the right
-  /// parenthese in the call expression. MinNumArgs specifies the minimum
-  /// number of arguments. The actual number of arguments will be the greater
-  /// of Args.size() and MinNumArgs. This is used in a few places to allocate
-  /// enough storage for the default arguments. UsesADL specifies whether the
-  /// callee was found through argument-dependent lookup.
+  /// Create a call expression.
+  /// \param Fn     The callee expression,
+  /// \param Args   The argument array,
+  /// \param Ty     The type of the call expression (which is *not* the return
+  ///               type in general),
+  /// \param VK     The value kind of the call expression (lvalue, rvalue, ...),
+  /// \param RParenLoc  The location of the right parenthesis in the call
+  ///                   expression.
+  /// \param FPFeatures Floating-point features associated with the call,
+  /// \param MinNumArgs Specifies the minimum number of arguments. The actual
+  ///                   number of arguments will be the greater of Args.size()
+  ///                   and MinNumArgs. This is used in a few places to allocate
+  ///                   enough storage for the default arguments.
+  /// \param UsesADL    Specifies whether the callee was found through
+  ///                   argument-dependent lookup.
   ///
   /// Note that you can use CreateTemporary if you need a temporary call
   /// expression on the stack.
   static CallExpr *Create(const ASTContext &Ctx, Expr *Fn,
                           ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
-                          SourceLocation RParenLoc, unsigned MinNumArgs = 0,
+                          SourceLocation RParenLoc,
+                          FPOptionsOverride FPFeatures, unsigned MinNumArgs = 0,
                           ADLCallKind UsesADL = NotADL);
 
   /// Create a temporary call expression with no arguments in the memory
@@ -2877,7 +2912,7 @@ public:
 
   /// Create an empty call expression, for deserialization.
   static CallExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
-                               EmptyShell Empty);
+                               bool HasFPFeatures, EmptyShell Empty);
 
   Expr *getCallee() { return cast<Expr>(getTrailingStmts()[FN]); }
   const Expr *getCallee() const { return cast<Expr>(getTrailingStmts()[FN]); }
@@ -2890,6 +2925,8 @@ public:
     CallExprBits.UsesADL = static_cast<bool>(V);
   }
   bool usesADL() const { return getADLCallKind() == UsesADL; }
+
+  bool hasStoredFPFeatures() const { return CallExprBits.HasFPFeatures; }
 
   Decl *getCalleeDecl() { return getCallee()->getReferencedDeclOfCallee(); }
   const Decl *getCalleeDecl() const {
@@ -2982,6 +3019,31 @@ public:
   /// getNumCommas - Return the number of commas that must have been present in
   /// this function call.
   unsigned getNumCommas() const { return getNumArgs() ? getNumArgs() - 1 : 0; }
+
+  /// Get FPOptionsOverride from trailing storage.
+  FPOptionsOverride getStoredFPFeatures() const {
+    assert(hasStoredFPFeatures());
+    return *getTrailingFPFeatures();
+  }
+  /// Set FPOptionsOverride in trailing storage. Used only by Serialization.
+  void setStoredFPFeatures(FPOptionsOverride F) {
+    assert(hasStoredFPFeatures());
+    *getTrailingFPFeatures() = F;
+  }
+
+  // Get the FP features status of this operator. Only meaningful for
+  // operations on floating point types.
+  FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
+    if (hasStoredFPFeatures())
+      return getStoredFPFeatures().applyOverrides(LO);
+    return FPOptions::defaultWithoutTrailingStorage(LO);
+  }
+
+  FPOptionsOverride getFPFeatures() const {
+    if (hasStoredFPFeatures())
+      return getStoredFPFeatures();
+    return FPOptionsOverride();
+  }
 
   /// getBuiltinCallee - If this is a call to a builtin, return the builtin ID
   /// of the callee. If not, return 0.

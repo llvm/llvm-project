@@ -786,3 +786,134 @@ define void @test16_caller(i32* %p, i32 %c) {
   tail call void @test16_sub(i32* %p, i32 %c, i32 %c)
   ret void
 }
+
+; test 17
+;
+; only_store is not called after make_alias is called.
+;
+; void test17_caller(int* p, int c) {
+;   if(c) {
+;     make_alias(p);
+;     if(0 == 0) {
+;       goto l3;
+;     } else {
+;       goto l2;
+;     }
+;   }
+;   l2:
+;     only_store(p);
+;   l3:
+;   return;
+; }
+
+define void @test17_caller(i32* noalias %p, i32 %c) {
+; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn writeonly
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test17_caller
+; NOT_CGSCC_NPM-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C:%.*]])
+; NOT_CGSCC_NPM-NEXT:  entry:
+; NOT_CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
+; NOT_CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
+; NOT_CGSCC_NPM:       l1:
+; NOT_CGSCC_NPM-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]])
+; NOT_CGSCC_NPM-NEXT:    br label [[L3:%.*]]
+; NOT_CGSCC_NPM:       l2:
+; NOT_CGSCC_NPM-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]])
+; NOT_CGSCC_NPM-NEXT:    br label [[L3]]
+; NOT_CGSCC_NPM:       l3:
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test17_caller
+; IS__CGSCC____-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C:%.*]])
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
+; IS__CGSCC____-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
+; IS__CGSCC____:       l1:
+; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]])
+; IS__CGSCC____-NEXT:    br label [[L3:%.*]]
+; IS__CGSCC____:       l2:
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P]])
+; IS__CGSCC____-NEXT:    br label [[L3]]
+; IS__CGSCC____:       l3:
+; IS__CGSCC____-NEXT:    ret void
+;
+entry:
+  %tobool = icmp eq i32 %c, 0
+  br i1 %tobool, label %l1, label %l2
+
+l1:
+  tail call void @make_alias(i32* %p)
+  %tobool2 = icmp eq i32 0, 0
+  br i1 %tobool2, label %l3, label %l2
+
+l2:
+  tail call void @only_store(i32* %p)
+  br label %l3
+
+l3:
+  ret void
+}
+
+; test 18
+; void test18_caller(int* p, int c) {
+;   if(c) {
+;     make_alias(p);
+;     noreturn();
+;   }
+;   only_store(p);
+;   return;
+; }
+
+define void @noreturn() {
+; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@noreturn()
+; NOT_CGSCC_NPM-NEXT:    unreachable
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@noreturn()
+; IS__CGSCC____-NEXT:    unreachable
+;
+  call void @noreturn()
+  ret void
+}
+
+define void @test18_caller(i32* noalias %p, i32 %c) {
+; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn writeonly
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test18_caller
+; NOT_CGSCC_NPM-SAME: (i32* noalias nofree writeonly [[P:%.*]], i32 [[C:%.*]])
+; NOT_CGSCC_NPM-NEXT:  entry:
+; NOT_CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
+; NOT_CGSCC_NPM-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
+; NOT_CGSCC_NPM:       l1:
+; NOT_CGSCC_NPM-NEXT:    tail call void @make_alias(i32* nofree writeonly [[P]])
+; NOT_CGSCC_NPM-NEXT:    unreachable
+; NOT_CGSCC_NPM:       l2:
+; NOT_CGSCC_NPM-NEXT:    tail call void @only_store(i32* nocapture nofree writeonly align 4 [[P]])
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test18_caller
+; IS__CGSCC____-SAME: (i32* noalias nofree nonnull writeonly align 4 dereferenceable(4) [[P:%.*]], i32 [[C:%.*]])
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
+; IS__CGSCC____-NEXT:    br i1 [[TOBOOL]], label [[L1:%.*]], label [[L2:%.*]]
+; IS__CGSCC____:       l1:
+; IS__CGSCC____-NEXT:    tail call void @make_alias(i32* nofree nonnull writeonly align 4 dereferenceable(4) [[P]])
+; IS__CGSCC____-NEXT:    unreachable
+; IS__CGSCC____:       l2:
+; IS__CGSCC____-NEXT:    tail call void @only_store(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P]])
+; IS__CGSCC____-NEXT:    ret void
+;
+entry:
+  %tobool = icmp eq i32 %c, 0
+  br i1 %tobool, label %l1, label %l2
+
+l1:
+  tail call void @make_alias(i32* %p)
+  tail call void @noreturn()
+  br label %l2
+
+l2:
+  tail call void @only_store(i32* %p)
+  ret void
+}

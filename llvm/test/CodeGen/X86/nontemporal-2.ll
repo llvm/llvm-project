@@ -595,14 +595,14 @@ define void @test_extract_f64(<2 x double> %arg, double* %dst) {
 define void @test_extract_i64(<2 x i64> %arg, i64* %dst) {
 ; SSE2-LABEL: test_extract_i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    movntiq %rax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_extract_i64:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE4A-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE4A-NEXT:    movq %xmm0, %rax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
 ; SSE4A-NEXT:    retq

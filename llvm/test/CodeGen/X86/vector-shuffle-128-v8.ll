@@ -1013,19 +1013,19 @@ define <8 x i16> @shuffle_v8i16_08192a3b(<8 x i16> %a, <8 x i16> %b) {
 define <8 x i16> @shuffle_v8i16_0c1d2e3f(<8 x i16> %a, <8 x i16> %b) {
 ; SSE-LABEL: shuffle_v8i16_0c1d2e3f:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: shuffle_v8i16_0c1d2e3f:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; AVX1OR2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512VL-SLOW-LABEL: shuffle_v8i16_0c1d2e3f:
 ; AVX512VL-SLOW:       # %bb.0:
-; AVX512VL-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; AVX512VL-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; AVX512VL-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX512VL-SLOW-NEXT:    retq
 ;
@@ -1055,19 +1055,19 @@ define <8 x i16> @shuffle_v8i16_4c5d6e7f(<8 x i16> %a, <8 x i16> %b) {
 define <8 x i16> @shuffle_v8i16_48596a7b(<8 x i16> %a, <8 x i16> %b) {
 ; SSE-LABEL: shuffle_v8i16_48596a7b:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: shuffle_v8i16_48596a7b:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX1OR2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512VL-SLOW-LABEL: shuffle_v8i16_48596a7b:
 ; AVX512VL-SLOW:       # %bb.0:
-; AVX512VL-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX512VL-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX512VL-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX512VL-SLOW-NEXT:    retq
 ;
@@ -1513,7 +1513,7 @@ define <8 x i16> @shuffle_v8i16_cde3XXXX(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: shuffle_v8i16_cde3XXXX:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    pandn %xmm0, %xmm2
 ; SSE2-NEXT:    por %xmm1, %xmm2
@@ -1529,25 +1529,25 @@ define <8 x i16> @shuffle_v8i16_cde3XXXX(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; SSE41-LABEL: shuffle_v8i16_cde3XXXX:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3],xmm1[4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: shuffle_v8i16_cde3XXXX:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; AVX1OR2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3],xmm1[4,5,6,7]
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512VL-SLOW-LABEL: shuffle_v8i16_cde3XXXX:
 ; AVX512VL-SLOW:       # %bb.0:
-; AVX512VL-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; AVX512VL-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; AVX512VL-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3],xmm1[4,5,6,7]
 ; AVX512VL-SLOW-NEXT:    retq
 ;
 ; AVX512VL-FAST-LABEL: shuffle_v8i16_cde3XXXX:
 ; AVX512VL-FAST:       # %bb.0:
-; AVX512VL-FAST-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,5,6,11,0,1,2,3]
+; AVX512VL-FAST-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,5,6,11,4,5,6,7]
 ; AVX512VL-FAST-NEXT:    vpermi2w %xmm0, %xmm1, %xmm2
 ; AVX512VL-FAST-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX512VL-FAST-NEXT:    retq

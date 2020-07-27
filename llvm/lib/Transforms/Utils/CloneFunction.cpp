@@ -147,6 +147,11 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                      TypeMapper, Materializer));
   }
 
+  // Everything else beyond this point deals with function instructions,
+  // so if we are dealing with a function declaration, we're done.
+  if (OldFunc->isDeclaration())
+    return;
+
   // When we remap instructions, we want to avoid duplicating inlined
   // DISubprograms, so record all subprograms we find as we duplicate
   // instructions and then freeze them in the MD map.

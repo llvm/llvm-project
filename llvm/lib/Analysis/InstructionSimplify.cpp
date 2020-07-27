@@ -3701,6 +3701,14 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       // LHS != Inf
       if (Pred == FCmpInst::FCMP_UNE && isKnownNeverInfinity(LHS, Q.TLI))
         return getTrue(RetTy);
+      // LHS == Inf || LHS == NaN
+      if (Pred == FCmpInst::FCMP_UEQ && isKnownNeverInfinity(LHS, Q.TLI) &&
+          isKnownNeverNaN(LHS, Q.TLI))
+        return getFalse(RetTy);
+      // LHS != Inf && LHS != NaN
+      if (Pred == FCmpInst::FCMP_ONE && isKnownNeverInfinity(LHS, Q.TLI) &&
+          isKnownNeverNaN(LHS, Q.TLI))
+        return getTrue(RetTy);
     }
     if (C->isNegative() && !C->isNegZero()) {
       assert(!C->isNaN() && "Unexpected NaN constant!");
@@ -5246,6 +5254,27 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   Intrinsic::ID IID = F->getIntrinsicID();
   Type *ReturnType = F->getReturnType();
   switch (IID) {
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin: {
+    // Canonicalize constant operand as Op1.
+    if (isa<Constant>(Op0))
+      std::swap(Op0, Op1);
+
+    // TODO: Allow partial undef vector constants.
+    const APInt *C;
+    if (!match(Op1, m_APInt(C)))
+      break;
+
+    if ((IID == Intrinsic::smax && C->isMaxSignedValue()) ||
+        (IID == Intrinsic::smin && C->isMinSignedValue()) ||
+        (IID == Intrinsic::umax && C->isMaxValue()) ||
+        (IID == Intrinsic::umin && C->isMinValue()))
+      return Op1;
+
+    break;
+  }
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow:
     // X - X -> { 0, false }

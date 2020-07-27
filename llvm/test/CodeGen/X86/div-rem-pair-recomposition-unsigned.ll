@@ -565,9 +565,9 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %divdst
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %esi
 ; X86-NEXT:    movd %eax, %xmm2
-; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; X86-NEXT:    movd %xmm3, %eax
-; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; X86-NEXT:    movd %xmm3, %esi
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %esi
@@ -608,9 +608,9 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %divdst
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    movd %eax, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; X64-NEXT:    movd %xmm3, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; X64-NEXT:    movd %xmm3, %ecx
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %ecx
@@ -657,11 +657,11 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,1,2,3]
 ; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
 ; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,2,3]
 ; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-NEXT:    movd %xmm1, (%esp)
 ; X86-NEXT:    calll __udivdi3
 ; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
@@ -707,9 +707,9 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divq %rcx
 ; X64-NEXT:    movq %rax, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; X64-NEXT:    movq %xmm3, %rax
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; X64-NEXT:    movq %xmm3, %rcx
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divq %rcx

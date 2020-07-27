@@ -235,6 +235,19 @@ class MemoryOpWithAlignmentBase {
   }];
 }
 
+// Code definition that is used for nontemporal metadata creation.
+class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
+  code setNonTemporalMetadataCode = [{
+    if ($nontemporal) {
+      llvm::Module *module = builder.GetInsertBlock()->getModule();
+      llvm::MDNode *metadata = llvm::MDNode::get(
+          inst->getContext(), llvm::ConstantAsMetadata::get(
+              builder.getInt32(1)));
+      inst->setMetadata(module->getMDKindID("nontemporal"), metadata);
+    }
+  }];
+}
+
 // Memory-related operations.
 def LLVM_AllocaOp :
     MemoryOpWithAlignmentBase,
@@ -266,52 +279,49 @@ def LLVM_GEPOp : LLVM_OneResultOp<"getelementptr", [NoSideEffect]>,
   }];
 }
 def LLVM_LoadOp :
-    MemoryOpWithAlignmentBase,
+    MemoryOpWithAlignmentAndAttributes,
     LLVM_OneResultOp<"load">,
-    Arguments<(ins LLVM_Type:$addr, OptionalAttr<I64Attr>:$alignment)> {
+    Arguments<(ins LLVM_Type:$addr,
+                   OptionalAttr<I64Attr>:$alignment,
+                   UnitAttr:$volatile_,
+                   UnitAttr:$nontemporal)> {
   string llvmBuilder = [{
-    auto *inst = builder.CreateLoad($addr);
-  }] # setAlignmentCode # [{
+    auto *inst = builder.CreateLoad($addr, $volatile_);
+  }] # setAlignmentCode # setNonTemporalMetadataCode # [{
     $res = inst;
   }];
   let builders = [OpBuilder<
-    "OpBuilder &b, OperationState &result, Value addr, unsigned alignment = 0",
+    "OpBuilder &b, OperationState &result, Value addr, "
+    "unsigned alignment = 0, bool isVolatile = false, "
+    "bool isNonTemporal = false",
     [{
       auto type = addr.getType().cast<LLVM::LLVMType>().getPointerElementTy();
-      build(b, result, type, addr, alignment);
+      build(b, result, type, addr, alignment, isVolatile, isNonTemporal);
     }]>,
     OpBuilder<
     "OpBuilder &b, OperationState &result, Type t, Value addr, "
-    "unsigned alignment = 0",
-    [{
-      if (alignment == 0)
-        return build(b, result, t, addr, IntegerAttr());
-      build(b, result, t, addr, b.getI64IntegerAttr(alignment));
-    }]>];
+    "unsigned alignment = 0, bool isVolatile = false, "
+    "bool isNonTemporal = false">];
   let parser = [{ return parseLoadOp(parser, result); }];
   let printer = [{ printLoadOp(p, *this); }];
   let verifier = alignmentVerifierCode;
 }
 def LLVM_StoreOp :
-    MemoryOpWithAlignmentBase,
+    MemoryOpWithAlignmentAndAttributes,
     LLVM_ZeroResultOp<"store">,
     Arguments<(ins LLVM_Type:$value,
                    LLVM_Type:$addr,
-                   OptionalAttr<I64Attr>:$alignment)> {
+                   OptionalAttr<I64Attr>:$alignment,
+                   UnitAttr:$volatile_,
+                   UnitAttr:$nontemporal)> {
   string llvmBuilder = [{
-    auto *inst = builder.CreateStore($value, $addr);
-  }] # setAlignmentCode;
-  let builders = [
-    OpBuilder<
+    auto *inst = builder.CreateStore($value, $addr, $volatile_);
+  }] # setAlignmentCode # setNonTemporalMetadataCode;
+  let builders = [OpBuilder<
     "OpBuilder &b, OperationState &result, Value value, Value addr, "
-    "unsigned alignment = 0",
-    [{
-      if (alignment == 0)
-        return build(b, result, ArrayRef<Type>{}, value, addr, IntegerAttr());
-      build(b, result, ArrayRef<Type>{}, value, addr, 
-            b.getI64IntegerAttr(alignment));
-    }]
-  >];
+    "unsigned alignment = 0, bool isVolatile = false, "
+    "bool isNonTemporal = false">
+    ];
   let parser = [{ return parseStoreOp(parser, result); }];
   let printer = [{ printStoreOp(p, *this); }];
   let verifier = alignmentVerifierCode;
@@ -514,21 +524,29 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
      NoSideEffect]> {
   let arguments = (ins LLVMI1:$condition,
                    Variadic<LLVM_Type>:$trueDestOperands,
-                   Variadic<LLVM_Type>:$falseDestOperands);
+                   Variadic<LLVM_Type>:$falseDestOperands,
+                   OptionalAttr<ElementsAttr>:$branch_weights);
   let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
   let assemblyFormat = [{
-    $condition `,`
+    $condition ( `weights` `(` $branch_weights^ `)` )? `,`
     $trueDest (`(` $trueDestOperands^ `:` type($trueDestOperands) `)`)? `,`
     $falseDest (`(` $falseDestOperands^ `:` type($falseDestOperands) `)`)?
     attr-dict
   }];
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value condition,"
-    "Block *trueDest, ValueRange trueOperands,"
-    "Block *falseDest, ValueRange falseOperands", [{
-      build(builder, result, condition, trueOperands, falseOperands, trueDest,
-            falseDest);
+     "OpBuilder &builder, OperationState &result, Value condition,"
+     "Block *trueDest, ValueRange trueOperands,"
+     "Block *falseDest, ValueRange falseOperands,"
+     "Optional<std::pair<uint32_t, uint32_t>> weights = {}", [{
+        ElementsAttr weightsAttr;
+        if (weights) {
+          weightsAttr =
+              builder.getI32VectorAttr({static_cast<int32_t>(weights->first),
+                                       static_cast<int32_t>(weights->second)});
+        }
+        build(builder, result, condition, trueOperands, falseOperands, weightsAttr,
+              trueDest, falseDest);
   }]>, OpBuilder<
     "OpBuilder &builder, OperationState &result, Value condition,"
     "Block *trueDest, Block *falseDest, ValueRange falseOperands = {}", [{

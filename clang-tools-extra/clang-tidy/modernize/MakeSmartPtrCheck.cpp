@@ -44,8 +44,8 @@ const char MakeSmartPtrCheck::PointerType[] = "pointerType";
 MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
                                      StringRef MakeSmartPtrFunctionName)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
-                                            utils::IncludeSorter::IS_LLVM)),
+      Inserter(Options.getLocalOrGlobal("IncludeStyle",
+                                        utils::IncludeSorter::IS_LLVM)),
       MakeSmartPtrFunctionHeader(
           Options.get("MakeSmartPtrFunctionHeader", StdMemoryHeader)),
       MakeSmartPtrFunctionName(
@@ -53,7 +53,7 @@ MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
       IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
 void MakeSmartPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeStyle);
+  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "MakeSmartPtrFunctionHeader", MakeSmartPtrFunctionHeader);
   Options.store(Opts, "MakeSmartPtrFunction", MakeSmartPtrFunctionName);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
@@ -67,9 +67,7 @@ bool MakeSmartPtrCheck::isLanguageVersionSupported(
 void MakeSmartPtrCheck::registerPPCallbacks(const SourceManager &SM,
                                             Preprocessor *PP,
                                             Preprocessor *ModuleExpanderPP) {
-    Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
-                                                         IncludeStyle);
-    PP->addPPCallbacks(Inserter->CreatePPCallbacks());
+  Inserter.registerPreprocessor(PP);
 }
 
 void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
@@ -432,7 +430,7 @@ void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
   if (MakeSmartPtrFunctionHeader.empty()) {
     return;
   }
-  Diag << Inserter->CreateIncludeInsertion(
+  Diag << Inserter.createIncludeInsertion(
       FD, MakeSmartPtrFunctionHeader,
       /*IsAngled=*/MakeSmartPtrFunctionHeader == StdMemoryHeader);
 }

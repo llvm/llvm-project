@@ -193,7 +193,7 @@ reduction operations, such as addition, multiplication, XOR, AND and OR.
 
 .. code-block:: c++
 
-  int foo(int *A, int *B, int n) {
+  int foo(int *A, int n) {
     unsigned sum = 0;
     for (int i = 0; i < n; ++i)
       sum += A[i] + 5;
@@ -210,7 +210,7 @@ array. The Loop Vectorizer knows to vectorize induction variables.
 
 .. code-block:: c++
 
-  void bar(float *A, float* B, float K, int n) {
+  void bar(float *A, int n) {
     for (int i = 0; i < n; ++i)
       A[i] = i;
   }
@@ -254,7 +254,7 @@ The Loop Vectorizer can vectorize loops that count backwards.
 
 .. code-block:: c++
 
-  int foo(int *A, int *B, int n) {
+  int foo(int *A, int n) {
     for (int i = n; i > 0; --i)
       A[i] +=1;
   }
@@ -284,7 +284,7 @@ vectorization is profitable.
 
 .. code-block:: c++
 
-  int foo(int *A, char *B, int n, int k) {
+  int foo(int *A, char *B, int n) {
     for (int i = 0; i < n; ++i)
       A[i] += 4 * B[i];
   }
@@ -360,7 +360,7 @@ to be used simultaneously.
 
 .. code-block:: c++
 
-  int foo(int *A, int *B, int n) {
+  int foo(int *A, int n) {
     unsigned sum = 0;
     for (int i = 0; i < n; ++i)
         sum += A[i];

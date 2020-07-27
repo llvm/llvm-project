@@ -2439,8 +2439,8 @@ CharUnits ASTContext::getTypeUnadjustedAlignInChars(const Type *T) const {
 
 /// getPreferredTypeAlign - Return the "preferred" alignment of the specified
 /// type for the current target in bits.  This can be different than the ABI
-/// alignment in cases where it is beneficial for performance to overalign
-/// a data type.
+/// alignment in cases where it is beneficial for performance or backwards
+/// compatibility preserving to overalign a data type.
 unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   TypeInfo TI = getTypeInfo(T);
   unsigned ABIAlign = TI.Align;
@@ -2450,18 +2450,33 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   // The preferred alignment of member pointers is that of a pointer.
   if (T->isMemberPointerType())
     return getPreferredTypeAlign(getPointerDiffType().getTypePtr());
-
+ 
   if (!Target->allowsLargerPreferedTypeAlignment())
     return ABIAlign;
 
-  // Double and long long should be naturally aligned if possible.
+  if (const auto *RT = T->getAs<RecordType>()) {
+    if (TI.AlignIsRequired)
+      return ABIAlign;
+
+    unsigned PreferredAlign = static_cast<unsigned>(
+        toBits(getASTRecordLayout(RT->getDecl()).PreferredAlignment));
+    assert(PreferredAlign >= ABIAlign &&
+           "PreferredAlign should be at least as large as ABIAlign.");
+    return PreferredAlign;
+  }
+
+  // Double (and, for targets supporting AIX `power` alignment, long double) and
+  // long long should be naturally aligned (despite requiring less alignment) if
+  // possible.
   if (const auto *CT = T->getAs<ComplexType>())
     T = CT->getElementType().getTypePtr();
   if (const auto *ET = T->getAs<EnumType>())
     T = ET->getDecl()->getIntegerType().getTypePtr();
   if (T->isSpecificBuiltinType(BuiltinType::Double) ||
       T->isSpecificBuiltinType(BuiltinType::LongLong) ||
-      T->isSpecificBuiltinType(BuiltinType::ULongLong))
+      T->isSpecificBuiltinType(BuiltinType::ULongLong) ||
+      (T->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+       Target->defaultsToAIXPowerAlignment()))
     // Don't increase the alignment if an alignment attribute was specified on a
     // typedef declaration.
     if (!TI.AlignIsRequired)

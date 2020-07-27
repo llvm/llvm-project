@@ -631,15 +631,10 @@ void CommandInterpreter::LoadCommandDictionary() {
   if (tbreak_regex_cmd_up) {
     bool success = true;
     for (size_t i = 0; i < num_regexes; i++) {
-      // If you add a resultant command string longer than 1024 characters be
-      // sure to increase the size of this buffer.
-      char buffer[1024];
-      int num_printed =
-          snprintf(buffer, 1024, "%s %s", break_regexes[i][1], "-o 1");
-      lldbassert(num_printed < 1024);
-      UNUSED_IF_ASSERT_DISABLED(num_printed);
+      std::string command = break_regexes[i][1];
+      command += " -o 1";
       success =
-          tbreak_regex_cmd_up->AddRegexCommand(break_regexes[i][0], buffer);
+          tbreak_regex_cmd_up->AddRegexCommand(break_regexes[i][0], command);
       if (!success)
         break;
     }
@@ -1987,10 +1982,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
         if (value_type != OptionParser::eOptionalArgument)
           new_args.AppendArgument(value);
         else {
-          char buffer[255];
-          ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
-                     value.c_str());
-          new_args.AppendArgument(llvm::StringRef(buffer));
+          new_args.AppendArgument(option + value);
         }
 
       } else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
@@ -2012,10 +2004,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
         if (value_type != OptionParser::eOptionalArgument)
           new_args.AppendArgument(cmd_args.GetArgumentAtIndex(index));
         else {
-          char buffer[255];
-          ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
-                     cmd_args.GetArgumentAtIndex(index));
-          new_args.AppendArgument(buffer);
+          new_args.AppendArgument(option + cmd_args.GetArgumentAtIndex(index));
         }
         used[index] = true;
       }

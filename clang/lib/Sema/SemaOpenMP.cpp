@@ -2244,7 +2244,11 @@ OpenMPClauseKind Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level,
           [](OpenMPDirectiveKind K) { return isOpenMPTaskingDirective(K); },
           Level)) {
     bool IsTriviallyCopyable =
-        D->getType().getNonReferenceType().isTriviallyCopyableType(Context);
+        D->getType().getNonReferenceType().isTriviallyCopyableType(Context) &&
+        !D->getType()
+             .getNonReferenceType()
+             .getCanonicalType()
+             ->getAsCXXRecordDecl();
     OpenMPDirectiveKind DKind = DSAStack->getDirective(Level);
     SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
     getOpenMPCaptureRegions(CaptureRegions, DKind);
@@ -15321,7 +15325,8 @@ static bool actOnOMPReductionKindClause(
           S.DefaultLvalueConversion(DeclareReductionRef.get()).get());
       Expr *Args[] = {LHS.get(), RHS.get()};
       ReductionOp =
-          CallExpr::Create(Context, OVE, Args, Context.VoidTy, VK_RValue, ELoc);
+          CallExpr::Create(Context, OVE, Args, Context.VoidTy, VK_RValue, ELoc,
+                           S.CurFPFeatureOverrides());
     } else {
       ReductionOp = S.BuildBinOp(
           Stack->getCurScope(), ReductionId.getBeginLoc(), BOK, LHSDRE, RHSDRE);

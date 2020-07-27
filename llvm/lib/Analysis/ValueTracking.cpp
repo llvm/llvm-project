@@ -4302,16 +4302,31 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
   return true;
 }
 
-/// Return true if the only users of this pointer are lifetime markers.
-bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
+static bool onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
+    const Value *V, bool AllowLifetime, bool AllowDroppable) {
   for (const User *U : V->users()) {
     const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
-    if (!II) return false;
-
-    if (!II->isLifetimeStartOrEnd())
+    if (!II)
       return false;
+
+    if (AllowLifetime && II->isLifetimeStartOrEnd())
+      continue;
+
+    if (AllowDroppable && II->isDroppable())
+      continue;
+
+    return false;
   }
   return true;
+}
+
+bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
+  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
+      V, /* AllowLifetime */ true, /* AllowDroppable */ false);
+}
+bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
+  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
+      V, /* AllowLifetime */ true, /* AllowDroppable */ true);
 }
 
 bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
@@ -4758,7 +4773,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
     const auto *CE = dyn_cast<ConstantExpr>(Op);
     if (isa<CastInst>(Op) || (CE && CE->isCast()))
       return false;
-    else if (isa<BinaryOperator>(Op))
+    else if (Instruction::isBinaryOp(Opcode))
       return false;
     // Be conservative and return true.
     return true;
@@ -4794,8 +4809,8 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy())
-      return !C->containsUndefElement() && !C->containsConstantExpression();
+    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C))
+      return !C->containsConstantExpression() && !C->containsUndefElement();
   }
 
   // Strip cast operations from a pointer value.

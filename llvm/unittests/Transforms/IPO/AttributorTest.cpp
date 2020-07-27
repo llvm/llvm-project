@@ -44,8 +44,8 @@ TEST_F(AttributorTestBase, TestCast) {
 
   Function *F = M.getFunction("foo");
 
-  AbstractAttribute *AA = (AbstractAttribute *)&(
-      A.getOrCreateAAFor<AAIsDead>(IRPosition::function(*F)));
+  const AbstractAttribute *AA =
+      &A.getOrCreateAAFor<AAIsDead>(IRPosition::function(*F));
 
   EXPECT_TRUE(AA);
 

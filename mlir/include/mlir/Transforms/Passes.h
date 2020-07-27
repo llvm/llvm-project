@@ -57,7 +57,7 @@ std::unique_ptr<OperationPass<FuncOp>> createPipelineDataTransferPass();
 /// Lowers affine control flow operations (ForStmt, IfStmt and AffineApplyOp)
 /// to equivalent lower-level constructs (flow of basic blocks and arithmetic
 /// primitives).
-std::unique_ptr<OperationPass<FuncOp>> createLowerAffinePass();
+std::unique_ptr<Pass> createLowerAffinePass();
 
 /// Creates a pass that transforms perfectly nested loops with independent
 /// bounds into a single loop.

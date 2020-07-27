@@ -21,7 +21,7 @@ define void @test55() {
 ; CHECK-NEXT:    vpmovsxwd %xmm0, %xmm1
 ; CHECK-NEXT:    # implicit-def: $ymm2
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm2
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; CHECK-NEXT:    vmovdqa %ymm0, (%rsp)

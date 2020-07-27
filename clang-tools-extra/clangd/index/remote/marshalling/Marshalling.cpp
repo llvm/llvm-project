@@ -17,6 +17,7 @@
 #include "index/SymbolOrigin.h"
 #include "support/Logger.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
@@ -29,6 +30,22 @@
 namespace clang {
 namespace clangd {
 namespace remote {
+
+namespace {
+
+template <typename MessageT>
+llvm::Expected<llvm::DenseSet<SymbolID>> getIDs(MessageT *Message) {
+  llvm::DenseSet<SymbolID> Result;
+  for (const auto &ID : Message->ids()) {
+    auto SID = SymbolID::fromStr(StringRef(ID));
+    if (!SID)
+      return SID.takeError();
+    Result.insert(*SID);
+  }
+  return Result;
+}
+
+} // namespace
 
 Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
                        llvm::StringRef LocalIndexRoot)
@@ -49,25 +66,48 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
   assert(!RemoteIndexRoot.empty() || !LocalIndexRoot.empty());
 }
 
-clangd::FuzzyFindRequest
-Marshaller::fromProtobuf(const FuzzyFindRequest *Request) {
+llvm::Expected<clangd::LookupRequest>
+Marshaller::fromProtobuf(const LookupRequest *Message) {
+  clangd::LookupRequest Req;
+  auto IDs = getIDs(Message);
+  if (!IDs)
+    return IDs.takeError();
+  Req.IDs = std::move(*IDs);
+  return Req;
+}
+
+llvm::Expected<clangd::FuzzyFindRequest>
+Marshaller::fromProtobuf(const FuzzyFindRequest *Message) {
   assert(RemoteIndexRoot);
   clangd::FuzzyFindRequest Result;
-  Result.Query = Request->query();
-  for (const auto &Scope : Request->scopes())
+  Result.Query = Message->query();
+  for (const auto &Scope : Message->scopes())
     Result.Scopes.push_back(Scope);
-  Result.AnyScope = Request->any_scope();
-  if (Request->limit())
-    Result.Limit = Request->limit();
-  Result.RestrictForCodeCompletion = Request->restricted_for_code_completion();
-  for (const auto &Path : Request->proximity_paths()) {
+  Result.AnyScope = Message->any_scope();
+  if (Message->limit())
+    Result.Limit = Message->limit();
+  Result.RestrictForCodeCompletion = Message->restricted_for_code_completion();
+  for (const auto &Path : Message->proximity_paths()) {
     llvm::SmallString<256> LocalPath = llvm::StringRef(*RemoteIndexRoot);
     llvm::sys::path::append(LocalPath, Path);
     Result.ProximityPaths.push_back(std::string(LocalPath));
   }
-  for (const auto &Type : Request->preferred_types())
+  for (const auto &Type : Message->preferred_types())
     Result.ProximityPaths.push_back(Type);
   return Result;
+}
+
+llvm::Expected<clangd::RefsRequest>
+Marshaller::fromProtobuf(const RefsRequest *Message) {
+  clangd::RefsRequest Req;
+  auto IDs = getIDs(Message);
+  if (!IDs)
+    return IDs.takeError();
+  Req.IDs = std::move(*IDs);
+  Req.Filter = static_cast<RefKind>(Message->filter());
+  if (Message->limit())
+    Req.Limit = Message->limit();
+  return Req;
 }
 
 llvm::Optional<clangd::Symbol> Marshaller::fromProtobuf(const Symbol &Message) {
@@ -157,8 +197,7 @@ FuzzyFindRequest Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
   RPCRequest.set_restricted_for_code_completion(From.RestrictForCodeCompletion);
   for (const auto &Path : From.ProximityPaths) {
     llvm::SmallString<256> RelativePath = llvm::StringRef(Path);
-    if (llvm::sys::path::replace_path_prefix(RelativePath, *LocalIndexRoot,
-                                             ""))
+    if (llvm::sys::path::replace_path_prefix(RelativePath, *LocalIndexRoot, ""))
       RPCRequest.add_proximity_paths(llvm::sys::path::convert_to_slash(
           RelativePath, llvm::sys::path::Style::posix));
   }

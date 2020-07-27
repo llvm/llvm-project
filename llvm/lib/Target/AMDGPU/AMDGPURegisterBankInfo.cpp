@@ -4019,6 +4019,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wwm:
     case Intrinsic::amdgcn_wqm:
     case Intrinsic::amdgcn_softwqm:
+    case Intrinsic::amdgcn_set_inactive:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_kernarg_segment_ptr:
     case Intrinsic::amdgcn_s_getpc:

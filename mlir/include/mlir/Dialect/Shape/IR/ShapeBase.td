@@ -104,13 +104,24 @@ def Shape_ValueShapeType : DialectType<ShapeDialect,
   }];
 }
 
+def Shape_ExtentTensorType :
+    1DTensorOf<[Index]>,
+    BuildableType<"::mlir::RankedTensorType::get({ShapedType::kDynamicSize}, "
+                  "$_builder.getType<::mlir::IndexType>())"> {
+  let typeDescription = [{
+    The extent tensor is a tensor of rank one with arbitrarily many index
+    elements. Like `!shape.shape`, it is used to represent shapes with the
+    difference that it is guaranteed to be error-free.
+  }];
+}
+
 def Shape_ShapeOrSizeType : AnyTypeOf<[Shape_SizeType, Shape_ShapeType],
   "shape or size">;
-
-def Shape_ExtentTensorType : 1DTensorOf<[Index]>;
 
 def Shape_ShapeOrExtentTensorType : AnyTypeOf<[Shape_ShapeType,
                                                Shape_ExtentTensorType],
                                               "shape or extent tensor">;
+
+def Shape_SizeOrIndexType : AnyTypeOf<[Shape_SizeType, Index], "size or index">;
 
 #endif // SHAPE_BASE_TD

@@ -608,58 +608,10 @@ bool MIPrinter::canPredictSuccessors(const MachineBasicBlock &MBB) const {
 
 void MIPrinter::print(const MachineBasicBlock &MBB) {
   assert(MBB.getNumber() >= 0 && "Invalid MBB number");
-  OS << "bb." << MBB.getNumber();
-  bool HasAttributes = false;
-  if (const auto *BB = MBB.getBasicBlock()) {
-    if (BB->hasName()) {
-      OS << "." << BB->getName();
-    } else {
-      HasAttributes = true;
-      OS << " (";
-      int Slot = MST.getLocalSlot(BB);
-      if (Slot == -1)
-        OS << "<ir-block badref>";
-      else
-        OS << (Twine("%ir-block.") + Twine(Slot)).str();
-    }
-  }
-  if (MBB.hasAddressTaken()) {
-    OS << (HasAttributes ? ", " : " (");
-    OS << "address-taken";
-    HasAttributes = true;
-  }
-  if (MBB.isEHPad()) {
-    OS << (HasAttributes ? ", " : " (");
-    OS << "landing-pad";
-    HasAttributes = true;
-  }
-  if (MBB.isEHFuncletEntry()) {
-    OS << (HasAttributes ? ", " : " (");
-    OS << "ehfunclet-entry";
-    HasAttributes = true;
-  }
-  if (MBB.getAlignment() != Align(1)) {
-    OS << (HasAttributes ? ", " : " (");
-    OS << "align " << MBB.getAlignment().value();
-    HasAttributes = true;
-  }
-  if (MBB.getSectionID() != MBBSectionID(0)) {
-    OS << (HasAttributes ? ", " : " (");
-    OS << "bbsections ";
-    switch (MBB.getSectionID().Type) {
-    case MBBSectionID::SectionType::Exception:
-      OS << "Exception";
-      break;
-    case MBBSectionID::SectionType::Cold:
-      OS << "Cold";
-      break;
-    default:
-      OS << MBB.getSectionID().Number;
-    }
-    HasAttributes = true;
-  }
-  if (HasAttributes)
-    OS << ")";
+  MBB.printName(OS,
+                MachineBasicBlock::PrintNameIr |
+                    MachineBasicBlock::PrintNameAttributes,
+                &MST);
   OS << ":\n";
 
   bool HasLineAttributes = false;

@@ -125,8 +125,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
     PhysReg = Reg;
   } else if (Def->isMachineOpcode()) {
     const MCInstrDesc &II = TII->get(Def->getMachineOpcode());
-    if (ResNo >= II.getNumDefs() &&
-        II.ImplicitDefs[ResNo - II.getNumDefs()] == Reg)
+    if (ResNo >= II.getNumDefs() && II.hasImplicitDefOfPhysReg(Reg))
       PhysReg = Reg;
   }
 

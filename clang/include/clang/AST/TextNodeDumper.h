@@ -155,6 +155,7 @@ class TextNodeDumper
   const comments::CommandTraits *Traits = nullptr;
 
   const char *getCommandName(unsigned CommandID);
+  void printFPOptions(FPOptionsOverride FPO);
 
   void dumpAPValueChildren(const APValue &Value, QualType Ty,
                            const APValue &(*IdxToChildFun)(const APValue &,

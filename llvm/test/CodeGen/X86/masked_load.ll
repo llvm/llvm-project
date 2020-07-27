@@ -153,7 +153,7 @@ define <4 x double> @load_v4f64_v4i32(<4 x i32> %trigger, <4 x double>* %addr, <
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2
@@ -233,7 +233,7 @@ define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, <4 x double>* %ad
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm0
@@ -458,12 +458,12 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ;
 ; AVX1-LABEL: load_v8f64_v8i16:
 ; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm3
 ; AVX1-NEXT:    vpmovsxdq %xmm3, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxdq %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
 ; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm0
@@ -479,7 +479,7 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ;
 ; AVX2-LABEL: load_v8f64_v8i16:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    vpmovsxwd %xmm3, %xmm3
@@ -1778,12 +1778,12 @@ define <8 x i64> @load_v8i64_v8i16(<8 x i16> %trigger, <8 x i64>* %addr, <8 x i6
 ;
 ; AVX1-LABEL: load_v8i64_v8i16:
 ; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm3
 ; AVX1-NEXT:    vpmovsxdq %xmm3, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxdq %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
 ; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm0
@@ -1799,7 +1799,7 @@ define <8 x i64> @load_v8i64_v8i16(<8 x i16> %trigger, <8 x i64>* %addr, <8 x i6
 ;
 ; AVX2-LABEL: load_v8i64_v8i16:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    vpmovsxwd %xmm3, %xmm3

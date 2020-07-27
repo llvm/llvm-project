@@ -70,8 +70,7 @@ public:
 
 private:
   Optional<transformer::RewriteRule> Rule;
-  const IncludeSorter::IncludeStyle IncludeStyle;
-  std::unique_ptr<IncludeInserter> Inserter;
+  IncludeInserter Inserter;
 };
 
 } // namespace utils

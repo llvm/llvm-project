@@ -77,7 +77,7 @@ define i1 @parseHeaders2_scalar_and(i64 * %ptr) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
 ; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rcx
 ; SSE2-NEXT:    testq %rcx, %rax
 ; SSE2-NEXT:    sete %al

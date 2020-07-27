@@ -93,17 +93,17 @@ typedef int (*TargetDataFuncPtrTy)(DeviceTy &, int32_t, void **, void **,
     fprintf(stderr, "Libomptarget message: " _str "\n", __VA_ARGS__);          \
   } while (0)
 
-#define FATAL_MESSAGE0(_num, _str)                                    \
-  do {                                                                \
-    fprintf(stderr, "Libomptarget fatal error %d: %s\n", _num, _str); \
-    exit(1);                                                          \
+#define FATAL_MESSAGE0(_num, _str)                                             \
+  do {                                                                         \
+    fprintf(stderr, "Libomptarget fatal error %d: %s\n", _num, _str);          \
+    abort();                                                                   \
   } while (0)
 
-#define FATAL_MESSAGE(_num, _str, ...)                              \
-  do {                                                              \
-    fprintf(stderr, "Libomptarget fatal error %d:" _str "\n", _num, \
-            __VA_ARGS__);                                           \
-    exit(1);                                                        \
+#define FATAL_MESSAGE(_num, _str, ...)                                         \
+  do {                                                                         \
+    fprintf(stderr, "Libomptarget fatal error %d:" _str "\n", _num,            \
+            __VA_ARGS__);                                                      \
+    abort();                                                                   \
   } while (0)
 
 // Implemented in libomp, they are called from within __tgt_* functions.

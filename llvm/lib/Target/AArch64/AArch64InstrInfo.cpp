@@ -6847,10 +6847,9 @@ Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
     if (!MI.getOperand(0).isReg() || !MI.getOperand(1).isReg() ||
         !MI.getOperand(2).isImm())
       return None;
-    Offset = MI.getOperand(2).getImm() * Sign;
     int Shift = MI.getOperand(3).getImm();
     assert((Shift == 0 || Shift == 12) && "Shift can be either 0 or 12");
-    Offset = Offset << Shift;
+    Offset = Sign * (MI.getOperand(2).getImm() << Shift);
   }
   }
   return RegImmPair{MI.getOperand(1).getReg(), Offset};

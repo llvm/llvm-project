@@ -19,13 +19,12 @@ namespace orc {
 
 TargetProcessControl::MemoryAccess::~MemoryAccess() {}
 
-TargetProcessControl::TargetProcessControl(Triple TT, unsigned PageSize)
-    : TT(std::move(TT)), PageSize(PageSize) {}
-
 TargetProcessControl::~TargetProcessControl() {}
 
-SelfTargetProcessControl::SelfTargetProcessControl(Triple TT, unsigned PageSize)
-    : TargetProcessControl(std::move(TT), PageSize) {
+SelfTargetProcessControl::SelfTargetProcessControl(Triple TT,
+                                                   unsigned PageSize) {
+  this->TT = std::move(TT);
+  this->PageSize = PageSize;
   this->MemMgr = IPMM.get();
   this->MemAccess = this;
   if (this->TT.isOSBinFormatMachO())
@@ -43,11 +42,11 @@ SelfTargetProcessControl::Create() {
   return std::make_unique<SelfTargetProcessControl>(std::move(TT), *PageSize);
 }
 
-Expected<TargetProcessControl::DynamicLibraryHandle>
-SelfTargetProcessControl::loadLibrary(const char *LibraryPath) {
+Expected<TargetProcessControl::DylibHandle>
+SelfTargetProcessControl::loadDylib(const char *DylibPath) {
   std::string ErrMsg;
   auto Dylib = std::make_unique<sys::DynamicLibrary>(
-      sys::DynamicLibrary::getPermanentLibrary(LibraryPath, &ErrMsg));
+      sys::DynamicLibrary::getPermanentLibrary(DylibPath, &ErrMsg));
   if (!Dylib->isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
   DynamicLibraries.push_back(std::move(Dylib));

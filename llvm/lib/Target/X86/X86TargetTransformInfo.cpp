@@ -3848,6 +3848,26 @@ X86TTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
   return CostKind == TTI::TCK_RecipThroughput ? 0 : 1;
 }
 
+int X86TTIImpl::getGatherOverhead() const {
+  // Some CPUs have more overhead for gather. The specified overhead is relative
+  // to the Load operation. "2" is the number provided by Intel architects. This
+  // parameter is used for cost estimation of Gather Op and comparison with
+  // other alternatives.
+  // TODO: Remove the explicit hasAVX512()?, That would mean we would only
+  // enable gather with a -march.
+  if (ST->hasAVX512() || (ST->hasAVX2() && ST->hasFastGather()))
+    return 2;
+
+  return 1024;
+}
+
+int X86TTIImpl::getScatterOverhead() const {
+  if (ST->hasAVX512())
+    return 2;
+
+  return 1024;
+}
+
 // Return an average cost of Gather / Scatter instruction, maybe improved later
 int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, const Value *Ptr,
                                 Align Alignment, unsigned AddressSpace) {
@@ -3906,8 +3926,8 @@ int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, const Value *Ptr,
   // The gather / scatter cost is given by Intel architects. It is a rough
   // number since we are looking at one instruction in a time.
   const int GSOverhead = (Opcode == Instruction::Load)
-                             ? ST->getGatherOverhead()
-                             : ST->getScatterOverhead();
+                             ? getGatherOverhead()
+                             : getScatterOverhead();
   return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                            MaybeAlign(Alignment), AddressSpace,
                                            TTI::TCK_RecipThroughput);

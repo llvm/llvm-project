@@ -127,6 +127,17 @@ define amdgpu_kernel void @ds_consume_lds_m0_restore(i32 addrspace(3)* %lds, i32
   ret void
 }
 
+; Make sure this selects successfully with no use. The result register needs to be constrained.
+; GCN-LABEL: {{^}}ds_consume_lds_no_use:
+; GCN: s_load_dword [[PTR:s[0-9]+]]
+; GCN: s_mov_b32 m0, [[PTR]]
+; GCN: ds_consume [[RESULT:v[0-9]+]] offset:65532{{$}}
+define amdgpu_kernel void @ds_consume_lds_no_use(i32 addrspace(3)* %lds, i32 addrspace(1)* %out) #0 {
+  %gep = getelementptr inbounds i32, i32 addrspace(3)* %lds, i32 16383
+  %val = call i32 @llvm.amdgcn.ds.consume.p3i32(i32 addrspace(3)* %gep, i1 false)
+  ret void
+}
+
 declare i32 @llvm.amdgcn.ds.consume.p3i32(i32 addrspace(3)* nocapture, i1 immarg) #1
 declare i32 @llvm.amdgcn.ds.consume.p2i32(i32 addrspace(2)* nocapture, i1 immarg) #1
 

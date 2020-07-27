@@ -177,6 +177,33 @@ static Type convertStructTypePacked(spirv::StructType type,
                                      /*isPacked=*/true);
 }
 
+/// Creates LLVM dialect constant with the given value.
+static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
+                                 LLVMTypeConverter &converter, unsigned value) {
+  return rewriter.create<LLVM::ConstantOp>(
+      loc, LLVM::LLVMType::getInt32Ty(converter.getDialect()),
+      rewriter.getIntegerAttr(rewriter.getI32Type(), value));
+}
+
+/// Utility for `spv.Load` and `spv.Store` conversion.
+static LogicalResult replaceWithLoadOrStore(Operation *op,
+                                            ConversionPatternRewriter &rewriter,
+                                            LLVMTypeConverter &typeConverter,
+                                            unsigned alignment) {
+  if (auto loadOp = dyn_cast<spirv::LoadOp>(op)) {
+    auto dstType = typeConverter.convertType(loadOp.getType());
+    if (!dstType)
+      return failure();
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, dstType, loadOp.ptr(),
+                                              alignment);
+    return success();
+  }
+  auto storeOp = cast<spirv::StoreOp>(op);
+  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(storeOp, storeOp.value(),
+                                             storeOp.ptr(), alignment);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Type conversion
 //===----------------------------------------------------------------------===//
@@ -558,6 +585,31 @@ public:
   }
 };
 
+/// Converts `spv.Load` and `spv.Store` to LLVM dialect.
+template <typename SPIRVop>
+class LoadStorePattern : public SPIRVToLLVMConversion<SPIRVop> {
+public:
+  using SPIRVToLLVMConversion<SPIRVop>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVop op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.memory_access().hasValue() &&
+        op.memory_access().getValue() != spirv::MemoryAccess::None) {
+      auto memoryAccess = op.memory_access().getValue();
+      if (memoryAccess == spirv::MemoryAccess::Aligned) {
+        unsigned alignment = op.alignment().getValue().getZExtValue();
+        replaceWithLoadOrStore(op, rewriter, this->typeConverter, alignment);
+        return success();
+      }
+      // There is no support of other memory access attributes.
+      return failure();
+    }
+    replaceWithLoadOrStore(op, rewriter, this->typeConverter, 0);
+    return success();
+  }
+};
+
 /// Converts `spv.Not` and `spv.LogicalNot` into LLVM dialect.
 template <typename SPIRVOp>
 class NotPattern : public SPIRVToLLVMConversion<SPIRVOp> {
@@ -729,6 +781,37 @@ public:
     Value result = rewriter.template create<LLVMOp>(
         loc, dstType, operation.operand1(), extended);
     rewriter.replaceOp(operation, result);
+    return success();
+  }
+};
+
+class VariablePattern : public SPIRVToLLVMConversion<spirv::VariableOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::VariableOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::VariableOp varOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = varOp.getType();
+    // Initialization is supported for scalars and vectors only.
+    auto pointerTo = srcType.cast<spirv::PointerType>().getPointeeType();
+    auto init = varOp.initializer();
+    if (init && !pointerTo.isIntOrFloat() && !pointerTo.isa<VectorType>())
+      return failure();
+
+    auto dstType = typeConverter.convertType(srcType);
+    if (!dstType)
+      return failure();
+
+    Location loc = varOp.getLoc();
+    Value size = createI32ConstantOf(loc, rewriter, typeConverter, 1);
+    if (!init) {
+      rewriter.replaceOpWithNewOp<LLVM::AllocaOp>(varOp, dstType, size);
+      return success();
+    }
+    Value allocated = rewriter.create<LLVM::AllocaOp>(loc, dstType, size);
+    rewriter.create<LLVM::StoreOp>(loc, init, allocated);
+    rewriter.replaceOp(varOp, allocated);
     return success();
   }
 };
@@ -932,6 +1015,10 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::LogicalEqualOp, LLVM::ICmpPredicate::eq>,
       IComparePattern<spirv::LogicalNotEqualOp, LLVM::ICmpPredicate::ne>,
       NotPattern<spirv::LogicalNotOp>,
+
+      // Memory ops
+      LoadStorePattern<spirv::LoadOp>, LoadStorePattern<spirv::StoreOp>,
+      VariablePattern,
 
       // Miscellaneous ops
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,

@@ -144,8 +144,7 @@ ModulePass *createInstrOrderFilePass();
 
 // Insert DataFlowSanitizer (dynamic data flow analysis) instrumentation
 ModulePass *createDataFlowSanitizerPass(
-    const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),
-    void *(*getArgTLS)() = nullptr, void *(*getRetValTLS)() = nullptr);
+    const std::vector<std::string> &ABIListFiles = std::vector<std::string>());
 
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {

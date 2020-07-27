@@ -21,7 +21,7 @@ define { i64, i64 } @PR46189(double %0, double %1, double %2, double %3, double 
 ; SSE-NEXT:    cvttpd2dq %xmm3, %xmm1
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    movq %xmm0, %rax
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE-NEXT:    movq %xmm0, %rdx
 ; SSE-NEXT:    retq
 ;

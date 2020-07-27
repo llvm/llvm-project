@@ -33,7 +33,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_s32_sgpr_sgpr_0xf0f0f0f0
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %const:sreg_32 = S_MOV_B32 4042322160
+    ; CHECK: %const:sreg_32 = S_MOV_B32 -252645136
     ; CHECK: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def $scc
     ; CHECK: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
@@ -54,7 +54,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_s32_sgpr_sgpr_0xffffffff
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %const:sreg_32 = S_MOV_B32 4294967295
+    ; CHECK: %const:sreg_32 = S_MOV_B32 -1
     ; CHECK: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def $scc
     ; CHECK: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
@@ -96,7 +96,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_s32_sgpr_sgpr_clearhi1
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %const:sreg_32 = S_MOV_B32 2147483648
+    ; CHECK: %const:sreg_32 = S_MOV_B32 -2147483648
     ; CHECK: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def $scc
     ; CHECK: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
@@ -117,7 +117,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_s32_sgpr_sgpr_clearhi2
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %const:sreg_32 = S_MOV_B32 3221225472
+    ; CHECK: %const:sreg_32 = S_MOV_B32 -1073741824
     ; CHECK: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def $scc
     ; CHECK: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
@@ -138,7 +138,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_s32_sgpr_sgpr_clearlo1
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %const:sreg_32 = S_MOV_B32 4294967294
+    ; CHECK: %const:sreg_32 = S_MOV_B32 -2
     ; CHECK: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def $scc
     ; CHECK: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
@@ -159,7 +159,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_s32_sgpr_sgpr_clearlo2
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %const:sreg_32 = S_MOV_B32 4294967292
+    ; CHECK: %const:sreg_32 = S_MOV_B32 -4
     ; CHECK: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def $scc
     ; CHECK: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
@@ -180,7 +180,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_s32_sgpr_sgpr_clearlo3
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %const:sreg_32 = S_MOV_B32 4294967288
+    ; CHECK: %const:sreg_32 = S_MOV_B32 -8
     ; CHECK: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def $scc
     ; CHECK: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
@@ -201,7 +201,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_s32_sgpr_sgpr_clearlo4
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %const:sreg_32 = S_MOV_B32 4294967280
+    ; CHECK: %const:sreg_32 = S_MOV_B32 -16
     ; CHECK: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def $scc
     ; CHECK: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
@@ -222,7 +222,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_s32_sgpr_sgpr_clearlo29
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %const:sreg_32 = S_MOV_B32 3758096384
+    ; CHECK: %const:sreg_32 = S_MOV_B32 -536870912
     ; CHECK: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def $scc
     ; CHECK: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
@@ -560,7 +560,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_vgpr_vgpr_0xf0f0f0f0
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 4042322160, implicit $exec
+    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 -252645136, implicit $exec
     ; CHECK: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
@@ -581,7 +581,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_vgpr_vgpr_clearlo1
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 4294967294, implicit $exec
+    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 -2, implicit $exec
     ; CHECK: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
@@ -602,7 +602,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_vgpr_vgpr_clearlo2
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 4294967292, implicit $exec
+    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 -4, implicit $exec
     ; CHECK: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
@@ -623,7 +623,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_vgpr_vgpr_clearlo3
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 4294967288, implicit $exec
+    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 -8, implicit $exec
     ; CHECK: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
@@ -644,7 +644,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_vgpr_vgpr_clearlo4
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 4294967280, implicit $exec
+    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 -16, implicit $exec
     ; CHECK: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
@@ -665,7 +665,7 @@ body: |
 
     ; CHECK-LABEL: name: ptrmask_p3_vgpr_vgpr_clearlo29
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 3758096384, implicit $exec
+    ; CHECK: %const:vgpr_32 = V_MOV_B32_e32 -536870912, implicit $exec
     ; CHECK: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0

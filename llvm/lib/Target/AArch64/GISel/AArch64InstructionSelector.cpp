@@ -2304,12 +2304,22 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     I.addOperand(MachineOperand::CreateImm(Offset));
 
     // If we're storing a 0, use WZR/XZR.
-    if (auto CVal = getConstantVRegVal(ValReg, MRI)) {
-      if (*CVal == 0 && Opcode == TargetOpcode::G_STORE) {
-        if (I.getOpcode() == AArch64::STRWui)
+    if (Opcode == TargetOpcode::G_STORE) {
+      auto CVal = getConstantVRegValWithLookThrough(
+          ValReg, MRI, /*LookThroughInstrs = */ true,
+          /*HandleFConstants = */ false);
+      if (CVal && CVal->Value == 0) {
+        unsigned Opc = I.getOpcode();
+        switch (Opc) {
+        case AArch64::STRWui:
+        case AArch64::STRHHui:
+        case AArch64::STRBBui:
           I.getOperand(0).setReg(AArch64::WZR);
-        else if (I.getOpcode() == AArch64::STRXui)
+          break;
+        case AArch64::STRXui:
           I.getOperand(0).setReg(AArch64::XZR);
+          break;
+        }
       }
     }
 

@@ -1422,6 +1422,50 @@ using UnsignedShiftRightOpLowering =
     OneToOneConvertToLLVMPattern<UnsignedShiftRightOp, LLVM::LShrOp>;
 using XOrOpLowering = VectorConvertToLLVMPattern<XOrOp, LLVM::XOrOp>;
 
+/// Lower `std.assert`. The default lowering calls the `abort` function if the
+/// assertion is violated and has no effect otherwise. The failure message is
+/// ignored by the default lowering but should be propagated by any custom
+/// lowering.
+struct AssertOpLowering : public ConvertOpToLLVMPattern<AssertOp> {
+  using ConvertOpToLLVMPattern<AssertOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    AssertOp::Adaptor transformed(operands);
+
+    // Insert the `abort` declaration if necessary.
+    auto module = op->getParentOfType<ModuleOp>();
+    auto abortFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("abort");
+    if (!abortFunc) {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(module.getBody());
+      auto abortFuncTy =
+          LLVM::LLVMType::getFunctionTy(getVoidType(), {}, /*isVarArg=*/false);
+      abortFunc = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
+                                                    "abort", abortFuncTy);
+    }
+
+    // Split block at `assert` operation.
+    Block *opBlock = rewriter.getInsertionBlock();
+    auto opPosition = rewriter.getInsertionPoint();
+    Block *continuationBlock = rewriter.splitBlock(opBlock, opPosition);
+
+    // Generate IR to call `abort`.
+    Block *failureBlock = rewriter.createBlock(opBlock->getParent());
+    rewriter.create<LLVM::CallOp>(loc, abortFunc, llvm::None);
+    rewriter.create<LLVM::UnreachableOp>(loc);
+
+    // Generate assertion test.
+    rewriter.setInsertionPointToEnd(opBlock);
+    rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
+        op, transformed.arg(), continuationBlock, failureBlock);
+
+    return success();
+  }
+};
+
 // Lowerings for operations on complex numbers.
 
 struct CreateComplexOpLowering
@@ -3169,6 +3213,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       AddIOpLowering,
       AllocaOpLowering,
       AndOpLowering,
+      AssertOpLowering,
       AtomicRMWOpLowering,
       BranchOpLowering,
       CallIndirectOpLowering,

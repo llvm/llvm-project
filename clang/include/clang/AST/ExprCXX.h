@@ -84,7 +84,6 @@ class CXXOperatorCallExpr final : public CallExpr {
   friend class ASTStmtWriter;
 
   SourceRange Range;
-  FPOptionsOverride Overrides;
 
   // CXXOperatorCallExpr has some trailing objects belonging
   // to CallExpr. See CallExpr for the details.
@@ -96,7 +95,7 @@ class CXXOperatorCallExpr final : public CallExpr {
                       SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
                       ADLCallKind UsesADL);
 
-  CXXOperatorCallExpr(unsigned NumArgs, EmptyShell Empty);
+  CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
 public:
   static CXXOperatorCallExpr *
@@ -106,7 +105,8 @@ public:
          ADLCallKind UsesADL = NotADL);
 
   static CXXOperatorCallExpr *CreateEmpty(const ASTContext &Ctx,
-                                          unsigned NumArgs, EmptyShell Empty);
+                                          unsigned NumArgs, bool HasFPFeatures,
+                                          EmptyShell Empty);
 
   /// Returns the kind of overloaded operator that this expression refers to.
   OverloadedOperatorKind getOperator() const {
@@ -164,11 +164,6 @@ public:
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXOperatorCallExprClass;
   }
-
-  // Set the FPFeatures status of this operator. Only meaningful for
-  // operations on floating point types.
-  void setFPFeatures(FPOptionsOverride F) { Overrides = F; }
-  FPOptionsOverride getFPFeatures() const { return Overrides; }
 };
 
 /// Represents a call to a member function that
@@ -184,18 +179,20 @@ class CXXMemberCallExpr final : public CallExpr {
   // to CallExpr. See CallExpr for the details.
 
   CXXMemberCallExpr(Expr *Fn, ArrayRef<Expr *> Args, QualType Ty,
-                    ExprValueKind VK, SourceLocation RP, unsigned MinNumArgs);
+                    ExprValueKind VK, SourceLocation RP,
+                    FPOptionsOverride FPOptions, unsigned MinNumArgs);
 
-  CXXMemberCallExpr(unsigned NumArgs, EmptyShell Empty);
+  CXXMemberCallExpr(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
 public:
   static CXXMemberCallExpr *Create(const ASTContext &Ctx, Expr *Fn,
                                    ArrayRef<Expr *> Args, QualType Ty,
                                    ExprValueKind VK, SourceLocation RP,
+                                   FPOptionsOverride FPFeatures,
                                    unsigned MinNumArgs = 0);
 
   static CXXMemberCallExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
-                                        EmptyShell Empty);
+                                        bool HasFPFeatures, EmptyShell Empty);
 
   /// Retrieve the implicit object argument for the member call.
   ///
@@ -242,18 +239,21 @@ class CUDAKernelCallExpr final : public CallExpr {
 
   CUDAKernelCallExpr(Expr *Fn, CallExpr *Config, ArrayRef<Expr *> Args,
                      QualType Ty, ExprValueKind VK, SourceLocation RP,
-                     unsigned MinNumArgs);
+                     FPOptionsOverride FPFeatures, unsigned MinNumArgs);
 
-  CUDAKernelCallExpr(unsigned NumArgs, EmptyShell Empty);
+  CUDAKernelCallExpr(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
 public:
   static CUDAKernelCallExpr *Create(const ASTContext &Ctx, Expr *Fn,
                                     CallExpr *Config, ArrayRef<Expr *> Args,
                                     QualType Ty, ExprValueKind VK,
-                                    SourceLocation RP, unsigned MinNumArgs = 0);
+                                    SourceLocation RP,
+                                    FPOptionsOverride FPFeatures,
+                                    unsigned MinNumArgs = 0);
 
   static CUDAKernelCallExpr *CreateEmpty(const ASTContext &Ctx,
-                                         unsigned NumArgs, EmptyShell Empty);
+                                         unsigned NumArgs, bool HasFPFeatures,
+                                         EmptyShell Empty);
 
   const CallExpr *getConfig() const {
     return cast_or_null<CallExpr>(getPreArg(CONFIG));
@@ -619,18 +619,20 @@ class UserDefinedLiteral final : public CallExpr {
 
   UserDefinedLiteral(Expr *Fn, ArrayRef<Expr *> Args, QualType Ty,
                      ExprValueKind VK, SourceLocation LitEndLoc,
-                     SourceLocation SuffixLoc);
+                     SourceLocation SuffixLoc, FPOptionsOverride FPFeatures);
 
-  UserDefinedLiteral(unsigned NumArgs, EmptyShell Empty);
+  UserDefinedLiteral(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
 public:
   static UserDefinedLiteral *Create(const ASTContext &Ctx, Expr *Fn,
                                     ArrayRef<Expr *> Args, QualType Ty,
                                     ExprValueKind VK, SourceLocation LitEndLoc,
-                                    SourceLocation SuffixLoc);
+                                    SourceLocation SuffixLoc,
+                                    FPOptionsOverride FPFeatures);
 
   static UserDefinedLiteral *CreateEmpty(const ASTContext &Ctx,
-                                         unsigned NumArgs, EmptyShell Empty);
+                                         unsigned NumArgs, bool HasFPOptions,
+                                         EmptyShell Empty);
 
   /// The kind of literal operator which is invoked.
   enum LiteralOperatorKind {

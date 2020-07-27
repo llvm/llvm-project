@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "llvm/Analysis/InlineCost.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

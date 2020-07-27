@@ -110,15 +110,18 @@ public:
     }
   };
 
-  using DynamicLibraryHandle = JITTargetAddress;
+  /// A handle for a library opened via loadDylib.
+  ///
+  /// Note that this handle does not necessarily represent a JITDylib: it may
+  /// be a regular dynamic library or shared object (e.g. one opened via a
+  /// dlopen in the target process).
+  using DylibHandle = JITTargetAddress;
 
-  /// Request lookup within a single library.
-  /// If Library is None then the whole target process should be searched.
+  /// Request lookup within the given DylibHandle.
   struct LookupRequestElement {
-    LookupRequestElement(DynamicLibraryHandle Handle,
-                         const SymbolLookupSet &Symbols)
+    LookupRequestElement(DylibHandle Handle, const SymbolLookupSet &Symbols)
         : Handle(Handle), Symbols(Symbols) {}
-    DynamicLibraryHandle Handle;
+    DylibHandle Handle;
     const SymbolLookupSet &Symbols;
   };
 
@@ -140,11 +143,10 @@ public:
   /// Return a MemoryAccess object for the target process.
   MemoryAccess &getMemoryAccess() const { return *MemAccess; }
 
-  /// Load the library at the given path. Returns a handle to the loaded
-  /// library. If LibraryPath is null this function will return the global
-  /// handle for the target process.
-  virtual Expected<DynamicLibraryHandle>
-  loadLibrary(const char *LibraryPath) = 0;
+  /// Load the dynamic library at the given path and return a handle to it.
+  /// If LibraryPath is null this function will return the global handle for
+  /// the target process.
+  virtual Expected<DylibHandle> loadDylib(const char *DylibPath) = 0;
 
   /// Search for symbols in the target process.
   /// The result of the lookup is a 2-dimentional array of target addresses
@@ -152,7 +154,6 @@ public:
   virtual Expected<LookupResult> lookupSymbols(LookupRequest Request) = 0;
 
 protected:
-  TargetProcessControl(Triple TT, unsigned PageSize);
 
   Triple TT;
   unsigned PageSize = 0;
@@ -168,7 +169,7 @@ public:
 
   static Expected<std::unique_ptr<SelfTargetProcessControl>> Create();
 
-  Expected<DynamicLibraryHandle> loadLibrary(const char *LibraryPath) override;
+  Expected<DylibHandle> loadDylib(const char *DylibPath) override;
 
   Expected<LookupResult> lookupSymbols(LookupRequest Request) override;
 

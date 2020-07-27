@@ -388,8 +388,8 @@ class LazyValueInfoImpl {
                                                        BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueSelect(SelectInst *S,
                                                       BasicBlock *BB);
-  Optional<ConstantRange> getRangeForOperand(unsigned Op, Instruction *I,
-                                             BasicBlock *BB);
+  Optional<ConstantRange> getRangeFor(Value *V, Instruction *CxtI,
+                                      BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueBinaryOpImpl(
       Instruction *I, BasicBlock *BB,
       std::function<ConstantRange(const ConstantRange &,
@@ -919,20 +919,19 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
   return Result;
 }
 
-Optional<ConstantRange> LazyValueInfoImpl::getRangeForOperand(unsigned Op,
-                                                              Instruction *I,
-                                                              BasicBlock *BB) {
-  Optional<ValueLatticeElement> OptVal = getBlockValue(I->getOperand(Op), BB);
+Optional<ConstantRange> LazyValueInfoImpl::getRangeFor(Value *V,
+                                                       Instruction *CxtI,
+                                                       BasicBlock *BB) {
+  Optional<ValueLatticeElement> OptVal = getBlockValue(V, BB);
   if (!OptVal)
     return None;
 
   ValueLatticeElement &Val = *OptVal;
-  intersectAssumeOrGuardBlockValueConstantRange(I->getOperand(Op), Val, I);
+  intersectAssumeOrGuardBlockValueConstantRange(V, Val, CxtI);
   if (Val.isConstantRange())
     return Val.getConstantRange();
 
-  const unsigned OperandBitWidth =
-    DL.getTypeSizeInBits(I->getOperand(Op)->getType());
+  const unsigned OperandBitWidth = DL.getTypeSizeInBits(V->getType());
   return ConstantRange::getFull(OperandBitWidth);
 }
 
@@ -962,7 +961,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueCast(
   // Figure out the range of the LHS.  If that fails, we still apply the
   // transfer rule on the full set since we may be able to locally infer
   // interesting facts.
-  Optional<ConstantRange> LHSRes = getRangeForOperand(0, CI, BB);
+  Optional<ConstantRange> LHSRes = getRangeFor(CI->getOperand(0), CI, BB);
   if (!LHSRes.hasValue())
     // More work to do before applying this transfer rule.
     return None;
@@ -985,8 +984,8 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
   // conservative range, but apply the transfer rule anyways.  This
   // lets us pick up facts from expressions like "and i32 (call i32
   // @foo()), 32"
-  Optional<ConstantRange> LHSRes = getRangeForOperand(0, I, BB);
-  Optional<ConstantRange> RHSRes = getRangeForOperand(1, I, BB);
+  Optional<ConstantRange> LHSRes = getRangeFor(I->getOperand(0), I, BB);
+  Optional<ConstantRange> RHSRes = getRangeFor(I->getOperand(1), I, BB);
   if (!LHSRes.hasValue() || !RHSRes.hasValue())
     // More work to do before applying this transfer rule.
     return None;

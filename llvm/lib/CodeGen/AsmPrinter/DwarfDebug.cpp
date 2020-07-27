@@ -95,10 +95,6 @@ static cl::opt<bool> UseDwarfRangesBaseAddressSpecifier(
     "use-dwarf-ranges-base-address-specifier", cl::Hidden,
     cl::desc("Use base address specifiers in debug_ranges"), cl::init(false));
 
-static cl::opt<bool> EmitDwarfDebugEntryValues(
-    "emit-debug-entry-values", cl::Hidden,
-    cl::desc("Emit the debug entry values"), cl::init(false));
-
 static cl::opt<bool> GenerateARangeSection("generate-arange-section",
                                            cl::Hidden,
                                            cl::desc("Generate dwarf aranges"),
@@ -430,9 +426,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
 
   // Emit call-site-param debug info for GDB and LLDB, if the target supports
   // the debug entry values feature. It can also be enabled explicitly.
-  EmitDebugEntryValues = (Asm->TM.Options.ShouldEmitDebugEntryValues() &&
-                          (tuneForGDB() || tuneForLLDB())) ||
-                         EmitDwarfDebugEntryValues;
+  EmitDebugEntryValues = Asm->TM.Options.ShouldEmitDebugEntryValues();
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
 }
@@ -2494,7 +2488,6 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addSignedConstant(Value.getInt());
     else
       DwarfExpr.addUnsignedConstant(Value.getInt());
-    DwarfExpr.addExpression(std::move(ExprCursor));
   } else if (Value.isLocation()) {
     MachineLocation Location = Value.getLoc();
     DwarfExpr.setLocation(Location, DIExpr);
@@ -2515,24 +2508,10 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addExpression(std::move(ExprCursor));
       return;
   } else if (Value.isConstantFP()) {
-    if (AP.getDwarfVersion() >= 4 && AP.getDwarfDebug()->tuneForGDB()) {
-      DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF());
-      return;
-    } else if (Value.getConstantFP()
-                   ->getValueAPF()
-                   .bitcastToAPInt()
-                   .getBitWidth() <= 64 /*bits*/) {
-      DwarfExpr.addUnsignedConstant(
-          Value.getConstantFP()->getValueAPF().bitcastToAPInt());
-      DwarfExpr.addExpression(std::move(ExprCursor));
-      return;
-    }
-    LLVM_DEBUG(
-        dbgs()
-        << "Skipped DwarfExpression creation for ConstantFP of size: "
-        << Value.getConstantFP()->getValueAPF().bitcastToAPInt().getBitWidth()
-        << " bits\n");
+    APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
+    DwarfExpr.addUnsignedConstant(RawBytes);
   }
+  DwarfExpr.addExpression(std::move(ExprCursor));
 }
 
 void DebugLocEntry::finalize(const AsmPrinter &AP,

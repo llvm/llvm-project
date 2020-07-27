@@ -2411,7 +2411,7 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo_and_one(<4 x i32> %X) nou
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm3[2,1]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm3[2,3]
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [5,4294967295,16,1]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm2
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
@@ -2516,7 +2516,7 @@ define <4 x i32> @test_urem_even_allones_and_poweroftwo_and_one(<4 x i32> %X) no
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm3[2,1]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,3],xmm3[2,3]
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [14,4294967295,16,1]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm3, %xmm2
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]

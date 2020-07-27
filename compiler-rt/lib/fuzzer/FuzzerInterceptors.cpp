@@ -119,6 +119,7 @@ static char *internal_strstr(const char *haystack, const char *needle) {
 
 extern "C" {
 
+DEFINE_REAL(int, bcmp, const void *, const void *, size_t)
 DEFINE_REAL(int, memcmp, const void *, const void *, size_t)
 DEFINE_REAL(int, strncmp, const char *, const char *, size_t)
 DEFINE_REAL(int, strcmp, const char *, const char *)
@@ -127,6 +128,14 @@ DEFINE_REAL(int, strcasecmp, const char *, const char *)
 DEFINE_REAL(char *, strstr, const char *, const char *)
 DEFINE_REAL(char *, strcasestr, const char *, const char *)
 DEFINE_REAL(void *, memmem, const void *, size_t, const void *, size_t)
+
+ATTRIBUTE_INTERFACE int bcmp(const char *s1, const char *s2, size_t n) {
+  if (!FuzzerInited)
+    return internal_memcmp(s1, s2, n);
+  int result = REAL(bcmp)(s1, s2, n);
+  __sanitizer_weak_hook_memcmp(GET_CALLER_PC(), s1, s2, n, result);
+  return result;
+}
 
 ATTRIBUTE_INTERFACE int memcmp(const void *s1, const void *s2, size_t n) {
   if (!FuzzerInited)
@@ -200,6 +209,8 @@ static void fuzzerInit() {
     return;
   FuzzerInitIsRunning = true;
 
+  REAL(bcmp) = reinterpret_cast<memcmp_type>(
+      getFuncAddr("bcmp", reinterpret_cast<uintptr_t>(&bcmp)));
   REAL(memcmp) = reinterpret_cast<memcmp_type>(
       getFuncAddr("memcmp", reinterpret_cast<uintptr_t>(&memcmp)));
   REAL(strncmp) = reinterpret_cast<strncmp_type>(

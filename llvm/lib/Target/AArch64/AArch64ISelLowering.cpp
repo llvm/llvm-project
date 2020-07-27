@@ -230,7 +230,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
            MVT::nxv2f64 }) {
       setCondCodeAction(ISD::SETO, VT, Expand);
       setCondCodeAction(ISD::SETOLT, VT, Expand);
+      setCondCodeAction(ISD::SETLT, VT, Expand);
       setCondCodeAction(ISD::SETOLE, VT, Expand);
+      setCondCodeAction(ISD::SETLE, VT, Expand);
       setCondCodeAction(ISD::SETULT, VT, Expand);
       setCondCodeAction(ISD::SETULE, VT, Expand);
       setCondCodeAction(ISD::SETUGE, VT, Expand);
@@ -12347,6 +12349,9 @@ static SDValue performLD1ReplicateCombine(SDNode *N, SelectionDAG &DAG) {
                 "Unsupported opcode.");
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+  if (VT == MVT::nxv8bf16 &&
+      !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
+    return SDValue();
 
   EVT LoadVT = VT;
   if (VT.isFloatingPoint())
