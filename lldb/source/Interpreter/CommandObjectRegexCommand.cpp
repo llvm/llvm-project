@@ -69,14 +69,13 @@ bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
   return false;
 }
 
-bool CommandObjectRegexCommand::AddRegexCommand(const char *re_cstr,
-                                                const char *command_cstr) {
+bool CommandObjectRegexCommand::AddRegexCommand(llvm::StringRef re_cstr,
+                                                llvm::StringRef command_cstr) {
   m_entries.resize(m_entries.size() + 1);
   // Only add the regular expression if it compiles
-  m_entries.back().regex =
-      RegularExpression(llvm::StringRef::withNullAsEmpty(re_cstr));
+  m_entries.back().regex = RegularExpression(re_cstr);
   if (m_entries.back().regex.IsValid()) {
-    m_entries.back().command.assign(command_cstr);
+    m_entries.back().command = command_cstr.str();
     return true;
   }
   // The regex didn't compile...
