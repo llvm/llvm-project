@@ -1143,7 +1143,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
                                              Builder);
       NewPN->addIncoming(InV, PN->getIncomingBlock(i));
     }
-  } else if (auto *FI = dyn_cast<FreezeInst>(&I)) {
+  } else if (isa<FreezeInst>(&I)) {
     for (unsigned i = 0; i != NumPHIValues; ++i) {
       Value *InV;
       if (NonConstBB == PN->getIncomingBlock(i))
