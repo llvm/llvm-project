@@ -314,7 +314,8 @@ bool SymbolCollector::handleDeclOccurrence(
   // file locations for references (as it aligns the behavior of clangd's
   // AST-based xref).
   // FIXME: we should try to use the file locations for other fields.
-  if (CollectRef && !IsMainFileOnly && !isa<NamespaceDecl>(ND) &&
+  if (CollectRef && (!IsMainFileOnly || ND->isExternallyVisible()) &&
+      !isa<NamespaceDecl>(ND) &&
       (Opts.RefsInHeaders ||
        SM.getFileID(SM.getFileLoc(Loc)) == SM.getMainFileID()))
     DeclRefs[ND].emplace_back(SM.getFileLoc(Loc), Roles);
