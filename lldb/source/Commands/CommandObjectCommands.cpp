@@ -970,7 +970,7 @@ protected:
       std::string subst(std::string(regex_sed.substr(
           second_separator_char_pos + 1,
           third_separator_char_pos - second_separator_char_pos - 1)));
-      m_regex_cmd_up->AddRegexCommand(regex.c_str(), subst.c_str());
+      m_regex_cmd_up->AddRegexCommand(regex, subst);
     }
     return error;
   }
