@@ -27,12 +27,14 @@ namespace xray {
 
 class LatencyAccountant {
 public:
-  typedef std::map<int32_t, std::vector<uint64_t>> FunctionLatencyMap;
-  typedef std::map<uint32_t, std::pair<uint64_t, uint64_t>>
+  typedef llvm::DenseMap<int32_t, llvm::SmallVector<uint64_t, 0>>
+      FunctionLatencyMap;
+  typedef llvm::DenseMap<uint32_t, std::pair<uint64_t, uint64_t>>
       PerThreadMinMaxTSCMap;
-  typedef std::map<uint8_t, std::pair<uint64_t, uint64_t>> PerCPUMinMaxTSCMap;
-  typedef std::vector<std::pair<int32_t, uint64_t>> FunctionStack;
-  typedef std::map<uint32_t, FunctionStack> PerThreadFunctionStackMap;
+  typedef llvm::DenseMap<uint8_t, std::pair<uint64_t, uint64_t>>
+      PerCPUMinMaxTSCMap;
+  typedef llvm::SmallVector<std::pair<int32_t, uint64_t>, 32> FunctionStack;
+  typedef llvm::DenseMap<uint32_t, FunctionStack> PerThreadFunctionStackMap;
 
 private:
   PerThreadFunctionStackMap PerThreadFunctionStack;
