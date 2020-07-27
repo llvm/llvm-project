@@ -1859,6 +1859,14 @@ bool JumpThreadingPass::ProcessBranchOnXOR(BinaryOperator *BO) {
     return true;
   }
 
+  // If any of predecessors end with an indirect goto, we can't change its
+  // destination. Same for CallBr.
+  if (any_of(BlocksToFoldInto, [](BasicBlock *Pred) {
+        return isa<IndirectBrInst>(Pred->getTerminator()) ||
+               isa<CallBrInst>(Pred->getTerminator());
+      }))
+    return false;
+
   // Try to duplicate BB into PredBB.
   return DuplicateCondBranchOnPHIIntoPred(BB, BlocksToFoldInto);
 }
