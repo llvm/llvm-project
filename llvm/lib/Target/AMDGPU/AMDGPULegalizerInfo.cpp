@@ -415,11 +415,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor(AllS64Vectors)
     .legalFor(AddrSpaces64)
     .legalFor(AddrSpaces32)
+    .legalIf(isPointer(0))
     .clampScalar(0, S32, S256)
     .widenScalarToNextPow2(0, 32)
     .clampMaxNumElements(0, S32, 16)
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-    .legalIf(isPointer(0));
+    .scalarize(0);
 
   if (ST.hasVOP3PInsts()) {
     assert(ST.hasIntClamp() && "all targets with VOP3P should support clamp");
