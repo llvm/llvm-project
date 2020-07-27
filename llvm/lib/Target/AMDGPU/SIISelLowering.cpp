@@ -1137,7 +1137,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align.reset();
     Info.flags = MachineMemOperand::MOLoad |
                  MachineMemOperand::MOStore |
-                 MachineMemOperand::MODereferenceable |
                  MachineMemOperand::MOVolatile;
     return true;
   }
