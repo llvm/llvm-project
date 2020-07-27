@@ -40,7 +40,7 @@ public:
                                     const Address &address,
                                     const CompilerType &ast_type);
 
-  uint64_t GetByteSize() override;
+  llvm::Optional<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 

@@ -179,8 +179,7 @@ ValueObjectSP ValueObjectConstResult::Create(ExecutionContextScope *exe_scope,
 ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
                                                ValueObjectManager &manager,
                                                const Status &error)
-    : ValueObject(exe_scope, manager), m_type_name(), m_byte_size(0),
-      m_impl(this) {
+    : ValueObject(exe_scope, manager), m_impl(this) {
   m_error = error;
   SetIsConstant();
 }
@@ -189,8 +188,7 @@ ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
                                                ValueObjectManager &manager,
                                                const Value &value,
                                                ConstString name, Module *module)
-    : ValueObject(exe_scope, manager), m_type_name(), m_byte_size(0),
-      m_impl(this) {
+    : ValueObject(exe_scope, manager), m_impl(this) {
   m_value = value;
   m_name = name;
   ExecutionContext exe_ctx;
@@ -208,9 +206,9 @@ lldb::ValueType ValueObjectConstResult::GetValueType() const {
   return eValueTypeConstResult;
 }
 
-uint64_t ValueObjectConstResult::GetByteSize() {
+llvm::Optional<uint64_t> ValueObjectConstResult::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  if (m_byte_size == 0) {
+  if (!m_byte_size) {
     if (auto size =
         GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope()))
       SetByteSize(*size);
