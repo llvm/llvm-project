@@ -1,15 +1,11 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +vsx -target-feature +altivec \
-// RUN:   -target-cpu pwr10 -triple powerpc64le-unknown-unknown -emit-llvm %s \
-// RUN:   -o - | FileCheck %s
-
-// RUN: %clang_cc1 -target-feature +vsx -target-feature +altivec \
+// RUN: %clang_cc1 -target-feature +vsx \
 // RUN:   -target-cpu pwr10 -triple powerpc64-unknown-unknown -emit-llvm %s \
-// RUN:   -o - | FileCheck %s -check-prefix=CHECK-BE
+// RUN:   -o - | FileCheck %s -check-prefixes=CHECK-BE,CHECK
 
-// RUN: %clang_cc1 -target-feature +vsx -target-feature +altivec \
+// RUN: %clang_cc1 -target-feature +vsx \
 // RUN:   -target-cpu pwr10 -triple powerpc64le-unknown-unknown -emit-llvm %s \
-// RUN:   -o - | FileCheck %s -check-prefix=CHECK-LE
+// RUN:   -o - | FileCheck %s -check-prefixes=CHECK-LE,CHECK
 
 #include <altivec.h>
 
@@ -514,19 +510,16 @@ vector unsigned int test_vec_inserth_uiv(void) {
 }
 
 vector signed int test_vec_vec_splati_si(void) {
-  // CHECK-BE: ret <4 x i32> <i32 -17, i32 -17, i32 -17, i32 -17>
   // CHECK: ret <4 x i32> <i32 -17, i32 -17, i32 -17, i32 -17>
   return vec_splati(-17);
 }
 
 vector unsigned int test_vec_vec_splati_ui(void) {
-  // CHECK-BE: ret <4 x i32> <i32 16, i32 16, i32 16, i32 16>
   // CHECK: ret <4 x i32> <i32 16, i32 16, i32 16, i32 16>
   return vec_splati(16U);
 }
 
 vector float test_vec_vec_splati_f(void) {
-  // CHECK-BE: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
   // CHECK: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
   return vec_splati(1.0f);
 }
@@ -536,10 +529,10 @@ vector double test_vec_vec_splatid(void) {
   // CHECK-BE-NEXT: [[T2:%.+]] = insertelement <2 x double> undef, double [[T1:%.+]], i32 0
   // CHECK-BE-NEXT: [[T3:%.+]] = shufflevector <2 x double> [[T2:%.+]], <2 x double> undef, <2 x i32> zeroinitialize
   // CHECK-BE-NEXT: ret <2 x double> [[T3:%.+]]
-  // CHECK: [[T1:%.+]] = fpext float %{{.+}} to double
-  // CHECK-NEXT: [[T2:%.+]] = insertelement <2 x double> undef, double [[T1:%.+]], i32 0
-  // CHECK-NEXT: [[T3:%.+]] = shufflevector <2 x double> [[T2:%.+]], <2 x double> undef, <2 x i32> zeroinitialize
-  // CHECK-NEXT: ret <2 x double> [[T3:%.+]]
+  // CHECK-LE: [[T1:%.+]] = fpext float %{{.+}} to double
+  // CHECK-LE-NEXT: [[T2:%.+]] = insertelement <2 x double> undef, double [[T1:%.+]], i32 0
+  // CHECK-LE-NEXT: [[T3:%.+]] = shufflevector <2 x double> [[T2:%.+]], <2 x double> undef, <2 x i32> zeroinitialize
+  // CHECK-LE-NEXT: ret <2 x double> [[T3:%.+]]
   return vec_splatid(1.0);
 }
 
@@ -548,11 +541,11 @@ vector signed int test_vec_vec_splati_ins_si(void) {
   // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
   // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
   // CHECK-BE: ret <4 x i32>
-  // CHECK:  [[T1:%.+]] = sub i32 1, %{{.+}}
-  // CHECK: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
-  // CHECK:  [[T2:%.+]] = sub i32 3, %{{.+}}
-  // CHECK: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T2]]
-  // CHECK: ret <4 x i32>
+  // CHECK-LE:  [[T1:%.+]] = sub i32 1, %{{.+}}
+  // CHECK-LE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
+  // CHECK-LE:  [[T2:%.+]] = sub i32 3, %{{.+}}
+  // CHECK-LE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T2]]
+  // CHECK-LE: ret <4 x i32>
   return vec_splati_ins(vsia, 0, -17);
 }
 
@@ -561,11 +554,11 @@ vector unsigned int test_vec_vec_splati_ins_ui(void) {
   // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
   // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
   // CHECK-BE: ret <4 x i32>
-  // CHECK:  [[T1:%.+]] = sub i32 1, %{{.+}}
-  // CHECK: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
-  // CHECK:  [[T2:%.+]] = sub i32 3, %{{.+}}
-  // CHECK: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T2]]
-  // CHECK: ret <4 x i32>
+  // CHECK-LE:  [[T1:%.+]] = sub i32 1, %{{.+}}
+  // CHECK-LE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
+  // CHECK-LE:  [[T2:%.+]] = sub i32 3, %{{.+}}
+  // CHECK-LE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T2]]
+  // CHECK-LE: ret <4 x i32>
   return vec_splati_ins(vuia, 1, 16U);
 }
 
@@ -574,11 +567,11 @@ vector float test_vec_vec_splati_ins_f(void) {
   // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
   // CHECK-BE: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T1]]
   // CHECK-BE: ret <4 x float>
-  // CHECK:  [[T1:%.+]] = sub i32 1, %{{.+}}
-  // CHECK: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T1]]
-  // CHECK:  [[T2:%.+]] = sub i32 3, %{{.+}}
-  // CHECK: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T2]]
-  // CHECK: ret <4 x float>
+  // CHECK-LE:  [[T1:%.+]] = sub i32 1, %{{.+}}
+  // CHECK-LE: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T1]]
+  // CHECK-LE:  [[T2:%.+]] = sub i32 3, %{{.+}}
+  // CHECK-LE: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T2]]
+  // CHECK-LE: ret <4 x float>
   return vec_splati_ins(vfa, 0, 1.0f);
 }
 

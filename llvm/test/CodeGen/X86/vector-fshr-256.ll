@@ -26,11 +26,11 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm2, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpsrlq %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm4[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm4[2,3,2,3]
 ; AVX1-NEXT:    vpsrlq %xmm6, %xmm3, %xmm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm5[0,1,2,3],xmm3[4,5,6,7]
 ; AVX1-NEXT:    vpsrlq %xmm2, %xmm1, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm2[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm2[2,3,2,3]
 ; AVX1-NEXT:    vpsrlq %xmm6, %xmm1, %xmm6
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3],xmm6[4,5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
@@ -38,12 +38,12 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ; AVX1-NEXT:    vpsubq %xmm4, %xmm8, %xmm6
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm7
 ; AVX1-NEXT:    vpsllq %xmm6, %xmm7, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[2,3,2,3]
 ; AVX1-NEXT:    vpsllq %xmm6, %xmm7, %xmm6
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3],xmm6[4,5,6,7]
 ; AVX1-NEXT:    vpsubq %xmm2, %xmm8, %xmm6
 ; AVX1-NEXT:    vpsllq %xmm6, %xmm0, %xmm7
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[2,3,2,3]
 ; AVX1-NEXT:    vpsllq %xmm6, %xmm0, %xmm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm7[0,1,2,3],xmm0[4,5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0

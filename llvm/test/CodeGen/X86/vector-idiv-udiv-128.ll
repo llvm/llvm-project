@@ -20,7 +20,7 @@ define <2 x i64> @test_div7_2i64(<2 x i64> %a) nounwind {
 ; SSE2-NEXT:    shrq %rcx
 ; SSE2-NEXT:    addq %rdx, %rcx
 ; SSE2-NEXT:    movq %rcx, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rcx
 ; SSE2-NEXT:    movq %rcx, %rax
 ; SSE2-NEXT:    mulq %rsi
@@ -445,7 +445,7 @@ define <2 x i64> @test_rem7_2i64(<2 x i64> %a) nounwind {
 ; SSE2-NEXT:    subq %rdx, %rax
 ; SSE2-NEXT:    addq %rcx, %rax
 ; SSE2-NEXT:    movq %rax, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rcx
 ; SSE2-NEXT:    movq %rcx, %rax
 ; SSE2-NEXT:    mulq %rsi

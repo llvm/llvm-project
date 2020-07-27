@@ -658,6 +658,7 @@ bool InlineAsmLowering::lowerAsmOperandForConstraint(
   default:
     return false;
   case 'i': // Simple Integer or Relocatable Constant
+  case 'n': // immediate integer with a known value.
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
       assert(CI->getBitWidth() <= 64 &&
              "expected immediate to fit into 64-bits");

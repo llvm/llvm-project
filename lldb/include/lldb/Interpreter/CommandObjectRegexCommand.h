@@ -30,7 +30,7 @@ public:
 
   bool IsRemovable() const override { return m_is_removable; }
 
-  bool AddRegexCommand(const char *re_cstr, const char *command_cstr);
+  bool AddRegexCommand(llvm::StringRef re_cstr, llvm::StringRef command_cstr);
 
   bool HasRegexEntries() const { return !m_entries.empty(); }
 

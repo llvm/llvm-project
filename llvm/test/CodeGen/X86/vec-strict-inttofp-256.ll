@@ -281,7 +281,7 @@ define <8 x float> @sitofp_v8i16_v8f32(<8 x i16> %x) #0 {
 ; AVX1-LABEL: sitofp_v8i16_v8f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0

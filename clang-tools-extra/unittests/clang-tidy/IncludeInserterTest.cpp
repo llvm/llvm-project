@@ -33,9 +33,7 @@ public:
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override {
-    Inserter = std::make_unique<utils::IncludeInserter>(
-        SM, getLangOpts(), utils::IncludeSorter::IS_Google);
-    PP->addPPCallbacks(Inserter->CreatePPCallbacks());
+    Inserter.registerPreprocessor(PP);
   }
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override {
@@ -46,15 +44,15 @@ public:
     auto Diag = diag(Result.Nodes.getNodeAs<DeclStmt>("stmt")->getBeginLoc(),
                      "foo, bar");
     for (StringRef Header : HeadersToInclude()) {
-      Diag << Inserter->CreateIncludeInsertion(
-          Result.SourceManager->getMainFileID(), Header, IsAngledInclude());
+      Diag << Inserter.createMainFileIncludeInsertion(Header,
+                                                      IsAngledInclude());
     }
   }
 
   virtual std::vector<StringRef> HeadersToInclude() const = 0;
   virtual bool IsAngledInclude() const = 0;
 
-  std::unique_ptr<utils::IncludeInserter> Inserter;
+  utils::IncludeInserter Inserter{utils::IncludeSorter::IS_Google};
 };
 
 class NonSystemHeaderInserterCheck : public IncludeInserterCheckBase {

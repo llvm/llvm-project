@@ -10,6 +10,7 @@
 #define MLIR_SUPPORT_STORAGEUNIQUER_H
 
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Allocator.h"
 
@@ -60,6 +61,20 @@ using has_impltype_hash_t = decltype(ImplTy::hashKey(std::declval<T>()));
 ///      that is called when erasing a storage instance. This should cleanup any
 ///      fields of the storage as necessary and not attempt to free the memory
 ///      of the storage itself.
+///
+/// Storage classes may have an optional mutable component, which must not take
+/// part in the unique immutable key. In this case, storage classes may be
+/// mutated with `mutate` and must additionally respect the following:
+///    - Provide a mutation method:
+///        'LogicalResult mutate(StorageAllocator &, <...>)'
+///      that is called when mutating a storage instance. The first argument is
+///      an allocator to store any mutable data, and the remaining arguments are
+///      forwarded from the call site. The storage can be mutated at any time
+///      after creation. Care must be taken to avoid excessive mutation since
+///      the allocated storage can keep containing previous states. The return
+///      value of the function is used to indicate whether the mutation was
+///      successful, e.g., to limit the number of mutations or enable deferred
+///      one-time assignment of the mutable component.
 class StorageUniquer {
 public:
   StorageUniquer();
@@ -166,6 +181,17 @@ public:
     return static_cast<Storage *>(getImpl(kind, ctorFn));
   }
 
+  /// Changes the mutable component of 'storage' by forwarding the trailing
+  /// arguments to the 'mutate' function of the derived class.
+  template <typename Storage, typename... Args>
+  LogicalResult mutate(Storage *storage, Args &&...args) {
+    auto mutationFn = [&](StorageAllocator &allocator) -> LogicalResult {
+      return static_cast<Storage &>(*storage).mutate(
+          allocator, std::forward<Args>(args)...);
+    };
+    return mutateImpl(mutationFn);
+  }
+
   /// Erases a uniqued instance of 'Storage'. This function is used for derived
   /// types that have complex storage or uniquing constraints.
   template <typename Storage, typename Arg, typename... Args>
@@ -205,6 +231,10 @@ private:
   void eraseImpl(unsigned kind, unsigned hashValue,
                  function_ref<bool(const BaseStorage *)> isEqual,
                  function_ref<void(BaseStorage *)> cleanupFn);
+
+  /// Implementation for mutating an instance of a derived storage.
+  LogicalResult
+  mutateImpl(function_ref<LogicalResult(StorageAllocator &)> mutationFn);
 
   /// The internal implementation class.
   std::unique_ptr<detail::StorageUniquerImpl> impl;

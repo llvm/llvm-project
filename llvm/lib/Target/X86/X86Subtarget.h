@@ -506,10 +506,6 @@ private:
   /// True if compiling for 16-bit, false for 32-bit or 64-bit.
   bool In16BitMode = false;
 
-  /// Contains the Overhead of gather\scatter instructions
-  int GatherOverhead = 1024;
-  int ScatterOverhead = 1024;
-
   X86SelectionDAGInfo TSInfo;
   // Ordering here is important. X86InstrInfo initializes X86RegisterInfo which
   // X86TargetLowering needs.
@@ -678,8 +674,6 @@ public:
   bool isPMADDWDSlow() const { return IsPMADDWDSlow; }
   bool isUnalignedMem16Slow() const { return IsUAMem16Slow; }
   bool isUnalignedMem32Slow() const { return IsUAMem32Slow; }
-  int getGatherOverhead() const { return GatherOverhead; }
-  int getScatterOverhead() const { return ScatterOverhead; }
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
   bool hasCmpxchg16b() const { return HasCmpxchg16b && is64Bit(); }
   bool useLeaForSP() const { return UseLeaForSP; }

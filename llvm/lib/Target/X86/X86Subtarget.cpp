@@ -262,17 +262,6 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
            isTargetKFreeBSD() || In64BitMode)
     stackAlignment = Align(16);
 
-  // Some CPUs have more overhead for gather. The specified overhead is relative
-  // to the Load operation. "2" is the number provided by Intel architects. This
-  // parameter is used for cost estimation of Gather Op and comparison with
-  // other alternatives.
-  // TODO: Remove the explicit hasAVX512()?, That would mean we would only
-  // enable gather with a -march.
-  if (hasAVX512() || (hasAVX2() && hasFastGather()))
-    GatherOverhead = 2;
-  if (hasAVX512())
-    ScatterOverhead = 2;
-
   // Consume the vector width attribute or apply any target specific limit.
   if (PreferVectorWidthOverride)
     PreferVectorWidth = PreferVectorWidthOverride;

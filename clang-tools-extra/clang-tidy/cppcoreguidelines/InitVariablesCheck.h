@@ -31,8 +31,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  std::unique_ptr<clang::tidy::utils::IncludeInserter> IncludeInserter;
-  const utils::IncludeSorter::IncludeStyle IncludeStyle;
+  utils::IncludeInserter IncludeInserter;
   const std::string MathHeader;
 };
 

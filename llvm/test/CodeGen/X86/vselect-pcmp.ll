@@ -364,7 +364,7 @@ define <4 x double> @signbit_sel_v4f64_small_mask(<4 x double> %x, <4 x double> 
 ; AVX1-LABEL: signbit_sel_v4f64_small_mask:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm3
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
@@ -397,7 +397,7 @@ define <4 x double> @signbit_sel_v4f64_small_mask(<4 x double> %x, <4 x double> 
 ; XOP-LABEL: signbit_sel_v4f64_small_mask:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vpmovsxdq %xmm2, %xmm3
-; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; XOP-NEXT:    vpmovsxdq %xmm2, %xmm2
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; XOP-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0

@@ -152,7 +152,7 @@ define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm1[2,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    psrad %xmm2, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm2[2,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm0, %xmm5
 ; SSE-NEXT:    psrad %xmm4, %xmm5
@@ -272,7 +272,7 @@ define <4 x i32> @combine_vec_ashr_positive(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm1[2,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    psrld %xmm2, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm2[2,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm0, %xmm5
 ; SSE-NEXT:    psrld %xmm4, %xmm5

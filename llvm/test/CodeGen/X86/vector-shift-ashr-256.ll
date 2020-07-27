@@ -22,7 +22,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
 ; AVX1-NEXT:    vpsrlq %xmm2, %xmm3, %xmm4
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
 ; AVX1-NEXT:    vpsrlq %xmm5, %xmm3, %xmm6
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm6[4,5,6,7]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
@@ -32,7 +32,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubq %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlq %xmm1, %xmm3, %xmm4
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[2,3,0,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
 ; AVX1-NEXT:    vpsrlq %xmm5, %xmm3, %xmm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0,1,2,3],xmm3[4,5,6,7]
 ; AVX1-NEXT:    vpsrlq %xmm1, %xmm0, %xmm1
@@ -92,7 +92,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; X32-AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
 ; X32-AVX1-NEXT:    # xmm3 = mem[0,0]
 ; X32-AVX1-NEXT:    vpsrlq %xmm2, %xmm3, %xmm4
-; X32-AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,0,1]
+; X32-AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
 ; X32-AVX1-NEXT:    vpsrlq %xmm5, %xmm3, %xmm6
 ; X32-AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm6[4,5,6,7]
 ; X32-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
@@ -102,7 +102,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; X32-AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm2
 ; X32-AVX1-NEXT:    vpsubq %xmm4, %xmm2, %xmm2
 ; X32-AVX1-NEXT:    vpsrlq %xmm1, %xmm3, %xmm4
-; X32-AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[2,3,0,1]
+; X32-AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
 ; X32-AVX1-NEXT:    vpsrlq %xmm5, %xmm3, %xmm3
 ; X32-AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0,1,2,3],xmm3[4,5,6,7]
 ; X32-AVX1-NEXT:    vpsrlq %xmm1, %xmm0, %xmm1

@@ -15,6 +15,7 @@ if (NOT DEFINED CLANGD_BUILD_XPC)
 endif ()
 
 llvm_canonicalize_cmake_booleans(CLANGD_BUILD_XPC)
+llvm_canonicalize_cmake_booleans(CLANGD_ENABLE_REMOTE)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/Features.inc.in
