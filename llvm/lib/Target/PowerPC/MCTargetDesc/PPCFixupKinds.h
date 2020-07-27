@@ -43,6 +43,9 @@ enum Fixups {
   // A 34-bit fixup corresponding to PC-relative paddi.
   fixup_ppc_pcrel34,
 
+  // A 34-bit fixup corresponding to Non-PC-relative paddi.
+  fixup_ppc_imm34,
+
   /// Not a true fixup, but ties a symbol to a call to __tls_get_addr for the
   /// TLS general and local dynamic models, or inserts the thread-pointer
   /// register number.

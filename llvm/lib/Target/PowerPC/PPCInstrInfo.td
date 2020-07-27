@@ -757,7 +757,13 @@ def PPCS34ImmAsmOperand : AsmOperandClass {
 }
 def s34imm : Operand<i64> {
   let PrintMethod = "printS34ImmOperand";
-  let EncoderMethod = "getImm34Encoding";
+  let EncoderMethod = "getImm34EncodingNoPCRel";
+  let ParserMatchClass = PPCS34ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<34>";
+}
+def s34imm_pcrel : Operand<i64> {
+  let PrintMethod = "printS34ImmOperand";
+  let EncoderMethod = "getImm34EncodingPCRel";
   let ParserMatchClass = PPCS34ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<34>";
 }

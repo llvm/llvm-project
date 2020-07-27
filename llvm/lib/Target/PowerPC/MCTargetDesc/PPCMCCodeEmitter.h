@@ -52,7 +52,14 @@ public:
                             const MCSubtargetInfo &STI) const;
   uint64_t getImm34Encoding(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,
-                            const MCSubtargetInfo &STI) const;
+                            const MCSubtargetInfo &STI,
+                            MCFixupKind Fixup) const;
+  uint64_t getImm34EncodingNoPCRel(const MCInst &MI, unsigned OpNo,
+                                   SmallVectorImpl<MCFixup> &Fixups,
+                                   const MCSubtargetInfo &STI) const;
+  uint64_t getImm34EncodingPCRel(const MCInst &MI, unsigned OpNo,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
   unsigned getMemRIEncoding(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
