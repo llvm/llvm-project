@@ -171,7 +171,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
       #endif
       )cpp";
   FS.Files[testPath("root/A.cc")] =
-      "#include \"A.h\"\nvoid g() { (void)common; }";
+      "#include \"A.h\"\nstatic void g() { (void)common; }";
   FS.Files[testPath("root/B.cc")] =
       R"cpp(
       #define A 0
