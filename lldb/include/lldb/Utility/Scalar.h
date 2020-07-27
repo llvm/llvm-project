@@ -62,18 +62,23 @@ public:
   // Constructors and Destructors
   Scalar() : m_type(e_void), m_float(0.0f) {}
   Scalar(int v)
-      : m_type(e_sint), m_integer(sizeof(v) * 8, v, true), m_float(0.0f) {}
+      : m_type(e_sint), m_integer(sizeof(v) * 8, uint64_t(v), true),
+        m_float(0.0f) {}
   Scalar(unsigned int v)
-      : m_type(e_uint), m_integer(sizeof(v) * 8, v, false), m_float(0.0f) {}
+      : m_type(e_uint), m_integer(sizeof(v) * 8, uint64_t(v), false),
+        m_float(0.0f) {}
   Scalar(long v)
-      : m_type(e_slong), m_integer(sizeof(v) * 8, v, true), m_float(0.0f) {}
+      : m_type(e_slong), m_integer(sizeof(v) * 8, uint64_t(v), true),
+        m_float(0.0f) {}
   Scalar(unsigned long v)
-      : m_type(e_ulong), m_integer(sizeof(v) * 8, v, false), m_float(0.0f) {}
+      : m_type(e_ulong), m_integer(sizeof(v) * 8, uint64_t(v), false),
+        m_float(0.0f) {}
   Scalar(long long v)
-      : m_type(e_slonglong), m_integer(sizeof(v) * 8, v, true), m_float(0.0f) {}
+      : m_type(e_slonglong), m_integer(sizeof(v) * 8, uint64_t(v), true),
+        m_float(0.0f) {}
   Scalar(unsigned long long v)
-      : m_type(e_ulonglong), m_integer(sizeof(v) * 8, v, false), m_float(0.0f) {
-  }
+      : m_type(e_ulonglong), m_integer(sizeof(v) * 8, uint64_t(v), false),
+        m_float(0.0f) {}
   Scalar(float v) : m_type(e_float), m_float(v) {}
   Scalar(double v) : m_type(e_double), m_float(v) {}
   Scalar(long double v) : m_type(e_long_double), m_float(double(v)) {
