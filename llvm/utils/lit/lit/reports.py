@@ -127,7 +127,7 @@ class XunitReport(object):
     def _get_skip_reason(self, test):
         code = test.result.code
         if code == lit.Test.EXCLUDED:
-            return 'Test not selected (--filter, --max-tests, --run-shard)'
+            return 'Test not selected (--filter, --max-tests)'
         if code == lit.Test.SKIPPED:
             return 'User interrupt'
 
