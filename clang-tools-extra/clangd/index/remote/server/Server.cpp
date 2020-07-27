@@ -9,6 +9,7 @@
 #include "index/Index.h"
 #include "index/Serialization.h"
 #include "index/remote/marshalling/Marshalling.h"
+#include "support/Logger.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
@@ -59,14 +60,12 @@ private:
   grpc::Status Lookup(grpc::ServerContext *Context,
                       const LookupRequest *Request,
                       grpc::ServerWriter<LookupReply> *Reply) override {
-    clangd::LookupRequest Req;
-    for (const auto &ID : Request->ids()) {
-      auto SID = SymbolID::fromStr(StringRef(ID));
-      if (!SID)
-        return grpc::Status::CANCELLED;
-      Req.IDs.insert(*SID);
+    auto Req = ProtobufMarshaller->fromProtobuf(Request);
+    if (!Req) {
+      elog("Can not parse LookupRequest from protobuf: {0}", Req.takeError());
+      return grpc::Status::CANCELLED;
     }
-    Index->lookup(Req, [&](const clangd::Symbol &Sym) {
+    Index->lookup(*Req, [&](const clangd::Symbol &Sym) {
       auto SerializedSymbol = ProtobufMarshaller->toProtobuf(Sym);
       if (!SerializedSymbol)
         return;
@@ -83,8 +82,13 @@ private:
   grpc::Status FuzzyFind(grpc::ServerContext *Context,
                          const FuzzyFindRequest *Request,
                          grpc::ServerWriter<FuzzyFindReply> *Reply) override {
-    const auto Req = ProtobufMarshaller->fromProtobuf(Request);
-    bool HasMore = Index->fuzzyFind(Req, [&](const clangd::Symbol &Sym) {
+    auto Req = ProtobufMarshaller->fromProtobuf(Request);
+    if (!Req) {
+      elog("Can not parse FuzzyFindRequest from protobuf: {0}",
+           Req.takeError());
+      return grpc::Status::CANCELLED;
+    }
+    bool HasMore = Index->fuzzyFind(*Req, [&](const clangd::Symbol &Sym) {
       auto SerializedSymbol = ProtobufMarshaller->toProtobuf(Sym);
       if (!SerializedSymbol)
         return;
@@ -100,14 +104,12 @@ private:
 
   grpc::Status Refs(grpc::ServerContext *Context, const RefsRequest *Request,
                     grpc::ServerWriter<RefsReply> *Reply) override {
-    clangd::RefsRequest Req;
-    for (const auto &ID : Request->ids()) {
-      auto SID = SymbolID::fromStr(StringRef(ID));
-      if (!SID)
-        return grpc::Status::CANCELLED;
-      Req.IDs.insert(*SID);
+    auto Req = ProtobufMarshaller->fromProtobuf(Request);
+    if (!Req) {
+      elog("Can not parse RefsRequest from protobuf: {0}", Req.takeError());
+      return grpc::Status::CANCELLED;
     }
-    bool HasMore = Index->refs(Req, [&](const clangd::Ref &Reference) {
+    bool HasMore = Index->refs(*Req, [&](const clangd::Ref &Reference) {
       auto SerializedRef = ProtobufMarshaller->toProtobuf(Reference);
       if (!SerializedRef)
         return;
