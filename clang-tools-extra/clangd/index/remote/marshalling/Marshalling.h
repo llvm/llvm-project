@@ -38,9 +38,14 @@ public:
   Marshaller() = delete;
   Marshaller(llvm::StringRef RemoteIndexRoot, llvm::StringRef LocalIndexRoot);
 
-  clangd::FuzzyFindRequest fromProtobuf(const FuzzyFindRequest *Request);
   llvm::Optional<clangd::Symbol> fromProtobuf(const Symbol &Message);
   llvm::Optional<clangd::Ref> fromProtobuf(const Ref &Message);
+
+  llvm::Expected<clangd::LookupRequest>
+  fromProtobuf(const LookupRequest *Message);
+  llvm::Expected<clangd::FuzzyFindRequest>
+  fromProtobuf(const FuzzyFindRequest *Message);
+  llvm::Expected<clangd::RefsRequest> fromProtobuf(const RefsRequest *Message);
 
   /// toProtobuf() functions serialize native clangd types and strip IndexRoot
   /// from the file paths specific to indexing machine. fromProtobuf() functions

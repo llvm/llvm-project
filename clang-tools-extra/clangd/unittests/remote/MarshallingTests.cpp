@@ -18,6 +18,7 @@
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 #include "gmock/gmock.h"
@@ -271,6 +272,30 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
   EXPECT_EQ(toYAML(Sym), toYAML(*Deserialized));
 }
 
+TEST(RemoteMarshallingTest, LookupRequestSerialization) {
+  clangd::LookupRequest Request;
+  Request.IDs.insert(llvm::cantFail(SymbolID::fromStr("0000000000000001")));
+  Request.IDs.insert(llvm::cantFail(SymbolID::fromStr("0000000000000002")));
+
+  Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
+
+  auto Serialized = ProtobufMarshaller.toProtobuf(Request);
+  EXPECT_EQ(static_cast<unsigned>(Serialized.ids_size()), Request.IDs.size());
+  auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
+  ASSERT_TRUE(bool(Deserialized));
+  EXPECT_EQ(Deserialized->IDs, Request.IDs);
+}
+
+TEST(RemoteMarshallingTest, LookupRequestFailingSerialization) {
+  clangd::LookupRequest Request;
+  Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
+  auto Serialized = ProtobufMarshaller.toProtobuf(Request);
+  Serialized.add_ids("Invalid Symbol ID");
+  auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
+  EXPECT_FALSE(Deserialized);
+  llvm::consumeError(Deserialized.takeError());
+}
+
 TEST(RemoteMarshallingTest, FuzzyFindRequestSerialization) {
   clangd::FuzzyFindRequest Request;
   Request.ProximityPaths = {testPath("local/Header.h"),
@@ -280,9 +305,41 @@ TEST(RemoteMarshallingTest, FuzzyFindRequestSerialization) {
   auto Serialized = ProtobufMarshaller.toProtobuf(Request);
   EXPECT_EQ(Serialized.proximity_paths_size(), 2);
   auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
-  EXPECT_THAT(Deserialized.ProximityPaths,
+  ASSERT_TRUE(bool(Deserialized));
+  EXPECT_THAT(Deserialized->ProximityPaths,
               testing::ElementsAre(testPath("remote/Header.h"),
                                    testPath("remote/subdir/OtherHeader.h")));
+}
+
+TEST(RemoteMarshallingTest, RefsRequestSerialization) {
+  clangd::RefsRequest Request;
+  Request.IDs.insert(llvm::cantFail(SymbolID::fromStr("0000000000000001")));
+  Request.IDs.insert(llvm::cantFail(SymbolID::fromStr("0000000000000002")));
+
+  Request.Limit = 9000;
+  Request.Filter = RefKind::Spelled | RefKind::Declaration;
+
+  Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
+
+  auto Serialized = ProtobufMarshaller.toProtobuf(Request);
+  EXPECT_EQ(static_cast<unsigned>(Serialized.ids_size()), Request.IDs.size());
+  EXPECT_EQ(Serialized.limit(), Request.Limit);
+  auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
+  ASSERT_TRUE(bool(Deserialized));
+  EXPECT_EQ(Deserialized->IDs, Request.IDs);
+  ASSERT_TRUE(Deserialized->Limit);
+  EXPECT_EQ(*Deserialized->Limit, Request.Limit);
+  EXPECT_EQ(Deserialized->Filter, Request.Filter);
+}
+
+TEST(RemoteMarshallingTest, RefsRequestFailingSerialization) {
+  clangd::RefsRequest Request;
+  Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
+  auto Serialized = ProtobufMarshaller.toProtobuf(Request);
+  Serialized.add_ids("Invalid Symbol ID");
+  auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
+  EXPECT_FALSE(Deserialized);
+  llvm::consumeError(Deserialized.takeError());
 }
 
 TEST(RemoteMarshallingTest, RelativePathToURITranslation) {
