@@ -11,13 +11,11 @@
 
 #include "IncludeSorter.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Lex/PPCallbacks.h"
+#include "llvm/ADT/StringSet.h"
 #include <memory>
-#include <string>
 
 namespace clang {
+class Preprocessor;
 namespace tidy {
 namespace utils {
 
@@ -26,16 +24,17 @@ namespace utils {
 ///
 /// ``IncludeInserter`` can be used in clang-tidy checks in the following way:
 /// \code
+/// #include "../ClangTidyCheck.h"
 /// #include "../utils/IncludeInserter.h"
-/// #include "clang/Frontend/CompilerInstance.h"
+///
+/// namespace clang {
+/// namespace tidy {
 ///
 /// class MyCheck : public ClangTidyCheck {
 ///  public:
 ///   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
 ///                            Preprocessor *ModuleExpanderPP) override {
-///     Inserter = std::make_unique<IncludeInserter>(
-///         SM, getLangOpts(), utils::IncludeSorter::IS_Google);
-///     PP->addPPCallbacks(Inserter->CreatePPCallbacks());
+///     Inserter.registerPreprocessor();
 ///   }
 ///
 ///   void registerMatchers(ast_matchers::MatchFinder* Finder) override { ... }
@@ -43,39 +42,53 @@ namespace utils {
 ///   void check(
 ///       const ast_matchers::MatchFinder::MatchResult& Result) override {
 ///     ...
-///     Inserter->CreateIncludeInsertion(
-///         Result.SourceManager->getMainFileID(), "path/to/Header.h",
-///         /*IsAngled=*/false);
+///     Inserter.createMainFileIncludeInsertion("path/to/Header.h",
+///                                             /*IsAngled=*/false);
 ///     ...
 ///   }
 ///
 ///  private:
-///   std::unique_ptr<clang::tidy::utils::IncludeInserter> Inserter;
+///   utils::IncludeInserter Inserter{utils::IncludeSorter::IS_Google};
 /// };
+/// } // namespace tidy
+/// } // namespace clang
 /// \endcode
 class IncludeInserter {
 public:
-  IncludeInserter(const SourceManager &SourceMgr, const LangOptions &LangOpts,
-                  IncludeSorter::IncludeStyle Style);
-  ~IncludeInserter();
+  /// Initializes the IncludeInserter using the IncludeStyle \p Style.
+  /// In most cases the \p Style will be retrieved from the ClangTidyOptions
+  /// using \code
+  ///   Options.getLocalOrGlobal("IncludeStyle", <DefaultStyle>)
+  /// \endcode
+  explicit IncludeInserter(IncludeSorter::IncludeStyle Style);
 
-  /// Create ``PPCallbacks`` for registration with the compiler's preprocessor.
-  std::unique_ptr<PPCallbacks> CreatePPCallbacks();
+  /// Registers this with the Preprocessor \p PP, must be called before this
+  /// class is used.
+  void registerPreprocessor(Preprocessor *PP);
 
-  /// Creates a \p Header inclusion directive fixit. Returns ``llvm::None`` on
-  /// error or if inclusion directive already exists.
+  /// Creates a \p Header inclusion directive fixit in the File \p FileID.
+  /// Returns ``llvm::None`` on error or if the inclusion directive already
+  /// exists.
   llvm::Optional<FixItHint>
-  CreateIncludeInsertion(FileID FileID, llvm::StringRef Header, bool IsAngled);
+  createIncludeInsertion(FileID FileID, llvm::StringRef Header, bool IsAngled);
+
+  /// Creates a \p Header inclusion directive fixit in the main file.
+  /// Returns``llvm::None`` on error or if the inclusion directive already
+  /// exists.
+  llvm::Optional<FixItHint>
+  createMainFileIncludeInsertion(llvm::StringRef Header, bool IsAngled);
+
+  IncludeSorter::IncludeStyle getStyle() const { return Style; }
 
 private:
-  void AddInclude(StringRef FileName, bool IsAngled,
+  void addInclude(StringRef FileName, bool IsAngled,
                   SourceLocation HashLocation, SourceLocation EndLocation);
 
   IncludeSorter &getOrCreate(FileID FileID);
 
   llvm::DenseMap<FileID, std::unique_ptr<IncludeSorter>> IncludeSorterByFile;
-  llvm::DenseMap<FileID, std::set<std::string>> InsertedHeaders;
-  const SourceManager &SourceMgr;
+  llvm::DenseMap<FileID, llvm::StringSet<>> InsertedHeaders;
+  const SourceManager *SourceMgr{nullptr};
   const IncludeSorter::IncludeStyle Style;
   friend class IncludeInserterCallback;
 };
