@@ -86,6 +86,24 @@ public:
   }
 };
 
+mlir::Type convertMemRef(mlir::MemRefType type) {
+  return fir::SequenceType::get(
+      SmallVector<int64_t, 8>(type.getShape().begin(), type.getShape().end()),
+      type.getElementType());
+}
+
+class StdAllocConversion : public mlir::OpRewritePattern<mlir::AllocOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  mlir::LogicalResult
+  matchAndRewrite(mlir::AllocOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<fir::AllocaOp>(op, convertMemRef(op.getType()),
+                                               op.value());
+    return success();
+  }
+};
+
 class AffineDialectDemotion
     : public AffineDialectDemotionBase<AffineDialectDemotion> {
 public:
@@ -99,7 +117,9 @@ public:
     patterns.insert<ConvertConversion>(context);
     patterns.insert<AffineLoadConversion>(context);
     patterns.insert<AffineStoreConversion>(context);
+    patterns.insert<StdAllocConversion>(context);
     mlir::ConversionTarget target = *context;
+    target.addIllegalOp<mlir::AllocOp>();
     target.addDynamicallyLegalOp<fir::ConvertOp>([](fir::ConvertOp op) {
       if (op.res().getType().isa<mlir::MemRefType>())
         return false;
