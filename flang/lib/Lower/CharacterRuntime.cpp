@@ -111,7 +111,7 @@ Fortran::lower::genRawCharCompare(Fortran::lower::AbstractConverter &converter,
   auto rptr = builder.createConvert(loc, fTy.getInput(1), rhsBuff);
   auto rlen = builder.createConvert(loc, fTy.getInput(3), rhsLen);
   llvm::SmallVector<mlir::Value, 4> args = {lptr, rptr, llen, rlen};
-  auto tri = builder.create<mlir::CallOp>(loc, beginFunc, args).getResult(0);
+  auto tri = builder.create<fir::CallOp>(loc, beginFunc, args).getResult(0);
   auto zero = builder.createIntegerConstant(loc, tri.getType(), 0);
   return builder.create<mlir::CmpIOp>(loc, cmp, tri, zero);
 }
