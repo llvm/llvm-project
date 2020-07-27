@@ -44,7 +44,6 @@ namespace llvm {
   FunctionPass *createPPCMIPeepholePass();
   FunctionPass *createPPCBranchSelectionPass();
   FunctionPass *createPPCBranchCoalescingPass();
-  FunctionPass *createPPCQPXLoadSplatPass();
   FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOpt::Level OL);
   FunctionPass *createPPCTLSDynamicCallPass();
   FunctionPass *createPPCBoolRetToIntPass();
@@ -68,7 +67,6 @@ namespace llvm {
   void initializePPCReduceCRLogicalsPass(PassRegistry&);
   void initializePPCBSelPass(PassRegistry&);
   void initializePPCBranchCoalescingPass(PassRegistry&);
-  void initializePPCQPXLoadSplatPass(PassRegistry&);
   void initializePPCBoolRetToIntPass(PassRegistry&);
   void initializePPCExpandISELPass(PassRegistry &);
   void initializePPCPreEmitPeepholePass(PassRegistry &);

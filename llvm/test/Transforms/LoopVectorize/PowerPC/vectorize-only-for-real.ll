@@ -1,6 +1,6 @@
 ; RUN: opt -S -loop-vectorize < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-bgq-linux"
+target triple = "powerpc64le-unknown-linux"
 
 ; Function Attrs: nounwind
 define zeroext i32 @test() #0 {

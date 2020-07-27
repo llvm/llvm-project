@@ -57,7 +57,6 @@ std::string ppc::getPPCTargetCPU(const ArgList &Args) {
         .Case("970", "970")
         .Case("G5", "g5")
         .Case("a2", "a2")
-        .Case("a2q", "a2q")
         .Case("e500", "e500")
         .Case("e500mc", "e500mc")
         .Case("e5500", "e5500")
