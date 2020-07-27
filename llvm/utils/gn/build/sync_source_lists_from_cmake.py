@@ -27,7 +27,7 @@ def patch_gn_file(gn_file, add, remove):
     with open(gn_file) as f:
         gn_contents = f.read()
 
-    srcs_tok = 'sources = [\n'
+    srcs_tok = 'sources = ['
     tokloc = gn_contents.find(srcs_tok)
 
     if tokloc == -1: raise ValueError(gn_file + ': Failed to find source list')
