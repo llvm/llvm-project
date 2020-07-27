@@ -1700,9 +1700,10 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   config->wordsize = config->is64() ? 8 : 4;
 
   // Handle /safeseh, x86 only, on by default, except for mingw.
-  if (config->machine == I386 &&
-      args.hasFlag(OPT_safeseh, OPT_safeseh_no, !config->mingw))
-    config->safeSEH = true;
+  if (config->machine == I386) {
+    config->safeSEH = args.hasFlag(OPT_safeseh, OPT_safeseh_no, !config->mingw);
+    config->noSEH = args.hasArg(OPT_noseh);
+  }
 
   // Handle /functionpadmin
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
