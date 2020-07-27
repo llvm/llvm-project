@@ -456,6 +456,11 @@ def map : Separate<["-"], "map">,
      HelpText<"Writes all symbols and their addresses to <path>">,
      Flags<[HelpHidden]>,
      Group<grp_introspect>;
+def dependency_info : Separate<["-"], "dependency_info">,
+     MetaVarName<"<path>">,
+     HelpText<"Dump dependency info">,
+     Flags<[HelpHidden]>,
+     Group<grp_introspect>;
 
 def grp_symtab : OptionGroup<"symtab">, HelpText<"SYMBOL TABLE OPTIMIZATIONS">;
 
@@ -1095,10 +1100,6 @@ def debug_snapshot : Flag<["-"], "debug_snapshot">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def demangle : Flag<["-"], "demangle">,
-     HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def dependency_info : Flag<["-"], "dependency_info">,
      HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
