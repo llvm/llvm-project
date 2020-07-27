@@ -19,13 +19,12 @@ namespace orc {
 
 TargetProcessControl::MemoryAccess::~MemoryAccess() {}
 
-TargetProcessControl::TargetProcessControl(Triple TT, unsigned PageSize)
-    : TT(std::move(TT)), PageSize(PageSize) {}
-
 TargetProcessControl::~TargetProcessControl() {}
 
-SelfTargetProcessControl::SelfTargetProcessControl(Triple TT, unsigned PageSize)
-    : TargetProcessControl(std::move(TT), PageSize) {
+SelfTargetProcessControl::SelfTargetProcessControl(Triple TT,
+                                                   unsigned PageSize) {
+  this->TT = std::move(TT);
+  this->PageSize = PageSize;
   this->MemMgr = IPMM.get();
   this->MemAccess = this;
   if (this->TT.isOSBinFormatMachO())

@@ -152,7 +152,6 @@ public:
   virtual Expected<LookupResult> lookupSymbols(LookupRequest Request) = 0;
 
 protected:
-  TargetProcessControl(Triple TT, unsigned PageSize);
 
   Triple TT;
   unsigned PageSize = 0;
