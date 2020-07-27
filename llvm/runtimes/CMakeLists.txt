@@ -7,7 +7,7 @@
 # Setting CMake minimum required version should be at the very top of the file
 # if this is the entry point.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  cmake_minimum_required(VERSION 3.4.3)
+  cmake_minimum_required(VERSION 3.13.4)
   project(Runtimes C CXX ASM)
 endif()
 
@@ -56,7 +56,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
   endfunction()
 
-  cmake_minimum_required(VERSION 3.4.3)
+  cmake_minimum_required(VERSION 3.13.4)
   project(Runtimes C CXX ASM)
 
   find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)

@@ -53,7 +53,7 @@ int main(int, char**) {
   char shared_buf[3] = {'0', '0', '0'};
   int cur_idx = 0;
 
-  func(A(shared_buf, &cur_idx), std::make_unique<B>(shared_buf, &cur_idx),
+  func(A(shared_buf, &cur_idx), std::unique_ptr<B>(new B(shared_buf, &cur_idx)),
        C(shared_buf, &cur_idx));
 
   // With trivial_abi, the std::unique_ptr<B> arg is always destructed first.

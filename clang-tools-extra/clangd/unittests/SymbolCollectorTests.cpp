@@ -624,11 +624,13 @@ TEST_F(SymbolCollectorTest, Refs) {
   EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(Symbols, "NS").ID, _))));
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "MACRO").ID,
                                   HaveRanges(Main.ranges("macro")))));
-  // Symbols *only* in the main file (a, b, c, FUNC) had no refs collected.
+  // Symbols *only* in the main file:
+  // - (a, b) externally visible and should have refs.
+  // - (c, FUNC) externally invisible and had no refs collected.
   auto MainSymbols =
       TestTU::withHeaderCode(SymbolsOnlyInMainCode.code()).headerSymbols();
-  EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "a").ID, _))));
-  EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "b").ID, _))));
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(MainSymbols, "a").ID, _)));
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(MainSymbols, "b").ID, _)));
   EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "c").ID, _))));
   EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "FUNC").ID, _))));
 }
@@ -816,11 +818,15 @@ TEST_F(SymbolCollectorTest, HeaderAsMainFile) {
     $Foo[[Foo]] fo;
   }
   )");
-  // The main file is normal .cpp file, we shouldn't collect any refs of symbols
-  // which are not declared in the preamble.
+  // The main file is normal .cpp file, we should collect the refs
+  // for externally visible symbols.
   TestFileName = testPath("foo.cpp");
   runSymbolCollector("", Header.code());
-  EXPECT_THAT(Refs, UnorderedElementsAre());
+  EXPECT_THAT(Refs,
+              UnorderedElementsAre(Pair(findSymbol(Symbols, "Foo").ID,
+                                        HaveRanges(Header.ranges("Foo"))),
+                                   Pair(findSymbol(Symbols, "Func").ID,
+                                        HaveRanges(Header.ranges("Func")))));
 
   // Run the .h file as main file, we should collect the refs.
   TestFileName = testPath("foo.h");
@@ -1402,6 +1408,9 @@ TEST_F(SymbolCollectorTest, Origin) {
   runSymbolCollector("class Foo {};", /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            Field(&Symbol::Origin, SymbolOrigin::Static)));
+  runSymbolCollector("#define FOO", /*Main=*/"");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           Field(&Symbol::Origin, SymbolOrigin::Static)));
 }
 
 TEST_F(SymbolCollectorTest, CollectMacros) {
@@ -1504,6 +1513,13 @@ TEST_F(SymbolCollectorTest, BadUTF8) {
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "PUNCT").ID, _)));
 }
 
+TEST_F(SymbolCollectorTest, MacrosInHeaders) {
+  CollectorOpts.CollectMacro = true;
+  TestFileName = testPath("test.h");
+  runSymbolCollector("", "#define X");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(QName("X"), ForCodeCompletion(true))));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

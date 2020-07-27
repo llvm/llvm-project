@@ -613,7 +613,7 @@ std::string ArchSpec::GetTargetABI() const {
   return abi;
 }
 
-void ArchSpec::SetFlags(std::string elf_abi) {
+void ArchSpec::SetFlags(const std::string &elf_abi) {
 
   uint32_t flag = GetFlags();
   if (IsMIPS()) {
@@ -846,6 +846,15 @@ bool ArchSpec::ContainsOnlyArch(const llvm::Triple &normalized_triple) {
 }
 
 void ArchSpec::MergeFrom(const ArchSpec &other) {
+  // ios-macabi always wins over macosx.
+  if ((GetTriple().getOS() == llvm::Triple::MacOSX ||
+       GetTriple().getOS() == llvm::Triple::UnknownOS) &&
+      other.GetTriple().getOS() == llvm::Triple::IOS &&
+      other.GetTriple().getEnvironment() == llvm::Triple::MacABI) {
+    (*this) = other;
+    return;
+  }
+
   if (!TripleVendorWasSpecified() && other.TripleVendorWasSpecified())
     GetTriple().setVendor(other.GetTriple().getVendor());
   if (!TripleOSWasSpecified() && other.TripleOSWasSpecified())
@@ -1031,6 +1040,22 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
 
     const llvm::Triple::OSType lhs_triple_os = lhs_triple.getOS();
     const llvm::Triple::OSType rhs_triple_os = rhs_triple.getOS();
+    const llvm::Triple::EnvironmentType lhs_triple_env =
+      lhs_triple.getEnvironment();
+    const llvm::Triple::EnvironmentType rhs_triple_env =
+      rhs_triple.getEnvironment();
+
+    if (!exact_match) {
+      // x86_64-apple-ios-macabi, x86_64-apple-macosx are compatible, no match.
+      if ((lhs_triple_os == llvm::Triple::IOS &&
+           lhs_triple_env == llvm::Triple::MacABI &&
+           rhs_triple_os == llvm::Triple::MacOSX) ||
+          (lhs_triple_os == llvm::Triple::MacOSX &&
+           rhs_triple_os == llvm::Triple::IOS &&
+           rhs_triple_env == llvm::Triple::MacABI))
+        return true;
+    }
+
     if (lhs_triple_os != rhs_triple_os) {
       const bool rhs_os_specified = rhs.TripleOSWasSpecified();
       const bool lhs_os_specified = TripleOSWasSpecified();
@@ -1045,10 +1070,13 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
         return false;
     }
 
-    const llvm::Triple::EnvironmentType lhs_triple_env =
-        lhs_triple.getEnvironment();
-    const llvm::Triple::EnvironmentType rhs_triple_env =
-        rhs_triple.getEnvironment();
+    // x86_64-apple-ios-macabi and x86_64-apple-ios are not compatible.
+    if (lhs_triple_os == llvm::Triple::IOS &&
+        rhs_triple_os == llvm::Triple::IOS &&
+        (lhs_triple_env == llvm::Triple::MacABI ||
+         rhs_triple_env == llvm::Triple::MacABI) &&
+        lhs_triple_env != rhs_triple_env)
+      return false;
 
     return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env);
   }

@@ -32,6 +32,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <cassert>
 #include <cstddef>
@@ -46,7 +47,7 @@ using namespace PatternMatch;
 /// The specific integer value is used in a context where it is known to be
 /// non-zero.  If this allows us to simplify the computation, do so and return
 /// the new operand, otherwise return null.
-static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
+static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
                                         Instruction &CxtI) {
   // If V has multiple uses, then we would have to do more analysis to determine
   // if this is safe.  For example, the use could be in dynamically unreached
@@ -171,7 +172,7 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   return nullptr;
 }
 
-Instruction *InstCombiner::visitMul(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Value *V = SimplifyMulInst(I.getOperand(0), I.getOperand(1),
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
@@ -423,7 +424,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
-Instruction *InstCombiner::foldFPSignBitOps(BinaryOperator &I) {
+Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
   BinaryOperator::BinaryOps Opcode = I.getOpcode();
   assert((Opcode == Instruction::FMul || Opcode == Instruction::FDiv) &&
          "Expected fmul or fdiv");
@@ -457,7 +458,7 @@ Instruction *InstCombiner::foldFPSignBitOps(BinaryOperator &I) {
   return nullptr;
 }
 
-Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   if (Value *V = SimplifyFMulInst(I.getOperand(0), I.getOperand(1),
                                   I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
@@ -637,7 +638,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
 /// Fold a divide or remainder with a select instruction divisor when one of the
 /// select operands is zero. In that case, we can use the other select operand
 /// because div/rem by zero is undefined.
-bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
+bool InstCombinerImpl::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
   SelectInst *SI = dyn_cast<SelectInst>(I.getOperand(1));
   if (!SI)
     return false;
@@ -738,7 +739,7 @@ static bool isMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
 /// instructions (udiv and sdiv). It is called by the visitors to those integer
 /// division instructions.
 /// Common integer divide transforms
-Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
+Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   bool IsSigned = I.getOpcode() == Instruction::SDiv;
   Type *Ty = I.getType();
@@ -874,7 +875,7 @@ namespace {
 
 using FoldUDivOperandCb = Instruction *(*)(Value *Op0, Value *Op1,
                                            const BinaryOperator &I,
-                                           InstCombiner &IC);
+                                           InstCombinerImpl &IC);
 
 /// Used to maintain state for visitUDivOperand().
 struct UDivFoldAction {
@@ -903,7 +904,8 @@ struct UDivFoldAction {
 
 // X udiv 2^C -> X >> C
 static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
-                                    const BinaryOperator &I, InstCombiner &IC) {
+                                    const BinaryOperator &I,
+                                    InstCombinerImpl &IC) {
   Constant *C1 = getLogBase2(Op0->getType(), cast<Constant>(Op1));
   if (!C1)
     llvm_unreachable("Failed to constant fold udiv -> logbase2");
@@ -916,7 +918,7 @@ static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
 // X udiv (C1 << N), where C1 is "1<<C2"  -->  X >> (N+C2)
 // X udiv (zext (C1 << N)), where C1 is "1<<C2"  -->  X >> (N+C2)
 static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
-                                InstCombiner &IC) {
+                                InstCombinerImpl &IC) {
   Value *ShiftLeft;
   if (!match(Op1, m_ZExt(m_Value(ShiftLeft))))
     ShiftLeft = Op1;
@@ -1010,7 +1012,7 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   return nullptr;
 }
 
-Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
   if (Value *V = SimplifyUDivInst(I.getOperand(0), I.getOperand(1),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
@@ -1104,7 +1106,7 @@ Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
   return nullptr;
 }
 
-Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   if (Value *V = SimplifySDivInst(I.getOperand(0), I.getOperand(1),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
@@ -1265,7 +1267,7 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
   return BinaryOperator::CreateFDivFMF(NewC, X, &I);
 }
 
-Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   if (Value *V = SimplifyFDivInst(I.getOperand(0), I.getOperand(1),
                                   I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
@@ -1372,7 +1374,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
 /// instructions (urem and srem). It is called by the visitors to those integer
 /// remainder instructions.
 /// Common integer remainder transforms
-Instruction *InstCombiner::commonIRemTransforms(BinaryOperator &I) {
+Instruction *InstCombinerImpl::commonIRemTransforms(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   // The RHS is known non-zero.
@@ -1410,7 +1412,7 @@ Instruction *InstCombiner::commonIRemTransforms(BinaryOperator &I) {
   return nullptr;
 }
 
-Instruction *InstCombiner::visitURem(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
   if (Value *V = SimplifyURemInst(I.getOperand(0), I.getOperand(1),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
@@ -1461,7 +1463,7 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
   return nullptr;
 }
 
-Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitSRem(BinaryOperator &I) {
   if (Value *V = SimplifySRemInst(I.getOperand(0), I.getOperand(1),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
@@ -1484,7 +1486,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   // -X srem Y --> -(X srem Y)
   Value *X, *Y;
   if (match(&I, m_SRem(m_OneUse(m_NSWSub(m_Zero(), m_Value(X))), m_Value(Y))))
-    return BinaryOperator::CreateNSWNeg(Builder.CreateSRem(X, Y)); 
+    return BinaryOperator::CreateNSWNeg(Builder.CreateSRem(X, Y));
 
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a urem.
@@ -1533,7 +1535,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   return nullptr;
 }
 
-Instruction *InstCombiner::visitFRem(BinaryOperator &I) {
+Instruction *InstCombinerImpl::visitFRem(BinaryOperator &I) {
   if (Value *V = SimplifyFRemInst(I.getOperand(0), I.getOperand(1),
                                   I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))

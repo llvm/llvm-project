@@ -500,27 +500,27 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
                         [IntrNoMem]>;
   def int_ppc_altivec_vinsbvlx : GCCBuiltin<"__builtin_altivec_vinsbvlx">,
               Intrinsic<[llvm_v16i8_ty],
-                        [llvm_v16i8_ty, llvm_i64_ty, llvm_v16i8_ty],
+                        [llvm_v16i8_ty, llvm_i32_ty, llvm_v16i8_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinsbvrx : GCCBuiltin<"__builtin_altivec_vinsbvrx">,
               Intrinsic<[llvm_v16i8_ty],
-                        [llvm_v16i8_ty, llvm_i64_ty, llvm_v16i8_ty],
+                        [llvm_v16i8_ty, llvm_i32_ty, llvm_v16i8_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinshvlx : GCCBuiltin<"__builtin_altivec_vinshvlx">,
               Intrinsic<[llvm_v8i16_ty],
-                        [llvm_v8i16_ty, llvm_i64_ty, llvm_v8i16_ty],
+                        [llvm_v8i16_ty, llvm_i32_ty, llvm_v8i16_ty],
                         [IntrNoMem]>;
  def int_ppc_altivec_vinshvrx : GCCBuiltin<"__builtin_altivec_vinshvrx">,
               Intrinsic<[llvm_v8i16_ty],
-                        [llvm_v8i16_ty, llvm_i64_ty, llvm_v8i16_ty],
+                        [llvm_v8i16_ty, llvm_i32_ty, llvm_v8i16_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinswvlx : GCCBuiltin<"__builtin_altivec_vinswvlx">,
               Intrinsic<[llvm_v4i32_ty],
-                        [llvm_v4i32_ty, llvm_i64_ty, llvm_v4i32_ty],
+                        [llvm_v4i32_ty, llvm_i32_ty, llvm_v4i32_ty],
                         [IntrNoMem]>;
   def int_ppc_altivec_vinswvrx : GCCBuiltin<"__builtin_altivec_vinswvrx">,
               Intrinsic<[llvm_v4i32_ty],
-                        [llvm_v4i32_ty, llvm_i64_ty, llvm_v4i32_ty],
+                        [llvm_v4i32_ty, llvm_i32_ty, llvm_v4i32_ty],
                         [IntrNoMem]>;
   // P10 Vector Insert with immediate.
   def int_ppc_altivec_vinsw :
@@ -1069,7 +1069,7 @@ def int_ppc_vsx_xxinsertw :
                             [IntrNoMem]>;
 def int_ppc_vsx_xvtlsbb :
       PowerPC_VSX_Intrinsic<"xvtlsbb", [llvm_i32_ty],
-                            [llvm_v16i8_ty, llvm_i1_ty], [IntrNoMem]>;
+                            [llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem]>;
 def int_ppc_vsx_xxeval :
       PowerPC_VSX_Intrinsic<"xxeval", [llvm_v2i64_ty],
                            [llvm_v2i64_ty, llvm_v2i64_ty,

@@ -366,13 +366,14 @@ define <16 x i32> @splatvar_funnnel_v16i32(<16 x i32> %x, <16 x i32> %amt) nounw
 define <32 x i16> @splatvar_funnnel_v32i16(<32 x i16> %x, <32 x i16> %amt) nounwind {
 ; AVX512F-LABEL: splatvar_funnnel_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512F-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm3
-; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero
-; AVX512F-NEXT:    vpsrlw %xmm3, %ymm2, %ymm4
-; AVX512F-NEXT:    vpsrlw %xmm3, %ymm0, %ymm3
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm3, %zmm3
 ; AVX512F-NEXT:    vpbroadcastw %xmm1, %ymm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm2
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpsrlw %xmm2, %ymm3, %ymm4
+; AVX512F-NEXT:    vpsrlw %xmm2, %ymm0, %ymm2
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX512F-NEXT:    vpsubw %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
@@ -380,22 +381,23 @@ define <32 x i16> @splatvar_funnnel_v32i16(<32 x i16> %x, <32 x i16> %amt) nounw
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512F-NEXT:    vpsllvd %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero
-; AVX512F-NEXT:    vpsllvd %zmm1, %zmm2, %zmm1
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm3 = ymm3[0],zero,ymm3[1],zero,ymm3[2],zero,ymm3[3],zero,ymm3[4],zero,ymm3[5],zero,ymm3[6],zero,ymm3[7],zero,ymm3[8],zero,ymm3[9],zero,ymm3[10],zero,ymm3[11],zero,ymm3[12],zero,ymm3[13],zero,ymm3[14],zero,ymm3[15],zero
+; AVX512F-NEXT:    vpsllvd %zmm1, %zmm3, %zmm1
 ; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vporq %zmm3, %zmm0, %zmm0
+; AVX512F-NEXT:    vporq %zmm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splatvar_funnnel_v32i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512VL-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm3
-; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero
-; AVX512VL-NEXT:    vpsrlw %xmm3, %ymm2, %ymm4
-; AVX512VL-NEXT:    vpsrlw %xmm3, %ymm0, %ymm3
-; AVX512VL-NEXT:    vinserti64x4 $1, %ymm4, %zmm3, %zmm3
 ; AVX512VL-NEXT:    vpbroadcastw %xmm1, %ymm1
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
+; AVX512VL-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm2
+; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512VL-NEXT:    vpsrlw %xmm2, %ymm3, %ymm4
+; AVX512VL-NEXT:    vpsrlw %xmm2, %ymm0, %ymm2
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm4, %zmm2, %zmm2
 ; AVX512VL-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX512VL-NEXT:    vpsubw %ymm1, %ymm4, %ymm1
 ; AVX512VL-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
@@ -403,11 +405,11 @@ define <32 x i16> @splatvar_funnnel_v32i16(<32 x i16> %x, <32 x i16> %amt) nounw
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512VL-NEXT:    vpsllvd %zmm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero
-; AVX512VL-NEXT:    vpsllvd %zmm1, %zmm2, %zmm1
+; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm3 = ymm3[0],zero,ymm3[1],zero,ymm3[2],zero,ymm3[3],zero,ymm3[4],zero,ymm3[5],zero,ymm3[6],zero,ymm3[7],zero,ymm3[8],zero,ymm3[9],zero,ymm3[10],zero,ymm3[11],zero,ymm3[12],zero,ymm3[13],zero,ymm3[14],zero,ymm3[15],zero
+; AVX512VL-NEXT:    vpsllvd %zmm1, %zmm3, %zmm1
 ; AVX512VL-NEXT:    vpmovdw %zmm1, %ymm1
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512VL-NEXT:    vporq %zmm3, %zmm0, %zmm0
+; AVX512VL-NEXT:    vporq %zmm2, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: splatvar_funnnel_v32i16:
@@ -447,13 +449,14 @@ define <32 x i16> @splatvar_funnnel_v32i16(<32 x i16> %x, <32 x i16> %amt) nounw
 define <64 x i8> @splatvar_funnnel_v64i8(<64 x i8> %x, <64 x i8> %amt) nounwind {
 ; AVX512F-LABEL: splatvar_funnnel_v64i8:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastb %xmm1, %ymm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; AVX512F-NEXT:    vpsllw $4, %ymm2, %ymm3
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; AVX512F-NEXT:    vpand %ymm4, %ymm3, %ymm3
-; AVX512F-NEXT:    vpbroadcastb %xmm1, %ymm5
-; AVX512F-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; AVX512F-NEXT:    vpsubb %ymm5, %ymm6, %ymm5
+; AVX512F-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; AVX512F-NEXT:    vpsubb %ymm1, %ymm5, %ymm5
 ; AVX512F-NEXT:    vpand {{.*}}(%rip), %ymm5, %ymm5
 ; AVX512F-NEXT:    vpsllw $5, %ymm5, %ymm5
 ; AVX512F-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm3
@@ -490,13 +493,14 @@ define <64 x i8> @splatvar_funnnel_v64i8(<64 x i8> %x, <64 x i8> %amt) nounwind 
 ;
 ; AVX512VL-LABEL: splatvar_funnnel_v64i8:
 ; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpbroadcastb %xmm1, %ymm1
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
 ; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; AVX512VL-NEXT:    vpsllw $4, %ymm2, %ymm3
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm4 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; AVX512VL-NEXT:    vpand %ymm4, %ymm3, %ymm3
-; AVX512VL-NEXT:    vpbroadcastb %xmm1, %ymm5
-; AVX512VL-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; AVX512VL-NEXT:    vpsubb %ymm5, %ymm6, %ymm5
+; AVX512VL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; AVX512VL-NEXT:    vpsubb %ymm1, %ymm5, %ymm5
 ; AVX512VL-NEXT:    vpand {{.*}}(%rip), %ymm5, %ymm5
 ; AVX512VL-NEXT:    vpsllw $5, %ymm5, %ymm5
 ; AVX512VL-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm3

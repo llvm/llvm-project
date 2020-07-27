@@ -1582,6 +1582,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (checkArgCount(*this, TheCall, 1)) return true;
     TheCall->setType(Context.IntTy);
     break;
+  case Builtin::BI__builtin_complex:
+    if (SemaBuiltinComplex(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_constant_p: {
     if (checkArgCount(*this, TheCall, 1)) return true;
     ExprResult Arg = DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
@@ -2284,10 +2288,7 @@ bool Sema::CheckARMCoprocessorImmediate(const TargetInfo &TI,
   if (CoprocArg->isTypeDependent() || CoprocArg->isValueDependent())
     return false;
 
-  llvm::APSInt CoprocNoAP;
-  bool IsICE = CoprocArg->isIntegerConstantExpr(CoprocNoAP, Context);
-  (void)IsICE;
-  assert(IsICE && "Coprocossor immediate is not a constant expression");
+  llvm::APSInt CoprocNoAP = *CoprocArg->getIntegerConstantExpr(Context);
   int64_t CoprocNo = CoprocNoAP.getExtValue();
   assert(CoprocNo >= 0 && "Coprocessor immediate must be non-negative");
 
@@ -2571,9 +2572,8 @@ bool Sema::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
   Expr *Arg;
   if (BuiltinID == BPF::BI__builtin_btf_type_id) {
     // The second argument needs to be a constant int
-    llvm::APSInt Value;
     Arg = TheCall->getArg(1);
-    if (!Arg->isIntegerConstantExpr(Value, Context)) {
+    if (!Arg->isIntegerConstantExpr(Context)) {
       Diag(Arg->getBeginLoc(), diag::err_btf_type_id_not_const)
           << 2 << Arg->getSourceRange();
       return true;
@@ -2599,8 +2599,7 @@ bool Sema::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
 
   // The second argument needs to be a constant int
   Arg = TheCall->getArg(1);
-  llvm::APSInt Value;
-  if (!Arg->isIntegerConstantExpr(Value, Context)) {
+  if (!Arg->isIntegerConstantExpr(Context)) {
     Diag(Arg->getBeginLoc(), diag::err_preserve_field_info_not_const)
         << 2 << Arg->getSourceRange();
     return true;
@@ -3198,11 +3197,10 @@ bool Sema::CheckSystemZBuiltinFunctionCall(unsigned BuiltinID,
                                            CallExpr *TheCall) {
   if (BuiltinID == SystemZ::BI__builtin_tabort) {
     Expr *Arg = TheCall->getArg(0);
-    llvm::APSInt AbortCode(32);
-    if (Arg->isIntegerConstantExpr(AbortCode, Context) &&
-        AbortCode.getSExtValue() >= 0 && AbortCode.getSExtValue() < 256)
-      return Diag(Arg->getBeginLoc(), diag::err_systemz_invalid_tabort_code)
-             << Arg->getSourceRange();
+    if (Optional<llvm::APSInt> AbortCode = Arg->getIntegerConstantExpr(Context))
+      if (AbortCode->getSExtValue() >= 0 && AbortCode->getSExtValue() < 256)
+        return Diag(Arg->getBeginLoc(), diag::err_systemz_invalid_tabort_code)
+               << Arg->getSourceRange();
   }
 
   // For intrinsics which take an immediate value as part of the instruction,
@@ -4923,21 +4921,21 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   }
 
   if (SubExprs.size() >= 2 && Form != Init) {
-    llvm::APSInt Result(32);
-    if (SubExprs[1]->isIntegerConstantExpr(Result, Context) &&
-        !isValidOrderingForOp(Result.getSExtValue(), Op))
-      Diag(SubExprs[1]->getBeginLoc(),
-           diag::warn_atomic_op_has_invalid_memory_order)
-          << SubExprs[1]->getSourceRange();
+    if (Optional<llvm::APSInt> Result =
+            SubExprs[1]->getIntegerConstantExpr(Context))
+      if (!isValidOrderingForOp(Result->getSExtValue(), Op))
+        Diag(SubExprs[1]->getBeginLoc(),
+             diag::warn_atomic_op_has_invalid_memory_order)
+            << SubExprs[1]->getSourceRange();
   }
 
   if (auto ScopeModel = AtomicExpr::getScopeModel(Op)) {
     auto *Scope = Args[Args.size() - 1];
-    llvm::APSInt Result(32);
-    if (Scope->isIntegerConstantExpr(Result, Context) &&
-        !ScopeModel->isValid(Result.getZExtValue())) {
-      Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_synch_scope)
-          << Scope->getSourceRange();
+    if (Optional<llvm::APSInt> Result =
+            Scope->getIntegerConstantExpr(Context)) {
+      if (!ScopeModel->isValid(Result->getZExtValue()))
+        Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_synch_scope)
+            << Scope->getSourceRange();
     }
     SubExprs.push_back(Scope);
   }
@@ -5792,6 +5790,61 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
   return false;
 }
 
+/// Perform semantic analysis for a call to __builtin_complex.
+bool Sema::SemaBuiltinComplex(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 2))
+    return true;
+
+  bool Dependent = false;
+  for (unsigned I = 0; I != 2; ++I) {
+    Expr *Arg = TheCall->getArg(I);
+    QualType T = Arg->getType();
+    if (T->isDependentType()) {
+      Dependent = true;
+      continue;
+    }
+
+    // Despite supporting _Complex int, GCC requires a real floating point type
+    // for the operands of __builtin_complex.
+    if (!T->isRealFloatingType()) {
+      return Diag(Arg->getBeginLoc(), diag::err_typecheck_call_requires_real_fp)
+             << Arg->getType() << Arg->getSourceRange();
+    }
+
+    ExprResult Converted = DefaultLvalueConversion(Arg);
+    if (Converted.isInvalid())
+      return true;
+    TheCall->setArg(I, Converted.get());
+  }
+
+  if (Dependent) {
+    TheCall->setType(Context.DependentTy);
+    return false;
+  }
+
+  Expr *Real = TheCall->getArg(0);
+  Expr *Imag = TheCall->getArg(1);
+  if (!Context.hasSameType(Real->getType(), Imag->getType())) {
+    return Diag(Real->getBeginLoc(),
+                diag::err_typecheck_call_different_arg_types)
+           << Real->getType() << Imag->getType()
+           << Real->getSourceRange() << Imag->getSourceRange();
+  }
+
+  // We don't allow _Complex _Float16 nor _Complex __fp16 as type specifiers;
+  // don't allow this builtin to form those types either.
+  // FIXME: Should we allow these types?
+  if (Real->getType()->isFloat16Type())
+    return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
+           << "_Float16";
+  if (Real->getType()->isHalfType())
+    return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
+           << "half";
+
+  TheCall->setType(Context.getComplexType(Real->getType()));
+  return false;
+}
+
 // Customized Sema Checking for VSX builtins that have the following signature:
 // vector [...] builtinName(vector [...], vector [...], const int);
 // Which takes the same type of vectors (any legal vector type) for the first
@@ -5814,8 +5867,7 @@ bool Sema::SemaBuiltinVSX(CallExpr *TheCall) {
            << TheCall->getSourceRange();
 
   // Check the third argument is a compile time constant
-  llvm::APSInt Value;
-  if(!TheCall->getArg(2)->isIntegerConstantExpr(Value, Context))
+  if (!TheCall->getArg(2)->isIntegerConstantExpr(Context))
     return Diag(TheCall->getBeginLoc(),
                 diag::err_vsx_builtin_nonconstant_argument)
            << 3 /* argument index */ << TheCall->getDirectCallee()
@@ -5910,17 +5962,18 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
         TheCall->getArg(i)->isValueDependent())
       continue;
 
-    llvm::APSInt Result(32);
-    if (!TheCall->getArg(i)->isIntegerConstantExpr(Result, Context))
+    Optional<llvm::APSInt> Result;
+    if (!(Result = TheCall->getArg(i)->getIntegerConstantExpr(Context)))
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_shufflevector_nonconstant_argument)
                        << TheCall->getArg(i)->getSourceRange());
 
     // Allow -1 which will be translated to undef in the IR.
-    if (Result.isSigned() && Result.isAllOnesValue())
+    if (Result->isSigned() && Result->isAllOnesValue())
       continue;
 
-    if (Result.getActiveBits() > 64 || Result.getZExtValue() >= numElements*2)
+    if (Result->getActiveBits() > 64 ||
+        Result->getZExtValue() >= numElements * 2)
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_shufflevector_argument_too_large)
                        << TheCall->getArg(i)->getSourceRange());
@@ -6167,10 +6220,11 @@ bool Sema::SemaBuiltinConstantArg(CallExpr *TheCall, int ArgNum,
 
   if (Arg->isTypeDependent() || Arg->isValueDependent()) return false;
 
-  if (!Arg->isIntegerConstantExpr(Result, Context))
+  Optional<llvm::APSInt> R;
+  if (!(R = Arg->getIntegerConstantExpr(Context)))
     return Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
            << FDecl->getDeclName() << Arg->getSourceRange();
-
+  Result = *R;
   return false;
 }
 
@@ -10330,14 +10384,15 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
 
       // If the shift amount is a positive constant, drop the width by
       // that much.
-      llvm::APSInt shift;
-      if (BO->getRHS()->isIntegerConstantExpr(shift, C) &&
-          shift.isNonNegative()) {
-        unsigned zext = shift.getZExtValue();
-        if (zext >= L.Width)
-          L.Width = (L.NonNegative ? 0 : 1);
-        else
-          L.Width -= zext;
+      if (Optional<llvm::APSInt> shift =
+              BO->getRHS()->getIntegerConstantExpr(C)) {
+        if (shift->isNonNegative()) {
+          unsigned zext = shift->getZExtValue();
+          if (zext >= L.Width)
+            L.Width = (L.NonNegative ? 0 : 1);
+          else
+            L.Width -= zext;
+        }
       }
 
       return L;
@@ -10361,9 +10416,9 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
       IntRange L = GetExprRange(C, BO->getLHS(), opWidth, InConstantContext);
 
       // If the divisor is constant, use that.
-      llvm::APSInt divisor;
-      if (BO->getRHS()->isIntegerConstantExpr(divisor, C)) {
-        unsigned log2 = divisor.logBase2(); // floor(log_2(divisor))
+      if (Optional<llvm::APSInt> divisor =
+              BO->getRHS()->getIntegerConstantExpr(C)) {
+        unsigned log2 = divisor->logBase2(); // floor(log_2(divisor))
         if (log2 >= L.Width)
           L.Width = (L.NonNegative ? 0 : 1);
         else
@@ -10795,23 +10850,20 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   Expr *RHS = E->getRHS();
 
   if (T->isIntegralType(S.Context)) {
-    llvm::APSInt RHSValue;
-    llvm::APSInt LHSValue;
-
-    bool IsRHSIntegralLiteral = RHS->isIntegerConstantExpr(RHSValue, S.Context);
-    bool IsLHSIntegralLiteral = LHS->isIntegerConstantExpr(LHSValue, S.Context);
+    Optional<llvm::APSInt> RHSValue = RHS->getIntegerConstantExpr(S.Context);
+    Optional<llvm::APSInt> LHSValue = LHS->getIntegerConstantExpr(S.Context);
 
     // We don't care about expressions whose result is a constant.
-    if (IsRHSIntegralLiteral && IsLHSIntegralLiteral)
+    if (RHSValue && LHSValue)
       return AnalyzeImpConvsInComparison(S, E);
 
     // We only care about expressions where just one side is literal
-    if (IsRHSIntegralLiteral ^ IsLHSIntegralLiteral) {
+    if ((bool)RHSValue ^ (bool)LHSValue) {
       // Is the constant on the RHS or LHS?
-      const bool RhsConstant = IsRHSIntegralLiteral;
+      const bool RhsConstant = (bool)RHSValue;
       Expr *Const = RhsConstant ? RHS : LHS;
       Expr *Other = RhsConstant ? LHS : RHS;
-      const llvm::APSInt &Value = RhsConstant ? RHSValue : LHSValue;
+      const llvm::APSInt &Value = RhsConstant ? *RHSValue : *LHSValue;
 
       // Check whether an integer constant comparison results in a value
       // of 'true' or 'false'.
@@ -11769,8 +11821,8 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     if (SourcePrecision > 0 && TargetPrecision > 0 &&
         SourcePrecision > TargetPrecision) {
 
-      llvm::APSInt SourceInt;
-      if (E->isIntegerConstantExpr(SourceInt, S.Context)) {
+      if (Optional<llvm::APSInt> SourceInt =
+              E->getIntegerConstantExpr(S.Context)) {
         // If the source integer is a constant, convert it to the target
         // floating point type. Issue a warning if the value changes
         // during the whole conversion.
@@ -11778,11 +11830,11 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
             S.Context.getFloatTypeSemantics(QualType(TargetBT, 0)));
         llvm::APFloat::opStatus ConversionStatus =
             TargetFloatValue.convertFromAPInt(
-                SourceInt, SourceBT->isSignedInteger(),
+                *SourceInt, SourceBT->isSignedInteger(),
                 llvm::APFloat::rmNearestTiesToEven);
 
         if (ConversionStatus != llvm::APFloat::opOK) {
-          std::string PrettySourceValue = SourceInt.toString(10);
+          std::string PrettySourceValue = SourceInt->toString(10);
           SmallString<32> PrettyTargetValue;
           TargetFloatValue.toString(PrettyTargetValue, TargetPrecision);
 
@@ -13505,10 +13557,9 @@ getAlignmentAndOffsetFromBinAddOrSub(const Expr *PtrE, const Expr *IntE,
   if (!P)
     return llvm::None;
 
-  llvm::APSInt IdxRes;
   CharUnits EltSize = Ctx.getTypeSizeInChars(PointeeType);
-  if (IntE->isIntegerConstantExpr(IdxRes, Ctx)) {
-    CharUnits Offset = EltSize * IdxRes.getExtValue();
+  if (Optional<llvm::APSInt> IdxRes = IntE->getIntegerConstantExpr(Ctx)) {
+    CharUnits Offset = EltSize * IdxRes->getExtValue();
     if (IsSub)
       Offset = -Offset;
     return std::make_pair(P->first, P->second + Offset);
@@ -14133,9 +14184,10 @@ namespace {
           return;
         if (Expr *RHS = BinOp->getRHS()) {
           RHS = RHS->IgnoreParenCasts();
-          llvm::APSInt Value;
+          Optional<llvm::APSInt> Value;
           VarWillBeReased =
-            (RHS && RHS->isIntegerConstantExpr(Value, Context) && Value == 0);
+              (RHS && (Value = RHS->getIntegerConstantExpr(Context)) &&
+               *Value == 0);
         }
       }
     }
@@ -15362,14 +15414,15 @@ ExprResult Sema::SemaBuiltinMatrixTranspose(CallExpr *TheCall,
 // Get and verify the matrix dimensions.
 static llvm::Optional<unsigned>
 getAndVerifyMatrixDimension(Expr *Expr, StringRef Name, Sema &S) {
-  llvm::APSInt Value(64);
   SourceLocation ErrorPos;
-  if (!Expr->isIntegerConstantExpr(Value, S.Context, &ErrorPos)) {
+  Optional<llvm::APSInt> Value =
+      Expr->getIntegerConstantExpr(S.Context, &ErrorPos);
+  if (!Value) {
     S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_scalar_unsigned_arg)
         << Name;
     return {};
   }
-  uint64_t Dim = Value.getZExtValue();
+  uint64_t Dim = Value->getZExtValue();
   if (!ConstantMatrixType::isDimensionValid(Dim)) {
     S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_invalid_dimension)
         << Name << ConstantMatrixType::getMaxElementsPerDimension();
@@ -15473,13 +15526,15 @@ ExprResult Sema::SemaBuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
   StrideExpr = StrideConv.get();
   TheCall->setArg(3, StrideExpr);
 
-  llvm::APSInt Value(64);
-  if (MaybeRows && StrideExpr->isIntegerConstantExpr(Value, Context)) {
-    uint64_t Stride = Value.getZExtValue();
-    if (Stride < *MaybeRows) {
-      Diag(StrideExpr->getBeginLoc(),
-           diag::err_builtin_matrix_stride_too_small);
-      ArgError = true;
+  if (MaybeRows) {
+    if (Optional<llvm::APSInt> Value =
+            StrideExpr->getIntegerConstantExpr(Context)) {
+      uint64_t Stride = Value->getZExtValue();
+      if (Stride < *MaybeRows) {
+        Diag(StrideExpr->getBeginLoc(),
+             diag::err_builtin_matrix_stride_too_small);
+        ArgError = true;
+      }
     }
   }
 
@@ -15570,13 +15625,15 @@ ExprResult Sema::SemaBuiltinMatrixColumnMajorStore(CallExpr *TheCall,
   }
 
   // Check stride argument.
-  llvm::APSInt Value(64);
-  if (MatrixTy && StrideExpr->isIntegerConstantExpr(Value, Context)) {
-    uint64_t Stride = Value.getZExtValue();
-    if (Stride < MatrixTy->getNumRows()) {
-      Diag(StrideExpr->getBeginLoc(),
-           diag::err_builtin_matrix_stride_too_small);
-      ArgError = true;
+  if (MatrixTy) {
+    if (Optional<llvm::APSInt> Value =
+            StrideExpr->getIntegerConstantExpr(Context)) {
+      uint64_t Stride = Value->getZExtValue();
+      if (Stride < MatrixTy->getNumRows()) {
+        Diag(StrideExpr->getBeginLoc(),
+             diag::err_builtin_matrix_stride_too_small);
+        ArgError = true;
+      }
     }
   }
 

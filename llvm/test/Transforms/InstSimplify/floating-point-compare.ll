@@ -1070,6 +1070,24 @@ define i1 @is_infinite_or_nan(float %x) {
   ret i1 %r
 }
 
+define i1 @is_infinite_or_nan2(float %x) {
+; CHECK-LABEL: @is_infinite_or_nan2(
+; CHECK-NEXT:    ret i1 false
+;
+  %xabs = call nnan ninf float @llvm.fabs.f32(float %x)
+  %r = fcmp ueq float %xabs, 0x7FF0000000000000
+  ret i1 %r
+}
+
+define <2 x i1> @is_infinite_neg_or_nan(<2 x float> %x) {
+; CHECK-LABEL: @is_infinite_neg_or_nan(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %x42 = fadd nnan ninf <2 x float> %x, <float 42.0, float 42.0>
+  %r = fcmp ueq <2 x float> %x42, <float 0xFFF0000000000000, float 0xFFF0000000000000>
+  ret <2 x i1> %r
+}
+
 define i1 @is_finite_or_nan(i1 %c, double %x) {
 ; CHECK-LABEL: @is_finite_or_nan(
 ; CHECK-NEXT:    ret i1 true
@@ -1100,4 +1118,23 @@ define i1 @is_finite_and_ordered(double %x) {
   %xx = fmul ninf double %x, %x
   %r = fcmp one double %xx, 0x7FF0000000000000
   ret i1 %r
+}
+
+define i1 @is_finite(i1 %c, double %x) {
+; CHECK-LABEL: @is_finite(
+; CHECK-NEXT:    ret i1 true
+;
+  %xx = fmul nnan ninf double %x, %x
+  %s = select i1 %c, double 42.0, double %xx
+  %r = fcmp one double %s, 0x7FF0000000000000
+  ret i1 %r
+}
+
+define <2 x i1> @is_finite_commute(<2 x i8> %x) {
+; CHECK-LABEL: @is_finite_commute(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %cast = uitofp <2 x i8> %x to <2 x float>
+  %r = fcmp one <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
+  ret <2 x i1> %r
 }

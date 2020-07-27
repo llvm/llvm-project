@@ -727,8 +727,8 @@ private:
 
     // Currently only considering loops with a single exit point
     // and a non-constant trip count.
-    unsigned TC0 = SE.getSmallConstantTripCount(FC0.L);
-    unsigned TC1 = SE.getSmallConstantTripCount(FC1.L);
+    const unsigned TC0 = SE.getSmallConstantTripCount(FC0.L);
+    const unsigned TC1 = SE.getSmallConstantTripCount(FC1.L);
 
     // If any of the tripcounts are zero that means that loop(s) do not have
     // a single exit or a constant tripcount.
@@ -746,9 +746,8 @@ private:
       Difference = Diff;
     else {
       LLVM_DEBUG(
-          dbgs()
-          << "Difference is less than 0. FC1 (second loop) has more "
-             "iterations than the first one. Currently not supported.\n");
+          dbgs() << "Difference is less than 0. FC1 (second loop) has more "
+                    "iterations than the first one. Currently not supported\n");
     }
 
     LLVM_DEBUG(dbgs() << "Difference in loop trip count is: " << Difference
@@ -775,7 +774,7 @@ private:
              "Loops should have identical trip counts after peeling");
 #endif
 
-      FC0.PP.PeelCount = PeelCount;
+      FC0.PP.PeelCount += PeelCount;
 
       // Peeling does not update the PDT
       PDT.recalculate(*FC0.Preheader->getParent());
@@ -786,26 +785,34 @@ private:
       // loop will execute completely (will not jump from one of
       // the peeled blocks to the second loop). Here we are updating the
       // branch conditions of each of the peeled blocks, such that it will
-      // branch to its successor which is not the Preheader of the second Loop.
-      // Doing this update will ensure that the entry block of the first loop
-      // dominates the entry block of the second loop.
+      // branch to its successor which is not the preheader of the second loop
+      // in the case of unguarded loops, or the succesors of the exit block of
+      // the first loop otherwise. Doing this update will ensure that the entry
+      // block of the first loop dominates the entry block of the second loop.
       BasicBlock *BB =
           FC0.GuardBranch ? FC0.ExitBlock->getUniqueSuccessor() : FC1.Preheader;
-      SmallVector<DominatorTree::UpdateType, 8> TreeUpdates;
-      for (BasicBlock *Pred : predecessors(BB)) {
-        if (Pred != FC0.ExitBlock) {
-          BranchInst *Old = dyn_cast<BranchInst>(Pred->getTerminator());
-          BasicBlock *Succ = Old->getSuccessor(0);
-          if (Succ == BB)
-            Succ = Old->getSuccessor(1);
-          BranchInst *NewBranch = BranchInst::Create(Succ);
-          ReplaceInstWithInst(Old, NewBranch);
-          TreeUpdates.emplace_back(
-              DominatorTree::UpdateType(DominatorTree::Delete, Pred, BB));
+      if (BB) {
+        SmallVector<DominatorTree::UpdateType, 8> TreeUpdates;
+        SmallVector<Instruction *, 8> WorkList;
+        for (BasicBlock *Pred : predecessors(BB)) {
+          if (Pred != FC0.ExitBlock) {
+            WorkList.emplace_back(Pred->getTerminator());
+            TreeUpdates.emplace_back(
+                DominatorTree::UpdateType(DominatorTree::Delete, Pred, BB));
+          }
         }
+        // Cannot modify the predecessors inside the above loop as it will cause
+        // the iterators to be nullptrs, causing memory errors.
+        for (Instruction *CurrentBranch: WorkList) {
+          BasicBlock *Succ = CurrentBranch->getSuccessor(0);
+          if (Succ == BB)
+            Succ = CurrentBranch->getSuccessor(1);
+          ReplaceInstWithInst(CurrentBranch, BranchInst::Create(Succ));
+        }
+
+        DTU.applyUpdates(TreeUpdates);
+        DTU.flush();
       }
-      DTU.applyUpdates(TreeUpdates);
-      DTU.flush();
       LLVM_DEBUG(
           dbgs() << "Sucessfully peeled " << FC0.PP.PeelCount
                  << " iterations from the first loop.\n"
@@ -1343,7 +1350,7 @@ private:
     FC0.Latch->replaceSuccessorsPhiUsesWith(FC1.Latch);
 
     // Then modify the control flow and update DT and PDT.
-    SmallVector<DominatorTree::UpdateType, 16> TreeUpdates;
+    SmallVector<DominatorTree::UpdateType, 8> TreeUpdates;
 
     // The old exiting block of the first loop (FC0) has to jump to the header
     // of the second as we need to execute the code in the second header block

@@ -8,9 +8,11 @@
 
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -88,6 +90,192 @@ void DbgValueHistoryMap::Entry::endEntry(EntryIndex Index) {
   assert(isDbgValue() && "Setting end index for non-debug value");
   assert(!isClosed() && "End index has already been set");
   EndIndex = Index;
+}
+
+using OrderMap = DenseMap<const MachineInstr *, unsigned>;
+/// Number instructions so that we can compare instruction positions within MF.
+/// Meta instructions are given the same nubmer as the preceding instruction.
+/// Because the block ordering will not change it is possible (and safe) to
+/// compare instruction positions between blocks.
+static void numberInstructions(const MachineFunction &MF, OrderMap &Ordering) {
+  // We give meta instructions the same number as the peceding instruction
+  // because this function is written for the task of comparing positions of
+  // variable location ranges against scope ranges. To reflect what we'll see
+  // in the binary, when we look at location ranges we must consider all
+  // DBG_VALUEs between two real instructions at the same position. And a
+  // scope range which ends on a meta instruction should be considered to end
+  // at the last seen real instruction. E.g.
+  //
+  //  1 instruction p      Both the variable location for x and for y start
+  //  1 DBG_VALUE for "x"  after instruction p so we give them all the same
+  //  1 DBG_VALUE for "y"  number. If a scope range ends at DBG_VALUE for "y",
+  //  2 instruction q      we should treat it as ending after instruction p
+  //                       because it will be the last real instruction in the
+  //                       range. DBG_VALUEs at or after this position for
+  //                       variables declared in the scope will have no effect.
+  unsigned position = 0;
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      Ordering[&MI] = MI.isMetaInstruction() ? position : ++position;
+}
+
+/// Check if instruction A comes before B. Meta instructions have the same
+/// position as the preceding non-meta instruction. See numberInstructions for
+/// more info.
+static bool isBefore(const MachineInstr *A, const MachineInstr *B,
+                     const OrderMap &Ordering) {
+  return Ordering.lookup(A) < Ordering.lookup(B);
+}
+
+/// Check if the instruction range [StartMI, EndMI] intersects any instruction
+/// range in Ranges. EndMI can be nullptr to indicate that the range is
+/// unbounded. Assumes Ranges is ordered and disjoint. Returns true and points
+/// to the first intersecting scope range if one exists.
+static Optional<ArrayRef<InsnRange>::iterator>
+intersects(const MachineInstr *StartMI, const MachineInstr *EndMI,
+           const ArrayRef<InsnRange> &Ranges, const OrderMap &Ordering) {
+  for (auto RangesI = Ranges.begin(), RangesE = Ranges.end();
+       RangesI != RangesE; ++RangesI) {
+    if (EndMI && isBefore(EndMI, RangesI->first, Ordering))
+      return None;
+    if (EndMI && !isBefore(RangesI->second, EndMI, Ordering))
+      return RangesI;
+    if (isBefore(StartMI, RangesI->second, Ordering))
+      return RangesI;
+  }
+  return None;
+}
+
+void DbgValueHistoryMap::trimLocationRanges(const MachineFunction &MF,
+                                            LexicalScopes &LScopes) {
+  OrderMap Ordering;
+  numberInstructions(MF, Ordering);
+
+  // The indices of the entries we're going to remove for each variable.
+  SmallVector<EntryIndex, 4> ToRemove;
+  // Entry reference count for each variable. Clobbers left with no references
+  // will be removed.
+  SmallVector<int, 4> ReferenceCount;
+  // Entries reference other entries by index. Offsets is used to remap these
+  // references if any entries are removed.
+  SmallVector<size_t, 4> Offsets;
+
+  for (auto &Record : VarEntries) {
+    auto &HistoryMapEntries = Record.second;
+    if (HistoryMapEntries.empty())
+      continue;
+
+    InlinedEntity Entity = Record.first;
+    const DILocalVariable *LocalVar = cast<DILocalVariable>(Entity.first);
+
+    LexicalScope *Scope = nullptr;
+    if (const DILocation *InlinedAt = Entity.second) {
+      Scope = LScopes.findInlinedScope(LocalVar->getScope(), InlinedAt);
+    } else {
+      Scope = LScopes.findLexicalScope(LocalVar->getScope());
+      // Ignore variables for non-inlined function level scopes. The scope
+      // ranges (from scope->getRanges()) will not include any instructions
+      // before the first one with a debug-location, which could cause us to
+      // incorrectly drop a location. We could introduce special casing for
+      // these variables, but it doesn't seem worth it because no out-of-scope
+      // locations have been observed for variables declared in function level
+      // scopes.
+      if (Scope &&
+          (Scope->getScopeNode() == Scope->getScopeNode()->getSubprogram()) &&
+          (Scope->getScopeNode() == LocalVar->getScope()))
+        continue;
+    }
+
+    // If there is no scope for the variable then something has probably gone
+    // wrong.
+    if (!Scope)
+      continue;
+
+    ToRemove.clear();
+    // Zero the reference counts.
+    ReferenceCount.assign(HistoryMapEntries.size(), 0);
+    // Index of the DBG_VALUE which marks the start of the current location
+    // range.
+    EntryIndex StartIndex = 0;
+    ArrayRef<InsnRange> ScopeRanges(Scope->getRanges());
+    for (auto EI = HistoryMapEntries.begin(), EE = HistoryMapEntries.end();
+         EI != EE; ++EI, ++StartIndex) {
+      // Only DBG_VALUEs can open location ranges so skip anything else.
+      if (!EI->isDbgValue())
+        continue;
+
+      // Index of the entry which closes this range.
+      EntryIndex EndIndex = EI->getEndIndex();
+      // If this range is closed bump the reference count of the closing entry.
+      if (EndIndex != NoEntry)
+        ReferenceCount[EndIndex] += 1;
+      // Skip this location range if the opening entry is still referenced. It
+      // may close a location range which intersects a scope range.
+      // TODO: We could be 'smarter' and trim these kinds of ranges such that
+      // they do not leak out of the scope ranges if they partially overlap.
+      if (ReferenceCount[StartIndex] > 0)
+        continue;
+
+      const MachineInstr *StartMI = EI->getInstr();
+      const MachineInstr *EndMI = EndIndex != NoEntry
+                                      ? HistoryMapEntries[EndIndex].getInstr()
+                                      : nullptr;
+      // Check if the location range [StartMI, EndMI] intersects with any scope
+      // range for the variable.
+      if (auto R = intersects(StartMI, EndMI, ScopeRanges, Ordering)) {
+        // Adjust ScopeRanges to exclude ranges which subsequent location ranges
+        // cannot possibly intersect.
+        ScopeRanges = ArrayRef<InsnRange>(R.getValue(), ScopeRanges.end());
+      } else {
+        // If the location range does not intersect any scope range then the
+        // DBG_VALUE which opened this location range is usless, mark it for
+        // removal.
+        ToRemove.push_back(StartIndex);
+        // Because we'll be removing this entry we need to update the reference
+        // count of the closing entry, if one exists.
+        if (EndIndex != NoEntry)
+          ReferenceCount[EndIndex] -= 1;
+      }
+    }
+
+    // If there is nothing to remove then jump to next variable.
+    if (ToRemove.empty())
+      continue;
+
+    // Mark clobbers that will no longer close any location ranges for removal.
+    for (size_t i = 0; i < HistoryMapEntries.size(); ++i)
+      if (ReferenceCount[i] <= 0 && HistoryMapEntries[i].isClobber())
+        ToRemove.push_back(i);
+
+    std::sort(ToRemove.begin(), ToRemove.end());
+
+    // Build an offset map so we can update the EndIndex of the remaining
+    // entries.
+    // Zero the offsets.
+    Offsets.assign(HistoryMapEntries.size(), 0);
+    size_t CurOffset = 0;
+    auto ToRemoveItr = ToRemove.begin();
+    for (size_t EntryIdx = *ToRemoveItr; EntryIdx < HistoryMapEntries.size();
+         ++EntryIdx) {
+      // Check if this is an entry which will be removed.
+      if (ToRemoveItr != ToRemove.end() && *ToRemoveItr == EntryIdx) {
+        ++ToRemoveItr;
+        ++CurOffset;
+      }
+      Offsets[EntryIdx] = CurOffset;
+    }
+
+    // Update the EndIndex of the entries to account for those which will be
+    // removed.
+    for (auto &Entry : HistoryMapEntries)
+      if (Entry.isClosed())
+        Entry.EndIndex -= Offsets[Entry.EndIndex];
+
+    // Now actually remove the entries. Iterate backwards so that our remaining
+    // ToRemove indices are valid after each erase.
+    for (auto Itr = ToRemove.rbegin(), End = ToRemove.rend(); Itr != End; ++Itr)
+      HistoryMapEntries.erase(HistoryMapEntries.begin() + *Itr);
+  }
 }
 
 void DbgLabelInstrMap::addInstr(InlinedEntity Label, const MachineInstr &MI) {

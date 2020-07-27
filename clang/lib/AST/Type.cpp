@@ -2318,6 +2318,13 @@ bool Type::isVLSTBuiltinType() const {
   return false;
 }
 
+bool Type::isVLST() const {
+  if (!isVLSTBuiltinType())
+    return false;
+
+  return hasAttr(attr::ArmSveVectorBits);
+}
+
 bool QualType::isPODType(const ASTContext &Context) const {
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)

@@ -17,7 +17,7 @@ function(libomp_check_linker_flag flag boolean)
   set(library_source
     "int foo(int a) { return a*a; }")
   set(cmake_source
-    "cmake_minimum_required(VERSION 2.8)
+    "cmake_minimum_required(VERSION 3.13.4)
      project(foo C)
      set(CMAKE_SHARED_LINKER_FLAGS \"${flag}\")
      add_library(foo SHARED src_to_link.c)")

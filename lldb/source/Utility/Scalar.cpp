@@ -126,8 +126,6 @@ static Scalar::Type PromoteToMaxType(
   return Scalar::e_void;
 }
 
-Scalar::Scalar() : m_type(e_void), m_float(static_cast<float>(0)) {}
-
 bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
   size_t byte_size = GetByteSize();
   if (byte_size == 0) {
@@ -160,7 +158,7 @@ bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
 void Scalar::GetBytes(llvm::MutableArrayRef<uint8_t> storage) const {
   assert(storage.size() >= GetByteSize());
 
-  const auto &store = [&](const llvm::APInt val) {
+  const auto &store = [&](const llvm::APInt &val) {
     StoreIntToMemory(val, storage.data(), (val.getBitWidth() + 7) / 8);
   };
   switch (GetCategory(m_type)) {
@@ -231,8 +229,6 @@ void Scalar::GetValue(Stream *s, bool show_type) const {
     break;
   }
 }
-
-Scalar::~Scalar() = default;
 
 Scalar::Type Scalar::GetBestTypeForBitSize(size_t bit_size, bool sign) {
   // Scalar types are always host types, hence the sizeof().

@@ -56,4 +56,19 @@ TEST_F(OpenMPLoweringTest, TaskWait) {
   EXPECT_EQ(succeeded(taskWaitOp.verify()), true);
 }
 
+TEST_F(OpenMPLoweringTest, TaskYield) {
+  // Construct a dummy parse tree node for `!OMP taskyield`.
+  struct Fortran::parser::OmpSimpleStandaloneDirective taskYieldDirective(
+      llvm::omp::Directive::OMPD_taskyield);
+
+  // Check and lower the `!OMP taskyield` node to `TaskYieldOp` operation of
+  // OpenMPDialect.
+  EXPECT_EQ(taskYieldDirective.v, llvm::omp::Directive::OMPD_taskyield);
+  auto taskYieldOp = mlirOpBuilder->create<mlir::omp::TaskyieldOp>(
+      mlirOpBuilder->getUnknownLoc());
+
+  EXPECT_EQ(taskYieldOp.getOperationName(), "omp.taskyield");
+  EXPECT_EQ(succeeded(taskYieldOp.verify()), true);
+}
+
 // main() from gtest_main

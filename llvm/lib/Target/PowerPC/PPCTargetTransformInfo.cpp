@@ -13,8 +13,11 @@
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"
@@ -57,6 +60,158 @@ PPCTTIImpl::getPopcntSupport(unsigned TyWidth) {
     return ST->hasPOPCNTD() == PPCSubtarget::POPCNTD_Slow ?
              TTI::PSK_SlowHardware : TTI::PSK_FastHardware;
   return TTI::PSK_Software;
+}
+
+Optional<Instruction *>
+PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  Intrinsic::ID IID = II.getIntrinsicID();
+  switch (IID) {
+  default:
+    break;
+  case Intrinsic::ppc_altivec_lvx:
+  case Intrinsic::ppc_altivec_lvxl:
+    // Turn PPC lvx -> load if the pointer is known aligned.
+    if (getOrEnforceKnownAlignment(
+            II.getArgOperand(0), Align(16), IC.getDataLayout(), &II,
+            &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
+      Value *Ptr = IC.Builder.CreateBitCast(
+          II.getArgOperand(0), PointerType::getUnqual(II.getType()));
+      return new LoadInst(II.getType(), Ptr, "", false, Align(16));
+    }
+    break;
+  case Intrinsic::ppc_vsx_lxvw4x:
+  case Intrinsic::ppc_vsx_lxvd2x: {
+    // Turn PPC VSX loads into normal loads.
+    Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(0),
+                                          PointerType::getUnqual(II.getType()));
+    return new LoadInst(II.getType(), Ptr, Twine(""), false, Align(1));
+  }
+  case Intrinsic::ppc_altivec_stvx:
+  case Intrinsic::ppc_altivec_stvxl:
+    // Turn stvx -> store if the pointer is known aligned.
+    if (getOrEnforceKnownAlignment(
+            II.getArgOperand(1), Align(16), IC.getDataLayout(), &II,
+            &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
+      Type *OpPtrTy = PointerType::getUnqual(II.getArgOperand(0)->getType());
+      Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+      return new StoreInst(II.getArgOperand(0), Ptr, false, Align(16));
+    }
+    break;
+  case Intrinsic::ppc_vsx_stxvw4x:
+  case Intrinsic::ppc_vsx_stxvd2x: {
+    // Turn PPC VSX stores into normal stores.
+    Type *OpPtrTy = PointerType::getUnqual(II.getArgOperand(0)->getType());
+    Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+    return new StoreInst(II.getArgOperand(0), Ptr, false, Align(1));
+  }
+  case Intrinsic::ppc_qpx_qvlfs:
+    // Turn PPC QPX qvlfs -> load if the pointer is known aligned.
+    if (getOrEnforceKnownAlignment(
+            II.getArgOperand(0), Align(16), IC.getDataLayout(), &II,
+            &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
+      Type *VTy =
+          VectorType::get(IC.Builder.getFloatTy(),
+                          cast<VectorType>(II.getType())->getElementCount());
+      Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(0),
+                                            PointerType::getUnqual(VTy));
+      Value *Load = IC.Builder.CreateLoad(VTy, Ptr);
+      return new FPExtInst(Load, II.getType());
+    }
+    break;
+  case Intrinsic::ppc_qpx_qvlfd:
+    // Turn PPC QPX qvlfd -> load if the pointer is known aligned.
+    if (getOrEnforceKnownAlignment(
+            II.getArgOperand(0), Align(32), IC.getDataLayout(), &II,
+            &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 32) {
+      Value *Ptr = IC.Builder.CreateBitCast(
+          II.getArgOperand(0), PointerType::getUnqual(II.getType()));
+      return new LoadInst(II.getType(), Ptr, "", false, Align(32));
+    }
+    break;
+  case Intrinsic::ppc_qpx_qvstfs:
+    // Turn PPC QPX qvstfs -> store if the pointer is known aligned.
+    if (getOrEnforceKnownAlignment(
+            II.getArgOperand(1), Align(16), IC.getDataLayout(), &II,
+            &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
+      Type *VTy = VectorType::get(
+          IC.Builder.getFloatTy(),
+          cast<VectorType>(II.getArgOperand(0)->getType())->getElementCount());
+      Value *TOp = IC.Builder.CreateFPTrunc(II.getArgOperand(0), VTy);
+      Type *OpPtrTy = PointerType::getUnqual(VTy);
+      Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+      return new StoreInst(TOp, Ptr, false, Align(16));
+    }
+    break;
+  case Intrinsic::ppc_qpx_qvstfd:
+    // Turn PPC QPX qvstfd -> store if the pointer is known aligned.
+    if (getOrEnforceKnownAlignment(
+            II.getArgOperand(1), Align(32), IC.getDataLayout(), &II,
+            &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 32) {
+      Type *OpPtrTy = PointerType::getUnqual(II.getArgOperand(0)->getType());
+      Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+      return new StoreInst(II.getArgOperand(0), Ptr, false, Align(32));
+    }
+    break;
+
+  case Intrinsic::ppc_altivec_vperm:
+    // Turn vperm(V1,V2,mask) -> shuffle(V1,V2,mask) if mask is a constant.
+    // Note that ppc_altivec_vperm has a big-endian bias, so when creating
+    // a vectorshuffle for little endian, we must undo the transformation
+    // performed on vec_perm in altivec.h.  That is, we must complement
+    // the permutation mask with respect to 31 and reverse the order of
+    // V1 and V2.
+    if (Constant *Mask = dyn_cast<Constant>(II.getArgOperand(2))) {
+      assert(cast<VectorType>(Mask->getType())->getNumElements() == 16 &&
+             "Bad type for intrinsic!");
+
+      // Check that all of the elements are integer constants or undefs.
+      bool AllEltsOk = true;
+      for (unsigned i = 0; i != 16; ++i) {
+        Constant *Elt = Mask->getAggregateElement(i);
+        if (!Elt || !(isa<ConstantInt>(Elt) || isa<UndefValue>(Elt))) {
+          AllEltsOk = false;
+          break;
+        }
+      }
+
+      if (AllEltsOk) {
+        // Cast the input vectors to byte vectors.
+        Value *Op0 =
+            IC.Builder.CreateBitCast(II.getArgOperand(0), Mask->getType());
+        Value *Op1 =
+            IC.Builder.CreateBitCast(II.getArgOperand(1), Mask->getType());
+        Value *Result = UndefValue::get(Op0->getType());
+
+        // Only extract each element once.
+        Value *ExtractedElts[32];
+        memset(ExtractedElts, 0, sizeof(ExtractedElts));
+
+        for (unsigned i = 0; i != 16; ++i) {
+          if (isa<UndefValue>(Mask->getAggregateElement(i)))
+            continue;
+          unsigned Idx =
+              cast<ConstantInt>(Mask->getAggregateElement(i))->getZExtValue();
+          Idx &= 31; // Match the hardware behavior.
+          if (DL.isLittleEndian())
+            Idx = 31 - Idx;
+
+          if (!ExtractedElts[Idx]) {
+            Value *Op0ToUse = (DL.isLittleEndian()) ? Op1 : Op0;
+            Value *Op1ToUse = (DL.isLittleEndian()) ? Op0 : Op1;
+            ExtractedElts[Idx] = IC.Builder.CreateExtractElement(
+                Idx < 16 ? Op0ToUse : Op1ToUse, IC.Builder.getInt32(Idx & 15));
+          }
+
+          // Insert this value into the result vector.
+          Result = IC.Builder.CreateInsertElement(Result, ExtractedElts[Idx],
+                                                  IC.Builder.getInt32(i));
+        }
+        return CastInst::Create(Instruction::BitCast, Result, II.getType());
+      }
+    }
+    break;
+  }
+  return None;
 }
 
 int PPCTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
@@ -849,7 +1004,7 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       // The cost of the load constant for a vector extract is disregarded
       // (invariant, easily schedulable).
       return vectorCostAdjustment(1, Opcode, Val, nullptr);
-      
+
     } else if (ST->hasDirectMove())
       // Assume permute has standard cost.
       // Assume move-to/move-from VSR have 2x standard cost.

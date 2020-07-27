@@ -452,7 +452,7 @@ define <8 x i32> @cmpne_knownzeros_zext_v8i16_v8i32(<8 x i16> %x) {
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    psrlw $15, %xmm0
 ; SSE42-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE42-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; SSE42-NEXT:    retq

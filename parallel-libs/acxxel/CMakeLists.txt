@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.13.4)
 
 option(ACXXEL_ENABLE_UNIT_TESTS "enable acxxel unit tests" ON)
 option(ACXXEL_ENABLE_MULTI_DEVICE_UNIT_TESTS "enable acxxel multi-device unit tests" OFF)
@@ -36,6 +36,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add warning flags.
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+    add_compile_options("-Wno-suggest-override")
+endif()
 
 add_library(
     acxxel

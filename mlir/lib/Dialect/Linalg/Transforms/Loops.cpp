@@ -58,20 +58,74 @@ static SmallVector<Value, 4> permuteIvs(ArrayRef<Value> ivs,
                      : SmallVector<Value, 4>(ivs.begin(), ivs.end());
 }
 
-// Creates a number of ranges equal to the number of results in `map`.
-// The returned ranges correspond to the loop ranges, in the proper order, for
-// which new loops will be created.
-static SmallVector<SubViewOp::Range, 4>
-emitLoopRanges(OpBuilder &b, Location loc, AffineMap map,
-               ArrayRef<Value> allViewSizes) {
-  // Apply `map` to get view sizes in loop order.
-  auto sizes = applyMapToValues(b, loc, map, allViewSizes);
-  // Create a new range with the applied tile sizes.
-  ScopedContext scope(b, loc);
-  SmallVector<SubViewOp::Range, 4> res;
-  for (unsigned idx = 0, e = map.getNumResults(); idx < e; ++idx) {
-    res.push_back(SubViewOp::Range{std_constant_index(0), sizes[idx],
-                                   std_constant_index(1)});
+/// Creates a number of ranges equal to the number of dimensions in the `map`.
+/// The returned ranges correspond to the loop ranges, in the proper order, for
+/// which new loops will be created.
+/// The function supports only maps that are invertible and have results of type
+/// DimExpr or (DimExpr + DimExpr - SymbolExpr floordiv ConstExpr).
+/// It expects a non-inverted, concatenated map and last values in
+/// allViewSizes will be applied to the symbols in the map if it contains any.
+static SmallVector<SubViewOp::Range, 4> emitLoopRanges(OpBuilder &b,
+                                                       Location loc,
+                                                       AffineMap map,
+                                                       ValueRange viewSizes) {
+  unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
+  unsigned numSym = map.getNumSymbols();
+  assert(viewSizes.size() == numRes + numSym &&
+         "viewSizes must contain sizes of all views and values for symbols");
+  SmallVector<SubViewOp::Range, 4> res(numDims);
+  for (unsigned idx = 0; idx < numRes; ++idx) {
+    auto result = map.getResult(idx);
+    if (auto d = result.dyn_cast<AffineDimExpr>()) {
+      if (res[d.getPosition()].offset)
+        continue;
+      res[d.getPosition()] = SubViewOp::Range{
+          std_constant_index(0), viewSizes[idx], std_constant_index(1)};
+    }
+
+    // If the access pattern is of form (m, n)[s] -> (m + n - s floordiv 2),
+    // then the bounds are:
+    //   (s floordiv 2) <= m <= (size(m) + s floordiv 2 - s + 1).
+    // where size(n) is applied to the symbol s.
+    // This is done statically now.
+    if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
+      auto lhs = binOp.getLHS().dyn_cast<AffineBinaryOpExpr>();
+      auto rhs = binOp.getRHS().dyn_cast<AffineBinaryOpExpr>();
+      if (!lhs || !rhs || binOp.getKind() != AffineExprKind::Add ||
+          lhs.getKind() != AffineExprKind::Add ||
+          rhs.getKind() != mlir::AffineExprKind::Mul)
+        continue;
+
+      auto m = lhs.getLHS().dyn_cast<AffineDimExpr>();
+      auto n = lhs.getRHS().dyn_cast<AffineDimExpr>();
+      auto fDiv = rhs.getLHS().dyn_cast<AffineBinaryOpExpr>();
+      auto minusOne = rhs.getRHS().dyn_cast<AffineConstantExpr>();
+      if (!m || !n || !fDiv || !minusOne ||
+          fDiv.getKind() != AffineExprKind::FloorDiv ||
+          fDiv.getLHS().getKind() != AffineExprKind::SymbolId ||
+          fDiv.getRHS().getKind() != AffineExprKind::Constant)
+        continue;
+
+      auto s = fDiv.getLHS().dyn_cast<AffineSymbolExpr>();
+      if (minusOne.getValue() != -1)
+        continue;
+
+      int mPos = m.getPosition();
+      AffineExpr one = getAffineConstantExpr(1, s.getContext());
+      AffineExpr sizeOfM = getAffineSymbolExpr(numSym, s.getContext());
+      // Construction of upper bound (size(m) + s floordiv 2 - s + 1).
+      AffineExpr upperOffsetExpr = sizeOfM + fDiv + one - s;
+      AffineMap fromMap = AffineMap::get(numDims, numSym + 1, fDiv);
+      AffineMap toMap = AffineMap::get(numDims, numSym + 1, upperOffsetExpr);
+      SmallVector<Value, 8> values(viewSizes.begin(),
+                                   viewSizes.begin() + numDims);
+      values.insert(values.end(), viewSizes.begin() + numRes, viewSizes.end());
+      values.push_back(viewSizes[mPos]);
+      // Construction of the lower bound (s floordiv 2).
+      Value from = applyMapToValues(b, loc, fromMap, values).front();
+      Value to = applyMapToValues(b, loc, toMap, values).front();
+      res[mPos] = SubViewOp::Range{from, to, std_constant_index(1)};
+    }
   }
   return res;
 }
@@ -469,32 +523,9 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
       llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
   SmallVector<Value, 8> sizes = getViewSizes(builder, linalgOp);
   AffineMap map = concatAffineMaps(maps);
-  if (map.getNumSymbols()) {
-    // Ignore symbols for now as they are not supported by inversePermutation.
-    unsigned dims = map.getNumDims();
-    SmallVector<AffineExpr, 8> zeros(
-        map.getNumSymbols(), getAffineConstantExpr(0, map.getContext()));
-    SmallVector<AffineExpr, 8> res;
-    for (auto result : map.getResults())
-      res.push_back(result.replaceDimsAndSymbols({}, zeros));
-
-    map = AffineMap::get(dims, 0, res, map.getContext());
-
-    // Cut off values that would have been applied to symbols
-    sizes.resize(res.size());
-  }
-
-  AffineMap invertedMap = inversePermutation(map);
-  if (!invertedMap)
-    return {};
-  if (invertedMap.isEmpty()) {
-    emitScalarImplementation<IndexedValueTy>({}, linalgOp);
-    return LinalgLoops();
-  }
-
-  SmallVector<Value, 4> allIvs;
   auto loopRanges = emitLoopRanges(scope.getBuilderRef(), scope.getLocation(),
-                                   invertedMap, sizes);
+                                   map, getViewSizes(builder, linalgOp));
+  SmallVector<Value, 4> allIvs;
   GenerateLoopNest<LoopTy>::doit(
       loopRanges, linalgOp.iterator_types().getValue(), [&](ValueRange ivs) {
         allIvs.append(ivs.begin(), ivs.end());

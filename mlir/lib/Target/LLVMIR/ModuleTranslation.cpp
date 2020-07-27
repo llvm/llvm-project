@@ -30,6 +30,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -594,9 +595,22 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
+    auto weights = condbrOp.branch_weights();
+    llvm::MDNode *branchWeights = nullptr;
+    if (weights) {
+      // Map weight attributes to LLVM metadata.
+      auto trueWeight =
+          weights.getValue().getValue(0).cast<IntegerAttr>().getInt();
+      auto falseWeight =
+          weights.getValue().getValue(1).cast<IntegerAttr>().getInt();
+      branchWeights =
+          llvm::MDBuilder(llvmModule->getContext())
+              .createBranchWeights(static_cast<uint32_t>(trueWeight),
+                                   static_cast<uint32_t>(falseWeight));
+    }
     builder.CreateCondBr(valueMapping.lookup(condbrOp.getOperand(0)),
                          blockMapping[condbrOp.getSuccessor(0)],
-                         blockMapping[condbrOp.getSuccessor(1)]);
+                         blockMapping[condbrOp.getSuccessor(1)], branchWeights);
     return success();
   }
 

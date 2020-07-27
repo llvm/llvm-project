@@ -241,8 +241,8 @@ MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
   return MBFI ? MBFI->getProfileCountFromFreq(F, Freq) : None;
 }
 
-bool
-MachineBlockFrequencyInfo::isIrrLoopHeader(const MachineBasicBlock *MBB) {
+bool MachineBlockFrequencyInfo::isIrrLoopHeader(
+    const MachineBasicBlock *MBB) const {
   assert(MBFI && "Expected analysis to be available");
   return MBFI->isIrrLoopHeader(MBB);
 }

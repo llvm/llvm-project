@@ -12,7 +12,7 @@
 ; RUN: llvm-dis %t3.o.0.2.internalize.bc -o - | FileCheck %s
 ; RUN: llvm-dis %t3.o.0.4.opt.bc -o - | FileCheck --check-prefix=OPT %s
 ; RUN: llvm-dis %t3.o.0.4.opt.bc -o - | FileCheck --check-prefix=OPT2 %s
-; RUN: llvm-nm %t3.o.o | FileCheck --check-prefix=NM %s
+; RUN: llvm-nm %t3.o.lto.o | FileCheck --check-prefix=NM %s
 
 ; RUN: rm -f %t4.o
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \

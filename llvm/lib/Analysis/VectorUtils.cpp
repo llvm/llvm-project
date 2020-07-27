@@ -817,8 +817,8 @@ static Value *concatenateTwoVectors(IRBuilderBase &Builder, Value *V1,
          VecTy1->getScalarType() == VecTy2->getScalarType() &&
          "Expect two vectors with the same element type");
 
-  unsigned NumElts1 = VecTy1->getNumElements();
-  unsigned NumElts2 = VecTy2->getNumElements();
+  unsigned NumElts1 = cast<FixedVectorType>(VecTy1)->getNumElements();
+  unsigned NumElts2 = cast<FixedVectorType>(VecTy2)->getNumElements();
   assert(NumElts1 >= NumElts2 && "Unexpect the first vector has less elements");
 
   if (NumElts1 > NumElts2) {
@@ -866,8 +866,9 @@ bool llvm::maskIsAllZeroOrUndef(Value *Mask) {
     return false;
   if (ConstMask->isNullValue() || isa<UndefValue>(ConstMask))
     return true;
-  for (unsigned I = 0,
-                E = cast<VectorType>(ConstMask->getType())->getNumElements();
+  for (unsigned
+           I = 0,
+           E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
        I != E; ++I) {
     if (auto *MaskElt = ConstMask->getAggregateElement(I))
       if (MaskElt->isNullValue() || isa<UndefValue>(MaskElt))
@@ -884,8 +885,9 @@ bool llvm::maskIsAllOneOrUndef(Value *Mask) {
     return false;
   if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
     return true;
-  for (unsigned I = 0,
-                E = cast<VectorType>(ConstMask->getType())->getNumElements();
+  for (unsigned
+           I = 0,
+           E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
        I != E; ++I) {
     if (auto *MaskElt = ConstMask->getAggregateElement(I))
       if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
@@ -899,7 +901,8 @@ bool llvm::maskIsAllOneOrUndef(Value *Mask) {
 /// vectors.  Is there something we can common this with?
 APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
 
-  const unsigned VWidth = cast<VectorType>(Mask->getType())->getNumElements();
+  const unsigned VWidth =
+      cast<FixedVectorType>(Mask->getType())->getNumElements();
   APInt DemandedElts = APInt::getAllOnesValue(VWidth);
   if (auto *CV = dyn_cast<ConstantVector>(Mask))
     for (unsigned i = 0; i < VWidth; i++)

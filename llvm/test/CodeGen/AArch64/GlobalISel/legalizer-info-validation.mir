@@ -337,6 +337,30 @@
 # DEBUG-NEXT: G_SSUBSAT (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_SMULFIX (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_UMULFIX (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_SMULFIXSAT (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_UMULFIXSAT (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_SDIVFIX (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_UDIVFIX (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_SDIVFIXSAT (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_UDIVFIXSAT (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FADD (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
@@ -366,6 +390,9 @@
 # DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
+# DEBUG-NEXT: G_FPOWI (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
+# DEBUG-NEXT:.. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT:.. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FEXP (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
@@ -404,12 +431,12 @@
 # DEBUG-NEXT: .. the first uncovered type index: 2, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_SITOFP (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
-# DEBUG-NEXT: .. the first uncovered type index: 2, OK
-# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_UITOFP (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
-# DEBUG-NEXT: .. the first uncovered type index: 2, OK
-# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_FABS (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected

@@ -618,6 +618,10 @@ static const char * const IntrinsicNameTable[] = {
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_TARGET_DATA
 
+bool Function::isTargetIntrinsic() const {
+  return IntID > TargetInfos[0].Count;
+}
+
 /// Find the segment of \c IntrinsicNameTable for intrinsics with the same
 /// target as \c Name, or the generic table if \c Name is not target specific.
 ///

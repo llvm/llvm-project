@@ -1,7 +1,7 @@
 ; RUN: opt -S -loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
 
-; This will test whether we can fuse two loops together if they have constant
-; but a different tripcount.
+; Tests whether we can fuse two loops together if they have constant but a
+; different tripcount.
 ; The first three iterations of the first loop should be peeled, and then the
 ; two loops should be fused together in this example.
 
@@ -17,41 +17,41 @@
 ;     B[i] = ((i-6)*(i+3)) % i;
 ; }
 
-; CHECK: void @function
-; CHECK-NEXT: for.first.preheader:
-; CHECK-NEXT: br label %for.first.peel.begin
-; CHECK: for.first.peel.begin:
-; CHECK-NEXT: br label %for.first.peel
-; CHECK: for.first.peel
-; CHECK: br label %for.first.latch.peel
-; CHECK: for.first.latch.peel:
-; CHECK: br label %for.first.peel.next
-; CHECK: for.first.peel.next:
-; CHECK-NEXT: br label %for.first.peel2
-; CHECK: for.first.peel2:
-; CHECK: br label %for.first.latch.peel10
-; CHECK: for.first.latch.peel10:
-; CHECK: br label %for.first.peel.next1
-; CHECK: for.first.peel.next1:
-; CHECK-NEXT: br label %for.first.peel15
-; CHECK: for.first.peel15:
-; CHECK: br label %for.first.latch.peel23
-; CHECK: for.first.latch.peel23:
-; CHECK: br label %for.first.peel.next14
-; CHECK: for.first.peel.next14:
-; CHECK-NEXT: br label %for.first.peel.next27
-; CHECK: for.first.peel.next27:
-; CHECK-NEXT: br label %for.first.preheader.peel.newph
-; CHECK: for.first.preheader.peel.newph:
-; CHECK-NEXT: br label %for.first
-; CHECK: for.first:
-; CHECK: br label %for.first.latch
-; CHECK: for.first.latch:
-; CHECK: br label %for.second.latch
-; CHECK: for.second.latch:
-; CHECK: br i1 %exitcond, label %for.first, label %for.end
-; CHECK: for.end:
-; CHECK-NEXT: ret void
+; CHECK-LABEL: void @function(i32* noalias %arg)
+; CHECK-NEXT:  for.first.preheader:
+; CHECK-NEXT:    br label %for.first.peel.begin
+; CHECK:       for.first.peel.begin:
+; CHECK-NEXT:    br label %for.first.peel
+; CHECK:       for.first.peel:
+; CHECK:         br label %for.first.latch.peel
+; CHECK:       for.first.latch.peel:
+; CHECK:         br label %for.first.peel.next
+; CHECK:       for.first.peel.next:
+; CHECK-NEXT:    br label %for.first.peel2
+; CHECK:       for.first.peel2:
+; CHECK:         br label %for.first.latch.peel10
+; CHECK:       for.first.latch.peel10:
+; CHECK:         br label %for.first.peel.next1
+; CHECK:       for.first.peel.next1:
+; CHECK-NEXT:    br label %for.first.peel15
+; CHECK:       for.first.peel15:
+; CHECK:         br label %for.first.latch.peel23
+; CHECK:       for.first.latch.peel23:
+; CHECK:         br label %for.first.peel.next14
+; CHECK:       for.first.peel.next14:
+; CHECK-NEXT:    br label %for.first.peel.next27
+; CHECK:       for.first.peel.next27:
+; CHECK-NEXT:    br label %for.first.preheader.peel.newph
+; CHECK:       for.first.preheader.peel.newph:
+; CHECK-NEXT:    br label %for.first
+; CHECK:       for.first:
+; CHECK:         br label %for.first.latch
+; CHECK:       for.first.latch:
+; CHECK:         br label %for.second.latch
+; CHECK:       for.second.latch:
+; CHECK:         br i1 %exitcond, label %for.first, label %for.end
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 
 @B = common global [1024 x i32] zeroinitializer, align 16
 
@@ -59,7 +59,7 @@ define void @function(i32* noalias %arg) {
 for.first.preheader:
   br label %for.first
 
-for.first:                                              ; preds = %for.first.preheader, %for.first.latch
+for.first:                                       ; preds = %for.first.preheader, %for.first.latch
   %.014 = phi i32 [ 0, %for.first.preheader ], [ %tmp15, %for.first.latch ]
   %indvars.iv23 = phi i64 [ 0, %for.first.preheader ], [ %indvars.iv.next3, %for.first.latch ]
   %tmp = add nsw i32 %.014, -3
@@ -72,16 +72,16 @@ for.first:                                              ; preds = %for.first.pre
   store i32 %tmp12, i32* %tmp13, align 4
   br label %for.first.latch
 
-for.first.latch:                                             ; preds = %for.first
+for.first.latch:                                 ; preds = %for.first
   %indvars.iv.next3 = add nuw nsw i64 %indvars.iv23, 1
   %tmp15 = add nuw nsw i32 %.014, 1
   %exitcond4 = icmp ne i64 %indvars.iv.next3, 100
   br i1 %exitcond4, label %for.first, label %for.second.preheader
 
-for.second.preheader:                                   ; preds = %for.first.latch
+for.second.preheader:                            ; preds = %for.first.latch
   br label %for.second
 
-for.second:                                             ; preds = %for.second.preheader, %for.second.latch
+for.second:                                      ; preds = %for.second.preheader, %for.second.latch
   %.02 = phi i32 [ 0, %for.second.preheader ], [ %tmp28, %for.second.latch ]
   %indvars.iv1 = phi i64 [ 3, %for.second.preheader ], [ %indvars.iv.next, %for.second.latch ]
   %tmp20 = add nsw i32 %.02, -3
@@ -94,13 +94,12 @@ for.second:                                             ; preds = %for.second.pr
   store i32 %tmp25, i32* %tmp26, align 4
   br label %for.second.latch
 
-for.second.latch:                                             ; preds = %for.second
+for.second.latch:                                ; preds = %for.second
   %indvars.iv.next = add nuw nsw i64 %indvars.iv1, 1
   %tmp28 = add nuw nsw i32 %.02, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 100
   br i1 %exitcond, label %for.second, label %for.end
 
-for.end:                                             ; preds = %for.second.latch
+for.end:                                        ; preds = %for.second.latch
   ret void
 }
-

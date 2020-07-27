@@ -431,9 +431,14 @@ def PROBED_ALLOCA_64 : PPCCustomInserterPseudo<(outs g8rc:$result),
                          (ins g8rc:$negsize, memri:$fpsi), "#PROBED_ALLOCA_64",
                            [(set i64:$result,
                              (PPCprobedalloca i64:$negsize, iaddr:$fpsi))]>;
-def PREPARE_PROBED_ALLOCA_64 : PPCEmitTimePseudo<(outs g8rc:$fp,
-    g8rc:$sp),
+def PREPARE_PROBED_ALLOCA_64 : PPCEmitTimePseudo<(outs
+    g8rc:$fp, g8rc:$actual_negsize),
     (ins g8rc:$negsize, memri:$fpsi), "#PREPARE_PROBED_ALLOCA_64", []>;
+def PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_64 : PPCEmitTimePseudo<(outs
+    g8rc:$fp, g8rc:$actual_negsize),
+    (ins g8rc:$negsize, memri:$fpsi),
+    "#PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_64", []>,
+    RegConstraint<"$actual_negsize = $negsize">;
 def PROBED_STACKALLOC_64 : PPCEmitTimePseudo<(outs g8rc:$scratch, g8rc:$temp),
     (ins i64imm:$stacksize),
     "#PROBED_STACKALLOC_64", []>;

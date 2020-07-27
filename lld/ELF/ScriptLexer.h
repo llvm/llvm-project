@@ -24,7 +24,7 @@ public:
 
   void setError(const Twine &msg);
   void tokenize(MemoryBufferRef mb);
-  static StringRef skipSpace(StringRef s);
+  StringRef skipSpace(StringRef s);
   bool atEOF();
   StringRef next();
   StringRef peek();

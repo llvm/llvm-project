@@ -404,13 +404,6 @@ public:
     return nullptr;
   }
 
-  bool DeclIsFromPCHWithObjectFile(const clang::Decl *D) override {
-    for (auto *S : Sources)
-      if (S->DeclIsFromPCHWithObjectFile(D))
-        return true;
-    return false;
-  }
-
   bool layoutRecordType(
       const clang::RecordDecl *Record, uint64_t &Size, uint64_t &Alignment,
       llvm::DenseMap<const clang::FieldDecl *, uint64_t> &FieldOffsets,

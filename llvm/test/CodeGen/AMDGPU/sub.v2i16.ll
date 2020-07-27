@@ -194,7 +194,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_constant(<2 x i16> addrspace(1)* %ou
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u16_e32 v2, 0xffffff85, v0
+; VI-NEXT:    v_add_u16_e32 v2, 0xff85, v0
 ; VI-NEXT:    v_add_u16_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v0, v2, v0
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0

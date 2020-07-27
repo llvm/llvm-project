@@ -58,18 +58,29 @@ public:
   /// information. Please note that initial frequency is equal to 1024. It means
   /// that we should not rely on the value itself, but only on the comparison to
   /// the other block frequencies. We do this to avoid using of floating points.
-  ///
+  /// For example, to get the frequency of a block relative to the entry block,
+  /// divide the integral value returned by this function (the
+  /// BlockFrequency::getFrequency() value) by getEntryFreq().
   BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;
+
+  /// Compute the frequency of the block, relative to the entry block.
+  /// This API assumes getEntryFreq() is non-zero.
+  float getBlockFreqRelativeToEntryBlock(const MachineBasicBlock *MBB) const {
+    return getBlockFreq(MBB).getFrequency() * (1.0f / getEntryFreq());
+  }
 
   Optional<uint64_t> getBlockProfileCount(const MachineBasicBlock *MBB) const;
   Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
 
-  bool isIrrLoopHeader(const MachineBasicBlock *MBB);
+  bool isIrrLoopHeader(const MachineBasicBlock *MBB) const;
 
   void setBlockFreq(const MachineBasicBlock *MBB, uint64_t Freq);
 
   const MachineFunction *getFunction() const;
   const MachineBranchProbabilityInfo *getMBPI() const;
+
+  /// Pop up a ghostview window with the current block frequency propagation
+  /// rendered using dot.
   void view(const Twine &Name, bool isSimple = true) const;
 
   // Print the block frequency Freq to OS using the current functions entry
@@ -81,6 +92,8 @@ public:
   raw_ostream &printBlockFreq(raw_ostream &OS,
                               const MachineBasicBlock *MBB) const;
 
+  /// Divide a block's BlockFrequency::getFrequency() value by this value to
+  /// obtain the entry block - relative frequency of said block.
   uint64_t getEntryFreq() const;
 };
 

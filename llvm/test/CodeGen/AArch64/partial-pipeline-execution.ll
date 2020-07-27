@@ -7,6 +7,11 @@
 ; optimize the loop differently
 ; RUN: cmp %t.s %t2.s
 
+; Check that we can do the same with unreachable-mbb-elimination pass
+; RUN: llc -O3 -stop-after=unreachable-mbb-elimination %s -o %t-mbb-elim.mir
+; RUN: llc -O3 -start-after=unreachable-mbb-elimination %t-mbb-elim.mir -o %t3.s
+; RUN: cmp %t.s %t3.s
+
 ; ModuleID = 'loop.c'
 source_filename = "loop.c"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

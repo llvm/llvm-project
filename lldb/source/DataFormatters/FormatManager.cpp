@@ -237,7 +237,9 @@ void FormatManager::GetPossibleMatches(
   // stripped.
   uint64_t array_size;
   if (compiler_type.IsArrayType(nullptr, &array_size, nullptr)) {
-    CompilerType element_type = compiler_type.GetArrayElementType();
+    ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
+    CompilerType element_type = compiler_type.GetArrayElementType(
+        exe_ctx.GetBestExecutionContextScope());
     if (element_type.IsTypedefType()) {
       // Get the stripped element type and compute the stripped array type
       // from it.
@@ -549,10 +551,6 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
     }
   }
   return true;
-}
-
-ConstString FormatManager::GetValidTypeName(ConstString type) {
-  return ::GetValidTypeName_Impl(type);
 }
 
 ConstString FormatManager::GetTypeForCache(ValueObject &valobj,

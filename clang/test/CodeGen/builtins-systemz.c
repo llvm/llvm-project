@@ -142,3 +142,10 @@ void test_htmxl1(void) {
   result = __TM_failure_code (tdb);
 }
 
+void test_eh_return_data_regno() {
+  volatile int res;
+  res = __builtin_eh_return_data_regno(0); // CHECK: store volatile i32 6
+  res = __builtin_eh_return_data_regno(1); // CHECK: store volatile i32 7
+  res = __builtin_eh_return_data_regno(2); // CHECK: store volatile i32 8
+  res = __builtin_eh_return_data_regno(3); // CHECK: store volatile i32 9
+}

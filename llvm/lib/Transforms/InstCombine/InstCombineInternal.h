@@ -15,39 +15,31 @@
 #ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Argument.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constant.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/Use.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
-#include <cstdint>
 
 #define DEBUG_TYPE "instcombine"
 
 using namespace llvm::PatternMatch;
+
+// As a default, let's assume that we want to be aggressive,
+// and attempt to traverse with no limits in attempt to sink negation.
+static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
+
+// Let's guesstimate that most often we will end up visiting/producing
+// fairly small number of new instructions.
+static constexpr unsigned NegatorMaxNodesSSO = 16;
 
 namespace llvm {
 
@@ -65,304 +57,25 @@ class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class User;
 
-/// Assign a complexity or rank value to LLVM Values. This is used to reduce
-/// the amount of pattern matching needed for compares and commutative
-/// instructions. For example, if we have:
-///   icmp ugt X, Constant
-/// or
-///   xor (add X, Constant), cast Z
-///
-/// We do not have to consider the commuted variants of these patterns because
-/// canonicalization based on complexity guarantees the above ordering.
-///
-/// This routine maps IR values to various complexity ranks:
-///   0 -> undef
-///   1 -> Constants
-///   2 -> Other non-instructions
-///   3 -> Arguments
-///   4 -> Cast and (f)neg/not instructions
-///   5 -> Other instructions
-static inline unsigned getComplexity(Value *V) {
-  if (isa<Instruction>(V)) {
-    if (isa<CastInst>(V) || match(V, m_Neg(m_Value())) ||
-        match(V, m_Not(m_Value())) || match(V, m_FNeg(m_Value())))
-      return 4;
-    return 5;
-  }
-  if (isa<Argument>(V))
-    return 3;
-  return isa<Constant>(V) ? (isa<UndefValue>(V) ? 0 : 1) : 2;
-}
-
-/// Predicate canonicalization reduces the number of patterns that need to be
-/// matched by other transforms. For example, we may swap the operands of a
-/// conditional branch or select to create a compare with a canonical (inverted)
-/// predicate which is then more likely to be matched with other values.
-static inline bool isCanonicalPredicate(CmpInst::Predicate Pred) {
-  switch (Pred) {
-  case CmpInst::ICMP_NE:
-  case CmpInst::ICMP_ULE:
-  case CmpInst::ICMP_SLE:
-  case CmpInst::ICMP_UGE:
-  case CmpInst::ICMP_SGE:
-  // TODO: There are 16 FCMP predicates. Should others be (not) canonical?
-  case CmpInst::FCMP_ONE:
-  case CmpInst::FCMP_OLE:
-  case CmpInst::FCMP_OGE:
-    return false;
-  default:
-    return true;
-  }
-}
-
-/// Given an exploded icmp instruction, return true if the comparison only
-/// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if the
-/// result of the comparison is true when the input value is signed.
-inline bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
-                           bool &TrueIfSigned) {
-  switch (Pred) {
-  case ICmpInst::ICMP_SLT: // True if LHS s< 0
-    TrueIfSigned = true;
-    return RHS.isNullValue();
-  case ICmpInst::ICMP_SLE: // True if LHS s<= -1
-    TrueIfSigned = true;
-    return RHS.isAllOnesValue();
-  case ICmpInst::ICMP_SGT: // True if LHS s> -1
-    TrueIfSigned = false;
-    return RHS.isAllOnesValue();
-  case ICmpInst::ICMP_SGE: // True if LHS s>= 0
-    TrueIfSigned = false;
-    return RHS.isNullValue();
-  case ICmpInst::ICMP_UGT:
-    // True if LHS u> RHS and RHS == sign-bit-mask - 1
-    TrueIfSigned = true;
-    return RHS.isMaxSignedValue();
-  case ICmpInst::ICMP_UGE:
-    // True if LHS u>= RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
-    TrueIfSigned = true;
-    return RHS.isMinSignedValue();
-  case ICmpInst::ICMP_ULT:
-    // True if LHS u< RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
-    TrueIfSigned = false;
-    return RHS.isMinSignedValue();
-  case ICmpInst::ICMP_ULE:
-    // True if LHS u<= RHS and RHS == sign-bit-mask - 1
-    TrueIfSigned = false;
-    return RHS.isMaxSignedValue();
-  default:
-    return false;
-  }
-}
-
-llvm::Optional<std::pair<CmpInst::Predicate, Constant *>>
-getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred, Constant *C);
-
-/// Return the source operand of a potentially bitcasted value while optionally
-/// checking if it has one use. If there is no bitcast or the one use check is
-/// not met, return the input value itself.
-static inline Value *peekThroughBitcast(Value *V, bool OneUseOnly = false) {
-  if (auto *BitCast = dyn_cast<BitCastInst>(V))
-    if (!OneUseOnly || BitCast->hasOneUse())
-      return BitCast->getOperand(0);
-
-  // V is not a bitcast or V has more than one use and OneUseOnly is true.
-  return V;
-}
-
-/// Add one to a Constant
-static inline Constant *AddOne(Constant *C) {
-  return ConstantExpr::getAdd(C, ConstantInt::get(C->getType(), 1));
-}
-
-/// Subtract one from a Constant
-static inline Constant *SubOne(Constant *C) {
-  return ConstantExpr::getSub(C, ConstantInt::get(C->getType(), 1));
-}
-
-/// Return true if the specified value is free to invert (apply ~ to).
-/// This happens in cases where the ~ can be eliminated.  If WillInvertAllUses
-/// is true, work under the assumption that the caller intends to remove all
-/// uses of V and only keep uses of ~V.
-///
-/// See also: canFreelyInvertAllUsersOf()
-static inline bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
-  // ~(~(X)) -> X.
-  if (match(V, m_Not(m_Value())))
-    return true;
-
-  // Constants can be considered to be not'ed values.
-  if (match(V, m_AnyIntegralConstant()))
-    return true;
-
-  // Compares can be inverted if all of their uses are being modified to use the
-  // ~V.
-  if (isa<CmpInst>(V))
-    return WillInvertAllUses;
-
-  // If `V` is of the form `A + Constant` then `-1 - V` can be folded into `(-1
-  // - Constant) - A` if we are willing to invert all of the uses.
-  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(V))
-    if (BO->getOpcode() == Instruction::Add ||
-        BO->getOpcode() == Instruction::Sub)
-      if (isa<Constant>(BO->getOperand(0)) || isa<Constant>(BO->getOperand(1)))
-        return WillInvertAllUses;
-
-  // Selects with invertible operands are freely invertible
-  if (match(V, m_Select(m_Value(), m_Not(m_Value()), m_Not(m_Value()))))
-    return WillInvertAllUses;
-
-  return false;
-}
-
-/// Given i1 V, can every user of V be freely adapted if V is changed to !V ?
-/// InstCombine's canonicalizeICmpPredicate() must be kept in sync with this fn.
-///
-/// See also: isFreeToInvert()
-static inline bool canFreelyInvertAllUsersOf(Value *V, Value *IgnoredUser) {
-  // Look at every user of V.
-  for (Use &U : V->uses()) {
-    if (U.getUser() == IgnoredUser)
-      continue; // Don't consider this user.
-
-    auto *I = cast<Instruction>(U.getUser());
-    switch (I->getOpcode()) {
-    case Instruction::Select:
-      if (U.getOperandNo() != 0) // Only if the value is used as select cond.
-        return false;
-      break;
-    case Instruction::Br:
-      assert(U.getOperandNo() == 0 && "Must be branching on that value.");
-      break; // Free to invert by swapping true/false values/destinations.
-    case Instruction::Xor: // Can invert 'xor' if it's a 'not', by ignoring it.
-      if (!match(I, m_Not(m_Value())))
-        return false; // Not a 'not'.
-      break;
-    default:
-      return false; // Don't know, likely not freely invertible.
-    }
-    // So far all users were free to invert...
-  }
-  return true; // Can freely invert all users!
-}
-
-/// Some binary operators require special handling to avoid poison and undefined
-/// behavior. If a constant vector has undef elements, replace those undefs with
-/// identity constants if possible because those are always safe to execute.
-/// If no identity constant exists, replace undef with some other safe constant.
-static inline Constant *getSafeVectorConstantForBinop(
-      BinaryOperator::BinaryOps Opcode, Constant *In, bool IsRHSConstant) {
-  auto *InVTy = dyn_cast<VectorType>(In->getType());
-  assert(InVTy && "Not expecting scalars here");
-
-  Type *EltTy = InVTy->getElementType();
-  auto *SafeC = ConstantExpr::getBinOpIdentity(Opcode, EltTy, IsRHSConstant);
-  if (!SafeC) {
-    // TODO: Should this be available as a constant utility function? It is
-    // similar to getBinOpAbsorber().
-    if (IsRHSConstant) {
-      switch (Opcode) {
-      case Instruction::SRem: // X % 1 = 0
-      case Instruction::URem: // X %u 1 = 0
-        SafeC = ConstantInt::get(EltTy, 1);
-        break;
-      case Instruction::FRem: // X % 1.0 (doesn't simplify, but it is safe)
-        SafeC = ConstantFP::get(EltTy, 1.0);
-        break;
-      default:
-        llvm_unreachable("Only rem opcodes have no identity constant for RHS");
-      }
-    } else {
-      switch (Opcode) {
-      case Instruction::Shl:  // 0 << X = 0
-      case Instruction::LShr: // 0 >>u X = 0
-      case Instruction::AShr: // 0 >> X = 0
-      case Instruction::SDiv: // 0 / X = 0
-      case Instruction::UDiv: // 0 /u X = 0
-      case Instruction::SRem: // 0 % X = 0
-      case Instruction::URem: // 0 %u X = 0
-      case Instruction::Sub:  // 0 - X (doesn't simplify, but it is safe)
-      case Instruction::FSub: // 0.0 - X (doesn't simplify, but it is safe)
-      case Instruction::FDiv: // 0.0 / X (doesn't simplify, but it is safe)
-      case Instruction::FRem: // 0.0 % X = 0
-        SafeC = Constant::getNullValue(EltTy);
-        break;
-      default:
-        llvm_unreachable("Expected to find identity constant for opcode");
-      }
-    }
-  }
-  assert(SafeC && "Must have safe constant for binop");
-  unsigned NumElts = InVTy->getNumElements();
-  SmallVector<Constant *, 16> Out(NumElts);
-  for (unsigned i = 0; i != NumElts; ++i) {
-    Constant *C = In->getAggregateElement(i);
-    Out[i] = isa<UndefValue>(C) ? SafeC : C;
-  }
-  return ConstantVector::get(Out);
-}
-
-/// The core instruction combiner logic.
-///
-/// This class provides both the logic to recursively visit instructions and
-/// combine them.
-class LLVM_LIBRARY_VISIBILITY InstCombiner
-    : public InstVisitor<InstCombiner, Instruction *> {
-  // FIXME: These members shouldn't be public.
+class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
+    : public InstCombiner,
+      public InstVisitor<InstCombinerImpl, Instruction *> {
 public:
-  /// A worklist of the instructions that need to be simplified.
-  InstCombineWorklist &Worklist;
+  InstCombinerImpl(InstCombineWorklist &Worklist, BuilderTy &Builder,
+                   bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
+                   TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
+                   DominatorTree &DT, OptimizationRemarkEmitter &ORE,
+                   BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+                   const DataLayout &DL, LoopInfo *LI)
+      : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
+                     BFI, PSI, DL, LI) {}
 
-  /// An IRBuilder that automatically inserts new instructions into the
-  /// worklist.
-  using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
-  BuilderTy &Builder;
-
-private:
-  // Mode in which we are running the combiner.
-  const bool MinimizeSize;
-
-  AAResults *AA;
-
-  // Required analyses.
-  AssumptionCache &AC;
-  TargetLibraryInfo &TLI;
-  DominatorTree &DT;
-  const DataLayout &DL;
-  const SimplifyQuery SQ;
-  OptimizationRemarkEmitter &ORE;
-  BlockFrequencyInfo *BFI;
-  ProfileSummaryInfo *PSI;
-
-  // Optional analyses. When non-null, these can both be used to do better
-  // combining and will be updated to reflect any changes.
-  LoopInfo *LI;
-
-  bool MadeIRChange = false;
-
-public:
-  InstCombiner(InstCombineWorklist &Worklist, BuilderTy &Builder,
-               bool MinimizeSize, AAResults *AA,
-               AssumptionCache &AC, TargetLibraryInfo &TLI, DominatorTree &DT,
-               OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-               ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
-      : Worklist(Worklist), Builder(Builder), MinimizeSize(MinimizeSize),
-        AA(AA), AC(AC), TLI(TLI), DT(DT),
-        DL(DL), SQ(DL, &TLI, &DT, &AC), ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
+  virtual ~InstCombinerImpl() {}
 
   /// Run the combiner over the entire worklist until it is empty.
   ///
   /// \returns true if the IR is changed.
   bool run();
-
-  AssumptionCache &getAssumptionCache() const { return AC; }
-
-  const DataLayout &getDataLayout() const { return DL; }
-
-  DominatorTree &getDominatorTree() const { return DT; }
-
-  LoopInfo *getLoopInfo() const { return LI; }
-
-  TargetLibraryInfo &getTargetLibraryInfo() const { return TLI; }
 
   // Visitation implementation - Implement instruction combining for different
   // instruction types.  The semantics are as follows:
@@ -726,7 +439,7 @@ public:
   /// When dealing with an instruction that has side effects or produces a void
   /// value, we can't rely on DCE to delete the instruction. Instead, visit
   /// methods should return the value returned by this function.
-  Instruction *eraseInstFromFunction(Instruction &I) {
+  Instruction *eraseInstFromFunction(Instruction &I) override {
     LLVM_DEBUG(dbgs() << "IC: ERASE " << I << '\n');
     assert(I.use_empty() && "Cannot erase instruction that is used!");
     salvageDebugInfo(I);
@@ -808,10 +521,6 @@ public:
       Instruction::BinaryOps BinaryOp, bool IsSigned,
       Value *LHS, Value *RHS, Instruction *CxtI) const;
 
-  /// Maximum size of array considered when transforming.
-  uint64_t MaxArraySizeForCombine = 0;
-
-private:
   /// Performs a few simplifications for operators which are associative
   /// or commutative.
   bool SimplifyAssociativeOrCommutative(BinaryOperator &I);
@@ -857,7 +566,7 @@ private:
                                  unsigned Depth, Instruction *CxtI);
   bool SimplifyDemandedBits(Instruction *I, unsigned Op,
                             const APInt &DemandedMask, KnownBits &Known,
-                            unsigned Depth = 0);
+                            unsigned Depth = 0) override;
 
   /// Helper routine of SimplifyDemandedUseBits. It computes KnownZero/KnownOne
   /// bits. It also tries to handle simplifications that can be done based on
@@ -877,13 +586,10 @@ private:
   /// demanded bits.
   bool SimplifyDemandedInstructionBits(Instruction &Inst);
 
-  Value *simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
-                                               APInt DemandedElts,
-                                               int DmaskIdx = -1);
-
-  Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
-                                    APInt &UndefElts, unsigned Depth = 0,
-                                    bool AllowMultipleUsers = false);
+  virtual Value *
+  SimplifyDemandedVectorElts(Value *V, APInt DemandedElts, APInt &UndefElts,
+                             unsigned Depth = 0,
+                             bool AllowMultipleUsers = false) override;
 
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
@@ -1023,18 +729,6 @@ private:
   Value *Descale(Value *Val, APInt Scale, bool &NoSignedWrap);
 };
 
-namespace {
-
-// As a default, let's assume that we want to be aggressive,
-// and attempt to traverse with no limits in attempt to sink negation.
-static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
-
-// Let's guesstimate that most often we will end up visiting/producing
-// fairly small number of new instructions.
-static constexpr unsigned NegatorMaxNodesSSO = 16;
-
-} // namespace
-
 class Negator final {
   /// Top-to-bottom, def-to-use negated instruction tree we produced.
   SmallVector<Instruction *, NegatorMaxNodesSSO> NewInstructions;
@@ -1078,7 +772,7 @@ public:
   /// Attempt to negate \p Root. Retuns nullptr if negation can't be performed,
   /// otherwise returns negated value.
   LLVM_NODISCARD static Value *Negate(bool LHSIsZero, Value *Root,
-                                      InstCombiner &IC);
+                                      InstCombinerImpl &IC);
 };
 
 } // end namespace llvm

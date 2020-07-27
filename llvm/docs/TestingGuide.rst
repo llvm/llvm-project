@@ -271,8 +271,27 @@ adding your code there instead of creating a new file.
 Extra files
 -----------
 
-If your test requires extra files besides the file containing the ``RUN:``
-lines, the idiomatic place to put them is in a subdirectory ``Inputs``.
+If your test requires extra files besides the file containing the ``RUN:`` lines
+and the extra files are small, consider specifying them in the same file and
+using ``extract`` to extract them. For example,
+
+.. code-block:: llvm
+
+  ; RUN: extract b %s -o %tb.ll
+  ; RUN: extract a %s | llvm-link - %tb.ll -S | FileCheck %s
+
+  ; CHECK: ...
+
+  ;--- a
+  ...
+  ;--- b
+  ...
+
+The parts are separated by the regex ``^(.|//)--- <part>``. By default the
+extracted content has leading empty lines to preserve line numbers. Specify
+``--no-leading-lines`` to drop leading lines.
+
+If the extra files are large, the idiomatic place to put them is in a subdirectory ``Inputs``.
 You can then refer to the extra files as ``%S/Inputs/foo.bar``.
 
 For example, consider ``test/Linker/ident.ll``. The directory structure is

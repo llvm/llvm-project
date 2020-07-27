@@ -2304,12 +2304,22 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     I.addOperand(MachineOperand::CreateImm(Offset));
 
     // If we're storing a 0, use WZR/XZR.
-    if (auto CVal = getConstantVRegVal(ValReg, MRI)) {
-      if (*CVal == 0 && Opcode == TargetOpcode::G_STORE) {
-        if (I.getOpcode() == AArch64::STRWui)
+    if (Opcode == TargetOpcode::G_STORE) {
+      auto CVal = getConstantVRegValWithLookThrough(
+          ValReg, MRI, /*LookThroughInstrs = */ true,
+          /*HandleFConstants = */ false);
+      if (CVal && CVal->Value == 0) {
+        unsigned Opc = I.getOpcode();
+        switch (Opc) {
+        case AArch64::STRWui:
+        case AArch64::STRHHui:
+        case AArch64::STRBBui:
           I.getOperand(0).setReg(AArch64::WZR);
-        else if (I.getOpcode() == AArch64::STRXui)
+          break;
+        case AArch64::STRXui:
           I.getOperand(0).setReg(AArch64::XZR);
+          break;
+        }
       }
     }
 
@@ -2945,17 +2955,20 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
   const GlobalValue &GV = *I.getOperand(1).getGlobal();
   MachineIRBuilder MIB(I);
 
-  MIB.buildInstr(AArch64::LOADgot, {AArch64::X0}, {})
-      .addGlobalAddress(&GV, 0, AArch64II::MO_TLS);
+  auto LoadGOT =
+      MIB.buildInstr(AArch64::LOADgot, {&AArch64::GPR64commonRegClass}, {})
+          .addGlobalAddress(&GV, 0, AArch64II::MO_TLS);
 
   auto Load = MIB.buildInstr(AArch64::LDRXui, {&AArch64::GPR64commonRegClass},
-                             {Register(AArch64::X0)})
+                             {LoadGOT.getReg(0)})
                   .addImm(0);
 
+  MIB.buildCopy(Register(AArch64::X0), LoadGOT.getReg(0));
   // TLS calls preserve all registers except those that absolutely must be
   // trashed: X0 (it takes an argument), LR (it's a call) and NZCV (let's not be
   // silly).
   MIB.buildInstr(getBLRCallOpcode(MF), {}, {Load})
+      .addUse(AArch64::X0, RegState::Implicit)
       .addDef(AArch64::X0, RegState::Implicit)
       .addRegMask(TRI.getTLSCallPreservedMask());
 

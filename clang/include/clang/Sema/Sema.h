@@ -1997,7 +1997,10 @@ public:
   bool RequireCompleteSizedType(SourceLocation Loc, QualType T, unsigned DiagID,
                                 const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    return RequireCompleteType(Loc, T, CompleteTypeKind::Normal, Diagnoser);
+    CompleteTypeKind Kind = CompleteTypeKind::Normal;
+    if (T->isVLST())
+      Kind = CompleteTypeKind::AcceptSizeless;
+    return RequireCompleteType(Loc, T, Kind, Diagnoser);
   }
 
   void completeExprArrayBound(Expr *E);
@@ -2015,7 +2018,10 @@ public:
   bool RequireCompleteSizedExprType(Expr *E, unsigned DiagID,
                                     const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    return RequireCompleteExprType(E, CompleteTypeKind::Normal, Diagnoser);
+    CompleteTypeKind Kind = CompleteTypeKind::Normal;
+    if (E->getType()->isVLST())
+      Kind = CompleteTypeKind::AcceptSizeless;
+    return RequireCompleteExprType(E, Kind, Diagnoser);
   }
 
   bool RequireLiteralType(SourceLocation Loc, QualType T,
@@ -12166,6 +12172,7 @@ private:
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
   bool SemaBuiltinUnorderedCompare(CallExpr *TheCall);
   bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs);
+  bool SemaBuiltinComplex(CallExpr *TheCall);
   bool SemaBuiltinVSX(CallExpr *TheCall);
   bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
 

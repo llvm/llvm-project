@@ -35,7 +35,7 @@ void TestDirectUnformatted() {
     IONAME(SetRec)(io, j) || (Fail() << "SetRec(" << j << ')', 0);
     buffer = j;
     IONAME(OutputUnformattedBlock)
-    (io, reinterpret_cast<const char *>(&buffer), recl) ||
+    (io, reinterpret_cast<const char *>(&buffer), recl, recl) ||
         (Fail() << "OutputUnformattedBlock()", 0);
     IONAME(EndIoStatement)
     (io) == IostatOk ||
@@ -47,7 +47,7 @@ void TestDirectUnformatted() {
     IONAME(SetRec)
     (io, j) || (Fail() << "SetRec(" << j << ')', 0);
     IONAME(InputUnformattedBlock)
-    (io, reinterpret_cast<char *>(&buffer), recl) ||
+    (io, reinterpret_cast<char *>(&buffer), recl, recl) ||
         (Fail() << "InputUnformattedBlock()", 0);
     IONAME(EndIoStatement)
     (io) == IostatOk ||
@@ -55,6 +55,72 @@ void TestDirectUnformatted() {
     if (buffer != j) {
       Fail() << "Read back " << buffer << " from direct unformatted record "
              << j << ", expected " << j << '\n';
+    }
+  }
+  // CLOSE(UNIT=unit,STATUS='DELETE')
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  IONAME(SetStatus)(io, "DELETE", 6) || (Fail() << "SetStatus(DELETE)", 0);
+  IONAME(EndIoStatement)
+  (io) == IostatOk || (Fail() << "EndIoStatement() for Close", 0);
+  llvm::errs() << "end TestDirectUnformatted()\n";
+}
+
+void TestDirectUnformattedSwapped() {
+  llvm::errs() << "begin TestDirectUnformattedSwapped()\n";
+  // OPEN(NEWUNIT=unit,ACCESS='DIRECT',ACTION='READWRITE',&
+  //   FORM='UNFORMATTED',RECL=8,STATUS='SCRATCH',CONVERT='NATIVE')
+  auto io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
+  IONAME(SetAccess)(io, "DIRECT", 6) || (Fail() << "SetAccess(DIRECT)", 0);
+  IONAME(SetAction)
+  (io, "READWRITE", 9) || (Fail() << "SetAction(READWRITE)", 0);
+  IONAME(SetForm)
+  (io, "UNFORMATTED", 11) || (Fail() << "SetForm(UNFORMATTED)", 0);
+  IONAME(SetConvert)
+  (io, "NATIVE", 6) || (Fail() << "SetConvert(NATIVE)", 0);
+  std::int64_t buffer;
+  static constexpr std::size_t recl{sizeof buffer};
+  IONAME(SetRecl)(io, recl) || (Fail() << "SetRecl()", 0);
+  IONAME(SetStatus)(io, "SCRATCH", 7) || (Fail() << "SetStatus(SCRATCH)", 0);
+  int unit{-1};
+  IONAME(GetNewUnit)(io, unit) || (Fail() << "GetNewUnit()", 0);
+  llvm::errs() << "unit=" << unit << '\n';
+  IONAME(EndIoStatement)
+  (io) == IostatOk || (Fail() << "EndIoStatement() for OpenNewUnit", 0);
+  static constexpr int records{10};
+  for (int j{1}; j <= records; ++j) {
+    // WRITE(UNIT=unit,REC=j) j
+    io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
+    IONAME(SetRec)(io, j) || (Fail() << "SetRec(" << j << ')', 0);
+    buffer = j;
+    IONAME(OutputUnformattedBlock)
+    (io, reinterpret_cast<const char *>(&buffer), recl, recl) ||
+        (Fail() << "OutputUnformattedBlock()", 0);
+    IONAME(EndIoStatement)
+    (io) == IostatOk ||
+        (Fail() << "EndIoStatement() for OutputUnformattedBlock", 0);
+  }
+  // OPEN(UNIT=unit,STATUS='OLD',CONVERT='SWAP')
+  io = IONAME(BeginOpenUnit)(unit, __FILE__, __LINE__);
+  IONAME(SetStatus)(io, "OLD", 3) || (Fail() << "SetStatus(OLD)", 0);
+  IONAME(SetConvert)
+  (io, "SWAP", 4) || (Fail() << "SetConvert(SWAP)", 0);
+  IONAME(EndIoStatement)
+  (io) == IostatOk || (Fail() << "EndIoStatement() for OpenUnit", 0);
+  for (int j{records}; j >= 1; --j) {
+    // READ(UNIT=unit,REC=j) n
+    io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
+    IONAME(SetRec)
+    (io, j) || (Fail() << "SetRec(" << j << ')', 0);
+    IONAME(InputUnformattedBlock)
+    (io, reinterpret_cast<char *>(&buffer), recl, recl) ||
+        (Fail() << "InputUnformattedBlock()", 0);
+    IONAME(EndIoStatement)
+    (io) == IostatOk ||
+        (Fail() << "EndIoStatement() for InputUnformattedBlock", 0);
+    if (buffer >> 56 != j) {
+      Fail() << "Read back " << (buffer >> 56)
+             << " from direct unformatted record " << j << ", expected " << j
+             << '\n';
     }
   }
   // CLOSE(UNIT=unit,STATUS='DELETE')
@@ -91,7 +157,7 @@ void TestSequentialFixedUnformatted() {
     io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
     buffer = j;
     IONAME(OutputUnformattedBlock)
-    (io, reinterpret_cast<const char *>(&buffer), recl) ||
+    (io, reinterpret_cast<const char *>(&buffer), recl, recl) ||
         (Fail() << "OutputUnformattedBlock()", 0);
     IONAME(EndIoStatement)
     (io) == IostatOk ||
@@ -105,7 +171,7 @@ void TestSequentialFixedUnformatted() {
     // DO J=1,RECORDS; READ(UNIT=unit) n; check n; END DO
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
     IONAME(InputUnformattedBlock)
-    (io, reinterpret_cast<char *>(&buffer), recl) ||
+    (io, reinterpret_cast<char *>(&buffer), recl, recl) ||
         (Fail() << "InputUnformattedBlock()", 0);
     IONAME(EndIoStatement)
     (io) == IostatOk ||
@@ -125,7 +191,7 @@ void TestSequentialFixedUnformatted() {
     // READ(UNIT=unit) n
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
     IONAME(InputUnformattedBlock)
-    (io, reinterpret_cast<char *>(&buffer), recl) ||
+    (io, reinterpret_cast<char *>(&buffer), recl, recl) ||
         (Fail() << "InputUnformattedBlock()", 0);
     IONAME(EndIoStatement)
     (io) == IostatOk ||
@@ -175,7 +241,8 @@ void TestSequentialVariableUnformatted() {
     // DO J=1,RECORDS; WRITE(UNIT=unit) BUFFER(0:j); END DO
     io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
     IONAME(OutputUnformattedBlock)
-    (io, reinterpret_cast<const char *>(&buffer), j * sizeof *buffer) ||
+    (io, reinterpret_cast<const char *>(&buffer), j * sizeof *buffer,
+        sizeof *buffer) ||
         (Fail() << "OutputUnformattedBlock()", 0);
     IONAME(EndIoStatement)
     (io) == IostatOk ||
@@ -189,7 +256,8 @@ void TestSequentialVariableUnformatted() {
     // DO J=1,RECORDS; READ(UNIT=unit) n; check n; END DO
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
     IONAME(InputUnformattedBlock)
-    (io, reinterpret_cast<char *>(&buffer), j * sizeof *buffer) ||
+    (io, reinterpret_cast<char *>(&buffer), j * sizeof *buffer,
+        sizeof *buffer) ||
         (Fail() << "InputUnformattedBlock()", 0);
     IONAME(EndIoStatement)
     (io) == IostatOk ||
@@ -211,7 +279,8 @@ void TestSequentialVariableUnformatted() {
     // READ(unit=unit) n; check
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
     IONAME(InputUnformattedBlock)
-    (io, reinterpret_cast<char *>(&buffer), j * sizeof *buffer) ||
+    (io, reinterpret_cast<char *>(&buffer), j * sizeof *buffer,
+        sizeof *buffer) ||
         (Fail() << "InputUnformattedBlock()", 0);
     IONAME(EndIoStatement)
     (io) == IostatOk ||
@@ -390,6 +459,7 @@ void TestStreamUnformatted() {
 int main() {
   StartTests();
   TestDirectUnformatted();
+  TestDirectUnformattedSwapped();
   TestSequentialFixedUnformatted();
   TestSequentialVariableUnformatted();
   TestDirectFormatted();

@@ -87,7 +87,7 @@ define void @truncstore_v8i64_v8i32(<8 x i64> %x, <8 x i32>* %p, <8 x i32> %mask
 ; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    je .LBB0_6
 ; SSE2-NEXT:  # %bb.5: # %cond.store3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm13[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm13[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm1, 8(%rdi)
 ; SSE2-NEXT:  .LBB0_6: # %else4
 ; SSE2-NEXT:    por %xmm0, %xmm3
@@ -122,7 +122,7 @@ define void @truncstore_v8i64_v8i32(<8 x i64> %x, <8 x i32>* %p, <8 x i32> %mask
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    je .LBB0_14
 ; SSE2-NEXT:  .LBB0_13: # %cond.store11
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, 24(%rdi)
 ; SSE2-NEXT:    testb $-128, %al
 ; SSE2-NEXT:    je .LBB0_16
@@ -1351,7 +1351,7 @@ define void @truncstore_v4i64_v4i32(<4 x i64> %x, <4 x i32>* %p, <4 x i32> %mask
 ; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    je .LBB3_6
 ; SSE2-NEXT:  .LBB3_5: # %cond.store3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, 8(%rdi)
 ; SSE2-NEXT:    testb $8, %al
 ; SSE2-NEXT:    je .LBB3_8

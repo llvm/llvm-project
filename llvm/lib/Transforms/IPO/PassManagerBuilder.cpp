@@ -149,9 +149,9 @@ cl::opt<bool> EnableOrderFileInstrumentation(
     "enable-order-file-instrumentation", cl::init(false), cl::Hidden,
     cl::desc("Enable order file instrumentation (default = off)"));
 
-static cl::opt<bool>
-    EnableMatrix("enable-matrix", cl::init(false), cl::Hidden,
-                 cl::desc("Enable lowering of the matrix intrinsics"));
+cl::opt<bool> EnableMatrix(
+    "enable-matrix", cl::init(false), cl::Hidden,
+    cl::desc("Enable lowering of the matrix intrinsics"));
 
 cl::opt<AttributorRunOption> AttributorRun(
     "attributor-enable", cl::Hidden, cl::init(AttributorRunOption::NONE),

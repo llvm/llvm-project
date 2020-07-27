@@ -251,6 +251,7 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
         Filename);
     return;
   }
+  WC->Writer.setInstrEntryBBEnabled(Reader->instrEntryBBEnabled());
 
   for (auto &I : *Reader) {
     if (Remapper)
@@ -977,8 +978,11 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (TextFormat)
     return 0;
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
-  OS << "Instrumentation level: "
-     << (Reader->isIRLevelProfile() ? "IR" : "Front-end") << "\n";
+  bool IsIR = Reader->isIRLevelProfile();
+  OS << "Instrumentation level: " << (IsIR ? "IR" : "Front-end");
+  if (IsIR)
+    OS << "  entry_first = " << Reader->instrEntryBBEnabled();
+  OS << "\n";
   if (ShowAllFunctions || !ShowFunction.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
   OS << "Total functions: " << PS->getNumFunctions() << "\n";

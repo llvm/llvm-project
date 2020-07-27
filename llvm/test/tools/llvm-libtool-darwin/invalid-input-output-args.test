@@ -1,25 +1,52 @@
 ## This test checks that an error is thrown in case of invalid input/output args.
 
 ## Missing input file:
-# RUN: not llvm-libtool-darwin -o %t.lib 2>&1 | \
+# RUN: not llvm-libtool-darwin -static -o %t.lib 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-INPUT
 
 # NO-INPUT: Must specify at least 1 positional argument
 
 ## Missing output file:
-# RUN: not llvm-libtool-darwin %t.input 2>&1 | \
+# RUN: not llvm-libtool-darwin -static %t.input 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-OUTPUT
 
 # NO-OUTPUT: for the -o option: must be specified at least once!
 
 ## Missing argument to -o:
-# RUN: not llvm-libtool-darwin %t.input -o 2>&1 | \
+# RUN: not llvm-libtool-darwin -static %t.input -o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=MISSING
 
 # MISSING: for the -o option: requires a value!
 
 ## Passing in two output files:
-# RUN: not llvm-libtool-darwin %t.input -o %t.lib1 -o %t.lib2 2>&1 | \
+# RUN: not llvm-libtool-darwin -static %t.input -o %t.lib1 -o %t.lib2 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=DOUBLE-OUTPUT
 
 # DOUBLE-OUTPUT: for the -o option: must occur exactly one time!
+
+## Input file not found:
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t.missing 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-FILE -DFILE=%t.missing
+
+# NO-FILE: error: '[[FILE]]': {{[nN]}}o such file or directory
+
+## Input file is not an object file:
+# RUN: touch %t.invalid
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t.invalid 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-OBJECT -DFILE=%basename_t.tmp.invalid
+
+# NOT-OBJECT: error: '[[FILE]]': The file was not recognized as a valid object file
+
+## Input file is not a Mach-O object file:
+# RUN: yaml2obj %s -o %t.elf
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t.elf 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-MACHO -DFILE=%basename_t.tmp.elf
+
+# NOT-MACHO: error: '[[FILE]]': format not supported
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64

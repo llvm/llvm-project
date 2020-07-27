@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/DWARFEmitter.h"
-#include "DWARFVisitor.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -85,6 +85,12 @@ static void writeInitialLength(const dwarf::DwarfFormat Format,
       writeVariableSizedInteger(Length, IsDWARF64 ? 8 : 4, OS, IsLittleEndian));
 }
 
+static void writeDWARFOffset(uint64_t Offset, dwarf::DwarfFormat Format,
+                             raw_ostream &OS, bool IsLittleEndian) {
+  cantFail(writeVariableSizedInteger(Offset, Format == dwarf::DWARF64 ? 8 : 4,
+                                     OS, IsLittleEndian));
+}
+
 Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto Str : DI.DebugStrings) {
     OS.write(Str.data(), Str.size());
@@ -123,10 +129,7 @@ Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
     auto HeaderStart = OS.tell();
     writeInitialLength(Range.Format, Range.Length, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Range.Version, OS, DI.IsLittleEndian);
-    if (Range.Format == dwarf::DWARF64)
-      writeInteger((uint64_t)Range.CuOffset, OS, DI.IsLittleEndian);
-    else
-      writeInteger((uint32_t)Range.CuOffset, OS, DI.IsLittleEndian);
+    writeDWARFOffset(Range.CuOffset, Range.Format, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.AddrSize, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.SegSize, OS, DI.IsLittleEndian);
 
@@ -204,79 +207,180 @@ Error DWARFYAML::emitPubSection(raw_ostream &OS,
   return Error::success();
 }
 
-namespace {
-/// An extension of the DWARFYAML::ConstVisitor which writes compile
-/// units and DIEs to a stream.
-class DumpVisitor : public DWARFYAML::ConstVisitor {
-  raw_ostream &OS;
+static Expected<uint64_t> writeDIE(ArrayRef<DWARFYAML::Abbrev> AbbrevDecls,
+                                   const DWARFYAML::Unit &Unit,
+                                   const DWARFYAML::Entry &Entry,
+                                   raw_ostream &OS, bool IsLittleEndian) {
+  uint64_t EntryBegin = OS.tell();
+  encodeULEB128(Entry.AbbrCode, OS);
+  uint32_t AbbrCode = Entry.AbbrCode;
+  if (AbbrCode == 0 || Entry.Values.empty())
+    return OS.tell() - EntryBegin;
 
-protected:
-  void onStartCompileUnit(const DWARFYAML::Unit &CU) override {
-    writeInitialLength(CU.Format, CU.Length, OS, DebugInfo.IsLittleEndian);
-    writeInteger((uint16_t)CU.Version, OS, DebugInfo.IsLittleEndian);
-    if (CU.Version >= 5) {
-      writeInteger((uint8_t)CU.Type, OS, DebugInfo.IsLittleEndian);
-      writeInteger((uint8_t)CU.AddrSize, OS, DebugInfo.IsLittleEndian);
-      cantFail(writeVariableSizedInteger(CU.AbbrOffset,
-                                         CU.Format == dwarf::DWARF64 ? 8 : 4,
-                                         OS, DebugInfo.IsLittleEndian));
-    } else {
-      cantFail(writeVariableSizedInteger(CU.AbbrOffset,
-                                         CU.Format == dwarf::DWARF64 ? 8 : 4,
-                                         OS, DebugInfo.IsLittleEndian));
-      writeInteger((uint8_t)CU.AddrSize, OS, DebugInfo.IsLittleEndian);
-    }
+  if (AbbrCode > AbbrevDecls.size())
+    return createStringError(
+        errc::invalid_argument,
+        "abbrev code must be less than or equal to the number of "
+        "entries in abbreviation table");
+  const DWARFYAML::Abbrev &Abbrev = AbbrevDecls[AbbrCode - 1];
+  auto FormVal = Entry.Values.begin();
+  auto AbbrForm = Abbrev.Attributes.begin();
+  for (; FormVal != Entry.Values.end() && AbbrForm != Abbrev.Attributes.end();
+       ++FormVal, ++AbbrForm) {
+    dwarf::Form Form = AbbrForm->Form;
+    bool Indirect;
+    do {
+      Indirect = false;
+      switch (Form) {
+      case dwarf::DW_FORM_addr:
+        // TODO: Test this error.
+        if (Error Err = writeVariableSizedInteger(
+                FormVal->Value, Unit.FormParams.AddrSize, OS, IsLittleEndian))
+          return std::move(Err);
+        break;
+      case dwarf::DW_FORM_ref_addr:
+        // TODO: Test this error.
+        if (Error Err = writeVariableSizedInteger(
+                FormVal->Value, Unit.FormParams.getRefAddrByteSize(), OS,
+                IsLittleEndian))
+          return std::move(Err);
+        break;
+      case dwarf::DW_FORM_exprloc:
+      case dwarf::DW_FORM_block:
+        encodeULEB128(FormVal->BlockData.size(), OS);
+        OS.write((const char *)FormVal->BlockData.data(),
+                 FormVal->BlockData.size());
+        break;
+      case dwarf::DW_FORM_block1: {
+        writeInteger((uint8_t)FormVal->BlockData.size(), OS, IsLittleEndian);
+        OS.write((const char *)FormVal->BlockData.data(),
+                 FormVal->BlockData.size());
+        break;
+      }
+      case dwarf::DW_FORM_block2: {
+        writeInteger((uint16_t)FormVal->BlockData.size(), OS, IsLittleEndian);
+        OS.write((const char *)FormVal->BlockData.data(),
+                 FormVal->BlockData.size());
+        break;
+      }
+      case dwarf::DW_FORM_block4: {
+        writeInteger((uint32_t)FormVal->BlockData.size(), OS, IsLittleEndian);
+        OS.write((const char *)FormVal->BlockData.data(),
+                 FormVal->BlockData.size());
+        break;
+      }
+      case dwarf::DW_FORM_strx:
+      case dwarf::DW_FORM_addrx:
+      case dwarf::DW_FORM_rnglistx:
+      case dwarf::DW_FORM_loclistx:
+      case dwarf::DW_FORM_udata:
+      case dwarf::DW_FORM_ref_udata:
+      case dwarf::DW_FORM_GNU_addr_index:
+      case dwarf::DW_FORM_GNU_str_index:
+        encodeULEB128(FormVal->Value, OS);
+        break;
+      case dwarf::DW_FORM_data1:
+      case dwarf::DW_FORM_ref1:
+      case dwarf::DW_FORM_flag:
+      case dwarf::DW_FORM_strx1:
+      case dwarf::DW_FORM_addrx1:
+        writeInteger((uint8_t)FormVal->Value, OS, IsLittleEndian);
+        break;
+      case dwarf::DW_FORM_data2:
+      case dwarf::DW_FORM_ref2:
+      case dwarf::DW_FORM_strx2:
+      case dwarf::DW_FORM_addrx2:
+        writeInteger((uint16_t)FormVal->Value, OS, IsLittleEndian);
+        break;
+      case dwarf::DW_FORM_data4:
+      case dwarf::DW_FORM_ref4:
+      case dwarf::DW_FORM_ref_sup4:
+      case dwarf::DW_FORM_strx4:
+      case dwarf::DW_FORM_addrx4:
+        writeInteger((uint32_t)FormVal->Value, OS, IsLittleEndian);
+        break;
+      case dwarf::DW_FORM_data8:
+      case dwarf::DW_FORM_ref8:
+      case dwarf::DW_FORM_ref_sup8:
+      case dwarf::DW_FORM_ref_sig8:
+        writeInteger((uint64_t)FormVal->Value, OS, IsLittleEndian);
+        break;
+      case dwarf::DW_FORM_sdata:
+        encodeSLEB128(FormVal->Value, OS);
+        break;
+      case dwarf::DW_FORM_string:
+        OS.write(FormVal->CStr.data(), FormVal->CStr.size());
+        OS.write('\0');
+        break;
+      case dwarf::DW_FORM_indirect:
+        encodeULEB128(FormVal->Value, OS);
+        Indirect = true;
+        Form = static_cast<dwarf::Form>((uint64_t)FormVal->Value);
+        ++FormVal;
+        break;
+      case dwarf::DW_FORM_strp:
+      case dwarf::DW_FORM_sec_offset:
+      case dwarf::DW_FORM_GNU_ref_alt:
+      case dwarf::DW_FORM_GNU_strp_alt:
+      case dwarf::DW_FORM_line_strp:
+      case dwarf::DW_FORM_strp_sup:
+        cantFail(writeVariableSizedInteger(
+            FormVal->Value, Unit.FormParams.getDwarfOffsetByteSize(), OS,
+            IsLittleEndian));
+        break;
+      default:
+        break;
+      }
+    } while (Indirect);
   }
 
-  void onStartDIE(const DWARFYAML::Unit &CU,
-                  const DWARFYAML::Entry &DIE) override {
-    encodeULEB128(DIE.AbbrCode, OS);
-  }
-
-  void onValue(const uint8_t U) override {
-    writeInteger(U, OS, DebugInfo.IsLittleEndian);
-  }
-
-  void onValue(const uint16_t U) override {
-    writeInteger(U, OS, DebugInfo.IsLittleEndian);
-  }
-
-  void onValue(const uint32_t U) override {
-    writeInteger(U, OS, DebugInfo.IsLittleEndian);
-  }
-
-  void onValue(const uint64_t U, const bool LEB = false) override {
-    if (LEB)
-      encodeULEB128(U, OS);
-    else
-      writeInteger(U, OS, DebugInfo.IsLittleEndian);
-  }
-
-  void onValue(const int64_t S, const bool LEB = false) override {
-    if (LEB)
-      encodeSLEB128(S, OS);
-    else
-      writeInteger(S, OS, DebugInfo.IsLittleEndian);
-  }
-
-  void onValue(const StringRef String) override {
-    OS.write(String.data(), String.size());
-    OS.write('\0');
-  }
-
-  void onValue(const MemoryBufferRef MBR) override {
-    OS.write(MBR.getBufferStart(), MBR.getBufferSize());
-  }
-
-public:
-  DumpVisitor(const DWARFYAML::Data &DI, raw_ostream &Out)
-      : DWARFYAML::ConstVisitor(DI), OS(Out) {}
-};
-} // namespace
+  return OS.tell() - EntryBegin;
+}
 
 Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  DumpVisitor Visitor(DI, OS);
-  return Visitor.traverseDebugInfo();
+  for (const DWARFYAML::Unit &Unit : DI.CompileUnits) {
+    uint64_t Length = 3; // sizeof(version) + sizeof(address_size)
+    Length += Unit.FormParams.Version >= 5 ? 1 : 0; // sizeof(unit_type)
+    Length +=
+        Unit.FormParams.getDwarfOffsetByteSize(); // sizeof(debug_abbrev_offset)
+
+    // Since the length of the current compilation unit is undetermined yet, we
+    // firstly write the content of the compilation unit to a buffer to
+    // calculate it and then serialize the buffer content to the actual output
+    // stream.
+    std::string EntryBuffer;
+    raw_string_ostream EntryBufferOS(EntryBuffer);
+
+    for (const DWARFYAML::Entry &Entry : Unit.Entries) {
+      if (Expected<uint64_t> EntryLength = writeDIE(
+              DI.AbbrevDecls, Unit, Entry, EntryBufferOS, DI.IsLittleEndian))
+        Length += *EntryLength;
+      else
+        return EntryLength.takeError();
+    }
+
+    // If the length is specified in the YAML description, we use it instead of
+    // the actual length.
+    if (Unit.Length)
+      Length = *Unit.Length;
+
+    writeInitialLength(Unit.FormParams.Format, Length, OS, DI.IsLittleEndian);
+    writeInteger((uint16_t)Unit.FormParams.Version, OS, DI.IsLittleEndian);
+    if (Unit.FormParams.Version >= 5) {
+      writeInteger((uint8_t)Unit.Type, OS, DI.IsLittleEndian);
+      writeInteger((uint8_t)Unit.FormParams.AddrSize, OS, DI.IsLittleEndian);
+      writeDWARFOffset(Unit.AbbrOffset, Unit.FormParams.Format, OS,
+                       DI.IsLittleEndian);
+    } else {
+      writeDWARFOffset(Unit.AbbrOffset, Unit.FormParams.Format, OS,
+                       DI.IsLittleEndian);
+      writeInteger((uint8_t)Unit.FormParams.AddrSize, OS, DI.IsLittleEndian);
+    }
+
+    OS.write(EntryBuffer.data(), EntryBuffer.size());
+  }
+
+  return Error::success();
 }
 
 static void emitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
@@ -326,7 +430,8 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
         case dwarf::DW_LNE_set_discriminator:
           // TODO: Test this error.
           if (Error Err = writeVariableSizedInteger(
-                  Op.Data, DI.CompileUnits[0].AddrSize, OS, DI.IsLittleEndian))
+                  Op.Data, DI.CompileUnits[0].FormParams.AddrSize, OS,
+                  DI.IsLittleEndian))
             return Err;
           break;
         case dwarf::DW_LNE_define_file:
@@ -431,45 +536,54 @@ Error DWARFYAML::emitDebugStrOffsets(raw_ostream &OS, const Data &DI) {
     writeInteger((uint16_t)Table.Version, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Table.Padding, OS, DI.IsLittleEndian);
 
-    for (uint64_t Offset : Table.Offsets) {
-      cantFail(writeVariableSizedInteger(Offset,
-                                         Table.Format == dwarf::DWARF64 ? 8 : 4,
-                                         OS, DI.IsLittleEndian));
-    }
+    for (uint64_t Offset : Table.Offsets)
+      writeDWARFOffset(Offset, Table.Format, OS, DI.IsLittleEndian);
   }
 
   return Error::success();
 }
 
-static Expected<uint64_t>
-writeRnglistEntry(raw_ostream &OS, const DWARFYAML::RnglistEntry &Entry,
-                  uint8_t AddrSize, bool IsLittleEndian) {
+static Error checkListEntryOperands(StringRef EncodingString,
+                                    ArrayRef<yaml::Hex64> Values,
+                                    uint64_t ExpectedOperands) {
+  if (Values.size() != ExpectedOperands)
+    return createStringError(
+        errc::invalid_argument,
+        "invalid number (%zu) of operands for the operator: %s, %" PRIu64
+        " expected",
+        Values.size(), EncodingString.str().c_str(), ExpectedOperands);
+
+  return Error::success();
+}
+
+static Error writeListEntryAddress(StringRef EncodingName, raw_ostream &OS,
+                                   uint64_t Addr, uint8_t AddrSize,
+                                   bool IsLittleEndian) {
+  if (Error Err = writeVariableSizedInteger(Addr, AddrSize, OS, IsLittleEndian))
+    return createStringError(errc::invalid_argument,
+                             "unable to write address for the operator %s: %s",
+                             EncodingName.str().c_str(),
+                             toString(std::move(Err)).c_str());
+
+  return Error::success();
+}
+
+static Expected<uint64_t> writeListEntry(raw_ostream &OS,
+                                         const DWARFYAML::RnglistEntry &Entry,
+                                         uint8_t AddrSize,
+                                         bool IsLittleEndian) {
   uint64_t BeginOffset = OS.tell();
   writeInteger((uint8_t)Entry.Operator, OS, IsLittleEndian);
 
-  auto CheckOperands = [&](uint64_t ExpectedOperands) -> Error {
-    if (Entry.Values.size() != ExpectedOperands) {
-      return createStringError(
-          errc::invalid_argument,
-          "invalid number (%zu) of operands for the operator: %s, %" PRIu64
-          " expected",
-          Entry.Values.size(),
-          dwarf::RangeListEncodingString(Entry.Operator).str().c_str(),
-          ExpectedOperands);
-    }
+  StringRef EncodingName = dwarf::RangeListEncodingString(Entry.Operator);
 
-    return Error::success();
+  auto CheckOperands = [&](uint64_t ExpectedOperands) -> Error {
+    return checkListEntryOperands(EncodingName, Entry.Values, ExpectedOperands);
   };
 
   auto WriteAddress = [&](uint64_t Addr) -> Error {
-    if (Error Err =
-            writeVariableSizedInteger(Addr, AddrSize, OS, IsLittleEndian))
-      return createStringError(
-          errc::not_supported,
-          "unable to write address for the operator %s: %s",
-          dwarf::RangeListEncodingString(Entry.Operator).str().c_str(),
-          toString(std::move(Err)).c_str());
-    return Error::success();
+    return writeListEntryAddress(EncodingName, OS, Addr, AddrSize,
+                                 IsLittleEndian);
   };
 
   switch (Entry.Operator) {
@@ -515,9 +629,11 @@ writeRnglistEntry(raw_ostream &OS, const DWARFYAML::RnglistEntry &Entry,
   return OS.tell() - BeginOffset;
 }
 
-Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
-  assert(DI.DebugRnglists && "unexpected emitDebugRnglists() call");
-  for (const DWARFYAML::RnglistTable &Table : *DI.DebugRnglists) {
+template <typename EntryType>
+Error writeDWARFLists(raw_ostream &OS,
+                      ArrayRef<DWARFYAML::ListTable<EntryType>> Tables,
+                      bool IsLittleEndian, bool Is64BitAddrSize) {
+  for (const DWARFYAML::ListTable<EntryType> &Table : Tables) {
     // sizeof(version) + sizeof(address_size) + sizeof(segment_selector_size) +
     // sizeof(offset_entry_count) = 8
     uint64_t Length = 8;
@@ -526,24 +642,25 @@ Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
     if (Table.AddrSize)
       AddrSize = *Table.AddrSize;
     else
-      AddrSize = DI.Is64BitAddrSize ? 8 : 4;
+      AddrSize = Is64BitAddrSize ? 8 : 4;
 
-    // Since the length of the current range lists entry is undetermined yet, we
-    // firstly write the content of the range lists to a buffer to calculate the
-    // length and then serialize the buffer content to the actual output stream.
+    // Since the length of the current range/location lists entry is
+    // undetermined yet, we firstly write the content of the range/location
+    // lists to a buffer to calculate the length and then serialize the buffer
+    // content to the actual output stream.
     std::string ListBuffer;
     raw_string_ostream ListBufferOS(ListBuffer);
 
-    // Offsets holds offsets for each range list. The i-th element is the offset
-    // from the beginning of the first range list to the location of the i-th
-    // range list.
+    // Offsets holds offsets for each range/location list. The i-th element is
+    // the offset from the beginning of the first range/location list to the
+    // location of the i-th range list.
     std::vector<uint64_t> Offsets;
 
-    for (const DWARFYAML::Rnglist &List : Table.Lists) {
+    for (const DWARFYAML::ListEntries<EntryType> &List : Table.Lists) {
       Offsets.push_back(ListBufferOS.tell());
-      for (const DWARFYAML::RnglistEntry &Entry : List.Entries) {
+      for (const EntryType &Entry : List.Entries) {
         Expected<uint64_t> EntrySize =
-            writeRnglistEntry(ListBufferOS, Entry, AddrSize, DI.IsLittleEndian);
+            writeListEntry(ListBufferOS, Entry, AddrSize, IsLittleEndian);
         if (!EntrySize)
           return EntrySize.takeError();
         Length += *EntrySize;
@@ -568,18 +685,16 @@ Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
     if (Table.Length)
       Length = *Table.Length;
 
-    writeInitialLength(Table.Format, Length, OS, DI.IsLittleEndian);
-    writeInteger((uint16_t)Table.Version, OS, DI.IsLittleEndian);
-    writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
-    writeInteger((uint8_t)Table.SegSelectorSize, OS, DI.IsLittleEndian);
-    writeInteger((uint32_t)OffsetEntryCount, OS, DI.IsLittleEndian);
+    writeInitialLength(Table.Format, Length, OS, IsLittleEndian);
+    writeInteger((uint16_t)Table.Version, OS, IsLittleEndian);
+    writeInteger((uint8_t)AddrSize, OS, IsLittleEndian);
+    writeInteger((uint8_t)Table.SegSelectorSize, OS, IsLittleEndian);
+    writeInteger((uint32_t)OffsetEntryCount, OS, IsLittleEndian);
 
     auto EmitOffsets = [&](ArrayRef<uint64_t> Offsets, uint64_t OffsetsSize) {
-      for (uint64_t Offset : Offsets) {
-        cantFail(writeVariableSizedInteger(
-            OffsetsSize + Offset, Table.Format == dwarf::DWARF64 ? 8 : 4, OS,
-            DI.IsLittleEndian));
-      }
+      for (uint64_t Offset : Offsets)
+        writeDWARFOffset(OffsetsSize + Offset, Table.Format, OS,
+                         IsLittleEndian);
     };
 
     if (Table.Offsets)
@@ -593,6 +708,12 @@ Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
   }
 
   return Error::success();
+}
+
+Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
+  assert(DI.DebugRnglists && "unexpected emitDebugRnglists() call");
+  return writeDWARFLists<DWARFYAML::RnglistEntry>(
+      OS, *DI.DebugRnglists, DI.IsLittleEndian, DI.Is64BitAddrSize);
 }
 
 using EmitFuncType = Error (*)(raw_ostream &, const DWARFYAML::Data &);
@@ -612,51 +733,8 @@ emitDebugSectionImpl(const DWARFYAML::Data &DI, EmitFuncType EmitFunc,
   return Error::success();
 }
 
-namespace {
-class DIEFixupVisitor : public DWARFYAML::Visitor {
-  uint64_t Length;
-
-public:
-  DIEFixupVisitor(DWARFYAML::Data &DI) : DWARFYAML::Visitor(DI){};
-
-protected:
-  void onStartCompileUnit(DWARFYAML::Unit &CU) override {
-    // Size of the unit header, excluding the length field itself.
-    Length = CU.Version >= 5 ? 8 : 7;
-  }
-
-  void onEndCompileUnit(DWARFYAML::Unit &CU) override { CU.Length = Length; }
-
-  void onStartDIE(DWARFYAML::Unit &CU, DWARFYAML::Entry &DIE) override {
-    Length += getULEB128Size(DIE.AbbrCode);
-  }
-
-  void onValue(const uint8_t U) override { Length += 1; }
-  void onValue(const uint16_t U) override { Length += 2; }
-  void onValue(const uint32_t U) override { Length += 4; }
-  void onValue(const uint64_t U, const bool LEB = false) override {
-    if (LEB)
-      Length += getULEB128Size(U);
-    else
-      Length += 8;
-  }
-  void onValue(const int64_t S, const bool LEB = false) override {
-    if (LEB)
-      Length += getSLEB128Size(S);
-    else
-      Length += 8;
-  }
-  void onValue(const StringRef String) override { Length += String.size() + 1; }
-
-  void onValue(const MemoryBufferRef MBR) override {
-    Length += MBR.getBufferSize();
-  }
-};
-} // namespace
-
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
-DWARFYAML::emitDebugSections(StringRef YAMLString, bool ApplyFixups,
-                             bool IsLittleEndian) {
+DWARFYAML::emitDebugSections(StringRef YAMLString, bool IsLittleEndian) {
   auto CollectDiagnostic = [](const SMDiagnostic &Diag, void *DiagContext) {
     *static_cast<SMDiagnostic *>(DiagContext) = Diag;
   };
@@ -670,12 +748,6 @@ DWARFYAML::emitDebugSections(StringRef YAMLString, bool ApplyFixups,
   YIn >> DI;
   if (YIn.error())
     return createStringError(YIn.error(), GeneratedDiag.getMessage());
-
-  if (ApplyFixups) {
-    DIEFixupVisitor DIFixer(DI);
-    if (Error Err = DIFixer.traverseDebugInfo())
-      return std::move(Err);
-  }
 
   StringMap<std::unique_ptr<MemoryBuffer>> DebugSections;
   Error Err = emitDebugSectionImpl(DI, &DWARFYAML::emitDebugInfo, "debug_info",

@@ -789,6 +789,52 @@ void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width) 
 
 namespace MTBUFFormat {
 
+int64_t getDfmt(const StringRef Name) {
+  for (int Id = DFMT_MIN; Id <= DFMT_MAX; ++Id) {
+    if (Name == DfmtSymbolic[Id])
+      return Id;
+  }
+  return DFMT_UNDEF;
+}
+
+StringRef getDfmtName(unsigned Id) {
+  assert(Id <= DFMT_MAX);
+  return DfmtSymbolic[Id];
+}
+
+static StringLiteral const *getNfmtLookupTable(const MCSubtargetInfo &STI) {
+  if (isSI(STI) || isCI(STI))
+    return NfmtSymbolicSICI;
+  if (isVI(STI) || isGFX9(STI))
+    return NfmtSymbolicVI;
+  return NfmtSymbolicGFX10;
+}
+
+int64_t getNfmt(const StringRef Name, const MCSubtargetInfo &STI) {
+  auto lookupTable = getNfmtLookupTable(STI);
+  for (int Id = NFMT_MIN; Id <= NFMT_MAX; ++Id) {
+    if (Name == lookupTable[Id])
+      return Id;
+  }
+  return NFMT_UNDEF;
+}
+
+StringRef getNfmtName(unsigned Id, const MCSubtargetInfo &STI) {
+  assert(Id <= NFMT_MAX);
+  return getNfmtLookupTable(STI)[Id];
+}
+
+bool isValidDfmtNfmt(unsigned Id, const MCSubtargetInfo &STI) {
+  unsigned Dfmt;
+  unsigned Nfmt;
+  decodeDfmtNfmt(Id, Dfmt, Nfmt);
+  return isValidNfmt(Nfmt, STI);
+}
+
+bool isValidNfmt(unsigned Id, const MCSubtargetInfo &STI) {
+  return !getNfmtName(Id, STI).empty();
+}
+
 int64_t encodeDfmtNfmt(unsigned Dfmt, unsigned Nfmt) {
   return (Dfmt << DFMT_SHIFT) | (Nfmt << NFMT_SHIFT);
 }
@@ -796,6 +842,41 @@ int64_t encodeDfmtNfmt(unsigned Dfmt, unsigned Nfmt) {
 void decodeDfmtNfmt(unsigned Format, unsigned &Dfmt, unsigned &Nfmt) {
   Dfmt = (Format >> DFMT_SHIFT) & DFMT_MASK;
   Nfmt = (Format >> NFMT_SHIFT) & NFMT_MASK;
+}
+
+int64_t getUnifiedFormat(const StringRef Name) {
+  for (int Id = UFMT_FIRST; Id <= UFMT_LAST; ++Id) {
+    if (Name == UfmtSymbolic[Id])
+      return Id;
+  }
+  return UFMT_UNDEF;
+}
+
+StringRef getUnifiedFormatName(unsigned Id) {
+  return isValidUnifiedFormat(Id) ? UfmtSymbolic[Id] : "";
+}
+
+bool isValidUnifiedFormat(unsigned Id) {
+  return Id <= UFMT_LAST;
+}
+
+int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt) {
+  int64_t Fmt = encodeDfmtNfmt(Dfmt, Nfmt);
+  for (int Id = UFMT_FIRST; Id <= UFMT_LAST; ++Id) {
+    if (Fmt == DfmtNfmt2UFmt[Id])
+      return Id;
+  }
+  return UFMT_UNDEF;
+}
+
+bool isValidFormatEncoding(unsigned Val, const MCSubtargetInfo &STI) {
+  return isGFX10(STI) ? (Val <= UFMT_MAX) : (Val <= DFMT_NFMT_MAX);
+}
+
+unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI) {
+  if (isGFX10(STI))
+    return UFMT_DEFAULT;
+  return DFMT_NFMT_DEFAULT;
 }
 
 } // namespace MTBUFFormat

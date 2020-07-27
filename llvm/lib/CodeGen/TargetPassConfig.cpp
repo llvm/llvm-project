@@ -1183,6 +1183,11 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   // LiveVariables can be removed completely, and LiveIntervals can be directly
   // computed. (We still either need to regenerate kill flags after regalloc, or
   // preferably fix the scavenger to not depend on them).
+  // FIXME: UnreachableMachineBlockElim is a dependant pass of LiveVariables.
+  // When LiveVariables is removed this has to be removed/moved either.
+  // Explicit addition of UnreachableMachineBlockElim allows stopping before or
+  // after it with -stop-before/-stop-after.
+  addPass(&UnreachableMachineBlockElimID, false);
   addPass(&LiveVariablesID, false);
 
   // Edge splitting is smarter with machine loop info.

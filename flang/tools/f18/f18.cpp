@@ -88,6 +88,7 @@ struct DriverOptions {
   bool forcedForm{false}; // -Mfixed or -Mfree appeared
   bool warnOnNonstandardUsage{false}; // -Mstandard
   bool warningsAreErrors{false}; // -Werror
+  bool byteswapio{false}; // -byteswapio
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
   bool parseOnly{false};
   bool dumpProvenance{false};
@@ -544,6 +545,11 @@ int main(int argc, char *const argv[]) {
       defaultKinds.set_defaultIntegerKind(8);
       defaultKinds.set_subscriptIntegerKind(8);
       defaultKinds.set_sizeIntegerKind(8);
+      if (isPGF90) {
+        driver.F18_FCArgs.push_back("-i8");
+      } else {
+        driver.F18_FCArgs.push_back("-fdefault-integer-8");
+      }
     } else if (arg == "-Mlargearray") {
     } else if (arg == "-Mnolargearray") {
     } else if (arg == "-flarge-sizes") {
@@ -585,6 +591,8 @@ int main(int argc, char *const argv[]) {
       driver.getDefinitionArgs = {arguments[0], arguments[1], arguments[2]};
     } else if (arg == "-fget-symbols-sources") {
       driver.getSymbolsSources = true;
+    } else if (arg == "-byteswapio") {
+      driver.byteswapio = true; // TODO: Pass to lowering, generate call
     } else if (arg == "-help" || arg == "--help" || arg == "-?") {
       llvm::errs()
           << "f18 options:\n"

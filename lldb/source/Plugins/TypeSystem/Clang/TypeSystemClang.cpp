@@ -1657,9 +1657,9 @@ bool TypeSystemClang::FieldIsBitfield(FieldDecl *field,
   if (field->isBitField()) {
     Expr *bit_width_expr = field->getBitWidth();
     if (bit_width_expr) {
-      llvm::APSInt bit_width_apsint;
-      if (bit_width_expr->isIntegerConstantExpr(bit_width_apsint, ast)) {
-        bitfield_bit_size = bit_width_apsint.getLimitedValue(UINT32_MAX);
+      if (Optional<llvm::APSInt> bit_width_apsint =
+              bit_width_expr->getIntegerConstantExpr(ast)) {
+        bitfield_bit_size = bit_width_apsint->getLimitedValue(UINT32_MAX);
         return true;
       }
     }
@@ -4089,7 +4089,8 @@ unsigned TypeSystemClang::GetTypeQualifiers(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemClang::GetArrayElementType(lldb::opaque_compiler_type_t type,
-                                     uint64_t *stride) {
+                                     uint64_t *stride,
+                                     ExecutionContextScope *exe_scope) {
   if (type) {
     clang::QualType qual_type(GetQualType(type));
 
@@ -4103,7 +4104,7 @@ TypeSystemClang::GetArrayElementType(lldb::opaque_compiler_type_t type,
 
     // TODO: the real stride will be >= this value.. find the real one!
     if (stride)
-      if (Optional<uint64_t> size = element_type.GetByteSize(nullptr))
+      if (Optional<uint64_t> size = element_type.GetByteSize(exe_scope))
         *stride = *size;
 
     return element_type;

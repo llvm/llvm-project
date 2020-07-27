@@ -98,4 +98,32 @@ if3.end:
   ret i32 %phi2
 }
 
+define void @pr46814(i32 %a) {
+; CHECK-LABEL: @pr46814(
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[A]], 20
+; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    br i1 [[C3]], label [[IF_1:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.1:
+; CHECK-NEXT:    br label [[IF_2:%.*]]
+; CHECK:       if.2:
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %c1 = icmp uge i32 %a, 10
+  %c2 = icmp ult i32 %a, 20
+  %c3 = and i1 %c1, %c2
+  br i1 %c3, label %if.1, label %exit
+
+if.1:
+  br i1 %c3, label %if.2, label %exit
+
+if.2:
+  br i1 %c3, label %exit, label %exit
+
+exit:
+  ret void
+}
+
 declare void @llvm.assume(i1)

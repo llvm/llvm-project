@@ -49,7 +49,7 @@ public:
   // This design avoids virtual member functions and function pointers,
   // which may not have good support in some runtime environments.
   std::optional<DataEdit> GetNextDataEdit(int = 1);
-  bool Emit(const char *, std::size_t);
+  bool Emit(const char *, std::size_t, std::size_t elementBytes = 0);
   std::optional<char32_t> GetCurrentChar(); // vacant after end of record
   bool AdvanceRecord(int = 1);
   void BackspaceRecord();
@@ -159,7 +159,8 @@ public:
   InternalIoStatementState(
       const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
   int EndIoStatement();
-  bool Emit(const CharType *, std::size_t chars /* not bytes */);
+  bool Emit(const CharType *, std::size_t chars /* not necessarily bytes */,
+      std::size_t elementBytes = 0);
   std::optional<char32_t> GetCurrentChar();
   bool AdvanceRecord(int = 1);
   void BackspaceRecord();
@@ -238,7 +239,7 @@ class ExternalIoStatementState : public ExternalIoStatementBase,
 public:
   using ExternalIoStatementBase::ExternalIoStatementBase;
   int EndIoStatement();
-  bool Emit(const char *, std::size_t);
+  bool Emit(const char *, std::size_t, std::size_t elementBytes = 0);
   bool Emit(const char16_t *, std::size_t chars /* not bytes */);
   bool Emit(const char32_t *, std::size_t chars /* not bytes */);
   std::optional<char32_t> GetCurrentChar();
@@ -283,7 +284,8 @@ template <Direction DIR>
 class UnformattedIoStatementState : public ExternalIoStatementState<DIR> {
 public:
   using ExternalIoStatementState<DIR>::ExternalIoStatementState;
-  bool Receive(char *, std::size_t);
+  bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
+  bool Emit(const char *, std::size_t, std::size_t elementBytes = 0);
   int EndIoStatement();
 };
 
@@ -298,6 +300,7 @@ public:
   void set_path(const char *, std::size_t, int kind); // FILE=
   void set_position(Position position) { position_ = position; } // POSITION=
   void set_action(Action action) { action_ = action; } // ACTION=
+  void set_convert(Convert convert) { convert_ = convert; } // CONVERT=
   int EndIoStatement();
 
 private:
@@ -305,6 +308,7 @@ private:
   std::optional<OpenStatus> status_;
   Position position_{Position::AsIs};
   std::optional<Action> action_;
+  Convert convert_{Convert::Native};
   OwningPtr<char> path_;
   std::size_t pathLength_;
 };

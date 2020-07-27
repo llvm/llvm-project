@@ -355,7 +355,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
   if (Doc.Symbols)
     ImplicitSections.push_back(".symtab");
   if (Doc.DWARF)
-    for (StringRef DebugSecName : Doc.DWARF->getUsedSectionNames()) {
+    for (StringRef DebugSecName : Doc.DWARF->getNonEmptySectionNames()) {
       std::string SecName = ("." + DebugSecName).str();
       ImplicitSections.push_back(StringRef(SecName).copy(StringAlloc));
     }
@@ -931,7 +931,7 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
 }
 
 static bool shouldEmitDWARF(DWARFYAML::Data &DWARF, StringRef Name) {
-  SetVector<StringRef> DebugSecNames = DWARF.getUsedSectionNames();
+  SetVector<StringRef> DebugSecNames = DWARF.getNonEmptySectionNames();
   return Name.consume_front(".") && DebugSecNames.count(Name);
 }
 

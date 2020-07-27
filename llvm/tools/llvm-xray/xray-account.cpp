@@ -35,6 +35,9 @@ static cl::opt<bool>
                      cl::sub(Account), cl::init(false));
 static cl::alias AccountKeepGoing2("k", cl::aliasopt(AccountKeepGoing),
                                    cl::desc("Alias for -keep_going"));
+static cl::opt<bool> AccountRecursiveCallsOnly(
+    "recursive-calls-only", cl::desc("Only count the calls that are recursive"),
+    cl::sub(Account), cl::init(false));
 static cl::opt<bool> AccountDeduceSiblingCalls(
     "deduce-sibling-calls",
     cl::desc("Deduce sibling calls when unrolling function call stacks"),
@@ -126,6 +129,32 @@ template <class T> T diff(T L, T R) { return std::max(L, R) - std::min(L, R); }
 
 } // namespace
 
+using RecursionStatus = LatencyAccountant::FunctionStack::RecursionStatus;
+RecursionStatus &RecursionStatus::operator++() {
+  auto Depth = Bitfield::get<RecursionStatus::Depth>(Storage);
+  assert(Depth >= 0 && Depth < std::numeric_limits<decltype(Depth)>::max());
+  ++Depth;
+  Bitfield::set<RecursionStatus::Depth>(Storage, Depth); // ++Storage
+  // Did this function just (maybe indirectly) call itself the first time?
+  if (!isRecursive() && Depth == 2) // Storage == 2  /  Storage s> 1
+    Bitfield::set<RecursionStatus::IsRecursive>(Storage,
+                                                true); // Storage |= INT_MIN
+  return *this;
+}
+RecursionStatus &RecursionStatus::operator--() {
+  auto Depth = Bitfield::get<RecursionStatus::Depth>(Storage);
+  assert(Depth > 0);
+  --Depth;
+  Bitfield::set<RecursionStatus::Depth>(Storage, Depth); // --Storage
+  // Did we leave a function that previouly (maybe indirectly) called itself?
+  if (isRecursive() && Depth == 0) // Storage == INT_MIN
+    Bitfield::set<RecursionStatus::IsRecursive>(Storage, false); // Storage = 0
+  return *this;
+}
+bool RecursionStatus::isRecursive() const {
+  return Bitfield::get<RecursionStatus::IsRecursive>(Storage); // Storage s< 0
+}
+
 bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
   setMinMax(PerThreadMinMaxTSC[Record.TId], Record.TSC);
   setMinMax(PerCPUMinMaxTSC[Record.CPU], Record.TSC);
@@ -137,6 +166,8 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
     return false;
 
   auto &ThreadStack = PerThreadFunctionStack[Record.TId];
+  if (RecursiveCallsOnly && !ThreadStack.RecursionDepth)
+    ThreadStack.RecursionDepth.emplace();
   switch (Record.Type) {
   case RecordTypes::CUSTOM_EVENT:
   case RecordTypes::TYPED_EVENT:
@@ -144,18 +175,24 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
     return true;
   case RecordTypes::ENTER:
   case RecordTypes::ENTER_ARG: {
-    ThreadStack.emplace_back(Record.FuncId, Record.TSC);
+    ThreadStack.Stack.emplace_back(Record.FuncId, Record.TSC);
+    if (ThreadStack.RecursionDepth)
+      ++(*ThreadStack.RecursionDepth)[Record.FuncId];
     break;
   }
   case RecordTypes::EXIT:
   case RecordTypes::TAIL_EXIT: {
-    if (ThreadStack.empty())
+    if (ThreadStack.Stack.empty())
       return false;
 
-    if (ThreadStack.back().first == Record.FuncId) {
-      const auto &Top = ThreadStack.back();
-      recordLatency(Top.first, diff(Top.second, Record.TSC));
-      ThreadStack.pop_back();
+    if (ThreadStack.Stack.back().first == Record.FuncId) {
+      const auto &Top = ThreadStack.Stack.back();
+      if (!ThreadStack.RecursionDepth ||
+          (*ThreadStack.RecursionDepth)[Top.first].isRecursive())
+        recordLatency(Top.first, diff(Top.second, Record.TSC));
+      if (ThreadStack.RecursionDepth)
+        --(*ThreadStack.RecursionDepth)[Top.first];
+      ThreadStack.Stack.pop_back();
       break;
     }
 
@@ -164,11 +201,11 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
 
     // Look for the parent up the stack.
     auto Parent =
-        std::find_if(ThreadStack.rbegin(), ThreadStack.rend(),
+        std::find_if(ThreadStack.Stack.rbegin(), ThreadStack.Stack.rend(),
                      [&](const std::pair<const int32_t, uint64_t> &E) {
                        return E.first == Record.FuncId;
                      });
-    if (Parent == ThreadStack.rend())
+    if (Parent == ThreadStack.Stack.rend())
       return false;
 
     // Account time for this apparently sibling call exit up the stack.
@@ -199,11 +236,17 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
     // complexity to do correctly (need to backtrack, etc.).
     //
     // FIXME: Potentially implement the more complex deduction algorithm?
-    auto I = std::next(Parent).base();
-    for (auto &E : make_range(I, ThreadStack.end())) {
-      recordLatency(E.first, diff(E.second, Record.TSC));
+    auto R = make_range(std::next(Parent).base(), ThreadStack.Stack.end());
+    for (auto &E : R) {
+      if (!ThreadStack.RecursionDepth ||
+          (*ThreadStack.RecursionDepth)[E.first].isRecursive())
+        recordLatency(E.first, diff(E.second, Record.TSC));
     }
-    ThreadStack.erase(I, ThreadStack.end());
+    for (auto &Top : reverse(R)) {
+      if (ThreadStack.RecursionDepth)
+        --(*ThreadStack.RecursionDepth)[Top.first];
+      ThreadStack.Stack.pop_back();
+    }
     break;
   }
   }
@@ -226,7 +269,7 @@ struct ResultRow {
   std::string Function;
 };
 
-ResultRow getStats(std::vector<uint64_t> &Timings) {
+ResultRow getStats(MutableArrayRef<uint64_t> Timings) {
   assert(!Timings.empty());
   ResultRow R;
   R.Sum = std::accumulate(Timings.begin(), Timings.end(), 0.0);
@@ -240,11 +283,13 @@ ResultRow getStats(std::vector<uint64_t> &Timings) {
   R.Median = Timings[MedianOff];
 
   auto Pct90Off = std::floor(Timings.size() * 0.9);
-  std::nth_element(Timings.begin(), Timings.begin() + Pct90Off, Timings.end());
+  std::nth_element(Timings.begin(), Timings.begin() + (uint64_t)Pct90Off,
+                   Timings.end());
   R.Pct90 = Timings[Pct90Off];
 
   auto Pct99Off = std::floor(Timings.size() * 0.99);
-  std::nth_element(Timings.begin(), Timings.begin() + Pct99Off, Timings.end());
+  std::nth_element(Timings.begin(), Timings.begin() + (uint64_t)Pct99Off,
+                   Timings.end());
   R.Pct99 = Timings[Pct99Off];
   return R;
 }
@@ -423,7 +468,8 @@ static CommandRegistration Unused(&Account, []() -> Error {
   symbolize::LLVMSymbolizer Symbolizer;
   llvm::xray::FuncIdConversionHelper FuncIdHelper(AccountInstrMap, Symbolizer,
                                                   FunctionAddresses);
-  xray::LatencyAccountant FCA(FuncIdHelper, AccountDeduceSiblingCalls);
+  xray::LatencyAccountant FCA(FuncIdHelper, AccountRecursiveCallsOnly,
+                              AccountDeduceSiblingCalls);
   auto TraceOrErr = loadTraceFile(AccountInput);
   if (!TraceOrErr)
     return joinErrors(
@@ -445,12 +491,12 @@ static CommandRegistration Unused(&Account, []() -> Error {
         << '\n';
     for (const auto &ThreadStack : FCA.getPerThreadFunctionStack()) {
       errs() << "Thread ID: " << ThreadStack.first << "\n";
-      if (ThreadStack.second.empty()) {
+      if (ThreadStack.second.Stack.empty()) {
         errs() << "  (empty stack)\n";
         continue;
       }
-      auto Level = ThreadStack.second.size();
-      for (const auto &Entry : llvm::reverse(ThreadStack.second))
+      auto Level = ThreadStack.second.Stack.size();
+      for (const auto &Entry : llvm::reverse(ThreadStack.second.Stack))
         errs() << "  #" << Level-- << "\t"
                << FuncIdHelper.SymbolOrNumber(Entry.first) << '\n';
     }

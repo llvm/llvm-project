@@ -20,7 +20,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
-
+#include "llvm/IR/Module.h"
 
 namespace llvm {
 
@@ -1581,6 +1581,13 @@ public:
   MachineInstrBuilder buildFExp2(const DstOp &Dst, const SrcOp &Src,
                                 Optional<unsigned> Flags = None) {
     return buildInstr(TargetOpcode::G_FEXP2, {Dst}, {Src}, Flags);
+  }
+
+  /// Build and insert \p Dst = G_FPOW \p Src0, \p Src1
+  MachineInstrBuilder buildFPow(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FPOW, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1

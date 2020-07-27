@@ -7,7 +7,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(ProfileDataTests
   CoverageMappingTest.cpp
-  InstrProfDataTest.cpp
   InstrProfTest.cpp
   SampleProfTest.cpp
   )

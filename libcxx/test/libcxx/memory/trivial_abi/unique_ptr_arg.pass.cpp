@@ -45,7 +45,7 @@ int main(int, char**) {
   //
   // With trivial-abi, expect_1 will see shared == 1 because shared_val is
   // incremented before get_val returns.
-  expect_1(&shared, get_val(std::make_unique<Node>(&shared)));
+  expect_1(&shared, get_val(std::unique_ptr<Node>(new Node(&shared))));
 
   // Check that the shared-value is still 1.
   expect_1(&shared, true);

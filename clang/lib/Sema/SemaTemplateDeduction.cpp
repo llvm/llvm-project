@@ -2100,24 +2100,23 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
             const auto *ArgConstMatrix = dyn_cast<ConstantMatrixType>(Arg);
             const auto *ArgDepMatrix = dyn_cast<DependentSizedMatrixType>(Arg);
             if (!ParamExpr->isValueDependent()) {
-              llvm::APSInt ParamConst(
-                  S.Context.getTypeSize(S.Context.getSizeType()));
-              if (!ParamExpr->isIntegerConstantExpr(ParamConst, S.Context))
+              Optional<llvm::APSInt> ParamConst =
+                  ParamExpr->getIntegerConstantExpr(S.Context);
+              if (!ParamConst)
                 return Sema::TDK_NonDeducedMismatch;
 
               if (ArgConstMatrix) {
-                if ((ArgConstMatrix->*GetArgDimension)() == ParamConst)
+                if ((ArgConstMatrix->*GetArgDimension)() == *ParamConst)
                   return Sema::TDK_Success;
                 return Sema::TDK_NonDeducedMismatch;
               }
 
               Expr *ArgExpr = (ArgDepMatrix->*GetArgDimensionExpr)();
-              llvm::APSInt ArgConst(
-                  S.Context.getTypeSize(S.Context.getSizeType()));
-              if (!ArgExpr->isValueDependent() &&
-                  ArgExpr->isIntegerConstantExpr(ArgConst, S.Context) &&
-                  ArgConst == ParamConst)
-                return Sema::TDK_Success;
+              if (!ArgExpr->isValueDependent())
+                if (Optional<llvm::APSInt> ArgConst =
+                        ArgExpr->getIntegerConstantExpr(S.Context))
+                  if (*ArgConst == *ParamConst)
+                    return Sema::TDK_Success;
               return Sema::TDK_NonDeducedMismatch;
             }
 
@@ -3816,8 +3815,11 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
     //   If P is a forwarding reference and the argument is an lvalue, the type
     //   "lvalue reference to A" is used in place of A for type deduction.
     if (isForwardingReference(QualType(ParamRefType, 0), FirstInnerIndex) &&
-        Arg->isLValue())
+        Arg->isLValue()) {
+      if (S.getLangOpts().OpenCL)
+        ArgType = S.Context.getAddrSpaceQualType(ArgType, LangAS::opencl_generic);
       ArgType = S.Context.getLValueReferenceType(ArgType);
+    }
   } else {
     // C++ [temp.deduct.call]p2:
     //   If P is not a reference type:

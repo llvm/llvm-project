@@ -1111,8 +1111,6 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
   return true;
 }
 
-// FIXME: This is to be removed after switching to the new memop value
-// profiling.
 // Parse the value profile options.
 void getMemOPSizeRangeFromOption(StringRef MemOPSizeRange, int64_t &RangeStart,
                                  int64_t &RangeLast) {
@@ -1136,12 +1134,15 @@ void getMemOPSizeRangeFromOption(StringRef MemOPSizeRange, int64_t &RangeStart,
 
 // Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
 // aware this is an ir_level profile so it can set the version flag.
-void createIRLevelProfileFlagVar(Module &M, bool IsCS) {
+void createIRLevelProfileFlagVar(Module &M, bool IsCS,
+                                 bool InstrEntryBBEnabled) {
   const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
   Type *IntTy64 = Type::getInt64Ty(M.getContext());
   uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
   if (IsCS)
     ProfileVersion |= VARIANT_MASK_CSIR_PROF;
+  if (InstrEntryBBEnabled)
+    ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);

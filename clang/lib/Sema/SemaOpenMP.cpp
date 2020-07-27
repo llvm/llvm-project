@@ -2244,7 +2244,11 @@ OpenMPClauseKind Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level,
           [](OpenMPDirectiveKind K) { return isOpenMPTaskingDirective(K); },
           Level)) {
     bool IsTriviallyCopyable =
-        D->getType().getNonReferenceType().isTriviallyCopyableType(Context);
+        D->getType().getNonReferenceType().isTriviallyCopyableType(Context) &&
+        !D->getType()
+             .getNonReferenceType()
+             .getCanonicalType()
+             ->getAsCXXRecordDecl();
     OpenMPDirectiveKind DKind = DSAStack->getDirective(Level);
     SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
     getOpenMPCaptureRegions(CaptureRegions, DKind);
@@ -6027,8 +6031,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
   // Deal with non-constant score and user condition expressions.
   auto HandleNonConstantScoresAndConditions = [this](Expr *&E,
                                                      bool IsScore) -> bool {
-    llvm::APSInt Result;
-    if (!E || E->isIntegerConstantExpr(Result, Context))
+    if (!E || E->isIntegerConstantExpr(Context))
       return false;
 
     if (IsScore) {
@@ -6514,14 +6517,14 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
     //  loop. If test-expr is of form b relational-op var and relational-op is
     //  > or >= then incr-expr must cause var to increase on each iteration of
     //  the loop.
-    llvm::APSInt Result;
-    bool IsConstant = NewStep->isIntegerConstantExpr(Result, SemaRef.Context);
+    Optional<llvm::APSInt> Result =
+        NewStep->getIntegerConstantExpr(SemaRef.Context);
     bool IsUnsigned = !NewStep->getType()->hasSignedIntegerRepresentation();
     bool IsConstNeg =
-        IsConstant && Result.isSigned() && (Subtract != Result.isNegative());
+        Result && Result->isSigned() && (Subtract != Result->isNegative());
     bool IsConstPos =
-        IsConstant && Result.isSigned() && (Subtract == Result.isNegative());
-    bool IsConstZero = IsConstant && !Result.getBoolValue();
+        Result && Result->isSigned() && (Subtract == Result->isNegative());
+    bool IsConstZero = Result && !Result->getBoolValue();
 
     // != with increment is treated as <; != with decrement is treated as >
     if (!TestIsLessOp.hasValue())
@@ -6969,9 +6972,16 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
   ExprResult NewStep = tryBuildCapture(SemaRef, Step, Captures);
   if (!NewStep.isUsable())
     return nullptr;
-  llvm::APSInt LRes, URes, SRes;
-  bool IsLowerConst = Lower->isIntegerConstantExpr(LRes, SemaRef.Context);
-  bool IsStepConst = Step->isIntegerConstantExpr(SRes, SemaRef.Context);
+  llvm::APSInt LRes, SRes;
+  bool IsLowerConst = false, IsStepConst = false;
+  if (Optional<llvm::APSInt> Res = Lower->getIntegerConstantExpr(SemaRef.Context)) {
+    LRes = *Res;
+    IsLowerConst = true;
+  }
+  if (Optional<llvm::APSInt> Res = Step->getIntegerConstantExpr(SemaRef.Context)) {
+    SRes = *Res;
+    IsStepConst = true;
+  }
   bool NoNeedToConvert = IsLowerConst && !RoundToStep &&
                          ((!TestIsStrictOp && LRes.isNonNegative()) ||
                           (TestIsStrictOp && LRes.isStrictlyPositive()));
@@ -7004,7 +7014,12 @@ calculateNumIters(Sema &SemaRef, Scope *S, SourceLocation DefaultLoc,
     }
     NeedToReorganize = NoNeedToConvert;
   }
-  bool IsUpperConst = Upper->isIntegerConstantExpr(URes, SemaRef.Context);
+  llvm::APSInt URes;
+  bool IsUpperConst = false;
+  if (Optional<llvm::APSInt> Res = Upper->getIntegerConstantExpr(SemaRef.Context)) {
+    URes = *Res;
+    IsUpperConst = true;
+  }
   if (NoNeedToConvert && IsLowerConst && IsUpperConst &&
       (!RoundToStep || IsStepConst)) {
     unsigned BW = LRes.getBitWidth() > URes.getBitWidth() ? LRes.getBitWidth()
@@ -7952,9 +7967,9 @@ static ExprResult widenIterationCount(unsigned Bits, Expr *E, Sema &SemaRef) {
 static bool fitsInto(unsigned Bits, bool Signed, const Expr *E, Sema &SemaRef) {
   if (E == nullptr)
     return false;
-  llvm::APSInt Result;
-  if (E->isIntegerConstantExpr(Result, SemaRef.Context))
-    return Signed ? Result.isSignedIntN(Bits) : Result.isIntN(Bits);
+  if (Optional<llvm::APSInt> Result =
+          E->getIntegerConstantExpr(SemaRef.Context))
+    return Signed ? Result->isSignedIntN(Bits) : Result->isIntN(Bits);
   return false;
 }
 
@@ -8227,9 +8242,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
 
   // Calculate the last iteration number beforehand instead of doing this on
   // each iteration. Do not do this if the number of iterations may be kfold-ed.
-  llvm::APSInt Result;
-  bool IsConstant =
-      LastIteration.get()->isIntegerConstantExpr(Result, SemaRef.Context);
+  bool IsConstant = LastIteration.get()->isIntegerConstantExpr(SemaRef.Context);
   ExprResult CalcLastIteration;
   if (!IsConstant) {
     ExprResult SaveRef =
@@ -12620,15 +12633,16 @@ isNonNegativeIntegerValue(Expr *&ValExpr, Sema &SemaRef, OpenMPClauseKind CKind,
 
     ValExpr = Value.get();
     // The expression must evaluate to a non-negative integer value.
-    llvm::APSInt Result;
-    if (ValExpr->isIntegerConstantExpr(Result, SemaRef.Context) &&
-        Result.isSigned() &&
-        !((!StrictlyPositive && Result.isNonNegative()) ||
-          (StrictlyPositive && Result.isStrictlyPositive()))) {
-      SemaRef.Diag(Loc, diag::err_omp_negative_expression_in_clause)
-          << getOpenMPClauseName(CKind) << (StrictlyPositive ? 1 : 0)
-          << ValExpr->getSourceRange();
-      return false;
+    if (Optional<llvm::APSInt> Result =
+            ValExpr->getIntegerConstantExpr(SemaRef.Context)) {
+      if (Result->isSigned() &&
+          !((!StrictlyPositive && Result->isNonNegative()) ||
+            (StrictlyPositive && Result->isStrictlyPositive()))) {
+        SemaRef.Diag(Loc, diag::err_omp_negative_expression_in_clause)
+            << getOpenMPClauseName(CKind) << (StrictlyPositive ? 1 : 0)
+            << ValExpr->getSourceRange();
+        return false;
+      }
     }
     if (!BuildCapture)
       return true;
@@ -13263,9 +13277,9 @@ OMPClause *Sema::ActOnOpenMPScheduleClause(
       // OpenMP [2.7.1, Restrictions]
       //  chunk_size must be a loop invariant integer expression with a positive
       //  value.
-      llvm::APSInt Result;
-      if (ValExpr->isIntegerConstantExpr(Result, Context)) {
-        if (Result.isSigned() && !Result.isStrictlyPositive()) {
+      if (Optional<llvm::APSInt> Result =
+              ValExpr->getIntegerConstantExpr(Context)) {
+        if (Result->isSigned() && !Result->isStrictlyPositive()) {
           Diag(ChunkSizeLoc, diag::err_omp_negative_expression_in_clause)
               << "schedule" << 1 << ChunkSize->getSourceRange();
           return nullptr;
@@ -15311,7 +15325,8 @@ static bool actOnOMPReductionKindClause(
           S.DefaultLvalueConversion(DeclareReductionRef.get()).get());
       Expr *Args[] = {LHS.get(), RHS.get()};
       ReductionOp =
-          CallExpr::Create(Context, OVE, Args, Context.VoidTy, VK_RValue, ELoc);
+          CallExpr::Create(Context, OVE, Args, Context.VoidTy, VK_RValue, ELoc,
+                           S.CurFPFeatureOverrides());
     } else {
       ReductionOp = S.BuildBinOp(
           Stack->getCurScope(), ReductionId.getBeginLoc(), BOK, LHSDRE, RHSDRE);
@@ -15742,12 +15757,12 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
 
     // Warn about zero linear step (it would be probably better specified as
     // making corresponding variables 'const').
-    llvm::APSInt Result;
-    bool IsConstant = StepExpr->isIntegerConstantExpr(Result, Context);
-    if (IsConstant && !Result.isNegative() && !Result.isStrictlyPositive())
-      Diag(StepLoc, diag::warn_omp_linear_step_zero) << Vars[0]
-                                                     << (Vars.size() > 1);
-    if (!IsConstant && CalcStep.isUsable()) {
+    if (Optional<llvm::APSInt> Result =
+            StepExpr->getIntegerConstantExpr(Context)) {
+      if (!Result->isNegative() && !Result->isStrictlyPositive())
+        Diag(StepLoc, diag::warn_omp_linear_step_zero)
+            << Vars[0] << (Vars.size() > 1);
+    } else if (CalcStep.isUsable()) {
       // Calculate the step beforehand instead of doing this on each iteration.
       // (This is not used if the number of iterations may be kfold-ed).
       CalcStepExpr = CalcStep.get();
@@ -17630,9 +17645,9 @@ OMPClause *Sema::ActOnOpenMPMapClause(
     OpenMPMapClauseKind MapType, bool IsMapTypeImplicit, SourceLocation MapLoc,
     SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
     const OMPVarListLocTy &Locs, ArrayRef<Expr *> UnresolvedMappers) {
-  OpenMPMapModifierKind Modifiers[] = {OMPC_MAP_MODIFIER_unknown,
-                                       OMPC_MAP_MODIFIER_unknown,
-                                       OMPC_MAP_MODIFIER_unknown};
+  OpenMPMapModifierKind Modifiers[] = {
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown};
   SourceLocation ModifiersLoc[NumberOfOMPMapClauseModifiers];
 
   // Process map-type-modifiers, flag errors for duplicate modifiers.
@@ -18280,9 +18295,9 @@ OMPClause *Sema::ActOnOpenMPDistScheduleClause(
       // OpenMP [2.7.1, Restrictions]
       //  chunk_size must be a loop invariant integer expression with a positive
       //  value.
-      llvm::APSInt Result;
-      if (ValExpr->isIntegerConstantExpr(Result, Context)) {
-        if (Result.isSigned() && !Result.isStrictlyPositive()) {
+      if (Optional<llvm::APSInt> Result =
+              ValExpr->getIntegerConstantExpr(Context)) {
+        if (Result->isSigned() && !Result->isStrictlyPositive()) {
           Diag(ChunkSizeLoc, diag::err_omp_negative_expression_in_clause)
               << "dist_schedule" << ChunkSize->getSourceRange();
           return nullptr;

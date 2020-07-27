@@ -58,6 +58,80 @@ define amdgpu_kernel void @test_char(i8 %a) #0
   ret void
 }
 
+; CHECK:      - Name:            test_char_byref_constant
+; CHECK-NEXT:   SymbolName:      'test_char_byref_constant@kd'
+; CHECK-NEXT:   Language:        OpenCL C
+; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
+; CHECK-NEXT:   Args:
+; CHECK-NEXT:     - Name:          a
+; CHECK-NEXT:       TypeName:      char
+; CHECK-NEXT:       Size:          1
+; CHECK-NEXT:       Align:         1
+; CHECK-NEXT:       ValueKind:     ByValue
+; CHECK-NEXT:       AccQual:       Default
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NOT:        ValueKind:     HiddenHostcallBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NOT:        ValueKind:     HiddenDefaultQueue
+; CHECK-NOT:        ValueKind:     HiddenCompletionAction
+; CHECK:            ValueKind:     HiddenMultiGridSyncArg
+; CHECK-NEXT:       AddrSpaceQual: Global
+define amdgpu_kernel void @test_char_byref_constant(i8 addrspace(4)* byref(i8) %a) #0
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !9
+    !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
+  ret void
+}
+
+; CHECK:      - Name:            test_char_byref_constant_align512
+; CHECK-NEXT:   SymbolName:      'test_char_byref_constant_align512@kd'
+; CHECK-NEXT:   Language:        OpenCL C
+; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
+; CHECK-NEXT:   Args:
+; CHECK-NEXT:       TypeName:      char
+; CHECK-NEXT:       Size:          1
+; CHECK-NEXT:       Align:         1
+; CHECK-NEXT:       ValueKind:     ByValue
+; CHECK-NEXT:       AccQual:       Default
+; CHECK-NEXT:     - Name:          a
+; CHECK-NEXT:       TypeName:      char
+; CHECK-NEXT:       Size:          1
+; CHECK-NEXT:       Align:         512
+; CHECK-NEXT:       ValueKind:     ByValue
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NOT:        ValueKind:     HiddenHostcallBuffer
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NOT:        ValueKind:     HiddenDefaultQueue
+; CHECK-NOT:        ValueKind:     HiddenCompletionAction
+; CHECK:            ValueKind:     HiddenMultiGridSyncArg
+; CHECK-NEXT:       AddrSpaceQual: Global
+define amdgpu_kernel void @test_char_byref_constant_align512(i8, i8 addrspace(4)* byref(i8) align 512 %a) #0
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !111
+    !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
+  ret void
+}
+
 ; CHECK:      - Name:            test_ushort2
 ; CHECK-NEXT:   SymbolName:      'test_ushort2@kd'
 ; CHECK-NEXT:   Language:        OpenCL C
@@ -523,6 +597,48 @@ define amdgpu_kernel void @test_struct(%struct.A %a) #0
   ret void
 }
 
+; CHECK:      - Name:            test_struct_byref_constant
+; CHECK-NEXT:   SymbolName:      'test_struct_byref_constant@kd'
+; CHECK-NEXT:   Language:        OpenCL C
+; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
+; CHECK-NEXT:   Args:
+; CHECK-NEXT:     - Name:          a
+; CHECK-NEXT:       TypeName:      struct A
+; CHECK-NEXT:       Size:          8
+; CHECK-NEXT:       Align:         4
+; CHECK-NEXT:       ValueKind:     ByValue
+; CHECK-NEXT:       AccQual:       Default
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenNone
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenNone
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenMultiGridSyncArg
+; CHECK-NEXT:       AddrSpaceQual: Global
+define amdgpu_kernel void @test_struct_byref_constant(%struct.A addrspace(4)* byref(%struct.A) %a) #0
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
+    !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
+  ret void
+}
+
 ; CHECK:      - Name:            test_array
 ; CHECK-NEXT:   SymbolName:      'test_array@kd'
 ; CHECK-NEXT:   Language:        OpenCL C
@@ -560,6 +676,48 @@ define amdgpu_kernel void @test_struct(%struct.A %a) #0
 ; CHECK-NEXT:       ValueKind:     HiddenMultiGridSyncArg
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_array([8 x i8] %a) #0
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
+    !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
+  ret void
+}
+
+; CHECK:      - Name:            test_array_byref_constant
+; CHECK-NEXT:   SymbolName:      'test_array_byref_constant@kd'
+; CHECK-NEXT:   Language:        OpenCL C
+; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
+; CHECK-NEXT:   Args:
+; CHECK-NEXT:     - Name:          a
+; CHECK-NEXT:       TypeName:      struct A
+; CHECK-NEXT:       Size:          8
+; CHECK-NEXT:       Align:         1
+; CHECK-NEXT:       ValueKind:     ByValue
+; CHECK-NEXT:       AccQual:       Default
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenNone
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenNone
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenMultiGridSyncArg
+; CHECK-NEXT:       AddrSpaceQual: Global
+define amdgpu_kernel void @test_array_byref_constant([8 x i8] addrspace(4)* byref([8 x i8]) %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
     !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
   ret void
@@ -1766,5 +1924,5 @@ attributes #2 = { "amdgpu-implicitarg-num-bytes"="56" "calls-enqueue-kernel" }
 !100 = !{!"1:1:4:%d\5Cn"}
 !101 = !{!"2:1:8:%g\5Cn"}
 !110 = !{!"__block_literal"}
-
+!111 = !{!"char", !"char"}
 ; PARSER: AMDGPU HSA Metadata Parser Test: PASS

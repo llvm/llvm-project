@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine %s | FileCheck %s
+; RUN: opt -S -instcombine -mtriple=amdgcn-amd-amdhsa %s | FileCheck %s
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.buffer.load
@@ -2964,6 +2964,64 @@ declare <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32(i32, float, fl
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.cd.cl
 ; --------------------------------------------------------------------
+
+; CHECK-LABEL: @extract_elt3_image_sample_cd_cl_1d_v4f16_f32_f32(
+; CHECK-NEXT: %data = call half @llvm.amdgcn.image.sample.cd.cl.1d.f16.f32.f32(i32 8, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+; CHECK-NEXT: ret half %data
+define amdgpu_ps half @extract_elt3_image_sample_cd_cl_1d_v4f16_f32_f32(float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %elt0 = extractelement <4 x half> %data, i32 3
+  ret half %elt0
+}
+
+; CHECK-LABEL: @extract_elt2_image_sample_cd_cl_1d_v4f16_f32_f32(
+; CHECK-NEXT: %data = call half @llvm.amdgcn.image.sample.cd.cl.1d.f16.f32.f32(i32 4, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+; CHECK-NEXT: ret half %data
+define amdgpu_ps half @extract_elt2_image_sample_cd_cl_1d_v4f16_f32_f32(float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %elt0 = extractelement <4 x half> %data, i32 2
+  ret half %elt0
+}
+
+; CHECK-LABEL: @extract_elt1_image_sample_cd_cl_1d_v4f16_f32_f32(
+; CHECK-NEXT: %data = call half @llvm.amdgcn.image.sample.cd.cl.1d.f16.f32.f32(i32 2, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+; CHECK-NEXT: ret half %data
+define amdgpu_ps half @extract_elt1_image_sample_cd_cl_1d_v4f16_f32_f32(float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %elt0 = extractelement <4 x half> %data, i32 1
+  ret half %elt0
+}
+
+; FIXME: Enable load shortening when full support for v3f16 has been added (should expect call <3 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v3f16.f32.f32).
+; CHECK-LABEL: @extract_elt_to3_image_sample_cd_cl_1d_v4f16_f32_f32(
+; CHECK-NEXT: %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+; CHECK-NEXT: %res = shufflevector <4 x half> %data, <4 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT: ret <4 x half> %res
+define amdgpu_ps <4 x half> @extract_elt_to3_image_sample_cd_cl_1d_v4f16_f32_f32(float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %res = shufflevector <4 x half> %data, <4 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
+  ret <4 x half> %res
+}
+
+; CHECK-LABEL: @extract_elt_to2_image_sample_cd_cl_1d_v4f16_f32_f32(
+; CHECK-NEXT: %data = call <2 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v2f16.f32.f32(i32 3, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+; CHECK-NEXT: %res = shufflevector <2 x half> %data, <2 x half> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT: ret <4 x half> %res
+define amdgpu_ps <4 x half> @extract_elt_to2_image_sample_cd_cl_1d_v4f16_f32_f32(float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %res = shufflevector <4 x half> %data, <4 x half> undef, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  ret <4 x half> %res
+}
+
+; CHECK-LABEL: @extract_elt_to1_image_sample_cd_cl_1d_v4f16_f32_f32(
+; CHECK-NEXT: %data = call half @llvm.amdgcn.image.sample.cd.cl.1d.f16.f32.f32(i32 1, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+; CHECK-NEXT: %res = insertelement <4 x half> undef, half %data, i64 0
+; CHECK-NEXT: ret <4 x half> %res
+define amdgpu_ps <4 x half> @extract_elt_to1_image_sample_cd_cl_1d_v4f16_f32_f32(float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %res = shufflevector <4 x half> %data, <4 x half> undef, <4 x i32> <i32 0, i32 4, i32 5, i32 6>
+  ret <4 x half> %res
+}
 
 ; CHECK-LABEL: @extract_elt0_image_sample_cd_cl_1d_v4f16_f32_f32(
 ; CHECK-NEXT: %data = call half @llvm.amdgcn.image.sample.cd.cl.1d.f16.f32.f32(i32 1, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)

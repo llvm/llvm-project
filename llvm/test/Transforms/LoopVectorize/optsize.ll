@@ -121,6 +121,38 @@ for.body29:
   br i1 %cmp26, label %for.body29, label %for.cond.cleanup28
 }
 
+define void @pr43371_pgso() !prof !14 {
+;
+; CHECK-LABEL: @pr43371_pgso
+; CHECK-NOT:   vector.scevcheck
+;
+; We do not want to generate SCEV predicates when optimising for size, because
+; that will lead to extra code generation such as the SCEV overflow runtime
+; checks. Not generating SCEV predicates can still result in vectorisation as
+; the non-consecutive loads/stores can be scalarized:
+;
+; CHECK: vector.body:
+; CHECK: store i16 0, i16* %{{.*}}, align 1
+; CHECK: store i16 0, i16* %{{.*}}, align 1
+; CHECK: br i1 {{.*}}, label %vector.body
+;
+entry:
+  br label %for.body29
+
+for.cond.cleanup28:
+  unreachable
+
+for.body29:
+  %i24.0170 = phi i16 [ 0, %entry], [ %inc37, %for.body29]
+  %add33 = add i16 undef, %i24.0170
+  %idxprom34 = zext i16 %add33 to i32
+  %arrayidx35 = getelementptr [2592 x i16], [2592 x i16] * @cm_array, i32 0, i32 %idxprom34
+  store i16 0, i16 * %arrayidx35, align 1
+  %inc37 = add i16 %i24.0170, 1
+  %cmp26 = icmp ult i16 %inc37, 756
+  br i1 %cmp26, label %for.body29, label %for.cond.cleanup28
+}
+
 ; PR45526: don't vectorize with fold-tail if first-order-recurrence is live-out.
 ;
 define i32 @pr45526() optsize {
@@ -154,6 +186,65 @@ exit:
   ret i32 %for
 }
 
+define i32 @pr45526_pgso() !prof !14 {
+;
+; CHECK-LABEL: @pr45526_pgso
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   br label %loop
+; CHECK-EMPTY:
+; CHECK-NEXT: loop:
+; CHECK-NEXT:   %piv = phi i32 [ 0, %entry ], [ %pivPlus1, %loop ]
+; CHECK-NEXT:   %for = phi i32 [ 5, %entry ], [ %pivPlus1, %loop ]
+; CHECK-NEXT:   %pivPlus1 = add nuw nsw i32 %piv, 1
+; CHECK-NEXT:   %cond = icmp ult i32 %piv, 510
+; CHECK-NEXT:   br i1 %cond, label %loop, label %exit
+; CHECK-EMPTY:
+; CHECK-NEXT: exit:
+; CHECK-NEXT:   %for.lcssa = phi i32 [ %for, %loop ]
+; CHECK-NEXT:   ret i32 %for.lcssa
+;
+entry:
+  br label %loop
+
+loop:
+  %piv = phi i32 [ 0, %entry ], [ %pivPlus1, %loop ]
+  %for = phi i32 [ 5, %entry ], [ %pivPlus1, %loop ]
+  %pivPlus1 = add nuw nsw i32 %piv, 1
+  %cond = icmp ult i32 %piv, 510
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i32 %for
+}
+
+; SWDEV-244155
+
+; PR46652: Check that the need for stride==1 check prevents vectorizing a loop
+; having tiny trip count, when compiling w/o -Os/-Oz.
+; CHECK-LABEL: @pr46652
+; CHECK-NOT: vector.scevcheck
+; CHECK-NOT: vector.body
+; CHECK-LABEL: for.body
+
+@g = external global [1 x i16], align 1
+
+define void @pr46652(i16 %stride) {
+entry:
+  br label %for.body
+
+for.body:                                        ; preds = %for.body, %entry
+  %l1.02 = phi i16 [ 1, %entry ], [ %inc9, %for.body ]
+  %mul = mul nsw i16 %l1.02, %stride
+  %arrayidx6 = getelementptr inbounds [1 x i16], [1 x i16]* @g, i16 0, i16 %mul
+  %0 = load i16, i16* %arrayidx6, align 1
+  %inc9 = add nuw nsw i16 %l1.02, 1
+  %exitcond.not = icmp eq i16 %inc9, 16
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                        ; preds = %for.body
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
@@ -170,3 +261,5 @@ exit:
 !12 = !{i32 999000, i64 100, i32 1}
 !13 = !{i32 999999, i64 1, i32 2}
 !14 = !{!"function_entry_count", i64 0}
+!15 = distinct !{!15, !16}
+!16 = !{!"llvm.loop.vectorize.enable", i1 true}

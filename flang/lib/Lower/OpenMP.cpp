@@ -39,7 +39,9 @@ static void genOMP(Fortran::lower::AbstractConverter &absConv,
         absConv.getCurrentLocation());
     break;
   case llvm::omp::Directive::OMPD_taskyield:
-    TODO();
+    absConv.getFirOpBuilder().create<mlir::omp::TaskyieldOp>(
+        absConv.getCurrentLocation());
+    break;
   case llvm::omp::Directive::OMPD_target_enter_data:
     TODO();
   case llvm::omp::Directive::OMPD_target_exit_data:

@@ -24,8 +24,6 @@
 namespace llvm {
 namespace msf {
 
-struct MSFLayout;
-
 /// MappedBlockStream represents data stored in an MSF file into chunks of a
 /// particular size (called the Block Size), and whose chunks may not be
 /// necessarily contiguous.  The arrangement of these chunks MSF the file

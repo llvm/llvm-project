@@ -1150,6 +1150,121 @@ def Vector_TransferWriteOp :
   let hasFolder = 1;
 }
 
+def Vector_GatherOp :
+  Vector_Op<"gather">,
+    Arguments<(ins AnyMemRef:$base,
+               VectorOfRankAndType<[1], [AnyInteger]>:$indices,
+               VectorOfRankAndType<[1], [I1]>:$mask,
+               Variadic<VectorOfRank<[1]>>:$pass_thru)>,
+    Results<(outs VectorOfRank<[1]>:$result)> {
+
+  let summary = "gathers elements from memory into a vector as defined by an index vector";
+
+  let description = [{
+    The gather operation gathers elements from memory into a 1-D vector as
+    defined by a base and a 1-D index vector, but only if the corresponding
+    bit is set in a 1-D mask vector. Otherwise, the element is taken from a
+    1-D pass-through vector, if provided, or left undefined. Informally the
+    semantics are:
+    ```
+    if (!defined(pass_thru)) pass_thru = [undef, .., undef]
+    result[0] := mask[0] ? MEM[base + index[0]] : pass_thru[0]
+    result[1] := mask[1] ? MEM[base + index[1]] : pass_thru[1]
+    etc.
+    ```
+    The vector dialect leaves out-of-bounds behavior undefined.
+
+    The gather operation can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for a gather. The semantics of the operation closely
+    correspond to those of the `llvm.masked.gather`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-gather-intrinsics).
+
+    Example:
+
+    ```mlir
+    %g = vector.gather %base, %indices, %mask, %pass_thru
+        : (memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
+    ```
+
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+    VectorType getIndicesVectorType() {
+      return indices().getType().cast<VectorType>();
+    }
+    VectorType getMaskVectorType() {
+      return mask().getType().cast<VectorType>();
+    }
+    VectorType getPassThruVectorType() {
+      return (llvm::size(pass_thru()) == 0)
+        ? VectorType()
+        : (*pass_thru().begin()).getType().cast<VectorType>();
+    }
+    VectorType getResultVectorType() {
+      return result().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+}
+
+def Vector_ScatterOp :
+  Vector_Op<"scatter">,
+    Arguments<(ins AnyMemRef:$base,
+               VectorOfRankAndType<[1], [AnyInteger]>:$indices,
+               VectorOfRankAndType<[1], [I1]>:$mask,
+               VectorOfRank<[1]>:$value)> {
+
+  let summary = "scatters elements from a vector into memory as defined by an index vector";
+
+  let description = [{
+    The scatter operation scatters elements from a 1-D vector into memory as
+    defined by a base and a 1-D index vector, but only if the corresponding
+    bit in a 1-D mask vector is set. Otherwise, no action is taken for that
+    element. Informally the semantics are:
+    ```
+    if (mask[0]) MEM[base + index[0]] = value[0]
+    if (mask[1]) MEM[base + index[1]] = value[1]
+    etc.
+    ```
+    The vector dialect leaves out-of-bounds and repeated index behavior
+    undefined. Underlying implementations may enforce strict sequential
+    semantics for the latter, though.
+    TODO: enforce the latter always?
+
+    The scatter operation can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for a scatter. The semantics of the operation closely
+    correspond to those of the `llvm.masked.scatter`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
+
+    Example:
+
+    ```mlir
+    vector.scatter %base, %indices, %mask, %value
+        : vector<16xi32>, vector<16xi1>, vector<16xf32> into memref<?xf32>
+    ```
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+    VectorType getIndicesVectorType() {
+      return indices().getType().cast<VectorType>();
+    }
+    VectorType getMaskVectorType() {
+      return mask().getType().cast<VectorType>();
+    }
+    VectorType getValueVectorType() {
+      return value().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = "$base `,` $indices `,` $mask `,` $value attr-dict `:` "
+    "type($indices) `,` type($mask) `,` type($value) `into` type($base)";
+}
+
 def Vector_ShapeCastOp :
   Vector_Op<"shape_cast", [NoSideEffect]>,
     Arguments<(ins AnyTypeOf<[AnyVector, TupleOf<[AnyVector]>]>:$source)>,

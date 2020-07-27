@@ -143,3 +143,10 @@ func @semi_affine_layout_map(%s0: index, %s1: index) {
   }
   return
 }
+
+// CHECK-LABEL: func @alignment
+func @alignment() {
+  %A = alloc() {alignment = 32 : i64}: memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
+  // CHECK-NEXT: alloc() {alignment = 32 : i64} : memref<256x64x128xf32>
+  return
+}

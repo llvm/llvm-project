@@ -12,6 +12,7 @@
 #include "combined.h"
 
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -67,15 +68,17 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
       "");
 }
 
+template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
+  TestAllocator() {
+    this->reset();
+    this->initThreadMaybe();
+  }
+  ~TestAllocator() { this->unmapTestOnly(); }
+};
+
 template <class Config> static void testAllocator() {
-  using AllocatorT = scudo::Allocator<Config>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<Config>;
+  auto Allocator = std::make_unique<AllocatorT>();
 
   EXPECT_FALSE(Allocator->isOwned(&Mutex));
   EXPECT_FALSE(Allocator->isOwned(&Allocator));
@@ -348,14 +351,8 @@ template <typename AllocatorT> static void stressAllocator(AllocatorT *A) {
 }
 
 template <class Config> static void testAllocatorThreaded() {
-  using AllocatorT = scudo::Allocator<Config>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<Config>;
+  auto Allocator = std::make_unique<AllocatorT>();
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
     Threads[I] = std::thread(stressAllocator<AllocatorT>, Allocator.get());
@@ -401,14 +398,8 @@ struct DeathConfig {
 };
 
 TEST(ScudoCombinedTest, DeathCombined) {
-  using AllocatorT = scudo::Allocator<DeathConfig>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<DeathConfig>;
+  auto Allocator = std::make_unique<AllocatorT>();
 
   const scudo::uptr Size = 1000U;
   void *P = Allocator->allocate(Size, Origin);
@@ -442,14 +433,8 @@ TEST(ScudoCombinedTest, DeathCombined) {
 // Ensure that releaseToOS can be called prior to any other allocator
 // operation without issue.
 TEST(ScudoCombinedTest, ReleaseToOS) {
-  using AllocatorT = scudo::Allocator<DeathConfig>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<DeathConfig>;
+  auto Allocator = std::make_unique<AllocatorT>();
 
   Allocator->releaseToOS();
 }
@@ -457,14 +442,8 @@ TEST(ScudoCombinedTest, ReleaseToOS) {
 // Verify that when a region gets full, the allocator will still manage to
 // fulfill the allocation through a larger size class.
 TEST(ScudoCombinedTest, FullRegion) {
-  using AllocatorT = scudo::Allocator<DeathConfig>;
-  auto Deleter = [](AllocatorT *A) {
-    A->unmapTestOnly();
-    delete A;
-  };
-  std::unique_ptr<AllocatorT, decltype(Deleter)> Allocator(new AllocatorT,
-                                                           Deleter);
-  Allocator->reset();
+  using AllocatorT = TestAllocator<DeathConfig>;
+  auto Allocator = std::make_unique<AllocatorT>();
 
   std::vector<void *> V;
   scudo::uptr FailedAllocationsCount = 0;
@@ -490,4 +469,43 @@ TEST(ScudoCombinedTest, FullRegion) {
     }
   }
   EXPECT_EQ(FailedAllocationsCount, 0U);
+}
+
+TEST(ScudoCombinedTest, OddEven) {
+  using AllocatorT = TestAllocator<scudo::AndroidConfig>;
+  using SizeClassMap = AllocatorT::PrimaryT::SizeClassMap;
+  auto Allocator = std::make_unique<AllocatorT>();
+
+  if (!Allocator->useMemoryTagging())
+    return;
+
+  auto CheckOddEven = [](scudo::uptr P1, scudo::uptr P2) {
+    scudo::uptr Tag1 = scudo::extractTag(scudo::loadTag(P1));
+    scudo::uptr Tag2 = scudo::extractTag(scudo::loadTag(P2));
+    EXPECT_NE(Tag1 % 2, Tag2 % 2);
+  };
+
+  for (scudo::uptr ClassId = 1U; ClassId <= SizeClassMap::LargestClassId;
+       ClassId++) {
+    const scudo::uptr Size = SizeClassMap::getSizeByClassId(ClassId);
+
+    std::set<scudo::uptr> Ptrs;
+    bool Found = false;
+    for (unsigned I = 0; I != 65536; ++I) {
+      scudo::uptr P = scudo::untagPointer(reinterpret_cast<scudo::uptr>(
+          Allocator->allocate(Size - scudo::Chunk::getHeaderSize(), Origin)));
+      if (Ptrs.count(P - Size)) {
+        Found = true;
+        CheckOddEven(P, P - Size);
+        break;
+      }
+      if (Ptrs.count(P + Size)) {
+        Found = true;
+        CheckOddEven(P, P + Size);
+        break;
+      }
+      Ptrs.insert(P);
+    }
+    EXPECT_TRUE(Found);
+  }
 }

@@ -1675,6 +1675,10 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       bool isPPC64 = Subtarget.isPPC64();
       MI.setDesc(get(Pred[0].getImm() ? (isPPC64 ? PPC::BDNZLR8 : PPC::BDNZLR)
                                       : (isPPC64 ? PPC::BDZLR8 : PPC::BDZLR)));
+      // Need add Def and Use for CTR implicit operand.
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg(), RegState::Implicit)
+          .addReg(Pred[1].getReg(), RegState::ImplicitDefine);
     } else if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
       MI.setDesc(get(PPC::BCLR));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
@@ -1694,6 +1698,10 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       bool isPPC64 = Subtarget.isPPC64();
       MI.setDesc(get(Pred[0].getImm() ? (isPPC64 ? PPC::BDNZ8 : PPC::BDNZ)
                                       : (isPPC64 ? PPC::BDZ8 : PPC::BDZ)));
+      // Need add Def and Use for CTR implicit operand.
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg(), RegState::Implicit)
+          .addReg(Pred[1].getReg(), RegState::ImplicitDefine);
     } else if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
       MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
       MI.RemoveOperand(0);
@@ -1734,19 +1742,24 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8 : PPC::BCCTR8)
                              : (setLR ? PPC::BCCTRL : PPC::BCCTR)));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
-      return true;
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
       MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8n : PPC::BCCTR8n)
                              : (setLR ? PPC::BCCTRLn : PPC::BCCTRn)));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
-      return true;
+    } else {
+      MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCCTRL8 : PPC::BCCCTR8)
+                             : (setLR ? PPC::BCCCTRL : PPC::BCCCTR)));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addImm(Pred[0].getImm())
+          .add(Pred[1]);
     }
 
-    MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCCTRL8 : PPC::BCCCTR8)
-                           : (setLR ? PPC::BCCCTRL : PPC::BCCCTR)));
-    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-        .addImm(Pred[0].getImm())
-        .add(Pred[1]);
+    // Need add Def and Use for LR implicit operand.
+    if (setLR)
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(isPPC64 ? PPC::LR8 : PPC::LR, RegState::Implicit)
+          .addReg(isPPC64 ? PPC::LR8 : PPC::LR, RegState::ImplicitDefine);
+
     return true;
   }
 
@@ -2270,7 +2283,8 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_PLT, "ppc-plt"},
       {MO_PIC_FLAG, "ppc-pic"},
       {MO_PCREL_FLAG, "ppc-pcrel"},
-      {MO_GOT_FLAG, "ppc-got"}};
+      {MO_GOT_FLAG, "ppc-got"},
+      {MO_PCREL_OPT_FLAG, "ppc-opt-pcrel"}};
   return makeArrayRef(TargetFlags);
 }
 
@@ -2655,6 +2669,15 @@ const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
 
 void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
                                      unsigned RegNo) const {
+  // Conservatively clear kill flag for the register if the instructions are in
+  // different basic blocks and in SSA form, because the kill flag may no longer
+  // be right. There is no need to bother with dead flags since defs with no
+  // uses will be handled by DCE.
+  MachineRegisterInfo &MRI = StartMI.getParent()->getParent()->getRegInfo();
+  if (MRI.isSSA() && (StartMI.getParent() != EndMI.getParent())) {
+    MRI.clearKillFlags(RegNo);
+    return;
+  }
 
   // Instructions between [StartMI, EndMI] should be in same basic block.
   assert((StartMI.getParent() == EndMI.getParent()) &&

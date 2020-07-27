@@ -43,9 +43,6 @@ endif()
 if(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG)
   add_definitions("-Wno-covered-switch-default")
 endif()
-if(CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
-  add_definitions("-Wno-suggest-override")
-endif()
 
 set(LLVM_REQUIRES_RTTI 1)
 add_definitions( -DGTEST_HAS_RTTI=0 )
@@ -72,6 +69,14 @@ add_llvm_library(gtest
   # This is a library meant only for the build tree.
   BUILDTREE_ONLY
 )
+
+# The googletest and googlemock sources don't presently use the 'override'
+# keyword, which leads to lots of warnings from -Wsuggest-override. Disable
+# that warning here for any targets that link to gtest.
+if(CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+  add_definitions("-Wno-suggest-override")
+  set_target_properties(gtest PROPERTIES INTERFACE_COMPILE_OPTIONS "-Wno-suggest-override")
+endif()
 
 add_subdirectory(UnitTestMain)
 

@@ -467,28 +467,33 @@ private:
       }
     }
 
-    // TODO(kostyak): currently not ideal as we loop over all regions and
-    // iterate multiple times over the same freelist if a ClassId spans multiple
-    // regions. But it will have to do for now.
-    uptr TotalReleasedBytes = 0;
-    const uptr MaxSize = (RegionSize / BlockSize) * BlockSize;
+    DCHECK_GT(MinRegionIndex, 0U);
+    uptr First = 0;
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++) {
       if (PossibleRegions[I] - 1U == ClassId) {
-        const uptr Region = I * RegionSize;
-        // If the region is the one currently associated to the size-class, we
-        // only need to release up to CurrentRegionAllocated, MaxSize otherwise.
-        const uptr Size = (Region == Sci->CurrentRegion)
-                              ? Sci->CurrentRegionAllocated
-                              : MaxSize;
-        ReleaseRecorder Recorder(Region);
-        releaseFreeMemoryToOS(Sci->FreeList, Region, Size, BlockSize,
-                              &Recorder);
-        if (Recorder.getReleasedRangesCount() > 0) {
-          Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
-          Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
-          Sci->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
-          TotalReleasedBytes += Sci->ReleaseInfo.LastReleasedBytes;
-        }
+        First = I;
+        break;
+      }
+    }
+    uptr Last = 0;
+    for (uptr I = MaxRegionIndex; I >= MinRegionIndex; I--) {
+      if (PossibleRegions[I] - 1U == ClassId) {
+        Last = I;
+        break;
+      }
+    }
+    uptr TotalReleasedBytes = 0;
+    if (First && Last) {
+      const uptr Base = First * RegionSize;
+      const uptr NumberOfRegions = Last - First + 1U;
+      ReleaseRecorder Recorder(Base);
+      releaseFreeMemoryToOS(Sci->FreeList, Base, RegionSize, NumberOfRegions,
+                            BlockSize, &Recorder);
+      if (Recorder.getReleasedRangesCount() > 0) {
+        Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
+        Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
+        Sci->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
+        TotalReleasedBytes += Sci->ReleaseInfo.LastReleasedBytes;
       }
     }
     Sci->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();

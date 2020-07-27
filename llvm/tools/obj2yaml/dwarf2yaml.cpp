@@ -165,13 +165,13 @@ void dumpDebugPubSections(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   for (const auto &CU : DCtx.compile_units()) {
     DWARFYAML::Unit NewUnit;
-    NewUnit.Format = CU->getFormat();
+    NewUnit.FormParams.Format = CU->getFormat();
     NewUnit.Length = CU->getLength();
-    NewUnit.Version = CU->getVersion();
-    if(NewUnit.Version >= 5)
+    NewUnit.FormParams.Version = CU->getVersion();
+    if (NewUnit.FormParams.Version >= 5)
       NewUnit.Type = (dwarf::UnitType)CU->getUnitType();
     NewUnit.AbbrOffset = CU->getAbbreviations()->getOffset();
-    NewUnit.AddrSize = CU->getAddressByteSize();
+    NewUnit.FormParams.AddrSize = CU->getAddressByteSize();
     for (auto DIE : CU->dies()) {
       DWARFYAML::Entry NewEntry;
       DataExtractor EntryData = CU->getDebugInfoExtractor();

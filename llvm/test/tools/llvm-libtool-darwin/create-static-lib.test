@@ -1,0 +1,66 @@
+## This test checks that a correct static library is created.
+
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
+# RUN: yaml2obj %S/Inputs/input2.yaml -o %t-input2.o
+
+# RUN: rm -rf %t.lib
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o %t-input2.o
+
+## Check that binaries are present:
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+
+# CHECK-NAMES:      [[PREFIX]]-input1.o
+# CHECK-NAMES-NEXT: [[PREFIX]]-input2.o
+
+## Check that symbols are present:
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# CHECK-SYMBOLS:      Archive map
+# CHECK-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# CHECK-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# CHECK-SYMBOLS-EMPTY:
+
+## Check that output archive is in Darwin format:
+# RUN: llvm-objdump --macho --archive-headers %t.lib | \
+# RUN:   FileCheck %s --check-prefix=FORMAT -DPREFIX=%basename_t.tmp -DARCHIVE=%t
+
+# FORMAT:      Archive : [[ARCHIVE]]
+# FORMAT-NEXT: __.SYMDEF
+# FORMAT-NEXT: [[PREFIX]]-input1.o
+# FORMAT-NEXT: [[PREFIX]]-input2.o
+# FORMAT-NOT:  {{.}}
+
+## Check that the output file is overwritten:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input2.o
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OVERWRITE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OVERWRITE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# OVERWRITE-NAMES: [[PREFIX]]-input2.o
+
+# OVERWRITE-SYMBOLS:      Archive map
+# OVERWRITE-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# OVERWRITE-SYMBOLS-EMPTY:
+
+## Duplicate a binary:
+## cctools' libtool raises a warning in this case.
+## The warning is not yet implemented for llvm-libtool-darwin.
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o %t-input2.o %t-input1.o 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --implicit-check-not={{.}}
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# DUPLICATE-NAMES:      [[PREFIX]]-input1.o
+# DUPLICATE-NAMES-NEXT: [[PREFIX]]-input2.o
+# DUPLICATE-NAMES-NEXT: [[PREFIX]]-input1.o
+
+# DUPLICATE-SYMBOLS:      Archive map
+# DUPLICATE-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# DUPLICATE-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# DUPLICATE-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# DUPLICATE-SYMBOLS-EMPTY:

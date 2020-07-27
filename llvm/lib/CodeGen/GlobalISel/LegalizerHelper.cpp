@@ -1204,6 +1204,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_PTRMASK: {
     if (TypeIdx != 1)
       return UnableToLegalize;
@@ -2170,6 +2171,15 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_FPOWI: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_INTTOPTR:
     if (TypeIdx != 1)
       return UnableToLegalize;
@@ -2673,6 +2683,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerFPTOSI(MI);
   case G_FPTRUNC:
     return lowerFPTRUNC(MI, TypeIdx, Ty);
+  case G_FPOWI:
+    return lowerFPOWI(MI);
   case G_SMIN:
   case G_SMAX:
   case G_UMIN:
@@ -2717,6 +2729,27 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   case G_READ_REGISTER:
   case G_WRITE_REGISTER:
     return lowerReadWriteRegister(MI);
+  case G_UADDSAT:
+  case G_USUBSAT: {
+    // Try to make a reasonable guess about which lowering strategy to use. The
+    // target can override this with custom lowering and calling the
+    // implementation functions.
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (LI.isLegalOrCustom({G_UMIN, Ty}))
+      return lowerAddSubSatToMinMax(MI);
+    return lowerAddSubSatToAddoSubo(MI);
+  }
+  case G_SADDSAT:
+  case G_SSUBSAT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+    // FIXME: It would probably make more sense to see if G_SADDO is preferred,
+    // since it's a shorter expansion. However, we would need to figure out the
+    // preferred boolean type for the carry out for the query.
+    if (LI.isLegalOrCustom({G_SMIN, Ty}) && LI.isLegalOrCustom({G_SMAX, Ty}))
+      return lowerAddSubSatToMinMax(MI);
+    return lowerAddSubSatToAddoSubo(MI);
+  }
   }
 }
 
@@ -3437,6 +3470,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_ADD:
   case G_SUB:
   case G_MUL:
+  case G_PTR_ADD:
   case G_SMULH:
   case G_UMULH:
   case G_FADD:
@@ -4821,6 +4855,20 @@ LegalizerHelper::lowerFPTRUNC(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   return UnableToLegalize;
 }
 
+// TODO: If RHS is a constant SelectionDAGBuilder expands this into a
+// multiplication tree.
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(Dst);
+
+  auto CvtSrc1 = MIRBuilder.buildSITOFP(Ty, Src1);
+  MIRBuilder.buildFPow(Dst, Src0, CvtSrc1, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 static CmpInst::Predicate minMaxToCompare(unsigned Opc) {
   switch (Opc) {
   case TargetOpcode::G_SMIN:
@@ -5286,6 +5334,151 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
       IsAdd ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGT, BoolTy, RHS, Zero);
 
   MIRBuilder.buildXor(Dst1, ConditionRHS, ResultLowerThanLHS);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerAddSubSatToMinMax(MachineInstr &MI) {
+  Register Res = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(Res);
+  bool IsSigned;
+  bool IsAdd;
+  unsigned BaseOp;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("unexpected addsat/subsat opcode");
+  case TargetOpcode::G_UADDSAT:
+    IsSigned = false;
+    IsAdd = true;
+    BaseOp = TargetOpcode::G_ADD;
+    break;
+  case TargetOpcode::G_SADDSAT:
+    IsSigned = true;
+    IsAdd = true;
+    BaseOp = TargetOpcode::G_ADD;
+    break;
+  case TargetOpcode::G_USUBSAT:
+    IsSigned = false;
+    IsAdd = false;
+    BaseOp = TargetOpcode::G_SUB;
+    break;
+  case TargetOpcode::G_SSUBSAT:
+    IsSigned = true;
+    IsAdd = false;
+    BaseOp = TargetOpcode::G_SUB;
+    break;
+  }
+
+  if (IsSigned) {
+    // sadd.sat(a, b) ->
+    //   hi = 0x7fffffff - smax(a, 0)
+    //   lo = 0x80000000 - smin(a, 0)
+    //   a + smin(smax(lo, b), hi)
+    // ssub.sat(a, b) ->
+    //   lo = smax(a, -1) - 0x7fffffff
+    //   hi = smin(a, -1) - 0x80000000
+    //   a - smin(smax(lo, b), hi)
+    // TODO: AMDGPU can use a "median of 3" instruction here:
+    //   a +/- med3(lo, b, hi)
+    uint64_t NumBits = Ty.getScalarSizeInBits();
+    auto MaxVal =
+        MIRBuilder.buildConstant(Ty, APInt::getSignedMaxValue(NumBits));
+    auto MinVal =
+        MIRBuilder.buildConstant(Ty, APInt::getSignedMinValue(NumBits));
+    MachineInstrBuilder Hi, Lo;
+    if (IsAdd) {
+      auto Zero = MIRBuilder.buildConstant(Ty, 0);
+      Hi = MIRBuilder.buildSub(Ty, MaxVal, MIRBuilder.buildSMax(Ty, LHS, Zero));
+      Lo = MIRBuilder.buildSub(Ty, MinVal, MIRBuilder.buildSMin(Ty, LHS, Zero));
+    } else {
+      auto NegOne = MIRBuilder.buildConstant(Ty, -1);
+      Lo = MIRBuilder.buildSub(Ty, MIRBuilder.buildSMax(Ty, LHS, NegOne),
+                               MaxVal);
+      Hi = MIRBuilder.buildSub(Ty, MIRBuilder.buildSMin(Ty, LHS, NegOne),
+                               MinVal);
+    }
+    auto RHSClamped =
+        MIRBuilder.buildSMin(Ty, MIRBuilder.buildSMax(Ty, Lo, RHS), Hi);
+    MIRBuilder.buildInstr(BaseOp, {Res}, {LHS, RHSClamped});
+  } else {
+    // uadd.sat(a, b) -> a + umin(~a, b)
+    // usub.sat(a, b) -> a - umin(a, b)
+    Register Not = IsAdd ? MIRBuilder.buildNot(Ty, LHS).getReg(0) : LHS;
+    auto Min = MIRBuilder.buildUMin(Ty, Not, RHS);
+    MIRBuilder.buildInstr(BaseOp, {Res}, {LHS, Min});
+  }
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerAddSubSatToAddoSubo(MachineInstr &MI) {
+  Register Res = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(Res);
+  LLT BoolTy = Ty.changeElementSize(1);
+  bool IsSigned;
+  bool IsAdd;
+  unsigned OverflowOp;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("unexpected addsat/subsat opcode");
+  case TargetOpcode::G_UADDSAT:
+    IsSigned = false;
+    IsAdd = true;
+    OverflowOp = TargetOpcode::G_UADDO;
+    break;
+  case TargetOpcode::G_SADDSAT:
+    IsSigned = true;
+    IsAdd = true;
+    OverflowOp = TargetOpcode::G_SADDO;
+    break;
+  case TargetOpcode::G_USUBSAT:
+    IsSigned = false;
+    IsAdd = false;
+    OverflowOp = TargetOpcode::G_USUBO;
+    break;
+  case TargetOpcode::G_SSUBSAT:
+    IsSigned = true;
+    IsAdd = false;
+    OverflowOp = TargetOpcode::G_SSUBO;
+    break;
+  }
+
+  auto OverflowRes =
+      MIRBuilder.buildInstr(OverflowOp, {Ty, BoolTy}, {LHS, RHS});
+  Register Tmp = OverflowRes.getReg(0);
+  Register Ov = OverflowRes.getReg(1);
+  MachineInstrBuilder Clamp;
+  if (IsSigned) {
+    // sadd.sat(a, b) ->
+    //   {tmp, ov} = saddo(a, b)
+    //   ov ? (tmp >>s 31) + 0x80000000 : r
+    // ssub.sat(a, b) ->
+    //   {tmp, ov} = ssubo(a, b)
+    //   ov ? (tmp >>s 31) + 0x80000000 : r
+    uint64_t NumBits = Ty.getScalarSizeInBits();
+    auto ShiftAmount = MIRBuilder.buildConstant(Ty, NumBits - 1);
+    auto Sign = MIRBuilder.buildAShr(Ty, Tmp, ShiftAmount);
+    auto MinVal =
+        MIRBuilder.buildConstant(Ty, APInt::getSignedMinValue(NumBits));
+    Clamp = MIRBuilder.buildAdd(Ty, Sign, MinVal);
+  } else {
+    // uadd.sat(a, b) ->
+    //   {tmp, ov} = uaddo(a, b)
+    //   ov ? 0xffffffff : tmp
+    // usub.sat(a, b) ->
+    //   {tmp, ov} = usubo(a, b)
+    //   ov ? 0 : tmp
+    Clamp = MIRBuilder.buildConstant(Ty, IsAdd ? -1 : 0);
+  }
+  MIRBuilder.buildSelect(Res, Ov, Clamp, Tmp);
+
   MI.eraseFromParent();
   return Legalized;
 }

@@ -7092,6 +7092,9 @@ public:
     /// Close is a hint to the runtime to allocate memory close to
     /// the target device.
     OMP_MAP_CLOSE = 0x400,
+    /// 0x800 is reserved for compatibility with XLC.
+    /// Produce a runtime error if the data is not already allocated.
+    OMP_MAP_PRESENT = 0x1000,
     /// The 16 MSBs of the flags indicate whether the entry is member of some
     /// struct/class.
     OMP_MAP_MEMBER_OF = 0xffff000000000000,
@@ -7336,6 +7339,9 @@ private:
     if (llvm::find(MapModifiers, OMPC_MAP_MODIFIER_close)
         != MapModifiers.end())
       Bits |= OMP_MAP_CLOSE;
+    if (llvm::find(MapModifiers, OMPC_MAP_MODIFIER_present)
+        != MapModifiers.end())
+      Bits |= OMP_MAP_PRESENT;
     return Bits;
   }
 
@@ -7428,6 +7434,9 @@ private:
     //
     // map(p[1:24])
     // p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM
+    // for data directives
+    // p, p, sizeof(float*), TARGET_PARAM | TO | FROM
+    // p, &p[1], 24*sizeof(float), PTR_AND_OBJ | TO | FROM
     //
     // map(s)
     // &s, &s, sizeof(S2), TARGET_PARAM | TO | FROM
@@ -7606,9 +7615,15 @@ private:
       if (Ty->isAnyPointerType() && std::next(I) != CE) {
         BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
 
-        // We do not need to generate individual map information for the
-        // pointer, it can be associated with the combined storage.
-        ++I;
+        // For non-data directives, we do not need to generate individual map
+        // information for the pointer, it can be associated with the combined
+        // storage.
+        if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
+            !CurDir.is<const OMPExecutableDirective *>() ||
+            !isOpenMPTargetDataManagementDirective(
+                CurDir.get<const OMPExecutableDirective *>()
+                    ->getDirectiveKind()))
+          ++I;
       }
     }
 
@@ -7682,6 +7697,7 @@ private:
                 isa<MemberExpr>(Next->getAssociatedExpression()) ||
                 isa<ArraySubscriptExpr>(Next->getAssociatedExpression()) ||
                 isa<OMPArraySectionExpr>(Next->getAssociatedExpression()) ||
+                isa<OMPArrayShapingExpr>(Next->getAssociatedExpression()) ||
                 isa<UnaryOperator>(Next->getAssociatedExpression()) ||
                 isa<BinaryOperator>(Next->getAssociatedExpression())) &&
                "Unexpected expression");
@@ -8009,6 +8025,13 @@ public:
     CombinedInfo.Sizes.push_back(Size);
     // Map type is always TARGET_PARAM
     CombinedInfo.Types.push_back(OMP_MAP_TARGET_PARAM);
+    // If any element has the present modifier, then make sure the runtime
+    // doesn't attempt to allocate the struct.
+    if (CurTypes.end() !=
+        llvm::find_if(CurTypes, [](OpenMPOffloadMappingFlags Type) {
+          return Type & OMP_MAP_PRESENT;
+        }))
+      CombinedInfo.Types.back() |= OMP_MAP_PRESENT;
     // Remove TARGET_PARAM flag from the first element
     (*CurTypes.begin()) &= ~OMP_MAP_TARGET_PARAM;
 

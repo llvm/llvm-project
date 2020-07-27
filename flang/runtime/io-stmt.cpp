@@ -38,7 +38,7 @@ InternalIoStatementState<DIR, CHAR>::InternalIoStatementState(
 
 template <Direction DIR, typename CHAR>
 bool InternalIoStatementState<DIR, CHAR>::Emit(
-    const CharType *data, std::size_t chars) {
+    const CharType *data, std::size_t chars, std::size_t /*elementBytes*/) {
   if constexpr (DIR == Direction::Input) {
     Crash("InternalIoStatementState<Direction::Input>::Emit() called");
     return false;
@@ -167,7 +167,7 @@ int OpenStatementState::EndIoStatement() {
                 "than 'OLD'");
   }
   unit().OpenUnit(status_.value_or(OpenStatus::Unknown), action_, position_,
-      std::move(path_), pathLength_, *this);
+      std::move(path_), pathLength_, convert_, *this);
   return ExternalIoStatementBase::EndIoStatement();
 }
 
@@ -195,11 +195,12 @@ template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
 }
 
 template <Direction DIR>
-bool ExternalIoStatementState<DIR>::Emit(const char *data, std::size_t chars) {
+bool ExternalIoStatementState<DIR>::Emit(
+    const char *data, std::size_t bytes, std::size_t elementBytes) {
   if constexpr (DIR == Direction::Input) {
     Crash("ExternalIoStatementState::Emit(char) called for input statement");
   }
-  return unit().Emit(data, chars * sizeof(*data), *this);
+  return unit().Emit(data, bytes, elementBytes, *this);
 }
 
 template <Direction DIR>
@@ -210,8 +211,8 @@ bool ExternalIoStatementState<DIR>::Emit(
         "ExternalIoStatementState::Emit(char16_t) called for input statement");
   }
   // TODO: UTF-8 encoding
-  return unit().Emit(
-      reinterpret_cast<const char *>(data), chars * sizeof(*data), *this);
+  return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
+      static_cast<int>(sizeof *data), *this);
 }
 
 template <Direction DIR>
@@ -222,8 +223,8 @@ bool ExternalIoStatementState<DIR>::Emit(
         "ExternalIoStatementState::Emit(char32_t) called for input statement");
   }
   // TODO: UTF-8 encoding
-  return unit().Emit(
-      reinterpret_cast<const char *>(data), chars * sizeof(*data), *this);
+  return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
+      static_cast<int>(sizeof *data), *this);
 }
 
 template <Direction DIR>
@@ -277,8 +278,10 @@ std::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
       [&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
 }
 
-bool IoStatementState::Emit(const char *data, std::size_t n) {
-  return std::visit([=](auto &x) { return x.get().Emit(data, n); }, u_);
+bool IoStatementState::Emit(
+    const char *data, std::size_t n, std::size_t elementBytes) {
+  return std::visit(
+      [=](auto &x) { return x.get().Emit(data, n, elementBytes); }, u_);
 }
 
 std::optional<char32_t> IoStatementState::GetCurrentChar() {
@@ -506,6 +509,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   } else if (realPart_) {
     realPart_ = false;
     imaginaryPart_ = true;
+    edit.descriptor = DataEdit::ListDirectedImaginaryPart;
   }
   if (!ch) {
     return std::nullopt;
@@ -571,17 +575,29 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   if (!imaginaryPart_ && ch && *ch == '(') {
     realPart_ = true;
     io.HandleRelativePosition(1);
+    edit.descriptor = DataEdit::ListDirectedRealPart;
   }
   return edit;
 }
 
 template <Direction DIR>
-bool UnformattedIoStatementState<DIR>::Receive(char *data, std::size_t bytes) {
+bool UnformattedIoStatementState<DIR>::Receive(
+    char *data, std::size_t bytes, std::size_t elementBytes) {
   if constexpr (DIR == Direction::Output) {
     this->Crash(
         "UnformattedIoStatementState::Receive() called for output statement");
   }
-  return this->unit().Receive(data, bytes, *this);
+  return this->unit().Receive(data, bytes, elementBytes, *this);
+}
+
+template <Direction DIR>
+bool UnformattedIoStatementState<DIR>::Emit(
+    const char *data, std::size_t bytes, std::size_t elementBytes) {
+  if constexpr (DIR == Direction::Input) {
+    this->Crash(
+        "UnformattedIoStatementState::Emit() called for input statement");
+  }
+  return ExternalIoStatementState<DIR>::Emit(data, bytes, elementBytes);
 }
 
 template <Direction DIR>

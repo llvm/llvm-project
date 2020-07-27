@@ -225,6 +225,99 @@ void foo(int arg) {
   // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S]]
   #pragma omp target data map(always close, to: lb)
   {++arg;}
+
+}
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK1A -verify -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK1A --check-prefix CK1A-64
+// RUN: %clang_cc1 -DCK1A -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK1A --check-prefix CK1A-64
+// RUN: %clang_cc1 -DCK1A -verify -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK1A --check-prefix CK1A-32
+// RUN: %clang_cc1 -DCK1A -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK1A --check-prefix CK1A-32
+
+// RUN: %clang_cc1 -DCK1A -verify -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK1A -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK1A -verify -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK1A -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+#ifdef CK1A
+
+// CK1A: [[ST:%.+]] = type { i32, double* }
+template <typename T>
+struct ST {
+  T a;
+  double *b;
+};
+
+ST<int> gb;
+double gc[100];
+
+// PRESENT=0x1000 | TARGET_PARAM=0x20 | TO=0x1 = 0x1021
+// CK1A: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1021]]]
+
+// PRESENT=0x1000 | CLOSE=0x400 | TARGET_PARAM=0x20 | ALWAYS=0x4 | TO=0x1 = 0x1425
+// CK1A: [[MTYPE01:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1425]]]
+
+// CK1A-LABEL: _Z3fooi
+void foo(int arg) {
+  int la;
+  float lb[arg];
+
+  // Region 00
+  // CK1A-DAG: call void @__tgt_target_data_begin_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz:32|64]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
+  // CK1A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+  // CK1A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK1A-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+
+  // CK1A-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+  // CK1A-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK1A-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+  // CK1A-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float**
+  // CK1A-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
+  // CK1A-DAG: store float* [[VAR0:%.+]], float** [[CBP0]]
+  // CK1A-DAG: store float* [[VAR0]], float** [[CP0]]
+  // CK1A-DAG: store i[[sz]] [[CSVAL0:%[^,]+]], i[[sz]]* [[S0]]
+  // CK1A-64-DAG: [[CSVAL0]] = mul nuw i64 %{{[^,]+}}, 4
+  // CK1A-32-DAG: [[CSVAL0]] = sext i32 [[CSVAL032:%.+]] to i64
+  // CK1A-32-DAG: [[CSVAL032]] = mul nuw i32 %{{[^,]+}}, 4
+  // CK1A: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+
+  // CK1A-DAG: call void @__tgt_target_data_end_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
+  // CK1A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
+  // CK1A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
+  // CK1A-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S]]
+  #pragma omp target data map(present, to: lb)
+  {++arg;}
+
+  // Region 01
+  // CK1A-DAG: call void @__tgt_target_data_begin_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}})
+  // CK1A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+  // CK1A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK1A-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+
+  // CK1A-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+  // CK1A-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK1A-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+  // CK1A-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float**
+  // CK1A-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
+  // CK1A-DAG: store float* [[VAR0:%.+]], float** [[CBP0]]
+  // CK1A-DAG: store float* [[VAR0]], float** [[CP0]]
+  // CK1A-DAG: store i[[sz]] [[CSVAL0:%[^,]+]], i[[sz]]* [[S0]]
+  // CK1A-64-DAG: [[CSVAL0]] = mul nuw i64 %{{[^,]+}}, 4
+  // CK1A-32-DAG: [[CSVAL0]] = sext i32 [[CSVAL032:%.+]] to i64
+  // CK1A-32-DAG: [[CSVAL032]] = mul nuw i32 %{{[^,]+}}, 4
+  // CK1A: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+
+  // CK1A-DAG: call void @__tgt_target_data_end_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}})
+  // CK1A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
+  // CK1A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
+  // CK1A-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S]]
+  #pragma omp target data map(always close present, to: lb)
+  {++arg;}
+
 }
 #endif
 ///==========================================================================///
@@ -462,7 +555,7 @@ struct S2 {
 
 void test_close_modifier(int arg) {
   S2 *ps;
-  // CK5: private unnamed_addr constant [5 x i64] [i64 1059, i64 32, {{.*}}, i64 16, i64 1043]
+  // CK5: private unnamed_addr constant [6 x i64] [i64 1059, i64 32, i64 562949953422339, i64 562949953421328, i64 16, i64 1043]
   #pragma omp target data map(close,tofrom: arg, ps->ps->ps->ps->s)
   {
     ++(arg);
@@ -508,6 +601,103 @@ void test_device_ptr_addr(int arg) {
   // CK7: add nsw i32
   #pragma omp target data use_device_ptr(p) use_device_addr(arg)
   { ++arg, ++(*p); }
+}
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK8 -verify -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK8 --check-prefix CK8-64
+// RUN: %clang_cc1 -DCK8 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK8 --check-prefix CK8-64
+// RUN: %clang_cc1 -DCK8 -verify -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK8 --check-prefix CK8-32
+// RUN: %clang_cc1 -DCK8 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK8 --check-prefix CK8-32
+
+// RUN: %clang_cc1 -DCK8 -verify -fopenmp-simd -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK8 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK8 -verify -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK8 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// SIMD-ONLY2-NOT: {{__kmpc|__tgt}}#ifdef CK8
+#ifdef CK8
+struct S1 {
+  int i;
+};
+struct S2 {
+  S1 s;
+  struct S2 *ps;
+};
+
+void test_present_modifier(int arg) {
+  S2 *ps1;
+  S2 *ps2;
+
+  // Make sure the struct picks up present even if another element of the struct
+  // doesn't have present.
+
+  // CK8: private unnamed_addr constant [15 x i64]
+
+  // ps1
+  //
+  // PRESENT=0x1000 | TARGET_PARAM=0x20 = 0x1020
+  // MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
+  // MEMBER_OF_1=0x1000000000000 | PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x1000000000013
+  // MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1000000001003
+  // MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1000000001010
+  // PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1010
+  // PRESENT=0x1000 | PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x1013
+  //
+  // CK8-SAME: {{^}} [i64 [[#0x1020]], i64 [[#0x1000000000003]],
+  // CK8-SAME: {{^}} i64 [[#0x1000000000013]], i64 [[#0x1000000001003]],
+  // CK8-SAME: {{^}} i64 [[#0x1000000001010]], i64 [[#0x1010]], i64 [[#0x1013]],
+
+  // arg
+  //
+  // PRESENT=0x1000 | TARGET_PARAM=0x20 | FROM=0x2 | TO=0x1 = 0x1023
+  //
+  // CK8-SAME: {{^}} i64 [[#0x1023]],
+
+  // ps2
+  //
+  // PRESENT=0x1000 | TARGET_PARAM=0x20 = 0x1020
+  // MEMBER_OF_9=0x9000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x9000000001003
+  // MEMBER_OF_9=0x9000000000000 | PRESENT=0x1000 | PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x9000000001013
+  // MEMBER_OF_9=0x9000000000000 | FROM=0x2 | TO=0x1 = 0x9000000000003
+  // MEMBER_OF_9=0x9000000000000 | PTR_AND_OBJ=0x10 = 0x9000000000010
+  // PTR_AND_OBJ=0x10 = 0x10
+  // PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x13
+  //
+  // CK8-SAME: {{^}} i64 [[#0x1020]], i64 [[#0x9000000001003]],
+  // CK8-SAME: {{^}} i64 [[#0x9000000001013]], i64 [[#0x9000000000003]],
+  // CK8-SAME: {{^}} i64 [[#0x9000000000010]], i64 [[#0x10]], i64 [[#0x13]]]
+  #pragma omp target data map(tofrom: ps1->s) \
+                          map(present,tofrom: arg, ps1->ps->ps->ps->s, ps2->s) \
+                          map(tofrom: ps2->ps->ps->ps->s)
+  {
+    ++(arg);
+  }
+}
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK9 -verify -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK9 --check-prefix CK9-64
+// RUN: %clang_cc1 -DCK9 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK9 --check-prefix CK9-64
+// RUN: %clang_cc1 -DCK9 -verify -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK9 --check-prefix CK9-32
+// RUN: %clang_cc1 -DCK9 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK9 --check-prefix CK9-32
+
+// RUN: %clang_cc1 -DCK9 -verify -fopenmp-simd -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK9 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK9 -verify -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -DCK9 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
+#ifdef CK9
+void test_present_modifier(int arg) {
+  // PRESENT=0x1000 | TARGET_PARAM=0x20 | FROM=0x2 | TO=0x1 = 0x1023
+  // CK9: private unnamed_addr constant [1 x i64] [i64 [[#0x1023]]]
+  #pragma omp target data map(present,tofrom: arg)
+  {++arg;}
 }
 #endif
 #endif

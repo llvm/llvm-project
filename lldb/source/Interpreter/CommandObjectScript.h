@@ -13,13 +13,9 @@
 
 namespace lldb_private {
 
-// CommandObjectScript
-
 class CommandObjectScript : public CommandObjectRaw {
 public:
-  CommandObjectScript(CommandInterpreter &interpreter,
-                      lldb::ScriptLanguage script_lang);
-
+  CommandObjectScript(CommandInterpreter &interpreter);
   ~CommandObjectScript() override;
 
 protected:

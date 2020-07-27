@@ -25,6 +25,7 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ExecutionEngine/Orc/TPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/TPCIndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/Support/InitLLVM.h"
@@ -51,17 +52,23 @@ ExitOnError ExitOnErr;
 
 const llvm::StringRef FooMod =
     R"(
+  declare i32 @return1()
+
   define i32 @foo_body() {
   entry:
-    ret i32 1
+    %0 = call i32 @return1()
+    ret i32 %0
   }
 )";
 
 const llvm::StringRef BarMod =
     R"(
+  declare i32 @return2()
+
   define i32 @bar_body() {
   entry:
-    ret i32 2
+    %0 = call i32 @return2()
+    ret i32 %0
   }
 )";
 
@@ -91,6 +98,9 @@ const llvm::StringRef MainMod =
   declare i32 @bar()
 )";
 
+extern "C" int32_t return1() { return 1; }
+extern "C" int32_t return2() { return 2; }
+
 static void *reenter(void *Ctx, void *TrampolineAddr) {
   std::promise<void *> LandingAddressP;
   auto LandingAddressF = LandingAddressP.get_future();
@@ -103,6 +113,11 @@ static void *reenter(void *Ctx, void *TrampolineAddr) {
             jitTargetAddressToPointer<void *>(LandingAddress));
       });
   return LandingAddressF.get();
+}
+
+static void reportErrorAndExit() {
+  errs() << "Unable to lazily compile function. Exiting.\n";
+  exit(1);
 }
 
 cl::list<std::string> InputArgv(cl::Positional,
@@ -119,7 +134,8 @@ int main(int argc, char *argv[]) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   // (1) Create LLJIT instance.
-  auto J = ExitOnErr(LLJITBuilder().create());
+  auto TPC = ExitOnErr(SelfTargetProcessControl::Create());
+  auto J = ExitOnErr(LLJITBuilder().setTargetProcessControl(*TPC).create());
 
   // (2) Install transform to print modules as they are compiled:
   J->getIRTransformLayer().setTransform(
@@ -130,13 +146,14 @@ int main(int argc, char *argv[]) {
       });
 
   // (3) Create stubs and call-through managers:
-
-  auto TPC = ExitOnErr(SelfTargetProcessControl::Create());
   auto TPCIU = ExitOnErr(TPCIndirectionUtils::Create(*TPC));
   ExitOnErr(TPCIU->writeResolverBlock(pointerToJITTargetAddress(&reenter),
                                       pointerToJITTargetAddress(TPCIU.get())));
-  TPCIU->createLazyCallThroughManager(J->getExecutionSession(), 0);
+  TPCIU->createLazyCallThroughManager(
+      J->getExecutionSession(), pointerToJITTargetAddress(&reportErrorAndExit));
   auto ISM = TPCIU->createIndirectStubsManager();
+  J->getMainJITDylib().addGenerator(
+      ExitOnErr(TPCDynamicLibrarySearchGenerator::GetForTargetProcess(*TPC)));
 
   // (4) Add modules.
   ExitOnErr(J->addIRModule(ExitOnErr(parseExampleModule(FooMod, "foo-mod"))));

@@ -264,7 +264,8 @@ void StubHelperSection::setup() {
   in.got->addEntry(*stubBinder);
 
   inputSections.push_back(in.imageLoaderCache);
-  symtab->addDefined("__dyld_private", in.imageLoaderCache, 0);
+  symtab->addDefined("__dyld_private", in.imageLoaderCache, 0,
+                     /*isWeakDef=*/false);
 }
 
 ImageLoaderCacheSection::ImageLoaderCacheSection() {

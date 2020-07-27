@@ -57,7 +57,7 @@ RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
 
 static Value emitOrFoldComposedAffineApply(OpBuilder &b, Location loc,
                                            AffineMap map,
-                                           ArrayRef<Value> operandsRef,
+                                           ValueRange operandsRef,
                                            OperationFolder *folder) {
   SmallVector<Value, 4> operands(operandsRef.begin(), operandsRef.end());
   fullyComposeAffineMapAndOperands(&map, &operands);
@@ -68,16 +68,16 @@ static Value emitOrFoldComposedAffineApply(OpBuilder &b, Location loc,
 
 SmallVector<Value, 4> mlir::linalg::applyMapToValues(OpBuilder &b, Location loc,
                                                      AffineMap map,
-                                                     ArrayRef<Value> values,
+                                                     ValueRange values,
                                                      OperationFolder *folder) {
   SmallVector<Value, 4> res;
   res.reserve(map.getNumResults());
-  unsigned numDims = map.getNumDims();
+  unsigned numDims = map.getNumDims(), numSym = map.getNumSymbols();
   // For each `expr` in `map`, applies the `expr` to the values extracted from
   // ranges. If the resulting application can be folded into a Value, the
   // folding occurs eagerly. Otherwise, an affine.apply operation is emitted.
   for (auto expr : map.getResults()) {
-    AffineMap map = AffineMap::get(numDims, 0, expr);
+    AffineMap map = AffineMap::get(numDims, numSym, expr);
     res.push_back(emitOrFoldComposedAffineApply(b, loc, map, values, folder));
   }
   return res;

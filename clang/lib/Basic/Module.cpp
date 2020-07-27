@@ -173,14 +173,10 @@ bool Module::isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
 }
 
 bool Module::isSubModuleOf(const Module *Other) const {
-  const Module *This = this;
-  do {
-    if (This == Other)
+  for (auto *Parent = this; Parent; Parent = Parent->Parent) {
+    if (Parent == Other)
       return true;
-
-    This = This->Parent;
-  } while (This);
-
+  }
   return false;
 }
 

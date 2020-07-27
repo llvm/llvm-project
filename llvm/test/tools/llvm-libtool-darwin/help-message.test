@@ -1,10 +1,13 @@
 ## This test checks that the help message is displayed correctly.
 
-# RUN: llvm-libtool-darwin -h | FileCheck --check-prefixes=LIBTOOL-USAGE,CATEG %s --match-full-lines
-# RUN: llvm-libtool-darwin -help | FileCheck --check-prefixes=LIBTOOL-USAGE,CATEG %s --match-full-lines
-# RUN: llvm-libtool-darwin --help | FileCheck --check-prefixes=LIBTOOL-USAGE,CATEG %s --match-full-lines
+# RUN: llvm-libtool-darwin -h | \
+# RUN:   FileCheck --check-prefixes=LIBTOOL-USAGE,CATEG %s --match-full-lines --implicit-check-not="General options:"
+# RUN: llvm-libtool-darwin -help | \
+# RUN:   FileCheck --check-prefixes=LIBTOOL-USAGE,CATEG %s --match-full-lines --implicit-check-not="General options:"
+# RUN: llvm-libtool-darwin --help | \
+# RUN:   FileCheck --check-prefixes=LIBTOOL-USAGE,CATEG %s --match-full-lines --implicit-check-not="General options:"
 # RUN: llvm-libtool-darwin --help-list | \
-# RUN:   FileCheck -check-prefixes=LIBTOOL-USAGE,LIST %s --match-full-lines
+# RUN:   FileCheck -check-prefixes=LIBTOOL-USAGE,LIST %s --match-full-lines --implicit-check-not="safepoint-ir-verifier-print-only"
 
 # RUN: not llvm-libtool-darwin -abcabc 2>&1 | FileCheck --check-prefix=UNKNOWN-ARG %s
 # RUN: not llvm-libtool-darwin --abcabc 2>&1 | FileCheck --check-prefix=UNKNOWN-ARG %s
@@ -19,5 +22,6 @@
 # LIST-NOT: Generic Options:
 # CATEG:    llvm-libtool-darwin Options:
 # LIST-NOT: llvm-libtool-darwin Options:
+# LIST-NOT: General options:
 
 # UNKNOWN-ARG: Unknown command line argument '{{-+}}abcabc'

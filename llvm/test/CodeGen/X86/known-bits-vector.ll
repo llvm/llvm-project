@@ -116,14 +116,14 @@ define <4 x i32> @knownbits_mask_shuffle_shuffle_undef_sext(<8 x i16> %a0) nounw
 ; X32-LABEL: knownbits_mask_shuffle_shuffle_undef_sext:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_shuffle_shuffle_undef_sext:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = and <8 x i16> %a0, <i16 -1, i16 -1, i16 -1, i16 -1, i16 15, i16 15, i16 15, i16 15>

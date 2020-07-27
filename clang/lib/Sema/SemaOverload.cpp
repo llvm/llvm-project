@@ -346,7 +346,6 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
                ToType->isRealFloatingType()) {
       if (IgnoreFloatToIntegralConversion)
         return NK_Not_Narrowing;
-      llvm::APSInt IntConstantValue;
       const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
       assert(Initializer && "Unknown conversion expression");
 
@@ -354,19 +353,20 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       if (Initializer->isValueDependent())
         return NK_Dependent_Narrowing;
 
-      if (Initializer->isIntegerConstantExpr(IntConstantValue, Ctx)) {
+      if (Optional<llvm::APSInt> IntConstantValue =
+              Initializer->getIntegerConstantExpr(Ctx)) {
         // Convert the integer to the floating type.
         llvm::APFloat Result(Ctx.getFloatTypeSemantics(ToType));
-        Result.convertFromAPInt(IntConstantValue, IntConstantValue.isSigned(),
+        Result.convertFromAPInt(*IntConstantValue, IntConstantValue->isSigned(),
                                 llvm::APFloat::rmNearestTiesToEven);
         // And back.
-        llvm::APSInt ConvertedValue = IntConstantValue;
+        llvm::APSInt ConvertedValue = *IntConstantValue;
         bool ignored;
         Result.convertToInteger(ConvertedValue,
                                 llvm::APFloat::rmTowardZero, &ignored);
         // If the resulting value is different, this was a narrowing conversion.
-        if (IntConstantValue != ConvertedValue) {
-          ConstantValue = APValue(IntConstantValue);
+        if (*IntConstantValue != ConvertedValue) {
+          ConstantValue = APValue(*IntConstantValue);
           ConstantType = Initializer->getType();
           return NK_Constant_Narrowing;
         }
@@ -430,17 +430,18 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
         (FromWidth == ToWidth && FromSigned != ToSigned) ||
         (FromSigned && !ToSigned)) {
       // Not all values of FromType can be represented in ToType.
-      llvm::APSInt InitializerValue;
       const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
 
       // If it's value-dependent, we can't tell whether it's narrowing.
       if (Initializer->isValueDependent())
         return NK_Dependent_Narrowing;
 
-      if (!Initializer->isIntegerConstantExpr(InitializerValue, Ctx)) {
+      Optional<llvm::APSInt> OptInitializerValue;
+      if (!(OptInitializerValue = Initializer->getIntegerConstantExpr(Ctx))) {
         // Such conversions on variables are always narrowing.
         return NK_Variable_Narrowing;
       }
+      llvm::APSInt &InitializerValue = *OptInitializerValue;
       bool Narrowing = false;
       if (FromWidth < ToWidth) {
         // Negative -> unsigned is narrowing. Otherwise, more bits is never
@@ -2183,21 +2184,22 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
   // compatibility.
   if (From) {
     if (FieldDecl *MemberDecl = From->getSourceBitField()) {
-      llvm::APSInt BitWidth;
+      Optional<llvm::APSInt> BitWidth;
       if (FromType->isIntegralType(Context) &&
-          MemberDecl->getBitWidth()->isIntegerConstantExpr(BitWidth, Context)) {
-        llvm::APSInt ToSize(BitWidth.getBitWidth(), BitWidth.isUnsigned());
+          (BitWidth =
+               MemberDecl->getBitWidth()->getIntegerConstantExpr(Context))) {
+        llvm::APSInt ToSize(BitWidth->getBitWidth(), BitWidth->isUnsigned());
         ToSize = Context.getTypeSize(ToType);
 
         // Are we promoting to an int from a bitfield that fits in an int?
-        if (BitWidth < ToSize ||
-            (FromType->isSignedIntegerType() && BitWidth <= ToSize)) {
+        if (*BitWidth < ToSize ||
+            (FromType->isSignedIntegerType() && *BitWidth <= ToSize)) {
           return To->getKind() == BuiltinType::Int;
         }
 
         // Are we promoting to an unsigned int from an unsigned bitfield
         // that fits into an unsigned int?
-        if (FromType->isUnsignedIntegerType() && BitWidth <= ToSize) {
+        if (FromType->isUnsignedIntegerType() && *BitWidth <= ToSize) {
           return To->getKind() == BuiltinType::UInt;
         }
 
@@ -12795,8 +12797,9 @@ bool Sema::buildOverloadedCallSet(Scope *S, Expr *Fn,
       // then create a type dependent CallExpr. The goal is to postpone name
       // lookup to instantiation time to be able to search into type dependent
       // base classes.
-      CallExpr *CE = CallExpr::Create(Context, Fn, Args, Context.DependentTy,
-                                      VK_RValue, RParenLoc);
+      CallExpr *CE =
+          CallExpr::Create(Context, Fn, Args, Context.DependentTy, VK_RValue,
+                           RParenLoc, CurFPFeatureOverrides());
       CE->markDependentForPostponedNameLookup();
       *Result = CE;
       return true;
@@ -13976,9 +13979,9 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
         << (qualsString.find(' ') == std::string::npos ? 1 : 2);
     }
 
-    CXXMemberCallExpr *call =
-        CXXMemberCallExpr::Create(Context, MemExprE, Args, resultType,
-                                  valueKind, RParenLoc, proto->getNumParams());
+    CXXMemberCallExpr *call = CXXMemberCallExpr::Create(
+        Context, MemExprE, Args, resultType, valueKind, RParenLoc,
+        CurFPFeatureOverrides(), proto->getNumParams());
 
     if (CheckCallReturnType(proto->getReturnType(), op->getRHS()->getBeginLoc(),
                             call, nullptr))
@@ -13995,7 +13998,7 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
 
   if (isa<CXXPseudoDestructorExpr>(NakedMemExpr))
     return CallExpr::Create(Context, MemExprE, Args, Context.VoidTy, VK_RValue,
-                            RParenLoc);
+                            RParenLoc, CurFPFeatureOverrides());
 
   UnbridgedCastsSet UnbridgedCasts;
   if (checkArgPlaceholdersForOverload(*this, Args, UnbridgedCasts))
@@ -14133,9 +14136,9 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
 
   assert(Method && "Member call to something that isn't a method?");
   const auto *Proto = Method->getType()->castAs<FunctionProtoType>();
-  CXXMemberCallExpr *TheCall =
-      CXXMemberCallExpr::Create(Context, MemExprE, Args, ResultType, VK,
-                                RParenLoc, Proto->getNumParams());
+  CXXMemberCallExpr *TheCall = CXXMemberCallExpr::Create(
+      Context, MemExprE, Args, ResultType, VK, RParenLoc,
+      CurFPFeatureOverrides(), Proto->getNumParams());
 
   // Check for a valid return type.
   if (CheckCallReturnType(Method->getReturnType(), MemExpr->getMemberLoc(),
@@ -14678,7 +14681,7 @@ ExprResult Sema::BuildLiteralOperatorCall(LookupResult &R,
 
   UserDefinedLiteral *UDL = UserDefinedLiteral::Create(
       Context, Fn.get(), llvm::makeArrayRef(ConvArgs, Args.size()), ResultTy,
-      VK, LitEndLoc, UDSuffixLoc);
+      VK, LitEndLoc, UDSuffixLoc, CurFPFeatureOverrides());
 
   if (CheckCallReturnType(FD->getReturnType(), UDSuffixLoc, UDL, FD))
     return ExprError();

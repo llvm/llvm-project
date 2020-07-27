@@ -308,6 +308,11 @@ LegalizeMutation changeElementTo(unsigned TypeIdx, unsigned FromTypeIdx);
 /// Keep the same scalar or element type as the given type.
 LegalizeMutation changeElementTo(unsigned TypeIdx, LLT Ty);
 
+/// Change the scalar size or element size to have the same scalar size as type
+/// index \p FromIndex. Unlike changeElementTo, this discards pointer types and
+/// only changes the size.
+LegalizeMutation changeElementSizeTo(unsigned TypeIdx, unsigned FromTypeIdx);
+
 /// Widen the scalar type or vector element type for the given type index to the
 /// next power of 2.
 LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx, unsigned Min = 0);
@@ -864,7 +869,10 @@ public:
     return actionIf(
         LegalizeAction::NarrowScalar,
         [=](const LegalityQuery &Query) {
-          return scalarWiderThan(TypeIdx, Ty.getSizeInBits()) && Predicate(Query);
+          const LLT QueryTy = Query.Types[TypeIdx];
+          return QueryTy.isScalar() &&
+                 QueryTy.getSizeInBits() > Ty.getSizeInBits() &&
+                 Predicate(Query);
         },
         changeElementTo(typeIdx(TypeIdx), Ty));
   }
@@ -890,11 +898,25 @@ public:
           return Query.Types[LargeTypeIdx].getScalarSizeInBits() >
                  Query.Types[TypeIdx].getSizeInBits();
         },
+        LegalizeMutations::changeElementSizeTo(TypeIdx, LargeTypeIdx));
+  }
+
+  /// Narrow the scalar to match the size of another.
+  LegalizeRuleSet &maxScalarSameAs(unsigned TypeIdx, unsigned NarrowTypeIdx) {
+    typeIdx(TypeIdx);
+    return narrowScalarIf(
         [=](const LegalityQuery &Query) {
-          LLT T = Query.Types[LargeTypeIdx];
-          return std::make_pair(TypeIdx,
-                                T.isVector() ? T.getElementType() : T);
-        });
+          return Query.Types[NarrowTypeIdx].getScalarSizeInBits() <
+                 Query.Types[TypeIdx].getSizeInBits();
+        },
+        LegalizeMutations::changeElementSizeTo(TypeIdx, NarrowTypeIdx));
+  }
+
+  /// Change the type \p TypeIdx to have the same scalar size as type \p
+  /// SameSizeIdx.
+  LegalizeRuleSet &scalarSameSizeAs(unsigned TypeIdx, unsigned SameSizeIdx) {
+    return minScalarSameAs(TypeIdx, SameSizeIdx)
+          .maxScalarSameAs(TypeIdx, SameSizeIdx);
   }
 
   /// Conditionally widen the scalar or elt to match the size of another.
@@ -1214,6 +1236,12 @@ public:
   bool isLegal(const LegalityQuery &Query) const {
     return getAction(Query).Action == LegalizeAction::Legal;
   }
+
+  bool isLegalOrCustom(const LegalityQuery &Query) const {
+    auto Action = getAction(Query).Action;
+    return Action == LegalizeAction::Legal || Action == LegalizeAction::Custom;
+  }
+
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
   bool isLegalOrCustom(const MachineInstr &MI,
                        const MachineRegisterInfo &MRI) const;

@@ -2,7 +2,7 @@
 
 This manual describes the conversion from [SPIR-V Dialect](Dialects/SPIR-V.md)
 to [LLVM Dialect](Dialects/LLVM.md). It assumes familiarity with both, and
-describes the design choices behind the modelling of SPIR-V conscepts in LLVM
+describes the design choices behind the modelling of SPIR-V concepts in LLVM
 Dialect. The conversion is an ongoing work, and is expected to grow as more
 features are implemented.
 
@@ -49,7 +49,7 @@ SPIR-V Dialect                                | LLVM Dialect
 
 ### Array types
 
-SPIR-V distiguishes between array type and run-time array type, the length of
+SPIR-V distinguishes between array type and run-time array type, the length of
 which is not known at compile time. In LLVM, it is possible to index beyond the
 end of the array. Therfore, runtime array can be implemented as a zero length
 array type.
@@ -209,7 +209,7 @@ to note:
     ```
 
     Also, note that if the bitwidth of `offset` or `count` is greater than the
-    bitwidth of `base`, truncation is still permitted. This is beacuse the ops have a
+    bitwidth of `base`, truncation is still permitted. This is because the ops have a
     defined behaviour with `offset` and `count` being less than the size of
     `base`. It creates a natural upper bound on what values `offset` and `count`
     can take, which is 64. This can be expressed in less than 8 bits.
@@ -332,13 +332,13 @@ SPIR-V Dialect op                     | LLVM Dialect op
 `spv.IEqual`                          | `llvm.icmp "eq"`
 `spv.INotEqual`                       | `llvm.icmp "ne"`
 `spv.FOrdEqual`                       | `llvm.fcmp "oeq"`
-`spv.FOrdGreaterhan`                  | `llvm.fcmp "ogt"`
+`spv.FOrdGreaterThan`                 | `llvm.fcmp "ogt"`
 `spv.FOrdGreaterThanEqual`            | `llvm.fcmp "oge"`
 `spv.FOrdLessThan`                    | `llvm.fcmp "olt"`
 `spv.FOrdLessThanEqual`               | `llvm.fcmp "ole"`
 `spv.FOrdNotEqual`                    | `llvm.fcmp "one"`
 `spv.FUnordEqual`                     | `llvm.fcmp "ueq"`
-`spv.FUnordGreaterhan`                | `llvm.fcmp "ugt"`
+`spv.FUnordGreaterThan`               | `llvm.fcmp "ugt"`
 `spv.FUnordGreaterThanEqual`          | `llvm.fcmp "uge"`
 `spv.FUnordLessThan`                  | `llvm.fcmp "ult"`
 `spv.FUnordLessThanEqual`             | `llvm.fcmp "ule"`
@@ -416,13 +416,13 @@ At the moment `spv.constant` conversion supports scalar and vector constants
 
 #### Mapping
 
-`spv.constant` is mapped to `llvm.mlir.constant`. This is a strightforward
+`spv.constant` is mapped to `llvm.mlir.constant`. This is a straightforward
 conversion pattern with a special case when the argument is signed or unsigned.
 
 #### Special case
 
 SPIR-V constant can be a signed or unsigned integer. Since LLVM Dialect does not
-have signedness semantics, this case should be handeled separately. 
+have signedness semantics, this case should be handled separately.
 
 The conversion casts constant value attribute to a signless integer or a vector
 of signless integers. This is correct because in SPIR-V, like in LLVM, how to
@@ -481,7 +481,7 @@ There is no support of the following ops:
 
 **Note: these conversions have not been implemented yet**
 
-## GLSL extended instriction set
+## GLSL extended instruction set
 
 **Note: these conversions have not been implemented yet**
 

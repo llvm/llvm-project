@@ -206,10 +206,10 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
 ; X64-NEXT:    cmovll %ecx, %edx
 ; X64-NEXT:    movd %edx, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
 ; X64-NEXT:    movd %xmm3, %edx
 ; X64-NEXT:    movslq %edx, %rdx
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; X64-NEXT:    movd %xmm3, %esi
 ; X64-NEXT:    movslq %esi, %rsi
 ; X64-NEXT:    imulq %rdx, %rsi
@@ -476,9 +476,9 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
 ; X64-NEXT:    imull %edx, %ecx
 ; X64-NEXT:    cmovol %edi, %ecx
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; X64-NEXT:    movd %xmm2, %edx
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
 ; X64-NEXT:    movd %xmm2, %esi
 ; X64-NEXT:    movl %esi, %edi
 ; X64-NEXT:    imull %edx, %edi

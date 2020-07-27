@@ -539,8 +539,10 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   if (VK == VK_RValue && !E->isRValue()) {
     switch (Kind) {
     default:
-      llvm_unreachable("can't implicitly cast lvalue to rvalue with this cast "
-                       "kind");
+      llvm_unreachable(("can't implicitly cast lvalue to rvalue with this cast "
+                        "kind: " +
+                        std::string(CastExpr::getCastKindName(Kind)))
+                           .c_str());
     case CK_Dependent:
     case CK_LValueToRValue:
     case CK_ArrayToPointerDecay:

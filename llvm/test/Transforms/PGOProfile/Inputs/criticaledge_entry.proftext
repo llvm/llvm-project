@@ -1,0 +1,20 @@
+# :ir is the flag to indicate this is IR level profile.
+:ir
+:entry_first
+test_criticalEdge
+82323253069
+8
+7
+2
+1
+2
+0
+1
+2
+1
+
+<stdin>:bar
+12884901887
+1
+7
+

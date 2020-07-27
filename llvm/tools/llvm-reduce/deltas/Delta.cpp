@@ -105,26 +105,28 @@ void llvm::runDeltaPass(
     }
   }
 
-  std::vector<Chunk> Chunks = {{1, Targets}};
-  std::set<Chunk> UninterestingChunks;
+  std::vector<Chunk> ChunksStillConsideredInteresting = {{1, Targets}};
   std::unique_ptr<Module> ReducedProgram;
 
-  if (!increaseGranularity(Chunks)) {
-    errs() << "\nAlready at minimum size. Cannot reduce anymore.\n";
-    return;
-  }
-
+  bool FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity;
   do {
-    UninterestingChunks = {};
-    for (int I = Chunks.size() - 1; I >= 0; --I) {
+    FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = false;
+
+    std::set<Chunk> UninterestingChunks;
+    for (Chunk &ChunkToCheckForUninterestingness :
+         reverse(ChunksStillConsideredInteresting)) {
+      // Take all of ChunksStillConsideredInteresting chunks, except those we've
+      // already deemed uninteresting (UninterestingChunks) but didn't remove
+      // from ChunksStillConsideredInteresting yet, and additionally ignore
+      // ChunkToCheckForUninterestingness chunk.
       std::vector<Chunk> CurrentChunks;
-
-      for (auto C : Chunks)
-        if (!UninterestingChunks.count(C) && C != Chunks[I])
-          CurrentChunks.push_back(C);
-
-      if (CurrentChunks.empty())
-        continue;
+      CurrentChunks.reserve(ChunksStillConsideredInteresting.size() -
+                            UninterestingChunks.size() - 1);
+      copy_if(ChunksStillConsideredInteresting,
+              std::back_inserter(CurrentChunks), [&](const Chunk &C) {
+                return !UninterestingChunks.count(C) &&
+                       C != ChunkToCheckForUninterestingness;
+              });
 
       // Clone module before hacking it up..
       std::unique_ptr<Module> Clone = CloneModule(*Test.getProgram());
@@ -132,28 +134,30 @@ void llvm::runDeltaPass(
       ExtractChunksFromModule(CurrentChunks, Clone.get());
 
       errs() << "Ignoring: ";
-      Chunks[I].print();
-      for (auto C : UninterestingChunks)
+      ChunkToCheckForUninterestingness.print();
+      for (const Chunk &C : UninterestingChunks)
         C.print();
-
-
 
       SmallString<128> CurrentFilepath;
       if (!IsReduced(*Clone, Test, CurrentFilepath)) {
+        // Program became non-reduced, so this chunk appears to be interesting.
         errs() << "\n";
         continue;
       }
 
-      UninterestingChunks.insert(Chunks[I]);
+      FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = true;
+      UninterestingChunks.insert(ChunkToCheckForUninterestingness);
       ReducedProgram = std::move(Clone);
       errs() << " **** SUCCESS | lines: " << getLines(CurrentFilepath) << "\n";
     }
     // Delete uninteresting chunks
-    erase_if(Chunks, [&UninterestingChunks](const Chunk &C) {
-      return UninterestingChunks.count(C);
-    });
-
-  } while (!UninterestingChunks.empty() || increaseGranularity(Chunks));
+    erase_if(ChunksStillConsideredInteresting,
+             [&UninterestingChunks](const Chunk &C) {
+               return UninterestingChunks.count(C);
+             });
+  } while (!ChunksStillConsideredInteresting.empty() &&
+           (FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity ||
+            increaseGranularity(ChunksStillConsideredInteresting)));
 
   // If we reduced the testcase replace it
   if (ReducedProgram)

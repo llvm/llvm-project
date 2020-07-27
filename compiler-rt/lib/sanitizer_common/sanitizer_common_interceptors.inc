@@ -5836,6 +5836,79 @@ INTERCEPTOR(int, xdr_string, __sanitizer_XDR *xdrs, char **p,
 #define INIT_XDR
 #endif  // SANITIZER_INTERCEPT_XDR
 
+#if SANITIZER_INTERCEPT_XDRREC
+typedef int (*xdrrec_cb)(char*, char*, int);
+struct XdrRecWrapper {
+  char *handle;
+  xdrrec_cb rd, wr;
+};
+typedef AddrHashMap<XdrRecWrapper *, 11> XdrRecWrapMap;
+static XdrRecWrapMap *xdrrec_wrap_map;
+
+static int xdrrec_wr_wrap(char *handle, char *buf, int count) {
+  COMMON_INTERCEPTOR_UNPOISON_PARAM(3);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(buf, count);
+  XdrRecWrapper *wrap = (XdrRecWrapper *)handle;
+  return wrap->wr(wrap->handle, buf, count);
+}
+
+static int xdrrec_rd_wrap(char *handle, char *buf, int count) {
+  COMMON_INTERCEPTOR_UNPOISON_PARAM(3);
+  XdrRecWrapper *wrap = (XdrRecWrapper *)handle;
+  return wrap->rd(wrap->handle, buf, count);
+}
+
+// This doesn't apply to the solaris version as it has a different function
+// signature.
+INTERCEPTOR(void, xdrrec_create, __sanitizer_XDR *xdr, unsigned sndsize,
+            unsigned rcvsize, char *handle, int (*rd)(char*, char*, int),
+            int (*wr)(char*, char*, int)) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, xdrrec_create, xdr, sndsize, rcvsize,
+                           handle, rd, wr);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, &xdr->x_op, sizeof xdr->x_op);
+  
+  // We can't allocate a wrapper on the stack, as the handle is used outside
+  // this stack frame. So we put it on the heap, and keep track of it with
+  // the HashMap (keyed by x_private). When we later need to xdr_destroy,
+  // we can index the map, free the wrapper, and then clean the map entry.
+  XdrRecWrapper *wrap_data =
+      (XdrRecWrapper *)InternalAlloc(sizeof(XdrRecWrapper));
+  wrap_data->handle = handle;
+  wrap_data->rd = rd;
+  wrap_data->wr = wr;
+  if (wr)
+    wr = xdrrec_wr_wrap;
+  if (rd)
+    rd = xdrrec_rd_wrap;
+  handle = (char *)wrap_data;
+
+  REAL(xdrrec_create)(xdr, sndsize, rcvsize, handle, rd, wr);
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, xdr, sizeof *xdr);
+
+  XdrRecWrapMap::Handle wrap(xdrrec_wrap_map, xdr->x_private, false, true);
+  *wrap = wrap_data;
+}
+
+// We have to intercept this to be able to free wrapper memory;
+// otherwise it's not necessary.
+INTERCEPTOR(void, xdr_destroy, __sanitizer_XDR *xdr) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, xdr_destroy, xdr);
+
+  XdrRecWrapMap::Handle wrap(xdrrec_wrap_map, xdr->x_private, true);
+  InternalFree(*wrap);
+  REAL(xdr_destroy)(xdr);
+}
+#define INIT_XDRREC_LINUX \
+  static u64 xdrrec_wrap_mem[sizeof(XdrRecWrapMap) / sizeof(u64) + 1]; \
+  xdrrec_wrap_map = new ((void *)&xdrrec_wrap_mem) XdrRecWrapMap(); \
+  COMMON_INTERCEPT_FUNCTION(xdrrec_create); \
+  COMMON_INTERCEPT_FUNCTION(xdr_destroy);
+#else
+#define INIT_XDRREC_LINUX
+#endif
+
 #if SANITIZER_INTERCEPT_TSEARCH
 INTERCEPTOR(void *, tsearch, void *key, void **rootp,
             int (*compar)(const void *, const void *)) {
@@ -10094,6 +10167,7 @@ static void InitializeCommonInterceptors() {
   INIT_BZERO;
   INIT_FTIME;
   INIT_XDR;
+  INIT_XDRREC_LINUX;
   INIT_TSEARCH;
   INIT_LIBIO_INTERNALS;
   INIT_FOPEN;

@@ -195,12 +195,11 @@ Symbols:
 ##         In this case we set the e_shstrndx field to an invalid index so that the .shstrtab section can't be located.
 # RUN: yaml2obj --docnum=2 -DSHSTRTAB=0xff %s -o %t64.err3
 # RUN: llvm-readobj --symbols %t64.err3 2>&1 | \
-# RUN:  FileCheck %s -DFILE=%t64.err3 --check-prefix=SYMTAB-SHSTRTAB-ERR-LLVM
+# RUN:  FileCheck %s -DFILE=%t64.err3 --check-prefix=SYMTAB-SHSTRTAB-ERR-LLVM --implicit-check-not=warning:
 # RUN: llvm-readelf --symbols %t64.err3 2>&1 | \
-# RUN:  FileCheck %s -DFILE=%t64.err3 --check-prefix=SYMTAB-SHSTRTAB-ERR-GNU
+# RUN:  FileCheck %s -DFILE=%t64.err3 --check-prefix=SYMTAB-SHSTRTAB-ERR-GNU --implicit-check-not=warning:
 
 # SYMTAB-SHSTRTAB-ERR-LLVM:      Symbols [
-# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT: warning: '[[FILE]]': unable to get the name of the SHT_SYMTAB section: section header string table index 255 does not exist
 # SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   Symbol {
 # SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Name:  (0)
 # SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Value: 0x0
@@ -222,7 +221,7 @@ Symbols:
 # SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   }
 # SYMTAB-SHSTRTAB-ERR-LLVM-NEXT: ]
 
-# SYMTAB-SHSTRTAB-ERR-GNU:      warning: '[[FILE]]': unable to get the name of the SHT_SYMTAB section: section header string table index 255 does not exist
+# SYMTAB-SHSTRTAB-ERR-GNU:      warning: '[[FILE]]': unable to get the name of SHT_SYMTAB section with index 1: section header string table index 255 does not exist
 # SYMTAB-SHSTRTAB-ERR-GNU:      Symbol table '<?>' contains 2 entries:
 # SYMTAB-SHSTRTAB-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
 # SYMTAB-SHSTRTAB-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND

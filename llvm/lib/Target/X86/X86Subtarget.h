@@ -50,7 +50,6 @@ enum class Style {
 } // end namespace PICStyles
 
 class X86Subtarget final : public X86GenSubtargetInfo {
-public:
   // NOTE: Do not add anything new to this list. Coarse, CPU name based flags
   // are not a good idea. We should be migrating away from these.
   enum X86ProcFamilyEnum {
@@ -59,7 +58,6 @@ public:
     IntelSLM
   };
 
-protected:
   enum X86SSEEnum {
     NoSSE, SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, AVX, AVX2, AVX512F
   };
@@ -191,8 +189,8 @@ protected:
   /// Processor has RDSEED instructions.
   bool HasRDSEED = false;
 
-  /// Processor has LAHF/SAHF instructions.
-  bool HasLAHFSAHF = false;
+  /// Processor has LAHF/SAHF instructions in 64-bit mode.
+  bool HasLAHFSAHF64 = false;
 
   /// Processor has MONITORX/MWAITX instructions.
   bool HasMWAITX = false;
@@ -366,9 +364,6 @@ protected:
   /// Processor has AVX-512 vp2intersect instructions
   bool HasVP2INTERSECT = false;
 
-  /// Deprecated flag for MPX instructions.
-  bool DeprecatedHasMPX = false;
-
   /// Processor supports CET SHSTK - Control-Flow Enforcement Technology
   /// using Shadow Stack
   bool HasSHSTK = false;
@@ -503,17 +498,13 @@ private:
   unsigned RequiredVectorWidth;
 
   /// True if compiling for 64-bit, false for 16-bit or 32-bit.
-  bool In64BitMode;
+  bool In64BitMode = false;
 
   /// True if compiling for 32-bit, false for 16-bit or 64-bit.
-  bool In32BitMode;
+  bool In32BitMode = false;
 
   /// True if compiling for 16-bit, false for 32-bit or 64-bit.
-  bool In16BitMode;
-
-  /// Contains the Overhead of gather\scatter instructions
-  int GatherOverhead = 1024;
-  int ScatterOverhead = 1024;
+  bool In16BitMode = false;
 
   X86SelectionDAGInfo TSInfo;
   // Ordering here is important. X86InstrInfo initializes X86RegisterInfo which
@@ -671,7 +662,7 @@ public:
     return hasSSE1() || (hasPRFCHW() && !has3DNow()) || hasPREFETCHWT1();
   }
   bool hasRDSEED() const { return HasRDSEED; }
-  bool hasLAHFSAHF() const { return HasLAHFSAHF; }
+  bool hasLAHFSAHF() const { return HasLAHFSAHF64 || !is64Bit(); }
   bool hasMWAITX() const { return HasMWAITX; }
   bool hasCLZERO() const { return HasCLZERO; }
   bool hasCLDEMOTE() const { return HasCLDEMOTE; }
@@ -683,8 +674,6 @@ public:
   bool isPMADDWDSlow() const { return IsPMADDWDSlow; }
   bool isUnalignedMem16Slow() const { return IsUAMem16Slow; }
   bool isUnalignedMem32Slow() const { return IsUAMem32Slow; }
-  int getGatherOverhead() const { return GatherOverhead; }
-  int getScatterOverhead() const { return ScatterOverhead; }
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
   bool hasCmpxchg16b() const { return HasCmpxchg16b && is64Bit(); }
   bool useLeaForSP() const { return UseLeaForSP; }
@@ -791,8 +780,6 @@ public:
   }
 
   bool isXRaySupported() const override { return is64Bit(); }
-
-  X86ProcFamilyEnum getProcFamily() const { return X86ProcFamily; }
 
   /// TODO: to be removed later and replaced with suitable properties
   bool isAtom() const { return X86ProcFamily == IntelAtom; }

@@ -8,6 +8,7 @@
 // RUN: rm -f gcov-fork.gcda && %run %t
 // RUN: llvm-cov gcov -t gcov-fork.gcda | FileCheck %s
 
+#include <sys/wait.h>
 #include <unistd.h>
 
 void func1() {}                    // CHECK:      1: [[#@LINE]]:void func1()

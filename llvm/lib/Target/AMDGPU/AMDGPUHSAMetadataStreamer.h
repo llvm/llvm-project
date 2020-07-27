@@ -87,11 +87,12 @@ private:
   void emitKernelArg(const Argument &Arg, unsigned &Offset,
                      msgpack::ArrayDocNode Args);
 
-  void emitKernelArg(const DataLayout &DL, Type *Ty, StringRef ValueKind,
-                     unsigned &Offset, msgpack::ArrayDocNode Args,
-                     MaybeAlign PointeeAlign = None, StringRef Name = "",
-                     StringRef TypeName = "", StringRef BaseTypeName = "",
-                     StringRef AccQual = "", StringRef TypeQual = "");
+  void emitKernelArg(const DataLayout &DL, Type *Ty, Align Alignment,
+                     StringRef ValueKind, unsigned &Offset,
+                     msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign = None,
+                     StringRef Name = "", StringRef TypeName = "",
+                     StringRef BaseTypeName = "", StringRef AccQual = "",
+                     StringRef TypeQual = "");
 
   void emitHiddenKernelArgs(const Function &Func, unsigned &Offset,
                             msgpack::ArrayDocNode Args);
@@ -156,10 +157,11 @@ private:
 
   void emitKernelArg(const Argument &Arg);
 
-  void emitKernelArg(const DataLayout &DL, Type *Ty, ValueKind ValueKind,
-                     MaybeAlign PointeeAlign = None, StringRef Name = "",
-                     StringRef TypeName = "", StringRef BaseTypeName = "",
-                     StringRef AccQual = "", StringRef TypeQual = "");
+  void emitKernelArg(const DataLayout &DL, Type *Ty, Align Alignment,
+                     ValueKind ValueKind, MaybeAlign PointeeAlign = None,
+                     StringRef Name = "", StringRef TypeName = "",
+                     StringRef BaseTypeName = "", StringRef AccQual = "",
+                     StringRef TypeQual = "");
 
   void emitHiddenKernelArgs(const Function &Func);
 

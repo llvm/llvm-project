@@ -1869,6 +1869,50 @@ TypeInfo ASTContext::getTypeInfo(const Type *T) const {
   return TI;
 }
 
+static unsigned getSveVectorWidth(const Type *T) {
+  // Get the vector size from the 'arm_sve_vector_bits' attribute via the
+  // AttributedTypeLoc associated with the typedef decl.
+  if (const auto *TT = T->getAs<TypedefType>()) {
+    const TypedefNameDecl *Typedef = TT->getDecl();
+    TypeSourceInfo *TInfo = Typedef->getTypeSourceInfo();
+    TypeLoc TL = TInfo->getTypeLoc();
+    if (AttributedTypeLoc ATL = TL.getAs<AttributedTypeLoc>())
+      if (const auto *Attr = ATL.getAttrAs<ArmSveVectorBitsAttr>())
+        return Attr->getNumBits();
+  }
+
+  llvm_unreachable("bad 'arm_sve_vector_bits' attribute!");
+}
+
+static unsigned getSvePredWidth(const ASTContext &Context, const Type *T) {
+  return getSveVectorWidth(T) / Context.getCharWidth();
+}
+
+unsigned ASTContext::getBitwidthForAttributedSveType(const Type *T) const {
+  assert(T->isVLST() &&
+         "getBitwidthForAttributedSveType called for non-attributed type!");
+
+  switch (T->castAs<BuiltinType>()->getKind()) {
+  default:
+    llvm_unreachable("unknown builtin type!");
+  case BuiltinType::SveInt8:
+  case BuiltinType::SveInt16:
+  case BuiltinType::SveInt32:
+  case BuiltinType::SveInt64:
+  case BuiltinType::SveUint8:
+  case BuiltinType::SveUint16:
+  case BuiltinType::SveUint32:
+  case BuiltinType::SveUint64:
+  case BuiltinType::SveFloat16:
+  case BuiltinType::SveFloat32:
+  case BuiltinType::SveFloat64:
+  case BuiltinType::SveBFloat16:
+    return getSveVectorWidth(T);
+  case BuiltinType::SveBool:
+    return getSvePredWidth(*this, T);
+  }
+}
+
 /// getTypeInfoImpl - Return the size of the specified type, in bits.  This
 /// method does not work on incomplete types.
 ///
@@ -2273,7 +2317,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = Info.Align;
       AlignIsRequired = Info.AlignIsRequired;
     }
-    Width = Info.Width;
+    if (T->isVLST())
+      Width = getBitwidthForAttributedSveType(T);
+    else
+      Width = Info.Width;
     break;
   }
 
@@ -9472,17 +9519,15 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
           const ConstantArrayType* CAT)
           -> std::pair<bool,llvm::APInt> {
         if (VAT) {
-          llvm::APSInt TheInt;
+          Optional<llvm::APSInt> TheInt;
           Expr *E = VAT->getSizeExpr();
-          if (E && E->isIntegerConstantExpr(TheInt, *this))
-            return std::make_pair(true, TheInt);
-          else
-            return std::make_pair(false, TheInt);
-        } else if (CAT) {
-            return std::make_pair(true, CAT->getSize());
-        } else {
-            return std::make_pair(false, llvm::APInt());
+          if (E && (TheInt = E->getIntegerConstantExpr(*this)))
+            return std::make_pair(true, *TheInt);
+          return std::make_pair(false, llvm::APSInt());
         }
+        if (CAT)
+          return std::make_pair(true, CAT->getSize());
+        return std::make_pair(false, llvm::APInt());
       };
 
       bool HaveLSize, HaveRSize;
@@ -10428,37 +10473,6 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return true;
   else
     return false;
-
-  if (D->isFromASTFile() && !LangOpts.BuildingPCHWithObjectFile) {
-    assert(getExternalSource() && "It's from an AST file; must have a source.");
-    // On Windows, PCH files are built together with an object file. If this
-    // declaration comes from such a PCH and DeclMustBeEmitted would return
-    // true, it would have returned true and the decl would have been emitted
-    // into that object file, so it doesn't need to be emitted here.
-    // Note that decls are still emitted if they're referenced, as usual;
-    // DeclMustBeEmitted is used to decide whether a decl must be emitted even
-    // if it's not referenced.
-    //
-    // Explicit template instantiation definitions are tricky. If there was an
-    // explicit template instantiation decl in the PCH before, it will look like
-    // the definition comes from there, even if that was just the declaration.
-    // (Explicit instantiation defs of variable templates always get emitted.)
-    bool IsExpInstDef =
-        isa<FunctionDecl>(D) &&
-        cast<FunctionDecl>(D)->getTemplateSpecializationKind() ==
-            TSK_ExplicitInstantiationDefinition;
-
-    // Implicit member function definitions, such as operator= might not be
-    // marked as template specializations, since they're not coming from a
-    // template but synthesized directly on the class.
-    IsExpInstDef |=
-        isa<CXXMethodDecl>(D) &&
-        cast<CXXMethodDecl>(D)->getParent()->getTemplateSpecializationKind() ==
-            TSK_ExplicitInstantiationDefinition;
-
-    if (getExternalSource()->DeclIsFromPCHWithObjectFile(D) && !IsExpInstDef)
-      return false;
-  }
 
   // If this is a member of a class template, we do not need to emit it.
   if (D->getDeclContext()->isDependentContext())

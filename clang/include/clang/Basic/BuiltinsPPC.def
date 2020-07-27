@@ -329,12 +329,12 @@ BUILTIN(__builtin_altivec_vinswlx, "V4UiV4UiUiUi", "")
 BUILTIN(__builtin_altivec_vinswrx, "V4UiV4UiUiUi", "")
 BUILTIN(__builtin_altivec_vinsdlx, "V2ULLiV2ULLiULLiULLi", "")
 BUILTIN(__builtin_altivec_vinsdrx, "V2ULLiV2ULLiULLiULLi", "")
-BUILTIN(__builtin_altivec_vinsbvlx, "V16UcV16UcULLiV16Uc", "")
-BUILTIN(__builtin_altivec_vinsbvrx, "V16UcV16UcULLiV16Uc", "")
-BUILTIN(__builtin_altivec_vinshvlx, "V8UsV8UsULLiV8Us", "")
-BUILTIN(__builtin_altivec_vinshvrx, "V8UsV8UsULLiV8Us", "")
-BUILTIN(__builtin_altivec_vinswvlx, "V4UiV4UiULLiV4Ui", "")
-BUILTIN(__builtin_altivec_vinswvrx, "V4UiV4UiULLiV4Ui", "")
+BUILTIN(__builtin_altivec_vinsbvlx, "V16UcV16UcUiV16Uc", "")
+BUILTIN(__builtin_altivec_vinsbvrx, "V16UcV16UcUiV16Uc", "")
+BUILTIN(__builtin_altivec_vinshvlx, "V8UsV8UsUiV8Us", "")
+BUILTIN(__builtin_altivec_vinshvrx, "V8UsV8UsUiV8Us", "")
+BUILTIN(__builtin_altivec_vinswvlx, "V4UiV4UiUiV4Ui", "")
+BUILTIN(__builtin_altivec_vinswvrx, "V4UiV4UiUiV4Ui", "")
 
 // VSX built-ins.
 
@@ -467,7 +467,7 @@ BUILTIN(__builtin_vsx_xxsldwi, "v.", "t")
 
 BUILTIN(__builtin_vsx_xxeval, "V2ULLiV2ULLiV2ULLiV2ULLiIi", "")
 
-BUILTIN(__builtin_vsx_xvtlsbb, "iV16Ucb", "")
+BUILTIN(__builtin_vsx_xvtlsbb, "iV16UcUi", "")
 
 // P10 Vector Permute Extended built-in.
 BUILTIN(__builtin_vsx_xxpermx, "V16UcV16UcV16UcV16UcIi", "")

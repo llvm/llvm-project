@@ -1,0 +1,17 @@
+# IR level Instrumentation Flag
+:ir
+:entry_first
+main
+# Func Hash:
+74054140268
+# Num Counters:
+7
+# Counter Values:
+11889
+3973
+3970
+0
+8111
+1
+0
+

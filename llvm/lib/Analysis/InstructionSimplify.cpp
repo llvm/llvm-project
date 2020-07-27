@@ -228,64 +228,54 @@ static bool valueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
   return false;
 }
 
-/// Simplify "A op (B op' C)" by distributing op over op', turning it into
-/// "(A op B) op' (A op C)".  Here "op" is given by Opcode and "op'" is
-/// given by OpcodeToExpand, while "A" corresponds to LHS and "B op' C" to RHS.
-/// Also performs the transform "(A op' B) op C" -> "(A op C) op' (B op C)".
-/// Returns the simplified value, or null if no simplification was performed.
-static Value *ExpandBinOp(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
-                          Instruction::BinaryOps OpcodeToExpand,
+/// Try to simplify a binary operator of form "V op OtherOp" where V is
+/// "(B0 opex B1)" by distributing 'op' across 'opex' as
+/// "(B0 op OtherOp) opex (B1 op OtherOp)".
+static Value *expandBinOp(Instruction::BinaryOps Opcode, Value *V,
+                          Value *OtherOp, Instruction::BinaryOps OpcodeToExpand,
                           const SimplifyQuery &Q, unsigned MaxRecurse) {
+  auto *B = dyn_cast<BinaryOperator>(V);
+  if (!B || B->getOpcode() != OpcodeToExpand)
+    return nullptr;
+  Value *B0 = B->getOperand(0), *B1 = B->getOperand(1);
+  Value *L = SimplifyBinOp(Opcode, B0, OtherOp, Q, MaxRecurse);
+  if (!L)
+    return nullptr;
+  Value *R = SimplifyBinOp(Opcode, B1, OtherOp, Q, MaxRecurse);
+  if (!R)
+    return nullptr;
+
+  // Does the expanded pair of binops simplify to the existing binop?
+  if ((L == B0 && R == B1) ||
+      (Instruction::isCommutative(OpcodeToExpand) && L == B1 && R == B0)) {
+    ++NumExpand;
+    return B;
+  }
+
+  // Otherwise, return "L op' R" if it simplifies.
+  Value *S = SimplifyBinOp(OpcodeToExpand, L, R, Q, MaxRecurse);
+  if (!S)
+    return nullptr;
+
+  ++NumExpand;
+  return S;
+}
+
+/// Try to simplify binops of form "A op (B op' C)" or the commuted variant by
+/// distributing op over op'.
+static Value *expandCommutativeBinOp(Instruction::BinaryOps Opcode,
+                                     Value *L, Value *R,
+                                     Instruction::BinaryOps OpcodeToExpand,
+                                     const SimplifyQuery &Q,
+                                     unsigned MaxRecurse) {
   // Recursion is always used, so bail out at once if we already hit the limit.
   if (!MaxRecurse--)
     return nullptr;
 
-  // Check whether the expression has the form "(A op' B) op C".
-  if (BinaryOperator *Op0 = dyn_cast<BinaryOperator>(LHS))
-    if (Op0->getOpcode() == OpcodeToExpand) {
-      // It does!  Try turning it into "(A op C) op' (B op C)".
-      Value *A = Op0->getOperand(0), *B = Op0->getOperand(1), *C = RHS;
-      // Do "A op C" and "B op C" both simplify?
-      if (Value *L = SimplifyBinOp(Opcode, A, C, Q, MaxRecurse))
-        if (Value *R = SimplifyBinOp(Opcode, B, C, Q, MaxRecurse)) {
-          // They do! Return "L op' R" if it simplifies or is already available.
-          // If "L op' R" equals "A op' B" then "L op' R" is just the LHS.
-          if ((L == A && R == B) || (Instruction::isCommutative(OpcodeToExpand)
-                                     && L == B && R == A)) {
-            ++NumExpand;
-            return LHS;
-          }
-          // Otherwise return "L op' R" if it simplifies.
-          if (Value *V = SimplifyBinOp(OpcodeToExpand, L, R, Q, MaxRecurse)) {
-            ++NumExpand;
-            return V;
-          }
-        }
-    }
-
-  // Check whether the expression has the form "A op (B op' C)".
-  if (BinaryOperator *Op1 = dyn_cast<BinaryOperator>(RHS))
-    if (Op1->getOpcode() == OpcodeToExpand) {
-      // It does!  Try turning it into "(A op B) op' (A op C)".
-      Value *A = LHS, *B = Op1->getOperand(0), *C = Op1->getOperand(1);
-      // Do "A op B" and "A op C" both simplify?
-      if (Value *L = SimplifyBinOp(Opcode, A, B, Q, MaxRecurse))
-        if (Value *R = SimplifyBinOp(Opcode, A, C, Q, MaxRecurse)) {
-          // They do! Return "L op' R" if it simplifies or is already available.
-          // If "L op' R" equals "B op' C" then "L op' R" is just the RHS.
-          if ((L == B && R == C) || (Instruction::isCommutative(OpcodeToExpand)
-                                     && L == C && R == B)) {
-            ++NumExpand;
-            return RHS;
-          }
-          // Otherwise return "L op' R" if it simplifies.
-          if (Value *V = SimplifyBinOp(OpcodeToExpand, L, R, Q, MaxRecurse)) {
-            ++NumExpand;
-            return V;
-          }
-        }
-    }
-
+  if (Value *V = expandBinOp(Opcode, L, R, OpcodeToExpand, Q, MaxRecurse))
+    return V;
+  if (Value *V = expandBinOp(Opcode, R, L, OpcodeToExpand, Q, MaxRecurse))
+    return V;
   return nullptr;
 }
 
@@ -901,8 +891,8 @@ static Value *SimplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return V;
 
   // Mul distributes over Add. Try some generic simplifications based on this.
-  if (Value *V = ExpandBinOp(Instruction::Mul, Op0, Op1, Instruction::Add,
-                             Q, MaxRecurse))
+  if (Value *V = expandCommutativeBinOp(Instruction::Mul, Op0, Op1,
+                                        Instruction::Add, Q, MaxRecurse))
     return V;
 
   // If the operation is with the result of a select instruction, check whether
@@ -1222,7 +1212,8 @@ static bool isUndefShift(Value *Amount) {
 
   // If all lanes of a vector shift are undefined the whole shift is.
   if (isa<ConstantVector>(C) || isa<ConstantDataVector>(C)) {
-    for (unsigned I = 0, E = cast<VectorType>(C->getType())->getNumElements();
+    for (unsigned I = 0,
+                  E = cast<FixedVectorType>(C->getType())->getNumElements();
          I != E; ++I)
       if (!isUndefShift(C->getAggregateElement(I)))
         return false;
@@ -2095,13 +2086,13 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return V;
 
   // And distributes over Or.  Try some generic simplifications based on this.
-  if (Value *V = ExpandBinOp(Instruction::And, Op0, Op1, Instruction::Or,
-                             Q, MaxRecurse))
+  if (Value *V = expandCommutativeBinOp(Instruction::And, Op0, Op1,
+                                        Instruction::Or, Q, MaxRecurse))
     return V;
 
   // And distributes over Xor.  Try some generic simplifications based on this.
-  if (Value *V = ExpandBinOp(Instruction::And, Op0, Op1, Instruction::Xor,
-                             Q, MaxRecurse))
+  if (Value *V = expandCommutativeBinOp(Instruction::And, Op0, Op1,
+                                        Instruction::Xor, Q, MaxRecurse))
     return V;
 
   // If the operation is with the result of a select instruction, check whether
@@ -2253,8 +2244,8 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return V;
 
   // Or distributes over And.  Try some generic simplifications based on this.
-  if (Value *V = ExpandBinOp(Instruction::Or, Op0, Op1, Instruction::And, Q,
-                             MaxRecurse))
+  if (Value *V = expandCommutativeBinOp(Instruction::Or, Op0, Op1,
+                                        Instruction::And, Q, MaxRecurse))
     return V;
 
   // If the operation is with the result of a select instruction, check whether
@@ -3710,6 +3701,14 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       // LHS != Inf
       if (Pred == FCmpInst::FCMP_UNE && isKnownNeverInfinity(LHS, Q.TLI))
         return getTrue(RetTy);
+      // LHS == Inf || LHS == NaN
+      if (Pred == FCmpInst::FCMP_UEQ && isKnownNeverInfinity(LHS, Q.TLI) &&
+          isKnownNeverNaN(LHS, Q.TLI))
+        return getFalse(RetTy);
+      // LHS != Inf && LHS != NaN
+      if (Pred == FCmpInst::FCMP_ONE && isKnownNeverInfinity(LHS, Q.TLI) &&
+          isKnownNeverNaN(LHS, Q.TLI))
+        return getTrue(RetTy);
     }
     if (C->isNegative() && !C->isNegZero()) {
       assert(!C->isNaN() && "Unexpected NaN constant!");
@@ -4134,7 +4133,8 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   Constant *TrueC, *FalseC;
   if (TrueVal->getType()->isVectorTy() && match(TrueVal, m_Constant(TrueC)) &&
       match(FalseVal, m_Constant(FalseC))) {
-    unsigned NumElts = cast<VectorType>(TrueC->getType())->getNumElements();
+    unsigned NumElts =
+        cast<FixedVectorType>(TrueC->getType())->getNumElements();
     SmallVector<Constant *, 16> NewC;
     for (unsigned i = 0; i != NumElts; ++i) {
       // Bail out on incomplete vector constants.
@@ -4420,7 +4420,7 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQ
   if (auto *IdxC = dyn_cast<ConstantInt>(Idx)) {
     // For fixed-length vector, fold into undef if index is out of bounds.
     if (isa<FixedVectorType>(VecVTy) &&
-        IdxC->getValue().uge(VecVTy->getNumElements()))
+        IdxC->getValue().uge(cast<FixedVectorType>(VecVTy)->getNumElements()))
       return UndefValue::get(VecVTy->getElementType());
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
@@ -4526,7 +4526,7 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
     return nullptr;
 
   // The mask value chooses which source operand we need to look at next.
-  int InVecNumElts = cast<VectorType>(Op0->getType())->getNumElements();
+  int InVecNumElts = cast<FixedVectorType>(Op0->getType())->getNumElements();
   int RootElt = MaskVal;
   Value *SourceOp = Op0;
   if (MaskVal >= InVecNumElts) {
@@ -5254,6 +5254,27 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   Intrinsic::ID IID = F->getIntrinsicID();
   Type *ReturnType = F->getReturnType();
   switch (IID) {
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin: {
+    // Canonicalize constant operand as Op1.
+    if (isa<Constant>(Op0))
+      std::swap(Op0, Op1);
+
+    // TODO: Allow partial undef vector constants.
+    const APInt *C;
+    if (!match(Op1, m_APInt(C)))
+      break;
+
+    if ((IID == Intrinsic::smax && C->isMaxSignedValue()) ||
+        (IID == Intrinsic::smin && C->isMinSignedValue()) ||
+        (IID == Intrinsic::umax && C->isMaxValue()) ||
+        (IID == Intrinsic::umin && C->isMinValue()))
+      return Op1;
+
+    break;
+  }
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow:
     // X - X -> { 0, false }

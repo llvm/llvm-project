@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.9.2 )
+cmake_minimum_required(VERSION 3.13.4)
 
 project( libclc VERSION 0.2.0 LANGUAGES CXX )
 include( GNUInstallDirs )

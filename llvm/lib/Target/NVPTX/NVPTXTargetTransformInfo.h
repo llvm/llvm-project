@@ -48,6 +48,9 @@ public:
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }
 
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) const;
+
   // Loads and stores can be vectorized if the alignment is at least as big as
   // the load/store we want to vectorize.
   bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes, Align Alignment,

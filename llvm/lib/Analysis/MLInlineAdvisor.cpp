@@ -20,8 +20,8 @@
 
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/InlineCost.h"
-#include "llvm/Analysis/InlineFeaturesAnalysis.h"
 #include "llvm/Analysis/MLInlineAdvisor.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -118,7 +118,8 @@ void MLInlineAdvisor::onPassEntry() {
 }
 
 int64_t MLInlineAdvisor::getLocalCalls(Function &F) {
-  return FAM.getResult<InlineFeaturesAnalysis>(F).DirectCallsToDefinedFunctions;
+  return FAM.getResult<FunctionPropertiesAnalysis>(F)
+      .DirectCallsToDefinedFunctions;
 }
 
 // Update the internal state of the advisor, and force invalidate feature
@@ -133,7 +134,7 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   Function *Callee = Advice.getCallee();
 
   // The caller features aren't valid anymore.
-  FAM.invalidate<InlineFeaturesAnalysis>(*Caller);
+  FAM.invalidate<FunctionPropertiesAnalysis>(*Caller);
   int64_t IRSizeAfter =
       getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
   CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
@@ -146,14 +147,15 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   // For edges, we 'forget' the edges that the caller and callee used to have
   // before inlining, and add back what they currently have together.
   int64_t NewCallerAndCalleeEdges =
-      FAM.getResult<InlineFeaturesAnalysis>(*Caller)
+      FAM.getResult<FunctionPropertiesAnalysis>(*Caller)
           .DirectCallsToDefinedFunctions;
 
   if (CalleeWasDeleted)
     --NodeCount;
   else
-    NewCallerAndCalleeEdges += FAM.getResult<InlineFeaturesAnalysis>(*Callee)
-                                   .DirectCallsToDefinedFunctions;
+    NewCallerAndCalleeEdges +=
+        FAM.getResult<FunctionPropertiesAnalysis>(*Callee)
+            .DirectCallsToDefinedFunctions;
   EdgeCount += (NewCallerAndCalleeEdges - Advice.CallerAndCalleeEdges);
   assert(CurrentIRSize >= 0 && EdgeCount >= 0 && NodeCount >= 0);
 }
@@ -224,8 +226,8 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdvice(CallBase &CB) {
     NrCtantParams += (isa<Constant>(*I));
   }
 
-  auto &CallerBefore = FAM.getResult<InlineFeaturesAnalysis>(Caller);
-  auto &CalleeBefore = FAM.getResult<InlineFeaturesAnalysis>(Callee);
+  auto &CallerBefore = FAM.getResult<FunctionPropertiesAnalysis>(Caller);
+  auto &CalleeBefore = FAM.getResult<FunctionPropertiesAnalysis>(Callee);
 
   ModelRunner->setFeature(FeatureIndex::CalleeBasicBlockCount,
                           CalleeBefore.BasicBlockCount);

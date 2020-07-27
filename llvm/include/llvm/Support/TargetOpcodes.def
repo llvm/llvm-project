@@ -469,6 +469,30 @@ HANDLE_TARGET_OPCODE(G_USUBSAT)
 /// Generic saturating signed subtraction.
 HANDLE_TARGET_OPCODE(G_SSUBSAT)
 
+// Perform signed fixed point multiplication
+HANDLE_TARGET_OPCODE(G_SMULFIX)
+
+// Perform unsigned fixed point multiplication
+HANDLE_TARGET_OPCODE(G_UMULFIX)
+
+// Perform signed, saturating fixed point multiplication
+HANDLE_TARGET_OPCODE(G_SMULFIXSAT)
+
+// Perform unsigned, saturating fixed point multiplication
+HANDLE_TARGET_OPCODE(G_UMULFIXSAT)
+
+// Perform signed fixed point division
+HANDLE_TARGET_OPCODE(G_SDIVFIX)
+
+// Perform unsigned fixed point division
+HANDLE_TARGET_OPCODE(G_UDIVFIX)
+
+// Perform signed, saturating fixed point division
+HANDLE_TARGET_OPCODE(G_SDIVFIXSAT)
+
+// Perform unsigned, saturating fixed point division
+HANDLE_TARGET_OPCODE(G_UDIVFIXSAT)
+
 /// Generic FP addition.
 HANDLE_TARGET_OPCODE(G_FADD)
 
@@ -492,6 +516,9 @@ HANDLE_TARGET_OPCODE(G_FREM)
 
 /// Generic FP exponentiation.
 HANDLE_TARGET_OPCODE(G_FPOW)
+
+/// Generic FP exponentiation, with an integer exponent.
+HANDLE_TARGET_OPCODE(G_FPOWI)
 
 /// Generic base-e exponential of a value.
 HANDLE_TARGET_OPCODE(G_FEXP)

@@ -107,8 +107,8 @@ public:
   bool matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
   void applyCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
 
-  bool matchSextAlreadyExtended(MachineInstr &MI);
-  bool applySextAlreadyExtended(MachineInstr &MI);
+  bool matchSextTruncSextLoad(MachineInstr &MI);
+  bool applySextTruncSextLoad(MachineInstr &MI);
 
   bool matchElideBrByInvertingCond(MachineInstr &MI);
   void applyElideBrByInvertingCond(MachineInstr &MI);

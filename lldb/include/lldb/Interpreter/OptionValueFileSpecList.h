@@ -39,11 +39,10 @@ public:
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
-  bool Clear() override {
+  void Clear() override {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_current_value.Clear();
     m_value_was_set = false;
-    return true;
   }
 
   lldb::OptionValueSP DeepCopy() const override;

@@ -17,11 +17,13 @@
 
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Timer.h"
-#include "llvm/Support/TypeName.h"
 #include <memory>
+#include <utility>
+
 namespace llvm {
 
 class Pass;

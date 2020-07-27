@@ -50,17 +50,17 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
 void StackFrameRecognizerManager::AddRecognizer(
     StackFrameRecognizerSP recognizer, ConstString module,
     llvm::ArrayRef<ConstString> symbols, bool first_instruction_only) {
-  m_recognizers.push_front({(uint32_t)m_recognizers.size(), false, recognizer,
-                            false, module, RegularExpressionSP(), symbols,
+  m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, false,
+                            module, RegularExpressionSP(), symbols,
                             RegularExpressionSP(), first_instruction_only});
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
     StackFrameRecognizerSP recognizer, RegularExpressionSP module,
     RegularExpressionSP symbol, bool first_instruction_only) {
-  m_recognizers.push_front(
-      {(uint32_t)m_recognizers.size(), false, recognizer, true, ConstString(),
-       module, std::vector<ConstString>(), symbol, first_instruction_only});
+  m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, true,
+                            ConstString(), module, std::vector<ConstString>(),
+                            symbol, first_instruction_only});
 }
 
 void StackFrameRecognizerManager::ForEach(
@@ -90,9 +90,13 @@ bool StackFrameRecognizerManager::RemoveRecognizerWithID(
     uint32_t recognizer_id) {
   if (recognizer_id >= m_recognizers.size())
     return false;
-  if (m_recognizers[recognizer_id].deleted)
+  auto found =
+      llvm::find_if(m_recognizers, [recognizer_id](const RegisteredEntry &e) {
+        return e.recognizer_id == recognizer_id;
+      });
+  if (found == m_recognizers.end())
     return false;
-  m_recognizers[recognizer_id].deleted = true;
+  m_recognizers.erase(found);
   return true;
 }
 
@@ -116,8 +120,6 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   Address current_addr = frame->GetFrameCodeAddress();
 
   for (auto entry : m_recognizers) {
-    if (entry.deleted)
-      continue;
     if (entry.module)
       if (entry.module != module_name)
         continue;

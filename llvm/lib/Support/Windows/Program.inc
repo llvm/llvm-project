@@ -192,8 +192,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   auto Result = flattenWindowsCommandLine(Args);
   if (std::error_code ec = Result.getError()) {
     SetLastError(ec.value());
-    MakeErrMsg(ErrMsg,
-               std::string("Unable to convert command-line to UTF-16"));
+    MakeErrMsg(ErrMsg, std::string("Unable to convert command-line to UTF-16"));
     return false;
   }
   std::wstring Command = *Result;
@@ -280,10 +279,9 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
 
   std::vector<wchar_t> CommandUtf16(Command.size() + 1, 0);
   std::copy(Command.begin(), Command.end(), CommandUtf16.begin());
-  BOOL rc = CreateProcessW(ProgramUtf16.data(), CommandUtf16.data(), 0, 0,
-                           TRUE, CREATE_UNICODE_ENVIRONMENT,
-                           EnvBlock.empty() ? 0 : EnvBlock.data(), 0, &si,
-                           &pi);
+  BOOL rc = CreateProcessW(ProgramUtf16.data(), CommandUtf16.data(), 0, 0, TRUE,
+                           CREATE_UNICODE_ENVIRONMENT,
+                           EnvBlock.empty() ? 0 : EnvBlock.data(), 0, &si, &pi);
   DWORD err = GetLastError();
 
   // Regardless of whether the process got created or not, we are done with

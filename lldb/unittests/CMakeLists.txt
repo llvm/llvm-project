@@ -6,7 +6,7 @@ include_directories(${LLDB_SOURCE_ROOT})
 include_directories(${LLDB_PROJECT_ROOT}/unittests)
 
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
-  add_definitions("-Wno-suggest-override")
+  add_compile_options("-Wno-suggest-override")
 endif()
 
 set(LLDB_GTEST_COMMON_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/gtest_common.h)

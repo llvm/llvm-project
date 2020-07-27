@@ -11,6 +11,8 @@ def RestrictStructSigactionPtr : RestrictedPtrType<StructSigaction>;
 def ConstRestrictStructSigactionPtr : ConstType<RestrictStructSigactionPtr>;
 
 def POSIX : StandardSpec<"POSIX"> {
+  PtrType CharPtr = PtrType<CharType>;
+  ConstType ConstCharPtr = ConstType<CharPtr>;
   NamedType OffTType = NamedType<"off_t">;
   NamedType SSizeTType = NamedType<"ssize_t">;
 
@@ -203,11 +205,30 @@ def POSIX : StandardSpec<"POSIX"> {
         >,
     ]
   >;
+  
+  HeaderSpec String = HeaderSpec<
+    "string.h",
+    [
+        Macro<"NULL">,
+    ],
+    [
+        SizeTType,
+    ],
+    [], // Enumerations
+    [
+        FunctionSpec<
+            "strnlen",
+             RetValSpec<SizeTType>,
+             [ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
+        >,
+    ]
+  >;
 
   let Headers = [
     Errno,
     SysMMan,
     Signal,
     UniStd,
+    String
   ];
 }

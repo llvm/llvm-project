@@ -20,6 +20,8 @@ namespace llvm {
 
 void PrintNote(const Twine &Msg);
 void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg);
+LLVM_ATTRIBUTE_NORETURN void PrintFatalNote(ArrayRef<SMLoc> ErrorLoc,
+                                            const Twine &Msg);
 
 void PrintWarning(ArrayRef<SMLoc> WarningLoc, const Twine &Msg);
 void PrintWarning(const char *Loc, const Twine &Msg);

@@ -5,6 +5,14 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+
+// RUN: %clang_cc1 -DOMP51 -verify -fopenmp -fopenmp-version=51 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -fopenmp-version=51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
+
+// RUN: %clang_cc1 -DOMP51 -verify -fopenmp-simd -fopenmp-version=51 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -fopenmp-version=51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -43,6 +51,11 @@ T tmain(T argc, T *argv) {
 #pragma omp target data map(close,alloc: e)
   foo();
 
+#ifdef OMP51
+#pragma omp target data map(present,alloc: e)
+  foo();
+#endif
+
 // nesting a target region
 #pragma omp target data map(e)
 {
@@ -50,6 +63,10 @@ T tmain(T argc, T *argv) {
     foo();
   #pragma omp target map(close, alloc: e)
     foo();
+#ifdef OMP51
+  #pragma omp target map(present, alloc: e)
+    foo();
+#endif
 }
 
   return 0;
@@ -75,12 +92,16 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(close,alloc: e)
 // CHECK-NEXT: foo();
+// OMP51-NEXT: #pragma omp target data map(present,alloc: e)
+// OMP51-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(tofrom: e)
 // CHECK-NEXT: {
 // CHECK-NEXT: #pragma omp target map(always,alloc: e)
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target map(close,alloc: e)
 // CHECK-NEXT: foo();
+// OMP51-NEXT: #pragma omp target map(present,alloc: e)
+// OMP51-NEXT: foo();
 // CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int i, j, b, c, d, e, x[20];
 // CHECK-NEXT: #pragma omp target data map(to: c)
@@ -101,12 +122,16 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(close,alloc: e)
 // CHECK-NEXT: foo();
+// OMP51-NEXT: #pragma omp target data map(present,alloc: e)
+// OMP51-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(tofrom: e)
 // CHECK-NEXT: {
 // CHECK-NEXT: #pragma omp target map(always,alloc: e)
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target map(close,alloc: e)
 // CHECK-NEXT: foo();
+// OMP51-NEXT: #pragma omp target map(present,alloc: e)
+// OMP51-NEXT: foo();
 // CHECK: template<> char tmain<char, 1>(char argc, char *argv) {
 // CHECK-NEXT: char i, j, b, c, d, e, x[20];
 // CHECK-NEXT: #pragma omp target data map(to: c)
@@ -127,12 +152,16 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(close,alloc: e)
 // CHECK-NEXT: foo();
+// OMP51-NEXT: #pragma omp target data map(present,alloc: e)
+// OMP51-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(tofrom: e)
 // CHECK-NEXT: {
 // CHECK-NEXT: #pragma omp target map(always,alloc: e)
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target map(close,alloc: e)
 // CHECK-NEXT: foo();
+// OMP51-NEXT: #pragma omp target map(present,alloc: e)
+// OMP51-NEXT: foo();
 
 int main (int argc, char **argv) {
   int b = argc, c, d, e, f, g, x[20];
@@ -185,6 +214,13 @@ int main (int argc, char **argv) {
   foo();
 // CHECK-NEXT: foo();
 
+// OMP51-NEXT: #pragma omp target data map(present,alloc: e)
+// OMP51-NEXT: foo();
+#ifdef OMP51
+#pragma omp target data map(present,alloc: e)
+  foo();
+#endif
+
 // nesting a target region
 #pragma omp target data map(e)
 // CHECK-NEXT: #pragma omp target data map(tofrom: e)
@@ -196,6 +232,10 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: foo();
 #pragma omp target map(close, alloc: e)
 // CHECK-NEXT: #pragma omp target map(close,alloc: e)
+  foo();
+// CHECK-NEXT: foo();
+#pragma omp target map(always, alloc: e)
+// CHECK-NEXT: #pragma omp target map(always,alloc: e)
   foo();
 }
 

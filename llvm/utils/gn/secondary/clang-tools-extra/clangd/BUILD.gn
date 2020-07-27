@@ -16,6 +16,7 @@ write_cmake_config("features") {
   } else {
     values += [ "CLANGD_BUILD_XPC=0" ]
   }
+  values += [ "CLANGD_ENABLE_REMOTE=0" ]
   public_configs = [ ":features_config" ]
 }
 

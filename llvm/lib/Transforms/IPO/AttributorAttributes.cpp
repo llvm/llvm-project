@@ -2468,7 +2468,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
         const auto &ReachabilityAA =
             A.getAAFor<AAReachability>(*this, IRPosition::function(*ScopeFn));
 
-        if (!ReachabilityAA.isAssumedReachable(UserI, getCtxI()))
+        if (!ReachabilityAA.isAssumedReachable(A, *UserI, *getCtxI()))
           return true;
 
         if (auto *CB = dyn_cast<CallBase>(UserI)) {

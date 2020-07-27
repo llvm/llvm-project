@@ -118,6 +118,23 @@ func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 //       CHECK: vector.contract {indexing_maps = [#[[$mk]], #[[$kn]], #[[$mn]]], iterator_types = ["parallel", "parallel", "reduction"]} %{{.*}}, %{{.*}}, %{{.*}} : vector<8x16xf32>, vector<16x32xf32> into vector<8x32xf32>
 //       CHECK: vector.transfer_write %{{.*}}, %{{.*}} : vector<8x32xf32>, memref<8x32xf32>
 
+func @vectorization_test_integer(%A: memref<8x16xi32>, %B: memref<16x32xi32>,
+                                 %C: memref<8x32xi32>) {
+  linalg.generic #matmul_trait %A, %B, %C {
+    ^bb(%a: i32, %b: i32, %c: i32) :
+      %d = muli %a, %b: i32
+      %e = addi %c, %d: i32
+      linalg.yield %e : i32
+  } : memref<8x16xi32>, memref<16x32xi32>, memref<8x32xi32>
+  return
+}
+// CHECK-LABEL: func @vectorization_test_integer
+//       CHECK: vector.transfer_read %{{.*}} : memref<8x16xi32>, vector<8x16xi32>
+//       CHECK: vector.transfer_read %{{.*}} : memref<16x32xi32>, vector<16x32xi32>
+//       CHECK: vector.transfer_read %{{.*}} : memref<8x32xi32>, vector<8x32xi32>
+//       CHECK: vector.contract {indexing_maps = [#[[$mk]], #[[$kn]], #[[$mn]]], iterator_types = ["parallel", "parallel", "reduction"]} %{{.*}}, %{{.*}}, %{{.*}} : vector<8x16xi32>, vector<16x32xi32> into vector<8x32xi32>
+//       CHECK: vector.transfer_write %{{.*}}, %{{.*}} : vector<8x32xi32>, memref<8x32xi32>
+
 func @vectorization_test_2(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
                          %C: memref<8x32xf32>) {
   linalg.matmul %A, %B, %C { __internal_linalg_transform__ = "VECTORIZE"} :
@@ -134,6 +151,23 @@ func @test_vectorize_fill(%A : memref<8x16xf32>, %arg0 : f32) {
 }
 // CHECK-LABEL: func @test_vectorize_fill
 //       CHECK: vector.broadcast {{.*}} : f32 to vector<8x16xf32>
+
+func @test_vectorize_copy(%A : memref<8x16xf32>, %B : memref<8x16xf32>) {
+  linalg.copy(%A, %B) { __internal_linalg_transform__ = "VECTORIZE"} :  memref<8x16xf32>, memref<8x16xf32>
+  return
+}
+// CHECK-LABEL: func @test_vectorize_copy
+//       CHECK: %[[V:.*]] = vector.transfer_read {{.*}} : memref<8x16xf32>, vector<8x16xf32>
+//       CHECK: vector.transfer_write %[[V]], {{.*}} : vector<8x16xf32>, memref<8x16xf32>
+
+func @test_vectorize_copy_scalar(%A : memref<f32>, %B : memref<f32>) {
+  linalg.copy(%A, %B) { __internal_linalg_transform__ = "VECTORIZE"} :  memref<f32>, memref<f32>
+  return
+}
+// CHECK-LABEL: func @test_vectorize_copy_scalar
+//       CHECK: %[[V:.*]] = load {{.*}} : memref<f32>
+//       CHECK: store %[[V]], {{.*}} : memref<f32>
+
 
 #matmul_accesses = [
   affine_map<(m, n, k) -> (m, k)>,

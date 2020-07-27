@@ -234,8 +234,8 @@ def FeaturePRFCHW  : SubtargetFeature<"prfchw", "HasPRFCHW", "true",
                                       "Support PRFCHW instructions">;
 def FeatureRDSEED  : SubtargetFeature<"rdseed", "HasRDSEED", "true",
                                       "Support RDSEED instruction">;
-def FeatureLAHFSAHF : SubtargetFeature<"sahf", "HasLAHFSAHF", "true",
-                                       "Support LAHF and SAHF instructions">;
+def FeatureLAHFSAHF : SubtargetFeature<"sahf", "HasLAHFSAHF64", "true",
+                           "Support LAHF and SAHF instructions in 64-bit mode">;
 def FeatureMWAITX  : SubtargetFeature<"mwaitx", "HasMWAITX", "true",
                                       "Enable MONITORX/MWAITX timer functionality">;
 def FeatureCLZERO  : SubtargetFeature<"clzero", "HasCLZERO", "true",
@@ -244,11 +244,6 @@ def FeatureCLDEMOTE  : SubtargetFeature<"cldemote", "HasCLDEMOTE", "true",
                                       "Enable Cache Demote">;
 def FeaturePTWRITE  : SubtargetFeature<"ptwrite", "HasPTWRITE", "true",
                                       "Support ptwrite instruction">;
-// FIXME: This feature is deprecated in 10.0 and should not be used for
-// anything, but removing it would break IR files that may contain it in a
-// target-feature attribute.
-def FeatureDeprecatedMPX : SubtargetFeature<"mpx", "DeprecatedHasMPX", "false",
-                                      "Deprecated. Support MPX instructions">;
 def FeatureAMXTILE     : SubtargetFeature<"amx-tile", "HasAMXTILE", "true",
                                       "Support AMX-TILE instructions">;
 def FeatureAMXINT8     : SubtargetFeature<"amx-int8", "HasAMXINT8", "true",
@@ -1027,8 +1022,12 @@ class Proc<string Name, list<SubtargetFeature> Features>
 
 // NOTE: CMPXCHG8B is here for legacy compatibility so that it is only disabled
 // if i386/i486 is specifically requested.
+// NOTE: 64Bit is here as "generic" is the default llc CPU. The X86Subtarget
+// constructor checks that any CPU used in 64-bit mode has Feature64Bit enabled.
+// It has no effect on code generation.
 def : Proc<"generic",         [FeatureX87, FeatureSlowUAMem16,
-                               FeatureCMPXCHG8B, FeatureInsertVZEROUPPER]>;
+                               FeatureCMPXCHG8B, Feature64Bit,
+                               FeatureInsertVZEROUPPER]>;
 def : Proc<"i386",            [FeatureX87, FeatureSlowUAMem16,
                                FeatureInsertVZEROUPPER]>;
 def : Proc<"i486",            [FeatureX87, FeatureSlowUAMem16,

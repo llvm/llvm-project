@@ -2,9 +2,14 @@
 
 namespace test1 {
   static int abc = 42; // expected-warning {{variable 'abc' is not needed and will not be emitted}}
+
+  namespace {
+  template <typename T> int abc_template = 0;
+  template <> int abc_template<int> = 0; // expected-warning {{variable 'abc_template' is not needed and will not be emitted}}
+  }                                      // namespace
   template <typename T>
   int foo(void) {
-    return abc;
+    return abc + abc_template<int> + abc_template<long>;
   }
 }
 

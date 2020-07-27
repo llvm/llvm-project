@@ -100,6 +100,7 @@ static_library("LLVMX86CodeGen") {
     "X86IndirectThunks.cpp",
     "X86InsertPrefetch.cpp",
     "X86InsertWait.cpp",
+    "X86InstCombineIntrinsic.cpp",
     "X86InstrFMA3Info.cpp",
     "X86InstrFoldTables.cpp",
     "X86InstrInfo.cpp",

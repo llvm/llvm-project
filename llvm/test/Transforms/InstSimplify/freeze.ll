@@ -111,8 +111,7 @@ define <2 x float> @constvector_FP_noopt() {
 }
 
 @g = external global i16, align 1
-
-; Negative test
+@g2 = external global i16, align 1
 
 define float @constant_expr() {
 ; CHECK-LABEL: @constant_expr(
@@ -136,6 +135,17 @@ define i32* @constant_expr3() {
 ;
   %r = freeze i32* getelementptr (i32, i32* @glb, i64 3)
   ret i32* %r
+}
+
+define i64 @ptrdiff() {
+; CHECK-LABEL: @ptrdiff(
+; CHECK-NEXT:    ret i64 sub (i64 ptrtoint (i16* @g to i64), i64 ptrtoint (i16* @g2 to i64))
+;
+  %i = ptrtoint i16* @g to i64
+  %i2 = ptrtoint i16* @g2 to i64
+  %diff = sub i64 %i, %i2
+  %r = freeze i64 %diff
+  ret i64 %r
 }
 
 ; Negative test
@@ -379,6 +389,23 @@ A:
 EXIT:
   %fr2 = freeze i32 %x
   ret i32 %fr2
+}
+
+declare i32 @any_num()
+
+define i32 @brcond_call() {
+; CHECK-LABEL: @brcond_call(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @any_num()
+; CHECK-NEXT:    switch i32 [[X]], label [[EXIT:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = call i32 @any_num()
+  switch i32 %x, label %EXIT []
+EXIT:
+  %y = freeze i32 %x
+  ret i32 %y
 }
 
 define i1 @brcond_noopt(i1 %c, i1 %c2) {

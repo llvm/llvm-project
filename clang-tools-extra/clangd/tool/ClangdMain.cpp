@@ -14,6 +14,7 @@
 #include "Transport.h"
 #include "index/Background.h"
 #include "index/Serialization.h"
+#include "index/remote/Client.h"
 #include "refactor/Rename.h"
 #include "support/Path.h"
 #include "support/Shutdown.h"
@@ -449,6 +450,21 @@ opt<bool> EnableConfig{
     init(true),
 };
 
+#if CLANGD_ENABLE_REMOTE
+opt<std::string> RemoteIndexAddress{
+    "remote-index-address",
+    cat(Features),
+    desc("Address of the remote index server"),
+};
+
+// FIXME(kirillbobyrev): Should this be the location of compile_commands.json?
+opt<std::string> ProjectRoot{
+    "project-root",
+    cat(Features),
+    desc("Path to the project root. Requires remote-index-address to be set."),
+};
+#endif
+
 /// Supports a test URI scheme with relaxed constraints for lit tests.
 /// The path in a test URI will be combined with a platform-specific fake
 /// directory to form an absolute path. For example, test:///a.cpp is resolved
@@ -680,6 +696,23 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     if (Sync)
       AsyncIndexLoad.wait();
   }
+#if CLANGD_ENABLE_REMOTE
+  if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
+    llvm::errs() << "remote-index-address and project-path have to be "
+                    "specified at the same time.";
+    return 1;
+  }
+  if (!RemoteIndexAddress.empty()) {
+    if (IndexFile.empty()) {
+      log("Connecting to remote index at {0}", RemoteIndexAddress);
+      StaticIdx = remote::getClient(RemoteIndexAddress, ProjectRoot);
+      EnableBackgroundIndex = false;
+    } else {
+      elog("When enabling remote index, IndexFile should not be specified. "
+           "Only one can be used at time. Remote index will ignored.");
+    }
+  }
+#endif
   Opts.StaticIndex = StaticIdx.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.BuildRecoveryAST = RecoveryAST;

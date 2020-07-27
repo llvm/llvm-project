@@ -21,8 +21,8 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -43,6 +43,46 @@ RunPreEmitPeephole("ppc-late-peephole", cl::Hidden, cl::init(true),
                    cl::desc("Run pre-emit peephole optimizations."));
 
 namespace {
+
+static bool hasPCRelativeForm(MachineInstr &Use) {
+  switch (Use.getOpcode()) {
+  default:
+    return false;
+  case PPC::LBZ:
+  case PPC::LBZ8:
+  case PPC::LHA:
+  case PPC::LHA8:
+  case PPC::LHZ:
+  case PPC::LHZ8:
+  case PPC::LWZ:
+  case PPC::LWZ8:
+  case PPC::STB:
+  case PPC::STB8:
+  case PPC::STH:
+  case PPC::STH8:
+  case PPC::STW:
+  case PPC::STW8:
+  case PPC::LD:
+  case PPC::STD:
+  case PPC::LWA:
+  case PPC::LXSD:
+  case PPC::LXSSP:
+  case PPC::LXV:
+  case PPC::STXSD:
+  case PPC::STXSSP:
+  case PPC::STXV:
+  case PPC::LFD:
+  case PPC::LFS:
+  case PPC::STFD:
+  case PPC::STFS:
+  case PPC::DFLOADf32:
+  case PPC::DFLOADf64:
+  case PPC::DFSTOREf32:
+  case PPC::DFSTOREf64:
+    return true;
+  }
+}
+
   class PPCPreEmitPeephole : public MachineFunctionPass {
   public:
     static char ID;
@@ -172,6 +212,135 @@ namespace {
       return !InstrsToErase.empty();
     }
 
+    // Check if this instruction is a PLDpc that is part of a GOT indirect
+    // access.
+    bool isGOTPLDpc(MachineInstr &Instr) {
+      if (Instr.getOpcode() != PPC::PLDpc)
+        return false;
+
+      // The result must be a register.
+      const MachineOperand &LoadedAddressReg = Instr.getOperand(0);
+      if (!LoadedAddressReg.isReg())
+        return false;
+
+      // Make sure that this is a global symbol.
+      const MachineOperand &SymbolOp = Instr.getOperand(1);
+      if (!SymbolOp.isGlobal())
+        return false;
+
+      // Finally return true only if the GOT flag is present.
+      return (SymbolOp.getTargetFlags() & PPCII::MO_GOT_FLAG);
+    }
+
+    bool addLinkerOpt(MachineBasicBlock &MBB, const TargetRegisterInfo *TRI) {
+      MachineFunction *MF = MBB.getParent();
+      // Add this linker opt only if we are using PC Relative memops.
+      if (!MF->getSubtarget<PPCSubtarget>().isUsingPCRelativeCalls())
+        return false;
+
+      // Struct to keep track of one def/use pair for a GOT indirect access.
+      struct GOTDefUsePair {
+        MachineBasicBlock::iterator DefInst;
+        MachineBasicBlock::iterator UseInst;
+        Register DefReg;
+        Register UseReg;
+        bool StillValid;
+      };
+      // Vector of def/ues pairs in this basic block.
+      SmallVector<GOTDefUsePair, 4> CandPairs;
+      SmallVector<GOTDefUsePair, 4> ValidPairs;
+      bool MadeChange = false;
+
+      // Run through all of the instructions in the basic block and try to
+      // collect potential pairs of GOT indirect access instructions.
+      for (auto BBI = MBB.instr_begin(); BBI != MBB.instr_end(); ++BBI) {
+        // Look for the initial GOT indirect load.
+        if (isGOTPLDpc(*BBI)) {
+          GOTDefUsePair CurrentPair{BBI, MachineBasicBlock::iterator(),
+                                    BBI->getOperand(0).getReg(),
+                                    PPC::NoRegister, true};
+          CandPairs.push_back(CurrentPair);
+          continue;
+        }
+
+        // We haven't encountered any new PLD instructions, nothing to check.
+        if (CandPairs.empty())
+          continue;
+
+        // Run through the candidate pairs and see if any of the registers
+        // defined in the PLD instructions are used by this instruction.
+        // Note: the size of CandPairs can change in the loop.
+        for (unsigned Idx = 0; Idx < CandPairs.size(); Idx++) {
+          GOTDefUsePair &Pair = CandPairs[Idx];
+          // The instruction does not use or modify this PLD's def reg,
+          // ignore it.
+          if (!BBI->readsRegister(Pair.DefReg, TRI) &&
+              !BBI->modifiesRegister(Pair.DefReg, TRI))
+            continue;
+
+          // The use needs to be used in the address compuation and not
+          // as the register being stored for a store.
+          const MachineOperand *UseOp =
+              hasPCRelativeForm(*BBI) ? &BBI->getOperand(2) : nullptr;
+
+          // Check for a valid use.
+          if (UseOp && UseOp->isReg() && UseOp->getReg() == Pair.DefReg &&
+              UseOp->isUse() && UseOp->isKill()) {
+            Pair.UseInst = BBI;
+            Pair.UseReg = BBI->getOperand(0).getReg();
+            ValidPairs.push_back(Pair);
+          }
+          CandPairs.erase(CandPairs.begin() + Idx);
+        }
+      }
+
+      // Go through all of the pairs and check for any more valid uses.
+      for (auto Pair = ValidPairs.begin(); Pair != ValidPairs.end(); Pair++) {
+        // We shouldn't be here if we don't have a valid pair.
+        assert(Pair->UseInst.isValid() && Pair->StillValid &&
+               "Kept an invalid def/use pair for GOT PCRel opt");
+        // We have found a potential pair. Search through the instructions
+        // between the def and the use to see if it is valid to mark this as a
+        // linker opt.
+        MachineBasicBlock::iterator BBI = Pair->DefInst;
+        ++BBI;
+        for (; BBI != Pair->UseInst; ++BBI) {
+          if (BBI->readsRegister(Pair->UseReg, TRI) ||
+              BBI->modifiesRegister(Pair->UseReg, TRI)) {
+            Pair->StillValid = false;
+            break;
+          }
+        }
+
+        if (!Pair->StillValid)
+          continue;
+
+        // The load/store instruction that uses the address from the PLD will
+        // either use a register (for a store) or define a register (for the
+        // load). That register will be added as an implicit def to the PLD
+        // and as an implicit use on the second memory op. This is a precaution
+        // to prevent future passes from using that register between the two
+        // instructions.
+        MachineOperand ImplDef =
+            MachineOperand::CreateReg(Pair->UseReg, true, true);
+        MachineOperand ImplUse =
+            MachineOperand::CreateReg(Pair->UseReg, false, true);
+        Pair->DefInst->addOperand(ImplDef);
+        Pair->UseInst->addOperand(ImplUse);
+
+        // Create the symbol.
+        MCContext &Context = MF->getContext();
+        MCSymbol *Symbol =
+            Context.createTempSymbol(Twine("pcrel"), false, false);
+        MachineOperand PCRelLabel =
+            MachineOperand::CreateMCSymbol(Symbol, PPCII::MO_PCREL_OPT_FLAG);
+        Pair->DefInst->addOperand(*MF, PCRelLabel);
+        Pair->UseInst->addOperand(*MF, PCRelLabel);
+        MadeChange |= true;
+      }
+      return MadeChange;
+    }
+
     bool runOnMachineFunction(MachineFunction &MF) override {
       if (skipFunction(MF.getFunction()) || !RunPreEmitPeephole) {
         // Remove UNENCODED_NOP even when this pass is disabled.
@@ -192,6 +361,7 @@ namespace {
       SmallVector<MachineInstr *, 4> InstrsToErase;
       for (MachineBasicBlock &MBB : MF) {
         Changed |= removeRedundantLIs(MBB, TRI);
+        Changed |= addLinkerOpt(MBB, TRI);
         for (MachineInstr &MI : MBB) {
           unsigned Opc = MI.getOpcode();
           if (Opc == PPC::UNENCODED_NOP) {

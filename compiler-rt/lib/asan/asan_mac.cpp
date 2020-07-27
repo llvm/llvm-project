@@ -89,6 +89,12 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
   op(globals, size / sizeof(__asan_global));
 }
 
+void FlushUnneededASanShadowMemory(uptr p, uptr size) {
+  // Since asan's mapping is compacting, the shadow chunk may be
+  // not page-aligned, so we only flush the page-aligned portion.
+  ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
+}
+
 void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
   UNIMPLEMENTED();
 }

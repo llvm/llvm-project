@@ -199,6 +199,11 @@ public:
   /// returns Intrinsic::not_intrinsic!
   bool isIntrinsic() const { return HasLLVMReservedName; }
 
+  /// isTargetIntrinsic - Returns true if this function is an intrinsic and the
+  /// intrinsic is specific to a certain target. If this is not an intrinsic
+  /// or a generic intrinsic, false is returned.
+  bool isTargetIntrinsic() const;
+
   /// Returns true if the function is one of the "Constrained Floating-Point
   /// Intrinsics". Returns false if not, and returns false when
   /// getIntrinsicID() returns Intrinsic::not_intrinsic.

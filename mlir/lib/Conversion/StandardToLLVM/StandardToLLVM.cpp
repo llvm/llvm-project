@@ -150,19 +150,42 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // Materialization for memrefs creates descriptor structs from individual
   // values constituting them, when descriptors are used, i.e. more than one
   // value represents a memref.
-  addMaterialization([&](PatternRewriter &rewriter,
-                         UnrankedMemRefType resultType, ValueRange inputs,
-                         Location loc) -> Optional<Value> {
+  addArgumentMaterialization(
+      [&](OpBuilder &builder, UnrankedMemRefType resultType, ValueRange inputs,
+          Location loc) -> Optional<Value> {
+        if (inputs.size() == 1)
+          return llvm::None;
+        return UnrankedMemRefDescriptor::pack(builder, loc, *this, resultType,
+                                              inputs);
+      });
+  addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
+                                 ValueRange inputs,
+                                 Location loc) -> Optional<Value> {
     if (inputs.size() == 1)
       return llvm::None;
-    return UnrankedMemRefDescriptor::pack(rewriter, loc, *this, resultType,
-                                          inputs);
+    return MemRefDescriptor::pack(builder, loc, *this, resultType, inputs);
   });
-  addMaterialization([&](PatternRewriter &rewriter, MemRefType resultType,
-                         ValueRange inputs, Location loc) -> Optional<Value> {
-    if (inputs.size() == 1)
+  // Add generic source and target materializations to handle cases where
+  // non-LLVM types persist after an LLVM conversion.
+  addSourceMaterialization([&](OpBuilder &builder, Type resultType,
+                               ValueRange inputs,
+                               Location loc) -> Optional<Value> {
+    if (inputs.size() != 1)
       return llvm::None;
-    return MemRefDescriptor::pack(rewriter, loc, *this, resultType, inputs);
+    // FIXME: These should check LLVM::DialectCastOp can actually be constructed
+    // from the input and result.
+    return builder.create<LLVM::DialectCastOp>(loc, resultType, inputs[0])
+        .getResult();
+  });
+  addTargetMaterialization([&](OpBuilder &builder, Type resultType,
+                               ValueRange inputs,
+                               Location loc) -> Optional<Value> {
+    if (inputs.size() != 1)
+      return llvm::None;
+    // FIXME: These should check LLVM::DialectCastOp can actually be constructed
+    // from the input and result.
+    return builder.create<LLVM::DialectCastOp>(loc, resultType, inputs[0])
+        .getResult();
   });
 }
 
@@ -1398,6 +1421,50 @@ using UnsignedRemIOpLowering =
 using UnsignedShiftRightOpLowering =
     OneToOneConvertToLLVMPattern<UnsignedShiftRightOp, LLVM::LShrOp>;
 using XOrOpLowering = VectorConvertToLLVMPattern<XOrOp, LLVM::XOrOp>;
+
+/// Lower `std.assert`. The default lowering calls the `abort` function if the
+/// assertion is violated and has no effect otherwise. The failure message is
+/// ignored by the default lowering but should be propagated by any custom
+/// lowering.
+struct AssertOpLowering : public ConvertOpToLLVMPattern<AssertOp> {
+  using ConvertOpToLLVMPattern<AssertOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    AssertOp::Adaptor transformed(operands);
+
+    // Insert the `abort` declaration if necessary.
+    auto module = op->getParentOfType<ModuleOp>();
+    auto abortFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("abort");
+    if (!abortFunc) {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(module.getBody());
+      auto abortFuncTy =
+          LLVM::LLVMType::getFunctionTy(getVoidType(), {}, /*isVarArg=*/false);
+      abortFunc = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
+                                                    "abort", abortFuncTy);
+    }
+
+    // Split block at `assert` operation.
+    Block *opBlock = rewriter.getInsertionBlock();
+    auto opPosition = rewriter.getInsertionPoint();
+    Block *continuationBlock = rewriter.splitBlock(opBlock, opPosition);
+
+    // Generate IR to call `abort`.
+    Block *failureBlock = rewriter.createBlock(opBlock->getParent());
+    rewriter.create<LLVM::CallOp>(loc, abortFunc, llvm::None);
+    rewriter.create<LLVM::UnreachableOp>(loc);
+
+    // Generate assertion test.
+    rewriter.setInsertionPointToEnd(opBlock);
+    rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
+        op, transformed.arg(), continuationBlock, failureBlock);
+
+    return success();
+  }
+};
 
 // Lowerings for operations on complex numbers.
 
@@ -3146,6 +3213,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       AddIOpLowering,
       AllocaOpLowering,
       AndOpLowering,
+      AssertOpLowering,
       AtomicRMWOpLowering,
       BranchOpLowering,
       CallIndirectOpLowering,

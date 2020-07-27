@@ -926,20 +926,6 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
       this->sections[sec.sh_info] = target;
     }
 
-    // This section contains relocation information.
-    // If -r is given, we do not interpret or apply relocation
-    // but just copy relocation sections to output.
-    if (config->relocatable) {
-      InputSection *relocSec = make<InputSection>(*this, sec, name);
-      // We want to add a dependency to target, similar like we do for
-      // -emit-relocs below. This is useful for the case when linker script
-      // contains the "/DISCARD/". It is perhaps uncommon to use a script with
-      // -r, but we faced it in the Linux kernel and have to handle such case
-      // and not to crash.
-      target->dependentSections.push_back(relocSec);
-      return relocSec;
-    }
-
     if (target->firstRelocation)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
@@ -957,17 +943,17 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
     }
     assert(isUInt<31>(target->numRelocations));
 
-    // Relocation sections processed by the linker are usually removed
-    // from the output, so returning `nullptr` for the normal case.
-    // However, if -emit-relocs is given, we need to leave them in the output.
-    // (Some post link analysis tools need this information.)
-    if (config->emitRelocs) {
-      InputSection *relocSec = make<InputSection>(*this, sec, name);
-      // We will not emit relocation section if target was discarded.
-      target->dependentSections.push_back(relocSec);
-      return relocSec;
-    }
-    return nullptr;
+    // Relocation sections are usually removed from the output, so return
+    // `nullptr` for the normal case. However, if -r or --emit-relocs is
+    // specified, we need to copy them to the output. (Some post link analysis
+    // tools specify --emit-relocs to obtain the information.)
+    if (!config->relocatable && !config->emitRelocs)
+      return nullptr;
+    InputSection *relocSec = make<InputSection>(*this, sec, name);
+    // If the relocated section is discarded (due to /DISCARD/ or
+    // --gc-sections), the relocation section should be discarded as well.
+    target->dependentSections.push_back(relocSec);
+    return relocSec;
   }
   }
 

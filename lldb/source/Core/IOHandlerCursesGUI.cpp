@@ -1189,9 +1189,7 @@ public:
 
     ListenerSP listener_sp(
         Listener::MakeListener("lldb.IOHandler.curses.Application"));
-    ConstString broadcaster_class_target(Target::GetStaticBroadcasterClass());
     ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
-    ConstString broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
     debugger.EnableForwardEvents(listener_sp);
 
     bool update = true;

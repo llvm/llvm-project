@@ -29,11 +29,10 @@ OptionValueFormatEntity::OptionValueFormatEntity(const char *default_format)
   }
 }
 
-bool OptionValueFormatEntity::Clear() {
+void OptionValueFormatEntity::Clear() {
   m_current_entry = m_default_entry;
   m_current_format = m_default_format;
   m_value_was_set = false;
-  return true;
 }
 
 static void EscapeBackticks(llvm::StringRef str, std::string &dst) {

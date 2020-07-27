@@ -105,6 +105,14 @@ protected:
     return UniquerT::template get<ConcreteT>(loc.getContext(), kind, args...);
   }
 
+  /// Mutate the current storage instance. This will not change the unique key.
+  /// The arguments are forwarded to 'ConcreteT::mutate'.
+  template <typename... Args>
+  LogicalResult mutate(Args &&...args) {
+    return UniquerT::mutate(this->getContext(), getImpl(),
+                            std::forward<Args>(args)...);
+  }
+
   /// Default implementation that just returns success.
   template <typename... Args>
   static LogicalResult verifyConstructionInvariants(Args... args) {

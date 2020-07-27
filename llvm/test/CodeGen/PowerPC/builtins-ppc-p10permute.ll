@@ -170,67 +170,67 @@ entry:
 }
 declare <2 x i64> @llvm.ppc.altivec.vinsdrx(<2 x i64>, i64, i64)
 
-define <16 x i8> @testVINSBVLX(<16 x i8> %a, i64 %b, <16 x i8> %c) {
+define <16 x i8> @testVINSBVLX(<16 x i8> %a, i32 %b, <16 x i8> %c) {
 ; CHECK-LABEL: testVINSBVLX:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinsbvlx v2, r5, v3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = tail call <16 x i8> @llvm.ppc.altivec.vinsbvlx(<16 x i8> %a, i64 %b, <16 x i8> %c)
+  %0 = tail call <16 x i8> @llvm.ppc.altivec.vinsbvlx(<16 x i8> %a, i32 %b, <16 x i8> %c)
   ret <16 x i8> %0
 }
-declare <16 x i8> @llvm.ppc.altivec.vinsbvlx(<16 x i8>, i64, <16 x i8>)
+declare <16 x i8> @llvm.ppc.altivec.vinsbvlx(<16 x i8>, i32, <16 x i8>)
 
-define <16 x i8> @testVINSBVRX(<16 x i8> %a, i64 %b, <16 x i8> %c) {
+define <16 x i8> @testVINSBVRX(<16 x i8> %a, i32 %b, <16 x i8> %c) {
 ; CHECK-LABEL: testVINSBVRX:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinsbvrx v2, r5, v3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = tail call <16 x i8> @llvm.ppc.altivec.vinsbvrx(<16 x i8> %a, i64 %b, <16 x i8> %c)
+  %0 = tail call <16 x i8> @llvm.ppc.altivec.vinsbvrx(<16 x i8> %a, i32 %b, <16 x i8> %c)
   ret <16 x i8> %0
 }
-declare <16 x i8> @llvm.ppc.altivec.vinsbvrx(<16 x i8>, i64, <16 x i8>)
+declare <16 x i8> @llvm.ppc.altivec.vinsbvrx(<16 x i8>, i32, <16 x i8>)
 
-define <8 x i16> @testVINSHVLX(<8 x i16> %a, i64 %b, <8 x i16> %c) {
+define <8 x i16> @testVINSHVLX(<8 x i16> %a, i32 %b, <8 x i16> %c) {
 ; CHECK-LABEL: testVINSHVLX:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinshvlx v2, r5, v3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = tail call <8 x i16> @llvm.ppc.altivec.vinshvlx(<8 x i16> %a, i64 %b, <8 x i16> %c)
+  %0 = tail call <8 x i16> @llvm.ppc.altivec.vinshvlx(<8 x i16> %a, i32 %b, <8 x i16> %c)
   ret <8 x i16> %0
 }
-declare <8 x i16> @llvm.ppc.altivec.vinshvlx(<8 x i16>, i64, <8 x i16>)
+declare <8 x i16> @llvm.ppc.altivec.vinshvlx(<8 x i16>, i32, <8 x i16>)
 
-define <8 x i16> @testVINSHVRX(<8 x i16> %a, i64 %b, <8 x i16> %c) {
+define <8 x i16> @testVINSHVRX(<8 x i16> %a, i32 %b, <8 x i16> %c) {
 entry:
-  %0 = tail call <8 x i16> @llvm.ppc.altivec.vinshvrx(<8 x i16> %a, i64 %b, <8 x i16> %c)
+  %0 = tail call <8 x i16> @llvm.ppc.altivec.vinshvrx(<8 x i16> %a, i32 %b, <8 x i16> %c)
   ret <8 x i16> %0
 }
-declare <8 x i16> @llvm.ppc.altivec.vinshvrx(<8 x i16>, i64, <8 x i16>)
+declare <8 x i16> @llvm.ppc.altivec.vinshvrx(<8 x i16>, i32, <8 x i16>)
 
-define <4 x i32> @testVINSWVLX(<4 x i32> %a, i64 %b, <4 x i32> %c) {
+define <4 x i32> @testVINSWVLX(<4 x i32> %a, i32 %b, <4 x i32> %c) {
 ; CHECK-LABEL: testVINSWVLX:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinswvlx v2, r5, v3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = tail call <4 x i32> @llvm.ppc.altivec.vinswvlx(<4 x i32> %a, i64 %b, <4 x i32> %c)
+  %0 = tail call <4 x i32> @llvm.ppc.altivec.vinswvlx(<4 x i32> %a, i32 %b, <4 x i32> %c)
   ret <4 x i32> %0
 }
-declare <4 x i32> @llvm.ppc.altivec.vinswvlx(<4 x i32>, i64, <4 x i32>)
+declare <4 x i32> @llvm.ppc.altivec.vinswvlx(<4 x i32>, i32, <4 x i32>)
 
-define <4 x i32> @testVINSWVRX(<4 x i32> %a, i64 %b, <4 x i32> %c) {
+define <4 x i32> @testVINSWVRX(<4 x i32> %a, i32 %b, <4 x i32> %c) {
 ; CHECK-LABEL: testVINSWVRX:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinswvrx v2, r5, v3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = tail call <4 x i32> @llvm.ppc.altivec.vinswvrx(<4 x i32> %a, i64 %b, <4 x i32> %c)
+  %0 = tail call <4 x i32> @llvm.ppc.altivec.vinswvrx(<4 x i32> %a, i32 %b, <4 x i32> %c)
   ret <4 x i32> %0
 }
-declare <4 x i32> @llvm.ppc.altivec.vinswvrx(<4 x i32>, i64, <4 x i32>)
+declare <4 x i32> @llvm.ppc.altivec.vinswvrx(<4 x i32>, i32, <4 x i32>)
 
 define <4 x i32> @testVINSW(<4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: testVINSW:

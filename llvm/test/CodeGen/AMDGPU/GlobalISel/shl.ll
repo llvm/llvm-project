@@ -529,8 +529,7 @@ define <2 x i16> @v_shl_v2i16_15(<2 x i16> %value) {
 ; GFX9-LABEL: v_shl_v2i16_15:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_pack_ll_b32_b16 s4, 15, 15
-; GFX9-NEXT:    v_pk_lshlrev_b16 v0, s4, v0
+; GFX9-NEXT:    v_pk_lshlrev_b16 v0, 15, v0 op_sel_hi:[0,1]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = shl <2 x i16> %value, <i16 15, i16 15>
   ret <2 x i16> %result

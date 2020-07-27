@@ -545,6 +545,77 @@ def G_SSUBSAT : GenericInstruction {
   let isCommutable = 0;
 }
 
+/// RESULT = [US]MULFIX(LHS, RHS, SCALE) - Perform fixed point
+/// multiplication on 2 integers with the same width and scale. SCALE
+/// represents the scale of both operands as fixed point numbers. This
+/// SCALE parameter must be a constant integer. A scale of zero is
+/// effectively performing multiplication on 2 integers.
+def G_SMULFIX : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+def G_UMULFIX : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+/// Same as the corresponding unsaturated fixed point instructions, but the
+/// result is clamped between the min and max values representable by the
+/// bits of the first 2 operands.
+def G_SMULFIXSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+def G_UMULFIXSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+/// RESULT = [US]DIVFIX(LHS, RHS, SCALE) - Perform fixed point division on
+/// 2 integers with the same width and scale. SCALE represents the scale
+/// of both operands as fixed point numbers. This SCALE parameter must be a
+/// constant integer.
+def G_SDIVFIX : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+def G_UDIVFIX : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+/// Same as the corresponding unsaturated fixed point instructions,
+/// but the result is clamped between the min and max values
+/// representable by the bits of the first 2 operands.
+def G_SDIVFIXSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+def G_UDIVFIXSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, untyped_imm_0:$scale);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
 //------------------------------------------------------------------------------
 // Floating Point Unary Ops.
 //------------------------------------------------------------------------------
@@ -729,6 +800,13 @@ def G_FREM : GenericInstruction {
 def G_FPOW : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+// Floating point exponentiation, with an integer power.
+def G_FPOWI : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type1:$src1);
   let hasSideEffects = 0;
 }
 

@@ -249,6 +249,10 @@ static cl::opt<bool>
                                    "optimization remarks: -{Rpass|"
                                    "pass-remarks}=pgo-instrumentation"));
 
+static cl::opt<bool> PGOInstrumentEntry(
+    "pgo-instrument-entry", cl::init(false), cl::Hidden,
+    cl::desc("Force to instrument function entry basicblock."));
+
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
 extern cl::opt<PGOViewCountsType> PGOViewCounts;
@@ -425,7 +429,7 @@ public:
 private:
   bool runOnModule(Module &M) override {
     createProfileFileNameVar(M, InstrProfileOutput);
-    createIRLevelProfileFlagVar(M, true);
+    createIRLevelProfileFlagVar(M, /* IsCS */ true, PGOInstrumentEntry);
     return false;
   }
   std::string InstrProfileOutput;
@@ -528,6 +532,9 @@ private:
   // Is this is context-sensitive instrumentation.
   bool IsCS;
 
+  // If we instrument function entry BB by default.
+  bool InstrumentFuncEntry;
+
   // A map that stores the Comdat group in function F.
   std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers;
 
@@ -572,9 +579,11 @@ public:
       Function &Func, TargetLibraryInfo &TLI,
       std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
       bool CreateGlobalVar = false, BranchProbabilityInfo *BPI = nullptr,
-      BlockFrequencyInfo *BFI = nullptr, bool IsCS = false)
+      BlockFrequencyInfo *BFI = nullptr, bool IsCS = false,
+      bool InstrumentFuncEntry = true)
       : F(Func), IsCS(IsCS), ComdatMembers(ComdatMembers), VPC(Func, TLI),
-        ValueSites(IPVK_Last + 1), SIVisitor(Func), MST(F, BPI, BFI) {
+        ValueSites(IPVK_Last + 1), SIVisitor(Func),
+        MST(F, InstrumentFuncEntry, BPI, BFI) {
     // This should be done before CFG hash computation.
     SIVisitor.countSelects(Func);
     ValueSites[IPVK_MemOPSize] = VPC.get(IPVK_MemOPSize);
@@ -845,8 +854,8 @@ static void instrumentOneFunc(
   // later in getInstrBB() to avoid invalidating it.
   SplitIndirectBrCriticalEdges(F, BPI, BFI);
 
-  FuncPGOInstrumentation<PGOEdge, BBInfo> FuncInfo(F, TLI, ComdatMembers, true,
-                                                   BPI, BFI, IsCS);
+  FuncPGOInstrumentation<PGOEdge, BBInfo> FuncInfo(
+      F, TLI, ComdatMembers, true, BPI, BFI, IsCS, PGOInstrumentEntry);
   std::vector<BasicBlock *> InstrumentBBs;
   FuncInfo.getInstrumentBBs(InstrumentBBs);
   unsigned NumCounters =
@@ -1004,9 +1013,10 @@ public:
   PGOUseFunc(Function &Func, Module *Modu, TargetLibraryInfo &TLI,
              std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
              BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFIin,
-             ProfileSummaryInfo *PSI, bool IsCS)
+             ProfileSummaryInfo *PSI, bool IsCS, bool InstrumentFuncEntry)
       : F(Func), M(Modu), BFI(BFIin), PSI(PSI),
-        FuncInfo(Func, TLI, ComdatMembers, false, BPI, BFIin, IsCS),
+        FuncInfo(Func, TLI, ComdatMembers, false, BPI, BFIin, IsCS,
+                 InstrumentFuncEntry),
         FreqAttr(FFA_Normal), IsCS(IsCS) {}
 
   // Read counts for the instrumented BB from profile.
@@ -1121,11 +1131,18 @@ bool PGOUseFunc::setInstrumentedCounts(
   if (NumCounters != CountFromProfile.size()) {
     return false;
   }
+  auto *FuncEntry = &*F.begin();
+
   // Set the profile count to the Instrumented BBs.
   uint32_t I = 0;
   for (BasicBlock *InstrBB : InstrumentBBs) {
     uint64_t CountValue = CountFromProfile[I++];
     UseBBInfo &Info = getBBInfo(InstrBB);
+    // If we reach here, we know that we have some nonzero count
+    // values in this function. The entry count should not be 0.
+    // Fix it if necessary.
+    if (InstrBB == FuncEntry && CountValue == 0)
+      CountValue = 1;
     Info.setBBInfoCount(CountValue);
   }
   ProfileCountSize = CountFromProfile.size();
@@ -1316,7 +1333,6 @@ void PGOUseFunc::populateCounters() {
   }
 #endif
   uint64_t FuncEntryCount = getBBInfo(&*F.begin()).CountValue;
-  F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
   uint64_t FuncMaxCount = FuncEntryCount;
   for (auto &BB : F) {
     auto BI = findBBInfo(&BB);
@@ -1324,6 +1340,11 @@ void PGOUseFunc::populateCounters() {
       continue;
     FuncMaxCount = std::max(FuncMaxCount, BI->CountValue);
   }
+
+  // Fix the obviously inconsistent entry count.
+  if (FuncMaxCount > 0 && FuncEntryCount == 0)
+    FuncEntryCount = 1;
+  F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
   markFunctionAttributes(FuncEntryCount, FuncMaxCount);
 
   // Now annotate select instructions
@@ -1514,7 +1535,7 @@ static bool InstrumentAllFunctions(
   // For the context-sensitve instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
   if (!IsCS)
-    createIRLevelProfileFlagVar(M, /* IsCS */ false);
+    createIRLevelProfileFlagVar(M, /* IsCS */ false, PGOInstrumentEntry);
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
@@ -1532,7 +1553,7 @@ static bool InstrumentAllFunctions(
 PreservedAnalyses
 PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &AM) {
   createProfileFileNameVar(M, CSInstrName);
-  createIRLevelProfileFlagVar(M, /* IsCS */ true);
+  createIRLevelProfileFlagVar(M, /* IsCS */ true, PGOInstrumentEntry);
   return PreservedAnalyses::all();
 }
 
@@ -1619,6 +1640,12 @@ static bool annotateAllFunctions(
   collectComdatMembers(M, ComdatMembers);
   std::vector<Function *> HotFunctions;
   std::vector<Function *> ColdFunctions;
+
+  // If the profile marked as always instrument the entry BB, do the
+  // same. Note this can be overwritten by the internal option in CFGMST.h
+  bool InstrumentFuncEntry = PGOReader->instrEntryBBEnabled();
+  if (PGOInstrumentEntry.getNumOccurrences() > 0)
+    InstrumentFuncEntry = PGOInstrumentEntry;
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
@@ -1628,7 +1655,8 @@ static bool annotateAllFunctions(
     // Split indirectbr critical edges here before computing the MST rather than
     // later in getInstrBB() to avoid invalidating it.
     SplitIndirectBrCriticalEdges(F, BPI, BFI);
-    PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, PSI, IsCS);
+    PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, PSI, IsCS,
+                    InstrumentFuncEntry);
     bool AllZeros = false;
     if (!Func.readCounters(PGOReader.get(), AllZeros))
       continue;

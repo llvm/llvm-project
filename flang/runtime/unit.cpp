@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "unit.h"
+#include "environment.h"
 #include "io-error.h"
 #include "lock.h"
 #include "unit-map.h"
 #include <cstdio>
+#include <utility>
 
 namespace Fortran::runtime::io {
 
@@ -65,7 +67,7 @@ ExternalFileUnit &ExternalFileUnit::LookUpOrCreateAnonymous(
     result.OpenUnit(
         dir == Direction::Input ? OpenStatus::Old : OpenStatus::Replace,
         Action::ReadWrite, Position::Rewind, std::move(path),
-        std::strlen(path.get()), handler);
+        std::strlen(path.get()), Convert::Native, handler);
     result.isUnformatted = isUnformatted;
   }
   return result;
@@ -90,7 +92,13 @@ int ExternalFileUnit::NewUnit(const Terminator &terminator) {
 
 void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
     Position position, OwningPtr<char> &&newPath, std::size_t newPathLength,
-    IoErrorHandler &handler) {
+    Convert convert, IoErrorHandler &handler) {
+  if (executionEnvironment.conversion != Convert::Unknown) {
+    convert = executionEnvironment.conversion;
+  }
+  swapEndianness_ = convert == Convert::Swap ||
+      (convert == Convert::LittleEndian && !isHostLittleEndian) ||
+      (convert == Convert::BigEndian && isHostLittleEndian);
   if (IsOpen()) {
     if (status == OpenStatus::Old &&
         (!newPath.get() ||
@@ -213,8 +221,20 @@ void ExternalFileUnit::FlushAll(IoErrorHandler &handler) {
   }
 }
 
-bool ExternalFileUnit::Emit(
-    const char *data, std::size_t bytes, IoErrorHandler &handler) {
+static void SwapEndianness(
+    char *data, std::size_t bytes, std::size_t elementBytes) {
+  if (elementBytes > 1) {
+    auto half{elementBytes >> 1};
+    for (std::size_t j{0}; j + elementBytes <= bytes; j += elementBytes) {
+      for (std::size_t k{0}; k < half; ++k) {
+        std::swap(data[j + k], data[j + elementBytes - 1 - k]);
+      }
+    }
+  }
+}
+
+bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
+    std::size_t elementBytes, IoErrorHandler &handler) {
   auto furthestAfter{std::max(furthestPositionInRecord,
       positionInRecord + static_cast<std::int64_t>(bytes))};
   if (furthestAfter > recordLength.value_or(furthestAfter)) {
@@ -230,14 +250,18 @@ bool ExternalFileUnit::Emit(
     std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord, ' ',
         positionInRecord - furthestPositionInRecord);
   }
-  std::memcpy(Frame() + recordOffsetInFrame_ + positionInRecord, data, bytes);
+  char *to{Frame() + recordOffsetInFrame_ + positionInRecord};
+  std::memcpy(to, data, bytes);
+  if (swapEndianness_) {
+    SwapEndianness(to, bytes, elementBytes);
+  }
   positionInRecord += bytes;
   furthestPositionInRecord = furthestAfter;
   return true;
 }
 
-bool ExternalFileUnit::Receive(
-    char *data, std::size_t bytes, IoErrorHandler &handler) {
+bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
+    std::size_t elementBytes, IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input);
   auto furthestAfter{std::max(furthestPositionInRecord,
       positionInRecord + static_cast<std::int64_t>(bytes))};
@@ -252,6 +276,9 @@ bool ExternalFileUnit::Receive(
   auto got{ReadFrame(frameOffsetInFile_, need, handler)};
   if (got >= need) {
     std::memcpy(data, Frame() + recordOffsetInFrame_ + positionInRecord, bytes);
+    if (swapEndianness_) {
+      SwapEndianness(data, bytes, elementBytes);
+    }
     positionInRecord += bytes;
     furthestPositionInRecord = furthestAfter;
     return true;
@@ -365,7 +392,7 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         }
       } else {
         positionInRecord = furthestPositionInRecord;
-        ok &= Emit("\n", 1, handler); // TODO: Windows CR+LF
+        ok &= Emit("\n", 1, 1, handler); // TODO: Windows CR+LF
       }
     }
     frameOffsetInFile_ +=

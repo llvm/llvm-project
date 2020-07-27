@@ -44,8 +44,24 @@ class FrameRecognizerTestCase(TestBase):
 
         self.runCmd("frame recognizer delete 0")
 
+        # Test that it deleted the recognizer with id 0.
         self.expect("frame recognizer list",
                     substrs=['1: recognizer.MyOtherFrameRecognizer, module a.out, symbol bar (regexp)'])
+        self.expect("frame recognizer list", matching=False,
+                    substrs=['MyFrameRecognizer'])
+
+        # Test that an invalid index and deleting the same index again
+        # is an error and doesn't do any changes.
+        self.expect("frame recognizer delete 2", error=True,
+                    substrs=["error: '2' is not a valid recognizer id."])
+        self.expect("frame recognizer delete 0", error=True,
+                    substrs=["error: '0' is not a valid recognizer id."])
+        # Recognizers should have the same state as above.
+        self.expect("frame recognizer list",
+                    substrs=['1: recognizer.MyOtherFrameRecognizer, module a.out, symbol bar (regexp)'])
+        self.expect("frame recognizer list", matching=False,
+                    substrs=['MyFrameRecognizer'])
+
 
         self.runCmd("frame recognizer clear")
 

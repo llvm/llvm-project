@@ -428,6 +428,13 @@ func @generic_result_0_element_type(%arg0: memref<?xf32>) {
 
 // -----
 
+func @conv_rank_limit(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) {
+  // expected-error @+1 {{expects memref ranks to be greater than 2}}
+  linalg.conv(%arg0, %arg1, %arg2) : memref<?xf32>, memref<?xf32>, memref<?xf32>
+}
+
+// -----
+
 // expected-error @+1 {{unknown Linalg type}}
 !invalid_type = type !linalg.unknown
 

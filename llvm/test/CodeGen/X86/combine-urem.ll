@@ -213,7 +213,7 @@ define <4 x i32> @combine_vec_urem_by_pow2d(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm3, %xmm4
 ; SSE-NEXT:    psrld %xmm2, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm2[2,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm3, %xmm6
 ; SSE-NEXT:    psrld %xmm5, %xmm6

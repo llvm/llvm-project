@@ -513,7 +513,7 @@ DWARF:
 
 #      DWARF32: DWARF:
 #      DWARF32:   debug_info:
-# DWARF32-NEXT:     - Length:     118
+# DWARF32-NEXT:     - Length:     0x0000000000000076
 # DWARF32-NEXT:       Version:    5
 # DWARF32-NEXT:       UnitType:   DW_UT_compile
 # DWARF32-NEXT:       AbbrOffset: 0
@@ -585,7 +585,7 @@ DWARF:
 # RUN:   obj2yaml | FileCheck %s --check-prefix=DWARF32-YAML
 
 #      DWARF32-YAML: debug_info:
-# DWARF32-YAML-NEXT:   - Length:     12
+# DWARF32-YAML-NEXT:   - Length:     0x000000000000000C
 # DWARF32-YAML-NEXT:     Version:    5
 # DWARF32-YAML-NEXT:     UnitType:   DW_UT_compile
 # DWARF32-YAML-NEXT:     AbbrOffset: 0x0000000000000000
@@ -669,7 +669,7 @@ DWARF:
 
 #      DWARF64-YAML: debug_info:
 # DWARF64-YAML-NEXT:   - Format:     DWARF64
-# DWARF64-YAML-NEXT:     Length:     20
+# DWARF64-YAML-NEXT:     Length:     0x0000000000000014
 # DWARF64-YAML-NEXT:     Version:    5
 # DWARF64-YAML-NEXT:     UnitType:   DW_UT_compile
 # DWARF64-YAML-NEXT:     AbbrOffset: 0x0000000000000000

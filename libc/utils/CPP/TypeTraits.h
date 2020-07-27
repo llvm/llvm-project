@@ -49,7 +49,8 @@ template <typename Type> struct IsIntegral {
       IsSameV<unsigned short, TypeNoCV> || IsSameV<int, TypeNoCV> ||
       IsSameV<unsigned int, TypeNoCV> || IsSameV<long, TypeNoCV> ||
       IsSameV<unsigned long, TypeNoCV> || IsSameV<long long, TypeNoCV> ||
-      IsSameV<unsigned long long, TypeNoCV> || IsSameV<bool, TypeNoCV>;
+      IsSameV<unsigned long long, TypeNoCV> || IsSameV<bool, TypeNoCV> ||
+      IsSameV<__uint128_t, TypeNoCV>;
 };
 
 template <typename T> struct IsPointerTypeNoCV : public FalseValue {};
@@ -63,6 +64,11 @@ template <typename Type> struct IsFloatingPointType {
   static constexpr bool Value = IsSame<float, TypeNoCV>::Value ||
                                 IsSame<double, TypeNoCV>::Value ||
                                 IsSame<long double, TypeNoCV>::Value;
+};
+
+template <typename Type> struct IsArithmetic {
+  static constexpr bool Value =
+      IsIntegral<Type>::Value || IsFloatingPointType<Type>::Value;
 };
 
 } // namespace cpp

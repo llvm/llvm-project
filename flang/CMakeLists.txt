@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9.0)
+cmake_minimum_required(VERSION 3.13.4)
 
 # RPATH settings on macOS do not affect INSTALL_NAME.
 if (POLICY CMP0068)
@@ -380,7 +380,6 @@ endif()
 add_subdirectory(runtime)
 
 if (FLANG_INCLUDE_TESTS)
-  enable_testing()
   add_subdirectory(test)
   if (FLANG_GTEST_AVAIL)
     add_subdirectory(unittests)

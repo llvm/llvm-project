@@ -868,9 +868,7 @@ float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
 float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
                                     const MachineBlockFrequencyInfo *MBFI,
                                     const MachineBasicBlock *MBB) {
-  BlockFrequency Freq = MBFI->getBlockFreq(MBB);
-  const float Scale = 1.0f / MBFI->getEntryFreq();
-  return (isDef + isUse) * (Freq.getFrequency() * Scale);
+  return (isDef + isUse) * MBFI->getBlockFreqRelativeToEntryBlock(MBB);
 }
 
 LiveRange::Segment

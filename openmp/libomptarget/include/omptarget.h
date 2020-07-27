@@ -49,6 +49,8 @@ enum tgt_map_type {
   OMP_TGT_MAPTYPE_IMPLICIT        = 0x200,
   // copy data to device
   OMP_TGT_MAPTYPE_CLOSE           = 0x400,
+  // runtime error if not already allocated
+  OMP_TGT_MAPTYPE_PRESENT         = 0x1000,
   // member of struct, member given by [16 MSBs] - 1
   OMP_TGT_MAPTYPE_MEMBER_OF       = 0xffff000000000000
 };
@@ -259,14 +261,6 @@ void __kmpc_push_target_tripcount(int64_t device_id, uint64_t loop_tripcount);
 }
 #endif
 
-#ifdef OMPTARGET_DEBUG
-#include <stdio.h>
-#define DEBUGP(prefix, ...)                                                    \
-  {                                                                            \
-    fprintf(stderr, "%s --> ", prefix);                                        \
-    fprintf(stderr, __VA_ARGS__);                                              \
-  }
-
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
@@ -293,6 +287,14 @@ void __kmpc_push_target_tripcount(int64_t device_id, uint64_t loop_tripcount);
  *                               // 16 digits for 64bit
  *   (uintptr_t) ptr);
  */
+
+#ifdef OMPTARGET_DEBUG
+#include <stdio.h>
+#define DEBUGP(prefix, ...)                                                    \
+  {                                                                            \
+    fprintf(stderr, "%s --> ", prefix);                                        \
+    fprintf(stderr, __VA_ARGS__);                                              \
+  }
 #else
 #define DEBUGP(prefix, ...)                                                    \
   {}

@@ -1,15 +1,18 @@
 ## Show that llvm-strings can handle the -t/--radix switch properly.
 
-RUN: echo one > %t
-RUN: echo two >> %t
-RUN: echo three >> %t
-RUN: echo four >> %t
-RUN: echo five >> %t
-RUN: echo six >> %t
-RUN: echo seven >> %t
-RUN: echo eight >> %t
-RUN: echo nine >> %t
-RUN: echo ten >> %t
+RUN: extract --no-leading-lines input %s -o %t
+#--- input
+one
+two
+three
+four
+five
+six
+seven
+eight
+nine
+ten
+#--- end
 
 RUN: llvm-strings %t | FileCheck %s -check-prefix CHECK-NONE --implicit-check-not={{.}}
 RUN: llvm-strings -t d %t | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace --implicit-check-not={{.}}

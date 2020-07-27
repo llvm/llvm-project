@@ -107,6 +107,10 @@ namespace llvm {
     /// produce the relocation @got@pcrel. Fixup is VK_PPC_GOT_PCREL.
     MO_GOT_FLAG = 8,
 
+    // MO_PCREL_OPT_FLAG - If this bit is set the operand is part of a
+    // PC Relative linker optimization.
+    MO_PCREL_OPT_FLAG = 16,
+
     /// The next are not flags but distinct values.
     MO_ACCESS_MASK = 0xf00,
 

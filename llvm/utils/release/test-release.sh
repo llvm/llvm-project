@@ -502,12 +502,18 @@ fi
 # Setup the test-suite.  Do this early so we can catch failures before
 # we do the full 3 stage build.
 if [ $do_test_suite = "yes" ]; then
+  venv=virtualenv
+  if ! type -P 'virtualenv' > /dev/null 2>&1 ; then
+    check_program_exists 'python3'
+    venv="python3 -m venv"
+  fi
+
   SandboxDir="$BuildDir/sandbox"
   Lit=$SandboxDir/bin/lit
   TestSuiteBuildDir="$BuildDir/test-suite-build"
   TestSuiteSrcDir="$BuildDir/llvm-test-suite"
 
-  virtualenv $SandboxDir
+  ${venv} $SandboxDir
   $SandboxDir/bin/python $BuildDir/llvm-project/llvm/utils/lit/setup.py install
   mkdir -p $TestSuiteBuildDir
 fi
