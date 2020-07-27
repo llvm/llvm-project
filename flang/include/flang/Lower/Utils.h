@@ -15,26 +15,27 @@
 
 #include "flang/Common/indirection.h"
 #include "flang/Parser/char-block.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace Fortran {
 namespace semantics {
-  class Symbol;
+class Symbol;
 }
 
 namespace evaluate {
-  template <typename A> class Expr;
-  struct SomeType;
-}
+template <typename A>
+class Expr;
+struct SomeType;
+} // namespace evaluate
 
 namespace common {
-  template <typename A> class Reference;
+template <typename A>
+class Reference;
 }
 
-namespace lower {
-namespace pft {
+namespace lower::pft {
 struct Evaluation;
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
@@ -43,9 +44,8 @@ using Label = std::uint64_t;
 using LabelSet = llvm::SmallSet<Label, 4>;
 using SymbolLabelMap = llvm::DenseMap<SymbolRef, LabelSet>;
 using LabelEvalMap = llvm::DenseMap<Label, Evaluation *>;
-}  // namespace pft
-}  // namespace lower
-}  // namespace Fortran
+} // namespace lower::pft
+} // namespace Fortran
 
 /// Convert an F18 CharBlock to an LLVM StringRef
 inline llvm::StringRef toStringRef(const Fortran::parser::CharBlock &cb) {
