@@ -1,6 +1,7 @@
-; RUN: opt -mcpu=a2 -loop-data-prefetch -mtriple=powerpc64le-unknown-linux -enable-ppc-prefetching -S < %s | FileCheck %s
-; RUN: opt -mcpu=a2 -passes=loop-data-prefetch -mtriple=powerpc64le-unknown-linux -enable-ppc-prefetching -S < %s | FileCheck %s
+; RUN: opt -mcpu=a2 -loop-data-prefetch -S < %s | FileCheck %s
+; RUN: opt -mcpu=a2 -passes=loop-data-prefetch -S < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
+target triple = "powerpc64-bgq-linux"
 
 define void @foo(double* nocapture %a, double* nocapture readonly %b) {
 entry:

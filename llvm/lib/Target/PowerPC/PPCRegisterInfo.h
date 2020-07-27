@@ -153,6 +153,7 @@ public:
     switch (RegName[0]) {
       case 'r':
       case 'f':
+      case 'q': // for QPX
       case 'v':
         if (RegName[1] == 's')
           return RegName + 2;

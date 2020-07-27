@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -verify-machineinstrs -mcpu=a2q < %s | FileCheck %s --check-prefix=QPX
 
 declare float @fabsf(float)
 
@@ -62,6 +63,11 @@ loop_exit:
 ; CHECK: mtctr
 ; CHECK-NOT: xsmindp
 ; CHECK: blr
+
+; QPX-LABEL: test1v:
+; QPX: mtctr
+; QPX-NOT: bl fminf
+; QPX: blr
 
 define void @test1a(float %f, float* %fp) {
 entry:
@@ -132,6 +138,11 @@ loop_exit:
 ; CHECK: mtctr
 ; CHECK-NOT: xsmaxdp
 ; CHECK: blr
+
+; QPX-LABEL: test2v:
+; QPX: mtctr
+; QPX-NOT: bl fmax
+; QPX: blr
 
 define void @test2a(float %f, float* %fp) {
 entry:
