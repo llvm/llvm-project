@@ -1083,6 +1083,9 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
 /// bytes.  Return the size of nop emitted.
 static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
                         const X86Subtarget *Subtarget) {
+  // Determine the longest nop which can be efficiently decoded for the given
+  // target cpu.  15-bytes is the longest single NOP instruction, but some
+  // platforms can't decode the longest forms efficiently.
   unsigned MaxNopLength = 1;
   if (Subtarget->is64Bit()) {
     // FIXME: We can use NOOPL on 32-bit targets with FeatureNOPL, but the
