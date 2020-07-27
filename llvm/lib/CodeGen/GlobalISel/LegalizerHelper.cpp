@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -29,6 +30,7 @@
 
 using namespace llvm;
 using namespace LegalizeActions;
+using namespace MIPatternMatch;
 
 /// Try to break down \p OrigTy into \p NarrowTy sized pieces.
 ///
@@ -2713,6 +2715,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case G_EXTRACT_VECTOR_ELT:
+    return lowerExtractVectorElt(MI);
   case G_SHUFFLE_VECTOR:
     return lowerShuffleVector(MI);
   case G_DYN_STACKALLOC:
@@ -2750,6 +2754,66 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerAddSubSatToAddoSubo(MI);
   }
   }
+}
+
+Align LegalizerHelper::getStackTemporaryAlignment(LLT Ty,
+                                                  Align MinAlign) const {
+  // FIXME: We're missing a way to go back from LLT to llvm::Type to query the
+  // datalayout for the preferred alignment. Also there should be a target hook
+  // for this to allow targets to reduce the alignment and ignore the
+  // datalayout. e.g. AMDGPU should always use a 4-byte alignment, regardless of
+  // the type.
+  return std::max(Align(PowerOf2Ceil(Ty.getSizeInBytes())), MinAlign);
+}
+
+MachineInstrBuilder
+LegalizerHelper::createStackTemporary(TypeSize Bytes, Align Alignment,
+                                      MachinePointerInfo &PtrInfo) {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  int FrameIdx = MF.getFrameInfo().CreateStackObject(Bytes, Alignment, false);
+
+  unsigned AddrSpace = DL.getAllocaAddrSpace();
+  LLT FramePtrTy = LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
+
+  PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIdx);
+  return MIRBuilder.buildFrameIndex(FramePtrTy, FrameIdx);
+}
+
+static Register clampDynamicVectorIndex(MachineIRBuilder &B, Register IdxReg,
+                                        LLT VecTy) {
+  int64_t IdxVal;
+  if (mi_match(IdxReg, *B.getMRI(), m_ICst(IdxVal)))
+    return IdxReg;
+
+  LLT IdxTy = B.getMRI()->getType(IdxReg);
+  unsigned NElts = VecTy.getNumElements();
+  if (isPowerOf2_32(NElts)) {
+    APInt Imm = APInt::getLowBitsSet(IdxTy.getSizeInBits(), Log2_32(NElts));
+    return B.buildAnd(IdxTy, IdxReg, B.buildConstant(IdxTy, Imm)).getReg(0);
+  }
+
+  return B.buildUMin(IdxTy, IdxReg, B.buildConstant(IdxTy, NElts - 1))
+      .getReg(0);
+}
+
+Register LegalizerHelper::getVectorElementPointer(Register VecPtr, LLT VecTy,
+                                                  Register Index) {
+  LLT EltTy = VecTy.getElementType();
+
+  // Calculate the element offset and add it to the pointer.
+  unsigned EltSize = EltTy.getSizeInBits() / 8; // FIXME: should be ABI size.
+  assert(EltSize * 8 == EltTy.getSizeInBits() &&
+         "Converting bits to bytes lost precision");
+
+  Index = clampDynamicVectorIndex(MIRBuilder, Index, VecTy);
+
+  LLT IdxTy = MRI.getType(Index);
+  auto Mul = MIRBuilder.buildMul(IdxTy, Index,
+                                 MIRBuilder.buildConstant(IdxTy, EltSize));
+
+  LLT PtrTy = MRI.getType(VecPtr);
+  return MIRBuilder.buildPtrAdd(PtrTy, VecPtr, Mul).getReg(0);
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorImplicitDef(
@@ -5118,6 +5182,57 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
     MIRBuilder.buildTrunc(MI.getOperand(I), Shift);
   }
 
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+/// Lower a vector extract by writing the vector to a stack temporary and
+/// reloading the element.
+///
+/// %dst = G_EXTRACT_VECTOR_ELT %vec, %idx
+///  =>
+///  %stack_temp = G_FRAME_INDEX
+///  G_STORE %vec, %stack_temp
+///  %idx = clamp(%idx, %vec.getNumElements())
+///  %element_ptr = G_PTR_ADD %stack_temp, %idx
+///  %dst = G_LOAD %element_ptr
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerExtractVectorElt(MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcVec = MI.getOperand(1).getReg();
+  Register Idx = MI.getOperand(2).getReg();
+  LLT VecTy = MRI.getType(SrcVec);
+  LLT EltTy = VecTy.getElementType();
+  if (!EltTy.isByteSized()) { // Not implemented.
+    LLVM_DEBUG(dbgs() << "Can't handle non-byte element vectors yet\n");
+    return UnableToLegalize;
+  }
+
+  unsigned EltBytes = EltTy.getSizeInBytes();
+  Align StoreAlign = getStackTemporaryAlignment(VecTy);
+  Align LoadAlign;
+
+  MachinePointerInfo PtrInfo;
+  auto StackTemp = createStackTemporary(TypeSize::Fixed(VecTy.getSizeInBytes()),
+                                        StoreAlign, PtrInfo);
+  MIRBuilder.buildStore(SrcVec, StackTemp, PtrInfo, StoreAlign);
+
+  // Get the pointer to the element, and be sure not to hit undefined behavior
+  // if the index is out of bounds.
+  Register LoadPtr = getVectorElementPointer(StackTemp.getReg(0), VecTy, Idx);
+
+  int64_t IdxVal;
+  if (mi_match(Idx, MRI, m_ICst(IdxVal))) {
+    int64_t Offset = IdxVal * EltBytes;
+    PtrInfo = PtrInfo.getWithOffset(Offset);
+    LoadAlign = commonAlignment(StoreAlign, Offset);
+  } else {
+    // We lose information with a variable offset.
+    LoadAlign = getStackTemporaryAlignment(EltTy);
+    PtrInfo = MachinePointerInfo(MRI.getType(LoadPtr).getAddressSpace());
+  }
+
+  MIRBuilder.buildLoad(DstReg, LoadPtr, PtrInfo, LoadAlign);
   MI.eraseFromParent();
   return Legalized;
 }
