@@ -97,6 +97,9 @@
 /* Define to 1 if you have the `pfm' library (-lpfm). */
 #cmakedefine HAVE_LIBPFM ${HAVE_LIBPFM}
 
+/* Define to 1 if the `perf_branch_entry' struct has field cycles. */
+#cmakedefine LIBPFM_HAS_FIELD_CYCLES ${LIBPFM_HAS_FIELD_CYCLES}
+
 /* Define to 1 if you have the `psapi' library (-lpsapi). */
 #cmakedefine HAVE_LIBPSAPI ${HAVE_LIBPSAPI}
 
