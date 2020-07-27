@@ -63,6 +63,7 @@ void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestOpaqueLoc();
 void registerTestPreparationPassWithAllowedMemrefResults();
+void registerTestRecursiveTypesPass();
 void registerTestReducer();
 void registerTestGpuParallelLoopMappingPass();
 void registerTestSCFUtilsPass();
@@ -138,6 +139,7 @@ void registerTestPasses() {
   registerTestMemRefStrideCalculation();
   registerTestOpaqueLoc();
   registerTestPreparationPassWithAllowedMemrefResults();
+  registerTestRecursiveTypesPass();
   registerTestReducer();
   registerTestGpuParallelLoopMappingPass();
   registerTestSCFUtilsPass();
