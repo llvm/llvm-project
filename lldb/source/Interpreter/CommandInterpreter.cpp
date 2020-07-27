@@ -1987,10 +1987,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
         if (value_type != OptionParser::eOptionalArgument)
           new_args.AppendArgument(value);
         else {
-          char buffer[255];
-          ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
-                     value.c_str());
-          new_args.AppendArgument(llvm::StringRef(buffer));
+          new_args.AppendArgument(option + value);
         }
 
       } else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
@@ -2012,10 +2009,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
         if (value_type != OptionParser::eOptionalArgument)
           new_args.AppendArgument(cmd_args.GetArgumentAtIndex(index));
         else {
-          char buffer[255];
-          ::snprintf(buffer, sizeof(buffer), "%s%s", option.c_str(),
-                     cmd_args.GetArgumentAtIndex(index));
-          new_args.AppendArgument(buffer);
+          new_args.AppendArgument(option + cmd_args.GetArgumentAtIndex(index));
         }
         used[index] = true;
       }

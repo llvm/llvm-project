@@ -199,9 +199,8 @@ bool Communication::StartReadThread(Status *error_ptr) {
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
            "{0} Communication::StartReadThread ()", this);
 
-  char thread_name[1024];
-  snprintf(thread_name, sizeof(thread_name), "<lldb.comm.%s>",
-           GetBroadcasterName().AsCString());
+  const std::string thread_name =
+      llvm::formatv("<lldb.comm.{0}>", GetBroadcasterName());
 
   m_read_thread_enabled = true;
   m_read_thread_did_exit = false;

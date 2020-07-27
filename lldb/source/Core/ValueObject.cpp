@@ -1702,8 +1702,7 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
                                                    bool can_create) {
   ValueObjectSP synthetic_child_sp;
   if (IsPointerType() || IsArrayType()) {
-    char index_str[64];
-    snprintf(index_str, sizeof(index_str), "[%" PRIu64 "]", (uint64_t)index);
+    std::string index_str = llvm::formatv("[{0}]", index);
     ConstString index_const_str(index_str);
     // Check if we have already created a synthetic array member in this valid
     // object. If we have we will re-use it.
@@ -1730,8 +1729,7 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
                                                      bool can_create) {
   ValueObjectSP synthetic_child_sp;
   if (IsScalarType()) {
-    char index_str[64];
-    snprintf(index_str, sizeof(index_str), "[%i-%i]", from, to);
+    std::string index_str = llvm::formatv("[{0}-{1}]", from, to);
     ConstString index_const_str(index_str);
     // Check if we have already created a synthetic array member in this valid
     // object. If we have we will re-use it.
@@ -1768,9 +1766,7 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
   ValueObjectSP synthetic_child_sp;
 
   if (name_const_str.IsEmpty()) {
-    char name_str[64];
-    snprintf(name_str, sizeof(name_str), "@%i", offset);
-    name_const_str.SetCString(name_str);
+    name_const_str.SetString("@" + std::to_string(offset));
   }
 
   // Check if we have already created a synthetic array member in this valid
