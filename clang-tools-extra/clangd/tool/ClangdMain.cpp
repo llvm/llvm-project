@@ -450,7 +450,7 @@ opt<bool> EnableConfig{
     init(true),
 };
 
-#ifdef CLANGD_ENABLE_REMOTE
+#if CLANGD_ENABLE_REMOTE
 opt<std::string> RemoteIndexAddress{
     "remote-index-address",
     cat(Features),
