@@ -297,15 +297,14 @@ TPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
     return Alloc.takeError();
 
   auto WorkingMemory = (*Alloc)->getWorkingMemory(ResolverBlockPermissions);
-  auto TargetAddress = (*Alloc)->getTargetMemory(ResolverBlockPermissions);
-  ABI->writeResolverCode(WorkingMemory.data(), TargetAddress, ReentryFnAddr,
+  ResolverBlockAddr = (*Alloc)->getTargetMemory(ResolverBlockPermissions);
+  ABI->writeResolverCode(WorkingMemory.data(), ResolverBlockAddr, ReentryFnAddr,
                          ReentryCtxAddr);
 
   if (auto Err = (*Alloc)->finalize())
     return std::move(Err);
 
   ResolverBlock = std::move(*Alloc);
-  ResolverBlockAddr = ResolverBlock->getTargetMemory(ResolverBlockPermissions);
   return ResolverBlockAddr;
 }
 
