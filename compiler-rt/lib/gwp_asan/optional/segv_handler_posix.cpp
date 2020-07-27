@@ -144,7 +144,7 @@ void installSignalHandlers(gwp_asan::GuardedPoolAllocator *GPA, Printf_t Printf,
   PrintBacktraceForSignalHandler = PrintBacktrace;
   BacktraceForSignalHandler = SegvBacktrace;
 
-  struct sigaction Action;
+  struct sigaction Action = {};
   Action.sa_sigaction = sigSegvHandler;
   Action.sa_flags = SA_SIGINFO;
   sigaction(SIGSEGV, &Action, &PreviousHandler);
