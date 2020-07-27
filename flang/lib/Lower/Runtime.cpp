@@ -102,7 +102,7 @@ void Fortran::lower::genStopStatement(
     auto type = calleeType.getInput(i++);
     op = builder.createConvert(loc, type, op);
   }
-  builder.create<mlir::CallOp>(loc, callee, operands);
+  builder.create<fir::CallOp>(loc, callee, operands);
 }
 
 void Fortran::lower::genFailImageStatement(
@@ -110,7 +110,7 @@ void Fortran::lower::genFailImageStatement(
   auto &bldr = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
   auto callee = genRuntimeFunction<mkRTKey(FailImageStatement)>(loc, bldr);
-  bldr.create<mlir::CallOp>(loc, callee, llvm::None);
+  bldr.create<fir::CallOp>(loc, callee, llvm::None);
 }
 
 void Fortran::lower::genEventPostStatement(
@@ -175,5 +175,5 @@ void Fortran::lower::genPauseStatement(
   auto &bldr = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
   auto callee = genRuntimeFunction<mkRTKey(PauseStatement)>(loc, bldr);
-  bldr.create<mlir::CallOp>(loc, callee, llvm::None);
+  bldr.create<fir::CallOp>(loc, callee, llvm::None);
 }
