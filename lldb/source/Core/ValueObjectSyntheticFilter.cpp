@@ -121,9 +121,7 @@ bool ValueObjectSynthetic::MightHaveChildren() {
   return (m_might_have_children != eLazyBoolNo);
 }
 
-llvm::Optional<uint64_t> ValueObjectSynthetic::GetByteSize() {
-  return m_parent->GetByteSize();
-}
+uint64_t ValueObjectSynthetic::GetByteSize() { return m_parent->GetByteSize(); }
 
 lldb::ValueType ValueObjectSynthetic::GetValueType() const {
   return m_parent->GetValueType();

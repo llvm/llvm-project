@@ -37,7 +37,7 @@ public:
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     const lldb::VariableSP &var_sp);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  uint64_t GetByteSize() override;
 
   ConstString GetTypeName() override;
 
