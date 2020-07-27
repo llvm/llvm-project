@@ -228,10 +228,9 @@ void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
     StringRef name = strtab + sym.n_strx;
     if (sym.n_type & N_EXT)
       // Global defined symbol
-      return symtab->addDefined(name, isec, value);
-    else
-      // Local defined symbol
-      return make<Defined>(name, isec, value);
+      return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF);
+    // Local defined symbol
+    return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF);
   };
 
   for (size_t i = 0, n = nList.size(); i < n; ++i) {
@@ -351,7 +350,9 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
               [&](const Twine &name, uint64_t flags) {
-                symbols.push_back(symtab->addDylib(saver.save(name), umbrella));
+                bool isWeakDef = flags & EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
+                symbols.push_back(
+                    symtab->addDylib(saver.save(name), umbrella, isWeakDef));
               });
   } else {
     error("LC_DYLD_INFO_ONLY not found in " + getName());
@@ -390,10 +391,11 @@ DylibFile::DylibFile(std::shared_ptr<llvm::MachO::InterfaceFile> interface,
 
   dylibName = saver.save(interface->getInstallName());
   // TODO(compnerd) filter out symbols based on the target platform
+  // TODO: handle weak defs
   for (const auto symbol : interface->symbols())
     if (symbol->getArchitectures().has(config->arch))
-      symbols.push_back(
-          symtab->addDylib(saver.save(symbol->getName()), umbrella));
+      symbols.push_back(symtab->addDylib(saver.save(symbol->getName()),
+                                         umbrella, /*isWeakDef=*/false));
   // TODO(compnerd) properly represent the hierarchy of the documents as it is
   // in theory possible to have re-exported dylibs from re-exported dylibs which
   // should be parent'ed to the child.
