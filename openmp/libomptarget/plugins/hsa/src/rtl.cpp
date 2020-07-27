@@ -52,7 +52,7 @@ extern "C" hsa_status_t hostrpc_terminate();
 int print_kernel_trace;
 
 // Size of the target call stack struture
-int32_t TgtStackItemSize = 0;
+uint32_t TgtStackItemSize = 0;
 
 #ifdef OMPTARGET_DEBUG
 static int DebugLevel = 0;
