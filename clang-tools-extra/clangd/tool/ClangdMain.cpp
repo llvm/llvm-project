@@ -696,7 +696,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     if (Sync)
       AsyncIndexLoad.wait();
   }
-#ifdef CLANGD_ENABLE_REMOTE
+#if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
     llvm::errs() << "remote-index-address and project-path have to be "
                     "specified at the same time.";
