@@ -3701,6 +3701,14 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       // LHS != Inf
       if (Pred == FCmpInst::FCMP_UNE && isKnownNeverInfinity(LHS, Q.TLI))
         return getTrue(RetTy);
+      // LHS == Inf || LHS == NaN
+      if (Pred == FCmpInst::FCMP_UEQ && isKnownNeverInfinity(LHS, Q.TLI) &&
+          isKnownNeverNaN(LHS, Q.TLI))
+        return getFalse(RetTy);
+      // LHS != Inf && LHS != NaN
+      if (Pred == FCmpInst::FCMP_ONE && isKnownNeverInfinity(LHS, Q.TLI) &&
+          isKnownNeverNaN(LHS, Q.TLI))
+        return getTrue(RetTy);
     }
     if (C->isNegative() && !C->isNegZero()) {
       assert(!C->isNaN() && "Unexpected NaN constant!");
