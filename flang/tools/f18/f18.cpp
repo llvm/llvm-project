@@ -545,6 +545,11 @@ int main(int argc, char *const argv[]) {
       defaultKinds.set_defaultIntegerKind(8);
       defaultKinds.set_subscriptIntegerKind(8);
       defaultKinds.set_sizeIntegerKind(8);
+      if (isPGF90) {
+        driver.F18_FCArgs.push_back("-i8");
+      } else {
+        driver.F18_FCArgs.push_back("-fdefault-integer-8");
+      }
     } else if (arg == "-Mlargearray") {
     } else if (arg == "-Mnolargearray") {
     } else if (arg == "-flarge-sizes") {
