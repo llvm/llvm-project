@@ -22,6 +22,7 @@
 // Control Macros
 #ifdef PGMATH_DECLARE
 #undef PGMATH_DECLARE
+#define DEFINE_C_COMPLEX_TYPES
 #define PGMATH_DECLARE(x) extern "C" x;
 #define PGMATH_FAST
 #define PGMATH_PRECISE
@@ -58,6 +59,37 @@
 #define PGMATH_USE_OTHER(name, x)
 #endif
 
+// Handle the C99 _Complex vs C++ std::complex call interface issue.
+// _Complex and std::complex are layout compatible (they are the same when
+// in memory), but they are not guaranteed to be compatible in call interface
+// (they may be passed/returned differently). For instance on X86 32 bits,
+// float _complex is returned in a pair of register, but std::complex<float>
+// is returned in memory.
+// Pgmath is defined in C using _Complex (and windows _Fcomplex/_DComplex
+// equivalents). Since this file defines the call interface with the runtime
+// for both folding and code generation (through template introspection), it
+// is crucial to make a difference between std::complex and _Complex here.
+// Unfortunately, _Complex support is not standard in C++.
+// Reserve pgmath usage at compile time (folding) when _Complex is available
+// (cmake is responsible to detect this).
+// For code generation, define type c_float_complex_t that can be used in
+// introspection to indicate that the C99 _Complex ABI has to be used for the
+// related value.
+#ifdef DEFINE_C_COMPLEX_TYPES
+#ifdef PGMATH_LINKING
+#ifdef _WIN32
+using c_float_complex_t = _Fcomplex;
+using c_double_complex_t = _Dcomplex;
+#else
+using c_float_complex_t = float _Complex;
+using c_double_complex_t = double _Complex;
+#endif
+#else
+struct c_float_complex_t {};
+struct c_double_complex_t {};
+#endif
+#endif
+
 #define PGMATH_REAL_IMPL(impl, func) \
   PGMATH_DECLARE(float __##impl##s_##func##_1(float)) \
   PGMATH_DECLARE(double __##impl##d_##func##_1(double)) \
@@ -65,8 +97,9 @@
   PGMATH_USE_D(func, __##impl##d_##func##_1)
 
 #define PGMATH_COMPLEX_IMPL(impl, func) \
-  PGMATH_DECLARE(float _Complex __##impl##c_##func##_1(float _Complex)) \
-  PGMATH_DECLARE(double _Complex __##impl##z_##func##_1(double _Complex)) \
+  PGMATH_DECLARE(c_float_complex_t __##impl##c_##func##_1(c_float_complex_t)) \
+  PGMATH_DECLARE( \
+      c_double_complex_t __##impl##z_##func##_1(c_double_complex_t)) \
   PGMATH_USE_C(func, __##impl##c_##func##_1) \
   PGMATH_USE_Z(func, __##impl##z_##func##_1)
 
@@ -81,10 +114,10 @@
   PGMATH_USE_D(func, __##impl##d_##func##_1)
 
 #define PGMATH_COMPLEX2_IMPL(impl, func) \
-  PGMATH_DECLARE( \
-      float _Complex __##impl##c_##func##_1(float _Complex, float _Complex)) \
-  PGMATH_DECLARE(double _Complex __##impl##z_##func##_1( \
-      double _Complex, double _Complex)) \
+  PGMATH_DECLARE(c_float_complex_t __##impl##c_##func##_1( \
+      c_float_complex_t, c_float_complex_t)) \
+  PGMATH_DECLARE(c_double_complex_t __##impl##z_##func##_1( \
+      c_double_complex_t, c_double_complex_t)) \
   PGMATH_USE_C(func, __##impl##c_##func##_1) \
   PGMATH_USE_Z(func, __##impl##z_##func##_1)
 
@@ -243,16 +276,19 @@ PGMATH_ALL2(pow)
 #define PGMATH_DELCARE_POW(impl) \
   PGMATH_DECLARE(float __##impl##s_powi_1(float, int)) \
   PGMATH_DECLARE(double __##impl##d_powi_1(double, int)) \
-  PGMATH_DECLARE(float _Complex __##impl##c_powi_1(float _Complex, int)) \
-  PGMATH_DECLARE(double _Complex __##impl##z_powi_1(double _Complex, int)) \
+  PGMATH_DECLARE(c_float_complex_t __##impl##c_powi_1(c_float_complex_t, int)) \
+  PGMATH_DECLARE( \
+      c_double_complex_t __##impl##z_powi_1(c_double_complex_t, int)) \
   PGMATH_USE_S(pow, __##impl##s_powi_1) \
   PGMATH_USE_D(pow, __##impl##d_powi_1) \
   PGMATH_USE_C(pow, __##impl##c_powi_1) \
   PGMATH_USE_Z(pow, __##impl##z_powi_1) \
   PGMATH_DECLARE(float __##impl##s_powk_1(float, int64_t)) \
   PGMATH_DECLARE(double __##impl##d_powk_1(double, int64_t)) \
-  PGMATH_DECLARE(float _Complex __##impl##c_powk_1(float _Complex, int64_t)) \
-  PGMATH_DECLARE(double _Complex __##impl##z_powk_1(double _Complex, int64_t)) \
+  PGMATH_DECLARE( \
+      c_float_complex_t __##impl##c_powk_1(c_float_complex_t, int64_t)) \
+  PGMATH_DECLARE( \
+      c_double_complex_t __##impl##z_powk_1(c_double_complex_t, int64_t)) \
   PGMATH_USE_S(pow, __##impl##s_powk_1) \
   PGMATH_USE_D(pow, __##impl##d_powk_1) \
   PGMATH_USE_C(pow, __##impl##c_powk_1) \
@@ -291,3 +327,5 @@ PGMATH_ALL(tanh)
 #undef PGMATH_USE_Z
 #undef PGMATH_USE_OTHER
 #undef PGMATH_USE_ALL_TYPES
+#undef PGMATH_LINKING
+#undef DEFINE_C_COMPLEX_TYPES

@@ -4,11 +4,6 @@ include(CheckCXXSourceCompiles)
 check_cxx_symbol_exists(strerror string.h HAVE_STRERROR)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
 
-check_cxx_compiler_flag("-Werror -Wc99-extensions" HAS_WC99_EXTENSIONS_FLAG)
-if (HAS_WC99_EXTENSIONS_FLAG)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c99-extensions")
-endif()
-
 # Can't use symbol exists here as the function is overloaded in C++
 check_cxx_source_compiles(
   "#include <string.h>
