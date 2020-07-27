@@ -204,6 +204,7 @@ def include_optional : Joined<["/", "-", "/?", "-?"], "includeoptional:">,
     HelpText<"Add symbol as undefined, but allow it to remain undefined">;
 def kill_at : F<"kill-at">;
 def lldmingw : F<"lldmingw">;
+def noseh : F<"noseh">;
 def output_def : Joined<["/", "-", "/?", "-?"], "output-def:">;
 def pdb_source_path : P<"pdbsourcepath",
     "Base path used to make relative source file path absolute in PDB">;
