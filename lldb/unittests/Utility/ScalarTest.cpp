@@ -92,6 +92,7 @@ TEST(ScalarTest, Getters) {
   CheckConversion<unsigned long long>(0x8765432112345678ull);
   CheckConversion<float>(42.25f);
   CheckConversion<double>(42.25);
+  CheckConversion<long double>(42.25L);
 
   EXPECT_EQ(APInt(128, 1) << 70, Scalar(std::pow(2.0f, 70.0f)).SInt128(APInt()));
   EXPECT_EQ(APInt(128, -1, true) << 70,
