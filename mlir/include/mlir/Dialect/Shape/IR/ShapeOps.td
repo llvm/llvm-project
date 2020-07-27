@@ -333,19 +333,19 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let summary = "Returns the number of elements for a given shape";
   let description = [{
     Returns the number of elements for a given shape which is the product of its
-    dimensions.
-
-    ```mlir
-    %product = shape.mul %lhs, %rhs
-    ```
+    extents. If the argument is of type `shape` then the result will be of type
+    `size` and potential errors will be propagated. Otherwise, if the argument
+    is and extent tensor `tensor<?xindex>` then the result will be of type
+    `index`.
   }];
 
-  let arguments = (ins Shape_ShapeType:$shape);
-  let results = (outs Shape_SizeType:$result);
+  let arguments = (ins Shape_ShapeOrExtentTensorType:$shape);
+  let results = (outs Shape_SizeOrIndexType:$result);
 
-  let assemblyFormat = "$shape attr-dict";
+  let assemblyFormat = "$shape `:` type($shape) `->` type($result) attr-dict";
 
   let hasFolder = 1;
+  let verifier = [{ return ::verifySizeOrIndexOp(*this); }];
 }
 
 def Shape_ReduceOp : Shape_Op<"reduce",
