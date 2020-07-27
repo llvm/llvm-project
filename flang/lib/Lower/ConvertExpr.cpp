@@ -1537,12 +1537,22 @@ fir::ExtendedValue Fortran::lower::createStringLiteral(
 // Support functions (implemented here for now)
 //===----------------------------------------------------------------------===//
 
-mlir::Value fir::getBase(const fir::ExtendedValue &ex) {
+mlir::Value fir::getBase(const fir::ExtendedValue &exv) {
   return std::visit(Fortran::common::visitors{
                         [](const fir::UnboxedValue &x) { return x; },
                         [](const auto &x) { return x.getAddr(); },
                     },
-                    ex.box);
+                    exv.box);
+}
+
+mlir::Value fir::getLen(const fir::ExtendedValue &exv) {
+  return std::visit(
+      Fortran::common::visitors{
+          [](const fir::CharBoxValue &x) { return x.getLen(); },
+          [](const fir::CharArrayBoxValue &x) { return x.getLen(); },
+          [](const fir::BoxValue &x) { return x.getLen(); },
+          [](const auto &) { return mlir::Value{}; }},
+      exv.box);
 }
 
 fir::ExtendedValue fir::substBase(const fir::ExtendedValue &ex,

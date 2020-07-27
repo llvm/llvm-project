@@ -102,7 +102,6 @@ createSomeExtendedAddress(mlir::Location loc, AbstractConverter &converter,
 fir::ExtendedValue createStringLiteral(mlir::Location loc,
                                        AbstractConverter &converter,
                                        llvm::StringRef str, std::uint64_t len);
-
 } // namespace lower
 } // namespace Fortran
 
