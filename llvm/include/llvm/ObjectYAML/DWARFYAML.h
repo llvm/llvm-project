@@ -225,7 +225,7 @@ struct Data {
 
   bool isEmpty() const;
 
-  SetVector<StringRef> getUsedSectionNames() const;
+  SetVector<StringRef> getNonEmptySectionNames() const;
 };
 
 } // end namespace DWARFYAML
