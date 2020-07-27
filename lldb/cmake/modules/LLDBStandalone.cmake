@@ -75,6 +75,11 @@ endif()
 file(TO_CMAKE_PATH ${LLVM_DIR} LLVM_DIR)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${SWIFT_CMAKE_DIR}")
+
+if(LLVM_ENABLE_ZLIB)
+  find_package(ZLIB)
+endif()
+
 include(AddLLVM)
 include(TableGen)
 include(HandleLLVMOptions)
