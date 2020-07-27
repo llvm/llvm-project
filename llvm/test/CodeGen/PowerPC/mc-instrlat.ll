@@ -19,7 +19,7 @@ entry:
 
 declare void @bar(double) #1
 
-attributes #0 = { nounwind "no-infs-fp-math"="true" "no-nans-fp-math"="true" "target-cpu"="ppc64" "target-features"="+altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-qpx,-vsx" "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #1 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="ppc64" "target-features"="+altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-qpx,-vsx" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind "no-infs-fp-math"="true" "no-nans-fp-math"="true" "target-cpu"="ppc64" "target-features"="+altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #1 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="ppc64" "target-features"="+altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" "unsafe-fp-math"="true" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 

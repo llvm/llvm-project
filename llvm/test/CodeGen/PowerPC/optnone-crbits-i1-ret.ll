@@ -1,6 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-bgq-linux"
 
 declare zeroext i1 @ri1()
 declare void @se1()
