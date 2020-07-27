@@ -2595,19 +2595,20 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
                                               int &MinCSFrameIndex,
                                               int &MaxCSFrameIndex,
                                               bool AssignOffsets) {
+#ifndef NDEBUG
   // First process all fixed stack objects.
-  int64_t Offset = 0;
   for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
-    if (MFI.getStackID(I) == TargetStackID::SVEVector) {
-      int64_t FixedOffset = -MFI.getObjectOffset(I);
-      if (FixedOffset > Offset)
-        Offset = FixedOffset;
-    }
+    assert(MFI.getStackID(I) != TargetStackID::SVEVector &&
+           "SVE vectors should never be passed on the stack by value, only by "
+           "reference.");
+#endif
 
   auto Assign = [&MFI](int FI, int64_t Offset) {
     LLVM_DEBUG(dbgs() << "alloc FI(" << FI << ") at SP[" << Offset << "]\n");
     MFI.setObjectOffset(FI, Offset);
   };
+
+  int64_t Offset = 0;
 
   // Then process all callee saved slots.
   if (getSVECalleeSaveSlotRange(MFI, MinCSFrameIndex, MaxCSFrameIndex)) {
