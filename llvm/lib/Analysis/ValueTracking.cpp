@@ -4773,7 +4773,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
     const auto *CE = dyn_cast<ConstantExpr>(Op);
     if (isa<CastInst>(Op) || (CE && CE->isCast()))
       return false;
-    else if (isa<BinaryOperator>(Op))
+    else if (Instruction::isBinaryOp(Opcode))
       return false;
     // Be conservative and return true.
     return true;
