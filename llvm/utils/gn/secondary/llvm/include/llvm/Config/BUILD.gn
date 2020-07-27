@@ -113,6 +113,7 @@ write_cmake_config("config") {
     "HAVE____CHKSTK=",
     "HAVE____CHKSTK_MS=",
     "HOST_LINK_VERSION=",
+    "LIBPFM_HAS_FIELD_CYCLES=",
     "LLVM_TARGET_TRIPLE_ENV=",
     "LLVM_VERSION_INFO=",
     "LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=1",
