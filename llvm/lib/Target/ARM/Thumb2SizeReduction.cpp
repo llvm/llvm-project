@@ -43,7 +43,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "t2-reduce-size"
+#define DEBUG_TYPE "thumb2-reduce-size"
 #define THUMB2_SIZE_REDUCE_NAME "Thumb2 instruction size reduce pass"
 
 STATISTIC(NumNarrows,  "Number of 32-bit instrs reduced to 16-bit ones");
