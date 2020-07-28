@@ -1433,13 +1433,8 @@ __kmp_invoke_microtask:
 	add 12, 0, 12
 	neg 12, 12
 
-// We need to make sure that the stack frame stays aligned (to 16 bytes, except
-// under the BG/Q CNK, where it must be to 32 bytes).
-# if KMP_OS_CNK
-	li 0, -32
-# else
+// We need to make sure that the stack frame stays aligned (to 16 bytes).
 	li 0, -16
-# endif
 	and 12, 0, 12
 
 // Establish the local stack frame.
