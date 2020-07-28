@@ -111,6 +111,22 @@ func @get_extent_from_extent_tensor(%extents : tensor<?xindex>, %idx : index)
 
 // -----
 
+// Lower `const_shape` to `tensor_from_elements`.
+// CHECK-LABEL: @const_shape
+// CHECK-SAME: () -> tensor<?xindex>
+func @const_shape() -> tensor<?xindex> {
+  // CHECK: %[[C1:.*]] = constant 1 : index
+  // CHECK: %[[C2:.*]] = constant 2 : index
+  // CHECK: %[[C3:.*]] = constant 3 : index
+  // CHECK: %[[TENSOR3:.*]] = tensor_from_elements(%[[C1]], %[[C2]], %[[C3]])
+  // CHECK: %[[RESULT:.*]] = tensor_cast %[[TENSOR3]] : tensor<3xindex> to tensor<?xindex>
+  // CHECK: return %[[RESULT]] : tensor<?xindex>
+  %shape = shape.const_shape [1, 2, 3] : tensor<?xindex>
+  return %shape : tensor<?xindex>
+}
+
+// -----
+
 // Lower `any` to its first operand.
 // CHECK-LABEL: @any_of_three
 // CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<?xindex>) -> tensor<?xindex>

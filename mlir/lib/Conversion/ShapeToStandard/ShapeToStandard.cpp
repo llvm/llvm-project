@@ -104,6 +104,39 @@ LogicalResult ShapeOfOpConversion::matchAndRewrite(
 }
 
 namespace {
+class ConstShapeOpConverter : public OpConversionPattern<ConstShapeOp> {
+public:
+  using OpConversionPattern<ConstShapeOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ConstShapeOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+} // namespace
+
+LogicalResult ConstShapeOpConverter::matchAndRewrite(
+    ConstShapeOp op, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+
+  // For now, this lowering supports only extent tensors, not `shape.shape`
+  // types.
+  if (op.getType().isa<ShapeType>())
+    return failure();
+
+  auto loc = op.getLoc();
+  SmallVector<Value, 4> extentOperands;
+  for (auto extent : op.shape()) {
+    extentOperands.push_back(
+        rewriter.create<ConstantIndexOp>(loc, extent.getLimitedValue()));
+  }
+  Value tensor = rewriter.create<TensorFromElementsOp>(loc, extentOperands);
+  Type indexTy = rewriter.getIndexType();
+  Type resultTy = RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
+  rewriter.replaceOpWithNewOp<TensorCastOp>(op, tensor, resultTy);
+  return success();
+}
+
+namespace {
 class GetExtentOpConverter : public OpConversionPattern<GetExtentOp> {
   using OpConversionPattern<GetExtentOp>::OpConversionPattern;
 
@@ -209,6 +242,7 @@ void mlir::populateShapeToStandardConversionPatterns(
   patterns.insert<
       AnyOpConversion,
       BinaryOpConversion<AddOp, AddIOp>,
+      ConstShapeOpConverter,
       BinaryOpConversion<MulOp, MulIOp>,
       GetExtentOpConverter,
       RankOpConverter,
