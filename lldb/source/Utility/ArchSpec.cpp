@@ -987,6 +987,12 @@ static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
   if (lhs == rhs)
     return true;
 
+  // Apple simulators are a different platform than what they simulate.
+  // As the environments are different at this point, if one of them is a
+  // simulator, then they are different.
+  if (lhs == llvm::Triple::Simulator || rhs == llvm::Triple::Simulator)
+    return false;
+
   // If any of the environment is unknown then they are compatible
   if (lhs == llvm::Triple::UnknownEnvironment ||
       rhs == llvm::Triple::UnknownEnvironment)
