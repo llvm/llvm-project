@@ -14,3 +14,18 @@ func @num_elements_to_reduce(%shape : !shape.shape) -> !shape.size {
 // CHECK: }
 // CHECK: return [[NUM_ELEMENTS]] : !shape.size
 
+// -----
+
+// CHECK-LABEL: func @num_elements_to_reduce_on_index
+// CHECK-SAME:  ([[ARG:%.*]]: tensor<?xindex>) -> index
+func @num_elements_to_reduce_on_index(%shape : tensor<?xindex>) -> index {
+  %num_elements = shape.num_elements %shape : tensor<?xindex> -> index
+  return %num_elements : index
+}
+// CHECK: [[C1:%.*]] = constant 1 : index
+// CHECK: [[NUM_ELEMENTS:%.*]] = shape.reduce([[ARG]], [[C1]]) : tensor<?xindex> -> index
+// CHECK: ^bb0({{.*}}: index, [[DIM:%.*]]: index, [[ACC:%.*]]: index
+// CHECK:   [[NEW_ACC:%.*]] = shape.mul [[DIM]], [[ACC]]
+// CHECK:   shape.yield [[NEW_ACC]] : index
+// CHECK: }
+// CHECK: return [[NUM_ELEMENTS]] : index
