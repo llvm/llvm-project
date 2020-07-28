@@ -103,6 +103,16 @@
 # RUN: llvm-readobj --dyn-symbols %t64 | FileCheck %s --implicit-check-not="{{^}}Symbols ["
 # RUN: llvm-readelf --dyn-symbols %t64 | FileCheck %s --implicit-check-not="Symbol table '.symtab'"
 
+## Case 6: Test that the Num index starts from zero at every new symbol table.
+# RUN: llvm-readelf --symbols %t64 %t64 | FileCheck %s --check-prefix=NUM-INDEX
+
+# NUM-INDEX:      Symbol table '.symtab' contains 3 entries:
+# NUM-INDEX-NEXT:    Num: {{.*}}
+# NUM-INDEX-NEXT:      0: {{.*}}
+# NUM-INDEX:      Symbol table '.symtab' contains 3 entries:
+# NUM-INDEX-NEXT:    Num: {{.*}}
+# NUM-INDEX-NEXT:      0: {{.*}}
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS[[BITS]]
