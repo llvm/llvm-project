@@ -3442,21 +3442,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Data.ColonLoc = ConsumeToken();
   } else if (Kind == OMPC_to || Kind == OMPC_from) {
     if (Tok.is(tok::identifier)) {
-      bool IsMapperModifier = false;
-      if (Kind == OMPC_to) {
-        auto Modifier =
-            static_cast<OpenMPToModifierKind>(getOpenMPSimpleClauseType(
-                Kind, PP.getSpelling(Tok), getLangOpts().OpenMP));
-        if (Modifier == OMPC_TO_MODIFIER_mapper)
-          IsMapperModifier = true;
-      } else {
-        auto Modifier =
-            static_cast<OpenMPFromModifierKind>(getOpenMPSimpleClauseType(
-                Kind, PP.getSpelling(Tok), getLangOpts().OpenMP));
-        if (Modifier == OMPC_FROM_MODIFIER_mapper)
-          IsMapperModifier = true;
-      }
-      if (IsMapperModifier) {
+      auto Modifier =
+          static_cast<OpenMPMotionModifierKind>(getOpenMPSimpleClauseType(
+              Kind, PP.getSpelling(Tok), getLangOpts().OpenMP));
+      if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
         // Parse the mapper modifier.
         ConsumeToken();
         IsInvalidMapperModifier = parseMapperModifier(Data);
