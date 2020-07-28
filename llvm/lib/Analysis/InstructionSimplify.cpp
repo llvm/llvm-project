@@ -2732,7 +2732,7 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   }
 
   const APInt *C;
-  if (!match(RHS, m_APInt(C)))
+  if (!match(RHS, m_APIntAllowUndef(C)))
     return nullptr;
 
   // Rule out tautological comparisons (eg., ult 0 or uge 0).
