@@ -60,32 +60,55 @@ needed to synthesize the control-flow required to iterate over its operands,
 according to their type. This notion of IR localization bears some resemblance
 to [URUK](http://icps.u-strasbg.fr/~bastoul/research/papers/GVBCPST06-IJPP.pdf).
 
-Consider the following, partially specified, `linalg.generic` example:
-```
-#attrs = {args_in: 1, args_out: 1}
-func @example(%A: memref<?xf32, layout1>,
-              %B: memref<?xvector<4xf32, layout2>>) {
-  linalg.generic #attrs (%2, %3): memref<?xf32, layout1>,
-                                  memref<?xvector<4xf32, layout2>>
+Consider the following fully specified `linalg.generic` example.
+Here, the first operand is a `memref` of `f32` scalar elements that
+has an ordinary identity layout, and the second one is a `memref` of
+4-element vectors with a 2-strided, 1-offset layout.
+
+```mlir
+// File name: example1.mlir
+#accesses = [
+  affine_map<(m) -> (m)>,
+  affine_map<(m) -> (m)>
+]
+#attrs = {
+  args_in = 1,
+  args_out = 1,
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+// memory layouts
+#identity = affine_map<(d0) -> (d0)>
+
+func @example(%A: memref<?xf32, #identity>,
+              %B: memref<?xvector<4xf32>, offset: 1, strides: [2]>) {
+  linalg.generic #attrs %A, %B {
+  ^bb0(%a: f32, %b: vector<4xf32>):
+    %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)
+    linalg.yield %c: vector<4xf32>
+  } : memref<?xf32, #identity>, memref<?xvector<4xf32>, offset: 1, strides: [2]>
   return
 }
 ```
 
 The property "*Input and Output Operands Define The Iteration Space*" is
 materialized by a lowering into a form that will resemble:
-```
-func @example(%A: memref<?xf32, layout1>,
-              %B: memref<?xvector<4xf32, layout2>>) {
-  %M = "dim" %A, 0: index
-  %N = "dim" %B, 0: index
-  %eq = eq %M, %N: i1   // iteration space is consistent with data
-  assert(%eq): (i1) -> ()
-  for %i = 0 to %M {
-    %a = load %A[%i]: memref<?xf32, layout1>
-    %b = load %B[%i]: memref<?xvector<4xf32>, layout2>
-    // compute arg types match elemental tensor types
-    %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)
-    store %c, %B[%i]: memref<?xvector<4xf32>, layout2>
+
+```mlir
+// Run: mlir-opt example1.mlir -allow-unregistered-dialect -convert-linalg-to-loops
+// This converted representation is in the `scf` dialect.
+// It's syntax can be found here: https://mlir.llvm.org/docs/Dialects/SCFDialect/
+#map0 = affine_map<(d0) -> (d0 * 2 + 1)>
+
+func @example(%arg0: memref<?xf32>, %arg1: memref<?xvector<4xf32>, #map0>) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %0 = dim %arg0, %c0 : memref<?xf32>
+  scf.for %arg2 = %c0 to %0 step %c1 {
+    %1 = load %arg0[%arg2] : memref<?xf32>
+    %2 = load %arg1[%arg2] : memref<?xvector<4xf32>, #map0>
+    %3 = "some_compute"(%1, %2) : (f32, vector<4xf32>) -> vector<4xf32>
+    store %3, %arg1[%arg2] : memref<?xvector<4xf32>, #map0>
   }
   return
 }
@@ -123,17 +146,30 @@ as well as [TACO](http://tensor-compiler.org/), has shown.
 A `linalg.generic` *defines* the mapping between the iteration space (i.e. the
 loops) and the data.
 
-Consider the following, partially specified, `linalg.generic` example:
+Consider the following fully specified `linalg.generic` example.
+Here, the first `memref` is a 2-strided one on both of its dimensions,
+and the second `memref` uses an identity layout.
+
 ```
-#indexing_maps = {
-  (i, j) -> (j, i),
-  (i, j) -> (j)
+// File name: example2.mlir
+#indexing_maps = [
+  affine_map<(i, j) -> (j, i)>,
+  affine_map<(i, j) -> (j)>
+]
+#attrs = {
+  args_in = 1,
+  args_out = 1,
+  indexing_maps = #indexing_maps,
+  iterator_types = ["parallel", "parallel"]
 }
-#attrs = {args_in: 1, args_out: 1, indexings: indexing_maps}
-func @example(%A: memref<8x?xf32, layout1>,
-              %B: memref<?xvector<4xf32, layout2>>) {
-  linalg.generic #attrs (%A, %B): memref<8x?xf32, layout1>,
-                                  memref<?xvector<4xf32, layout2>>
+
+func @example(%A: memref<8x?xf32, offset: 0, strides: [2, 2]>,
+              %B: memref<?xvector<4xf32>>) {
+  linalg.generic #attrs %A, %B {
+  ^bb0(%a: f32, %b: vector<4xf32>):
+    %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)
+    linalg.yield %c: vector<4xf32>
+  }: memref<8x?xf32 , offset: 0, strides: [2, 2]>, memref<?xvector<4xf32>>
   return
 }
 ```
@@ -141,22 +177,20 @@ func @example(%A: memref<8x?xf32, layout1>,
 The property "*Reversible Mappings Between Control and Data Structures*" is
 materialized by a lowering into a form that will resemble:
 ```
-#attrs = {args_in: 1, args_out: 1, indexings: indexing_maps}
-func @example(%A: memref<8x?xf32, layout1>,
-              %B: memref<?xvector<4xf32, layout2>>) {
-  // loop bounds determined from data sizes by “inverting the map”
-  %J = "dim" %A, 0: index
-  %I = "dim" %A, 1: index
-  %J2 = "dim" %B, 0: index
-  // iteration space is consistent with data + mapping inference
-  %eq = "eq" %J, %J2: i1
-  "assert" %eq: (i1) -> ()
-  for %i = 0 to %I {           // loop order is fully defined by indexing maps
-    for %j = 0 to %J {         // arbitrary permutations are possible
-      %a = "load" %A, %j, %i: memref<8x?xf32>
-      %b = "load" %B, %j: memref<?xvector<4xf32>>
-      %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)
-      "store" %c, %B, %j: memref<?xvector<4xf32>>
+// Run: mlir-opt example2.mlir -allow-unregistered-dialect -convert-linalg-to-loops
+#map0 = affine_map<(d0, d1) -> (d0 * 2 + d1 * 2)>
+
+func @example(%arg0: memref<8x?xf32, #map0>, %arg1: memref<?xvector<4xf32>>) {
+  %c8 = constant 8 : index
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %0 = dim %arg0, %c1 : memref<8x?xf32, #map0>
+  scf.for %arg2 = %c0 to %0 step %c1 {
+    scf.for %arg3 = %c0 to %c8 step %c1 {
+      %1 = load %arg0[%arg3, %arg2] : memref<8x?xf32, #map0>
+      %2 = load %arg1[%arg3] : memref<?xvector<4xf32>>
+      %3 = "some_compute"(%1, %2) : (f32, vector<4xf32>) -> vector<4xf32>
+      store %3, %arg1[%arg3] : memref<?xvector<4xf32>>
     }
   }
   return
@@ -174,7 +208,7 @@ Answering these `2` questions is one of the main analyses that Linalg uses to
 implement transformations such as tiling, tiled producer-consumer fusion, and
 promotion to temporary buffers in fast memory.
 
-In the current implementation, `linalg.generic` uses a list of [AffineMaps]().
+In the current implementation, `linalg.generic` uses a list of [AffineMaps](https://mlir.llvm.org/docs/LangRef/#affinemap-attribute) (see the `#indexing_maps` attribute in the previous examples).
 This is a pragmatic short-term solution, but in the longer term note that
 this property could be even evaluated dynamically, similarly to
 inspector-executor algorithms.
@@ -234,38 +268,53 @@ to correspond to the operations inside the region: the region can capture
 buffers arbitrarily and write into them. If this conflicts with some parallel
 iterator requirement, this is undefined behavior.
 
-Concretely, consider the following, partially specified, `linalg.generic`
-example:
+Previous examples already ellaborate compute payloads with an unregistered function `"some_compute"`. The following code snippet shows what the result will be when using a concrete operation `addf`:
 ```
-#indexing_maps = {
-  (i, j) -> (i, j),
-  (i, j) -> (i, j)
+// File name: example3.mlir
+#indexing_maps = [
+  affine_map<(i, j) -> (i, j)>,
+  affine_map<(i, j) -> (i, j)>,
+  affine_map<(i, j) -> (i, j)>
+]
+#attrs = {
+  args_in = 2,
+  args_out = 1,
+  indexing_maps = #indexing_maps,
+  iterator_types = ["parallel", "parallel"]
 }
-#attrs = {args_in: 2, args_out: 1, indexings: #indexing_maps}
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
-  linalg.generic #attrs (%A, %B, %C) {
-    ^bb0(%a: f32, %b: f32):
-      %c = addf %a, %b : f32
-      return %c : f32
+  linalg.generic #attrs %A, %B, %C {
+  ^bb0(%a: f32, %b: f32, %c: f32):
+    %d = addf %a, %b : f32
+    linalg.yield %d : f32
   }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
   return
 }
 ```
 
+This function basically element-wise adds up two matrices (`%A` and `%B`) and stores the result into another one (`%C`).
+
 The property "*The Compute Payload is Specified With a Region*" is
 materialized by a lowering into a form that will resemble:
 ```
+// Run: mlir-opt example3.mlir -convert-linalg-to-loops
+#indexing_maps = [
+  affine_map<(i, j) -> (i, j)>,
+  affine_map<(i, j) -> (i, j)>,
+  affine_map<(i, j) -> (i, j)>
+]
+#attrs = {
+  args_in = 2,
+  args_out = 1,
+  indexing_maps = #indexing_maps,
+  iterator_types = ["parallel", "parallel"]
+}
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
-  %M = dim %A, 0: index
-  %N = dim %B, 1: index
-  for %i = 0 to %M {
-    for %j = 0 to %N {
-      %a = load %A[%i, %j]: memref<?x?xf32>
-      %b = load %B[%i, %j]: memref<?x?xf32>>
-      %c = addf %a, %b : f32
-      store %c, %C[%i, %j]: memref<?x?xf32>
-    }
-  }
+  linalg.generic #attrs %A, %B, %C {
+  ^bb0(%a: f32, %b: f32, %c: f32):
+    %d = addf %a, %b : f32
+    linalg.yield %d : f32
+  }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
   return
 }
 ```
@@ -287,20 +336,27 @@ and integration at the ABI level. Regardless of whether one wants to use
 external library calls or a custom ISA, the problem for codegen is similar:
 preservation of a fixed granularity.
 
-Consider the following, partially specified, `linalg.generic`
-example:
+Consider the following example that adds an additional attribute `library_call="pointwise_add"`
+that specifies the name of an external library call we intend to use:
 ```
-#fun_attr = "pointwise_add"
-#indexing_maps = {
-  (i, j) -> (i, j),
-  (i, j) -> (i, j)
+// File name: example4.mlir
+#indexing_maps = [
+  affine_map<(i, j) -> (i, j)>,
+  affine_map<(i, j) -> (i, j)>,
+  affine_map<(i, j) -> (i, j)>
+]
+#attrs = {
+  args_in = 2,
+  args_out = 1,
+  indexing_maps = #indexing_maps,
+  iterator_types = ["parallel", "parallel"],
+  library_call = "pointwise_add"
 }
-#attrs = {args_in: 2, args_out: 1, indexings: #indexing_maps, fun: #fun_attr}
 func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
-  linalg.generic #attrs (%A, %B, %C) {
-    ^bb0(%a: f32, %b: f32):
-      %c = addf %a, %b : f32
-      return %c : f32
+  linalg.generic #attrs %A, %B, %C {
+  ^bb0(%a: f32, %b: f32, %c: f32):
+    %d = addf %a, %b : f32
+    linalg.yield %d : f32
   }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
   return
 }
@@ -310,28 +366,39 @@ The property "*Map To an External Library Call*" is
 materialized by a lowering into a form that will resemble:
 
 ```
-func @pointwise_add_sxsxf32_sxsxf32(memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
+// Run: mlir-opt example4.mlir -convert-linalg-to-std
+// Note that we lower the Linalg dialect directly to the Standard dialect.
+// See this doc: https://mlir.llvm.org/docs/Dialects/Standard/
 
-func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
-  call @pointwise_add_sxsxf32_sxsxf32 (%A, %B, %C):
-    (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
+#map0 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+
+func @example(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+  %0 = memref_cast %arg0 : memref<?x?xf32> to memref<?x?xf32, #map0>
+  %1 = memref_cast %arg1 : memref<?x?xf32> to memref<?x?xf32, #map0>
+  %2 = memref_cast %arg2 : memref<?x?xf32> to memref<?x?xf32, #map0>
+  call @pointwise_add(%0, %1, %2) : (memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf32, #map0>) -> ()
   return
 }
+func @pointwise_add(memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf32, #map0>) attributes {llvm.emit_c_interface}
 ```
 
 Which, after lowering to LLVM resembles:
 ```
-func @pointwise_add_sxsxf32_sxsxf32(!llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">,
-                                    !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">,
-                                    !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">) -> ()
-
-func @example(%A: !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">,
-              %B: !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">,
-              %C: !llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">) {
-  llvm.call @pointwise_add_sxsxf32_sxsxf32 (%A, %B, %C):
-    (!llvm<"{ float*, i64, [2 x i64], [3 x i64] }*">...) -> ()
+// Run: mlir-opt example4.mlir -convert-linalg-to-std | mlir-opt -convert-std-to-llvm
+// Some generated code are omitted here.
+func @example(%arg0: !llvm<"float*">, ...) {
+  ...
+  llvm.call @pointwise_add(...) : (!llvm<"float*">, ...) -> ()
   return
 }
+
+llvm.func @pointwise_add(%arg0: !llvm<"float*">, ...) attributes {llvm.emit_c_interface} {
+  ...
+  llvm.call @_mlir_ciface_pointwise_add(%9, %19, %29) : (!llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }
+*">) -> ()
+  llvm.return
+}
+llvm.func @_mlir_ciface_pointwise_add(!llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">, !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }*">) attributes {llvm.emit_c_interface}
 ```
 
 ##### Convention For External Library Interoperability
