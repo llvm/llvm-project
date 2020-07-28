@@ -348,13 +348,11 @@
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
 #    define _LIBCPP_HAS_QUICK_EXIT
-#    define _LIBCPP_HAS_C11_FEATURES
 #    if __FreeBSD_version >= 1300064 || \
        (__FreeBSD_version >= 1201504 && __FreeBSD_version < 1300000)
 #      define _LIBCPP_HAS_TIMESPEC_GET
 #    endif
 #  elif defined(__BIONIC__)
-#    define _LIBCPP_HAS_C11_FEATURES
 #    if __ANDROID_API__ >= 21
 #      define _LIBCPP_HAS_QUICK_EXIT
 #    endif
@@ -368,7 +366,6 @@
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
 #    define _LIBCPP_HAS_QUICK_EXIT
 #    define _LIBCPP_HAS_TIMESPEC_GET
-#    define _LIBCPP_HAS_C11_FEATURES
 #  elif defined(__linux__)
 #    if !defined(_LIBCPP_HAS_MUSL_LIBC)
 #      if _LIBCPP_GLIBC_PREREQ(2, 15) || defined(__BIONIC__)
@@ -376,14 +373,12 @@
 #      endif
 #      if _LIBCPP_GLIBC_PREREQ(2, 17)
 #        define _LIBCPP_HAS_ALIGNED_ALLOC
-#        define _LIBCPP_HAS_C11_FEATURES
 #        define _LIBCPP_HAS_TIMESPEC_GET
 #      endif
 #    else // defined(_LIBCPP_HAS_MUSL_LIBC)
 #      define _LIBCPP_HAS_ALIGNED_ALLOC
 #      define _LIBCPP_HAS_QUICK_EXIT
 #      define _LIBCPP_HAS_TIMESPEC_GET
-#      define _LIBCPP_HAS_C11_FEATURES
 #    endif
 #  endif // __linux__
 #endif

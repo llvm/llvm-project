@@ -5,22 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03
 
-// test that referencing quick_exit when _LIBCPP_HAS_QUICK_EXIT is not defined
-// results in a compile error.
+// UNSUPPORTED: c++03, c++11, c++14
 
-#include <cstdlib>
+// Make sure TEST_HAS_TIMESPEC_GET (defined by the test suite) and
+// _LIBCPP_HAS_TIMESPEC_GET (defined by libc++) stay in sync.
 
-void f() {}
+#include <__config>
+#include "test_macros.h"
 
-int main(int, char**)
-{
-#ifndef _LIBCPP_HAS_QUICK_EXIT
-    std::quick_exit(0);
-#else
-#error
+#if defined(TEST_HAS_TIMESPEC_GET) != defined(_LIBCPP_HAS_TIMESPEC_GET)
+#   error "TEST_HAS_TIMESPEC_GET and _LIBCPP_HAS_TIMESPEC_GET are out of sync"
 #endif
-
-  return 0;
-}

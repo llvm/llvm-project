@@ -5,22 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03
 
-// test quick_exit and at_quick_exit
+// UNSUPPORTED: c++03, c++11, c++14
 
-#include <cstdlib>
+// Make sure TEST_HAS_QUICK_EXIT (defined by the test suite) and
+// _LIBCPP_HAS_QUICK_EXIT (defined by libc++) stay in sync.
 
+#include <__config>
 #include "test_macros.h"
 
-void f() {}
-
-int main(int, char**)
-{
-#ifdef TEST_HAS_QUICK_EXIT
-    std::at_quick_exit(f);
-    std::quick_exit(0);
+#if defined(TEST_HAS_QUICK_EXIT) != defined(_LIBCPP_HAS_QUICK_EXIT)
+#   error "TEST_HAS_QUICK_EXIT and _LIBCPP_HAS_QUICK_EXIT are out of sync"
 #endif
-
-  return 0;
-}
