@@ -614,7 +614,8 @@ QualType Sema::CheckPackExpansion(QualType Pattern, SourceRange PatternRange,
     return QualType();
   }
 
-  return Context.getPackExpansionType(Pattern, NumExpansions);
+  return Context.getPackExpansionType(Pattern, NumExpansions,
+                                      /*ExpectPackInType=*/false);
 }
 
 ExprResult Sema::ActOnPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc) {

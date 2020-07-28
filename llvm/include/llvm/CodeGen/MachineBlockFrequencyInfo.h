@@ -74,7 +74,11 @@ public:
 
   bool isIrrLoopHeader(const MachineBasicBlock *MBB) const;
 
-  void setBlockFreq(const MachineBasicBlock *MBB, uint64_t Freq);
+  /// incrementally calculate block frequencies when we split edges, to avoid
+  /// full CFG traversal.
+  void onEdgeSplit(const MachineBasicBlock &NewPredecessor,
+                   const MachineBasicBlock &NewSuccessor,
+                   const MachineBranchProbabilityInfo &MBPI);
 
   const MachineFunction *getFunction() const;
   const MachineBranchProbabilityInfo *getMBPI() const;

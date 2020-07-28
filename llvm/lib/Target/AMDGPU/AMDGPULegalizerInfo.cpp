@@ -551,8 +551,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({{PrivatePtr, S32}});
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
-    .unsupportedFor({PrivatePtr})
-    .custom();
+    .customIf(typeIsNot(0, PrivatePtr));
+
   setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
   auto &FPOpActions = getActionDefinitionsBuilder(
@@ -1490,6 +1490,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});
+
+  getActionDefinitionsBuilder(G_FENCE)
+    .alwaysLegal();
 
   getActionDefinitionsBuilder({
       // TODO: Verify V_BFI_B32 is generated from expanded bit ops

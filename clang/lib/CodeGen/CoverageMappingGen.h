@@ -16,6 +16,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/raw_ostream.h"
@@ -29,15 +30,40 @@ class Preprocessor;
 class Decl;
 class Stmt;
 
+struct SkippedRange {
+  SourceRange Range;
+  // The location of token before the skipped source range.
+  SourceLocation PrevTokLoc;
+  // The location of token after the skipped source range.
+  SourceLocation NextTokLoc;
+
+  SkippedRange(SourceRange Range, SourceLocation PrevTokLoc = SourceLocation(),
+               SourceLocation NextTokLoc = SourceLocation())
+      : Range(Range), PrevTokLoc(PrevTokLoc), NextTokLoc(NextTokLoc) {}
+};
+
 /// Stores additional source code information like skipped ranges which
 /// is required by the coverage mapping generator and is obtained from
 /// the preprocessor.
-class CoverageSourceInfo : public PPCallbacks {
-  std::vector<SourceRange> SkippedRanges;
+class CoverageSourceInfo : public PPCallbacks, public CommentHandler {
+  // A vector of skipped source ranges and PrevTokLoc with NextTokLoc.
+  std::vector<SkippedRange> SkippedRanges;
+  bool AfterComment = false;
+
 public:
-  ArrayRef<SourceRange> getSkippedRanges() const { return SkippedRanges; }
+  // Location of the token parsed before HandleComment is called. This is
+  // updated every time Preprocessor::Lex lexes a new token.
+  SourceLocation PrevTokLoc;
+  // The location of token before comment.
+  SourceLocation BeforeCommentLoc;
+
+  std::vector<SkippedRange> &getSkippedRanges() { return SkippedRanges; }
 
   void SourceRangeSkipped(SourceRange Range, SourceLocation EndifLoc) override;
+
+  bool HandleComment(Preprocessor &PP, SourceRange Range) override;
+
+  void updateNextTokLoc(SourceLocation Loc);
 };
 
 namespace CodeGen {
@@ -66,6 +92,8 @@ class CoverageMappingModuleGen {
                                  uint64_t FilenamesRef);
 
 public:
+  static CoverageSourceInfo *setUpCoverageCallbacks(Preprocessor &PP);
+
   CoverageMappingModuleGen(CodeGenModule &CGM, CoverageSourceInfo &SourceInfo)
       : CGM(CGM), SourceInfo(SourceInfo) {}
 

@@ -1,6 +1,6 @@
 ; Test -sanitizer-coverage-trace-compares=1 and how it prunes backedge compares.
-; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -sanitizer-coverage-prune-blocks=1 -S | FileCheck %s --check-prefix=PRUNE
-; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -sanitizer-coverage-prune-blocks=0 -S | FileCheck %s --check-prefix=NOPRUNE
+; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -sanitizer-coverage-prune-blocks=1 -S -enable-new-pm=0 | FileCheck %s --check-prefix=PRUNE
+; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -sanitizer-coverage-prune-blocks=0 -S -enable-new-pm=0 | FileCheck %s --check-prefix=NOPRUNE
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -sanitizer-coverage-prune-blocks=1 -S | FileCheck %s --check-prefix=PRUNE
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -sanitizer-coverage-prune-blocks=0 -S | FileCheck %s --check-prefix=NOPRUNE
 

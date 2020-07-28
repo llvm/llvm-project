@@ -1,4 +1,0 @@
-executable("extract") {
-  deps = [ "//llvm/lib/Support" ]
-  sources = [ "extract.cpp" ]
-}

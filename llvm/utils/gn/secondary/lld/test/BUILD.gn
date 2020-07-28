@@ -78,7 +78,6 @@ group("test") {
     ":lit_unit_site_cfg",
     "//lld/tools/lld:symlinks",
     "//lld/unittests",
-    "//llvm/tools/extract",
     "//llvm/tools/llc",
     "//llvm/tools/llvm-ar:symlinks",
     "//llvm/tools/llvm-as",

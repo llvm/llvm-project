@@ -41,8 +41,6 @@ extern "C" size_t android_unsafe_frame_pointer_chase(scudo::uptr *buf,
 
 namespace scudo {
 
-enum class Option { ReleaseInterval, MemtagTuning };
-
 template <class Params, void (*PostInitCallback)(void) = EmptyCallback>
 class Allocator {
 public:
@@ -277,7 +275,7 @@ public:
     }
 #endif // GWP_ASAN_HOOKS
 
-    FillContentsMode FillContents =
+    const FillContentsMode FillContents =
         ZeroContents ? ZeroFill : Options.FillContents;
 
     if (UNLIKELY(Alignment > MaxAlignment)) {
@@ -285,7 +283,7 @@ public:
         return nullptr;
       reportAlignmentTooBig(Alignment, MaxAlignment);
     }
-    if (Alignment < MinAlignment)
+    if (UNLIKELY(Alignment < MinAlignment))
       Alignment = MinAlignment;
 
     // If the requested size happens to be 0 (more common than you might think),
@@ -322,13 +320,11 @@ public:
       if (UNLIKELY(!Block)) {
         while (ClassId < SizeClassMap::LargestClassId) {
           Block = TSD->Cache.allocate(++ClassId);
-          if (LIKELY(Block)) {
+          if (LIKELY(Block))
             break;
-          }
         }
-        if (UNLIKELY(!Block)) {
+        if (UNLIKELY(!Block))
           ClassId = 0;
-        }
       }
       if (UnlockRequired)
         TSD->unlock();
@@ -349,7 +345,7 @@ public:
 
     void *Ptr = reinterpret_cast<void *>(UserPtr);
     void *TaggedPtr = Ptr;
-    if (ClassId) {
+    if (LIKELY(ClassId)) {
       // We only need to zero or tag the contents for Primary backed
       // allocations. We only set tags for primary allocations in order to avoid
       // faulting potentially large numbers of pages for large secondary
@@ -692,11 +688,7 @@ public:
   }
 
   bool setOption(Option O, sptr Value) {
-    if (O == Option::ReleaseInterval) {
-      Primary.setReleaseToOsIntervalMs(static_cast<s32>(Value));
-      Secondary.setReleaseToOsIntervalMs(static_cast<s32>(Value));
-      return true;
-    }
+    initThreadMaybe();
     if (O == Option::MemtagTuning) {
       // Enabling odd/even tags involves a tradeoff between use-after-free
       // detection and buffer overflow detection. Odd/even tags make it more
@@ -705,14 +697,19 @@ public:
       // use-after-free is less likely to be detected because the tag space for
       // any particular chunk is cut in half. Therefore we use this tuning
       // setting to control whether odd/even tags are enabled.
-      if (Value == M_MEMTAG_TUNING_BUFFER_OVERFLOW) {
+      if (Value == M_MEMTAG_TUNING_BUFFER_OVERFLOW)
         Options.UseOddEvenTags = true;
-        return true;
-      }
-      if (Value == M_MEMTAG_TUNING_UAF) {
+      else if (Value == M_MEMTAG_TUNING_UAF)
         Options.UseOddEvenTags = false;
-        return true;
-      }
+      return true;
+    } else {
+      // We leave it to the various sub-components to decide whether or not they
+      // want to handle the option, but we do not want to short-circuit
+      // execution if one of the setOption was to return false.
+      const bool PrimaryResult = Primary.setOption(O, Value);
+      const bool SecondaryResult = Secondary.setOption(O, Value);
+      const bool RegistryResult = TSDRegistry.setOption(O, Value);
+      return PrimaryResult && SecondaryResult && RegistryResult;
     }
     return false;
   }
@@ -805,8 +802,7 @@ public:
         PrimaryT::findNearestBlock(RegionInfoPtr, UntaggedFaultAddr);
 
     auto GetGranule = [&](uptr Addr, const char **Data, uint8_t *Tag) -> bool {
-      if (Addr < MemoryAddr ||
-          Addr + archMemoryTagGranuleSize() < Addr ||
+      if (Addr < MemoryAddr || Addr + archMemoryTagGranuleSize() < Addr ||
           Addr + archMemoryTagGranuleSize() > MemoryAddr + MemorySize)
         return false;
       *Data = &Memory[Addr - MemoryAddr];
@@ -950,10 +946,10 @@ private:
   u32 Cookie;
 
   struct {
-    u8 MayReturnNull : 1;       // may_return_null
+    u8 MayReturnNull : 1;              // may_return_null
     FillContentsMode FillContents : 2; // zero_contents, pattern_fill_contents
-    u8 DeallocTypeMismatch : 1; // dealloc_type_mismatch
-    u8 DeleteSizeMismatch : 1;  // delete_size_mismatch
+    u8 DeallocTypeMismatch : 1;        // dealloc_type_mismatch
+    u8 DeleteSizeMismatch : 1;         // delete_size_mismatch
     u8 TrackAllocationStacks : 1;
     u8 UseOddEvenTags : 1;
     u32 QuarantineMaxChunkSize; // quarantine_max_chunk_size

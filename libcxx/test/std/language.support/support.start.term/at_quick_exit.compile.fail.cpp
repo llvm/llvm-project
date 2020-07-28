@@ -5,23 +5,23 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: c++03
 
-// test that referencing at_quick_exit when _LIBCPP_HAS_QUICK_EXIT is not defined
+// test that referencing at_quick_exit when TEST_HAS_QUICK_EXIT is not defined
 // results in a compile error.
 
 #include <cstdlib>
 
-void f() {}
+#include "test_macros.h"
 
-int main(int, char**)
-{
-#ifndef _LIBCPP_HAS_QUICK_EXIT
+void f() { }
+
+int main(int, char**) {
+#if !defined(TEST_HAS_QUICK_EXIT)
     std::at_quick_exit(f);
 #else
-#error
+#   error
 #endif
-
-  return 0;
+    return 0;
 }

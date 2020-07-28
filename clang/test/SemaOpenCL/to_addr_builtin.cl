@@ -15,7 +15,7 @@ void test(void) {
   // expected-error@-2{{implicit declaration of function 'to_global' is invalid in OpenCL}}
   // expected-warning@-3{{incompatible integer to pointer conversion assigning to '__global int *__private' from 'int'}}
 #else
-  // expected-error@-5{{invalid number of arguments to function: 'to_global'}}
+  // expected-error@-5{{too many arguments to function call, expected 1, have 2}}
 #endif
 
   int x;

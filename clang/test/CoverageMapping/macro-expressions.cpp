@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name macro-expressions.cpp -w %s | FileCheck %s
-
+// RUN: %strip_comments > %t.stripped.cpp
+// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name macro-expressions.cpp -w %t.stripped.cpp | FileCheck %s
 #define EXPR(x) (x)
 #define NEXPR(x) (!x)
 #define DECL(T, x) T x

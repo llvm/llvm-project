@@ -105,6 +105,7 @@ raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
 static bool hasNoSimpleLoops(const LegalizeRule &Rule, const LegalityQuery &Q,
                              const std::pair<unsigned, LLT> &Mutation) {
   switch (Rule.getAction()) {
+  case Legal:
   case Custom:
   case Lower:
   case MoreElements:
@@ -122,7 +123,7 @@ static bool mutationIsSane(const LegalizeRule &Rule,
                            std::pair<unsigned, LLT> Mutation) {
   // If the user wants a custom mutation, then we can't really say much about
   // it. Return true, and trust that they're doing the right thing.
-  if (Rule.getAction() == Custom)
+  if (Rule.getAction() == Custom || Rule.getAction() == Legal)
     return true;
 
   const unsigned TypeIdx = Mutation.first;

@@ -4817,37 +4817,27 @@ ASTContext::getInjectedTemplateArgs(const TemplateParameterList *Params,
 }
 
 QualType ASTContext::getPackExpansionType(QualType Pattern,
-                                          Optional<unsigned> NumExpansions) {
+                                          Optional<unsigned> NumExpansions,
+                                          bool ExpectPackInType) {
+  assert((!ExpectPackInType || Pattern->containsUnexpandedParameterPack()) &&
+         "Pack expansions must expand one or more parameter packs");
+
   llvm::FoldingSetNodeID ID;
   PackExpansionType::Profile(ID, Pattern, NumExpansions);
 
-  // A deduced type can deduce to a pack, eg
-  //   auto ...x = some_pack;
-  // That declaration isn't (yet) valid, but is created as part of building an
-  // init-capture pack:
-  //   [...x = some_pack] {}
-  assert((Pattern->containsUnexpandedParameterPack() ||
-          Pattern->getContainedDeducedType()) &&
-         "Pack expansions must expand one or more parameter packs");
   void *InsertPos = nullptr;
-  PackExpansionType *T
-    = PackExpansionTypes.FindNodeOrInsertPos(ID, InsertPos);
+  PackExpansionType *T = PackExpansionTypes.FindNodeOrInsertPos(ID, InsertPos);
   if (T)
     return QualType(T, 0);
 
   QualType Canon;
   if (!Pattern.isCanonical()) {
-    Canon = getCanonicalType(Pattern);
-    // The canonical type might not contain an unexpanded parameter pack, if it
-    // contains an alias template specialization which ignores one of its
-    // parameters.
-    if (Canon->containsUnexpandedParameterPack()) {
-      Canon = getPackExpansionType(Canon, NumExpansions);
+    Canon = getPackExpansionType(getCanonicalType(Pattern), NumExpansions,
+                                 /*ExpectPackInType=*/false);
 
-      // Find the insert position again, in case we inserted an element into
-      // PackExpansionTypes and invalidated our insert position.
-      PackExpansionTypes.FindNodeOrInsertPos(ID, InsertPos);
-    }
+    // Find the insert position again, in case we inserted an element into
+    // PackExpansionTypes and invalidated our insert position.
+    PackExpansionTypes.FindNodeOrInsertPos(ID, InsertPos);
   }
 
   T = new (*this, TypeAlignment)
