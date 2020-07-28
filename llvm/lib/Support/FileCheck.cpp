@@ -1218,7 +1218,7 @@ Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
         Format.valueFromStringRepr(MatchedValue, SM);
     if (!Value)
       return Value.takeError();
-    DefinedNumericVariable->setValue(*Value);
+    DefinedNumericVariable->setValue(*Value, MatchedValue);
   }
 
   // Like CHECK-NEXT, CHECK-EMPTY's match range is considered to start after
@@ -1292,6 +1292,57 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       else
         SM.PrintMessage(Range.Start, SourceMgr::DK_Note, OS.str());
     }
+  }
+}
+
+void Pattern::printVariableDefs(const SourceMgr &SM,
+                                FileCheckDiag::MatchType MatchTy,
+                                std::vector<FileCheckDiag> *Diags) const {
+  if (VariableDefs.empty() && NumericVariableDefs.empty())
+    return;
+  // Build list of variable captures.
+  struct VarCapture {
+    StringRef Name;
+    SMRange Range;
+  };
+  SmallVector<VarCapture, 2> VarCaptures;
+  for (const auto &VariableDef : VariableDefs) {
+    VarCapture VC;
+    VC.Name = VariableDef.first;
+    StringRef Value = Context->GlobalVariableTable[VC.Name];
+    SMLoc Start = SMLoc::getFromPointer(Value.data());
+    SMLoc End = SMLoc::getFromPointer(Value.data() + Value.size());
+    VC.Range = SMRange(Start, End);
+    VarCaptures.push_back(VC);
+  }
+  for (const auto &VariableDef : NumericVariableDefs) {
+    VarCapture VC;
+    VC.Name = VariableDef.getKey();
+    StringRef StrValue = VariableDef.getValue()
+                             .DefinedNumericVariable->getStringValue()
+                             .getValue();
+    SMLoc Start = SMLoc::getFromPointer(StrValue.data());
+    SMLoc End = SMLoc::getFromPointer(StrValue.data() + StrValue.size());
+    VC.Range = SMRange(Start, End);
+    VarCaptures.push_back(VC);
+  }
+  // Sort variable captures by the order in which they matched the input.
+  // Ranges shouldn't be overlapping, so we can just compare the start.
+  std::sort(VarCaptures.begin(), VarCaptures.end(),
+            [](const VarCapture &A, const VarCapture &B) {
+              assert(A.Range.Start != B.Range.Start &&
+                     "unexpected overlapping variable captures");
+              return A.Range.Start.getPointer() < B.Range.Start.getPointer();
+            });
+  // Create notes for the sorted captures.
+  for (const VarCapture &VC : VarCaptures) {
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "captured var \"" << VC.Name << "\"";
+    if (Diags)
+      Diags->emplace_back(SM, CheckTy, getLoc(), MatchTy, VC.Range, OS.str());
+    else
+      SM.PrintMessage(VC.Range.Start, SourceMgr::DK_Note, OS.str(), VC.Range);
   }
 }
 
@@ -1876,8 +1927,10 @@ static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
                                          : FileCheckDiag::MatchFoundButExcluded;
   SMRange MatchRange = ProcessMatchResult(MatchTy, SM, Loc, Pat.getCheckTy(),
                                           Buffer, MatchPos, MatchLen, Diags);
-  if (Diags)
+  if (Diags) {
     Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, Diags);
+    Pat.printVariableDefs(SM, MatchTy, Diags);
+  }
   if (!PrintDiag)
     return;
 
@@ -1893,6 +1946,7 @@ static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
   SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note, "found here",
                   {MatchRange});
   Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, nullptr);
+  Pat.printVariableDefs(SM, MatchTy, nullptr);
 }
 
 static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
