@@ -36,6 +36,9 @@ std::unique_ptr<OperationPass<FuncOp>> createSimplifyAffineStructuresPass();
 std::unique_ptr<OperationPass<FuncOp>>
 createAffineLoopInvariantCodeMotionPass();
 
+/// Creates a loop interchange pass
+std::unique_ptr<OperationPass<FuncOp>> createAffineLoopInterchangePass();
+
 /// Creates a pass to convert all parallel affine.for's into 1-d affine.parallel
 /// ops.
 std::unique_ptr<OperationPass<FuncOp>> createAffineParallelizePass();

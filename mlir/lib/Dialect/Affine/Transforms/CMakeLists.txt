@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   LoopUnrollAndJam.cpp
   SuperVectorize.cpp
   SimplifyAffineStructures.cpp
+  AffineLoopInterchange.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Affine
