@@ -17,4 +17,4 @@
 type = Tool
 name = llvm-libtool-darwin
 parent = Tools
-required_libraries = BinaryFormat Object Support
+required_libraries = BinaryFormat Object Support TextAPI
