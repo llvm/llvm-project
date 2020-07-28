@@ -140,6 +140,7 @@ struct Configuration {
   bool safeSEH = false;
   Symbol *sehTable = nullptr;
   Symbol *sehCount = nullptr;
+  bool noSEH = false;
 
   // Used for /opt:lldlto=N
   unsigned ltoo = 2;
