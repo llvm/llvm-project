@@ -22,7 +22,7 @@ namespace llvm {
 class AMDGPUTargetLowering;
 class MachineInstrBuilder;
 
-class AMDGPUCallLowering: public CallLowering {
+class AMDGPUCallLowering final : public CallLowering {
   void lowerParameterPtr(Register DstReg, MachineIRBuilder &B, Type *ParamTy,
                          uint64_t Offset) const;
 
