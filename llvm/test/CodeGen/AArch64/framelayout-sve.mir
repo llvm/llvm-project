@@ -500,7 +500,7 @@ body:             |
 # CHECK-NEXT: $[[TMP:x[0-9]+]] = frame-setup SUBXri $sp, 16, 0
 # CHECK-NEXT: $sp = ANDXri killed $[[TMP]]
 
-# CHECK:      $sp = frame-destroy ADDVL_XXI $fp, -19
+# CHECK:      $sp = frame-destroy ADDVL_XXI $fp, -18
 # CHECK-NEXT: $p15 = frame-destroy LDR_PXI $sp, 4
 # CHECK-NEXT: $p14 = frame-destroy LDR_PXI $sp, 5
 # CHECK:      $p5 = frame-destroy LDR_PXI $sp, 14
