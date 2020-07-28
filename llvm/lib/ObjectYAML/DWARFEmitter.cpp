@@ -658,12 +658,17 @@ Error writeDWARFLists(raw_ostream &OS,
 
     for (const DWARFYAML::ListEntries<EntryType> &List : Table.Lists) {
       Offsets.push_back(ListBufferOS.tell());
-      for (const EntryType &Entry : List.Entries) {
-        Expected<uint64_t> EntrySize =
-            writeListEntry(ListBufferOS, Entry, AddrSize, IsLittleEndian);
-        if (!EntrySize)
-          return EntrySize.takeError();
-        Length += *EntrySize;
+      if (List.Content) {
+        List.Content->writeAsBinary(ListBufferOS, UINT64_MAX);
+        Length += List.Content->binary_size();
+      } else if (List.Entries) {
+        for (const EntryType &Entry : *List.Entries) {
+          Expected<uint64_t> EntrySize =
+              writeListEntry(ListBufferOS, Entry, AddrSize, IsLittleEndian);
+          if (!EntrySize)
+            return EntrySize.takeError();
+          Length += *EntrySize;
+        }
       }
     }
 
