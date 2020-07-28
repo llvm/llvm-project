@@ -164,17 +164,20 @@ static MCFixupKind getImmFixupKind(uint64_t TSFlags) {
 /// \returns true if the specified instruction has a 16-bit memory operand.
 static bool is16BitMemOperand(const MCInst &MI, unsigned Op,
                               const MCSubtargetInfo &STI) {
-  const MCOperand &BaseReg = MI.getOperand(Op + X86::AddrBaseReg);
-  const MCOperand &IndexReg = MI.getOperand(Op + X86::AddrIndexReg);
+  const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
+  const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
   const MCOperand &Disp = MI.getOperand(Op + X86::AddrDisp);
 
-  if (STI.hasFeature(X86::Mode16Bit) && BaseReg.getReg() == 0 && Disp.isImm() &&
-      Disp.getImm() < 0x10000)
+  unsigned BaseReg = Base.getReg();
+  unsigned IndexReg = Index.getReg();
+
+  if (STI.hasFeature(X86::Mode16Bit) && BaseReg == 0 && IndexReg == 0 &&
+      Disp.isImm() && Disp.getImm() < 0x10000)
     return true;
-  if ((BaseReg.getReg() != 0 &&
-       X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg.getReg())) ||
-      (IndexReg.getReg() != 0 &&
-       X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg.getReg())))
+  if ((BaseReg != 0 &&
+       X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg)) ||
+      (IndexReg != 0 &&
+       X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg)))
     return true;
   return false;
 }
@@ -498,6 +501,7 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       // This is the [REG]+disp16 case.
       emitByte(modRMByte(2, RegOpcodeField, RMfield), OS);
     } else {
+      assert(IndexReg.getReg() == 0 && "Unexpected index register!");
       // There is no BaseReg; this is the plain [disp16] case.
       emitByte(modRMByte(0, RegOpcodeField, 6), OS);
     }

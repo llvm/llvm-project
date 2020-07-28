@@ -62,6 +62,8 @@
 	//CHECK:	popfl                           # encoding: [0x66,0x9d]
 	pushw 4
 	//CHECK:	pushw	4                       # encoding: [0xff,0x36,0x04,0x00]
+	addw $1, (,%eax,4)
+	//CHECK:	addw $1, (,%eax,4)              # encoding: [0x67,0x83,0x04,0x85,0x00,0x00,0x00,0x00,0x01]
 
 	
 
