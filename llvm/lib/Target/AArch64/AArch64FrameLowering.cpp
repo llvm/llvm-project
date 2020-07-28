@@ -1596,12 +1596,13 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // Deallocate the SVE area.
   if (SVEStackSize) {
     if (AFI->isStackRealigned()) {
-      if (AFI->getSVECalleeSavedStackSize())
-        // Set SP to start of SVE area, from which the callee-save reloads
-        // can be done. The code below will deallocate the stack space
+      if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize())
+        // Set SP to start of SVE callee-save area from which they can
+        // be reloaded. The code below will deallocate the stack space
         // space by moving FP -> SP.
         emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, AArch64::FP,
-                        -SVEStackSize, TII, MachineInstr::FrameDestroy);
+                        {-CalleeSavedSize, MVT::nxv1i8}, TII,
+                        MachineInstr::FrameDestroy);
     } else {
       if (AFI->getSVECalleeSavedStackSize()) {
         // Deallocate the non-SVE locals first before we can deallocate (and
