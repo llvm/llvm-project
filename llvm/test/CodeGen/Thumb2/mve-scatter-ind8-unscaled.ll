@@ -534,6 +534,115 @@ entry:
   ret void
 }
 
+define arm_aapcs_vfpcc void @unscaled_v16i8_i8_2gep(i8* %base, <16 x i8>* %offptr, <16 x i8> %input) {
+; CHECK-LABEL: unscaled_v16i8_i8_2gep:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    vldrb.s32 q1, [r1, #12]
+; CHECK-NEXT:    vldrb.s32 q2, [r1, #8]
+; CHECK-NEXT:    vldrb.s32 q3, [r1, #4]
+; CHECK-NEXT:    vldrb.s32 q5, [r1]
+; CHECK-NEXT:    vmov.i32 q4, #0x5
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vadd.i32 q2, q2, r0
+; CHECK-NEXT:    vadd.i32 q3, q3, r0
+; CHECK-NEXT:    vadd.i32 q5, q5, r0
+; CHECK-NEXT:    vadd.i32 q1, q1, q4
+; CHECK-NEXT:    vadd.i32 q2, q2, q4
+; CHECK-NEXT:    vadd.i32 q3, q3, q4
+; CHECK-NEXT:    vadd.i32 q4, q5, q4
+; CHECK-NEXT:    vmov.u8 r1, q0[0]
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    vmov.u8 r1, q0[1]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov.u8 r1, q0[2]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    vmov.u8 r1, q0[3]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmov.u8 r1, q0[4]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s13
+; CHECK-NEXT:    vmov.u8 r1, q0[5]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    vmov.u8 r1, q0[6]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s15
+; CHECK-NEXT:    vmov.u8 r1, q0[7]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    vmov.u8 r1, q0[8]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s9
+; CHECK-NEXT:    vmov.u8 r1, q0[9]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s10
+; CHECK-NEXT:    vmov.u8 r1, q0[10]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s11
+; CHECK-NEXT:    vmov.u8 r1, q0[11]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.u8 r1, q0[12]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s5
+; CHECK-NEXT:    vmov.u8 r1, q0[13]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov.u8 r1, q0[14]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vmov r0, s7
+; CHECK-NEXT:    vmov.u8 r1, q0[15]
+; CHECK-NEXT:    strb r1, [r0]
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <16 x i8>, <16 x i8>* %offptr, align 1
+  %ptrs = getelementptr inbounds i8, i8* %base, <16 x i8> %offs
+  %ptrs2 = getelementptr inbounds i8, <16 x i8*> %ptrs, i8 5
+  call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> %input, <16 x i8*> %ptrs2, i32 1, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
+define arm_aapcs_vfpcc void @unscaled_v16i8_i8_2gep2(i8* %base, <16 x i8>* %offptr, <16 x i8> %input) {
+; CHECK-LABEL: unscaled_v16i8_i8_2gep2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    adr r1, .LCPI11_0
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vstrb.8 q0, [r0, q1]
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI11_0:
+; CHECK-NEXT:    .byte 5 @ 0x5
+; CHECK-NEXT:    .byte 8 @ 0x8
+; CHECK-NEXT:    .byte 11 @ 0xb
+; CHECK-NEXT:    .byte 14 @ 0xe
+; CHECK-NEXT:    .byte 17 @ 0x11
+; CHECK-NEXT:    .byte 20 @ 0x14
+; CHECK-NEXT:    .byte 23 @ 0x17
+; CHECK-NEXT:    .byte 26 @ 0x1a
+; CHECK-NEXT:    .byte 29 @ 0x1d
+; CHECK-NEXT:    .byte 32 @ 0x20
+; CHECK-NEXT:    .byte 35 @ 0x23
+; CHECK-NEXT:    .byte 38 @ 0x26
+; CHECK-NEXT:    .byte 41 @ 0x29
+; CHECK-NEXT:    .byte 44 @ 0x2c
+; CHECK-NEXT:    .byte 47 @ 0x2f
+; CHECK-NEXT:    .byte 50 @ 0x32
+entry:
+  %ptrs = getelementptr inbounds i8, i8* %base, <16 x i8> <i8 0, i8 3, i8 6, i8 9, i8 12, i8 15, i8 18, i8 21, i8 24, i8 27, i8 30, i8 33, i8 36, i8 39, i8 42, i8 45>
+  %ptrs2 = getelementptr inbounds i8, <16 x i8*> %ptrs, i8 5
+  call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> %input, <16 x i8*> %ptrs2, i32 1, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
 
 declare void @llvm.masked.scatter.v2i8.v2p0i8(<2 x i8>, <2 x i8*>, i32, <2 x i1>)
 declare void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8>, <8 x i8*>, i32, <8 x i1>)
