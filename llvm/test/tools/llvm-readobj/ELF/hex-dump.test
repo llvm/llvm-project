@@ -1,6 +1,6 @@
 ## Test that the -x alias can be used flexibly. Create a baseline and ensure
 ## all other combinations are identical.
-# RUN: yaml2obj %s -o %t
+# RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: llvm-readelf --file-header --hex-dump=.shstrtab %t > %t.hexdump.out
 # RUN: llvm-readelf -h --hex-dump .shstrtab %t > %t.hexdump.1
 # RUN: llvm-readelf -h -x .shstrtab %t > %t.hexdump.2
@@ -48,3 +48,44 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_DYN
   Machine: EM_386
+
+## Test that llvm-readelf emits a correct amount of spaces between the hex data
+## and its ascii representation.
+
+## a) When the hex data doesn't fill the column whose index isn't 4.
+# RUN: yaml2obj --docnum=2 -DSIZE=18 %s -o %t2.out1
+# RUN: llvm-readelf --hex-dump=.sec %t2.out1 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES1
+
+#      SPACES1:Hex dump of section '.sec':
+# SPACES1-NEXT:0x00000000 00000000 00000000 00000000 00000000 ................
+# SPACES1-NEXT:0x00000010 0000                                ..
+
+## b) When the hex data doesn't fill the column whose index is 4.
+# RUN: yaml2obj --docnum=2 -DSIZE=30 %s -o %t2.out2
+# RUN: llvm-readelf --hex-dump=.sec %t2.out2 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES2
+
+#      SPACES2:Hex dump of section '.sec':
+# SPACES2-NEXT:0x00000000 00000000 00000000 00000000 00000000 ................
+# SPACES2-NEXT:0x00000010 00000000 00000000 00000000 0000     ..............
+
+## c) When the hex data fills the column.
+# RUN: yaml2obj --docnum=2 -DSIZE=28 %s -o %t2.out3
+# RUN: llvm-readelf --hex-dump=.sec %t2.out3 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES3
+
+#      SPACES3:Hex dump of section '.sec':
+# SPACES3-NEXT:0x00000000 00000000 00000000 00000000 00000000 ................
+# SPACES3-NEXT:0x00000010 00000000 00000000 00000000          ............
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name: .sec
+    Type: SHT_PROGBITS
+    Size: [[SIZE]]

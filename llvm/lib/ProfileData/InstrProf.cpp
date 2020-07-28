@@ -625,11 +625,11 @@ void InstrProfValueSiteRecord::merge(InstrProfValueSiteRecord &Input,
   }
 }
 
-void InstrProfValueSiteRecord::scale(uint64_t Weight,
+void InstrProfValueSiteRecord::scale(uint64_t N, uint64_t D,
                                      function_ref<void(instrprof_error)> Warn) {
   for (auto I = ValueData.begin(), IE = ValueData.end(); I != IE; ++I) {
     bool Overflowed;
-    I->Count = SaturatingMultiply(I->Count, Weight, &Overflowed);
+    I->Count = SaturatingMultiply(I->Count, N, &Overflowed) / D;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }
@@ -678,22 +678,23 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
 }
 
 void InstrProfRecord::scaleValueProfData(
-    uint32_t ValueKind, uint64_t Weight,
+    uint32_t ValueKind, uint64_t N, uint64_t D,
     function_ref<void(instrprof_error)> Warn) {
   for (auto &R : getValueSitesForKind(ValueKind))
-    R.scale(Weight, Warn);
+    R.scale(N, D, Warn);
 }
 
-void InstrProfRecord::scale(uint64_t Weight,
+void InstrProfRecord::scale(uint64_t N, uint64_t D,
                             function_ref<void(instrprof_error)> Warn) {
+  assert(D != 0 && "D cannot be 0");
   for (auto &Count : this->Counts) {
     bool Overflowed;
-    Count = SaturatingMultiply(Count, Weight, &Overflowed);
+    Count = SaturatingMultiply(Count, N, &Overflowed) / D;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
-    scaleValueProfData(Kind, Weight, Warn);
+    scaleValueProfData(Kind, N, D, Warn);
 }
 
 // Map indirect call target name hash to name string.

@@ -48,6 +48,8 @@ public:
   InstrProfWriter(bool Sparse = false, bool InstrEntryBBEnabled = false);
   ~InstrProfWriter();
 
+  StringMap<ProfilingData> &getProfileData() { return FunctionData; }
+
   /// Add function counts for the given function. If there are already counts
   /// for this function and the hash and number of counts match, each counter is
   /// summed. Optionally scale counts by \p Weight.

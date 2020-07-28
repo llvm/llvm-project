@@ -241,7 +241,7 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
     // We've never seen a function with this name and hash, add it.
     Dest = std::move(I);
     if (Weight > 1)
-      Dest.scale(Weight, MapWarn);
+      Dest.scale(Weight, 1, MapWarn);
   } else {
     // We're updating a function we've seen before.
     Dest.merge(I, Weight, MapWarn);
