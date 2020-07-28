@@ -683,7 +683,8 @@ public:
   /// Prints the value of successful substitutions or the name of the undefined
   /// string or numeric variables preventing a successful substitution.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
-                          SMRange MatchRange = None) const;
+                          SMRange MatchRange, FileCheckDiag::MatchType MatchTy,
+                          std::vector<FileCheckDiag> *Diags) const;
   void printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
                        std::vector<FileCheckDiag> *Diags) const;
 
