@@ -657,16 +657,16 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       // continuing.
       llvm::SmallString<128> Path(CompileCommandsDir);
       if (std::error_code EC = llvm::sys::fs::make_absolute(Path)) {
-        llvm::errs() << "Error while converting the relative path specified by "
-                        "--compile-commands-dir to an absolute path: "
-                     << EC.message() << ". The argument will be ignored.\n";
+        elog("Error while converting the relative path specified by "
+             "--compile-commands-dir to an absolute path: {0}. The argument "
+             "will be ignored.",
+             EC.message());
       } else {
         CompileCommandsDirPath = std::string(Path.str());
       }
     } else {
-      llvm::errs()
-          << "Path specified by --compile-commands-dir does not exist. The "
-             "argument will be ignored.\n";
+      elog("Path specified by --compile-commands-dir does not exist. The "
+           "argument will be ignored.");
     }
   }
 
@@ -750,7 +750,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       elog("Couldn't determine user config file, not loading");
     }
     std::vector<const config::Provider *> ProviderPointers;
-    for (const auto& P : ProviderStack)
+    for (const auto &P : ProviderStack)
       ProviderPointers.push_back(P.get());
     Config = config::Provider::combine(std::move(ProviderPointers));
     Opts.ConfigProvider = Config.get();
