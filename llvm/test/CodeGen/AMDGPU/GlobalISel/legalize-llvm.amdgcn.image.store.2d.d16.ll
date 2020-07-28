@@ -161,9 +161,9 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; PACKED:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
   ; PACKED:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
   ; PACKED:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST1]](<2 x s16>), [[BITCAST2]](<2 x s16>), [[DEF]](<2 x s16>)
-  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<6 x s16>), 0
+  ; PACKED:   [[UV3:%[0-9]+]]:_(<3 x s16>), [[UV4:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<6 x s16>)
   ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; PACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[EXTRACT]](<3 x s16>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store 6 into custom "TargetCustom8", align 8)
+  ; PACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[UV3]](<3 x s16>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable store 6 into custom "TargetCustom8", align 8)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.image.store.2d.v3f16.i32(<3 x half> %in, i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
