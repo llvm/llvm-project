@@ -447,7 +447,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg);
 
-  if (MF.getFrameInfo().hasCalls()) {
+  if (requiresStackPointerReference(MF)) {
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
@@ -1262,6 +1262,20 @@ MachineBasicBlock::iterator SIFrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(I);
 }
 
+/// Returns true if the frame will require a reference to the stack pointer.
+///
+/// This is the set of conditions common to setting up the stack pointer in a
+/// kernel, and for using a frame pointer in a callable function.
+///
+/// FIXME: Should also check hasOpaqueSPAdjustment and if any inline asm
+/// references SP.
+static bool frameTriviallyRequiresSP(const MachineFrameInfo &MFI) {
+  return MFI.hasVarSizedObjects() || MFI.hasStackMap() || MFI.hasPatchPoint();
+}
+
+// The FP for kernels is always known 0, so we never really need to setup an
+// explicit register for it. However, DisableFramePointerElim will force us to
+// use a register for it.
 bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -1277,8 +1291,31 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
 
-  return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
-    MFI.hasStackMap() || MFI.hasPatchPoint() ||
+  return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
     MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->needsStackRealignment(MF) ||
     MF.getTarget().Options.DisableFramePointerElim(MF);
+}
+
+// This is essentially a reduced version of hasFP for entry functions. Since the
+// stack pointer is known 0 on entry to kernels, we never really need an FP
+// register. We may need to initialize the stack pointer depending on the frame
+// properties, which logically overlaps many of the cases where an ordinary
+// function would require an FP.
+bool SIFrameLowering::requiresStackPointerReference(
+    const MachineFunction &MF) const {
+  // Callable functions always require a stack pointer reference.
+  assert(MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() &&
+         "only expected to call this for entry points");
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Entry points ordinarily don't need to initialize SP. We have to set it up
+  // for callees if there are any. Also note tail calls are impossible/don't
+  // make any sense for kernels.
+  if (MFI.hasCalls())
+    return true;
+
+  // We still need to initialize the SP if we're doing anything weird that
+  // references the SP, like variable sized stack objects.
+  return frameTriviallyRequiresSP(MFI);
 }
