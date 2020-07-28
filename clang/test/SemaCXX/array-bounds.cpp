@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++11 %s
+// RUN: %clang_cc1 -verify -std=c++14 %s
 
 int foo() {
   int x[2]; // expected-note 4 {{array 'x' declared here}}
@@ -309,3 +309,14 @@ namespace PR41087 {
     foo<int>(); // expected-note 1{{in instantiation of function template specialization}}
   };
 }
+
+namespace var_template_array {
+template <typename T> int arr[2]; // expected-note {{array 'arr<int>' declared here}}
+template <> int arr<float>[1];    // expected-note {{array 'arr<float>' declared here}}
+
+void test() {
+  arr<int>[1] = 0;   // ok
+  arr<int>[2] = 0;   // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
+  arr<float>[1] = 0; // expected-warning {{array index 1 is past the end of the array (which contains 1 element)}}
+}
+} // namespace var_template_array

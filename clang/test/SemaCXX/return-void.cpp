@@ -4,7 +4,7 @@ void f1() { return {1,2}; } // expected-error {{void function 'f1' must not retu
 
 template <typename T> void f2() { return {1,2}; } // expected-error {{void function 'f2' must not return a value}}
 
-template <> void f2<float>() { return {1,2}; } // expected-error {{void function 'f2' must not return a value}}
+template <> void f2<float>() { return {1, 2}; } // expected-error {{void function 'f2<float>' must not return a value}}
 
 void test_f2() {
   f2<int>();

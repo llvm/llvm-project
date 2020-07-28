@@ -3635,12 +3635,11 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
     if (FD->hasAttrs())
       Attrs = &FD->getAttrs();
     if (FD->isNoReturn())
-      Diag(ReturnLoc, diag::warn_noreturn_function_has_return_expr)
-        << FD->getDeclName();
+      Diag(ReturnLoc, diag::warn_noreturn_function_has_return_expr) << FD;
     if (FD->isMain() && RetValExp)
       if (isa<CXXBoolLiteralExpr>(RetValExp))
         Diag(ReturnLoc, diag::warn_main_returns_bool_literal)
-          << RetValExp->getSourceRange();
+            << RetValExp->getSourceRange();
     if (FD->hasAttr<CmseNSEntryAttr>() && RetValExp) {
       if (const auto *RT = dyn_cast<RecordType>(FnRetType.getCanonicalType())) {
         if (RT->getDecl()->isOrContainsUnion())
@@ -3711,8 +3710,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
           FunctionKind = 3;
 
         Diag(ReturnLoc, diag::err_return_init_list)
-          << CurDecl->getDeclName() << FunctionKind
-          << RetValExp->getSourceRange();
+            << CurDecl << FunctionKind << RetValExp->getSourceRange();
 
         // Drop the expression.
         RetValExp = nullptr;
@@ -3739,9 +3737,8 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
         // return of void in constructor/destructor is illegal in C++.
         if (D == diag::err_ctor_dtor_returns_void) {
           NamedDecl *CurDecl = getCurFunctionOrMethodDecl();
-          Diag(ReturnLoc, D)
-            << CurDecl->getDeclName() << isa<CXXDestructorDecl>(CurDecl)
-            << RetValExp->getSourceRange();
+          Diag(ReturnLoc, D) << CurDecl << isa<CXXDestructorDecl>(CurDecl)
+                             << RetValExp->getSourceRange();
         }
         // return (some void expression); is legal in C++.
         else if (D != diag::ext_return_has_void_expr ||
@@ -3757,8 +3754,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
             FunctionKind = 3;
 
           Diag(ReturnLoc, D)
-            << CurDecl->getDeclName() << FunctionKind
-            << RetValExp->getSourceRange();
+              << CurDecl << FunctionKind << RetValExp->getSourceRange();
         }
       }
 
