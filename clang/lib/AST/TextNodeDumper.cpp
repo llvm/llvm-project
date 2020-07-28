@@ -1994,7 +1994,7 @@ void TextNodeDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
       dumpBareDeclRef(TC->getFoundDecl());
       OS << ")";
     }
-    Visit(TC->getImmediatelyDeclaredConstraint());
+    AddChild([=] { Visit(TC->getImmediatelyDeclaredConstraint()); });
   } else if (D->wasDeclaredWithTypename())
     OS << " typename";
   else
