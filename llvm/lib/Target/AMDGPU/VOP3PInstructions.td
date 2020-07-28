@@ -77,6 +77,8 @@ def V_PK_ASHRREV_I16 : VOP3PInst<"v_pk_ashrrev_i16", VOP3_Profile<VOP_V2I16_V2I1
 def V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3_Profile<VOP_V2I16_V2I16_V2I16>, lshr_rev>;
 
 
+let SubtargetPredicate = HasVOP3PInsts in {
+
 // Undo sub x, c -> add x, -c canonicalization since c is more likely
 // an inline immediate than -c.
 // The constant will be emitted as a mov, and folded later.
@@ -85,6 +87,19 @@ def : GCNPat<
   (add (v2i16 (VOP3PMods v2i16:$src0, i32:$src0_modifiers)), NegSubInlineConstV216:$src1),
   (V_PK_SUB_U16 $src0_modifiers, $src0, SRCMODS.OP_SEL_1, NegSubInlineConstV216:$src1)
 >;
+
+// Integer operations with clamp bit set.
+class VOP3PSatPat<SDPatternOperator pat, Instruction inst> : GCNPat<
+  (pat (v2i16 (VOP3PMods v2i16:$src0, i32:$src0_modifiers)),
+       (v2i16 (VOP3PMods v2i16:$src1, i32:$src1_modifiers))),
+  (inst $src0_modifiers, $src0, $src1_modifiers, $src1, DSTCLAMP.ENABLE)
+>;
+
+def : VOP3PSatPat<uaddsat, V_PK_ADD_U16>;
+def : VOP3PSatPat<saddsat, V_PK_ADD_I16>;
+def : VOP3PSatPat<usubsat, V_PK_SUB_U16>;
+def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
+} // End SubtargetPredicate = HasVOP3PInsts
 
 multiclass MadFmaMixPats<SDPatternOperator fma_like,
                          Instruction mix_inst,

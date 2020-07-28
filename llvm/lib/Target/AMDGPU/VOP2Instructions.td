@@ -828,6 +828,24 @@ def : GCNPat <
 } // End Predicates = [Has16BitInsts]
 
 
+let SubtargetPredicate = HasIntClamp in {
+// Set clamp bit for saturation.
+def : VOPBinOpClampPat<uaddsat, V_ADD_CO_U32_e64, i32>;
+def : VOPBinOpClampPat<usubsat, V_SUB_CO_U32_e64, i32>;
+}
+
+let SubtargetPredicate = HasAddNoCarryInsts, OtherPredicates = [HasIntClamp] in {
+let AddedComplexity = 1 in { // Prefer over form with carry-out.
+def : VOPBinOpClampPat<uaddsat, V_ADD_U32_e64, i32>;
+def : VOPBinOpClampPat<usubsat, V_SUB_U32_e64, i32>;
+}
+}
+
+let SubtargetPredicate = Has16BitInsts, OtherPredicates = [HasIntClamp] in {
+def : VOPBinOpClampPat<uaddsat, V_ADD_U16_e64, i16>;
+def : VOPBinOpClampPat<usubsat, V_SUB_U16_e64, i16>;
+}
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
