@@ -51,9 +51,9 @@ using ReassociationExprs = SmallVector<AffineExpr, 2>;
 /// 1. linalg.fill(%A, %f) : memref<f32>, f32
 ///   name mangles into `linalg_fill_viewf32_f32_impl`
 ///
-/// 2. linalg.dot(%A, %B, %C) :
-///      memref<?xf32, stride_specification>,
-///      memref<?xf32, stride_specification>, memref<f32>
+/// 2. linalg.dot %A, %B, %C :
+///      (memref<?xf32, stride_specification>,
+///       memref<?xf32, stride_specification>, memref<f32>)
 ///   name mangles into `linalg_dot_viewxf32_viewxf32_viewf32_impl`
 ///
 /// 3. linalg.matmul(...) :
