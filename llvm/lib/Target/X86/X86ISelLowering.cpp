@@ -15057,6 +15057,12 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       if (Subtarget.hasVBMI() && Subtarget.hasVLX())
         return lowerShuffleWithPERMV(DL, MVT::v16i8, Mask, V1, V2, DAG);
 
+      // If we have XOP we can use one VPPERM instead of multiple PSHUFBs.
+      if (Subtarget.hasXOP()) {
+        SDValue MaskNode = getConstVector(Mask, MVT::v16i8, DAG, DL, true);
+        return DAG.getNode(X86ISD::VPPERM, DL, MVT::v16i8, V1, V2, MaskNode);
+      }
+
       // Use PALIGNR+Permute if possible - permute might become PSHUFB but the
       // PALIGNR will be cheaper than the second PSHUFB+OR.
       if (SDValue V = lowerShuffleAsByteRotateAndPermute(

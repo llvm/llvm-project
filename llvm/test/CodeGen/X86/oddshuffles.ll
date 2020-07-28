@@ -775,17 +775,11 @@ define void @interleave_24i8_out(<24 x i8>* %p, <8 x i8>* %q1, <8 x i8>* %q2, <8
 ;
 ; XOP-LABEL: interleave_24i8_out:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovdqu (%rdi), %xmm0
-; XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; XOP-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,xmm1[2,5,u,u,u,u,u,u,u,u]
-; XOP-NEXT:    vpshufb {{.*#+}} xmm3 = xmm0[0,3,6,9,12,15],zero,zero,xmm0[u,u,u,u,u,u,u,u]
-; XOP-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; XOP-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,zero,zero,zero,xmm1[0,3,6,u,u,u,u,u,u,u,u]
-; XOP-NEXT:    vpshufb {{.*#+}} xmm4 = xmm0[1,4,7,10,13],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
-; XOP-NEXT:    vpor %xmm3, %xmm4, %xmm3
-; XOP-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,xmm1[1,4,7,u,u,u,u,u,u,u,u]
-; XOP-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,5,8,11,14],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
-; XOP-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; XOP-NEXT:    vmovdqu (%rdi), %xmm1
+; XOP-NEXT:    vpperm {{.*#+}} xmm2 = xmm1[0,3,6,9,12,15],xmm0[2,5],xmm1[u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpperm {{.*#+}} xmm3 = xmm1[1,4,7,10,13],xmm0[0,3,6],xmm1[u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[2,5,8,11,14],xmm0[1,4,7],xmm1[u,u,u,u,u,u,u,u]
 ; XOP-NEXT:    vmovq %xmm2, (%rsi)
 ; XOP-NEXT:    vmovq %xmm3, (%rdx)
 ; XOP-NEXT:    vmovq %xmm0, (%rcx)
@@ -883,12 +877,8 @@ define void @interleave_24i8_in(<24 x i8>* %p, <8 x i8>* %q1, <8 x i8>* %q2, <8 
 ; XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; XOP-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; XOP-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[0,8],zero,xmm0[1,9],zero,xmm0[2,10],zero,xmm0[3,11],zero,xmm0[4,12],zero,xmm0[5]
-; XOP-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm1[0],zero,zero,xmm1[1],zero,zero,xmm1[2],zero,zero,xmm1[3],zero,zero,xmm1[4],zero
-; XOP-NEXT:    vpor %xmm3, %xmm2, %xmm2
-; XOP-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[13],zero,xmm0[6,14],zero,xmm0[7,15],zero,xmm0[u,u,u,u,u,u,u,u]
-; XOP-NEXT:    vpshufb {{.*#+}} xmm1 = zero,xmm1[5],zero,zero,xmm1[6],zero,zero,xmm1[7,u,u,u,u,u,u,u,u]
-; XOP-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    vpperm {{.*#+}} xmm2 = xmm0[0,8],xmm1[0],xmm0[1,9],xmm1[1],xmm0[2,10],xmm1[2],xmm0[3,11],xmm1[3],xmm0[4,12],xmm1[4],xmm0[5]
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[13],xmm1[5],xmm0[6,14],xmm1[6],xmm0[7,15],xmm1[7],xmm0[u,u,u,u,u,u,u,u]
 ; XOP-NEXT:    vmovq %xmm0, 16(%rdi)
 ; XOP-NEXT:    vmovdqu %xmm2, (%rdi)
 ; XOP-NEXT:    retq
