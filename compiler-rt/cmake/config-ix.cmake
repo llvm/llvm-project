@@ -157,6 +157,19 @@ check_library_exists(stdc++ __cxa_throw "" COMPILER_RT_HAS_LIBSTDCXX)
 check_linker_flag("-Wl,-z,text" COMPILER_RT_HAS_Z_TEXT)
 check_linker_flag("-fuse-ld=lld" COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
 
+set(VERS_COMPAT_OPTION "-Wl,-z,gnu-version-script-compat")
+check_linker_flag("${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
+
+set(DUMMY_VERS ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/dummy.vers)
+file(WRITE ${DUMMY_VERS} "{};")
+set(VERS_OPTION "-Wl,--version-script,${DUMMY_VERS}")
+if(COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
+  # Solaris 11.4 ld only supports --version-script with
+  # -z gnu-version-script-compat. 
+  string(APPEND VERS_OPTION " ${VERS_COMPAT_OPTION}")
+endif()
+check_linker_flag("${VERS_OPTION}" COMPILER_RT_HAS_VERSION_SCRIPT)
+
 if(ANDROID)
   check_linker_flag("-Wl,-z,global" COMPILER_RT_HAS_Z_GLOBAL)
   check_library_exists(log __android_log_write "" COMPILER_RT_HAS_LIBLOG)
