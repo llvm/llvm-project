@@ -208,7 +208,17 @@
 #      define TEST_HAS_ALIGNED_ALLOC
 #      define TEST_HAS_TIMESPEC_GET
 #    endif
-#  endif
+#  elif defined(__APPLE__)
+     // timespec_get and aligned_alloc were introduced in macOS 10.15 and
+     // aligned releases
+#    if (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500 || \
+         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
+         __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
+         __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000)
+#      define TEST_HAS_ALIGNED_ALLOC
+#      define TEST_HAS_TIMESPEC_GET
+#    endif
+#  endif // __APPLE__
 #endif
 
 /* Features that were introduced in C++14 */
