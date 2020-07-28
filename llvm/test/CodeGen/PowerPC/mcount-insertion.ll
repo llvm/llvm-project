@@ -1,9 +1,8 @@
-; RUN: opt -ee-instrument < %s | opt -inline | llc | FileCheck %s
+; RUN: opt -ee-instrument < %s | opt -inline | llc -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
 
 ; The run-line mimics how Clang might run the instrumentation passes.
 
 target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-bgq-linux"
 
 
 define void @leaf_function() #0 {

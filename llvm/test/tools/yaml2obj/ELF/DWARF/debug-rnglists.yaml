@@ -608,3 +608,64 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_rnglists: []
+
+## s) Test that we are able to generate a range list via raw binary data.
+
+# RUN: yaml2obj --docnum=17 %s -o %t17.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t17.o | \
+# RUN:   FileCheck %s --check-prefix=CUSTOM-LIST
+
+#      CUSTOM-LIST: Hex dump of section '.debug_rnglists':
+# CUSTOM-LIST-NEXT: 0x00000000 29000000 05000800 03000000 0c000000 )...............
+##                             ^-------                            unit_length (4-byte)
+##                                      ^---                       version (2-byte)
+##                                          ^-                     address_size (1-byte)
+##                                            ^-                   segment_selector_size (1-byte)
+##                                               ^-------          offset_entry_count (4-byte)
+##                                                        ^------- offsets[0] (4-byte)
+# CUSTOM-LIST-NEXT: 0x00000010 11000000 19000000 02b424b4 24123456 ..........$.$.4V
+##                             ^-------                            offsets[1] (4-byte)
+##                                      ^-------                   offsets[2] (4-byte)
+##                                               ^-                DW_RLE_startx_endx
+##                                                 ^---            operands[0] (ULEB128) 0x1234
+##                                                     ^----       operands[1] (ULEB128) 0x1234
+##                                                          ^----- custom list content
+# CUSTOM-LIST-NEXT: 0x00000020 7890abcd efabcdef 12345678 90       x........4Vx.
+##                             -----------
+##                                        ^-----------------       custom list content
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_rnglists:
+    - Lists:
+        - Entries:
+            - Operator: DW_RLE_startx_endx
+              Values:   [ 0x1234, 0x1234 ]
+        - Content: '1234567890abcdef'
+        - Content: 'abcdef1234567890'
+
+## t) Test that yaml2obj emits an error message when 'Content' and 'Entries' are specified
+## at the same time.
+
+# RUN: not yaml2obj --docnum=18 %s 2>&1 | FileCheck %s --check-prefix=ERR
+
+#      ERR: YAML:{{.*}}: error: Entries and Content can't be used together
+# ERR-NEXT:         - Entries: []
+# ERR-NEXT:           ^
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_rnglists:
+    - Lists:
+        - Entries: []
+          Content: ''
