@@ -1094,11 +1094,13 @@ static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
   // automatically when they are not explicitly defined.
   assert(!IO.outputting() ||
          (!Section.ShOffset.hasValue() && !Section.ShSize.hasValue() &&
-          !Section.ShName.hasValue() && !Section.ShFlags.hasValue()));
+          !Section.ShName.hasValue() && !Section.ShFlags.hasValue() &&
+          !Section.ShType.hasValue()));
   IO.mapOptional("ShName", Section.ShName);
   IO.mapOptional("ShOffset", Section.ShOffset);
   IO.mapOptional("ShSize", Section.ShSize);
   IO.mapOptional("ShFlags", Section.ShFlags);
+  IO.mapOptional("ShType", Section.ShType);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::DynamicSection &Section) {
