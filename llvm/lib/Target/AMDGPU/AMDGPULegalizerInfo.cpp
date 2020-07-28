@@ -422,7 +422,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .scalarize(0);
 
-  if (ST.hasVOP3PInsts()) {
+  if (ST.hasVOP3PInsts() && ST.hasAddNoCarry() && ST.hasIntClamp()) {
+    // Full set of gfx9 features.
     getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalFor({S32, S16, V2S16})
       .clampScalar(0, S16, S32)
@@ -431,7 +432,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0, 32);
 
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT, G_SADDSAT, G_SSUBSAT})
-      .lowerFor({S32, S16, V2S16}) // FIXME: legal and merge with add/sub/mul
+      .legalFor({S32, S16, V2S16}) // Clamp modifier
       .minScalar(0, S16)
       .clampMaxNumElements(0, S16, 2)
       .scalarize(0)
@@ -447,7 +448,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // Technically the saturating operations require clamp bit support, but this
     // was introduced at the same time as 16-bit operations.
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
-      .lowerFor({S32, S16}) // FIXME: legal with clamp modifier
+      .legalFor({S32, S16}) // Clamp modifier
       .minScalar(0, S16)
       .scalarize(0)
       .widenScalarToNextPow2(0, 16)
@@ -467,7 +468,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     if (ST.hasIntClamp()) {
       getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
-        .lowerFor({S32}) // FIXME: legal with clamp modifier.
+        .legalFor({S32}) // Clamp modifier.
         .scalarize(0)
         .minScalarOrElt(0, S32)
         .lower();
@@ -479,6 +480,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .lower();
     }
 
+    // FIXME: DAG expansion gets better results. The widening uses the smaller
+    // range values and goes for the min/max lowering directly.
     getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT})
       .minScalar(0, S32)
       .scalarize(0)
