@@ -470,8 +470,11 @@ public:
   void dropDroppableUses(llvm::function_ref<bool(const Use *)> ShouldDrop =
                              [](const Use *) { return true; });
 
-  /// Remove every use of \p User that can safely be removed.
-  void dropDroppableUsesByUser(const User &Usr);
+  /// Remove every use of this value in \p User that can safely be removed.
+  void dropDroppableUsesIn(User &Usr);
+
+  /// Remove the droppable use \p U.
+  void dropDroppableUse(Use &U);
 
   /// Check if this value is used in the specified basic block.
   bool isUsedInBasicBlock(const BasicBlock *BB) const;

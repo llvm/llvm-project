@@ -7920,6 +7920,20 @@ private:
         Layout.push_back(Data.get<const FieldDecl *>());
     }
   }
+  static void translateMotionModifiers(
+      ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+      SmallVectorImpl<OpenMPMapModifierKind> &MapModifiers) {
+    for (OpenMPMotionModifierKind MotionMod : MotionModifiers) {
+      switch (MotionMod) {
+      case OMPC_MOTION_MODIFIER_present:
+        MapModifiers.push_back(OMPC_MAP_MODIFIER_present);
+        break;
+      case OMPC_MOTION_MODIFIER_mapper:
+      case OMPC_MOTION_MODIFIER_unknown:
+        break;
+      }
+    }
+  }
 
 public:
   MappableExprsHandler(const OMPExecutableDirective &Dir, CodeGenFunction &CGF)
@@ -8038,12 +8052,16 @@ public:
       }
     for (const auto *C : CurExecDir->getClausesOfKind<OMPToClause>())
       for (const auto L : C->component_lists()) {
-        InfoGen(std::get<0>(L), std::get<1>(L), OMPC_MAP_to, llvm::None,
+        SmallVector<OpenMPMapModifierKind, 2> MapModifiers;
+        translateMotionModifiers(C->getMotionModifiers(), MapModifiers);
+        InfoGen(std::get<0>(L), std::get<1>(L), OMPC_MAP_to, MapModifiers,
                 /*ReturnDevicePointer=*/false, C->isImplicit(), std::get<2>(L));
       }
     for (const auto *C : CurExecDir->getClausesOfKind<OMPFromClause>())
       for (const auto L : C->component_lists()) {
-        InfoGen(std::get<0>(L), std::get<1>(L), OMPC_MAP_from, llvm::None,
+        SmallVector<OpenMPMapModifierKind, 2> MapModifiers;
+        translateMotionModifiers(C->getMotionModifiers(), MapModifiers);
+        InfoGen(std::get<0>(L), std::get<1>(L), OMPC_MAP_from, MapModifiers,
                 /*ReturnDevicePointer=*/false, C->isImplicit(), std::get<2>(L));
       }
 

@@ -4896,6 +4896,13 @@ QualType Sema::ReplaceAutoType(QualType TypeWithAuto,
       .TransformType(TypeWithAuto);
 }
 
+TypeSourceInfo *Sema::ReplaceAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
+                                                QualType TypeToReplaceAuto) {
+  return SubstituteDeducedTypeTransform(*this, TypeToReplaceAuto,
+                                        /*UseTypeSugar*/ false)
+      .TransformType(TypeWithAuto);
+}
+
 void Sema::DiagnoseAutoDeductionFailure(VarDecl *VDecl, Expr *Init) {
   if (isa<InitListExpr>(Init))
     Diag(VDecl->getLocation(),

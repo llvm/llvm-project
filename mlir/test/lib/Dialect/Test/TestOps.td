@@ -1473,4 +1473,36 @@ def RegionIfOp : TEST_Op<"region_if",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Test TableGen generated build() methods
+//===----------------------------------------------------------------------===//
+
+def TableGenConstant : TEST_Op<"tblgen_constant"> {
+  let results = (outs AnyType);
+}
+
+// No variadic args or results.
+def TableGenBuildOp0 : TEST_Op<"tblgen_build_0"> {
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$result);
+}
+
+// Sigle variadic arg and single variadic results.
+def TableGenBuildOp1 : TEST_Op<"tblgen_build_1"> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$results);
+}
+
+// Single variadic arg and non-variadic results.
+def TableGenBuildOp2 : TEST_Op<"tblgen_build_2"> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs AnyType:$result);
+}
+
+// Single variadic arg and multiple variadic results.
+def TableGenBuildOp3 : TEST_Op<"tblgen_build_3", [SameVariadicResultSize]> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$resultA, Variadic<AnyType>:$resultB);
+}
+
 #endif // TEST_OPS
