@@ -15,5 +15,5 @@ void f() {
   };
   (void) i;
 
-  C<int>(); // expected-warning {{'C' was marked unused but was used}}
+  C<int>(); // expected-warning {{'C<int>' was marked unused but was used}}
 }
