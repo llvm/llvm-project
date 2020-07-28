@@ -23,5 +23,9 @@ add_lldb_tool(lldb-test
   LINK_COMPONENTS
     Support
   )
-  
+
 include_directories(${LLDB_SOURCE_DIR}/source)
+
+if(PYTHON_RPATH)
+  set_property(TARGET lldb-test APPEND PROPERTY INSTALL_RPATH "${PYTHON_RPATH}")
+endif()
