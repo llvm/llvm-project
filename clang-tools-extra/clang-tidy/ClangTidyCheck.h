@@ -330,7 +330,7 @@ public:
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, llvm::Expected<T>>
-    get(StringRef LocalName, bool IgnoreCase = false) {
+    get(StringRef LocalName, bool IgnoreCase = false) const {
       if (llvm::Expected<int64_t> ValueOr =
               getEnumInt(LocalName, typeEraseMapping<T>(), false, IgnoreCase))
         return static_cast<T>(*ValueOr);
@@ -349,7 +349,7 @@ public:
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, T>
-    get(StringRef LocalName, T Default, bool IgnoreCase = false) {
+    get(StringRef LocalName, T Default, bool IgnoreCase = false) const {
       if (auto ValueOr = get<T>(LocalName, IgnoreCase))
         return *ValueOr;
       else
@@ -370,8 +370,7 @@ public:
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, llvm::Expected<T>>
-    getLocalOrGlobal(StringRef LocalName,
-                     bool IgnoreCase = false) {
+    getLocalOrGlobal(StringRef LocalName, bool IgnoreCase = false) const {
       if (llvm::Expected<int64_t> ValueOr =
               getEnumInt(LocalName, typeEraseMapping<T>(), true, IgnoreCase))
         return static_cast<T>(*ValueOr);
@@ -391,7 +390,8 @@ public:
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, T>
-    getLocalOrGlobal(StringRef LocalName, T Default, bool IgnoreCase = false) {
+    getLocalOrGlobal(StringRef LocalName, T Default,
+                     bool IgnoreCase = false) const {
       if (auto ValueOr = getLocalOrGlobal<T>(LocalName, IgnoreCase))
         return *ValueOr;
       else
@@ -420,7 +420,8 @@ public:
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value>
-    store(ClangTidyOptions::OptionMap &Options, StringRef LocalName, T Value) {
+    store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
+          T Value) const {
       ArrayRef<std::pair<T, StringRef>> Mapping =
           OptionEnumMapping<T>::getEnumMapping();
       auto Iter = llvm::find_if(
@@ -436,11 +437,11 @@ public:
 
     llvm::Expected<int64_t> getEnumInt(StringRef LocalName,
                                        ArrayRef<NameAndValue> Mapping,
-                                       bool CheckGlobal, bool IgnoreCase);
+                                       bool CheckGlobal, bool IgnoreCase) const;
 
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, std::vector<NameAndValue>>
-    typeEraseMapping() {
+    typeEraseMapping() const {
       ArrayRef<std::pair<T, StringRef>> Mapping =
           OptionEnumMapping<T>::getEnumMapping();
       std::vector<NameAndValue> Result;
