@@ -967,9 +967,17 @@ bool ArchSpec::IsCompatibleMatch(const ArchSpec &rhs) const {
 }
 
 static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
-                                    llvm::Triple::EnvironmentType rhs) {
+                                    llvm::Triple::EnvironmentType rhs,
+                                    bool exact_match) {
   if (lhs == rhs)
     return true;
+
+  // Apple simulators are a different platform than what they simulate.
+  // As the environments are different at this point, if one of them is a
+  // simulator, then they are different.
+  if (exact_match)
+    if (lhs == llvm::Triple::Simulator || rhs == llvm::Triple::Simulator)
+      return false;
 
   // If any of the environment is unknown then they are compatible
   if (lhs == llvm::Triple::UnknownEnvironment ||
@@ -1043,7 +1051,7 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
     const llvm::Triple::EnvironmentType rhs_triple_env =
         rhs_triple.getEnvironment();
 
-    return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env);
+    return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env, exact_match);
   }
   return false;
 }
