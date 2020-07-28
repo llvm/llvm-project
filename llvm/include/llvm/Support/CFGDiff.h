@@ -55,21 +55,18 @@ template <bool B, typename Range> auto reverse_if(Range &&R) {
 // multigraph. Added edges are pruned to be unique, and deleted edges will
 // remove all existing edges between two blocks.
 template <typename NodePtr, bool InverseGraph = false> class GraphDiff {
-  using UpdateMapType = SmallDenseMap<NodePtr, SmallVector<NodePtr, 2>>;
-  struct EdgesInsertedDeleted {
-    UpdateMapType Succ;
-    UpdateMapType Pred;
+  struct DeletesInserts {
+    SmallVector<NodePtr, 2> DI[2];
   };
-  // Store Deleted edges on position 0, and Inserted edges on position 1.
-  EdgesInsertedDeleted Edges[2];
+  using UpdateMapType = SmallDenseMap<NodePtr, DeletesInserts>;
+  UpdateMapType Succ;
+  UpdateMapType Pred;
+
   // By default, it is assumed that, given a CFG and a set of updates, we wish
   // to apply these updates as given. If UpdatedAreReverseApplied is set, the
   // updates will be applied in reverse: deleted edges are considered re-added
   // and inserted edges are considered deleted when returning children.
   bool UpdatedAreReverseApplied;
-  // Using a singleton empty vector for all node requests with no
-  // children.
-  SmallVector<NodePtr, 0> Empty;
 
   // Keep the list of legalized updates for a deterministic order of updates
   // when using a GraphDiff for incremental updates in the DominatorTree.
@@ -77,14 +74,19 @@ template <typename NodePtr, bool InverseGraph = false> class GraphDiff {
   SmallVector<cfg::Update<NodePtr>, 4> LegalizedUpdates;
 
   void printMap(raw_ostream &OS, const UpdateMapType &M) const {
-    for (auto Pair : M)
-      for (auto Child : Pair.second) {
-        OS << "(";
-        Pair.first->printAsOperand(OS, false);
-        OS << ", ";
-        Child->printAsOperand(OS, false);
-        OS << ") ";
+    StringRef DIText[2] = {"Delete", "Insert"};
+    for (auto Pair : M) {
+      for (unsigned IsInsert = 0; IsInsert <= 1; ++IsInsert) {
+        OS << DIText[IsInsert] << " edges: \n";
+        for (auto Child : Pair.second.DI[IsInsert]) {
+          OS << "(";
+          Pair.first->printAsOperand(OS, false);
+          OS << ", ";
+          Child->printAsOperand(OS, false);
+          OS << ") ";
+        }
       }
+    }
     OS << "\n";
   }
 
@@ -93,13 +95,11 @@ public:
   GraphDiff(ArrayRef<cfg::Update<NodePtr>> Updates,
             bool ReverseApplyUpdates = false) {
     cfg::LegalizeUpdates<NodePtr>(Updates, LegalizedUpdates, InverseGraph);
-    // The legalized updates are stored in reverse so we can pop_back when doing
-    // incremental updates.
     for (auto U : LegalizedUpdates) {
       unsigned IsInsert =
           (U.getKind() == cfg::UpdateKind::Insert) == !ReverseApplyUpdates;
-      Edges[IsInsert].Succ[U.getFrom()].push_back(U.getTo());
-      Edges[IsInsert].Pred[U.getTo()].push_back(U.getFrom());
+      Succ[U.getFrom()].DI[IsInsert].push_back(U.getTo());
+      Pred[U.getTo()].DI[IsInsert].push_back(U.getFrom());
     }
     UpdatedAreReverseApplied = ReverseApplyUpdates;
   }
@@ -115,41 +115,20 @@ public:
     auto U = LegalizedUpdates.pop_back_val();
     unsigned IsInsert =
         (U.getKind() == cfg::UpdateKind::Insert) == !UpdatedAreReverseApplied;
-    auto &SuccList = Edges[IsInsert].Succ[U.getFrom()];
+    auto &SuccDIList = Succ[U.getFrom()];
+    auto &SuccList = SuccDIList.DI[IsInsert];
     assert(SuccList.back() == U.getTo());
     SuccList.pop_back();
-    if (SuccList.empty())
-      Edges[IsInsert].Succ.erase(U.getFrom());
+    if (SuccList.empty() && SuccDIList.DI[!IsInsert].empty())
+      Succ.erase(U.getFrom());
 
-    auto &PredList = Edges[IsInsert].Pred[U.getTo()];
+    auto &PredDIList = Pred[U.getTo()];
+    auto &PredList = PredDIList.DI[IsInsert];
     assert(PredList.back() == U.getFrom());
     PredList.pop_back();
-    if (PredList.empty())
-      Edges[IsInsert].Pred.erase(U.getTo());
+    if (PredList.empty() && PredDIList.DI[!IsInsert].empty())
+      Pred.erase(U.getTo());
     return U;
-  }
-
-  bool ignoreChild(const NodePtr BB, NodePtr EdgeEnd, bool InverseEdge) const {
-    // Used to filter nullptr in clang.
-    if (EdgeEnd == nullptr)
-      return true;
-    auto &DeleteChildren =
-        (InverseEdge != InverseGraph) ? Edges[0].Pred : Edges[0].Succ;
-    auto It = DeleteChildren.find(BB);
-    if (It == DeleteChildren.end())
-      return false;
-    auto &EdgesForBB = It->second;
-    return llvm::find(EdgesForBB, EdgeEnd) != EdgesForBB.end();
-  }
-
-  iterator_range<typename SmallVectorImpl<NodePtr>::const_iterator>
-  getAddedChildren(const NodePtr BB, bool InverseEdge) const {
-    auto &InsertChildren =
-        (InverseEdge != InverseGraph) ? Edges[1].Pred : Edges[1].Succ;
-    auto It = InsertChildren.find(BB);
-    if (It == InsertChildren.end())
-      return make_range(Empty.begin(), Empty.end());
-    return make_range(It->second.begin(), It->second.end());
   }
 
   using VectRet = SmallVector<NodePtr, 8>;
@@ -157,31 +136,35 @@ public:
     using DirectedNodeT =
         std::conditional_t<InverseEdge, Inverse<NodePtr>, NodePtr>;
     auto R = children<DirectedNodeT>(N);
-    auto CurrentCFGChildren = detail::reverse_if<!InverseEdge>(R);
+    VectRet Res = VectRet(detail::reverse_if<!InverseEdge>(R));
 
-    VectRet UpdatedCFGChildren;
-    for (auto Child : CurrentCFGChildren)
-      if (Child && !ignoreChild(N, Child, InverseEdge))
-        UpdatedCFGChildren.push_back(Child);
+    // Remove nullptr children for clang.
+    llvm::erase_value(Res, nullptr);
 
-    auto AddedCFGChildren = getAddedChildren(N, InverseEdge);
-    UpdatedCFGChildren.insert(UpdatedCFGChildren.end(),
-                              AddedCFGChildren.begin(), AddedCFGChildren.end());
-    return UpdatedCFGChildren;
+    auto &Children = (InverseEdge != InverseGraph) ? Pred : Succ;
+    auto It = Children.find(N);
+    if (It == Children.end())
+      return Res;
+
+    // Remove children present in the CFG but not in the snapshot.
+    for (auto *Child : It->second.DI[0])
+      llvm::erase_value(Res, Child);
+
+    // Add children present in the snapshot for not in the real CFG.
+    auto &AddedChildren = It->second.DI[1];
+    Res.insert(Res.end(), AddedChildren.begin(), AddedChildren.end());
+
+    return Res;
   }
 
   void print(raw_ostream &OS) const {
     OS << "===== GraphDiff: CFG edge changes to create a CFG snapshot. \n"
           "===== (Note: notion of children/inverse_children depends on "
           "the direction of edges and the graph.)\n";
-    OS << "Children to insert:\n\t";
-    printMap(OS, Edges[1].Succ);
-    OS << "Children to delete:\n\t";
-    printMap(OS, Edges[0].Succ);
-    OS << "Inverse_children to insert:\n\t";
-    printMap(OS, Edges[1].Pred);
-    OS << "Inverse_children to delete:\n\t";
-    printMap(OS, Edges[0].Pred);
+    OS << "Children to delete/insert:\n\t";
+    printMap(OS, Succ);
+    OS << "Inverse_children to delete/insert:\n\t";
+    printMap(OS, Pred);
     OS << "\n";
   }
 
