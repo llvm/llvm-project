@@ -1,4 +1,7 @@
 set(TARGET_LIBC_ENTRYPOINTS
+    # ctype.h entrypoints
+    libc.src.ctype.isalpha
+    
     # errno.h entrypoints
     libc.src.errno.__errno_location
 
