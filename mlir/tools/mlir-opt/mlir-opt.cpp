@@ -66,6 +66,7 @@ void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
 void registerTestReducer();
 void registerTestGpuParallelLoopMappingPass();
+void registerTestSpirvEntryPointABIPass();
 void registerTestSCFUtilsPass();
 void registerTestVectorConversions();
 void registerVectorizerTestPass();
@@ -142,6 +143,7 @@ void registerTestPasses() {
   registerTestRecursiveTypesPass();
   registerTestReducer();
   registerTestGpuParallelLoopMappingPass();
+  registerTestSpirvEntryPointABIPass();
   registerTestSCFUtilsPass();
   registerTestVectorConversions();
   registerVectorizerTestPass();
