@@ -223,6 +223,7 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
 }
 
 // FIXME: Figure out why this test causes crashes on mac os.
+// See also comments around the ClangTidyDiagnosticConsumer.SortsErrors test.
 #ifndef __APPLE__
 TEST(ValidConfiguration, ValidEnumOptions) {
 
