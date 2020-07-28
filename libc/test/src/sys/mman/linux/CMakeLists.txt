@@ -12,4 +12,5 @@ add_libc_unittest(
     libc.src.errno.__errno_location
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
+    libc.test.errno_setter_matcher
 )

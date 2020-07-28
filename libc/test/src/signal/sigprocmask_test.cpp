@@ -14,7 +14,7 @@
 #include "src/signal/sigemptyset.h"
 #include "src/signal/sigprocmask.h"
 
-#include "utils/UnitTest/ErrnoSetterMatcher.h"
+#include "test/ErrnoSetterMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 class SignalTest : public __llvm_libc::testing::Test {
