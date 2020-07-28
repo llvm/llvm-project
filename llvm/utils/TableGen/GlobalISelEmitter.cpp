@@ -4394,6 +4394,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
 
   DstMIBuilder.addRenderer<CopyRenderer>(DstI->Operands[0].Name);
 
+  // Some instructions have multiple defs, but are missing a type entry
+  // (e.g. s_cc_out operands).
+  if (Dst->getExtTypes().size() < NumDefs)
+    return failedImport("unhandled discarded def");
+
   // Patterns only handle a single result, so any result after the first is an
   // implicitly dead def.
   for (unsigned I = 1; I < NumDefs; ++I) {

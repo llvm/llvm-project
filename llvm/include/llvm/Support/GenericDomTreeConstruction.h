@@ -92,13 +92,9 @@ struct SemiNCAInfo {
 
   BatchUpdateInfo *BatchUpdates;
   using BatchUpdatePtr = BatchUpdateInfo *;
-  std::unique_ptr<GraphDiffT> EmptyGD;
 
   // If BUI is a nullptr, then there's no batch update in progress.
-  SemiNCAInfo(BatchUpdatePtr BUI) : BatchUpdates(BUI) {
-    if (!BatchUpdates)
-      EmptyGD = std::make_unique<GraphDiffT>();
-  }
+  SemiNCAInfo(BatchUpdatePtr BUI) : BatchUpdates(BUI) {}
 
   void clear() {
     NumToNode = {nullptr}; // Restore to initial state with a dummy start node.
