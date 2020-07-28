@@ -213,6 +213,15 @@ static void addFile(StringRef path) {
   }
 }
 
+static void addFileList(StringRef path) {
+  Optional<MemoryBufferRef> buffer = readFile(path);
+  if (!buffer)
+    return;
+  MemoryBufferRef mbref = *buffer;
+  for (StringRef path : args::getLines(mbref))
+    addFile(path);
+}
+
 static std::array<StringRef, 6> archNames{"arm",    "arm64", "i386",
                                           "x86_64", "ppc",   "ppc64"};
 static bool isArchString(StringRef s) {
@@ -410,6 +419,9 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     switch (arg->getOption().getID()) {
     case OPT_INPUT:
       addFile(arg->getValue());
+      break;
+    case OPT_filelist:
+      addFileList(arg->getValue());
       break;
     case OPT_l: {
       StringRef name = arg->getValue();
