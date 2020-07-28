@@ -582,23 +582,21 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
     // MOD=0, BASE=5, to JUST get the index, scale, and displacement.
     emitByte(modRMByte(0, RegOpcodeField, 4), OS);
     ForceDisp32 = true;
-  } else if (!Disp.isImm()) {
-    // Emit the normal disp32 encoding.
-    emitByte(modRMByte(2, RegOpcodeField, 4), OS);
-    ForceDisp32 = true;
-  } else if (Disp.getImm() == 0 &&
+  } else if (Disp.isImm() && Disp.getImm() == 0 &&
              // Base reg can't be anything that ends up with '5' as the base
              // reg, it is the magic [*] nomenclature that indicates no base.
              BaseRegNo != N86::EBP) {
     // Emit no displacement ModR/M byte
     emitByte(modRMByte(0, RegOpcodeField, 4), OS);
-  } else if (isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
+  } else if (Disp.isImm() &&
+             isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
     // Emit the disp8 encoding.
     emitByte(modRMByte(1, RegOpcodeField, 4), OS);
     ForceDisp8 = true; // Make sure to force 8 bit disp if Base=EBP
   } else {
     // Emit the normal disp32 encoding.
     emitByte(modRMByte(2, RegOpcodeField, 4), OS);
+    ForceDisp32 = true;
   }
 
   // Calculate what the SS field value should be...
@@ -618,7 +616,7 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
   if (ForceDisp8)
     emitImmediate(Disp, MI.getLoc(), 1, FK_Data_1, StartByte, OS, Fixups,
                   ImmOffset);
-  else if (ForceDisp32 || Disp.getImm() != 0)
+  else if (ForceDisp32)
     emitImmediate(Disp, MI.getLoc(), 4, MCFixupKind(X86::reloc_signed_4byte),
                   StartByte, OS, Fixups);
 }
