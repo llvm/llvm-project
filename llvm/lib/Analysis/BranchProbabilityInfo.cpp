@@ -1178,7 +1178,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
 
   PostDominatedByUnreachable.clear();
   PostDominatedByColdCall.clear();
-  SccI.release();
+  SccI.reset();
 
   if (PrintBranchProb &&
       (PrintBranchProbFuncName.empty() ||
