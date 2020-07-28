@@ -70,6 +70,11 @@ private:
   // Alignment - Alignment of record in characters.
   CharUnits Alignment;
 
+  // PreferredAlignment - Preferred alignment of record in characters. This
+  // can be different than Alignment in cases where it is beneficial for
+  // performance or backwards compatibility preserving (e.g. AIX-ABI).
+  CharUnits PreferredAlignment;
+
   // UnadjustedAlignment - Maximum of the alignments of the record members in
   // characters.
   CharUnits UnadjustedAlignment;
@@ -90,6 +95,11 @@ private:
     /// NonVirtualAlignment - The non-virtual alignment (in chars) of an object,
     /// which is the alignment of the object without virtual bases.
     CharUnits NonVirtualAlignment;
+
+    /// PreferredNVAlignment - The preferred non-virtual alignment (in chars) of
+    /// an object, which is the preferred alignment of the object without
+    /// virtual bases.
+    CharUnits PreferredNVAlignment;
 
     /// SizeOfLargestEmptySubobject - The size of the largest empty subobject
     /// (either a base or a member). Will be zero if the class doesn't contain
@@ -139,30 +149,26 @@ private:
   CXXRecordLayoutInfo *CXXInfo = nullptr;
 
   ASTRecordLayout(const ASTContext &Ctx, CharUnits size, CharUnits alignment,
-                  CharUnits unadjustedAlignment,
+                  CharUnits preferredAlignment, CharUnits unadjustedAlignment,
                   CharUnits requiredAlignment, CharUnits datasize,
                   ArrayRef<uint64_t> fieldoffsets);
 
   using BaseOffsetsMapTy = CXXRecordLayoutInfo::BaseOffsetsMapTy;
 
   // Constructor for C++ records.
-  ASTRecordLayout(const ASTContext &Ctx,
-                  CharUnits size, CharUnits alignment,
-                  CharUnits unadjustedAlignment,
-                  CharUnits requiredAlignment,
-                  bool hasOwnVFPtr, bool hasExtendableVFPtr,
-                  CharUnits vbptroffset,
-                  CharUnits datasize,
-                  ArrayRef<uint64_t> fieldoffsets,
+  ASTRecordLayout(const ASTContext &Ctx, CharUnits size, CharUnits alignment,
+                  CharUnits preferredAlignment, CharUnits unadjustedAlignment,
+                  CharUnits requiredAlignment, bool hasOwnVFPtr,
+                  bool hasExtendableVFPtr, CharUnits vbptroffset,
+                  CharUnits datasize, ArrayRef<uint64_t> fieldoffsets,
                   CharUnits nonvirtualsize, CharUnits nonvirtualalignment,
+                  CharUnits preferrednvalignment,
                   CharUnits SizeOfLargestEmptySubobject,
-                  const CXXRecordDecl *PrimaryBase,
-                  bool IsPrimaryBaseVirtual,
+                  const CXXRecordDecl *PrimaryBase, bool IsPrimaryBaseVirtual,
                   const CXXRecordDecl *BaseSharingVBPtr,
-                  bool EndsWithZeroSizedObject,
-                  bool LeadsWithZeroSizedBase,
-                  const BaseOffsetsMapTy& BaseOffsets,
-                  const VBaseOffsetsMapTy& VBaseOffsets);
+                  bool EndsWithZeroSizedObject, bool LeadsWithZeroSizedBase,
+                  const BaseOffsetsMapTy &BaseOffsets,
+                  const VBaseOffsetsMapTy &VBaseOffsets);
 
   ~ASTRecordLayout() = default;
 
@@ -174,6 +180,10 @@ public:
 
   /// getAlignment - Get the record alignment in characters.
   CharUnits getAlignment() const { return Alignment; }
+
+  /// getPreferredFieldAlignment - Get the record preferred alignment in
+  /// characters.
+  CharUnits getPreferredAlignment() const { return PreferredAlignment; }
 
   /// getUnadjustedAlignment - Get the record alignment in characters, before
   /// alignment adjustement.
@@ -193,9 +203,7 @@ public:
 
   /// getDataSize() - Get the record data size, which is the record size
   /// without tail padding, in characters.
-  CharUnits getDataSize() const {
-    return DataSize;
-  }
+  CharUnits getDataSize() const { return DataSize; }
 
   /// getNonVirtualSize - Get the non-virtual size (in chars) of an object,
   /// which is the size of the object without virtual bases.
@@ -205,12 +213,21 @@ public:
     return CXXInfo->NonVirtualSize;
   }
 
-  /// getNonVirtualSize - Get the non-virtual alignment (in chars) of an object,
-  /// which is the alignment of the object without virtual bases.
+  /// getNonVirtualAlignment - Get the non-virtual alignment (in chars) of an
+  /// object, which is the alignment of the object without virtual bases.
   CharUnits getNonVirtualAlignment() const {
     assert(CXXInfo && "Record layout does not have C++ specific info!");
 
     return CXXInfo->NonVirtualAlignment;
+  }
+
+  /// getPreferredNVAlignment - Get the preferred non-virtual alignment (in
+  /// chars) of an object, which is the preferred alignment of the object
+  /// without virtual bases.
+  CharUnits getPreferredNVAlignment() const {
+    assert(CXXInfo && "Record layout does not have C++ specific info!");
+
+    return CXXInfo->PreferredNVAlignment;
   }
 
   /// getPrimaryBase - Get the primary base for this record.
@@ -287,9 +304,7 @@ public:
     return !CXXInfo->VBPtrOffset.isNegative();
   }
 
-  CharUnits getRequiredAlignment() const {
-    return RequiredAlignment;
-  }
+  CharUnits getRequiredAlignment() const { return RequiredAlignment; }
 
   bool endsWithZeroSizedObject() const {
     return CXXInfo && CXXInfo->EndsWithZeroSizedObject;

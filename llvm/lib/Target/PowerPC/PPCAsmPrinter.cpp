@@ -1678,21 +1678,30 @@ void PPCAIXAsmPrinter::ValidateGV(const GlobalVariable *GV) {
     report_fatal_error("COMDAT not yet supported by AIX.");
 }
 
-static bool isSpecialLLVMGlobalArrayForStaticInit(const GlobalVariable *GV) {
-  return StringSwitch<bool>(GV->getName())
-      .Cases("llvm.global_ctors", "llvm.global_dtors", true)
-      .Default(false);
+static bool isSpecialLLVMGlobalArrayToSkip(const GlobalVariable *GV) {
+  return GV->hasAppendingLinkage() &&
+         StringSwitch<bool>(GV->getName())
+             // TODO: Update the handling of global arrays for static init when
+             // we support the ".ref" directive.
+             // Otherwise, we can skip these arrays, because the AIX linker
+             // collects static init functions simply based on their name.
+             .Cases("llvm.global_ctors", "llvm.global_dtors", true)
+             // TODO: Linker could still eliminate the GV if we just skip
+             // handling llvm.used array. Skipping them for now until we or the
+             // AIX OS team come up with a good solution.
+             .Case("llvm.used", true)
+             // It's correct to just skip llvm.compiler.used array here.
+             .Case("llvm.compiler.used", true)
+             .Default(false);
 }
 
 void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  ValidateGV(GV);
-
-  // TODO: Update the handling of global arrays for static init when we support
-  // the ".ref" directive.
-  // Otherwise, we can skip these arrays, because the AIX linker collects
-  // static init functions simply based on their name.
-  if (isSpecialLLVMGlobalArrayForStaticInit(GV))
+  if (isSpecialLLVMGlobalArrayToSkip(GV))
     return;
+
+  assert(!GV->getName().startswith("llvm.") &&
+         "Unhandled intrinsic global variable.");
+  ValidateGV(GV);
 
   // Create the symbol, set its storage class.
   MCSymbolXCOFF *GVSym = cast<MCSymbolXCOFF>(getSymbol(GV));
@@ -1836,8 +1845,11 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   // We need to know, up front, the alignment of csects for the assembly path,
   // because once a .csect directive gets emitted, we could not change the
   // alignment value on it.
-  for (const auto &G : M.globals())
+  for (const auto &G : M.globals()) {
+    if (isSpecialLLVMGlobalArrayToSkip(&G))
+      continue;
     setCsectAlignment(&G);
+  }
 
   for (const auto &F : M)
     setCsectAlignment(&F);

@@ -1493,6 +1493,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       G_FCOPYSIGN,
 
       G_ATOMIC_CMPXCHG_WITH_SUCCESS,
+      G_ATOMICRMW_NAND,
+      G_ATOMICRMW_FSUB,
       G_READ_REGISTER,
       G_WRITE_REGISTER,
 

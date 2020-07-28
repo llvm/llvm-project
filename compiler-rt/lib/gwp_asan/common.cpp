@@ -34,6 +34,9 @@ const char *ErrorToString(const Error &E) {
   __builtin_trap();
 }
 
+constexpr size_t AllocationMetadata::kStackFrameStorageBytes;
+constexpr size_t AllocationMetadata::kMaxTraceLengthToCollect;
+
 void AllocationMetadata::RecordAllocation(uintptr_t AllocAddr,
                                           size_t AllocSize) {
   Addr = AllocAddr;

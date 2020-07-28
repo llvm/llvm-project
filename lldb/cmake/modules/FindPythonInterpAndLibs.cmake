@@ -61,45 +61,21 @@ if(PYTHON_LIBRARIES AND PYTHON_INCLUDE_DIRS AND PYTHON_EXECUTABLE AND SWIG_EXECU
 else()
   find_package(SWIG 2.0)
   if (SWIG_FOUND)
-    if(NOT CMAKE_VERSION VERSION_LESS 3.12)
-      if (LLDB_PYTHON_VERSION)
-        if (LLDB_PYTHON_VERSION VERSION_EQUAL "2")
-          FindPython2()
-        elseif(LLDB_PYTHON_VERSION VERSION_EQUAL "3")
-          FindPython3()
-        endif()
-      else()
+    if (LLDB_PYTHON_VERSION)
+      if (LLDB_PYTHON_VERSION VERSION_EQUAL "2")
+        FindPython2()
+      elseif(LLDB_PYTHON_VERSION VERSION_EQUAL "3")
         FindPython3()
-        if (NOT PYTHON3_FOUND AND NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
-          FindPython2()
-        endif()
       endif()
     else()
-      find_package(PythonInterp)
-      find_package(PythonLibs)
-      if(PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND AND SWIG_FOUND)
-        if (NOT CMAKE_CROSSCOMPILING)
-          string(REPLACE "." ";" pythonlibs_version_list ${PYTHONLIBS_VERSION_STRING})
-          list(GET pythonlibs_version_list 0 pythonlibs_major)
-          list(GET pythonlibs_version_list 1 pythonlibs_minor)
-
-          # Ignore the patch version. Some versions of macOS report a different
-          # patch version for the system provided interpreter and libraries.
-          if (CMAKE_CROSSCOMPILING OR (PYTHON_VERSION_MAJOR VERSION_EQUAL pythonlibs_major AND
-              PYTHON_VERSION_MINOR VERSION_EQUAL pythonlibs_minor))
-            mark_as_advanced(
-              PYTHON_LIBRARIES
-              PYTHON_INCLUDE_DIRS
-              PYTHON_EXECUTABLE
-              SWIG_EXECUTABLE)
-          endif()
-        endif()
+      FindPython3()
+      if (NOT PYTHON3_FOUND AND NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+        FindPython2()
       endif()
     endif()
   else()
     message(STATUS "SWIG 2 or later is required for Python support in LLDB but could not be found")
   endif()
-
 
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(PythonInterpAndLibs

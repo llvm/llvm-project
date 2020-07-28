@@ -77,6 +77,7 @@ PlatformSP PlatformAppleTVSimulator::CreateInstance(bool force,
   bool create = force;
   if (!create && arch && arch->IsValid()) {
     switch (arch->GetMachine()) {
+    case llvm::Triple::aarch64:
     case llvm::Triple::x86_64: {
       const llvm::Triple &triple = arch->GetTriple();
       switch (triple.getVendor()) {
@@ -144,7 +145,24 @@ const char *PlatformAppleTVSimulator::GetDescriptionStatic() {
 /// Default Constructor
 PlatformAppleTVSimulator::PlatformAppleTVSimulator()
     : PlatformAppleSimulator(
-          CoreSimulatorSupport::DeviceType::ProductFamilyID::appleTV) {}
+          CoreSimulatorSupport::DeviceType::ProductFamilyID::appleTV) {
+#ifdef __APPLE__
+#if __arm64__
+  static const llvm::StringRef supported_triples[] = {
+      "arm64e-apple-tvos-simulator",
+      "arm64-apple-tvos-simulator",
+      "x86_64h-apple-tvos-simulator",
+      "x86_64-apple-tvos-simulator",
+  };
+#else
+  static const llvm::StringRef supported_triples[] = {
+      "x86_64h-apple-tvos-simulator",
+      "x86_64-apple-tvos-simulator",
+  };
+#endif
+  m_supported_triples = supported_triples;
+#endif
+}
 
 /// Destructor.
 ///
@@ -321,20 +339,4 @@ uint32_t PlatformAppleTVSimulator::FindProcesses(
     }
   }
   return process_infos.size();
-}
-
-bool PlatformAppleTVSimulator::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                               ArchSpec &arch) {
-  static const ArchSpec platform_arch(
-      HostInfo::GetArchitecture(HostInfo::eArchKind64));
-
-  if (idx == 0) {
-    arch = platform_arch;
-    if (arch.IsValid()) {
-      arch.GetTriple().setOS(llvm::Triple::TvOS);
-      arch.GetTriple().setEnvironment(llvm::Triple::Simulator);
-      return true;
-    }
-  }
-  return false;
 }

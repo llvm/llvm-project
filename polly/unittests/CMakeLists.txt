@@ -19,10 +19,6 @@ function(add_polly_unittest test_name)
   target_link_libraries(${test_name} PRIVATE Polly)
 endfunction()
 
-if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
-  add_compile_options("-Wno-suggest-override")
-endif()
-
 add_subdirectory(Isl)
 add_subdirectory(Flatten)
 add_subdirectory(DeLICM)

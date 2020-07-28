@@ -1408,7 +1408,7 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
     }
 
     int64_t child_offset = child_sp->GetByteOffset();
-    int64_t child_size = child_sp->GetByteSize();
+    int64_t child_size = child_sp->GetByteSize().getValueOr(0);
 
     if (offset >= child_offset && offset < (child_offset + child_size)) {
       return GetValueForOffset(frame, child_sp, offset - child_offset);
@@ -1441,8 +1441,8 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
   }
 
   if (offset >= 0 && uint64_t(offset) >= pointee->GetByteSize()) {
-    int64_t index = offset / pointee->GetByteSize();
-    offset = offset % pointee->GetByteSize();
+    int64_t index = offset / pointee->GetByteSize().getValueOr(1);
+    offset = offset % pointee->GetByteSize().getValueOr(1);
     const bool can_create = true;
     pointee = base->GetSyntheticArrayMember(index, can_create);
   }

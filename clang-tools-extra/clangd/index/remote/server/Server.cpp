@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Index.pb.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
+#include "index/Symbol.h"
 #include "index/remote/marshalling/Marshalling.h"
 #include "support/Logger.h"
+#include "support/Trace.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
@@ -36,6 +39,16 @@ llvm::cl::opt<std::string> IndexPath(llvm::cl::desc("<INDEX FILE>"),
 llvm::cl::opt<std::string> IndexRoot(llvm::cl::desc("<PROJECT ROOT>"),
                                      llvm::cl::Positional, llvm::cl::Required);
 
+llvm::cl::opt<std::string> TraceFile(
+    "trace-file",
+    llvm::cl::desc("Path to the file where tracer logs will be stored"));
+
+llvm::cl::opt<bool> PrettyPrint{
+    "pretty",
+    llvm::cl::desc("Pretty-print JSON output in the trace"),
+    llvm::cl::init(false),
+};
+
 llvm::cl::opt<std::string> ServerAddress(
     "server-address", llvm::cl::init("0.0.0.0:50051"),
     llvm::cl::desc("Address of the invoked server. Defaults to 0.0.0.0:50051"));
@@ -60,66 +73,90 @@ private:
   grpc::Status Lookup(grpc::ServerContext *Context,
                       const LookupRequest *Request,
                       grpc::ServerWriter<LookupReply> *Reply) override {
+    trace::Span Tracer(LookupRequest::descriptor()->name());
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
       elog("Can not parse LookupRequest from protobuf: {0}", Req.takeError());
       return grpc::Status::CANCELLED;
     }
-    Index->lookup(*Req, [&](const clangd::Symbol &Sym) {
-      auto SerializedSymbol = ProtobufMarshaller->toProtobuf(Sym);
-      if (!SerializedSymbol)
+    unsigned Sent = 0;
+    unsigned FailedToSend = 0;
+    Index->lookup(*Req, [&](const auto &Item) {
+      auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
+      if (!SerializedItem) {
+        ++FailedToSend;
         return;
+      }
       LookupReply NextMessage;
-      *NextMessage.mutable_stream_result() = *SerializedSymbol;
+      *NextMessage.mutable_stream_result() = *SerializedItem;
       Reply->Write(NextMessage);
+      ++Sent;
     });
     LookupReply LastMessage;
     LastMessage.set_final_result(true);
     Reply->Write(LastMessage);
+    SPAN_ATTACH(Tracer, "Sent", Sent);
+    SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
     return grpc::Status::OK;
   }
 
   grpc::Status FuzzyFind(grpc::ServerContext *Context,
                          const FuzzyFindRequest *Request,
                          grpc::ServerWriter<FuzzyFindReply> *Reply) override {
+    trace::Span Tracer(FuzzyFindRequest::descriptor()->name());
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
       elog("Can not parse FuzzyFindRequest from protobuf: {0}",
            Req.takeError());
       return grpc::Status::CANCELLED;
     }
-    bool HasMore = Index->fuzzyFind(*Req, [&](const clangd::Symbol &Sym) {
-      auto SerializedSymbol = ProtobufMarshaller->toProtobuf(Sym);
-      if (!SerializedSymbol)
+    unsigned Sent = 0;
+    unsigned FailedToSend = 0;
+    bool HasMore = Index->fuzzyFind(*Req, [&](const auto &Item) {
+      auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
+      if (!SerializedItem) {
+        ++FailedToSend;
         return;
+      }
       FuzzyFindReply NextMessage;
-      *NextMessage.mutable_stream_result() = *SerializedSymbol;
+      *NextMessage.mutable_stream_result() = *SerializedItem;
       Reply->Write(NextMessage);
+      ++Sent;
     });
     FuzzyFindReply LastMessage;
     LastMessage.set_final_result(HasMore);
     Reply->Write(LastMessage);
+    SPAN_ATTACH(Tracer, "Sent", Sent);
+    SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
     return grpc::Status::OK;
   }
 
   grpc::Status Refs(grpc::ServerContext *Context, const RefsRequest *Request,
                     grpc::ServerWriter<RefsReply> *Reply) override {
+    trace::Span Tracer(RefsRequest::descriptor()->name());
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
       elog("Can not parse RefsRequest from protobuf: {0}", Req.takeError());
       return grpc::Status::CANCELLED;
     }
-    bool HasMore = Index->refs(*Req, [&](const clangd::Ref &Reference) {
-      auto SerializedRef = ProtobufMarshaller->toProtobuf(Reference);
-      if (!SerializedRef)
+    unsigned Sent = 0;
+    unsigned FailedToSend = 0;
+    bool HasMore = Index->refs(*Req, [&](const auto &Item) {
+      auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
+      if (!SerializedItem) {
+        ++FailedToSend;
         return;
+      }
       RefsReply NextMessage;
-      *NextMessage.mutable_stream_result() = *SerializedRef;
+      *NextMessage.mutable_stream_result() = *SerializedItem;
       Reply->Write(NextMessage);
+      ++Sent;
     });
     RefsReply LastMessage;
     LastMessage.set_final_result(HasMore);
     Reply->Write(LastMessage);
+    SPAN_ATTACH(Tracer, "Sent", Sent);
+    SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
     return grpc::Status::OK;
   }
 
@@ -146,20 +183,44 @@ void runServer(std::unique_ptr<clangd::SymbolIndex> Index,
 } // namespace clangd
 } // namespace clang
 
+using clang::clangd::elog;
+
 int main(int argc, char *argv[]) {
   using namespace clang::clangd::remote;
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   if (!llvm::sys::path::is_absolute(IndexRoot)) {
-    llvm::errs() << "Index root should be an absolute path.\n";
+    elog("Index root should be an absolute path.");
     return -1;
   }
+
+  llvm::Optional<llvm::raw_fd_ostream> TracerStream;
+  std::unique_ptr<clang::clangd::trace::EventTracer> Tracer;
+  if (!TraceFile.empty()) {
+    std::error_code EC;
+    TracerStream.emplace(TraceFile, EC,
+                         llvm::sys::fs::FA_Read | llvm::sys::fs::FA_Write);
+    if (EC) {
+      TracerStream.reset();
+      elog("Error while opening trace file {0}: {1}", TraceFile, EC.message());
+    } else {
+      // FIXME(kirillbobyrev): Also create metrics tracer to track latency and
+      // accumulate other request statistics.
+      Tracer = clang::clangd::trace::createJSONTracer(*TracerStream,
+                                                      /*PrettyPrint=*/false);
+      clang::clangd::vlog("Successfully created a tracer.");
+    }
+  }
+
+  llvm::Optional<clang::clangd::trace::Session> TracingSession;
+  if (Tracer)
+    TracingSession.emplace(*Tracer);
 
   std::unique_ptr<clang::clangd::SymbolIndex> Index = openIndex(IndexPath);
 
   if (!Index) {
-    llvm::errs() << "Failed to open the index.\n";
+    elog("Failed to open the index.");
     return -1;
   }
 

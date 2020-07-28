@@ -330,11 +330,13 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       offset_ += *repeat;
     } else if (ch >= 'A' && ch <= 'Z') {
       int start{offset_ - 1};
-      CharType next{Capitalize(PeekNext())};
-      if (next >= 'A' && next <= 'Z') {
-        ++offset_;
-      } else {
-        next = '\0';
+      CharType next{'\0'};
+      if (ch != 'P') { // 1PE5.2 - comma not required (C1302)
+        CharType peek{Capitalize(PeekNext())};
+        if (peek >= 'A' && peek <= 'Z') {
+          next = peek;
+          ++offset_;
+        }
       }
       if (ch == 'E' ||
           (!next &&

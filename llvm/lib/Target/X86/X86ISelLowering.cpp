@@ -48420,10 +48420,14 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
          InOpcode == ISD::ZERO_EXTEND_VECTOR_INREG ||
          InOpcode == ISD::SIGN_EXTEND ||
          InOpcode == ISD::SIGN_EXTEND_VECTOR_INREG) &&
-        VT.is128BitVector() &&
-        InVec.getOperand(0).getSimpleValueType().is128BitVector()) {
+        (SizeInBits == 128 || SizeInBits == 256) &&
+        InVec.getOperand(0).getValueSizeInBits() >= SizeInBits) {
+      SDLoc DL(N);
+      SDValue Ext = InVec.getOperand(0);
+      if (Ext.getValueSizeInBits() > SizeInBits)
+        Ext = extractSubVector(Ext, 0, DAG, DL, SizeInBits);
       unsigned ExtOp = getOpcode_EXTEND_VECTOR_INREG(InOpcode);
-      return DAG.getNode(ExtOp, SDLoc(N), VT, InVec.getOperand(0));
+      return DAG.getNode(ExtOp, DL, VT, Ext);
     }
     if (InOpcode == ISD::VSELECT &&
         InVec.getOperand(0).getValueType().is256BitVector() &&
