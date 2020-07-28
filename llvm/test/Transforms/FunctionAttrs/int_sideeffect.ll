@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -functionattrs | FileCheck %s
+; RUN: opt -S < %s -function-attrs | FileCheck %s
 ; RUN: opt -S < %s -passes=function-attrs | FileCheck %s
 
 ; CHECK: Function Attrs

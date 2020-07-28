@@ -1,5 +1,5 @@
-; RUN: opt < %s -basic-aa -functionattrs -rpo-functionattrs -S | FileCheck %s 
-; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs),rpo-functionattrs' -S | FileCheck %s
+; RUN: opt < %s -basic-aa -function-attrs -rpo-function-attrs -S | FileCheck %s 
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs),rpo-function-attrs' -S | FileCheck %s
 
 ; CHECK: Function Attrs
 ; CHECK-SAME: norecurse nounwind readnone

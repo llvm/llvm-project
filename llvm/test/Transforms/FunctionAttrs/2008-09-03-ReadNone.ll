@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -functionattrs -S | FileCheck %s
+; RUN: opt < %s -basic-aa -function-attrs -S | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes=function-attrs -S | FileCheck %s
 
 @x = global i32 0
