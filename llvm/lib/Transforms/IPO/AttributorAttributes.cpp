@@ -1052,9 +1052,10 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
   // map, NewRVsMap.
   decltype(ReturnedValues) NewRVsMap;
 
-  auto HandleReturnValue = [&](Value *RV, SmallSetVector<ReturnInst *, 4> &RIs) {
-    LLVM_DEBUG(dbgs() << "[AAReturnedValues] Returned value: " << *RV
-                      << " by #" << RIs.size() << " RIs\n");
+  auto HandleReturnValue = [&](Value *RV,
+                               SmallSetVector<ReturnInst *, 4> &RIs) {
+    LLVM_DEBUG(dbgs() << "[AAReturnedValues] Returned value: " << *RV << " by #"
+                      << RIs.size() << " RIs\n");
     CallBase *CB = dyn_cast<CallBase>(RV);
     if (!CB || UnresolvedCalls.count(CB))
       return;
@@ -3424,7 +3425,6 @@ struct AADereferenceableFloating : AADereferenceableImpl {
         DerefBytes = DS.DerefBytesState.getAssumed();
         T.GlobalState &= DS.GlobalState;
       }
-
 
       // For now we do not try to "increase" dereferenceability due to negative
       // indices as we first have to come up with code to deal with loops and
