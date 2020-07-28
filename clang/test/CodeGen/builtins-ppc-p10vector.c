@@ -25,6 +25,66 @@ unsigned char uca;
 unsigned short usa;
 unsigned long long ulla;
 
+vector signed long long test_vec_mul_sll(void) {
+  // CHECK: mul <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_mul(vslla, vsllb);
+}
+
+vector unsigned long long test_vec_mul_ull(void) {
+  // CHECK: mul <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_mul(vulla, vullb);
+}
+
+vector signed int test_vec_div_si(void) {
+  // CHECK: sdiv <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_div(vsia, vsib);
+}
+
+vector unsigned int test_vec_div_ui(void) {
+  // CHECK: udiv <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_div(vuia, vuib);
+}
+
+vector signed long long test_vec_div_sll(void) {
+  // CHECK: sdiv <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_div(vslla, vsllb);
+}
+
+vector unsigned long long test_vec_div_ull(void) {
+  // CHECK: udiv <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_div(vulla, vullb);
+}
+
+vector signed int test_vec_mod_si(void) {
+  // CHECK: srem <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_mod(vsia, vsib);
+}
+
+vector unsigned int test_vec_mod_ui(void) {
+  // CHECK: urem <4 x i32>
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_mod(vuia, vuib);
+}
+
+vector signed long long test_vec_mod_sll(void) {
+  // CHECK: srem <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_mod(vslla, vsllb);
+}
+
+vector unsigned long long test_vec_mod_ull(void) {
+  // CHECK: urem <2 x i64>
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_mod(vulla, vullb);
+}
+
 vector unsigned long long test_vpdepd(void) {
   // CHECK: @llvm.ppc.altivec.vpdepd(<2 x i64>
   // CHECK-NEXT: ret <2 x i64>
