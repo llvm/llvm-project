@@ -3643,8 +3643,8 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       unsigned FieldBits = isSize? S.Context.getTypeSize(FieldType)
                                  : S.Context.getTypeAlign(FieldType);
       S.Diag(Field->getLocation(),
-          diag::warn_transparent_union_attribute_field_size_align)
-        << isSize << Field->getDeclName() << FieldBits;
+             diag::warn_transparent_union_attribute_field_size_align)
+          << isSize << *Field << FieldBits;
       unsigned FirstBits = isSize? FirstSize : FirstAlign;
       S.Diag(FirstField->getLocation(),
              diag::note_transparent_union_first_field_size_align)

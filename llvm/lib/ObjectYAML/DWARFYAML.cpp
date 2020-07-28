@@ -246,6 +246,15 @@ template <typename EntryType>
 void MappingTraits<DWARFYAML::ListEntries<EntryType>>::mapping(
     IO &IO, DWARFYAML::ListEntries<EntryType> &ListEntries) {
   IO.mapOptional("Entries", ListEntries.Entries);
+  IO.mapOptional("Content", ListEntries.Content);
+}
+
+template <typename EntryType>
+StringRef MappingTraits<DWARFYAML::ListEntries<EntryType>>::validate(
+    IO &IO, DWARFYAML::ListEntries<EntryType> &ListEntries) {
+  if (ListEntries.Entries && ListEntries.Content)
+    return "Entries and Content can't be used together";
+  return StringRef();
 }
 
 template <typename EntryType>

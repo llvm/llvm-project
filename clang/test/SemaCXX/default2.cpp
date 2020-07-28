@@ -119,7 +119,7 @@ class C2 {
 
 template <typename T> class C3;
 template <> class C3<int> {
-  static void g(int = f()); // expected-error {{use of default argument to function 'f' that is declared later in class 'C3'}}
+  static void g(int = f()); // expected-error {{use of default argument to function 'f' that is declared later in class 'C3<int>'}}
   static int f(int = 10); // expected-note {{default argument declared here}}
 };
 

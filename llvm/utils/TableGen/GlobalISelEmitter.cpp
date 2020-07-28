@@ -2628,12 +2628,14 @@ protected:
   unsigned TempRegID;
   const CodeGenSubRegIndex *SubRegIdx;
   bool IsDef;
+  bool IsDead;
 
 public:
   TempRegRenderer(unsigned InsnID, unsigned TempRegID, bool IsDef = false,
-                  const CodeGenSubRegIndex *SubReg = nullptr)
+                  const CodeGenSubRegIndex *SubReg = nullptr,
+                  bool IsDead = false)
       : OperandRenderer(OR_Register), InsnID(InsnID), TempRegID(TempRegID),
-        SubRegIdx(SubReg), IsDef(IsDef) {}
+        SubRegIdx(SubReg), IsDef(IsDef), IsDead(IsDead) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_TempRegister;
@@ -2650,9 +2652,13 @@ public:
           << MatchTable::Comment("TempRegID") << MatchTable::IntValue(TempRegID)
           << MatchTable::Comment("TempRegFlags");
 
-    if (IsDef)
-      Table << MatchTable::NamedValue("RegState::Define");
-    else
+    if (IsDef) {
+      SmallString<32> RegFlags;
+      RegFlags += "RegState::Define";
+      if (IsDead)
+        RegFlags += "|RegState::Dead";
+      Table << MatchTable::NamedValue(RegFlags);
+    } else
       Table << MatchTable::IntValue(0);
 
     if (SubRegIdx)
@@ -3394,7 +3400,11 @@ private:
   Expected<action_iterator>
   createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
                             const TreePatternNode *Dst);
-  void importExplicitDefRenderers(BuildMIAction &DstMIBuilder);
+
+  Expected<action_iterator>
+  importExplicitDefRenderers(action_iterator InsertPt, RuleMatcher &M,
+                             BuildMIAction &DstMIBuilder,
+                             const TreePatternNode *Dst);
 
   Expected<action_iterator>
   importExplicitUseRenderers(action_iterator InsertPt, RuleMatcher &M,
@@ -4220,7 +4230,9 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysInput.first);
   }
 
-  importExplicitDefRenderers(DstMIBuilder);
+  if (auto Error = importExplicitDefRenderers(InsertPt, M, DstMIBuilder, Dst)
+                       .takeError())
+    return std::move(Error);
 
   if (auto Error = importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst)
                        .takeError())
@@ -4372,13 +4384,39 @@ Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
                                        DstI);
 }
 
-void GlobalISelEmitter::importExplicitDefRenderers(
-    BuildMIAction &DstMIBuilder) {
+Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
+    action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
+    const TreePatternNode *Dst) {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
-  for (unsigned I = 0; I < DstI->Operands.NumDefs; ++I) {
-    const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[I];
-    DstMIBuilder.addRenderer<CopyRenderer>(DstIOperand.Name);
+  const unsigned NumDefs = DstI->Operands.NumDefs;
+  if (NumDefs == 0)
+    return InsertPt;
+
+  DstMIBuilder.addRenderer<CopyRenderer>(DstI->Operands[0].Name);
+
+  // Some instructions have multiple defs, but are missing a type entry
+  // (e.g. s_cc_out operands).
+  if (Dst->getExtTypes().size() < NumDefs)
+    return failedImport("unhandled discarded def");
+
+  // Patterns only handle a single result, so any result after the first is an
+  // implicitly dead def.
+  for (unsigned I = 1; I < NumDefs; ++I) {
+    const TypeSetByHwMode &ExtTy = Dst->getExtType(I);
+    if (!ExtTy.isMachineValueType())
+      return failedImport("unsupported typeset");
+
+    auto OpTy = MVTToLLT(ExtTy.getMachineValueType().SimpleTy);
+    if (!OpTy)
+      return failedImport("unsupported type");
+
+    unsigned TempRegID = M.allocateTempRegID();
+    InsertPt =
+      M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+    DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true, nullptr, true);
   }
+
+  return InsertPt;
 }
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
@@ -4814,8 +4852,8 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   auto &DstI = Target.getInstruction(DstOp);
   StringRef DstIName = DstI.TheDef->getName();
 
-  if (DstI.Operands.NumDefs != Src->getExtTypes().size())
-    return failedImport("Src pattern results and dst MI defs are different (" +
+  if (DstI.Operands.NumDefs < Src->getExtTypes().size())
+    return failedImport("Src pattern result has more defs than dst MI (" +
                         to_string(Src->getExtTypes().size()) + " def(s) vs " +
                         to_string(DstI.Operands.NumDefs) + " def(s))");
 

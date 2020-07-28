@@ -114,10 +114,6 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   option(CLANG_ENABLE_BOOTSTRAP "Generate the clang bootstrap target" OFF)
   option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
 
-  if(LLVM_ENABLE_ZLIB)
-    find_package(ZLIB)
-  endif()
-
   include(AddLLVM)
   include(TableGen)
   include(HandleLLVMOptions)
@@ -756,6 +752,14 @@ if (CLANG_ENABLE_BOOTSTRAP)
     -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/${C_COMPILER}
     -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/${C_COMPILER}
     -DCMAKE_ASM_COMPILER_ID=Clang)
+
+  # cmake requires CMAKE_LINKER to be specified if the compiler is MSVC-like,
+  # otherwise it defaults the linker to be link.exe.
+  if(BOOTSTRAP_LLVM_ENABLE_LLD)
+    if((WIN32 AND NOT BOOTSTRAP_CMAKE_SYSTEM_NAME) OR BOOTSTRAP_CMAKE_SYSTEM_NAME STREQUAL "Windows")
+      set(${CLANG_STAGE}_LINKER -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/lld-link${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
+  endif()
 
   if(BOOTSTRAP_CMAKE_SYSTEM_NAME)
     set(${CLANG_STAGE}_CONFIG -DLLVM_CONFIG_PATH=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-config)

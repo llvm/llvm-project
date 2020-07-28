@@ -3757,11 +3757,6 @@ static std::string getSectionTypeString(unsigned Machine, unsigned Type) {
   if (Name == "SHT_SYMTAB_SHNDX")
     return "SYMTAB SECTION INDICES";
 
-  // The SHT_ANDROID_RELR is special, all other SHT_ANDROID_* types are handled
-  // in the common block below.
-  if (Name == "SHT_ANDROID_RELR")
-    return "RELR";
-
   if (Name.startswith("SHT_"))
     return Name.drop_front(4).str();
   return getSectionTypeOffsetString(Type);
@@ -3929,21 +3924,10 @@ void GNUStyle<ELFT>::printSymbol(const ELFO *Obj, const Elf_Sym *Symbol,
                                  const Elf_Sym *FirstSym,
                                  Optional<StringRef> StrTable, bool IsDynamic,
                                  bool NonVisibilityBitsUsed) {
-  static int Idx = 0;
-  static bool Dynamic = true;
-
-  // If this function was called with a different value from IsDynamic
-  // from last call, happens when we move from dynamic to static symbol
-  // table, "Num" field should be reset.
-  if (!Dynamic != !IsDynamic) {
-    Idx = 0;
-    Dynamic = false;
-  }
-
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
   Field Fields[8] = {0,         8,         17 + Bias, 23 + Bias,
                      31 + Bias, 38 + Bias, 48 + Bias, 51 + Bias};
-  Fields[0].Str = to_string(format_decimal(Idx++, 6)) + ":";
+  Fields[0].Str = to_string(format_decimal(Symbol - FirstSym, 6)) + ":";
   Fields[1].Str = to_string(
       format_hex_no_prefix(Symbol->st_value, ELFT::Is64Bits ? 16 : 8));
   Fields[2].Str = to_string(format_decimal(Symbol->st_size, 5));

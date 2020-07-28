@@ -2117,9 +2117,11 @@ public:
     /// resolved. ActOnNameClassifiedAsDependentNonType should be called to
     /// convert the result to an expression.
     NC_DependentNonType,
-    /// The name was classified as a non-type, and an expression representing
-    /// that name has been formed.
-    NC_ContextIndependentExpr,
+    /// The name was classified as an overload set, and an expression
+    /// representing that overload set has been formed.
+    /// ActOnNameClassifiedAsOverloadSet should be called to form a suitable
+    /// expression referencing the overload set.
+    NC_OverloadSet,
     /// The name was classified as a template whose specializations are types.
     NC_TypeTemplate,
     /// The name was classified as a variable template name.
@@ -2156,8 +2158,8 @@ public:
       return NameClassification(NC_Unknown);
     }
 
-    static NameClassification ContextIndependentExpr(ExprResult E) {
-      NameClassification Result(NC_ContextIndependentExpr);
+    static NameClassification OverloadSet(ExprResult E) {
+      NameClassification Result(NC_OverloadSet);
       Result.Expr = E;
       return Result;
     }
@@ -2209,7 +2211,7 @@ public:
     NameClassificationKind getKind() const { return Kind; }
 
     ExprResult getExpression() const {
-      assert(Kind == NC_ContextIndependentExpr);
+      assert(Kind == NC_OverloadSet);
       return Expr;
     }
 
@@ -2289,6 +2291,8 @@ public:
                                           NamedDecl *Found,
                                           SourceLocation NameLoc,
                                           const Token &NextToken);
+  /// Act on the result of classifying a name as an overload set.
+  ExprResult ActOnNameClassifiedAsOverloadSet(Scope *S, Expr *OverloadSet);
 
   /// Describes the detailed kind of a template name. Used in diagnostics.
   enum class TemplateNameKindForDiagnostics {
@@ -4846,11 +4850,10 @@ public:
       Expr *baseObjectExpr = nullptr,
       SourceLocation opLoc = SourceLocation());
 
-  ExprResult BuildPossibleImplicitMemberExpr(const CXXScopeSpec &SS,
-                                             SourceLocation TemplateKWLoc,
-                                             LookupResult &R,
-                                const TemplateArgumentListInfo *TemplateArgs,
-                                             const Scope *S);
+  ExprResult BuildPossibleImplicitMemberExpr(
+      const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
+      const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
+      UnresolvedLookupExpr *AsULE = nullptr);
   ExprResult BuildImplicitMemberExpr(const CXXScopeSpec &SS,
                                      SourceLocation TemplateKWLoc,
                                      LookupResult &R,

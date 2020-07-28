@@ -495,6 +495,9 @@ void LinkerDriver::main(ArrayRef<const char *> argsArr) {
       tar = std::move(*errOrWriter);
       tar->append("response.txt", createResponseFile(args));
       tar->append("version.txt", getLLDVersion() + "\n");
+      StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
+      if (!ltoSampleProfile.empty())
+        readFile(ltoSampleProfile);
     } else {
       error("--reproduce: " + toString(errOrWriter.takeError()));
     }

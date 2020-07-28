@@ -41,10 +41,10 @@
 # +----------+
 # |scratchreg|  // x29 is used as scratch reg.
 # +----------+
-# | %fixed-  |  // scalable SVE object of n * 18 bytes, aligned to 16 bytes,
-# |  stack.0 |  // to be materialized with 2*ADDVL (<=> 2 * n * 16bytes)
+# | %stack.0 |  // scalable SVE object of n * 18 bytes, aligned to 16 bytes,
+# |          |  // to be materialized with 2*ADDVL (<=> 2 * n * 16bytes)
 # +----------+
-# | %stack.0 |  // not scalable
+# | %stack.1 |  // not scalable
 # +----------+ <- SP
 
 # CHECK-LABEL: name: test_allocate_sve
@@ -60,10 +60,9 @@
 # CHECK-NEXT: $sp, $[[SCRATCH]] = frame-destroy LDRXpost $sp, 16
 # CHECK-NEXT: RET_ReallyLR
 name:            test_allocate_sve
-fixedStack:
-  - { id: 0, stack-id: sve-vec, size: 18, alignment: 2, offset: -18 }
 stack:
-  - { id: 0, stack-id: default, size: 16, alignment: 8 }
+  - { id: 0, stack-id: sve-vec, size: 18, alignment: 2 }
+  - { id: 1, stack-id: default, size: 16, alignment: 8 }
 body:             |
   bb.0.entry:
     RET_ReallyLR
@@ -73,10 +72,9 @@ body:             |
 # | x20, x21 |  // callee saves
 # |scratchreg|  // x29 is used as scratch reg.
 # +----------+
-# | %fixed-  |  // scalable objects
-# |  stack.0 |
+# | %stack.0 |  // scalable objects
 # +----------+
-# | %stack.0 |  // not scalable
+# | %stack.1 |  // not scalable
 # +----------+ <- SP
 
 # CHECK-LABEL: name: test_allocate_sve_gpr_callee_saves
@@ -95,10 +93,9 @@ body:             |
 # CHECK-NEXT: $sp, $[[SCRATCH]] = frame-destroy LDRXpost $sp, 32
 # CHECK-NEXT: RET_ReallyLR
 name:            test_allocate_sve_gpr_callee_saves
-fixedStack:
-  - { id: 0, stack-id: sve-vec, size: 18, alignment: 2, offset: -18 }
 stack:
-  - { id: 0, stack-id: default, size: 16, alignment: 8 }
+  - { id: 0, stack-id: sve-vec, size: 18, alignment: 2 }
+  - { id: 1, stack-id: default, size: 16, alignment: 8 }
 body:             |
   bb.0.entry:
     $x20 = IMPLICIT_DEF
@@ -109,11 +106,10 @@ body:             |
 # +----------+
 # |  lr, fp  |  // frame record
 # +----------+ <- FP
-# | %fixed-  |  // scalable objects
-# |  stack.0 |
+# | %stack.0 |  // scalable objects
 # +----------+
 # |//////////|  // alignment gap
-# | %stack.0 |  // not scalable
+# | %stack.1 |  // not scalable
 # +----------+ <- SP
 # CHECK-LABEL: name: test_allocate_sve_gpr_realigned
 # CHECK:       stackSize: 32
@@ -128,10 +124,9 @@ body:             |
 # CHECK-NEXT: $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2
 # CHECK-NEXT: RET_ReallyLR
 name:            test_allocate_sve_gpr_realigned
-fixedStack:
-  - { id: 0, stack-id: sve-vec, size: 18, alignment: 2, offset: -18 }
 stack:
-  - { id: 0, stack-id: default, size: 16, alignment: 32 }
+  - { id: 0, stack-id: sve-vec, size: 18, alignment: 2  }
+  - { id: 1, stack-id: default, size: 16, alignment: 32 }
 body:             |
   bb.0.entry:
     RET_ReallyLR
@@ -144,7 +139,7 @@ body:             |
 # | %stack.1 |  // scalable @ SP + 16b + 16 scalable bytes
 # | %stack.2 |  // scalable @ SP + 16b + 14 scalable bytes
 # +----------+
-# | %stack.0 |  // not scalable
+# | %stack.3 |  // not scalable
 # +----------+ <- SP
 
 # CHECK-LABEL: name: test_address_sve
@@ -169,19 +164,18 @@ body:             |
 name:            test_address_sve
 frameInfo:
   maxAlignment:  16
-fixedStack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8, offset: -16 }
-  - { id: 1, stack-id: sve-vec, size: 16, alignment: 8, offset: -32 }
-  - { id: 2, stack-id: sve-vec, size:  2, alignment: 2, offset: -34 }
 stack:
-  - { id: 0, stack-id: default, size: 16, alignment: 8 }
+  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8 }
+  - { id: 1, stack-id: sve-vec, size: 16, alignment: 8 }
+  - { id: 2, stack-id: sve-vec, size:  2, alignment: 2 }
+  - { id: 3, stack-id: default, size: 16, alignment: 8 }
 body:             |
   bb.0.entry:
     liveins: $z0, $z1, $p0
 
-    STR_ZXI $z0, %fixed-stack.0, 0
-    STR_ZXI $z1, %fixed-stack.1, 0
-    STR_PXI $p0, %fixed-stack.2, 0
+    STR_ZXI $z0, %stack.0, 0
+    STR_ZXI $z1, %stack.1, 0
+    STR_PXI $p0, %stack.2, 0
 
     RET_ReallyLR
 ---
@@ -190,11 +184,11 @@ body:             |
 # | x20, x21  |  // callee saves
 # |  lr, fp   |  // frame record
 # +-----------+ <- FP
-# | %fstack.0 |  // scalable @ FP - 16 scalable bytes
-# | %fstack.1 |  // scalable @ FP - 32 scalable bytes
-# | %fstack.2 |  // scalable @ FP - 34 scalable bytes
+# | %stack.0  |  // scalable @ FP - 16 scalable bytes
+# | %stack.1  |  // scalable @ FP - 32 scalable bytes
+# | %stack.2  |  // scalable @ FP - 34 scalable bytes
 # +-----------+
-# | %stack.0  |  // not scalable
+# | %stack.3  |  // not scalable
 # +-----------+ <- SP
 
 # CHECK-LABEL: name: test_address_sve_fp
@@ -218,19 +212,18 @@ name:            test_address_sve_fp
 frameInfo:
   maxAlignment:  16
   isFrameAddressTaken: true
-fixedStack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8, offset: -16 }
-  - { id: 1, stack-id: sve-vec, size: 16, alignment: 8, offset: -32 }
-  - { id: 2, stack-id: sve-vec, size:  2, alignment: 2, offset: -34 }
 stack:
-  - { id: 0, stack-id: default, size: 16, alignment: 8 }
+  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8 }
+  - { id: 1, stack-id: sve-vec, size: 16, alignment: 8 }
+  - { id: 2, stack-id: sve-vec, size:  2, alignment: 2 }
+  - { id: 3, stack-id: default, size: 16, alignment: 8 }
 body:             |
   bb.0.entry:
     liveins: $z0, $z1, $p0
 
-    STR_ZXI $z0, %fixed-stack.0, 0
-    STR_ZXI $z1, %fixed-stack.1, 0
-    STR_PXI $p0, %fixed-stack.2, 0
+    STR_ZXI $z0, %stack.0, 0
+    STR_ZXI $z1, %stack.1, 0
+    STR_PXI $p0, %stack.2, 0
 
     RET_ReallyLR
 ---
@@ -240,9 +233,9 @@ body:             |
 # +-----------+
 # |callee save|  // register saved as scratch reg.
 # +-----------+
-# | %fstack.1 |  // vector of 16 scalable bytes
+# | %stack.0  |  // vector of 16 scalable bytes
 # +---------- +
-# | %stack.0  |  // not scalable, 16 bytes
+# | %stack.1  |  // not scalable, 16 bytes
 # +-----------+ <- SP
 # CHECK-LABEL: name: test_stack_arg_sve
 # CHECK:       stackSize: 32
@@ -262,9 +255,9 @@ body:             |
 name:             test_stack_arg_sve
 fixedStack:
   - { id: 0, stack-id: default, size: 16, alignment: 16, offset: 0 }
-  - { id: 1, stack-id: sve-vec, size: 16, alignment: 16, offset: -16 }
 stack:
-  - { id: 0, stack-id: default, size: 16, alignment: 16 }
+  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 1, stack-id: default, size: 16, alignment: 16 }
 body:             |
   bb.0.entry:
     liveins: $x0
@@ -320,17 +313,17 @@ body:             |
 name:            test_address_sve_out_of_range
 frameInfo:
   maxAlignment:  16
-fixedStack:
-  - { id: 0, stack-id: sve-vec, size:   16, alignment: 16, offset: -16 }
-  - { id: 1, stack-id: sve-vec, size: 3584, alignment: 16, offset: -3600 }
-  - { id: 2, stack-id: sve-vec, size:  512, alignment: 16, offset: -4112 }
+stack:
+  - { id: 0, stack-id: sve-vec, size:   16, alignment: 16 }
+  - { id: 1, stack-id: sve-vec, size: 3584, alignment: 16 }
+  - { id: 2, stack-id: sve-vec, size:  512, alignment: 16 }
 
 body:             |
   bb.0.entry:
     liveins: $z0, $p0
 
-    STR_ZXI $z0, %fixed-stack.0, 0
-    STR_PXI $p0, %fixed-stack.1, 0
+    STR_ZXI $z0, %stack.0, 0
+    STR_PXI $p0, %stack.1, 0
 
     RET_ReallyLR
 ---
@@ -340,11 +333,11 @@ body:             |
 # access from the FP when there are also SVE objects on the stack.
 #
 # +----------+ <- FP
-# | %fstack.0|  // 16 scalable bytes
+# | %stack.0 |  // 16 scalable bytes
 # +----------+ <- @FP - 16 scalable bytes
-# | %stack.0 |  // 16 bytes
+# | %stack.1 |  // 16 bytes
 # +----------+ <- @BP
-# : %stack.1 :  // variable length
+# : %stack.2 :  // variable length
 # +----------+ <- SP
 
 # CHECK-LABEL: name: test_address_gpr_vla
@@ -354,16 +347,15 @@ body:             |
 name:            test_address_gpr_vla
 frameInfo:
   maxAlignment:  16
-fixedStack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8, offset: -16 }
 stack:
-  - { id: 0, stack-id: default, size: 16, alignment: 8 }
-  - { id: 1, stack-id: default, type: variable-sized }
+  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8 }
+  - { id: 1, stack-id: default, size: 16, alignment: 8 }
+  - { id: 2, stack-id: default, type: variable-sized }
 body:             |
   bb.0.entry:
     liveins: $xzr
 
-    STRXui $xzr, %stack.0, 0
+    STRXui $xzr, %stack.1, 0
 
     RET_ReallyLR
 ---
@@ -429,7 +421,7 @@ body:             |
 # CHECK-LABEL: name: save_restore_sve
 # CHECK: $sp = frame-setup STPXpre killed ${{[a-z0-9]+}}, killed $x21, $sp, -4
 # CHECK: frame-setup STPXi killed $x20, killed $x19, $sp, 2
-# CHECK: $sp = frame-setup ADDVL_XXI $sp, -19
+# CHECK: $sp = frame-setup ADDVL_XXI $sp, -18
 # CHECK: frame-setup STR_PXI killed $p15, $sp, 4
 # CHECK: frame-setup STR_PXI killed $p14, $sp, 5
 # CHECK: frame-setup STR_PXI killed $p5, $sp, 14
@@ -438,9 +430,11 @@ body:             |
 # CHECK: frame-setup STR_ZXI killed $z22, $sp, 3
 # CHECK: frame-setup STR_ZXI killed $z9, $sp, 16
 # CHECK: frame-setup STR_ZXI killed $z8, $sp, 17
+# CHECK: $sp = frame-setup ADDVL_XXI $sp, -1
 # CHECK: $sp = frame-setup SUBXri $sp, 32, 0
 
 # CHECK: $sp = frame-destroy ADDXri $sp, 32, 0
+# CHECK: $sp = frame-destroy ADDVL_XXI $sp, 1
 # CHECK: $p15 = frame-destroy LDR_PXI $sp, 4
 # CHECK: $p14 = frame-destroy LDR_PXI $sp, 5
 # CHECK: $p5 = frame-destroy LDR_PXI $sp, 14
@@ -449,15 +443,14 @@ body:             |
 # CHECK: $z22 = frame-destroy LDR_ZXI $sp, 3
 # CHECK: $z9 = frame-destroy LDR_ZXI $sp, 16
 # CHECK: $z8 = frame-destroy LDR_ZXI $sp, 17
-# CHECK: $sp = frame-destroy ADDVL_XXI $sp, 19
+# CHECK: $sp = frame-destroy ADDVL_XXI $sp, 18
 # CHECK: $x20, $x19 = frame-destroy LDPXi $sp, 2
 # CHECK: $sp, ${{[a-z0-9]+}}, $x21 = frame-destroy LDPXpost $sp, 4
 # CHECK: RET_ReallyLR
 name: save_restore_sve
-fixedStack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16, offset: -16 }
 stack:
-  - { id: 0, stack-id: default, size: 32, alignment: 16 }
+  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 1, stack-id: default, size: 32, alignment: 16 }
 body:             |
   bb.0.entry:
 
@@ -494,7 +487,7 @@ body:             |
 # CHECK-LABEL: name: save_restore_sve_realign
 # CHECK:      $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2
 # CHECK-NEXT: $fp = frame-setup ADDXri $sp, 0, 0
-# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -19
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -18
 # CHECK-NEXT: STR_PXI killed $p15, $sp, 4
 # CHECK-NEXT: STR_PXI killed $p14, $sp, 5
 # CHECK:      STR_PXI killed $p5, $sp, 14
@@ -503,10 +496,11 @@ body:             |
 # CHECK-NEXT: STR_ZXI killed $z22, $sp, 3
 # CHECK:      STR_ZXI killed $z9, $sp, 16
 # CHECK-NEXT: STR_ZXI killed $z8, $sp, 17
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1
 # CHECK-NEXT: $[[TMP:x[0-9]+]] = frame-setup SUBXri $sp, 16, 0
 # CHECK-NEXT: $sp = ANDXri killed $[[TMP]]
 
-# CHECK:      $sp = frame-destroy ADDVL_XXI $fp, -19
+# CHECK:      $sp = frame-destroy ADDVL_XXI $fp, -18
 # CHECK-NEXT: $p15 = frame-destroy LDR_PXI $sp, 4
 # CHECK-NEXT: $p14 = frame-destroy LDR_PXI $sp, 5
 # CHECK:      $p5 = frame-destroy LDR_PXI $sp, 14
@@ -519,10 +513,9 @@ body:             |
 # CHECK-NEXT: $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2
 # CHECK-NEXT: RET_ReallyLR
 name: save_restore_sve_realign
-fixedStack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16, offset: -16 }
 stack:
-  - { id: 0, stack-id: default, size: 16, alignment: 32 }
+  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 1, stack-id: default, size: 16, alignment: 32 }
 body:             |
   bb.0.entry:
 
@@ -580,7 +573,7 @@ body:             |
 # CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$z23',
 # CHECK:        - { id: 8, name: '', type: spill-slot, offset: -34, size: 2, alignment: 2,
 # CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$p4',
-# CHECK:        - { id: 9, name: '', type: spill-slot, offset: -48, size: 2, alignment: 16,
+# CHECK:        - { id: 9, name: '', type: spill-slot, offset: -36, size: 2, alignment: 2,
 # CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$p15',
 # CHECK:        - { id: 10, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
 # CHECK-NEXT:       stack-id: default, callee-saved-register: '$fp',

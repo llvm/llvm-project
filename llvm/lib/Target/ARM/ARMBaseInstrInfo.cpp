@@ -537,6 +537,18 @@ bool ARMBaseInstrInfo::PredicateInstruction(
     MachineOperand &PMO = MI.getOperand(PIdx);
     PMO.setImm(Pred[0].getImm());
     MI.getOperand(PIdx+1).setReg(Pred[1].getReg());
+
+    // Thumb 1 arithmetic instructions do not set CPSR when executed inside an
+    // IT block. This affects how they are printed.
+    const MCInstrDesc &MCID = MI.getDesc();
+    if (MCID.TSFlags & ARMII::ThumbArithFlagSetting) {
+      assert(MCID.OpInfo[1].isOptionalDef() && "CPSR def isn't expected operand");
+      assert((MI.getOperand(1).isDead() ||
+              MI.getOperand(1).getReg() != ARM::CPSR) &&
+             "if conversion tried to stop defining used CPSR");
+      MI.getOperand(1).setReg(ARM::NoRegister);
+    }
+
     return true;
   }
   return false;

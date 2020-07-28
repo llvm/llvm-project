@@ -18,6 +18,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
 #include <vector>
@@ -189,7 +190,8 @@ struct RnglistEntry {
 };
 
 template <typename EntryType> struct ListEntries {
-  std::vector<EntryType> Entries;
+  Optional<std::vector<EntryType>> Entries;
+  Optional<yaml::BinaryRef> Content;
 };
 
 template <typename EntryType> struct ListTable {
@@ -328,6 +330,8 @@ struct MappingTraits<DWARFYAML::ListTable<EntryType>> {
 template <typename EntryType>
 struct MappingTraits<DWARFYAML::ListEntries<EntryType>> {
   static void mapping(IO &IO, DWARFYAML::ListEntries<EntryType> &ListEntries);
+  static StringRef validate(IO &IO,
+                            DWARFYAML::ListEntries<EntryType> &ListEntries);
 };
 
 template <> struct MappingTraits<DWARFYAML::RnglistEntry> {

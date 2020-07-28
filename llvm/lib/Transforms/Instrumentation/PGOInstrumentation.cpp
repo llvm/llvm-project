@@ -1020,7 +1020,8 @@ public:
         FreqAttr(FFA_Normal), IsCS(IsCS) {}
 
   // Read counts for the instrumented BB from profile.
-  bool readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros);
+  bool readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
+                    bool &AllMinusOnes);
 
   // Populate the counts for all BBs.
   void populateCounters();
@@ -1203,7 +1204,8 @@ void PGOUseFunc::setEdgeCount(DirectEdges &Edges, uint64_t Value) {
 // Read the profile from ProfileFileName and assign the value to the
 // instrumented BB and the edges. This function also updates ProgramMaxCount.
 // Return true if the profile are successfully read, and false on errors.
-bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros) {
+bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
+                              bool &AllMinusOnes) {
   auto &Ctx = M->getContext();
   Expected<InstrProfRecord> Result =
       PGOReader->getInstrProfRecord(FuncInfo.FuncName, FuncInfo.FunctionHash);
@@ -1246,10 +1248,13 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros)
 
   IsCS ? NumOfCSPGOFunc++ : NumOfPGOFunc++;
   LLVM_DEBUG(dbgs() << CountFromProfile.size() << " counts\n");
+  AllMinusOnes = (CountFromProfile.size() > 0);
   uint64_t ValueSum = 0;
   for (unsigned I = 0, S = CountFromProfile.size(); I < S; I++) {
     LLVM_DEBUG(dbgs() << "  " << I << ": " << CountFromProfile[I] << "\n");
     ValueSum += CountFromProfile[I];
+    if (CountFromProfile[I] != (uint64_t)-1)
+      AllMinusOnes = false;
   }
   AllZeros = (ValueSum == 0);
 
@@ -1657,13 +1662,27 @@ static bool annotateAllFunctions(
     SplitIndirectBrCriticalEdges(F, BPI, BFI);
     PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, PSI, IsCS,
                     InstrumentFuncEntry);
+    // When AllMinusOnes is true, it means the profile for the function
+    // is unrepresentative and this function is actually hot. Set the
+    // entry count of the function to be multiple times of hot threshold
+    // and drop all its internal counters.
+    bool AllMinusOnes = false;
     bool AllZeros = false;
-    if (!Func.readCounters(PGOReader.get(), AllZeros))
+    if (!Func.readCounters(PGOReader.get(), AllZeros, AllMinusOnes))
       continue;
     if (AllZeros) {
       F.setEntryCount(ProfileCount(0, Function::PCT_Real));
       if (Func.getProgramMaxCount() != 0)
         ColdFunctions.push_back(&F);
+      continue;
+    }
+    const unsigned MultiplyFactor = 3;
+    if (AllMinusOnes) {
+      uint64_t HotThreshold = PSI->getHotCountThreshold();
+      if (HotThreshold)
+        F.setEntryCount(
+            ProfileCount(HotThreshold * MultiplyFactor, Function::PCT_Real));
+      HotFunctions.push_back(&F);
       continue;
     }
     Func.populateCounters();

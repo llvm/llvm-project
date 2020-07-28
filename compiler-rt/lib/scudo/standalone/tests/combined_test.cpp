@@ -78,7 +78,7 @@ template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
 
 template <class Config> static void testAllocator() {
   using AllocatorT = TestAllocator<Config>;
-  auto Allocator = std::make_unique<AllocatorT>();
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   EXPECT_FALSE(Allocator->isOwned(&Mutex));
   EXPECT_FALSE(Allocator->isOwned(&Allocator));
@@ -352,7 +352,7 @@ template <typename AllocatorT> static void stressAllocator(AllocatorT *A) {
 
 template <class Config> static void testAllocatorThreaded() {
   using AllocatorT = TestAllocator<Config>;
-  auto Allocator = std::make_unique<AllocatorT>();
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
     Threads[I] = std::thread(stressAllocator<AllocatorT>, Allocator.get());
@@ -399,7 +399,7 @@ struct DeathConfig {
 
 TEST(ScudoCombinedTest, DeathCombined) {
   using AllocatorT = TestAllocator<DeathConfig>;
-  auto Allocator = std::make_unique<AllocatorT>();
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   const scudo::uptr Size = 1000U;
   void *P = Allocator->allocate(Size, Origin);
@@ -434,7 +434,7 @@ TEST(ScudoCombinedTest, DeathCombined) {
 // operation without issue.
 TEST(ScudoCombinedTest, ReleaseToOS) {
   using AllocatorT = TestAllocator<DeathConfig>;
-  auto Allocator = std::make_unique<AllocatorT>();
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   Allocator->releaseToOS();
 }
@@ -443,7 +443,7 @@ TEST(ScudoCombinedTest, ReleaseToOS) {
 // fulfill the allocation through a larger size class.
 TEST(ScudoCombinedTest, FullRegion) {
   using AllocatorT = TestAllocator<DeathConfig>;
-  auto Allocator = std::make_unique<AllocatorT>();
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   std::vector<void *> V;
   scudo::uptr FailedAllocationsCount = 0;
@@ -474,7 +474,7 @@ TEST(ScudoCombinedTest, FullRegion) {
 TEST(ScudoCombinedTest, OddEven) {
   using AllocatorT = TestAllocator<scudo::AndroidConfig>;
   using SizeClassMap = AllocatorT::PrimaryT::SizeClassMap;
-  auto Allocator = std::make_unique<AllocatorT>();
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   if (!Allocator->useMemoryTagging())
     return;

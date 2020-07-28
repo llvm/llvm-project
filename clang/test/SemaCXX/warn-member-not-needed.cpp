@@ -4,8 +4,8 @@ namespace {
   class A {
     void g() {} // expected-warning {{member function 'g' is not needed and will not be emitted}}
     template <typename T> void gt(T) {}
-    template <> void gt<int>(int) {} // expected-warning {{member function 'gt' is not needed and will not be emitted}}
-    template <> void gt(float) {}    // expected-warning {{member function 'gt' is not needed and will not be emitted}}
+    template <> void gt<int>(int) {} // expected-warning {{member function 'gt<int>' is not needed and will not be emitted}}
+    template <> void gt(float) {}    // expected-warning {{member function 'gt<float>' is not needed and will not be emitted}}
 
     template <typename T>
     void foo() {

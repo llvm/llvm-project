@@ -14,6 +14,7 @@
 #include "llvm/Support/Path.h"
 #include "gtest/gtest.h"
 #include <stdlib.h>
+#include <thread>
 #if defined(__APPLE__)
 # include <crt_externs.h>
 #elif !defined(_MSC_VER)
@@ -359,6 +360,59 @@ TEST_F(ProgramEnvTest, TestExecuteAndWaitStatistics) {
   ASSERT_TRUE(ProcStat);
   ASSERT_GE(ProcStat->UserTime, std::chrono::microseconds(0));
   ASSERT_GE(ProcStat->TotalTime, ProcStat->UserTime);
+}
+
+TEST_F(ProgramEnvTest, TestLockFile) {
+  using namespace llvm::sys;
+
+  if (const char *LockedFile = getenv("LLVM_PROGRAM_TEST_LOCKED_FILE")) {
+    // Child process.
+    int FD2;
+    ASSERT_NO_ERROR(fs::openFileForReadWrite(LockedFile, FD2,
+                                             fs::CD_OpenExisting, fs::OF_None));
+
+    std::error_code ErrC = fs::tryLockFile(FD2, std::chrono::seconds(5));
+    ASSERT_NO_ERROR(ErrC);
+    ASSERT_NO_ERROR(fs::unlockFile(FD2));
+    close(FD2);
+    exit(0);
+  }
+
+  // Create file that will be locked.
+  SmallString<64> LockedFile;
+  int FD1;
+  ASSERT_NO_ERROR(
+      fs::createTemporaryFile("TestLockFile", "temp", FD1, LockedFile));
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {Executable, "--gtest_filter=ProgramEnvTest.TestLockFile"};
+
+  // Add LLVM_PROGRAM_TEST_LOCKED_FILE to the environment of the child.
+  std::string EnvVar = "LLVM_PROGRAM_TEST_LOCKED_FILE=";
+  EnvVar += LockedFile.str();
+  addEnvVar(EnvVar);
+
+  // Lock the file.
+  ASSERT_NO_ERROR(fs::tryLockFile(FD1));
+
+  std::string Error;
+  bool ExecutionFailed;
+  ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(), {}, 0, &Error,
+                                  &ExecutionFailed);
+  ASSERT_FALSE(ExecutionFailed) << Error;
+  ASSERT_TRUE(Error.empty());
+  ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+
+  // Wait some time to give the child process a chance to start.
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  ASSERT_NO_ERROR(fs::unlockFile(FD1));
+  ProcessInfo WaitResult = llvm::sys::Wait(PI2, 5 /* seconds */, true, &Error);
+  ASSERT_TRUE(Error.empty());
+  ASSERT_EQ(0, WaitResult.ReturnCode);
+  ASSERT_EQ(WaitResult.Pid, PI2.Pid);
+  sys::fs::remove(LockedFile);
 }
 
 } // end anonymous namespace

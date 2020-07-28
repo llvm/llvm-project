@@ -667,6 +667,20 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32>;
 
+def : VOPBinOpClampPat<saddsat, V_ADD_I32, i32>;
+def : VOPBinOpClampPat<ssubsat, V_SUB_I32, i32>;
+
+
+// FIXME: Probably should hardcode clamp bit in pseudo and avoid this.
+class OpSelBinOpClampPat<SDPatternOperator node,
+                         Instruction inst> : GCNPat<
+ (node (i16 (VOP3OpSel i16:$src0, i32:$src0_modifiers)),
+       (i16 (VOP3OpSel i16:$src1, i32:$src1_modifiers))),
+  (inst $src0_modifiers, $src0, $src1_modifiers, $src1, DSTCLAMP.ENABLE, 0)
+>;
+
+def : OpSelBinOpClampPat<saddsat, V_ADD_I16>;
+def : OpSelBinOpClampPat<ssubsat, V_SUB_I16>;
 } // End SubtargetPredicate = isGFX9Plus
 
 def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3_OPSEL> {

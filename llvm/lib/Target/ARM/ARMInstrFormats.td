@@ -403,8 +403,9 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   bit isUnaryDataProc = 0;
   bit canXformTo16Bit = 0;
   // The instruction is a 16-bit flag setting Thumb instruction. Used
-  // by the parser to determine whether to require the 'S' suffix on the
-  // mnemonic (when not in an IT block) or preclude it (when in an IT block).
+  // by the parser and if-converter to determine whether to require the 'S'
+  // suffix on the mnemonic (when not in an IT block) or preclude it (when
+  // in an IT block).
   bit thumbArithFlagSetting = 0;
 
   bit validForTailPredication = 0;

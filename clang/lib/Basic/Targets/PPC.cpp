@@ -46,8 +46,6 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasP8Crypto = true;
     } else if (Feature == "+direct-move") {
       HasDirectMove = true;
-    } else if (Feature == "+qpx") {
-      HasQPX = true;
     } else if (Feature == "+htm") {
       HasHTM = true;
     } else if (Feature == "+float128") {
@@ -99,7 +97,7 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   // ABI options.
-  if (ABI == "elfv1" || ABI == "elfv1-qpx")
+  if (ABI == "elfv1")
     Builder.defineMacro("_CALL_ELF", "1");
   if (ABI == "elfv2")
     Builder.defineMacro("_CALL_ELF", "2");
@@ -159,21 +157,10 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_ARCH_PWR10");
   if (ArchDefs & ArchDefineA2)
     Builder.defineMacro("_ARCH_A2");
-  if (ArchDefs & ArchDefineA2q) {
-    Builder.defineMacro("_ARCH_A2Q");
-    Builder.defineMacro("_ARCH_QP");
-  }
   if (ArchDefs & ArchDefineE500)
     Builder.defineMacro("__NO_LWSYNC__");
   if (ArchDefs & ArchDefineFuture)
     Builder.defineMacro("_ARCH_PWR_FUTURE");
-
-  if (getTriple().getVendor() == llvm::Triple::BGQ) {
-    Builder.defineMacro("__bg__");
-    Builder.defineMacro("__THW_BLUEGENE__");
-    Builder.defineMacro("__bgq__");
-    Builder.defineMacro("__TOS_BGQ__");
-  }
 
   if (HasAltivec) {
     Builder.defineMacro("__VEC__", "10206");
@@ -277,7 +264,6 @@ bool PPCTargetInfo::initFeatureMap(
                             .Case("ppc64le", true)
                             .Default(false);
 
-  Features["qpx"] = (CPU == "a2q");
   Features["power9-vector"] = (CPU == "pwr9");
   Features["crypto"] = llvm::StringSwitch<bool>(CPU)
                            .Case("ppc64le", true)
@@ -373,7 +359,6 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("power8-vector", HasP8Vector)
       .Case("crypto", HasP8Crypto)
       .Case("direct-move", HasDirectMove)
-      .Case("qpx", HasQPX)
       .Case("htm", HasHTM)
       .Case("bpermd", HasBPERMD)
       .Case("extdiv", HasExtDiv)
@@ -503,17 +488,17 @@ ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"generic"},     {"440"},     {"450"},     {"601"},       {"602"},
-    {"603"},         {"603e"},    {"603ev"},   {"604"},       {"604e"},
-    {"620"},         {"630"},     {"g3"},      {"7400"},      {"g4"},
-    {"7450"},        {"g4+"},     {"750"},     {"8548"},      {"970"},
-    {"g5"},          {"a2"},      {"a2q"},     {"e500"},      {"e500mc"},
-    {"e5500"},       {"power3"},  {"pwr3"},    {"power4"},    {"pwr4"},
-    {"power5"},      {"pwr5"},    {"power5x"}, {"pwr5x"},     {"power6"},
-    {"pwr6"},        {"power6x"}, {"pwr6x"},   {"power7"},    {"pwr7"},
-    {"power8"},      {"pwr8"},    {"power9"},  {"pwr9"},      {"power10"},
-    {"pwr10"},       {"powerpc"}, {"ppc"},     {"powerpc64"}, {"ppc64"},
-    {"powerpc64le"}, {"ppc64le"}, {"future"}};
+    {"generic"}, {"440"},     {"450"},       {"601"},     {"602"},
+    {"603"},     {"603e"},    {"603ev"},     {"604"},     {"604e"},
+    {"620"},     {"630"},     {"g3"},        {"7400"},    {"g4"},
+    {"7450"},    {"g4+"},     {"750"},       {"8548"},    {"970"},
+    {"g5"},      {"a2"},      {"e500"},      {"e500mc"},  {"e5500"},
+    {"power3"},  {"pwr3"},    {"power4"},    {"pwr4"},    {"power5"},
+    {"pwr5"},    {"power5x"}, {"pwr5x"},     {"power6"},  {"pwr6"},
+    {"power6x"}, {"pwr6x"},   {"power7"},    {"pwr7"},    {"power8"},
+    {"pwr8"},    {"power9"},  {"pwr9"},      {"power10"}, {"pwr10"},
+    {"powerpc"}, {"ppc"},     {"powerpc64"}, {"ppc64"},   {"powerpc64le"},
+    {"ppc64le"}, {"future"}};
 
 bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);

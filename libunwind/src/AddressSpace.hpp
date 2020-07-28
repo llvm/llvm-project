@@ -39,13 +39,6 @@ struct EHABIIndexEntry {
 };
 #endif
 
-#ifdef __APPLE__
-#include <mach-o/getsect.h>
-namespace libunwind {
-   bool checkKeyMgrRegisteredFDEs(uintptr_t targetAddr, void *&fde);
-}
-#endif
-
 #include "libunwind.h"
 #include "config.h"
 #include "dwarf2.h"
@@ -651,14 +644,10 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
 
 
 inline bool LocalAddressSpace::findOtherFDE(pint_t targetAddr, pint_t &fde) {
-#ifdef __APPLE__
-  return checkKeyMgrRegisteredFDEs(targetAddr, *((void**)&fde));
-#else
   // TO DO: if OS has way to dynamically register FDEs, check that.
   (void)targetAddr;
   (void)fde;
   return false;
-#endif
 }
 
 inline bool LocalAddressSpace::findFunctionName(pint_t addr, char *buf,
