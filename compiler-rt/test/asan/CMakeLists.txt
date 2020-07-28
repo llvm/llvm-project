@@ -14,9 +14,9 @@ if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
 endif()
 
 macro(get_bits_for_arch arch bits)
-  if (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|arm64|mips64|mips64el|s390x|sparcv9")
+  if (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|arm64|mips64|mips64el|s390x|sparcv9|riscv64")
     set(${bits} 64)
-  elseif (${arch} MATCHES "i386|arm|mips|mipsel|sparc")
+  elseif (${arch} MATCHES "i386|arm|mips|mipsel|sparc|riscv32")
     set(${bits} 32)
   else()
     message(FATAL_ERROR "Unknown target architecture: ${arch}")
