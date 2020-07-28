@@ -11,6 +11,9 @@
 #include "Plugins/Platform/MacOSX/PlatformAppleTVSimulator.h"
 #include "Plugins/Platform/MacOSX/PlatformAppleWatchSimulator.h"
 #include "Plugins/Platform/MacOSX/PlatformiOSSimulator.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteAppleTV.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteAppleWatch.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteiOS.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -21,7 +24,9 @@ using namespace lldb_private;
 
 class PlatformAppleSimulatorTest : public ::testing::Test {
   SubsystemRAII<FileSystem, HostInfo, PlatformAppleTVSimulator,
-                PlatformiOSSimulator, PlatformAppleWatchSimulator>
+                PlatformiOSSimulator, PlatformAppleWatchSimulator,
+                PlatformRemoteAppleTV, PlatformRemoteAppleWatch,
+                PlatformRemoteiOS>
       subsystems;
 };
 
@@ -70,5 +75,34 @@ TEST_F(PlatformAppleSimulatorTest, TestHostPlatformToSim) {
     EXPECT_TRUE(platform_sp);
   }
 }
+
+TEST_F(PlatformAppleSimulatorTest, TestPlatformSelectionOrder) {
+  static const ArchSpec platform_arch(
+      HostInfo::GetArchitecture(HostInfo::eArchKindDefault));
+
+  const llvm::Triple::OSType sim_platforms[] = {
+      llvm::Triple::IOS,
+      llvm::Triple::TvOS,
+      llvm::Triple::WatchOS,
+  };
+
+  Status error;
+  Platform::Create(ConstString("remote-ios"), error);
+  EXPECT_FALSE(error.Fail());
+  Platform::Create(ConstString("remote-tvos"), error);
+  EXPECT_FALSE(error.Fail());
+  Platform::Create(ConstString("remote-watchos"), error);    
+  EXPECT_FALSE(error.Fail());
+
+  for (auto sim : sim_platforms) {
+    ArchSpec arch = platform_arch;
+    arch.GetTriple().setOS(sim);
+    arch.GetTriple().setEnvironment(llvm::Triple::Simulator);
+
+    auto platform_sp = Platform::Create(arch, nullptr, error);
+    EXPECT_TRUE(platform_sp->GetName().GetStringRef().contains("simulator"));
+  }
+}
+
 
 #endif

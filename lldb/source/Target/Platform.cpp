@@ -311,22 +311,12 @@ PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
                             Status &error) {
   lldb::PlatformSP platform_sp;
   if (arch.IsValid()) {
-    // Scope for locker
-    {
-      // First try exact arch matches across all platforms already created
-      std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
-      for (const auto &platform_sp : GetPlatformList()) {
-        if (platform_sp->IsCompatibleArchitecture(arch, true,
-                                                  platform_arch_ptr))
-          return platform_sp;
-      }
+    std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
 
-      // Next try compatible arch matches across all platforms already created
-      for (const auto &platform_sp : GetPlatformList()) {
-        if (platform_sp->IsCompatibleArchitecture(arch, false,
-                                                  platform_arch_ptr))
-          return platform_sp;
-      }
+    // First try exact arch matches across all platforms already created
+    for (const auto &platform_sp : GetPlatformList()) {
+      if (platform_sp->IsCompatibleArchitecture(arch, true, platform_arch_ptr))
+        return platform_sp;
     }
 
     PlatformCreateInstance create_callback;
@@ -337,24 +327,29 @@ PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
          ++idx) {
       if (create_callback) {
         platform_sp = create_callback(false, &arch);
-        if (platform_sp &&
-            platform_sp->IsCompatibleArchitecture(arch, true,
-                                                  platform_arch_ptr)) {
+        if (platform_sp && platform_sp->IsCompatibleArchitecture(
+                               arch, true, platform_arch_ptr)) {
           std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
           GetPlatformList().push_back(platform_sp);
           return platform_sp;
         }
       }
     }
+
+    // Next try compatible arch matches across all platforms already created
+    for (const auto &platform_sp : GetPlatformList()) {
+      if (platform_sp->IsCompatibleArchitecture(arch, false, platform_arch_ptr))
+        return platform_sp;
+    }
+
     // Next try compatible arch matches across all platform plug-ins
     for (idx = 0; (create_callback =
                        PluginManager::GetPlatformCreateCallbackAtIndex(idx));
          ++idx) {
       if (create_callback) {
         platform_sp = create_callback(false, &arch);
-        if (platform_sp &&
-            platform_sp->IsCompatibleArchitecture(arch, false,
-                                                  platform_arch_ptr)) {
+        if (platform_sp && platform_sp->IsCompatibleArchitecture(
+                               arch, false, platform_arch_ptr)) {
           std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
           GetPlatformList().push_back(platform_sp);
           return platform_sp;
