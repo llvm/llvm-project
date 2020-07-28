@@ -87,6 +87,14 @@ class X86AsmParser : public MCTargetAsmParser {
 
   VEXEncoding ForcedVEXEncoding = VEXEncoding_Default;
 
+  enum DispEncoding {
+    DispEncoding_Default,
+    DispEncoding_Disp8,
+    DispEncoding_Disp32,
+  };
+
+  DispEncoding ForcedDispEncoding = DispEncoding_Default;
+
 private:
   SMLoc consumeToken() {
     MCAsmParser &Parser = getParser();
@@ -2592,6 +2600,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Reset the forced VEX encoding.
   ForcedVEXEncoding = VEXEncoding_Default;
+  ForcedDispEncoding = DispEncoding_Default;
 
   // Parse pseudo prefixes.
   while (1) {
@@ -2610,6 +2619,10 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         ForcedVEXEncoding = VEXEncoding_VEX3;
       else if (Prefix == "evex")
         ForcedVEXEncoding = VEXEncoding_EVEX;
+      else if (Prefix == "disp8")
+        ForcedDispEncoding = DispEncoding_Disp8;
+      else if (Prefix == "disp32")
+        ForcedDispEncoding = DispEncoding_Disp32;
       else
         return Error(NameLoc, "unknown prefix");
 
@@ -3118,6 +3131,26 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
 
   switch (Inst.getOpcode()) {
   default: return false;
+  case X86::JMP_1:
+    // {disp32} forces a larger displacement as if the instruction was relaxed.
+    // NOTE: 16-bit mode uses 16-bit displacement even though it says {disp32}.
+    // This matches GNU assembler.
+    if (ForcedDispEncoding == DispEncoding_Disp32) {
+      Inst.setOpcode(is16BitMode() ? X86::JMP_2 : X86::JMP_4);
+      return true;
+    }
+
+    return false;
+  case X86::JCC_1:
+    // {disp32} forces a larger displacement as if the instruction was relaxed.
+    // NOTE: 16-bit mode uses 16-bit displacement even though it says {disp32}.
+    // This matches GNU assembler.
+    if (ForcedDispEncoding == DispEncoding_Disp32) {
+      Inst.setOpcode(is16BitMode() ? X86::JCC_2 : X86::JCC_4);
+      return true;
+    }
+
+    return false;
   case X86::VMOVZPQILo2PQIrr:
   case X86::VMOVAPDrr:
   case X86::VMOVAPDYrr:
