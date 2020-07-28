@@ -6,15 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_ERRNOSETTERMATCHER_H
-#define LLVM_LIBC_UTILS_UNITTEST_ERRNOSETTERMATCHER_H
+#ifndef LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
+#define LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
 
-#include "Test.h"
-
-// Using LLVM libc headers in UnitTest is not ideal however we also want the
-// test/ directory to have the same layout as libc/ so there is no clean place
-// to put this file except for in utils/UnitTest/.
 #include "src/errno/llvmlibc_errno.h"
+#include "utils/UnitTest/Test.h"
 
 namespace __llvm_libc {
 namespace testing {
@@ -73,4 +69,4 @@ static internal::ErrnoSetterMatcher<RetT> Fails(int ExpectedErrno,
 } // namespace testing
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_ERRNOSETTERMATCHER_H
+#endif // LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
