@@ -231,12 +231,10 @@ static void diagnoseInstanceReference(Sema &SemaRef,
 }
 
 /// Builds an expression which might be an implicit member expression.
-ExprResult
-Sema::BuildPossibleImplicitMemberExpr(const CXXScopeSpec &SS,
-                                      SourceLocation TemplateKWLoc,
-                                      LookupResult &R,
-                                const TemplateArgumentListInfo *TemplateArgs,
-                                      const Scope *S) {
+ExprResult Sema::BuildPossibleImplicitMemberExpr(
+    const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
+    const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
+    UnresolvedLookupExpr *AsULE) {
   switch (ClassifyImplicitMemberAccess(*this, R)) {
   case IMA_Instance:
     return BuildImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs, true, S);
@@ -257,7 +255,7 @@ Sema::BuildPossibleImplicitMemberExpr(const CXXScopeSpec &SS,
   case IMA_Unresolved_StaticContext:
     if (TemplateArgs || TemplateKWLoc.isValid())
       return BuildTemplateIdExpr(SS, TemplateKWLoc, R, false, TemplateArgs);
-    return BuildDeclarationNameExpr(SS, R, false);
+    return AsULE ? AsULE : BuildDeclarationNameExpr(SS, R, false);
 
   case IMA_Error_StaticContext:
   case IMA_Error_Unrelated:
