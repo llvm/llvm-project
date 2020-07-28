@@ -76,7 +76,9 @@ PlatformSP PlatformAppleWatchSimulator::CreateInstance(bool force,
   bool create = force;
   if (!create && arch && arch->IsValid()) {
     switch (arch->GetMachine()) {
-    case llvm::Triple::x86_64: {
+    case llvm::Triple::aarch64:
+    case llvm::Triple::x86_64:
+    case llvm::Triple::x86: {
       const llvm::Triple &triple = arch->GetTriple();
       switch (triple.getVendor()) {
       case llvm::Triple::Apple:
@@ -143,7 +145,23 @@ const char *PlatformAppleWatchSimulator::GetDescriptionStatic() {
 
 /// Default Constructor
 PlatformAppleWatchSimulator::PlatformAppleWatchSimulator()
-    : PlatformDarwin(true), m_sdk_directory() {}
+    : PlatformDarwin(true), m_sdk_directory() {
+#ifdef __APPLE__
+#if __arm64__
+  static const llvm::StringRef supported_triples[] = {
+      "arm64e-apple-watchos-simulator",
+      "arm64-apple-watchos-simulator",
+  };
+#else
+  static const llvm::StringRef supported_triples[] = {
+      "x86_64-apple-watchos-simulator",
+      "x86_64h-apple-watchos-simulator",
+      "i386-apple-watchos-simulator",
+  };
+#endif
+  m_supported_triples = supported_triples;
+#endif
+}
 
 /// Destructor.
 ///
@@ -372,15 +390,8 @@ uint32_t PlatformAppleWatchSimulator::FindProcesses(
 
 bool PlatformAppleWatchSimulator::GetSupportedArchitectureAtIndex(
     uint32_t idx, ArchSpec &arch) {
-  static const ArchSpec platform_arch(
-      HostInfo::GetArchitecture(HostInfo::eArchKind64));
-
-  if (idx == 0) {
-    arch = platform_arch;
-    if (arch.IsValid()) {
-      arch.GetTriple().setOS(llvm::Triple::WatchOS);
-      return true;
-    }
-  }
-  return false;
+  if (idx >= m_supported_triples.size())
+    return false;
+  arch = ArchSpec(m_supported_triples[idx]);
+  return true;
 }

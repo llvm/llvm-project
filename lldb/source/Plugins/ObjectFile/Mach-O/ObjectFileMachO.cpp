@@ -1981,7 +1981,8 @@ static LazyBool CalculateNameIsSwift(std::vector<llvm::StringRef> &nameSlices) {
 }
 
 static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
-                             const bool is_arm, const LazyBool symbol_is_swift,
+                             const bool is_arm, lldb::addr_t text_seg_base_addr,
+                             const LazyBool symbol_is_swift,
                              std::vector<llvm::StringRef> &nameSlices,
                              std::set<lldb::addr_t> &resolver_addresses,
                              std::vector<TrieEntryWithOffset> &output) {
@@ -2003,6 +2004,8 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
       if (e.entry.flags & EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER) {
         e.entry.other = data.GetULEB128(&offset);
         uint64_t resolver_addr = e.entry.other;
+        if (text_seg_base_addr != LLDB_INVALID_ADDRESS)
+          resolver_addr += text_seg_base_addr;
         if (is_arm)
           resolver_addr &= THUMB_ADDRESS_BIT_MASK;
         resolver_addresses.insert(resolver_addr);
@@ -2043,7 +2046,7 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
             : symbol_is_swift;
     lldb::offset_t childNodeOffset = data.GetULEB128(&children_offset);
     if (childNodeOffset) {
-      if (!ParseTrieEntries(data, childNodeOffset, is_arm,
+      if (!ParseTrieEntries(data, childNodeOffset, is_arm, text_seg_base_addr,
                             child_symbol_is_swift, nameSlices,
                             resolver_addresses, output)) {
         return false;
@@ -2632,20 +2635,20 @@ size_t ObjectFileMachO::ParseSymtab() {
 
   if (dyld_trie_data.GetByteSize() > 0) {
     std::vector<llvm::StringRef> nameSlices;
-    ParseTrieEntries(dyld_trie_data, 0, is_arm,
-                     eLazyBoolNo, // eLazyBoolCalculate,
-                     nameSlices, resolver_addresses, trie_entries);
 
     ConstString text_segment_name("__TEXT");
     SectionSP text_segment_sp =
         GetSectionList()->FindSectionByName(text_segment_name);
-    if (text_segment_sp) {
-      const lldb::addr_t text_segment_file_addr =
-          text_segment_sp->GetFileAddress();
-      if (text_segment_file_addr != LLDB_INVALID_ADDRESS) {
-        for (auto &e : trie_entries)
-          e.entry.address += text_segment_file_addr;
-      }
+    lldb::addr_t text_segment_file_addr = LLDB_INVALID_ADDRESS;
+    if (text_segment_sp)
+      text_segment_file_addr = text_segment_sp->GetFileAddress();
+
+    ParseTrieEntries(dyld_trie_data, 0, is_arm, text_segment_file_addr,
+                     eLazyBoolNo, // eLazyBoolCalculate,
+                     nameSlices, resolver_addresses, trie_entries);
+    if (text_segment_file_addr != LLDB_INVALID_ADDRESS) {
+      for (auto &e : trie_entries)
+        e.entry.address += text_segment_file_addr;
     }
   }
 
