@@ -879,20 +879,10 @@ bool ReexecDisabled() {
   return false;
 }
 
-extern "C" SANITIZER_WEAK_ATTRIBUTE double dyldVersionNumber;
-static const double kMinDyldVersionWithAutoInterposition = 360.0;
-
-bool DyldNeedsEnvVariable() {
-  // Although sanitizer support was added to LLVM on OS X 10.7+, GCC users
-  // still may want use them on older systems. On older Darwin platforms, dyld
-  // doesn't export dyldVersionNumber symbol and we simply return true.
-  if (!&dyldVersionNumber) return true;
+static bool DyldNeedsEnvVariable() {
   // If running on OS X 10.11+ or iOS 9.0+, dyld will interpose even if
-  // DYLD_INSERT_LIBRARIES is not set. However, checking OS version via
-  // GetMacosAlignedVersion() doesn't work for the simulator. Let's instead
-  // check `dyldVersionNumber`, which is exported by dyld, against a known
-  // version number from the first OS release where this appeared.
-  return dyldVersionNumber < kMinDyldVersionWithAutoInterposition;
+  // DYLD_INSERT_LIBRARIES is not set.
+  return GetMacosAlignedVersion() < MacosVersion(10, 11);
 }
 
 void MaybeReexec() {
