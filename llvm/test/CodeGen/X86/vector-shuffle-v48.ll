@@ -26,13 +26,9 @@ define <32 x i8> @foo(<48 x i8>* %x0) {
 ; XOP-NEXT:    vmovdqu (%rdi), %xmm0
 ; XOP-NEXT:    vmovdqu 16(%rdi), %xmm1
 ; XOP-NEXT:    vmovdqu 32(%rdi), %xmm2
-; XOP-NEXT:    vpshufb {{.*#+}} xmm3 = xmm1[8,9,11,12,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; XOP-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,xmm2[1,2,4,5,7,8,10,11,13,14]
-; XOP-NEXT:    vpor %xmm3, %xmm2, %xmm2
-; XOP-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,2,3,5,6]
-; XOP-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,3,4,6,7,9,10,12,13,15],zero,zero,zero,zero,zero
-; XOP-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,1,3,4,6,7,9,10,12,13,15],xmm1[0,2,3,5,6]
+; XOP-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[8,9,11,12,14,15],xmm2[1,2,4,5,7,8,10,11,13,14]
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
 ; AVX2-LABEL: foo:
