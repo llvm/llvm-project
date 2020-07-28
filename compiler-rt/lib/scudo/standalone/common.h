@@ -182,6 +182,14 @@ struct BlockInfo {
   uptr RegionEnd;
 };
 
+enum class Option : u8 {
+  ReleaseInterval,      // Release to OS interval in milliseconds.
+  MemtagTuning,         // Whether to tune tagging for UAF or overflow.
+  MaxCacheEntriesCount, // Maximum number of blocks that can be cached.
+  MaxCacheEntrySize,    // Maximum size of a block that can be cached.
+  MaxTSDsCount,         // Number of usable TSDs for the shared registry.
+};
+
 constexpr unsigned char PatternFillByte = 0xAB;
 
 enum FillContentsMode {
