@@ -8241,6 +8241,8 @@ public:
   /// Completely replace the \c auto in \p TypeWithAuto by
   /// \p Replacement. This does not retain any \c auto type sugar.
   QualType ReplaceAutoType(QualType TypeWithAuto, QualType Replacement);
+  TypeSourceInfo *ReplaceAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
+                                            QualType Replacement);
 
   /// Result type of DeduceAutoType.
   enum DeduceAutoResult {
