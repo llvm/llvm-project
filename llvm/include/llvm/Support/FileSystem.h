@@ -1140,7 +1140,7 @@ openNativeFileForRead(const Twine &Name, OpenFlags Flags = OF_None,
 /// none of other processes read or write this file, provided that all processes
 /// lock the file prior to accessing its content.
 ///
-/// @param File    The descriptor representing the file to lock.
+/// @param FD      The descriptor representing the file to lock.
 /// @param Timeout Time in milliseconds that the process should wait before
 ///                reporting lock failure. Zero value means try to get lock only
 ///                once.
@@ -1163,7 +1163,7 @@ std::error_code lockFile(int FD);
 
 /// Unlock the file.
 ///
-/// @param File The descriptor representing the file to unlock.
+/// @param FD The descriptor representing the file to unlock.
 /// @returns errc::success if lock is successfully released or platform-specific
 /// error_code otherwise.
 std::error_code unlockFile(int FD);
