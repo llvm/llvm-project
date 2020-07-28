@@ -51,7 +51,7 @@ func @dot() -> f32 {
   %B = view %bB[%c0][%c16] : memref<?xi8> to memref<?xf32>
   %C = view %bC[%c0][] : memref<?xi8> to memref<f32>
 
-  linalg.dot(%A, %B, %C) : memref<?xf32>, memref<?xf32>, memref<f32>
+  linalg.dot %A, %B, %C : (memref<?xf32>, memref<?xf32>, memref<f32>)
   %res = load %C[] : memref<f32>
 
   dealloc %bC : memref<?xi8>

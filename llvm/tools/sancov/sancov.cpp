@@ -32,15 +32,13 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SHA1.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -1134,10 +1132,7 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
 } // namespace
 
 int main(int Argc, char **Argv) {
-  // Print stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal(Argv[0]);
-  PrettyStackTraceProgram X(Argc, Argv);
-  llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
+  llvm::InitLLVM X(Argc, Argv);
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
