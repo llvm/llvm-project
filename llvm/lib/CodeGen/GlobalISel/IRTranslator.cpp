@@ -1543,6 +1543,18 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     }
     return true;
   }
+  case Intrinsic::convert_from_fp16:
+    // FIXME: This intrinsic should probably be removed from the IR.
+    MIRBuilder.buildFPExt(getOrCreateVReg(CI),
+                          getOrCreateVReg(*CI.getArgOperand(0)),
+                          MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  case Intrinsic::convert_to_fp16:
+    // FIXME: This intrinsic should probably be removed from the IR.
+    MIRBuilder.buildFPTrunc(getOrCreateVReg(CI),
+                            getOrCreateVReg(*CI.getArgOperand(0)),
+                            MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
   case Intrinsic::memcpy:
   case Intrinsic::memmove:
   case Intrinsic::memset:
