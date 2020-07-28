@@ -206,6 +206,12 @@ struct Section : public Chunk {
 
   // This can be used to override the sh_flags field.
   Optional<llvm::yaml::Hex64> ShFlags;
+
+  // This can be used to override the sh_type field. It is useful when we
+  // want to use specific YAML keys for a section of a particular type to
+  // describe the content, but still want to have a different final type
+  // for the section.
+  Optional<ELF_SHT> ShType;
 };
 
 // Fill is a block of data which is placed outside of sections. It is
