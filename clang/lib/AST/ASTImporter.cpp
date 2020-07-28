@@ -1900,7 +1900,8 @@ Error ASTNodeImporter::ImportDefinition(
           else
             return ToCaptureOrErr.takeError();
         }
-        cast<CXXRecordDecl>(To)->setCaptures(ToCaptures);
+        cast<CXXRecordDecl>(To)->setCaptures(Importer.getToContext(),
+                                             ToCaptures);
       }
 
       Error Result = ImportDeclContext(From, /*ForceImport=*/true);
