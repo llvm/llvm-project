@@ -30954,6 +30954,34 @@ bool X86TargetLowering::areJTsAllowed(const Function *Fn) const {
 //                           X86 Scheduler Hooks
 //===----------------------------------------------------------------------===//
 
+// Returns true if EFLAG is consumed after this iterator in the rest of the
+// basic block or any successors of the basic block.
+static bool isEFLAGSLiveAfter(MachineBasicBlock::iterator Itr,
+                              MachineBasicBlock *BB) {
+  // Scan forward through BB for a use/def of EFLAGS.
+  for (MachineBasicBlock::iterator miI = std::next(Itr), miE = BB->end();
+         miI != miE; ++miI) {
+    const MachineInstr& mi = *miI;
+    if (mi.readsRegister(X86::EFLAGS))
+      return true;
+    // If we found a def, we can stop searching.
+    if (mi.definesRegister(X86::EFLAGS))
+      return false;
+  }
+
+  // If we hit the end of the block, check whether EFLAGS is live into a
+  // successor.
+  for (MachineBasicBlock::succ_iterator sItr = BB->succ_begin(),
+                                        sEnd = BB->succ_end();
+       sItr != sEnd; ++sItr) {
+    MachineBasicBlock* succ = *sItr;
+    if (succ->isLiveIn(X86::EFLAGS))
+      return true;
+  }
+
+  return false;
+}
+
 /// Utility function to emit xbegin specifying the start of an RTM region.
 static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
                                      const TargetInstrInfo *TII) {
@@ -30985,6 +31013,12 @@ static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
   MF->insert(I, mainMBB);
   MF->insert(I, fallMBB);
   MF->insert(I, sinkMBB);
+
+  if (isEFLAGSLiveAfter(MI, MBB)) {
+    mainMBB->addLiveIn(X86::EFLAGS);
+    fallMBB->addLiveIn(X86::EFLAGS);
+    sinkMBB->addLiveIn(X86::EFLAGS);
+  }
 
   // Transfer the remainder of BB and its successor edges to sinkMBB.
   sinkMBB->splice(sinkMBB->begin(), MBB,
@@ -31374,27 +31408,8 @@ MachineBasicBlock *X86TargetLowering::EmitVAStartSaveXMMRegsWithCustomInserter(
 static bool checkAndUpdateEFLAGSKill(MachineBasicBlock::iterator SelectItr,
                                      MachineBasicBlock* BB,
                                      const TargetRegisterInfo* TRI) {
-  // Scan forward through BB for a use/def of EFLAGS.
-  MachineBasicBlock::iterator miI(std::next(SelectItr));
-  for (MachineBasicBlock::iterator miE = BB->end(); miI != miE; ++miI) {
-    const MachineInstr& mi = *miI;
-    if (mi.readsRegister(X86::EFLAGS))
-      return false;
-    if (mi.definesRegister(X86::EFLAGS))
-      break; // Should have kill-flag - update below.
-  }
-
-  // If we hit the end of the block, check whether EFLAGS is live into a
-  // successor.
-  if (miI == BB->end()) {
-    for (MachineBasicBlock::succ_iterator sItr = BB->succ_begin(),
-                                          sEnd = BB->succ_end();
-         sItr != sEnd; ++sItr) {
-      MachineBasicBlock* succ = *sItr;
-      if (succ->isLiveIn(X86::EFLAGS))
-        return false;
-    }
-  }
+  if (isEFLAGSLiveAfter(SelectItr, BB))
+    return false;
 
   // We found a def, or hit the end of the basic block and EFLAGS wasn't live
   // out. SelectMI should have a kill flag on EFLAGS.
