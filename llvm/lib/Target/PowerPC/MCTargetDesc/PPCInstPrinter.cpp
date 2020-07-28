@@ -49,18 +49,6 @@ FullRegNamesWithPercent("ppc-reg-with-percent-prefix", cl::Hidden,
 
 void PPCInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   const char *RegName = getRegisterName(RegNo);
-  if (RegName[0] == 'q' /* QPX */) {
-    // The system toolchain on the BG/Q does not understand QPX register names
-    // in .cfi_* directives, so print the name of the floating-point
-    // subregister instead.
-    std::string RN(RegName);
-
-    RN[0] = 'f';
-    OS << RN;
-
-    return;
-  }
-
   OS << RegName;
 }
 

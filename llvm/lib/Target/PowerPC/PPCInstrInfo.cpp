@@ -259,14 +259,6 @@ bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   case PPC::XVMULDP:
   case PPC::XVMULSP:
   case PPC::XSMULSP:
-  // QPX Add:
-  case PPC::QVFADD:
-  case PPC::QVFADDS:
-  case PPC::QVFADDSs:
-  // QPX Multiply:
-  case PPC::QVFMUL:
-  case PPC::QVFMULS:
-  case PPC::QVFMULSs:
     return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
            Inst.getFlag(MachineInstr::MIFlag::FmNsz);
   // Fixed point:
@@ -300,9 +292,7 @@ static const uint16_t FMAOpIdxInfo[][5] = {
     {PPC::XVMADDADP, PPC::XVADDDP, PPC::XVMULDP, 1, 2},
     {PPC::XVMADDASP, PPC::XVADDSP, PPC::XVMULSP, 1, 2},
     {PPC::FMADD, PPC::FADD, PPC::FMUL, 3, 1},
-    {PPC::FMADDS, PPC::FADDS, PPC::FMULS, 3, 1},
-    {PPC::QVFMADDSs, PPC::QVFADDSs, PPC::QVFMULSs, 3, 1},
-    {PPC::QVFMADD, PPC::QVFADD, PPC::QVFMUL, 3, 1}};
+    {PPC::FMADDS, PPC::FADDS, PPC::FMULS, 3, 1}};
 
 // Check if an opcode is a FMA instruction. If it is, return the index in array
 // FMAOpIdxInfo. Otherwise, return -1.
@@ -666,7 +656,6 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::LI8:
   case PPC::LIS:
   case PPC::LIS8:
-  case PPC::QVGPCI:
   case PPC::ADDIStocHA:
   case PPC::ADDIStocHA8:
   case PPC::ADDItocL:
@@ -1343,12 +1332,6 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   else if (PPC::VSFRCRegClass.contains(DestReg, SrcReg) ||
            PPC::VSSRCRegClass.contains(DestReg, SrcReg))
     Opc = (Subtarget.hasP9Vector()) ? PPC::XSCPSGNDP : PPC::XXLORf;
-  else if (PPC::QFRCRegClass.contains(DestReg, SrcReg))
-    Opc = PPC::QVFMR;
-  else if (PPC::QSRCRegClass.contains(DestReg, SrcReg))
-    Opc = PPC::QVFMRs;
-  else if (PPC::QBRCRegClass.contains(DestReg, SrcReg))
-    Opc = PPC::QVFMRb;
   else if (PPC::CRBITRCRegClass.contains(DestReg, SrcReg))
     Opc = PPC::CROR;
   else if (PPC::SPERCRegClass.contains(DestReg, SrcReg))
@@ -1393,12 +1376,6 @@ static unsigned getSpillIndex(const TargetRegisterClass *RC) {
     OpcodeIndex = SOK_VectorFloat4Spill;
   } else if (PPC::VRSAVERCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_VRSaveSpill;
-  } else if (PPC::QFRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_QuadFloat8Spill;
-  } else if (PPC::QSRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_QuadFloat4Spill;
-  } else if (PPC::QBRCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_QuadBitSpill;
   } else if (PPC::SPILLTOVSRRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_SpillToVSR;
   } else {

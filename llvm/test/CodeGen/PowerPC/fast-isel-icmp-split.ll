@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -O0 -relocation-model=pic < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-bgq-linux"
+target triple = "powerpc64le-unknown-linux"
 
 %"class.std::__1::__tree_node.130.151" = type { %"class.std::__1::__tree_node_base.base.128.149", %"class.boost::serialization::extended_type_info.129.150"* }
 %"class.std::__1::__tree_node_base.base.128.149" = type <{ %"class.std::__1::__tree_end_node.127.148", %"class.std::__1::__tree_node_base.126.147"*, %"class.std::__1::__tree_node_base.126.147"*, i8 }>
