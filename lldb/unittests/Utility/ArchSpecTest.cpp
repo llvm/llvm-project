@@ -307,6 +307,14 @@ TEST(ArchSpecTest, Compatibility) {
     ASSERT_FALSE(A.IsCompatibleMatch(B));
   }
   {
+    ArchSpec A("arm64-apple-ios");
+    ArchSpec B("arm64-apple-ios-simulator");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+  }
+  {
     ArchSpec A("arm64-*-*");
     ArchSpec B("arm64-apple-ios");
     ASSERT_FALSE(A.IsExactMatch(B));
