@@ -27,7 +27,7 @@ namespace format {
 namespace {
 
 /// Returns \c true if the token can be used as an identifier in
-/// an Objective-C \c @selector, \c false otherwise.
+/// an Objective-C \c \@selector, \c false otherwise.
 ///
 /// Because getFormattingLangOpts() always lexes source code as
 /// Objective-C++, C++ keywords like \c new and \c delete are
