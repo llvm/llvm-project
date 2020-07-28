@@ -23,10 +23,10 @@ template <> struct MantissaWidth<long double> {
 template <unsigned Width> struct Padding;
 
 // i386 padding.
-template <> struct Padding<4> { static constexpr unsigned Value = 16; };
+template <> struct Padding<4> { static constexpr unsigned value = 16; };
 
 // x86_64 padding.
-template <> struct Padding<8> { static constexpr unsigned Value = 48; };
+template <> struct Padding<8> { static constexpr unsigned value = 48; };
 
 template <> struct __attribute__((packed)) FPBits<long double> {
   using UIntType = __uint128_t;
@@ -38,7 +38,7 @@ template <> struct __attribute__((packed)) FPBits<long double> {
   uint8_t implicitBit : 1;
   uint16_t exponent : ExponentWidth<long double>::value;
   uint8_t sign : 1;
-  uint64_t padding : Padding<sizeof(uintptr_t)>::Value;
+  uint64_t padding : Padding<sizeof(uintptr_t)>::value;
 
   template <typename XType,
             cpp::EnableIfType<cpp::IsSame<long double, XType>::Value, int> = 0>
@@ -91,7 +91,15 @@ template <> struct __attribute__((packed)) FPBits<long double> {
     // zero in case i386.
     UIntType result = UIntType(0);
     *reinterpret_cast<FPBits<long double> *>(&result) = *this;
-    return result;
+
+    // Even though we zero out |result| before copying the long double value,
+    // there can be garbage bits in the padding. So, we zero the padding bits
+    // in |result|.
+    static constexpr UIntType mask =
+        (UIntType(1) << (sizeof(long double) -
+                         Padding<sizeof(uintptr_t)>::value / 8)) -
+        1;
+    return result & mask;
   }
 
   static FPBits<long double> zero() { return FPBits<long double>(0.0l); }
