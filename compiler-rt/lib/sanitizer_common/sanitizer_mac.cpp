@@ -606,21 +606,65 @@ HandleSignalMode GetHandleSignalMode(int signum) {
   return result;
 }
 
-// This corresponds to Triple::getMacOSXVersion() in the Clang driver.
-static MacosVersion GetMacosAlignedVersionInternal() {
-  u16 kernel_major = GetDarwinKernelVersion().major;
-  // Darwin 0-3  -> unsupported
-  // Darwin 4-19 -> macOS 10.x
-  // Darwin 20+  -> macOS 11+
-  CHECK_GE(kernel_major, 4);
-  u16 major, minor;
-  if (kernel_major < 20) {
-    major = 10;
-    minor = kernel_major - 4;
+using VersStr = char[64];
+
+static void GetOSVersion(VersStr vers) {
+  uptr len = sizeof(VersStr);
+  if (SANITIZER_IOSSIM) {
+    const char *vers_env = GetEnv("SIMULATOR_RUNTIME_VERSION");
+    if (!vers_env) {
+      Report("ERROR: Running in simulator but SIMULATOR_RUNTIME_VERSION env "
+          "var is not set.\n");
+      Die();
+    }
+    len = internal_strlcpy(vers, vers_env, len);
   } else {
-    major = 11 + kernel_major - 20;
-    minor = 0;
+    int res =
+        internal_sysctlbyname("kern.osproductversion", vers, &len, nullptr, 0);
+    CHECK_EQ(res, 0);
   }
+  CHECK_LT(len, sizeof(VersStr));
+}
+
+void ParseVersion(const char *vers, u16 *major, u16 *minor) {
+  // Format: <major>.<minor>[.<patch>]\0
+  CHECK_GE(internal_strlen(vers), 3);
+  const char *p = vers;
+  *major = internal_simple_strtoll(p, &p, /*base=*/10);
+  CHECK_EQ(*p, '.');
+  p += 1;
+  *minor = internal_simple_strtoll(p, &p, /*base=*/10);
+}
+
+// Aligned versions example:
+// macOS 10.15 -- iOS 13 -- tvOS 13 -- watchOS 6
+static void MapToMacos(u16 *major, u16 *minor) {
+  if (TARGET_OS_OSX)
+    return;
+
+  if (SANITIZER_IOS || SANITIZER_TVOS)
+    *major += 2;
+  else if (SANITIZER_WATCHOS)
+    *major += 9;
+  else
+    UNREACHABLE("unsupported platform");
+
+  if (*major >= 16) {  // macOS 11+
+    *major -= 5;
+  } else {  // macOS 10.15 and below
+    *minor = *major;
+    *major = 10;
+  }
+}
+
+static MacosVersion GetMacosAlignedVersionInternal() {
+  VersStr vers;
+  GetOSVersion(vers);
+
+  u16 major, minor;
+  ParseVersion(vers, &major, &minor);
+  MapToMacos(&major, &minor);
+
   return MacosVersion(major, minor);
 }
 
@@ -639,24 +683,15 @@ MacosVersion GetMacosAlignedVersion() {
   return *reinterpret_cast<MacosVersion *>(&result);
 }
 
-void ParseVersion(const char *vers, u16 *major, u16 *minor) {
-  // Format: <major>.<minor>.<patch>\0
-  CHECK_GE(internal_strlen(vers), 5);
-  const char *p = vers;
-  *major = internal_simple_strtoll(p, &p, /*base=*/10);
-  CHECK_EQ(*p, '.');
-  p += 1;
-  *minor = internal_simple_strtoll(p, &p, /*base=*/10);
-}
-
 DarwinKernelVersion GetDarwinKernelVersion() {
-  char buf[100];
-  size_t len = sizeof(buf);
-  int res = internal_sysctlbyname("kern.osrelease", buf, &len, nullptr, 0);
+  VersStr vers;
+  uptr len = sizeof(VersStr);
+  int res = internal_sysctlbyname("kern.osrelease", vers, &len, nullptr, 0);
   CHECK_EQ(res, 0);
+  CHECK_LT(len, sizeof(VersStr));
 
   u16 major, minor;
-  ParseVersion(buf, &major, &minor);
+  ParseVersion(vers, &major, &minor);
 
   return DarwinKernelVersion(major, minor);
 }
