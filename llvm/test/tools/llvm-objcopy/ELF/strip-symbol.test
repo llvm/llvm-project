@@ -1,24 +1,19 @@
-# RUN: extract yaml %s | yaml2obj - -o %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-symbol baz -N bar %t %t2
 # RUN: llvm-readobj --symbols --sections %t2 | FileCheck %s
 # RUN: llvm-strip --strip-symbol baz -N bar %t -o %t3
 # RUN: cmp %t2 %t3
 # RUN: llvm-strip --regex --strip-symbol '^b.*' -N bar %t -o %t4
 # RUN: cmp %t3 %t4
-# RUN: extract list1 %s -o %t-list.txt && llvm-objcopy --strip-symbols %t-list.txt %t %t5
+# RUN: echo " bar # bar" > %t-list.txt
+# RUN: echo " baz # baz" >> %t-list.txt
+# RUN: echo " # no symbol" >> %t-list.txt
+# RUN: llvm-objcopy --strip-symbols %t-list.txt %t %t5
 # RUN: cmp %t3 %t5
-# RUN: extract list2 %s -o %t-list2.txt && llvm-objcopy --regex --strip-symbols %t-list2.txt %t %t6
+# RUN: echo "b.* # bar & baz" > %t-list2.txt
+# RUN: llvm-objcopy --regex --strip-symbols %t-list2.txt %t %t6
 # RUN: cmp %t3 %t6
 
-#--- list1
-bar # bar
-baz # baz
-# no symbol
-
-#--- list2
-b.* # bar & baz
-
-#--- yaml
 !ELF
 FileHeader:
   Class:           ELFCLASS64
