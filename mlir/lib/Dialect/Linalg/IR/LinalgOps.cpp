@@ -1173,10 +1173,6 @@ LogicalResult CopyOp::fold(ArrayRef<Attribute>,
                            SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }
-LogicalResult DotOp::fold(ArrayRef<Attribute>,
-                          SmallVectorImpl<OpFoldResult> &) {
-  return foldMemRefCast(*this);
-}
 LogicalResult FillOp::fold(ArrayRef<Attribute>,
                            SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
@@ -1280,6 +1276,17 @@ static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
   if (!tensorResultTypes.empty())
     result.addTypes(tensorResultTypes);
 
+  // The number of parsed arguments must equal
+  // the number of expected arguments for the current operation.
+  auto parsedArgs = operandsInfo.size();
+  auto expectedArgs = NamedStructuredOpType::getNumInputs() +
+                      NamedStructuredOpType::getNumOutputs();
+  if (parsedArgs != expectedArgs)
+    return parser.emitError(parser.getNameLoc(),
+                            "expects " + std::to_string(expectedArgs) +
+                                " operands, but found " +
+                                std::to_string(parsedArgs));
+
   buildNamedStructuredOpRegionAndAttributes<NamedStructuredOpType>(
       parser.getBuilder(), result, operandTypes, tensorResultTypes);
 
@@ -1297,6 +1304,10 @@ static LogicalResult verifyNamedStructuredOp(NamedStructuredOpType op) {
 // TODO: Determine whether we can generate the folders and verifiers.
 LogicalResult BatchMatmulOp::fold(ArrayRef<Attribute>,
                                   SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult DotOp::fold(ArrayRef<Attribute>,
+                          SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }
 LogicalResult MatmulOp::fold(ArrayRef<Attribute>,
