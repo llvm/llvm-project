@@ -1311,7 +1311,10 @@ Expr ScriptParser::readPrimary() {
   }
   if (tok == "DEFINED") {
     StringRef name = readParenLiteral();
-    return [=] { return symtab->find(name) ? 1 : 0; };
+    return [=] {
+      Symbol *b = symtab->find(name);
+      return (b && b->isDefined()) ? 1 : 0;
+    };
   }
   if (tok == "LENGTH") {
     StringRef name = readParenLiteral();
