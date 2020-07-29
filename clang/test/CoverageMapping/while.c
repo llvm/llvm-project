@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name loops.cpp %s | FileCheck %s
+// RUN: %strip_comments > %t.stripped.c
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name loops.cpp %t.stripped.c | FileCheck %s
 
-                                    // CHECK: main
+// CHECK: main
 int main() {                        // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+8]]:2 = #0
   int j = 0;                        // CHECK-NEXT: File 0, [[@LINE+1]]:9 -> [[@LINE+1]]:14 = (#0 + #1)
   while(j < 5) ++j;                 // CHECK-NEXT: File 0, [[@LINE]]:15 -> [[@LINE]]:16 = #1
