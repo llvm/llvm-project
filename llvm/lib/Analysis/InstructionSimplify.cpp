@@ -5270,11 +5270,22 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     if (!match(Op1, m_APIntAllowUndef(C)))
       break;
 
+    // Clamp to limit value. For example:
+    // umax(i8 %x, i8 255) --> 255
     if ((IID == Intrinsic::smax && C->isMaxSignedValue()) ||
         (IID == Intrinsic::smin && C->isMinSignedValue()) ||
         (IID == Intrinsic::umax && C->isMaxValue()) ||
         (IID == Intrinsic::umin && C->isMinValue()))
       return ConstantInt::get(ReturnType, *C);
+
+    // If the constant op is the opposite of the limit value, the other must be
+    // larger/smaller or equal. For example:
+    // umin(i8 %x, i8 255) --> %x
+    if ((IID == Intrinsic::smax && C->isMinSignedValue()) ||
+        (IID == Intrinsic::smin && C->isMaxSignedValue()) ||
+        (IID == Intrinsic::umax && C->isMinValue()) ||
+        (IID == Intrinsic::umin && C->isMaxValue()))
+      return Op0;
 
     break;
   }
