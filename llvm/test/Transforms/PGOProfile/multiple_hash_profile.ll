@@ -1,6 +1,8 @@
 ; RUN: llvm-profdata merge %S/Inputs/multiple_hash_profile.proftext -o %t.profdata
 ; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata  -S | FileCheck %s
+; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -pgo-instr-old-cfg-hashing=true -S | FileCheck -check-prefix=CHECKOLDHASH %s
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -pgo-instr-old-cfg-hashing=true -S | FileCheck -check-prefix=CHECKOLDHASH %s
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -29,6 +31,9 @@ entry:
 ; CHECK: %mul.i = select i1 %cmp.i, i32 1, i32 %i
 ; CHECK-SAME: !prof ![[BW:[0-9]+]]
 ; CHECK: ![[BW]] = !{!"branch_weights", i32 12, i32 6}
+; CHECKOLDHASH: %mul.i = select i1 %cmp.i, i32 1, i32 %i
+; CHECKOLDHASH-SAME: !prof ![[BW:[0-9]+]]
+; CHECKOLDHASH: ![[BW]] = !{!"branch_weights", i32 6, i32 12}
   %retval.0.i = mul nsw i32 %mul.i, %i
   ret i32 %retval.0.i
 }
