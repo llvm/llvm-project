@@ -69,21 +69,21 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_aranges:
-    - Format:   [[FORMAT]]
-      Length:   0x2c
-      Version:  2
-      CuOffset: 0
-      AddrSize: 0x04
-      SegSize:  0x00
+    - Format:               [[FORMAT]]
+      Length:               0x2c
+      Version:              2
+      CuOffset:             0
+      AddressSize:          0x04
+      SegmentSelectorSize:  0x00
       Descriptors:
         - Address: 0x00001234
           Length:  0x20
-    - Format:   [[FORMAT]]
-      Length:   0x2c
-      Version:  2
-      CuOffset: 0x65
-      AddrSize: 0x08
-      SegSize:  0x00
+    - Format:              [[FORMAT]]
+      Length:              0x2c
+      Version:             2
+      CuOffset:            0x65
+      AddressSize:         0x08
+      SegmentSelectorSize: 0x00
       Descriptors:
         - Address: 0x0000000000005678
           Length:  0x20
@@ -307,11 +307,11 @@ Sections:
     Size: 0x10
 DWARF:
   debug_aranges:
-    - Length:   0x2c
-      Version:  2
-      CuOffset: 0
-      AddrSize: 0x08
-      SegSize:  0x00
+    - Length:              0x2c
+      Version:             2
+      CuOffset:            0
+      AddressSize:         0x08
+      SegmentSelectorSize: 0x00
       Descriptors:
         - Address: 0x0000000000001234
           Length:  0x20
@@ -333,11 +333,11 @@ Sections:
     Content: "00"
 DWARF:
   debug_aranges:
-    - Length:   0x2c
-      Version:  2
-      CuOffset: 0
-      AddrSize: 0x08
-      SegSize:  0x00
+    - Length:              0x2c
+      Version:             2
+      CuOffset:            0
+      AddressSize:         0x08
+      SegmentSelectorSize: 0x00
       Descriptors:
         - Address: 0x0000000000001234
           Length:  0x20
@@ -398,11 +398,11 @@ Sections:
     Type:         SHT_STRTAB
 DWARF:
   debug_aranges:
-    - Length:   0x2c
-      Version:  2
-      CuOffset: 0
-      AddrSize: 0x08
-      SegSize:  0x00
+    - Length:              0x2c
+      Version:             2
+      CuOffset:            0
+      AddressSize:         0x08
+      SegmentSelectorSize: 0x00
       Descriptors:
         - Address: 0x0000000000001234
           Length:  0x20
@@ -427,12 +427,12 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_aranges:
-    - Length:      0x2c
-      Version:     2
-      CuOffset:    0
-      AddrSize:    0x07 ## Invalid address_size.
-      SegSize:     0
-      Descriptors: []
+    - Length:              0x2c
+      Version:             2
+      CuOffset:            0
+      AddressSize:         0x07 ## Invalid address_size.
+      SegmentSelectorSize: 0
+      Descriptors:         []
 
 ## i) Test that yaml2obj emits an error message if we try to assign an invalid value to
 ## 'AddrSize' when the 'Descriptors' list isn't empty.
@@ -450,11 +450,11 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_aranges:
-    - Length:      0x2c
-      Version:     2
-      CuOffset:    0
-      AddrSize:    0x07 ## Invalid address_size.
-      SegSize:     0
+    - Length:              0x2c
+      Version:             2
+      CuOffset:            0
+      AddressSize:         0x07 ## Invalid address_size.
+      SegmentSelectorSize: 0
       Descriptors:
         - Address: 0x1234
           Length:  0x1000
