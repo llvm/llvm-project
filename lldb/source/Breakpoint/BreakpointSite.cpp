@@ -21,7 +21,7 @@ using namespace lldb_private;
 BreakpointSite::BreakpointSite(BreakpointSiteList *list,
                                const BreakpointLocationSP &owner,
                                lldb::addr_t addr, bool use_hardware)
-    : StoppointLocation(GetNextID(), addr, 0, use_hardware),
+    : StoppointSite(GetNextID(), addr, 0, use_hardware),
       m_type(eSoftware), // Process subclasses need to set this correctly using
                          // SetType()
       m_saved_opcode(), m_trap_opcode(),
@@ -48,7 +48,7 @@ break_id_t BreakpointSite::GetNextID() {
 // should continue.
 
 bool BreakpointSite::ShouldStop(StoppointCallbackContext *context) {
-  IncrementHitCount();
+  m_hit_counter.Increment();
   // ShouldStop can do a lot of work, and might even come come back and hit
   // this breakpoint site again.  So don't hold the m_owners_mutex the whole
   // while.  Instead make a local copy of the collection and call ShouldStop on
@@ -153,13 +153,6 @@ void BreakpointSite::BumpHitCounts() {
   std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
   for (BreakpointLocationSP loc_sp : m_owners.BreakpointLocations()) {
     loc_sp->BumpHitCount();
-  }
-}
-
-void BreakpointSite::SetHardwareIndex(uint32_t index) {
-  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
-  for (BreakpointLocationSP loc_sp : m_owners.BreakpointLocations()) {
-    loc_sp->SetHardwareIndex(index);
   }
 }
 
