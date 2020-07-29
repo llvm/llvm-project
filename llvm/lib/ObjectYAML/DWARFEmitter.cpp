@@ -543,9 +543,9 @@ Error DWARFYAML::emitDebugStrOffsets(raw_ostream &OS, const Data &DI) {
   return Error::success();
 }
 
-static Error checkListEntryOperands(StringRef EncodingString,
-                                    ArrayRef<yaml::Hex64> Values,
-                                    uint64_t ExpectedOperands) {
+static Error checkOperandCount(StringRef EncodingString,
+                               ArrayRef<yaml::Hex64> Values,
+                               uint64_t ExpectedOperands) {
   if (Values.size() != ExpectedOperands)
     return createStringError(
         errc::invalid_argument,
@@ -578,7 +578,7 @@ static Expected<uint64_t> writeListEntry(raw_ostream &OS,
   StringRef EncodingName = dwarf::RangeListEncodingString(Entry.Operator);
 
   auto CheckOperands = [&](uint64_t ExpectedOperands) -> Error {
-    return checkListEntryOperands(EncodingName, Entry.Values, ExpectedOperands);
+    return checkOperandCount(EncodingName, Entry.Values, ExpectedOperands);
   };
 
   auto WriteAddress = [&](uint64_t Addr) -> Error {
