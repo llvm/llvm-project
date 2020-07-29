@@ -1410,8 +1410,8 @@ void CXXRecordDecl::finishedDefaultedOrDeletedMember(CXXMethodDecl *D) {
     data().DeclaredNonTrivialSpecialMembers |= SMKind;
 }
 
-void CXXRecordDecl::setCaptures(ArrayRef<LambdaCapture> Captures) {
-  ASTContext &Context = getASTContext();
+void CXXRecordDecl::setCaptures(ASTContext &Context,
+                                ArrayRef<LambdaCapture> Captures) {
   CXXRecordDecl::LambdaDefinitionData &Data = getLambdaData();
 
   // Copy captures.
