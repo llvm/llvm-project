@@ -831,6 +831,19 @@ void SignalContext::InitPcSpBp() {
   GetPcSpBp(context, &pc, &sp, &bp);
 }
 
+// ASan/TSan use mmap in a way that creates “deallocation gaps” which triggers
+// EXC_GUARD exceptions on macOS 10.15+ (XNU 19.0+).
+static void DisableMmapExcGuardExceptions() {
+  using task_exc_guard_behavior_t = uint32_t;
+  using task_set_exc_guard_behavior_t =
+      kern_return_t(task_t task, task_exc_guard_behavior_t behavior);
+  auto *set_behavior = (task_set_exc_guard_behavior_t *)dlsym(
+      RTLD_DEFAULT, "task_set_exc_guard_behavior");
+  if (set_behavior == nullptr) return;
+  const task_exc_guard_behavior_t task_exc_guard_none = 0;
+  set_behavior(mach_task_self(), task_exc_guard_none);
+}
+
 void InitializePlatformEarly() {
   // Only use xnu_fast_mmap when on x86_64 and the kernel supports it.
   use_xnu_fast_mmap =
@@ -839,6 +852,8 @@ void InitializePlatformEarly() {
 #else
       false;
 #endif
+  if (GetDarwinKernelVersion() >= DarwinKernelVersion(19, 0))
+    DisableMmapExcGuardExceptions();
 }
 
 #if !SANITIZER_GO
