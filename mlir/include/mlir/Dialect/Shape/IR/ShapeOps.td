@@ -440,7 +440,7 @@ def Shape_SizeToIndexOp : Shape_Op<"size_to_index", [NoSideEffect]> {
     arguments.
   }];
 
-  let arguments = (outs Shape_SizeOrIndexType:$arg);
+  let arguments = (ins Shape_SizeOrIndexType:$arg);
   let results = (outs Index:$result);
 
   let assemblyFormat = "$arg attr-dict `:` type($arg)";
