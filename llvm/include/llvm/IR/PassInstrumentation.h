@@ -67,11 +67,14 @@ public:
   // to take them as constant pointers, wrapped with llvm::Any.
   // For the case when IRUnit has been invalidated there is a different
   // callback to use - AfterPassInvalidated.
+  // We call all BeforePassFuncs to determine if a pass should run or not.
+  // BeforeNonSkippedPassFuncs are called only if the pass should run.
   // TODO: currently AfterPassInvalidated does not accept IRUnit, since passing
-  // already invalidated IRUnit is unsafe. There are ways to handle invalidated IRUnits
-  // in a safe way, and we might pursue that as soon as there is a useful instrumentation
-  // that needs it.
+  // already invalidated IRUnit is unsafe. There are ways to handle invalidated
+  // IRUnits in a safe way, and we might pursue that as soon as there is a
+  // useful instrumentation that needs it.
   using BeforePassFunc = bool(StringRef, Any);
+  using BeforeNonSkippedPassFunc = void(StringRef, Any);
   using AfterPassFunc = void(StringRef, Any);
   using AfterPassInvalidatedFunc = void(StringRef);
   using BeforeAnalysisFunc = void(StringRef, Any);
@@ -86,6 +89,11 @@ public:
 
   template <typename CallableT> void registerBeforePassCallback(CallableT C) {
     BeforePassCallbacks.emplace_back(std::move(C));
+  }
+
+  template <typename CallableT>
+  void registerBeforeNonSkippedPassCallback(CallableT C) {
+    BeforeNonSkippedPassCallbacks.emplace_back(std::move(C));
   }
 
   template <typename CallableT> void registerAfterPassCallback(CallableT C) {
@@ -111,6 +119,8 @@ private:
   friend class PassInstrumentation;
 
   SmallVector<llvm::unique_function<BeforePassFunc>, 4> BeforePassCallbacks;
+  SmallVector<llvm::unique_function<BeforeNonSkippedPassFunc>, 4>
+      BeforeNonSkippedPassCallbacks;
   SmallVector<llvm::unique_function<AfterPassFunc>, 4> AfterPassCallbacks;
   SmallVector<llvm::unique_function<AfterPassInvalidatedFunc>, 4>
       AfterPassInvalidatedCallbacks;
@@ -165,6 +175,12 @@ public:
     for (auto &C : Callbacks->BeforePassCallbacks)
       ShouldRun &= C(Pass.name(), llvm::Any(&IR));
     ShouldRun = ShouldRun || isRequired(Pass);
+
+    if (ShouldRun) {
+      for (auto &C : Callbacks->BeforeNonSkippedPassCallbacks)
+        C(Pass.name(), llvm::Any(&IR));
+    }
+
     return ShouldRun;
   }
 
