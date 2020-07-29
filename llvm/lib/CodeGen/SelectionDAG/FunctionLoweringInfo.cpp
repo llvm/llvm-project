@@ -360,7 +360,7 @@ void FunctionLoweringInfo::clear() {
   RegFixups.clear();
   RegsWithFixups.clear();
   StatepointStackSlots.clear();
-  StatepointSpillMaps.clear();
+  StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
 }
 
