@@ -79,6 +79,18 @@ bool DWARFDebugLine::Prologue::hasFileAtIndex(uint64_t FileIndex) const {
   return FileIndex != 0 && FileIndex <= FileNames.size();
 }
 
+Optional<uint64_t> DWARFDebugLine::Prologue::getLastValidFileIndex() const {
+  if (FileNames.empty())
+    return None;
+  uint16_t DwarfVersion = getVersion();
+  assert(DwarfVersion != 0 &&
+         "line table prologue has no dwarf version information");
+  // In DWARF v5 the file names are 0-indexed.
+  if (DwarfVersion >= 5)
+    return FileNames.size() - 1;
+  return FileNames.size();
+}
+
 const llvm::DWARFDebugLine::FileNameEntry &
 DWARFDebugLine::Prologue::getFileNameEntry(uint64_t Index) const {
   uint16_t DwarfVersion = getVersion();

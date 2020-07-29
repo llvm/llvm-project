@@ -538,6 +538,39 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     }
     break;
   }
+  case DW_AT_call_file:
+  case DW_AT_decl_file: {
+    if (auto FileIdx = AttrValue.Value.getAsUnsignedConstant()) {
+      DWARFUnit *U = Die.getDwarfUnit();
+      const auto *LT = U->getContext().getLineTableForUnit(U);
+      if (LT) {
+        if (!LT->hasFileAtIndex(*FileIdx)) {
+          bool IsZeroIndexed = LT->Prologue.getVersion() >= 5;
+          if (Optional<uint64_t> LastFileIdx = LT->getLastValidFileIndex()) {
+            ReportError("DIE has " + AttributeString(Attr) +
+                        " with an invalid file index " +
+                        llvm::formatv("{0}", *FileIdx) +
+                        " (valid values are [" + (IsZeroIndexed ? "0-" : "1-") +
+                        llvm::formatv("{0}", *LastFileIdx) + "])");
+          } else {
+            ReportError("DIE has " + AttributeString(Attr) +
+                        " with an invalid file index " +
+                        llvm::formatv("{0}", *FileIdx) +
+                        " (the file table in the prologue is empty)");
+          }
+        }
+      } else {
+        ReportError("DIE has " + AttributeString(Attr) +
+                    " that references a file with index " +
+                    llvm::formatv("{0}", *FileIdx) +
+                    " and the compile unit has no line table");
+      }
+    } else {
+      ReportError("DIE has " + AttributeString(Attr) +
+                  " with invalid encoding");
+    }
+    break;
+  }
   default:
     break;
   }
