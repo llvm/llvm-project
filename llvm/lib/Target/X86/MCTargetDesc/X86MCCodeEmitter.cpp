@@ -605,23 +605,14 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
   static const unsigned SSTable[] = {~0U, 0, 1, ~0U, 2, ~0U, ~0U, ~0U, 3};
   unsigned SS = SSTable[Scale.getImm()];
 
-  if (BaseReg == 0) {
-    // Handle the SIB byte for the case where there is no base, see Intel
-    // Manual 2A, table 2-7. The displacement has already been output.
-    unsigned IndexRegNo;
-    if (IndexReg.getReg())
-      IndexRegNo = getX86RegNum(IndexReg);
-    else // Examples: [ESP+1*<noreg>+4] or [scaled idx]+disp32 (MOD=0,BASE=5)
-      IndexRegNo = 4;
-    emitSIBByte(SS, IndexRegNo, 5, OS);
-  } else {
-    unsigned IndexRegNo;
-    if (IndexReg.getReg())
-      IndexRegNo = getX86RegNum(IndexReg);
-    else
-      IndexRegNo = 4; // For example [ESP+1*<noreg>+4]
-    emitSIBByte(SS, IndexRegNo, getX86RegNum(Base), OS);
-  }
+  unsigned IndexRegNo = IndexReg.getReg() ? getX86RegNum(IndexReg) : 4;
+
+  // Handle the SIB byte for the case where there is no base, see Intel
+  // Manual 2A, table 2-7. The displacement has already been output.
+  if (BaseReg == 0)
+    BaseRegNo = 5;
+
+  emitSIBByte(SS, IndexRegNo, BaseRegNo, OS);
 
   // Do we need to output a displacement?
   if (ForceDisp8)
