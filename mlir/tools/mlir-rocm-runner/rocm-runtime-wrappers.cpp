@@ -25,8 +25,7 @@
   [](hipError_t result) {                                                      \
     if (!result)                                                               \
       return;                                                                  \
-    const char *name = nullptr;                                                \
-    hipGetErrorName(result, &name);                                            \
+    const char *name = hipGetErrorName(result);                                \
     if (!name)                                                                 \
       name = "<unknown>";                                                      \
     llvm::errs() << "'" << #expr << "' failed with '" << name << "'\n";        \
@@ -74,8 +73,7 @@ extern "C" void mgpuStreamSynchronize(hipStream_t stream) {
 // Allows to register byte array with the ROCM runtime. Helpful until we have
 // transfer functions implemented.
 extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
-  HIP_REPORT_IF_ERROR(hipHostRegister(ptr, sizeBytes, /*flags=*/0),
-                      "MemHostRegister");
+  HIP_REPORT_IF_ERROR(hipHostRegister(ptr, sizeBytes, /*flags=*/0));
 }
 
 // Allows to register a MemRef with the ROCM runtime. Initializes array with
@@ -116,10 +114,9 @@ extern "C" void mgpuMemHostRegisterInt32(int64_t rank, void *ptr) {
 
 template <typename T>
 void mgpuMemGetDevicePointer(T *hostPtr, T **devicePtr) {
-  HIP_REPORT_IF_ERROR(hipSetDevice(0), "hipSetDevice");
+  HIP_REPORT_IF_ERROR(hipSetDevice(0));
   HIP_REPORT_IF_ERROR(
-      hipHostGetDevicePointer((void **)devicePtr, hostPtr, /*flags=*/0),
-      "hipHostGetDevicePointer");
+      hipHostGetDevicePointer((void **)devicePtr, hostPtr, /*flags=*/0));
 }
 
 extern "C" StridedMemRefType<float, 1>
