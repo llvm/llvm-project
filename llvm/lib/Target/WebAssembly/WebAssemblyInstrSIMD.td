@@ -892,15 +892,21 @@ def : Pat<(v4i32 (int_wasm_trunc_saturate_unsigned (v4f32 V128:$src))),
           (fp_to_uint_v4i32_v4f32 (v4f32 V128:$src))>;
 
 // Widening operations
+def widen_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def widen_low_s : SDNode<"WebAssemblyISD::WIDEN_LOW_S", widen_t>;
+def widen_high_s : SDNode<"WebAssemblyISD::WIDEN_HIGH_S", widen_t>;
+def widen_low_u : SDNode<"WebAssemblyISD::WIDEN_LOW_U", widen_t>;
+def widen_high_u : SDNode<"WebAssemblyISD::WIDEN_HIGH_U", widen_t>;
+
 multiclass SIMDWiden<ValueType vec_t, string vec, ValueType arg_t, string arg,
                      bits<32> baseInst> {
-  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_low_signed,
+  defm "" : SIMDConvert<vec_t, arg_t, widen_low_s,
                         vec#".widen_low_"#arg#"_s", baseInst>;
-  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_high_signed,
+  defm "" : SIMDConvert<vec_t, arg_t, widen_high_s,
                         vec#".widen_high_"#arg#"_s", !add(baseInst, 1)>;
-  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_low_unsigned,
+  defm "" : SIMDConvert<vec_t, arg_t, widen_low_u,
                         vec#".widen_low_"#arg#"_u", !add(baseInst, 2)>;
-  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_high_unsigned,
+  defm "" : SIMDConvert<vec_t, arg_t, widen_high_u,
                         vec#".widen_high_"#arg#"_u", !add(baseInst, 3)>;
 }
 
