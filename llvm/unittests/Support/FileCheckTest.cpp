@@ -655,20 +655,36 @@ TEST_F(FileCheckTest, NumericVariable) {
   Expected<ExpressionValue> EvalResult = FooVarUse.eval();
   expectUndefErrors({"FOO"}, EvalResult.takeError());
 
+  // Defined variable without string: only getValue and eval return value set.
   FooVar.setValue(ExpressionValue(42u));
-
-  // Defined variable: getValue and eval return value set.
   Optional<ExpressionValue> Value = FooVar.getValue();
   ASSERT_TRUE(Value);
   EXPECT_EQ(42, cantFail(Value->getSignedValue()));
+  EXPECT_FALSE(FooVar.getStringValue());
   EvalResult = FooVarUse.eval();
   ASSERT_THAT_EXPECTED(EvalResult, Succeeded());
   EXPECT_EQ(42, cantFail(EvalResult->getSignedValue()));
+
+  // Defined variable with string: getValue, eval, and getStringValue return
+  // value set.
+  StringRef StringValue = "925";
+  FooVar.setValue(ExpressionValue(925u), StringValue);
+  Value = FooVar.getValue();
+  ASSERT_TRUE(Value);
+  EXPECT_EQ(925, cantFail(Value->getSignedValue()));
+  // getStringValue should return the same memory not just the same characters.
+  EXPECT_EQ(StringValue.begin(), FooVar.getStringValue().getValue().begin());
+  EXPECT_EQ(StringValue.end(), FooVar.getStringValue().getValue().end());
+  EvalResult = FooVarUse.eval();
+  ASSERT_THAT_EXPECTED(EvalResult, Succeeded());
+  EXPECT_EQ(925, cantFail(EvalResult->getSignedValue()));
+  EXPECT_EQ(925, cantFail(EvalResult->getSignedValue()));
 
   // Clearing variable: getValue and eval fail. Error returned by eval holds
   // the name of the cleared variable.
   FooVar.clearValue();
   EXPECT_FALSE(FooVar.getValue());
+  EXPECT_FALSE(FooVar.getStringValue());
   EvalResult = FooVarUse.eval();
   expectUndefErrors({"FOO"}, EvalResult.takeError());
 }
@@ -920,6 +936,11 @@ public:
     StringRef BufferRef = bufferize(SM, Buffer);
     size_t MatchLen;
     return P.match(BufferRef, MatchLen, SM);
+  }
+
+  void printVariableDefs(FileCheckDiag::MatchType MatchTy,
+                         std::vector<FileCheckDiag> &Diags) {
+    P.printVariableDefs(SM, MatchTy, &Diags);
   }
 };
 
@@ -1616,5 +1637,26 @@ TEST_F(FileCheckTest, FileCheckContext) {
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
   EXPECT_EQ(cantFail(ExpressionVal->getSignedValue()), 36);
+}
+
+TEST_F(FileCheckTest, CapturedVarDiags) {
+  PatternTester Tester;
+  ASSERT_FALSE(Tester.parsePattern("[[STRVAR:[a-z]+]] [[#NUMVAR:@LINE]]"));
+  EXPECT_THAT_EXPECTED(Tester.match("foobar 2"), Succeeded());
+  std::vector<FileCheckDiag> Diags;
+  Tester.printVariableDefs(FileCheckDiag::MatchFoundAndExpected, Diags);
+  EXPECT_EQ(Diags.size(), 2ul);
+  for (FileCheckDiag Diag : Diags) {
+    EXPECT_EQ(Diag.CheckTy, Check::CheckPlain);
+    EXPECT_EQ(Diag.MatchTy, FileCheckDiag::MatchFoundAndExpected);
+    EXPECT_EQ(Diag.InputStartLine, 1u);
+    EXPECT_EQ(Diag.InputEndLine, 1u);
+  }
+  EXPECT_EQ(Diags[0].InputStartCol, 1u);
+  EXPECT_EQ(Diags[0].InputEndCol, 7u);
+  EXPECT_EQ(Diags[1].InputStartCol, 8u);
+  EXPECT_EQ(Diags[1].InputEndCol, 9u);
+  EXPECT_EQ(Diags[0].Note, "captured var \"STRVAR\"");
+  EXPECT_EQ(Diags[1].Note, "captured var \"NUMVAR\"");
 }
 } // namespace
