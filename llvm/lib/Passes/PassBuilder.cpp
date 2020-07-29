@@ -1144,11 +1144,14 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // convert to more optimized IR using more aggressive simplify CFG options.
   // The extra sinking transform can create larger basic blocks, so do this
   // before SLP vectorization.
-  OptimizePM.addPass(SimplifyCFGPass(SimplifyCFGOptions().
-                                     forwardSwitchCondToPhi(true).
-                                     convertSwitchToLookupTable(true).
-                                     needCanonicalLoops(false).
-                                     sinkCommonInsts(true)));
+  // FIXME: study whether hoisting and/or sinking of common instructions should
+  //        be delayed until after SLP vectorizer.
+  OptimizePM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                         .forwardSwitchCondToPhi(true)
+                                         .convertSwitchToLookupTable(true)
+                                         .needCanonicalLoops(false)
+                                         .hoistCommonInsts(true)
+                                         .sinkCommonInsts(true)));
 
   // Optimize parallel scalar instruction chains into SIMD instructions.
   if (PTO.SLPVectorization)
