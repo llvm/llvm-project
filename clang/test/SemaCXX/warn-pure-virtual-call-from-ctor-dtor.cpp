@@ -22,8 +22,8 @@ struct C {
 };
 
 template <typename T> struct TA {
-  TA() { f(); } // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'TA'}}
-  ~TA() { f(); } // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the destructor of 'TA'}}
+  TA() { f(); }  // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'TA<float>'}}
+  ~TA() { f(); } // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the destructor of 'TA<float>'}}
 
   virtual void f() = 0; // expected-note 2{{'f' declared here}}
 };
@@ -35,8 +35,8 @@ template <> struct TA<int> {
 };
 
 template <> struct TA<long> {
-  TA() { f(); }  // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'TA'}}
-  ~TA() { f(); } // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the destructor of 'TA'}}
+  TA() { f(); }         // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'TA<long>'}}
+  ~TA() { f(); }        // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the destructor of 'TA<long>'}}
   virtual void f() = 0; // expected-note 2{{'f' declared here}}
 };
 

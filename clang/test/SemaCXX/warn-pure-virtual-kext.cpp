@@ -10,7 +10,7 @@ struct A {
 template <typename T> struct TA {
   virtual void f() = 0; // expected-note {{'f' declared here}}
 
-  TA() { TA::f(); } // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'TA'}} // expected-note {{qualified call to 'TA'::'f' is treated as a virtual call to 'f' due to -fapple-kext}}
+  TA() { TA::f(); } // expected-warning {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'TA<int>'}} // expected-note {{qualified call to 'TA<int>'::'f' is treated as a virtual call to 'f' due to -fapple-kext}}
 };
 
 struct B : TA<int> { // expected-note {{in instantiation of member function 'TA<int>::TA' requested here}}

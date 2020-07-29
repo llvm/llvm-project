@@ -5,7 +5,7 @@ namespace test1 {
 
   namespace {
   template <typename T> int abc_template = 0;
-  template <> int abc_template<int> = 0; // expected-warning {{variable 'abc_template' is not needed and will not be emitted}}
+  template <> int abc_template<int> = 0; // expected-warning {{variable 'abc_template<int>' is not needed and will not be emitted}}
   }                                      // namespace
   template <typename T>
   int foo(void) {
