@@ -31,18 +31,18 @@ void avx512_saxpy(int n, float s, float *x, float *y) {
 }
 
 void caller(int n, float s, float *x, float *y) {
-  // GENERIC:     define void @{{.*}}caller
-  // GENERIC:      call void @{{.*}}base_saxpy
-  // WITHFEATURE: define void @{{.*}}caller
-  // WITHFEATURE:  call void @{{.*}}avx512_saxpy
+  // GENERIC:     define void {{.*}}caller
+  // GENERIC:      call void {{.*}}base_saxpy
+  // WITHFEATURE: define void {{.*}}caller
+  // WITHFEATURE:  call void {{.*}}avx512_saxpy
   base_saxpy(n, s, x, y);
 }
 
 __attribute__((target("avx512f"))) void variant_caller(int n, float s, float *x, float *y) {
-  // GENERIC:     define void @{{.*}}variant_caller
-  // GENERIC:      call void @{{.*}}avx512_saxpy
-  // WITHFEATURE: define void @{{.*}}variant_caller
-  // WITHFEATURE:  call void @{{.*}}avx512_saxpy
+  // GENERIC:     define void {{.*}}variant_caller
+  // GENERIC:      call void {{.*}}avx512_saxpy
+  // WITHFEATURE: define void {{.*}}variant_caller
+  // WITHFEATURE:  call void {{.*}}avx512_saxpy
   base_saxpy(n, s, x, y);
 }
 
