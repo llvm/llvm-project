@@ -9724,8 +9724,6 @@ def err_opencl_block_ref_block : Error<
   "cannot refer to a block inside block">;
 
 // OpenCL v2.0 s6.13.9 - Address space qualifier functions.
-def err_opencl_builtin_to_addr_arg_num : Error<
-  "invalid number of arguments to function: %0">;
 def err_opencl_builtin_to_addr_invalid_arg : Error<
   "invalid argument %0 to function: %1, expecting a generic pointer argument">;
 

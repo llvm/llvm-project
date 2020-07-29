@@ -1,5 +1,0 @@
-RUN: extract --help 2>&1 | FileCheck --implicit-check-not='General Options:' %s
-CHECK: OVERVIEW: Split input {{.*}}
-CHECK: Generic Options:
-CHECK: extract Options:
-CHECK:   -o

@@ -39,6 +39,15 @@ llvm::cl::opt<std::string> IndexPath(llvm::cl::desc("<INDEX FILE>"),
 llvm::cl::opt<std::string> IndexRoot(llvm::cl::desc("<PROJECT ROOT>"),
                                      llvm::cl::Positional, llvm::cl::Required);
 
+llvm::cl::opt<Logger::Level> LogLevel{
+    "log",
+    llvm::cl::desc("Verbosity of log messages written to stderr"),
+    values(clEnumValN(Logger::Error, "error", "Error messages only"),
+           clEnumValN(Logger::Info, "info", "High level execution tracing"),
+           clEnumValN(Logger::Debug, "verbose", "Low level details")),
+    llvm::cl::init(Logger::Info),
+};
+
 llvm::cl::opt<std::string> TraceFile(
     "trace-file",
     llvm::cl::desc("Path to the file where tracer logs will be stored"));
@@ -173,7 +182,7 @@ void runServer(std::unique_ptr<clangd::SymbolIndex> Index,
   Builder.AddListeningPort(ServerAddress, grpc::InsecureServerCredentials());
   Builder.RegisterService(&Service);
   std::unique_ptr<grpc::Server> Server(Builder.BuildAndStart());
-  llvm::outs() << "Server listening on " << ServerAddress << '\n';
+  log("Server listening on {0}", ServerAddress);
 
   Server->Wait();
 }
@@ -191,9 +200,15 @@ int main(int argc, char *argv[]) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   if (!llvm::sys::path::is_absolute(IndexRoot)) {
-    elog("Index root should be an absolute path.");
+    llvm::errs() << "Index root should be an absolute path.\n";
     return -1;
   }
+
+  llvm::errs().SetBuffered();
+  // Don't flush stdout when logging for thread safety.
+  llvm::errs().tie(nullptr);
+  clang::clangd::StreamLogger Logger(llvm::errs(), LogLevel);
+  clang::clangd::LoggingSession LoggingSession(Logger);
 
   llvm::Optional<llvm::raw_fd_ostream> TracerStream;
   std::unique_ptr<clang::clangd::trace::EventTracer> Tracer;
@@ -220,7 +235,7 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<clang::clangd::SymbolIndex> Index = openIndex(IndexPath);
 
   if (!Index) {
-    elog("Failed to open the index.");
+    llvm::errs() << "Failed to open the index.\n";
     return -1;
   }
 

@@ -1058,7 +1058,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
 
       // Mark the "old value of vgpr" input undef only if this is the first sgpr
       // spill to this specific vgpr in the first basic block.
-      BuildMI(*MBB, MI, DL,
+      auto MIB = BuildMI(*MBB, MI, DL,
               TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
               Spill.VGPR)
         .addReg(SubReg, getKillRegState(IsKill))
@@ -1068,6 +1068,11 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
       if (NeedsCFI)
         TFL->buildCFIForSGPRToVGPRSpill(*MBB, MI, DL, SubReg, Spill.VGPR,
                                         Spill.Lane);
+      if (i == 0 && NumSubRegs > 1) {
+        // We may be spilling a super-register which is only partially defined,
+        // and need to ensure later spills think the value is defined.
+        MIB.addReg(SuperReg, RegState::ImplicitDefine);
+      }
 
       // FIXME: Since this spills to another register instead of an actual
       // frame index, we should delete the frame index when all references to

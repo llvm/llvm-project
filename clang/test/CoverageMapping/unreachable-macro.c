@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s | FileCheck %s
-
+// RUN: %strip_comments > %t.stripped.c
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %t.stripped.c | FileCheck %s
 #define WHILE while (0) {}
 
 // CHECK: counters_in_macro_following_unreachable

@@ -281,6 +281,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool NoSignedZerosFPMath = false;
   bool MemoryBound = false;
   bool WaveLimiter = false;
+  bool HasSpilledSGPRs = false;
+  bool HasSpilledVGPRs = false;
   uint32_t HighBitsOf32BitAddress = 0;
 
   StringValue ScratchRSrcReg = "$private_rsrc_reg";
@@ -308,6 +310,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("noSignedZerosFPMath", MFI.NoSignedZerosFPMath, false);
     YamlIO.mapOptional("memoryBound", MFI.MemoryBound, false);
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
+    YamlIO.mapOptional("hasSpilledSGPRs", MFI.HasSpilledSGPRs, false);
+    YamlIO.mapOptional("hasSpilledVGPRs", MFI.HasSpilledVGPRs, false);
     YamlIO.mapOptional("scratchRSrcReg", MFI.ScratchRSrcReg,
                        StringValue("$private_rsrc_reg"));
     YamlIO.mapOptional("frameOffsetReg", MFI.FrameOffsetReg,

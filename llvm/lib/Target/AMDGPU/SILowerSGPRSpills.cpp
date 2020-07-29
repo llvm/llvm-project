@@ -233,10 +233,18 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
 // Find lowest available VGPR and use it as VGPR reserved for SGPR spills.
 static bool lowerShiftReservedVGPR(MachineFunction &MF,
                                    const GCNSubtarget &ST) {
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  const Register PreReservedVGPR = FuncInfo->VGPRReservedForSGPRSpill;
+  // Early out if pre-reservation of a VGPR for SGPR spilling is disabled.
+  if (!PreReservedVGPR)
+    return false;
+
+  // If there are no free lower VGPRs available, default to using the
+  // pre-reserved register instead.
+  Register LowestAvailableVGPR = PreReservedVGPR;
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  Register LowestAvailableVGPR, ReservedVGPR;
   ArrayRef<MCPhysReg> AllVGPR32s = ST.getRegisterInfo()->getAllVGPR32(MF);
   for (MCPhysReg Reg : AllVGPR32s) {
     if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg)) {
@@ -245,26 +253,29 @@ static bool lowerShiftReservedVGPR(MachineFunction &MF,
     }
   }
 
-  if (!LowestAvailableVGPR)
-    return false;
-
-  ReservedVGPR = FuncInfo->VGPRReservedForSGPRSpill;
   const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
-  int i = 0;
+  Optional<int> FI;
+  // Check if we are reserving a CSR. Create a stack object for a possible spill
+  // in the function prologue.
+  if (FuncInfo->isCalleeSavedReg(CSRegs, LowestAvailableVGPR))
+    FI = FrameInfo.CreateSpillStackObject(4, Align(4));
+
+  // Find saved info about the pre-reserved register.
+  const auto *ReservedVGPRInfoItr =
+      std::find_if(FuncInfo->getSGPRSpillVGPRs().begin(),
+                   FuncInfo->getSGPRSpillVGPRs().end(),
+                   [PreReservedVGPR](const auto &SpillRegInfo) {
+                     return SpillRegInfo.VGPR == PreReservedVGPR;
+                   });
+
+  assert(ReservedVGPRInfoItr != FuncInfo->getSGPRSpillVGPRs().end());
+  auto Index =
+      std::distance(FuncInfo->getSGPRSpillVGPRs().begin(), ReservedVGPRInfoItr);
+
+  FuncInfo->setSGPRSpillVGPRs(LowestAvailableVGPR, FI, Index);
 
   for (MachineBasicBlock &MBB : MF) {
-    for (auto Reg : FuncInfo->getSGPRSpillVGPRs()) {
-      if (Reg.VGPR == ReservedVGPR) {
-        MBB.removeLiveIn(ReservedVGPR);
-        MBB.addLiveIn(LowestAvailableVGPR);
-        Optional<int> FI;
-        if (FuncInfo->isCalleeSavedReg(CSRegs, LowestAvailableVGPR))
-          FI = FrameInfo.CreateSpillStackObject(4, Align(4));
-
-        FuncInfo->setSGPRSpillVGPRs(LowestAvailableVGPR, FI, i);
-      }
-      ++i;
-    }
+    MBB.addLiveIn(LowestAvailableVGPR);
     MBB.sortUniqueLiveIns();
   }
 

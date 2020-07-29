@@ -256,3 +256,7 @@ RUN: ld.lld -### -m i386pep foo.o -section-alignment 0x2000 | FileCheck -check-p
 RUN: ld.lld -### -m i386pep foo.o --section-alignment=0x2000 | FileCheck -check-prefix ALIGN %s
 RUN: ld.lld -### -m i386pep foo.o -section-alignment=0x2000 | FileCheck -check-prefix ALIGN %s
 ALIGN: -align:0x2000
+
+RUN: ld.lld -### -m i386pe foo.o -no-seh | FileCheck -check-prefix NOSEH %s
+RUN: ld.lld -### -m i386pe foo.o --no-seh | FileCheck -check-prefix NOSEH %s
+NOSEH: -noseh

@@ -121,6 +121,18 @@ size_t __scudo_get_region_info_size();
 #define M_MEMTAG_TUNING -102
 #endif
 
+#ifndef M_CACHE_COUNT_MAX
+#define M_CACHE_COUNT_MAX -200
+#endif
+
+#ifndef M_CACHE_SIZE_MAX
+#define M_CACHE_SIZE_MAX -201
+#endif
+
+#ifndef M_TSDS_COUNT_MAX
+#define M_TSDS_COUNT_MAX -202
+#endif
+
 enum scudo_memtag_tuning {
   // Tune for buffer overflows.
   M_MEMTAG_TUNING_BUFFER_OVERFLOW,

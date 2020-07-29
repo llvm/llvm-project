@@ -31,8 +31,9 @@ add_flang_library(FortranSemantics
   pointer-assignment.cpp
   program-tree.cpp
   resolve-labels.cpp
-  resolve-names.cpp
+  resolve-directives.cpp
   resolve-names-utils.cpp
+  resolve-names.cpp
   rewrite-parse-tree.cpp
   scope.cpp
   semantics.cpp

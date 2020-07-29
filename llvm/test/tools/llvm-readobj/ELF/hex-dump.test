@@ -49,10 +49,10 @@ FileHeader:
   Type:    ET_DYN
   Machine: EM_386
 
-## Test that llvm-readelf emits a correct amount of spaces between the hex data
+## Test that llvm-readelf emits the correct number of spaces between the hex data
 ## and its ascii representation.
 
-## a) When the hex data doesn't fill the column whose index isn't 4.
+## a) When the hex data doesn't fill a column other than the last one.
 # RUN: yaml2obj --docnum=2 -DSIZE=18 %s -o %t2.out1
 # RUN: llvm-readelf --hex-dump=.sec %t2.out1 | \
 # RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES1
@@ -61,7 +61,7 @@ FileHeader:
 # SPACES1-NEXT:0x00000000 00000000 00000000 00000000 00000000 ................
 # SPACES1-NEXT:0x00000010 0000                                ..
 
-## b) When the hex data doesn't fill the column whose index is 4.
+## b) When the hex data doesn't fill the last column.
 # RUN: yaml2obj --docnum=2 -DSIZE=30 %s -o %t2.out2
 # RUN: llvm-readelf --hex-dump=.sec %t2.out2 | \
 # RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES2
@@ -70,7 +70,7 @@ FileHeader:
 # SPACES2-NEXT:0x00000000 00000000 00000000 00000000 00000000 ................
 # SPACES2-NEXT:0x00000010 00000000 00000000 00000000 0000     ..............
 
-## c) When the hex data fills the column.
+## c) When the hex data fills a column.
 # RUN: yaml2obj --docnum=2 -DSIZE=28 %s -o %t2.out3
 # RUN: llvm-readelf --hex-dump=.sec %t2.out3 | \
 # RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES3

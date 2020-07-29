@@ -468,9 +468,6 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// Indicates target prefers AVX512 mask registers.
   bool PreferMaskRegisters = false;
 
-  /// Threeway branch is profitable in this subtarget.
-  bool ThreewayBranchProfitable = false;
-
   /// Use Goldmont specific floating point div/sqrt costs.
   bool UseGLMDivSqrtCosts = false;
 
@@ -723,7 +720,6 @@ public:
   bool hasWAITPKG() const { return HasWAITPKG; }
   bool hasPCONFIG() const { return HasPCONFIG; }
   bool hasSGX() const { return HasSGX; }
-  bool threewayBranchProfitable() const { return ThreewayBranchProfitable; }
   bool hasINVPCID() const { return HasINVPCID; }
   bool hasENQCMD() const { return HasENQCMD; }
   bool hasSERIALIZE() const { return HasSERIALIZE; }

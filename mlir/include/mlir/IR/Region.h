@@ -74,6 +74,9 @@ public:
   BlockArgListType getArguments() {
     return empty() ? BlockArgListType() : front().getArguments();
   }
+
+  ValueTypeRange<BlockArgListType> getArgumentTypes();
+
   using args_iterator = BlockArgListType::iterator;
   using reverse_args_iterator = BlockArgListType::reverse_iterator;
   args_iterator args_begin() { return getArguments().begin(); }

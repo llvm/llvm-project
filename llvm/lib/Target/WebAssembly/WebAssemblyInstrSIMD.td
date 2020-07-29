@@ -885,16 +885,28 @@ defm "" : SIMDConvert<v4i32, v4f32, fp_to_uint, "i32x4.trunc_sat_f32x4_u", 249>;
 defm "" : SIMDConvert<v4f32, v4i32, sint_to_fp, "f32x4.convert_i32x4_s", 250>;
 defm "" : SIMDConvert<v4f32, v4i32, uint_to_fp, "f32x4.convert_i32x4_u", 251>;
 
+// Lower llvm.wasm.trunc.saturate.* to saturating instructions
+def : Pat<(v4i32 (int_wasm_trunc_saturate_signed (v4f32 V128:$src))),
+          (fp_to_sint_v4i32_v4f32 (v4f32 V128:$src))>;
+def : Pat<(v4i32 (int_wasm_trunc_saturate_unsigned (v4f32 V128:$src))),
+          (fp_to_uint_v4i32_v4f32 (v4f32 V128:$src))>;
+
 // Widening operations
+def widen_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def widen_low_s : SDNode<"WebAssemblyISD::WIDEN_LOW_S", widen_t>;
+def widen_high_s : SDNode<"WebAssemblyISD::WIDEN_HIGH_S", widen_t>;
+def widen_low_u : SDNode<"WebAssemblyISD::WIDEN_LOW_U", widen_t>;
+def widen_high_u : SDNode<"WebAssemblyISD::WIDEN_HIGH_U", widen_t>;
+
 multiclass SIMDWiden<ValueType vec_t, string vec, ValueType arg_t, string arg,
                      bits<32> baseInst> {
-  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_low_signed,
+  defm "" : SIMDConvert<vec_t, arg_t, widen_low_s,
                         vec#".widen_low_"#arg#"_s", baseInst>;
-  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_high_signed,
+  defm "" : SIMDConvert<vec_t, arg_t, widen_high_s,
                         vec#".widen_high_"#arg#"_s", !add(baseInst, 1)>;
-  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_low_unsigned,
+  defm "" : SIMDConvert<vec_t, arg_t, widen_low_u,
                         vec#".widen_low_"#arg#"_u", !add(baseInst, 2)>;
-  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_high_unsigned,
+  defm "" : SIMDConvert<vec_t, arg_t, widen_high_u,
                         vec#".widen_high_"#arg#"_u", !add(baseInst, 3)>;
 }
 
@@ -921,11 +933,95 @@ multiclass SIMDNarrow<ValueType vec_t, string vec, ValueType arg_t, string arg,
 defm "" : SIMDNarrow<v16i8, "i8x16", v8i16, "i16x8", 101>;
 defm "" : SIMDNarrow<v8i16, "i16x8", v4i32, "i32x4", 133>;
 
-// Lower llvm.wasm.trunc.saturate.* to saturating instructions
-def : Pat<(v4i32 (int_wasm_trunc_saturate_signed (v4f32 V128:$src))),
-          (fp_to_sint_v4i32_v4f32 (v4f32 V128:$src))>;
-def : Pat<(v4i32 (int_wasm_trunc_saturate_unsigned (v4f32 V128:$src))),
-          (fp_to_uint_v4i32_v4f32 (v4f32 V128:$src))>;
+// Use narrowing operations for truncating stores. Since the narrowing
+// operations are saturating instead of truncating, we need to mask
+// the stored values first.
+// TODO: Use consts instead of splats
+def store_v8i8_trunc_v8i16 :
+  OutPatFrag<(ops node:$val),
+             (EXTRACT_LANE_v2i64
+               (NARROW_U_v16i8
+                 (AND_v4i32 (SPLAT_v4i32 (CONST_I32 0x00ff00ff)), node:$val),
+                 node:$val // Unused input
+               ),
+               0
+             )>;
+
+def store_v4i16_trunc_v4i32 :
+  OutPatFrag<(ops node:$val),
+             (EXTRACT_LANE_v2i64
+               (NARROW_U_v8i16
+                 (AND_v4i32 (SPLAT_v4i32 (CONST_I32 0x0000ffff)), node:$val),
+                 node:$val // Unused input
+               ),
+               0
+             )>;
+
+// Store patterns adapted from WebAssemblyInstrMemory.td
+multiclass NarrowingStorePatNoOffset<ValueType ty, PatFrag node,
+                                     OutPatFrag out> {
+  def : Pat<(node ty:$val, I32:$addr),
+            (STORE_I64_A32 0, 0, I32:$addr, (i64 (out ty:$val)))>,
+        Requires<[HasAddr32]>;
+  def : Pat<(node ty:$val, I64:$addr),
+            (STORE_I64_A64 0, 0, I64:$addr, (i64 (out ty:$val)))>,
+        Requires<[HasAddr64]>;
+}
+
+defm : NarrowingStorePatNoOffset<v8i16, truncstorevi8, store_v8i8_trunc_v8i16>;
+defm : NarrowingStorePatNoOffset<v4i32, truncstorevi16,
+                                 store_v4i16_trunc_v4i32>;
+
+multiclass NarrowingStorePatImmOff<ValueType ty, PatFrag kind,
+                                   PatFrag operand, OutPatFrag out> {
+  def : Pat<(kind ty:$val, (operand I32:$addr, imm:$off)),
+            (STORE_I64_A32 0, imm:$off, I32:$addr, (i64 (out ty:$val)))>,
+        Requires<[HasAddr32]>;
+  def : Pat<(kind ty:$val, (operand I64:$addr, imm:$off)),
+            (STORE_I64_A64 0, imm:$off, I64:$addr, (i64 (out ty:$val)))>,
+        Requires<[HasAddr64]>;
+}
+
+defm : NarrowingStorePatImmOff<v8i16, truncstorevi8, regPlusImm,
+                               store_v8i8_trunc_v8i16>;
+defm : NarrowingStorePatImmOff<v4i32, truncstorevi16, regPlusImm,
+                               store_v4i16_trunc_v4i32>;
+defm : NarrowingStorePatImmOff<v8i16, truncstorevi8, or_is_add,
+                               store_v8i8_trunc_v8i16>;
+defm : NarrowingStorePatImmOff<v4i32, truncstorevi16, or_is_add,
+                               store_v4i16_trunc_v4i32>;
+
+multiclass NarrowingStorePatOffsetOnly<ValueType ty, PatFrag kind,
+                                       OutPatFrag out> {
+  def : Pat<(kind ty:$val, imm:$off),
+            (STORE_I64_A32 0, imm:$off, (CONST_I32 0), (i64 (out ty:$val)))>,
+        Requires<[HasAddr32]>;
+  def : Pat<(kind ty:$val, imm:$off),
+            (STORE_I64_A64 0, imm:$off, (CONST_I64 0), (i64 (out ty:$val)))>,
+        Requires<[HasAddr64]>;
+}
+
+defm : NarrowingStorePatOffsetOnly<v8i16, truncstorevi8,
+                                   store_v8i8_trunc_v8i16>;
+defm : NarrowingStorePatOffsetOnly<v4i32, truncstorevi16,
+                                   store_v4i16_trunc_v4i32>;
+
+multiclass NarrowingStorePatGlobalAddrOffOnly<ValueType ty, PatFrag kind,
+                                              OutPatFrag out> {
+  def : Pat<(kind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
+            (STORE_I64_A32
+              0, tglobaladdr:$off, (CONST_I32 0), (i64 (out ty:$val)))>,
+        Requires<[IsNotPIC, HasAddr32]>;
+  def : Pat<(kind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
+            (STORE_I64_A64
+              0, tglobaladdr:$off, (CONST_I64 0), (i64 (out ty:$val)))>,
+        Requires<[IsNotPIC, HasAddr64]>;
+}
+
+defm : NarrowingStorePatGlobalAddrOffOnly<v8i16, truncstorevi8,
+                                          store_v8i8_trunc_v8i16>;
+defm : NarrowingStorePatGlobalAddrOffOnly<v4i32, truncstorevi16,
+                                          store_v4i16_trunc_v4i32>;
 
 // Bitcasts are nops
 // Matching bitcast t1 to t1 causes strange errors, so avoid repeating types

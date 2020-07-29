@@ -16,6 +16,7 @@
 #include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "index/SymbolCollector.h"
+#include "support/Logger.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
@@ -122,7 +123,7 @@ int main(int argc, const char **argv) {
       std::make_unique<clang::clangd::IndexActionFactory>(Data),
       clang::tooling::getStripPluginsAdjuster());
   if (Err) {
-    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+    clang::clangd::elog("{0}", std::move(Err));
   }
 
   // Emit collected data.
