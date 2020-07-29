@@ -749,39 +749,77 @@ bool AMDGPUPromoteAlloca::hasSufficientLocalMem(const Function &F) {
   if (LocalMemLimit == 0)
     return false;
 
-  const DataLayout &DL = Mod->getDataLayout();
+  SmallVector<const Constant *, 16> Stack;
+  SmallPtrSet<const Constant *, 8> VisitedConstants;
+  SmallPtrSet<const GlobalVariable *, 8> UsedLDS;
 
-  // Check how much local memory is being used by global objects
-  CurrentLocalMemUsage = 0;
+  auto visitUsers = [&](const GlobalVariable *GV, const Constant *Val) -> bool {
+    for (const User *U : Val->users()) {
+      if (const Instruction *Use = dyn_cast<Instruction>(U)) {
+        if (Use->getParent()->getParent() == &F)
+          return true;
+      } else {
+        const Constant *C = cast<Constant>(U);
+        if (VisitedConstants.insert(C).second)
+          Stack.push_back(C);
+      }
+    }
+
+    return false;
+  };
+
   for (GlobalVariable &GV : Mod->globals()) {
     if (GV.getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
       continue;
 
-    for (const User *U : GV.users()) {
-      const Instruction *Use = dyn_cast<Instruction>(U);
-      if (!Use) {
-        // FIXME: This is probably a constant expression use. We should
-        // recursively search the users of it for the parent function instead of
-        // bailing.
-        LLVM_DEBUG(dbgs() << "Giving up on LDS size estimate "
-                             "due to constant expression\n");
-        return false;
-      }
+    if (visitUsers(&GV, &GV)) {
+      UsedLDS.insert(&GV);
+      Stack.clear();
+      continue;
+    }
 
-      if (Use->getParent()->getParent() == &F) {
-        Align Alignment =
-            DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
-
-        // FIXME: Try to account for padding here. The padding is currently
-        // determined from the inverse order of uses in the function. I'm not
-        // sure if the use list order is in any way connected to this, so the
-        // total reported size is likely incorrect.
-        uint64_t AllocSize = DL.getTypeAllocSize(GV.getValueType());
-        CurrentLocalMemUsage = alignTo(CurrentLocalMemUsage, Alignment);
-        CurrentLocalMemUsage += AllocSize;
+    // For any ConstantExpr uses, we need to recursively search the users until
+    // we see a function.
+    while (!Stack.empty()) {
+      const Constant *C = Stack.pop_back_val();
+      if (visitUsers(&GV, C)) {
+        UsedLDS.insert(&GV);
+        Stack.clear();
         break;
       }
     }
+  }
+
+  const DataLayout &DL = Mod->getDataLayout();
+  SmallVector<std::pair<uint64_t, Align>, 16> AllocatedSizes;
+  AllocatedSizes.reserve(UsedLDS.size());
+
+  for (const GlobalVariable *GV : UsedLDS) {
+    Align Alignment =
+        DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
+    uint64_t AllocSize = DL.getTypeAllocSize(GV->getValueType());
+    AllocatedSizes.emplace_back(AllocSize, Alignment);
+  }
+
+  // Sort to try to estimate the worst case alignment padding
+  //
+  // FIXME: We should really do something to fix the addresses to a more optimal
+  // value instead
+  llvm::sort(AllocatedSizes.begin(), AllocatedSizes.end(),
+             [](std::pair<uint64_t, Align> LHS, std::pair<uint64_t, Align> RHS) {
+               return LHS.second < RHS.second;
+             });
+
+  // Check how much local memory is being used by global objects
+  CurrentLocalMemUsage = 0;
+
+  // FIXME: Try to account for padding here. The real padding and address is
+  // currently determined from the inverse order of uses in the function when
+  // legalizing, which could also potentially change. We try to estimate the
+  // worst case here, but we probably should fix the addresses earlier.
+  for (auto Alloc : AllocatedSizes) {
+    CurrentLocalMemUsage = alignTo(CurrentLocalMemUsage, Alloc.second);
+    CurrentLocalMemUsage += Alloc.first;
   }
 
   unsigned MaxOccupancy = ST.getOccupancyWithLocalMemSize(CurrentLocalMemUsage,
