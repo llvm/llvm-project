@@ -2388,16 +2388,39 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
       switch (AS) {
       default: llvm_unreachable("Not a language specific address space");
       //  <OpenCL-addrspace> ::= "CL" [ "global" | "local" | "constant" |
-      //                                "private"| "generic" ]
-      case LangAS::opencl_global:   ASString = "CLglobal";   break;
-      case LangAS::opencl_local:    ASString = "CLlocal";    break;
-      case LangAS::opencl_constant: ASString = "CLconstant"; break;
-      case LangAS::opencl_private:  ASString = "CLprivate";  break;
-      case LangAS::opencl_generic:  ASString = "CLgeneric";  break;
+      //                                "private"| "generic" | "device" |
+      //                                "host" ]
+      case LangAS::opencl_global:
+        ASString = "CLglobal";
+        break;
+      case LangAS::opencl_global_device:
+        ASString = "CLdevice";
+        break;
+      case LangAS::opencl_global_host:
+        ASString = "CLhost";
+        break;
+      case LangAS::opencl_local:
+        ASString = "CLlocal";
+        break;
+      case LangAS::opencl_constant:
+        ASString = "CLconstant";
+        break;
+      case LangAS::opencl_private:
+        ASString = "CLprivate";
+        break;
+      case LangAS::opencl_generic:
+        ASString = "CLgeneric";
+        break;
       //  <CUDA-addrspace> ::= "CU" [ "device" | "constant" | "shared" ]
-      case LangAS::cuda_device:     ASString = "CUdevice";   break;
-      case LangAS::cuda_constant:   ASString = "CUconstant"; break;
-      case LangAS::cuda_shared:     ASString = "CUshared";   break;
+      case LangAS::cuda_device:
+        ASString = "CUdevice";
+        break;
+      case LangAS::cuda_constant:
+        ASString = "CUconstant";
+        break;
+      case LangAS::cuda_shared:
+        ASString = "CUshared";
+        break;
       //  <ptrsize-addrspace> ::= [ "ptr32_sptr" | "ptr32_uptr" | "ptr64" ]
       case LangAS::ptr32_sptr:
         ASString = "ptr32_sptr";
