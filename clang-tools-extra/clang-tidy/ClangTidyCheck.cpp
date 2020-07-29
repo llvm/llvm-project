@@ -168,10 +168,9 @@ void ClangTidyCheck::OptionsView::store<bool>(
   store(Options, LocalName, Value ? StringRef("true") : StringRef("false"));
 }
 
-llvm::Expected<int64_t>
-ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
-                                        ArrayRef<NameAndValue> Mapping,
-                                        bool CheckGlobal, bool IgnoreCase) {
+llvm::Expected<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
+    StringRef LocalName, ArrayRef<NameAndValue> Mapping, bool CheckGlobal,
+    bool IgnoreCase) const {
   auto Iter = CheckGlobal
                   ? findPriorityOption(CheckOptions, NamePrefix, LocalName)
                   : CheckOptions.find((NamePrefix + LocalName).str());
