@@ -103,31 +103,13 @@ struct SemiNCAInfo {
     // in progress, we need this information to continue it.
   }
 
-  template <bool Inversed> struct ChildrenGetter {
-    using ResultTy = SmallVector<NodePtr, 8>;
-
-    static ResultTy Get(NodePtr N, std::integral_constant<bool, false>) {
-      auto RChildren = reverse(children<NodePtr>(N));
-      return ResultTy(RChildren.begin(), RChildren.end());
-    }
-
-    static ResultTy Get(NodePtr N, std::integral_constant<bool, true>) {
-      auto IChildren = inverse_children<NodePtr>(N);
-      return ResultTy(IChildren.begin(), IChildren.end());
-    }
-
-    using Tag = std::integral_constant<bool, Inversed>;
-
-    // The function below is the core part of the batch updater. It allows the
-    // Depth Based Search algorithm to perform incremental updates in lockstep
-    // with updates to the CFG. We emulated lockstep CFG updates by getting its
-    // next snapshots by reverse-applying future updates.
-    static ResultTy Get(NodePtr N, BatchUpdatePtr BUI) {
-      if (!BUI)
-        return Get(N, Tag());
+  template <bool Inversed>
+  static SmallVector<NodePtr, 8> getChildren(NodePtr N, BatchUpdatePtr BUI) {
+    if (BUI)
       return BUI->PreViewCFG.template getChildren<Inversed>(N);
-    }
-  };
+    GraphDiffT GD;
+    return GD.template getChildren<Inversed>(N);
+  }
 
   NodePtr getIDom(NodePtr BB) const {
     auto InfoIt = NodeToInfo.find(BB);
@@ -194,8 +176,7 @@ struct SemiNCAInfo {
       NumToNode.push_back(BB);
 
       constexpr bool Direction = IsReverse != IsPostDom;  // XOR.
-      for (const NodePtr Succ :
-           ChildrenGetter<Direction>::Get(BB, BatchUpdates)) {
+      for (const NodePtr Succ : getChildren<Direction>(BB, BatchUpdates)) {
         const auto SIT = NodeToInfo.find(Succ);
         // Don't visit nodes more than once but remember to collect
         // ReverseChildren.
@@ -330,7 +311,7 @@ struct SemiNCAInfo {
   // to CFG nodes within infinite loops.
   static bool HasForwardSuccessors(const NodePtr N, BatchUpdatePtr BUI) {
     assert(N && "N must be a valid node");
-    return !ChildrenGetter<false>::Get(N, BUI).empty();
+    return !getChildren<false>(N, BUI).empty();
   }
 
   static NodePtr GetEntryNode(const DomTreeT &DT) {
@@ -748,8 +729,7 @@ struct SemiNCAInfo {
         //
         // Invariant: there is an optimal path from `To` to TN with the minimum
         // depth being CurrentLevel.
-        for (const NodePtr Succ :
-             ChildrenGetter<IsPostDom>::Get(TN->getBlock(), BUI)) {
+        for (const NodePtr Succ : getChildren<IsPostDom>(TN->getBlock(), BUI)) {
           const TreeNodePtr SuccTN = DT.getNode(Succ);
           assert(SuccTN &&
                  "Unreachable successor found at reachable insertion");
@@ -879,7 +859,7 @@ struct SemiNCAInfo {
     // the DomTree about it.
     // The check is O(N), so run it only in debug configuration.
     auto IsSuccessor = [BUI](const NodePtr SuccCandidate, const NodePtr Of) {
-      auto Successors = ChildrenGetter<IsPostDom>::Get(Of, BUI);
+      auto Successors = getChildren<IsPostDom>(Of, BUI);
       return llvm::find(Successors, SuccCandidate) != Successors.end();
     };
     (void)IsSuccessor;
@@ -967,7 +947,7 @@ struct SemiNCAInfo {
     LLVM_DEBUG(dbgs() << "IsReachableFromIDom " << BlockNamePrinter(TN)
                       << "\n");
     auto TNB = TN->getBlock();
-    for (const NodePtr Pred : ChildrenGetter<!IsPostDom>::Get(TNB, BUI)) {
+    for (const NodePtr Pred : getChildren<!IsPostDom>(TNB, BUI)) {
       LLVM_DEBUG(dbgs() << "\tPred " << BlockNamePrinter(Pred) << "\n");
       if (!DT.getNode(Pred)) continue;
 
