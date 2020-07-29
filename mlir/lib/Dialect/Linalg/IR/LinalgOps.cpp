@@ -986,6 +986,17 @@ static LogicalResult verifyStrideOrDilation(LinalgPoolingOp op,
   return success();
 }
 
+template <typename ConvNDOp>
+static LogicalResult verify(ConvNDOp op) {
+  auto outputType = op.getOutputShapedType(0).getElementType();
+  auto inputType = op.getInputShapedType(0).getElementType();
+  auto kernelType = op.getInputShapedType(1).getElementType();
+  if (outputType != inputType || inputType != kernelType)
+    return op.emitOpError("expected all element types of operands to match");
+
+  return success();
+}
+
 static LogicalResult verify(ConvOp op) {
   auto oType = op.output().getType().cast<MemRefType>();
   auto fType = op.filter().getType().cast<MemRefType>();
@@ -1096,6 +1107,27 @@ mlir::linalg::weightedPoolingInputIndex(PoolingOp op,
   return res;
 }
 
+llvm::Optional<SmallVector<AffineMap, 8>>
+mlir::linalg::createConvNDIndexingMaps(MLIRContext *context, unsigned rank) {
+  unsigned numDims = rank * 2, idx = 0;
+
+  SmallVector<AffineExpr, 8> dims, in, kernel, out;
+  dims = makeAffineDimExprs(numDims, idx, context);
+  in.reserve(rank);
+  kernel.reserve(rank);
+  out.reserve(rank);
+
+  for (unsigned i = 0; i < rank; i++) {
+    in.push_back(dims[i] + dims[rank + i]);
+    kernel.push_back(dims[rank + i]);
+    out.push_back(dims[i]);
+  }
+
+  return SmallVector<AffineMap, 8>{AffineMap::get(numDims, 0, in, context),
+                                   AffineMap::get(numDims, 0, kernel, context),
+                                   AffineMap::get(numDims, 0, out, context)};
+}
+
 #define INSTANTIATE_WEIGHTED_POOLING_INPUT_INDEX(OP_TYPE)                      \
   template SmallVector<AffineExpr, 4>                                          \
   mlir::linalg::weightedPoolingInputIndex<OP_TYPE>(                            \
@@ -1175,6 +1207,18 @@ LogicalResult CopyOp::fold(ArrayRef<Attribute>,
 }
 LogicalResult FillOp::fold(ArrayRef<Attribute>,
                            SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult Conv1DOp::fold(ArrayRef<Attribute>,
+                             SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult Conv2DOp::fold(ArrayRef<Attribute>,
+                             SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult Conv3DOp::fold(ArrayRef<Attribute>,
+                             SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
 }
 LogicalResult GenericOp::fold(ArrayRef<Attribute>,
