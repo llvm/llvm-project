@@ -253,7 +253,7 @@ int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
     return 1;
   }
 
-  static char DFSanEnv[] = "DFSAN_OPTIONS=fast16labels=1:warn_unimplemented=0";
+  static char DFSanEnv[] = "DFSAN_OPTIONS=warn_unimplemented=0";
   putenv(DFSanEnv);
   MkDir(DirPath);
   for (auto &F : CorporaFiles) {
