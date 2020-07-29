@@ -1098,6 +1098,8 @@ OMPToClause *OMPToClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<ValueDecl *> Declarations,
     MappableExprComponentListsRef ComponentLists, ArrayRef<Expr *> UDMapperRefs,
+    ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+    ArrayRef<SourceLocation> MotionModifiersLoc,
     NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId) {
   OMPMappableExprListSizeTy Sizes;
   Sizes.NumVars = Vars.size();
@@ -1122,7 +1124,8 @@ OMPToClause *OMPToClause::Create(
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
-  auto *Clause = new (Mem) OMPToClause(UDMQualifierLoc, MapperId, Locs, Sizes);
+  auto *Clause = new (Mem) OMPToClause(MotionModifiers, MotionModifiersLoc,
+                                       UDMQualifierLoc, MapperId, Locs, Sizes);
 
   Clause->setVarRefs(Vars);
   Clause->setUDMapperRefs(UDMapperRefs);
@@ -1145,6 +1148,8 @@ OMPFromClause *OMPFromClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<ValueDecl *> Declarations,
     MappableExprComponentListsRef ComponentLists, ArrayRef<Expr *> UDMapperRefs,
+    ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+    ArrayRef<SourceLocation> MotionModifiersLoc,
     NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId) {
   OMPMappableExprListSizeTy Sizes;
   Sizes.NumVars = Vars.size();
@@ -1170,7 +1175,8 @@ OMPFromClause *OMPFromClause::Create(
           Sizes.NumComponents));
 
   auto *Clause =
-      new (Mem) OMPFromClause(UDMQualifierLoc, MapperId, Locs, Sizes);
+      new (Mem) OMPFromClause(MotionModifiers, MotionModifiersLoc,
+                              UDMQualifierLoc, MapperId, Locs, Sizes);
 
   Clause->setVarRefs(Vars);
   Clause->setUDMapperRefs(UDMapperRefs);
@@ -1937,6 +1943,17 @@ void OMPClausePrinter::VisitOMPDependClause(OMPDependClause *Node) {
   OS << ")";
 }
 
+template <typename T>
+static void PrintMapper(raw_ostream &OS, T *Node,
+                        const PrintingPolicy &Policy) {
+  OS << '(';
+  NestedNameSpecifier *MapperNNS =
+      Node->getMapperQualifierLoc().getNestedNameSpecifier();
+  if (MapperNNS)
+    MapperNNS->print(OS, Policy);
+  OS << Node->getMapperIdInfo() << ')';
+}
+
 void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "map(";
@@ -1945,14 +1962,8 @@ void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
         if (Node->getMapTypeModifier(I) != OMPC_MAP_MODIFIER_unknown) {
           OS << getOpenMPSimpleClauseTypeName(OMPC_map,
                                               Node->getMapTypeModifier(I));
-          if (Node->getMapTypeModifier(I) == OMPC_MAP_MODIFIER_mapper) {
-            OS << '(';
-            NestedNameSpecifier *MapperNNS =
-                Node->getMapperQualifierLoc().getNestedNameSpecifier();
-            if (MapperNNS)
-              MapperNNS->print(OS, Policy);
-            OS << Node->getMapperIdInfo() << ')';
-          }
+          if (Node->getMapTypeModifier(I) == OMPC_MAP_MODIFIER_mapper)
+            PrintMapper(OS, Node, Policy);
           OS << ',';
         }
       }
@@ -1964,44 +1975,41 @@ void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
   }
 }
 
-void OMPClausePrinter::VisitOMPToClause(OMPToClause *Node) {
-  if (!Node->varlist_empty()) {
-    OS << "to";
-    DeclarationNameInfo MapperId = Node->getMapperIdInfo();
-    if (MapperId.getName() && !MapperId.getName().isEmpty()) {
-      OS << '(';
-      OS << "mapper(";
-      NestedNameSpecifier *MapperNNS =
-          Node->getMapperQualifierLoc().getNestedNameSpecifier();
-      if (MapperNNS)
-        MapperNNS->print(OS, Policy);
-      OS << MapperId << "):";
-      VisitOMPClauseList(Node, ' ');
-    } else {
-      VisitOMPClauseList(Node, '(');
-    }
-    OS << ")";
+template <typename T> void OMPClausePrinter::VisitOMPMotionClause(T *Node) {
+  if (Node->varlist_empty())
+    return;
+  OS << getOpenMPClauseName(Node->getClauseKind());
+  unsigned ModifierCount = 0;
+  for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
+    if (Node->getMotionModifier(I) != OMPC_MOTION_MODIFIER_unknown)
+      ++ModifierCount;
   }
+  if (ModifierCount) {
+    OS << '(';
+    for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
+      if (Node->getMotionModifier(I) != OMPC_MOTION_MODIFIER_unknown) {
+        OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                                            Node->getMotionModifier(I));
+        if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_mapper)
+          PrintMapper(OS, Node, Policy);
+        if (I < ModifierCount - 1)
+          OS << ", ";
+      }
+    }
+    OS << ':';
+    VisitOMPClauseList(Node, ' ');
+  } else {
+    VisitOMPClauseList(Node, '(');
+  }
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPToClause(OMPToClause *Node) {
+  VisitOMPMotionClause(Node);
 }
 
 void OMPClausePrinter::VisitOMPFromClause(OMPFromClause *Node) {
-  if (!Node->varlist_empty()) {
-    OS << "from";
-    DeclarationNameInfo MapperId = Node->getMapperIdInfo();
-    if (MapperId.getName() && !MapperId.getName().isEmpty()) {
-      OS << '(';
-      OS << "mapper(";
-      NestedNameSpecifier *MapperNNS =
-          Node->getMapperQualifierLoc().getNestedNameSpecifier();
-      if (MapperNNS)
-        MapperNNS->print(OS, Policy);
-      OS << MapperId << "):";
-      VisitOMPClauseList(Node, ' ');
-    } else {
-      VisitOMPClauseList(Node, '(');
-    }
-    OS << ")";
-  }
+  VisitOMPMotionClause(Node);
 }
 
 void OMPClausePrinter::VisitOMPDistScheduleClause(OMPDistScheduleClause *Node) {
