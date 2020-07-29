@@ -486,6 +486,41 @@ struct TimeTracerRAII {
   }
 };
 
+// For use in NPM transition.
+// TODO: use a codegen version of PassRegistry.def/PassBuilder::is*Pass() once
+// it exists.
+static bool IsCodegenPass(StringRef Pass) {
+  std::vector<StringRef> PassNamePrefix = {
+      "x86-",    "xcore-", "wasm-",  "systemz-", "ppc-",    "nvvm-",
+      "nvptx-",  "mips-",  "lanai-", "hexagon-", "bpf-",    "avr-",
+      "thumb2-", "arm-",   "si-",    "gcn-",     "amdgpu-", "aarch64-"};
+  std::vector<StringRef> PassNameContain = {"ehprepare"};
+  std::vector<StringRef> PassNameExact = {
+      "safe-stack",           "cost-model",
+      "codegenprepare",       "interleaved-load-combine",
+      "unreachableblockelim", "sclaraized-masked-mem-intrin"};
+  for (const auto &P : PassNamePrefix)
+    if (Pass.startswith(P))
+      return true;
+  for (const auto &P : PassNameContain)
+    if (Pass.contains(P))
+      return true;
+  for (const auto &P : PassNamePrefix)
+    if (Pass == P)
+      return true;
+  return false;
+}
+
+// For use in NPM transition.
+static bool CodegenPassSpecifiedInPassList() {
+  for (const auto &P : PassList) {
+    StringRef Arg = P->getPassArgument();
+    if (IsCodegenPass(Arg))
+      return true;
+  }
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // main for opt
 //
@@ -685,7 +720,12 @@ int main(int argc, char **argv) {
   if (OutputThinLTOBC)
     M->addModuleFlag(Module::Error, "EnableSplitLTOUnit", SplitLTOUnit);
 
-  if (EnableNewPassManager || PassPipeline.getNumOccurrences() > 0) {
+  // If `-passes=` is specified, use NPM.
+  // If `-enable-new-pm` is specified and there are no codegen passes, use NPM.
+  // e.g. `-enable-new-pm -sroa` will use NPM.
+  // but `-enable-new-pm -codegenprepare` will still revert to legacy PM.
+  if ((EnableNewPassManager && !CodegenPassSpecifiedInPassList()) ||
+      PassPipeline.getNumOccurrences() > 0) {
     if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
       errs()
           << "Cannot specify passes via both -foo-pass and --passes=foo-pass";
