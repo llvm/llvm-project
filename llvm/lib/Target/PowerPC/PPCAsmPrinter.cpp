@@ -1779,7 +1779,11 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
 }
 
 void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
-  PPCAsmPrinter::emitFunctionEntryLabel();
+  // It's not necessary to emit the label when we have individual
+  // function in its own csect.
+  if (!TM.getFunctionSections())
+    PPCAsmPrinter::emitFunctionEntryLabel();
+
   // Emit aliasing label for function entry point label.
   llvm::for_each(
       GOAliasMap[&MF->getFunction()], [this](const GlobalAlias *Alias) {
