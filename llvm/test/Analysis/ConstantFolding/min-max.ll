@@ -139,8 +139,7 @@ define <4 x float> @maximum_float_zeros_vec() {
 
 define i8 @smax() {
 ; CHECK-LABEL: @smax(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smax.i8(i8 -128, i8 -127)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -127
 ;
   %r = call i8 @llvm.smax.i8(i8 128, i8 129)
   ret i8 %r
@@ -148,8 +147,7 @@ define i8 @smax() {
 
 define <5 x i8> @smax_vec() {
 ; CHECK-LABEL: @smax_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <5 x i8> @llvm.smax.v5i8(<5 x i8> <i8 undef, i8 undef, i8 1, i8 42, i8 42>, <5 x i8> <i8 undef, i8 1, i8 undef, i8 42, i8 127>)
-; CHECK-NEXT:    ret <5 x i8> [[R]]
+; CHECK-NEXT:    ret <5 x i8> <i8 undef, i8 127, i8 127, i8 42, i8 127>
 ;
   %r = call <5 x i8> @llvm.smax.v5i8(<5 x i8> <i8 undef, i8 undef, i8 1, i8 42, i8 42>, <5 x i8> <i8 undef, i8 1, i8 undef, i8 42, i8 127>)
   ret <5 x i8> %r
@@ -157,8 +155,7 @@ define <5 x i8> @smax_vec() {
 
 define i8 @smin() {
 ; CHECK-LABEL: @smin(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smin.i8(i8 -128, i8 127)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %r = call i8 @llvm.smin.i8(i8 128, i8 127)
   ret i8 %r
@@ -166,8 +163,7 @@ define i8 @smin() {
 
 define <5 x i8> @smin_vec() {
 ; CHECK-LABEL: @smin_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <5 x i8> @llvm.smin.v5i8(<5 x i8> <i8 undef, i8 undef, i8 1, i8 42, i8 42>, <5 x i8> <i8 undef, i8 1, i8 undef, i8 42, i8 -127>)
-; CHECK-NEXT:    ret <5 x i8> [[R]]
+; CHECK-NEXT:    ret <5 x i8> <i8 undef, i8 -128, i8 -128, i8 42, i8 -127>
 ;
   %r = call <5 x i8> @llvm.smin.v5i8(<5 x i8> <i8 undef, i8 undef, i8 1, i8 42, i8 42>, <5 x i8> <i8 undef, i8 1, i8 undef, i8 42, i8 129>)
   ret <5 x i8> %r
@@ -175,8 +171,7 @@ define <5 x i8> @smin_vec() {
 
 define i8 @umax() {
 ; CHECK-LABEL: @umax(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.umax.i8(i8 -128, i8 127)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %r = call i8 @llvm.umax.i8(i8 128, i8 127)
   ret i8 %r
@@ -184,8 +179,7 @@ define i8 @umax() {
 
 define <5 x i8> @umax_vec() {
 ; CHECK-LABEL: @umax_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <5 x i8> @llvm.umax.v5i8(<5 x i8> <i8 undef, i8 undef, i8 1, i8 42, i8 42>, <5 x i8> <i8 undef, i8 1, i8 undef, i8 42, i8 -128>)
-; CHECK-NEXT:    ret <5 x i8> [[R]]
+; CHECK-NEXT:    ret <5 x i8> <i8 undef, i8 -1, i8 -1, i8 42, i8 -128>
 ;
   %r = call <5 x i8> @llvm.umax.v5i8(<5 x i8> <i8 undef, i8 undef, i8 1, i8 42, i8 42>, <5 x i8> <i8 undef, i8 1, i8 undef, i8 42, i8 128>)
   ret <5 x i8> %r
@@ -193,8 +187,7 @@ define <5 x i8> @umax_vec() {
 
 define i8 @umin() {
 ; CHECK-LABEL: @umin(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.umin.i8(i8 -128, i8 127)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 127
 ;
   %r = call i8 @llvm.umin.i8(i8 128, i8 127)
   ret i8 %r
@@ -202,8 +195,7 @@ define i8 @umin() {
 
 define <5 x i8> @umin_vec() {
 ; CHECK-LABEL: @umin_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <5 x i8> @llvm.umin.v5i8(<5 x i8> <i8 undef, i8 undef, i8 1, i8 42, i8 42>, <5 x i8> <i8 undef, i8 1, i8 undef, i8 42, i8 -128>)
-; CHECK-NEXT:    ret <5 x i8> [[R]]
+; CHECK-NEXT:    ret <5 x i8> <i8 undef, i8 0, i8 0, i8 42, i8 42>
 ;
   %r = call <5 x i8> @llvm.umin.v5i8(<5 x i8> <i8 undef, i8 undef, i8 1, i8 42, i8 42>, <5 x i8> <i8 undef, i8 1, i8 undef, i8 42, i8 128>)
   ret <5 x i8> %r
