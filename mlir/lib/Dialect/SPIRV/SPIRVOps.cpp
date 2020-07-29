@@ -1955,8 +1955,13 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
   // SPIR-V spec: "Storage Class is the Storage Class of the memory holding the
   // object. It cannot be Generic. It must be the same as the Storage Class
   // operand of the Result Type."
-  if (varOp.storageClass() == spirv::StorageClass::Generic)
-    return varOp.emitOpError("storage class cannot be 'Generic'");
+  // Also, Function storage class is reserved by spv.Variable.
+  auto storageClass = varOp.storageClass();
+  if (storageClass == spirv::StorageClass::Generic ||
+      storageClass == spirv::StorageClass::Function) {
+    return varOp.emitOpError("storage class cannot be '")
+           << stringifyStorageClass(storageClass) << "'";
+  }
 
   if (auto init =
           varOp.getAttrOfType<FlatSymbolRefAttr>(kInitializerAttrName)) {
