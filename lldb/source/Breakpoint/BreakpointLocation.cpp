@@ -68,6 +68,14 @@ Breakpoint &BreakpointLocation::GetBreakpoint() { return m_owner; }
 
 Target &BreakpointLocation::GetTarget() { return m_owner.GetTarget(); }
 
+bool BreakpointLocation::IsHardware() const {
+  if (m_bp_site_sp)
+    return m_bp_site_sp->IsHardware();
+
+  // If breakpoint location is not resolved yet, it cannot be hardware.
+  return false;
+}
+
 bool BreakpointLocation::IsEnabled() const {
   if (!m_owner.IsEnabled())
     return false;

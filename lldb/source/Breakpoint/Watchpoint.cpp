@@ -95,7 +95,10 @@ void Watchpoint::SetWatchSpec(const std::string &str) {
 
 // Override default impl of StoppointLocation::IsHardware() since m_is_hardware
 // member field is more accurate.
-bool Watchpoint::IsHardware() const { return m_is_hardware; }
+bool Watchpoint::IsHardware() const {
+  lldbassert(m_is_hardware || !HardwareRequired());
+  return m_is_hardware;
+}
 
 bool Watchpoint::IsWatchVariable() const { return m_is_watch_variable; }
 
