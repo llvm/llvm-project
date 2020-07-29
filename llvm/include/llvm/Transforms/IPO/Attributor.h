@@ -2138,7 +2138,7 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
 
   /// Helper functions, for debug purposes only.
   ///{
-  virtual void print(raw_ostream &OS) const;
+  void print(raw_ostream &OS) const override;
   virtual void printWithDeps(raw_ostream &OS) const;
   void dump() const { print(dbgs()); }
 
