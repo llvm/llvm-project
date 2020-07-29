@@ -236,9 +236,6 @@ public:
     operator bool() { return platform > 0; }
     /// The Mach-O platform type;
     unsigned char platform = 0;
-    /// Pre-LC_BUILD_VERSION files don't disambiguate between ios and ios
-    /// simulator.
-    bool maybe_simulator = false;
     uint32_t major_version = 0;
     uint32_t minor_version = 0;
     uint32_t patch_version = 0;
