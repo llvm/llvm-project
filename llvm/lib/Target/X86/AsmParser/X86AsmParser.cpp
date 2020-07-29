@@ -1000,8 +1000,7 @@ private:
   /// Parses AVX512 specific operand primitives: masked registers ({%k<NUM>}, {z})
   /// and memory broadcasting ({1to<NUM>}) primitives, updating Operands vector if required.
   /// return false if no parsing errors occurred, true otherwise.
-  bool HandleAVX512Operand(OperandVector &Operands,
-                           const MCParsedAsmOperand &Op);
+  bool HandleAVX512Operand(OperandVector &Operands);
 
   bool ParseZ(std::unique_ptr<X86Operand> &Z, const SMLoc &StartLoc);
 
@@ -2313,8 +2312,7 @@ bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z,
 }
 
 // true on failure, false otherwise
-bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
-                                       const MCParsedAsmOperand &Op) {
+bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   if (getLexer().is(AsmToken::LCurly)) {
     // Eat "{" and mark the current place.
@@ -2893,7 +2891,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     while(1) {
       if (std::unique_ptr<X86Operand> Op = ParseOperand()) {
         Operands.push_back(std::move(Op));
-        if (HandleAVX512Operand(Operands, *Operands.back()))
+        if (HandleAVX512Operand(Operands))
           return true;
       } else {
          return true;
