@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BITSTREAM_BITCODECOMMON_H
-#define LLVM_BITSTREAM_BITCODECOMMON_H
+#ifndef LLVM_BITCODE_BITCODECOMMON_H
+#define LLVM_BITCODE_BITCODECOMMON_H
 
 #include "llvm/ADT/Bitfields.h"
 
@@ -27,4 +27,4 @@ struct AllocaPackedValues {
 
 } // namespace llvm
 
-#endif // LLVM_BITSTREAM_BITCODECOMMON_H
+#endif // LLVM_BITCODE_BITCODECOMMON_H
