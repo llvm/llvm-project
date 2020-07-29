@@ -89,6 +89,10 @@ protected:
                                             llvm::IRBuilder<> &builder);
   virtual LogicalResult convertOmpParallel(Operation &op,
                                            llvm::IRBuilder<> &builder);
+
+  /// Converts the type from MLIR LLVM dialect to LLVM.
+  llvm::Type *convertType(LLVMType type);
+
   static std::unique_ptr<llvm::Module> prepareLLVMModule(Operation *m);
 
   /// A helper to look up remapped operands in the value remapping table.
