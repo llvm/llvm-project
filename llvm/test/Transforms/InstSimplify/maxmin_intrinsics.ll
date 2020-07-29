@@ -14,8 +14,7 @@ declare <2 x i8> @llvm.umin.v2i8(<2 x i8>, <2 x i8>)
 
 define i81 @smax_sameval(i81 %x) {
 ; CHECK-LABEL: @smax_sameval(
-; CHECK-NEXT:    [[R:%.*]] = call i81 @llvm.smax.i81(i81 [[X:%.*]], i81 [[X]])
-; CHECK-NEXT:    ret i81 [[R]]
+; CHECK-NEXT:    ret i81 [[X:%.*]]
 ;
   %r = call i81 @llvm.smax.i81(i81 %x, i81 %x)
   ret i81 %r
@@ -23,8 +22,7 @@ define i81 @smax_sameval(i81 %x) {
 
 define i3 @smin_sameval(i3 %x) {
 ; CHECK-LABEL: @smin_sameval(
-; CHECK-NEXT:    [[R:%.*]] = call i3 @llvm.smin.i3(i3 [[X:%.*]], i3 [[X]])
-; CHECK-NEXT:    ret i3 [[R]]
+; CHECK-NEXT:    ret i3 [[X:%.*]]
 ;
   %r = call i3 @llvm.smin.i3(i3 %x, i3 %x)
   ret i3 %r
@@ -32,8 +30,7 @@ define i3 @smin_sameval(i3 %x) {
 
 define <2 x i8> @umax_sameval(<2 x i8> %x) {
 ; CHECK-LABEL: @umax_sameval(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.umax.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[X]])
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> [[X:%.*]]
 ;
   %r = call <2 x i8> @llvm.umax.v2i8(<2 x i8> %x, <2 x i8> %x)
   ret <2 x i8> %r
@@ -41,8 +38,7 @@ define <2 x i8> @umax_sameval(<2 x i8> %x) {
 
 define <2 x i8> @umin_sameval(<2 x i8> %x) {
 ; CHECK-LABEL: @umin_sameval(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[X]])
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> [[X:%.*]]
 ;
   %r = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %x, <2 x i8> %x)
   ret <2 x i8> %r
