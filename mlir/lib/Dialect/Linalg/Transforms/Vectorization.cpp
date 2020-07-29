@@ -43,9 +43,9 @@ static bool hasMultiplyAddBody(Region &r) {
     return false;
 
   using mlir::matchers::m_Val;
-  auto a = m_Val(r.front().getArgument(0));
-  auto b = m_Val(r.front().getArgument(1));
-  auto c = m_Val(r.front().getArgument(2));
+  auto a = m_Val(r.getArgument(0));
+  auto b = m_Val(r.getArgument(1));
+  auto c = m_Val(r.getArgument(2));
   // TODO: Update this detection once we have  matcher support for specifying
   // that any permutation of operands matches.
   auto pattern1 = m_Op<YieldOp>(m_Op<AddFOp>(m_Op<MulFOp>(a, b), c));
