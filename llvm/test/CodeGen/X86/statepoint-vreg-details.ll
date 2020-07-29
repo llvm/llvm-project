@@ -215,27 +215,25 @@ define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint
 ; CHECK-VREG:  bb.0.entry:
 ; CHECK-VREG:         %1:gr32 = COPY $esi
 ; CHECK-VREG-NEXT:    %0:gr64 = COPY $rdi
-; CHECK-VREG-NEXT:    %3:gr8 = COPY %1.sub_8bit
-; CHECK-VREG-NEXT:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
+; CHECK-VREG-NEXT:    %4:gr8 = COPY %1.sub_8bit
 ; CHECK-VREG-NEXT:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG-NEXT:    STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, 1, 8, %stack.0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al :: (volatile load store 8 on %stack.0)
+; CHECK-VREG-NEXT:    %2:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, %0, %0(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
 ; CHECK-VREG-NEXT:    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG-NEXT:    %4:gr8 = COPY $al
-; CHECK-VREG-NEXT:    %2:gr8 = COPY %4
-; CHECK-VREG-NEXT:    TEST8ri killed %3, 1, implicit-def $eflags
+; CHECK-VREG-NEXT:    %5:gr8 = COPY $al
+; CHECK-VREG-NEXT:    %3:gr8 = COPY %5
+; CHECK-VREG-NEXT:    TEST8ri killed %4, 1, implicit-def $eflags
 ; CHECK-VREG-NEXT:    JCC_1 %bb.2, 4, implicit $eflags
 ; CHECK-VREG-NEXT:    JMP_1 %bb.1
 ; CHECK-VREG:       bb.1.left:
-; CHECK-VREG-NEXT:    %6:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
 ; CHECK-VREG-NEXT:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG-NEXT:    $rdi = COPY %6
+; CHECK-VREG-NEXT:    $rdi = COPY %2
 ; CHECK-VREG-NEXT:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG-NEXT:    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG-NEXT:    $al = COPY %2
+; CHECK-VREG-NEXT:    $al = COPY %3
 ; CHECK-VREG-NEXT:    RET 0, $al
 ; CHECK-VREG:       bb.2.right:
-; CHECK-VREG-NEXT:    %5:gr8 = MOV8ri 1
-; CHECK-VREG-NEXT:    $al = COPY %5
+; CHECK-VREG-NEXT:    %6:gr8 = MOV8ri 1
+; CHECK-VREG-NEXT:    $al = COPY %6
 ; CHECK-VREG-NEXT:    RET 0, $al
 
 entry:
