@@ -134,7 +134,11 @@ public:
     c->nsects = seg->numNonHiddenSections();
 
     for (OutputSection *osec : seg->getSections()) {
-      c->filesize += osec->getFileSize();
+      if (!isZeroFill(osec->flags)) {
+        assert(osec->fileOff >= seg->fileOff);
+        c->filesize = std::max(
+            c->filesize, osec->fileOff + osec->getFileSize() - seg->fileOff);
+      }
 
       if (osec->isHidden())
         continue;
@@ -454,6 +458,8 @@ void Writer::assignAddresses(OutputSegment *seg) {
   seg->fileOff = fileOff;
 
   for (auto *osec : seg->getSections()) {
+    if (!osec->isNeeded())
+      continue;
     addr = alignTo(addr, osec->align);
     fileOff = alignTo(fileOff, osec->align);
     osec->addr = addr;
