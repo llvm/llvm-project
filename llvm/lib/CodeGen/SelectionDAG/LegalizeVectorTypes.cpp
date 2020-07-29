@@ -2197,13 +2197,19 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
   SDValue Idx = N->getOperand(1);
   SDLoc dl(N);
   SDValue Lo, Hi;
+
+  if (SubVT.isScalableVector() !=
+      N->getOperand(0).getValueType().isScalableVector())
+    report_fatal_error("Extracting a fixed-length vector from an illegal "
+                       "scalable vector is not yet supported");
+
   GetSplitVector(N->getOperand(0), Lo, Hi);
 
-  uint64_t LoElts = Lo.getValueType().getVectorNumElements();
+  uint64_t LoElts = Lo.getValueType().getVectorMinNumElements();
   uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
 
   if (IdxVal < LoElts) {
-    assert(IdxVal + SubVT.getVectorNumElements() <= LoElts &&
+    assert(IdxVal + SubVT.getVectorMinNumElements() <= LoElts &&
            "Extracted subvector crosses vector split!");
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
   } else {
