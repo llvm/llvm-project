@@ -298,35 +298,12 @@ public:
 private:
   std::unique_ptr<TFModelEvaluator> Evaluator;
 
-  // The training framework needs some additional features, that just need to
-  // be set to 0.
-  struct TensorSpec {
-    std::string Name;
-    std::function<void(TFModelEvaluator *, size_t Index,
-                       const std::vector<int64_t> &Dim)>
-        Initializer;
-  };
-
+  // The training framework needs some additional features.
   const std::vector<TensorSpec> TrainingOnlyFeatures{
-      {"inlining_default",
-       [](TFModelEvaluator *Evaluator, size_t Index,
-          const std::vector<int64_t> &Dim) {
-         Evaluator->initInput<int64_t>(Index, Dim);
-       }},
-      {"discount",
-       [](TFModelEvaluator *Evaluator, size_t Index,
-          const std::vector<int64_t> &Dim) {
-         Evaluator->initInput<float>(Index, Dim);
-       }},
-      {"reward",
-       [](TFModelEvaluator *Evaluator, size_t Index,
-          const std::vector<int64_t> &Dim) {
-         Evaluator->initInput<float>(Index, Dim);
-       }},
-      {"step_type", [](TFModelEvaluator *Evaluator, size_t Index,
-                       const std::vector<int64_t> &Dim) {
-         Evaluator->initInput<int32_t>(Index, Dim);
-       }}};
+      TensorSpec::createSpec<int64_t>(TFFeedPrefix + "inlining_default", {1}),
+      TensorSpec::createSpec<float>(TFFeedPrefix + "discount", {1}),
+      TensorSpec::createSpec<float>(TFFeedPrefix + "reward", {1}),
+      TensorSpec::createSpec<int32_t>(TFFeedPrefix + "step_type", {1})};
 };
 } // namespace
 
@@ -409,32 +386,21 @@ size_t DevelopmentModeMLInlineAdvisor::getTotalSizeEstimate() {
 ModelUnderTrainingRunner::ModelUnderTrainingRunner(LLVMContext &Ctx,
                                                    const std::string &ModelPath)
     : MLModelRunner(Ctx) {
-  std::vector<std::string> InputNames;
-  std::vector<std::string> OutputNames;
+  std::vector<TensorSpec> InputSpecs;
+  std::vector<TensorSpec> OutputSpecs;
   for (size_t I = 0; I < NumberOfFeatures; ++I)
-    InputNames.push_back(TFFeedPrefix + FeatureNameMap[I]);
-  for (size_t I = 0; I < TrainingOnlyFeatures.size(); ++I)
-    InputNames.push_back(TFFeedPrefix + TrainingOnlyFeatures[I].Name);
-  OutputNames.push_back(TFDecisionName);
+    InputSpecs.push_back(
+        TensorSpec::createSpec<int64_t>(TFFeedPrefix + FeatureNameMap[I], {1}));
+  InputSpecs.insert(InputSpecs.end(), TrainingOnlyFeatures.begin(),
+                    TrainingOnlyFeatures.end());
+  OutputSpecs.push_back(TensorSpec::createSpec<int64_t>(TFDecisionName, {1}));
 
   Evaluator =
-      std::make_unique<TFModelEvaluator>(ModelPath, InputNames, OutputNames);
+      std::make_unique<TFModelEvaluator>(ModelPath, InputSpecs, OutputSpecs);
   if (!Evaluator || !Evaluator->isValid()) {
     Ctx.emitError("Failed to create inliner saved model evaluator");
     Evaluator.reset();
     return;
-  }
-
-  static const std::vector<int64_t> Dim{1};
-
-  size_t InputIndex = 0;
-  for (; InputIndex < NumberOfFeatures; ++InputIndex) {
-    Evaluator->initInput<int64_t>(InputIndex, Dim);
-  }
-
-  for (; InputIndex < InputNames.size(); ++InputIndex) {
-    TrainingOnlyFeatures[InputIndex - NumberOfFeatures].Initializer(
-        Evaluator.get(), InputIndex, Dim);
   }
 }
 

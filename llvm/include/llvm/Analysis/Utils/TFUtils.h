@@ -36,6 +36,43 @@ namespace llvm {
 class TFModelEvaluatorImpl;
 class EvaluationResultImpl;
 
+/// TensorSpec encapsulates the specification of a tensor: its dimensions, or
+/// "shape" (row-major), its type (see TensorSpec::getDataType specializations
+/// for supported types), its name and port (see "TensorFlow: Large-Scale
+/// Machine Learning on Heterogeneous Distributed Systems", section 4.2, para 2:
+/// https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/45166.pdf)
+///
+/// TensorSpec is used to set up a TFModelEvaluator by describing the expected
+/// inputs and outputs.
+class TensorSpec final {
+public:
+  template <typename T>
+  static TensorSpec createSpec(const std::string &Name,
+                               const std::vector<int64_t> &Shape,
+                               int Port = 0) {
+    return TensorSpec(Name, Port, getDataType<T>(), Shape);
+  }
+
+  const std::string &name() const { return Name; }
+  int port() const { return Port; }
+  int typeIndex() const { return TypeIndex; }
+  const std::vector<int64_t> &shape() const { return Shape; }
+
+private:
+  TensorSpec(const std::string &Name, int Port, int TypeIndex,
+             const std::vector<int64_t> &Shape)
+      : Name(Name), Port(Port), TypeIndex(TypeIndex), Shape(Shape) {}
+
+  template <typename T> static int getDataType() {
+    llvm_unreachable("Undefined tensor type");
+  }
+
+  std::string Name;
+  int Port = 0;
+  int TypeIndex = 0;
+  std::vector<int64_t> Shape;
+};
+
 class TFModelEvaluator final {
 public:
   /// The result of a model evaluation. Handles the lifetime of the output
@@ -60,8 +97,8 @@ public:
   };
 
   TFModelEvaluator(StringRef SavedModelPath,
-                   const std::vector<std::string> &InputNames,
-                   const std::vector<std::string> &OutputNames,
+                   const std::vector<TensorSpec> &InputSpecs,
+                   const std::vector<TensorSpec> &OutputSpecs,
                    const char *Tags = "serve");
   ~TFModelEvaluator();
   TFModelEvaluator(const TFModelEvaluator &) = delete;
@@ -82,32 +119,21 @@ public:
   /// otherwise.
   bool isValid() const { return !!Impl; }
 
-  /// Initialize the input at Index as a tensor of the given type and
-  /// dimensions.
-  template <typename T>
-  void initInput(size_t Index, const std::vector<int64_t> &Dimensions) {
-    return initInput(Index, getModelTypeIndex<T>(), Dimensions);
-  }
-
 private:
   void *getUntypedInput(size_t Index);
-  template <typename T> int getModelTypeIndex();
-  void initInput(size_t Index, int TypeIndex,
-                 const std::vector<int64_t> &Dimensions);
-
   std::unique_ptr<TFModelEvaluatorImpl> Impl;
 };
 
-template <> int TFModelEvaluator::getModelTypeIndex<float>();
-template <> int TFModelEvaluator::getModelTypeIndex<double>();
-template <> int TFModelEvaluator::getModelTypeIndex<int8_t>();
-template <> int TFModelEvaluator::getModelTypeIndex<uint8_t>();
-template <> int TFModelEvaluator::getModelTypeIndex<int16_t>();
-template <> int TFModelEvaluator::getModelTypeIndex<uint16_t>();
-template <> int TFModelEvaluator::getModelTypeIndex<int32_t>();
-template <> int TFModelEvaluator::getModelTypeIndex<uint32_t>();
-template <> int TFModelEvaluator::getModelTypeIndex<int64_t>();
-template <> int TFModelEvaluator::getModelTypeIndex<uint64_t>();
+template <> int TensorSpec::getDataType<float>();
+template <> int TensorSpec::getDataType<double>();
+template <> int TensorSpec::getDataType<int8_t>();
+template <> int TensorSpec::getDataType<uint8_t>();
+template <> int TensorSpec::getDataType<int16_t>();
+template <> int TensorSpec::getDataType<uint16_t>();
+template <> int TensorSpec::getDataType<int32_t>();
+template <> int TensorSpec::getDataType<uint32_t>();
+template <> int TensorSpec::getDataType<int64_t>();
+template <> int TensorSpec::getDataType<uint64_t>();
 
 } // namespace llvm
 
