@@ -40,9 +40,7 @@ public:
 
   bool HardwareRequired() const { return m_hardware; }
 
-  virtual bool IsHardware() const {
-    return m_hardware_index != LLDB_INVALID_INDEX32;
-  }
+  virtual bool IsHardware() const = 0;
 
   virtual bool ShouldStop(StoppointCallbackContext *context) { return true; }
 
