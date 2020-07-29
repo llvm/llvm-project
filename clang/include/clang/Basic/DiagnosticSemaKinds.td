@@ -793,6 +793,7 @@ def ext_main_used : Extension<
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,
   InGroup<MissingDeclarations>;
+def err_no_declarators : Error<"declaration does not declare anything">;
 def ext_typedef_without_a_name : ExtWarn<"typedef requires a name">,
   InGroup<MissingDeclarations>;
 def err_typedef_not_identifier : Error<"typedef name must be an identifier">;

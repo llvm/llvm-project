@@ -8,20 +8,13 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+from functionalities.breakpoint.hardware_breakpoints.base import *
 
-class BreakpointLocationsTestCase(TestBase):
-    NO_DEBUG_INFO_TESTCASE = True
+class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def supports_hw_breakpoints(self):
-        self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"),
-                    CURRENT_EXECUTABLE_SET)
-        self.runCmd("breakpoint set -b main --hardware")
-        self.runCmd("run")
-        if 'stopped' in self.res.GetOutput():
-            return 'Hardware breakpoints are supported'
-        return None
+        return super().supports_hw_breakpoints()
 
     def test_breakpoint(self):
         """Test regular breakpoints when hardware breakpoints are required."""
@@ -34,7 +27,6 @@ class BreakpointLocationsTestCase(TestBase):
         breakpoint = target.BreakpointCreateByLocation("main.c", 1)
         self.assertTrue(breakpoint.IsHardware())
 
-    @skipIfWindows
     @expectedFailure(supports_hw_breakpoints)
     def test_step_range(self):
         """Test stepping when hardware breakpoints are required."""
@@ -56,7 +48,6 @@ class BreakpointLocationsTestCase(TestBase):
         self.assertTrue("Could not create hardware breakpoint for thread plan"
                         in error.GetCString())
 
-    @skipIfWindows
     @expectedFailure(supports_hw_breakpoints)
     def test_step_out(self):
         """Test stepping out when hardware breakpoints are required."""
@@ -77,7 +68,6 @@ class BreakpointLocationsTestCase(TestBase):
         self.assertTrue("Could not create hardware breakpoint for thread plan"
                         in error.GetCString())
 
-    @skipIfWindows
     @expectedFailure(supports_hw_breakpoints)
     def test_step_over(self):
         """Test stepping over when hardware breakpoints are required."""
@@ -96,7 +86,6 @@ class BreakpointLocationsTestCase(TestBase):
                 'error: Could not create hardware breakpoint for thread plan.'
             ])
 
-    @skipIfWindows
     @expectedFailure(supports_hw_breakpoints)
     def test_step_until(self):
         """Test stepping until when hardware breakpoints are required."""

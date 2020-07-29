@@ -1286,7 +1286,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         })
       .clampScalar(EltTypeIdx, S32, S64)
       .clampScalar(VecTypeIdx, S32, S64)
-      .clampScalar(IdxTypeIdx, S32, S32);
+      .clampScalar(IdxTypeIdx, S32, S32)
+      // TODO: Clamp the number of elements before resorting to stack lowering.
+      // It should only be necessary with variable indexes.
+      // As a last resort, lower to the stack
+      .lower();
   }
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)

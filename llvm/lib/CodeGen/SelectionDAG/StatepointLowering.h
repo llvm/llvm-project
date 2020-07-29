@@ -103,10 +103,6 @@ public:
     return AllocatedStackSlots.test(Offset);
   }
 
-  /// Maps pre-relocated value to virtual register holding it's relocation if
-  /// vreg lowering was used.
-  DenseMap<const Value *, Register> VirtRegs;
-
 private:
   /// Maps pre-relocation value (gc pointer directly incoming into statepoint)
   /// into it's location (currently only stack slots)

@@ -2453,6 +2453,10 @@ def mdirect_move : Flag<["-"], "mdirect-move">,
     Group<m_ppc_Features_Group>;
 def mnodirect_move : Flag<["-"], "mno-direct-move">,
     Group<m_ppc_Features_Group>;
+def mpaired_vector_memops: Flag<["-"], "mpaired-vector-memops">,
+    Group<m_ppc_Features_Group>;
+def mnopaired_vector_memops: Flag<["-"], "mno-paired-vector-memops">,
+    Group<m_ppc_Features_Group>;
 def mhtm : Flag<["-"], "mhtm">, Group<m_ppc_Features_Group>;
 def mno_htm : Flag<["-"], "mno-htm">, Group<m_ppc_Features_Group>;
 def mfprnd : Flag<["-"], "mfprnd">, Group<m_ppc_Features_Group>;

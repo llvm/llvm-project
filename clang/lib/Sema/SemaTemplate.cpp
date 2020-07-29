@@ -7774,15 +7774,14 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   // C++ [temp]p4:
   //   A template [...] shall not have C linkage.
   DeclContext *Ctx = S->getEntity();
-  assert(Ctx && "Unknown context");
-  if (Ctx->isExternCContext()) {
+  if (Ctx && Ctx->isExternCContext()) {
     Diag(TemplateParams->getTemplateLoc(), diag::err_template_linkage)
         << TemplateParams->getSourceRange();
     if (const LinkageSpecDecl *LSD = Ctx->getExternCContext())
       Diag(LSD->getExternLoc(), diag::note_extern_c_begins_here);
     return true;
   }
-  Ctx = Ctx->getRedeclContext();
+  Ctx = Ctx ? Ctx->getRedeclContext() : nullptr;
 
   // C++ [temp]p2:
   //   A template-declaration can appear only as a namespace scope or
