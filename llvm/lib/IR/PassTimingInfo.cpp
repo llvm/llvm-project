@@ -240,17 +240,14 @@ static bool matchPassManager(StringRef PassID) {
          Prefix.endswith("AnalysisManagerProxy");
 }
 
-bool TimePassesHandler::runBeforePass(StringRef PassID) {
+void TimePassesHandler::runBeforePass(StringRef PassID) {
   if (matchPassManager(PassID))
-    return true;
+    return;
 
   startTimer(PassID);
 
   LLVM_DEBUG(dbgs() << "after runBeforePass(" << PassID << ")\n");
   LLVM_DEBUG(dump());
-
-  // we are not going to skip this pass, thus return true.
-  return true;
 }
 
 void TimePassesHandler::runAfterPass(StringRef PassID) {
@@ -267,8 +264,8 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   if (!Enabled)
     return;
 
-  PIC.registerBeforePassCallback(
-      [this](StringRef P, Any) { return this->runBeforePass(P); });
+  PIC.registerBeforeNonSkippedPassCallback(
+      [this](StringRef P, Any) { this->runBeforePass(P); });
   PIC.registerAfterPassCallback(
       [this](StringRef P, Any) { this->runAfterPass(P); });
   PIC.registerAfterPassInvalidatedCallback(

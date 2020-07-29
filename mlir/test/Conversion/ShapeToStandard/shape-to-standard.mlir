@@ -13,6 +13,30 @@ func @binary_ops(%lhs : index, %rhs : index) {
 
 // -----
 
+// Don't lower binary ops when they operate on `shape.size`.
+// CHECK-LABEL: @binary_ops_on_size
+// CHECK-SAME: (%[[LHS:.*]]: !shape.size, %[[RHS:.*]]: !shape.size)
+func @binary_ops_on_size(%lhs : !shape.size, %rhs : !shape.size) {
+  // CHECK: shape.add %[[LHS]], %[[RHS]] : !shape.size, !shape.size -> !shape.size
+  // CHECK: shape.mul %[[LHS]], %[[RHS]] : !shape.size, !shape.size -> !shape.size
+  %sum = shape.add %lhs, %rhs : !shape.size, !shape.size -> !shape.size
+  %prod = shape.mul %lhs, %rhs : !shape.size, !shape.size -> !shape.size
+  return
+}
+
+// -----
+
+// Don't lower `shape_of` with `shape.shape` type.
+// CHECK-LABEL: @shape_of
+// CHECK-SAME: (%[[ARG:.*]]: tensor<1x2x3xf32>)
+func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
+  // CHECK: shape.shape_of %[[ARG]] : tensor<1x2x3xf32> -> !shape.shape
+  %shape = shape.shape_of %arg : tensor<1x2x3xf32> -> !shape.shape
+  return
+}
+
+// -----
+
 // Lower `shape_of` for statically shaped tensor.
 // CHECK-LABEL: @shape_of_stat
 // CHECK-SAME: (%[[ARG:.*]]: tensor<1x2x3xf32>)
@@ -51,6 +75,17 @@ func @rank(%shape : tensor<?xindex>) -> index {
   // CHECK: return %[[RESULT]] : index
   %rank = shape.rank %shape : tensor<?xindex> -> index
   return %rank : index
+}
+
+// -----
+
+// Don't lower `get_extent` if it is of type `shape.size`.
+// CHECK-LABEL: @get_extent
+func @get_extent(%shape : tensor<?xindex>, %idx : !shape.size) -> !shape.size {
+  // CHECK: shape.get_extent
+  %result = shape.get_extent %shape, %idx
+      : tensor<?xindex>, !shape.size -> !shape.size
+  return %result : !shape.size
 }
 
 // -----

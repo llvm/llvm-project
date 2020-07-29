@@ -1324,10 +1324,18 @@ static void removeImageAccessQualifier(std::string& TyName) {
 // (basically all single AS CPUs).
 static unsigned ArgInfoAddressSpace(LangAS AS) {
   switch (AS) {
-  case LangAS::opencl_global:   return 1;
-  case LangAS::opencl_constant: return 2;
-  case LangAS::opencl_local:    return 3;
-  case LangAS::opencl_generic:  return 4; // Not in SPIR 2.0 specs.
+  case LangAS::opencl_global:
+    return 1;
+  case LangAS::opencl_constant:
+    return 2;
+  case LangAS::opencl_local:
+    return 3;
+  case LangAS::opencl_generic:
+    return 4; // Not in SPIR 2.0 specs.
+  case LangAS::opencl_global_device:
+    return 5;
+  case LangAS::opencl_global_host:
+    return 6;
   default:
     return 0; // Assume private.
   }
@@ -3792,6 +3800,8 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
   if (LangOpts.OpenCL) {
     AddrSpace = D ? D->getType().getAddressSpace() : LangAS::opencl_global;
     assert(AddrSpace == LangAS::opencl_global ||
+           AddrSpace == LangAS::opencl_global_device ||
+           AddrSpace == LangAS::opencl_global_host ||
            AddrSpace == LangAS::opencl_constant ||
            AddrSpace == LangAS::opencl_local ||
            AddrSpace >= LangAS::FirstTargetAddressSpace);
