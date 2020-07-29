@@ -4320,7 +4320,7 @@ def MCRFS : XLForm_3<63, 64, (outs crrc:$BF), (ins crrc:$BFA),
 
 def MTFSFI : XLForm_4<63, 134, (outs crrc:$BF), (ins i32imm:$U, i32imm:$W),
                       "mtfsfi $BF, $U, $W", IIC_IntMFFS>;
-
+let Defs = [CR1] in
 def MTFSFI_rec : XLForm_4<63, 134, (outs crrc:$BF), (ins i32imm:$U, i32imm:$W),
                        "mtfsfi. $BF, $U, $W", IIC_IntMFFS>, isRecordForm;
 
@@ -4331,6 +4331,7 @@ let Predicates = [HasFPU] in {
 def MTFSF : XFLForm_1<63, 711, (outs),
                       (ins i32imm:$FLM, f8rc:$FRB, i32imm:$L, i32imm:$W),
                       "mtfsf $FLM, $FRB, $L, $W", IIC_IntMFFS, []>;
+let Defs = [CR1] in
 def MTFSF_rec : XFLForm_1<63, 711, (outs),
                        (ins i32imm:$FLM, f8rc:$FRB, i32imm:$L, i32imm:$W),
                        "mtfsf. $FLM, $FRB, $L, $W", IIC_IntMFFS, []>, isRecordForm;

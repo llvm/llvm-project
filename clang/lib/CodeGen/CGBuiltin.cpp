@@ -16528,40 +16528,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(IntNo, {ConvertType(E->getType()), Low->getType()});
     return Builder.CreateCall(Callee, {Low, High});
   }
-  case WebAssembly::BI__builtin_wasm_widen_low_s_i16x8_i8x16:
-  case WebAssembly::BI__builtin_wasm_widen_high_s_i16x8_i8x16:
-  case WebAssembly::BI__builtin_wasm_widen_low_u_i16x8_i8x16:
-  case WebAssembly::BI__builtin_wasm_widen_high_u_i16x8_i8x16:
-  case WebAssembly::BI__builtin_wasm_widen_low_s_i32x4_i16x8:
-  case WebAssembly::BI__builtin_wasm_widen_high_s_i32x4_i16x8:
-  case WebAssembly::BI__builtin_wasm_widen_low_u_i32x4_i16x8:
-  case WebAssembly::BI__builtin_wasm_widen_high_u_i32x4_i16x8: {
-    Value *Vec = EmitScalarExpr(E->getArg(0));
-    unsigned IntNo;
-    switch (BuiltinID) {
-    case WebAssembly::BI__builtin_wasm_widen_low_s_i16x8_i8x16:
-    case WebAssembly::BI__builtin_wasm_widen_low_s_i32x4_i16x8:
-      IntNo = Intrinsic::wasm_widen_low_signed;
-      break;
-    case WebAssembly::BI__builtin_wasm_widen_high_s_i16x8_i8x16:
-    case WebAssembly::BI__builtin_wasm_widen_high_s_i32x4_i16x8:
-      IntNo = Intrinsic::wasm_widen_high_signed;
-      break;
-    case WebAssembly::BI__builtin_wasm_widen_low_u_i16x8_i8x16:
-    case WebAssembly::BI__builtin_wasm_widen_low_u_i32x4_i16x8:
-      IntNo = Intrinsic::wasm_widen_low_unsigned;
-      break;
-    case WebAssembly::BI__builtin_wasm_widen_high_u_i16x8_i8x16:
-    case WebAssembly::BI__builtin_wasm_widen_high_u_i32x4_i16x8:
-      IntNo = Intrinsic::wasm_widen_high_unsigned;
-      break;
-    default:
-      llvm_unreachable("unexpected builtin ID");
-    }
-    Function *Callee =
-        CGM.getIntrinsic(IntNo, {ConvertType(E->getType()), Vec->getType()});
-    return Builder.CreateCall(Callee, Vec);
-  }
   case WebAssembly::BI__builtin_wasm_shuffle_v8x16: {
     Value *Ops[18];
     size_t OpIdx = 0;

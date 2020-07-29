@@ -918,6 +918,24 @@ define void @store_v8i16(<8 x i16> %v, <8 x i16>* %p) {
   ret void
 }
 
+define void @store_narrowing_v8i16(<8 x i8> %v, <8 x i8>* %p) {
+; CHECK-LABEL: store_narrowing_v8i16:
+; CHECK:         .functype store_narrowing_v8i16 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 16711935
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  store <8 x i8> %v, <8 x i8>* %p
+  ret void
+}
+
 define void @store_v8i16_with_folded_offset(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK-LABEL: store_v8i16_with_folded_offset:
 ; CHECK:         .functype store_v8i16_with_folded_offset (v128, i32) -> ()
@@ -930,6 +948,27 @@ define void @store_v8i16_with_folded_offset(<8 x i16> %v, <8 x i16>* %p) {
   %r = add nuw i32 %q, 16
   %s = inttoptr i32 %r to <8 x i16>*
   store <8 x i16> %v , <8 x i16>* %s
+  ret void
+}
+
+define void @store_narrowing_v8i16_with_folded_offset(<8 x i8> %v, <8 x i8>* %p) {
+; CHECK-LABEL: store_narrowing_v8i16_with_folded_offset:
+; CHECK:         .functype store_narrowing_v8i16_with_folded_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 16711935
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 16
+; CHECK-NEXT:    # fallthrough-return
+  %q = ptrtoint <8 x i8>* %p to i32
+  %r = add nuw i32 %q, 16
+  %s = inttoptr i32 %r to <8 x i8>*
+  store <8 x i8> %v , <8 x i8>* %s
   ret void
 }
 
@@ -946,6 +985,25 @@ define void @store_v8i16_with_folded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
   ret void
 }
 
+define void @store_narrowing_v8i16_with_folded_gep_offset(<8 x i8> %v, <8 x i8>* %p) {
+; CHECK-LABEL: store_narrowing_v8i16_with_folded_gep_offset:
+; CHECK:         .functype store_narrowing_v8i16_with_folded_gep_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 16711935
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 8
+; CHECK-NEXT:    # fallthrough-return
+  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 1
+  store <8 x i8> %v , <8 x i8>* %s
+  ret void
+}
+
 define void @store_v8i16_with_unfolded_gep_negative_offset(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK-LABEL: store_v8i16_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_v8i16_with_unfolded_gep_negative_offset (v128, i32) -> ()
@@ -958,6 +1016,27 @@ define void @store_v8i16_with_unfolded_gep_negative_offset(<8 x i16> %v, <8 x i1
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i32 -1
   store <8 x i16> %v , <8 x i16>* %s
+  ret void
+}
+
+define void @store_narrowing_v8i16_with_unfolded_gep_negative_offset(<8 x i8> %v, <8 x i8>* %p) {
+; CHECK-LABEL: store_narrowing_v8i16_with_unfolded_gep_negative_offset:
+; CHECK:         .functype store_narrowing_v8i16_with_unfolded_gep_negative_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const -8
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.const 16711935
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %s = getelementptr inbounds <8 x i8>, <8 x i8>* %p, i32 -1
+  store <8 x i8> %v , <8 x i8>* %s
   ret void
 }
 
@@ -978,6 +1057,29 @@ define void @store_v8i16_with_unfolded_offset(<8 x i16> %v, <8 x i16>* %p) {
   ret void
 }
 
+define void @store_narrowing_v8i16_with_unfolded_offset(<8 x i8> %v, <8 x i8>* %p) {
+; CHECK-LABEL: store_narrowing_v8i16_with_unfolded_offset:
+; CHECK:         .functype store_narrowing_v8i16_with_unfolded_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.const 16711935
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %q = ptrtoint <8 x i8>* %p to i32
+  %r = add nsw i32 %q, 16
+  %s = inttoptr i32 %r to <8 x i8>*
+  store <8 x i8> %v , <8 x i8>* %s
+  ret void
+}
+
 define void @store_v8i16_with_unfolded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK-LABEL: store_v8i16_with_unfolded_gep_offset:
 ; CHECK:         .functype store_v8i16_with_unfolded_gep_offset (v128, i32) -> ()
@@ -990,6 +1092,27 @@ define void @store_v8i16_with_unfolded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr <8 x i16>, <8 x i16>* %p, i32 1
   store <8 x i16> %v , <8 x i16>* %s
+  ret void
+}
+
+define void @store_narrowing_v8i16_with_unfolded_gep_offset(<8 x i8> %v, <8 x i8>* %p) {
+; CHECK-LABEL: store_narrowing_v8i16_with_unfolded_gep_offset:
+; CHECK:         .functype store_narrowing_v8i16_with_unfolded_gep_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 8
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.const 16711935
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %s = getelementptr <8 x i8>, <8 x i8>* %p, i32 1
+  store <8 x i8> %v , <8 x i8>* %s
   ret void
 }
 
@@ -1006,6 +1129,25 @@ define void @store_v8i16_to_numeric_address(<8 x i16> %v) {
   ret void
 }
 
+define void @store_narrowing_v8i16_to_numeric_address(<8 x i8> %v, <8 x i8>* %p) {
+; CHECK-LABEL: store_narrowing_v8i16_to_numeric_address:
+; CHECK:         .functype store_narrowing_v8i16_to_numeric_address (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.const 16711935
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 32
+; CHECK-NEXT:    # fallthrough-return
+  %s = inttoptr i32 32 to <8 x i8>*
+  store <8 x i8> %v , <8 x i8>* %s
+  ret void
+}
+
 define void @store_v8i16_to_global_address(<8 x i16> %v) {
 ; CHECK-LABEL: store_v8i16_to_global_address:
 ; CHECK:         .functype store_v8i16_to_global_address (v128) -> ()
@@ -1015,6 +1157,24 @@ define void @store_v8i16_to_global_address(<8 x i16> %v) {
 ; CHECK-NEXT:    v128.store gv_v8i16
 ; CHECK-NEXT:    # fallthrough-return
   store <8 x i16> %v , <8 x i16>* @gv_v8i16
+  ret void
+}
+
+define void @store_narrowing_v8i16_to_global_address(<8 x i8> %v) {
+; CHECK-LABEL: store_narrowing_v8i16_to_global_address:
+; CHECK:         .functype store_narrowing_v8i16_to_global_address (v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.const 16711935
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store gv_v8i8
+; CHECK-NEXT:    # fallthrough-return
+  store <8 x i8> %v , <8 x i8>* @gv_v8i8
   ret void
 }
 
@@ -1588,6 +1748,24 @@ define void @store_v4i32(<4 x i32> %v, <4 x i32>* %p) {
   ret void
 }
 
+define void @store_narrowing_v4i32(<4 x i16> %v, <4 x i16>* %p) {
+; CHECK-LABEL: store_narrowing_v4i32:
+; CHECK:         .functype store_narrowing_v4i32 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  store <4 x i16> %v , <4 x i16>* %p
+  ret void
+}
+
 define void @store_v4i32_with_folded_offset(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK-LABEL: store_v4i32_with_folded_offset:
 ; CHECK:         .functype store_v4i32_with_folded_offset (v128, i32) -> ()
@@ -1600,6 +1778,27 @@ define void @store_v4i32_with_folded_offset(<4 x i32> %v, <4 x i32>* %p) {
   %r = add nuw i32 %q, 16
   %s = inttoptr i32 %r to <4 x i32>*
   store <4 x i32> %v , <4 x i32>* %s
+  ret void
+}
+
+define void @store_narrowing_v4i32_with_folded_offset(<4 x i16> %v, <4 x i16>* %p) {
+; CHECK-LABEL: store_narrowing_v4i32_with_folded_offset:
+; CHECK:         .functype store_narrowing_v4i32_with_folded_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 16
+; CHECK-NEXT:    # fallthrough-return
+  %q = ptrtoint <4 x i16>* %p to i32
+  %r = add nuw i32 %q, 16
+  %s = inttoptr i32 %r to <4 x i16>*
+  store <4 x i16> %v , <4 x i16>* %s
   ret void
 }
 
@@ -1616,6 +1815,25 @@ define void @store_v4i32_with_folded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
   ret void
 }
 
+define void @store_narrowing_v4i32_with_folded_gep_offset(<4 x i16> %v, <4 x i16>* %p) {
+; CHECK-LABEL: store_narrowing_v4i32_with_folded_gep_offset:
+; CHECK:         .functype store_narrowing_v4i32_with_folded_gep_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 8
+; CHECK-NEXT:    # fallthrough-return
+  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 1
+  store <4 x i16> %v , <4 x i16>* %s
+  ret void
+}
+
 define void @store_v4i32_with_unfolded_gep_negative_offset(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK-LABEL: store_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype store_v4i32_with_unfolded_gep_negative_offset (v128, i32) -> ()
@@ -1628,6 +1846,27 @@ define void @store_v4i32_with_unfolded_gep_negative_offset(<4 x i32> %v, <4 x i3
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i32 -1
   store <4 x i32> %v , <4 x i32>* %s
+  ret void
+}
+
+define void @store_narrowing_v4i32_with_unfolded_gep_negative_offset(<4 x i16> %v, <4 x i16>* %p) {
+; CHECK-LABEL: store_narrowing_v4i32_with_unfolded_gep_negative_offset:
+; CHECK:         .functype store_narrowing_v4i32_with_unfolded_gep_negative_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const -8
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %s = getelementptr inbounds <4 x i16>, <4 x i16>* %p, i32 -1
+  store <4 x i16> %v , <4 x i16>* %s
   ret void
 }
 
@@ -1648,6 +1887,29 @@ define void @store_v4i32_with_unfolded_offset(<4 x i32> %v, <4 x i32>* %p) {
   ret void
 }
 
+define void @store_narrowing_v4i32_with_unfolded_offset(<4 x i16> %v, <4 x i16>* %p) {
+; CHECK-LABEL: store_narrowing_v4i32_with_unfolded_offset:
+; CHECK:         .functype store_narrowing_v4i32_with_unfolded_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %q = ptrtoint <4 x i16>* %p to i32
+  %r = add nsw i32 %q, 16
+  %s = inttoptr i32 %r to <4 x i16>*
+  store <4 x i16> %v , <4 x i16>* %s
+  ret void
+}
+
 define void @store_v4i32_with_unfolded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK-LABEL: store_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype store_v4i32_with_unfolded_gep_offset (v128, i32) -> ()
@@ -1660,6 +1922,27 @@ define void @store_v4i32_with_unfolded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr <4 x i32>, <4 x i32>* %p, i32 1
   store <4 x i32> %v , <4 x i32>* %s
+  ret void
+}
+
+define void @store_narrowing_v4i32_with_unfolded_gep_offset(<4 x i16> %v, <4 x i16>* %p) {
+; CHECK-LABEL: store_narrowing_v4i32_with_unfolded_gep_offset:
+; CHECK:         .functype store_narrowing_v4i32_with_unfolded_gep_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 8
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %s = getelementptr <4 x i16>, <4 x i16>* %p, i32 1
+  store <4 x i16> %v , <4 x i16>* %s
   ret void
 }
 
@@ -1676,6 +1959,25 @@ define void @store_v4i32_to_numeric_address(<4 x i32> %v) {
   ret void
 }
 
+define void @store_narrowing_v4i32_to_numeric_address(<4 x i16> %v) {
+; CHECK-LABEL: store_narrowing_v4i32_to_numeric_address:
+; CHECK:         .functype store_narrowing_v4i32_to_numeric_address (v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store 32
+; CHECK-NEXT:    # fallthrough-return
+  %s = inttoptr i32 32 to <4 x i16>*
+  store <4 x i16> %v , <4 x i16>* %s
+  ret void
+}
+
 define void @store_v4i32_to_global_address(<4 x i32> %v) {
 ; CHECK-LABEL: store_v4i32_to_global_address:
 ; CHECK:         .functype store_v4i32_to_global_address (v128) -> ()
@@ -1685,6 +1987,24 @@ define void @store_v4i32_to_global_address(<4 x i32> %v) {
 ; CHECK-NEXT:    v128.store gv_v4i32
 ; CHECK-NEXT:    # fallthrough-return
   store <4 x i32> %v , <4 x i32>* @gv_v4i32
+  ret void
+}
+
+define void @store_narrowing_v4i32_to_global_address(<4 x i16> %v) {
+; CHECK-LABEL: store_narrowing_v4i32_to_global_address:
+; CHECK:         .functype store_narrowing_v4i32_to_global_address (v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i64x2.extract_lane 0
+; CHECK-NEXT:    i64.store gv_v4i16
+; CHECK-NEXT:    # fallthrough-return
+  store <4 x i16> %v , <4 x i16>* @gv_v4i16
   ret void
 }
 

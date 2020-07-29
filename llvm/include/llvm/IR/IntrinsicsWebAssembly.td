@@ -159,22 +159,6 @@ def int_wasm_narrow_unsigned :
   Intrinsic<[llvm_anyvector_ty],
             [llvm_anyvector_ty, LLVMMatchType<1>],
             [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_widen_low_signed :
-  Intrinsic<[llvm_anyvector_ty],
-            [llvm_anyvector_ty],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_widen_high_signed :
-  Intrinsic<[llvm_anyvector_ty],
-            [llvm_anyvector_ty],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_widen_low_unsigned :
-  Intrinsic<[llvm_anyvector_ty],
-            [llvm_anyvector_ty],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_widen_high_unsigned :
-  Intrinsic<[llvm_anyvector_ty],
-            [llvm_anyvector_ty],
-            [IntrNoMem, IntrSpeculatable]>;
 
 // TODO: Replace these intrinsics with normal ISel patterns
 def int_wasm_pmin :

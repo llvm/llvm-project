@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown- -mcpu=core2 | FileCheck %s --check-prefixes=CHECK,X64
 ; RUN: llc < %s -mtriple=i686-unknown- -mcpu=i486 | FileCheck %s --check-prefixes=I486
 ; RUN: llc < %s -mtriple=i686-unknown- -mcpu=znver1 | FileCheck %s --check-prefixes=CHECK,X86
+; RUN: llc < %s -mtriple=i686-unknown- -mcpu=lakemont | FileCheck %s --check-prefixes=CHECK,X86
 
 ; Basic 64-bit cmpxchg
 define void @t1(i64* nocapture %p) nounwind ssp {
