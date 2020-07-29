@@ -27,8 +27,8 @@ TEST_F(AArch64GISelMITest, TestCSE) {
   B.setCSEInfo(&CSEInfo);
   CSEMIRBuilder CSEB(B.getState());
 
-  CSEB.setInsertPt(*EntryMBB, EntryMBB->begin());
-  unsigned AddReg = MRI->createGenericVirtualRegister(s16);
+  CSEB.setInsertPt(B.getMBB(), B.getInsertPt());
+  Register AddReg = MRI->createGenericVirtualRegister(s16);
   auto MIBAddCopy =
       CSEB.buildInstr(TargetOpcode::G_ADD, {AddReg}, {MIBInput, MIBInput});
   EXPECT_EQ(MIBAddCopy->getOpcode(), TargetOpcode::COPY);
