@@ -23,6 +23,7 @@
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 #include "lldb/Interpreter/OptionGroupFile.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
+#include "lldb/Interpreter/OptionGroupPlatform.h"
 #include "lldb/Interpreter/OptionGroupString.h"
 #include "lldb/Interpreter/OptionGroupUInt64.h"
 #include "lldb/Interpreter/OptionGroupUUID.h"
@@ -216,6 +217,7 @@ public:
             "Create a target using the argument as the main executable.",
             nullptr),
         m_option_group(), m_arch_option(),
+        m_platform_options(true), // Include the --platform option.
         m_core_file(LLDB_OPT_SET_1, false, "core", 'c', 0, eArgTypeFilename,
                     "Fullpath to a core file to use for this target."),
         m_platform_path(LLDB_OPT_SET_1, false, "platform-path", 'P', 0,
@@ -245,6 +247,7 @@ public:
     m_arguments.push_back(arg);
 
     m_option_group.Append(&m_arch_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+    m_option_group.Append(&m_platform_options, LLDB_OPT_SET_ALL, 1);
     m_option_group.Append(&m_core_file, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_platform_path, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_symbol_file, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
@@ -317,7 +320,8 @@ protected:
       llvm::StringRef arch_cstr = m_arch_option.GetArchitectureName();
       Status error(debugger.GetTargetList().CreateTarget(
           debugger, file_path, arch_cstr,
-          m_add_dependents.m_load_dependent_files, nullptr, target_sp));
+          m_add_dependents.m_load_dependent_files, &m_platform_options,
+          target_sp));
 
       if (target_sp) {
         // Only get the platform after we create the target because we might
@@ -448,6 +452,7 @@ protected:
 private:
   OptionGroupOptions m_option_group;
   OptionGroupArchitecture m_arch_option;
+  OptionGroupPlatform m_platform_options;
   OptionGroupFile m_core_file;
   OptionGroupFile m_platform_path;
   OptionGroupFile m_symbol_file;
