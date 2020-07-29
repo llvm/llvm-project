@@ -66,11 +66,11 @@ struct ARangeDescriptor {
 
 struct ARange {
   dwarf::DwarfFormat Format;
-  uint64_t Length;
+  yaml::Hex64 Length;
   uint16_t Version;
-  uint32_t CuOffset;
-  uint8_t AddrSize;
-  uint8_t SegSize;
+  yaml::Hex64 CuOffset;
+  yaml::Hex8 AddrSize;
+  yaml::Hex8 SegSize;
   std::vector<ARangeDescriptor> Descriptors;
 };
 

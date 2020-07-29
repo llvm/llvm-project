@@ -325,11 +325,11 @@ DWARF:
 
 #CHECK: DWARF:           
 #CHECK:   debug_aranges:   
-#CHECK:     - Length:          44
+#CHECK:     - Length:          0x000000000000002C
 #CHECK:       Version:         2
-#CHECK:       CuOffset:        0
-#CHECK:       AddrSize:        8
-#CHECK:       SegSize:         0
+#CHECK:       CuOffset:        0x0000000000000000
+#CHECK:       AddrSize:        0x08
+#CHECK:       SegSize:         0x00
 #CHECK:       Descriptors:     
 #CHECK:         - Address:         0x0000000100000F50
 #CHECK:           Length:          52
