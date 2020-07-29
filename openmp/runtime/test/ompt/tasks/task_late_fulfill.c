@@ -1,5 +1,6 @@
 // RUN: %libomp-compile -fopenmp-version=50 && env OMP_NUM_THREADS='3' \
 // RUN:    %libomp-run | %sort-threads | FileCheck %s
+// REQUIRES: ompt
 
 // Checked gcc 10.1 still does not support detach clause on task construct.
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8, gcc-9, gcc-10

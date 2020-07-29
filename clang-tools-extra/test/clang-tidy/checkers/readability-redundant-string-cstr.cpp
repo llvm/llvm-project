@@ -15,6 +15,8 @@ struct basic_string {
   basic_string();
   basic_string(const C *p, const A &a = A());
 
+  ~basic_string();
+
   const C *c_str() const;
   const C *data() const;
 
