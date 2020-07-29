@@ -143,7 +143,7 @@ ModulePass *createInstrProfilingLegacyPass(
 ModulePass *createInstrOrderFilePass();
 
 // Insert DataFlowSanitizer (dynamic data flow analysis) instrumentation
-ModulePass *createDataFlowSanitizerPass(
+ModulePass *createDataFlowSanitizerLegacyPassPass(
     const std::vector<std::string> &ABIListFiles = std::vector<std::string>());
 
 // Options for sanitizer coverage instrumentation.
