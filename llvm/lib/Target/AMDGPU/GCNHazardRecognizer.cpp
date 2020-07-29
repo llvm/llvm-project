@@ -1383,3 +1383,27 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
 
   return WaitStatesNeeded;
 }
+
+bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
+  if (!SU->isInstr())
+    return false;
+
+  MachineInstr *MAI = nullptr;
+  auto IsMFMAFn = [&MAI] (MachineInstr *MI) {
+    MAI = nullptr;
+    if (SIInstrInfo::isMAI(*MI) &&
+        MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32 &&
+        MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32)
+      MAI = MI;
+    return MAI != nullptr;
+  };
+
+  MachineInstr *MI = SU->getInstr();
+  if (IsMFMAFn(MI)) {
+    int W = getWaitStatesSince(IsMFMAFn, 16);
+    if (MAI)
+      return W < (int)TSchedModel.computeInstrLatency(MAI);
+  }
+
+  return false;
+}
