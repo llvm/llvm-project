@@ -803,7 +803,8 @@ QualType Sema::buildLambdaInitCaptureInitialization(
       Diag(EllipsisLoc, getLangOpts().CPlusPlus20
                             ? diag::warn_cxx17_compat_init_capture_pack
                             : diag::ext_init_capture_pack);
-      DeductType = Context.getPackExpansionType(DeductType, NumExpansions);
+      DeductType = Context.getPackExpansionType(DeductType, NumExpansions,
+                                                /*ExpectPackInType=*/false);
       TLB.push<PackExpansionTypeLoc>(DeductType).setEllipsisLoc(EllipsisLoc);
     } else {
       // Just ignore the ellipsis for now and form a non-pack variable. We'll
