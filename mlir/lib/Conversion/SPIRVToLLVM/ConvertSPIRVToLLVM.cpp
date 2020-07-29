@@ -189,18 +189,20 @@ static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
 static LogicalResult replaceWithLoadOrStore(Operation *op,
                                             ConversionPatternRewriter &rewriter,
                                             LLVMTypeConverter &typeConverter,
-                                            unsigned alignment) {
+                                            unsigned alignment, bool isVolatile,
+                                            bool isNonTemporal) {
   if (auto loadOp = dyn_cast<spirv::LoadOp>(op)) {
     auto dstType = typeConverter.convertType(loadOp.getType());
     if (!dstType)
       return failure();
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, dstType, loadOp.ptr(),
-                                              alignment);
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+        loadOp, dstType, loadOp.ptr(), alignment, isVolatile, isNonTemporal);
     return success();
   }
   auto storeOp = cast<spirv::StoreOp>(op);
   rewriter.replaceOpWithNewOp<LLVM::StoreOp>(storeOp, storeOp.value(),
-                                             storeOp.ptr(), alignment);
+                                             storeOp.ptr(), alignment,
+                                             isVolatile, isNonTemporal);
   return success();
 }
 
@@ -594,19 +596,31 @@ public:
   LogicalResult
   matchAndRewrite(SPIRVop op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    if (op.memory_access().hasValue() &&
-        op.memory_access().getValue() != spirv::MemoryAccess::None) {
-      auto memoryAccess = op.memory_access().getValue();
-      if (memoryAccess == spirv::MemoryAccess::Aligned) {
-        unsigned alignment = op.alignment().getValue().getZExtValue();
-        replaceWithLoadOrStore(op, rewriter, this->typeConverter, alignment);
-        return success();
-      }
+
+    if (!op.memory_access().hasValue()) {
+      replaceWithLoadOrStore(op, rewriter, this->typeConverter, /*alignment=*/0,
+                             /*isVolatile=*/false, /*isNonTemporal=*/ false);
+      return success();
+    }
+    auto memoryAccess = op.memory_access().getValue();
+    switch (memoryAccess) {
+    case spirv::MemoryAccess::Aligned:
+    case spirv::MemoryAccess::None:
+    case spirv::MemoryAccess::Nontemporal:
+    case spirv::MemoryAccess::Volatile: {
+      unsigned alignment = memoryAccess == spirv::MemoryAccess::Aligned
+                               ? op.alignment().getValue().getZExtValue()
+                               : 0;
+      bool isNonTemporal = memoryAccess == spirv::MemoryAccess::Nontemporal;
+      bool isVolatile = memoryAccess == spirv::MemoryAccess::Volatile;
+      replaceWithLoadOrStore(op, rewriter, this->typeConverter, alignment,
+                             isVolatile, isNonTemporal);
+      return success();
+    }
+    default:
       // There is no support of other memory access attributes.
       return failure();
     }
-    replaceWithLoadOrStore(op, rewriter, this->typeConverter, 0);
-    return success();
   }
 };
 

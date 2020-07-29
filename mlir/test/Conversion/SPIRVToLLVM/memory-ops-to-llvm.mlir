@@ -25,6 +25,20 @@ func @load_with_alignment() {
   return
 }
 
+func @load_volatile() {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  // CHECK: %{{.*}} = llvm.load volatile %{{.*}} : !llvm<"float*">
+  %1 = spv.Load "Function" %0 ["Volatile"] : f32
+  return
+}
+
+func @load_nontemporal() {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  // CHECK: %{{.*}} = llvm.load %{{.*}} {nontemporal} : !llvm<"float*">
+  %1 = spv.Load "Function" %0 ["Nontemporal"] : f32
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // spv.Store
 //===----------------------------------------------------------------------===//
@@ -47,6 +61,20 @@ func @store_with_alignment(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 4 : i64} : !llvm<"float*">
   spv.Store "Function" %0, %arg0 ["Aligned", 4] : f32
+  return
+}
+
+func @store_volatile(%arg0 : f32) -> () {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} : !llvm<"float*">
+  spv.Store "Function" %0, %arg0 ["Volatile"] : f32
+  return
+}
+
+func @store_nontemporal(%arg0 : f32) -> () {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  // CHECK: llvm.store %{{.*}}, %{{.*}} {nontemporal} : !llvm<"float*">
+  spv.Store "Function" %0, %arg0 ["Nontemporal"] : f32
   return
 }
 
