@@ -10725,9 +10725,7 @@ public:
       DeclarationNameInfo &ReductionOrMapperId, int ExtraModifier,
       ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
       ArrayRef<SourceLocation> MapTypeModifiersLoc, bool IsMapTypeImplicit,
-      SourceLocation ExtraModifierLoc,
-      ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
-      ArrayRef<SourceLocation> MotionModifiersLoc);
+      SourceLocation ExtraModifierLoc);
   /// Called on well-formed 'inclusive' clause.
   OMPClause *ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,
                                         SourceLocation StartLoc,
@@ -10864,20 +10862,15 @@ public:
       SourceLocation KindLoc, SourceLocation EndLoc);
   /// Called on well-formed 'to' clause.
   OMPClause *
-  ActOnOpenMPToClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
-                      ArrayRef<SourceLocation> MotionModifiersLoc,
-                      CXXScopeSpec &MapperIdScopeSpec,
-                      DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
-                      ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
+  ActOnOpenMPToClause(ArrayRef<Expr *> VarList, CXXScopeSpec &MapperIdScopeSpec,
+                      DeclarationNameInfo &MapperId,
+                      const OMPVarListLocTy &Locs,
                       ArrayRef<Expr *> UnresolvedMappers = llvm::None);
   /// Called on well-formed 'from' clause.
-  OMPClause *
-  ActOnOpenMPFromClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
-                        ArrayRef<SourceLocation> MotionModifiersLoc,
-                        CXXScopeSpec &MapperIdScopeSpec,
-                        DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
-                        ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
-                        ArrayRef<Expr *> UnresolvedMappers = llvm::None);
+  OMPClause *ActOnOpenMPFromClause(
+      ArrayRef<Expr *> VarList, CXXScopeSpec &MapperIdScopeSpec,
+      DeclarationNameInfo &MapperId, const OMPVarListLocTy &Locs,
+      ArrayRef<Expr *> UnresolvedMappers = llvm::None);
   /// Called on well-formed 'use_device_ptr' clause.
   OMPClause *ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
                                            const OMPVarListLocTy &Locs);
