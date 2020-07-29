@@ -224,7 +224,7 @@ else()
     PARENT_TARGET asan)
 
   foreach(arch ${ASAN_SUPPORTED_ARCH})
-    if (UNIX)
+    if (UNIX AND COMPILER_RT_HAS_VERSION_SCRIPT)
       add_sanitizer_rt_version_list(clang_rt.asan-dynamic-${arch}
                                     LIBS clang_rt.asan-${arch} clang_rt.asan_cxx-${arch}
                                     EXTRA asan.syms.extra)
@@ -232,7 +232,7 @@ else()
            -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
       # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
       # but requires a special option to enable it.
-      if (OS_NAME MATCHES "SunOS")
+      if (COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
           list(APPEND VERSION_SCRIPT_FLAG -Wl,-z,gnu-version-script-compat)
       endif()
       set_property(SOURCE
