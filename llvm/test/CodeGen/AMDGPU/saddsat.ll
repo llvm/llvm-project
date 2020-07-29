@@ -170,24 +170,24 @@ define <3 x i16> @v_saddsat_v3i16(<3 x i16> %lhs, <3 x i16> %rhs) {
 ; GFX6-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX6-NEXT:    v_bfe_i32 v4, v4, 0, 16
 ; GFX6-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX6-NEXT:    v_bfe_i32 v5, v5, 0, 16
+; GFX6-NEXT:    v_bfe_i32 v2, v2, 0, 16
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, v1, v4
 ; GFX6-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v3
+; GFX6-NEXT:    v_add_i32_e32 v2, vcc, v2, v5
 ; GFX6-NEXT:    v_min_i32_e32 v1, s4, v1
 ; GFX6-NEXT:    s_movk_i32 s5, 0x8000
 ; GFX6-NEXT:    v_min_i32_e32 v0, s4, v0
 ; GFX6-NEXT:    v_max_i32_e32 v1, s5, v1
 ; GFX6-NEXT:    v_max_i32_e32 v0, s5, v0
-; GFX6-NEXT:    v_bfe_i32 v5, v5, 0, 16
-; GFX6-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX6-NEXT:    v_min_i32_e32 v2, s4, v2
+; GFX6-NEXT:    v_max_i32_e32 v3, s5, v2
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX6-NEXT:    v_add_i32_e32 v1, vcc, v2, v5
-; GFX6-NEXT:    v_min_i32_e32 v1, s4, v1
-; GFX6-NEXT:    v_max_i32_e32 v1, s5, v1
-; GFX6-NEXT:    v_or_b32_e32 v2, 0xffff0000, v1
-; GFX6-NEXT:    v_alignbit_b32 v1, v1, v0, 16
+; GFX6-NEXT:    v_or_b32_e32 v2, 0xffff0000, v3
+; GFX6-NEXT:    v_alignbit_b32 v1, v3, v1, 16
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_saddsat_v3i16:

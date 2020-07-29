@@ -5083,11 +5083,59 @@ InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectAddrModeXRO(MachineOperand &Root,
                                               unsigned SizeInBytes) const {
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
-
-  // If we have a constant offset, then we probably don't want to match a
-  // register offset.
-  if (isBaseWithConstantOffset(Root, MRI))
+  if (!Root.isReg())
     return None;
+  MachineInstr *PtrAdd =
+      getOpcodeDef(TargetOpcode::G_PTR_ADD, Root.getReg(), MRI);
+  if (!PtrAdd)
+    return None;
+
+  // Check for an immediates which cannot be encoded in the [base + imm]
+  // addressing mode, and can't be encoded in an add/sub. If this happens, we'll
+  // end up with code like:
+  //
+  // mov x0, wide
+  // add x1 base, x0
+  // ldr x2, [x1, x0]
+  //
+  // In this situation, we can use the [base, xreg] addressing mode to save an
+  // add/sub:
+  //
+  // mov x0, wide
+  // ldr x2, [base, x0]
+  auto ValAndVReg =
+      getConstantVRegValWithLookThrough(PtrAdd->getOperand(2).getReg(), MRI);
+  if (ValAndVReg) {
+    unsigned Scale = Log2_32(SizeInBytes);
+    int64_t ImmOff = ValAndVReg->Value;
+
+    // Skip immediates that can be selected in the load/store addresing
+    // mode.
+    if (ImmOff % SizeInBytes == 0 && ImmOff >= 0 &&
+        ImmOff < (0x1000 << Scale))
+      return None;
+
+    // Helper lambda to decide whether or not it is preferable to emit an add.
+    auto isPreferredADD = [](int64_t ImmOff) {
+      // Constants in [0x0, 0xfff] can be encoded in an add.
+      if ((ImmOff & 0xfffffffffffff000LL) == 0x0LL)
+        return true;
+
+      // Can it be encoded in an add lsl #12?
+      if ((ImmOff & 0xffffffffff000fffLL) != 0x0LL)
+        return false;
+
+      // It can be encoded in an add lsl #12, but we may not want to. If it is
+      // possible to select this as a single movz, then prefer that. A single
+      // movz is faster than an add with a shift.
+      return (ImmOff & 0xffffffffff00ffffLL) != 0x0LL &&
+             (ImmOff & 0xffffffffffff0fffLL) != 0x0LL;
+    };
+
+    // If the immediate can be encoded in a single add/sub, then bail out.
+    if (isPreferredADD(ImmOff) || isPreferredADD(-ImmOff))
+      return None;
+  }
 
   // Try to fold shifts into the addressing mode.
   auto AddrModeFns = selectAddrModeShiftedExtendXReg(Root, SizeInBytes);

@@ -1005,6 +1005,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case ISD::STRICT_FFLOOR:
     case ISD::FTRUNC:
     case ISD::STRICT_FTRUNC:
+    case ISD::FROUNDEVEN:
+    case ISD::STRICT_FROUNDEVEN:
     case ISD::FNEARBYINT:
     case ISD::STRICT_FNEARBYINT:
     case ISD::FRINT:
@@ -1020,6 +1022,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       case ISD::FFLOOR:     Imm = 0x9; break;
       case ISD::STRICT_FTRUNC:
       case ISD::FTRUNC:     Imm = 0xB; break;
+      case ISD::STRICT_FROUNDEVEN:
+      case ISD::FROUNDEVEN: Imm = 0x8; break;
       case ISD::STRICT_FNEARBYINT:
       case ISD::FNEARBYINT: Imm = 0xC; break;
       case ISD::STRICT_FRINT:

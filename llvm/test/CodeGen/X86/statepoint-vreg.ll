@@ -310,10 +310,11 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
 ; CHECK-VREG-LABEL: name:            test_gcptr_uniqueing
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
 ; CHECK-VREG:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, %0, 2, 4278124286, %0, %0(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp
+; CHECK-VREG:    %2:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, %0, 2, 4278124286, %0, %0(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+; CHECK-VREG:    %1:gr64 = COPY %2
 ; CHECK-VREG:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG:    $rdi = COPY %1
+; CHECK-VREG:    $rdi = COPY %2
 ; CHECK-VREG:    $rsi = COPY %1
 ; CHECK-VREG:    CALL64pcrel32 @use1, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp
 

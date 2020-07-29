@@ -6329,8 +6329,20 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   friend OMPVarListClause;
   friend TrailingObjects;
 
+  /// Motion-modifiers for the 'to' clause.
+  OpenMPMotionModifierKind MotionModifiers[NumberOfOMPMotionModifiers] = {
+      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown};
+
+  /// Location of motion-modifiers for the 'to' clause.
+  SourceLocation MotionModifiersLoc[NumberOfOMPMotionModifiers];
+
+  /// Colon location.
+  SourceLocation ColonLoc;
+
   /// Build clause with number of variables \a NumVars.
   ///
+  /// \param TheMotionModifiers Motion-modifiers.
+  /// \param TheMotionModifiersLoc Locations of motion-modifiers.
   /// \param MapperQualifierLoc C++ nested name specifier for the associated
   /// user-defined mapper.
   /// \param MapperIdInfo The identifier of associated user-defined mapper.
@@ -6342,13 +6354,24 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   /// NumUniqueDeclarations: number of unique base declarations in this clause;
   /// 3) NumComponentLists: number of component lists in this clause; and 4)
   /// NumComponents: total number of expression components in the clause.
-  explicit OMPToClause(NestedNameSpecifierLoc MapperQualifierLoc,
+  explicit OMPToClause(ArrayRef<OpenMPMotionModifierKind> TheMotionModifiers,
+                       ArrayRef<SourceLocation> TheMotionModifiersLoc,
+                       NestedNameSpecifierLoc MapperQualifierLoc,
                        DeclarationNameInfo MapperIdInfo,
                        const OMPVarListLocTy &Locs,
                        const OMPMappableExprListSizeTy &Sizes)
       : OMPMappableExprListClause(llvm::omp::OMPC_to, Locs, Sizes,
                                   /*SupportsMapper=*/true, &MapperQualifierLoc,
-                                  &MapperIdInfo) {}
+                                  &MapperIdInfo) {
+    assert(llvm::array_lengthof(MotionModifiers) == TheMotionModifiers.size() &&
+           "Unexpected number of motion modifiers.");
+    llvm::copy(TheMotionModifiers, std::begin(MotionModifiers));
+
+    assert(llvm::array_lengthof(MotionModifiersLoc) ==
+               TheMotionModifiersLoc.size() &&
+           "Unexpected number of motion modifier locations.");
+    llvm::copy(TheMotionModifiersLoc, std::begin(MotionModifiersLoc));
+  }
 
   /// Build an empty clause.
   ///
@@ -6360,6 +6383,29 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   explicit OMPToClause(const OMPMappableExprListSizeTy &Sizes)
       : OMPMappableExprListClause(llvm::omp::OMPC_to, OMPVarListLocTy(), Sizes,
                                   /*SupportsMapper=*/true) {}
+
+  /// Set motion-modifier for the clause.
+  ///
+  /// \param I index for motion-modifier.
+  /// \param T motion-modifier for the clause.
+  void setMotionModifier(unsigned I, OpenMPMotionModifierKind T) {
+    assert(I < NumberOfOMPMotionModifiers &&
+           "Unexpected index to store motion modifier, exceeds array size.");
+    MotionModifiers[I] = T;
+  }
+
+  /// Set location for the motion-modifier.
+  ///
+  /// \param I index for motion-modifier location.
+  /// \param TLoc motion-modifier location.
+  void setMotionModifierLoc(unsigned I, SourceLocation TLoc) {
+    assert(I < NumberOfOMPMotionModifiers &&
+           "Index to store motion modifier location exceeds array size.");
+    MotionModifiersLoc[I] = TLoc;
+  }
+
+  /// Set colon location.
+  void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
   /// Define the sizes of each trailing object array except the last one. This
   /// is required for TrailingObjects to work properly.
@@ -6385,6 +6431,8 @@ public:
   /// \param Vars The original expression used in the clause.
   /// \param Declarations Declarations used in the clause.
   /// \param ComponentLists Component lists used in the clause.
+  /// \param MotionModifiers Motion-modifiers.
+  /// \param MotionModifiersLoc Location of motion-modifiers.
   /// \param UDMapperRefs References to user-defined mappers associated with
   /// expressions used in the clause.
   /// \param UDMQualifierLoc C++ nested name specifier for the associated
@@ -6395,6 +6443,8 @@ public:
                              ArrayRef<ValueDecl *> Declarations,
                              MappableExprComponentListsRef ComponentLists,
                              ArrayRef<Expr *> UDMapperRefs,
+                             ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+                             ArrayRef<SourceLocation> MotionModifiersLoc,
                              NestedNameSpecifierLoc UDMQualifierLoc,
                              DeclarationNameInfo MapperId);
 
@@ -6408,6 +6458,38 @@ public:
   /// NumComponents: total number of expression components in the clause.
   static OMPToClause *CreateEmpty(const ASTContext &C,
                                   const OMPMappableExprListSizeTy &Sizes);
+
+  /// Fetches the motion-modifier at 'Cnt' index of array of modifiers.
+  ///
+  /// \param Cnt index for motion-modifier.
+  OpenMPMotionModifierKind getMotionModifier(unsigned Cnt) const LLVM_READONLY {
+    assert(Cnt < NumberOfOMPMotionModifiers &&
+           "Requested modifier exceeds the total number of modifiers.");
+    return MotionModifiers[Cnt];
+  }
+
+  /// Fetches the motion-modifier location at 'Cnt' index of array of modifiers'
+  /// locations.
+  ///
+  /// \param Cnt index for motion-modifier location.
+  SourceLocation getMotionModifierLoc(unsigned Cnt) const LLVM_READONLY {
+    assert(Cnt < NumberOfOMPMotionModifiers &&
+           "Requested modifier location exceeds total number of modifiers.");
+    return MotionModifiersLoc[Cnt];
+  }
+
+  /// Fetches ArrayRef of motion-modifiers.
+  ArrayRef<OpenMPMotionModifierKind> getMotionModifiers() const LLVM_READONLY {
+    return llvm::makeArrayRef(MotionModifiers);
+  }
+
+  /// Fetches ArrayRef of location of motion-modifiers.
+  ArrayRef<SourceLocation> getMotionModifiersLoc() const LLVM_READONLY {
+    return llvm::makeArrayRef(MotionModifiersLoc);
+  }
+
+  /// Get colon location.
+  SourceLocation getColonLoc() const { return ColonLoc; }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -6449,8 +6531,20 @@ class OMPFromClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
+  /// Motion-modifiers for the 'from' clause.
+  OpenMPMotionModifierKind MotionModifiers[NumberOfOMPMotionModifiers] = {
+      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown};
+
+  /// Location of motion-modifiers for the 'from' clause.
+  SourceLocation MotionModifiersLoc[NumberOfOMPMotionModifiers];
+
+  /// Colon location.
+  SourceLocation ColonLoc;
+
   /// Build clause with number of variables \a NumVars.
   ///
+  /// \param TheMotionModifiers Motion-modifiers.
+  /// \param TheMotionModifiersLoc Locations of motion-modifiers.
   /// \param MapperQualifierLoc C++ nested name specifier for the associated
   /// user-defined mapper.
   /// \param MapperIdInfo The identifier of associated user-defined mapper.
@@ -6462,13 +6556,24 @@ class OMPFromClause final
   /// NumUniqueDeclarations: number of unique base declarations in this clause;
   /// 3) NumComponentLists: number of component lists in this clause; and 4)
   /// NumComponents: total number of expression components in the clause.
-  explicit OMPFromClause(NestedNameSpecifierLoc MapperQualifierLoc,
+  explicit OMPFromClause(ArrayRef<OpenMPMotionModifierKind> TheMotionModifiers,
+                         ArrayRef<SourceLocation> TheMotionModifiersLoc,
+                         NestedNameSpecifierLoc MapperQualifierLoc,
                          DeclarationNameInfo MapperIdInfo,
                          const OMPVarListLocTy &Locs,
                          const OMPMappableExprListSizeTy &Sizes)
       : OMPMappableExprListClause(llvm::omp::OMPC_from, Locs, Sizes,
                                   /*SupportsMapper=*/true, &MapperQualifierLoc,
-                                  &MapperIdInfo) {}
+                                  &MapperIdInfo) {
+    assert(llvm::array_lengthof(MotionModifiers) == TheMotionModifiers.size() &&
+           "Unexpected number of motion modifiers.");
+    llvm::copy(TheMotionModifiers, std::begin(MotionModifiers));
+
+    assert(llvm::array_lengthof(MotionModifiersLoc) ==
+               TheMotionModifiersLoc.size() &&
+           "Unexpected number of motion modifier locations.");
+    llvm::copy(TheMotionModifiersLoc, std::begin(MotionModifiersLoc));
+  }
 
   /// Build an empty clause.
   ///
@@ -6480,6 +6585,29 @@ class OMPFromClause final
   explicit OMPFromClause(const OMPMappableExprListSizeTy &Sizes)
       : OMPMappableExprListClause(llvm::omp::OMPC_from, OMPVarListLocTy(),
                                   Sizes, /*SupportsMapper=*/true) {}
+
+  /// Set motion-modifier for the clause.
+  ///
+  /// \param I index for motion-modifier.
+  /// \param T motion-modifier for the clause.
+  void setMotionModifier(unsigned I, OpenMPMotionModifierKind T) {
+    assert(I < NumberOfOMPMotionModifiers &&
+           "Unexpected index to store motion modifier, exceeds array size.");
+    MotionModifiers[I] = T;
+  }
+
+  /// Set location for the motion-modifier.
+  ///
+  /// \param I index for motion-modifier location.
+  /// \param TLoc motion-modifier location.
+  void setMotionModifierLoc(unsigned I, SourceLocation TLoc) {
+    assert(I < NumberOfOMPMotionModifiers &&
+           "Index to store motion modifier location exceeds array size.");
+    MotionModifiersLoc[I] = TLoc;
+  }
+
+  /// Set colon location.
+  void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
   /// Define the sizes of each trailing object array except the last one. This
   /// is required for TrailingObjects to work properly.
@@ -6505,18 +6633,21 @@ public:
   /// \param Vars The original expression used in the clause.
   /// \param Declarations Declarations used in the clause.
   /// \param ComponentLists Component lists used in the clause.
+  /// \param MotionModifiers Motion-modifiers.
+  /// \param MotionModifiersLoc Location of motion-modifiers.
   /// \param UDMapperRefs References to user-defined mappers associated with
   /// expressions used in the clause.
   /// \param UDMQualifierLoc C++ nested name specifier for the associated
   /// user-defined mapper.
   /// \param MapperId The identifier of associated user-defined mapper.
-  static OMPFromClause *Create(const ASTContext &C, const OMPVarListLocTy &Locs,
-                               ArrayRef<Expr *> Vars,
-                               ArrayRef<ValueDecl *> Declarations,
-                               MappableExprComponentListsRef ComponentLists,
-                               ArrayRef<Expr *> UDMapperRefs,
-                               NestedNameSpecifierLoc UDMQualifierLoc,
-                               DeclarationNameInfo MapperId);
+  static OMPFromClause *
+  Create(const ASTContext &C, const OMPVarListLocTy &Locs,
+         ArrayRef<Expr *> Vars, ArrayRef<ValueDecl *> Declarations,
+         MappableExprComponentListsRef ComponentLists,
+         ArrayRef<Expr *> UDMapperRefs,
+         ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+         ArrayRef<SourceLocation> MotionModifiersLoc,
+         NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -6528,6 +6659,38 @@ public:
   /// NumComponents: total number of expression components in the clause.
   static OMPFromClause *CreateEmpty(const ASTContext &C,
                                     const OMPMappableExprListSizeTy &Sizes);
+
+  /// Fetches the motion-modifier at 'Cnt' index of array of modifiers.
+  ///
+  /// \param Cnt index for motion-modifier.
+  OpenMPMotionModifierKind getMotionModifier(unsigned Cnt) const LLVM_READONLY {
+    assert(Cnt < NumberOfOMPMotionModifiers &&
+           "Requested modifier exceeds the total number of modifiers.");
+    return MotionModifiers[Cnt];
+  }
+
+  /// Fetches the motion-modifier location at 'Cnt' index of array of modifiers'
+  /// locations.
+  ///
+  /// \param Cnt index for motion-modifier location.
+  SourceLocation getMotionModifierLoc(unsigned Cnt) const LLVM_READONLY {
+    assert(Cnt < NumberOfOMPMotionModifiers &&
+           "Requested modifier location exceeds total number of modifiers.");
+    return MotionModifiersLoc[Cnt];
+  }
+
+  /// Fetches ArrayRef of motion-modifiers.
+  ArrayRef<OpenMPMotionModifierKind> getMotionModifiers() const LLVM_READONLY {
+    return llvm::makeArrayRef(MotionModifiers);
+  }
+
+  /// Fetches ArrayRef of location of motion-modifiers.
+  ArrayRef<SourceLocation> getMotionModifiersLoc() const LLVM_READONLY {
+    return llvm::makeArrayRef(MotionModifiersLoc);
+  }
+
+  /// Get colon location.
+  SourceLocation getColonLoc() const { return ColonLoc; }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -7623,6 +7786,8 @@ class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
 
   /// Process clauses with list of variables.
   template <typename T> void VisitOMPClauseList(T *Node, char StartSym);
+  /// Process motion clauses.
+  template <typename T> void VisitOMPMotionClause(T *Node);
 
 public:
   OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy)

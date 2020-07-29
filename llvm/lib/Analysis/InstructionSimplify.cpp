@@ -5258,20 +5258,23 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   case Intrinsic::smin:
   case Intrinsic::umax:
   case Intrinsic::umin: {
+    // If the arguments are the same, this is a no-op.
+    if (Op0 == Op1)
+      return Op0;
+
     // Canonicalize constant operand as Op1.
     if (isa<Constant>(Op0))
       std::swap(Op0, Op1);
 
-    // TODO: Allow partial undef vector constants.
     const APInt *C;
-    if (!match(Op1, m_APInt(C)))
+    if (!match(Op1, m_APIntAllowUndef(C)))
       break;
 
     if ((IID == Intrinsic::smax && C->isMaxSignedValue()) ||
         (IID == Intrinsic::smin && C->isMinSignedValue()) ||
         (IID == Intrinsic::umax && C->isMaxValue()) ||
         (IID == Intrinsic::umin && C->isMinValue()))
-      return Op1;
+      return ConstantInt::get(ReturnType, *C);
 
     break;
   }
@@ -5481,28 +5484,9 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
   }
 }
 
-Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
-  Value *Callee = Call->getCalledOperand();
-
-  // musttail calls can only be simplified if they are also DCEd.
-  // As we can't guarantee this here, don't simplify them.
-  if (Call->isMustTailCall())
-    return nullptr;
-
-  // call undef -> undef
-  // call null -> undef
-  if (isa<UndefValue>(Callee) || isa<ConstantPointerNull>(Callee))
-    return UndefValue::get(Call->getType());
-
-  Function *F = dyn_cast<Function>(Callee);
-  if (!F)
-    return nullptr;
-
-  if (F->isIntrinsic())
-    if (Value *Ret = simplifyIntrinsic(Call, Q))
-      return Ret;
-
-  if (!canConstantFoldCallTo(Call, F))
+static Value *tryConstantFoldCall(CallBase *Call, const SimplifyQuery &Q) {
+  auto *F = dyn_cast<Function>(Call->getCalledOperand());
+  if (!F || !canConstantFoldCallTo(Call, F))
     return nullptr;
 
   SmallVector<Constant *, 4> ConstantArgs;
@@ -5519,6 +5503,29 @@ Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
   }
 
   return ConstantFoldCall(Call, F, ConstantArgs, Q.TLI);
+}
+
+Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
+  // musttail calls can only be simplified if they are also DCEd.
+  // As we can't guarantee this here, don't simplify them.
+  if (Call->isMustTailCall())
+    return nullptr;
+
+  // call undef -> undef
+  // call null -> undef
+  Value *Callee = Call->getCalledOperand();
+  if (isa<UndefValue>(Callee) || isa<ConstantPointerNull>(Callee))
+    return UndefValue::get(Call->getType());
+
+  if (Value *V = tryConstantFoldCall(Call, Q))
+    return V;
+
+  auto *F = dyn_cast<Function>(Callee);
+  if (F && F->isIntrinsic())
+    if (Value *Ret = simplifyIntrinsic(Call, Q))
+      return Ret;
+
+  return nullptr;
 }
 
 /// Given operands for a Freeze, see if we can fold the result.

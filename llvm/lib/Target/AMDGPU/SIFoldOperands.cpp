@@ -643,38 +643,35 @@ void SIFoldOperands::foldOperand(
 
   if (FoldingImmLike && UseMI->isCopy()) {
     Register DestReg = UseMI->getOperand(0).getReg();
+    Register SrcReg = UseMI->getOperand(1).getReg();
+    assert(SrcReg.isVirtual());
 
-    // Don't fold into a copy to a physical register. Doing so would interfere
-    // with the register coalescer's logic which would avoid redundant
-    // initalizations.
-    if (DestReg.isPhysical())
+    const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+
+    // Don't fold into a copy to a physical register with the same class. Doing
+    // so would interfere with the register coalescer's logic which would avoid
+    // redundant initalizations.
+    if (DestReg.isPhysical() && SrcRC->contains(DestReg))
       return;
 
-    const TargetRegisterClass *DestRC =  MRI->getRegClass(DestReg);
+    const TargetRegisterClass *DestRC = TRI->getRegClassForReg(*MRI, DestReg);
+    if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
+      MachineRegisterInfo::use_iterator NextUse;
+      SmallVector<FoldCandidate, 4> CopyUses;
+      for (MachineRegisterInfo::use_iterator Use = MRI->use_begin(DestReg),
+                                             E = MRI->use_end();
+           Use != E; Use = NextUse) {
+        NextUse = std::next(Use);
+        // There's no point trying to fold into an implicit operand.
+        if (Use->isImplicit())
+          continue;
 
-    Register SrcReg = UseMI->getOperand(1).getReg();
-    if (SrcReg.isVirtual()) { // XXX - This can be an assert?
-      const TargetRegisterClass * SrcRC = MRI->getRegClass(SrcReg);
-      if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
-        MachineRegisterInfo::use_iterator NextUse;
-        SmallVector<FoldCandidate, 4> CopyUses;
-        for (MachineRegisterInfo::use_iterator
-          Use = MRI->use_begin(DestReg), E = MRI->use_end();
-          Use != E; Use = NextUse) {
-          NextUse = std::next(Use);
-
-          // There's no point trying to fold into an implicit operand.
-          if (Use->isImplicit())
-            continue;
-
-          FoldCandidate FC = FoldCandidate(Use->getParent(),
-           Use.getOperandNo(), &UseMI->getOperand(1));
-          CopyUses.push_back(FC);
-       }
-        for (auto & F : CopyUses) {
-          foldOperand(*F.OpToFold, F.UseMI, F.UseOpNo,
-           FoldList, CopiesToReplace);
-        }
+        FoldCandidate FC = FoldCandidate(Use->getParent(), Use.getOperandNo(),
+                                         &UseMI->getOperand(1));
+        CopyUses.push_back(FC);
+      }
+      for (auto &F : CopyUses) {
+        foldOperand(*F.OpToFold, F.UseMI, F.UseOpNo, FoldList, CopiesToReplace);
       }
     }
 
