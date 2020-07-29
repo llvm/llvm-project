@@ -76,7 +76,7 @@ V-NEXT: {{^}}NUMVAR - 1:41{{$}}
 V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
 V-NEXT: verbose.txt:[[#@LINE-18]]:1: note: with "NUMVAR - 1" equal to "41"
 V-NEXT: {{^}}NUMVAR - 1:41{{$}}
-V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
+V-NEXT: {{^}}^{{$}}
 
 VV-NEXT: verbose.txt:[[#@LINE-20]]:12: remark: {{C}}HECK-NOT: excluded string not found in input
 VV-NEXT: {{C}}HECK-NOT: {{[[][[]#NUMVAR [+] 1[]][]]$}}
