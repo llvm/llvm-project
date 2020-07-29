@@ -218,11 +218,19 @@ Predicate any(Predicate P0, Predicate P1, Args... args) {
   return any(any(P0, P1), args...);
 }
 
-/// True iff the given type index is the specified types.
+/// True iff the given type index is the specified type.
 LegalityPredicate typeIs(unsigned TypeIdx, LLT TypesInit);
 /// True iff the given type index is one of the specified types.
 LegalityPredicate typeInSet(unsigned TypeIdx,
                             std::initializer_list<LLT> TypesInit);
+
+/// True iff the given type index is not the specified type.
+inline LegalityPredicate typeIsNot(unsigned TypeIdx, LLT Type) {
+  return [=](const LegalityQuery &Query) {
+           return Query.Types[TypeIdx] != Type;
+         };
+}
+
 /// True iff the given types for the given pair of type indexes is one of the
 /// specified type pairs.
 LegalityPredicate
