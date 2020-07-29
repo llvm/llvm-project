@@ -107,5 +107,5 @@ struct S {
   // CHECK-FIXES: {{^}}  void f(char c) { s += std::to_string(c | static_cast<int>(t)); } 
 };
 
-template S<int>;
+template struct S<int>;
 }
