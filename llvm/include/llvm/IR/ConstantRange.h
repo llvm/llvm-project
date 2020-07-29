@@ -150,6 +150,14 @@ public:
                                              const APInt &Other,
                                              unsigned NoWrapKind);
 
+  /// Returns true if ConstantRange calculations are supported for intrinsic
+  /// with \p IntrinsicID.
+  static bool isIntrinsicSupported(Intrinsic::ID IntrinsicID);
+
+  /// Compute range of intrinsic result for the given operand ranges.
+  static ConstantRange intrinsic(Intrinsic::ID IntrinsicID,
+                                 ArrayRef<ConstantRange> Ops);
+
   /// Set up \p Pred and \p RHS such that
   /// ConstantRange::makeExactICmpRegion(Pred, RHS) == *this.  Return true if
   /// successful.

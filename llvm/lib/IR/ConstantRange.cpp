@@ -26,6 +26,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/Compiler.h"
@@ -832,6 +833,35 @@ ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
     // Don't know about this Overflowing Binary Operation.
     // Conservatively fallback to plain binop handling.
     return binaryOp(BinOp, Other);
+  }
+}
+
+bool ConstantRange::isIntrinsicSupported(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::uadd_sat:
+  case Intrinsic::usub_sat:
+  case Intrinsic::sadd_sat:
+  case Intrinsic::ssub_sat:
+    return true;
+  default:
+    return false;
+  }
+}
+
+ConstantRange ConstantRange::intrinsic(Intrinsic::ID IntrinsicID,
+                                       ArrayRef<ConstantRange> Ops) {
+  switch (IntrinsicID) {
+  case Intrinsic::uadd_sat:
+    return Ops[0].uadd_sat(Ops[1]);
+  case Intrinsic::usub_sat:
+    return Ops[0].usub_sat(Ops[1]);
+  case Intrinsic::sadd_sat:
+    return Ops[0].sadd_sat(Ops[1]);
+  case Intrinsic::ssub_sat:
+    return Ops[0].ssub_sat(Ops[1]);
+  default:
+    assert(!isIntrinsicSupported(IntrinsicID) && "Shouldn't be supported");
+    llvm_unreachable("Unsupported intrinsic");
   }
 }
 
