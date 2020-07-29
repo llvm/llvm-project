@@ -167,40 +167,39 @@ bool BreakpointSite::IntersectsRange(lldb::addr_t addr, size_t size,
                                      lldb::addr_t *intersect_addr,
                                      size_t *intersect_size,
                                      size_t *opcode_offset) const {
-  // We only use software traps for software breakpoints
-  if (!IsHardware()) {
-    if (m_byte_size > 0) {
-      const lldb::addr_t bp_end_addr = m_addr + m_byte_size;
-      const lldb::addr_t end_addr = addr + size;
-      // Is the breakpoint end address before the passed in start address?
-      if (bp_end_addr <= addr)
-        return false;
-      // Is the breakpoint start address after passed in end address?
-      if (end_addr <= m_addr)
-        return false;
-      if (intersect_addr || intersect_size || opcode_offset) {
-        if (m_addr < addr) {
-          if (intersect_addr)
-            *intersect_addr = addr;
-          if (intersect_size)
-            *intersect_size =
-                std::min<lldb::addr_t>(bp_end_addr, end_addr) - addr;
-          if (opcode_offset)
-            *opcode_offset = addr - m_addr;
-        } else {
-          if (intersect_addr)
-            *intersect_addr = m_addr;
-          if (intersect_size)
-            *intersect_size =
-                std::min<lldb::addr_t>(bp_end_addr, end_addr) - m_addr;
-          if (opcode_offset)
-            *opcode_offset = 0;
-        }
+  // The function should be called only for software breakpoints.
+  lldbassert(GetType() == Type::eSoftware);
+
+  if (m_byte_size > 0) {
+    const lldb::addr_t bp_end_addr = m_addr + m_byte_size;
+    const lldb::addr_t end_addr = addr + size;
+    // Is the breakpoint end address before the passed in start address?
+    if (bp_end_addr <= addr)
+      return false;
+    // Is the breakpoint start address after passed in end address?
+    if (end_addr <= m_addr)
+      return false;
+    if (intersect_addr || intersect_size || opcode_offset) {
+      if (m_addr < addr) {
+        if (intersect_addr)
+          *intersect_addr = addr;
+        if (intersect_size)
+          *intersect_size =
+              std::min<lldb::addr_t>(bp_end_addr, end_addr) - addr;
+        if (opcode_offset)
+          *opcode_offset = addr - m_addr;
+      } else {
+        if (intersect_addr)
+          *intersect_addr = m_addr;
+        if (intersect_size)
+          *intersect_size =
+              std::min<lldb::addr_t>(bp_end_addr, end_addr) - m_addr;
+        if (opcode_offset)
+          *opcode_offset = 0;
       }
-      return true;
     }
+    return true;
   }
-  return false;
 }
 
 size_t
