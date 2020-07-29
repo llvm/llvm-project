@@ -13,7 +13,7 @@ define i32 @PR37890_v4i32(<4 x i32> %a)  {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
@@ -22,7 +22,7 @@ define i32 @PR37890_v4i32(<4 x i32> %a)  {
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSSE3-SLOW-NEXT:    retq
@@ -38,7 +38,7 @@ define i32 @PR37890_v4i32(<4 x i32> %a)  {
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX1-SLOW-NEXT:    retq
@@ -54,7 +54,7 @@ define i32 @PR37890_v4i32(<4 x i32> %a)  {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    retq
@@ -72,7 +72,7 @@ define i16 @PR37890_v8i16(<8 x i16> %a)  {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddw %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrld $16, %xmm1
@@ -85,7 +85,7 @@ define i16 @PR37890_v8i16(<8 x i16> %a)  {
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSSE3-SLOW-NEXT:    paddw %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSSE3-SLOW-NEXT:    paddw %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    movdqa %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    psrld $16, %xmm1
@@ -107,7 +107,7 @@ define i16 @PR37890_v8i16(<8 x i16> %a)  {
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX1-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX1-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
@@ -128,7 +128,7 @@ define i16 @PR37890_v8i16(<8 x i16> %a)  {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
@@ -153,7 +153,7 @@ define i32 @PR37890_v8i32(<8 x i32> %a)  {
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
@@ -163,7 +163,7 @@ define i32 @PR37890_v8i32(<8 x i32> %a)  {
 ; SSSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSSE3-SLOW-NEXT:    retq
@@ -182,7 +182,7 @@ define i32 @PR37890_v8i32(<8 x i32> %a)  {
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX1-SLOW-NEXT:    vzeroupper
@@ -204,7 +204,7 @@ define i32 @PR37890_v8i32(<8 x i32> %a)  {
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    vzeroupper
@@ -227,7 +227,7 @@ define i16 @PR37890_v16i16(<16 x i16> %a)  {
 ; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddw %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrld $16, %xmm1
@@ -241,7 +241,7 @@ define i16 @PR37890_v16i16(<16 x i16> %a)  {
 ; SSSE3-SLOW-NEXT:    paddw %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSSE3-SLOW-NEXT:    paddw %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSSE3-SLOW-NEXT:    paddw %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    movdqa %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    psrld $16, %xmm1
@@ -266,7 +266,7 @@ define i16 @PR37890_v16i16(<16 x i16> %a)  {
 ; AVX1-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX1-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX1-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
@@ -293,7 +293,7 @@ define i16 @PR37890_v16i16(<16 x i16> %a)  {
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
@@ -324,7 +324,7 @@ define i32 @PR37890_v16i32(<16 x i32> %a)  {
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    retq
@@ -336,7 +336,7 @@ define i32 @PR37890_v16i32(<16 x i32> %a)  {
 ; SSSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
-; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
 ; SSSE3-SLOW-NEXT:    movd %xmm1, %eax
 ; SSSE3-SLOW-NEXT:    retq
@@ -361,7 +361,7 @@ define i32 @PR37890_v16i32(<16 x i32> %a)  {
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX1-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX1-SLOW-NEXT:    vzeroupper
@@ -387,7 +387,7 @@ define i32 @PR37890_v16i32(<16 x i32> %a)  {
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    vzeroupper

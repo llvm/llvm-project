@@ -779,14 +779,14 @@ define <4 x float> @multi_use_binop(<4 x float> %x, <4 x float> %y) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    mulps %xmm1, %xmm0
 ; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    addps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: multi_use_binop:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,2,0]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,0,0,0]
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq

@@ -108,8 +108,8 @@ define <4 x float> @sin_v4f32(<4 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpermilps $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[3,1,2,3]
+; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    callq sinf
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
@@ -140,8 +140,8 @@ define <5 x float> @sin_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpermilps $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[3,1,2,3]
+; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    callq sinf
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
@@ -191,8 +191,8 @@ define <6 x float> @sin_v6f32(<6 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpermilps $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[3,1,2,3]
+; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    callq sinf
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]

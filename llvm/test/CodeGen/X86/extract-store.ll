@@ -241,13 +241,13 @@ define void @extract_i32_3(i32* nocapture %dst, <4 x i32> %foo) nounwind {
 ; SSE2-X32-LABEL: extract_i32_3:
 ; SSE2-X32:       # %bb.0:
 ; SSE2-X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-X32-NEXT:    movd %xmm0, (%eax)
 ; SSE2-X32-NEXT:    retl
 ;
 ; SSE2-X64-LABEL: extract_i32_3:
 ; SSE2-X64:       # %bb.0:
-; SSE2-X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-X64-NEXT:    movd %xmm0, (%rdi)
 ; SSE2-X64-NEXT:    retq
 ;
@@ -370,13 +370,13 @@ define void @extract_f32_3(float* nocapture %dst, <4 x float> %foo) nounwind {
 ; SSE2-X32-LABEL: extract_f32_3:
 ; SSE2-X32:       # %bb.0:
 ; SSE2-X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-X32-NEXT:    movss %xmm0, (%eax)
 ; SSE2-X32-NEXT:    retl
 ;
 ; SSE2-X64-LABEL: extract_f32_3:
 ; SSE2-X64:       # %bb.0:
-; SSE2-X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-X64-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-X64-NEXT:    retq
 ;

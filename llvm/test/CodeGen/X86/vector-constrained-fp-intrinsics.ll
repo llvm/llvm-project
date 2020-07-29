@@ -6371,7 +6371,7 @@ define <3 x double> @constrained_vector_sitofp_v3f64_v3i32(<3 x i32> %x) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    cvtsi2sd %eax, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    cvtsi2sd %eax, %xmm1
@@ -6409,7 +6409,7 @@ define <3 x float> @constrained_vector_sitofp_v3f32_v3i32(<3 x i32> %x) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    cvtsi2ss %eax, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm2, %eax
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
 ; CHECK-NEXT:    cvtsi2ss %eax, %xmm2
@@ -7027,7 +7027,7 @@ define <3 x double> @constrained_vector_uitofp_v3f64_v3i32(<3 x i32> %x) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    cvtsi2sd %rax, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    cvtsi2sd %rax, %xmm1
@@ -7077,7 +7077,7 @@ define <3 x float> @constrained_vector_uitofp_v3f32_v3i32(<3 x i32> %x) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    cvtsi2ss %rax, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm2, %eax
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
 ; CHECK-NEXT:    cvtsi2ss %rax, %xmm2

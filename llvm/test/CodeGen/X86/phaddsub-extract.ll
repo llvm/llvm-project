@@ -14,7 +14,7 @@ define i32 @extract_extract01_v4i32_add_i32(<4 x i32> %x) {
 ; SSE3-SLOW-LABEL: extract_extract01_v4i32_add_i32:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -48,7 +48,7 @@ define i32 @extract_extract23_v4i32_add_i32(<4 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    movd %xmm1, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -56,7 +56,7 @@ define i32 @extract_extract23_v4i32_add_i32(<4 x i32> %x) {
 ; SSE3-FAST-LABEL: extract_extract23_v4i32_add_i32:
 ; SSE3-FAST:       # %bb.0:
 ; SSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSE3-FAST-NEXT:    retq
 ;
@@ -82,7 +82,7 @@ define i32 @extract_extract01_v4i32_add_i32_commute(<4 x i32> %x) {
 ; SSE3-SLOW-LABEL: extract_extract01_v4i32_add_i32_commute:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -116,7 +116,7 @@ define i32 @extract_extract23_v4i32_add_i32_commute(<4 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    movd %xmm1, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -124,7 +124,7 @@ define i32 @extract_extract23_v4i32_add_i32_commute(<4 x i32> %x) {
 ; SSE3-FAST-LABEL: extract_extract23_v4i32_add_i32_commute:
 ; SSE3-FAST:       # %bb.0:
 ; SSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSE3-FAST-NEXT:    retq
 ;
@@ -294,7 +294,7 @@ define i32 @extract_extract01_v4i32_sub_i32(<4 x i32> %x) {
 ; SSE3-SLOW-LABEL: extract_extract01_v4i32_sub_i32:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
 ; SSE3-SLOW-NEXT:    subl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -328,7 +328,7 @@ define i32 @extract_extract23_v4i32_sub_i32(<4 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    movd %xmm1, %eax
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
 ; SSE3-SLOW-NEXT:    subl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -336,7 +336,7 @@ define i32 @extract_extract23_v4i32_sub_i32(<4 x i32> %x) {
 ; SSE3-FAST-LABEL: extract_extract23_v4i32_sub_i32:
 ; SSE3-FAST:       # %bb.0:
 ; SSE3-FAST-NEXT:    phsubd %xmm0, %xmm0
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSE3-FAST-NEXT:    retq
 ;
@@ -362,7 +362,7 @@ define i32 @extract_extract01_v4i32_sub_i32_commute(<4 x i32> %x) {
 ; SSE3-LABEL: extract_extract01_v4i32_sub_i32_commute:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movd %xmm0, %ecx
-; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    subl %ecx, %eax
 ; SSE3-NEXT:    retq
@@ -384,7 +384,7 @@ define i32 @extract_extract23_v4i32_sub_i32_commute(<4 x i32> %x) {
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-NEXT:    movd %xmm1, %ecx
-; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    subl %ecx, %eax
 ; SSE3-NEXT:    retq
@@ -523,7 +523,7 @@ define i32 @extract_extract01_v8i32_add_i32(<8 x i32> %x) {
 ; SSE3-SLOW-LABEL: extract_extract01_v8i32_add_i32:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -559,7 +559,7 @@ define i32 @extract_extract23_v8i32_add_i32(<8 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    movd %xmm1, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -567,7 +567,7 @@ define i32 @extract_extract23_v8i32_add_i32(<8 x i32> %x) {
 ; SSE3-FAST-LABEL: extract_extract23_v8i32_add_i32:
 ; SSE3-FAST:       # %bb.0:
 ; SSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSE3-FAST-NEXT:    retq
 ;
@@ -596,7 +596,7 @@ define i32 @extract_extract67_v8i32_add_i32(<8 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -604,7 +604,7 @@ define i32 @extract_extract67_v8i32_add_i32(<8 x i32> %x) {
 ; SSE3-FAST-LABEL: extract_extract67_v8i32_add_i32:
 ; SSE3-FAST:       # %bb.0:
 ; SSE3-FAST-NEXT:    phaddd %xmm1, %xmm1
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSE3-FAST-NEXT:    retq
 ;
@@ -650,7 +650,7 @@ define i32 @extract_extract01_v8i32_add_i32_commute(<8 x i32> %x) {
 ; SSE3-SLOW-LABEL: extract_extract01_v8i32_add_i32_commute:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -686,7 +686,7 @@ define i32 @extract_extract23_v8i32_add_i32_commute(<8 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    movd %xmm1, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -694,7 +694,7 @@ define i32 @extract_extract23_v8i32_add_i32_commute(<8 x i32> %x) {
 ; SSE3-FAST-LABEL: extract_extract23_v8i32_add_i32_commute:
 ; SSE3-FAST:       # %bb.0:
 ; SSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSE3-FAST-NEXT:    retq
 ;
@@ -723,7 +723,7 @@ define i32 @extract_extract67_v8i32_add_i32_commute(<8 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -731,7 +731,7 @@ define i32 @extract_extract67_v8i32_add_i32_commute(<8 x i32> %x) {
 ; SSE3-FAST-LABEL: extract_extract67_v8i32_add_i32_commute:
 ; SSE3-FAST:       # %bb.0:
 ; SSE3-FAST-NEXT:    phaddd %xmm1, %xmm1
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSE3-FAST-NEXT:    retq
 ;
@@ -1085,7 +1085,7 @@ define i32 @extract_extract01_v8i32_sub_i32(<8 x i32> %x) {
 ; SSE3-SLOW-LABEL: extract_extract01_v8i32_sub_i32:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
 ; SSE3-SLOW-NEXT:    subl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1121,7 +1121,7 @@ define i32 @extract_extract23_v8i32_sub_i32(<8 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    movd %xmm1, %eax
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
 ; SSE3-SLOW-NEXT:    subl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1129,7 +1129,7 @@ define i32 @extract_extract23_v8i32_sub_i32(<8 x i32> %x) {
 ; SSE3-FAST-LABEL: extract_extract23_v8i32_sub_i32:
 ; SSE3-FAST:       # %bb.0:
 ; SSE3-FAST-NEXT:    phsubd %xmm0, %xmm0
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSE3-FAST-NEXT:    retq
 ;
@@ -1158,7 +1158,7 @@ define i32 @extract_extract67_v8i32_sub_i32(<8 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
 ; SSE3-SLOW-NEXT:    subl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1166,7 +1166,7 @@ define i32 @extract_extract67_v8i32_sub_i32(<8 x i32> %x) {
 ; SSE3-FAST-LABEL: extract_extract67_v8i32_sub_i32:
 ; SSE3-FAST:       # %bb.0:
 ; SSE3-FAST-NEXT:    phsubd %xmm1, %xmm1
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
 ; SSE3-FAST-NEXT:    retq
 ;
@@ -1214,7 +1214,7 @@ define i32 @extract_extract01_v8i32_sub_i32_commute(<8 x i32> %x) {
 ; SSE3-LABEL: extract_extract01_v8i32_sub_i32_commute:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movd %xmm0, %ecx
-; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    subl %ecx, %eax
 ; SSE3-NEXT:    retq
@@ -1301,7 +1301,7 @@ define i32 @extract_extract01_v16i32_add_i32(<16 x i32> %x) {
 ; SSE3-SLOW-LABEL: extract_extract01_v16i32_add_i32:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1336,7 +1336,7 @@ define i32 @extract_extract01_v16i32_add_i32_commute(<16 x i32> %x) {
 ; SSE3-SLOW-LABEL: extract_extract01_v16i32_add_i32_commute:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1447,7 +1447,7 @@ define i32 @extract_extract01_v16i32_sub_i32(<16 x i32> %x) {
 ; SSE3-SLOW-LABEL: extract_extract01_v16i32_sub_i32:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
 ; SSE3-SLOW-NEXT:    subl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1482,7 +1482,7 @@ define i32 @extract_extract01_v16i32_sub_i32_commute(<16 x i32> %x) {
 ; SSE3-LABEL: extract_extract01_v16i32_sub_i32_commute:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movd %xmm0, %ecx
-; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    subl %ecx, %eax
 ; SSE3-NEXT:    retq
@@ -1568,7 +1568,7 @@ define i32 @extract_extract01_v4i32_add_i32_uses1(<4 x i32> %x, i32* %p) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
 ; SSE3-SLOW-NEXT:    movd %xmm0, (%rdi)
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1605,7 +1605,7 @@ define i32 @extract_extract01_v4i32_add_i32_uses2(<4 x i32> %x, i32* %p) {
 ; SSE3-SLOW-LABEL: extract_extract01_v4i32_add_i32_uses2:
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    movd %xmm0, %ecx
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    addl %ecx, %eax
 ; SSE3-SLOW-NEXT:    movd %xmm0, (%rdi)
@@ -1613,7 +1613,7 @@ define i32 @extract_extract01_v4i32_add_i32_uses2(<4 x i32> %x, i32* %p) {
 ;
 ; SSE3-FAST-LABEL: extract_extract01_v4i32_add_i32_uses2:
 ; SSE3-FAST:       # %bb.0:
-; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE3-FAST-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE3-FAST-NEXT:    movd %xmm1, (%rdi)
 ; SSE3-FAST-NEXT:    phaddd %xmm0, %xmm0
 ; SSE3-FAST-NEXT:    movd %xmm0, %eax
@@ -1645,7 +1645,7 @@ define i32 @extract_extract01_v4i32_add_i32_uses3(<4 x i32> %x, i32* %p1, i32* %
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movd %xmm0, %ecx
 ; SSE3-NEXT:    movd %xmm0, (%rdi)
-; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    addl %ecx, %eax
 ; SSE3-NEXT:    movd %xmm0, (%rsi)
@@ -1674,7 +1674,7 @@ define i32 @partial_reduction_add_v8i32(<8 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1691,7 +1691,7 @@ define i32 @partial_reduction_add_v8i32(<8 x i32> %x) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX-SLOW-NEXT:    vzeroupper
@@ -1717,7 +1717,7 @@ define i32 @partial_reduction_add_v16i32(<16 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1734,7 +1734,7 @@ define i32 @partial_reduction_add_v16i32(<16 x i32> %x) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX-SLOW-NEXT:    vzeroupper
@@ -1760,7 +1760,7 @@ define i32 @partial_reduction_sub_v8i32(<8 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    psubd %xmm1, %xmm0
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    psubd %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1777,7 +1777,7 @@ define i32 @partial_reduction_sub_v8i32(<8 x i32> %x) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-SLOW-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-SLOW-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX-SLOW-NEXT:    vzeroupper
@@ -1804,7 +1804,7 @@ define i32 @partial_reduction_sub_v16i32(<16 x i32> %x) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    psubd %xmm1, %xmm0
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE3-SLOW-NEXT:    psubd %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1821,7 +1821,7 @@ define i32 @partial_reduction_sub_v16i32(<16 x i32> %x) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-SLOW-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-SLOW-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX-SLOW-NEXT:    vzeroupper
@@ -1840,7 +1840,7 @@ define i32 @partial_reduction_sub_v16i32(<16 x i32> %x) {
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-FAST-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX2-FAST-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -1850,7 +1850,7 @@ define i32 @partial_reduction_sub_v16i32(<16 x i32> %x) {
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX512-FAST-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX512-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX512-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX512-FAST-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX512-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX512-FAST-NEXT:    vzeroupper
@@ -1870,7 +1870,7 @@ define i16 @hadd16_8(<8 x i16> %x223) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    paddw %xmm0, %xmm1
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE3-SLOW-NEXT:    paddw %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    movdqa %xmm0, %xmm1
 ; SSE3-SLOW-NEXT:    psrld $16, %xmm1
@@ -1892,7 +1892,7 @@ define i16 @hadd16_8(<8 x i16> %x223) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
@@ -1923,7 +1923,7 @@ define i32 @hadd32_4(<4 x i32> %x225) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1939,7 +1939,7 @@ define i32 @hadd32_4(<4 x i32> %x225) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX-SLOW-NEXT:    retq
@@ -1963,7 +1963,7 @@ define i32 @hadd32_8(<8 x i32> %x225) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -1980,7 +1980,7 @@ define i32 @hadd32_8(<8 x i32> %x225) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX-SLOW-NEXT:    vzeroupper
@@ -2006,7 +2006,7 @@ define i32 @hadd32_16(<16 x i32> %x225) {
 ; SSE3-SLOW:       # %bb.0:
 ; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    movd %xmm0, %eax
 ; SSE3-SLOW-NEXT:    retq
@@ -2023,7 +2023,7 @@ define i32 @hadd32_16(<16 x i32> %x225) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-SLOW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovd %xmm0, %eax
 ; AVX-SLOW-NEXT:    vzeroupper

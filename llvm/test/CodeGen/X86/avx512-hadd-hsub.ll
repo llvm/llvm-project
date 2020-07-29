@@ -7,7 +7,7 @@ define i32 @hadd_16(<16 x i32> %x225) {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; KNL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; KNL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vmovd %xmm0, %eax
 ; KNL-NEXT:    retq
@@ -16,7 +16,7 @@ define i32 @hadd_16(<16 x i32> %x225) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; SKX-NEXT:    vmovd %xmm0, %eax
 ; SKX-NEXT:    vzeroupper
@@ -34,7 +34,7 @@ define i32 @hsub_16(<16 x i32> %x225) {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; KNL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; KNL-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vmovd %xmm0, %eax
 ; KNL-NEXT:    retq
@@ -43,7 +43,7 @@ define i32 @hsub_16(<16 x i32> %x225) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SKX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; SKX-NEXT:    vmovd %xmm0, %eax
 ; SKX-NEXT:    vzeroupper
