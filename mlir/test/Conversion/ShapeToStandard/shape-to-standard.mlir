@@ -1,40 +1,11 @@
 // RUN: mlir-opt --split-input-file --convert-shape-to-std --verify-diagnostics %s | FileCheck %s
 
-// Convert `size` to `index` type.
-// CHECK-LABEL: @size_id
-// CHECK-SAME: (%[[SIZE:.*]]: index)
-func @size_id(%size : !shape.size) -> !shape.size {
-  // CHECK: return %[[SIZE]] : index
-  return %size : !shape.size
-}
-
-// -----
-
-// Convert `shape` to `tensor<?xindex>` type.
-// CHECK-LABEL: @shape_id
-// CHECK-SAME: (%[[SHAPE:.*]]: tensor<?xindex>)
-func @shape_id(%shape : !shape.shape) -> !shape.shape {
-  // CHECK: return %[[SHAPE]] : tensor<?xindex>
-  return %shape : !shape.shape
-}
-
-// -----
-
-// Lower binary ops.
-// CHECK-LABEL: @binary_ops
-// CHECK-SAME: (%[[LHS:.*]]: index, %[[RHS:.*]]: index)
-func @binary_ops(%lhs : !shape.size, %rhs : !shape.size) {
-  // CHECK: addi %[[LHS]], %[[RHS]] : index
-  %sum = "shape.add"(%lhs, %rhs) : (!shape.size, !shape.size) -> !shape.size
-  return
-}
-
-// -----
-
 // Lower binary ops.
 // CHECK-LABEL: @binary_ops
 // CHECK-SAME: (%[[LHS:.*]]: index, %[[RHS:.*]]: index)
 func @binary_ops(%lhs : index, %rhs : index) {
+  // CHECK: addi %[[LHS]], %[[RHS]] : index
+  %sum = shape.add %lhs, %rhs : index, index -> index
   // CHECK: muli %[[LHS]], %[[RHS]] : index
   %product = shape.mul %lhs, %rhs : index, index -> index
   return
@@ -149,3 +120,28 @@ func @any_of_one(%a : tensor<?xindex>) -> tensor<?xindex> {
   return %result : tensor<?xindex>
 }
 
+// -----
+
+// Lower 'const_size` to `std.constant`
+// CHECK-LABEL: @const_size
+func @const_size() -> index {
+  // CHECK: %[[RES:.*]] = constant 42 : index
+  %size = shape.const_size 42
+  %result = shape.size_to_index %size : !shape.size
+  // CHECK: return %[[RES]]
+  return %result : index
+}
+
+// -----
+
+// Lower `to_extent_tensor` to `std.tensor_cast`
+// Fold to_extent_tensor when already on tensor.
+// CHECK-LABEL: @to_extent_tensor
+// CHECK-SAME: (%[[ARG:.*]]: tensor<?xindex>
+func @to_extent_tensor(%arg: tensor<?xindex>) -> tensor<3xindex> {
+  // CHECK-NOT: to_extent_tensor
+  // CHECK: %[[RES:.*]] = tensor_cast %[[ARG]] : tensor<?xindex> to tensor<3xindex
+  %casted = shape.to_extent_tensor %arg : tensor<?xindex> -> tensor<3xindex>
+  // CHECK: return %[[RES]]
+  return %casted : tensor<3xindex>
+}

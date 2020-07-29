@@ -69,21 +69,21 @@ define <2 x i64> @extract1_i32_zext_insert0_i64_undef(<4 x i32> %x) {
 define <2 x i64> @extract1_i32_zext_insert0_i64_zero(<4 x i32> %x) {
 ; SSE2-LABEL: extract1_i32_zext_insert0_i64_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: extract1_i32_zext_insert0_i64_zero:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE41-NEXT:    pxor %xmm0, %xmm0
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: extract1_i32_zext_insert0_i64_zero:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
@@ -242,7 +242,7 @@ define <2 x i64> @extract1_i32_zext_insert1_i64_undef(<4 x i32> %x) {
 define <2 x i64> @extract1_i32_zext_insert1_i64_zero(<4 x i32> %x) {
 ; SSE2-LABEL: extract1_i32_zext_insert1_i64_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movq %rax, %xmm0
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
@@ -332,7 +332,7 @@ define <2 x i64> @extract3_i32_zext_insert1_i64_undef(<4 x i32> %x) {
 define <2 x i64> @extract3_i32_zext_insert1_i64_zero(<4 x i32> %x) {
 ; SSE2-LABEL: extract3_i32_zext_insert1_i64_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movq %rax, %xmm0
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]

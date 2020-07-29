@@ -15,7 +15,7 @@ define float @ext_fadd_v4f32(<4 x float> %x) {
 define float @ext_fsub_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: ext_fsub_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    subss %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
@@ -28,7 +28,7 @@ define float @ext_fsub_v4f32(<4 x float> %x) {
 define float @ext_fmul_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: ext_fmul_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    mulss {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bo = fmul <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 42.0>
@@ -50,7 +50,7 @@ define float @ext_fdiv_v4f32(<4 x float> %x) {
 define float @ext_fdiv_v4f32_constant_op0(<4 x float> %x) {
 ; CHECK-LABEL: ext_fdiv_v4f32_constant_op0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    divss %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
@@ -75,7 +75,7 @@ define float @ext_frem_v4f32_constant_op0(<4 x float> %x) {
 ; CHECK-LABEL: ext_frem_v4f32_constant_op0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    jmp fmodf # TAILCALL
   %bo = frem <4 x float> <float 1.0, float 2.0, float 3.0, float 42.0>, %x

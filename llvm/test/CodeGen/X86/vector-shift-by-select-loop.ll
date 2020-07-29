@@ -42,19 +42,19 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
 ; SSE-NEXT:    pmovsxbd %xmm0, %xmm7
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE-NEXT:    pmovsxbd %xmm0, %xmm0
 ; SSE-NEXT:    pcmpeqb %xmm1, %xmm3
 ; SSE-NEXT:    pmovsxbd %xmm3, %xmm13
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,1,1]
 ; SSE-NEXT:    pmovsxbd %xmm3, %xmm6
 ; SSE-NEXT:    pcmpeqb %xmm1, %xmm4
 ; SSE-NEXT:    pmovsxbd %xmm4, %xmm11
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,1,1]
 ; SSE-NEXT:    pmovsxbd %xmm3, %xmm2
 ; SSE-NEXT:    pcmpeqb %xmm1, %xmm5
 ; SSE-NEXT:    pmovsxbd %xmm5, %xmm9
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[1,1,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[1,1,1,1]
 ; SSE-NEXT:    pmovsxbd %xmm3, %xmm10
 ; SSE-NEXT:    movdqu 16(%rdi,%rcx,4), %xmm3
 ; SSE-NEXT:    movdqa %xmm3, %xmm4
@@ -175,11 +175,11 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX1-NEXT:    vpxor %xmm12, %xmm12, %xmm12
 ; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm12, %xmm1
 ; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm12, %xmm2
 ; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm6
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm12, %xmm3
 ; AVX1-NEXT:    vpmovzxdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Folded Reload
@@ -191,14 +191,14 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX1-NEXT:    vpslld %xmm10, %xmm8, %xmm0
 ; AVX1-NEXT:    vblendvps %xmm5, %xmm9, %xmm0, %xmm8
 ; AVX1-NEXT:    vpmovsxbd %xmm3, %xmm5
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,1,1]
 ; AVX1-NEXT:    vpmovsxbd %xmm3, %xmm3
 ; AVX1-NEXT:    vpcmpeqb %xmm4, %xmm12, %xmm4
 ; AVX1-NEXT:    vmovdqu 16(%rdi,%rcx,4), %xmm0
 ; AVX1-NEXT:    vpslld %xmm7, %xmm0, %xmm7
 ; AVX1-NEXT:    vpslld %xmm10, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm9
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,2,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
 ; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm12
 ; AVX1-NEXT:    vblendvps %xmm1, %xmm7, %xmm0, %xmm10
 ; AVX1-NEXT:    vmovdqu 32(%rdi,%rcx,4), %xmm1
@@ -371,19 +371,19 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; XOP-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; XOP-NEXT:    vpcomeqb %xmm8, %xmm5, %xmm5
 ; XOP-NEXT:    vpmovsxbd %xmm5, %xmm0
-; XOP-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,2,3]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,1,1]
 ; XOP-NEXT:    vpmovsxbd %xmm5, %xmm5
 ; XOP-NEXT:    vpcomeqb %xmm8, %xmm6, %xmm6
 ; XOP-NEXT:    vpmovsxbd %xmm6, %xmm10
-; XOP-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[1,1,2,3]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[1,1,1,1]
 ; XOP-NEXT:    vpmovsxbd %xmm6, %xmm6
 ; XOP-NEXT:    vpcomeqb %xmm8, %xmm7, %xmm7
 ; XOP-NEXT:    vpmovsxbd %xmm7, %xmm11
-; XOP-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[1,1,2,3]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[1,1,1,1]
 ; XOP-NEXT:    vpmovsxbd %xmm7, %xmm7
 ; XOP-NEXT:    vpcomeqb %xmm8, %xmm2, %xmm2
 ; XOP-NEXT:    vpmovsxbd %xmm2, %xmm12
-; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; XOP-NEXT:    vpmovsxbd %xmm2, %xmm2
 ; XOP-NEXT:    vblendvps %xmm5, %xmm15, %xmm4, %xmm5
 ; XOP-NEXT:    vpshld %xmm5, 16(%rdi,%rcx,4), %xmm13

@@ -127,7 +127,7 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter, T op,
 
   auto dataLayout = typeConverter.getDialect()->getLLVMModule().getDataLayout();
   align = dataLayout.getPrefTypeAlignment(
-      elementTy.cast<LLVM::LLVMType>().getUnderlyingType());
+      LLVM::convertLLVMType(elementTy.cast<LLVM::LLVMType>()));
   return success();
 }
 
