@@ -46,6 +46,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -78,6 +79,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -292,7 +294,7 @@ AttributeList TransformFunctionAttributes(
       llvm::makeArrayRef(ArgumentAttributes));
 }
 
-class DataFlowSanitizer : public ModulePass {
+class DataFlowSanitizer {
   friend struct DFSanFunction;
   friend class DFSanVisitor;
 
@@ -390,14 +392,12 @@ class DataFlowSanitizer : public ModulePass {
   void initializeCallbackFunctions(Module &M);
   void initializeRuntimeFunctions(Module &M);
 
+  bool init(Module &M);
+
 public:
-  static char ID;
+  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles);
 
-  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles =
-                        std::vector<std::string>());
-
-  bool doInitialization(Module &M) override;
-  bool runOnModule(Module &M) override;
+  bool runImpl(Module &M);
 };
 
 struct DFSanFunction {
@@ -482,19 +482,8 @@ public:
 
 } // end anonymous namespace
 
-char DataFlowSanitizer::ID;
-
-INITIALIZE_PASS(DataFlowSanitizer, "dfsan",
-                "DataFlowSanitizer: dynamic data flow analysis.", false, false)
-
-ModulePass *llvm::createDataFlowSanitizerPass(
-    const std::vector<std::string> &ABIListFiles) {
-  return new DataFlowSanitizer(ABIListFiles);
-}
-
 DataFlowSanitizer::DataFlowSanitizer(
-    const std::vector<std::string> &ABIListFiles)
-    : ModulePass(ID) {
+    const std::vector<std::string> &ABIListFiles) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   AllABIListFiles.insert(AllABIListFiles.end(), ClABIListFiles.begin(),
                          ClABIListFiles.end());
@@ -559,7 +548,7 @@ TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
       ArgumentIndexMapping);
 }
 
-bool DataFlowSanitizer::doInitialization(Module &M) {
+bool DataFlowSanitizer::init(Module &M) {
   Triple TargetTriple(M.getTargetTriple());
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
   bool IsMIPS64 = TargetTriple.isMIPS64();
@@ -785,7 +774,9 @@ void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
                                                 DFSanLoadStoreCmpCallbackFnTy);
 }
 
-bool DataFlowSanitizer::runOnModule(Module &M) {
+bool DataFlowSanitizer::runImpl(Module &M) {
+  init(M);
+
   if (ABIList.isIn(M, "skip"))
     return false;
 
@@ -1816,4 +1807,38 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
 
   DFSF.PHIFixups.push_back(std::make_pair(&PN, ShadowPN));
   DFSF.setShadow(&PN, ShadowPN);
+}
+
+class DataFlowSanitizerLegacyPass : public ModulePass {
+private:
+  std::vector<std::string> ABIListFiles;
+
+public:
+  static char ID;
+
+  DataFlowSanitizerLegacyPass(
+      const std::vector<std::string> &ABIListFiles = std::vector<std::string>())
+      : ModulePass(ID), ABIListFiles(ABIListFiles) {}
+
+  bool runOnModule(Module &M) override {
+    return DataFlowSanitizer(ABIListFiles).runImpl(M);
+  }
+};
+
+char DataFlowSanitizerLegacyPass::ID;
+
+INITIALIZE_PASS(DataFlowSanitizerLegacyPass, "dfsan",
+                "DataFlowSanitizer: dynamic data flow analysis.", false, false)
+
+ModulePass *llvm::createDataFlowSanitizerLegacyPassPass(
+    const std::vector<std::string> &ABIListFiles) {
+  return new DataFlowSanitizerLegacyPass(ABIListFiles);
+}
+
+PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
+  if (DataFlowSanitizer(ABIListFiles).runImpl(M)) {
+    return PreservedAnalyses::none();
+  }
+  return PreservedAnalyses::all();
 }
