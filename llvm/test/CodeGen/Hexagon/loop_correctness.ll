@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -march=hexagon -O3 -hexagon-instsimplify=0 < %s | FileCheck %s
 
 ; CHECK-LABEL: f0:
 ; CHECK: loop0(.LBB{{[0-9]+}}_{{[0-9]+}},#3)
