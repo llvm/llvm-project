@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PublicAPICommand.h"
+#include "utils/LibcTableGenUtil/APIIndexer.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
