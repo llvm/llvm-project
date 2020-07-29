@@ -1,4 +1,12 @@
 add_libc_fuzzer(
+  strcmp_fuzz
+  SRCS
+    strcmp_fuzz.cpp
+  DEPENDS
+    libc.src.string.strcmp
+)
+
+add_libc_fuzzer(
   strcpy_fuzz
   SRCS
     strcpy_fuzz.cpp
@@ -9,9 +17,10 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
-  strcmp_fuzz
+  strstr_fuzz
   SRCS
-    strcmp_fuzz.cpp
+    strstr_fuzz.cpp
   DEPENDS
-    libc.src.string.strcmp
+    libc.src.string.strstr
+    libc.src.string.strlen
 )
