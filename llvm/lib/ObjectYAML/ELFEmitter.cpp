@@ -551,6 +551,8 @@ static void overrideFields(ELFYAML::Section *From, typename ELFT::Shdr &To) {
     To.sh_offset = *From->ShOffset;
   if (From->ShSize)
     To.sh_size = *From->ShSize;
+  if (From->ShType)
+    To.sh_type = *From->ShType;
 }
 
 template <class ELFT>
