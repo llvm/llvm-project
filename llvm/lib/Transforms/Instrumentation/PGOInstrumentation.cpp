@@ -261,10 +261,6 @@ extern cl::opt<PGOViewCountsType> PGOViewCounts;
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
-static cl::opt<bool>
-    PGOOldCFGHashing("pgo-instr-old-cfg-hashing", cl::init(false), cl::Hidden,
-                     cl::desc("Use the old CFG function hashing"));
-
 // Return a string describing the branch condition that can be
 // used in static branch probability heuristics:
 static std::string getBranchCondString(Instruction *TI) {
@@ -624,8 +620,7 @@ public:
 } // end anonymous namespace
 
 // Compute Hash value for the CFG: the lower 32 bits are CRC32 of the index
-// value of each BB in the CFG. The higher 32 bits are the CRC32 of the numbers
-// of selects, indirect calls, mem ops and edges.
+// value of each BB in the CFG. The higher 32 bits record the number of edges.
 template <class Edge, class BBInfo>
 void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   std::vector<uint8_t> Indexes;
@@ -644,34 +639,12 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   }
   JC.update(Indexes);
 
-  JamCRC JCH;
-  if (PGOOldCFGHashing) {
-    // Hash format for context sensitive profile. Reserve 4 bits for other
-    // information.
-    FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
-                   (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
-                   //(uint64_t)ValueSites[IPVK_MemOPSize].size() << 40 |
-                   (uint64_t)MST.AllEdges.size() << 32 | JC.getCRC();
-  } else {
-    // The higher 32 bits.
-    union {
-      uint64_t N;
-      uint8_t C[8];
-    } Data;
-    Data.N = (uint64_t)SIVisitor.getNumOfSelectInsts();
-    JCH.update(Data.C);
-    Data.N = (uint64_t)ValueSites[IPVK_IndirectCallTarget].size();
-    JCH.update(Data.C);
-    Data.N = (uint64_t)ValueSites[IPVK_MemOPSize].size();
-    JCH.update(Data.C);
-    Data.N = (uint64_t)MST.AllEdges.size();
-    JCH.update(Data.C);
-
-    // Hash format for context sensitive profile. Reserve 4 bits for other
-    // information.
-    FunctionHash = (((uint64_t)JCH.getCRC()) << 28) + JC.getCRC();
-  }
-
+  // Hash format for context sensitive profile. Reserve 4 bits for other
+  // information.
+  FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
+                 (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
+                 //(uint64_t)ValueSites[IPVK_MemOPSize].size() << 40 |
+                 (uint64_t)MST.AllEdges.size() << 32 | JC.getCRC();
   // Reserve bit 60-63 for other information purpose.
   FunctionHash &= 0x0FFFFFFFFFFFFFFF;
   if (IsCS)
@@ -680,12 +653,8 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
                     << " CRC = " << JC.getCRC()
                     << ", Selects = " << SIVisitor.getNumOfSelectInsts()
                     << ", Edges = " << MST.AllEdges.size() << ", ICSites = "
-                    << ValueSites[IPVK_IndirectCallTarget].size());
-  if (!PGOOldCFGHashing) {
-    LLVM_DEBUG(dbgs() << ", Memops = " << ValueSites[IPVK_MemOPSize].size()
-                      << ", High32 CRC = " << JCH.getCRC());
-  }
-  LLVM_DEBUG(dbgs() << ", Hash = " << FunctionHash << "\n";);
+                    << ValueSites[IPVK_IndirectCallTarget].size()
+                    << ", Hash = " << FunctionHash << "\n";);
 }
 
 // Check if we can safely rename this Comdat function.
