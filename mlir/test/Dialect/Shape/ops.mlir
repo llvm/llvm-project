@@ -49,9 +49,16 @@ func @test_shape_num_elements_fixed() {
 func @test_broadcast_fixed() {
   %0 = shape.const_shape [10, 1, 57, 92] : !shape.shape
   %1 = shape.const_shape [4, 57, 92] : !shape.shape
-  %2 = shape.broadcast %0, %1 : !shape.shape, !shape.shape
+  %2 = shape.broadcast %0, %1 : !shape.shape, !shape.shape -> !shape.shape
   %3 = "shape.print"(%2) : (!shape.shape) -> !shape.shape
   return
+}
+
+func @test_broadcast_extents() -> tensor<?xindex> {
+  %0 = shape.const_shape [10, 1, 57, 92] : tensor<?xindex>
+  %1 = shape.const_shape [4, 57, 92] : tensor<?xindex>
+  %2 = shape.broadcast %0, %1 : tensor<?xindex>, tensor<?xindex> -> tensor<?xindex>
+  return %2 : tensor<?xindex>
 }
 
 func @test_shape_any_fixed() {
