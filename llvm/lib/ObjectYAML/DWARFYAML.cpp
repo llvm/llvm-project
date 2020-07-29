@@ -106,8 +106,8 @@ void MappingTraits<DWARFYAML::ARange>::mapping(IO &IO,
   IO.mapRequired("Length", ARange.Length);
   IO.mapRequired("Version", ARange.Version);
   IO.mapRequired("CuOffset", ARange.CuOffset);
-  IO.mapRequired("AddrSize", ARange.AddrSize);
-  IO.mapRequired("SegSize", ARange.SegSize);
+  IO.mapRequired("AddressSize", ARange.AddrSize);
+  IO.mapRequired("SegmentSelectorSize", ARange.SegSize);
   IO.mapRequired("Descriptors", ARange.Descriptors);
 }
 
