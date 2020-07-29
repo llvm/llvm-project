@@ -3243,6 +3243,8 @@ public:
         {'f', "Step out (finish)"},
         {'s', "Step in (source line)"},
         {'S', "Step in (single instruction)"},
+        {'u', "Frame up"},
+        {'d', "Frame down"},
         {',', "Page up"},
         {'.', "Page down"},
         {'\0', nullptr}};
@@ -3852,6 +3854,26 @@ public:
           StateIsStoppedState(exe_ctx.GetProcessRef().GetState(), true)) {
         bool source_step = (c == 's');
         exe_ctx.GetThreadRef().StepIn(source_step);
+      }
+    }
+      return eKeyHandled;
+
+    case 'u': // 'u' == frame up
+    case 'd': // 'd' == frame down
+    {
+      ExecutionContext exe_ctx =
+          m_debugger.GetCommandInterpreter().GetExecutionContext();
+      if (exe_ctx.HasThreadScope()) {
+        Thread *thread = exe_ctx.GetThreadPtr();
+        uint32_t frame_idx = thread->GetSelectedFrameIndex();
+        if (frame_idx == UINT32_MAX)
+          frame_idx = 0;
+        if (c == 'u' && frame_idx + 1 < thread->GetStackFrameCount())
+          ++frame_idx;
+        else if (c == 'd' && frame_idx > 0)
+          --frame_idx;
+        if (thread->SetSelectedFrameByIndex(frame_idx, true))
+          exe_ctx.SetFrameSP(thread->GetSelectedFrame());
       }
     }
       return eKeyHandled;
