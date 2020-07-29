@@ -8,10 +8,13 @@ class SwiftCompletionTest(PExpectTest):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # PExpect uses many timeouts internally and doesn't play well
-    # under ASAN on a loaded machine..
-    @skipIfAsan
-    @skipUnlessDarwin
+    # This test is failing sporadically on the bots (rdar://66291543) due to
+    # some cl::opt being registered multiple times.
+    ## # PExpect uses many timeouts internally and doesn't play well
+    ## # under ASAN on a loaded machine..
+    ## @skipIfAsan
+    ## @skipUnlessDarwin
+    @skipIf
     def test_basic_completion(self):
 
         self.launch(extra_args=["--repl"], executable=None, dimensions=(100,500))
