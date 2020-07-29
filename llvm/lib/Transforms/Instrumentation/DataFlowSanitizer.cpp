@@ -344,8 +344,6 @@ class DataFlowSanitizer : public ModulePass {
   ConstantInt *ShadowPtrMul;
   Constant *ArgTLS;
   Constant *RetvalTLS;
-  void *(*GetArgTLSPtr)();
-  void *(*GetRetvalTLSPtr)();
   FunctionType *GetArgTLSTy;
   FunctionType *GetRetvalTLSTy;
   Constant *GetArgTLS;
@@ -395,9 +393,8 @@ class DataFlowSanitizer : public ModulePass {
 public:
   static char ID;
 
-  DataFlowSanitizer(
-      const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),
-      void *(*getArgTLS)() = nullptr, void *(*getRetValTLS)() = nullptr);
+  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles =
+                        std::vector<std::string>());
 
   bool doInitialization(Module &M) override;
   bool runOnModule(Module &M) override;
@@ -490,17 +487,14 @@ char DataFlowSanitizer::ID;
 INITIALIZE_PASS(DataFlowSanitizer, "dfsan",
                 "DataFlowSanitizer: dynamic data flow analysis.", false, false)
 
-ModulePass *
-llvm::createDataFlowSanitizerPass(const std::vector<std::string> &ABIListFiles,
-                                  void *(*getArgTLS)(),
-                                  void *(*getRetValTLS)()) {
-  return new DataFlowSanitizer(ABIListFiles, getArgTLS, getRetValTLS);
+ModulePass *llvm::createDataFlowSanitizerPass(
+    const std::vector<std::string> &ABIListFiles) {
+  return new DataFlowSanitizer(ABIListFiles);
 }
 
 DataFlowSanitizer::DataFlowSanitizer(
-    const std::vector<std::string> &ABIListFiles, void *(*getArgTLS)(),
-    void *(*getRetValTLS)())
-    : ModulePass(ID), GetArgTLSPtr(getArgTLS), GetRetvalTLSPtr(getRetValTLS) {
+    const std::vector<std::string> &ABIListFiles)
+    : ModulePass(ID) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   AllABIListFiles.insert(AllABIListFiles.end(), ClABIListFiles.begin(),
                          ClABIListFiles.end());
@@ -612,22 +606,6 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
   DFSanMemTransferCallbackFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanMemTransferCallbackArgs,
                         /*isVarArg=*/false);
-
-  if (GetArgTLSPtr) {
-    Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
-    ArgTLS = nullptr;
-    GetArgTLSTy = FunctionType::get(PointerType::getUnqual(ArgTLSTy), false);
-    GetArgTLS = ConstantExpr::getIntToPtr(
-        ConstantInt::get(IntptrTy, uintptr_t(GetArgTLSPtr)),
-        PointerType::getUnqual(GetArgTLSTy));
-  }
-  if (GetRetvalTLSPtr) {
-    RetvalTLS = nullptr;
-    GetRetvalTLSTy = FunctionType::get(PointerType::getUnqual(ShadowTy), false);
-    GetRetvalTLS = ConstantExpr::getIntToPtr(
-        ConstantInt::get(IntptrTy, uintptr_t(GetRetvalTLSPtr)),
-        PointerType::getUnqual(GetRetvalTLSTy));
-  }
 
   ColdCallWeights = MDBuilder(*Ctx).createBranchWeights(1, 1000);
   return true;
@@ -816,20 +794,16 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
 
   bool Changed = false;
 
-  if (!GetArgTLSPtr) {
-    Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
-    ArgTLS = Mod->getOrInsertGlobal("__dfsan_arg_tls", ArgTLSTy);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS)) {
-      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
-      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-    }
+  Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
+  ArgTLS = Mod->getOrInsertGlobal("__dfsan_arg_tls", ArgTLSTy);
+  if (GlobalVariable *G = dyn_cast<GlobalVariable>(ArgTLS)) {
+    Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
+    G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
   }
-  if (!GetRetvalTLSPtr) {
-    RetvalTLS = Mod->getOrInsertGlobal("__dfsan_retval_tls", ShadowTy);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS)) {
-      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
-      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-    }
+  RetvalTLS = Mod->getOrInsertGlobal("__dfsan_retval_tls", ShadowTy);
+  if (GlobalVariable *G = dyn_cast<GlobalVariable>(RetvalTLS)) {
+    Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
+    G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
   }
 
   ExternalShadowMask =
