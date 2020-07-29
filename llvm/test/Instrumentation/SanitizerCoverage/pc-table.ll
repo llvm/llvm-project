@@ -1,7 +1,7 @@
 ; Test -sanitizer-coverage-pc-table=1
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard       -sanitizer-coverage-pc-table=1 -S | FileCheck %s
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-inline-8bit-counters -sanitizer-coverage-pc-table=1 -S | FileCheck %s
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-inline-bool-flag -sanitizer-coverage-pc-table=1 -S | FileCheck %s
+; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard       -sanitizer-coverage-pc-table=1 -S -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-inline-8bit-counters -sanitizer-coverage-pc-table=1 -S -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-inline-bool-flag -sanitizer-coverage-pc-table=1 -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard       -sanitizer-coverage-pc-table=1 -S | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-inline-8bit-counters -sanitizer-coverage-pc-table=1 -S | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-inline-bool-flag -sanitizer-coverage-pc-table=1 -S | FileCheck %s
