@@ -1,4 +1,4 @@
-set(LLVM_LINK_COMPONENTS support)
+set(LLVM_LINK_COMPONENTS support FrontendOpenMP)
 
 add_clang_library(clangToolingRefactor
   ASTSlice.cpp
