@@ -94,6 +94,10 @@ enum OpenMPMotionModifierKind {
   OMPC_MOTION_MODIFIER_unknown
 };
 
+/// Number of allowed motion-modifiers.
+static constexpr unsigned NumberOfOMPMotionModifiers =
+    OMPC_MOTION_MODIFIER_unknown;
+
 /// OpenMP attributes for 'dist_schedule' clause.
 enum OpenMPDistScheduleClauseKind {
 #define OPENMP_DIST_SCHEDULE_KIND(Name) OMPC_DIST_SCHEDULE_##Name,
