@@ -114,11 +114,9 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = llvm::None;
-  unsigned Priority = 0;
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries())
-    Options =
-        Options.mergeWith(Module.instantiate()->getModuleOptions(), ++Priority);
+    Options = Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
   return Options;
 }
 
