@@ -628,6 +628,12 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
         false, IsHostPtr);
     if (!TgtPtrBegin) {
       DP("hst data:" DPxMOD " not found, becomes a noop\n", DPxPTR(HstPtrBegin));
+      if (arg_types[i] & OMP_TGT_MAPTYPE_PRESENT) {
+        MESSAGE("device mapping required by 'present' motion modifier does not "
+                "exist for host address " DPxMOD " (%ld bytes)",
+                DPxPTR(HstPtrBegin), MapSize);
+        return OFFLOAD_FAIL;
+      }
       continue;
     }
 
