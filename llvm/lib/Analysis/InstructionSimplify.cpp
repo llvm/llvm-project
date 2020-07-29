@@ -5253,6 +5253,7 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
                                       const SimplifyQuery &Q) {
   Intrinsic::ID IID = F->getIntrinsicID();
   Type *ReturnType = F->getReturnType();
+  unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::smax:
   case Intrinsic::smin:
@@ -5265,6 +5266,18 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // Canonicalize constant operand as Op1.
     if (isa<Constant>(Op0))
       std::swap(Op0, Op1);
+
+    // Assume undef is the limit value.
+    if (isa<UndefValue>(Op1)) {
+      if (IID == Intrinsic::smax)
+        return ConstantInt::get(ReturnType, APInt::getSignedMaxValue(BitWidth));
+      if (IID == Intrinsic::smin)
+        return ConstantInt::get(ReturnType, APInt::getSignedMinValue(BitWidth));
+      if (IID == Intrinsic::umax)
+        return ConstantInt::get(ReturnType, APInt::getMaxValue(BitWidth));
+      if (IID == Intrinsic::umin)
+        return ConstantInt::get(ReturnType, APInt::getMinValue(BitWidth));
+    }
 
     const APInt *C;
     if (!match(Op1, m_APIntAllowUndef(C)))
