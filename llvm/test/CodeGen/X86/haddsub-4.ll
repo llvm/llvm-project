@@ -151,13 +151,11 @@ define <8 x double> @hadd_reverse_v8f64(<8 x double> %a0, <8 x double> %a1) noun
 ;
 ; AVX1-LABEL: hadd_reverse_v8f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm2[2,3,0,1]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm2
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm3[2,3,0,1]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,0,1]
-; AVX1-NEXT:    vhaddpd %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vmovapd %ymm2, %ymm1
+; AVX1-NEXT:    vhaddpd %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm1[2,3,0,1]
+; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
+; AVX1-NEXT:    vmovapd %ymm3, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: hadd_reverse_v8f64:
