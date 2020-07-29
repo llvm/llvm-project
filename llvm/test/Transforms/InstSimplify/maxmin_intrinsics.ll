@@ -218,8 +218,7 @@ define <2 x i8> @umin_maxval_commute(<2 x i8> %x) {
 
 define <2 x i8> @smax_maxval_partial_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @smax_maxval_partial_undef(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> <i8 undef, i8 127>, <2 x i8> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 127, i8 127>
 ;
   %r = call <2 x i8> @llvm.smax.v2i8(<2 x i8> <i8 undef, i8 127>, <2 x i8> %x)
   ret <2 x i8> %r
@@ -227,8 +226,7 @@ define <2 x i8> @smax_maxval_partial_undef(<2 x i8> %x) {
 
 define <2 x i8> @smin_minval_partial_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @smin_minval_partial_undef(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 -128, i8 undef>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -128, i8 -128>
 ;
   %r = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %x, <2 x i8> <i8 -128, i8 undef>)
   ret <2 x i8> %r
@@ -236,8 +234,7 @@ define <2 x i8> @smin_minval_partial_undef(<2 x i8> %x) {
 
 define <2 x i8> @umax_maxval_partial_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @umax_maxval_partial_undef(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.umax.v2i8(<2 x i8> <i8 -1, i8 undef>, <2 x i8> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %r = call <2 x i8> @llvm.umax.v2i8(<2 x i8> <i8 255, i8 undef>, <2 x i8> %x)
   ret <2 x i8> %r
@@ -245,8 +242,7 @@ define <2 x i8> @umax_maxval_partial_undef(<2 x i8> %x) {
 
 define <2 x i8> @umin_minval_partial_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @umin_minval_partial_undef(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 undef, i8 0>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %r = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %x, <2 x i8> <i8 undef, i8 0>)
   ret <2 x i8> %r
