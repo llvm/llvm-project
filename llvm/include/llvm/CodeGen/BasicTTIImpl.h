@@ -1225,6 +1225,26 @@ public:
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, 1, I);
       return getIntrinsicInstrCost(Attrs, CostKind);
     }
+    case Intrinsic::abs:
+    case Intrinsic::smax:
+    case Intrinsic::smin:
+    case Intrinsic::umax:
+    case Intrinsic::umin: {
+      // abs(X) = select(icmp(X,0),X,sub(0,X))
+      // minmax(X,Y) = select(icmp(X,Y),X,Y)
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      unsigned Cost = 0;
+      // TODO: Ideally getCmpSelInstrCost would accept an icmp condition code.
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          CostKind);
+      // TODO: Should we add an OperandValueProperties::OP_Zero property?
+      if (IID == Intrinsic::abs)
+        Cost += thisT()->getArithmeticInstrCost(
+            BinaryOperator::Sub, RetTy, CostKind, TTI::OK_UniformConstantValue);
+      return Cost;
+    }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
       const Value *X = Args[0];
