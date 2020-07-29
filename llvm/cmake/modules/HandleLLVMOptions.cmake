@@ -473,6 +473,10 @@ if( MSVC )
       endif()
     endif()
   endif()
+  # By default MSVC has a 2^16 limit on the number of sections in an object file,
+  # but in many objects files need more than that. This flag is to increase the
+  # number of sections.
+  append("/bigobj" CMAKE_CXX_FLAGS)
 endif( MSVC )
 
 # Warnings-as-errors handling for GCC-compatible compilers:

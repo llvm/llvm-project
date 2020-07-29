@@ -3,9 +3,6 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-if (MSVC)
-  set_source_files_properties(ASTImporterTest.cpp PROPERTIES COMPILE_FLAGS /bigobj)
-endif()
 
 add_clang_unittest(ASTTests
   ASTContextParentMapTest.cpp
