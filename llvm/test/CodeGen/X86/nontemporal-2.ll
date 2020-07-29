@@ -492,7 +492,7 @@ define void @test_arg_i64(i64 %arg, i64* %dst) {
 define void @test_extract_f32(<4 x float> %arg, float* %dst) {
 ; SSE2-LABEL: test_extract_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -527,14 +527,14 @@ define void @test_extract_f32(<4 x float> %arg, float* %dst) {
 define void @test_extract_i32(<4 x i32> %arg, i32* %dst) {
 ; SSE2-LABEL: test_extract_i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movntil %eax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4A-LABEL: test_extract_i32:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE4A-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE4A-NEXT:    movd %xmm0, %eax
 ; SSE4A-NEXT:    movntil %eax, (%rdi)
 ; SSE4A-NEXT:    retq

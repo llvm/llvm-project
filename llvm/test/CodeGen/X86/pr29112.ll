@@ -32,7 +32,7 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vextractf32x4 $2, %zmm3, %xmm4
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm4 = xmm1[0,1,2],xmm4[3]
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm2[3,1,2,3]
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm2[3,3,3,3]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm5 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm2[1],xmm5[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1,2],xmm3[1]

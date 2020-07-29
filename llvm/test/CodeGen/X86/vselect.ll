@@ -570,7 +570,7 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
 ; SSE2-NEXT:    por %xmm1, %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm2[1,1]
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[1,1]
 ; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    pandn %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
@@ -583,7 +583,7 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; SSE41-NEXT:    movd %edi, %xmm1
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
 ; SSE41-NEXT:    por %xmm1, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,2,3]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,1,1]
 ; SSE41-NEXT:    pinsrd $1, %edi, %xmm1
 ; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
@@ -596,7 +596,7 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; AVX-NEXT:    vmovd %edi, %xmm1
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
 ; AVX-NEXT:    vpor %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,2,3]
+; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
 ; AVX-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
 ; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX-NEXT:    retq

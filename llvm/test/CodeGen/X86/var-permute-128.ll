@@ -67,11 +67,11 @@ define <4 x i32> @var_shuffle_v4i32(<4 x i32> %v, <4 x i32> %indices) nounwind {
 ; SSE3-LABEL: var_shuffle_v4i32:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movd %xmm1, %eax
-; SSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,2,3]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
 ; SSE3-NEXT:    movd %xmm2, %ecx
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; SSE3-NEXT:    movd %xmm2, %edx
-; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE3-NEXT:    movd %xmm1, %esi
 ; SSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE3-NEXT:    andl $3, %eax
@@ -428,11 +428,11 @@ define <4 x float> @var_shuffle_v4f32(<4 x float> %v, <4 x i32> %indices) nounwi
 ; SSE3-LABEL: var_shuffle_v4f32:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movd %xmm1, %eax
-; SSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,2,3]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
 ; SSE3-NEXT:    movd %xmm2, %ecx
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; SSE3-NEXT:    movd %xmm2, %edx
-; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE3-NEXT:    movd %xmm1, %esi
 ; SSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE3-NEXT:    andl $3, %eax

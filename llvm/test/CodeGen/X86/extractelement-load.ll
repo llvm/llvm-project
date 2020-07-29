@@ -86,7 +86,7 @@ define i64 @t4(<2 x double>* %a) {
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movdqa (%eax), %xmm0
 ; X32-SSE2-NEXT:    movd %xmm0, %eax
-; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,0,1]
+; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-SSE2-NEXT:    movd %xmm0, %edx
 ; X32-SSE2-NEXT:    retl
 ;
@@ -136,7 +136,7 @@ define float @t6(<8 x float> *%a0) {
 ; X32-SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movaps (%eax), %xmm0
-; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X32-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
 ; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -228,7 +228,7 @@ define float @PR43971_1(<8 x float> *%a0) nounwind {
 ; X32-SSE2-NEXT:    pushl %eax
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movaps (%eax), %xmm0
-; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X32-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
 ; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
