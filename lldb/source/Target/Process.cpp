@@ -2291,6 +2291,9 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
     if (error.Fail())
       return;
 
+    if (bp->GetType() != BreakpointSite::eSoftware)
+      return;
+
     addr_t intersect_addr;
     size_t intersect_size;
     size_t opcode_offset;
