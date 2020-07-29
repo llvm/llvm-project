@@ -8,7 +8,7 @@
 
 from libcxx.test.dsl import *
 
-_allStandards = ['c++98', 'c++03', 'c++11', 'c++14', 'c++17', 'c++2a']
+_allStandards = ['c++03', 'c++11', 'c++14', 'c++17', 'c++2a']
 
 DEFAULT_PARAMETERS = [
   # Core parameters of the test suite
