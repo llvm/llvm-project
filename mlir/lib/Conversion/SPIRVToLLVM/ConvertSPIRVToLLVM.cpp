@@ -459,13 +459,18 @@ public:
   LogicalResult
   matchAndRewrite(spirv::BranchConditionalOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    // There is no support of branch weights in LLVM dialect at the moment.
-    if (auto weights = op.branch_weights())
-      return failure();
+    // If branch weights exist, map them to 32-bit integer vector.
+    ElementsAttr branchWeights = nullptr;
+    if (auto weights = op.branch_weights()) {
+      VectorType weightType = VectorType::get(2, rewriter.getI32Type());
+      branchWeights =
+          DenseElementsAttr::get(weightType, weights.getValue().getValue());
+    }
 
     rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
-        op, op.condition(), op.getTrueBlock(), op.getTrueBlockArguments(),
-        op.getFalseBlock(), op.getFalseBlockArguments());
+        op, op.condition(), op.getTrueBlockArguments(),
+        op.getFalseBlockArguments(), branchWeights, op.getTrueBlock(),
+        op.getFalseBlock());
     return success();
   }
 };
