@@ -409,7 +409,8 @@ void ARMPassConfig::addIRPasses() {
   // ldrex/strex loops to simplify this, but it needs tidying up.
   if (TM->getOptLevel() != CodeGenOpt::None && EnableAtomicTidy)
     addPass(createCFGSimplificationPass(
-        SimplifyCFGOptions().sinkCommonInsts(true), [this](const Function &F) {
+        SimplifyCFGOptions().hoistCommonInsts(true).sinkCommonInsts(true),
+        [this](const Function &F) {
           const auto &ST = this->TM->getSubtarget<ARMSubtarget>(F);
           return ST.hasAnyDataBarrier() && !ST.isThumb1Only();
         }));
