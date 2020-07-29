@@ -43,13 +43,18 @@ static cl::opt<unsigned> MaxInterleaveGroupFactor(
 /// hasVectorInstrinsicScalarOpd).
 bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   switch (ID) {
-  case Intrinsic::bswap: // Begin integer bit-manipulation.
+  case Intrinsic::abs:   // Begin integer bit-manipulation.
+  case Intrinsic::bswap:
   case Intrinsic::bitreverse:
   case Intrinsic::ctpop:
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin:
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
@@ -94,6 +99,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
 bool llvm::hasVectorInstrinsicScalarOpd(Intrinsic::ID ID,
                                         unsigned ScalarOpdIdx) {
   switch (ID) {
+  case Intrinsic::abs:
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
   case Intrinsic::powi:
