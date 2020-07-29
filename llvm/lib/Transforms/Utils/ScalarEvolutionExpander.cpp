@@ -2150,8 +2150,9 @@ bool SCEVExpander::isHighCostExpansionHelper(
       llvm_unreachable("There are no other cast types.");
     }
     const SCEV *Op = CastExpr->getOperand();
-    BudgetRemaining -= TTI.getCastInstrCost(Opcode, /*Dst=*/S->getType(),
-                                            /*Src=*/Op->getType(), CostKind);
+    BudgetRemaining -= TTI.getCastInstrCost(
+        Opcode, /*Dst=*/S->getType(),
+        /*Src=*/Op->getType(), TTI::CastContextHint::None, CostKind);
     Worklist.emplace_back(Op);
     return false; // Will answer upon next entry into this function.
   }

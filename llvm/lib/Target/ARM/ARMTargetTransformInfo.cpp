@@ -301,6 +301,7 @@ int ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Im
 }
 
 int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                 TTI::CastContextHint CCH,
                                  TTI::TargetCostKind CostKind,
                                  const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -317,7 +318,8 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   EVT DstTy = TLI->getValueType(DL, Dst);
 
   if (!SrcTy.isSimple() || !DstTy.isSimple())
-    return AdjustCost(BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I));
+    return AdjustCost(
+        BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 
   // The extend of a load is free
   if (I && isa<LoadInst>(I->getOperand(0))) {
@@ -388,8 +390,8 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     };
     if (SrcTy.isVector() && ST->hasMVEIntegerOps()) {
       if (const auto *Entry =
-              ConvertCostTableLookup(MVELoadConversionTbl, ISD, SrcTy.getSimpleVT(),
-                                     DstTy.getSimpleVT()))
+              ConvertCostTableLookup(MVELoadConversionTbl, ISD,
+                                     SrcTy.getSimpleVT(), DstTy.getSimpleVT()))
         return AdjustCost(Entry->Cost * ST->getMVEVectorCostFactor());
     }
 
@@ -399,8 +401,8 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     };
     if (SrcTy.isVector() && ST->hasMVEFloatOps()) {
       if (const auto *Entry =
-              ConvertCostTableLookup(MVEFLoadConversionTbl, ISD, SrcTy.getSimpleVT(),
-                                     DstTy.getSimpleVT()))
+              ConvertCostTableLookup(MVEFLoadConversionTbl, ISD,
+                                     SrcTy.getSimpleVT(), DstTy.getSimpleVT()))
         return AdjustCost(Entry->Cost * ST->getMVEVectorCostFactor());
     }
   }
@@ -672,7 +674,7 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                      ? ST->getMVEVectorCostFactor()
                      : 1;
   return AdjustCost(
-    BaseCost * BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I));
+      BaseCost * BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
 int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
