@@ -235,7 +235,10 @@ void mlir::populateLinalgToStandardConversionPatterns(
       LinalgOpConversion<PoolingMaxOp>,
       LinalgOpConversion<PoolingMinOp>,
       LinalgOpConversion<PoolingSumOp>,
-      LinalgOpConversion<CopyOp>, 
+      LinalgOpConversion<CopyOp>,
+      LinalgOpConversion<Conv1DOp>,
+      LinalgOpConversion<Conv2DOp>,
+      LinalgOpConversion<Conv3DOp>,
       LinalgOpConversion<FillOp>,
       LinalgOpConversion<GenericOp>,
       LinalgOpConversion<IndexedGenericOp>>(ctx);
