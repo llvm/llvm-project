@@ -716,9 +716,10 @@ public:
   }
 
   unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                            TTI::CastContextHint CCH,
                             TTI::TargetCostKind CostKind,
                             const Instruction *I = nullptr) {
-    if (BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I) == 0)
+    if (BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I) == 0)
       return 0;
 
     const TargetLoweringBase *TLI = getTLI();
@@ -756,15 +757,12 @@ public:
         return 0;
       LLVM_FALLTHROUGH;
     case Instruction::SExt:
-      if (!I)
-        break;
-
-      if (getTLI()->isExtFree(I))
+      if (I && getTLI()->isExtFree(I))
         return 0;
 
       // If this is a zext/sext of a load, return 0 if the corresponding
       // extending load exists on target.
-      if (I && isa<LoadInst>(I->getOperand(0))) {
+      if (CCH == TTI::CastContextHint::Normal) {
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
@@ -839,7 +837,7 @@ public:
         unsigned SplitCost =
             (!SplitSrc || !SplitDst) ? TTI->getVectorSplitCost() : 0;
         return SplitCost +
-               (2 * TTI->getCastInstrCost(Opcode, SplitDstTy, SplitSrcTy,
+               (2 * TTI->getCastInstrCost(Opcode, SplitDstTy, SplitSrcTy, CCH,
                                           CostKind, I));
       }
 
@@ -847,7 +845,7 @@ public:
       // the operation will get scalarized.
       unsigned Num = cast<FixedVectorType>(DstVTy)->getNumElements();
       unsigned Cost = thisT()->getCastInstrCost(
-          Opcode, Dst->getScalarType(), Src->getScalarType(), CostKind, I);
+          Opcode, Dst->getScalarType(), Src->getScalarType(), CCH, CostKind, I);
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
@@ -872,7 +870,7 @@ public:
     return thisT()->getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                        Index) +
            thisT()->getCastInstrCost(Opcode, Dst, VecTy->getElementType(),
-                                     TTI::TCK_RecipThroughput);
+                                     TTI::CastContextHint::None, TTI::TCK_RecipThroughput);
   }
 
   unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
@@ -1522,13 +1520,14 @@ public:
 
       unsigned ExtOp =
           IID == Intrinsic::smul_fix ? Instruction::SExt : Instruction::ZExt;
+      TTI::CastContextHint CCH = TTI::CastContextHint::None;
 
       unsigned Cost = 0;
-      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, RetTy, CostKind);
+      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, RetTy, CCH, CostKind);
       Cost +=
           thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
       Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, RetTy, ExtTy,
-                                            CostKind);
+                                            CCH, CostKind);
       Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, RetTy,
                                               CostKind, TTI::OK_AnyValue,
                                               TTI::OK_UniformConstantValue);
@@ -1587,13 +1586,14 @@ public:
 
       unsigned ExtOp =
           IID == Intrinsic::smul_fix ? Instruction::SExt : Instruction::ZExt;
+      TTI::CastContextHint CCH = TTI::CastContextHint::None;
 
       unsigned Cost = 0;
-      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, MulTy, CostKind);
+      Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, MulTy, CCH, CostKind);
       Cost +=
           thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
       Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, MulTy, ExtTy,
-                                            CostKind);
+                                            CCH, CostKind);
       Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, MulTy,
                                               CostKind, TTI::OK_AnyValue,
                                               TTI::OK_UniformConstantValue);

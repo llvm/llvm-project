@@ -730,12 +730,57 @@ int TargetTransformInfo::getShuffleCost(ShuffleKind Kind, VectorType *Ty,
   return Cost;
 }
 
+TTI::CastContextHint
+TargetTransformInfo::getCastContextHint(const Instruction *I) {
+  if (!I)
+    return CastContextHint::None;
+
+  auto getLoadStoreKind = [](const Value *V, unsigned LdStOp, unsigned MaskedOp,
+                             unsigned GatScatOp) {
+    const Instruction *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return CastContextHint::None;
+
+    if (I->getOpcode() == LdStOp)
+      return CastContextHint::Normal;
+
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      if (II->getIntrinsicID() == MaskedOp)
+        return TTI::CastContextHint::Masked;
+      if (II->getIntrinsicID() == GatScatOp)
+        return TTI::CastContextHint::GatherScatter;
+    }
+
+    return TTI::CastContextHint::None;
+  };
+
+  switch (I->getOpcode()) {
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::FPExt:
+    return getLoadStoreKind(I->getOperand(0), Instruction::Load,
+                            Intrinsic::masked_load, Intrinsic::masked_gather);
+  case Instruction::Trunc:
+  case Instruction::FPTrunc:
+    if (I->hasOneUse())
+      return getLoadStoreKind(*I->user_begin(), Instruction::Store,
+                              Intrinsic::masked_store,
+                              Intrinsic::masked_scatter);
+    break;
+  default:
+    return CastContextHint::None;
+  }
+
+  return TTI::CastContextHint::None;
+}
+
 int TargetTransformInfo::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                          CastContextHint CCH,
                                           TTI::TargetCostKind CostKind,
                                           const Instruction *I) const {
   assert((I == nullptr || I->getOpcode() == Opcode) &&
          "Opcode should reflect passed instruction.");
-  int Cost = TTIImpl->getCastInstrCost(Opcode, Dst, Src, CostKind, I);
+  int Cost = TTIImpl->getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
