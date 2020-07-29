@@ -668,12 +668,64 @@
 ; SUBST-NEG-NEXT:>>>>>>
 
 ;--------------------------------------------------
-; Substitutions: CHECK-NEXT, CHECK-SAME, CHECK-DAG fixups.
+; Captured variables
+;--------------------------------------------------
+
+; RUN: echo 'strvar: foo'           >  %t.in
+; RUN: echo 'numvar no expr: 51'    >> %t.in
+; RUN: echo 'numvar expr: -49'      >> %t.in
+; RUN: echo 'many: foo 100 8 bar'   >> %t.in
+; RUN: echo 'var in neg match: foo' >> %t.in
+; RUN: echo 'END'                   >> %t.in
+
+; RUN: echo 'CHECK: strvar: [[STRVAR:[a-z]+]]'                         >  %t.chk
+; RUN: echo 'CHECK: numvar no expr: [[#NUMVAR_NO_EXPR:]]'              >> %t.chk
+; RUN: echo 'CHECK: numvar expr: [[#%d,NUMVAR_EXPR:2-NUMVAR_NO_EXPR]]' >> %t.chk
+
+; Capture many variables of different kinds in a different order than their
+; names sort alphabetically to ensure they're sorted in capture order.
+; RUN: echo 'CHECK: many: [[VAR1:foo]] [[#%d,VAR3:]] [[#VAR2:]] [[VAR4:bar]]' \
+; RUN:      >> %t.chk
+
+; RUN: echo 'CHECK-NOT: var in neg match: [[VAR:foo]]' >> %t.chk
+; RUN: echo 'CHECK: END'                               >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -vv -input-file=%t.in %t.chk 2>&1 \
+; RUN: | FileCheck -strict-whitespace -match-full-lines %s -check-prefix=CAPTURE-NEG
+
+;      CAPTURE-NEG:<<<<<<
+; CAPTURE-NEG-NEXT:           1: strvar: foo
+; CAPTURE-NEG-NEXT:check:1'0     ^~~~~~~~~~~
+; CAPTURE-NEG-NEXT:check:1'1             ^~~ captured var "STRVAR"
+; CAPTURE-NEG-NEXT:           2: numvar no expr: 51
+; CAPTURE-NEG-NEXT:check:2'0     ^~~~~~~~~~~~~~~~~~
+; CAPTURE-NEG-NEXT:check:2'1                     ^~ captured var "NUMVAR_NO_EXPR"
+; CAPTURE-NEG-NEXT:           3: numvar expr: -49
+; CAPTURE-NEG-NEXT:check:3'0     ^~~~~~~~~~~~~~~~
+; CAPTURE-NEG-NEXT:check:3'1                      with "%d,NUMVAR_EXPR:2-NUMVAR_NO_EXPR" equal to "-49"
+; CAPTURE-NEG-NEXT:check:3'2                  ^~~ captured var "NUMVAR_EXPR"
+; CAPTURE-NEG-NEXT:           4: many: foo 100 8 bar
+; CAPTURE-NEG-NEXT:check:4'0     ^~~~~~~~~~~~~~~~~~~
+; CAPTURE-NEG-NEXT:check:4'1           ^~~           captured var "VAR1"
+; CAPTURE-NEG-NEXT:check:4'2               ^~~       captured var "VAR3"
+; CAPTURE-NEG-NEXT:check:4'3                   ^     captured var "VAR2"
+; CAPTURE-NEG-NEXT:check:4'4                     ^~~ captured var "VAR4"
+; CAPTURE-NEG-NEXT:           5: var in neg match: foo
+; CAPTURE-NEG-NEXT:not:5'0       !~~~~~~~~~~~~~~~~~~~~ error: no match expected
+; CAPTURE-NEG-NEXT:not:5'1                         !~~ captured var "VAR"
+; CAPTURE-NEG-NEXT:           6: END
+; CAPTURE-NEG-NEXT:check:6       ^~~
+; CAPTURE-NEG-NEXT:>>>>>>
+
+;--------------------------------------------------
+; CHECK-NEXT, CHECK-SAME, CHECK-DAG note fixups.
 ;
 ; When CHECK-NEXT or CHECK-SAME fails for the wrong line, or when a CHECK-DAG
 ; match is discarded, the associated diagnostic type must be converted from
-; successful to failed or discarded.  However, any substitution diagnostics must
-; be traversed to find that diagnostic.
+; successful to failed or discarded.  However, any note annotation must be
+; traversed to find that diagnostic.  We check this behavior here only for
+; substitutions, but it's the same mechanism for all note annotations.
 ;--------------------------------------------------
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
