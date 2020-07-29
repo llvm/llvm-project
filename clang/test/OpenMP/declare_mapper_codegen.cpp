@@ -839,4 +839,242 @@ void foo(int a){
 
 #endif // CK3
 
+///==========================================================================///
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm -femit-all-decls -disable-llvm-passes %s -o - | FileCheck --check-prefix CK4 --check-prefix CK4-64 %s
+// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -femit-all-decls -disable-llvm-passes -o %t %s
+// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -femit-all-decls -disable-llvm-passes -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix CK4 --check-prefix CK4-64 %s
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm -femit-all-decls -disable-llvm-passes %s -o - | FileCheck --check-prefix CK4 --check-prefix CK4-32 %s
+// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -femit-all-decls -disable-llvm-passes -o %t %s
+// RUN: %clang_cc1 -DCK4 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -femit-all-decls -disable-llvm-passes -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix CK4 --check-prefix CK4-32 %s
+
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm -femit-all-decls -disable-llvm-passes %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -femit-all-decls -disable-llvm-passes -o %t %s
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -femit-all-decls -disable-llvm-passes -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm -femit-all-decls -disable-llvm-passes %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -femit-all-decls -disable-llvm-passes -o %t %s
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -femit-all-decls -disable-llvm-passes -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+
+#ifdef CK4
+// Mapper function code generation and runtime interface.
+
+// CK4-64: [[TSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK4-32: [[TSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
+// PRESENT=0x1000 | TARGET_PARAM=0x20 | TO=0x1 = 0x1021
+// CK4: [[TTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1021]]]
+
+// CK4-64: [[FSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK4-32: [[FSIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
+// PRESENT=0x1000 | TARGET_PARAM=0x20 | FROM=0x2 = 0x1022
+// CK4: [[FTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1022]]]
+
+class C {
+public:
+  int a;
+  double *b;
+};
+
+#pragma omp declare mapper(id: C s) map(s.a, s.b[0:2])
+
+// CK4: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](i8*{{.*}}, i8*{{.*}}, i8*{{.*}}, i64{{.*}}, i64{{.*}})
+// CK4: store i8* %{{[^,]+}}, i8** [[HANDLEADDR:%[^,]+]]
+// CK4: store i8* %{{[^,]+}}, i8** [[BPTRADDR:%[^,]+]]
+// CK4: store i8* %{{[^,]+}}, i8** [[VPTRADDR:%[^,]+]]
+// CK4: store i64 %{{[^,]+}}, i{{64|32}}* [[SIZEADDR:%[^,]+]]
+// CK4: store i64 %{{[^,]+}}, i64* [[TYPEADDR:%[^,]+]]
+// CK4-DAG: [[BYTESIZE:%.+]] = load i64, i64* [[SIZEADDR]]
+// CK4-64-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 16
+// CK4-32-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 8
+// CK4-DAG: [[TYPE:%.+]] = load i64, i64* [[TYPEADDR]]
+// CK4-DAG: [[HANDLE:%.+]] = load i8*, i8** [[HANDLEADDR]]
+// CK4-DAG: [[PTRBEGIN:%.+]] = bitcast i8** [[VPTRADDR]] to %class.C**
+// CK4-DAG: [[PTREND:%.+]] = getelementptr %class.C*, %class.C** [[PTRBEGIN]], i64 [[SIZE]]
+// CK4-DAG: [[BPTR:%.+]] = load i8*, i8** [[BPTRADDR]]
+// CK4-DAG: [[BEGIN:%.+]] = load i8*, i8** [[VPTRADDR]]
+// CK4: [[ISARRAY:%.+]] = icmp sge i64 [[SIZE]], 1
+// CK4: br i1 [[ISARRAY]], label %[[INITEVALDEL:[^,]+]], label %[[LHEAD:[^,]+]]
+
+// CK4: [[INITEVALDEL]]
+// CK4: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
+// CK4: [[ISNOTDEL:%.+]] = icmp eq i64 [[TYPEDEL]], 0
+// CK4: br i1 [[ISNOTDEL]], label %[[INIT:[^,]+]], label %[[LHEAD:[^,]+]]
+// CK4: [[INIT]]
+// CK4-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
+// CK4-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
+// CK4-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]])
+// CK4: br label %[[LHEAD:[^,]+]]
+
+// CK4: [[LHEAD]]
+// CK4: [[ISEMPTY:%.+]] = icmp eq %class.C** [[PTRBEGIN]], [[PTREND]]
+// CK4: br i1 [[ISEMPTY]], label %[[DONE:[^,]+]], label %[[LBODY:[^,]+]]
+// CK4: [[LBODY]]
+// CK4: [[PTR:%.+]] = phi %class.C** [ [[PTRBEGIN]], %[[LHEAD]] ], [ [[PTRNEXT:%.+]], %[[LCORRECT:[^,]+]] ]
+// CK4: [[OBJ:%.+]] = load %class.C*, %class.C** [[PTR]]
+// CK4-DAG: [[ABEGIN:%.+]] = getelementptr inbounds %class.C, %class.C* [[OBJ]], i32 0, i32 0
+// CK4-DAG: [[BBEGIN:%.+]] = getelementptr inbounds %class.C, %class.C* [[OBJ]], i32 0, i32 1
+// CK4-DAG: [[BBEGIN2:%.+]] = getelementptr inbounds %class.C, %class.C* [[OBJ]], i32 0, i32 1
+// CK4-DAG: [[BARRBEGIN:%.+]] = load double*, double** [[BBEGIN2]]
+// CK4-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds double, double* [[BARRBEGIN]], i[[sz:64|32]] 0
+// CK4-DAG: [[BEND:%.+]] = getelementptr double*, double** [[BBEGIN]], i32 1
+// CK4-DAG: [[ABEGINV:%.+]] = bitcast i32* [[ABEGIN]] to i8*
+// CK4-DAG: [[BENDV:%.+]] = bitcast double** [[BEND]] to i8*
+// CK4-DAG: [[ABEGINI:%.+]] = ptrtoint i8* [[ABEGINV]] to i64
+// CK4-DAG: [[BENDI:%.+]] = ptrtoint i8* [[BENDV]] to i64
+// CK4-DAG: [[CSIZE:%.+]] = sub i64 [[BENDI]], [[ABEGINI]]
+// CK4-DAG: [[CUSIZE:%.+]] = sdiv exact i64 [[CSIZE]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
+// CK4-DAG: [[BPTRADDR0BC:%.+]] = bitcast %class.C* [[OBJ]] to i8*
+// CK4-DAG: [[PTRADDR0BC:%.+]] = bitcast i32* [[ABEGIN]] to i8*
+// CK4-DAG: [[PRESIZE:%.+]] = call i64 @__tgt_mapper_num_components(i8* [[HANDLE]])
+// CK4-DAG: [[SHIPRESIZE:%.+]] = shl i64 [[PRESIZE]], 48
+// CK4-DAG: br label %[[MEMBER:[^,]+]]
+// CK4-DAG: [[MEMBER]]
+// CK4-DAG: br i1 true, label %[[LTYPE:[^,]+]], label %[[MEMBERCOM:[^,]+]]
+// CK4-DAG: [[MEMBERCOM]]
+// CK4-DAG: [[MEMBERCOMTYPE:%.+]] = add nuw i64 32, [[SHIPRESIZE]]
+// CK4-DAG: br label %[[LTYPE]]
+// CK4-DAG: [[LTYPE]]
+// CK4-DAG: [[MEMBERTYPE:%.+]] = phi i64 [ 32, %[[MEMBER]] ], [ [[MEMBERCOMTYPE]], %[[MEMBERCOM]] ]
+// CK4-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
+// CK4-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
+// CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
+// CK4-DAG: [[ALLOC]]
+// CK4-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK4-DAG: br label %[[TYEND:[^,]+]]
+// CK4-DAG: [[ALLOCELSE]]
+// CK4-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
+// CK4-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
+// CK4-DAG: [[TO]]
+// CK4-DAG: [[TOTYPE:%.+]] = and i64 [[MEMBERTYPE]], -3
+// CK4-DAG: br label %[[TYEND]]
+// CK4-DAG: [[TOELSE]]
+// CK4-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
+// CK4-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
+// CK4-DAG: [[FROM]]
+// CK4-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
+// CK4-DAG: br label %[[TYEND]]
+// CK4-DAG: [[TYEND]]
+// CK4-DAG: [[PHITYPE0:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR0BC]], i8* [[PTRADDR0BC]], i64 [[CUSIZE]], i64 [[PHITYPE0]])
+// CK4-DAG: [[BPTRADDR1BC:%.+]] = bitcast %class.C* [[OBJ]] to i8*
+// CK4-DAG: [[PTRADDR1BC:%.+]] = bitcast i32* [[ABEGIN]] to i8*
+// CK4-DAG: br label %[[MEMBER:[^,]+]]
+// CK4-DAG: [[MEMBER]]
+// CK4-DAG: br i1 false, label %[[LTYPE:[^,]+]], label %[[MEMBERCOM:[^,]+]]
+// CK4-DAG: [[MEMBERCOM]]
+// 281474976710659 == 0x1,000,000,003
+// CK4-DAG: [[MEMBERCOMTYPE:%.+]] = add nuw i64 281474976710659, [[SHIPRESIZE]]
+// CK4-DAG: br label %[[LTYPE]]
+// CK4-DAG: [[LTYPE]]
+// CK4-DAG: [[MEMBERTYPE:%.+]] = phi i64 [ 281474976710659, %[[MEMBER]] ], [ [[MEMBERCOMTYPE]], %[[MEMBERCOM]] ]
+// CK4-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
+// CK4-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
+// CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
+// CK4-DAG: [[ALLOC]]
+// CK4-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK4-DAG: br label %[[TYEND:[^,]+]]
+// CK4-DAG: [[ALLOCELSE]]
+// CK4-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
+// CK4-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
+// CK4-DAG: [[TO]]
+// CK4-DAG: [[TOTYPE:%.+]] = and i64 [[MEMBERTYPE]], -3
+// CK4-DAG: br label %[[TYEND]]
+// CK4-DAG: [[TOELSE]]
+// CK4-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
+// CK4-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
+// CK4-DAG: [[FROM]]
+// CK4-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
+// CK4-DAG: br label %[[TYEND]]
+// CK4-DAG: [[TYEND]]
+// CK4-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR1BC]], i8* [[PTRADDR1BC]], i64 4, i64 [[TYPE1]])
+// CK4-DAG: [[BPTRADDR2BC:%.+]] = bitcast double** [[BBEGIN]] to i8*
+// CK4-DAG: [[PTRADDR2BC:%.+]] = bitcast double* [[BARRBEGINGEP]] to i8*
+// CK4-DAG: br label %[[MEMBER:[^,]+]]
+// CK4-DAG: [[MEMBER]]
+// CK4-DAG: br i1 false, label %[[LTYPE:[^,]+]], label %[[MEMBERCOM:[^,]+]]
+// CK4-DAG: [[MEMBERCOM]]
+// 281474976710675 == 0x1,000,000,013
+// CK4-DAG: [[MEMBERCOMTYPE:%.+]] = add nuw i64 281474976710675, [[SHIPRESIZE]]
+// CK4-DAG: br label %[[LTYPE]]
+// CK4-DAG: [[LTYPE]]
+// CK4-DAG: [[MEMBERTYPE:%.+]] = phi i64 [ 281474976710675, %[[MEMBER]] ], [ [[MEMBERCOMTYPE]], %[[MEMBERCOM]] ]
+// CK4-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
+// CK4-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
+// CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
+// CK4-DAG: [[ALLOC]]
+// CK4-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK4-DAG: br label %[[TYEND:[^,]+]]
+// CK4-DAG: [[ALLOCELSE]]
+// CK4-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
+// CK4-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
+// CK4-DAG: [[TO]]
+// CK4-DAG: [[TOTYPE:%.+]] = and i64 [[MEMBERTYPE]], -3
+// CK4-DAG: br label %[[TYEND]]
+// CK4-DAG: [[TOELSE]]
+// CK4-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
+// CK4-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
+// CK4-DAG: [[FROM]]
+// CK4-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
+// CK4-DAG: br label %[[TYEND]]
+// CK4-DAG: [[TYEND]]
+// CK4-DAG: [[TYPE2:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTRADDR2BC]], i8* [[PTRADDR2BC]], i64 16, i64 [[TYPE2]])
+// CK4: [[PTRNEXT]] = getelementptr %class.C*, %class.C** [[PTR]], i32 1
+// CK4: [[ISDONE:%.+]] = icmp eq %class.C** [[PTRNEXT]], [[PTREND]]
+// CK4: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]
+
+// CK4: [[LEXIT]]
+// CK4: [[ISARRAY:%.+]] = icmp sge i64 [[SIZE]], 1
+// CK4: br i1 [[ISARRAY]], label %[[EVALDEL:[^,]+]], label %[[DONE]]
+// CK4: [[EVALDEL]]
+// CK4: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
+// CK4: [[ISDEL:%.+]] = icmp ne i64 [[TYPEDEL]], 0
+// CK4: br i1 [[ISDEL]], label %[[DEL:[^,]+]], label %[[DONE]]
+// CK4: [[DEL]]
+// CK4-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
+// CK4-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
+// CK4-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]])
+// CK4: br label %[[DONE]]
+// CK4: [[DONE]]
+// CK4: ret void
+
+
+// CK4-LABEL: define {{.*}}void @{{.*}}foo{{.*}}
+void foo(int a){
+  int i = a;
+  C c;
+  c.a = a;
+
+  // CK4-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[TGEPBP:%.+]], i8** [[TGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[TSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[TTYPES]]{{.+}}, i8** [[TMPRGEP:%.+]])
+  // CK4-DAG: [[TGEPBP]] = getelementptr inbounds {{.+}}[[TBP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
+  // CK4-DAG: [[TGEPP]] = getelementptr inbounds {{.+}}[[TP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
+  // CK4-DAG: [[TMPRGEP]] = bitcast [1 x i8*]* [[TMPR:%[^,]+]] to i8**
+  // CK4-DAG: [[TBP0:%.+]] = getelementptr inbounds {{.+}}[[TBP]], i{{.+}} 0, i{{.+}} 0
+  // CK4-DAG: [[TP0:%.+]] = getelementptr inbounds {{.+}}[[TP]], i{{.+}} 0, i{{.+}} 0
+  // CK4-DAG: [[TMPR1:%.+]] = getelementptr inbounds {{.+}}[[TMPR]], i[[sz]] 0, i[[sz]] 0
+  // CK4-DAG: [[TCBP0:%.+]] = bitcast i8** [[TBP0]] to %class.C**
+  // CK4-DAG: [[TCP0:%.+]] = bitcast i8** [[TP0]] to %class.C**
+  // CK4-DAG: store %class.C* [[VAL:%[^,]+]], %class.C** [[TCBP0]]
+  // CK4-DAG: store %class.C* [[VAL]], %class.C** [[TCP0]]
+  // CK4-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[TMPR1]]
+  #pragma omp target update to(present, mapper(id): c)
+
+  // CK4-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[FGEPBP:%.+]], i8** [[FGEPP:%.+]], i64* getelementptr {{.+}}[1 x i64]* [[FSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[FTYPES]]{{.+}}, i8** [[FMPRGEP:%.+]])
+  // CK4-DAG: [[FGEPBP]] = getelementptr inbounds {{.+}}[[FBP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
+  // CK4-DAG: [[FGEPP]] = getelementptr inbounds {{.+}}[[FP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
+  // CK4-DAG: [[FMPRGEP]] = bitcast [1 x i8*]* [[FMPR:%[^,]+]] to i8**
+  // CK4-DAG: [[FBP0:%.+]] = getelementptr inbounds {{.+}}[[FBP]], i{{.+}} 0, i{{.+}} 0
+  // CK4-DAG: [[FP0:%.+]] = getelementptr inbounds {{.+}}[[FP]], i{{.+}} 0, i{{.+}} 0
+  // CK4-DAG: [[FMPR1:%.+]] = getelementptr inbounds {{.+}}[[FMPR]], i[[sz]] 0, i[[sz]] 0
+  // CK4-DAG: [[FCBP0:%.+]] = bitcast i8** [[FBP0]] to %class.C**
+  // CK4-DAG: [[FCP0:%.+]] = bitcast i8** [[FP0]] to %class.C**
+  // CK4-DAG: store %class.C* [[VAL]], %class.C** [[FCBP0]]
+  // CK4-DAG: store %class.C* [[VAL]], %class.C** [[FCP0]]
+  // CK4-DAG: store i8* bitcast (void (i8*, i8*, i8*, i64, i64)* [[MPRFUNC]] to i8*), i8** [[FMPR1]]
+  #pragma omp target update from(mapper(id), present: c)
+}
+
+#endif // CK4
+
 #endif // HEADER

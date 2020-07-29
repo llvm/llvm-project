@@ -13544,7 +13544,9 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     DeclarationNameInfo &ReductionOrMapperId, int ExtraModifier,
     ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
     ArrayRef<SourceLocation> MapTypeModifiersLoc, bool IsMapTypeImplicit,
-    SourceLocation ExtraModifierLoc) {
+    SourceLocation ExtraModifierLoc,
+    ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+    ArrayRef<SourceLocation> MotionModifiersLoc) {
   SourceLocation StartLoc = Locs.StartLoc;
   SourceLocation LParenLoc = Locs.LParenLoc;
   SourceLocation EndLoc = Locs.EndLoc;
@@ -13621,12 +13623,14 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
         IsMapTypeImplicit, ExtraModifierLoc, ColonLoc, VarList, Locs);
     break;
   case OMPC_to:
-    Res = ActOnOpenMPToClause(VarList, ReductionOrMapperIdScopeSpec,
-                              ReductionOrMapperId, Locs);
+    Res = ActOnOpenMPToClause(MotionModifiers, MotionModifiersLoc,
+                              ReductionOrMapperIdScopeSpec, ReductionOrMapperId,
+                              ColonLoc, VarList, Locs);
     break;
   case OMPC_from:
-    Res = ActOnOpenMPFromClause(VarList, ReductionOrMapperIdScopeSpec,
-                                ReductionOrMapperId, Locs);
+    Res = ActOnOpenMPFromClause(MotionModifiers, MotionModifiersLoc,
+                                ReductionOrMapperIdScopeSpec,
+                                ReductionOrMapperId, ColonLoc, VarList, Locs);
     break;
   case OMPC_use_device_ptr:
     Res = ActOnOpenMPUseDevicePtrClause(VarList, Locs);
@@ -18584,11 +18588,31 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
   checkDeclInTargetContext(E->getExprLoc(), E->getSourceRange(), *this, D);
 }
 
-OMPClause *Sema::ActOnOpenMPToClause(ArrayRef<Expr *> VarList,
-                                     CXXScopeSpec &MapperIdScopeSpec,
-                                     DeclarationNameInfo &MapperId,
-                                     const OMPVarListLocTy &Locs,
-                                     ArrayRef<Expr *> UnresolvedMappers) {
+OMPClause *Sema::ActOnOpenMPToClause(
+    ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+    ArrayRef<SourceLocation> MotionModifiersLoc,
+    CXXScopeSpec &MapperIdScopeSpec, DeclarationNameInfo &MapperId,
+    SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
+    const OMPVarListLocTy &Locs, ArrayRef<Expr *> UnresolvedMappers) {
+  OpenMPMotionModifierKind Modifiers[] = {OMPC_MOTION_MODIFIER_unknown,
+                                          OMPC_MOTION_MODIFIER_unknown};
+  SourceLocation ModifiersLoc[NumberOfOMPMotionModifiers];
+
+  // Process motion-modifiers, flag errors for duplicate modifiers.
+  unsigned Count = 0;
+  for (unsigned I = 0, E = MotionModifiers.size(); I < E; ++I) {
+    if (MotionModifiers[I] != OMPC_MOTION_MODIFIER_unknown &&
+        llvm::find(Modifiers, MotionModifiers[I]) != std::end(Modifiers)) {
+      Diag(MotionModifiersLoc[I], diag::err_omp_duplicate_motion_modifier);
+      continue;
+    }
+    assert(Count < NumberOfOMPMotionModifiers &&
+           "Modifiers exceed the allowed number of motion modifiers");
+    Modifiers[Count] = MotionModifiers[I];
+    ModifiersLoc[Count] = MotionModifiersLoc[I];
+    ++Count;
+  }
+
   MappableVarListInfo MVLI(VarList);
   checkMappableExpressionList(*this, DSAStack, OMPC_to, MVLI, Locs.StartLoc,
                               MapperIdScopeSpec, MapperId, UnresolvedMappers);
@@ -18597,15 +18621,35 @@ OMPClause *Sema::ActOnOpenMPToClause(ArrayRef<Expr *> VarList,
 
   return OMPToClause::Create(
       Context, Locs, MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
-      MVLI.VarComponents, MVLI.UDMapperList,
+      MVLI.VarComponents, MVLI.UDMapperList, Modifiers, ModifiersLoc,
       MapperIdScopeSpec.getWithLocInContext(Context), MapperId);
 }
 
-OMPClause *Sema::ActOnOpenMPFromClause(ArrayRef<Expr *> VarList,
-                                       CXXScopeSpec &MapperIdScopeSpec,
-                                       DeclarationNameInfo &MapperId,
-                                       const OMPVarListLocTy &Locs,
-                                       ArrayRef<Expr *> UnresolvedMappers) {
+OMPClause *Sema::ActOnOpenMPFromClause(
+    ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+    ArrayRef<SourceLocation> MotionModifiersLoc,
+    CXXScopeSpec &MapperIdScopeSpec, DeclarationNameInfo &MapperId,
+    SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
+    const OMPVarListLocTy &Locs, ArrayRef<Expr *> UnresolvedMappers) {
+  OpenMPMotionModifierKind Modifiers[] = {OMPC_MOTION_MODIFIER_unknown,
+                                          OMPC_MOTION_MODIFIER_unknown};
+  SourceLocation ModifiersLoc[NumberOfOMPMotionModifiers];
+
+  // Process motion-modifiers, flag errors for duplicate modifiers.
+  unsigned Count = 0;
+  for (unsigned I = 0, E = MotionModifiers.size(); I < E; ++I) {
+    if (MotionModifiers[I] != OMPC_MOTION_MODIFIER_unknown &&
+        llvm::find(Modifiers, MotionModifiers[I]) != std::end(Modifiers)) {
+      Diag(MotionModifiersLoc[I], diag::err_omp_duplicate_motion_modifier);
+      continue;
+    }
+    assert(Count < NumberOfOMPMotionModifiers &&
+           "Modifiers exceed the allowed number of motion modifiers");
+    Modifiers[Count] = MotionModifiers[I];
+    ModifiersLoc[Count] = MotionModifiersLoc[I];
+    ++Count;
+  }
+
   MappableVarListInfo MVLI(VarList);
   checkMappableExpressionList(*this, DSAStack, OMPC_from, MVLI, Locs.StartLoc,
                               MapperIdScopeSpec, MapperId, UnresolvedMappers);
@@ -18614,7 +18658,7 @@ OMPClause *Sema::ActOnOpenMPFromClause(ArrayRef<Expr *> VarList,
 
   return OMPFromClause::Create(
       Context, Locs, MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
-      MVLI.VarComponents, MVLI.UDMapperList,
+      MVLI.VarComponents, MVLI.UDMapperList, Modifiers, ModifiersLoc,
       MapperIdScopeSpec.getWithLocInContext(Context), MapperId);
 }
 

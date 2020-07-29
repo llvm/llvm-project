@@ -9805,6 +9805,8 @@ def err_omp_multiple_array_items_in_map_clause : Error<
   "multiple array elements associated with the same variable are not allowed in map clauses of the same construct">;
 def err_omp_duplicate_map_type_modifier : Error<
   "same map type modifier has been specified more than once">;
+def err_omp_duplicate_motion_modifier : Error<
+  "same motion modifier has been specified more than once">;
 def err_omp_pointer_mapped_along_with_derived_section : Error<
   "pointer cannot be mapped along with a section derived from itself">;
 def err_omp_original_storage_is_shared_and_does_not_contain : Error<

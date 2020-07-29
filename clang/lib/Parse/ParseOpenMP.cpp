@@ -3453,25 +3453,43 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     if (Tok.is(tok::colon))
       Data.ColonLoc = ConsumeToken();
   } else if (Kind == OMPC_to || Kind == OMPC_from) {
-    if (Tok.is(tok::identifier)) {
+    while (Tok.is(tok::identifier)) {
       auto Modifier =
           static_cast<OpenMPMotionModifierKind>(getOpenMPSimpleClauseType(
               Kind, PP.getSpelling(Tok), getLangOpts().OpenMP));
+      if (Modifier == OMPC_MOTION_MODIFIER_unknown)
+        break;
+      Data.MotionModifiers.push_back(Modifier);
+      Data.MotionModifiersLoc.push_back(Tok.getLocation());
+      ConsumeToken();
       if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
-        // Parse the mapper modifier.
-        ConsumeToken();
         IsInvalidMapperModifier = parseMapperModifier(Data);
-        if (Tok.isNot(tok::colon)) {
-          if (!IsInvalidMapperModifier)
-            Diag(Tok, diag::warn_pragma_expected_colon) << ")";
-          SkipUntil(tok::colon, tok::r_paren, tok::annot_pragma_openmp_end,
-                    StopBeforeMatch);
-        }
-        // Consume ':'.
-        if (Tok.is(tok::colon))
-          ConsumeToken();
+        if (IsInvalidMapperModifier)
+          break;
       }
+      // OpenMP < 5.1 doesn't permit a ',' or additional modifiers.
+      if (getLangOpts().OpenMP < 51)
+        break;
+      // OpenMP 5.1 accepts an optional ',' even if the next character is ':'.
+      // TODO: Is that intentional?
+      if (Tok.is(tok::comma))
+        ConsumeToken();
     }
+    if (!Data.MotionModifiers.empty() && Tok.isNot(tok::colon)) {
+      if (!IsInvalidMapperModifier) {
+        if (getLangOpts().OpenMP < 51)
+          Diag(Tok, diag::warn_pragma_expected_colon) << ")";
+        else
+          Diag(Tok, diag::warn_pragma_expected_colon) << "motion modifier";
+      }
+      SkipUntil(tok::colon, tok::r_paren, tok::annot_pragma_openmp_end,
+                StopBeforeMatch);
+    }
+    // OpenMP 5.1 permits a ':' even without a preceding modifier.  TODO: Is
+    // that intentional?
+    if ((!Data.MotionModifiers.empty() || getLangOpts().OpenMP >= 51) &&
+        Tok.is(tok::colon))
+      Data.ColonLoc = ConsumeToken();
   } else if (Kind == OMPC_allocate ||
              (Kind == OMPC_affinity && Tok.is(tok::identifier) &&
               PP.getSpelling(Tok) == "iterator")) {
@@ -3647,6 +3665,7 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
       Kind, Vars, Data.DepModOrTailExpr, Locs, Data.ColonLoc,
       Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId,
       Data.ExtraModifier, Data.MapTypeModifiers, Data.MapTypeModifiersLoc,
-      Data.IsMapTypeImplicit, Data.ExtraModifierLoc);
+      Data.IsMapTypeImplicit, Data.ExtraModifierLoc, Data.MotionModifiers,
+      Data.MotionModifiersLoc);
 }
 
