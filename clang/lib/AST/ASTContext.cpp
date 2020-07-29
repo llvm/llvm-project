@@ -919,18 +919,20 @@ static const LangASMap *getAddressSpaceMap(const TargetInfo &T,
     // The fake address space map must have a distinct entry for each
     // language-specific address space.
     static const unsigned FakeAddrSpaceMap[] = {
-        0, // Default
-        1, // opencl_global
-        3, // opencl_local
-        2, // opencl_constant
-        0, // opencl_private
-        4, // opencl_generic
-        5, // cuda_device
-        6, // cuda_constant
-        7, // cuda_shared
-        8, // ptr32_sptr
-        9, // ptr32_uptr
-        10 // ptr64
+        0,  // Default
+        1,  // opencl_global
+        3,  // opencl_local
+        2,  // opencl_constant
+        0,  // opencl_private
+        4,  // opencl_generic
+        5,  // opencl_global_device
+        6,  // opencl_global_host
+        7,  // cuda_device
+        8,  // cuda_constant
+        9,  // cuda_shared
+        10, // ptr32_sptr
+        11, // ptr32_uptr
+        12  // ptr64
     };
     return &FakeAddrSpaceMap;
   } else {

@@ -30,6 +30,8 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // opencl_constant
     0,   // opencl_private
     0,   // opencl_generic
+    0,   // opencl_global_device
+    0,   // opencl_global_host
     0,   // cuda_device
     0,   // cuda_constant
     0,   // cuda_shared
