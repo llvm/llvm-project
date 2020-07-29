@@ -1,5 +1,5 @@
 // RUN: %clangxx -O0 %s -o %t && %run %t | FileCheck %s
-// REQUIRES: !android
+// REQUIRES: sunrpc, !android
 #include <cassert>
 #include <rpc/xdr.h>
 
