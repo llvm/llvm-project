@@ -71,6 +71,8 @@ cl::opt<unsigned> MaxRegistersForGCPointers(
     "max-registers-for-gc-values", cl::Hidden, cl::init(0),
     cl::desc("Max number of VRegs allowed to pass GC pointer meta args in"));
 
+typedef FunctionLoweringInfo::StatepointRelocationRecord RecordType;
+
 static void pushStackMapConstant(SmallVectorImpl<SDValue>& Ops,
                                  SelectionDAGBuilder &Builder, uint64_t Value) {
   SDLoc L = Builder.getCurSDLoc();
@@ -90,13 +92,11 @@ void StatepointLoweringState::startNewStatepoint(SelectionDAGBuilder &Builder) {
   // FunctionLoweringInfo.  Also need to ensure used bits get cleared.
   AllocatedStackSlots.clear();
   AllocatedStackSlots.resize(Builder.FuncInfo.StatepointStackSlots.size());
-  VirtRegs.clear();
 }
 
 void StatepointLoweringState::clear() {
   Locations.clear();
   AllocatedStackSlots.clear();
-  VirtRegs.clear();
   assert(PendingGCRelocateCalls.empty() &&
          "cleared before statepoint sequence completed");
 }
@@ -162,14 +162,18 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
 
   // Spill location is known for gc relocates
   if (const auto *Relocate = dyn_cast<GCRelocateInst>(Val)) {
-    const auto &SpillMap =
-        Builder.FuncInfo.StatepointSpillMaps[Relocate->getStatepoint()];
+    const auto &RelocationMap =
+        Builder.FuncInfo.StatepointRelocationMaps[Relocate->getStatepoint()];
 
-    auto It = SpillMap.find(Relocate->getDerivedPtr());
-    if (It == SpillMap.end())
+    auto It = RelocationMap.find(Relocate->getDerivedPtr());
+    if (It == RelocationMap.end())
       return None;
 
-    return It->second;
+    auto &Record = It->second;
+    if (Record.type != RecordType::Spill)
+      return None;
+
+    return Record.payload.FI;
   }
 
   // Look through bitcast instructions.
@@ -666,39 +670,6 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
       MemRefs.push_back(MMO);
     }
   }
-
-  // Record computed locations for all lowered values.
-  // This can not be embedded in lowering loops as we need to record *all*
-  // values, while previous loops account only values with unique SDValues.
-  const Instruction *StatepointInstr = SI.StatepointInstr;
-  auto &SpillMap = Builder.FuncInfo.StatepointSpillMaps[StatepointInstr];
-
-  for (const GCRelocateInst *Relocate : SI.GCRelocates) {
-    const Value *V = Relocate->getDerivedPtr();
-    SDValue SDV = Builder.getValue(V);
-    SDValue Loc = Builder.StatepointLowering.getLocation(SDV);
-
-    if (Loc.getNode()) {
-      // If this is a value we spilled, remember where for when we visit the
-      // gc.relocate corresponding to this gc.statepoint
-      SpillMap[V] = cast<FrameIndexSDNode>(Loc)->getIndex();
-    } else {
-      // If we didn't spill the value - allocas, constants, and values lowered
-      // as tied vregs - mark them as visited, but not spilled.  Marking them
-      // visited (as opposed to simply missing in the map), allows tighter
-      // assertion checking.  
-      SpillMap[V] = None;
-
-      // Conservatively export all values used by gc.relocates outside this
-      // block.  This is currently only needed for expressions which don't need
-      // relocation (such as constants and allocas).
-      if (!LowerAsVReg.count(SDV) &&
-          Relocate->getParent() != StatepointInstr->getParent()) {
-        Builder.ExportFromCurrentBlock(V);
-        assert(!LowerAsVReg.count(SDV));
-      }
-    }
-  }
 }
 
 SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
@@ -856,12 +827,10 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     DAG.getMachineNode(TargetOpcode::STATEPOINT, getCurSDLoc(), NodeTys, Ops);
   DAG.setNodeMemRefs(StatepointMCNode, MemRefs);
 
-  SDNode *SinkNode = StatepointMCNode;
 
-  // Remember the mapping between values relocated in registers and the virtual
-  // register holding the relocation.  Note that for simplicity, we *always*
-  // create a vreg even within a single block.
-  auto &VirtRegs = StatepointLowering.VirtRegs;
+  // For values lowered to tied-defs, create the virtual registers.  Note that
+  // for simplicity, we *always* create a vreg even within a single block. 
+  DenseMap<const Value *, Register> VirtRegs;
   for (const auto *Relocate : SI.GCRelocates) {
     Value *Derived = Relocate->getDerivedPtr();
     SDValue SD = getValue(Derived);
@@ -884,6 +853,39 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     
     VirtRegs[Derived] = Reg; 
   }
+
+  // Record for later use how each relocation was lowered.  This is needed to
+  // allow later gc.relocates to mirror the lowering chosen.
+  const Instruction *StatepointInstr = SI.StatepointInstr;
+  auto &RelocationMap = FuncInfo.StatepointRelocationMaps[StatepointInstr];
+  for (const GCRelocateInst *Relocate : SI.GCRelocates) {
+    const Value *V = Relocate->getDerivedPtr();
+    SDValue SDV = getValue(V);
+    SDValue Loc = StatepointLowering.getLocation(SDV);
+
+    RecordType Record;
+    if (Loc.getNode()) {
+      Record.type = RecordType::Spill;
+      Record.payload.FI = cast<FrameIndexSDNode>(Loc)->getIndex();
+    } else if (LowerAsVReg.count(SDV)) {
+      Record.type = RecordType::VReg;
+      assert(VirtRegs.count(V));
+      Record.payload.Reg = VirtRegs[V];
+    } else {
+      Record.type = RecordType::NoRelocate;
+      // If we didn't relocate a value, we'll essentialy end up inserting an
+      // additional use of the original value when lowering the gc.relocate.
+      // We need to make sure the value is available at the new use, which
+      // might be in another block.
+      if (Relocate->getParent() != StatepointInstr->getParent())
+        ExportFromCurrentBlock(V);
+    }
+    RelocationMap[V] = Record;
+  }
+
+  
+
+  SDNode *SinkNode = StatepointMCNode;
 
   // Build the GC_TRANSITION_END node if necessary.
   //
@@ -1118,12 +1120,15 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 #endif
 
   const Value *DerivedPtr = Relocate.getDerivedPtr();
+  auto &RelocationMap =
+    FuncInfo.StatepointRelocationMaps[Relocate.getStatepoint()];
+  auto SlotIt = RelocationMap.find(DerivedPtr);
+  assert(SlotIt != RelocationMap.end() && "Relocating not lowered gc value");
+  const RecordType &Record = SlotIt->second;
 
   // If relocation was done via virtual register..
-  auto &VirtRegs = StatepointLowering.VirtRegs;
-  auto It = VirtRegs.find(DerivedPtr);
-  if (It != VirtRegs.end()) {
-    Register InReg = It->second;
+  if (Record.type == RecordType::VReg) {
+    Register InReg = Record.payload.Reg;
     RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
                      DAG.getDataLayout(), InReg, Relocate.getType(),
                      None); // This is not an ABI copy.
@@ -1143,19 +1148,17 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
     return;
   }
 
-  auto &SpillMap = FuncInfo.StatepointSpillMaps[Relocate.getStatepoint()];
-  auto SlotIt = SpillMap.find(DerivedPtr);
-  assert(SlotIt != SpillMap.end() && "Relocating not lowered gc value");
-  Optional<int> DerivedPtrLocation = SlotIt->second;
 
   // We didn't need to spill these special cases (constants and allocas).
   // See the handling in spillIncomingValueForStatepoint for detail.
-  if (!DerivedPtrLocation) {
+  if (Record.type == RecordType::NoRelocate) {
     setValue(&Relocate, SD);
     return;
   }
 
-  unsigned Index = *DerivedPtrLocation;
+  assert(Record.type == RecordType::Spill);
+
+  unsigned Index = Record.payload.FI;;
   SDValue SpillSlot = DAG.getTargetFrameIndex(Index, getFrameIndexTy());
 
   // All the reloads are independent and are reading memory only modified by
