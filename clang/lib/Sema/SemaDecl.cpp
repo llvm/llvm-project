@@ -1184,23 +1184,20 @@ Corrected:
     return ParsedType::make(T);
   }
 
-  // FIXME: This is context-dependent. We need to defer building the member
-  // expression until the classification is consumed.
-  if (FirstDecl->isCXXClassMember())
-    return NameClassification::ContextIndependentExpr(
-        BuildPossibleImplicitMemberExpr(SS, SourceLocation(), Result, nullptr,
-                                        S));
-
   // If we already know which single declaration is referenced, just annotate
-  // that declaration directly.
+  // that declaration directly. Defer resolving even non-overloaded class
+  // member accesses, as we need to defer certain access checks until we know
+  // the context.
   bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
-  if (Result.isSingleResult() && !ADL)
+  if (Result.isSingleResult() && !ADL && !FirstDecl->isCXXClassMember())
     return NameClassification::NonType(Result.getRepresentativeDecl());
 
-  // Build an UnresolvedLookupExpr. Note that this doesn't depend on the
-  // context in which we performed classification, so it's safe to do now.
-  return NameClassification::ContextIndependentExpr(
-      BuildDeclarationNameExpr(SS, Result, ADL));
+  // Otherwise, this is an overload set that we will need to resolve later.
+  Result.suppressDiagnostics();
+  return NameClassification::OverloadSet(UnresolvedLookupExpr::Create(
+      Context, Result.getNamingClass(), SS.getWithLocInContext(Context),
+      Result.getLookupNameInfo(), ADL, Result.isOverloadedResult(),
+      Result.begin(), Result.end()));
 }
 
 ExprResult
@@ -1238,6 +1235,30 @@ ExprResult Sema::ActOnNameClassifiedAsNonType(Scope *S, const CXXScopeSpec &SS,
 
   bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
   return BuildDeclarationNameExpr(SS, Result, ADL);
+}
+
+ExprResult Sema::ActOnNameClassifiedAsOverloadSet(Scope *S, Expr *E) {
+  // For an implicit class member access, transform the result into a member
+  // access expression if necessary.
+  auto *ULE = cast<UnresolvedLookupExpr>(E);
+  if ((*ULE->decls_begin())->isCXXClassMember()) {
+    CXXScopeSpec SS;
+    SS.Adopt(ULE->getQualifierLoc());
+
+    // Reconstruct the lookup result.
+    LookupResult Result(*this, ULE->getName(), ULE->getNameLoc(),
+                        LookupOrdinaryName);
+    Result.setNamingClass(ULE->getNamingClass());
+    for (auto I = ULE->decls_begin(), E = ULE->decls_end(); I != E; ++I)
+      Result.addDecl(*I, I.getAccess());
+    Result.resolveKind();
+    return BuildPossibleImplicitMemberExpr(SS, SourceLocation(), Result,
+                                           nullptr, S);
+  }
+
+  // Otherwise, this is already in the form we needed, and no further checks
+  // are necessary.
+  return ULE;
 }
 
 Sema::TemplateNameKindForDiagnostics

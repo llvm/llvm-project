@@ -160,3 +160,14 @@ namespace test6 {
     }
   };
 }
+
+namespace test7 {
+  struct C { void g(); };
+  template<typename T> struct A {
+    T x;
+    static void f() {
+      (x.g()); // expected-error {{invalid use of member 'x' in static member function}}
+    }
+  };
+  void h() { A<C>::f(); }
+}
