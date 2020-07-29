@@ -1543,7 +1543,7 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   Constant *C;
   if (match(&Inst,
             m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))),
-                      m_Constant(C))) &&
+                      m_Constant(C))) && !isa<ConstantExpr>(C) &&
       cast<FixedVectorType>(V1->getType())->getNumElements() <= NumElts) {
     assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
