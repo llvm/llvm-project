@@ -19194,7 +19194,10 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
 
   // The binop must be a vector type, so we can extract some fraction of it.
   EVT WideBVT = BinOp.getValueType();
-  if (!WideBVT.isVector())
+  // The optimisations below currently assume we are dealing with fixed length
+  // vectors. It is possible to add support for scalable vectors, but at the
+  // moment we've done no analysis to prove whether they are profitable or not.
+  if (!WideBVT.isFixedLengthVector())
     return SDValue();
 
   EVT VT = Extract->getValueType(0);

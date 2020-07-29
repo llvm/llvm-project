@@ -54,7 +54,7 @@ func @f() -> !shape.shape {
   // CHECK: shape.const_shape [7, 2] : !shape.shape
   %0 = shape.const_shape [1, 2] : !shape.shape
   %1 = shape.const_shape [7, 1] : !shape.shape
-  %2 = shape.broadcast %0, %1 : !shape.shape, !shape.shape
+  %2 = shape.broadcast %0, %1 : !shape.shape, !shape.shape -> !shape.shape
   return %2 : !shape.shape
 }
 
@@ -65,7 +65,7 @@ func @f() -> !shape.shape {
 func @f(%arg0 : !shape.shape) -> !shape.shape {
   // CHECK: return %arg0
   %0 = shape.const_shape [] : !shape.shape
-  %1 = shape.broadcast %arg0, %0 : !shape.shape, !shape.shape
+  %1 = shape.broadcast %arg0, %0 : !shape.shape, !shape.shape -> !shape.shape
   return %1 : !shape.shape
 }
 
@@ -76,7 +76,7 @@ func @f(%arg0 : !shape.shape) -> !shape.shape {
 func @f(%arg0 : !shape.shape) -> !shape.shape {
   // CHECK: return %arg0
   %0 = shape.const_shape [] : !shape.shape
-  %1 = shape.broadcast %0, %arg0 : !shape.shape, !shape.shape
+  %1 = shape.broadcast %0, %arg0 : !shape.shape, !shape.shape -> !shape.shape
   return %1 : !shape.shape
 }
 
@@ -89,7 +89,7 @@ func @f() -> !shape.shape {
   // CHECK: return %[[CST]]
   %0 = shape.const_shape [] : !shape.shape
   %1 = shape.const_shape [1, 2, 3] : !shape.shape
-  %2 = shape.broadcast %0, %1 : !shape.shape, !shape.shape
+  %2 = shape.broadcast %0, %1 : !shape.shape, !shape.shape -> !shape.shape
   return %2 : !shape.shape
 }
 
@@ -101,7 +101,7 @@ func @f() -> !shape.shape {
   // CHECK: shape.broadcast
   %0 = shape.const_shape [2] : !shape.shape
   %1 = shape.const_shape [7] : !shape.shape
-  %2 = shape.broadcast %0, %1 : !shape.shape, !shape.shape
+  %2 = shape.broadcast %0, %1 : !shape.shape, !shape.shape -> !shape.shape
   return %2 : !shape.shape
 }
 

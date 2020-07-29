@@ -205,6 +205,20 @@ namespace ARM_AM {
     return V;
   }
 
+  /// isSOImmTwoPartValNeg - Return true if the specified value can be obtained
+  /// by two SOImmVal, that -V = First + Second.
+  /// "R+V" can be optimized to (sub (sub R, First), Second).
+  /// "R=V" can be optimized to (sub (mvn R, ~(-First)), Second).
+  inline bool isSOImmTwoPartValNeg(unsigned V) {
+    unsigned First;
+    if (!isSOImmTwoPartVal(-V))
+      return false;
+    // Return false if ~(-First) is not a SoImmval.
+    First = getSOImmTwoPartFirst(-V);
+    First = ~(-First);
+    return !(rotr32(~255U, getSOImmValRotate(First)) & First);
+  }
+
   /// getThumbImmValShift - Try to handle Imm with a 8-bit immediate followed
   /// by a left shift. Returns the shift amount to use.
   inline unsigned getThumbImmValShift(unsigned Imm) {

@@ -136,3 +136,19 @@ func @add(%lhs : !shape.size, %rhs : index) -> index {
   return %result : index
 }
 
+// -----
+
+func @broadcast_error_possible(%arg0 : !shape.shape, %arg1 : !shape.shape) -> tensor<?xindex> {
+  // expected-error@+1 {{if at least one of the operands can hold error values then the result must be of type `shape` to propagate them}}
+  %result = shape.broadcast %arg0, %arg1 : !shape.shape, !shape.shape -> tensor<?xindex>
+  return %result : tensor<?xindex>
+}
+
+
+// -----
+
+func @broadcast_error_possible(%arg0 : !shape.shape, %arg1 : tensor<?xindex>) -> tensor<?xindex> {
+  // expected-error@+1 {{if at least one of the operands can hold error values then the result must be of type `shape` to propagate them}}
+  %result = shape.broadcast %arg0, %arg1 : !shape.shape, tensor<?xindex> -> tensor<?xindex>
+  return %result : tensor<?xindex>
+}

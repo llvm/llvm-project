@@ -6458,13 +6458,54 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::BitCast: {
+    // Computes the CastContextHint from a Load/Store instruction.
+    auto ComputeCCH = [&](Instruction *I) -> TTI::CastContextHint {
+      assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+             "Expected a load or a store!");
+
+      if (VF == 1)
+        return TTI::CastContextHint::Normal;
+
+      switch (getWideningDecision(I, VF)) {
+      case LoopVectorizationCostModel::CM_GatherScatter:
+        return TTI::CastContextHint::GatherScatter;
+      case LoopVectorizationCostModel::CM_Interleave:
+        return TTI::CastContextHint::Interleave;
+      case LoopVectorizationCostModel::CM_Scalarize:
+      case LoopVectorizationCostModel::CM_Widen:
+        return Legal->isMaskRequired(I) ? TTI::CastContextHint::Masked
+                                        : TTI::CastContextHint::Normal;
+      case LoopVectorizationCostModel::CM_Widen_Reverse:
+        return TTI::CastContextHint::Reversed;
+      case LoopVectorizationCostModel::CM_Unknown:
+        llvm_unreachable("Instr did not go through cost modelling?");
+      }
+
+      llvm_unreachable("Unhandled case!");
+    };
+
+    unsigned Opcode = I->getOpcode();
+    TTI::CastContextHint CCH = TTI::CastContextHint::None;
+    // For Trunc, the context is the only user, which must be a StoreInst.
+    if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
+      if (I->hasOneUse())
+        if (StoreInst *Store = dyn_cast<StoreInst>(*I->user_begin()))
+          CCH = ComputeCCH(Store);
+    }
+    // For Z/Sext, the context is the operand, which must be a LoadInst.
+    else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
+             Opcode == Instruction::FPExt) {
+      if (LoadInst *Load = dyn_cast<LoadInst>(I->getOperand(0)))
+        CCH = ComputeCCH(Load);
+    }
+
     // We optimize the truncation of induction variables having constant
     // integer steps. The cost of these truncations is the same as the scalar
     // operation.
     if (isOptimizableIVTruncate(I, VF)) {
       auto *Trunc = cast<TruncInst>(I);
       return TTI.getCastInstrCost(Instruction::Trunc, Trunc->getDestTy(),
-                                  Trunc->getSrcTy(), CostKind, Trunc);
+                                  Trunc->getSrcTy(), CCH, CostKind, Trunc);
     }
 
     Type *SrcScalarTy = I->getOperand(0)->getType();
@@ -6477,12 +6518,11 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       //
       // Calculate the modified src and dest types.
       Type *MinVecTy = VectorTy;
-      if (I->getOpcode() == Instruction::Trunc) {
+      if (Opcode == Instruction::Trunc) {
         SrcVecTy = smallestIntegerVectorType(SrcVecTy, MinVecTy);
         VectorTy =
             largestIntegerVectorType(ToVectorTy(I->getType(), VF), MinVecTy);
-      } else if (I->getOpcode() == Instruction::ZExt ||
-                 I->getOpcode() == Instruction::SExt) {
+      } else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt) {
         SrcVecTy = largestIntegerVectorType(SrcVecTy, MinVecTy);
         VectorTy =
             smallestIntegerVectorType(ToVectorTy(I->getType(), VF), MinVecTy);
@@ -6490,8 +6530,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     }
 
     unsigned N = isScalarAfterVectorization(I, VF) ? VF : 1;
-    return N * TTI.getCastInstrCost(I->getOpcode(), VectorTy, SrcVecTy,
-                                    CostKind, I);
+    return N *
+           TTI.getCastInstrCost(Opcode, VectorTy, SrcVecTy, CCH, CostKind, I);
   }
   case Instruction::Call: {
     bool NeedToScalarize;
