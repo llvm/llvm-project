@@ -120,6 +120,15 @@ func @mul(%size_arg : !shape.size, %index_arg : index) {
   return
 }
 
+func @add(%size_arg : !shape.size, %index_arg : index) {
+  %size_sum = shape.add %size_arg, %size_arg
+      : !shape.size, !shape.size -> !shape.size
+  %index_sum = shape.add %index_arg, %index_arg : index, index -> index
+  %mixed_sum = shape.add %size_arg, %index_arg
+      : !shape.size, index -> !shape.size
+  return
+}
+
 func @const_size() {
   // CHECK: %c1 = shape.const_size 1
   // CHECK: %c2 = shape.const_size 2
