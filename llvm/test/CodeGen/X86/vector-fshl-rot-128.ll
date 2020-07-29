@@ -930,7 +930,7 @@ define <8 x i16> @splatvar_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind 
 ;
 ; XOPAVX1-LABEL: splatvar_funnnel_v8i16:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,0,2,3,4,5,6,7]
+; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
 ; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; XOPAVX1-NEXT:    vprotw %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    retq
@@ -975,7 +975,7 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %amt) nounwind 
 ; SSE2-NEXT:    pcmpeqd %xmm5, %xmm5
 ; SSE2-NEXT:    psllw %xmm3, %xmm5
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm5[0,0,2,3,4,5,6,7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm5[0,0,0,0,4,5,6,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; SSE2-NEXT:    pand %xmm3, %xmm1
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0]
@@ -984,7 +984,7 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %amt) nounwind 
 ; SSE2-NEXT:    psrlw %xmm2, %xmm4
 ; SSE2-NEXT:    psrlw $8, %xmm4
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm4[0,0,2,3,4,5,6,7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm4[0,0,0,0,4,5,6,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    por %xmm2, %xmm1
@@ -1150,7 +1150,7 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %amt) nounwind 
 ; X32-SSE-NEXT:    pcmpeqd %xmm5, %xmm5
 ; X32-SSE-NEXT:    psllw %xmm3, %xmm5
 ; X32-SSE-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm5[0,0,2,3,4,5,6,7]
+; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm5[0,0,0,0,4,5,6,7]
 ; X32-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; X32-SSE-NEXT:    pand %xmm3, %xmm1
 ; X32-SSE-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0]
@@ -1159,7 +1159,7 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %amt) nounwind 
 ; X32-SSE-NEXT:    psrlw %xmm2, %xmm4
 ; X32-SSE-NEXT:    psrlw $8, %xmm4
 ; X32-SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm4[0,0,2,3,4,5,6,7]
+; X32-SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm4[0,0,0,0,4,5,6,7]
 ; X32-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; X32-SSE-NEXT:    pand %xmm0, %xmm2
 ; X32-SSE-NEXT:    por %xmm2, %xmm1

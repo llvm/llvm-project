@@ -113,7 +113,7 @@ define void @fadd_64r(double* %loc, double %val) nounwind {
 ; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    faddl 12(%ebp)
@@ -278,7 +278,7 @@ define void @fadd_64g() nounwind {
 ; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    faddl (%esp)
@@ -441,7 +441,7 @@ define void @fadd_64imm() nounwind {
 ; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    faddl (%esp)
@@ -610,7 +610,7 @@ define void @fadd_64stack() nounwind {
 ; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    faddl (%esp)
@@ -716,7 +716,7 @@ define void @fadd_array(i64* %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fldl (%esp)
 ; X86-SSE1-NEXT:    faddl 12(%ebp)

@@ -1304,11 +1304,11 @@ define <8 x i64> @mul_v8i64_sext(<8 x i16> %val1, <8 x i32> %val2) {
 ;
 ; SSE41-LABEL: mul_v8i64_sext:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,1,2,3]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; SSE41-NEXT:    pmovsxwq %xmm3, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE41-NEXT:    pmovsxwq %xmm3, %xmm5
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,1,1]
 ; SSE41-NEXT:    pmovsxwq %xmm3, %xmm6
 ; SSE41-NEXT:    pmovsxwq %xmm0, %xmm7
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,2,3,3]

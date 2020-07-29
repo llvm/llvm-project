@@ -15,7 +15,7 @@ define float @PR37890_v4f32(<4 x float> %a)  {
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    addps %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -132,7 +132,7 @@ define float @PR37890_v8f32(<8 x float> %a)  {
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    addps %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -276,7 +276,7 @@ define float @PR37890_v16f32(<16 x float> %a)  {
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
 ; SSE2-NEXT:    addps %xmm1, %xmm2
 ; SSE2-NEXT:    movaps %xmm2, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm2[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm2[1,1]
 ; SSE2-NEXT:    addss %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;

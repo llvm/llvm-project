@@ -525,9 +525,9 @@ define <4 x float> @f19(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    pxor {{.*}}(%rip), %xmm0
 ; NOFMA-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; NOFMA-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; NOFMA-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
+; NOFMA-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
@@ -546,11 +546,11 @@ define <4 x float> @f19(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; NOFMA-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
-; NOFMA-NEXT:    pshufd $229, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; NOFMA-NEXT:    # xmm0 = mem[1,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
+; NOFMA-NEXT:    pshufd $85, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; NOFMA-NEXT:    # xmm0 = mem[1,1,1,1]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; NOFMA-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -629,9 +629,9 @@ define <4 x float> @f21(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    pxor {{.*}}(%rip), %xmm2
 ; NOFMA-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; NOFMA-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; NOFMA-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; NOFMA-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -650,11 +650,11 @@ define <4 x float> @f21(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; NOFMA-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; NOFMA-NEXT:    pshufd $229, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
-; NOFMA-NEXT:    # xmm2 = mem[1,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; NOFMA-NEXT:    pshufd $85, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
+; NOFMA-NEXT:    # xmm2 = mem[1,1,1,1]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; NOFMA-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -735,9 +735,9 @@ define <4 x float> @f23(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    pxor %xmm3, %xmm2
 ; NOFMA-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; NOFMA-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; NOFMA-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; NOFMA-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; NOFMA-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,3,3,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
 ; NOFMA-NEXT:    pshufd $238, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -755,12 +755,12 @@ define <4 x float> @f23(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; NOFMA-NEXT:    pshufd $229, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; NOFMA-NEXT:    # xmm0 = mem[1,1,2,3]
-; NOFMA-NEXT:    pshufd $229, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
-; NOFMA-NEXT:    # xmm2 = mem[1,1,2,3]
+; NOFMA-NEXT:    pshufd $85, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; NOFMA-NEXT:    # xmm0 = mem[1,1,1,1]
+; NOFMA-NEXT:    pshufd $85, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
+; NOFMA-NEXT:    # xmm2 = mem[1,1,1,1]
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; NOFMA-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -842,9 +842,9 @@ define <4 x float> @f25(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; NOFMA-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; NOFMA-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -863,11 +863,11 @@ define <4 x float> @f25(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; NOFMA-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; NOFMA-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; NOFMA-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -960,9 +960,9 @@ define <4 x float> @f27(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    pxor %xmm3, %xmm2
 ; NOFMA-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; NOFMA-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; NOFMA-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; NOFMA-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; NOFMA-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,3,3,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
 ; NOFMA-NEXT:    pshufd $238, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -980,12 +980,12 @@ define <4 x float> @f27(<4 x float> %0, <4 x float> %1, <4 x float> %2) #0 {
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; NOFMA-NEXT:    pshufd $229, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; NOFMA-NEXT:    # xmm0 = mem[1,1,2,3]
-; NOFMA-NEXT:    pshufd $229, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
-; NOFMA-NEXT:    # xmm2 = mem[1,1,2,3]
+; NOFMA-NEXT:    pshufd $85, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; NOFMA-NEXT:    # xmm0 = mem[1,1,1,1]
+; NOFMA-NEXT:    pshufd $85, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
+; NOFMA-NEXT:    # xmm2 = mem[1,1,1,1]
 ; NOFMA-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; NOFMA-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; NOFMA-NEXT:    callq fmaf
 ; NOFMA-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; NOFMA-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]

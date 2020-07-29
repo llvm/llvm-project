@@ -182,8 +182,8 @@ define float @ext_1(<4 x float> %v) nounwind {
 ; X86-SSE-LABEL: ext_1:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    pushl %eax ## encoding: [0x50]
-; X86-SSE-NEXT:    shufps $231, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xe7]
-; X86-SSE-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X86-SSE-NEXT:    shufps $255, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xff]
+; X86-SSE-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X86-SSE-NEXT:    addss LCPI5_0, %xmm0 ## encoding: [0xf3,0x0f,0x58,0x05,A,A,A,A]
 ; X86-SSE-NEXT:    ## fixup A - offset: 4, value: LCPI5_0, kind: FK_Data_4
 ; X86-SSE-NEXT:    movss %xmm0, (%esp) ## encoding: [0xf3,0x0f,0x11,0x04,0x24]
@@ -194,8 +194,8 @@ define float @ext_1(<4 x float> %v) nounwind {
 ; X86-AVX1-LABEL: ext_1:
 ; X86-AVX1:       ## %bb.0:
 ; X86-AVX1-NEXT:    pushl %eax ## encoding: [0x50]
-; X86-AVX1-NEXT:    vpermilps $231, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; X86-AVX1-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X86-AVX1-NEXT:    vpermilps $255, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; X86-AVX1-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X86-AVX1-NEXT:    vaddss LCPI5_0, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x58,0x05,A,A,A,A]
 ; X86-AVX1-NEXT:    ## fixup A - offset: 4, value: LCPI5_0, kind: FK_Data_4
 ; X86-AVX1-NEXT:    vmovss %xmm0, (%esp) ## encoding: [0xc5,0xfa,0x11,0x04,0x24]
@@ -206,8 +206,8 @@ define float @ext_1(<4 x float> %v) nounwind {
 ; X86-AVX512-LABEL: ext_1:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    pushl %eax ## encoding: [0x50]
-; X86-AVX512-NEXT:    vpermilps $231, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; X86-AVX512-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X86-AVX512-NEXT:    vpermilps $255, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; X86-AVX512-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X86-AVX512-NEXT:    vaddss LCPI5_0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x58,0x05,A,A,A,A]
 ; X86-AVX512-NEXT:    ## fixup A - offset: 4, value: LCPI5_0, kind: FK_Data_4
 ; X86-AVX512-NEXT:    vmovss %xmm0, (%esp) ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x04,0x24]
@@ -217,24 +217,24 @@ define float @ext_1(<4 x float> %v) nounwind {
 ;
 ; X64-SSE-LABEL: ext_1:
 ; X64-SSE:       ## %bb.0:
-; X64-SSE-NEXT:    shufps $231, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xe7]
-; X64-SSE-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X64-SSE-NEXT:    shufps $255, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xff]
+; X64-SSE-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X64-SSE-NEXT:    addss {{.*}}(%rip), %xmm0 ## encoding: [0xf3,0x0f,0x58,0x05,A,A,A,A]
 ; X64-SSE-NEXT:    ## fixup A - offset: 4, value: LCPI5_0-4, kind: reloc_riprel_4byte
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: ext_1:
 ; X64-AVX1:       ## %bb.0:
-; X64-AVX1-NEXT:    vpermilps $231, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; X64-AVX1-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X64-AVX1-NEXT:    vpermilps $255, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; X64-AVX1-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X64-AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x58,0x05,A,A,A,A]
 ; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: LCPI5_0-4, kind: reloc_riprel_4byte
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: ext_1:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vpermilps $231, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; X64-AVX512-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X64-AVX512-NEXT:    vpermilps $255, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; X64-AVX512-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X64-AVX512-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x58,0x05,A,A,A,A]
 ; X64-AVX512-NEXT:    ## fixup A - offset: 4, value: LCPI5_0-4, kind: reloc_riprel_4byte
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
@@ -247,8 +247,8 @@ define float @ext_2(<4 x float> %v) nounwind {
 ; X86-SSE-LABEL: ext_2:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    pushl %eax ## encoding: [0x50]
-; X86-SSE-NEXT:    shufps $231, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xe7]
-; X86-SSE-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X86-SSE-NEXT:    shufps $255, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xff]
+; X86-SSE-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X86-SSE-NEXT:    movss %xmm0, (%esp) ## encoding: [0xf3,0x0f,0x11,0x04,0x24]
 ; X86-SSE-NEXT:    flds (%esp) ## encoding: [0xd9,0x04,0x24]
 ; X86-SSE-NEXT:    popl %eax ## encoding: [0x58]
@@ -257,8 +257,8 @@ define float @ext_2(<4 x float> %v) nounwind {
 ; X86-AVX1-LABEL: ext_2:
 ; X86-AVX1:       ## %bb.0:
 ; X86-AVX1-NEXT:    pushl %eax ## encoding: [0x50]
-; X86-AVX1-NEXT:    vpermilps $231, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; X86-AVX1-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X86-AVX1-NEXT:    vpermilps $255, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; X86-AVX1-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X86-AVX1-NEXT:    vmovss %xmm0, (%esp) ## encoding: [0xc5,0xfa,0x11,0x04,0x24]
 ; X86-AVX1-NEXT:    flds (%esp) ## encoding: [0xd9,0x04,0x24]
 ; X86-AVX1-NEXT:    popl %eax ## encoding: [0x58]
@@ -267,8 +267,8 @@ define float @ext_2(<4 x float> %v) nounwind {
 ; X86-AVX512-LABEL: ext_2:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    pushl %eax ## encoding: [0x50]
-; X86-AVX512-NEXT:    vpermilps $231, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; X86-AVX512-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X86-AVX512-NEXT:    vpermilps $255, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; X86-AVX512-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X86-AVX512-NEXT:    vmovss %xmm0, (%esp) ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x11,0x04,0x24]
 ; X86-AVX512-NEXT:    flds (%esp) ## encoding: [0xd9,0x04,0x24]
 ; X86-AVX512-NEXT:    popl %eax ## encoding: [0x58]
@@ -276,20 +276,20 @@ define float @ext_2(<4 x float> %v) nounwind {
 ;
 ; X64-SSE-LABEL: ext_2:
 ; X64-SSE:       ## %bb.0:
-; X64-SSE-NEXT:    shufps $231, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xe7]
-; X64-SSE-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X64-SSE-NEXT:    shufps $255, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xff]
+; X64-SSE-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: ext_2:
 ; X64-AVX1:       ## %bb.0:
-; X64-AVX1-NEXT:    vpermilps $231, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; X64-AVX1-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X64-AVX1-NEXT:    vpermilps $255, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; X64-AVX1-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: ext_2:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vpermilps $231, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; X64-AVX512-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; X64-AVX512-NEXT:    vpermilps $255, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; X64-AVX512-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %s = extractelement <4 x float> %v, i32 3
   ret float %s
@@ -636,8 +636,8 @@ define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, <4 x i32>* nocaptu
 ; X86-SSE-LABEL: pinsrd_from_shufflevector_i32:
 ; X86-SSE:       ## %bb.0: ## %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-SSE-NEXT:    pshufd $36, (%eax), %xmm1 ## encoding: [0x66,0x0f,0x70,0x08,0x24]
-; X86-SSE-NEXT:    ## xmm1 = mem[0,1,2,0]
+; X86-SSE-NEXT:    pshufd $0, (%eax), %xmm1 ## encoding: [0x66,0x0f,0x70,0x08,0x00]
+; X86-SSE-NEXT:    ## xmm1 = mem[0,0,0,0]
 ; X86-SSE-NEXT:    pblendw $192, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0e,0xc1,0xc0]
 ; X86-SSE-NEXT:    ## xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
@@ -645,8 +645,8 @@ define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, <4 x i32>* nocaptu
 ; X86-AVX1-LABEL: pinsrd_from_shufflevector_i32:
 ; X86-AVX1:       ## %bb.0: ## %entry
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX1-NEXT:    vpermilps $36, (%eax), %xmm1 ## encoding: [0xc4,0xe3,0x79,0x04,0x08,0x24]
-; X86-AVX1-NEXT:    ## xmm1 = mem[0,1,2,0]
+; X86-AVX1-NEXT:    vpermilps $0, (%eax), %xmm1 ## encoding: [0xc4,0xe3,0x79,0x04,0x08,0x00]
+; X86-AVX1-NEXT:    ## xmm1 = mem[0,0,0,0]
 ; X86-AVX1-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; X86-AVX1-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
@@ -654,32 +654,32 @@ define <4 x i32> @pinsrd_from_shufflevector_i32(<4 x i32> %a, <4 x i32>* nocaptu
 ; X86-AVX512-LABEL: pinsrd_from_shufflevector_i32:
 ; X86-AVX512:       ## %bb.0: ## %entry
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX512-NEXT:    vpermilps $36, (%eax), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0x08,0x24]
-; X86-AVX512-NEXT:    ## xmm1 = mem[0,1,2,0]
+; X86-AVX512-NEXT:    vmovaps (%eax), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x08]
+; X86-AVX512-NEXT:    vbroadcastss %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0xc9]
 ; X86-AVX512-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; X86-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: pinsrd_from_shufflevector_i32:
 ; X64-SSE:       ## %bb.0: ## %entry
-; X64-SSE-NEXT:    pshufd $36, (%rdi), %xmm1 ## encoding: [0x66,0x0f,0x70,0x0f,0x24]
-; X64-SSE-NEXT:    ## xmm1 = mem[0,1,2,0]
+; X64-SSE-NEXT:    pshufd $0, (%rdi), %xmm1 ## encoding: [0x66,0x0f,0x70,0x0f,0x00]
+; X64-SSE-NEXT:    ## xmm1 = mem[0,0,0,0]
 ; X64-SSE-NEXT:    pblendw $192, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0e,0xc1,0xc0]
 ; X64-SSE-NEXT:    ## xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: pinsrd_from_shufflevector_i32:
 ; X64-AVX1:       ## %bb.0: ## %entry
-; X64-AVX1-NEXT:    vpermilps $36, (%rdi), %xmm1 ## encoding: [0xc4,0xe3,0x79,0x04,0x0f,0x24]
-; X64-AVX1-NEXT:    ## xmm1 = mem[0,1,2,0]
+; X64-AVX1-NEXT:    vpermilps $0, (%rdi), %xmm1 ## encoding: [0xc4,0xe3,0x79,0x04,0x0f,0x00]
+; X64-AVX1-NEXT:    ## xmm1 = mem[0,0,0,0]
 ; X64-AVX1-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; X64-AVX1-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: pinsrd_from_shufflevector_i32:
 ; X64-AVX512:       ## %bb.0: ## %entry
-; X64-AVX512-NEXT:    vpermilps $36, (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0x0f,0x24]
-; X64-AVX512-NEXT:    ## xmm1 = mem[0,1,2,0]
+; X64-AVX512-NEXT:    vmovaps (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x0f]
+; X64-AVX512-NEXT:    vbroadcastss %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0xc9]
 ; X64-AVX512-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
@@ -1164,8 +1164,8 @@ define <4 x i32> @i32_shuf_XYW0(<4 x i32> %x, <4 x i32> %a) {
 define <4 x i32> @i32_shuf_W00W(<4 x i32> %x, <4 x i32> %a) {
 ; SSE-LABEL: i32_shuf_W00W:
 ; SSE:       ## %bb.0:
-; SSE-NEXT:    pshufd $231, %xmm0, %xmm1 ## encoding: [0x66,0x0f,0x70,0xc8,0xe7]
-; SSE-NEXT:    ## xmm1 = xmm0[3,1,2,3]
+; SSE-NEXT:    pshufd $255, %xmm0, %xmm1 ## encoding: [0x66,0x0f,0x70,0xc8,0xff]
+; SSE-NEXT:    ## xmm1 = xmm0[3,3,3,3]
 ; SSE-NEXT:    pxor %xmm0, %xmm0 ## encoding: [0x66,0x0f,0xef,0xc0]
 ; SSE-NEXT:    pblendw $195, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0e,0xc1,0xc3]
 ; SSE-NEXT:    ## xmm0 = xmm1[0,1],xmm0[2,3,4,5],xmm1[6,7]
@@ -1173,8 +1173,8 @@ define <4 x i32> @i32_shuf_W00W(<4 x i32> %x, <4 x i32> %a) {
 ;
 ; AVX1-LABEL: i32_shuf_W00W:
 ; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpermilps $231, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; AVX1-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; AVX1-NEXT:    vpermilps $255, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; AVX1-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1 ## encoding: [0xc5,0xf0,0x57,0xc9]
 ; AVX1-NEXT:    vblendps $6, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x06]
 ; AVX1-NEXT:    ## xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
@@ -1182,8 +1182,8 @@ define <4 x i32> @i32_shuf_W00W(<4 x i32> %x, <4 x i32> %a) {
 ;
 ; AVX512-LABEL: i32_shuf_W00W:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpermilps $231, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xe7]
-; AVX512-NEXT:    ## xmm0 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpermilps $255, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xff]
+; AVX512-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf0,0x57,0xc9]
 ; AVX512-NEXT:    vblendps $6, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x06]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
@@ -1202,8 +1202,8 @@ define <4 x i32> @i32_shuf_X00A(<4 x i32> %x, <4 x i32> %a) {
 ; SSE-NEXT:    pxor %xmm2, %xmm2 ## encoding: [0x66,0x0f,0xef,0xd2]
 ; SSE-NEXT:    pblendw $252, %xmm2, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0e,0xc2,0xfc]
 ; SSE-NEXT:    ## xmm0 = xmm0[0,1],xmm2[2,3,4,5,6,7]
-; SSE-NEXT:    pshufd $36, %xmm1, %xmm1 ## encoding: [0x66,0x0f,0x70,0xc9,0x24]
-; SSE-NEXT:    ## xmm1 = xmm1[0,1,2,0]
+; SSE-NEXT:    pshufd $0, %xmm1, %xmm1 ## encoding: [0x66,0x0f,0x70,0xc9,0x00]
+; SSE-NEXT:    ## xmm1 = xmm1[0,0,0,0]
 ; SSE-NEXT:    pblendw $192, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0e,0xc1,0xc0]
 ; SSE-NEXT:    ## xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
@@ -1213,8 +1213,8 @@ define <4 x i32> @i32_shuf_X00A(<4 x i32> %x, <4 x i32> %a) {
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2 ## encoding: [0xc5,0xe8,0x57,0xd2]
 ; AVX1-NEXT:    vblendps $1, %xmm0, %xmm2, %xmm0 ## encoding: [0xc4,0xe3,0x69,0x0c,0xc0,0x01]
 ; AVX1-NEXT:    ## xmm0 = xmm0[0],xmm2[1,2,3]
-; AVX1-NEXT:    vpermilps $36, %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x79,0x04,0xc9,0x24]
-; AVX1-NEXT:    ## xmm1 = xmm1[0,1,2,0]
+; AVX1-NEXT:    vpermilps $0, %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x79,0x04,0xc9,0x00]
+; AVX1-NEXT:    ## xmm1 = xmm1[0,0,0,0]
 ; AVX1-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; AVX1-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
@@ -1224,8 +1224,7 @@ define <4 x i32> @i32_shuf_X00A(<4 x i32> %x, <4 x i32> %a) {
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2 ## encoding: [0xc5,0xe8,0x57,0xd2]
 ; AVX512-NEXT:    vblendps $1, %xmm0, %xmm2, %xmm0 ## encoding: [0xc4,0xe3,0x69,0x0c,0xc0,0x01]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm2[1,2,3]
-; AVX512-NEXT:    vpermilps $36, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x04,0xc9,0x24]
-; AVX512-NEXT:    ## xmm1 = xmm1[0,1,2,0]
+; AVX512-NEXT:    vbroadcastss %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0xc9]
 ; AVX512-NEXT:    vblendps $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x08]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
@@ -1241,8 +1240,8 @@ define <4 x i32> @i32_shuf_X00X(<4 x i32> %x, <4 x i32> %a) {
 ; SSE-LABEL: i32_shuf_X00X:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    pxor %xmm1, %xmm1 ## encoding: [0x66,0x0f,0xef,0xc9]
-; SSE-NEXT:    pshufd $36, %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x70,0xc0,0x24]
-; SSE-NEXT:    ## xmm0 = xmm0[0,1,2,0]
+; SSE-NEXT:    pshufd $0, %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x70,0xc0,0x00]
+; SSE-NEXT:    ## xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    pblendw $60, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0e,0xc1,0x3c]
 ; SSE-NEXT:    ## xmm0 = xmm0[0,1],xmm1[2,3,4,5],xmm0[6,7]
 ; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
@@ -1250,8 +1249,8 @@ define <4 x i32> @i32_shuf_X00X(<4 x i32> %x, <4 x i32> %a) {
 ; AVX1-LABEL: i32_shuf_X00X:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1 ## encoding: [0xc5,0xf0,0x57,0xc9]
-; AVX1-NEXT:    vpermilps $36, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x24]
-; AVX1-NEXT:    ## xmm0 = xmm0[0,1,2,0]
+; AVX1-NEXT:    vpermilps $0, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x00]
+; AVX1-NEXT:    ## xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vblendps $6, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x06]
 ; AVX1-NEXT:    ## xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
 ; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
@@ -1276,8 +1275,8 @@ define <4 x i32> @i32_shuf_X0YC(<4 x i32> %x, <4 x i32> %a) {
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    pmovzxdq %xmm0, %xmm2 ## encoding: [0x66,0x0f,0x38,0x35,0xd0]
 ; SSE-NEXT:    ## xmm2 = xmm0[0],zero,xmm0[1],zero
-; SSE-NEXT:    pshufd $164, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x70,0xc1,0xa4]
-; SSE-NEXT:    ## xmm0 = xmm1[0,1,2,2]
+; SSE-NEXT:    pshufd $170, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x70,0xc1,0xaa]
+; SSE-NEXT:    ## xmm0 = xmm1[2,2,2,2]
 ; SSE-NEXT:    pblendw $63, %xmm2, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0e,0xc2,0x3f]
 ; SSE-NEXT:    ## xmm0 = xmm2[0,1,2,3,4,5],xmm0[6,7]
 ; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
@@ -1286,8 +1285,8 @@ define <4 x i32> @i32_shuf_X0YC(<4 x i32> %x, <4 x i32> %a) {
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vpmovzxdq %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x35,0xc0]
 ; AVX1-NEXT:    ## xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX1-NEXT:    vpshufd $164, %xmm1, %xmm1 ## encoding: [0xc5,0xf9,0x70,0xc9,0xa4]
-; AVX1-NEXT:    ## xmm1 = xmm1[0,1,2,2]
+; AVX1-NEXT:    vpshufd $170, %xmm1, %xmm1 ## encoding: [0xc5,0xf9,0x70,0xc9,0xaa]
+; AVX1-NEXT:    ## xmm1 = xmm1[2,2,2,2]
 ; AVX1-NEXT:    vpblendw $192, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0e,0xc1,0xc0]
 ; AVX1-NEXT:    ## xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
@@ -1296,8 +1295,8 @@ define <4 x i32> @i32_shuf_X0YC(<4 x i32> %x, <4 x i32> %a) {
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vpmovzxdq %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x35,0xc0]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX512-NEXT:    vpshufd $164, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x70,0xc9,0xa4]
-; AVX512-NEXT:    ## xmm1 = xmm1[0,1,2,2]
+; AVX512-NEXT:    vpshufd $170, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x70,0xc9,0xaa]
+; AVX512-NEXT:    ## xmm1 = xmm1[2,2,2,2]
 ; AVX512-NEXT:    vpblendd $8, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x02,0xc1,0x08]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]

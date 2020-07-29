@@ -1248,7 +1248,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; AVX1-NEXT:    vpsllw %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsllw %xmm4, %xmm0, %xmm4
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
-; AVX1-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[0,0,2,3,4,5,6,7]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [16,16,16,16,16,16,16,16]
 ; AVX1-NEXT:    vpsubw %xmm2, %xmm4, %xmm4
@@ -1378,7 +1378,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; XOPAVX1-NEXT:    vpsllw %xmm4, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpsllw %xmm4, %xmm0, %xmm4
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
-; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[0,0,2,3,4,5,6,7]
+; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
 ; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [16,16,16,16,16,16,16,16]
 ; XOPAVX1-NEXT:    vpsubw %xmm2, %xmm4, %xmm4
@@ -1674,7 +1674,7 @@ define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
 ; AVX1-NEXT:    vpcmpeqb %xmm5, %xmm8, %xmm5
 ; AVX1-NEXT:    vpmovsxbd %xmm5, %xmm6
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,2,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,1,1]
 ; AVX1-NEXT:    vpmovsxbd %xmm5, %xmm5
 ; AVX1-NEXT:    vmovdqu 4096(%rdi,%rax,4), %xmm7
 ; AVX1-NEXT:    vmovdqu 4112(%rdi,%rax,4), %xmm0
@@ -1876,7 +1876,7 @@ define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
 ; XOPAVX1-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
 ; XOPAVX1-NEXT:    vpcomeqb %xmm2, %xmm5, %xmm5
 ; XOPAVX1-NEXT:    vpmovsxbd %xmm5, %xmm6
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,2,3]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,1,1]
 ; XOPAVX1-NEXT:    vpmovsxbd %xmm5, %xmm5
 ; XOPAVX1-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm5
 ; XOPAVX1-NEXT:    vprotd %xmm5, 4112(%rdi,%rax,4), %xmm5
