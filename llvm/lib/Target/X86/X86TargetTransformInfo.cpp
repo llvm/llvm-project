@@ -2272,6 +2272,8 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::CTLZ,       MVT::v16i8,   4 },
   };
   static const CostTblEntry AVX512BWCostTbl[] = {
+    { ISD::ABS,        MVT::v32i16,  1 },
+    { ISD::ABS,        MVT::v64i8,   1 },
     { ISD::BITREVERSE, MVT::v8i64,   5 },
     { ISD::BITREVERSE, MVT::v16i32,  5 },
     { ISD::BITREVERSE, MVT::v32i16,  5 },
@@ -2298,6 +2300,12 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::USUBSAT,    MVT::v64i8,   1 },
   };
   static const CostTblEntry AVX512CostTbl[] = {
+    { ISD::ABS,        MVT::v8i64,   1 },
+    { ISD::ABS,        MVT::v16i32,  1 },
+    { ISD::ABS,        MVT::v32i16,  2 }, // FIXME: include split
+    { ISD::ABS,        MVT::v64i8,   2 }, // FIXME: include split
+    { ISD::ABS,        MVT::v4i64,   1 },
+    { ISD::ABS,        MVT::v2i64,   1 },
     { ISD::BITREVERSE, MVT::v8i64,  36 },
     { ISD::BITREVERSE, MVT::v16i32, 24 },
     { ISD::BITREVERSE, MVT::v32i16, 10 },
@@ -2354,6 +2362,10 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::BITREVERSE, MVT::i8,      3 }
   };
   static const CostTblEntry AVX2CostTbl[] = {
+    { ISD::ABS,        MVT::v4i64,   2 }, // VBLENDVPD(X,VPSUBQ(0,X),X)
+    { ISD::ABS,        MVT::v8i32,   1 },
+    { ISD::ABS,        MVT::v16i16,  1 },
+    { ISD::ABS,        MVT::v32i8,   1 },
     { ISD::BITREVERSE, MVT::v4i64,   5 },
     { ISD::BITREVERSE, MVT::v8i32,   5 },
     { ISD::BITREVERSE, MVT::v16i16,  5 },
@@ -2391,6 +2403,10 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::FSQRT,      MVT::v4f64,  28 }, // Haswell from http://www.agner.org/
   };
   static const CostTblEntry AVX1CostTbl[] = {
+    { ISD::ABS,        MVT::v4i64,   6 }, // VBLENDVPD(X,VPSUBQ(0,X),X)
+    { ISD::ABS,        MVT::v8i32,   3 },
+    { ISD::ABS,        MVT::v16i16,  3 },
+    { ISD::ABS,        MVT::v32i8,   3 },
     { ISD::BITREVERSE, MVT::v4i64,  12 }, // 2 x 128-bit Op + extract/insert
     { ISD::BITREVERSE, MVT::v8i32,  12 }, // 2 x 128-bit Op + extract/insert
     { ISD::BITREVERSE, MVT::v16i16, 12 }, // 2 x 128-bit Op + extract/insert
@@ -2446,12 +2462,16 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::FSQRT, MVT::v2f64, 70 }, // sqrtpd
   };
   static const CostTblEntry SSE42CostTbl[] = {
+    { ISD::ABS,        MVT::v2i64,   3 }, // BLENDVPD(X,PSUBQ(0,X),X)
     { ISD::USUBSAT,    MVT::v4i32,   2 }, // pmaxud + psubd
     { ISD::UADDSAT,    MVT::v4i32,   3 }, // not + pminud + paddd
     { ISD::FSQRT,      MVT::f32,    18 }, // Nehalem from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  18 }, // Nehalem from http://www.agner.org/
   };
   static const CostTblEntry SSSE3CostTbl[] = {
+    { ISD::ABS,        MVT::v4i32,   1 },
+    { ISD::ABS,        MVT::v8i16,   1 },
+    { ISD::ABS,        MVT::v16i8,   1 },
     { ISD::BITREVERSE, MVT::v2i64,   5 },
     { ISD::BITREVERSE, MVT::v4i32,   5 },
     { ISD::BITREVERSE, MVT::v8i16,   5 },
@@ -2473,6 +2493,10 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
     { ISD::CTTZ,       MVT::v16i8,   9 }
   };
   static const CostTblEntry SSE2CostTbl[] = {
+    { ISD::ABS,        MVT::v2i64,   4 },
+    { ISD::ABS,        MVT::v4i32,   3 },
+    { ISD::ABS,        MVT::v8i16,   3 },
+    { ISD::ABS,        MVT::v16i8,   3 },
     { ISD::BITREVERSE, MVT::v2i64,  29 },
     { ISD::BITREVERSE, MVT::v4i32,  27 },
     { ISD::BITREVERSE, MVT::v8i16,  27 },
@@ -2570,6 +2594,9 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
   unsigned ISD = ISD::DELETED_NODE;
   switch (IID) {
   default:
+    break;
+  case Intrinsic::abs:
+    ISD = ISD::ABS;
     break;
   case Intrinsic::bitreverse:
     ISD = ISD::BITREVERSE;
