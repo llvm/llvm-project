@@ -30,44 +30,6 @@
 // a non-inversed graph, the children are naturally the successors when
 // InverseEdge is false and the predecessors when InverseEdge is true.
 
-// We define two base clases that call into GraphDiff, one for successors
-// (CFGSuccessors), where InverseEdge is false, and one for predecessors
-// (CFGPredecessors), where InverseEdge is true.
-// FIXME: Further refactoring may merge the two base classes into a single one
-// templated / parametrized on using succ_iterator/pred_iterator and false/true
-// for the InverseEdge.
-
-// CFGViewChildren and CFGViewPredecessors, both can be parametrized to
-// consider the graph inverted or not (i.e. InverseGraph). Successors
-// implicitly has InverseEdge = false and Predecessors implicitly has
-// InverseEdge = true (see calls to GraphDiff methods in there). The GraphTraits
-// instantiations that follow define the value of InverseGraph.
-
-// GraphTraits instantiations:
-// - GraphDiff<BasicBlock *> is equivalent to InverseGraph = false
-// - GraphDiff<Inverse<BasicBlock *>> is equivalent to InverseGraph = true
-// - second pair item is BasicBlock *, then InverseEdge = false (so it inherits
-// from CFGViewChildren).
-// - second pair item is Inverse<BasicBlock *>, then InverseEdge = true (so it
-// inherits from CFGViewPredecessors).
-
-// The 4 GraphTraits are as follows:
-// 1. std::pair<const GraphDiff<BasicBlock *> *, BasicBlock *>> :
-//        CFGViewChildren<false>
-// Regular CFG, children means successors, InverseGraph = false,
-// InverseEdge = false.
-// 2. std::pair<const GraphDiff<Inverse<BasicBlock *>> *, BasicBlock *>> :
-//        CFGViewChildren<true>
-// Reverse the graph, get successors but reverse-apply updates,
-// InverseGraph = true, InverseEdge = false.
-// 3. std::pair<const GraphDiff<BasicBlock *> *, Inverse<BasicBlock *>>> :
-//        CFGViewPredecessors<false>
-// Regular CFG, reverse edges, so children mean predecessors,
-// InverseGraph = false, InverseEdge = true.
-// 4. std::pair<const GraphDiff<Inverse<BasicBlock *>> *, Inverse<BasicBlock *>>
-//        : CFGViewPredecessors<true>
-// Reverse the graph and the edges, InverseGraph = true, InverseEdge = true.
-
 namespace llvm {
 
 namespace detail {
@@ -87,9 +49,9 @@ template <bool B, typename Range> auto reverse_if(Range &&R) {
 }
 } // namespace detail
 
-// GraphDiff defines a CFG snapshot: given a set of Update<NodePtr>, provide
-// utilities to skip edges marked as deleted and return a set of edges marked as
-// newly inserted. The current diff treats the CFG as a graph rather than a
+// GraphDiff defines a CFG snapshot: given a set of Update<NodePtr>, provides
+// a getChildren method to get a Node's children based on the additional updates
+// in the snapshot. The current diff treats the CFG as a graph rather than a
 // multigraph. Added edges are pruned to be unique, and deleted edges will
 // remove all existing edges between two blocks.
 template <typename NodePtr, bool InverseGraph = false> class GraphDiff {
@@ -191,7 +153,6 @@ public:
   }
 
   using VectRet = SmallVector<NodePtr, 8>;
-
   template <bool InverseEdge> VectRet getChildren(NodePtr N) const {
     using DirectedNodeT =
         std::conditional_t<InverseEdge, Inverse<NodePtr>, NodePtr>;
@@ -228,59 +189,6 @@ public:
   LLVM_DUMP_METHOD void dump() const { print(dbgs()); }
 #endif
 };
-
-template <typename GraphT, bool InverseGraph = false, bool InverseEdge = false,
-          typename GT = GraphTraits<GraphT>>
-struct CFGViewChildren {
-  using DataRef = const GraphDiff<typename GT::NodeRef, InverseGraph> *;
-  using NodeRef = std::pair<DataRef, typename GT::NodeRef>;
-
-  template<typename Range>
-  static auto makeChildRange(Range &&R, DataRef DR) {
-    using Iter = WrappedPairNodeDataIterator<decltype(std::forward<Range>(R).begin()), NodeRef, DataRef>;
-    return make_range(Iter(R.begin(), DR), Iter(R.end(), DR));
-  }
-
-  static auto children(NodeRef N) {
-
-    // filter iterator init:
-    auto R = make_range(GT::child_begin(N.second), GT::child_end(N.second));
-    auto RR = detail::reverse_if<!InverseEdge>(R);
-    // This lambda is copied into the iterators and persists to callers, ensure
-    // captures are by value or otherwise have sufficient lifetime.
-    auto First = make_filter_range(makeChildRange(RR, N.first), [N](NodeRef C) {
-      return !C.first->ignoreChild(N.second, C.second, InverseEdge);
-    });
-
-    // new inserts iterator init:
-    auto InsertVec = N.first->getAddedChildren(N.second, InverseEdge);
-    auto Second = makeChildRange(InsertVec, N.first);
-
-    auto CR = concat<NodeRef>(First, Second);
-
-    // concat_range contains references to other ranges, returning it would
-    // leave those references dangling - the iterators contain
-    // other iterators by value so they're safe to return.
-    return make_range(CR.begin(), CR.end());
-  }
-
-  static auto child_begin(NodeRef N) {
-    return children(N).begin();
-  }
-
-  static auto child_end(NodeRef N) {
-    return children(N).end();
-  }
-
-  using ChildIteratorType = decltype(child_end(std::declval<NodeRef>()));
-};
-
-template <typename T, bool B>
-struct GraphTraits<std::pair<const GraphDiff<T, B> *, T>>
-    : CFGViewChildren<T, B> {};
-template <typename T, bool B>
-struct GraphTraits<std::pair<const GraphDiff<T, B> *, Inverse<T>>>
-    : CFGViewChildren<Inverse<T>, B, true> {};
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_CFGDIFF_H
