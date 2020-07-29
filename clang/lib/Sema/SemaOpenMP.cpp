@@ -5895,8 +5895,15 @@ ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
     return Call;
 
   ASTContext &Context = getASTContext();
-  OMPContext OMPCtx(getLangOpts().OpenMPIsDevice,
-                    Context.getTargetInfo().getTriple());
+  std::function<void(StringRef)> DiagUnknownTrait = [this,
+                                                     CE](StringRef ISATrait) {
+    // TODO Track the selector locations in a way that is accessible here to
+    // improve the diagnostic location.
+    Diag(CE->getBeginLoc(), diag::warn_unknown_declare_variant_isa_trait)
+        << ISATrait;
+  };
+  TargetOMPContext OMPCtx(Context, std::move(DiagUnknownTrait),
+                          getCurFunctionDecl());
 
   SmallVector<Expr *, 4> Exprs;
   SmallVector<VariantMatchInfo, 4> VMIs;
@@ -5908,7 +5915,8 @@ ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
       VariantMatchInfo VMI;
       OMPTraitInfo &TI = A->getTraitInfo();
       TI.getAsVariantMatchInfo(Context, VMI);
-      if (!isVariantApplicableInContext(VMI, OMPCtx, /* DeviceSetOnly */ false))
+      if (!isVariantApplicableInContext(VMI, OMPCtx,
+                                        /* DeviceSetOnly */ false))
         continue;
 
       VMIs.push_back(VMI);

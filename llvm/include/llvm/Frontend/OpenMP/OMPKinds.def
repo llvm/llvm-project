@@ -1071,7 +1071,11 @@ __OMP_TRAIT_PROPERTY(device, kind, any)
 
 __OMP_TRAIT_SELECTOR(device, isa, true)
 
-// TODO: What do we want for ISA?
+// We use "__ANY" as a placeholder in the isa property to denote the
+// conceptual "any", not the literal `any` used in kind. The string we
+// we use is not important except that it will show up in diagnostics.
+OMP_TRAIT_PROPERTY(device_isa___ANY, device, device_isa,
+                   "<any, entirely target dependent>")
 
 __OMP_TRAIT_SELECTOR(device, arch, true)
 

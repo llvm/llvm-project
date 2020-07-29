@@ -1278,6 +1278,11 @@ def warn_omp_declare_variant_string_literal_or_identifier
               "%select{set|selector|property}0; "
               "%select{set|selector|property}0 skipped">,
       InGroup<OpenMPClauses>;
+def warn_unknown_begin_declare_variant_isa_trait
+    : Warning<"isa trait '%0' is not known to the current target; verify the "
+              "spelling or consider restricting the context selector with the "
+              "'arch' selector further">,
+      InGroup<SourceUsesOpenMP>;
 def note_omp_declare_variant_ctx_options
     : Note<"context %select{set|selector|property}0 options are: %1">;
 def warn_omp_declare_variant_expected
