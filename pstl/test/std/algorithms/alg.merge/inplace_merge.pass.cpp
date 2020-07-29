@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 #include "support/pstl_test_config.h"
 
@@ -153,7 +153,7 @@ main()
         [](const MemoryChecker& val1, const MemoryChecker& val2){ return val1.value() == val2.value(); });
     EXPECT_FALSE(MemoryChecker::alive_objects() < 0, "wrong effect from inplace_merge: number of ctors calls < num of dtors calls");
     EXPECT_FALSE(MemoryChecker::alive_objects() > 0, "wrong effect from inplace_merge: number of ctors calls > num of dtors calls");
-    
+
     std::cout << done() << std::endl;
     return 0;
 }
