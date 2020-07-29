@@ -389,6 +389,7 @@ static void *enableMalloc(void *Unused) {
 
 TEST(ScudoWrappersCTest, DisableForkEnable) {
   pthread_t ThreadId;
+  Ready = false;
   EXPECT_EQ(pthread_create(&ThreadId, nullptr, &enableMalloc, nullptr), 0);
 
   // Wait for the thread to be warmed up.

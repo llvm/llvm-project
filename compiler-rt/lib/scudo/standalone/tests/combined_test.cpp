@@ -19,7 +19,7 @@
 
 static std::mutex Mutex;
 static std::condition_variable Cv;
-static bool Ready = false;
+static bool Ready;
 
 static constexpr scudo::Chunk::Origin Origin = scudo::Chunk::Origin::Malloc;
 
@@ -351,6 +351,7 @@ template <typename AllocatorT> static void stressAllocator(AllocatorT *A) {
 }
 
 template <class Config> static void testAllocatorThreaded() {
+  Ready = false;
   using AllocatorT = TestAllocator<Config>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
   std::thread Threads[32];
@@ -394,7 +395,7 @@ struct DeathConfig {
   typedef scudo::SizeClassAllocator64<DeathSizeClassMap, DeathRegionSizeLog>
       Primary;
   typedef scudo::MapAllocator<scudo::MapAllocatorNoCache> Secondary;
-  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U>;
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
 };
 
 TEST(ScudoCombinedTest, DeathCombined) {
