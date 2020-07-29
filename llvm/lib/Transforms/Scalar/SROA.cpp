@@ -3087,7 +3087,7 @@ private:
     if (II.isDroppable()) {
       assert(II.getIntrinsicID() == Intrinsic::assume && "Expected assume");
       // TODO For now we forget assumed information, this can be improved.
-      OldPtr->dropDroppableUsesByUser(II);
+      OldPtr->dropDroppableUsesIn(II);
       return true;
     }
 

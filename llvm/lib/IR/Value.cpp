@@ -175,25 +175,34 @@ void Value::dropDroppableUses(
   for (Use &U : uses())
     if (U.getUser()->isDroppable() && ShouldDrop(&U))
       ToBeEdited.push_back(&U);
-  for (Use *U : ToBeEdited) {
-    U->removeFromList();
-    if (auto *Assume = dyn_cast<IntrinsicInst>(U->getUser())) {
-      assert(Assume->getIntrinsicID() == Intrinsic::assume);
-      unsigned OpNo = U->getOperandNo();
-      if (OpNo == 0)
-        Assume->setOperand(0, ConstantInt::getTrue(Assume->getContext()));
-      else {
-        Assume->setOperand(OpNo, UndefValue::get(U->get()->getType()));
-        CallInst::BundleOpInfo &BOI = Assume->getBundleOpInfoForOperand(OpNo);
-        BOI.Tag = getContext().pImpl->getOrInsertBundleTag("ignore");
-      }
-    } else
-      llvm_unreachable("unkown droppable use");
+  for (Use *U : ToBeEdited)
+    dropDroppableUse(*U);
+}
+
+void Value::dropDroppableUsesIn(User &Usr) {
+  assert(Usr.isDroppable() && "Expected a droppable user!");
+  for (Use &UsrOp : Usr.operands()) {
+    if (UsrOp.get() == this)
+      dropDroppableUse(UsrOp);
   }
 }
 
-void Value::dropDroppableUsesByUser(const User &Usr) {
-  dropDroppableUses([&](const Use *U) { return U->getUser() == &Usr; });
+void Value::dropDroppableUse(Use &U) {
+  U.removeFromList();
+  if (auto *Assume = dyn_cast<IntrinsicInst>(U.getUser())) {
+    assert(Assume->getIntrinsicID() == Intrinsic::assume);
+    unsigned OpNo = U.getOperandNo();
+    if (OpNo == 0)
+      U.set(ConstantInt::getTrue(Assume->getContext()));
+    else {
+      U.set(UndefValue::get(U.get()->getType()));
+      CallInst::BundleOpInfo &BOI = Assume->getBundleOpInfoForOperand(OpNo);
+      BOI.Tag = getContext().pImpl->getOrInsertBundleTag("ignore");
+    }
+    return;
+  }
+
+  llvm_unreachable("unkown droppable use");
 }
 
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
