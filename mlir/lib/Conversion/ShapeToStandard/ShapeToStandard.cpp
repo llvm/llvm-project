@@ -57,6 +57,21 @@ public:
 } // namespace
 
 namespace {
+class ConstSizeOpConversion : public OpConversionPattern<ConstSizeOp> {
+public:
+  using OpConversionPattern<ConstSizeOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ConstSizeOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    rewriter.replaceOpWithNewOp<ConstantIndexOp>(op, op.value().getSExtValue());
+    return success();
+  }
+};
+} // namespace
+
+namespace {
 class ShapeOfOpConversion : public OpConversionPattern<ShapeOfOp> {
 public:
   using OpConversionPattern<ShapeOfOp>::OpConversionPattern;
@@ -135,6 +150,27 @@ LogicalResult ConstShapeOpConverter::matchAndRewrite(
   rewriter.replaceOpWithNewOp<TensorCastOp>(op, tensor, resultTy);
   return success();
 }
+
+namespace {
+class ToExtentTensorOpConversion
+    : public OpConversionPattern<ToExtentTensorOp> {
+public:
+  using OpConversionPattern<ToExtentTensorOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ToExtentTensorOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ToExtentTensorOpAdaptor adaptor(operands);
+
+    if (!adaptor.input().getType().isa<RankedTensorType>())
+      return rewriter.notifyMatchFailure(op, "input needs to be a tensor");
+
+    rewriter.replaceOpWithNewOp<TensorCastOp>(op, adaptor.input(),
+                                              op.getType());
+    return success();
+  }
+};
+} // namespace
 
 namespace {
 class GetExtentOpConverter : public OpConversionPattern<GetExtentOp> {
@@ -244,9 +280,11 @@ void mlir::populateShapeToStandardConversionPatterns(
       BinaryOpConversion<AddOp, AddIOp>,
       ConstShapeOpConverter,
       BinaryOpConversion<MulOp, MulIOp>,
+      ConstSizeOpConversion,
       GetExtentOpConverter,
       RankOpConverter,
-      ShapeOfOpConversion>(ctx);
+      ShapeOfOpConversion,
+      ToExtentTensorOpConversion>(ctx);
   // clang-format on
 }
 

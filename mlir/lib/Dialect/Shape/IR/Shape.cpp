@@ -753,7 +753,7 @@ OpFoldResult SizeToIndexOp::fold(ArrayRef<Attribute> operands) {
   // `IntegerAttr`s which makes constant folding simple.
   if (Attribute arg = operands[0])
     return arg;
-  return {};
+  return impl::foldCastOp(*this);
 }
 
 void SizeToIndexOp::getCanonicalizationPatterns(
@@ -812,7 +812,7 @@ LogicalResult SplitAtOp::fold(ArrayRef<Attribute> operands,
 
 OpFoldResult ToExtentTensorOp::fold(ArrayRef<Attribute> operands) {
   if (!operands[0])
-    return nullptr;
+    return impl::foldCastOp(*this);
   Builder builder(getContext());
   auto shape = llvm::to_vector<6>(
       operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());

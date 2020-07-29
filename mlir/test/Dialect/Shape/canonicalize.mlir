@@ -774,3 +774,22 @@ func @fold_mul_mixed() -> !shape.size {
   return %result : !shape.size
 }
 
+// -----
+
+// Fold index_cast when already on index.
+// CHECK-LABEL: @fold_index_cast_on_index
+func @fold_index_cast_on_index(%arg: index) -> index {
+  // CHECK-NOT: size_to_index
+  %casted = shape.size_to_index %arg : index
+  return %casted : index
+}
+
+// -----
+
+// Fold to_extent_tensor when already on tensor.
+// CHECK-LABEL: @fold_to_extent_tensor_on_tensor
+func @fold_to_extent_tensor_on_tensor(%arg: tensor<?xindex>) -> tensor<?xindex> {
+  // CHECK-NOT: to_extent_tensor
+  %casted = shape.to_extent_tensor %arg : tensor<?xindex> -> tensor<?xindex>
+  return %casted : tensor<?xindex>
+}
