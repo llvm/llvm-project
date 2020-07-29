@@ -121,7 +121,7 @@ LogicalResult
 ReduceOpConverter::matchAndRewrite(shape::ReduceOp op, ArrayRef<Value> operands,
                                    ConversionPatternRewriter &rewriter) const {
   // For now, this lowering is only defined on `tensor<?xindex>` operands.
-  if (!op.shape().getType().isa<RankedTensorType>())
+  if (op.shape().getType().isa<ShapeType>())
     return failure();
 
   auto loc = op.getLoc();
@@ -171,12 +171,15 @@ public:
 LogicalResult
 ShapeOfOpConverter::matchAndRewrite(ShapeOfOp op, ArrayRef<Value> operands,
                                     ConversionPatternRewriter &rewriter) const {
-  ShapeOfOp::Adaptor transformed(operands);
-  Value arg = transformed.arg();
-  Type argTy = arg.getType();
+  // For now, this lowering supports only error-free arguments.
+  if (op.getType().isa<ShapeType>())
+    return failure();
 
   // For ranked tensors `shape_of` lowers to `std` and the pattern can be
   // found in the corresponding pass.
+  ShapeOfOp::Adaptor transformed(operands);
+  Value arg = transformed.arg();
+  Type argTy = arg.getType();
   if (argTy.isa<RankedTensorType>())
     return failure();
 
