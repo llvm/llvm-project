@@ -49,8 +49,14 @@ public:
   LogicalResult
   matchAndRewrite(SrcOpTy op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    typename SrcOpTy::Adaptor adaptor(operands);
-    rewriter.replaceOpWithNewOp<DstOpTy>(op, adaptor.lhs(), adaptor.rhs());
+    typename SrcOpTy::Adaptor transformed(operands);
+
+    // For now, only error-free types are supported by this lowering.
+    if (op.getType().template isa<SizeType>())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<DstOpTy>(op, transformed.lhs(),
+                                         transformed.rhs());
     return success();
   }
 };
@@ -85,27 +91,31 @@ public:
 LogicalResult ShapeOfOpConversion::matchAndRewrite(
     ShapeOfOp op, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  ShapeOfOp::Adaptor transformed(operands);
-  auto loc = op.getLoc();
-  auto tensorVal = transformed.arg();
-  auto tensorTy = tensorVal.getType();
+
+  // For now, only error-free types are supported by this lowering.
+  if (op.getType().isa<ShapeType>())
+    return failure();
 
   // For unranked tensors `shape_of` lowers to `scf` and the pattern can be
   // found in the corresponding pass.
+  ShapeOfOp::Adaptor transformed(operands);
+  Value tensorVal = transformed.arg();
+  Type tensorTy = tensorVal.getType();
   if (tensorTy.isa<UnrankedTensorType>())
     return failure();
 
   // Build values for individual dimensions.
   SmallVector<Value, 8> dimValues;
-  auto rankedTensorTy = tensorTy.cast<RankedTensorType>();
+  RankedTensorType rankedTensorTy = tensorTy.cast<RankedTensorType>();
   int64_t rank = rankedTensorTy.getRank();
+  auto loc = op.getLoc();
   for (int64_t i = 0; i < rank; i++) {
     if (rankedTensorTy.isDynamicDim(i)) {
-      auto dimVal = rewriter.create<DimOp>(loc, tensorVal, i);
+      Value dimVal = rewriter.create<DimOp>(loc, tensorVal, i);
       dimValues.push_back(dimVal);
     } else {
       int64_t dim = rankedTensorTy.getDimSize(i);
-      auto dimVal = rewriter.create<ConstantIndexOp>(loc, dim);
+      Value dimVal = rewriter.create<ConstantIndexOp>(loc, dim);
       dimValues.push_back(dimVal);
     }
   }
@@ -187,11 +197,18 @@ LogicalResult GetExtentOpConverter::matchAndRewrite(
     ConversionPatternRewriter &rewriter) const {
   GetExtentOp::Adaptor transformed(operands);
 
-  // Derive shape extent directly from shape origin if possible.
-  // This circumvents the necessity to materialize the shape in memory.
+  // For now, only error-free types are supported by this lowering.
+  if (op.getType().isa<SizeType>())
+    return failure();
+
+  // Derive shape extent directly from shape origin if possible. This
+  // circumvents the necessity to materialize the shape in memory.
   if (auto shapeOfOp = op.shape().getDefiningOp<ShapeOfOp>()) {
-    rewriter.replaceOpWithNewOp<DimOp>(op, shapeOfOp.arg(), transformed.dim());
-    return success();
+    if (shapeOfOp.arg().getType().isa<ShapedType>()) {
+      rewriter.replaceOpWithNewOp<DimOp>(op, shapeOfOp.arg(),
+                                         transformed.dim());
+      return success();
+    }
   }
 
   rewriter.replaceOpWithNewOp<ExtractElementOp>(op, rewriter.getIndexType(),
@@ -241,7 +258,7 @@ void ConvertShapeToStandardPass::runOnOperation() {
 
   // Apply conversion.
   auto module = getOperation();
-  if (failed(applyFullConversion(module, target, patterns)))
+  if (failed(applyPartialConversion(module, target, patterns)))
     signalPassFailure();
 }
 
