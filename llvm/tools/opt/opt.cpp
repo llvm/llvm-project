@@ -505,7 +505,7 @@ static bool IsCodegenPass(StringRef Pass) {
   for (const auto &P : PassNameContain)
     if (Pass.contains(P))
       return true;
-  for (const auto &P : PassNamePrefix)
+  for (const auto &P : PassNameExact)
     if (Pass == P)
       return true;
   return false;
