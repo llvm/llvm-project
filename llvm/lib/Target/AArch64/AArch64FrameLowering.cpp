@@ -1214,7 +1214,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   // Process the SVE callee-saves to determine what space needs to be
   // allocated.
-  if (AFI->getSVECalleeSavedStackSize()) {
+  if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
     // Find callee save instructions in frame.
     CalleeSavesBegin = MBBI;
     assert(IsSVECalleeSave(CalleeSavesBegin) && "Unexpected instruction");
@@ -1222,11 +1222,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       ++MBBI;
     CalleeSavesEnd = MBBI;
 
-    int64_t OffsetToFirstCalleeSaveFromSP =
-        MFI.getObjectOffset(AFI->getMaxSVECSFrameIndex());
-    StackOffset OffsetToCalleeSavesFromSP =
-        StackOffset(OffsetToFirstCalleeSaveFromSP, MVT::nxv1i8) + SVEStackSize;
-    AllocateBefore -= OffsetToCalleeSavesFromSP;
+    AllocateBefore = {CalleeSavedSize, MVT::nxv1i8};
     AllocateAfter = SVEStackSize - AllocateBefore;
   }
 
@@ -1630,7 +1626,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // deallocated.
   StackOffset DeallocateBefore = {}, DeallocateAfter = SVEStackSize;
   MachineBasicBlock::iterator RestoreBegin = LastPopI, RestoreEnd = LastPopI;
-  if (AFI->getSVECalleeSavedStackSize()) {
+  if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
     RestoreBegin = std::prev(RestoreEnd);;
     while (IsSVECalleeSave(RestoreBegin) &&
            RestoreBegin != MBB.begin())
@@ -1640,12 +1636,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     assert(IsSVECalleeSave(RestoreBegin) &&
            IsSVECalleeSave(std::prev(RestoreEnd)) && "Unexpected instruction");
 
-    int64_t OffsetToFirstCalleeSaveFromSP =
-        MFI.getObjectOffset(AFI->getMaxSVECSFrameIndex());
-    StackOffset OffsetToCalleeSavesFromSP =
-        StackOffset(OffsetToFirstCalleeSaveFromSP, MVT::nxv1i8) + SVEStackSize;
-    DeallocateBefore = OffsetToCalleeSavesFromSP;
-    DeallocateAfter = SVEStackSize - DeallocateBefore;
+    StackOffset CalleeSavedSizeAsOffset = {CalleeSavedSize, MVT::nxv1i8};
+    DeallocateBefore = SVEStackSize - CalleeSavedSizeAsOffset;
+    DeallocateAfter = CalleeSavedSizeAsOffset;
   }
 
   // Deallocate the SVE area.
@@ -2660,9 +2653,6 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
 
   // Then process all callee saved slots.
   if (getSVECalleeSaveSlotRange(MFI, MinCSFrameIndex, MaxCSFrameIndex)) {
-    // Make sure to align the last callee save slot.
-    MFI.setObjectAlignment(MaxCSFrameIndex, Align(16));
-
     // Assign offsets to the callee save slots.
     for (int I = MinCSFrameIndex; I <= MaxCSFrameIndex; ++I) {
       Offset += MFI.getObjectSize(I);
@@ -2671,6 +2661,9 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
         Assign(I, -Offset);
     }
   }
+
+  // Ensure that the Callee-save area is aligned to 16bytes.
+  Offset = alignTo(Offset, Align(16U));
 
   // Create a buffer of SVE objects to allocate and sort it.
   SmallVector<int, 8> ObjectsToAllocate;
