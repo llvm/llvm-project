@@ -90,13 +90,13 @@ void StatepointLoweringState::startNewStatepoint(SelectionDAGBuilder &Builder) {
   // FunctionLoweringInfo.  Also need to ensure used bits get cleared.
   AllocatedStackSlots.clear();
   AllocatedStackSlots.resize(Builder.FuncInfo.StatepointStackSlots.size());
-  DerivedPtrMap.clear();
+  VirtRegs.clear();
 }
 
 void StatepointLoweringState::clear() {
   Locations.clear();
   AllocatedStackSlots.clear();
-  DerivedPtrMap.clear();
+  VirtRegs.clear();
   assert(PendingGCRelocateCalls.empty() &&
          "cleared before statepoint sequence completed");
 }
@@ -691,8 +691,9 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
 
       // Conservatively export all values used by gc.relocates outside this
       // block.  This is currently only needed for expressions which don't need
-      // relocation, but will likely be extended for vreg case shortly.
-      if (Relocate->getParent() != StatepointInstr->getParent()) {
+      // relocation (such as constants and allocas).
+      if (!LowerAsVReg.count(SDV) &&
+          Relocate->getParent() != StatepointInstr->getParent()) {
         Builder.ExportFromCurrentBlock(V);
         assert(!LowerAsVReg.count(SDV));
       }
@@ -857,15 +858,31 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
 
   SDNode *SinkNode = StatepointMCNode;
 
-  // Fill mapping from derived pointer to statepoint result denoting its
-  // relocated value.
-  auto &DPtrMap = StatepointLowering.DerivedPtrMap;
+  // Remember the mapping between values relocated in registers and the virtual
+  // register holding the relocation.  Note that for simplicity, we *always*
+  // create a vreg even within a single block.
+  auto &VirtRegs = StatepointLowering.VirtRegs;
   for (const auto *Relocate : SI.GCRelocates) {
     Value *Derived = Relocate->getDerivedPtr();
     SDValue SD = getValue(Derived);
     if (!LowerAsVReg.count(SD))
       continue;
-    DPtrMap[Derived] = SDValue(StatepointMCNode, LowerAsVReg[SD]);
+
+    // Handle multiple gc.relocates of the same input efficiently.
+    if (VirtRegs.count(Derived))
+      continue;
+
+    SDValue Relocated = SDValue(StatepointMCNode, LowerAsVReg[SD]);
+
+    auto *RetTy = Relocate->getType();
+    Register Reg = FuncInfo.CreateRegs(RetTy);
+    RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
+                     DAG.getDataLayout(), Reg, RetTy, None);
+    SDValue Chain = DAG.getEntryNode();
+    RFV.getCopyToRegs(Relocated, DAG, getCurSDLoc(), Chain, nullptr);
+    PendingExports.push_back(Chain);
+    
+    VirtRegs[Derived] = Reg; 
   }
 
   // Build the GC_TRANSITION_END node if necessary.
@@ -1101,23 +1118,28 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 #endif
 
   const Value *DerivedPtr = Relocate.getDerivedPtr();
+
+  // If relocation was done via virtual register..
+  auto &VirtRegs = StatepointLowering.VirtRegs;
+  auto It = VirtRegs.find(DerivedPtr);
+  if (It != VirtRegs.end()) {
+    Register InReg = It->second;
+    RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
+                     DAG.getDataLayout(), InReg, Relocate.getType(),
+                     None); // This is not an ABI copy.
+    SDValue Chain = DAG.getEntryNode();
+    SDValue Relocation = RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
+                                             Chain, nullptr, nullptr);
+    setValue(&Relocate, Relocation);
+    return;
+  }
+  
   SDValue SD = getValue(DerivedPtr);
 
   if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
     // Lowering relocate(undef) as arbitrary constant. Current constant value
     // is chosen such that it's unlikely to be a valid pointer.
     setValue(&Relocate, DAG.getTargetConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
-    return;
-  }
-
-  // Relocate is local to statepoint block and its pointer was assigned
-  // to VReg. Use corresponding statepoint result.
-  auto &DPtrMap = StatepointLowering.DerivedPtrMap;
-  auto It = DPtrMap.find(DerivedPtr);
-  if (It != DPtrMap.end()) {
-    setValue(&Relocate, It->second);
-    assert(Relocate.getParent() == Relocate.getStatepoint()->getParent() &&
-           "unexpected DPtrMap entry");
     return;
   }
 
