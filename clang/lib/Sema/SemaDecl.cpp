@@ -6994,18 +6994,17 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                          TemplateParams->getRAngleLoc());
         TemplateParams = nullptr;
       } else {
+        // Check that we can declare a template here.
+        if (CheckTemplateDeclScope(S, TemplateParams))
+          return nullptr;
+
         if (D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId) {
           // This is an explicit specialization or a partial specialization.
-          // FIXME: Check that we can declare a specialization here.
           IsVariableTemplateSpecialization = true;
           IsPartialSpecialization = TemplateParams->size() > 0;
         } else { // if (TemplateParams->size() > 0)
           // This is a template declaration.
           IsVariableTemplate = true;
-
-          // Check that we can declare a template here.
-          if (CheckTemplateDeclScope(S, TemplateParams))
-            return nullptr;
 
           // Only C++1y supports variable templates (N3651).
           Diag(D.getIdentifierLoc(),
@@ -7015,6 +7014,10 @@ NamedDecl *Sema::ActOnVariableDeclarator(
         }
       }
     } else {
+      // Check that we can declare a member specialization here.
+      if (!TemplateParamLists.empty() && IsMemberSpecialization &&
+          CheckTemplateDeclScope(S, TemplateParamLists.back()))
+        return nullptr;
       assert((Invalid ||
               D.getName().getKind() != UnqualifiedIdKind::IK_TemplateId) &&
              "should have a 'template<>' for this decl");
@@ -8941,12 +8944,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             TemplateParamLists, isFriend, isMemberSpecialization,
             Invalid);
     if (TemplateParams) {
+      // Check that we can declare a template here.
+      if (CheckTemplateDeclScope(S, TemplateParams))
+        NewFD->setInvalidDecl();
+
       if (TemplateParams->size() > 0) {
         // This is a function template
-
-        // Check that we can declare a template here.
-        if (CheckTemplateDeclScope(S, TemplateParams))
-          NewFD->setInvalidDecl();
 
         // A destructor cannot be a template.
         if (Name.getNameKind() == DeclarationName::CXXDestructorName) {
@@ -9006,6 +9009,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         }
       }
     } else {
+      // Check that we can declare a template here.
+      if (!TemplateParamLists.empty() && isMemberSpecialization &&
+          CheckTemplateDeclScope(S, TemplateParamLists.back()))
+        NewFD->setInvalidDecl();
+
       // All template param lists were matched against the scope specifier:
       // this is NOT (an explicit specialization of) a template.
       if (TemplateParamLists.size() > 0)
@@ -15301,6 +15309,10 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
         isMemberSpecialization = true;
       }
     }
+
+    if (!TemplateParameterLists.empty() && isMemberSpecialization &&
+        CheckTemplateDeclScope(S, TemplateParameterLists.back()))
+      return nullptr;
   }
 
   // Figure out the underlying type if this a enum declaration. We need to do
@@ -17300,7 +17312,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CXXRecordDecl *CXXRecord = cast<CXXRecordDecl>(Record);
       CheckForZeroSize =
           CXXRecord->getLexicalDeclContext()->isExternCContext() &&
-          !CXXRecord->isDependentType() &&
+          !CXXRecord->isDependentType() && !inTemplateInstantiation() &&
           CXXRecord->isCLike();
     }
     if (CheckForZeroSize) {

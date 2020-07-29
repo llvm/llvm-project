@@ -7771,8 +7771,9 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
          (S->getFlags() & Scope::TemplateParamScope) != 0)
     S = S->getParent();
 
-  // C++ [temp]p4:
-  //   A template [...] shall not have C linkage.
+  // C++ [temp.pre]p6: [P2096]
+  //   A template, explicit specialization, or partial specialization shall not
+  //   have C linkage.
   DeclContext *Ctx = S->getEntity();
   if (Ctx && Ctx->isExternCContext()) {
     Diag(TemplateParams->getTemplateLoc(), diag::err_template_linkage)
@@ -7786,6 +7787,12 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   // C++ [temp]p2:
   //   A template-declaration can appear only as a namespace scope or
   //   class scope declaration.
+  // C++ [temp.expl.spec]p3:
+  //   An explicit specialization may be declared in any scope in which the
+  //   corresponding primary template may be defined.
+  // C++ [temp.class.spec]p6: [P2096]
+  //   A partial specialization may be declared in any scope in which the
+  //   corresponding primary template may be defined.
   if (Ctx) {
     if (Ctx->isFileContext())
       return false;
@@ -8103,6 +8110,10 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
           TemplateParameterLists, TUK == TUK_Friend, isMemberSpecialization,
           Invalid);
   if (Invalid)
+    return true;
+
+  // Check that we can declare a template specialization here.
+  if (TemplateParams && CheckTemplateDeclScope(S, TemplateParams))
     return true;
 
   if (TemplateParams && TemplateParams->size() > 0) {
