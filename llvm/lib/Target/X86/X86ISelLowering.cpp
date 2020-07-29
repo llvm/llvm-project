@@ -5625,6 +5625,11 @@ static bool scaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts,
   return false;
 }
 
+static bool canScaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts) {
+  SmallVector<int, 32> WidenedMask;
+  return scaleShuffleElements(Mask, NumDstElts, WidenedMask);
+}
+
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
 bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
@@ -44486,12 +44491,6 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, SelectionDAG &DAG,
       RMask.push_back(i);
   }
 
-  // Avoid 128-bit lane crossing if pre-AVX2 and FP (integer will split).
-  if (!Subtarget.hasAVX2() && VT.isFloatingPoint() &&
-      (isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(), LMask) ||
-       isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(), RMask)))
-    return false;
-
   // If A and B occur in reverse order in RHS, then canonicalize by commuting
   // RHS operands and shuffle mask.
   if (A != C) {
@@ -44553,6 +44552,14 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, SelectionDAG &DAG,
       isSequentialOrUndefInRange(PostShuffleMask, 0, NumElts, 0);
   if (IsIdentityPostShuffle)
     PostShuffleMask.clear();
+
+  // Avoid 128-bit lane crossing if pre-AVX2 and FP (integer will split), unless
+  // the shuffle can widen to shuffle entire lanes, which should still be quick.
+  if (!IsIdentityPostShuffle && !Subtarget.hasAVX2() && VT.isFloatingPoint() &&
+      isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(),
+                                PostShuffleMask) &&
+      !canScaleShuffleElements(PostShuffleMask, 2))
+    return false;
 
   // Assume a SingleSource HOP if we only shuffle one input and don't need to
   // shuffle the result.
