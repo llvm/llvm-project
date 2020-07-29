@@ -77,6 +77,32 @@ static bool isFullExecCopy(const MachineInstr& MI, const GCNSubtarget& ST) {
   return false;
 }
 
+// See if there is a def between \p AndIdx and \p SelIdx that needs to live
+// beyond \p AndIdx.
+static bool isDefBetween(const LiveRange &LR, SlotIndex AndIdx,
+                         SlotIndex SelIdx) {
+  LiveQueryResult AndLRQ = LR.Query(AndIdx);
+  return (!AndLRQ.isKill() && AndLRQ.valueIn() != LR.Query(SelIdx).valueOut());
+}
+
+// FIXME: Why do we bother trying to handle physical registers here?
+static bool isDefBetween(const SIRegisterInfo &TRI,
+                         LiveIntervals *LIS, Register Reg,
+                         const MachineInstr &Sel, const MachineInstr &And) {
+  SlotIndex AndIdx = LIS->getInstructionIndex(And);
+  SlotIndex SelIdx = LIS->getInstructionIndex(Sel);
+
+  if (Reg.isVirtual())
+    return isDefBetween(LIS->getInterval(Reg), AndIdx, SelIdx);
+
+  for (MCRegUnitIterator UI(Reg, &TRI); UI.isValid(); ++UI) {
+    if (isDefBetween(LIS->getRegUnit(*UI), AndIdx, SelIdx))
+      return true;
+  }
+
+  return false;
+}
+
 // Optimize sequence
 //    %sel = V_CNDMASK_B32_e64 0, 1, %cc
 //    %cmp = V_CMP_NE_U32 1, %1
@@ -158,10 +184,16 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
       Op1->getImm() != 0 || Op2->getImm() != 1)
     return AMDGPU::NoRegister;
 
+  Register CCReg = CC->getReg();
+
+  // If there was a def between the select and the and, we would need to move it
+  // to fold this.
+  if (isDefBetween(*TRI, LIS, CCReg, *Sel, *And))
+    return AMDGPU::NoRegister;
+
   LLVM_DEBUG(dbgs() << "Folding sequence:\n\t" << *Sel << '\t' << *Cmp << '\t'
                     << *And);
 
-  Register CCReg = CC->getReg();
   LIS->RemoveMachineInstrFromMaps(*And);
   MachineInstr *Andn2 =
       BuildMI(MBB, *And, And->getDebugLoc(), TII->get(Andn2Opc),
