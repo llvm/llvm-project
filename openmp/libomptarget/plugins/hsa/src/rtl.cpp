@@ -389,7 +389,7 @@ public:
            "Unexpected device id!");
     FuncGblEntries[device_id].emplace_back();
     FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
-    KernelArgPoolMap.clear();
+    // KernelArgPoolMap.clear();
     E.Entries.clear();
     E.Table.EntriesBegin = E.Table.EntriesEnd = 0;
   }
@@ -821,7 +821,21 @@ atmi_status_t interop_get_symbol_info(char *base, size_t img_size,
 }
 } // namespace
 
+static __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
+                                                 __tgt_device_image *image);
+
+
 __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
+                                          __tgt_device_image *image)
+{
+  static pthread_mutex_t load_binary_mutex = PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_lock(&load_binary_mutex);
+  __tgt_target_table * res = __tgt_rtl_load_binary_locked(device_id, image);
+  pthread_mutex_unlock(&load_binary_mutex);
+  return res;
+}
+
+__tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
                                           __tgt_device_image *image) {
   const size_t img_size = (char *)image->ImageEnd - (char *)image->ImageStart;
 
@@ -1521,7 +1535,10 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
         ArgPool = (it->second).get();
       }
     }
-
+    if (!ArgPool) {
+      fprintf(stderr, "Warning: No ArgPool for %s on device %d\n",
+              KernelInfo->Name, device_id);
+    }
     {
       void *kernarg = nullptr;
       if (ArgPool) {
