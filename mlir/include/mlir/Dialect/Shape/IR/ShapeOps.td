@@ -53,18 +53,23 @@ def Shape_WitnessType : DialectType<ShapeDialect,
 class Shape_Op<string mnemonic, list<OpTrait> traits = []> :
     Op<ShapeDialect, mnemonic, traits>;
 
-def Shape_AddOp : Shape_Op<"add", [Commutative, SameOperandsAndResultType]> {
-  let summary = "Addition of sizes";
+def Shape_AddOp : Shape_Op<"add", [Commutative, NoSideEffect]> {
+  let summary = "Addition of sizes and indices";
   let description = [{
-    Adds two valid sizes as follows:
-    * lhs + rhs = unknown if either lhs or rhs unknown;
-    * lhs + rhs = (int)lhs + (int)rhs if known;
+    Adds two sizes or indices. If either operand is an error it will be
+    propagated to the result. The operands can be of type `size` or `index`. If
+    at least one of the operands can hold an error, i.e. if it is of type `size`,
+    then also the result must be of type `size`.
   }];
 
-  let arguments = (ins Shape_SizeType:$lhs, Shape_SizeType:$rhs);
-  let results = (outs Shape_SizeType:$result);
+  let arguments = (ins Shape_SizeOrIndexType:$lhs, Shape_SizeOrIndexType:$rhs);
+  let results = (outs Shape_SizeOrIndexType:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs attr-dict";
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
+  }];
+
+  let verifier = [{ return verifySizeOrIndexOp(*this); }];
 }
 
 def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {

@@ -105,7 +105,7 @@ func @rank(%arg : !shape.shape) {
 
 // -----
 
-func @get_extent_error_possible(%arg : tensor<?xindex>) -> index {
+func @get_extent(%arg : tensor<?xindex>) -> index {
   %c0 = shape.const_size 0
   // expected-error@+1 {{if at least one of the operands can hold error values then the result must be of type `size` to propagate them}}
   %result = shape.get_extent %arg, %c0 : tensor<?xindex>, !shape.size -> index
@@ -114,7 +114,7 @@ func @get_extent_error_possible(%arg : tensor<?xindex>) -> index {
 
 // -----
 
-func @mul_error_possible(%lhs : !shape.size, %rhs : index) -> index {
+func @mul(%lhs : !shape.size, %rhs : index) -> index {
   // expected-error@+1 {{if at least one of the operands can hold error values then the result must be of type `size` to propagate them}}
   %result = shape.mul %lhs, %rhs : !shape.size, index -> index
   return %result : index
@@ -122,9 +122,17 @@ func @mul_error_possible(%lhs : !shape.size, %rhs : index) -> index {
 
 // -----
 
-func @num_elements_error_possible(%arg : !shape.shape) -> index {
+func @num_elements(%arg : !shape.shape) -> index {
   // expected-error@+1 {{if at least one of the operands can hold error values then the result must be of type `size` to propagate them}}
   %result = shape.num_elements %arg : !shape.shape -> index
+  return %result : index
+}
+
+// -----
+
+func @add(%lhs : !shape.size, %rhs : index) -> index {
+  // expected-error@+1 {{if at least one of the operands can hold error values then the result must be of type `size` to propagate them}}
+  %result = shape.add %lhs, %rhs : !shape.size, index -> index
   return %result : index
 }
 
