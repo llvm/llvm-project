@@ -824,7 +824,9 @@ def mod_imm_neg : Operand<i32>, PatLeaf<(imm), [{
 def arm_i32imm : IntImmLeaf<i32, [{
   if (Subtarget->useMovt())
     return true;
-  return ARM_AM::isSOImmTwoPartVal(Imm.getZExtValue());
+  if (ARM_AM::isSOImmTwoPartVal(Imm.getZExtValue()))
+    return true;
+  return ARM_AM::isSOImmTwoPartValNeg(Imm.getZExtValue());
 }]>;
 
 /// imm0_1 predicate - Immediate in the range [0,1].
