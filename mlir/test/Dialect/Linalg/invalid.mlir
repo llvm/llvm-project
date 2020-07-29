@@ -507,3 +507,11 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?xf32>, %c3: memref<?x?x?x
   linalg.batch_matmul %a3, %b3, %c3 : (memref<?x?x?xf32>, memref<?x?xf32>, memref<?x?x?xf32>) -> ()
   return
 }
+
+// -----
+
+func @conv_type_mismatch(%in: memref<?xi32>, %filter: memref<?xf32>, %out: memref<?xf32>) {
+  // expected-error @+1 {{expected all element types of operands to match}}
+  linalg.conv1D(%in, %filter, %out) : memref<?xi32>, memref<?xf32>, memref<?xf32>
+  return
+}
