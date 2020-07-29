@@ -286,6 +286,15 @@ macro(darwin_add_builtin_library name suffix)
     endforeach(cflag)
   endif()
 
+  if ("${LIB_OS}" MATCHES ".*sim$")
+    # Pass an explicit -simulator environment to the -target option to ensure
+    # that we don't rely on the architecture to infer whether we're building
+    # for the simulator.
+    string(REGEX REPLACE "sim" "" base_os "${LIB_OS}")
+    list(APPEND builtin_cflags
+         -target "${LIB_ARCH}-apple-${base_os}${DARWIN_${LIBOS}_BUILTIN_MIN_VER}-simulator")
+  endif()
+
   set_target_compile_flags(${libname}
     ${sysroot_flag}
     ${DARWIN_${LIB_OS}_BUILTIN_MIN_VER_FLAG}
@@ -412,15 +421,33 @@ macro(darwin_add_builtin_libraries)
     endif()
   endforeach()
 
-  # We put the x86 sim slices into the archives for their base OS
   foreach (os ${ARGN})
+    # We put the x86 sim slices into the archives for their base OS
+    # FIXME: Stop doing that in upstream Phab review (blocked by swift side
+    # support as well).
     if(NOT ${os} MATCHES ".*sim$")
+      set(sim_flags ${${os}sim_builtins_lipo_flags})
+      # Do not include the arm64 slice in the `lipo` invocation for the device
+      # libclang_rt.<os>.a . This ensures that `lipo` uses the device arm64
+      # slice in libclang_rt.<os>.a. The simulator arm64 slice is present only
+      # in libclang_rt.<os>sim.a .
+      if (NOT "${sim_flags}" STREQUAL "")
+        string(REGEX REPLACE ";-arch;arm64.*" "" sim_flags "${sim_flags}")
+        message(STATUS "adjusted simulator flags for non-sim builtin lib: ${sim_flags}")
+      endif()
       darwin_lipo_libs(clang_rt.${os}
                         PARENT_TARGET builtins
-                        LIPO_FLAGS ${${os}_builtins_lipo_flags} ${${os}sim_builtins_lipo_flags}
+                        LIPO_FLAGS ${${os}_builtins_lipo_flags} ${sim_flags}
                         DEPENDS ${${os}_builtins_libs} ${${os}sim_builtins_libs}
                         OUTPUT_DIR ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
                         INSTALL_DIR ${COMPILER_RT_LIBRARY_INSTALL_DIR})
+    else()
+      darwin_lipo_libs(clang_rt.${os}
+                       PARENT_TARGET builtins
+                       LIPO_FLAGS ${${os}_builtins_lipo_flags}
+                       DEPENDS ${${os}_builtins_libs}
+                       OUTPUT_DIR ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+                       INSTALL_DIR ${COMPILER_RT_LIBRARY_INSTALL_DIR})
     endif()
   endforeach()
   darwin_add_embedded_builtin_libraries()
