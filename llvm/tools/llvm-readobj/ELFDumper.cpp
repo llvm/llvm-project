@@ -3924,21 +3924,10 @@ void GNUStyle<ELFT>::printSymbol(const ELFO *Obj, const Elf_Sym *Symbol,
                                  const Elf_Sym *FirstSym,
                                  Optional<StringRef> StrTable, bool IsDynamic,
                                  bool NonVisibilityBitsUsed) {
-  static int Idx = 0;
-  static bool Dynamic = true;
-
-  // If this function was called with a different value from IsDynamic
-  // from last call, happens when we move from dynamic to static symbol
-  // table, "Num" field should be reset.
-  if (!Dynamic != !IsDynamic) {
-    Idx = 0;
-    Dynamic = false;
-  }
-
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
   Field Fields[8] = {0,         8,         17 + Bias, 23 + Bias,
                      31 + Bias, 38 + Bias, 48 + Bias, 51 + Bias};
-  Fields[0].Str = to_string(format_decimal(Idx++, 6)) + ":";
+  Fields[0].Str = to_string(format_decimal(Symbol - FirstSym, 6)) + ":";
   Fields[1].Str = to_string(
       format_hex_no_prefix(Symbol->st_value, ELFT::Is64Bits ? 16 : 8));
   Fields[2].Str = to_string(format_decimal(Symbol->st_size, 5));
