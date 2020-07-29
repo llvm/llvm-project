@@ -21,7 +21,7 @@ define i32 @test_criticalEdge(i32 %i, i32 %j) {
 entry:
 ; CHECK: entry:
 ; NOTENTRY-NOT: call void @llvm.instrprof.increment
-; ENTRY:   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 0)
+; ENTRY:   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 0)
   switch i32 %i, label %sw.default [
     i32 1, label %sw.bb
     i32 2, label %sw.bb1
@@ -35,24 +35,24 @@ entry:
 ; USE-SAME: !prof ![[BW_SWITCH:[0-9]+]]
 
 ; CHECK: entry.sw.bb2_crit_edge1:
-; NOTENTRY:   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 1)
-; ENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 2)
+; NOTENTRY:   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 1)
+; ENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 2)
 ; CHECK:   br label %sw.bb2
 
 ; CHECK: entry.sw.bb2_crit_edge:
-; NOTENTRY:   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 0)
-; TENTRY:   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 1)
+; NOTENTRY:   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 0)
+; TENTRY:   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 1)
 ; CHECK:   br label %sw.bb2
 
 sw.bb:
 ; GEN: sw.bb:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 5)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 5)
   %call = call i32 @bar(i32 2)
   br label %sw.epilog
 
 sw.bb1:
 ; GEN: sw.bb1:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 4)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 4)
   %call2 = call i32 @bar(i32 1024)
   br label %sw.epilog
 
@@ -66,14 +66,14 @@ sw.bb2:
 
 if.then:
 ; GEN: if.then:
-; NOTENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 2)
+; NOTENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 2)
 ; ENTRY-NOT: call void @llvm.instrprof.increment
   %call4 = call i32 @bar(i32 4)
   br label %return
 
 if.end:
 ; GEN: if.end:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 3)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 3)
   %call5 = call i32 @bar(i32 8)
   br label %sw.epilog
 
@@ -88,13 +88,13 @@ sw.default:
 
 if.then8:
 ; GEN: if.then8:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 7)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 7)
   %add = add nsw i32 %call6, 10
   br label %if.end9
 
 if.end9:
 ; GEN: if.end9:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 82323253069, i32 8, i32 6)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__profn_test_criticalEdge, i32 0, i32 0), i64 {{[0-9]+}}, i32 8, i32 6)
   %res.0 = phi i32 [ %add, %if.then8 ], [ %call6, %sw.default ]
   br label %sw.epilog
 
@@ -113,7 +113,7 @@ return:
 
 define internal i32 @bar(i32 %i) {
 entry:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @__profn__stdin__bar, i32 0, i32 0), i64 12884901887, i32 1, i32 0)
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @__profn__stdin__bar, i32 0, i32 0), i64 {{[0-9]+}}, i32 1, i32 0)
   ret i32 %i
 }
 
