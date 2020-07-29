@@ -39,7 +39,21 @@ def StdC : StandardSpec<"stdc"> {
       [], // Enumerations
       []
   >;
-
+  
+  HeaderSpec CType = HeaderSpec<
+      "ctype.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "isalpha",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+      ]
+  >;
+     
   HeaderSpec String = HeaderSpec<
       "string.h",
       [
@@ -386,6 +400,7 @@ def StdC : StandardSpec<"stdc"> {
 
   let Headers = [
     Assert,
+    CType,
     Errno,
     Math,
     String,
