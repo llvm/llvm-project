@@ -64,9 +64,6 @@ AnalysisManager<IRUnitT, ExtraArgTs...>::getResultImpl(
   // run it to produce a result, which we then add to the cache.
   if (Inserted) {
     auto &P = this->lookUpPass(ID);
-    if (DebugLogging)
-      dbgs() << "Running analysis: " << P.name() << " on " << IR.getName()
-             << "\n";
 
     PassInstrumentation PI;
     if (ID != PassInstrumentationAnalysis::ID()) {
