@@ -63,7 +63,7 @@ namespace {
 struct MemRefDataFlowOpt : public MemRefDataFlowOptBase<MemRefDataFlowOpt> {
   void runOnFunction() override;
 
-  void forwardStoreToLoad(AffineLoadOp loadOp);
+  void forwardStoreToLoad(AffineReadOpInterface loadOp);
 
   // A list of memref's that are potentially dead / could be eliminated.
   SmallPtrSet<Value, 4> memrefsToErase;
@@ -84,14 +84,14 @@ std::unique_ptr<OperationPass<FuncOp>> mlir::createMemRefDataFlowOptPass() {
 
 // This is a straightforward implementation not optimized for speed. Optimize
 // if needed.
-void MemRefDataFlowOpt::forwardStoreToLoad(AffineLoadOp loadOp) {
+void MemRefDataFlowOpt::forwardStoreToLoad(AffineReadOpInterface loadOp) {
   // First pass over the use list to get the minimum number of surrounding
   // loops common between the load op and the store op, with min taken across
   // all store ops.
   SmallVector<Operation *, 8> storeOps;
   unsigned minSurroundingLoops = getNestingDepth(loadOp);
   for (auto *user : loadOp.getMemRef().getUsers()) {
-    auto storeOp = dyn_cast<AffineStoreOp>(user);
+    auto storeOp = dyn_cast<AffineWriteOpInterface>(user);
     if (!storeOp)
       continue;
     unsigned nsLoops = getNumCommonSurroundingLoops(*loadOp, *storeOp);
@@ -167,8 +167,9 @@ void MemRefDataFlowOpt::forwardStoreToLoad(AffineLoadOp loadOp) {
     return;
 
   // Perform the actual store to load forwarding.
-  Value storeVal = cast<AffineStoreOp>(lastWriteStoreOp).getValueToStore();
-  loadOp.replaceAllUsesWith(storeVal);
+  Value storeVal =
+    cast<AffineWriteOpInterface>(lastWriteStoreOp).getValueToStore();
+  loadOp.getValue().replaceAllUsesWith(storeVal);
   // Record the memref for a later sweep to optimize away.
   memrefsToErase.insert(loadOp.getMemRef());
   // Record this to erase later.
@@ -190,7 +191,7 @@ void MemRefDataFlowOpt::runOnFunction() {
   memrefsToErase.clear();
 
   // Walk all load's and perform store to load forwarding.
-  f.walk([&](AffineLoadOp loadOp) { forwardStoreToLoad(loadOp); });
+  f.walk([&](AffineReadOpInterface loadOp) { forwardStoreToLoad(loadOp); });
 
   // Erase all load op's whose results were replaced with store fwd'ed ones.
   for (auto *loadOp : loadOpsToErase)
@@ -207,7 +208,7 @@ void MemRefDataFlowOpt::runOnFunction() {
       // could still erase it if the call had no side-effects.
       continue;
     if (llvm::any_of(memref.getUsers(), [&](Operation *ownerOp) {
-          return !isa<AffineStoreOp, DeallocOp>(ownerOp);
+          return !isa<AffineWriteOpInterface, DeallocOp>(ownerOp);
         }))
       continue;
 
