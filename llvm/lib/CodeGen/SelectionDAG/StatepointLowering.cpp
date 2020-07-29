@@ -545,16 +545,6 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   const unsigned MaxTiedRegs = 15; // Max  number of tied regs MI can have.
   unsigned MaxVRegPtrs =
       std::min(MaxTiedRegs, MaxRegistersForGCPointers.getValue());
-  // Use old spill scheme for cross-block relocates.
-  if (SI.StatepointInstr) {
-    const BasicBlock *BB = SI.StatepointInstr->getParent();
-    bool NonLocalReloc =
-        llvm::any_of(SI.GCRelocates, [BB](const GCRelocateInst *R) {
-          return R->getParent() != BB;
-        });
-    if (NonLocalReloc)
-      MaxVRegPtrs = 0;
-  }
 
   LLVM_DEBUG(dbgs() << "Desiding how to lower GC Pointers:\n");
   unsigned CurNumVRegs = 0;
