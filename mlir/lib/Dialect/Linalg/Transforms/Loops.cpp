@@ -296,18 +296,6 @@ void emitScalarImplementation(ArrayRef<Value> allIvs, FillOp fillOp) {
 }
 
 template <typename IndexedValueType>
-void emitScalarImplementation(ArrayRef<Value> allIvs, DotOp dotOp) {
-  assert(dotOp.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  assert(allIvs.size() == 1);
-  Value r_i(allIvs[0]);
-  IndexedValueType A(dotOp.getInput(0)), B(dotOp.getInput(1)),
-      C(dotOp.getOutputBuffer(0));
-  // Emit scalar form.
-  C() = C() + A(r_i) * B(r_i);
-}
-
-template <typename IndexedValueType>
 Value getConvOpInput(ConvOp convOp, StdIndexedValue im,
                      MutableArrayRef<Value> imIdx) {
   // TODO: add a level of indirection to linalg.generic.
@@ -673,8 +661,6 @@ static Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
     return linalgOpToLoopsImpl<LoopTy, CopyOp>(op, builder);
   if (isa<FillOp>(op))
     return linalgOpToLoopsImpl<LoopTy, FillOp>(op, builder);
-  if (isa<DotOp>(op))
-    return linalgOpToLoopsImpl<LoopTy, DotOp>(op, builder);
   if (isa<ConvOp>(op))
     return linalgOpToLoopsImpl<LoopTy, ConvOp>(op, builder);
   if (isa<PoolingMaxOp>(op))
@@ -693,6 +679,8 @@ static Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
     return linalgOpToLoopsImpl<LoopTy, MatmulOp>(op, builder);
   if (isa<MatvecOp>(op))
     return linalgOpToLoopsImpl<LoopTy, MatvecOp>(op, builder);
+  if (isa<DotOp>(op))
+    return linalgOpToLoopsImpl<LoopTy, DotOp>(op, builder);
   if (isa<BatchMatmulOp>(op))
     return linalgOpToLoopsImpl<LoopTy, BatchMatmulOp>(op, builder);
   llvm_unreachable("Unexpected op in linalgOpToLoopsImpl");

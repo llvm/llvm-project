@@ -14,10 +14,10 @@
 func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
           %y: memref<?xf32, offset: ?, strides: [1]>,
           %v: memref<f32>) {
-  linalg.dot(%x, %y, %v) { __internal_linalg_transform__ = "MEM" } :
-             memref<?xf32, offset: ?, strides: [1]>,
-             memref<?xf32, offset: ?, strides: [1]>,
-             memref<f32>
+  linalg.dot %x, %y, %v { __internal_linalg_transform__ = "MEM" } :
+             (memref<?xf32, offset: ?, strides: [1]>,
+              memref<?xf32, offset: ?, strides: [1]>,
+              memref<f32>)
   return
 }
 // CHECK-LABEL: func @dot
@@ -28,8 +28,8 @@ func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
 // CHECK:             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c1]] {
 // CHECK:               load
 // CHECK:               load
-// CHECK:               mulf
 // CHECK:               load
+// CHECK:               mulf
 // CHECK:               addf
 // CHECK:               store
 
