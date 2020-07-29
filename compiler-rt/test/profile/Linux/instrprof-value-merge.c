@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 
 // CHECK: Counters:
 // CHECK:   main:
-// CHECK:     Hash: 0x0a9bd81e87ab6e87
+// CHECK:     Hash: 0x00030012a7ab6e87
 // CHECK:     Counters: 6
 // CHECK:     Indirect Call Site Count: 3
 // CHECK:     Number of Memory Intrinsics Calls: 3
