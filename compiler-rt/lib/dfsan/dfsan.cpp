@@ -18,14 +18,15 @@
 // prefixed __dfsan_.
 //===----------------------------------------------------------------------===//
 
+#include "dfsan/dfsan.h"
+
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
-#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
-
-#include "dfsan/dfsan.h"
 
 using namespace __dfsan;
 
@@ -158,18 +159,10 @@ static void dfsan_check_label(dfsan_label label) {
   }
 }
 
-static void ReportUnsupportedFast16(const char *func) {
-  Report("FATAL: DataFlowSanitizer: %s is unsupported in fast16labels mode\n",
-         func);
-  Die();
-}
-
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
 // this function (the instrumentation pass inlines the equality test).
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
-  if (flags().fast16labels)
-    return l1 | l2;
   DCHECK_NE(l1, l2);
 
   if (l1 == 0)
@@ -225,6 +218,14 @@ dfsan_label __dfsan_union_load(const dfsan_label *ls, uptr n) {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
+dfsan_label __dfsan_union_load_fast16labels(const dfsan_label *ls, uptr n) {
+  dfsan_label label = ls[0];
+  for (uptr i = 1; i != n; ++i)
+    label |= ls[i];
+  return label;
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_unimplemented(char *fname) {
   if (flags().warn_unimplemented)
     Report("WARNING: DataFlowSanitizer: call to uninstrumented function %s\n",
@@ -259,8 +260,6 @@ dfsan_union(dfsan_label l1, dfsan_label l2) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label dfsan_create_label(const char *desc, void *userdata) {
-  if (flags().fast16labels)
-    ReportUnsupportedFast16("dfsan_create_label");
   dfsan_label label =
       atomic_fetch_add(&__dfsan_last_label, 1, memory_order_relaxed) + 1;
   dfsan_check_label(label);
@@ -319,15 +318,11 @@ dfsan_read_label(const void *addr, uptr size) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 const struct dfsan_label_info *dfsan_get_label_info(dfsan_label label) {
-  if (flags().fast16labels)
-    ReportUnsupportedFast16("dfsan_get_label_info");
   return &__dfsan_label_info[label];
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE int
 dfsan_has_label(dfsan_label label, dfsan_label elem) {
-  if (flags().fast16labels)
-    return label & elem;
   if (label == elem)
     return true;
   const dfsan_label_info *info = dfsan_get_label_info(label);
@@ -340,8 +335,6 @@ dfsan_has_label(dfsan_label label, dfsan_label elem) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 dfsan_has_label_with_desc(dfsan_label label, const char *desc) {
-  if (flags().fast16labels)
-    ReportUnsupportedFast16("dfsan_has_label_with_desc");
   const dfsan_label_info *info = dfsan_get_label_info(label);
   if (info->l1 != 0) {
     return dfsan_has_label_with_desc(info->l1, desc) ||
@@ -361,9 +354,6 @@ dfsan_get_label_count(void) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 dfsan_dump_labels(int fd) {
-  if (flags().fast16labels)
-    return;
-
   dfsan_label last_label =
       atomic_load(&__dfsan_last_label, memory_order_relaxed);
   for (uptr l = 1; l <= last_label; ++l) {
