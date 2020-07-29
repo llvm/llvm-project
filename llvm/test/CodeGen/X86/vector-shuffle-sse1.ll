@@ -174,7 +174,7 @@ define <4 x float> @shuffle_v4f32_zuu4(<4 x float> %a) {
 ; SSE1-LABEL: shuffle_v4f32_zuu4:
 ; SSE1:       # %bb.0:
 ; SSE1-NEXT:    xorps %xmm1, %xmm1
-; SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,0]
+; SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
 ; SSE1-NEXT:    movaps %xmm1, %xmm0
 ; SSE1-NEXT:    retq
   %shuffle = shufflevector <4 x float> zeroinitializer, <4 x float> %a, <4 x i32> <i32 0, i32 undef, i32 undef, i32 4>

@@ -30,7 +30,7 @@ define float @pr26491(<4 x float> %a0) {
 ; SSSE3-FAST:       # %bb.0:
 ; SSSE3-FAST-NEXT:    haddps %xmm0, %xmm0
 ; SSSE3-FAST-NEXT:    movaps %xmm0, %xmm1
-; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1],xmm0[2,3]
+; SSSE3-FAST-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
 ; SSSE3-FAST-NEXT:    addss %xmm0, %xmm1
 ; SSSE3-FAST-NEXT:    movaps %xmm1, %xmm0
 ; SSSE3-FAST-NEXT:    retq
@@ -46,7 +46,7 @@ define float @pr26491(<4 x float> %a0) {
 ; AVX1-FAST-LABEL: pr26491:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
+; AVX1-FAST-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; AVX1-FAST-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX1-FAST-NEXT:    retq
 ;

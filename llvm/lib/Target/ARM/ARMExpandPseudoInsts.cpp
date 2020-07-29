@@ -873,16 +873,27 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
     // FIXME Windows CE supports older ARM CPUs
     assert(!STI->isTargetWindows() && "Windows on ARM requires ARMv7+");
 
-    // Expand into a movi + orr.
-    LO16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MOVi), DstReg);
-    HI16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::ORRri))
-      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-      .addReg(DstReg);
-
     assert (MO.isImm() && "MOVi32imm w/ non-immediate source operand!");
     unsigned ImmVal = (unsigned)MO.getImm();
-    unsigned SOImmValV1 = ARM_AM::getSOImmTwoPartFirst(ImmVal);
-    unsigned SOImmValV2 = ARM_AM::getSOImmTwoPartSecond(ImmVal);
+    unsigned SOImmValV1 = 0, SOImmValV2 = 0;
+
+    if (ARM_AM::isSOImmTwoPartVal(ImmVal)) { // Expand into a movi + orr.
+      LO16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MOVi), DstReg);
+      HI16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::ORRri))
+          .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+          .addReg(DstReg);
+      SOImmValV1 = ARM_AM::getSOImmTwoPartFirst(ImmVal);
+      SOImmValV2 = ARM_AM::getSOImmTwoPartSecond(ImmVal);
+    } else { // Expand into a mvn + sub.
+      LO16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MVNi), DstReg);
+      HI16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::SUBri))
+          .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+          .addReg(DstReg);
+      SOImmValV1 = ARM_AM::getSOImmTwoPartFirst(-ImmVal);
+      SOImmValV2 = ARM_AM::getSOImmTwoPartSecond(-ImmVal);
+      SOImmValV1 = ~(-SOImmValV1);
+    }
+
     unsigned MIFlags = MI.getFlags();
     LO16 = LO16.addImm(SOImmValV1);
     HI16 = HI16.addImm(SOImmValV2);

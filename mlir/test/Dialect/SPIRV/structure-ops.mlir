@@ -348,6 +348,13 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
+  // expected-error @+1 {{storage class cannot be 'Function'}}
+  spv.globalVariable @var0 : !spv.ptr<f32, Function>
+}
+
+// -----
+
+spv.module Logical GLSL450 {
   spv.func @foo() "None" {
     // expected-error @+1 {{op must appear in a module-like op's block}}
     spv.globalVariable @var0 : !spv.ptr<f32, Input>

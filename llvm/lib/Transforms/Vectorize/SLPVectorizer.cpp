@@ -3399,8 +3399,8 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
                   Ext->getOpcode(), Ext->getType(), VecTy, i);
               // Add back the cost of s|zext which is subtracted separately.
               DeadCost += TTI->getCastInstrCost(
-                  Ext->getOpcode(), Ext->getType(), E->getType(), CostKind,
-                  Ext);
+                  Ext->getOpcode(), Ext->getType(), E->getType(),
+                  TTI::getCastContextHint(Ext), CostKind, Ext);
               continue;
             }
           }
@@ -3424,8 +3424,8 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     case Instruction::BitCast: {
       Type *SrcTy = VL0->getOperand(0)->getType();
       int ScalarEltCost =
-          TTI->getCastInstrCost(E->getOpcode(), ScalarTy, SrcTy, CostKind,
-                                VL0);
+          TTI->getCastInstrCost(E->getOpcode(), ScalarTy, SrcTy,
+                                TTI::getCastContextHint(VL0), CostKind, VL0);
       if (NeedToShuffleReuses) {
         ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
       }
@@ -3437,9 +3437,10 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       int VecCost = 0;
       // Check if the values are candidates to demote.
       if (!MinBWs.count(VL0) || VecTy != SrcVecTy) {
-        VecCost = ReuseShuffleCost +
-                  TTI->getCastInstrCost(E->getOpcode(), VecTy, SrcVecTy,
-                                        CostKind, VL0);
+        VecCost =
+            ReuseShuffleCost +
+            TTI->getCastInstrCost(E->getOpcode(), VecTy, SrcVecTy,
+                                  TTI::getCastContextHint(VL0), CostKind, VL0);
       }
       return VecCost - ScalarCost;
     }
@@ -3644,9 +3645,9 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
         auto *Src0Ty = FixedVectorType::get(Src0SclTy, VL.size());
         auto *Src1Ty = FixedVectorType::get(Src1SclTy, VL.size());
         VecCost = TTI->getCastInstrCost(E->getOpcode(), VecTy, Src0Ty,
-                                        CostKind);
+                                        TTI::CastContextHint::None, CostKind);
         VecCost += TTI->getCastInstrCost(E->getAltOpcode(), VecTy, Src1Ty,
-                                         CostKind);
+                                         TTI::CastContextHint::None, CostKind);
       }
       VecCost += TTI->getShuffleCost(TargetTransformInfo::SK_Select, VecTy, 0);
       return ReuseShuffleCost + VecCost - ScalarCost;
@@ -7397,8 +7398,17 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // Look for the next elements with the same type.
       SmallVector<Value *, 4>::iterator SameTypeIt = IncIt;
       Type *EltTy = (*IncIt)->getType();
-      unsigned EltSize = EltTy->isSized() ? DL->getTypeSizeInBits(EltTy)
-                                          : MaxVecRegSize;
+
+      assert(EltTy->isSized() &&
+             "Instructions should all be sized at this point");
+      TypeSize EltTS = DL->getTypeSizeInBits(EltTy);
+      if (EltTS.isScalable()) {
+        // For now, just ignore vectorizing scalable types.
+        ++IncIt;
+        continue;
+      }
+
+      unsigned EltSize = EltTS.getFixedSize();
       unsigned MaxNumElts = MaxVecRegSize / EltSize;
       if (MaxNumElts < 2) {
         ++IncIt;

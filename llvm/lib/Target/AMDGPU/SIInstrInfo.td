@@ -55,10 +55,6 @@ def SIatomic_dec : SDNode<"AMDGPUISD::ATOMIC_DEC", SDTAtomic2,
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
 >;
 
-def SIatomic_csub : SDNode<"AMDGPUISD::ATOMIC_LOAD_CSUB", SDTAtomic2,
-  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
->;
-
 def SDTAtomic2_f32 : SDTypeProfile<1, 2, [
   SDTCisSameAs<0,2>, SDTCisFP<0>, SDTCisPtrTy<1>
 ]>;
@@ -310,10 +306,6 @@ class isPackedType<ValueType SrcVT> {
 //===----------------------------------------------------------------------===//
 // PatFrags for global memory operations
 //===----------------------------------------------------------------------===//
-
-let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_global").AddrSpaces in {
-defm atomic_csub_global : binary_atomic_op<SIatomic_csub>;
-}
 
 foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
 let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
@@ -668,7 +660,6 @@ multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
 
 defm atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
 defm atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
-defm atomic_load_csub : SIAtomicM0Glue2 <"LOAD_CSUB", 1>;
 defm atomic_inc : SIAtomicM0Glue2 <"INC", 1>;
 defm atomic_dec : SIAtomicM0Glue2 <"DEC", 1>;
 defm atomic_load_and : SIAtomicM0Glue2 <"LOAD_AND">;

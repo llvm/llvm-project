@@ -73,14 +73,15 @@ static unsigned getARMFPUFeatures(const Driver &D, const Arg *A,
 }
 
 // Decode ARM features from string like +[no]featureA+[no]featureB+...
-static bool DecodeARMFeatures(const Driver &D, StringRef text,
-                              StringRef CPU, llvm::ARM::ArchKind ArchKind,
-                              std::vector<StringRef> &Features) {
+static bool DecodeARMFeatures(const Driver &D, StringRef text, StringRef CPU,
+                              llvm::ARM::ArchKind ArchKind,
+                              std::vector<StringRef> &Features,
+                              unsigned &ArgFPUID) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
   for (StringRef Feature : Split) {
-    if (!appendArchExtFeatures(CPU, ArchKind, Feature, Features))
+    if (!appendArchExtFeatures(CPU, ArchKind, Feature, Features, ArgFPUID))
       return false;
   }
   return true;
@@ -102,14 +103,14 @@ static void DecodeARMFeaturesFromCPU(const Driver &D, StringRef CPU,
 static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
                              llvm::StringRef ArchName, llvm::StringRef CPUName,
                              std::vector<StringRef> &Features,
-                             const llvm::Triple &Triple) {
+                             const llvm::Triple &Triple, unsigned &ArgFPUID) {
   std::pair<StringRef, StringRef> Split = ArchName.split("+");
 
   std::string MArch = arm::getARMArch(ArchName, Triple);
   llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(MArch);
   if (ArchKind == llvm::ARM::ArchKind::INVALID ||
-      (Split.second.size() && !DecodeARMFeatures(
-        D, Split.second, CPUName, ArchKind, Features)))
+      (Split.second.size() && !DecodeARMFeatures(D, Split.second, CPUName,
+                                                 ArchKind, Features, ArgFPUID)))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
 
@@ -117,15 +118,15 @@ static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
 static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
                             llvm::StringRef CPUName, llvm::StringRef ArchName,
                             std::vector<StringRef> &Features,
-                            const llvm::Triple &Triple) {
+                            const llvm::Triple &Triple, unsigned &ArgFPUID) {
   std::pair<StringRef, StringRef> Split = CPUName.split("+");
 
   std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
   llvm::ARM::ArchKind ArchKind =
     arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
   if (ArchKind == llvm::ARM::ArchKind::INVALID ||
-      (Split.second.size() && !DecodeARMFeatures(
-        D, Split.second, CPU, ArchKind, Features)))
+      (Split.second.size() &&
+       !DecodeARMFeatures(D, Split.second, CPU, ArchKind, Features, ArgFPUID)))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
 
@@ -347,6 +348,8 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   const Arg *CPUArg = Args.getLastArg(options::OPT_mcpu_EQ);
   StringRef ArchName;
   StringRef CPUName;
+  unsigned ArchArgFPUID = llvm::ARM::FK_INVALID;
+  unsigned CPUArgFPUID = llvm::ARM::FK_INVALID;
 
   // Check -mcpu. ClangAs gives preference to -Wa,-mcpu=.
   if (WaCPU) {
@@ -364,14 +367,14 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       D.Diag(clang::diag::warn_drv_unused_argument)
           << ArchArg->getAsString(Args);
     ArchName = StringRef(WaArch->getValue()).substr(7);
-    checkARMArchName(D, WaArch, Args, ArchName, CPUName,
-                     ExtensionFeatures, Triple);
+    checkARMArchName(D, WaArch, Args, ArchName, CPUName, ExtensionFeatures,
+                     Triple, ArchArgFPUID);
     // FIXME: Set Arch.
     D.Diag(clang::diag::warn_drv_unused_argument) << WaArch->getAsString(Args);
   } else if (ArchArg) {
     ArchName = ArchArg->getValue();
-    checkARMArchName(D, ArchArg, Args, ArchName, CPUName,
-                     ExtensionFeatures, Triple);
+    checkARMArchName(D, ArchArg, Args, ArchName, CPUName, ExtensionFeatures,
+                     Triple, ArchArgFPUID);
   }
 
   // Add CPU features for generic CPUs
@@ -390,8 +393,8 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   if (CPUArg)
-    checkARMCPUName(D, CPUArg, Args, CPUName, ArchName,
-                    ExtensionFeatures, Triple);
+    checkARMCPUName(D, CPUArg, Args, CPUName, ArchName, ExtensionFeatures,
+                    Triple, CPUArgFPUID);
   // Honor -mfpu=. ClangAs gives preference to -Wa,-mfpu=.
   unsigned FPUID = llvm::ARM::FK_INVALID;
   const Arg *FPUArg = Args.getLastArg(options::OPT_mfpu_EQ);
@@ -455,20 +458,26 @@ fp16_fml_fallthrough:
       Features.push_back("+fullfp16");
   }
 
-  // Setting -msoft-float/-mfloat-abi=soft effectively disables the FPU (GCC
-  // ignores the -mfpu options in this case).
-  // Note that the ABI can also be set implicitly by the target selected.
+  // Setting -msoft-float/-mfloat-abi=soft, -mfpu=none, or adding +nofp to
+  // -march/-mcpu effectively disables the FPU (GCC ignores the -mfpu options in
+  // this case). Note that the ABI can also be set implicitly by the target
+  // selected.
   if (ABI == arm::FloatABI::Soft) {
     llvm::ARM::getFPUFeatures(llvm::ARM::FK_NONE, Features);
 
     // Disable all features relating to hardware FP, not already disabled by the
     // above call.
+    Features.insert(Features.end(), {"-dotprod", "-fp16fml", "-bf16", "-mve",
+                                     "-mve.fp", "-fpregs"});
+  } else if (FPUID == llvm::ARM::FK_NONE ||
+             ArchArgFPUID == llvm::ARM::FK_NONE ||
+             CPUArgFPUID == llvm::ARM::FK_NONE) {
+    // -mfpu=none, -march=armvX+nofp or -mcpu=X+nofp is *very* similar to
+    // -mfloat-abi=soft, only that it should not disable MVE-I. They disable the
+    // FPU, but not the FPU registers, thus MVE-I, which depends only on the
+    // latter, is still supported.
     Features.insert(Features.end(),
-                    {"-dotprod", "-fp16fml", "-mve", "-mve.fp", "-fpregs"});
-  } else if (FPUID == llvm::ARM::FK_NONE) {
-    // -mfpu=none is *very* similar to -mfloat-abi=soft, only that it should not
-    // disable MVE-I.
-    Features.insert(Features.end(), {"-dotprod", "-fp16fml", "-mve.fp"});
+                    {"-dotprod", "-fp16fml", "-bf16", "-mve.fp"});
     if (!hasIntegerMVE(Features))
       Features.emplace_back("-fpregs");
   }

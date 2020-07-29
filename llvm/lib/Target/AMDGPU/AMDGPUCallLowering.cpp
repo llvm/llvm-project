@@ -993,7 +993,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     Register InputReg = MRI.createGenericVirtualRegister(ArgTy);
 
     if (IncomingArg) {
-      LI->loadInputValue(InputReg, MIRBuilder, IncomingArg);
+      LI->loadInputValue(InputReg, MIRBuilder, IncomingArg, ArgRC, ArgTy);
     } else {
       assert(InputID == AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR);
       LI->getImplicitArgPtr(InputReg, MRI, MIRBuilder);
@@ -1026,13 +1026,16 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   if (!OutgoingArg)
     return false;
 
-  const ArgDescriptor *IncomingArgX = std::get<0>(
-      CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X));
-  const ArgDescriptor *IncomingArgY = std::get<0>(
-      CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y));
-  const ArgDescriptor *IncomingArgZ = std::get<0>(
-      CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z));
+  auto WorkitemIDX =
+      CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X);
+  auto WorkitemIDY =
+      CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
+  auto WorkitemIDZ =
+      CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
 
+  const ArgDescriptor *IncomingArgX = std::get<0>(WorkitemIDX);
+  const ArgDescriptor *IncomingArgY = std::get<0>(WorkitemIDY);
+  const ArgDescriptor *IncomingArgZ = std::get<0>(WorkitemIDZ);
   const LLT S32 = LLT::scalar(32);
 
   // If incoming ids are not packed we need to pack them.
@@ -1040,12 +1043,14 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   Register InputReg;
   if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo->WorkItemIDX) {
     InputReg = MRI.createGenericVirtualRegister(S32);
-    LI->loadInputValue(InputReg, MIRBuilder, IncomingArgX);
+    LI->loadInputValue(InputReg, MIRBuilder, IncomingArgX,
+                       std::get<1>(WorkitemIDX), std::get<2>(WorkitemIDX));
   }
 
   if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo->WorkItemIDY) {
     Register Y = MRI.createGenericVirtualRegister(S32);
-    LI->loadInputValue(Y, MIRBuilder, IncomingArgY);
+    LI->loadInputValue(Y, MIRBuilder, IncomingArgY, std::get<1>(WorkitemIDY),
+                       std::get<2>(WorkitemIDY));
 
     Y = MIRBuilder.buildShl(S32, Y, MIRBuilder.buildConstant(S32, 10)).getReg(0);
     InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Y).getReg(0) : Y;
@@ -1053,7 +1058,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
 
   if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo->WorkItemIDZ) {
     Register Z = MRI.createGenericVirtualRegister(S32);
-    LI->loadInputValue(Z, MIRBuilder, IncomingArgZ);
+    LI->loadInputValue(Z, MIRBuilder, IncomingArgZ, std::get<1>(WorkitemIDZ),
+                       std::get<2>(WorkitemIDZ));
 
     Z = MIRBuilder.buildShl(S32, Z, MIRBuilder.buildConstant(S32, 20)).getReg(0);
     InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Z).getReg(0) : Z;
@@ -1067,7 +1073,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     ArgDescriptor IncomingArg = ArgDescriptor::createArg(
       IncomingArgX ? *IncomingArgX :
         IncomingArgY ? *IncomingArgY : *IncomingArgZ, ~0u);
-    LI->loadInputValue(InputReg, MIRBuilder, &IncomingArg);
+    LI->loadInputValue(InputReg, MIRBuilder, &IncomingArg,
+                       &AMDGPU::VGPR_32RegClass, S32);
   }
 
   if (OutgoingArg->isRegister()) {

@@ -64,12 +64,16 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
     return Type;
   }
   case OMPC_to:
-  case OMPC_from:
-    return llvm::StringSwitch<unsigned>(Str)
+  case OMPC_from: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
 #define OPENMP_MOTION_MODIFIER_KIND(Name)                                      \
   .Case(#Name, static_cast<unsigned>(OMPC_MOTION_MODIFIER_##Name))
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_MOTION_MODIFIER_unknown);
+    if (OpenMPVersion < 51 && Type == OMPC_MOTION_MODIFIER_present)
+      return OMPC_MOTION_MODIFIER_unknown;
+    return Type;
+  }
   case OMPC_dist_schedule:
     return llvm::StringSwitch<OpenMPDistScheduleClauseKind>(Str)
 #define OPENMP_DIST_SCHEDULE_KIND(Name) .Case(#Name, OMPC_DIST_SCHEDULE_##Name)

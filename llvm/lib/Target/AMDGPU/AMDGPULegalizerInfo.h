@@ -91,11 +91,11 @@ public:
                              bool InsertLiveInCopy = true) const;
   Register insertLiveInCopy(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                             Register LiveIn, Register PhyReg) const;
-  const ArgDescriptor *
-  getArgDescriptor(MachineIRBuilder &B,
-                   AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
-                      const ArgDescriptor *Arg) const;
+                      const ArgDescriptor *Arg,
+                      const TargetRegisterClass *ArgRC, LLT ArgTy) const;
+  bool loadInputValue(Register DstReg, MachineIRBuilder &B,
+                      AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
   bool legalizePreloadedArgIntrin(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;

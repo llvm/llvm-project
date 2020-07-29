@@ -819,7 +819,7 @@ define <32 x i8> @PR27320(<8 x i32> %a0) {
 define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1, <8 x float> %inp2) {
 ; CHECK-LABEL: PR34577:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,1,3]
+; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,1,1]
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>

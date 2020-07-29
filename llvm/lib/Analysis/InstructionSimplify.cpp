@@ -5258,20 +5258,23 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   case Intrinsic::smin:
   case Intrinsic::umax:
   case Intrinsic::umin: {
+    // If the arguments are the same, this is a no-op.
+    if (Op0 == Op1)
+      return Op0;
+
     // Canonicalize constant operand as Op1.
     if (isa<Constant>(Op0))
       std::swap(Op0, Op1);
 
-    // TODO: Allow partial undef vector constants.
     const APInt *C;
-    if (!match(Op1, m_APInt(C)))
+    if (!match(Op1, m_APIntAllowUndef(C)))
       break;
 
     if ((IID == Intrinsic::smax && C->isMaxSignedValue()) ||
         (IID == Intrinsic::smin && C->isMinSignedValue()) ||
         (IID == Intrinsic::umax && C->isMaxValue()) ||
         (IID == Intrinsic::umin && C->isMinValue()))
-      return Op1;
+      return ConstantInt::get(ReturnType, *C);
 
     break;
   }

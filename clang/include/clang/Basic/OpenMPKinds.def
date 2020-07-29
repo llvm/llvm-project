@@ -125,6 +125,7 @@ OPENMP_MAP_MODIFIER_KIND(present)
 
 // Modifiers for 'to' or 'from' clause.
 OPENMP_MOTION_MODIFIER_KIND(mapper)
+OPENMP_MOTION_MODIFIER_KIND(present)
 
 // Static attributes for 'dist_schedule' clause.
 OPENMP_DIST_SCHEDULE_KIND(static)

@@ -703,9 +703,7 @@ template <class ELFT> class MipsGOTParser;
 
 template <typename ELFT> class DumpStyle {
 public:
-  using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Sym = typename ELFT::Sym;
-  using Elf_Addr = typename ELFT::Addr;
+  TYPEDEF_ELF_TYPES(ELFT)
 
   DumpStyle(ELFDumper<ELFT> *Dumper) : Dumper(Dumper) {
     FileName = this->Dumper->getElfObject()->getFileName();
@@ -768,6 +766,15 @@ protected:
       const ELFFile<ELFT> *Obj,
       function_ref<void(const Elf_Shdr &)> OnSectionStart,
       function_ref<void(StringRef, uint64_t)> OnSectionEntry);
+
+  virtual void printRelReloc(const ELFO *Obj, unsigned SecIndex,
+                             const Elf_Shdr *SymTab, const Elf_Rel &R,
+                             unsigned RelIndex) = 0;
+  virtual void printRelaReloc(const ELFO *Obj, unsigned SecIndex,
+                              const Elf_Shdr *SymTab, const Elf_Rela &R,
+                              unsigned RelIndex) = 0;
+  virtual void printRelrReloc(const Elf_Relr &R) = 0;
+  void printRelocationsHelper(const ELFFile<ELFT> *Obj, const Elf_Shdr &Sec);
 
   void reportUniqueWarning(Error Err) const;
   StringRef FileName;
@@ -880,13 +887,21 @@ private:
   void printHashedSymbol(const ELFO *Obj, const Elf_Sym *FirstSym, uint32_t Sym,
                          StringRef StrTable, uint32_t Bucket);
   void printRelocHeader(unsigned SType);
+
+  void printRelReloc(const ELFO *Obj, unsigned SecIndex, const Elf_Shdr *SymTab,
+                     const Elf_Rel &R, unsigned RelIndex) override;
+  void printRelaReloc(const ELFO *Obj, unsigned SecIndex,
+                      const Elf_Shdr *SymTab, const Elf_Rela &R,
+                      unsigned RelIndex) override;
+  void printRelrReloc(const Elf_Relr &R) override;
+
   template <class RelTy>
-  void printRelocation(const ELFO *Obj, unsigned SecIndex,
-                       const Elf_Shdr *SymTab, const RelTy &R,
-                       unsigned RelIndex);
+  void printRelRelaReloc(const ELFO *Obj, unsigned SecIndex,
+                         const Elf_Shdr *SymTab, const RelTy &R,
+                         unsigned RelIndex);
   template <class RelTy>
-  void printRelocation(const ELFO *Obj, const Elf_Sym *Sym,
-                       StringRef SymbolName, const RelTy &R);
+  void printRelRelaReloc(const ELFO *Obj, const Elf_Sym *Sym,
+                         StringRef SymbolName, const RelTy &R);
   void printSymbol(const ELFO *Obj, const Elf_Sym *Symbol, const Elf_Sym *First,
                    Optional<StringRef> StrTable, bool IsDynamic,
                    bool NonVisibilityBitsUsed) override;
@@ -924,7 +939,6 @@ public:
   void printFileHeaders(const ELFO *Obj) override;
   void printGroupSections(const ELFFile<ELFT> *Obj) override;
   void printRelocations(const ELFO *Obj) override;
-  void printRelocations(const Elf_Shdr *Sec, const ELFO *Obj);
   void printSectionHeaders(const ELFO *Obj) override;
   void printSymbols(const ELFO *Obj, bool PrintSymbols,
                     bool PrintDynamicSymbols) override;
@@ -951,9 +965,15 @@ public:
   void printMipsABIFlags(const ELFObjectFile<ELFT> *Obj) override;
 
 private:
+  void printRelReloc(const ELFO *Obj, unsigned SecIndex, const Elf_Shdr *SymTab,
+                     const Elf_Rel &R, unsigned RelIndex) override;
+  void printRelaReloc(const ELFO *Obj, unsigned SecIndex,
+                      const Elf_Shdr *SymTab, const Elf_Rela &R,
+                      unsigned RelIndex) override;
+  void printRelrReloc(const Elf_Relr &R) override;
   template <class RelTy>
-  void printRelocation(const ELFO *Obj, unsigned SecIndex, const RelTy &Rel,
-                       unsigned RelIndex, const Elf_Shdr *SymTab);
+  void printRelRelaReloc(const ELFO *Obj, unsigned SecIndex, const RelTy &Rel,
+                         unsigned RelIndex, const Elf_Shdr *SymTab);
   template <class RelTy>
   void printDynamicRelocation(const ELFO *Obj, const RelTy& Rel);
 
@@ -3573,10 +3593,28 @@ template <class ELFT> void GNUStyle<ELFT>::printGroupSections(const ELFO *Obj) {
 }
 
 template <class ELFT>
+void GNUStyle<ELFT>::printRelReloc(const ELFO *Obj, unsigned SecIndex,
+                                   const Elf_Shdr *SymTab, const Elf_Rel &R,
+                                   unsigned RelIndex) {
+  printRelRelaReloc(Obj, SecIndex, SymTab, R, RelIndex);
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printRelaReloc(const ELFO *Obj, unsigned SecIndex,
+                                    const Elf_Shdr *SymTab, const Elf_Rela &R,
+                                    unsigned RelIndex) {
+  printRelRelaReloc(Obj, SecIndex, SymTab, R, RelIndex);
+}
+
+template <class ELFT> void GNUStyle<ELFT>::printRelrReloc(const Elf_Relr &R) {
+  OS << to_string(format_hex_no_prefix(R, ELFT::Is64Bits ? 16 : 8)) << "\n";
+}
+
+template <class ELFT>
 template <class RelTy>
-void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, unsigned SecIndex,
-                                     const Elf_Shdr *SymTab, const RelTy &R,
-                                     unsigned RelIndex) {
+void GNUStyle<ELFT>::printRelRelaReloc(const ELFO *Obj, unsigned SecIndex,
+                                       const Elf_Shdr *SymTab, const RelTy &R,
+                                       unsigned RelIndex) {
   Expected<std::pair<const typename ELFT::Sym *, std::string>> Target =
       this->dumper()->getRelocationTarget(SymTab, R);
   if (!Target)
@@ -3584,7 +3622,7 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, unsigned SecIndex,
         "unable to print relocation " + Twine(RelIndex) + " in section " +
         Twine(SecIndex) + ": " + toString(Target.takeError())));
   else
-    printRelocation(Obj, /*Sym=*/Target->first, /*Name=*/Target->second, R);
+    printRelRelaReloc(Obj, /*Sym=*/Target->first, /*Name=*/Target->second, R);
 }
 
 template <class ELFT>
@@ -3599,8 +3637,8 @@ static Optional<int64_t> getAddend(const typename ELFT::Rel &) {
 
 template <class ELFT>
 template <class RelTy>
-void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Sym *Sym,
-                                     StringRef SymbolName, const RelTy &R) {
+void GNUStyle<ELFT>::printRelRelaReloc(const ELFO *Obj, const Elf_Sym *Sym,
+                                       StringRef SymbolName, const RelTy &R) {
   // First two fields are bit width dependent. The rest of them are fixed width.
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
   Field Fields[5] = {0, 10 + Bias, 19 + 2 * Bias, 42 + 2 * Bias, 53 + 2 * Bias};
@@ -3657,73 +3695,42 @@ template <class ELFT> void GNUStyle<ELFT>::printRelocHeader(unsigned SType) {
   OS << "\n";
 }
 
+template <class ELFT>
+static bool isRelocationSec(const typename ELFT::Shdr &Sec) {
+  return Sec.sh_type == ELF::SHT_REL || Sec.sh_type == ELF::SHT_RELA ||
+         Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_REL ||
+         Sec.sh_type == ELF::SHT_ANDROID_RELA ||
+         Sec.sh_type == ELF::SHT_ANDROID_RELR;
+}
+
 template <class ELFT> void GNUStyle<ELFT>::printRelocations(const ELFO *Obj) {
   bool HasRelocSections = false;
   for (const Elf_Shdr &Sec : cantFail(Obj->sections())) {
-    if (Sec.sh_type != ELF::SHT_REL && Sec.sh_type != ELF::SHT_RELA &&
-        Sec.sh_type != ELF::SHT_RELR && Sec.sh_type != ELF::SHT_ANDROID_REL &&
-        Sec.sh_type != ELF::SHT_ANDROID_RELA &&
-        Sec.sh_type != ELF::SHT_ANDROID_RELR)
+    if (!isRelocationSec<ELFT>(Sec))
       continue;
     HasRelocSections = true;
+
     StringRef Name = unwrapOrError(this->FileName, Obj->getSectionName(&Sec));
-    unsigned Entries = Sec.getEntityCount();
-    std::vector<Elf_Rela> AndroidRelas;
+    unsigned Entries;
+    // Android's packed relocation section needs to be unpacked first
+    // to get the actual number of entries.
     if (Sec.sh_type == ELF::SHT_ANDROID_REL ||
         Sec.sh_type == ELF::SHT_ANDROID_RELA) {
-      // Android's packed relocation section needs to be unpacked first
-      // to get the actual number of entries.
-      AndroidRelas = unwrapOrError(this->FileName, Obj->android_relas(&Sec));
-      Entries = AndroidRelas.size();
-    }
-    std::vector<Elf_Rel> RelrRels;
-    if (!opts::RawRelr && (Sec.sh_type == ELF::SHT_RELR ||
-                           Sec.sh_type == ELF::SHT_ANDROID_RELR)) {
-      // .relr.dyn relative relocation section needs to be unpacked first
-      // to get the actual number of entries.
+      Entries = unwrapOrError(this->FileName, Obj->android_relas(&Sec)).size();
+    } else if (!opts::RawRelr && (Sec.sh_type == ELF::SHT_RELR ||
+                                  Sec.sh_type == ELF::SHT_ANDROID_RELR)) {
       Elf_Relr_Range Relrs = unwrapOrError(this->FileName, Obj->relrs(&Sec));
-      RelrRels = unwrapOrError(this->FileName, Obj->decode_relrs(Relrs));
-      Entries = RelrRels.size();
+      Entries = unwrapOrError(this->FileName, Obj->decode_relrs(Relrs)).size();
+    } else {
+      Entries = Sec.getEntityCount();
     }
+
     uintX_t Offset = Sec.sh_offset;
     OS << "\nRelocation section '" << Name << "' at offset 0x"
        << to_hexString(Offset, false) << " contains " << Entries
        << " entries:\n";
     printRelocHeader(Sec.sh_type);
-    const Elf_Shdr *SymTab =
-        unwrapOrError(this->FileName, Obj->getSection(Sec.sh_link));
-    unsigned SecNdx = &Sec - &cantFail(Obj->sections()).front();
-    unsigned RelNdx = 0;
-
-    switch (Sec.sh_type) {
-    case ELF::SHT_REL:
-      for (const Elf_Rel &R : unwrapOrError(this->FileName, Obj->rels(&Sec)))
-        printRelocation(Obj, SecNdx, SymTab, R, ++RelNdx);
-      break;
-    case ELF::SHT_RELA:
-      for (const Elf_Rela &R : unwrapOrError(this->FileName, Obj->relas(&Sec)))
-        printRelocation(Obj, SecNdx, SymTab, R, ++RelNdx);
-      break;
-    case ELF::SHT_RELR:
-    case ELF::SHT_ANDROID_RELR:
-      if (opts::RawRelr)
-        for (const Elf_Relr &R :
-             unwrapOrError(this->FileName, Obj->relrs(&Sec)))
-          OS << to_string(format_hex_no_prefix(R, ELFT::Is64Bits ? 16 : 8))
-             << "\n";
-      else
-        for (const Elf_Rel &R : RelrRels)
-          printRelocation(Obj, SecNdx, SymTab, R, ++RelNdx);
-      break;
-    case ELF::SHT_ANDROID_REL:
-      for (const Elf_Rela &R : AndroidRelas)
-        printRelocation(Obj, SecNdx, SymTab, (const Elf_Rel &)R, ++RelNdx);
-      break;
-    case ELF::SHT_ANDROID_RELA:
-      for (const Elf_Rela &R : AndroidRelas)
-        printRelocation(Obj, SecNdx, SymTab, R, ++RelNdx);
-      break;
-    }
+    this->printRelocationsHelper(Obj, Sec);
   }
   if (!HasRelocSections)
     OS << "\nThere are no relocations in this file.\n";
@@ -4370,7 +4377,7 @@ template <class ELFT>
 template <class RelTy>
 void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, const RelTy &R) {
   RelSymbol<ELFT> S = getSymbolForReloc(Obj, this->FileName, this->dumper(), R);
-  printRelocation(Obj, S.Sym, S.Name, R);
+  printRelRelaReloc(Obj, S.Sym, S.Name, R);
 }
 
 template <class ELFT>
@@ -5451,6 +5458,46 @@ void DumpStyle<ELFT>::printDependentLibsHelper(
 }
 
 template <class ELFT>
+void DumpStyle<ELFT>::printRelocationsHelper(const ELFFile<ELFT> *Obj,
+                                             const Elf_Shdr &Sec) {
+  const Elf_Shdr *SymTab =
+      unwrapOrError(this->FileName, Obj->getSection(Sec.sh_link));
+  unsigned SecNdx = &Sec - &cantFail(Obj->sections()).front();
+  unsigned RelNdx = 0;
+
+  switch (Sec.sh_type) {
+  case ELF::SHT_REL:
+    for (const Elf_Rel &R : unwrapOrError(this->FileName, Obj->rels(&Sec)))
+      printRelReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    break;
+  case ELF::SHT_RELA:
+    for (const Elf_Rela &R : unwrapOrError(this->FileName, Obj->relas(&Sec)))
+      printRelaReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    break;
+  case ELF::SHT_RELR:
+  case ELF::SHT_ANDROID_RELR: {
+    Elf_Relr_Range Relrs = unwrapOrError(this->FileName, Obj->relrs(&Sec));
+    if (opts::RawRelr) {
+      for (const Elf_Relr &R : Relrs)
+        printRelrReloc(R);
+      break;
+    }
+    std::vector<Elf_Rel> RelrRels =
+        unwrapOrError(this->FileName, Obj->decode_relrs(Relrs));
+    for (const Elf_Rel &R : RelrRels)
+      printRelReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    break;
+  }
+  case ELF::SHT_ANDROID_REL:
+  case ELF::SHT_ANDROID_RELA:
+    for (const Elf_Rela &R :
+         unwrapOrError(this->FileName, Obj->android_relas(&Sec)))
+      printRelaReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    break;
+  }
+}
+
+template <class ELFT>
 void GNUStyle<ELFT>::printDependentLibs(const ELFFile<ELFT> *Obj) {
   bool SectionStarted = false;
   struct NameOffset {
@@ -6059,72 +6106,43 @@ void LLVMStyle<ELFT>::printGroupSections(const ELFO *Obj) {
 template <class ELFT> void LLVMStyle<ELFT>::printRelocations(const ELFO *Obj) {
   ListScope D(W, "Relocations");
 
-  int SectionNumber = -1;
   for (const Elf_Shdr &Sec : cantFail(Obj->sections())) {
-    ++SectionNumber;
-
-    if (Sec.sh_type != ELF::SHT_REL && Sec.sh_type != ELF::SHT_RELA &&
-        Sec.sh_type != ELF::SHT_RELR && Sec.sh_type != ELF::SHT_ANDROID_REL &&
-        Sec.sh_type != ELF::SHT_ANDROID_RELA &&
-        Sec.sh_type != ELF::SHT_ANDROID_RELR)
+    if (!isRelocationSec<ELFT>(Sec))
       continue;
 
     StringRef Name = unwrapOrError(this->FileName, Obj->getSectionName(&Sec));
-
-    W.startLine() << "Section (" << SectionNumber << ") " << Name << " {\n";
+    unsigned SecNdx = &Sec - &cantFail(Obj->sections()).front();
+    W.startLine() << "Section (" << SecNdx << ") " << Name << " {\n";
     W.indent();
-
-    printRelocations(&Sec, Obj);
-
+    this->printRelocationsHelper(Obj, Sec);
     W.unindent();
     W.startLine() << "}\n";
   }
 }
 
 template <class ELFT>
-void LLVMStyle<ELFT>::printRelocations(const Elf_Shdr *Sec, const ELFO *Obj) {
-  const Elf_Shdr *SymTab =
-      unwrapOrError(this->FileName, Obj->getSection(Sec->sh_link));
-  unsigned SecNdx = Sec - &cantFail(Obj->sections()).front();
-  unsigned RelNdx = 0;
+void LLVMStyle<ELFT>::printRelReloc(const ELFO *Obj, unsigned SecIndex,
+                                    const Elf_Shdr *SymTab, const Elf_Rel &R,
+                                    unsigned RelIndex) {
+  printRelRelaReloc(Obj, SecIndex, R, RelIndex, SymTab);
+}
 
-  switch (Sec->sh_type) {
-  case ELF::SHT_REL:
-    for (const Elf_Rel &R : unwrapOrError(this->FileName, Obj->rels(Sec)))
-      printRelocation(Obj, SecNdx, R, ++RelNdx, SymTab);
-    break;
-  case ELF::SHT_RELA:
-    for (const Elf_Rela &R : unwrapOrError(this->FileName, Obj->relas(Sec)))
-      printRelocation(Obj, SecNdx, R, ++RelNdx, SymTab);
-    break;
-  case ELF::SHT_RELR:
-  case ELF::SHT_ANDROID_RELR: {
-    Elf_Relr_Range Relrs = unwrapOrError(this->FileName, Obj->relrs(Sec));
-    if (opts::RawRelr) {
-      for (const Elf_Relr &R : Relrs)
-        W.startLine() << W.hex(R) << "\n";
-    } else {
-      std::vector<Elf_Rel> RelrRels =
-          unwrapOrError(this->FileName, Obj->decode_relrs(Relrs));
-      for (const Elf_Rel &R : RelrRels)
-        printRelocation(Obj, SecNdx, R, ++RelNdx, SymTab);
-    }
-    break;
-  }
-  case ELF::SHT_ANDROID_REL:
-  case ELF::SHT_ANDROID_RELA:
-    for (const Elf_Rela &R :
-         unwrapOrError(this->FileName, Obj->android_relas(Sec)))
-      printRelocation(Obj, SecNdx, R, ++RelNdx, SymTab);
-    break;
-  }
+template <class ELFT>
+void LLVMStyle<ELFT>::printRelaReloc(const ELFO *Obj, unsigned SecIndex,
+                                     const Elf_Shdr *SymTab, const Elf_Rela &R,
+                                     unsigned RelIndex) {
+  printRelRelaReloc(Obj, SecIndex, R, RelIndex, SymTab);
+}
+
+template <class ELFT> void LLVMStyle<ELFT>::printRelrReloc(const Elf_Relr &R) {
+  W.startLine() << W.hex(R) << "\n";
 }
 
 template <class ELFT>
 template <class RelTy>
-void LLVMStyle<ELFT>::printRelocation(const ELFO *Obj, unsigned SecIndex,
-                                      const RelTy &Rel, unsigned RelIndex,
-                                      const Elf_Shdr *SymTab) {
+void LLVMStyle<ELFT>::printRelRelaReloc(const ELFO *Obj, unsigned SecIndex,
+                                        const RelTy &Rel, unsigned RelIndex,
+                                        const Elf_Shdr *SymTab) {
   Expected<std::pair<const typename ELFT::Sym *, std::string>> Target =
       this->dumper()->getRelocationTarget(SymTab, Rel);
   if (!Target) {
@@ -6187,7 +6205,7 @@ void LLVMStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
 
     if (opts::SectionRelocations) {
       ListScope D(W, "Relocations");
-      printRelocations(&Sec, Obj);
+      this->printRelocationsHelper(Obj, Sec);
     }
 
     if (opts::SectionSymbols) {
