@@ -180,9 +180,9 @@ PrintIRInstrumentation::popModuleDesc(StringRef PassID) {
   return ModuleDesc;
 }
 
-bool PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
+void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   if (PassID.startswith("PassManager<") || PassID.contains("PassAdaptor<"))
-    return true;
+    return;
 
   // Saving Module for AfterPassInvalidated operations.
   // Note: here we rely on a fact that we do not change modules while
@@ -192,11 +192,11 @@ bool PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
     pushModuleDesc(PassID, IR);
 
   if (!llvm::shouldPrintBeforePass(PassID))
-    return true;
+    return;
 
   SmallString<20> Banner = formatv("*** IR Dump Before {0} ***", PassID);
   unwrapAndPrint(IR, Banner, llvm::forcePrintModuleIR());
-  return true;
+  return;
 }
 
 void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
@@ -240,8 +240,8 @@ void PrintIRInstrumentation::registerCallbacks(
   // for later use in AfterPassInvalidated.
   StoreModuleDesc = llvm::forcePrintModuleIR() && llvm::shouldPrintAfterPass();
   if (llvm::shouldPrintBeforePass() || StoreModuleDesc)
-    PIC.registerBeforePassCallback(
-        [this](StringRef P, Any IR) { return this->printBeforePass(P, IR); });
+    PIC.registerBeforeNonSkippedPassCallback(
+        [this](StringRef P, Any IR) { this->printBeforePass(P, IR); });
 
   if (llvm::shouldPrintAfterPass()) {
     PIC.registerAfterPassCallback(

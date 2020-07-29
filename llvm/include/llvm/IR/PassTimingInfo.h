@@ -100,7 +100,7 @@ private:
   void stopTimer(StringRef PassID);
 
   // Implementation of pass instrumentation callbacks.
-  bool runBeforePass(StringRef PassID);
+  void runBeforePass(StringRef PassID);
   void runAfterPass(StringRef PassID);
 };
 

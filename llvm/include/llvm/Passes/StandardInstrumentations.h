@@ -39,7 +39,7 @@ public:
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
-  bool printBeforePass(StringRef PassID, Any IR);
+  void printBeforePass(StringRef PassID, Any IR);
   void printAfterPass(StringRef PassID, Any IR);
   void printAfterPassInvalidated(StringRef PassID);
 
