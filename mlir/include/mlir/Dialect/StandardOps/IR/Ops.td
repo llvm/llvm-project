@@ -1409,7 +1409,7 @@ def DimOp : Std_Op<"dim", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins AnyTypeOf<[AnyMemRef, AnyTensor],
+  let arguments = (ins AnyTypeOf<[AnyRankedOrUnrankedMemRef, AnyTensor],
                                  "any tensor or memref type">:$memrefOrTensor,
                        Index:$index);
   let results = (outs Index:$result);
@@ -2024,16 +2024,18 @@ def PrefetchOp : Std_Op<"prefetch"> {
 def RankOp : Std_Op<"rank", [NoSideEffect]> {
   let summary = "rank operation";
   let description = [{
-    The `rank` operation takes a tensor operand and returns its rank.
+    The `rank` operation takes a memref/tensor operand and returns its rank.
 
     Example:
 
     ```mlir
-    %1 = rank %0 : tensor<*xf32>
+    %1 = rank %arg0 : tensor<*xf32>
+    %2 = rank %arg1 : memref<*xf32>
     ```
   }];
 
-  let arguments = (ins AnyTensor);
+  let arguments = (ins AnyTypeOf<[AnyRankedOrUnrankedMemRef, AnyTensor],
+                                 "any tensor or memref type">:$memrefOrTensor);
   let results = (outs Index);
   let verifier = ?;
 
@@ -2044,7 +2046,7 @@ def RankOp : Std_Op<"rank", [NoSideEffect]> {
     }]>];
 
   let hasFolder = 1;
-  let assemblyFormat = "operands attr-dict `:` type(operands)";
+  let assemblyFormat = "$memrefOrTensor attr-dict `:` type($memrefOrTensor)";
 }
 
 //===----------------------------------------------------------------------===//
