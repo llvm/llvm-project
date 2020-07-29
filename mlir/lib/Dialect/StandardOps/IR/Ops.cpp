@@ -2039,10 +2039,12 @@ LogicalResult PrefetchOp::fold(ArrayRef<Attribute> cstOperands,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
-  // Constant fold rank when the rank of the tensor is known.
+  // Constant fold rank when the rank of the operand is known.
   auto type = getOperand().getType();
-  if (auto tensorType = type.dyn_cast<RankedTensorType>())
-    return IntegerAttr::get(IndexType::get(getContext()), tensorType.getRank());
+  if (auto shapedType = type.dyn_cast<ShapedType>())
+    if (shapedType.hasRank())
+      return IntegerAttr::get(IndexType::get(getContext()),
+                              shapedType.getRank());
   return IntegerAttr();
 }
 
