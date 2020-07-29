@@ -140,7 +140,7 @@ body:             |
 
     ; CHECK-LABEL: name: shuffle_v2i64
     ; CHECK: constants:
-    ; CHECK: value:           '<16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>'
+    ; CHECK: value:           '<16 x i8> <i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>'
     ; CHECK: alignment:       16
     ; CHECK: isTargetSpecific: false
     ; CHECK: liveins: $q0, $q1
@@ -154,7 +154,7 @@ body:             |
     ; CHECK: RET_ReallyLR implicit $q0
     %0:fpr(<2 x s64>) = COPY $q0
     %1:fpr(<2 x s64>) = COPY $q1
-    %2:fpr(<2 x s64>) = G_SHUFFLE_VECTOR %0(<2 x s64>), %1, shufflemask(0, 0)
+    %2:fpr(<2 x s64>) = G_SHUFFLE_VECTOR %0(<2 x s64>), %1, shufflemask(1, 0)
     $q0 = COPY %2(<2 x s64>)
     RET_ReallyLR implicit $q0
 

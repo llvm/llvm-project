@@ -213,5 +213,9 @@ LLT getLCMType(LLT OrigTy, LLT TargetTy);
 LLVM_READNONE
 LLT getGCDType(LLT OrigTy, LLT TargetTy);
 
+/// \returns The splat index of a G_SHUFFLE_VECTOR \p MI when \p MI is a splat.
+/// If \p MI is not a splat, returns None.
+Optional<int> getSplatIndex(MachineInstr &MI);
+
 } // End namespace llvm.
 #endif
