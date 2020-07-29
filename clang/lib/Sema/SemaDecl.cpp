@@ -4766,7 +4766,10 @@ Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
   if (!DeclaresAnything) {
     // In C, we allow this as a (popular) extension / bug. Don't bother
     // producing further diagnostics for redundant qualifiers after this.
-    Diag(DS.getBeginLoc(), diag::ext_no_declarators) << DS.getSourceRange();
+    Diag(DS.getBeginLoc(), (IsExplicitInstantiation || !TemplateParams.empty())
+                               ? diag::err_no_declarators
+                               : diag::ext_no_declarators)
+        << DS.getSourceRange();
     return TagD;
   }
 
