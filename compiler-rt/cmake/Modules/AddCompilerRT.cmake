@@ -110,7 +110,7 @@ endfunction()
 function(add_asm_sources output)
   set(${output} ${ARGN} PARENT_SCOPE)
   # Xcode will try to compile asm files as C ('clang -x c'), and that will fail.
-  if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+  if (${CMAKE_GENERATOR} STREQUAL "Xcode")
     enable_language(ASM)
   else()
     # Pass ASM file directly to the C++ compiler.
