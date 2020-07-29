@@ -834,7 +834,13 @@ void ReduceOp::build(OpBuilder &builder, OperationState &result, Value shape,
   bodyRegion->push_back(new Block);
   Block &bodyBlock = bodyRegion->front();
   bodyBlock.addArgument(builder.getIndexType());
-  bodyBlock.addArgument(SizeType::get(builder.getContext()));
+
+  Type elementType;
+  if (auto tensorType = shape.getType().dyn_cast<TensorType>())
+    elementType = tensorType.getElementType();
+  else
+    elementType = SizeType::get(builder.getContext());
+  bodyBlock.addArgument(elementType);
 
   for (Type initValType : initVals.getTypes()) {
     bodyBlock.addArgument(initValType);
