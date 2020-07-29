@@ -229,6 +229,20 @@ private:
                          ArrayRef<Register> Src2Regs, LLT NarrowTy);
 
 public:
+  /// Return the alignment to use for a stack temporary object with the given
+  /// type.
+  Align getStackTemporaryAlignment(LLT Type, Align MinAlign = Align()) const;
+
+  /// Create a stack temporary based on the size in bytes and the alignment
+  MachineInstrBuilder createStackTemporary(TypeSize Bytes, Align Alignment,
+                                           MachinePointerInfo &PtrInfo);
+
+  /// Get a pointer to vector element \p Index located in memory for a vector of
+  /// type \p VecTy starting at a base address of \p VecPtr. If \p Index is out
+  /// of bounds the returned pointer is unspecified, but will be within the
+  /// vector bounds.
+  Register getVectorElementPointer(Register VecPtr, LLT VecTy, Register Index);
+
   LegalizeResult fewerElementsVectorImplicitDef(MachineInstr &MI,
                                                 unsigned TypeIdx, LLT NarrowTy);
 
@@ -312,6 +326,7 @@ public:
   LegalizeResult lowerFFloor(MachineInstr &MI);
   LegalizeResult lowerMergeValues(MachineInstr &MI);
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
+  LegalizeResult lowerExtractVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
   LegalizeResult lowerExtract(MachineInstr &MI);
