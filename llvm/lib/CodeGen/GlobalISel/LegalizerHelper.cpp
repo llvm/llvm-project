@@ -1614,8 +1614,7 @@ LegalizerHelper::widenScalarExtract(MachineInstr &MI, unsigned TypeIdx,
     if (WideTy.getSizeInBits() > SrcTy.getSizeInBits()) {
       Src = MIRBuilder.buildAnyExt(WideTy, Src);
       ShiftTy = WideTy;
-    } else if (WideTy.getSizeInBits() > SrcTy.getSizeInBits())
-      return UnableToLegalize;
+    }
 
     auto LShr = MIRBuilder.buildLShr(
       ShiftTy, Src, MIRBuilder.buildConstant(ShiftTy, Offset));
