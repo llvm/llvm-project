@@ -62,6 +62,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     } else if (Feature == "-hard-float") {
       FloatABI = SoftFloat;
+    } else if (Feature == "+paired-vector-memops") {
+      PairedVectorMemops = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -218,6 +220,7 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
 // - direct-move
 // - float128
 // - power9-vector
+// - paired-vector-memops
 // - power10-vector
 // then go ahead and error since the customer has expressed an incompatible
 // set of options.
@@ -240,6 +243,7 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
   Found |= FindVSXSubfeature("+direct-move", "-mdirect-move");
   Found |= FindVSXSubfeature("+float128", "-mfloat128");
   Found |= FindVSXSubfeature("+power9-vector", "-mpower9-vector");
+  Found |= FindVSXSubfeature("+paired-vector-memops", "-mpaired-vector-memops");
   Found |= FindVSXSubfeature("+power10-vector", "-mpower10-vector");
 
   // Return false if any vsx subfeatures was found.
@@ -340,6 +344,7 @@ bool PPCTargetInfo::initFeatureMap(
 void PPCTargetInfo::addP10SpecificFeatures(
     llvm::StringMap<bool> &Features) const {
   Features["htm"] = false; // HTM was removed for P10.
+  Features["paired-vector-memops"] = true;
   Features["power10-vector"] = true;
   Features["pcrelative-memops"] = true;
   return;
@@ -364,6 +369,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("extdiv", HasExtDiv)
       .Case("float128", HasFloat128)
       .Case("power9-vector", HasP9Vector)
+      .Case("paired-vector-memops", PairedVectorMemops)
       .Case("power10-vector", HasP10Vector)
       .Case("pcrelative-memops", HasPCRelativeMemops)
       .Case("spe", HasSPE)
@@ -380,6 +386,7 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
                              .Case("direct-move", true)
                              .Case("power8-vector", true)
                              .Case("power9-vector", true)
+                             .Case("paired-vector-memops", true)
                              .Case("power10-vector", true)
                              .Case("float128", true)
                              .Default(false);
@@ -399,11 +406,13 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
     if ((Name == "altivec") || (Name == "vsx"))
       Features["vsx"] = Features["direct-move"] = Features["power8-vector"] =
           Features["float128"] = Features["power9-vector"] =
-              Features["power10-vector"] = false;
+              Features["paired-vector-memops"] = Features["power10-vector"] =
+                  false;
     if (Name == "power8-vector")
-      Features["power9-vector"] = Features["power10-vector"] = false;
+      Features["power9-vector"] = Features["paired-vector-memops"] =
+          Features["power10-vector"] = false;
     else if (Name == "power9-vector")
-      Features["power10-vector"] = false;
+      Features["paired-vector-memops"] = Features["power10-vector"] = false;
     if (Name == "pcrel")
       Features["pcrelative-memops"] = false;
     else
