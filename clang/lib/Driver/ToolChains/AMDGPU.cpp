@@ -365,10 +365,33 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 }
 
 void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
+                                     const llvm::Triple &Triple,
                                      const llvm::opt::ArgList &Args,
                                      std::vector<StringRef> &Features) {
   if (const Arg *dAbi = Args.getLastArg(options::OPT_mamdgpu_debugger_abi))
     D.Diag(diag::err_drv_clang_unsupported) << dAbi->getAsString(Args);
+
+  // Add target ID features to -target-feature options. No diagnostics should
+  // be emitted here since invalid target ID is diagnosed at other places.
+  StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
+  if (!TargetID.empty()) {
+    llvm::StringMap<bool> FeatureMap;
+    auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
+    if (OptionalGpuArch) {
+      StringRef GpuArch = OptionalGpuArch.getValue();
+      // Iterate through all possible target ID features for the given GPU.
+      // If it is mapped to true, add +feature.
+      // If it is mapped to false, add -feature.
+      // If it is not in the map (default), do not add it
+      for (auto &&Feature : getAllPossibleTargetIDFeatures(Triple, GpuArch)) {
+        auto Pos = FeatureMap.find(Feature);
+        if (Pos == FeatureMap.end())
+          continue;
+        std::string Opt = (Twine(Pos->second ? "+" : "-") + Feature).str();
+        Features.push_back(Args.MakeArgStringRef(Opt));
+      }
+    }
+  }
 
   if (Args.getLastArg(options::OPT_mwavefrontsize64)) {
     Features.push_back("-wavefrontsize16");
@@ -523,37 +546,18 @@ AMDGPUToolChain::getGPUArch(const llvm::opt::ArgList &DriverArgs) const {
 StringRef
 AMDGPUToolChain::translateTargetID(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
-  StringRef GpuArch;
-  llvm::StringMap<bool> FeatureMap;
   StringRef TargetID = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
   if (TargetID.empty())
-    return GpuArch;
+    return StringRef();
 
+  llvm::StringMap<bool> FeatureMap;
   auto OptionalGpuArch = parseTargetID(getTriple(), TargetID, &FeatureMap);
   if (!OptionalGpuArch) {
     getDriver().Diag(clang::diag::err_drv_bad_target_id) << TargetID;
-    return GpuArch;
+    return StringRef();
   }
 
-  GpuArch = OptionalGpuArch.getValue();
-  if (GpuArch.empty())
-    return GpuArch;
-
-  // Iterate through all possible target ID features for the given GPU.
-  // If it is mapped to true, pass -mfeature to clang -cc1.
-  // If it is mapped to false, pass -mno-feature to clang -cc1.
-  // If it is not in the map (default), do not pass it to clang -cc1.
-  for (auto Feature : getAllPossibleTargetIDFeatures(getTriple(), GpuArch)) {
-    auto Pos = FeatureMap.find(Feature);
-    if (Pos == FeatureMap.end())
-      continue;
-    CC1Args.push_back("-target-feature");
-    auto FeatureName = Feature;
-    std::string Opt = (Twine(Pos->second ? "+" : "-") + FeatureName).str();
-    CC1Args.push_back(DriverArgs.MakeArgStringRef(Opt));
-  }
-
-  return GpuArch;
+  return OptionalGpuArch.getValue();
 }
 
 void ROCMToolChain::addClangTargetOptions(
