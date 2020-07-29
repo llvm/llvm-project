@@ -33,6 +33,7 @@
 
 #include <dirent.h>
 #include <pwd.h>
+#include <sys/file.h>
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
@@ -1076,6 +1077,50 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
   if (NumRead == -1)
     return errorCodeToError(std::error_code(errno, std::generic_category()));
   return NumRead;
+}
+
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
+  auto Start = std::chrono::steady_clock::now();
+  auto End = Start + Timeout;
+  do {
+    struct flock Lock;
+    memset(&Lock, 0, sizeof(Lock));
+    Lock.l_type = F_WRLCK;
+    Lock.l_whence = SEEK_SET;
+    Lock.l_start = 0;
+    Lock.l_len = 0;
+    if (::fcntl(FD, F_SETLK, &Lock) != -1)
+      return std::error_code();
+    int Error = errno;
+    if (Error != EACCES && Error != EAGAIN)
+      return std::error_code(Error, std::generic_category());
+    usleep(1000);
+  } while (std::chrono::steady_clock::now() < End);
+  return make_error_code(errc::no_lock_available);
+}
+
+std::error_code lockFile(int FD) {
+  struct flock Lock;
+  memset(&Lock, 0, sizeof(Lock));
+  Lock.l_type = F_WRLCK;
+  Lock.l_whence = SEEK_SET;
+  Lock.l_start = 0;
+  Lock.l_len = 0;
+  if (::fcntl(FD, F_SETLKW, &Lock) != -1)
+    return std::error_code();
+  int Error = errno;
+  return std::error_code(Error, std::generic_category());
+}
+
+std::error_code unlockFile(int FD) {
+  struct flock Lock;
+  Lock.l_type = F_UNLCK;
+  Lock.l_whence = SEEK_SET;
+  Lock.l_start = 0;
+  Lock.l_len = 0;
+  if (::fcntl(FD, F_SETLK, &Lock) != -1)
+    return std::error_code();
+  return std::error_code(errno, std::generic_category());
 }
 
 std::error_code closeFile(file_t &F) {
