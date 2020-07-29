@@ -62,9 +62,6 @@ public:
   FindProcesses(const lldb_private::ProcessInstanceInfoMatch &match_info,
                 lldb_private::ProcessInstanceInfoList &process_infos) override;
 
-  bool GetSupportedArchitectureAtIndex(uint32_t idx,
-                                       lldb_private::ArchSpec &arch) override;
-
   void
   AddClangModuleCompilationOptions(lldb_private::Target *target,
                                    std::vector<std::string> &options) override {
