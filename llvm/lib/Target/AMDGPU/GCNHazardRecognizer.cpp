@@ -715,8 +715,9 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) {
   return -1;
 }
 
-int GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
-						const MachineRegisterInfo &MRI) {
+int
+GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
+                                            const MachineRegisterInfo &MRI) {
   // Helper to check for the hazard where VMEM instructions that store more than
   // 8 bytes can have there store data over written by the next instruction.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
