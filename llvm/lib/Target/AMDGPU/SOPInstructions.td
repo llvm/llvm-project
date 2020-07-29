@@ -806,15 +806,19 @@ let hasSideEffects = 1 in {
 let mayLoad = 1 in {
 // s_getreg_b32 should use hasSideEffects = 1 for tablegen to allow
 // its use in the readcyclecounter selection.
+// FIXME: Need to truncate immediate to 16-bits.
 def S_GETREG_B32 : SOPK_Pseudo <
   "s_getreg_b32",
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
-  "$sdst, $simm16"
->;
+  "$sdst, $simm16",
+  [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
+  let SOPKZext = 1;
+}
 }
 
 let mayLoad = 0, mayStore =0 in {
 
+// FIXME: Need to truncate immediate to 16-bits.
 def S_SETREG_B32 : SOPK_Pseudo <
   "s_setreg_b32",
   (outs), (ins SReg_32:$sdst, hwreg:$simm16),
@@ -1249,14 +1253,6 @@ let SubtargetPredicate = isGFX10Plus in {
   def S_TTRACEDATA_IMM :
     SOPP<0x028, (ins s16imm:$simm16), "s_ttracedata_imm $simm16">;
 } // End SubtargetPredicate = isGFX10Plus
-
-//===----------------------------------------------------------------------===//
-// S_GETREG_B32 Intrinsic Pattern.
-//===----------------------------------------------------------------------===//
-def : GCNPat <
-  (int_amdgcn_s_getreg timm:$simm16),
-  (S_GETREG_B32 (as_i16imm $simm16))
->;
 
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
