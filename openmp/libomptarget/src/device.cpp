@@ -153,7 +153,7 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
   return lr;
 }
 
-// Used by target_data_begin
+// Used by targetDataBegin
 // Return the target pointer begin (where the data will be moved).
 // Allocate memory if this is the first occurrence of this mapping.
 // Increment the reference counter.
@@ -217,7 +217,7 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
   } else if (Size) {
     // If it is not contained and Size > 0, we should create a new entry for it.
     IsNew = true;
-    uintptr_t tp = (uintptr_t)data_alloc(Size, HstPtrBegin);
+    uintptr_t tp = (uintptr_t)allocData(Size, HstPtrBegin);
     DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD ", "
        "HstEnd=" DPxMOD ", TgtBegin=" DPxMOD "\n",
        DPxPTR(HstPtrBase), DPxPTR(HstPtrBegin),
@@ -232,9 +232,9 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
   return rc;
 }
 
-// Used by target_data_begin, target_data_end, target_data_update and target.
+// Used by targetDataBegin, targetDataEnd, target_data_update and target.
 // Return the target pointer begin (where the data will be moved).
-// Decrement the reference counter if called from target_data_end.
+// Decrement the reference counter if called from targetDataEnd.
 void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
     bool UpdateRefCount, bool &IsHostPtr) {
   void *rc = NULL;
@@ -299,7 +299,7 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
     if (HT.decRefCount() == 0) {
       DP("Deleting tgt data " DPxMOD " of size %ld\n",
           DPxPTR(HT.TgtPtrBegin), Size);
-      data_delete((void *)HT.TgtPtrBegin);
+      deleteData((void *)HT.TgtPtrBegin);
       DP("Removing%s mapping with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
           ", Size=%ld\n", (ForceDelete ? " (forced)" : ""),
           DPxPTR(HT.HstPtrBegin), DPxPTR(HT.TgtPtrBegin), Size);
@@ -351,17 +351,17 @@ __tgt_target_table *DeviceTy::load_binary(void *Img) {
   return rc;
 }
 
-void *DeviceTy::data_alloc(int64_t Size, void *HstPtr) {
+void *DeviceTy::allocData(int64_t Size, void *HstPtr) {
   return RTL->data_alloc(RTLDeviceID, Size, HstPtr);
 }
 
-int32_t DeviceTy::data_delete(void *TgtPtrBegin) {
+int32_t DeviceTy::deleteData(void *TgtPtrBegin) {
   return RTL->data_delete(RTLDeviceID, TgtPtrBegin);
 }
 
 // Submit data to device
-int32_t DeviceTy::data_submit(void *TgtPtrBegin, void *HstPtrBegin,
-                              int64_t Size, __tgt_async_info *AsyncInfoPtr) {
+int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                             __tgt_async_info *AsyncInfoPtr) {
   if (!AsyncInfoPtr || !RTL->data_submit_async || !RTL->synchronize)
     return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
   else
@@ -392,9 +392,9 @@ int32_t DeviceTy::data_exchange(void *SrcPtr, DeviceTy DstDev, void *DstPtr,
 }
 
 // Run region on device
-int32_t DeviceTy::run_region(void *TgtEntryPtr, void **TgtVarsPtr,
-                             ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
-                             __tgt_async_info *AsyncInfoPtr) {
+int32_t DeviceTy::runRegion(void *TgtEntryPtr, void **TgtVarsPtr,
+                            ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
+                            __tgt_async_info *AsyncInfoPtr) {
   if (!AsyncInfoPtr || !RTL->run_region || !RTL->synchronize)
     return RTL->run_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
                            TgtVarsSize);
@@ -404,11 +404,11 @@ int32_t DeviceTy::run_region(void *TgtEntryPtr, void **TgtVarsPtr,
 }
 
 // Run team region on device.
-int32_t DeviceTy::run_team_region(void *TgtEntryPtr, void **TgtVarsPtr,
-                                  ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
-                                  int32_t NumTeams, int32_t ThreadLimit,
-                                  uint64_t LoopTripCount,
-                                  __tgt_async_info *AsyncInfoPtr) {
+int32_t DeviceTy::runTeamRegion(void *TgtEntryPtr, void **TgtVarsPtr,
+                                ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
+                                int32_t NumTeams, int32_t ThreadLimit,
+                                uint64_t LoopTripCount,
+                                __tgt_async_info *AsyncInfoPtr) {
   if (!AsyncInfoPtr || !RTL->run_team_region_async || !RTL->synchronize)
     return RTL->run_team_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
                                 TgtOffsets, TgtVarsSize, NumTeams, ThreadLimit,
