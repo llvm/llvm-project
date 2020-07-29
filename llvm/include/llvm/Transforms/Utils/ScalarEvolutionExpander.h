@@ -52,9 +52,6 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   // New instructions receive a name to identify them with the current pass.
   const char *IVName;
 
-  /// Indicates whether LCSSA phis should be created for inserted values.
-  bool PreserveLCSSA;
-
   // InsertedExpressions caches Values for reuse, so must track RAUW.
   DenseMap<std::pair<const SCEV *, Instruction *>, TrackingVH<Value>>
       InsertedExpressions;
@@ -149,10 +146,9 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
 public:
   /// Construct a SCEVExpander in "canonical" mode.
   explicit SCEVExpander(ScalarEvolution &se, const DataLayout &DL,
-                        const char *name, bool PreserveLCSSA = true)
-      : SE(se), DL(DL), IVName(name), PreserveLCSSA(PreserveLCSSA),
-        IVIncInsertLoop(nullptr), IVIncInsertPos(nullptr), CanonicalMode(true),
-        LSRMode(false),
+                        const char *name)
+      : SE(se), DL(DL), IVName(name), IVIncInsertLoop(nullptr),
+        IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
         Builder(se.getContext(), TargetFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {
@@ -227,18 +223,14 @@ public:
                                const TargetTransformInfo *TTI = nullptr);
 
   /// Insert code to directly compute the specified SCEV expression into the
-  /// program.  The code is inserted into the specified block.
-  Value *expandCodeFor(const SCEV *SH, Type *Ty, Instruction *I) {
-    return expandCodeForImpl(SH, Ty, I, true);
-  }
+  /// program.  The inserted code is inserted into the specified block.
+  Value *expandCodeFor(const SCEV *SH, Type *Ty, Instruction *I);
 
   /// Insert code to directly compute the specified SCEV expression into the
-  /// program.  The code is inserted into the SCEVExpander's current
+  /// program.  The inserted code is inserted into the SCEVExpander's current
   /// insertion point. If a type is specified, the result will be expanded to
   /// have that type, with a cast if necessary.
-  Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr) {
-    return expandCodeForImpl(SH, Ty, true);
-  }
+  Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr);
 
   /// Generates a code sequence that evaluates this predicate.  The inserted
   /// instructions will be at position \p Loc.  The result will be of type i1
@@ -346,20 +338,6 @@ public:
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
 
-  /// Insert code to directly compute the specified SCEV expression into the
-  /// program. The code is inserted into the SCEVExpander's current
-  /// insertion point. If a type is specified, the result will be expanded to
-  /// have that type, with a cast if necessary. If \p Root is true, this
-  /// indicates that \p SH is the top-level expression to expand passed from
-  /// an external client call.
-  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root);
-
-  /// Insert code to directly compute the specified SCEV expression into the
-  /// program. The code is inserted into the specified block. If \p
-  /// Root is true, this indicates that \p SH is the top-level expression to
-  /// expand passed from an external client call.
-  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, Instruction *I, bool Root);
-
   /// Recursive helper function for isHighCostExpansion.
   bool isHighCostExpansionHelper(const SCEV *S, Loop *L, const Instruction &At,
                                  int &BudgetRemaining,
@@ -441,11 +419,6 @@ private:
                       Instruction *Pos, PHINode *LoopPhi);
 
   void fixupInsertPoints(Instruction *I);
-
-  /// If required, create LCSSA PHIs for \p Users' operand \p OpIdx. If new
-  /// LCSSA PHIs have been created, return the LCSSA PHI available at \p User.
-  /// If no PHIs have been created, return the unchanged operand \p OpIdx.
-  Value *fixupLCSSAFormFor(Instruction *User, unsigned OpIdx);
 };
 } // namespace llvm
 
