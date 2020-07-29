@@ -5513,6 +5513,8 @@ unsigned llvm::ConstantMaterializationCost(unsigned Val,
       return ForCodesize ? 4 : 1;
     if (ARM_AM::isSOImmTwoPartVal(Val)) // two instrs
       return ForCodesize ? 8 : 2;
+    if (ARM_AM::isSOImmTwoPartValNeg(Val)) // two instrs
+      return ForCodesize ? 8 : 2;
   }
   if (Subtarget->useMovt()) // MOVW + MOVT
     return ForCodesize ? 8 : 2;
