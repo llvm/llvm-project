@@ -35,6 +35,10 @@ using namespace llvm;
 static cl::opt<bool> UseSubRegLiveness("ppc-track-subreg-liveness",
 cl::desc("Enable subregister liveness tracking for PPC"), cl::Hidden);
 
+static cl::opt<bool> QPXStackUnaligned("qpx-stack-unaligned",
+  cl::desc("Even when QPX is enabled the stack is not 32-byte aligned"),
+  cl::Hidden);
+
 static cl::opt<bool>
     EnableMachinePipeliner("ppc-enable-pipeliner",
                            cl::desc("Enable Machine Pipeliner for PPC"),
@@ -66,6 +70,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasAltivec = false;
   HasSPE = false;
   HasFPU = false;
+  HasQPX = false;
   HasVSX = false;
   NeedsTwoConstNR = false;
   HasP8Vector = false;
@@ -104,6 +109,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasInvariantFunctionDescriptors = false;
   HasPartwordAtomics = false;
   HasDirectMove = false;
+  IsQPXStackUnaligned = false;
   HasHTM = false;
   HasFloat128 = false;
   HasFusion = false;
@@ -152,7 +158,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   if (HasSPE && IsPPC64)
     report_fatal_error( "SPE is only supported for 32-bit targets.\n", false);
-  if (HasSPE && (HasAltivec || HasVSX || HasFPU))
+  if (HasSPE && (HasAltivec || HasQPX || HasVSX || HasFPU))
     report_fatal_error(
         "SPE and traditional floating point cannot both be enabled.\n", false);
 
@@ -160,6 +166,10 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (!HasSPE)
     HasFPU = true;
 
+  // QPX requires a 32-byte aligned stack. Note that we need to do this if
+  // we're compiling for a BG/Q system regardless of whether or not QPX
+  // is enabled because external functions will assume this alignment.
+  IsQPXStackUnaligned = QPXStackUnaligned;
   StackAlignment = getPlatformStackAlignment();
 
   // Determine endianness.

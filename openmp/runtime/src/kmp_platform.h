@@ -22,6 +22,7 @@
 #define KMP_OS_OPENBSD 0
 #define KMP_OS_DARWIN 0
 #define KMP_OS_WINDOWS 0
+#define KMP_OS_CNK 0
 #define KMP_OS_HURD 0
 #define KMP_OS_UNIX 0 /* disjunction of KMP_OS_LINUX, KMP_OS_DARWIN etc. */
 
@@ -63,6 +64,11 @@
 #if (defined __OpenBSD__)
 #undef KMP_OS_OPENBSD
 #define KMP_OS_OPENBSD 1
+#endif
+
+#if (defined __bgq__)
+#undef KMP_OS_CNK
+#define KMP_OS_CNK 1
 #endif
 
 #if (defined __GNU__)

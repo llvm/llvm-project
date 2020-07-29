@@ -167,6 +167,12 @@ static DecodeStatus DecodeG8RC_NOX0RegisterClass(MCInst &Inst, uint64_t RegNo,
 #define DecodePointerLikeRegClass0 DecodeGPRCRegisterClass
 #define DecodePointerLikeRegClass1 DecodeGPRC_NOR0RegisterClass
 
+static DecodeStatus DecodeQFRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, QFRegs);
+}
+
 static DecodeStatus DecodeSPERCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
@@ -395,9 +401,14 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   // Read the instruction in the proper endianness.
   uint64_t Inst = ReadFunc(Bytes.data());
 
-  if (STI.getFeatureBits()[PPC::FeatureSPE]) {
+  if (STI.getFeatureBits()[PPC::FeatureQPX]) {
     DecodeStatus result =
-        decodeInstruction(DecoderTableSPE32, MI, Inst, Address, this, STI);
+      decodeInstruction(DecoderTableQPX32, MI, Inst, Address, this, STI);
+    if (result != MCDisassembler::Fail)
+      return result;
+  } else if (STI.getFeatureBits()[PPC::FeatureSPE]) {
+    DecodeStatus result =
+      decodeInstruction(DecoderTableSPE32, MI, Inst, Address, this, STI);
     if (result != MCDisassembler::Fail)
       return result;
   }

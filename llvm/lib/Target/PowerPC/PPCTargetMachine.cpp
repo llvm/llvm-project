@@ -64,6 +64,10 @@ opt<bool> DisableVSXSwapRemoval("disable-ppc-vsx-swap-removal", cl::Hidden,
                                 cl::desc("Disable VSX Swap Removal for PPC"));
 
 static cl::
+opt<bool> DisableQPXLoadSplat("disable-ppc-qpx-load-splat", cl::Hidden,
+                              cl::desc("Disable QPX load splat simplification"));
+
+static cl::
 opt<bool> DisableMIPeephole("disable-ppc-peephole", cl::Hidden,
                             cl::desc("Disable machine peepholes for PPC"));
 
@@ -110,6 +114,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCReduceCRLogicalsPass(PR);
   initializePPCBSelPass(PR);
   initializePPCBranchCoalescingPass(PR);
+  initializePPCQPXLoadSplatPass(PR);
   initializePPCBoolRetToIntPass(PR);
   initializePPCExpandISELPass(PR);
   initializePPCPreEmitPeepholePass(PR);
@@ -406,9 +411,14 @@ void PPCPassConfig::addIRPasses() {
 
   // Lower generic MASSV routines to PowerPC subtarget-specific entries.
   addPass(createPPCLowerMASSVEntriesPass());
-
-  // If explicitly requested, add explicit data prefetch intrinsics.
+  
+  // For the BG/Q (or if explicitly requested), add explicit data prefetch
+  // intrinsics.
+  bool UsePrefetching = TM->getTargetTriple().getVendor() == Triple::BGQ &&
+                        getOptLevel() != CodeGenOpt::None;
   if (EnablePrefetch.getNumOccurrences() > 0)
+    UsePrefetching = EnablePrefetch;
+  if (UsePrefetching)
     addPass(createLoopDataPrefetchPass());
 
   if (TM->getOptLevel() >= CodeGenOpt::Default && EnableGEPOpt) {
@@ -505,8 +515,15 @@ void PPCPassConfig::addPreRegAlloc() {
 }
 
 void PPCPassConfig::addPreSched2() {
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::None) {
     addPass(&IfConverterID);
+
+    // This optimization must happen after anything that might do store-to-load
+    // forwarding. Here we're after RA (and, thus, when spills are inserted)
+    // but before post-RA scheduling.
+    if (!DisableQPXLoadSplat)
+      addPass(createPPCQPXLoadSplatPass());
+  }
 }
 
 void PPCPassConfig::addPreEmitPass() {

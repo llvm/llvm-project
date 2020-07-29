@@ -46,6 +46,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
     ArchDefinePwr10 = 1 << 14,
     ArchDefineFuture = 1 << 15,
     ArchDefineA2 = 1 << 16,
+    ArchDefineA2q = 1 << 17,
     ArchDefineE500 = 1 << 18
   } ArchDefineTypes;
 
@@ -62,6 +63,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasP8Vector = false;
   bool HasP8Crypto = false;
   bool HasDirectMove = false;
+  bool HasQPX = false;
   bool HasHTM = false;
   bool HasBPERMD = false;
   bool HasExtDiv = false;
@@ -116,6 +118,7 @@ public:
               .Case("970", ArchDefineName | ArchDefinePwr4 | ArchDefinePpcgr |
                                ArchDefinePpcsq)
               .Case("a2", ArchDefineA2)
+              .Case("a2q", ArchDefineName | ArchDefineA2 | ArchDefineA2q)
               .Cases("power3", "pwr3", ArchDefinePpcgr)
               .Cases("power4", "pwr4",
                      ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)

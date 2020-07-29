@@ -97,6 +97,7 @@ protected:
   bool HasAltivec;
   bool HasFPU;
   bool HasSPE;
+  bool HasQPX;
   bool HasVSX;
   bool NeedsTwoConstNR;
   bool HasP8Vector;
@@ -148,6 +149,11 @@ protected:
   bool PredictableSelectIsExpensive;
 
   POPCNTDKind HasPOPCNTD;
+
+  /// When targeting QPX running a stock PPC64 Linux kernel where the stack
+  /// alignment has not been changed, we need to keep the 16-byte alignment
+  /// of the stack.
+  bool IsQPXStackUnaligned;
 
   const PPCTargetMachine &TM;
   PPCFrameLowering FrameLowering;
@@ -249,6 +255,7 @@ public:
   bool hasAltivec() const { return HasAltivec; }
   bool hasSPE() const { return HasSPE; }
   bool hasFPU() const { return HasFPU; }
+  bool hasQPX() const { return HasQPX; }
   bool hasVSX() const { return HasVSX; }
   bool needsTwoConstNR() const { return NeedsTwoConstNR; }
   bool hasP8Vector() const { return HasP8Vector; }
@@ -284,7 +291,11 @@ public:
   bool hasPartwordAtomics() const { return HasPartwordAtomics; }
   bool hasDirectMove() const { return HasDirectMove; }
 
+  bool isQPXStackUnaligned() const { return IsQPXStackUnaligned; }
   Align getPlatformStackAlignment() const {
+    if ((hasQPX() || isBGQ()) && !isQPXStackUnaligned())
+      return Align(32);
+
     return Align(16);
   }
 
@@ -313,6 +324,9 @@ public:
   POPCNTDKind hasPOPCNTD() const { return HasPOPCNTD; }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
+
+  /// isBGQ - True if this is a BG/Q platform.
+  bool isBGQ() const { return TargetTriple.getVendor() == Triple::BGQ; }
 
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
