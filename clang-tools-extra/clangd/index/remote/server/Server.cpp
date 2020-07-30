@@ -90,7 +90,7 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
-    Index->lookup(*Req, [&](const auto &Item) {
+    Index->lookup(*Req, [&](const clangd::Symbol &Item) {
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
         ++FailedToSend;
@@ -121,7 +121,7 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
-    bool HasMore = Index->fuzzyFind(*Req, [&](const auto &Item) {
+    bool HasMore = Index->fuzzyFind(*Req, [&](const clangd::Symbol &Item) {
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
         ++FailedToSend;
@@ -150,7 +150,7 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
-    bool HasMore = Index->refs(*Req, [&](const auto &Item) {
+    bool HasMore = Index->refs(*Req, [&](const clangd::Ref &Item) {
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
         ++FailedToSend;
