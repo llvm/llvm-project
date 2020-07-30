@@ -909,6 +909,7 @@ private:
   void AddSaveName(std::set<SourceName> &, const SourceName &);
   void SetSaveAttr(Symbol &);
   bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
+  bool IsUplevelReference(const Symbol &);
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   bool CheckInitialDataTarget(const Symbol &, const SomeExpr &, SourceName);
   void CheckInitialProcTarget(const Symbol &, const parser::Name &, SourceName);
@@ -5429,7 +5430,10 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
     if (CheckUseError(name)) {
       return nullptr; // reported an error
     }
-    if (IsDummy(*symbol) ||
+    if (IsUplevelReference(*symbol)) {
+      name.symbol = nullptr;
+      MakeSymbol(name, HostAssocDetails{*symbol});
+    } else if (IsDummy(*symbol) ||
         (!symbol->GetType() && FindCommonBlockContaining(*symbol))) {
       ConvertToObjectEntity(*symbol);
       ApplyImplicitRules(*symbol);
@@ -5451,6 +5455,16 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
   ConvertToObjectEntity(*symbol);
   ApplyImplicitRules(*symbol);
   return &name;
+}
+
+bool DeclarationVisitor::IsUplevelReference(const Symbol &symbol) {
+  const Scope *symbolUnit{FindProgramUnitContaining(symbol)};
+  if (symbolUnit == FindProgramUnitContaining(currScope())) {
+    return false;
+  } else {
+    Scope::Kind kind{DEREF(symbolUnit).kind()};
+    return kind == Scope::Kind::Subprogram || kind == Scope::Kind::MainProgram;
+  }
 }
 
 // base is a part-ref of a derived type; find the named component in its type.
