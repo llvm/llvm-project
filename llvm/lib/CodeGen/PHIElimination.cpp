@@ -324,21 +324,43 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       // Increment use count of the newly created virtual register.
       LV->setPHIJoin(IncomingReg);
 
-      // When we are reusing the incoming register, it may already have been
-      // killed in this block. The old kill will also have been inserted at
-      // AfterPHIsIt, so it appears before the current PHICopy.
-      if (reusedIncoming)
-        if (MachineInstr *OldKill = VI.findKill(&MBB)) {
-          LLVM_DEBUG(dbgs() << "Remove old kill from " << *OldKill);
-          LV->removeVirtualRegisterKilled(IncomingReg, *OldKill);
-          LLVM_DEBUG(MBB.dump());
-        }
+      MachineInstr *OldKill = nullptr;
+      bool IsPHICopyAfterOldKill = false;
 
-      // Add information to LiveVariables to know that the incoming value is
-      // killed.  Note that because the value is defined in several places (once
-      // each for each incoming block), the "def" block and instruction fields
-      // for the VarInfo is not filled in.
-      LV->addVirtualRegisterKilled(IncomingReg, *PHICopy);
+      if (reusedIncoming && (OldKill = VI.findKill(&MBB))) {
+        // Calculate whether the PHICopy is after the OldKill.
+        // In general, the PHICopy is inserted as the first non-phi instruction
+        // by default, so it's before the OldKill. But some Target hooks for
+        // createPHIDestinationCopy() may modify the default insert position of
+        // PHICopy.
+        for (auto I = MBB.SkipPHIsAndLabels(MBB.begin()), E = MBB.end();
+             I != E; ++I) {
+          if (I == PHICopy)
+            break;
+
+          if (I == OldKill) {
+            IsPHICopyAfterOldKill = true;
+            break;
+          }
+        }
+      }
+
+      // When we are reusing the incoming register and it has been marked killed
+      // by OldKill, if the PHICopy is after the OldKill, we should remove the
+      // killed flag from OldKill.
+      if (IsPHICopyAfterOldKill) {
+        LLVM_DEBUG(dbgs() << "Remove old kill from " << *OldKill);
+        LV->removeVirtualRegisterKilled(IncomingReg, *OldKill);
+        LLVM_DEBUG(MBB.dump());
+      }
+
+      // Add information to LiveVariables to know that the first used incoming
+      // value or the resued incoming value whose PHICopy is after the OldKIll
+      // is killed. Note that because the value is defined in several places
+      // (once each for each incoming block), the "def" block and instruction
+      // fields for the VarInfo is not filled in.
+      if (!OldKill || IsPHICopyAfterOldKill)
+        LV->addVirtualRegisterKilled(IncomingReg, *PHICopy);
     }
 
     // Since we are going to be deleting the PHI node, if it is the last use of
