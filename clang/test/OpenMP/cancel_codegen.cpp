@@ -16,7 +16,6 @@
 
 float flag;
 int main (int argc, char **argv) {
-// ALL: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
 #pragma omp parallel
 {
 #pragma omp cancel parallel if(flag)
@@ -42,14 +41,14 @@ int main (int argc, char **argv) {
   }
 }
 // ALL: call void @__kmpc_for_static_init_4(
-// ALL: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* {{[^,]+}}, i32 [[GTID]], i32 3)
+// ALL: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* {{[^,]+}}, i32 [[GTID:%.*]], i32 3)
 // ALL: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // ALL: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // ALL: [[EXIT]]
 // ALL: br label
 // ALL: [[CONTINUE]]
 // ALL: br label
-// ALL: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* {{[^,]+}}, i32 [[GTID]], i32 3)
+// ALL: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* {{[^,]+}}, i32 [[GTID:%.*]], i32 3)
 // ALL: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // ALL: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // ALL: [[EXIT]]
@@ -66,7 +65,7 @@ for (int i = 0; i < argc; ++i) {
 // ALL: [[BOOL:%.+]] = fcmp une float [[FLAG]], 0.000000e+00
 // ALL: br i1 [[BOOL]], label %[[THEN:[^,]+]], label %[[ELSE:[^,]+]]
 // ALL: [[THEN]]
-// ALL: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* {{[^,]+}}, i32 [[GTID]], i32 2)
+// ALL: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* {{[^,]+}}, i32 [[GTID:%.*]], i32 2)
 // ALL: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // ALL: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // ALL: [[EXIT]]
@@ -148,7 +147,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
-// CHECK: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* {{[^,]+}}, i32 [[GTID]], i32 3)
+// CHECK: [[RES:%.+]] = call i32 @__kmpc_cancel(%struct.ident_t* {{[^,]+}}, i32 [[GTID:%.*]], i32 3)
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
