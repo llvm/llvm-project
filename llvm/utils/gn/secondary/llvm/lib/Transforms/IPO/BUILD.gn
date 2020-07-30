@@ -38,7 +38,6 @@ static_library("IPO") {
     "GlobalOpt.cpp",
     "GlobalSplit.cpp",
     "HotColdSplitting.cpp",
-    "IPConstantPropagation.cpp",
     "IPO.cpp",
     "InferFunctionAttrs.cpp",
     "InlineSimple.cpp",
