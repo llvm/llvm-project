@@ -5,7 +5,8 @@
 using namespace llvm;
 using namespace WebAssembly;
 
-template <> bool ConcreteSortRegion<MachineLoop>::isLoop() const {
+template <>
+bool llvm::WebAssembly::ConcreteSortRegion<MachineLoop>::isLoop() const {
   return true;
 }
 
