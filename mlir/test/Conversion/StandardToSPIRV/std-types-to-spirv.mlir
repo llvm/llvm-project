@@ -510,6 +510,51 @@ func @dynamic_dim_memref(%arg0: memref<8x?xi32>,
 
 // -----
 
+// Vector types
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: func @memref_vector
+// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<4 x vector<2xf32>, stride=8> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<4 x vector<4xf32>, stride=16> [0]>, Uniform>
+func @memref_vector(
+    %arg0: memref<4xvector<2xf32>, 0>,
+    %arg1: memref<4xvector<4xf32>, 4>)
+{ return }
+
+// CHECK-LABEL: func @dynamic_dim_memref_vector
+// CHECK-SAME: !spv.ptr<!spv.struct<!spv.rtarray<vector<4xi32>, stride=16> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<!spv.rtarray<vector<2xf32>, stride=8> [0]>, StorageBuffer>
+func @dynamic_dim_memref_vector(%arg0: memref<8x?xvector<4xi32>>,
+                         %arg1: memref<?x?xvector<2xf32>>)
+{ return }
+
+} // end module
+
+// -----
+
+// Vector types, check that sizes not available in SPIR-V are not transformed.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: func @memref_vector_wrong_size
+// CHECK-SAME: memref<4xvector<5xf32>>
+func @memref_vector_wrong_size(
+    %arg0: memref<4xvector<5xf32>, 0>)
+{ return }
+
+} // end module
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Tensor types
 //===----------------------------------------------------------------------===//

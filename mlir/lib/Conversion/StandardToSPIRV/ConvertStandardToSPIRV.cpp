@@ -217,11 +217,15 @@ CHECK_UNSIGNED_OP(spirv::UModOp)
 /// Returns true if the allocations of type `t` can be lowered to SPIR-V.
 static bool isAllocationSupported(MemRefType t) {
   // Currently only support workgroup local memory allocations with static
-  // shape and int or float element type.
-  return t.hasStaticShape() &&
-         SPIRVTypeConverter::getMemorySpaceForStorageClass(
-             spirv::StorageClass::Workgroup) == t.getMemorySpace() &&
-         t.getElementType().isIntOrFloat();
+  // shape and int or float or vector of int or float element type.
+  if (!(t.hasStaticShape() &&
+        SPIRVTypeConverter::getMemorySpaceForStorageClass(
+            spirv::StorageClass::Workgroup) == t.getMemorySpace()))
+    return false;
+  Type elementType = t.getElementType();
+  if (auto vecType = elementType.dyn_cast<VectorType>())
+    elementType = vecType.getElementType();
+  return elementType.isIntOrFloat();
 }
 
 /// Returns the scope to use for atomic operations use for emulating store
