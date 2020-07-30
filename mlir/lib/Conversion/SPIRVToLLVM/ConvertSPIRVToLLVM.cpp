@@ -1120,8 +1120,13 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLSLCosOp, LLVM::CosOp>,
       DirectConversionPattern<spirv::GLSLExpOp, LLVM::ExpOp>,
       DirectConversionPattern<spirv::GLSLFAbsOp, LLVM::FAbsOp>,
+      DirectConversionPattern<spirv::GLSLFloorOp, LLVM::FFloorOp>,
+      DirectConversionPattern<spirv::GLSLFMaxOp, LLVM::MaxNumOp>,
+      DirectConversionPattern<spirv::GLSLFMinOp, LLVM::MinNumOp>,
       DirectConversionPattern<spirv::GLSLLogOp, LLVM::LogOp>,
       DirectConversionPattern<spirv::GLSLSinOp, LLVM::SinOp>,
+      DirectConversionPattern<spirv::GLSLSMaxOp, LLVM::SMaxOp>,
+      DirectConversionPattern<spirv::GLSLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::GLSLSqrtOp, LLVM::SqrtOp>,
       InverseSqrtPattern, TanPattern, TanhPattern,
 

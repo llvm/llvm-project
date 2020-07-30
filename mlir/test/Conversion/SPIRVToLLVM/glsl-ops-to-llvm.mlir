@@ -53,6 +53,45 @@ func @fabs(%arg0: f32, %arg1: vector<3xf16>) {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.GLSL.Floor
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @floor
+func @floor(%arg0: f32, %arg1: vector<3xf16>) {
+	// CHECK: "llvm.intr.floor"(%{{.*}}) : (!llvm.float) -> !llvm.float
+	%0 = spv.GLSL.Floor %arg0 : f32
+	// CHECK: "llvm.intr.floor"(%{{.*}}) : (!llvm<"<3 x half>">) -> !llvm<"<3 x half>">
+	%1 = spv.GLSL.Floor %arg1 : vector<3xf16>
+	return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.FMax
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fmax
+func @fmax(%arg0: f32, %arg1: vector<3xf16>) {
+	// CHECK: "llvm.intr.maxnum"(%{{.*}}, %{{.*}}) : (!llvm.float, !llvm.float) -> !llvm.float
+	%0 = spv.GLSL.FMax %arg0, %arg0 : f32
+	// CHECK: "llvm.intr.maxnum"(%{{.*}}, %{{.*}}) : (!llvm<"<3 x half>">, !llvm<"<3 x half>">) -> !llvm<"<3 x half>">
+	%1 = spv.GLSL.FMax %arg1, %arg1 : vector<3xf16>
+	return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.FMin
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fmin
+func @fmin(%arg0: f32, %arg1: vector<3xf16>) {
+	// CHECK: "llvm.intr.minnum"(%{{.*}}, %{{.*}}) : (!llvm.float, !llvm.float) -> !llvm.float
+	%0 = spv.GLSL.FMin %arg0, %arg0 : f32
+	// CHECK: "llvm.intr.minnum"(%{{.*}}, %{{.*}}) : (!llvm<"<3 x half>">, !llvm<"<3 x half>">) -> !llvm<"<3 x half>">
+	%1 = spv.GLSL.FMin %arg1, %arg1 : vector<3xf16>
+	return
+}
+
+//===----------------------------------------------------------------------===//
 // spv.GLSL.Log
 //===----------------------------------------------------------------------===//
 
@@ -75,6 +114,32 @@ func @sin(%arg0: f32, %arg1: vector<3xf16>) {
 	%0 = spv.GLSL.Sin %arg0 : f32
 	// CHECK: "llvm.intr.sin"(%{{.*}}) : (!llvm<"<3 x half>">) -> !llvm<"<3 x half>">
 	%1 = spv.GLSL.Sin %arg1 : vector<3xf16>
+	return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.SMax
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @smax
+func @smax(%arg0: i16, %arg1: vector<3xi32>) {
+	// CHECK: "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (!llvm.i16, !llvm.i16) -> !llvm.i16
+	%0 = spv.GLSL.SMax %arg0, %arg0 : i16
+	// CHECK: "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (!llvm<"<3 x i32>">, !llvm<"<3 x i32>">) -> !llvm<"<3 x i32>">
+	%1 = spv.GLSL.SMax %arg1, %arg1 : vector<3xi32>
+	return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.SMin
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @smin
+func @smin(%arg0: i16, %arg1: vector<3xi32>) {
+	// CHECK: "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (!llvm.i16, !llvm.i16) -> !llvm.i16
+	%0 = spv.GLSL.SMin %arg0, %arg0 : i16
+	// CHECK: "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (!llvm<"<3 x i32>">, !llvm<"<3 x i32>">) -> !llvm<"<3 x i32>">
+	%1 = spv.GLSL.SMin %arg1, %arg1 : vector<3xi32>
 	return
 }
 
