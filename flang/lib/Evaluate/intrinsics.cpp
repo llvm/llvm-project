@@ -1568,6 +1568,7 @@ public:
   bool IsIntrinsic(const std::string &) const;
 
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
+  std::string GetGenericIntrinsicName(const std::string &) const;
 
   std::optional<SpecificCall> Probe(const CallCharacteristics &,
       ActualArguments &, FoldingContext &, const IntrinsicProcTable &) const;
@@ -1623,6 +1624,17 @@ IntrinsicClass IntrinsicProcTable::Implementation::GetIntrinsicClass(
     return subrIntrinsic->second->intrinsicClass;
   }
   return IntrinsicClass::noClass;
+}
+
+std::string IntrinsicProcTable::Implementation::GetGenericIntrinsicName(
+    const std::string &name) const {
+  auto specificIntrinsic{specificFuncs_.find(name)};
+  if (specificIntrinsic != specificFuncs_.end()) {
+    if (const char *genericName{specificIntrinsic->second->generic}) {
+      return {genericName};
+    }
+  }
+  return name;
 }
 
 bool CheckAndRearrangeArguments(ActualArguments &arguments,
@@ -2073,6 +2085,11 @@ bool IntrinsicProcTable::IsIntrinsic(const std::string &name) const {
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(
     const std::string &name) const {
   return DEREF(impl_).GetIntrinsicClass(name);
+}
+
+std::string IntrinsicProcTable::GetGenericIntrinsicName(
+    const std::string &name) const {
+  return DEREF(impl_).GetGenericIntrinsicName(name);
 }
 
 std::optional<SpecificCall> IntrinsicProcTable::Probe(
