@@ -108,14 +108,15 @@ UnrollVerifyDomtree("unroll-verify-domtree", cl::Hidden,
 /// insert a phi-node, otherwise LCSSA will be broken.
 /// The function is just a helper function for llvm::UnrollLoop that returns
 /// true if this situation occurs, indicating that LCSSA needs to be fixed.
-static bool needToInsertPhisForLCSSA(Loop *L, std::vector<BasicBlock *> Blocks,
+static bool needToInsertPhisForLCSSA(Loop *L,
+                                     const std::vector<BasicBlock *> &Blocks,
                                      LoopInfo *LI) {
   for (BasicBlock *BB : Blocks) {
     if (LI->getLoopFor(BB) == L)
       continue;
     for (Instruction &I : *BB) {
       for (Use &U : I.operands()) {
-        if (auto Def = dyn_cast<Instruction>(U)) {
+        if (const auto *Def = dyn_cast<Instruction>(U)) {
           Loop *DefLoop = LI->getLoopFor(Def->getParent());
           if (!DefLoop)
             continue;
