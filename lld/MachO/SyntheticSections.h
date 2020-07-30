@@ -273,6 +273,7 @@ private:
 };
 
 struct InStruct {
+  MachHeaderSection *header = nullptr;
   BindingSection *binding = nullptr;
   GotSection *got = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
