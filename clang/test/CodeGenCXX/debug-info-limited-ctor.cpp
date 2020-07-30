@@ -24,3 +24,10 @@ D::D() {}
 struct E {
   constexpr E(){};
 } TestE;
+
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "F"{{.*}}DIFlagTypePassByValue
+struct F {
+  F() = default;
+  F(int) {}
+  int i;
+} TestF;
