@@ -13,8 +13,7 @@ define void @test_umin(i32 %x) {
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 10)
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
 ; CHECK:       split:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ule i32 [[M]], 10
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
@@ -35,8 +34,7 @@ define void @test_umax(i32 %x) {
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 10)
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
 ; CHECK:       split:
-; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[M]], 10
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
@@ -57,8 +55,7 @@ define void @test_smin(i32 %x) {
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 10)
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
 ; CHECK:       split:
-; CHECK-NEXT:    [[C1:%.*]] = icmp sle i32 [[M]], 10
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
@@ -79,8 +76,7 @@ define void @test_smax(i32 %x) {
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 10)
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
 ; CHECK:       split:
-; CHECK-NEXT:    [[C1:%.*]] = icmp sge i32 [[M]], 10
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
@@ -102,8 +98,7 @@ define void @test_abs1(i32* %p) {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
 ; CHECK:       split:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ule i32 [[A]], 15
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[A]], 15
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
@@ -125,8 +120,7 @@ define void @test_abs2(i32 %x) {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
 ; CHECK:       split:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ule i32 [[A]], -2147483648
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[A]], -2147483648
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
