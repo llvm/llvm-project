@@ -395,6 +395,10 @@ public:
     return Name;
   }
 
+  /// Rename this symbol. The client is responsible for updating scope and
+  /// linkage if this name-change requires it.
+  void setName(StringRef Name) { this->Name = Name; }
+
   /// Returns true if this Symbol has content (potentially) defined within this
   /// object file (i.e. is anything but an external or absolute symbol).
   bool isDefined() const {
