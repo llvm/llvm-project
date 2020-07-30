@@ -30,8 +30,9 @@ class DereferenceChecker
     : public Checker< check::Location,
                       check::Bind,
                       EventDispatcher<ImplicitNullDerefEvent> > {
-  mutable std::unique_ptr<BuiltinBug> BT_null;
-  mutable std::unique_ptr<BuiltinBug> BT_undef;
+  BugType BT_Null{this, "Dereference of null pointer", categories::LogicError};
+  BugType BT_Undef{this, "Dereference of undefined pointer value",
+                   categories::LogicError};
 
   void reportBug(ProgramStateRef State, const Stmt *S, CheckerContext &C) const;
 
@@ -123,11 +124,6 @@ void DereferenceChecker::reportBug(ProgramStateRef State, const Stmt *S,
   if (!N)
     return;
 
-  // We know that 'location' cannot be non-null.  This is what
-  // we call an "explicit" null dereference.
-  if (!BT_null)
-    BT_null.reset(new BuiltinBug(this, "Dereference of null pointer"));
-
   SmallString<100> buf;
   llvm::raw_svector_ostream os(buf);
 
@@ -180,7 +176,7 @@ void DereferenceChecker::reportBug(ProgramStateRef State, const Stmt *S,
   }
 
   auto report = std::make_unique<PathSensitiveBugReport>(
-      *BT_null, buf.empty() ? BT_null->getDescription() : StringRef(buf), N);
+      BT_Null, buf.empty() ? BT_Null.getDescription() : StringRef(buf), N);
 
   bugreporter::trackExpressionValue(N, bugreporter::getDerefExpr(S), *report);
 
@@ -196,12 +192,8 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
   // Check for dereference of an undefined value.
   if (l.isUndef()) {
     if (ExplodedNode *N = C.generateErrorNode()) {
-      if (!BT_undef)
-        BT_undef.reset(
-            new BuiltinBug(this, "Dereference of undefined pointer value"));
-
       auto report = std::make_unique<PathSensitiveBugReport>(
-          *BT_undef, BT_undef->getDescription(), N);
+          BT_Undef, BT_Undef.getDescription(), N);
       bugreporter::trackExpressionValue(N, bugreporter::getDerefExpr(S), *report);
       C.emitReport(std::move(report));
     }
@@ -219,9 +211,10 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
   ProgramStateRef notNullState, nullState;
   std::tie(notNullState, nullState) = state->assume(location);
 
-  // The explicit NULL case.
   if (nullState) {
     if (!notNullState) {
+      // We know that 'location' can only be null.  This is what
+      // we call an "explicit" null dereference.
       const Expr *expr = getDereferenceExpr(S);
       if (!suppressReport(expr)) {
         reportBug(nullState, expr, C);
