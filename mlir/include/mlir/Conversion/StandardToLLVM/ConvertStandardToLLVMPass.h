@@ -42,31 +42,26 @@ struct LowerToLLVMOptions {
 /// Standard dialect to the LLVM dialect, excluding non-memory-related
 /// operations and FuncOp.
 void populateStdToLLVMMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    const LowerToLLVMOptions &options);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
 /// Collect a set of patterns to convert from the Standard dialect to the LLVM
 /// dialect, excluding the memory-related operations.
 void populateStdToLLVMNonMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    const LowerToLLVMOptions &options);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
 /// Collect the default pattern to convert a FuncOp to the LLVM dialect. If
 /// `emitCWrappers` is set, the pattern will also produce functions
 /// that pass memref descriptors by pointer-to-structure in addition to the
 /// default unpacked form.
 void populateStdToLLVMFuncOpConversionPattern(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    const LowerToLLVMOptions &options);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
 /// Collect the patterns to convert from the Standard dialect to LLVM. The
 /// conversion patterns capture the LLVMTypeConverter and the LowerToLLVMOptions
 /// by reference meaning the references have to remain alive during the entire
 /// pattern lifetime.
-void populateStdToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    const LowerToLLVMOptions &options =
-        LowerToLLVMOptions::getDefaultOptions());
+void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                         OwningRewritePatternList &patterns);
 
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
 /// stdlib malloc/free is used by default for allocating memrefs allocated with
