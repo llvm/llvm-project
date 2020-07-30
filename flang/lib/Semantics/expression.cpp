@@ -1202,6 +1202,7 @@ private:
   bool explicitType_{type_.has_value()};
   std::optional<std::int64_t> constantLength_;
   ArrayConstructorValues<SomeType> values_;
+  bool messageDisplayedOnce{false};
 };
 
 void ArrayConstructorContext::Push(MaybeExpr &&x) {
@@ -1252,17 +1253,21 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
           }
         }
       } else {
-        exprAnalyzer_.Say(
-            "Values in array constructor must have the same declared type "
-            "when no explicit type appears"_err_en_US);
+        if (!messageDisplayedOnce) {
+          exprAnalyzer_.Say(
+              "Values in array constructor must have the same declared type "
+              "when no explicit type appears"_err_en_US); // C7110
+          messageDisplayedOnce = true;
+        }
       }
     } else {
       if (auto cast{ConvertToType(*type_, std::move(*x))}) {
         values_.Push(std::move(*cast));
       } else {
         exprAnalyzer_.Say(
-            "Value in array constructor could not be converted to the type "
-            "of the array"_err_en_US);
+            "Value in array constructor of type '%s' could not "
+            "be converted to the type of the array '%s'"_err_en_US,
+            x->GetType()->AsFortran(), type_->AsFortran()); // C7111, C7112
       }
     }
   }
@@ -1304,7 +1309,7 @@ void ArrayConstructorContext::Add(const parser::AcValue &x) {
                 if (exprType->IsUnlimitedPolymorphic()) {
                   exprAnalyzer_.Say(
                       "Cannot have an unlimited polymorphic value in an "
-                      "array constructor"_err_en_US);
+                      "array constructor"_err_en_US); // C7113
                 }
               }
               Push(std::move(*v));
@@ -1346,7 +1351,7 @@ void ArrayConstructorContext::Add(const parser::AcValue &x) {
             } else {
               exprAnalyzer_.SayAt(name,
                   "Implied DO index is active in surrounding implied DO loop "
-                  "and may not have the same name"_err_en_US);
+                  "and may not have the same name"_err_en_US); // C7115
             }
           },
       },
@@ -1386,7 +1391,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                           "ABSTRACT derived type '%s' may not be used in a "
                           "structure constructor"_err_en_US,
                           typeName),
-        typeSymbol);
+        typeSymbol); // C7114
   }
 
   // This iterator traverses all of the components in the derived type and its
