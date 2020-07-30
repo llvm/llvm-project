@@ -9,13 +9,13 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 define void @caller() #0 {
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@caller()
-; NOT_TUNIT_NPM-NEXT:    [[X:%.*]] = alloca i32
+; NOT_TUNIT_NPM-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; NOT_TUNIT_NPM-NEXT:    store i32 42, i32* [[X]], align 4
 ; NOT_TUNIT_NPM-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[X]]), !prof !0
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@caller()
-; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = alloca i32
+; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 42, i32* [[X]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[X]], align 4
 ; IS__TUNIT_NPM-NEXT:    call void @promote_i32_ptr(i32 [[TMP1]]), !prof !0
@@ -36,8 +36,8 @@ define internal void @promote_i32_ptr(i32* %xp) {
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@promote_i32_ptr
 ; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[XP_PRIV:%.*]] = alloca i32
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[XP_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[XP_PRIV:%.*]] = alloca i32, align 4
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[XP_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = load i32, i32* [[XP_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    call void @use_i32(i32 [[X]])
 ; IS__TUNIT_NPM-NEXT:    ret void

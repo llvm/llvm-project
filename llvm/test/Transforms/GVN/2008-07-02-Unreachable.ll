@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
 ; PR2503
 
 @g_3 = external global i8		; <i8*> [#uses=2]

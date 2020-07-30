@@ -97,7 +97,7 @@ private:
 
 /// Returns true if the given pass is hidden from IR printing.
 static bool isHiddenPass(Pass *pass) {
-  return isa<OpToOpPassAdaptor>(pass) || isa<VerifierPass>(pass);
+  return isa<OpToOpPassAdaptor, VerifierPass>(pass);
 }
 
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,

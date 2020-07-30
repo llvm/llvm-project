@@ -79,6 +79,10 @@ public:
   // This can be use by passes, when destroying predicateinfo, to know
   // whether they can just drop the intrinsic, or have to merge metadata.
   Value *OriginalOp;
+  // The renamed operand in the condition used for this predicate. For nested
+  // predicates, this is different to OriginalOp which refers to the initial
+  // operand.
+  Value *RenamedOp;
   PredicateBase(const PredicateBase &) = delete;
   PredicateBase &operator=(const PredicateBase &) = delete;
   PredicateBase() = delete;

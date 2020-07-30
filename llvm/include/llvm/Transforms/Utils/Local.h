@@ -19,35 +19,37 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include <cstdint>
 #include <limits>
 
 namespace llvm {
 
+class AAResults;
 class AllocaInst;
 class AssumptionCache;
 class BasicBlock;
 class BranchInst;
+class CallBase;
 class CallInst;
 class DbgDeclareInst;
 class DbgVariableIntrinsic;
 class DbgValueInst;
 class DIBuilder;
+class DomTreeUpdater;
 class Function;
 class Instruction;
+class InvokeInst;
 class LoadInst;
 class MDNode;
 class MemorySSAUpdater;
@@ -251,7 +253,7 @@ bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with
 /// identical statements.
-bool FlattenCFG(BasicBlock *BB, AliasAnalysis *AA = nullptr);
+bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
 
 /// If this basic block is ONLY a setcc and a branch, and if a predecessor
 /// branches to us and one of our successors, fold the setcc into the

@@ -6,8 +6,15 @@
 # GNU:        Section header string table index: 255
 # GNU-NEXT:   There are 3 section headers, starting at offset 0x58:
 # GNU:      Section Headers:
-# GNU-NEXT:  [Nr] Name
-# GNU-NEXT:  error: '[[FILE]]': section header string table index 255 does not exist
+# GNU-NEXT:  [Nr] Name         Type   Address          Off    Size   ES Flg Lk Inf Al
+# GNU-NEXT: warning: '[[FILE]]': section header string table index 255 does not exist
+# GNU-NEXT:  [ 0] <no-strings> NULL   0000000000000000 000000 000000 00      0   0  0
+# GNU-NEXT:  [ 1] <no-strings> STRTAB 0000000000000000 000040 000001 00      0   0  1
+# GNU-NEXT:  [ 2] <no-strings> STRTAB 0000000000000000 000041 000013 00      0   0  1
+# GNU-NEXT: Key to Flags:
+# GNU:      Section to Segment mapping:
+# GNU-NEXT:   Segment Sections...
+# GNU-NEXT: error: '[[FILE]]': section header string table index 255 does not exist
 
 # LLVM:      ElfHeader {
 # LLVM:        StringTableSectionIndex: 255

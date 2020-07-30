@@ -126,6 +126,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
+  case R_AARCH64_PLT32:
     return R_PLT_PC;
   case R_AARCH64_PREL16:
   case R_AARCH64_PREL32:
@@ -244,7 +245,8 @@ bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   // ELF for the ARM 64-bit architecture, section Call and Jump relocations
   // only permits range extension thunks for R_AARCH64_CALL26 and
   // R_AARCH64_JUMP26 relocation types.
-  if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26)
+  if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
+      type != R_AARCH64_PLT32)
     return false;
   uint64_t dst = expr == R_PLT_PC ? s.getPltVA() : s.getVA(a);
   return !inBranchRange(type, branchAddr, dst);
@@ -258,11 +260,13 @@ uint32_t AArch64::getThunkSectionSpacing() const {
 }
 
 bool AArch64::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
-  if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26)
+  if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
+      type != R_AARCH64_PLT32)
     return true;
   // The AArch64 call and unconditional branch instructions have a range of
-  // +/- 128 MiB.
-  uint64_t range = 128 * 1024 * 1024;
+  // +/- 128 MiB. The PLT32 relocation supports a range up to +/- 2 GiB.
+  uint64_t range =
+      type == R_AARCH64_PLT32 ? (UINT64_C(1) << 31) : (128 * 1024 * 1024);
   if (dst > src) {
     // Immediate of branch is signed.
     range -= 4;
@@ -323,6 +327,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
     checkIntUInt(loc, val, 32, rel);
+    write32le(loc, val);
+    break;
+  case R_AARCH64_PLT32:
+    checkInt(loc, val, 32, rel);
     write32le(loc, val);
     break;
   case R_AARCH64_ABS64:

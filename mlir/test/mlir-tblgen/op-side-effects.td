@@ -19,9 +19,9 @@ def SideEffectOpB : TEST_Op<"side_effect_op_b",
     [MemoryEffects<[MemWrite<CustomResource>]>]>;
 
 // CHECK: void SideEffectOpA::getEffects
-// CHECK:   for (Value value : getODSOperands(0))
+// CHECK:   for (::mlir::Value value : getODSOperands(0))
 // CHECK:     effects.emplace_back(MemoryEffects::Read::get(), value, ::mlir::SideEffects::DefaultResource::get());
-// CHECK:   for (Value value : getODSResults(0))
+// CHECK:   for (::mlir::Value value : getODSResults(0))
 // CHECK:     effects.emplace_back(MemoryEffects::Allocate::get(), value, CustomResource::get());
 
 // CHECK: void SideEffectOpB::getEffects

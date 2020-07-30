@@ -88,20 +88,17 @@ endmacro()
 macro(config_define_if condition def)
   if (${condition})
     set(${def} ON)
-    set(LIBCXX_NEEDS_SITE_CONFIG ON)
   endif()
 endmacro()
 
 macro(config_define_if_not condition def)
   if (NOT ${condition})
     set(${def} ON)
-    set(LIBCXX_NEEDS_SITE_CONFIG ON)
   endif()
 endmacro()
 
 macro(config_define value def)
   set(${def} ${value})
-  set(LIBCXX_NEEDS_SITE_CONFIG ON)
 endmacro()
 
 # Add a list of flags to all of 'CMAKE_CXX_FLAGS', 'CMAKE_C_FLAGS',

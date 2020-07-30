@@ -25,5 +25,5 @@ B::B() : Forward(WithDtor()) {}
 // CHECK-SAME: %class.Forward** %
 // CHECK-SAME: !dbg ![[INL:[0-9]+]]
 
-// CHECK: ![[INL]] = !DILocation(line: 10, scope: ![[SP:[0-9]+]], inlinedAt:
+// CHECK: ![[INL]] = !DILocation(line: 10, column: 15, scope: ![[SP:[0-9]+]], inlinedAt:
 // CHECK: ![[SP]] = distinct !DISubprogram(name: "Base", {{.*}} DISPFlagDefinition

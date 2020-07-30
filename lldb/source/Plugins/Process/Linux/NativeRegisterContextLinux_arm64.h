@@ -12,7 +12,7 @@
 #define lldb_NativeRegisterContextLinux_arm64_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 namespace lldb_private {
 namespace process_linux {
@@ -95,47 +95,13 @@ protected:
   size_t GetFPRSize() override { return sizeof(m_fpr); }
 
 private:
-  struct RegInfo {
-    uint32_t num_registers;
-    uint32_t num_gpr_registers;
-    uint32_t num_fpr_registers;
-
-    uint32_t last_gpr;
-    uint32_t first_fpr;
-    uint32_t last_fpr;
-
-    uint32_t first_fpr_v;
-    uint32_t last_fpr_v;
-
-    uint32_t gpr_flags;
-  };
-
-  // based on RegisterContextDarwin_arm64.h
-  struct VReg {
-    uint8_t bytes[16];
-  };
-
-  // based on RegisterContextDarwin_arm64.h
-  struct FPU {
-    VReg v[32];
-    uint32_t fpsr;
-    uint32_t fpcr;
-  };
-
-  struct GPR {
-    uint64_t x[31];
-    uint64_t sp;
-    uint64_t pc;
-    uint64_t pstate;
-  };
-
   bool m_gpr_is_valid;
   bool m_fpu_is_valid;
 
-  GPR m_gpr_arm64; // 64-bit general purpose registers.
-  RegInfo m_reg_info;
-  FPU m_fpr; // floating-point registers including extended register sets.
+  RegisterInfoPOSIX_arm64::GPR m_gpr_arm64; // 64-bit general purpose registers.
 
+  RegisterInfoPOSIX_arm64::FPU
+      m_fpr; // floating-point registers including extended register sets.
   // Debug register info for hardware breakpoints and watchpoints management.
   struct DREG {
     lldb::addr_t address;  // Breakpoint/watchpoint address value.
@@ -162,6 +128,8 @@ private:
   Status WriteHardwareDebugRegs(int hwbType);
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
+
+  RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
 };
 
 } // namespace process_linux

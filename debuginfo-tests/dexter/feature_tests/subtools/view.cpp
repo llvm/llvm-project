@@ -1,3 +1,4 @@
+// REQUIRES: lldb
 // Purpose:
 //      Check the `view` subtool works with typical inputs.
 //

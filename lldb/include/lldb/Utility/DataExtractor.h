@@ -9,12 +9,14 @@
 #ifndef LLDB_UTILITY_DATAEXTRACTOR_H
 #define LLDB_UTILITY_DATAEXTRACTOR_H
 
+#include "lldb/Utility/Endian.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/SwapByteOrder.h"
 
 #include <cassert>
 #include <stdint.h>
@@ -979,6 +981,21 @@ public:
   }
 
 protected:
+  template <typename T> T Get(lldb::offset_t *offset_ptr, T fail_value) const {
+    constexpr size_t src_size = sizeof(T);
+    T val = fail_value;
+
+    const T *src = static_cast<const T *>(GetData(offset_ptr, src_size));
+    if (!src)
+      return val;
+
+    memcpy(&val, src, src_size);
+    if (m_byte_order != endian::InlHostByteOrder())
+      llvm::sys::swapByteOrder(val);
+
+    return val;
+  }
+
   // Member variables
   const uint8_t *m_start; ///< A pointer to the first byte of data.
   const uint8_t

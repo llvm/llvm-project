@@ -201,7 +201,7 @@ TEST(RangeSelectorTest, RangeOpNodes) {
   )cc";
   auto Matcher = callExpr(hasArgument(0, expr().bind("a0")),
                           hasArgument(1, expr().bind("a1")));
-  RangeSelector R = range("a0", "a1");
+  RangeSelector R = encloseNodes("a0", "a1");
   TestMatch Match = matchCode(Code, Matcher);
   EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7"));
 }
@@ -213,7 +213,7 @@ TEST(RangeSelectorTest, RangeOpGeneral) {
   )cc";
   auto Matcher = callExpr(hasArgument(0, expr().bind("a0")),
                           hasArgument(1, expr().bind("a1")));
-  RangeSelector R = range(node("a0"), node("a1"));
+  RangeSelector R = enclose(node("a0"), node("a1"));
   TestMatch Match = matchCode(Code, Matcher);
   EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7"));
 }

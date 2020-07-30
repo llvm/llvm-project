@@ -482,9 +482,8 @@ define float @fabs_squared_fast(float %x) {
 
 define float @fabs_fabs(float %x, float %y) {
 ; CHECK-LABEL: @fabs_fabs(
-; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.fabs.f32(float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
@@ -497,8 +496,8 @@ define float @fabs_fabs_extra_use1(float %x, float %y) {
 ; CHECK-LABEL: @fabs_fabs_extra_use1(
 ; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    call void @use_f32(float [[X_FABS]])
-; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul ninf float [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = call ninf float @llvm.fabs.f32(float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
@@ -510,10 +509,10 @@ define float @fabs_fabs_extra_use1(float %x, float %y) {
 
 define float @fabs_fabs_extra_use2(float %x, float %y) {
 ; CHECK-LABEL: @fabs_fabs_extra_use2(
-; CHECK-NEXT:    [[X_FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[Y_FABS:%.*]] = call fast float @llvm.fabs.f32(float [[Y:%.*]])
 ; CHECK-NEXT:    call void @use_f32(float [[Y_FABS]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc ninf float [[X_FABS]], [[Y_FABS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc ninf float [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = call reassoc ninf float @llvm.fabs.f32(float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x.fabs = call fast float @llvm.fabs.f32(float %x)
@@ -522,6 +521,8 @@ define float @fabs_fabs_extra_use2(float %x, float %y) {
   %mul = fmul reassoc ninf float %x.fabs, %y.fabs
   ret float %mul
 }
+
+; negative test - don't create an extra instruction
 
 define float @fabs_fabs_extra_use3(float %x, float %y) {
 ; CHECK-LABEL: @fabs_fabs_extra_use3(

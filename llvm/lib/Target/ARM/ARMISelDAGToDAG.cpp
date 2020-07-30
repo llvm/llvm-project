@@ -1726,7 +1726,7 @@ bool ARMDAGToDAGISel::tryMVEIndexedLoad(SDNode *N) {
   EVT LoadedVT;
   unsigned Opcode = 0;
   bool isSExtLd, isPre;
-  unsigned Align;
+  Align Alignment;
   ARMVCC::VPTCodes Pred;
   SDValue PredReg;
   SDValue Chain, Base, Offset;
@@ -1742,7 +1742,7 @@ bool ARMDAGToDAGISel::tryMVEIndexedLoad(SDNode *N) {
     Chain = LD->getChain();
     Base = LD->getBasePtr();
     Offset = LD->getOffset();
-    Align = LD->getAlignment();
+    Alignment = LD->getAlign();
     isSExtLd = LD->getExtensionType() == ISD::SEXTLOAD;
     isPre = (AM == ISD::PRE_INC) || (AM == ISD::PRE_DEC);
     Pred = ARMVCC::None;
@@ -1758,7 +1758,7 @@ bool ARMDAGToDAGISel::tryMVEIndexedLoad(SDNode *N) {
     Chain = LD->getChain();
     Base = LD->getBasePtr();
     Offset = LD->getOffset();
-    Align = LD->getAlignment();
+    Alignment = LD->getAlign();
     isSExtLd = LD->getExtensionType() == ISD::SEXTLOAD;
     isPre = (AM == ISD::PRE_INC) || (AM == ISD::PRE_DEC);
     Pred = ARMVCC::Then;
@@ -1772,7 +1772,7 @@ bool ARMDAGToDAGISel::tryMVEIndexedLoad(SDNode *N) {
   bool CanChangeType = Subtarget->isLittle() && !isa<MaskedLoadSDNode>(N);
 
   SDValue NewOffset;
-  if (Align >= 2 && LoadedVT == MVT::v4i16 &&
+  if (Alignment >= Align(2) && LoadedVT == MVT::v4i16 &&
       SelectT2AddrModeImm7Offset(N, Offset, NewOffset, 1)) {
     if (isSExtLd)
       Opcode = isPre ? ARM::MVE_VLDRHS32_pre : ARM::MVE_VLDRHS32_post;
@@ -1790,12 +1790,12 @@ bool ARMDAGToDAGISel::tryMVEIndexedLoad(SDNode *N) {
       Opcode = isPre ? ARM::MVE_VLDRBS32_pre : ARM::MVE_VLDRBS32_post;
     else
       Opcode = isPre ? ARM::MVE_VLDRBU32_pre : ARM::MVE_VLDRBU32_post;
-  } else if (Align >= 4 &&
+  } else if (Alignment >= Align(4) &&
              (CanChangeType || LoadedVT == MVT::v4i32 ||
               LoadedVT == MVT::v4f32) &&
              SelectT2AddrModeImm7Offset(N, Offset, NewOffset, 2))
     Opcode = isPre ? ARM::MVE_VLDRWU32_pre : ARM::MVE_VLDRWU32_post;
-  else if (Align >= 2 &&
+  else if (Alignment >= Align(2) &&
            (CanChangeType || LoadedVT == MVT::v8i16 ||
             LoadedVT == MVT::v8f16) &&
            SelectT2AddrModeImm7Offset(N, Offset, NewOffset, 1))
@@ -4742,6 +4742,29 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     switch (IntNo) {
     default:
       break;
+
+    // Scalar f32 -> bf16
+    case Intrinsic::arm_neon_vcvtbfp2bf: {
+      SDLoc dl(N);
+      const SDValue &Src = N->getOperand(1);
+      llvm::EVT DestTy = N->getValueType(0);
+      SDValue Pred = getAL(CurDAG, dl);
+      SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
+      SDValue Ops[] = { Src, Src, Pred, Reg0 };
+      CurDAG->SelectNodeTo(N, ARM::BF16_VCVTB, DestTy, Ops);
+      return;
+    }
+
+    // Vector v4f32 -> v4bf16
+    case Intrinsic::arm_neon_vcvtfp2bf: {
+      SDLoc dl(N);
+      const SDValue &Src = N->getOperand(1);
+      SDValue Pred = getAL(CurDAG, dl);
+      SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
+      SDValue Ops[] = { Src, Pred, Reg0 };
+      CurDAG->SelectNodeTo(N, ARM::BF16_VCVT, MVT::v4bf16, Ops);
+      return;
+    }
 
     case Intrinsic::arm_mve_urshrl:
       SelectMVE_LongShift(N, ARM::MVE_URSHRL, true, false);

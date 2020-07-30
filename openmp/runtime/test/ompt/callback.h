@@ -22,22 +22,19 @@
 #define _OMPT_TESTS
 #endif
 
-static const char* ompt_thread_t_values[] = {
-  NULL,
-  "ompt_thread_initial",
-  "ompt_thread_worker",
-  "ompt_thread_other"
-};
+static const char *ompt_thread_t_values[] = {
+    "ompt_thread_UNDEFINED", "ompt_thread_initial", "ompt_thread_worker",
+    "ompt_thread_other"};
 
-static const char* ompt_task_status_t_values[] = {
-  NULL,
-  "ompt_task_complete",       // 1
-  "ompt_task_yield",          // 2
-  "ompt_task_cancel",         // 3
-  "ompt_task_detach",         // 4
-  "ompt_task_early_fulfill",  // 5
-  "ompt_task_late_fulfill",   // 6
-  "ompt_task_switch"          // 7
+static const char *ompt_task_status_t_values[] = {
+    "ompt_task_UNDEFINED",
+    "ompt_task_complete", // 1
+    "ompt_task_yield", // 2
+    "ompt_task_cancel", // 3
+    "ompt_task_detach", // 4
+    "ompt_task_early_fulfill", // 5
+    "ompt_task_late_fulfill", // 6
+    "ompt_task_switch" // 7
 };
 static const char* ompt_cancel_flag_t_values[] = {
   "ompt_cancel_parallel",
@@ -50,7 +47,7 @@ static const char* ompt_cancel_flag_t_values[] = {
 };
 
 static const char *ompt_dependence_type_t_values[] = {
-    NULL,
+    "ompt_dependence_type_UNDEFINED",
     "ompt_dependence_type_in", // 1
     "ompt_dependence_type_out", // 2
     "ompt_dependence_type_inout", // 3
@@ -990,7 +987,7 @@ on_ompt_callback_dependences(
     if (deps[i].dependence_type == ompt_dependence_type_source ||
         deps[i].dependence_type == ompt_dependence_type_sink)
       progress +=
-          sprintf(progress, "(%ld, %s), ", deps[i].variable.value,
+          sprintf(progress, "(%" PRIu64 ", %s), ", deps[i].variable.value,
                   ompt_dependence_type_t_values[deps[i].dependence_type]);
     else
       progress +=

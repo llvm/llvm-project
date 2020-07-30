@@ -10,7 +10,7 @@ struct coroutine_traits; // expected-note {{declared here}}
 template <class Promise = void>
 struct coroutine_handle {
   coroutine_handle() = default;
-  static coroutine_handle from_address(void *) { return {}; }
+  static coroutine_handle from_address(void *) noexcept { return {}; }
 };
 
 template <>
@@ -18,7 +18,7 @@ struct coroutine_handle<void> {
   static coroutine_handle from_address(void *) { return {}; }
   coroutine_handle() = default;
   template <class PromiseType>
-  coroutine_handle(coroutine_handle<PromiseType>) {}
+  coroutine_handle(coroutine_handle<PromiseType>) noexcept {}
 };
 
 } // end namespace experimental
@@ -36,9 +36,9 @@ void  operator delete(void* __p, const std::nothrow_t&) noexcept;
 
 
 struct suspend_always {
-  bool await_ready() { return false; }
-  void await_suspend(std::experimental::coroutine_handle<>) {}
-  void await_resume() {}
+  bool await_ready() noexcept { return false; }
+  void await_suspend(std::experimental::coroutine_handle<>) noexcept {}
+  void await_resume() noexcept {}
 };
 
 struct global_new_delete_tag {};
@@ -48,7 +48,7 @@ struct std::experimental::coroutine_traits<void, global_new_delete_tag> {
   struct promise_type {
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -89,7 +89,7 @@ struct std::experimental::coroutine_traits<void, promise_new_tag> {
     void *operator new(unsigned long);
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -115,7 +115,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_placement_new_
                        int, float, double);
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -145,7 +145,7 @@ struct std::experimental::coroutine_traits<void, promise_matching_global_placeme
   struct promise_type {
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -168,7 +168,7 @@ struct std::experimental::coroutine_traits<void, promise_delete_tag> {
     void operator delete(void*);
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -193,7 +193,7 @@ struct std::experimental::coroutine_traits<void, promise_sized_delete_tag> {
     void operator delete(void*, unsigned long);
     void get_return_object() {}
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
   };
 };
@@ -218,7 +218,7 @@ struct std::experimental::coroutine_traits<int, promise_on_alloc_failure_tag> {
   struct promise_type {
     int get_return_object() { return 0; }
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     static int get_return_object_on_allocation_failure() { return -1; }
   };

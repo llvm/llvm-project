@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -36,5 +38,11 @@ int main(int argc, char **argv) {
   {
     foo();
   }
+
+  int iarr[5][5];
+#pragma omp target update to(iarr[0:][1:2:-1]) // omp50-error {{section stride is evaluated to a non-positive value -1}} omp45-error {{expected ']'}} omp45-note {{to match this '['}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+  {}
+#pragma omp target update from(iarr[0:][1:2:-1]) // omp50-error {{section stride is evaluated to a non-positive value -1}} omp45-error {{expected ']'}} omp45-note {{to match this '['}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
   return tmain(argc, argv);
 }

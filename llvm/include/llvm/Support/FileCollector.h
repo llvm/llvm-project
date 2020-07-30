@@ -12,13 +12,13 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/VirtualFileSystem.h"
-
 #include <mutex>
+#include <string>
 
 namespace llvm {
 class FileCollectorFileSystem;
+class Twine;
 
 /// Captures file system interaction and generates data to be later replayed
 /// with the RedirectingFileSystem.

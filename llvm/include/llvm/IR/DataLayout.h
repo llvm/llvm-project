@@ -133,7 +133,8 @@ private:
     MM_MachO,
     MM_WinCOFF,
     MM_WinCOFFX86,
-    MM_Mips
+    MM_Mips,
+    MM_XCOFF
   };
   ManglingModeT ManglingMode;
 
@@ -309,6 +310,7 @@ public:
     case MM_ELF:
     case MM_Mips:
     case MM_WinCOFF:
+    case MM_XCOFF:
       return '\0';
     case MM_MachO:
     case MM_WinCOFFX86:
@@ -329,6 +331,8 @@ public:
     case MM_MachO:
     case MM_WinCOFFX86:
       return "L";
+    case MM_XCOFF:
+      return "L..";
     }
     llvm_unreachable("invalid mangling mode");
   }
@@ -574,13 +578,26 @@ public:
   /// Returns the preferred alignment of the specified global.
   ///
   /// This includes an explicitly requested alignment (if the global has one).
-  unsigned getPreferredAlignment(const GlobalVariable *GV) const;
+  Align getPreferredAlign(const GlobalVariable *GV) const;
+
+  /// Returns the preferred alignment of the specified global.
+  ///
+  /// This includes an explicitly requested alignment (if the global has one).
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline unsigned getPreferredAlignment(const GlobalVariable *GV) const,
+      "Use getPreferredAlign instead") {
+    return getPreferredAlign(GV).value();
+  }
 
   /// Returns the preferred alignment of the specified global, returned
   /// in log form.
   ///
   /// This includes an explicitly requested alignment (if the global has one).
-  unsigned getPreferredAlignmentLog(const GlobalVariable *GV) const;
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline unsigned getPreferredAlignmentLog(const GlobalVariable *GV) const,
+      "Inline where needed") {
+    return Log2(getPreferredAlign(GV));
+  }
 };
 
 inline DataLayout *unwrap(LLVMTargetDataRef P) {

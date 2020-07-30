@@ -2607,8 +2607,8 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
           // how rounding should be done, and provide their own folding to be
           // consistent with rounding. This is the same approach as used by
           // DAGTypeLegalizer::ExpandIntRes_MULFIX.
-          APInt Lhs = Op1->getValue();
-          APInt Rhs = Op2->getValue();
+          const APInt &Lhs = Op1->getValue();
+          const APInt &Rhs = Op2->getValue();
           unsigned Scale = Op3->getValue().getZExtValue();
           unsigned Width = Lhs.getBitWidth();
           assert(Scale < Width && "Illegal scale.");

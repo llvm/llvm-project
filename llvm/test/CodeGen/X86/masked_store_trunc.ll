@@ -2377,9 +2377,9 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, <16 x i16>* %p, <16 x i32> 
 ; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm2, %ymm2
 ; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpacksswb %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne .LBB9_1
@@ -3058,9 +3058,9 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, <16 x i8>* %p, <16 x i32> %m
 ; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm2, %ymm2
 ; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpacksswb %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    jne .LBB10_1

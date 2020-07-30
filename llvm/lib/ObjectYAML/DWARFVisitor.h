@@ -16,6 +16,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
+class Error;
 
 namespace DWARFYAML {
 
@@ -68,7 +69,7 @@ public:
 
   virtual ~VisitorImpl() {}
 
-  void traverseDebugInfo();
+  Error traverseDebugInfo();
 
 private:
   void onVariableSizeValue(uint64_t U, unsigned Size);

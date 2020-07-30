@@ -14,7 +14,7 @@
 
 // Returns: 1 if number of bits is odd else returns 0
 
-COMPILER_RT_ABI si_int __paritysi2(si_int a) {
+COMPILER_RT_ABI int __paritysi2(si_int a) {
   su_int x = (su_int)a;
   x ^= x >> 16;
   x ^= x >> 8;

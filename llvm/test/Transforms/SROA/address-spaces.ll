@@ -1,5 +1,5 @@
 ; RUN: opt < %s -sroa -S | FileCheck %s
-target datalayout = "e-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
+target datalayout = "e-p:64:64:64-p1:16:16:16-p3:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1)
 declare void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* nocapture, i8* nocapture readonly, i32, i1)
@@ -71,7 +71,8 @@ for.end:
 @g = common global i32 0, align 4
 @l = common addrspace(3) global i32 0, align 4
 
-; Make sure an illegal bitcast isn't introduced
+; If pointers from different address spaces have different sizes, make sure an
+; illegal bitcast isn't introduced
 define void @pr27557() {
 ; CHECK-LABEL: @pr27557(
 ; CHECK: %[[CAST:.*]] = bitcast i32** {{.*}} to i32 addrspace(3)**
@@ -82,6 +83,21 @@ define void @pr27557() {
   %3 = bitcast %union.anon* %1 to i32 addrspace(3)**
   store i32 addrspace(3)* @l, i32 addrspace(3)** %3, align 8
   ret void
+}
+
+@l2 = common addrspace(2) global i32 0, align 4
+
+; If pointers from different address spaces have the same size, that pointer
+; should be promoted through the pair of `ptrtoint`/`inttoptr`.
+define i32* @pr27557.alt() {
+; CHECK-LABEL: @pr27557.alt(
+; CHECK: ret i32* inttoptr (i64 ptrtoint (i32 addrspace(2)* @l2 to i64) to i32*)
+  %1 = alloca %union.anon, align 8
+  %2 = bitcast %union.anon* %1 to i32 addrspace(2)**
+  store i32 addrspace(2)* @l2, i32 addrspace(2)** %2, align 8
+  %3 = bitcast %union.anon* %1 to i32**
+  %4 = load i32*, i32** %3, align 8
+  ret i32* %4
 }
 
 ; Make sure pre-splitting doesn't try to introduce an illegal bitcast

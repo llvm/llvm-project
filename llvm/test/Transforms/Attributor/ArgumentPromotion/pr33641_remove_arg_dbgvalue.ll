@@ -15,7 +15,7 @@
 
 define void @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo()
-; CHECK-NEXT:    [[TMP:%.*]] = alloca void (i16*)*
+; CHECK-NEXT:    [[TMP:%.*]] = alloca void (i16*)*, align 8
 ; CHECK-NEXT:    store void (i16*)* @bar, void (i16*)** [[TMP]], align 8
 ; CHECK-NEXT:    ret void
 ;

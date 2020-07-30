@@ -706,7 +706,6 @@ define i1 @allones_v16i32_sign(<16 x i32> %arg) {
 ; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
@@ -767,9 +766,8 @@ define i1 @allzeros_v16i32_sign(<16 x i32> %arg) {
 ; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
-; AVX2-NEXT:    testl $-1431655766, %eax # imm = 0xAAAAAAAA
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -2149,7 +2147,6 @@ define i1 @allones_v16i32_and1(<16 x i32> %arg) {
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
@@ -2211,9 +2208,8 @@ define i1 @allzeros_v16i32_and1(<16 x i32> %arg) {
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
-; AVX2-NEXT:    testl $-1431655766, %eax # imm = 0xAAAAAAAA
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -3522,7 +3518,6 @@ define i1 @allones_v16i32_and4(<16 x i32> %arg) {
 ; AVX2-NEXT:    vpslld $29, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
@@ -3584,9 +3579,8 @@ define i1 @allzeros_v16i32_and4(<16 x i32> %arg) {
 ; AVX2-NEXT:    vpslld $29, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
-; AVX2-NEXT:    testl $-1431655766, %eax # imm = 0xAAAAAAAA
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

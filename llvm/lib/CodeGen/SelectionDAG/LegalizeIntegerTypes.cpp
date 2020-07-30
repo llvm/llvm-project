@@ -1723,7 +1723,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MLOAD(MaskedLoadSDNode *N,
   SDValue Mask = PromoteTargetBoolean(N->getOperand(OpNo), DataVT);
   SmallVector<SDValue, 4> NewOps(N->op_begin(), N->op_end());
   NewOps[OpNo] = Mask;
-  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+  SDNode *Res = DAG.UpdateNodeOperands(N, NewOps);
+  if (Res == N)
+    return SDValue(Res, 0);
+
+  // Update triggered CSE, do our own replacement since caller can't.
+  ReplaceValueWith(SDValue(N, 0), SDValue(Res, 0));
+  ReplaceValueWith(SDValue(N, 1), SDValue(Res, 1));
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_MGATHER(MaskedGatherSDNode *N,
@@ -1744,7 +1751,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MGATHER(MaskedGatherSDNode *N,
   } else
     NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
 
-  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+  SDNode *Res = DAG.UpdateNodeOperands(N, NewOps);
+  if (Res == N)
+    return SDValue(Res, 0);
+
+  // Update triggered CSE, do our own replacement since caller can't.
+  ReplaceValueWith(SDValue(N, 0), SDValue(Res, 0));
+  ReplaceValueWith(SDValue(N, 1), SDValue(Res, 1));
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
@@ -4320,7 +4334,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
   EVT OutVT = N->getValueType(0);
   EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
   assert(NOutVT.isVector() && "This type must be promoted to a vector type");
-  unsigned OutNumElems = OutVT.getVectorNumElements();
   EVT NOutVTElem = NOutVT.getVectorElementType();
 
   SDLoc dl(N);
@@ -4357,6 +4370,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
 
   EVT InVT = InOp0.getValueType();
 
+  unsigned OutNumElems = OutVT.getVectorNumElements();
   SmallVector<SDValue, 8> Ops;
   Ops.reserve(OutNumElems);
   for (unsigned i = 0; i != OutNumElems; ++i) {

@@ -193,9 +193,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
-    Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling,
-    Optional<bool> UserAllowProfileBasedPeeling,
-    Optional<unsigned> UserFullUnrollMaxCount) {
+    Optional<bool> UserUpperBound, Optional<unsigned> UserFullUnrollMaxCount) {
   TargetTransformInfo::UnrollingPreferences UP;
 
   // Set up the defaults
@@ -206,7 +204,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.PartialThreshold = 150;
   UP.PartialOptSizeThreshold = 0;
   UP.Count = 0;
-  UP.PeelCount = 0;
   UP.DefaultUnrollRuntimeCount = 8;
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.FullUnrollMaxCount = std::numeric_limits<unsigned>::max();
@@ -218,10 +215,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.AllowExpensiveTripCount = false;
   UP.Force = false;
   UP.UpperBound = false;
-  UP.AllowPeeling = true;
-  UP.AllowLoopNestsPeeling = false;
   UP.UnrollAndJam = false;
-  UP.PeelProfiledIterations = true;
   UP.UnrollAndJamInnerLoopThreshold = 60;
   UP.MaxIterationsCountToAnalyze = UnrollMaxIterationsCountToAnalyze;
 
@@ -249,8 +243,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.MaxCount = UnrollMaxCount;
   if (UnrollFullMaxCount.getNumOccurrences() > 0)
     UP.FullUnrollMaxCount = UnrollFullMaxCount;
-  if (UnrollPeelCount.getNumOccurrences() > 0)
-    UP.PeelCount = UnrollPeelCount;
   if (UnrollAllowPartial.getNumOccurrences() > 0)
     UP.Partial = UnrollAllowPartial;
   if (UnrollAllowRemainder.getNumOccurrences() > 0)
@@ -259,10 +251,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.Runtime = UnrollRuntime;
   if (UnrollMaxUpperBound == 0)
     UP.UpperBound = false;
-  if (UnrollAllowPeeling.getNumOccurrences() > 0)
-    UP.AllowPeeling = UnrollAllowPeeling;
-  if (UnrollAllowLoopNestsPeeling.getNumOccurrences() > 0)
-    UP.AllowLoopNestsPeeling = UnrollAllowLoopNestsPeeling;
   if (UnrollUnrollRemainder.getNumOccurrences() > 0)
     UP.UnrollRemainder = UnrollUnrollRemainder;
   if (UnrollMaxIterationsCountToAnalyze.getNumOccurrences() > 0)
@@ -281,14 +269,43 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.Runtime = *UserRuntime;
   if (UserUpperBound.hasValue())
     UP.UpperBound = *UserUpperBound;
-  if (UserAllowPeeling.hasValue())
-    UP.AllowPeeling = *UserAllowPeeling;
-  if (UserAllowProfileBasedPeeling.hasValue())
-    UP.PeelProfiledIterations = *UserAllowProfileBasedPeeling;
   if (UserFullUnrollMaxCount.hasValue())
     UP.FullUnrollMaxCount = *UserFullUnrollMaxCount;
 
   return UP;
+}
+
+TargetTransformInfo::PeelingPreferences
+llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                               const TargetTransformInfo &TTI,
+                               Optional<bool> UserAllowPeeling,
+                               Optional<bool> UserAllowProfileBasedPeeling) {
+  TargetTransformInfo::PeelingPreferences PP;
+
+  // Default values
+  PP.PeelCount = 0;
+  PP.AllowPeeling = true;
+  PP.AllowLoopNestsPeeling = false;
+  PP.PeelProfiledIterations = true;
+
+  // Get Target Specifc Values
+  TTI.getPeelingPreferences(L, SE, PP);
+
+  // User Specified Values using cl::opt
+  if (UnrollPeelCount.getNumOccurrences() > 0)
+    PP.PeelCount = UnrollPeelCount;
+  if (UnrollAllowPeeling.getNumOccurrences() > 0)
+    PP.AllowPeeling = UnrollAllowPeeling;
+  if (UnrollAllowLoopNestsPeeling.getNumOccurrences() > 0)
+    PP.AllowLoopNestsPeeling = UnrollAllowLoopNestsPeeling;
+
+  // User Specifed values provided by argument
+  if (UserAllowPeeling.hasValue())
+    PP.AllowPeeling = *UserAllowPeeling;
+  if (UserAllowProfileBasedPeeling.hasValue())
+    PP.PeelProfiledIterations = *UserAllowProfileBasedPeeling;
+
+  return PP;
 }
 
 namespace {
@@ -761,7 +778,8 @@ bool llvm::computeUnrollCount(
     ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
     OptimizationRemarkEmitter *ORE, unsigned &TripCount, unsigned MaxTripCount,
     bool MaxOrZero, unsigned &TripMultiple, unsigned LoopSize,
-    TargetTransformInfo::UnrollingPreferences &UP, bool &UseUpperBound) {
+    TargetTransformInfo::UnrollingPreferences &UP,
+    TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound) {
 
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
@@ -863,8 +881,8 @@ bool llvm::computeUnrollCount(
   }
 
   // 4th priority is loop peeling.
-  computePeelCount(L, LoopSize, UP, TripCount, SE);
-  if (UP.PeelCount) {
+  computePeelCount(L, LoopSize, UP, PP, TripCount, SE);
+  if (PP.PeelCount) {
     UP.Runtime = false;
     UP.Count = 1;
     return ExplicitUnroll;
@@ -1067,8 +1085,9 @@ static LoopUnrollResult tryToUnrollLoop(
   TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
       L, SE, TTI, BFI, PSI, OptLevel, ProvidedThreshold, ProvidedCount,
       ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound,
-      ProvidedAllowPeeling, ProvidedAllowProfileBasedPeeling,
       ProvidedFullUnrollMaxCount);
+  TargetTransformInfo::PeelingPreferences PP = gatherPeelingPreferences(
+      L, SE, TTI, ProvidedAllowPeeling, ProvidedAllowProfileBasedPeeling);
 
   // Exit early if unrolling is disabled. For OptForSize, we pick the loop size
   // as threshold later on.
@@ -1142,7 +1161,7 @@ static LoopUnrollResult tryToUnrollLoop(
   bool UseUpperBound = false;
   bool IsCountSetExplicitly = computeUnrollCount(
       L, TTI, DT, LI, SE, EphValues, &ORE, TripCount, MaxTripCount, MaxOrZero,
-      TripMultiple, LoopSize, UP, UseUpperBound);
+      TripMultiple, LoopSize, UP, PP, UseUpperBound);
   if (!UP.Count)
     return LoopUnrollResult::Unmodified;
   // Unroll factor (Count) must be less or equal to TripCount.
@@ -1157,7 +1176,7 @@ static LoopUnrollResult tryToUnrollLoop(
   LoopUnrollResult UnrollResult = UnrollLoop(
       L,
       {UP.Count, TripCount, UP.Force, UP.Runtime, UP.AllowExpensiveTripCount,
-       UseUpperBound, MaxOrZero, TripMultiple, UP.PeelCount, UP.UnrollRemainder,
+       UseUpperBound, MaxOrZero, TripMultiple, PP.PeelCount, UP.UnrollRemainder,
        ForgetAllSCEV},
       LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop);
   if (UnrollResult == LoopUnrollResult::Unmodified)
@@ -1189,7 +1208,7 @@ static LoopUnrollResult tryToUnrollLoop(
   // If the loop was peeled, we already "used up" the profile information
   // we had, so we don't want to unroll or peel again.
   if (UnrollResult != LoopUnrollResult::FullyUnrolled &&
-      (IsCountSetExplicitly || (UP.PeelProfiledIterations && UP.PeelCount)))
+      (IsCountSetExplicitly || (PP.PeelProfiledIterations && PP.PeelCount)))
     L->setLoopAlreadyUnrolled();
 
   return UnrollResult;

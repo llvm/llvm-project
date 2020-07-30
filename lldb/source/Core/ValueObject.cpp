@@ -140,58 +140,6 @@ ValueObject::ValueObject(ExecutionContextScope *exe_scope,
 // Destructor
 ValueObject::~ValueObject() {}
 
-void ValueObject::UpdateChildrenAddressType() {
-  Value::ValueType value_type = m_value.GetValueType();
-  ExecutionContext exe_ctx(GetExecutionContextRef());
-  Process *process = exe_ctx.GetProcessPtr();
-  const bool process_is_alive = process && process->IsAlive();
-  const uint32_t type_info = GetCompilerType().GetTypeInfo();
-  const bool is_pointer_or_ref =
-      (type_info & (lldb::eTypeIsPointer | lldb::eTypeIsReference)) != 0;
-
-  switch (value_type) {
-  case Value::eValueTypeFileAddress:
-    // If this type is a pointer, then its children will be considered load
-    // addresses if the pointer or reference is dereferenced, but only if
-    // the process is alive.
-    //
-    // There could be global variables like in the following code:
-    // struct LinkedListNode { Foo* foo; LinkedListNode* next; };
-    // Foo g_foo1;
-    // Foo g_foo2;
-    // LinkedListNode g_second_node = { &g_foo2, NULL };
-    // LinkedListNode g_first_node = { &g_foo1, &g_second_node };
-    //
-    // When we aren't running, we should be able to look at these variables
-    // using the "target variable" command. Children of the "g_first_node"
-    // always will be of the same address type as the parent. But children
-    // of the "next" member of LinkedListNode will become load addresses if
-    // we have a live process, or remain a file address if it was a file
-    // address.
-    if (process_is_alive && is_pointer_or_ref)
-      SetAddressTypeOfChildren(eAddressTypeLoad);
-    else
-      SetAddressTypeOfChildren(eAddressTypeFile);
-    break;
-  case Value::eValueTypeHostAddress:
-    // Same as above for load addresses, except children of pointer or refs
-    // are always load addresses. Host addresses are used to store freeze
-    // dried variables. If this type is a struct, the entire struct
-    // contents will be copied into the heap of the
-    // LLDB process, but we do not currently follow any pointers.
-    if (is_pointer_or_ref)
-      SetAddressTypeOfChildren(eAddressTypeLoad);
-    else
-      SetAddressTypeOfChildren(eAddressTypeHost);
-    break;
-  case Value::eValueTypeLoadAddress:
-  case Value::eValueTypeScalar:
-  case Value::eValueTypeVector:
-    SetAddressTypeOfChildren(eAddressTypeLoad);
-    break;
-  }
-}
-
 bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
   bool did_change_formats = false;
@@ -574,15 +522,13 @@ size_t ValueObject::GetIndexOfChildWithName(ConstString name) {
 
 ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
                                                   bool can_create) {
-  // when getting a child by name, it could be buried inside some base classes
-  // (which really aren't part of the expression path), so we need a vector of
-  // indexes that can get us down to the correct child
-  ValueObjectSP child_sp;
-
-  // We may need to update our value if we are dynamic
+  // We may need to update our value if we are dynamic.
   if (IsPossibleDynamicType())
     UpdateValueIfNeeded(false);
 
+  // When getting a child by name, it could be buried inside some base classes
+  // (which really aren't part of the expression path), so we need a vector of
+  // indexes that can get us down to the correct child.
   std::vector<uint32_t> child_indexes;
   bool omit_empty_base_classes = true;
 
@@ -592,20 +538,13 @@ ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
   const size_t num_child_indexes =
       GetCompilerType().GetIndexOfChildMemberWithName(
           name.GetCString(), omit_empty_base_classes, child_indexes);
-  if (num_child_indexes > 0) {
-    std::vector<uint32_t>::const_iterator pos = child_indexes.begin();
-    std::vector<uint32_t>::const_iterator end = child_indexes.end();
+  if (num_child_indexes == 0)
+    return nullptr;
 
-    child_sp = GetChildAtIndex(*pos, can_create);
-    for (++pos; pos != end; ++pos) {
-      if (child_sp) {
-        ValueObjectSP new_child_sp(child_sp->GetChildAtIndex(*pos, can_create));
-        child_sp = new_child_sp;
-      } else {
-        child_sp.reset();
-      }
-    }
-  }
+  ValueObjectSP child_sp = GetSP();
+  for (uint32_t idx : child_indexes)
+    if (child_sp)
+      child_sp = child_sp->GetChildAtIndex(idx, can_create);
   return child_sp;
 }
 
@@ -687,10 +626,15 @@ ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
         language_flags);
   }
 
-  if (!valobj && synthetic_array_member)
-    valobj = GetSyntheticValue()
-                 ->GetChildAtIndex(synthetic_index, synthetic_array_member)
-                 .get();
+  // In case of an incomplete type, try to use the ValueObject's
+  // synthetic value to create the child ValueObject.
+  if (!valobj && synthetic_array_member) {
+    if (ValueObjectSP synth_valobj_sp = GetSyntheticValue()) {
+      valobj = synth_valobj_sp
+                   ->GetChildAtIndex(synthetic_index, synthetic_array_member)
+                   .get();
+    }
+  }
 
   return valobj;
 }
@@ -1203,6 +1147,7 @@ uint64_t ValueObject::GetValueAsUnsigned(uint64_t fail_value, bool *success) {
     if (ResolveValue(scalar)) {
       if (success)
         *success = true;
+      scalar.MakeUnsigned();
       return scalar.ULongLong(fail_value);
     }
     // fallthrough, otherwise...
@@ -1220,6 +1165,7 @@ int64_t ValueObject::GetValueAsSigned(int64_t fail_value, bool *success) {
     if (ResolveValue(scalar)) {
       if (success)
         *success = true;
+      scalar.MakeSigned();
       return scalar.SLongLong(fail_value);
     }
     // fallthrough, otherwise...

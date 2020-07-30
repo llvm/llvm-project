@@ -631,8 +631,7 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
         kinfo.kp_proc.p_pid == 0 ||      // Skip kernel (kernel pid is zero)
         kinfo.kp_proc.p_stat == SZOMB || // Zombies are bad, they like brains...
         kinfo.kp_proc.p_flag & P_TRACED ||   // Being debugged?
-        kinfo.kp_proc.p_flag & P_WEXIT ||    // Working on exiting?
-        kinfo.kp_proc.p_flag & P_TRANSLATED) // Skip translated ppc (Rosetta)
+        kinfo.kp_proc.p_flag & P_WEXIT)
       continue;
 
     ProcessInstanceInfo process_info;

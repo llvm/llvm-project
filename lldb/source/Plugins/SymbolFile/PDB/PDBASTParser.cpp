@@ -1265,6 +1265,52 @@ void PDBASTParser::AddRecordMembers(
       if (!decl)
         continue;
 
+      // Static constant members may be a const[expr] declaration.
+      // Query the symbol's value as the variable initializer if valid.
+      if (member_comp_type.IsConst()) {
+        auto value = member->getValue();
+        clang::QualType qual_type = decl->getType();
+        unsigned type_width = m_ast.getASTContext().getIntWidth(qual_type);
+        unsigned constant_width = value.getBitWidth();
+
+        if (qual_type->isIntegralOrEnumerationType()) {
+          if (type_width >= constant_width) {
+            TypeSystemClang::SetIntegerInitializerForVariable(
+                decl, value.toAPSInt().extOrTrunc(type_width));
+          } else {
+            LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+                     "Class '{0}' has a member '{1}' of type '{2}' ({3} bits) "
+                     "which resolves to a wider constant value ({4} bits). "
+                     "Ignoring constant.",
+                     record_type.GetTypeName(), member_name,
+                     member_comp_type.GetTypeName(), type_width,
+                     constant_width);
+          }
+        } else {
+          switch (member_comp_type.GetBasicTypeEnumeration()) {
+          case lldb::eBasicTypeFloat:
+          case lldb::eBasicTypeDouble:
+          case lldb::eBasicTypeLongDouble:
+            if (type_width == constant_width) {
+              TypeSystemClang::SetFloatingInitializerForVariable(
+                  decl, value.toAPFloat());
+              decl->setConstexpr(true);
+            } else {
+              LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+                       "Class '{0}' has a member '{1}' of type '{2}' ({3} "
+                       "bits) which resolves to a constant value of mismatched "
+                       "width ({4} bits). Ignoring constant.",
+                       record_type.GetTypeName(), member_name,
+                       member_comp_type.GetTypeName(), type_width,
+                       constant_width);
+            }
+            break;
+          default:
+            break;
+          }
+        }
+      }
+
       m_uid_to_decl[member->getSymIndexId()] = decl;
 
       break;

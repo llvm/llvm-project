@@ -120,9 +120,17 @@ INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
   __builtin_amdgcn_s_barrier();
 }
 
-DEVICE void __kmpc_impl_threadfence(void);
-DEVICE void __kmpc_impl_threadfence_block(void);
-DEVICE void __kmpc_impl_threadfence_system(void);
+INLINE void __kmpc_impl_threadfence() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
+}
+
+INLINE void __kmpc_impl_threadfence_block() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
+}
+
+INLINE void __kmpc_impl_threadfence_system() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");
+}
 
 // Calls to the AMDGCN layer (assuming 1D layout)
 INLINE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
@@ -131,8 +139,6 @@ DEVICE int GetNumberOfBlocksInKernel();
 DEVICE int GetNumberOfThreadsInBlock();
 DEVICE unsigned GetWarpId();
 DEVICE unsigned GetLaneId();
-
-DEVICE bool __kmpc_impl_is_first_active_thread();
 
 // Locks
 DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);

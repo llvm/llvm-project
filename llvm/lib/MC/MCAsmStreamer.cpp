@@ -28,6 +28,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
@@ -174,6 +175,8 @@ public:
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
                                             MCSymbolAttr Linakge,
                                             MCSymbolAttr Visibility) override;
+  void emitXCOFFRenameDirective(const MCSymbol *Name,
+                                StringRef Rename) override;
 
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -797,6 +800,11 @@ void MCAsmStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
 
 void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
     MCSymbol *Symbol, MCSymbolAttr Linkage, MCSymbolAttr Visibility) {
+  // Print symbol's rename (original name contains invalid character(s)) if
+  // there is one.
+  if (cast<MCSymbolXCOFF>(Symbol)->hasRename())
+    emitXCOFFRenameDirective(Symbol,
+                             cast<MCSymbolXCOFF>(Symbol)->getSymbolTableName());
 
   switch (Linkage) {
   case MCSA_Global:
@@ -807,6 +815,9 @@ void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
     break;
   case MCSA_Extern:
     OS << "\t.extern\t";
+    break;
+  case MCSA_LGlobal:
+    OS << "\t.lglobl\t";
     break;
   default:
     report_fatal_error("unhandled linkage type");
@@ -830,6 +841,22 @@ void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
   EmitEOL();
 }
 
+void MCAsmStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
+                                             StringRef Rename) {
+  OS << "\t.rename\t";
+  Name->print(OS, MAI);
+  const char DQ = '"';
+  OS << ',' << DQ;
+  for (char C : Rename) {
+    // To escape a double quote character, the character should be doubled.
+    if (C == DQ)
+      OS << DQ;
+    OS << C;
+  }
+  OS << DQ;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
   assert(MAI->hasDotTypeDotSizeDirective());
   OS << "\t.size\t";
@@ -841,6 +868,12 @@ void MCAsmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
 
 void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                      unsigned ByteAlignment) {
+  // Print symbol's rename (original name contains invalid character(s)) if
+  // there is one.
+  MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(Symbol);
+  if (XSym && XSym->hasRename())
+    emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+
   OS << "\t.comm\t";
   Symbol->print(OS, MAI);
   OS << ',' << Size;

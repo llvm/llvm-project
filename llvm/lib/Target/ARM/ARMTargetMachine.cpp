@@ -518,9 +518,12 @@ void ARMPassConfig::addPreSched2() {
   addPass(createARMExpandPseudoPass());
 
   if (getOptLevel() != CodeGenOpt::None) {
-    // in v8, IfConversion depends on Thumb instruction widths
+    // When optimising for size, always run the Thumb2SizeReduction pass before
+    // IfConversion. Otherwise, check whether IT blocks are restricted
+    // (e.g. in v8, IfConversion depends on Thumb instruction widths)
     addPass(createThumb2SizeReductionPass([this](const Function &F) {
-      return this->TM->getSubtarget<ARMSubtarget>(F).restrictIT();
+      return this->TM->getSubtarget<ARMSubtarget>(F).hasMinSize() ||
+             this->TM->getSubtarget<ARMSubtarget>(F).restrictIT();
     }));
 
     addPass(createIfConverter([](const MachineFunction &MF) {

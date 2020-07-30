@@ -4,12 +4,12 @@
 ; current two cases.
 ;
 ; RUN: opt < %s -disable-output -debug-pass-manager 2>&1 \
-; RUN:     -passes='require<opt-remark-emit>,loop(unroll-full)' \
+; RUN:     -passes='require<opt-remark-emit>,loop(loop-unroll-full)' \
 ; RUN:     | FileCheck %s
 ;
 ; Also run in a special mode that visits children.
 ; RUN: opt < %s -disable-output -debug-pass-manager -unroll-revisit-child-loops 2>&1 \
-; RUN:     -passes='require<opt-remark-emit>,loop(unroll-full)' \
+; RUN:     -passes='require<opt-remark-emit>,loop(loop-unroll-full)' \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-CHILDREN
 
 ; Basic test is fully unrolled and we revisit the post-unroll new sibling

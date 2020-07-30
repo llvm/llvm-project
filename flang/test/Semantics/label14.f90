@@ -1,9 +1,8 @@
-! RUN: %S/test_any.sh %s %t %f18
 ! Tests implemented for this standard
 ! 11.1.4 - 4 It is permissible to branch to and end-block-stmt only withinh its
 !            Block Construct
 
-! EXEC: ${F18} %s 2>&1 | ${FileCheck} %s
+! RUN: not %f18 %s 2>&1 | FileCheck %s
 ! CHECK: Label '20' is not in scope
 
 subroutine s1

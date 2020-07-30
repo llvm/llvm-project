@@ -134,14 +134,14 @@ entry:
 define void @foo_int32_int8_double(<16 x i32>* %dest, <16 x i8>* readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_int32_int8_double:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.s32 q0, [r1, #4]
-; CHECK-NEXT:    vldrb.s32 q1, [r1]
-; CHECK-NEXT:    vldrb.s32 q2, [r1, #12]
-; CHECK-NEXT:    vldrb.s32 q3, [r1, #8]
-; CHECK-NEXT:    vstrw.32 q1, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [r0, #16]
-; CHECK-NEXT:    vstrw.32 q3, [r0, #32]
-; CHECK-NEXT:    vstrw.32 q2, [r0, #48]
+; CHECK-NEXT:    vldrb.s32 q0, [r1]
+; CHECK-NEXT:    vldrb.s32 q1, [r1, #4]
+; CHECK-NEXT:    vldrb.s32 q2, [r1, #8]
+; CHECK-NEXT:    vldrb.s32 q3, [r1, #12]
+; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
+; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    vstrw.32 q3, [r0, #48]
+; CHECK-NEXT:    vstrw.32 q2, [r0, #32]
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <16 x i8>, <16 x i8>* %src, align 1
@@ -224,14 +224,14 @@ entry:
 define void @foo_uint32_uint8_double(<16 x i32>* %dest, <16 x i8>* readonly %src, i32 %n) {
 ; CHECK-LABEL: foo_uint32_uint8_double:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u32 q0, [r1, #4]
-; CHECK-NEXT:    vldrb.u32 q1, [r1]
-; CHECK-NEXT:    vldrb.u32 q2, [r1, #12]
-; CHECK-NEXT:    vldrb.u32 q3, [r1, #8]
-; CHECK-NEXT:    vstrw.32 q1, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [r0, #16]
-; CHECK-NEXT:    vstrw.32 q3, [r0, #32]
-; CHECK-NEXT:    vstrw.32 q2, [r0, #48]
+; CHECK-NEXT:    vldrb.u32 q0, [r1]
+; CHECK-NEXT:    vldrb.u32 q1, [r1, #4]
+; CHECK-NEXT:    vldrb.u32 q2, [r1, #8]
+; CHECK-NEXT:    vldrb.u32 q3, [r1, #12]
+; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
+; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    vstrw.32 q3, [r0, #48]
+; CHECK-NEXT:    vstrw.32 q2, [r0, #32]
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <16 x i8>, <16 x i8>* %src, align 1
@@ -347,12 +347,12 @@ define <16 x i16>* @foo_uint32_uint16_quad_offset(<16 x i32>* %dest, <16 x i16>*
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r1, #32]!
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
-; CHECK-NEXT:    vldrh.s32 q2, [r1, #24]
-; CHECK-NEXT:    vldrh.s32 q3, [r1, #16]
+; CHECK-NEXT:    vldrh.s32 q2, [r1, #16]
+; CHECK-NEXT:    vldrh.s32 q3, [r1, #24]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
-; CHECK-NEXT:    vstrw.32 q2, [r0, #48]
+; CHECK-NEXT:    vstrw.32 q2, [r0, #32]
 ; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
-; CHECK-NEXT:    vstrw.32 q3, [r0, #32]
+; CHECK-NEXT:    vstrw.32 q3, [r0, #48]
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:

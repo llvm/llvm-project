@@ -82,8 +82,7 @@ To upload a new patch:
 * Add reviewers (see below for advice). (If you set the Repository field
   correctly, llvm-commits or cfe-commits will be subscribed automatically;
   otherwise, you will have to manually subscribe them.)
-* In the Repository field, enter the name of the project (LLVM, Clang,
-  etc.) to which the review should be sent.
+* In the Repository field, enter "rG LLVM Github Monorepo".
 * Click *Save*.
 
 To submit an updated patch:
@@ -183,6 +182,13 @@ that you close the review manually. In the web UI, under "Leap Into Action" put
 the git revision number in the Comment, set the Action to "Close Revision" and
 click Submit.  Note the review must have been Accepted first.
 
+Arcanist also adds extra tags that are mostly noise in the commit message, for
+this reason avoid using `arc land` and push commits to master directly with git
+after removing tags other than "Reviewed by" and "Differential Revision".
+You can run `llvm/utils/git/arcfilter.sh` to clean the commit message of the
+current "HEAD" commit automatically. You can also setup a git hook to catch this
+for you (see `Getting Started <GettingStarted.html#git-pre-push-hook>`).
+
 
 Committing someone's change from Phabricator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -216,12 +222,6 @@ the following:
   git show # Ensure the patch looks correct.
   ninja check-$whatever # Rerun the appropriate tests if needed.
   git push https://github.com/llvm/llvm-project.git HEAD:master
-
-Or
-
-::
-
-  arc land D<Revision>
 
 
 Abandoning a change

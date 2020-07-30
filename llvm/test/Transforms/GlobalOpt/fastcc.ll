@@ -35,6 +35,17 @@ define internal i32 @inalloca(i32* inalloca %p) {
   ret i32 %rv
 }
 
+define i32 @inalloca2_caller(i32* inalloca %p) {
+  %rv = musttail call i32 @inalloca2(i32* inalloca %p)
+  ret i32 %rv
+}
+define internal i32 @inalloca2(i32* inalloca %p) {
+; Because of the musttail caller, this inalloca cannot be dropped.
+; CHECK-LABEL: define internal i32 @inalloca2(i32* inalloca %p)
+  %rv = load i32, i32* %p
+  ret i32 %rv
+}
+
 define internal i32 @preallocated(i32* preallocated(i32) %p) {
 ; CHECK-LABEL: define internal fastcc i32 @preallocated(i32* %p)
   %rv = load i32, i32* %p

@@ -178,8 +178,7 @@ static void addFile(StringRef path) {
     if (!result)
       return;
 
-    std::unique_ptr<llvm::MachO::InterfaceFile> interface{std::move(*result)};
-    inputFiles.push_back(make<DylibFile>(std::move(interface)));
+    inputFiles.push_back(make<DylibFile>(std::move(*result)));
     break;
   }
   default:

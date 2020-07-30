@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-init-variables %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s cppcoreguidelines-init-variables %t -- -- -fno-delayed-template-parsing -fexceptions
 
 // Ensure that function declarations are not changed.
 void some_func(int x, double d, bool b, const char *p);
@@ -82,5 +82,12 @@ void init_unit_tests() {
 template <typename RANGE>
 void f(RANGE r) {
   for (char c : r) {
+  }
+}
+
+void catch_variable_decl() {
+  // Expect no warning given here.
+  try {
+  } catch (int X) {
   }
 }

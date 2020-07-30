@@ -305,3 +305,13 @@
 // RUN: %clang -target armv7k-apple-ios10.1-simulator -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TENV-SIM2 %s
 // CHECK-VERSION-TENV-SIM2: "thumbv7k-apple-ios10.1.0-simulator"
+
+
+// RUN: %clang -target x86_64-apple-macos11 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MACOS11 %s
+// RUN: %clang -target x86_64-apple-darwin20 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MACOS11 %s
+// RUN: %clang -target x86_64-apple-darwin -mmacos-version-min=11 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MACOS11 %s
+
+// CHECK-MACOS11: "x86_64-apple-macosx11.0.0"

@@ -56,12 +56,12 @@ def err_drv_no_cuda_libdevice : Error<
   "cannot find libdevice for %0. Provide path to different CUDA installation "
   "via --cuda-path, or pass -nocudalib to build without linking with libdevice.">;
 
-def err_drv_no_rocm_installation : Error<
-  "cannot find ROCm installation.  Provide its path via --rocm-path, or pass "
-  "-nogpulib and -nogpuinc to build without ROCm device library and HIP includes.">;
 def err_drv_no_rocm_device_lib : Error<
-  "cannot find device library for %0. Provide path to different ROCm installation "
-  "via --rocm-path, or pass -nogpulib to build without linking default libraries.">;
+  "cannot find ROCm device library%select{| for %1}0. Provide its path via --rocm-path or "
+  "--rocm-device-lib-path, or pass -nogpulib to build without ROCm device library.">;
+def err_drv_no_hip_runtime : Error<
+  "cannot find HIP runtime. Provide its path via --rocm-path, or pass "
+  "-nogpuinc to build without HIP runtime.">;
 
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
@@ -509,4 +509,6 @@ def warn_drv_libstdcxx_not_found : Warning<
   InGroup<DiagGroup<"stdlibcxx-not-found">>;
 
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
+
+def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognized and is not a valid setting.">;
 }

@@ -2,6 +2,7 @@
 
 declare token @llvm.call.preallocated.setup(i32)
 declare i8* @llvm.call.preallocated.arg(token, i32)
+declare void @llvm.call.preallocated.teardown(token)
 
 ; Fake LLVM intrinsic to return a token
 declare token @llvm.what()
@@ -134,5 +135,12 @@ define void @musttail_and_bundle(i32* preallocated(i32) %a) {
 ; CHECK: cannot guarantee tail call due to mismatched ABI impacting function attributes
 define void @musttail_attr_no_match(i32* preallocated(i32) %a) {
     musttail call void @musttail_and_bundle(i32* %a)
+    ret void
+}
+
+; CHECK: token argument must be a llvm.call.preallocated.setup
+define void @teardown_token_not_from_setup() {
+    %cs = call token @llvm.what()
+    call void @llvm.call.preallocated.teardown(token %cs)
     ret void
 }

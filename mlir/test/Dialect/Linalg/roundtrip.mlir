@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file %s | FileCheck %s
 // | mlir-opt | FileCheck %s
 
-// TODO(pifon): Re-enable LLVM lowering test after IndexedGenericOp is lowered.
+// TODO: Re-enable LLVM lowering test after IndexedGenericOp is lowered.
 //
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // DISABLED: mlir-opt %s --convert-linalg-to-llvm -o=/dev/null 2>&1

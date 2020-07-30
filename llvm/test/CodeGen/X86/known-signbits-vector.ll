@@ -256,9 +256,8 @@ define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) 
 ; X86-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X86-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; X86-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[0,2]
 ; X86-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; X86-NEXT:    retl
 ;
@@ -269,9 +268,8 @@ define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) 
 ; X64-AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X64-AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; X64-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[0,2]
 ; X64-AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -389,7 +387,6 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X86-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,0,8,0]
 ; X86-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; X86-NEXT:    vpmovsxdq %xmm1, %xmm1
 ; X86-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; X86-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; X86-NEXT:    vpxor %xmm0, %xmm1, %xmm0
@@ -407,7 +404,6 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,8]
 ; X64-AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpmovsxdq %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; X64-AVX1-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; X64-AVX1-NEXT:    vpxor %xmm0, %xmm1, %xmm0
@@ -420,7 +416,6 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,8]
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpmovsxdq %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; X64-AVX2-NEXT:    vpxor %xmm0, %xmm1, %xmm0

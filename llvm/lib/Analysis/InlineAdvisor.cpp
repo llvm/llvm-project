@@ -20,6 +20,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <sstream>
@@ -154,7 +155,9 @@ bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
     // To be added subsequently under conditional compilation.
     break;
   case InliningAdvisorMode::Release:
-    // To be added subsequently under conditional compilation.
+#ifdef LLVM_HAVE_TF_AOT
+    Advisor = llvm::getReleaseModeAdvisor(M, MAM);
+#endif
     break;
   }
   return !!Advisor;

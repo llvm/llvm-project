@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -newgvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -newgvn -S | FileCheck %s
 %struct.__fundamental_type_info_pseudo = type { %struct.__type_info_pseudo }
 %struct.__type_info_pseudo = type { i8*, i8* }
 

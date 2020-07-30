@@ -232,6 +232,11 @@ static void computeConstraintToUse(const TargetLowering *TLI,
   }
 }
 
+static unsigned getNumOpRegs(const MachineInstr &I, unsigned OpIdx) {
+  unsigned Flag = I.getOperand(OpIdx).getImm();
+  return InlineAsm::getNumOperandRegisters(Flag);
+}
+
 bool InlineAsmLowering::lowerInlineAsm(
     MachineIRBuilder &MIRBuilder, const CallBase &Call,
     std::function<ArrayRef<Register>(const Value &Val)> GetOrCreateVRegs)
@@ -317,6 +322,10 @@ bool InlineAsmLowering::lowerInlineAsm(
                   .addExternalSymbol(IA->getAsmString().c_str())
                   .addImm(ExtraInfo.get());
 
+  // Starting from this operand: flag followed by register(s) will be added as
+  // operands to Inst for each constraint. Used for matching input constraints.
+  unsigned StartIdx = Inst->getNumOperands();
+
   // Collects the output operands for later processing
   GISelAsmOperandInfoVector OutputOperands;
 
@@ -390,8 +399,43 @@ bool InlineAsmLowering::lowerInlineAsm(
       break;
     case InlineAsm::isInput: {
       if (OpInfo.isMatchingInputConstraint()) {
-        LLVM_DEBUG(dbgs() << "Tied input operands not supported yet\n");
-        return false;
+        unsigned DefIdx = OpInfo.getMatchedOperand();
+        // Find operand with register def that corresponds to DefIdx.
+        unsigned InstFlagIdx = StartIdx;
+        for (unsigned i = 0; i < DefIdx; ++i)
+          InstFlagIdx += getNumOpRegs(*Inst, InstFlagIdx) + 1;
+        assert(getNumOpRegs(*Inst, InstFlagIdx) == 1 && "Wrong flag");
+
+        unsigned MatchedOperandFlag = Inst->getOperand(InstFlagIdx).getImm();
+        if (InlineAsm::isMemKind(MatchedOperandFlag)) {
+          LLVM_DEBUG(dbgs() << "Matching input constraint to mem operand not "
+                               "supported. This should be target specific.\n");
+          return false;
+        }
+        if (!InlineAsm::isRegDefKind(MatchedOperandFlag) &&
+            !InlineAsm::isRegDefEarlyClobberKind(MatchedOperandFlag)) {
+          LLVM_DEBUG(dbgs() << "Unknown matching constraint\n");
+          return false;
+        }
+
+        // We want to tie input to register in next operand.
+        unsigned DefRegIdx = InstFlagIdx + 1;
+        Register Def = Inst->getOperand(DefRegIdx).getReg();
+
+        // Copy input to new vreg with same reg class as Def
+        const TargetRegisterClass *RC = MRI->getRegClass(Def);
+        ArrayRef<Register> SrcRegs = GetOrCreateVRegs(*OpInfo.CallOperandVal);
+        assert(SrcRegs.size() == 1 && "Single register is expected here");
+        Register Tmp = MRI->createVirtualRegister(RC);
+        MIRBuilder.buildCopy(Tmp, SrcRegs[0]);
+
+        // Add Flag and input register operand (Tmp) to Inst. Tie Tmp to Def.
+        unsigned UseFlag = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, 1);
+        unsigned Flag = InlineAsm::getFlagWordForMatchingOp(UseFlag, DefIdx);
+        Inst.addImm(Flag);
+        Inst.addReg(Tmp);
+        Inst->tieOperands(DefRegIdx, Inst->getNumOperands() - 1);
+        break;
       }
 
       if (OpInfo.ConstraintType == TargetLowering::C_Other &&

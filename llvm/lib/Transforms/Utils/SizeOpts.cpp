@@ -39,7 +39,7 @@ cl::opt<bool> PGSOColdCodeOnlyForSamplePGO(
              "to cold code under sample PGO."));
 
 cl::opt<bool> PGSOColdCodeOnlyForPartialSamplePGO(
-    "pgso-cold-code-only-for-partial-sample-pgo", cl::Hidden, cl::init(true),
+    "pgso-cold-code-only-for-partial-sample-pgo", cl::Hidden, cl::init(false),
     cl::desc("Apply the profile guided size optimizations only "
              "to cold code under partial-profile sample PGO."));
 

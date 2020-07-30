@@ -27,7 +27,7 @@ declare <16 x double> @llvm.ceil.v16f64(<16 x double>) nounwind readnone
 ; SI-DAG: v_cmp_gt_f64
 ; SI-DAG: v_cmp_lg_f64
 ; SI-DAG: v_cndmask_b32
-; SI: v_cndmask_b32
+; SI: s_cselect_b32
 ; SI: v_add_f64
 ; SI: s_endpgm
 define amdgpu_kernel void @fceil_f64(double addrspace(1)* %out, double %x) {

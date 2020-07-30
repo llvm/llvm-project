@@ -21,7 +21,7 @@ using namespace lldb_private;
 SBCommandInterpreterRunOptions::SBCommandInterpreterRunOptions() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCommandInterpreterRunOptions);
 
-  m_opaque_up.reset(new CommandInterpreterRunOptions());
+  m_opaque_up = std::make_unique<CommandInterpreterRunOptions>();
 }
 
 SBCommandInterpreterRunOptions::~SBCommandInterpreterRunOptions() = default;
@@ -182,7 +182,7 @@ SBCommandInterpreterRunResult::SBCommandInterpreterRunResult(
 SBCommandInterpreterRunResult::SBCommandInterpreterRunResult(
     const CommandInterpreterRunResult &rhs)
     : m_opaque_up() {
-  m_opaque_up.reset(new CommandInterpreterRunResult(rhs));
+  m_opaque_up = std::make_unique<CommandInterpreterRunResult>(rhs);
 }
 
 SBCommandInterpreterRunResult::~SBCommandInterpreterRunResult() = default;

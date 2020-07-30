@@ -65,8 +65,18 @@
 
 using namespace mlir;
 
-namespace {
+/// Walks over all immediate return-like terminators in the given region.
+template <typename FuncT>
+static void walkReturnOperations(Region *region, const FuncT &func) {
+  for (Block &block : *region)
+    for (Operation &operation : block) {
+      // Skip non-return-like terminators.
+      if (operation.hasTrait<OpTrait::ReturnLike>())
+        func(&operation);
+    }
+}
 
+namespace {
 //===----------------------------------------------------------------------===//
 // BufferPlacementAliasAnalysis
 //===----------------------------------------------------------------------===//
@@ -82,7 +92,7 @@ public:
 
 public:
   /// Constructs a new alias analysis using the op provided.
-  BufferPlacementAliasAnalysis(Operation *op) { build(op->getRegions()); }
+  BufferPlacementAliasAnalysis(Operation *op) { build(op); }
 
   /// Find all immediate aliases this value could potentially have.
   ValueMapT::const_iterator find(Value value) const {
@@ -102,7 +112,7 @@ public:
   }
 
   /// Removes the given values from all alias sets.
-  void remove(const SmallPtrSetImpl<BlockArgument> &aliasValues) {
+  void remove(const SmallPtrSetImpl<Value> &aliasValues) {
     for (auto &entry : aliases)
       llvm::set_subtract(entry.second, aliasValues);
   }
@@ -123,33 +133,75 @@ private:
   /// This function constructs a mapping from values to its immediate aliases.
   /// It iterates over all blocks, gets their predecessors, determines the
   /// values that will be passed to the corresponding block arguments and
-  /// inserts them into the underlying map.
-  void build(MutableArrayRef<Region> regions) {
-    for (Region &region : regions) {
-      for (Block &block : region) {
-        // Iterate over all predecessor and get the mapped values to their
-        // corresponding block arguments values.
-        for (auto it = block.pred_begin(), e = block.pred_end(); it != e;
-             ++it) {
-          unsigned successorIndex = it.getSuccessorIndex();
-          // Get the terminator and the values that will be passed to our block.
-          auto branchInterface =
-              dyn_cast<BranchOpInterface>((*it)->getTerminator());
-          if (!branchInterface)
-            continue;
-          // Query the branch op interace to get the successor operands.
-          auto successorOperands =
-              branchInterface.getSuccessorOperands(successorIndex);
-          if (successorOperands.hasValue()) {
-            // Build the actual mapping of values to their immediate aliases.
-            for (auto argPair : llvm::zip(block.getArguments(),
-                                          successorOperands.getValue())) {
-              aliases[std::get<1>(argPair)].insert(std::get<0>(argPair));
-            }
-          }
+  /// inserts them into the underlying map. Furthermore, it wires successor
+  /// regions and branch-like return operations from nested regions.
+  void build(Operation *op) {
+    // Registers all aliases of the given values.
+    auto registerAliases = [&](auto values, auto aliases) {
+      for (auto entry : llvm::zip(values, aliases))
+        this->aliases[std::get<0>(entry)].insert(std::get<1>(entry));
+    };
+
+    // Add additional aliases created by view changes to the alias list.
+    op->walk([&](ViewLikeOpInterface viewInterface) {
+      aliases[viewInterface.getViewSource()].insert(
+          viewInterface.getOperation()->getResult(0));
+    });
+
+    // Query all branch interfaces to link block argument aliases.
+    op->walk([&](BranchOpInterface branchInterface) {
+      Block *parentBlock = branchInterface.getOperation()->getBlock();
+      for (auto it = parentBlock->succ_begin(), e = parentBlock->succ_end();
+           it != e; ++it) {
+        // Query the branch op interface to get the successor operands.
+        auto successorOperands =
+            branchInterface.getSuccessorOperands(it.getIndex());
+        if (!successorOperands.hasValue())
+          continue;
+        // Build the actual mapping of values to their immediate aliases.
+        registerAliases(successorOperands.getValue(), (*it)->getArguments());
+      }
+    });
+
+    // Query the RegionBranchOpInterface to find potential successor regions.
+    op->walk([&](RegionBranchOpInterface regionInterface) {
+      // Create an empty attribute for each operand to comply with the
+      // `getSuccessorRegions` interface definition that requires a single
+      // attribute per operand.
+      SmallVector<Attribute, 2> operandAttributes(
+          regionInterface.getOperation()->getNumOperands());
+
+      // Extract all entry regions and wire all initial entry successor inputs.
+      SmallVector<RegionSuccessor, 2> entrySuccessors;
+      regionInterface.getSuccessorRegions(/*index=*/llvm::None,
+                                          operandAttributes, entrySuccessors);
+      for (RegionSuccessor &entrySuccessor : entrySuccessors) {
+        // Wire the entry region's successor arguments with the initial
+        // successor inputs.
+        assert(entrySuccessor.getSuccessor() &&
+               "Invalid entry region without an attached successor region");
+        registerAliases(regionInterface.getSuccessorEntryOperands(
+                            entrySuccessor.getSuccessor()->getRegionNumber()),
+                        entrySuccessor.getSuccessorInputs());
+      }
+
+      // Wire flow between regions and from region exits.
+      for (Region &region : regionInterface.getOperation()->getRegions()) {
+        // Iterate over all successor region entries that are reachable from the
+        // current region.
+        SmallVector<RegionSuccessor, 2> successorRegions;
+        regionInterface.getSuccessorRegions(
+            region.getRegionNumber(), operandAttributes, successorRegions);
+        for (RegionSuccessor &successorRegion : successorRegions) {
+          // Iterate over all immediate terminator operations and wire the
+          // successor inputs with the operands of each terminator.
+          walkReturnOperations(&region, [&](Operation *terminator) {
+            registerAliases(terminator->getOperands(),
+                            successorRegion.getSuccessorInputs());
+          });
         }
       }
-    }
+    });
   }
 
   /// Maps values to all immediate aliases this value can have.
@@ -235,14 +287,24 @@ private:
   Block *getInitialAllocBlock(OpResult result) {
     // Get all allocation operands as these operands are important for the
     // allocation operation.
-    auto operands = result.getOwner()->getOperands();
+    Operation *owner = result.getOwner();
+    auto operands = owner->getOperands();
+    Block *dominator;
     if (operands.size() < 1)
-      return findCommonDominator(result, aliases.resolve(result), dominators);
+      dominator =
+          findCommonDominator(result, aliases.resolve(result), dominators);
+    else {
+      // If this node has dependencies, check all dependent nodes with respect
+      // to a common post dominator in which all values are available.
+      ValueSetT dependencies(++operands.begin(), operands.end());
+      dominator =
+          findCommonDominator(*operands.begin(), dependencies, postDominators);
+    }
 
-    // If this node has dependencies, check all dependent nodes with respect
-    // to a common post dominator in which all values are available.
-    ValueSetT dependencies(++operands.begin(), operands.end());
-    return findCommonDominator(*operands.begin(), dependencies, postDominators);
+    // Do not move allocs out of their parent regions to keep them local.
+    if (dominator->getParent() != owner->getParentRegion())
+      return &owner->getParentRegion()->front();
+    return dominator;
   }
 
   /// Finds correct alloc positions according to the algorithm described at
@@ -273,12 +335,12 @@ private:
 
   /// Introduces required allocs and copy operations to avoid memory leaks.
   void introduceCopies() {
-    // Initialize the set of block arguments that require a dedicated memory
-    // free operation since their arguments cannot be safely deallocated in a
-    // post dominator.
-    SmallPtrSet<BlockArgument, 8> blockArgsToFree;
-    llvm::SmallDenseSet<std::tuple<BlockArgument, Block *>> visitedBlockArgs;
-    SmallVector<std::tuple<BlockArgument, Block *>, 8> toProcess;
+    // Initialize the set of values that require a dedicated memory free
+    // operation since their operands cannot be safely deallocated in a post
+    // dominator.
+    SmallPtrSet<Value, 8> valuesToFree;
+    llvm::SmallDenseSet<std::tuple<Value, Block *>> visitedValues;
+    SmallVector<std::tuple<Value, Block *>, 8> toProcess;
 
     // Check dominance relation for proper dominance properties. If the given
     // value node does not dominate an alias, we will have to create a copy in
@@ -289,17 +351,15 @@ private:
       if (it == aliases.end())
         return;
       for (Value value : it->second) {
-        auto blockArg = value.cast<BlockArgument>();
-        if (blockArgsToFree.count(blockArg) > 0)
+        if (valuesToFree.count(value) > 0)
           continue;
         // Check whether we have to free this particular block argument.
-        if (!dominators.dominates(definingBlock, blockArg.getOwner())) {
-          toProcess.emplace_back(blockArg, blockArg.getParentBlock());
-          blockArgsToFree.insert(blockArg);
-        } else if (visitedBlockArgs
-                       .insert(std::make_tuple(blockArg, definingBlock))
+        if (!dominators.dominates(definingBlock, value.getParentBlock())) {
+          toProcess.emplace_back(value, value.getParentBlock());
+          valuesToFree.insert(value);
+        } else if (visitedValues.insert(std::make_tuple(value, definingBlock))
                        .second)
-          toProcess.emplace_back(blockArg, definingBlock);
+          toProcess.emplace_back(value, definingBlock);
       }
     };
 
@@ -316,60 +376,168 @@ private:
 
     // Update buffer aliases to ensure that we free all buffers and block
     // arguments at the correct locations.
-    aliases.remove(blockArgsToFree);
+    aliases.remove(valuesToFree);
 
     // Add new allocs and additional copy operations.
-    for (BlockArgument blockArg : blockArgsToFree) {
-      Block *block = blockArg.getOwner();
+    for (Value value : valuesToFree) {
+      if (auto blockArg = value.dyn_cast<BlockArgument>())
+        introduceBlockArgCopy(blockArg);
+      else
+        introduceValueCopyForRegionResult(value);
 
-      // Allocate a buffer for the current block argument in the block of
-      // the associated value (which will be a predecessor block by
-      // definition).
-      for (auto it = block->pred_begin(), e = block->pred_end(); it != e;
-           ++it) {
-        // Get the terminator and the value that will be passed to our
-        // argument.
-        Operation *terminator = (*it)->getTerminator();
-        auto branchInterface = cast<BranchOpInterface>(terminator);
-        // Convert the mutable operand range to an immutable range and query the
-        // associated source value.
-        Value sourceValue =
-            branchInterface.getSuccessorOperands(it.getSuccessorIndex())
-                .getValue()[blockArg.getArgNumber()];
-        // Create a new alloc at the current location of the terminator.
-        auto memRefType = sourceValue.getType().cast<MemRefType>();
-        OpBuilder builder(terminator);
+      // Register the value to require a final dealloc. Note that we do not have
+      // to assign a block here since we do not want to move the allocation node
+      // to another location.
+      allocs.push_back({value, nullptr, nullptr});
+    }
+  }
 
-        // Extract information about dynamically shaped types by
-        // extracting their dynamic dimensions.
-        SmallVector<Value, 4> dynamicOperands;
-        for (auto shapeElement : llvm::enumerate(memRefType.getShape())) {
-          if (!ShapedType::isDynamic(shapeElement.value()))
-            continue;
-          dynamicOperands.push_back(builder.create<DimOp>(
-              terminator->getLoc(), sourceValue, shapeElement.index()));
-        }
-
-        // TODO: provide a generic interface to create dialect-specific
-        // Alloc and CopyOp nodes.
-        auto alloc = builder.create<AllocOp>(terminator->getLoc(), memRefType,
-                                             dynamicOperands);
-        // Wire new alloc and successor operand.
-        branchInterface.getMutableSuccessorOperands(it.getSuccessorIndex())
-            .getValue()
+  /// Introduces temporary allocs in all predecessors and copies the source
+  /// values into the newly allocated buffers.
+  void introduceBlockArgCopy(BlockArgument blockArg) {
+    // Allocate a buffer for the current block argument in the block of
+    // the associated value (which will be a predecessor block by
+    // definition).
+    Block *block = blockArg.getOwner();
+    for (auto it = block->pred_begin(), e = block->pred_end(); it != e; ++it) {
+      // Get the terminator and the value that will be passed to our
+      // argument.
+      Operation *terminator = (*it)->getTerminator();
+      auto branchInterface = cast<BranchOpInterface>(terminator);
+      // Query the associated source value.
+      Value sourceValue =
+          branchInterface.getSuccessorOperands(it.getSuccessorIndex())
+              .getValue()[blockArg.getArgNumber()];
+      // Create a new alloc and copy at the current location of the terminator.
+      Value alloc = introduceBufferCopy(sourceValue, terminator);
+      // Wire new alloc and successor operand.
+      auto mutableOperands =
+          branchInterface.getMutableSuccessorOperands(it.getSuccessorIndex());
+      if (!mutableOperands.hasValue())
+        terminator->emitError() << "terminators with immutable successor "
+                                   "operands are not supported";
+      else
+        mutableOperands.getValue()
             .slice(blockArg.getArgNumber(), 1)
             .assign(alloc);
-        // Create a new copy operation that copies to contents of the old
-        // allocation to the new one.
-        builder.create<linalg::CopyOp>(terminator->getLoc(), sourceValue,
-                                       alloc);
-      }
-
-      // Register the block argument to require a final dealloc. Note that
-      // we do not have to assign a block here since we do not want to
-      // move the allocation node to another location.
-      allocs.push_back({blockArg, nullptr, nullptr});
     }
+
+    // Check whether the block argument has implicitly defined predecessors via
+    // the RegionBranchOpInterface. This can be the case if the current block
+    // argument belongs to the first block in a region and the parent operation
+    // implements the RegionBranchOpInterface.
+    Region *argRegion = block->getParent();
+    RegionBranchOpInterface regionInterface;
+    if (!argRegion || &argRegion->front() != block ||
+        !(regionInterface =
+              dyn_cast<RegionBranchOpInterface>(argRegion->getParentOp())))
+      return;
+
+    introduceCopiesForRegionSuccessors(
+        regionInterface, argRegion->getParentOp()->getRegions(),
+        [&](RegionSuccessor &successorRegion) {
+          // Find a predecessor of our argRegion.
+          return successorRegion.getSuccessor() == argRegion;
+        },
+        [&](RegionSuccessor &successorRegion) {
+          // The operand index will be the argument number.
+          return blockArg.getArgNumber();
+        });
+  }
+
+  /// Introduces temporary allocs in front of all associated nested-region
+  /// terminators and copies the source values into the newly allocated buffers.
+  void introduceValueCopyForRegionResult(Value value) {
+    // Get the actual result index in the scope of the parent terminator.
+    Operation *operation = value.getDefiningOp();
+    auto regionInterface = cast<RegionBranchOpInterface>(operation);
+    introduceCopiesForRegionSuccessors(
+        regionInterface, operation->getRegions(),
+        [&](RegionSuccessor &successorRegion) {
+          // Determine whether this region has a successor entry that leaves
+          // this region by returning to its parent operation.
+          return !successorRegion.getSuccessor();
+        },
+        [&](RegionSuccessor &successorRegion) {
+          // Find the associated success input index.
+          return llvm::find(successorRegion.getSuccessorInputs(), value)
+              .getIndex();
+        });
+  }
+
+  /// Introduces buffer copies for all terminators in the given regions. The
+  /// regionPredicate is applied to every successor region in order to restrict
+  /// the copies to specific regions. Thereby, the operandProvider is invoked
+  /// for each matching region successor and determines the operand index that
+  /// requires a buffer copy.
+  template <typename TPredicate, typename TOperandProvider>
+  void
+  introduceCopiesForRegionSuccessors(RegionBranchOpInterface regionInterface,
+                                     MutableArrayRef<Region> regions,
+                                     const TPredicate &regionPredicate,
+                                     const TOperandProvider &operandProvider) {
+    // Create an empty attribute for each operand to comply with the
+    // `getSuccessorRegions` interface definition that requires a single
+    // attribute per operand.
+    SmallVector<Attribute, 2> operandAttributes(
+        regionInterface.getOperation()->getNumOperands());
+    for (Region &region : regions) {
+      // Query the regionInterface to get all successor regions of the current
+      // one.
+      SmallVector<RegionSuccessor, 2> successorRegions;
+      regionInterface.getSuccessorRegions(region.getRegionNumber(),
+                                          operandAttributes, successorRegions);
+      // Try to find a matching region successor.
+      RegionSuccessor *regionSuccessor =
+          llvm::find_if(successorRegions, regionPredicate);
+      if (regionSuccessor == successorRegions.end())
+        continue;
+      // Get the operand index in the context of the current successor input
+      // bindings.
+      auto operandIndex = operandProvider(*regionSuccessor);
+
+      // Iterate over all immediate terminator operations to introduce
+      // new buffer allocations. Thereby, the appropriate terminator operand
+      // will be adjusted to point to the newly allocated buffer instead.
+      walkReturnOperations(&region, [&](Operation *terminator) {
+        // Extract the source value from the current terminator.
+        Value sourceValue = terminator->getOperand(operandIndex);
+        // Create a new alloc at the current location of the terminator.
+        Value alloc = introduceBufferCopy(sourceValue, terminator);
+        // Wire alloc and terminator operand.
+        terminator->setOperand(operandIndex, alloc);
+      });
+    }
+  }
+
+  /// Creates a new memory allocation for the given source value and copies
+  /// its content into the newly allocated buffer. The terminator operation is
+  /// used to insert the alloc and copy operations at the right places.
+  Value introduceBufferCopy(Value sourceValue, Operation *terminator) {
+    // Create a new alloc at the current location of the terminator.
+    auto memRefType = sourceValue.getType().cast<MemRefType>();
+    OpBuilder builder(terminator);
+
+    // Extract information about dynamically shaped types by
+    // extracting their dynamic dimensions.
+    SmallVector<Value, 4> dynamicOperands;
+    for (auto shapeElement : llvm::enumerate(memRefType.getShape())) {
+      if (!ShapedType::isDynamic(shapeElement.value()))
+        continue;
+      dynamicOperands.push_back(builder.create<DimOp>(
+          terminator->getLoc(), sourceValue, shapeElement.index()));
+    }
+
+    // TODO: provide a generic interface to create dialect-specific
+    // Alloc and CopyOp nodes.
+    auto alloc = builder.create<AllocOp>(terminator->getLoc(), memRefType,
+                                         dynamicOperands);
+
+    // Create a new copy operation that copies to contents of the old
+    // allocation to the new one.
+    builder.create<linalg::CopyOp>(terminator->getLoc(), sourceValue, alloc);
+
+    return alloc;
   }
 
   /// Finds associated deallocs that can be linked to our allocation nodes (if
@@ -440,8 +608,8 @@ private:
       if (entry.deallocOperation) {
         entry.deallocOperation->moveAfter(endOperation);
       } else {
-        // If the Dealloc position is at the terminator operation of the block,
-        // then the value should escape from a deallocation.
+        // If the Dealloc position is at the terminator operation of the
+        // block, then the value should escape from a deallocation.
         Operation *nextOp = endOperation->getNextNode();
         if (!nextOp)
           continue;
@@ -532,15 +700,19 @@ BufferAssignmentPlacer::computeAllocPosition(OpResult result) {
 BufferAssignmentTypeConverter::BufferAssignmentTypeConverter() {
   // Keep all types unchanged.
   addConversion([](Type type) { return type; });
-  // A type conversion that converts ranked-tensor type to memref type.
+  // Convert RankedTensorType to MemRefType.
   addConversion([](RankedTensorType type) {
     return (Type)MemRefType::get(type.getShape(), type.getElementType());
+  });
+  // Convert UnrankedTensorType to UnrankedMemRefType.
+  addConversion([](UnrankedTensorType type) {
+    return (Type)UnrankedMemRefType::get(type.getElementType(), 0);
   });
 }
 
 /// Checks if `type` has been converted from non-memref type to memref.
 bool BufferAssignmentTypeConverter::isConvertedMemref(Type type, Type before) {
-  return type.isa<MemRefType>() && !before.isa<MemRefType>();
+  return type.isa<BaseMemRefType>() && !before.isa<BaseMemRefType>();
 }
 
 //===----------------------------------------------------------------------===//

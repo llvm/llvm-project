@@ -3570,7 +3570,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16_i64(i16* %ptr) {
 ; SSE-LABEL: insert_dup_mem_v8i16_sext_i16_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzwl (%rdi), %eax
-; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    retq
@@ -3578,7 +3578,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16_i64(i16* %ptr) {
 ; AVX1-LABEL: insert_dup_mem_v8i16_sext_i16_i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movzwl (%rdi), %eax
-; AVX1-NEXT:    vmovq %rax, %xmm0
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    retq
@@ -3591,7 +3591,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16_i64(i16* %ptr) {
 ; XOPAVX1-LABEL: insert_dup_mem_v8i16_sext_i16_i64:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    movzwl (%rdi), %eax
-; XOPAVX1-NEXT:    vmovq %rax, %xmm0
+; XOPAVX1-NEXT:    vmovd %eax, %xmm0
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
 ; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; XOPAVX1-NEXT:    retq

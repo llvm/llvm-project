@@ -321,8 +321,8 @@ define <4 x float> @ulto4f32(<4 x i64> %a) {
 define <8 x double> @ulto8f64(<8 x i64> %a) {
 ; NODQ-LABEL: ulto8f64:
 ; NODQ:       # %bb.0:
-; NODQ-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm0, %zmm1
-; NODQ-NEXT:    vporq {{.*}}(%rip){1to8}, %zmm1, %zmm1
+; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; NODQ-NEXT:    vpternlogq $248, {{.*}}(%rip){1to8}, %zmm0, %zmm1
 ; NODQ-NEXT:    vpsrlq $32, %zmm0, %zmm0
 ; NODQ-NEXT:    vporq {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; NODQ-NEXT:    vsubpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
@@ -346,21 +346,20 @@ define <16 x double> @ulto16f64(<16 x i64> %a) {
 ; NODQ-LABEL: ulto16f64:
 ; NODQ:       # %bb.0:
 ; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295]
-; NODQ-NEXT:    vpandq %zmm2, %zmm0, %zmm3
-; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm4 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
-; NODQ-NEXT:    vporq %zmm4, %zmm3, %zmm3
+; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; NODQ-NEXT:    vmovdqa64 %zmm3, %zmm4
+; NODQ-NEXT:    vpternlogq $248, %zmm2, %zmm0, %zmm4
 ; NODQ-NEXT:    vpsrlq $32, %zmm0, %zmm0
 ; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm5 = [4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072]
 ; NODQ-NEXT:    vporq %zmm5, %zmm0, %zmm0
 ; NODQ-NEXT:    vbroadcastsd {{.*#+}} zmm6 = [1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25]
 ; NODQ-NEXT:    vsubpd %zmm6, %zmm0, %zmm0
-; NODQ-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
-; NODQ-NEXT:    vpandq %zmm2, %zmm1, %zmm2
-; NODQ-NEXT:    vporq %zmm4, %zmm2, %zmm2
+; NODQ-NEXT:    vaddpd %zmm0, %zmm4, %zmm0
+; NODQ-NEXT:    vpternlogq $248, %zmm2, %zmm1, %zmm3
 ; NODQ-NEXT:    vpsrlq $32, %zmm1, %zmm1
 ; NODQ-NEXT:    vporq %zmm5, %zmm1, %zmm1
 ; NODQ-NEXT:    vsubpd %zmm6, %zmm1, %zmm1
-; NODQ-NEXT:    vaddpd %zmm1, %zmm2, %zmm1
+; NODQ-NEXT:    vaddpd %zmm1, %zmm3, %zmm1
 ; NODQ-NEXT:    retq
 ;
 ; VLDQ-LABEL: ulto16f64:

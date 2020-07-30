@@ -21,3 +21,13 @@ void foo(I *i)
 {
   i.helper; // expected-warning{{property access result unused - getters should not be used for side effects}}
 }
+
+@interface J
+@property (nonnull) auto a; // expected-error {{'auto' not allowed in interface member}}
+@property auto b; // expected-error {{'auto' not allowed in interface member}}
+@property (nullable) auto c; // expected-error {{'auto' not allowed in interface member}}
+@end
+
+@interface J (Cat)
+@property (nonnull) auto catprop; // expected-error {{'auto' not allowed in interface member}}
+@end

@@ -1063,6 +1063,71 @@ end:
 }
 
 
+define i32 @func(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@func
+; CHECK-SAME: (i1 [[C:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[C]], i32 0, i32 1
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ret = select i1 %c, i32 0, i32 1
+  ret i32 %ret
+}
+
+define i32 @simplify_callsite_argument(i1 %d) {
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@simplify_callsite_argument
+; IS__TUNIT_OPM-SAME: (i1 [[D:%.*]])
+; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = select i1 [[D]], i1 true, i1 false
+; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__TUNIT_OPM:       t:
+; IS__TUNIT_OPM-NEXT:    [[RET1:%.*]] = call i32 @func(i1 [[C]]) #2, !range !3
+; IS__TUNIT_OPM-NEXT:    ret i32 [[RET1]]
+; IS__TUNIT_OPM:       f:
+; IS__TUNIT_OPM-NEXT:    [[RET2:%.*]] = call i32 @func(i1 false) #2, !range !3
+; IS__TUNIT_OPM-NEXT:    ret i32 [[RET2]]
+;
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@simplify_callsite_argument
+; IS__TUNIT_NPM-SAME: (i1 [[D:%.*]])
+; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = select i1 [[D]], i1 true, i1 false
+; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__TUNIT_NPM:       t:
+; IS__TUNIT_NPM-NEXT:    [[RET1:%.*]] = call i32 @func(i1 true) #1, !range !4
+; IS__TUNIT_NPM-NEXT:    ret i32 [[RET1]]
+; IS__TUNIT_NPM:       f:
+; IS__TUNIT_NPM-NEXT:    [[RET2:%.*]] = call i32 @func(i1 false) #1, !range !4
+; IS__TUNIT_NPM-NEXT:    ret i32 [[RET2]]
+;
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@simplify_callsite_argument
+; IS__CGSCC_OPM-SAME: (i1 [[D:%.*]])
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = select i1 [[D]], i1 true, i1 false
+; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__CGSCC_OPM:       t:
+; IS__CGSCC_OPM-NEXT:    [[RET1:%.*]] = call i32 @func(i1 [[C]])
+; IS__CGSCC_OPM-NEXT:    ret i32 [[RET1]]
+; IS__CGSCC_OPM:       f:
+; IS__CGSCC_OPM-NEXT:    [[RET2:%.*]] = call i32 @func(i1 false)
+; IS__CGSCC_OPM-NEXT:    ret i32 [[RET2]]
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@simplify_callsite_argument
+; IS__CGSCC_NPM-SAME: (i1 [[D:%.*]])
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = select i1 [[D]], i1 true, i1 false
+; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__CGSCC_NPM:       t:
+; IS__CGSCC_NPM-NEXT:    [[RET1:%.*]] = call i32 @func(i1 true)
+; IS__CGSCC_NPM-NEXT:    ret i32 [[RET1]]
+; IS__CGSCC_NPM:       f:
+; IS__CGSCC_NPM-NEXT:    [[RET2:%.*]] = call i32 @func(i1 false)
+; IS__CGSCC_NPM-NEXT:    ret i32 [[RET2]]
+;
+  %c = select i1 %d, i1 true, i1 false
+  br i1 %c, label %t, label %f
+t:
+  %ret1 = call i32 @func(i1 %c)
+  ret i32 %ret1
+f:
+  %ret2 = call i32 @func(i1 false)
+  ret i32 %ret2
+}
+
 !0 = !{i32 0, i32 10}
 !1 = !{i32 10, i32 100}
 

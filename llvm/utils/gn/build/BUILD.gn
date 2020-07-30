@@ -43,6 +43,10 @@ config("compiler_defaults") {
       "-isysroot",
       mac_sdk_path,
     ]
+    ldflags += [
+      "-isysroot",
+      mac_sdk_path,
+    ]
   }
 
   if (host_os != "win") {

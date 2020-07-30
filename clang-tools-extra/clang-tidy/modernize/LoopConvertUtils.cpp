@@ -500,7 +500,7 @@ void ForLoopIndexUseVisitor::addUsage(const Usage &U) {
 ///     int k = *i + 2;
 ///   }
 /// \endcode
-bool ForLoopIndexUseVisitor::TraverseUnaryDeref(UnaryOperator *Uop) {
+bool ForLoopIndexUseVisitor::TraverseUnaryOperator(UnaryOperator *Uop) {
   // If we dereference an iterator that's actually a pointer, count the
   // occurrence.
   if (isDereferenceOfUop(Uop, IndexVar)) {

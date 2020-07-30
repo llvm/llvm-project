@@ -1,9 +1,8 @@
 ; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
-; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN:   -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s
 ; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
-; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
+; RUN:   -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
 ; RUN:   | FileCheck -check-prefix=CHECK-BE %s
 
 ; Testing homogeneous aggregates.

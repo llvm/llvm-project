@@ -322,6 +322,8 @@ public:
       return wasm::ValType::V128;
     if (Type == "exnref")
       return wasm::ValType::EXNREF;
+    if (Type == "externref")
+      return wasm::ValType::EXTERNREF;
     return Optional<wasm::ValType>();
   }
 

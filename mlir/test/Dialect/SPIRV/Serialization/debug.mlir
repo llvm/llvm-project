@@ -58,7 +58,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
   spv.func @memory_accesses(%arg0 : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, StorageBuffer>, %arg1 : i32, %arg2 : i32) "None" {
     // CHECK: loc({{".*debug.mlir"}}:61:10)
-    %2 = spv.AccessChain %arg0[%arg1, %arg2] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, StorageBuffer>
+    %2 = spv.AccessChain %arg0[%arg1, %arg2] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, StorageBuffer>, i32, i32
     // CHECK: loc({{".*debug.mlir"}}:63:10)
     %3 = spv.Load "StorageBuffer" %2 : f32
     // CHECK: loc({{.*debug.mlir"}}:65:5)

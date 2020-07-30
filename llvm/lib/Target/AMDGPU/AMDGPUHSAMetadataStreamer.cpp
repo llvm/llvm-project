@@ -127,38 +127,6 @@ ValueKind MetadataStreamerV2::getValueKind(Type *Ty, StringRef TypeQual,
                       ValueKind::ByValue);
 }
 
-ValueType MetadataStreamerV2::getValueType(Type *Ty, StringRef TypeName) const {
-  switch (Ty->getTypeID()) {
-  case Type::IntegerTyID: {
-    auto Signed = !TypeName.startswith("u");
-    switch (Ty->getIntegerBitWidth()) {
-    case 8:
-      return Signed ? ValueType::I8 : ValueType::U8;
-    case 16:
-      return Signed ? ValueType::I16 : ValueType::U16;
-    case 32:
-      return Signed ? ValueType::I32 : ValueType::U32;
-    case 64:
-      return Signed ? ValueType::I64 : ValueType::U64;
-    default:
-      return ValueType::Struct;
-    }
-  }
-  case Type::HalfTyID:
-    return ValueType::F16;
-  case Type::FloatTyID:
-    return ValueType::F32;
-  case Type::DoubleTyID:
-    return ValueType::F64;
-  case Type::PointerTyID:
-    return getValueType(Ty->getPointerElementType(), TypeName);
-  case Type::FixedVectorTyID:
-    return getValueType(cast<VectorType>(Ty)->getElementType(), TypeName);
-  default:
-    return ValueType::Struct;
-  }
-}
-
 std::string MetadataStreamerV2::getTypeName(Type *Ty, bool Signed) const {
   switch (Ty->getTypeID()) {
   case Type::IntegerTyID: {
@@ -346,12 +314,11 @@ void MetadataStreamerV2::emitKernelArg(const Argument &Arg) {
   Type *Ty = Arg.getType();
   const DataLayout &DL = Func->getParent()->getDataLayout();
 
-  unsigned PointeeAlign = 0;
+  MaybeAlign PointeeAlign;
   if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
     if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-      PointeeAlign = Arg.getParamAlignment();
-      if (PointeeAlign == 0)
-        PointeeAlign = DL.getABITypeAlignment(PtrTy->getElementType());
+      PointeeAlign = DL.getValueOrABITypeAlignment(Arg.getParamAlign(),
+                                                   PtrTy->getElementType());
     }
   }
 
@@ -361,7 +328,7 @@ void MetadataStreamerV2::emitKernelArg(const Argument &Arg) {
 
 void MetadataStreamerV2::emitKernelArg(const DataLayout &DL, Type *Ty,
                                        ValueKind ValueKind,
-                                       unsigned PointeeAlign, StringRef Name,
+                                       MaybeAlign PointeeAlign, StringRef Name,
                                        StringRef TypeName,
                                        StringRef BaseTypeName,
                                        StringRef AccQual, StringRef TypeQual) {
@@ -371,10 +338,9 @@ void MetadataStreamerV2::emitKernelArg(const DataLayout &DL, Type *Ty,
   Arg.mName = std::string(Name);
   Arg.mTypeName = std::string(TypeName);
   Arg.mSize = DL.getTypeAllocSize(Ty);
-  Arg.mAlign = DL.getABITypeAlignment(Ty);
+  Arg.mAlign = DL.getABITypeAlign(Ty).value();
   Arg.mValueKind = ValueKind;
-  Arg.mValueType = getValueType(Ty, BaseTypeName);
-  Arg.mPointeeAlign = PointeeAlign;
+  Arg.mPointeeAlign = PointeeAlign ? PointeeAlign->value() : 0;
 
   if (auto PtrTy = dyn_cast<PointerType>(Ty))
     Arg.mAddrSpaceQual = getAddressSpaceQualifier(PtrTy->getAddressSpace());
@@ -574,38 +540,6 @@ StringRef MetadataStreamerV3::getValueKind(Type *Ty, StringRef TypeQual,
                    : "by_value");
 }
 
-StringRef MetadataStreamerV3::getValueType(Type *Ty, StringRef TypeName) const {
-  switch (Ty->getTypeID()) {
-  case Type::IntegerTyID: {
-    auto Signed = !TypeName.startswith("u");
-    switch (Ty->getIntegerBitWidth()) {
-    case 8:
-      return Signed ? "i8" : "u8";
-    case 16:
-      return Signed ? "i16" : "u16";
-    case 32:
-      return Signed ? "i32" : "u32";
-    case 64:
-      return Signed ? "i64" : "u64";
-    default:
-      return "struct";
-    }
-  }
-  case Type::HalfTyID:
-    return "f16";
-  case Type::FloatTyID:
-    return "f32";
-  case Type::DoubleTyID:
-    return "f64";
-  case Type::PointerTyID:
-    return getValueType(Ty->getPointerElementType(), TypeName);
-  case Type::FixedVectorTyID:
-    return getValueType(cast<VectorType>(Ty)->getElementType(), TypeName);
-  default:
-    return "struct";
-  }
-}
-
 std::string MetadataStreamerV3::getTypeName(Type *Ty, bool Signed) const {
   switch (Ty->getTypeID()) {
   case Type::IntegerTyID: {
@@ -768,12 +702,11 @@ void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
   Type *Ty = Arg.getType();
   const DataLayout &DL = Func->getParent()->getDataLayout();
 
-  unsigned PointeeAlign = 0;
+  MaybeAlign PointeeAlign;
   if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
     if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-      PointeeAlign = Arg.getParamAlignment();
-      if (PointeeAlign == 0)
-        PointeeAlign = DL.getABITypeAlignment(PtrTy->getElementType());
+      PointeeAlign = DL.getValueOrABITypeAlignment(Arg.getParamAlign(),
+                                                   PtrTy->getElementType());
     }
   }
 
@@ -786,7 +719,7 @@ void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
 void MetadataStreamerV3::emitKernelArg(const DataLayout &DL, Type *Ty,
                                        StringRef ValueKind, unsigned &Offset,
                                        msgpack::ArrayDocNode Args,
-                                       unsigned PointeeAlign, StringRef Name,
+                                       MaybeAlign PointeeAlign, StringRef Name,
                                        StringRef TypeName,
                                        StringRef BaseTypeName,
                                        StringRef AccQual, StringRef TypeQual) {
@@ -797,16 +730,14 @@ void MetadataStreamerV3::emitKernelArg(const DataLayout &DL, Type *Ty,
   if (!TypeName.empty())
     Arg[".type_name"] = Arg.getDocument()->getNode(TypeName, /*Copy=*/true);
   auto Size = DL.getTypeAllocSize(Ty);
-  auto Align = DL.getABITypeAlignment(Ty);
+  Align Alignment = DL.getABITypeAlign(Ty);
   Arg[".size"] = Arg.getDocument()->getNode(Size);
-  Offset = alignTo(Offset, Align);
+  Offset = alignTo(Offset, Alignment);
   Arg[".offset"] = Arg.getDocument()->getNode(Offset);
   Offset += Size;
   Arg[".value_kind"] = Arg.getDocument()->getNode(ValueKind, /*Copy=*/true);
-  Arg[".value_type"] =
-      Arg.getDocument()->getNode(getValueType(Ty, BaseTypeName), /*Copy=*/true);
   if (PointeeAlign)
-    Arg[".pointee_align"] = Arg.getDocument()->getNode(PointeeAlign);
+    Arg[".pointee_align"] = Arg.getDocument()->getNode(PointeeAlign->value());
 
   if (auto PtrTy = dyn_cast<PointerType>(Ty))
     if (auto Qualifier = getAddressSpaceQualifier(PtrTy->getAddressSpace()))

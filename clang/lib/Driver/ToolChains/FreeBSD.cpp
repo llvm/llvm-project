@@ -128,7 +128,8 @@ void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(II.getFilename());
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
 }
 
 void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -358,7 +359,8 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ToolChain.addProfileRTLibs(Args, CmdArgs);
 
   const char *Exec = Args.MakeArgString(getToolChain().GetLinkerPath());
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
 }
 
 /// FreeBSD - FreeBSD tool chain which can call as(1) and ld(1) directly.
@@ -421,6 +423,11 @@ void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
 void FreeBSD::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                  ArgStringList &CC1Args) const {
   CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+}
+
+void FreeBSD::AddHIPIncludeArgs(const ArgList &DriverArgs,
+                                ArgStringList &CC1Args) const {
+  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 Tool *FreeBSD::buildAssembler() const {

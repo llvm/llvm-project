@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "stop.h"
+#include "file.h"
 #include "io-error.h"
 #include "terminator.h"
 #include "unit.h"
@@ -69,6 +70,19 @@ static void CloseAllExternalUnits(const char *why) {
     DescribeIEEESignaledExceptions();
   }
   std::exit(EXIT_FAILURE);
+}
+
+void RTNAME(PauseStatement)() {
+  if (Fortran::runtime::io::IsATerminal(0)) {
+    Fortran::runtime::io::IoErrorHandler handler{"PAUSE statement"};
+    Fortran::runtime::io::ExternalFileUnit::FlushAll(handler);
+    std::fputs("Fortran PAUSE: hit RETURN to continue:", stderr);
+    std::fflush(nullptr);
+    if (std::fgetc(stdin) == EOF) {
+      CloseAllExternalUnits("PAUSE statement");
+      std::exit(EXIT_SUCCESS);
+    }
+  }
 }
 
 [[noreturn]] void RTNAME(FailImageStatement)() {

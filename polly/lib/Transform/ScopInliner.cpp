@@ -15,6 +15,7 @@
 
 #include "polly/LinkAllPasses.h"
 #include "polly/ScopDetection.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"

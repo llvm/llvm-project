@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -print-alias-sets -S -o - < %s 2>&1 | FileCheck %s
+; RUN: opt -basic-aa -print-alias-sets -S -o - < %s 2>&1 | FileCheck %s
 
 @s = global i8 1, align 1
 @d = global i8 2, align 1

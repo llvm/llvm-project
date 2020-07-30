@@ -655,6 +655,14 @@ int main(int argc, const char *argv[]) {
       [NSDate dateWithTimeIntervalSinceReferenceDate:
                   floor([[NSDate date] timeIntervalSinceReferenceDate])];
 
+  NSDate *date_1970_minus_06 = [NSDate dateWithTimeIntervalSince1970:-0.6];
+  NSDate *date_1970_minus_05 = [NSDate dateWithTimeIntervalSince1970:-0.5];
+  NSDate *date_1970_minus_04 = [NSDate dateWithTimeIntervalSince1970:-0.4];
+
+  NSDate *date_1970_plus_06 = [NSDate dateWithTimeIntervalSince1970:0.6];
+  NSDate *date_1970_plus_05 = [NSDate dateWithTimeIntervalSince1970:0.5];
+  NSDate *date_1970_plus_04 = [NSDate dateWithTimeIntervalSince1970:0.4];
+
   CFAbsoluteTime date1_abs = CFDateGetAbsoluteTime(date1);
   CFAbsoluteTime date2_abs = CFDateGetAbsoluteTime(date2);
   CFAbsoluteTime date3_abs = CFDateGetAbsoluteTime(date3);

@@ -204,7 +204,7 @@ LoadCommands:
       - sectname:        __debug_abbrev
         segname:         __DWARF
         addr:            0x000000010000312C
-        size:            84
+        size:            86
         offset:          0x00002167
         align:           0
         reloff:          0x00000000
@@ -217,7 +217,7 @@ LoadCommands:
         segname:         __DWARF
         addr:            0x0000000100003178
         size:            83
-        offset:          0x000021BB
+        offset:          0x000021BC
         align:           0
         reloff:          0x00000000
         nreloc:          0
@@ -334,8 +334,7 @@ DWARF:
         - Attribute:       0x201A
           Form:            DW_FORM_addr
   debug_info:      
-    - Length:          
-        TotalLength:     168
+    - Length:          168
       Version:         2
       AbbrOffset:      0
       AddrSize:        8
@@ -416,8 +415,7 @@ DWARF:
 ...
 
 #CHECK:   debug_info:      
-#CHECK:     - Length:          
-#CHECK:         TotalLength:     168
+#CHECK:     - Length:          168
 #CHECK:       Version:         2
 #CHECK:       AbbrOffset:      0
 #CHECK:       AddrSize:        8

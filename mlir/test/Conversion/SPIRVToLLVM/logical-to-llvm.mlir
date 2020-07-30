@@ -33,6 +33,24 @@ func @logical_not_equal_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.LogicalNot
+//===----------------------------------------------------------------------===//
+
+func @logical_not__scalar(%arg0: i1) {
+  // CHECK: %[[CONST:.*]] = llvm.mlir.constant(true) : !llvm.i1
+  // CHECK: %{{.*}} = llvm.xor %{{.*}}, %[[CONST]] : !llvm.i1
+	%0 = spv.LogicalNot %arg0 : i1
+  return
+}
+
+func @logical_not_vector(%arg0: vector<4xi1>) {
+  // CHECK: %[[CONST:.*]] = llvm.mlir.constant(dense<true> : vector<4xi1>) : !llvm<"<4 x i1>">
+  // CHECK: %{{.*}} = llvm.xor %{{.*}}, %[[CONST]] : !llvm<"<4 x i1>">
+	%0 = spv.LogicalNot %arg0 : vector<4xi1>
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // spv.LogicalAnd
 //===----------------------------------------------------------------------===//
 

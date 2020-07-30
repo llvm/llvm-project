@@ -8,7 +8,7 @@
 ; }
 ;
 
-; RUN: opt < %s -disable-basicaa -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 %T = type { i32, [10 x i8] }
 

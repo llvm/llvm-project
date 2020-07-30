@@ -1,5 +1,5 @@
 ; RUN: opt < %s -S -early-cse | FileCheck %s
-; RUN: opt < %s -S -basicaa -early-cse-memssa | FileCheck %s
+; RUN: opt < %s -S -basic-aa -early-cse-memssa | FileCheck %s
 
 ; Ensure we don't simplify away additions vectors of +0.0's (same as scalars).
 define <4 x float> @fV( <4 x float> %a) {

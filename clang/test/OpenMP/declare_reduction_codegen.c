@@ -2,6 +2,9 @@
 // RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -emit-pch -o %t %s -femit-all-decls -disable-llvm-passes
 // RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefix=CHECK-LOAD %s
 
+// RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -emit-pch -o %t %s -femit-all-decls -disable-llvm-passes -fopenmp-version=45
+// RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes -fopenmp-version=45 | FileCheck --check-prefixes=CHECK-LOAD,OMP45-LOAD %s
+
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c -emit-llvm %s -triple %itanium_abi_triple -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c -triple %itanium_abi_triple -emit-pch -o %t %s -femit-all-decls -disable-llvm-passes
 // RUN: %clang_cc1 -fopenmp-simd -x c -triple %itanium_abi_triple -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefix SIMD-ONLY0 %s
@@ -146,18 +149,18 @@ int main() {
   return 0;
 }
 
-// CHECK-LOAD: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
-// CHECK-LOAD: [[MUL:%.+]] = mul nsw i32
-// CHECK-LOAD-NEXT: store i32 [[MUL]], i32*
-// CHECK-LOAD-NEXT: ret void
-// CHECK-LOAD-NEXT: }
+// OMP45-LOAD: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
+// OMP45-LOAD: [[MUL:%.+]] = mul nsw i32
+// OMP45-LOAD-NEXT: store i32 [[MUL]], i32*
+// OMP45-LOAD-NEXT: ret void
+// OMP45-LOAD-NEXT: }
 
-// CHECK-LOAD: define internal {{.*}}void @{{[^(]+}}(i8* noalias %0, i8* noalias %1)
-// CHECK-LOAD: sext i8
-// CHECK-LOAD: sext i8
-// CHECK-LOAD: [[MUL:%.+]] = mul nsw i32
-// CHECK-LOAD-NEXT: [[TRUNC:%.+]] = trunc i32 [[MUL]] to i8
-// CHECK-LOAD-NEXT: store i8 [[TRUNC]], i8*
-// CHECK-LOAD-NEXT: ret void
-// CHECK-LOAD-NEXT: }
+// OMP45-LOAD: define internal {{.*}}void @{{[^(]+}}(i8* noalias %0, i8* noalias %1)
+// OMP45-LOAD: sext i8
+// OMP45-LOAD: sext i8
+// OMP45-LOAD: [[MUL:%.+]] = mul nsw i32
+// OMP45-LOAD-NEXT: [[TRUNC:%.+]] = trunc i32 [[MUL]] to i8
+// OMP45-LOAD-NEXT: store i8 [[TRUNC]], i8*
+// OMP45-LOAD-NEXT: ret void
+// OMP45-LOAD-NEXT: }
 #endif

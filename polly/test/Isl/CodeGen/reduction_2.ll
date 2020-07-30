@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-ast -analyze \
+; RUN: opt %loadPolly -basic-aa -polly-ast -analyze \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ;#include <string.h>

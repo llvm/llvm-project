@@ -77,7 +77,6 @@ attributes #0 = { "sign-return-address"="all"
 
 ; CHECK:            OUTLINED_FUNC
 ; CHECK:            // %bb.0:
-; CHECK-NEXT:               .cfi_b_key_frame
 ; CHECK-NEXT:               pacibsp
 ; CHECK:                    retab
 ; CHECK-NOT:                auti[a,b]sp

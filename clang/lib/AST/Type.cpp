@@ -347,15 +347,7 @@ ExtIntType::ExtIntType(bool IsUnsigned, unsigned NumBits)
 DependentExtIntType::DependentExtIntType(const ASTContext &Context,
                                          bool IsUnsigned, Expr *NumBitsExpr)
     : Type(DependentExtInt, QualType{},
-           ((NumBitsExpr->isValueDependent() || NumBitsExpr->isTypeDependent())
-                ? TypeDependence::Dependent
-                : TypeDependence::None) |
-               (NumBitsExpr->isInstantiationDependent()
-                    ? TypeDependence::Instantiation
-                    : TypeDependence::None) |
-               (NumBitsExpr->containsUnexpandedParameterPack()
-                    ? TypeDependence::VariablyModified
-                    : TypeDependence::None)),
+           toTypeDependence(NumBitsExpr->getDependence())),
       Context(Context), ExprAndUnsigned(NumBitsExpr, IsUnsigned) {}
 
 bool DependentExtIntType::isUnsigned() const {
@@ -3591,7 +3583,7 @@ TemplateSpecializationType::TemplateSpecializationType(
 
   auto *TemplateArgs = reinterpret_cast<TemplateArgument *>(this + 1);
   for (const TemplateArgument &Arg : Args) {
-    // Update instantiation-dependent and variably-modified bits.
+    // Update instantiation-dependent, variably-modified, and error bits.
     // If the canonical type exists and is non-dependent, the template
     // specialization type can be non-dependent even if one of the type
     // arguments is. Given:

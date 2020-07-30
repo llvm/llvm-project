@@ -1732,9 +1732,9 @@ define <8 x i16> @psubus_8i64_max(<8 x i16> %x, <8 x i64> %y) nounwind {
 ; AVX2-NEXT:    vpcmpgtq %ymm3, %ymm5, %ymm3
 ; AVX2-NEXT:    vblendvpd %ymm3, %ymm1, %ymm6, %ymm1
 ; AVX2-NEXT:    vpackusdw %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
 ; AVX2-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

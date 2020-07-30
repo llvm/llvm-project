@@ -433,6 +433,11 @@ void MappingTraits<wasm::WasmInitExpr>::mapping(IO &IO,
   case wasm::WASM_OPCODE_GLOBAL_GET:
     IO.mapRequired("Index", Expr.Value.Global);
     break;
+  case wasm::WASM_OPCODE_REF_NULL: {
+    WasmYAML::ValueType Ty = wasm::WASM_TYPE_EXTERNREF;
+    IO.mapRequired("Type", Ty);
+    break;
+  }
   }
 }
 
@@ -517,6 +522,7 @@ void ScalarBitSetTraits<WasmYAML::LimitFlags>::bitset(
 #define BCase(X) IO.bitSetCase(Value, #X, wasm::WASM_LIMITS_FLAG_##X)
   BCase(HAS_MAX);
   BCase(IS_SHARED);
+  BCase(IS_64);
 #undef BCase
 }
 
@@ -559,6 +565,8 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(F64);
   ECase(V128);
   ECase(FUNCREF);
+  ECase(EXNREF);
+  ECase(EXTERNREF);
   ECase(FUNC);
 #undef ECase
 }
@@ -583,6 +591,7 @@ void ScalarEnumerationTraits<WasmYAML::Opcode>::enumeration(
   ECase(F64_CONST);
   ECase(F32_CONST);
   ECase(GLOBAL_GET);
+  ECase(REF_NULL);
 #undef ECase
 }
 

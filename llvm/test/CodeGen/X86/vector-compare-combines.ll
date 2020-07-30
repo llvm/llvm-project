@@ -42,4 +42,3 @@ define <4 x i32> @PR27924_cmpgt(<4 x i32> %a, <4 x i32> %b) {
   %ret = sext <4 x i1> %untruth to <4 x i32>
   ret <4 x i32> %ret
 }
-

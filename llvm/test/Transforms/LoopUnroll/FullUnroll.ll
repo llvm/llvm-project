@@ -1,4 +1,4 @@
-; RUN: opt -passes='default<O1>' -disable-verify --mtriple x86_64-pc-linux-gnu -new-pm-disable-loop-unrolling=true \
+; RUN: opt -passes='default<O1>' -disable-verify --mtriple x86_64-pc-linux-gnu -disable-loop-unrolling=true \
 ; RUN: -S -o - %s | FileCheck %s
 
 ; This checks that the loop full unroller will fire in the new pass manager

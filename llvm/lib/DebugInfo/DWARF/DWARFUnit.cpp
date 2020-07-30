@@ -300,7 +300,7 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
                 TypeOffset < getLength() + getUnitLengthFieldByteSize();
   bool LengthOK = debug_info.isValidOffset(getNextUnitOffset() - 1);
   bool VersionOK = DWARFContext::isSupportedVersion(getVersion());
-  bool AddrSizeOK = getAddressByteSize() == 4 || getAddressByteSize() == 8;
+  bool AddrSizeOK = DWARFContext::isAddressSizeSupported(getAddressByteSize());
 
   if (!LengthOK || !VersionOK || !AddrSizeOK || !TypeOffsetOK)
     return false;

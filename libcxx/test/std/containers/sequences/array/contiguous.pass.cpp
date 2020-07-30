@@ -8,6 +8,9 @@
 
 // <array>
 
+// GCC 5 doesn't implement the required constexpr support
+// UNSUPPORTED: gcc-5
+
 // An array is a contiguous container
 
 #include <array>

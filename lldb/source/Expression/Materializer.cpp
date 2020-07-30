@@ -399,7 +399,8 @@ uint32_t Materializer::AddPersistentVariable(
     lldb::ExpressionVariableSP &persistent_variable_sp,
     PersistentVariableDelegate *delegate, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityPersistentVariable(persistent_variable_sp, delegate));
+  *iter = std::make_unique<EntityPersistentVariable>(persistent_variable_sp,
+                                                     delegate);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -752,7 +753,7 @@ private:
 
 uint32_t Materializer::AddVariable(lldb::VariableSP &variable_sp, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityVariable(variable_sp));
+  *iter = std::make_unique<EntityVariable>(variable_sp);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -784,7 +785,9 @@ public:
 
       const lldb::addr_t load_addr = process_address + m_offset;
 
-      ExecutionContextScope *exe_scope = map.GetBestExecutionContextScope();
+      ExecutionContextScope *exe_scope = frame_sp.get();
+      if (!exe_scope)
+        exe_scope = map.GetBestExecutionContextScope();
 
       llvm::Optional<uint64_t> byte_size = m_type.GetByteSize(exe_scope);
       if (!byte_size) {
@@ -834,7 +837,9 @@ public:
                      lldb::addr_t frame_bottom, Status &err) override {
     err.Clear();
 
-    ExecutionContextScope *exe_scope = map.GetBestExecutionContextScope();
+    ExecutionContextScope *exe_scope = frame_sp.get();
+    if (!exe_scope)
+      exe_scope = map.GetBestExecutionContextScope();
 
     if (!exe_scope) {
       err.SetErrorString("Couldn't dematerialize a result variable: invalid "
@@ -1030,8 +1035,8 @@ uint32_t Materializer::AddResultVariable(const CompilerType &type,
                                          PersistentVariableDelegate *delegate,
                                          Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityResultVariable(type, is_program_reference,
-                                       keep_in_memory, delegate));
+  *iter = std::make_unique<EntityResultVariable>(type, is_program_reference,
+                                                 keep_in_memory, delegate);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -1060,7 +1065,9 @@ public:
 
     const Address sym_address = m_symbol.GetAddress();
 
-    ExecutionContextScope *exe_scope = map.GetBestExecutionContextScope();
+    ExecutionContextScope *exe_scope = frame_sp.get();
+    if (!exe_scope)
+      exe_scope = map.GetBestExecutionContextScope();
 
     lldb::TargetSP target_sp;
 
@@ -1147,7 +1154,7 @@ private:
 
 uint32_t Materializer::AddSymbol(const Symbol &symbol_sp, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntitySymbol(symbol_sp));
+  *iter = std::make_unique<EntitySymbol>(symbol_sp);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -1324,7 +1331,7 @@ private:
 uint32_t Materializer::AddRegister(const RegisterInfo &register_info,
                                    Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  iter->reset(new EntityRegister(register_info));
+  *iter = std::make_unique<EntityRegister>(register_info);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;
@@ -1341,7 +1348,6 @@ Materializer::DematerializerSP
 Materializer::Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
                           lldb::addr_t process_address, Status &error) {
   ExecutionContextScope *exe_scope = frame_sp.get();
-
   if (!exe_scope)
     exe_scope = map.GetBestExecutionContextScope();
 
@@ -1392,7 +1398,9 @@ void Materializer::Dematerializer::Dematerialize(Status &error,
   if (thread_sp)
     frame_sp = thread_sp->GetFrameWithStackID(m_stack_id);
 
-  ExecutionContextScope *exe_scope = m_map->GetBestExecutionContextScope();
+  ExecutionContextScope *exe_scope = frame_sp.get();
+  if (!exe_scope)
+    exe_scope = m_map->GetBestExecutionContextScope();
 
   if (!IsValid()) {
     error.SetErrorToGenericError();

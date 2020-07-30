@@ -47,6 +47,9 @@ public:
                            NotifyResolvedFunction NotifyResolved);
 
 protected:
+  using NotifyLandingResolvedFunction =
+      TrampolinePool::NotifyLandingResolvedFunction;
+
   LazyCallThroughManager(ExecutionSession &ES,
                          JITTargetAddress ErrorHandlerAddr,
                          std::unique_ptr<TrampolinePool> TP);
@@ -56,16 +59,13 @@ protected:
     SymbolStringPtr SymbolName;
   };
 
+  JITTargetAddress reportCallThroughError(Error Err);
   Expected<ReexportsEntry> findReexport(JITTargetAddress TrampolineAddr);
-  Expected<JITTargetAddress> resolveSymbol(const ReexportsEntry &RE);
-
   Error notifyResolved(JITTargetAddress TrampolineAddr,
                        JITTargetAddress ResolvedAddr);
-
-  JITTargetAddress reportCallThroughError(Error Err) {
-    ES.reportError(std::move(Err));
-    return ErrorHandlerAddr;
-  }
+  void resolveTrampolineLandingAddress(
+      JITTargetAddress TrampolineAddr,
+      NotifyLandingResolvedFunction NotifyLandingResolved);
 
   void setTrampolinePool(std::unique_ptr<TrampolinePool> TP) {
     this->TP = std::move(TP);
@@ -87,14 +87,19 @@ private:
 /// A lazy call-through manager that builds trampolines in the current process.
 class LocalLazyCallThroughManager : public LazyCallThroughManager {
 private:
+  using NotifyTargetResolved = unique_function<void(JITTargetAddress)>;
+
   LocalLazyCallThroughManager(ExecutionSession &ES,
                               JITTargetAddress ErrorHandlerAddr)
       : LazyCallThroughManager(ES, ErrorHandlerAddr, nullptr) {}
 
   template <typename ORCABI> Error init() {
     auto TP = LocalTrampolinePool<ORCABI>::Create(
-        [this](JITTargetAddress TrampolineAddr) {
-          return callThroughToSymbol(TrampolineAddr);
+        [this](JITTargetAddress TrampolineAddr,
+               TrampolinePool::NotifyLandingResolvedFunction
+                   NotifyLandingResolved) {
+          resolveTrampolineLandingAddress(TrampolineAddr,
+                                          std::move(NotifyLandingResolved));
         });
 
     if (!TP)
@@ -102,21 +107,6 @@ private:
 
     setTrampolinePool(std::move(*TP));
     return Error::success();
-  }
-
-  JITTargetAddress callThroughToSymbol(JITTargetAddress TrampolineAddr) {
-    auto Entry = findReexport(TrampolineAddr);
-    if (!Entry)
-      return reportCallThroughError(Entry.takeError());
-
-    auto ResolvedAddr = resolveSymbol(std::move(*Entry));
-    if (!ResolvedAddr)
-      return reportCallThroughError(ResolvedAddr.takeError());
-
-    if (Error Err = notifyResolved(TrampolineAddr, *ResolvedAddr))
-      return reportCallThroughError(std::move(Err));
-
-    return *ResolvedAddr;
   }
 
 public:

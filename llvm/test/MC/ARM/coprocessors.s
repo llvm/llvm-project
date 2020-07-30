@@ -1,13 +1,11 @@
-@ RUN: not llvm-mc -triple=armv7 < %s 2> %t | FileCheck --check-prefix=ACCEPT-01234567CD --check-prefix=ACCEPT-89 --check-prefix=ACCEPT-EF %s
-@ RUN: FileCheck --check-prefix=REJECT-AB < %t %s
-@ RUN: not llvm-mc -triple=thumbv7 < %s 2> %t | FileCheck --check-prefix=ACCEPT-01234567CD --check-prefix=ACCEPT-89 --check-prefix=ACCEPT-EF %s
-@ RUN: FileCheck --check-prefix=REJECT-AB < %t %s
+@ RUN: llvm-mc -triple=armv7 < %s 2> %t | FileCheck --check-prefix=ACCEPT-01234567CD --check-prefix=ACCEPT-89 --check-prefix=ACCEPT-AB --check-prefix=ACCEPT-EF %s
+@ RUN: llvm-mc -triple=thumbv7 < %s 2> %t | FileCheck --check-prefix=ACCEPT-01234567CD --check-prefix=ACCEPT-89 --check-prefix=ACCEPT-AB --check-prefix=ACCEPT-EF %s
 @ RUN: not llvm-mc -triple=armv8 < %s 2> %t | FileCheck --check-prefix=ACCEPT-EF %s
 @ RUN: FileCheck --check-prefix=REJECT-01234567CD --check-prefix=REJECT-89 --check-prefix=REJECT-AB < %t %s
 @ RUN: not llvm-mc -triple=thumbv8 < %s 2> %t | FileCheck --check-prefix=ACCEPT-EF %s
 @ RUN: FileCheck --check-prefix=REJECT-01234567CD --check-prefix=REJECT-89 --check-prefix=REJECT-AB < %t %s
-@ RUN: not llvm-mc -triple=thumbv8.1m.main < %s 2> %t | FileCheck --check-prefix=ACCEPT-01234567CD %s
-@ RUN: FileCheck --check-prefix=REJECT-89 --check-prefix=REJECT-AB --check-prefix=REJECT-EF < %t %s
+@ RUN: not llvm-mc -triple=thumbv8.1m.main < %s 2> %t | FileCheck --check-prefix=ACCEPT-01234567CD --check-prefix=ACCEPT-AB %s
+@ RUN: FileCheck --check-prefix=REJECT-89 --check-prefix=REJECT-EF < %t %s
 
 mrc   p0, #1, r2, c3, c4, #5
 @ ACCEPT-01234567CD: mrc   p0, #1, r2, c3, c4, #5

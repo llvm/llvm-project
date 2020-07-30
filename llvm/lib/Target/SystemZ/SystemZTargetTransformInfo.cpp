@@ -294,6 +294,10 @@ void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.Force = true;
 }
 
+void SystemZTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                           TTI::PeelingPreferences &PP) {
+  BaseT::getPeelingPreferences(L, SE, PP);
+}
 
 bool SystemZTTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                                    TargetTransformInfo::LSRCost &C2) {
@@ -1102,14 +1106,10 @@ int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 // needed for using / defining the vector operands. The SystemZ version does
 // roughly the same but bases the computations on vector permutations
 // instead.
-int SystemZTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
-                                               unsigned Factor,
-                                               ArrayRef<unsigned> Indices,
-                                               unsigned Alignment,
-                                               unsigned AddressSpace,
-                                               TTI::TargetCostKind CostKind,
-                                               bool UseMaskForCond,
-                                               bool UseMaskForGaps) {
+int SystemZTTIImpl::getInterleavedMemoryOpCost(
+    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+    bool UseMaskForCond, bool UseMaskForGaps) {
   if (UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                              Alignment, AddressSpace, CostKind,

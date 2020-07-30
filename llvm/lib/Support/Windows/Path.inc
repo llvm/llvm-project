@@ -555,6 +555,11 @@ std::error_code rename(const Twine &From, const Twine &To) {
                       NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (FromHandle)
       break;
+
+    // We don't want to loop if the file doesn't exist.
+    auto EC = mapWindowsError(GetLastError());
+    if (EC == errc::no_such_file_or_directory)
+      return EC;
   }
   if (!FromHandle)
     return mapWindowsError(GetLastError());
@@ -1365,6 +1370,12 @@ static bool getKnownFolderPath(KNOWNFOLDERID folderId,
 
 bool home_directory(SmallVectorImpl<char> &result) {
   return getKnownFolderPath(FOLDERID_Profile, result);
+}
+
+bool user_config_directory(SmallVectorImpl<char> &result) {
+  // Either local or roaming appdata may be suitable in some cases, depending
+  // on the data. Local is more conservative, Roaming may not always be correct.
+  return getKnownFolderPath(FOLDERID_LocalAppData, result);
 }
 
 bool cache_directory(SmallVectorImpl<char> &result) {

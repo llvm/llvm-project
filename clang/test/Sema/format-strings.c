@@ -290,8 +290,11 @@ void test11(void *p, char *s) {
   printf("%0p", p); // expected-warning{{flag '0' results in undefined behavior with 'p' conversion specifier}}
   printf("%s", s); // no-warning
   printf("%+s", p); // expected-warning{{flag '+' results in undefined behavior with 's' conversion specifier}}
+                    // expected-warning@-1 {{format specifies type 'char *' but the argument has type 'void *'}}
   printf("% s", p); // expected-warning{{flag ' ' results in undefined behavior with 's' conversion specifier}}
+                    // expected-warning@-1 {{format specifies type 'char *' but the argument has type 'void *'}}
   printf("%0s", p); // expected-warning{{flag '0' results in undefined behavior with 's' conversion specifier}}
+                    // expected-warning@-1 {{format specifies type 'char *' but the argument has type 'void *'}}
 }
 
 void test12(char *b) {
@@ -706,4 +709,8 @@ void test_char_pointer_arithmetic(int b) {
 void PR30481() {
   // This caused crashes due to invalid casts.
   printf(1 > 0); // expected-warning{{format string is not a string literal}} expected-warning{{incompatible integer to pointer conversion}} expected-note@format-strings.c:*{{passing argument to parameter here}} expected-note{{to avoid this}}
+}
+
+void test_printf_opaque_ptr(void *op) {
+  printf("%s", op); // expected-warning{{format specifies type 'char *' but the argument has type 'void *'}}
 }

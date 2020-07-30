@@ -163,7 +163,7 @@ const lldb_private::LineEntry *SBLineEntry::operator->() const {
 
 lldb_private::LineEntry &SBLineEntry::ref() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new lldb_private::LineEntry());
+    m_opaque_up = std::make_unique<lldb_private::LineEntry>();
   return *m_opaque_up;
 }
 

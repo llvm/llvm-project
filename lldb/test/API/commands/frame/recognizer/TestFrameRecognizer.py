@@ -144,3 +144,25 @@ class FrameRecognizerTestCase(TestBase):
 
         self.expect("frame recognizer info 0",
                     substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
+
+    @no_debug_info_test
+    def test_frame_recognizer_delete_invalid_arg(self):
+        self.expect("frame recognizer delete a", error=True,
+                    substrs=["error: 'a' is not a valid recognizer id."])
+        self.expect("frame recognizer delete \"\"", error=True,
+                    substrs=["error: '' is not a valid recognizer id."])
+        self.expect("frame recognizer delete -1", error=True,
+                    substrs=["error: '-1' is not a valid recognizer id."])
+        self.expect("frame recognizer delete 4294967297", error=True,
+                    substrs=["error: '4294967297' is not a valid recognizer id."])
+
+    @no_debug_info_test
+    def test_frame_recognizer_info_invalid_arg(self):
+        self.expect("frame recognizer info a", error=True,
+                    substrs=["error: 'a' is not a valid frame index."])
+        self.expect("frame recognizer info \"\"", error=True,
+                    substrs=["error: '' is not a valid frame index."])
+        self.expect("frame recognizer info -1", error=True,
+                    substrs=["error: '-1' is not a valid frame index."])
+        self.expect("frame recognizer info 4294967297", error=True,
+                    substrs=["error: '4294967297' is not a valid frame index."])

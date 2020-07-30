@@ -6,10 +6,10 @@ define i16 @uaddsat_i16(i16 %lhs, i16 %rhs) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[UADDSAT:%[0-9]+]]:_(s16) = G_UADDSAT [[TRUNC]], [[TRUNC1]]
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UADDSAT]](s16)
   ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
@@ -85,10 +85,10 @@ define i16 @saddsat_i16(i16 %lhs, i16 %rhs) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[SADDSAT:%[0-9]+]]:_(s16) = G_SADDSAT [[TRUNC]], [[TRUNC1]]
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SADDSAT]](s16)
   ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
@@ -164,10 +164,10 @@ define i16 @usubsat_i16(i16 %lhs, i16 %rhs) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[USUBSAT:%[0-9]+]]:_(s16) = G_USUBSAT [[TRUNC]], [[TRUNC1]]
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[USUBSAT]](s16)
   ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
@@ -243,10 +243,10 @@ define i16 @ssubsat_i16(i16 %lhs, i16 %rhs) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[SSUBSAT:%[0-9]+]]:_(s16) = G_SSUBSAT [[TRUNC]], [[TRUNC1]]
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SSUBSAT]](s16)
   ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)

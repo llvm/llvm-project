@@ -24,7 +24,7 @@ struct coro_t {
   struct promise_type {
     coro_t get_return_object();
     suspend_never initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
     void return_void();
     static void unhandled_exception();
   };

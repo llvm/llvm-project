@@ -278,7 +278,7 @@ public:
   void print(llvm::raw_ostream &OS, const PrintingPolicy &PP) const;
 
   /// Dumps the node to the given output stream.
-  void dump(llvm::raw_ostream &OS, SourceManager &SM) const;
+  void dump(llvm::raw_ostream &OS, const ASTContext &Context) const;
 
   /// For nodes which represent textual entities in the source code,
   /// return their SourceRange.  For all other nodes, return SourceRange().

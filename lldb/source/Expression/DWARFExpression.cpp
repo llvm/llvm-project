@@ -2346,8 +2346,8 @@ bool DWARFExpression::Evaluate(
         return false;
       }
       const uint64_t die_offset = opcodes.GetULEB128(&offset);
-      Scalar::Type type = Scalar::e_void;
       uint64_t bit_size;
+      bool sign;
       if (die_offset == 0) {
         // The generic type has the size of an address on the target
         // machine and an unspecified signedness. Scalar has no
@@ -2357,13 +2357,13 @@ bool DWARFExpression::Evaluate(
             error_ptr->SetErrorString("No module");
           return false;
         }
+        sign = false;
         bit_size = module_sp->GetArchitecture().GetAddressByteSize() * 8;
         if (!bit_size) {
           if (error_ptr)
             error_ptr->SetErrorString("unspecified architecture");
           return false;
         }
-        type = Scalar::GetBestTypeForBitSize(bit_size, false);
       } else {
         // Retrieve the type DIE that the value is being converted to.
         // FIXME: the constness has annoying ripple effects.
@@ -2386,11 +2386,11 @@ bool DWARFExpression::Evaluate(
         switch (encoding) {
         case DW_ATE_signed:
         case DW_ATE_signed_char:
-          type = Scalar::GetBestTypeForBitSize(bit_size, true);
+          sign = true;
           break;
         case DW_ATE_unsigned:
         case DW_ATE_unsigned_char:
-          type = Scalar::GetBestTypeForBitSize(bit_size, false);
+          sign = false;
           break;
         default:
           if (error_ptr)
@@ -2398,13 +2398,8 @@ bool DWARFExpression::Evaluate(
           return false;
         }
       }
-      if (type == Scalar::e_void) {
-        if (error_ptr)
-          error_ptr->SetErrorString("Unsupported pointer size");
-        return false;
-      }
       Scalar &top = stack.back().ResolveValue(exe_ctx);
-      top.TruncOrExtendTo(type, bit_size);
+      top.TruncOrExtendTo(bit_size, sign);
       break;
     }
 

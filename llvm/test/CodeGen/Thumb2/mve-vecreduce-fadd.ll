@@ -3,31 +3,51 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve,+fullfp16,+fp64 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOFP
 
 define arm_aapcs_vfpcc float @fadd_v2f32(<2 x float> %x, float %y) {
-; CHECK-LABEL: fadd_v2f32:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vadd.f32 s0, s0, s1
-; CHECK-NEXT:    vldr s2, .LCPI0_0
-; CHECK-NEXT:    vadd.f32 s0, s0, s2
-; CHECK-NEXT:    vadd.f32 s0, s0, s2
-; CHECK-NEXT:    vadd.f32 s0, s4, s0
-; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0x00000000 @ float 0
+; CHECK-FP-LABEL: fadd_v2f32:
+; CHECK-FP:       @ %bb.0: @ %entry
+; CHECK-FP-NEXT:    vadd.f32 s0, s0, s1
+; CHECK-FP-NEXT:    vldr s2, .LCPI0_0
+; CHECK-FP-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-FP-NEXT:    vadd.f32 s0, s4, s0
+; CHECK-FP-NEXT:    bx lr
+; CHECK-FP-NEXT:    .p2align 2
+; CHECK-FP-NEXT:  @ %bb.1:
+; CHECK-FP-NEXT:  .LCPI0_0:
+; CHECK-FP-NEXT:    .long 0x00000000 @ float 0
+;
+; CHECK-NOFP-LABEL: fadd_v2f32:
+; CHECK-NOFP:       @ %bb.0: @ %entry
+; CHECK-NOFP-NEXT:    vadd.f32 s0, s0, s1
+; CHECK-NOFP-NEXT:    vldr s2, .LCPI0_0
+; CHECK-NOFP-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f32 s0, s4, s0
+; CHECK-NOFP-NEXT:    bx lr
+; CHECK-NOFP-NEXT:    .p2align 2
+; CHECK-NOFP-NEXT:  @ %bb.1:
+; CHECK-NOFP-NEXT:  .LCPI0_0:
+; CHECK-NOFP-NEXT:    .long 0x00000000 @ float 0
 entry:
   %z = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v2f32(float %y, <2 x float> %x)
   ret float %z
 }
 
 define arm_aapcs_vfpcc float @fadd_v4f32(<4 x float> %x, float %y) {
-; CHECK-LABEL: fadd_v4f32:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vadd.f32 s6, s0, s1
-; CHECK-NEXT:    vadd.f32 s6, s6, s2
-; CHECK-NEXT:    vadd.f32 s0, s6, s3
-; CHECK-NEXT:    vadd.f32 s0, s4, s0
-; CHECK-NEXT:    bx lr
+; CHECK-FP-LABEL: fadd_v4f32:
+; CHECK-FP:       @ %bb.0: @ %entry
+; CHECK-FP-NEXT:    vadd.f32 s6, s2, s3
+; CHECK-FP-NEXT:    vadd.f32 s0, s0, s1
+; CHECK-FP-NEXT:    vadd.f32 s0, s0, s6
+; CHECK-FP-NEXT:    vadd.f32 s0, s4, s0
+; CHECK-FP-NEXT:    bx lr
+;
+; CHECK-NOFP-LABEL: fadd_v4f32:
+; CHECK-NOFP:       @ %bb.0: @ %entry
+; CHECK-NOFP-NEXT:    vadd.f32 s6, s0, s1
+; CHECK-NOFP-NEXT:    vadd.f32 s6, s6, s2
+; CHECK-NOFP-NEXT:    vadd.f32 s0, s6, s3
+; CHECK-NOFP-NEXT:    vadd.f32 s0, s4, s0
+; CHECK-NOFP-NEXT:    bx lr
 entry:
   %z = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %y, <4 x float> %x)
   ret float %z
@@ -37,9 +57,9 @@ define arm_aapcs_vfpcc float @fadd_v8f32(<8 x float> %x, float %y) {
 ; CHECK-FP-LABEL: fadd_v8f32:
 ; CHECK-FP:       @ %bb.0: @ %entry
 ; CHECK-FP-NEXT:    vadd.f32 q0, q0, q1
-; CHECK-FP-NEXT:    vadd.f32 s4, s0, s1
-; CHECK-FP-NEXT:    vadd.f32 s4, s4, s2
-; CHECK-FP-NEXT:    vadd.f32 s0, s4, s3
+; CHECK-FP-NEXT:    vadd.f32 s4, s2, s3
+; CHECK-FP-NEXT:    vadd.f32 s0, s0, s1
+; CHECK-FP-NEXT:    vadd.f32 s0, s0, s4
 ; CHECK-FP-NEXT:    vadd.f32 s0, s8, s0
 ; CHECK-FP-NEXT:    bx lr
 ;
@@ -59,27 +79,75 @@ entry:
   ret float %z
 }
 
+define arm_aapcs_vfpcc void @fadd_v2f16(<2 x half> %x, half* %yy) {
+; CHECK-FP-LABEL: fadd_v2f16:
+; CHECK-FP:       @ %bb.0: @ %entry
+; CHECK-FP-NEXT:    vmovx.f16 s4, s0
+; CHECK-FP-NEXT:    vadd.f16 s0, s0, s4
+; CHECK-FP-NEXT:    vldr.16 s2, [r0]
+; CHECK-FP-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-FP-NEXT:    vstr.16 s0, [r0]
+; CHECK-FP-NEXT:    bx lr
+;
+; CHECK-NOFP-LABEL: fadd_v2f16:
+; CHECK-NOFP:       @ %bb.0: @ %entry
+; CHECK-NOFP-NEXT:    vmovx.f16 s4, s0
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s4
+; CHECK-NOFP-NEXT:    vldr.16 s2, .LCPI3_0
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vldr.16 s2, [r0]
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-NOFP-NEXT:    vstr.16 s0, [r0]
+; CHECK-NOFP-NEXT:    bx lr
+; CHECK-NOFP-NEXT:    .p2align 1
+; CHECK-NOFP-NEXT:  @ %bb.1:
+; CHECK-NOFP-NEXT:  .LCPI3_0:
+; CHECK-NOFP-NEXT:    .short 0x0000 @ half 0
+entry:
+  %y = load half, half* %yy
+  %z = call fast half @llvm.experimental.vector.reduce.v2.fadd.f16.v2f16(half %y, <2 x half> %x)
+  store half %z, half* %yy
+  ret void
+}
+
 define arm_aapcs_vfpcc void @fadd_v4f16(<4 x half> %x, half* %yy) {
-; CHECK-LABEL: fadd_v4f16:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vadd.f16 s4, s0, s4
-; CHECK-NEXT:    vmovx.f16 s0, s1
-; CHECK-NEXT:    vadd.f16 s4, s4, s1
-; CHECK-NEXT:    vldr.16 s2, .LCPI3_0
-; CHECK-NEXT:    vadd.f16 s0, s4, s0
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vadd.f16 s0, s0, s2
-; CHECK-NEXT:    vldr.16 s2, [r0]
-; CHECK-NEXT:    vadd.f16 s0, s2, s0
-; CHECK-NEXT:    vstr.16 s0, [r0]
-; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 1
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .short 0x0000 @ half 0
+; CHECK-FP-LABEL: fadd_v4f16:
+; CHECK-FP:       @ %bb.0: @ %entry
+; CHECK-FP-NEXT:    vmovx.f16 s4, s1
+; CHECK-FP-NEXT:    vmovx.f16 s6, s0
+; CHECK-FP-NEXT:    vadd.f16 s0, s0, s6
+; CHECK-FP-NEXT:    vadd.f16 s4, s1, s4
+; CHECK-FP-NEXT:    vldr.16 s2, [r0]
+; CHECK-FP-NEXT:    vadd.f16 s0, s0, s4
+; CHECK-FP-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-FP-NEXT:    vstr.16 s0, [r0]
+; CHECK-FP-NEXT:    bx lr
+;
+; CHECK-NOFP-LABEL: fadd_v4f16:
+; CHECK-NOFP:       @ %bb.0: @ %entry
+; CHECK-NOFP-NEXT:    vmovx.f16 s4, s0
+; CHECK-NOFP-NEXT:    vadd.f16 s4, s0, s4
+; CHECK-NOFP-NEXT:    vmovx.f16 s0, s1
+; CHECK-NOFP-NEXT:    vadd.f16 s4, s4, s1
+; CHECK-NOFP-NEXT:    vldr.16 s2, .LCPI4_0
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s4, s0
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vldr.16 s2, [r0]
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-NOFP-NEXT:    vstr.16 s0, [r0]
+; CHECK-NOFP-NEXT:    bx lr
+; CHECK-NOFP-NEXT:    .p2align 1
+; CHECK-NOFP-NEXT:  @ %bb.1:
+; CHECK-NOFP-NEXT:  .LCPI4_0:
+; CHECK-NOFP-NEXT:    .short 0x0000 @ half 0
 entry:
   %y = load half, half* %yy
   %z = call fast half @llvm.experimental.vector.reduce.v2.fadd.f16.v4f16(half %y, <4 x half> %x)
@@ -88,23 +156,35 @@ entry:
 }
 
 define arm_aapcs_vfpcc void @fadd_v8f16(<8 x half> %x, half* %yy) {
-; CHECK-LABEL: fadd_v8f16:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vmovx.f16 s6, s1
-; CHECK-NEXT:    vadd.f16 s4, s0, s4
-; CHECK-NEXT:    vmovx.f16 s0, s3
-; CHECK-NEXT:    vadd.f16 s4, s4, s1
-; CHECK-NEXT:    vadd.f16 s4, s4, s6
-; CHECK-NEXT:    vmovx.f16 s6, s2
-; CHECK-NEXT:    vadd.f16 s4, s4, s2
-; CHECK-NEXT:    vldr.16 s2, [r0]
-; CHECK-NEXT:    vadd.f16 s4, s4, s6
-; CHECK-NEXT:    vadd.f16 s4, s4, s3
-; CHECK-NEXT:    vadd.f16 s0, s4, s0
-; CHECK-NEXT:    vadd.f16 s0, s2, s0
-; CHECK-NEXT:    vstr.16 s0, [r0]
-; CHECK-NEXT:    bx lr
+; CHECK-FP-LABEL: fadd_v8f16:
+; CHECK-FP:       @ %bb.0: @ %entry
+; CHECK-FP-NEXT:    vrev32.16 q1, q0
+; CHECK-FP-NEXT:    vadd.f16 q0, q0, q1
+; CHECK-FP-NEXT:    vadd.f16 s4, s2, s3
+; CHECK-FP-NEXT:    vadd.f16 s0, s0, s1
+; CHECK-FP-NEXT:    vldr.16 s2, [r0]
+; CHECK-FP-NEXT:    vadd.f16 s0, s0, s4
+; CHECK-FP-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-FP-NEXT:    vstr.16 s0, [r0]
+; CHECK-FP-NEXT:    bx lr
+;
+; CHECK-NOFP-LABEL: fadd_v8f16:
+; CHECK-NOFP:       @ %bb.0: @ %entry
+; CHECK-NOFP-NEXT:    vmovx.f16 s4, s0
+; CHECK-NOFP-NEXT:    vmovx.f16 s6, s1
+; CHECK-NOFP-NEXT:    vadd.f16 s4, s0, s4
+; CHECK-NOFP-NEXT:    vmovx.f16 s0, s3
+; CHECK-NOFP-NEXT:    vadd.f16 s4, s4, s1
+; CHECK-NOFP-NEXT:    vadd.f16 s4, s4, s6
+; CHECK-NOFP-NEXT:    vmovx.f16 s6, s2
+; CHECK-NOFP-NEXT:    vadd.f16 s4, s4, s2
+; CHECK-NOFP-NEXT:    vldr.16 s2, [r0]
+; CHECK-NOFP-NEXT:    vadd.f16 s4, s4, s6
+; CHECK-NOFP-NEXT:    vadd.f16 s4, s4, s3
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s4, s0
+; CHECK-NOFP-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-NOFP-NEXT:    vstr.16 s0, [r0]
+; CHECK-NOFP-NEXT:    bx lr
 entry:
   %y = load half, half* %yy
   %z = call fast half @llvm.experimental.vector.reduce.v2.fadd.f16.v8f16(half %y, <8 x half> %x)
@@ -116,18 +196,12 @@ define arm_aapcs_vfpcc void @fadd_v16f16(<16 x half> %x, half* %yy) {
 ; CHECK-FP-LABEL: fadd_v16f16:
 ; CHECK-FP:       @ %bb.0: @ %entry
 ; CHECK-FP-NEXT:    vadd.f16 q0, q0, q1
-; CHECK-FP-NEXT:    vmovx.f16 s4, s0
-; CHECK-FP-NEXT:    vmovx.f16 s6, s1
-; CHECK-FP-NEXT:    vadd.f16 s4, s0, s4
-; CHECK-FP-NEXT:    vmovx.f16 s0, s3
-; CHECK-FP-NEXT:    vadd.f16 s4, s4, s1
-; CHECK-FP-NEXT:    vadd.f16 s4, s4, s6
-; CHECK-FP-NEXT:    vmovx.f16 s6, s2
-; CHECK-FP-NEXT:    vadd.f16 s4, s4, s2
+; CHECK-FP-NEXT:    vrev32.16 q1, q0
+; CHECK-FP-NEXT:    vadd.f16 q0, q0, q1
+; CHECK-FP-NEXT:    vadd.f16 s4, s2, s3
+; CHECK-FP-NEXT:    vadd.f16 s0, s0, s1
 ; CHECK-FP-NEXT:    vldr.16 s2, [r0]
-; CHECK-FP-NEXT:    vadd.f16 s4, s4, s6
-; CHECK-FP-NEXT:    vadd.f16 s4, s4, s3
-; CHECK-FP-NEXT:    vadd.f16 s0, s4, s0
+; CHECK-FP-NEXT:    vadd.f16 s0, s0, s4
 ; CHECK-FP-NEXT:    vadd.f16 s0, s2, s0
 ; CHECK-FP-NEXT:    vstr.16 s0, [r0]
 ; CHECK-FP-NEXT:    bx lr
@@ -365,5 +439,6 @@ declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v2f32(float, <2 x flo
 declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float, <4 x float>)
 declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float, <8 x float>)
 declare half @llvm.experimental.vector.reduce.v2.fadd.f16.v16f16(half, <16 x half>)
+declare half @llvm.experimental.vector.reduce.v2.fadd.f16.v2f16(half, <2 x half>)
 declare half @llvm.experimental.vector.reduce.v2.fadd.f16.v4f16(half, <4 x half>)
 declare half @llvm.experimental.vector.reduce.v2.fadd.f16.v8f16(half, <8 x half>)

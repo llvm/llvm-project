@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/Support/VersionTuple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -1222,6 +1223,44 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_EQ((unsigned)0, Minor);
   EXPECT_EQ((unsigned)0, Micro);
 
+  T = Triple("x86_64-apple-macos11.0");
+  EXPECT_TRUE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getMacOSXVersion(Major, Minor, Micro);
+  EXPECT_EQ((unsigned)11, Major);
+  EXPECT_EQ((unsigned)0, Minor);
+  EXPECT_EQ((unsigned)0, Micro);
+
+  T = Triple("arm64-apple-macosx11.5.8");
+  EXPECT_TRUE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getMacOSXVersion(Major, Minor, Micro);
+  EXPECT_EQ((unsigned)11, Major);
+  EXPECT_EQ((unsigned)5, Minor);
+  EXPECT_EQ((unsigned)8, Micro);
+
+  // 10.16 forms a valid triple, even though it's not
+  // a version of a macOS.
+  T = Triple("x86_64-apple-macos10.16");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Major, Minor, Micro);
+  EXPECT_EQ((unsigned)10, Major);
+  EXPECT_EQ((unsigned)16, Minor);
+  EXPECT_EQ((unsigned)0, Micro);
+
+  T = Triple("x86_64-apple-darwin20");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Major, Minor, Micro);
+  EXPECT_EQ((unsigned)11, Major);
+  EXPECT_EQ((unsigned)0, Minor);
+  EXPECT_EQ((unsigned)0, Micro);
+
   T = Triple("armv7-apple-ios");
   EXPECT_FALSE(T.isMacOSX());
   EXPECT_TRUE(T.isiOS());
@@ -1271,6 +1310,27 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_TRUE(T.getEnvironment() == Triple::MacABI);
   EXPECT_TRUE(T.isMacCatalystEnvironment());
   EXPECT_FALSE(T.isSimulatorEnvironment());
+}
+
+TEST(TripleTest, isMacOSVersionLT) {
+  Triple T = Triple("x86_64-apple-macos11");
+  EXPECT_TRUE(T.isMacOSXVersionLT(11, 1, 0));
+  EXPECT_FALSE(T.isMacOSXVersionLT(10, 15, 0));
+
+  T = Triple("x86_64-apple-darwin20");
+  EXPECT_TRUE(T.isMacOSXVersionLT(11, 1, 0));
+  EXPECT_FALSE(T.isMacOSXVersionLT(11, 0, 0));
+  EXPECT_FALSE(T.isMacOSXVersionLT(10, 15, 0));
+}
+
+TEST(TripleTest, CanonicalizeOSVersion) {
+  EXPECT_EQ(VersionTuple(10, 15, 4),
+            Triple::getCanonicalVersionForOS(Triple::MacOSX,
+                                             VersionTuple(10, 15, 4)));
+  EXPECT_EQ(VersionTuple(11, 0), Triple::getCanonicalVersionForOS(
+                                     Triple::MacOSX, VersionTuple(10, 16)));
+  EXPECT_EQ(VersionTuple(20),
+            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(20)));
 }
 
 TEST(TripleTest, FileFormat) {

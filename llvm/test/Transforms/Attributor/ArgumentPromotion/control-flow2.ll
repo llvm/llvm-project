@@ -18,8 +18,8 @@ define internal i32 @callee(i1 %C, i32* %P) {
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee
 ; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]], i32 [[TMP0:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[P_PRIV:%.*]] = alloca i32
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[P_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[P_PRIV:%.*]] = alloca i32, align 4
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[P_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    br label [[F:%.*]]
 ; IS__TUNIT_NPM:       T:
 ; IS__TUNIT_NPM-NEXT:    unreachable
@@ -48,20 +48,20 @@ F:              ; preds = %0
 
 define i32 @foo() {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@foo()
-; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = alloca i32
+; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__TUNIT_OPM-NEXT:    store i32 17, i32* [[A]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]])
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[X]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@foo()
-; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32
+; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 17, i32* [[A]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32 [[TMP1]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[X]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo()
-; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32
+; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    store i32 17, i32* [[A]], align 4
 ; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @callee(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]])
 ; IS__CGSCC____-NEXT:    ret i32 [[X]]

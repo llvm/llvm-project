@@ -111,6 +111,10 @@ void Value::deleteValue() {
     static_cast<DerivedUser *>(this)->DeleteValue(                             \
         static_cast<DerivedUser *>(this));                                     \
     break;
+#define HANDLE_CONSTANT(Name)                                                  \
+  case Value::Name##Val:                                                       \
+    llvm_unreachable("constants should be destroyed with destroyConstant");    \
+    break;
 #define HANDLE_INSTRUCTION(Name)  /* nothing */
 #include "llvm/IR/Value.def"
 
@@ -552,6 +556,8 @@ static const Value *stripPointerCastsAndOffsets(
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast) {
       V = cast<Operator>(V)->getOperand(0);
+      if (!V->getType()->isPointerTy())
+        return V;
     } else if (StripKind != PSK_ZeroIndicesSameRepresentation &&
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       // TODO: If we know an address space cast will not change the
@@ -766,7 +772,7 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
           // it the preferred alignment. Otherwise, we have to assume that it
           // may only have the minimum ABI alignment.
           if (GVar->isStrongDefinitionForLinker())
-            return Align(DL.getPreferredAlignment(GVar));
+            return DL.getPreferredAlign(GVar);
           else
             return DL.getABITypeAlign(ObjectType);
         }

@@ -57,7 +57,7 @@ static void AddLibmRealHostProcedures(
       {"asin", F{std::asin}, true},
       {"asinh", F{std::asinh}, true},
       {"atan", F{std::atan}, true},
-      {"atan", F2{std::atan2}, true},
+      {"atan2", F2{std::atan2}, true},
       {"atanh", F{std::atanh}, true},
       {"cos", F{std::cos}, true},
       {"cosh", F{std::cosh}, true},
@@ -135,7 +135,8 @@ static void AddLibmComplexHostProcedures(
   }
 }
 
-void InitHostIntrinsicLibraryWithLibm(HostIntrinsicProceduresLibrary &lib) {
+[[maybe_unused]] static void InitHostIntrinsicLibraryWithLibm(
+    HostIntrinsicProceduresLibrary &lib) {
   if constexpr (host::FortranTypeExists<float>()) {
     AddLibmRealHostProcedures<float>(lib);
   }
@@ -158,397 +159,213 @@ void InitHostIntrinsicLibraryWithLibm(HostIntrinsicProceduresLibrary &lib) {
 }
 
 #if LINK_WITH_LIBPGMATH
-namespace pgmath {
-// Define mapping between numerical intrinsics and libpgmath symbols
-// namespace is used to have shorter names on repeated patterns.
-// A class would be better to hold all these defs, but GCC does not
-// support specialization of template variables inside class even
-// if it is C++14 standard compliant here because there are only full
-// specializations.
-
-// List of intrinsics that have libpgmath implementations that can be used for
-// constant folding The tag names must match the name used inside libpgmath name
-// so that the macro below work.
-enum class I {
-  acos,
-  acosh,
-  asin,
-  asinh,
-  atan,
-  atan2,
-  atanh,
-  bessel_j0,
-  bessel_j1,
-  bessel_jn,
-  bessel_y0,
-  bessel_y1,
-  bessel_yn,
-  cos,
-  cosh,
-  erf,
-  erfc,
-  erfc_scaled,
-  exp,
-  gamma,
-  hypot,
-  log,
-  log10,
-  log_gamma,
-  mod,
-  pow,
-  sin,
-  sinh,
-  sqrt,
-  tan,
-  tanh
-};
+// Only use libpgmath for folding if it is available.
+// First declare all libpgmaths functions
+#define PGMATH_DECLARE
+#include "../runtime/pgmath.h.inc"
 
 // Library versions: P for Precise, R for Relaxed, F for Fast
 enum class L { F, R, P };
 
-struct NoSuchRuntimeSymbol {};
-template <L, I, typename> constexpr auto Sym{NoSuchRuntimeSymbol{}};
-
-// Macros to declare fast/relaxed/precise libpgmath variants.
-#define DECLARE_PGMATH_FAST_REAL(func) \
-  extern "C" float __fs_##func##_1(float); \
-  extern "C" double __fd_##func##_1(double); \
-  template <> constexpr auto Sym<L::F, I::func, float>{__fs_##func##_1}; \
-  template <> constexpr auto Sym<L::F, I::func, double>{__fd_##func##_1};
-
-#define DECLARE_PGMATH_FAST_COMPLEX(func) \
-  extern "C" float _Complex __fc_##func##_1(float _Complex); \
-  extern "C" double _Complex __fz_##func##_1(double _Complex); \
-  template <> \
-  constexpr auto Sym<L::F, I::func, std::complex<float>>{__fc_##func##_1}; \
-  template <> \
-  constexpr auto Sym<L::F, I::func, std::complex<double>>{__fz_##func##_1};
-
-#define DECLARE_PGMATH_FAST_ALL_FP(func) \
-  DECLARE_PGMATH_FAST_REAL(func) \
-  DECLARE_PGMATH_FAST_COMPLEX(func)
-
-#define DECLARE_PGMATH_PRECISE_REAL(func) \
-  extern "C" float __ps_##func##_1(float); \
-  extern "C" double __pd_##func##_1(double); \
-  template <> constexpr auto Sym<L::P, I::func, float>{__ps_##func##_1}; \
-  template <> constexpr auto Sym<L::P, I::func, double>{__pd_##func##_1};
-
-#define DECLARE_PGMATH_PRECISE_COMPLEX(func) \
-  extern "C" float _Complex __pc_##func##_1(float _Complex); \
-  extern "C" double _Complex __pz_##func##_1(double _Complex); \
-  template <> \
-  constexpr auto Sym<L::P, I::func, std::complex<float>>{__pc_##func##_1}; \
-  template <> \
-  constexpr auto Sym<L::P, I::func, std::complex<double>>{__pz_##func##_1};
-
-#define DECLARE_PGMATH_PRECISE_ALL_FP(func) \
-  DECLARE_PGMATH_PRECISE_REAL(func) \
-  DECLARE_PGMATH_PRECISE_COMPLEX(func)
-
-#define DECLARE_PGMATH_RELAXED_REAL(func) \
-  extern "C" float __rs_##func##_1(float); \
-  extern "C" double __rd_##func##_1(double); \
-  template <> constexpr auto Sym<L::R, I::func, float>{__rs_##func##_1}; \
-  template <> constexpr auto Sym<L::R, I::func, double>{__rd_##func##_1};
-
-#define DECLARE_PGMATH_RELAXED_COMPLEX(func) \
-  extern "C" float _Complex __rc_##func##_1(float _Complex); \
-  extern "C" double _Complex __rz_##func##_1(double _Complex); \
-  template <> \
-  constexpr auto Sym<L::R, I::func, std::complex<float>>{__rc_##func##_1}; \
-  template <> \
-  constexpr auto Sym<L::R, I::func, std::complex<double>>{__rz_##func##_1};
-
-#define DECLARE_PGMATH_RELAXED_ALL_FP(func) \
-  DECLARE_PGMATH_RELAXED_REAL(func) \
-  DECLARE_PGMATH_RELAXED_COMPLEX(func)
-
-#define DECLARE_PGMATH_REAL(func) \
-  DECLARE_PGMATH_FAST_REAL(func) \
-  DECLARE_PGMATH_PRECISE_REAL(func) \
-  DECLARE_PGMATH_RELAXED_REAL(func)
-
-#define DECLARE_PGMATH_COMPLEX(func) \
-  DECLARE_PGMATH_FAST_COMPLEX(func) \
-  DECLARE_PGMATH_PRECISE_COMPLEX(func) \
-  DECLARE_PGMATH_RELAXED_COMPLEX(func)
-
-#define DECLARE_PGMATH_ALL(func) \
-  DECLARE_PGMATH_REAL(func) \
-  DECLARE_PGMATH_COMPLEX(func)
-
-// Macros to declare fast/relaxed/precise libpgmath variants with two arguments.
-#define DECLARE_PGMATH_FAST_REAL2(func) \
-  extern "C" float __fs_##func##_1(float, float); \
-  extern "C" double __fd_##func##_1(double, double); \
-  template <> constexpr auto Sym<L::F, I::func, float>{__fs_##func##_1}; \
-  template <> constexpr auto Sym<L::F, I::func, double>{__fd_##func##_1};
-
-#define DECLARE_PGMATH_FAST_COMPLEX2(func) \
-  extern "C" float _Complex __fc_##func##_1(float _Complex, float _Complex); \
-  extern "C" double _Complex __fz_##func##_1( \
-      double _Complex, double _Complex); \
-  template <> \
-  constexpr auto Sym<L::F, I::func, std::complex<float>>{__fc_##func##_1}; \
-  template <> \
-  constexpr auto Sym<L::F, I::func, std::complex<double>>{__fz_##func##_1};
-
-#define DECLARE_PGMATH_FAST_ALL_FP2(func) \
-  DECLARE_PGMATH_FAST_REAL2(func) \
-  DECLARE_PGMATH_FAST_COMPLEX2(func)
-
-#define DECLARE_PGMATH_PRECISE_REAL2(func) \
-  extern "C" float __ps_##func##_1(float, float); \
-  extern "C" double __pd_##func##_1(double, double); \
-  template <> constexpr auto Sym<L::P, I::func, float>{__ps_##func##_1}; \
-  template <> constexpr auto Sym<L::P, I::func, double>{__pd_##func##_1};
-
-#define DECLARE_PGMATH_PRECISE_COMPLEX2(func) \
-  extern "C" float _Complex __pc_##func##_1(float _Complex, float _Complex); \
-  extern "C" double _Complex __pz_##func##_1( \
-      double _Complex, double _Complex); \
-  template <> \
-  constexpr auto Sym<L::P, I::func, std::complex<float>>{__pc_##func##_1}; \
-  template <> \
-  constexpr auto Sym<L::P, I::func, std::complex<double>>{__pz_##func##_1};
-
-#define DECLARE_PGMATH_PRECISE_ALL_FP2(func) \
-  DECLARE_PGMATH_PRECISE_REAL2(func) \
-  DECLARE_PGMATH_PRECISE_COMPLEX2(func)
-
-#define DECLARE_PGMATH_RELAXED_REAL2(func) \
-  extern "C" float __rs_##func##_1(float, float); \
-  extern "C" double __rd_##func##_1(double, double); \
-  template <> constexpr auto Sym<L::R, I::func, float>{__rs_##func##_1}; \
-  template <> constexpr auto Sym<L::R, I::func, double>{__rd_##func##_1};
-
-#define DECLARE_PGMATH_RELAXED_COMPLEX2(func) \
-  extern "C" float _Complex __rc_##func##_1(float _Complex, float _Complex); \
-  extern "C" double _Complex __rz_##func##_1( \
-      double _Complex, double _Complex); \
-  template <> \
-  constexpr auto Sym<L::R, I::func, std::complex<float>>{__rc_##func##_1}; \
-  template <> \
-  constexpr auto Sym<L::R, I::func, std::complex<double>>{__rz_##func##_1};
-
-#define DECLARE_PGMATH_RELAXED_ALL_FP2(func) \
-  DECLARE_PGMATH_RELAXED_REAL2(func) \
-  DECLARE_PGMATH_RELAXED_COMPLEX2(func)
-
-#define DECLARE_PGMATH_REAL2(func) \
-  DECLARE_PGMATH_FAST_REAL2(func) \
-  DECLARE_PGMATH_PRECISE_REAL2(func) \
-  DECLARE_PGMATH_RELAXED_REAL2(func)
-
-#define DECLARE_PGMATH_COMPLEX2(func) \
-  DECLARE_PGMATH_FAST_COMPLEX2(func) \
-  DECLARE_PGMATH_PRECISE_COMPLEX2(func) \
-  DECLARE_PGMATH_RELAXED_COMPLEX2(func)
-
-#define DECLARE_PGMATH_ALL2(func) \
-  DECLARE_PGMATH_REAL2(func) \
-  DECLARE_PGMATH_COMPLEX2(func)
-
-// Marcos to declare __mth_i libpgmath variants
-#define DECLARE_PGMATH_MTH_VERSION_REAL(func) \
-  extern "C" float __mth_i_##func(float); \
-  extern "C" double __mth_i_d##func(double); \
-  template <> constexpr auto Sym<L::F, I::func, float>{__mth_i_##func}; \
-  template <> constexpr auto Sym<L::F, I::func, double>{__mth_i_d##func}; \
-  template <> constexpr auto Sym<L::P, I::func, float>{__mth_i_##func}; \
-  template <> constexpr auto Sym<L::P, I::func, double>{__mth_i_d##func}; \
-  template <> constexpr auto Sym<L::R, I::func, float>{__mth_i_##func}; \
-  template <> constexpr auto Sym<L::R, I::func, double>{__mth_i_d##func};
-
-// Actual libpgmath declarations
-DECLARE_PGMATH_ALL(acos)
-DECLARE_PGMATH_MTH_VERSION_REAL(acosh)
-DECLARE_PGMATH_ALL(asin)
-DECLARE_PGMATH_MTH_VERSION_REAL(asinh)
-DECLARE_PGMATH_ALL(atan)
-DECLARE_PGMATH_REAL2(atan2)
-DECLARE_PGMATH_MTH_VERSION_REAL(atanh)
-DECLARE_PGMATH_MTH_VERSION_REAL(bessel_j0)
-DECLARE_PGMATH_MTH_VERSION_REAL(bessel_j1)
-DECLARE_PGMATH_MTH_VERSION_REAL(bessel_y0)
-DECLARE_PGMATH_MTH_VERSION_REAL(bessel_y1)
-// bessel_jn and bessel_yn takes an int as first arg
-extern "C" float __mth_i_bessel_jn(int, float);
-extern "C" double __mth_i_dbessel_jn(int, double);
-template <> constexpr auto Sym<L::F, I::bessel_jn, float>{__mth_i_bessel_jn};
-template <> constexpr auto Sym<L::F, I::bessel_jn, double>{__mth_i_dbessel_jn};
-template <> constexpr auto Sym<L::P, I::bessel_jn, float>{__mth_i_bessel_jn};
-template <> constexpr auto Sym<L::P, I::bessel_jn, double>{__mth_i_dbessel_jn};
-template <> constexpr auto Sym<L::R, I::bessel_jn, float>{__mth_i_bessel_jn};
-template <> constexpr auto Sym<L::R, I::bessel_jn, double>{__mth_i_dbessel_jn};
-extern "C" float __mth_i_bessel_yn(int, float);
-extern "C" double __mth_i_dbessel_yn(int, double);
-template <> constexpr auto Sym<L::F, I::bessel_yn, float>{__mth_i_bessel_yn};
-template <> constexpr auto Sym<L::F, I::bessel_yn, double>{__mth_i_dbessel_yn};
-template <> constexpr auto Sym<L::P, I::bessel_yn, float>{__mth_i_bessel_yn};
-template <> constexpr auto Sym<L::P, I::bessel_yn, double>{__mth_i_dbessel_yn};
-template <> constexpr auto Sym<L::R, I::bessel_yn, float>{__mth_i_bessel_yn};
-template <> constexpr auto Sym<L::R, I::bessel_yn, double>{__mth_i_dbessel_yn};
-DECLARE_PGMATH_ALL(cos)
-DECLARE_PGMATH_ALL(cosh)
-DECLARE_PGMATH_MTH_VERSION_REAL(erf)
-DECLARE_PGMATH_MTH_VERSION_REAL(erfc)
-DECLARE_PGMATH_MTH_VERSION_REAL(erfc_scaled)
-DECLARE_PGMATH_ALL(exp)
-DECLARE_PGMATH_MTH_VERSION_REAL(gamma)
-extern "C" float __mth_i_hypot(float, float);
-extern "C" double __mth_i_dhypot(double, double);
-template <> constexpr auto Sym<L::F, I::hypot, float>{__mth_i_hypot};
-template <> constexpr auto Sym<L::F, I::hypot, double>{__mth_i_dhypot};
-template <> constexpr auto Sym<L::P, I::hypot, float>{__mth_i_hypot};
-template <> constexpr auto Sym<L::P, I::hypot, double>{__mth_i_dhypot};
-template <> constexpr auto Sym<L::R, I::hypot, float>{__mth_i_hypot};
-template <> constexpr auto Sym<L::R, I::hypot, double>{__mth_i_dhypot};
-DECLARE_PGMATH_ALL(log)
-DECLARE_PGMATH_REAL(log10)
-DECLARE_PGMATH_MTH_VERSION_REAL(log_gamma)
-// no function for modulo in libpgmath
-extern "C" float __fs_mod_1(float, float);
-extern "C" double __fd_mod_1(double, double);
-template <> constexpr auto Sym<L::F, I::mod, float>{__fs_mod_1};
-template <> constexpr auto Sym<L::F, I::mod, double>{__fd_mod_1};
-template <> constexpr auto Sym<L::P, I::mod, float>{__fs_mod_1};
-template <> constexpr auto Sym<L::P, I::mod, double>{__fd_mod_1};
-template <> constexpr auto Sym<L::R, I::mod, float>{__fs_mod_1};
-template <> constexpr auto Sym<L::R, I::mod, double>{__fd_mod_1};
-DECLARE_PGMATH_ALL2(pow)
-DECLARE_PGMATH_ALL(sin)
-DECLARE_PGMATH_ALL(sinh)
-DECLARE_PGMATH_MTH_VERSION_REAL(sqrt)
-DECLARE_PGMATH_COMPLEX(sqrt) // real versions are __mth_i...
-DECLARE_PGMATH_ALL(tan)
-DECLARE_PGMATH_ALL(tanh)
-
 // Fill the function map used for folding with libpgmath symbols
-template <L Lib, typename HostT>
-static void AddLibpgmathRealHostProcedures(
+template <L Lib>
+static void AddLibpgmathFloatHostProcedures(
     HostIntrinsicProceduresLibrary &hostIntrinsicLibrary) {
-  static_assert(std::is_same_v<HostT, float> || std::is_same_v<HostT, double>);
-  HostRuntimeIntrinsicProcedure pgmathSymbols[]{
-      {"acos", Sym<Lib, I::acos, HostT>, true},
-      {"acosh", Sym<Lib, I::acosh, HostT>, true},
-      {"asin", Sym<Lib, I::asin, HostT>, true},
-      {"asinh", Sym<Lib, I::asinh, HostT>, true},
-      {"atan", Sym<Lib, I::atan, HostT>, true},
-      {"atan", Sym<Lib, I::atan2, HostT>,
-          true}, // atan is also the generic name for atan2
-      {"atanh", Sym<Lib, I::atanh, HostT>, true},
-      {"bessel_j0", Sym<Lib, I::bessel_j0, HostT>, true},
-      {"bessel_j1", Sym<Lib, I::bessel_j1, HostT>, true},
-      {"bessel_jn", Sym<Lib, I::bessel_jn, HostT>, true},
-      {"bessel_y0", Sym<Lib, I::bessel_y0, HostT>, true},
-      {"bessel_y1", Sym<Lib, I::bessel_y1, HostT>, true},
-      {"bessel_yn", Sym<Lib, I::bessel_yn, HostT>, true},
-      {"cos", Sym<Lib, I::cos, HostT>, true},
-      {"cosh", Sym<Lib, I::cosh, HostT>, true},
-      {"erf", Sym<Lib, I::erf, HostT>, true},
-      {"erfc", Sym<Lib, I::erfc, HostT>, true},
-      {"erfc_scaled", Sym<Lib, I::erfc_scaled, HostT>, true},
-      {"exp", Sym<Lib, I::exp, HostT>, true},
-      {"gamma", Sym<Lib, I::gamma, HostT>, true},
-      {"hypot", Sym<Lib, I::hypot, HostT>, true},
-      {"log", Sym<Lib, I::log, HostT>, true},
-      {"log10", Sym<Lib, I::log10, HostT>, true},
-      {"log_gamma", Sym<Lib, I::log_gamma, HostT>, true},
-      {"mod", Sym<Lib, I::mod, HostT>, true},
-      {"pow", Sym<Lib, I::pow, HostT>, true},
-      {"sin", Sym<Lib, I::sin, HostT>, true},
-      {"sinh", Sym<Lib, I::sinh, HostT>, true},
-      {"sqrt", Sym<Lib, I::sqrt, HostT>, true},
-      {"tan", Sym<Lib, I::tan, HostT>, true},
-      {"tanh", Sym<Lib, I::tanh, HostT>, true},
-  };
-
-  for (auto sym : pgmathSymbols) {
-    hostIntrinsicLibrary.AddProcedure(std::move(sym));
+  if constexpr (Lib == L::F) {
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_FAST
+#define PGMATH_USE_S(name, function) {#name, function, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  } else if constexpr (Lib == L::R) {
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_RELAXED
+#define PGMATH_USE_S(name, function) {#name, function, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  } else {
+    static_assert(Lib == L::P && "unexpected libpgmath version");
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_PRECISE
+#define PGMATH_USE_S(name, function) {#name, function, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
   }
 }
 
-// Note: std::complex and _complex are layout compatible but are not guaranteed
+template <L Lib>
+static void AddLibpgmathDoubleHostProcedures(
+    HostIntrinsicProceduresLibrary &hostIntrinsicLibrary) {
+  if constexpr (Lib == L::F) {
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_FAST
+#define PGMATH_USE_D(name, function) {#name, function, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  } else if constexpr (Lib == L::R) {
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_RELAXED
+#define PGMATH_USE_D(name, function) {#name, function, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  } else {
+    static_assert(Lib == L::P && "unexpected libpgmath version");
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_PRECISE
+#define PGMATH_USE_D(name, function) {#name, function, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  }
+}
+
+// Note: Lipgmath uses _Complex but the front-end use std::complex for folding.
+// std::complex and _Complex are layout compatible but are not guaranteed
 // to be linkage compatible. For instance, on i386, float _Complex is returned
 // by a pair of register but std::complex<float> is returned by structure
 // address. To fix the issue, wrapper around C _Complex functions are defined
 // below.
-template <FuncPointer<float _Complex, float _Complex> func>
-static std::complex<float> ComplexCFuncWrapper(std::complex<float> &arg) {
-  float _Complex res{func(*reinterpret_cast<float _Complex *>(&arg))};
-  return *reinterpret_cast<std::complex<float> *>(&res);
-}
 
-template <FuncPointer<double _Complex, double _Complex> func>
-static std::complex<double> ComplexCFuncWrapper(std::complex<double> &arg) {
-  double _Complex res{func(*reinterpret_cast<double _Complex *>(&arg))};
-  return *reinterpret_cast<std::complex<double> *>(&res);
-}
+template <typename T> struct ToStdComplex {
+  using Type = T;
+  using AType = Type;
+};
 
-template <FuncPointer<float _Complex, float _Complex, float _Complex> func>
-static std::complex<float> ComplexCFuncWrapper(
-    std::complex<float> &arg1, std::complex<float> &arg2) {
-  float _Complex res{func(*reinterpret_cast<float _Complex *>(&arg1),
-      *reinterpret_cast<float _Complex *>(&arg2))};
-  return *reinterpret_cast<std::complex<float> *>(&res);
-}
+template <typename F, F func> struct CComplexFunc {};
+template <typename R, typename... A, FuncPointer<R, A...> func>
+struct CComplexFunc<FuncPointer<R, A...>, func> {
+  static typename ToStdComplex<R>::Type wrapper(
+      typename ToStdComplex<A>::AType... args) {
+    R res{func(*reinterpret_cast<A *>(&args)...)};
+    return *reinterpret_cast<typename ToStdComplex<R>::Type *>(&res);
+  }
+};
 
-template <FuncPointer<double _Complex, double _Complex, double _Complex> func>
-static std::complex<double> ComplexCFuncWrapper(
-    std::complex<double> &arg1, std::complex<double> &arg2) {
-  double _Complex res{func(*reinterpret_cast<double _Complex *>(&arg1),
-      *reinterpret_cast<double _Complex *>(&arg2))};
-  return *reinterpret_cast<std::complex<double> *>(&res);
-}
-
-template <L Lib, typename HostT>
+template <L Lib>
 static void AddLibpgmathComplexHostProcedures(
     HostIntrinsicProceduresLibrary &hostIntrinsicLibrary) {
-  static_assert(std::is_same_v<HostT, float> || std::is_same_v<HostT, double>);
-  using CHostT = std::complex<HostT>;
-  // cmath is used to complement pgmath when symbols are not available
-  using CmathF = FuncPointer<CHostT, const CHostT &>;
-  HostRuntimeIntrinsicProcedure pgmathSymbols[]{
-      {"abs", FuncPointer<HostT, const CHostT &>{std::abs}, true},
-      {"acos", ComplexCFuncWrapper<Sym<Lib, I::acos, CHostT>>, true},
-      {"acosh", CmathF{std::acosh}, true},
-      {"asin", ComplexCFuncWrapper<Sym<Lib, I::asin, CHostT>>, true},
-      {"asinh", CmathF{std::asinh}, true},
-      {"atan", ComplexCFuncWrapper<Sym<Lib, I::atan, CHostT>>, true},
-      {"atanh", CmathF{std::atanh}, true},
-      {"cos", ComplexCFuncWrapper<Sym<Lib, I::cos, CHostT>>, true},
-      {"cosh", ComplexCFuncWrapper<Sym<Lib, I::cosh, CHostT>>, true},
-      {"exp", ComplexCFuncWrapper<Sym<Lib, I::exp, CHostT>>, true},
-      {"log", ComplexCFuncWrapper<Sym<Lib, I::log, CHostT>>, true},
-      {"pow", ComplexCFuncWrapper<Sym<Lib, I::pow, CHostT>>, true},
-      {"sin", ComplexCFuncWrapper<Sym<Lib, I::sin, CHostT>>, true},
-      {"sinh", ComplexCFuncWrapper<Sym<Lib, I::sinh, CHostT>>, true},
-      {"sqrt", ComplexCFuncWrapper<Sym<Lib, I::sqrt, CHostT>>, true},
-      {"tan", ComplexCFuncWrapper<Sym<Lib, I::tan, CHostT>>, true},
-      {"tanh", ComplexCFuncWrapper<Sym<Lib, I::tanh, CHostT>>, true},
-  };
-
-  for (auto sym : pgmathSymbols) {
-    hostIntrinsicLibrary.AddProcedure(std::move(sym));
+  if constexpr (Lib == L::F) {
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_FAST
+#define PGMATH_USE_C(name, function) \
+  {#name, CComplexFunc<decltype(&function), &function>::wrapper, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  } else if constexpr (Lib == L::R) {
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_RELAXED
+#define PGMATH_USE_C(name, function) \
+  {#name, CComplexFunc<decltype(&function), &function>::wrapper, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  } else {
+    static_assert(Lib == L::P && "unexpected libpgmath version");
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_PRECISE
+#define PGMATH_USE_C(name, function) \
+  {#name, CComplexFunc<decltype(&function), &function>::wrapper, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
   }
+
+  // cmath is used to complement pgmath when symbols are not available
+  using HostT = float;
+  using CHostT = std::complex<HostT>;
+  using CmathF = FuncPointer<CHostT, const CHostT &>;
+  hostIntrinsicLibrary.AddProcedure(
+      {"abs", FuncPointer<HostT, const CHostT &>{std::abs}, true});
+  hostIntrinsicLibrary.AddProcedure({"acosh", CmathF{std::acosh}, true});
+  hostIntrinsicLibrary.AddProcedure({"asinh", CmathF{std::asinh}, true});
+  hostIntrinsicLibrary.AddProcedure({"atanh", CmathF{std::atanh}, true});
+}
+
+template <L Lib>
+static void AddLibpgmathDoubleComplexHostProcedures(
+    HostIntrinsicProceduresLibrary &hostIntrinsicLibrary) {
+  if constexpr (Lib == L::F) {
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_FAST
+#define PGMATH_USE_Z(name, function) \
+  {#name, CComplexFunc<decltype(&function), &function>::wrapper, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  } else if constexpr (Lib == L::R) {
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_RELAXED
+#define PGMATH_USE_Z(name, function) \
+  {#name, CComplexFunc<decltype(&function), &function>::wrapper, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  } else {
+    static_assert(Lib == L::P && "unexpected libpgmath version");
+    HostRuntimeIntrinsicProcedure pgmathSymbols[]{
+#define PGMATH_PRECISE
+#define PGMATH_USE_Z(name, function) \
+  {#name, CComplexFunc<decltype(&function), &function>::wrapper, true},
+#include "../runtime/pgmath.h.inc"
+    };
+    for (auto sym : pgmathSymbols) {
+      hostIntrinsicLibrary.AddProcedure(std::move(sym));
+    }
+  }
+
+  // cmath is used to complement pgmath when symbols are not available
+  using HostT = double;
+  using CHostT = std::complex<HostT>;
+  using CmathF = FuncPointer<CHostT, const CHostT &>;
+  hostIntrinsicLibrary.AddProcedure(
+      {"abs", FuncPointer<HostT, const CHostT &>{std::abs}, true});
+  hostIntrinsicLibrary.AddProcedure({"acosh", CmathF{std::acosh}, true});
+  hostIntrinsicLibrary.AddProcedure({"asinh", CmathF{std::asinh}, true});
+  hostIntrinsicLibrary.AddProcedure({"atanh", CmathF{std::atanh}, true});
 }
 
 template <L Lib>
 static void InitHostIntrinsicLibraryWithLibpgmath(
     HostIntrinsicProceduresLibrary &lib) {
   if constexpr (host::FortranTypeExists<float>()) {
-    AddLibpgmathRealHostProcedures<Lib, float>(lib);
+    AddLibpgmathFloatHostProcedures<Lib>(lib);
   }
   if constexpr (host::FortranTypeExists<double>()) {
-    AddLibpgmathRealHostProcedures<Lib, double>(lib);
+    AddLibpgmathDoubleHostProcedures<Lib>(lib);
   }
   if constexpr (host::FortranTypeExists<std::complex<float>>()) {
-    AddLibpgmathComplexHostProcedures<Lib, float>(lib);
+    AddLibpgmathComplexHostProcedures<Lib>(lib);
   }
   if constexpr (host::FortranTypeExists<std::complex<double>>()) {
-    AddLibpgmathComplexHostProcedures<Lib, double>(lib);
+    AddLibpgmathDoubleComplexHostProcedures<Lib>(lib);
   }
   // No long double functions in libpgmath
   if constexpr (host::FortranTypeExists<long double>()) {
@@ -558,7 +375,6 @@ static void InitHostIntrinsicLibraryWithLibpgmath(
     AddLibmComplexHostProcedures<long double>(lib);
   }
 }
-} // namespace pgmath
 #endif // LINK_WITH_LIBPGMATH
 
 // Define which host runtime functions will be used for folding
@@ -571,11 +387,11 @@ HostIntrinsicProceduresLibrary::HostIntrinsicProceduresLibrary() {
   // to silence clang warnings on unused symbols if all declared pgmath
   // symbols are not used somewhere.
   if (true) {
-    pgmath::InitHostIntrinsicLibraryWithLibpgmath<pgmath::L::P>(*this);
+    InitHostIntrinsicLibraryWithLibpgmath<L::P>(*this);
   } else if (false) {
-    pgmath::InitHostIntrinsicLibraryWithLibpgmath<pgmath::L::F>(*this);
+    InitHostIntrinsicLibraryWithLibpgmath<L::F>(*this);
   } else {
-    pgmath::InitHostIntrinsicLibraryWithLibpgmath<pgmath::L::R>(*this);
+    InitHostIntrinsicLibraryWithLibpgmath<L::R>(*this);
   }
 #else
   InitHostIntrinsicLibraryWithLibm(*this);

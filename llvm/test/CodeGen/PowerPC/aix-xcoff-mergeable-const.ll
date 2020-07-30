@@ -25,7 +25,7 @@ entry:
 ;CHECK:         .csect .rodata[RO],4
 
 ;CHECK-NEXT:         .align  4
-;CHECK-NEXT: .L__const.main.cnst32:
+;CHECK-NEXT: L..__const.main.cnst32:
 ;CHECK32-NEXT:         .vbyte	4, 1073741824
 ;CHECK32-NEXT:         .vbyte	4, 50
 ;CHECK64-NEXT:         .vbyte	8, 4611686018427387954
@@ -38,7 +38,7 @@ entry:
 ;CHECK-NEXT:           .space  4
 
 ;CHECK-NEXT:           .align  3
-;CHECK-NEXT: .L__const.main.cnst16:
+;CHECK-NEXT: L..__const.main.cnst16:
 ;CHECK32-NEXT:         .vbyte	4, 1073741824
 ;CHECK32-NEXT:         .vbyte	4, 22
 ;CHECK64-NEXT:         .vbyte	8, 4611686018427387926
@@ -46,12 +46,12 @@ entry:
 ;CHECK-NEXT:           .space  4
 
 ;CHECK-NEXT:         .align  3
-;CHECK-NEXT: .L__const.main.cnst8:
+;CHECK-NEXT: L..__const.main.cnst8:
 ;CHECK-NEXT:         .vbyte	4, 1073741832              # 0x40000008
 ;CHECK-NEXT:         .vbyte	4, 0                       # 0x0
 
 ;CHECK-NEXT:         .align  3
-;CHECK-NEXT: .L__const.main.cnst4:
+;CHECK-NEXT: L..__const.main.cnst4:
 ;CHECK-NEXT:         .vbyte	2, 16392                   # 0x4008
 ;CHECK-NEXT:         .byte   0                       # 0x0
 ;CHECK-NEXT:         .space  1

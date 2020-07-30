@@ -34,6 +34,7 @@
 #include "MisplacedWideningCastCheck.h"
 #include "MoveForwardingReferenceCheck.h"
 #include "MultipleStatementMacroCheck.h"
+#include "NoEscapeCheck.h"
 #include "NotNullTerminatedResultCheck.h"
 #include "ParentVirtualCallCheck.h"
 #include "PosixReturnCheck.h"
@@ -120,6 +121,7 @@ public:
         "bugprone-multiple-statement-macro");
     CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(
         "bugprone-narrowing-conversions");
+    CheckFactories.registerCheck<NoEscapeCheck>("bugprone-no-escape");
     CheckFactories.registerCheck<NotNullTerminatedResultCheck>(
         "bugprone-not-null-terminated-result");
     CheckFactories.registerCheck<ParentVirtualCallCheck>(

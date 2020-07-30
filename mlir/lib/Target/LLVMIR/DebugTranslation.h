@@ -54,7 +54,7 @@ private:
       locationToLoc;
 
   /// A mapping between filename and llvm debug file.
-  /// TODO(riverriddle) Change this to DenseMap<Identifier, ...> when we can
+  /// TODO: Change this to DenseMap<Identifier, ...> when we can
   /// access the Identifier filename in FileLineColLoc.
   llvm::StringMap<llvm::DIFile *> fileMap;
 

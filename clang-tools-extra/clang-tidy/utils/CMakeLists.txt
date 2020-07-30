@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyUtils
+  Aliasing.cpp
   ASTUtils.cpp
   DeclRefExprUtils.cpp
   ExceptionAnalyzer.cpp
@@ -23,6 +24,9 @@ add_clang_library(clangTidyUtils
 
   LINK_LIBS
   clangTidy
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyUtils

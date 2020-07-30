@@ -562,3 +562,19 @@ void ReferenceBadNamedFunction() {
 }
 
 } // namespace redecls
+
+namespace scratchspace {
+#define DUP(Tok) Tok
+#define M1(Tok) DUP(badName##Tok())
+
+// We don't want a warning here as the call to this in Foo is in a scratch
+// buffer so its fix-it wouldn't be applied, resulting in invalid code.
+void badNameWarn();
+
+void Foo() {
+  M1(Warn);
+}
+
+#undef M1
+#undef DUP
+} // namespace scratchspace

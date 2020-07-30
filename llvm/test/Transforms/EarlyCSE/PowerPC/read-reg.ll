@@ -1,5 +1,5 @@
 ; RUN: opt -S -early-cse < %s | FileCheck %s
-; RUN: opt -S -basicaa -early-cse-memssa < %s | FileCheck %s
+; RUN: opt -S -basic-aa -early-cse-memssa < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

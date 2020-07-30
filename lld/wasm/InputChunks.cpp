@@ -32,6 +32,18 @@ StringRef relocTypeToString(uint8_t relocType) {
   llvm_unreachable("unknown reloc type");
 }
 
+bool relocIs64(uint8_t relocType) {
+  switch (relocType) {
+  case R_WASM_MEMORY_ADDR_LEB64:
+  case R_WASM_MEMORY_ADDR_SLEB64:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_I64:
+    return true;
+  default:
+    return false;
+  }
+}
+
 std::string toString(const wasm::InputChunk *c) {
   return (toString(c->file) + ":(" + c->getName() + ")").str();
 }
@@ -323,12 +335,17 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << getName()
                     << " count=" << relocations.size() << "\n");
 
+  unsigned opcode_ptr_const =
+      config->is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
+  unsigned opcode_ptr_add =
+      config->is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
+
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
   uint32_t segmentVA = outputSeg->startVA + outputSegmentOffset;
   for (const WasmRelocation &rel : relocations) {
-    uint32_t offset = rel.Offset - getInputSectionOffset();
-    uint32_t outputOffset = segmentVA + offset;
+    uint64_t offset = rel.Offset - getInputSectionOffset();
+    uint64_t outputOffset = segmentVA + offset;
 
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
                       << " addend=" << rel.Addend << " index=" << rel.Index
@@ -339,9 +356,17 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
     writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
 
     // Add the offset of the relocation
-    writeU8(os, WASM_OPCODE_I32_CONST, "I32_CONST");
+    writeU8(os, opcode_ptr_const, "CONST");
     writeSleb128(os, outputOffset, "offset");
-    writeU8(os, WASM_OPCODE_I32_ADD, "ADD");
+    writeU8(os, opcode_ptr_add, "ADD");
+
+    bool is64 = relocIs64(rel.Type);
+    unsigned opcode_reloc_const =
+        is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
+    unsigned opcode_reloc_add =
+        is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
+    unsigned opcode_reloc_store =
+        is64 ? WASM_OPCODE_I64_STORE : WASM_OPCODE_I32_STORE;
 
     Symbol *sym = file->getSymbol(rel);
     // Now figure out what we want to store
@@ -349,9 +374,9 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, sym->getGOTIndex(), "global index");
       if (rel.Addend) {
-        writeU8(os, WASM_OPCODE_I32_CONST, "CONST");
+        writeU8(os, opcode_reloc_const, "CONST");
         writeSleb128(os, rel.Addend, "addend");
-        writeU8(os, WASM_OPCODE_I32_ADD, "ADD");
+        writeU8(os, opcode_reloc_add, "ADD");
       }
     } else {
       const GlobalSymbol* baseSymbol = WasmSym::memoryBase;
@@ -359,13 +384,13 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
         baseSymbol = WasmSym::tableBase;
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, baseSymbol->getGlobalIndex(), "base");
-      writeU8(os, WASM_OPCODE_I32_CONST, "CONST");
+      writeU8(os, opcode_reloc_const, "CONST");
       writeSleb128(os, file->calcNewValue(rel), "offset");
-      writeU8(os, WASM_OPCODE_I32_ADD, "ADD");
+      writeU8(os, opcode_reloc_add, "ADD");
     }
 
     // Store that value at the virtual address
-    writeU8(os, WASM_OPCODE_I32_STORE, "I32_STORE");
+    writeU8(os, opcode_reloc_store, "I32_STORE");
     writeUleb128(os, 2, "align");
     writeUleb128(os, 0, "offset");
   }

@@ -71,14 +71,14 @@ namespace {
     const char *ES;
     MCSymbol *MCSym;
     int JT;
-    unsigned Align;    // CP alignment.
+    Align Alignment;            // CP alignment.
     unsigned char SymbolFlags;  // X86II::MO_*
     bool NegateIndex = false;
 
     X86ISelAddressMode()
         : BaseType(RegBase), Base_FrameIndex(0), Scale(1), IndexReg(), Disp(0),
           Segment(), GV(nullptr), CP(nullptr), BlockAddr(nullptr), ES(nullptr),
-          MCSym(nullptr), JT(-1), Align(0), SymbolFlags(X86II::MO_NO_FLAG) {}
+          MCSym(nullptr), JT(-1), SymbolFlags(X86II::MO_NO_FLAG) {}
 
     bool hasSymbolicDisplacement() const {
       return GV != nullptr || CP != nullptr || ES != nullptr ||
@@ -144,7 +144,7 @@ namespace {
         dbgs() << MCSym;
       else
         dbgs() << "nul";
-      dbgs() << " JT" << JT << " Align" << Align << '\n';
+      dbgs() << " JT" << JT << " Align" << Alignment.value() << '\n';
     }
 #endif
   };
@@ -296,7 +296,7 @@ namespace {
                                               MVT::i32, AM.Disp,
                                               AM.SymbolFlags);
       else if (AM.CP)
-        Disp = CurDAG->getTargetConstantPool(AM.CP, MVT::i32, Align(AM.Align),
+        Disp = CurDAG->getTargetConstantPool(AM.CP, MVT::i32, AM.Alignment,
                                              AM.Disp, AM.SymbolFlags);
       else if (AM.ES) {
         assert(!AM.Disp && "Non-zero displacement is ignored with ES.");
@@ -503,6 +503,7 @@ namespace {
     bool isMaskZeroExtended(SDNode *N) const;
     bool tryShiftAmountMod(SDNode *N);
     bool tryShrinkShlLogicImm(SDNode *N);
+    bool tryVPTERNLOG(SDNode *N);
     bool tryVPTESTM(SDNode *Root, SDValue Setcc, SDValue Mask);
     bool tryMatchBitSelect(SDNode *N);
 
@@ -1622,7 +1623,7 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
     Offset = G->getOffset();
   } else if (ConstantPoolSDNode *CP = dyn_cast<ConstantPoolSDNode>(N0)) {
     AM.CP = CP->getConstVal();
-    AM.Align = CP->getAlign().value();
+    AM.Alignment = CP->getAlign();
     AM.SymbolFlags = CP->getTargetFlags();
     Offset = CP->getOffset();
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(N0)) {
@@ -3929,6 +3930,85 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
   return true;
 }
 
+// Try to match two logic ops to a VPTERNLOG.
+// FIXME: Handle inverted inputs?
+// FIXME: Handle more complex patterns that use an operand more than once?
+bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
+  MVT NVT = N->getSimpleValueType(0);
+
+  // Make sure we support VPTERNLOG.
+  if (!NVT.isVector() || !Subtarget->hasAVX512() ||
+      NVT.getVectorElementType() == MVT::i1)
+    return false;
+
+  // We need VLX for 128/256-bit.
+  if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
+    return false;
+
+  unsigned Opc1 = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  auto isLogicOp = [](unsigned Opc) {
+    return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR ||
+           Opc == X86ISD::ANDNP;
+  };
+
+  SDValue A, B, C;
+  unsigned Opc2;
+  if (isLogicOp(N1.getOpcode()) && N1.hasOneUse()) {
+    Opc2 = N1.getOpcode();
+    A = N0;
+    B = N1.getOperand(0);
+    C = N1.getOperand(1);
+  } else if (isLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
+    Opc2 = N0.getOpcode();
+    A = N1;
+    B = N0.getOperand(0);
+    C = N0.getOperand(1);
+  } else
+    return false;
+
+  uint64_t Imm;
+  switch (Opc1) {
+  default: llvm_unreachable("Unexpected opcode!");
+  case ISD::AND:
+    switch (Opc2) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::AND:      Imm = 0x80; break;
+    case ISD::OR:       Imm = 0xe0; break;
+    case ISD::XOR:      Imm = 0x60; break;
+    case X86ISD::ANDNP: Imm = 0x20; break;
+    }
+    break;
+  case ISD::OR:
+    switch (Opc2) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::AND:      Imm = 0xf8; break;
+    case ISD::OR:       Imm = 0xfe; break;
+    case ISD::XOR:      Imm = 0xf6; break;
+    case X86ISD::ANDNP: Imm = 0xf2; break;
+    }
+    break;
+  case ISD::XOR:
+    switch (Opc2) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::AND:      Imm = 0x78; break;
+    case ISD::OR:       Imm = 0x1e; break;
+    case ISD::XOR:      Imm = 0x96; break;
+    case X86ISD::ANDNP: Imm = 0xd2; break;
+    }
+    break;
+  }
+
+  SDLoc DL(N);
+  SDValue New = CurDAG->getNode(X86ISD::VPTERNLOG, DL, NVT, A, B, C,
+                                CurDAG->getTargetConstant(Imm, DL, MVT::i8));
+  ReplaceNode(N, New.getNode());
+  SelectCode(New.getNode());
+  return true;
+}
+
 /// If the high bits of an 'and' operand are known zero, try setting the
 /// high bits of an 'and' constant operand to produce a smaller encoding by
 /// creating a small, sign-extended negative immediate rather than a large
@@ -4001,159 +4081,50 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
 
 static unsigned getVPTESTMOpc(MVT TestVT, bool IsTestN, bool FoldedLoad,
                               bool FoldedBCast, bool Masked) {
-  if (Masked) {
-    if (FoldedLoad) {
-      switch (TestVT.SimpleTy) {
-      default: llvm_unreachable("Unexpected VT!");
-      case MVT::v16i8:
-        return IsTestN ? X86::VPTESTNMBZ128rmk : X86::VPTESTMBZ128rmk;
-      case MVT::v8i16:
-        return IsTestN ? X86::VPTESTNMWZ128rmk : X86::VPTESTMWZ128rmk;
-      case MVT::v4i32:
-        return IsTestN ? X86::VPTESTNMDZ128rmk : X86::VPTESTMDZ128rmk;
-      case MVT::v2i64:
-        return IsTestN ? X86::VPTESTNMQZ128rmk : X86::VPTESTMQZ128rmk;
-      case MVT::v32i8:
-        return IsTestN ? X86::VPTESTNMBZ256rmk : X86::VPTESTMBZ256rmk;
-      case MVT::v16i16:
-        return IsTestN ? X86::VPTESTNMWZ256rmk : X86::VPTESTMWZ256rmk;
-      case MVT::v8i32:
-        return IsTestN ? X86::VPTESTNMDZ256rmk : X86::VPTESTMDZ256rmk;
-      case MVT::v4i64:
-        return IsTestN ? X86::VPTESTNMQZ256rmk : X86::VPTESTMQZ256rmk;
-      case MVT::v64i8:
-        return IsTestN ? X86::VPTESTNMBZrmk : X86::VPTESTMBZrmk;
-      case MVT::v32i16:
-        return IsTestN ? X86::VPTESTNMWZrmk : X86::VPTESTMWZrmk;
-      case MVT::v16i32:
-        return IsTestN ? X86::VPTESTNMDZrmk : X86::VPTESTMDZrmk;
-      case MVT::v8i64:
-        return IsTestN ? X86::VPTESTNMQZrmk : X86::VPTESTMQZrmk;
-      }
-    }
+#define VPTESTM_CASE(VT, SUFFIX) \
+case MVT::VT: \
+  if (Masked) \
+    return IsTestN ? X86::VPTESTNM##SUFFIX##k: X86::VPTESTM##SUFFIX##k; \
+  return IsTestN ? X86::VPTESTNM##SUFFIX : X86::VPTESTM##SUFFIX;
 
-    if (FoldedBCast) {
-      switch (TestVT.SimpleTy) {
-      default: llvm_unreachable("Unexpected VT!");
-      case MVT::v4i32:
-        return IsTestN ? X86::VPTESTNMDZ128rmbk : X86::VPTESTMDZ128rmbk;
-      case MVT::v2i64:
-        return IsTestN ? X86::VPTESTNMQZ128rmbk : X86::VPTESTMQZ128rmbk;
-      case MVT::v8i32:
-        return IsTestN ? X86::VPTESTNMDZ256rmbk : X86::VPTESTMDZ256rmbk;
-      case MVT::v4i64:
-        return IsTestN ? X86::VPTESTNMQZ256rmbk : X86::VPTESTMQZ256rmbk;
-      case MVT::v16i32:
-        return IsTestN ? X86::VPTESTNMDZrmbk : X86::VPTESTMDZrmbk;
-      case MVT::v8i64:
-        return IsTestN ? X86::VPTESTNMQZrmbk : X86::VPTESTMQZrmbk;
-      }
-    }
 
-    switch (TestVT.SimpleTy) {
-    default: llvm_unreachable("Unexpected VT!");
-    case MVT::v16i8:
-      return IsTestN ? X86::VPTESTNMBZ128rrk : X86::VPTESTMBZ128rrk;
-    case MVT::v8i16:
-      return IsTestN ? X86::VPTESTNMWZ128rrk : X86::VPTESTMWZ128rrk;
-    case MVT::v4i32:
-      return IsTestN ? X86::VPTESTNMDZ128rrk : X86::VPTESTMDZ128rrk;
-    case MVT::v2i64:
-      return IsTestN ? X86::VPTESTNMQZ128rrk : X86::VPTESTMQZ128rrk;
-    case MVT::v32i8:
-      return IsTestN ? X86::VPTESTNMBZ256rrk : X86::VPTESTMBZ256rrk;
-    case MVT::v16i16:
-      return IsTestN ? X86::VPTESTNMWZ256rrk : X86::VPTESTMWZ256rrk;
-    case MVT::v8i32:
-      return IsTestN ? X86::VPTESTNMDZ256rrk : X86::VPTESTMDZ256rrk;
-    case MVT::v4i64:
-      return IsTestN ? X86::VPTESTNMQZ256rrk : X86::VPTESTMQZ256rrk;
-    case MVT::v64i8:
-      return IsTestN ? X86::VPTESTNMBZrrk : X86::VPTESTMBZrrk;
-    case MVT::v32i16:
-      return IsTestN ? X86::VPTESTNMWZrrk : X86::VPTESTMWZrrk;
-    case MVT::v16i32:
-      return IsTestN ? X86::VPTESTNMDZrrk : X86::VPTESTMDZrrk;
-    case MVT::v8i64:
-      return IsTestN ? X86::VPTESTNMQZrrk : X86::VPTESTMQZrrk;
-    }
-  }
+#define VPTESTM_BROADCAST_CASES(SUFFIX) \
+default: llvm_unreachable("Unexpected VT!"); \
+VPTESTM_CASE(v4i32, DZ128##SUFFIX) \
+VPTESTM_CASE(v2i64, QZ128##SUFFIX) \
+VPTESTM_CASE(v8i32, DZ256##SUFFIX) \
+VPTESTM_CASE(v4i64, QZ256##SUFFIX) \
+VPTESTM_CASE(v16i32, DZ##SUFFIX) \
+VPTESTM_CASE(v8i64, QZ##SUFFIX)
+
+#define VPTESTM_FULL_CASES(SUFFIX) \
+VPTESTM_BROADCAST_CASES(SUFFIX) \
+VPTESTM_CASE(v16i8, BZ128##SUFFIX) \
+VPTESTM_CASE(v8i16, WZ128##SUFFIX) \
+VPTESTM_CASE(v32i8, BZ256##SUFFIX) \
+VPTESTM_CASE(v16i16, WZ256##SUFFIX) \
+VPTESTM_CASE(v64i8, BZ##SUFFIX) \
+VPTESTM_CASE(v32i16, WZ##SUFFIX)
 
   if (FoldedLoad) {
     switch (TestVT.SimpleTy) {
-    default: llvm_unreachable("Unexpected VT!");
-    case MVT::v16i8:
-      return IsTestN ? X86::VPTESTNMBZ128rm : X86::VPTESTMBZ128rm;
-    case MVT::v8i16:
-      return IsTestN ? X86::VPTESTNMWZ128rm : X86::VPTESTMWZ128rm;
-    case MVT::v4i32:
-      return IsTestN ? X86::VPTESTNMDZ128rm : X86::VPTESTMDZ128rm;
-    case MVT::v2i64:
-      return IsTestN ? X86::VPTESTNMQZ128rm : X86::VPTESTMQZ128rm;
-    case MVT::v32i8:
-      return IsTestN ? X86::VPTESTNMBZ256rm : X86::VPTESTMBZ256rm;
-    case MVT::v16i16:
-      return IsTestN ? X86::VPTESTNMWZ256rm : X86::VPTESTMWZ256rm;
-    case MVT::v8i32:
-      return IsTestN ? X86::VPTESTNMDZ256rm : X86::VPTESTMDZ256rm;
-    case MVT::v4i64:
-      return IsTestN ? X86::VPTESTNMQZ256rm : X86::VPTESTMQZ256rm;
-    case MVT::v64i8:
-      return IsTestN ? X86::VPTESTNMBZrm : X86::VPTESTMBZrm;
-    case MVT::v32i16:
-      return IsTestN ? X86::VPTESTNMWZrm : X86::VPTESTMWZrm;
-    case MVT::v16i32:
-      return IsTestN ? X86::VPTESTNMDZrm : X86::VPTESTMDZrm;
-    case MVT::v8i64:
-      return IsTestN ? X86::VPTESTNMQZrm : X86::VPTESTMQZrm;
+    VPTESTM_FULL_CASES(rm)
     }
   }
 
   if (FoldedBCast) {
     switch (TestVT.SimpleTy) {
-    default: llvm_unreachable("Unexpected VT!");
-    case MVT::v4i32:
-      return IsTestN ? X86::VPTESTNMDZ128rmb : X86::VPTESTMDZ128rmb;
-    case MVT::v2i64:
-      return IsTestN ? X86::VPTESTNMQZ128rmb : X86::VPTESTMQZ128rmb;
-    case MVT::v8i32:
-      return IsTestN ? X86::VPTESTNMDZ256rmb : X86::VPTESTMDZ256rmb;
-    case MVT::v4i64:
-      return IsTestN ? X86::VPTESTNMQZ256rmb : X86::VPTESTMQZ256rmb;
-    case MVT::v16i32:
-      return IsTestN ? X86::VPTESTNMDZrmb : X86::VPTESTMDZrmb;
-    case MVT::v8i64:
-      return IsTestN ? X86::VPTESTNMQZrmb : X86::VPTESTMQZrmb;
+    VPTESTM_BROADCAST_CASES(rmb)
     }
   }
 
   switch (TestVT.SimpleTy) {
-  default: llvm_unreachable("Unexpected VT!");
-  case MVT::v16i8:
-    return IsTestN ? X86::VPTESTNMBZ128rr : X86::VPTESTMBZ128rr;
-  case MVT::v8i16:
-    return IsTestN ? X86::VPTESTNMWZ128rr : X86::VPTESTMWZ128rr;
-  case MVT::v4i32:
-    return IsTestN ? X86::VPTESTNMDZ128rr : X86::VPTESTMDZ128rr;
-  case MVT::v2i64:
-    return IsTestN ? X86::VPTESTNMQZ128rr : X86::VPTESTMQZ128rr;
-  case MVT::v32i8:
-    return IsTestN ? X86::VPTESTNMBZ256rr : X86::VPTESTMBZ256rr;
-  case MVT::v16i16:
-    return IsTestN ? X86::VPTESTNMWZ256rr : X86::VPTESTMWZ256rr;
-  case MVT::v8i32:
-    return IsTestN ? X86::VPTESTNMDZ256rr : X86::VPTESTMDZ256rr;
-  case MVT::v4i64:
-    return IsTestN ? X86::VPTESTNMQZ256rr : X86::VPTESTMQZ256rr;
-  case MVT::v64i8:
-    return IsTestN ? X86::VPTESTNMBZrr : X86::VPTESTMBZrr;
-  case MVT::v32i16:
-    return IsTestN ? X86::VPTESTNMWZrr : X86::VPTESTMWZrr;
-  case MVT::v16i32:
-    return IsTestN ? X86::VPTESTNMDZrr : X86::VPTESTMDZrr;
-  case MVT::v8i64:
-    return IsTestN ? X86::VPTESTNMQZrr : X86::VPTESTMQZrr;
+  VPTESTM_FULL_CASES(rr)
   }
+
+#undef VPTESTM_FULL_CASES
+#undef VPTESTM_BROADCAST_CASES
+#undef VPTESTM_CASE
 }
 
 // Try to create VPTESTM instruction. If InMask is not null, it will be used
@@ -4464,8 +4435,39 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
       break;
     }
+    case Intrinsic::x86_tileloadd64:
+    case Intrinsic::x86_tileloaddt164:
+    case Intrinsic::x86_tilestored64: {
+      if (!Subtarget->hasAMXTILE())
+        break;
+      unsigned Opc;
+      switch (IntNo) {
+      default: llvm_unreachable("Unexpected intrinsic!");
+      case Intrinsic::x86_tileloadd64:   Opc = X86::PTILELOADD; break;
+      case Intrinsic::x86_tileloaddt164: Opc = X86::PTILELOADDT1; break;
+      case Intrinsic::x86_tilestored64:  Opc = X86::PTILESTORED; break;
+      }
+      // FIXME: Match displacement and scale.
+      unsigned TIndex = Node->getConstantOperandVal(2);
+      SDValue TReg = getI8Imm(TIndex, dl);
+      SDValue Base = Node->getOperand(3);
+      SDValue Scale = getI8Imm(1, dl);
+      SDValue Index = Node->getOperand(4);
+      SDValue Disp = CurDAG->getTargetConstant(0, dl, MVT::i32);
+      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
+      SDValue Chain = Node->getOperand(0);
+      MachineSDNode *CNode;
+      if (Opc == X86::PTILESTORED) {
+        SDValue Ops[] = { Base, Scale, Index, Disp, Segment, TReg, Chain };
+        CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
+      } else {
+        SDValue Ops[] = { TReg, Base, Scale, Index, Disp, Segment, Chain };
+        CNode = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
+      }
+      ReplaceNode(Node, CNode);
+      return;
     }
-
+    }
     break;
   }
   case ISD::BRIND: {
@@ -4541,8 +4543,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
       return;
-
     if (Opcode == ISD::OR && tryMatchBitSelect(Node))
+      return;
+    if (tryVPTERNLOG(Node))
       return;
 
     LLVM_FALLTHROUGH;

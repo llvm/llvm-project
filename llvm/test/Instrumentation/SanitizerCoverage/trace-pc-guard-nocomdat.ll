@@ -31,7 +31,6 @@ entry:
 
 ; CHECK_TRACE_PC_GUARD-LABEL: define void @foo
 ; CHECK_TRACE_PC_GUARD: call void @__sanitizer_cov_trace_pc
-; CHECK_TRACE_PC_GUARD: call void asm sideeffect "", ""()
 ; CHECK_TRACE_PC_GUARD: ret void
 
 ; CHECK_TRACE_PC_GUARD-LABEL: define void @CallViaVptr

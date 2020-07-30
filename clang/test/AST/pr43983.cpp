@@ -9,6 +9,7 @@
 
 struct B { _Alignas(64) struct { int b; };   };
 
-// CHECK: AlignedAttr {{.*}} _Alignas
-// CHECK: ConstantExpr {{.*}} 64
-// CHECK: IntegerLiteral {{.*}} 64
+// CHECK:  | `-AlignedAttr {{.*}} <col:12> _Alignas
+// CHECK-NEXT:  |   `-ConstantExpr {{.*}} <col:21> 'int'
+// CHECK-NEXT:  |     |-value: Int 64
+// CHECK-NEXT:  |     `-IntegerLiteral {{.*}} <col:21> 'int' 64

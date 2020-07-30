@@ -65,8 +65,20 @@ MATCHER_P2(TUState, PreambleActivity, ASTActivity, "") {
   return true;
 }
 
+// Dummy ContextProvider to verify the provider is invoked & contexts are used.
+static Key<std::string> BoundPath;
+Context bindPath(PathRef F) {
+  return Context::current().derive(BoundPath, F.str());
+}
+llvm::StringRef boundPath() {
+  const std::string *V = Context::current().get(BoundPath);
+  return V ? *V : llvm::StringRef("");
+}
+
 TUScheduler::Options optsForTest() {
-  return TUScheduler::Options(ClangdServer::optsForTest());
+  TUScheduler::Options Opts(ClangdServer::optsForTest());
+  Opts.ContextProvider = bindPath;
+  return Opts;
 }
 
 class TUSchedulerTests : public ::testing::Test {
@@ -454,6 +466,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
               [File, Nonce, Version(Inputs.Version), &Mut, &TotalUpdates,
                &LatestDiagVersion](std::vector<Diag>) {
                 EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
+                EXPECT_EQ(File, boundPath());
 
                 std::lock_guard<std::mutex> Lock(Mut);
                 ++TotalUpdates;
@@ -474,6 +487,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
               [File, Inputs, Nonce, &Mut,
                &TotalASTReads](Expected<InputsAndAST> AST) {
                 EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
+                EXPECT_EQ(File, boundPath());
 
                 ASSERT_TRUE((bool)AST);
                 EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
@@ -493,6 +507,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
               [File, Inputs, Nonce, &Mut,
                &TotalPreambleReads](Expected<InputsAndPreamble> Preamble) {
                 EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
+                EXPECT_EQ(File, boundPath());
 
                 ASSERT_TRUE((bool)Preamble);
                 EXPECT_EQ(Preamble->Contents, Inputs.Contents);
@@ -849,18 +864,22 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
 }
 
 TEST_F(TUSchedulerTests, Run) {
-  TUScheduler S(CDB, optsForTest());
+  auto Opts = optsForTest();
+  Opts.ContextProvider = bindPath;
+  TUScheduler S(CDB, Opts);
   std::atomic<int> Counter(0);
-  S.run("add 1", [&] { ++Counter; });
-  S.run("add 2", [&] { Counter += 2; });
+  S.run("add 1", /*Path=*/"", [&] { ++Counter; });
+  S.run("add 2", /*Path=*/"", [&] { Counter += 2; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   EXPECT_EQ(Counter.load(), 3);
 
   Notification TaskRun;
   Key<int> TestKey;
   WithContextValue CtxWithKey(TestKey, 10);
-  S.run("props context", [&] {
+  const char *Path = "somepath";
+  S.run("props context", Path, [&] {
     EXPECT_EQ(Context::current().getExisting(TestKey), 10);
+    EXPECT_EQ(Path, boundPath());
     TaskRun.notify();
   });
   TaskRun.wait();

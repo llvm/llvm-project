@@ -47,4 +47,4 @@ define void @parent_func() #0 {
   ret void
 }
 
-attributes #0 = { nounwind noinline norecurse }
+attributes #0 = { nounwind noinline norecurse "amdgpu-flat-work-group-size"="1,256" }

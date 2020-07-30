@@ -76,16 +76,25 @@ ClangTidyCheck::OptionsView::get(StringRef LocalName) const {
   return llvm::make_error<MissingOptionError>((NamePrefix + LocalName).str());
 }
 
+static ClangTidyOptions::OptionMap::const_iterator
+findPriorityOption(const ClangTidyOptions::OptionMap &Options, StringRef NamePrefix,
+          StringRef LocalName) {
+  auto IterLocal = Options.find((NamePrefix + LocalName).str());
+  auto IterGlobal = Options.find(LocalName.str());
+  if (IterLocal == Options.end())
+    return IterGlobal;
+  if (IterGlobal == Options.end())
+    return IterLocal;
+  if (IterLocal->second.Priority >= IterGlobal->second.Priority)
+    return IterLocal;
+  return IterGlobal;
+}
+
 llvm::Expected<std::string>
 ClangTidyCheck::OptionsView::getLocalOrGlobal(StringRef LocalName) const {
-  auto IterLocal = CheckOptions.find(NamePrefix + LocalName.str());
-  auto IterGlobal = CheckOptions.find(LocalName.str());
-  if (IterLocal != CheckOptions.end() &&
-      (IterGlobal == CheckOptions.end() ||
-       IterLocal->second.Priority >= IterGlobal->second.Priority))
-    return IterLocal->second.Value;
-  if (IterGlobal != CheckOptions.end())
-    return IterGlobal->second.Value;
+  auto Iter = findPriorityOption(CheckOptions, NamePrefix, LocalName);
+  if (Iter != CheckOptions.end())
+    return Iter->second.Value;
   return llvm::make_error<MissingOptionError>((NamePrefix + LocalName).str());
 }
 
@@ -124,14 +133,9 @@ bool ClangTidyCheck::OptionsView::get<bool>(StringRef LocalName,
 template <>
 llvm::Expected<bool>
 ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName) const {
-  auto IterLocal = CheckOptions.find(NamePrefix + LocalName.str());
-  auto IterGlobal = CheckOptions.find(LocalName.str());
-  if (IterLocal != CheckOptions.end() &&
-      (IterGlobal == CheckOptions.end() ||
-       IterLocal->second.Priority >= IterGlobal->second.Priority))
-    return getAsBool(IterLocal->second.Value, NamePrefix + LocalName);
-  if (IterGlobal != CheckOptions.end())
-    return getAsBool(IterGlobal->second.Value, llvm::Twine(LocalName));
+  auto Iter = findPriorityOption(CheckOptions, NamePrefix, LocalName);
+  if (Iter != CheckOptions.end())
+    return getAsBool(Iter->second.Value, Iter->first);
   return llvm::make_error<MissingOptionError>((NamePrefix + LocalName).str());
 }
 
@@ -157,12 +161,13 @@ void ClangTidyCheck::OptionsView::store(ClangTidyOptions::OptionMap &Options,
   store(Options, LocalName, llvm::itostr(Value));
 }
 
-llvm::Expected<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
-    StringRef LocalName, ArrayRef<std::pair<StringRef, int64_t>> Mapping,
-    bool CheckGlobal, bool IgnoreCase) {
-  auto Iter = CheckOptions.find((NamePrefix + LocalName).str());
-  if (CheckGlobal && Iter == CheckOptions.end())
-    Iter = CheckOptions.find(LocalName.str());
+llvm::Expected<int64_t>
+ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
+                                        ArrayRef<NameAndValue> Mapping,
+                                        bool CheckGlobal, bool IgnoreCase) {
+  auto Iter = CheckGlobal
+                  ? findPriorityOption(CheckOptions, NamePrefix, LocalName)
+                  : CheckOptions.find((NamePrefix + LocalName).str());
   if (Iter == CheckOptions.end())
     return llvm::make_error<MissingOptionError>((NamePrefix + LocalName).str());
 
@@ -171,19 +176,19 @@ llvm::Expected<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
   unsigned EditDistance = -1;
   for (const auto &NameAndEnum : Mapping) {
     if (IgnoreCase) {
-      if (Value.equals_lower(NameAndEnum.first))
-        return NameAndEnum.second;
-    } else if (Value.equals(NameAndEnum.first)) {
-      return NameAndEnum.second;
-    } else if (Value.equals_lower(NameAndEnum.first)) {
-      Closest = NameAndEnum.first;
+      if (Value.equals_lower(NameAndEnum.second))
+        return NameAndEnum.first;
+    } else if (Value.equals(NameAndEnum.second)) {
+      return NameAndEnum.first;
+    } else if (Value.equals_lower(NameAndEnum.second)) {
+      Closest = NameAndEnum.second;
       EditDistance = 0;
       continue;
     }
-    unsigned Distance = Value.edit_distance(NameAndEnum.first);
+    unsigned Distance = Value.edit_distance(NameAndEnum.second);
     if (Distance < EditDistance) {
       EditDistance = Distance;
-      Closest = NameAndEnum.first;
+      Closest = NameAndEnum.second;
     }
   }
   if (EditDistance < 3)

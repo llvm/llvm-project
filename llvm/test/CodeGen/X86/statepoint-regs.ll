@@ -115,10 +115,10 @@ define  i32 addrspace(1)* @test5(i32 %a, i32 addrspace(1)* %p) gc "statepoint-ex
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
-  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %p, i32 addrspace(1)* %p) ["deopt"(i32 %a)]
-  %p2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token,  i32 8, i32 8)
-  %token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %p2, i32 addrspace(1)* %p2) ["deopt"(i32 %a)]
-  %p3 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token2,  i32 8, i32 8)
+  %token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %p, i32 addrspace(1)* %p), "deopt"(i32 %a)]
+  %p2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token,  i32 1, i32 1)
+  %token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %p2, i32 addrspace(1)* %p2), "deopt"(i32 %a)]
+  %p3 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token2,  i32 1, i32 1)
   ret i32 addrspace(1)* %p3
 }
 
@@ -683,12 +683,12 @@ define i32 addrspace(1)*  @test_fpconst_deopt(i32 addrspace(1)* %in) gc "statepo
 ; CHECK-NEXT:    movq (%rsp), %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
-    %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2, i32 5, void ()* nonnull @bar, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %in) ["deopt" (
+    %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2, i32 5, void ()* nonnull @bar, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %in), "deopt" (
     float 0x40421A1CA0000000, float 0x40459A1CA0000000, float 0x40401A1CA0000000, float 0x40479A1CA0000000, float 0x403C343940000000,
     float 0x403E343940000000, float 0x40469A1CA0000000, float 0x40489A1CA0000000, float 0x404A9A1CA0000000, float 0x40499A1CA0000000,
     float 0xC05FCD2F20000000, float 0xC05C0D2F20000000, float 0xC060269780000000, float 0xC05B8D2F20000000, float 0xC060669780000000,
     float 0xC05B0D2F20000000, float 0xC060A69780000000, float 0xC05A8D2F20000000, float 0xC060E69780000000, float 0x40439A1CA0000000)]
-    %out = call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %statepoint_token, i32 7, i32 7)
+    %out = call coldcc i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %statepoint_token, i32 0, i32 0)
     ret i32 addrspace(1)* %out
 }
 

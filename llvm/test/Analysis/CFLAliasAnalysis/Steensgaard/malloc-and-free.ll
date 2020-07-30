@@ -1,6 +1,6 @@
 ; This testcase ensures that CFL AA handles malloc and free in a sound and precise manner
 
-; RUN: opt < %s -disable-basicaa -cfl-steens-aa -aa-eval -print-no-aliases -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-no-aliases -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-no-aliases -disable-output 2>&1 | FileCheck %s
 
 declare noalias i8* @malloc(i64)

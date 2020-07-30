@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 
 #include "Cuda.h"
+#include "ROCm.h"
 #include "clang/Driver/DarwinSDKInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -40,13 +41,8 @@ protected:
   }
 
 public:
-  MachOTool(
-      const char *Name, const char *ShortName, const ToolChain &TC,
-      ResponseFileSupport ResponseSupport = RF_None,
-      llvm::sys::WindowsEncodingMethod ResponseEncoding = llvm::sys::WEM_UTF8,
-      const char *ResponseFlag = "@")
-      : Tool(Name, ShortName, TC, ResponseSupport, ResponseEncoding,
-             ResponseFlag) {}
+  MachOTool(const char *Name, const char *ShortName, const ToolChain &TC)
+      : Tool(Name, ShortName, TC) {}
 };
 
 class LLVM_LIBRARY_VISIBILITY Assembler : public MachOTool {
@@ -66,12 +62,10 @@ class LLVM_LIBRARY_VISIBILITY Linker : public MachOTool {
   bool NeedsTempPath(const InputInfoList &Inputs) const;
   void AddLinkArgs(Compilation &C, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs,
-                   const InputInfoList &Inputs) const;
+                   const InputInfoList &Inputs, unsigned Version[5]) const;
 
 public:
-  Linker(const ToolChain &TC)
-      : MachOTool("darwin::Linker", "linker", TC, RF_FileList,
-                  llvm::sys::WEM_UTF8, "-filelist") {}
+  Linker(const ToolChain &TC) : MachOTool("darwin::Linker", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
@@ -300,6 +294,7 @@ public:
   mutable Optional<DarwinSDKInfo> SDKInfo;
 
   CudaInstallationDetector CudaInstallation;
+  RocmInstallationDetector RocmInstallation;
 
 private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
@@ -357,6 +352,7 @@ protected:
       const_cast<Darwin *>(this)->setTripleEnvironment(llvm::Triple::Simulator);
   }
 
+public:
   bool isTargetIPhoneOS() const {
     assert(TargetInitialized && "Target not initialized!");
     return (TargetPlatform == IPhoneOS || TargetPlatform == TvOS) &&
@@ -409,6 +405,17 @@ protected:
     return TargetPlatform == MacOS;
   }
 
+  bool isTargetMacOSBased() const {
+    assert(TargetInitialized && "Target not initialized!");
+    // FIXME (Alex L): Add remaining MacCatalyst suppport.
+    return TargetPlatform == MacOS;
+  }
+
+  bool isTargetAppleSiliconMac() const {
+    assert(TargetInitialized && "Target not initialized!");
+    return isTargetMacOSBased() && getArch() == llvm::Triple::aarch64;
+  }
+
   bool isTargetInitialized() const { return TargetInitialized; }
 
   VersionTuple getTargetVersion() const {
@@ -422,11 +429,20 @@ protected:
     return TargetVersion < VersionTuple(V0, V1, V2);
   }
 
+  /// Returns true if the minimum supported macOS version for the slice that's
+  /// being built is less than the specified version. If there's no minimum
+  /// supported macOS version, the deployment target version is compared to the
+  /// specifed version instead.
   bool isMacosxVersionLT(unsigned V0, unsigned V1 = 0, unsigned V2 = 0) const {
-    assert(isTargetMacOS() && "Unexpected call for non OS X target!");
-    return TargetVersion < VersionTuple(V0, V1, V2);
+    assert(isTargetMacOS() && getTriple().isMacOSX() &&
+           "Unexpected call for non OS X target!");
+    VersionTuple MinVers = getTriple().getMinimumSupportedOSVersion();
+    return (!MinVers.empty() && MinVers > TargetVersion
+                ? MinVers
+                : TargetVersion) < VersionTuple(V0, V1, V2);
   }
 
+protected:
   /// Return true if c++17 aligned allocation/deallocation functions are not
   /// implemented in the c++ standard library of the deployment target we are
   /// targeting.
@@ -461,6 +477,8 @@ public:
 
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
+  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CC1Args) const override;
 
   bool UseObjCMixedDispatch() const override {
     // This is only used with the non-fragile ABI and non-legacy dispatch.

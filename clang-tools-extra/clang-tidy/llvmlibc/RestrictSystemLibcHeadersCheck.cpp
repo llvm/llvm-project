@@ -11,6 +11,10 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "clang/Lex/Preprocessor.h"
+
+// FixItHint - Hint to check documentation script to mark this check as
+// providing a FixIt.
 
 namespace clang {
 namespace tidy {

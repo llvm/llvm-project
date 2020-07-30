@@ -3,7 +3,7 @@
 ; analysis is cached, then unroll the loop (deleting it) and make sure that the
 ; next function doesn't get a cache "hit" for this stale analysis result.
 ;
-; RUN: opt -S -passes='loop(require<access-info>),unroll,loop(print-access-info)' -debug-pass-manager < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes='loop(require<access-info>),loop-unroll,loop(print-access-info)' -debug-pass-manager < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Starting llvm::Function pass manager run.
 ; CHECK: Running pass: FunctionToLoopPassAdaptor

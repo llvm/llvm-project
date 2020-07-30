@@ -13,6 +13,9 @@ add_clang_library(clangTidyLLVMLibcModule
   clangTidy
   clangTidyPortabilityModule
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyLLVMLibcModule

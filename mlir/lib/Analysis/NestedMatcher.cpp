@@ -68,8 +68,8 @@ unsigned NestedPattern::getDepth() const {
 ///   3. if all is good, recursively matches the nested patterns;
 ///   4. if all nested match then the single operation matches too and is
 ///      appended to the list of matches;
-///   5. TODO(ntv) Optionally applies actions (lambda), in which case we will
-///      want to traverse in post-order DFS to avoid invalidating iterators.
+///   5. TODO: Optionally applies actions (lambda), in which case we will want
+///      to traverse in post-order DFS to avoid invalidating iterators.
 void NestedPattern::matchOne(Operation *op,
                              SmallVectorImpl<NestedMatch> *matches) {
   if (skip == op) {
@@ -145,7 +145,7 @@ NestedPattern For(FilterFunctionType filter, ArrayRef<NestedPattern> nested) {
 }
 
 bool isLoadOrStore(Operation &op) {
-  return isa<AffineLoadOp>(op) || isa<AffineStoreOp>(op);
+  return isa<AffineLoadOp, AffineStoreOp>(op);
 }
 
 } // end namespace matcher

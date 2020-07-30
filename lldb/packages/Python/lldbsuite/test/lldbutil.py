@@ -775,7 +775,7 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
         launch_info = target.GetLaunchInfo()
         launch_info.SetWorkingDirectory(test.get_process_working_directory())
 
-    if extra_images and lldb.remote_platform:
+    if extra_images:
         environ = test.registerSharedLibrariesWithTarget(target, extra_images)
         launch_info.SetEnvironmentEntries(environ, True)
 
@@ -787,6 +787,8 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
                     error.GetCString()))
     test.assertFalse(error.Fail(),
                      "Process launch failed: %s" % (error.GetCString()))
+
+    test.assertEqual(process.GetState(), lldb.eStateStopped)
 
     # Frame #0 should be at our breakpoint.
     threads = get_threads_stopped_at_breakpoint(

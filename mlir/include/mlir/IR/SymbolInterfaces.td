@@ -27,13 +27,14 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     See [Symbols and SymbolTables](SymbolsAndSymbolTables.md) for more details
     and constraints on `Symbol` operations.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<"Returns the name of this symbol.",
       "StringRef", "getName", (ins), [{
         // Don't rely on the trait implementation as optional symbol operations
         // may override this.
-        return mlir::SymbolTable::getSymbolName(op);
+        return mlir::SymbolTable::getSymbolName($_op);
       }], /*defaultImplementation=*/[{
         return mlir::SymbolTable::getSymbolName(this->getOperation());
       }]

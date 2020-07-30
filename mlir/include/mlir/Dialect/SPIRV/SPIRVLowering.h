@@ -35,8 +35,8 @@ namespace mlir {
 /// satisfy shader interface requirements: shader interface types must be
 /// pointers to structs.
 ///
-/// TODO(antiagainst): We might want to introduce a way to control how
-/// unsupported bitwidth are handled and explicitly fail if wanted.
+/// TODO: We might want to introduce a way to control how unsupported bitwidth
+/// are handled and explicitly fail if wanted.
 class SPIRVTypeConverter : public TypeConverter {
 public:
   explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr);
@@ -120,8 +120,8 @@ Value getBuiltinVariableValue(Operation *op, BuiltIn builtin,
 /// Performs the index computation to get to the element at `indices` of the
 /// memory pointed to by `basePtr`, using the layout map of `baseType`.
 
-// TODO(ravishankarm) : This method assumes that the `baseType` is a MemRefType
-// with AffineMap that has static strides. Extend to handle dynamic strides.
+// TODO: This method assumes that the `baseType` is a MemRefType with AffineMap
+// that has static strides. Extend to handle dynamic strides.
 spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
                                    MemRefType baseType, Value basePtr,
                                    ValueRange indices, Location loc,

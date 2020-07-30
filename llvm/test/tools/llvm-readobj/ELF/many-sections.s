@@ -34,13 +34,25 @@ Sections:
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
 
-# RUN: llvm-readelf --file-headers %t2 | FileCheck %s --check-prefix=GNU2
+# RUN: llvm-readelf --file-headers --sections %t2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2 --check-prefix=GNU2
 # GNU2: Number of section headers:         0
 # GNU2: Section header string table index: 65535 (corrupt: out of range)
 
-# RUN: llvm-readobj --file-headers %t2 | FileCheck %s --check-prefix=LLVM2
-# LLVM2: SectionHeaderCount: 0
-# LLVM2: StringTableSectionIndex: 65535 (corrupt: out of range)
+# GNU2:       There are 0 section headers, starting at offset 0x0:
+# GNU2-EMPTY:
+# GNU2-NEXT:  Section Headers:
+# GNU2-NEXT:   [Nr] Name Type Address Off Size ES Flg Lk Inf Al
+# GNU2-NEXT:  warning: '[[FILE]]': e_shstrndx == SHN_XINDEX, but the section header table is empty
+# GNU2-NEXT:  Key to Flags:
+
+# RUN: llvm-readobj --file-headers --sections %t2 | \
+# RUN:   FileCheck %s --check-prefix=LLVM2 --implicit-check-not="warning:"
+# LLVM2:       SectionHeaderCount: 0
+# LLVM2:       StringTableSectionIndex: 65535 (corrupt: out of range)
+# LLVM2-NEXT: }
+# LLVM2-NEXT: Sections [
+# LLVM2-NEXT: ]
 
 --- !ELF
 FileHeader:

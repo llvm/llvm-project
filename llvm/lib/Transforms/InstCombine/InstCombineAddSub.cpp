@@ -1787,6 +1787,21 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateSub(XZ, YW);
   }
 
+  auto m_AddRdx = [](Value *&Vec) {
+    return m_OneUse(
+        m_Intrinsic<Intrinsic::experimental_vector_reduce_add>(m_Value(Vec)));
+  };
+  Value *V0, *V1;
+  if (match(Op0, m_AddRdx(V0)) && match(Op1, m_AddRdx(V1)) &&
+      V0->getType() == V1->getType()) {
+    // Difference of sums is sum of differences:
+    // add_rdx(V0) - add_rdx(V1) --> add_rdx(V0 - V1)
+    Value *Sub = Builder.CreateSub(V0, V1);
+    Value *Rdx = Builder.CreateIntrinsic(
+        Intrinsic::experimental_vector_reduce_add, {Sub->getType()}, {Sub});
+    return replaceInstUsesWith(I, Rdx);
+  }
+
   if (Constant *C = dyn_cast<Constant>(Op0)) {
     Value *X;
     if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))

@@ -589,7 +589,7 @@ SBTypeList &SBTypeList::operator=(const SBTypeList &rhs) {
                      SBTypeList, operator=,(const lldb::SBTypeList &), rhs);
 
   if (this != &rhs) {
-    m_opaque_up.reset(new TypeListImpl());
+    m_opaque_up = std::make_unique<TypeListImpl>();
     for (uint32_t i = 0, rhs_size = const_cast<SBTypeList &>(rhs).GetSize();
          i < rhs_size; i++)
       Append(const_cast<SBTypeList &>(rhs).GetTypeAtIndex(i));
@@ -632,7 +632,7 @@ SBTypeMember::SBTypeMember(const SBTypeMember &rhs) : m_opaque_up() {
 
   if (this != &rhs) {
     if (rhs.IsValid())
-      m_opaque_up.reset(new TypeMemberImpl(rhs.ref()));
+      m_opaque_up = std::make_unique<TypeMemberImpl>(rhs.ref());
   }
 }
 
@@ -642,7 +642,7 @@ lldb::SBTypeMember &SBTypeMember::operator=(const lldb::SBTypeMember &rhs) {
 
   if (this != &rhs) {
     if (rhs.IsValid())
-      m_opaque_up.reset(new TypeMemberImpl(rhs.ref()));
+      m_opaque_up = std::make_unique<TypeMemberImpl>(rhs.ref());
   }
   return LLDB_RECORD_RESULT(*this);
 }
@@ -746,7 +746,7 @@ void SBTypeMember::reset(TypeMemberImpl *type_member_impl) {
 
 TypeMemberImpl &SBTypeMember::ref() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new TypeMemberImpl());
+    m_opaque_up = std::make_unique<TypeMemberImpl>();
   return *m_opaque_up;
 }
 

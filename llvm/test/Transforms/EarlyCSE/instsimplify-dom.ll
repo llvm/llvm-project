@@ -1,5 +1,5 @@
 ; RUN: opt -early-cse -S < %s | FileCheck %s
-; RUN: opt -basicaa -early-cse-memssa -S < %s | FileCheck %s
+; RUN: opt -basic-aa -early-cse-memssa -S < %s | FileCheck %s
 ; PR12231
 
 declare i32 @f()

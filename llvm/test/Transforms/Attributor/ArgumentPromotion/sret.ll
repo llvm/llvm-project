@@ -40,14 +40,14 @@ define internal void @add({i32, i32}* %this, i32* sret %r) {
 
 define void @f() {
 ; IS________OPM-LABEL: define {{[^@]+}}@f()
-; IS________OPM-NEXT:    [[R:%.*]] = alloca i32
-; IS________OPM-NEXT:    [[PAIR:%.*]] = alloca { i32, i32 }
+; IS________OPM-NEXT:    [[R:%.*]] = alloca i32, align 4
+; IS________OPM-NEXT:    [[PAIR:%.*]] = alloca { i32, i32 }, align 8
 ; IS________OPM-NEXT:    call void @add({ i32, i32 }* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[PAIR]], i32* nocapture nofree nonnull sret writeonly align 4 dereferenceable(4) [[R]])
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@f()
-; IS________NPM-NEXT:    [[R:%.*]] = alloca i32
-; IS________NPM-NEXT:    [[PAIR:%.*]] = alloca { i32, i32 }
+; IS________NPM-NEXT:    [[R:%.*]] = alloca i32, align 4
+; IS________NPM-NEXT:    [[PAIR:%.*]] = alloca { i32, i32 }, align 8
 ; IS________NPM-NEXT:    call void @add({ i32, i32 }* noalias nocapture nofree nonnull readonly align 8 dereferenceable(8) [[PAIR]], i32* noalias nocapture nofree nonnull sret writeonly align 4 dereferenceable(4) [[R]])
 ; IS________NPM-NEXT:    ret void
 ;

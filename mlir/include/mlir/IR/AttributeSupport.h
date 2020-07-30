@@ -22,6 +22,45 @@ class MLIRContext;
 class Type;
 
 //===----------------------------------------------------------------------===//
+// AbstractAttribute
+//===----------------------------------------------------------------------===//
+
+/// This class contains all of the static information common to all instances of
+/// a registered Attribute.
+class AbstractAttribute {
+public:
+  /// Look up the specified abstract attribute in the MLIRContext and return a
+  /// reference to it.
+  static const AbstractAttribute &lookup(TypeID typeID, MLIRContext *context);
+
+  /// This method is used by Dialect objects when they register the list of
+  /// attributes they contain.
+  template <typename T> static AbstractAttribute get(Dialect &dialect) {
+    return AbstractAttribute(dialect, T::getInterfaceMap());
+  }
+
+  /// Return the dialect this attribute was registered to.
+  Dialect &getDialect() const { return const_cast<Dialect &>(dialect); }
+
+  /// Returns an instance of the concept object for the given interface if it
+  /// was registered to this attribute, null otherwise. This should not be used
+  /// directly.
+  template <typename T> typename T::Concept *getInterface() const {
+    return interfaceMap.lookup<T>();
+  }
+
+private:
+  AbstractAttribute(Dialect &dialect, detail::InterfaceMap &&interfaceMap)
+      : dialect(dialect), interfaceMap(std::move(interfaceMap)) {}
+
+  /// This is the dialect that this attribute was registered to.
+  Dialect &dialect;
+
+  /// This is a collection of the interfaces registered to this attribute.
+  detail::InterfaceMap interfaceMap;
+};
+
+//===----------------------------------------------------------------------===//
 // AttributeStorage
 //===----------------------------------------------------------------------===//
 
@@ -39,10 +78,10 @@ public:
   /// Get the type of this attribute.
   Type getType() const;
 
-  /// Get the dialect of this attribute.
-  Dialect &getDialect() const {
-    assert(dialect && "Malformed attribute storage object.");
-    return const_cast<Dialect &>(*dialect);
+  /// Return the abstract descriptor for this attribute.
+  const AbstractAttribute &getAbstractAttribute() const {
+    assert(abstractAttribute && "Malformed attribute storage object.");
+    return *abstractAttribute;
   }
 
 protected:
@@ -56,13 +95,15 @@ protected:
   /// Set the type of this attribute.
   void setType(Type type);
 
-  // Set the dialect for this storage instance. This is used by the
+  // Set the abstract attribute for this storage instance. This is used by the
   // AttributeUniquer when initializing a newly constructed storage object.
-  void initializeDialect(Dialect &newDialect) { dialect = &newDialect; }
+  void initialize(const AbstractAttribute &abstractAttr) {
+    abstractAttribute = &abstractAttr;
+  }
 
 private:
-  /// The dialect for this attribute.
-  Dialect *dialect;
+  /// The abstract descriptor for this attribute.
+  const AbstractAttribute *abstractAttribute;
 
   /// The opaque type of the attribute value.
   const void *type;

@@ -402,6 +402,13 @@ public:
                              CXXCtorType Type, bool ForVirtualBase,
                              bool Delegating, CallArgList &Args);
 
+  /// Get the implicit (second) parameter that comes after the "this" pointer,
+  /// or nullptr if there is isn't one.
+  virtual llvm::Value *
+  getCXXDestructorImplicitParam(CodeGenFunction &CGF,
+                                const CXXDestructorDecl *DD, CXXDtorType Type,
+                                bool ForVirtualBase, bool Delegating) = 0;
+
   /// Emit the destructor call.
   virtual void EmitDestructorCall(CodeGenFunction &CGF,
                                   const CXXDestructorDecl *DD, CXXDtorType Type,

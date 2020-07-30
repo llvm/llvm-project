@@ -1220,7 +1220,7 @@ are listed below.
 
    * ``-fno-math-errno``
 
-   * ``-ffinite-math``
+   * ``-ffinite-math-only``
 
    * ``-fassociative-math``
 
@@ -1306,14 +1306,14 @@ are listed below.
 **-f[no-]honor-infinities**
 
    If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
-   has the same effect as specifying ``-ffinite-math``.
+   has the same effect as specifying ``-ffinite-math-only``.
 
 .. _opt_fhonor-nans:
 
 **-f[no-]honor-nans**
 
    If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
-   has the same effect as specifying ``-ffinite-math``.
+   has the same effect as specifying ``-ffinite-math-only``.
 
 .. _opt_fsigned-zeros:
 
@@ -1351,9 +1351,9 @@ are listed below.
 
    Defaults to ``-fno-unsafe-math-optimizations``.
 
-.. _opt_ffinite-math:
+.. _opt_ffinite-math-only:
 
-**-f[no-]finite-math**
+**-f[no-]finite-math-only**
 
    Allow floating-point optimizations that assume arguments and results are
    not NaNs or +-Inf.  This defines the ``__FINITE_MATH_ONLY__`` preprocessor macro.
@@ -1362,7 +1362,7 @@ are listed below.
    * ``-fno-honor-infinities``
    * ``-fno-honor-nans``
 
-   Defaults to ``-fno-finite-math``.
+   Defaults to ``-fno-finite-math-only``.
 
 .. _opt_frounding-math:
 
@@ -3132,7 +3132,7 @@ Global objects must be constructed before the first kernel using the global obje
 is executed and destroyed just after the last kernel using the program objects is
 executed. In OpenCL v2.0 drivers there is no specific API for invoking global
 constructors. However, an easy workaround would be to enqueue a constructor
-initialization kernel that has a name ``@_GLOBAL__sub_I_<compiled file name>``.
+initialization kernel that has a name ``_GLOBAL__sub_I_<compiled file name>``.
 This kernel is only present if there are any global objects to be initialized in
 the compiled binary. One way to check this is by passing ``CL_PROGRAM_KERNEL_NAMES``
 to ``clGetProgramInfo`` (OpenCL v2.0 s5.8.7).
@@ -3148,7 +3148,7 @@ before running any kernels in which the objects are used.
      clang -cl-std=clc++ test.cl
 
 If there are any global objects to be initialized, the final binary will contain
-the ``@_GLOBAL__sub_I_test.cl`` kernel to be enqueued.
+the ``_GLOBAL__sub_I_test.cl`` kernel to be enqueued.
 
 Global destructors can not be invoked in OpenCL v2.0 drivers. However, all memory used
 for program scope objects is released on ``clReleaseProgram``.

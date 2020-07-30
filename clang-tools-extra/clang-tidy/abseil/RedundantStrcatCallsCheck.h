@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_REDUNDANTSTRCATCALLSCHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_REDUNDANTSTRCATCALLSCHECK_H
 
-#include "../ClangTidy.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {

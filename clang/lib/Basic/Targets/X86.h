@@ -125,6 +125,9 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasPTWRITE = false;
   bool HasINVPCID = false;
   bool HasENQCMD = false;
+  bool HasAMXTILE = false;
+  bool HasAMXINT8 = false;
+  bool HasAMXBF16 = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
 
@@ -138,6 +141,7 @@ public:
       : TargetInfo(Triple) {
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     AddrSpaceMap = &X86AddrSpaceMap;
+    HasStrictFP = true;
   }
 
   const char *getLongDoubleMangling() const override {
@@ -259,24 +263,8 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  static void setSSELevel(llvm::StringMap<bool> &Features, X86SSEEnum Level,
-                          bool Enabled);
-
-  static void setMMXLevel(llvm::StringMap<bool> &Features, MMX3DNowEnum Level,
-                          bool Enabled);
-
-  static void setXOPLevel(llvm::StringMap<bool> &Features, XOPEnum Level,
-                          bool Enabled);
-
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
-                         bool Enabled) const override {
-    setFeatureEnabledImpl(Features, Name, Enabled);
-  }
-
-  // This exists purely to cut down on the number of virtual calls in
-  // initFeatureMap which calls this repeatedly.
-  static void setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
-                                    StringRef Name, bool Enabled);
+                         bool Enabled) const final;
 
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
@@ -285,7 +273,7 @@ public:
 
   bool isValidFeatureName(StringRef Name) const override;
 
-  bool hasFeature(StringRef Feature) const override;
+  bool hasFeature(StringRef Feature) const final;
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;

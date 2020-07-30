@@ -44,6 +44,9 @@ def HasFPRegs        : Predicate<"Subtarget->hasFPRegs()">,
 def HasFPRegs16      : Predicate<"Subtarget->hasFPRegs16()">,
                                  AssemblerPredicate<(all_of FeatureFPRegs16),
                                                     "16-bit fp registers">;
+def HasNoFPRegs16    : Predicate<"!Subtarget->hasFPRegs16()">,
+                                 AssemblerPredicate<(all_of (not FeatureFPRegs16)),
+                                                    "16-bit fp registers">;
 def HasFPRegs64      : Predicate<"Subtarget->hasFPRegs64()">,
                                  AssemblerPredicate<(all_of FeatureFPRegs64),
                                                     "64-bit fp registers">;

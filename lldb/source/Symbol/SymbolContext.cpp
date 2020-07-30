@@ -968,7 +968,7 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
     // CompUnits can't necessarily be resolved here, since an inlined function
     // might show up in a number of CompUnits.  Instead we just convert to a
     // FileSpec and store it away.
-    m_file_spec_up.reset(new FileSpec(spec_string));
+    m_file_spec_up = std::make_unique<FileSpec>(spec_string);
     m_type |= eFileSpecified;
     break;
   case eLineStartSpecified:

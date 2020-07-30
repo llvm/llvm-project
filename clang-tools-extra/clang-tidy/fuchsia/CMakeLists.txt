@@ -17,6 +17,9 @@ add_clang_library(clangTidyFuchsiaModule
   clangTidy
   clangTidyGoogleModule
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyFuchsiaModule

@@ -632,11 +632,6 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  if (GetImportInProgress()) {
-    LLDB_LOGV(log, "Ignoring a query during an import");
-    return;
-  }
-
   if (log) {
     if (!context.m_decl_context)
       LLDB_LOG(log,

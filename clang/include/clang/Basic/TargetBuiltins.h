@@ -119,6 +119,11 @@ namespace clang {
   };
   }
 
+  /// VE builtins
+  namespace VE {
+  enum { LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1, LastTSBuiltin };
+  }
+
   /// Flags to identify the types for overloaded Neon builtins.
   ///
   /// These must be kept in sync with the flags in utils/TableGen/NeonEmitter.h.

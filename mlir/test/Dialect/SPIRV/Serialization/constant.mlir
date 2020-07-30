@@ -108,7 +108,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
   // CHECK-LABEL: @double_const
   spv.func @double_const() -> () "None" {
-    // TODO(antiagainst): test range boundary values
+    // TODO: test range boundary values
     // CHECK: spv.constant 1.024000e+03 : f64
     %0 = spv.constant 1024. : f64
     // CHECK: spv.constant -1.024000e+03 : f64

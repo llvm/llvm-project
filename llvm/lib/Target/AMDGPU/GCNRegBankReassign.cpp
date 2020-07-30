@@ -170,11 +170,13 @@ private:
   // If Bank is not -1 assume Reg:SubReg to belong to that Bank.
   uint32_t getRegBankMask(unsigned Reg, unsigned SubReg, int Bank);
 
-  // Return number of stalls in the instructions.
-  // UsedBanks has bits set for the banks used by all operands.
-  // If Reg and Bank provided substitute the Reg with the Bank.
-  unsigned analyzeInst(const MachineInstr& MI, unsigned& UsedBanks,
-                       unsigned Reg = AMDGPU::NoRegister, int Bank = -1);
+  // Analyze one instruction returning the number of stalls and a mask of the
+  // banks used by all operands.
+  // If Reg and Bank are provided, assume all uses of Reg will be replaced with
+  // a register chosen from Bank.
+  std::pair<unsigned, unsigned> analyzeInst(const MachineInstr &MI,
+                                            unsigned Reg = AMDGPU::NoRegister,
+                                            int Bank = -1);
 
   // Return true if register is regular VGPR or SGPR or their tuples.
   // Returns false for special registers like m0, vcc etc.
@@ -356,15 +358,14 @@ uint32_t GCNRegBankReassign::getRegBankMask(unsigned Reg, unsigned SubReg,
   return Mask << SGPR_BANK_OFFSET;
 }
 
-unsigned GCNRegBankReassign::analyzeInst(const MachineInstr& MI,
-                                         unsigned& UsedBanks,
-                                         unsigned Reg,
-                                         int Bank) {
+std::pair<unsigned, unsigned>
+GCNRegBankReassign::analyzeInst(const MachineInstr &MI, unsigned Reg,
+                                int Bank) {
   unsigned StallCycles = 0;
-  UsedBanks = 0;
+  unsigned UsedBanks = 0;
 
   if (MI.isDebugValue())
-    return 0;
+    return std::make_pair(StallCycles, UsedBanks);
 
   RegsUsed.reset();
   OperandMasks.clear();
@@ -404,7 +405,7 @@ unsigned GCNRegBankReassign::analyzeInst(const MachineInstr& MI,
     OperandMasks.push_back(OperandMask(Op.getReg(), Op.getSubReg(), Mask));
   }
 
-  return StallCycles;
+  return std::make_pair(StallCycles, UsedBanks);
 }
 
 unsigned GCNRegBankReassign::getOperandGatherWeight(const MachineInstr& MI,
@@ -588,7 +589,6 @@ unsigned GCNRegBankReassign::computeStallCycles(unsigned SrcReg,
                                                 unsigned Reg, int Bank,
                                                 bool Collect) {
   unsigned TotalStallCycles = 0;
-  unsigned UsedBanks = 0;
   SmallSet<const MachineInstr *, 16> Visited;
 
   for (auto &MI : MRI->use_nodbg_instructions(SrcReg)) {
@@ -596,7 +596,9 @@ unsigned GCNRegBankReassign::computeStallCycles(unsigned SrcReg,
       continue;
     if (!Visited.insert(&MI).second)
       continue;
-    unsigned StallCycles = analyzeInst(MI, UsedBanks, Reg, Bank);
+    unsigned StallCycles;
+    unsigned UsedBanks;
+    std::tie(StallCycles, UsedBanks) = analyzeInst(MI, Reg, Bank);
     TotalStallCycles += StallCycles;
     if (Collect)
       collectCandidates(MI, UsedBanks, StallCycles);
@@ -717,8 +719,9 @@ unsigned GCNRegBankReassign::collectCandidates(MachineFunction &MF,
       if (MI.isBundle())
           continue; // we analyze the instructions inside the bundle individually
 
-      unsigned UsedBanks = 0;
-      unsigned StallCycles = analyzeInst(MI, UsedBanks);
+      unsigned StallCycles;
+      unsigned UsedBanks;
+      std::tie(StallCycles, UsedBanks) = analyzeInst(MI);
 
       if (Collect)
         collectCandidates(MI, UsedBanks, StallCycles);

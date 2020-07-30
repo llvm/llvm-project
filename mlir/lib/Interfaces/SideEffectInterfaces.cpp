@@ -22,8 +22,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 bool MemoryEffects::Effect::classof(const SideEffects::Effect *effect) {
-  return isa<Allocate>(effect) || isa<Free>(effect) || isa<Read>(effect) ||
-         isa<Write>(effect);
+  return isa<Allocate, Free, Read, Write>(effect);
 }
 
 //===----------------------------------------------------------------------===//

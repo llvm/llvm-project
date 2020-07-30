@@ -25,39 +25,37 @@ int main() {
 // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
 // CHECK: {{^}}[[MASTER:[0-9]+]]: ompt_event_loop_begin:
-// CHECK-SAME: parallel_id={{[0-9]+}}, parent_task_id=[[IMPL_TASK:[0-9]+]],
+// CHECK-SAME: parallel_id={{[0-9]+}}, parent_task_id=[[ITASK:[0-9]+]],
 
-// CHECK: {{^}}[[MASTER]]: ompt_event_dependences: task_id=[[IMPL_TASK]],
+// CHECK: {{^}}[[MASTER]]: ompt_event_dependences: task_id=[[ITASK]],
 // CHECK-SAME: deps=[(0, ompt_dependence_type_source), (0,
 // CHECK-SAME: ompt_dependence_type_source)], ndeps=2
 
-// CHECK: {{^}}[[MASTER]]: ompt_event_dependences: task_id=[[IMPL_TASK]],
+// CHECK: {{^}}[[MASTER]]: ompt_event_dependences: task_id=[[ITASK]],
 // CHECK-SAME: deps=[(0, ompt_dependence_type_sink), (0,
 // CHECK-SAME: ompt_dependence_type_sink)], ndeps=2
 
-// CHECK: {{^}}[[MASTER]]: ompt_event_dependences: task_id=[[IMPL_TASK]],
+// CHECK: {{^}}[[MASTER]]: ompt_event_dependences: task_id=[[ITASK]],
 // CHECK-SAME: deps=[(0, ompt_dependence_type_source), (1,
 // CHECK-SAME: ompt_dependence_type_source)], ndeps=2
 
 // CHECK: {{^}}[[WORKER:[0-9]+]]: ompt_event_loop_begin:
-// CHECK-SAME: parallel_id={{[0-9]+}}, parent_task_id=[[IMPL_TASK:[0-9]+]],
+// CHECK-SAME: parallel_id={{[0-9]+}}, parent_task_id=[[ITASK:[0-9]+]],
 
-// CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[IMPL_TASK]],
+// CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[ITASK]],
 // CHECK-SAME: deps=[(0, ompt_dependence_type_sink), (0,
 // CHECK-SAME: ompt_dependence_type_sink)], ndeps=2
 
-// CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[IMPL_TASK]],
+// CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[ITASK]],
 // CHECK-SAME: deps=[(1, ompt_dependence_type_source), (0,
 // CHECK-SAME: ompt_dependence_type_source)], ndeps=2
 
-// CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[IMPL_TASK]],
-// CHECK-SAME: deps=[(0, ompt_dependence_type_sink), (1,
-// CHECK-SAME: ompt_dependence_type_sink)], ndeps=2
+// either can be first for last iteration
 
-// CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[IMPL_TASK]],
-// CHECK-SAME: deps=[(1, ompt_dependence_type_sink), (0,
-// CHECK-SAME: ompt_dependence_type_sink)], ndeps=2
+// CHECK-DAG: [[ITASK]]{{.*}}deps=[(0{{.*}}sink), (1,{{.*}}sink)]
 
-// CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[IMPL_TASK]],
+// CHECK-DAG: [[ITASK]]{{.*}}deps=[(1{{.*}}sink), (0,{{.*}}sink)]
+
+// CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[ITASK]],
 // CHECK-SAME: deps=[(1, ompt_dependence_type_source), (1,
 // CHECK-SAME: ompt_dependence_type_source)], ndeps=2

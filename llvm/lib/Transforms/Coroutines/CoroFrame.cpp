@@ -1548,6 +1548,75 @@ static void sinkSpillUsesAfterCoroBegin(Function &F, const SpillInfo &Spills,
   return;
 }
 
+/// For each local variable that all of its user are only used inside one of
+/// suspended region, we sink their lifetime.start markers to the place where
+/// after the suspend block. Doing so minimizes the lifetime of each variable,
+/// hence minimizing the amount of data we end up putting on the frame.
+static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
+                                     SuspendCrossingInfo &Checker) {
+  DominatorTree DT(F);
+
+  // Collect all possible basic blocks which may dominate all uses of allocas.
+  SmallPtrSet<BasicBlock *, 4> DomSet;
+  DomSet.insert(&F.getEntryBlock());
+  for (auto *CSI : Shape.CoroSuspends) {
+    BasicBlock *SuspendBlock = CSI->getParent();
+    assert(isSuspendBlock(SuspendBlock) && SuspendBlock->getSingleSuccessor() &&
+           "should have split coro.suspend into its own block");
+    DomSet.insert(SuspendBlock->getSingleSuccessor());
+  }
+
+  for (Instruction &I : instructions(F)) {
+    if (!isa<AllocaInst>(&I))
+      continue;
+
+    for (BasicBlock *DomBB : DomSet) {
+      bool Valid = true;
+      SmallVector<Instruction *, 1> BCInsts;
+
+      auto isUsedByLifetimeStart = [&](Instruction *I) {
+        if (isa<BitCastInst>(I) && I->hasOneUse())
+          if (auto *IT = dyn_cast<IntrinsicInst>(I->user_back()))
+            return IT->getIntrinsicID() == Intrinsic::lifetime_start;
+        return false;
+      };
+
+      for (User *U : I.users()) {
+        Instruction *UI = cast<Instruction>(U);
+        // For all users except lifetime.start markers, if they are all
+        // dominated by one of the basic blocks and do not cross
+        // suspend points as well, then there is no need to spill the
+        // instruction.
+        if (!DT.dominates(DomBB, UI->getParent()) ||
+            Checker.isDefinitionAcrossSuspend(DomBB, U)) {
+          // Skip bitcast used by lifetime.start markers.
+          if (isUsedByLifetimeStart(UI)) {
+            BCInsts.push_back(UI);
+            continue;
+          }
+          Valid = false;
+          break;
+        }
+      }
+      // Sink lifetime.start markers to dominate block when they are
+      // only used outside the region.
+      if (Valid && BCInsts.size() != 0) {
+        auto *NewBitcast = BCInsts[0]->clone();
+        auto *NewLifetime = cast<Instruction>(BCInsts[0]->user_back())->clone();
+        NewLifetime->replaceUsesOfWith(BCInsts[0], NewBitcast);
+        NewBitcast->insertBefore(DomBB->getTerminator());
+        NewLifetime->insertBefore(DomBB->getTerminator());
+
+        // All the outsided lifetime.start markers are no longer necessary.
+        for (Instruction *S : BCInsts) {
+          S->user_back()->eraseFromParent();
+        }
+        break;
+      }
+    }
+  }
+}
+
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   eliminateSwiftError(F, Shape);
 
@@ -1598,6 +1667,7 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     Spills.clear();
   }
 
+  sinkLifetimeStartMarkers(F, Shape, Checker);
   // Collect lifetime.start info for each alloca.
   using LifetimeStart = SmallPtrSet<Instruction *, 2>;
   llvm::DenseMap<Instruction *, std::unique_ptr<LifetimeStart>> LifetimeMap;

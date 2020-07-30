@@ -280,7 +280,7 @@ InFlightDiagnostic Operation::emitError(const Twine &message) {
   if (getContext()->shouldPrintOpOnDiagnostic()) {
     // Print out the operation explicitly here so that we can print the generic
     // form.
-    // TODO(riverriddle) It would be nice if we could instead provide the
+    // TODO: It would be nice if we could instead provide the
     // specific printing flags when adding the operation as an argument to the
     // diagnostic.
     std::string printedOp;
@@ -1015,6 +1015,22 @@ LogicalResult OpTrait::impl::verifyOperandSizeAttr(Operation *op,
 LogicalResult OpTrait::impl::verifyResultSizeAttr(Operation *op,
                                                   StringRef attrName) {
   return verifyValueSizeAttr(op, attrName, /*isOperand=*/false);
+}
+
+LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
+  for (Region &region : op->getRegions()) {
+    if (region.empty())
+      continue;
+
+    if (region.front().getNumArguments() != 0) {
+      if (op->getNumRegions() > 1)
+        return op->emitOpError("region #")
+               << region.getRegionNumber() << " should have no arguments";
+      else
+        return op->emitOpError("region should have no arguments");
+    }
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

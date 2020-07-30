@@ -57,3 +57,35 @@ llvm::Error Lua::LoadModule(llvm::StringRef filename) {
   lua_setglobal(m_lua_state, module_name.GetCString());
   return llvm::Error::success();
 }
+
+llvm::Error Lua::ChangeIO(FILE *out, FILE *err) {
+  assert(out != nullptr);
+  assert(err != nullptr);
+
+  lua_getglobal(m_lua_state, "io");
+
+  lua_getfield(m_lua_state, -1, "stdout");
+  if (luaL_Stream *s = static_cast<luaL_Stream *>(
+          luaL_testudata(m_lua_state, -1, LUA_FILEHANDLE))) {
+    s->f = out;
+    lua_pop(m_lua_state, 1);
+  } else {
+    lua_pop(m_lua_state, 2);
+    return llvm::make_error<llvm::StringError>("could not get stdout",
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  lua_getfield(m_lua_state, -1, "stderr");
+  if (luaL_Stream *s = static_cast<luaL_Stream *>(
+          luaL_testudata(m_lua_state, -1, LUA_FILEHANDLE))) {
+    s->f = out;
+    lua_pop(m_lua_state, 1);
+  } else {
+    lua_pop(m_lua_state, 2);
+    return llvm::make_error<llvm::StringError>("could not get stderr",
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  lua_pop(m_lua_state, 1);
+  return llvm::Error::success();
+}

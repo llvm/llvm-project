@@ -671,8 +671,9 @@ result of the evaluation is:
     empty operation expression for this purpose.*
 
   * If the top stack entry is a location description, or can be converted
-    to one, then the result is that, possibly converted, location description.
-    Any other entries on the stack are discarded.
+    to one (see :ref:`amdgpu-dwarf-memory-location-description-operations`),
+    then the result is that, possibly converted, location description. Any other
+    entries on the stack are discarded.
 
   * Otherwise the DWARF expression is ill-formed.
 
@@ -683,9 +684,10 @@ result of the evaluation is:
 
 * If evaluation of the DWARF expression requires a value, then:
 
-  * If the top stack entry is a value, or can be converted to one, then the
-    result is that, possibly converted, value. Any other entries on the stack
-    are discarded.
+  * If the top stack entry is a value, or can be converted to one (see
+    :ref:`amdgpu-dwarf-memory-location-description-operations`), then the result
+    is that, possibly converted, value. Any other entries on the stack are
+    discarded.
 
   * Otherwise the DWARF expression is ill-formed.
 

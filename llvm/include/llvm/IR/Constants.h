@@ -41,11 +41,6 @@
 
 namespace llvm {
 
-class ArrayType;
-class IntegerType;
-class PointerType;
-class StructType;
-class VectorType;
 template <class ConstantClass> struct ConstantAggrKeyType;
 
 /// Base class for constants with no operands.
@@ -156,9 +151,19 @@ public:
     return Val.getSExtValue();
   }
 
-  /// Return the constant as an llvm::Align. Note that this method can assert if
-  /// the value does not fit in 64 bits or is not a power of two.
-  inline Align getAlignValue() const { return Align(getZExtValue()); }
+  /// Return the constant as an llvm::MaybeAlign.
+  /// Note that this method can assert if the value does not fit in 64 bits or
+  /// is not a power of two.
+  inline MaybeAlign getMaybeAlignValue() const {
+    return MaybeAlign(getZExtValue());
+  }
+
+  /// Return the constant as an llvm::Align, interpreting `0` as `Align(1)`.
+  /// Note that this method can assert if the value does not fit in 64 bits or
+  /// is not a power of two.
+  inline Align getAlignValue() const {
+    return getMaybeAlignValue().valueOrOne();
+  }
 
   /// A helper method that can be used to determine if the constant contained
   /// within is equal to a constant.  This only works for very small values,
@@ -903,6 +908,8 @@ protected:
     // Operation type (an Instruction opcode) is stored as the SubclassData.
     setValueSubclassData(Opcode);
   }
+
+  ~ConstantExpr() = default;
 
 public:
   // Static methods to construct a ConstantExpr of different kinds.  Note that

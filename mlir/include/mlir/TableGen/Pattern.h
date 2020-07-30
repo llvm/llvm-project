@@ -407,8 +407,8 @@ private:
   const llvm::Record &def;
 
   // All operators.
-  // TODO(antiagainst): we need a proper context manager, like MLIRContext,
-  // for managing the lifetime of shared entities.
+  // TODO: we need a proper context manager, like MLIRContext, for managing the
+  // lifetime of shared entities.
   RecordOperatorMap *recordOpMap;
 };
 

@@ -2,6 +2,9 @@
 // RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -mattr=-code-object-v3 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX800 %s
 // RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-code-object-v3 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX900 %s
 
+// The legacy ValueType field should be parsed without error, but not
+// re-emitted.
+
 // CHECK:  .amd_amdgpu_hsa_metadata
 // CHECK:    Version: [ 1, 0 ]
 // CHECK:    Printf:
@@ -17,24 +20,19 @@
 // CHECK:            Size:          1
 // CHECK:            Align:         1
 // CHECK:            ValueKind:     ByValue
-// CHECK:            ValueType:     I8
 // CHECK:            AccQual:       Default
 // CHECK:          - Size:          8
 // CHECK:            Align:         8
 // CHECK:            ValueKind:     HiddenGlobalOffsetX
-// CHECK:            ValueType:     I64
 // CHECK:          - Size:          8
 // CHECK:            Align:         8
 // CHECK:            ValueKind:     HiddenGlobalOffsetY
-// CHECK:            ValueType:     I64
 // CHECK:          - Size:          8
 // CHECK:            Align:         8
 // CHECK:            ValueKind:     HiddenGlobalOffsetZ
-// CHECK:            ValueType:     I64
 // CHECK:          - Size:          8
 // CHECK:            Align:         8
 // CHECK:            ValueKind:     HiddenPrintfBuffer
-// CHECK:            ValueType:     I8
 // CHECK:            AddrSpaceQual: Global
 // CHECK:  .end_amd_amdgpu_hsa_metadata
 .amd_amdgpu_hsa_metadata

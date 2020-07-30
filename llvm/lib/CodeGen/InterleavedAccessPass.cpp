@@ -280,7 +280,7 @@ static bool isReInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
 
 bool InterleavedAccess::lowerInterleavedLoad(
     LoadInst *LI, SmallVector<Instruction *, 32> &DeadInsts) {
-  if (!LI->isSimple())
+  if (!LI->isSimple() || isa<ScalableVectorType>(LI->getType()))
     return false;
 
   SmallVector<ShuffleVectorInst *, 4> Shuffles;
@@ -308,7 +308,8 @@ bool InterleavedAccess::lowerInterleavedLoad(
 
   unsigned Factor, Index;
 
-  unsigned NumLoadElements = cast<VectorType>(LI->getType())->getNumElements();
+  unsigned NumLoadElements =
+      cast<FixedVectorType>(LI->getType())->getNumElements();
   // Check if the first shufflevector is DE-interleave shuffle.
   if (!isDeInterleaveMask(Shuffles[0]->getShuffleMask(), Factor, Index,
                           MaxFactor, NumLoadElements))
@@ -421,13 +422,13 @@ bool InterleavedAccess::lowerInterleavedStore(
     return false;
 
   ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(SI->getValueOperand());
-  if (!SVI || !SVI->hasOneUse())
+  if (!SVI || !SVI->hasOneUse() || isa<ScalableVectorType>(SVI->getType()))
     return false;
 
   // Check if the shufflevector is RE-interleave shuffle.
   unsigned Factor;
   unsigned OpNumElts =
-      cast<VectorType>(SVI->getOperand(0)->getType())->getNumElements();
+      cast<FixedVectorType>(SVI->getOperand(0)->getType())->getNumElements();
   if (!isReInterleaveMask(SVI->getShuffleMask(), Factor, MaxFactor, OpNumElts))
     return false;
 

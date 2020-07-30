@@ -861,11 +861,8 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
     --I;
     if (I->getOffset() <= SLocOffset) {
       FileID Res = FileID::get(int(I - LocalSLocEntryTable.begin()));
-
-      // If this isn't an expansion, remember it.  We have good locality across
-      // FileID lookups.
-      if (!I->isExpansion())
-        LastFileIDLookup = Res;
+      // Remember it.  We have good locality across FileID lookups.
+      LastFileIDLookup = Res;
       NumLinearScans += NumProbes+1;
       return Res;
     }
@@ -882,11 +879,8 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
   unsigned LessIndex = 0;
   NumProbes = 0;
   while (true) {
-    bool Invalid = false;
     unsigned MiddleIndex = (GreaterIndex-LessIndex)/2+LessIndex;
-    unsigned MidOffset = getLocalSLocEntry(MiddleIndex, &Invalid).getOffset();
-    if (Invalid)
-      return FileID::get(0);
+    unsigned MidOffset = getLocalSLocEntry(MiddleIndex).getOffset();
 
     ++NumProbes;
 
@@ -898,15 +892,12 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
     }
 
     // If the middle index contains the value, succeed and return.
-    // FIXME: This could be made faster by using a function that's aware of
-    // being in the local area.
-    if (isOffsetInFileID(FileID::get(MiddleIndex), SLocOffset)) {
+    if (MiddleIndex + 1 == LocalSLocEntryTable.size() ||
+        SLocOffset < getLocalSLocEntry(MiddleIndex + 1).getOffset()) {
       FileID Res = FileID::get(MiddleIndex);
 
-      // If this isn't a macro expansion, remember it.  We have good locality
-      // across FileID lookups.
-      if (!LocalSLocEntryTable[MiddleIndex].isExpansion())
-        LastFileIDLookup = Res;
+      // Remember it.  We have good locality across FileID lookups.
+      LastFileIDLookup = Res;
       NumBinaryProbes += NumProbes;
       return Res;
     }
@@ -944,9 +935,7 @@ FileID SourceManager::getFileIDLoaded(unsigned SLocOffset) const {
     const SrcMgr::SLocEntry &E = getLoadedSLocEntry(I);
     if (E.getOffset() <= SLocOffset) {
       FileID Res = FileID::get(-int(I) - 2);
-
-      if (!E.isExpansion())
-        LastFileIDLookup = Res;
+      LastFileIDLookup = Res;
       NumLinearScans += NumProbes + 1;
       return Res;
     }
@@ -979,8 +968,7 @@ FileID SourceManager::getFileIDLoaded(unsigned SLocOffset) const {
 
     if (isOffsetInFileID(FileID::get(-int(MiddleIndex) - 2), SLocOffset)) {
       FileID Res = FileID::get(-int(MiddleIndex) - 2);
-      if (!E.isExpansion())
-        LastFileIDLookup = Res;
+      LastFileIDLookup = Res;
       NumBinaryProbes += NumProbes;
       return Res;
     }
@@ -1695,11 +1683,7 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
   // The location we're looking for isn't in the main file; look
   // through all of the local source locations.
   for (unsigned I = 0, N = local_sloc_entry_size(); I != N; ++I) {
-    bool Invalid = false;
-    const SLocEntry &SLoc = getLocalSLocEntry(I, &Invalid);
-    if (Invalid)
-      return FileID();
-
+    const SLocEntry &SLoc = getLocalSLocEntry(I);
     if (SLoc.isFile() && SLoc.getFile().getContentCache() &&
         SLoc.getFile().getContentCache()->OrigEntry == SourceFile)
       return FileID::get(I);

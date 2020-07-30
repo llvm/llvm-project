@@ -1,10 +1,10 @@
 ; Test we lose details of not inlined profile without '-sample-profile-merge-inlinee'
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -S | FileCheck -check-prefix=SCALE %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -S | FileCheck -check-prefix=SCALE %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -S | FileCheck -check-prefix=SCALE %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -S | FileCheck -check-prefix=SCALE %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -S | FileCheck -check-prefix=SCALE %s
 
 ; Test we properly merge not inlined profile properly with '-sample-profile-merge-inlinee'
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee -S | FileCheck -check-prefix=MERGE %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee -S | FileCheck -check-prefix=MERGE  %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -S | FileCheck -check-prefix=MERGE  %s
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 

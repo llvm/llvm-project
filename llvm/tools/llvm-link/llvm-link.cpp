@@ -399,7 +399,7 @@ int main(int argc, char **argv) {
     errs() << "Writing bitcode...\n";
   if (OutputAssembly) {
     Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
-  } else if (Force || !CheckBitcodeOutputToConsole(Out.os(), true))
+  } else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
     WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
 
   // Declare success.

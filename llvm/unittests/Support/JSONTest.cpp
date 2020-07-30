@@ -324,6 +324,9 @@ TEST(JSONTest, Integers) {
           double{-0x4000000000000000},
       },
 
+      // PR46470,
+      // https://developercommunity.visualstudio.com/content/problem/1093399/incorrect-result-when-printing-6917529027641081856.html
+#if !defined(_MSC_VER) || _MSC_VER < 1926
       {
           "Dynamically exact integer. Stored as double, convertible.",
           double{0x6000000000000000},
@@ -331,6 +334,7 @@ TEST(JSONTest, Integers) {
           int64_t{0x6000000000000000},
           double{0x6000000000000000},
       },
+#endif
 
       {
           "Dynamically integer, >64 bits. Stored as double, not convertible.",

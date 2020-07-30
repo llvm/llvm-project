@@ -747,5 +747,18 @@ id test22(int c, id x) {
   return c ? test22_0() : ({ id (^b)(void) = ^{ return x; }; test22_1(); b(); });
 }
 
+@interface Test23
+-(void)m:(int)i, ...;
+@end
+
+// CHECK-COMMON-LABEL: define void @test23(
+// CHECK-COMMON: %[[V9:.*]] = call i8* @llvm.objc.retainBlock(
+// CHECK-COMMON: %[[V10:.*]] = bitcast i8* %[[V9]] to void ()*
+// CHECK-COMMON: call void (i8*, i8*, i32, ...) bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i32, ...)*)(i8* %{{.*}}, i8* %{{.*}}, i32 123, void ()* %[[V10]])
+
+void test23(id x, Test23 *t) {
+  [t m:123, ^{ (void)x; }];
+}
+
 // CHECK: attributes [[NUW]] = { nounwind }
 // CHECK-UNOPT: attributes [[NUW]] = { nounwind }

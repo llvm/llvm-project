@@ -3910,7 +3910,7 @@ IOHandlerCursesGUI::IOHandlerCursesGUI(Debugger &debugger)
 void IOHandlerCursesGUI::Activate() {
   IOHandler::Activate();
   if (!m_app_ap) {
-    m_app_ap.reset(new Application(GetInputFILE(), GetOutputFILE()));
+    m_app_ap = std::make_unique<Application>(GetInputFILE(), GetOutputFILE());
 
     // This is both a window and a menu delegate
     std::shared_ptr<ApplicationDelegate> app_delegate_sp(

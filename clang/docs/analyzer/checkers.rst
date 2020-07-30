@@ -1836,6 +1836,19 @@ Check unreachable code.
    [x retain]; // warn
  }
 
+.. _alpha-cplusplus-SmartPtr:
+
+alpha.cplusplus.SmartPtr (C++)
+""""""""""""""""""""""""""""""
+Check for dereference of null smart pointers.
+
+.. code-block:: cpp
+
+ void deref_smart_ptr() {
+   std::unique_ptr<int> P;
+   *P; // warn: dereference of a default constructed smart unique_ptr
+ }
+
 alpha.llvm
 ^^^^^^^^^^
 

@@ -57,47 +57,26 @@ class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         new_platform = lldb.SBPlatform(lldb.remote_platform.GetName())
         self.dbg.SetSelectedPlatform(new_platform)
-        interpreter = self.dbg.GetCommandInterpreter()
 
         connect_url = "%s://%s:%s" % (protocol, hostname, str(hostport+1))
 
-        command = "platform connect %s" % (connect_url)
-
-        result = lldb.SBCommandReturnObject()
-
         # Test the default setting.
-        interpreter.HandleCommand("settings show target.auto-install-main-executable", result)
-        self.assertTrue(
-            result.Succeeded() and
-            "target.auto-install-main-executable (boolean) = true" in result.GetOutput(),
-            "Default settings for target.auto-install-main-executable failed.: %s - %s" %
-            (result.GetOutput(), result.GetError()))
+        self.expect("settings show target.auto-install-main-executable",
+                substrs=["target.auto-install-main-executable (boolean) = true"],
+                msg="Default settings for target.auto-install-main-executable failed.")
 
         # Disable the auto install.
-        interpreter.HandleCommand("settings set target.auto-install-main-executable false", result)
-        interpreter.HandleCommand("settings show target.auto-install-main-executable", result)
-        self.assertTrue(
-            result.Succeeded() and
-            "target.auto-install-main-executable (boolean) = false" in result.GetOutput(),
-            "Default settings for target.auto-install-main-executable failed.: %s - %s" %
-            (result.GetOutput(), result.GetError()))
+        self.runCmd("settings set target.auto-install-main-executable false")
+        self.expect("settings show target.auto-install-main-executable", 
+            substrs=["target.auto-install-main-executable (boolean) = false"])
 
-        interpreter.HandleCommand("platform select %s"%configuration.lldb_platform_name, result)
-        interpreter.HandleCommand(command, result)
-
-        self.assertTrue(
-            result.Succeeded(),
-            "platform process connect failed: %s - %s" %
-            (result.GetOutput(),result.GetError()))
+        self.runCmd("platform select %s"%configuration.lldb_platform_name)
+        self.runCmd("platform connect %s" % (connect_url))
 
         # Create the target with the original file.
-        interpreter.HandleCommand("target create --remote-file %s %s "%
-                                        (os.path.join(working_dir,dest.GetFilename()), self.getBuildArtifact("a.out")),
-                                      result)
-        self.assertTrue(
-            result.Succeeded(),
-            "platform create failed: %s - %s" %
-            (result.GetOutput(),result.GetError()))
+        self.runCmd("target create --remote-file %s %s "%
+                                        (os.path.join(working_dir,dest.GetFilename()),
+                                            self.getBuildArtifact("a.out")))
 
         target = new_debugger.GetSelectedTarget()
         breakpoint = target.BreakpointCreateByName("main")
@@ -115,10 +94,7 @@ class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual(frame.GetFunction().GetName(), "main")
 
-        interpreter.HandleCommand("target variable build", result)
-        self.assertTrue(
-            result.Succeeded() and
-            '"device"' in result.GetOutput(),
-            "Magic in the binary is wrong: %s " % result.GetOutput())
+        self.expect("target variable build", substrs=['"device"'],
+                msg="Magic in the binary is wrong")
 
         process.Continue()

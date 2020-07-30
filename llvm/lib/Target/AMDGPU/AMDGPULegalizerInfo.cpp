@@ -121,10 +121,10 @@ static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
     unsigned Size = Ty.getSizeInBits();
 
     LLT CoercedTy;
-    if (Size < 32) {
+    if (Size <= 32) {
       // <2 x s8> -> s16
-      assert(Size == 16);
-      CoercedTy = LLT::scalar(16);
+      // <4 x s8> -> s32
+      CoercedTy = LLT::scalar(Size);
     } else
       CoercedTy = LLT::scalarOrVector(Size / 32, 32);
 
@@ -982,15 +982,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Actions.bitcastIf(
       [=](const LegalityQuery &Query) -> bool {
         const LLT Ty = Query.Types[0];
+        const unsigned Size = Ty.getSizeInBits();
 
-        // Do not cast an extload/truncstore.
-        if (Ty.getSizeInBits() != Query.MMODescrs[0].SizeInBits)
-          return false;
+        if (Size != Query.MMODescrs[0].SizeInBits)
+          return Size <= 32 && Ty.isVector();
 
         if (loadStoreBitcastWorkaround(Ty) && isRegisterType(Ty))
           return true;
-        const unsigned Size = Ty.getSizeInBits();
-        return Ty.isVector() && isRegisterSize(Size) &&
+        return Ty.isVector() && (Size <= 32 || isRegisterSize(Size)) &&
                !isRegisterVectorElementType(Ty.getElementType());
       }, bitcastToRegisterType(0));
 
@@ -2003,10 +2002,12 @@ bool AMDGPULegalizerInfo::legalizeSinCos(
   return true;
 }
 
-bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(
-  Register DstReg, LLT PtrTy,
-  MachineIRBuilder &B, const GlobalValue *GV,
-  unsigned Offset, unsigned GAFlags) const {
+bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
+                                                  MachineIRBuilder &B,
+                                                  const GlobalValue *GV,
+                                                  int64_t Offset,
+                                                  unsigned GAFlags) const {
+  assert(isInt<32>(Offset + 4) && "32-bit offset is expected!");
   // In order to support pc-relative addressing, SI_PC_ADD_REL_OFFSET is lowered
   // to the following code sequence:
   //
@@ -2097,7 +2098,9 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
         return true; // Leave in place;
       }
 
-      B.buildConstant(DstReg, MFI->allocateLDSGlobal(B.getDataLayout(), *GV));
+      B.buildConstant(
+          DstReg,
+          MFI->allocateLDSGlobal(B.getDataLayout(), *cast<GlobalVariable>(GV)));
       MI.eraseFromParent();
       return true;
     }
@@ -2439,7 +2442,8 @@ const ArgDescriptor *AMDGPULegalizerInfo::getArgDescriptor(
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
   const ArgDescriptor *Arg;
   const TargetRegisterClass *RC;
-  std::tie(Arg, RC) = MFI->getPreloadedValue(ArgType);
+  LLT ArgTy;
+  std::tie(Arg, RC, ArgTy) = MFI->getPreloadedValue(ArgType);
   if (!Arg) {
     LLVM_DEBUG(dbgs() << "Required arg register missing\n");
     return nullptr;
@@ -2519,114 +2523,56 @@ bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
   return false;
 }
 
-static Register buildDivRCP(MachineIRBuilder &B, Register Src) {
-  const LLT S32 = LLT::scalar(32);
-
-  auto Cvt0 = B.buildUITOFP(S32, Src);
-  auto RcpIFlag = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {Cvt0});
-  auto FPUIntMaxPlus1 = B.buildFConstant(S32, BitsToFloat(0x4f800000));
-  auto Mul = B.buildFMul(S32, RcpIFlag, FPUIntMaxPlus1);
-  return B.buildFPTOUI(S32, Mul).getReg(0);
-}
-
 void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
                                                   Register DstReg,
-                                                  Register Num,
-                                                  Register Den,
-                                                  bool IsRem) const {
+                                                  Register X,
+                                                  Register Y,
+                                                  bool IsDiv) const {
   const LLT S1 = LLT::scalar(1);
   const LLT S32 = LLT::scalar(32);
 
-  // RCP =  URECIP(Den) = 2^32 / Den + e
-  // e is rounding error.
-  auto RCP = buildDivRCP(B, Den);
+  // See AMDGPUCodeGenPrepare::expandDivRem32 for a description of the
+  // algorithm used here.
 
-  // RCP_LO = mul(RCP, Den)
-  auto RCP_LO = B.buildMul(S32, RCP, Den);
+  // Initial estimate of inv(y).
+  auto FloatY = B.buildUITOFP(S32, Y);
+  auto RcpIFlag = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {FloatY});
+  auto Scale = B.buildFConstant(S32, BitsToFloat(0x4f7ffffe));
+  auto ScaledY = B.buildFMul(S32, RcpIFlag, Scale);
+  auto Z = B.buildFPTOUI(S32, ScaledY);
 
-  // RCP_HI = mulhu (RCP, Den) */
-  auto RCP_HI = B.buildUMulH(S32, RCP, Den);
+  // One round of UNR.
+  auto NegY = B.buildSub(S32, B.buildConstant(S32, 0), Y);
+  auto NegYZ = B.buildMul(S32, NegY, Z);
+  Z = B.buildAdd(S32, Z, B.buildUMulH(S32, Z, NegYZ));
 
-  // NEG_RCP_LO = -RCP_LO
-  auto Zero = B.buildConstant(S32, 0);
-  auto NEG_RCP_LO = B.buildSub(S32, Zero, RCP_LO);
+  // Quotient/remainder estimate.
+  auto Q = B.buildUMulH(S32, X, Z);
+  auto R = B.buildSub(S32, X, B.buildMul(S32, Q, Y));
 
-  // ABS_RCP_LO = (RCP_HI == 0 ? NEG_RCP_LO : RCP_LO)
-  auto CmpRcpHiZero = B.buildICmp(CmpInst::ICMP_EQ, S1, RCP_HI, Zero);
-  auto ABS_RCP_LO = B.buildSelect(S32, CmpRcpHiZero, NEG_RCP_LO, RCP_LO);
-
-  // Calculate the rounding error from the URECIP instruction
-  // E = mulhu(ABS_RCP_LO, RCP)
-  auto E = B.buildUMulH(S32, ABS_RCP_LO, RCP);
-
-  // RCP_A_E = RCP + E
-  auto RCP_A_E = B.buildAdd(S32, RCP, E);
-
-  // RCP_S_E = RCP - E
-  auto RCP_S_E = B.buildSub(S32, RCP, E);
-
-  // Tmp0 = (RCP_HI == 0 ? RCP_A_E : RCP_SUB_E)
-  auto Tmp0 = B.buildSelect(S32, CmpRcpHiZero, RCP_A_E, RCP_S_E);
-
-  // Quotient = mulhu(Tmp0, Num)stmp
-  auto Quotient = B.buildUMulH(S32, Tmp0, Num);
-
-  // Num_S_Remainder = Quotient * Den
-  auto Num_S_Remainder = B.buildMul(S32, Quotient, Den);
-
-  // Remainder = Num - Num_S_Remainder
-  auto Remainder = B.buildSub(S32, Num, Num_S_Remainder);
-
-  // Remainder_GE_Den = Remainder >= Den
-  auto Remainder_GE_Den = B.buildICmp(CmpInst::ICMP_UGE, S1, Remainder, Den);
-
-  // Remainder_GE_Zero = Num >= Num_S_Remainder;
-  auto Remainder_GE_Zero = B.buildICmp(CmpInst::ICMP_UGE, S1,
-                                       Num, Num_S_Remainder);
-
-  // Tmp1 = Remainder_GE_Den & Remainder_GE_Zero
-  auto Tmp1 = B.buildAnd(S1, Remainder_GE_Den, Remainder_GE_Zero);
-
-  // Calculate Division result:
-
-  // Quotient_A_One = Quotient + 1
+  // First quotient/remainder refinement.
   auto One = B.buildConstant(S32, 1);
-  auto Quotient_A_One = B.buildAdd(S32, Quotient, One);
+  auto Cond = B.buildICmp(CmpInst::ICMP_UGE, S1, R, Y);
+  if (IsDiv)
+    Q = B.buildSelect(S32, Cond, B.buildAdd(S32, Q, One), Q);
+  R = B.buildSelect(S32, Cond, B.buildSub(S32, R, Y), R);
 
-  // Quotient_S_One = Quotient - 1
-  auto Quotient_S_One = B.buildSub(S32, Quotient, One);
-
-  // Div = (Tmp1 ? Quotient_A_One : Quotient)
-  auto Div = B.buildSelect(S32, Tmp1, Quotient_A_One, Quotient);
-
-  // Div = (Remainder_GE_Zero ? Div : Quotient_S_One)
-  if (IsRem) {
-    Div = B.buildSelect(S32, Remainder_GE_Zero, Div, Quotient_S_One);
-
-    // Calculate Rem result:
-    auto Remainder_S_Den = B.buildSub(S32, Remainder, Den);
-
-    // Remainder_A_Den = Remainder + Den
-    auto Remainder_A_Den = B.buildAdd(S32, Remainder, Den);
-
-    // Rem = (Tmp1 ? Remainder_S_Den : Remainder)
-    auto Rem = B.buildSelect(S32, Tmp1, Remainder_S_Den, Remainder);
-
-    // Rem = (Remainder_GE_Zero ? Rem : Remainder_A_Den)
-    B.buildSelect(DstReg, Remainder_GE_Zero, Rem, Remainder_A_Den);
-  } else {
-    B.buildSelect(DstReg, Remainder_GE_Zero, Div, Quotient_S_One);
-  }
+  // Second quotient/remainder refinement.
+  Cond = B.buildICmp(CmpInst::ICMP_UGE, S1, R, Y);
+  if (IsDiv)
+    B.buildSelect(DstReg, Cond, B.buildAdd(S32, Q, One), Q);
+  else
+    B.buildSelect(DstReg, Cond, B.buildSub(S32, R, Y), R);
 }
 
 bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
                                               MachineRegisterInfo &MRI,
                                               MachineIRBuilder &B) const {
-  const bool IsRem = MI.getOpcode() == AMDGPU::G_UREM;
+  const bool IsDiv = MI.getOpcode() == AMDGPU::G_UDIV;
   Register DstReg = MI.getOperand(0).getReg();
   Register Num = MI.getOperand(1).getReg();
   Register Den = MI.getOperand(2).getReg();
-  legalizeUDIV_UREM32Impl(B, DstReg, Num, Den, IsRem);
+  legalizeUDIV_UREM32Impl(B, DstReg, Num, Den, IsDiv);
   MI.eraseFromParent();
   return true;
 }
@@ -2674,15 +2620,14 @@ static std::pair<Register, Register> emitReciprocalU64(MachineIRBuilder &B,
   return {ResultLo.getReg(0), ResultHi.getReg(0)};
 }
 
-bool AMDGPULegalizerInfo::legalizeUDIV_UREM64(MachineInstr &MI,
-                                              MachineRegisterInfo &MRI,
-                                              MachineIRBuilder &B) const {
-  const bool IsDiv = MI.getOpcode() == TargetOpcode::G_UDIV;
+void AMDGPULegalizerInfo::legalizeUDIV_UREM64Impl(MachineIRBuilder &B,
+                                                  Register DstReg,
+                                                  Register Numer,
+                                                  Register Denom,
+                                                  bool IsDiv) const {
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
   const LLT S1 = LLT::scalar(1);
-  Register Numer = MI.getOperand(1).getReg();
-  Register Denom = MI.getOperand(2).getReg();
   Register RcpLo, RcpHi;
 
   std::tie(RcpLo, RcpHi) = emitReciprocalU64(B, Denom);
@@ -2778,73 +2723,82 @@ bool AMDGPULegalizerInfo::legalizeUDIV_UREM64(MachineInstr &MI,
   if (IsDiv) {
     auto Sel1 = B.buildSelect(
         S64, B.buildICmp(CmpInst::ICMP_NE, S1, C6, Zero32), Add4, Add3);
-    B.buildSelect(MI.getOperand(0),
+    B.buildSelect(DstReg,
                   B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32), Sel1, MulHi3);
   } else {
     auto Sel2 = B.buildSelect(
         S64, B.buildICmp(CmpInst::ICMP_NE, S1, C6, Zero32), Sub3, Sub2);
-    B.buildSelect(MI.getOperand(0),
+    B.buildSelect(DstReg,
                   B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32), Sel2, Sub1);
   }
-
-  MI.eraseFromParent();
-  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeUDIV_UREM(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
-  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-  if (Ty == LLT::scalar(32))
-    return legalizeUDIV_UREM32(MI, MRI, B);
-  if (Ty == LLT::scalar(64))
-    return legalizeUDIV_UREM64(MI, MRI, B);
-  return false;
-}
-
-bool AMDGPULegalizerInfo::legalizeSDIV_SREM32(MachineInstr &MI,
-                                              MachineRegisterInfo &MRI,
-                                              MachineIRBuilder &B) const {
+  const LLT S64 = LLT::scalar(64);
   const LLT S32 = LLT::scalar(32);
-
-  const bool IsRem = MI.getOpcode() == AMDGPU::G_SREM;
+  const bool IsDiv = MI.getOpcode() == AMDGPU::G_UDIV;
   Register DstReg = MI.getOperand(0).getReg();
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
+  Register Num = MI.getOperand(1).getReg();
+  Register Den = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(DstReg);
 
-  auto ThirtyOne = B.buildConstant(S32, 31);
-  auto LHSign = B.buildAShr(S32, LHS, ThirtyOne);
-  auto RHSign = B.buildAShr(S32, RHS, ThirtyOne);
-
-  LHS = B.buildAdd(S32, LHS, LHSign).getReg(0);
-  RHS = B.buildAdd(S32, RHS, RHSign).getReg(0);
-
-  LHS = B.buildXor(S32, LHS, LHSign).getReg(0);
-  RHS = B.buildXor(S32, RHS, RHSign).getReg(0);
-
-  Register UDivRem = MRI.createGenericVirtualRegister(S32);
-  legalizeUDIV_UREM32Impl(B, UDivRem, LHS, RHS, IsRem);
-
-  if (IsRem) {
-    auto RSign = LHSign; // Remainder sign is the same as LHS
-    UDivRem = B.buildXor(S32, UDivRem, RSign).getReg(0);
-    B.buildSub(DstReg, UDivRem, RSign);
-  } else {
-    auto DSign = B.buildXor(S32, LHSign, RHSign);
-    UDivRem = B.buildXor(S32, UDivRem, DSign).getReg(0);
-    B.buildSub(DstReg, UDivRem, DSign);
-  }
+  if (Ty == S32)
+    legalizeUDIV_UREM32Impl(B, DstReg, Num, Den, IsDiv);
+  else if (Ty == S64)
+    legalizeUDIV_UREM64Impl(B, DstReg, Num, Den, IsDiv);
+  else
+    return false;
 
   MI.eraseFromParent();
   return true;
+
 }
 
 bool AMDGPULegalizerInfo::legalizeSDIV_SREM(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
-  if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32))
-    return legalizeSDIV_SREM32(MI, MRI, B);
-  return false;
+  const LLT S64 = LLT::scalar(64);
+  const LLT S32 = LLT::scalar(32);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  const LLT Ty = MRI.getType(DstReg);
+  if (Ty != S32 && Ty != S64)
+    return false;
+
+  const bool IsDiv = MI.getOpcode() == AMDGPU::G_SDIV;
+
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  auto SignBitOffset = B.buildConstant(S32, Ty.getSizeInBits() - 1);
+  auto LHSign = B.buildAShr(Ty, LHS, SignBitOffset);
+  auto RHSign = B.buildAShr(Ty, RHS, SignBitOffset);
+
+  LHS = B.buildAdd(Ty, LHS, LHSign).getReg(0);
+  RHS = B.buildAdd(Ty, RHS, RHSign).getReg(0);
+
+  LHS = B.buildXor(Ty, LHS, LHSign).getReg(0);
+  RHS = B.buildXor(Ty, RHS, RHSign).getReg(0);
+
+  Register UDivRem = MRI.createGenericVirtualRegister(Ty);
+  if (Ty == S32)
+    legalizeUDIV_UREM32Impl(B, UDivRem, LHS, RHS, IsDiv);
+  else
+    legalizeUDIV_UREM64Impl(B, UDivRem, LHS, RHS, IsDiv);
+
+  Register Sign;
+  if (IsDiv)
+    Sign = B.buildXor(Ty, LHSign, RHSign).getReg(0);
+  else
+    Sign = LHSign.getReg(0); // Remainder sign is the same as LHS
+
+  UDivRem = B.buildXor(Ty, UDivRem, Sign).getReg(0);
+  B.buildSub(DstReg, UDivRem, Sign);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
@@ -3167,8 +3121,9 @@ bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
 
   const ArgDescriptor *Arg;
   const TargetRegisterClass *RC;
-  std::tie(Arg, RC)
-    = MFI->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
+  LLT ArgTy;
+  std::tie(Arg, RC, ArgTy) =
+      MFI->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
   if (!Arg)
     return false;
 

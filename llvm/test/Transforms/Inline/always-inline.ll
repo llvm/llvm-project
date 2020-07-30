@@ -212,7 +212,7 @@ entry:
 ; CHECK: ret void
 }
 
-; The 'inner10' and 'outer10' functions test a frustrating consquence of the
+; The 'inner10' and 'outer10' functions test a frustrating consequence of the
 ; current 'alwaysinline' semantic model. Because such functions are allowed to
 ; be external functions, it may be necessary to both inline all of their uses
 ; and leave them in the final output. These tests can be removed if and when

@@ -236,3 +236,111 @@ entry:
   tail call void @use_foo(%struct.Foo* %f)
   ret void
 }
+
+define i32 @test_load_sptr32(i32 addrspace(270)* %i) {
+; CHECK-LABEL: test_load_sptr32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl (%eax), %eax
+; CHECK-NEXT:    retl
+; CHECK-O0-LABEL: test_load_sptr32:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl (%eax), %eax
+; CHECK-O0-NEXT:    retl
+entry:
+  %0 = load i32, i32 addrspace(270)* %i, align 4
+  ret i32 %0
+}
+
+define i32 @test_load_uptr32(i32 addrspace(271)* %i) {
+; CHECK-LABEL: test_load_uptr32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl (%eax), %eax
+; CHECK-NEXT:    retl
+; CHECK-O0-LABEL: test_load_uptr32:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl (%eax), %eax
+; CHECK-O0-NEXT:    retl
+entry:
+  %0 = load i32, i32 addrspace(271)* %i, align 4
+  ret i32 %0
+}
+
+define i32 @test_load_ptr64(i32 addrspace(272)* %i) {
+; CHECK-LABEL: test_load_ptr64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl (%eax), %eax
+; CHECK-NEXT:    retl
+; CHECK-O0-LABEL: test_load_ptr64:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    pushl %eax
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-O0-NEXT:    movl (%ecx), %ecx
+; CHECK-O0-NEXT:    movl %eax, (%esp)
+; CHECK-O0-NEXT:    movl %ecx, %eax
+; CHECK-O0-NEXT:    popl %ecx
+; CHECK-O0-NEXT:    retl
+entry:
+  %0 = load i32, i32 addrspace(272)* %i, align 8
+  ret i32 %0
+}
+
+define void @test_store_sptr32(i32 addrspace(270)* %s, i32 %i) {
+; CHECK-LABEL: test_store_sptr32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, (%ecx)
+; CHECK-NEXT:    retl
+; CHECK-O0-LABEL: test_store_sptr32:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-O0-NEXT:    movl %eax, (%ecx)
+; CHECK-O0-NEXT:    retl
+entry:
+  store i32 %i, i32 addrspace(270)* %s, align 4
+  ret void
+}
+
+define void @test_store_uptr32(i32 addrspace(271)* %s, i32 %i) {
+; CHECK-LABEL: test_store_uptr32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, (%ecx)
+; CHECK-NEXT:    retl
+; CHECK-O0-LABEL: test_store_uptr32:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-O0-NEXT:    movl %eax, (%ecx)
+; CHECK-O0-NEXT:    retl
+entry:
+  store i32 %i, i32 addrspace(271)* %s, align 4
+  ret void
+}
+
+define void @test_store_ptr64(i32 addrspace(272)* %s, i32 %i) {
+; CHECK-LABEL: test_store_ptr64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, (%ecx)
+; CHECK-NEXT:    retl
+; CHECK-O0-LABEL: test_store_ptr64:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-O0-NEXT:    movl %edx, (%ecx)
+; CHECK-O0-NEXT:    retl
+entry:
+  store i32 %i, i32 addrspace(272)* %s, align 8
+  ret void
+}

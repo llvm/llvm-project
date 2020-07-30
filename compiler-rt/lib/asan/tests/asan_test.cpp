@@ -588,9 +588,6 @@ NOINLINE void TouchStackFunc() {
     A[i] = i*i;
 }
 
-// Disabled due to rdar://problem/62141412
-#if !(defined(__APPLE__) && defined(__i386__))
-
 // Test that we handle longjmp and do not report false positives on stack.
 TEST(AddressSanitizer, LongJmpTest) {
   static jmp_buf buf;
@@ -600,7 +597,6 @@ TEST(AddressSanitizer, LongJmpTest) {
     TouchStackFunc();
   }
 }
-#endif
 
 #if !defined(_WIN32)  // Only basic longjmp is available on Windows.
 NOINLINE void UnderscopeLongJmpFunc1(jmp_buf buf) {
@@ -662,8 +658,6 @@ TEST(AddressSanitizer, UnderscopeLongJmpTest) {
   }
 }
 
-// Disabled due to rdar://problem/62141412
-#if !(defined(__APPLE__) && defined(__i386__))
 TEST(AddressSanitizer, SigLongJmpTest) {
   static sigjmp_buf buf;
   if (!sigsetjmp(buf, 1)) {
@@ -672,8 +666,6 @@ TEST(AddressSanitizer, SigLongJmpTest) {
     TouchStackFunc();
   }
 }
-#endif
-
 #endif
 
 // FIXME: Why does clang-cl define __EXCEPTIONS?

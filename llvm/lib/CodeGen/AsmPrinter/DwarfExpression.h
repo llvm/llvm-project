@@ -276,6 +276,9 @@ protected:
   /// DWARF block which has been emitted to the temporary buffer.
   void finalizeEntryValue();
 
+  /// Cancel the emission of an entry value.
+  void cancelEntryValue();
+
   ~DwarfExpression() = default;
 
 public:

@@ -19,7 +19,7 @@ A::A(int i, ...) {}
 // CHECK-DAG: ![[A:.*]] = distinct !DISubprogram(name: "A", linkageName: "_ZN1BCI11AEiz"
 void foo() {
 // CHECK-DAG: ![[LOC]] = !DILocation(line: 0, scope: ![[A]], inlinedAt: ![[INL:[0-9]+]])
-// CHECK-DAG: ![[INL]] = !DILocation(line: [[@LINE+1]], scope: ![[FOO]])
+// CHECK-DAG: ![[INL]] = !DILocation(line: [[@LINE+1]], column: 5, scope: ![[FOO]])
   B b(0);
-// CHECK: ![[NOINL]] = !DILocation(line: [[@LINE+1]], scope: !{{[0-9]+}})
+// CHECK: ![[NOINL]] = !DILocation(line: [[@LINE+1]], column: 1, scope: !{{[0-9]+}})
 }

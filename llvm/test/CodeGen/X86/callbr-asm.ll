@@ -14,7 +14,7 @@ define i32 @test1(i32 %a) {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp .Ltmp0
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB0_1: # %normal
+; CHECK-NEXT:  # %bb.1: # %normal
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
@@ -89,7 +89,7 @@ define i32 @test3(i32 %a) {
 ; CHECK-NEXT:    jmp .Ltmp2
 ; CHECK-NEXT:    jmp .Ltmp3
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB2_5: # %normal0
+; CHECK-NEXT:  # %bb.5: # %normal0
 ; CHECK-NEXT:    # in Loop: Header=BB2_4 Depth=4
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    jmp .Ltmp1
@@ -97,7 +97,7 @@ define i32 @test3(i32 %a) {
 ; CHECK-NEXT:    jmp .Ltmp3
 ; CHECK-NEXT:    jmp .Ltmp4
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB2_6: # %normal1
+; CHECK-NEXT:  # %bb.6: # %normal1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    retl
 entry:
@@ -135,11 +135,11 @@ define void @test4() {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    ja .Ltmp5{{$}}
+; CHECK-NEXT:    ja .Ltmp5
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB3_1: # %asm.fallthrough
+; CHECK-NEXT:  # %bb.1: # %asm.fallthrough
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    ja .Ltmp5{{$}}
+; CHECK-NEXT:    ja .Ltmp5
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  .Ltmp5: # Block address taken
 ; CHECK-NEXT:  .LBB3_3: # %quux

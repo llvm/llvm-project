@@ -88,7 +88,7 @@ class ExprCommandWithThrowTestCase(TestBase):
         options.SetTrapExceptions(False)
         value = frame.EvaluateExpression("[my_class iCatchMyself]", options)
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
         self.assertEquals(value.GetValueAsUnsigned(), 57)
         self.check_after_call()
         options.SetTrapExceptions(True)

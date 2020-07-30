@@ -1,5 +1,4 @@
-! RUN: %S/test_any.sh %s %t %f18
-! EXEC: ${F18} -funparse-with-symbols %s 2>&1 | ${FileCheck} %s
+! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: Label '60' was not found
 
 subroutine s(a)

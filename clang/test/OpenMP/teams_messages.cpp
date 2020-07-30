@@ -1,7 +1,8 @@
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp -std=c++11 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -std=c++11 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-version=50 -fopenmp-simd -std=c++11 -o - %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}

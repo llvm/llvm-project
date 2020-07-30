@@ -61,35 +61,8 @@ public:
 
 /// Unfortunately Scalar's operator==() is really picky.
 static Scalar GetScalar(unsigned bits, uint64_t value, bool sign) {
-  Scalar scalar;
-  auto type = Scalar::GetBestTypeForBitSize(bits, sign);
-  switch (type) {
-  case Scalar::e_sint:
-    scalar = Scalar((int)value);
-    break;
-  case Scalar::e_slong:
-    scalar = Scalar((long)value);
-    break;
-  case Scalar::e_slonglong:
-    scalar = Scalar((long long)value);
-    break;
-  case Scalar::e_uint:
-    scalar = Scalar((unsigned int)value);
-    break;
-  case Scalar::e_ulong:
-    scalar = Scalar((unsigned long)value);
-    break;
-  case Scalar::e_ulonglong:
-    scalar = Scalar((unsigned long long)value);
-    break;
-  default:
-    llvm_unreachable("not implemented");
-  }
-  scalar.TruncOrExtendTo(type, bits);
-  if (sign)
-    scalar.MakeSigned();
-  else
-    scalar.MakeUnsigned();
+  Scalar scalar(value);
+  scalar.TruncOrExtendTo(bits, sign);
   return scalar;
 }
 
@@ -121,8 +94,7 @@ TEST(DWARFExpression, DW_OP_convert) {
       "      - Attribute:       DW_AT_byte_size\n"
       "        Form:            DW_FORM_data1\n"
       "debug_info:\n"
-      "  - Length:\n"
-      "      TotalLength:     0\n"
+      "  - Length:          0\n"
       "    Version:         4\n"
       "    AbbrOffset:      0\n"
       "    AddrSize:        8\n"

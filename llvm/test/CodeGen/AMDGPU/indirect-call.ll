@@ -81,16 +81,19 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, gv.fptr0@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, gv.fptr0@rel32@hi+4
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GCN-NEXT:    s_mov_b32 s13, s15
+; GCN-NEXT:    s_mov_b32 s12, s14
+; GCN-NEXT:    s_getpc_b64 s[14:15]
+; GCN-NEXT:    s_add_u32 s14, s14, gv.fptr0@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s15, s15, gv.fptr0@rel32@hi+4
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
+; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_endpgm
   %fptr = load void()*, void()* addrspace(4)* @gv.fptr0
   call void %fptr()
@@ -174,17 +177,20 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, gv.fptr1@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, gv.fptr1@rel32@hi+4
+; GCN-NEXT:    s_mov_b32 s13, s15
+; GCN-NEXT:    s_mov_b32 s12, s14
+; GCN-NEXT:    s_getpc_b64 s[14:15]
+; GCN-NEXT:    s_add_u32 s14, s14, gv.fptr1@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s15, s15, gv.fptr1@rel32@hi+4
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x7b
+; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_endpgm
   %fptr = load void(i32)*, void(i32)* addrspace(4)* @gv.fptr1
   call void %fptr(i32 123)

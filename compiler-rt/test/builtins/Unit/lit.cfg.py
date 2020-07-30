@@ -5,6 +5,17 @@ import platform
 
 import lit.formats
 
+# Choose between lit's internal shell pipeline runner and a real shell.  If
+# LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
+use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if use_lit_shell:
+    # 0 is external, "" is default, and everything else is internal.
+    execute_external = (use_lit_shell == "0")
+else:
+    # Otherwise we default to internal on Windows and external elsewhere, as
+    # bash on Windows is usually very slow.
+    execute_external = (not sys.platform in ['win32'])
+
 def get_required_attr(config, attr_name):
   attr_value = getattr(config, attr_name, None)
   if attr_value == None:
@@ -35,10 +46,16 @@ elif config.host_os  == 'Darwin':
 else:
   base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.builtins%s.a"
                           % config.target_suffix)
+  if sys.platform in ['win32'] and execute_external:
+    # Don't pass dosish path separator to msys bash.exe.
+    base_lib = base_lib.replace('\\', '/')
   config.substitutions.append( ("%librt ", base_lib + ' -lc -lm ') )
 
 builtins_source_dir = os.path.join(
   get_required_attr(config, "compiler_rt_src_root"), "lib", "builtins")
+if sys.platform in ['win32'] and execute_external:
+  # Don't pass dosish path separator to msys bash.exe.
+  builtins_source_dir = builtins_source_dir.replace('\\', '/')
 builtins_lit_source_dir = get_required_attr(config, "builtins_lit_source_dir")
 
 extra_link_flags = ["-nodefaultlibs"]

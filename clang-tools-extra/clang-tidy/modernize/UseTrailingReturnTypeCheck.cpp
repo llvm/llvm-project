@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
 

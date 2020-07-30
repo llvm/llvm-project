@@ -844,7 +844,6 @@ bool GCOVProfiler::emitProfileArcs() {
         continue;
       // TODO: Functions using scope-based EH are currently not supported.
       if (isUsingScopeBasedEH(F)) continue;
-      if (!Result) Result = true;
 
       DenseMap<std::pair<BasicBlock *, BasicBlock *>, unsigned> EdgeToCounter;
       unsigned Edges = 0;
@@ -939,6 +938,7 @@ bool GCOVProfiler::emitProfileArcs() {
     Builder.CreateRetVoid();
 
     appendToGlobalCtors(*M, F, 0);
+    Result = true;
   }
 
   return Result;

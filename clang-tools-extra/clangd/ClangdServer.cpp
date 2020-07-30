@@ -8,6 +8,7 @@
 
 #include "ClangdServer.h"
 #include "CodeComplete.h"
+#include "Config.h"
 #include "FindSymbols.h"
 #include "Format.h"
 #include "HeaderSourceSwitch.h"
@@ -132,7 +133,7 @@ ClangdServer::Options::operator TUScheduler::Options() const {
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
-    : TFS(TFS),
+    : ConfigProvider(Opts.ConfigProvider), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
@@ -147,7 +148,14 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
       WorkScheduler(
-          CDB, TUScheduler::Options(Opts),
+          CDB,
+          [&, this] {
+            TUScheduler::Options O(Opts);
+            O.ContextProvider = [this](PathRef P) {
+              return createProcessingContext(P);
+            };
+            return O;
+          }(),
           std::make_unique<UpdateIndexCallbacks>(
               DynamicIdx.get(), Callbacks, Opts.TheiaSemanticHighlighting)) {
   // Adds an index to the stack, at higher priority than existing indexes.
@@ -170,7 +178,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
         [Callbacks](BackgroundQueue::Stats S) {
           if (Callbacks)
             Callbacks->onBackgroundIndexProgress(S);
-        });
+        },
+        [this](PathRef P) { return createProcessingContext(P); });
     AddIndex(BackgroundIdx.get());
   }
   if (DynamicIdx)
@@ -296,40 +305,46 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
                                 std::move(Action));
 }
 
-llvm::Expected<tooling::Replacements>
-ClangdServer::formatRange(llvm::StringRef Code, PathRef File, Range Rng) {
+void ClangdServer::formatRange(PathRef File, llvm::StringRef Code, Range Rng,
+                               Callback<tooling::Replacements> CB) {
   llvm::Expected<size_t> Begin = positionToOffset(Code, Rng.start);
   if (!Begin)
-    return Begin.takeError();
+    return CB(Begin.takeError());
   llvm::Expected<size_t> End = positionToOffset(Code, Rng.end);
   if (!End)
-    return End.takeError();
-  return formatCode(Code, File, {tooling::Range(*Begin, *End - *Begin)});
+    return CB(End.takeError());
+  formatCode(File, Code, {tooling::Range(*Begin, *End - *Begin)},
+             std::move(CB));
 }
 
-llvm::Expected<tooling::Replacements>
-ClangdServer::formatFile(llvm::StringRef Code, PathRef File) {
+void ClangdServer::formatFile(PathRef File, llvm::StringRef Code,
+                              Callback<tooling::Replacements> CB) {
   // Format everything.
-  return formatCode(Code, File, {tooling::Range(0, Code.size())});
+  formatCode(File, Code, {tooling::Range(0, Code.size())}, std::move(CB));
 }
 
-llvm::Expected<std::vector<TextEdit>>
-ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos,
-                           StringRef TriggerText) {
+void ClangdServer::formatOnType(PathRef File, llvm::StringRef Code,
+                                Position Pos, StringRef TriggerText,
+                                Callback<std::vector<TextEdit>> CB) {
   llvm::Expected<size_t> CursorPos = positionToOffset(Code, Pos);
   if (!CursorPos)
-    return CursorPos.takeError();
-  auto Style = format::getStyle(format::DefaultFormatStyle, File,
-                                format::DefaultFallbackStyle, Code,
-                                TFS.view(/*CWD=*/llvm::None).get());
-  if (!Style)
-    return Style.takeError();
+    return CB(CursorPos.takeError());
+  auto Action = [File = File.str(), Code = Code.str(),
+                 TriggerText = TriggerText.str(), CursorPos = *CursorPos,
+                 CB = std::move(CB), this]() mutable {
+    auto Style = format::getStyle(format::DefaultFormatStyle, File,
+                                  format::DefaultFallbackStyle, Code,
+                                  TFS.view(/*CWD=*/llvm::None).get());
+    if (!Style)
+      return CB(Style.takeError());
 
-  std::vector<TextEdit> Result;
-  for (const tooling::Replacement &R :
-       formatIncremental(Code, *CursorPos, TriggerText, *Style))
-    Result.push_back(replacementToEdit(Code, R));
-  return Result;
+    std::vector<TextEdit> Result;
+    for (const tooling::Replacement &R :
+         formatIncremental(Code, CursorPos, TriggerText, *Style))
+      Result.push_back(replacementToEdit(Code, R));
+    return CB(Result);
+  };
+  WorkScheduler.run("FormatOnType", File, std::move(Action));
 }
 
 void ClangdServer::prepareRename(PathRef File, Position Pos,
@@ -561,21 +576,25 @@ void ClangdServer::switchSourceHeader(
   WorkScheduler.runWithAST("SwitchHeaderSource", Path, std::move(Action));
 }
 
-llvm::Expected<tooling::Replacements>
-ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
-                         llvm::ArrayRef<tooling::Range> Ranges) {
+void ClangdServer::formatCode(PathRef File, llvm::StringRef Code,
+                              llvm::ArrayRef<tooling::Range> Ranges,
+                              Callback<tooling::Replacements> CB) {
   // Call clang-format.
-  format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS);
-  tooling::Replacements IncludeReplaces =
-      format::sortIncludes(Style, Code, Ranges, File);
-  auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
-  if (!Changed)
-    return Changed.takeError();
+  auto Action = [File = File.str(), Code = Code.str(), Ranges = Ranges.vec(),
+                 CB = std::move(CB), this]() mutable {
+    format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS);
+    tooling::Replacements IncludeReplaces =
+        format::sortIncludes(Style, Code, Ranges, File);
+    auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
+    if (!Changed)
+      return CB(Changed.takeError());
 
-  return IncludeReplaces.merge(format::reformat(
-      Style, *Changed,
-      tooling::calculateRangesAfterReplacements(IncludeReplaces, Ranges),
-      File));
+    CB(IncludeReplaces.merge(format::reformat(
+        Style, *Changed,
+        tooling::calculateRangesAfterReplacements(IncludeReplaces, Ranges),
+        File)));
+  };
+  WorkScheduler.run("Format", File, std::move(Action));
 }
 
 void ClangdServer::findDocumentHighlights(
@@ -636,7 +655,7 @@ void ClangdServer::workspaceSymbols(
     llvm::StringRef Query, int Limit,
     Callback<std::vector<SymbolInformation>> CB) {
   WorkScheduler.run(
-      "getWorkspaceSymbols",
+      "getWorkspaceSymbols", /*Path=*/"",
       [Query = Query.str(), Limit, CB = std::move(CB), this]() mutable {
         CB(clangd::getWorkspaceSymbols(Query, Limit, Index,
                                        WorkspaceRoot.getValueOr("")));
@@ -724,6 +743,31 @@ void ClangdServer::semanticHighlights(
 
 llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
   return WorkScheduler.fileStats();
+}
+
+Context ClangdServer::createProcessingContext(PathRef File) const {
+  if (!ConfigProvider)
+    return Context::current().clone();
+
+  config::Params Params;
+  llvm::SmallString<256> PosixPath;
+  if (!File.empty()) {
+    assert(llvm::sys::path::is_absolute(File));
+    llvm::sys::path::native(File, PosixPath, llvm::sys::path::Style::posix);
+    Params.Path = PosixPath.str();
+  }
+
+  auto DiagnosticHandler = [](const llvm::SMDiagnostic &Diag) {
+    if (Diag.getKind() == llvm::SourceMgr::DK_Error) {
+      elog("config error at {0}:{1}:{2}: {3}", Diag.getFilename(),
+           Diag.getLineNo(), Diag.getColumnNo(), Diag.getMessage());
+    } else {
+      log("config warning at {0}:{1}:{2}: {3}", Diag.getFilename(),
+          Diag.getLineNo(), Diag.getColumnNo(), Diag.getMessage());
+    }
+  };
+  Config C = ConfigProvider->getConfig(Params, DiagnosticHandler);
+  return Context::current().derive(Config::Key, std::move(C));
 }
 
 LLVM_NODISCARD bool

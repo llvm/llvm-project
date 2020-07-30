@@ -17,6 +17,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/Any.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -40,6 +41,9 @@ public:
   /// \p KeyPosition should be the location of the key syntactical element that
   /// is being changed, e.g. the call to a refactored method.
   AtomicChange(const SourceManager &SM, SourceLocation KeyPosition);
+
+  AtomicChange(const SourceManager &SM, SourceLocation KeyPosition,
+               llvm::Any Metadata);
 
   /// Creates an atomic change for \p FilePath with a customized key.
   AtomicChange(llvm::StringRef FilePath, llvm::StringRef Key)
@@ -120,6 +124,8 @@ public:
     return RemovedHeaders;
   }
 
+  const llvm::Any &getMetadata() const { return Metadata; }
+
 private:
   AtomicChange() {}
 
@@ -135,6 +141,12 @@ private:
   std::vector<std::string> InsertedHeaders;
   std::vector<std::string> RemovedHeaders;
   tooling::Replacements Replaces;
+
+  // This field stores metadata which is ignored for the purposes of applying
+  // edits to source, but may be useful for other consumers of AtomicChanges. In
+  // particular, consumers can use this to direct how they want to consume each
+  // edit.
+  llvm::Any Metadata;
 };
 
 using AtomicChanges = std::vector<AtomicChange>;

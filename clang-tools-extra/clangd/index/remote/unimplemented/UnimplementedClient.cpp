@@ -8,12 +8,14 @@
 
 #include "index/remote/Client.h"
 #include "support/Logger.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace clangd {
 namespace remote {
 
-std::unique_ptr<clangd::SymbolIndex> getClient(llvm::StringRef Address) {
+std::unique_ptr<clangd::SymbolIndex> getClient(llvm::StringRef Address,
+                                               llvm::StringRef IndexRoot) {
   elog("Can't create SymbolIndex client without Remote Index support.");
   return nullptr;
 }

@@ -40,10 +40,10 @@ entry:
 define half @addf16(half %a, half %b) {
 ; CHECK-VFPV4-SOFT-LABEL: addf16:
 ; CHECK-VFPV4-SOFT:       @ %bb.0: @ %entry
-; CHECK-VFPV4-SOFT-NEXT:    vmov s2, r1
 ; CHECK-VFPV4-SOFT-NEXT:    vmov s0, r0
-; CHECK-VFPV4-SOFT-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-VFPV4-SOFT-NEXT:    vmov s2, r1
 ; CHECK-VFPV4-SOFT-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-VFPV4-SOFT-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-VFPV4-SOFT-NEXT:    vadd.f32 s0, s0, s2
 ; CHECK-VFPV4-SOFT-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-VFPV4-SOFT-NEXT:    vmov r0, s0

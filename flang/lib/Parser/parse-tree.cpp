@@ -14,16 +14,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
-// So "delete Expr;" calls an external destructor for its typedExpr.
-namespace Fortran::evaluate {
-struct GenericExprWrapper {
-  ~GenericExprWrapper();
-};
-struct GenericAssignmentWrapper {
-  ~GenericAssignmentWrapper();
-};
-} // namespace Fortran::evaluate
-
 namespace Fortran::parser {
 
 // R867
@@ -258,6 +248,3 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
 }
 
 } // namespace Fortran::parser
-
-template class std::unique_ptr<Fortran::evaluate::GenericExprWrapper>;
-template class std::unique_ptr<Fortran::evaluate::GenericAssignmentWrapper>;

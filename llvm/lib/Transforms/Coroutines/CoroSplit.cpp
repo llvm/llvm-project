@@ -75,7 +75,7 @@ using namespace llvm;
 
 namespace {
 
-/// A little helper class for building 
+/// A little helper class for building
 class CoroCloner {
 public:
   enum class Kind {
@@ -563,7 +563,7 @@ void CoroCloner::replaceEntryBlock() {
   // In the original function, the AllocaSpillBlock is a block immediately
   // following the allocation of the frame object which defines GEPs for
   // all the allocas that have been moved into the frame, and it ends by
-  // branching to the original beginning of the coroutine.  Make this 
+  // branching to the original beginning of the coroutine.  Make this
   // the entry block of the cloned function.
   auto *Entry = cast<BasicBlock>(VMap[Shape.AllocaSpillBlock]);
   auto *OldEntry = &NewF->getEntryBlock();

@@ -56,6 +56,7 @@ entry:
 ; CHECK: bl .extern_foo
 ; CHECK: bl .static_foo
 
+; CHECK: .lglobl static_foo[DS]
 ; CHECK: .lglobl .static_foo
 ; 32BIT: .csect static_foo[DS],2
 ; 32BIT-NEXT: .vbyte	4, .static_foo

@@ -212,15 +212,14 @@ define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512BW-NEXT:    vpsrlw %xmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpsrlw %xmm1, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpsrlw $8, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpbroadcastb %xmm2, %zmm2
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896]
-; AVX512BW-NEXT:    vpsrlw %xmm1, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpsrlw %xmm1, %zmm2, %zmm2
+; AVX512BW-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpsrlw %xmm1, %xmm3, %xmm1
+; AVX512BW-NEXT:    vpsrlw $8, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpbroadcastb %xmm1, %zmm1
+; AVX512BW-NEXT:    vpternlogq $108, %zmm0, %zmm2, %zmm1
+; AVX512BW-NEXT:    vpsubb %zmm2, %zmm1, %zmm0
 ; AVX512BW-NEXT:    retq
   %splat = shufflevector <64 x i8> %b, <64 x i8> undef, <64 x i32> zeroinitializer
   %shift = ashr <64 x i8> %a, %splat
@@ -375,9 +374,8 @@ define <64 x i8> @splatconstant_shift_v64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-LABEL: splatconstant_shift_v64i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsrlw $3, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX512BW-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpternlogq $108, {{.*}}(%rip), %zmm1, %zmm0
 ; AVX512BW-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %shift = ashr <64 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>

@@ -34,10 +34,12 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/CheckerRegistryData.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2106,6 +2108,53 @@ void BuiltinBug::anchor() {}
 // Methods for BugReport and subclasses.
 //===----------------------------------------------------------------------===//
 
+LLVM_ATTRIBUTE_USED static bool
+isDependency(const CheckerRegistryData &Registry, StringRef CheckerName) {
+  for (const std::pair<StringRef, StringRef> &Pair : Registry.Dependencies) {
+    if (Pair.second == CheckerName)
+      return true;
+  }
+  return false;
+}
+
+LLVM_ATTRIBUTE_USED static bool isHidden(const CheckerRegistryData &Registry,
+                                         StringRef CheckerName) {
+  for (const CheckerInfo &Checker : Registry.Checkers) {
+    if (Checker.FullName == CheckerName)
+      return Checker.IsHidden;
+  }
+  llvm_unreachable(
+      "Checker name not found in CheckerRegistry -- did you retrieve it "
+      "correctly from CheckerManager::getCurrentCheckerName?");
+}
+
+PathSensitiveBugReport::PathSensitiveBugReport(
+    const BugType &bt, StringRef shortDesc, StringRef desc,
+    const ExplodedNode *errorNode, PathDiagnosticLocation LocationToUnique,
+    const Decl *DeclToUnique)
+    : BugReport(Kind::PathSensitive, bt, shortDesc, desc), ErrorNode(errorNode),
+      ErrorNodeRange(getStmt() ? getStmt()->getSourceRange() : SourceRange()),
+      UniqueingLocation(LocationToUnique), UniqueingDecl(DeclToUnique) {
+  assert(!isDependency(ErrorNode->getState()
+                           ->getAnalysisManager()
+                           .getCheckerManager()
+                           ->getCheckerRegistryData(),
+                       bt.getCheckerName()) &&
+         "Some checkers depend on this one! We don't allow dependency "
+         "checkers to emit warnings, because checkers should depend on "
+         "*modeling*, not *diagnostics*.");
+
+  assert(
+      (bt.getCheckerName().startswith("debug") ||
+       !isHidden(ErrorNode->getState()
+                     ->getAnalysisManager()
+                     .getCheckerManager()
+                     ->getCheckerRegistryData(),
+                 bt.getCheckerName())) &&
+          "Hidden checkers musn't emit diagnostics as they are by definition "
+          "non-user facing!");
+}
+
 void PathSensitiveBugReport::addVisitor(
     std::unique_ptr<BugReporterVisitor> visitor) {
   if (!visitor)
@@ -2194,12 +2243,12 @@ static void insertToInterestingnessMap(
       return;
     case bugreporter::TrackingKind::Condition:
       return;
-  }
+    }
 
-  llvm_unreachable(
-      "BugReport::markInteresting currently can only handle 2 different "
-      "tracking kinds! Please define what tracking kind should this entitiy"
-      "have, if it was already marked as interesting with a different kind!");
+    llvm_unreachable(
+        "BugReport::markInteresting currently can only handle 2 different "
+        "tracking kinds! Please define what tracking kind should this entitiy"
+        "have, if it was already marked as interesting with a different kind!");
 }
 
 void PathSensitiveBugReport::markInteresting(SymbolRef sym,
@@ -2783,7 +2832,7 @@ Optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
         R->clearVisitors();
         R->addVisitor(std::make_unique<FalsePositiveRefutationBRVisitor>());
 
-        // We don't overrite the notes inserted by other visitors because the
+        // We don't overwrite the notes inserted by other visitors because the
         // refutation manager does not add any new note to the path
         generateVisitorsDiagnostics(R, BugPath->ErrorNode, BRC);
       }

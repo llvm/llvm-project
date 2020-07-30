@@ -15,6 +15,9 @@
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=cortex-a75 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=cortex-a76ae 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=cortex-a76 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=cortex-a77 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=cortex-a78 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=cortex-x1 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=neoverse-e1 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=neoverse-n1 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-unknown-unknown -mcpu=exynos-m3 2>&1 | FileCheck %s

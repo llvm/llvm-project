@@ -1497,9 +1497,8 @@ define i1 @icmp_v16i32_v16i1(<16 x i32>) {
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
-; AVX2-NEXT:    testl $-1431655766, %eax # imm = 0xAAAAAAAA
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    setne %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

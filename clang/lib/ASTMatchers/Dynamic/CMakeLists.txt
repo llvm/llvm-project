@@ -23,4 +23,7 @@ add_clang_library(clangDynamicASTMatchers
   clangAST
   clangASTMatchers
   clangBasic
+
+  DEPENDS
+  omp_gen
   )

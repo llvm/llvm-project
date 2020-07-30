@@ -159,6 +159,9 @@ public:
   static char ID;
 };
 
+/// The recorder is a small object handed out by a provider to record data. It
+/// is commonly used in combination with a MultiProvider which is meant to
+/// record information for multiple instances of the same source of data.
 class AbstractRecorder {
 protected:
   AbstractRecorder(const FileSpec &filename, std::error_code &ec)
@@ -181,6 +184,7 @@ protected:
   bool m_record;
 };
 
+/// Recorder that records its data as text to a file.
 class DataRecorder : public AbstractRecorder {
 public:
   DataRecorder(const FileSpec &filename, std::error_code &ec)
@@ -199,24 +203,88 @@ public:
   }
 };
 
-class CommandProvider : public Provider<CommandProvider> {
+/// Recorder that records its data as YAML to a file.
+class YamlRecorder : public AbstractRecorder {
+public:
+  YamlRecorder(const FileSpec &filename, std::error_code &ec)
+      : AbstractRecorder(filename, ec) {}
+
+  static llvm::Expected<std::unique_ptr<YamlRecorder>>
+  Create(const FileSpec &filename);
+
+  template <typename T> void Record(const T &t) {
+    if (!m_record)
+      return;
+    llvm::yaml::Output yout(m_os);
+    // The YAML traits are defined as non-const because they are used for
+    // serialization and deserialization. The cast is safe because
+    // serialization doesn't modify the object.
+    yout << const_cast<T &>(t);
+    m_os.flush();
+  }
+};
+
+/// The MultiProvider is a provider that hands out recorder which can be used
+/// to capture data for different instances of the same object. The recorders
+/// can be passed around or stored as an instance member.
+///
+/// The Info::file for the MultiProvider contains an index of files for every
+/// recorder. Use the MultiLoader to read the index and get the individual
+/// files.
+template <typename T, typename V>
+class MultiProvider : public repro::Provider<V> {
+public:
+  MultiProvider(const FileSpec &directory) : Provider<V>(directory) {}
+
+  T *GetNewRecorder() {
+    std::size_t i = m_recorders.size() + 1;
+    std::string filename = (llvm::Twine(V::Info::name) + llvm::Twine("-") +
+                            llvm::Twine(i) + llvm::Twine(".yaml"))
+                               .str();
+    auto recorder_or_error =
+        T::Create(this->GetRoot().CopyByAppendingPathComponent(filename));
+    if (!recorder_or_error) {
+      llvm::consumeError(recorder_or_error.takeError());
+      return nullptr;
+    }
+
+    m_recorders.push_back(std::move(*recorder_or_error));
+    return m_recorders.back().get();
+  }
+
+  void Keep() override {
+    std::vector<std::string> files;
+    for (auto &recorder : m_recorders) {
+      recorder->Stop();
+      files.push_back(recorder->GetFilename().GetPath());
+    }
+
+    FileSpec file = this->GetRoot().CopyByAppendingPathComponent(V::Info::file);
+    std::error_code ec;
+    llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+    if (ec)
+      return;
+    llvm::yaml::Output yout(os);
+    yout << files;
+  }
+
+  void Discard() override { m_recorders.clear(); }
+
+private:
+  std::vector<std::unique_ptr<T>> m_recorders;
+};
+
+class CommandProvider : public MultiProvider<DataRecorder, CommandProvider> {
 public:
   struct Info {
     static const char *name;
     static const char *file;
   };
 
-  CommandProvider(const FileSpec &directory) : Provider(directory) {}
-
-  DataRecorder *GetNewDataRecorder();
-
-  void Keep() override;
-  void Discard() override;
+  CommandProvider(const FileSpec &directory)
+      : MultiProvider<DataRecorder, CommandProvider>(directory) {}
 
   static char ID;
-
-private:
-  std::vector<std::unique_ptr<DataRecorder>> m_data_recorders;
 };
 
 /// The generator is responsible for the logic needed to generate a
@@ -360,6 +428,8 @@ private:
   mutable std::mutex m_mutex;
 };
 
+/// Loader for data captured with the MultiProvider. It will read the index and
+/// return the path to the files in the index.
 template <typename T> class MultiLoader {
 public:
   MultiLoader(std::vector<std::string> files) : m_files(files) {}

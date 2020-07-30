@@ -7,12 +7,12 @@ target triple = "aarch64--linux-gnu"
 
 ; This test checks that we correctly compute the scalarized operands for a
 ; user-specified vectorization factor when interleaving is disabled. We use the
-; "optsize" attribute to disable all interleaving calculations.  A cost of 5
+; "optsize" attribute to disable all interleaving calculations.  A cost of 4
 ; for %tmp4 indicates that we would scalarize it's operand (%tmp3), giving
 ; %tmp4 a lower scalarization overhead.
 ;
 ; COST-LABEL:  predicated_udiv_scalarized_operand
-; COST:        LV: Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i64 %tmp2, %tmp3
+; COST:        LV: Found an estimated cost of 4 for VF 2 For instruction: %tmp4 = udiv i64 %tmp2, %tmp3
 ;
 ; CHECK-LABEL: @predicated_udiv_scalarized_operand(
 ; CHECK:       vector.body:

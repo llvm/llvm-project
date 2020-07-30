@@ -72,6 +72,8 @@ table_row = """\
      - {style2}`{percent}%`
 """
 
+FNULL = open(os.devnull, 'w')
+
 with open(DOC_FILE, 'wb') as output:
     sha = get_git_revision_short_hash()
     today = datetime.now().strftime("%B %d, %Y %H:%M:%S")
@@ -85,13 +87,21 @@ with open(DOC_FILE, 'wb') as output:
         for subdir in subdirs:
             if any(sd == subdir for sd in skipped_dirs):
                 subdirs.remove(subdir)
+            else:
+                act_sub_dir = os.path.join(root, subdir)
+                # Check the git index to see if the directory contains tracked
+                # files. Reditect the output to a null descriptor as we aren't
+                # interested in it, just the return code.
+                git_check = subprocess.Popen(
+                    ["git", "ls-files", "--error-unmatch", act_sub_dir],
+                    stdout=FNULL,
+                    stderr=FNULL)
+                if git_check.wait() != 0:
+                    print("Skipping directory: ", act_sub_dir)
+                    subdirs.remove(subdir)
 
         path = os.path.relpath(root, TOP_DIR)
         path = path.replace('\\', '/')
-
-        head, _ = os.path.split(root)
-        while head:
-            head, _ = os.path.split(head)
 
         file_count = 0
         file_pass = 0

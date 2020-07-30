@@ -1,0 +1,19 @@
+; RUN: llvm-rc /l 40A /FO %t.res -- %p/Inputs/language.rc
+; RUN: llvm-readobj %t.res | FileCheck %s
+; RUN: llvm-rc /l40A /FO %t.res -- %p/Inputs/language.rc
+; RUN: llvm-readobj %t.res | FileCheck %s
+
+; CHECK:      Resource name (int): 1
+; CHECK-NEXT: Data version:
+; CHECK-NEXT: Memory flags:
+; CHECK-NEXT: Language ID: 2049
+
+; CHECK:      Resource name (int): 2
+; CHECK-NEXT: Data version:
+; CHECK-NEXT: Memory flags:
+; CHECK-NEXT: Language ID: 1034
+
+; CHECK:      Resource name (int): 3
+; CHECK-NEXT: Data version:
+; CHECK-NEXT: Memory flags:
+; CHECK-NEXT: Language ID: 4099

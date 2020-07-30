@@ -849,6 +849,20 @@ csrrs t2, 0xB1F, zero
 ######################################
 # Machine Counter Setup
 ######################################
+# mcountinhibit
+# name
+# CHECK-INST: csrrs t1, mcountinhibit, zero
+# CHECK-ENC:  encoding: [0x73,0x23,0x00,0x32]
+# CHECK-INST-ALIAS: csrr t1, mcountinhibit
+# uimm12
+# CHECK-INST: csrrs t2, mcountinhibit, zero
+# CHECK-ENC:  encoding: [0xf3,0x23,0x00,0x32]
+# CHECK-INST-ALIAS: csrr t2, mcountinhibit
+# name
+csrrs t1, mcountinhibit, zero
+# uimm12
+csrrs t2, 0x320, zero
+
 # mhpmevent3
 # name
 # CHECK-INST: csrrs t1, mhpmevent3, zero

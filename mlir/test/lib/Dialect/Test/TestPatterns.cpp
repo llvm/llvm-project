@@ -32,6 +32,16 @@ static void handleNoResultOp(PatternRewriter &rewriter,
                                     op.operand());
 }
 
+// Test that natives calls are only called once during rewrites.
+// OpM_Test will return Pi, increased by 1 for each subsequent calls.
+// This let us check the number of times OpM_Test was called by inspecting
+// the returned value in the MLIR output.
+static int64_t opMIncreasingValue = 314159265;
+static Attribute OpMTest(PatternRewriter &rewriter, Value val) {
+  int64_t i = opMIncreasingValue++;
+  return rewriter.getIntegerAttr(rewriter.getIntegerType(32), i);
+}
+
 namespace {
 #include "TestPatterns.inc"
 } // end anonymous namespace
@@ -101,7 +111,7 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
               context, llvm::None, values, op->getAttrDictionary(),
               op->getRegions(), inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());
-        // TODO(jpienaar): Expand to regions.
+        // TODO: Expand to regions.
         OpTy::build(b, state, values, op->getAttrs());
         (void)b.createOperation(state);
       }

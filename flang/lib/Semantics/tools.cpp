@@ -1217,13 +1217,6 @@ const Symbol *FindImmediateComponent(const DerivedTypeSpec &type,
   return nullptr;
 }
 
-bool IsFunctionResult(const Symbol &symbol) {
-  return (symbol.has<ObjectEntityDetails>() &&
-             symbol.get<ObjectEntityDetails>().isFuncResult()) ||
-      (symbol.has<ProcEntityDetails>() &&
-          symbol.get<ProcEntityDetails>().isFuncResult());
-}
-
 bool IsFunctionResultWithSameNameAsFunction(const Symbol &symbol) {
   if (IsFunctionResult(symbol)) {
     if (const Symbol * function{symbol.owner().symbol()}) {
@@ -1290,6 +1283,15 @@ void LabelEnforce::SayWithConstruct(SemanticsContext &context,
     parser::CharBlock constructLocation) {
   context.Say(stmtLocation, message)
       .Attach(constructLocation, GetEnclosingConstructMsg());
+}
+
+bool HasAlternateReturns(const Symbol &subprogram) {
+  for (const auto *dummyArg : subprogram.get<SubprogramDetails>().dummyArgs()) {
+    if (!dummyArg) {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace Fortran::semantics

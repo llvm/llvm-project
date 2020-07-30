@@ -19,7 +19,7 @@ using namespace llvm;
 
 LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
   if (auto VTy = dyn_cast<VectorType>(&Ty)) {
-    auto NumElements = VTy->getNumElements();
+    auto NumElements = cast<FixedVectorType>(VTy)->getNumElements();
     LLT ScalarTy = getLLTForType(*VTy->getElementType(), DL);
     if (NumElements == 1)
       return ScalarTy;

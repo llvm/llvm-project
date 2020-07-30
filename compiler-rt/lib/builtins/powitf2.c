@@ -17,7 +17,7 @@
 
 // Returns: a ^ b
 
-COMPILER_RT_ABI long double __powitf2(long double a, si_int b) {
+COMPILER_RT_ABI long double __powitf2(long double a, int b) {
   const int recip = b < 0;
   long double r = 1;
   while (1) {

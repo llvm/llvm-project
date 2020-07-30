@@ -85,8 +85,7 @@ static void getBackwardSliceImpl(Operation *op,
   if (!op)
     return;
 
-  assert((op->getNumRegions() == 0 || isa<AffineForOp>(op) ||
-          isa<scf::ForOp>(op)) &&
+  assert((op->getNumRegions() == 0 || isa<AffineForOp, scf::ForOp>(op)) &&
          "unexpected generic op with regions");
 
   // Evaluate whether we should keep this def.

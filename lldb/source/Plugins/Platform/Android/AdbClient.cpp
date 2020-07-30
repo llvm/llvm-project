@@ -132,7 +132,7 @@ const std::string &AdbClient::GetDeviceID() const { return m_device_id; }
 
 Status AdbClient::Connect() {
   Status error;
-  m_conn.reset(new ConnectionFileDescriptor);
+  m_conn = std::make_unique<ConnectionFileDescriptor>();
   std::string port = "5037";
   if (const char *env_port = std::getenv("ANDROID_ADB_SERVER_PORT")) {
     port = env_port;

@@ -36,4 +36,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   clangToolingCore
   clangToolingRefactoring
   clangToolingSyntax
+
+  DEPENDS
+  omp_gen
   )

@@ -762,18 +762,23 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
       if (State == StateWWM) {
         assert(SavedNonWWMReg);
         fromWWM(MBB, Before, SavedNonWWMReg);
+        LIS->createAndComputeVirtRegInterval(SavedNonWWMReg);
+        SavedNonWWMReg = 0;
         State = NonWWMState;
       }
 
       if (Needs == StateWWM) {
         NonWWMState = State;
+        assert(!SavedNonWWMReg);
         SavedNonWWMReg = MRI->createVirtualRegister(BoolRC);
         toWWM(MBB, Before, SavedNonWWMReg);
         State = StateWWM;
       } else {
         if (State == StateWQM && (Needs & StateExact) && !(Needs & StateWQM)) {
-          if (!WQMFromExec && (OutNeeds & StateWQM))
+          if (!WQMFromExec && (OutNeeds & StateWQM)) {
+            assert(!SavedWQMReg);
             SavedWQMReg = MRI->createVirtualRegister(BoolRC);
+          }
 
           toExact(MBB, Before, SavedWQMReg, LiveMaskReg);
           State = StateExact;
@@ -806,6 +811,8 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
       break;
     II = Next;
   }
+  assert(!SavedWQMReg);
+  assert(!SavedNonWWMReg);
 }
 
 void SIWholeQuadMode::lowerLiveMaskQueries(unsigned LiveMaskReg) {
@@ -898,10 +905,12 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
 
     if (GlobalFlags == StateWQM) {
       // For a shader that needs only WQM, we can just set it once.
-      BuildMI(Entry, EntryMI, DebugLoc(), TII->get(ST->isWave32() ?
-                AMDGPU::S_WQM_B32 : AMDGPU::S_WQM_B64),
-              Exec)
-          .addReg(Exec);
+      auto MI = BuildMI(Entry, EntryMI, DebugLoc(),
+                        TII->get(ST->isWave32() ? AMDGPU::S_WQM_B32
+                                                : AMDGPU::S_WQM_B64),
+                        Exec)
+                    .addReg(Exec);
+      LIS->InsertMachineInstrInMaps(*MI);
 
       lowerCopyInstrs();
       // EntryMI may become invalid here
@@ -916,6 +925,9 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   // Handle the general case
   for (auto BII : Blocks)
     processBlock(*BII.first, LiveMaskReg, BII.first == &*MF.begin());
+
+  if (LiveMaskReg)
+    LIS->createAndComputeVirtRegInterval(LiveMaskReg);
 
   // Physical registers like SCC aren't tracked by default anyway, so just
   // removing the ranges we computed is the simplest option for maintaining

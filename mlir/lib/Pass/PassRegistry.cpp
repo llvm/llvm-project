@@ -128,7 +128,7 @@ void detail::PassOptions::copyOptionValuesFrom(const PassOptions &other) {
 }
 
 LogicalResult detail::PassOptions::parseFromString(StringRef options) {
-  // TODO(parkers): Handle escaping strings.
+  // TODO: Handle escaping strings.
   // NOTE: `options` is modified in place to always refer to the unprocessed
   // part of the string.
   while (!options.empty()) {
@@ -199,7 +199,7 @@ void detail::PassOptions::printHelp(size_t indent, size_t descIndent) const {
   };
   llvm::array_pod_sort(orderedOps.begin(), orderedOps.end(), compareOptionArgs);
   for (OptionBase *option : orderedOps) {
-    // TODO(riverriddle) printOptionInfo assumes a specific indent and will
+    // TODO: printOptionInfo assumes a specific indent and will
     // print options with values with incorrect indentation. We should add
     // support to llvm::cl::Option for passing in a base indent to use when
     // printing.
@@ -328,7 +328,7 @@ LogicalResult TextualPipeline::parsePipelineText(StringRef text,
       // Skip over everything until the closing '}' and store as options.
       size_t close = text.find('}');
 
-      // TODO(parkers): Handle skipping over quoted sub-strings.
+      // TODO: Handle skipping over quoted sub-strings.
       if (close == StringRef::npos) {
         return errorHandler(
             /*rawLoc=*/text.data() - 1,

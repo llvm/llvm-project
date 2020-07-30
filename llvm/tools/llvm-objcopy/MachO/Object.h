@@ -326,6 +326,11 @@ struct Object {
 
   Error
   removeSections(function_ref<bool(const std::unique_ptr<Section> &)> ToRemove);
+
+  Error removeLoadCommands(function_ref<bool(const LoadCommand &)> ToRemove);
+
+  void updateLoadCommandIndexes();
+
   void addLoadCommand(LoadCommand LC);
 
   /// Creates a new segment load command in the object and returns a reference

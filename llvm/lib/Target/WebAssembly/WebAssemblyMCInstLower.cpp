@@ -81,8 +81,9 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
         strcmp(Name, "__stack_pointer") == 0 || strcmp(Name, "__tls_base") == 0;
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
     WasmSym->setGlobalType(wasm::WasmGlobalType{
-        uint8_t(Subtarget.hasAddr64() ? wasm::WASM_TYPE_I64
-                                      : wasm::WASM_TYPE_I32),
+        uint8_t(Subtarget.hasAddr64() && strcmp(Name, "__table_base") != 0
+                    ? wasm::WASM_TYPE_I64
+                    : wasm::WASM_TYPE_I32),
         Mutable});
     return WasmSym;
   }

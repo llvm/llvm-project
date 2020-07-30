@@ -100,6 +100,8 @@ public:
   /// the function.
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologMBB) const override;
 
   bool hasFP(const MachineFunction &MF) const override;
   bool needsFP(const MachineFunction &MF) const;

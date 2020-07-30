@@ -10,6 +10,7 @@
 #define FORTRAN_SEMANTICS_MOD_FILE_H_
 
 #include "flang/Semantics/attr.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 namespace Fortran::parser {

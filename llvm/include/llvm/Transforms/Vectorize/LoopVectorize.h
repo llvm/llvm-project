@@ -56,13 +56,13 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H
 
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include <functional>
 
 namespace llvm {
 
+class AAResults;
 class AssumptionCache;
 class BlockFrequencyInfo;
 class DemandedBits;
@@ -146,7 +146,7 @@ public:
   BlockFrequencyInfo *BFI;
   TargetLibraryInfo *TLI;
   DemandedBits *DB;
-  AliasAnalysis *AA;
+  AAResults *AA;
   AssumptionCache *AC;
   std::function<const LoopAccessInfo &(Loop &)> *GetLAA;
   OptimizationRemarkEmitter *ORE;
@@ -159,7 +159,7 @@ public:
   runImpl(Function &F, ScalarEvolution &SE_, LoopInfo &LI_,
           TargetTransformInfo &TTI_, DominatorTree &DT_,
           BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_, DemandedBits &DB_,
-          AliasAnalysis &AA_, AssumptionCache &AC_,
+          AAResults &AA_, AssumptionCache &AC_,
           std::function<const LoopAccessInfo &(Loop &)> &GetLAA_,
           OptimizationRemarkEmitter &ORE_, ProfileSummaryInfo *PSI_);
 

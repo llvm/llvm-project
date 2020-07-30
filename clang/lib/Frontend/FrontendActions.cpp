@@ -79,7 +79,8 @@ ASTDumpAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   const FrontendOptions &Opts = CI.getFrontendOpts();
   return CreateASTDumper(nullptr /*Dump to stdout.*/, Opts.ASTDumpFilter,
                          Opts.ASTDumpDecls, Opts.ASTDumpAll,
-                         Opts.ASTDumpLookups, Opts.ASTDumpFormat);
+                         Opts.ASTDumpLookups, Opts.ASTDumpDeclTypes,
+                         Opts.ASTDumpFormat);
 }
 
 std::unique_ptr<ASTConsumer>

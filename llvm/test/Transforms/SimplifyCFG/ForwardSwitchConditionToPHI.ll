@@ -34,8 +34,8 @@ define i32 @t(i32 %m) nounwind readnone {
 ; FWD-LABEL: @t(
 ; FWD-NEXT:  entry:
 ; FWD-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[M:%.*]], 4
-; FWD-NEXT:    [[M_:%.*]] = select i1 [[SWITCH]], i32 [[M]], i32 4
-; FWD-NEXT:    ret i32 [[M_]]
+; FWD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i32 [[M]], i32 4
+; FWD-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
 entry:
   switch i32 %m, label %sw.bb4 [

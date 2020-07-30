@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple %itanium_abi_triple -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --implicit-check-not='ret i32 {{6|7|8|9|10|12|13|14|15|19|21|22|23|24}}'
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple %itanium_abi_triple -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope -fopenmp-version=45 | FileCheck %s --implicit-check-not='ret i32 {{6|7|8|9|10|12|13|14|15|19|21|22|23|24}}'
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t -fopenmp-version=50 %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 | FileCheck %s --implicit-check-not='ret i32 {{6|7|8|9|10|12|13|14|15|19|21|22|23|24}}'
 // expected-no-diagnostics

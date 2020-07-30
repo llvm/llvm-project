@@ -299,9 +299,8 @@ HexagonTargetLowering::isHvxBoolTy(MVT Ty) const {
          Ty.getVectorElementType() == MVT::i1;
 }
 
-bool
-HexagonTargetLowering::allowsHvxMemoryAccess(MVT VecTy, unsigned Alignment,
-        MachineMemOperand::Flags Flags, bool *Fast) const {
+bool HexagonTargetLowering::allowsHvxMemoryAccess(
+    MVT VecTy, MachineMemOperand::Flags Flags, bool *Fast) const {
   // Bool vectors are excluded by default, but make it explicit to
   // emphasize that bool vectors cannot be loaded or stored.
   // Also, disallow double vector stores (to prevent unnecessary
@@ -315,9 +314,8 @@ HexagonTargetLowering::allowsHvxMemoryAccess(MVT VecTy, unsigned Alignment,
   return true;
 }
 
-bool
-HexagonTargetLowering::allowsHvxMisalignedMemoryAccesses(MVT VecTy,
-        unsigned Align, MachineMemOperand::Flags Flags, bool *Fast) const {
+bool HexagonTargetLowering::allowsHvxMisalignedMemoryAccesses(
+    MVT VecTy, MachineMemOperand::Flags Flags, bool *Fast) const {
   if (!Subtarget.isHVXVectorType(VecTy))
     return false;
   // XXX Should this be false?  vmemu are a bit slower than vmem.

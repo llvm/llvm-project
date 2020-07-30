@@ -58,7 +58,7 @@ Sections:
 
 # INVALID-INDEX:      Addrsig [
 # INVALID-INDEX-NEXT:   Sym: foo (1)
-# INVALID-INDEX-NEXT:   warning: '[[FILE]]': unable to get symbol from section [index 2]: invalid symbol index (255)
+# INVALID-INDEX-NEXT:   warning: '[[FILE]]': unable to read the name of symbol with index 255: unable to get symbol from section [index 2]: invalid symbol index (255)
 # INVALID-INDEX-NEXT:   Sym: <?> (255)
 # INVALID-INDEX-NEXT:   Sym: bar (2)
 # INVALID-INDEX-NEXT: ]

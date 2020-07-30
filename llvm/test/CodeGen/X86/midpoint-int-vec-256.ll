@@ -1855,12 +1855,12 @@ define <16 x i16> @vec256_i16_unsigned_reg_reg(<16 x i16> %a1, <16 x i16> %a2) n
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vpminuw %ymm1, %ymm0, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm3
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %ymm3, %ymm3, %ymm3
-; AVX512VL-FALLBACK-NEXT:    vpor {{.*}}(%rip), %ymm3, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqd %ymm4, %ymm4, %ymm4
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $190, {{.*}}(%rip), %ymm3, %ymm4
 ; AVX512VL-FALLBACK-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpsubw %ymm2, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm3, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm4, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %ymm0, %ymm1, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
@@ -2789,21 +2789,21 @@ define <32 x i8> @vec256_i8_unsigned_reg_reg(<32 x i8> %a1, <32 x i8> %a2) nounw
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vpminub %ymm1, %ymm0, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm3
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %ymm3, %ymm3, %ymm3
-; AVX512VL-FALLBACK-NEXT:    vpor {{.*}}(%rip), %ymm3, %ymm3
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqd %ymm4, %ymm4, %ymm4
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $190, {{.*}}(%rip), %ymm3, %ymm4
 ; AVX512VL-FALLBACK-NEXT:    vpmaxub %ymm1, %ymm0, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %ymm2, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm4, %ymm2, %ymm2
-; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512VL-FALLBACK-NEXT:    vpand %ymm4, %ymm2, %ymm2
+; AVX512VL-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm4[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm3, %ymm2, %ymm2
+; AVX512VL-FALLBACK-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512VL-FALLBACK-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX512VL-FALLBACK-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; AVX512VL-FALLBACK-NEXT:    vpunpcklbw {{.*#+}} ymm3 = ymm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm3, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpand %ymm4, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpunpcklbw {{.*#+}} ymm4 = ymm4[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
+; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm4, %ymm1, %ymm1
+; AVX512VL-FALLBACK-NEXT:    vpand %ymm3, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpackuswb %ymm2, %ymm1, %ymm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX512VL-FALLBACK-NEXT:    retq

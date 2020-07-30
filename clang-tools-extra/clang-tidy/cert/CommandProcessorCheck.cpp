@@ -19,8 +19,7 @@ namespace cert {
 void CommandProcessorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          callee(functionDecl(anyOf(hasName("::system"), hasName("::popen"),
-                                    hasName("::_popen")))
+          callee(functionDecl(hasAnyName("::system", "::popen", "::_popen"))
                      .bind("func")),
           // Do not diagnose when the call expression passes a null pointer
           // constant to system(); that only checks for the presence of a

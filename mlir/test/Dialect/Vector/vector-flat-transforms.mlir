@@ -2,10 +2,9 @@
 
 // Tests for lowering 2-D vector.transpose into vector.flat_transpose.
 //
-// TODO(ajcbik,ntv): having ShapeCastOp2DDownCastRewritePattern and
-//                   ShapeCastOp2DUpCastRewritePattern too early in
-//                   the greedy rewriting patterns misses opportunities
-//                   to fold shape casts!
+// TODO: having ShapeCastOp2DDownCastRewritePattern and
+//       ShapeCastOp2DUpCastRewritePattern too early in the greedy rewriting
+//       patterns misses opportunities to fold shape casts!
 
 // No shape cast folding expected.
 //

@@ -158,12 +158,12 @@ static void AddAllFixIts(ClangDiagnostic *diag, const clang::Diagnostic &Info) {
 class ClangDiagnosticManagerAdapter : public clang::DiagnosticConsumer {
 public:
   ClangDiagnosticManagerAdapter(DiagnosticOptions &opts) {
-    DiagnosticOptions *m_options = new DiagnosticOptions(opts);
-    m_options->ShowPresumedLoc = true;
-    m_options->ShowLevel = false;
+    DiagnosticOptions *options = new DiagnosticOptions(opts);
+    options->ShowPresumedLoc = true;
+    options->ShowLevel = false;
     m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
     m_passthrough =
-        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
+        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, options);
   }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {
@@ -199,6 +199,9 @@ public:
       }
       return;
     }
+
+    // Update error/warning counters.
+    DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
 
     // Render diagnostic message to m_output.
     m_output.clear();
@@ -261,7 +264,11 @@ public:
     }
   }
 
-  clang::TextDiagnosticPrinter *GetPassthrough() { return m_passthrough.get(); }
+  void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override {
+    m_passthrough->BeginSourceFile(LO, PP);
+  }
+
+  void EndSourceFile() override { m_passthrough->EndSourceFile(); }
 
 private:
   DiagnosticManager *m_manager = nullptr;
@@ -331,7 +338,7 @@ ClangExpressionParser::ClangExpressionParser(
   }
 
   // 1. Create a new compiler instance.
-  m_compiler.reset(new CompilerInstance());
+  m_compiler = std::make_unique<CompilerInstance>();
 
   // When capturing a reproducer, hook up the file collector with clang to
   // collector modules and headers.
@@ -641,12 +648,12 @@ ClangExpressionParser::ClangExpressionParser(
   m_compiler->createASTContext();
   clang::ASTContext &ast_context = m_compiler->getASTContext();
 
-  m_ast_context.reset(new TypeSystemClang(
-      "Expression ASTContext for '" + m_filename + "'", ast_context));
+  m_ast_context = std::make_unique<TypeSystemClang>(
+      "Expression ASTContext for '" + m_filename + "'", ast_context);
 
   std::string module_name("$__lldb_module");
 
-  m_llvm_context.reset(new LLVMContext());
+  m_llvm_context = std::make_unique<LLVMContext>();
   m_code_generator.reset(CreateLLVMCodeGen(
       m_compiler->getDiagnostics(), module_name,
       m_compiler->getHeaderSearchOpts(), m_compiler->getPreprocessorOpts(),
@@ -967,7 +974,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   ClangDiagnosticManagerAdapter *adapter =
       static_cast<ClangDiagnosticManagerAdapter *>(
           m_compiler->getDiagnostics().getClient());
-  auto diag_buf = adapter->GetPassthrough();
 
   adapter->ResetManager(&diagnostic_manager);
 
@@ -1022,8 +1028,8 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     source_mgr.setMainFileID(source_mgr.createFileID(std::move(memory_buffer)));
   }
 
-  diag_buf->BeginSourceFile(m_compiler->getLangOpts(),
-                            &m_compiler->getPreprocessor());
+  adapter->BeginSourceFile(m_compiler->getLangOpts(),
+                           &m_compiler->getPreprocessor());
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());
@@ -1047,11 +1053,11 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
   std::unique_ptr<clang::ASTConsumer> Consumer;
   if (ast_transformer) {
-    Consumer.reset(new ASTConsumerForwarder(ast_transformer));
+    Consumer = std::make_unique<ASTConsumerForwarder>(ast_transformer);
   } else if (m_code_generator) {
-    Consumer.reset(new ASTConsumerForwarder(m_code_generator.get()));
+    Consumer = std::make_unique<ASTConsumerForwarder>(m_code_generator.get());
   } else {
-    Consumer.reset(new ASTConsumer());
+    Consumer = std::make_unique<ASTConsumer>();
   }
 
   clang::ASTContext &ast_context = m_compiler->getASTContext();
@@ -1108,9 +1114,9 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   // original behavior of ParseAST (which also destroys the Sema after parsing).
   m_compiler->setSema(nullptr);
 
-  diag_buf->EndSourceFile();
+  adapter->EndSourceFile();
 
-  unsigned num_errors = diag_buf->getNumErrors();
+  unsigned num_errors = adapter->getNumErrors();
 
   if (m_pp_callbacks && m_pp_callbacks->hasErrors()) {
     num_errors++;

@@ -37,6 +37,69 @@ Sections:
       - From:   bar
         To:     foo
         Weight: 98
+## 0x10 is the normal entry size for the SHT_LLVM_CALL_GRAPH_PROFILE section.
+    EntSize: [[ENTSIZE=0x10]]
 Symbols:
   - Name: foo
   - Name: bar
+
+## Check we report a warning when unable to get the content of the SHT_LLVM_CALL_GRAPH_PROFILE section.
+# RUN: yaml2obj %s -DENTSIZE=0xF -o %t2.o
+# RUN: llvm-readobj %t2.o --cg-profile 2>&1 | FileCheck %s -DFILE=%t2.o --check-prefix=LLVM-ERR
+# RUN: llvm-readelf %t2.o --cg-profile | FileCheck %s --check-prefix=GNU
+
+# LLVM-ERR:      CGProfile [
+# LLVM-ERR-NEXT: warning: '[[FILE]]': unable to dump the SHT_LLVM_CALL_GRAPH_PROFILE section: section [index 1] has an invalid sh_entsize: 15
+# LLVM-ERR-NEXT: ]
+
+## Check we report a warning when unable to dump a name of a symbol.
+# RUN: yaml2obj %s --docnum=2 -o %t3.o
+# RUN: llvm-readobj %t3.o --cg-profile 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=LLVM-BROKEN-SYM
+# RUN: llvm-readelf %t3.o --cg-profile | FileCheck %s --check-prefix=GNU
+
+# LLVM-BROKEN-SYM:      CGProfile [
+# LLVM-BROKEN-SYM-NEXT:   CGProfileEntry {
+# LLVM-BROKEN-SYM-NEXT:     From: A (1)
+# LLVM-BROKEN-SYM-NEXT: warning: '[[FILE]]': unable to read the name of symbol with index 2: st_name (0xff) is past the end of the string table of size 0x5
+# LLVM-BROKEN-SYM-NEXT:     To: <?> (2)
+# LLVM-BROKEN-SYM-NEXT:     Weight: 10
+# LLVM-BROKEN-SYM-NEXT:   }
+# LLVM-BROKEN-SYM-NEXT:   CGProfileEntry {
+# LLVM-BROKEN-SYM-NEXT:     From: <?> (2)
+# LLVM-BROKEN-SYM-NEXT:     To: B (3)
+# LLVM-BROKEN-SYM-NEXT:     Weight: 20
+# LLVM-BROKEN-SYM-NEXT:   }
+# LLVM-BROKEN-SYM-NEXT:   CGProfileEntry {
+# LLVM-BROKEN-SYM-NEXT:     From: (0)
+# LLVM-BROKEN-SYM-NEXT: warning: '[[FILE]]': unable to read the name of symbol with index 4: unable to get symbol from section [index 3]: invalid symbol index (4)
+# LLVM-BROKEN-SYM-NEXT:     To: <?> (4)
+# LLVM-BROKEN-SYM-NEXT:     Weight: 20
+# LLVM-BROKEN-SYM-NEXT:   }
+# LLVM-BROKEN-SYM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Entries:
+      - From:   1
+        To:     2
+        Weight: 10
+      - From:   2
+        To:     3
+        Weight: 20
+      - From:   0x0 ## Null symbol.
+        To:     0x4 ## This index goes past the end of the symbol table.
+        Weight: 20
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Content: "0041004200" ## '\0', 'A', '\0', 'B', '\0'
+Symbols:
+  - StName: 1    ## 'A'
+  - StName: 0xFF ## An arbitrary currupted index in the string table.
+  - StName: 3    ## 'B'

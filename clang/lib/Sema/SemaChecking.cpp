@@ -88,6 +88,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <bitset>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -237,8 +238,8 @@ static bool SemaBuiltinAlignment(Sema &S, CallExpr *TheCall, unsigned ID) {
   }
   Expr::EvalResult AlignResult;
   unsigned MaxAlignmentBits = S.Context.getIntWidth(SrcTy) - 1;
-  // We can't check validity of alignment if it is type dependent.
-  if (!AlignOp->isInstantiationDependent() &&
+  // We can't check validity of alignment if it is value dependent.
+  if (!AlignOp->isValueDependent() &&
       AlignOp->EvaluateAsInt(AlignResult, S.Context,
                              Expr::SE_AllowSideEffects)) {
     llvm::APSInt AlignValue = AlignResult.Val.getInt();
@@ -1808,6 +1809,36 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     TheCall->setType(Context.IntTy);
     break;
   }
+  case Builtin::BI__builtin_expect_with_probability: {
+    // We first want to ensure we are called with 3 arguments
+    if (checkArgCount(*this, TheCall, 3))
+      return ExprError();
+    // then check probability is constant float in range [0.0, 1.0]
+    const Expr *ProbArg = TheCall->getArg(2);
+    SmallVector<PartialDiagnosticAt, 8> Notes;
+    Expr::EvalResult Eval;
+    Eval.Diag = &Notes;
+    if ((!ProbArg->EvaluateAsConstantExpr(Eval, Expr::EvaluateForCodeGen,
+                                          Context)) ||
+        !Eval.Val.isFloat()) {
+      Diag(ProbArg->getBeginLoc(), diag::err_probability_not_constant_float)
+          << ProbArg->getSourceRange();
+      for (const PartialDiagnosticAt &PDiag : Notes)
+        Diag(PDiag.first, PDiag.second);
+      return ExprError();
+    }
+    llvm::APFloat Probability = Eval.Val.getFloat();
+    bool LoseInfo = false;
+    Probability.convert(llvm::APFloat::IEEEdouble(),
+                        llvm::RoundingMode::Dynamic, &LoseInfo);
+    if (!(Probability >= llvm::APFloat(0.0) &&
+          Probability <= llvm::APFloat(1.0))) {
+      Diag(ProbArg->getBeginLoc(), diag::err_probability_out_of_range)
+          << ProbArg->getSourceRange();
+      return ExprError();
+    }
+    break;
+  }
   case Builtin::BI__builtin_preserve_access_index:
     if (SemaBuiltinPreserveAI(*this, TheCall))
       return ExprError();
@@ -3094,6 +3125,16 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
            SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
   case PPC::BI__builtin_pack_vector_int128:
     return SemaVSXCheck(TheCall);
+  case PPC::BI__builtin_altivec_vgnb:
+     return SemaBuiltinConstantArgRange(TheCall, 1, 2, 7);
+  case PPC::BI__builtin_vsx_xxeval:
+     return SemaBuiltinConstantArgRange(TheCall, 3, 0, 255);
+  case PPC::BI__builtin_altivec_vsldbi:
+     return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
+  case PPC::BI__builtin_altivec_vsrdbi:
+     return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
+  case PPC::BI__builtin_vsx_xxpermx:
+     return SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
 }
@@ -3567,6 +3608,64 @@ bool Sema::CheckX86BuiltinGatherScatterScale(unsigned BuiltinID,
          << Arg->getSourceRange();
 }
 
+enum { TileRegLow = 0, TileRegHigh = 7 };
+
+bool Sema::CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall,
+                                    ArrayRef<int> ArgNums) {
+  for (int ArgNum : ArgNums) {
+    if (SemaBuiltinConstantArgRange(TheCall, ArgNum, TileRegLow, TileRegHigh))
+      return true;
+  }
+  return false;
+}
+
+bool Sema::CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall, int ArgNum) {
+  return SemaBuiltinConstantArgRange(TheCall, ArgNum, TileRegLow, TileRegHigh);
+}
+
+bool Sema::CheckX86BuiltinTileDuplicate(CallExpr *TheCall,
+                                        ArrayRef<int> ArgNums) {
+  // Because the max number of tile register is TileRegHigh + 1, so here we use
+  // each bit to represent the usage of them in bitset.
+  std::bitset<TileRegHigh + 1> ArgValues;
+  for (int ArgNum : ArgNums) {
+    llvm::APSInt Arg;
+    SemaBuiltinConstantArg(TheCall, ArgNum, Arg);
+    int ArgExtValue = Arg.getExtValue();
+    assert((ArgExtValue >= TileRegLow || ArgExtValue <= TileRegHigh) &&
+           "Incorrect tile register num.");
+    if (ArgValues.test(ArgExtValue))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_x86_builtin_tile_arg_duplicate)
+             << TheCall->getArg(ArgNum)->getSourceRange();
+    ArgValues.set(ArgExtValue);
+  }
+  return false;
+}
+
+bool Sema::CheckX86BuiltinTileRangeAndDuplicate(CallExpr *TheCall,
+                                                ArrayRef<int> ArgNums) {
+  return CheckX86BuiltinTileArgumentsRange(TheCall, ArgNums) ||
+         CheckX86BuiltinTileDuplicate(TheCall, ArgNums);
+}
+
+bool Sema::CheckX86BuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
+  switch (BuiltinID) {
+  default:
+    return false;
+  case X86::BI__builtin_ia32_tileloadd64:
+  case X86::BI__builtin_ia32_tileloaddt164:
+  case X86::BI__builtin_ia32_tilestored64:
+  case X86::BI__builtin_ia32_tilezero:
+    return CheckX86BuiltinTileArgumentsRange(TheCall, 0);
+  case X86::BI__builtin_ia32_tdpbssd:
+  case X86::BI__builtin_ia32_tdpbsud:
+  case X86::BI__builtin_ia32_tdpbusd:
+  case X86::BI__builtin_ia32_tdpbuud:
+  case X86::BI__builtin_ia32_tdpbf16ps:
+    return CheckX86BuiltinTileRangeAndDuplicate(TheCall, {0, 1, 2});
+  }
+}
 static bool isX86_32Builtin(unsigned BuiltinID) {
   // These builtins only work on x86-32 targets.
   switch (BuiltinID) {
@@ -3598,6 +3697,10 @@ bool Sema::CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
 
   // If the intrinsic has a gather/scatter scale immediate make sure its valid.
   if (CheckX86BuiltinGatherScatterScale(BuiltinID, TheCall))
+    return true;
+
+  // If the intrinsic has a tile arguments, make sure they are valid.
+  if (CheckX86BuiltinTileArguments(BuiltinID, TheCall))
     return true;
 
   // For intrinsics which take an immediate value as part of the instruction,
@@ -11833,27 +11936,31 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       }
 }
 
-static void CheckConditionalOperator(Sema &S, ConditionalOperator *E,
+static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
                                      SourceLocation CC, QualType T);
 
 static void CheckConditionalOperand(Sema &S, Expr *E, QualType T,
                                     SourceLocation CC, bool &ICContext) {
   E = E->IgnoreParenImpCasts();
 
-  if (isa<ConditionalOperator>(E))
-    return CheckConditionalOperator(S, cast<ConditionalOperator>(E), CC, T);
+  if (auto *CO = dyn_cast<AbstractConditionalOperator>(E))
+    return CheckConditionalOperator(S, CO, CC, T);
 
   AnalyzeImplicitConversions(S, E, CC);
   if (E->getType() != T)
     return CheckImplicitConversion(S, E, T, CC, &ICContext);
 }
 
-static void CheckConditionalOperator(Sema &S, ConditionalOperator *E,
+static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
                                      SourceLocation CC, QualType T) {
   AnalyzeImplicitConversions(S, E->getCond(), E->getQuestionLoc());
 
+  Expr *TrueExpr = E->getTrueExpr();
+  if (auto *BCO = dyn_cast<BinaryConditionalOperator>(E))
+    TrueExpr = BCO->getCommon();
+
   bool Suspicious = false;
-  CheckConditionalOperand(S, E->getTrueExpr(), T, CC, Suspicious);
+  CheckConditionalOperand(S, TrueExpr, T, CC, Suspicious);
   CheckConditionalOperand(S, E->getFalseExpr(), T, CC, Suspicious);
 
   if (T->isBooleanType())
@@ -11872,7 +11979,7 @@ static void CheckConditionalOperator(Sema &S, ConditionalOperator *E,
   if (E->getType() == T) return;
 
   Suspicious = false;
-  CheckImplicitConversion(S, E->getTrueExpr()->IgnoreParenImpCasts(),
+  CheckImplicitConversion(S, TrueExpr->IgnoreParenImpCasts(),
                           E->getType(), CC, &Suspicious);
   if (!Suspicious)
     CheckImplicitConversion(S, E->getFalseExpr()->IgnoreParenImpCasts(),
@@ -11935,7 +12042,7 @@ static void AnalyzeImplicitConversions(
 
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.
-  if (auto *CO = dyn_cast<ConditionalOperator>(SourceExpr)) {
+  if (auto *CO = dyn_cast<AbstractConditionalOperator>(SourceExpr)) {
     CheckConditionalOperator(S, CO, CC, T);
     return;
   }
@@ -13453,12 +13560,14 @@ static getBaseAlignmentAndOffsetFromLValue(const Expr *E, ASTContext &Ctx) {
   }
   case Stmt::MemberExprClass: {
     auto *ME = cast<MemberExpr>(E);
-    if (ME->isArrow())
-      break;
     auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
     if (!FD || FD->getType()->isReferenceType())
       break;
-    auto P = getBaseAlignmentAndOffsetFromLValue(ME->getBase(), Ctx);
+    Optional<std::pair<CharUnits, CharUnits>> P;
+    if (ME->isArrow())
+      P = getBaseAlignmentAndOffsetFromPtr(ME->getBase(), Ctx);
+    else
+      P = getBaseAlignmentAndOffsetFromLValue(ME->getBase(), Ctx);
     if (!P)
       break;
     const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(FD->getParent());
@@ -13521,6 +13630,11 @@ static getBaseAlignmentAndOffsetFromPtr(const Expr *E, ASTContext &Ctx) {
     }
     }
     break;
+  }
+  case Stmt::CXXThisExprClass: {
+    auto *RD = E->getType()->getPointeeType()->getAsCXXRecordDecl();
+    CharUnits Alignment = Ctx.getASTRecordLayout(RD).getNonVirtualAlignment();
+    return std::make_pair(Alignment, CharUnits::Zero());
   }
   case Stmt::UnaryOperatorClass: {
     auto *UO = cast<UnaryOperator>(E);
@@ -15265,7 +15379,8 @@ ExprResult Sema::SemaBuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
   if (checkArgCount(*this, TheCall, 4))
     return ExprError();
 
-  Expr *PtrExpr = TheCall->getArg(0);
+  unsigned PtrArgIdx = 0;
+  Expr *PtrExpr = TheCall->getArg(PtrArgIdx);
   Expr *RowsExpr = TheCall->getArg(1);
   Expr *ColumnsExpr = TheCall->getArg(2);
   Expr *StrideExpr = TheCall->getArg(3);
@@ -15289,14 +15404,14 @@ ExprResult Sema::SemaBuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
   QualType ElementTy;
   if (!PtrTy) {
     Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_pointer_arg)
-        << "first";
+        << PtrArgIdx + 1;
     ArgError = true;
   } else {
     ElementTy = PtrTy->getPointeeType().getUnqualifiedType();
 
     if (!ConstantMatrixType::isValidElementType(ElementTy)) {
       Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_pointer_arg)
-          << "first";
+          << PtrArgIdx + 1;
       ArgError = true;
     }
   }
@@ -15372,8 +15487,9 @@ ExprResult Sema::SemaBuiltinMatrixColumnMajorStore(CallExpr *TheCall,
   if (checkArgCount(*this, TheCall, 3))
     return ExprError();
 
+  unsigned PtrArgIdx = 1;
   Expr *MatrixExpr = TheCall->getArg(0);
-  Expr *PtrExpr = TheCall->getArg(1);
+  Expr *PtrExpr = TheCall->getArg(PtrArgIdx);
   Expr *StrideExpr = TheCall->getArg(2);
 
   bool ArgError = false;
@@ -15412,7 +15528,7 @@ ExprResult Sema::SemaBuiltinMatrixColumnMajorStore(CallExpr *TheCall,
   auto *PtrTy = PtrExpr->getType()->getAs<PointerType>();
   if (!PtrTy) {
     Diag(PtrExpr->getBeginLoc(), diag::err_builtin_matrix_pointer_arg)
-        << "second";
+        << PtrArgIdx + 1;
     ArgError = true;
   } else {
     QualType ElementTy = PtrTy->getPointeeType();

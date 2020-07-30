@@ -26,8 +26,7 @@ void addSanitizerArgs(const ToolChain &TC, llvm::opt::ArgStringList &CmdArgs);
 
 class LLVM_LIBRARY_VISIBILITY Assemble : public Tool {
 public:
-  Assemble(const ToolChain &TC)
-      : Tool("PS4cpu::Assemble", "assembler", TC, RF_Full) {}
+  Assemble(const ToolChain &TC) : Tool("PS4cpu::Assemble", "assembler", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -40,7 +39,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Link : public Tool {
 public:
-  Link(const ToolChain &TC) : Tool("PS4cpu::Link", "linker", TC, RF_Full) {}
+  Link(const ToolChain &TC) : Tool("PS4cpu::Link", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }

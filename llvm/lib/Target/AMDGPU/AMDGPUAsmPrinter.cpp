@@ -315,14 +315,12 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     const DataLayout &DL = GV->getParent()->getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
-    unsigned Align = GV->getAlignment();
-    if (!Align)
-      Align = 4;
+    Align Alignment = GV->getAlign().getValueOr(Align(4));
 
     emitVisibility(GVSym, GV->getVisibility(), !GV->isDeclaration());
     emitLinkage(GV, GVSym);
     if (auto TS = getTargetStreamer())
-      TS->emitAMDGPULDS(GVSym, Size, Align);
+      TS->emitAMDGPULDS(GVSym, Size, Alignment);
     return;
   }
 
@@ -1367,9 +1365,9 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     if (AMDGPU::isInlinableIntLiteral(Val)) {
       O << Val;
     } else if (isUInt<16>(Val)) {
-      O << format("0x%" PRIx64, static_cast<uint16_t>(Val));
+      O << format("0x%" PRIx16, static_cast<uint16_t>(Val));
     } else if (isUInt<32>(Val)) {
-      O << format("0x%" PRIx64, static_cast<uint32_t>(Val));
+      O << format("0x%" PRIx32, static_cast<uint32_t>(Val));
     } else {
       O << format("0x%" PRIx64, static_cast<uint64_t>(Val));
     }

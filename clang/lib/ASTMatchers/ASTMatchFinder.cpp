@@ -43,6 +43,13 @@ typedef MatchFinder::MatchCallback MatchCallback;
 // optimize this on.
 static const unsigned MaxMemoizationEntries = 10000;
 
+enum class MatchType {
+  Ancestors,
+
+  Descendants,
+  Child,
+};
+
 // We use memoization to avoid running the same matcher on the same
 // AST node twice.  This struct is the key for looking up match
 // result.  It consists of an ID of the MatcherInterface (for
@@ -60,10 +67,11 @@ struct MatchKey {
   DynTypedNode Node;
   BoundNodesTreeBuilder BoundNodes;
   TraversalKind Traversal = TK_AsIs;
+  MatchType Type;
 
   bool operator<(const MatchKey &Other) const {
-    return std::tie(Traversal, MatcherID, Node, BoundNodes) <
-           std::tie(Other.Traversal, Other.MatcherID, Other.Node,
+    return std::tie(Traversal, Type, MatcherID, Node, BoundNodes) <
+           std::tie(Other.Traversal, Other.Type, Other.MatcherID, Other.Node,
                     Other.BoundNodes);
   }
 };
@@ -456,7 +464,8 @@ public:
     // Note that we key on the bindings *before* the match.
     Key.BoundNodes = *Builder;
     Key.Traversal = Ctx.getParentMapContext().getTraversalKind();
-
+    // Memoize result even doing a single-level match, it might be expensive.
+    Key.Type = MaxDepth == 1 ? MatchType::Child : MatchType::Descendants;
     MemoizationMap::iterator I = ResultCache.find(Key);
     if (I != ResultCache.end()) {
       *Builder = I->second.Nodes;
@@ -693,7 +702,10 @@ private:
                                             BoundNodesTreeBuilder *Builder,
                                             AncestorMatchMode MatchMode) {
     // For AST-nodes that don't have an identity, we can't memoize.
-    if (!Builder->isComparable())
+    // When doing a single-level match, we don't need to memoize because
+    // ParentMap (in ASTContext) already memoizes the result.
+    if (!Builder->isComparable() ||
+        MatchMode == AncestorMatchMode::AMM_ParentOnly)
       return matchesAncestorOfRecursively(Node, Ctx, Matcher, Builder,
                                           MatchMode);
 
@@ -702,6 +714,7 @@ private:
     Key.Node = Node;
     Key.BoundNodes = *Builder;
     Key.Traversal = Ctx.getParentMapContext().getTraversalKind();
+    Key.Type = MatchType::Ancestors;
 
     // Note that we cannot use insert and reuse the iterator, as recursive
     // calls to match might invalidate the result cache iterators.
@@ -742,7 +755,7 @@ private:
             return D->getKind() == Decl::TranslationUnit;
           })) {
         llvm::errs() << "Tried to match orphan node:\n";
-        Node.dump(llvm::errs(), ActiveASTContext->getSourceManager());
+        Node.dump(llvm::errs(), *ActiveASTContext);
         llvm_unreachable("Parent map should be complete!");
       }
 #endif

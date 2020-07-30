@@ -95,7 +95,6 @@ declare void @foo(...)
 ; CHECK: call void @__msan_warning_with_origin_noreturn(i32
 ; CHECK-ORIGINS-SAME %[[ORIGIN]])
 ; CHECK-CONT: 
-; CHECK-NEXT: call void asm sideeffect
 ; CHECK-NEXT: unreachable
 ; CHECK: br i1 %tobool
 ; CHECK: ret void

@@ -6,20 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "gmock/gmock.h"
 #include <type_traits>
 
-// Pull in generated enum utility declarations
+/// Pull in generated enum utility declarations and definitions.
 #include "EnumsGenTest.h.inc"
-// And definitions
 #include "EnumsGenTest.cpp.inc"
 
-// Test namespaces and enum class/utility names
+/// Test namespaces and enum class/utility names.
 using Outer::Inner::ConvertToEnum;
 using Outer::Inner::ConvertToString;
 using Outer::Inner::StrEnum;

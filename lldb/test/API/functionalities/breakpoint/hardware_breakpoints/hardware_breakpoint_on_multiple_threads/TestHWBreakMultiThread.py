@@ -36,7 +36,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     # architectures.
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
-    @skipIfDarwinEmbedded
+    @expectedFailureAll(archs=["arm64"])
     def test_hw_break_set_delete_multi_thread_macos(self):
         self.build()
         self.setTearDownCleanup()
@@ -46,7 +46,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     # architectures.
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
-    @skipIfDarwinEmbedded
+    @expectedFailureAll(archs=["arm64"])
     def test_hw_break_set_disable_multi_thread_macos(self):
         self.build()
         self.setTearDownCleanup()

@@ -154,13 +154,17 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   set(GEN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/gen-msvc-exports.py)
 
   set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
-
-  if(CMAKE_CROSSCOMPILING)
-    build_native_tool(llvm-nm llvm_nm)
-    set(llvm_nm_target "${llvm_nm}")
+  if(NOT LLVM_NM)
+    if(CMAKE_CROSSCOMPILING)
+      build_native_tool(llvm-nm llvm_nm)
+      set(llvm_nm_target "${llvm_nm}")
+    else()
+      set(llvm_nm $<TARGET_FILE:llvm-nm>)
+      set(llvm_nm_target llvm-nm)
+    endif()
   else()
-    set(llvm_nm $<TARGET_FILE:llvm-nm>)
-    set(llvm_nm_target llvm-nm)
+    set(llvm_nm ${LLVM_NM})
+    set(llvm_nm_target "")
   endif()
 
   add_custom_command(OUTPUT ${LLVM_EXPORTED_SYMBOL_FILE}

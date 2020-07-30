@@ -29,7 +29,7 @@ using namespace lldb_private::formatters;
 bool lldb_private::formatters::CFAbsoluteTimeSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   time_t epoch = GetOSXEpoch();
-  epoch = epoch + (time_t)valobj.GetValueAsUnsigned(0);
+  epoch = epoch + (time_t)valobj.GetValueAsSigned(0);
   tm *tm_date = localtime(&epoch);
   if (!tm_date)
     return false;

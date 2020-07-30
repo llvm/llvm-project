@@ -1,0 +1,71 @@
+## On Windows co-operative applications can be expected to open LLD's output
+## with FILE_SHARE_DELETE included in the sharing mode. This allows us to link
+## over the top of an existing file even if it is in use by another application.
+
+# REQUIRES: system-windows, x86
+# RUN: echo '.globl _start; _start:' > %t.s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-unknown %t.s -o %t.o
+
+## FILE_SHARE_READ   = 1
+## FILE_SHARE_WRITE  = 2
+## FILE_SHARE_DELETE = 4
+
+# RUN:     %python %s %t.o 7
+# RUN: not %python %s %t.o 3 2>&1 | FileCheck %s
+# CHECK: error: failed to write to the output file
+
+import contextlib
+import ctypes
+from ctypes import wintypes as w
+import os
+import shutil
+import subprocess
+import platform
+import sys
+import time
+
+object_file = sys.argv[1]
+share_flags = int(sys.argv[2])
+
+@contextlib.contextmanager
+def open_with_share_flags(filename, share_flags):
+    GENERIC_READ          = 0x80000000
+    FILE_ATTRIBUTE_NORMAL = 0x80
+    OPEN_EXISTING         = 0x3
+    INVALID_HANDLE_VALUE = w.HANDLE(-1).value
+
+    CreateFileA = ctypes.windll.kernel32.CreateFileA
+    CreateFileA.restype = w.HANDLE
+    h = CreateFileA(filename.encode('mbcs'), GENERIC_READ, share_flags,
+                    None, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, None)
+
+    assert h != INVALID_HANDLE_VALUE, 'Failed to open ' + filename
+    try:
+        yield
+    finally:
+        ctypes.windll.kernel32.CloseHandle(h)
+
+## Ensure we have an empty directory for the output.
+outdir = os.path.basename(__file__) + '.dir'
+if os.path.exists(outdir):
+    shutil.rmtree(outdir)
+os.makedirs(outdir)
+
+## Link on top of an open file.
+elf = os.path.join(outdir, 'output_file.elf')
+open(elf, 'wb').close()
+with open_with_share_flags(elf, share_flags):
+    subprocess.check_call(['ld.lld.exe', object_file, '-o', elf])
+
+## Check the linker wrote the output file.
+with open(elf, 'rb') as f:
+    assert f.read(4) == b'\x7fELF', "linker did not write output file correctly"
+
+## Check no temp files are left around.
+## It might take a while for Windows to remove them, so loop.
+deleted = lambda: len(os.listdir(outdir)) == 1
+for _ in range(10):
+    if not deleted():
+        time.sleep (1)
+
+assert deleted(), "temp file(s) not deleted after grace period"

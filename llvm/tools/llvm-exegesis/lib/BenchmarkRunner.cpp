@@ -46,9 +46,29 @@ public:
 
 private:
   Expected<int64_t> runAndMeasure(const char *Counters) const override {
+    auto ResultOrError = runAndSample(Counters);
+    if (ResultOrError)
+      return ResultOrError.get()[0];
+    return ResultOrError.takeError();
+  }
+
+  static void
+  accumulateCounterValues(const llvm::SmallVector<int64_t, 4> &NewValues,
+                          llvm::SmallVector<int64_t, 4> *Result) {
+
+    const size_t NumValues = std::max(NewValues.size(), Result->size());
+    if (NumValues > Result->size())
+      Result->resize(NumValues, 0);
+    for (size_t I = 0, End = NewValues.size(); I < End; ++I)
+      (*Result)[I] += NewValues[I];
+  }
+
+  Expected<llvm::SmallVector<int64_t, 4>>
+  runAndSample(const char *Counters) const override {
     // We sum counts when there are several counters for a single ProcRes
     // (e.g. P23 on SandyBridge).
-    int64_t CounterValue = 0;
+    llvm::SmallVector<int64_t, 4> CounterValues;
+    int Reserved = 0;
     SmallVector<StringRef, 2> CounterNames;
     StringRef(Counters).split(CounterNames, '+');
     char *const ScratchPtr = Scratch->ptr();
@@ -61,6 +81,17 @@ private:
         return CounterOrError.takeError();
 
       pfm::Counter *Counter = CounterOrError.get().get();
+      if (Reserved == 0) {
+        Reserved = Counter->numValues();
+        CounterValues.reserve(Reserved);
+      } else if (Reserved != Counter->numValues())
+        // It'd be wrong to accumulate vectors of different sizes.
+        return make_error<Failure>(
+            llvm::Twine("Inconsistent number of values for counter ")
+                .concat(CounterName)
+                .concat(std::to_string(Counter->numValues()))
+                .concat(" vs expected of ")
+                .concat(std::to_string(Reserved)));
       Scratch->clear();
       {
         CrashRecoveryContext CRC;
@@ -75,9 +106,13 @@ private:
         if (Crashed)
           return make_error<SnippetCrash>("snippet crashed while running");
       }
-      CounterValue += Counter->read();
+      auto ValueOrError = Counter->readOrError();
+      if (!ValueOrError)
+        return ValueOrError.takeError();
+
+      accumulateCounterValues(ValueOrError.get(), &CounterValues);
     }
-    return CounterValue;
+    return CounterValues;
   }
 
   const LLVMState &State;

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -instcombine -S | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -instcombine -S | FileCheck %s
 
 @flag0 = internal global i32 zeroinitializer
 @turn = internal global i32 zeroinitializer

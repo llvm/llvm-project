@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/VersionTuple.h"
 
 namespace clang {
 namespace driver {
@@ -38,11 +39,43 @@ private:
     }
   };
 
+  // Installation path candidate.
+  struct Candidate {
+    llvm::SmallString<0> Path;
+    bool StrictChecking;
+
+    Candidate(std::string Path, bool StrictChecking = false)
+        : Path(Path), StrictChecking(StrictChecking) {}
+  };
+
   const Driver &D;
-  bool IsValid = false;
-  // RocmVersion Version = RocmVersion::UNKNOWN;
+  bool HasHIPRuntime = false;
+  bool HasDeviceLibrary = false;
+
+  // Default version if not detected or specified.
+  const unsigned DefaultVersionMajor = 3;
+  const unsigned DefaultVersionMinor = 5;
+  const char *DefaultVersionPatch = "0";
+
+  // The version string in Major.Minor.Patch format.
+  std::string DetectedVersion;
+  // Version containing major and minor.
+  llvm::VersionTuple VersionMajorMinor;
+  // Version containing patch.
+  std::string VersionPatch;
+
+  // ROCm path specified by --rocm-path.
+  StringRef RocmPathArg;
+  // ROCm device library paths specified by --rocm-device-lib-path.
+  std::vector<std::string> RocmDeviceLibPathArg;
+  // HIP version specified by --hip-version.
+  StringRef HIPVersionArg;
+  // Wheter -nogpulib is specified.
+  bool NoBuiltinLibs = false;
+
+  // Paths
   SmallString<0> InstallPath;
-  // SmallString<0> BinPath;
+  SmallString<0> BinPath;
   SmallString<0> LibPath;
   SmallString<0> LibDevicePath;
   SmallString<0> IncludePath;
@@ -74,11 +107,15 @@ private:
   // CheckRocmVersionSupportsArch.
   mutable llvm::SmallSet<CudaArch, 4> ArchsWithBadVersion;
 
-  void scanLibDevicePath();
+  void scanLibDevicePath(llvm::StringRef Path);
+  void ParseHIPVersionFile(llvm::StringRef V);
+  SmallVector<Candidate, 4> getInstallationPathCandidates();
 
 public:
   RocmInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
-                           const llvm::opt::ArgList &Args);
+                           const llvm::opt::ArgList &Args,
+                           bool DetectHIPRuntime = true,
+                           bool DetectDeviceLib = false);
 
   /// Add arguments needed to link default bitcode libraries.
   void addCommonBitcodeLibCC1Args(const llvm::opt::ArgList &DriverArgs,
@@ -93,8 +130,12 @@ public:
   /// most one error per Arch.
   void CheckRocmVersionSupportsArch(CudaArch Arch) const;
 
-  /// Check whether we detected a valid Rocm install.
-  bool isValid() const { return IsValid; }
+  /// Check whether we detected a valid HIP runtime.
+  bool hasHIPRuntime() const { return HasHIPRuntime; }
+
+  /// Check whether we detected a valid ROCm device library.
+  bool hasDeviceLibrary() const { return HasDeviceLibrary; }
+
   /// Print information about the detected ROCm installation.
   void print(raw_ostream &OS) const;
 
@@ -163,6 +204,22 @@ public:
 
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const;
+
+  void detectDeviceLibrary();
+  void detectHIPRuntime();
+
+  /// Get the values for --rocm-device-lib-path arguments
+  std::vector<std::string> getRocmDeviceLibPathArg() const {
+    return RocmDeviceLibPathArg;
+  }
+
+  /// Get the value for --rocm-path argument
+  StringRef getRocmPathArg() const { return RocmPathArg; }
+
+  /// Get the value for --hip-version argument
+  StringRef getHIPVersionArg() const { return HIPVersionArg; }
+
+  std::string getHIPVersion() const { return DetectedVersion; }
 };
 
 } // end namespace driver

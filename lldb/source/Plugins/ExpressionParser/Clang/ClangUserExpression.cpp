@@ -595,7 +595,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   // Parse the expression
   //
 
-  m_materializer_up.reset(new Materializer());
+  m_materializer_up = std::make_unique<Materializer>();
 
   ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
 
@@ -783,7 +783,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   // Parse the expression
   //
 
-  m_materializer_up.reset(new Materializer());
+  m_materializer_up = std::make_unique<Materializer>();
 
   ResetDeclMap(exe_ctx, m_result_delegate, /*keep result in memory*/ true);
 
@@ -919,16 +919,16 @@ void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
     ast_importer = persistent_vars->GetClangASTImporter();
   }
-  m_expr_decl_map_up.reset(
-      new ClangExpressionDeclMap(keep_result_in_memory, &delegate,
-                                 exe_ctx.GetTargetSP(), ast_importer, ctx_obj));
+  m_expr_decl_map_up = std::make_unique<ClangExpressionDeclMap>(
+      keep_result_in_memory, &delegate, exe_ctx.GetTargetSP(), ast_importer,
+      ctx_obj);
 }
 
 clang::ASTConsumer *
 ClangUserExpression::ClangUserExpressionHelper::ASTTransformer(
     clang::ASTConsumer *passthrough) {
-  m_result_synthesizer_up.reset(
-      new ASTResultSynthesizer(passthrough, m_top_level, m_target));
+  m_result_synthesizer_up = std::make_unique<ASTResultSynthesizer>(
+      passthrough, m_top_level, m_target);
 
   return m_result_synthesizer_up.get();
 }

@@ -4,6 +4,10 @@ add_library(FortranEvaluateTesting
   fp-testing.cpp
 )
 
+target_link_libraries(FortranEvaluateTesting
+  LLVMSupport
+)
+
 add_executable(leading-zero-bit-count-test
   leading-zero-bit-count.cpp
 )

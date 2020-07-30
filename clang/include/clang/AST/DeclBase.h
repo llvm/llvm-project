@@ -66,6 +66,7 @@ class SourceManager;
 class Stmt;
 class StoredDeclsMap;
 class TemplateDecl;
+class TemplateParameterList;
 class TranslationUnitDecl;
 class UsingDirectiveDecl;
 
@@ -862,6 +863,10 @@ public:
   // within the scope of a template parameter).
   bool isTemplated() const;
 
+  /// Determine the number of levels of template parameter surrounding this
+  /// declaration.
+  unsigned getTemplateDepth() const;
+
   /// isDefinedOutsideFunctionOrMethod - This predicate returns true if this
   /// scoped decl is defined outside the current function or method.  This is
   /// roughly global variables and functions, but also handles enums (which
@@ -870,15 +875,19 @@ public:
     return getParentFunctionOrMethod() == nullptr;
   }
 
-  /// Returns true if this declaration is lexically inside a function or inside
-  /// a variable initializer. It recognizes non-defining declarations as well
-  /// as members of local classes and lambdas:
+  /// Determine whether a substitution into this declaration would occur as
+  /// part of a substitution into a dependent local scope. Such a substitution
+  /// transitively substitutes into all constructs nested within this
+  /// declaration.
+  ///
+  /// This recognizes non-defining declarations as well as members of local
+  /// classes and lambdas:
   /// \code
-  ///     void foo() { void bar(); }
-  ///     void foo2() { class ABC { void bar(); }; }
-  ///     inline int x = [](){ return 0; }();
+  ///     template<typename T> void foo() { void bar(); }
+  ///     template<typename T> void foo2() { class ABC { void bar(); }; }
+  ///     template<typename T> inline int x = [](){ return 0; }();
   /// \endcode
-  bool isInLocalScope() const;
+  bool isInLocalScopeForInstantiation() const;
 
   /// If this decl is defined inside a function/method/block it returns
   /// the corresponding DeclContext, otherwise it returns null.
@@ -1038,7 +1047,15 @@ public:
 
   /// If this is a declaration that describes some template, this
   /// method returns that template declaration.
+  ///
+  /// Note that this returns nullptr for partial specializations, because they
+  /// are not modeled as TemplateDecls. Use getDescribedTemplateParams to handle
+  /// those cases.
   TemplateDecl *getDescribedTemplate() const;
+
+  /// If this is a declaration that describes some template or partial
+  /// specialization, this returns the corresponding template parameter list.
+  const TemplateParameterList *getDescribedTemplateParams() const;
 
   /// Returns the function itself, or the templated function if this is a
   /// function template.

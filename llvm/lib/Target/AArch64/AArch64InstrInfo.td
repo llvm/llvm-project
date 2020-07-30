@@ -155,6 +155,8 @@ def HasMatMulFP64    : Predicate<"Subtarget->hasMatMulFP64()">,
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
+def UseExperimentalZeroingPseudos
+    : Predicate<"Subtarget->useExperimentalZeroingPseudos()">;
 def UseAlternateSExtLoadCVTF32
     : Predicate<"Subtarget->useAlternateSExtLoadCVTF32Pattern()">;
 
@@ -551,6 +553,9 @@ def AArch64sminv    : SDNode<"AArch64ISD::SMINV", SDT_AArch64UnaryVec>;
 def AArch64uminv    : SDNode<"AArch64ISD::UMINV", SDT_AArch64UnaryVec>;
 def AArch64smaxv    : SDNode<"AArch64ISD::SMAXV", SDT_AArch64UnaryVec>;
 def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
+
+def AArch64srhadd   : SDNode<"AArch64ISD::SRHADD", SDT_AArch64binvec>;
+def AArch64urhadd   : SDNode<"AArch64ISD::URHADD", SDT_AArch64binvec>;
 
 def SDT_AArch64SETTAG : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def AArch64stg : SDNode<"AArch64ISD::STG", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
@@ -3955,12 +3960,16 @@ defm URSQRTE: SIMDTwoVectorS<1, 1, 0b11100, "ursqrte", int_aarch64_neon_ursqrte>
 defm USQADD : SIMDTwoVectorBHSDTied<1, 0b00011, "usqadd",int_aarch64_neon_usqadd>;
 defm XTN    : SIMDMixedTwoVector<0, 0b10010, "xtn", trunc>;
 
-def : Pat<(v4f16 (AArch64rev32 V64:$Rn)), (REV32v4i16 V64:$Rn)>;
-def : Pat<(v4f16 (AArch64rev64 V64:$Rn)), (REV64v4i16 V64:$Rn)>;
-def : Pat<(v8f16 (AArch64rev32 V128:$Rn)), (REV32v8i16 V128:$Rn)>;
-def : Pat<(v8f16 (AArch64rev64 V128:$Rn)), (REV64v8i16 V128:$Rn)>;
-def : Pat<(v2f32 (AArch64rev64 V64:$Rn)), (REV64v2i32 V64:$Rn)>;
-def : Pat<(v4f32 (AArch64rev64 V128:$Rn)), (REV64v4i32 V128:$Rn)>;
+def : Pat<(v4f16  (AArch64rev32 V64:$Rn)),  (REV32v4i16 V64:$Rn)>;
+def : Pat<(v4f16  (AArch64rev64 V64:$Rn)),  (REV64v4i16 V64:$Rn)>;
+def : Pat<(v4bf16 (AArch64rev32 V64:$Rn)),  (REV32v4i16 V64:$Rn)>;
+def : Pat<(v4bf16 (AArch64rev64 V64:$Rn)),  (REV64v4i16 V64:$Rn)>;
+def : Pat<(v8f16  (AArch64rev32 V128:$Rn)), (REV32v8i16 V128:$Rn)>;
+def : Pat<(v8f16  (AArch64rev64 V128:$Rn)), (REV64v8i16 V128:$Rn)>;
+def : Pat<(v8bf16 (AArch64rev32 V128:$Rn)), (REV32v8i16 V128:$Rn)>;
+def : Pat<(v8bf16 (AArch64rev64 V128:$Rn)), (REV64v8i16 V128:$Rn)>;
+def : Pat<(v2f32  (AArch64rev64 V64:$Rn)),  (REV64v2i32 V64:$Rn)>;
+def : Pat<(v4f32  (AArch64rev64 V128:$Rn)), (REV64v4i32 V128:$Rn)>;
 
 // Patterns for vector long shift (by element width). These need to match all
 // three of zext, sext and anyext so it's easier to pull the patterns out of the
@@ -4067,7 +4076,7 @@ defm SQRDMULH : SIMDThreeSameVectorHS<1,0b10110,"sqrdmulh",int_aarch64_neon_sqrd
 defm SQRSHL   : SIMDThreeSameVector<0,0b01011,"sqrshl", int_aarch64_neon_sqrshl>;
 defm SQSHL    : SIMDThreeSameVector<0,0b01001,"sqshl", int_aarch64_neon_sqshl>;
 defm SQSUB    : SIMDThreeSameVector<0,0b00101,"sqsub", int_aarch64_neon_sqsub>;
-defm SRHADD   : SIMDThreeSameVectorBHS<0,0b00010,"srhadd",int_aarch64_neon_srhadd>;
+defm SRHADD   : SIMDThreeSameVectorBHS<0,0b00010,"srhadd", AArch64srhadd>;
 defm SRSHL    : SIMDThreeSameVector<0,0b01010,"srshl", int_aarch64_neon_srshl>;
 defm SSHL     : SIMDThreeSameVector<0,0b01000,"sshl", int_aarch64_neon_sshl>;
 defm SUB      : SIMDThreeSameVector<1,0b10000,"sub", sub>;
@@ -4084,7 +4093,7 @@ defm UQADD    : SIMDThreeSameVector<1,0b00001,"uqadd", int_aarch64_neon_uqadd>;
 defm UQRSHL   : SIMDThreeSameVector<1,0b01011,"uqrshl", int_aarch64_neon_uqrshl>;
 defm UQSHL    : SIMDThreeSameVector<1,0b01001,"uqshl", int_aarch64_neon_uqshl>;
 defm UQSUB    : SIMDThreeSameVector<1,0b00101,"uqsub", int_aarch64_neon_uqsub>;
-defm URHADD   : SIMDThreeSameVectorBHS<1,0b00010,"urhadd", int_aarch64_neon_urhadd>;
+defm URHADD   : SIMDThreeSameVectorBHS<1,0b00010,"urhadd", AArch64urhadd>;
 defm URSHL    : SIMDThreeSameVector<1,0b01010,"urshl", int_aarch64_neon_urshl>;
 defm USHL     : SIMDThreeSameVector<1,0b01000,"ushl", int_aarch64_neon_ushl>;
 defm SQRDMLAH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10000,"sqrdmlah",

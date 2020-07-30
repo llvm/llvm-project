@@ -148,6 +148,8 @@ class FRd<bits<4> opcode, bits<7> f, dag outs, dag ins, string asmstr,
   let Inst{11-9} = f{6-4};
   let Inst{8-4} = d;
   let Inst{3-0} = f{3-0};
+
+  let DecoderMethod = "decodeFRd";
 }
 
 //===----------------------------------------------------------------------===//
@@ -235,6 +237,8 @@ class FLPMX<bit e, bit p, dag outs, dag ins, string asmstr, list<dag> pattern>
    let Inst{3-2} = 0b01;
    let Inst{1} = e;
    let Inst{0} = p;
+
+   let DecoderMethod = "decodeFLPMX";
 }
 
 //===----------------------------------------------------------------------===//
@@ -252,6 +256,8 @@ class FMOVWRdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15-8} = 0b00000001;
   let Inst{7-4} = d{4-1};
   let Inst{3-0} = r{4-1};
+
+  let DecoderMethod = "decodeFMOVWRdRr";
 }
 
 //===----------------------------------------------------------------------===//
@@ -270,6 +276,8 @@ class FMUL2RdRr<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{8} = f;
   let Inst{7-4} = rd{3-0};
   let Inst{3-0} = rr{3-0};
+
+  let DecoderMethod = "decodeFMUL2RdRr";
 }
 
 // Special encoding for the FMUL family of instructions.
@@ -293,6 +301,8 @@ class FFMULRdRr<bits<2> f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{6-4} = rd;
   let Inst{3} = f{0};
   let Inst{2-0} = rr;
+
+  let DecoderMethod = "decodeFFMULRdRr";
 }
 
 
@@ -314,6 +324,8 @@ class FWRdK<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-6} = k{5-4};
   let Inst{5-4} = dst{2-1};
   let Inst{3-0} = k{3-0};
+
+  let DecoderMethod = "decodeFWRdK";
 }
 
 //===----------------------------------------------------------------------===//

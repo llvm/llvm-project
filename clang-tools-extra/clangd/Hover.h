@@ -77,10 +77,30 @@ struct HoverInfo {
   llvm::Optional<uint64_t> Size;
   /// Contains the offset of fields within the enclosing class.
   llvm::Optional<uint64_t> Offset;
+  // Set when symbol is inside function call. Contains information extracted
+  // from the callee definition about the argument this is passed as.
+  llvm::Optional<Param> CalleeArgInfo;
+  struct PassType {
+    // How the variable is passed to callee.
+    enum PassMode { Ref, ConstRef, Value };
+    PassMode PassBy = Ref;
+    // True if type conversion happened. This includes calls to implicit
+    // constructor, as well as built-in type conversions. Casting to base class
+    // is not considered conversion.
+    bool Converted = false;
+  };
+  // Set only if CalleeArgInfo is set.
+  llvm::Optional<PassType> CallPassType;
 
   /// Produce a user-readable information.
   markup::Document present() const;
 };
+
+inline bool operator==(const HoverInfo::PassType &LHS,
+                       const HoverInfo::PassType &RHS) {
+  return std::tie(LHS.PassBy, LHS.Converted) ==
+         std::tie(RHS.PassBy, RHS.Converted);
+}
 
 // Try to infer structure of a documentation comment (e.g. line breaks).
 // FIXME: move to another file so CodeComplete doesn't depend on Hover.

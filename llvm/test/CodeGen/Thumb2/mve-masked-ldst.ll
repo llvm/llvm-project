@@ -876,11 +876,11 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 ; CHECK-NEXT:    lsls.w r1, lr, #29
 ; CHECK-NEXT:    bmi .LBB18_7
 ; CHECK-NEXT:  .LBB18_4:
-; CHECK-NEXT:    vmov q2, q0
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    lsls.w r1, lr, #28
 ; CHECK-NEXT:    bmi .LBB18_8
 ; CHECK-NEXT:  .LBB18_5:
-; CHECK-NEXT:    vmov q1, q2
+; CHECK-NEXT:    vmov q2, q1
 ; CHECK-NEXT:    b .LBB18_9
 ; CHECK-NEXT:  .LBB18_6:
 ; CHECK-NEXT:    vmov q0, q1
@@ -889,37 +889,35 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 ; CHECK-NEXT:  .LBB18_7: @ %cond.load4
 ; CHECK-NEXT:    vmovx.f16 s4, s0
 ; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vldr.16 s8, [r2, #4]
 ; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    vldr.16 s4, [r2, #4]
-; CHECK-NEXT:    vmov.16 q2[0], r1
+; CHECK-NEXT:    vmov.16 q1[0], r1
 ; CHECK-NEXT:    vmovx.f16 s0, s1
-; CHECK-NEXT:    vmov.16 q2[1], r3
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    vmov.16 q2[2], r1
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vmov.16 q2[3], r1
-; CHECK-NEXT:    lsls.w r1, lr, #28
-; CHECK-NEXT:    bpl .LBB18_5
-; CHECK-NEXT:  .LBB18_8: @ %cond.load7
-; CHECK-NEXT:    vmovx.f16 s0, s8
-; CHECK-NEXT:    vmov r3, s8
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vmov.16 q1[0], r3
-; CHECK-NEXT:    vldr.16 s0, [r2, #6]
-; CHECK-NEXT:    vmov.16 q1[1], r1
-; CHECK-NEXT:    vmov r1, s9
+; CHECK-NEXT:    vmov.16 q1[1], r3
+; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    vmov.16 q1[2], r1
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmov.16 q1[3], r1
+; CHECK-NEXT:    lsls.w r1, lr, #28
+; CHECK-NEXT:    bpl .LBB18_5
+; CHECK-NEXT:  .LBB18_8: @ %cond.load7
+; CHECK-NEXT:    vmovx.f16 s0, s4
+; CHECK-NEXT:    vmov r3, s4
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.16 q2[0], r3
+; CHECK-NEXT:    vldr.16 s0, [r2, #6]
+; CHECK-NEXT:    vmov.16 q2[1], r1
+; CHECK-NEXT:    vmov r1, s5
+; CHECK-NEXT:    vmov.16 q2[2], r1
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.16 q2[3], r1
 ; CHECK-NEXT:  .LBB18_9: @ %else8
 ; CHECK-NEXT:    vmrs r2, p0
-; CHECK-NEXT:    vmovx.f16 s0, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s3, s0
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s5
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    vcvtb.f32.f16 s1, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s4
+; CHECK-NEXT:    vcvtt.f32.f16 s3, s9
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s9
+; CHECK-NEXT:    vcvtt.f32.f16 s1, s8
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s8
 ; CHECK-NEXT:    and r3, r2, #1
 ; CHECK-NEXT:    rsbs r3, r3, #0
 ; CHECK-NEXT:    bfi r1, r3, #0, #1
@@ -1004,11 +1002,11 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 ; CHECK-NEXT:    lsls.w r1, lr, #29
 ; CHECK-NEXT:    bmi .LBB19_7
 ; CHECK-NEXT:  .LBB19_4:
-; CHECK-NEXT:    vmov q2, q0
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    lsls.w r1, lr, #28
 ; CHECK-NEXT:    bmi .LBB19_8
 ; CHECK-NEXT:  .LBB19_5:
-; CHECK-NEXT:    vmov q1, q2
+; CHECK-NEXT:    vmov q2, q1
 ; CHECK-NEXT:    b .LBB19_9
 ; CHECK-NEXT:  .LBB19_6:
 ; CHECK-NEXT:    vmov q0, q1
@@ -1017,37 +1015,35 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 ; CHECK-NEXT:  .LBB19_7: @ %cond.load4
 ; CHECK-NEXT:    vmovx.f16 s4, s0
 ; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vldr.16 s8, [r2, #4]
 ; CHECK-NEXT:    vmov r3, s4
-; CHECK-NEXT:    vldr.16 s4, [r2, #4]
-; CHECK-NEXT:    vmov.16 q2[0], r1
+; CHECK-NEXT:    vmov.16 q1[0], r1
 ; CHECK-NEXT:    vmovx.f16 s0, s1
-; CHECK-NEXT:    vmov.16 q2[1], r3
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    vmov.16 q2[2], r1
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vmov.16 q2[3], r1
-; CHECK-NEXT:    lsls.w r1, lr, #28
-; CHECK-NEXT:    bpl .LBB19_5
-; CHECK-NEXT:  .LBB19_8: @ %cond.load7
-; CHECK-NEXT:    vmovx.f16 s0, s8
-; CHECK-NEXT:    vmov r3, s8
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vmov.16 q1[0], r3
-; CHECK-NEXT:    vldr.16 s0, [r2, #6]
-; CHECK-NEXT:    vmov.16 q1[1], r1
-; CHECK-NEXT:    vmov r1, s9
+; CHECK-NEXT:    vmov.16 q1[1], r3
+; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    vmov.16 q1[2], r1
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmov.16 q1[3], r1
+; CHECK-NEXT:    lsls.w r1, lr, #28
+; CHECK-NEXT:    bpl .LBB19_5
+; CHECK-NEXT:  .LBB19_8: @ %cond.load7
+; CHECK-NEXT:    vmovx.f16 s0, s4
+; CHECK-NEXT:    vmov r3, s4
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.16 q2[0], r3
+; CHECK-NEXT:    vldr.16 s0, [r2, #6]
+; CHECK-NEXT:    vmov.16 q2[1], r1
+; CHECK-NEXT:    vmov r1, s5
+; CHECK-NEXT:    vmov.16 q2[2], r1
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.16 q2[3], r1
 ; CHECK-NEXT:  .LBB19_9: @ %else8
 ; CHECK-NEXT:    vmrs r2, p0
-; CHECK-NEXT:    vmovx.f16 s0, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s3, s0
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s5
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    vcvtb.f32.f16 s1, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s4
+; CHECK-NEXT:    vcvtt.f32.f16 s3, s9
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s9
+; CHECK-NEXT:    vcvtt.f32.f16 s1, s8
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s8
 ; CHECK-NEXT:    and r3, r2, #1
 ; CHECK-NEXT:    rsbs r3, r3, #0
 ; CHECK-NEXT:    bfi r1, r3, #0, #1

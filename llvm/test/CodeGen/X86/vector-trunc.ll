@@ -456,7 +456,7 @@ define <8 x i16> @trunc8i32_8i16_lshr(<8 x i32> %a) {
 ;
 ; SSSE3-LABEL: trunc8i32_8i16_lshr:
 ; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2,3,6,7,10,11,14,15,10,11,14,15,14,15,255,255]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2,3,6,7,10,11,14,15,10,11,14,15,14,15,128,128]
 ; SSSE3-NEXT:    pshufb %xmm2, %xmm1
 ; SSSE3-NEXT:    pshufb %xmm2, %xmm0
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -927,9 +927,9 @@ define void @trunc16i32_16i8_ashr(<16 x i32> %a) {
 ; AVX2-NEXT:    vpsrad $24, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrad $24, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1004,9 +1004,9 @@ define void @trunc16i32_16i8_lshr(<16 x i32> %a) {
 ; AVX2-NEXT:    vpsrld $24, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrld $24, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

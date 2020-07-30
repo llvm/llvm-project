@@ -163,3 +163,87 @@ entry:
   %vgetq_lane = extractelement <8 x bfloat> %v, i32 7
   ret bfloat %vgetq_lane
 }
+
+; vcopy_lane_bf16(a, 1, b, 3);
+define <4 x bfloat> @test_vcopy_lane_bf16_v1(<4 x bfloat> %a, <4 x bfloat> %b) nounwind {
+; CHECK-LABEL: test_vcopy_lane_bf16_v1:
+; CHECK-NEXT:    mov v0.h[1], v1.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %vset_lane = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 7, i32 2, i32 3>
+  ret <4 x bfloat> %vset_lane
+}
+
+; vcopy_lane_bf16(a, 2, b, 0);
+define <4 x bfloat> @test_vcopy_lane_bf16_v2(<4 x bfloat> %a, <4 x bfloat> %b) nounwind {
+; CHECK-LABEL: test_vcopy_lane_bf16_v2:
+; CHECK-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-NEXT:    ret
+entry:
+  %vset_lane = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 3>
+  ret <4 x bfloat> %vset_lane
+}
+
+; vcopyq_lane_bf16(a, 0, b, 2);
+define <8 x bfloat> @test_vcopyq_lane_bf16_v1(<8 x bfloat> %a, <4 x bfloat> %b) nounwind {
+; CHECK-LABEL: test_vcopyq_lane_bf16_v1:
+; CHECK-NEXT:    mov v0.h[0], v1.h[2]
+; CHECK-NEXT:    ret
+entry:
+  %0 = shufflevector <4 x bfloat> %b, <4 x bfloat> undef, <8 x i32> <i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %vset_lane = shufflevector <8 x bfloat> %a, <8 x bfloat> %0, <8 x i32> <i32 10, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x bfloat> %vset_lane
+}
+
+; vcopyq_lane_bf16(a, 6, b, 0);
+define <8 x bfloat> @test_vcopyq_lane_bf16_v2(<8 x bfloat> %a, <4 x bfloat> %b) nounwind {
+; CHECK-LABEL: test_vcopyq_lane_bf16_v2:
+; CHECK-NEXT:    mov v0.h[6], v1.h[0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = shufflevector <4 x bfloat> %b, <4 x bfloat> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %vset_lane = shufflevector <8 x bfloat> %a, <8 x bfloat> %0, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 7>
+  ret <8 x bfloat> %vset_lane
+}
+
+; vcopy_laneq_bf16(a, 0, b, 7);
+define <4 x bfloat> @test_vcopy_laneq_bf16_v1(<4 x bfloat> %a, <8 x bfloat> %b) nounwind {
+; CHECK-LABEL: test_vcopy_laneq_bf16_v1:
+; CHECK-NEXT:    mov v0.h[0], v1.h[7]
+; CHECK-NEXT:    ret
+entry:
+  %vgetq_lane = extractelement <8 x bfloat> %b, i32 7
+  %vset_lane = insertelement <4 x bfloat> %a, bfloat %vgetq_lane, i32 0
+  ret <4 x bfloat> %vset_lane
+}
+
+; vcopy_laneq_bf16(a, 3, b, 4);
+define <4 x bfloat> @test_vcopy_laneq_bf16_v2(<4 x bfloat> %a, <8 x bfloat> %b) nounwind {
+; CHECK-LABEL: test_vcopy_laneq_bf16_v2:
+; CHECK-NEXT:    mov v0.h[3], v1.h[4]
+; CHECK-NEXT:    ret
+entry:
+  %vgetq_lane = extractelement <8 x bfloat> %b, i32 4
+  %vset_lane = insertelement <4 x bfloat> %a, bfloat %vgetq_lane, i32 3
+  ret <4 x bfloat> %vset_lane
+}
+
+; vcopyq_laneq_bf16(a, 3, b, 7);
+define <8 x bfloat> @test_vcopyq_laneq_bf16_v1(<8 x bfloat> %a, <8 x bfloat> %b) nounwind {
+; CHECK-LABEL: test_vcopyq_laneq_bf16_v1:
+; CHECK-NEXT:    mov v0.h[3], v1.h[7]
+; CHECK-NEXT:    ret
+entry:
+  %vset_lane = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 15, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x bfloat> %vset_lane
+}
+
+; vcopyq_laneq_bf16(a, 6, b, 2);
+define <8 x bfloat> @test_vcopyq_laneq_bf16_v2(<8 x bfloat> %a, <8 x bfloat> %b) nounwind {
+; CHECK-LABEL: test_vcopyq_laneq_bf16_v2:
+; CHECK-NEXT:    mov v0.h[6], v1.h[2]
+; CHECK-NEXT:    ret
+entry:
+  %vset_lane = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 10, i32 7>
+  ret <8 x bfloat> %vset_lane
+}

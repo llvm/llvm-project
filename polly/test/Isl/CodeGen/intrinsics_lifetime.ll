@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-codegen -S < %s | FileCheck %s
 ;
 ; Verify that we remove the lifetime markers from everywhere.
 ;

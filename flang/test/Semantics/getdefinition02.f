@@ -1,4 +1,3 @@
-!RUN: %S/test_any.sh %s %t %f18
 ! Tests -fget-definition with fixed form.
       module m2
        private :: f
@@ -17,10 +16,10 @@
        end function
       end module
 
-! EXEC: ${F18} -fget-definition 8 9 10 -fparse-only %s > %t;
-! EXEC: ${F18} -fget-definition 9 26 29 -fparse-only %s >> %t;
-! EXEC: ${F18} -fget-definition 16 9 10 -fparse-only %s >> %t;
-! EXEC: cat %t | ${FileCheck} %s
-! CHECK:x:.*getdefinition02.f, 6, 27-28
-! CHECK:yyy:.*getdefinition02.f, 6, 30-33
-! CHECK:x:.*getdefinition02.f, 15, 30-31
+! RUN and CHECK lines here as test is sensitive to line numbers
+! RUN: %f18 -fget-definition 7 9 10 -fparse-only %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
+! RUN: %f18 -fget-definition 8 26 29 -fparse-only %s 2>&1 | FileCheck --check-prefix=CHECK2 %s
+! RUN: %f18 -fget-definition 15 9 10 -fparse-only %s 2>&1 | FileCheck --check-prefix=CHECK3 %s
+! CHECK1: x:{{.*}}getdefinition02.f, 5, 27-28
+! CHECK2: yyy:{{.*}}getdefinition02.f, 5, 30-33
+! CHECK3: x:{{.*}}getdefinition02.f, 14, 30-31

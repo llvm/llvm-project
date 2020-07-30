@@ -47,7 +47,9 @@ Type Attribute::getType() const { return impl->getType(); }
 MLIRContext *Attribute::getContext() const { return getType().getContext(); }
 
 /// Get the dialect this attribute is registered to.
-Dialect &Attribute::getDialect() const { return impl->getDialect(); }
+Dialect &Attribute::getDialect() const {
+  return impl->getAbstractAttribute().getDialect();
+}
 
 //===----------------------------------------------------------------------===//
 // AffineMapAttr
@@ -337,7 +339,7 @@ uint64_t IntegerAttr::getUInt() const {
 }
 
 static LogicalResult verifyIntegerTypeInvariants(Location loc, Type type) {
-  if (type.isa<IntegerType>() || type.isa<IndexType>())
+  if (type.isa<IntegerType, IndexType>())
     return success();
   return emitError(loc, "expected integer or index type");
 }
@@ -1090,7 +1092,7 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
 DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
                                                    ArrayRef<char> data,
                                                    bool isSplat) {
-  assert((type.isa<RankedTensorType>() || type.isa<VectorType>()) &&
+  assert((type.isa<RankedTensorType, VectorType>()) &&
          "type must be ranked tensor or vector");
   assert(type.hasStaticShape() && "type must have static shape");
   return Base::get(type.getContext(), StandardAttributes::DenseIntOrFPElements,
@@ -1247,7 +1249,7 @@ SparseElementsAttr SparseElementsAttr::get(ShapedType type,
                                            DenseElementsAttr values) {
   assert(indices.getType().getElementType().isInteger(64) &&
          "expected sparse indices to be 64-bit integer values");
-  assert((type.isa<RankedTensorType>() || type.isa<VectorType>()) &&
+  assert((type.isa<RankedTensorType, VectorType>()) &&
          "type must be ranked tensor or vector");
   assert(type.hasStaticShape() && "type must have static shape");
   return Base::get(type.getContext(), StandardAttributes::SparseElements, type,

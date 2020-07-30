@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 # RUN: llvm-mc -filetype=obj -triple=x86_64-windows-msvc %s -o %t.obj
 # RUN: llvm-objdump -h %t.obj | FileCheck %s
 # RUN: obj2yaml %t.obj | yaml2obj -o %t.2.obj

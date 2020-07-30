@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -37,6 +38,7 @@ class GlobalVariable;
 class StructType;
 class Type;
 class Value;
+class OpenMPIRBuilder;
 } // namespace llvm
 
 namespace clang {
@@ -284,6 +286,8 @@ public:
     ~LastprivateConditionalRAII();
   };
 
+  llvm::OpenMPIRBuilder &getOMPBuilder() { return OMPBuilder; }
+
 protected:
   CodeGenModule &CGM;
   StringRef FirstSeparator, Separator;
@@ -368,6 +372,8 @@ protected:
   llvm::Value *getCriticalRegionLock(StringRef CriticalName);
 
 private:
+  /// An OpenMP-IR-Builder instance.
+  llvm::OpenMPIRBuilder OMPBuilder;
   /// Default const ident_t object used for initialization of all other
   /// ident_t objects.
   llvm::Constant *DefaultOpenMPPSource = nullptr;

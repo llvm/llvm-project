@@ -14361,7 +14361,7 @@ bool EmulateInstructionARM::EvaluateInstruction(uint32_t evaluate_options) {
     if (!success)
       return false;
 
-    if (auto_advance_pc && (after_pc_value == orig_pc_value)) {
+    if (after_pc_value == orig_pc_value) {
       after_pc_value += m_opcode.GetByteSize();
 
       EmulateInstruction::Context context;

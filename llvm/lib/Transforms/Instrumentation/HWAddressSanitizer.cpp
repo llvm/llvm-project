@@ -539,30 +539,29 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
     if (!ClInstrumentReads || ignoreAccess(LI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
-                             LI->getType(), LI->getAlignment());
+                             LI->getType(), LI->getAlign());
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (!ClInstrumentWrites || ignoreAccess(SI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
-                             SI->getValueOperand()->getType(),
-                             SI->getAlignment());
+                             SI->getValueOperand()->getType(), SI->getAlign());
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
     if (!ClInstrumentAtomics || ignoreAccess(RMW->getPointerOperand()))
       return;
     Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
-                             RMW->getValOperand()->getType(), 0);
+                             RMW->getValOperand()->getType(), None);
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
     if (!ClInstrumentAtomics || ignoreAccess(XCHG->getPointerOperand()))
       return;
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
-                             XCHG->getCompareOperand()->getType(), 0);
+                             XCHG->getCompareOperand()->getType(), None);
   } else if (auto CI = dyn_cast<CallInst>(I)) {
     for (unsigned ArgNo = 0; ArgNo < CI->getNumArgOperands(); ArgNo++) {
       if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
           ignoreAccess(CI->getArgOperand(ArgNo)))
         continue;
       Type *Ty = CI->getParamByValType(ArgNo);
-      Interesting.emplace_back(I, ArgNo, false, Ty, 1);
+      Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));
     }
   }
 }
@@ -732,9 +731,9 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
 
   IRBuilder<> IRB(O.getInsn());
   if (isPowerOf2_64(O.TypeSize) &&
-      (O.TypeSize / 8 <= (1UL << (kNumberOfAccessSizes - 1))) &&
-      (O.Alignment >= (1UL << Mapping.Scale) || O.Alignment == 0 ||
-       O.Alignment >= O.TypeSize / 8)) {
+      (O.TypeSize / 8 <= (1ULL << (kNumberOfAccessSizes - 1))) &&
+      (!O.Alignment || *O.Alignment >= (1ULL << Mapping.Scale) ||
+       *O.Alignment >= O.TypeSize / 8)) {
     size_t AccessSizeIndex = TypeSizeToSizeIndex(O.TypeSize);
     if (ClInstrumentWithCalls) {
       IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],

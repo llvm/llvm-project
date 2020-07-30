@@ -8,9 +8,10 @@
 
 #include "gtest/gtest.h"
 
+#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
+
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPythonImpl.h"
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 

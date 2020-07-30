@@ -2,6 +2,14 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GFX9,GFX9_10 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GFX10,GFX9_10 %s
 
+--- |
+    define amdgpu_kernel void @max-counter-lgkmcnt() #0 { ret void }
+    define amdgpu_kernel void @max-counter-vmcnt() #0 { ret void }
+    define amdgpu_kernel void @max-counter-expcnt() #0 { ret void }
+
+    attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+...
+
 # Check that we handle cases where a counter has overflowed.
 
 # Overflows lgkmcnt with gfx9 but not with gfx10.

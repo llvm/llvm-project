@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidyModule.h"
+#include "ClangTidyCheck.h"
 
 namespace clang {
 namespace tidy {

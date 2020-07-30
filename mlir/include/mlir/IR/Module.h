@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_MODULE_H
 #define MLIR_IR_MODULE_H
 
+#include "mlir/IR/OwningOpRefBase.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
@@ -33,7 +34,7 @@ class ModuleOp
           OpTrait::IsIsolatedFromAbove, OpTrait::AffineScope,
           OpTrait::SymbolTable,
           OpTrait::SingleBlockImplicitTerminator<ModuleTerminatorOp>::Impl,
-          SymbolOpInterface::Trait> {
+          SymbolOpInterface::Trait, OpTrait::NoRegionArguments> {
 public:
   using Op::Op;
   using Op::print;
@@ -122,40 +123,10 @@ public:
 };
 
 /// This class acts as an owning reference to a module, and will automatically
-/// destroy the held module if valid.
-class OwningModuleRef {
+/// destroy the held module on destruction if the held module is valid.
+class OwningModuleRef : public OwningOpRefBase<ModuleOp> {
 public:
-  OwningModuleRef(std::nullptr_t = nullptr) {}
-  OwningModuleRef(ModuleOp module) : module(module) {}
-  OwningModuleRef(OwningModuleRef &&other) : module(other.release()) {}
-  ~OwningModuleRef() {
-    if (module)
-      module.erase();
-  }
-
-  // Assign from another module reference.
-  OwningModuleRef &operator=(OwningModuleRef &&other) {
-    if (module)
-      module.erase();
-    module = other.release();
-    return *this;
-  }
-
-  /// Allow accessing the internal module.
-  ModuleOp get() const { return module; }
-  ModuleOp operator*() const { return module; }
-  ModuleOp *operator->() { return &module; }
-  explicit operator bool() const { return module; }
-
-  /// Release the referenced module.
-  ModuleOp release() {
-    ModuleOp released;
-    std::swap(released, module);
-    return released;
-  }
-
-private:
-  ModuleOp module;
+  using OwningOpRefBase<ModuleOp>::OwningOpRefBase;
 };
 
 } // end namespace mlir

@@ -11,6 +11,7 @@
 
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 #include <variant>
@@ -67,7 +68,7 @@ public:
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const CharBoxValue &);
-  void dump() const { llvm::errs() << *this; }
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
 
 protected:
   mlir::Value len;
@@ -117,7 +118,7 @@ public:
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const ArrayBoxValue &);
-  void dump() const { operator<<(llvm::errs(), *this); }
+  LLVM_DUMP_METHOD void dump() const { operator<<(llvm::errs(), *this); }
 };
 
 /// Expressions of type CHARACTER and with rank > 0.
@@ -134,7 +135,7 @@ public:
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const CharArrayBoxValue &);
-  void dump() const { operator<<(llvm::errs(), *this); }
+  LLVM_DUMP_METHOD void dump() const { operator<<(llvm::errs(), *this); }
 };
 
 /// Expressions that are procedure POINTERs may need a set of references to
@@ -152,7 +153,7 @@ public:
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const ProcBoxValue &);
-  void dump() const { operator<<(llvm::errs(), *this); }
+  LLVM_DUMP_METHOD void dump() const { operator<<(llvm::errs(), *this); }
 
 protected:
   mlir::Value hostContext;
@@ -185,7 +186,7 @@ public:
   }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const BoxValue &);
-  void dump() const { operator<<(llvm::errs(), *this); }
+  LLVM_DUMP_METHOD void dump() const { operator<<(llvm::errs(), *this); }
 
 protected:
   mlir::Value len;
@@ -220,7 +221,7 @@ public:
   }
 
   /// LLVM style debugging of extended values
-  void dump() const { llvm::errs() << *this << '\n'; }
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const ExtendedValue &);

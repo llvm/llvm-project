@@ -1,6 +1,9 @@
 ; Because some arguments are passed by reference (through stack),
 ; the compiler should not do tail-call optimization.
-; RUN: llc -mtriple=aarch64 -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64 -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ; CHECK-LABEL: caller:
 ; CHECK:       addvl sp, sp, #-[[STACKSIZE:[0-9]+]]

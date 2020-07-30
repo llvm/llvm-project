@@ -18,6 +18,21 @@
 // CHECK: rank = 0
 // 122 is ASCII for 'z'.
 // CHECK: [z]
+//
+// CHECK: rank = 2
+// CHECK-SAME: sizes = [4, 3]
+// CHECK-SAME: strides = [3, 1]
+// CHECK-COUNT-4: [1, 1, 1]
+//
+// CHECK: rank = 2
+// CHECK-SAME: sizes = [4, 3]
+// CHECK-SAME: strides = [3, 1]
+// CHECK-COUNT-4: [1, 1, 1]
+//
+// CHECK: rank = 2
+// CHECK-SAME: sizes = [4, 3]
+// CHECK-SAME: strides = [3, 1]
+// CHECK-COUNT-4: [1, 1, 1]
 func @main() -> () {
     %A = alloc() : memref<10x3xf32, 0>
     %f2 = constant 2.00000e+00 : f32
@@ -48,8 +63,40 @@ func @main() -> () {
     call @print_memref_i8(%U4) : (memref<*xi8>) -> ()
 
     dealloc %A : memref<10x3xf32, 0>
+
+    call @return_var_memref_caller() : () -> ()
+    call @return_two_var_memref_caller() : () -> ()
     return
 }
 
 func @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
 func @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+
+func @return_two_var_memref_caller() {
+  %0 = alloca() : memref<4x3xf32>
+  %c0f32 = constant 1.0 : f32
+  linalg.fill(%0, %c0f32) : memref<4x3xf32>, f32
+  %1:2 = call @return_two_var_memref(%0) : (memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>)
+  call @print_memref_f32(%1#0) : (memref<*xf32>) -> ()
+  call @print_memref_f32(%1#1) : (memref<*xf32>) -> ()
+  return
+ }
+
+ func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>) {
+  %0 = memref_cast %arg0 : memref<4x3xf32> to memref<*xf32>
+  return %0, %0 : memref<*xf32>, memref<*xf32>
+}
+
+func @return_var_memref_caller() {
+  %0 = alloca() : memref<4x3xf32>
+  %c0f32 = constant 1.0 : f32
+  linalg.fill(%0, %c0f32) : memref<4x3xf32>, f32
+  %1 = call @return_var_memref(%0) : (memref<4x3xf32>) -> memref<*xf32>
+  call @print_memref_f32(%1) : (memref<*xf32>) -> ()
+  return
+}
+
+func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
+  %0 = memref_cast %arg0: memref<4x3xf32> to memref<*xf32>
+  return %0 : memref<*xf32>
+}

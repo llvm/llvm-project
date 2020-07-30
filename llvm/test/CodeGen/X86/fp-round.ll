@@ -455,8 +455,8 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ;
 ; AVX512-LABEL: round_v16f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm1
-; AVX512-NEXT:    vpord {{.*}}(%rip){1to16}, %zmm1, %zmm1
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; AVX512-NEXT:    vpternlogd $248, {{.*}}(%rip){1to16}, %zmm0, %zmm1
 ; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vrndscaleps $11, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
@@ -554,8 +554,8 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
 ;
 ; AVX512-LABEL: round_v8f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm0, %zmm1
-; AVX512-NEXT:    vporq {{.*}}(%rip){1to8}, %zmm1, %zmm1
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX512-NEXT:    vpternlogq $248, {{.*}}(%rip){1to8}, %zmm0, %zmm1
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vrndscalepd $11, %zmm0, %zmm0
 ; AVX512-NEXT:    retq

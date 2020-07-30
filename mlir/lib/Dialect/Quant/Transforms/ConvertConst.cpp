@@ -69,8 +69,7 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   }
 
   // Is the constant value a type expressed in a way that we support?
-  if (!value.isa<FloatAttr>() && !value.isa<DenseElementsAttr>() &&
-      !value.isa<SparseElementsAttr>()) {
+  if (!value.isa<FloatAttr, DenseElementsAttr, SparseElementsAttr>()) {
     return failure();
   }
 

@@ -20,13 +20,18 @@ Here is the specification for this library:
 
 http://gcc.gnu.org/onlinedocs/gccint/Libgcc.html#Libgcc
 
+Please note that the libgcc specification explicitly mentions actual types of
+arguments and returned values being expressed with machine modes.
+In some cases particular types such as "int", "unsigned", "long long", etc.
+may be specified just as examples there.
+
 Here is a synopsis of the contents of this library:
 
-typedef      int si_int;
-typedef unsigned su_int;
+typedef  int32_t si_int;
+typedef uint32_t su_int;
 
-typedef          long long di_int;
-typedef unsigned long long du_int;
+typedef  int64_t di_int;
+typedef uint64_t du_int;
 
 // Integral bit manipulation
 
@@ -38,24 +43,24 @@ ti_int __ashrti3(ti_int a, si_int b);      // a >> b  arithmetic (sign fill)
 di_int __lshrdi3(di_int a, si_int b);      // a >> b  logical    (zero fill)
 ti_int __lshrti3(ti_int a, si_int b);      // a >> b  logical    (zero fill)
 
-si_int __clzsi2(si_int a);  // count leading zeros
-si_int __clzdi2(di_int a);  // count leading zeros
-si_int __clzti2(ti_int a);  // count leading zeros
-si_int __ctzsi2(si_int a);  // count trailing zeros
-si_int __ctzdi2(di_int a);  // count trailing zeros
-si_int __ctzti2(ti_int a);  // count trailing zeros
+int __clzsi2(si_int a);  // count leading zeros
+int __clzdi2(di_int a);  // count leading zeros
+int __clzti2(ti_int a);  // count leading zeros
+int __ctzsi2(si_int a);  // count trailing zeros
+int __ctzdi2(di_int a);  // count trailing zeros
+int __ctzti2(ti_int a);  // count trailing zeros
 
-si_int __ffssi2(si_int a);  // find least significant 1 bit
-si_int __ffsdi2(di_int a);  // find least significant 1 bit
-si_int __ffsti2(ti_int a);  // find least significant 1 bit
+int __ffssi2(si_int a);  // find least significant 1 bit
+int __ffsdi2(di_int a);  // find least significant 1 bit
+int __ffsti2(ti_int a);  // find least significant 1 bit
 
-si_int __paritysi2(si_int a);  // bit parity
-si_int __paritydi2(di_int a);  // bit parity
-si_int __parityti2(ti_int a);  // bit parity
+int __paritysi2(si_int a);  // bit parity
+int __paritydi2(di_int a);  // bit parity
+int __parityti2(ti_int a);  // bit parity
 
-si_int __popcountsi2(si_int a);  // bit population
-si_int __popcountdi2(di_int a);  // bit population
-si_int __popcountti2(ti_int a);  // bit population
+int __popcountsi2(si_int a);  // bit population
+int __popcountdi2(di_int a);  // bit population
+int __popcountti2(ti_int a);  // bit population
 
 uint32_t __bswapsi2(uint32_t a);   // a byteswapped
 uint64_t __bswapdi2(uint64_t a);   // a byteswapped
@@ -169,10 +174,10 @@ long double __floatuntixf(tu_int a);
 
 //  Floating point raised to integer power
 
-float       __powisf2(      float a, si_int b);  // a ^ b
-double      __powidf2(     double a, si_int b);  // a ^ b
-long double __powixf2(long double a, si_int b);  // a ^ b
-long double __powitf2(long double a, si_int b);  // ppc only, a ^ b
+float       __powisf2(      float a, int b);  // a ^ b
+double      __powidf2(     double a, int b);  // a ^ b
+long double __powixf2(long double a, int b);  // a ^ b
+long double __powitf2(long double a, int b);  // ppc only, a ^ b
 
 //  Complex arithmetic
 

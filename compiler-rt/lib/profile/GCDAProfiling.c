@@ -628,8 +628,14 @@ void llvm_writeout_files(void) {
   }
 }
 
-COMPILER_RT_VISIBILITY
-void llvm_delete_writeout_function_list(void) {
+#ifndef _WIN32
+// __attribute__((destructor)) and destructors whose priorities are greater than
+// 100 run before this function and can thus be tracked. The priority is
+// compatible with GCC 7 onwards.
+__attribute__((destructor(100)))
+#endif
+static void llvm_writeout_and_clear(void) {
+  llvm_writeout_files();
   fn_list_remove(&writeout_fn_list);
 }
 
@@ -710,8 +716,9 @@ void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn, fn_ptr rfn) {
     /* Make sure we write out the data and delete the data structures. */
     atexit(llvm_delete_reset_function_list);
     atexit(llvm_delete_flush_function_list);
-    atexit(llvm_delete_writeout_function_list);
-    atexit(llvm_writeout_files);
+#ifdef _WIN32
+    atexit(llvm_writeout_and_clear);
+#endif
   }
 }
 

@@ -187,7 +187,7 @@ public:
 SDBM SDBM::get(ArrayRef<SDBMExpr> inequalities, ArrayRef<SDBMExpr> equalities) {
   SDBM result;
 
-  // TODO(zinenko): consider detecting equalities in the list of inequalities.
+  // TODO: consider detecting equalities in the list of inequalities.
   // This is potentially expensive and requires to
   //   - create a list of negated inequalities (may allocate under lock);
   //   - perform a pairwise comparison of direct and negated inequalities;
@@ -289,7 +289,7 @@ SDBM SDBM::get(ArrayRef<SDBMExpr> inequalities, ArrayRef<SDBMExpr> equalities) {
   // value is positive, the set defined by SDBM is trivially empty.  We store
   // this value anyway and continue processing to maintain the correspondence
   // between the matrix form and the list-of-SDBMExpr form.
-  // TODO(zinenko): we may want to reconsider this once we have canonicalization
+  // TODO: we may want to reconsider this once we have canonicalization
   // or simplification in place
   auto updateMatrix = [](SDBM &sdbm, const SDBMBuilderResult &r) {
     for (auto positivePos : r.positivePos) {

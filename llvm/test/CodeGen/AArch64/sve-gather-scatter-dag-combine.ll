@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ; Verify that DAG combine rules for LD1 + sext/zext don't apply when the
 ; result of LD1 has multiple uses

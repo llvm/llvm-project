@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -licm -S | FileCheck %s
+; RUN: opt < %s -basic-aa -licm -S | FileCheck %s
 
 ; Test moved from sinking.ll, as it tests sinking of a store who alone touches
 ; a memory location in a loop.

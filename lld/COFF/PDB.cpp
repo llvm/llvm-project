@@ -946,12 +946,12 @@ static pdb::BulkPublic createPublic(Defined *def) {
   } else if (isa<DefinedImportThunk>(def)) {
     flags = PublicSymFlags::Function;
   }
-  pub.Flags = static_cast<uint16_t>(flags);
+  pub.setFlags(flags);
 
   OutputSection *os = def->getChunk()->getOutputSection();
   assert(os && "all publics should be in final image");
   pub.Offset = def->getRVA() - os->getRVA();
-  pub.U.Segment = os->sectionIndex;
+  pub.Segment = os->sectionIndex;
   return pub;
 }
 

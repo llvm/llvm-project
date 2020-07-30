@@ -52,7 +52,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
   // Loop over each of the elements, placing them in memory.
   for (unsigned i = 0, e = NumElements; i != e; ++i) {
     Type *Ty = ST->getElementType(i);
-    const Align TyAlign(ST->isPacked() ? 1 : DL.getABITypeAlignment(Ty));
+    const Align TyAlign = ST->isPacked() ? Align(1) : DL.getABITypeAlign(Ty);
 
     // Add padding if necessary to align the data element properly.
     if (!isAligned(TyAlign, StructSize)) {
@@ -153,6 +153,8 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
     return "-m:o";
   if (T.isOSWindows() && T.isOSBinFormatCOFF())
     return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
+  if (T.isOSBinFormatXCOFF())
+    return "-m:a";
   return "-m:e";
 }
 
@@ -260,8 +262,8 @@ void DataLayout::parseSpecifier(StringRef Desc) {
 
     switch (Specifier) {
     case 's':
-      // Ignored for backward compatibility.
-      // FIXME: remove this on LLVM 4.0.
+      // Deprecated, but ignoring here to preserve loading older textual llvm
+      // ASM file
       break;
     case 'E':
       BigEndian = true;
@@ -443,6 +445,9 @@ void DataLayout::parseSpecifier(StringRef Desc) {
         break;
       case 'x':
         ManglingMode = MM_WinCOFFX86;
+        break;
+      case 'a':
+        ManglingMode = MM_XCOFF;
         break;
       }
       break;
@@ -792,7 +797,7 @@ Type *DataLayout::getIntPtrType(Type *Ty) const {
   unsigned NumBits = getPointerTypeSizeInBits(Ty);
   IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
-    return FixedVectorType::get(IntTy, VecTy->getNumElements());
+    return VectorType::get(IntTy, VecTy);
   return IntTy;
 }
 
@@ -814,7 +819,7 @@ Type *DataLayout::getIndexType(Type *Ty) const {
   unsigned NumBits = getIndexTypeSizeInBits(Ty);
   IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
-    return FixedVectorType::get(IntTy, VecTy->getNumElements());
+    return VectorType::get(IntTy, VecTy);
   return IntTy;
 }
 
@@ -846,15 +851,14 @@ int64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
   return Result;
 }
 
-/// getPreferredAlignment - Return the preferred alignment of the specified
-/// global.  This includes an explicitly requested alignment (if the global
-/// has one).
-unsigned DataLayout::getPreferredAlignment(const GlobalVariable *GV) const {
-  unsigned GVAlignment = GV->getAlignment();
+/// getPreferredAlign - Return the preferred alignment of the specified global.
+/// This includes an explicitly requested alignment (if the global has one).
+Align DataLayout::getPreferredAlign(const GlobalVariable *GV) const {
+  MaybeAlign GVAlignment = GV->getAlign();
   // If a section is specified, always precisely honor explicit alignment,
   // so we don't insert padding into a section we don't control.
   if (GVAlignment && GV->hasSection())
-    return GVAlignment;
+    return *GVAlignment;
 
   // If no explicit alignment is specified, compute the alignment based on
   // the IR type. If an alignment is specified, increase it to match the ABI
@@ -863,30 +867,24 @@ unsigned DataLayout::getPreferredAlignment(const GlobalVariable *GV) const {
   // FIXME: Not sure it makes sense to use the alignment of the type if
   // there's already an explicit alignment specification.
   Type *ElemType = GV->getValueType();
-  unsigned Alignment = getPrefTypeAlignment(ElemType);
-  if (GVAlignment >= Alignment) {
-    Alignment = GVAlignment;
-  } else if (GVAlignment != 0) {
-    Alignment = std::max(GVAlignment, getABITypeAlignment(ElemType));
+  Align Alignment = getPrefTypeAlign(ElemType);
+  if (GVAlignment) {
+    if (*GVAlignment >= Alignment)
+      Alignment = *GVAlignment;
+    else
+      Alignment = std::max(*GVAlignment, getABITypeAlign(ElemType));
   }
 
   // If no explicit alignment is specified, and the global is large, increase
   // the alignment to 16.
   // FIXME: Why 16, specifically?
-  if (GV->hasInitializer() && GVAlignment == 0) {
-    if (Alignment < 16) {
+  if (GV->hasInitializer() && !GVAlignment) {
+    if (Alignment < Align(16)) {
       // If the global is not external, see if it is large.  If so, give it a
       // larger alignment.
       if (getTypeSizeInBits(ElemType) > 128)
-        Alignment = 16;    // 16-byte alignment.
+        Alignment = Align(16); // 16-byte alignment.
     }
   }
   return Alignment;
-}
-
-/// getPreferredAlignmentLog - Return the preferred alignment of the
-/// specified global, returned in log form.  This includes an explicitly
-/// requested alignment (if the global has one).
-unsigned DataLayout::getPreferredAlignmentLog(const GlobalVariable *GV) const {
-  return Log2_32(getPreferredAlignment(GV));
 }

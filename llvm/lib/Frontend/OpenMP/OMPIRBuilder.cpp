@@ -31,7 +31,6 @@
 
 using namespace llvm;
 using namespace omp;
-using namespace types;
 
 static cl::opt<bool>
     OptimisticAttributes("openmp-ir-builder-optimistic-attributes", cl::Hidden,
@@ -611,9 +610,6 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::CreateParallel(
          "Unexpected finalization stack state!");
 
   Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
-  assert(PRegPreFiniTI->getNumSuccessors() == 1 &&
-         PRegPreFiniTI->getSuccessor(0) == PRegExitBB &&
-         "Unexpected CFG structure!");
 
   InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
   FiniCB(PreFiniIP);
@@ -948,6 +944,105 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveExit(
                                   ExitCall->getIterator());
 }
 
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCopyinClauseBlocks(
+    InsertPointTy IP, Value *MasterAddr, Value *PrivateAddr,
+    llvm::IntegerType *IntPtrTy, bool BranchtoEnd) {
+  if (!IP.isSet())
+    return IP;
+
+  IRBuilder<>::InsertPointGuard IPG(Builder);
+
+  // creates the following CFG structure
+  //	   OMP_Entry : (MasterAddr != PrivateAddr)?
+  //       F     T
+  //       |      \
+  //       |     copin.not.master
+  //       |      /
+  //       v     /
+  //   copyin.not.master.end
+  //		     |
+  //         v
+  //   OMP.Entry.Next
+
+  BasicBlock *OMP_Entry = IP.getBlock();
+  Function *CurFn = OMP_Entry->getParent();
+  BasicBlock *CopyBegin =
+      BasicBlock::Create(M.getContext(), "copyin.not.master", CurFn);
+  BasicBlock *CopyEnd = nullptr;
+
+  // If entry block is terminated, split to preserve the branch to following
+  // basic block (i.e. OMP.Entry.Next), otherwise, leave everything as is.
+  if (isa_and_nonnull<BranchInst>(OMP_Entry->getTerminator())) {
+    CopyEnd = OMP_Entry->splitBasicBlock(OMP_Entry->getTerminator(),
+                                         "copyin.not.master.end");
+    OMP_Entry->getTerminator()->eraseFromParent();
+  } else {
+    CopyEnd =
+        BasicBlock::Create(M.getContext(), "copyin.not.master.end", CurFn);
+  }
+
+  Builder.SetInsertPoint(OMP_Entry);
+  Value *MasterPtr = Builder.CreatePtrToInt(MasterAddr, IntPtrTy);
+  Value *PrivatePtr = Builder.CreatePtrToInt(PrivateAddr, IntPtrTy);
+  Value *cmp = Builder.CreateICmpNE(MasterPtr, PrivatePtr);
+  Builder.CreateCondBr(cmp, CopyBegin, CopyEnd);
+
+  Builder.SetInsertPoint(CopyBegin);
+  if (BranchtoEnd)
+    Builder.SetInsertPoint(Builder.CreateBr(CopyEnd));
+
+  return Builder.saveIP();
+}
+
+CallInst *OpenMPIRBuilder::CreateOMPAlloc(const LocationDescription &Loc,
+                                          Value *Size, Value *Allocator,
+                                          std::string Name) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
+  Builder.restoreIP(Loc.IP);
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *ThreadId = getOrCreateThreadID(Ident);
+  Value *Args[] = {ThreadId, Size, Allocator};
+
+  Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_alloc);
+
+  return Builder.CreateCall(Fn, Args, Name);
+}
+
+CallInst *OpenMPIRBuilder::CreateOMPFree(const LocationDescription &Loc,
+                                         Value *Addr, Value *Allocator,
+                                         std::string Name) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
+  Builder.restoreIP(Loc.IP);
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *ThreadId = getOrCreateThreadID(Ident);
+  Value *Args[] = {ThreadId, Addr, Allocator};
+  Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_free);
+  return Builder.CreateCall(Fn, Args, Name);
+}
+
+CallInst *OpenMPIRBuilder::CreateCachedThreadPrivate(
+    const LocationDescription &Loc, llvm::Value *Pointer,
+    llvm::ConstantInt *Size, const llvm::Twine &Name) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
+  Builder.restoreIP(Loc.IP);
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *ThreadId = getOrCreateThreadID(Ident);
+  Constant *ThreadPrivateCache =
+      getOrCreateOMPInternalVariable(Int8PtrPtr, Name);
+  llvm::Value *Args[] = {Ident, ThreadId, Pointer, Size, ThreadPrivateCache};
+
+  Function *Fn =
+  		getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_threadprivate_cached);
+
+  return Builder.CreateCall(Fn, Args);
+}
+
 std::string OpenMPIRBuilder::getNameWithSeparators(ArrayRef<StringRef> Parts,
                                                    StringRef FirstSeparator,
                                                    StringRef Separator) {
@@ -995,4 +1090,25 @@ Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
   std::string Prefix = Twine("gomp_critical_user_", CriticalName).str();
   std::string Name = getNameWithSeparators({Prefix, "var"}, ".", ".");
   return getOrCreateOMPInternalVariable(KmpCriticalNameTy, Name);
+}
+
+// Create all simple and struct types exposed by the runtime and remember
+// the llvm::PointerTypes of them for easy access later.
+void OpenMPIRBuilder::initializeTypes(Module &M) {
+  LLVMContext &Ctx = M.getContext();
+  StructType *T;
+#define OMP_TYPE(VarName, InitValue) VarName = InitValue;
+#define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
+  VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
+  VarName##PtrTy = PointerType::getUnqual(VarName##Ty);
+#define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
+  VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
+  VarName##Ptr = PointerType::getUnqual(VarName);
+#define OMP_STRUCT_TYPE(VarName, StructName, ...)                              \
+  T = M.getTypeByName(StructName);                                             \
+  if (!T)                                                                      \
+    T = StructType::create(Ctx, {__VA_ARGS__}, StructName);                    \
+  VarName = T;                                                                 \
+  VarName##Ptr = PointerType::getUnqual(T);
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
 }

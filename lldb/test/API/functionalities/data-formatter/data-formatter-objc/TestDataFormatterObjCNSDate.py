@@ -43,6 +43,15 @@ class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
         self.expect('frame variable date4_abs', substrs=['1970'])
         self.expect('frame variable date5_abs', substrs=[now_year])
 
+        # Check that LLDB always follow's NSDate's rounding behavior (which
+        # is always rounding down).
+        self.expect_expr("date_1970_minus_06", result_summary="1969-12-31 23:59:59 UTC")
+        self.expect_expr("date_1970_minus_05", result_summary="1969-12-31 23:59:59 UTC")
+        self.expect_expr("date_1970_minus_04", result_summary="1969-12-31 23:59:59 UTC")
+        self.expect_expr("date_1970_plus_06", result_summary="1970-01-01 00:00:00 UTC")
+        self.expect_expr("date_1970_plus_05", result_summary="1970-01-01 00:00:00 UTC")
+        self.expect_expr("date_1970_plus_04", result_summary="1970-01-01 00:00:00 UTC")
+
         self.expect('frame variable cupertino home europe',
                     substrs=['@"America/Los_Angeles"',
                              '@"Europe/Rome"',

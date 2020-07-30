@@ -281,6 +281,9 @@ static bool makeReducible(LoopInfo &LI, DominatorTree &DT, Graph &&G) {
     LLVM_DEBUG(dbgs() << "Found headers:");
     for (auto BB : reverse(Blocks)) {
       for (const auto P : predecessors(BB)) {
+        // Skip unreachable predecessors.
+        if (!DT.isReachableFromEntry(P))
+          continue;
         if (!Blocks.count(P)) {
           LLVM_DEBUG(dbgs() << " " << BB->getName());
           Headers.insert(BB);

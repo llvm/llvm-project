@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++17 \
 // RUN:            -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++17 \
-// RUN:            -x c++ -include-pch %t -ast-dump-all -ast-dump-filter test \
+// RUN:            -x c++ -include-pch %t -ast-dump-all -ast-dump-filter test /dev/null \
 // RUN: | FileCheck -strict-whitespace --match-full-lines %s
 
 

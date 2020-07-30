@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -basicaa -gvn -stats -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -stats -disable-output 2>&1 | FileCheck %s
 ; rdar://7363102
 
 ; CHECK: Number of loads deleted

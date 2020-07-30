@@ -8,7 +8,7 @@ struct coro {
   struct promise_type {
     coro get_return_object();
     suspend_always initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
     void return_void();
     static void unhandled_exception();
   };

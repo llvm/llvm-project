@@ -11,10 +11,14 @@ FileHeader:
 Symbols:
   - Name:     test
     Index:    SHN_COMMON
+    Value:    0x1233
+    Binding:  STB_GLOBAL
+  - Name:     test1
+    Index:    SHN_HEXAGON_SCOMMON
     Value:    0x1234
     Binding:  STB_GLOBAL
   - Name:     test2
-    Index:    SHN_HEXAGON_SCOMMON
+    Index:    SHN_HEXAGON_SCOMMON_1
     Value:    0x1235
     Binding:  STB_GLOBAL
   - Name:     test3
@@ -42,12 +46,21 @@ Symbols:
 #CHECK-NEXT:  }
 #CHECK-NEXT:  Symbol {
 #CHECK-NEXT:    Name: test
-#CHECK-NEXT:    Value: 0x1234
+#CHECK-NEXT:    Value: 0x1233
 #CHECK-NEXT:    Size: 0
 #CHECK-NEXT:    Binding: Global (0x1)
 #CHECK-NEXT:    Type: None (0x0)
 #CHECK-NEXT:    Other: 0
 #CHECK-NEXT:    Section: Common (0xFFF2)
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: test1
+#CHECK-NEXT:    Value: 0x1234
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Global (0x1)
+#CHECK-NEXT:    Type: None (0x0)
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Processor Specific (0xFF00)
 #CHECK-NEXT:  }
 #CHECK-NEXT:  Symbol {
 #CHECK-NEXT:    Name: test2
@@ -56,7 +69,7 @@ Symbols:
 #CHECK-NEXT:    Binding: Global (0x1)
 #CHECK-NEXT:    Type: None (0x0)
 #CHECK-NEXT:    Other: 0
-#CHECK-NEXT:    Section: Processor Specific (0xFF00)
+#CHECK-NEXT:    Section: Processor Specific (0xFF01)
 #CHECK-NEXT:  }
 #CHECK-NEXT:  Symbol {
 #CHECK-NEXT:    Name: test3

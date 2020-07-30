@@ -265,3 +265,28 @@ namespace an_alias_template_is_not_a_class_template {
     int z = Bar(); // expected-error {{use of template template parameter 'Bar' requires template arguments}}
   }
 }
+
+namespace resolved_nttp {
+  template <typename T> struct A {
+    template <int N> using Arr = T[N];
+    Arr<3> a;
+  };
+  using TA = decltype(A<int>::a);
+  using TA = int[3];
+
+  template <typename T> struct B {
+    template <int... N> using Fn = T(int(*...A)[N]);
+    Fn<1, 2, 3> *p;
+  };
+  using TB = decltype(B<int>::p);
+  using TB = int (*)(int (*)[1], int (*)[2], int (*)[3]);
+
+  template <typename T, int ...M> struct C {
+    template <T... N> using Fn = T(int(*...A)[N]);
+    Fn<1, M..., 4> *p; // expected-error-re 3{{evaluates to {{[234]}}, which cannot be narrowed to type 'bool'}}
+  };
+  using TC = decltype(C<int, 2, 3>::p);
+  using TC = int (*)(int (*)[1], int (*)[2], int (*)[3], int (*)[4]);
+
+  using TC2 = decltype(C<bool, 2, 3>::p); // expected-note {{instantiation of}}
+}

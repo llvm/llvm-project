@@ -313,7 +313,7 @@ SBError SBDebugger::SetInputFile(SBFile file) {
 
   repro::DataRecorder *recorder = nullptr;
   if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator())
-    recorder = g->GetOrCreate<repro::CommandProvider>().GetNewDataRecorder();
+    recorder = g->GetOrCreate<repro::CommandProvider>().GetNewRecorder();
 
   FileSP file_sp = file.m_opaque_sp;
 

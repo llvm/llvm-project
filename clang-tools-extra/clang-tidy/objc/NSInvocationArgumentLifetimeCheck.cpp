@@ -8,7 +8,6 @@
 
 #include "NSInvocationArgumentLifetimeCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
@@ -23,10 +22,10 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace clang::ast_matchers;
 

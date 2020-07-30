@@ -230,6 +230,28 @@ def act_on_decl(declaration, comment, allowed_types):
         add_matcher(result_type, name, args, comment)
       return
 
+    m = re.match(r"""^\s*AST_POLYMORPHIC_MATCHER_REGEX(?:_OVERLOAD)?\(
+                          \s*([^\s,]+)\s*,
+                          \s*AST_POLYMORPHIC_SUPPORTED_TYPES\(([^)]*)\),
+                          \s*([^\s,]+)\s*
+                       (?:,\s*\d+\s*)?
+                      \)\s*{\s*$""", declaration, flags=re.X)
+
+    if m:
+      name, results, arg_name = m.groups()[0:3]
+      result_types = [r.strip() for r in results.split(',')]
+      if allowed_types and allowed_types != result_types:
+        raise Exception('Inconsistent documentation for: %s' % name)
+      arg = "StringRef %s, Regex::RegexFlags Flags = NoFlags" % arg_name
+      comment += """
+If the matcher is used in clang-query, RegexFlags parameter
+should be passed as a quoted string. e.g: "NoFlags".
+Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
+"""
+      for result_type in result_types:
+        add_matcher(result_type, name, arg, comment)
+      return
+
     m = re.match(r"""^\s*AST_MATCHER_FUNCTION(_P)?(.?)(?:_OVERLOAD)?\(
                        (?:\s*([^\s,]+)\s*,)?
                           \s*([^\s,]+)\s*
@@ -273,6 +295,31 @@ def act_on_decl(declaration, comment, allowed_types):
                        for i in range(0, len(args), 2) if args[i])
       for result_type in result_types:
         add_matcher(result_type, name, args, comment)
+      return
+
+    m = re.match(r"""^\s*AST_MATCHER_REGEX(?:_OVERLOAD)?\(
+                       \s*([^\s,]+)\s*,
+                       \s*([^\s,]+)\s*,
+                       \s*([^\s,]+)\s*
+                       (?:,\s*\d+\s*)?
+                      \)\s*{""", declaration, flags=re.X)
+    if m:
+      result, name, arg_name = m.groups()[0:3]
+      if not result:
+        if not allowed_types:
+          raise Exception('Did not find allowed result types for: %s' % name)
+        result_types = allowed_types
+      else:
+        result_types = [result]
+      arg = "StringRef %s, Regex::RegexFlags Flags = NoFlags" % arg_name
+      comment += """
+If the matcher is used in clang-query, RegexFlags parameter
+should be passed as a quoted string. e.g: "NoFlags".
+Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
+"""
+
+      for result_type in result_types:
+        add_matcher(result_type, name, arg, comment)
       return
 
     # Parse ArgumentAdapting matchers.

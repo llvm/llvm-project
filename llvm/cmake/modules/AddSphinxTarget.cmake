@@ -38,6 +38,7 @@ function (add_sphinx_target builder project)
                             -b ${builder}
                             -d "${SPHINX_DOC_TREE_DIR}"
                             -q # Quiet: no output other than errors and warnings.
+                            -t builder-${builder} # tag for builder
                             ${SPHINX_WARNINGS_AS_ERRORS_FLAG} # Treat warnings as errors if requested
                             "${ARG_SOURCE_DIR}" # Source
                             "${SPHINX_BUILD_DIR}" # Output

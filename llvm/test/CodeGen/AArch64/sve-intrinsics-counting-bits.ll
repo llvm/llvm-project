@@ -145,6 +145,16 @@ define <vscale x 8 x i16> @cnt_f16(<vscale x 8 x i16> %a, <vscale x 8 x i1> %pg,
   ret <vscale x 8 x i16> %out
 }
 
+define <vscale x 8 x i16> @cnt_bf16(<vscale x 8 x i16> %a, <vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %b) #0 {
+; CHECK-LABEL: cnt_bf16:
+; CHECK: cnt z0.h, p0/m, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8bf16(<vscale x 8 x i16> %a,
+                                                                <vscale x 8 x i1> %pg,
+                                                                <vscale x 8 x bfloat> %b)
+  ret <vscale x 8 x i16> %out
+}
+
 define <vscale x 4 x i32> @cnt_f32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: cnt_f32:
 ; CHECK: cnt z0.s, p0/m, z1.s
@@ -180,5 +190,9 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8i16(<vscale x 8 x i16>, <vs
 declare <vscale x 4 x i32> @llvm.aarch64.sve.cnt.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.cnt.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x i64>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8f16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x half>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8bf16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.cnt.nxv4f32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x float>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.cnt.nxv2f64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x double>)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }

@@ -70,6 +70,7 @@ class COFFAsmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveLinkOnce>(".linkonce");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveRVA>(".rva");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveSymbolAttribute>(".weak");
+    addDirectiveHandler<&COFFAsmParser::ParseDirectiveCGProfile>(".cg_profile");
 
     // Win64 EH directives.
     addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveStartProc>(
@@ -125,6 +126,7 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool parseCOMDATType(COFF::COMDATType &Type);
   bool ParseDirectiveLinkOnce(StringRef, SMLoc);
   bool ParseDirectiveRVA(StringRef, SMLoc);
+  bool ParseDirectiveCGProfile(StringRef, SMLoc);
 
   // Win64 EH directives.
   bool ParseSEHDirectiveStartProc(StringRef, SMLoc);
@@ -299,6 +301,10 @@ bool COFFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
   return false;
 }
 
+bool COFFAsmParser::ParseDirectiveCGProfile(StringRef S, SMLoc Loc) {
+  return MCAsmParserExtension::ParseDirectiveCGProfile(S, Loc);
+}
+
 bool COFFAsmParser::ParseSectionSwitch(StringRef Section,
                                        unsigned Characteristics,
                                        SectionKind Kind) {
@@ -321,7 +327,7 @@ bool COFFAsmParser::ParseSectionSwitch(StringRef Section,
 }
 
 bool COFFAsmParser::ParseSectionName(StringRef &SectionName) {
-  if (!getLexer().is(AsmToken::Identifier))
+  if (!getLexer().is(AsmToken::Identifier) && !getLexer().is(AsmToken::String))
     return true;
 
   SectionName = getTok().getIdentifier();

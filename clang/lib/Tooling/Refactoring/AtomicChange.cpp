@@ -204,6 +204,12 @@ AtomicChange::AtomicChange(const SourceManager &SM,
   Key = FilePath + ":" + std::to_string(FileIDAndOffset.second);
 }
 
+AtomicChange::AtomicChange(const SourceManager &SM, SourceLocation KeyPosition,
+                           llvm::Any M)
+    : AtomicChange(SM, KeyPosition) {
+  Metadata = std::move(M);
+}
+
 AtomicChange::AtomicChange(std::string Key, std::string FilePath,
                            std::string Error,
                            std::vector<std::string> InsertedHeaders,

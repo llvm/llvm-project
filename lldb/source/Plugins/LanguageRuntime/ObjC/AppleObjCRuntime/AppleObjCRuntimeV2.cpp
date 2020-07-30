@@ -581,8 +581,8 @@ protected:
     case 0:
       break;
     case 1: {
-      regex_up.reset(new RegularExpression(
-          llvm::StringRef::withNullAsEmpty(command.GetArgumentAtIndex(0))));
+      regex_up = std::make_unique<RegularExpression>(
+          llvm::StringRef::withNullAsEmpty(command.GetArgumentAtIndex(0)));
       if (!regex_up->IsValid()) {
         result.AppendError(
             "invalid argument - please provide a valid regular expression");
@@ -2006,7 +2006,7 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
 
 DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
   if (!m_decl_vendor_up)
-    m_decl_vendor_up.reset(new AppleObjCDeclVendor(*this));
+    m_decl_vendor_up = std::make_unique<AppleObjCDeclVendor>(*this);
 
   return m_decl_vendor_up.get();
 }

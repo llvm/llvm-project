@@ -1968,7 +1968,8 @@ static void __kmp_dispatch_set_hierarchy_values() {
   __kmp_hier_max_units[kmp_hier_layer_e::LAYER_THREAD + 1] =
       nPackages * nCoresPerPkg * __kmp_nThreadsPerCore;
   __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L1 + 1] = __kmp_ncores;
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS)
+#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) && \
+    KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L2 + 1] = __kmp_ncores / 2;
   else
@@ -1982,7 +1983,8 @@ static void __kmp_dispatch_set_hierarchy_values() {
   __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_THREAD + 1] = 1;
   __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L1 + 1] =
       __kmp_nThreadsPerCore;
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS)
+#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_WINDOWS) && \
+    KMP_MIC_SUPPORTED
   if (__kmp_mic_type >= mic3)
     __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L2 + 1] =
         2 * __kmp_nThreadsPerCore;

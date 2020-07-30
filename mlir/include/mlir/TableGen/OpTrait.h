@@ -25,7 +25,7 @@ class Record;
 namespace mlir {
 namespace tblgen {
 
-class OpInterface;
+struct OpInterface;
 
 // Wrapper class with helper methods for accessing OpTrait constraints defined
 // in TableGen.
@@ -98,7 +98,7 @@ public:
   OpInterface getOpInterface() const;
 
   // Returns the trait corresponding to a C++ trait class.
-  StringRef getTrait() const;
+  std::string getTrait() const;
 
   static bool classof(const OpTrait *t) {
     return t->getKind() == Kind::Interface;

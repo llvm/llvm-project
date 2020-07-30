@@ -48,6 +48,14 @@ protected:
   llvm::Optional<lldb::addr_t> m_shared_library_info_addr;
 };
 
+// Explicitly declare the two 32/64 bit templates that NativeProcessELF.cpp will
+// define. This allows us to keep the template definition here and usable
+// elsewhere.
+extern template lldb::addr_t NativeProcessELF::GetELFImageInfoAddress<
+    llvm::ELF::Elf32_Ehdr, llvm::ELF::Elf32_Phdr, llvm::ELF::Elf32_Dyn>();
+extern template lldb::addr_t NativeProcessELF::GetELFImageInfoAddress<
+    llvm::ELF::Elf64_Ehdr, llvm::ELF::Elf64_Phdr, llvm::ELF::Elf64_Dyn>();
+
 } // namespace lldb_private
 
 #endif

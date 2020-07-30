@@ -2426,7 +2426,10 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
                          TypeSourceInfo *TInfo,
                          SourceLocation EllipsisLoc) {
   QualType BaseType = TInfo->getType();
-
+  if (BaseType->containsErrors()) {
+    // Already emitted a diagnostic when parsing the error type.
+    return nullptr;
+  }
   // C++ [class.union]p1:
   //   A union shall not have base classes.
   if (Class->isUnion()) {
@@ -3042,7 +3045,7 @@ void Sema::CheckOverrideControl(NamedDecl *D) {
       << MD->getDeclName();
 }
 
-void Sema::DiagnoseAbsenceOfOverrideControl(NamedDecl *D) {
+void Sema::DiagnoseAbsenceOfOverrideControl(NamedDecl *D, bool Inconsistent) {
   if (D->isInvalidDecl() || D->hasAttr<OverrideAttr>())
     return;
   CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D);
@@ -3058,12 +3061,22 @@ void Sema::DiagnoseAbsenceOfOverrideControl(NamedDecl *D) {
       return;
 
   if (MD->size_overridden_methods() > 0) {
-    unsigned DiagID = isa<CXXDestructorDecl>(MD)
-                          ? diag::warn_destructor_marked_not_override_overriding
-                          : diag::warn_function_marked_not_override_overriding;
-    Diag(MD->getLocation(), DiagID) << MD->getDeclName();
-    const CXXMethodDecl *OMD = *MD->begin_overridden_methods();
-    Diag(OMD->getLocation(), diag::note_overridden_virtual_function);
+    auto EmitDiag = [&](unsigned DiagInconsistent, unsigned DiagSuggest) {
+      unsigned DiagID =
+          Inconsistent && !Diags.isIgnored(DiagInconsistent, MD->getLocation())
+              ? DiagInconsistent
+              : DiagSuggest;
+      Diag(MD->getLocation(), DiagID) << MD->getDeclName();
+      const CXXMethodDecl *OMD = *MD->begin_overridden_methods();
+      Diag(OMD->getLocation(), diag::note_overridden_virtual_function);
+    };
+    if (isa<CXXDestructorDecl>(MD))
+      EmitDiag(
+          diag::warn_inconsistent_destructor_marked_not_override_overriding,
+          diag::warn_suggest_destructor_marked_not_override_overriding);
+    else
+      EmitDiag(diag::warn_inconsistent_function_marked_not_override_overriding,
+               diag::warn_suggest_function_marked_not_override_overriding);
   }
 }
 
@@ -6746,13 +6759,10 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     }
   }
 
-  if (HasMethodWithOverrideControl &&
-      HasOverridingMethodWithoutOverrideControl) {
-    // At least one method has the 'override' control declared.
-    // Diagnose all other overridden methods which do not have 'override'
-    // specified on them.
+  if (HasOverridingMethodWithoutOverrideControl) {
+    bool HasInconsistentOverrideControl = HasMethodWithOverrideControl;
     for (auto *M : Record->methods())
-      DiagnoseAbsenceOfOverrideControl(M);
+      DiagnoseAbsenceOfOverrideControl(M, HasInconsistentOverrideControl);
   }
 
   // Check the defaulted secondary comparisons after any other member functions.
@@ -9716,6 +9726,10 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
 
   // Ill-formed if the copy and move constructors are deleted.
   auto HasNonDeletedCopyOrMoveConstructor = [&]() {
+    // If the type is dependent, then assume it might have
+    // implicit copy or move ctor because we won't know yet at this point.
+    if (RD.isDependentType())
+      return true;
     if (RD.needsImplicitCopyConstructor() &&
         !RD.defaultedCopyConstructorIsDeleted())
       return true;
@@ -9839,86 +9853,95 @@ static void findImplicitlyDeclaredEqualityComparisons(
 /// [special]p1).  This routine can only be executed just before the
 /// definition of the class is complete.
 void Sema::AddImplicitlyDeclaredMembersToClass(CXXRecordDecl *ClassDecl) {
-  if (ClassDecl->needsImplicitDefaultConstructor()) {
-    ++getASTContext().NumImplicitDefaultConstructors;
+  // Don't add implicit special members to templated classes.
+  // FIXME: This means unqualified lookups for 'operator=' within a class
+  // template don't work properly.
+  if (!ClassDecl->isDependentType()) {
+    if (ClassDecl->needsImplicitDefaultConstructor()) {
+      ++getASTContext().NumImplicitDefaultConstructors;
 
-    if (ClassDecl->hasInheritedConstructor())
-      DeclareImplicitDefaultConstructor(ClassDecl);
-  }
+      if (ClassDecl->hasInheritedConstructor())
+        DeclareImplicitDefaultConstructor(ClassDecl);
+    }
 
-  if (ClassDecl->needsImplicitCopyConstructor()) {
-    ++getASTContext().NumImplicitCopyConstructors;
+    if (ClassDecl->needsImplicitCopyConstructor()) {
+      ++getASTContext().NumImplicitCopyConstructors;
 
-    // If the properties or semantics of the copy constructor couldn't be
-    // determined while the class was being declared, force a declaration
-    // of it now.
-    if (ClassDecl->needsOverloadResolutionForCopyConstructor() ||
-        ClassDecl->hasInheritedConstructor())
-      DeclareImplicitCopyConstructor(ClassDecl);
-    // For the MS ABI we need to know whether the copy ctor is deleted. A
-    // prerequisite for deleting the implicit copy ctor is that the class has a
-    // move ctor or move assignment that is either user-declared or whose
-    // semantics are inherited from a subobject. FIXME: We should provide a more
-    // direct way for CodeGen to ask whether the constructor was deleted.
-    else if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
-             (ClassDecl->hasUserDeclaredMoveConstructor() ||
-              ClassDecl->needsOverloadResolutionForMoveConstructor() ||
-              ClassDecl->hasUserDeclaredMoveAssignment() ||
-              ClassDecl->needsOverloadResolutionForMoveAssignment()))
-      DeclareImplicitCopyConstructor(ClassDecl);
-  }
+      // If the properties or semantics of the copy constructor couldn't be
+      // determined while the class was being declared, force a declaration
+      // of it now.
+      if (ClassDecl->needsOverloadResolutionForCopyConstructor() ||
+          ClassDecl->hasInheritedConstructor())
+        DeclareImplicitCopyConstructor(ClassDecl);
+      // For the MS ABI we need to know whether the copy ctor is deleted. A
+      // prerequisite for deleting the implicit copy ctor is that the class has
+      // a move ctor or move assignment that is either user-declared or whose
+      // semantics are inherited from a subobject. FIXME: We should provide a
+      // more direct way for CodeGen to ask whether the constructor was deleted.
+      else if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+               (ClassDecl->hasUserDeclaredMoveConstructor() ||
+                ClassDecl->needsOverloadResolutionForMoveConstructor() ||
+                ClassDecl->hasUserDeclaredMoveAssignment() ||
+                ClassDecl->needsOverloadResolutionForMoveAssignment()))
+        DeclareImplicitCopyConstructor(ClassDecl);
+    }
 
-  if (getLangOpts().CPlusPlus11 && ClassDecl->needsImplicitMoveConstructor()) {
-    ++getASTContext().NumImplicitMoveConstructors;
+    if (getLangOpts().CPlusPlus11 &&
+        ClassDecl->needsImplicitMoveConstructor()) {
+      ++getASTContext().NumImplicitMoveConstructors;
 
-    if (ClassDecl->needsOverloadResolutionForMoveConstructor() ||
-        ClassDecl->hasInheritedConstructor())
-      DeclareImplicitMoveConstructor(ClassDecl);
-  }
+      if (ClassDecl->needsOverloadResolutionForMoveConstructor() ||
+          ClassDecl->hasInheritedConstructor())
+        DeclareImplicitMoveConstructor(ClassDecl);
+    }
 
-  if (ClassDecl->needsImplicitCopyAssignment()) {
-    ++getASTContext().NumImplicitCopyAssignmentOperators;
+    if (ClassDecl->needsImplicitCopyAssignment()) {
+      ++getASTContext().NumImplicitCopyAssignmentOperators;
 
-    // If we have a dynamic class, then the copy assignment operator may be
-    // virtual, so we have to declare it immediately. This ensures that, e.g.,
-    // it shows up in the right place in the vtable and that we diagnose
-    // problems with the implicit exception specification.
-    if (ClassDecl->isDynamicClass() ||
-        ClassDecl->needsOverloadResolutionForCopyAssignment() ||
-        ClassDecl->hasInheritedAssignment())
-      DeclareImplicitCopyAssignment(ClassDecl);
-  }
+      // If we have a dynamic class, then the copy assignment operator may be
+      // virtual, so we have to declare it immediately. This ensures that, e.g.,
+      // it shows up in the right place in the vtable and that we diagnose
+      // problems with the implicit exception specification.
+      if (ClassDecl->isDynamicClass() ||
+          ClassDecl->needsOverloadResolutionForCopyAssignment() ||
+          ClassDecl->hasInheritedAssignment())
+        DeclareImplicitCopyAssignment(ClassDecl);
+    }
 
-  if (getLangOpts().CPlusPlus11 && ClassDecl->needsImplicitMoveAssignment()) {
-    ++getASTContext().NumImplicitMoveAssignmentOperators;
+    if (getLangOpts().CPlusPlus11 && ClassDecl->needsImplicitMoveAssignment()) {
+      ++getASTContext().NumImplicitMoveAssignmentOperators;
 
-    // Likewise for the move assignment operator.
-    if (ClassDecl->isDynamicClass() ||
-        ClassDecl->needsOverloadResolutionForMoveAssignment() ||
-        ClassDecl->hasInheritedAssignment())
-      DeclareImplicitMoveAssignment(ClassDecl);
-  }
+      // Likewise for the move assignment operator.
+      if (ClassDecl->isDynamicClass() ||
+          ClassDecl->needsOverloadResolutionForMoveAssignment() ||
+          ClassDecl->hasInheritedAssignment())
+        DeclareImplicitMoveAssignment(ClassDecl);
+    }
 
-  if (ClassDecl->needsImplicitDestructor()) {
-    ++getASTContext().NumImplicitDestructors;
+    if (ClassDecl->needsImplicitDestructor()) {
+      ++getASTContext().NumImplicitDestructors;
 
-    // If we have a dynamic class, then the destructor may be virtual, so we
-    // have to declare the destructor immediately. This ensures that, e.g., it
-    // shows up in the right place in the vtable and that we diagnose problems
-    // with the implicit exception specification.
-    if (ClassDecl->isDynamicClass() ||
-        ClassDecl->needsOverloadResolutionForDestructor())
-      DeclareImplicitDestructor(ClassDecl);
+      // If we have a dynamic class, then the destructor may be virtual, so we
+      // have to declare the destructor immediately. This ensures that, e.g., it
+      // shows up in the right place in the vtable and that we diagnose problems
+      // with the implicit exception specification.
+      if (ClassDecl->isDynamicClass() ||
+          ClassDecl->needsOverloadResolutionForDestructor())
+        DeclareImplicitDestructor(ClassDecl);
+    }
   }
 
   // C++2a [class.compare.default]p3:
   //   If the member-specification does not explicitly declare any member or
   //   friend named operator==, an == operator function is declared implicitly
-  //   for each defaulted three-way comparison operator function defined in the
-  //   member-specification
+  //   for each defaulted three-way comparison operator function defined in
+  //   the member-specification
   // FIXME: Consider doing this lazily.
-  if (getLangOpts().CPlusPlus20) {
-    llvm::SmallVector<FunctionDecl*, 4> DefaultedSpaceships;
+  // We do this during the initial parse for a class template, not during
+  // instantiation, so that we can handle unqualified lookups for 'operator=='
+  // when parsing the template.
+  if (getLangOpts().CPlusPlus20 && !inTemplateInstantiation()) {
+    llvm::SmallVector<FunctionDecl *, 4> DefaultedSpaceships;
     findImplicitlyDeclaredEqualityComparisons(Context, ClassDecl,
                                               DefaultedSpaceships);
     for (auto *FD : DefaultedSpaceships)
@@ -9926,19 +9949,17 @@ void Sema::AddImplicitlyDeclaredMembersToClass(CXXRecordDecl *ClassDecl) {
   }
 }
 
-unsigned Sema::ActOnReenterTemplateScope(Scope *S, Decl *D) {
+unsigned
+Sema::ActOnReenterTemplateScope(Decl *D,
+                                llvm::function_ref<Scope *()> EnterScope) {
   if (!D)
     return 0;
+  AdjustDeclIfTemplate(D);
 
-  // The order of template parameters is not important here. All names
-  // get added to the same scope.
+  // In order to get name lookup right, reenter template scopes in order from
+  // outermost to innermost.
   SmallVector<TemplateParameterList *, 4> ParameterLists;
-
-  if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
-    D = TD->getTemplatedDecl();
-
-  if (auto *PSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(D))
-    ParameterLists.push_back(PSD->getTemplateParameters());
+  DeclContext *LookupDC = dyn_cast<DeclContext>(D);
 
   if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D)) {
     for (unsigned i = 0; i < DD->getNumTemplateParameterLists(); ++i)
@@ -9947,31 +9968,49 @@ unsigned Sema::ActOnReenterTemplateScope(Scope *S, Decl *D) {
     if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       if (FunctionTemplateDecl *FTD = FD->getDescribedFunctionTemplate())
         ParameterLists.push_back(FTD->getTemplateParameters());
-    }
-  }
+    } else if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+      LookupDC = VD->getDeclContext();
 
-  if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
+      if (VarTemplateDecl *VTD = VD->getDescribedVarTemplate())
+        ParameterLists.push_back(VTD->getTemplateParameters());
+      else if (auto *PSD = dyn_cast<VarTemplatePartialSpecializationDecl>(D))
+        ParameterLists.push_back(PSD->getTemplateParameters());
+    }
+  } else if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
     for (unsigned i = 0; i < TD->getNumTemplateParameterLists(); ++i)
       ParameterLists.push_back(TD->getTemplateParameterList(i));
 
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(TD)) {
       if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
         ParameterLists.push_back(CTD->getTemplateParameters());
+      else if (auto *PSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(D))
+        ParameterLists.push_back(PSD->getTemplateParameters());
     }
   }
+  // FIXME: Alias declarations and concepts.
 
   unsigned Count = 0;
+  Scope *InnermostTemplateScope = nullptr;
   for (TemplateParameterList *Params : ParameterLists) {
-    if (Params->size() > 0)
-      // Ignore explicit specializations; they don't contribute to the template
-      // depth.
-      ++Count;
+    // Ignore explicit specializations; they don't contribute to the template
+    // depth.
+    if (Params->size() == 0)
+      continue;
+
+    InnermostTemplateScope = EnterScope();
     for (NamedDecl *Param : *Params) {
       if (Param->getDeclName()) {
-        S->AddDecl(Param);
+        InnermostTemplateScope->AddDecl(Param);
         IdResolver.AddDecl(Param);
       }
     }
+    ++Count;
+  }
+
+  // Associate the new template scopes with the corresponding entities.
+  if (InnermostTemplateScope) {
+    assert(LookupDC && "no enclosing DeclContext for template lookup");
+    EnterTemplatedContext(InnermostTemplateScope, LookupDC);
   }
 
   return Count;
@@ -13498,11 +13537,11 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
   Expr *From = FromB.build(S, Loc);
   From = UnaryOperator::Create(
       S.Context, From, UO_AddrOf, S.Context.getPointerType(From->getType()),
-      VK_RValue, OK_Ordinary, Loc, false, S.CurFPFeatures);
+      VK_RValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
   Expr *To = ToB.build(S, Loc);
-  To = UnaryOperator::Create(S.Context, To, UO_AddrOf,
-                             S.Context.getPointerType(To->getType()), VK_RValue,
-                             OK_Ordinary, Loc, false, S.CurFPFeatures);
+  To = UnaryOperator::Create(
+      S.Context, To, UO_AddrOf, S.Context.getPointerType(To->getType()),
+      VK_RValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
 
   const Type *E = T->getBaseElementTypeUnsafe();
   bool NeedsCollectableMemCpy =
@@ -13739,14 +13778,14 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
   Expr *Comparison = BinaryOperator::Create(
       S.Context, IterationVarRefRVal.build(S, Loc),
       IntegerLiteral::Create(S.Context, Upper, SizeType, Loc), BO_NE,
-      S.Context.BoolTy, VK_RValue, OK_Ordinary, Loc, S.CurFPFeatures);
+      S.Context.BoolTy, VK_RValue, OK_Ordinary, Loc, S.CurFPFeatureOverrides());
 
   // Create the pre-increment of the iteration variable. We can determine
   // whether the increment will overflow based on the value of the array
   // bound.
   Expr *Increment = UnaryOperator::Create(
       S.Context, IterationVarRef.build(S, Loc), UO_PreInc, SizeType, VK_LValue,
-      OK_Ordinary, Loc, Upper.isMaxValue(), S.CurFPFeatures);
+      OK_Ordinary, Loc, Upper.isMaxValue(), S.CurFPFeatureOverrides());
 
   // Construct the loop that copies all elements of this array.
   return S.ActOnForStmt(
@@ -15184,12 +15223,6 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
   QualType ResultType =
       FnDecl->getType()->castAs<FunctionType>()->getReturnType();
 
-  // Check that the result type is not dependent.
-  if (ResultType->isDependentType())
-    return SemaRef.Diag(FnDecl->getLocation(),
-                        diag::err_operator_new_delete_dependent_result_type)
-    << FnDecl->getDeclName() << ExpectedResultType;
-
   // The operator is valid on any address space for OpenCL.
   if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
     if (auto *PtrTy = ResultType->getAs<PointerType>()) {
@@ -15198,10 +15231,16 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
   }
 
   // Check that the result type is what we expect.
-  if (SemaRef.Context.getCanonicalType(ResultType) != ExpectedResultType)
-    return SemaRef.Diag(FnDecl->getLocation(),
-                        diag::err_operator_new_delete_invalid_result_type)
-    << FnDecl->getDeclName() << ExpectedResultType;
+  if (SemaRef.Context.getCanonicalType(ResultType) != ExpectedResultType) {
+    // Reject even if the type is dependent; an operator delete function is
+    // required to have a non-dependent result type.
+    return SemaRef.Diag(
+               FnDecl->getLocation(),
+               ResultType->isDependentType()
+                   ? diag::err_operator_new_delete_dependent_result_type
+                   : diag::err_operator_new_delete_invalid_result_type)
+           << FnDecl->getDeclName() << ExpectedResultType;
+  }
 
   // A function template must have at least 2 parameters.
   if (FnDecl->getDescribedFunctionTemplate() && FnDecl->getNumParams() < 2)
@@ -15215,13 +15254,7 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
                         diag::err_operator_new_delete_too_few_parameters)
       << FnDecl->getDeclName();
 
-  // Check the first parameter type is not dependent.
   QualType FirstParamType = FnDecl->getParamDecl(0)->getType();
-  if (FirstParamType->isDependentType())
-    return SemaRef.Diag(FnDecl->getLocation(), DependentParamTypeDiag)
-      << FnDecl->getDeclName() << ExpectedFirstParamType;
-
-  // Check that the first parameter type is what we expect.
   if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
     // The operator is valid on any address space for OpenCL.
     if (auto *PtrTy =
@@ -15229,10 +15262,18 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
       FirstParamType = RemoveAddressSpaceFromPtr(SemaRef, PtrTy);
     }
   }
+
+  // Check that the first parameter type is what we expect.
   if (SemaRef.Context.getCanonicalType(FirstParamType).getUnqualifiedType() !=
-      ExpectedFirstParamType)
-    return SemaRef.Diag(FnDecl->getLocation(), InvalidParamTypeDiag)
-    << FnDecl->getDeclName() << ExpectedFirstParamType;
+      ExpectedFirstParamType) {
+    // The first parameter type is not allowed to be dependent. As a tentative
+    // DR resolution, we allow a dependent parameter type if it is the right
+    // type anyway, to allow destroying operator delete in class templates.
+    return SemaRef.Diag(FnDecl->getLocation(), FirstParamType->isDependentType()
+                                                   ? DependentParamTypeDiag
+                                                   : InvalidParamTypeDiag)
+           << FnDecl->getDeclName() << ExpectedFirstParamType;
+  }
 
   return false;
 }

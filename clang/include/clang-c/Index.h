@@ -2167,7 +2167,7 @@ enum CXCursorKind {
    */
   CXCursor_ObjCSelfExpr = 147,
 
-  /** OpenMP 4.0 [2.4, Array Section].
+  /** OpenMP 5.0 [2.1.5, Array Section].
    */
   CXCursor_OMPArraySectionExpr = 148,
 
@@ -5934,6 +5934,7 @@ typedef void *CXEvalResult;
  * If cursor is a statement declaration tries to evaluate the
  * statement and if its variable, tries to evaluate its initializer,
  * into its corresponding type.
+ * If it's an expression, tries to evaluate the expression.
  */
 CINDEX_LINKAGE CXEvalResult clang_Cursor_Evaluate(CXCursor C);
 

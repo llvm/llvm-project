@@ -397,7 +397,7 @@ static WalkResult walkSymbolRefs(
     for (Attribute attr : llvm::drop_begin(attrRange, index)) {
       /// Check for a nested container attribute, these will also need to be
       /// walked.
-      if (attr.isa<ArrayAttr>() || attr.isa<DictionaryAttr>()) {
+      if (attr.isa<ArrayAttr, DictionaryAttr>()) {
         attrWorklist.push_back(attr);
         curAccessChain.push_back(-1);
         return WalkResult::advance();

@@ -389,8 +389,8 @@ ConversionToDecimalResult ConvertLongDoubleToDecimal(char *buffer,
 }
 
 template <int PREC, int LOG10RADIX>
-llvm::raw_ostream &BigRadixFloatingPointNumber<PREC, LOG10RADIX>::Dump(
-    llvm::raw_ostream &o) const {
+template <typename STREAM>
+STREAM &BigRadixFloatingPointNumber<PREC, LOG10RADIX>::Dump(STREAM &o) const {
   if (isNegative_) {
     o << '-';
   }

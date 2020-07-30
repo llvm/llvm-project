@@ -11,11 +11,11 @@
 
 // Precondition: a != 0
 
-COMPILER_RT_ABI si_int __clzti2(ti_int a);
+COMPILER_RT_ABI int __clzti2(ti_int a);
 
-int test__clzti2(ti_int a, si_int expected)
+int test__clzti2(ti_int a, int expected)
 {
-    si_int x = __clzti2(a);
+    int x = __clzti2(a);
     if (x != expected)
     {
         twords at;

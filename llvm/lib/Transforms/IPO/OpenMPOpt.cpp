@@ -29,7 +29,6 @@
 
 using namespace llvm;
 using namespace omp;
-using namespace types;
 
 #define DEBUG_TYPE "openmp-opt"
 
@@ -37,6 +36,11 @@ static cl::opt<bool> DisableOpenMPOptimizations(
     "openmp-opt-disable", cl::ZeroOrMore,
     cl::desc("Disable OpenMP specific optimizations."), cl::Hidden,
     cl::init(false));
+
+static cl::opt<bool> PrintICVValues("openmp-print-icv-values", cl::init(false),
+                                    cl::Hidden);
+static cl::opt<bool> PrintOpenMPKernels("openmp-print-gpu-kernels",
+                                        cl::init(false), cl::Hidden);
 
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
@@ -46,26 +50,120 @@ STATISTIC(NumOpenMPRuntimeFunctionsIdentified,
           "Number of OpenMP runtime functions identified");
 STATISTIC(NumOpenMPRuntimeFunctionUsesIdentified,
           "Number of OpenMP runtime function uses identified");
+STATISTIC(NumOpenMPTargetRegionKernels,
+          "Number of OpenMP target region entry points (=kernels) identified");
+STATISTIC(
+    NumOpenMPParallelRegionsReplacedInGPUStateMachine,
+    "Number of OpenMP parallel regions replaced with ID in GPU state machines");
 
 #if !defined(NDEBUG)
 static constexpr auto TAG = "[" DEBUG_TYPE "]";
 #endif
 
+/// Apply \p CB to all uses of \p F. If \p LookThroughConstantExprUses is
+/// true, constant expression users are not given to \p CB but their uses are
+/// traversed transitively.
+template <typename CBTy>
+static void foreachUse(Function &F, CBTy CB,
+                       bool LookThroughConstantExprUses = true) {
+  SmallVector<Use *, 8> Worklist(make_pointer_range(F.uses()));
+
+  for (unsigned idx = 0; idx < Worklist.size(); ++idx) {
+    Use &U = *Worklist[idx];
+
+    // Allow use in constant bitcasts and simply look through them.
+    if (LookThroughConstantExprUses && isa<ConstantExpr>(U.getUser())) {
+      for (Use &CEU : cast<ConstantExpr>(U.getUser())->uses())
+        Worklist.push_back(&CEU);
+      continue;
+    }
+
+    CB(U);
+  }
+}
+
+/// Helper struct to store tracked ICV values at specif instructions.
+struct ICVValue {
+  Instruction *Inst;
+  Value *TrackedValue;
+
+  ICVValue(Instruction *I, Value *Val) : Inst(I), TrackedValue(Val) {}
+};
+
+namespace llvm {
+
+// Provide DenseMapInfo for ICVValue
+template <> struct DenseMapInfo<ICVValue> {
+  using InstInfo = DenseMapInfo<Instruction *>;
+  using ValueInfo = DenseMapInfo<Value *>;
+
+  static inline ICVValue getEmptyKey() {
+    return ICVValue(InstInfo::getEmptyKey(), ValueInfo::getEmptyKey());
+  };
+
+  static inline ICVValue getTombstoneKey() {
+    return ICVValue(InstInfo::getTombstoneKey(), ValueInfo::getTombstoneKey());
+  };
+
+  static unsigned getHashValue(const ICVValue &ICVVal) {
+    return detail::combineHashValue(
+        InstInfo::getHashValue(ICVVal.Inst),
+        ValueInfo::getHashValue(ICVVal.TrackedValue));
+  }
+
+  static bool isEqual(const ICVValue &LHS, const ICVValue &RHS) {
+    return InstInfo::isEqual(LHS.Inst, RHS.Inst) &&
+           ValueInfo::isEqual(LHS.TrackedValue, RHS.TrackedValue);
+  }
+};
+
+} // end namespace llvm
+
 namespace {
+
+struct AAICVTracker;
 
 /// OpenMP specific information. For now, stores RFIs and ICVs also needed for
 /// Attributor runs.
 struct OMPInformationCache : public InformationCache {
   OMPInformationCache(Module &M, AnalysisGetter &AG,
-                      BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
-                      SmallPtrSetImpl<Function *> &ModuleSlice)
-      : InformationCache(M, AG, Allocator, CGSCC), ModuleSlice(ModuleSlice),
-        OMPBuilder(M) {
-    initializeTypes(M);
-    initializeRuntimeFunctions();
+                      BumpPtrAllocator &Allocator, SetVector<Function *> &CGSCC,
+                      SmallPtrSetImpl<Kernel> &Kernels)
+      : InformationCache(M, AG, Allocator, &CGSCC), OMPBuilder(M),
+        Kernels(Kernels) {
+    initializeModuleSlice(CGSCC);
 
     OMPBuilder.initialize();
+    initializeRuntimeFunctions();
+    initializeInternalControlVars();
   }
+
+  /// Generic information that describes an internal control variable.
+  struct InternalControlVarInfo {
+    /// The kind, as described by InternalControlVar enum.
+    InternalControlVar Kind;
+
+    /// The name of the ICV.
+    StringRef Name;
+
+    /// Environment variable associated with this ICV.
+    StringRef EnvVarName;
+
+    /// Initial value kind.
+    ICVInitValue InitKind;
+
+    /// Initial value.
+    ConstantInt *InitValue;
+
+    /// Setter RTL function associated with this ICV.
+    RuntimeFunction Setter;
+
+    /// Getter RTL function associated with this ICV.
+    RuntimeFunction Getter;
+
+    /// RTL Function corresponding to the override clause of this ICV
+    RuntimeFunction Clause;
+  };
 
   /// Generic information that describes a runtime function
   struct RuntimeFunctionInfo {
@@ -91,11 +189,17 @@ struct OMPInformationCache : public InformationCache {
     /// Uses of this runtime function per function containing the use.
     using UseVector = SmallVector<Use *, 16>;
 
+    /// Clear UsesMap for runtime function.
+    void clearUsesMap() { UsesMap.clear(); }
+
+    /// Boolean conversion that is true if the runtime function was found.
+    operator bool() const { return Declaration; }
+
     /// Return the vector of uses in function \p F.
     UseVector &getOrCreateUseVector(Function *F) {
-      std::unique_ptr<UseVector> &UV = UsesMap[F];
+      std::shared_ptr<UseVector> &UV = UsesMap[F];
       if (!UV)
-        UV = std::make_unique<UseVector>();
+        UV = std::make_shared<UseVector>();
       return *UV;
     }
 
@@ -118,20 +222,20 @@ struct OMPInformationCache : public InformationCache {
     /// Run the callback \p CB on each use and forget the use if the result is
     /// true. The callback will be fed the function in which the use was
     /// encountered as second argument.
-    void foreachUse(function_ref<bool(Use &, Function &)> CB) {
-      for (auto &It : UsesMap)
-        foreachUse(CB, It.first, It.second.get());
+    void foreachUse(SmallVectorImpl<Function *> &SCC,
+                    function_ref<bool(Use &, Function &)> CB) {
+      for (Function *F : SCC)
+        foreachUse(CB, F);
     }
 
     /// Run the callback \p CB on each use within the function \p F and forget
     /// the use if the result is true.
-    void foreachUse(function_ref<bool(Use &, Function &)> CB, Function *F,
-                    UseVector *Uses = nullptr) {
+    void foreachUse(function_ref<bool(Use &, Function &)> CB, Function *F) {
       SmallVector<unsigned, 8> ToBeDeleted;
       ToBeDeleted.clear();
 
       unsigned Idx = 0;
-      UseVector &UV = Uses ? *Uses : getOrCreateUseVector(F);
+      UseVector &UV = getOrCreateUseVector(F);
 
       for (Use *U : UV) {
         if (CB(*U, *F))
@@ -140,7 +244,7 @@ struct OMPInformationCache : public InformationCache {
       }
 
       // Remove the to-be-deleted indices in reverse order as prior
-      // modifcations will not modify the smaller indices.
+      // modifications will not modify the smaller indices.
       while (!ToBeDeleted.empty()) {
         unsigned Idx = ToBeDeleted.pop_back_val();
         UV[Idx] = UV.back();
@@ -151,11 +255,48 @@ struct OMPInformationCache : public InformationCache {
   private:
     /// Map from functions to all uses of this runtime function contained in
     /// them.
-    DenseMap<Function *, std::unique_ptr<UseVector>> UsesMap;
+    DenseMap<Function *, std::shared_ptr<UseVector>> UsesMap;
   };
 
+  /// Initialize the ModuleSlice member based on \p SCC. ModuleSlices contains
+  /// (a subset of) all functions that we can look at during this SCC traversal.
+  /// This includes functions (transitively) called from the SCC and the
+  /// (transitive) callers of SCC functions. We also can look at a function if
+  /// there is a "reference edge", i.a., if the function somehow uses (!=calls)
+  /// a function in the SCC or a caller of a function in the SCC.
+  void initializeModuleSlice(SetVector<Function *> &SCC) {
+    ModuleSlice.insert(SCC.begin(), SCC.end());
+
+    SmallPtrSet<Function *, 16> Seen;
+    SmallVector<Function *, 16> Worklist(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      for (Instruction &I : instructions(*F))
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (Function *Callee = CB->getCalledFunction())
+            if (Seen.insert(Callee).second)
+              Worklist.push_back(Callee);
+    }
+
+    Seen.clear();
+    Worklist.append(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      // Traverse all transitive uses.
+      foreachUse(*F, [&](Use &U) {
+        if (auto *UsrI = dyn_cast<Instruction>(U.getUser()))
+          if (Seen.insert(UsrI->getFunction()).second)
+            Worklist.push_back(UsrI->getFunction());
+      });
+    }
+  }
+
   /// The slice of the module we are allowed to look at.
-  SmallPtrSetImpl<Function *> &ModuleSlice;
+  SmallPtrSet<Function *, 8> ModuleSlice;
 
   /// An OpenMP-IR-Builder instance
   OpenMPIRBuilder OMPBuilder;
@@ -164,6 +305,49 @@ struct OMPInformationCache : public InformationCache {
   EnumeratedArray<RuntimeFunctionInfo, RuntimeFunction,
                   RuntimeFunction::OMPRTL___last>
       RFIs;
+
+  /// Map from ICV kind to the ICV description.
+  EnumeratedArray<InternalControlVarInfo, InternalControlVar,
+                  InternalControlVar::ICV___last>
+      ICVs;
+
+  /// Helper to initialize all internal control variable information for those
+  /// defined in OMPKinds.def.
+  void initializeInternalControlVars() {
+#define ICV_RT_SET(_Name, RTL)                                                 \
+  {                                                                            \
+    auto &ICV = ICVs[_Name];                                                   \
+    ICV.Setter = RTL;                                                          \
+  }
+#define ICV_RT_GET(Name, RTL)                                                  \
+  {                                                                            \
+    auto &ICV = ICVs[Name];                                                    \
+    ICV.Getter = RTL;                                                          \
+  }
+#define ICV_DATA_ENV(Enum, _Name, _EnvVarName, Init)                           \
+  {                                                                            \
+    auto &ICV = ICVs[Enum];                                                    \
+    ICV.Name = _Name;                                                          \
+    ICV.Kind = Enum;                                                           \
+    ICV.InitKind = Init;                                                       \
+    ICV.EnvVarName = _EnvVarName;                                              \
+    switch (ICV.InitKind) {                                                    \
+    case ICV_IMPLEMENTATION_DEFINED:                                           \
+      ICV.InitValue = nullptr;                                                 \
+      break;                                                                   \
+    case ICV_ZERO:                                                             \
+      ICV.InitValue = ConstantInt::get(                                        \
+          Type::getInt32Ty(OMPBuilder.Int32->getContext()), 0);                \
+      break;                                                                   \
+    case ICV_FALSE:                                                            \
+      ICV.InitValue = ConstantInt::getFalse(OMPBuilder.Int1->getContext());    \
+      break;                                                                   \
+    case ICV_LAST:                                                             \
+      break;                                                                   \
+    }                                                                          \
+  }
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  }
 
   /// Returns true if the function declaration \p F matches the runtime
   /// function types, that is, return type \p RTFRetType, and argument types
@@ -191,49 +375,83 @@ struct OMPInformationCache : public InformationCache {
     return true;
   }
 
+  // Helper to collect all uses of the declaration in the UsesMap.
+  unsigned collectUses(RuntimeFunctionInfo &RFI, bool CollectStats = true) {
+    unsigned NumUses = 0;
+    if (!RFI.Declaration)
+      return NumUses;
+    OMPBuilder.addAttributes(RFI.Kind, *RFI.Declaration);
+
+    if (CollectStats) {
+      NumOpenMPRuntimeFunctionsIdentified += 1;
+      NumOpenMPRuntimeFunctionUsesIdentified += RFI.Declaration->getNumUses();
+    }
+
+    // TODO: We directly convert uses into proper calls and unknown uses.
+    for (Use &U : RFI.Declaration->uses()) {
+      if (Instruction *UserI = dyn_cast<Instruction>(U.getUser())) {
+        if (ModuleSlice.count(UserI->getFunction())) {
+          RFI.getOrCreateUseVector(UserI->getFunction()).push_back(&U);
+          ++NumUses;
+        }
+      } else {
+        RFI.getOrCreateUseVector(nullptr).push_back(&U);
+        ++NumUses;
+      }
+    }
+    return NumUses;
+  }
+
+  // Helper function to recollect uses of all runtime functions.
+  void recollectUses() {
+    for (int Idx = 0; Idx < RFIs.size(); ++Idx) {
+      auto &RFI = RFIs[static_cast<RuntimeFunction>(Idx)];
+      RFI.clearUsesMap();
+      collectUses(RFI, /*CollectStats*/ false);
+    }
+  }
+
   /// Helper to initialize all runtime function information for those defined
   /// in OpenMPKinds.def.
   void initializeRuntimeFunctions() {
-    // Helper to collect all uses of the decleration in the UsesMap.
-    auto CollectUses = [&](RuntimeFunctionInfo &RFI) {
-      unsigned NumUses = 0;
-      if (!RFI.Declaration)
-        return NumUses;
-      OMPBuilder.addAttributes(RFI.Kind, *RFI.Declaration);
-
-      NumOpenMPRuntimeFunctionsIdentified += 1;
-      NumOpenMPRuntimeFunctionUsesIdentified += RFI.Declaration->getNumUses();
-
-      // TODO: We directly convert uses into proper calls and unknown uses.
-      for (Use &U : RFI.Declaration->uses()) {
-        if (Instruction *UserI = dyn_cast<Instruction>(U.getUser())) {
-          if (ModuleSlice.count(UserI->getFunction())) {
-            RFI.getOrCreateUseVector(UserI->getFunction()).push_back(&U);
-            ++NumUses;
-          }
-        } else {
-          RFI.getOrCreateUseVector(nullptr).push_back(&U);
-          ++NumUses;
-        }
-      }
-      return NumUses;
-    };
-
     Module &M = *((*ModuleSlice.begin())->getParent());
+
+    // Helper macros for handling __VA_ARGS__ in OMP_RTL
+#define OMP_TYPE(VarName, ...)                                                 \
+  Type *VarName = OMPBuilder.VarName;                                          \
+  (void)VarName;
+
+#define OMP_ARRAY_TYPE(VarName, ...)                                           \
+  ArrayType *VarName##Ty = OMPBuilder.VarName##Ty;                             \
+  (void)VarName##Ty;                                                           \
+  PointerType *VarName##PtrTy = OMPBuilder.VarName##PtrTy;                     \
+  (void)VarName##PtrTy;
+
+#define OMP_FUNCTION_TYPE(VarName, ...)                                        \
+  FunctionType *VarName = OMPBuilder.VarName;                                  \
+  (void)VarName;                                                               \
+  PointerType *VarName##Ptr = OMPBuilder.VarName##Ptr;                         \
+  (void)VarName##Ptr;
+
+#define OMP_STRUCT_TYPE(VarName, ...)                                          \
+  StructType *VarName = OMPBuilder.VarName;                                    \
+  (void)VarName;                                                               \
+  PointerType *VarName##Ptr = OMPBuilder.VarName##Ptr;                         \
+  (void)VarName##Ptr;
 
 #define OMP_RTL(_Enum, _Name, _IsVarArg, _ReturnType, ...)                     \
   {                                                                            \
     SmallVector<Type *, 8> ArgsTypes({__VA_ARGS__});                           \
     Function *F = M.getFunction(_Name);                                        \
-    if (declMatchesRTFTypes(F, _ReturnType, ArgsTypes)) {                      \
+    if (declMatchesRTFTypes(F, OMPBuilder._ReturnType, ArgsTypes)) {           \
       auto &RFI = RFIs[_Enum];                                                 \
       RFI.Kind = _Enum;                                                        \
       RFI.Name = _Name;                                                        \
       RFI.IsVarArg = _IsVarArg;                                                \
-      RFI.ReturnType = _ReturnType;                                            \
+      RFI.ReturnType = OMPBuilder._ReturnType;                                 \
       RFI.ArgumentTypes = std::move(ArgsTypes);                                \
       RFI.Declaration = F;                                                     \
-      unsigned NumUses = CollectUses(RFI);                                     \
+      unsigned NumUses = collectUses(RFI);                                     \
       (void)NumUses;                                                           \
       LLVM_DEBUG({                                                             \
         dbgs() << TAG << RFI.Name << (RFI.Declaration ? "" : " not")           \
@@ -249,6 +467,9 @@ struct OMPInformationCache : public InformationCache {
 
     // TODO: We should attach the attributes defined in OMPKinds.def.
   }
+
+  /// Collection of known kernels (\see Kernel) in the module.
+  SmallPtrSetImpl<Kernel> &Kernels;
 };
 
 struct OpenMPOpt {
@@ -258,22 +479,73 @@ struct OpenMPOpt {
 
   OpenMPOpt(SmallVectorImpl<Function *> &SCC, CallGraphUpdater &CGUpdater,
             OptimizationRemarkGetter OREGetter,
-            OMPInformationCache &OMPInfoCache)
+            OMPInformationCache &OMPInfoCache, Attributor &A)
       : M(*(*SCC.begin())->getParent()), SCC(SCC), CGUpdater(CGUpdater),
-        OREGetter(OREGetter), OMPInfoCache(OMPInfoCache) {}
+        OREGetter(OREGetter), OMPInfoCache(OMPInfoCache), A(A) {}
 
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
   bool run() {
+    if (SCC.empty())
+      return false;
+
     bool Changed = false;
 
     LLVM_DEBUG(dbgs() << TAG << "Run on SCC with " << SCC.size()
                       << " functions in a slice with "
                       << OMPInfoCache.ModuleSlice.size() << " functions\n");
 
+    if (PrintICVValues)
+      printICVs();
+    if (PrintOpenMPKernels)
+      printKernels();
+
+    Changed |= rewriteDeviceCodeStateMachine();
+
+    Changed |= runAttributor();
+
+    // Recollect uses, in case Attributor deleted any.
+    OMPInfoCache.recollectUses();
+
     Changed |= deduplicateRuntimeCalls();
     Changed |= deleteParallelRegions();
 
     return Changed;
+  }
+
+  /// Print initial ICV values for testing.
+  /// FIXME: This should be done from the Attributor once it is added.
+  void printICVs() const {
+    InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel};
+
+    for (Function *F : OMPInfoCache.ModuleSlice) {
+      for (auto ICV : ICVs) {
+        auto ICVInfo = OMPInfoCache.ICVs[ICV];
+        auto Remark = [&](OptimizationRemark OR) {
+          return OR << "OpenMP ICV " << ore::NV("OpenMPICV", ICVInfo.Name)
+                    << " Value: "
+                    << (ICVInfo.InitValue
+                            ? ICVInfo.InitValue->getValue().toString(10, true)
+                            : "IMPLEMENTATION_DEFINED");
+        };
+
+        emitRemarkOnFunction(F, "OpenMPICVTracker", Remark);
+      }
+    }
+  }
+
+  /// Print OpenMP GPU kernels for testing.
+  void printKernels() const {
+    for (Function *F : SCC) {
+      if (!OMPInfoCache.Kernels.count(F))
+        continue;
+
+      auto Remark = [&](OptimizationRemark OR) {
+        return OR << "OpenMP GPU kernel "
+                  << ore::NV("OpenMPGPUKernel", F->getName()) << "\n";
+      };
+
+      emitRemarkOnFunction(F, "OpenMPGPU", Remark);
+    }
   }
 
   /// Return the call if \p U is a callee use in a regular call. If \p RFI is
@@ -341,12 +613,12 @@ private:
       return true;
     };
 
-    RFI.foreachUse(DeleteCallCB);
+    RFI.foreachUse(SCC, DeleteCallCB);
 
     return Changed;
   }
 
-  /// Try to eliminiate runtime calls by reusing existing ones.
+  /// Try to eliminate runtime calls by reusing existing ones.
   bool deduplicateRuntimeCalls() {
     bool Changed = false;
 
@@ -426,7 +698,7 @@ private:
                                   /* GlobalOnly */ true, SingleChoice);
       return false;
     };
-    RFI.foreachUse(CombineIdentStruct);
+    RFI.foreachUse(SCC, CombineIdentStruct);
 
     if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
@@ -442,7 +714,7 @@ private:
     return Ident;
   }
 
-  /// Try to eliminiate calls of \p RFI in \p F by reusing an existing one or
+  /// Try to eliminate calls of \p RFI in \p F by reusing an existing one or
   /// \p ReplVal if given.
   bool deduplicateRuntimeCalls(Function &F,
                                OMPInformationCache::RuntimeFunctionInfo &RFI,
@@ -460,11 +732,11 @@ private:
            "Unexpected replacement value!");
 
     // TODO: Use dominance to find a good position instead.
-    auto CanBeMoved = [](CallBase &CB) {
+    auto CanBeMoved = [this](CallBase &CB) {
       unsigned NumArgs = CB.getNumArgOperands();
       if (NumArgs == 0)
         return true;
-      if (CB.getArgOperand(0)->getType() != IdentPtr)
+      if (CB.getArgOperand(0)->getType() != OMPInfoCache.OMPBuilder.IdentPtr)
         return false;
       for (unsigned u = 1; u < NumArgs; ++u)
         if (isa<Instruction>(CB.getArgOperand(u)))
@@ -499,7 +771,7 @@ private:
     // existing and used by one of the calls, or created from scratch.
     if (CallBase *CI = dyn_cast<CallBase>(ReplVal)) {
       if (CI->getNumArgOperands() > 0 &&
-          CI->getArgOperand(0)->getType() == IdentPtr) {
+          CI->getArgOperand(0)->getType() == OMPInfoCache.OMPBuilder.IdentPtr) {
         Value *Ident = getCombinedIdentFromCallUsesIn(RFI, F,
                                                       /* GlobalOnly */ true);
         CI->setArgOperand(0, Ident);
@@ -526,7 +798,7 @@ private:
       Changed = true;
       return true;
     };
-    RFI.foreachUse(ReplaceAndDeleteCB);
+    RFI.foreachUse(SCC, ReplaceAndDeleteCB);
 
     return Changed;
   }
@@ -569,7 +841,7 @@ private:
     OMPInformationCache::RuntimeFunctionInfo &GlobThreadNumRFI =
         OMPInfoCache.RFIs[OMPRTL___kmpc_global_thread_num];
 
-    GlobThreadNumRFI.foreachUse([&](Use &U, Function &F) {
+    GlobThreadNumRFI.foreachUse(SCC, [&](Use &U, Function &F) {
       if (CallInst *CI = getCallIfRegularCall(U, &GlobThreadNumRFI))
         AddUserArgs(*CI);
       return false;
@@ -581,6 +853,31 @@ private:
     for (unsigned u = 0; u < GTIdArgs.size(); ++u)
       AddUserArgs(*GTIdArgs[u]);
   }
+
+  /// Kernel (=GPU) optimizations and utility functions
+  ///
+  ///{{
+
+  /// Check if \p F is a kernel, hence entry point for target offloading.
+  bool isKernel(Function &F) { return OMPInfoCache.Kernels.count(&F); }
+
+  /// Cache to remember the unique kernel for a function.
+  DenseMap<Function *, Optional<Kernel>> UniqueKernelMap;
+
+  /// Find the unique kernel that will execute \p F, if any.
+  Kernel getUniqueKernelFor(Function &F);
+
+  /// Find the unique kernel that will execute \p I, if any.
+  Kernel getUniqueKernelFor(Instruction &I) {
+    return getUniqueKernelFor(*I.getFunction());
+  }
+
+  /// Rewrite the device (=GPU) code state machine create in non-SPMD mode in
+  /// the cases we can avoid taking the address of a function.
+  bool rewriteDeviceCodeStateMachine();
+
+  ///
+  ///}}
 
   /// Emit a remark generically
   ///
@@ -596,7 +893,7 @@ private:
   template <typename RemarkKind,
             typename RemarkCallBack = function_ref<RemarkKind(RemarkKind &&)>>
   void emitRemark(Instruction *Inst, StringRef RemarkName,
-                  RemarkCallBack &&RemarkCB) {
+                  RemarkCallBack &&RemarkCB) const {
     Function *F = Inst->getParent()->getParent();
     auto &ORE = OREGetter(F);
 
@@ -604,7 +901,20 @@ private:
         [&]() { return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, Inst)); });
   }
 
-  /// The underyling module.
+  /// Emit a remark on a function. Since only OptimizationRemark is supporting
+  /// this, it can't be made generic.
+  void
+  emitRemarkOnFunction(Function *F, StringRef RemarkName,
+                       function_ref<OptimizationRemark(OptimizationRemark &&)>
+                           &&RemarkCB) const {
+    auto &ORE = OREGetter(F);
+
+    ORE.emit([&]() {
+      return RemarkCB(OptimizationRemark(DEBUG_TYPE, RemarkName, F));
+    });
+  }
+
+  /// The underlying module.
   Module &M;
 
   /// The SCC we are operating on.
@@ -619,8 +929,337 @@ private:
 
   /// OpenMP-specific information cache. Also Used for Attributor runs.
   OMPInformationCache &OMPInfoCache;
+
+  /// Attributor instance.
+  Attributor &A;
+
+  /// Helper function to run Attributor on SCC.
+  bool runAttributor() {
+    if (SCC.empty())
+      return false;
+
+    registerAAs();
+
+    ChangeStatus Changed = A.run();
+
+    LLVM_DEBUG(dbgs() << "[Attributor] Done with " << SCC.size()
+                      << " functions, result: " << Changed << ".\n");
+
+    return Changed == ChangeStatus::CHANGED;
+  }
+
+  /// Populate the Attributor with abstract attribute opportunities in the
+  /// function.
+  void registerAAs() {
+    for (Function *F : SCC) {
+      if (F->isDeclaration())
+        continue;
+
+      A.getOrCreateAAFor<AAICVTracker>(IRPosition::function(*F));
+    }
+  }
+};
+
+Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
+  if (!OMPInfoCache.ModuleSlice.count(&F))
+    return nullptr;
+
+  // Use a scope to keep the lifetime of the CachedKernel short.
+  {
+    Optional<Kernel> &CachedKernel = UniqueKernelMap[&F];
+    if (CachedKernel)
+      return *CachedKernel;
+
+    // TODO: We should use an AA to create an (optimistic and callback
+    //       call-aware) call graph. For now we stick to simple patterns that
+    //       are less powerful, basically the worst fixpoint.
+    if (isKernel(F)) {
+      CachedKernel = Kernel(&F);
+      return *CachedKernel;
+    }
+
+    CachedKernel = nullptr;
+    if (!F.hasLocalLinkage())
+      return nullptr;
+  }
+
+  auto GetUniqueKernelForUse = [&](const Use &U) -> Kernel {
+    if (auto *Cmp = dyn_cast<ICmpInst>(U.getUser())) {
+      // Allow use in equality comparisons.
+      if (Cmp->isEquality())
+        return getUniqueKernelFor(*Cmp);
+      return nullptr;
+    }
+    if (auto *CB = dyn_cast<CallBase>(U.getUser())) {
+      // Allow direct calls.
+      if (CB->isCallee(&U))
+        return getUniqueKernelFor(*CB);
+      // Allow the use in __kmpc_kernel_prepare_parallel calls.
+      if (Function *Callee = CB->getCalledFunction())
+        if (Callee->getName() == "__kmpc_kernel_prepare_parallel")
+          return getUniqueKernelFor(*CB);
+      return nullptr;
+    }
+    // Disallow every other use.
+    return nullptr;
+  };
+
+  // TODO: In the future we want to track more than just a unique kernel.
+  SmallPtrSet<Kernel, 2> PotentialKernels;
+  foreachUse(F, [&](const Use &U) {
+    PotentialKernels.insert(GetUniqueKernelForUse(U));
+  });
+
+  Kernel K = nullptr;
+  if (PotentialKernels.size() == 1)
+    K = *PotentialKernels.begin();
+
+  // Cache the result.
+  UniqueKernelMap[&F] = K;
+
+  return K;
+}
+
+bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
+  OMPInformationCache::RuntimeFunctionInfo &KernelPrepareParallelRFI =
+      OMPInfoCache.RFIs[OMPRTL___kmpc_kernel_prepare_parallel];
+
+  bool Changed = false;
+  if (!KernelPrepareParallelRFI)
+    return Changed;
+
+  for (Function *F : SCC) {
+
+    // Check if the function is uses in a __kmpc_kernel_prepare_parallel call at
+    // all.
+    bool UnknownUse = false;
+    unsigned NumDirectCalls = 0;
+
+    SmallVector<Use *, 2> ToBeReplacedStateMachineUses;
+    foreachUse(*F, [&](Use &U) {
+      if (auto *CB = dyn_cast<CallBase>(U.getUser()))
+        if (CB->isCallee(&U)) {
+          ++NumDirectCalls;
+          return;
+        }
+
+      if (isa<ICmpInst>(U.getUser())) {
+        ToBeReplacedStateMachineUses.push_back(&U);
+        return;
+      }
+      if (OpenMPOpt::getCallIfRegularCall(*U.getUser(),
+                                          &KernelPrepareParallelRFI)) {
+        ToBeReplacedStateMachineUses.push_back(&U);
+        return;
+      }
+      UnknownUse = true;
+    });
+
+    // If this ever hits, we should investigate.
+    if (UnknownUse || NumDirectCalls != 1)
+      continue;
+
+    // TODO: This is not a necessary restriction and should be lifted.
+    if (ToBeReplacedStateMachineUses.size() != 2)
+      continue;
+
+    // Even if we have __kmpc_kernel_prepare_parallel calls, we (for now) give
+    // up if the function is not called from a unique kernel.
+    Kernel K = getUniqueKernelFor(*F);
+    if (!K)
+      continue;
+
+    // We now know F is a parallel body function called only from the kernel K.
+    // We also identified the state machine uses in which we replace the
+    // function pointer by a new global symbol for identification purposes. This
+    // ensures only direct calls to the function are left.
+
+    Module &M = *F->getParent();
+    Type *Int8Ty = Type::getInt8Ty(M.getContext());
+
+    auto *ID = new GlobalVariable(
+        M, Int8Ty, /* isConstant */ true, GlobalValue::PrivateLinkage,
+        UndefValue::get(Int8Ty), F->getName() + ".ID");
+
+    for (Use *U : ToBeReplacedStateMachineUses)
+      U->set(ConstantExpr::getBitCast(ID, U->get()->getType()));
+
+    ++NumOpenMPParallelRegionsReplacedInGPUStateMachine;
+
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+/// Abstract Attribute for tracking ICV values.
+struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAICVTracker(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Returns true if value is assumed to be tracked.
+  bool isAssumedTracked() const { return getAssumed(); }
+
+  /// Returns true if value is known to be tracked.
+  bool isKnownTracked() const { return getAssumed(); }
+
+  /// Create an abstract attribute biew for the position \p IRP.
+  static AAICVTracker &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// Return the value with which \p I can be replaced for specific \p ICV.
+  virtual Value *getReplacementValue(InternalControlVar ICV,
+                                     const Instruction *I, Attributor &A) = 0;
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAICVTracker"; }
+
+  static const char ID;
+};
+
+struct AAICVTrackerFunction : public AAICVTracker {
+  AAICVTrackerFunction(const IRPosition &IRP, Attributor &A)
+      : AAICVTracker(IRP, A) {}
+
+  // FIXME: come up with better string.
+  const std::string getAsStr() const override { return "ICVTracker"; }
+
+  // FIXME: come up with some stats.
+  void trackStatistics() const override {}
+
+  /// TODO: decide whether to deduplicate here, or use current
+  /// deduplicateRuntimeCalls function.
+  ChangeStatus manifest(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    for (InternalControlVar &ICV : TrackableICVs)
+      if (deduplicateICVGetters(ICV, A))
+        Changed = ChangeStatus::CHANGED;
+
+    return Changed;
+  }
+
+  bool deduplicateICVGetters(InternalControlVar &ICV, Attributor &A) {
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+    auto &ICVInfo = OMPInfoCache.ICVs[ICV];
+    auto &GetterRFI = OMPInfoCache.RFIs[ICVInfo.Getter];
+
+    bool Changed = false;
+
+    auto ReplaceAndDeleteCB = [&](Use &U, Function &Caller) {
+      CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &GetterRFI);
+      Instruction *UserI = cast<Instruction>(U.getUser());
+      Value *ReplVal = getReplacementValue(ICV, UserI, A);
+
+      if (!ReplVal || !CI)
+        return false;
+
+      A.removeCallSite(CI);
+      CI->replaceAllUsesWith(ReplVal);
+      CI->eraseFromParent();
+      Changed = true;
+      return true;
+    };
+
+    GetterRFI.foreachUse(ReplaceAndDeleteCB, getAnchorScope());
+    return Changed;
+  }
+
+  // Map of ICV to their values at specific program point.
+  EnumeratedArray<SmallSetVector<ICVValue, 4>, InternalControlVar,
+                  InternalControlVar::ICV___last>
+      ICVValuesMap;
+
+  // Currently only nthreads is being tracked.
+  // this array will only grow with time.
+  InternalControlVar TrackableICVs[1] = {ICV_nthreads};
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
+
+    Function *F = getAnchorScope();
+
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+
+    for (InternalControlVar ICV : TrackableICVs) {
+      auto &SetterRFI = OMPInfoCache.RFIs[OMPInfoCache.ICVs[ICV].Setter];
+
+      auto TrackValues = [&](Use &U, Function &) {
+        CallInst *CI = OpenMPOpt::getCallIfRegularCall(U);
+        if (!CI)
+          return false;
+
+        // FIXME: handle setters with more that 1 arguments.
+        /// Track new value.
+        if (ICVValuesMap[ICV].insert(ICVValue(CI, CI->getArgOperand(0))))
+          HasChanged = ChangeStatus::CHANGED;
+
+        return false;
+      };
+
+      SetterRFI.foreachUse(TrackValues, F);
+    }
+
+    return HasChanged;
+  }
+
+  /// Return the value with which \p I can be replaced for specific \p ICV.
+  Value *getReplacementValue(InternalControlVar ICV, const Instruction *I,
+                             Attributor &A) override {
+    const BasicBlock *CurrBB = I->getParent();
+
+    auto &ValuesSet = ICVValuesMap[ICV];
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+    auto &GetterRFI = OMPInfoCache.RFIs[OMPInfoCache.ICVs[ICV].Getter];
+
+    for (const auto &ICVVal : ValuesSet) {
+      if (CurrBB == ICVVal.Inst->getParent()) {
+        if (!ICVVal.Inst->comesBefore(I))
+          continue;
+
+        // both instructions are in the same BB and at \p I we know the ICV
+        // value.
+        while (I != ICVVal.Inst) {
+          // we don't yet know if a call might update an ICV.
+          // TODO: check callsite AA for value.
+          if (const auto *CB = dyn_cast<CallBase>(I))
+            if (CB->getCalledFunction() != GetterRFI.Declaration)
+              return nullptr;
+
+          I = I->getPrevNode();
+        }
+
+        // No call in between, return the value.
+        return ICVVal.TrackedValue;
+      }
+    }
+
+    // No value was tracked.
+    return nullptr;
+  }
 };
 } // namespace
+
+const char AAICVTracker::ID = 0;
+
+AAICVTracker &AAICVTracker::createForPosition(const IRPosition &IRP,
+                                              Attributor &A) {
+  AAICVTracker *AA = nullptr;
+  switch (IRP.getPositionKind()) {
+  case IRPosition::IRP_INVALID:
+  case IRPosition::IRP_FLOAT:
+  case IRPosition::IRP_ARGUMENT:
+  case IRPosition::IRP_RETURNED:
+  case IRPosition::IRP_CALL_SITE_RETURNED:
+  case IRPosition::IRP_CALL_SITE_ARGUMENT:
+  case IRPosition::IRP_CALL_SITE:
+    llvm_unreachable("ICVTracker can only be created for function position!");
+  case IRPosition::IRP_FUNCTION:
+    AA = new (A.Allocator) AAICVTrackerFunction(IRP, A);
+    break;
+  }
+
+  return *AA;
+}
 
 PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
                                      CGSCCAnalysisManager &AM,
@@ -631,12 +1270,9 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
-  SmallPtrSet<Function *, 16> ModuleSlice;
   SmallVector<Function *, 16> SCC;
-  for (LazyCallGraph::Node &N : C) {
+  for (LazyCallGraph::Node &N : C)
     SCC.push_back(&N.getFunction());
-    ModuleSlice.insert(SCC.back());
-  }
 
   if (SCC.empty())
     return PreservedAnalyses::all();
@@ -656,10 +1292,12 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   BumpPtrAllocator Allocator;
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
-                                /*CGSCC*/ &Functions, ModuleSlice);
+                                /*CGSCC*/ Functions, OMPInModule.getKernels());
+
+  Attributor A(Functions, InfoCache, CGUpdater);
 
   // TODO: Compute the module slice we are allowed to look at.
-  OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache);
+  OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run();
   (void)Changed;
   return PreservedAnalyses::all();
@@ -692,14 +1330,11 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     if (DisableOpenMPOptimizations || skipSCC(CGSCC))
       return false;
 
-    SmallPtrSet<Function *, 16> ModuleSlice;
     SmallVector<Function *, 16> SCC;
     for (CallGraphNode *CGN : CGSCC)
       if (Function *Fn = CGN->getFunction())
-        if (!Fn->isDeclaration()) {
+        if (!Fn->isDeclaration())
           SCC.push_back(Fn);
-          ModuleSlice.insert(Fn);
-        }
 
     if (SCC.empty())
       return false;
@@ -719,12 +1354,14 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     AnalysisGetter AG;
     SetVector<Function *> Functions(SCC.begin(), SCC.end());
     BumpPtrAllocator Allocator;
-    OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG,
-                                  Allocator,
-                                  /*CGSCC*/ &Functions, ModuleSlice);
+    OMPInformationCache InfoCache(
+        *(Functions.back()->getParent()), AG, Allocator,
+        /*CGSCC*/ Functions, OMPInModule.getKernels());
+
+    Attributor A(Functions, InfoCache, CGUpdater);
 
     // TODO: Compute the module slice we are allowed to look at.
-    OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache);
+    OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
     return OMPOpt.run();
   }
 
@@ -733,14 +1370,53 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
 
 } // end anonymous namespace
 
+void OpenMPInModule::identifyKernels(Module &M) {
+
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+  if (!MD)
+    return;
+
+  for (auto *Op : MD->operands()) {
+    if (Op->getNumOperands() < 2)
+      continue;
+    MDString *KindID = dyn_cast<MDString>(Op->getOperand(1));
+    if (!KindID || KindID->getString() != "kernel")
+      continue;
+
+    Function *KernelFn =
+        mdconst::dyn_extract_or_null<Function>(Op->getOperand(0));
+    if (!KernelFn)
+      continue;
+
+    ++NumOpenMPTargetRegionKernels;
+
+    Kernels.insert(KernelFn);
+  }
+}
+
 bool llvm::omp::containsOpenMP(Module &M, OpenMPInModule &OMPInModule) {
   if (OMPInModule.isKnown())
     return OMPInModule;
 
+  // MSVC doesn't like long if-else chains for some reason and instead just
+  // issues an error. Work around it..
+  do {
 #define OMP_RTL(_Enum, _Name, ...)                                             \
-  if (M.getFunction(_Name))                                                    \
-    return OMPInModule = true;
+  if (M.getFunction(_Name)) {                                                  \
+    OMPInModule = true;                                                        \
+    break;                                                                     \
+  }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
+  } while (false);
+
+  // Identify kernels once. TODO: We should split the OMPInformationCache into a
+  // module and an SCC part. The kernel information, among other things, could
+  // go into the module part.
+  if (OMPInModule.isKnown() && OMPInModule) {
+    OMPInModule.identifyKernels(M);
+    return true;
+  }
+
   return OMPInModule = false;
 }
 

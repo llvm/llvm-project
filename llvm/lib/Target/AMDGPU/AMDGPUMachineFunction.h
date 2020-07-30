@@ -77,7 +77,7 @@ public:
     return WaveLimiter;
   }
 
-  unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalValue &GV);
+  unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV);
 };
 
 }

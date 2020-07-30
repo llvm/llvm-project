@@ -13,6 +13,7 @@
 #include "tools.h"
 #include "unit.h"
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 
@@ -182,10 +183,10 @@ int NoopCloseStatementState::EndIoStatement() {
 }
 
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
+  if (!unit().nonAdvancing) {
+    unit().AdvanceRecord(*this);
+  }
   if constexpr (DIR == Direction::Output) {
-    if (!unit().nonAdvancing) {
-      unit().AdvanceRecord(*this);
-    }
     unit().FlushIfTerminal(*this);
   }
   return ExternalIoStatementBase::EndIoStatement();
@@ -291,7 +292,7 @@ void IoStatementState::BackspaceRecord() {
 }
 
 void IoStatementState::HandleRelativePosition(std::int64_t n) {
-  return std::visit([=](auto &x) { x.get().HandleRelativePosition(n); }, u_);
+  std::visit([=](auto &x) { x.get().HandleRelativePosition(n); }, u_);
 }
 
 int IoStatementState::EndIoStatement() {
@@ -347,15 +348,22 @@ bool IoStatementState::EmitField(
   }
 }
 
-void IoStatementState::SkipSpaces(std::optional<int> &remaining) {
-  if (!remaining || *remaining > 0) {
-    for (auto ch{GetCurrentChar()}; ch && ch == ' '; ch = GetCurrentChar()) {
-      HandleRelativePosition(1);
-      if (remaining && !--*remaining) {
-        break;
+std::optional<char32_t> IoStatementState::SkipSpaces(
+    std::optional<int> &remaining) {
+  while (!remaining || *remaining > 0) {
+    if (auto ch{GetCurrentChar()}) {
+      if (*ch != ' ') {
+        return ch;
       }
+      HandleRelativePosition(1);
+      if (remaining) {
+        --*remaining;
+      }
+    } else {
+      break;
     }
   }
+  return std::nullopt;
 }
 
 std::optional<char32_t> IoStatementState::NextInField(
@@ -372,6 +380,7 @@ std::optional<char32_t> IoStatementState::NextInField(
       case '\'':
       case '"':
       case '*':
+      case '\n': // for stream access
         break;
       default:
         HandleRelativePosition(1);
@@ -385,7 +394,8 @@ std::optional<char32_t> IoStatementState::NextInField(
       return next;
     }
     const ConnectionState &connection{GetConnectionState()};
-    if (!connection.IsAtEOF() && connection.recordLength &&
+    if (!connection.IsAtEOF() && connection.isFixedRecordLength &&
+        connection.recordLength &&
         connection.positionInRecord >= *connection.recordLength) {
       if (connection.modes.pad) { // PAD='YES'
         --*remaining;
@@ -554,28 +564,38 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
 }
 
 template <Direction DIR>
+bool UnformattedIoStatementState<DIR>::Receive(char *data, std::size_t bytes) {
+  if constexpr (DIR == Direction::Output) {
+    this->Crash(
+        "UnformattedIoStatementState::Receive() called for output statement");
+  }
+  return this->unit().Receive(data, bytes, *this);
+}
+
+template <Direction DIR>
 int UnformattedIoStatementState<DIR>::EndIoStatement() {
-  auto &ext{static_cast<ExternalIoStatementState<DIR> &>(*this)};
-  ExternalFileUnit &unit{ext.unit()};
-  if (unit.access == Access::Sequential && !unit.recordLength.has_value()) {
-    // Overwrite the first four bytes of the record with its length,
-    // and also append the length.  These four bytes were skipped over
-    // in BeginUnformattedOutput().
-    // TODO: Break very large records up into subrecords with negative
-    // headers &/or footers
-    union {
-      std::uint32_t u;
-      char c[sizeof u];
-    } u;
-    u.u = unit.furthestPositionInRecord - sizeof u.c;
-    // TODO: Convert record length to little-endian on big-endian host?
-    if (!(ext.Emit(u.c, sizeof u.c) &&
-            (ext.HandleAbsolutePosition(0), ext.Emit(u.c, sizeof u.c)) &&
-            ext.AdvanceRecord())) {
-      return false;
+  ExternalFileUnit &unit{this->unit()};
+  if constexpr (DIR == Direction::Output) {
+    if (unit.access == Access::Sequential && !unit.isFixedRecordLength) {
+      // Append the length of a sequential unformatted variable-length record
+      // as its footer, then overwrite the reserved first four bytes of the
+      // record with its length as its header.  These four bytes were skipped
+      // over in BeginUnformattedOutput().
+      // TODO: Break very large records up into subrecords with negative
+      // headers &/or footers
+      union {
+        std::uint32_t u;
+        char c[sizeof u];
+      } u;
+      u.u = unit.furthestPositionInRecord - sizeof u;
+      // TODO: Convert record length to little-endian on big-endian host?
+      if (!(this->Emit(u.c, sizeof u) &&
+              (this->HandleAbsolutePosition(0), this->Emit(u.c, sizeof u)))) {
+        return false;
+      }
     }
   }
-  return ext.EndIoStatement();
+  return ExternalIoStatementState<DIR>::EndIoStatement();
 }
 
 template class InternalIoStatementState<Direction::Output>;
@@ -592,4 +612,25 @@ template class ExternalListIoStatementState<Direction::Output>;
 template class ExternalListIoStatementState<Direction::Input>;
 template class UnformattedIoStatementState<Direction::Output>;
 template class UnformattedIoStatementState<Direction::Input>;
+
+int ExternalMiscIoStatementState::EndIoStatement() {
+  ExternalFileUnit &ext{unit()};
+  switch (which_) {
+  case Flush:
+    ext.Flush(*this);
+    std::fflush(nullptr); // flushes C stdio output streams (12.9(2))
+    break;
+  case Backspace:
+    ext.BackspaceRecord(*this);
+    break;
+  case Endfile:
+    ext.Endfile(*this);
+    break;
+  case Rewind:
+    ext.Rewind(*this);
+    break;
+  }
+  return ExternalIoStatementBase::EndIoStatement();
+}
+
 } // namespace Fortran::runtime::io

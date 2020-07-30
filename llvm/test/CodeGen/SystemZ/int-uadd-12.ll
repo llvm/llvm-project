@@ -2,7 +2,7 @@
 ; store into an alsi. This folding is suppose to not happen as it would
 ; introduce a loop in the DAG.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -disable-basicaa -consthoist-gep | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -disable-basic-aa -consthoist-gep | FileCheck %s
 
 @g_295 = external dso_local unnamed_addr global i32, align 4
 @g_672 = external dso_local unnamed_addr global i64, align 8

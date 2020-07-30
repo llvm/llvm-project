@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -18,33 +19,74 @@
 using namespace llvm;
 using namespace dwarf;
 
-DWARFDebugPubTable::DWARFDebugPubTable(const DWARFObject &Obj,
-                                       const DWARFSection &Sec,
-                                       bool LittleEndian, bool GnuStyle)
-    : GnuStyle(GnuStyle) {
-  DWARFDataExtractor PubNames(Obj, Sec, LittleEndian, 0);
+void DWARFDebugPubTable::extract(
+    DWARFDataExtractor Data, bool GnuStyle,
+    function_ref<void(Error)> RecoverableErrorHandler) {
+  this->GnuStyle = GnuStyle;
+  Sets.clear();
   uint64_t Offset = 0;
-  while (PubNames.isValidOffset(Offset)) {
+  while (Data.isValidOffset(Offset)) {
+    uint64_t SetOffset = Offset;
     Sets.push_back({});
-    Set &SetData = Sets.back();
+    Set &NewSet = Sets.back();
 
-    std::tie(SetData.Length, SetData.Format) =
-        PubNames.getInitialLength(&Offset);
-    const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(SetData.Format);
+    DataExtractor::Cursor C(Offset);
+    std::tie(NewSet.Length, NewSet.Format) = Data.getInitialLength(C);
+    if (!C) {
+      // Drop the newly added set because it does not contain anything useful
+      // to dump.
+      Sets.pop_back();
+      RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          "name lookup table at offset 0x%" PRIx64 " parsing failed: %s",
+          SetOffset, toString(C.takeError()).c_str()));
+      return;
+    }
 
-    SetData.Version = PubNames.getU16(&Offset);
-    SetData.Offset = PubNames.getRelocatedValue(OffsetSize, &Offset);
-    SetData.Size = PubNames.getUnsigned(&Offset, OffsetSize);
+    Offset = C.tell() + NewSet.Length;
+    DWARFDataExtractor SetData(Data, Offset);
+    const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(NewSet.Format);
 
-    while (Offset < Sec.Data.size()) {
-      uint64_t DieRef = PubNames.getUnsigned(&Offset, OffsetSize);
+    NewSet.Version = SetData.getU16(C);
+    NewSet.Offset = SetData.getRelocatedValue(C, OffsetSize);
+    NewSet.Size = SetData.getUnsigned(C, OffsetSize);
+
+    if (!C) {
+      // Preserve the newly added set because at least some fields of the header
+      // are read and can be dumped.
+      RecoverableErrorHandler(
+          createStringError(errc::invalid_argument,
+                            "name lookup table at offset 0x%" PRIx64
+                            " does not have a complete header: %s",
+                            SetOffset, toString(C.takeError()).c_str()));
+      continue;
+    }
+
+    while (C) {
+      uint64_t DieRef = SetData.getUnsigned(C, OffsetSize);
       if (DieRef == 0)
         break;
-      uint8_t IndexEntryValue = GnuStyle ? PubNames.getU8(&Offset) : 0;
-      StringRef Name = PubNames.getCStrRef(&Offset);
-      SetData.Entries.push_back(
-          {DieRef, PubIndexEntryDescriptor(IndexEntryValue), Name});
+      uint8_t IndexEntryValue = GnuStyle ? SetData.getU8(C) : 0;
+      StringRef Name = SetData.getCStrRef(C);
+      if (C)
+        NewSet.Entries.push_back(
+            {DieRef, PubIndexEntryDescriptor(IndexEntryValue), Name});
     }
+
+    if (!C) {
+      RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          "name lookup table at offset 0x%" PRIx64 " parsing failed: %s",
+          SetOffset, toString(C.takeError()).c_str()));
+      continue;
+    }
+    if (C.tell() != Offset)
+      RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          "name lookup table at offset 0x%" PRIx64
+          " has a terminator at offset 0x%" PRIx64
+          " before the expected end at 0x%" PRIx64,
+          SetOffset, C.tell() - OffsetSize, Offset - OffsetSize));
   }
 }
 

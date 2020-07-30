@@ -120,14 +120,17 @@ public:
       : PPCTargetStreamer(S), OS(OS) {}
 
   void emitTCEntry(const MCSymbol &S) override {
-    const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
-    OS << "\t.tc ";
-    OS << (MAI->getSymbolsHaveSMC()
-               ? cast<MCSymbolXCOFF>(S).getUnqualifiedName()
-               : S.getName());
-    OS << "[TC],";
-    OS << S.getName();
-    OS << '\n';
+    if (const MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(&S)) {
+      MCSymbolXCOFF *TCSym =
+          cast<MCSymbolXCOFF>(Streamer.getContext().getOrCreateSymbol(
+              XSym->getSymbolTableName() + "[TC]"));
+      if (TCSym->hasRename())
+        Streamer.emitXCOFFRenameDirective(TCSym, TCSym->getSymbolTableName());
+      OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
+      return;
+    }
+
+    OS << "\t.tc " << S.getName() << "[TC]," << S.getName() << '\n';
   }
 
   void emitMachine(StringRef CPU) override {

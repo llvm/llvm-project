@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=standalone -dwarf-column-info %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s
 void ext();
 
 struct Bar {

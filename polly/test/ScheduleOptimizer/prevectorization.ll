@@ -1,11 +1,11 @@
-; RUN: opt -S %loadPolly -basicaa -polly-opt-isl \
+; RUN: opt -S %loadPolly -basic-aa -polly-opt-isl \
 ; RUN: -polly-pattern-matching-based-opts=false -polly-vectorizer=polly \
 ; RUN: -polly-ast -analyze < %s | FileCheck %s 
-; RUN: opt -S %loadPolly -basicaa -polly-opt-isl \
+; RUN: opt -S %loadPolly -basic-aa -polly-opt-isl \
 ; RUN: -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine \
 ; RUN: -polly-ast -analyze < %s | FileCheck %s
 
-; RUN: opt -S %loadPolly -basicaa -polly-opt-isl \
+; RUN: opt -S %loadPolly -basic-aa -polly-opt-isl \
 ; RUN: -polly-vectorizer=polly -polly-pattern-matching-based-opts=false \
 ; RUN: -polly-ast -analyze -polly-prevect-width=16 < %s | \
 ; RUN: FileCheck %s -check-prefix=VEC16

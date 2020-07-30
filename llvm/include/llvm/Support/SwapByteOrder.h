@@ -36,6 +36,10 @@
 #else
 #define BYTE_ORDER LITTLE_ENDIAN
 #endif
+#elif defined(__MVS__)
+#define BIG_ENDIAN 4321
+#define LITTLE_ENDIAN 1234
+#define BYTE_ORDER BIG_ENDIAN
 #else
 #if !defined(BYTE_ORDER) && !defined(_WIN32)
 #include <machine/endian.h>

@@ -1,7 +1,6 @@
 ; Test that llvm-reduce can remove uninteresting functions as well as
 ; their InstCalls.
 ;
-; RUN: rm -rf %t
 ; RUN: llvm-reduce --test %python --test-arg %p/Inputs/remove-funcs.py %s -o %t
 ; RUN: cat %t | FileCheck -implicit-check-not=uninteresting %s
 

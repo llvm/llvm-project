@@ -327,6 +327,21 @@ public:
     VK_AMDGPU_ABS32_LO,      // symbol@abs32@lo
     VK_AMDGPU_ABS32_HI,      // symbol@abs32@hi
 
+    VK_VE_HI32,        // symbol@hi
+    VK_VE_LO32,        // symbol@lo
+    VK_VE_PC_HI32,     // symbol@pc_hi
+    VK_VE_PC_LO32,     // symbol@pc_lo
+    VK_VE_GOT_HI32,    // symbol@got_hi
+    VK_VE_GOT_LO32,    // symbol@got_lo
+    VK_VE_GOTOFF_HI32, // symbol@gotoff_hi
+    VK_VE_GOTOFF_LO32, // symbol@gotoff_lo
+    VK_VE_PLT_HI32,    // symbol@plt_hi
+    VK_VE_PLT_LO32,    // symbol@plt_lo
+    VK_VE_TLS_GD_HI32, // symbol@tls_gd_hi
+    VK_VE_TLS_GD_LO32, // symbol@tls_gd_lo
+    VK_VE_TPOFF_HI32,  // symbol@tpoff_hi
+    VK_VE_TPOFF_LO32,  // symbol@tpoff_lo
+
     VK_TPREL,
     VK_DTPREL
   };

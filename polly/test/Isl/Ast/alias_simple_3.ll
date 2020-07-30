@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -polly-ast -analyze -disable-basicaa < %s | FileCheck %s --check-prefix=NOAA
+; RUN: opt %loadPolly -polly-ast -analyze -disable-basic-aa < %s | FileCheck %s --check-prefix=NOAA
 ; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s --check-prefix=BASI
-; RUN: opt %loadPolly -polly-ast -analyze -disable-basicaa -tbaa < %s | FileCheck %s --check-prefix=TBAA
-; RUN: opt %loadPolly -polly-ast -analyze -disable-basicaa -scev-aa < %s | FileCheck %s --check-prefix=SCEV
-; RUN: opt %loadPolly -polly-ast -analyze -disable-basicaa -globals-aa < %s | FileCheck %s --check-prefix=GLOB
+; RUN: opt %loadPolly -polly-ast -analyze -disable-basic-aa -tbaa < %s | FileCheck %s --check-prefix=TBAA
+; RUN: opt %loadPolly -polly-ast -analyze -disable-basic-aa -scev-aa < %s | FileCheck %s --check-prefix=SCEV
+; RUN: opt %loadPolly -polly-ast -analyze -disable-basic-aa -globals-aa < %s | FileCheck %s --check-prefix=GLOB
 ;
 ;    int A[1024];
 ;    float B[1024];

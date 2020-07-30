@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/AMDGPUMetadata.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 
@@ -66,8 +67,6 @@ private:
   StringRef getValueKind(Type *Ty, StringRef TypeQual,
                          StringRef BaseTypeName) const;
 
-  StringRef getValueType(Type *Ty, StringRef TypeName) const;
-
   std::string getTypeName(Type *Ty, bool Signed) const;
 
   msgpack::ArrayDocNode getWorkGroupDimensions(MDNode *Node) const;
@@ -90,7 +89,7 @@ private:
 
   void emitKernelArg(const DataLayout &DL, Type *Ty, StringRef ValueKind,
                      unsigned &Offset, msgpack::ArrayDocNode Args,
-                     unsigned PointeeAlign = 0, StringRef Name = "",
+                     MaybeAlign PointeeAlign = None, StringRef Name = "",
                      StringRef TypeName = "", StringRef BaseTypeName = "",
                      StringRef AccQual = "", StringRef TypeQual = "");
 
@@ -134,8 +133,6 @@ private:
   ValueKind getValueKind(Type *Ty, StringRef TypeQual,
                          StringRef BaseTypeName) const;
 
-  ValueType getValueType(Type *Ty, StringRef TypeName) const;
-
   std::string getTypeName(Type *Ty, bool Signed) const;
 
   std::vector<uint32_t> getWorkGroupDimensions(MDNode *Node) const;
@@ -160,10 +157,9 @@ private:
   void emitKernelArg(const Argument &Arg);
 
   void emitKernelArg(const DataLayout &DL, Type *Ty, ValueKind ValueKind,
-                     unsigned PointeeAlign = 0,
-                     StringRef Name = "", StringRef TypeName = "",
-                     StringRef BaseTypeName = "", StringRef AccQual = "",
-                     StringRef TypeQual = "");
+                     MaybeAlign PointeeAlign = None, StringRef Name = "",
+                     StringRef TypeName = "", StringRef BaseTypeName = "",
+                     StringRef AccQual = "", StringRef TypeQual = "");
 
   void emitHiddenKernelArgs(const Function &Func);
 

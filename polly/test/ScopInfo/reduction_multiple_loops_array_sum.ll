@@ -1,4 +1,4 @@
-; RUN: opt -basicaa %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt -basic-aa %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
 ; CHECK: Stmt_for_body
 ; CHECK: Reduction Type: *

@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_AARCH64TARGETPARSERCOMMON_H
 #define LLVM_SUPPORT_AARCH64TARGETPARSERCOMMON_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMTargetParser.h"
 #include <vector>

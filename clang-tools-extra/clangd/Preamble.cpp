@@ -229,9 +229,8 @@ struct ScannedPreamble {
 llvm::Expected<ScannedPreamble>
 scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   class EmptyFS : public ThreadsafeFS {
-  public:
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-    view(llvm::NoneType) const override {
+  private:
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
       return new llvm::vfs::InMemoryFileSystem;
     }
   };

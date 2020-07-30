@@ -100,6 +100,14 @@ const char *AVRInstPrinter::getPrettyRegisterName(unsigned RegNum,
 
 void AVRInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   raw_ostream &O) {
+  const MCOperandInfo &MOI = this->MII.get(MI->getOpcode()).OpInfo[OpNo];
+  if (MOI.RegClass == AVR::ZREGRegClassID) {
+    // Special case for the Z register, which sometimes doesn't have an operand
+    // in the MCInst.
+    O << "Z";
+    return;
+  }
+
   if (OpNo >= MI->size()) {
     // Not all operands are correctly disassembled at the moment. This means
     // that some machine instructions won't have all the necessary operands
@@ -111,7 +119,6 @@ void AVRInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   const MCOperand &Op = MI->getOperand(OpNo);
-  const MCOperandInfo &MOI = this->MII.get(MI->getOpcode()).OpInfo[OpNo];
 
   if (Op.isReg()) {
     bool isPtrReg = (MOI.RegClass == AVR::PTRREGSRegClassID) ||
@@ -124,7 +131,7 @@ void AVRInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       O << getPrettyRegisterName(Op.getReg(), MRI);
     }
   } else if (Op.isImm()) {
-    O << Op.getImm();
+    O << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
     O << *Op.getExpr();

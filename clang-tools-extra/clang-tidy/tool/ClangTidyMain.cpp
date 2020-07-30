@@ -25,8 +25,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 
-using namespace clang::ast_matchers;
-using namespace clang::driver;
 using namespace clang::tooling;
 using namespace llvm;
 

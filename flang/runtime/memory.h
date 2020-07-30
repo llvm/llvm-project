@@ -20,7 +20,7 @@ class Terminator;
 
 [[nodiscard]] void *AllocateMemoryOrCrash(
     const Terminator &, std::size_t bytes);
-template <typename A>[[nodiscard]] A &AllocateOrCrash(const Terminator &t) {
+template <typename A> [[nodiscard]] A &AllocateOrCrash(const Terminator &t) {
   return *reinterpret_cast<A *>(AllocateMemoryOrCrash(t, sizeof(A)));
 }
 void FreeMemory(void *);
@@ -32,19 +32,31 @@ template <typename A> void FreeMemoryAndNullify(A *&p) {
   p = nullptr;
 }
 
-template <typename A> struct New {
-  template <typename... X>
-  [[nodiscard]] A &operator()(const Terminator &terminator, X &&... x) {
-    return *new (AllocateMemoryOrCrash(terminator, sizeof(A)))
-        A{std::forward<X>(x)...};
-  }
-};
-
 template <typename A> struct OwningPtrDeleter {
   void operator()(A *p) { FreeMemory(p); }
 };
 
 template <typename A> using OwningPtr = std::unique_ptr<A, OwningPtrDeleter<A>>;
+
+template <typename A> class SizedNew {
+public:
+  explicit SizedNew(const Terminator &terminator) : terminator_{terminator} {}
+  template <typename... X>
+  [[nodiscard]] OwningPtr<A> operator()(std::size_t bytes, X &&... x) {
+    return OwningPtr<A>{new (AllocateMemoryOrCrash(terminator_, bytes))
+            A{std::forward<X>(x)...}};
+  }
+
+private:
+  const Terminator &terminator_;
+};
+
+template <typename A> struct New : public SizedNew<A> {
+  using SizedNew<A>::SizedNew;
+  template <typename... X> [[nodiscard]] OwningPtr<A> operator()(X &&... x) {
+    return SizedNew<A>::operator()(sizeof(A), std::forward<X>(x)...);
+  }
+};
 
 template <typename A> struct Allocator {
   using value_type = A;

@@ -1369,15 +1369,9 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     return;
   }
 
-  uint64_t Align;
-  if (ClPreserveAlignment) {
-    Align = LI.getAlignment();
-    if (Align == 0)
-      Align = DL.getABITypeAlignment(LI.getType());
-  } else {
-    Align = 1;
-  }
-  Value *Shadow = DFSF.loadShadow(LI.getPointerOperand(), Size, Align, &LI);
+  Align Alignment = ClPreserveAlignment ? LI.getAlign() : Align(1);
+  Value *Shadow =
+      DFSF.loadShadow(LI.getPointerOperand(), Size, Alignment.value(), &LI);
   if (ClCombinePointerLabelsOnLoad) {
     Value *PtrShadow = DFSF.getShadow(LI.getPointerOperand());
     Shadow = DFSF.combineShadows(Shadow, PtrShadow, &LI);

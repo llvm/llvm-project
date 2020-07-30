@@ -53,7 +53,6 @@ public:
 
 private:
   bool Aliases(const MDNode *A, const MDNode *B) const;
-  bool PathAliases(const MDNode *A, const MDNode *B) const;
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

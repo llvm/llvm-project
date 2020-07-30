@@ -110,10 +110,10 @@ cont2:
 
   ; Check that traps are conditional. Invalid TYPE_ID can cause
   ; unconditional traps.
-  ; CHECK-IR: br i1 {{.*}}, label %trap
+  ; CHECK-IR: br i1 {{.*}}, label %trap, label %cont2
 
   ; We still have to call it as virtual.
-  ; CHECK-IR: %call3 = tail call i32 %8
+  ; CHECK-IR: %call3 = tail call i32 %7
   %call3 = tail call i32 %8(%struct.A* nonnull %obj, i32 %call)
   ret i32 %call3
 }

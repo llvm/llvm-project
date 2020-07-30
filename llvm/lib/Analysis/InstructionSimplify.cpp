@@ -3281,6 +3281,30 @@ static Value *simplifyICmpWithMinMax(CmpInst::Predicate Pred, Value *LHS,
   return nullptr;
 }
 
+static Value *simplifyICmpWithDominatingAssume(CmpInst::Predicate Predicate,
+                                               Value *LHS, Value *RHS,
+                                               const SimplifyQuery &Q) {
+  // Gracefully handle instructions that have not been inserted yet.
+  if (!Q.AC || !Q.CxtI || !Q.CxtI->getParent())
+    return nullptr;
+
+  for (Value *AssumeBaseOp : {LHS, RHS}) {
+    for (auto &AssumeVH : Q.AC->assumptionsFor(AssumeBaseOp)) {
+      if (!AssumeVH)
+        continue;
+
+      CallInst *Assume = cast<CallInst>(AssumeVH);
+      if (Optional<bool> Imp =
+              isImpliedCondition(Assume->getArgOperand(0), Predicate, LHS, RHS,
+                                 Q.DL))
+        if (isValidAssumeForContext(Assume, Q.CxtI, Q.DT))
+          return ConstantInt::get(GetCompareTy(LHS), *Imp);
+    }
+  }
+
+  return nullptr;
+}
+
 /// Given operands for an ICmpInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
@@ -3381,6 +3405,15 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
                                           MaxRecurse-1))
             return V;
       }
+      // Fold (zext X) ule (sext X), (zext X) sge (sext X) to true.
+      else if (SExtInst *RI = dyn_cast<SExtInst>(RHS)) {
+        if (SrcOp == RI->getOperand(0)) {
+          if (Pred == ICmpInst::ICMP_ULE || Pred == ICmpInst::ICMP_SGE)
+            return ConstantInt::getTrue(ITy);
+          if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_SLT)
+            return ConstantInt::getFalse(ITy);
+        }
+      }
       // Turn icmp (zext X), Cst into a compare of X and Cst if Cst is extended
       // too.  If not, then try to deduce the result of the comparison.
       else if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
@@ -3439,6 +3472,15 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
           if (Value *V = SimplifyICmpInst(Pred, SrcOp, RI->getOperand(0),
                                           Q, MaxRecurse-1))
             return V;
+      }
+      // Fold (sext X) uge (zext X), (sext X) sle (zext X) to true.
+      else if (ZExtInst *RI = dyn_cast<ZExtInst>(RHS)) {
+        if (SrcOp == RI->getOperand(0)) {
+          if (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_SLE)
+            return ConstantInt::getTrue(ITy);
+          if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_SGT)
+            return ConstantInt::getFalse(ITy);
+        }
       }
       // Turn icmp (sext X), Cst into a compare of X and Cst if Cst is extended
       // too.  If not, then try to deduce the result of the comparison.
@@ -3513,6 +3555,9 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     return V;
 
   if (Value *V = simplifyICmpWithMinMax(Pred, LHS, RHS, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = simplifyICmpWithDominatingAssume(Pred, LHS, RHS, Q))
     return V;
 
   // Simplify comparisons of related pointers using a powerful, recursive
@@ -4073,9 +4118,15 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   if (TrueVal == FalseVal)
     return TrueVal;
 
-  if (isa<UndefValue>(TrueVal))   // select ?, undef, X -> X
+  // If the true or false value is undef, we can fold to the other value as
+  // long as the other value isn't poison.
+  // select ?, undef, X -> X
+  if (isa<UndefValue>(TrueVal) &&
+      isGuaranteedNotToBeUndefOrPoison(FalseVal, Q.CxtI, Q.DT))
     return FalseVal;
-  if (isa<UndefValue>(FalseVal))   // select ?, X, undef -> X
+  // select ?, X, undef -> X
+  if (isa<UndefValue>(FalseVal) &&
+      isGuaranteedNotToBeUndefOrPoison(TrueVal, Q.CxtI, Q.DT))
     return TrueVal;
 
   // Deal with partial undef vector constants: select ?, VecC, VecC' --> VecC''
@@ -4095,9 +4146,11 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
       // one element is undef, choose the defined element as the safe result.
       if (TEltC == FEltC)
         NewC.push_back(TEltC);
-      else if (isa<UndefValue>(TEltC))
+      else if (isa<UndefValue>(TEltC) &&
+               isGuaranteedNotToBeUndefOrPoison(FEltC))
         NewC.push_back(FEltC);
-      else if (isa<UndefValue>(FEltC))
+      else if (isa<UndefValue>(FEltC) &&
+               isGuaranteedNotToBeUndefOrPoison(TEltC))
         NewC.push_back(TEltC);
       else
         break;

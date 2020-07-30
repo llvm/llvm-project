@@ -14,6 +14,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "Utils/RISCVMatInt.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -74,6 +75,30 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   EVT VT = Node->getValueType(0);
 
   switch (Opcode) {
+  case ISD::ADD: {
+    // Optimize (add r, imm) to (addi (addi r, imm0) imm1) if applicable. The
+    // immediate must be in specific ranges and have a single use.
+    if (auto *ConstOp = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
+      if (!(ConstOp->hasOneUse()))
+        break;
+      // The imm must be in range [-4096,-2049] or [2048,4094].
+      int64_t Imm = ConstOp->getSExtValue();
+      if (!(-4096 <= Imm && Imm <= -2049) && !(2048 <= Imm && Imm <= 4094))
+        break;
+      // Break the imm to imm0+imm1.
+      SDLoc DL(Node);
+      EVT VT = Node->getValueType(0);
+      const SDValue ImmOp0 = CurDAG->getTargetConstant(Imm - Imm / 2, DL, VT);
+      const SDValue ImmOp1 = CurDAG->getTargetConstant(Imm / 2, DL, VT);
+      auto *NodeAddi0 = CurDAG->getMachineNode(RISCV::ADDI, DL, VT,
+                                               Node->getOperand(0), ImmOp0);
+      auto *NodeAddi1 = CurDAG->getMachineNode(RISCV::ADDI, DL, VT,
+                                               SDValue(NodeAddi0, 0), ImmOp1);
+      ReplaceNode(Node, NodeAddi1);
+      return;
+    }
+    break;
+  }
   case ISD::Constant: {
     auto ConstNode = cast<ConstantSDNode>(Node);
     if (VT == XLenVT && ConstNode->isNullValue()) {
@@ -160,8 +185,9 @@ bool RISCVDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
 }
 
 // Merge an ADDI into the offset of a load/store instruction where possible.
-// (load (add base, off), 0) -> (load base, off)
-// (store val, (add base, off)) -> (store val, base, off)
+// (load (addi base, off1), off2) -> (load base, off1+off2)
+// (store val, (addi base, off1), off2) -> (store val, base, off1+off2)
+// This is possible when off1+off2 fits a 12-bit immediate.
 void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
   SelectionDAG::allnodes_iterator Position(CurDAG->getRoot().getNode());
   ++Position;
@@ -202,10 +228,7 @@ void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
       break;
     }
 
-    // Currently, the load/store offset must be 0 to be considered for this
-    // peephole optimisation.
-    if (!isa<ConstantSDNode>(N->getOperand(OffsetOpIdx)) ||
-        N->getConstantOperandVal(OffsetOpIdx) != 0)
+    if (!isa<ConstantSDNode>(N->getOperand(OffsetOpIdx)))
       continue;
 
     SDValue Base = N->getOperand(BaseOpIdx);
@@ -215,18 +238,39 @@ void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
       continue;
 
     SDValue ImmOperand = Base.getOperand(1);
+    uint64_t Offset2 = N->getConstantOperandVal(OffsetOpIdx);
 
     if (auto Const = dyn_cast<ConstantSDNode>(ImmOperand)) {
-      ImmOperand = CurDAG->getTargetConstant(
-          Const->getSExtValue(), SDLoc(ImmOperand), ImmOperand.getValueType());
+      int64_t Offset1 = Const->getSExtValue();
+      int64_t CombinedOffset = Offset1 + Offset2;
+      if (!isInt<12>(CombinedOffset))
+        continue;
+      ImmOperand = CurDAG->getTargetConstant(CombinedOffset, SDLoc(ImmOperand),
+                                             ImmOperand.getValueType());
     } else if (auto GA = dyn_cast<GlobalAddressSDNode>(ImmOperand)) {
+      // If the off1 in (addi base, off1) is a global variable's address (its
+      // low part, really), then we can rely on the alignment of that variable
+      // to provide a margin of safety before off1 can overflow the 12 bits.
+      // Check if off2 falls within that margin; if so off1+off2 can't overflow.
+      const DataLayout &DL = CurDAG->getDataLayout();
+      Align Alignment = GA->getGlobal()->getPointerAlignment(DL);
+      if (Offset2 != 0 && Alignment <= Offset2)
+        continue;
+      int64_t Offset1 = GA->getOffset();
+      int64_t CombinedOffset = Offset1 + Offset2;
       ImmOperand = CurDAG->getTargetGlobalAddress(
           GA->getGlobal(), SDLoc(ImmOperand), ImmOperand.getValueType(),
-          GA->getOffset(), GA->getTargetFlags());
+          CombinedOffset, GA->getTargetFlags());
     } else if (auto CP = dyn_cast<ConstantPoolSDNode>(ImmOperand)) {
+      // Ditto.
+      Align Alignment = CP->getAlign();
+      if (Offset2 != 0 && Alignment <= Offset2)
+        continue;
+      int64_t Offset1 = CP->getOffset();
+      int64_t CombinedOffset = Offset1 + Offset2;
       ImmOperand = CurDAG->getTargetConstantPool(
           CP->getConstVal(), ImmOperand.getValueType(), CP->getAlign(),
-          CP->getOffset(), CP->getTargetFlags());
+          CombinedOffset, CP->getTargetFlags());
     } else {
       continue;
     }

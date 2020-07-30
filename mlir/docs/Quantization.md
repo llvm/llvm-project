@@ -196,7 +196,7 @@ operations for type conversion and expression of the supporting math.
 
 ### Quantized type
 
-TODO : Flesh this section out.
+TODO: Flesh this section out.
 
 *   QuantizedType base class
 *   UniformQuantizedType
@@ -247,7 +247,7 @@ in floating point with appropriate conversions at the boundaries.
 
 ## TFLite native quantization
 
-TODO : Flesh this out
+TODO: Flesh this out
 
 ### General algorithm
 

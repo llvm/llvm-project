@@ -4,6 +4,9 @@ add_clang_library(clangTidyPlugin
   LINK_LIBS
   clangTidy
   ${ALL_CLANG_TIDY_CHECKS}
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyPlugin

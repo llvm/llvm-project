@@ -57,10 +57,18 @@ public:
   virtual void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                                    CodeGen::CodeGenModule &M) const {}
 
-  /// emitTargetMD - Provides a convenient hook to handle extra
-  /// target-specific metadata for the given global.
-  virtual void emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
-                            CodeGen::CodeGenModule &M) const {}
+  /// emitTargetMetadata - Provides a convenient hook to handle extra
+  /// target-specific metadata for the given globals.
+  virtual void emitTargetMetadata(
+      CodeGen::CodeGenModule &CGM,
+      const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {}
+
+  /// Any further codegen related checks that need to be done on a function call
+  /// in a target specific manner.
+  virtual void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
+                                    const FunctionDecl *Caller,
+                                    const FunctionDecl *Callee,
+                                    const CallArgList &Args) const {}
 
   /// Determines the size of struct _Unwind_Exception on this platform,
   /// in 8-bit units.  The Itanium ABI defines this as:

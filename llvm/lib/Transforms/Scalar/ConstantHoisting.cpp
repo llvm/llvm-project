@@ -250,7 +250,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   Orders.push_back(Entry);
   while (Idx != Orders.size()) {
     BasicBlock *Node = Orders[Idx++];
-    for (auto ChildDomNode : DT.getNode(Node)->getChildren()) {
+    for (auto ChildDomNode : DT.getNode(Node)->children()) {
       if (Candidates.count(ChildDomNode->getBlock()))
         Orders.push_back(ChildDomNode->getBlock());
     }

@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -264,8 +265,9 @@ public:
       Type *EltTy = VecTy->getElementType();
       if (EltTy->isPointerTy()) {
         uint32_t EltSize = DL->getTypeSizeInBits(EltTy);
-        auto *NewTy = FixedVectorType::get(IntegerType::get(Ctx, EltSize),
-                                           VecTy->getNumElements());
+        auto *NewTy = FixedVectorType::get(
+            IntegerType::get(Ctx, EltSize),
+            cast<FixedVectorType>(VecTy)->getNumElements());
         V = IRB.CreatePointerCast(V, NewTy);
       }
     }

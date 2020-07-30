@@ -43,8 +43,17 @@ enum class NodeKind : uint16_t {
   PrefixUnaryOperatorExpression,
   PostfixUnaryOperatorExpression,
   BinaryOperatorExpression,
-  CxxNullPtrExpression,
+  ParenExpression,
   IntegerLiteralExpression,
+  CharacterLiteralExpression,
+  FloatingLiteralExpression,
+  StringLiteralExpression,
+  BoolLiteralExpression,
+  CxxNullPtrExpression,
+  IntegerUserDefinedLiteralExpression,
+  FloatUserDefinedLiteralExpression,
+  CharUserDefinedLiteralExpression,
+  StringUserDefinedLiteralExpression,
   IdExpression,
 
   // Statements.
@@ -157,7 +166,8 @@ enum class NodeRole : uint8_t {
   ParametersAndQualifiers_trailingReturn,
   IdExpression_id,
   IdExpression_qualifier,
-  NestedNameSpecifier_specifier
+  NestedNameSpecifier_specifier,
+  ParenExpression_subExpression
 };
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeRole R);
@@ -244,7 +254,72 @@ public:
   }
 };
 
-/// C++11 'nullptr' expression.
+/// Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
+/// e.g. `(3 + 2)` in `a = 1 + (3 + 2);`
+class ParenExpression final : public Expression {
+public:
+  ParenExpression() : Expression(NodeKind::ParenExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ParenExpression;
+  }
+  syntax::Leaf *openParen();
+  syntax::Expression *subExpression();
+  syntax::Leaf *closeParen();
+};
+
+/// Expression for integer literals. C++ [lex.icon]
+class IntegerLiteralExpression final : public Expression {
+public:
+  IntegerLiteralExpression() : Expression(NodeKind::IntegerLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::IntegerLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for character literals. C++ [lex.ccon]
+class CharacterLiteralExpression final : public Expression {
+public:
+  CharacterLiteralExpression()
+      : Expression(NodeKind::CharacterLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::CharacterLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for floating-point literals. C++ [lex.fcon]
+class FloatingLiteralExpression final : public Expression {
+public:
+  FloatingLiteralExpression()
+      : Expression(NodeKind::FloatingLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::FloatingLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for string-literals. C++ [lex.string]
+class StringLiteralExpression final : public Expression {
+public:
+  StringLiteralExpression() : Expression(NodeKind::StringLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::StringLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for boolean literals. C++ [lex.bool]
+class BoolLiteralExpression final : public Expression {
+public:
+  BoolLiteralExpression() : Expression(NodeKind::BoolLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::BoolLiteralExpression;
+  }
+  syntax::Leaf *literalToken();
+};
+
+/// Expression for the `nullptr` literal. C++ [lex.nullptr]
 class CxxNullPtrExpression final : public Expression {
 public:
   CxxNullPtrExpression() : Expression(NodeKind::CxxNullPtrExpression) {}
@@ -254,14 +329,70 @@ public:
   syntax::Leaf *nullPtrKeyword();
 };
 
-/// Expression for integer literals.
-class IntegerLiteralExpression final : public Expression {
+/// Expression for user-defined literal. C++ [lex.ext]
+/// user-defined-literal:
+///   user-defined-integer-literal
+///   user-defined-floating-point-literal
+///   user-defined-string-literal
+///   user-defined-character-literal
+class UserDefinedLiteralExpression : public Expression {
 public:
-  IntegerLiteralExpression() : Expression(NodeKind::IntegerLiteralExpression) {}
+  UserDefinedLiteralExpression(NodeKind K) : Expression(K) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::IntegerLiteralExpression;
+    return N->kind() == NodeKind::IntegerUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::FloatUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::CharUserDefinedLiteralExpression ||
+           N->kind() == NodeKind::StringUserDefinedLiteralExpression;
   }
   syntax::Leaf *literalToken();
+};
+
+/// Expression for user-defined-integer-literal. C++ [lex.ext]
+class IntegerUserDefinedLiteralExpression final
+    : public UserDefinedLiteralExpression {
+public:
+  IntegerUserDefinedLiteralExpression()
+      : UserDefinedLiteralExpression(
+            NodeKind::IntegerUserDefinedLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::IntegerUserDefinedLiteralExpression;
+  }
+};
+
+/// Expression for user-defined-floating-point-literal. C++ [lex.ext]
+class FloatUserDefinedLiteralExpression final
+    : public UserDefinedLiteralExpression {
+public:
+  FloatUserDefinedLiteralExpression()
+      : UserDefinedLiteralExpression(
+            NodeKind::FloatUserDefinedLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::FloatUserDefinedLiteralExpression;
+  }
+};
+
+/// Expression for user-defined-character-literal. C++ [lex.ext]
+class CharUserDefinedLiteralExpression final
+    : public UserDefinedLiteralExpression {
+public:
+  CharUserDefinedLiteralExpression()
+      : UserDefinedLiteralExpression(
+            NodeKind::CharUserDefinedLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::CharUserDefinedLiteralExpression;
+  }
+};
+
+/// Expression for user-defined-string-literal. C++ [lex.ext]
+class StringUserDefinedLiteralExpression final
+    : public UserDefinedLiteralExpression {
+public:
+  StringUserDefinedLiteralExpression()
+      : UserDefinedLiteralExpression(
+            NodeKind::StringUserDefinedLiteralExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::StringUserDefinedLiteralExpression;
+  }
 };
 
 /// An abstract class for prefix and postfix unary operators.

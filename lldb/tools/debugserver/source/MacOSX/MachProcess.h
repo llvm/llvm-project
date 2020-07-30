@@ -230,10 +230,22 @@ public:
                          uint64_t plo_pthread_tsd_base_address_offset,
                          uint64_t plo_pthread_tsd_base_offset,
                          uint64_t plo_pthread_tsd_entry_size);
-  const char *
-  GetDeploymentInfo(const struct load_command&, uint64_t load_command_address,
-                    uint32_t& major_version, uint32_t& minor_version,
-                    uint32_t& patch_version);
+
+  struct DeploymentInfo {
+    DeploymentInfo() = default;
+    operator bool() { return platform > 0; }
+    /// The Mach-O platform type;
+    unsigned char platform = 0;
+    /// Pre-LC_BUILD_VERSION files don't disambiguate between ios and ios
+    /// simulator.
+    bool maybe_simulator = false;
+    uint32_t major_version = 0;
+    uint32_t minor_version = 0;
+    uint32_t patch_version = 0;
+  };
+  DeploymentInfo GetDeploymentInfo(const struct load_command &,
+                                   uint64_t load_command_address);
+  static const char *GetPlatformString(unsigned char platform);
   bool GetMachOInformationFromMemory(uint32_t platform,
                                      nub_addr_t mach_o_header_addr,
                                      int wordsize,

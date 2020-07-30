@@ -7,11 +7,11 @@ class bind_rt {};
 
 template <class Fp, class... Arguments>
 bind_rt<Fp, Arguments...> bind(Fp &&, Arguments &&...);
-}
+} // namespace impl
 
 template <typename T>
 T ref(T &t);
-}
+} // namespace std
 
 namespace boost {
 template <class Fp, class... Arguments>
@@ -58,12 +58,33 @@ struct F {
 
 void UseF(F);
 
+struct G {
+  G() : _member(0) {}
+  G(int m) : _member(m) {}
+
+  template <typename T>
+  void operator()(T) const {}
+
+  int _member;
+};
+
+template <typename T>
+struct H {
+  void operator()(T) const {};
+};
+
 struct placeholder {};
 placeholder _1;
 placeholder _2;
 
+namespace placeholders {
+using ::_1;
+using ::_2;
+} // namespace placeholders
+
 int add(int x, int y) { return x + y; }
 int addThree(int x, int y, int z) { return x + y + z; }
+void sub(int &x, int y) { x += y; }
 
 // Let's fake a minimal std::function-like facility.
 namespace std {
@@ -107,6 +128,7 @@ struct TestCaptureByValueStruct {
   int MemberVariable;
   static int StaticMemberVariable;
   F MemberStruct;
+  G MemberStructWithData;
 
   void testCaptureByValue(int Param, F f) {
     int x = 3;
@@ -145,6 +167,11 @@ struct TestCaptureByValueStruct {
     auto GGG = boost::bind(UseF, MemberStruct);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to boost::bind [modernize-avoid-bind]
     // CHECK-FIXES: auto GGG = [this] { return UseF(MemberStruct); };
+
+    auto HHH = std::bind(add, MemberStructWithData._member, 1);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // Correctly distinguish data members of other classes
+    // CHECK-FIXES: auto HHH = [capture0 = MemberStructWithData._member] { return add(capture0, 1); };
   }
 };
 
@@ -217,17 +244,38 @@ void testFunctionObjects() {
   auto EEE = std::bind(*D::create(), 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
   // CHECK-FIXES: auto EEE = [Func = *D::create()] { return Func(1, 2); };
+
+  auto FFF = std::bind(G(), 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
+  // Templated function call operators may be used
+  // CHECK-FIXES: auto FFF = [] { return G()(1); };
+
+  int CTorArg = 42;
+  auto GGG = std::bind(G(CTorArg), 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
+  // Function objects with constructor arguments should be captured
+  // CHECK-FIXES: auto GGG = [Func = G(CTorArg)] { return Func(1); };
 }
+
+template <typename T>
+void testMemberFnOfClassTemplate(T) {
+  auto HHH = std::bind(H<T>(), 42);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
+  // Ensure function class template arguments are preserved
+  // CHECK-FIXES: auto HHH = [] { return H<T>()(42); };
+}
+
+template void testMemberFnOfClassTemplate(int);
 
 void testPlaceholders() {
   int x = 2;
   auto AAA = std::bind(add, x, _1);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto AAA = [x](auto && PH1) { return add(x, PH1); };
+  // CHECK-FIXES: auto AAA = [x](auto && PH1) { return add(x, std::forward<decltype(PH1)>(PH1)); };
 
   auto BBB = std::bind(add, _2, _1);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto BBB = [](auto && PH1, auto && PH2) { return add(PH2, PH1); };
+  // CHECK-FIXES: auto BBB = [](auto && PH1, auto && PH2) { return add(std::forward<decltype(PH2)>(PH2), std::forward<decltype(PH1)>(PH1)); };
 
   // No fix is applied for reused placeholders.
   auto CCC = std::bind(add, _1, _1);
@@ -238,7 +286,12 @@ void testPlaceholders() {
   // unnamed parameters.
   auto DDD = std::bind(add, _2, 1);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto DDD = [](auto &&, auto && PH2) { return add(PH2, 1); };
+  // CHECK-FIXES: auto DDD = [](auto &&, auto && PH2) { return add(std::forward<decltype(PH2)>(PH2), 1); };
+
+  // Namespace-qualified placeholders are valid too
+  auto EEE = std::bind(add, placeholders::_2, 1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
+  // CHECK-FIXES: auto EEE = [](auto &&, auto && PH2) { return add(std::forward<decltype(PH2)>(PH2), 1); };
 }
 
 void testGlobalFunctions() {
@@ -267,6 +320,7 @@ void testGlobalFunctions() {
 void testCapturedSubexpressions() {
   int x = 3;
   int y = 3;
+  int *p = &x;
 
   auto AAA = std::bind(add, 1, add(2, 5));
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
@@ -277,6 +331,11 @@ void testCapturedSubexpressions() {
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
   // Results of nested calls are captured by value.
   // CHECK-FIXES: auto BBB = [x, capture0 = add(y, 5)] { return add(x, capture0); };
+
+  auto CCC = std::bind(sub, std::ref(*p), _1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
+  // Expressions returning references are captured
+  // CHECK-FIXES: auto CCC = [&capture0 = *p](auto && PH1) { return sub(capture0, std::forward<decltype(PH1)>(PH1)); };
 }
 
 struct E {

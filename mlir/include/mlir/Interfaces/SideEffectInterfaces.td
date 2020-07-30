@@ -61,7 +61,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
          (ins "Value":$value,
               "SmallVectorImpl<SideEffects::EffectInstance<"
               # baseEffect # ">> &":$effects), [{
-          op.getEffects(effects);
+          $_op.getEffects(effects);
           llvm::erase_if(effects, [&](auto &it) {
             return it.getValue() != value;
           });
@@ -75,7 +75,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
          (ins "SideEffects::Resource *":$resource,
               "SmallVectorImpl<SideEffects::EffectInstance<"
               # baseEffect # ">> &":$effects), [{
-          op.getEffects(effects);
+          $_op.getEffects(effects);
           llvm::erase_if(effects, [&](auto &it) {
             return it.getResource() != resource;
           });
@@ -142,6 +142,9 @@ class SideEffect<EffectOpInterfaceBase interface, string effectName,
   /// The parent interface that the effect belongs to.
   string interfaceTrait = interface.trait;
 
+  /// The cpp namespace of the interface trait.
+  string cppNamespace = interface.cppNamespace;
+
   /// The derived effect that is being applied.
   string effect = effectName;
 
@@ -155,6 +158,9 @@ class SideEffectsTraitBase<EffectOpInterfaceBase parentInterface,
     : OpInterfaceTrait<""> {
   /// The name of the interface trait to use.
   let trait = parentInterface.trait;
+
+  /// The cpp namespace of the interface trait.
+  string cppNamespace = parentInterface.cppNamespace;
 
   /// The name of the base effects class.
   string baseEffectName = parentInterface.baseEffectName;
@@ -177,6 +183,7 @@ def MemoryEffectsOpInterface
     An interface used to query information about the memory effects applied by
     an operation.
   }];
+  let cppNamespace = "::mlir";
 }
 
 // The base class for defining specific memory effects.

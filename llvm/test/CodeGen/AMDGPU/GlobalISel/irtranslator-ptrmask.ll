@@ -48,9 +48,9 @@ define i8* @ptrmask_flat_i16(i8* %ptr, i16 %mask) {
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
   ; CHECK:   [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[MV]], [[TRUNC]](s16)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PTRMASK]](p0)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -119,8 +119,8 @@ define i8 addrspace(3)* @ptrmask_local_i16(i8 addrspace(3)* %ptr, i16 %mask) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[COPY]], [[TRUNC]](s16)
   ; CHECK:   $vgpr0 = COPY [[PTRMASK]](p3)
   ; CHECK:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]

@@ -110,7 +110,7 @@ private:
     for (Value operand : operands) {
       // If the use count of this operand is now < 2, we re-add the defining
       // operation to the worklist.
-      // TODO(riverriddle) This is based on the fact that zero use operations
+      // TODO: This is based on the fact that zero use operations
       // may be deleted, and that single use values often have more
       // canonicalization opportunities.
       if (!operand.use_empty() && !operand.hasOneUse())

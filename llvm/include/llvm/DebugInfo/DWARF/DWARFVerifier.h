@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
@@ -56,11 +57,13 @@ public:
     typedef std::set<DieRangeInfo>::const_iterator die_range_info_iterator;
 
     /// Inserts the address range. If the range overlaps with an existing
-    /// range, the range is *not* added and an iterator to the overlapping
-    /// range is returned.
+    /// range, the range that it overlaps with will be returned and the two
+    /// address ranges will be unioned together in "Ranges".
     ///
-    /// This is used for finding overlapping ranges within the same DIE.
-    address_range_iterator insert(const DWARFAddressRange &R);
+    /// This is used for finding overlapping ranges in the DW_AT_ranges
+    /// attribute of a DIE. It is also used as a set of address ranges that
+    /// children address ranges must all be contained in.
+    Optional<DWARFAddressRange> insert(const DWARFAddressRange &R);
 
     /// Finds an address range in the sorted vector of ranges.
     address_range_iterator findRange(const DWARFAddressRange &R) const {

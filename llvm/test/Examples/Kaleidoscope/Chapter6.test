@@ -1,5 +1,5 @@
 # RUN: Kaleidoscope-Ch6 < %s 2>&1 | FileCheck %s
-# REQUIRES: default_target
+# REQUIRES: default_triple
 
 # Test unary operator definition.
 def unary-(x) 0 - x;

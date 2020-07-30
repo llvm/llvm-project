@@ -58,7 +58,7 @@ define void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    jmp .LBB0_10
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  .LBB0_8: # %if.then20.critedge
+; CHECK-NEXT:  # %bb.8: # %if.then20.critedge
 ; CHECK-NEXT:    movl {{.*}}(%rip), %edi
 ; CHECK-NEXT:    movslq %eax, %rcx
 ; CHECK-NEXT:    movl $1, %esi

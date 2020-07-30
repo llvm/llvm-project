@@ -12,21 +12,15 @@
 #include "ClangTidyOptions.h"
 #include "ClangTidyProfiling.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Diagnostic.h"
-#include "clang/Tooling/Refactoring.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/Support/Timer.h"
-
-namespace llvm {
-class Regex;
-}
+#include "llvm/Support/Regex.h"
 
 namespace clang {
 
 class ASTContext;
 class CompilerInstance;
+class SourceManager;
 namespace ast_matchers {
 class MatchFinder;
 }

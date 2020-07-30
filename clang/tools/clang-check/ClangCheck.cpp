@@ -141,6 +141,7 @@ public:
                                     /*DumpDecls=*/true,
                                     /*Deserialize=*/false,
                                     /*DumpLookups=*/false,
+                                    /*DumpDeclTypes=*/false,
                                     clang::ADOF_Default);
     if (ASTPrint)
       return clang::CreateASTPrinter(nullptr, ASTDumpFilter);

@@ -123,10 +123,10 @@ define internal i32 @noalias_args_argmem_ro(i32* %A, i32* %B) #1 {
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@noalias_args_argmem_ro
 ; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[B_PRIV:%.*]] = alloca i32
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[B_PRIV]]
-; IS__TUNIT_NPM-NEXT:    [[A_PRIV:%.*]] = alloca i32
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[B_PRIV:%.*]] = alloca i32, align 4
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[B_PRIV]], align 4
+; IS__TUNIT_NPM-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[T0:%.*]] = load i32, i32* [[A_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[T1:%.*]] = load i32, i32* [[B_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[ADD:%.*]] = add nsw i32 [[T0]], [[T1]]

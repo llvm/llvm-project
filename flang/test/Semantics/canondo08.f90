@@ -1,4 +1,3 @@
-! RUN: %S/test_any.sh %s %t %f18
 ! Error test -- DO loop uses obsolete loop termination statement
 ! See R1131 and C1133
 
@@ -6,7 +5,7 @@
 ! A warning is generated with -Mstandard
 
 
-! EXEC: ${F18} -funparse-with-symbols -Mstandard %s 2>&1 | ${FileCheck} %s
+! RUN: %f18 -funparse-with-symbols -Mstandard %s 2>%t.stderr | FileCheck %s
 
 ! CHECK: end do
 
@@ -15,7 +14,8 @@
 ! not want to see label do in the unparse only.
 ! CHECK-NOT: do [1-9]
 
-! CHECK: A DO loop should terminate with an END DO or CONTINUE
+! RUN: FileCheck --check-prefix=ERR --input-file=%t.stderr %s
+! ERR: A DO loop should terminate with an END DO or CONTINUE
 
 subroutine foo1()
   do 01 k=1,2

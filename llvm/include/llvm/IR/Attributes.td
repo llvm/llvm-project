@@ -39,6 +39,9 @@ def Builtin : EnumAttr<"builtin">;
 /// Pass structure by value.
 def ByVal : TypeAttr<"byval">;
 
+/// Parameter or return value may not contain uninitialized or poison bits.
+def NoUndef : EnumAttr<"noundef">;
+
 /// Marks function as being in a cold path.
 def Cold : EnumAttr<"cold">;
 
@@ -233,6 +236,7 @@ def ZExt : EnumAttr<"zeroext">;
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
 def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
+def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
 def UnsafeFPMath : StrBoolAttr<"unsafe-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
 def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
@@ -270,6 +274,7 @@ class MergeRule<string F> {
 def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
 def : MergeRule<"setAND<NoInfsFPMathAttr>">;
 def : MergeRule<"setAND<NoNansFPMathAttr>">;
+def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
 def : MergeRule<"setAND<UnsafeFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"setOR<NoJumpTablesAttr>">;

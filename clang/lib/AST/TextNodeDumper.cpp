@@ -11,14 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/TextNodeDumper.h"
+#include "clang/AST/APValue.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/LocInfoType.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
+
+#include <algorithm>
+#include <utility>
 
 using namespace clang;
 
@@ -51,12 +56,15 @@ static void dumpPreviousDecl(raw_ostream &OS, const Decl *D) {
   llvm_unreachable("Decl that isn't part of DeclNodes.inc!");
 }
 
-TextNodeDumper::TextNodeDumper(raw_ostream &OS, bool ShowColors,
-                               const SourceManager *SM,
-                               const PrintingPolicy &PrintPolicy,
-                               const comments::CommandTraits *Traits)
-    : TextTreeStructure(OS, ShowColors), OS(OS), ShowColors(ShowColors), SM(SM),
-      PrintPolicy(PrintPolicy), Traits(Traits) {}
+TextNodeDumper::TextNodeDumper(raw_ostream &OS, const ASTContext &Context,
+                               bool ShowColors)
+    : TextTreeStructure(OS, ShowColors), OS(OS), ShowColors(ShowColors),
+      Context(&Context), SM(&Context.getSourceManager()),
+      PrintPolicy(Context.getPrintingPolicy()),
+      Traits(&Context.getCommentCommandTraits()) {}
+
+TextNodeDumper::TextNodeDumper(raw_ostream &OS, bool ShowColors)
+    : TextTreeStructure(OS, ShowColors), OS(OS), ShowColors(ShowColors) {}
 
 void TextNodeDumper::Visit(const comments::Comment *C,
                            const comments::FullComment *FC) {
@@ -345,6 +353,218 @@ void TextNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
 
   if (A.isSelected())
     OS << " selected";
+}
+
+static double GetApproxValue(const llvm::APFloat &F) {
+  llvm::APFloat V = F;
+  bool ignored;
+  V.convert(llvm::APFloat::IEEEdouble(), llvm::APFloat::rmNearestTiesToEven,
+            &ignored);
+  return V.convertToDouble();
+}
+
+/// True if the \p APValue \p Value can be folded onto the current line.
+static bool isSimpleAPValue(const APValue &Value) {
+  switch (Value.getKind()) {
+  case APValue::None:
+  case APValue::Indeterminate:
+  case APValue::Int:
+  case APValue::Float:
+  case APValue::FixedPoint:
+  case APValue::ComplexInt:
+  case APValue::ComplexFloat:
+  case APValue::LValue:
+  case APValue::MemberPointer:
+  case APValue::AddrLabelDiff:
+    return true;
+  case APValue::Vector:
+  case APValue::Array:
+  case APValue::Struct:
+    return false;
+  case APValue::Union:
+    return isSimpleAPValue(Value.getUnionValue());
+  }
+  llvm_unreachable("unexpected APValue kind!");
+}
+
+/// Dump the children of the \p APValue \p Value.
+///
+/// \param[in] Value          The \p APValue to visit
+/// \param[in] Ty             The \p QualType passed to \p Visit
+///
+/// \param[in] IdxToChildFun  A function mapping an \p APValue and an index
+///                           to one of the child of the \p APValue
+///
+/// \param[in] NumChildren    \p IdxToChildFun will be called on \p Value with
+///                           the indices in the range \p [0,NumChildren(
+///
+/// \param[in] LabelSingular  The label to use on a line with a single child
+/// \param[in] LabelPlurial   The label to use on a line with multiple children
+void TextNodeDumper::dumpAPValueChildren(
+    const APValue &Value, QualType Ty,
+    const APValue &(*IdxToChildFun)(const APValue &, unsigned),
+    unsigned NumChildren, StringRef LabelSingular, StringRef LabelPlurial) {
+  // To save some vertical space we print up to MaxChildrenPerLine APValues
+  // considered to be simple (by isSimpleAPValue) on a single line.
+  constexpr unsigned MaxChildrenPerLine = 4;
+  unsigned I = 0;
+  while (I < NumChildren) {
+    unsigned J = I;
+    while (J < NumChildren) {
+      if (isSimpleAPValue(IdxToChildFun(Value, J)) &&
+          (J - I < MaxChildrenPerLine)) {
+        ++J;
+        continue;
+      }
+      break;
+    }
+
+    J = std::max(I + 1, J);
+
+    // Print [I,J) on a single line.
+    AddChild(J - I > 1 ? LabelPlurial : LabelSingular, [=]() {
+      for (unsigned X = I; X < J; ++X) {
+        Visit(IdxToChildFun(Value, X), Ty);
+        if (X + 1 != J)
+          OS << ", ";
+      }
+    });
+    I = J;
+  }
+}
+
+void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
+  ColorScope Color(OS, ShowColors, ValueKindColor);
+  switch (Value.getKind()) {
+  case APValue::None:
+    OS << "None";
+    return;
+  case APValue::Indeterminate:
+    OS << "Indeterminate";
+    return;
+  case APValue::Int:
+    OS << "Int ";
+    {
+      ColorScope Color(OS, ShowColors, ValueColor);
+      OS << Value.getInt();
+    }
+    return;
+  case APValue::Float:
+    OS << "Float ";
+    {
+      ColorScope Color(OS, ShowColors, ValueColor);
+      OS << GetApproxValue(Value.getFloat());
+    }
+    return;
+  case APValue::FixedPoint:
+    OS << "FixedPoint ";
+    {
+      ColorScope Color(OS, ShowColors, ValueColor);
+      OS << Value.getFixedPoint();
+    }
+    return;
+  case APValue::Vector: {
+    unsigned VectorLength = Value.getVectorLength();
+    OS << "Vector length=" << VectorLength;
+
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getVectorElt(Index);
+        },
+        VectorLength, "element", "elements");
+    return;
+  }
+  case APValue::ComplexInt:
+    OS << "ComplexInt ";
+    {
+      ColorScope Color(OS, ShowColors, ValueColor);
+      OS << Value.getComplexIntReal() << " + " << Value.getComplexIntImag()
+         << 'i';
+    }
+    return;
+  case APValue::ComplexFloat:
+    OS << "ComplexFloat ";
+    {
+      ColorScope Color(OS, ShowColors, ValueColor);
+      OS << GetApproxValue(Value.getComplexFloatReal()) << " + "
+         << GetApproxValue(Value.getComplexFloatImag()) << 'i';
+    }
+    return;
+  case APValue::LValue:
+    (void)Context;
+    OS << "LValue <todo>";
+    return;
+  case APValue::Array: {
+    unsigned ArraySize = Value.getArraySize();
+    unsigned NumInitializedElements = Value.getArrayInitializedElts();
+    OS << "Array size=" << ArraySize;
+
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getArrayInitializedElt(Index);
+        },
+        NumInitializedElements, "element", "elements");
+
+    if (Value.hasArrayFiller()) {
+      AddChild("filler", [=] {
+        {
+          ColorScope Color(OS, ShowColors, ValueColor);
+          OS << ArraySize - NumInitializedElements << " x ";
+        }
+        Visit(Value.getArrayFiller(), Ty);
+      });
+    }
+
+    return;
+  }
+  case APValue::Struct: {
+    OS << "Struct";
+
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getStructBase(Index);
+        },
+        Value.getStructNumBases(), "base", "bases");
+
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getStructField(Index);
+        },
+        Value.getStructNumFields(), "field", "fields");
+
+    return;
+  }
+  case APValue::Union: {
+    OS << "Union";
+    {
+      ColorScope Color(OS, ShowColors, ValueColor);
+      if (const FieldDecl *FD = Value.getUnionField())
+        OS << " ." << *cast<NamedDecl>(FD);
+    }
+    // If the union value is considered to be simple, fold it into the
+    // current line to save some vertical space.
+    const APValue &UnionValue = Value.getUnionValue();
+    if (isSimpleAPValue(UnionValue)) {
+      OS << ' ';
+      Visit(UnionValue, Ty);
+    } else {
+      AddChild([=] { Visit(UnionValue, Ty); });
+    }
+
+    return;
+  }
+  case APValue::MemberPointer:
+    OS << "MemberPointer <todo>";
+    return;
+  case APValue::AddrLabelDiff:
+    OS << "AddrLabelDiff <todo>";
+    return;
+  }
+  llvm_unreachable("Unknown APValue kind!");
 }
 
 void TextNodeDumper::dumpPointer(const void *Ptr) {
@@ -709,11 +929,9 @@ void TextNodeDumper::VisitCaseStmt(const CaseStmt *Node) {
 }
 
 void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
-  if (Node->getResultAPValueKind() != APValue::None) {
-    ColorScope Color(OS, ShowColors, ValueColor);
-    OS << " ";
-    Node->getAPValueResult().dump(OS);
-  }
+  if (Node->hasAPValueResult())
+    AddChild("value",
+             [=] { Visit(Node->getAPValueResult(), Node->getType()); });
 }
 
 void TextNodeDumper::VisitCallExpr(const CallExpr *Node) {
@@ -1451,6 +1669,16 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
     OS << " destroyed";
   if (D->isParameterPack())
     OS << " pack";
+
+  if (D->hasInit()) {
+    const Expr *E = D->getInit();
+    // Only dump the value of constexpr VarDecls for now.
+    if (E && !E->isValueDependent() && D->isConstexpr()) {
+      const APValue *Value = D->evaluateValue();
+      if (Value)
+        AddChild("value", [=] { Visit(*Value, E->getType()); });
+    }
+  }
 }
 
 void TextNodeDumper::VisitBindingDecl(const BindingDecl *D) {

@@ -153,6 +153,13 @@ func @call_non_llvm_input(%callee : (i32) -> (), %arg : i32) {
 
 // -----
 
+func @constant_wrong_type() {
+  // expected-error@+1 {{only supports integer, float, string or elements attributes}}
+  llvm.mlir.constant(@constant_wrong_type) : !llvm<"void ()*">
+}
+
+// -----
+
 func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
   // expected-error@+1 {{expected LLVM IR Dialect type}}
   llvm.insertvalue %a, %b[0] : i32

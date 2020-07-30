@@ -185,6 +185,9 @@ public:
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
+  bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                              SDValue C) const override;
+
   TargetLowering::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
   Value *emitMaskedAtomicRMWIntrinsic(IRBuilder<> &Builder, AtomicRMWInst *AI,

@@ -1778,7 +1778,7 @@ indirectgoto:                                     ; preds = %lab0, %entry
 define i32 @main() {
 ; CHECK-LABEL: define {{[^@]+}}@main()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F:%.*]] = alloca i32
+; CHECK-NEXT:    [[F:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br label [[FOR_COND_0:%.*]]
 ; CHECK:       for.cond.0:
 ; CHECK-NEXT:    [[G_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY_0:%.*]] ]
@@ -1856,8 +1856,8 @@ define i32 @h(i32 %i) {
 define void @bad_gep() {
 ; CHECK-LABEL: define {{[^@]+}}@bad_gep()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = alloca i8
-; CHECK-NEXT:    [[M:%.*]] = alloca i8
+; CHECK-NEXT:    [[N:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* noalias nocapture nonnull dereferenceable(1) [[N]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       while.body:

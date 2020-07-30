@@ -143,21 +143,10 @@ for.cond.cleanup:
 ;
 ; CHECK-LABEL: @reduction_not_guarded
 ;
+; CHECK:     vector.body:
 ; CHECK-NOT: @llvm.arm.mve.vctp
-; CHECK-NOT: @llvm.get.active.lane.mask.v8i1.i32
-;
-; CHECK: entry:
-; CHECK: %[[ELEMCOUNT:.*]] = add i32 %N, -1
-; CHECK: %broadcast.splatinsert1 = insertelement <8 x i32> undef, i32 %[[ELEMCOUNT]], i32 0
-; CHECK  %broadcast.splat2 = shufflevector <8 x i32> %broadcast.splatinsert1, <8 x i32> undef, <8 x i32> zeroinitializer
-;
-; CHECK: vector.body:
-; CHECK: %lane.mask.splatinsert = insertelement <8 x i32> undef, i32 %index, i32 0
-; CHECK: %lane.mask.splat = shufflevector <8 x i32> %lane.mask.splatinsert, <8 x i32> undef, <8 x i32> zeroinitializer
-; CHECK: %lane.mask.induction = add <8 x i32> %lane.mask.splat, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK: %[[ICMP:.*]] = icmp ule <8 x i32> %lane.mask.induction, %broadcast.splat2
-; CHECK: call <8 x i16> @llvm.masked.load.v8i16.p0v8i16({{.*}}, <8 x i1> %[[ICMP]], <8 x i16> undef)
-; CHECK: ret
+; CHECK:     @llvm.get.active.lane.mask.v8i1.i32
+; CHECK:     ret
 ;
 define i16 @reduction_not_guarded(i16* nocapture readonly %A, i16 %B, i32 %N) local_unnamed_addr {
 entry:
@@ -213,20 +202,9 @@ middle.block:                                     ; preds = %vector.body
 ;
 ; CHECK-LABEL: @Correlation
 ;
-; CHECK: entry:
-; CHECK: for.body.lr.ph:          ; preds = %entry
-; CHECK: for.body:                ; preds = %for.end, %for.body.lr.ph
-; CHECK: vector.ph:               ; preds = %for.body
-; CHECK:   %trip.count.minus.1 = add i32 %8, -1
-; CHECK:   call void @llvm.set.loop.iterations.i32(i32 %7)
-; CHECK:   %insert.btc = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
-; CHECK:   %splat.btc = shufflevector <4 x i32> %insert.btc, <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK:   br label %vector.body
 ; CHECK: vector.body:
-; CHECK-NOT:   @llvm.arm.mve.vctp
-; CHECK:   %[[ICMP:.*]] = icmp ule <4 x i32> %lane.mask.induction, %splat.btc
-; CHECK:   call <4 x i16> @llvm.masked.load.v4i16.p0v4i16({{.*}}, <4 x i1> %[[ICMP]],{{.*}} 
-;
+; CHECK-NOT: @llvm.arm.mve.vctp
+; CHECK:     %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
 ;
 ; FORCE-LABEL: @Correlation
 ; FORCE: vector.ph:                                        ; preds = %for.body

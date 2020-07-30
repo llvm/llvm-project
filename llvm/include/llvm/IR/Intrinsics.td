@@ -117,6 +117,8 @@ class ReadNone<AttrIndex idx> : IntrinsicProperty {
 
 def IntrNoReturn : IntrinsicProperty;
 
+def IntrNoFree : IntrinsicProperty;
+
 def IntrWillReturn : IntrinsicProperty;
 
 // IntrCold - Calls to this intrinsic are cold.
@@ -532,6 +534,7 @@ def int_instrprof_value_profile : Intrinsic<[],
 
 def int_call_preallocated_setup : Intrinsic<[llvm_token_ty], [llvm_i32_ty]>;
 def int_call_preallocated_arg : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;
+def int_call_preallocated_teardown : Intrinsic<[], [llvm_token_ty]>;
 
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
@@ -836,6 +839,10 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
 //
 def int_expect : Intrinsic<[llvm_anyint_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrWillReturn]>;
+
+def int_expect_with_probability : Intrinsic<[llvm_anyint_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>, llvm_double_ty],
+  [IntrNoMem, IntrWillReturn]>;
 
 //===-------------------- Bit Manipulation Intrinsics ---------------------===//
 //

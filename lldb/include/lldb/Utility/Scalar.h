@@ -106,7 +106,10 @@ public:
 
   bool ClearBit(uint32_t bit);
 
-  const void *GetBytes() const;
+  /// Store the binary representation of this value into the given storage.
+  /// Exactly GetByteSize() bytes will be stored, and the buffer must be large
+  /// enough to hold this data.
+  void GetBytes(llvm::MutableArrayRef<uint8_t> storage) const;
 
   size_t GetByteSize() const;
 
@@ -122,7 +125,7 @@ public:
     m_integer.clearAllBits();
   }
 
-  const char *GetTypeAsCString() const;
+  const char *GetTypeAsCString() const { return GetValueTypeAsCString(m_type); }
 
   void GetValue(Stream *s, bool show_type) const;
 
@@ -130,8 +133,8 @@ public:
     return (m_type >= e_sint) && (m_type <= e_long_double);
   }
 
-  /// Convert integer to \p type, limited to \p bits size.
-  void TruncOrExtendTo(Scalar::Type type, uint16_t bits);
+  /// Convert to an integer with \p bits and the given signedness.
+  void TruncOrExtendTo(uint16_t bits, bool sign);
 
   bool Promote(Scalar::Type type);
 
@@ -185,7 +188,7 @@ public:
 
   unsigned char UChar(unsigned char fail_value = 0) const;
 
-  signed char SChar(char fail_value = 0) const;
+  signed char SChar(signed char fail_value = 0) const;
 
   unsigned short UShort(unsigned short fail_value = 0) const;
 
@@ -201,7 +204,7 @@ public:
 
   unsigned long long ULongLong(unsigned long long fail_value = 0) const;
 
-  llvm::APInt SInt128(llvm::APInt &fail_value) const;
+  llvm::APInt SInt128(const llvm::APInt &fail_value) const;
 
   llvm::APInt UInt128(const llvm::APInt &fail_value) const;
 
@@ -263,6 +266,8 @@ protected:
   Scalar::Type m_type;
   llvm::APInt m_integer;
   llvm::APFloat m_float;
+
+  template <typename T> T GetAs(T fail_value) const;
 
 private:
   friend const Scalar operator+(const Scalar &lhs, const Scalar &rhs);

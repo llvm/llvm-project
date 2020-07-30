@@ -48,7 +48,7 @@ define i32 @foo(i32 %arg, i32 (i8*)* %arg3) nounwind {
 ; CHECK-NEXT:    movabsq $-2305847407260205056, %rbx # imm = 0xDFFFFC0000000000
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB0_4: # %bb17
+; CHECK-NEXT:  # %bb.4: # %bb17
 ; CHECK-NEXT:    callq widget
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  .LBB0_5: # %bb18

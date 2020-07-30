@@ -40,9 +40,10 @@ define <4 x i32> @f4(<4 x i1> *%ptr) {
 ; Test a v4i8->v4i32 extension.
 define <4 x i32> @f5(<4 x i8> *%ptr) {
 ; CHECK-LABEL: f5:
+; CHECK: larl	%r1, .LCPI4_0
 ; CHECK: vlrepf [[REG1:%v[0-9]+]], 0(%r2)
-; CHECK: vuplhb [[REG2:%v[0-9]+]], [[REG1]]
-; CHECK: vuplhh %v24, [[REG2]]
+; CHECK: vl	%v1, 0(%r1), 3
+; CHECK: vperm	%v24, %v1, [[REG1]], %v1
 ; CHECK: br %r14
   %val = load <4 x i8>, <4 x i8> *%ptr
   %ret = zext <4 x i8> %val to <4 x i32>
@@ -71,10 +72,10 @@ define <2 x i64> @f7(<2 x i1> *%ptr) {
 ; Test a v2i8->v2i64 extension.
 define <2 x i64> @f8(<2 x i8> *%ptr) {
 ; CHECK-LABEL: f8:
-; CHECK: vlreph [[REG1:%v[0-9]+]], 0(%r2)
-; CHECK: vuplhb [[REG2:%v[0-9]+]], [[REG1]]
-; CHECK: vuplhh [[REG3:%v[0-9]+]], [[REG2]]
-; CHECK: vuplhf %v24, [[REG3]]
+; CHECK: larl	%r1, .LCPI7_0
+; CHECK: vlreph	[[REG1:%v[0-9]+]], 0(%r2)
+; CHECK: vl	%v1, 0(%r1), 3
+; CHECK: vperm	%v24, %v1, [[REG1]], %v1
 ; CHECK: br %r14
   %val = load <2 x i8>, <2 x i8> *%ptr
   %ret = zext <2 x i8> %val to <2 x i64>
@@ -84,9 +85,10 @@ define <2 x i64> @f8(<2 x i8> *%ptr) {
 ; Test a v2i16->v2i64 extension.
 define <2 x i64> @f9(<2 x i16> *%ptr) {
 ; CHECK-LABEL: f9:
-; CHECK: vlrepf [[REG1:%v[0-9]+]], 0(%r2)
-; CHECK: vuplhh [[REG2:%v[0-9]+]], [[REG1]]
-; CHECK: vuplhf %v24, [[REG2]]
+; CHECK: larl	%r1, .LCPI8_0
+; CHECK: vlrepf	[[REG1:%v[0-9]+]], 0(%r2)
+; CHECK: vl	%v1, 0(%r1), 3
+; CHECK: vperm	%v24, %v1, [[REG1]], %v1
 ; CHECK: br %r14
   %val = load <2 x i16>, <2 x i16> *%ptr
   %ret = zext <2 x i16> %val to <2 x i64>

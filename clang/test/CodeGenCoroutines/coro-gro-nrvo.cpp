@@ -21,7 +21,7 @@ template <class RetObject>
 struct promise_type {
     RetObject get_return_object();
     suspend_always initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
     void return_void();
     static void unhandled_exception();
 };
@@ -52,7 +52,7 @@ struct promise_type_with_on_alloc_failure {
     static RetObject get_return_object_on_allocation_failure();
     RetObject get_return_object();
     suspend_always initial_suspend();
-    suspend_never final_suspend();
+    suspend_never final_suspend() noexcept;
     void return_void();
     static void unhandled_exception();
 };

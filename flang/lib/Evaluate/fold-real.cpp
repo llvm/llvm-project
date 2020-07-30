@@ -42,7 +42,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return RewriteSpecificMINorMAX(context, std::move(funcRef));
   } else if (name == "atan" || name == "atan2" || name == "hypot" ||
       name == "mod") {
-    std::string localName{name == "atan2" ? "atan" : name};
+    std::string localName{name == "atan" ? "atan2" : name};
     CHECK(args.size() == 2);
     if (auto callable{
             context.hostIntrinsicsLibrary()

@@ -19,31 +19,31 @@ static cl::opt<bool> PPCDisableNonVolatileCR(
     cl::init(false), cl::Hidden);
 
 void PPCFunctionInfo::anchor() {}
-PPCFunctionInfo::PPCFunctionInfo(MachineFunction &MF)
-    : DisableNonVolatileCR(PPCDisableNonVolatileCR), MF(MF) {}
+PPCFunctionInfo::PPCFunctionInfo(const MachineFunction &MF)
+    : DisableNonVolatileCR(PPCDisableNonVolatileCR) {}
 
-MCSymbol *PPCFunctionInfo::getPICOffsetSymbol() const {
+MCSymbol *PPCFunctionInfo::getPICOffsetSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
   return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
                                            Twine(MF.getFunctionNumber()) +
                                            "$poff");
 }
 
-MCSymbol *PPCFunctionInfo::getGlobalEPSymbol() const {
+MCSymbol *PPCFunctionInfo::getGlobalEPSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
   return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
                                            "func_gep" +
                                            Twine(MF.getFunctionNumber()));
 }
 
-MCSymbol *PPCFunctionInfo::getLocalEPSymbol() const {
+MCSymbol *PPCFunctionInfo::getLocalEPSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
   return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
                                            "func_lep" +
                                            Twine(MF.getFunctionNumber()));
 }
 
-MCSymbol *PPCFunctionInfo::getTOCOffsetSymbol() const {
+MCSymbol *PPCFunctionInfo::getTOCOffsetSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
   return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
                                            "func_toc" +

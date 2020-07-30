@@ -1,5 +1,12 @@
 // RUN: %libomp-compile-and-run
 
+// Parsing error until gcc8:
+// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8
+
+// Missing GOMP_taskgroup_reduction_(un)register in LLVM/OpenMP
+// Should be removed once the functions are implemented
+// XFAIL: gcc-9, gcc-10
+
 #include <stdio.h>
 #include <omp.h>
 

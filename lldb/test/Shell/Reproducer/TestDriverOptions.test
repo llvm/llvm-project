@@ -11,16 +11,16 @@
 # RUN: %lldb --capture --capture-path %t.repro -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
 # RUN: %lldb --capture -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix STATUS-CAPTURE
 # RUN: %lldb --capture-path %t.repro -b -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix WARNING --check-prefix STATUS-CAPTURE --check-prefix NOAUTOGEN
-# RUN: %lldb --capture-path %t.repro -b -o 'reproducer status' --reproducer-auto-generate  2>&1 | FileCheck %s --check-prefix WARNING2
+# RUN: %lldb --capture-path %t.repro -b -o 'reproducer status' --reproducer-generate-on-exit  2>&1 | FileCheck %s --check-prefix WARNING2
 #
 # NO-WARNING-NOT: warning: -capture-path specified without -capture
 # WARNING: warning: -capture-path specified without -capture
-# WARNING2: warning: -reproducer-auto-generate specified without -capture
+# WARNING2: warning: -reproducer-generate-on-exit specified without -capture
 # STATUS-CAPTURE: Reproducer is in capture mode.
 # NOAUTOGEN-NOT: Auto generate
 
 # Check auto generate.
 # RUN: rm -rf %t.repro
-# RUN: %lldb --capture --capture-path %t.repro -b --reproducer-auto-generate -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix AUTOGEN
+# RUN: %lldb --capture --capture-path %t.repro -b --reproducer-generate-on-exit -o 'reproducer status' 2>&1 | FileCheck %s --check-prefix NO-WARNING --check-prefix AUTOGEN
 # RUN: cat %t.repro/index.yaml
 # AUTOGEN: Auto generate: on

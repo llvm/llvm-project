@@ -15,6 +15,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Format.h"
@@ -1186,11 +1187,10 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
   // Query the external layout to see if it provides an offset.
   bool HasExternalLayout = false;
   if (UseExternalLayout) {
-    // FIXME: This appears to be reversed.
     if (Base->IsVirtual)
-      HasExternalLayout = External.getExternalNVBaseOffset(Base->Class, Offset);
-    else
       HasExternalLayout = External.getExternalVBaseOffset(Base->Class, Offset);
+    else
+      HasExternalLayout = External.getExternalNVBaseOffset(Base->Class, Offset);
   }
 
   // Clang <= 6 incorrectly applied the 'packed' attribute to base classes.
@@ -2107,7 +2107,7 @@ static const CXXMethodDecl *computeKeyFunction(ASTContext &Context,
     if (MD->isImplicit())
       continue;
 
-    if (MD->isInlineSpecified())
+    if (MD->isInlineSpecified() || MD->isConstexpr())
       continue;
 
     if (MD->hasInlineBody())
@@ -2568,9 +2568,11 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
   // information about the bases, such as required alignment and the presence of
   // zero sized members.
   const ASTRecordLayout *PreviousBaseLayout = nullptr;
+  bool HasPolymorphicBaseClass = false;
   // Iterate through the bases and lay out the non-virtual ones.
   for (const CXXBaseSpecifier &Base : RD->bases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    HasPolymorphicBaseClass |= BaseDecl->isPolymorphic();
     const ASTRecordLayout &BaseLayout = Context.getASTRecordLayout(BaseDecl);
     // Mark and skip virtual bases.
     if (Base.isVirtual()) {
@@ -2594,11 +2596,23 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
     layoutNonVirtualBase(RD, BaseDecl, BaseLayout, PreviousBaseLayout);
   }
   // Figure out if we need a fresh VFPtr for this class.
-  if (!PrimaryBase && RD->isDynamicClass())
-    for (CXXRecordDecl::method_iterator i = RD->method_begin(),
-                                        e = RD->method_end();
-         !HasOwnVFPtr && i != e; ++i)
-      HasOwnVFPtr = i->isVirtual() && i->size_overridden_methods() == 0;
+  if (RD->isPolymorphic()) {
+    if (!HasPolymorphicBaseClass)
+      // This class introduces polymorphism, so we need a vftable to store the
+      // RTTI information.
+      HasOwnVFPtr = true;
+    else if (!PrimaryBase) {
+      // We have a polymorphic base class but can't extend its vftable. Add a
+      // new vfptr if we would use any vftable slots.
+      for (CXXMethodDecl *M : RD->methods()) {
+        if (MicrosoftVTableContext::hasVtableSlot(M) &&
+            M->size_overridden_methods() == 0) {
+          HasOwnVFPtr = true;
+          break;
+        }
+      }
+    }
+  }
   // If we don't have a primary base then we have a leading object that could
   // itself lead with a zero-sized object, something we track.
   bool CheckLeadingLayout = !PrimaryBase;
@@ -2993,7 +3007,8 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
   llvm::SmallPtrSet<const CXXRecordDecl *, 2> BasesWithOverriddenMethods;
   // Seed the working set with our non-destructor, non-pure virtual methods.
   for (const CXXMethodDecl *MD : RD->methods())
-    if (MD->isVirtual() && !isa<CXXDestructorDecl>(MD) && !MD->isPure())
+    if (MicrosoftVTableContext::hasVtableSlot(MD) &&
+        !isa<CXXDestructorDecl>(MD) && !MD->isPure())
       Work.insert(MD);
   while (!Work.empty()) {
     const CXXMethodDecl *MD = *Work.begin();

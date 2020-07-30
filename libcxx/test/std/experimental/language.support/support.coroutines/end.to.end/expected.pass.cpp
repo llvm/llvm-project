@@ -40,7 +40,7 @@ struct expected {
     Data* data;
     DataPtr get_return_object() { data = new Data{}; return {data}; }
     suspend_never initial_suspend() { return {}; }
-    suspend_never final_suspend() { return {}; }
+    suspend_never final_suspend() noexcept { return {}; }
     void return_value(T v) { data->val = std::move(v); data->error = {};}
     void unhandled_exception() {}
   };

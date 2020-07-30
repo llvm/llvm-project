@@ -296,13 +296,13 @@ define <4 x i16> @fix_double_to_i16(<4 x double> %in) {
 ; CHECK-NEXT:    vcvt.s32.f64 s0, d18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vadd.f64 d20, d16, d16
-; CHECK-NEXT:    vadd.f64 d19, d19, d19
 ; CHECK-NEXT:    vadd.f64 d16, d17, d17
 ; CHECK-NEXT:    vcvt.s32.f64 s2, d20
-; CHECK-NEXT:    vcvt.s32.f64 s4, d19
 ; CHECK-NEXT:    vcvt.s32.f64 s6, d16
 ; CHECK-NEXT:    vmov.32 d16[0], r0
 ; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vadd.f64 d19, d19, d19
+; CHECK-NEXT:    vcvt.s32.f64 s4, d19
 ; CHECK-NEXT:    vmov.32 d17[0], r0
 ; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    vmov.32 d16[1], r0
@@ -355,10 +355,8 @@ define i32 @multi_sint(double %c, i32* nocapture %p, i32* nocapture %q) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vcvt.s32.f64 s0, d16
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vstr s0, [r2]
-; CHECK-NEXT:    vcvt.s32.f64 s0, d16
-; CHECK-NEXT:    vcvt.s32.f64 s2, d16
-; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vstr s0, [r3]
 ; CHECK-NEXT:    mov pc, lr
   %conv = fptosi double %c to i32
@@ -372,10 +370,8 @@ define i32 @multi_uint(double %c, i32* nocapture %p, i32* nocapture %q) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vcvt.u32.f64 s0, d16
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vstr s0, [r2]
-; CHECK-NEXT:    vcvt.u32.f64 s0, d16
-; CHECK-NEXT:    vcvt.u32.f64 s2, d16
-; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vstr s0, [r3]
 ; CHECK-NEXT:    mov pc, lr
   %conv = fptoui double %c to i32

@@ -13,13 +13,16 @@
 #ifndef LLVM_ANALYSIS_LOADS_H
 #define LLVM_ANALYSIS_LOADS_H
 
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
+class AAResults;
 class DataLayout;
+class DominatorTree;
+class Instruction;
+class LoadInst;
 class Loop;
 class MDNode;
 class ScalarEvolution;
@@ -120,7 +123,7 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
                                 BasicBlock *ScanBB,
                                 BasicBlock::iterator &ScanFrom,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan,
-                                AliasAnalysis *AA = nullptr,
+                                AAResults *AA = nullptr,
                                 bool *IsLoadCSE = nullptr,
                                 unsigned *NumScanedInst = nullptr);
 
@@ -143,15 +146,15 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
 /// is zero, the whole block will be scanned.
 /// \param AA Optional pointer to alias analysis, to make the scan more
 /// precise.
-/// \param [out] IsLoad Whether the returned value is a load from the same
+/// \param [out] IsLoadCSE Whether the returned value is a load from the same
 /// location in memory, as opposed to the value operand of a store.
 ///
 /// \returns The found value, or nullptr if no value is found.
 Value *FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy, bool AtLeastAtomic,
                                  BasicBlock *ScanBB,
                                  BasicBlock::iterator &ScanFrom,
-                                 unsigned MaxInstsToScan, AliasAnalysis *AA,
-                                 bool *IsLoad, unsigned *NumScanedInst);
+                                 unsigned MaxInstsToScan, AAResults *AA,
+                                 bool *IsLoadCSE, unsigned *NumScanedInst);
 }
 
 #endif

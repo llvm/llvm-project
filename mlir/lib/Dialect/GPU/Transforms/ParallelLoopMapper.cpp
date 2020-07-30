@@ -80,7 +80,7 @@ MappingLevel &operator++(MappingLevel &mappingLevel) {
 /// Computed the hardware id to use for a given mapping level. Will
 /// assign x,y and z hardware ids for the first 3 dimensions and use
 /// sequential after.
-/// TODO(ravishankarm/herhut) : Make this use x for the inner-most loop that is
+/// TODO: Make this use x for the inner-most loop that is
 /// distributed to map to x, the next innermost to y and the next innermost to
 /// z.
 static gpu::Processor getHardwareIdForMapping(MappingLevel level,

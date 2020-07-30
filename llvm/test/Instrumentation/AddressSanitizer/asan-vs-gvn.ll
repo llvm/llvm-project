@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -asan -asan-module -S | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -asan -asan-module -S | FileCheck %s
 ; ASAN conflicts with load widening iff the widened load accesses data out of bounds
 ; (while the original unwidened loads do not).
 ; https://github.com/google/sanitizers/issues/20#issuecomment-136381262

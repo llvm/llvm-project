@@ -889,6 +889,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return constrainCopyLikeIntrin(I, AMDGPU::WWM);
   case Intrinsic::amdgcn_div_scale:
     return selectDivScale(I);
+  case Intrinsic::amdgcn_icmp:
+    return selectIntrinsicIcmp(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1004,6 +1006,34 @@ bool AMDGPUInstructionSelector::selectG_ICMP(MachineInstr &I) const {
             .add(I.getOperand(3));
   RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(),
                                *TRI.getBoolRC(), *MRI);
+  bool Ret = constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
+  I.eraseFromParent();
+  return Ret;
+}
+
+bool AMDGPUInstructionSelector::selectIntrinsicIcmp(MachineInstr &I) const {
+  Register Dst = I.getOperand(0).getReg();
+  if (isVCC(Dst, *MRI))
+    return false;
+
+  if (MRI->getType(Dst).getSizeInBits() != STI.getWavefrontSize())
+    return false;
+
+  MachineBasicBlock *BB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register SrcReg = I.getOperand(2).getReg();
+  unsigned Size = RBI.getSizeInBits(SrcReg, *MRI, TRI);
+  auto Pred = static_cast<CmpInst::Predicate>(I.getOperand(4).getImm());
+
+  int Opcode = getV_CMPOpcode(Pred, Size);
+  if (Opcode == -1)
+    return false;
+
+  MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), Dst)
+                           .add(I.getOperand(2))
+                           .add(I.getOperand(3));
+  RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(), *TRI.getBoolRC(),
+                               *MRI);
   bool Ret = constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
   I.eraseFromParent();
   return Ret;

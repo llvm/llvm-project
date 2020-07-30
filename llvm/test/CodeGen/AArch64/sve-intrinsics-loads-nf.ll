@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ; Range testing for the immediate in the reg+imm(mulvl) addressing
 ; mode is done only for one instruction. The rest of the instrucions
@@ -140,6 +143,14 @@ define <vscale x 8 x half> @ldnf1h_f16(<vscale x 8 x i1> %pg, half* %a) {
   ret <vscale x 8 x half> %load
 }
 
+define <vscale x 8 x bfloat> @ldnf1h_bf16(<vscale x 8 x i1> %pg, bfloat* %a) #0 {
+; CHECK-LABEL: ldnf1h_bf16:
+; CHECK: ldnf1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT: ret
+  %load = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnf1.nxv8bf16(<vscale x 8 x i1> %pg, bfloat* %a)
+  ret <vscale x 8 x bfloat> %load
+}
+
 define <vscale x 8 x half> @ldnf1h_f16_inbound(<vscale x 8 x i1> %pg, half* %a) {
 ; CHECK-LABEL: ldnf1h_f16_inbound:
 ; CHECK: ldnf1h { z0.h }, p0/z, [x0, #1, mul vl]
@@ -149,6 +160,17 @@ define <vscale x 8 x half> @ldnf1h_f16_inbound(<vscale x 8 x i1> %pg, half* %a) 
   %base_scalar = bitcast <vscale x 8 x half>* %base to half*
   %load = call <vscale x 8 x half> @llvm.aarch64.sve.ldnf1.nxv8f16(<vscale x 8 x i1> %pg, half* %base_scalar)
   ret <vscale x 8 x half> %load
+}
+
+define <vscale x 8 x bfloat> @ldnf1h_bf16_inbound(<vscale x 8 x i1> %pg, bfloat* %a) #0 {
+; CHECK-LABEL: ldnf1h_bf16_inbound:
+; CHECK: ldnf1h { z0.h }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT: ret
+  %base_scalable = bitcast bfloat* %a to <vscale x 8 x bfloat>*
+  %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %base_scalable, i64 1
+  %base_scalar = bitcast <vscale x 8 x bfloat>* %base to bfloat*
+  %load = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnf1.nxv8bf16(<vscale x 8 x i1> %pg, bfloat* %base_scalar)
+  ret <vscale x 8 x bfloat> %load
 }
 
 define <vscale x 4 x i32> @ldnf1b_s(<vscale x 4 x i1> %pg, i8* %a) {
@@ -442,6 +464,7 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.ldnf1.nxv16i8(<vscale x 16 x i1>, i
 declare <vscale x 8 x i8> @llvm.aarch64.sve.ldnf1.nxv8i8(<vscale x 8 x i1>, i8*)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.ldnf1.nxv8i16(<vscale x 8 x i1>, i16*)
 declare <vscale x 8 x half> @llvm.aarch64.sve.ldnf1.nxv8f16(<vscale x 8 x i1>, half*)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnf1.nxv8bf16(<vscale x 8 x i1>, bfloat*)
 
 declare <vscale x 4 x i8> @llvm.aarch64.sve.ldnf1.nxv4i8(<vscale x 4 x i1>, i8*)
 declare <vscale x 4 x i16> @llvm.aarch64.sve.ldnf1.nxv4i16(<vscale x 4 x i1>, i16*)
@@ -453,3 +476,6 @@ declare <vscale x 2 x i16> @llvm.aarch64.sve.ldnf1.nxv2i16(<vscale x 2 x i1>, i1
 declare <vscale x 2 x i32> @llvm.aarch64.sve.ldnf1.nxv2i32(<vscale x 2 x i1>, i32*)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.ldnf1.nxv2i64(<vscale x 2 x i1>, i64*)
 declare <vscale x 2 x double> @llvm.aarch64.sve.ldnf1.nxv2f64(<vscale x 2 x i1>, double*)
+
+; +bf16 is required for the bfloat version.
+attributes #0 = { "target-features"="+sve,+bf16" }

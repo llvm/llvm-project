@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CompileCommands.h"
+#include "Config.h"
 #include "support/Logger.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -182,6 +183,10 @@ CommandMangler CommandMangler::forTests() {
 }
 
 void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
+  // FIXME: remove const_cast once unique_function is const-compatible.
+  for (auto &Edit : const_cast<Config &>(Config::current()).CompileFlags.Edits)
+    Edit(Cmd);
+
   // Check whether the flag exists, either as -flag or -flag=*
   auto Has = [&](llvm::StringRef Flag) {
     for (llvm::StringRef Arg : Cmd) {

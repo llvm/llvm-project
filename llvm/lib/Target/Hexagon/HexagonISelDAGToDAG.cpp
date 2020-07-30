@@ -1315,28 +1315,28 @@ bool HexagonDAGToDAGISel::SelectAddrFI(SDValue &N, SDValue &R) {
 }
 
 inline bool HexagonDAGToDAGISel::SelectAddrGA(SDValue &N, SDValue &R) {
-  return SelectGlobalAddress(N, R, false, 0);
+  return SelectGlobalAddress(N, R, false, Align(1));
 }
 
 inline bool HexagonDAGToDAGISel::SelectAddrGP(SDValue &N, SDValue &R) {
-  return SelectGlobalAddress(N, R, true, 0);
+  return SelectGlobalAddress(N, R, true, Align(1));
 }
 
 inline bool HexagonDAGToDAGISel::SelectAnyImm(SDValue &N, SDValue &R) {
-  return SelectAnyImmediate(N, R, 0);
+  return SelectAnyImmediate(N, R, Align(1));
 }
 
 inline bool HexagonDAGToDAGISel::SelectAnyImm0(SDValue &N, SDValue &R) {
-  return SelectAnyImmediate(N, R, 0);
+  return SelectAnyImmediate(N, R, Align(1));
 }
 inline bool HexagonDAGToDAGISel::SelectAnyImm1(SDValue &N, SDValue &R) {
-  return SelectAnyImmediate(N, R, 1);
+  return SelectAnyImmediate(N, R, Align(2));
 }
 inline bool HexagonDAGToDAGISel::SelectAnyImm2(SDValue &N, SDValue &R) {
-  return SelectAnyImmediate(N, R, 2);
+  return SelectAnyImmediate(N, R, Align(4));
 }
 inline bool HexagonDAGToDAGISel::SelectAnyImm3(SDValue &N, SDValue &R) {
-  return SelectAnyImmediate(N, R, 3);
+  return SelectAnyImmediate(N, R, Align(8));
 }
 
 inline bool HexagonDAGToDAGISel::SelectAnyInt(SDValue &N, SDValue &R) {
@@ -1348,17 +1348,13 @@ inline bool HexagonDAGToDAGISel::SelectAnyInt(SDValue &N, SDValue &R) {
 }
 
 bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
-                                             uint32_t LogAlign) {
-  auto IsAligned = [LogAlign] (uint64_t V) -> bool {
-    return alignTo(V, (uint64_t)1 << LogAlign) == V;
-  };
-
+                                             Align Alignment) {
   switch (N.getOpcode()) {
   case ISD::Constant: {
     if (N.getValueType() != MVT::i32)
       return false;
     int32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
-    if (!IsAligned(V))
+    if (!isAligned(Alignment, V))
       return false;
     R = CurDAG->getTargetConstant(V, SDLoc(N), N.getValueType());
     return true;
@@ -1366,37 +1362,34 @@ bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
   case HexagonISD::JT:
   case HexagonISD::CP:
     // These are assumed to always be aligned at least 8-byte boundary.
-    if (LogAlign > 3)
+    if (Alignment > Align(8))
       return false;
     R = N.getOperand(0);
     return true;
   case ISD::ExternalSymbol:
     // Symbols may be aligned at any boundary.
-    if (LogAlign > 0)
+    if (Alignment > Align(1))
       return false;
     R = N;
     return true;
   case ISD::BlockAddress:
     // Block address is always aligned at least 4-byte boundary.
-    if (LogAlign > 2 || !IsAligned(cast<BlockAddressSDNode>(N)->getOffset()))
+    if (Alignment > Align(4) ||
+        !isAligned(Alignment, cast<BlockAddressSDNode>(N)->getOffset()))
       return false;
     R = N;
     return true;
   }
 
-  if (SelectGlobalAddress(N, R, false, LogAlign) ||
-      SelectGlobalAddress(N, R, true, LogAlign))
+  if (SelectGlobalAddress(N, R, false, Alignment) ||
+      SelectGlobalAddress(N, R, true, Alignment))
     return true;
 
   return false;
 }
 
 bool HexagonDAGToDAGISel::SelectGlobalAddress(SDValue &N, SDValue &R,
-                                              bool UseGP, uint32_t LogAlign) {
-  auto IsAligned = [LogAlign] (uint64_t V) -> bool {
-    return alignTo(V, (uint64_t)1 << LogAlign) == V;
-  };
-
+                                              bool UseGP, Align Alignment) {
   switch (N.getOpcode()) {
   case ISD::ADD: {
     SDValue N0 = N.getOperand(0);
@@ -1407,10 +1400,9 @@ bool HexagonDAGToDAGISel::SelectGlobalAddress(SDValue &N, SDValue &R,
     if (!UseGP && GAOpc != HexagonISD::CONST32)
       return false;
     if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N1)) {
-      SDValue Addr = N0.getOperand(0);
-      // For the purpose of alignment, sextvalue and zextvalue are the same.
-      if (!IsAligned(Const->getZExtValue()))
+      if (!isAligned(Alignment, Const->getZExtValue()))
         return false;
+      SDValue Addr = N0.getOperand(0);
       if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Addr)) {
         if (GA->getOpcode() == ISD::TargetGlobalAddress) {
           uint64_t NewOff = GA->getOffset() + (uint64_t)Const->getSExtValue();

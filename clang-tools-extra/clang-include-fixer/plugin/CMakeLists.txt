@@ -10,4 +10,7 @@ add_clang_library(clangIncludeFixerPlugin
   clangSema
   clangTooling
   ${LLVM_PTHREAD_LIB}
+
+  DEPENDS
+  omp_gen
   )

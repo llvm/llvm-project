@@ -41,7 +41,7 @@ void TestMemRefBoundCheck::runOnFunction() {
         .Case<AffineReadOpInterface, AffineWriteOpInterface>(
             [](auto op) { boundCheckLoadOrStoreOp(op); });
 
-    // TODO(bondhugula): do this for DMA ops as well.
+    // TODO: do this for DMA ops as well.
   });
 }
 

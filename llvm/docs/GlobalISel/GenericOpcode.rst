@@ -294,7 +294,7 @@ G_PTRMASK
 
 Zero out an arbitrary mask of bits of a pointer. The mask type must be
 an integer, and the number of vector elements must match for all
-operands. This corresponds to :ref:`i_intr_llvm_ptrmask`.
+operands. This corresponds to `i_intr_llvm_ptrmask`.
 
 .. code-block:: none
 

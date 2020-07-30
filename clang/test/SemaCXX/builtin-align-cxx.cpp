@@ -37,7 +37,7 @@ void test() {
   // expected-note@-1{{in instantiation of function template specialization 'test_templated_arguments<int, 7, 16>'}}
 }
 
-template <typename T>
+template <typename T, long ArraySize>
 void test_incorrect_alignment_without_instatiation(T value) {
   int array[32];
   static_assert(__is_same(decltype(__builtin_align_up(array, 31)), int *), // expected-error{{requested alignment is not a power of 2}}
@@ -52,6 +52,10 @@ void test_incorrect_alignment_without_instatiation(T value) {
   __builtin_align_up(array, 31);   // expected-error{{requested alignment is not a power of 2}}
   __builtin_align_up(value, 31);   // This shouldn't want since the type is dependent
   __builtin_align_up(value);       // Same here
+
+  __builtin_align_up(array, sizeof(sizeof(value)) - 1); // expected-error{{requested alignment is not a power of 2}}
+  __builtin_align_up(array, value); // no diagnostic as the alignment is value dependent.
+  (void)__builtin_align_up(array, ArraySize); // The same above here
 }
 
 // The original fix for the issue above broke some legitimate code.

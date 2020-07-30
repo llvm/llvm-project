@@ -123,7 +123,7 @@ struct LTOCodeGenerator {
   /// name is misleading).  This function should be called before
   /// LTOCodeGenerator::compilexxx(), and
   /// LTOCodeGenerator::writeMergedModules().
-  void setCodeGenDebugOptions(ArrayRef<const char *> Opts);
+  void setCodeGenDebugOptions(ArrayRef<StringRef> Opts);
 
   /// Parse the options set in setCodeGenDebugOptions.
   ///

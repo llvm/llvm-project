@@ -69,7 +69,7 @@ class X86InterleavedAccessGroup {
 
   /// Breaks down a vector \p 'Inst' of N elements into \p NumSubVectors
   /// sub vectors of type \p T. Returns the sub-vectors in \p DecomposedVectors.
-  void decompose(Instruction *Inst, unsigned NumSubVectors, VectorType *T,
+  void decompose(Instruction *Inst, unsigned NumSubVectors, FixedVectorType *T,
                  SmallVectorImpl<Instruction *> &DecomposedVectors);
 
   /// Performs matrix transposition on a 4x4 matrix \p InputVectors and
@@ -165,7 +165,7 @@ bool X86InterleavedAccessGroup::isSupported() const {
 }
 
 void X86InterleavedAccessGroup::decompose(
-    Instruction *VecInst, unsigned NumSubVectors, VectorType *SubVecTy,
+    Instruction *VecInst, unsigned NumSubVectors, FixedVectorType *SubVecTy,
     SmallVectorImpl<Instruction *> &DecomposedVectors) {
   assert((isa<LoadInst>(VecInst) || isa<ShuffleVectorInst>(VecInst)) &&
          "Expected Load or Shuffle");
@@ -727,13 +727,13 @@ void X86InterleavedAccessGroup::transpose_4x4(
 bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
   SmallVector<Instruction *, 4> DecomposedVectors;
   SmallVector<Value *, 4> TransposedVectors;
-  VectorType *ShuffleTy = Shuffles[0]->getType();
+  auto *ShuffleTy = cast<FixedVectorType>(Shuffles[0]->getType());
 
   if (isa<LoadInst>(Inst)) {
     // Try to generate target-sized register(/instruction).
     decompose(Inst, Factor, ShuffleTy, DecomposedVectors);
 
-    auto *ShuffleEltTy = cast<VectorType>(Inst->getType());
+    auto *ShuffleEltTy = cast<FixedVectorType>(Inst->getType());
     unsigned NumSubVecElems = ShuffleEltTy->getNumElements() / Factor;
     // Perform matrix-transposition in order to compute interleaved
     // results by generating some sort of (optimized) target-specific
@@ -832,7 +832,8 @@ bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
 
-  assert(SVI->getType()->getNumElements() % Factor == 0 &&
+  assert(cast<FixedVectorType>(SVI->getType())->getNumElements() % Factor ==
+             0 &&
          "Invalid interleaved store");
 
   // Holds the indices of SVI that correspond to the starting index of each

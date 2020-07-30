@@ -109,6 +109,11 @@ static cl::opt<bool> AlignLoads("hexagon-align-loads",
   cl::Hidden, cl::init(false),
   cl::desc("Rewrite unaligned loads as a pair of aligned loads"));
 
+static cl::opt<bool>
+    DisableArgsMinAlignment("hexagon-disable-args-min-alignment", cl::Hidden,
+                            cl::init(false),
+                            cl::desc("Disable minimum alignment of 1 for "
+                                     "arguments passed by value on stack"));
 
 namespace {
 
@@ -401,6 +406,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (Subtarget.useHVXOps())
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_HVX);
+  else if (DisableArgsMinAlignment)
+    CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
 
@@ -762,6 +769,8 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
   if (Subtarget.useHVXOps())
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_HVX);
+  else if (DisableArgsMinAlignment)
+    CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon);
 
@@ -1981,8 +1990,7 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // The offset value comes through Modifier register. For now, assume the
     // offset is 0.
     Info.offset = 0;
-    Info.align =
-        MaybeAlign(DL.getABITypeAlignment(Info.memVT.getTypeForEVT(Cont)));
+    Info.align = DL.getABITypeAlign(Info.memVT.getTypeForEVT(Cont));
     Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
@@ -3269,12 +3277,12 @@ bool HexagonTargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // The type Ty passed here would then be "void". Skip the alignment
     // checks, but do not return false right away, since that confuses
     // LSR into crashing.
-    unsigned A = DL.getABITypeAlignment(Ty);
+    Align A = DL.getABITypeAlign(Ty);
     // The base offset must be a multiple of the alignment.
-    if ((AM.BaseOffs % A) != 0)
+    if (!isAligned(A, AM.BaseOffs))
       return false;
     // The shifted offset must fit in 11 bits.
-    if (!isInt<11>(AM.BaseOffs >> Log2_32(A)))
+    if (!isInt<11>(AM.BaseOffs >> Log2(A)))
       return false;
   }
 
@@ -3385,12 +3393,12 @@ EVT HexagonTargetLowering::getOptimalMemOpType(
   return MVT::Other;
 }
 
-bool HexagonTargetLowering::allowsMemoryAccess(LLVMContext &Context,
-      const DataLayout &DL, EVT VT, unsigned AddrSpace, unsigned Alignment,
-      MachineMemOperand::Flags Flags, bool *Fast) const {
+bool HexagonTargetLowering::allowsMemoryAccess(
+    LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
+    Align Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
   MVT SVT = VT.getSimpleVT();
   if (Subtarget.isHVXVectorType(SVT, true))
-    return allowsHvxMemoryAccess(SVT, Alignment, Flags, Fast);
+    return allowsHvxMemoryAccess(SVT, Flags, Fast);
   return TargetLoweringBase::allowsMemoryAccess(
               Context, DL, VT, AddrSpace, Alignment, Flags, Fast);
 }
@@ -3400,7 +3408,7 @@ bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(
       MachineMemOperand::Flags Flags, bool *Fast) const {
   MVT SVT = VT.getSimpleVT();
   if (Subtarget.isHVXVectorType(SVT, true))
-    return allowsHvxMisalignedMemoryAccesses(SVT, Alignment, Flags, Fast);
+    return allowsHvxMisalignedMemoryAccesses(SVT, Flags, Fast);
   if (Fast)
     *Fast = false;
   return false;

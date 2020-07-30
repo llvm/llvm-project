@@ -11,7 +11,7 @@ define i32 @basic(i1 %cond_0, i32* %p) {
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTRET]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[RETURN:%.*]], label [[DEOPT]], !prof !0
 ; CHECK:       return:
@@ -84,7 +84,7 @@ define i32 @basic_swapped_branch(i1 %cond_0, i32* %p) {
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTRET]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[DEOPT]], label [[RETURN:%.*]], !prof !0
 ; CHECK:       return:
@@ -324,7 +324,7 @@ define i32 @neg_correlated(i1 %cond_0, i1 %cond_1, i32* %p) {
 ; CHECK-NEXT:    [[DEOPTRET2:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTRET2]]
 ; CHECK:       guarded2:
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[RETURN:%.*]], label [[DEOPT3:%.*]], !prof !0
 ; CHECK:       deopt3:
@@ -372,7 +372,7 @@ define i32 @trivial_wb(i1 %cond_0, i32* %p) {
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTRET]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[RETURN:%.*]], label [[DEOPT]], !prof !0
 ; CHECK:       return:
@@ -410,7 +410,7 @@ define i32 @swapped_wb(i1 %cond_0, i32* %p) {
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTRET]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[RETURN:%.*]], label [[DEOPT]], !prof !0
 ; CHECK:       return:

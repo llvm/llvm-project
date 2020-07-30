@@ -39,7 +39,7 @@ def GPU_Dialect : Dialect {
 
     /// Returns the number of workgroup (thread, block) dimensions supported in
     /// the GPU dialect.
-    // TODO(zinenko,herhut): consider generalizing this.
+    // TODO: consider generalizing this.
     static unsigned getNumWorkgroupDimensions() { return 3; }
 
     /// Returns the numeric value used to identify the workgroup memory address

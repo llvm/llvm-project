@@ -1,5 +1,5 @@
 # RUN: Kaleidoscope-Ch4 < %s 2>&1 | FileCheck %s
-# REQUIRES: default_target
+# REQUIRES: default_triple
 
 # Test basic definition, binding, and execution.
 def foo(x) x + 1;

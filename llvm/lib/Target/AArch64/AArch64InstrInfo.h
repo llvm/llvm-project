@@ -442,7 +442,7 @@ enum FalseLaneType {
 
 int getSVEPseudoMap(uint16_t Opcode);
 int getSVERevInstr(uint16_t Opcode);
-int getSVEOrigInstr(uint16_t Opcode);
+int getSVENonRevInstr(uint16_t Opcode);
 }
 
 } // end namespace llvm

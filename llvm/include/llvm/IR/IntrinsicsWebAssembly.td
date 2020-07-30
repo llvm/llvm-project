@@ -207,20 +207,6 @@ def int_wasm_nearest :
             [IntrNoMem, IntrSpeculatable]>;
 
 //===----------------------------------------------------------------------===//
-// Bulk memory intrinsics
-//===----------------------------------------------------------------------===//
-
-def int_wasm_memory_init :
-  Intrinsic<[],
-            [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrWriteMem, IntrInaccessibleMemOrArgMemOnly, WriteOnly<ArgIndex<2>>,
-             IntrHasSideEffects, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
-def int_wasm_data_drop :
-  Intrinsic<[],
-            [llvm_i32_ty],
-            [IntrNoDuplicate, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
-
-//===----------------------------------------------------------------------===//
 // Thread-local storage intrinsics
 //===----------------------------------------------------------------------===//
 

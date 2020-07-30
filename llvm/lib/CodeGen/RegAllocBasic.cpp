@@ -100,8 +100,8 @@ public:
     return LI;
   }
 
-  unsigned selectOrSplit(LiveInterval &VirtReg,
-                         SmallVectorImpl<unsigned> &SplitVRegs) override;
+  Register selectOrSplit(LiveInterval &VirtReg,
+                         SmallVectorImpl<Register> &SplitVRegs) override;
 
   /// Perform register allocation.
   bool runOnMachineFunction(MachineFunction &mf) override;
@@ -114,8 +114,8 @@ public:
   // Helper for spilling all live virtual registers currently unified under preg
   // that interfere with the most recently queried lvr.  Return true if spilling
   // was successful, and append any new spilled/split intervals to splitLVRs.
-  bool spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
-                          SmallVectorImpl<unsigned> &SplitVRegs);
+  bool spillInterferences(LiveInterval &VirtReg, Register PhysReg,
+                          SmallVectorImpl<Register> &SplitVRegs);
 
   static char ID;
 };
@@ -201,8 +201,8 @@ void RABasic::releaseMemory() {
 // Spill or split all live virtual registers currently unified under PhysReg
 // that interfere with VirtReg. The newly spilled or split live intervals are
 // returned by appending them to SplitVRegs.
-bool RABasic::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
-                                 SmallVectorImpl<unsigned> &SplitVRegs) {
+bool RABasic::spillInterferences(LiveInterval &VirtReg, Register PhysReg,
+                                 SmallVectorImpl<Register> &SplitVRegs) {
   // Record each interference and determine if all are spillable before mutating
   // either the union or live intervals.
   SmallVector<LiveInterval*, 8> Intfs;
@@ -253,14 +253,14 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
 // |vregs| * |machineregs|. And since the number of interference tests is
 // minimal, there is no value in caching them outside the scope of
 // selectOrSplit().
-unsigned RABasic::selectOrSplit(LiveInterval &VirtReg,
-                                SmallVectorImpl<unsigned> &SplitVRegs) {
+Register RABasic::selectOrSplit(LiveInterval &VirtReg,
+                                SmallVectorImpl<Register> &SplitVRegs) {
   // Populate a list of physical register spill candidates.
-  SmallVector<unsigned, 8> PhysRegSpillCands;
+  SmallVector<Register, 8> PhysRegSpillCands;
 
   // Check for an available register in this class.
   AllocationOrder Order(VirtReg.reg, *VRM, RegClassInfo, Matrix);
-  while (unsigned PhysReg = Order.next()) {
+  while (Register PhysReg = Order.next()) {
     // Check for interference in PhysReg
     switch (Matrix->checkInterference(VirtReg, PhysReg)) {
     case LiveRegMatrix::IK_Free:
@@ -279,7 +279,7 @@ unsigned RABasic::selectOrSplit(LiveInterval &VirtReg,
   }
 
   // Try to spill another interfering reg with less spill weight.
-  for (SmallVectorImpl<unsigned>::iterator PhysRegI = PhysRegSpillCands.begin(),
+  for (SmallVectorImpl<Register>::iterator PhysRegI = PhysRegSpillCands.begin(),
        PhysRegE = PhysRegSpillCands.end(); PhysRegI != PhysRegE; ++PhysRegI) {
     if (!spillInterferences(VirtReg, *PhysRegI, SplitVRegs))
       continue;

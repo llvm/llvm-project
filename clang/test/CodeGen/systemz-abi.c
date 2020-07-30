@@ -155,6 +155,17 @@ struct agg_nofloat3 pass_agg_nofloat3(struct agg_nofloat3 arg) { return arg; }
 // CHECK-LABEL: define void @pass_agg_nofloat3(%struct.agg_nofloat3* noalias sret align 4 %{{.*}}, i32 %{{.*}})
 
 
+// Union types likewise are *not* float-like aggregate types
+
+union union_float { float a; };
+union union_float pass_union_float(union union_float arg) { return arg; }
+// CHECK-LABEL: define void @pass_union_float(%union.union_float* noalias sret align 4 %{{.*}}, i32 %{{.*}})
+
+union union_double { double a; };
+union union_double pass_union_double(union union_double arg) { return arg; }
+// CHECK-LABEL: define void @pass_union_double(%union.union_double* noalias sret align 8 %{{.*}}, i64 %{{.*}})
+
+
 // Accessing variable argument lists
 
 int va_int(__builtin_va_list l) { return __builtin_va_arg(l, int); }

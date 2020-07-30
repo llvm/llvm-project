@@ -98,6 +98,8 @@ public:
     return getParser().parseOptionalToken(T);
   }
 
+  bool ParseDirectiveCGProfile(StringRef, SMLoc);
+
   bool check(bool P, const Twine &Msg) {
     return getParser().check(P, Msg);
   }

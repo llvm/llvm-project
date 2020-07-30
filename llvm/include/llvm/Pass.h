@@ -203,14 +203,17 @@ public:
   template<typename AnalysisType>
   AnalysisType &getAnalysis() const; // Defined in PassAnalysisSupport.h
 
-  template<typename AnalysisType>
-  AnalysisType &getAnalysis(Function &F); // Defined in PassAnalysisSupport.h
+  template <typename AnalysisType>
+  AnalysisType &
+  getAnalysis(Function &F,
+              bool *Changed = nullptr); // Defined in PassAnalysisSupport.h
 
   template<typename AnalysisType>
   AnalysisType &getAnalysisID(AnalysisID PI) const;
 
-  template<typename AnalysisType>
-  AnalysisType &getAnalysisID(AnalysisID PI, Function &F);
+  template <typename AnalysisType>
+  AnalysisType &getAnalysisID(AnalysisID PI, Function &F,
+                              bool *Changed = nullptr);
 };
 
 //===----------------------------------------------------------------------===//

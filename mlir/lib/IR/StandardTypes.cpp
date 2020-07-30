@@ -72,11 +72,11 @@ bool Type::isUnsignedInteger(unsigned width) {
 }
 
 bool Type::isSignlessIntOrIndex() {
-  return isa<IndexType>() || isSignlessInteger();
+  return isSignlessInteger() || isa<IndexType>();
 }
 
 bool Type::isSignlessIntOrIndexOrFloat() {
-  return isa<IndexType>() || isSignlessInteger() || isa<FloatType>();
+  return isSignlessInteger() || isa<IndexType, FloatType>();
 }
 
 bool Type::isSignlessIntOrFloat() {
@@ -85,7 +85,7 @@ bool Type::isSignlessIntOrFloat() {
 
 bool Type::isIntOrIndex() { return isa<IntegerType>() || isIndex(); }
 
-bool Type::isIntOrFloat() { return isa<IntegerType>() || isa<FloatType>(); }
+bool Type::isIntOrFloat() { return isa<IntegerType, FloatType>(); }
 
 bool Type::isIntOrIndexOrFloat() { return isIntOrFloat() || isIndex(); }
 
@@ -200,7 +200,7 @@ int64_t ShapedType::getNumElements() const {
 int64_t ShapedType::getRank() const { return getShape().size(); }
 
 bool ShapedType::hasRank() const {
-  return !isa<UnrankedMemRefType>() && !isa<UnrankedTensorType>();
+  return !isa<UnrankedMemRefType, UnrankedTensorType>();
 }
 
 int64_t ShapedType::getDimSize(unsigned idx) const {
@@ -233,7 +233,7 @@ int64_t ShapedType::getSizeInBits() const {
   // Tensors can have vectors and other tensors as elements, other shaped types
   // cannot.
   assert(isa<TensorType>() && "unsupported element type");
-  assert((elementType.isa<VectorType>() || elementType.isa<TensorType>()) &&
+  assert((elementType.isa<VectorType, TensorType>()) &&
          "unsupported tensor element type");
   return getNumElements() * elementType.cast<ShapedType>().getSizeInBits();
 }
@@ -398,8 +398,8 @@ MemRefType MemRefType::getImpl(ArrayRef<int64_t> shape, Type elementType,
   auto *context = elementType.getContext();
 
   // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>() &&
-      !elementType.isa<ComplexType>())
+  if (!elementType.isIntOrFloat() &&
+      !elementType.isa<VectorType, ComplexType>())
     return emitOptionalError(location, "invalid memref element type"),
            MemRefType();
 
@@ -476,8 +476,8 @@ LogicalResult
 UnrankedMemRefType::verifyConstructionInvariants(Location loc, Type elementType,
                                                  unsigned memorySpace) {
   // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>() &&
-      !elementType.isa<ComplexType>())
+  if (!elementType.isIntOrFloat() &&
+      !elementType.isa<VectorType, ComplexType>())
     return emitError(loc, "invalid memref element type");
   return success();
 }
@@ -550,7 +550,7 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   // For now strides are only computed on a single affine map with a single
   // result (i.e. the closed subset of linearization maps that are compatible
   // with striding semantics).
-  // TODO(ntv): support more forms on a per-need basis.
+  // TODO: support more forms on a per-need basis.
   if (affineMaps.size() > 1)
     return failure();
   if (affineMaps.size() == 1 && affineMaps[0].getNumResults() != 1)
@@ -597,8 +597,8 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
 
   /// In practice, a strided memref must be internally non-aliasing. Test
   /// against 0 as a proxy.
-  /// TODO(ntv) static cases can have more advanced checks.
-  /// TODO(ntv) dynamic cases would require a way to compare symbolic
+  /// TODO: static cases can have more advanced checks.
+  /// TODO: dynamic cases would require a way to compare symbolic
   /// expressions and would probably need an affine set context propagated
   /// everywhere.
   if (llvm::any_of(strides, [](AffineExpr e) {

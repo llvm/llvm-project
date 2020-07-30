@@ -40,7 +40,7 @@ def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
       [DeclareOpInterfaceMethods<TestOpInterface, ["default_foo"]>]>;
 
 // DECL-LABEL: TestOpInterfaceInterfaceTraits
-// DECL: class TestOpInterface : public OpInterface<TestOpInterface, detail::TestOpInterfaceInterfaceTraits>
+// DECL: class TestOpInterface : public ::mlir::OpInterface<TestOpInterface, detail::TestOpInterfaceInterfaceTraits>
 // DECL: int foo(int input);
 
 // DECL-NOT: TestOpInterface

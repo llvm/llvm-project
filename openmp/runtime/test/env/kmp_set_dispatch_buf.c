@@ -1,9 +1,15 @@
-// RUN: %libomp-compile && env KMP_DISP_NUM_BUFFERS=0 %libomp-run
-// RUN: env KMP_DISP_NUM_BUFFERS=1 %libomp-run && env KMP_DISP_NUM_BUFFERS=3 %libomp-run
-// RUN: env KMP_DISP_NUM_BUFFERS=4 %libomp-run && env KMP_DISP_NUM_BUFFERS=7 %libomp-run
-// RUN: %libomp-compile -DMY_SCHEDULE=guided && env KMP_DISP_NUM_BUFFERS=1 %libomp-run
-// RUN: env KMP_DISP_NUM_BUFFERS=3 %libomp-run && env KMP_DISP_NUM_BUFFERS=4 %libomp-run
+// RUN: %libomp-compile
+// RUN: env KMP_DISP_NUM_BUFFERS=0 %libomp-run
+// RUN: env KMP_DISP_NUM_BUFFERS=1 %libomp-run
+// RUN: env KMP_DISP_NUM_BUFFERS=3 %libomp-run
+// RUN: env KMP_DISP_NUM_BUFFERS=4 %libomp-run
 // RUN: env KMP_DISP_NUM_BUFFERS=7 %libomp-run
+// RUN: %libomp-compile -DMY_SCHEDULE=guided
+// RUN: env KMP_DISP_NUM_BUFFERS=1 %libomp-run
+// RUN: env KMP_DISP_NUM_BUFFERS=3 %libomp-run
+// RUN: env KMP_DISP_NUM_BUFFERS=4 %libomp-run
+// RUN: env KMP_DISP_NUM_BUFFERS=7 %libomp-run
+// UNSUPPORTED: clang-11
 #include <stdio.h>
 #include <omp.h>
 #include <stdlib.h>

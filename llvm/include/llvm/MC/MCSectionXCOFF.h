@@ -36,13 +36,15 @@ class MCSectionXCOFF final : public MCSection {
   XCOFF::SymbolType Type;
   XCOFF::StorageClass StorageClass;
   MCSymbolXCOFF *const QualName;
+  StringRef SymbolTableName;
   static constexpr unsigned DefaultAlignVal = 4;
 
   MCSectionXCOFF(StringRef Name, XCOFF::StorageMappingClass SMC,
                  XCOFF::SymbolType ST, XCOFF::StorageClass SC, SectionKind K,
-                 MCSymbolXCOFF *QualName, MCSymbol *Begin)
+                 MCSymbolXCOFF *QualName, MCSymbol *Begin,
+                 StringRef SymbolTableName)
       : MCSection(SV_XCOFF, Name, K, Begin), MappingClass(SMC), Type(ST),
-        StorageClass(SC), QualName(QualName) {
+        StorageClass(SC), QualName(QualName), SymbolTableName(SymbolTableName) {
     assert((ST == XCOFF::XTY_SD || ST == XCOFF::XTY_CM || ST == XCOFF::XTY_ER) &&
            "Invalid or unhandled type for csect.");
     assert(QualName != nullptr && "QualName is needed.");
@@ -72,6 +74,7 @@ public:
                             const MCExpr *Subsection) const override;
   bool UseCodeAlign() const override;
   bool isVirtualSection() const override;
+  StringRef getSymbolTableName() const { return SymbolTableName; }
 };
 
 } // end namespace llvm

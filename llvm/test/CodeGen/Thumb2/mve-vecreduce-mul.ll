@@ -16,12 +16,12 @@ entry:
 define arm_aapcs_vfpcc i32 @mul_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: mul_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -33,12 +33,12 @@ define arm_aapcs_vfpcc i32 @mul_v8i32(<8 x i32> %x) {
 ; CHECK-LABEL: mul_v8i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmul.i32 q0, q0, q1
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -49,12 +49,12 @@ entry:
 define arm_aapcs_vfpcc i16 @mul_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: mul_v4i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -65,20 +65,14 @@ entry:
 define arm_aapcs_vfpcc i16 @mul_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: mul_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r0, q0[1]
-; CHECK-NEXT:    vmov.u16 r1, q0[0]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[2]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[3]
-; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    vrev32.16 q1, q0
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    vmov.u16 r0, q0[6]
 ; CHECK-NEXT:    vmov.u16 r1, q0[4]
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[5]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[6]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[7]
+; CHECK-NEXT:    vmov.u16 r1, q0[2]
+; CHECK-NEXT:    vmov.u16 r2, q0[0]
+; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -90,20 +84,14 @@ define arm_aapcs_vfpcc i16 @mul_v16i16(<16 x i16> %x) {
 ; CHECK-LABEL: mul_v16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmul.i16 q0, q0, q1
-; CHECK-NEXT:    vmov.u16 r0, q0[1]
-; CHECK-NEXT:    vmov.u16 r1, q0[0]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[2]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[3]
-; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    vrev32.16 q1, q0
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    vmov.u16 r0, q0[6]
 ; CHECK-NEXT:    vmov.u16 r1, q0[4]
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[5]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[6]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[7]
+; CHECK-NEXT:    vmov.u16 r1, q0[2]
+; CHECK-NEXT:    vmov.u16 r2, q0[0]
+; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -114,20 +102,14 @@ entry:
 define arm_aapcs_vfpcc i8 @mul_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: mul_v8i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r0, q0[1]
-; CHECK-NEXT:    vmov.u16 r1, q0[0]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[2]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[3]
-; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    vrev32.16 q1, q0
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    vmov.u16 r0, q0[6]
 ; CHECK-NEXT:    vmov.u16 r1, q0[4]
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[5]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[6]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q0[7]
+; CHECK-NEXT:    vmov.u16 r1, q0[2]
+; CHECK-NEXT:    vmov.u16 r2, q0[0]
+; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -138,36 +120,16 @@ entry:
 define arm_aapcs_vfpcc i8 @mul_v16i8(<16 x i8> %x) {
 ; CHECK-LABEL: mul_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u8 r0, q0[1]
-; CHECK-NEXT:    vmov.u8 r1, q0[0]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[2]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[3]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[4]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[5]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[6]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[7]
-; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    vrev16.8 q1, q0
+; CHECK-NEXT:    vmul.i8 q0, q0, q1
+; CHECK-NEXT:    vrev32.8 q1, q0
+; CHECK-NEXT:    vmul.i8 q0, q0, q1
+; CHECK-NEXT:    vmov.u8 r0, q0[12]
 ; CHECK-NEXT:    vmov.u8 r1, q0[8]
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[9]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[10]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[11]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[12]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[13]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[14]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[15]
+; CHECK-NEXT:    vmov.u8 r1, q0[4]
+; CHECK-NEXT:    vmov.u8 r2, q0[0]
+; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -179,36 +141,16 @@ define arm_aapcs_vfpcc i8 @mul_v32i8(<32 x i8> %x) {
 ; CHECK-LABEL: mul_v32i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmul.i8 q0, q0, q1
-; CHECK-NEXT:    vmov.u8 r0, q0[1]
-; CHECK-NEXT:    vmov.u8 r1, q0[0]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[2]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[3]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[4]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[5]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[6]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[7]
-; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    vrev16.8 q1, q0
+; CHECK-NEXT:    vmul.i8 q0, q0, q1
+; CHECK-NEXT:    vrev32.8 q1, q0
+; CHECK-NEXT:    vmul.i8 q0, q0, q1
+; CHECK-NEXT:    vmov.u8 r0, q0[12]
 ; CHECK-NEXT:    vmov.u8 r1, q0[8]
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[9]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[10]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[11]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[12]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[13]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[14]
-; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    vmov.u8 r1, q0[15]
+; CHECK-NEXT:    vmov.u8 r1, q0[4]
+; CHECK-NEXT:    vmov.u8 r2, q0[0]
+; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -286,12 +228,12 @@ entry:
 define arm_aapcs_vfpcc i32 @mul_v4i32_acc(<4 x i32> %x, i32 %y) {
 ; CHECK-LABEL: mul_v4i32_acc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    muls r1, r2, r1
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
+; CHECK-NEXT:    muls r2, r3, r2
 ; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
@@ -305,12 +247,12 @@ define arm_aapcs_vfpcc i32 @mul_v8i32_acc(<8 x i32> %x, i32 %y) {
 ; CHECK-LABEL: mul_v8i32_acc:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmul.i32 q0, q0, q1
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    muls r1, r2, r1
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
+; CHECK-NEXT:    muls r2, r3, r2
 ; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
@@ -323,12 +265,12 @@ entry:
 define arm_aapcs_vfpcc i16 @mul_v4i16_acc(<4 x i16> %x, i16 %y) {
 ; CHECK-LABEL: mul_v4i16_acc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    muls r1, r2, r1
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
+; CHECK-NEXT:    muls r2, r3, r2
 ; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
@@ -341,20 +283,14 @@ entry:
 define arm_aapcs_vfpcc i16 @mul_v8i16_acc(<8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: mul_v8i16_acc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r1, q0[1]
-; CHECK-NEXT:    vmov.u16 r2, q0[0]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[2]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[3]
-; CHECK-NEXT:    muls r1, r2, r1
+; CHECK-NEXT:    vrev32.16 q1, q0
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    vmov.u16 r1, q0[6]
 ; CHECK-NEXT:    vmov.u16 r2, q0[4]
 ; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[5]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[6]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[7]
+; CHECK-NEXT:    vmov.u16 r2, q0[2]
+; CHECK-NEXT:    vmov.u16 r3, q0[0]
+; CHECK-NEXT:    muls r2, r3, r2
 ; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
@@ -368,20 +304,14 @@ define arm_aapcs_vfpcc i16 @mul_v16i16_acc(<16 x i16> %x, i16 %y) {
 ; CHECK-LABEL: mul_v16i16_acc:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmul.i16 q0, q0, q1
-; CHECK-NEXT:    vmov.u16 r1, q0[1]
-; CHECK-NEXT:    vmov.u16 r2, q0[0]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[2]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[3]
-; CHECK-NEXT:    muls r1, r2, r1
+; CHECK-NEXT:    vrev32.16 q1, q0
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    vmov.u16 r1, q0[6]
 ; CHECK-NEXT:    vmov.u16 r2, q0[4]
 ; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[5]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[6]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[7]
+; CHECK-NEXT:    vmov.u16 r2, q0[2]
+; CHECK-NEXT:    vmov.u16 r3, q0[0]
+; CHECK-NEXT:    muls r2, r3, r2
 ; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
@@ -394,20 +324,14 @@ entry:
 define arm_aapcs_vfpcc i8 @mul_v8i8_acc(<8 x i8> %x, i8 %y) {
 ; CHECK-LABEL: mul_v8i8_acc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r1, q0[1]
-; CHECK-NEXT:    vmov.u16 r2, q0[0]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[2]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[3]
-; CHECK-NEXT:    muls r1, r2, r1
+; CHECK-NEXT:    vrev32.16 q1, q0
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    vmov.u16 r1, q0[6]
 ; CHECK-NEXT:    vmov.u16 r2, q0[4]
 ; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[5]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[6]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u16 r2, q0[7]
+; CHECK-NEXT:    vmov.u16 r2, q0[2]
+; CHECK-NEXT:    vmov.u16 r3, q0[0]
+; CHECK-NEXT:    muls r2, r3, r2
 ; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
@@ -420,36 +344,16 @@ entry:
 define arm_aapcs_vfpcc i8 @mul_v16i8_acc(<16 x i8> %x, i8 %y) {
 ; CHECK-LABEL: mul_v16i8_acc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u8 r1, q0[1]
-; CHECK-NEXT:    vmov.u8 r2, q0[0]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[2]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[3]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[4]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[5]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[6]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[7]
-; CHECK-NEXT:    muls r1, r2, r1
+; CHECK-NEXT:    vrev16.8 q1, q0
+; CHECK-NEXT:    vmul.i8 q0, q0, q1
+; CHECK-NEXT:    vrev32.8 q1, q0
+; CHECK-NEXT:    vmul.i8 q0, q0, q1
+; CHECK-NEXT:    vmov.u8 r1, q0[12]
 ; CHECK-NEXT:    vmov.u8 r2, q0[8]
 ; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[9]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[10]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[11]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[12]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[13]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[14]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[15]
+; CHECK-NEXT:    vmov.u8 r2, q0[4]
+; CHECK-NEXT:    vmov.u8 r3, q0[0]
+; CHECK-NEXT:    muls r2, r3, r2
 ; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr
@@ -463,36 +367,16 @@ define arm_aapcs_vfpcc i8 @mul_v32i8_acc(<32 x i8> %x, i8 %y) {
 ; CHECK-LABEL: mul_v32i8_acc:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmul.i8 q0, q0, q1
-; CHECK-NEXT:    vmov.u8 r1, q0[1]
-; CHECK-NEXT:    vmov.u8 r2, q0[0]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[2]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[3]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[4]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[5]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[6]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[7]
-; CHECK-NEXT:    muls r1, r2, r1
+; CHECK-NEXT:    vrev16.8 q1, q0
+; CHECK-NEXT:    vmul.i8 q0, q0, q1
+; CHECK-NEXT:    vrev32.8 q1, q0
+; CHECK-NEXT:    vmul.i8 q0, q0, q1
+; CHECK-NEXT:    vmov.u8 r1, q0[12]
 ; CHECK-NEXT:    vmov.u8 r2, q0[8]
 ; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[9]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[10]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[11]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[12]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[13]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[14]
-; CHECK-NEXT:    muls r1, r2, r1
-; CHECK-NEXT:    vmov.u8 r2, q0[15]
+; CHECK-NEXT:    vmov.u8 r2, q0[4]
+; CHECK-NEXT:    vmov.u8 r3, q0[0]
+; CHECK-NEXT:    muls r2, r3, r2
 ; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    bx lr

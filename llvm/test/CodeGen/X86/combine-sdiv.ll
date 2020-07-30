@@ -933,26 +933,27 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ;
 ; AVX512F-LABEL: combine_vec_sdiv_by_pow2b_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512F-NEXT:    vpsraw $15, %ymm1, %ymm2
-; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,4,2,16,8,32,64,2,0,4,2,16,8,32,64,2]
-; AVX512F-NEXT:    # ymm3 = mem[0,1,0,1]
-; AVX512F-NEXT:    vpmulhuw %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vpaddw %ymm2, %ymm1, %ymm2
+; AVX512F-NEXT:    vpsraw $15, %ymm0, %ymm1
+; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,4,2,16,8,32,64,2,0,4,2,16,8,32,64,2]
+; AVX512F-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX512F-NEXT:    vpmulhuw %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
+; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
+; AVX512F-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [0,2,1,4,3,5,6,1,0,2,1,4,3,5,6,1]
+; AVX512F-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
+; AVX512F-NEXT:    vpsravd %zmm3, %zmm1, %zmm1
+; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
+; AVX512F-NEXT:    vpsraw $15, %ymm4, %ymm5
+; AVX512F-NEXT:    vpmulhuw %ymm2, %ymm5, %ymm2
+; AVX512F-NEXT:    vpaddw %ymm2, %ymm4, %ymm2
 ; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
-; AVX512F-NEXT:    vbroadcasti64x4 {{.*#+}} zmm4 = [0,2,1,4,3,5,6,1,0,2,1,4,3,5,6,1]
-; AVX512F-NEXT:    # zmm4 = mem[0,1,2,3,0,1,2,3]
-; AVX512F-NEXT:    vpsravd %zmm4, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsravd %zmm3, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpmovdw %zmm2, %ymm2
-; AVX512F-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3,4,5,6,7],ymm1[8],ymm2[9,10,11,12,13,14,15]
-; AVX512F-NEXT:    vpsraw $15, %ymm0, %ymm2
-; AVX512F-NEXT:    vpmulhuw %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vpaddw %ymm2, %ymm0, %ymm2
-; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
-; AVX512F-NEXT:    vpsravd %zmm4, %zmm2, %zmm2
-; AVX512F-NEXT:    vpmovdw %zmm2, %ymm2
-; AVX512F-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7],ymm0[8],ymm2[9,10,11,12,13,14,15]
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; AVX512F-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535]
+; AVX512F-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; AVX512F-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: combine_vec_sdiv_by_pow2b_v32i16:

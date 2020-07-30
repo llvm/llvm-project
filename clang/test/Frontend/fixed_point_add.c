@@ -413,7 +413,7 @@ void SaturatedAddition() {
   // SIGNED-NEXT: [[USA_SAT_RESIZE:%[a-z0-9]+]] = zext i16 [[USA_SAT]] to i40
   // SIGNED-NEXT: [[I_RESIZE:%[a-z0-9]+]] = sext i32 [[I]] to i40
   // SIGNED-NEXT: [[I_UPSCALE:%[a-z0-9]+]] = shl i40 [[I_RESIZE]], 8
-  // SIGNED-NEXT: [[SUM:%[0-9]+]] = call i40 @llvm.uadd.sat.i40(i40 [[USA_SAT_RESIZE]], i40 [[I_UPSCALE]])
+  // SIGNED-NEXT: [[SUM:%[0-9]+]] = call i40 @llvm.sadd.sat.i40(i40 [[USA_SAT_RESIZE]], i40 [[I_UPSCALE]])
   // SIGNED-NEXT: [[USE_MAX:%[0-9]+]] = icmp sgt i40 [[SUM]], 65535
   // SIGNED-NEXT: [[RESULT:%[a-z0-9]+]] = select i1 [[USE_MAX]], i40 65535, i40 [[SUM]]
   // SIGNED-NEXT: [[USE_MIN:%[0-9]+]] = icmp slt i40 [[RESULT]], 0
@@ -422,7 +422,7 @@ void SaturatedAddition() {
   // UNSIGNED-NEXT: [[USA_SAT_RESIZE:%[a-z0-9]+]] = zext i16 [[USA_SAT]] to i39
   // UNSIGNED-NEXT: [[I_RESIZE:%[a-z0-9]+]] = sext i32 [[I]] to i39
   // UNSIGNED-NEXT: [[I_UPSCALE:%[a-z0-9]+]] = shl i39 [[I_RESIZE]], 7
-  // UNSIGNED-NEXT: [[SUM:%[0-9]+]] = call i39 @llvm.uadd.sat.i39(i39 [[USA_SAT_RESIZE]], i39 [[I_UPSCALE]])
+  // UNSIGNED-NEXT: [[SUM:%[0-9]+]] = call i39 @llvm.sadd.sat.i39(i39 [[USA_SAT_RESIZE]], i39 [[I_UPSCALE]])
   // UNSIGNED-NEXT: [[USE_MAX:%[0-9]+]] = icmp sgt i39 [[SUM]], 32767
   // UNSIGNED-NEXT: [[RESULT:%[a-z0-9]+]] = select i1 [[USE_MAX]], i39 32767, i39 [[SUM]]
   // UNSIGNED-NEXT: [[USE_MIN:%[0-9]+]] = icmp slt i39 [[RESULT]], 0

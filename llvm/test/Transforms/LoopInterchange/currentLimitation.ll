@@ -1,8 +1,8 @@
-; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' \
+; RUN: opt < %s -basic-aa -loop-interchange -pass-remarks-missed='loop-interchange' \
 ; RUN:   -pass-remarks-output=%t -verify-loop-info -verify-dom-info -S | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --input-file=%t %s
 
-; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' \
+; RUN: opt < %s -basic-aa -loop-interchange -pass-remarks-missed='loop-interchange' \
 ; RUN:   -da-disable-delinearization-checks -pass-remarks-output=%t             \
 ; RUN:   -verify-loop-info -verify-dom-info -S | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --check-prefix=DELIN --input-file=%t %s

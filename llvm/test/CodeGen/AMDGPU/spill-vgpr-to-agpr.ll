@@ -199,7 +199,7 @@ define amdgpu_kernel void @max_10_vgprs_spill_v32(<32 x float> addrspace(1)* %p)
 ; GFX908: ScratchSize: 0
 ; GCN:    VGPRBlocks: 63
 ; GCN:    NumVGPRsForWavesPerEU: 256
-define amdgpu_kernel void @max_256_vgprs_spill_9x32(<32 x float> addrspace(1)* %p) {
+define amdgpu_kernel void @max_256_vgprs_spill_9x32(<32 x float> addrspace(1)* %p) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %p1 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p, i32 %tid
   %p2 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p1, i32 %tid
@@ -250,7 +250,7 @@ define amdgpu_kernel void @max_256_vgprs_spill_9x32(<32 x float> addrspace(1)* %
 ; GFX908-FIXME: ScratchSize: 0
 ; GCN:    VGPRBlocks: 63
 ; GCN:    NumVGPRsForWavesPerEU: 256
-define amdgpu_kernel void @max_256_vgprs_spill_9x32_2bb(<32 x float> addrspace(1)* %p) {
+define amdgpu_kernel void @max_256_vgprs_spill_9x32_2bb(<32 x float> addrspace(1)* %p) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %p1 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p, i32 %tid
   %p2 = getelementptr inbounds <32 x float>, <32 x float> addrspace(1)* %p1, i32 %tid
@@ -288,3 +288,4 @@ st:
 declare i32 @llvm.amdgcn.workitem.id.x()
 
 attributes #0 = { nounwind "amdgpu-num-vgpr"="10" }
+attributes #1 = { "amdgpu-flat-work-group-size"="1,256" }

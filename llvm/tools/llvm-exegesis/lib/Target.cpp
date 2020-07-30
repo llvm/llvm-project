@@ -68,8 +68,9 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
 }
 
 Expected<std::unique_ptr<BenchmarkRunner>>
-ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
-                                      const LLVMState &State) const {
+ExegesisTarget::createBenchmarkRunner(
+    InstructionBenchmark::ModeE Mode, const LLVMState &State,
+    InstructionBenchmark::ResultAggregationModeE ResultAggMode) const {
   PfmCountersInfo PfmCounters = State.getPfmCounters();
   switch (Mode) {
   case InstructionBenchmark::Unknown:
@@ -85,12 +86,12 @@ ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
               .concat(ModeName)
               .concat("' mode, sched model does not define a cycle counter."));
     }
-    return createLatencyBenchmarkRunner(State, Mode);
+    return createLatencyBenchmarkRunner(State, Mode, ResultAggMode);
   case InstructionBenchmark::Uops:
     if (!PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
       return make_error<Failure>("can't run 'uops' mode, sched model does not "
                                  "define uops or issue counters.");
-    return createUopsBenchmarkRunner(State);
+    return createUopsBenchmarkRunner(State, ResultAggMode);
   }
   return nullptr;
 }
@@ -106,12 +107,14 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createParallelSnippetGenerator
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
-    const LLVMState &State, InstructionBenchmark::ModeE Mode) const {
-  return std::make_unique<LatencyBenchmarkRunner>(State, Mode);
+    const LLVMState &State, InstructionBenchmark::ModeE Mode,
+    InstructionBenchmark::ResultAggregationModeE ResultAggMode) const {
+  return std::make_unique<LatencyBenchmarkRunner>(State, Mode, ResultAggMode);
 }
 
-std::unique_ptr<BenchmarkRunner>
-ExegesisTarget::createUopsBenchmarkRunner(const LLVMState &State) const {
+std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
+    const LLVMState &State,
+    InstructionBenchmark::ResultAggregationModeE /*unused*/) const {
   return std::make_unique<UopsBenchmarkRunner>(State);
 }
 

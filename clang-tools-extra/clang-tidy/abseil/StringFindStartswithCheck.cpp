@@ -12,8 +12,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/CompilerInstance.h"
-
-#include <cassert>
+#include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 
 using namespace clang::ast_matchers;
 
@@ -27,7 +27,6 @@ StringFindStartswithCheck::StringFindStartswithCheck(StringRef Name,
       StringLikeClasses(utils::options::parseStringList(
           Options.get("StringLikeClasses", "::std::basic_string"))),
       IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
-                                            utils::IncludeSorter::getMapping(),
                                             utils::IncludeSorter::IS_LLVM)),
       AbseilStringsMatchHeader(
           Options.get("AbseilStringsMatchHeader", "absl/strings/match.h")) {}
@@ -122,8 +121,7 @@ void StringFindStartswithCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StringLikeClasses",
                 utils::options::serializeStringList(StringLikeClasses));
-  Options.store(Opts, "IncludeStyle", IncludeStyle,
-                utils::IncludeSorter::getMapping());
+  Options.store(Opts, "IncludeStyle", IncludeStyle);
   Options.store(Opts, "AbseilStringsMatchHeader", AbseilStringsMatchHeader);
 }
 

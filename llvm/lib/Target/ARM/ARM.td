@@ -594,6 +594,12 @@ def ProcA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
                                    "Cortex-A75 ARM processors", []>;
 def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
                                    "Cortex-A76 ARM processors", []>;
+def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
+                                   "Cortex-A77 ARM processors", []>;
+def ProcA78     : SubtargetFeature<"cortex-a78", "ARMProcFamily", "CortexA78",
+                                   "Cortex-A78 ARM processors", []>;
+def ProcX1      : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
+                                   "Cortex-X1 ARM processors", []>;
 
 def ProcKrait   : SubtargetFeature<"krait", "ARMProcFamily", "Krait",
                                    "Qualcomm Krait processors", []>;
@@ -1217,6 +1223,30 @@ def : ProcNoItin<"cortex-a76",                          [ARMv82a, ProcA76,
                                                          FeatureDotProd]>;
 
 def : ProcNoItin<"cortex-a76ae",                        [ARMv82a, ProcA76,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureCrypto,
+                                                         FeatureCRC,
+                                                         FeatureFullFP16,
+                                                         FeatureDotProd]>;
+
+def : ProcNoItin<"cortex-a77",                          [ARMv82a, ProcA77,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureCrypto,
+                                                         FeatureCRC,
+                                                         FeatureFullFP16,
+                                                         FeatureDotProd]>;
+
+def : ProcNoItin<"cortex-a78",                          [ARMv82a, ProcA78,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureCrypto,
+                                                         FeatureCRC,
+                                                         FeatureFullFP16,
+                                                         FeatureDotProd]>;
+
+def : ProcNoItin<"cortex-x1",                           [ARMv82a, ProcX1,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,

@@ -38,7 +38,7 @@ void getReachableAffineApplyOps(ArrayRef<Value> operands,
 /// used to add appropriate inequalities. Any symbols founds in the bound
 /// operands are added as symbols in the system. Returns failure for the yet
 /// unimplemented cases.
-//  TODO(bondhugula): handle non-unit strides.
+//  TODO: handle non-unit strides.
 LogicalResult getIndexSet(MutableArrayRef<AffineForOp> forOps,
                           FlatAffineConstraints *domain);
 
@@ -49,8 +49,8 @@ struct MemRefAccess {
   SmallVector<Value, 4> indices;
 
   /// Constructs a MemRefAccess from a load or store operation.
-  // TODO(b/119949820): add accessors to standard op's load, store, DMA op's to
-  // return MemRefAccess, i.e., loadOp->getAccess(), dmaOp->getRead/WriteAccess.
+  // TODO: add accessors to standard op's load, store, DMA op's to return
+  // MemRefAccess, i.e., loadOp->getAccess(), dmaOp->getRead/WriteAccess.
   explicit MemRefAccess(Operation *opInst);
 
   // Returns the rank of the memref associated with this access.
@@ -95,9 +95,9 @@ struct DependenceComponent {
 /// access the same memref element. If 'allowRAR' is true, will consider
 /// read-after-read dependences (typically used by applications trying to
 /// optimize input reuse).
-// TODO(andydavis) Wrap 'dependenceConstraints' and 'dependenceComponents' into
-// a single struct.
-// TODO(andydavis) Make 'dependenceConstraints' optional arg.
+// TODO: Wrap 'dependenceConstraints' and 'dependenceComponents' into a single
+// struct.
+// TODO: Make 'dependenceConstraints' optional arg.
 struct DependenceResult {
   enum ResultEnum {
     HasDependence, // A dependence exists between 'srcAccess' and 'dstAccess'.

@@ -7,7 +7,6 @@ set(LIBCXXABI_SOURCES
   cxa_exception_storage.cpp
   cxa_guard.cpp
   cxa_handlers.cpp
-  cxa_unexpected.cpp
   cxa_vector.cpp
   cxa_virtual.cpp
   # C++ STL files

@@ -1,0 +1,6 @@
+# RUN: cp -f %S/Inputs/on_the_fly_arg_change.c %t.c
+# RUN: %update_cc_test_checks %t.c
+# RUN: diff -u %t.c %S/Inputs/on_the_fly_arg_change.c.expected
+## Check that running the script again does not change the result:
+# RUN: %update_cc_test_checks %t.c
+# RUN: diff -u %t.c %S/Inputs/on_the_fly_arg_change.c.expected

@@ -70,26 +70,6 @@ void foo(){
 
 // COMMON-NOT: define{{.*}}@__foo_block_invoke_kernel
 
-// Test that we support block arguments.
-// COMMON-LABEL: define {{.*}} @blockArgFunc
-int blockArgFunc(int (^ bl)(void)) {
-  return bl();
-}
-
-// COMMON-LABEL: define {{.*}} @get21
-// COMMON: define {{.*}} @__get21_block_invoke
-// COMMON: ret i32 21
-int get21() {
-  return blockArgFunc(^{return 21;});
-}
-
-// COMMON-LABEL: define {{.*}} @get42
-// COMMON: define {{.*}} @__get42_block_invoke
-// COMMON: ret i32 42
-int get42() {
-  return blockArgFunc(^{return 42;});
-}
-
 // COMMON-LABEL: define {{.*}}@call_block
 // call {{.*}}@__call_block_block_invoke
 int call_block() {

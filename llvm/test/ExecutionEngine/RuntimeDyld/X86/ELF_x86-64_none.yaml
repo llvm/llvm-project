@@ -22,8 +22,8 @@ Sections:
       - Offset:          0x0000000000000000
         Type:            R_X86_64_NONE
 Symbols:
-  Global:
-    - Name: _main
-      Section: .text
-      Value: 0
-      Size: 4
+  - Name: _main
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0
+    Size: 4

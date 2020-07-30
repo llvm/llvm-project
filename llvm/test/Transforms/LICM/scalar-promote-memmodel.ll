@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -licm -S | FileCheck %s
+; RUN: opt < %s -basic-aa -licm -S | FileCheck %s
 ; RUN: opt -aa-pipeline=type-based-aa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s
 
 ; Make sure we don't hoist a conditionally-executed store out of the loop;

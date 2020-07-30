@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-detect-track-failures -polly-detect-keep-going -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-detect-track-failures -polly-detect-keep-going -polly-detect -analyze < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

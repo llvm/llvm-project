@@ -18,6 +18,7 @@
 ;	     C[i][j] += alpha * A[i][k] * B[k][j];
 ;        }
 ;
+; CHECK-LABEL: Printing analysis 'Polly - Generate an AST from the SCoP (isl)' for region: 'bb8 => bb32' in function 'kernel_gemm':
 ; CHECK:    {
 ; CHECK-NEXT:      // 1st level tiling - Tiles
 ; CHECK-NEXT:      for (int c0 = 0; c0 <= 32; c0 += 1)

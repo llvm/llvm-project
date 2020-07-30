@@ -391,8 +391,7 @@ DWARF:
         - Attribute:       DW_AT_external
           Form:            DW_FORM_flag_present
   debug_info:
-    - Length:
-        TotalLength:     113
+    - Length:          113
       Version:         4
       AbbrOffset:      0
       AddrSize:        8

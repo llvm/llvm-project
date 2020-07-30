@@ -777,7 +777,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
 
   if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
     // Add a vtable pointer, if we need one and it hasn't already been added.
-    if (CD->isDynamicClass() && !IsPrimaryBase) {
+    if (Layout.hasOwnVFPtr()) {
       llvm::Constant *VTableAddressPoint =
           CGM.getCXXABI().getVTableAddressPointForConstExpr(
               BaseSubobject(CD, Offset), VTableClass);

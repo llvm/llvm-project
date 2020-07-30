@@ -1,6 +1,7 @@
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -disable-llvm-optzns | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix SEQ
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -disable-llvm-optzns -fopenmp-cuda-parallel-target-regions | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix PAR
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -30,33 +31,35 @@ int bar(int n){
   return a;
 }
 
-// CHECK: [[MEM_TY:%.+]] = type { [128 x i8] }
-// CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
-// CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
-// CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 4
-// CHECK-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
+// SEQ: [[MEM_TY:%.+]] = type { [128 x i8] }
+// SEQ-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
+// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// SEQ-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 4
+// SEQ-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l12}}_worker()
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l13}}_worker()
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call i1 @__kmpc_kernel_parallel(
 // CHECK: call void @__omp_outlined___wrapper(
 
-// CHECK: define weak void @__omp_offloading_{{.*}}l12(
-// CHECK: call void @__omp_offloading_{{.*}}l12_worker()
+// CHECK: define weak void @__omp_offloading_{{.*}}l13(
+// CHECK: call void @__omp_offloading_{{.*}}l13_worker()
 // CHECK: call void @__kmpc_kernel_init(
 // CHECK: call void @__kmpc_data_sharing_init_stack()
-// CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
-// CHECK: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE]],
-// CHECK: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i64 %7, i16 %6, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
-// CHECK: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
-// CHECK: [[STACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
+// SEQ: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// SEQ: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE]],
+// SEQ: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i64 %7, i16 %6, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// SEQ: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
+// SEQ: [[STACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
+// PAR: [[STACK:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{32|64}} 4, i16 1)
 // CHECK: call void @__kmpc_kernel_prepare_parallel(
 // CHECK: call void @__kmpc_begin_sharing_variables({{.*}}, i64 2)
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_end_sharing_variables()
-// CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[IS_SHARED]])
+// SEQ: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// SEQ: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[IS_SHARED]])
+// PAR: call void @__kmpc_data_sharing_pop_stack(i8* [[STACK]])
 // CHECK: call void @__kmpc_kernel_deinit(i16 1)
 
 // CHECK: define internal void @__omp_outlined__(

@@ -2,6 +2,7 @@ set(files
   adxintrin.h
   altivec.h
   ammintrin.h
+  amxintrin.h
   arm_acle.h
   arm_cmse.h
   armintr.h
@@ -150,6 +151,8 @@ set(ppc_wrapper_files
 set(openmp_wrapper_files
   openmp_wrappers/math.h
   openmp_wrappers/cmath
+  openmp_wrappers/complex.h
+  openmp_wrappers/complex
   openmp_wrappers/__clang_openmp_device_functions.h
   openmp_wrappers/new
 )

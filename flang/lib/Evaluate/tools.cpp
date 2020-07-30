@@ -1003,7 +1003,7 @@ bool IsSaved(const Symbol &original) {
     } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
                block && block->attrs().test(Attr::SAVE)) {
       return true;
-    } else if (IsDummy(symbol)) {
+    } else if (IsDummy(symbol) || IsFunctionResult(symbol)) {
       return false;
     } else {
       for (; !scope->IsGlobal(); scope = &scope->parent()) {
@@ -1024,6 +1024,13 @@ bool IsDummy(const Symbol &symbol) {
           [](const HostAssocDetails &x) { return IsDummy(x.symbol()); },
           [](const auto &) { return false; }},
       symbol.details());
+}
+
+bool IsFunctionResult(const Symbol &symbol) {
+  return (symbol.has<ObjectEntityDetails>() &&
+             symbol.get<ObjectEntityDetails>().isFuncResult()) ||
+      (symbol.has<ProcEntityDetails>() &&
+          symbol.get<ProcEntityDetails>().isFuncResult());
 }
 
 int CountLenParameters(const DerivedTypeSpec &type) {

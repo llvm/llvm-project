@@ -47,6 +47,7 @@ translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
     transformer::Edit T;
     T.Range = *EditRange;
     T.Replacement = std::move(*Replacement);
+    T.Metadata = E.Metadata;
     Edits.push_back(std::move(T));
   }
   return Edits;

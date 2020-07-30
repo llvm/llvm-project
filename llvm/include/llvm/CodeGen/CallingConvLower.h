@@ -221,9 +221,7 @@ private:
   // ByValRegs[1] describes how "%t" is stored (Begin == r3, End == r4).
   //
   // In case of 8 bytes stack alignment,
-  // ByValRegs may also contain information about wasted registers.
   // In function shown above, r3 would be wasted according to AAPCS rules.
-  // And in that case ByValRegs[1].Waste would be "true".
   // ByValRegs vector size still would be 2,
   // while "%t" goes to the stack: it wouldn't be described in ByValRegs.
   //
@@ -233,19 +231,13 @@ private:
   // 3. Argument analysis (LowerFormatArguments, for example). After
   // some byval argument was analyzed, InRegsParamsProcessed is increased.
   struct ByValInfo {
-    ByValInfo(unsigned B, unsigned E, bool IsWaste = false) :
-      Begin(B), End(E), Waste(IsWaste) {}
+    ByValInfo(unsigned B, unsigned E) : Begin(B), End(E) {}
+
     // First register allocated for current parameter.
     unsigned Begin;
 
     // First after last register allocated for current parameter.
     unsigned End;
-
-    // Means that current range of registers doesn't belong to any
-    // parameters. It was wasted due to stack alignment rules.
-    // For more information see:
-    // AAPCS, 5.5 Parameter Passing, Stage C, C.3.
-    bool Waste;
   };
   SmallVector<ByValInfo, 4 > ByValRegs;
 

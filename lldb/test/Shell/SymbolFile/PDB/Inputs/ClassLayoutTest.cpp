@@ -106,6 +106,7 @@ protected:
 int main() {
   MemberTest::Base B1;
   B1.Get();
+  MemberTest::Class C1;
   MemberTest::Class::StaticMemberFunc(1, 10, 2);
   return 0;
 }

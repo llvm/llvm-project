@@ -463,7 +463,74 @@ void Constant::destroyConstant() {
   }
 
   // Value has no outstanding references it is safe to delete it now...
-  delete this;
+  deleteConstant(this);
+}
+
+void llvm::deleteConstant(Constant *C) {
+  switch (C->getValueID()) {
+  case Constant::ConstantIntVal:
+    delete static_cast<ConstantInt *>(C);
+    break;
+  case Constant::ConstantFPVal:
+    delete static_cast<ConstantFP *>(C);
+    break;
+  case Constant::ConstantAggregateZeroVal:
+    delete static_cast<ConstantAggregateZero *>(C);
+    break;
+  case Constant::ConstantArrayVal:
+    delete static_cast<ConstantArray *>(C);
+    break;
+  case Constant::ConstantStructVal:
+    delete static_cast<ConstantStruct *>(C);
+    break;
+  case Constant::ConstantVectorVal:
+    delete static_cast<ConstantVector *>(C);
+    break;
+  case Constant::ConstantPointerNullVal:
+    delete static_cast<ConstantPointerNull *>(C);
+    break;
+  case Constant::ConstantDataArrayVal:
+    delete static_cast<ConstantDataArray *>(C);
+    break;
+  case Constant::ConstantDataVectorVal:
+    delete static_cast<ConstantDataVector *>(C);
+    break;
+  case Constant::ConstantTokenNoneVal:
+    delete static_cast<ConstantTokenNone *>(C);
+    break;
+  case Constant::BlockAddressVal:
+    delete static_cast<BlockAddress *>(C);
+    break;
+  case Constant::UndefValueVal:
+    delete static_cast<UndefValue *>(C);
+    break;
+  case Constant::ConstantExprVal:
+    if (isa<UnaryConstantExpr>(C))
+      delete static_cast<UnaryConstantExpr *>(C);
+    else if (isa<BinaryConstantExpr>(C))
+      delete static_cast<BinaryConstantExpr *>(C);
+    else if (isa<SelectConstantExpr>(C))
+      delete static_cast<SelectConstantExpr *>(C);
+    else if (isa<ExtractElementConstantExpr>(C))
+      delete static_cast<ExtractElementConstantExpr *>(C);
+    else if (isa<InsertElementConstantExpr>(C))
+      delete static_cast<InsertElementConstantExpr *>(C);
+    else if (isa<ShuffleVectorConstantExpr>(C))
+      delete static_cast<ShuffleVectorConstantExpr *>(C);
+    else if (isa<ExtractValueConstantExpr>(C))
+      delete static_cast<ExtractValueConstantExpr *>(C);
+    else if (isa<InsertValueConstantExpr>(C))
+      delete static_cast<InsertValueConstantExpr *>(C);
+    else if (isa<GetElementPtrConstantExpr>(C))
+      delete static_cast<GetElementPtrConstantExpr *>(C);
+    else if (isa<CompareConstantExpr>(C))
+      delete static_cast<CompareConstantExpr *>(C);
+    else
+      llvm_unreachable("Unexpected constant expr");
+    break;
+  default:
+    llvm_unreachable("Unexpected constant");
+  }
 }
 
 static bool canTrapImpl(const Constant *C,
@@ -1518,6 +1585,27 @@ Constant *Constant::getSplatValue(bool AllowUndefs) const {
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
     return CV->getSplatValue(AllowUndefs);
+
+  // Check if this is a constant expression splat of the form returned by
+  // ConstantVector::getSplat()
+  const auto *Shuf = dyn_cast<ConstantExpr>(this);
+  if (Shuf && Shuf->getOpcode() == Instruction::ShuffleVector &&
+      isa<UndefValue>(Shuf->getOperand(1))) {
+
+    const auto *IElt = dyn_cast<ConstantExpr>(Shuf->getOperand(0));
+    if (IElt && IElt->getOpcode() == Instruction::InsertElement &&
+        isa<UndefValue>(IElt->getOperand(0))) {
+
+      ArrayRef<int> Mask = Shuf->getShuffleMask();
+      Constant *SplatVal = IElt->getOperand(1);
+      ConstantInt *Index = dyn_cast<ConstantInt>(IElt->getOperand(2));
+
+      if (Index && Index->getValue() == 0 &&
+          std::all_of(Mask.begin(), Mask.end(), [](int I) { return I == 0; }))
+        return SplatVal;
+    }
+  }
+
   return nullptr;
 }
 
@@ -2175,15 +2263,20 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   std::vector<Constant*> ArgVec;
   ArgVec.reserve(1 + Idxs.size());
   ArgVec.push_back(C);
-  for (unsigned i = 0, e = Idxs.size(); i != e; ++i) {
+  auto GTI = gep_type_begin(Ty, Idxs), GTE = gep_type_end(Ty, Idxs);
+  for (; GTI != GTE; ++GTI) {
+    auto *Idx = cast<Constant>(GTI.getOperand());
     assert(
-        (!isa<VectorType>(Idxs[i]->getType()) ||
-         cast<VectorType>(Idxs[i]->getType())->getElementCount() == EltCount) &&
+        (!isa<VectorType>(Idx->getType()) ||
+         cast<VectorType>(Idx->getType())->getElementCount() == EltCount) &&
         "getelementptr index type missmatch");
 
-    Constant *Idx = cast<Constant>(Idxs[i]);
-    if (EltCount.Min != 0 && !Idxs[i]->getType()->isVectorTy())
+    if (GTI.isStruct() && Idx->getType()->isVectorTy()) {
+      Idx = Idx->getSplatValue();
+    } else if (GTI.isSequential() && EltCount.Min != 0 &&
+               !Idx->getType()->isVectorTy()) {
       Idx = ConstantVector::getSplat(EltCount, Idx);
+    }
     ArgVec.push_back(Idx);
   }
 

@@ -1149,5 +1149,5 @@ body: |
     ; GFX6: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<2 x s128>)
     %0:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:_(<2 x s128>) = G_SEXT_INREG %0, 1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7  = COPY %1
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
 ...

@@ -18,6 +18,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTSource.h"
 #include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -874,6 +875,33 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
       RegisterImportedDecl(From, R);
       return R;
     }
+  }
+
+  // If we have a forcefully completed type, try to find an actual definition
+  // for it in other modules.
+  const ClangASTMetadata *md = m_master.GetDeclMetadata(From);
+  auto *td = dyn_cast<TagDecl>(From);
+  if (td && md && md->IsForcefullyCompleted()) {
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    LLDB_LOG(log,
+             "[ClangASTImporter] Searching for a complete definition of {0} in "
+             "other modules",
+             td->getName());
+    Expected<DeclContext *> dc_or_err = ImportContext(td->getDeclContext());
+    if (!dc_or_err)
+      return dc_or_err.takeError();
+    Expected<DeclarationName> dn_or_err = Import(td->getDeclName());
+    if (!dn_or_err)
+      return dn_or_err.takeError();
+    DeclContext *dc = *dc_or_err;
+    DeclContext::lookup_result lr = dc->lookup(*dn_or_err);
+    if (lr.size()) {
+      clang::Decl *lookup_found = lr.front();
+      RegisterImportedDecl(From, lookup_found);
+      m_decls_to_ignore.insert(lookup_found);
+      return lookup_found;
+    } else
+      LLDB_LOG(log, "[ClangASTImporter] Complete definition not found");
   }
 
   return ASTImporter::ImportImpl(From);

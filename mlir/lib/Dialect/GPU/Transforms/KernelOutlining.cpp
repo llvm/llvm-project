@@ -54,7 +54,7 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
 }
 
 static bool isSinkingBeneficiary(Operation *op) {
-  return isa<ConstantOp>(op) || isa<DimOp>(op);
+  return isa<ConstantOp, DimOp>(op);
 }
 
 LogicalResult mlir::sinkOperationsIntoLaunchOp(gpu::LaunchOp launchOp) {
@@ -156,7 +156,7 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
     map.map(operand.value(), entryBlock.getArgument(operand.index()));
 
   // Clone the region of the gpu.launch operation into the gpu.func operation.
-  // TODO(ravishankarm): If cloneInto can be modified such that if a mapping for
+  // TODO: If cloneInto can be modified such that if a mapping for
   // a block exists, that block will be used to clone operations into (at the
   // end of the block), instead of creating a new block, this would be much
   // cleaner.

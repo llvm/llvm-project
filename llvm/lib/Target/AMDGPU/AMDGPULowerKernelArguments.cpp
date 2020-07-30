@@ -109,7 +109,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
 
   for (Argument &Arg : F.args()) {
     Type *ArgTy = Arg.getType();
-    unsigned ABITypeAlign = DL.getABITypeAlignment(ArgTy);
+    Align ABITypeAlign = DL.getABITypeAlign(ArgTy);
     unsigned Size = DL.getTypeSizeInBits(ArgTy);
     unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
 

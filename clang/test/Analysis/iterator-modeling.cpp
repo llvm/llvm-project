@@ -1,12 +1,12 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=false %s -verify
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=false %s -verify -analyzer-config display-checker-name=false
 
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 %s -verify
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 %s -verify -analyzer-config display-checker-name=false
 
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -DSTD_ADVANCE_INLINE_LEVEL=0 %s -verify
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -DSTD_ADVANCE_INLINE_LEVEL=0 %s -verify -analyzer-config display-checker-name=false
 
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -DSTD_ADVANCE_INLINE_LEVEL=1 %s -verify
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -DSTD_ADVANCE_INLINE_LEVEL=1 %s -verify -analyzer-config display-checker-name=false
 
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -DSTD_ADVANCE_INLINE_LEVEL=2 %s -verify
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -DSTD_ADVANCE_INLINE_LEVEL=2 %s -verify -analyzer-config display-checker-name=false
 
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true %s 2>&1 | FileCheck %s
 
@@ -18,6 +18,7 @@ template <typename Container>
 long clang_analyzer_container_end(const Container&);
 template <typename Iterator>
 long clang_analyzer_iterator_position(const Iterator&);
+long clang_analyzer_iterator_position(int*);
 template <typename Iterator>
 void* clang_analyzer_iterator_container(const Iterator&);
 template <typename Iterator>
@@ -33,7 +34,7 @@ void begin(const std::vector<int> &v) {
 
   clang_analyzer_eval(clang_analyzer_iterator_container(i) == &v); // expected-warning{{TRUE}}
   clang_analyzer_denote(clang_analyzer_container_begin(v), "$v.begin()");
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.begin(){{$}}}}
 
   if (i != v.begin()) {
     clang_analyzer_warnIfReached();
@@ -45,7 +46,7 @@ void end(const std::vector<int> &v) {
 
   clang_analyzer_eval(clang_analyzer_iterator_container(i) == &v); // expected-warning{{TRUE}}
   clang_analyzer_denote(clang_analyzer_container_end(v), "$v.end()");
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.end(){{$}}}}
 
   if (i != v.end()) {
     clang_analyzer_warnIfReached();
@@ -59,8 +60,8 @@ void prefix_increment(const std::vector<int> &v) {
 
   auto j = ++i;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.begin() + 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.begin() + 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning-re {{$v.begin() + 1{{$}}}}
 }
 
 void prefix_decrement(const std::vector<int> &v) {
@@ -70,8 +71,8 @@ void prefix_decrement(const std::vector<int> &v) {
 
   auto j = --i;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.end() - 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.end() - 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning-re {{$v.end() - 1{{$}}}}
 }
 
 void postfix_increment(const std::vector<int> &v) {
@@ -81,8 +82,8 @@ void postfix_increment(const std::vector<int> &v) {
 
   auto j = i++;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.begin() + 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.begin() + 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning-re {{$v.begin(){{$}}}}
 }
 
 void postfix_decrement(const std::vector<int> &v) {
@@ -92,8 +93,8 @@ void postfix_decrement(const std::vector<int> &v) {
 
   auto j = i--;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.end() - 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.end() - 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning-re {{$v.end(){{$}}}}
 }
 
 void plus_equal(const std::vector<int> &v) {
@@ -103,7 +104,7 @@ void plus_equal(const std::vector<int> &v) {
 
   i += 2;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.begin() + 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.begin() + 2{{$}}}}
 }
 
 void plus_equal_negative(const std::vector<int> &v) {
@@ -113,7 +114,7 @@ void plus_equal_negative(const std::vector<int> &v) {
 
   i += -2;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.end() - 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.end() - 2{{$}}}}
 }
 
 void minus_equal(const std::vector<int> &v) {
@@ -123,7 +124,7 @@ void minus_equal(const std::vector<int> &v) {
 
   i -= 2;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.end() - 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.end() - 2{{$}}}}
 }
 
 void minus_equal_negative(const std::vector<int> &v) {
@@ -133,7 +134,7 @@ void minus_equal_negative(const std::vector<int> &v) {
 
   i -= -2;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.begin() + 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.begin() + 2{{$}}}}
 }
 
 void copy(const std::vector<int> &v) {
@@ -144,7 +145,8 @@ void copy(const std::vector<int> &v) {
   auto i2 = i1;
 
   clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &v); // expected-warning{{TRUE}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1));     // expected-warning-re {{$v.end(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2));     // expected-warning-re {{$v.end(){{$}}}}
 }
 
 void plus(const std::vector<int> &v) {
@@ -155,7 +157,8 @@ void plus(const std::vector<int> &v) {
   auto i2 = i1 + 2;
 
   clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &v); // expected-warning{{TRUE}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.begin() + 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1));     // expected-warning-re{{$v.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2));     // expected-warning-re{{$v.begin() + 2{{$}}}}
 }
 
 void plus_negative(const std::vector<int> &v) {
@@ -166,7 +169,8 @@ void plus_negative(const std::vector<int> &v) {
   auto i2 = i1 + (-2);
 
   clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &v); // expected-warning{{TRUE}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.end() - 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1));     // expected-warning-re {{$v.end(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2));     // expected-warning-re {{$v.end() - 2{{$}}}}
 }
 
 void minus(const std::vector<int> &v) {
@@ -177,7 +181,8 @@ void minus(const std::vector<int> &v) {
   auto i2 = i1 - 2;
 
   clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &v); // expected-warning{{TRUE}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.end() - 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1));     // expected-warning-re {{$v.end(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2));     // expected-warning-re {{$v.end() - 2{{$}}}}
 }
 
 void minus_negative(const std::vector<int> &v) {
@@ -188,7 +193,8 @@ void minus_negative(const std::vector<int> &v) {
   auto i2 = i1 - (-2);
 
   clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &v); // expected-warning{{TRUE}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.begin() + 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1));     // expected-warning-re {{$v.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2));     // expected-warning-re {{$v.begin() + 2{{$}}}}
 }
 
 void copy_and_increment1(const std::vector<int> &v) {
@@ -199,8 +205,8 @@ void copy_and_increment1(const std::vector<int> &v) {
   auto i2 = i1;
   ++i1;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); //expected-warning{{$v.begin() + 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$v.begin() + 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$v.begin(){{$}}}}
 }
 
 void copy_and_increment2(const std::vector<int> &v) {
@@ -211,8 +217,8 @@ void copy_and_increment2(const std::vector<int> &v) {
   auto i2 = i1;
   ++i2;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); //expected-warning{{$v.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$v.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$v.begin() + 1{{$}}}}
 }
 
 void copy_and_decrement1(const std::vector<int> &v) {
@@ -223,8 +229,8 @@ void copy_and_decrement1(const std::vector<int> &v) {
   auto i2 = i1;
   --i1;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); //expected-warning{{$v.end() - 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$v.end() - 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$v.end(){{$}}}}
 }
 
 void copy_and_decrement2(const std::vector<int> &v) {
@@ -235,8 +241,8 @@ void copy_and_decrement2(const std::vector<int> &v) {
   auto i2 = i1;
   --i2;
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); //expected-warning{{$v.end()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$v.end(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$v.end() - 1{{$}}}}
 }
 
 /// std::advance(), std::prev(), std::next()
@@ -248,7 +254,7 @@ void std_advance_minus(const std::vector<int> &v) {
 
   std::advance(i, -1);
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.end() - 1{{$}}}}
 }
 
 void std_advance_plus(const std::vector<int> &v) {
@@ -258,7 +264,7 @@ void std_advance_plus(const std::vector<int> &v) {
 
   std::advance(i, 1);
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning-re {{$v.begin() + 1{{$}}}}
 }
 
 void std_prev(const std::vector<int> &v) {
@@ -268,7 +274,7 @@ void std_prev(const std::vector<int> &v) {
 
   auto j = std::prev(i);
 
-  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning-re {{$v.end() - 1{{$}}}}
 }
 
 void std_prev2(const std::vector<int> &v) {
@@ -278,7 +284,7 @@ void std_prev2(const std::vector<int> &v) {
 
   auto j = std::prev(i, 2);
 
-  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.end() - 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning-re {{$v.end() - 2{{$}}}}
 }
 
 void std_next(const std::vector<int> &v) {
@@ -288,7 +294,7 @@ void std_next(const std::vector<int> &v) {
 
   auto j = std::next(i);
 
-  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning-re {{$v.begin() + 1{{$}}}}
 }
 
 void std_next2(const std::vector<int> &v) {
@@ -298,7 +304,7 @@ void std_next2(const std::vector<int> &v) {
 
   auto j = std::next(i, 2);
 
-  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.begin() + 2}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning-re {{$v.begin() + 2{{$}}}}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -356,7 +362,7 @@ void list_move_assignment(std::list<int> &L1, std::list<int> &L2) {
   clang_analyzer_eval(clang_analyzer_iterator_container(i1) == &L1); // expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &L1); // expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L2.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L2.begin(){{$}}}}
 }
 
 void vector_move_assignment(std::vector<int> &V1, std::vector<int> &V2) {
@@ -374,7 +380,7 @@ void vector_move_assignment(std::vector<int> &V1, std::vector<int> &V2) {
   clang_analyzer_eval(clang_analyzer_iterator_container(i1) == &V1); // expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &V1); // expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$V2.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$V2.begin(){{$}}}}
 }
 
 void deque_move_assignment(std::deque<int> &D1, std::deque<int> &D2) {
@@ -392,7 +398,7 @@ void deque_move_assignment(std::deque<int> &D1, std::deque<int> &D2) {
   clang_analyzer_eval(clang_analyzer_iterator_container(i1) == &D1); // expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &D1); // expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$D2.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$D2.begin(){{$}}}}
 }
 
 void forward_list_move_assignment(std::forward_list<int> &FL1,
@@ -409,7 +415,7 @@ void forward_list_move_assignment(std::forward_list<int> &FL1,
 
   clang_analyzer_eval(clang_analyzer_iterator_container(i1) == &FL1); // expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$FL2.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL2.begin(){{$}}}}
 }
 
 
@@ -506,9 +512,9 @@ void list_push_back(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end() - 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}} FIXME: Should be $L.end() + 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end() - 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}} FIXME: Should be $L.end() + 1
 }
 
 /// std::vector-like containers: The past-the-end iterator is invalidated.
@@ -525,8 +531,8 @@ void vector_push_back(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$V.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$V.end() - 1{{$}}}}
 }
 
 /// std::deque-like containers: All iterators, including the past-the-end
@@ -566,9 +572,9 @@ void list_emplace_back(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}  FIXME: Should be $L.end() + 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end() - 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}  FIXME: Should be $L.end() + 1
 }
 
 /// std::vector-like containers: The past-the-end iterator is invalidated.
@@ -585,8 +591,8 @@ void vector_emplace_back(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$V.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$V.end() - 1{{$}}}}
 }
 
 /// std::deque-like containers: All iterators, including the past-the-end
@@ -626,8 +632,8 @@ void list_pop_back(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}  FIXME: Should be $L.end() - 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}  FIXME: Should be $L.end() - 1
 }
 
 /// std::vector-like containers: Iterators to the last element, as well as the
@@ -645,7 +651,7 @@ void vector_pop_back(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
 }
 
 /// std::deque-like containers: Iterators to the last element are invalidated.
@@ -664,7 +670,7 @@ void deque_pop_back(std::deque<int> &D, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$D.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$D.begin(){{$}}}}
 }
 
 /// push_front()
@@ -687,8 +693,8 @@ void list_push_front(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 /// std::deque-like containers: All iterators, including the past-the-end
@@ -720,8 +726,8 @@ void forward_list_push_front(std::forward_list<int> &FL, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 /// emplace_front()
@@ -744,8 +750,8 @@ void list_emplace_front(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 /// std::deque-like containers: All iterators, including the past-the-end
@@ -777,8 +783,8 @@ void forward_list_emplace_front(std::forward_list<int> &FL, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 /// pop_front()
@@ -802,8 +808,8 @@ void list_pop_front(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.begin() + 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.begin() + 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 /// std::deque-like containers: Iterators to the first element are invalidated.
@@ -821,8 +827,8 @@ void deque_pop_front(std::deque<int> &D, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$D.begin() + 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$D.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$D.begin() + 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$D.end(){{$}}}}
 }
 
 /// std::forward_list-like containers: Iterators to the first element are
@@ -840,8 +846,8 @@ void forward_list_pop_front(std::list<int> &FL, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$FL.begin() + 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.begin() + 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 /// insert()
@@ -867,9 +873,9 @@ void list_insert_begin(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i2)); FIXME: expect warning $L.begin() - 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 void list_insert_behind_begin(std::list<int> &L, int n) {
@@ -884,10 +890,10 @@ void list_insert_behind_begin(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}} FIXME: Should be $L.begin() - 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}} FIXME: Should be $L.begin() - 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.begin() + 1{{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.begin()
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 template <typename Iter> Iter return_any_iterator(const Iter &It);
@@ -905,10 +911,10 @@ void list_insert_unknown(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$i1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$i1{{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $i - 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 void list_insert_ahead_of_end(std::list<int> &L, int n) {
@@ -923,9 +929,9 @@ void list_insert_ahead_of_end(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end() - 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end() - 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.end() - 2
 }
 
@@ -941,9 +947,9 @@ void list_insert_end(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end() - 1}} FIXME: should be $L.end() - 2
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end() - 1{{$}}}} FIXME: should be $L.end() - 2
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.end() - 1
 }
 
@@ -977,7 +983,7 @@ void vector_insert_behind_begin(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}} FIXME: Should be $V.begin() - 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}} FIXME: Should be $V.begin() - 1
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); // FIXME: expect -warning $V.begin()
 }
 
@@ -994,7 +1000,7 @@ void vector_insert_unknown(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expecte warning $i1 - 1
 }
 
@@ -1010,7 +1016,7 @@ void vector_insert_ahead_of_end(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $V.end() - 2
 }
 
@@ -1026,8 +1032,8 @@ void vector_insert_end(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$V.end() - 1}} FIXME: Should be $V.end() - 2
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$V.end() - 1{{$}}}} FIXME: Should be $V.end() - 2
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $V.end() - 1
 }
 
@@ -1130,9 +1136,9 @@ void forward_list_insert_after_begin(std::forward_list<int> &FL, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i2)); FIXME: expect warning $FL.begin() + 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 void forward_list_insert_after_behind_begin(std::forward_list<int> &FL, int n) {
@@ -1147,10 +1153,10 @@ void forward_list_insert_after_behind_begin(std::forward_list<int> &FL, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$FL.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.begin() + 1{{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $FL.begin() + 2
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 void forward_list_insert_after_unknown(std::forward_list<int> &FL, int n) {
@@ -1166,10 +1172,10 @@ void forward_list_insert_after_unknown(std::forward_list<int> &FL, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$i1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$i1{{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $i1 + 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 /// emplace()
@@ -1195,9 +1201,9 @@ void list_emplace_begin(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i2)); FIXME: expect warning $L.begin() - 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 void list_emplace_behind_begin(std::list<int> &L, int n) {
@@ -1212,10 +1218,10 @@ void list_emplace_behind_begin(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}} FIXME: Should be $L.begin() - 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}} FIXME: Should be $L.begin() - 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.begin() + 1{{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.begin()
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 template <typename Iter> Iter return_any_iterator(const Iter &It);
@@ -1233,10 +1239,10 @@ void list_emplace_unknown(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$i1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$i1{{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $i - 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 void list_emplace_ahead_of_end(std::list<int> &L, int n) {
@@ -1251,9 +1257,9 @@ void list_emplace_ahead_of_end(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end() - 1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end() - 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.end() - 2
 }
 
@@ -1269,9 +1275,9 @@ void list_emplace_end(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.end() - 1}} FIXME: should be $L.end() - 2
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end() - 1{{$}}}} FIXME: should be $L.end() - 2
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.end() - 1
 }
 
@@ -1304,7 +1310,7 @@ void vector_emplace_behind_begin(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}} FIXME: Should be $V.begin() - 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}} FIXME: Should be $V.begin() - 1
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); // FIXME: expect -warning $V.begin()
 }
 
@@ -1321,7 +1327,7 @@ void vector_emplace_unknown(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expecte warning $i1 - 1
 }
 
@@ -1337,7 +1343,7 @@ void vector_emplace_ahead_of_end(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $V.end() - 2
 }
 
@@ -1353,8 +1359,8 @@ void vector_emplace_end(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$V.end() - 1}} FIXME: Should be $V.end() - 2
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$V.end() - 1{{$}}}} FIXME: Should be $V.end() - 2
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $V.end() - 1
 }
 
@@ -1455,9 +1461,9 @@ void forward_list_emplace_after_begin(std::forward_list<int> &FL, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i2)); FIXME: expect warning $FL.begin() + 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 void forward_list_emplace_after_behind_begin(std::forward_list<int> &FL,
@@ -1473,10 +1479,10 @@ void forward_list_emplace_after_behind_begin(std::forward_list<int> &FL,
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$FL.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.begin() + 1{{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $FL.begin() + 2
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 void forward_list_emplace_after_unknown(std::forward_list<int> &FL, int n) {
@@ -1492,10 +1498,10 @@ void forward_list_emplace_after_unknown(std::forward_list<int> &FL, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$i1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$i1{{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $i1 + 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 /// erase()
@@ -1523,9 +1529,9 @@ void list_erase_begin(std::list<int> &L) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$L.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.begin() + 1{{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.begin() + 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 void list_erase_behind_begin(std::list<int> &L, int n) {
@@ -1540,9 +1546,9 @@ void list_erase_behind_begin(std::list<int> &L, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}} FIXME: Should be $L.begin() + 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}} FIXME: Should be $L.begin() + 1
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.begin() + 2
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 void list_erase_unknown(std::list<int> &L) {
@@ -1558,9 +1564,9 @@ void list_erase_unknown(std::list<int> &L) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $i1 + 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
 }
 
 void list_erase_ahead_of_end(std::list<int> &L) {
@@ -1575,8 +1581,8 @@ void list_erase_ahead_of_end(std::list<int> &L) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$L.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$L.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.end()
 }
 
@@ -1610,7 +1616,7 @@ void vector_erase_behind_begin(std::vector<int> &V, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}} FIXME: Should be $V.begin() + 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}} FIXME: Should be $V.begin() + 1
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $V.begin() + 2
 }
 
@@ -1627,7 +1633,7 @@ void vector_erase_unknown(std::vector<int> &V) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $i1 + 1
 }
 
@@ -1643,7 +1649,7 @@ void vector_erase_ahead_of_end(std::vector<int> &V) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$V.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $V.end()
 }
 
@@ -1743,10 +1749,10 @@ void forward_list_erase_after_begin(std::forward_list<int> &FL) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i3)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$FL.begin() + 2}} FIXME: Should be $FL.begin() + 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$FL.begin() + 2{{$}}}} FIXME: Should be $FL.begin() + 1
   // clang_analyzer_express(clang_analyzer_iterator_position(i4)); FIXME: expect warning $FL.begin() + 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i3)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i3)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 void forward_list_erase_after_unknown(std::forward_list<int> &FL) {
@@ -1768,11 +1774,11 @@ void forward_list_erase_after_unknown(std::forward_list<int> &FL) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i3)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i4)); //expected-warning{{TRUE}}
 
-  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning{{$FL.begin()}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$i1}}
-  clang_analyzer_express(clang_analyzer_iterator_position(i3)); // expected-warning{{$i1 + 2}} FIXME: Should be $i1 + 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$i1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i3)); // expected-warning-re {{$i1 + 2{{$}}}} FIXME: Should be $i1 + 1
   // clang_analyzer_express(clang_analyzer_iterator_position(i5)); FIXME: expect warning $i1 + 1
-  clang_analyzer_express(clang_analyzer_iterator_position(i4)); // expected-warning{{$FL.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i4)); // expected-warning-re {{$FL.end(){{$}}}}
 }
 
 struct simple_iterator_base {
@@ -1806,7 +1812,7 @@ struct simple_container {
 
 void good_derived(simple_container c) {
   auto i0 = c.end();
-  
+
   if (i0 != c.end()) {
     clang_analyzer_warnIfReached();
   }
@@ -1859,24 +1865,134 @@ void non_std_find(std::vector<int> &V, int e) {
   }
 }
 
+template<typename T>
+struct cont_with_ptr_iterator {
+  typedef T* iterator;
+  T* begin() const;
+  T* end() const;
+};
+
+void begin_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.begin();
+
+  clang_analyzer_eval(clang_analyzer_iterator_container(i) == &c); // expected-warning{{TRUE}}
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.begin()}}
+
+  if (i != c.begin()) {
+    clang_analyzer_warnIfReached();
+  }
+  }
+
+void prefix_increment_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+
+  auto j = ++i;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning{{$c.begin() + 1}}
+}
+
+void prefix_decrement_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(c), "$c.end()");
+
+  auto j = --i;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning{{$c.end() - 1}}
+}
+
+void postfix_increment_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+
+  auto j = i++;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.begin() + 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning{{$c.begin()}}
+}
+
+void postfix_decrement_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(c), "$c.end()");
+
+  auto j = i--;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.end() - 1}}
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); // expected-warning{{$c.end()}}
+}
+
+void plus_equal_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+
+  i += 2;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.begin() + 2}}
+}
+
+void minus_equal_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i = c.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(c), "$c.end()");
+
+  i -= 2;
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); // expected-warning{{$c.end() - 2}}
+}
+
+void plus_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i1 = c.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(c), "$c.begin()");
+
+  auto i2 = i1 + 2;
+
+  clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &c); // expected-warning{{TRUE}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$c.begin()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$c.begin() + 2}}
+}
+
+void minus_ptr_iterator(const cont_with_ptr_iterator<int> &c) {
+  auto i1 = c.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(c), "$c.end()");
+
+  auto i2 = i1 - 2;
+
+  clang_analyzer_eval(clang_analyzer_iterator_container(i2) == &c); // expected-warning{{TRUE}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning{{$c.end()}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning{{$c.end() - 2}}
+}
+
 void clang_analyzer_printState();
 
 void print_state(std::vector<int> &V) {
   const auto i0 = V.cbegin();
   clang_analyzer_printState();
 
-// CHECK:      "checker_messages": [
-// CHECK:   { "checker": "alpha.cplusplus.IteratorModeling", "messages": [
-// CHECK-NEXT:     "Iterator Positions :",
-// CHECK-NEXT:     "i0 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}"
-// CHECK-NEXT:   ]}
+  // CHECK:      "checker_messages": [
+  // CHECK:   { "checker": "alpha.cplusplus.IteratorModeling", "messages": [
+  // CHECK-NEXT:     "Iterator Positions :",
+  // CHECK-NEXT:     "i0 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}"
+  // CHECK-NEXT:   ]}
 
+  *i0;
   const auto i1 = V.cend();
   clang_analyzer_printState();
-  
-// CHECK:      "checker_messages": [
-// CHECK:   { "checker": "alpha.cplusplus.IteratorModeling", "messages": [
-// CHECK-NEXT:     "Iterator Positions :",
-// CHECK-NEXT:     "i1 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}"
-// CHECK-NEXT:   ]}
+
+  // CHECK:      "checker_messages": [
+  // CHECK:   { "checker": "alpha.cplusplus.IteratorModeling", "messages": [
+  // CHECK-NEXT:     "Iterator Positions :",
+  // CHECK-NEXT:     "i1 : Valid ; Container == SymRegion{reg_$[[#]]<std::vector<int> & V>} ; Offset == conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]}"
+  // CHECK-NEXT:   ]}
+
+  *i1;
 }

@@ -420,7 +420,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
   if (IsThreadLocal)
     return 0;
   emitInst(Mips::LW, DestReg)
-      .addReg(MFI->getGlobalBaseReg())
+      .addReg(MFI->getGlobalBaseReg(*MF))
       .addGlobalAddress(GV, 0, MipsII::MO_GOT);
   if ((GV->hasInternalLinkage() ||
        (GV->hasLocalLinkage() && !isa<Function>(GV)))) {
@@ -437,7 +437,7 @@ unsigned MipsFastISel::materializeExternalCallSym(MCSymbol *Sym) {
   const TargetRegisterClass *RC = &Mips::GPR32RegClass;
   unsigned DestReg = createResultReg(RC);
   emitInst(Mips::LW, DestReg)
-      .addReg(MFI->getGlobalBaseReg())
+      .addReg(MFI->getGlobalBaseReg(*MF))
       .addSym(Sym, MipsII::MO_GOT);
   return DestReg;
 }

@@ -359,7 +359,7 @@ class DIEnumerator : public DINode {
   friend class MDNode;
 
   APInt Value;
-  DIEnumerator(LLVMContext &C, StorageType Storage, APInt Value,
+  DIEnumerator(LLVMContext &C, StorageType Storage, const APInt &Value,
                bool IsUnsigned, ArrayRef<Metadata *> Ops)
       : DINode(C, DIEnumeratorKind, Storage, dwarf::DW_TAG_enumerator, Ops),
         Value(Value) {
@@ -371,13 +371,13 @@ class DIEnumerator : public DINode {
                      Ops) {}
   ~DIEnumerator() = default;
 
-  static DIEnumerator *getImpl(LLVMContext &Context, APInt Value,
+  static DIEnumerator *getImpl(LLVMContext &Context, const APInt &Value,
                                bool IsUnsigned, StringRef Name,
                                StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Value, IsUnsigned,
                    getCanonicalMDString(Context, Name), Storage, ShouldCreate);
   }
-  static DIEnumerator *getImpl(LLVMContext &Context, APInt Value,
+  static DIEnumerator *getImpl(LLVMContext &Context, const APInt &Value,
                                bool IsUnsigned, MDString *Name,
                                StorageType Storage, bool ShouldCreate = true);
 

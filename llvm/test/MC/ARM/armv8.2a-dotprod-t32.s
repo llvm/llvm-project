@@ -2,6 +2,9 @@
 // RUN: llvm-mc -triple thumb -mcpu=cortex-a55 -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
 // RUN: llvm-mc -triple thumb -mcpu=cortex-a75 -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
 // RUN: llvm-mc -triple thumb -mcpu=cortex-a76 -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
+// RUN: llvm-mc -triple thumb -mcpu=cortex-a77 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
+// RUN: llvm-mc -triple thumb -mcpu=cortex-a78 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
+// RUN: llvm-mc -triple thumb -mcpu=cortex-x1 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
 // RUN: llvm-mc -triple thumb -mcpu=neoverse-n1 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
 
 // RUN: not llvm-mc -triple thumb -mattr=-dotprod -show-encoding < %s 2> %t

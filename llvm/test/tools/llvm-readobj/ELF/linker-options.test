@@ -2,13 +2,14 @@
 ## to dump SHT_LLVM_LINKER_OPTIONS sections.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readobj --elf-linker-options %t1 2>&1 | FileCheck %s --check-prefix=CHECK -DFILE=%t1
+# RUN: llvm-readobj --elf-linker-options %t1 2>&1 | FileCheck %s -DFILE=%t1
 
 # CHECK:      LinkerOptions [
 # CHECK:        option 0: value 0
 # CHECK:        option 1: value 1
 # CHECK-NEXT:   warning: '[[FILE]]': SHT_LLVM_LINKER_OPTIONS section at index 2 is broken: an incomplete key-value pair was found. The last possible key was: "c"
 # CHECK-NEXT:   warning: '[[FILE]]': SHT_LLVM_LINKER_OPTIONS section at index 4 is broken: the content is not null-terminated
+# CHECK-NEXT:   warning: '[[FILE]]': unable to read the content of the SHT_LLVM_LINKER_OPTIONS section: section [index 5] has a sh_offset (0xffffffff) + sh_size (0x8) that is greater than the file size (0x370)
 # CHECK-NEXT:   option 3: value 3
 # CHECK-NEXT: ]
 
@@ -44,7 +45,15 @@ Sections:
   - Name:    .linker-options.nonul
     Type:    SHT_LLVM_LINKER_OPTIONS
     Content: "61"
-## Case 5: another correct case to show we do not stop dumping after reporting a warning.
+## Case 5: check we report a warning when it is not possible to read
+##         the content of the SHT_LLVM_LINKER_OPTIONS section.
+  - Name:     .linker-options.broken.content
+    Type:     SHT_LLVM_LINKER_OPTIONS
+    ShOffset: 0xffffffff
+    Options:
+      - Name:  foo
+        Value: bar
+## Case 6: another correct case to show we do not stop dumping after reporting a warning.
   - Name: .linker-options.valid2
     Type: SHT_LLVM_LINKER_OPTIONS
     Options:

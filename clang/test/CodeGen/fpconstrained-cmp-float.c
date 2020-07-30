@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -ffp-exception-behavior=ignore -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=FCMP
-// RUN: %clang_cc1 -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=EXCEPT
-// RUN: %clang_cc1 -ffp-exception-behavior=maytrap -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=MAYTRAP
-// RUN: %clang_cc1 -frounding-math -ffp-exception-behavior=ignore -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=IGNORE
-// RUN: %clang_cc1 -frounding-math -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=EXCEPT
-// RUN: %clang_cc1 -frounding-math -ffp-exception-behavior=maytrap -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=MAYTRAP
+// RUN: %clang_cc1 -ffp-exception-behavior=ignore -fexperimental-strict-floating-point -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=FCMP
+// RUN: %clang_cc1 -ffp-exception-behavior=strict -fexperimental-strict-floating-point -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=EXCEPT
+// RUN: %clang_cc1 -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=MAYTRAP
+// RUN: %clang_cc1 -frounding-math -ffp-exception-behavior=ignore -fexperimental-strict-floating-point -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=IGNORE
+// RUN: %clang_cc1 -frounding-math -ffp-exception-behavior=strict -fexperimental-strict-floating-point -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=EXCEPT
+// RUN: %clang_cc1 -frounding-math -ffp-exception-behavior=maytrap -fexperimental-strict-floating-point -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=MAYTRAP
 
 _Bool QuietEqual(float f1, float f2) {
   // CHECK-LABEL: define {{.*}}i1 @QuietEqual(float %f1, float %f2)

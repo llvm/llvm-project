@@ -50,7 +50,8 @@ void tools::MinGW::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(II.getFilename());
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs));
 
   if (Args.hasArg(options::OPT_gsplit_dwarf))
     SplitDebugInfo(getToolChain(), C, *this, JA, Args, Output,
@@ -321,7 +322,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
   const char *Exec = Args.MakeArgString(TC.GetLinkerPath());
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
 }
 
 // Simplified from Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple.
@@ -396,7 +398,8 @@ llvm::ErrorOr<std::string> toolchains::MinGW::findClangRelativeSysroot() {
 
 toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
-    : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args) {
+    : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
+      RocmInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
   if (getDriver().SysRoot.size())
@@ -498,8 +501,14 @@ void toolchains::MinGW::AddCudaIncludeArgs(const ArgList &DriverArgs,
   CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
+void toolchains::MinGW::AddHIPIncludeArgs(const ArgList &DriverArgs,
+                                          ArgStringList &CC1Args) const {
+  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
+}
+
 void toolchains::MinGW::printVerboseInfo(raw_ostream &OS) const {
   CudaInstallation.print(OS);
+  RocmInstallation.print(OS);
 }
 
 // Include directories for various hosts:

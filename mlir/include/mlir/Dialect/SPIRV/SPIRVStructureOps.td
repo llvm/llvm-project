@@ -102,7 +102,7 @@ def SPV_ConstantOp : SPV_Op<"constant", [ConstantLike, NoSideEffect]> {
     %2 = spv.constant [dense<3.0> : vector<2xf32>] : !spv.array<1xvector<2xf32>>
     ```
 
-    TODO(antiagainst): support constant structs
+    TODO: support constant structs
   }];
 
   let arguments = (ins
@@ -541,7 +541,7 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
     spv.specConstant @spec_const2 spec_id(5) = 42 : i32
     ```
 
-    TODO(antiagainst): support composite spec constants with another op
+    TODO: support composite spec constants with another op
   }];
 
   let arguments = (ins

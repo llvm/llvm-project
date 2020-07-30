@@ -16,7 +16,6 @@
 
 #include "constexpr-bitset.h"
 #include "idioms.h"
-#include "llvm/Support/raw_ostream.h"
 #include <bitset>
 #include <cstddef>
 #include <initializer_list>
@@ -190,7 +189,7 @@ public:
       // std::bitset: just iterate
       for (std::size_t j{0}; j < BITS; ++j) {
         auto enumerator{static_cast<enumerationType>(j)};
-        if (bitset_.test(enumerator)) {
+        if (bitset_.test(j)) {
           return {enumerator};
         }
       }
@@ -206,8 +205,8 @@ public:
     }
   }
 
-  llvm::raw_ostream &Dump(
-      llvm::raw_ostream &o, std::string EnumToString(enumerationType)) const {
+  template <typename STREAM>
+  STREAM &Dump(STREAM &o, std::string EnumToString(enumerationType)) const {
     char sep{'{'};
     IterateOverMembers([&](auto e) {
       o << sep << EnumToString(e);

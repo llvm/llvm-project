@@ -23,15 +23,8 @@ class ScopedEnumType(TestBase):
         self.expect("expr f == Foo::FooBar",
                 substrs=['(bool) $0 = true'])
 
-        value = frame.EvaluateExpression("f == Foo::FooBar")
-        self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
-        self.assertEqual(value.GetValueAsUnsigned(), 1)
-
-        value = frame.EvaluateExpression("b == BarBar")
-        self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
-        self.assertEqual(value.GetValueAsUnsigned(), 1)
+        self.expect_expr("f == Foo::FooBar", result_value='true')
+        self.expect_expr("b == BarBar", result_value='true')
 
         ## b is not a Foo
         value = frame.EvaluateExpression("b == Foo::FooBar")

@@ -1384,27 +1384,27 @@ struct SemanticTokens {
   // send a delta.
   std::string resultId;
 
-  /// The actual tokens. For a detailed description about how the data is
-  /// structured pls see
-  /// https://github.com/microsoft/vscode-extension-samples/blob/5ae1f7787122812dcc84e37427ca90af5ee09f14/semantic-tokens-sample/vscode.proposed.d.ts#L71
-  std::vector<SemanticToken> tokens;
+  /// The actual tokens.
+  std::vector<SemanticToken> tokens; // encoded as a flat integer array.
 };
 llvm::json::Value toJSON(const SemanticTokens &);
 
+/// Body of textDocument/semanticTokens/full request.
 struct SemanticTokensParams {
   /// The text document.
   TextDocumentIdentifier textDocument;
 };
 bool fromJSON(const llvm::json::Value &, SemanticTokensParams &);
 
+/// Body of textDocument/semanticTokens/full/delta request.
 /// Requests the changes in semantic tokens since a previous response.
-struct SemanticTokensEditsParams {
+struct SemanticTokensDeltaParams {
   /// The text document.
   TextDocumentIdentifier textDocument;
   /// The previous result id.
   std::string previousResultId;
 };
-bool fromJSON(const llvm::json::Value &Params, SemanticTokensEditsParams &R);
+bool fromJSON(const llvm::json::Value &Params, SemanticTokensDeltaParams &R);
 
 /// Describes a a replacement of a contiguous range of semanticTokens.
 struct SemanticTokensEdit {
@@ -1413,20 +1413,20 @@ struct SemanticTokensEdit {
   // We use token counts instead, and translate when serializing this struct.
   unsigned startToken = 0;
   unsigned deleteTokens = 0;
-  std::vector<SemanticToken> tokens;
+  std::vector<SemanticToken> tokens; // encoded as a flat integer array
 };
 llvm::json::Value toJSON(const SemanticTokensEdit &);
 
-/// This models LSP SemanticTokensEdits | SemanticTokens, which is the result of
-/// textDocument/semanticTokens/edits.
-struct SemanticTokensOrEdits {
+/// This models LSP SemanticTokensDelta | SemanticTokens, which is the result of
+/// textDocument/semanticTokens/full/delta.
+struct SemanticTokensOrDelta {
   std::string resultId;
   /// Set if we computed edits relative to a previous set of tokens.
   llvm::Optional<std::vector<SemanticTokensEdit>> edits;
   /// Set if we computed a fresh set of tokens.
-  llvm::Optional<std::vector<SemanticToken>> tokens;
+  llvm::Optional<std::vector<SemanticToken>> tokens; // encoded as integer array
 };
-llvm::json::Value toJSON(const SemanticTokensOrEdits &);
+llvm::json::Value toJSON(const SemanticTokensOrDelta &);
 
 /// Represents a semantic highlighting information that has to be applied on a
 /// specific line of the text document.

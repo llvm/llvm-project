@@ -15,10 +15,10 @@ define internal i32 @test(i32* %X, i32* %Y) {
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test
 ; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[Y_PRIV:%.*]] = alloca i32
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[Y_PRIV]]
-; IS__TUNIT_NPM-NEXT:    [[X_PRIV:%.*]] = alloca i32
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[X_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[Y_PRIV:%.*]] = alloca i32, align 4
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[Y_PRIV]], align 4
+; IS__TUNIT_NPM-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[X_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = load i32, i32* [[X_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[B:%.*]] = load i32, i32* [[Y_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
@@ -40,16 +40,16 @@ define internal i32 @test(i32* %X, i32* %Y) {
 define internal i32 @caller(i32* %B) {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@caller
 ; IS__TUNIT_OPM-SAME: (i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B:%.*]])
-; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = alloca i32
+; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__TUNIT_OPM-NEXT:    store i32 1, i32* [[A]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[C]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@caller
 ; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[B_PRIV:%.*]] = alloca i32
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV]]
-; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32
+; IS__TUNIT_NPM-NEXT:    [[B_PRIV:%.*]] = alloca i32, align 4
+; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV]], align 4
+; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 1, i32* [[A]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[A]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[B_PRIV]], align 4
@@ -58,7 +58,7 @@ define internal i32 @caller(i32* %B) {
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B:%.*]])
-; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32
+; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    store i32 1, i32* [[A]], align 4
 ; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
 ; IS__CGSCC____-NEXT:    ret i32 [[C]]
@@ -71,13 +71,13 @@ define internal i32 @caller(i32* %B) {
 
 define i32 @callercaller() {
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callercaller()
-; NOT_TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32
+; NOT_TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; NOT_TUNIT_NPM-NEXT:    store i32 2, i32* [[B]], align 4
 ; NOT_TUNIT_NPM-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
 ; NOT_TUNIT_NPM-NEXT:    ret i32 [[X]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callercaller()
-; IS__TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32
+; IS__TUNIT_NPM-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 2, i32* [[B]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = call i32 @caller(i32 [[TMP1]])

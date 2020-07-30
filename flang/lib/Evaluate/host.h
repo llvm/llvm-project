@@ -41,7 +41,9 @@ public:
 
 private:
   std::fenv_t originalFenv_;
-  std::fenv_t currentFenv_;
+#if __x86_64__
+  unsigned int originalMxcsr;
+#endif
   RealFlags flags_;
   bool hasSubnormalFlushingHardwareControl_{false};
   bool hardwareFlagsAreReliable_{true};

@@ -134,4 +134,4 @@ bool GEPOperator::accumulateConstantOffset(
   }
   return true;
 }
-}
+} // namespace llvm

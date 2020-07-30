@@ -10,6 +10,9 @@ add_clang_library(clangTidyZirconModule
   LINK_LIBS
   clangTidy
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyZirconModule

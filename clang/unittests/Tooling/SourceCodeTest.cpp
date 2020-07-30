@@ -9,6 +9,8 @@
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "TestVisitor.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -21,9 +23,11 @@ using llvm::Failed;
 using llvm::Succeeded;
 using llvm::ValueIs;
 using tooling::getAssociatedRange;
+using tooling::getExtendedRange;
 using tooling::getExtendedText;
 using tooling::getRangeForEdit;
 using tooling::getText;
+using tooling::maybeExtendRange;
 using tooling::validateEditRange;
 
 namespace {
@@ -52,7 +56,7 @@ MATCHER_P(EqualsRange, R, "") {
          arg.getBegin() == R.getBegin() && arg.getEnd() == R.getEnd();
 }
 
-MATCHER_P2(EqualsAnnotatedRange, SM, R, "") {
+MATCHER_P2(EqualsAnnotatedRange, Context, R, "") {
   if (arg.getBegin().isMacroID()) {
     *result_listener << "which starts in a macro";
     return false;
@@ -62,15 +66,13 @@ MATCHER_P2(EqualsAnnotatedRange, SM, R, "") {
     return false;
   }
 
-  unsigned Begin = SM->getFileOffset(arg.getBegin());
-  unsigned End = SM->getFileOffset(arg.getEnd());
+  CharSourceRange Range = Lexer::getAsCharRange(
+      arg, Context->getSourceManager(), Context->getLangOpts());
+  unsigned Begin = Context->getSourceManager().getFileOffset(Range.getBegin());
+  unsigned End = Context->getSourceManager().getFileOffset(Range.getEnd());
 
-  *result_listener << "which is [" << Begin << ",";
-  if (arg.isTokenRange()) {
-    *result_listener << End << "]";
-    return Begin == R.Begin && End + 1 == R.End;
-  }
-  *result_listener << End << ")";
+  *result_listener << "which is a " << (arg.isTokenRange() ? "Token" : "Char")
+                   << " range [" << Begin << "," << End << ")";
   return Begin == R.Begin && End == R.End;
 }
 
@@ -84,11 +86,13 @@ static ::testing::Matcher<CharSourceRange> AsRange(const SourceManager &SM,
 // Base class for visitors that expect a single match corresponding to a
 // specific annotated range.
 template <typename T> class AnnotatedCodeVisitor : public TestVisitor<T> {
-  llvm::Annotations Code;
+protected:
   int MatchCount = 0;
+  llvm::Annotations Code;
 
 public:
   AnnotatedCodeVisitor() : Code("$r[[]]") {}
+  // Helper for tests of `getAssociatedRange`.
   bool VisitDeclHelper(Decl *Decl) {
     // Only consider explicit declarations.
     if (Decl->isImplicit())
@@ -96,8 +100,7 @@ public:
 
     ++MatchCount;
     EXPECT_THAT(getAssociatedRange(*Decl, *this->Context),
-                EqualsAnnotatedRange(&this->Context->getSourceManager(),
-                                     Code.range("r")))
+                EqualsAnnotatedRange(this->Context, Code.range("r")))
         << Code.code();
     return true;
   }
@@ -181,6 +184,45 @@ TEST(SourceCodeTest, getExtendedText) {
   Visitor.runOver("bool foo() { if (foo()) return true; return false; }");
   Visitor.runOver("void foo() { int x; for (;; foo()) ++x; }");
   Visitor.runOver("int foo() { return foo() + 3; }");
+}
+
+TEST(SourceCodeTest, maybeExtendRange_TokenRange) {
+  struct ExtendTokenRangeVisitor
+      : AnnotatedCodeVisitor<ExtendTokenRangeVisitor> {
+    bool VisitCallExpr(CallExpr *CE) {
+      ++MatchCount;
+      EXPECT_THAT(getExtendedRange(*CE, tok::TokenKind::semi, *Context),
+                  EqualsAnnotatedRange(Context, Code.range("r")));
+      return true;
+    }
+  };
+
+  ExtendTokenRangeVisitor Visitor;
+  // Extends to include semicolon.
+  Visitor.runOverAnnotated("void f(int x, int y) { $r[[f(x, y);]] }");
+  // Does not extend to include semicolon.
+  Visitor.runOverAnnotated(
+      "int f(int x, int y) { if (0) return $r[[f(x, y)]] + 3; }");
+}
+
+TEST(SourceCodeTest, maybeExtendRange_CharRange) {
+  struct ExtendCharRangeVisitor : AnnotatedCodeVisitor<ExtendCharRangeVisitor> {
+    bool VisitCallExpr(CallExpr *CE) {
+      ++MatchCount;
+      CharSourceRange Call = Lexer::getAsCharRange(CE->getSourceRange(),
+                                                   Context->getSourceManager(),
+                                                   Context->getLangOpts());
+      EXPECT_THAT(maybeExtendRange(Call, tok::TokenKind::semi, *Context),
+                  EqualsAnnotatedRange(Context, Code.range("r")));
+      return true;
+    }
+  };
+  ExtendCharRangeVisitor Visitor;
+  // Extends to include semicolon.
+  Visitor.runOverAnnotated("void f(int x, int y) { $r[[f(x, y);]] }");
+  // Does not extend to include semicolon.
+  Visitor.runOverAnnotated(
+      "int f(int x, int y) { if (0) return $r[[f(x, y)]] + 3; }");
 }
 
 TEST(SourceCodeTest, getAssociatedRange) {

@@ -499,6 +499,26 @@ TEST(LiveIntervalTest, TestMoveSubRegDefAcrossUseDefMulti) {
   });
 }
 
+TEST(LiveIntervalTest, TestMoveSubRegUseAcrossMainRangeHole) {
+  liveIntervalTest(R"MIR(
+    %1:sgpr_128 = IMPLICIT_DEF
+  bb.1:
+    %2:sgpr_32 = COPY %1.sub2
+    %3:sgpr_32 = COPY %1.sub1
+    %1.sub2 = COPY %2
+    undef %1.sub0 = IMPLICIT_DEF
+    %1.sub2 = IMPLICIT_DEF
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.2
+  bb.2:
+)MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
+    MachineInstr &MI = getMI(MF, 3, /*BlockNum=*/1);
+    MI.getOperand(0).setIsUndef(false);
+    testHandleMove(MF, LIS, 4, 3, 1);
+    testHandleMove(MF, LIS, 1, 4, 1);
+  });
+}
+
 TEST(LiveIntervalTest, BundleUse) {
   liveIntervalTest(R"MIR(
     %0 = IMPLICIT_DEF

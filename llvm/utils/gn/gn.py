@@ -17,12 +17,12 @@ ROOT_DIR = os.path.join(THIS_DIR, '..', '..', '..')
 
 def get_platform():
     import platform
+    if sys.platform == 'darwin':
+        return 'mac-amd64' if platform.machine() != 'arm64' else 'mac-arm64'
     if platform.machine() not in ('AMD64', 'x86_64'):
         return None
     if sys.platform.startswith('linux'):
         return 'linux-amd64'
-    if sys.platform == 'darwin':
-        return 'mac-amd64'
     if sys.platform == 'win32':
         return 'windows-amd64'
 

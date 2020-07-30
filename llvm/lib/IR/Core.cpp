@@ -2003,7 +2003,7 @@ LLVMTypeRef LLVMGlobalGetValueType(LLVMValueRef Global) {
 
 unsigned LLVMGetAlignment(LLVMValueRef V) {
   Value *P = unwrap<Value>(V);
-  if (GlobalValue *GV = dyn_cast<GlobalValue>(P))
+  if (GlobalObject *GV = dyn_cast<GlobalObject>(P))
     return GV->getAlignment();
   if (AllocaInst *AI = dyn_cast<AllocaInst>(P))
     return AI->getAlignment();
@@ -2013,7 +2013,7 @@ unsigned LLVMGetAlignment(LLVMValueRef V) {
     return SI->getAlignment();
 
   llvm_unreachable(
-      "only GlobalValue, AllocaInst, LoadInst and StoreInst have alignment");
+      "only GlobalObject, AllocaInst, LoadInst and StoreInst have alignment");
 }
 
 void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {

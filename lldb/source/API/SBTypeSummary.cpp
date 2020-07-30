@@ -21,7 +21,7 @@ using namespace lldb_private;
 SBTypeSummaryOptions::SBTypeSummaryOptions() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeSummaryOptions);
 
-  m_opaque_up.reset(new TypeSummaryOptions());
+  m_opaque_up = std::make_unique<TypeSummaryOptions>();
 }
 
 SBTypeSummaryOptions::SBTypeSummaryOptions(
@@ -111,9 +111,9 @@ SBTypeSummaryOptions::SBTypeSummaryOptions(
 void SBTypeSummaryOptions::SetOptions(
     const lldb_private::TypeSummaryOptions *lldb_object_ptr) {
   if (lldb_object_ptr)
-    m_opaque_up.reset(new TypeSummaryOptions(*lldb_object_ptr));
+    m_opaque_up = std::make_unique<TypeSummaryOptions>(*lldb_object_ptr);
   else
-    m_opaque_up.reset(new TypeSummaryOptions());
+    m_opaque_up = std::make_unique<TypeSummaryOptions>();
 }
 
 SBTypeSummary::SBTypeSummary() : m_opaque_sp() {

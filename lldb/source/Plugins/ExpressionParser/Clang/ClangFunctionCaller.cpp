@@ -209,8 +209,8 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
 clang::ASTConsumer *
 ClangFunctionCaller::ClangFunctionCallerHelper::ASTTransformer(
     clang::ASTConsumer *passthrough) {
-  m_struct_extractor.reset(new ASTStructExtractor(
-      passthrough, m_owner.GetWrapperStructName(), m_owner));
+  m_struct_extractor = std::make_unique<ASTStructExtractor>(
+      passthrough, m_owner.GetWrapperStructName(), m_owner);
 
   return m_struct_extractor.get();
 }

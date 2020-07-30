@@ -19,7 +19,7 @@ define internal void @foo(i32 %x) nounwind readnone {
 ; IS__CGSCC____-SAME: (i32 [[X:%.*]])
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    store volatile i32 -1, i32* [[B]]
+; IS__CGSCC____-NEXT:    store volatile i32 -1, i32* [[B]], align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
@@ -41,9 +41,9 @@ define internal void @bar(i32* nocapture %pc) nounwind readonly {
 ; IS__CGSCC_OPM:       indirectgoto:
 ; IS__CGSCC_OPM-NEXT:    [[INDVAR]] = phi i32 [ [[INDVAR_NEXT]], [[LAB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; IS__CGSCC_OPM-NEXT:    [[PC_ADDR_0:%.*]] = getelementptr i32, i32* [[PC]], i32 [[INDVAR]]
-; IS__CGSCC_OPM-NEXT:    [[TMP1_PN:%.*]] = load i32, i32* [[PC_ADDR_0]]
+; IS__CGSCC_OPM-NEXT:    [[TMP1_PN:%.*]] = load i32, i32* [[PC_ADDR_0]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @bar.l, i32 0, i32 [[TMP1_PN]]
-; IS__CGSCC_OPM-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]]
+; IS__CGSCC_OPM-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]], align 8
 ; IS__CGSCC_OPM-NEXT:    indirectbr i8* [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
 ;
 entry:

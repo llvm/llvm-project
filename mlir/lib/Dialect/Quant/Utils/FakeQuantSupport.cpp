@@ -61,7 +61,7 @@ static bool getDefaultStorageParams(unsigned numBits, bool narrowRange,
 // point is derived from the shifted range, and the scale isn't changed. As
 // a consequence some values, which are supposed in the original [rmin, rmax]
 // range will be outside the shifted range and be clamped during quantization.
-// TODO(fengliuai): we should nudge the scale as well, but that requires the
+// TODO: we should nudge the scale as well, but that requires the
 // fake quant op used in the training to use the nudged scale as well.
 static void getNudgedScaleAndZeroPoint(int64_t qmin, int64_t qmax, double rmin,
                                        double rmax, double &scale,

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify -fblocks -cl-std=CL2.0 %s
 
 // OpenCL v2.0 s6.12.5
-void f0(int (^const bl)());
+void f0(int (^const bl)()); // expected-error{{declaring function parameter of type 'int (__generic ^const __private)(void)' is not allowed}}
 // All blocks declarations must be const qualified and initialized.
 void f1() {
   int (^bl1)(void) = ^() {
@@ -26,9 +26,18 @@ void f2() {
   };
 }
 
-// A block cannot be the return value of a function.
+// A block cannot be the return value or parameter of a function.
 typedef int (^bl_t)(void);
-bl_t f3(bl_t bl); // expected-error{{declaring function return value of type 'bl_t' (aka 'int (__generic ^const)(void)') is not allowed}}
+bl_t f3a(int);     // expected-error{{declaring function return value of type 'bl_t' (aka 'int (__generic ^const)(void)') is not allowed}}
+bl_t f3b(bl_t bl);
+// expected-error@-1{{declaring function return value of type 'bl_t' (aka 'int (__generic ^const)(void)') is not allowed}}
+// expected-error@-2{{declaring function parameter of type '__private bl_t' (aka 'int (__generic ^const __private)(void)') is not allowed}}
+void f3c() {
+  // Block with a block argument.
+  int (^const bl2)(bl_t block_arg) = ^() { // expected-error{{declaring function parameter of type '__private bl_t' (aka 'int (__generic ^const __private)(void)') is not allowed}}
+    return block_arg(); // expected-error{{implicit declaration of function 'block_arg' is invalid in OpenCL}}
+  };
+}
 
 struct bl_s {
   int (^bl)(void); // expected-error {{the 'int (__generic ^const)(void)' type cannot be used to declare a structure or union field}}

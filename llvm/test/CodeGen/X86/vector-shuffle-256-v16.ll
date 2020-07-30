@@ -7683,7 +7683,7 @@ define <16 x i16> @insert_dup_mem_v16i16_sext_i16_i64(i16* %ptr) {
 ; AVX1-LABEL: insert_dup_mem_v16i16_sext_i16_i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movzwl (%rdi), %eax
-; AVX1-NEXT:    vmovq %rax, %xmm0
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
@@ -7697,7 +7697,7 @@ define <16 x i16> @insert_dup_mem_v16i16_sext_i16_i64(i16* %ptr) {
 ; XOPAVX1-LABEL: insert_dup_mem_v16i16_sext_i16_i64:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    movzwl (%rdi), %eax
-; XOPAVX1-NEXT:    vmovq %rax, %xmm0
+; XOPAVX1-NEXT:    vmovd %eax, %xmm0
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
 ; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0

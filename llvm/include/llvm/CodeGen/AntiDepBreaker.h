@@ -60,8 +60,9 @@ public:
   /// other machine instruction to use NewReg.
   void UpdateDbgValue(MachineInstr &MI, unsigned OldReg, unsigned NewReg) {
     assert(MI.isDebugValue() && "MI is not DBG_VALUE!");
-    if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == OldReg)
-      MI.getOperand(0).setReg(NewReg);
+    if (MI.getDebugOperand(0).isReg() &&
+        MI.getDebugOperand(0).getReg() == OldReg)
+      MI.getDebugOperand(0).setReg(NewReg);
   }
 
   /// Update all DBG_VALUE instructions that may be affected by the dependency

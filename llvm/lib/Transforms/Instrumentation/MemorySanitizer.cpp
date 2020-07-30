@@ -137,6 +137,9 @@
 ///
 ///  KernelMemorySanitizer only supports X86_64 at the moment.
 ///
+//
+// FIXME: This sanitizer does not yet handle scalable vectors
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
@@ -595,9 +598,6 @@ private:
 
   /// Branch weights for origin store.
   MDNode *OriginStoreWeights;
-
-  /// An empty volatile inline asm that prevents callback merge.
-  InlineAsm *EmptyAsm;
 };
 
 void insertModuleCtor(Module &M) {
@@ -854,10 +854,6 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
   MemsetFn = M.getOrInsertFunction(
     "__msan_memset", IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IRB.getInt32Ty(),
     IntptrTy);
-  // We insert an empty inline asm after __msan_report* to avoid callback merge.
-  EmptyAsm = InlineAsm::get(FunctionType::get(IRB.getVoidTy(), false),
-                            StringRef(""), StringRef(""),
-                            /*hasSideEffects=*/true);
 
   MsanInstrumentAsmStoreFn =
       M.getOrInsertFunction("__msan_instrument_asm_store", IRB.getVoidTy(),
@@ -1113,7 +1109,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void paintOrigin(IRBuilder<> &IRB, Value *Origin, Value *OriginPtr,
                    unsigned Size, Align Alignment) {
     const DataLayout &DL = F.getParent()->getDataLayout();
-    const Align IntptrAlignment = Align(DL.getABITypeAlignment(MS.IntptrTy));
+    const Align IntptrAlignment = DL.getABITypeAlign(MS.IntptrTy);
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     assert(IntptrAlignment >= kMinOriginAlignment);
     assert(IntptrSize >= kOriginSize);
@@ -1211,8 +1207,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!Origin)
       Origin = (Value *)IRB.getInt32(0);
     assert(Origin->getType()->isIntegerTy());
-    IRB.CreateCall(MS.WarningFn, Origin);
-    IRB.CreateCall(MS.EmptyAsm, {});
+    IRB.CreateCall(MS.WarningFn, Origin)->setCannotMerge();
     // FIXME: Insert UnreachableInst if !MS.Recover?
     // This may invalidate some of the following checks and needs to be done
     // at the very end.
@@ -1363,7 +1358,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (VectorType *VT = dyn_cast<VectorType>(OrigTy)) {
       uint32_t EltSize = DL.getTypeSizeInBits(VT->getElementType());
       return FixedVectorType::get(IntegerType::get(*MS.C, EltSize),
-                                  VT->getNumElements());
+                                  cast<FixedVectorType>(VT)->getNumElements());
     }
     if (ArrayType *AT = dyn_cast<ArrayType>(OrigTy)) {
       return ArrayType::get(getShadowTy(AT->getElementType()),
@@ -2085,7 +2080,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   size_t VectorOrPrimitiveTypeSizeInBits(Type *Ty) {
     assert(!(Ty->isVectorTy() && Ty->getScalarType()->isPointerTy()) &&
            "Vector of pointers is not a valid shadow type");
-    return Ty->isVectorTy() ? cast<VectorType>(Ty)->getNumElements() *
+    return Ty->isVectorTy() ? cast<FixedVectorType>(Ty)->getNumElements() *
                                   Ty->getScalarSizeInBits()
                             : Ty->getPrimitiveSizeInBits();
   }
@@ -2103,8 +2098,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (dstTy->isIntegerTy() && srcTy->isIntegerTy())
       return IRB.CreateIntCast(V, dstTy, Signed);
     if (dstTy->isVectorTy() && srcTy->isVectorTy() &&
-        cast<VectorType>(dstTy)->getNumElements() ==
-            cast<VectorType>(srcTy)->getNumElements())
+        cast<FixedVectorType>(dstTy)->getNumElements() ==
+            cast<FixedVectorType>(srcTy)->getNumElements())
       return IRB.CreateIntCast(V, dstTy, Signed);
     Value *V1 = IRB.CreateBitCast(V, Type::getIntNTy(*MS.C, srcSizeInBits));
     Value *V2 =
@@ -2149,7 +2144,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Constant *ShadowMul;
     Type *Ty = ConstArg->getType();
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
-      unsigned NumElements = VTy->getNumElements();
+      unsigned NumElements = cast<FixedVectorType>(VTy)->getNumElements();
       Type *EltTy = VTy->getElementType();
       SmallVector<Constant *, 16> Elements;
       for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
@@ -2977,8 +2972,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
         Value *Acc = IRB.CreateExtractElement(
             MaskedPassThruShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
-        for (int i = 1,
-                 N = cast<VectorType>(PassThru->getType())->getNumElements();
+        for (int i = 1, N = cast<FixedVectorType>(PassThru->getType())
+                                ->getNumElements();
              i < N; ++i) {
           Value *More = IRB.CreateExtractElement(
               MaskedPassThruShadow, ConstantInt::get(IRB.getInt32Ty(), i));
@@ -3038,7 +3033,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Type *ShadowTy = getShadowTy(&I);
     unsigned Width =
-        cast<VectorType>(I.getArgOperand(0)->getType())->getNumElements();
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
     assert(isa<ConstantInt>(I.getArgOperand(2)) &&
            "pclmul 3rd operand must be a constant");
     unsigned Imm = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
@@ -3052,6 +3047,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SOC.Add(Shuf0, getOrigin(&I, 0));
     SOC.Add(Shuf1, getOrigin(&I, 1));
     SOC.Done(&I);
+  }
+
+  // Instrument _mm_*_sd intrinsics
+  void handleUnarySdIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *First = getShadow(&I, 0);
+    Value *Second = getShadow(&I, 1);
+    // High word of first operand, low word of second
+    Value *Shadow =
+        IRB.CreateShuffleVector(First, Second, llvm::makeArrayRef<int>({2, 1}));
+
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
+  }
+
+  void handleBinarySdIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *First = getShadow(&I, 0);
+    Value *Second = getShadow(&I, 1);
+    Value *OrShadow = IRB.CreateOr(First, Second);
+    // High word of first operand, low word of both OR'd together
+    Value *Shadow = IRB.CreateShuffleVector(First, OrShadow,
+                                            llvm::makeArrayRef<int>({2, 1}));
+
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
   }
 
   void visitIntrinsicInst(IntrinsicInst &I) {
@@ -3291,6 +3312,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_pclmulqdq_256:
     case Intrinsic::x86_pclmulqdq_512:
       handlePclmulIntrinsic(I);
+      break;
+
+    case Intrinsic::x86_sse41_round_sd:
+      handleUnarySdIntrinsic(I);
+      break;
+    case Intrinsic::x86_sse2_max_sd:
+    case Intrinsic::x86_sse2_min_sd:
+      handleBinarySdIntrinsic(I);
       break;
 
     case Intrinsic::is_constant:

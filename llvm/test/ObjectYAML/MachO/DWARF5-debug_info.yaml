@@ -1,4 +1,10 @@
-# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+## This file contains test cases for generating a DWARFv5 .debug_info
+## section in object files from the DWARF entry of Mach-O YAML inputs.
+
+## a) Test that yaml2obj emits a DWARF32 .debug_info sections and obj2yaml
+## converts it back.
+
+# RUN: yaml2obj --docnum=1 %s | obj2yaml | FileCheck %s --check-prefix=DWARF32
 
 --- !mach-o
 FileHeader:      
@@ -384,8 +390,7 @@ DWARF:
         - Address:         0x0000000100000F50
           Length:          52
   debug_info:      
-    - Length:          
-        TotalLength:     118
+    - Length:          118
       Version:         5
       UnitType:        DW_UT_compile
       AbbrOffset:      0
@@ -506,70 +511,170 @@ DWARF:
           Data:            11
 ...
 
+#      DWARF32: DWARF:
+#      DWARF32:   debug_info:
+# DWARF32-NEXT:     - Length:     118
+# DWARF32-NEXT:       Version:    5
+# DWARF32-NEXT:       UnitType:   DW_UT_compile
+# DWARF32-NEXT:       AbbrOffset: 0
+# DWARF32-NEXT:       AddrSize:   8
+# DWARF32-NEXT:       Entries:
+# DWARF32-NEXT:         - AbbrCode: 0x00000001
+# DWARF32-NEXT:           Values:
+# DWARF32-NEXT:             - Value: 0x0000000000000001
+# DWARF32-NEXT:             - Value: 0x000000000000000C
+# DWARF32-NEXT:             - Value: 0x0000000000000038
+# DWARF32-NEXT:             - Value: 0x0000000000000000
+# DWARF32-NEXT:             - Value: 0x0000000000000046
+# DWARF32-NEXT:             - Value: 0x0000000100000F50
+# DWARF32-NEXT:             - Value: 0x0000000000000034
+# DWARF32-NEXT:         - AbbrCode: 0x00000002
+# DWARF32-NEXT:           Values:
+# DWARF32-NEXT:             - Value: 0x0000000100000F50
+# DWARF32-NEXT:             - Value: 0x0000000000000034
+# DWARF32-NEXT:             - Value: 0x0000000000000001
+# DWARF32-NEXT:               BlockData: [ 0x56 ]
+# DWARF32-NEXT:             - Value: 0x0000000000000076
+# DWARF32-NEXT:             - Value: 0x0000000000000001
+# DWARF32-NEXT:             - Value: 0x0000000000000003
+# DWARF32-NEXT:             - Value: 0x0000000000000001
+# DWARF32-NEXT:             - Value: 0x0000000000000060
+# DWARF32-NEXT:             - Value: 0x0000000000000001
+# DWARF32-NEXT:         - AbbrCode: 0x00000003
+# DWARF32-NEXT:           Values:
+# DWARF32-NEXT:             - Value: 0x0000000000000002
+# DWARF32-NEXT:               BlockData: [ 0x91, 0x78 ]
+# DWARF32-NEXT:             - Value: 0x000000000000007B
+# DWARF32-NEXT:             - Value: 0x0000000000000001
+# DWARF32-NEXT:             - Value: 0x0000000000000003
+# DWARF32-NEXT:             - Value: 0x0000000000000060
+# DWARF32-NEXT:         - AbbrCode:        0x00000003
+# DWARF32-NEXT:           Values:          
+# DWARF32-NEXT:             - Value:           0x0000000000000002
+# DWARF32-NEXT:               BlockData:       [ 0x91, 0x70 ]
+# DWARF32-NEXT:             - Value:           0x0000000000000080
+# DWARF32-NEXT:             - Value:           0x0000000000000001
+# DWARF32-NEXT:             - Value:           0x0000000000000003
+# DWARF32-NEXT:             - Value:           0x0000000000000067
+# DWARF32-NEXT:         - AbbrCode:        0x00000000
+# DWARF32-NEXT:           Values:          
+# DWARF32-NEXT:         - AbbrCode:        0x00000004
+# DWARF32-NEXT:           Values:          
+# DWARF32-NEXT:             - Value:           0x0000000000000085
+# DWARF32-NEXT:             - Value:           0x0000000000000005
+# DWARF32-NEXT:             - Value:           0x0000000000000004
+# DWARF32-NEXT:         - AbbrCode:        0x00000005
+# DWARF32-NEXT:           Values:          
+# DWARF32-NEXT:             - Value:           0x000000000000006C
+# DWARF32-NEXT:         - AbbrCode:        0x00000005
+# DWARF32-NEXT:           Values:          
+# DWARF32-NEXT:             - Value:           0x0000000000000071
+# DWARF32-NEXT:         - AbbrCode:        0x00000004
+# DWARF32-NEXT:           Values:          
+# DWARF32-NEXT:             - Value:           0x0000000000000089
+# DWARF32-NEXT:             - Value:           0x0000000000000006
+# DWARF32-NEXT:             - Value:           0x0000000000000001
+# DWARF32-NEXT:         - AbbrCode:        0x00000000
+# DWARF32-NEXT:           Values:          
 
-#CHECK: DWARF:           
-#CHECK:   debug_info:      
-#CHECK:     - Length:          
-#CHECK:         TotalLength:     118
-#CHECK:       Version:         5
-#CHECK:       UnitType:        DW_UT_compile
-#CHECK:       AbbrOffset:      0
-#CHECK:       AddrSize:        8
-#CHECK:       Entries:         
-#CHECK:         - AbbrCode:        0x00000001
-#CHECK:           Values:          
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:             - Value:           0x000000000000000C
-#CHECK:             - Value:           0x0000000000000038
-#CHECK:             - Value:           0x0000000000000000
-#CHECK:             - Value:           0x0000000000000046
-#CHECK:             - Value:           0x0000000100000F50
-#CHECK:             - Value:           0x0000000000000034
-#CHECK:         - AbbrCode:        0x00000002
-#CHECK:           Values:          
-#CHECK:             - Value:           0x0000000100000F50
-#CHECK:             - Value:           0x0000000000000034
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:               BlockData:       [ 0x56 ]
-#CHECK:             - Value:           0x0000000000000076
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:             - Value:           0x0000000000000003
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:             - Value:           0x0000000000000060
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:         - AbbrCode:        0x00000003
-#CHECK:           Values:          
-#CHECK:             - Value:           0x0000000000000002
-#CHECK:               BlockData:       [ 0x91, 0x78 ]
-#CHECK:             - Value:           0x000000000000007B
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:             - Value:           0x0000000000000003
-#CHECK:             - Value:           0x0000000000000060
-#CHECK:         - AbbrCode:        0x00000003
-#CHECK:           Values:          
-#CHECK:             - Value:           0x0000000000000002
-#CHECK:               BlockData:       [ 0x91, 0x70 ]
-#CHECK:             - Value:           0x0000000000000080
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:             - Value:           0x0000000000000003
-#CHECK:             - Value:           0x0000000000000067
-#CHECK:         - AbbrCode:        0x00000000
-#CHECK:           Values:          
-#CHECK:         - AbbrCode:        0x00000004
-#CHECK:           Values:          
-#CHECK:             - Value:           0x0000000000000085
-#CHECK:             - Value:           0x0000000000000005
-#CHECK:             - Value:           0x0000000000000004
-#CHECK:         - AbbrCode:        0x00000005
-#CHECK:           Values:          
-#CHECK:             - Value:           0x000000000000006C
-#CHECK:         - AbbrCode:        0x00000005
-#CHECK:           Values:          
-#CHECK:             - Value:           0x0000000000000071
-#CHECK:         - AbbrCode:        0x00000004
-#CHECK:           Values:          
-#CHECK:             - Value:           0x0000000000000089
-#CHECK:             - Value:           0x0000000000000006
-#CHECK:             - Value:           0x0000000000000001
-#CHECK:         - AbbrCode:        0x00000000
-#CHECK:           Values:          
+## b) Test that yaml2obj emits a correct unit header and obj2yaml is able to convert it back.
+
+## Test DWARF32 unit header.
+
+# RUN: yaml2obj --docnum=2 -DFORMAT=DWARF32 -DLENGTH=12 %s | \
+# RUN:   obj2yaml | FileCheck %s --check-prefix=DWARF32-YAML
+
+#      DWARF32-YAML: debug_info:
+# DWARF32-YAML-NEXT:   - Length:     12
+# DWARF32-YAML-NEXT:     Version:    5
+# DWARF32-YAML-NEXT:     UnitType:   DW_UT_compile
+# DWARF32-YAML-NEXT:     AbbrOffset: 0x0000000000000000
+# DWARF32-YAML-NEXT:     AddrSize:   8
+# DWARF32-YAML-NEXT:     Entries:
+# DWARF32-YAML-NEXT:       - AbbrCode: 0x00000001
+# DWARF32-YAML-NEXT:         Values:
+# DWARF32-YAML-NEXT:           - Value: 0x0000000000001234
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x0000000A
+  ncmds:      1
+  sizeofcmds: 232
+  flags:      0x00000000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  232
+    segname:  __DWARF
+    vmaddr:   0x00
+    vmsize:   0x00
+    fileoff:  0x00
+    filesize: 0x00
+    maxprot:  0
+    initprot: 0
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x00
+        size:      12
+        offset:    528
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x00
+        size:      0xffff
+        offset:    1070
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+DWARF:
+  debug_abbrev:    
+    - Code:     1
+      Tag:      DW_TAG_compile_unit
+      Children: DW_CHILDREN_no
+      Attributes:
+        - Attribute: DW_AT_low_pc
+          Form:      DW_FORM_addr
+  debug_info:
+    - Format:     [[FORMAT]]
+      Length:     [[LENGTH]]
+      Version:    5
+      UnitType:   DW_UT_compile
+      AbbrOffset: 0
+      AddrSize:   8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1234
+
+## Test DWARF64 unit header.
+
+# RUN: yaml2obj --docnum=2 -DFORMAT=DWARF64 -DLENGTH=20 %s | \
+# RUN:   obj2yaml | FileCheck %s --check-prefix=DWARF64-YAML
+
+#      DWARF64-YAML: debug_info:
+# DWARF64-YAML-NEXT:   - Format:     DWARF64
+# DWARF64-YAML-NEXT:     Length:     20
+# DWARF64-YAML-NEXT:     Version:    5
+# DWARF64-YAML-NEXT:     UnitType:   DW_UT_compile
+# DWARF64-YAML-NEXT:     AbbrOffset: 0x0000000000000000
+# DWARF64-YAML-NEXT:     AddrSize:   8
+# DWARF64-YAML-NEXT:     Entries:
+# DWARF64-YAML-NEXT:       - AbbrCode: 0x00000001
+# DWARF64-YAML-NEXT:         Values:
+# DWARF64-YAML-NEXT:           - Value: 0x0000000000001234

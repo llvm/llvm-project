@@ -158,6 +158,20 @@ ProgramHeaders:
 # RUN:   FileCheck %s --check-prefixes=GNU2,GNU2-MORE,GNU2-ALL,WARN \
 # RUN:                --implicit-check-not=warning: -DNCHAIN=4
 
+# WARN: warning: '{{.*}}2-{{.*}}': hash table nchain ([[NCHAIN]]) differs from symbol count derived from SHT_DYNSYM section header (3)
+
+## Show we report a warning when the sh_entsize of the SHT_DYNSYM section is zero and therefore we are unable
+## to derive the number of dynamic symbols from SHT_DYNSYM section header.
+# RUN: yaml2obj --docnum=2 %s -o %t2-zero-entsize -DCHAIN="[1, 2, 3, 4]" -DENTSIZE=0
+# RUN: llvm-readobj --dyn-symbols %t2-zero-entsize 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2-zero-entsize --check-prefixes=LLVM2,LLVM2-MORE,LLVM2-ALL,WARN-ENTSIZE \
+# RUN:                --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-symbols %t2-zero-entsize 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2-zero-entsize --check-prefixes=GNU2,GNU2-MORE,GNU2-ALL,WARN-ENTSIZE \
+# RUN:                --implicit-check-not=warning: -DNCHAIN=4
+
+## WARN-ENTSIZE: warning: '[[FILE]]': SHT_DYNSYM section has sh_entsize == 0
+
 ## Show there's no warning if the sizes match
 # RUN: yaml2obj --docnum=2 %s -o %t2-same -DCHAIN="[1, 2, 3]"
 # RUN: llvm-readobj --dyn-symbols %t2-same 2>&1 | \
@@ -165,8 +179,6 @@ ProgramHeaders:
 # RUN: llvm-readelf --dyn-symbols %t2-same 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=GNU2,GNU2-MORE \
 # RUN:                --implicit-check-not=warning: -DNCHAIN=3
-
-# WARN: warning: '{{.*}}2-{{.*}}': hash table nchain ([[NCHAIN]]) differs from symbol count derived from SHT_DYNSYM section header (3)
 
 # LLVM2:           DynamicSymbols [
 # LLVM2-NEXT:        Symbol {
@@ -236,6 +248,8 @@ Sections:
     ShSize:       0x48
     Address:      0x400
     AddressAlign: 0x400
+## 0x18 is the standard entsize value.
+    EntSize:      [[ENTSIZE=0x18]]
   - Name:         .hash
     Type:         SHT_HASH
     Flags:        [ SHF_ALLOC ]

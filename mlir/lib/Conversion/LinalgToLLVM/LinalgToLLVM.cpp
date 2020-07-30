@@ -219,7 +219,7 @@ public:
     BaseViewConversionHelper desc(
         typeConverter.convertType(sliceOp.getShapedType()));
 
-    // TODO(ntv): extract sizes and emit asserts.
+    // TODO: extract sizes and emit asserts.
     SmallVector<Value, 4> strides(memRefType.getRank());
     for (int i = 0, e = memRefType.getRank(); i < e; ++i)
       strides[i] = baseDesc.stride(i);

@@ -403,12 +403,6 @@ public:
   bool doInitialization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineModuleInfoWrapperPass>();
-    AU.addPreserved<MachineModuleInfoWrapperPass>();
-  }
-
 private:
   std::tuple<SLSBLRThunkInserter> TIs;
 

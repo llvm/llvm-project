@@ -362,8 +362,8 @@ define <8 x double> @sitofp_v8i64_v8f64(<8 x i64> %x) #0 {
 define <8 x double> @uitofp_v8i64_v8f64(<8 x i64> %x) #0 {
 ; NODQ-32-LABEL: uitofp_v8i64_v8f64:
 ; NODQ-32:       # %bb.0:
-; NODQ-32-NEXT:    vpandq {{\.LCPI.*}}, %zmm0, %zmm1
-; NODQ-32-NEXT:    vporq {{\.LCPI.*}}, %zmm1, %zmm1
+; NODQ-32-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,1127219200,0,1127219200,0,1127219200,0,1127219200,0,1127219200,0,1127219200,0,1127219200,0,1127219200]
+; NODQ-32-NEXT:    vpternlogq $248, {{\.LCPI.*}}, %zmm0, %zmm1
 ; NODQ-32-NEXT:    vpsrlq $32, %zmm0, %zmm0
 ; NODQ-32-NEXT:    vporq {{\.LCPI.*}}, %zmm0, %zmm0
 ; NODQ-32-NEXT:    vsubpd {{\.LCPI.*}}{1to8}, %zmm0, %zmm0
@@ -372,8 +372,8 @@ define <8 x double> @uitofp_v8i64_v8f64(<8 x i64> %x) #0 {
 ;
 ; NODQ-64-LABEL: uitofp_v8i64_v8f64:
 ; NODQ-64:       # %bb.0:
-; NODQ-64-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm0, %zmm1
-; NODQ-64-NEXT:    vporq {{.*}}(%rip){1to8}, %zmm1, %zmm1
+; NODQ-64-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; NODQ-64-NEXT:    vpternlogq $248, {{.*}}(%rip){1to8}, %zmm0, %zmm1
 ; NODQ-64-NEXT:    vpsrlq $32, %zmm0, %zmm0
 ; NODQ-64-NEXT:    vporq {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; NODQ-64-NEXT:    vsubpd {{.*}}(%rip){1to8}, %zmm0, %zmm0

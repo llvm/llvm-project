@@ -4,7 +4,13 @@ add_subdirectory(SDBM)
 add_subdirectory(lib)
 
 llvm_canonicalize_cmake_booleans(
+  MLIR_BINDINGS_PYTHON_ENABLED
   LLVM_BUILD_EXAMPLES
+  MLIR_CUDA_CONVERSIONS_ENABLED
+  MLIR_CUDA_RUNNER_ENABLED
+  MLIR_ROCM_CONVERSIONS_ENABLED
+  MLIR_ROCM_RUNNER_ENABLED
+  MLIR_VULKAN_RUNNER_ENABLED
   )
 
 # Passed to lit.site.cfg.py.in to set up the path where to find the libraries
@@ -38,6 +44,7 @@ set(MLIR_TEST_DEPENDS
   mlir-edsc-builder-api-test
   mlir-linalg-ods-gen
   mlir-opt
+  mlir-reduce
   mlir-sdbm-api-test
   mlir-tblgen
   mlir-translate
@@ -74,6 +81,12 @@ endif()
 if(MLIR_VULKAN_RUNNER_ENABLED)
   list(APPEND MLIR_TEST_DEPENDS
     mlir-vulkan-runner
+  )
+endif()
+
+if(MLIR_BINDINGS_PYTHON_ENABLED)
+  list(APPEND MLIR_TEST_DEPENDS
+    MLIRBindingsPythonExtension
   )
 endif()
 

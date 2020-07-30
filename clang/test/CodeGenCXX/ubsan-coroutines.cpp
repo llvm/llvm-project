@@ -32,7 +32,7 @@ struct task {
   struct promise_type {
     task get_return_object() { return task(); }
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     void unhandled_exception() {}
   };

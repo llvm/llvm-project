@@ -15,9 +15,9 @@ typename MyMatrix<EltTy1, R1, C1>::matrix_t transpose(MyMatrix<EltTy0, R0, C0> &
   // expected-error@-3 {{cannot initialize a variable of type 'char *' with an rvalue of type 'unsigned int __attribute__((matrix_type(3, 3)))'}}
 
   __builtin_matrix_transpose(A);
-  // expected-error@-1 {{first argument must be a matrix}}
-  // expected-error@-2 {{first argument must be a matrix}}
-  // expected-error@-3 {{first argument must be a matrix}}
+  // expected-error@-1 {{1st argument must be a matrix}}
+  // expected-error@-2 {{1st argument must be a matrix}}
+  // expected-error@-3 {{1st argument must be a matrix}}
 
   return __builtin_matrix_transpose(A.value);
   // expected-error@-1 {{cannot initialize return object of type 'typename MyMatrix<unsigned int, 2U, 3U>::matrix_t' (aka 'unsigned int __attribute__((matrix_type(2, 3)))') with an rvalue of type 'unsigned int __attribute__((matrix_type(3, 2)))'}}
@@ -99,13 +99,13 @@ void call_column_major_load_temp(unsigned *Ptr, unsigned X) {
   // expected-error@-1 {{row argument must be a constant unsigned integer expression}}
   // expected-error@-2 {{column argument must be a constant unsigned integer expression}}
   (void)__builtin_matrix_column_major_load(X, 2, 2, 2);
-  // expected-error@-1 {{first argument must be a pointer to a valid matrix element type}}
+  // expected-error@-1 {{1st argument must be a pointer to a valid matrix element type}}
 }
 
 template <typename EltTy0, unsigned R0, unsigned C0, typename PtrTy>
 void column_major_store(MyMatrix<EltTy0, R0, C0> &A, PtrTy Ptr, unsigned Stride) {
   __builtin_matrix_column_major_store(A.value, Ptr, Stride);
-  // expected-error@-1 {{the pointee of the second argument must match the element type of the first argument ('float' != 'unsigned int')}}
+  // expected-error@-1 {{the pointee of the 2nd argument must match the element type of the 1st argument ('float' != 'unsigned int')}}
 }
 
 template <typename MTy, typename PtrTy, unsigned Stride>
@@ -126,14 +126,14 @@ template <typename EltTy0, unsigned R0, unsigned C0, typename EltTy1>
 void column_major_store(MyMatrix<EltTy0, R0, C0> &A, EltTy1 *Ptr) {
   __builtin_matrix_column_major_store(A.value, Ptr, 1);
   // expected-error@-1 3 {{stride must be greater or equal to the number of rows}}
-  // expected-error@-2 {{the pointee of the second argument must match the element type of the first argument ('float' != 'unsigned int')}}
-  // expected-error@-3 {{the pointee of the second argument must match the element type of the first argument ('unsigned int' != 'float')}}
+  // expected-error@-2 {{the pointee of the 2nd argument must match the element type of the 1st argument ('float' != 'unsigned int')}}
+  // expected-error@-3 {{the pointee of the 2nd argument must match the element type of the 1st argument ('unsigned int' != 'float')}}
 
   char *s;
   return __builtin_matrix_column_major_store(A.value, s, 20);
-  // expected-error@-1 {{the pointee of the second argument must match the element type of the first argument ('char' != 'unsigned int')}}
-  // expected-error@-2 {{the pointee of the second argument must match the element type of the first argument ('char' != 'unsigned int')}}
-  // expected-error@-3 {{he pointee of the second argument must match the element type of the first argument ('char' != 'float')}}
+  // expected-error@-1 {{the pointee of the 2nd argument must match the element type of the 1st argument ('char' != 'unsigned int')}}
+  // expected-error@-2 {{the pointee of the 2nd argument must match the element type of the 1st argument ('char' != 'unsigned int')}}
+  // expected-error@-3 {{he pointee of the 2nd argument must match the element type of the 1st argument ('char' != 'float')}}
 }
 
 void test_column_major_store_template(unsigned *Ptr1, float *Ptr2) {
@@ -152,9 +152,9 @@ void test_column_major_store_constexpr(unsigned *Ptr, MyMatrix<unsigned, 3, 3> &
   __builtin_matrix_column_major_store(M.value, Ptr, constexpr1());
   // expected-error@-1 {{stride must be greater or equal to the number of rows}}
   __builtin_matrix_column_major_store(constexpr1(), Ptr, 1);
-  // expected-error@-1 {{first argument must be a matrix}}
+  // expected-error@-1 {{1st argument must be a matrix}}
   __builtin_matrix_column_major_store(M.value, constexpr1(), 1);
-  // expected-error@-1 {{second argument must be a pointer to a valid matrix element type}}
+  // expected-error@-1 {{2nd argument must be a pointer to a valid matrix element type}}
   // expected-error@-2 {{stride must be greater or equal to the number of rows}}
 }
 
@@ -162,5 +162,5 @@ void test_column_major_store_wrapper(unsigned *Ptr, MyMatrix<unsigned, 3, 3> &M,
   __builtin_matrix_column_major_store(M.value, Ptr, W);
 
   __builtin_matrix_column_major_store(W, Ptr, W);
-  // expected-error@-1 {{first argument must be a matrix}}
+  // expected-error@-1 {{1st argument must be a matrix}}
 }

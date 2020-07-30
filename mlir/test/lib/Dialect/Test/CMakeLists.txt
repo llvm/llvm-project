@@ -3,6 +3,11 @@ set(LLVM_OPTIONAL_SOURCES
   TestPatterns.cpp
 )
 
+set(LLVM_TARGET_DEFINITIONS TestInterfaces.td)
+mlir_tablegen(TestTypeInterfaces.h.inc -gen-type-interface-decls)
+mlir_tablegen(TestTypeInterfaces.cpp.inc -gen-type-interface-defs)
+add_public_tablegen_target(MLIRTestInterfaceIncGen)
+
 set(LLVM_TARGET_DEFINITIONS TestOps.td)
 mlir_tablegen(TestOps.h.inc -gen-op-decls)
 mlir_tablegen(TestOps.cpp.inc -gen-op-defs)
@@ -22,6 +27,7 @@ add_mlir_library(MLIRTestDialect
   EXCLUDE_FROM_LIBMLIR
 
   DEPENDS
+  MLIRTestInterfaceIncGen
   MLIRTestOpsIncGen
 
   LINK_LIBS PUBLIC

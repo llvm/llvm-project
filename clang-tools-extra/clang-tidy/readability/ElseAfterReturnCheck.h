@@ -28,6 +28,7 @@ public:
 
 private:
   const bool WarnOnUnfixable;
+  const bool WarnOnConditionVariables;
 };
 
 } // namespace readability

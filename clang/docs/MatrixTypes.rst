@@ -245,8 +245,8 @@ and if omitted ``row`` is used as ``columnStride``.
 **Preconditions**: ``columnStride`` is greater than or equal to the number of rows in ``M``.
 
 **Remarks**: The type ``T`` is the const-unqualified version of the matrix
-argument’s element type. The paramter ``columnStride`` is optional and if
-ommitted, the number of rows of ``M`` is used as ``columnStride``.
+argument’s element type. The parameter ``columnStride`` is optional and if
+omitted, the number of rows of ``M`` is used as ``columnStride``.
 
 **Effects**: Equivalent to:
 

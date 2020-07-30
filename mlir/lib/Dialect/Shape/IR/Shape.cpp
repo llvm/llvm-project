@@ -317,21 +317,101 @@ OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shapeAttr(); }
 // CstrBroadcastableOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+// Given an input shape Value, try to obtain the shape's values.
+LogicalResult getShapeVec(Value input, SmallVectorImpl<int64_t> &shapeValues) {
+  if (auto inputOp = input.getDefiningOp<ShapeOfOp>()) {
+    auto type = inputOp.arg().getType().dyn_cast<ShapedType>();
+    if (!type.hasRank())
+      return failure();
+    shapeValues = llvm::to_vector<6>(type.getShape());
+    return success();
+  } else if (auto inputOp = input.getDefiningOp<ConstShapeOp>()) {
+    shapeValues = llvm::to_vector<6>(inputOp.shape().getValues<int64_t>());
+    return success();
+  } else {
+    return failure();
+  }
+}
+
+// For shapes that were created by some operations, we can obtain partial
+// information on the shapes and sometimes determine if they will be
+// broadcastable with that.
+struct CstrBroadcastablePartialInfo
+    : public OpRewritePattern<CstrBroadcastableOp> {
+  using OpRewritePattern<CstrBroadcastableOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CstrBroadcastableOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<int64_t, 6> lhsShape, rhsShape;
+    if (failed(getShapeVec(op.lhs(), lhsShape)))
+      return failure();
+    if (failed(getShapeVec(op.rhs(), rhsShape)))
+      return failure();
+    if (!OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<ConstWitnessOp>(op.getOperation(), true);
+    return success();
+  }
+};
+
+// Scalars are always broadcastable.
+struct CstrBroadcastableScalar : public OpRewritePattern<CstrBroadcastableOp> {
+  using OpRewritePattern<CstrBroadcastableOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CstrBroadcastableOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<int64_t, 6> shape;
+    if (failed(getShapeVec(op.lhs(), shape)) || shape.size() > 0)
+      return failure();
+    if (failed(getShapeVec(op.rhs(), shape)) || shape.size() > 0)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<ConstWitnessOp>(op.getOperation(), true);
+    return success();
+  }
+};
+
+} // namespace
+
 void CstrBroadcastableOp::getCanonicalizationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
-  // If inputs are equal, return passing witness
-  patterns.insert<CstrBroadcastableEqOps>(context);
+  // Canonicalization patterns have overlap with the considerations during
+  // folding in case additional shape information is inferred at some point that
+  // does not result in folding.
+  patterns.insert<CstrBroadcastableEqOps, CstrBroadcastablePartialInfo,
+                  CstrBroadcastableScalar>(context);
 }
 
 OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
-  if (!operands[0] || !operands[1])
+  // Both operands are not needed if one is a scalar.
+  if (operands[0] &&
+      operands[0].cast<DenseIntElementsAttr>().getNumElements() == 0)
+    return BoolAttr::get(true, getContext());
+  if (operands[1] &&
+      operands[1].cast<DenseIntElementsAttr>().getNumElements() == 0)
+    return BoolAttr::get(true, getContext());
+
+  if (operands[0] && operands[1]) {
+    auto lhsShape = llvm::to_vector<6>(
+        operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
+    auto rhsShape = llvm::to_vector<6>(
+        operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
+    SmallVector<int64_t, 6> resultShape;
+    if (OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
+      return BoolAttr::get(true, getContext());
+  }
+
+  // Lastly, see if folding can be completed based on what constraints are known
+  // on the input shapes.
+  SmallVector<int64_t, 6> lhsShape, rhsShape;
+  if (failed(getShapeVec(lhs(), lhsShape)))
     return nullptr;
-  auto lhsShape = llvm::to_vector<6>(
-      operands[0].cast<DenseIntElementsAttr>().getValues<int64_t>());
-  auto rhsShape = llvm::to_vector<6>(
-      operands[1].cast<DenseIntElementsAttr>().getValues<int64_t>());
-  SmallVector<int64_t, 6> resultShape;
-  if (OpTrait::util::getBroadcastedShape(lhsShape, rhsShape, resultShape))
+  if (failed(getShapeVec(rhs(), rhsShape)))
+    return nullptr;
+
+  if (OpTrait::util::staticallyKnownBroadcastable(lhsShape, rhsShape))
     return BoolAttr::get(true, getContext());
 
   // Because a failing witness result here represents an eventual assertion
@@ -364,6 +444,11 @@ OpFoldResult CstrEqOp::fold(ArrayRef<Attribute> operands) {
 // ConstSizeOp
 //===----------------------------------------------------------------------===//
 
+void ConstSizeOp::build(OpBuilder &builder, OperationState &result,
+                        int64_t value) {
+  build(builder, result, builder.getIndexAttr(value));
+}
+
 OpFoldResult ConstSizeOp::fold(ArrayRef<Attribute>) { return valueAttr(); }
 
 void ConstSizeOp::getAsmResultNames(
@@ -390,6 +475,11 @@ OpFoldResult IndexToSizeOp::fold(ArrayRef<Attribute> operands) {
   if (Attribute arg = operands[0])
     return arg;
   return {};
+}
+
+void IndexToSizeOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<SizeToIndexToSizeCanonicalization>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -438,6 +528,58 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
 }
 
 //===----------------------------------------------------------------------===//
+// RankOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
+  auto shape = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
+  if (!shape)
+    return {};
+  int64_t rank = shape.getNumElements();
+  Builder builder(getContext());
+  return builder.getIndexAttr(rank);
+}
+
+/// Evaluate the `rank` operation for shapes of ranked tensors at compile time.
+/// Constant folding fails in cases where only the rank is constant, not the
+/// shape itself.
+/// This canonicalization matches `shape.rank(shape.shape_of(%ranked_tensor))`.
+///
+/// Example:
+///
+/// %shape = shape.shape_of %ranked_tensor : tensor<1x2x?xf32>
+/// %rank = shape.rank %shape
+///
+/// becomes
+///
+/// %rank = shape.const_size 3
+
+namespace {
+struct RankShapeOfCanonicalizationPattern : public OpRewritePattern<RankOp> {
+  using OpRewritePattern<RankOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(RankOp op,
+                                PatternRewriter &rewriter) const override {
+    auto shapeOfOp = op.shape().getDefiningOp<ShapeOfOp>();
+    if (!shapeOfOp)
+      return failure();
+    auto rankedTensorType =
+        shapeOfOp.arg().getType().dyn_cast<RankedTensorType>();
+    if (!rankedTensorType)
+      return failure();
+    int64_t rank = rankedTensorType.getRank();
+    rewriter.replaceOpWithNewOp<ConstSizeOp>(op.getOperation(), rank);
+    return success();
+  }
+};
+} // namespace
+
+void RankOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+                                         MLIRContext *context) {
+  patterns.insert<RankShapeOfCanonicalizationPattern>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // NumElementsOp
 //===----------------------------------------------------------------------===//
 
@@ -477,6 +619,11 @@ OpFoldResult SizeToIndexOp::fold(ArrayRef<Attribute> operands) {
   if (Attribute arg = operands[0])
     return arg;
   return {};
+}
+
+void SizeToIndexOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<IndexToSizeToIndexCanonicalization>(context);
 }
 
 //===----------------------------------------------------------------------===//

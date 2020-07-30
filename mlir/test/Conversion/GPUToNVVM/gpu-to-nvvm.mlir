@@ -1,36 +1,52 @@
 // RUN: mlir-opt %s -convert-gpu-to-nvvm -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='index-bitwidth=32' -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_index_ops()
+  // CHECK32-LABEL: func @gpu_index_ops()
   func @gpu_index_ops()
       -> (index, index, index, index, index, index,
           index, index, index, index, index, index) {
+    // CHECK32-NOT: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
+
     // CHECK: = nvvm.read.ptx.sreg.tid.x : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %tIdX = "gpu.thread_id"() {dimension = "x"} : () -> (index)
     // CHECK: = nvvm.read.ptx.sreg.tid.y : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %tIdY = "gpu.thread_id"() {dimension = "y"} : () -> (index)
     // CHECK: = nvvm.read.ptx.sreg.tid.z : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %tIdZ = "gpu.thread_id"() {dimension = "z"} : () -> (index)
 
     // CHECK: = nvvm.read.ptx.sreg.ntid.x : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %bDimX = "gpu.block_dim"() {dimension = "x"} : () -> (index)
     // CHECK: = nvvm.read.ptx.sreg.ntid.y : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %bDimY = "gpu.block_dim"() {dimension = "y"} : () -> (index)
     // CHECK: = nvvm.read.ptx.sreg.ntid.z : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %bDimZ = "gpu.block_dim"() {dimension = "z"} : () -> (index)
 
     // CHECK: = nvvm.read.ptx.sreg.ctaid.x : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %bIdX = "gpu.block_id"() {dimension = "x"} : () -> (index)
     // CHECK: = nvvm.read.ptx.sreg.ctaid.y : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %bIdY = "gpu.block_id"() {dimension = "y"} : () -> (index)
     // CHECK: = nvvm.read.ptx.sreg.ctaid.z : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %bIdZ = "gpu.block_id"() {dimension = "z"} : () -> (index)
 
     // CHECK: = nvvm.read.ptx.sreg.nctaid.x : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %gDimX = "gpu.grid_dim"() {dimension = "x"} : () -> (index)
     // CHECK: = nvvm.read.ptx.sreg.nctaid.y : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %gDimY = "gpu.grid_dim"() {dimension = "y"} : () -> (index)
     // CHECK: = nvvm.read.ptx.sreg.nctaid.z : !llvm.i32
+    // CHECK: = llvm.sext %{{.*}} : !llvm.i32 to !llvm.i64
     %gDimZ = "gpu.grid_dim"() {dimension = "z"} : () -> (index)
 
     std.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
@@ -43,10 +59,25 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_index_comp
+  // CHECK32-LABEL: func @gpu_index_comp
+  func @gpu_index_comp(%idx : index) -> index {
+    // CHECK: = llvm.add %{{.*}}, %{{.*}} : !llvm.i64
+    // CHECK32: = llvm.add %{{.*}}, %{{.*}} : !llvm.i32
+    %0 = addi %idx, %idx : index
+    // CHECK: llvm.return %{{.*}} : !llvm.i64
+    // CHECK32: llvm.return %{{.*}} : !llvm.i32
+    std.return %0 : index
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK-LABEL: func @gpu_all_reduce_op()
   gpu.func @gpu_all_reduce_op() {
     %arg0 = constant 1.0 : f32
-    // TODO(csigg): Check full IR expansion once lowering has settled.
+    // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync.bfly
     // CHECK: nvvm.barrier0
     // CHECK: llvm.fadd
@@ -62,7 +93,7 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_all_reduce_region()
   gpu.func @gpu_all_reduce_region() {
     %arg0 = constant 1 : i32
-    // TODO(csigg): Check full IR expansion once lowering has settled.
+    // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync.bfly
     // CHECK: nvvm.barrier0
     %result = "gpu.all_reduce"(%arg0) ({

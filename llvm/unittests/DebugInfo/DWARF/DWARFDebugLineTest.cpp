@@ -1380,6 +1380,130 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   EXPECT_EQ(Output.size(), Pos);
 }
 
+struct TruncatedPrologueFixture
+    : public TestWithParam<
+          std::tuple<uint64_t, uint64_t, uint16_t, DwarfFormat, StringRef>>,
+      public CommonFixture {
+  void SetUp() {
+    std::tie(Length, ExpectedOffset, Version, Format, ExpectedErr) = GetParam();
+  }
+
+  uint64_t Length;
+  uint64_t ExpectedOffset;
+  uint16_t Version;
+  DwarfFormat Format;
+  StringRef ExpectedErr;
+};
+
+TEST_P(TruncatedPrologueFixture, ErrorForTruncatedPrologue) {
+  if (!setupGenerator(Version))
+    return;
+
+  LineTable &Padding = Gen->addLineTable();
+  // Add some padding to show that a non-zero offset is handled correctly.
+  Padding.setCustomPrologue({{0, LineTable::Byte}});
+
+  // Add a table with only two standard opcodes - we don't need to test the full
+  // set.
+  LineTable &Table = Gen->addLineTable(Format);
+  DWARFDebugLine::Prologue InputPrologue = Table.createBasicPrologue();
+  InputPrologue.OpcodeBase = 3;
+  InputPrologue.StandardOpcodeLengths.resize(2);
+  Table.setPrologue(InputPrologue);
+
+  generate();
+  // Truncate the data extractor to the specified length.
+  LineData = DWARFDataExtractor(LineData, Length);
+
+  DWARFDebugLine::Prologue Prologue;
+  uint64_t Offset = 1;
+  Error Err = Prologue.parse(LineData, &Offset, RecordRecoverable, *Context);
+
+  EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage(ExpectedErr.str()));
+  EXPECT_EQ(Offset, ExpectedOffset);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    TruncatedPrologueParams, TruncatedPrologueFixture,
+    Values(
+        // Truncated length:
+        std::make_tuple(
+            4, 1, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0x4 while reading [0x1, 0x5)"),
+        std::make_tuple(
+            4, 1, 4, DWARF64,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0x4 while reading [0x1, 0x5)"),
+        std::make_tuple(
+            0xc, 1, 4, DWARF64,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0xc while reading [0x5, 0xd)"),
+        // Truncated version:
+        std::make_tuple(
+            6, 5, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0x6 while reading [0x5, 0x7)"),
+        // Truncated address size:
+        std::make_tuple(
+            7, 7, 5, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0x7 while reading [0x7, 0x8)"),
+        // Truncated segment selector size:
+        std::make_tuple(
+            8, 8, 5, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0x8 while reading [0x8, 0x9)"),
+        // Truncated prologue length:
+        std::make_tuple(
+            0xa, 7, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0xa while reading [0x7, 0xb)"),
+        std::make_tuple(
+            0x16, 0xf, 4, DWARF64,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0x16 while reading [0xf, 0x17)"),
+        // Truncated min instruction length:
+        std::make_tuple(
+            0xb, 0xb, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0xb while reading [0xb, 0xc)"),
+        // Truncated max ops per inst:
+        std::make_tuple(
+            0xc, 0xc, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0xc while reading [0xc, 0xd)"),
+        // Truncated default is stmt:
+        std::make_tuple(
+            0xd, 0xd, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0xd while reading [0xd, 0xe)"),
+        // Truncated line base:
+        std::make_tuple(
+            0xe, 0xe, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0xe while reading [0xe, 0xf)"),
+        // Truncated line range:
+        std::make_tuple(
+            0xf, 0xf, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0xf while reading [0xf, 0x10)"),
+        // Truncated opcode base:
+        std::make_tuple(
+            0x10, 0x10, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0x10 while reading [0x10, 0x11)"),
+        // Truncated first standard opcode:
+        std::make_tuple(
+            0x11, 0x11, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0x11 while reading [0x11, 0x12)"),
+        // Truncated second standard opcode:
+        std::make_tuple(
+            0x12, 0x12, 4, DWARF32,
+            "parsing line table prologue at offset 0x00000001: unexpected end "
+            "of data at offset 0x12 while reading [0x12, 0x13)")), );
+
 using ValueAndLengths = std::vector<LineTable::ValueAndLength>;
 
 struct TruncatedOpcodeFixtureBase : public CommonFixture {
@@ -1461,64 +1585,71 @@ TEST_P(TruncatedExtendedOpcodeFixture, ErrorForTruncatedExtendedOpcode) {
 INSTANTIATE_TEST_CASE_P(
     TruncatedExtendedOpcodeParams, TruncatedExtendedOpcodeFixture,
     Values(
-        std::make_tuple(1, 1, DW_LNE_end_sequence, ValueAndLengths(),
-                        "Badly formed extended line op (length 0)",
+        // Truncated length:
+        std::make_tuple(1, 1, /*ArbitraryOpcode=*/0x7f, ValueAndLengths(), "",
                         "unable to decode LEB128 at offset 0x00000030: "
                         "malformed uleb128, extends past end"),
+        // Truncated opcode:
         std::make_tuple(
-            2, 9, DW_LNE_set_address,
-            ValueAndLengths{{0x12345678, LineTable::Quad}},
-            "Unrecognized extended op 0x00 length 9",
+            2, 9, /*ArbitraryOpcode=*/0x7f, ValueAndLengths(), "",
             "unexpected end of data at offset 0x31 while reading [0x31, 0x32)"),
+        // Truncated operands:
         std::make_tuple(
             3, 9, DW_LNE_set_address,
-            ValueAndLengths{{0x12345678, LineTable::Quad}},
-            "DW_LNE_set_address (0x0000000000000000)",
+            ValueAndLengths{{0x1234567890abcdef, LineTable::Quad}},
+            "DW_LNE_set_address",
             "unexpected end of data at offset 0x32 while reading [0x32, 0x3a)"),
-        std::make_tuple(3, 5, DW_LNE_define_file,
+        std::make_tuple(
+            10, 9, DW_LNE_set_address,
+            ValueAndLengths{{0x1234567878563412, LineTable::Quad}},
+            "DW_LNE_set_address (<parsing error> 12 34 56 78 78 56 34)",
+            "unexpected end of data at offset 0x39 while reading [0x32, 0x3a)"),
+        std::make_tuple(3, 6, DW_LNE_define_file,
                         ValueAndLengths{{'a', LineTable::Byte},
                                         {'\0', LineTable::Byte},
                                         {1, LineTable::ULEB},
                                         {1, LineTable::ULEB},
                                         {1, LineTable::ULEB}},
-                        "DW_LNE_define_file (, dir=0, "
-                        "mod_time=(0x0000000000000000), length=0)",
+                        "DW_LNE_define_file",
                         "no null terminated string at offset 0x32"),
-        std::make_tuple(5, 5, DW_LNE_define_file,
+        std::make_tuple(5, 6, DW_LNE_define_file,
                         ValueAndLengths{{'a', LineTable::Byte},
                                         {'\0', LineTable::Byte},
                                         {1, LineTable::ULEB},
                                         {1, LineTable::ULEB},
                                         {1, LineTable::ULEB}},
-                        "DW_LNE_define_file (a, dir=0, "
-                        "mod_time=(0x0000000000000000), length=0)",
+                        "DW_LNE_define_file (<parsing error> 61 00)",
                         "unable to decode LEB128 at offset 0x00000034: "
                         "malformed uleb128, extends past end"),
-        std::make_tuple(6, 5, DW_LNE_define_file,
+        std::make_tuple(6, 6, DW_LNE_define_file,
                         ValueAndLengths{{'a', LineTable::Byte},
                                         {'\0', LineTable::Byte},
                                         {1, LineTable::ULEB},
                                         {1, LineTable::ULEB},
                                         {1, LineTable::ULEB}},
-                        "DW_LNE_define_file (a, dir=1, "
-                        "mod_time=(0x0000000000000000), length=0)",
+                        "DW_LNE_define_file (<parsing error> 61 00 01)",
                         "unable to decode LEB128 at offset 0x00000035: "
                         "malformed uleb128, extends past end"),
-        std::make_tuple(7, 5, DW_LNE_define_file,
+        std::make_tuple(7, 6, DW_LNE_define_file,
                         ValueAndLengths{{'a', LineTable::Byte},
                                         {'\0', LineTable::Byte},
                                         {1, LineTable::ULEB},
                                         {1, LineTable::ULEB},
                                         {1, LineTable::ULEB}},
-                        "DW_LNE_define_file (a, dir=1, "
-                        "mod_time=(0x0000000000000001), length=0)",
+                        "DW_LNE_define_file (<parsing error> 61 00 01 01)",
                         "unable to decode LEB128 at offset 0x00000036: "
                         "malformed uleb128, extends past end"),
         std::make_tuple(3, 2, DW_LNE_set_discriminator,
                         ValueAndLengths{{1, LineTable::ULEB}},
-                        "DW_LNE_set_discriminator (0)",
+                        "DW_LNE_set_discriminator",
                         "unable to decode LEB128 at offset 0x00000032: "
-                        "malformed uleb128, extends past end")), );
+                        "malformed uleb128, extends past end"),
+        std::make_tuple(
+            6, 5, /*Unknown=*/0x7f,
+            ValueAndLengths{{0x12343412, LineTable::Long}},
+            "Unrecognized extended op 0x7f length 5 (<parsing error> 12 34 34)",
+            "unexpected end of data at offset 0x35 while reading [0x32, "
+            "0x36)")), );
 
 TEST_P(TruncatedStandardOpcodeFixture, ErrorForTruncatedStandardOpcode) {
   if (!setupGenerator())

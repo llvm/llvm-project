@@ -212,9 +212,9 @@ void AMDGPUTargetAsmStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
 }
 
 void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
-                                            unsigned Align) {
-  OS << "\t.amdgpu_lds " << Symbol->getName() << ", " << Size << ", " << Align
-     << '\n';
+                                            Align Alignment) {
+  OS << "\t.amdgpu_lds " << Symbol->getName() << ", " << Size << ", "
+     << Alignment.value() << '\n';
 }
 
 bool AMDGPUTargetAsmStreamer::EmitISAVersion(StringRef IsaVersionString) {
@@ -515,9 +515,7 @@ void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
 }
 
 void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
-                                            unsigned Align) {
-  assert(isPowerOf2_32(Align));
-
+                                            Align Alignment) {
   MCSymbolELF *SymbolELF = cast<MCSymbolELF>(Symbol);
   SymbolELF->setType(ELF::STT_OBJECT);
 
@@ -526,7 +524,7 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
     SymbolELF->setExternal(true);
   }
 
-  if (SymbolELF->declareCommon(Size, Align, true)) {
+  if (SymbolELF->declareCommon(Size, Alignment.value(), true)) {
     report_fatal_error("Symbol: " + Symbol->getName() +
                        " redeclared as different type");
   }

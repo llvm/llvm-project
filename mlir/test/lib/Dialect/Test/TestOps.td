@@ -90,6 +90,10 @@ def MultiTensorRankOf : TEST_Op<"multi_tensor_rank_of"> {
   );
 }
 
+def TEST_TestType : DialectType<Test_Dialect,
+    CPred<"$_self.isa<::mlir::TestType>()">, "test">,
+    BuildableType<"$_builder.getType<::mlir::TestType>()">;
+
 //===----------------------------------------------------------------------===//
 // Test Symbols
 //===----------------------------------------------------------------------===//
@@ -123,6 +127,12 @@ def MixedNormalVariadicOperandOp : TEST_Op<
     AnyTensor:$input2,
     Variadic<AnyTensor>:$input3
   );
+}
+def VariadicWithSameOperandsResult :
+      TEST_Op<"variadic_with_same_operand_results",
+              [SameOperandsAndResultType]> {
+  let arguments = (ins Variadic<AnySignlessInteger>:$operands);
+  let results = (outs AnySignlessInteger:$result);
 }
 
 //===----------------------------------------------------------------------===//
@@ -601,6 +611,20 @@ def : Pat<(OpH $input), (OpI $input)>;
 def OpJ : TEST_Op<"op_j">, Arguments<(ins)>, Results<(outs I32)>;
 def OpK : TEST_Op<"op_k">, Arguments<(ins)>, Results<(outs I32)>;
 def : Pat<(OpJ), (OpK)>;
+
+// Test that natives calls are only called once during rewrites.
+def OpM : TEST_Op<"op_m"> {
+  let arguments = (ins I32, OptionalAttr<I32Attr>:$optional_attr);
+  let results = (outs I32);
+}
+// Pattern add the argument plus a increasing static number hidden in
+// OpMTest function. That value is set into the optional argument.
+// That way, we will know if operations is called once or twice.
+def OpMGetNullAttr : NativeCodeCall<"Attribute()">;
+def OpMAttributeIsNull : Constraint<CPred<"! ($_self)">, "Attribute is null">;
+def OpMVal : NativeCodeCall<"OpMTest($_builder, $0)">;
+def : Pat<(OpM $attr, $optAttr), (OpM $attr, (OpMVal $attr) ),
+    [(OpMAttributeIsNull:$optAttr)]>;
 
 // Test `$_` for ignoring op argument match.
 def TestIgnoreArgMatchSrcOp : TEST_Op<"ignore_arg_match_src"> {
@@ -1320,6 +1344,54 @@ def FormatTwoVariadicOperandsNoBuildableTypeOp
   }];
 }
 
+def FormatInferVariadicTypeFromNonVariadic
+    : TEST_Op<"format_infer_variadic_type_from_non_variadic",
+              [SameOperandsAndResultType]> {
+  let arguments = (ins Variadic<AnyType>:$operands);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "$operands attr-dict `:` type($result)";
+}
+
+//===----------------------------------------------------------------------===//
+// AllTypesMatch type inference
+//===----------------------------------------------------------------------===//
+
+def FormatAllTypesMatchVarOp : TEST_Op<"format_all_types_match_var", [
+    AllTypesMatch<["value1", "value2", "result"]>
+  ]> {
+  let arguments = (ins AnyType:$value1, AnyType:$value2);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value1 `,` $value2 `:` type($value1)";
+}
+
+def FormatAllTypesMatchAttrOp : TEST_Op<"format_all_types_match_attr", [
+    AllTypesMatch<["value1", "value2", "result"]>
+  ]> {
+  let arguments = (ins AnyAttr:$value1, AnyType:$value2);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value1 `,` $value2";
+}
+
+//===----------------------------------------------------------------------===//
+// TypesMatchWith type inference
+//===----------------------------------------------------------------------===//
+
+def FormatTypesMatchVarOp : TEST_Op<"format_types_match_var", [
+    TypesMatchWith<"result type matches operand", "value", "result", "$_self">
+  ]> {
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value `:` type($value)";
+}
+
+def FormatTypesMatchAttrOp : TEST_Op<"format_types_match_attr", [
+    TypesMatchWith<"result type matches constant", "value", "result", "$_self">
+  ]> {
+  let arguments = (ins AnyAttr:$value);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value";
+}
+
 //===----------------------------------------------------------------------===//
 // Test SideEffects
 //===----------------------------------------------------------------------===//
@@ -1327,6 +1399,49 @@ def FormatTwoVariadicOperandsNoBuildableTypeOp
 def SideEffectOp : TEST_Op<"side_effect_op",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let results = (outs AnyType:$result);
+}
+
+//===----------------------------------------------------------------------===//
+// Test RegionBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+def RegionIfYieldOp : TEST_Op<"region_if_yield",
+      [NoSideEffect, ReturnLike, Terminator]> {
+  let arguments = (ins Variadic<AnyType>:$results);
+  let assemblyFormat = [{
+    $results `:` type($results) attr-dict
+  }];
+}
+
+def RegionIfOp : TEST_Op<"region_if",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       SingleBlockImplicitTerminator<"RegionIfYieldOp">,
+       RecursiveSideEffects]> {
+  let description =[{
+    Represents an abstract if-then-else-join pattern. In this context, the then
+    and else regions jump to the join region, which finally returns to its
+    parent op.
+    }];
+
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parseRegionIfOp(parser, result); }];
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$thenRegion,
+                        AnyRegion:$elseRegion,
+                        AnyRegion:$joinRegion);
+  let extraClassDeclaration = [{
+    Block::BlockArgListType getThenArgs() {
+      return getBody(0)->getArguments();
+    }
+    Block::BlockArgListType getElseArgs() {
+      return getBody(1)->getArguments();
+    }
+    Block::BlockArgListType getJoinArgs() {
+      return getBody(2)->getArguments();
+    }
+    OperandRange getSuccessorEntryOperands(unsigned index);
+  }];
 }
 
 #endif // TEST_OPS

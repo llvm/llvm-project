@@ -182,7 +182,7 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
     case MCObjectFileInfo::IsWasm:
       return new (Name, *this) MCSymbolWasm(Name, IsTemporary);
     case MCObjectFileInfo::IsXCOFF:
-      return new (Name, *this) MCSymbolXCOFF(Name, IsTemporary);
+      return createXCOFFSymbolImpl(Name, IsTemporary);
     }
   }
   return new (Name, *this) MCSymbol(MCSymbol::SymbolKindUnset, Name,
@@ -290,6 +290,61 @@ void MCContext::setSymbolValue(MCStreamer &Streamer,
 
 void MCContext::registerInlineAsmLabel(MCSymbol *Sym) {
   InlineAsmUsedLabelNames[Sym->getName()] = Sym;
+}
+
+MCSymbolXCOFF *
+MCContext::createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
+                                 bool IsTemporary) {
+  if (!Name)
+    return new (nullptr, *this) MCSymbolXCOFF(nullptr, IsTemporary);
+
+  StringRef OriginalName = Name->first();
+  if (OriginalName.startswith("._Renamed..") ||
+      OriginalName.startswith("_Renamed.."))
+    reportError(SMLoc(), "invalid symbol name from source");
+
+  if (MAI->isValidUnquotedName(OriginalName))
+    return new (Name, *this) MCSymbolXCOFF(Name, IsTemporary);
+
+  // Now we have a name that contains invalid character(s) for XCOFF symbol.
+  // Let's replace with something valid, but save the original name so that
+  // we could still use the original name in the symbol table.
+  SmallString<128> InvalidName(OriginalName);
+
+  // If it's an entry point symbol, we will keep the '.'
+  // in front for the convention purpose. Otherwise, add "_Renamed.."
+  // as prefix to signal this is an renamed symbol.
+  const bool IsEntryPoint = !InvalidName.empty() && InvalidName[0] == '.';
+  SmallString<128> ValidName =
+      StringRef(IsEntryPoint ? "._Renamed.." : "_Renamed..");
+
+  // Append the hex values of '_' and invalid characters with "_Renamed..";
+  // at the same time replace invalid characters with '_'.
+  for (size_t I = 0; I < InvalidName.size(); ++I) {
+    if (!MAI->isAcceptableChar(InvalidName[I]) || InvalidName[I] == '_') {
+      raw_svector_ostream(ValidName).write_hex(InvalidName[I]);
+      InvalidName[I] = '_';
+    }
+  }
+
+  // Skip entry point symbol's '.' as we already have a '.' in front of
+  // "_Renamed".
+  if (IsEntryPoint)
+    ValidName.append(InvalidName.substr(1, InvalidName.size() - 1));
+  else
+    ValidName.append(InvalidName);
+
+  auto NameEntry = UsedNames.insert(std::make_pair(ValidName, true));
+  assert((NameEntry.second || !NameEntry.first->second) &&
+         "This name is used somewhere else.");
+  // Mark the name as used for a non-section symbol.
+  NameEntry.first->second = true;
+  // Have the MCSymbol object itself refer to the copy of the string
+  // that is embedded in the UsedNames entry.
+  MCSymbolXCOFF *XSym = new (&*NameEntry.first, *this)
+      MCSymbolXCOFF(&*NameEntry.first, IsTemporary);
+  XSym->setSymbolTableName(MCSymbolXCOFF::getUnqualifiedName(OriginalName));
+  return XSym;
 }
 
 //===----------------------------------------------------------------------===//
@@ -610,15 +665,18 @@ MCSectionXCOFF *MCContext::getXCOFFSection(StringRef Section,
 
   // Otherwise, return a new section.
   StringRef CachedName = Entry.first.SectionName;
-  MCSymbol *QualName = getOrCreateSymbol(
-      CachedName + "[" + XCOFF::getMappingClassString(SMC) + "]");
+  MCSymbolXCOFF *QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(
+      CachedName + "[" + XCOFF::getMappingClassString(SMC) + "]"));
 
   MCSymbol *Begin = nullptr;
   if (BeginSymName)
     Begin = createTempSymbol(BeginSymName, false);
 
-  MCSectionXCOFF *Result = new (XCOFFAllocator.Allocate()) MCSectionXCOFF(
-      CachedName, SMC, Type, SC, Kind, cast<MCSymbolXCOFF>(QualName), Begin);
+  // QualName->getUnqualifiedName() and CachedName are the same except when
+  // CachedName contains invalid character(s) such as '$' for an XCOFF symbol.
+  MCSectionXCOFF *Result = new (XCOFFAllocator.Allocate())
+      MCSectionXCOFF(QualName->getUnqualifiedName(), SMC, Type, SC, Kind,
+                     QualName, Begin, CachedName);
   Entry.second = Result;
 
   auto *F = new MCDataFragment();

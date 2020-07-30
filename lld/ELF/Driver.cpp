@@ -411,6 +411,24 @@ static GnuStackKind getZGnuStack(opt::InputArgList &args) {
   return GnuStackKind::NoExec;
 }
 
+static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
+  for (auto *arg : args.filtered_reverse(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "start-stop-visibility") {
+      if (kv.second == "default")
+        return STV_DEFAULT;
+      else if (kv.second == "internal")
+        return STV_INTERNAL;
+      else if (kv.second == "hidden")
+        return STV_HIDDEN;
+      else if (kv.second == "protected")
+        return STV_PROTECTED;
+      error("unknown -z start-stop-visibility= value: " + StringRef(kv.second));
+    }
+  }
+  return STV_PROTECTED;
+}
+
 static bool isKnownZFlag(StringRef s) {
   return s == "combreloc" || s == "copyreloc" || s == "defs" ||
          s == "execstack" || s == "force-bti" || s == "force-ibt" ||
@@ -426,7 +444,9 @@ static bool isKnownZFlag(StringRef s) {
          s == "rela" || s == "relro" || s == "retpolineplt" ||
          s == "rodynamic" || s == "shstk" || s == "text" || s == "undefs" ||
          s == "wxneeded" || s.startswith("common-page-size=") ||
-         s.startswith("max-page-size=") || s.startswith("stack-size=");
+         s.startswith("dead-reloc-in-nonalloc=") ||
+         s.startswith("max-page-size=") || s.startswith("stack-size=") ||
+         s.startswith("start-stop-visibility=");
 }
 
 // Report an error for an unknown -z option.
@@ -1046,8 +1066,30 @@ static void readConfigs(opt::InputArgList &args) {
   config->zSeparate = getZSeparate(args);
   config->zShstk = hasZOption(args, "shstk");
   config->zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
+  config->zStartStopVisibility = getZStartStopVisibility(args);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
+
+  for (opt::Arg *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> option =
+        StringRef(arg->getValue()).split('=');
+    if (option.first != "dead-reloc-in-nonalloc")
+      continue;
+    constexpr StringRef errPrefix = "-z dead-reloc-in-nonalloc=: ";
+    std::pair<StringRef, StringRef> kv = option.second.split('=');
+    if (kv.first.empty() || kv.second.empty()) {
+      error(errPrefix + "expected <section_glob>=<value>");
+      continue;
+    }
+    uint64_t v;
+    if (!to_integer(kv.second, v))
+      error(errPrefix + "expected a non-negative integer, but got '" +
+            kv.second + "'");
+    else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
+      config->deadRelocInNonAlloc.emplace_back(std::move(*pat), v);
+    else
+      error(errPrefix + toString(pat.takeError()));
+  }
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
@@ -1697,8 +1739,11 @@ template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
   for (InputFile *file : lto->compile()) {
     auto *obj = cast<ObjFile<ELFT>>(file);
     obj->parse(/*ignoreComdats=*/true);
-    for (Symbol *sym : obj->getGlobalSymbols())
-      sym->parseSymbolVersion();
+
+    // Parse '@' in symbol names for non-relocatable output.
+    if (!config->relocatable)
+      for (Symbol *sym : obj->getGlobalSymbols())
+        sym->parseSymbolVersion();
     objectFiles.push_back(file);
   }
 }

@@ -109,8 +109,7 @@ PreservedAnalyses SyntheticCountsPropagation::run(Module &M,
     Optional<Scaled64> Res = None;
     if (!Edge.first)
       return Res;
-    assert(isa<Instruction>(Edge.first));
-    CallBase &CB = cast<CallBase>(*Edge.first);
+    CallBase &CB = *cast<CallBase>(*Edge.first);
     Function *Caller = CB.getCaller();
     auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*Caller);
 

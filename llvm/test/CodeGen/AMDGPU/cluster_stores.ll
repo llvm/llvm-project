@@ -5,6 +5,14 @@
 ; CHECK-LABEL: {{^}}cluster_load_cluster_store:
 define amdgpu_kernel void @cluster_load_cluster_store(i32* noalias %lb, i32* noalias %sb) {
 bb:
+
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 8
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 8
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 4
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 4
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 4
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 4
+
 ; DBG: Cluster ld/st SU(1) - SU(2)
 
 ; DBG: Cluster ld/st SU([[L1:[0-9]+]]) - SU([[L2:[0-9]+]])
@@ -45,6 +53,13 @@ bb:
 ; CHECK-LABEL: {{^}}cluster_load_valu_cluster_store:
 define amdgpu_kernel void @cluster_load_valu_cluster_store(i32* noalias %lb, i32* noalias %sb) {
 bb:
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 8
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 8
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 4
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 4
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 4
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 4
+
 ; DBG: Cluster ld/st SU(1) - SU(2)
 
 ; DBG: Cluster ld/st SU([[L1:[0-9]+]]) - SU([[L2:[0-9]+]])
@@ -86,6 +101,8 @@ bb:
 
 ; Cluster loads from the same texture with different coordinates
 ; CHECK-LABEL: {{^}}cluster_image_load:
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
 ; DBG: {{^}}Cluster ld/st [[SU1:SU\([0-9]+\)]] - [[SU2:SU\([0-9]+\)]]
 ; DBG: {{^}}[[SU1]]: {{.*}} IMAGE_LOAD
 ; DBG: {{^}}[[SU2]]: {{.*}} IMAGE_LOAD
@@ -106,6 +123,9 @@ entry:
 
 ; Don't cluster loads from different textures
 ; CHECK-LABEL: {{^}}no_cluster_image_load:
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
 ; DBG-NOT: {{^}}Cluster ld/st
 define amdgpu_ps void @no_cluster_image_load(<8 x i32> inreg %src1, <8 x i32> inreg %src2, <8 x i32> inreg %dst, i32 %x, i32 %y) {
 entry:
@@ -118,6 +138,8 @@ entry:
 
 ; Cluster loads from the same texture and sampler with different coordinates
 ; CHECK-LABEL: {{^}}cluster_image_sample:
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
+; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
 ; DBG: {{^}}Cluster ld/st [[SU1:SU\([0-9]+\)]] - [[SU2:SU\([0-9]+\)]]
 ; DBG: {{^}}[[SU1]]: {{.*}} IMAGE_SAMPLE
 ; DBG: {{^}}[[SU2]]: {{.*}} IMAGE_SAMPLE

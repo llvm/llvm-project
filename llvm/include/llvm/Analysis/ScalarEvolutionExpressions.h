@@ -222,17 +222,21 @@ class Type;
   class SCEVAddExpr : public SCEVCommutativeExpr {
     friend class ScalarEvolution;
 
-    SCEVAddExpr(const FoldingSetNodeIDRef ID,
-                const SCEV *const *O, size_t N)
-      : SCEVCommutativeExpr(ID, scAddExpr, O, N) {}
+    Type *Ty;
+
+    SCEVAddExpr(const FoldingSetNodeIDRef ID, const SCEV *const *O, size_t N)
+        : SCEVCommutativeExpr(ID, scAddExpr, O, N) {
+      auto *FirstPointerTypedOp = find_if(operands(), [](const SCEV *Op) {
+        return Op->getType()->isPointerTy();
+      });
+      if (FirstPointerTypedOp != operands().end())
+        Ty = (*FirstPointerTypedOp)->getType();
+      else
+        Ty = getOperand(0)->getType();
+    }
 
   public:
-    Type *getType() const {
-      // Use the type of the last operand, which is likely to be a pointer
-      // type, if there is one. This doesn't usually matter, but it can help
-      // reduce casts when the expressions are expanded.
-      return getOperand(getNumOperands() - 1)->getType();
-    }
+    Type *getType() const { return Ty; }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const SCEV *S) {

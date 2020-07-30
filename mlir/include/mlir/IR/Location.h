@@ -208,7 +208,8 @@ public:
 
 /// Represents an unknown location.  This is always a singleton for a given
 /// MLIRContext.
-class UnknownLoc : public Attribute::AttrBase<UnknownLoc, LocationAttr> {
+class UnknownLoc
+    : public Attribute::AttrBase<UnknownLoc, LocationAttr, AttributeStorage> {
 public:
   using Base::Base;
 

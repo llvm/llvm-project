@@ -19,7 +19,8 @@ class ClangASTMetadata {
 public:
   ClangASTMetadata()
       : m_user_id(0), m_union_is_user_id(false), m_union_is_isa_ptr(false),
-        m_has_object_ptr(false), m_is_self(false), m_is_dynamic_cxx(true) {}
+        m_has_object_ptr(false), m_is_self(false), m_is_dynamic_cxx(true),
+        m_is_forcefully_completed(false) {}
 
   bool GetIsDynamicCXXType() const { return m_is_dynamic_cxx; }
 
@@ -83,6 +84,15 @@ public:
 
   bool HasObjectPtr() const { return m_has_object_ptr; }
 
+  /// A type is "forcefully completed" if it was declared complete to satisfy an
+  /// AST invariant (e.g. base classes must be complete types), but in fact we
+  /// were not able to find a actual definition for it.
+  bool IsForcefullyCompleted() const { return m_is_forcefully_completed; }
+
+  void SetIsForcefullyCompleted(bool value = true) {
+    m_is_forcefully_completed = true;
+  }
+
   void Dump(Stream *s);
 
 private:
@@ -92,7 +102,7 @@ private:
   };
 
   bool m_union_is_user_id : 1, m_union_is_isa_ptr : 1, m_has_object_ptr : 1,
-      m_is_self : 1, m_is_dynamic_cxx : 1;
+      m_is_self : 1, m_is_dynamic_cxx : 1, m_is_forcefully_completed : 1;
 };
 
 } // namespace lldb_private

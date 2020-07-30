@@ -46,6 +46,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
@@ -78,15 +79,9 @@ namespace {
 class MVETailPredication : public LoopPass {
   SmallVector<IntrinsicInst*, 4> MaskedInsts;
   Loop *L = nullptr;
-  LoopInfo *LI = nullptr;
-  const DataLayout *DL;
-  DominatorTree *DT = nullptr;
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
-  TargetLibraryInfo *TLI = nullptr;
-  bool ClonedVCTPInExitBlock = false;
-  IntrinsicInst *ActiveLaneMask = nullptr;
-  FixedVectorType *VecTy = nullptr;
+  const ARMSubtarget *ST = nullptr;
 
 public:
   static char ID;
@@ -98,8 +93,6 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.setPreservesCFG();
   }
@@ -118,21 +111,17 @@ private:
   /// intrinsic: check if the first is a loop induction variable, and for the
   /// the second check that no overflow can occur in the expression that use
   /// this backedge-taken count.
-  bool IsSafeActiveMask(Value *TripCount, FixedVectorType *VecTy);
+  bool IsSafeActiveMask(IntrinsicInst *ActiveLaneMask, Value *TripCount,
+                        FixedVectorType *VecTy);
 
   /// Insert the intrinsic to represent the effect of tail predication.
   void InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask, Value *TripCount,
-                           FixedVectorType *VecTy,
-                           DenseMap<Instruction *, Instruction *> &NewPredicates);
+                           FixedVectorType *VecTy);
 
   /// Rematerialize the iteration count in exit blocks, which enables
   /// ARMLowOverheadLoops to better optimise away loop update statements inside
   /// hardware-loops.
   void RematerializeIterCount();
-
-  /// If it is not safe to lower @llvm.get.active.lane.mask to a VCTP, it needs
-  /// to be lowered to an icmp.
-  void RevertActiveLaneMask();
 };
 
 } // end namespace
@@ -156,93 +145,6 @@ static bool IsMasked(Instruction *I) {
   return ID == Intrinsic::masked_store || ID == Intrinsic::masked_load;
 }
 
-void MVETailPredication::RematerializeIterCount() {
-  SmallVector<WeakTrackingVH, 16> DeadInsts;
-  SCEVExpander Rewriter(*SE, *DL, "mvetp");
-  ReplaceExitVal ReplaceExitValue = AlwaysRepl;
-
-  formLCSSARecursively(*L, *DT, LI, SE);
-  rewriteLoopExitValues(L, LI, TLI, SE, TTI, Rewriter, DT, ReplaceExitValue,
-                        DeadInsts);
-}
-
-void MVETailPredication::RevertActiveLaneMask() {
-  if (!ActiveLaneMask)
-    return;
-
-  int VectorWidth = VecTy->getElementCount().Min;
-  IRBuilder<> Builder(ActiveLaneMask->getParent()->getFirstNonPHI());
-
-  // 1. Create the vector induction step. This %induction will be the LHS of
-  // the icmp:
-  //
-  // %splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  // %splat = shufflevector <4 x i32> %splatinsert, <4 x i32> undef, <4 x i32> 0
-  // %induction = add <4 x i32> %splat, <i32 0, i32 1, i32 2, i32 3>
-  //
-  Value *Index = ActiveLaneMask->getOperand(0);
-  Value *SplatIndex =
-      Builder.CreateVectorSplat(VectorWidth, Index, "lane.mask");
-
-  SmallVector<Constant *, 8> Indices;
-  for (int i = 0; i < VectorWidth; ++i)
-    Indices.push_back(ConstantInt::get(Index->getType(), i));
-
-  Constant *CV = ConstantVector::get(Indices);
-  Value *Induction = Builder.CreateAdd(SplatIndex, CV, "lane.mask.induction");
-
-  LLVM_DEBUG(dbgs() << "ARM TP: New index: " << *SplatIndex << "\n";
-             dbgs() << "ARM TP: New Induction: " << *Induction << "\n");
-
-  // 2. In the Preheader, first look if the splat BTC already exists. Find this
-  //    %splat, which will be the RHS of the icmp:
-  //
-  //    %TC.minus.1 = add i32 %N, -1
-  //    %splatinsert = insertelement <4 x i32> undef, i32 %TC.minus.1, i32 0
-  //    %splat = shufflevector <4 x i32> %splatinsert, <4 x i32> undef, <16 x i32> 0
-  //
-  auto *Preheader = L->getLoopPreheader();
-  auto *BTC = ActiveLaneMask->getOperand(1);
-  Value *SplatBTC = nullptr;
-
-  if (auto *C = dyn_cast<ConstantInt>(BTC)) {
-    Builder.SetInsertPoint(Preheader->getTerminator());
-    SplatBTC = Builder.CreateVectorSplat(VectorWidth, C);
-    LLVM_DEBUG(dbgs() << "ARM TCP: New splat BTC: " << *SplatBTC << "\n");
-  } else {
-    Instruction *InsertElem;
-    for (auto &V : *Preheader) {
-      InsertElem = dyn_cast<InsertElementInst>(&V);
-      if (!InsertElem)
-        continue;
-      ConstantInt *CI = dyn_cast<ConstantInt>(InsertElem->getOperand(2));
-      if (!CI)
-        continue;
-      if (InsertElem->getOperand(1) != BTC || CI->getSExtValue() != 0)
-        continue;
-      if ((SplatBTC = dyn_cast<ShuffleVectorInst>(*InsertElem->users().begin())))
-         break;
-    }
-  }
-  // Or create the splat BTC if it doesn't exist.
-  if (!SplatBTC) {
-    Builder.SetInsertPoint(Preheader->getTerminator());
-    Value *Undef =
-        UndefValue::get(FixedVectorType::get(BTC->getType(), VectorWidth));
-    Value *Insert = Builder.CreateInsertElement(Undef,
-        BTC, Builder.getInt32(0), "insert.btc");
-    Value *Zero = ConstantInt::get(Insert->getType(), 0);
-    SplatBTC = Builder.CreateShuffleVector (Insert, Undef, Zero, "splat.btc");
-    LLVM_DEBUG(dbgs() << "ARM TCP: New splat BTC: " << *SplatBTC << "\n");
-  }
-
-  Builder.SetInsertPoint(ActiveLaneMask);
-  Value *ICmp = Builder.CreateICmp(ICmpInst::ICMP_ULE, Induction, SplatBTC);
-  LLVM_DEBUG(dbgs() << "ARM TP: New compare: " << *ICmp << "\n");
-  ActiveLaneMask->replaceAllUsesWith(ICmp);
-  ActiveLaneMask->eraseFromParent();
-}
-
 bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   if (skipLoop(L) || DisableTailPredication)
     return false;
@@ -251,16 +153,10 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   Function &F = *L->getHeader()->getParent();
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<TargetMachine>();
-  auto *ST = &TM.getSubtarget<ARMSubtarget>(F);
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  ST = &TM.getSubtarget<ARMSubtarget>(F);
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-  TLI = TLIP ? &TLIP->getTLI(*L->getHeader()->getParent()) : nullptr;
-  DL = &L->getHeader()->getModule()->getDataLayout();
   this->L = L;
-  ActiveLaneMask = nullptr;
 
   // The MVE and LOB extensions are combined to enable tail-predication, but
   // there's nothing preventing us from generating VCTP instructions for v8.1m.
@@ -313,19 +209,15 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   if (!Decrement)
     return false;
 
-  ClonedVCTPInExitBlock = false;
   LLVM_DEBUG(dbgs() << "ARM TP: Running on Loop: " << *L << *Setup << "\n"
              << *Decrement << "\n");
 
-  if (TryConvert(Setup->getArgOperand(0))) {
-    if (ClonedVCTPInExitBlock)
-      RematerializeIterCount();
-    return true;
-  } else
-    RevertActiveLaneMask();
+  if (!TryConvert(Setup->getArgOperand(0))) {
+    LLVM_DEBUG(dbgs() << "ARM TP: Can't tail-predicate this loop.\n");
+    return false;
+  }
 
-  LLVM_DEBUG(dbgs() << "ARM TP: Can't tail-predicate this loop.\n");
-  return false;
+  return true;
 }
 
 static FixedVectorType *getVectorType(IntrinsicInst *I) {
@@ -340,10 +232,38 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
   // Check that the loop contains at least one masked load/store intrinsic.
   // We only support 'normal' vector instructions - other than masked
   // load/stores.
+  bool ActiveLaneMask = false;
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
+      auto *Int = dyn_cast<IntrinsicInst>(&I);
+      if (!Int)
+        continue;
+
+      switch (Int->getIntrinsicID()) {
+      case Intrinsic::get_active_lane_mask:
+        ActiveLaneMask = true;
+        LLVM_FALLTHROUGH;
+      case Intrinsic::sadd_sat:
+      case Intrinsic::uadd_sat:
+      case Intrinsic::ssub_sat:
+      case Intrinsic::usub_sat:
+        continue;
+      case Intrinsic::fma:
+      case Intrinsic::trunc:
+      case Intrinsic::rint:
+      case Intrinsic::round:
+      case Intrinsic::floor:
+      case Intrinsic::ceil:
+      case Intrinsic::fabs:
+        if (ST->hasMVEFloatOps())
+          continue;
+        LLVM_FALLTHROUGH;
+      default:
+        break;
+      }
+
       if (IsMasked(&I)) {
-        FixedVectorType *VecTy = getVectorType(cast<IntrinsicInst>(&I));
+        auto *VecTy = getVectorType(Int);
         unsigned Lanes = VecTy->getNumElements();
         unsigned ElementWidth = VecTy->getScalarSizeInBits();
         // MVE vectors are 128-bit, but don't support 128 x i1.
@@ -352,17 +272,20 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
         if (Lanes * ElementWidth > MaxWidth || Lanes == MaxWidth)
           return false;
         MaskedInsts.push_back(cast<IntrinsicInst>(&I));
-      } else if (auto *Int = dyn_cast<IntrinsicInst>(&I)) {
-        if (Int->getIntrinsicID() == Intrinsic::fma)
-          continue;
-        for (auto &U : Int->args()) {
-          if (isa<VectorType>(U->getType()))
-            return false;
-        }
+        continue;
+      }
+
+      for (const Use &U : Int->args()) {
+        if (isa<VectorType>(U->getType()))
+          return false;
       }
     }
   }
 
+  if (!ActiveLaneMask) {
+    LLVM_DEBUG(dbgs() << "ARM TP: No get.active.lane.mask intrinsic found.\n");
+    return false;
+  }
   return !MaskedInsts.empty();
 }
 
@@ -373,32 +296,11 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
 // in the block. This means that the VPR doesn't have to be live into the
 // exit block which should make it easier to convert this loop into a proper
 // tail predicated loop.
-static bool Cleanup(DenseMap<Instruction*, Instruction*> &NewPredicates,
-                    SetVector<Instruction*> &MaybeDead, Loop *L) {
+static void Cleanup(SetVector<Instruction*> &MaybeDead, Loop *L) {
   BasicBlock *Exit = L->getUniqueExitBlock();
   if (!Exit) {
     LLVM_DEBUG(dbgs() << "ARM TP: can't find loop exit block\n");
-    return false;
-  }
-
-  bool ClonedVCTPInExitBlock = false;
-
-  for (auto &Pair : NewPredicates) {
-    Instruction *OldPred = Pair.first;
-    Instruction *NewPred = Pair.second;
-
-    for (auto &I : *Exit) {
-      if (I.isSameOperationAs(OldPred)) {
-        Instruction *PredClone = NewPred->clone();
-        PredClone->insertBefore(&I);
-        I.replaceAllUsesWith(PredClone);
-        MaybeDead.insert(&I);
-        ClonedVCTPInExitBlock = true;
-        LLVM_DEBUG(dbgs() << "ARM TP: replacing: "; I.dump();
-                   dbgs() << "ARM TP: with:      "; PredClone->dump());
-        break;
-      }
-    }
+    return;
   }
 
   // Drop references and add operands to check for dead.
@@ -423,8 +325,6 @@ static bool Cleanup(DenseMap<Instruction*, Instruction*> &NewPredicates,
 
   for (auto I : L->blocks())
     DeleteDeadPHIs(I);
-
-  return ClonedVCTPInExitBlock;
 }
 
 // The active lane intrinsic has this form:
@@ -444,14 +344,15 @@ static bool Cleanup(DenseMap<Instruction*, Instruction*> &NewPredicates,
 //        (((ElementCount + (VectorWidth - 1)) / VectorWidth) - TripCount
 // 3) The IV must be an induction phi with an increment equal to the
 //    vector width.
-bool MVETailPredication::IsSafeActiveMask(Value *TripCount,
-    FixedVectorType *VecTy) {
+bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
+    Value *TripCount, FixedVectorType *VecTy) {
   // 1) Test whether entry to the loop is protected by a conditional
   // BTC + 1 < 0. In other words, if the scalar trip count overflows,
   // becomes negative, we shouldn't enter the loop and creating
   // tripcount expression BTC + 1 is not safe. So, check that BTC
   // isn't max. This is evaluated in unsigned, because the semantics
   // of @get.active.lane.mask is a ULE comparison.
+
   int VectorWidth = VecTy->getNumElements();
   auto *BackedgeTakenCount = ActiveLaneMask->getOperand(1);
   auto *BTC = SE->getSCEV(BackedgeTakenCount);
@@ -563,8 +464,8 @@ bool MVETailPredication::IsSafeActiveMask(Value *TripCount,
   if (VectorWidth == StepValue)
     return true;
 
-  LLVM_DEBUG(dbgs() << "ARM TP: step value " << StepValue << " doesn't match "
-             "vector width : " << VectorWidth << "\n");
+  LLVM_DEBUG(dbgs() << "ARM TP: Step value " << StepValue << " doesn't match "
+             "vector width " << VectorWidth << "\n");
 
   return false;
 }
@@ -602,11 +503,11 @@ static Value *getNumElements(BasicBlock *Preheader, Value *BTC) {
 }
 
 void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
-    Value *TripCount, FixedVectorType *VecTy,
-    DenseMap<Instruction*, Instruction*> &NewPredicates) {
+    Value *TripCount, FixedVectorType *VecTy) {
   IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
   Module *M = L->getHeader()->getModule();
   Type *Ty = IntegerType::get(M->getContext(), 32);
+  unsigned VectorWidth = VecTy->getNumElements();
 
   // The backedge-taken count in @llvm.get.active.lane.mask, its 2nd operand,
   // is one less than the trip count. So we need to find or create
@@ -624,10 +525,10 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   // represent the effect of tail predication.
   Builder.SetInsertPoint(ActiveLaneMask);
   ConstantInt *Factor =
-    ConstantInt::get(cast<IntegerType>(Ty), VecTy->getNumElements());
+    ConstantInt::get(cast<IntegerType>(Ty), VectorWidth);
 
   Intrinsic::ID VCTPID;
-  switch (VecTy->getNumElements()) {
+  switch (VectorWidth) {
   default:
     llvm_unreachable("unexpected number of lanes");
   case 4:  VCTPID = Intrinsic::arm_mve_vctp32; break;
@@ -643,7 +544,6 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   Function *VCTP = Intrinsic::getDeclaration(M, VCTPID);
   Value *VCTPCall = Builder.CreateCall(VCTP, Processed);
   ActiveLaneMask->replaceAllUsesWith(VCTPCall);
-  NewPredicates[ActiveLaneMask] = cast<Instruction>(VCTPCall);
 
   // Add the incoming value to the new phi.
   // TODO: This add likely already exists in the loop.
@@ -661,9 +561,7 @@ bool MVETailPredication::TryConvert(Value *TripCount) {
   }
 
   LLVM_DEBUG(dbgs() << "ARM TP: Found predicated vector loop.\n");
-
   SetVector<Instruction*> Predicates;
-  DenseMap<Instruction*, Instruction*> NewPredicates;
 
   // Walk through the masked intrinsics and try to find whether the predicate
   // operand is generated by intrinsic @llvm.get.active.lane.mask().
@@ -673,7 +571,7 @@ bool MVETailPredication::TryConvert(Value *TripCount) {
     if (!Predicate || Predicates.count(Predicate))
       continue;
 
-    ActiveLaneMask = dyn_cast<IntrinsicInst>(Predicate);
+    auto *ActiveLaneMask = dyn_cast<IntrinsicInst>(Predicate);
     if (!ActiveLaneMask ||
         ActiveLaneMask->getIntrinsicID() != Intrinsic::get_active_lane_mask)
       continue;
@@ -682,17 +580,16 @@ bool MVETailPredication::TryConvert(Value *TripCount) {
     LLVM_DEBUG(dbgs() << "ARM TP: Found active lane mask: "
                       << *ActiveLaneMask << "\n");
 
-    VecTy = getVectorType(I);
-    if (!IsSafeActiveMask(TripCount, VecTy)) {
+    auto *VecTy = getVectorType(I);
+    if (!IsSafeActiveMask(ActiveLaneMask, TripCount, VecTy)) {
       LLVM_DEBUG(dbgs() << "ARM TP: Not safe to insert VCTP.\n");
       return false;
     }
     LLVM_DEBUG(dbgs() << "ARM TP: Safe to insert VCTP.\n");
-    InsertVCTPIntrinsic(ActiveLaneMask, TripCount, VecTy, NewPredicates);
+    InsertVCTPIntrinsic(ActiveLaneMask, TripCount, VecTy);
   }
 
-  // Now clean up.
-  ClonedVCTPInExitBlock = Cleanup(NewPredicates, Predicates, L);
+  Cleanup(Predicates, L);
   return true;
 }
 

@@ -184,6 +184,14 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
   case wasm::WASM_OPCODE_GLOBAL_GET:
     Expr.Value.Global = readULEB128(Ctx);
     break;
+  case wasm::WASM_OPCODE_REF_NULL: {
+    wasm::ValType Ty = static_cast<wasm::ValType>(readULEB128(Ctx));
+    if (Ty != wasm::ValType::EXTERNREF) {
+      return make_error<GenericBinaryError>("Invalid type for ref.null",
+                                            object_error::parse_failed);
+    }
+    break;
+  }
   default:
     return make_error<GenericBinaryError>("Invalid opcode in init_expr",
                                           object_error::parse_failed);
@@ -200,9 +208,9 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
 static wasm::WasmLimits readLimits(WasmObjectFile::ReadContext &Ctx) {
   wasm::WasmLimits Result;
   Result.Flags = readVaruint32(Ctx);
-  Result.Initial = readVaruint32(Ctx);
+  Result.Initial = readVaruint64(Ctx);
   if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
-    Result.Maximum = readVaruint32(Ctx);
+    Result.Maximum = readVaruint64(Ctx);
   return Result;
 }
 

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/WithColor.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 

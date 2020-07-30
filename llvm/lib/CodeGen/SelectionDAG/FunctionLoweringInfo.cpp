@@ -190,7 +190,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           // stack allocation for each one.
           // Inform the Frame Information that we have variable-sized objects.
           MF->getFrameInfo().CreateVariableSizedObject(
-              Alignment <= StackAlign ? 0 : Alignment.value(), AI);
+              Alignment <= StackAlign ? Align(1) : Alignment, AI);
         }
       }
 

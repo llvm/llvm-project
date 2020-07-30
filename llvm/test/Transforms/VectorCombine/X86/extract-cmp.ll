@@ -8,22 +8,22 @@ define i1 @cmp_v4i32(<4 x float> %arg, <4 x float> %arg1) {
 ; CHECK-NEXT:    [[T:%.*]] = bitcast <4 x float> [[ARG:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[T3:%.*]] = bitcast <4 x float> [[ARG1:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i32> [[T]], [[T3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[BB6:%.*]], label [[BB18:%.*]]
+; CHECK-NEXT:    [[T5:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    br i1 [[T5]], label [[BB6:%.*]], label [[BB18:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[T]], [[T3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
-; CHECK-NEXT:    br i1 [[TMP3]], label [[BB10:%.*]], label [[BB18]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[T]], [[T3]]
+; CHECK-NEXT:    [[T9:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    br i1 [[T9]], label [[BB10:%.*]], label [[BB18]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[T]], [[T3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP4]], i32 2
-; CHECK-NEXT:    br i1 [[TMP5]], label [[BB14:%.*]], label [[BB18]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[T]], [[T3]]
+; CHECK-NEXT:    [[T13:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
+; CHECK-NEXT:    br i1 [[T13]], label [[BB14:%.*]], label [[BB18]]
 ; CHECK:       bb14:
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[T]], [[T3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[T]], [[T3]]
+; CHECK-NEXT:    [[T17:%.*]] = extractelement <4 x i1> [[TMP3]], i32 3
 ; CHECK-NEXT:    br label [[BB18]]
 ; CHECK:       bb18:
-; CHECK-NEXT:    [[T19:%.*]] = phi i1 [ false, [[BB10]] ], [ false, [[BB6]] ], [ false, [[BB:%.*]] ], [ [[TMP7]], [[BB14]] ]
+; CHECK-NEXT:    [[T19:%.*]] = phi i1 [ false, [[BB10]] ], [ false, [[BB6]] ], [ false, [[BB:%.*]] ], [ [[T17]], [[BB14]] ]
 ; CHECK-NEXT:    ret i1 [[T19]]
 ;
 bb:
@@ -75,12 +75,12 @@ define i32 @cmp_v2f64(<2 x double> %x, <2 x double> %y, <2 x double> %z) {
 ; AVX-LABEL: @cmp_v2f64(
 ; AVX-NEXT:  entry:
 ; AVX-NEXT:    [[TMP0:%.*]] = fcmp oeq <2 x double> [[X:%.*]], [[Y:%.*]]
-; AVX-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
-; AVX-NEXT:    br i1 [[TMP1]], label [[T:%.*]], label [[F:%.*]]
+; AVX-NEXT:    [[CMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
+; AVX-NEXT:    br i1 [[CMP1]], label [[T:%.*]], label [[F:%.*]]
 ; AVX:       t:
-; AVX-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x double> [[Y]], [[Z:%.*]]
-; AVX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
-; AVX-NEXT:    [[E:%.*]] = select i1 [[TMP3]], i32 42, i32 99
+; AVX-NEXT:    [[TMP1:%.*]] = fcmp ogt <2 x double> [[Y]], [[Z:%.*]]
+; AVX-NEXT:    [[CMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; AVX-NEXT:    [[E:%.*]] = select i1 [[CMP2]], i32 42, i32 99
 ; AVX-NEXT:    ret i32 [[E]]
 ; AVX:       f:
 ; AVX-NEXT:    ret i32 0
@@ -109,10 +109,10 @@ define i1 @cmp01_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SSE-NEXT:    ret i1 [[CMP]]
 ;
 ; AVX-LABEL: @cmp01_v2f64(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[Y:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
-; AVX-NEXT:    [[TMP2:%.*]] = fcmp oge <2 x double> [[X:%.*]], [[TMP1]]
-; AVX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
-; AVX-NEXT:    ret i1 [[TMP3]]
+; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x double> [[Y:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+; AVX-NEXT:    [[TMP1:%.*]] = fcmp oge <2 x double> [[X:%.*]], [[SHIFT]]
+; AVX-NEXT:    [[CMP:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; AVX-NEXT:    ret i1 [[CMP]]
 ;
   %x0 = extractelement <2 x double> %x, i32 0
   %y1 = extractelement <2 x double> %y, i32 1
@@ -128,10 +128,10 @@ define i1 @cmp10_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SSE-NEXT:    ret i1 [[CMP]]
 ;
 ; AVX-LABEL: @cmp10_v2f64(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
-; AVX-NEXT:    [[TMP2:%.*]] = fcmp ule <2 x double> [[TMP1]], [[Y:%.*]]
-; AVX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
-; AVX-NEXT:    ret i1 [[TMP3]]
+; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+; AVX-NEXT:    [[TMP1:%.*]] = fcmp ule <2 x double> [[SHIFT]], [[Y:%.*]]
+; AVX-NEXT:    [[CMP:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
+; AVX-NEXT:    ret i1 [[CMP]]
 ;
   %x1 = extractelement <2 x double> %x, i32 1
   %y0 = extractelement <2 x double> %y, i32 0
@@ -141,10 +141,10 @@ define i1 @cmp10_v2f64(<2 x double> %x, <2 x double> %y) {
 
 define i1 @cmp12_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @cmp12_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> <i32 undef, i32 2, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[X:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> <i32 undef, i32 2, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[X:%.*]], [[SHIFT]]
+; CHECK-NEXT:    [[CMP:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x1 = extractelement <4 x i32> %x, i32 1
   %y2 = extractelement <4 x i32> %y, i32 2
@@ -161,10 +161,10 @@ define <4 x i1> @ins_fcmp_ext_ext(<4 x float> %a, <4 x i1> %b) {
 ; SSE-NEXT:    ret <4 x i1> [[R]]
 ;
 ; AVX-LABEL: @ins_fcmp_ext_ext(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 undef>
-; AVX-NEXT:    [[TMP2:%.*]] = fcmp ugt <4 x float> [[A]], [[TMP1]]
-; AVX-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
-; AVX-NEXT:    [[R:%.*]] = insertelement <4 x i1> [[B:%.*]], i1 [[TMP3]], i32 2
+; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 undef>
+; AVX-NEXT:    [[TMP1:%.*]] = fcmp ugt <4 x float> [[A]], [[SHIFT]]
+; AVX-NEXT:    [[A21:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
+; AVX-NEXT:    [[R:%.*]] = insertelement <4 x i1> [[B:%.*]], i1 [[A21]], i32 2
 ; AVX-NEXT:    ret <4 x i1> [[R]]
 ;
   %a1 = extractelement <4 x float> %a, i32 1
@@ -176,10 +176,10 @@ define <4 x i1> @ins_fcmp_ext_ext(<4 x float> %a, <4 x i1> %b) {
 
 define <4 x i1> @ins_icmp_ext_ext(<4 x i32> %a, <4 x i1> %b) {
 ; CHECK-LABEL: @ins_icmp_ext_ext(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i32> [[TMP1]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i64 3
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> [[B:%.*]], i1 [[TMP3]], i32 3
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i32> [[SHIFT]], [[A]]
+; CHECK-NEXT:    [[A23:%.*]] = extractelement <4 x i1> [[TMP1]], i64 3
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i1> [[B:%.*]], i1 [[A23]], i32 3
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %a3 = extractelement <4 x i32> %a, i32 3

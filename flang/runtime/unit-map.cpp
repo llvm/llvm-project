@@ -63,8 +63,17 @@ void UnitMap::CloseAll(IoErrorHandler &handler) {
   }
 }
 
+void UnitMap::FlushAll(IoErrorHandler &handler) {
+  CriticalSection critical{lock_};
+  for (int j{0}; j < buckets_; ++j) {
+    for (Chain *p{bucket_[j].get()}; p; p = p->next.get()) {
+      p->unit.Flush(handler);
+    }
+  }
+}
+
 ExternalFileUnit &UnitMap::Create(int n, const Terminator &terminator) {
-  Chain &chain{New<Chain>{}(terminator, n)};
+  Chain &chain{*New<Chain>{terminator}(n).release()};
   chain.next.reset(&chain);
   bucket_[Hash(n)].swap(chain.next); // pushes new node as list head
   return chain.unit;

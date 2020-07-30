@@ -106,7 +106,7 @@ private:
   /// Globals are inserted before the first function, if any.
   Block::iterator getGlobalInsertPt() {
     auto i = module.getBody()->begin();
-    while (!isa<LLVMFuncOp>(i) && !isa<ModuleTerminatorOp>(i))
+    while (!isa<LLVMFuncOp, ModuleTerminatorOp>(i))
       ++i;
     return i;
   }
@@ -405,6 +405,9 @@ Value Importer::processConstant(llvm::Constant *c) {
     LLVMType type = processType(c->getType());
     if (!type)
       return nullptr;
+    if (auto symbolRef = attr.dyn_cast<FlatSymbolRefAttr>())
+      return instMap[c] = bEntry.create<AddressOfOp>(unknownLoc, type,
+                                                     symbolRef.getValue());
     return instMap[c] = bEntry.create<ConstantOp>(unknownLoc, type, attr);
   }
   if (auto *cn = dyn_cast<llvm::ConstantPointerNull>(c)) {

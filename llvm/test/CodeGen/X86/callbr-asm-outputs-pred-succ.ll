@@ -4,28 +4,16 @@
 ; RUN: llc -stop-after=finalize-isel -print-after=finalize-isel -mtriple=i686-- < %s 2>&1 | FileCheck %s
 
 ; The block containting the INLINEASM_BR should have a fallthrough and its
-; indirect targets as its successors. The fallthrough is a block we synthesized
-; in InstrEmitter::EmitMachineNode. Fallthrough should have 100% branch weight,
+; indirect targets as its successors. Fallthrough should have 100% branch weight,
 ; while the indirect targets have 0%.
 ; CHECK: bb.0 (%ir-block.2):
-; CHECK-NEXT: successors: %bb.4(0x00000000), %bb.6(0x80000000); %bb.4(0.00%), %bb.6(100.00%)
+; CHECK-NEXT: successors: %bb.1(0x80000000), %bb.4(0x00000000); %bb.1(100.00%), %bb.4(0.00%)
 
-; The fallthrough block is predaccessed by the block containing INLINEASM_BR,
-; and succeeded by the INLINEASM_BR's original fallthrough block pre-splitting.
-; CHECK: bb.6 (%ir-block.2):
-; CHECK-NEXT: predecessors: %bb.0
-; CHECK-NEXT: successors: %bb.1(0x80000000); %bb.1(100.00%)
-
-; Another block containing a second INLINEASM_BR. Check it has two successors,
-; and the the probability for fallthrough is 100%. Predecessor check irrelevant.
+; The fallthrough is a block containing a second INLINEASM_BR. Check it has two successors,
+; and the the probability for fallthrough is 100%.
 ; CHECK: bb.1 (%ir-block.4):
-; CHECK: successors: %bb.2(0x00000000), %bb.7(0x80000000); %bb.2(0.00%), %bb.7(100.00%)
-
-; Check the synthesized fallthrough block for the second INLINEASM_BR is
-; preceded correctly, and has the original successor pre-splitting.
-; CHECK: bb.7 (%ir-block.4):
-; CHECK-NEXT: predecessors: %bb.1
-; CHECK-NEXT: successors: %bb.3(0x80000000); %bb.3(100.00%)
+; CHECK-NEXT: predecessors: %bb.0
+; CHECK-NEXT: successors: %bb.3(0x80000000), %bb.2(0x00000000); %bb.3(100.00%), %bb.2(0.00%)
 
 ; Check the second INLINEASM_BR target block is preceded by the block with the
 ; second INLINEASM_BR.

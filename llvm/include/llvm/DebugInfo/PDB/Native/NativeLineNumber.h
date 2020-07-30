@@ -19,7 +19,8 @@ namespace pdb {
 class NativeLineNumber : public IPDBLineNumber {
 public:
   explicit NativeLineNumber(const NativeSession &Session,
-                            const codeview::LineInfo Line, uint32_t Length,
+                            const codeview::LineInfo Line,
+                            uint32_t ColumnNumber, uint32_t Length,
                             uint32_t Section, uint32_t Offset,
                             uint32_t SrcFileId);
 
@@ -39,6 +40,7 @@ public:
 private:
   const NativeSession &Session;
   const codeview::LineInfo Line;
+  uint32_t ColumnNumber;
   uint32_t Section;
   uint32_t Offset;
   uint32_t Length;

@@ -15,8 +15,8 @@
 # RUN: clangd -background-index -lit-test < %t/definition.jsonrpc | FileCheck %t/definition.jsonrpc --check-prefixes=CHECK,BUILD
 
 # Test that the index is writing files in the expected location.
-# RUN: ls %t/.clangd/index/foo.cpp.*.idx
-# RUN: ls %t/sub_dir/.clangd/index/foo.h.*.idx
+# RUN: ls %t/.cache/clangd/index/foo.cpp.*.idx
+# RUN: ls %t/sub_dir/.cache/clangd/index/foo.h.*.idx
 
 # Test the index is read from disk: delete code and restart clangd.
 # RUN: rm %t/foo.cpp

@@ -74,7 +74,8 @@ struct InstructionBenchmark {
   std::string Error;
   std::string Info;
   std::vector<uint8_t> AssembledSnippet;
-
+  // How to aggregate measurements.
+  enum ResultAggregationModeE { Min, Max, Mean, MinVariance };
   // Read functions.
   static Expected<InstructionBenchmark> readYaml(const LLVMState &State,
                                                  StringRef Filename);

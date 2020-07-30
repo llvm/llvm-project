@@ -50,14 +50,14 @@ class DataFormatterBoolRefPtr(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        isiOS = (lldbplatformutil.getPlatform() == 'ios' or lldbplatformutil.getPlatform() == 'watchos')
+        isArm = 'arm' in self.getArchitecture()
 
         # Now check that we use the right summary for BOOL&
         self.expect('frame variable yes_ref',
                     substrs=['YES'])
         self.expect('frame variable no_ref',
                     substrs=['NO'])
-        if not(isiOS):
+        if not(isArm):
             self.expect('frame variable unset_ref', substrs=['12'])
 
         # Now check that we use the right summary for BOOL*
@@ -65,7 +65,7 @@ class DataFormatterBoolRefPtr(TestBase):
                     substrs=['YES'])
         self.expect('frame variable no_ptr',
                     substrs=['NO'])
-        if not(isiOS):
+        if not(isArm):
             self.expect('frame variable unset_ptr', substrs=['12'])
 
         # Now check that we use the right summary for BOOL
@@ -73,5 +73,5 @@ class DataFormatterBoolRefPtr(TestBase):
                     substrs=['YES'])
         self.expect('frame variable no',
                     substrs=['NO'])
-        if not(isiOS):
+        if not(isArm):
             self.expect('frame variable unset', substrs=['12'])

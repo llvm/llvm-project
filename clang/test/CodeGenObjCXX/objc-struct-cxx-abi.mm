@@ -178,3 +178,32 @@ void testParamContainsNonTrivial(ContainsNonTrivial a) {
 void testCallContainsNonTrivial(ContainsNonTrivial *a) {
   testParamContainsNonTrivial(*a);
 }
+
+namespace testThunk {
+
+// CHECK-LABEL: define i64 @_ZThn8_N9testThunk2D02m0Ev(
+// CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_STRONG]], align 8
+// CHECK: %[[CALL:.*]] = tail call i64 @_ZN9testThunk2D02m0Ev(
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], %[[STRUCT_STRONG]]* %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[CALL]] to i8*
+// CHECK: store i8* %[[COERCE_VAL_IP]], i8** %[[COERCE_DIVE]], align 8
+// CHECK: %[[COERCE_DIVE2:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], %[[STRUCT_STRONG]]* %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[V3:.*]] = load i8*, i8** %[[COERCE_DIVE2]], align 8
+// CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint i8* %[[V3]] to i64
+// CHECK: ret i64 %[[COERCE_VAL_PI]]
+
+struct B0 {
+  virtual Strong m0();
+};
+
+struct B1 {
+  virtual Strong m0();
+};
+
+struct D0 : B0, B1 {
+  Strong m0() override;
+};
+
+Strong D0::m0() { return {}; }
+
+}

@@ -66,7 +66,8 @@ void tools::PS4cpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("orbis-as"));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
 }
 
 static void AddPS4SanitizerArgs(const ToolChain &TC, ArgStringList &CmdArgs) {
@@ -151,7 +152,8 @@ void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Exec =
       Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld"));
 
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
 }
 
 toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,

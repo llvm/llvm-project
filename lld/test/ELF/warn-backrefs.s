@@ -51,6 +51,12 @@
 
 # OBJECT: warning: backward reference detected: foo in {{.*}}1.o refers to {{.*}}2.o
 
+## Back reference from an fetched --start-lib to a previous --start-lib.
+# RUN: ld.lld -m elf_x86_64 -u _start --warn-backrefs --start-lib %/t2.o --end-lib \
+# RUN:   --start-lib %t1.o --end-lib -o /dev/null 2>&1 | FileCheck --check-prefix=OBJECT %s
+## --warn-backrefs-exclude=%/t2.o can be used for a fetched --start-lib.
+# RUN: ld.lld --fatal-warnings -m elf_x86_64 -u _start --warn-backrefs --warn-backrefs-exclude=%/t2.o --start-lib %/t2.o --end-lib --start-lib %t1.o --end-lib -o /dev/null
+
 ## Don't warn if the definition and the backward reference are in a group.
 # RUN: echo '.globl bar; bar:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t3.o
 # RUN: echo '.globl foo; foo: call bar' | llvm-mc -filetype=obj -triple=x86_64 - -o %t4.o

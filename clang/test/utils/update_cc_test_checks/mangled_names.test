@@ -8,6 +8,11 @@
 ## Also try the --function-signature flag
 # RUN: %update_cc_test_checks %t.c --function-signature
 # RUN: diff -u %t.c %S/Inputs/mangled_names.c.funcsig.expected
-## Verify that running without the --function-signature flag removes the -SAME: lines:
+## Running it again should implicitly add the function-signature flag due to UTC_ARGS:
 # RUN: %update_cc_test_checks %t.c
-# RUN: diff -u %t.c %S/Inputs/mangled_names.c.expected
+# RUN: diff -u %t.c %S/Inputs/mangled_names.c.funcsig.expected
+## Verify that running without the --function-signature flag removes the -SAME: lines:
+## We have to remove the UTC_ARGS comment first:
+# RUN: grep -v UTC_ARGS %t.c > %t-no-args.c
+# RUN: %update_cc_test_checks %t-no-args.c
+# RUN: diff -u %t-no-args.c %S/Inputs/mangled_names.c.expected

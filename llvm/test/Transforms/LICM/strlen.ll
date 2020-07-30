@@ -1,4 +1,4 @@
-; RUN: opt -S -inferattrs -basicaa -licm < %s | FileCheck %s
+; RUN: opt -S -inferattrs -basic-aa -licm < %s | FileCheck %s
 
 define void @test(i64* noalias %loc, i8* noalias %a) {
 ; CHECK-LABEL: @test

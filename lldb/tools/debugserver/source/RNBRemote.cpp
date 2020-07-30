@@ -4908,6 +4908,8 @@ rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
     strm << "ostype:watchos;";
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
     strm << "ostype:bridgeos;";
+#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
+    strm << "ostype:macosx;";
 #else
     strm << "ostype:ios;";
 #endif
@@ -6336,7 +6338,7 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
   if (addr_size > 0) {
     rep << "ptrsize:" << std::dec << addr_size << ';';
 
-#if (defined(__x86_64__) || defined(__i386__))
+#if defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
     // Try and get the OS type by looking at the load commands in the main
     // executable and looking for a LC_VERSION_MIN load command. This is the
     // most reliable way to determine the "ostype" value when on desktop.
@@ -6366,7 +6368,7 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
         load_command_addr = load_command_addr + lc.cmdsize;
       }
     }
-#endif // when compiling this on x86 targets
+#endif // TARGET_OS_OSX
   }
 
   // If we weren't able to find the OS in a LC_VERSION_MIN load command, try
@@ -6383,6 +6385,8 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
       rep << "ostype:watchos;";
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
       rep << "ostype:bridgeos;";
+#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
+      rep << "ostype:macosx;";
 #else
       rep << "ostype:ios;";
 #endif

@@ -116,6 +116,20 @@ void test_rcp_f64(global double* out, double a)
   *out = __builtin_amdgcn_rcp(a);
 }
 
+// CHECK-LABEL: @test_sqrt_f32
+// CHECK: call float @llvm.amdgcn.sqrt.f32
+void test_sqrt_f32(global float* out, float a)
+{
+  *out = __builtin_amdgcn_sqrtf(a);
+}
+
+// CHECK-LABEL: @test_sqrt_f64
+// CHECK: call double @llvm.amdgcn.sqrt.f64
+void test_sqrt_f64(global double* out, double a)
+{
+  *out = __builtin_amdgcn_sqrt(a);
+}
+
 // CHECK-LABEL: @test_rsq_f32
 // CHECK: call float @llvm.amdgcn.rsq.f32
 void test_rsq_f32(global float* out, float a)

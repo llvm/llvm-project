@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -basicaa -polly-ast -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -basicaa -polly-import-jscop \
+; RUN: opt %loadPolly -basic-aa -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-import-jscop \
 ; RUN:   -polly-ast-print-accesses \
 ; RUN:   -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s \
 ; RUN:   -check-prefix=CHECK-VECTOR

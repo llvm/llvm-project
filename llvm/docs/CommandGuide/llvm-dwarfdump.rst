@@ -149,7 +149,7 @@ OPTIONS
 
             Display the version of the tool.
 
-.. option:: --debug-abbrev, --debug-addr, --debug-aranges, --debug-cu-index, --debug-frame[=<offset>], --debug-gnu-pubnames, --debug-gnu-pubtypes, --debug-info[=<offset>], --debug-line[=<offset>], --debug-line-str, --debug-loc[=<offset>], --debug-loclists[=<offset>], --debug-macro, --debug-names, --debug-pubnames, --debug-pubtypes, --debug-ranges, --debug-rnglists, --debug-str, --debug-str-offsets, --debug-tu-index, --debug-types[=<offset>], --eh-frame[=<offset>], --gdb-index, --apple-names, --apple-types, --apple-namespaces, --apple-objc
+.. option:: --debug-abbrev, --debug-addr, --debug-aranges, --debug-cu-index, --debug-frame[=<offset>], --debug-gnu-pubnames, --debug-gnu-pubtypes, --debug-info [=<offset>], --debug-line [=<offset>], --debug-line-str, --debug-loc [=<offset>], --debug-loclists [=<offset>], --debug-macro, --debug-names, --debug-pubnames, --debug-pubtypes, --debug-ranges, --debug-rnglists, --debug-str, --debug-str-offsets, --debug-tu-index, --debug-types [=<offset>], --eh-frame [=<offset>], --gdb-index, --apple-names, --apple-types, --apple-namespaces, --apple-objc
 
             Dump the specified DWARF section by name. Only the
             `.debug_info` section is shown by default. Some entries

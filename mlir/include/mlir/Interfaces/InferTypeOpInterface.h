@@ -95,8 +95,6 @@ LogicalResult inferReturnTensorTypes(
 LogicalResult verifyInferredResultTypes(Operation *op);
 } // namespace detail
 
-#include "mlir/Interfaces/InferTypeOpInterface.h.inc"
-
 namespace OpTrait {
 
 /// Tensor type inference trait that constructs a tensor from the inferred
@@ -118,5 +116,8 @@ public:
 
 } // namespace OpTrait
 } // namespace mlir
+
+/// Include the generated interface declarations.
+#include "mlir/Interfaces/InferTypeOpInterface.h.inc"
 
 #endif // MLIR_INTERFACES_INFERTYPEOPINTERFACE_H_

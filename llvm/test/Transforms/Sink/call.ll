@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -sink -S | FileCheck %s
+; RUN: opt < %s -basic-aa -sink -S | FileCheck %s
 
 declare i32 @f_load_global() nounwind readonly
 declare i32 @f_load_arg(i32*) nounwind readonly argmemonly

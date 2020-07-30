@@ -908,6 +908,18 @@ struct CounterCoverageMappingBuilder
     terminateRegion(S);
   }
 
+  void VisitCoroutineBodyStmt(const CoroutineBodyStmt *S) {
+    extendRegion(S);
+    Visit(S->getBody());
+  }
+
+  void VisitCoreturnStmt(const CoreturnStmt *S) {
+    extendRegion(S);
+    if (S->getOperand())
+      Visit(S->getOperand());
+    terminateRegion(S);
+  }
+
   void VisitCXXThrowExpr(const CXXThrowExpr *E) {
     extendRegion(E);
     if (E->getSubExpr())

@@ -18,16 +18,15 @@ func @collapse_to_single() {
 // CHECK:         [[C4:%.*]] = constant 4 : index
 // CHECK:         [[C18:%.*]] = constant 18 : index
 // CHECK:         [[C3:%.*]] = constant 3 : index
-// CHECK:         [[C6:%.*]] = constant 6 : index
 // CHECK:         [[C0:%.*]] = constant 0 : index
 // CHECK:         [[C1:%.*]] = constant 1 : index
 // CHECK:         scf.parallel ([[NEW_I:%.*]]) = ([[C0]]) to ([[C18]]) step ([[C1]]) {
 // CHECK:           [[I0_COUNT:%.*]] = remi_signed [[NEW_I]], [[C3]] : index
-// CHECK:           [[I1_COUNT:%.*]] = divi_signed [[NEW_I]], [[C6]] : index
-// CHECK:           [[VAL_10:%.*]] = muli [[I1_COUNT]], [[C4]] : index
-// CHECK:           [[I1:%.*]] = addi [[VAL_10]], [[C7]] : index
-// CHECK:           [[VAL_12:%.*]] = muli [[I0_COUNT]], [[C3]] : index
-// CHECK:           [[I0:%.*]] = addi [[VAL_12]], [[C3]] : index
+// CHECK:           [[I1_COUNT:%.*]] = divi_signed [[NEW_I]], [[C3]] : index
+// CHECK:           [[V0:%.*]] = muli [[I1_COUNT]], [[C4]] : index
+// CHECK:           [[I1:%.*]] = addi [[V0]], [[C7]] : index
+// CHECK:           [[V1:%.*]] = muli [[I0_COUNT]], [[C3]] : index
+// CHECK:           [[I0:%.*]] = addi [[V1]], [[C3]] : index
 // CHECK:           "magic.op"([[I0]], [[I1]]) : (index, index) -> index
 // CHECK:           scf.yield
 // CHECK-NEXT:    }

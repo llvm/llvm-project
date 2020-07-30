@@ -46,7 +46,7 @@ typedef float fp_t;
 #define REP_C UINT32_C
 #define significandBits 23
 
-static __inline int rep_clz(rep_t a) { return __builtin_clz(a); }
+static __inline int rep_clz(rep_t a) { return clzsi(a); }
 
 // 32x32 --> 64 bit multiply
 static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {

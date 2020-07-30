@@ -208,7 +208,7 @@ PreservedAnalyses SafepointIRVerifierPass::run(Function &F,
   Verify(F, DT, CD);
   return PreservedAnalyses::all();
 }
-}
+} // namespace llvm
 
 namespace {
 

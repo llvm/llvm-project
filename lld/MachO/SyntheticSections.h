@@ -23,14 +23,14 @@ namespace macho {
 
 namespace section_names {
 
-constexpr const char *pageZero = "__pagezero";
-constexpr const char *header = "__mach_header";
-constexpr const char *binding = "__binding";
-constexpr const char *lazyBinding = "__lazy_binding";
-constexpr const char *export_ = "__export";
-constexpr const char *symbolTable = "__symbol_table";
-constexpr const char *stringTable = "__string_table";
-constexpr const char *got = "__got";
+constexpr const char pageZero[] = "__pagezero";
+constexpr const char header[] = "__mach_header";
+constexpr const char binding[] = "__binding";
+constexpr const char lazyBinding[] = "__lazy_binding";
+constexpr const char export_[] = "__export";
+constexpr const char symbolTable[] = "__symbol_table";
+constexpr const char stringTable[] = "__string_table";
+constexpr const char got[] = "__got";
 
 } // namespace section_names
 
@@ -45,6 +45,8 @@ public:
   static bool classof(const OutputSection *sec) {
     return sec->kind() == SyntheticKind;
   }
+
+  const StringRef segname;
 };
 
 // The header of the Mach-O file, which must have a file offset of zero.
@@ -92,6 +94,16 @@ private:
   llvm::SetVector<const Symbol *> entries;
 };
 
+struct BindingEntry {
+  const DylibSymbol *dysym;
+  const InputSection *isec;
+  uint64_t offset;
+  int64_t addend;
+  BindingEntry(const DylibSymbol *dysym, const InputSection *isec,
+               uint64_t offset, int64_t addend)
+      : dysym(dysym), isec(isec), offset(offset), addend(addend) {}
+};
+
 // Stores bind opcodes for telling dyld which symbols to load non-lazily.
 class BindingSection : public SyntheticSection {
 public:
@@ -105,6 +117,13 @@ public:
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) const override;
 
+  void addEntry(const DylibSymbol *dysym, const InputSection *isec,
+                uint64_t offset, int64_t addend) {
+    bindings.emplace_back(dysym, isec, offset, addend);
+  }
+
+private:
+  std::vector<BindingEntry> bindings;
   SmallVector<char, 128> contents;
 };
 
@@ -254,6 +273,7 @@ private:
 };
 
 struct InStruct {
+  BindingSection *binding = nullptr;
   GotSection *got = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
@@ -262,6 +282,7 @@ struct InStruct {
 };
 
 extern InStruct in;
+extern std::vector<SyntheticSection *> syntheticSections;
 
 } // namespace macho
 } // namespace lld

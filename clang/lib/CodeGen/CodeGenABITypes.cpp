@@ -115,3 +115,16 @@ unsigned CodeGen::getLLVMFieldNumber(CodeGenModule &CGM,
                                      const FieldDecl *FD) {
   return CGM.getTypes().getCGRecordLayout(RD).getLLVMFieldNo(FD);
 }
+
+llvm::Value *CodeGen::getCXXDestructorImplicitParam(
+    CodeGenModule &CGM, llvm::BasicBlock *InsertBlock,
+    llvm::BasicBlock::iterator InsertPoint, const CXXDestructorDecl *D,
+    CXXDtorType Type, bool ForVirtualBase, bool Delegating) {
+  CodeGenFunction CGF(CGM, /*suppressNewContext=*/true);
+  CGF.CurCodeDecl = D;
+  CGF.CurFuncDecl = D;
+  CGF.CurFn = InsertBlock->getParent();
+  CGF.Builder.SetInsertPoint(InsertBlock, InsertPoint);
+  return CGM.getCXXABI().getCXXDestructorImplicitParam(
+      CGF, D, Type, ForVirtualBase, Delegating);
+}

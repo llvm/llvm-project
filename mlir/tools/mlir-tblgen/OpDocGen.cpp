@@ -197,7 +197,7 @@ static void emitDialectDoc(const Dialect &dialect, ArrayRef<Operator> ops,
 
   os << "[TOC]\n\n";
 
-  // TODO(antiagainst): Add link between use and def for types
+  // TODO: Add link between use and def for types
   if (!types.empty()) {
     os << "## Type definition\n\n";
     for (const Type &type : types)

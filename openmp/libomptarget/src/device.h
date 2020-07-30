@@ -18,6 +18,7 @@
 #include <list>
 #include <map>
 #include <mutex>
+#include <set>
 #include <vector>
 
 // Forward declarations.
@@ -35,7 +36,8 @@ struct HostDataToTargetTy {
   uintptr_t TgtPtrBegin; // target info.
 
 private:
-  uint64_t RefCount;
+  /// use mutable to allow modification via std::set iterator which is const.
+  mutable uint64_t RefCount;
   static const uint64_t INFRefCount = ~(uint64_t)0;
 
 public:
@@ -48,14 +50,14 @@ public:
     return RefCount;
   }
 
-  uint64_t resetRefCount() {
+  uint64_t resetRefCount() const {
     if (RefCount != INFRefCount)
       RefCount = 1;
 
     return RefCount;
   }
 
-  uint64_t incRefCount() {
+  uint64_t incRefCount() const {
     if (RefCount != INFRefCount) {
       ++RefCount;
       assert(RefCount < INFRefCount && "refcount overflow");
@@ -64,7 +66,7 @@ public:
     return RefCount;
   }
 
-  uint64_t decRefCount() {
+  uint64_t decRefCount() const {
     if (RefCount != INFRefCount) {
       assert(RefCount > 0 && "refcount underflow");
       --RefCount;
@@ -78,7 +80,19 @@ public:
   }
 };
 
-typedef std::list<HostDataToTargetTy> HostDataToTargetListTy;
+typedef uintptr_t HstPtrBeginTy;
+inline bool operator<(const HostDataToTargetTy &lhs, const HstPtrBeginTy &rhs) {
+  return lhs.HstPtrBegin < rhs;
+}
+inline bool operator<(const HstPtrBeginTy &lhs, const HostDataToTargetTy &rhs) {
+  return lhs < rhs.HstPtrBegin;
+}
+inline bool operator<(const HostDataToTargetTy &lhs,
+                      const HostDataToTargetTy &rhs) {
+  return lhs.HstPtrBegin < rhs.HstPtrBegin;
+}
+
+typedef std::set<HostDataToTargetTy, std::less<>> HostDataToTargetListTy;
 
 struct LookupResult {
   struct {

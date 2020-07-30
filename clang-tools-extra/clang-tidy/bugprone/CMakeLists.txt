@@ -29,6 +29,7 @@ add_clang_library(clangTidyBugproneModule
   MisplacedWideningCastCheck.cpp
   MoveForwardingReferenceCheck.cpp
   MultipleStatementMacroCheck.cpp
+  NoEscapeCheck.cpp
   NotNullTerminatedResultCheck.cpp
   ParentVirtualCallCheck.cpp
   PosixReturnCheck.cpp
@@ -62,6 +63,9 @@ add_clang_library(clangTidyBugproneModule
   clangTidy
   clangTidyCppCoreGuidelinesModule
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyBugproneModule

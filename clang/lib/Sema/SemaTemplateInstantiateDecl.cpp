@@ -3719,6 +3719,8 @@ FunctionDecl *Sema::SubstSpaceshipAsEqualEqual(CXXRecordDecl *RD,
   //   access and function-definition and in the same class scope as the
   //   three-way comparison operator function
   MultiLevelTemplateArgumentList NoTemplateArgs;
+  NoTemplateArgs.setKind(TemplateSubstitutionKind::Rewrite);
+  NoTemplateArgs.addOuterRetainedLevels(RD->getTemplateDepth());
   TemplateDeclInstantiator Instantiator(*this, RD, NoTemplateArgs);
   Decl *R;
   if (auto *MD = dyn_cast<CXXMethodDecl>(Spaceship)) {
@@ -4225,6 +4227,94 @@ static bool addInstantiatedParametersToScope(Sema &S, FunctionDecl *Function,
   return false;
 }
 
+bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
+                                      ParmVarDecl *Param) {
+  assert(Param->hasUninstantiatedDefaultArg());
+  Expr *UninstExpr = Param->getUninstantiatedDefaultArg();
+
+  EnterExpressionEvaluationContext EvalContext(
+      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Param);
+
+  // Instantiate the expression.
+  //
+  // FIXME: Pass in a correct Pattern argument, otherwise
+  // getTemplateInstantiationArgs uses the lexical context of FD, e.g.
+  //
+  // template<typename T>
+  // struct A {
+  //   static int FooImpl();
+  //
+  //   template<typename Tp>
+  //   // bug: default argument A<T>::FooImpl() is evaluated with 2-level
+  //   // template argument list [[T], [Tp]], should be [[Tp]].
+  //   friend A<Tp> Foo(int a);
+  // };
+  //
+  // template<typename T>
+  // A<T> Foo(int a = A<T>::FooImpl());
+  MultiLevelTemplateArgumentList TemplateArgs
+    = getTemplateInstantiationArgs(FD, nullptr, /*RelativeToPrimary=*/true);
+
+  InstantiatingTemplate Inst(*this, CallLoc, Param,
+                             TemplateArgs.getInnermost());
+  if (Inst.isInvalid())
+    return true;
+  if (Inst.isAlreadyInstantiating()) {
+    Diag(Param->getBeginLoc(), diag::err_recursive_default_argument) << FD;
+    Param->setInvalidDecl();
+    return true;
+  }
+
+  ExprResult Result;
+  {
+    // C++ [dcl.fct.default]p5:
+    //   The names in the [default argument] expression are bound, and
+    //   the semantic constraints are checked, at the point where the
+    //   default argument expression appears.
+    ContextRAII SavedContext(*this, FD);
+    LocalInstantiationScope Local(*this);
+
+    FunctionDecl *Pattern = FD->getTemplateInstantiationPattern(
+        /*ForDefinition*/ false);
+    if (addInstantiatedParametersToScope(*this, FD, Pattern, Local,
+                                         TemplateArgs))
+      return true;
+
+    runWithSufficientStackSpace(CallLoc, [&] {
+      Result = SubstInitializer(UninstExpr, TemplateArgs,
+                                /*DirectInit*/false);
+    });
+  }
+  if (Result.isInvalid())
+    return true;
+
+  // Check the expression as an initializer for the parameter.
+  InitializedEntity Entity
+    = InitializedEntity::InitializeParameter(Context, Param);
+  InitializationKind Kind = InitializationKind::CreateCopy(
+      Param->getLocation(),
+      /*FIXME:EqualLoc*/ UninstExpr->getBeginLoc());
+  Expr *ResultE = Result.getAs<Expr>();
+
+  InitializationSequence InitSeq(*this, Entity, Kind, ResultE);
+  Result = InitSeq.Perform(*this, Entity, Kind, ResultE);
+  if (Result.isInvalid())
+    return true;
+
+  Result =
+      ActOnFinishFullExpr(Result.getAs<Expr>(), Param->getOuterLocStart(),
+                          /*DiscardedValue*/ false);
+  if (Result.isInvalid())
+    return true;
+
+  // Remember the instantiated default argument.
+  Param->setDefaultArg(Result.getAs<Expr>());
+  if (ASTMutationListener *L = getASTMutationListener())
+    L->DefaultArgumentInstantiated(Param);
+
+  return false;
+}
+
 void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
                                     FunctionDecl *Decl) {
   const FunctionProtoType *Proto = Decl->getType()->castAs<FunctionProtoType>();
@@ -4255,6 +4345,10 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   MultiLevelTemplateArgumentList TemplateArgs =
     getTemplateInstantiationArgs(Decl, nullptr, /*RelativeToPrimary*/true);
 
+  // FIXME: We can't use getTemplateInstantiationPattern(false) in general
+  // here, because for a non-defining friend declaration in a class template,
+  // we don't store enough information to map back to the friend declaration in
+  // the template.
   FunctionDecl *Template = Proto->getExceptionSpecTemplate();
   if (addInstantiatedParametersToScope(*this, Decl, Template, Scope,
                                        TemplateArgs)) {
@@ -4364,7 +4458,7 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
         EPI.ExceptionSpec.Type != EST_None &&
         EPI.ExceptionSpec.Type != EST_DynamicNone &&
         EPI.ExceptionSpec.Type != EST_BasicNoexcept &&
-        !Tmpl->isInLocalScope()) {
+        !Tmpl->isInLocalScopeForInstantiation()) {
       FunctionDecl *ExceptionSpecTemplate = Tmpl;
       if (EPI.ExceptionSpec.Type == EST_Uninstantiated)
         ExceptionSpecTemplate = EPI.ExceptionSpec.SourceTemplate;
@@ -5605,6 +5699,20 @@ DeclContext *Sema::FindInstantiatedContext(SourceLocation Loc, DeclContext* DC,
   } else return DC;
 }
 
+/// Determine whether the given context is dependent on template parameters at
+/// level \p Level or below.
+///
+/// Sometimes we only substitute an inner set of template arguments and leave
+/// the outer templates alone. In such cases, contexts dependent only on the
+/// outer levels are not effectively dependent.
+static bool isDependentContextAtLevel(DeclContext *DC, unsigned Level) {
+  if (!DC->isDependentContext())
+    return false;
+  if (!Level)
+    return true;
+  return cast<Decl>(DC)->getTemplateDepth() > Level;
+}
+
 /// Find the instantiation of the given declaration within the
 /// current instantiation.
 ///
@@ -5635,6 +5743,10 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
                           const MultiLevelTemplateArgumentList &TemplateArgs,
                           bool FindingInstantiatedContext) {
   DeclContext *ParentDC = D->getDeclContext();
+  // Determine whether our parent context depends on any of the tempalte
+  // arguments we're currently substituting.
+  bool ParentDependsOnArgs = isDependentContextAtLevel(
+      ParentDC, TemplateArgs.getNumRetainedOuterLevels());
   // FIXME: Parmeters of pointer to functions (y below) that are themselves
   // parameters (p below) can have their ParentDC set to the translation-unit
   // - thus we can not consistently check if the ParentDC of such a parameter
@@ -5651,15 +5763,14 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
   //  - as long as we have a ParmVarDecl whose parent is non-dependent and
   //    whose type is not instantiation dependent, do nothing to the decl
   //  - otherwise find its instantiated decl.
-  if (isa<ParmVarDecl>(D) && !ParentDC->isDependentContext() &&
+  if (isa<ParmVarDecl>(D) && !ParentDependsOnArgs &&
       !cast<ParmVarDecl>(D)->getType()->isInstantiationDependentType())
     return D;
   if (isa<ParmVarDecl>(D) || isa<NonTypeTemplateParmDecl>(D) ||
       isa<TemplateTypeParmDecl>(D) || isa<TemplateTemplateParmDecl>(D) ||
-      ((ParentDC->isFunctionOrMethod() ||
-        isa<OMPDeclareReductionDecl>(ParentDC) ||
-        isa<OMPDeclareMapperDecl>(ParentDC)) &&
-       ParentDC->isDependentContext()) ||
+      (ParentDependsOnArgs && (ParentDC->isFunctionOrMethod() ||
+                               isa<OMPDeclareReductionDecl>(ParentDC) ||
+                               isa<OMPDeclareMapperDecl>(ParentDC))) ||
       (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda())) {
     // D is a local of some kind. Look into the map of local
     // declarations to their instantiations.
@@ -5813,7 +5924,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // anonymous unions in class templates).
   }
 
-  if (!ParentDC->isDependentContext())
+  if (!ParentDependsOnArgs)
     return D;
 
   ParentDC = FindInstantiatedContext(Loc, ParentDC, TemplateArgs);

@@ -328,8 +328,6 @@ def splat16 : PatFrag<(ops node:$x), (build_vector
 
 multiclass Splat<ValueType vec_t, string vec, WebAssemblyRegClass reg_t,
                  PatFrag splat_pat, bits<32> simdop> {
-  // Prefer splats over v128.const for const splats (65 is lowest that works)
-  let AddedComplexity = 65 in
   defm SPLAT_#vec_t : SIMD_I<(outs V128:$dst), (ins reg_t:$x), (outs), (ins),
                              [(set (vec_t V128:$dst), (splat_pat reg_t:$x))],
                              vec#".splat\t$dst, $x", vec#".splat", simdop>;
@@ -654,55 +652,36 @@ defm BITMASK : SIMDBitmask<v4i32, "i32x4", 164>;
 // Bit shifts
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDShift<ValueType vec_t, string vec, SDNode node, dag shift_vec,
-                     string name, bits<32> simdop> {
+multiclass SIMDShift<ValueType vec_t, string vec, SDNode node, string name,
+                     bits<32> simdop> {
   defm _#vec_t : SIMD_I<(outs V128:$dst), (ins V128:$vec, I32:$x),
                         (outs), (ins),
-                        [(set (vec_t V128:$dst),
-                          (node V128:$vec, (vec_t shift_vec)))],
+                        [(set (vec_t V128:$dst), (node V128:$vec, I32:$x))],
                         vec#"."#name#"\t$dst, $vec, $x", vec#"."#name, simdop>;
 }
 
 multiclass SIMDShiftInt<SDNode node, string name, bits<32> baseInst> {
-  defm "" : SIMDShift<v16i8, "i8x16", node, (splat16 I32:$x), name, baseInst>;
-  defm "" : SIMDShift<v8i16, "i16x8", node, (splat8 I32:$x), name,
-                      !add(baseInst, 32)>;
-  defm "" : SIMDShift<v4i32, "i32x4", node, (splat4 I32:$x), name,
-                      !add(baseInst, 64)>;
-  defm "" : SIMDShift<v2i64, "i64x2", node, (splat2 (i64 (zext I32:$x))),
-                      name, !add(baseInst, 96)>;
+  defm "" : SIMDShift<v16i8, "i8x16", node, name, baseInst>;
+  defm "" : SIMDShift<v8i16, "i16x8", node, name, !add(baseInst, 32)>;
+  defm "" : SIMDShift<v4i32, "i32x4", node, name, !add(baseInst, 64)>;
+  defm "" : SIMDShift<v2i64, "i64x2", node, name, !add(baseInst, 96)>;
 }
 
-// Left shift by scalar: shl
-defm SHL : SIMDShiftInt<shl, "shl", 107>;
-
-// Right shift by scalar: shr_s / shr_u
-defm SHR_S : SIMDShiftInt<sra, "shr_s", 108>;
-defm SHR_U : SIMDShiftInt<srl, "shr_u", 109>;
-
-// Truncate i64 shift operands to i32s, except if they are already i32s
-foreach shifts = [[shl, SHL_v2i64], [sra, SHR_S_v2i64], [srl, SHR_U_v2i64]] in {
-def : Pat<(v2i64 (shifts[0]
-            (v2i64 V128:$vec),
-            (v2i64 (splat2 (i64 (sext I32:$x))))
-          )),
-          (v2i64 (shifts[1] (v2i64 V128:$vec), (i32 I32:$x)))>;
-def : Pat<(v2i64 (shifts[0] (v2i64 V128:$vec), (v2i64 (splat2 I64:$x)))),
-          (v2i64 (shifts[1] (v2i64 V128:$vec), (I32_WRAP_I64 I64:$x)))>;
-}
-
-// 2xi64 shifts with constant shift amounts are custom lowered to avoid wrapping
+// WebAssembly SIMD shifts are nonstandard in that the shift amount is
+// an i32 rather than a vector, so they need custom nodes.
 def wasm_shift_t : SDTypeProfile<1, 2,
   [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVT<2, i32>]
 >;
 def wasm_shl : SDNode<"WebAssemblyISD::VEC_SHL", wasm_shift_t>;
 def wasm_shr_s : SDNode<"WebAssemblyISD::VEC_SHR_S", wasm_shift_t>;
 def wasm_shr_u : SDNode<"WebAssemblyISD::VEC_SHR_U", wasm_shift_t>;
-foreach shifts = [[wasm_shl, SHL_v2i64],
-                  [wasm_shr_s, SHR_S_v2i64],
-                  [wasm_shr_u, SHR_U_v2i64]] in
-def : Pat<(v2i64 (shifts[0] (v2i64 V128:$vec), I32:$x)),
-          (v2i64 (shifts[1] (v2i64 V128:$vec), I32:$x))>;
+
+// Left shift by scalar: shl
+defm SHL : SIMDShiftInt<wasm_shl, "shl", 107>;
+
+// Right shift by scalar: shr_s / shr_u
+defm SHR_S : SIMDShiftInt<wasm_shr_s, "shr_s", 108>;
+defm SHR_U : SIMDShiftInt<wasm_shr_u, "shr_u", 109>;
 
 //===----------------------------------------------------------------------===//
 // Integer binary arithmetic
@@ -766,12 +745,12 @@ def add_nuw : PatFrag<(ops node:$lhs, node:$rhs),
                       "return N->getFlags().hasNoUnsignedWrap();">;
 
 foreach nodes = [[v16i8, splat16], [v8i16, splat8]] in
-def : Pat<(srl
+def : Pat<(wasm_shr_u
             (add_nuw
               (add_nuw (nodes[0] V128:$lhs), (nodes[0] V128:$rhs)),
               (nodes[1] (i32 1))
             ),
-            (nodes[0] (nodes[1] (i32 1)))
+            (i32 1)
           ),
           (!cast<NI>("AVGR_U_"#nodes[0]) V128:$lhs, V128:$rhs)>;
 

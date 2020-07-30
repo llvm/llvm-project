@@ -107,6 +107,10 @@ public:
 
   void lowerDynamicAlloc(MachineBasicBlock::iterator II) const;
   void lowerDynamicAreaOffset(MachineBasicBlock::iterator II) const;
+  void prepareDynamicAlloca(MachineBasicBlock::iterator II,
+                            Register &NegSizeReg, bool &KillNegSizeReg,
+                            Register &FramePointer) const;
+  void lowerPrepareProbedAlloca(MachineBasicBlock::iterator II) const;
   void lowerCRSpilling(MachineBasicBlock::iterator II,
                        unsigned FrameIndex) const;
   void lowerCRRestore(MachineBasicBlock::iterator II,

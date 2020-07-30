@@ -330,7 +330,8 @@ public:
   /// through getAnalysis interface.
   virtual void addLowerLevelRequiredPass(Pass *P, Pass *RequiredPass);
 
-  virtual Pass *getOnTheFlyPass(Pass *P, AnalysisID PI, Function &F);
+  virtual std::tuple<Pass *, bool> getOnTheFlyPass(Pass *P, AnalysisID PI,
+                                                   Function &F);
 
   /// Initialize available analysis information.
   void initializeAnalysisInfo() {

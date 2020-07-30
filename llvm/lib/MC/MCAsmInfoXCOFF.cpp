@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmInfoXCOFF.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace llvm;
 
@@ -32,7 +33,6 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   COMMDirectiveAlignmentIsInBytes = false;
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
   HasDotTypeDotSizeDirective = false;
-  SymbolsHaveSMC = true;
   UseIntegratedAssembler = false;
   NeedsFunctionDescriptors = true;
 }
@@ -43,5 +43,8 @@ bool MCAsmInfoXCOFF::isAcceptableChar(char C) const {
   if (C == '[' || C == ']')
     return true;
 
-  return MCAsmInfo::isAcceptableChar(C);
+  // For AIX assembler, symbols may consist of numeric digits,
+  // underscores, periods, uppercase or lowercase letters, or
+  // any combination of these.
+  return isAlnum(C) || C == '_' || C == '.';
 }

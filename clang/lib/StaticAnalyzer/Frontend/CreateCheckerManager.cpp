@@ -23,11 +23,11 @@ CheckerManager::CheckerManager(
     ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns)
     : Context(&Context), LangOpts(Context.getLangOpts()), AOptions(AOptions),
       PP(&PP), Diags(Context.getDiagnostics()),
-      Registry(
-          std::make_unique<CheckerRegistry>(plugins, Context.getDiagnostics(),
-                                            AOptions, checkerRegistrationFns)) {
-  Registry->initializeRegistry(*this);
-  Registry->initializeManager(*this);
+      RegistryData(std::make_unique<CheckerRegistryData>()) {
+  CheckerRegistry Registry(*RegistryData, plugins, Context.getDiagnostics(),
+                           AOptions, checkerRegistrationFns);
+  Registry.initializeRegistry(*this);
+  Registry.initializeManager(*this);
   finishedCheckerRegistration();
 }
 
@@ -36,8 +36,9 @@ CheckerManager::CheckerManager(AnalyzerOptions &AOptions,
                                DiagnosticsEngine &Diags,
                                ArrayRef<std::string> plugins)
     : LangOpts(LangOpts), AOptions(AOptions), Diags(Diags),
-      Registry(std::make_unique<CheckerRegistry>(plugins, Diags, AOptions)) {
-  Registry->initializeRegistry(*this);
+      RegistryData(std::make_unique<CheckerRegistryData>()) {
+  CheckerRegistry Registry(*RegistryData, plugins, Diags, AOptions, {});
+  Registry.initializeRegistry(*this);
 }
 
 CheckerManager::~CheckerManager() {

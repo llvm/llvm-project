@@ -115,9 +115,9 @@ Symbols:
 ## Check that llvm-readobj reports an error if .symtab has an invalid sh_entsize.
 
 # RUN: yaml2obj %s --docnum=6 -o %t6
-# RUN: not llvm-readobj --symbols %t6 2>&1 | FileCheck -DFILE=%t6 --check-prefix=INVALID-SYM-SIZE %s
+# RUN: llvm-readobj --symbols %t6 2>&1 | FileCheck -DFILE=%t6 --check-prefix=INVALID-SYM-SIZE %s
 
-# INVALID-SYM-SIZE: error: '[[FILE]]': section [index 1] has an invalid sh_entsize: 32
+# INVALID-SYM-SIZE: warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has an invalid sh_entsize: 32
 
 --- !ELF
 FileHeader:
@@ -152,13 +152,13 @@ Sections:
 DynamicSymbols:
   - Name: foo
 
-## Check that llvm-readobj reports an error if .symtab has an invalid sh_link value,
+## Check that llvm-readobj reports a warning if .symtab has an invalid sh_link value,
 ## which is greater than number of sections.
 
 # RUN: yaml2obj %s --docnum=8 -o %t8
-# RUN: not llvm-readobj --symbols %t8 2>&1 | FileCheck -DFILE=%t8 --check-prefix=INVALID-SYMTAB-LINK %s
+# RUN: llvm-readobj --symbols %t8 2>&1 | FileCheck -DFILE=%t8 --check-prefix=INVALID-SYMTAB-LINK %s
 
-# INVALID-SYMTAB-LINK: error: '[[FILE]]': invalid section index: 255
+# INVALID-SYMTAB-LINK: warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
 
 --- !ELF
 FileHeader:
@@ -187,13 +187,13 @@ FileHeader:
   Machine:   EM_X86_64
   SHEntSize: 1
 
-## Check that llvm-readobj reports an error if .symtab has sh_size
+## Check that llvm-readobj reports a warning if .symtab has sh_size
 ## that is not a multiple of sh_entsize.
 
 # RUN: yaml2obj %s --docnum=10 -o %t10
-# RUN: not llvm-readobj --symbols %t10 2>&1 | FileCheck -DFILE=%t10 --check-prefix=INVALID-SYMTAB-SIZE %s
+# RUN: llvm-readobj --symbols %t10 2>&1 | FileCheck -DFILE=%t10 --check-prefix=INVALID-SYMTAB-SIZE %s
 
-# INVALID-SYMTAB-SIZE: error: '[[FILE]]': section [index 1] has an invalid sh_size (1) which is not a multiple of its sh_entsize (24)
+# INVALID-SYMTAB-SIZE: warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has an invalid sh_size (1) which is not a multiple of its sh_entsize (24)
 
 --- !ELF
 FileHeader:
@@ -276,13 +276,13 @@ Sections:
     Type:     SHT_RELA
     ShOffset: 0x10000
 
-## Check that llvm-objdump reports an error when we try to print symbols and
+## Check that llvm-objdump reports a warning when we try to print symbols and
 ## .shstrtab has a broken sh_offset so large that sh_offset + sh_size overflows the platform address size type.
 
 # RUN: yaml2obj %s --docnum=14 -o %t14
-# RUN: not llvm-readobj --symbols %t14 2>&1 | FileCheck -DFILE=%t14 --check-prefix=INVALID-SECTION-SIZE2 %s
+# RUN: llvm-readobj --symbols %t14 2>&1 | FileCheck -DFILE=%t14 --check-prefix=INVALID-SECTION-SIZE2 %s
 
-# INVALID-SECTION-SIZE2: error: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x1b) that cannot be represented
+# INVALID-SECTION-SIZE2: warning: '[[FILE]]': unable to get the name of the SHT_SYMTAB section: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x1b) that cannot be represented
 
 --- !ELF
 FileHeader:
@@ -364,13 +364,13 @@ Sections:
     Type:     SHT_PROGBITS
     ShOffset: 0xFFFF0000
 
-## Check that llvm-readobj reports an error if symbol name
+## Check that llvm-readobj reports a warning if symbol name
 ## offset goes past the end of the symbol string table.
 
 # RUN: yaml2obj %s --docnum=18 -o %t18
-# RUN: not llvm-readobj --symbols %t18 2>&1 | FileCheck -DFILE=%t18 --check-prefix=INVALID-SYM-NAME %s
+# RUN: llvm-readobj --symbols %t18 2>&1 | FileCheck -DFILE=%t18 --check-prefix=INVALID-SYM-NAME %s
 
-# INVALID-SYM-NAME: error: '[[FILE]]': st_name (0x1) is past the end of the string table of size 0x1
+# INVALID-SYM-NAME: warning: '[[FILE]]': st_name (0x1) is past the end of the string table of size 0x1
 
 --- !ELF
 FileHeader:

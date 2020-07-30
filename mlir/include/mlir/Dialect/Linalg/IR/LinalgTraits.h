@@ -246,8 +246,8 @@ public:
         cast<ConcreteType>(this->getOperation()).referenceIterators();
 
     // If there is no reference, this must be a generic op.
-    // TODO(ntv): Traits are used to define ops. Split into cpp to avoid
-    // cyclic dependency.
+    // TODO: Traits are used to define ops. Split into cpp to avoid cyclic
+    // dependency.
     auto name = this->getOperation()->getName().getStringRef();
     if (!maybeReferenceIteratorTypes && name != "generic" &&
         name != "indexed_generic") {
@@ -263,8 +263,8 @@ public:
                                        return StringAttr::get(str, ctx);
                                      });
     auto attr = ArrayAttr::get(llvm::to_vector<4>(attrRange), ctx);
-    // TODO(ntv): Need to memoize this. Can't just store as an attribute atm as
-    // it will impact parser, printer and tests.
+    // TODO: Need to memoize this. Can't just store as an attribute atm as it
+    // will impact parser, printer and tests.
     // this->getOperation()->setAttr("iterator_types", attr);
     return attr;
   }
@@ -301,8 +301,8 @@ public:
         });
     SmallVector<Attribute, 4> attrs{attrRange.begin(), attrRange.end()};
     auto attr = ArrayAttr::get(attrs, ctx);
-    // TODO(ntv): Need to memoize this. Can't just store as an attribute atm as
-    // it will impact parser, printer and tests.
+    // TODO: Need to memoize this. Can't just store as an attribute atm as it
+    // will impact parser, printer and tests.
     // this->getOperation()->setAttr("indexing_maps", attr);
     return attr;
   }

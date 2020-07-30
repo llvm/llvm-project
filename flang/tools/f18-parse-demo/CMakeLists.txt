@@ -1,3 +1,7 @@
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  )
+
 add_flang_tool(f18-parse-demo
   f18-parse-demo.cpp
   stub-evaluate.cpp

@@ -252,6 +252,9 @@ struct RawContentSection : Section {
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::RawContent;
   }
+
+  // Is used when a content is read as an array of bytes.
+  Optional<std::vector<uint8_t>> ContentBuf;
 };
 
 struct NoBitsSection : Section {

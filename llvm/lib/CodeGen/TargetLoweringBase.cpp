@@ -1573,14 +1573,14 @@ unsigned TargetLoweringBase::getByValTypeAlignment(Type *Ty,
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
     LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
-    unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
+    Align Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
   // Check if the specified alignment is sufficient based on the data layout.
   // TODO: While using the data layout works in practice, a better solution
   // would be to implement this check directly (make this a virtual function).
   // For example, the ABI alignment may change based on software platform while
   // this function should only be affected by hardware implementation.
   Type *Ty = VT.getTypeForEVT(Context);
-  if (Alignment >= DL.getABITypeAlign(Ty).value()) {
+  if (Alignment >= DL.getABITypeAlign(Ty)) {
     // Assume that an access that meets the ABI-specified alignment is fast.
     if (Fast != nullptr)
       *Fast = true;
@@ -1588,20 +1588,22 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
   }
 
   // This is a misaligned access.
-  return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Flags, Fast);
+  return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment.value(), Flags,
+                                        Fast);
 }
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
     LLVMContext &Context, const DataLayout &DL, EVT VT,
     const MachineMemOperand &MMO, bool *Fast) const {
   return allowsMemoryAccessForAlignment(Context, DL, VT, MMO.getAddrSpace(),
-                                        MMO.getAlign().value(), MMO.getFlags(),
-                                        Fast);
+                                        MMO.getAlign(), MMO.getFlags(), Fast);
 }
 
-bool TargetLoweringBase::allowsMemoryAccess(
-    LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
-    unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
+bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
+                                            const DataLayout &DL, EVT VT,
+                                            unsigned AddrSpace, Align Alignment,
+                                            MachineMemOperand::Flags Flags,
+                                            bool *Fast) const {
   return allowsMemoryAccessForAlignment(Context, DL, VT, AddrSpace, Alignment,
                                         Flags, Fast);
 }
@@ -1610,8 +1612,8 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, EVT VT,
                                             const MachineMemOperand &MMO,
                                             bool *Fast) const {
-  return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(),
-                            MMO.getAlign().value(), MMO.getFlags(), Fast);
+  return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
+                            MMO.getFlags(), Fast);
 }
 
 BranchProbability TargetLoweringBase::getPredictableBranchThreshold() const {

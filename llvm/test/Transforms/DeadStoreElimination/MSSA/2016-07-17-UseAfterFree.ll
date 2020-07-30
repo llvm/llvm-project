@@ -1,5 +1,4 @@
-; XFAIL: *
-; RUN: opt < %s -basicaa -dse-enable-dse-memoryssa  -S -enable-dse-partial-overwrite-tracking | FileCheck %s
+; RUN: opt < %s -basic-aa -dse -enable-dse-memoryssa  -S -enable-dse-partial-overwrite-tracking | FileCheck %s
 ; PR28588
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

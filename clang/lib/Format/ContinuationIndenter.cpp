@@ -1041,8 +1041,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       //    * not remove the 'lead' ContinuationIndentWidth
       //    * always un-indent by the operator when
       //    BreakBeforeTernaryOperators=true
-      unsigned Indent =
-          State.Stack.back().Indent - Style.ContinuationIndentWidth;
+      unsigned Indent = State.Stack.back().Indent;
+      if (Style.AlignOperands != FormatStyle::OAS_DontAlign) {
+        Indent -= Style.ContinuationIndentWidth;
+      }
       if (Style.BreakBeforeTernaryOperators &&
           State.Stack.back().UnindentOperator)
         Indent -= 2;

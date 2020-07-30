@@ -56,9 +56,9 @@ public:
   using Factory = llvm::unique_function<BackgroundIndexStorage *(PathRef)>;
 
   // Creates an Index Storage that saves shards into disk. Index storage uses
-  // CDBDirectory + ".clangd/index/" as the folder to save shards. CDBDirectory
-  // is the first directory containing a CDB in parent directories of a file, or
-  // user's home directory if none was found, e.g. standard library headers.
+  // CDBDirectory + ".cache/clangd/index/" as the folder to save shards.
+  // CDBDirectory is the first directory containing a CDB in parent directories
+  // of a file, or user cache directory if none was found, e.g. stdlib headers.
   static Factory createDiskBackedStorageFactory(
       std::function<llvm::Optional<ProjectInfo>(PathRef)> GetProjectInfo);
 };
@@ -135,8 +135,11 @@ public:
       Context BackgroundContext, const ThreadsafeFS &,
       const GlobalCompilationDatabase &CDB,
       BackgroundIndexStorage::Factory IndexStorageFactory,
-      size_t ThreadPoolSize = 0, // 0 = use all hardware threads
-      std::function<void(BackgroundQueue::Stats)> OnProgress = nullptr);
+      // Arbitrary value to ensure some concurrency in tests.
+      // In production an explicit value is passed.
+      size_t ThreadPoolSize = 4,
+      std::function<void(BackgroundQueue::Stats)> OnProgress = nullptr,
+      std::function<Context(PathRef)> ContextProvider = nullptr);
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
   // Enqueue translation units for indexing.
@@ -181,6 +184,7 @@ private:
   const ThreadsafeFS &TFS;
   const GlobalCompilationDatabase &CDB;
   Context BackgroundContext;
+  std::function<Context(PathRef)> ContextProvider;
 
   llvm::Error index(tooling::CompileCommand);
 
@@ -191,12 +195,11 @@ private:
 
   BackgroundIndexStorage::Factory IndexStorageFactory;
   // Tries to load shards for the MainFiles and their dependencies.
-  std::vector<tooling::CompileCommand>
-  loadProject(std::vector<std::string> MainFiles);
+  std::vector<std::string> loadProject(std::vector<std::string> MainFiles);
 
   BackgroundQueue::Task
   changedFilesTask(const std::vector<std::string> &ChangedFiles);
-  BackgroundQueue::Task indexFileTask(tooling::CompileCommand Cmd);
+  BackgroundQueue::Task indexFileTask(std::string Path);
 
   // from lowest to highest priority
   enum QueuePriority {

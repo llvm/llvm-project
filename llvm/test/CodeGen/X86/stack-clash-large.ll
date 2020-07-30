@@ -22,9 +22,9 @@ attributes #0 =  {"probe-stack"="inline-asm"}
 ; CHECK-X86-64-NEXT:	subq	$4096, %rsp # imm = 0x1000
 ; CHECK-X86-64-NEXT:	movq	$0, (%rsp)
 ; CHECK-X86-64-NEXT:	cmpq	%r11, %rsp
-; CHECK-X86-64-NEXT:	jl	.LBB0_1
+; CHECK-X86-64-NEXT:	jne	.LBB0_1
 ; CHECK-X86-64-NEXT:# %bb.2:
-; CHECK-X86-64-NEXT:	movq    %r11, %rsp
+; CHECK-X86-64-NEXT:	subq    $2248, %rsp
 ; CHECK-X86-64-NEXT:	.cfi_def_cfa_offset 71888
 ; CHECK-X86-64-NEXT:	movl	$1, 264(%rsp)
 ; CHECK-X86-64-NEXT:	movl	$1, 28664(%rsp)
@@ -41,9 +41,9 @@ attributes #0 =  {"probe-stack"="inline-asm"}
 ; CHECK-X86-32-NEXT:    subl    $4096, %esp # imm = 0x1000
 ; CHECK-X86-32-NEXT:    movl    $0, (%esp)
 ; CHECK-X86-32-NEXT:    cmpl    %r11d, %esp
-; CHECK-X86-32-NEXT:    jl  .LBB0_1
+; CHECK-X86-32-NEXT:    jne  .LBB0_1
 ; CHECK-X86-32-NEXT:# %bb.2:
-; CHECK-X86-32-NEXT:    movl    %r11d, %esp
+; CHECK-X86-32-NEXT:    subl    $2380, %esp
 ; CHECK-X86-32-NEXT:    .cfi_def_cfa_offset 72016
 ; CHECK-X86-32-NEXT:    movl    $1, 392(%esp)
 ; CHECK-X86-32-NEXT:    movl    $1, 28792(%esp)

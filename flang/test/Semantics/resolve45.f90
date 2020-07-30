@@ -15,8 +15,15 @@ function f2(x, y)
   !ERROR: SAVE attribute may not be applied to dummy argument 'x'
   complex, save :: x
   allocatable :: y
+  integer :: y
   !ERROR: SAVE attribute may not be applied to dummy argument 'y'
-  integer, save :: y
+  save :: y
+end
+
+! SAVE statement should not trigger the above errors
+function f2b(x, y)
+  real :: x, y
+  save
 end
 
 subroutine s3(x)

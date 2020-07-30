@@ -76,11 +76,6 @@ LogicalResult ModuleOp::verify() {
   if (!llvm::hasSingleElement(bodyRegion))
     return emitOpError("expected body region to have a single block");
 
-  // Check that the body has no block arguments.
-  auto *body = &bodyRegion.front();
-  if (body->getNumArguments() != 0)
-    return emitOpError("expected body to have no arguments");
-
   // Check that none of the attributes are non-dialect attributes, except for
   // the symbol related attributes.
   for (auto attr : getOperation()->getMutableAttrDict().getAttrs()) {

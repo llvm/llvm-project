@@ -1,0 +1,38 @@
+## gnu size has a number of special cases regarding REL, RELA and STRTAB sections being considered in size output. 
+## To avoid unnecessary complexity llvm size outputs these sections in cases they have the SHF_ALLOC flag.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-size --format=sysv %t1 | FileCheck %s
+
+# CHECK:      section     size   addr
+# CHECK-NEXT: .rela.alloc
+# CHECK-NEXT: .rel.alloc
+# CHECK-NEXT: .strtab.alloc
+# CHECK-NEXT: Total
+# CHECK-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .rela.alloc
+    Type:  SHT_RELA
+    Flags: [ SHF_ALLOC ]
+  - Name:  .rel.alloc
+    Type:  SHT_REL
+    Flags: [ SHF_ALLOC ]
+  - Name:  .strtab.alloc
+    Type:  SHT_STRTAB
+    Flags: [ SHF_ALLOC ]
+  - Name:  .rela
+    Type:  SHT_RELA
+    Flags: []
+  - Name:  .rel
+    Type:  SHT_REL
+    Flags: []
+  - Name:  .strtab
+    Type:  SHT_STRTAB
+    Flags: []

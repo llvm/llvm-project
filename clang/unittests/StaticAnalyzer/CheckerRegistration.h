@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Tooling/Tooling.h"
+#include "gtest/gtest.h"
 
 namespace clang {
 namespace ento {
@@ -65,16 +66,44 @@ public:
   }
 };
 
+inline SmallString<80> getCurrentTestNameAsFileName() {
+  const ::testing::TestInfo *Info =
+      ::testing::UnitTest::GetInstance()->current_test_info();
+
+  SmallString<80> FileName;
+  (Twine{Info->name()} + ".cc").toVector(FileName);
+  return FileName;
+}
+
 template <AddCheckerFn... Fns>
 bool runCheckerOnCode(const std::string &Code, std::string &Diags) {
+  const SmallVectorImpl<char> &FileName = getCurrentTestNameAsFileName();
   llvm::raw_string_ostream OS(Diags);
-  return tooling::runToolOnCode(std::make_unique<TestAction<Fns...>>(OS), Code);
+  return tooling::runToolOnCode(std::make_unique<TestAction<Fns...>>(OS), Code,
+                                FileName);
 }
 
 template <AddCheckerFn... Fns>
 bool runCheckerOnCode(const std::string &Code) {
   std::string Diags;
   return runCheckerOnCode<Fns...>(Code, Diags);
+}
+
+template <AddCheckerFn... Fns>
+bool runCheckerOnCodeWithArgs(const std::string &Code,
+                              const std::vector<std::string> &Args,
+                              std::string &Diags) {
+  const SmallVectorImpl<char> &FileName = getCurrentTestNameAsFileName();
+  llvm::raw_string_ostream OS(Diags);
+  return tooling::runToolOnCodeWithArgs(
+      std::make_unique<TestAction<Fns...>>(OS), Code, Args, FileName);
+}
+
+template <AddCheckerFn... Fns>
+bool runCheckerOnCodeWithArgs(const std::string &Code,
+                              const std::vector<std::string> &Args) {
+  std::string Diags;
+  return runCheckerOnCodeWithArgs<Fns...>(Code, Args, Diags);
 }
 
 } // namespace ento

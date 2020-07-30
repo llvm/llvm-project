@@ -987,7 +987,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction *MF = MBB->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  DenseSet<unsigned> SGPRSpillVGPRDefinedSet;
+  DenseSet<Register> SGPRSpillVGPRDefinedSet;
 
   ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills
     = MFI->getSGPRToVGPRSpills(Index);

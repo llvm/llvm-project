@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -sink -S | FileCheck %s
+; RUN: opt < %s -basic-aa -sink -S | FileCheck %s
 declare void @foo(i64 *)
 declare i8* @llvm.load.relative.i32(i8* %ptr, i32 %offset) argmemonly nounwind readonly
 define i64 @sinkload(i1 %cmp, i8* %ptr, i32 %off) {

@@ -122,14 +122,14 @@ define i32 @mul_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    vmul.i32 q0, q1, q0
 ; CHECK-NEXT:    le lr, .LBB1_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
-; CHECK-NEXT:    vmov r2, s1
+; CHECK-NEXT:    vmov r2, s3
 ; CHECK-NEXT:    cmp r12, r1
-; CHECK-NEXT:    vmov r3, s0
-; CHECK-NEXT:    mul r2, r3, r2
 ; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    mul lr, r3, r2
+; CHECK-NEXT:    vmov r3, s1
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    mul r2, r3, r2
-; CHECK-NEXT:    vmov r3, s3
-; CHECK-NEXT:    mul r2, r3, r2
+; CHECK-NEXT:    mul r2, r2, lr
 ; CHECK-NEXT:    beq .LBB1_8
 ; CHECK-NEXT:  .LBB1_6: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r12
@@ -222,13 +222,13 @@ define i32 @and_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    vand q0, q1, q0
 ; CHECK-NEXT:    le lr, .LBB2_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
-; CHECK-NEXT:    vmov r12, s1
+; CHECK-NEXT:    vmov r12, s3
 ; CHECK-NEXT:    cmp r3, r1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    and.w r12, r12, r2
 ; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov lr, s1
 ; CHECK-NEXT:    and.w r12, r12, r2
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    and.w r2, r2, lr
 ; CHECK-NEXT:    and.w r2, r2, r12
 ; CHECK-NEXT:    beq .LBB2_9
 ; CHECK-NEXT:  .LBB2_7: @ %for.body.preheader1
@@ -322,13 +322,13 @@ define i32 @or_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    vorr q0, q1, q0
 ; CHECK-NEXT:    le lr, .LBB3_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
-; CHECK-NEXT:    vmov r12, s1
+; CHECK-NEXT:    vmov r12, s3
 ; CHECK-NEXT:    cmp r3, r1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    orr.w r12, r12, r2
 ; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov lr, s1
 ; CHECK-NEXT:    orr.w r12, r12, r2
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    orr.w r2, r2, lr
 ; CHECK-NEXT:    orr.w r2, r2, r12
 ; CHECK-NEXT:    beq .LBB3_9
 ; CHECK-NEXT:  .LBB3_7: @ %for.body.preheader1
@@ -422,13 +422,13 @@ define i32 @xor_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    veor q0, q1, q0
 ; CHECK-NEXT:    le lr, .LBB4_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
-; CHECK-NEXT:    vmov r12, s1
+; CHECK-NEXT:    vmov r12, s3
 ; CHECK-NEXT:    cmp r3, r1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    eor.w r12, r12, r2
 ; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov lr, s1
 ; CHECK-NEXT:    eor.w r12, r12, r2
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    eor.w r2, r2, lr
 ; CHECK-NEXT:    eor.w r2, r2, r12
 ; CHECK-NEXT:    beq .LBB4_9
 ; CHECK-NEXT:  .LBB4_7: @ %for.body.preheader1
@@ -522,10 +522,10 @@ define float @fadd_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    vadd.f32 q0, q1, q0
 ; CHECK-NEXT:    le lr, .LBB5_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
-; CHECK-NEXT:    vadd.f32 s4, s0, s1
+; CHECK-NEXT:    vadd.f32 s4, s2, s3
 ; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    vadd.f32 s4, s4, s2
-; CHECK-NEXT:    vadd.f32 s0, s4, s3
+; CHECK-NEXT:    vadd.f32 s0, s0, s1
+; CHECK-NEXT:    vadd.f32 s0, s0, s4
 ; CHECK-NEXT:    beq .LBB5_9
 ; CHECK-NEXT:  .LBB5_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r2
@@ -623,10 +623,10 @@ define float @fmul_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    vmul.f32 q0, q1, q0
 ; CHECK-NEXT:    le lr, .LBB6_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
-; CHECK-NEXT:    vmul.f32 s4, s0, s1
+; CHECK-NEXT:    vmul.f32 s4, s2, s3
 ; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    vmul.f32 s4, s4, s2
-; CHECK-NEXT:    vmul.f32 s0, s4, s3
+; CHECK-NEXT:    vmul.f32 s0, s0, s1
+; CHECK-NEXT:    vmul.f32 s0, s0, s4
 ; CHECK-NEXT:    beq .LBB6_9
 ; CHECK-NEXT:  .LBB6_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r2

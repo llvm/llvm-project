@@ -1,6 +1,6 @@
 ; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -ppc-vsr-nums-as-vr \
-; RUN:   -verify-machineinstrs -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN:   -ppc-vsr-nums-as-vr -verify-machineinstrs -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s
 
 @mem = global [5 x i64] [i64 56, i64 63, i64 3, i64 5, i64 6], align 8
 @umem = global [5 x i64] [i64 560, i64 100, i64 34, i64 2, i64 5], align 8

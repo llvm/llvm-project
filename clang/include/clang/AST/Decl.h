@@ -2618,7 +2618,13 @@ public:
   /// Retrieve the function declaration from which this function could
   /// be instantiated, if it is an instantiation (rather than a non-template
   /// or a specialization, for example).
-  FunctionDecl *getTemplateInstantiationPattern() const;
+  ///
+  /// If \p ForDefinition is \c false, explicit specializations will be treated
+  /// as if they were implicit instantiations. This will then find the pattern
+  /// corresponding to non-definition portions of the declaration, such as
+  /// default arguments and the exception specification.
+  FunctionDecl *
+  getTemplateInstantiationPattern(bool ForDefinition = true) const;
 
   /// Retrieve the primary template that this function template
   /// specialization either specializes or was instantiated from.

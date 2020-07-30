@@ -463,3 +463,64 @@ ProgramHeaders:
     Sections:
       - Section: .rela.dyn
       - Section: .dynamic
+
+## Show that when we have both REL and RELA relocations, we dump both sets.
+# RUN: yaml2obj --docnum=13 %s -o %t13
+# RUN: llvm-readobj --dyn-relocations %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=BOTH-RELA-REL-LLVM
+# RUN: llvm-readelf --dyn-relocations %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=BOTH-RELA-REL-GNU
+
+# BOTH-RELA-REL-LLVM:      Dynamic Relocations {
+# BOTH-RELA-REL-LLVM-NEXT:   0x1 R_X86_64_NONE - 0x0
+# BOTH-RELA-REL-LLVM-NEXT:   0x2 R_X86_64_NONE - 0x0
+# BOTH-RELA-REL-LLVM-NEXT: }
+
+# BOTH-RELA-REL-GNU:       'RELA' relocation section at offset 0x78 contains 24 bytes:
+# BOTH-RELA-REL-GNU-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# BOTH-RELA-REL-GNU-NEXT:  0000000000000001  0000000000000000 R_X86_64_NONE                     0
+# BOTH-RELA-REL-GNU-EMPTY:
+# BOTH-RELA-REL-GNU:       'REL' relocation section at offset 0x90 contains 16 bytes:
+# BOTH-RELA-REL-GNU-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
+# BOTH-RELA-REL-GNU-NEXT:  0000000000000002  0000000000000000 R_X86_64_NONE
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.dyn
+    Type: SHT_RELA
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Offset: 0x1
+  - Name: .rel.dyn
+    Type: SHT_REL
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Offset: 0x2
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x0
+      - Tag:   DT_RELASZ
+        Value: 0x18
+      - Tag:   DT_RELAENT
+        Value: 0x18
+## 0x18 == offset of .rel.dyn == size of .rela.dyn section.
+      - Tag:   DT_REL
+        Value: 0x18
+      - Tag:   DT_RELSZ
+        Value: 0x10
+      - Tag:   DT_RELENT
+        Value: 0x10
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Sections:
+      - Section: .rela.dyn
+      - Section: .rel.dyn
+      - Section: .dynamic

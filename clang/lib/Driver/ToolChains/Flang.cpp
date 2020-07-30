@@ -70,10 +70,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const auto& D = C.getDriver();
   const char* Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
-  C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
 }
 
-Flang::Flang(const ToolChain &TC)
-    : Tool("flang", "flang frontend", TC, RF_Full) {}
+Flang::Flang(const ToolChain &TC) : Tool("flang", "flang frontend", TC) {}
 
 Flang::~Flang() {}

@@ -40,7 +40,6 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -61,11 +60,13 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Regex.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -1947,6 +1948,10 @@ hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 bool matchesAnyBase(const CXXRecordDecl &Node,
                     const Matcher<CXXBaseSpecifier> &BaseSpecMatcher,
                     ASTMatchFinder *Finder, BoundNodesTreeBuilder *Builder);
+
+std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
+                                                  llvm::Regex::RegexFlags Flags,
+                                                  StringRef MatcherID);
 
 } // namespace internal
 

@@ -18,8 +18,6 @@ RUN: %python -c 'import sys;print("\n".join([hex(int(x, 16) - 0x400000) for x in
 RUN:    | llvm-symbolizer -obj="%p/Inputs/test.exe" -use-native-pdb-reader -demangle=false --relative-address \
 RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
 
-Currently only finding function/public symbol names is implemented.
-
 CHECK: foo(void)
 CHECK-NEXT: test.cpp:10
 CHECK: {{^private_symbol$}}

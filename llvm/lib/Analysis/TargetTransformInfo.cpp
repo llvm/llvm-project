@@ -68,7 +68,7 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
                                                  const CallBase &CI) :
   II(dyn_cast<IntrinsicInst>(&CI)),  RetTy(CI.getType()), IID(Id) {
 
-  if (auto *FPMO = dyn_cast<FPMathOperator>(&CI))
+  if (const auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
 
   FunctionType *FTy =
@@ -96,7 +96,7 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
                                                  unsigned ScalarCost) :
     RetTy(CI.getType()), IID(Id), VF(Factor), ScalarizationCost(ScalarCost) {
 
-  if (auto *FPMO = dyn_cast<FPMathOperator>(&CI))
+  if (const auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
 
   Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
@@ -136,8 +136,8 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
 }
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
-                                                 ArrayRef<Value *> Args) :
-    RetTy(Ty), IID(Id) {
+                                                 ArrayRef<const Value *> Args)
+    : RetTy(Ty), IID(Id) {
 
   Arguments.insert(Arguments.begin(), Args.begin(), Args.end());
   ParamTys.reserve(Arguments.size());
@@ -325,6 +325,11 @@ bool TargetTransformInfo::emitGetActiveLaneMask() const {
 void TargetTransformInfo::getUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, UnrollingPreferences &UP) const {
   return TTIImpl->getUnrollingPreferences(L, SE, UP);
+}
+
+void TargetTransformInfo::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                                                PeelingPreferences &PP) const {
+  return TTIImpl->getPeelingPreferences(L, SE, PP);
 }
 
 bool TargetTransformInfo::isLegalAddImmediate(int64_t Imm) const {
@@ -633,11 +638,12 @@ unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {
 }
 
 TargetTransformInfo::OperandValueKind
-TargetTransformInfo::getOperandInfo(Value *V, OperandValueProperties &OpProps) {
+TargetTransformInfo::getOperandInfo(const Value *V,
+                                    OperandValueProperties &OpProps) {
   OperandValueKind OpInfo = OK_AnyValue;
   OpProps = OP_None;
 
-  if (auto *CI = dyn_cast<ConstantInt>(V)) {
+  if (const auto *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->getValue().isPowerOf2())
       OpProps = OP_PowerOf2;
     return OK_UniformConstantValue;
@@ -646,7 +652,7 @@ TargetTransformInfo::getOperandInfo(Value *V, OperandValueProperties &OpProps) {
   // A broadcast shuffle creates a uniform value.
   // TODO: Add support for non-zero index broadcasts.
   // TODO: Add support for different source vector width.
-  if (auto *ShuffleInst = dyn_cast<ShuffleVectorInst>(V))
+  if (const auto *ShuffleInst = dyn_cast<ShuffleVectorInst>(V))
     if (ShuffleInst->isZeroEltSplat())
       OpInfo = OK_UniformValue;
 
@@ -661,7 +667,7 @@ TargetTransformInfo::getOperandInfo(Value *V, OperandValueProperties &OpProps) {
       if (auto *CI = dyn_cast<ConstantInt>(Splat))
         if (CI->getValue().isPowerOf2())
           OpProps = OP_PowerOf2;
-    } else if (auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
+    } else if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
       OpProps = OP_PowerOf2;
       for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
         if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I)))
@@ -756,10 +762,9 @@ int TargetTransformInfo::getMemoryOpCost(unsigned Opcode, Type *Src,
   return Cost;
 }
 
-int TargetTransformInfo::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                               unsigned Alignment,
-                                               unsigned AddressSpace,
-                                               TTI::TargetCostKind CostKind) const {
+int TargetTransformInfo::getMaskedMemoryOpCost(
+    unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind) const {
   int Cost =
       TTIImpl->getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                      CostKind);
@@ -768,9 +773,8 @@ int TargetTransformInfo::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 int TargetTransformInfo::getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, Value *Ptr, bool VariableMask,
-    unsigned Alignment, TTI::TargetCostKind CostKind,
-    const Instruction *I) const {
+    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   int Cost = TTIImpl->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                              Alignment, CostKind, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
@@ -779,8 +783,7 @@ int TargetTransformInfo::getGatherScatterOpCost(
 
 int TargetTransformInfo::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    unsigned Alignment, unsigned AddressSpace,
-    TTI::TargetCostKind CostKind,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) const {
   int Cost = TTIImpl->getInterleavedMemoryOpCost(
       Opcode, VecTy, Factor, Indices, Alignment, AddressSpace, CostKind,
@@ -912,13 +915,13 @@ bool TargetTransformInfo::isLegalToVectorizeStore(StoreInst *SI) const {
 }
 
 bool TargetTransformInfo::isLegalToVectorizeLoadChain(
-    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+    unsigned ChainSizeInBytes, Align Alignment, unsigned AddrSpace) const {
   return TTIImpl->isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment,
                                               AddrSpace);
 }
 
 bool TargetTransformInfo::isLegalToVectorizeStoreChain(
-    unsigned ChainSizeInBytes, unsigned Alignment, unsigned AddrSpace) const {
+    unsigned ChainSizeInBytes, Align Alignment, unsigned AddrSpace) const {
   return TTIImpl->isLegalToVectorizeStoreChain(ChainSizeInBytes, Alignment,
                                                AddrSpace);
 }
@@ -1055,6 +1058,8 @@ static TTI::ReductionKind matchPairwiseReductionAtLevel(Instruction *I,
   // Check that the next levels binary operation exists and matches with the
   // current one.
   if (Level + 1 != NumLevels) {
+    if (!isa<Instruction>(NextLevelOp))
+      return TTI::RK_None;
     Optional<TTI::ReductionData> NextLevelRD =
         getReductionData(cast<Instruction>(NextLevelOp));
     if (!NextLevelRD || !RD->hasSameData(*NextLevelRD))
@@ -1076,7 +1081,7 @@ static TTI::ReductionKind matchPairwiseReductionAtLevel(Instruction *I,
     return RD->Kind;
 
   // Match next level.
-  return matchPairwiseReductionAtLevel(cast<Instruction>(NextLevelOp), Level,
+  return matchPairwiseReductionAtLevel(dyn_cast<Instruction>(NextLevelOp), Level,
                                        NumLevels);
 }
 

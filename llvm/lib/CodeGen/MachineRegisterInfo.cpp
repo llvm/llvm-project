@@ -550,7 +550,7 @@ void MachineRegisterInfo::markUsesInDebugValueAsUndef(Register Reg) const {
     nextI = std::next(I);  // I is invalidated by the setReg
     MachineInstr *UseMI = &*I;
     if (UseMI->isDebugValue())
-      UseMI->getOperand(0).setReg(0U);
+      UseMI->getDebugOperandForReg(Reg)->setReg(0U);
   }
 }
 

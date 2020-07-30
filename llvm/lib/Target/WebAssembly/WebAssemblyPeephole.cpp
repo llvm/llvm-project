@@ -66,7 +66,7 @@ static bool maybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
     Register NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
     MO.setReg(NewReg);
     MO.setIsDead();
-    MFI.stackifyVReg(NewReg);
+    MFI.stackifyVReg(MRI, NewReg);
   }
   return Changed;
 }
@@ -121,7 +121,7 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
       BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(CopyLocalOpc), NewReg)
           .addReg(Reg);
       MO.setReg(NewReg);
-      MFI.stackifyVReg(NewReg);
+      MFI.stackifyVReg(MRI, NewReg);
     }
   }
 

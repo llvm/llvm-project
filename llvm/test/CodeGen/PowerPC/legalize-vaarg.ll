@@ -6,13 +6,6 @@ define <8 x i32> @test_large_vec_vaarg(i32 %n, ...) {
 ; BE-LABEL: test_large_vec_vaarg:
 ; BE:       # %bb.0:
 ; BE-NEXT:    ld 3, -8(1)
-; BE-NEXT:    std 4, 56(1)
-; BE-NEXT:    std 5, 64(1)
-; BE-NEXT:    std 6, 72(1)
-; BE-NEXT:    std 7, 80(1)
-; BE-NEXT:    std 8, 88(1)
-; BE-NEXT:    std 9, 96(1)
-; BE-NEXT:    std 10, 104(1)
 ; BE-NEXT:    addi 3, 3, 15
 ; BE-NEXT:    rldicr 3, 3, 0, 59
 ; BE-NEXT:    addi 4, 3, 16
@@ -28,15 +21,8 @@ define <8 x i32> @test_large_vec_vaarg(i32 %n, ...) {
 ; LE-LABEL: test_large_vec_vaarg:
 ; LE:       # %bb.0:
 ; LE-NEXT:    ld 3, -8(1)
-; LE-NEXT:    std 4, 40(1)
-; LE-NEXT:    std 5, 48(1)
-; LE-NEXT:    std 6, 56(1)
-; LE-NEXT:    std 7, 64(1)
 ; LE-NEXT:    addi 3, 3, 15
 ; LE-NEXT:    rldicr 3, 3, 0, 59
-; LE-NEXT:    std 8, 72(1)
-; LE-NEXT:    std 9, 80(1)
-; LE-NEXT:    std 10, 88(1)
 ; LE-NEXT:    addi 4, 3, 31
 ; LE-NEXT:    addi 5, 3, 16
 ; LE-NEXT:    rldicr 4, 4, 0, 59

@@ -182,8 +182,10 @@ cl::opt<bool> JustSymbolName("just-symbol-name",
 cl::alias JustSymbolNames("j", cl::desc("Alias for --just-symbol-name"),
                           cl::aliasopt(JustSymbolName), cl::Grouping);
 
-cl::opt<bool> SpecialSyms("special-syms",
-                          cl::desc("No-op. Used for GNU compatibility only"));
+cl::opt<bool>
+    SpecialSyms("special-syms",
+                cl::desc("Do not filter special symbols from the output"),
+                cl::cat(NMCat));
 
 cl::list<std::string> SegSect("s", cl::multi_val(2), cl::ZeroOrMore,
                               cl::value_desc("segment section"), cl::Hidden,
@@ -733,6 +735,16 @@ static void writeFileName(raw_ostream &S, StringRef ArchiveName,
   }
 }
 
+static bool isSpecialSym(SymbolicFile &Obj, StringRef Name) {
+  auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
+  if (!ELFObj)
+    return false;
+  uint16_t EMachine = ELFObj->getEMachine();
+  if (EMachine != ELF::EM_ARM && EMachine != ELF::EM_AARCH64)
+    return false;
+  return !Name.empty() && Name[0] == '$';
+}
+
 static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
                                    StringRef ArchiveName,
                                    StringRef ArchitectureName) {
@@ -822,7 +834,8 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     bool Global = SymFlags & SymbolRef::SF_Global;
     bool Weak = SymFlags & SymbolRef::SF_Weak;
     if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
-        (!Global && ExternalOnly) || (Weak && NoWeakSymbols))
+        (!Global && ExternalOnly) || (Weak && NoWeakSymbols) ||
+        (!SpecialSyms && isSpecialSym(Obj, Name)))
       continue;
     if (PrintFileName)
       writeFileName(outs(), ArchiveName, ArchitectureName);

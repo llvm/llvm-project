@@ -33,6 +33,26 @@ const char *IostatErrorString(int iostat) {
     return "Invalid FORMAT";
   case IostatErrorInKeyword:
     return "Bad keyword argument value";
+  case IostatEndfileNonSequential:
+    return "ENDFILE on non-sequential file";
+  case IostatEndfileUnwritable:
+    return "ENDFILE on read-only file";
+  case IostatOpenBadRecl:
+    return "OPEN with bad RECL= value";
+  case IostatOpenUnknownSize:
+    return "OPEN of file of unknown size";
+  case IostatOpenBadAppend:
+    return "OPEN(POSITION='APPEND') of unpositionable file";
+  case IostatWriteToReadOnly:
+    return "Attempted output to read-only file";
+  case IostatReadFromWriteOnly:
+    return "Attempted input from write-only file";
+  case IostatBackspaceNonSequential:
+    return "BACKSPACE on non-sequential file";
+  case IostatBackspaceAtFirstRecord:
+    return "BACKSPACE at first record";
+  case IostatRewindNonSequential:
+    return "REWIND on non-sequential file";
   default:
     return nullptr;
   }

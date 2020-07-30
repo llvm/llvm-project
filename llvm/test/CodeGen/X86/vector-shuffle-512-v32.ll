@@ -201,8 +201,8 @@ define <32 x i16> @shuffle_v32i16_03_00_01_02_07_04_05_06_11_08_09_10_15_12_13_1
 define <32 x i16> @shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(<32 x i16> %a) {
 ; KNL-LABEL: shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vmovaps {{.*#+}} xmm1 = [65535,0,0,0]
-; KNL-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; KNL-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,0,0,0]
+; KNL-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:

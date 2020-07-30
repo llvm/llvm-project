@@ -1573,8 +1573,13 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     bool OffsetIsScalable;
     unsigned Width;
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
-                                           OffsetIsScalable, Width, TRI))
+                                           OffsetIsScalable, Width, TRI)) {
       MemOpRecords.push_back(MemOpInfo(SU, BaseOps, Offset, Width));
+
+      LLVM_DEBUG(dbgs() << "Num BaseOps: " << BaseOps.size() << ", Offset: "
+                        << Offset << ", OffsetIsScalable: " << OffsetIsScalable
+                        << ", Width: " << Width << "\n");
+    }
 #ifndef NDEBUG
     for (auto *Op : BaseOps)
       assert(Op);
@@ -1630,6 +1635,10 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
                         << ")\n");
       DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
     }
+
+    LLVM_DEBUG(dbgs() << "  Curr cluster length: " << ClusterLength
+                      << ", Curr cluster bytes: " << CurrentClusterBytes
+                      << "\n");
   }
 }
 

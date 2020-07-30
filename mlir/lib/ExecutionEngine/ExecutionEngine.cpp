@@ -234,7 +234,7 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
 
   // Clone module in a new LLVMContext since translateModuleToLLVMIR buries
   // ownership too deeply.
-  // TODO(zinenko): Reevaluate model of ownership of LLVMContext in LLVMDialect.
+  // TODO: Reevaluate model of ownership of LLVMContext in LLVMDialect.
   std::unique_ptr<Module> deserModule =
       LLVM::cloneModuleIntoNewContext(ctx.get(), llvmModule.get());
   auto dataLayout = deserModule->getDataLayout();

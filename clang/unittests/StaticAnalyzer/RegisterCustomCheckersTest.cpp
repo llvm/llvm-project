@@ -11,6 +11,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/CheckerRegistryData.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
@@ -41,17 +42,16 @@ public:
 
 void addCustomChecker(AnalysisASTConsumer &AnalysisConsumer,
                       AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.CustomChecker", true}};
+  AnOpts.CheckersAndPackages = {{"test.CustomChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addChecker<CustomChecker>("custom.CustomChecker", "Description",
-                                       "");
+    Registry.addChecker<CustomChecker>("test.CustomChecker", "Description", "");
   });
 }
 
 TEST(RegisterCustomCheckers, RegisterChecker) {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCode<addCustomChecker>("void f() {;}", Diags));
-  EXPECT_EQ(Diags, "custom.CustomChecker:Custom diagnostic description\n");
+  EXPECT_EQ(Diags, "test.CustomChecker:Custom diagnostic description\n");
 }
 
 //===----------------------------------------------------------------------===//
@@ -100,7 +100,7 @@ public:
     llvm::raw_svector_ostream OS(Buf);
     C.getAnalysisManager()
         .getCheckerManager()
-        ->getCheckerRegistry()
+        ->getCheckerRegistryData()
         .printEnabledCheckerList(OS);
     // Strip a newline off.
     auto R =
@@ -120,7 +120,7 @@ bool shouldRegisterCheckerRegistrationOrderPrinter(const CheckerManager &mgr) {
 void addCheckerRegistrationOrderPrinter(CheckerRegistry &Registry) {
   Registry.addChecker(registerCheckerRegistrationOrderPrinter,
                       shouldRegisterCheckerRegistrationOrderPrinter,
-                      "custom.RegistrationOrder", "Description", "", false);
+                      "test.RegistrationOrder", "Description", "", false);
 }
 
 #define UNITTEST_CHECKER(CHECKER_NAME, DIAG_MSG)                               \
@@ -141,7 +141,7 @@ void addCheckerRegistrationOrderPrinter(CheckerRegistry &Registry) {
   }                                                                            \
   void add##CHECKER_NAME(CheckerRegistry &Registry) {                          \
     Registry.addChecker(register##CHECKER_NAME, shouldRegister##CHECKER_NAME,  \
-                        "custom." #CHECKER_NAME, "Description", "", false);    \
+                        "test." #CHECKER_NAME, "Description", "", false);      \
   }
 
 UNITTEST_CHECKER(StrongDep, "Strong")
@@ -154,22 +154,22 @@ bool shouldRegisterStrongFALSE(const CheckerManager &mgr) {
 
 void addDep(AnalysisASTConsumer &AnalysisConsumer,
                   AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker(registerStrongDep, shouldRegisterStrongFALSE,
-                        "custom.Strong", "Description", "", false);
+                        "test.Strong", "Description", "", false);
     addStrongDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addDependency("custom.Dep", "custom.Strong");
+    Registry.addDependency("test.Dep", "test.Strong");
   });
 }
 
 TEST(RegisterDeps, UnsatisfiedDependency) {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCode<addDep>("void f() {int i;}", Diags));
-  EXPECT_EQ(Diags, "custom.RegistrationOrder:custom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.RegistrationOrder\n");
 }
 
 //===----------------------------------------------------------------------===//
@@ -180,52 +180,52 @@ UNITTEST_CHECKER(WeakDep, "Weak")
 
 void addWeakDepCheckerBothEnabled(AnalysisASTConsumer &AnalysisConsumer,
                                   AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.WeakDep", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.WeakDep", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addWeakDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
   });
 }
 
 void addWeakDepCheckerBothEnabledSwitched(AnalysisASTConsumer &AnalysisConsumer,
                                           AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.WeakDep", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.WeakDep", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addWeakDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addWeakDependency("custom.WeakDep", "custom.Dep");
+    Registry.addWeakDependency("test.WeakDep", "test.Dep");
   });
 }
 
 void addWeakDepCheckerDepDisabled(AnalysisASTConsumer &AnalysisConsumer,
                                   AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.WeakDep", false},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.WeakDep", false},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addWeakDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
   });
 }
 
 void addWeakDepCheckerDepUnspecified(AnalysisASTConsumer &AnalysisConsumer,
                                      AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addWeakDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
   });
 }
 
@@ -234,10 +234,10 @@ UNITTEST_CHECKER(Dep2, "Dep2")
 
 void addWeakDepHasWeakDep(AnalysisASTConsumer &AnalysisConsumer,
                           AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.WeakDep", true},
-                                {"custom.WeakDep2", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.WeakDep", true},
+                                {"test.WeakDep2", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addStrongDep(Registry);
     addWeakDep(Registry);
@@ -245,17 +245,17 @@ void addWeakDepHasWeakDep(AnalysisASTConsumer &AnalysisConsumer,
     addDep(Registry);
     addDep2(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
-    Registry.addWeakDependency("custom.WeakDep", "custom.WeakDep2");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
+    Registry.addWeakDependency("test.WeakDep", "test.WeakDep2");
   });
 }
 
 void addWeakDepTransitivity(AnalysisASTConsumer &AnalysisConsumer,
                             AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.WeakDep", false},
-                                {"custom.WeakDep2", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.WeakDep", false},
+                                {"test.WeakDep2", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addStrongDep(Registry);
     addWeakDep(Registry);
@@ -263,8 +263,8 @@ void addWeakDepTransitivity(AnalysisASTConsumer &AnalysisConsumer,
     addDep(Registry);
     addDep2(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
-    Registry.addWeakDependency("custom.WeakDep", "custom.WeakDep2");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
+    Registry.addWeakDependency("test.WeakDep", "test.WeakDep2");
   });
 }
 
@@ -272,42 +272,40 @@ TEST(RegisterDeps, SimpleWeakDependency) {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCode<addWeakDepCheckerBothEnabled>(
       "void f() {int i;}", Diags));
-  EXPECT_EQ(Diags, "custom.RegistrationOrder:custom.WeakDep\ncustom."
-                   "Dep\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.WeakDep\ntest."
+                   "Dep\ntest.RegistrationOrder\n");
   Diags.clear();
 
   // Mind that AnalyzerOption listed the enabled checker list in the same order,
   // but the dependencies are switched.
   EXPECT_TRUE(runCheckerOnCode<addWeakDepCheckerBothEnabledSwitched>(
       "void f() {int i;}", Diags));
-  EXPECT_EQ(Diags, "custom.RegistrationOrder:custom.Dep\ncustom."
-                   "RegistrationOrder\ncustom.WeakDep\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.Dep\ntest."
+                   "RegistrationOrder\ntest.WeakDep\n");
   Diags.clear();
 
   // Weak dependencies dont prevent dependent checkers from being enabled.
   EXPECT_TRUE(runCheckerOnCode<addWeakDepCheckerDepDisabled>(
       "void f() {int i;}", Diags));
-  EXPECT_EQ(Diags,
-            "custom.RegistrationOrder:custom.Dep\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.Dep\ntest.RegistrationOrder\n");
   Diags.clear();
 
   // Nor will they be enabled just because a dependent checker is.
   EXPECT_TRUE(runCheckerOnCode<addWeakDepCheckerDepUnspecified>(
       "void f() {int i;}", Diags));
-  EXPECT_EQ(Diags,
-            "custom.RegistrationOrder:custom.Dep\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.Dep\ntest.RegistrationOrder\n");
   Diags.clear();
 
   EXPECT_TRUE(
       runCheckerOnCode<addWeakDepTransitivity>("void f() {int i;}", Diags));
-  EXPECT_EQ(Diags, "custom.RegistrationOrder:custom.WeakDep2\ncustom."
-                   "Dep\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.WeakDep2\ntest."
+                   "Dep\ntest.RegistrationOrder\n");
   Diags.clear();
 
   EXPECT_TRUE(
       runCheckerOnCode<addWeakDepHasWeakDep>("void f() {int i;}", Diags));
-  EXPECT_EQ(Diags, "custom.RegistrationOrder:custom.WeakDep2\ncustom."
-                   "WeakDep\ncustom.Dep\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.WeakDep2\ntest."
+                   "WeakDep\ntest.Dep\ntest.RegistrationOrder\n");
   Diags.clear();
 }
 
@@ -317,98 +315,98 @@ TEST(RegisterDeps, SimpleWeakDependency) {
 
 void addWeakDepHasStrongDep(AnalysisASTConsumer &AnalysisConsumer,
                             AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.StrongDep", true},
-                                {"custom.WeakDep", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.StrongDep", true},
+                                {"test.WeakDep", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addStrongDep(Registry);
     addWeakDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addDependency("custom.WeakDep", "custom.StrongDep");
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
+    Registry.addDependency("test.WeakDep", "test.StrongDep");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
   });
 }
 
 void addWeakDepAndStrongDep(AnalysisASTConsumer &AnalysisConsumer,
                             AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.StrongDep", true},
-                                {"custom.WeakDep", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.StrongDep", true},
+                                {"test.WeakDep", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addStrongDep(Registry);
     addWeakDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addDependency("custom.Dep", "custom.StrongDep");
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
+    Registry.addDependency("test.Dep", "test.StrongDep");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
   });
 }
 
 void addDisabledWeakDepHasStrongDep(AnalysisASTConsumer &AnalysisConsumer,
                                     AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.StrongDep", true},
-                                {"custom.WeakDep", false},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.StrongDep", true},
+                                {"test.WeakDep", false},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addStrongDep(Registry);
     addWeakDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addDependency("custom.WeakDep", "custom.StrongDep");
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
+    Registry.addDependency("test.WeakDep", "test.StrongDep");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
   });
 }
 
 void addDisabledWeakDepHasUnspecifiedStrongDep(
     AnalysisASTConsumer &AnalysisConsumer, AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.WeakDep", false},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.WeakDep", false},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addStrongDep(Registry);
     addWeakDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addDependency("custom.WeakDep", "custom.StrongDep");
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
+    Registry.addDependency("test.WeakDep", "test.StrongDep");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
   });
 }
 
 void addWeakDepHasDisabledStrongDep(AnalysisASTConsumer &AnalysisConsumer,
                                     AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.StrongDep", false},
-                                {"custom.WeakDep", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.StrongDep", false},
+                                {"test.WeakDep", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addStrongDep(Registry);
     addWeakDep(Registry);
     addDep(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addDependency("custom.WeakDep", "custom.StrongDep");
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
+    Registry.addDependency("test.WeakDep", "test.StrongDep");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
   });
 }
 
 void addWeakDepHasUnspecifiedButLaterEnabledStrongDep(
     AnalysisASTConsumer &AnalysisConsumer, AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"custom.Dep", true},
-                                {"custom.Dep2", true},
-                                {"custom.WeakDep", true},
-                                {"custom.RegistrationOrder", true}};
+  AnOpts.CheckersAndPackages = {{"test.Dep", true},
+                                {"test.Dep2", true},
+                                {"test.WeakDep", true},
+                                {"test.RegistrationOrder", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([=](CheckerRegistry &Registry) {
     addStrongDep(Registry);
     addWeakDep(Registry);
     addDep(Registry);
     addDep2(Registry);
     addCheckerRegistrationOrderPrinter(Registry);
-    Registry.addDependency("custom.WeakDep", "custom.StrongDep");
-    Registry.addDependency("custom.Dep2", "custom.StrongDep");
-    Registry.addWeakDependency("custom.Dep", "custom.WeakDep");
+    Registry.addDependency("test.WeakDep", "test.StrongDep");
+    Registry.addDependency("test.Dep2", "test.StrongDep");
+    Registry.addWeakDependency("test.Dep", "test.WeakDep");
   });
 }
 
@@ -416,8 +414,8 @@ TEST(RegisterDeps, DependencyInteraction) {
   std::string Diags;
   EXPECT_TRUE(
       runCheckerOnCode<addWeakDepHasStrongDep>("void f() {int i;}", Diags));
-  EXPECT_EQ(Diags, "custom.RegistrationOrder:custom.StrongDep\ncustom."
-                   "WeakDep\ncustom.Dep\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.StrongDep\ntest."
+                   "WeakDep\ntest.Dep\ntest.RegistrationOrder\n");
   Diags.clear();
 
   // Weak dependencies are registered before strong dependencies. This is most
@@ -426,39 +424,36 @@ TEST(RegisterDeps, DependencyInteraction) {
   // established in between the modeling portion and the weak dependency.
   EXPECT_TRUE(
       runCheckerOnCode<addWeakDepAndStrongDep>("void f() {int i;}", Diags));
-  EXPECT_EQ(Diags, "custom.RegistrationOrder:custom.WeakDep\ncustom."
-                   "StrongDep\ncustom.Dep\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.WeakDep\ntest."
+                   "StrongDep\ntest.Dep\ntest.RegistrationOrder\n");
   Diags.clear();
 
   // If a weak dependency is disabled, the checker itself can still be enabled.
   EXPECT_TRUE(runCheckerOnCode<addDisabledWeakDepHasStrongDep>(
       "void f() {int i;}", Diags));
-  EXPECT_EQ(Diags, "custom.RegistrationOrder:custom.Dep\ncustom."
-                   "RegistrationOrder\ncustom.StrongDep\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.Dep\ntest."
+                   "RegistrationOrder\ntest.StrongDep\n");
   Diags.clear();
 
   // If a weak dependency is disabled, the checker itself can still be enabled,
   // but it shouldn't enable a strong unspecified dependency.
   EXPECT_TRUE(runCheckerOnCode<addDisabledWeakDepHasUnspecifiedStrongDep>(
       "void f() {int i;}", Diags));
-  EXPECT_EQ(Diags,
-            "custom.RegistrationOrder:custom.Dep\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.Dep\ntest.RegistrationOrder\n");
   Diags.clear();
 
   // A strong dependency of a weak dependency is disabled, so neither of them
   // should be enabled.
   EXPECT_TRUE(runCheckerOnCode<addWeakDepHasDisabledStrongDep>(
       "void f() {int i;}", Diags));
-  EXPECT_EQ(Diags,
-            "custom.RegistrationOrder:custom.Dep\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.Dep\ntest.RegistrationOrder\n");
   Diags.clear();
 
   EXPECT_TRUE(
       runCheckerOnCode<addWeakDepHasUnspecifiedButLaterEnabledStrongDep>(
           "void f() {int i;}", Diags));
-  EXPECT_EQ(Diags,
-            "custom.RegistrationOrder:custom.StrongDep\ncustom.WeakDep\ncustom."
-            "Dep\ncustom.Dep2\ncustom.RegistrationOrder\n");
+  EXPECT_EQ(Diags, "test.RegistrationOrder:test.StrongDep\ntest.WeakDep\ntest."
+                   "Dep\ntest.Dep2\ntest.RegistrationOrder\n");
   Diags.clear();
 }
 } // namespace

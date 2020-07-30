@@ -878,12 +878,12 @@ StringRef ScalarTraits<StringRef>::input(StringRef Scalar, void *,
 }
 
 void ScalarTraits<std::string>::output(const std::string &Val, void *,
-                                     raw_ostream &Out) {
+                                       raw_ostream &Out) {
   Out << Val;
 }
 
 StringRef ScalarTraits<std::string>::input(StringRef Scalar, void *,
-                                         std::string &Val) {
+                                           std::string &Val) {
   Val = Scalar.str();
   return StringRef();
 }

@@ -15,6 +15,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/Support/FormatAdapters.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -30,6 +31,9 @@ public:
                           ">>> ", "..> ", true, debugger.GetUseColor(), 0,
                           *this, nullptr),
         m_script_interpreter(script_interpreter) {
+    llvm::cantFail(m_script_interpreter.GetLua().ChangeIO(
+        debugger.GetOutputFile().GetStream(),
+        debugger.GetErrorFile().GetStream()));
     llvm::cantFail(m_script_interpreter.EnterSession(debugger.GetID()));
   }
 
@@ -39,6 +43,11 @@ public:
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
+    if (llvm::StringRef(data).rtrim() == "quit") {
+      io_handler.SetIsDone(true);
+      return;
+    }
+
     if (llvm::Error error = m_script_interpreter.GetLua().Run(data)) {
       *GetOutputStreamFileSP() << llvm::toString(std::move(error));
     }
@@ -57,12 +66,43 @@ ScriptInterpreterLua::~ScriptInterpreterLua() {}
 bool ScriptInterpreterLua::ExecuteOneLine(llvm::StringRef command,
                                           CommandReturnObject *result,
                                           const ExecuteScriptOptions &options) {
+  if (command.empty()) {
+    if (result)
+      result->AppendError("empty command passed to lua\n");
+    return false;
+  }
+
+  llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
+      io_redirect_or_error = ScriptInterpreterIORedirect::Create(
+          options.GetEnableIO(), m_debugger, result);
+  if (!io_redirect_or_error) {
+    if (result)
+      result->AppendErrorWithFormatv(
+          "failed to redirect I/O: {0}\n",
+          llvm::fmt_consume(io_redirect_or_error.takeError()));
+    else
+      llvm::consumeError(io_redirect_or_error.takeError());
+    return false;
+  }
+
+  ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
+
+  if (llvm::Error e =
+          m_lua->ChangeIO(io_redirect.GetOutputFile()->GetStream(),
+                          io_redirect.GetErrorFile()->GetStream())) {
+    result->AppendErrorWithFormatv("lua failed to redirect I/O: {0}\n",
+                                   llvm::toString(std::move(e)));
+    return false;
+  }
+
   if (llvm::Error e = m_lua->Run(command)) {
     result->AppendErrorWithFormatv(
         "lua failed attempting to evaluate '{0}': {1}\n", command,
         llvm::toString(std::move(e)));
     return false;
   }
+
+  io_redirect.Flush();
   return true;
 }
 

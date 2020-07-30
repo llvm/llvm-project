@@ -38,6 +38,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -253,13 +254,13 @@ class LowerMatrixIntrinsics {
         return Vectors.size();
       else {
         assert(Vectors.size() > 0 && "Cannot call getNumRows without columns");
-        return cast<VectorType>(Vectors[0]->getType())->getNumElements();
+        return cast<FixedVectorType>(Vectors[0]->getType())->getNumElements();
       }
     }
     unsigned getNumRows() const {
       if (isColumnMajor()) {
         assert(Vectors.size() > 0 && "Cannot call getNumRows without columns");
-        return cast<VectorType>(Vectors[0]->getType())->getNumElements();
+        return cast<FixedVectorType>(Vectors[0]->getType())->getNumElements();
       } else
         return Vectors.size();
     }
@@ -400,7 +401,7 @@ public:
   unsigned getNumOps(Type *VT) {
     assert(isa<VectorType>(VT) && "Expected vector type");
     return getNumOps(VT->getScalarType(),
-                     cast<VectorType>(VT)->getNumElements());
+                     cast<FixedVectorType>(VT)->getNumElements());
   }
 
   //
@@ -420,7 +421,8 @@ public:
                      IRBuilder<> &Builder) {
     VectorType *VType = dyn_cast<VectorType>(MatrixVal->getType());
     assert(VType && "MatrixVal must be a vector type");
-    assert(VType->getNumElements() == SI.NumRows * SI.NumColumns &&
+    assert(cast<FixedVectorType>(VType)->getNumElements() ==
+               SI.NumRows * SI.NumColumns &&
            "The vector size must match the number of matrix elements");
 
     // Check if we lowered MatrixVal using shape information. In that case,
@@ -441,7 +443,8 @@ public:
     // Otherwise split MatrixVal.
     SmallVector<Value *, 16> SplitVecs;
     Value *Undef = UndefValue::get(VType);
-    for (unsigned MaskStart = 0; MaskStart < VType->getNumElements();
+    for (unsigned MaskStart = 0;
+         MaskStart < cast<FixedVectorType>(VType)->getNumElements();
          MaskStart += SI.getStride()) {
       Value *V = Builder.CreateShuffleVector(
           MatrixVal, Undef, createSequentialMask(MaskStart, SI.getStride(), 0),
@@ -927,8 +930,8 @@ public:
 
     // First, bring Block to the same size as Col
     unsigned BlockNumElts =
-        cast<VectorType>(Block->getType())->getNumElements();
-    unsigned NumElts = cast<VectorType>(Col->getType())->getNumElements();
+        cast<FixedVectorType>(Block->getType())->getNumElements();
+    unsigned NumElts = cast<FixedVectorType>(Col->getType())->getNumElements();
     assert(NumElts >= BlockNumElts && "Too few elements for current block");
 
     Value *Undef = UndefValue::get(Block->getType());
@@ -943,7 +946,8 @@ public:
     for (i = 0; i < I; i++)
       Mask.push_back(i);
 
-    unsigned VecNumElts = cast<VectorType>(Col->getType())->getNumElements();
+    unsigned VecNumElts =
+        cast<FixedVectorType>(Col->getType())->getNumElements();
     for (; i < I + BlockNumElts; i++)
       Mask.push_back(i - I + VecNumElts);
 

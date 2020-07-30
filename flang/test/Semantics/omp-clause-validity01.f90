@@ -403,6 +403,10 @@
   !ERROR: Internal: no symbol found for 'i'
   !$omp ordered depend(sink:i-1)
   !$omp flush (c)
+  !$omp flush acq_rel
+  !$omp flush release
+  !$omp flush acquire
+  !$omp flush release (c)
   !$omp cancel DO
   !$omp cancellation point parallel
 
@@ -454,7 +458,6 @@
   enddo
   !$omp end taskloop simd
 
-  !ERROR: REDUCTION clause is not allowed on the TASKLOOP SIMD directive
   !$omp taskloop simd reduction(+:a)
   do i = 1, N
      a = a + 3.14

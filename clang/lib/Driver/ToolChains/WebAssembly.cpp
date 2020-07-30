@@ -62,6 +62,12 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Linker = Args.MakeArgString(getLinkerPath(Args));
   ArgStringList CmdArgs;
 
+  CmdArgs.push_back("-m");
+  if (getToolChain().getTriple().isArch64Bit())
+    CmdArgs.push_back("wasm64");
+  else
+    CmdArgs.push_back("wasm32");
+
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
 
@@ -108,7 +114,8 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  C.addCommand(std::make_unique<Command>(JA, *this, Linker, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Linker, CmdArgs, Inputs));
 
   // When optimizing, if wasm-opt is available, run it.
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
@@ -130,7 +137,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
         CmdArgs.push_back("-o");
         CmdArgs.push_back(Output.getFilename());
-        C.addCommand(std::make_unique<Command>(JA, *this, WasmOpt, CmdArgs, Inputs));
+        C.addCommand(std::make_unique<Command>(
+            JA, *this, ResponseFileSupport::AtFileCurCP(), WasmOpt, CmdArgs,
+            Inputs));
       }
     }
   }

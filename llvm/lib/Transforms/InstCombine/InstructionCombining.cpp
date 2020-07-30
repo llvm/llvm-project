@@ -971,7 +971,7 @@ static Value *foldOperationIntoPhiValue(BinaryOperator *I, Value *InV,
   if (!ConstIsRHS)
     std::swap(Op0, Op1);
 
-  Value *RI = Builder.CreateBinOp(I->getOpcode(), Op0, Op1, "phitmp");
+  Value *RI = Builder.CreateBinOp(I->getOpcode(), Op0, Op1, "phi.bo");
   auto *FPInst = dyn_cast<Instruction>(RI);
   if (FPInst && isa<FPMathOperator>(FPInst))
     FPInst->copyFastMathFlags(I);
@@ -1076,7 +1076,7 @@ Instruction *InstCombiner::foldOpIntoPhi(Instruction &I, PHINode *PN) {
         // the select would be generated exactly once in the NonConstBB.
         Builder.SetInsertPoint(ThisBB->getTerminator());
         InV = Builder.CreateSelect(PN->getIncomingValue(i), TrueVInPred,
-                                   FalseVInPred, "phitmp");
+                                   FalseVInPred, "phi.sel");
       }
       NewPN->addIncoming(InV, ThisBB);
     }
@@ -1088,7 +1088,7 @@ Instruction *InstCombiner::foldOpIntoPhi(Instruction &I, PHINode *PN) {
         InV = ConstantExpr::getCompare(CI->getPredicate(), InC, C);
       else
         InV = Builder.CreateCmp(CI->getPredicate(), PN->getIncomingValue(i),
-                                C, "phitmp");
+                                C, "phi.cmp");
       NewPN->addIncoming(InV, PN->getIncomingBlock(i));
     }
   } else if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
@@ -1106,7 +1106,7 @@ Instruction *InstCombiner::foldOpIntoPhi(Instruction &I, PHINode *PN) {
         InV = ConstantExpr::getCast(CI->getOpcode(), InC, RetTy);
       else
         InV = Builder.CreateCast(CI->getOpcode(), PN->getIncomingValue(i),
-                                 I.getType(), "phitmp");
+                                 I.getType(), "phi.cast");
       NewPN->addIncoming(InV, PN->getIncomingBlock(i));
     }
   }
@@ -2480,6 +2480,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
               return false;
             LLVM_FALLTHROUGH;
           }
+          case Intrinsic::assume:
           case Intrinsic::invariant_start:
           case Intrinsic::invariant_end:
           case Intrinsic::lifetime_start:
@@ -2754,9 +2755,9 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
     return replaceOperand(
         BI, 0, ConstantInt::getFalse(BI.getCondition()->getType()));
 
-  // Canonicalize, for example, icmp_ne -> icmp_eq or fcmp_one -> fcmp_oeq.
+  // Canonicalize, for example, fcmp_one -> fcmp_oeq.
   CmpInst::Predicate Pred;
-  if (match(&BI, m_Br(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())),
+  if (match(&BI, m_Br(m_OneUse(m_FCmp(Pred, m_Value(), m_Value())),
                       m_BasicBlock(), m_BasicBlock())) &&
       !isCanonicalPredicate(Pred)) {
     // Swap destinations and condition.
@@ -3354,6 +3355,12 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(&*InsertPos);
   ++NumSunkInst;
+
+  // Drop the debug loc of non-inlinable instructions. This prevents
+  // single-stepping from going backwards. See HowToUpdateDebugInfo.rst for
+  // the full rationale.
+  if (!isa<CallBase>(I))
+    I->setDebugLoc(DebugLoc());
 
   // Also sink all related debug uses from the source basic block. Otherwise we
   // get debug use before the def. Attempt to salvage debug uses first, to

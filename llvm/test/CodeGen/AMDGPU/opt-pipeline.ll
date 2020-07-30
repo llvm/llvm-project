@@ -276,6 +276,12 @@
 ; GCN-O1-NEXT:       Warn about non-applied transformations
 ; GCN-O1-NEXT:       Alignment from assumptions
 ; GCN-O1-NEXT:     Strip Unused Function Prototypes
+; GCN-O1-NEXT:     Call Graph Profile
+; GCN-O1-NEXT:       FunctionPass Manager
+; GCN-O1-NEXT:         Dominator Tree Construction
+; GCN-O1-NEXT:         Natural Loop Information
+; GCN-O1-NEXT:         Lazy Branch Probability Analysis
+; GCN-O1-NEXT:         Lazy Block Frequency Analysis
 ; GCN-O1-NEXT:     FunctionPass Manager
 ; GCN-O1-NEXT:       Dominator Tree Construction
 ; GCN-O1-NEXT:       Natural Loop Information
@@ -623,6 +629,12 @@
 ; GCN-O2-NEXT:     Strip Unused Function Prototypes
 ; GCN-O2-NEXT:     Dead Global Elimination
 ; GCN-O2-NEXT:     Merge Duplicate Global Constants
+; GCN-O2-NEXT:     Call Graph Profile
+; GCN-O2-NEXT:       FunctionPass Manager
+; GCN-O2-NEXT:         Dominator Tree Construction
+; GCN-O2-NEXT:         Natural Loop Information
+; GCN-O2-NEXT:         Lazy Branch Probability Analysis
+; GCN-O2-NEXT:         Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:     FunctionPass Manager
 ; GCN-O2-NEXT:       Dominator Tree Construction
 ; GCN-O2-NEXT:       Natural Loop Information
@@ -975,6 +987,12 @@
 ; GCN-O3-NEXT:     Strip Unused Function Prototypes
 ; GCN-O3-NEXT:     Dead Global Elimination
 ; GCN-O3-NEXT:     Merge Duplicate Global Constants
+; GCN-O3-NEXT:     Call Graph Profile
+; GCN-O3-NEXT:       FunctionPass Manager
+; GCN-O3-NEXT:         Dominator Tree Construction
+; GCN-O3-NEXT:         Natural Loop Information
+; GCN-O3-NEXT:         Lazy Branch Probability Analysis
+; GCN-O3-NEXT:         Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:     FunctionPass Manager
 ; GCN-O3-NEXT:       Dominator Tree Construction
 ; GCN-O3-NEXT:       Natural Loop Information

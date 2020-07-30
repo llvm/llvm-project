@@ -383,3 +383,20 @@ func @transfer_write_progressive_not_masked(%A : memref<?x?xf32>, %base: index, 
     vector<3x15xf32>, memref<?x?xf32>
   return
 }
+
+// -----
+
+// FULL-UNROLL-LABEL: transfer_read_simple
+func @transfer_read_simple(%A : memref<2x2xf32>) -> vector<2x2xf32> {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+  // FULL-UNROLL-DAG: %[[VC0:.*]] = constant dense<0.000000e+00> : vector<2x2xf32>
+  // FULL-UNROLL-DAG: %[[C0:.*]] = constant 0 : index
+  // FULL-UNROLL-DAG: %[[C1:.*]] = constant 1 : index
+  // FULL-UNROLL: %[[V0:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]]
+  // FULL-UNROLL: %[[RES0:.*]] = vector.insert %[[V0]], %[[VC0]] [0] : vector<2xf32> into vector<2x2xf32>
+  // FULL-UNROLL: %[[V1:.*]] = vector.transfer_read %{{.*}}[%[[C1]], %[[C0]]]
+  // FULL-UNROLL: %[[RES1:.*]] = vector.insert %[[V1]], %[[RES0]] [1] : vector<2xf32> into vector<2x2xf32>
+  %0 = vector.transfer_read %A[%c0, %c0], %f0 : memref<2x2xf32>, vector<2x2xf32>
+  return %0 : vector<2x2xf32>
+}

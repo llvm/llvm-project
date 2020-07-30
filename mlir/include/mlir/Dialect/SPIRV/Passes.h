@@ -46,6 +46,10 @@ createUpdateVersionCapabilityExtensionPass();
 ///    functions using the specification in the `spv.entry_point_abi` attribute.
 std::unique_ptr<OperationPass<spirv::ModuleOp>> createLowerABIAttributesPass();
 
+/// Creates an operation pass that rewrites sequential chains of
+/// spv.CompositeInsert into spv.CompositeConstruct.
+std::unique_ptr<OperationPass<spirv::ModuleOp>> createRewriteInsertsPass();
+
 } // namespace spirv
 } // namespace mlir
 

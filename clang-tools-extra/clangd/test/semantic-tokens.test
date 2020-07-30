@@ -13,7 +13,7 @@
 }}}
 ---
 # Non-incremental token request.
-{"jsonrpc":"2.0","id":1,"method":"textDocument/semanticTokens","params":{"textDocument":{"uri":"test:///foo.cpp"}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/semanticTokens/full","params":{"textDocument":{"uri":"test:///foo.cpp"}}}
 # CHECK:       "id": 1,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {
@@ -34,7 +34,7 @@
 }}
 ---
 # Incremental token request, based on previous response.
-{"jsonrpc":"2.0","id":2,"method":"textDocument/semanticTokens/edits","params":{
+{"jsonrpc":"2.0","id":2,"method":"textDocument/semanticTokens/full/delta","params":{
   "textDocument": {"uri":"test:///foo.cpp"},
   "previousResultId": "1"
 }}
@@ -60,7 +60,7 @@
 # CHECK-NEXT:  }
 ---
 # Incremental token request with incorrect baseline => full tokens list.
-{"jsonrpc":"2.0","id":2,"method":"textDocument/semanticTokens/edits","params":{
+{"jsonrpc":"2.0","id":2,"method":"textDocument/semanticTokens/full/delta","params":{
   "textDocument": {"uri":"test:///foo.cpp"},
   "previousResultId": "bogus"
 }}

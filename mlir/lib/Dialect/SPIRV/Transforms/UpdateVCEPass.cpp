@@ -163,7 +163,7 @@ void UpdateVCEPass::runOnOperation() {
   if (walkResult.wasInterrupted())
     return signalPassFailure();
 
-  // TODO(antiagainst): verify that the deduced version is consistent with
+  // TODO: verify that the deduced version is consistent with
   // SPIR-V ops' maximal version requirements.
 
   auto triple = spirv::VerCapExtAttr::get(

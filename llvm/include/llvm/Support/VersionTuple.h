@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_VERSIONTUPLE_H
 #define LLVM_SUPPORT_VERSIONTUPLE_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include <string>
 #include <tuple>
@@ -142,6 +143,10 @@ public:
   /// zero.
   friend bool operator>=(const VersionTuple &X, const VersionTuple &Y) {
     return !(X < Y);
+  }
+
+  friend llvm::hash_code hash_value(const VersionTuple &VT) {
+    return llvm::hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
   }
 
   /// Retrieve a string representation of the version number.

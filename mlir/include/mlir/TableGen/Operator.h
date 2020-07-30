@@ -219,9 +219,9 @@ public:
   StringRef getExtraClassDeclaration() const;
 
   // Returns the Tablegen definition this operator was constructed from.
-  // TODO(antiagainst,zinenko): do not expose the TableGen record, this is a
-  // temporary solution to OpEmitter requiring a Record because Operator does
-  // not provide enough methods.
+  // TODO: do not expose the TableGen record, this is a temporary solution to
+  // OpEmitter requiring a Record because Operator does not provide enough
+  // methods.
   const llvm::Record &getDef() const;
 
   // Returns the dialect of the op.
@@ -260,6 +260,22 @@ public:
   // Return all arguments or type constraints with same type as result[index].
   // Requires: all result types are known.
   ArrayRef<ArgOrType> getSameTypeAsResult(int index) const;
+
+  // Pair consisting kind of argument and index into operands or attributes.
+  struct OperandOrAttribute {
+    enum class Kind { Operand, Attribute };
+    OperandOrAttribute(Kind kind, int index) {
+      packed = (index << 1) & (kind == Kind::Attribute);
+    }
+    int operandOrAttributeIndex() const { return (packed >> 1); }
+    Kind kind() { return (packed & 0x1) ? Kind::Attribute : Kind::Operand; }
+
+  private:
+    int packed;
+  };
+
+  // Returns the OperandOrAttribute corresponding to the index.
+  OperandOrAttribute getArgToOperandOrAttribute(int index) const;
 
 private:
   // Populates the vectors containing operands, attributes, results and traits.
@@ -302,6 +318,9 @@ private:
 
   // The argument with the same type as the result.
   SmallVector<SmallVector<ArgOrType, 2>, 4> resultTypeMapping;
+
+  // Map from argument to attribute or operand number.
+  SmallVector<OperandOrAttribute, 4> attrOrOperandMapping;
 
   // The number of native attributes stored in the leading positions of
   // `attributes`.

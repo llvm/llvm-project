@@ -164,7 +164,8 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         [this] { m_process->LoadOperatingSystemPlugin(true); });
   }
 
-  m_experimental_properties_up.reset(new ProcessExperimentalProperties());
+  m_experimental_properties_up =
+      std::make_unique<ProcessExperimentalProperties>();
   m_collection_sp->AppendProperty(
       ConstString(Properties::GetExperimentalSettingsName()),
       ConstString("Experimental settings - setting these won't produce "
@@ -2748,7 +2749,7 @@ DataExtractor Process::GetAuxvData() { return DataExtractor(); }
 
 JITLoaderList &Process::GetJITLoaders() {
   if (!m_jit_loaders_up) {
-    m_jit_loaders_up.reset(new JITLoaderList());
+    m_jit_loaders_up = std::make_unique<JITLoaderList>();
     JITLoader::LoadPlugins(this, *m_jit_loaders_up);
   }
   return *m_jit_loaders_up;

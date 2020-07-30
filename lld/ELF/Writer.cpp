@@ -2229,8 +2229,10 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *sec) {
   StringRef s = sec->name;
   if (!isValidCIdentifier(s))
     return;
-  addOptionalRegular(saver.save("__start_" + s), sec, 0, STV_PROTECTED);
-  addOptionalRegular(saver.save("__stop_" + s), sec, -1, STV_PROTECTED);
+  addOptionalRegular(saver.save("__start_" + s), sec, 0,
+                     config->zStartStopVisibility);
+  addOptionalRegular(saver.save("__stop_" + s), sec, -1,
+                     config->zStartStopVisibility);
 }
 
 static bool needsPtLoad(OutputSection *sec) {

@@ -886,7 +886,7 @@ llvm.func @ops(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm.i32, %arg3: 
 // CHECK-LABEL: define void @indirect_const_call(i64 {{%.*}})
 llvm.func @indirect_const_call(%arg0: !llvm.i64) {
 // CHECK-NEXT:  call void @body(i64 %0)
-  %0 = llvm.mlir.constant(@body) : !llvm<"void (i64)*">
+  %0 = llvm.mlir.addressof @body : !llvm<"void (i64)*">
   llvm.call %0(%arg0) : (!llvm.i64) -> ()
 // CHECK-NEXT:  ret void
   llvm.return
@@ -1230,3 +1230,13 @@ llvm.func @constant_bf16() -> !llvm<"bfloat"> {
 
 // CHECK: ret bfloat 0xR4120
 
+// -----
+
+llvm.func @address_taken() {
+  llvm.return
+}
+
+llvm.mlir.global internal constant @taker_of_address() : !llvm<"void()*"> {
+  %0 = llvm.mlir.addressof @address_taken : !llvm<"void()*">
+  llvm.return %0 : !llvm<"void()*">
+}

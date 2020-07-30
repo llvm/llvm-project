@@ -69,7 +69,7 @@ protected:
     SBCommandInterpreter sb_interpreter(&m_interpreter);
     SBDebugger debugger_sb(m_interpreter.GetDebugger().shared_from_this());
     bool ret = m_backend->DoExecute(
-        debugger_sb, (char **)command.GetArgumentVector(), sb_return);
+        debugger_sb, command.GetArgumentVector(), sb_return);
     return ret;
   }
   std::shared_ptr<lldb::SBCommandPluginInterface> m_backend;

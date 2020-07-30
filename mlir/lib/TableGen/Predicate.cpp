@@ -213,7 +213,7 @@ static PredNode *propagateGroundTruth(
   // still point to the original predicate records.  While the original
   // predicate may be known to be true or false, it is not necessarily the case
   // after rewriting.
-  // TODO(zinenko,jpienaar): we can support ground truth for rewritten
+  // TODO: we can support ground truth for rewritten
   // predicates by either (a) having our own unique'ing of the predicates
   // instead of relying on TableGen record pointers or (b) taking ground truth
   // values optionally prefixed with a list of substitutions to apply, e.g.

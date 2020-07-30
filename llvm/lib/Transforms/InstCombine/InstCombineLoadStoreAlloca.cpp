@@ -14,8 +14,8 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -24,6 +24,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -40,7 +41,7 @@ STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 /// the alloca, and if the source pointer is a pointer to a constant global, we
 /// can optimize this.
 static bool
-isOnlyCopiedFromConstantMemory(AliasAnalysis *AA,
+isOnlyCopiedFromConstantMemory(AAResults *AA,
                                Value *V, MemTransferInst *&TheCopy,
                                SmallVectorImpl<Instruction *> &ToDelete) {
   // We track lifetime intrinsics as we encounter them.  If we decide to go
@@ -144,7 +145,7 @@ isOnlyCopiedFromConstantMemory(AliasAnalysis *AA,
 /// modified by a copy from a constant global.  If we can prove this, we can
 /// replace any uses of the alloca with uses of the global directly.
 static MemTransferInst *
-isOnlyCopiedFromConstantMemory(AliasAnalysis *AA,
+isOnlyCopiedFromConstantMemory(AAResults *AA,
                                AllocaInst *AI,
                                SmallVectorImpl<Instruction *> &ToDelete) {
   MemTransferInst *TheCopy = nullptr;
@@ -1424,18 +1425,33 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
+  auto IsNoopInstrForStoreMerging = [](BasicBlock::iterator BBI) {
+    return isa<DbgInfoIntrinsic>(BBI) ||
+           (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy());
+  };
+
   // If this store is the second-to-last instruction in the basic block
   // (excluding debug info and bitcasts of pointers) and if the block ends with
   // an unconditional branch, try to move the store to the successor block.
   BBI = SI.getIterator();
   do {
     ++BBI;
-  } while (isa<DbgInfoIntrinsic>(BBI) ||
-           (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy()));
+  } while (IsNoopInstrForStoreMerging(BBI));
 
   if (BranchInst *BI = dyn_cast<BranchInst>(BBI))
     if (BI->isUnconditional())
-      mergeStoreIntoSuccessor(SI);
+      if (mergeStoreIntoSuccessor(SI)) {
+        // Okay, we've managed to do that. Now, let's see if now-second-to-last
+        // instruction is also a store that we can also sink.
+        BasicBlock::iterator FirstInstr = BBI->getParent()->begin();
+        do {
+          if (BBI != FirstInstr)
+            --BBI;
+        } while (BBI != FirstInstr && IsNoopInstrForStoreMerging(BBI));
+        if (StoreInst *PrevStore = dyn_cast<StoreInst>(BBI))
+          Worklist.add(PrevStore);
+        return nullptr;
+      }
 
   return nullptr;
 }

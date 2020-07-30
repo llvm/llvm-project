@@ -584,7 +584,7 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
   // defaultEvalCall if all of them fail.
   ExplodedNodeSet dstCallEvaluated;
   getCheckerManager().runCheckersForEvalCall(dstCallEvaluated, dstPreVisit,
-                                             Call, *this);
+                                             Call, *this, EvalCallOptions());
 
   // If there were other constructors called for object-type arguments
   // of this call, clean them up.
@@ -717,7 +717,7 @@ void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
 ExprEngine::CallInlinePolicy
 ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
                               AnalyzerOptions &Opts,
-                              const ExprEngine::EvalCallOptions &CallOpts) {
+                              const EvalCallOptions &CallOpts) {
   const LocationContext *CurLC = Pred->getLocationContext();
   const StackFrameContext *CallerSFC = CurLC->getStackFrame();
   switch (Call.getKind()) {

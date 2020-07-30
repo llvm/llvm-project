@@ -30,6 +30,7 @@
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"

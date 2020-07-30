@@ -18,6 +18,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
 
 using namespace llvm;
 

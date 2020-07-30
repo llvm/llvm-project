@@ -189,7 +189,7 @@ private:
   bool
   constantOffsetHeuristic(const SmallVectorImpl<VariableGEPIndex> &VarIndices,
                           LocationSize V1Size, LocationSize V2Size,
-                          APInt BaseOffset, AssumptionCache *AC,
+                          const APInt &BaseOffset, AssumptionCache *AC,
                           DominatorTree *DT);
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);

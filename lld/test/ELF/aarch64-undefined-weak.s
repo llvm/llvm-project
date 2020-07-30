@@ -33,6 +33,8 @@ _start:
  .xword target - .
 // R_AARCH64_PREL16
  .hword target - .
+// R_AARCH64_PLT32
+ .word target@PLT - .
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
@@ -47,4 +49,5 @@ _start:
 // CHECK:      1001013c: 00 00 00 00     .word   0x00000000
 // CHECK-NEXT: 10010140: 00 00 00 00     .word   0x00000000
 // CHECK-NEXT: 10010144: 00 00 00 00     .word   0x00000000
-// CHECK-NEXT: 10010148: 00 00           .short  0x0000
+// CHECK-NEXT: 10010148: 00 00 00 00     .word   0x00000000
+// CHECK-NEXT: 1001014c: 00 00           .short  0x0000

@@ -30,20 +30,25 @@ public:
   virtual ~ThreadsafeFS() = default;
 
   /// Obtain a vfs::FileSystem with an arbitrary initial working directory.
-  virtual llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  view(llvm::NoneType CWD) const = 0;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  view(llvm::NoneType CWD) const {
+    return viewImpl();
+  }
 
   /// Obtain a vfs::FileSystem with a specified working directory.
   /// If the working directory can't be set (e.g. doesn't exist), logs and
   /// returns the FS anyway.
-  virtual llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  view(PathRef CWD) const;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> view(PathRef CWD) const;
+
+private:
+  /// Overridden by implementations to provide a vfs::FileSystem.
+  /// This is distinct from view(NoneType) to avoid GCC's -Woverloaded-virtual.
+  virtual llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const = 0;
 };
 
 class RealThreadsafeFS : public ThreadsafeFS {
-public:
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-      view(llvm::NoneType) const override;
+private:
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override;
 };
 
 } // namespace clangd

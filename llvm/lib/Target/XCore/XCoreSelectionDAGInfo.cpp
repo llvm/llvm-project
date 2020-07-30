@@ -17,11 +17,11 @@ using namespace llvm;
 
 SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, unsigned Align, bool isVolatile, bool AlwaysInline,
+    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   unsigned SizeBitWidth = Size.getValueSizeInBits();
   // Call __memcpy_4 if the src, dst and size are all 4 byte aligned.
-  if (!AlwaysInline && (Align & 3) == 0 &&
+  if (!AlwaysInline && Alignment >= Align(4) &&
       DAG.MaskedValueIsZero(Size, APInt(SizeBitWidth, 3))) {
     const TargetLowering &TLI = *DAG.getSubtarget().getTargetLowering();
     TargetLowering::ArgListTy Args;

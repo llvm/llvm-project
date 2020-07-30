@@ -51,5 +51,48 @@ module attributes {
       }
       gpu.return
     }
+
+
+    // CHECK-LABEL: @loop_yield
+    gpu.func @loop_yield(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>) kernel
+    attributes {spv.entry_point_abi = {local_size = dense<[16, 1, 1]>: vector<3xi32>}} {
+      // CHECK: %[[LB:.*]] = spv.constant 4 : i32
+      %lb = constant 4 : index
+      // CHECK: %[[UB:.*]] = spv.constant 42 : i32
+      %ub = constant 42 : index
+      // CHECK: %[[STEP:.*]] = spv.constant 2 : i32
+      %step = constant 2 : index
+      // CHECK: %[[INITVAR1:.*]] = spv.constant 0.000000e+00 : f32
+      %s0 = constant 0.0 : f32
+      // CHECK: %[[INITVAR2:.*]] = spv.constant 1.000000e+00 : f32
+      %s1 = constant 1.0 : f32
+      // CHECK: %[[VAR1:.*]] = spv.Variable : !spv.ptr<f32, Function>
+      // CHECK: %[[VAR2:.*]] = spv.Variable : !spv.ptr<f32, Function>
+      // CHECK: spv.loop {
+      // CHECK:   spv.Branch ^[[HEADER:.*]](%[[LB]], %[[INITVAR1]], %[[INITVAR2]] : i32, f32, f32)
+      // CHECK: ^[[HEADER]](%[[INDVAR:.*]]: i32, %[[CARRIED1:.*]]: f32, %[[CARRIED2:.*]]: f32):
+      // CHECK:   %[[CMP:.*]] = spv.SLessThan %[[INDVAR]], %[[UB]] : i32
+      // CHECK:   spv.BranchConditional %[[CMP]], ^[[BODY:.*]], ^[[MERGE:.*]]
+      // CHECK: ^[[BODY]]:
+      // CHECK:   %[[UPDATED:.*]] = spv.FAdd %[[CARRIED1]], %[[CARRIED1]] : f32
+      // CHECK-DAG:   %[[INCREMENT:.*]] = spv.IAdd %[[INDVAR]], %[[STEP]] : i32
+      // CHECK-DAG:   spv.Store "Function" %[[VAR1]], %[[UPDATED]] : f32
+      // CHECK-DAG:   spv.Store "Function" %[[VAR2]], %[[UPDATED]] : f32
+      // CHECK: spv.Branch ^[[HEADER]](%[[INCREMENT]], %[[UPDATED]], %[[UPDATED]] : i32, f32, f32)
+      // CHECK: ^[[MERGE]]:
+      // CHECK:   spv._merge
+      // CHECK: }
+      %result:2 = scf.for %i0 = %lb to %ub step %step iter_args(%si = %s0, %sj = %s1) -> (f32, f32) {
+        %sn = addf %si, %si : f32
+        scf.yield %sn, %sn : f32, f32
+      }
+      // CHECK-DAG: %[[OUT1:.*]] = spv.Load "Function" %[[VAR1]] : f32
+      // CHECK-DAG: %[[OUT2:.*]] = spv.Load "Function" %[[VAR2]] : f32
+      // CHECK: spv.Store "StorageBuffer" {{%.*}}, %[[OUT1]] : f32
+      // CHECK: spv.Store "StorageBuffer" {{%.*}}, %[[OUT2]] : f32
+      store %result#0, %arg3[%lb] : memref<10xf32>
+      store %result#1, %arg3[%ub] : memref<10xf32>
+      gpu.return
+    }
   }
 }

@@ -1071,6 +1071,12 @@ void MCStreamer::emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
                    "XCOFF targets");
 }
 
+void MCStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
+                                          StringRef Rename) {
+  llvm_unreachable("emitXCOFFRenameDirective is only supported on "
+                   "XCOFF targets");
+}
+
 void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
 void MCStreamer::emitELFSymverDirective(StringRef AliasName,
                                         const MCSymbol *Aliasee) {}
@@ -1128,6 +1134,79 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
   return Sym;
 }
 
+static VersionTuple
+targetVersionOrMinimumSupportedOSVersion(const Triple &Target,
+                                         VersionTuple TargetVersion) {
+  VersionTuple Min = Target.getMinimumSupportedOSVersion();
+  return !Min.empty() && Min > TargetVersion ? Min : TargetVersion;
+}
+
+static MCVersionMinType
+getMachoVersionMinLoadCommandType(const Triple &Target) {
+  assert(Target.isOSDarwin() && "expected a darwin OS");
+  switch (Target.getOS()) {
+  case Triple::MacOSX:
+  case Triple::Darwin:
+    return MCVM_OSXVersionMin;
+  case Triple::IOS:
+    assert(!Target.isMacCatalystEnvironment() &&
+           "mac Catalyst should use LC_BUILD_VERSION");
+    return MCVM_IOSVersionMin;
+  case Triple::TvOS:
+    return MCVM_TvOSVersionMin;
+  case Triple::WatchOS:
+    return MCVM_WatchOSVersionMin;
+  default:
+    break;
+  }
+  llvm_unreachable("unexpected OS type");
+}
+
+static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
+  assert(Target.isOSDarwin() && "expected a darwin OS");
+  switch (Target.getOS()) {
+  case Triple::MacOSX:
+  case Triple::Darwin:
+    return VersionTuple(10, 14);
+  case Triple::IOS:
+    // Mac Catalyst always uses the build version load command.
+    if (Target.isMacCatalystEnvironment())
+      return VersionTuple();
+    LLVM_FALLTHROUGH;
+  case Triple::TvOS:
+    return VersionTuple(12);
+  case Triple::WatchOS:
+    return VersionTuple(5);
+  default:
+    break;
+  }
+  llvm_unreachable("unexpected OS type");
+}
+
+static MachO::PlatformType
+getMachoBuildVersionPlatformType(const Triple &Target) {
+  assert(Target.isOSDarwin() && "expected a darwin OS");
+  switch (Target.getOS()) {
+  case Triple::MacOSX:
+  case Triple::Darwin:
+    return MachO::PLATFORM_MACOS;
+  case Triple::IOS:
+    if (Target.isMacCatalystEnvironment())
+      return MachO::PLATFORM_MACCATALYST;
+    return Target.isSimulatorEnvironment() ? MachO::PLATFORM_IOSSIMULATOR
+                                           : MachO::PLATFORM_IOS;
+  case Triple::TvOS:
+    return Target.isSimulatorEnvironment() ? MachO::PLATFORM_TVOSSIMULATOR
+                                           : MachO::PLATFORM_TVOS;
+  case Triple::WatchOS:
+    return Target.isSimulatorEnvironment() ? MachO::PLATFORM_WATCHOSSIMULATOR
+                                           : MachO::PLATFORM_WATCHOS;
+  default:
+    break;
+  }
+  llvm_unreachable("unexpected OS type");
+}
+
 void MCStreamer::emitVersionForTarget(const Triple &Target,
                                       const VersionTuple &SDKVersion) {
   if (!Target.isOSBinFormatMachO() || !Target.isOSDarwin())
@@ -1136,33 +1215,37 @@ void MCStreamer::emitVersionForTarget(const Triple &Target,
   if (Target.getOSMajorVersion() == 0)
     return;
 
-  unsigned Major;
-  unsigned Minor;
-  unsigned Update;
-  if (Target.isMacCatalystEnvironment()) {
-    // Mac Catalyst always uses the build version load command.
+  unsigned Major = 0;
+  unsigned Minor = 0;
+  unsigned Update = 0;
+  switch (Target.getOS()) {
+  case Triple::MacOSX:
+  case Triple::Darwin:
+    Target.getMacOSXVersion(Major, Minor, Update);
+    break;
+  case Triple::IOS:
+  case Triple::TvOS:
     Target.getiOSVersion(Major, Minor, Update);
-    assert(Major && "A non-zero major version is expected");
-    emitBuildVersion(MachO::PLATFORM_MACCATALYST, Major, Minor, Update,
-                     SDKVersion);
-    return;
-  }
-
-  MCVersionMinType VersionType;
-  if (Target.isWatchOS()) {
-    VersionType = MCVM_WatchOSVersionMin;
+    break;
+  case Triple::WatchOS:
     Target.getWatchOSVersion(Major, Minor, Update);
-  } else if (Target.isTvOS()) {
-    VersionType = MCVM_TvOSVersionMin;
-    Target.getiOSVersion(Major, Minor, Update);
-  } else if (Target.isMacOSX()) {
-    VersionType = MCVM_OSXVersionMin;
-    if (!Target.getMacOSXVersion(Major, Minor, Update))
-      Major = 0;
-  } else {
-    VersionType = MCVM_IOSVersionMin;
-    Target.getiOSVersion(Major, Minor, Update);
+    break;
+  default:
+    llvm_unreachable("unexpected OS type");
   }
-  if (Major != 0)
-    emitVersionMin(VersionType, Major, Minor, Update, SDKVersion);
+  assert(Major != 0 && "A non-zero major version is expected");
+  auto LinkedTargetVersion = targetVersionOrMinimumSupportedOSVersion(
+      Target, VersionTuple(Major, Minor, Update));
+  auto BuildVersionOSVersion = getMachoBuildVersionSupportedOS(Target);
+  if (BuildVersionOSVersion.empty() ||
+      LinkedTargetVersion >= BuildVersionOSVersion)
+    return emitBuildVersion(getMachoBuildVersionPlatformType(Target),
+                            LinkedTargetVersion.getMajor(),
+                            *LinkedTargetVersion.getMinor(),
+                            *LinkedTargetVersion.getSubminor(), SDKVersion);
+
+  emitVersionMin(getMachoVersionMinLoadCommandType(Target),
+                 LinkedTargetVersion.getMajor(),
+                 *LinkedTargetVersion.getMinor(),
+                 *LinkedTargetVersion.getSubminor(), SDKVersion);
 }

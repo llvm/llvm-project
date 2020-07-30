@@ -108,20 +108,6 @@ bool GlobalValue::canBenefitFromLocalAlias() const {
          !isa<GlobalIFunc>(this) && !hasComdat();
 }
 
-unsigned GlobalValue::getAlignment() const {
-  if (auto *GA = dyn_cast<GlobalAlias>(this)) {
-    // In general we cannot compute this at the IR level, but we try.
-    if (const GlobalObject *GO = GA->getBaseObject())
-      return GO->getAlignment();
-
-    // FIXME: we should also be able to handle:
-    // Alias = Global + Offset
-    // Alias = Absolute
-    return 0;
-  }
-  return cast<GlobalObject>(this)->getAlignment();
-}
-
 unsigned GlobalValue::getAddressSpace() const {
   PointerType *PtrTy = getType();
   return PtrTy->getAddressSpace();
@@ -252,7 +238,7 @@ bool GlobalValue::isDeclaration() const {
   return false;
 }
 
-bool GlobalValue::canIncreaseAlignment() const {
+bool GlobalObject::canIncreaseAlignment() const {
   // Firstly, can only increase the alignment of a global if it
   // is a strong definition.
   if (!isStrongDefinitionForLinker())

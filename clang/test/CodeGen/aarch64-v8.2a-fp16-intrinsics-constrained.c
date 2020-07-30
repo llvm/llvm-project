@@ -12,7 +12,7 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 \
 // RUN: -ffp-exception-behavior=strict \
 // RUN: -fallow-half-arguments-and-returns -S -disable-O0-optnone -o - %s \
-// RUN: | FileCheck -vv --check-prefix=COMMON --check-prefix=CHECK-ASM %s
+// RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
 
 // REQUIRES: aarch64-registered-target
 

@@ -278,16 +278,16 @@ void new_default_ctor_with_default_arg(long count) {
 namespace std::experimental {
   template <typename Promise>
   struct coroutine_handle {
-    static coroutine_handle from_address(void *);
+    static coroutine_handle from_address(void *) noexcept;
   };
 }
 
 struct TestPromise {
   TestPromise initial_suspend();
-  TestPromise final_suspend();
-  bool await_ready();
-  void await_suspend(const std::experimental::coroutine_handle<TestPromise> &);
-  void await_resume();
+  TestPromise final_suspend() noexcept;
+  bool await_ready() noexcept;
+  void await_suspend(const std::experimental::coroutine_handle<TestPromise> &) noexcept;
+  void await_resume() noexcept;
   Foo return_value(const Bar &);
   Bar get_return_object();
   void unhandled_exception();

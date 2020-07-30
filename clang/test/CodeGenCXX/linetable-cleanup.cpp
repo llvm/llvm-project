@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin10 -std=c++98 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin10 -std=c++11 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -gno-column-info -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -gno-column-info -triple x86_64-apple-darwin10 -std=c++98 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -gno-column-info -triple x86_64-apple-darwin10 -std=c++11 %s -o - | FileCheck %s
 
 // Check the line numbers for cleanup code with EH in combination with
 // simple return expressions.

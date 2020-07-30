@@ -33,7 +33,8 @@ void ento::printCheckerHelp(raw_ostream &out, CompilerInstance &CI) {
       *CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
       CI.getFrontendOpts().Plugins);
 
-  CheckerMgr->getCheckerRegistry().printCheckerWithDescList(out);
+  CheckerMgr->getCheckerRegistryData().printCheckerWithDescList(
+      *CI.getAnalyzerOpts(), out);
 }
 
 void ento::printEnabledCheckerList(raw_ostream &out, CompilerInstance &CI) {
@@ -43,7 +44,7 @@ void ento::printEnabledCheckerList(raw_ostream &out, CompilerInstance &CI) {
       *CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
       CI.getFrontendOpts().Plugins);
 
-  CheckerMgr->getCheckerRegistry().printEnabledCheckerList(out);
+  CheckerMgr->getCheckerRegistryData().printEnabledCheckerList(out);
 }
 
 void ento::printCheckerConfigList(raw_ostream &out, CompilerInstance &CI) {
@@ -52,7 +53,8 @@ void ento::printCheckerConfigList(raw_ostream &out, CompilerInstance &CI) {
       *CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
       CI.getFrontendOpts().Plugins);
 
-  CheckerMgr->getCheckerRegistry().printCheckerOptionList(out);
+  CheckerMgr->getCheckerRegistryData().printCheckerOptionList(
+      *CI.getAnalyzerOpts(), out);
 }
 
 void ento::printAnalyzerConfigList(raw_ostream &out) {

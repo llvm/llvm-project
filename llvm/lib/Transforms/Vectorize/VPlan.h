@@ -865,12 +865,18 @@ public:
 /// A recipe for handling GEP instructions.
 class VPWidenGEPRecipe : public VPRecipeBase {
   GetElementPtrInst *GEP;
+
+  /// Hold VPValues for the base and indices of the GEP.
+  VPUser User;
+
   bool IsPtrLoopInvariant;
   SmallBitVector IsIndexLoopInvariant;
 
 public:
-  VPWidenGEPRecipe(GetElementPtrInst *GEP, Loop *OrigLoop)
-      : VPRecipeBase(VPWidenGEPSC), GEP(GEP),
+  template <typename IterT>
+  VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands,
+                   Loop *OrigLoop)
+      : VPRecipeBase(VPWidenGEPSC), GEP(GEP), User(Operands),
         IsIndexLoopInvariant(GEP->getNumIndices(), false) {
     IsPtrLoopInvariant = OrigLoop->isLoopInvariant(GEP->getPointerOperand());
     for (auto Index : enumerate(GEP->indices()))

@@ -330,11 +330,10 @@ bool checkDebugifyMetadata(Module &M,
       }
 
       if (!DL) {
-        dbg() << "ERROR: Instruction with empty DebugLoc in function ";
+        dbg() << "WARNING: Instruction with empty DebugLoc in function ";
         dbg() << F.getName() << " --";
         I.print(dbg());
         dbg() << "\n";
-        HasErrors = true;
       }
     }
 

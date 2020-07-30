@@ -44,13 +44,13 @@ class ContextObjectObjcTestCase(TestBase):
         # Test retrieving of an objcClass's property through the self pointer
         value = obj_val.EvaluateExpression("self.property")
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
         self.assertEqual(value.GetValueAsSigned(), 2222)
 
         # Test objcClass's methods evaluation through the self pointer
         value = obj_val.EvaluateExpression("[self method]")
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
         self.assertEqual(value.GetValueAsSigned(), 3333)
 
         # Test if we can use a computation result reference object correctly
@@ -63,12 +63,12 @@ class ContextObjectObjcTestCase(TestBase):
         # Test an expression evaluation on it
         value = obj_val.EvaluateExpression("1")
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
 
         # Test retrieving of a field on it
         value = obj_val.EvaluateExpression("field")
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
         self.assertEqual(value.GetValueAsSigned(), 1111)
 
     def setUp(self):

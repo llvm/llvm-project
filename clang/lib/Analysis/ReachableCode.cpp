@@ -138,10 +138,10 @@ static bool isDeadReturn(const CFGBlock *B, const Stmt *S) {
 static SourceLocation getTopMostMacro(SourceLocation Loc, SourceManager &SM) {
   assert(Loc.isMacroID());
   SourceLocation Last;
-  while (Loc.isMacroID()) {
+  do {
     Last = Loc;
     Loc = SM.getImmediateMacroCallerLoc(Loc);
-  }
+  } while (Loc.isMacroID());
   return Last;
 }
 

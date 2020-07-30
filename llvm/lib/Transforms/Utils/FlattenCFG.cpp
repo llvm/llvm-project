@@ -97,7 +97,7 @@ public:
 ///    br label %if.end;
 ///
 ///  Current implementation handles two cases.
-///  Case 1: \param BB is on the else-path.
+///  Case 1: BB is on the else-path.
 ///
 ///          BB1
 ///        /     |
@@ -105,7 +105,7 @@ public:
 ///      /   \   |
 ///     BB3   \  |     where, BB1, BB2 contain conditional branches.
 ///      \    |  /     BB3 contains unconditional branch.
-///       \   | /      BB4 corresponds to \param BB which is also the merge.
+///       \   | /      BB4 corresponds to BB which is also the merge.
 ///  BB => BB4
 ///
 ///
@@ -114,14 +114,14 @@ public:
 ///  if (a == b && c == d)
 ///    statement; // BB3
 ///
-///  Case 2: \param BB BB is on the then-path.
+///  Case 2: BB is on the then-path.
 ///
 ///             BB1
 ///          /      |
 ///         |      BB2
 ///         \    /    |  where BB1, BB2 contain conditional branches.
 ///  BB =>   BB3      |  BB3 contains unconditiona branch and corresponds
-///           \     /    to \param BB.  BB4 is the merge.
+///           \     /    to BB.  BB4 is the merge.
 ///             BB4
 ///
 ///  Corresponding source code:
@@ -129,9 +129,9 @@ public:
 ///  if (a == b || c == d)
 ///    statement;  // BB3
 ///
-///  In both cases,  \param BB is the common successor of conditional branches.
-///  In Case 1, \param BB (BB4) has an unconditional branch (BB3) as
-///  its predecessor.  In Case 2, \param BB (BB3) only has conditional branches
+///  In both cases, BB is the common successor of conditional branches.
+///  In Case 1, BB (BB4) has an unconditional branch (BB3) as
+///  its predecessor.  In Case 2, BB (BB3) only has conditional branches
 ///  as its predecessors.
 bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   PHINode *PHI = dyn_cast<PHINode>(BB->begin());
@@ -318,8 +318,8 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
 /// Compare blocks from two if-regions, where \param Head2 is the entry of the
 /// 2nd if-region. \param Block1 is a block in the 1st if-region to compare.
 /// \param Block2 is a block in the 2nd if-region to compare.  \returns true if
-/// \param Block1 and \param Block2 have identical instructions and do not have
-/// memory reference alias with \param Head2.
+/// Block1 and Block2 have identical instructions and do not have
+/// memory reference alias with Head2.
 bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Block1, BasicBlock *Block2,
                                          BasicBlock *Head2) {
   Instruction *PTI2 = Head2->getTerminator();
@@ -540,6 +540,6 @@ bool FlattenCFGOpt::run(BasicBlock *BB) {
 /// FlattenCFG - This function is used to flatten a CFG.  For
 /// example, it uses parallel-and and parallel-or mode to collapse
 /// if-conditions and merge if-regions with identical statements.
-bool llvm::FlattenCFG(BasicBlock *BB, AliasAnalysis *AA) {
+bool llvm::FlattenCFG(BasicBlock *BB, AAResults *AA) {
   return FlattenCFGOpt(AA).run(BB);
 }

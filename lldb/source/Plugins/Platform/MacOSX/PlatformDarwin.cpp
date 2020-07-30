@@ -546,6 +546,8 @@ bool PlatformDarwin::ARMGetSupportedArchitectureAtIndex(uint32_t idx,
 #define OSNAME "watchos"
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
 #define OSNAME "bridgeos"
+#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
+#define OSNAME "macosx"
 #else
 #define OSNAME "ios"
 #endif

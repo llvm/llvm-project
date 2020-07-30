@@ -208,7 +208,8 @@ template <class Node, class ChildIterator> struct DomTreeGraphTraitsBase {
 
 template <>
 struct GraphTraits<DomTreeNode *>
-    : public DomTreeGraphTraitsBase<DomTreeNode, DomTreeNode::iterator> {};
+    : public DomTreeGraphTraitsBase<DomTreeNode, DomTreeNode::const_iterator> {
+};
 
 template <>
 struct GraphTraits<const DomTreeNode *>
@@ -277,7 +278,7 @@ public:
     AU.setPreservesAll();
   }
 
-  void releaseMemory() override { DT.releaseMemory(); }
+  void releaseMemory() override { DT.reset(); }
 
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 };

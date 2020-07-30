@@ -205,10 +205,11 @@ def DeprecatedDST    : SubtargetFeature<"", "DeprecatedDST", "true",
 
 def FeatureISA3_0 : SubtargetFeature<"isa-v30-instructions", "IsISA3_0",
                                      "true",
-                                     "Enable instructions added in ISA 3.0.">;
+                                     "Enable instructions in ISA 3.0.">;
 def FeatureISA3_1 : SubtargetFeature<"isa-v31-instructions", "IsISA3_1",
                                      "true",
-                                     "Enable instructions added in ISA 3.1.">;
+                                     "Enable instructions in ISA 3.1.",
+                                     [FeatureISA3_0]>;
 def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9Altivec", "true",
                                         "Enable POWER9 Altivec instructions",
                                         [FeatureISA3_0, FeatureP8Altivec]>;

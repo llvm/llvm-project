@@ -525,32 +525,34 @@ tracksRegLiveness: true
 # CHECK-NEXT: INLINEASM_BR
 
 # DEBUG-LABEL: Ifcvt: function ({{[0-9]+}}) 'fn9'
-# DEBUG: MeetIfcvtSizeLimit(BranchBytes=2, CommonBytes=6, NumPredicatedInstructions=4, ExtraPredicateBytes=2)
+# DEBUG: MeetIfcvtSizeLimit(BranchBytes=2, CommonBytes=8, NumPredicatedInstructions=4, ExtraPredicateBytes=2)
 
 body:             |
   bb.0.entry:
     successors: %bb.1(0x30000000), %bb.3(0x50000000)
     liveins: $r0, $r1, $r2
 
-    tCMPi8 killed renamable $r2, 42, 14, $noreg, implicit-def $cpsr
+    tCMPi8 renamable $r2, 42, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.3, 1, killed $cpsr
 
   bb.1.if.then:
     successors:  %bb.5(0x7fffffff)
-    liveins: $r0
+    liveins: $r0, $r2
 
     renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg
     INLINEASM_BR &"b ${0:l}", 1, 13, blockaddress(@fn9, %ir-block.lab1)
+    tBX_RET 14, $noreg, implicit $r2
 
   bb.3.if.else:
     successors: %bb.5(0x7fffffff)
-    liveins: $r1
+    liveins: $r1, $r2
 
     renamable $r0 = tLDRi killed renamable $r1, 0, 14, $noreg
     renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg
     renamable $r0 = t2LDRSHi12 killed renamable $r0, 0, 14, $noreg
     INLINEASM_BR &"b ${0:l}", 1, 13, blockaddress(@fn9, %ir-block.lab1)
-
+    tBX_RET 14, $noreg, implicit $r2
+    
   bb.5.lab1 (address-taken):
     liveins: $r0
 

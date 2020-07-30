@@ -203,6 +203,11 @@ public:
   Result run(Module &M, ModuleAnalysisManager &MAM) { return Result(M, MAM); }
 };
 
+#ifdef LLVM_HAVE_TF_AOT
+std::unique_ptr<InlineAdvisor>
+getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM);
+#endif
+
 // Default (manual policy) decision making helper APIs. Shared with the legacy
 // pass manager inliner.
 

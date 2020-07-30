@@ -61,9 +61,9 @@ public:
   bool legalizeSinCos(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &B) const;
 
-  bool buildPCRelGlobalAddress(
-    Register DstReg, LLT PtrTy, MachineIRBuilder &B, const GlobalValue *GV,
-    unsigned Offset, unsigned GAFlags = SIInstrInfo::MO_NONE) const;
+  bool buildPCRelGlobalAddress(Register DstReg, LLT PtrTy, MachineIRBuilder &B,
+                               const GlobalValue *GV, int64_t Offset,
+                               unsigned GAFlags = SIInstrInfo::MO_NONE) const;
 
   bool legalizeGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
@@ -110,6 +110,10 @@ public:
                            MachineIRBuilder &B) const;
   bool legalizeSDIV_SREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
+
+  void legalizeUDIV_UREM64Impl(MachineIRBuilder &B,
+                               Register DstReg, Register Numer, Register Denom,
+                               bool IsDiv) const;
 
   bool legalizeUDIV_UREM64(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;

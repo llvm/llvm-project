@@ -12,7 +12,7 @@
 #error "This file is for CUDA compilation only."
 #endif
 
-#ifndef _OPENMP
+#ifndef __OPENMP_NVPTX__
 #if CUDA_VERSION < 9000
 #error This file is intended to be used with CUDA-9+ only.
 #endif
@@ -22,7 +22,7 @@
 // we implement in this file. We need static in order to avoid emitting unused
 // functions and __forceinline__ helps inlining these wrappers at -O1.
 #pragma push_macro("__DEVICE__")
-#ifdef _OPENMP
+#ifdef __OPENMP_NVPTX__
 #if defined(__cplusplus)
 #define __DEVICE__ static constexpr __attribute__((always_inline, nothrow))
 #else
@@ -36,7 +36,7 @@
 // because the OpenMP overlay requires constexpr functions here but prior to
 // c++14 void return functions could not be constexpr.
 #pragma push_macro("__DEVICE_VOID__")
-#ifdef _OPENMP && defined(__cplusplus) && __cplusplus < 201402L
+#ifdef __OPENMP_NVPTX__ && defined(__cplusplus) && __cplusplus < 201402L
 #define __DEVICE_VOID__ static __attribute__((always_inline, nothrow))
 #else
 #define __DEVICE_VOID__ __DEVICE__

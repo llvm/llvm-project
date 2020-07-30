@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
+; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
 ; RUN:   < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

@@ -15,4 +15,7 @@ add_clang_library(clangToolingSyntax
   clangFrontend
   clangLex
   clangToolingCore
+
+  DEPENDS
+  omp_gen
   )

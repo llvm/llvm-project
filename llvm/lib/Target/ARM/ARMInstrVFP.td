@@ -158,15 +158,23 @@ def VLDRS : ASI5<0b1101, 0b01, (outs SPR:$Sd), (ins addrmode5:$addr),
 let isUnpredicable = 1 in
 def VLDRH : AHI5<0b1101, 0b01, (outs HPR:$Sd), (ins addrmode5fp16:$addr),
                  IIC_fpLoad16, "vldr", ".16\t$Sd, $addr",
-                 []>,
+                 [(set HPR:$Sd, (f16 (alignedload16 addrmode5fp16:$addr)))]>,
             Requires<[HasFPRegs16]>;
 
 } // End of 'let canFoldAsLoad = 1, isReMaterializable = 1 in'
 
-def : FPRegs16Pat<(f16 (alignedload16 addrmode5fp16:$addr)),
-                  (VLDRH addrmode5fp16:$addr)>;
-def : FPRegs16Pat<(bf16 (alignedload16 addrmode5fp16:$addr)),
-                  (VLDRH addrmode5fp16:$addr)>;
+def : Pat<(bf16 (alignedload16 addrmode5fp16:$addr)),
+          (VLDRH addrmode5fp16:$addr)> {
+  let Predicates = [HasFPRegs16];
+}
+def : Pat<(bf16 (alignedload16 addrmode3:$addr)),
+          (COPY_TO_REGCLASS (LDRH addrmode3:$addr), HPR)> {
+  let Predicates = [HasNoFPRegs16, IsARM];
+}
+def : Pat<(bf16 (alignedload16 t2addrmode_imm12:$addr)),
+          (COPY_TO_REGCLASS (t2LDRHi12 t2addrmode_imm12:$addr), HPR)> {
+  let Predicates = [HasNoFPRegs16, IsThumb];
+}
 
 def VSTRD : ADI5<0b1101, 0b00, (outs), (ins DPR:$Dd, addrmode5:$addr),
                  IIC_fpStore64, "vstr", "\t$Dd, $addr",
@@ -185,13 +193,21 @@ def VSTRS : ASI5<0b1101, 0b00, (outs), (ins SPR:$Sd, addrmode5:$addr),
 let isUnpredicable = 1 in
 def VSTRH : AHI5<0b1101, 0b00, (outs), (ins HPR:$Sd, addrmode5fp16:$addr),
                  IIC_fpStore16, "vstr", ".16\t$Sd, $addr",
-                 []>,
+                 [(alignedstore16 (f16 HPR:$Sd), addrmode5fp16:$addr)]>,
             Requires<[HasFPRegs16]>;
 
-def : FPRegs16Pat<(alignedstore16 (f16 HPR:$Sd), addrmode5fp16:$addr),
-                  (VSTRH (f16 HPR:$Sd), addrmode5fp16:$addr)>;
-def : FPRegs16Pat<(alignedstore16 (bf16 HPR:$Sd), addrmode5fp16:$addr),
-                  (VSTRH (bf16 HPR:$Sd), addrmode5fp16:$addr)>;
+def : Pat<(alignedstore16 (bf16 HPR:$Sd), addrmode5fp16:$addr),
+          (VSTRH (bf16 HPR:$Sd), addrmode5fp16:$addr)> {
+  let Predicates = [HasFPRegs16];
+}
+def : Pat<(alignedstore16 (bf16 HPR:$Sd), addrmode3:$addr),
+          (STRH (COPY_TO_REGCLASS $Sd, GPR), addrmode3:$addr)> {
+  let Predicates = [HasNoFPRegs16, IsARM];
+}
+def : Pat<(alignedstore16 (bf16 HPR:$Sd), t2addrmode_imm12:$addr),
+          (t2STRHi12 (COPY_TO_REGCLASS $Sd, GPR), t2addrmode_imm12:$addr)> {
+  let Predicates = [HasNoFPRegs16, IsThumb];
+}
 
 //===----------------------------------------------------------------------===//
 //  Load / store multiple Instructions.
@@ -287,7 +303,6 @@ def : MnemonicAlias<"vstm", "vstmia">;
 //===----------------------------------------------------------------------===//
 //  Lazy load / store multiple Instructions
 //
-let mayLoad = 1 in
 def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
                   NoItinerary, "vlldm${p}\t$Rn", "", []>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
@@ -298,9 +313,9 @@ def VLLDM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
     let Inst{15-12} = 0;
     let Inst{7-0}   = 0;
     let mayLoad     = 1;
+    let Defs = [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, VPR, FPSCR, FPSCR_NZCV];
 }
 
-let mayStore = 1 in
 def VLSTM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
                   NoItinerary, "vlstm${p}\t$Rn", "", []>,
             Requires<[HasV8MMainline, Has8MSecExt]> {
@@ -693,6 +708,7 @@ def VCVTDS  : ASuI<0b11101, 0b11, 0b0111, 0b11, 0,
   let Inst{22}    = Dd{4};
 
   let Predicates = [HasVFP2, HasDPVFP];
+  let hasSideEffects = 0;
 }
 
 // Special case encoding: bits 11-8 is 0b1011.
@@ -717,9 +733,11 @@ def VCVTSD  : VFPAI<(outs SPR:$Sd), (ins DPR:$Dm), VFPUnaryFrm,
   let Inst{4}     = 0;
 
   let Predicates = [HasVFP2, HasDPVFP];
+  let hasSideEffects = 0;
 }
 
 // Between half, single and double-precision.
+let hasSideEffects = 0 in
 def VCVTBHS: ASuI<0b11101, 0b11, 0b0010, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtb", ".f32.f16\t$Sd, $Sm",
                  [/* Intentionally left blank, see patterns below */]>,
@@ -731,6 +749,7 @@ def : FP16Pat<(f32 (fpextend (f16 HPR:$Sm))),
 def : FP16Pat<(f16_to_fp GPR:$a),
               (VCVTBHS (COPY_TO_REGCLASS GPR:$a, SPR))>;
 
+let hasSideEffects = 0 in
 def VCVTBSH: ASuI<0b11101, 0b11, 0b0011, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTHS, "vcvtb", ".f16.f32\t$Sd, $Sm",
                  [/* Intentionally left blank, see patterns below */]>,
@@ -741,18 +760,40 @@ def : FP16Pat<(f16 (fpround SPR:$Sm)),
               (COPY_TO_REGCLASS (VCVTBSH SPR:$Sm), HPR)>;
 def : FP16Pat<(fp_to_f16 SPR:$a),
               (i32 (COPY_TO_REGCLASS (VCVTBSH SPR:$a), GPR))>;
+def : FP16Pat<(insertelt (v8f16 MQPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm_even:$lane),
+              (v8f16 (INSERT_SUBREG (v8f16 MQPR:$src1), (VCVTBSH SPR:$src2),
+                                    (SSubReg_f16_reg imm:$lane)))>;
+def : FP16Pat<(insertelt (v4f16 DPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm_even:$lane),
+              (v4f16 (INSERT_SUBREG (v4f16 DPR:$src1), (VCVTBSH SPR:$src2),
+                                    (SSubReg_f16_reg imm:$lane)))>;
 
+let hasSideEffects = 0 in
 def VCVTTHS: ASuI<0b11101, 0b11, 0b0010, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtt", ".f32.f16\t$Sd, $Sm",
-                 [/* For disassembly only; pattern left blank */]>,
+                 [/* Intentionally left blank, see patterns below */]>,
                  Requires<[HasFP16]>,
              Sched<[WriteFPCVT]>;
 
+def : FP16Pat<(f32 (fpextend (extractelt (v8f16 MQPR:$src), imm_odd:$lane))),
+              (VCVTTHS (EXTRACT_SUBREG MQPR:$src, (SSubReg_f16_reg imm_odd:$lane)))>;
+def : FP16Pat<(f32 (fpextend (extractelt (v4f16 DPR:$src), imm_odd:$lane))),
+              (VCVTTHS (EXTRACT_SUBREG
+                (v2f32 (COPY_TO_REGCLASS (v4f16 DPR:$src), DPR_VFP2)),
+                (SSubReg_f16_reg imm_odd:$lane)))>;
+
+let hasSideEffects = 0 in
 def VCVTTSH: ASuI<0b11101, 0b11, 0b0011, 0b11, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTHS, "vcvtt", ".f16.f32\t$Sd, $Sm",
-                 [/* For disassembly only; pattern left blank */]>,
+                 [/* Intentionally left blank, see patterns below */]>,
                  Requires<[HasFP16]>,
             Sched<[WriteFPCVT]>;
+
+def : FP16Pat<(insertelt (v8f16 MQPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm_odd:$lane),
+              (v8f16 (INSERT_SUBREG (v8f16 MQPR:$src1), (VCVTTSH SPR:$src2),
+                                    (SSubReg_f16_reg imm:$lane)))>;
+def : FP16Pat<(insertelt (v4f16 DPR:$src1), (f16 (fpround (f32 SPR:$src2))), imm_odd:$lane),
+              (v4f16 (INSERT_SUBREG (v4f16 DPR:$src1), (VCVTTSH SPR:$src2),
+                                    (SSubReg_f16_reg imm:$lane)))>;
 
 def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
                    (outs DPR:$Dd), (ins SPR:$Sm),
@@ -766,6 +807,8 @@ def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
   // Encode instruction operands.
   let Inst{3-0} = Sm{4-1};
   let Inst{5}   = Sm{0};
+
+  let hasSideEffects = 0;
 }
 
 def : FullFP16Pat<(f64 (fpextend (f16 HPR:$Sm))),
@@ -789,6 +832,8 @@ def VCVTBDH : ADuI<0b11101, 0b11, 0b0011, 0b01, 0,
   let Inst{5}       = Dm{4};
   let Inst{15-12}   = Sd{4-1};
   let Inst{22}      = Sd{0};
+
+  let hasSideEffects = 0;
 }
 
 def : FullFP16Pat<(f16 (fpround DPR:$Dm)),
@@ -808,6 +853,8 @@ def VCVTTHD : ADuI<0b11101, 0b11, 0b0010, 0b11, 0,
   // Encode instruction operands.
   let Inst{3-0} = Sm{4-1};
   let Inst{5}   = Sm{0};
+
+  let hasSideEffects = 0;
 }
 
 def VCVTTDH : ADuI<0b11101, 0b11, 0b0011, 0b11, 0,
@@ -823,11 +870,13 @@ def VCVTTDH : ADuI<0b11101, 0b11, 0b0011, 0b11, 0,
   let Inst{22}    = Sd{0};
   let Inst{3-0}   = Dm{3-0};
   let Inst{5}     = Dm{4};
+
+  let hasSideEffects = 0;
 }
 
 multiclass vcvt_inst<string opc, bits<2> rm,
                      SDPatternOperator node = null_frag> {
-  let PostEncoderMethod = "", DecoderNamespace = "VFPV8" in {
+  let PostEncoderMethod = "", DecoderNamespace = "VFPV8", hasSideEffects = 0 in {
     def SH : AHuInp<0b11101, 0b11, 0b1100, 0b11, 0,
                     (outs SPR:$Sd), (ins HPR:$Sm),
                     NoItinerary, !strconcat("vcvt", opc, ".s32.f16\t$Sd, $Sm"),
@@ -1332,6 +1381,7 @@ class AVConv1IDs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{22}    = Dd{4};
 
   let Predicates = [HasVFP2, HasDPVFP];
+  let hasSideEffects = 0;
 }
 
 class AVConv1InSs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
@@ -1348,6 +1398,8 @@ class AVConv1InSs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{5}     = Sm{0};
   let Inst{15-12} = Sd{4-1};
   let Inst{22}    = Sd{0};
+
+  let hasSideEffects = 0;
 }
 
 class AVConv1IHs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
@@ -1367,6 +1419,7 @@ class AVConv1IHs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{22}    = Sd{0};
 
   let Predicates = [HasFullFP16];
+  let hasSideEffects = 0;
 }
 
 def VSITOD : AVConv1IDs_Encode<0b11101, 0b11, 0b1000, 0b1011,
@@ -1480,6 +1533,7 @@ class AVConv1IsD_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{22}    = Sd{0};
 
   let Predicates = [HasVFP2, HasDPVFP];
+  let hasSideEffects = 0;
 }
 
 class AVConv1InsS_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
@@ -1516,6 +1570,7 @@ class AVConv1IsH_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let Inst{22}    = Sd{0};
 
   let Predicates = [HasFullFP16];
+  let hasSideEffects = 0;
 }
 
 // Always set Z bit in the instruction, i.e. "round towards zero" variants.
@@ -1695,6 +1750,8 @@ class AVConv1XInsS_Encode<bits<5> op1, bits<2> op2, bits<4> op3, bits<4> op4,
   // if dp_operation then UInt(D:Vd) else UInt(Vd:D);
   let Inst{22} = dst{0};
   let Inst{15-12} = dst{4-1};
+
+  let hasSideEffects = 0;
 }
 
 // Double Precision register
@@ -1707,6 +1764,7 @@ class AVConv1XInsD_Encode<bits<5> op1, bits<2> op2, bits<4> op3, bits<4> op4,
   let Inst{22} = dst{4};
   let Inst{15-12} = dst{3-0};
 
+  let hasSideEffects = 0;
   let Predicates = [HasVFP2, HasDPVFP];
 }
 
@@ -1905,7 +1963,9 @@ class BF16_VCVT<string opc, bits<2> op7_6>
   let Inst{11-8}  = 0b1001;
   let Inst{7-6}   = op7_6;
   let Inst{4}     = 0;
+
   let DecoderNamespace = "VFPV8";
+  let hasSideEffects = 0;
 }
 
 def BF16_VCVTB : BF16_VCVT<"vcvtb", 0b01>;

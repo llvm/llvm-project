@@ -312,6 +312,9 @@ def pp_macro_not_used : Warning<"macro is not used">, DefaultIgnore,
 def warn_pp_undef_identifier : Warning<
   "%0 is not defined, evaluates to 0">,
   InGroup<DiagGroup<"undef">>, DefaultIgnore;
+def warn_pp_undef_prefix : Warning<
+  "%0 is not defined, evaluates to 0">,
+  InGroup<DiagGroup<"undef-prefix">>, DefaultIgnore;
 def warn_pp_ambiguous_macro : Warning<
   "ambiguous expansion of macro %0">, InGroup<AmbiguousMacro>;
 def note_pp_ambiguous_macro_chosen : Note<

@@ -21,7 +21,7 @@ config.name = 'MLIR'
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = ['.td', '.mlir', '.toy', '.ll', '.tc']
+config.suffixes = ['.td', '.mlir', '.toy', '.ll', '.tc', '.py']
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -41,7 +41,8 @@ llvm_config.use_default_substitutions()
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
-config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
+config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt',
+                   'lit.cfg.py', 'lit.site.cfg.py']
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -62,6 +63,7 @@ tools = [
 
 # The following tools are optional
 tools.extend([
+    ToolSubst('%PYTHON', config.python_executable),
     ToolSubst('toy-ch1', unresolved='ignore'),
     ToolSubst('toy-ch2', unresolved='ignore'),
     ToolSubst('toy-ch3', unresolved='ignore'),
@@ -71,7 +73,7 @@ tools.extend([
     ToolSubst('%linalg_test_lib_dir', config.linalg_test_lib_dir, unresolved='ignore'),
     ToolSubst('%mlir_runner_utils_dir', config.mlir_runner_utils_dir, unresolved='ignore'),
     ToolSubst('%rocm_wrapper_library_dir', config.rocm_wrapper_library_dir, unresolved='ignore'),
-    ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore')
+    ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore'),
 ])
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
@@ -89,3 +91,13 @@ config.environment['FILECHECK_OPTS'] = "-enable-var-scope"
 # to be available for JIT tests.
 if config.target_triple:
     config.available_features.add('default_triple')
+
+# Add the python path for both the source and binary tree.
+# Note that presently, the python sources come from the source tree and the
+# binaries come from the build tree. This should be unified to the build tree
+# by copying/linking sources to build.
+if config.enable_bindings_python:
+    llvm_config.with_environment('PYTHONPATH', [
+        os.path.join(config.mlir_src_root, "lib", "Bindings", "Python"),
+        os.path.join(config.mlir_obj_root, "lib", "Bindings", "Python"),
+    ], append_path=True)

@@ -1156,7 +1156,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 }
 
 void RegAllocFast::handleDebugValue(MachineInstr &MI) {
-  MachineOperand &MO = MI.getOperand(0);
+  MachineOperand &MO = MI.getDebugOperand(0);
 
   // Ignore DBG_VALUEs that aren't based on virtual registers. These are
   // mostly constants and frame indices.

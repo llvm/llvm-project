@@ -12,6 +12,9 @@
 // target, so this test would fail.
 // UNSUPPORTED: apple-clang-9, apple-clang-10
 
+// GCC 5 doesn't support aligned allocation
+// UNSUPPORTED: gcc-5
+
 // XFAIL: availability=macosx10.13
 // XFAIL: availability=macosx10.12
 // XFAIL: availability=macosx10.11

@@ -89,8 +89,10 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   SetVector<MachineInstr*> LoweredEndCf;
   DenseSet<Register> LoweredIf;
+  SmallSet<MachineInstr *, 16> NeedsKillCleanup;
 
   const TargetRegisterClass *BoolRC = nullptr;
+  bool InsertKillCleanups;
   unsigned AndOpc;
   unsigned OrOpc;
   unsigned XorOpc;
@@ -110,6 +112,8 @@ private:
                         SmallVectorImpl<MachineOperand> &Src) const;
 
   void combineMasks(MachineInstr &MI);
+
+  void process(MachineInstr &MI);
 
   // Skip to the next instruction, ignoring debug instructions, and trivial
   // block boundaries (blocks that have one (typically fallthrough) successor,
@@ -160,8 +164,28 @@ static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
 
 char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 
-static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI,
-                       const SIInstrInfo *TII) {
+static bool hasKill(const MachineBasicBlock *Begin,
+                    const MachineBasicBlock *End, const SIInstrInfo *TII) {
+  DenseSet<const MachineBasicBlock*> Visited;
+  SmallVector<MachineBasicBlock *, 4> Worklist(Begin->succ_begin(),
+                                               Begin->succ_end());
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+
+    if (MBB == End || !Visited.insert(MBB).second)
+      continue;
+    for (auto &Term : MBB->terminators())
+      if (TII->isKillTerminator(Term.getOpcode()))
+        return true;
+
+    Worklist.append(MBB->succ_begin(), MBB->succ_end());
+  }
+
+  return false;
+}
+
+static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
   Register SaveExecReg = MI.getOperand(0).getReg();
   auto U = MRI->use_instr_nodbg_begin(SaveExecReg);
 
@@ -169,26 +193,6 @@ static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI,
       std::next(U) != MRI->use_instr_nodbg_end() ||
       U->getOpcode() != AMDGPU::SI_END_CF)
     return false;
-
-  // Check for SI_KILL_*_TERMINATOR on path from if to endif.
-  // if there is any such terminator simplififcations are not safe.
-  auto SMBB = MI.getParent();
-  auto EMBB = U->getParent();
-  DenseSet<const MachineBasicBlock*> Visited;
-  SmallVector<MachineBasicBlock*, 4> Worklist(SMBB->succ_begin(),
-                                              SMBB->succ_end());
-
-  while (!Worklist.empty()) {
-    MachineBasicBlock *MBB = Worklist.pop_back_val();
-
-    if (MBB == EMBB || !Visited.insert(MBB).second)
-      continue;
-    for(auto &Term : MBB->terminators())
-      if (TII->isKillTerminator(Term.getOpcode()))
-        return false;
-
-    Worklist.append(MBB->succ_begin(), MBB->succ_end());
-  }
 
   return true;
 }
@@ -207,7 +211,35 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // If there is only one use of save exec register and that use is SI_END_CF,
   // we can optimize SI_IF by returning the full saved exec mask instead of
   // just cleared bits.
-  bool SimpleIf = isSimpleIf(MI, MRI, TII);
+  bool SimpleIf = isSimpleIf(MI, MRI);
+
+  if (InsertKillCleanups) {
+    // Check for SI_KILL_*_TERMINATOR on full path of control flow and
+    // flag the associated SI_END_CF for insertion of a kill cleanup.
+    auto UseMI = MRI->use_instr_nodbg_begin(SaveExecReg);
+    while (UseMI->getOpcode() != AMDGPU::SI_END_CF) {
+      assert(std::next(UseMI) == MRI->use_instr_nodbg_end());
+      assert(UseMI->getOpcode() == AMDGPU::SI_ELSE);
+      MachineOperand &NextExec = UseMI->getOperand(0);
+      Register NextExecReg = NextExec.getReg();
+      if (NextExec.isDead()) {
+        assert(!SimpleIf);
+        break;
+      }
+      UseMI = MRI->use_instr_nodbg_begin(NextExecReg);
+    }
+    if (UseMI->getOpcode() == AMDGPU::SI_END_CF) {
+      if (hasKill(MI.getParent(), UseMI->getParent(), TII)) {
+        NeedsKillCleanup.insert(&*UseMI);
+        SimpleIf = false;
+      }
+    }
+  } else if (SimpleIf) {
+    // Check for SI_KILL_*_TERMINATOR on path from if to endif.
+    // if there is any such terminator simplifications are not safe.
+    auto UseMI = MRI->use_instr_nodbg_begin(SaveExecReg);
+    SimpleIf = !hasKill(MI.getParent(), UseMI->getParent(), TII);
+  }
 
   // Add an implicit def of exec to discourage scheduling VALU after this which
   // will interfere with trying to form s_and_saveexec_b64 later.
@@ -427,6 +459,8 @@ SILowerControlFlow::skipIgnoreExecInstsTrivialSucc(
 
     auto E = B->end();
     for ( ; It != E; ++It) {
+      if (It->getOpcode() == AMDGPU::SI_KILL_CLEANUP)
+        continue;
       if (TII->mayReadEXEC(*MRI, *It))
         break;
     }
@@ -461,8 +495,18 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 
   LoweredEndCf.insert(NewMI);
 
-  if (LIS)
+  // If this ends control flow which contains kills (as flagged in emitIf)
+  // then insert an SI_KILL_CLEANUP immediately following the exec mask
+  // manipulation.  This can be lowered to early termination if appropriate.
+  MachineInstr *CleanUpMI = nullptr;
+  if (NeedsKillCleanup.count(&MI))
+    CleanUpMI = BuildMI(MBB, InsPt, DL, TII->get(AMDGPU::SI_KILL_CLEANUP));
+
+  if (LIS) {
     LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
+    if (CleanUpMI)
+      LIS->InsertMachineInstrInMaps(*CleanUpMI);
+  }
 
   MI.eraseFromParent();
 
@@ -553,6 +597,56 @@ void SILowerControlFlow::optimizeEndCf() {
   }
 }
 
+void SILowerControlFlow::process(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineBasicBlock::iterator I(MI);
+  MachineInstr *Prev = (I != MBB.begin()) ? &*(std::prev(I)) : nullptr;
+
+  switch (MI.getOpcode()) {
+  case AMDGPU::SI_IF:
+    emitIf(MI);
+    break;
+
+  case AMDGPU::SI_ELSE:
+    emitElse(MI);
+    break;
+
+  case AMDGPU::SI_IF_BREAK:
+    emitIfBreak(MI);
+    break;
+
+  case AMDGPU::SI_LOOP:
+    emitLoop(MI);
+    break;
+
+  case AMDGPU::SI_END_CF:
+    emitEndCf(MI);
+    break;
+
+  default:
+    assert(false && "Attempt to process unsupported instruction");
+    break;
+  }
+
+  MachineBasicBlock::iterator Next;
+  for (I = Prev ? Prev->getIterator() : MBB.begin(); I != MBB.end(); I = Next) {
+    Next = std::next(I);
+    MachineInstr &MaskMI = *I;
+    switch (MaskMI.getOpcode()) {
+    case AMDGPU::S_AND_B64:
+    case AMDGPU::S_OR_B64:
+    case AMDGPU::S_AND_B32:
+    case AMDGPU::S_OR_B32:
+      // Cleanup bit manipulations on exec mask
+      combineMasks(MaskMI);
+      break;
+    default:
+      I = MBB.end();
+      break;
+    }
+  }
+}
+
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -562,6 +656,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   LIS = getAnalysisIfAvailable<LiveIntervals>();
   MRI = &MF.getRegInfo();
   BoolRC = TRI->getBoolRC();
+  InsertKillCleanups =
+      MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS;
 
   if (ST.isWave32()) {
     AndOpc = AMDGPU::S_AND_B32;
@@ -583,62 +679,49 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     Exec = AMDGPU::EXEC;
   }
 
+  SmallVector<MachineInstr *, 32> Worklist;
+
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
        BI != BE; BI = NextBB) {
     NextBB = std::next(BI);
     MachineBasicBlock &MBB = *BI;
 
-    MachineBasicBlock::iterator I, Next, Last;
-
-    for (I = MBB.begin(), Last = MBB.end(); I != MBB.end(); I = Next) {
+    MachineBasicBlock::iterator I, Next;
+    for (I = MBB.begin(); I != MBB.end(); I = Next) {
       Next = std::next(I);
       MachineInstr &MI = *I;
 
       switch (MI.getOpcode()) {
       case AMDGPU::SI_IF:
-        emitIf(MI);
+        process(MI);
         break;
 
       case AMDGPU::SI_ELSE:
-        emitElse(MI);
-        break;
-
       case AMDGPU::SI_IF_BREAK:
-        emitIfBreak(MI);
-        break;
-
       case AMDGPU::SI_LOOP:
-        emitLoop(MI);
-        break;
-
       case AMDGPU::SI_END_CF:
-        emitEndCf(MI);
+        // Only build worklist if SI_IF instructions must be processed first.
+        if (InsertKillCleanups)
+          Worklist.push_back(&MI);
+        else
+          process(MI);
         break;
-
-      case AMDGPU::S_AND_B64:
-      case AMDGPU::S_OR_B64:
-      case AMDGPU::S_AND_B32:
-      case AMDGPU::S_OR_B32:
-        // Cleanup bit manipulations on exec mask
-        combineMasks(MI);
-        Last = I;
-        continue;
 
       default:
-        Last = I;
-        continue;
+        break;
       }
-
-      // Replay newly inserted code to combine masks
-      Next = (Last == MBB.end()) ? MBB.begin() : Last;
     }
   }
+
+  for (MachineInstr *MI : Worklist)
+    process(*MI);
 
   optimizeEndCf();
 
   LoweredEndCf.clear();
   LoweredIf.clear();
+  NeedsKillCleanup.clear();
 
   return true;
 }

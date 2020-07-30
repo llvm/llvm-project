@@ -282,6 +282,9 @@ static bool updateOperand(FoldCandidate &Fold,
   assert(!Fold.needsShrink() && "not handled");
 
   if (Fold.isImm()) {
+    // FIXME: ChangeToImmediate should probably clear the subreg flags. It's
+    // reinterpreted as TargetFlags.
+    Old.setSubReg(0);
     Old.ChangeToImmediate(Fold.ImmToFold);
     return true;
   }

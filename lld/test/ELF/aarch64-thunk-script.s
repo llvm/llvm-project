@@ -6,7 +6,7 @@
 // RUN:       } " > %t.script
 // RUN: ld.lld --script %t.script %t.o -o %t
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck %s
-// RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
+// RUN: llvm-nm --no-sort --special-syms %t | FileCheck --check-prefix=NM %s
 
 // Check that we have the out of branch range calculation right. The immediate
 // field is signed so we have a slightly higher negative displacement.

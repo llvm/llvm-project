@@ -118,9 +118,6 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// 64-bit SVR4 ABI.
   SmallVector<Register, 3> MustSaveCRs;
 
-  /// Hold onto our MachineFunction context.
-  MachineFunction &MF;
-
   /// Whether this uses the PIC Base register or not.
   bool UsesPICBase = false;
 
@@ -129,7 +126,7 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   std::vector<std::pair<Register, ISD::ArgFlagsTy>> LiveInAttrs;
 
 public:
-  explicit PPCFunctionInfo(MachineFunction &MF);
+  explicit PPCFunctionInfo(const MachineFunction &MF);
 
   int getFramePointerSaveIndex() const { return FramePointerSaveIndex; }
   void setFramePointerSaveIndex(int Idx) { FramePointerSaveIndex = Idx; }
@@ -225,11 +222,11 @@ public:
   void setUsesPICBase(bool uses) { UsesPICBase = uses; }
   bool usesPICBase() const { return UsesPICBase; }
 
-  MCSymbol *getPICOffsetSymbol() const;
+  MCSymbol *getPICOffsetSymbol(MachineFunction &MF) const;
 
-  MCSymbol *getGlobalEPSymbol() const;
-  MCSymbol *getLocalEPSymbol() const;
-  MCSymbol *getTOCOffsetSymbol() const;
+  MCSymbol *getGlobalEPSymbol(MachineFunction &MF) const;
+  MCSymbol *getLocalEPSymbol(MachineFunction &MF) const;
+  MCSymbol *getTOCOffsetSymbol(MachineFunction &MF) const;
 };
 
 } // end namespace llvm

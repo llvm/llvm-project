@@ -12,6 +12,7 @@ void StartTests();
 llvm::raw_ostream &Fail();
 int EndTests();
 
+// Defines a CHARACTER object with padding when needed
 void SetCharacter(char *, std::size_t, const char *);
 
 #endif // FORTRAN_TEST_RUNTIME_TESTING_H_

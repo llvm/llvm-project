@@ -34,7 +34,7 @@ define <4 x i32*> @vector_inttoptr({<2 x i64>, <2 x i64>} %x) {
 }
 
 define <2 x i64> @vector_ptrtointbitcast({<1 x i32*>, <1 x i32*>} %x) {
-; CHECK-LABEL: @vector_ptrtointbitcast
+; CHECK-LABEL: @vector_ptrtointbitcast(
   %a = alloca {<1 x i32*>, <1 x i32*>}
 ; CHECK-NOT: alloca
 
@@ -50,4 +50,42 @@ define <2 x i64> @vector_ptrtointbitcast({<1 x i32*>, <1 x i32*>} %x) {
 ; CHECK: bitcast
 
   ret <2 x i64> %vec
+}
+
+define <2 x i8*> @vector_inttoptrbitcast_vector({<16 x i8>, <16 x i8>} %x) {
+; CHECK-LABEL: @vector_inttoptrbitcast_vector(
+  %a = alloca {<16 x i8>, <16 x i8>}
+; CHECK-NOT: alloca
+
+  store {<16 x i8>, <16 x i8>} %x, {<16 x i8>, <16 x i8>}* %a
+; CHECK-NOT: store
+
+  %cast = bitcast {<16 x i8>, <16 x i8>}* %a to <2 x i8*>*
+  %vec = load <2 x i8*>, <2 x i8*>* %cast
+; CHECK-NOT: load
+; CHECK: extractvalue
+; CHECK: extractvalue
+; CHECK: bitcast
+; CHECK: inttoptr
+
+  ret <2 x i8*> %vec
+}
+
+define <16 x i8> @vector_ptrtointbitcast_vector({<2 x i8*>, <2 x i8*>} %x) {
+; CHECK-LABEL: @vector_ptrtointbitcast_vector(
+  %a = alloca {<2 x i8*>, <2 x i8*>}
+; CHECK-NOT: alloca
+
+  store {<2 x i8*>, <2 x i8*>} %x, {<2 x i8*>, <2 x i8*>}* %a
+; CHECK-NOT: store
+
+  %cast = bitcast {<2 x i8*>, <2 x i8*>}* %a to <16 x i8>*
+  %vec = load <16 x i8>, <16 x i8>* %cast
+; CHECK-NOT: load
+; CHECK: extractvalue
+; CHECK: ptrtoint
+; CHECK: bitcast
+; CHECK: extractvalue
+
+  ret <16 x i8> %vec
 }

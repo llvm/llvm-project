@@ -324,7 +324,6 @@ private:
   std::unique_ptr<CGObjCRuntime> ObjCRuntime;
   std::unique_ptr<CGOpenCLRuntime> OpenCLRuntime;
   std::unique_ptr<CGOpenMPRuntime> OpenMPRuntime;
-  std::unique_ptr<llvm::OpenMPIRBuilder> OMPBuilder;
   std::unique_ptr<CGCUDARuntime> CUDARuntime;
   std::unique_ptr<CGDebugInfo> DebugInfo;
   std::unique_ptr<ObjCEntrypoints> ObjCData;
@@ -596,9 +595,6 @@ public:
     assert(OpenMPRuntime != nullptr);
     return *OpenMPRuntime;
   }
-
-  /// Return a pointer to the configured OpenMPIRBuilder, if any.
-  llvm::OpenMPIRBuilder *getOpenMPIRBuilder() { return OMPBuilder.get(); }
 
   /// Return a reference to the configured CUDA runtime.
   CGCUDARuntime &getCUDARuntime() {
@@ -1531,9 +1527,6 @@ private:
 
   /// Emit the Clang commandline as llvm.commandline metadata.
   void EmitCommandLineMetadata();
-
-  /// Emits target specific Metadata for global declarations.
-  void EmitTargetMetadata();
 
   /// Emit the module flag metadata used to pass options controlling the
   /// the backend to LLVM.

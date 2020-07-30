@@ -272,6 +272,7 @@ void Prescanner::LabelField(TokenSequence &token, int outCol) {
       token.CloseToken();
     }
   }
+  SkipToNextSignificantCharacter();
 }
 
 void Prescanner::SkipToEndOfLine() {
@@ -298,6 +299,14 @@ void Prescanner::NextChar() {
     at_ += 3;
     encoding_ = Encoding::UTF_8;
   }
+  SkipToNextSignificantCharacter();
+}
+
+// Skip everything that should be ignored until the next significant
+// character is reached; handles C-style comments in preprocessing
+// directives, Fortran ! comments, stuff after the right margin in
+// fixed form, and all forms of line continuation.
+void Prescanner::SkipToNextSignificantCharacter() {
   if (inPreprocessorDirective_) {
     SkipCComments();
   } else {

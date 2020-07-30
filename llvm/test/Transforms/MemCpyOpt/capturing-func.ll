@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -memcpyopt -S | FileCheck %s
+; RUN: opt < %s -basic-aa -memcpyopt -S | FileCheck %s
 
 target datalayout = "e"
 

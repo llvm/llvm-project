@@ -141,7 +141,7 @@ static LogicalResult verify(MmaOp op) {
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
-// TODO(herhut): This should be the llvm.nvvm dialect once this is supported.
+// TODO: This should be the llvm.nvvm dialect once this is supported.
 NVVMDialect::NVVMDialect(MLIRContext *context) : Dialect("nvvm", context) {
   addOperations<
 #define GET_OP_LIST

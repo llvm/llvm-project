@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt < %s -basicaa -newgvn -S | FileCheck %s
+; RUN: opt < %s -basic-aa -newgvn -S | FileCheck %s
 
 	%struct.anon = type { i32 (i32, i32, i32)*, i32, i32, [3 x i32], i8*, i8*, i8* }
 @debug = external constant i32		; <i32*> [#uses=0]

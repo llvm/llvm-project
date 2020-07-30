@@ -54,6 +54,7 @@ INLINE static void gpu_irregular_warp_reduce(void *reduce_data,
   }
 }
 
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ < 700
 INLINE static uint32_t
 gpu_irregular_simd_reduce(void *reduce_data, kmp_ShuffleReductFctPtr shflFct) {
   uint32_t size, remote_id, physical_lane_id;
@@ -72,22 +73,7 @@ gpu_irregular_simd_reduce(void *reduce_data, kmp_ShuffleReductFctPtr shflFct) {
   } while (logical_lane_id % 2 == 0 && size > 1);
   return (logical_lane_id == 0);
 }
-
-EXTERN
-int32_t __kmpc_nvptx_simd_reduce_nowait(int32_t global_tid, int32_t num_vars,
-                                        size_t reduce_size, void *reduce_data,
-                                        kmp_ShuffleReductFctPtr shflFct,
-                                        kmp_InterWarpCopyFctPtr cpyFct) {
-  __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
-  if (Liveness == __kmpc_impl_all_lanes) {
-    gpu_regular_warp_reduce(reduce_data, shflFct);
-    return GetThreadIdInBlock() % WARPSIZE ==
-           0; // Result on lane 0 of the simd warp.
-  } else {
-    return gpu_irregular_simd_reduce(
-        reduce_data, shflFct); // Result on the first active lane.
-  }
-}
+#endif
 
 INLINE
 static int32_t nvptx_parallel_reduce_nowait(
@@ -177,14 +163,6 @@ static int32_t nvptx_parallel_reduce_nowait(
 #endif // __CUDA_ARCH__ >= 700
 }
 
-EXTERN __attribute__((deprecated)) int32_t __kmpc_nvptx_parallel_reduce_nowait(
-    int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
-    kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct) {
-  return nvptx_parallel_reduce_nowait(global_tid, num_vars, reduce_size,
-                                      reduce_data, shflFct, cpyFct,
-                                      isSPMDMode(), isRuntimeUninitialized());
-}
-
 EXTERN
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
     kmp_Ident *loc, int32_t global_tid, int32_t num_vars, size_t reduce_size,
@@ -193,201 +171,6 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
   return nvptx_parallel_reduce_nowait(
       global_tid, num_vars, reduce_size, reduce_data, shflFct, cpyFct,
       checkSPMDMode(loc), checkRuntimeUninitialized(loc));
-}
-
-EXTERN
-int32_t __kmpc_nvptx_parallel_reduce_nowait_simple_spmd(
-    int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
-    kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct) {
-  return nvptx_parallel_reduce_nowait(
-      global_tid, num_vars, reduce_size, reduce_data, shflFct, cpyFct,
-      /*isSPMDExecutionMode=*/true, /*isRuntimeUninitialized=*/true);
-}
-
-EXTERN
-int32_t __kmpc_nvptx_parallel_reduce_nowait_simple_generic(
-    int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
-    kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct) {
-  return nvptx_parallel_reduce_nowait(
-      global_tid, num_vars, reduce_size, reduce_data, shflFct, cpyFct,
-      /*isSPMDExecutionMode=*/false, /*isRuntimeUninitialized=*/true);
-}
-
-INLINE
-static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
-                                         size_t reduce_size, void *reduce_data,
-                                         kmp_ShuffleReductFctPtr shflFct,
-                                         kmp_InterWarpCopyFctPtr cpyFct,
-                                         kmp_CopyToScratchpadFctPtr scratchFct,
-                                         kmp_LoadReduceFctPtr ldFct,
-                                         bool isSPMDExecutionMode) {
-  uint32_t ThreadId = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
-  // In non-generic mode all workers participate in the teams reduction.
-  // In generic mode only the team master participates in the teams
-  // reduction because the workers are waiting for parallel work.
-  uint32_t NumThreads =
-      isSPMDExecutionMode ? GetNumberOfOmpThreads(/*isSPMDExecutionMode=*/true)
-                          : /*Master thread only*/ 1;
-  uint32_t TeamId = GetBlockIdInKernel();
-  uint32_t NumTeams = GetNumberOfBlocksInKernel();
-  static SHARED volatile bool IsLastTeam;
-
-  // Team masters of all teams write to the scratchpad.
-  if (ThreadId == 0) {
-    unsigned int *timestamp = GetTeamsReductionTimestamp();
-    char *scratchpad = GetTeamsReductionScratchpad();
-
-    scratchFct(reduce_data, scratchpad, TeamId, NumTeams);
-    __kmpc_impl_threadfence();
-
-    // atomicInc increments 'timestamp' and has a range [0, NumTeams-1].
-    // It resets 'timestamp' back to 0 once the last team increments
-    // this counter.
-    unsigned val = __kmpc_atomic_inc(timestamp, NumTeams - 1);
-    IsLastTeam = val == NumTeams - 1;
-  }
-
-  // We have to wait on L1 barrier because in GENERIC mode the workers
-  // are waiting on barrier 0 for work.
-  //
-  // If we guard this barrier as follows it leads to deadlock, probably
-  // because of a compiler bug: if (!IsGenericMode()) __syncthreads();
-  uint16_t SyncWarps = (NumThreads + WARPSIZE - 1) / WARPSIZE;
-  __kmpc_impl_named_sync(L1_BARRIER, SyncWarps * WARPSIZE);
-
-  // If this team is not the last, quit.
-  if (/* Volatile read by all threads */ !IsLastTeam)
-    return 0;
-
-    //
-    // Last team processing.
-    //
-
-    // Threads in excess of #teams do not participate in reduction of the
-    // scratchpad values.
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-  uint32_t ActiveThreads = NumThreads;
-  if (NumTeams < NumThreads) {
-    ActiveThreads =
-        (NumTeams < WARPSIZE) ? 1 : NumTeams & ~((uint16_t)WARPSIZE - 1);
-  }
-  if (ThreadId >= ActiveThreads)
-    return 0;
-
-  // Load from scratchpad and reduce.
-  char *scratchpad = GetTeamsReductionScratchpad();
-  ldFct(reduce_data, scratchpad, ThreadId, NumTeams, /*Load only*/ 0);
-  for (uint32_t i = ActiveThreads + ThreadId; i < NumTeams; i += ActiveThreads)
-    ldFct(reduce_data, scratchpad, i, NumTeams, /*Load and reduce*/ 1);
-
-  uint32_t WarpsNeeded = (ActiveThreads + WARPSIZE - 1) / WARPSIZE;
-  uint32_t WarpId = ThreadId / WARPSIZE;
-
-  // Reduce across warps to the warp master.
-  if ((ActiveThreads % WARPSIZE == 0) ||
-      (WarpId < WarpsNeeded - 1)) // Full warp
-    gpu_regular_warp_reduce(reduce_data, shflFct);
-  else if (ActiveThreads > 1) // Partial warp but contiguous lanes
-    // Only SPMD execution mode comes thru this case.
-    gpu_irregular_warp_reduce(reduce_data, shflFct,
-                              /*LaneCount=*/ActiveThreads % WARPSIZE,
-                              /*LaneId=*/ThreadId % WARPSIZE);
-
-  // When we have more than [warpsize] number of threads
-  // a block reduction is performed here.
-  if (ActiveThreads > WARPSIZE) {
-    // Gather all the reduced values from each warp
-    // to the first warp.
-    cpyFct(reduce_data, WarpsNeeded);
-
-    if (WarpId == 0)
-      gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded, ThreadId);
-  }
-#else
-  if (ThreadId >= NumTeams)
-    return 0;
-
-  // Load from scratchpad and reduce.
-  char *scratchpad = GetTeamsReductionScratchpad();
-  ldFct(reduce_data, scratchpad, ThreadId, NumTeams, /*Load only*/ 0);
-  for (uint32_t i = NumThreads + ThreadId; i < NumTeams; i += NumThreads)
-    ldFct(reduce_data, scratchpad, i, NumTeams, /*Load and reduce*/ 1);
-
-  // Reduce across warps to the warp master.
-  __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
-  if (Liveness == __kmpc_impl_all_lanes) // Full warp
-    gpu_regular_warp_reduce(reduce_data, shflFct);
-  else // Partial warp but contiguous lanes
-    gpu_irregular_warp_reduce(reduce_data, shflFct,
-                              /*LaneCount=*/__kmpc_impl_popc(Liveness),
-                              /*LaneId=*/ThreadId % WARPSIZE);
-
-  // When we have more than [warpsize] number of threads
-  // a block reduction is performed here.
-  uint32_t ActiveThreads = NumTeams < NumThreads ? NumTeams : NumThreads;
-  if (ActiveThreads > WARPSIZE) {
-    uint32_t WarpsNeeded = (ActiveThreads + WARPSIZE - 1) / WARPSIZE;
-    // Gather all the reduced values from each warp
-    // to the first warp.
-    cpyFct(reduce_data, WarpsNeeded);
-
-    uint32_t WarpId = ThreadId / WARPSIZE;
-    if (WarpId == 0)
-      gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded, ThreadId);
-  }
-#endif // __CUDA_ARCH__ >= 700
-
-  return ThreadId == 0;
-}
-
-EXTERN
-int32_t __kmpc_nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
-                                         size_t reduce_size, void *reduce_data,
-                                         kmp_ShuffleReductFctPtr shflFct,
-                                         kmp_InterWarpCopyFctPtr cpyFct,
-                                         kmp_CopyToScratchpadFctPtr scratchFct,
-                                         kmp_LoadReduceFctPtr ldFct) {
-  return nvptx_teams_reduce_nowait(global_tid, num_vars, reduce_size,
-                                   reduce_data, shflFct, cpyFct, scratchFct,
-                                   ldFct, isSPMDMode());
-}
-
-EXTERN
-int32_t __kmpc_nvptx_teams_reduce_nowait_simple_spmd(
-    int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
-    kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct,
-    kmp_CopyToScratchpadFctPtr scratchFct, kmp_LoadReduceFctPtr ldFct) {
-  return nvptx_teams_reduce_nowait(global_tid, num_vars, reduce_size,
-                                   reduce_data, shflFct, cpyFct, scratchFct,
-                                   ldFct, /*isSPMDExecutionMode=*/true);
-}
-
-EXTERN
-int32_t __kmpc_nvptx_teams_reduce_nowait_simple_generic(
-    int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
-    kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct,
-    kmp_CopyToScratchpadFctPtr scratchFct, kmp_LoadReduceFctPtr ldFct) {
-  return nvptx_teams_reduce_nowait(global_tid, num_vars, reduce_size,
-                                   reduce_data, shflFct, cpyFct, scratchFct,
-                                   ldFct, /*isSPMDExecutionMode=*/false);
-}
-
-EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_simple(kmp_Ident *loc,
-                                                       int32_t global_tid,
-                                                       kmp_CriticalName *crit) {
-  if (checkSPMDMode(loc) && GetThreadIdInBlock() != 0)
-    return 0;
-  // The master thread of the team actually does the reduction.
-  while (__kmpc_atomic_cas((uint32_t *)crit, 0u, 1u))
-    ;
-  return 1;
-}
-
-EXTERN void
-__kmpc_nvptx_teams_end_reduce_nowait_simple(kmp_Ident *loc, int32_t global_tid,
-                                            kmp_CriticalName *crit) {
-  __kmpc_impl_threadfence_system();
-  (void)__kmpc_atomic_exchange((uint32_t *)crit, 0u);
 }
 
 INLINE static bool isMaster(kmp_Ident *loc, uint32_t ThreadId) {

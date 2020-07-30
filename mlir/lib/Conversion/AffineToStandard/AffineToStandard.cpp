@@ -327,8 +327,8 @@ public:
   }
 };
 
-/// Affine terminators are removed.
-class AffineTerminatorLowering : public OpRewritePattern<AffineYieldOp> {
+/// Affine yields ops are removed.
+class AffineYieldOpLowering : public OpRewritePattern<AffineYieldOp> {
 public:
   using OpRewritePattern<AffineYieldOp>::OpRewritePattern;
 
@@ -619,7 +619,7 @@ void mlir::populateAffineToStdConversionPatterns(
       AffineStoreLowering,
       AffineForLowering,
       AffineIfLowering,
-      AffineTerminatorLowering>(ctx);
+      AffineYieldOpLowering>(ctx);
   // clang-format on
 }
 

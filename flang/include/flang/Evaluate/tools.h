@@ -908,6 +908,7 @@ bool IsProcedure(const Symbol &);
 bool IsProcedurePointer(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
+bool IsFunctionResult(const Symbol &);
 
 // Follow use, host, and construct assocations to a variable, if any.
 const Symbol *GetAssociationRoot(const Symbol &);

@@ -62,3 +62,9 @@ constexpr auto x2 = AA<int>::foo2(); // expected-error {{be initialized by a con
                                      // expected-note {{in instantiation of member function}} \
                                      // expected-note {{in call to}}
 }
+
+// verify no assertion failure on violating value category.
+namespace test4 {
+int &&f(int);  // expected-note {{candidate function not viable}}
+int &&k = f(); // expected-error {{no matching function for call}}
+}

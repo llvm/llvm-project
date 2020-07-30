@@ -696,10 +696,8 @@ ReprocessLoop:
       LI->removeBlock(ExitingBlock);
 
       DomTreeNode *Node = DT->getNode(ExitingBlock);
-      const std::vector<DomTreeNodeBase<BasicBlock> *> &Children =
-        Node->getChildren();
-      while (!Children.empty()) {
-        DomTreeNode *Child = Children.front();
+      while (!Node->isLeaf()) {
+        DomTreeNode *Child = Node->back();
         DT->changeImmediateDominator(Child, Node->getIDom());
       }
       DT->eraseNode(ExitingBlock);

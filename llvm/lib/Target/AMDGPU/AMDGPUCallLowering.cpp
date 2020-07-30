@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUISelLowering.h"
 #include "AMDGPUSubtarget.h"
+#include "AMDGPUTargetMachine.h"
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
@@ -225,19 +226,6 @@ void AMDGPUCallLowering::splitToValueTypes(
     MVT RegVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);
 
     if (NumParts == 1) {
-      // Fixup EVTs to an MVT.
-      //
-      // FIXME: This is pretty hacky. Why do we have to split the type
-      // legalization logic between here and handleAssignments?
-      if (OrigArgIdx != AttributeList::ReturnIndex && VT != RegVT) {
-        assert(VT.getSizeInBits() < 32 &&
-               "unexpected illegal type");
-        Ty = Type::getInt32Ty(Ctx);
-        Register OrigReg = Reg;
-        Reg = B.getMRI()->createGenericVirtualRegister(LLT::scalar(32));
-        B.buildTrunc(OrigReg, Reg);
-      }
-
       // No splitting to do, but we want to replace the original type (e.g. [1 x
       // double] -> double).
       SplitArgs.emplace_back(Reg, Ty, OrigArg.Flags, OrigArg.IsFixed);
@@ -517,18 +505,23 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
     if (AllocSize == 0)
       continue;
 
-    unsigned ABIAlign = DL.getABITypeAlignment(ArgTy);
+    Align ABIAlign = DL.getABITypeAlign(ArgTy);
 
     uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
+
+    if (Arg.use_empty()) {
+      ++i;
+      continue;
+    }
 
     ArrayRef<Register> OrigArgRegs = VRegs[i];
     Register ArgReg =
       OrigArgRegs.size() == 1
       ? OrigArgRegs[0]
       : MRI.createGenericVirtualRegister(getLLTForType(*ArgTy, DL));
+
     Align Alignment = commonAlignment(KernArgBaseAlign, ArgOffset);
-    ArgOffset = alignTo(ArgOffset, DL.getABITypeAlignment(ArgTy));
     lowerParameter(B, ArgTy, ArgOffset, Alignment, ArgReg);
     if (OrigArgRegs.size() > 1)
       unpackRegs(OrigArgRegs, ArgReg, ArgTy, B);
@@ -797,11 +790,17 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (!MBB.empty())
     B.setInstr(*MBB.begin());
 
+  if (!IsEntryFunc) {
+    // For the fixed ABI, pass workitem IDs in the last argument register.
+    if (AMDGPUTargetMachine::EnableFixedFunctionABI)
+      TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
+  }
+
   FormalArgHandler Handler(B, MRI, AssignFn);
   if (!handleAssignments(CCInfo, ArgLocs, B, SplitArgs, Handler))
     return false;
 
-  if (!IsEntryFunc) {
+  if (!IsEntryFunc && !AMDGPUTargetMachine::EnableFixedFunctionABI) {
     // Special inputs come after user arguments.
     TLI.allocateSpecialInputVGPRs(CCInfo, MF, *TRI, *Info);
   }

@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Regex.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -188,6 +189,24 @@ public:
   static ArgKind getKind() {
     return ArgKind(ArgKind::AK_String);
   }
+
+  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
+};
+
+template <> struct ArgTypeTraits<llvm::Regex::RegexFlags> {
+private:
+  static Optional<llvm::Regex::RegexFlags> getFlags(llvm::StringRef Flags);
+
+public:
+  static bool is(const VariantValue &Value) {
+    return Value.isString() && getFlags(Value.getString());
+  }
+
+  static llvm::Regex::RegexFlags get(const VariantValue &Value) {
+    return *getFlags(Value.getString());
+  }
+
+  static ArgKind getKind() { return ArgKind(ArgKind::AK_String); }
 
   static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
 };
@@ -711,6 +730,71 @@ private:
   std::vector<std::unique_ptr<MatcherDescriptor>> Overloads;
 };
 
+template <typename ReturnType>
+class RegexMatcherDescriptor : public MatcherDescriptor {
+public:
+  RegexMatcherDescriptor(ReturnType (*WithFlags)(StringRef,
+                                                 llvm::Regex::RegexFlags),
+                         ReturnType (*NoFlags)(StringRef),
+                         ArrayRef<ASTNodeKind> RetKinds)
+      : WithFlags(WithFlags), NoFlags(NoFlags),
+        RetKinds(RetKinds.begin(), RetKinds.end()) {}
+  bool isVariadic() const override { return true; }
+  unsigned getNumArgs() const override { return 0; }
+
+  void getArgKinds(ASTNodeKind ThisKind, unsigned ArgNo,
+                   std::vector<ArgKind> &Kinds) const override {
+    assert(ArgNo < 2);
+    Kinds.push_back(ArgKind::AK_String);
+  }
+
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
+                       ASTNodeKind *LeastDerivedKind) const override {
+    return isRetKindConvertibleTo(RetKinds, Kind, Specificity,
+                                  LeastDerivedKind);
+  }
+
+  VariantMatcher create(SourceRange NameRange, ArrayRef<ParserValue> Args,
+                        Diagnostics *Error) const override {
+    if (Args.size() < 1 || Args.size() > 2) {
+      Error->addError(NameRange, Diagnostics::ET_RegistryWrongArgCount)
+          << "1 or 2" << Args.size();
+      return VariantMatcher();
+    }
+    if (!ArgTypeTraits<StringRef>::is(Args[0].Value)) {
+      Error->addError(Args[0].Range, Error->ET_RegistryWrongArgType)
+          << 1 << ArgTypeTraits<StringRef>::getKind().asString()
+          << Args[0].Value.getTypeAsString();
+      return VariantMatcher();
+    }
+    if (Args.size() == 1) {
+      return outvalueToVariantMatcher(
+          NoFlags(ArgTypeTraits<StringRef>::get(Args[0].Value)));
+    }
+    if (!ArgTypeTraits<llvm::Regex::RegexFlags>::is(Args[1].Value)) {
+      if (llvm::Optional<std::string> BestGuess =
+              ArgTypeTraits<llvm::Regex::RegexFlags>::getBestGuess(
+                  Args[1].Value)) {
+        Error->addError(Args[1].Range, Error->ET_RegistryUnknownEnumWithReplace)
+            << 2 << Args[1].Value.getString() << *BestGuess;
+      } else {
+        Error->addError(Args[1].Range, Error->ET_RegistryWrongArgType)
+            << 2 << ArgTypeTraits<llvm::Regex::RegexFlags>::getKind().asString()
+            << Args[1].Value.getTypeAsString();
+      }
+      return VariantMatcher();
+    }
+    return outvalueToVariantMatcher(
+        WithFlags(ArgTypeTraits<StringRef>::get(Args[0].Value),
+                  ArgTypeTraits<llvm::Regex::RegexFlags>::get(Args[1].Value)));
+  }
+
+private:
+  ReturnType (*const WithFlags)(StringRef, llvm::Regex::RegexFlags);
+  ReturnType (*const NoFlags)(StringRef);
+  const std::vector<ASTNodeKind> RetKinds;
+};
+
 /// Variadic operator marshaller function.
 class VariadicOperatorMatcherDescriptor : public MatcherDescriptor {
 public:
@@ -812,6 +896,16 @@ makeMatcherAutoMarshall(ReturnType (*Func)(ArgType1, ArgType2),
   return std::make_unique<FixedArgCountMatcherDescriptor>(
       matcherMarshall2<ReturnType, ArgType1, ArgType2>,
       reinterpret_cast<void (*)()>(Func), MatcherName, RetTypes, AKs);
+}
+
+template <typename ReturnType>
+std::unique_ptr<MatcherDescriptor> makeMatcherRegexMarshall(
+    ReturnType (*FuncFlags)(llvm::StringRef, llvm::Regex::RegexFlags),
+    ReturnType (*Func)(llvm::StringRef)) {
+  std::vector<ASTNodeKind> RetTypes;
+  BuildReturnTypeVector<ReturnType>::build(RetTypes);
+  return std::make_unique<RegexMatcherDescriptor<ReturnType>>(FuncFlags, Func,
+                                                              RetTypes);
 }
 
 /// Variadic overload.

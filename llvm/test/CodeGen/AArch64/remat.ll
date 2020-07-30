@@ -8,6 +8,9 @@
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a72 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a73 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a75 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a77 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a78 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-x1 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=neoverse-e1 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=neoverse-n1 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=exynos-m3 -o - %s | FileCheck %s

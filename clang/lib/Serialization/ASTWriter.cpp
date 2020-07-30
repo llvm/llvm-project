@@ -3960,7 +3960,7 @@ void ASTWriter::WriteDeclContextVisibleUpdate(const DeclContext *DC) {
 }
 
 /// Write an FP_PRAGMA_OPTIONS block for the given FPOptions.
-void ASTWriter::WriteFPPragmaOptions(const FPOptions &Opts) {
+void ASTWriter::WriteFPPragmaOptions(const FPOptionsOverride &Opts) {
   RecordData::value_type Record[] = {Opts.getAsOpaqueInt()};
   Stream.EmitRecord(FP_PRAGMA_OPTIONS, Record);
 }
@@ -4790,7 +4790,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   WriteReferencedSelectorsPool(SemaRef);
   WriteLateParsedTemplates(SemaRef);
   WriteIdentifierTable(PP, SemaRef.IdResolver, isModule);
-  WriteFPPragmaOptions(SemaRef.getCurFPFeatures());
+  WriteFPPragmaOptions(SemaRef.CurFPFeatureOverrides());
   WriteOpenCLExtensions(SemaRef);
   WriteOpenCLExtensionTypes(SemaRef);
   WriteCUDAPragmas(SemaRef);
@@ -5688,8 +5688,8 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   // getODRHash will compute the ODRHash if it has not been previously computed.
   Record->push_back(D->getODRHash());
-  bool ModulesDebugInfo = Writer->Context->getLangOpts().ModulesDebugInfo &&
-                          Writer->WritingModule && !D->isDependentType();
+  bool ModulesDebugInfo =
+      Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
   Record->push_back(ModulesDebugInfo);
   if (ModulesDebugInfo)
     Writer->ModularCodegenDecls.push_back(Writer->GetDeclRef(D));

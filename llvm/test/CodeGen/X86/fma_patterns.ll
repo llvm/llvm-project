@@ -1821,25 +1821,57 @@ define double @fadd_fma_fmul_1(double %a, double %b, double %c, double %d, doubl
   ret double %a2
 }
 
-; Minimum FMF, commute final add operands, change type.
+; Minimum FMF - the 1st fadd is contracted because that combines
+; fmul+fadd as specified by the order of operations; the 2nd fadd
+; requires reassociation to fuse with c*d.
 
-define float @fadd_fma_fmul_2(float %a, float %b, float %c, float %d, float %n0) nounwind {
-; FMA-LABEL: fadd_fma_fmul_2:
+define float @fadd_fma_fmul_fmf(float %a, float %b, float %c, float %d, float %n0) nounwind {
+; FMA-LABEL: fadd_fma_fmul_fmf:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfmadd213ss {{.*#+}} xmm2 = (xmm3 * xmm2) + xmm4
 ; FMA-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; FMA-NEXT:    retq
 ;
-; FMA4-LABEL: fadd_fma_fmul_2:
+; FMA4-LABEL: fadd_fma_fmul_fmf:
 ; FMA4:       # %bb.0:
 ; FMA4-NEXT:    vfmaddss {{.*#+}} xmm2 = (xmm2 * xmm3) + xmm4
 ; FMA4-NEXT:    vfmaddss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm2
 ; FMA4-NEXT:    retq
 ;
-; AVX512-LABEL: fadd_fma_fmul_2:
+; AVX512-LABEL: fadd_fma_fmul_fmf:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm2 = (xmm3 * xmm2) + xmm4
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; AVX512-NEXT:    retq
+  %m1 = fmul float %a, %b
+  %m2 = fmul float %c, %d
+  %a1 = fadd contract float %m1, %m2
+  %a2 = fadd reassoc float %n0, %a1
+  ret float %a2
+}
+
+; Not minimum FMF.
+
+define float @fadd_fma_fmul_2(float %a, float %b, float %c, float %d, float %n0) nounwind {
+; FMA-LABEL: fadd_fma_fmul_2:
+; FMA:       # %bb.0:
+; FMA-NEXT:    vmulss %xmm3, %xmm2, %xmm2
+; FMA-NEXT:    vfmadd231ss {{.*#+}} xmm2 = (xmm1 * xmm0) + xmm2
+; FMA-NEXT:    vaddss %xmm2, %xmm4, %xmm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: fadd_fma_fmul_2:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulss %xmm3, %xmm2, %xmm2
+; FMA4-NEXT:    vfmaddss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm2
+; FMA4-NEXT:    vaddss %xmm0, %xmm4, %xmm0
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: fadd_fma_fmul_2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmulss %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vfmadd231ss {{.*#+}} xmm2 = (xmm1 * xmm0) + xmm2
+; AVX512-NEXT:    vaddss %xmm2, %xmm4, %xmm0
 ; AVX512-NEXT:    retq
   %m1 = fmul float %a, %b
   %m2 = fmul float %c, %d

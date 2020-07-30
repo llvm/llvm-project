@@ -2458,9 +2458,10 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
 
   assert(FD->doesThisDeclarationHaveABody());
   bool ModulesCodegen = false;
-  if (Writer->WritingModule && !FD->isDependentContext()) {
+  if (!FD->isDependentContext()) {
     Optional<GVALinkage> Linkage;
-    if (Writer->WritingModule->Kind == Module::ModuleInterfaceUnit) {
+    if (Writer->WritingModule &&
+        Writer->WritingModule->Kind == Module::ModuleInterfaceUnit) {
       // When building a C++ Modules TS module interface unit, a strong
       // definition in the module interface is provided by the compilation of
       // that module interface unit, not by its users. (Inline functions are

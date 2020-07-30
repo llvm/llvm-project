@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "../GlobList.h"
+#include "clang/Lex/PPCallbacks.h"
 
 namespace clang {
 namespace tidy {

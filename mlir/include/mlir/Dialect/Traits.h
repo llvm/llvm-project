@@ -47,6 +47,21 @@ namespace util {
 bool getBroadcastedShape(ArrayRef<int64_t> shape1, ArrayRef<int64_t> shape2,
                          SmallVectorImpl<int64_t> &resultShape);
 
+/// Returns true if a broadcast between the 2 shapes is guaranteed to be
+/// successful and not result in an error. False does not guarantee that the
+/// shapes are not broadcastable; it might guarantee that they are not
+/// broadcastable or it might mean that this function does not have enough
+/// information to know.
+///
+/// Conceptually, this returns true if getBroadcastedShape would have returned
+/// true and vice versa, with one exception. If a dimension is unknown in both
+/// shapes, getBroadcastedShape would return true and have a result with unknown
+/// dimension, while this function will return false because it's possible for
+/// both shapes to have a dimension greater than 1 and different which would
+/// fail to broadcast.
+bool staticallyKnownBroadcastable(ArrayRef<int64_t> shape1,
+                                  ArrayRef<int64_t> shape2);
+
 /// Returns the result broadcast composition type from the two given types by
 /// following NumPy broadcast semantics. Returned type may have dynamic shape if
 /// either of the input types has dynamic shape. Returns null type if the two

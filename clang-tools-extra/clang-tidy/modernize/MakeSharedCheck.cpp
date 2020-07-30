@@ -8,6 +8,9 @@
 
 #include "MakeSharedCheck.h"
 
+// FixItHint - Hint to check documentation script to mark this check as
+// providing a FixIt.
+
 using namespace clang::ast_matchers;
 
 namespace clang {

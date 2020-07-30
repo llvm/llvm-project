@@ -15,7 +15,6 @@
 
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
@@ -624,41 +623,11 @@ int64_t DataExtractor::GetMaxS64Bitfield(offset_t *offset_ptr, size_t size,
 }
 
 float DataExtractor::GetFloat(offset_t *offset_ptr) const {
-  typedef float float_type;
-  float_type val = 0.0;
-  const size_t src_size = sizeof(float_type);
-  const float_type *src =
-      static_cast<const float_type *>(GetData(offset_ptr, src_size));
-  if (src) {
-    if (m_byte_order != endian::InlHostByteOrder()) {
-      const uint8_t *src_data = reinterpret_cast<const uint8_t *>(src);
-      uint8_t *dst_data = reinterpret_cast<uint8_t *>(&val);
-      for (size_t i = 0; i < sizeof(float_type); ++i)
-        dst_data[sizeof(float_type) - 1 - i] = src_data[i];
-    } else {
-      val = *src;
-    }
-  }
-  return val;
+  return Get<float>(offset_ptr, 0.0f);
 }
 
 double DataExtractor::GetDouble(offset_t *offset_ptr) const {
-  typedef double float_type;
-  float_type val = 0.0;
-  const size_t src_size = sizeof(float_type);
-  const float_type *src =
-      static_cast<const float_type *>(GetData(offset_ptr, src_size));
-  if (src) {
-    if (m_byte_order != endian::InlHostByteOrder()) {
-      const uint8_t *src_data = reinterpret_cast<const uint8_t *>(src);
-      uint8_t *dst_data = reinterpret_cast<uint8_t *>(&val);
-      for (size_t i = 0; i < sizeof(float_type); ++i)
-        dst_data[sizeof(float_type) - 1 - i] = src_data[i];
-    } else {
-      val = *src;
-    }
-  }
-  return val;
+  return Get<double>(offset_ptr, 0.0);
 }
 
 long double DataExtractor::GetLongDouble(offset_t *offset_ptr) const {

@@ -1,11 +1,11 @@
-; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
+; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
 ; RUN:   < %s | FileCheck %s
 
-; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -loop-vectorize -force-vector-width=4 \
+; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -loop-vectorize -force-vector-width=4 \
 ; RUN:   -verify-loop-info -verify-dom-info -S < %s | \
 ; RUN:   FileCheck --check-prefix=VECTORIZE %s
 
-; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info \
+; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info \
 ; RUN:   -loop-accesses -analyze < %s | FileCheck %s --check-prefix=ANALYSIS
 
 ; The memcheck version of basic.ll.  We should distribute and vectorize the

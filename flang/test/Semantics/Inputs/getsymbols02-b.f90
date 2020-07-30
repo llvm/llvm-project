@@ -1,5 +1,3 @@
-! EXEC: ${F18} -fparse-only %s
-
 module mm2b
 use mm2a
 implicit none

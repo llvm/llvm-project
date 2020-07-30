@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Pass.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-seses"
@@ -29,8 +30,8 @@ using namespace llvm;
 STATISTIC(NumLFENCEsInserted, "Number of lfence instructions inserted");
 
 static cl::opt<bool> EnableSpeculativeExecutionSideEffectSuppression(
-    "x86-seses-enable",
-    cl::desc("Force enable speculative execution side effect suppresion. "
+    "x86-seses-enable-without-lvi-cfi",
+    cl::desc("Force enable speculative execution side effect suppression. "
              "(Note: User must pass -mlvi-cfi in order to mitigate indirect "
              "branches and returns.)"),
     cl::init(false), cl::Hidden);
@@ -86,27 +87,44 @@ static bool hasConstantAddressingMode(const MachineInstr &MI) {
 
 bool X86SpeculativeExecutionSideEffectSuppression::runOnMachineFunction(
     MachineFunction &MF) {
-  if (!EnableSpeculativeExecutionSideEffectSuppression)
+
+  const auto &OptLevel = MF.getTarget().getOptLevel();
+  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+
+  // Check whether SESES needs to run as the fallback for LVI at O0, whether the
+  // user explicitly passed an SESES flag, or whether the SESES target feature
+  // was set.
+  if (!EnableSpeculativeExecutionSideEffectSuppression &&
+      !(Subtarget.useLVILoadHardening() && OptLevel == CodeGenOpt::None) &&
+      !Subtarget.useSpeculativeExecutionSideEffectSuppression())
     return false;
 
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
                     << " **********\n");
   bool Modified = false;
-  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
   const X86InstrInfo *TII = Subtarget.getInstrInfo();
   for (MachineBasicBlock &MBB : MF) {
     MachineInstr *FirstTerminator = nullptr;
-
+    // Keep track of whether the previous instruction was an LFENCE to avoid
+    // adding redundant LFENCEs.
+    bool PrevInstIsLFENCE = false;
     for (auto &MI : MBB) {
+
+      if (MI.getOpcode() == X86::LFENCE) {
+        PrevInstIsLFENCE = true;
+        continue;
+      }
       // We want to put an LFENCE before any instruction that
       // may load or store. This LFENCE is intended to avoid leaking any secret
       // data due to a given load or store. This results in closing the cache
       // and memory timing side channels. We will treat terminators that load
       // or store separately.
       if (MI.mayLoadOrStore() && !MI.isTerminator()) {
-        BuildMI(MBB, MI, DebugLoc(), TII->get(X86::LFENCE));
-        NumLFENCEsInserted++;
-        Modified = true;
+        if (!PrevInstIsLFENCE) {
+          BuildMI(MBB, MI, DebugLoc(), TII->get(X86::LFENCE));
+          NumLFENCEsInserted++;
+          Modified = true;
+        }
         if (OneLFENCEPerBasicBlock)
           break;
       }
@@ -128,19 +146,25 @@ bool X86SpeculativeExecutionSideEffectSuppression::runOnMachineFunction(
 
       // Look for branch instructions that will require an LFENCE to be put
       // before this basic block's terminators.
-      if (!MI.isBranch() || OmitBranchLFENCEs)
+      if (!MI.isBranch() || OmitBranchLFENCEs) {
         // This isn't a branch or we're not putting LFENCEs before branches.
+        PrevInstIsLFENCE = false;
         continue;
+      }
 
-      if (OnlyLFENCENonConst && hasConstantAddressingMode(MI))
+      if (OnlyLFENCENonConst && hasConstantAddressingMode(MI)) {
         // This is a branch, but it only has constant addressing mode and we're
         // not adding LFENCEs before such branches.
+        PrevInstIsLFENCE = false;
         continue;
+      }
 
       // This branch requires adding an LFENCE.
-      BuildMI(MBB, FirstTerminator, DebugLoc(), TII->get(X86::LFENCE));
-      NumLFENCEsInserted++;
-      Modified = true;
+      if (!PrevInstIsLFENCE) {
+        BuildMI(MBB, FirstTerminator, DebugLoc(), TII->get(X86::LFENCE));
+        NumLFENCEsInserted++;
+        Modified = true;
+      }
       break;
     }
   }
@@ -153,5 +177,5 @@ FunctionPass *llvm::createX86SpeculativeExecutionSideEffectSuppression() {
 }
 
 INITIALIZE_PASS(X86SpeculativeExecutionSideEffectSuppression, "x86-seses",
-                "X86 Speculative Execution Side Effect Suppresion", false,
+                "X86 Speculative Execution Side Effect Suppression", false,
                 false)

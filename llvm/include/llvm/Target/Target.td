@@ -1017,10 +1017,10 @@ def INLINEASM_BR : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let AsmString = "";
-  let hasSideEffects = 0;  // Note side effect is encoded in an operand.
-  let isTerminator = 1;
-  let isBranch = 1;
-  let isIndirectBranch = 1;
+  // Unlike INLINEASM, this is always treated as having side-effects.
+  let hasSideEffects = 1;
+  // Despite potentially branching, this instruction is intentionally _not_
+  // marked as a terminator or a branch.
 }
 def CFI_INSTRUCTION : StandardPseudoInstruction {
   let OutOperandList = (outs);

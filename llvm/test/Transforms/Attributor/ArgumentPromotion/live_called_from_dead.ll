@@ -41,13 +41,13 @@ dead:
 
 define internal i32 @caller(i32* %B) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@caller()
-; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = alloca i32
+; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[A]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
 ; IS__CGSCC_OPM-NEXT:    ret i32 0
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller()
-; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = alloca i32
+; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[A]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
 ; IS__CGSCC_NPM-NEXT:    ret i32 undef
@@ -60,7 +60,7 @@ define internal i32 @caller(i32* %B) {
 
 define i32 @callercaller() {
 ; CHECK-LABEL: define {{[^@]+}}@callercaller()
-; CHECK-NEXT:    [[B:%.*]] = alloca i32
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 2, i32* [[B]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;

@@ -39,7 +39,7 @@ SBProcessInfo &SBProcessInfo::operator=(const SBProcessInfo &rhs) {
 
 ProcessInstanceInfo &SBProcessInfo::ref() {
   if (m_opaque_up == nullptr) {
-    m_opaque_up.reset(new ProcessInstanceInfo());
+    m_opaque_up = std::make_unique<ProcessInstanceInfo>();
   }
   return *m_opaque_up;
 }

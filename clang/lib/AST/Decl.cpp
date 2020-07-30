@@ -3623,7 +3623,8 @@ bool FunctionDecl::isTemplateInstantiation() const {
   return clang::isTemplateInstantiation(getTemplateSpecializationKind());
 }
 
-FunctionDecl *FunctionDecl::getTemplateInstantiationPattern() const {
+FunctionDecl *
+FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
   // If this is a generic lambda call operator specialization, its
   // instantiation pattern is always its primary template's pattern
   // even if its primary template was instantiated from another
@@ -3640,18 +3641,20 @@ FunctionDecl *FunctionDecl::getTemplateInstantiationPattern() const {
   }
 
   if (MemberSpecializationInfo *Info = getMemberSpecializationInfo()) {
-    if (!clang::isTemplateInstantiation(Info->getTemplateSpecializationKind()))
+    if (ForDefinition &&
+        !clang::isTemplateInstantiation(Info->getTemplateSpecializationKind()))
       return nullptr;
     return getDefinitionOrSelf(cast<FunctionDecl>(Info->getInstantiatedFrom()));
   }
 
-  if (!clang::isTemplateInstantiation(getTemplateSpecializationKind()))
+  if (ForDefinition &&
+      !clang::isTemplateInstantiation(getTemplateSpecializationKind()))
     return nullptr;
 
   if (FunctionTemplateDecl *Primary = getPrimaryTemplate()) {
     // If we hit a point where the user provided a specialization of this
     // template, we're done looking.
-    while (!Primary->isMemberSpecialization()) {
+    while (!ForDefinition || !Primary->isMemberSpecialization()) {
       auto *NewPrimary = Primary->getInstantiatedFromMemberTemplate();
       if (!NewPrimary)
         break;

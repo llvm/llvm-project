@@ -10,6 +10,8 @@ signed int si;
 unsigned int ui;
 signed long long sll;
 unsigned long long ull;
+__int128 s128;
+unsigned  __int128 u128;
 
 void test_op_ignore (void) // CHECK-LABEL: define void @test_op_ignore
 {
@@ -48,6 +50,8 @@ void test_op_ignore (void) // CHECK-LABEL: define void @test_op_ignore
   (void) __sync_fetch_and_xor (&ui, 1); // CHECK: atomicrmw xor i32
   (void) __sync_fetch_and_xor (&sll, 1); // CHECK: atomicrmw xor i64
   (void) __sync_fetch_and_xor (&ull, 1); // CHECK: atomicrmw xor i64
+  (void) __sync_fetch_and_xor (&u128, 1); // CHECK: atomicrmw xor i128
+  (void) __sync_fetch_and_xor (&s128, 1); // CHECK: atomicrmw xor i128
 
   (void) __sync_fetch_and_nand (&sc, 1); // CHECK: atomicrmw nand i8
   (void) __sync_fetch_and_nand (&uc, 1); // CHECK: atomicrmw nand i8
@@ -168,27 +172,43 @@ void test_op_and_fetch (void)
   sc = __sync_nand_and_fetch (&sc, uc); // CHECK: atomicrmw nand
                                         // CHECK: and
                                         // CHECK: xor
+                                        // CHECK: -1
   uc = __sync_nand_and_fetch (&uc, uc); // CHECK: atomicrmw nand
                                         // CHECK: and
                                         // CHECK: xor
+                                        // CHECK: -1
   ss = __sync_nand_and_fetch (&ss, uc); // CHECK: atomicrmw nand
                                         // CHECK: and
                                         // CHECK: xor
+                                        // CHECK: -1
   us = __sync_nand_and_fetch (&us, uc); // CHECK: atomicrmw nand
                                         // CHECK: and
                                         // CHECK: xor
+                                        // CHECK: -1
   si = __sync_nand_and_fetch (&si, uc); // CHECK: atomicrmw nand
                                         // CHECK: and
                                         // CHECK: xor
+                                        // CHECK: -1
   ui = __sync_nand_and_fetch (&ui, uc); // CHECK: atomicrmw nand
                                         // CHECK: and
                                         // CHECK: xor
+                                        // CHECK: -1
   sll = __sync_nand_and_fetch (&sll, uc); // CHECK: atomicrmw nand
                                           // CHECK: and
                                           // CHECK: xor
+                                          // CHECK: -1
   ull = __sync_nand_and_fetch (&ull, uc); // CHECK: atomicrmw nand
                                           // CHECK: and
                                           // CHECK: xor
+                                          // CHECK: -1
+  u128 = __sync_nand_and_fetch (&u128, uc); // CHECK: atomicrmw nand
+                                          // CHECK: and
+                                          // CHECK: xor
+                                          // CHECK: -1
+  s128 = __sync_nand_and_fetch (&s128, uc); // CHECK: atomicrmw nand
+                                          // CHECK: and
+                                          // CHECK: xor
+                                          // CHECK: -1
 
   sc = __sync_and_and_fetch (&sc, uc); // CHECK: atomicrmw and
   uc = __sync_and_and_fetch (&uc, uc); // CHECK: atomicrmw and

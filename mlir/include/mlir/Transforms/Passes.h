@@ -32,6 +32,9 @@ std::unique_ptr<Pass> createBufferPlacementPass();
 /// Creates an instance of the Canonicalizer pass.
 std::unique_ptr<Pass> createCanonicalizerPass();
 
+/// Create a pass that removes unnecessary Copy operations.
+std::unique_ptr<Pass> createCopyRemovalPass();
+
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();
 

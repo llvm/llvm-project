@@ -20,6 +20,7 @@ import itertools
 import re
 import requests
 import textwrap
+import yaml
 
 SPIRV_HTML_SPEC_URL = 'https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html'
 SPIRV_JSON_SPEC_URL = 'https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/spirv.core.grammar.json'
@@ -72,7 +73,7 @@ def get_spirv_grammar_from_json_spec():
   return spirv['operand_kinds'], spirv['instructions']
 
 
-def split_list_into_sublists(items, offset):
+def split_list_into_sublists(items):
   """Split the list of items into multiple sublists.
 
   This is to make sure the string composed from each sublist won't exceed
@@ -80,7 +81,6 @@ def split_list_into_sublists(items, offset):
 
   Arguments:
     - items: a list of strings
-    - offset: the offset in calculating each sublist's length
   """
   chuncks = []
   chunk = []
@@ -255,7 +255,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
     min_version = ''
   elif min_version:
     min_version = 'MinVersion<SPV_V_{}>'.format(min_version.replace('.', '_'))
-  # TODO(antiagainst): delete this once ODS can support dialect-specific content
+  # TODO: delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not min_version:
     min_version = DEFAULT_MIN_VERSION
@@ -263,7 +263,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
   max_version = enum_case.get('lastVersion', '')
   if max_version:
     max_version = 'MaxVersion<SPV_V_{}>'.format(max_version.replace('.', '_'))
-  # TODO(antiagainst): delete this once ODS can support dialect-specific content
+  # TODO: delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not max_version:
     max_version = DEFAULT_MAX_VERSION
@@ -278,7 +278,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
     # a core symbol since the given version, rather than a minimal version
     # requirement.
     min_version = DEFAULT_MIN_VERSION if for_op else ''
-  # TODO(antiagainst): delete this once ODS can support dialect-specific content
+  # TODO: delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not exts:
     exts = DEFAULT_EXT
@@ -305,7 +305,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
     else:
       caps = 'Capability<[{}]>'.format(', '.join(prefixed_caps))
       implies = ''
-  # TODO(antiagainst): delete this once ODS can support dialect-specific content
+  # TODO: delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not caps:
     caps = DEFAULT_CAP
@@ -391,7 +391,7 @@ def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
                 for case in kind_cases]
 
   # Split them into sublists and concatenate into multiple lines
-  case_names = split_list_into_sublists(case_names, 6)
+  case_names = split_list_into_sublists(case_names)
   case_names = ['{:6}'.format('') + ', '.join(sublist)
                 for sublist in case_names]
   case_names = ',\n'.join(case_names)
@@ -428,7 +428,7 @@ def gen_opcode(instructions):
   opcode_list = [
       decl_fmt_str.format(name=inst['opname']) for inst in instructions
   ]
-  opcode_list = split_list_into_sublists(opcode_list, 6)
+  opcode_list = split_list_into_sublists(opcode_list)
   opcode_list = [
       '{:6}'.format('') + ', '.join(sublist) for sublist in opcode_list
   ]
@@ -439,6 +439,75 @@ def gen_opcode(instructions):
               '    ]>;'.format(name='Opcode', lst=opcode_list)
   return opcode_str + '\n\n' + enum_attr
 
+def map_cap_to_opnames(instructions):
+  """Maps capabilities to instructions enabled by those capabilities
+
+  Arguments:
+    - instructions: a list containing a subset of SPIR-V instructions' grammar
+  Returns:
+    - A map with keys representing capabilities and values of lists of
+    instructions enabled by the corresponding key
+  """
+  cap_to_inst = {}
+
+  for inst in instructions:
+    caps = inst['capabilities'] if 'capabilities' in inst else ['0_core_0']
+    for cap in caps:
+      if cap not in cap_to_inst:
+        cap_to_inst[cap] = []
+      cap_to_inst[cap].append(inst['opname'])
+
+  return cap_to_inst
+
+def gen_instr_coverage_report(path, instructions):
+  """Dumps to standard output a YAML report of current instruction coverage
+
+  Arguments:
+    - path: the path to SPIRBase.td
+    - instructions: a list containing all SPIR-V instructions' grammar
+  """
+  with open(path, 'r') as f:
+    content = f.read()
+
+  content = content.split(AUTOGEN_OPCODE_SECTION_MARKER)
+
+  existing_opcodes = [k[11:] for k in re.findall('def SPV_OC_\w+', content[1])]
+  existing_instructions = list(
+          filter(lambda inst: (inst['opname'] in existing_opcodes),
+              instructions))
+
+  instructions_opnames = [inst['opname'] for inst in instructions]
+
+  remaining_opcodes = list(set(instructions_opnames) - set(existing_opcodes))
+  remaining_instructions = list(
+          filter(lambda inst: (inst['opname'] in remaining_opcodes),
+              instructions))
+
+  rem_cap_to_instr = map_cap_to_opnames(remaining_instructions)
+  ex_cap_to_instr = map_cap_to_opnames(existing_instructions)
+
+  rem_cap_to_cov = {}
+
+  # Calculate coverage for each capability
+  for cap in rem_cap_to_instr:
+    if cap not in ex_cap_to_instr:
+      rem_cap_to_cov[cap] = 0.0
+    else:
+      rem_cap_to_cov[cap] = \
+              (len(ex_cap_to_instr[cap]) / (len(ex_cap_to_instr[cap]) \
+              + len(rem_cap_to_instr[cap])))
+
+  report = {}
+
+  # Merge the 3 maps into one report
+  for cap in rem_cap_to_instr:
+    report[cap] = {}
+    report[cap]['Supported Instructions'] = \
+            ex_cap_to_instr[cap] if cap in ex_cap_to_instr else []
+    report[cap]['Unsupported Instructions']  = rem_cap_to_instr[cap]
+    report[cap]['Coverage'] = '{}%'.format(int(rem_cap_to_cov[cap] * 100))
+
+  print(yaml.dump(report))
 
 def update_td_opcodes(path, instructions, filter_list):
   """Updates SPIRBase.td with new generated opcode cases.
@@ -552,7 +621,7 @@ def map_spec_operand_to_ods_argument(operand):
     else:
       arg_type = 'Variadic<SPV_Type>'
   elif kind == 'IdMemorySemantics' or kind == 'IdScope':
-    # TODO(antiagainst): Need to further constrain 'IdMemorySemantics'
+    # TODO: Need to further constrain 'IdMemorySemantics'
     # and 'IdScope' given that they should be generated from OpConstant.
     assert quantifier == '', ('unexpected to have optional/variadic memory '
                               'semantics or scope <id>')
@@ -771,7 +840,6 @@ def extract_td_op_info(op_def):
   """Extracts potentially manually specified sections in op's definition.
 
   Arguments: - A string containing the op's TableGen definition
-    - doc: the instruction's SPIR-V HTML doc
 
   Returns:
     - A dict containing potential manually specified sections
@@ -930,6 +998,8 @@ if __name__ == '__main__':
       default='Op',
       help='SPIR-V instruction category used for choosing '\
            'the TableGen base class to define this op')
+  cli_parser.add_argument('--gen-inst-coverage', dest='gen_inst_coverage', action='store_true')
+  cli_parser.set_defaults(gen_inst_coverage=False)
 
   args = cli_parser.parse_args()
 
@@ -956,3 +1026,6 @@ if __name__ == '__main__':
     print('Done. Note that this script just generates a template; ', end='')
     print('please read the spec and update traits, arguments, and ', end='')
     print('results accordingly.')
+
+  if args.gen_inst_coverage:
+    gen_instr_coverage_report(args.base_td_path, instructions)

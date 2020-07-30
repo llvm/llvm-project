@@ -234,8 +234,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
         MachineBasicBlock::iterator EndIter = std::next(MI.getIterator());
         if (MI.getOperand(0).isReg())
           for (; EndIter != MBB.end() && EndIter->isDebugValue() &&
-                 EndIter->getOperand(0).isReg() &&
-                 EndIter->getOperand(0).getReg() == MI.getOperand(0).getReg();
+                 EndIter->getDebugOperandForReg(MI.getOperand(0).getReg());
                ++EndIter, ++Next)
             IOM[&*EndIter] = NewOrder;
         MBB.splice(I, &MBB, MI.getIterator(), EndIter);

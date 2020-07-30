@@ -119,7 +119,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   }
   if (Attrs.hasAttribute(OpIdx, Attribute::Nest))
     Flags.setNest();
-  Flags.setOrigAlign(Align(DL.getABITypeAlignment(Arg.Ty)));
+  Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
 }
 
 template void
@@ -194,11 +194,11 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
 
   unsigned NumArgs = Args.size();
   for (unsigned i = 0; i != NumArgs; ++i) {
-    MVT CurVT = MVT::getVT(Args[i].Ty);
-    if (Handler.assignArg(i, CurVT, CurVT, CCValAssign::Full, Args[i],
-                          Args[i].Flags[0], CCInfo)) {
-      if (!CurVT.isValid())
-        return false;
+    EVT CurVT = EVT::getEVT(Args[i].Ty);
+    if (!CurVT.isSimple() ||
+        Handler.assignArg(i, CurVT.getSimpleVT(), CurVT.getSimpleVT(),
+                          CCValAssign::Full, Args[i], Args[i].Flags[0],
+                          CCInfo)) {
       MVT NewVT = TLI->getRegisterTypeForCallingConv(
           F.getContext(), F.getCallingConv(), EVT(CurVT));
 
@@ -309,8 +309,10 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     // FIXME: Pack registers if we have more than one.
     Register ArgReg = Args[i].Regs[0];
 
-    MVT OrigVT = MVT::getVT(Args[i].Ty);
-    MVT VAVT = VA.getValVT();
+    EVT OrigVT = EVT::getEVT(Args[i].Ty);
+    EVT VAVT = VA.getValVT();
+    const LLT OrigTy = getLLTForType(*Args[i].Ty, DL);
+
     if (VA.isRegLoc()) {
       if (Handler.isIncomingArgumentHandler() && VAVT != OrigVT) {
         if (VAVT.getSizeInBits() < OrigVT.getSizeInBits()) {
@@ -332,7 +334,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           MIRBuilder.buildMerge(Args[i].OrigRegs[0], Args[i].Regs);
           continue;
         }
-        const LLT VATy(VAVT);
+        const LLT VATy(VAVT.getSimpleVT());
         Register NewReg =
             MIRBuilder.getMRI()->createGenericVirtualRegister(VATy);
         Handler.assignValueToReg(NewReg, VA.getLocReg(), VA);
@@ -340,7 +342,6 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
         // or do an unmerge to get the lower block of elements.
         if (VATy.isVector() &&
             VATy.getNumElements() > OrigVT.getVectorNumElements()) {
-          const LLT OrigTy(OrigVT);
           // Just handle the case where the VA type is 2 * original type.
           if (VATy.getNumElements() != OrigVT.getVectorNumElements() * 2) {
             LLVM_DEBUG(dbgs()

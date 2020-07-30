@@ -27,11 +27,11 @@ define i32 @caller(i32 %a) nounwind {
 ; RV32-SMALL-NEXT: target-flags(riscv-hi) @g_i
 ; RV32-SMALL-NEXT: target-flags(riscv-lo) @g_i
 ; RV32-SMALL:      target-flags(riscv-tls-got-hi) @t_un
-; RV32-SMALL-NEXT: target-flags(riscv-pcrel-lo) %bb.1
+; RV32-SMALL-NEXT: target-flags(riscv-pcrel-lo)
 ; RV32-SMALL:      target-flags(riscv-tls-got-hi) @t_ld
-; RV32-SMALL-NEXT: target-flags(riscv-pcrel-lo) %bb.2
+; RV32-SMALL-NEXT: target-flags(riscv-pcrel-lo)
 ; RV32-SMALL:      target-flags(riscv-tls-got-hi) @t_ie
-; RV32-SMALL-NEXT: target-flags(riscv-pcrel-lo) %bb.3
+; RV32-SMALL-NEXT: target-flags(riscv-pcrel-lo)
 ; RV32-SMALL:      target-flags(riscv-tprel-hi) @t_le
 ; RV32-SMALL-NEXT: target-flags(riscv-tprel-add) @t_le
 ; RV32-SMALL-NEXT: target-flags(riscv-tprel-lo) @t_le
@@ -39,17 +39,17 @@ define i32 @caller(i32 %a) nounwind {
 ;
 ; RV32-MED-LABEL: name: caller
 ; RV32-MED:      target-flags(riscv-got-hi) @g_e
-; RV32-MED-NEXT: target-flags(riscv-pcrel-lo) %bb.1
+; RV32-MED-NEXT: target-flags(riscv-pcrel-lo)
 ; RV32-MED:      target-flags(riscv-pcrel-hi) @g_i
-; RV32-MED-NEXT: target-flags(riscv-pcrel-lo) %bb.2
+; RV32-MED-NEXT: target-flags(riscv-pcrel-lo)
 ; RV32-MED:      target-flags(riscv-tls-gd-hi) @t_un
-; RV32-MED-NEXT: target-flags(riscv-pcrel-lo) %bb.3
-; RV32-MED-NEXT: target-flags(riscv-plt) &__tls_get_addr
+; RV32-MED-NEXT: target-flags(riscv-pcrel-lo)
+; RV32-MED:      target-flags(riscv-plt) &__tls_get_addr
 ; RV32-MED:      target-flags(riscv-tls-gd-hi) @t_ld
-; RV32-MED-NEXT: target-flags(riscv-pcrel-lo) %bb.4
-; RV32-MED-NEXT: target-flags(riscv-plt) &__tls_get_addr
+; RV32-MED-NEXT: target-flags(riscv-pcrel-lo)
+; RV32-MED:      target-flags(riscv-plt) &__tls_get_addr
 ; RV32-MED:      target-flags(riscv-tls-got-hi) @t_ie
-; RV32-MED-NEXT: target-flags(riscv-pcrel-lo) %bb.5
+; RV32-MED-NEXT: target-flags(riscv-pcrel-lo)
 ; RV32-MED:      target-flags(riscv-tprel-hi) @t_le
 ; RV32-MED-NEXT: target-flags(riscv-tprel-add) @t_le
 ; RV32-MED-NEXT: target-flags(riscv-tprel-lo) @t_le

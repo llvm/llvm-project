@@ -232,9 +232,11 @@ def capture_path: Separate<["--", "-"], "capture-path">,
 def replay: Separate<["--", "-"], "replay">,
   MetaVarName<"<filename>">,
   HelpText<"Tells the debugger to replay a reproducer from <filename>.">;
-def skip_version_check: F<"reproducer-skip-version-check">,
-  HelpText<"Skip the reproducer version check.">;
-def auto_generate: F<"reproducer-auto-generate">,
+def no_version_check: F<"reproducer-no-version-check">,
+  HelpText<"Disable the reproducer version check.">;
+def no_generate_on_signal: F<"reproducer-no-generate-on-signal">,
+  HelpText<"Don't generate reproducer when a signal is received.">;
+def generate_on_exit: F<"reproducer-generate-on-exit">,
   HelpText<"Generate reproducer on exit.">;
 
 def REM : R<["--"], "">;

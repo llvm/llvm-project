@@ -5325,7 +5325,7 @@ TEST_F(FormatTest, DeductionGuides) {
   verifyFormat("template <class... Ts> S(Ts...) -> S<Ts...>;");
   verifyFormat(
       "template <class... T>\n"
-      "array(T &&... t) -> array<std::common_type_t<T...>, sizeof...(T)>;");
+      "array(T &&...t) -> array<std::common_type_t<T...>, sizeof...(T)>;");
   verifyFormat("template <class T> A() -> A<decltype(p->foo<3>())>;");
   verifyFormat("template <class T> A() -> A<decltype(foo<traits<1>>)>;");
   verifyFormat("template <class T> A() -> A<sizeof(p->foo<1>)>;");
@@ -6280,6 +6280,17 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
                "                                : eeeeeeeeeeeeeeeeee\n"
                "       : bbbbbbbbbbbbbbbbbbbbbbb ? 2222222222222222\n"
                "                                 : 3333333333333333;",
+               Style);
+
+  Style.AlignOperands = FormatStyle::OAS_DontAlign;
+  Style.BreakBeforeTernaryOperators = false;
+  // FIXME: Aligning the question marks is weird given DontAlign.
+  // Consider disabling this alignment in this case. Also check whether this
+  // will render the adjustment from https://reviews.llvm.org/D82199
+  // unnecessary.
+  verifyFormat("int x = aaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaa :\n"
+               "    bbbb                ? cccccccccccccccccc :\n"
+               "                          ddddd;\n",
                Style);
 }
 
@@ -8168,13 +8179,20 @@ TEST_F(FormatTest, AttributePenaltyBreaking) {
 }
 
 TEST_F(FormatTest, UnderstandsEllipsis) {
+  FormatStyle Style = getLLVMStyle();
   verifyFormat("int printf(const char *fmt, ...);");
   verifyFormat("template <class... Ts> void Foo(Ts... ts) { Foo(ts...); }");
-  verifyFormat("template <class... Ts> void Foo(Ts *... ts) {}");
+  verifyFormat("template <class... Ts> void Foo(Ts *...ts) {}");
 
-  FormatStyle PointersLeft = getLLVMStyle();
-  PointersLeft.PointerAlignment = FormatStyle::PAS_Left;
-  verifyFormat("template <class... Ts> void Foo(Ts*... ts) {}", PointersLeft);
+  verifyFormat("template <int *...PP> a;", Style);
+
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("template <class... Ts> void Foo(Ts*... ts) {}", Style);
+
+  verifyFormat("template <int*... PP> a;", Style);
+
+  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  verifyFormat("template <int *... PP> a;", Style);
 }
 
 TEST_F(FormatTest, AdaptivelyFormatsPointersAndReferences) {
@@ -12968,9 +12986,7 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
                "  }\n",
                WhitesmithsBraceStyle);
 
-  // FIXME: the block and the break under case 2 in this test don't get indented
-  // correctly
-  /*
+  WhitesmithsBraceStyle.IndentCaseBlocks = true;
   verifyFormat("void switchTest1(int a)\n"
                "  {\n"
                "  switch (a)\n"
@@ -12978,35 +12994,101 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
                "    case 2:\n"
                "      {\n"
                "      }\n"
-               "      break;\n"
+               "    break;\n"
                "    }\n"
                "  }\n",
                WhitesmithsBraceStyle);
-  */
 
-  // FIXME: the block and the break under case 2 in this test don't get indented
-  // correctly
-  /*
   verifyFormat("void switchTest2(int a)\n"
                "  {\n"
                "  switch (a)\n"
                "    {\n"
-               "  case 0:\n"
+               "    case 0:\n"
                "    break;\n"
-               "  case 1:\n"
-               "    {\n"
+               "    case 1:\n"
+               "      {\n"
+               "      break;\n"
+               "      }\n"
+               "    case 2:\n"
+               "      {\n"
+               "      }\n"
                "    break;\n"
-               "    }\n"
-               "  case 2:\n"
-               "    {\n"
-               "    }\n"
-               "    break;\n"
-               "  default:\n"
+               "    default:\n"
                "    break;\n"
                "    }\n"
                "  }\n",
                WhitesmithsBraceStyle);
-  */
+
+  verifyFormat("void switchTest3(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "    case 0:\n"
+               "      {\n"
+               "      foo(x);\n"
+               "      }\n"
+               "    break;\n"
+               "    default:\n"
+               "      {\n"
+               "      foo(1);\n"
+               "      }\n"
+               "    break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+
+  WhitesmithsBraceStyle.IndentCaseBlocks = false;
+
+  verifyFormat("void switchTest4(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "    case 2:\n"
+               "    {\n"
+               "    }\n"
+               "    break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("void switchTest5(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "    case 0:\n"
+               "    break;\n"
+               "    case 1:\n"
+               "    {\n"
+               "    foo();\n"
+               "    break;\n"
+               "    }\n"
+               "    case 2:\n"
+               "    {\n"
+               "    }\n"
+               "    break;\n"
+               "    default:\n"
+               "    break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("void switchTest6(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "    case 0:\n"
+               "    {\n"
+               "    foo(x);\n"
+               "    }\n"
+               "    break;\n"
+               "    default:\n"
+               "    {\n"
+               "    foo(1);\n"
+               "    }\n"
+               "    break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
 
   verifyFormat("enum X\n"
                "  {\n"
@@ -13945,6 +14027,19 @@ TEST_F(FormatTest, ParsesConfiguration) {
               std::vector<std::string>{"TESTSUITE"});
   CHECK_PARSE("NamespaceMacros: [TESTSUITE, SUITE]", NamespaceMacros,
               std::vector<std::string>({"TESTSUITE", "SUITE"}));
+
+  Style.WhitespaceSensitiveMacros.clear();
+  CHECK_PARSE("WhitespaceSensitiveMacros: [STRINGIZE]",
+              WhitespaceSensitiveMacros, std::vector<std::string>{"STRINGIZE"});
+  CHECK_PARSE("WhitespaceSensitiveMacros: [STRINGIZE, ASSERT]",
+              WhitespaceSensitiveMacros,
+              std::vector<std::string>({"STRINGIZE", "ASSERT"}));
+  Style.WhitespaceSensitiveMacros.clear();
+  CHECK_PARSE("WhitespaceSensitiveMacros: ['STRINGIZE']",
+              WhitespaceSensitiveMacros, std::vector<std::string>{"STRINGIZE"});
+  CHECK_PARSE("WhitespaceSensitiveMacros: ['STRINGIZE', 'ASSERT']",
+              WhitespaceSensitiveMacros,
+              std::vector<std::string>({"STRINGIZE", "ASSERT"}));
 
   Style.IncludeStyle.IncludeCategories.clear();
   std::vector<tooling::IncludeStyle::IncludeCategory> ExpectedCategories = {
@@ -16453,6 +16548,36 @@ TEST_F(FormatTest, OperatorPassedAsAFunctionPtr) {
   verifyFormat("foo(-42, operator--);", Style);
   verifyFormat("foo(-42, operator, );", Style);
   verifyFormat("foo(operator, , -42);", Style);
+}
+
+TEST_F(FormatTest, WhitespaceSensitiveMacros) {
+  FormatStyle Style = getLLVMStyle();
+  Style.WhitespaceSensitiveMacros.push_back("FOO");
+
+  // Don't use the helpers here, since 'mess up' will change the whitespace
+  // and these are all whitespace sensitive by definition
+  EXPECT_EQ("FOO(String-ized&Messy+But(: :Still)=Intentional);",
+            format("FOO(String-ized&Messy+But(: :Still)=Intentional);", Style));
+  EXPECT_EQ(
+      "FOO(String-ized&Messy+But\\(: :Still)=Intentional);",
+      format("FOO(String-ized&Messy+But\\(: :Still)=Intentional);", Style));
+  EXPECT_EQ("FOO(String-ized&Messy+But,: :Still=Intentional);",
+            format("FOO(String-ized&Messy+But,: :Still=Intentional);", Style));
+  EXPECT_EQ("FOO(String-ized&Messy+But,: :\n"
+            "       Still=Intentional);",
+            format("FOO(String-ized&Messy+But,: :\n"
+                   "       Still=Intentional);",
+                   Style));
+  Style.AlignConsecutiveAssignments = true;
+  EXPECT_EQ("FOO(String-ized=&Messy+But,: :\n"
+            "       Still=Intentional);",
+            format("FOO(String-ized=&Messy+But,: :\n"
+                   "       Still=Intentional);",
+                   Style));
+
+  Style.ColumnLimit = 21;
+  EXPECT_EQ("FOO(String-ized&Messy+But: :Still=Intentional);",
+            format("FOO(String-ized&Messy+But: :Still=Intentional);", Style));
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {

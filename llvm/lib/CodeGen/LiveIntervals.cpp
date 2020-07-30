@@ -1011,6 +1011,20 @@ public:
           }
         }
         updateRange(LI, Reg, LaneBitmask::getNone());
+        // If main range has a hole and we are moving a subrange use across
+        // the hole updateRange() cannot properly handle it since it only
+        // gets the LiveRange and not the whole LiveInterval. As a result
+        // we may end up with a main range not covering all subranges.
+        // This is extremely rare case, so let's check and reconstruct the
+        // main range.
+        for (LiveInterval::SubRange &S : LI.subranges()) {
+          if (LI.covers(S))
+            continue;
+          LI.clear();
+          LIS.constructMainRangeFromSubranges(LI);
+          break;
+        }
+
         continue;
       }
 

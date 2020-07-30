@@ -599,6 +599,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
     IO.mapOptional("UseCRLF", Style.UseCRLF);
     IO.mapOptional("UseTab", Style.UseTab);
+    IO.mapOptional("WhitespaceSensitiveMacros",
+                   Style.WhitespaceSensitiveMacros);
   }
 };
 
@@ -933,6 +935,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SortUsingDeclarations = true;
   LLVMStyle.StatementMacros.push_back("Q_UNUSED");
   LLVMStyle.StatementMacros.push_back("QT_REQUIRE_VERSION");
+  LLVMStyle.WhitespaceSensitiveMacros.push_back("STRINGIZE");
+  LLVMStyle.WhitespaceSensitiveMacros.push_back("PP_STRINGIZE");
+  LLVMStyle.WhitespaceSensitiveMacros.push_back("BOOST_PP_STRINGIZE");
 
   // Defaults that differ when not C++.
   if (Language == FormatStyle::LK_TableGen) {

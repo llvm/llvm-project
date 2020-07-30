@@ -11,15 +11,7 @@ define i16 @f1() {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_BODY:%.*]], label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[PHI_I0:%.*]] = phi i16 [ 1, [[ENTRY:%.*]] ], [ undef, [[FOR_COND]] ]
-; CHECK-NEXT:    [[PHI_I1:%.*]] = phi i16 [ 1, [[ENTRY]] ], [ undef, [[FOR_COND]] ]
-; CHECK-NEXT:    [[PHI_I2:%.*]] = phi i16 [ 1, [[ENTRY]] ], [ undef, [[FOR_COND]] ]
-; CHECK-NEXT:    [[PHI_I3:%.*]] = phi i16 [ 1, [[ENTRY]] ], [ undef, [[FOR_COND]] ]
-; CHECK-NEXT:    [[PHI_UPTO0:%.*]] = insertelement <4 x i16> undef, i16 [[PHI_I0]], i32 0
-; CHECK-NEXT:    [[PHI_UPTO1:%.*]] = insertelement <4 x i16> [[PHI_UPTO0]], i16 [[PHI_I1]], i32 1
-; CHECK-NEXT:    [[PHI_UPTO2:%.*]] = insertelement <4 x i16> [[PHI_UPTO1]], i16 [[PHI_I2]], i32 2
-; CHECK-NEXT:    [[PHI:%.*]] = insertelement <4 x i16> [[PHI_UPTO2]], i16 [[PHI_I3]], i32 3
-; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x i16> [[PHI]], i32 0
+; CHECK-NEXT:    [[EXTRACT:%.*]] = phi i16 [ 1, [[ENTRY:%.*]] ], [ undef, [[FOR_COND]] ]
 ; CHECK-NEXT:    ret i16 [[EXTRACT]]
 ;
 entry:

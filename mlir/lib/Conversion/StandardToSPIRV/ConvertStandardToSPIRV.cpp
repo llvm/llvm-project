@@ -518,7 +518,7 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
     return failure();
 
   // std.constant should only have vector or tenor types.
-  assert(srcType.isa<VectorType>() || srcType.isa<RankedTensorType>());
+  assert((srcType.isa<VectorType, RankedTensorType>()));
 
   auto dstType = typeConverter.convertType(srcType);
   if (!dstType)
@@ -536,7 +536,7 @@ LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
                                           srcType.getElementType());
       dstElementsAttr = dstElementsAttr.reshape(dstAttrType);
     } else {
-      // TODO(antiagainst): add support for large vectors.
+      // TODO: add support for large vectors.
       return failure();
     }
   }

@@ -457,3 +457,26 @@ contains
     integer :: i, j
   end
 end
+
+module m20
+  interface operator(.not.)
+    real function f(x)
+      character(*),intent(in) :: x
+    end function
+  end interface
+  interface operator(+)
+    procedure f
+  end interface
+end module
+
+subroutine s1()
+  use m20
+  interface operator(.not.)
+    !ERROR: Procedure 'f' is already specified in generic 'operator(.not.)'
+    procedure f
+  end interface
+  interface operator(+)
+    !ERROR: Procedure 'f' is already specified in generic 'operator(+)'
+    procedure f
+  end interface
+end subroutine s1

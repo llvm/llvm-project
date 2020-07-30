@@ -198,7 +198,7 @@ class LoopVectorizationLegality {
 public:
   LoopVectorizationLegality(
       Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
-      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, AliasAnalysis *AA,
+      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, AAResults *AA,
       Function *F, std::function<const LoopAccessInfo &(Loop &)> *GetLAA,
       LoopInfo *LI, OptimizationRemarkEmitter *ORE,
       LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,

@@ -1,10 +1,10 @@
 ; Note that this needs new pass manager for now. Passing `-sample-profile-top-down-load` to legacy pass manager is a no-op.
 
 ; Test we aren't doing specialization for inlining with default source order
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -S | FileCheck -check-prefix=DEFAULT %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-top-down-load=false -S | FileCheck -check-prefix=DEFAULT %s
 
 ; Test we specialize based on call path with context-sensitive profile while inlining with '-sample-profile-top-down-load'
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-merge-inlinee -sample-profile-top-down-load -S | FileCheck -check-prefix=TOPDOWN  %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-topdown.prof -sample-profile-merge-inlinee -sample-profile-top-down-load=true -S | FileCheck -check-prefix=TOPDOWN  %s
 
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1

@@ -125,7 +125,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:6:23> col:23 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |-OMPTeamsDistributeSimdDirective {{.*}} <line:5:1, col:34>
 // CHECK-NEXT: |       |   | `-CapturedStmt {{.*}} <line:6:3, line:7:5>
@@ -308,9 +308,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:13:23> col:23 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:14:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |-OMPTeamsDistributeSimdDirective {{.*}} <line:12:1, col:34>
 // CHECK-NEXT: |       |   | `-CapturedStmt {{.*}} <line:13:3, line:15:7>
@@ -527,9 +527,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:21:23> col:23 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:22:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |-OMPTeamsDistributeSimdDirective {{.*}} <line:20:1, col:46>
 // CHECK-NEXT: |       |   | |-OMPCollapseClause {{.*}} <col:35, col:45>
@@ -768,9 +768,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:29:23> col:23 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:30:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |-OMPTeamsDistributeSimdDirective {{.*}} <line:28:1, col:46>
 // CHECK-NEXT: |       |   | |-OMPCollapseClause {{.*}} <col:35, col:45>
@@ -1061,11 +1061,11 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT:         | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT:         | | |-FieldDecl {{.*}} <line:37:23> col:23 implicit 'int'
-// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT:         | | |-FieldDecl {{.*}} <line:38:25> col:25 implicit 'int'
-// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT:         | | `-FieldDecl {{.*}} <line:39:27> col:27 implicit 'int'
-// CHECK-NEXT:         | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 9
+// CHECK-NEXT:         | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
 // CHECK-NEXT:         | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:         |   |-OMPTeamsDistributeSimdDirective {{.*}} <line:36:1, col:46>
 // CHECK-NEXT:         |   | |-OMPCollapseClause {{.*}} <col:35, col:45>

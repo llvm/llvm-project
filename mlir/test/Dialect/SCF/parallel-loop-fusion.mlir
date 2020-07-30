@@ -10,7 +10,7 @@ func @fuse_empty_loops() {
   scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     scf.yield
   }
-  "xla_lhlo.terminator"() : () -> ()
+  return
 }
 // CHECK-LABEL: func @fuse_empty_loops
 // CHECK:        [[C2:%.*]] = constant 2 : index
@@ -140,7 +140,7 @@ func @do_not_fuse_nested_ploop1() {
   scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     scf.yield
   }
-  "xla_lhlo.terminator"() : () -> ()
+  return
 }
 // CHECK-LABEL: func @do_not_fuse_nested_ploop1
 // CHECK:        scf.parallel
@@ -162,7 +162,7 @@ func @do_not_fuse_nested_ploop2() {
     }
     scf.yield
   }
-  "xla_lhlo.terminator"() : () -> ()
+  return
 }
 // CHECK-LABEL: func @do_not_fuse_nested_ploop2
 // CHECK:        scf.parallel
@@ -181,7 +181,7 @@ func @do_not_fuse_loops_unmatching_num_loops() {
   scf.parallel (%i) = (%c0) to (%c2) step (%c1) {
     scf.yield
   }
-  "xla_lhlo.terminator"() : () -> ()
+  return
 }
 // CHECK-LABEL: func @do_not_fuse_loops_unmatching_num_loops
 // CHECK:        scf.parallel
@@ -200,7 +200,7 @@ func @do_not_fuse_loops_with_side_effecting_ops_in_between() {
   scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     scf.yield
   }
-  "xla_lhlo.terminator"() : () -> ()
+  return
 }
 // CHECK-LABEL: func @do_not_fuse_loops_with_side_effecting_ops_in_between
 // CHECK:        scf.parallel
@@ -219,7 +219,7 @@ func @do_not_fuse_loops_unmatching_iteration_space() {
   scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
     scf.yield
   }
-  "xla_lhlo.terminator"() : () -> ()
+  return
 }
 // CHECK-LABEL: func @do_not_fuse_loops_unmatching_iteration_space
 // CHECK:        scf.parallel
@@ -302,7 +302,7 @@ func @do_not_fuse_loops_with_memref_defined_in_loop_bodies() {
     %A_elem = load %A[%i, %j] : memref<?x?xf32, offset: ?, strides:[?, ?]>
     scf.yield
   }
-  "xla_lhlo.terminator"() : () -> ()
+  return
 }
 // CHECK-LABEL: func @do_not_fuse_loops_with_memref_defined_in_loop_bodies
 // CHECK:        scf.parallel

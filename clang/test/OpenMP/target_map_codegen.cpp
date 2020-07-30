@@ -39,7 +39,7 @@ public:
 };
 double B::VAR = 1.0;
 
-// CK1-LABEL: @.__omp_offloading_{{.*}}implicit_maps_integer{{.*}}_l68.region_id = weak constant i8 0
+// CK1-LABEL: @.__omp_offloading_{{.*}}implicit_maps_integer{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK1-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
@@ -98,12 +98,12 @@ void implicit_maps_integer (int a){
 // SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 #ifdef CK2
 
-// CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_reference{{.*}}_l128.region_id = weak constant i8 0
+// CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_reference{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK2: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
 // CK2: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
-// CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_reference{{.*}}_l147.region_id = weak constant i8 0
+// CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_reference{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK2: [[SIZES2:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
 // Map types: OMP_MAP_IS_PTR | OMP_MAP_IMPLICIT = 544
 // CK2: [[TYPES2:@.+]] = {{.+}}constant [1 x i64] [i64 544]
@@ -188,7 +188,7 @@ void implicit_maps_reference (int a, int *b){
 // SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
 #ifdef CK3
 
-// CK3-LABEL: @.__omp_offloading_{{.*}}implicit_maps_parameter{{.*}}_l214.region_id = weak constant i8 0
+// CK3-LABEL: @.__omp_offloading_{{.*}}implicit_maps_parameter{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK3-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
@@ -242,7 +242,7 @@ void implicit_maps_parameter (int a){
 // SIMD-ONLY3-NOT: {{__kmpc|__tgt}}
 #ifdef CK4
 
-// CK4-LABEL: @.__omp_offloading_{{.*}}implicit_maps_nested_integer{{.*}}_l276.region_id = weak constant i8 0
+// CK4-LABEL: @.__omp_offloading_{{.*}}implicit_maps_nested_integer{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK4-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
@@ -308,7 +308,7 @@ void implicit_maps_nested_integer (int a){
 // SIMD-ONLY4-NOT: {{__kmpc|__tgt}}
 #ifdef CK5
 
-// CK5-LABEL: @.__omp_offloading_{{.*}}implicit_maps_nested_integer_and_enum{{.*}}_l340.region_id = weak constant i8 0
+// CK5-LABEL: @.__omp_offloading_{{.*}}implicit_maps_nested_integer_and_enum{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK5-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
@@ -353,12 +353,12 @@ void implicit_maps_nested_integer_and_enum (int a){
 
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -DCK6 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK6 --check-prefix CK6-64
-// RUN: %clang_cc1 -DCK6 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6 --check-prefix CK6-64
-// RUN: %clang_cc1 -DCK6 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6 --check-prefix CK6-32
-// RUN: %clang_cc1 -DCK6 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6 --check-prefix CK6-32
+// RUN: %clang_cc1 -DCK6 -verify -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK6 --check-prefix CK6-64
+// RUN: %clang_cc1 -DCK6 -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6 --check-prefix CK6-64
+// RUN: %clang_cc1 -DCK6 -verify -fopenmp -fopenmp-version=45 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6 --check-prefix CK6-32
+// RUN: %clang_cc1 -DCK6 -fopenmp -fopenmp-version=45 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK6 --check-prefix CK6-32
 
 // RUN: %clang_cc1 -DCK6 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY5 %s
 // RUN: %clang_cc1 -DCK6 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
@@ -368,7 +368,7 @@ void implicit_maps_nested_integer_and_enum (int a){
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY5 %s
 // SIMD-ONLY5-NOT: {{__kmpc|__tgt}}
 #ifdef CK6
-// CK6-LABEL: @.__omp_offloading_{{.*}}implicit_maps_host_global{{.*}}_l397.region_id = weak constant i8 0
+// CK6-LABEL: @.__omp_offloading_{{.*}}implicit_maps_host_global{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK6-DAG: [[GBL:@Gi]] = global i32 0
 // CK6-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
@@ -428,7 +428,7 @@ void implicit_maps_host_global (int a){
 // For a 32-bit targets, the value doesn't fit the size of the pointer,
 // therefore it is passed by reference with a map 'to' specification.
 
-// CK7-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double{{.*}}_l464.region_id = weak constant i8 0
+// CK7-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK7-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
@@ -497,7 +497,7 @@ void implicit_maps_double (int a){
 // SIMD-ONLY7-NOT: {{__kmpc|__tgt}}
 #ifdef CK8
 
-// CK8-LABEL: @.__omp_offloading_{{.*}}implicit_maps_float{{.*}}_l524.region_id = weak constant i8 0
+// CK8-LABEL: @.__omp_offloading_{{.*}}implicit_maps_float{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK8-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
@@ -551,7 +551,7 @@ void implicit_maps_float (int a){
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK9
 
-// CK9-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l575.region_id = weak constant i8 0
+// CK9-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK9-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // Map types: OMP_MAP_TO + OMP_MAP_FROM + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
@@ -602,7 +602,7 @@ void implicit_maps_array (int a){
 // SIMD-ONLY9-NOT: {{__kmpc|__tgt}}
 #ifdef CK10
 
-// CK10-LABEL: @.__omp_offloading_{{.*}}implicit_maps_pointer{{.*}}_l626.region_id = weak constant i8 0
+// CK10-LABEL: @.__omp_offloading_{{.*}}implicit_maps_pointer{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK10-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
@@ -638,12 +638,12 @@ void implicit_maps_pointer (){
 
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -DCK11 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK11
-// RUN: %clang_cc1 -DCK11 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
-// RUN: %clang_cc1 -DCK11 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
-// RUN: %clang_cc1 -DCK11 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
+// RUN: %clang_cc1 -DCK11 -verify -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK11
+// RUN: %clang_cc1 -DCK11 -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
+// RUN: %clang_cc1 -DCK11 -verify -fopenmp -fopenmp-version=45 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
+// RUN: %clang_cc1 -DCK11 -fopenmp -fopenmp-version=45 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK11
 
 // RUN: %clang_cc1 -DCK11 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // RUN: %clang_cc1 -DCK11 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
@@ -654,7 +654,7 @@ void implicit_maps_pointer (){
 // SIMD-ONLY10-NOT: {{__kmpc|__tgt}}
 #ifdef CK11
 
-// CK11-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l678.region_id = weak constant i8 0
+// CK11-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK11-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 {{8|4}}]
 // Map types: OMP_MAP_TO  | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
@@ -707,7 +707,7 @@ void implicit_maps_double_complex (int a, int *b){
 // For a 32-bit targets, the value doesn't fit the size of the pointer,
 // therefore it is passed by reference with a map 'to' specification.
 
-// CK12-LABEL: @.__omp_offloading_{{.*}}implicit_maps_float_complex{{.*}}_l743.region_id = weak constant i8 0
+// CK12-LABEL: @.__omp_offloading_{{.*}}implicit_maps_float_complex{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK12-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
 // Map types: OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
@@ -775,7 +775,7 @@ void implicit_maps_float_complex (int a){
 // SIMD-ONLY12-NOT: {{__kmpc|__tgt}}
 #ifdef CK13
 
-// CK13-LABEL: @.__omp_offloading_{{.*}}implicit_maps_variable_length_array{{.*}}_l825.region_id = weak constant i8 0
+// CK13-LABEL: @.__omp_offloading_{{.*}}implicit_maps_variable_length_array{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // We don't have a constant map size for VLAs.
 // Map types:
@@ -859,7 +859,7 @@ void implicit_maps_variable_length_array (int a){
 
 // CK14-DAG: [[ST:%.+]] = type { i32, double }
 
-// CK14-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l877.region_id = weak constant i8 0
+// CK14-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 
 // Map types:
@@ -1207,7 +1207,7 @@ void implicit_maps_templated_function (int a){
 #ifdef CK17
 
 // CK17-DAG: [[ST:%.+]] = type { i32, double }
-// CK17-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l1236.region_id = weak constant i8 0
+// CK17-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK17-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
 // Map types: OMP_MAP_TO + OMP_MAP_FROM + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
 // CK17-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 547]
@@ -1323,173 +1323,173 @@ void implicit_maps_template_type_capture (int a){
 // SIMD-ONLY18-NOT: {{__kmpc|__tgt}}
 #ifdef CK19
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1514.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK19: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1535.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE00n:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK19: [[MTYPE00n:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1557.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE01:@.+]] = private {{.*}}constant [1 x i64] [i64 400]
 // CK19: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1576.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE02:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
 // CK19: [[MTYPE02:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1595.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE03:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
 // CK19: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1614.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE04:@.+]] = private {{.*}}constant [1 x i64] [i64 400]
 // CK19: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1633.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE05:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK19: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1656.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE06:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1679.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE07:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1698.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE08:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK19: [[MTYPE08:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1719.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
 // CK19: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1740.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE10:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
 // CK19: [[MTYPE10:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1761.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE11:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
 // CK19: [[MTYPE11:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1782.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE12:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK19: [[MTYPE12:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1807.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE13:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1832.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE14:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1853.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE15:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK19: [[MTYPE15:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1887.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE16:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 33]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1913.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE17:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 240]
 // CK19: [[MTYPE17:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 34]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1939.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE18:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 240]
 // CK19: [[MTYPE18:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1971.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE19:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 32]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1997.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE20:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 4]
 // CK19: [[MTYPE20:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 33]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2029.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE21:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2055.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE22:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 4]
 // CK19: [[MTYPE22:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2074.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE23:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK19: [[MTYPE23:@.+]] = private {{.*}}constant [1 x i64] [i64 39]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2096.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE24:@.+]] = private {{.*}}constant [1 x i64] [i64 480]
 // CK19: [[MTYPE24:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2117.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE25:@.+]] = private {{.*}}constant [1 x i64] [i64 16]
 // CK19: [[MTYPE25:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2138.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE26:@.+]] = private {{.*}}constant [1 x i64] [i64 24]
 // CK19: [[MTYPE26:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2159.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE27:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK19: [[MTYPE27:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2204.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE28:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 16]
 // CK19: [[MTYPE28:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2249.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE29:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 4]
 // CK19: [[MTYPE29:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2305.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE30:@.+]] = private {{.*}}constant [4 x i64] [i64 800, i64 800, i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2349.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE31:@.+]] = private {{.*}}constant [4 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 {{8|4}}, i64 40]
 // CK19: [[MTYPE31:@.+]] = private {{.*}}constant [4 x i64] [i64 800, i64 800, i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2372.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE32:@.+]] = private {{.*}}constant [1 x i64] [i64 13728]
 // CK19: [[MTYPE32:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2391.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE33:@.+]] = private {{.*}}constant [1 x i64] [i64 13728]
 // CK19: [[MTYPE33:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2410.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE34:@.+]] = private {{.*}}constant [1 x i64] [i64 13728]
 // CK19: [[MTYPE34:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2435.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE35:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2456.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE36:@.+]] = private {{.*}}constant [1 x i64] [i64 208]
 // CK19: [[MTYPE36:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2496.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE37:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2538.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE38:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2580.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE39:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2622.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE40:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2657.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE41:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 208]
 // CK19: [[MTYPE41:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2702.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE42:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 104]
 // CK19: [[MTYPE42:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2727.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[MTYPE43:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
-// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2746.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE44:@.+]] = private {{.*}}constant [1 x i64] [i64 320]
 // CK19: [[MTYPE44:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
 
@@ -2814,19 +2814,19 @@ void explicit_maps_single (int ii){
 // SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
 #ifdef CK20
 
-// CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l2856.region_id = weak constant i8 0
+// CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK20: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK20: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
-// CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l2877.region_id = weak constant i8 0
+// CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK20: [[SIZE01:@.+]] = private {{.*}}constant [1 x i64] [i64 20]
 // CK20: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
-// CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l2895.region_id = weak constant i8 0
+// CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK20: [[SIZE02:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
 // CK20: [[MTYPE02:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
 
-// CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l2916.region_id = weak constant i8 0
+// CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK20: [[SIZE03:@.+]] = private {{.*}}constant [1 x i64] [i64 12]
 // CK20: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
 
@@ -5299,11 +5299,11 @@ void map_with_deep_copy() {
 // SIMD-ONLY18-NOT: {{__kmpc|__tgt}}
 #ifdef CK31
 
-// CK31-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l5329.region_id = weak constant i8 0
+// CK31-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK31: [[SIZE00:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
 // CK31: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 1059]
 
-// CK31-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l5348.region_id = weak constant i8 0
+// CK31-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK31: [[SIZE01:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
 // CK31: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 1063]
 

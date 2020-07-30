@@ -17,7 +17,7 @@ define i32 @cmps() {
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %a10 = fcmp olt <8 x half> undef, undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a11 = fcmp oge <4 x float> undef, undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a12 = fcmp oge <2 x double> undef, undef
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; CHECK-SIZE-LABEL: 'cmps'
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a0 = icmp slt i8 undef, undef

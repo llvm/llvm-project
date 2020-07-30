@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt -basicaa -newgvn -S %s | FileCheck %s
+; RUN: opt -basic-aa -newgvn -S %s | FileCheck %s
 
 %MyStruct = type { i32, i32 }
 define i8 @foo(i64 %in, i8* %arr) {

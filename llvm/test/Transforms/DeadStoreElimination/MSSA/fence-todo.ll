@@ -1,6 +1,6 @@
 ; XFAIL: *
 
-; RUN: opt -S -basicaa -dse -enable-dse-memoryssa < %s | FileCheck %s
+; RUN: opt -S -basic-aa -dse -enable-dse-memoryssa < %s | FileCheck %s
 
 ; We DSE stack alloc'ed and byval locations, in the presence of fences.
 ; Fence does not make an otherwise thread local store visible.

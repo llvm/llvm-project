@@ -43,6 +43,9 @@ add_clang_library(clangTidyModernizeModule
   clangTidy
   clangTidyReadabilityModule
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyModernizeModule

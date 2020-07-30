@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 -asm-verbose=0 -mattr=+use-experimental-zeroing-pseudos < %s | FileCheck %s
 
 ;
 ; SQSHLU

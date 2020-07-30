@@ -1,4 +1,7 @@
-; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 < %s 2>%t | FileCheck %s
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ;
 ; svint8x2_t

@@ -5,9 +5,8 @@
 
 using namespace Fortran::runtime::io;
 
-int main(int argc, const char *argv[], const char *envp[]) {
-  RTNAME(ProgramStart)(argc, argv, envp);
-  auto *io{IONAME(BeginExternalListOutput)()};
+void output1() {
+  auto io{IONAME(BeginExternalListOutput)()};
   const char str[]{"Hello, world!"};
   IONAME(OutputAscii)(io, str, std::strlen(str));
   IONAME(OutputInteger64)(io, 678);
@@ -21,6 +20,31 @@ int main(int argc, const char *argv[], const char *envp[]) {
   IONAME(OutputLogical)(io, false);
   IONAME(OutputLogical)(io, true);
   IONAME(EndIoStatement)(io);
+}
+
+void input1() {
+  auto io{IONAME(BeginExternalListOutput)()};
+  const char prompt[]{"Enter an integer value:"};
+  IONAME(OutputAscii)(io, prompt, std::strlen(prompt));
+  IONAME(EndIoStatement)(io);
+
+  io = IONAME(BeginExternalListInput)();
+  std::int64_t n{-666};
+  IONAME(InputInteger)(io, n);
+  IONAME(EndIoStatement)(io);
+
+  io = IONAME(BeginExternalListOutput)();
+  const char str[]{"Result:"};
+  IONAME(OutputAscii)(io, str, std::strlen(str));
+  IONAME(OutputInteger64)(io, n);
+  IONAME(EndIoStatement)(io);
+}
+
+int main(int argc, const char *argv[], const char *envp[]) {
+  RTNAME(ProgramStart)(argc, argv, envp);
+  output1();
+  input1();
+  RTNAME(PauseStatement)();
   RTNAME(ProgramEndStatement)();
   return 0;
 }

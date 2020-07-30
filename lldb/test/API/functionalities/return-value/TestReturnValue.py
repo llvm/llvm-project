@@ -165,7 +165,7 @@ class ReturnValueTestCase(TestBase):
         archs=["i386"])
     @expectedFailureAll(compiler=["gcc"], archs=["x86_64", "i386"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    @skipIfDarwinEmbedded # <rdar://problem/33976032> ABIMacOSX_arm64 doesn't get structs this big correctly
+    @expectedFailureDarwin(archs=["arm64"]) # <rdar://problem/33976032> ABIMacOSX_arm64 doesn't get structs this big correctly
     def test_vector_values(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

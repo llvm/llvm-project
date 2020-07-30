@@ -1,5 +1,5 @@
 ; RUN: opt < %s -S -early-cse | FileCheck %s
-; RUN: opt < %s -S -basicaa -early-cse-memssa | FileCheck %s
+; RUN: opt < %s -S -basic-aa -early-cse-memssa | FileCheck %s
 
 ; CHECK-LABEL: @test12(
 define i32 @test12(i1 %B, i32* %P1, i32* %P2) {

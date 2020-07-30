@@ -25,6 +25,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
     Interface to infer the return types for an operation that could be used
     during op construction, verification or type inference.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     StaticInterfaceMethod<
@@ -73,6 +74,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
 
     The components consists of element type, shape and raw attribute.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     StaticInterfaceMethod<

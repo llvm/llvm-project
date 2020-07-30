@@ -33,7 +33,7 @@ public:
 
   const RegisterInfoInterface &GetRegisterInfoInterface() const;
 
-private:
+protected:
   std::unique_ptr<RegisterInfoInterface> m_register_info_interface_up;
 };
 }

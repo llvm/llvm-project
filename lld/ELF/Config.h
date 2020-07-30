@@ -145,6 +145,7 @@ struct Configuration {
   bool checkSections;
   bool compressDebugSections;
   bool cref;
+  std::vector<std::pair<llvm::GlobPattern, uint64_t>> deadRelocInNonAlloc;
   bool defineCommon;
   bool demangle = true;
   bool dependentLibraries;
@@ -230,6 +231,7 @@ struct Configuration {
   bool zRelro;
   bool zRodynamic;
   bool zShstk;
+  uint8_t zStartStopVisibility;
   bool zText;
   bool zRetpolineplt;
   bool zWxneeded;

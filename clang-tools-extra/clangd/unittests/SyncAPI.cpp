@@ -105,23 +105,16 @@ llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
   return std::move(*Result);
 }
 
+llvm::Expected<tooling::Replacements>
+runFormatFile(ClangdServer &Server, PathRef File, StringRef Code) {
+  llvm::Optional<llvm::Expected<tooling::Replacements>> Result;
+  Server.formatFile(File, Code, capture(Result));
+  return std::move(*Result);
+}
+
 std::string runDumpAST(ClangdServer &Server, PathRef File) {
   llvm::Optional<std::string> Result;
   Server.dumpAST(File, capture(Result));
-  return std::move(*Result);
-}
-
-llvm::Expected<std::vector<SymbolInformation>>
-runWorkspaceSymbols(ClangdServer &Server, llvm::StringRef Query, int Limit) {
-  llvm::Optional<llvm::Expected<std::vector<SymbolInformation>>> Result;
-  Server.workspaceSymbols(Query, Limit, capture(Result));
-  return std::move(*Result);
-}
-
-llvm::Expected<std::vector<DocumentSymbol>>
-runDocumentSymbols(ClangdServer &Server, PathRef File) {
-  llvm::Optional<llvm::Expected<std::vector<DocumentSymbol>>> Result;
-  Server.documentSymbols(File, capture(Result));
   return std::move(*Result);
 }
 

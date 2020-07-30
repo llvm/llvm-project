@@ -518,7 +518,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     switch (OutMI.getOpcode()) {
     default: llvm_unreachable("Invalid opcode");
     case X86::MULX32Hrr: NewOpc = X86::MULX32rr; break;
-    case X86::MULX32Hrm: NewOpc = X86::MULX32rr; break;
+    case X86::MULX32Hrm: NewOpc = X86::MULX32rm; break;
     case X86::MULX64Hrr: NewOpc = X86::MULX64rr; break;
     case X86::MULX64Hrm: NewOpc = X86::MULX64rm; break;
     }

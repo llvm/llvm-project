@@ -13,10 +13,5 @@ int main() {
   int $R0 = 13;
   int $0 = 14;
 
-  //%self.expect("expr $__lldb_expr_result", substrs=['(int) $0 = 11'])
-  //%self.expect("expr $foo", substrs=['(int)', ' = 12'])
-  //%self.expect("expr $R0", substrs=['(int)', ' = 13'])
-  //%self.expect("expr int $foo = 123", error=True, substrs=["declaration conflicts"])
-  //%self.expect("expr $0", substrs=['(int)', ' = 11'])
-  return 0;
+  return 0; // break here
 }

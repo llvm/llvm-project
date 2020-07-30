@@ -8,6 +8,11 @@ add_library(RuntimeTesting
 )
 llvm_update_compile_flags(RuntimeTesting)
 
+target_link_libraries(RuntimeTesting
+  FortranRuntime
+  LLVMSupport
+)
+
 add_executable(format-test
   format.cpp
 )
@@ -40,6 +45,18 @@ target_link_libraries(external-hello-world
   FortranRuntime
   LLVMSupport
 )
+
+add_executable(external-io
+  external-io.cpp
+)
+
+target_link_libraries(external-io
+  RuntimeTesting
+  FortranRuntime
+  LLVMSupport
+)
+
+add_test(NAME ExternalIO COMMAND external-io)
 
 add_executable(list-input-test
   list-input.cpp

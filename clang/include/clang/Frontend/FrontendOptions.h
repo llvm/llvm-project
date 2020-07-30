@@ -285,6 +285,9 @@ public:
   /// Whether we include lookup table dumps in AST dumps.
   unsigned ASTDumpLookups : 1;
 
+  /// Whether we include declaration type dumps in AST dumps.
+  unsigned ASTDumpDeclTypes : 1;
+
   /// Whether we are performing an implicit module build.
   unsigned BuildingImplicitModule : 1;
 

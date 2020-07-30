@@ -378,96 +378,12 @@ void APValue::swap(APValue &RHS) {
   memcpy(RHS.Data.buffer, TmpData, DataSize);
 }
 
-LLVM_DUMP_METHOD void APValue::dump() const {
-  dump(llvm::errs());
-  llvm::errs() << '\n';
-}
-
 static double GetApproxValue(const llvm::APFloat &F) {
   llvm::APFloat V = F;
   bool ignored;
   V.convert(llvm::APFloat::IEEEdouble(), llvm::APFloat::rmNearestTiesToEven,
             &ignored);
   return V.convertToDouble();
-}
-
-void APValue::dump(raw_ostream &OS) const {
-  switch (getKind()) {
-  case None:
-    OS << "None";
-    return;
-  case Indeterminate:
-    OS << "Indeterminate";
-    return;
-  case Int:
-    OS << "Int: " << getInt();
-    return;
-  case Float:
-    OS << "Float: " << GetApproxValue(getFloat());
-    return;
-  case FixedPoint:
-    OS << "FixedPoint : " << getFixedPoint();
-    return;
-  case Vector:
-    OS << "Vector: ";
-    getVectorElt(0).dump(OS);
-    for (unsigned i = 1; i != getVectorLength(); ++i) {
-      OS << ", ";
-      getVectorElt(i).dump(OS);
-    }
-    return;
-  case ComplexInt:
-    OS << "ComplexInt: " << getComplexIntReal() << ", " << getComplexIntImag();
-    return;
-  case ComplexFloat:
-    OS << "ComplexFloat: " << GetApproxValue(getComplexFloatReal())
-       << ", " << GetApproxValue(getComplexFloatImag());
-    return;
-  case LValue:
-    OS << "LValue: <todo>";
-    return;
-  case Array:
-    OS << "Array: ";
-    for (unsigned I = 0, N = getArrayInitializedElts(); I != N; ++I) {
-      getArrayInitializedElt(I).dump(OS);
-      if (I != getArraySize() - 1) OS << ", ";
-    }
-    if (hasArrayFiller()) {
-      OS << getArraySize() - getArrayInitializedElts() << " x ";
-      getArrayFiller().dump(OS);
-    }
-    return;
-  case Struct:
-    OS << "Struct ";
-    if (unsigned N = getStructNumBases()) {
-      OS << " bases: ";
-      getStructBase(0).dump(OS);
-      for (unsigned I = 1; I != N; ++I) {
-        OS << ", ";
-        getStructBase(I).dump(OS);
-      }
-    }
-    if (unsigned N = getStructNumFields()) {
-      OS << " fields: ";
-      getStructField(0).dump(OS);
-      for (unsigned I = 1; I != N; ++I) {
-        OS << ", ";
-        getStructField(I).dump(OS);
-      }
-    }
-    return;
-  case Union:
-    OS << "Union: ";
-    getUnionValue().dump(OS);
-    return;
-  case MemberPointer:
-    OS << "MemberPointer: <todo>";
-    return;
-  case AddrLabelDiff:
-    OS << "AddrLabelDiff: <todo>";
-    return;
-  }
-  llvm_unreachable("Unknown APValue kind!");
 }
 
 void APValue::printPretty(raw_ostream &Out, const ASTContext &Ctx,

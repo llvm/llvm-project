@@ -75,6 +75,10 @@ public:
   /// attribute. These attributes represent arguments being passed by value.
   bool hasPassPointeeByValueAttr() const;
 
+  /// If this argument satisfies has hasPassPointeeByValueAttr, return the
+  /// in-memory ABI size copied to the stack for the call. Otherwise, return 0.
+  uint64_t getPassPointeeByValueCopySize(const DataLayout &DL) const;
+
   /// If this is a byval or inalloca argument, return its alignment.
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getParamAlign() instead.

@@ -1072,6 +1072,7 @@ public:
     Ptr->Index = Sections.size();
     return *Ptr;
   }
+  void addNewSymbolTable();
   Segment &addSegment(ArrayRef<uint8_t> Data) {
     Segments.emplace_back(std::make_unique<Segment>(Data));
     return *Segments.back();

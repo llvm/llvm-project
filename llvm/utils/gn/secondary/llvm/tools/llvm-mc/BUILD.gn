@@ -3,10 +3,7 @@ executable("llvm-mc") {
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",
-    "//llvm/lib/Target:AllTargetsAsmParsers",
-    "//llvm/lib/Target:AllTargetsDescs",
-    "//llvm/lib/Target:AllTargetsDisassemblers",
-    "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/Target:TargetsToBuild",
   ]
   sources = [
     "Disassembler.cpp",

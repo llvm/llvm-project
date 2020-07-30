@@ -1,7 +1,8 @@
-// RUN: %check_clang_tidy %s performance-faster-string-find %t -- \
+// RUN: %check_clang_tidy %s performance-faster-string-find %t
+// RUN: %check_clang_tidy -check-suffix=CUSTOM %s performance-faster-string-find %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             [{key: performance-faster-string-find.StringLikeClasses, \
-// RUN:               value: 'std::basic_string; ::llvm::StringRef;'}]}" --
+// RUN:               value: '::llvm::StringRef;'}]}"
 
 namespace std {
 template <typename Char>
@@ -17,6 +18,20 @@ struct basic_string {
 
 typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;
+
+template <typename Char>
+struct basic_string_view {
+  int find(const Char *, int = 0) const;
+  int find(const Char *, int, int) const;
+  int rfind(const Char *) const;
+  int find_first_of(const Char *) const;
+  int find_first_not_of(const Char *) const;
+  int find_last_of(const Char *) const;
+  int find_last_not_of(const Char *) const;
+};
+
+typedef basic_string_view<char> string_view;
+typedef basic_string_view<wchar_t> wstring_view;
 }  // namespace std
 
 namespace llvm {
@@ -75,11 +90,25 @@ void StringFind() {
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: 'find' called with a string literal
   // CHECK-FIXES: Str.find(L'\x3A9');
 
+  // std::string_view and std::wstring_view should work.
+  std::string_view StrView;
+  StrView.find("n");
+  // CHECK-MESSAGES: [[@LINE-1]]:16: warning: 'find' called with a string literal
+  // CHECK-FIXES: StrView.find('n');
+  std::wstring_view WStrView;
+
+  WStrView.find(L"n");
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'find' called with a string literal
+  // CHECK-FIXES: WStrView.find(L'n');
+  WStrView.find(L"\x3A9");
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'find' called with a string literal
+  // CHECK-FIXES: WStrView.find(L'\x3A9');
+
   // Also with other types, but only if it was specified in the options.
   llvm::StringRef sr;
   sr.find("x");
-  // CHECK-MESSAGES: [[@LINE-1]]:11: warning: 'find' called with a string literal
-  // CHECK-FIXES: sr.find('x');
+  // CHECK-MESSAGES-CUSTOM: [[@LINE-1]]:11: warning: 'find' called with a string literal
+  // CHECK-FIXES-CUSTOM: sr.find('x');
   NotStringRef nsr;
   nsr.find("x");
 }

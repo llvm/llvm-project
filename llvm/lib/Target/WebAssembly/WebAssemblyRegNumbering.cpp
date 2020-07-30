@@ -66,7 +66,7 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  MFI.initWARegs();
+  MFI.initWARegs(MRI);
 
   // WebAssembly argument registers are in the same index space as local
   // variables. Assign the numbers for them first.

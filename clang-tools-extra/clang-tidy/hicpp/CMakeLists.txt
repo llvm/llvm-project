@@ -20,6 +20,9 @@ add_clang_library(clangTidyHICPPModule
   clangTidyPerformanceModule
   clangTidyReadabilityModule
   clangTidyUtils
+
+  DEPENDS
+  omp_gen
   )
 
 clang_target_link_libraries(clangTidyHICPPModule

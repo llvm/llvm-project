@@ -91,8 +91,6 @@ static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
   // one.
   signed_width(Size + 1, Value, std::string("branch target"), Fixup, Ctx);
 
-  Value -= 2;
-
   // Rightshifts the value by one.
   AVR::fixups::adjustBranchTarget(Value);
 }
@@ -249,27 +247,6 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   uint64_t Size = AVRAsmBackend::getFixupKindInfo(Fixup.getKind()).TargetSize;
 
   unsigned Kind = Fixup.getKind();
-
-  // Parsed LLVM-generated temporary labels are already
-  // adjusted for instruction size, but normal labels aren't.
-  //
-  // To handle both cases, we simply un-adjust the temporary label
-  // case so it acts like all other labels.
-  if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    if (A->getSymbol().isTemporary()) {
-      switch (Kind) {
-      case FK_Data_1:
-      case FK_Data_2:
-      case FK_Data_4:
-      case FK_Data_8:
-        // Don't shift value for absolute addresses.
-        break;
-      default:
-        Value += 2;
-      }
-    }
-  }
-
   switch (Kind) {
   default:
     llvm_unreachable("unhandled fixup");

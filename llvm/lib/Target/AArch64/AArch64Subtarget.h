@@ -55,6 +55,9 @@ public:
     CortexA73,
     CortexA75,
     CortexA76,
+    CortexA77,
+    CortexA78,
+    CortexX1,
     ExynosM3,
     Falkor,
     Kryo,
@@ -104,6 +107,10 @@ protected:
   bool HasPAN_RWV = false;
   bool HasCCPP = false;
 
+  // SVE extensions
+  bool HasSVE = false;
+  bool UseExperimentalZeroingPseudos = false;
+
   // Armv8.2 Crypto extensions
   bool HasSM4 = false;
   bool HasSHA3 = false;
@@ -130,8 +137,6 @@ protected:
   bool HasRCPC_IMMO = false;
 
   bool HasLSLFast = false;
-  bool HasSVE = false;
-  bool HasSVE2 = false;
   bool HasRCPC = false;
   bool HasAggressiveFMA = false;
 
@@ -158,6 +163,7 @@ protected:
   bool HasEnhancedCounterVirtualization = false;
 
   // Arm SVE2 extensions
+  bool HasSVE2 = false;
   bool HasSVE2AES = false;
   bool HasSVE2SM4 = false;
   bool HasSVE2SHA3 = false;
@@ -397,6 +403,10 @@ public:
   unsigned getMaximumJumpTableSize() const { return MaxJumpTableSize; }
 
   unsigned getWideningBaseCost() const { return WideningBaseCost; }
+
+  bool useExperimentalZeroingPseudos() const {
+    return UseExperimentalZeroingPseudos;
+  }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.

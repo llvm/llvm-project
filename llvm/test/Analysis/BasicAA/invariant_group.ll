@@ -1,5 +1,5 @@
-; RUN: opt < %s -basicaa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
-; RUN: opt < %s -basicaa -gvn -S | FileCheck -check-prefix=CHECK-GVN %s
+; RUN: opt < %s -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -basic-aa -gvn -S | FileCheck -check-prefix=CHECK-GVN %s
 
 ; The input *.ll had been adapted from bug 37458:
 ;

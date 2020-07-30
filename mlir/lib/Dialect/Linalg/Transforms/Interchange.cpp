@@ -37,7 +37,7 @@ LogicalResult mlir::linalg::interchangeGenericLinalgOpPrecondition(
   if (interchangeVector.empty())
     return failure();
   // Transformation applies to generic ops only.
-  if (!isa<GenericOp>(op) && !isa<IndexedGenericOp>(op))
+  if (!isa<GenericOp, IndexedGenericOp>(op))
     return failure();
   LinalgOp linOp = cast<LinalgOp>(op);
   // Transformation applies to buffers only.

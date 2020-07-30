@@ -1,9 +1,9 @@
 //===- PPCInstrVSX.td - The PowerPC VSX Extension --*- tablegen -*-===//
-// 
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// 
+//
 //===----------------------------------------------------------------------===//
 //
 // This file describes the VSX extension to the PowerPC instruction set.
@@ -142,15 +142,15 @@ def PPCSToV : SDNode<"PPCISD::SCALAR_TO_VECTOR_PERMUTED",
                      SDTypeProfile<1, 1, []>, []>;
 
 //-------------------------- Predicate definitions ---------------------------//
-def HasVSX : Predicate<"PPCSubTarget->hasVSX()">;
-def IsLittleEndian : Predicate<"PPCSubTarget->isLittleEndian()">;
-def IsBigEndian : Predicate<"!PPCSubTarget->isLittleEndian()">;
-def HasOnlySwappingMemOps : Predicate<"!PPCSubTarget->hasP9Vector()">;
-def HasP8Vector : Predicate<"PPCSubTarget->hasP8Vector()">;
-def HasDirectMove : Predicate<"PPCSubTarget->hasDirectMove()">;
-def NoP9Vector : Predicate<"!PPCSubTarget->hasP9Vector()">;
-def HasP9Vector : Predicate<"PPCSubTarget->hasP9Vector()">;
-def NoP9Altivec : Predicate<"!PPCSubTarget->hasP9Altivec()">;
+def HasVSX : Predicate<"Subtarget->hasVSX()">;
+def IsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
+def IsBigEndian : Predicate<"!Subtarget->isLittleEndian()">;
+def HasOnlySwappingMemOps : Predicate<"!Subtarget->hasP9Vector()">;
+def HasP8Vector : Predicate<"Subtarget->hasP8Vector()">;
+def HasDirectMove : Predicate<"Subtarget->hasDirectMove()">;
+def NoP9Vector : Predicate<"!Subtarget->hasP9Vector()">;
+def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
+def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
 
 //--------------------- VSX-specific instruction formats ---------------------//
 // By default, all VSX instructions are to be selected over their Altivec

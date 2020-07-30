@@ -138,7 +138,7 @@ define void @test4(i1 %b, i32 %x) {
 ; CHECK-NEXT:    i32 2, label [[CASE0]]
 ; CHECK-NEXT:    i32 3, label [[CASE3]]
 ; CHECK-NEXT:    i32 4, label [[DEFAULT:%.*]]
-; CHECK-NEXT:    ] Edge: [label [[SW]],label %case1] }
+; CHECK-NEXT:    ] Edge: [label [[SW]],label %case1]
 ; CHECK-NEXT:    [[X_0:%.*]] = call i32 @llvm.ssa.copy.{{.+}}(i32 [[X:%.*]])
 ; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT]] [
 ; CHECK-NEXT:    i32 0, label [[CASE0]]

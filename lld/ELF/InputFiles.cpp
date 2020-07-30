@@ -1711,8 +1711,9 @@ template <class ELFT> void LazyObjFile::parse() {
         continue;
       sym->resolve(LazyObject{*this, sym->getName()});
 
-      // MemoryBuffer is emptied if this file is instantiated as ObjFile.
-      if (mb.getBuffer().empty())
+      // If fetched, stop iterating because this->symbols has been transferred
+      // to the instantiated ObjFile.
+      if (fetched)
         return;
     }
     return;

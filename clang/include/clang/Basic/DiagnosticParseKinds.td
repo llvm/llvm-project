@@ -194,6 +194,8 @@ def err_function_declared_typedef : Error<
 def err_at_defs_cxx : Error<"@defs is not supported in Objective-C++">;
 def err_at_in_class : Error<"unexpected '@' in member specification">;
 def err_unexpected_semi : Error<"unexpected ';' before %0">;
+def err_postfix_after_unary_requires_parens : Error<
+  "expression cannot be followed by a postfix %0 operator; add parentheses">;
 def err_unparenthesized_non_primary_expr_in_requires_clause : Error<
   "parentheses are required around this expression in a requires clause">;
 def note_unparenthesized_non_primary_expr_in_requires_clause : Note<
@@ -1332,6 +1334,8 @@ def warn_omp_more_one_device_type_clause
       InGroup<OpenMPClauses>;
 def err_omp_variant_ctx_second_match_extension : Error<
   "only a single match extension allowed per OpenMP context selector">;
+def err_omp_invalid_dsa: Error<
+  "data-sharing attribute '%0' in '%1' clause requires OpenMP version %2 or above">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

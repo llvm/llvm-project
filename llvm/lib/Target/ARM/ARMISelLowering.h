@@ -208,6 +208,10 @@ class VectorType;
       VQMOVNs,      // Vector (V) Saturating (Q) Move and Narrow (N), signed (s)
       VQMOVNu,      // Vector (V) Saturating (Q) Move and Narrow (N), unsigned (u)
 
+      // MVE float <> half converts
+      VCVTN,        // MVE vcvt f32 -> f16, truncating into either the bottom or top lanes
+      VCVTL,        // MVE vcvt f16 -> f32, extending from either the bottom or top lanes
+
       // Vector multiply long:
       VMULLs,       // ...signed
       VMULLu,       // ...unsigned
@@ -449,9 +453,9 @@ class VectorType;
                                        const SelectionDAG &DAG,
                                        unsigned Depth) const override;
 
-    bool targetShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
+    bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
+                                      const APInt &DemandedElts,
                                       TargetLoweringOpt &TLO) const override;
-
 
     bool ExpandInlineAsm(CallInst *CI) const override;
 
@@ -764,6 +768,8 @@ class VectorType;
     SDValue LowerDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed) const;
     void ExpandDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed,
                            SmallVectorImpl<SDValue> &Results) const;
+    SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
+                          const ARMSubtarget *Subtarget) const;
     SDValue LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG, bool Signed,
                                    SDValue &Chain) const;
     SDValue LowerREM(SDNode *N, SelectionDAG &DAG) const;
@@ -786,6 +792,11 @@ class VectorType;
 
     bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                     EVT VT) const override;
+
+    SDValue MoveToHPR(const SDLoc &dl, SelectionDAG &DAG, MVT LocVT, MVT ValVT,
+                      SDValue Val) const;
+    SDValue MoveFromHPR(const SDLoc &dl, SelectionDAG &DAG, MVT LocVT,
+                        MVT ValVT, SDValue Val) const;
 
     SDValue ReconstructShuffle(SDValue Op, SelectionDAG &DAG) const;
 

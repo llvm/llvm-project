@@ -18,7 +18,7 @@ class RegisterContextCorePOSIX_arm64 : public RegisterContextPOSIX_arm64 {
 public:
   RegisterContextCorePOSIX_arm64(
       lldb_private::Thread &thread,
-      lldb_private::RegisterInfoInterface *register_info,
+      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 

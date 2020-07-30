@@ -178,8 +178,10 @@ SequenceType parseSequence(mlir::DialectAsmParser &parser, mlir::Location) {
   return SequenceType::get(shape, eleTy, map);
 }
 
-static bool verifyIntegerType(mlir::Type ty) {
-  return ty.isa<mlir::IntegerType>() || ty.isa<IntType>();
+/// Is `ty` a standard or FIR integer type?
+static bool isaIntegerType(mlir::Type ty) {
+  // TODO: why aren't we using isa_integer? investigatation required.
+  return ty.isa<mlir::IntegerType>() || ty.isa<fir::IntType>();
 }
 
 bool verifyRecordMemberType(mlir::Type ty) {
@@ -205,7 +207,7 @@ RecordType verifyDerived(mlir::DialectAsmParser &parser, RecordType derivedTy,
     return {};
   }
   for (auto &p : lenPList)
-    if (!verifyIntegerType(p.second)) {
+    if (!isaIntegerType(p.second)) {
       parser.emitError(loc, "LEN parameter must be integral type");
       return {};
     }
@@ -293,11 +295,13 @@ RecordType parseDerived(mlir::DialectAsmParser &parser, mlir::Location) {
   return verifyDerived(parser, result, lenParamList, typeList);
 }
 
+#ifndef NDEBUG
 // !fir.ptr<X> and !fir.heap<X> where X is !fir.ptr, !fir.heap, or !fir.ref
 // is undefined and disallowed.
 inline bool singleIndirectionLevel(mlir::Type ty) {
   return !fir::isa_ref_type(ty);
 }
+#endif
 
 } // namespace
 
@@ -384,24 +388,22 @@ struct DimsTypeStorage : public mlir::TypeStorage {
 
   static unsigned hashKey(const KeyTy &key) { return llvm::hash_combine(key); }
 
-  bool operator==(const KeyTy &key) const {
-    return key == static_cast<unsigned>(getRank());
-  }
+  bool operator==(const KeyTy &key) const { return key == getRank(); }
 
   static DimsTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                    int rank) {
+                                    unsigned rank) {
     auto *storage = allocator.allocate<DimsTypeStorage>();
     return new (storage) DimsTypeStorage{rank};
   }
 
-  int getRank() const { return rank; }
+  unsigned getRank() const { return rank; }
 
 protected:
-  int rank;
+  unsigned rank;
 
 private:
   DimsTypeStorage() = delete;
-  explicit DimsTypeStorage(int rank) : rank{rank} {}
+  explicit DimsTypeStorage(unsigned rank) : rank{rank} {}
 };
 
 /// The type of a derived type part reference
@@ -832,6 +834,9 @@ bool isa_std_type(mlir::Type t) {
 }
 
 bool isa_fir_or_std_type(mlir::Type t) {
+  if (auto funcType = t.dyn_cast<mlir::FunctionType>())
+    return llvm::all_of(funcType.getInputs(), isa_fir_or_std_type) &&  
+      llvm::all_of(funcType.getResults(), isa_fir_or_std_type);
   return isa_fir_type(t) || isa_std_type(t);
 }
 
@@ -874,7 +879,7 @@ DimsType fir::DimsType::get(mlir::MLIRContext *ctxt, unsigned rank) {
   return Base::get(ctxt, FIR_DIMS, rank);
 }
 
-int fir::DimsType::getRank() const { return getImpl()->getRank(); }
+unsigned fir::DimsType::getRank() const { return getImpl()->getRank(); }
 
 // Field
 
@@ -999,10 +1004,7 @@ fir::ReferenceType::verifyConstructionInvariants(mlir::Location loc,
 // Pointer<T>
 
 PointerType fir::PointerType::get(mlir::Type elementType) {
-  if (!singleIndirectionLevel(elementType)) {
-    llvm_unreachable("FIXME: invalid element type");
-    return {};
-  }
+  assert(singleIndirectionLevel(elementType) && "invalid element type");
   return Base::get(elementType.getContext(), FIR_POINTER, elementType);
 }
 
@@ -1030,10 +1032,7 @@ fir::PointerType::verifyConstructionInvariants(mlir::Location loc,
 // Heap<T>
 
 HeapType fir::HeapType::get(mlir::Type elementType) {
-  if (!singleIndirectionLevel(elementType)) {
-    llvm_unreachable("FIXME: invalid element type");
-    return {};
-  }
+  assert(singleIndirectionLevel(elementType) && "invalid element type");
   return Base::get(elementType.getContext(), FIR_HEAP, elementType);
 }
 
@@ -1171,7 +1170,6 @@ mlir::Type fir::RecordType::getType(llvm::StringRef ident) {
   for (auto f : getTypeList())
     if (ident == f.first)
       return f.second;
-  llvm_unreachable("query for field not present in record");
   return {};
 }
 
@@ -1216,9 +1214,9 @@ llvm::SmallPtrSet<detail::RecordTypeStorage const *, 4> recordTypeVisited;
 } // namespace
 
 void fir::verifyIntegralType(mlir::Type type) {
-  if (verifyIntegerType(type) || type.isa<mlir::IndexType>())
+  if (isaIntegerType(type) || type.isa<mlir::IndexType>())
     return;
-  llvm_unreachable("expected integral type");
+  llvm::report_fatal_error("expected integral type");
 }
 
 void fir::printFirType(FIROpsDialect *, mlir::Type ty,

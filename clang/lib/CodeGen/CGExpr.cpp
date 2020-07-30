@@ -2398,7 +2398,13 @@ EmitBitCastOfLValueToProperType(CodeGenFunction &CGF,
 static LValue EmitThreadPrivateVarDeclLValue(
     CodeGenFunction &CGF, const VarDecl *VD, QualType T, Address Addr,
     llvm::Type *RealVarTy, SourceLocation Loc) {
-  Addr = CGF.CGM.getOpenMPRuntime().getAddrOfThreadPrivate(CGF, VD, Addr, Loc);
+  if (CGF.CGM.getLangOpts().OpenMPIRBuilder)
+    Addr = CodeGenFunction::OMPBuilderCBHelpers::getAddrOfThreadPrivate(
+        CGF, VD, Addr, Loc);
+  else
+    Addr =
+        CGF.CGM.getOpenMPRuntime().getAddrOfThreadPrivate(CGF, VD, Addr, Loc);
+
   Addr = CGF.Builder.CreateElementBitCast(Addr, RealVarTy);
   return CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
 }
@@ -3843,7 +3849,7 @@ LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
   else
     ResultExprTy = BaseTy->getPointeeType();
   llvm::Value *Idx = nullptr;
-  if (IsLowerBound || E->getColonLoc().isInvalid()) {
+  if (IsLowerBound || E->getColonLocFirst().isInvalid()) {
     // Requesting lower bound or upper bound, but without provided length and
     // without ':' symbol for the default length -> length = 1.
     // Idx = LowerBound ?: 0;

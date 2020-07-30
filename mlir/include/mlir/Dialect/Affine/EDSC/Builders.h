@@ -66,10 +66,14 @@ Value operator^(Value lhs, Value rhs);
 /// Comparison operator overloadings.
 Value eq(Value lhs, Value rhs);
 Value ne(Value lhs, Value rhs);
-Value operator<(Value lhs, Value rhs);
-Value operator<=(Value lhs, Value rhs);
-Value operator>(Value lhs, Value rhs);
-Value operator>=(Value lhs, Value rhs);
+Value slt(Value lhs, Value rhs);
+Value sle(Value lhs, Value rhs);
+Value sgt(Value lhs, Value rhs);
+Value sge(Value lhs, Value rhs);
+Value ult(Value lhs, Value rhs);
+Value ule(Value lhs, Value rhs);
+Value ugt(Value lhs, Value rhs);
+Value uge(Value lhs, Value rhs);
 
 } // namespace op
 
@@ -159,24 +163,44 @@ Value TemplatedIndexedValue<Load, Store>::ne(Value e) {
   return ne(value, e);
 }
 template <typename Load, typename Store>
-Value TemplatedIndexedValue<Load, Store>::operator<(Value e) {
-  using op::operator<;
-  return static_cast<Value>(*this) < e;
+Value TemplatedIndexedValue<Load, Store>::slt(Value e) {
+  using op::slt;
+  return slt(static_cast<Value>(*this), e);
 }
 template <typename Load, typename Store>
-Value TemplatedIndexedValue<Load, Store>::operator<=(Value e) {
-  using op::operator<=;
-  return static_cast<Value>(*this) <= e;
+Value TemplatedIndexedValue<Load, Store>::sle(Value e) {
+  using op::sle;
+  return sle(static_cast<Value>(*this), e);
 }
 template <typename Load, typename Store>
-Value TemplatedIndexedValue<Load, Store>::operator>(Value e) {
-  using op::operator>;
-  return static_cast<Value>(*this) > e;
+Value TemplatedIndexedValue<Load, Store>::sgt(Value e) {
+  using op::sgt;
+  return sgt(static_cast<Value>(*this), e);
 }
 template <typename Load, typename Store>
-Value TemplatedIndexedValue<Load, Store>::operator>=(Value e) {
-  using op::operator>=;
-  return static_cast<Value>(*this) >= e;
+Value TemplatedIndexedValue<Load, Store>::sge(Value e) {
+  using op::sge;
+  return sge(static_cast<Value>(*this), e);
+}
+template <typename Load, typename Store>
+Value TemplatedIndexedValue<Load, Store>::ult(Value e) {
+  using op::ult;
+  return ult(static_cast<Value>(*this), e);
+}
+template <typename Load, typename Store>
+Value TemplatedIndexedValue<Load, Store>::ule(Value e) {
+  using op::ule;
+  return ule(static_cast<Value>(*this), e);
+}
+template <typename Load, typename Store>
+Value TemplatedIndexedValue<Load, Store>::ugt(Value e) {
+  using op::ugt;
+  return ugt(static_cast<Value>(*this), e);
+}
+template <typename Load, typename Store>
+Value TemplatedIndexedValue<Load, Store>::uge(Value e) {
+  using op::uge;
+  return uge(static_cast<Value>(*this), e);
 }
 
 } // namespace edsc

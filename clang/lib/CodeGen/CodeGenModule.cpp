@@ -222,14 +222,6 @@ void CodeGenModule::createOpenMPRuntime() {
       OpenMPRuntime.reset(new CGOpenMPRuntime(*this));
     break;
   }
-
-  // The OpenMP-IR-Builder should eventually replace the above runtime codegens
-  // but we are not there yet so they both reside in CGModule for now and the
-  // OpenMP-IR-Builder is opt-in only.
-  if (LangOpts.OpenMPIRBuilder) {
-    OMPBuilder.reset(new llvm::OpenMPIRBuilder(TheModule));
-    OMPBuilder->initialize();
-  }
 }
 
 void CodeGenModule::createCUDARuntime() {
@@ -663,7 +655,7 @@ void CodeGenModule::Release() {
   if (!getCodeGenOpts().RecordCommandLine.empty())
     EmitCommandLineMetadata();
 
-  EmitTargetMetadata();
+  getTargetCodeGenInfo().emitTargetMetadata(*this, MangledDeclNames);
 
   EmitBackendOptionsMetadata(getCodeGenOpts());
 }
@@ -3656,26 +3648,29 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
 }
 
 llvm::Constant *
-CodeGenModule::GetAddrOfGlobal(GlobalDecl GD,
-                               ForDefinition_t IsForDefinition) {
+CodeGenModule::GetAddrOfGlobal(GlobalDecl GD, ForDefinition_t IsForDefinition) {
   const Decl *D = GD.getDecl();
+
   if (isa<CXXConstructorDecl>(D) || isa<CXXDestructorDecl>(D))
     return getAddrOfCXXStructor(GD, /*FnInfo=*/nullptr, /*FnType=*/nullptr,
                                 /*DontDefer=*/false, IsForDefinition);
-  else if (isa<CXXMethodDecl>(D)) {
-    auto FInfo = &getTypes().arrangeCXXMethodDeclaration(
-        cast<CXXMethodDecl>(D));
+
+  if (isa<CXXMethodDecl>(D)) {
+    auto FInfo =
+        &getTypes().arrangeCXXMethodDeclaration(cast<CXXMethodDecl>(D));
     auto Ty = getTypes().GetFunctionType(*FInfo);
     return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/false,
                              IsForDefinition);
-  } else if (isa<FunctionDecl>(D)) {
+  }
+
+  if (isa<FunctionDecl>(D)) {
     const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
     llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
     return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/false,
                              IsForDefinition);
-  } else
-    return GetAddrOfGlobalVar(cast<VarDecl>(D), /*Ty=*/nullptr,
-                              IsForDefinition);
+  }
+
+  return GetAddrOfGlobalVar(cast<VarDecl>(D), /*Ty=*/nullptr, IsForDefinition);
 }
 
 llvm::GlobalVariable *CodeGenModule::CreateOrReplaceCXXRuntimeVariable(
@@ -5788,21 +5783,6 @@ void CodeGenModule::EmitCommandLineMetadata() {
   CommandLineMetadata->addOperand(llvm::MDNode::get(Ctx, CommandLineNode));
 }
 
-void CodeGenModule::EmitTargetMetadata() {
-  // Warning, new MangledDeclNames may be appended within this loop.
-  // We rely on MapVector insertions adding new elements to the end
-  // of the container.
-  // FIXME: Move this loop into the one target that needs it, and only
-  // loop over those declarations for which we couldn't emit the target
-  // metadata when we emitted the declaration.
-  for (unsigned I = 0; I != MangledDeclNames.size(); ++I) {
-    auto Val = *(MangledDeclNames.begin() + I);
-    const Decl *D = Val.first.getDecl()->getMostRecentDecl();
-    llvm::GlobalValue *GV = GetGlobalValue(Val.second);
-    getTargetCodeGenInfo().emitTargetMD(D, GV, *this);
-  }
-}
-
 void CodeGenModule::EmitCoverageFile() {
   if (getCodeGenOpts().CoverageDataFile.empty() &&
       getCodeGenOpts().CoverageNotesFile.empty())
@@ -5990,6 +5970,9 @@ CharUnits CodeGenModule::getNaturalTypeAlignment(QualType T,
   if (TBAAInfo)
     *TBAAInfo = getTBAAAccessInfo(T);
 
+  // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown. But
+  // that doesn't return the information we need to compute BaseInfo.
+
   // Honor alignment typedef attributes even on incomplete types.
   // We also honor them straight for C++ class types, even as pointees;
   // there's an expressivity gap here.
@@ -6001,32 +5984,46 @@ CharUnits CodeGenModule::getNaturalTypeAlignment(QualType T,
     }
   }
 
+  bool AlignForArray = T->isArrayType();
+
+  // Analyze the base element type, so we don't get confused by incomplete
+  // array types.
+  T = getContext().getBaseElementType(T);
+
+  if (T->isIncompleteType()) {
+    // We could try to replicate the logic from
+    // ASTContext::getTypeAlignIfKnown, but nothing uses the alignment if the
+    // type is incomplete, so it's impossible to test. We could try to reuse
+    // getTypeAlignIfKnown, but that doesn't return the information we need
+    // to set BaseInfo.  So just ignore the possibility that the alignment is
+    // greater than one.
+    if (BaseInfo)
+      *BaseInfo = LValueBaseInfo(AlignmentSource::Type);
+    return CharUnits::One();
+  }
+
   if (BaseInfo)
     *BaseInfo = LValueBaseInfo(AlignmentSource::Type);
 
   CharUnits Alignment;
-  if (T->isIncompleteType()) {
-    Alignment = CharUnits::One(); // Shouldn't be used, but pessimistic is best.
+  // For C++ class pointees, we don't know whether we're pointing at a
+  // base or a complete object, so we generally need to use the
+  // non-virtual alignment.
+  const CXXRecordDecl *RD;
+  if (forPointeeType && !AlignForArray && (RD = T->getAsCXXRecordDecl())) {
+    Alignment = getClassPointerAlignment(RD);
   } else {
-    // For C++ class pointees, we don't know whether we're pointing at a
-    // base or a complete object, so we generally need to use the
-    // non-virtual alignment.
-    const CXXRecordDecl *RD;
-    if (forPointeeType && (RD = T->getAsCXXRecordDecl())) {
-      Alignment = getClassPointerAlignment(RD);
-    } else {
-      Alignment = getContext().getTypeAlignInChars(T);
-      if (T.getQualifiers().hasUnaligned())
-        Alignment = CharUnits::One();
-    }
+    Alignment = getContext().getTypeAlignInChars(T);
+    if (T.getQualifiers().hasUnaligned())
+      Alignment = CharUnits::One();
+  }
 
-    // Cap to the global maximum type alignment unless the alignment
-    // was somehow explicit on the type.
-    if (unsigned MaxAlign = getLangOpts().MaxTypeAlign) {
-      if (Alignment.getQuantity() > MaxAlign &&
-          !getContext().isAlignmentRequired(T))
-        Alignment = CharUnits::fromQuantity(MaxAlign);
-    }
+  // Cap to the global maximum type alignment unless the alignment
+  // was somehow explicit on the type.
+  if (unsigned MaxAlign = getLangOpts().MaxTypeAlign) {
+    if (Alignment.getQuantity() > MaxAlign &&
+        !getContext().isAlignmentRequired(T))
+      Alignment = CharUnits::fromQuantity(MaxAlign);
   }
   return Alignment;
 }

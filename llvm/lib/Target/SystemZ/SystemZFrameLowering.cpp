@@ -341,8 +341,8 @@ processFunctionBeforeFrameFinalized(MachineFunction &MF,
     // are outside the reach of an unsigned 12-bit displacement.
     // Create 2 for the case where both addresses in an MVC are
     // out of range.
-    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, 8, false));
-    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, 8, false));
+    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, Align(8), false));
+    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, Align(8), false));
   }
 }
 

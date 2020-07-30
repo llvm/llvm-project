@@ -11,10 +11,10 @@
 define half @foo(half %a, half %b) {
 ; SOFT-LABEL: foo:
 ; SOFT:       @ %bb.0: @ %entry
-; SOFT-NEXT:    vmov s2, r1
 ; SOFT-NEXT:    vmov s0, r0
-; SOFT-NEXT:    vcvtb.f32.f16 s2, s2
+; SOFT-NEXT:    vmov s2, r1
 ; SOFT-NEXT:    vcvtb.f32.f16 s0, s0
+; SOFT-NEXT:    vcvtb.f32.f16 s2, s2
 ; SOFT-NEXT:    vadd.f32 s0, s0, s2
 ; SOFT-NEXT:    vcvtb.f16.f32 s0, s0
 ; SOFT-NEXT:    vmov r0, s0

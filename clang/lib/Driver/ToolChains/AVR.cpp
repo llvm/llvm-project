@@ -118,13 +118,6 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
-  //   "Not [sic] that addr must be offset by adding 0x800000 the to
-  //    real SRAM address so that the linker knows that the address
-  //    is in the SRAM memory space."
-  //
-  //      - https://www.nongnu.org/avr-libc/user-manual/mem_sections.html
-  CmdArgs.push_back("-Tdata=0x800100");
-
   // If the family name is known, we can link with the device-specific libgcc.
   // Without it, libgcc will simply not be linked. This matches avr-gcc
   // behavior.
@@ -149,8 +142,9 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
   }
 
-  C.addCommand(std::make_unique<Command>(JA, *this, Args.MakeArgString(Linker),
-                                          CmdArgs, Inputs));
+  C.addCommand(
+      std::make_unique<Command>(JA, *this, ResponseFileSupport::AtFileCurCP(),
+                                Args.MakeArgString(Linker), CmdArgs, Inputs));
 }
 
 llvm::Optional<std::string> AVRToolChain::findAVRLibcInstallation() const {

@@ -64,15 +64,26 @@ st:
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; A2M-DAG:    s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; A2V-NOT:    SCRATCH_RSRC
-; GFX908-DAG: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a0
-; A2M:        buffer_store_dword v[[VSPILL]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
-; A2M:        buffer_load_dword v[[VSPILL:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
-; GFX908:     v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
-; A2V:        ScratchSize: 0
-define amdgpu_kernel void @max_10_vgprs_used_9a(i32 addrspace(1)* %p) #1 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  call void asm sideeffect "", "a,a,a,a"(i32 1, i32 2, i32 3, i32 4)
-  call void asm sideeffect "", "a,a,a,a,a"(i32 5, i32 6, i32 7, i32 8, i32 9)
+
+; A2V: v_accvgpr_read_b32 v[[VSPILL:[0-9]+]], a{{[0-9]+}}
+; A2V: v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL]]
+; A2V: ScratchSize: 0
+
+; A2M: buffer_store_dword v[[VSPILLSTORE:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI:[0-9]+]] ; 4-byte Folded Spill
+; A2M: buffer_load_dword v[[VSPILL_RELOAD:[0-9]+]], off, s[{{[0-9:]+}}], 0 offset:[[FI]] ; 4-byte Folded Reload
+; A2M: v_accvgpr_write_b32 a{{[0-9]+}}, v[[VSPILL_RELOAD]]
+define amdgpu_kernel void @max_10_vgprs_used_9a() #1 {
+  %v0 = load volatile i32, i32 addrspace(3)* undef
+  %v1 = load volatile i32, i32 addrspace(3)* undef
+  %v2 = load volatile i32, i32 addrspace(3)* undef
+  %v3 = load volatile i32, i32 addrspace(3)* undef
+  %v4 = load volatile i32, i32 addrspace(3)* undef
+  %v5 = load volatile i32, i32 addrspace(3)* undef
+  %v6 = load volatile i32, i32 addrspace(3)* undef
+  %v7 = load volatile i32, i32 addrspace(3)* undef
+  call void asm sideeffect "", "a,a,a,a,~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6}"(i32 %v0, i32 %v1, i32 %v2, i32 %v3)
+  %v8 = load volatile i32, i32 addrspace(3)* undef
+  call void asm sideeffect "", "a,a,a,a,a"(i32 %v4, i32 %v5, i32 %v6, i32 %v7, i32 %v8)
   ret void
 }
 

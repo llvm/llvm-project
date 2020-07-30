@@ -81,9 +81,11 @@ public:
   /// The index keeps the slabs alive.
   /// Will count Symbol::References based on number of references in the main
   /// files, while building the index with DuplicateHandling::Merge option.
+  /// Version is populated with an increasing sequence counter.
   std::unique_ptr<SymbolIndex>
   buildIndex(IndexType,
-             DuplicateHandling DuplicateHandle = DuplicateHandling::PickOne);
+             DuplicateHandling DuplicateHandle = DuplicateHandling::PickOne,
+             size_t *Version = nullptr);
 
 private:
   struct RefSlabAndCountReferences {
@@ -92,6 +94,7 @@ private:
   };
   mutable std::mutex Mutex;
 
+  size_t Version = 0;
   llvm::StringMap<std::shared_ptr<SymbolSlab>> SymbolsSnapshot;
   llvm::StringMap<RefSlabAndCountReferences> RefsSnapshot;
   llvm::StringMap<std::shared_ptr<RelationSlab>> RelatiosSnapshot;
@@ -136,6 +139,12 @@ private:
   // (Note that symbols *only* in the main file are not indexed).
   FileSymbols MainFileSymbols;
   SwapIndex MainFileIndex;
+
+  // While both the FileIndex and SwapIndex are threadsafe, we need to track
+  // versions to ensure that we don't overwrite newer indexes with older ones.
+  std::mutex UpdateIndexMu;
+  unsigned MainIndexVersion = 0;
+  unsigned PreambleIndexVersion = 0;
 };
 
 using SlabTuple = std::tuple<SymbolSlab, RefSlab, RelationSlab>;

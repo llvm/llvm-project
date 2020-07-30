@@ -615,7 +615,8 @@ void ExprEngine::handleConstructor(const Expr *E,
   } else {
     for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
          I != E; ++I)
-      defaultEvalCall(Bldr, *I, *Call, CallOpts);
+      getCheckerManager().runCheckersForEvalCall(DstEvaluated, *I, *Call, *this,
+                                                 CallOpts);
   }
 
   // If the CFG was constructed without elements for temporary destructors

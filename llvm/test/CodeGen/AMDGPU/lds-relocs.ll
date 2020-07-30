@@ -35,7 +35,7 @@
 ; GCN: v_mov_b32_e32 v1, lds.external@abs32@lo ; encoding: [0xff,0x02,0x02,0x7e,A,A,A,A]
 ; GCN-NEXT:              ; fixup A - offset: 4, value: lds.external@abs32@lo, kind: FK_Data_4{{$}}
 ;
-; GCN: s_add_i32 s0, lds.defined@abs32@lo, s0 ; encoding: [0xff,0x00,0x00,0x81,A,A,A,A]
+; GCN: s_add_i32 s0, s0, lds.defined@abs32@lo ; encoding: [0x00,0xff,0x00,0x81,A,A,A,A]
 ; GCN-NEXT:          ; fixup A - offset: 4, value: lds.defined@abs32@lo, kind: FK_Data_4{{$}}
 ;
 ; GCN: .globl lds.external

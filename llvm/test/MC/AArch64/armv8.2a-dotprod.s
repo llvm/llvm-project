@@ -4,6 +4,9 @@
 // RUN: llvm-mc -triple aarch64 -mcpu=cortex-a65ae -show-encoding < %s| FileCheck %s --check-prefix=CHECK-DOTPROD
 // RUN: llvm-mc -triple aarch64 -mcpu=cortex-a75 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
 // RUN: llvm-mc -triple aarch64 -mcpu=cortex-a76 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
+// RUN: llvm-mc -triple aarch64 -mcpu=cortex-a77 -show-encoding < %s     | FileCheck %s --check-prefix=CHECK-DOTPROD
+// RUN: llvm-mc -triple aarch64 -mcpu=cortex-a78 -show-encoding < %s     | FileCheck %s --check-prefix=CHECK-DOTPROD
+// RUN: llvm-mc -triple aarch64 -mcpu=cortex-x1 -show-encoding < %s     | FileCheck %s --check-prefix=CHECK-DOTPROD
 // RUN: llvm-mc -triple aarch64 -mcpu=neoverse-e1 -show-encoding < %s| FileCheck %s --check-prefix=CHECK-DOTPROD
 // RUN: llvm-mc -triple aarch64 -mcpu=neoverse-n1 -show-encoding < %s| FileCheck %s --check-prefix=CHECK-DOTPROD
 // RUN: llvm-mc -triple aarch64 -mcpu=tsv110 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
@@ -15,6 +18,12 @@
 // RUN: not llvm-mc -triple aarch64 -mcpu=cortex-a65ae -mattr=-dotprod -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
 // RUN: not llvm-mc -triple aarch64 -mcpu=neoverse-e1 -mattr=-dotprod -show-encoding < %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
+// RUN: not llvm-mc -triple aarch64 -mcpu=cortex-a77 -mattr=-dotprod -show-encoding < %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
+// RUN: not llvm-mc -triple aarch64 -mcpu=cortex-a78 -mattr=-dotprod -show-encoding < %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
+// RUN: not llvm-mc -triple aarch64 -mcpu=cortex-x1 -mattr=-dotprod -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
 // RUN: not llvm-mc -triple aarch64 -mcpu=neoverse-n1 -mattr=-dotprod -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s

@@ -423,7 +423,6 @@ private:
 class GenericDetails {
 public:
   GenericDetails() {}
-  GenericDetails(const SymbolVector &specificProcs);
 
   GenericKind kind() const { return kind_; }
   void set_kind(GenericKind kind) { kind_ = kind; }

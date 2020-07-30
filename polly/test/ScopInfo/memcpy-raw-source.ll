@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -scoped-noalias -tbaa -polly-scops -analyze < %s
+; RUN: opt %loadPolly -basic-aa -scoped-noalias -tbaa -polly-scops -analyze < %s
 ;
 ; Ensure that ScopInfo's alias analysis llvm.memcpy for,
 ; like the AliasSetTracker, preserves bitcasts.

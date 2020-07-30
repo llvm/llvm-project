@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExprSequence.h"
+#include "clang/AST/ParentMapContext.h"
 
 namespace clang {
 namespace tidy {

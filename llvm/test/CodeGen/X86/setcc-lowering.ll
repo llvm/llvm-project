@@ -16,8 +16,6 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; AVX-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;

@@ -156,8 +156,8 @@ define amdgpu_kernel void @v_cttz_zero_undef_i16_with_select(i16 addrspace(1)* n
 }
 
 ; FUNC-LABEL: {{^}}v_cttz_zero_undef_i32_with_select:
-; SI: v_ffbl_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI: v_cmp_ne_u32_e32 vcc, 0
+; SI-DAG: v_ffbl_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; SI-DAG: v_cmp_ne_u32_e32 vcc, 0
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[RESULT:T[0-9]+\.[XYZW]]]
 define amdgpu_kernel void @v_cttz_zero_undef_i32_with_select(i32 addrspace(1)* noalias %out, i32 addrspace(1)* nocapture readonly %arrayidx) nounwind {
   %val = load i32, i32 addrspace(1)* %arrayidx, align 1

@@ -146,7 +146,7 @@ public:
   DynamicType ResultTypeForMultiply(const DynamicType &) const;
 
   bool IsAssumedLengthCharacter() const;
-  bool IsUnknownLengthCharacter() const;
+  bool IsNonConstantLengthCharacter() const;
   bool IsTypelessIntrinsicArgument() const;
   constexpr bool IsAssumedType() const { // TYPE(*)
     return kind_ == AssumedTypeKind;

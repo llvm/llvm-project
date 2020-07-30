@@ -355,8 +355,7 @@ struct OpConversionPattern : public ConversionPattern {
     return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
   }
 
-  // TODO(b/142763075): Use OperandAdaptor when it supports access to unnamed
-  // operands.
+  // TODO: Use OperandAdaptor when it supports access to unnamed operands.
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
   /// overridden by the derived pattern class.

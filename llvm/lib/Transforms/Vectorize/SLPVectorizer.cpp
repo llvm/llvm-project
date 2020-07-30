@@ -7361,6 +7361,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   bool Changed = false;
   SmallVector<Value *, 4> Incoming;
   SmallPtrSet<Value *, 16> VisitedInstrs;
+  unsigned MaxVecRegSize = R.getMaxVecRegSize();
 
   bool HaveVectorizedPhiNodes = true;
   while (HaveVectorizedPhiNodes) {
@@ -7387,8 +7388,18 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
       // Look for the next elements with the same type.
       SmallVector<Value *, 4>::iterator SameTypeIt = IncIt;
+      Type *EltTy = (*IncIt)->getType();
+      unsigned EltSize = EltTy->isSized() ? DL->getTypeSizeInBits(EltTy)
+                                          : MaxVecRegSize;
+      unsigned MaxNumElts = MaxVecRegSize / EltSize;
+      if (MaxNumElts < 2) {
+        ++IncIt;
+        continue;
+      }
+
       while (SameTypeIt != E &&
-             (*SameTypeIt)->getType() == (*IncIt)->getType()) {
+             (*SameTypeIt)->getType() == EltTy &&
+             (SameTypeIt - IncIt) < MaxNumElts) {
         VisitedInstrs.insert(*SameTypeIt);
         ++SameTypeIt;
       }
@@ -7503,9 +7514,12 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
                       << Entry.second.size() << ".\n");
 
     // Process the GEP list in chunks suitable for the target's supported
-    // vector size. If a vector register can't hold 1 element, we are done.
+    // vector size. If a vector register can't hold 1 element, we are done. We
+    // are trying to vectorize the index computations, so the maximum number of
+    // elements is based on the size of the index expression, rather than the
+    // size of the GEP itself (the target's pointer size).
     unsigned MaxVecRegSize = R.getMaxVecRegSize();
-    unsigned EltSize = R.getVectorElementSize(Entry.second[0]);
+    unsigned EltSize = R.getVectorElementSize(*Entry.second[0]->idx_begin());
     if (MaxVecRegSize < EltSize)
       continue;
 

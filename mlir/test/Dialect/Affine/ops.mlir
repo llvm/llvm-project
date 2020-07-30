@@ -154,14 +154,14 @@ func @valid_symbol_affine_scope(%n : index, %A : memref<?xf32>) {
 // -----
 
 // CHECK-LABEL: func @parallel
-// CHECK-SAME: (%[[N:.*]]: index)
-func @parallel(%N : index) {
+// CHECK-SAME: (%[[A:.*]]: memref<100x100xf32>, %[[N:.*]]: index)
+func @parallel(%A : memref<100x100xf32>, %N : index) {
   // CHECK: affine.parallel (%[[I0:.*]], %[[J0:.*]]) = (0, 0) to (symbol(%[[N]]), 100) step (10, 10)
   affine.parallel (%i0, %j0) = (0, 0) to (symbol(%N), 100) step (10, 10) {
-    %0 = alloc() : memref<f32>
-    // CHECK: affine.parallel (%{{.*}}, %{{.*}}) = (%[[I0]], %[[J0]]) to (%[[I0]] + 10, %[[J0]] + 10) : memref<f32>
-    %1 = affine.parallel (%i1, %j1) = (%i0, %j0) to (%i0 + 10, %j0 + 10) : memref<f32> {
-      affine.yield %0 : memref<f32>
+    // CHECK: affine.parallel (%{{.*}}, %{{.*}}) = (%[[I0]], %[[J0]]) to (%[[I0]] + 10, %[[J0]] + 10) reduce ("minf", "maxf") -> (f32, f32)
+    %0:2 = affine.parallel (%i1, %j1) = (%i0, %j0) to (%i0 + 10, %j0 + 10) reduce ("minf", "maxf") -> (f32, f32) {
+      %2 = affine.load %A[%i0 + %i0, %j0 + %j1] : memref<100x100xf32>
+      affine.yield %2, %2 : f32, f32
     }
   }
   return

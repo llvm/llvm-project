@@ -99,6 +99,8 @@ template <typename A, typename B> A *Unwrap(B &x) {
 // Get the CoindexedNamedObject if the entity is a coindexed object.
 const CoindexedNamedObject *GetCoindexedNamedObject(const AllocateObject &);
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &);
+const CoindexedNamedObject *GetCoindexedNamedObject(const Designator &);
+const CoindexedNamedObject *GetCoindexedNamedObject(const Variable &);
 
 // Detects parse tree nodes with "source" members.
 template <typename A, typename = int> struct HasSource : std::false_type {};

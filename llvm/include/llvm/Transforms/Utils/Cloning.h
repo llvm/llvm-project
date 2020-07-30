@@ -19,7 +19,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/IR/ValueHandle.h"
@@ -30,6 +29,7 @@
 
 namespace llvm {
 
+class AAResults;
 class AllocaInst;
 class BasicBlock;
 class BlockFrequencyInfo;

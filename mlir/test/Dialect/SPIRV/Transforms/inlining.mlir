@@ -37,7 +37,7 @@ spv.module Logical GLSL450 {
   spv.func @callee() "None" {
     %0 = spv._address_of @data : !spv.ptr<!spv.struct<!spv.rtarray<i32> [0]>, StorageBuffer>
     %1 = spv.constant 0: i32
-    %2 = spv.AccessChain %0[%1, %1] : !spv.ptr<!spv.struct<!spv.rtarray<i32> [0]>, StorageBuffer>
+    %2 = spv.AccessChain %0[%1, %1] : !spv.ptr<!spv.struct<!spv.rtarray<i32> [0]>, StorageBuffer>, i32, i32
     spv.Branch ^next
 
   ^next:
@@ -196,7 +196,7 @@ spv.module Logical GLSL450 {
     // CHECK: [[VAL:%.*]] = spv.Load "StorageBuffer" [[LOADPTR]]
     %2 = spv._address_of @arg_0 : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
     %3 = spv._address_of @arg_1 : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
-    %4 = spv.AccessChain %2[%1] : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
+    %4 = spv.AccessChain %2[%1] : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>, i32
     %5 = spv.Load "StorageBuffer" %4 : i32
     %6 = spv.SGreaterThan %5, %1 : i32
     // CHECK: spv.selection
@@ -204,7 +204,7 @@ spv.module Logical GLSL450 {
       spv.BranchConditional %6, ^bb1, ^bb2
     ^bb1: // pred: ^bb0
       // CHECK: [[STOREPTR:%.*]] = spv.AccessChain [[ADDRESS_ARG1]]
-      %7 = spv.AccessChain %3[%1] : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
+      %7 = spv.AccessChain %3[%1] : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>, i32
       // CHECK-NOT: spv.FunctionCall
       // CHECK: spv.AtomicIAdd "Device" "AcquireRelease" [[STOREPTR]], [[VAL]]
       // CHECK: spv.Branch

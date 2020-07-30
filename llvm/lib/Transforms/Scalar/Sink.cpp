@@ -166,8 +166,8 @@ static bool SinkInstruction(Instruction *Inst,
   // dominated by one of the successors.
   // Look at all the dominated blocks and see if we can sink it in one.
   DomTreeNode *DTN = DT.getNode(Inst->getParent());
-  for (DomTreeNode::iterator I = DTN->begin(), E = DTN->end();
-      I != E && SuccToSinkTo == nullptr; ++I) {
+  for (auto I = DTN->begin(), E = DTN->end(); I != E && SuccToSinkTo == nullptr;
+       ++I) {
     BasicBlock *Candidate = (*I)->getBlock();
     // A node always immediate-dominates its children on the dominator
     // tree.

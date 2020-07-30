@@ -788,6 +788,10 @@ public:
     // to implicit this-parameter on the declaration.
     return CallArgumentIndex + 1;
   }
+
+  OverloadedOperatorKind getOverloadedOperator() const {
+    return getOriginExpr()->getOperator();
+  }
 };
 
 /// Represents an implicit call to a C++ destructor.

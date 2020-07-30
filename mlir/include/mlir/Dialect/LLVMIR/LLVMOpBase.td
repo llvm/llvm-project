@@ -214,10 +214,30 @@ class LLVM_VectorReduction<string mnem>
     : LLVM_OneResultIntrOp<"experimental.vector.reduce." # mnem, [], [0], []>,
       Arguments<(ins LLVM_Type)>;
 
-// LLVM vector reduction over a single vector, with an initial value.
+// LLVM vector reduction over a single vector, with an initial value,
+// and with permission to reassociate the reduction operations.
 class LLVM_VectorReductionV2<string mnem>
-    : LLVM_OneResultIntrOp<"experimental.vector.reduce.v2." # mnem,
-                           [0], [1], []>,
-      Arguments<(ins LLVM_Type, LLVM_Type)>;
+    : LLVM_OpBase<LLVM_Dialect, "intr.experimental.vector.reduce.v2." # mnem, []>,
+      Results<(outs LLVM_Type:$res)>,
+      Arguments<(ins LLVM_Type, LLVM_Type,
+                 DefaultValuedAttr<BoolAttr, "false">:$reassoc)> {
+  let llvmBuilder = [{
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Function *fn = llvm::Intrinsic::getDeclaration(
+        module,
+        llvm::Intrinsic::experimental_vector_reduce_v2_}] # mnem # [{,
+        { }] # StrJoin<!listconcat(
+            ListIntSubst<LLVM_IntrPatterns.result, [0]>.lst,
+            ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst)>.result # [{
+        });
+    auto operands = lookupValues(opInst.getOperands());
+    llvm::FastMathFlags origFM = builder.getFastMathFlags();
+    llvm::FastMathFlags tempFM = origFM;
+    tempFM.setAllowReassoc($reassoc);
+    builder.setFastMathFlags(tempFM);  // set fastmath flag
+    $res = builder.CreateCall(fn, operands);
+    builder.setFastMathFlags(origFM);  // restore fastmath flag
+  }];
+}
 
 #endif  // LLVMIR_OP_BASE

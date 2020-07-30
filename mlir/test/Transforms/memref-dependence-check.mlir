@@ -766,7 +766,7 @@ func @delinearize_mod_floordiv() {
 // expected-remark@above {{dependence from 1 to 2 at depth 1 = false}}
 // expected-remark@above {{dependence from 1 to 2 at depth 2 = false}}
 // expected-remark@above {{dependence from 1 to 2 at depth 3 = false}}
-// TODO(andydavis): the dep tester shouldn't be printing out these messages
+// TODO: the dep tester shouldn't be printing out these messages
 // below; they are redundant.
       affine.store %v0, %out[%ii, %jj] : memref<64x9xi32>
 // expected-remark@above {{dependence from 2 to 0 at depth 1 = false}}
@@ -781,7 +781,7 @@ func @delinearize_mod_floordiv() {
   return
 }
 
-// TODO(bondhugula): add more test cases involving mod's/div's.
+// TODO: add more test cases involving mod's/div's.
 
 // -----
 

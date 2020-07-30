@@ -43,6 +43,31 @@ struct HasNonTrivial {
   NonTrivial m;
 };
 
+struct B0 {
+  virtual Small m0();
+};
+
+struct B1 {
+  virtual Small m0();
+};
+
+struct D0 : B0, B1 {
+  Small m0() override;
+};
+
+// CHECK-LABEL: define i64 @_ZThn8_N2D02m0Ev(
+// CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SMALL]], align 8
+// CHECK: %[[CALL:.*]] = tail call i64 @_ZN2D02m0Ev(
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], %[[STRUCT_SMALL]]* %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[CALL]] to i32*
+// CHECK: store i32* %[[COERCE_VAL_IP]], i32** %[[COERCE_DIVE]], align 8
+// CHECK: %[[COERCE_DIVE2:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], %[[STRUCT_SMALL]]* %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[V3:.*]] = load i32*, i32** %[[COERCE_DIVE2]], align 8
+// CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint i32* %[[V3]] to i64
+// CHECK: ret i64 %[[COERCE_VAL_PI]]
+
+Small D0::m0() { return {}; }
+
 // CHECK: define void @_Z14testParamSmall5Small(i64 %[[A_COERCE:.*]])
 // CHECK: %[[A:.*]] = alloca %[[STRUCT_SMALL]], align 8
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], %[[STRUCT_SMALL]]* %[[A]], i32 0, i32 0

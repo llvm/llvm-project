@@ -41,9 +41,11 @@ public:
 
 char WebAssemblyFixBrTableDefaults::ID = 0;
 
-// `MI` is a br_table instruction missing its default target argument. This
+// `MI` is a br_table instruction with a dummy default target argument. This
 // function finds and adds the default target argument and removes any redundant
-// range check preceding the br_table.
+// range check preceding the br_table. Returns the MBB that the br_table is
+// moved into so it can be removed from further consideration, or nullptr if the
+// br_table cannot be optimized.
 MachineBasicBlock *fixBrTable(MachineInstr &MI, MachineBasicBlock *MBB,
                               MachineFunction &MF) {
   // Get the header block, which contains the redundant range check.
@@ -51,11 +53,14 @@ MachineBasicBlock *fixBrTable(MachineInstr &MI, MachineBasicBlock *MBB,
   auto *HeaderMBB = *MBB->pred_begin();
 
   // Find the conditional jump to the default target. If it doesn't exist, the
-  // default target is unreachable anyway, so we can choose anything.
+  // default target is unreachable anyway, so we can keep the existing dummy
+  // target.
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 2> Cond;
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-  TII.analyzeBranch(*HeaderMBB, TBB, FBB, Cond);
+  bool Analyzed = !TII.analyzeBranch(*HeaderMBB, TBB, FBB, Cond);
+  assert(Analyzed && "Could not analyze jump header branches");
+  (void)Analyzed;
 
   // Here are the possible outcomes. '_' is nullptr, `J` is the jump table block
   // aka MBB, 'D' is the default block.
@@ -66,14 +71,25 @@ MachineBasicBlock *fixBrTable(MachineInstr &MI, MachineBasicBlock *MBB,
   //  D  |  _  | Header jumps to the default and falls through to the jump table
   //  D  |  J  | Header jumps to the default and also to the jump table
   if (TBB && TBB != MBB) {
-    // Install the default target.
     assert((FBB == nullptr || FBB == MBB) &&
            "Expected jump or fallthrough to br_table block");
+    assert(Cond.size() == 2 && Cond[1].isReg() && "Unexpected condition info");
+
+    // If the range check checks an i64 value, we cannot optimize it out because
+    // the i64 index is truncated to an i32, making values over 2^32
+    // indistinguishable from small numbers. There are also other strange edge
+    // cases that can arise in practice that we don't want to reason about, so
+    // conservatively only perform the optimization if the range check is the
+    // normal case of an i32.gt_u.
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+    auto *RangeCheck = MRI.getVRegDef(Cond[1].getReg());
+    assert(RangeCheck != nullptr);
+    if (RangeCheck->getOpcode() != WebAssembly::GT_U_I32)
+      return nullptr;
+
+    // Remove the dummy default target and install the real one.
+    MI.RemoveOperand(MI.getNumExplicitOperands() - 1);
     MI.addOperand(MF, MachineOperand::CreateMBB(TBB));
-  } else {
-    // Arbitrarily choose the first jump target as the default.
-    auto *SomeMBB = MI.getOperand(1).getMBB();
-    MI.addOperand(MachineOperand::CreateMBB(SomeMBB));
   }
 
   // Remove any branches from the header and splice in the jump table instead
@@ -110,8 +126,10 @@ bool WebAssemblyFixBrTableDefaults::runOnMachineFunction(MachineFunction &MF) {
     for (auto &MI : *MBB) {
       if (WebAssembly::isBrTable(MI)) {
         auto *Fixed = fixBrTable(MI, MBB, MF);
-        MBBSet.erase(Fixed);
-        Changed = true;
+        if (Fixed != nullptr) {
+          MBBSet.erase(Fixed);
+          Changed = true;
+        }
         break;
       }
     }

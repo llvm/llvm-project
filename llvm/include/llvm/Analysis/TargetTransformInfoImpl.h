@@ -150,6 +150,9 @@ public:
   void getUnrollingPreferences(Loop *, ScalarEvolution &,
                                TTI::UnrollingPreferences &) {}
 
+  void getPeelingPreferences(Loop *, ScalarEvolution &,
+                             TTI::PeelingPreferences &) {}
+
   bool isLegalAddImmediate(int64_t Imm) { return false; }
 
   bool isLegalICmpImmediate(int64_t Imm) { return false; }
@@ -464,26 +467,23 @@ public:
     return 1;
   }
 
-  unsigned getMaskedMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
+  unsigned getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                  unsigned AddressSpace,
                                  TTI::TargetCostKind CostKind) {
     return 1;
   }
 
-  unsigned getGatherScatterOpCost(
-      unsigned Opcode, Type *DataTy, Value *Ptr, bool VariableMask,
-      unsigned Alignment, TTI::TargetCostKind CostKind,
-      const Instruction *I = nullptr) {
+  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                  const Value *Ptr, bool VariableMask,
+                                  Align Alignment, TTI::TargetCostKind CostKind,
+                                  const Instruction *I = nullptr) {
     return 1;
   }
 
-  unsigned getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
-                                      unsigned Factor,
-                                      ArrayRef<unsigned> Indices,
-                                      unsigned Alignment, unsigned AddressSpace,
-                                      TTI::TargetCostKind CostKind,
-                                      bool UseMaskForCond,
-                                      bool UseMaskForGaps) {
+  unsigned getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+      bool UseMaskForCond, bool UseMaskForGaps) {
     return 1;
   }
 
@@ -610,14 +610,12 @@ public:
 
   bool isLegalToVectorizeStore(StoreInst *SI) const { return true; }
 
-  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
-                                   unsigned Alignment,
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes, Align Alignment,
                                    unsigned AddrSpace) const {
     return true;
   }
 
-  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
-                                    unsigned Alignment,
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const {
     return true;
   }
@@ -923,13 +921,17 @@ public:
                                            CostKind, I);
     }
     case Instruction::InsertElement: {
-      auto *IE = cast<InsertElementInst>(U);
+      auto *IE = dyn_cast<InsertElementInst>(U);
+      if (!IE)
+        return TTI::TCC_Basic; // FIXME
       auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
       unsigned Idx = CI ? CI->getZExtValue() : -1;
       return TargetTTI->getVectorInstrCost(Opcode, Ty, Idx);
     }
     case Instruction::ShuffleVector: {
-      auto *Shuffle = cast<ShuffleVectorInst>(U);
+      auto *Shuffle = dyn_cast<ShuffleVectorInst>(U);
+      if (!Shuffle)
+        return TTI::TCC_Basic; // FIXME
       auto *VecTy = cast<VectorType>(U->getType());
       auto *VecSrcTy = cast<VectorType>(U->getOperand(0)->getType());
 
@@ -959,7 +961,10 @@ public:
     }
     case Instruction::ExtractElement: {
       unsigned Idx = -1;
-      auto *EEI = cast<ExtractElementInst>(U);
+      auto *EEI = dyn_cast<ExtractElementInst>(U);
+      if (!EEI)
+        return TTI::TCC_Basic; // FIXME
+
       auto *CI = dyn_cast<ConstantInt>(EEI->getOperand(1));
       if (CI)
         Idx = CI->getZExtValue();

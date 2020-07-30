@@ -32,12 +32,12 @@ def set_executable_bit(path):
 
 def get_platform():
     import platform
+    if sys.platform == 'darwin':
+        return 'mac-amd64' if platform.machine() != 'arm64' else 'mac-arm64'
     if platform.machine() not in ('AMD64', 'x86_64'):
         return None
     if sys.platform.startswith('linux'):
         return 'linux-amd64'
-    if sys.platform == 'darwin':
-        return 'mac-amd64'
     if sys.platform == 'win32':
         return 'windows-amd64'
 
@@ -46,6 +46,14 @@ def main():
     platform = get_platform()
     if not platform:
         print('no prebuilt binary for', sys.platform)
+        return 1
+    if platform == 'mac-arm64':
+        print('no prebuilt mac-arm64 binaries yet. build it yourself with:')
+        print('  rm -rf /tmp/gn &&')
+        print('  pushd /tmp && git clone https://gn.googlesource.com/gn &&')
+        print('  cd gn && build/gen.py && ninja -C out gn && popd &&')
+        print('  mkdir -p llvm/utils/gn/bin/mac-arm64 &&')
+        print('  cp /tmp/gn/out/gn llvm/utils/gn/bin/mac-arm64')
         return 1
 
     dirname = os.path.join(os.path.dirname(__file__), 'bin', platform)

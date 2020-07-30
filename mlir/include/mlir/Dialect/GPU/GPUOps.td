@@ -224,8 +224,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
     ///  - the argument/result attributes may need an update: if the new type
     ///  has less parameters we drop the extra attributes, if there are more
     ///  parameters they won't have any attributes.
-    // TODO(b/146349912): consider removing this function thanks to rewrite
-    // patterns.
+    // TODO: consider removing this function thanks to rewrite patterns.
     void setType(FunctionType newType);
 
     /// Returns the number of buffers located in the workgroup memory.

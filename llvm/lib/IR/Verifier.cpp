@@ -570,8 +570,9 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
   Assert(!GV.isDeclaration() || GV.hasValidDeclarationLinkage(),
          "Global is external, but doesn't have external or weak linkage!", &GV);
 
-  Assert(GV.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &GV);
+  if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV))
+    Assert(GO->getAlignment() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", GO);
   Assert(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
          "Only global variables can have appending linkage!", &GV);
 
@@ -4565,6 +4566,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                "llvm.call.preallocated.alloc arg index must be between 0 and "
                "corresponding "
                "llvm.call.preallocated.setup's argument count");
+      } else if (Fn && Fn->getIntrinsicID() ==
+                           Intrinsic::call_preallocated_teardown) {
+        // nothing to do
       } else {
         Assert(!FoundCall, "Can have at most one call corresponding to a "
                            "llvm.call.preallocated.setup");
@@ -4611,6 +4615,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Assert(Call.hasFnAttr(Attribute::Preallocated),
            "llvm.call.preallocated.arg must be called with a \"preallocated\" "
            "call site attribute");
+    break;
+  }
+  case Intrinsic::call_preallocated_teardown: {
+    auto *Token = dyn_cast<CallBase>(Call.getArgOperand(0));
+    Assert(Token && Token->getCalledFunction()->getIntrinsicID() ==
+                        Intrinsic::call_preallocated_setup,
+           "llvm.call.preallocated.teardown token argument must be a "
+           "llvm.call.preallocated.setup");
     break;
   }
   case Intrinsic::gcroot:

@@ -136,6 +136,30 @@ const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
       base.u);
 }
 const CoindexedNamedObject *GetCoindexedNamedObject(
+    const Designator &designator) {
+  return std::visit(common::visitors{
+                        [](const DataRef &x) -> const CoindexedNamedObject * {
+                          return GetCoindexedNamedObject(x);
+                        },
+                        [](const Substring &x) -> const CoindexedNamedObject * {
+                          return GetCoindexedNamedObject(
+                              std::get<DataRef>(x.t));
+                        },
+                    },
+      designator.u);
+}
+const CoindexedNamedObject *GetCoindexedNamedObject(const Variable &variable) {
+  return std::visit(
+      common::visitors{
+          [](const common::Indirection<Designator> &designator)
+              -> const CoindexedNamedObject * {
+            return GetCoindexedNamedObject(designator.value());
+          },
+          [](const auto &) -> const CoindexedNamedObject * { return nullptr; },
+      },
+      variable.u);
+}
+const CoindexedNamedObject *GetCoindexedNamedObject(
     const AllocateObject &allocateObject) {
   return std::visit(
       common::visitors{

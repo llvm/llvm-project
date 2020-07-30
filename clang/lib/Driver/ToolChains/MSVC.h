@@ -24,9 +24,7 @@ namespace tools {
 namespace visualstudio {
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const ToolChain &TC)
-      : Tool("visualstudio::Linker", "linker", TC, RF_Full,
-             llvm::sys::WEM_UTF16) {}
+  Linker(const ToolChain &TC) : Tool("visualstudio::Linker", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
@@ -40,8 +38,7 @@ public:
 class LLVM_LIBRARY_VISIBILITY Compiler : public Tool {
 public:
   Compiler(const ToolChain &TC)
-      : Tool("visualstudio::Compiler", "compiler", TC, RF_Full,
-             llvm::sys::WEM_UTF16) {}
+      : Tool("visualstudio::Compiler", "compiler", TC) {}
 
   bool hasIntegratedAssembler() const override { return true; }
   bool hasIntegratedCPP() const override { return true; }

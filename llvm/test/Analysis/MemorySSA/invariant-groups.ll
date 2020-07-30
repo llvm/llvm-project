@@ -1,4 +1,4 @@
-; RUN: opt -basicaa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s
+; RUN: opt -basic-aa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s
 ;
 ; Currently, MemorySSA doesn't support invariant groups. So, we should ignore
 ; launder.invariant.group intrinsics entirely. We'll need to pay attention to

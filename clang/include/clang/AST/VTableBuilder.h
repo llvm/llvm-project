@@ -354,6 +354,9 @@ public:
   }
 
   bool IsMicrosoftABI;
+
+  /// Determine whether this function should be assigned a vtable slot.
+  static bool hasVtableSlot(const CXXMethodDecl *MD);
 };
 
 class ItaniumVTableContext : public VTableContextBase {

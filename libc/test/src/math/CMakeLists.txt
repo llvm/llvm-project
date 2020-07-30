@@ -176,6 +176,19 @@ add_math_unittest(
 )
 
 add_math_unittest(
+  ceill_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    ceill_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.ceill
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
   floor_test
   NEED_MPFR
   SUITE
@@ -202,6 +215,19 @@ add_math_unittest(
 )
 
 add_math_unittest(
+  floorl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    floorl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.floorl
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
   round_test
   NEED_MPFR
   SUITE
@@ -224,6 +250,19 @@ add_math_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.roundf
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  roundl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    roundl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundl
     libc.utils.FPUtil.fputil
 )
 
@@ -280,6 +319,18 @@ add_math_unittest(
 )
 
 add_math_unittest(
+  copysignl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    copysignl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.copysignl
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
   frexp_test
   SUITE
     libc_math_unittests
@@ -300,6 +351,18 @@ add_math_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.frexpf
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  frexpl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    frexpl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.frexpl
     libc.utils.FPUtil.fputil
 )
 
@@ -328,6 +391,18 @@ add_math_unittest(
 )
 
 add_math_unittest(
+  logbl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    logbl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.logbl
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
   modf_test
   SUITE
     libc_math_unittests
@@ -348,5 +423,17 @@ add_math_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.modff
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  modfl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    modfl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.modfl
     libc.utils.FPUtil.fputil
 )

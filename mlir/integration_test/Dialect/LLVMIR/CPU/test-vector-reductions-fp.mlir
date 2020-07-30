@@ -42,9 +42,21 @@ module {
     llvm.call @print_newline() : () -> ()
     // CHECK: 11
 
+    %add1r = "llvm.intr.experimental.vector.reduce.v2.fadd"(%0, %v)
+        {reassoc = true} : (!llvm.float, !llvm<"<4 x float>">) -> !llvm.float
+    llvm.call @print_f32(%add1r) : (!llvm.float) -> ()
+    llvm.call @print_newline() : () -> ()
+    // CHECK: 11
+
     %add2 = "llvm.intr.experimental.vector.reduce.v2.fadd"(%1, %v)
         : (!llvm.float, !llvm<"<4 x float>">) -> !llvm.float
     llvm.call @print_f32(%add2) : (!llvm.float) -> ()
+    llvm.call @print_newline() : () -> ()
+    // CHECK: 12
+
+    %add2r = "llvm.intr.experimental.vector.reduce.v2.fadd"(%1, %v)
+        {reassoc = true} : (!llvm.float, !llvm<"<4 x float>">) -> !llvm.float
+    llvm.call @print_f32(%add2r) : (!llvm.float) -> ()
     llvm.call @print_newline() : () -> ()
     // CHECK: 12
 
@@ -54,9 +66,21 @@ module {
     llvm.call @print_newline() : () -> ()
     // CHECK: 24
 
+    %mul1r = "llvm.intr.experimental.vector.reduce.v2.fmul"(%0, %v)
+        {reassoc = true} : (!llvm.float, !llvm<"<4 x float>">) -> !llvm.float
+    llvm.call @print_f32(%mul1r) : (!llvm.float) -> ()
+    llvm.call @print_newline() : () -> ()
+    // CHECK: 24
+
     %mul2 = "llvm.intr.experimental.vector.reduce.v2.fmul"(%1, %v)
         : (!llvm.float, !llvm<"<4 x float>">) -> !llvm.float
     llvm.call @print_f32(%mul2) : (!llvm.float) -> ()
+    llvm.call @print_newline() : () -> ()
+    // CHECK: 48
+
+    %mul2r = "llvm.intr.experimental.vector.reduce.v2.fmul"(%1, %v)
+        {reassoc = true} : (!llvm.float, !llvm<"<4 x float>">) -> !llvm.float
+    llvm.call @print_f32(%mul2r) : (!llvm.float) -> ()
     llvm.call @print_newline() : () -> ()
     // CHECK: 48
 

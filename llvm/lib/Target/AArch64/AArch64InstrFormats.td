@@ -1647,6 +1647,8 @@ class BaseAuthLoad<bit M, bit W, dag oops, dag iops, string asm,
   let Inst{10} = 1;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rt;
+
+  let DecoderMethod = "DecodeAuthLoadInstruction";
 }
 
 multiclass AuthLoad<bit M, string asm, Operand opr> {
@@ -7911,15 +7913,18 @@ class SIMDThreeSameVectorBF16MatrixMul<string asm>
 class SIMD_BFCVTN
   : BaseSIMDMixedTwoVector<0, 0, 0b10, 0b10110, V128, V128,
                            "bfcvtn", ".4h", ".4s",
-    []>;
+    [(set (v8bf16 V128:$Rd),
+          (int_aarch64_neon_bfcvtn (v4f32 V128:$Rn)))]>;
 
 class SIMD_BFCVTN2
   : BaseSIMDMixedTwoVectorTied<1, 0, 0b10, 0b10110, V128, V128,
                            "bfcvtn2", ".8h", ".4s",
-    []>;
+    [(set (v8bf16 V128:$dst),
+          (int_aarch64_neon_bfcvtn2 (v8bf16 V128:$Rd), (v4f32 V128:$Rn)))]>;
 
 class BF16ToSinglePrecision<string asm>
-  : I<(outs FPR16:$Rd), (ins FPR32:$Rn), asm, "\t$Rd, $Rn", "", []>,
+  : I<(outs FPR16:$Rd), (ins FPR32:$Rn), asm, "\t$Rd, $Rn", "",
+    [(set (bf16 FPR16:$Rd), (int_aarch64_neon_bfcvt (f32 FPR32:$Rn)))]>,
     Sched<[WriteFCvt]> {
   bits<5> Rd;
   bits<5> Rn;

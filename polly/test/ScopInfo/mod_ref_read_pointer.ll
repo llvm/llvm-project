@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -basicaa -polly-scops -analyze -polly-allow-modref-calls \
+; RUN: opt %loadPolly -basic-aa -polly-scops -analyze -polly-allow-modref-calls \
 ; RUN:  < %s | FileCheck %s
-; RUN: opt %loadPolly -basicaa -polly-codegen -disable-output \
+; RUN: opt %loadPolly -basic-aa -polly-codegen -disable-output \
 ; RUN: -polly-allow-modref-calls < %s
 ;
 ; Check that we assume the call to func has a read on the whole A array.

@@ -738,6 +738,12 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink,
                                         Config.GnuDebugLinkCRC32);
 
+  // If the symbol table was previously removed, we need to create a new one
+  // before adding new symbols.
+  if (!Obj.SymbolTable && !Config.ELF->SymbolsToAdd.empty()) {
+    Obj.addNewSymbolTable();
+  }
+
   for (const NewSymbolInfo &SI : Config.ELF->SymbolsToAdd) {
     SectionBase *Sec = Obj.findSection(SI.SectionName);
     uint64_t Value = Sec ? Sec->Addr + SI.Value : SI.Value;

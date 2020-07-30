@@ -574,8 +574,7 @@ DWARF:
       - DieOffset:       0x000000D8
         Name:            char
   debug_info:
-    - Length:
-        TotalLength:     220
+    - Length:          220
       Version:         4
       AbbrOffset:      0
       AddrSize:        8

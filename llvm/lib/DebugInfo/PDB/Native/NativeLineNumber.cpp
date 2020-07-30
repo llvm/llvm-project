@@ -13,10 +13,11 @@ using namespace llvm::pdb;
 
 NativeLineNumber::NativeLineNumber(const NativeSession &Session,
                                    const codeview::LineInfo Line,
-                                   uint32_t Section, uint32_t Offset,
-                                   uint32_t Length, uint32_t SrcFileId)
-    : Session(Session), Line(Line), Section(Section), Offset(Offset),
-      Length(Length), SrcFileId(SrcFileId) {}
+                                   uint32_t ColumnNumber, uint32_t Section,
+                                   uint32_t Offset, uint32_t Length,
+                                   uint32_t SrcFileId)
+    : Session(Session), Line(Line), ColumnNumber(ColumnNumber),
+      Section(Section), Offset(Offset), Length(Length), SrcFileId(SrcFileId) {}
 
 uint32_t NativeLineNumber::getLineNumber() const { return Line.getStartLine(); }
 
@@ -24,7 +25,7 @@ uint32_t NativeLineNumber::getLineNumberEnd() const {
   return Line.getEndLine();
 }
 
-uint32_t NativeLineNumber::getColumnNumber() const { return 0; }
+uint32_t NativeLineNumber::getColumnNumber() const { return ColumnNumber; }
 
 uint32_t NativeLineNumber::getColumnNumberEnd() const { return 0; }
 

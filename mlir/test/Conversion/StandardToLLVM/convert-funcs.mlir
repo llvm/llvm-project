@@ -31,7 +31,7 @@ func @pass_through(%arg0: () -> ()) -> (() -> ()) {
 // CHECK-NEXT:  llvm.br ^bb1(%arg0 : !llvm<"void ()*">)
   br ^bb1(%arg0 : () -> ())
 
-//CHECK-NEXT: ^bb1(%0: !llvm<"void ()*">):	// pred: ^bb0
+//CHECK-NEXT: ^bb1(%0: !llvm<"void ()*">):
 ^bb1(%bbarg: () -> ()):
 // CHECK-NEXT:  llvm.return %0 : !llvm<"void ()*">
   return %bbarg : () -> ()
@@ -40,11 +40,12 @@ func @pass_through(%arg0: () -> ()) -> (() -> ()) {
 // CHECK-LABEL: llvm.func @body(!llvm.i32)
 func @body(i32)
 
-// CHECK-LABEL: llvm.func @indirect_const_call(%arg0: !llvm.i32) {
+// CHECK-LABEL: llvm.func @indirect_const_call
+// CHECK-SAME: (%[[ARG0:.*]]: !llvm.i32) {
 func @indirect_const_call(%arg0: i32) {
-// CHECK-NEXT: %0 = llvm.mlir.constant(@body) : !llvm<"void (i32)*">
+// CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @body : !llvm<"void (i32)*">
   %0 = constant @body : (i32) -> ()
-// CHECK-NEXT:  llvm.call %0(%arg0) : (!llvm.i32) -> ()
+// CHECK-NEXT:  llvm.call %[[ADDR]](%[[ARG0:.*]]) : (!llvm.i32) -> ()
   call_indirect %0(%arg0) : (i32) -> ()
 // CHECK-NEXT:  llvm.return
   return

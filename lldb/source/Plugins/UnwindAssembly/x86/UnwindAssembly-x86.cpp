@@ -141,7 +141,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
           // and we don't need to modify it at all.
 
           if (first_row_pc_loc.GetOffset() == -wordsize) {
-            do_augment_unwindplan = false;
+            return true;
           }
         }
       }

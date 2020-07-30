@@ -59,8 +59,6 @@ docs/_build
 # VS2017 and VSCode config files.
 .vscode
 .vs
-# clangd index
-.clangd
 
 #==============================================================================#
 # Files created in tree by the Go bindings.

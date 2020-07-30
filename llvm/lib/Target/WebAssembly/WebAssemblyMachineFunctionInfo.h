@@ -30,8 +30,6 @@ struct WebAssemblyFunctionInfo;
 /// This class is derived from MachineFunctionInfo and contains private
 /// WebAssembly-specific information for each MachineFunction.
 class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
-  MachineFunction &MF;
-
   std::vector<MVT> Params;
   std::vector<MVT> Results;
   std::vector<MVT> Locals;
@@ -66,7 +64,7 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   bool CFGStackified = false;
 
 public:
-  explicit WebAssemblyFunctionInfo(MachineFunction &MF) : MF(MF) {}
+  explicit WebAssemblyFunctionInfo(MachineFunction &MF) {}
   ~WebAssemblyFunctionInfo() override;
   void initializeBaseYamlFields(const yaml::WebAssemblyFunctionInfo &YamlMFI);
 
@@ -113,8 +111,8 @@ public:
 
   static const unsigned UnusedReg = -1u;
 
-  void stackifyVReg(unsigned VReg) {
-    assert(MF.getRegInfo().getUniqueVRegDef(VReg));
+  void stackifyVReg(MachineRegisterInfo &MRI, unsigned VReg) {
+    assert(MRI.getUniqueVRegDef(VReg));
     auto I = Register::virtReg2Index(VReg);
     if (I >= VRegStackified.size())
       VRegStackified.resize(I + 1);
@@ -132,7 +130,7 @@ public:
     return VRegStackified.test(I);
   }
 
-  void initWARegs();
+  void initWARegs(MachineRegisterInfo &MRI);
   void setWAReg(unsigned VReg, unsigned WAReg) {
     assert(WAReg != UnusedReg);
     auto I = Register::virtReg2Index(VReg);

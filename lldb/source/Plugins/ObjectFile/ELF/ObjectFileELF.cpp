@@ -903,7 +903,7 @@ size_t ObjectFileELF::ParseDependentModules() {
   if (m_filespec_up)
     return m_filespec_up->GetSize();
 
-  m_filespec_up.reset(new FileSpecList());
+  m_filespec_up = std::make_unique<FileSpecList>();
 
   if (!ParseSectionHeaders())
     return 0;
@@ -2717,7 +2717,7 @@ Symtab *ObjectFileELF::GetSymtab() {
     Section *symtab =
         section_list->FindSectionByType(eSectionTypeELFSymbolTable, true).get();
     if (symtab) {
-      m_symtab_up.reset(new Symtab(symtab->GetObjectFile()));
+      m_symtab_up = std::make_unique<Symtab>(symtab->GetObjectFile());
       symbol_id += ParseSymbolTable(m_symtab_up.get(), symbol_id, symtab);
     }
 
@@ -2734,7 +2734,7 @@ Symtab *ObjectFileELF::GetSymtab() {
               .get();
       if (dynsym) {
         if (!m_symtab_up)
-          m_symtab_up.reset(new Symtab(dynsym->GetObjectFile()));
+          m_symtab_up = std::make_unique<Symtab>(dynsym->GetObjectFile());
         symbol_id += ParseSymbolTable(m_symtab_up.get(), symbol_id, dynsym);
       }
     }
@@ -2761,7 +2761,8 @@ Symtab *ObjectFileELF::GetSymtab() {
         assert(reloc_header);
 
         if (m_symtab_up == nullptr)
-          m_symtab_up.reset(new Symtab(reloc_section->GetObjectFile()));
+          m_symtab_up =
+              std::make_unique<Symtab>(reloc_section->GetObjectFile());
 
         ParseTrampolineSymbols(m_symtab_up.get(), symbol_id, reloc_header,
                                reloc_id);
@@ -2771,14 +2772,14 @@ Symtab *ObjectFileELF::GetSymtab() {
     if (DWARFCallFrameInfo *eh_frame =
             GetModule()->GetUnwindTable().GetEHFrameInfo()) {
       if (m_symtab_up == nullptr)
-        m_symtab_up.reset(new Symtab(this));
+        m_symtab_up = std::make_unique<Symtab>(this);
       ParseUnwindSymbols(m_symtab_up.get(), eh_frame);
     }
 
     // If we still don't have any symtab then create an empty instance to avoid
     // do the section lookup next time.
     if (m_symtab_up == nullptr)
-      m_symtab_up.reset(new Symtab(this));
+      m_symtab_up = std::make_unique<Symtab>(this);
 
     // In the event that there's no symbol entry for the entry point we'll
     // artificially create one. We delegate to the symtab object the figuring

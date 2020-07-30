@@ -96,9 +96,9 @@ inline constexpr bool IsSameApartFromCase(char x, char y) {
 inline constexpr char DecimalDigitValue(char ch) { return ch - '0'; }
 
 inline constexpr char HexadecimalDigitValue(char ch) {
-  return IsUpperCaseLetter(ch)
-      ? ch - 'A' + 10
-      : IsLowerCaseLetter(ch) ? ch - 'a' + 10 : DecimalDigitValue(ch);
+  return IsUpperCaseLetter(ch) ? ch - 'A' + 10
+      : IsLowerCaseLetter(ch)  ? ch - 'a' + 10
+                               : DecimalDigitValue(ch);
 }
 
 inline constexpr std::optional<char> BackslashEscapeValue(char ch) {

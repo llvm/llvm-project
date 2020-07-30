@@ -125,7 +125,7 @@ TEST(PreamblePatchTest, IncludeParsing) {
         #/**/include <b.h>)cpp",
   };
 
-  for (const auto Case : Cases) {
+  for (const auto &Case : Cases) {
     Annotations Test(Case);
     const auto Code = Test.code();
     SCOPED_TRACE(Code);
@@ -230,8 +230,8 @@ std::string getPreamblePatch(llvm::StringRef Baseline,
 TEST(PreamblePatchTest, Define) {
   // BAR should be defined while parsing the AST.
   struct {
-    llvm::StringLiteral Contents;
-    llvm::StringLiteral ExpectedPatch;
+    const char *const Contents;
+    const char *const ExpectedPatch;
   } Cases[] = {
       {
           R"cpp(
@@ -270,7 +270,7 @@ TEST(PreamblePatchTest, Define) {
     SCOPED_TRACE(Case.Contents);
     Annotations Modified(Case.Contents);
     EXPECT_THAT(getPreamblePatch("", Modified.code()),
-                MatchesRegex(Case.ExpectedPatch.str()));
+                MatchesRegex(Case.ExpectedPatch));
 
     auto AST = createPatchedAST("", Modified.code());
     ASSERT_TRUE(AST);
@@ -304,8 +304,8 @@ TEST(PreamblePatchTest, OrderingPreserved) {
 
 TEST(PreamblePatchTest, LocateMacroAtWorks) {
   struct {
-    llvm::StringLiteral Baseline;
-    llvm::StringLiteral Modified;
+    const char *const Baseline;
+    const char *const Modified;
   } Cases[] = {
       // Addition of new directive
       {
@@ -417,8 +417,8 @@ TEST(PreamblePatchTest, LocateMacroAtDeletion) {
 
 TEST(PreamblePatchTest, RefsToMacros) {
   struct {
-    llvm::StringLiteral Baseline;
-    llvm::StringLiteral Modified;
+    const char *const Baseline;
+    const char *const Modified;
   } Cases[] = {
       // Newly added
       {
@@ -491,8 +491,8 @@ TEST(TranslatePreamblePatchLocation, Simple) {
 
 TEST(PreamblePatch, ModifiedBounds) {
   struct {
-    llvm::StringLiteral Baseline;
-    llvm::StringLiteral Modified;
+    const char *const Baseline;
+    const char *const Modified;
   } Cases[] = {
       // Size increased
       {

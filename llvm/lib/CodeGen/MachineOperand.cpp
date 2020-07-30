@@ -25,6 +25,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
@@ -669,7 +670,7 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
       size_t e = CFI.getValues().size() - 1;
       for (size_t i = 0; i < e; ++i)
         OS << format("0x%02x", uint8_t(CFI.getValues()[i])) << ", ";
-      OS << format("0x%02x", uint8_t(CFI.getValues()[e])) << ", ";
+      OS << format("0x%02x", uint8_t(CFI.getValues()[e]));
     }
     break;
   }

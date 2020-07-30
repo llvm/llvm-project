@@ -2,7 +2,7 @@
 ; to the internal functions are cold, thereby preventing the last call to
 ; static bonus from being applied.
 
-; RUN: opt < %s -passes='function(require<opt-remark-emit>,unroll),require<profile-summary>,cgscc(inline)' -unroll-threshold=15000 -inline-threshold=250 -S | FileCheck %s
+; RUN: opt < %s -passes='function(require<opt-remark-emit>,loop-unroll),require<profile-summary>,cgscc(inline)' -unroll-threshold=15000 -inline-threshold=250 -S | FileCheck %s
 
 ; CHECK-LABEL: define internal i32 @baz
 define internal i32 @baz() {

@@ -92,8 +92,8 @@ public:
   bool isChar() const { return ElementBitwidth == 8; }
   bool isVoid() const { return Void & !Pointer; }
   bool isDefault() const { return DefaultType; }
-  bool isFloat() const { return Float; }
-  bool isBFloat() const { return BFloat; }
+  bool isFloat() const { return Float && !BFloat; }
+  bool isBFloat() const { return BFloat && !Float; }
   bool isFloatingPoint() const { return Float || BFloat; }
   bool isInteger() const { return !isFloatingPoint() && !Predicate; }
   bool isScalarPredicate() const {
@@ -248,13 +248,13 @@ private:
     const char *Type;
     const char *BuiltinType;
   };
-  SmallVector<ReinterpretTypeInfo, 11> Reinterprets = {
+  SmallVector<ReinterpretTypeInfo, 12> Reinterprets = {
       {"s8", "svint8_t", "q16Sc"},   {"s16", "svint16_t", "q8Ss"},
       {"s32", "svint32_t", "q4Si"},  {"s64", "svint64_t", "q2SWi"},
       {"u8", "svuint8_t", "q16Uc"},  {"u16", "svuint16_t", "q8Us"},
       {"u32", "svuint32_t", "q4Ui"}, {"u64", "svuint64_t", "q2UWi"},
-      {"f16", "svfloat16_t", "q8h"}, {"f32", "svfloat32_t", "q4f"},
-      {"f64", "svfloat64_t", "q2d"}};
+      {"f16", "svfloat16_t", "q8h"}, {"bf16", "svbfloat16_t", "q8y"},
+      {"f32", "svfloat32_t", "q4f"}, {"f64", "svfloat64_t", "q2d"}};
 
   RecordKeeper &Records;
   llvm::StringMap<uint64_t> EltTypes;
@@ -491,6 +491,7 @@ void SVEType::applyTypespec() {
       break;
     case 'b':
       BFloat = true;
+      Float = false;
       ElementBitwidth = 16;
       break;
     default:
@@ -538,6 +539,7 @@ void SVEType::applyModifier(char Mod) {
   case 'b':
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth /= 4;
     break;
   case 'o':
@@ -567,18 +569,21 @@ void SVEType::applyModifier(char Mod) {
   case '@':
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth /= 4;
     NumVectors = 0;
     break;
   case 'K':
     Signed = true;
     Float = false;
+    BFloat = false;
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
     break;
   case 'L':
     Signed = false;
     Float = false;
+    BFloat = false;
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
     break;
@@ -586,15 +591,18 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = false;
     Float = false;
+    BFloat = false;
     break;
   case 'x':
     Predicate = false;
     Signed = true;
     Float = false;
+    BFloat = false;
     break;
   case 'i':
     Predicate = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     Signed = false;
@@ -603,6 +611,7 @@ void SVEType::applyModifier(char Mod) {
   case 'I':
     Predicate = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     Signed = true;
@@ -612,6 +621,7 @@ void SVEType::applyModifier(char Mod) {
   case 'J':
     Predicate = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     Signed = true;
@@ -622,6 +632,7 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = true;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     break;
@@ -629,6 +640,7 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = true;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
@@ -636,6 +648,7 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     break;
@@ -643,6 +656,7 @@ void SVEType::applyModifier(char Mod) {
     Predicate = false;
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = Bitwidth = 64;
     NumVectors = 0;
     break;
@@ -661,16 +675,19 @@ void SVEType::applyModifier(char Mod) {
   case 'g':
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = 64;
     break;
   case 't':
     Signed = true;
     Float = false;
+    BFloat = false;
     ElementBitwidth = 32;
     break;
   case 'z':
     Signed = false;
     Float = false;
+    BFloat = false;
     ElementBitwidth = 32;
     break;
   case 'O':
@@ -681,6 +698,7 @@ void SVEType::applyModifier(char Mod) {
   case 'M':
     Predicate = false;
     Float = true;
+    BFloat = false;
     ElementBitwidth = 32;
     break;
   case 'N':
@@ -1085,10 +1103,20 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVUint16_t svuint16_t;\n";
   OS << "typedef __SVUint32_t svuint32_t;\n";
   OS << "typedef __SVUint64_t svuint64_t;\n";
-  OS << "typedef __SVFloat16_t svfloat16_t;\n";
-  OS << "typedef __SVBFloat16_t svbfloat16_t;\n\n";
+  OS << "typedef __SVFloat16_t svfloat16_t;\n\n";
 
-  OS << "#ifdef __ARM_FEATURE_BF16_SCALAR_ARITHMETIC\n";
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16) && "
+        "!defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
+  OS << "#error \"__ARM_FEATURE_BF16_SCALAR_ARITHMETIC must be defined when "
+        "__ARM_FEATURE_SVE_BF16 is defined\"\n";
+  OS << "#endif\n\n";
+
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
+  OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
+  OS << "#endif\n\n";
+
+  OS << "#if defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
+  OS << "#include <arm_bf16.h>\n";
   OS << "typedef __bf16 bfloat16_t;\n";
   OS << "#endif\n\n";
 
@@ -1128,6 +1156,12 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __clang_svfloat32x4_t svfloat32x4_t;\n";
   OS << "typedef __clang_svfloat64x4_t svfloat64x4_t;\n";
   OS << "typedef __SVBool_t  svbool_t;\n\n";
+
+  OS << "#ifdef __ARM_FEATURE_SVE_BF16\n";
+  OS << "typedef __clang_svbfloat16x2_t svbfloat16x2_t;\n";
+  OS << "typedef __clang_svbfloat16x3_t svbfloat16x3_t;\n";
+  OS << "typedef __clang_svbfloat16x4_t svbfloat16x4_t;\n";
+  OS << "#endif\n";
 
   OS << "typedef enum\n";
   OS << "{\n";
@@ -1174,6 +1208,10 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   for (auto ShortForm : { false, true } )
     for (const ReinterpretTypeInfo &From : Reinterprets)
       for (const ReinterpretTypeInfo &To : Reinterprets) {
+        const bool IsBFloat = StringRef(From.Suffix).equals("bf16") ||
+                              StringRef(To.Suffix).equals("bf16");
+        if (IsBFloat)
+          OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
         if (ShortForm) {
           OS << "__aio " << From.Type << " svreinterpret_" << From.Suffix;
           OS << "(" << To.Type << " op) {\n";
@@ -1184,6 +1222,8 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
           OS << "#define svreinterpret_" << From.Suffix << "_" << To.Suffix
              << "(...) __builtin_sve_reinterpret_" << From.Suffix << "_"
              << To.Suffix << "(__VA_ARGS__)\n";
+        if (IsBFloat)
+          OS << "#endif /* #if defined(__ARM_FEATURE_SVE_BF16) */\n";
       }
 
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
@@ -1221,6 +1261,11 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
 
   if (!InGuard.empty())
     OS << "#endif  //" << InGuard << "\n";
+
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
+  OS << "#define svcvtnt_bf16_x      svcvtnt_bf16_m\n";
+  OS << "#define svcvtnt_bf16_f32_x  svcvtnt_bf16_f32_m\n";
+  OS << "#endif /*__ARM_FEATURE_SVE_BF16 */\n\n";
 
   OS << "#if defined(__ARM_FEATURE_SVE2)\n";
   OS << "#define svcvtnt_f16_x      svcvtnt_f16_m\n";

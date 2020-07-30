@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objcopy --remove-section=.text.bar %t %t2
-# RUN: llvm-readobj --elf-section-groups %t2 | FileCheck %s
+# RUN: llvm-objcopy --remove-section=.text.bar %t %t1
+# RUN: llvm-readobj --elf-section-groups %t1 | FileCheck %s
 
 # In this test the section .text.bar is getting removed, as a result, 
 # the indices of the sections which go after .text.bar will change, 
@@ -54,3 +54,27 @@ Symbols:
     Section:         .text.foo
     Size:            0x0000000000000000
     Binding:         STB_WEAK
+
+## This checks that tool will emit an error when trying to remove the symbol
+## table when we have a group section linked with symtab.
+# RUN: not llvm-objcopy -R .symtab %t %t2 2>&1 | FileCheck %s --check-prefix=ERR -DINPUT=%t
+
+# ERR: error: '[[INPUT]]': section '.symtab' cannot be removed because it is referenced by the group section '.group'
+
+## The '.symtab' section could be removed using --allow-broken-links option.
+# RUN: llvm-objcopy --allow-broken-links -R .symtab %t %t3
+# RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=SECTIONS
+
+# SECTIONS: There are 6 section headers
+# SECTIONS:      Name      Type   Address Off    Size   ES     Flg Lk Inf
+# SECTIONS-NEXT: NULL
+# SECTIONS-NEXT: .group    {{.+}} {{.+}}  {{.+}} {{.+}} {{.+}}     0  0
+# SECTIONS-NEXT: .text.bar
+# SECTIONS-NEXT: .text.foo
+# SECTIONS-NEXT: .strtab
+# SECTIONS-NEXT: .shstrtab
+
+## Show that llvm-objcopy can handle a group section with a zero sh_link and
+## sh_info fields.
+# RUN: llvm-objcopy --allow-broken-links -R .symtab %t3 %t4
+# RUN: cmp %t3 %t4

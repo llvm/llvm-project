@@ -160,9 +160,9 @@ namespace matcher {
 /// over other smaller vector types in the function and avoids interfering with
 /// operations on those.
 /// This is a first approximation, it can easily be extended in the future.
-/// TODO(ntv): this could all be much simpler if we added a bit that a vector
-/// type to mark that a vector is a strict super-vector but it still does not
-/// warrant adding even 1 extra bit in the IR for now.
+/// TODO: this could all be much simpler if we added a bit that a vector type to
+/// mark that a vector is a strict super-vector but it still does not warrant
+/// adding even 1 extra bit in the IR for now.
 bool operatesOnSuperVectorsOf(Operation &op, VectorType subVectorType);
 
 } // end namespace matcher

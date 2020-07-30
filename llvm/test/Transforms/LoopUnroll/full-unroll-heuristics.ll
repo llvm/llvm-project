@@ -21,14 +21,14 @@
 ; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=200 | FileCheck %s -check-prefix=TEST2
 ; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST3
 
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST1
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=200 | FileCheck %s -check-prefix=TEST2
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST3
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST1
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=200 | FileCheck %s -check-prefix=TEST2
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST3
 
 ; Check that these work when the unroller has partial unrolling enabled too.
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST1
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=200 | FileCheck %s -check-prefix=TEST2
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,unroll' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST3
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST1
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=200 | FileCheck %s -check-prefix=TEST2
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST3
 
 ; If the absolute threshold is too low, we should not unroll:
 ; TEST1: %array_const_idx = getelementptr inbounds [9 x i32], [9 x i32]* @known_constant, i64 0, i64 %iv
@@ -41,7 +41,7 @@
 
 ; And check that we don't crash when we're not allowed to do any analysis.
 ; RUN: opt < %s -loop-unroll -unroll-max-iteration-count-to-analyze=0 -disable-output
-; RUN: opt < %s -passes='require<opt-remark-emit>,loop(unroll-full)' -unroll-max-iteration-count-to-analyze=0 -disable-output
+; RUN: opt < %s -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=0 -disable-output
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @known_constant = internal unnamed_addr constant [9 x i32] [i32 0, i32 -1, i32 0, i32 -1, i32 5, i32 -1, i32 0, i32 -1, i32 0], align 16

@@ -191,8 +191,8 @@ static void mergeInlinedArrayAllocas(Function *Caller, InlineFunctionInfo &IFI,
     // function.  Also, AllocasForType can be empty of course!
     bool MergedAwayAlloca = false;
     for (AllocaInst *AvailableAlloca : AllocasForType) {
-      unsigned Align1 = AI->getAlignment(),
-               Align2 = AvailableAlloca->getAlignment();
+      Align Align1 = AI->getAlign();
+      Align Align2 = AvailableAlloca->getAlign();
 
       // The available alloca has to be in the right function, not in some other
       // function in this SCC.
@@ -219,18 +219,8 @@ static void mergeInlinedArrayAllocas(Function *Caller, InlineFunctionInfo &IFI,
 
       AI->replaceAllUsesWith(AvailableAlloca);
 
-      if (Align1 != Align2) {
-        if (!Align1 || !Align2) {
-          const DataLayout &DL = Caller->getParent()->getDataLayout();
-          unsigned TypeAlign = DL.getABITypeAlignment(AI->getAllocatedType());
-
-          Align1 = Align1 ? Align1 : TypeAlign;
-          Align2 = Align2 ? Align2 : TypeAlign;
-        }
-
-        if (Align1 > Align2)
-          AvailableAlloca->setAlignment(AI->getAlign());
-      }
+      if (Align1 > Align2)
+        AvailableAlloca->setAlignment(AI->getAlign());
 
       AI->eraseFromParent();
       MergedAwayAlloca = true;
@@ -801,7 +791,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     LazyCallGraph::Node &N = *CG.lookup(F);
     if (CG.lookupSCC(N) != C)
       continue;
-    if (F.hasOptNone()) {
+    if (!Calls[I].first->getCalledFunction()->hasFnAttribute(
+            Attribute::AlwaysInline) &&
+        F.hasOptNone()) {
       setInlineRemark(*Calls[I].first, "optnone attribute");
       continue;
     }

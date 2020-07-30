@@ -1,4 +1,4 @@
-; RUN: opt -passes 'strength-reduce' -scalar-evolution-max-arith-depth=2 -S < %s | FileCheck %s
+; RUN: opt -passes 'loop-reduce' -scalar-evolution-max-arith-depth=2 -S < %s | FileCheck %s
 ; RUN: opt -loop-reduce -scalar-evolution-max-arith-depth=2 -S < %s | FileCheck %s
 
 ; This test should just compile cleanly without assertions.

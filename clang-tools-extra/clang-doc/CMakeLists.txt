@@ -15,6 +15,9 @@ add_clang_library(clangDoc
   Representation.cpp
   Serialize.cpp
   YAMLGenerator.cpp
+
+  DEPENDS
+  omp_gen
 )
 
 clang_target_link_libraries(clangDoc

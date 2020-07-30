@@ -785,6 +785,20 @@ def int_arm_neon_usmmla : Neon_MatMul_Intrinsic;
 def int_arm_neon_usdot  : Neon_Dot_Intrinsic;
 
 // v8.6-A Bfloat Intrinsics
+def int_arm_neon_vcvtfp2bf
+    : Intrinsic<[llvm_anyvector_ty], [llvm_v4f32_ty], [IntrNoMem]>;
+def int_arm_neon_vcvtbfp2bf
+    : Intrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem]>;
+
+def int_arm_neon_bfdot : Neon_Dot_Intrinsic;
+def int_arm_neon_bfmmla : Neon_MatMul_Intrinsic;
+
+class Neon_FML_Intrinsic
+  : Intrinsic<[llvm_anyvector_ty],
+              [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<1>],
+              [IntrNoMem]>;
+def int_arm_neon_bfmlalb : Neon_FML_Intrinsic;
+def int_arm_neon_bfmlalt : Neon_FML_Intrinsic;
 
 def int_arm_cls: Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_cls64: Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;

@@ -336,7 +336,7 @@ void tblgen::Operator::populateTypeInferenceInfo(
             llvm::formatv("{0}::Trait", inferTypeOpInterface).str()))
       return;
     if (const auto *opTrait = dyn_cast<tblgen::InterfaceOpTrait>(&trait))
-      if (opTrait->getTrait().startswith(inferTypeOpInterface))
+      if (&opTrait->getDef() == inferTrait)
         return;
 
     if (!def.isSubClassOf("AllTypesMatch"))
@@ -436,9 +436,13 @@ void tblgen::Operator::populateOpStructure() {
       argDef = argDef->getValueAsDef("constraint");
 
     if (argDef->isSubClassOf(typeConstraintClass)) {
+      attrOrOperandMapping.push_back(
+          {OperandOrAttribute::Kind::Operand, operandIndex});
       arguments.emplace_back(&operands[operandIndex++]);
     } else {
       assert(argDef->isSubClassOf(attrClass));
+      attrOrOperandMapping.push_back(
+          {OperandOrAttribute::Kind::Attribute, attrIndex});
       arguments.emplace_back(&attributes[attrIndex++]);
     }
   }
@@ -558,7 +562,7 @@ StringRef tblgen::Operator::getSummary() const {
 
 bool tblgen::Operator::hasAssemblyFormat() const {
   auto *valueInit = def.getValueInit("assemblyFormat");
-  return isa<llvm::CodeInit>(valueInit) || isa<llvm::StringInit>(valueInit);
+  return isa<llvm::CodeInit, llvm::StringInit>(valueInit);
 }
 
 StringRef tblgen::Operator::getAssemblyFormat() const {
@@ -580,4 +584,9 @@ void tblgen::Operator::print(llvm::raw_ostream &os) const {
 auto tblgen::Operator::VariableDecoratorIterator::unwrap(llvm::Init *init)
     -> VariableDecorator {
   return VariableDecorator(cast<llvm::DefInit>(init)->getDef());
+}
+
+auto tblgen::Operator::getArgToOperandOrAttribute(int index) const
+    -> OperandOrAttribute {
+  return attrOrOperandMapping[index];
 }

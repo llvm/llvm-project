@@ -571,7 +571,7 @@ void RegisterCoalescer::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void RegisterCoalescer::eliminateDeadDefs() {
-  SmallVector<unsigned, 8> NewRegs;
+  SmallVector<Register, 8> NewRegs;
   LiveRangeEdit(nullptr, NewRegs, *MF, *LIS,
                 nullptr, this).eliminateDeadDefs(DeadDefs);
 }
@@ -1064,7 +1064,9 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     return false;
 
   MachineBasicBlock &MBB = *CopyMI.getParent();
-  if (MBB.isEHPad())
+  // If this block is the target of an invoke/inlineasm_br, moving the copy into
+  // the predecessor is tricker, and we don't handle it.
+  if (MBB.isEHPad() || MBB.isInlineAsmBrIndirectTarget())
     return false;
 
   if (MBB.pred_size() != 2)
@@ -2429,7 +2431,7 @@ public:
   /// Add foreign virtual registers to ShrinkRegs if their live range ended at
   /// the erased instrs.
   void eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
-                   SmallVectorImpl<unsigned> &ShrinkRegs,
+                   SmallVectorImpl<Register> &ShrinkRegs,
                    LiveInterval *LI = nullptr);
 
   /// Remove liverange defs at places where implicit defs will be removed.
@@ -3171,7 +3173,7 @@ void JoinVals::removeImplicitDefs() {
 }
 
 void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
-                           SmallVectorImpl<unsigned> &ShrinkRegs,
+                           SmallVectorImpl<Register> &ShrinkRegs,
                            LiveInterval *LI) {
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
     // Get the def location before markUnused() below invalidates it.
@@ -3439,7 +3441,7 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
   // Erase COPY and IMPLICIT_DEF instructions. This may cause some external
   // registers to require trimming.
-  SmallVector<unsigned, 8> ShrinkRegs;
+  SmallVector<Register, 8> ShrinkRegs;
   LHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, &LHS);
   RHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs);
   while (!ShrinkRegs.empty())
@@ -3488,7 +3490,7 @@ void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF)
   // vreg => DbgValueLoc map.
   auto CloseNewDVRange = [this, &ToInsert](SlotIndex Slot) {
     for (auto *X : ToInsert)
-      DbgVRegToValues[X->getOperand(0).getReg()].push_back({Slot, X});
+      DbgVRegToValues[X->getDebugOperand(0).getReg()].push_back({Slot, X});
 
     ToInsert.clear();
   };
@@ -3500,8 +3502,8 @@ void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF)
     SlotIndex CurrentSlot = Slots.getMBBStartIdx(&MBB);
 
     for (auto &MI : MBB) {
-      if (MI.isDebugValue() && MI.getOperand(0).isReg() &&
-          MI.getOperand(0).getReg().isVirtual()) {
+      if (MI.isDebugValue() && MI.getDebugOperand(0).isReg() &&
+          MI.getDebugOperand(0).getReg().isVirtual()) {
         ToInsert.push_back(&MI);
       } else if (!MI.isDebugInstr()) {
         CurrentSlot = Slots.getInstructionIndex(MI);
@@ -3600,10 +3602,10 @@ void RegisterCoalescer::checkMergingChangesDbgValuesImpl(unsigned Reg,
       // "Other" is live and there is a DBG_VALUE of Reg: test if we should
       // set it undef.
       if (DbgValueSetIt->first >= SegmentIt->start &&
-          DbgValueSetIt->second->getOperand(0).getReg() != 0 &&
+          DbgValueSetIt->second->getDebugOperand(0).getReg() != 0 &&
           ShouldUndef(DbgValueSetIt->first)) {
         // Mark undef, erase record of this DBG_VALUE to avoid revisiting.
-        DbgValueSetIt->second->getOperand(0).setReg(0);
+        DbgValueSetIt->second->setDebugValueUndef();
         continue;
       }
       ++DbgValueSetIt;

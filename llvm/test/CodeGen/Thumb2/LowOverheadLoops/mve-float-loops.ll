@@ -710,10 +710,10 @@ define arm_aapcs_vfpcc void @float_int_mul(float* nocapture readonly %a, i32* no
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r4, [r6], #4
 ; CHECK-NEXT:    add.w r12, r12, #1
-; CHECK-NEXT:    vmov s0, r4
-; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vldr s2, [r5]
 ; CHECK-NEXT:    adds r5, #4
+; CHECK-NEXT:    vmov s0, r4
+; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r7]
 ; CHECK-NEXT:    adds r7, #4
@@ -739,19 +739,19 @@ define arm_aapcs_vfpcc void @float_int_mul(float* nocapture readonly %a, i32* no
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r6]
 ; CHECK-NEXT:    vldr s0, [r1, #-4]
-; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vldr s2, [r7, #4]
+; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r6, #4]
 ; CHECK-NEXT:    vldr s0, [r1]
-; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vldr s2, [r7, #8]
+; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r6, #8]
 ; CHECK-NEXT:    vldr s0, [r1, #4]
 ; CHECK-NEXT:    add.w r1, r1, #16
-; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vldr s2, [r7, #12]
+; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r6, #12]
 ; CHECK-NEXT:    bne .LBB3_12
@@ -1011,13 +1011,11 @@ define arm_aapcs_vfpcc void @half_half_mul(half* nocapture readonly %a, half* no
 ; CHECK-NEXT:    vmov.32 q1[1], r10
 ; CHECK-NEXT:    adds r5, #8
 ; CHECK-NEXT:    vmul.f16 q0, q0, q1
-; CHECK-NEXT:    vmovx.f16 s6, s1
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s11, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s1
-; CHECK-NEXT:    vcvtb.f32.f16 s9, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s0
-; CHECK-NEXT:    vstrb.8 q2, [r6], #16
+; CHECK-NEXT:    vcvtt.f32.f16 s7, s1
+; CHECK-NEXT:    vcvtb.f32.f16 s6, s1
+; CHECK-NEXT:    vcvtt.f32.f16 s5, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s4, s0
+; CHECK-NEXT:    vstrb.8 q1, [r6], #16
 ; CHECK-NEXT:    le lr, .LBB5_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r12, r3
@@ -1130,13 +1128,11 @@ define arm_aapcs_vfpcc void @half_half_add(half* nocapture readonly %a, half* no
 ; CHECK-NEXT:    vmov.32 q1[1], r10
 ; CHECK-NEXT:    adds r5, #8
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
-; CHECK-NEXT:    vmovx.f16 s6, s1
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s11, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s1
-; CHECK-NEXT:    vcvtb.f32.f16 s9, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s0
-; CHECK-NEXT:    vstrb.8 q2, [r6], #16
+; CHECK-NEXT:    vcvtt.f32.f16 s7, s1
+; CHECK-NEXT:    vcvtb.f32.f16 s6, s1
+; CHECK-NEXT:    vcvtt.f32.f16 s5, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s4, s0
+; CHECK-NEXT:    vstrb.8 q1, [r6], #16
 ; CHECK-NEXT:    le lr, .LBB6_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r12, r3
@@ -1249,13 +1245,11 @@ define arm_aapcs_vfpcc void @half_half_sub(half* nocapture readonly %a, half* no
 ; CHECK-NEXT:    vmov.32 q1[1], r10
 ; CHECK-NEXT:    adds r5, #8
 ; CHECK-NEXT:    vsub.f16 q0, q0, q1
-; CHECK-NEXT:    vmovx.f16 s6, s1
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s11, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s1
-; CHECK-NEXT:    vcvtb.f32.f16 s9, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s0
-; CHECK-NEXT:    vstrb.8 q2, [r6], #16
+; CHECK-NEXT:    vcvtt.f32.f16 s7, s1
+; CHECK-NEXT:    vcvtb.f32.f16 s6, s1
+; CHECK-NEXT:    vcvtt.f32.f16 s5, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s4, s0
+; CHECK-NEXT:    vstrb.8 q1, [r6], #16
 ; CHECK-NEXT:    le lr, .LBB7_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r12, r3
@@ -1373,13 +1367,11 @@ define arm_aapcs_vfpcc void @half_short_mul(half* nocapture readonly %a, i16* no
 ; CHECK-NEXT:    vmov.32 q1[0], r9
 ; CHECK-NEXT:    vmov.32 q1[1], r8
 ; CHECK-NEXT:    vmul.f16 q0, q1, q0
-; CHECK-NEXT:    vmovx.f16 s6, s1
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vcvtb.f32.f16 s11, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s10, s1
-; CHECK-NEXT:    vcvtb.f32.f16 s9, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s0
-; CHECK-NEXT:    vstrb.8 q2, [r6], #16
+; CHECK-NEXT:    vcvtt.f32.f16 s7, s1
+; CHECK-NEXT:    vcvtb.f32.f16 s6, s1
+; CHECK-NEXT:    vcvtt.f32.f16 s5, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s4, s0
+; CHECK-NEXT:    vstrb.8 q1, [r6], #16
 ; CHECK-NEXT:    le lr, .LBB8_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r12, r3
@@ -1498,18 +1490,18 @@ define arm_aapcs_vfpcc float @half_half_mac(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    vmul.f16 s2, s4, s2
 ; CHECK-NEXT:    vldr.16 s4, [r2, #4]
 ; CHECK-NEXT:    vldr.16 s10, [r4]
-; CHECK-NEXT:    adds r3, #8
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vmul.f16 s4, s6, s4
 ; CHECK-NEXT:    vldr.16 s6, [r2, #2]
-; CHECK-NEXT:    add.w r12, r12, #4
+; CHECK-NEXT:    vcvtb.f32.f16 s4, s4
+; CHECK-NEXT:    adds r3, #8
 ; CHECK-NEXT:    vmul.f16 s6, s8, s6
 ; CHECK-NEXT:    vldr.16 s8, [r2]
+; CHECK-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vmul.f16 s8, s10, s8
 ; CHECK-NEXT:    vcvtb.f32.f16 s8, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s6, s6
 ; CHECK-NEXT:    vadd.f32 s0, s0, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s4, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vadd.f32 s0, s0, s6
 ; CHECK-NEXT:    vadd.f32 s0, s0, s4
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2
@@ -1655,18 +1647,18 @@ define arm_aapcs_vfpcc float @half_half_acc(half* nocapture readonly %a, half* n
 ; CHECK-NEXT:    vadd.f16 s2, s4, s2
 ; CHECK-NEXT:    vldr.16 s4, [r2, #4]
 ; CHECK-NEXT:    vldr.16 s10, [r4]
-; CHECK-NEXT:    adds r3, #8
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vadd.f16 s4, s6, s4
 ; CHECK-NEXT:    vldr.16 s6, [r2, #2]
-; CHECK-NEXT:    add.w r12, r12, #4
+; CHECK-NEXT:    vcvtb.f32.f16 s4, s4
+; CHECK-NEXT:    adds r3, #8
 ; CHECK-NEXT:    vadd.f16 s6, s8, s6
 ; CHECK-NEXT:    vldr.16 s8, [r2]
+; CHECK-NEXT:    vcvtb.f32.f16 s6, s6
+; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vadd.f16 s8, s10, s8
 ; CHECK-NEXT:    vcvtb.f32.f16 s8, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s6, s6
 ; CHECK-NEXT:    vadd.f32 s0, s0, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s4, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vadd.f32 s0, s0, s6
 ; CHECK-NEXT:    vadd.f32 s0, s0, s4
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2
@@ -1806,32 +1798,32 @@ define arm_aapcs_vfpcc float @half_short_mac(half* nocapture readonly %a, i16* n
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrsh.w r4, [r3, #2]
 ; CHECK-NEXT:    vldr.16 s2, [r2, #2]
+; CHECK-NEXT:    ldrsh r5, [r3, #-2]
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vmov s4, r4
-; CHECK-NEXT:    vcvt.f16.s32 s4, s4
 ; CHECK-NEXT:    ldrsh.w r4, [r3]
+; CHECK-NEXT:    vcvt.f16.s32 s4, s4
+; CHECK-NEXT:    vmov s8, r5
 ; CHECK-NEXT:    vmul.f16 s2, s2, s4
 ; CHECK-NEXT:    vldr.16 s4, [r2]
 ; CHECK-NEXT:    vmov s6, r4
-; CHECK-NEXT:    vcvt.f16.s32 s6, s6
-; CHECK-NEXT:    ldrsh r5, [r3, #-2]
 ; CHECK-NEXT:    ldrsh r4, [r3, #-4]
+; CHECK-NEXT:    vcvt.f16.s32 s6, s6
+; CHECK-NEXT:    vcvt.f16.s32 s8, s8
 ; CHECK-NEXT:    vmul.f16 s4, s4, s6
 ; CHECK-NEXT:    vldr.16 s6, [r2, #-2]
-; CHECK-NEXT:    adds r3, #8
-; CHECK-NEXT:    vmov s8, r5
-; CHECK-NEXT:    vcvt.f16.s32 s8, s8
 ; CHECK-NEXT:    vmov s10, r4
+; CHECK-NEXT:    vcvtb.f32.f16 s4, s4
 ; CHECK-NEXT:    vmul.f16 s6, s6, s8
 ; CHECK-NEXT:    vldr.16 s8, [r2, #-4]
 ; CHECK-NEXT:    vcvt.f16.s32 s10, s10
-; CHECK-NEXT:    adds r2, #8
-; CHECK-NEXT:    vmul.f16 s8, s8, s10
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s8
 ; CHECK-NEXT:    vcvtb.f32.f16 s6, s6
-; CHECK-NEXT:    vadd.f32 s0, s0, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s4, s4
+; CHECK-NEXT:    vmul.f16 s8, s8, s10
 ; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-NEXT:    vcvtb.f32.f16 s8, s8
+; CHECK-NEXT:    adds r3, #8
+; CHECK-NEXT:    vadd.f32 s0, s0, s8
+; CHECK-NEXT:    adds r2, #8
 ; CHECK-NEXT:    vadd.f32 s0, s0, s6
 ; CHECK-NEXT:    vadd.f32 s0, s0, s4
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2

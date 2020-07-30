@@ -58,6 +58,8 @@ CODEGENOPT(DisableLLVMPasses , 1, 0) ///< Don't run any LLVM IR passes to get
                                      ///< frontend.
 CODEGENOPT(DisableLifetimeMarkers, 1, 0) ///< Don't emit any lifetime markers
 CODEGENOPT(DisableO0ImplyOptNone , 1, 0) ///< Don't annonate function with optnone at O0
+CODEGENOPT(ExperimentalStrictFloatingPoint, 1, 0) ///< Enables the new, experimental
+                                                  ///< strict floating point.
 CODEGENOPT(ExperimentalNewPassManager, 1, 0) ///< Enables the new, experimental
                                              ///< pass manager.
 CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
@@ -252,7 +254,6 @@ CODEGENOPT(UnwindTables      , 1, 0) ///< Emit unwind tables.
 CODEGENOPT(VectorizeLoop     , 1, 0) ///< Run loop vectorizer.
 CODEGENOPT(VectorizeSLP      , 1, 0) ///< Run SLP vectorizer.
 CODEGENOPT(ProfileSampleAccurate, 1, 0) ///< Sample profile is accurate.
-CODEGENOPT(CallGraphProfile  , 1, 0) ///< Run call graph profile.
 
   /// Attempt to use register sized accesses to bit-fields in structures, when
   /// possible.

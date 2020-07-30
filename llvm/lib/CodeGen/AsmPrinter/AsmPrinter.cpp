@@ -157,11 +157,11 @@ static gcp_map_type &getGCMap(void *&P) {
 
 /// getGVAlignment - Return the alignment to use for the specified global
 /// value.  This rounds up to the preferred alignment if possible and legal.
-Align AsmPrinter::getGVAlignment(const GlobalValue *GV, const DataLayout &DL,
+Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
                                  Align InAlign) {
   Align Alignment;
   if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
-    Alignment = Align(DL.getPreferredAlignment(GVar));
+    Alignment = DL.getPreferredAlign(GVar);
 
   // If InAlign is specified, round it to it.
   if (InAlign > Alignment)
@@ -244,7 +244,6 @@ const MCSection *AsmPrinter::getCurrentSection() const {
 void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
-  AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
 }
@@ -306,14 +305,14 @@ bool AsmPrinter::doInitialization(Module &M) {
   }
 
   if (MAI->doesSupportDebugInformation()) {
-    bool EmitCodeView = MMI->getModule()->getCodeViewFlag();
+    bool EmitCodeView = M.getCodeViewFlag();
     if (EmitCodeView && TM.getTargetTriple().isOSWindows()) {
       Handlers.emplace_back(std::make_unique<CodeViewDebug>(this),
                             DbgTimerName, DbgTimerDescription,
                             CodeViewLineTablesGroupName,
                             CodeViewLineTablesGroupDescription);
     }
-    if (!EmitCodeView || MMI->getModule()->getDwarfVersion()) {
+    if (!EmitCodeView || M.getDwarfVersion()) {
       DD = new DwarfDebug(this, &M);
       DD->beginModule();
       Handlers.emplace_back(std::unique_ptr<DwarfDebug>(DD), DbgTimerName,
@@ -376,8 +375,7 @@ bool AsmPrinter::doInitialization(Module &M) {
                           DWARFGroupDescription);
 
   // Emit tables for any value of cfguard flag (i.e. cfguard=1 or cfguard=2).
-  if (mdconst::extract_or_null<ConstantInt>(
-          MMI->getModule()->getModuleFlag("cfguard")))
+  if (mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("cfguard")))
     Handlers.emplace_back(std::make_unique<WinCFGuard>(this), CFGuardName,
                           CFGuardDescription, DWARFGroupName,
                           DWARFGroupDescription);
@@ -684,8 +682,7 @@ void AsmPrinter::emitFunctionHeader() {
   if (!MAI->hasVisibilityOnlyWithLinkage())
     emitVisibility(CurrentFnSym, F.getVisibility());
 
-  if (MAI->needsFunctionDescriptors() &&
-      F.getLinkage() != GlobalValue::InternalLinkage)
+  if (MAI->needsFunctionDescriptors())
     emitLinkage(&F, CurrentFnDescSym);
 
   emitLinkage(&F, CurrentFnSym);
@@ -879,7 +876,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << " <- ";
 
   // The second operand is only an offset if it's an immediate.
-  bool MemLoc = MI->getOperand(0).isReg() && MI->getOperand(1).isImm();
+  bool MemLoc = MI->isIndirectDebugValue();
   int64_t Offset = MemLoc ? MI->getOperand(1).getImm() : 0;
   const DIExpression *Expr = MI->getDebugExpression();
   if (Expr->getNumElements()) {
@@ -898,11 +895,11 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   }
 
   // Register or immediate value. Register 0 means undef.
-  if (MI->getOperand(0).isFPImm()) {
-    APFloat APF = APFloat(MI->getOperand(0).getFPImm()->getValueAPF());
-    if (MI->getOperand(0).getFPImm()->getType()->isFloatTy()) {
+  if (MI->getDebugOperand(0).isFPImm()) {
+    APFloat APF = APFloat(MI->getDebugOperand(0).getFPImm()->getValueAPF());
+    if (MI->getDebugOperand(0).getFPImm()->getType()->isFloatTy()) {
       OS << (double)APF.convertToFloat();
-    } else if (MI->getOperand(0).getFPImm()->getType()->isDoubleTy()) {
+    } else if (MI->getDebugOperand(0).getFPImm()->getType()->isDoubleTy()) {
       OS << APF.convertToDouble();
     } else {
       // There is no good way to print long double.  Convert a copy to
@@ -912,23 +909,23 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
                   &ignored);
       OS << "(long double) " << APF.convertToDouble();
     }
-  } else if (MI->getOperand(0).isImm()) {
-    OS << MI->getOperand(0).getImm();
-  } else if (MI->getOperand(0).isCImm()) {
-    MI->getOperand(0).getCImm()->getValue().print(OS, false /*isSigned*/);
-  } else if (MI->getOperand(0).isTargetIndex()) {
-    auto Op = MI->getOperand(0);
+  } else if (MI->getDebugOperand(0).isImm()) {
+    OS << MI->getDebugOperand(0).getImm();
+  } else if (MI->getDebugOperand(0).isCImm()) {
+    MI->getDebugOperand(0).getCImm()->getValue().print(OS, false /*isSigned*/);
+  } else if (MI->getDebugOperand(0).isTargetIndex()) {
+    auto Op = MI->getDebugOperand(0);
     OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
     return true;
   } else {
     Register Reg;
-    if (MI->getOperand(0).isReg()) {
-      Reg = MI->getOperand(0).getReg();
+    if (MI->getDebugOperand(0).isReg()) {
+      Reg = MI->getDebugOperand(0).getReg();
     } else {
-      assert(MI->getOperand(0).isFI() && "Unknown operand type");
+      assert(MI->getDebugOperand(0).isFI() && "Unknown operand type");
       const TargetFrameLowering *TFI = AP.MF->getSubtarget().getFrameLowering();
-      Offset += TFI->getFrameIndexReference(*AP.MF,
-                                            MI->getOperand(0).getIndex(), Reg);
+      Offset += TFI->getFrameIndexReference(
+          *AP.MF, MI->getDebugOperand(0).getIndex(), Reg);
       MemLoc = true;
     }
     if (Reg == 0) {
@@ -1051,9 +1048,9 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   OutStreamer->PopSection();
 }
 
-static bool needFuncLabelsForEHOrDebugInfo(const MachineFunction &MF,
-                                           MachineModuleInfo *MMI) {
-  if (!MF.getLandingPads().empty() || MF.hasEHFunclets() || MMI->hasDebugInfo())
+static bool needFuncLabelsForEHOrDebugInfo(const MachineFunction &MF) {
+  MachineModuleInfo &MMI = MF.getMMI();
+  if (!MF.getLandingPads().empty() || MF.hasEHFunclets() || MMI.hasDebugInfo())
     return true;
 
   // We might emit an EH table that uses function begin and end labels even if
@@ -1209,6 +1206,8 @@ void AsmPrinter::emitFunctionBody() {
       if (!MBB.sameSection(&MF->front())) {
         if (MAI->hasDotTypeDotSizeDirective())
           emitELFSizeDirective(CurrentSectionBeginSym);
+        MBBSectionRanges[MBB.getSectionIDNum()] =
+            MBBSectionRange{CurrentSectionBeginSym, CurrentBBEnd};
       }
     }
     emitBasicBlockEnd(MBB);
@@ -1261,7 +1260,7 @@ void AsmPrinter::emitFunctionBody() {
   // Emit target-specific gunk after the function body.
   emitFunctionBodyEnd();
 
-  if (needFuncLabelsForEHOrDebugInfo(*MF, MMI) ||
+  if (needFuncLabelsForEHOrDebugInfo(*MF) ||
       MAI->hasDotTypeDotSizeDirective()) {
     // Create a symbol for the end of function.
     CurrentFnEnd = createTempSymbol("func_end");
@@ -1285,6 +1284,8 @@ void AsmPrinter::emitFunctionBody() {
     HI.Handler->markFunctionEnd();
   }
 
+  MBBSectionRanges[MF->front().getSectionIDNum()] =
+      MBBSectionRange{CurrentFnBegin, CurrentFnEnd};
 
   // Print out jump tables referenced by the function.
   emitJumpTableInfo();
@@ -1784,12 +1785,13 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnSymForSize = CurrentFnSym;
   CurrentFnBegin = nullptr;
   CurrentSectionBeginSym = nullptr;
+  MBBSectionRanges.clear();
   CurExceptionSym = nullptr;
   bool NeedsLocalForSize = MAI->needsLocalForSize();
   if (F.hasFnAttribute("patchable-function-entry") ||
       F.hasFnAttribute("function-instrument") ||
       F.hasFnAttribute("xray-instruction-threshold") ||
-      needFuncLabelsForEHOrDebugInfo(MF, MMI) || NeedsLocalForSize ||
+      needFuncLabelsForEHOrDebugInfo(MF) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
@@ -3055,16 +3057,13 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
 
   if (MBB.pred_empty() ||
       (!MF->hasBBLabels() && isBlockOnlyReachableByFallthrough(&MBB) &&
-       !MBB.isEHFuncletEntry() && !MBB.hasLabelMustBeEmitted())) {
+       !MBB.isEHFuncletEntry())) {
     if (isVerbose()) {
       // NOTE: Want this comment at start of line, don't emit with AddComment.
       OutStreamer->emitRawComment(" %bb." + Twine(MBB.getNumber()) + ":",
                                   false);
     }
   } else {
-    if (isVerbose() && MBB.hasLabelMustBeEmitted()) {
-      OutStreamer->AddComment("Label of block must be emitted");
-    }
     // Switch to a new section if this basic block must begin a section.
     if (MBB.isBeginSection()) {
       OutStreamer->SwitchSection(

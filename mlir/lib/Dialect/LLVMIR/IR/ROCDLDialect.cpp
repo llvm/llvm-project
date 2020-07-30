@@ -84,7 +84,7 @@ static ParseResult parseROCDLMubufStoreOp(OpAsmParser &parser,
 // ROCDLDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
-// TODO(herhut): This should be the llvm.rocdl dialect once this is supported.
+// TODO: This should be the llvm.rocdl dialect once this is supported.
 ROCDLDialect::ROCDLDialect(MLIRContext *context) : Dialect("rocdl", context) {
   addOperations<
 #define GET_OP_LIST

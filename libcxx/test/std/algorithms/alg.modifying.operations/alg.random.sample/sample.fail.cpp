@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// Test failure not investigated on GCC 5.
+// UNSUPPORTED: gcc-5
+
 // <algorithm>
 
 // template <class PopulationIterator, class SampleIterator, class Distance,

@@ -185,13 +185,13 @@ const lldb_private::SymbolContext &SBSymbolContext::operator*() const {
 
 lldb_private::SymbolContext &SBSymbolContext::operator*() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new SymbolContext);
+    m_opaque_up = std::make_unique<SymbolContext>();
   return *m_opaque_up;
 }
 
 lldb_private::SymbolContext &SBSymbolContext::ref() {
   if (m_opaque_up == nullptr)
-    m_opaque_up.reset(new SymbolContext);
+    m_opaque_up = std::make_unique<SymbolContext>();
   return *m_opaque_up;
 }
 

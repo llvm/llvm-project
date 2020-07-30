@@ -224,7 +224,7 @@ public:
       // Create one token for each line in the skipped range, so it works
       // with line-based diffing.
       assert(R.start.line <= R.end.line);
-      for (int Line = R.start.line; Line < R.end.line; ++Line) {
+      for (int Line = R.start.line; Line <= R.end.line; ++Line) {
         // Don't bother computing the offset for the end of the line, just use
         // zero. The client will treat this highlighting kind specially, and
         // highlight the entire line visually (i.e. not just to where the text

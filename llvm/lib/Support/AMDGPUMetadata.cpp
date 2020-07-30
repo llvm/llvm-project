@@ -111,7 +111,11 @@ struct MappingTraits<Kernel::Arg::Metadata> {
     YIO.mapRequired(Kernel::Arg::Key::Size, MD.mSize);
     YIO.mapRequired(Kernel::Arg::Key::Align, MD.mAlign);
     YIO.mapRequired(Kernel::Arg::Key::ValueKind, MD.mValueKind);
-    YIO.mapRequired(Kernel::Arg::Key::ValueType, MD.mValueType);
+
+    // Removed. Accepted for parsing compatibility, but not emitted.
+    Optional<ValueType> Unused;
+    YIO.mapOptional(Kernel::Arg::Key::ValueType, Unused);
+
     YIO.mapOptional(Kernel::Arg::Key::PointeeAlign, MD.mPointeeAlign,
                     uint32_t(0));
     YIO.mapOptional(Kernel::Arg::Key::AddrSpaceQual, MD.mAddrSpaceQual,

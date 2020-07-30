@@ -42,7 +42,7 @@ class ExprCommandWithFixits(TestBase):
         # Try with one error:
         value = frame.EvaluateExpression("my_pointer.first", options)
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
         self.assertEquals(value.GetValueAsUnsigned(), 10)
 
         # Try with one error in a top-level expression.
@@ -58,7 +58,7 @@ class ExprCommandWithFixits(TestBase):
         two_error_expression = "my_pointer.second->a"
         value = frame.EvaluateExpression(two_error_expression, options)
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success())
+        self.assertSuccess(value.GetError())
         self.assertEquals(value.GetValueAsUnsigned(), 20)
 
         # Try a Fix-It that is stored in the 'note:' diagnostic of an error.
@@ -66,7 +66,7 @@ class ExprCommandWithFixits(TestBase):
         fixit_in_note_expr ="#define ToStr(x) #x\nToStr(0 {, })"
         value = frame.EvaluateExpression(fixit_in_note_expr, options)
         self.assertTrue(value.IsValid())
-        self.assertTrue(value.GetError().Success(), value.GetError())
+        self.assertSuccess(value.GetError())
         self.assertEquals(value.GetSummary(), '"(0 {, })"')
 
         # Now turn off the fixits, and the expression should fail:

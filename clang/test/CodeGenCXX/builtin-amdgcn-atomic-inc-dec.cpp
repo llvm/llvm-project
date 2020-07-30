@@ -2,9 +2,9 @@
 // RUN: %clang_cc1 %s -x hip -fcuda-is-device -emit-llvm -O0 -o - \
 // RUN:   -triple=amdgcn-amd-amdhsa  | opt -S | FileCheck %s
 
-__attribute__((device)) void test_non_volatile_parameter32(int *ptr) {
+__attribute__((device)) void test_non_volatile_parameter32(__UINT32_TYPE__ *ptr) {
   // CHECK-LABEL: test_non_volatile_parameter32
-  int res;
+  __UINT32_TYPE__ res;
   // CHECK: %ptr.addr = alloca i32*, align 8, addrspace(5)
   // CHECK-NEXT: %ptr.addr.ascast = addrspacecast i32* addrspace(5)* %ptr.addr to i32**
   // CHECK-NEXT: %res = alloca i32, align 4, addrspace(5)
@@ -25,9 +25,9 @@ __attribute__((device)) void test_non_volatile_parameter32(int *ptr) {
   res = __builtin_amdgcn_atomic_dec32(ptr, *ptr, __ATOMIC_SEQ_CST, "workgroup");
 }
 
-__attribute__((device)) void test_non_volatile_parameter64(__INT64_TYPE__ *ptr) {
+__attribute__((device)) void test_non_volatile_parameter64(__UINT64_TYPE__ *ptr) {
   // CHECK-LABEL: test_non_volatile_parameter64
-  __INT64_TYPE__ res;
+  __UINT64_TYPE__ res;
   // CHECK: %ptr.addr = alloca i64*, align 8, addrspace(5)
   // CHECK-NEXT: %ptr.addr.ascast = addrspacecast i64* addrspace(5)* %ptr.addr to i64**
   // CHECK-NEXT: %res = alloca i64, align 8, addrspace(5)
@@ -48,9 +48,9 @@ __attribute__((device)) void test_non_volatile_parameter64(__INT64_TYPE__ *ptr) 
   res = __builtin_amdgcn_atomic_dec64(ptr, *ptr, __ATOMIC_SEQ_CST, "workgroup");
 }
 
-__attribute__((device)) void test_volatile_parameter32(volatile int *ptr) {
+__attribute__((device)) void test_volatile_parameter32(volatile __UINT32_TYPE__ *ptr) {
   // CHECK-LABEL: test_volatile_parameter32
-  int res;
+  __UINT32_TYPE__ res;
   // CHECK: %ptr.addr = alloca i32*, align 8, addrspace(5)
   // CHECK-NEXT: %ptr.addr.ascast = addrspacecast i32* addrspace(5)* %ptr.addr to i32**
   // CHECK-NEXT: %res = alloca i32, align 4, addrspace(5)
@@ -71,9 +71,9 @@ __attribute__((device)) void test_volatile_parameter32(volatile int *ptr) {
   res = __builtin_amdgcn_atomic_dec32(ptr, *ptr, __ATOMIC_SEQ_CST, "workgroup");
 }
 
-__attribute__((device)) void test_volatile_parameter64(volatile __INT64_TYPE__ *ptr) {
+__attribute__((device)) void test_volatile_parameter64(volatile __UINT64_TYPE__ *ptr) {
   // CHECK-LABEL: test_volatile_parameter64
-  __INT64_TYPE__ res;
+  __UINT64_TYPE__ res;
   // CHECK: %ptr.addr = alloca i64*, align 8, addrspace(5)
   // CHECK-NEXT: %ptr.addr.ascast = addrspacecast i64* addrspace(5)* %ptr.addr to i64**
   // CHECK-NEXT: %res = alloca i64, align 8, addrspace(5)
@@ -96,7 +96,7 @@ __attribute__((device)) void test_volatile_parameter64(volatile __INT64_TYPE__ *
 
 __attribute__((device)) void test_shared32() {
   // CHECK-LABEL: test_shared32
-  __attribute__((shared)) int val;
+  __attribute__((shared)) __UINT32_TYPE__ val;
 
   // CHECK: %0 = load i32, i32* addrspacecast (i32 addrspace(3)* @_ZZ13test_shared32vE3val to i32*), align 4
   // CHECK-NEXT: %1 = call i32 @llvm.amdgcn.atomic.inc.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ13test_shared32vE3val to i32*), i32 %0, i32 7, i32 2, i1 false)
@@ -111,7 +111,7 @@ __attribute__((device)) void test_shared32() {
 
 __attribute__((device)) void test_shared64() {
   // CHECK-LABEL: test_shared64
-  __attribute__((shared)) __INT64_TYPE__ val;
+  __attribute__((shared)) __UINT64_TYPE__ val;
 
   // CHECK: %0 = load i64, i64* addrspacecast (i64 addrspace(3)* @_ZZ13test_shared64vE3val to i64*), align 8
   // CHECK-NEXT: %1 = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ13test_shared64vE3val to i64*), i64 %0, i32 7, i32 2, i1 false)
@@ -124,7 +124,7 @@ __attribute__((device)) void test_shared64() {
   val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_SEQ_CST, "workgroup");
 }
 
-int global_val32;
+__UINT32_TYPE__ global_val32;
 __attribute__((device)) void test_global32() {
   // CHECK-LABEL: test_global32
   // CHECK: %0 = load i32, i32* addrspacecast (i32 addrspace(1)* @global_val32 to i32*), align 4
@@ -138,7 +138,7 @@ __attribute__((device)) void test_global32() {
   global_val32 = __builtin_amdgcn_atomic_dec32(&global_val32, global_val32, __ATOMIC_SEQ_CST, "workgroup");
 }
 
-__INT64_TYPE__ global_val64;
+__UINT64_TYPE__ global_val64;
 __attribute__((device)) void test_global64() {
   // CHECK-LABEL: test_global64
   // CHECK: %0 = load i64, i64* addrspacecast (i64 addrspace(1)* @global_val64 to i64*), align 8
@@ -152,10 +152,10 @@ __attribute__((device)) void test_global64() {
   global_val64 = __builtin_amdgcn_atomic_dec64(&global_val64, global_val64, __ATOMIC_SEQ_CST, "workgroup");
 }
 
-__attribute__((constant)) int cval32;
+__attribute__((constant)) __UINT32_TYPE__ cval32;
 __attribute__((device)) void test_constant32() {
   // CHECK-LABEL: test_constant32
-  int local_val;
+  __UINT32_TYPE__ local_val;
 
   // CHECK: %0 = load i32, i32* addrspacecast (i32 addrspace(4)* @cval32 to i32*), align 4
   // CHECK-NEXT: %1 = call i32 @llvm.amdgcn.atomic.inc.i32.p0i32(i32* addrspacecast (i32 addrspace(4)* @cval32 to i32*), i32 %0, i32 7, i32 2, i1 false)
@@ -168,10 +168,10 @@ __attribute__((device)) void test_constant32() {
   local_val = __builtin_amdgcn_atomic_dec32(&cval32, cval32, __ATOMIC_SEQ_CST, "workgroup");
 }
 
-__attribute__((constant)) __INT64_TYPE__ cval64;
+__attribute__((constant)) __UINT64_TYPE__ cval64;
 __attribute__((device)) void test_constant64() {
   // CHECK-LABEL: test_constant64
-  __INT64_TYPE__ local_val;
+  __UINT64_TYPE__ local_val;
 
   // CHECK: %0 = load i64, i64* addrspacecast (i64 addrspace(4)* @cval64 to i64*), align 8
   // CHECK-NEXT: %1 = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* addrspacecast (i64 addrspace(4)* @cval64 to i64*), i64 %0, i32 7, i32 2, i1 false)
@@ -186,7 +186,7 @@ __attribute__((device)) void test_constant64() {
 
 __attribute__((device)) void test_order32() {
   // CHECK-LABEL: test_order32
-  __attribute__((shared)) int val;
+  __attribute__((shared)) __UINT32_TYPE__ val;
 
   // CHECK: %1 = call i32 @llvm.amdgcn.atomic.inc.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 %0, i32 4, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_ACQUIRE, "workgroup");
@@ -203,7 +203,7 @@ __attribute__((device)) void test_order32() {
 
 __attribute__((device)) void test_order64() {
   // CHECK-LABEL: test_order64
-  __attribute__((shared)) __INT64_TYPE__ val;
+  __attribute__((shared)) __UINT64_TYPE__ val;
 
   // CHECK: %1 = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 %0, i32 4, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_ACQUIRE, "workgroup");
@@ -220,7 +220,7 @@ __attribute__((device)) void test_order64() {
 
 __attribute__((device)) void test_scope32() {
   // CHECK-LABEL: test_scope32
-  __attribute__((shared)) int val;
+  __attribute__((shared)) __UINT32_TYPE__ val;
 
   // CHECK: %1 = call i32 @llvm.amdgcn.atomic.inc.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_scope32vE3val to i32*), i32 %0, i32 7, i32 1, i1 false)
   val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_SEQ_CST, "");
@@ -237,7 +237,7 @@ __attribute__((device)) void test_scope32() {
 
 __attribute__((device)) void test_scope64() {
   // CHECK-LABEL: test_scope64
-  __attribute__((shared)) __INT64_TYPE__ val;
+  __attribute__((shared)) __UINT64_TYPE__ val;
 
   // CHECK: %1 = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_scope64vE3val to i64*), i64 %0, i32 7, i32 1, i1 false)
   val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_SEQ_CST, "");

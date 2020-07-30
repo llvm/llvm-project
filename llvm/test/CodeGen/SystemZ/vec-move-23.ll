@@ -68,9 +68,9 @@ define void @fun3(<4 x i16> %Src, <4 x float>* %Dst) {
 
 define void @fun4(<2 x i8> %Src, <2 x double>* %Dst) {
 ; CHECK-LABEL: fun4:
-; CHECK:      vuplhb	%v0, %v24
-; CHECK-NEXT: vuplhh	%v0, %v0
-; CHECK-NEXT: vuplhf	%v0, %v0
+; CHECK:      larl	%r1, .LCPI4_0
+; CHECK-NEXT: vl	%v0, 0(%r1), 3
+; CHECK-NEXT: vperm	%v0, %v0, %v24, %v0
 ; CHECK-NEXT: vcdlgb	%v0, %v0, 0, 0
 ; CHECK-NEXT: vst	%v0, 0(%r2), 3
 ; CHECK-NEXT: br	%r14
@@ -81,8 +81,9 @@ define void @fun4(<2 x i8> %Src, <2 x double>* %Dst) {
 
 define void @fun5(<2 x i16> %Src, <2 x double>* %Dst) {
 ; CHECK-LABEL: fun5:
-; CHECK:      vuplhh	%v0, %v24
-; CHECK-NEXT: vuplhf	%v0, %v0
+; CHECK:      larl	%r1, .LCPI5_0
+; CHECK-NEXT: vl	%v0, 0(%r1), 3
+; CHECK-NEXT: vperm	%v0, %v0, %v24, %v0
 ; CHECK-NEXT: vcdlgb	%v0, %v0, 0, 0
 ; CHECK-NEXT: vst	%v0, 0(%r2), 3
 ; CHECK-NEXT: br	%r14

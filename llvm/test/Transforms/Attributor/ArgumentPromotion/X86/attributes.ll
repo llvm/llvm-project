@@ -100,8 +100,8 @@ define internal fastcc void @promote_avx2(<4 x i64>* %arg, <4 x i64>* readonly %
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@promote_avx2
 ; IS__TUNIT_NPM-SAME: (<4 x i64>* noalias nocapture nofree nonnull writeonly align 32 dereferenceable(32) [[ARG:%.*]], <4 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
-; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <4 x i64>
-; IS__TUNIT_NPM-NEXT:    store <4 x i64> [[TMP0]], <4 x i64>* [[ARG1_PRIV]]
+; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <4 x i64>, align 32
+; IS__TUNIT_NPM-NEXT:    store <4 x i64> [[TMP0]], <4 x i64>* [[ARG1_PRIV]], align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <4 x i64>, <4 x i64>* [[ARG1_PRIV]], align 32
 ; IS__TUNIT_NPM-NEXT:    store <4 x i64> [[TMP]], <4 x i64>* [[ARG]], align 32
 ; IS__TUNIT_NPM-NEXT:    ret void

@@ -25,13 +25,6 @@ extern DEVICE
 // init entry points
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN void __kmpc_kernel_init_params(void *Ptr) {
-  PRINT(LD_IO, "call to __kmpc_kernel_init_params with version %f\n",
-        OMPTARGET_NVPTX_VERSION);
-
-  SetTeamsReductionScratchpadPtr(Ptr);
-}
-
 EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   PRINT(LD_IO, "call to __kmpc_kernel_init with version %f\n",
         OMPTARGET_NVPTX_VERSION);
@@ -150,10 +143,6 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
     DataSharingState.SlotPtr[WID] = RootS;
     DataSharingState.StackPtr[WID] = (void *)&RootS->Data[0];
   }
-}
-
-EXTERN __attribute__((deprecated)) void __kmpc_spmd_kernel_deinit() {
-  __kmpc_spmd_kernel_deinit_v2(isRuntimeInitialized());
 }
 
 EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime) {

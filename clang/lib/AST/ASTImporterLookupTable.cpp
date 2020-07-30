@@ -45,7 +45,11 @@ struct Builder : RecursiveASTVisitor<Builder> {
           LT.add(RTy->getAsCXXRecordDecl());
         else if (const auto *SpecTy = dyn_cast<TemplateSpecializationType>(Ty))
           LT.add(SpecTy->getAsCXXRecordDecl());
-        else if (isa<TypedefType>(Ty)) {
+        else if (const auto *SubstTy =
+                     dyn_cast<SubstTemplateTypeParmType>(Ty)) {
+          if (SubstTy->getAsCXXRecordDecl())
+            LT.add(SubstTy->getAsCXXRecordDecl());
+        } else if (isa<TypedefType>(Ty)) {
           // We do not put friend typedefs to the lookup table because
           // ASTImporter does not organize typedefs into redecl chains.
         } else {

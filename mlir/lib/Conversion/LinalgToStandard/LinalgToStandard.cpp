@@ -79,8 +79,7 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
   rewriter.setInsertionPoint(module.getBody(),
                              std::prev(module.getBody()->end()));
   FuncOp funcOp =
-      rewriter.create<FuncOp>(op->getLoc(), fnNameAttr.getValue(), libFnType,
-                              ArrayRef<NamedAttribute>{});
+      rewriter.create<FuncOp>(op->getLoc(), fnNameAttr.getValue(), libFnType);
   // Insert a function attribute that will trigger the emission of the
   // corresponding `_mlir_ciface_xxx` interface so that external libraries see
   // a normalized ABI. This interface is added during std to llvm conversion.
@@ -173,7 +172,7 @@ public:
     if (!libraryCallName)
       return failure();
 
-    // TODO(pifon, ntv): Use induction variables values instead of zeros, when
+    // TODO: Use induction variables values instead of zeros, when
     // IndexedGenericOp is tiled.
     auto zero = rewriter.create<mlir::ConstantOp>(
         op.getLoc(), rewriter.getIntegerAttr(rewriter.getIndexType(), 0));
@@ -227,7 +226,7 @@ public:
 /// Populate the given list with patterns that convert from Linalg to Standard.
 void mlir::populateLinalgToStandardConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  // TODO(ntv) ConvOp conversion needs to export a descriptor with relevant
+  // TODO: ConvOp conversion needs to export a descriptor with relevant
   // attribute values such as kernel striding and dilation.
   // clang-format off
   patterns.insert<

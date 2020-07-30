@@ -234,7 +234,7 @@ define void @FPArithmetic(float %a, float %b, double %c, double %d) {
 ; CHECK-LABEL: @precaller
 define i32 @precaller() {
   %1 = alloca i32 ()*
-  ; CHECK: %[[func:.*]] = llvm.mlir.constant(@callee) : !llvm<"i32 ()*">
+  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm<"i32 ()*">
   ; CHECK: llvm.store %[[func]], %[[loc:.*]]
   store i32 ()* @callee, i32 ()** %1
   ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]
@@ -252,7 +252,7 @@ define i32 @callee() {
 ; CHECK-LABEL: @postcaller
 define i32 @postcaller() {
   %1 = alloca i32 ()*
-  ; CHECK: %[[func:.*]] = llvm.mlir.constant(@callee) : !llvm<"i32 ()*">
+  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm<"i32 ()*">
   ; CHECK: llvm.store %[[func]], %[[loc:.*]]
   store i32 ()* @callee, i32 ()** %1
   ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]

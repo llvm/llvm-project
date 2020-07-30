@@ -25,10 +25,6 @@
 BUILTIN(__builtin_wasm_memory_size, "zIi", "n")
 BUILTIN(__builtin_wasm_memory_grow, "zIiz", "n")
 
-// Bulk memory builtins
-TARGET_BUILTIN(__builtin_wasm_memory_init, "vIUiIUiv*UiUi", "", "bulk-memory")
-TARGET_BUILTIN(__builtin_wasm_data_drop, "vIUi", "", "bulk-memory")
-
 // Thread-local storage
 TARGET_BUILTIN(__builtin_wasm_tls_size, "z", "nc", "bulk-memory")
 TARGET_BUILTIN(__builtin_wasm_tls_align, "z", "nc", "bulk-memory")

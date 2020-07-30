@@ -70,7 +70,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else
           NewRecipe = new VPWidenPHIRecipe(Phi);
       } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-        NewRecipe = new VPWidenGEPRecipe(GEP, OrigLoop);
+        NewRecipe = new VPWidenGEPRecipe(
+            GEP, Plan->mapToVPValues(GEP->operands()), OrigLoop);
       } else
         NewRecipe =
             new VPWidenRecipe(*Inst, Plan->mapToVPValues(Inst->operands()));

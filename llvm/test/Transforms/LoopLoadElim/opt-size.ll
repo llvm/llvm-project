@@ -1,6 +1,6 @@
-; RUN: opt -basicaa -loop-load-elim -S < %s | FileCheck %s
-; RUN: opt -basicaa -loop-load-elim -pgso -S < %s | FileCheck %s -check-prefix=PGSO
-; RUN: opt -basicaa -loop-load-elim -pgso=false -S < %s | FileCheck %s -check-prefix=NPGSO
+; RUN: opt -basic-aa -loop-load-elim -S < %s | FileCheck %s
+; RUN: opt -basic-aa -loop-load-elim -pgso -S < %s | FileCheck %s -check-prefix=PGSO
+; RUN: opt -basic-aa -loop-load-elim -pgso=false -S < %s | FileCheck %s -check-prefix=NPGSO
 
 ; When optimizing for size don't eliminate in this loop because the loop would
 ; have to be versioned first because A and C may alias.

@@ -221,7 +221,7 @@ define amdgpu_kernel void @store_select_group_global_mismatch_inttoptr_flat_null
 }
 
 ; CHECK-LABEL: @store_select_group_global_mismatch_undef_undef_constexpr(
-; CHECK: store i32 7, i32 addrspace(3)* null
+; CHECK: store i32 7, i32* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32* addrspacecast (i32 addrspace(3)* null to i32*), i32* undef), align 4
 define amdgpu_kernel void @store_select_group_global_mismatch_undef_undef_constexpr() #0 {
   store i32 7, i32* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32* addrspacecast (i32 addrspace(3)* null to i32*), i32* addrspacecast (i32 addrspace(1)* undef to i32*)), align 4
   ret void

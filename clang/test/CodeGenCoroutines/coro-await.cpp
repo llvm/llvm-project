@@ -17,7 +17,7 @@ struct coroutine_handle<void> {
 
 template <typename Promise>
 struct coroutine_handle : coroutine_handle<> {
-  static coroutine_handle from_address(void *);
+  static coroutine_handle from_address(void *) noexcept;
 };
 
 }
@@ -29,9 +29,9 @@ struct init_susp {
   void await_resume();
 };
 struct final_susp {
-  bool await_ready();
-  void await_suspend(std::experimental::coroutine_handle<>);
-  void await_resume();
+  bool await_ready() noexcept;
+  void await_suspend(std::experimental::coroutine_handle<>) noexcept;
+  void await_resume() noexcept;
 };
 
 struct suspend_always {
@@ -46,7 +46,7 @@ struct std::experimental::coroutine_traits<void> {
   struct promise_type {
     void get_return_object();
     init_susp initial_suspend();
-    final_susp final_suspend();
+    final_susp final_suspend() noexcept;
     void return_void();
   };
 };
@@ -119,7 +119,7 @@ struct std::experimental::coroutine_traits<void,int> {
   struct promise_type {
     void get_return_object();
     init_susp initial_suspend();
-    final_susp final_suspend();
+    final_susp final_suspend() noexcept;
     void return_void();
     suspend_maybe yield_value(int);
   };
@@ -295,7 +295,7 @@ struct std::experimental::coroutine_traits<void,double> {
   struct promise_type {
     void get_return_object();
     init_susp initial_suspend();
-    final_susp final_suspend();
+    final_susp final_suspend() noexcept;
     void return_void();
     AwaitResumeReturnsLValue yield_value(int);
   };

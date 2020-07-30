@@ -181,7 +181,7 @@ void GenerateLoopNest<AffineForOp>::doit(
 /// of the innermost loop is populated by `bodyBuilderFn` that accepts a range
 /// of induction variables for all loops. `ivStorage` is used to store the
 /// partial list of induction variables.
-// TODO(zinenko,ntv): this function can be made iterative instead. However, it
+// TODO: this function can be made iterative instead. However, it
 // will have at most as many recursive calls as nested loops, which rarely
 // exceeds 10.
 static void

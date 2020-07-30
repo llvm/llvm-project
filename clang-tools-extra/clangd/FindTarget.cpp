@@ -58,6 +58,24 @@ nodeToString(const ast_type_traits::DynTypedNode &N) {
   return S;
 }
 
+// Helper function for getMembersReferencedViaDependentName()
+// which takes a dependent type `T` and heuristically
+// resolves it to a CXXRecordDecl in which we can try name lookup.
+CXXRecordDecl *resolveTypeToRecordDecl(const Type *T) {
+  assert(T);
+  if (const auto *ICNT = T->getAs<InjectedClassNameType>()) {
+    T = ICNT->getInjectedSpecializationType().getTypePtrOrNull();
+  }
+  const auto *TST = T->getAs<TemplateSpecializationType>();
+  if (!TST)
+    return nullptr;
+  const ClassTemplateDecl *TD = dyn_cast_or_null<ClassTemplateDecl>(
+      TST->getTemplateName().getAsTemplateDecl());
+  if (!TD)
+    return nullptr;
+  return TD->getTemplatedDecl();
+}
+
 // Given a dependent type and a member name, heuristically resolve the
 // name to one or more declarations.
 // The current heuristic is simply to look up the name in the primary
@@ -82,25 +100,17 @@ std::vector<const NamedDecl *> getMembersReferencedViaDependentName(
         ET->getDecl()->lookup(NameFactory(ET->getDecl()->getASTContext()));
     return {Result.begin(), Result.end()};
   }
-  if (auto *ICNT = T->getAs<InjectedClassNameType>()) {
-    T = ICNT->getInjectedSpecializationType().getTypePtrOrNull();
+  if (auto *RD = resolveTypeToRecordDecl(T)) {
+    if (!RD->hasDefinition())
+      return {};
+    RD = RD->getDefinition();
+    DeclarationName Name = NameFactory(RD->getASTContext());
+    return RD->lookupDependentName(Name, [=](const NamedDecl *D) {
+      return IsNonstaticMember ? D->isCXXInstanceMember()
+                               : !D->isCXXInstanceMember();
+    });
   }
-  auto *TST = T->getAs<TemplateSpecializationType>();
-  if (!TST)
-    return {};
-  const ClassTemplateDecl *TD = dyn_cast_or_null<ClassTemplateDecl>(
-      TST->getTemplateName().getAsTemplateDecl());
-  if (!TD)
-    return {};
-  CXXRecordDecl *RD = TD->getTemplatedDecl();
-  if (!RD->hasDefinition())
-    return {};
-  RD = RD->getDefinition();
-  DeclarationName Name = NameFactory(RD->getASTContext());
-  return RD->lookupDependentName(Name, [=](const NamedDecl *D) {
-    return IsNonstaticMember ? D->isCXXInstanceMember()
-                             : !D->isCXXInstanceMember();
-  });
+  return {};
 }
 
 // Given the type T of a dependent expression that appears of the LHS of a "->",
@@ -142,6 +152,28 @@ const Type *getPointeeType(const Type *T) {
   if (FirstArg.getKind() != TemplateArgument::Type)
     return nullptr;
   return FirstArg.getAsType().getTypePtrOrNull();
+}
+
+// Try to heuristically resolve a dependent expression `E` to one
+// or more declarations that it likely references.
+std::vector<const NamedDecl *> resolveDependentExprToDecls(const Expr *E) {
+  assert(E->isTypeDependent());
+  if (const auto *ME = dyn_cast<CXXDependentScopeMemberExpr>(E)) {
+    const Type *BaseType = ME->getBaseType().getTypePtrOrNull();
+    if (ME->isArrow()) {
+      BaseType = getPointeeType(BaseType);
+    }
+    return getMembersReferencedViaDependentName(
+        BaseType, [ME](ASTContext &) { return ME->getMember(); },
+        /*IsNonstaticMember=*/true);
+  }
+  if (const auto *RE = dyn_cast<DependentScopeDeclRefExpr>(E)) {
+    return getMembersReferencedViaDependentName(
+        RE->getQualifier()->getAsType(),
+        [RE](ASTContext &) { return RE->getDeclName(); },
+        /*IsNonstaticMember=*/false);
+  }
+  return {};
 }
 
 const NamedDecl *getTemplatePattern(const NamedDecl *D) {
@@ -341,21 +373,12 @@ public:
       }
       void
       VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
-        const Type *BaseType = E->getBaseType().getTypePtrOrNull();
-        if (E->isArrow()) {
-          BaseType = getPointeeType(BaseType);
-        }
-        for (const NamedDecl *D : getMembersReferencedViaDependentName(
-                 BaseType, [E](ASTContext &) { return E->getMember(); },
-                 /*IsNonstaticMember=*/true)) {
+        for (const NamedDecl *D : resolveDependentExprToDecls(E)) {
           Outer.add(D, Flags);
         }
       }
       void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *E) {
-        for (const NamedDecl *D : getMembersReferencedViaDependentName(
-                 E->getQualifier()->getAsType(),
-                 [E](ASTContext &) { return E->getDeclName(); },
-                 /*IsNonstaticMember=*/false)) {
+        for (const NamedDecl *D : resolveDependentExprToDecls(E)) {
           Outer.add(D, Flags);
         }
       }

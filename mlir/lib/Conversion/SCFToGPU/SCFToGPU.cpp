@@ -378,12 +378,12 @@ static LogicalResult processParallelLoop(
     ParallelOp parallelOp, gpu::LaunchOp launchOp,
     BlockAndValueMapping &cloningMap, SmallVectorImpl<Operation *> &worklist,
     DenseMap<gpu::Processor, Value> &bounds, PatternRewriter &rewriter) {
-  // TODO(herhut): Verify that this is a valid GPU mapping.
+  // TODO: Verify that this is a valid GPU mapping.
   // processor ids: 0-2 block [x/y/z], 3-5 -> thread [x/y/z], 6-> sequential
   ArrayAttr mapping =
       parallelOp.getAttrOfType<ArrayAttr>(gpu::getMappingAttrName());
 
-  // TODO(herhut): Support reductions.
+  // TODO: Support reductions.
   if (!mapping || parallelOp.getNumResults() != 0)
     return failure();
 
@@ -431,7 +431,7 @@ static LogicalResult processParallelLoop(
           loc, annotation.map().getValue().compose(lowerAndStep),
           ValueRange{operand, step, lowerBound});
       // If there was also a bound, insert that, too.
-      // TODO(herhut): Check that we do not assign bounds twice.
+      // TODO: Check that we do not assign bounds twice.
       if (annotation.bound().getValue()) {
         // We pass as the single operand to the bound-map the number of
         // iterations, which is (upperBound - lowerBound) ceilDiv step. To

@@ -1,4 +1,13 @@
-# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a --disassemble < %s 2>&1 | FileCheck %s
+
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0x00,0x0c,0x20,0xf8]
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0x00,0x0c,0xa0,0xf8]
+# CHECK: ldraa x0, [x0, #0]!
+# CHECK: ldrab x0, [x0, #0]!
+[0x00,0x0c,0x20,0xf8]
+[0x00,0x0c,0xa0,0xf8]
 
 # CHECK: paciasp
 # CHECK: autiasp

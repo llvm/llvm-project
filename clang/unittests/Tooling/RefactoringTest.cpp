@@ -1296,6 +1296,18 @@ TEST_F(AtomicChangeTest, InsertAfterWithInvalidLocation) {
       Replacement(Context.Sources, SourceLocation(), 0, "b")));
 }
 
+TEST_F(AtomicChangeTest, Metadata) {
+  AtomicChange Change(Context.Sources, DefaultLoc, 17);
+  const llvm::Any &Metadata = Change.getMetadata();
+  ASSERT_TRUE(llvm::any_isa<int>(Metadata));
+  EXPECT_EQ(llvm::any_cast<int>(Metadata), 17);
+}
+
+TEST_F(AtomicChangeTest, NoMetadata) {
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  EXPECT_FALSE(Change.getMetadata().hasValue());
+}
+
 class ApplyAtomicChangesTest : public ::testing::Test {
 protected:
   ApplyAtomicChangesTest() : FilePath("file.cc") {

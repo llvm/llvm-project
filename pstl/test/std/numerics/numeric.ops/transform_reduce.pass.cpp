@@ -18,14 +18,6 @@
 
 using namespace TestUtils;
 
-// Equal for all types
-template <typename T>
-static bool
-Equal(T x, T y)
-{
-    return x == y;
-}
-
 // Functor for xor-operation for modeling binary operations in inner_product
 class XOR
 {
@@ -57,11 +49,13 @@ class MyClass
     {
         return MyClass(-x.my_field);
     }
-    friend MyClass operator*(const MyClass& x, const MyClass& y) { return MyClass(x.my_field * y.my_field); }
-    bool
-    operator==(const MyClass& in)
+    friend MyClass operator*(const MyClass& x, const MyClass& y)
     {
-        return my_field == in.my_field;
+        return MyClass(x.my_field * y.my_field);
+    }
+    friend bool operator==(const MyClass& x, const MyClass& y)
+    {
+        return x.my_field == y.my_field;
     }
 };
 
@@ -69,7 +63,7 @@ template <typename T>
 void
 CheckResults(const T& expected, const T& in)
 {
-    EXPECT_TRUE(Equal(expected, in), "wrong result of transform_reduce");
+    EXPECT_TRUE(expected == in, "wrong result of transform_reduce");
 }
 
 // We need to check correctness only for "int" (for example) except cases

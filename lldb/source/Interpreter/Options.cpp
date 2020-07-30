@@ -798,7 +798,8 @@ void Options::HandleOptionArgumentCompletion(
               interpreter.GetDebugger().GetSelectedTarget();
           // Search filters require a target...
           if (target_sp)
-            filter_up.reset(new SearchFilterByModule(target_sp, module_spec));
+            filter_up =
+                std::make_unique<SearchFilterByModule>(target_sp, module_spec);
         }
         break;
       }

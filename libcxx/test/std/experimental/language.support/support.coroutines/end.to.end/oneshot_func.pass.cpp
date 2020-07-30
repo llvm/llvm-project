@@ -25,7 +25,7 @@ template <typename R> struct func {
     R result;
     func get_return_object() { return {this}; }
     suspend_always initial_suspend() { return {}; }
-    suspend_always final_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
     void return_value(R v) { result = v; }
     void unhandled_exception() {}
   };

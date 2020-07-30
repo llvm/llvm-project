@@ -728,7 +728,8 @@ const void *RegisterValue::GetBytes() const {
   case eTypeFloat:
   case eTypeDouble:
   case eTypeLongDouble:
-    return m_scalar.GetBytes();
+    m_scalar.GetBytes(buffer.bytes);
+    return buffer.bytes;
   case eTypeBytes:
     return buffer.bytes;
   }

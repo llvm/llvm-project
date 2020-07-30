@@ -9,25 +9,19 @@
 // The parse tree has slots in which pointers to the results of semantic
 // analysis may be placed.  When using the parser without the semantics
 // libraries, as here, we need to stub out the dependences on the external
-// destructors, which will never actually be called.
-
-#include "flang/Common/indirection.h"
+// deleters, which will never actually be called.
 
 namespace Fortran::evaluate {
 struct GenericExprWrapper {
-  ~GenericExprWrapper();
+  static void Deleter(GenericExprWrapper *);
 };
-GenericExprWrapper::~GenericExprWrapper() {}
+void GenericExprWrapper::Deleter(GenericExprWrapper *) {}
 struct GenericAssignmentWrapper {
-  ~GenericAssignmentWrapper();
+  static void Deleter(GenericAssignmentWrapper *);
 };
-GenericAssignmentWrapper::~GenericAssignmentWrapper() {}
+void GenericAssignmentWrapper::Deleter(GenericAssignmentWrapper *) {}
 struct ProcedureRef {
-  ~ProcedureRef();
+  static void Deleter(ProcedureRef *);
 };
-ProcedureRef::~ProcedureRef() {}
+void ProcedureRef::Deleter(ProcedureRef *) {}
 } // namespace Fortran::evaluate
-
-DEFINE_DELETER(Fortran::evaluate::GenericExprWrapper)
-DEFINE_DELETER(Fortran::evaluate::GenericAssignmentWrapper)
-DEFINE_DELETER(Fortran::evaluate::ProcedureRef)

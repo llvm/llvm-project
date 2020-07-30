@@ -1842,7 +1842,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   m_module = &llvm_module;
-  m_target_data.reset(new DataLayout(m_module));
+  m_target_data = std::make_unique<DataLayout>(m_module);
   m_intptr_ty = llvm::Type::getIntNTy(m_module->getContext(),
                                       m_target_data->getPointerSizeInBits());
 

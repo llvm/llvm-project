@@ -5,6 +5,9 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangChangeNamespace
   ChangeNamespace.cpp
+
+  DEPENDS
+  omp_gen
 )
 
 clang_target_link_libraries(clangChangeNamespace

@@ -1,4 +1,4 @@
-; RUN: opt -S -basicaa -licm < %s | FileCheck %s
+; RUN: opt -S -basic-aa -licm < %s | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s| FileCheck %s
 ;
 ; Manually validate LCSSA form is preserved even after SSAUpdater is used to

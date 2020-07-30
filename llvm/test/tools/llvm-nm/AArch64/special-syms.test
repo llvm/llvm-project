@@ -1,10 +1,7 @@
+## Test --special-syms flag.
 # RUN: yaml2obj %s -o %t
-# Test --special-syms flag. Currently this flag is a no-op, so outputs with and without
-# this flag should be identical. GNU nm doesn't show ARM and AArch64 special symbols
-# without --special-syms, so this test is to be changed when/if we decide to implement
-# GNU nm-like behavior in llvm-nm
 
-# RUN: llvm-nm %t | FileCheck %s
+# RUN: llvm-nm %t | count 0
 # RUN: llvm-nm %t --special-syms | FileCheck %s
 
 !ELF

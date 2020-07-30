@@ -199,11 +199,11 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       "Operation *", "clone",
       (ins "OpBuilder &":$b, "Location":$loc, "ValueRange":$operands), [{
         BlockAndValueMapping map;
-        unsigned numRegions = op.getOperation()->getNumRegions();
-        Operation *res = create(b, loc, operands, op.getAttrs());
+        unsigned numRegions = $_op.getOperation()->getNumRegions();
+        Operation *res = create(b, loc, operands, $_op.getAttrs());
         assert(res->getNumRegions() == numRegions && "inconsistent # regions");
         for (unsigned ridx = 0; ridx < numRegions; ++ridx)
-          op.getOperation()->getRegion(ridx).cloneInto(
+          $_op.getOperation()->getRegion(ridx).cloneInto(
             &res->getRegion(ridx), map);
         return res;
       }]

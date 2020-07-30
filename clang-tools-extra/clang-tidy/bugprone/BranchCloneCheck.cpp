@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/CloneDetection.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/Support/Casting.h"
 
 using namespace clang;

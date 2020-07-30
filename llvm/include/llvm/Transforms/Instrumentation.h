@@ -88,6 +88,8 @@ ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false,
                                                      bool SamplePGO = false);
 FunctionPass *createPGOMemOPSizeOptLegacyPass();
 
+ModulePass *createCGProfileLegacyPass();
+
 // The pgo-specific indirect call promotion function declared below is used by
 // the pgo-driven indirect call promotion and sample profile passes. It's a
 // wrapper around llvm::promoteCall, et al. that additionally computes !prof

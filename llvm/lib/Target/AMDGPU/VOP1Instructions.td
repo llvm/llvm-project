@@ -248,13 +248,13 @@ defm V_LOG_F32 : VOP1Inst <"v_log_f32", VOP_F32_F32, flog2>;
 defm V_RCP_F32 : VOP1Inst <"v_rcp_f32", VOP_F32_F32, AMDGPUrcp>;
 defm V_RCP_IFLAG_F32 : VOP1Inst <"v_rcp_iflag_f32", VOP_F32_F32, AMDGPUrcp_iflag>;
 defm V_RSQ_F32 : VOP1Inst <"v_rsq_f32", VOP_F32_F32, AMDGPUrsq>;
-defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, fsqrt>;
+defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, any_amdgcn_sqrt>;
 } // End SchedRW = [WriteTrans32]
 
 let SchedRW = [WriteTrans64] in {
 defm V_RCP_F64 : VOP1Inst <"v_rcp_f64", VOP_F64_F64, AMDGPUrcp>;
 defm V_RSQ_F64 : VOP1Inst <"v_rsq_f64", VOP_F64_F64, AMDGPUrsq>;
-defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64, fsqrt>;
+defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64, any_amdgcn_sqrt>;
 } // End SchedRW = [WriteTrans64]
 
 let SchedRW = [WriteTrans32] in {
@@ -388,7 +388,7 @@ defm V_CVT_U16_F16 : VOP1Inst <"v_cvt_u16_f16", VOP_I16_F16, fp_to_uint>;
 defm V_CVT_I16_F16 : VOP1Inst <"v_cvt_i16_f16", VOP_I16_F16, fp_to_sint>;
 let SchedRW = [WriteTrans32] in {
 defm V_RCP_F16 : VOP1Inst <"v_rcp_f16", VOP_F16_F16, AMDGPUrcp>;
-defm V_SQRT_F16 : VOP1Inst <"v_sqrt_f16", VOP_F16_F16, fsqrt>;
+defm V_SQRT_F16 : VOP1Inst <"v_sqrt_f16", VOP_F16_F16, any_amdgcn_sqrt>;
 defm V_RSQ_F16 : VOP1Inst <"v_rsq_f16", VOP_F16_F16, AMDGPUrsq>;
 defm V_LOG_F16 : VOP1Inst <"v_log_f16", VOP_F16_F16, flog2>;
 defm V_EXP_F16 : VOP1Inst <"v_exp_f16", VOP_F16_F16, fexp2>;

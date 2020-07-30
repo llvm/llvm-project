@@ -91,7 +91,7 @@ define void @test3(i2 %a) {
 ; CHECK-NEXT:    call void @foo(i32 2)
 ; CHECK-NEXT:    ret void
 ; CHECK:       default:
-; CHECK-NEXT:    call void @foo(i32 0)
+; CHECK-NEXT:    call void @foo(i32 3)
 ; CHECK-NEXT:    ret void
 ;
   switch i2 %a, label %default [i2 0, label %case0
@@ -108,7 +108,7 @@ case2:
   call void @foo(i32 2)
   ret void
 default:
-  call void @foo(i32 0)
+  call void @foo(i32 3)
   ret void
 }
 
@@ -127,7 +127,7 @@ define void @test4(i128 %a) {
 ; CHECK-NEXT:    call void @foo(i32 1)
 ; CHECK-NEXT:    ret void
 ; CHECK:       default:
-; CHECK-NEXT:    call void @foo(i32 0)
+; CHECK-NEXT:    call void @foo(i32 2)
 ; CHECK-NEXT:    ret void
 ;
   switch i128 %a, label %default [i128 0, label %case0
@@ -140,7 +140,7 @@ case1:
   call void @foo(i32 1)
   ret void
 default:
-  call void @foo(i32 0)
+  call void @foo(i32 2)
   ret void
 }
 

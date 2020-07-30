@@ -76,7 +76,7 @@ protected:
   Status WriteFPR() override;
 
   void *GetGPRBuffer() override { return &m_regs; }
-  size_t GetGPRSize() override { return sizeof(m_regs); }
+  size_t GetGPRSize() const override { return sizeof(m_regs); }
   void *GetFPRBuffer() override { return &m_fp_regs; }
   size_t GetFPRSize() override { return sizeof(m_fp_regs); }
 

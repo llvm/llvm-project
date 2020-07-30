@@ -139,12 +139,12 @@ static int InitLibrary(DeviceTy& Device) {
         DP("Add mapping from host " DPxMOD " to device " DPxMOD " with size %zu"
             "\n", DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
             CurrDeviceEntry->size);
-        Device.HostDataToTargetMap.push_front(HostDataToTargetTy(
+        Device.HostDataToTargetMap.emplace(
             (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
             (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
             (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size /*HstPtrEnd*/,
             (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
-            true /*IsRefCountINF*/));
+            true /*IsRefCountINF*/);
       }
     }
     Device.DataMapMtx.unlock();

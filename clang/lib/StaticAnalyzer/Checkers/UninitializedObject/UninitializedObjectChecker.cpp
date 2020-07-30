@@ -541,14 +541,11 @@ static bool hasUnguardedAccess(const FieldDecl *FD, ProgramStateRef State) {
   auto FieldAccessM = memberExpr(hasDeclaration(equalsNode(FD))).bind("access");
 
   auto AssertLikeM = callExpr(callee(functionDecl(
-      anyOf(hasName("exit"), hasName("panic"), hasName("error"),
-            hasName("Assert"), hasName("assert"), hasName("ziperr"),
-            hasName("assfail"), hasName("db_error"), hasName("__assert"),
-            hasName("__assert2"), hasName("_wassert"), hasName("__assert_rtn"),
-            hasName("__assert_fail"), hasName("dtrace_assfail"),
-            hasName("yy_fatal_error"), hasName("_XCAssertionFailureHandler"),
-            hasName("_DTAssertionFailureHandler"),
-            hasName("_TSAssertionFailureHandler")))));
+      hasAnyName("exit", "panic", "error", "Assert", "assert", "ziperr",
+                 "assfail", "db_error", "__assert", "__assert2", "_wassert",
+                 "__assert_rtn", "__assert_fail", "dtrace_assfail",
+                 "yy_fatal_error", "_XCAssertionFailureHandler",
+                 "_DTAssertionFailureHandler", "_TSAssertionFailureHandler"))));
 
   auto NoReturnFuncM = callExpr(callee(functionDecl(isNoReturn())));
 

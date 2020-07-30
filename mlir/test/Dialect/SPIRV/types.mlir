@@ -1,6 +1,6 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
-// TODO(b/133530217): Add more tests after switching to the generic parser.
+// TODO: Add more tests after switching to the generic parser.
 
 //===----------------------------------------------------------------------===//
 // ArrayType

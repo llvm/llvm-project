@@ -2144,8 +2144,9 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         LLVM_DEBUG(dbgs() << "Reserving emergency spill slot\n");
         const TargetRegisterClass &RC = ARM::GPRRegClass;
         unsigned Size = TRI->getSpillSize(RC);
-        unsigned Align = TRI->getSpillAlignment(RC);
-        RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Align, false));
+        Align Alignment = TRI->getSpillAlign(RC);
+        RS->addScavengingFrameIndex(
+            MFI.CreateStackObject(Size, Alignment, false));
       }
     }
   }

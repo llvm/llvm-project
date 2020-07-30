@@ -259,6 +259,12 @@ public:
                                                bool ForVirtualBase,
                                                bool Delegating) override;
 
+  llvm::Value *getCXXDestructorImplicitParam(CodeGenFunction &CGF,
+                                             const CXXDestructorDecl *DD,
+                                             CXXDtorType Type,
+                                             bool ForVirtualBase,
+                                             bool Delegating) override;
+
   void EmitDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *DD,
                           CXXDtorType Type, bool ForVirtualBase,
                           bool Delegating, Address This,
@@ -1577,6 +1583,12 @@ CGCXXABI::AddedStructorArgs MicrosoftCXXABI::getImplicitConstructorArgs(
   return AddedStructorArgs::suffix({{MostDerivedArg, getContext().IntTy}});
 }
 
+llvm::Value *MicrosoftCXXABI::getCXXDestructorImplicitParam(
+    CodeGenFunction &CGF, const CXXDestructorDecl *DD, CXXDtorType Type,
+    bool ForVirtualBase, bool Delegating) {
+  return nullptr;
+}
+
 void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
                                          const CXXDestructorDecl *DD,
                                          CXXDtorType Type, bool ForVirtualBase,
@@ -1603,8 +1615,11 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
     BaseDtorEndBB = EmitDtorCompleteObjectHandler(CGF);
   }
 
+  llvm::Value *Implicit =
+      getCXXDestructorImplicitParam(CGF, DD, Type, ForVirtualBase,
+                                    Delegating); // = nullptr
   CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(), ThisTy,
-                            /*ImplicitParam=*/nullptr,
+                            /*ImplicitParam=*/Implicit,
                             /*ImplicitParamTy=*/QualType(), nullptr);
   if (BaseDtorEndBB) {
     // Complete object handler should continue to be the remaining

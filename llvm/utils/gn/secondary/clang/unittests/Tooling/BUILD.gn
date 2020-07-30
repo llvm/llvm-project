@@ -41,6 +41,7 @@ unittest("ToolingTests") {
     "RecursiveASTVisitorTests/CXXMemberCall.cpp",
     "RecursiveASTVisitorTests/CXXMethodDecl.cpp",
     "RecursiveASTVisitorTests/CXXOperatorCallExprTraverser.cpp",
+    "RecursiveASTVisitorTests/Callbacks.cpp",
     "RecursiveASTVisitorTests/Class.cpp",
     "RecursiveASTVisitorTests/ConstructExpr.cpp",
     "RecursiveASTVisitorTests/DeclRefExpr.cpp",

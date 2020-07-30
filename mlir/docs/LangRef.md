@@ -148,7 +148,7 @@ integer-literal ::= decimal-literal | hexadecimal-literal
 decimal-literal ::= digit+
 hexadecimal-literal ::= `0x` hex_digit+
 float-literal ::= [-+]?[0-9]+[.][0-9]*([eE][-+]?[0-9]+)?
-string-literal  ::= `"` [^"\n\f\v\r]* `"`   TODO define escaping rules
+string-literal  ::= `"` [^"\n\f\v\r]* `"`   TODO: define escaping rules
 ```
 
 Not listed here, but MLIR does support comments. They use standard BCPL syntax,

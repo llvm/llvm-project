@@ -632,9 +632,9 @@ bool LTOCodeGenerator::compileOptimized(ArrayRef<raw_pwrite_stream *> Out) {
   return true;
 }
 
-void LTOCodeGenerator::setCodeGenDebugOptions(ArrayRef<const char *> Options) {
+void LTOCodeGenerator::setCodeGenDebugOptions(ArrayRef<StringRef> Options) {
   for (StringRef Option : Options)
-    CodegenOptions.push_back(std::string(Option));
+    CodegenOptions.push_back(Option.str());
 }
 
 void LTOCodeGenerator::parseCodeGenDebugOptions() {

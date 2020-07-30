@@ -427,6 +427,14 @@ static void handleMustTailForwardedRegisters(MachineIRBuilder &MIRBuilder,
   }
 }
 
+bool AArch64CallLowering::fallBackToDAGISel(const Function &F) const {
+  if (isa<ScalableVectorType>(F.getReturnType()))
+    return true;
+  return llvm::any_of(F.args(), [](const Argument &A) {
+    return isa<ScalableVectorType>(A.getType());
+  });
+}
+
 bool AArch64CallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function &F,
     ArrayRef<ArrayRef<Register>> VRegs) const {
@@ -438,9 +446,6 @@ bool AArch64CallLowering::lowerFormalArguments(
   SmallVector<ArgInfo, 8> SplitArgs;
   unsigned i = 0;
   for (auto &Arg : F.args()) {
-    if (isa<ScalableVectorType>(Arg.getType()))
-      return false;
-
     if (DL.getTypeStoreSize(Arg.getType()).isZero())
       continue;
 
@@ -880,7 +885,6 @@ bool AArch64CallLowering::lowerTailCall(
   const auto &Forwards = FuncInfo->getForwardedMustTailRegParms();
 
   // Do the actual argument marshalling.
-  SmallVector<unsigned, 8> PhysRegs;
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
                              AssignFnVarArg, true, FPDiff);
   if (!handleAssignments(MIRBuilder, OutArgs, Handler))
@@ -998,7 +1002,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     TRI->emitReservedArgRegCallError(MF);
 
   // Do the actual argument marshalling.
-  SmallVector<unsigned, 8> PhysRegs;
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
                              AssignFnVarArg, false);
   if (!handleAssignments(MIRBuilder, OutArgs, Handler))

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -licm -S | FileCheck %s
+; RUN: opt < %s -basic-aa -licm -S | FileCheck %s
 
 @a = external constant float*
 

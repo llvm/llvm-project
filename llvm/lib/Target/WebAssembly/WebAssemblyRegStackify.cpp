@@ -248,7 +248,8 @@ static void query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
   }
 
   // Check for writes to __stack_pointer global.
-  if (MI.getOpcode() == WebAssembly::GLOBAL_SET_I32 &&
+  if ((MI.getOpcode() == WebAssembly::GLOBAL_SET_I32 ||
+       MI.getOpcode() == WebAssembly::GLOBAL_SET_I64) &&
       strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer") == 0)
     StackPointer = true;
 
@@ -530,7 +531,7 @@ static MachineInstr *moveForSingleUse(unsigned Reg, MachineOperand &Op,
   if (MRI.hasOneDef(Reg) && MRI.hasOneUse(Reg)) {
     // No one else is using this register for anything so we can just stackify
     // it in place.
-    MFI.stackifyVReg(Reg);
+    MFI.stackifyVReg(MRI, Reg);
   } else {
     // The register may have unrelated uses or defs; create a new register for
     // just our one def and use so that we can stackify it.
@@ -547,7 +548,7 @@ static MachineInstr *moveForSingleUse(unsigned Reg, MachineOperand &Op,
                      LIS.getInstructionIndex(*Op.getParent()).getRegSlot(),
                      /*RemoveDeadValNo=*/true);
 
-    MFI.stackifyVReg(NewReg);
+    MFI.stackifyVReg(MRI, NewReg);
 
     DefDIs.updateReg(NewReg);
 
@@ -576,7 +577,7 @@ static MachineInstr *rematerializeCheapDef(
   MachineInstr *Clone = &*std::prev(Insert);
   LIS.InsertMachineInstrInMaps(*Clone);
   LIS.createAndComputeVirtRegInterval(NewReg);
-  MFI.stackifyVReg(NewReg);
+  MFI.stackifyVReg(MRI, NewReg);
   imposeStackOrdering(Clone);
 
   LLVM_DEBUG(dbgs() << " - Cloned to "; Clone->dump());
@@ -667,8 +668,8 @@ static MachineInstr *moveAndTeeForMultiUse(
   // Finish stackifying the new regs.
   LIS.createAndComputeVirtRegInterval(TeeReg);
   LIS.createAndComputeVirtRegInterval(DefReg);
-  MFI.stackifyVReg(DefReg);
-  MFI.stackifyVReg(TeeReg);
+  MFI.stackifyVReg(MRI, DefReg);
+  MFI.stackifyVReg(MRI, TeeReg);
   imposeStackOrdering(Def);
   imposeStackOrdering(Tee);
 
@@ -934,7 +935,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
           // TODO: This single-use restriction could be relaxed by using tees
           if (DefReg != UseReg || !MRI.hasOneUse(DefReg))
             break;
-          MFI.stackifyVReg(DefReg);
+          MFI.stackifyVReg(MRI, DefReg);
           ++SubsequentDef;
           ++SubsequentUse;
         }

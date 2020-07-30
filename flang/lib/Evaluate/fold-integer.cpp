@@ -157,9 +157,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "ceiling" || name == "floor" || name == "nint") {
     if (const auto *cx{UnwrapExpr<Expr<SomeReal>>(args[0])}) {
       // NINT rounds ties away from zero, not to even
-      common::RoundingMode mode{name == "ceiling"
-              ? common::RoundingMode::Up
-              : name == "floor" ? common::RoundingMode::Down
+      common::RoundingMode mode{name == "ceiling" ? common::RoundingMode::Up
+              : name == "floor"                   ? common::RoundingMode::Down
                                 : common::RoundingMode::TiesAwayFromZero};
       return std::visit(
           [&](const auto &kx) {
@@ -322,8 +321,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                         return name == "index"
                             ? CharacterUtils<TC::kind>::INDEX(str, other)
                             : name == "scan"
-                                ? CharacterUtils<TC::kind>::SCAN(str, other)
-                                : CharacterUtils<TC::kind>::VERIFY(str, other);
+                            ? CharacterUtils<TC::kind>::SCAN(str, other)
+                            : CharacterUtils<TC::kind>::VERIFY(str, other);
                       }});
             }
           },
@@ -613,7 +612,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldOperation(
         if (iter != scope->end()) {
           const Symbol &symbol{*iter->second};
           const auto *details{symbol.detailsIf<semantics::TypeParamDetails>()};
-          if (details && details->init()) {
+          if (details && details->init() &&
+              (details->attr() == common::TypeParamAttr::Kind ||
+                  IsConstantExpr(*details->init()))) {
             Expr<SomeInteger> expr{*details->init()};
             return Fold(context,
                 Expr<IntKIND>{

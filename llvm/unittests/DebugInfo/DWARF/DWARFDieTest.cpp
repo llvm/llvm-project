@@ -34,8 +34,7 @@ TEST(DWARFDie, getLocations) {
           - Attribute:       DW_AT_call_data_location
             Form:            DW_FORM_sec_offset
     debug_info:
-      - Length:
-          TotalLength:     0
+      - Length:          0
         Version:         5
         UnitType:        DW_UT_compile
         AbbrOffset:      0

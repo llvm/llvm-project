@@ -57,6 +57,9 @@ settings = [('target.prefer-dynamic-value', 'no-dynamic-values')]
 # Path to the FileCheck testing tool. Not optional.
 filecheck = None
 
+# Path to the yaml2obj tool. Not optional.
+yaml2obj = None
+
 # The arch might dictate some specific CFLAGS to be passed to the toolchain to build
 # the inferior programs.  The global variable cflags_extras provides a hook to do
 # just that.
@@ -162,6 +165,13 @@ def get_filecheck_path():
     """
     if filecheck and os.path.lexists(filecheck):
         return filecheck
+
+def get_yaml2obj_path():
+    """
+    Get the path to the yaml2obj tool.
+    """
+    if yaml2obj and os.path.lexists(yaml2obj):
+        return yaml2obj
 
 def is_reproducer_replay():
     """

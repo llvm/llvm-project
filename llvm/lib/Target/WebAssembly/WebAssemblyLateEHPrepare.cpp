@@ -408,8 +408,8 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
       ++InsertPos;
     if (InsertPos->getOpcode() == WebAssembly::CATCH)
       ++InsertPos;
-    FrameLowering->writeSPToGlobal(WebAssembly::SP32, MF, MBB, InsertPos,
-                                   MBB.begin()->getDebugLoc());
+    FrameLowering->writeSPToGlobal(FrameLowering->getSPReg(MF), MF, MBB,
+                                   InsertPos, MBB.begin()->getDebugLoc());
   }
   return Changed;
 }

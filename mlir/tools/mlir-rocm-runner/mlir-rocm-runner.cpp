@@ -198,7 +198,7 @@ static LogicalResult createHsaco(const Blob &isaBlob, StringRef name,
 
 static std::unique_ptr<llvm::Module> compileModuleToROCDLIR(Operation *m) {
   auto llvmModule = translateModuleToROCDLIR(m);
-  // TODO(whchung): Link with ROCm-Device-Libs in case needed (ex: the Module
+  // TODO: Link with ROCm-Device-Libs in case needed (ex: the Module
   // depends on math functions).
   return llvmModule;
 }
@@ -227,7 +227,7 @@ static void configTargetChip() {
   llvm::ErrorOr<std::string> rocmAgentEnumerator = llvm::sys::findProgramByName(
       kRocmAgentEnumerator, {__ROCM_PATH__ "/bin"});
   std::error_code ec;
-  if (ec = rocmAgentEnumerator.getError()) {
+  if ((ec = rocmAgentEnumerator.getError())) {
     WithColor::warning(errs(), kRunnerProgram)
         << kRocmAgentEnumerator << " couldn't be located under "
         << __ROCM_PATH__ << ", set target as " << kDefaultTargetChip << "\n";

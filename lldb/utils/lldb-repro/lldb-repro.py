@@ -49,7 +49,7 @@ def main():
     elif sys.argv[1] == "capture":
         new_args.extend([
             '--capture', '--capture-path', reproducer_path,
-            '--reproducer-auto-generate'
+            '--reproducer-generate-on-exit'
         ])
         new_args.extend(sys.argv[2:])
     else:

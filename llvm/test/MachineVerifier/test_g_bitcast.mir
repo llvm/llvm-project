@@ -34,4 +34,6 @@ body:             |
     %10:_(p1) = G_IMPLICIT_DEF
     %11:_(p3) = G_BITCAST %8
 
+    ; CHECK: Bad machine code: bitcast must change the type
+    %12:_(s64) = G_BITCAST %0
 ...

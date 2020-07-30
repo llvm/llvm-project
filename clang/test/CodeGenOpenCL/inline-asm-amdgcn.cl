@@ -33,3 +33,17 @@ kernel void test_agpr() {
          : "={a1}"(reg_a)
          : "{a1}"(reg_b));
 }
+
+kernel void test_constraint_DA() {
+  const long x = 0x200000001;
+  int res;
+  // CHECK: call i32 asm sideeffect "v_mov_b32 $0, $1 & 0xFFFFFFFF", "=v,^DA"(i64 8589934593)
+  __asm volatile("v_mov_b32 %0, %1 & 0xFFFFFFFF" : "=v"(res) : "DA"(x));
+}
+
+kernel void test_constraint_DB() {
+  const long x = 0x200000001;
+  int res;
+  // CHECK: call i32 asm sideeffect "v_mov_b32 $0, $1 & 0xFFFFFFFF", "=v,^DB"(i64 8589934593)
+  __asm volatile("v_mov_b32 %0, %1 & 0xFFFFFFFF" : "=v"(res) : "DB"(x));
+}

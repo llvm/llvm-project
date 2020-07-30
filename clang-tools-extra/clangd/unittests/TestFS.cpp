@@ -79,13 +79,13 @@ const char *testRoot() {
 #endif
 }
 
-std::string testPath(PathRef File) {
+std::string testPath(PathRef File, llvm::sys::path::Style Style) {
   assert(llvm::sys::path::is_relative(File) && "FileName should be relative");
 
   llvm::SmallString<32> NativeFile = File;
-  llvm::sys::path::native(NativeFile);
+  llvm::sys::path::native(NativeFile, Style);
   llvm::SmallString<32> Path;
-  llvm::sys::path::append(Path, testRoot(), NativeFile);
+  llvm::sys::path::append(Path, Style, testRoot(), NativeFile);
   return std::string(Path.str());
 }
 

@@ -86,7 +86,7 @@ spirv::getRecursiveImpliedCapabilities(Capability cap) {
   llvm::SetVector<Capability, SmallVector<Capability, 0>> allCaps(
       directCaps.begin(), directCaps.end());
 
-  // TODO(antiagainst): This is insufficient; find a better way to handle this
+  // TODO: This is insufficient; find a better way to handle this
   // (e.g., using static lists) if this turns out to be a bottleneck.
   for (unsigned i = 0; i < allCaps.size(); ++i)
     for (Capability c : getDirectImpliedCapabilities(allCaps[i]))
@@ -151,6 +151,14 @@ void ArrayType::getCapabilities(
   getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
 }
 
+Optional<int64_t> ArrayType::getSizeInBytes() {
+  auto elementType = getElementType().cast<SPIRVType>();
+  Optional<int64_t> size = elementType.getSizeInBytes();
+  if (!size)
+    return llvm::None;
+  return (*size + getArrayStride()) * getNumElements();
+}
+
 //===----------------------------------------------------------------------===//
 // CompositeType
 //===----------------------------------------------------------------------===//
@@ -182,7 +190,7 @@ Type CompositeType::getElementType(unsigned index) const {
   case spirv::TypeKind::CooperativeMatrix:
     return cast<CooperativeMatrixNVType>().getElementType();
   case spirv::TypeKind::Matrix:
-    return cast<MatrixType>().getElementType();
+    return cast<MatrixType>().getColumnType();
   case spirv::TypeKind::RuntimeArray:
     return cast<RuntimeArrayType>().getElementType();
   case spirv::TypeKind::Struct:
@@ -202,7 +210,7 @@ unsigned CompositeType::getNumElements() const {
     llvm_unreachable(
         "invalid to query number of elements of spirv::CooperativeMatrix type");
   case spirv::TypeKind::Matrix:
-    return cast<MatrixType>().getNumElements();
+    return cast<MatrixType>().getNumColumns();
   case spirv::TypeKind::RuntimeArray:
     llvm_unreachable(
         "invalid to query number of elements of spirv::RuntimeArray type");
@@ -278,6 +286,24 @@ void CompositeType::getCapabilities(
     break;
   default:
     llvm_unreachable("invalid composite type");
+  }
+}
+
+Optional<int64_t> CompositeType::getSizeInBytes() {
+  switch (getKind()) {
+  case spirv::TypeKind::Array:
+    return cast<ArrayType>().getSizeInBytes();
+  case spirv::TypeKind::Struct:
+    return cast<StructType>().getSizeInBytes();
+  case StandardTypes::Vector: {
+    auto elementSize =
+        cast<VectorType>().getElementType().cast<ScalarType>().getSizeInBytes();
+    if (!elementSize)
+      return llvm::None;
+    return *elementSize * cast<VectorType>().getNumElements();
+  }
+  default:
+    return llvm::None;
   }
 }
 
@@ -589,9 +615,6 @@ StorageClass PointerType::getStorageClass() const {
 
 void PointerType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                 Optional<StorageClass> storage) {
-  if (storage)
-    assert(*storage == getStorageClass() && "inconsistent storage class!");
-
   // Use this pointer type's storage class because this pointer indicates we are
   // using the pointee type in that specific storage class.
   getPointeeType().cast<SPIRVType>().getExtensions(extensions,
@@ -604,9 +627,6 @@ void PointerType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
 void PointerType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     Optional<StorageClass> storage) {
-  if (storage)
-    assert(*storage == getStorageClass() && "inconsistent storage class!");
-
   // Use this pointer type's storage class because this pointer indicates we are
   // using the pointee type in that specific storage class.
   getPointeeType().cast<SPIRVType>().getCapabilities(capabilities,
@@ -812,6 +832,19 @@ void ScalarType::getCapabilities(
 #undef WIDTH_CASE
 }
 
+Optional<int64_t> ScalarType::getSizeInBytes() {
+  auto bitWidth = getIntOrFloatBitWidth();
+  // According to the SPIR-V spec:
+  // "There is no physical size or bit pattern defined for values with boolean
+  // type. If they are stored (in conjunction with OpVariable), they can only
+  // be used with logical addressing operations, not physical, and only with
+  // non-externally visible shader Storage Classes: Workgroup, CrossWorkgroup,
+  // Private, Function, Input, and Output."
+  if (bitWidth == 1)
+    return llvm::None;
+  return bitWidth / 8;
+}
+
 //===----------------------------------------------------------------------===//
 // SPIRVType
 //===----------------------------------------------------------------------===//
@@ -865,6 +898,14 @@ void SPIRVType::getCapabilities(
   } else {
     llvm_unreachable("invalid SPIR-V Type to getCapabilities");
   }
+}
+
+Optional<int64_t> SPIRVType::getSizeInBytes() {
+  if (auto scalarType = dyn_cast<ScalarType>())
+    return scalarType.getSizeInBytes();
+  if (auto compositeType = dyn_cast<CompositeType>())
+    return compositeType.getSizeInBytes();
+  return llvm::None;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1092,13 +1133,25 @@ bool MatrixType::isValidColumnType(Type columnType) {
   return false;
 }
 
-Type MatrixType::getElementType() const { return getImpl()->columnType; }
+Type MatrixType::getColumnType() const { return getImpl()->columnType; }
 
-unsigned MatrixType::getNumElements() const { return getImpl()->columnCount; }
+Type MatrixType::getElementType() const {
+  return getImpl()->columnType.cast<VectorType>().getElementType();
+}
+
+unsigned MatrixType::getNumColumns() const { return getImpl()->columnCount; }
+
+unsigned MatrixType::getNumRows() const {
+  return getImpl()->columnType.cast<VectorType>().getShape()[0];
+}
+
+unsigned MatrixType::getNumElements() const {
+  return (getImpl()->columnCount) * getNumRows();
+}
 
 void MatrixType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                Optional<StorageClass> storage) {
-  getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
+  getColumnType().cast<SPIRVType>().getExtensions(extensions, storage);
 }
 
 void MatrixType::getCapabilities(
@@ -1110,5 +1163,5 @@ void MatrixType::getCapabilities(
     capabilities.push_back(ref);
   }
   // Add any capabilities associated with the underlying vectors (i.e., columns)
-  getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+  getColumnType().cast<SPIRVType>().getCapabilities(capabilities, storage);
 }

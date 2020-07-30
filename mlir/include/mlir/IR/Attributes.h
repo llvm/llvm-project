@@ -63,10 +63,10 @@ public:
   };
 
   /// Utility class for implementing attributes.
-  template <typename ConcreteType, typename BaseType = Attribute,
-            typename StorageType = AttributeStorage>
+  template <typename ConcreteType, typename BaseType, typename StorageType,
+            template <typename T> class... Traits>
   using AttrBase = detail::StorageUserBase<ConcreteType, BaseType, StorageType,
-                                           detail::AttributeUniquer>;
+                                           detail::AttributeUniquer, Traits...>;
 
   using ImplType = AttributeStorage;
   using ValueType = void;
@@ -85,6 +85,8 @@ public:
   bool operator!() const { return impl == nullptr; }
 
   template <typename U> bool isa() const;
+  template <typename First, typename Second, typename... Rest>
+  bool isa() const;
   template <typename U> U dyn_cast() const;
   template <typename U> U dyn_cast_or_null() const;
   template <typename U> U cast() const;
@@ -117,6 +119,11 @@ public:
 
   friend ::llvm::hash_code hash_value(Attribute arg);
 
+  /// Return the abstract descriptor for this attribute.
+  const AbstractAttribute &getAbstractAttribute() const {
+    return impl->getAbstractAttribute();
+  }
+
 protected:
   ImplType *impl;
 };
@@ -125,6 +132,46 @@ inline raw_ostream &operator<<(raw_ostream &os, Attribute attr) {
   attr.print(os);
   return os;
 }
+
+//===----------------------------------------------------------------------===//
+// AttributeTraitBase
+//===----------------------------------------------------------------------===//
+
+namespace AttributeTrait {
+/// This class represents the base of an attribute trait.
+template <typename ConcreteType, template <typename> class TraitType>
+using TraitBase = detail::StorageUserTraitBase<ConcreteType, TraitType>;
+} // namespace AttributeTrait
+
+//===----------------------------------------------------------------------===//
+// AttributeInterface
+//===----------------------------------------------------------------------===//
+
+/// This class represents the base of an attribute interface. See the definition
+/// of `detail::Interface` for requirements on the `Traits` type.
+template <typename ConcreteType, typename Traits>
+class AttributeInterface
+    : public detail::Interface<ConcreteType, Attribute, Traits, Attribute,
+                               AttributeTrait::TraitBase> {
+public:
+  using Base = AttributeInterface<ConcreteType, Traits>;
+  using InterfaceBase = detail::Interface<ConcreteType, Type, Traits, Type,
+                                          AttributeTrait::TraitBase>;
+  using InterfaceBase::InterfaceBase;
+
+private:
+  /// Returns the impl interface instance for the given type.
+  static typename InterfaceBase::Concept *getInterfaceFor(Attribute attr) {
+    return attr.getAbstractAttribute().getInterface<ConcreteType>();
+  }
+
+  /// Allow access to 'getInterfaceFor'.
+  friend InterfaceBase;
+};
+
+//===----------------------------------------------------------------------===//
+// StandardAttributes
+//===----------------------------------------------------------------------===//
 
 namespace StandardAttributes {
 enum Kind {
@@ -238,6 +285,12 @@ public:
   llvm::iterator_range<attr_value_iterator<AttrTy>> getAsRange() {
     return llvm::make_range(attr_value_iterator<AttrTy>(begin()),
                             attr_value_iterator<AttrTy>(end()));
+  }
+  template <typename AttrTy, typename UnderlyingTy>
+  auto getAsRange() {
+    return llvm::map_range(getAsRange<AttrTy>(), [](AttrTy attr) {
+      return static_cast<UnderlyingTy>(attr.getValue());
+    });
   }
 };
 
@@ -370,7 +423,7 @@ public:
   APInt getValue() const;
   /// Return the integer value as a 64-bit int. The attribute must be a signless
   /// integer.
-  // TODO(jpienaar): Change callers to use getValue instead.
+  // TODO: Change callers to use getValue instead.
   int64_t getInt() const;
   /// Return the integer value as a signed 64-bit int. The attribute must be
   /// a signed integer.
@@ -588,7 +641,8 @@ public:
 
 /// Unit attributes are attributes that hold no specific value and are given
 /// meaning by their existence.
-class UnitAttr : public Attribute::AttrBase<UnitAttr> {
+class UnitAttr
+    : public Attribute::AttrBase<UnitAttr, Attribute, AttributeStorage> {
 public:
   using Base::Base;
 
@@ -1390,8 +1444,7 @@ public:
     auto zeroValue = getZeroValue<T>();
     auto valueIt = getValues().getValues<T>().begin();
     const std::vector<ptrdiff_t> flatSparseIndices(getFlattenedSparseIndices());
-    // TODO(riverriddle): Move-capture flatSparseIndices when c++14 is
-    // available.
+    // TODO: Move-capture flatSparseIndices when c++14 is available.
     std::function<T(ptrdiff_t)> mapFn = [=](ptrdiff_t index) {
       // Try to map the current index to one of the sparse indices.
       for (unsigned i = 0, e = flatSparseIndices.size(); i != e; ++i)
@@ -1630,6 +1683,12 @@ template <typename U> bool Attribute::isa() const {
   assert(impl && "isa<> used on a null attribute.");
   return U::classof(*this);
 }
+
+template <typename First, typename Second, typename... Rest>
+bool Attribute::isa() const {
+  return isa<First>() || isa<Second, Rest...>();
+}
+
 template <typename U> U Attribute::dyn_cast() const {
   return isa<U>() ? U(impl) : U(nullptr);
 }

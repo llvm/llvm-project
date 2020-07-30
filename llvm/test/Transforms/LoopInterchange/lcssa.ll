@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' -verify-loop-lcssa -pass-remarks-output=%t -S
+; RUN: opt < %s -basic-aa -loop-interchange -pass-remarks-missed='loop-interchange' -verify-loop-lcssa -pass-remarks-output=%t -S
 ; RUN: FileCheck --input-file %t --check-prefix REMARK %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

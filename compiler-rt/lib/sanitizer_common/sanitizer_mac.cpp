@@ -606,12 +606,22 @@ HandleSignalMode GetHandleSignalMode(int signum) {
   return result;
 }
 
+// This corresponds to Triple::getMacOSXVersion() in the Clang driver.
 static MacosVersion GetMacosAlignedVersionInternal() {
   u16 kernel_major = GetDarwinKernelVersion().major;
-  const u16 version_offset = 4;
-  CHECK_GE(kernel_major, version_offset);
-  u16 macos_major = kernel_major - version_offset;
-  return MacosVersion(10, macos_major);
+  // Darwin 0-3  -> unsupported
+  // Darwin 4-19 -> macOS 10.x
+  // Darwin 20+  -> macOS 11+
+  CHECK_GE(kernel_major, 4);
+  u16 major, minor;
+  if (kernel_major < 20) {
+    major = 10;
+    minor = kernel_major - 4;
+  } else {
+    major = 11 + kernel_major - 20;
+    minor = 0;
+  }
+  return MacosVersion(major, minor);
 }
 
 static_assert(sizeof(MacosVersion) == sizeof(atomic_uint32_t::Type),

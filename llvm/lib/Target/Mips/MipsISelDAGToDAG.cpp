@@ -65,7 +65,7 @@ bool MipsDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 /// getGlobalBaseReg - Output the instructions required to put the
 /// GOT address into a register.
 SDNode *MipsDAGToDAGISel::getGlobalBaseReg() {
-  Register GlobalBaseReg = MF->getInfo<MipsFunctionInfo>()->getGlobalBaseReg();
+  Register GlobalBaseReg = MF->getInfo<MipsFunctionInfo>()->getGlobalBaseReg(*MF);
   return CurDAG->getRegister(GlobalBaseReg, getTargetLowering()->getPointerTy(
                                                 CurDAG->getDataLayout()))
       .getNode();

@@ -136,7 +136,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   size_t framework_pos = raw_path.find("LLDB.framework");
   if (framework_pos != std::string::npos) {
     framework_pos += strlen("LLDB.framework");
-#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
+#if TARGET_OS_EMBEDDED
     // Shallow bundle
     raw_path.resize(framework_pos);
 #else
@@ -276,6 +276,9 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 #elif defined(TARGET_OS_WATCHOS) && TARGET_OS_WATCHOS == 1
         arch_32.GetTriple().setOS(llvm::Triple::WatchOS);
         arch_64.GetTriple().setOS(llvm::Triple::WatchOS);
+#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
+        arch_32.GetTriple().setOS(llvm::Triple::MacOSX);
+        arch_64.GetTriple().setOS(llvm::Triple::MacOSX);
 #else
         arch_32.GetTriple().setOS(llvm::Triple::IOS);
         arch_64.GetTriple().setOS(llvm::Triple::IOS);

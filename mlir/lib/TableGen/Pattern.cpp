@@ -57,7 +57,7 @@ bool tblgen::DagLeaf::isEnumAttrCase() const {
 }
 
 bool tblgen::DagLeaf::isStringAttr() const {
-  return isa<llvm::StringInit>(def) || isa<llvm::CodeInit>(def);
+  return isa<llvm::StringInit, llvm::CodeInit>(def);
 }
 
 tblgen::Constraint tblgen::DagLeaf::getAsConstraint() const {

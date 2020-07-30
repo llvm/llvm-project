@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -893,7 +894,7 @@ void FlatAffineConstraints::removeIdRange(unsigned idStart, unsigned idLimit) {
   // We are going to be removing one or more identifiers from the range.
   assert(idStart < numIds && "invalid idStart position");
 
-  // TODO(andydavis) Make 'removeIdRange' a lambda called from here.
+  // TODO: Make 'removeIdRange' a lambda called from here.
   // Remove eliminated identifiers from equalities.
   shiftColumnsToLeft(this, idStart, idLimit, /*isEq=*/true);
 
@@ -1035,6 +1036,28 @@ bool FlatAffineConstraints::isEmptyByGCDTest() const {
   return false;
 }
 
+// First, try the GCD test heuristic.
+//
+// If that doesn't find the set empty, check if the set is unbounded. If it is,
+// we cannot use the GBR algorithm and we conservatively return false.
+//
+// If the set is bounded, we use the complete emptiness check for this case
+// provided by Simplex::findIntegerSample(), which gives a definitive answer.
+bool FlatAffineConstraints::isIntegerEmpty() const {
+  if (isEmptyByGCDTest())
+    return true;
+
+  Simplex simplex(*this);
+  if (simplex.isUnbounded())
+    return false;
+  return !simplex.findIntegerSample().hasValue();
+}
+
+Optional<SmallVector<int64_t, 8>>
+FlatAffineConstraints::findIntegerSample() const {
+  return Simplex(*this).findIntegerSample();
+}
+
 /// Tightens inequalities given that we are dealing with integer spaces. This is
 /// analogous to the GCD test but applied to inequalities. The constant term can
 /// be reduced to the preceding multiple of the GCD of the coefficients, i.e.,
@@ -1150,8 +1173,8 @@ static bool detectAsMod(const FlatAffineConstraints &cst, unsigned pos,
       if (c == pos)
         continue;
       // The coefficient of the quotient should be +/-divisor.
-      // TODO(bondhugula): could be extended to detect an affine function for
-      // the quotient (i.e., the coeff could be a non-zero multiple of divisor).
+      // TODO: could be extended to detect an affine function for the quotient
+      // (i.e., the coeff could be a non-zero multiple of divisor).
       int64_t v = cst.atEq(r, c) * cst.atEq(r, pos);
       if (v == divisor || v == -divisor) {
         seenQuotient++;
@@ -1159,8 +1182,8 @@ static bool detectAsMod(const FlatAffineConstraints &cst, unsigned pos,
         quotientSign = v > 0 ? 1 : -1;
       }
       // The coefficient of the dividend should be +/-1.
-      // TODO(bondhugula): could be extended to detect an affine function of
-      // the other identifiers as the dividend.
+      // TODO: could be extended to detect an affine function of the other
+      // identifiers as the dividend.
       else if (v == -1 || v == 1) {
         seenDividend++;
         dividendPos = c;
@@ -1319,8 +1342,8 @@ static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
         }
         // Expression can't be constructed as it depends on a yet unknown
         // identifier.
-        // TODO(mlir-team): Visit/compute the identifiers in an order so that
-        // this doesn't happen. More complex but much more efficient.
+        // TODO: Visit/compute the identifiers in an order so that this doesn't
+        // happen. More complex but much more efficient.
         if (c < f)
           continue;
         // Successfully detected the floordiv.
@@ -1596,9 +1619,9 @@ void FlatAffineConstraints::getSliceBounds(unsigned offset, unsigned num,
       lbMap = AffineMap::get(numMapDims, numMapSymbols, expr);
       ubMap = AffineMap::get(numMapDims, numMapSymbols, expr + 1);
     } else {
-      // TODO(bondhugula): Whenever there are local identifiers in the
-      // dependence constraints, we'll conservatively over-approximate, since we
-      // don't always explicitly compute them above (in the while loop).
+      // TODO: Whenever there are local identifiers in the dependence
+      // constraints, we'll conservatively over-approximate, since we don't
+      // always explicitly compute them above (in the while loop).
       if (getNumLocalIds() == 0) {
         // Work on a copy so that we don't update this constraint system.
         if (!tmpClone) {
@@ -1613,7 +1636,7 @@ void FlatAffineConstraints::getSliceBounds(unsigned offset, unsigned num,
 
       // If the above fails, we'll just use the constant lower bound and the
       // constant upper bound (if they exist) as the slice bounds.
-      // TODO(b/126426796): being conservative for the moment in cases that
+      // TODO: being conservative for the moment in cases that
       // lead to multiple bounds - until getConstDifference in LoopFusion.cpp is
       // fixed (b/126426796).
       if (!lbMap || lbMap.getNumResults() > 1) {
@@ -2333,8 +2356,8 @@ void FlatAffineConstraints::removeTrivialRedundancy() {
   }
   inequalities.resize(numReservedCols * pos);
 
-  // TODO(bondhugula): consider doing this for equalities as well, but probably
-  // not worth the savings.
+  // TODO: consider doing this for equalities as well, but probably not worth
+  // the savings.
 }
 
 void FlatAffineConstraints::clearAndCopyFrom(
@@ -2411,8 +2434,8 @@ getNewNumDimsSymbols(unsigned pos, const FlatAffineConstraints &cst) {
 /// holes/splinters:                         j = 2
 ///
 /// darkShadow = false, isResultIntegerExact = nullptr are default values.
-// TODO(bondhugula): a slight modification to yield dark shadow version of FM
-// (tightened), which can prove the existence of a solution if there is one.
+// TODO: a slight modification to yield dark shadow version of FM (tightened),
+// which can prove the existence of a solution if there is one.
 void FlatAffineConstraints::FourierMotzkinEliminate(
     unsigned pos, bool darkShadow, bool *isResultIntegerExact) {
   LLVM_DEBUG(llvm::dbgs() << "FM input (eliminate pos " << pos << "):\n");
@@ -2444,7 +2467,7 @@ void FlatAffineConstraints::FourierMotzkinEliminate(
   }
   if (r == getNumInequalities()) {
     // If it doesn't appear, just remove the column and return.
-    // TODO(andydavis,bondhugula): refactor removeColumns to use it from here.
+    // TODO: refactor removeColumns to use it from here.
     removeId(pos);
     LLVM_DEBUG(llvm::dbgs() << "FM output:\n");
     LLVM_DEBUG(dump());
@@ -2515,7 +2538,7 @@ void FlatAffineConstraints::FourierMotzkinEliminate(
       // coefficient in the canonical form as the view taken here is that of the
       // term being moved to the other size of '>='.
       int64_t ubCoeff = -atIneq(ubPos, pos);
-      // TODO(bondhugula): refactor this loop to avoid all branches inside.
+      // TODO: refactor this loop to avoid all branches inside.
       for (unsigned l = 0, e = getNumCols(); l < e; l++) {
         if (l == pos)
           continue;
@@ -2719,14 +2742,14 @@ FlatAffineConstraints::unionBoundingBox(const FlatAffineConstraints &otherCst) {
   for (unsigned d = 0, e = getNumDimIds(); d < e; ++d) {
     auto extent = getConstantBoundOnDimSize(d, &lb, &lbFloorDivisor, &ub);
     if (!extent.hasValue())
-      // TODO(bondhugula): symbolic extents when necessary.
-      // TODO(bondhugula): handle union if a dimension is unbounded.
+      // TODO: symbolic extents when necessary.
+      // TODO: handle union if a dimension is unbounded.
       return failure();
 
     auto otherExtent = otherAligned.getConstantBoundOnDimSize(
         d, &otherLb, &otherLbFloorDivisor, &otherUb);
     if (!otherExtent.hasValue() || lbFloorDivisor != otherLbFloorDivisor)
-      // TODO(bondhugula): symbolic extents when necessary.
+      // TODO: symbolic extents when necessary.
       return failure();
 
     assert(lbFloorDivisor > 0 && "divisor always expected to be positive");
@@ -2796,9 +2819,9 @@ FlatAffineConstraints::unionBoundingBox(const FlatAffineConstraints &otherCst) {
   append(commonCst);
   removeTrivialRedundancy();
 
-  // TODO(mlir-team): copy over pure symbolic constraints from this and 'other'
-  // over to the union (since the above are just the union along dimensions); we
-  // shouldn't be discarding any other constraints on the symbols.
+  // TODO: copy over pure symbolic constraints from this and 'other' over to the
+  // union (since the above are just the union along dimensions); we shouldn't
+  // be discarding any other constraints on the symbols.
 
   return success();
 }

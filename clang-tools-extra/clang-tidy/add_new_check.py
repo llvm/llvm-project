@@ -289,6 +289,19 @@ void awesome_f2();
 """ % {'check_name_dashes': check_name_dashes})
 
 
+def get_actual_filename(dirname, filename):
+  if not os.path.isdir(dirname): 
+    return ""
+  name = os.path.join(dirname, filename)
+  if (os.path.isfile(name)):
+    return name
+  caselessname = filename.lower()
+  for file in os.listdir(dirname):
+    if (file.lower() == caselessname):
+      return os.path.join(dirname, file)
+  return ""
+
+
 # Recreates the list of checks in the docs/clang-tidy/checks directory.
 def update_checks_list(clang_tidy_path):
   docs_dir = os.path.join(clang_tidy_path, '../docs/clang-tidy/checks')
@@ -304,7 +317,8 @@ def update_checks_list(clang_tidy_path):
   def has_auto_fix(check_name):
     dirname, _, check_name = check_name.partition("-")
 
-    checkerCode = os.path.join(dirname, get_camel_name(check_name)) + ".cpp"
+    checkerCode = get_actual_filename(dirname,
+                                      get_camel_name(check_name) + '.cpp')
 
     if not os.path.isfile(checkerCode):
       return ""

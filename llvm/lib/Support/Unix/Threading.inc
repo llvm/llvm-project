@@ -37,6 +37,10 @@
 #include <lwp.h> // For _lwp_self()
 #endif
 
+#if defined(__OpenBSD__)
+#include <unistd.h> // For getthrid()
+#endif
+
 #if defined(__linux__)
 #include <sched.h>       // For sched_getaffinity
 #include <sys/syscall.h> // For syscall codes
@@ -90,6 +94,10 @@ llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
     if ((errnum = ::pthread_join(Thread, nullptr)) != 0) {
       ReportErrnumFatal("pthread_join failed", errnum);
     }
+  } else if (JP == JoiningPolicy::Detach) {
+    if ((errnum = ::pthread_detach(Thread)) != 0) {
+      ReportErrnumFatal("pthread_detach failed", errnum);
+    }
   }
 }
 
@@ -105,6 +113,8 @@ uint64_t llvm::get_threadid() {
   return uint64_t(pthread_getthreadid_np());
 #elif defined(__NetBSD__)
   return uint64_t(_lwp_self());
+#elif defined(__OpenBSD__)
+  return uint64_t(getthrid());
 #elif defined(__ANDROID__)
   return uint64_t(gettid());
 #elif defined(__linux__)

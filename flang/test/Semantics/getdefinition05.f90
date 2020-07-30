@@ -1,4 +1,3 @@
-!RUN: %S/test_any.sh %s %t %f18
 ! Tests -fget-symbols-sources with BLOCK that contains same variable name as 
 ! another in an outer scope.
 program main
@@ -13,9 +12,8 @@ program main
 end program
 
 !! Inner x
-! EXEC: ${F18} -fget-definition 10 5 6 -fparse-only %s > %t;
-! CHECK:x:.*getdefinition05.f90, 8, 16-17
+! RUN: %f18 -fget-definition 9 5 6 -fparse-only %s | FileCheck --check-prefix=CHECK1 %s
+! CHECK1: x:{{.*}}getdefinition05.f90, 7, 16-17
 !! Outer y
-! EXEC: ${F18} -fget-definition 12 7 8 -fparse-only %s >> %t;
-! CHECK:y:.*getdefinition05.f90, 6, 14-15
-! EXEC: cat %t | ${FileCheck} %s;
+! RUN: %f18 -fget-definition 11 7 8 -fparse-only %s | FileCheck --check-prefix=CHECK2 %s
+! CHECK2: y:{{.*}}getdefinition05.f90, 5, 14-15

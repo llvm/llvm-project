@@ -17,6 +17,19 @@ struct dim3 {
   __host__ __device__ dim3(unsigned x, unsigned y = 1, unsigned z = 1) : x(x), y(y), z(z) {}
 };
 
+#ifdef __HIP__
+typedef struct hipStream *hipStream_t;
+typedef enum hipError {} hipError_t;
+int hipConfigureCall(dim3 gridSize, dim3 blockSize, size_t sharedSize = 0,
+                     hipStream_t stream = 0);
+extern "C" hipError_t __hipPushCallConfiguration(dim3 gridSize, dim3 blockSize,
+                                                 size_t sharedSize = 0,
+                                                 hipStream_t stream = 0);
+extern "C" hipError_t hipLaunchKernel(const void *func, dim3 gridDim,
+                                      dim3 blockDim, void **args,
+                                      size_t sharedMem,
+                                      hipStream_t stream);
+#else
 typedef struct cudaStream *cudaStream_t;
 typedef enum cudaError {} cudaError_t;
 
@@ -29,6 +42,7 @@ extern "C" int __cudaPushCallConfiguration(dim3 gridSize, dim3 blockSize,
 extern "C" cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim,
                                         dim3 blockDim, void **args,
                                         size_t sharedMem, cudaStream_t stream);
+#endif
 
 // Host- and device-side placement new overloads.
 void *operator new(__SIZE_TYPE__, void *p) { return p; }

@@ -10,7 +10,7 @@
 //
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
-// RUN: %{libcxx_gdb} -nx -batch -iex "set autoload off" -ex "source %{libcxx_src_root}/utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %{libcxx_src_root}/test/pretty_printers/gdb_pretty_printer_test.py" %t.exe
+// RUN: %{libcxx_gdb} -nx -batch -iex "set autoload off" -ex "source %S/../../utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe
 
 #include <bitset>
 #include <deque>

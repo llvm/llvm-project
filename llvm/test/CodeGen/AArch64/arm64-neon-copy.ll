@@ -211,7 +211,7 @@ define <2 x double> @ins1f2(<1 x double> %tmp1, <2 x double> %tmp2) {
 define <2 x double> @ins1f2_args_flipped(<2 x double> %tmp2, <1 x double> %tmp1) {
 ; CHECK-LABEL: ins1f2_args_flipped:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill:  def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <1 x double> %tmp1, i32 0
@@ -1088,56 +1088,73 @@ define <2 x float> @test_bitcastv1f64tov2f32(<1 x i64> %a) #0 {
 ; Test insert element into an undef vector
 define <8 x i8> @scalar_to_vector.v8i8(i8 %a) {
 ; CHECK-LABEL: scalar_to_vector.v8i8:
-; CHECK: fmov {{s[0-9]+}}, {{w[0-9]+}}
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ret
   %b = insertelement <8 x i8> undef, i8 %a, i32 0
   ret <8 x i8> %b
 }
 
 define <16 x i8> @scalar_to_vector.v16i8(i8 %a) {
 ; CHECK-LABEL: scalar_to_vector.v16i8:
-; CHECK: fmov {{s[0-9]+}}, {{w[0-9]+}}
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ret
   %b = insertelement <16 x i8> undef, i8 %a, i32 0
   ret <16 x i8> %b
 }
 
 define <4 x i16> @scalar_to_vector.v4i16(i16 %a) {
 ; CHECK-LABEL: scalar_to_vector.v4i16:
-; CHECK: fmov {{s[0-9]+}}, {{w[0-9]+}}
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ret
   %b = insertelement <4 x i16> undef, i16 %a, i32 0
   ret <4 x i16> %b
 }
 
 define <8 x i16> @scalar_to_vector.v8i16(i16 %a) {
 ; CHECK-LABEL: scalar_to_vector.v8i16:
-; CHECK: fmov {{s[0-9]+}}, {{w[0-9]+}}
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ret
   %b = insertelement <8 x i16> undef, i16 %a, i32 0
   ret <8 x i16> %b
 }
 
 define <2 x i32> @scalar_to_vector.v2i32(i32 %a) {
 ; CHECK-LABEL: scalar_to_vector.v2i32:
-; CHECK: fmov {{s[0-9]+}}, {{w[0-9]+}}
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ret
   %b = insertelement <2 x i32> undef, i32 %a, i32 0
   ret <2 x i32> %b
 }
 
 define <4 x i32> @scalar_to_vector.v4i32(i32 %a) {
 ; CHECK-LABEL: scalar_to_vector.v4i32:
-; CHECK: fmov {{s[0-9]+}}, {{w[0-9]+}}
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ret
   %b = insertelement <4 x i32> undef, i32 %a, i32 0
   ret <4 x i32> %b
 }
 
 define <2 x i64> @scalar_to_vector.v2i64(i64 %a) {
 ; CHECK-LABEL: scalar_to_vector.v2i64:
-; CHECK: fmov {{d[0-9]+}}, {{x[0-9]+}}
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    ret
   %b = insertelement <2 x i64> undef, i64 %a, i32 0
   ret <2 x i64> %b
 }
 
 define <8 x i8> @testDUP.v1i8(<1 x i8> %a) {
 ; CHECK-LABEL: testDUP.v1i8:
-; CHECK: dup v0.8b, v0.b[0]
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-NEXT:    ret
   %b = extractelement <1 x i8> %a, i32 0
   %c = insertelement <8 x i8> undef, i8 %b, i32 0
   %d = insertelement <8 x i8> %c, i8 %b, i32 1
@@ -1152,7 +1169,10 @@ define <8 x i8> @testDUP.v1i8(<1 x i8> %a) {
 
 define <8 x i16> @testDUP.v1i16(<1 x i16> %a) {
 ; CHECK-LABEL: testDUP.v1i16:
-; CHECK: dup v0.8h, v0.h[0]
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
   %b = extractelement <1 x i16> %a, i32 0
   %c = insertelement <8 x i16> undef, i16 %b, i32 0
   %d = insertelement <8 x i16> %c, i16 %b, i32 1
@@ -1167,7 +1187,10 @@ define <8 x i16> @testDUP.v1i16(<1 x i16> %a) {
 
 define <4 x i32> @testDUP.v1i32(<1 x i32> %a) {
 ; CHECK-LABEL: testDUP.v1i32:
-; CHECK: dup v0.4s, v0.s[0]
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    ret
   %b = extractelement <1 x i32> %a, i32 0
   %c = insertelement <4 x i32> undef, i32 %b, i32 0
   %d = insertelement <4 x i32> %c, i32 %b, i32 1

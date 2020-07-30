@@ -1,5 +1,5 @@
 ; RUN: llvm-mc -triple avr -mattr=addsubiw -show-encoding < %s | FileCheck %s
-; RUNx: llvm-mc -filetype=obj -triple avr -mattr=addsubiw < %s | llvm-objdump -d --mattr=addsubiw - | FileCheck --check-prefix=CHECK-INST %s
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=addsubiw < %s | llvm-objdump -dr --mattr=addsubiw - | FileCheck --check-prefix=CHECK-INST %s
 
 
 foo:
@@ -10,8 +10,11 @@ foo:
   adiw r28,  17
   adiw r28,  0
 
-  adiw r30,  63
   adiw r30,  3
+  adiw r30,  63
+  adiw r24,  63
+  adiw r24,  0
+  adiw r30,  0
 
   adiw r24, SYMBOL
 
@@ -21,8 +24,11 @@ foo:
 ; CHECK: adiw r28,  17               ; encoding: [0x61,0x96]
 ; CHECK: adiw r28,  0                ; encoding: [0x20,0x96]
 
-; CHECK: adiw r30,  63               ; encoding: [0xff,0x96]
 ; CHECK: adiw r30,  3                ; encoding: [0x33,0x96]
+; CHECK: adiw r30,  63               ; encoding: [0xff,0x96]
+; CHECK: adiw r24,  63               ; encoding: [0xcf,0x96]
+; CHECK: adiw r24,  0                ; encoding: [0x00,0x96]
+; CHECK: adiw r30,  0                ; encoding: [0x30,0x96]
 
 ; CHECK: adiw r24, SYMBOL            ; encoding: [0b00AAAAAA,0x96]
                                      ;   fixup A - offset: 0, value: SYMBOL, kind: fixup_6_adiw
@@ -33,7 +39,11 @@ foo:
 ; CHECK-INST: adiw r28,  17
 ; CHECK-INST: adiw r28,  0
 
-; CHECK-INST: adiw r30,  63
 ; CHECK-INST: adiw r30,  3
+; CHECK-INST: adiw r30,  63
+; CHECK-INST: adiw r24,  63
+; CHECK-INST: adiw r24,  0
+; CHECK-INST: adiw r30,  0
 
 ; CHECK-INST: adiw r24, 0
+; CHECK-INST:      R_AVR_6_ADIW SYMBOL

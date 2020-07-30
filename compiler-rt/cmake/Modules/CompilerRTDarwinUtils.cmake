@@ -169,25 +169,46 @@ function(darwin_test_archs os valid_archs)
     CACHE STRING "List of valid architectures for platform ${os}." FORCE)
 endfunction()
 
-# This function checks the host cpusubtype to see if it is post-haswell. Haswell
-# and later machines can run x86_64h binaries. Haswell is cpusubtype 8.
+# This function checks the host cputype/cpusubtype to filter supported
+# architecture for the host OS. This is used to determine which tests are
+# available for the host.
 function(darwin_filter_host_archs input output)
   list_intersect(tmp_var DARWIN_osx_ARCHS ${input})
   execute_process(
-    COMMAND sysctl hw.cpusubtype
-    OUTPUT_VARIABLE SUBTYPE)
-
-  string(REGEX MATCH "hw.cpusubtype: ([0-9]*)"
-         SUBTYPE_MATCHED "${SUBTYPE}")
-  set(HASWELL_SUPPORTED Off)
-  if(SUBTYPE_MATCHED)
-    if(${CMAKE_MATCH_1} GREATER 7)
-      set(HASWELL_SUPPORTED On)
+    COMMAND sysctl hw.cputype
+    OUTPUT_VARIABLE CPUTYPE)
+  string(REGEX MATCH "hw.cputype: ([0-9]*)"
+         CPUTYPE_MATCHED "${CPUTYPE}")
+  set(ARM_HOST Off)
+  if(CPUTYPE_MATCHED)
+    # ARM cputype is (0x01000000 | 12) and X86(_64) is always 7.
+    if(${CMAKE_MATCH_1} GREATER 11)
+      set(ARM_HOST On)
     endif()
   endif()
-  if(NOT HASWELL_SUPPORTED)
-    list(REMOVE_ITEM tmp_var x86_64h)
+
+  if(ARM_HOST)
+    list(REMOVE_ITEM tmp_var i386)
+  else()
+    list(REMOVE_ITEM tmp_var arm64)
+    list(REMOVE_ITEM tmp_var arm64e)
+    execute_process(
+      COMMAND sysctl hw.cpusubtype
+      OUTPUT_VARIABLE SUBTYPE)
+    string(REGEX MATCH "hw.cpusubtype: ([0-9]*)"
+           SUBTYPE_MATCHED "${SUBTYPE}")
+
+    set(HASWELL_SUPPORTED Off)
+    if(SUBTYPE_MATCHED)
+      if(${CMAKE_MATCH_1} GREATER 7)
+        set(HASWELL_SUPPORTED On)
+      endif()
+    endif()
+    if(NOT HASWELL_SUPPORTED)
+      list(REMOVE_ITEM tmp_var x86_64h)
+    endif()
   endif()
+
   set(${output} ${tmp_var} PARENT_SCOPE)
 endfunction()
 

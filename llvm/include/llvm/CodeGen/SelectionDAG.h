@@ -931,7 +931,8 @@ public:
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm) {
     assert(MulImm.getMinSignedBits() <= VT.getSizeInBits() &&
            "Immediate does not fit VT");
-    return getNode(ISD::VSCALE, DL, VT, getConstant(MulImm, DL, VT));
+    return getNode(ISD::VSCALE, DL, VT,
+                   getConstant(MulImm.sextOrTrunc(VT.getSizeInBits()), DL, VT));
   }
 
   /// Return a GLOBAL_OFFSET_TABLE node. This does not have a useful SDLoc.
@@ -1341,6 +1342,9 @@ public:
 
   /// Return a freeze using the SDLoc of the value operand.
   SDValue getFreeze(SDValue V);
+
+  /// Return an AssertAlignSDNode.
+  SDValue getAssertAlign(const SDLoc &DL, SDValue V, Align A);
 
   /// Return the specified value casted to
   /// the target's desired shift amount type.

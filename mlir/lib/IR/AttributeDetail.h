@@ -658,7 +658,7 @@ struct OpaqueElementsAttributeStorage : public AttributeStorage {
   /// Construct a new storage instance.
   static OpaqueElementsAttributeStorage *
   construct(AttributeStorageAllocator &allocator, KeyTy key) {
-    // TODO(b/131468830): Provide a way to avoid copying content of large opaque
+    // TODO: Provide a way to avoid copying content of large opaque
     // tensors This will likely require a new reference attribute kind.
     return new (allocator.allocate<OpaqueElementsAttributeStorage>())
         OpaqueElementsAttributeStorage(std::get<0>(key), std::get<1>(key),
