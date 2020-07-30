@@ -37,8 +37,7 @@ Sections:
       - From:   bar
         To:     foo
         Weight: 98
-## 0x10 is the normal entry size for the SHT_LLVM_CALL_GRAPH_PROFILE section.
-    EntSize: [[ENTSIZE=0x10]]
+    EntSize: [[ENTSIZE=<none>]]
 Symbols:
   - Name: foo
   - Name: bar

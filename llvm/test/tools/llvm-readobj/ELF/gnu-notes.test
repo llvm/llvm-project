@@ -87,8 +87,8 @@ FileHeader:
   Data:       ELFDATA2LSB
   Type:       ET_EXEC
   Machine:    EM_X86_64
-  EPhEntSize: [[PHENTSIZE=56]]
-  EShNum:     [[SHNUM=6]]
+  EPhEntSize: [[PHENTSIZE=<none>]]
+  EShNum:     [[SHNUM=<none>]]
 Sections:
   - Name:         .note.ABI-tag
     Type:         SHT_NOTE
