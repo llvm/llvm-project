@@ -97,7 +97,7 @@ public:
               });
   }
 
-  void notifyResolved(LinkGraph &G) override {
+  Error notifyResolved(LinkGraph &G) override {
     auto &ES = Layer.getExecutionSession();
 
     SymbolFlagsMap ExtraSymbolsToClaim;
@@ -143,7 +143,7 @@ public:
 
     if (!ExtraSymbolsToClaim.empty())
       if (auto Err = MR.defineMaterializing(ExtraSymbolsToClaim))
-        return notifyFailed(std::move(Err));
+        return Err;
 
     {
 
@@ -169,12 +169,9 @@ public:
       }
 
       // If there were missing symbols then report the error.
-      if (!MissingSymbols.empty()) {
-        ES.reportError(make_error<MissingSymbolDefinitions>(
-            G.getName(), std::move(MissingSymbols)));
-        MR.failMaterialization();
-        return;
-      }
+      if (!MissingSymbols.empty())
+        return make_error<MissingSymbolDefinitions>(G.getName(),
+                                                    std::move(MissingSymbols));
 
       // If there are more definitions than expected, add them to the
       // ExtraSymbols vector.
@@ -186,20 +183,16 @@ public:
       }
 
       // If there were extra definitions then report the error.
-      if (!ExtraSymbols.empty()) {
-        ES.reportError(make_error<UnexpectedSymbolDefinitions>(
-            G.getName(), std::move(ExtraSymbols)));
-        MR.failMaterialization();
-        return;
-      }
+      if (!ExtraSymbols.empty())
+        return make_error<UnexpectedSymbolDefinitions>(G.getName(),
+                                                       std::move(ExtraSymbols));
     }
 
-    if (auto Err = MR.notifyResolved(InternedResult)) {
-      Layer.getExecutionSession().reportError(std::move(Err));
-      MR.failMaterialization();
-      return;
-    }
+    if (auto Err = MR.notifyResolved(InternedResult))
+      return Err;
+
     Layer.notifyLoaded(MR);
+    return Error::success();
   }
 
   void notifyFinalized(
