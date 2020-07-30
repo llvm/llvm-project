@@ -20,10 +20,6 @@ func @nestedtensor(tensor<tensor<i8>>) -> () // expected-error {{invalid tensor 
 func @indexvector(vector<4 x index>) -> () // expected-error {{vector elements must be int or float type}}
 
 // -----
-
-func @indexmemref(memref<? x index>) -> () // expected-error {{invalid memref element type}}
-
-// -----
 // Test no map in memref type.
 func @memrefs(memref<2x4xi8, >) // expected-error {{expected list element}}
 
