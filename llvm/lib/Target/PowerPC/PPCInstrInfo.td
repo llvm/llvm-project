@@ -1563,11 +1563,12 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
     def BCn : BForm_4<16, 4, 0, 0, (outs), (ins crbitrc:$bi, condbrtarget:$dst),
              "bc 4, $bi, $dst">;
 
-    let isReturn = 1, Uses = [LR, RM] in
+    let isReturn = 1, Uses = [LR, RM] in {
     def BCLR  : XLForm_2_br2<19, 16, 12, 0, (outs), (ins crbitrc:$bi),
                              "bclr 12, $bi, 0", IIC_BrB, []>;
     def BCLRn : XLForm_2_br2<19, 16, 4, 0, (outs), (ins crbitrc:$bi),
                              "bclr 4, $bi, 0", IIC_BrB, []>;
+    }
   }
 
   let isReturn = 1, Defs = [CTR], Uses = [CTR, LR, RM] in {
@@ -2584,22 +2585,7 @@ def FTDIV: XForm_17<63, 128, (outs crrc:$crD), (ins f8rc:$fA, f8rc:$fB),
 def FTSQRT: XForm_17a<63, 160, (outs crrc:$crD), (ins f8rc:$fB),
                       "ftsqrt $crD, $fB", IIC_FPCompare>;
 
-let Uses = [RM], mayRaiseFPException = 1 in {
-  let hasSideEffects = 0 in {
-  defm FCTIW  : XForm_26r<63, 14, (outs f8rc:$frD), (ins f8rc:$frB),
-                          "fctiw", "$frD, $frB", IIC_FPGeneral,
-                          []>;
-  defm FCTIWU  : XForm_26r<63, 142, (outs f8rc:$frD), (ins f8rc:$frB),
-                          "fctiwu", "$frD, $frB", IIC_FPGeneral,
-                          []>;
-  defm FCTIWZ : XForm_26r<63, 15, (outs f8rc:$frD), (ins f8rc:$frB),
-                          "fctiwz", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (PPCfctiwz f64:$frB))]>;
-
-  defm FRSP   : XForm_26r<63, 12, (outs f4rc:$frD), (ins f8rc:$frB),
-                          "frsp", "$frD, $frB", IIC_FPGeneral,
-                          [(set f32:$frD, (any_fpround f64:$frB))]>;
-
+let mayRaiseFPException = 1, hasSideEffects = 0 in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIND  : XForm_26r<63, 392, (outs f8rc:$frD), (ins f8rc:$frB),
                           "frin", "$frD, $frB", IIC_FPGeneral,
@@ -2607,9 +2593,7 @@ let Uses = [RM], mayRaiseFPException = 1 in {
   defm FRINS  : XForm_26r<63, 392, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frin", "$frD, $frB", IIC_FPGeneral,
                           [(set f32:$frD, (any_fround f32:$frB))]>;
-  }
 
-  let hasSideEffects = 0 in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
   defm FRIPD  : XForm_26r<63, 456, (outs f8rc:$frD), (ins f8rc:$frB),
                           "frip", "$frD, $frB", IIC_FPGeneral,
@@ -2631,6 +2615,22 @@ let Uses = [RM], mayRaiseFPException = 1 in {
   defm FRIMS  : XForm_26r<63, 488, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frim", "$frD, $frB", IIC_FPGeneral,
                           [(set f32:$frD, (any_ffloor f32:$frB))]>;
+}
+
+let Uses = [RM], mayRaiseFPException = 1, hasSideEffects = 0 in {
+  defm FCTIW  : XForm_26r<63, 14, (outs f8rc:$frD), (ins f8rc:$frB),
+                          "fctiw", "$frD, $frB", IIC_FPGeneral,
+                          []>;
+  defm FCTIWU  : XForm_26r<63, 142, (outs f8rc:$frD), (ins f8rc:$frB),
+                          "fctiwu", "$frD, $frB", IIC_FPGeneral,
+                          []>;
+  defm FCTIWZ : XForm_26r<63, 15, (outs f8rc:$frD), (ins f8rc:$frB),
+                          "fctiwz", "$frD, $frB", IIC_FPGeneral,
+                          [(set f64:$frD, (PPCfctiwz f64:$frB))]>;
+
+  defm FRSP   : XForm_26r<63, 12, (outs f4rc:$frD), (ins f8rc:$frB),
+                          "frsp", "$frD, $frB", IIC_FPGeneral,
+                          [(set f32:$frD, (any_fpround f64:$frB))]>;
 
   defm FSQRT  : XForm_26r<63, 22, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fsqrt", "$frD, $frB", IIC_FPSqrtD,
@@ -2638,8 +2638,7 @@ let Uses = [RM], mayRaiseFPException = 1 in {
   defm FSQRTS : XForm_26r<59, 22, (outs f4rc:$frD), (ins f4rc:$frB),
                           "fsqrts", "$frD, $frB", IIC_FPSqrtS,
                           [(set f32:$frD, (any_fsqrt f32:$frB))]>;
-  }
-  }
+}
 }
 
 /// Note that FMR is defined as pseudo-ops on the PPC970 because they are
@@ -2916,13 +2915,17 @@ let Uses = [RM] in {
 
 // The above pseudo gets expanded to make use of the following instructions
 // to manipulate FPSCR.  Note that FPSCR is not modeled at the DAG level.
-let Uses = [RM], Defs = [RM] in {
-  def MTFSB0 : XForm_43<63, 70, (outs), (ins u5imm:$FM),
-                        "mtfsb0 $FM", IIC_IntMTFSB0, []>,
-               PPC970_DGroup_Single, PPC970_Unit_FPU;
-  def MTFSB1 : XForm_43<63, 38, (outs), (ins u5imm:$FM),
-                        "mtfsb1 $FM", IIC_IntMTFSB0, []>,
-               PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+// When FM is 30/31, we are setting the 62/63 bit of FPSCR, the implicit-def
+// RM should be set.
+def MTFSB0 : XForm_43<63, 70, (outs), (ins u5imm:$FM),
+                      "mtfsb0 $FM", IIC_IntMTFSB0, []>,
+             PPC970_DGroup_Single, PPC970_Unit_FPU;
+def MTFSB1 : XForm_43<63, 38, (outs), (ins u5imm:$FM),
+                      "mtfsb1 $FM", IIC_IntMTFSB0, []>,
+             PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+let Defs = [RM] in {
   let isCodeGenOnly = 1 in
   def MTFSFb  : XFLForm<63, 711, (outs), (ins i32imm:$FM, f8rc:$rT),
                         "mtfsf $FM, $rT", IIC_IntMTFSB0, []>,
@@ -4318,6 +4321,8 @@ def MTMSRD : XForm_mtmsr<31, 178, (outs), (ins gprc:$RS, i32imm:$L),
 def MCRFS : XLForm_3<63, 64, (outs crrc:$BF), (ins crrc:$BFA),
                      "mcrfs $BF, $BFA", IIC_BrMCR>;
 
+// If W is 0 and BF is 7, the 60:63 bits will be set, we should set the
+// implicit-def RM.
 def MTFSFI : XLForm_4<63, 134, (outs crrc:$BF), (ins i32imm:$U, i32imm:$W),
                       "mtfsfi $BF, $U, $W", IIC_IntMFFS>;
 let Defs = [CR1] in
@@ -4328,6 +4333,7 @@ def : InstAlias<"mtfsfi $BF, $U", (MTFSFI crrc:$BF, i32imm:$U, 0)>;
 def : InstAlias<"mtfsfi. $BF, $U", (MTFSFI_rec crrc:$BF, i32imm:$U, 0)>;
 
 let Predicates = [HasFPU] in {
+let Defs = [RM] in {
 def MTFSF : XFLForm_1<63, 711, (outs),
                       (ins i32imm:$FLM, f8rc:$FRB, i32imm:$L, i32imm:$W),
                       "mtfsf $FLM, $FRB, $L, $W", IIC_IntMFFS, []>;
@@ -4335,6 +4341,7 @@ let Defs = [CR1] in
 def MTFSF_rec : XFLForm_1<63, 711, (outs),
                        (ins i32imm:$FLM, f8rc:$FRB, i32imm:$L, i32imm:$W),
                        "mtfsf. $FLM, $FRB, $L, $W", IIC_IntMFFS, []>, isRecordForm;
+}
 
 def : InstAlias<"mtfsf $FLM, $FRB", (MTFSF i32imm:$FLM, f8rc:$FRB, 0, 0)>;
 def : InstAlias<"mtfsf. $FLM, $FRB", (MTFSF_rec i32imm:$FLM, f8rc:$FRB, 0, 0)>;
