@@ -1134,7 +1134,6 @@ void PathDiagnosticPopUpPiece::Profile(llvm::FoldingSetNodeID &ID) const {
 void PathDiagnostic::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.Add(getLocation());
   ID.Add(getUniqueingLoc());
-  ID.AddPointer(getUniqueingLoc().isValid() ? getUniqueingDecl() : nullptr);
   ID.AddString(BugType);
   ID.AddString(VerboseDesc);
   ID.AddString(Category);
