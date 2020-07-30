@@ -163,13 +163,12 @@ const Type *getPointeeType(const Type *T) {
 }
 
 // Forward declaration, needed as this function is mutually recursive
-// with resolveDependentExprToDecls.
-const Type *resolveDependentExprToType(const Expr *E);
+// with resolveExprToDecls.
+const Type *resolveExprToType(const Expr *E);
 
-// Try to heuristically resolve a dependent expression `E` to one
+// Try to heuristically resolve a possibly-dependent expression `E` to one
 // or more declarations that it likely references.
-std::vector<const NamedDecl *> resolveDependentExprToDecls(const Expr *E) {
-  assert(E->isTypeDependent());
+std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E) {
   if (const auto *ME = dyn_cast<CXXDependentScopeMemberExpr>(E)) {
     const Type *BaseType = ME->getBaseType().getTypePtrOrNull();
     if (ME->isArrow()) {
@@ -183,7 +182,7 @@ std::vector<const NamedDecl *> resolveDependentExprToDecls(const Expr *E) {
       // can get further by analyzing the depedent expression.
       Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
       if (Base && BT->getKind() == BuiltinType::Dependent) {
-        BaseType = resolveDependentExprToType(Base);
+        BaseType = resolveExprToType(Base);
       }
     }
     return getMembersReferencedViaDependentName(
@@ -197,7 +196,7 @@ std::vector<const NamedDecl *> resolveDependentExprToDecls(const Expr *E) {
         /*IsNonstaticMember=*/false);
   }
   if (const auto *CE = dyn_cast<CallExpr>(E)) {
-    const auto *CalleeType = resolveDependentExprToType(CE->getCallee());
+    const auto *CalleeType = resolveExprToType(CE->getCallee());
     if (!CalleeType)
       return {};
     if (const auto *FnTypePtr = CalleeType->getAs<PointerType>())
@@ -209,15 +208,16 @@ std::vector<const NamedDecl *> resolveDependentExprToDecls(const Expr *E) {
       }
     }
   }
-  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
     return {ME->getMemberDecl()};
-  }
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return {DRE->getFoundDecl()};
   return {};
 }
 
-// Try to heuristically resolve the type of a dependent expression `E`.
-const Type *resolveDependentExprToType(const Expr *E) {
-  std::vector<const NamedDecl *> Decls = resolveDependentExprToDecls(E);
+// Try to heuristically resolve the type of a possibly-dependent expression `E`.
+const Type *resolveExprToType(const Expr *E) {
+  std::vector<const NamedDecl *> Decls = resolveExprToDecls(E);
   if (Decls.size() != 1) // Names an overload set -- just bail.
     return nullptr;
   if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
@@ -426,12 +426,12 @@ public:
       }
       void
       VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
-        for (const NamedDecl *D : resolveDependentExprToDecls(E)) {
+        for (const NamedDecl *D : resolveExprToDecls(E)) {
           Outer.add(D, Flags);
         }
       }
       void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *E) {
-        for (const NamedDecl *D : resolveDependentExprToDecls(E)) {
+        for (const NamedDecl *D : resolveExprToDecls(E)) {
           Outer.add(D, Flags);
         }
       }
