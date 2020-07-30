@@ -132,6 +132,9 @@ defm demangle: B<"demangle",
     "Demangle symbol names (default)",
     "Do not demangle symbol names">;
 
+defm dependency_file: EEq<"dependency-file", "Write a dependency file">,
+  MetaVarName<"<path>">;
+
 def disable_new_dtags: F<"disable-new-dtags">,
   HelpText<"Disable new dynamic tags">;
 
