@@ -906,8 +906,8 @@ private:
                             std::unique_ptr<llvm::MCParsedAsmOperand> &&Dst);
   bool VerifyAndAdjustOperands(OperandVector &OrigOperands,
                                OperandVector &FinalOperands);
-  std::unique_ptr<X86Operand> ParseOperand();
-  std::unique_ptr<X86Operand> ParseATTOperand();
+  bool ParseOperand(OperandVector &Operands);
+  bool ParseATTOperand(OperandVector &Operands);
   std::unique_ptr<X86Operand> ParseIntelOperand();
   bool ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
                                 InlineAsmIdentifierInfo &Info, SMLoc &End);
@@ -1531,10 +1531,16 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
   return false;
 }
 
-std::unique_ptr<X86Operand> X86AsmParser::ParseOperand() {
-  if (isParsingIntelSyntax())
-    return ParseIntelOperand();
-  return ParseATTOperand();
+bool X86AsmParser::ParseOperand(OperandVector &Operands) {
+  if (isParsingIntelSyntax()) {
+    if (std::unique_ptr<X86Operand> Op = ParseIntelOperand()) {
+      Operands.push_back(std::move(Op));
+      return false;
+    }
+    return true;
+  }
+
+  return ParseATTOperand(Operands);
 }
 
 std::unique_ptr<X86Operand> X86AsmParser::CreateMemForMSInlineAsm(
@@ -2206,7 +2212,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
                                BaseReg, IndexReg, Scale, Start, End, Size);
 }
 
-std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand() {
+bool X86AsmParser::ParseATTOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   switch (getLexer().getKind()) {
   case AsmToken::Dollar: {
@@ -2221,12 +2227,17 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand() {
               "expected immediate expression") ||
         getParser().parseExpression(Val, End) ||
         check(isa<X86MCExpr>(Val), L, "expected immediate expression"))
-      return nullptr;
-    return X86Operand::CreateImm(Val, Start, End);
+      return true;
+    Operands.push_back(X86Operand::CreateImm(Val, Start, End));
+    return false;
   }
   case AsmToken::LCurly: {
     SMLoc Start = Parser.getTok().getLoc();
-    return ParseRoundingModeOp(Start);
+    if (std::unique_ptr<X86Operand> Op = ParseRoundingModeOp(Start)) {
+      Operands.push_back(std::move(Op));
+      return false;
+    }
+    return true;
   }
   default: {
     // This a memory operand or a register. We have some parsing complications
@@ -2240,7 +2251,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand() {
     if (getLexer().isNot(AsmToken::LParen)) {
       // No '(' so this is either a displacement expression or a register.
       if (Parser.parseExpression(Expr, EndLoc))
-        return nullptr;
+        return true;
       if (auto *RE = dyn_cast<X86MCExpr>(Expr)) {
         // Segment Register. Reset Expr and copy value to register.
         Expr = nullptr;
@@ -2248,21 +2259,31 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand() {
 
         // Sanity check register.
         if (Reg == X86::EIZ || Reg == X86::RIZ)
-          return ErrorOperand(
+          return Error(
               Loc, "%eiz and %riz can only be used as index registers",
               SMRange(Loc, EndLoc));
         if (Reg == X86::RIP)
-          return ErrorOperand(Loc, "%rip can only be used as a base register",
-                              SMRange(Loc, EndLoc));
+          return Error(Loc, "%rip can only be used as a base register",
+                       SMRange(Loc, EndLoc));
         // Return register that are not segment prefixes immediately.
-        if (!Parser.parseOptionalToken(AsmToken::Colon))
-          return X86Operand::CreateReg(Reg, Loc, EndLoc);
+        if (!Parser.parseOptionalToken(AsmToken::Colon)) {
+          Operands.push_back(X86Operand::CreateReg(Reg, Loc, EndLoc));
+          return false;
+        }
         if (!X86MCRegisterClasses[X86::SEGMENT_REGRegClassID].contains(Reg))
-          return ErrorOperand(Loc, "invalid segment register");
+          return Error(Loc, "invalid segment register");
+        // Accept a '*' absolute memory reference after the segment. Place it
+        // before the full memory operand.
+        if (getLexer().is(AsmToken::Star))
+          Operands.push_back(X86Operand::CreateToken("*", consumeToken()));
       }
     }
     // This is a Memory operand.
-    return ParseMemOperand(Reg, Expr, Loc, EndLoc);
+    if (std::unique_ptr<X86Operand> Op = ParseMemOperand(Reg, Expr, Loc, EndLoc)) {
+      Operands.push_back(std::move(Op));
+      return false;
+    }
+    return true;
   }
   }
 }
@@ -2889,13 +2910,11 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
     // Read the operands.
     while(1) {
-      if (std::unique_ptr<X86Operand> Op = ParseOperand()) {
-        Operands.push_back(std::move(Op));
-        if (HandleAVX512Operand(Operands))
-          return true;
-      } else {
-         return true;
-      }
+      if (ParseOperand(Operands))
+        return true;
+      if (HandleAVX512Operand(Operands))
+        return true;
+
       // check for comma and eat it
       if (getLexer().is(AsmToken::Comma))
         Parser.Lex();
