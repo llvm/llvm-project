@@ -1937,6 +1937,15 @@ class SignAuthTwoOperand<bits<4> opc, string asm,
   let Inst{4-0}   = Rd;
 }
 
+class ClearAuth<bits<1> data, string asm>
+  : I<(outs GPR64:$Rd), (ins GPR64:$Rn), asm, "\t$Rd", "$Rd = $Rn", []>, Sched<[]> {
+  bits<5> Rd;
+  let Inst{31-11} = 0b110110101100000101000;
+  let Inst{10} = data;
+  let Inst{9-5} = 0b11111;
+  let Inst{4-0} = Rd;
+}
+
 // Base class for the Armv8.4-A 8 and 16-bit flag manipulation instructions
 class BaseFlagManipulation<bit sf, bit sz, dag iops, string asm, string ops>
     : I<(outs), iops, asm, ops, "", []>,

@@ -1455,6 +1455,19 @@ void CGOpenMPRuntime::clearLocThreadIdInsertPt(CodeGenFunction &CGF) {
   }
 }
 
+static StringRef getIdentStringFromSourceLocation(CodeGenFunction &CGF,
+                                                  SourceLocation Loc,
+                                                  SmallString<128> &Buffer) {
+  llvm::raw_svector_ostream OS(Buffer);
+  // Build debug location
+  PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
+  OS << ";" << PLoc.getFilename() << ";";
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CGF.CurFuncDecl))
+    OS << FD->getQualifiedNameAsString();
+  OS << ";" << PLoc.getLine() << ";" << PLoc.getColumn() << ";;";
+  return OS.str();
+}
+
 llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
                                                  SourceLocation Loc,
                                                  unsigned Flags) {
@@ -1463,6 +1476,16 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
   if (CGM.getCodeGenOpts().getDebugInfo() == codegenoptions::NoDebugInfo ||
       Loc.isInvalid())
     return getOrCreateDefaultLocation(Flags).getPointer();
+
+  // If the OpenMPIRBuilder is used we need to use it for all location handling
+  // as the clang invariants used below might be broken.
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    SmallString<128> Buffer;
+    OMPBuilder.updateToLocation(CGF.Builder.saveIP());
+    auto *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(
+        getIdentStringFromSourceLocation(CGF, Loc, Buffer));
+    return OMPBuilder.getOrCreateIdent(SrcLocStr, IdentFlag(Flags));
+  }
 
   assert(CGF.CurFn && "No function in current CodeGenFunction.");
 
@@ -1497,15 +1520,9 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
 
   llvm::Value *OMPDebugLoc = OpenMPDebugLocMap.lookup(Loc.getRawEncoding());
   if (OMPDebugLoc == nullptr) {
-    SmallString<128> Buffer2;
-    llvm::raw_svector_ostream OS2(Buffer2);
-    // Build debug location
-    PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-    OS2 << ";" << PLoc.getFilename() << ";";
-    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CGF.CurFuncDecl))
-      OS2 << FD->getQualifiedNameAsString();
-    OS2 << ";" << PLoc.getLine() << ";" << PLoc.getColumn() << ";;";
-    OMPDebugLoc = CGF.Builder.CreateGlobalStringPtr(OS2.str());
+    SmallString<128> Buffer;
+    OMPDebugLoc = CGF.Builder.CreateGlobalStringPtr(
+        getIdentStringFromSourceLocation(CGF, Loc, Buffer));
     OpenMPDebugLocMap[Loc.getRawEncoding()] = OMPDebugLoc;
   }
   // *psource = ";<File>;<Function>;<Line>;<Column>;;";
@@ -1519,6 +1536,16 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
 llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
                                           SourceLocation Loc) {
   assert(CGF.CurFn && "No function in current CodeGenFunction.");
+  // If the OpenMPIRBuilder is used we need to use it for all thread id calls as
+  // the clang invariants used below might be broken.
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    SmallString<128> Buffer;
+    OMPBuilder.updateToLocation(CGF.Builder.saveIP());
+    auto *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(
+        getIdentStringFromSourceLocation(CGF, Loc, Buffer));
+    return OMPBuilder.getOrCreateThreadID(
+        OMPBuilder.getOrCreateIdent(SrcLocStr));
+  }
 
   llvm::Value *ThreadID = nullptr;
   // Check whether we've already cached a load of the thread id in this
@@ -8108,17 +8135,18 @@ public:
           // array section or array shaping. The base address is passed as a
           // pointer to base in this case and cannot be used as a base for
           // use_device_ptr list item.
-          auto PrevCI = std::next(CI->Components.rbegin());
-          const auto *VarD = dyn_cast<VarDecl>(VD);
-          if (CI != It->second.end() &&
-              (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
-               isa<MemberExpr>(IE) ||
-               !VD->getType().getNonReferenceType()->isPointerType() ||
-               PrevCI == CI->Components.rend() ||
-               isa<MemberExpr>(PrevCI->getAssociatedExpression()) || !VarD ||
-               VarD->hasLocalStorage())) {
-            CI->ReturnDevicePointer = true;
-            continue;
+          if (CI != It->second.end()) {
+            auto PrevCI = std::next(CI->Components.rbegin());
+            const auto *VarD = dyn_cast<VarDecl>(VD);
+            if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
+                isa<MemberExpr>(IE) ||
+                !VD->getType().getNonReferenceType()->isPointerType() ||
+                PrevCI == CI->Components.rend() ||
+                isa<MemberExpr>(PrevCI->getAssociatedExpression()) || !VarD ||
+                VarD->hasLocalStorage()) {
+              CI->ReturnDevicePointer = true;
+              continue;
+            }
           }
         }
 
