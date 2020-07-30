@@ -165,6 +165,8 @@ private:
 
   Value *computeBaseAndAccessKey(CallInst *Call, CallInfo &CInfo,
                                  std::string &AccessKey, MDNode *&BaseMeta);
+  MDNode *computeAccessKey(CallInst *Call, CallInfo &CInfo,
+                           std::string &AccessKey, bool &IsInt32Ret);
   uint64_t getConstant(const Value *IndexValue);
   bool transformGEPChain(Module &M, CallInst *Call, CallInfo &CInfo);
 };
@@ -283,6 +285,34 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
     if (InfoKind >= BPFCoreSharedInfo::MAX_FIELD_RELOC_KIND)
       report_fatal_error("Incorrect info_kind for llvm.bpf.preserve.field.info intrinsic");
     CInfo.AccessIndex = InfoKind;
+    return true;
+  }
+  if (GV->getName().startswith("llvm.bpf.preserve.type.info")) {
+    CInfo.Kind = BPFPreserveFieldInfoAI;
+    CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
+    if (!CInfo.Metadata)
+      report_fatal_error("Missing metadata for llvm.preserve.type.info intrinsic");
+    uint64_t Flag = getConstant(Call->getArgOperand(1));
+    if (Flag >= BPFCoreSharedInfo::MAX_PRESERVE_TYPE_INFO_FLAG)
+      report_fatal_error("Incorrect flag for llvm.bpf.preserve.type.info intrinsic");
+    if (Flag == BPFCoreSharedInfo::PRESERVE_TYPE_INFO_EXISTENCE)
+      CInfo.AccessIndex = BPFCoreSharedInfo::TYPE_EXISTENCE;
+    else
+      CInfo.AccessIndex = BPFCoreSharedInfo::TYPE_SIZE;
+    return true;
+  }
+  if (GV->getName().startswith("llvm.bpf.preserve.enum.value")) {
+    CInfo.Kind = BPFPreserveFieldInfoAI;
+    CInfo.Metadata = Call->getMetadata(LLVMContext::MD_preserve_access_index);
+    if (!CInfo.Metadata)
+      report_fatal_error("Missing metadata for llvm.preserve.enum.value intrinsic");
+    uint64_t Flag = getConstant(Call->getArgOperand(2));
+    if (Flag >= BPFCoreSharedInfo::MAX_PRESERVE_ENUM_VALUE_FLAG)
+      report_fatal_error("Incorrect flag for llvm.bpf.preserve.enum.value intrinsic");
+    if (Flag == BPFCoreSharedInfo::PRESERVE_ENUM_VALUE_EXISTENCE)
+      CInfo.AccessIndex = BPFCoreSharedInfo::ENUM_VALUE_EXISTENCE;
+    else
+      CInfo.AccessIndex = BPFCoreSharedInfo::ENUM_VALUE;
     return true;
   }
 
@@ -847,26 +877,92 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   return Base;
 }
 
+MDNode *BPFAbstractMemberAccess::computeAccessKey(CallInst *Call,
+                                                  CallInfo &CInfo,
+                                                  std::string &AccessKey,
+                                                  bool &IsInt32Ret) {
+  DIType *Ty = stripQualifiers(cast<DIType>(CInfo.Metadata), false);
+  assert(!Ty->getName().empty());
+
+  int64_t PatchImm;
+  std::string AccessStr("0");
+  if (CInfo.AccessIndex == BPFCoreSharedInfo::TYPE_EXISTENCE) {
+    PatchImm = 1;
+  } else if (CInfo.AccessIndex == BPFCoreSharedInfo::TYPE_SIZE) {
+    // typedef debuginfo type has size 0, get the eventual base type.
+    DIType *BaseTy = stripQualifiers(Ty, true);
+    PatchImm = BaseTy->getSizeInBits() / 8;
+  } else {
+    // ENUM_VALUE_EXISTENCE and ENUM_VALUE
+    IsInt32Ret = false;
+
+    const auto *CE = cast<ConstantExpr>(Call->getArgOperand(1));
+    const GlobalVariable *GV = cast<GlobalVariable>(CE->getOperand(0));
+    assert(GV->hasInitializer());
+    const ConstantDataArray *DA = cast<ConstantDataArray>(GV->getInitializer());
+    assert(DA->isString());
+    StringRef ValueStr = DA->getAsString();
+
+    // ValueStr format: <EnumeratorStr>:<Value>
+    size_t Separator = ValueStr.find_first_of(':');
+    StringRef EnumeratorStr = ValueStr.substr(0, Separator);
+
+    // Find enumerator index in the debuginfo
+    DIType *BaseTy = stripQualifiers(Ty, true);
+    const auto *CTy = cast<DICompositeType>(BaseTy);
+    assert(CTy->getTag() == dwarf::DW_TAG_enumeration_type);
+    int EnumIndex = 0;
+    for (const auto Element : CTy->getElements()) {
+      const auto *Enum = cast<DIEnumerator>(Element);
+      if (Enum->getName() == EnumeratorStr) {
+        AccessStr = std::to_string(EnumIndex);
+        break;
+      }
+      EnumIndex++;
+    }
+
+    if (CInfo.AccessIndex == BPFCoreSharedInfo::ENUM_VALUE) {
+      StringRef EValueStr = ValueStr.substr(Separator + 1);
+      PatchImm = std::stoll(std::string(EValueStr));
+    } else {
+      PatchImm = 1;
+    }
+  }
+
+  AccessKey = "llvm." + Ty->getName().str() + ":" +
+              std::to_string(CInfo.AccessIndex) + std::string(":") +
+              std::to_string(PatchImm) + std::string("$") + AccessStr;
+
+  return Ty;
+}
+
 /// Call/Kind is the base preserve_*_access_index() call. Attempts to do
 /// transformation to a chain of relocable GEPs.
 bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
                                                 CallInfo &CInfo) {
   std::string AccessKey;
   MDNode *TypeMeta;
-  Value *Base =
-      computeBaseAndAccessKey(Call, CInfo, AccessKey, TypeMeta);
-  if (!Base)
-    return false;
+  Value *Base = nullptr;
+  bool IsInt32Ret;
+
+  IsInt32Ret = CInfo.Kind == BPFPreserveFieldInfoAI;
+  if (CInfo.Kind == BPFPreserveFieldInfoAI && CInfo.Metadata) {
+    TypeMeta = computeAccessKey(Call, CInfo, AccessKey, IsInt32Ret);
+  } else {
+    Base = computeBaseAndAccessKey(Call, CInfo, AccessKey, TypeMeta);
+    if (!Base)
+      return false;
+  }
 
   BasicBlock *BB = Call->getParent();
   GlobalVariable *GV;
 
   if (GEPGlobals.find(AccessKey) == GEPGlobals.end()) {
     IntegerType *VarType;
-    if (CInfo.Kind == BPFPreserveFieldInfoAI)
+    if (IsInt32Ret)
       VarType = Type::getInt32Ty(BB->getContext()); // 32bit return value
     else
-      VarType = Type::getInt64Ty(BB->getContext()); // 64bit ptr arith
+      VarType = Type::getInt64Ty(BB->getContext()); // 64bit ptr or enum value
 
     GV = new GlobalVariable(M, VarType, false, GlobalVariable::ExternalLinkage,
                             NULL, AccessKey);
@@ -879,8 +975,11 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
 
   if (CInfo.Kind == BPFPreserveFieldInfoAI) {
     // Load the global variable which represents the returned field info.
-    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
-                                Call);
+    LoadInst *LDInst;
+    if (IsInt32Ret)
+      LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "", Call);
+    else
+      LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
     Call->replaceAllUsesWith(LDInst);
     Call->eraseFromParent();
     return true;
