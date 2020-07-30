@@ -10,6 +10,7 @@ LLVM Buildbot is the place where volunteers provide build machines. Everyone can
 * `lldb-x64-windows-ninja <http://lab.llvm.org:8011/builders/lldb-x64-windows-ninja>`_
 * `lldb-x86_64-debian <http://lab.llvm.org:8011/builders/lldb-x86_64-debian>`_
 * `lldb-aarch64-ubuntu <http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/>`_
+* `lldb-arm-ubuntu <http://lab.llvm.org:8011/builders/lldb-arm-ubuntu>`_
 * `lldb-x86_64-fedora <http://lab.llvm.org:8014/builders/lldb-x86_64-fedora>`_
 
 Documentation
