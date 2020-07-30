@@ -284,7 +284,7 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
     LLDB_LOGV(log,
               "Read(buffer, sizeof(buffer), timeout = {0}, "
               "status = {1}, error = {2}) => bytes_read = {3}",
-              timeout, Communication::ConnectionStatusAsCString(status), error,
+              timeout, Communication::ConnectionStatusAsString(status), error,
               bytes_read);
 
     if (bytes_read > 0) {
