@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -mtriple=systemz-unknown -march=z13 -O3 -enable-mssa-loop-dependency -disable-output %s
+; RUN: opt -mtriple=systemz-unknown -mcpu=z13 -O3 -enable-mssa-loop-dependency -disable-output %s
 
 ; During transform to LCSSA, an access becomes obfuscated to:
 ; (2 = phi (phi(val), val)), which BasicAA fails to analyze.
