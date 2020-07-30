@@ -1,3 +1,4 @@
+; FIXME: This test should use CHECK-NEXT to keep up-to-date.
 ; REQUIRES: x86-registered-target
 
 ; Validate ThinLTO post link pipeline at O2 and O3
@@ -18,7 +19,6 @@
 ; RUN:   -c -fthinlto-index=%t.o.thinlto.bc \
 ; RUN:   -o %t.native.o -x ir %t.o 2>&1 | FileCheck -check-prefixes=CHECK-O,CHECK-O3 %s --dump-input=fail
 
-; CHECK-O: Running analysis: PassInstrumentationAnalysis
 ; CHECK-O: Starting {{.*}}Module pass manager run.
 ; CHECK-O: Running pass: WholeProgramDevirtPass
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
@@ -26,15 +26,12 @@
 ; CHECK-O: Invalidating all non-preserved analyses for:
 ; CHECK-O: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running pass: ForceFunctionAttrsPass
-; CHECK-O: Running pass: PassManager<{{.*}}Module>
 ; CHECK-O: Starting {{.*}}Module pass manager run.
 ; CHECK-O: Running pass: PGOIndirectCallPromotion
 ; CHECK-O: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running analysis: OptimizationRemarkEmitterAnalysis on main
-; CHECK-O: Running analysis: PassInstrumentationAnalysis on main
 ; CHECK-O: Running pass: InferFunctionAttrsPass
-; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function>{{ ?}}>
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running analysis: TargetIRAnalysis on main
@@ -46,18 +43,17 @@
 ; CHECK-O: Running pass: LowerExpectIntrinsicPass on main
 ; CHECK-O3: Running pass: CallSiteSplittingPass on main
 ; CHECK-O: Finished {{.*}}Function pass manager run.
+; CHECK-O: Running pass: LowerTypeTestsPass
 ; CHECK-O: Running pass: IPSCCPPass
 ; CHECK-O: Running pass: CalledValuePropagationPass
 ; CHECK-O: Running pass: GlobalOptPass
 ; CHECK-O: Invalidating all non-preserved analyses for:
 ; CHECK-O: Invalidating analysis: InnerAnalysisManagerProxy
-; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PromotePass>
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
+; CHECK-O: Running pass: PromotePass
 ; CHECK-O: Running analysis: DominatorTreeAnalysis on main
-; CHECK-O: Running analysis: PassInstrumentationAnalysis on main
 ; CHECK-O: Running analysis: AssumptionAnalysis on main
 ; CHECK-O: Running pass: DeadArgumentEliminationPass
-; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function>{{ ?}}>
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running analysis: TargetLibraryAnalysis on main
@@ -74,11 +70,9 @@
 ; CHECK-O: Running analysis: GlobalsAA
 ; CHECK-O: Running analysis: CallGraphAnalysis
 ; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
-; CHECK-O: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}DevirtSCCRepeatedPass<{{.*}}PassManager<{{.*}}LazyCallGraph::SCC
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O: Running analysis: FunctionAnalysisManagerCGSCCProxy on (main)
-; CHECK-O: Running analysis: PassInstrumentationAnalysis on (main)
 ; CHECK-O: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O: Starting CGSCC pass manager run.
 ; CHECK-O: Running pass: InlinerPass on (main)
@@ -87,8 +81,6 @@
 ; CHECK-O: Clearing all analysis results for: main
 ; CHECK-O3: Running pass: ArgumentPromotionPass on (main)
 ; CHECK-O3: Running analysis: TargetIRAnalysis on main
-; CHECK-O: Running analysis: PassInstrumentationAnalysis on main
-; CHECK-O3: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: SROA on main
 ; These next two can appear in any order since they are accessed as parameters
@@ -117,7 +109,6 @@
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: ReassociatePass on main
 ; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
-; CHECK-O: Running pass: FunctionToLoopPassAdaptor<{{.*}}PassManager<{{.*}}Loop
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running analysis: LoopAnalysis on main
@@ -125,7 +116,6 @@
 ; CHECK-O: Finished {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: InstCombinePass on main
-; CHECK-O: Running pass: FunctionToLoopPassAdaptor<{{.*}}PassManager<{{.*}}Loop
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running pass: LCSSAPass on main
@@ -143,7 +133,6 @@
 ; CHECK-O: Running pass: JumpThreadingPass on main
 ; CHECK-O: Running pass: CorrelatedValuePropagationPass on main
 ; CHECK-O: Running pass: DSEPass on main
-; CHECK-O: Running pass: FunctionToLoopPassAdaptor<{{.*}}LICMPass> on main
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running pass: LCSSAPass on main
@@ -168,7 +157,6 @@
 ; CHECK-O: Invalidating analysis: PostDominatorTreeAnalysis on main
 ; CHECK-O: Invalidating analysis: CallGraphAnalysis
 ; CHECK-O: Finished {{.*}}Module pass manager run.
-; CHECK-O: Running pass: PassManager<{{.*}}Module>
 ; CHECK-O: Starting {{.*}}Module pass manager run.
 ; CHECK-O: Running pass: GlobalOptPass
 ; CHECK-O: Running pass: GlobalDCEPass
@@ -176,40 +164,43 @@
 ; CHECK-O: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O: Running analysis: CallGraphAnalysis
 ; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
-; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function>{{ ?}}>
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: Float2IntPass on main
 ; CHECK-O: Running pass: LowerConstantIntrinsicsPass on main
-; CHECK-O: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopRotatePass> on main
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running analysis: LoopAnalysis on main
 ; CHECK-O: Running pass: LCSSAPass on main
 ; CHECK-O: Finished {{.*}}Function pass manager run.
-; CHECK-O: Running pass: LoopDistributePass on main
-; CHECK-O: Running analysis: ScalarEvolutionAnalysis on main
+; CHECK-O: Running analysis: MemorySSAAnalysis on main
 ; CHECK-O: Running analysis: AAManager on main
 ; CHECK-O: Running analysis: BasicAA on main
+; CHECK-O: Running analysis: ScalarEvolutionAnalysis on main
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
+; CHECK-O: Running pass: LoopRotatePass on Loop at depth 1 containing: %b
+; CHECK-O: Running pass: LoopDistributePass on main
+; CHECK-O: Running pass: InjectTLIMappings on main
 ; CHECK-O: Running pass: LoopVectorizePass on main
 ; CHECK-O: Running analysis: BlockFrequencyAnalysis on main
 ; CHECK-O: Running analysis: BranchProbabilityAnalysis on main
+; CHECK-O: Running analysis: PostDominatorTreeAnalysis on main
 ; CHECK-O: Running analysis: DemandedBitsAnalysis on main
-; CHECK-O: Running analysis: MemorySSAAnalysis on main
 ; CHECK-O: Running pass: LoopLoadEliminationPass on main
+; CHECK-O: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %b
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: SLPVectorizerPass on main
+; CHECK-O: Running pass: VectorCombinePass on main
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: LoopUnrollPass on main
 ; CHECK-O: Running pass: WarnMissedTransformationsPass on main
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
-; CHECK-O: Running pass: FunctionToLoopPassAdaptor<{{.*}}LICMPass> on main
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running pass: LCSSAPass on main
 ; CHECK-O: Finished {{.*}}Function pass manager run.
+; CHECK-O: Running pass: LICMPass on Loop at depth 1 containing: %b
 ; CHECK-O: Running pass: AlignmentFromAssumptionsPass on main
 ; CHECK-O: Running pass: LoopSinkPass on main
 ; CHECK-O: Running pass: InstSimplifyPass on main
@@ -227,6 +218,8 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-grtev4-linux-gnu"
 
 define i32 @main() {
-entry:
+  br label %b
+b:
+  br label %b
   ret i32 0
 }

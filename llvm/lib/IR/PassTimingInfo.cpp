@@ -231,17 +231,9 @@ void TimePassesHandler::stopTimer(StringRef PassID) {
     MyTimer->stopTimer();
 }
 
-static bool matchPassManager(StringRef PassID) {
-  size_t prefix_pos = PassID.find('<');
-  if (prefix_pos == StringRef::npos)
-    return false;
-  StringRef Prefix = PassID.substr(0, prefix_pos);
-  return Prefix.endswith("PassManager") || Prefix.endswith("PassAdaptor") ||
-         Prefix.endswith("AnalysisManagerProxy");
-}
-
 void TimePassesHandler::runBeforePass(StringRef PassID) {
-  if (matchPassManager(PassID))
+  if (isSpecialPass(PassID,
+                    {"PassManager", "PassAdaptor", "AnalysisManagerProxy"}))
     return;
 
   startTimer(PassID);
@@ -251,7 +243,8 @@ void TimePassesHandler::runBeforePass(StringRef PassID) {
 }
 
 void TimePassesHandler::runAfterPass(StringRef PassID) {
-  if (matchPassManager(PassID))
+  if (isSpecialPass(PassID,
+                    {"PassManager", "PassAdaptor", "AnalysisManagerProxy"}))
     return;
 
   stopTimer(PassID);

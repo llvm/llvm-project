@@ -234,6 +234,8 @@ public:
   }
 };
 
+bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);
+
 } // namespace llvm
 
 #endif
