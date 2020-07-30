@@ -1367,10 +1367,6 @@ The DWARF address space mapping used for AMDGPU is defined in
    *Reserved*                              0x04
    ``DW_ASPACE_AMDGPU_private_lane``       0x05  4       4        Private (Scratch) *focused lane*
    ``DW_ASPACE_AMDGPU_private_wave``       0x06  4       4        Private (Scratch) *unswizzled wavefront*
-   *Reserved*                              0x07-
-                                           0x1F
-   ``DW_ASPACE_AMDGPU_private_lane<0-63>`` 0x20- 4       4        Private (Scratch) *specific lane*
-                                           0x5F
    ======================================= ===== ======= ======== ================= =======================
 
 See :ref:`amdgpu-address-spaces` for information on the AMDGPU address spaces
@@ -1441,12 +1437,6 @@ the wavefront size since it generates the code. Note that the type of the
 address may have to be converted as the size of a
 ``DW_ASPACE_AMDGPU_private_lane`` address may be smaller than the size of a
 ``DW_ASPACE_AMDGPU_private_wave`` address.
-
-The ``DW_ASPACE_AMDGPU_private_lane<N>`` address space allows location
-expressions to specify the private address space corresponding to a specific
-lane N. For example, this can be used when the compiler spills scalar registers
-to scratch memory, with each scalar register being saved to a different lane's
-scratch memory.
 
 .. _amdgpu-dwarf-lane-identifier:
 
