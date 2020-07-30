@@ -39081,10 +39081,12 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   // Handle extract(truncate(x)) for 0'th index.
   // TODO: Treat this as a faux shuffle?
   // TODO: When can we use this for general indices?
-  if (ISD::TRUNCATE == Src.getOpcode() && SrcVT.is128BitVector() && IdxC == 0) {
+  if (ISD::TRUNCATE == Src.getOpcode() && IdxC == 0 &&
+      (SrcVT.getSizeInBits() % 128) == 0) {
     Src = extract128BitVector(Src.getOperand(0), 0, DAG, dl);
-    Src = DAG.getBitcast(SrcVT, Src);
-    return DAG.getNode(N->getOpcode(), dl, VT, Src, Idx);
+    MVT ExtractVT = MVT::getVectorVT(SrcSVT.getSimpleVT(), 128 / SrcEltBits);
+    return DAG.getNode(N->getOpcode(), dl, VT, DAG.getBitcast(ExtractVT, Src),
+                       Idx);
   }
 
   // Resolve the target shuffle inputs and mask.
