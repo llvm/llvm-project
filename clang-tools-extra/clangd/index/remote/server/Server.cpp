@@ -169,6 +169,38 @@ private:
     return grpc::Status::OK;
   }
 
+  grpc::Status Relations(grpc::ServerContext *Context,
+                         const RelationsRequest *Request,
+                         grpc::ServerWriter<RelationsReply> *Reply) override {
+    trace::Span Tracer(RelationsRequest::descriptor()->name());
+    auto Req = ProtobufMarshaller->fromProtobuf(Request);
+    if (!Req) {
+      elog("Can not parse RelationsRequest from protobuf: {0}",
+           Req.takeError());
+      return grpc::Status::CANCELLED;
+    }
+    unsigned Sent = 0;
+    unsigned FailedToSend = 0;
+    Index->relations(
+        *Req, [&](const SymbolID &Subject, const clangd::Symbol &Object) {
+          auto SerializedItem = ProtobufMarshaller->toProtobuf(Subject, Object);
+          if (!SerializedItem) {
+            ++FailedToSend;
+            return;
+          }
+          RelationsReply NextMessage;
+          *NextMessage.mutable_stream_result() = *SerializedItem;
+          Reply->Write(NextMessage);
+          ++Sent;
+        });
+    RelationsReply LastMessage;
+    LastMessage.set_final_result(true);
+    Reply->Write(LastMessage);
+    SPAN_ATTACH(Tracer, "Sent", Sent);
+    SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
+    return grpc::Status::OK;
+  }
+
   std::unique_ptr<clangd::SymbolIndex> Index;
   std::unique_ptr<Marshaller> ProtobufMarshaller;
 };

@@ -38,14 +38,19 @@ public:
   Marshaller() = delete;
   Marshaller(llvm::StringRef RemoteIndexRoot, llvm::StringRef LocalIndexRoot);
 
+  // FIXME(kirillbobyrev): Switch from Optional to Expected.
   llvm::Optional<clangd::Symbol> fromProtobuf(const Symbol &Message);
   llvm::Optional<clangd::Ref> fromProtobuf(const Ref &Message);
+  llvm::Optional<std::pair<clangd::SymbolID, clangd::Symbol>>
+  fromProtobuf(const Relation &Message);
 
   llvm::Expected<clangd::LookupRequest>
   fromProtobuf(const LookupRequest *Message);
   llvm::Expected<clangd::FuzzyFindRequest>
   fromProtobuf(const FuzzyFindRequest *Message);
   llvm::Expected<clangd::RefsRequest> fromProtobuf(const RefsRequest *Message);
+  llvm::Expected<clangd::RelationsRequest>
+  fromProtobuf(const RelationsRequest *Message);
 
   /// toProtobuf() functions serialize native clangd types and strip IndexRoot
   /// from the file paths specific to indexing machine. fromProtobuf() functions
@@ -54,9 +59,12 @@ public:
   LookupRequest toProtobuf(const clangd::LookupRequest &From);
   FuzzyFindRequest toProtobuf(const clangd::FuzzyFindRequest &From);
   RefsRequest toProtobuf(const clangd::RefsRequest &From);
+  RelationsRequest toProtobuf(const clangd::RelationsRequest &From);
 
-  llvm::Optional<Ref> toProtobuf(const clangd::Ref &From);
   llvm::Optional<Symbol> toProtobuf(const clangd::Symbol &From);
+  llvm::Optional<Ref> toProtobuf(const clangd::Ref &From);
+  llvm::Optional<Relation> toProtobuf(const clangd::SymbolID &Subject,
+                                      const clangd::Symbol &Object);
 
   /// Translates \p RelativePath into the absolute path and builds URI for the
   /// user machine. This translation happens on the client side with the
