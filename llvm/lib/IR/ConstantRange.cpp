@@ -872,9 +872,12 @@ ConstantRange ConstantRange::intrinsic(Intrinsic::ID IntrinsicID,
     return Ops[0].smin(Ops[1]);
   case Intrinsic::smax:
     return Ops[0].smax(Ops[1]);
-  case Intrinsic::abs:
-    // TODO: Make use of poison flag.
-    return Ops[0].abs();
+  case Intrinsic::abs: {
+    const APInt *IntMinIsPoison = Ops[1].getSingleElement();
+    assert(IntMinIsPoison && "Must be known (immarg)");
+    assert(IntMinIsPoison->getBitWidth() == 1 && "Must be boolean");
+    return Ops[0].abs(IntMinIsPoison->getBoolValue());
+  }
   default:
     assert(!isIntrinsicSupported(IntrinsicID) && "Shouldn't be supported");
     llvm_unreachable("Unsupported intrinsic");
