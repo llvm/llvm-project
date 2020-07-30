@@ -69,7 +69,7 @@ struct ARange {
   yaml::Hex64 Length;
   uint16_t Version;
   yaml::Hex64 CuOffset;
-  yaml::Hex8 AddrSize;
+  Optional<yaml::Hex8> AddrSize;
   yaml::Hex8 SegSize;
   std::vector<ARangeDescriptor> Descriptors;
 };

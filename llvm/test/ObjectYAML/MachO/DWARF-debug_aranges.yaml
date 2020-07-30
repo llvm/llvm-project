@@ -328,7 +328,6 @@ DWARF:
 # CHECK-NEXT:       Version:             2
 # CHECK-NEXT:       CuOffset:            0x0000000000000000
 # CHECK-NEXT:       AddressSize:         0x08
-# CHECK-NEXT:       SegmentSelectorSize: 0x00
 # CHECK-NEXT:       Descriptors:
 # CHECK-NEXT:         - Address: 0x0000000100000F50
 # CHECK-NEXT:           Length:  52
