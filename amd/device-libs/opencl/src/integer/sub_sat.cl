@@ -31,7 +31,7 @@
     {                                               \
         u##T s;                                     \
         bool c = __builtin_sub_overflow(x, y, &s);  \
-        return c ? u##T##_max : s;                  \
+        return c ? 0 : s;                           \
     }
 
 GENN(char)
