@@ -40,16 +40,14 @@ func @shape_of(%arg : tensor<*xf32>) {
 // CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>)
 func @shape_of_unranked(%arg : tensor<*xf32>) {
   // CHECK: %[[RANK:.*]] = rank %[[ARG]] : tensor<*xf32>
-  // CHECK: %[[SHAPE_MEM:.*]] = alloca(%[[RANK]]) : memref<?xi64>
+  // CHECK: %[[SHAPE_MEM:.*]] = alloca(%[[RANK]]) : memref<?xindex>
   // CHECK: %[[C0:.*]] = constant 0 : index
   // CHECK: %[[C1:.*]] = constant 1 : index
   // CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[RANK]] step %[[C1]] {
   // CHECK:   %[[DIM:.]] = dim %[[ARG]], %[[I]] : tensor<*xf32>
-  // CHECK:   %[[DIM_INT:.*]] = index_cast %[[DIM]] : index to i64
-  // CHECK:   store %[[DIM_INT]], %[[SHAPE_MEM]][%[[I]]] : memref<?xi64>
+  // CHECK:   store %[[DIM]], %[[SHAPE_MEM]][%[[I]]] : memref<?xindex>
   // CHECK: }
-  // CHECK: %[[SHAPE_INT:.*]] = tensor_load %[[SHAPE_MEM]] : memref<?xi64>
-  // CHECK: %[[SHAPE:.*]] = index_cast %[[SHAPE_INT]] : tensor<?xi64> to tensor<?xindex>
+  // CHECK: %[[SHAPE:.*]] = tensor_load %[[SHAPE_MEM]] : memref<?xindex>
   %shape = shape.shape_of %arg : tensor<*xf32> -> tensor<?xindex>
   return
 }
