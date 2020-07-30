@@ -667,6 +667,15 @@ public:
                                      Types2);
   }
 
+  /// The instruction is emitted as a library call.
+  LegalizeRuleSet &libcall() {
+    using namespace LegalizeMutations;
+    // We have no choice but conservatively assume that predicate-less lowering
+    // properly handles all type indices by design:
+    markAllIdxsAsCovered();
+    return actionIf(LegalizeAction::Libcall, always);
+  }
+
   /// Like legalIf, but for the Libcall action.
   LegalizeRuleSet &libcallIf(LegalityPredicate Predicate) {
     // We have no choice but conservatively assume that a libcall with a

@@ -918,6 +918,12 @@ def G_INTRINSIC_LRINT : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_INTRINSIC_ROUNDEVEN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
 def G_READCYCLECOUNTER : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins);
