@@ -1057,9 +1057,11 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
     }
   }
 
-  // If the terminator is branching on an undef, we can pick any of the
-  // successors to branch to.  Let GetBestDestForJumpOnUndef decide.
-  if (isa<UndefValue>(Condition)) {
+  // If the terminator is branching on an undef or freeze undef, we can pick any
+  // of the successors to branch to.  Let GetBestDestForJumpOnUndef decide.
+  auto *FI = dyn_cast<FreezeInst>(Condition);
+  if (isa<UndefValue>(Condition) ||
+      (FI && isa<UndefValue>(FI->getOperand(0)) && FI->hasOneUse())) {
     unsigned BestSucc = GetBestDestForJumpOnUndef(BB);
     std::vector<DominatorTree::UpdateType> Updates;
 
@@ -1078,6 +1080,8 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
     BranchInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm);
     BBTerm->eraseFromParent();
     DTU->applyUpdatesPermissive(Updates);
+    if (FI)
+      FI->eraseFromParent();
     return true;
   }
 

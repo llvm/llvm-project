@@ -606,6 +606,14 @@ HandleSignalMode GetHandleSignalMode(int signum) {
   return result;
 }
 
+// Offset example:
+// XNU 17 -- macOS 10.13 -- iOS 11 -- tvOS 11 -- watchOS 4
+constexpr u16 GetOSMajorKernelOffset() {
+  if (TARGET_OS_OSX) return 4;
+  if (SANITIZER_IOS || SANITIZER_TVOS) return 6;
+  if (SANITIZER_WATCHOS) return 13;
+}
+
 using VersStr = char[64];
 
 static void GetOSVersion(VersStr vers) {
@@ -621,7 +629,18 @@ static void GetOSVersion(VersStr vers) {
   } else {
     int res =
         internal_sysctlbyname("kern.osproductversion", vers, &len, nullptr, 0);
-    CHECK_EQ(res, 0);
+    if (res) {
+      // Fallback for XNU 17 (macOS 10.13) and below that do not provide the
+      // `kern.osproductversion` property.
+      u16 kernel_major = GetDarwinKernelVersion().major;
+      u16 offset = GetOSMajorKernelOffset();
+      CHECK_LE(kernel_major, 17);
+      CHECK_GE(kernel_major, offset);
+      u16 os_major = kernel_major - offset;
+
+      auto format = TARGET_OS_OSX ? "10.%d" : "%d.0";
+      len = internal_snprintf(vers, len, format, os_major);
+    }
   }
   CHECK_LT(len, sizeof(VersStr));
 }

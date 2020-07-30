@@ -228,6 +228,8 @@ private:
                          ArrayRef<Register> Src1Regs,
                          ArrayRef<Register> Src2Regs, LLT NarrowTy);
 
+  void changeOpcode(MachineInstr &MI, unsigned NewOpcode);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
