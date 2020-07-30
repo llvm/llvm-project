@@ -510,3 +510,88 @@ DWARF:
       Descriptors:
         - Address: 0x1234
           Length:  0x1000
+
+## k) Test that yaml2obj is able to determine the correct length for the address range table
+## if the 'Length' field isn't specified.
+
+# RUN: yaml2obj --docnum=11 -DCLASS=ELFCLASS64 -DADDRSIZE=4 %s -o %t11.64-bit.o
+# RUN: llvm-readelf --hex-dump=.debug_aranges %t11.64-bit.o | \
+# RUN:   FileCheck %s --check-prefix=LENGTH64
+
+#      LENGTH64: Hex dump of section '.debug_aranges':
+# LENGTH64-NEXT: 0x00000000 2c000000 02000000 00000800 00000000 ,...............
+##                          ^-------                            unit_length (4-byte)
+##                                   ^---                       version (2-byte)
+##                                       ^--------              debug_info_offset (4-byte)
+##                                                ^-            address_size (1-byte)
+##                                                  ^-          segment_selector_size (1-byte)
+##                                                     ^------- padding (4-byte)
+# LENGTH64-NEXT: 0x00000010 34120000 00000000 00100000 00000000 4...............
+##                          ^----------------                   address (8-byte)
+##                                            ^---------------- length (8-byte)
+# LENGTH64-NEXT: 0x00000020 00000000 00000000 00000000 00000000 ................
+##                          ^---------------------------------- terminating entry (16-byte)
+# LENGTH64-NEXT: 0x00000030 ffffffff 1c000000 00000000 02000000 ................
+##                          ^-------------------------          unit_length (12-byte)
+##                                                     ^---     version (2-byte)
+##                                                         ^--- debug_info_offset (8-byte)
+# LENGTH64-NEXT: 0x00000040 00000000 00000400 34120000 21430000 ........4...!C..
+##                          -------------
+##                                       ^-                     address_size (1-byte)
+##                                         ^-                   segment_selector_size (1-byte)
+##                                            ^-------          address (4-byte)
+##                                                     ^------- length (4-byte)
+# LENGTH64-NEXT: 0x00000050 00000000 00000000                   ........
+##                          ^----------------                   terminating entry (8-byte)
+
+# RUN: yaml2obj --docnum=11 -DCLASS=ELFCLASS32 -DADDRSIZE=8 %s -o %t11.32-bit.o
+# RUN: llvm-readelf --hex-dump=.debug_aranges %t11.32-bit.o | \
+# RUN:   FileCheck %s --check-prefix=LENGTH32
+
+#      LENGTH32: Hex dump of section '.debug_aranges':
+# LENGTH32-NEXT: 0x00000000 1c000000 02000000 00000400 00000000 ................
+##                          ^-------                            unit_length (4-byte)
+##                                   ^---                       version (2-byte)
+##                                       ^--------              debug_info_offset (4-byte)
+##                                                ^-            address_size (1-byte)
+##                                                  ^-          segment_selector_size (1-byte)
+##                                                     ^------- padding (4-byte)
+# LENGTH32-NEXT: 0x00000010 34120000 00100000 00000000 00000000 4...............
+##                          ^-------                            address (4-byte)
+##                                   ^-------                   length (4-byte)
+##                                            ^---------------- terminating entry (8-byte)
+# LENGTH32-NEXT: 0x00000020 ffffffff 34000000 00000000 02000000 ....4...........
+##                          ^-------------------------          unit_length (12-byte)
+##                                                     ^---     version (2-byte)
+##                                                         ^--- debug_info_offset (8-byte)
+# LENGTH32-NEXT: 0x00000030 00000000 00000800 00000000 00000000 ................
+##                          -------------
+##                                       ^-                     address_size (1-byte)
+##                                         ^-                   segment_selector_size (1-byte)
+##                                            ^---------------- padding (8-byte)
+# LENGTH32-NEXT: 0x00000040 34120000 00000000 21430000 00000000 4.......!C......
+##                          ^----------------                   address (8-byte)
+##                                            ^---------------- length (8-byte)
+# LENGTH32-NEXT: 0x00000050 00000000 00000000 00000000 00000000 ................
+##                          ^---------------------------------- terminating entry (16-byte)
+
+--- !ELF
+FileHeader:
+  Class:   [[CLASS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_aranges:
+    - Version:  2
+      CuOffset: 0
+      Descriptors:
+        - Address: 0x1234
+          Length:  0x1000
+    - Format:      DWARF64
+      Version:     2
+      AddressSize: [[ADDRSIZE]]
+      CuOffset:    0
+      Descriptors:
+        - Address: 0x1234
+          Length:  0x4321
