@@ -442,6 +442,39 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
   if (err_str && err_len > 0)
     err_str[0] = '\0';
 
+  if (getenv("LLDB_DEBUGSERVER_PATH") == NULL) {
+    int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID,
+                 static_cast<int>(attach_pid)};
+    struct kinfo_proc processInfo;
+    size_t bufsize = sizeof(processInfo);
+    if (sysctl(mib, (unsigned)(sizeof(mib) / sizeof(int)), &processInfo,
+               &bufsize, NULL, 0) == 0 &&
+        bufsize > 0) {
+
+      if ((processInfo.kp_proc.p_flag & P_TRANSLATED) == P_TRANSLATED) {
+        const char *translated_debugserver =
+            "/Library/Apple/usr/libexec/oah/debugserver";
+        char fdstr[16];
+        char pidstr[16];
+        extern int communication_fd;
+
+        if (communication_fd == -1) {
+          fprintf(stderr, "Trying to attach to a translated process with the "
+                          "native debugserver, exiting...\n");
+          exit(1);
+        }
+
+        snprintf(fdstr, sizeof(fdstr), "--fd=%d", communication_fd);
+        snprintf(pidstr, sizeof(pidstr), "--attach=%d", attach_pid);
+        execl(translated_debugserver, "--native-regs", "--setsid", fdstr,
+              "--handoff-attach-from-native", pidstr, (char *)0);
+        DNBLogThreadedIf(LOG_PROCESS, "Failed to launch debugserver for "
+                         "translated process: ", errno, strerror(errno));
+        __builtin_trap();
+      }
+    }
+  }
+
   pid_t pid = INVALID_NUB_PROCESS;
   MachProcessSP processSP(new MachProcess);
   if (processSP.get()) {
