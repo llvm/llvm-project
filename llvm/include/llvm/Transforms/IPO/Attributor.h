@@ -117,6 +117,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 namespace llvm {
@@ -1001,8 +1002,10 @@ struct Attributor {
       return AA;
     }
 
-    AA.initialize(*this);
-
+    {
+      TimeTraceScope TimeScope(AA.getName() + "::initialize");
+      AA.initialize(*this);
+    }
     // We can initialize (=look at) code outside the current function set but
     // not call update because that would again spawn new abstract attributes in
     // potentially unconnected code regions (=SCCs).
