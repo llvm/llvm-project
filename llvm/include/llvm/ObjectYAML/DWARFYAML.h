@@ -66,7 +66,7 @@ struct ARangeDescriptor {
 
 struct ARange {
   dwarf::DwarfFormat Format;
-  yaml::Hex64 Length;
+  Optional<yaml::Hex64> Length;
   uint16_t Version;
   yaml::Hex64 CuOffset;
   Optional<yaml::Hex8> AddrSize;
