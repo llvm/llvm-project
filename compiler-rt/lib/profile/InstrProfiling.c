@@ -6,6 +6,9 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+// Note: This is linked into the Darwin kernel, and must remain compatible
+// with freestanding compilation. See `darwin_add_builtin_libraries`.
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +19,6 @@
 
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "profile/InstrProfData.inc"
-
 
 COMPILER_RT_WEAK uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION;
 
