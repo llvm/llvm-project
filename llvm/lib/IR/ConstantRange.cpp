@@ -842,6 +842,11 @@ bool ConstantRange::isIntrinsicSupported(Intrinsic::ID IntrinsicID) {
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
+  case Intrinsic::umin:
+  case Intrinsic::umax:
+  case Intrinsic::smin:
+  case Intrinsic::smax:
+  case Intrinsic::abs:
     return true;
   default:
     return false;
@@ -859,6 +864,17 @@ ConstantRange ConstantRange::intrinsic(Intrinsic::ID IntrinsicID,
     return Ops[0].sadd_sat(Ops[1]);
   case Intrinsic::ssub_sat:
     return Ops[0].ssub_sat(Ops[1]);
+  case Intrinsic::umin:
+    return Ops[0].umin(Ops[1]);
+  case Intrinsic::umax:
+    return Ops[0].umax(Ops[1]);
+  case Intrinsic::smin:
+    return Ops[0].smin(Ops[1]);
+  case Intrinsic::smax:
+    return Ops[0].smax(Ops[1]);
+  case Intrinsic::abs:
+    // TODO: Make use of poison flag.
+    return Ops[0].abs();
   default:
     assert(!isIntrinsicSupported(IntrinsicID) && "Shouldn't be supported");
     llvm_unreachable("Unsupported intrinsic");
