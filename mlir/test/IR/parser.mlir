@@ -140,6 +140,9 @@ func @memrefs_compose_with_id(memref<2x2xi8, affine_map<(d0, d1) -> (d0, d1)>,
 func @complex_types(complex<i1>) -> complex<f32>
 
 
+// CHECK: func @memref_with_index_elems(memref<1x?xindex>)
+func @memref_with_index_elems(memref<1x?xindex>)
+
 // CHECK: func @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
 func @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
 
