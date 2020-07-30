@@ -937,6 +937,7 @@ private:
                           SMLoc End, unsigned Size, StringRef Identifier,
                           const InlineAsmIdentifierInfo &Info);
 
+  bool parseDirectiveArch();
   bool parseDirectiveEven(SMLoc L);
   bool ParseDirectiveCode(StringRef IDVal, SMLoc L);
 
@@ -3993,6 +3994,8 @@ bool X86AsmParser::OmitRegisterFromClobberLists(unsigned RegNo) {
 bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
   MCAsmParser &Parser = getParser();
   StringRef IDVal = DirectiveID.getIdentifier();
+  if (IDVal.startswith(".arch"))
+    return parseDirectiveArch();
   if (IDVal.startswith(".code"))
     return ParseDirectiveCode(IDVal, DirectiveID.getLoc());
   else if (IDVal.startswith(".att_syntax")) {
@@ -4045,6 +4048,12 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return parseDirectiveSEHPushFrame(DirectiveID.getLoc());
 
   return true;
+}
+
+bool X86AsmParser::parseDirectiveArch() {
+  // Ignore .arch for now.
+  getParser().parseStringToEndOfStatement();
+  return false;
 }
 
 /// parseDirectiveEven
