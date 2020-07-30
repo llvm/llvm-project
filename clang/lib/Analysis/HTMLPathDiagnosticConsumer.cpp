@@ -1,4 +1,4 @@
-//===- HTMLDiagnostics.cpp - HTML Diagnostics for Paths -------------------===//
+//===- HTMLPathDiagnosticConsumer.cpp - HTML Diagnostics for Paths --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the HTMLDiagnostics object.
+//  This file defines the HTMLPathDiagnosticConsumer object.
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/PathDiagnostic.h"
+#include "clang/Analysis/PathDiagnosticConsumers.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Stmt.h"
@@ -24,7 +25,6 @@
 #include "clang/Lex/Token.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -56,7 +56,7 @@ using namespace ento;
 
 namespace {
 
-class HTMLDiagnostics : public PathDiagnosticConsumer {
+class HTMLPathDiagnosticConsumer : public PathDiagnosticConsumer {
   PathDiagnosticConsumerOptions DiagOpts;
   std::string Directory;
   bool createdDir = false;
@@ -65,20 +65,18 @@ class HTMLDiagnostics : public PathDiagnosticConsumer {
   const bool SupportsCrossFileDiagnostics;
 
 public:
-  HTMLDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
-                  const std::string &OutputDir, const Preprocessor &pp,
-                  bool supportsMultipleFiles)
-      : DiagOpts(std::move(DiagOpts)), Directory(OutputDir), PP(pp),
-        SupportsCrossFileDiagnostics(supportsMultipleFiles) {}
+  HTMLPathDiagnosticConsumer(PathDiagnosticConsumerOptions DiagOpts,
+                             const std::string &OutputDir,
+                             const Preprocessor &PP, bool SupportsMultipleFiles)
+      : DiagOpts(std::move(DiagOpts)), Directory(OutputDir), PP(PP),
+        SupportsCrossFileDiagnostics(SupportsMultipleFiles) {}
 
-  ~HTMLDiagnostics() override { FlushDiagnostics(nullptr); }
+  ~HTMLPathDiagnosticConsumer() override { FlushDiagnostics(nullptr); }
 
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                             FilesMade *filesMade) override;
 
-  StringRef getName() const override {
-    return "HTMLDiagnostics";
-  }
+  StringRef getName() const override { return "HTMLPathDiagnosticConsumer"; }
 
   bool supportsCrossFileDiagnostics() const override {
     return SupportsCrossFileDiagnostics;
@@ -148,7 +146,8 @@ void ento::createHTMLDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, true));
+  C.push_back(
+      new HTMLPathDiagnosticConsumer(std::move(DiagOpts), OutputDir, PP, true));
 }
 
 void ento::createHTMLSingleFileDiagnosticConsumer(
@@ -161,34 +160,22 @@ void ento::createHTMLSingleFileDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, false));
-}
-
-void ento::createPlistHTMLDiagnosticConsumer(
-    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
-    const std::string &prefix, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
-  createHTMLDiagnosticConsumer(
-      DiagOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP,
-      CTU);
-  createPlistMultiFileDiagnosticConsumer(DiagOpts, C, prefix, PP, CTU);
-  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, prefix, PP,
-                                          CTU);
+  C.push_back(new HTMLPathDiagnosticConsumer(std::move(DiagOpts), OutputDir, PP,
+                                             false));
 }
 
 //===----------------------------------------------------------------------===//
 // Report processing.
 //===----------------------------------------------------------------------===//
 
-void HTMLDiagnostics::FlushDiagnosticsImpl(
-  std::vector<const PathDiagnostic *> &Diags,
-  FilesMade *filesMade) {
+void HTMLPathDiagnosticConsumer::FlushDiagnosticsImpl(
+    std::vector<const PathDiagnostic *> &Diags, FilesMade *filesMade) {
   for (const auto Diag : Diags)
     ReportDiag(*Diag, filesMade);
 }
 
-void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
-                                 FilesMade *filesMade) {
+void HTMLPathDiagnosticConsumer::ReportDiag(const PathDiagnostic &D,
+                                            FilesMade *filesMade) {
   // Create the HTML directory if it is missing.
   if (!createdDir) {
     createdDir = true;
@@ -296,8 +283,11 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
   os << report;
 }
 
-std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
-    const SourceManager& SMgr, const PathPieces& path, const char *declName) {
+std::string HTMLPathDiagnosticConsumer::GenerateHTML(const PathDiagnostic &D,
+                                                     Rewriter &R,
+                                                     const SourceManager &SMgr,
+                                                     const PathPieces &path,
+                                                     const char *declName) {
   // Rewrite source files as HTML for every new file the path crosses
   std::vector<FileID> FileIDs;
   for (auto I : path) {
@@ -369,9 +359,8 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   return os.str();
 }
 
-void HTMLDiagnostics::dumpCoverageData(
-    const PathDiagnostic &D,
-    const PathPieces &path,
+void HTMLPathDiagnosticConsumer::dumpCoverageData(
+    const PathDiagnostic &D, const PathPieces &path,
     llvm::raw_string_ostream &os) {
 
   const FilesToLineNumsMap &ExecutedLines = D.getExecutedLines();
@@ -395,8 +384,8 @@ void HTMLDiagnostics::dumpCoverageData(
   os << "};";
 }
 
-std::string HTMLDiagnostics::showRelevantLinesJavascript(
-      const PathDiagnostic &D, const PathPieces &path) {
+std::string HTMLPathDiagnosticConsumer::showRelevantLinesJavascript(
+    const PathDiagnostic &D, const PathPieces &path) {
   std::string s;
   llvm::raw_string_ostream os(s);
   os << "<script type='text/javascript'>\n";
@@ -460,9 +449,10 @@ document.addEventListener("DOMContentLoaded", function() {
   return os.str();
 }
 
-void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
-    const SourceManager& SMgr, const PathPieces& path, FileID FID,
-    const FileEntry *Entry, const char *declName) {
+void HTMLPathDiagnosticConsumer::FinalizeHTML(
+    const PathDiagnostic &D, Rewriter &R, const SourceManager &SMgr,
+    const PathPieces &path, FileID FID, const FileEntry *Entry,
+    const char *declName) {
   // This is a cludge; basically we want to append either the full
   // working directory if we have no directory information.  This is
   // a work in progress.
@@ -607,7 +597,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   html::AddHeaderFooterInternalBuiltinCSS(R, FID, Entry->getName());
 }
 
-StringRef HTMLDiagnostics::showHelpJavascript() {
+StringRef HTMLPathDiagnosticConsumer::showHelpJavascript() {
   return R"<<<(
 <script type='text/javascript'>
 
@@ -690,8 +680,9 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
   }
 }
 
-void HTMLDiagnostics::RewriteFile(Rewriter &R,
-                                  const PathPieces& path, FileID FID) {
+void HTMLPathDiagnosticConsumer::RewriteFile(Rewriter &R,
+                                             const PathPieces &path,
+                                             FileID FID) {
   // Process the path.
   // Maintain the counts of extra note pieces separately.
   unsigned TotalPieces = path.size();
@@ -769,10 +760,9 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
   html::HighlightMacros(R, FID, PP);
 }
 
-void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
-                                  const PathDiagnosticPiece &P,
-                                  const std::vector<SourceRange> &PopUpRanges,
-                                  unsigned num, unsigned max) {
+void HTMLPathDiagnosticConsumer::HandlePiece(
+    Rewriter &R, FileID BugFileID, const PathDiagnosticPiece &P,
+    const std::vector<SourceRange> &PopUpRanges, unsigned num, unsigned max) {
   // For now, just draw a box above the line in question, and emit the
   // warning.
   FullSourceLoc Pos = P.getLocation().asLocation();
@@ -1004,9 +994,8 @@ static void EmitAlphaCounter(raw_ostream &os, unsigned n) {
   os << char('a' + x);
 }
 
-unsigned HTMLDiagnostics::ProcessMacroPiece(raw_ostream &os,
-                                            const PathDiagnosticMacroPiece& P,
-                                            unsigned num) {
+unsigned HTMLPathDiagnosticConsumer::ProcessMacroPiece(
+    raw_ostream &os, const PathDiagnosticMacroPiece &P, unsigned num) {
   for (const auto &subPiece : P.subPieces) {
     if (const auto *MP = dyn_cast<PathDiagnosticMacroPiece>(subPiece.get())) {
       num = ProcessMacroPiece(os, *MP, num);
@@ -1028,10 +1017,10 @@ unsigned HTMLDiagnostics::ProcessMacroPiece(raw_ostream &os,
   return num;
 }
 
-void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
-                                     SourceRange Range,
-                                     const char *HighlightStart,
-                                     const char *HighlightEnd) {
+void HTMLPathDiagnosticConsumer::HighlightRange(Rewriter &R, FileID BugFileID,
+                                                SourceRange Range,
+                                                const char *HighlightStart,
+                                                const char *HighlightEnd) {
   SourceManager &SM = R.getSourceMgr();
   const LangOptions &LangOpts = R.getLangOpts();
 
@@ -1066,7 +1055,7 @@ void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
   html::HighlightRange(R, InstantiationStart, E, HighlightStart, HighlightEnd);
 }
 
-StringRef HTMLDiagnostics::generateKeyboardNavigationJavascript() {
+StringRef HTMLPathDiagnosticConsumer::generateKeyboardNavigationJavascript() {
   return R"<<<(
 <script type='text/javascript'>
 var digitMatcher = new RegExp("[0-9]+");
