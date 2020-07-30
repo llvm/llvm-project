@@ -17,57 +17,56 @@ define <3 x i32> @v_load_constant_v3i32_align1(<3 x i32> addrspace(4)* %ptr) {
 ;
 ; GFX9-NOUNALIGNED-LABEL: v_load_constant_v3i32_align1:
 ; GFX9-NOUNALIGNED:       ; %bb.0:
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NOUNALIGNED-NEXT:    v_add_co_u32_e32 v2, vcc, 11, v0
-; GFX9-NOUNALIGNED-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v4, v[2:3], off offset:-6
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v5, v[2:3], off offset:-5
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v6, v[2:3], off offset:-4
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v7, v[2:3], off offset:-3
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v8, v[2:3], off offset:-2
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v9, v[2:3], off offset:-1
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v10, v[2:3], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v0, v[0:1], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v1, v[2:3], off offset:-10
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v11, v[2:3], off offset:-9
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v12, v[2:3], off offset:-8
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v2, v[2:3], off offset:-7
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v3, 0xff
-; GFX9-NOUNALIGNED-NEXT:    s_movk_i32 s4, 0xff
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v13, 8
-; GFX9-NOUNALIGNED-NEXT:    s_mov_b32 s5, 8
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(11)
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_sdwa v4, v13, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(10)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v5, v5, v3
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(9)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v6, v6, v3
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(7)
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_sdwa v8, v13, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(6)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v9, v9, v3
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(5)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v10, v10, v3
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(3)
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_sdwa v1, s5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v11, s4, v11
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v12, s4, v12
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v2, v2, v3, v4
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v0, v0, s4, v1
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v11
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v11, 24, v12
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v4, 16, v5
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v5, 24, v6
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v3, v7, v3, v8
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v6, 16, v9
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v7, 24, v10
-; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v0, v0, v1, v11
-; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v1, v2, v4, v5
-; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v2, v3, v6, v7
-; GFX9-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NOUNALIGNED-NEXT:	v_add_co_u32_e32 v2, vcc, 11, v0
+; GFX9-NOUNALIGNED-NEXT:	v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v0, v[0:1], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v1, v[2:3], off offset:-10
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v4, v[2:3], off offset:-9
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v5, v[2:3], off offset:-8
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v6, v[2:3], off offset:-7
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v7, v[2:3], off offset:-6
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v8, v[2:3], off offset:-5
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v9, v[2:3], off offset:-4
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v10, v[2:3], off offset:-3
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v11, v[2:3], off offset:-2
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v12, v[2:3], off offset:-1
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v2, v[2:3], off
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v3, 0xff
+; GFX9-NOUNALIGNED-NEXT:	s_movk_i32 s4, 0xff
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v13, 8
+; GFX9-NOUNALIGNED-NEXT:	s_mov_b32 s5, 8
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(10)
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_sdwa v1, s5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(9)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v4, s4, v4
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(8)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v5, s4, v5
+; GFX9-NOUNALIGNED-NEXT:	v_and_or_b32 v0, v0, s4, v1
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(6)
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_sdwa v7, v13, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(5)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v8, v8, v3
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(4)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v9, v9, v3
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v1, 16, v4
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(2)
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_sdwa v11, v13, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(1)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v12, v12, v3
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(0)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v2, v2, v3
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v4, 24, v5
+; GFX9-NOUNALIGNED-NEXT:	v_and_or_b32 v5, v6, v3, v7
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v6, 16, v8
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v7, 24, v9
+; GFX9-NOUNALIGNED-NEXT:	v_and_or_b32 v3, v10, v3, v11
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v8, 16, v12
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v2, 24, v2
+; GFX9-NOUNALIGNED-NEXT:	v_or3_b32 v0, v0, v1, v4
+; GFX9-NOUNALIGNED-NEXT:	v_or3_b32 v1, v5, v6, v7
+; GFX9-NOUNALIGNED-NEXT:	v_or3_b32 v2, v3, v8, v2
+; GFX9-NOUNALIGNED-NEXT:	s_setpc_b64 s[30:31]
 ;
 ; GFX7-UNALIGNED-LABEL: v_load_constant_v3i32_align1:
 ; GFX7-UNALIGNED:       ; %bb.0:
@@ -156,31 +155,30 @@ define <3 x i32> @v_load_constant_v3i32_align2(<3 x i32> addrspace(4)* %ptr) {
 ;
 ; GFX9-NOUNALIGNED-LABEL: v_load_constant_v3i32_align2:
 ; GFX9-NOUNALIGNED:       ; %bb.0:
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NOUNALIGNED-NEXT:    v_add_co_u32_e32 v2, vcc, 10, v0
-; GFX9-NOUNALIGNED-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v4, v[2:3], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v0, v[0:1], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v1, v[2:3], off offset:-8
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v5, v[2:3], off offset:-6
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v6, v[2:3], off offset:-4
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v2, v[2:3], off offset:-2
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v3, 0xffff
-; GFX9-NOUNALIGNED-NEXT:    s_mov_b32 s4, 0xffff
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(5)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v4, v4, v3
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(3)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v1, s4, v1
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v6, v6, v3
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v0, v0, s4, v1
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v1, v5, v3, v6
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v2, v2, v3, v4
-; GFX9-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NOUNALIGNED-NEXT:        v_add_co_u32_e32 v2, vcc, 10, v0
+; GFX9-NOUNALIGNED-NEXT:        v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
+; GFX9-NOUNALIGNED-NEXT:        global_load_ushort v0, v[0:1], off
+; GFX9-NOUNALIGNED-NEXT:        global_load_ushort v1, v[2:3], off offset:-8
+; GFX9-NOUNALIGNED-NEXT:        global_load_ushort v4, v[2:3], off offset:-6
+; GFX9-NOUNALIGNED-NEXT:        global_load_ushort v5, v[2:3], off offset:-4
+; GFX9-NOUNALIGNED-NEXT:        global_load_ushort v6, v[2:3], off offset:-2
+; GFX9-NOUNALIGNED-NEXT:        global_load_ushort v2, v[2:3], off
+; GFX9-NOUNALIGNED-NEXT:        v_mov_b32_e32 v3, 0xffff
+; GFX9-NOUNALIGNED-NEXT:        s_mov_b32 s4, 0xffff
+; GFX9-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(4)
+; GFX9-NOUNALIGNED-NEXT:        v_and_b32_e32 v1, s4, v1
+; GFX9-NOUNALIGNED-NEXT:        v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(2)
+; GFX9-NOUNALIGNED-NEXT:        v_and_b32_e32 v5, v5, v3
+; GFX9-NOUNALIGNED-NEXT:        v_lshlrev_b32_e32 v5, 16, v5
+; GFX9-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(0)
+; GFX9-NOUNALIGNED-NEXT:        v_and_b32_e32 v2, v2, v3
+; GFX9-NOUNALIGNED-NEXT:        v_lshlrev_b32_e32 v2, 16, v2
+; GFX9-NOUNALIGNED-NEXT:        v_and_or_b32 v0, v0, s4, v1
+; GFX9-NOUNALIGNED-NEXT:        v_and_or_b32 v1, v4, v3, v5
+; GFX9-NOUNALIGNED-NEXT:        v_and_or_b32 v2, v6, v3, v2
+; GFX9-NOUNALIGNED-NEXT:        s_setpc_b64 s[30:31]
 ;
 ; GFX7-UNALIGNED-LABEL: v_load_constant_v3i32_align2:
 ; GFX7-UNALIGNED:       ; %bb.0:
@@ -194,35 +192,36 @@ define <3 x i32> @v_load_constant_v3i32_align2(<3 x i32> addrspace(4)* %ptr) {
 ;
 ; GFX7-NOUNALIGNED-LABEL: v_load_constant_v3i32_align2:
 ; GFX7-NOUNALIGNED:       ; %bb.0:
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NOUNALIGNED-NEXT:    s_mov_b32 s6, 0
-; GFX7-NOUNALIGNED-NEXT:    s_mov_b32 s7, 0xf000
-; GFX7-NOUNALIGNED-NEXT:    s_mov_b64 s[4:5], 0
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v2, v[0:1], s[4:7], 0 addr64 offset:10
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v3, v[0:1], s[4:7], 0 addr64
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v4, v[0:1], s[4:7], 0 addr64 offset:2
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v5, v[0:1], s[4:7], 0 addr64 offset:4
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v6, v[0:1], s[4:7], 0 addr64 offset:6
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v0, v[0:1], s[4:7], 0 addr64 offset:8
-; GFX7-NOUNALIGNED-NEXT:    s_mov_b32 s4, 0xffff
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(4)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v1, s4, v3
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(3)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v3, s4, v4
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(2)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v4, s4, v5
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v5, s4, v6
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v6, s4, v0
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v0, s4, v2
-; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
-; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v3, 16, v5
-; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v5, 16, v0
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v0, v1, v2
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v1, v4, v3
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v2, v6, v5
-; GFX7-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NOUNALIGNED-NEXT:        s_mov_b32 s6, 0
+; GFX7-NOUNALIGNED-NEXT:        s_mov_b32 s7, 0xf000
+; GFX7-NOUNALIGNED-NEXT:        s_mov_b64 s[4:5], 0
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v2, v[0:1], s[4:7], 0 addr64
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v3, v[0:1], s[4:7], 0 addr64 offset:2
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v4, v[0:1], s[4:7], 0 addr64 offset:4
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v5, v[0:1], s[4:7], 0 addr64 offset:6
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v6, v[0:1], s[4:7], 0 addr64 offset:8
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v0, v[0:1], s[4:7], 0 addr64 offset:10
+; GFX7-NOUNALIGNED-NEXT:        s_mov_b32 s4, 0xffff
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(5)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v1, s4, v2
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(4)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v2, s4, v3
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(3)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v3, s4, v4
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(2)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v4, s4, v5
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(1)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v5, s4, v6
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(0)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v0, s4, v0
+; GFX7-NOUNALIGNED-NEXT:        v_lshlrev_b32_e32 v2, 16, v2
+; GFX7-NOUNALIGNED-NEXT:        v_lshlrev_b32_e32 v6, 16, v0
+; GFX7-NOUNALIGNED-NEXT:        v_lshlrev_b32_e32 v4, 16, v4
+; GFX7-NOUNALIGNED-NEXT:        v_or_b32_e32 v0, v1, v2
+; GFX7-NOUNALIGNED-NEXT:        v_or_b32_e32 v1, v3, v4
+; GFX7-NOUNALIGNED-NEXT:        v_or_b32_e32 v2, v5, v6
+; GFX7-NOUNALIGNED-NEXT:        s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 2
   ret <3 x i32> %load
 }
@@ -399,97 +398,101 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(<3 x i32> addrspace(4)*
 ;
 ; GFX9-NOUNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX9-NOUNALIGNED:       ; %bb.0:
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 1
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v3, s3
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 2
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v5, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v4, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 3
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v7, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v6, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 4
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v9, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v8, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 5
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v11, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v10, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 6
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v13, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v12, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 7
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v15, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v14, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 8
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v17, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v16, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 9
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v19, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v18, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 10
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s0, s0, 11
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v20, v[10:11], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v21, v[12:13], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v14, v[14:15], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v15, v[16:17], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v16, v[18:19], off
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s1, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v11, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v13, s1
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v10, s2
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v12, s0
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v10, v[10:11], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v11, v[12:13], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v0, v[0:1], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v1, v[2:3], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v2, v[4:5], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v3, v[6:7], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ubyte v4, v[8:9], off
-; GFX9-NOUNALIGNED-NEXT:    s_mov_b32 s1, 8
-; GFX9-NOUNALIGNED-NEXT:    s_movk_i32 s0, 0xff
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v5, 0xff
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v6, 8
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(3)
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_sdwa v1, s1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v0, v0, s0, v1
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v1, s0, v2
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v2, s0, v3
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v1, v21, v5
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v2, v14, v5
-; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_sdwa v0, v6, v20 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v0, v4, v5, v0
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v1, v0, v1, v2
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_sdwa v0, v6, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v2, v11, v5
-; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v1, v10, v5
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v0, v15, v5, v0
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v2, v0, v1, v2
-; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX9-NOUNALIGNED-NEXT:    ; return to shader part epilog
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 1
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v2, s2
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v3, s3
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 2
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v5, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v4, s2
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 3
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v7, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v6, s2
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 4
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v9, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v8, s2
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 5
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v11, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v10, s2
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 6
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v13, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v12, s2
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 7
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v0, s0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v15, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v14, s2
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 8
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v1, s1
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v16, v[0:1], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v17, v[2:3], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v18, v[4:5], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v19, v[6:7], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v8, v[8:9], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v9, v[10:11], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v10, v[12:13], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v11, v[14:15], off
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v0, s2
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v1, s3
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 9
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v2, s2
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v3, s3
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 10
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s0, s0, 11
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s1, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v5, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v7, s1
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v4, s2
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v6, s0
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v12, v[0:1], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v2, v[2:3], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v3, v[4:5], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ubyte v4, v[6:7], off
+; GFX9-NOUNALIGNED-NEXT:	s_movk_i32 s0, 0xff
+; GFX9-NOUNALIGNED-NEXT:	s_mov_b32 s1, 8
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v5, 0xff
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v6, 8
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(10)
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_sdwa v0, s1, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(9)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v1, s0, v18
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(8)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v7, s0, v19
+; GFX9-NOUNALIGNED-NEXT:	v_and_or_b32 v0, v16, s0, v0
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v7, 24, v7
+; GFX9-NOUNALIGNED-NEXT:	v_or3_b32 v0, v0, v1, v7
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(5)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v1, v10, v5
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(4)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v7, v11, v5
+; GFX9-NOUNALIGNED-NEXT:	v_readfirstlane_b32 s0, v0
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_sdwa v0, v6, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX9-NOUNALIGNED-NEXT:	v_and_or_b32 v0, v8, v5, v0
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v7, 24, v7
+; GFX9-NOUNALIGNED-NEXT:	v_or3_b32 v1, v0, v1, v7
+; GFX9-NOUNALIGNED-NEXT:	v_readfirstlane_b32 s1, v1
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(2)
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_sdwa v0, v6, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(1)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v1, v3, v5
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(0)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v2, v4, v5
+; GFX9-NOUNALIGNED-NEXT:	v_and_or_b32 v0, v12, v5, v0
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v2, 24, v2
+; GFX9-NOUNALIGNED-NEXT:	v_or3_b32 v2, v0, v1, v2
+; GFX9-NOUNALIGNED-NEXT:	v_readfirstlane_b32 s2, v2
+; GFX9-NOUNALIGNED-NEXT:	; return to shader part epilog
 ;
 ; GFX7-UNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX7-UNALIGNED:       ; %bb.0:
@@ -585,52 +588,52 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(<3 x i32> addrspace(4)*
 ;
 ; GFX9-NOUNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX9-NOUNALIGNED:       ; %bb.0:
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 2
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v3, s3
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 4
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v5, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v4, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 6
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v7, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v6, s2
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s2, s0, 8
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s3, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NOUNALIGNED-NEXT:    s_add_u32 s0, s0, 10
-; GFX9-NOUNALIGNED-NEXT:    s_addc_u32 s1, s1, 0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v11, s1
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v9, s3
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v10, s0
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v8, s2
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v10, v[10:11], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v0, v[0:1], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v1, v[2:3], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v2, v[4:5], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v3, v[6:7], off
-; GFX9-NOUNALIGNED-NEXT:    global_load_ushort v4, v[8:9], off
-; GFX9-NOUNALIGNED-NEXT:    s_mov_b32 s0, 0xffff
-; GFX9-NOUNALIGNED-NEXT:    v_mov_b32_e32 v5, 0xffff
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(3)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v1, s0, v1
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v0, v0, s0, v1
-; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v0, v3, v5
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v1, v2, v5, v0
-; GFX9-NOUNALIGNED-NEXT:    v_and_b32_e32 v0, v10, v5
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX9-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v2, v4, v5, v0
-; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX9-NOUNALIGNED-NEXT:    ; return to shader part epilog
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 2
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v2, s2
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v3, s3
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 4
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v5, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v4, s2
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 6
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v7, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v6, s2
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s2, s0, 8
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s3, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v0, s0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v1, s1
+; GFX9-NOUNALIGNED-NEXT:	s_add_u32 s0, s0, 10
+; GFX9-NOUNALIGNED-NEXT:	s_addc_u32 s1, s1, 0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v9, s3
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v11, s1
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v10, s0
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v8, s2
+; GFX9-NOUNALIGNED-NEXT:	global_load_ushort v0, v[0:1], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ushort v1, v[2:3], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ushort v2, v[4:5], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ushort v3, v[6:7], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ushort v4, v[8:9], off
+; GFX9-NOUNALIGNED-NEXT:	global_load_ushort v5, v[10:11], off
+; GFX9-NOUNALIGNED-NEXT:	s_mov_b32 s0, 0xffff
+; GFX9-NOUNALIGNED-NEXT:	v_mov_b32_e32 v6, 0xffff
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(4)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v1, s0, v1
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NOUNALIGNED-NEXT:	v_and_or_b32 v0, v0, s0, v1
+; GFX9-NOUNALIGNED-NEXT:	v_readfirstlane_b32 s0, v0
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(2)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v0, v3, v6
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NOUNALIGNED-NEXT:	v_and_or_b32 v1, v2, v6, v0
+; GFX9-NOUNALIGNED-NEXT:	s_waitcnt vmcnt(0)
+; GFX9-NOUNALIGNED-NEXT:	v_and_b32_e32 v0, v5, v6
+; GFX9-NOUNALIGNED-NEXT:	v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NOUNALIGNED-NEXT:	v_and_or_b32 v2, v4, v6, v0
+; GFX9-NOUNALIGNED-NEXT:	v_readfirstlane_b32 s1, v1
+; GFX9-NOUNALIGNED-NEXT:	v_readfirstlane_b32 s2, v2
+; GFX9-NOUNALIGNED-NEXT:	; return to shader part epilog
 ;
 ; GFX7-UNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX7-UNALIGNED:       ; %bb.0:
@@ -648,37 +651,35 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(<3 x i32> addrspace(4)*
 ;
 ; GFX7-NOUNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX7-NOUNALIGNED:       ; %bb.0:
-; GFX7-NOUNALIGNED-NEXT:    s_mov_b32 s2, -1
-; GFX7-NOUNALIGNED-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:10
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v1, off, s[0:3], 0
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v2, off, s[0:3], 0 offset:2
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v3, off, s[0:3], 0 offset:4
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v4, off, s[0:3], 0 offset:6
-; GFX7-NOUNALIGNED-NEXT:    buffer_load_ushort v5, off, s[0:3], 0 offset:8
-; GFX7-NOUNALIGNED-NEXT:    s_mov_b32 s0, 0xffff
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(5)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v0, s0, v0
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(4)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v1, s0, v1
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(3)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v2, s0, v2
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(2)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v3, s0, v3
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v4, s0, v4
-; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NOUNALIGNED-NEXT:    v_and_b32_e32 v5, s0, v5
-; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v6, 16, v0
-; GFX7-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v0, v1, v2
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v1, v3, v4
-; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v2, v5, v6
-; GFX7-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX7-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX7-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX7-NOUNALIGNED-NEXT:    ; return to shader part epilog
+; GFX7-NOUNALIGNED-NEXT:        s_mov_b32 s2, -1
+; GFX7-NOUNALIGNED-NEXT:        s_mov_b32 s3, 0xf000
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v0, off, s[0:3], 0
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v1, off, s[0:3], 0 offset:2
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v2, off, s[0:3], 0 offset:4
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v3, off, s[0:3], 0 offset:6
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v4, off, s[0:3], 0 offset:8
+; GFX7-NOUNALIGNED-NEXT:        buffer_load_ushort v5, off, s[0:3], 0 offset:10
+; GFX7-NOUNALIGNED-NEXT:        s_mov_b32 s0, 0xffff
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(5)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v0, s0, v0
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(4)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v1, s0, v1
+; GFX7-NOUNALIGNED-NEXT:        v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(2)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v3, s0, v3
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v2, s0, v2
+; GFX7-NOUNALIGNED-NEXT:        s_waitcnt vmcnt(0)
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v5, s0, v5
+; GFX7-NOUNALIGNED-NEXT:        v_and_b32_e32 v4, s0, v4
+; GFX7-NOUNALIGNED-NEXT:        v_lshlrev_b32_e32 v3, 16, v3
+; GFX7-NOUNALIGNED-NEXT:        v_lshlrev_b32_e32 v5, 16, v5
+; GFX7-NOUNALIGNED-NEXT:        v_or_b32_e32 v0, v0, v1
+; GFX7-NOUNALIGNED-NEXT:        v_or_b32_e32 v1, v2, v3
+; GFX7-NOUNALIGNED-NEXT:        v_or_b32_e32 v2, v4, v5
+; GFX7-NOUNALIGNED-NEXT:        v_readfirstlane_b32 s0, v0
+; GFX7-NOUNALIGNED-NEXT:        v_readfirstlane_b32 s1, v1
+; GFX7-NOUNALIGNED-NEXT:        v_readfirstlane_b32 s2, v2
+; GFX7-NOUNALIGNED-NEXT:        ; return to shader part epilog
   %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 2
   ret <3 x i32> %load
 }

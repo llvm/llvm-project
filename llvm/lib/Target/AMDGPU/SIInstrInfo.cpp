@@ -474,65 +474,29 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       ArrayRef<const MachineOperand *> BaseOps2,
                                       unsigned NumLoads,
                                       unsigned NumBytes) const {
+  // If the mem ops (to be clustered) do not have the same base ptr, then they
+  // should not be clustered
   assert(!BaseOps1.empty() && !BaseOps2.empty());
   const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
   const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
-
   if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
     return false;
 
-  const MachineOperand *FirstDst = nullptr;
-  const MachineOperand *SecondDst = nullptr;
-
-  if ((isMUBUF(FirstLdSt) && isMUBUF(SecondLdSt)) ||
-      (isMTBUF(FirstLdSt) && isMTBUF(SecondLdSt)) ||
-      (isMIMG(FirstLdSt) && isMIMG(SecondLdSt)) ||
-      (isFLAT(FirstLdSt) && isFLAT(SecondLdSt))) {
-    const unsigned MaxGlobalLoadCluster = 7;
-    if (NumLoads > MaxGlobalLoadCluster)
-      return false;
-
-    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdata);
-    if (!FirstDst)
-      FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdst);
-    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdata);
-    if (!SecondDst)
-      SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdst);
-  } else if (isSMRD(FirstLdSt) && isSMRD(SecondLdSt)) {
-    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::sdst);
-    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::sdst);
-  } else if (isDS(FirstLdSt) && isDS(SecondLdSt)) {
-    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdst);
-    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdst);
-  }
-
-  if (!FirstDst || !SecondDst)
-    return false;
-
-  // Try to limit clustering based on the total number of bytes loaded
-  // rather than the number of instructions.  This is done to help reduce
-  // register pressure.  The method used is somewhat inexact, though,
-  // because it assumes that all loads in the cluster will load the
-  // same number of bytes as FirstLdSt.
-
-  // The unit of this value is bytes.
-  // FIXME: This needs finer tuning.
-  unsigned LoadClusterThreshold = 16;
-
-  const MachineRegisterInfo &MRI =
-      FirstLdSt.getParent()->getParent()->getRegInfo();
-
-  const Register Reg = FirstDst->getReg();
-
-  const TargetRegisterClass *DstRC = Register::isVirtualRegister(Reg)
-                                         ? MRI.getRegClass(Reg)
-                                         : RI.getPhysRegClass(Reg);
-
-  // FIXME: NumLoads should not be subtracted 1. This is to match behavior
-  // of clusterNeighboringMemOps which was previosly passing cluster length
-  // less 1. LoadClusterThreshold should be tuned instead.
-  return ((NumLoads - 1) * (RI.getRegSizeInBits(*DstRC) / 8)) <=
-         LoadClusterThreshold;
+  // In order to avoid regester pressure, on an average, the number of DWORDS
+  // loaded together by all clustered mem ops should not exceed 8. This is an
+  // empirical value based on certain observations and performance related
+  // experiments.
+  // The good thing about this heuristic is - it avoids clustering of too many
+  // sub-word loads, and also avoids clustering of wide loads. Below is the
+  // brief summary of how the heuristic behaves for various `LoadSize`.
+  // (1) 1 <= LoadSize <= 4: cluster at max 8 mem ops
+  // (2) 5 <= LoadSize <= 8: cluster at max 4 mem ops
+  // (3) 9 <= LoadSize <= 12: cluster at max 2 mem ops
+  // (4) 13 <= LoadSize <= 16: cluster at max 2 mem ops
+  // (5) LoadSize >= 17: do not cluster
+  const unsigned LoadSize = NumBytes / NumLoads;
+  const unsigned NumDWORDs = ((LoadSize + 3) / 4) * NumLoads;
+  return NumDWORDs <= 8;
 }
 
 // FIXME: This behaves strangely. If, for example, you have 32 load + stores,
