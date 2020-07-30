@@ -1279,7 +1279,11 @@ public:
   /// their final memory locations in the target process. At this point the
   /// LinkGraph can be inspected to build a symbol table, however the block
   /// content will not generally have been copied to the target location yet.
-  virtual void notifyResolved(LinkGraph &G) = 0;
+  ///
+  /// If the client detects an error in the LinkGraph state (e.g. unexpected or
+  /// missing symbols) they may return an error here. The error will be
+  /// propagated to notifyFailed and the linker will bail out.
+  virtual Error notifyResolved(LinkGraph &G) = 0;
 
   /// Called by JITLink to notify the context that the object has been
   /// finalized (i.e. emitted to memory and memory permissions set). If all of
