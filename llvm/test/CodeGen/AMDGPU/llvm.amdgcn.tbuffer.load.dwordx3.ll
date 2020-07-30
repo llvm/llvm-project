@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=gfx600 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,SI
-;RUN: llc < %s -march=amdgcn -mcpu=gfx700 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,GCNX3
+; RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=gfx600 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,SI
+; RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=gfx700 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,GCNX3
 
 ; GCN-LABEL: {{^}}tbuffer_raw_load_immoffs_x3:
 ; SI: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT] offset:42
