@@ -1,15 +1,15 @@
-.. _amdgpu-dwarf-proposal-for-heterogeneous-debugging:
+.. _amdgpu-dwarf-extensions-for-heterogeneous-debugging:
 
-******************************************
-DWARF Proposal For Heterogeneous Debugging
-******************************************
+********************************************
+DWARF Extensions For Heterogeneous Debugging
+********************************************
 
 .. contents::
    :local:
 
 .. warning::
 
-   This document describes a **provisional proposal** for DWARF Version 6
+   This document describes **provisional extensions** to DWARF Version 5
    [:ref:`DWARF <amdgpu-dwarf-DWARF>`] to support heterogeneous debugging. It is
    not currently fully implemented and is subject to change.
 
@@ -37,43 +37,37 @@ and the Perforce TotalView HPC debugger [:ref:`Perforce-TotalView
 
 To support debugging heterogeneous programs several features that are not
 provided by current DWARF Version 5 [:ref:`DWARF <amdgpu-dwarf-DWARF>`] have
-been identified. This document contains a collection of proposals to address
+been identified. This document contains a collection of extensions to address
 providing those features.
 
 The :ref:`amdgpu-dwarf-motivation` section describes the issues that are being
 addressed for heterogeneous computing. That is followed by the
-:ref:`amdgpu-dwarf-proposed-changes-relative-to-dwarf-version-5` section
-containing the proposed textual changes relative to the DWARF Version 5
-standard. Then there is an :ref:`amdgpu-dwarf-examples` section that links to
-the AMD GPU specific usage of the features in the proposal that includes an
-example. Finally, there is a :ref:`amdgpu-dwarf-references` section. There are a
-number of notes included that raise open questions, or provide alternative
-approaches considered. The draft proposal seeks to be general in nature and
-backwards compatible with DWARF Version 5. Its goal is to be applicable to
-meeting the needs of any heterogeneous system and not be vendor or architecture
-specific.
+:ref:`amdgpu-dwarf-changes-relative-to-dwarf-version-5` section containing the
+textual changes for the extensions relative to the DWARF Version 5 standard.
+Then there is an :ref:`amdgpu-dwarf-examples` section that links to the AMD GPU
+specific usage of the extensions that includes an example. Finally, there is a
+:ref:`amdgpu-dwarf-references` section. There are a number of notes included
+that raise open questions, or provide alternative approaches considered. The
+extensions seek to be general in nature and backwards compatible with DWARF
+Version 5. The goal is to be applicable to meeting the needs of any
+heterogeneous system and not be vendor or architecture specific.
 
-A fundamental aspect of the draft proposal is that it allows DWARF expression
-location descriptions as stack elements. The draft proposal is based on DWARF
+A fundamental aspect of the extensions is that it allows DWARF expression
+location descriptions as stack elements. The extensions are based on DWARF
 Version 5 and maintains compatibility with DWARF Version 5. After attempting
-several alternatives, the current thinking is that such an addition to DWARF
-Version 5 is the simplest and cleanest way to support debugging optimized GPU
+several alternatives, the current thinking is that such extensions to DWARF
+Version 5 are the simplest and cleanest ways to support debugging optimized GPU
 code. It also appears to be generally useful and may be able to address other
 reported DWARF issues, as well as being helpful in providing better optimization
 support for non-GPU code.
 
-General feedback on this draft proposal is sought, together with suggestions on
-how to clarify, simplify, or organize it before submitting it as a formal DWARF
-proposal. The current draft proposal is large and may need to be split into
-separate proposals before formal submission. Any suggestions on how best to do
-that are appreciated. However, at the initial review stage it is believed there
-is value in presenting a unified proposal as there are mutual dependencies
-between the various parts that would not be as apparent if it was broken up into
-separate independent proposals.
+General feedback on these extensions is sought, together with suggestions on how
+to clarify, simplify, or organize them. If their is general interest then some
+or all of these extensions could be submitted as future DWARF proposals.
 
-We are in the process of modifying LLVM and GDB to support this draft proposal
+We are in the process of modifying LLVM and GDB to support these extensions
 which is providing experience and insights. We plan to upstream the changes to
-those projects for any final form of the proposal.
+those projects for any final form of the extensions.
 
 The author very much appreciates the input provided so far by many others which
 has been incorporated into this current version.
@@ -83,11 +77,10 @@ has been incorporated into this current version.
 Motivation
 ==========
 
-This document proposes a set of backwards compatible extensions to DWARF Version
-5 [:ref:`DWARF <amdgpu-dwarf-DWARF>`] for consideration of inclusion into a
-future DWARF Version 6 standard to support heterogeneous debugging.
+This document presents a set of backwards compatible extensions to DWARF Version
+5 [:ref:`DWARF <amdgpu-dwarf-DWARF>`] to support heterogeneous debugging.
 
-The remainder of this section provides motivation for each proposed feature in
+The remainder of this section provides motivation for each extension in
 terms of heterogeneous debugging on commercially available AMD GPU hardware
 (AMDGPU). The goal is to add support to the AMD [:ref:`AMD <amdgpu-dwarf-AMD>`]
 open source Radeon Open Compute Platform (ROCm) [:ref:`AMD-ROCm
@@ -102,21 +95,21 @@ to work with third parties to enable support for AMDGPU debugging in the GCC
 compiler [:ref:`GCC <amdgpu-dwarf-GCC>`] and the Perforce TotalView HPC debugger
 [:ref:`Perforce-TotalView <amdgpu-dwarf-Perforce-TotalView>`].
 
-However, the proposal is intended to be vendor and architecture neutral. It is
-believed to apply to other heterogenous hardware devices including GPUs, DSPs,
-FPGAs, and other specialized hardware. These collectively include similar
-characteristics and requirements as AMDGPU devices. Parts of the proposal can
+However, the extensions are intended to be vendor and architecture neutral. They
+are believed to apply to other heterogenous hardware devices including GPUs,
+DSPs, FPGAs, and other specialized hardware. These collectively include similar
+characteristics and requirements as AMDGPU devices. Some of the extension can
 also apply to traditional CPU hardware that supports large vector registers.
 Compilers can map source languages and extensions that describe large scale
 parallel execution onto the lanes of the vector registers. This is common in
-programming languages used in ML and HPC. The proposal also includes improved
+programming languages used in ML and HPC. The extensions also include improved
 support for optimized code on any architecture. Some of the generalizations may
 also benefit other issues that have been raised.
 
-The proposal has evolved though collaboration with many individuals and active
-prototyping within the GDB debugger and LLVM compiler. Input has also been very
-much appreciated from the developers working on the Perforce TotalView HPC
-Debugger and GCC compiler.
+The extensions have evolved though collaboration with many individuals and
+active prototyping within the GDB debugger and LLVM compiler. Input has also
+been very much appreciated from the developers working on the Perforce TotalView
+HPC Debugger and GCC compiler.
 
 The AMDGPU has several features that require additional DWARF functionality in
 order to support optimized code.
@@ -332,8 +325,8 @@ attributes such as ``DW_AT_data_member_location``, ``DW_AT_use_location``, and
 on the expression stack before evaluating the expression. However, DWARF
 Version 5 only allows the stack to contain values and so only a single memory
 address can be on the stack which makes these incapable of handling location
-descriptions with multiple places, or places other than memory. Since this
-proposal allows the stack to contain location descriptions, the operations are
+descriptions with multiple places, or places other than memory. Since these
+extensions allow the stack to contain location descriptions, the operations are
 generalized to support location descriptions that can have multiple places.
 This is backwards compatible with DWARF Version 5 and allows objects with
 multiple places to be supported. For example, the expression that describes
@@ -345,8 +338,8 @@ unified into a single section that describes DWARF expressions in general.
 This unification seems to be a natural consequence and a necessity of allowing
 location descriptions to be part of the evaluation stack.
 
-For those familiar with the definition of location descriptions in DWARF
-Version 5, the definition in this proposal is presented differently, but does
+For those familiar with the definition of location descriptions in DWARF Version
+5, the definitions in these extensions are presented differently, but does
 in fact define the same concept with the same fundamental semantics. However,
 it does so in a way that allows the concept to extend to support address
 spaces, bit addressing, the ability for composite location descriptions to be
@@ -354,7 +347,7 @@ composed of any kind of location description, and the ability to support
 objects located at multiple places. Collectively these changes expand the set
 of processors that can be supported and improves support for optimized code.
 
-Several approaches were considered, and the one proposed appears to be the
+Several approaches were considered, and the one presented appears to be the
 cleanest and offers the greatest improvement of DWARF's ability to support
 optimized code. Examining the GDB debugger and LLVM compiler, it appears only
 to require modest changes as they both already have to support general use of
@@ -412,22 +405,22 @@ style based on the DWARF Version 5 specification. Non-normative text is shown
 in *italics*.
 
 The names for the new operations, attributes, and constants include "\
-``LLVM``\ " and are encoded with vendor specific codes so this proposal can be
-implemented as an LLVM vendor extension to DWARF Version 5. If accepted these
+``LLVM``\ " and are encoded with vendor specific codes so these extensions can
+be implemented as an LLVM vendor extension to DWARF Version 5. If accepted these
 names would not include the "\ ``LLVM``\ " and would not use encodings in the
 vendor range.
 
-The proposal is described in
-:ref:`amdgpu-dwarf-proposed-changes-relative-to-dwarf-version-5` and is
+The extensions are described in
+:ref:`amdgpu-dwarf-changes-relative-to-dwarf-version-5` and are
 organized to follow the section ordering of DWARF Version 5. It includes notes
 to indicate the corresponding DWARF Version 5 sections to which they pertain.
 Other notes describe additional changes that may be worth considering, and to
 raise questions.
 
-.. _amdgpu-dwarf-proposed-changes-relative-to-dwarf-version-5:
+.. _amdgpu-dwarf-changes-relative-to-dwarf-version-5:
 
-Proposed Changes Relative to DWARF Version 5
-============================================
+Changes Relative to DWARF Version 5
+===================================
 
 General Description
 -------------------
@@ -463,7 +456,7 @@ DWARF Expressions
 .. note::
 
   This section, and its nested sections, replaces DWARF Version 5 section 2.5
-  and section 2.6. The new proposed DWARF expression operations are defined as
+  and section 2.6. The new DWARF expression operation extensions are defined as
   well as clarifying the extensions to already existing DWARF Version 5
   operations. It is based on the text of the existing DWARF Version 5 standard.
 
@@ -1432,8 +1425,8 @@ There are these special value operations currently defined:
       register hook reads bytes from the next register (or reads out of bounds
       for the last register!). Removing use of the target hook does not cause
       any test failures in common architectures (except an illegal hand written
-      assembly test). If a target architecture requires this behavior, this
-      proposal allows a composite location description to be used to combine
+      assembly test). If a target architecture requires this behavior, these
+      extensions allow a composite location description to be used to combine
       multiple registers.
 
 2.  ``DW_OP_deref``
@@ -1507,17 +1500,18 @@ There are these special value operations currently defined:
 
       This definition makes it an evaluation error if L is a register location
       description that has less than TS bits remaining in the register storage.
-      Particularly since this proposal extends location descriptions to have a
-      bit offset, it would be odd to define this as performing sign extension
+      Particularly since these extensions extend location descriptions to have
+      a bit offset, it would be odd to define this as performing sign extension
       based on the type, or be target architecture dependent, as the number of
       remaining bits could be any number. This matches the GDB implementation
       for ``DW_OP_deref_type``.
 
-      This proposal defines ``DW_OP_*breg*`` in terms of ``DW_OP_regval_type``.
-      ``DW_OP_regval_type`` is defined in terms of ``DW_OP_regx``, which uses a
-      0 bit offset, and ``DW_OP_deref_type``. Therefore, it requires the
-      register size to be greater or equal to the address size of the address
-      space. This matches the GDB implementation for ``DW_OP_*breg*``.
+      These extensions define ``DW_OP_*breg*`` in terms of
+      ``DW_OP_regval_type``. ``DW_OP_regval_type`` is defined in terms of
+      ``DW_OP_regx``, which uses a 0 bit offset, and ``DW_OP_deref_type``.
+      Therefore, it requires the register size to be greater or equal to the
+      address size of the address space. This matches the GDB implementation for
+      ``DW_OP_*breg*``.
 
     The DWARF is ill-formed if D is not in the current compilation unit, D is
     not a ``DW_TAG_base_type`` debugging information entry, or if TS divided by
@@ -2410,7 +2404,7 @@ compatible with the definitions in DWARF Version 5.*
 
     .. note::
 
-      Since this proposal allows location descriptions to be entries on the
+      Since these extensions allow location descriptions to be entries on the
       stack, a simpler operation to create composite location descriptions. For
       example, just one operation that specifies how many parts, and pops pairs
       of stack entries for the part size and location description. Not only
@@ -2693,15 +2687,15 @@ DWARF address space identifiers are used by:
 
 .. note::
 
-  With the definition of DWARF address classes and DWARF address spaces in this
-  proposal, DWARF Version 5 table 2.7 needs to be updated. It seems it is an
+  With the definition of DWARF address classes and DWARF address spaces in these
+  extensions, DWARF Version 5 table 2.7 needs to be updated. It seems it is an
   example of DWARF address spaces and not DWARF address classes.
 
 .. note::
 
-  With the expanded support for DWARF address spaces in this proposal, it may be
-  worth examining if DWARF segments can be eliminated and DWARF address spaces
-  used instead.
+  With the expanded support for DWARF address spaces in these extensions, it may
+  be worth examining if DWARF segments can be eliminated and DWARF address
+  spaces used instead.
 
   That may involve extending DWARF address spaces to also be used to specify
   code locations. In target architectures that use different memory areas for
@@ -2751,7 +2745,7 @@ DWARF address space identifiers are used by:
   debugger information entry type modifier that can be applied to a pointer type
   and reference type. The ``DW_AT_address_class`` attribute could be re-defined
   to not be target architecture specific and instead define generalized language
-  values (as is proposed above for DWARF address classes in the table
+  values (as presented above for DWARF address classes in the table
   :ref:`amdgpu-dwarf-address-class-table`) that will support OpenCL and other
   languages using memory spaces. The ``DW_AT_address_class`` attribute could be
   defined to not be applied to pointer types or reference types, but instead
@@ -2772,7 +2766,7 @@ DWARF address space identifiers are used by:
   variable allocation in address classes. Such variable allocation would result
   in the variable's location description needing an address space.
 
-  The approach proposed in :ref:`amdgpu-dwarf-address-class-table` is to define
+  The approach presented in :ref:`amdgpu-dwarf-address-class-table` is to define
   the default ``DW_ADDR_none`` to be the generic address class and not the
   global address class. This matches how CLANG and LLVM have added support for
   CUDA-like languages on top of existing C++ language support. This allows all
@@ -2827,7 +2821,7 @@ Debugging Information Entry Attributes
 .. note::
 
   This section provides changes to existing debugger information entry
-  attributes and defines attributes added by the proposal. These would be
+  attributes and defines attributes added by these extensions. These would be
   incorporated into the appropriate DWARF Version 5 chapter 2 sections.
 
 1.  ``DW_AT_location``
@@ -3419,8 +3413,8 @@ Call Frame Information
 .. note::
 
   This section provides changes to existing call frame information and defines
-  instructions added by the proposal. Additional support is added for address
-  spaces. Register unwind DWARF expressions are generalized to allow any
+  instructions added by these extensions. Additional support is added for
+  address spaces. Register unwind DWARF expressions are generalized to allow any
   location description, including those with composite and implicit location
   descriptions.
 
@@ -3578,7 +3572,7 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
 
     .. note::
 
-      Would this be increased to 5 to reflect the changes in the proposal?
+      Would this be increased to 5 to reflect the changes in these extensions?
 
 4.  ``augmentation`` (sequence of UTF-8 characters)
 
@@ -4243,8 +4237,9 @@ debugger information entries.
 Examples
 ========
 
-The AMD GPU specific usage of the features in the proposal, including examples,
-is available at :ref:`amdgpu-dwarf-debug-information`.
+The AMD GPU specific usage of the features in these extensions, including
+examples, is available at *User Guide for AMDGPU Backend* section
+:ref:`amdgpu-dwarf-debug-information`.
 
 .. note::
 
