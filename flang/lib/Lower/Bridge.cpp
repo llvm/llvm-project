@@ -1678,6 +1678,22 @@ private:
       }
       return;
     }
+    if (var.isAlias()) {
+      auto aliasOffset = var.getAlias();
+      assert(storeMap.count(aliasOffset));
+      auto store = storeMap.find(aliasOffset)->second;
+      auto i8Ty = builder->getIntegerType(8);
+      auto i8Ptr = builder->getRefType(i8Ty);
+      auto seqTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
+      auto base = builder->createConvert(loc, seqTy, store);
+      llvm::SmallVector<mlir::Value, 1> offs{
+          builder->createIntegerConstant(loc, idxTy, aliasOffset)};
+      auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
+      auto addrOf =
+          builder->createConvert(loc, builder->getRefType(genType(sym)), ptr);
+      addSymbol(sym, addrOf);
+      return;
+    }
     if (const auto *details =
             sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
       // FIXME: an exported module variable will have external linkage.
@@ -1834,18 +1850,34 @@ private:
     return local;
   }
 
-  /// This is a primary store for a set of EQUIVALENCED variables. Create the
+  /// This is an aggregate store for a set of EQUIVALENCED variables. Create the
   /// store on the stack and add it to the map.
-  void
-  instantiatePrimaryStore(const Fortran::lower::pft::Variable &var,
-                          llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
-    assert(var.isPrimaryStore());
-    // Allocate an anonymous block of memory.
-    auto off = std::get<0>(var.getPrimaryStore());
-    auto size = std::get<1>(var.getPrimaryStore());
+  void instantiateAggregateStore(
+      const Fortran::lower::pft::Variable &var,
+      llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
+    assert(var.isAggregateStore());
+    auto off = std::get<0>(var.getInterval());
     auto i8Ty = builder->getIntegerType(8);
     auto loc = toLocation();
     auto idxTy = builder->getIndexType();
+    if (var.isGlobal()) {
+      auto &st = var.getAggregateStore();
+      // global address must already be in the map
+      auto addr = lookupSymbol(*st.obj);
+      assert(addr && "global variable must already be in map");
+      auto i8PtrTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
+      auto i8Addr = builder->createConvert(loc, i8PtrTy, addr);
+      // adjust for displacement of the global variable relative to the
+      // aggregate interval
+      llvm::SmallVector<mlir::Value, 1> offs = {
+          builder->createIntegerConstant(loc, idxTy, off - st.offset)};
+      auto stAddr =
+          builder->create<fir::CoordinateOp>(loc, i8PtrTy, i8Addr, offs);
+      storeMap[off] = stAddr;
+      return;
+    }
+    // Allocate an anonymous block of memory.
+    auto size = std::get<1>(var.getInterval());
     llvm::SmallVector<mlir::Value, 2> shape = {
         builder->createIntegerConstant(loc, idxTy, size)};
     auto local =
@@ -1858,34 +1890,26 @@ private:
   /// which its properties depend will already have been visited.
   void instantiateLocal(const Fortran::lower::pft::Variable &var,
                         llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
-    mlir::Value preAlloc;
     const auto &sym = var.getSymbol();
     const auto loc = genLocation(sym.name());
     auto idxTy = builder->getIndexType();
-    if (var.isAlias()) {
-      // If var is an alias, then use the alias offset to lookup the
-      // corresponding primary storage for this alias set. The primary storage
-      // must have already been instantiated and added to the `storeMap`.  Note
-      // that this does not handle EQUIVALENCED globals. Assumably those will be
-      // like COMMON blocks.
-      if (preAlloc) {
-        llvm::errs() << "TODO: EQUIVALENCE used on variable in COMMON\n";
-        exit(1);
-      }
-      assert(!preAlloc && "cannot be in COMMON");
-      auto aliasOffset = var.getAlias();
-      assert(storeMap.count(aliasOffset));
-      auto store = storeMap.find(aliasOffset)->second;
-      auto i8Ty = builder->getIntegerType(8);
-      auto i8Ptr = builder->getRefType(i8Ty);
-      auto seqTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
-      auto base = builder->createConvert(loc, seqTy, store);
-      llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
-          loc, idxTy, sym.offset() - aliasOffset)};
-      auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
-      preAlloc =
-          builder->createConvert(loc, builder->getRefType(genType(sym)), ptr);
+    if (!var.isAlias()) {
+      mapSymbolAttributes(var, storeMap, mlir::Value{});
+      return;
     }
+    auto aliasOffset = var.getAlias();
+    assert(storeMap.count(aliasOffset));
+    auto store = storeMap.find(aliasOffset)->second;
+    auto i8Ty = builder->getIntegerType(8);
+    auto i8Ptr = builder->getRefType(i8Ty);
+    auto seqTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
+    auto base = builder->createConvert(loc, seqTy, store);
+    llvm::SmallVector<mlir::Value, 1> offs{
+        builder->createIntegerConstant(loc, idxTy, sym.offset() - aliasOffset)};
+    auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
+    auto preAlloc =
+        builder->createConvert(loc, builder->getRefType(genType(sym)), ptr);
+
     mapSymbolAttributes(var, storeMap, preAlloc);
   }
 
@@ -2129,11 +2153,12 @@ private:
 
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
-    if (var.isPrimaryStore())
-      instantiatePrimaryStore(var, storeMap);
-    else if (auto *common =
-                 Fortran::semantics::FindCommonBlockContaining(var.getSymbol()))
-      instantiateCommon(*common, var, storeMap);
+    if (var.isAggregateStore())
+      instantiateAggregateStore(var, storeMap);
+    else if (Fortran::lower::declaredInCommonBlock(var.getSymbol()))
+      instantiateCommon(
+          *Fortran::semantics::FindCommonBlockContaining(var.getSymbol()), var,
+          storeMap);
     else if (var.isGlobal())
       instantiateGlobal(var, storeMap);
     else
@@ -2192,7 +2217,7 @@ private:
         deferredFuncResultList;
     llvm::DenseMap<std::size_t, mlir::Value> storeMap;
     for (const auto &var : funit.getOrderedSymbolTable()) {
-      if (var.isPrimaryStore()) {
+      if (var.isAggregateStore()) {
         instantiateVar(var, storeMap);
         continue;
       }

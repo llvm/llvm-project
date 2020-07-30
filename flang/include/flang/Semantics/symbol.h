@@ -653,7 +653,7 @@ public:
   const DerivedTypeSpec *GetParentTypeSpec(const Scope * = nullptr) const;
 
   SemanticsContext &GetSemanticsContext() const;
-  LLVM_DUMP_METHOD void dump() { llvm::errs() << *this << '\n'; }
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
 
 private:
   const Scope *owner_;

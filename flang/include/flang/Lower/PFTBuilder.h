@@ -33,6 +33,11 @@ class SemanticsContext;
 class Scope;
 } // namespace semantics
 namespace lower {
+
+/// Disambiguate between variables that are declared inside a COMMON block and
+/// variables that slide into a COMMON block by EQUIVALENCE.
+bool declaredInCommonBlock(const semantics::Symbol &sym);
+
 namespace pft {
 
 struct Evaluation;
@@ -361,61 +366,155 @@ struct ProgramUnit : ProgramVariant {
 /// Fortran EQUIVALENCE statements are a mechanism that introduces aliasing
 /// between named variables. The set of overlapping aliases will materialize a
 /// generic store object with a designated offset and size. Participant
-/// symbols will simply be pointers into the primary store.
+/// symbols will simply be pointers into the aggregate store.
+///
+/// EQUIVALENCE can also interact with COMMON and other global variables to
+/// imply aliasing between (subparts of) a global and other local variable
+/// names.
 ///
 /// Properties can be applied by lowering. For example, a local array that is
 /// known to be very large may be transformed into a heap allocated entity by
 /// lowering. That decision would be tracked in its Variable instance.
 struct Variable {
-  using StoreInterval = std::tuple<std::size_t, std::size_t>;
+  /// Most variables are nominal and require the allocation of local/global
+  /// storage space. A nominal variable may also be an alias for some other
+  /// (subpart) of storage.
+  struct Nominal {
+    Nominal(const semantics::Symbol *symbol, int depth, bool global)
+        : symbol{symbol}, depth{depth}, global{global} {}
+    const semantics::Symbol *symbol{};
+    int depth{};
+    bool global{};
+    bool heapAlloc{}; // variable needs deallocation on exit
+    bool pointer{};
+    bool target{};
+    bool aliaser{}; // participates in EQUIVALENCE union
+    std::size_t aliasOffset{};
+  };
+
+  using Interval = std::tuple<std::size_t, std::size_t>;
+
+  /// An interval of storage is a contiguous block of memory to be allocated or
+  /// mapped onto another variable. Aliaser variables will be pointers into
+  /// interval stores and may overlap each other.
+  struct IntervalStore {
+    IntervalStore(Interval &&interval, bool global)
+        : interval{std::move(interval)}, global{global} {}
+    IntervalStore(Interval &&interval, bool global,
+                  const semantics::Symbol *obj, std::size_t offset)
+        : interval{std::move(interval)}, global{global}, obj{obj},
+          offset{offset} {}
+    Interval interval{};
+    bool global{};
+    const semantics::Symbol *obj{};
+    std::size_t offset{}; // offset of obj relative to interval
+  };
+
   explicit Variable(const Fortran::semantics::Symbol &sym, bool global = false,
                     int depth = 0)
-      : u{&sym}, depth{depth}, global{global} {}
-  explicit Variable(StoreInterval &&store, bool global = false)
-      : u{std::move(store)}, depth{0}, global{global} {}
+      : var{Nominal(&sym, depth, global)} {}
+  explicit Variable(Interval &&interval, bool global = false)
+      : var{IntervalStore(std::move(interval), global)} {}
+  explicit Variable(IntervalStore &&istore) : var{std::move(istore)} {}
 
+  /// Return the front-end symbol for a nominal variable.
   const Fortran::semantics::Symbol &getSymbol() const {
     assert(hasSymbol());
-    return *std::get<const Fortran::semantics::Symbol *>(u);
+    return *std::get<Nominal>(var).symbol;
   }
 
-  const StoreInterval &getPrimaryStore() const {
-    assert(isPrimaryStore());
-    return std::get<StoreInterval>(u);
+  /// Return the aggregate store.
+  const IntervalStore &getAggregateStore() const {
+    assert(isAggregateStore());
+    return std::get<IntervalStore>(var);
   }
 
-  bool hasSymbol() const {
-    return std::holds_alternative<const Fortran::semantics::Symbol *>(u);
+  /// Return the interval range of an aggregate store.
+  const Interval &getInterval() const {
+    assert(isAggregateStore());
+    return std::get<IntervalStore>(var).interval;
   }
-  bool isPrimaryStore() const { return !hasSymbol(); }
-  bool isGlobal() const { return global; }
-  bool isHeapAlloc() const { return heapAlloc; }
-  bool isPointer() const { return pointer; }
-  bool isTarget() const { return target; }
-  int getDepth() const { return depth; }
 
-  bool isAlias() const { return aliasee; }
-  std::size_t getAlias() const { return aliasOffset; }
+  /// Only nominal variable have front-end symbols.
+  bool hasSymbol() const { return std::holds_alternative<Nominal>(var); }
+
+  /// Is this an aggregate store?
+  bool isAggregateStore() const {
+    return std::holds_alternative<IntervalStore>(var);
+  }
+
+  /// Is this variable a global?
+  bool isGlobal() const {
+    return std::visit([](const auto &x) { return x.global; }, var);
+  }
+
+  bool isHeapAlloc() const {
+    if (auto *s = std::get_if<Nominal>(&var))
+      return s->heapAlloc;
+    return false;
+  }
+  bool isPointer() const {
+    if (auto *s = std::get_if<Nominal>(&var))
+      return s->pointer;
+    return false;
+  }
+  bool isTarget() const {
+    if (auto *s = std::get_if<Nominal>(&var))
+      return s->target;
+    return false;
+  }
+
+  /// An alias(er) is a variable that is part of a EQUIVALENCE that is allocated
+  /// locally on the stack.
+  bool isAlias() const {
+    if (auto *s = std::get_if<Nominal>(&var))
+      return s->aliaser;
+    return false;
+  }
+  std::size_t getAlias() const {
+    if (auto *s = std::get_if<Nominal>(&var))
+      return s->aliasOffset;
+    return 0;
+  }
   void setAlias(std::size_t offset) {
-    aliasee = true;
-    aliasOffset = offset;
+    if (auto *s = std::get_if<Nominal>(&var)) {
+      s->aliaser = true;
+      s->aliasOffset = offset;
+    } else {
+      llvm_unreachable("not a nominal var");
+    }
   }
 
-  void setHeapAlloc(bool to = true) { heapAlloc = to; }
-  void setPointer(bool to = true) { pointer = to; }
-  void setTarget(bool to = true) { target = to; }
+  void setHeapAlloc(bool to = true) {
+    if (auto *s = std::get_if<Nominal>(&var))
+      s->heapAlloc = to;
+    else
+      llvm_unreachable("not a nominal var");
+  }
+  void setPointer(bool to = true) {
+    if (auto *s = std::get_if<Nominal>(&var))
+      s->pointer = to;
+    else
+      llvm_unreachable("not a nominal var");
+  }
+  void setTarget(bool to = true) {
+    if (auto *s = std::get_if<Nominal>(&var))
+      s->target = to;
+    else
+      llvm_unreachable("not a nominal var");
+  }
+
+  /// The depth is recorded for nominal variables as a debugging aid.
+  int getDepth() const {
+    if (auto *s = std::get_if<Nominal>(&var))
+      return s->depth;
+    return 0;
+  }
 
   LLVM_DUMP_METHOD void dump() const;
 
 private:
-  std::variant<const Fortran::semantics::Symbol *, StoreInterval> u;
-  int depth;
-  bool global;
-  bool heapAlloc{false}; // variable needs deallocation on exit
-  bool pointer{false};
-  bool target{false};
-  bool aliasee{false}; // participates in EQUIVALENCE union
-  std::size_t aliasOffset{};
+  std::variant<Nominal, IntervalStore> var;
 };
 
 /// Function-like units may contain evaluations (executable statements) and
