@@ -70,7 +70,7 @@ struct NOptionMap {
   NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
     Options.reserve(OptionMap.size());
     for (const auto &KeyValue : OptionMap)
-      Options.emplace_back(KeyValue.first, KeyValue.second.Value);
+      Options.emplace_back(KeyValue.getKey(), KeyValue.getValue().Value);
   }
   ClangTidyOptions::OptionMap denormalize(IO &) {
     ClangTidyOptions::OptionMap Map;
@@ -157,8 +157,10 @@ ClangTidyOptions ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   mergeVectors(Result.ExtraArgsBefore, Other.ExtraArgsBefore);
 
   for (const auto &KeyValue : Other.CheckOptions) {
-    Result.CheckOptions[KeyValue.first] = ClangTidyValue(
-        KeyValue.second.Value, KeyValue.second.Priority + Priority);
+    Result.CheckOptions.insert_or_assign(
+        KeyValue.getKey(),
+        ClangTidyValue(KeyValue.getValue().Value,
+                       KeyValue.getValue().Priority + Priority));
   }
 
   return Result;
