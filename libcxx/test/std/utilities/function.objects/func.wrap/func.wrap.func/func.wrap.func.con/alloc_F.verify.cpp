@@ -7,23 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 // <functional>
-// XFAIL: c++03, c++11, c++14
+
+// UNSUPPORTED: c++03, c++11, c++14
 
 // class function<R(ArgTypes...)>
 
-// template<class A> function(allocator_arg_t, const A&);
-
-// This test runs in C++03, but we have deprecated using std::function in C++03.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// template<class F, class A> function(allocator_arg_t, const A&, F);
+//
+// This signature was removed in C++17
 
 #include <functional>
 #include <cassert>
 
-#include "min_allocator.h"
+#include "test_macros.h"
+
+void foo(int) {}
 
 int main(int, char**)
 {
-    std::function<int(int)> f(std::allocator_arg, std::allocator<int>());
-
-  return 0;
+    std::function<void(int)> f(std::allocator_arg, std::allocator<int>(), foo); // expected-error {{no matching constructor for initialization of}}
+    return 0;
 }
