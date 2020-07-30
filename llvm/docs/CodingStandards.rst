@@ -174,6 +174,16 @@ used as an abstract.  Any additional information should be separated by a blank
 line.  If an algorithm is based on a paper or is described in another source,
 provide a reference.
 
+Header Guard
+""""""""""""
+
+The header file's guard should be the all-caps path that a user of this header
+would #include, using '_' instead of path separator and extension marker. 
+For example, the header file
+``llvm/include/llvm/Analysis/Utils/Local.h`` would be ``#include``-ed as 
+``#include "llvm/Analysis/Utils/Local.h"``, so its guard is 
+``LLVM_ANALYSIS_UTILS_LOCAL_H``.
+
 Class overviews
 """""""""""""""
 
