@@ -1642,6 +1642,17 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
       default: break;
+      case Intrinsic::abs:
+        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        // Otherwise, if this call is undefined for INT_MIN, the result is
+        // positive.
+        if (match(II->getArgOperand(1), m_One()))
+          Known.Zero.setSignBit();
+        // Absolute value preserves trailing zero count.
+        Known.Zero.setLowBits(Known2.Zero.countTrailingOnes());
+        // FIXME: Handle known negative/non-negative input?
+        // FIXME: Calculate the negated Known bits and combine them?
+        break;
       case Intrinsic::bitreverse:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         Known.Zero |= Known2.Zero.reverseBits();
