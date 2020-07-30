@@ -463,7 +463,18 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
 static bool isUseSafeToFold(const SIInstrInfo *TII,
                             const MachineInstr &MI,
                             const MachineOperand &UseMO) {
-  return !UseMO.isUndef() && !TII->isSDWA(MI);
+  if (UseMO.isUndef() || TII->isSDWA(MI))
+    return false;
+
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_MOV_B32_e32:
+  case AMDGPU::V_MOV_B32_e64:
+  case AMDGPU::V_MOV_B64_PSEUDO:
+    // Do not fold into an indirect mov.
+    return !MI.hasRegisterImplicitUseOperand(AMDGPU::M0);
+  }
+
+  return true;
   //return !MI.hasRegisterImplicitUseOperand(UseMO.getReg());
 }
 
