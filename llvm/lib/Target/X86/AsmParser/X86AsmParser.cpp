@@ -926,9 +926,9 @@ private:
                                      bool IsParsingOffsetOperator = false);
 
   std::unique_ptr<X86Operand> ParseMemOperand(unsigned SegReg,
-                                              const MCExpr *&Disp,
-                                              const SMLoc &StartLoc,
-                                              SMLoc &EndLoc);
+                                              const MCExpr *Disp,
+                                              SMLoc StartLoc,
+                                              SMLoc EndLoc);
 
   X86::CondCode ParseConditionCode(StringRef CCode);
 
@@ -2418,9 +2418,9 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands) {
 /// ParseMemOperand: 'seg : disp(basereg, indexreg, scale)'.  The '%ds:' prefix
 /// has already been parsed if present. disp may be provided as well.
 std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
-                                                          const MCExpr *&Disp,
-                                                          const SMLoc &StartLoc,
-                                                          SMLoc &EndLoc) {
+                                                          const MCExpr *Disp,
+                                                          SMLoc StartLoc,
+                                                          SMLoc EndLoc) {
   MCAsmParser &Parser = getParser();
   SMLoc Loc;
   // Based on the initial passed values, we may be in any of these cases, we are
