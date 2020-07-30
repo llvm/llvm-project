@@ -141,8 +141,7 @@ define void @test_abs3(i32 %x) {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
 ; CHECK:       split:
-; CHECK-NEXT:    [[C1:%.*]] = icmp sge i32 [[A]], 0
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[A]], 0
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
