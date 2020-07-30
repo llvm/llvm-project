@@ -103,3 +103,33 @@ func @tan(%arg0: f32) {
 	%0 = spv.GLSL.Tan %arg0 : f32
 	return
 }
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Tanh
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @tanh
+func @tanh(%arg0: f32) {
+	// CHECK: %[[TWO:.*]] = llvm.mlir.constant(2.000000e+00 : f32) : !llvm.float
+  // CHECK: %[[X2:.*]] = llvm.fmul %[[TWO]], %{{.*}} : !llvm.float
+  // CHECK: %[[EXP:.*]] = "llvm.intr.exp"(%[[X2]]) : (!llvm.float) -> !llvm.float
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : !llvm.float
+  // CHECK: %[[T0:.*]] = llvm.fsub %[[EXP]], %[[ONE]] : !llvm.float
+  // CHECK: %[[T1:.*]] = llvm.fadd %[[EXP]], %[[ONE]] : !llvm.float
+  // CHECK: llvm.fdiv %[[T0]], %[[T1]] : !llvm.float
+	%0 = spv.GLSL.Tanh %arg0 : f32
+	return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.InverseSqrt
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @inverse_sqrt
+func @inverse_sqrt(%arg0: f32) {
+	// CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : !llvm.float
+  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%{{.*}}) : (!llvm.float) -> !llvm.float
+	// CHECK: llvm.fdiv %[[ONE]], %[[SQRT]] : !llvm.float
+	%0 = spv.GLSL.InverseSqrt %arg0 : f32
+	return
+}
