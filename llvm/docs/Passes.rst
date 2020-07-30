@@ -676,6 +676,15 @@ This pass loops over all of the functions in the input module, looking for a
 main function.  If a main function is found, all other functions and all global
 variables with initializers are marked as internal.
 
+``-ipconstprop``: Interprocedural constant propagation
+------------------------------------------------------
+
+This pass implements an *extremely* simple interprocedural constant propagation
+pass.  It could certainly be improved in many different ways, like using a
+worklist.  This pass makes arguments dead, but does not remove them.  The
+existing dead argument elimination pass should be run after this to clean up
+the mess.
+
 ``-ipsccp``: Interprocedural Sparse Conditional Constant Propagation
 --------------------------------------------------------------------
 
