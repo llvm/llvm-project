@@ -1277,3 +1277,17 @@ func @bfloat(%arg0: bf16) -> bf16 {
   return %arg0 : bf16
 }
 // CHECK-NEXT: return %{{.*}} : !llvm.bfloat
+
+// -----
+
+// CHECK-LABEL: func @memref_index
+// CHECK-SAME: %arg0: !llvm<"i64*">, %arg1: !llvm<"i64*">,
+// CHECK-SAME: %arg2: !llvm.i64, %arg3: !llvm.i64, %arg4: !llvm.i64)
+// CHECK-SAME: -> !llvm<"{ i64*, i64*, i64, [1 x i64], [1 x i64] }">
+// CHECK32-LABEL: func @memref_index
+// CHECK32-SAME: %arg0: !llvm<"i32*">, %arg1: !llvm<"i32*">,
+// CHECK32-SAME: %arg2: !llvm.i32, %arg3: !llvm.i32, %arg4: !llvm.i32)
+// CHECK32-SAME: -> !llvm<"{ i32*, i32*, i32, [1 x i32], [1 x i32] }">
+func @memref_index(%arg0: memref<32xindex>) -> memref<32xindex> {
+  return %arg0 : memref<32xindex>
+}
