@@ -13,6 +13,7 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
 
@@ -479,6 +480,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   createSyntheticSections();
+  symtab->addDSOHandle(in.header);
 
   // Initialize InputSections.
   for (InputFile *file : inputFiles) {
