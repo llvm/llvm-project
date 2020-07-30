@@ -23,8 +23,6 @@ define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %res
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) #0
-; Function Attrs: nounwind writeonly
 declare void @llvm.amdgcn.raw.buffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32 immarg) #1
 
 ; Function Attrs: nounwind readnone speculatable
