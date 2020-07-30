@@ -43,7 +43,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         architecture = root.find("architecture")
         self.assertIsNotNone(architecture)
-        self.assertEqual(architecture.text, self.getArchitecture())
+        self.assertIn(self.getArchitecture(), architecture.text)
 
         feature = root.find("feature")
         self.assertIsNotNone(feature)
