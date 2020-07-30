@@ -302,18 +302,3 @@ llvm::createCFGSimplificationPass(SimplifyCFGOptions Options,
                                   std::function<bool(const Function &)> Ftor) {
   return new CFGSimplifyPass(Options, std::move(Ftor));
 }
-
-// Public interface to the CFGSimplification pass
-FunctionPass *
-llvm::createCFGSimplificationPass(unsigned Threshold, bool ForwardSwitchCond,
-                                  bool ConvertSwitch, bool KeepLoops,
-                                  bool SinkCommon,
-                                  std::function<bool(const Function &)> Ftor) {
-  return new CFGSimplifyPass(SimplifyCFGOptions()
-                                 .bonusInstThreshold(Threshold)
-                                 .forwardSwitchCondToPhi(ForwardSwitchCond)
-                                 .convertSwitchToLookupTable(ConvertSwitch)
-                                 .needCanonicalLoops(KeepLoops)
-                                 .sinkCommonInsts(SinkCommon),
-                             std::move(Ftor));
-}

@@ -260,11 +260,6 @@ FunctionPass *createCFGSimplificationPass(
     SimplifyCFGOptions Options = SimplifyCFGOptions(),
     std::function<bool(const Function &)> Ftor = nullptr);
 
-FunctionPass *createCFGSimplificationPass(
-    unsigned Threshold, bool ForwardSwitchCond = false,
-    bool ConvertSwitch = false, bool KeepLoops = true, bool SinkCommon = false,
-    std::function<bool(const Function &)> Ftor = nullptr);
-
 //===----------------------------------------------------------------------===//
 //
 // FlattenCFG - flatten CFG, reduce number of conditional branches by using
