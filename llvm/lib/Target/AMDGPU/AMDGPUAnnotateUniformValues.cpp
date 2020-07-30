@@ -131,10 +131,20 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   // We're tracking up to the Function boundaries, and cannot go beyond because
   // of FunctionPass restrictions. We can ensure that is memory not clobbered
   // for memory operations that are live in to entry points only.
-  bool NotClobbered = isEntryFunc && !isClobberedInFunction(&I);
   Instruction *PtrI = dyn_cast<Instruction>(Ptr);
-  if (!PtrI && NotClobbered && isGlobalLoad(I)) {
-    if (isa<Argument>(Ptr) || isa<GlobalValue>(Ptr)) {
+
+  if (!isEntryFunc) {
+    if (PtrI)
+      setUniformMetadata(PtrI);
+    return;
+  }
+
+  bool NotClobbered = false;
+  if (PtrI)
+    NotClobbered = !isClobberedInFunction(&I);
+  else if (isa<Argument>(Ptr) || isa<GlobalValue>(Ptr)) {
+    if (isGlobalLoad(I) && !isClobberedInFunction(&I)) {
+      NotClobbered = true;
       // Lookup for the existing GEP
       if (noClobberClones.count(Ptr)) {
         PtrI = noClobberClones[Ptr];
