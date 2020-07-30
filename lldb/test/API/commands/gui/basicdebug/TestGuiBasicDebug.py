@@ -25,10 +25,8 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
 
         escape_key = chr(27).encode()
 
-        # Start the GUI and close the welcome window.
+        # Start the GUI.
         self.child.sendline("gui")
-        self.child.expect("Welcome to the LLDB curses GUI.")
-        self.child.send(escape_key)
 
         # Simulate a simple debugging session.
         self.child.send("s") # step

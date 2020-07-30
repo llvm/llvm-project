@@ -29,9 +29,8 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
         escape_key = chr(27).encode()
         down_key = chr(27)+'OB' # for vt100 terminal (lldbexpect sets TERM=vt100)
 
-        # Start the GUI and close the welcome window.
+        # Start the GUI.
         self.child.sendline("gui")
-        self.child.send(escape_key)
         self.child.expect_exact("Sources") # wait for gui
 
         # Go to next line, set a breakpoint.

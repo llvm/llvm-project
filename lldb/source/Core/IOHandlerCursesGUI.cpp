@@ -7667,14 +7667,6 @@ void IOHandlerCursesGUI::Activate() {
     status_window_sp->SetDelegate(
         WindowDelegateSP(new StatusBarWindowDelegate(m_debugger)));
 
-    // Show the main help window once the first time the curses GUI is
-    // launched
-    static bool g_showed_help = false;
-    if (!g_showed_help) {
-      g_showed_help = true;
-      main_window_sp->CreateHelpSubwindow();
-    }
-
     // All colors with black background.
     init_pair(1, COLOR_BLACK, COLOR_BLACK);
     init_pair(2, COLOR_RED, COLOR_BLACK);

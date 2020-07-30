@@ -26,18 +26,9 @@ class BasicGuiCommandTest(PExpectTest):
 
         escape_key = chr(27).encode()
 
-        # Start the GUI for the first time and check for the welcome window.
+        # Start the GUI.
         self.child.sendline("gui")
-        self.child.expect_exact("Welcome to the LLDB curses GUI.")
 
-        # Press escape to quit the welcome screen
-        self.child.send(escape_key)
-        # Press escape again to quit the gui
-        self.child.send(escape_key)
-        self.expect_prompt()
-
-        # Start the GUI a second time, this time we should have the normal GUI.
-        self.child.sendline("gui")
         # Check for GUI elements in the menu bar.
         self.child.expect_exact("Target")
         self.child.expect_exact("Process")
