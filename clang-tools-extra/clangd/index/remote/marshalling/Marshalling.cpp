@@ -10,6 +10,7 @@
 #include "Headers.h"
 #include "Index.pb.h"
 #include "Protocol.h"
+#include "index/Index.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
@@ -33,10 +34,10 @@ namespace remote {
 
 namespace {
 
-template <typename MessageT>
-llvm::Expected<llvm::DenseSet<SymbolID>> getIDs(MessageT *Message) {
+template <typename IDRange>
+llvm::Expected<llvm::DenseSet<SymbolID>> getIDs(IDRange IDs) {
   llvm::DenseSet<SymbolID> Result;
-  for (const auto &ID : Message->ids()) {
+  for (const auto &ID : IDs) {
     auto SID = SymbolID::fromStr(StringRef(ID));
     if (!SID)
       return SID.takeError();
@@ -69,7 +70,7 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
 llvm::Expected<clangd::LookupRequest>
 Marshaller::fromProtobuf(const LookupRequest *Message) {
   clangd::LookupRequest Req;
-  auto IDs = getIDs(Message);
+  auto IDs = getIDs(Message->ids());
   if (!IDs)
     return IDs.takeError();
   Req.IDs = std::move(*IDs);
@@ -100,11 +101,24 @@ Marshaller::fromProtobuf(const FuzzyFindRequest *Message) {
 llvm::Expected<clangd::RefsRequest>
 Marshaller::fromProtobuf(const RefsRequest *Message) {
   clangd::RefsRequest Req;
-  auto IDs = getIDs(Message);
+  auto IDs = getIDs(Message->ids());
   if (!IDs)
     return IDs.takeError();
   Req.IDs = std::move(*IDs);
   Req.Filter = static_cast<RefKind>(Message->filter());
+  if (Message->limit())
+    Req.Limit = Message->limit();
+  return Req;
+}
+
+llvm::Expected<clangd::RelationsRequest>
+Marshaller::fromProtobuf(const RelationsRequest *Message) {
+  clangd::RelationsRequest Req;
+  auto IDs = getIDs(Message->subjects());
+  if (!IDs)
+    return IDs.takeError();
+  Req.Subjects = std::move(*IDs);
+  Req.Predicate = static_cast<RelationKind>(Message->predicate());
   if (Message->limit())
     Req.Limit = Message->limit();
   return Req;
@@ -178,6 +192,24 @@ llvm::Optional<clangd::Ref> Marshaller::fromProtobuf(const Ref &Message) {
   return Result;
 }
 
+llvm::Optional<std::pair<clangd::SymbolID, clangd::Symbol>>
+Marshaller::fromProtobuf(const Relation &Message) {
+  auto SubjectID = SymbolID::fromStr(Message.subject_id());
+  if (!SubjectID) {
+    elog("Cannot convert Relation from protobuf (invalid Subject ID): {0}",
+         SubjectID.takeError());
+    return llvm::None;
+  }
+  if (!Message.has_object()) {
+    elog("Cannot convert Relation from protobuf (missing Object): {0}");
+    return llvm::None;
+  }
+  auto Object = fromProtobuf(Message.object());
+  if (!Object)
+    return llvm::None;
+  return std::make_pair(*SubjectID, *Object);
+}
+
 LookupRequest Marshaller::toProtobuf(const clangd::LookupRequest &From) {
   LookupRequest RPCRequest;
   for (const auto &SymbolID : From.IDs)
@@ -211,6 +243,16 @@ RefsRequest Marshaller::toProtobuf(const clangd::RefsRequest &From) {
   for (const auto &ID : From.IDs)
     RPCRequest.add_ids(ID.str());
   RPCRequest.set_filter(static_cast<uint32_t>(From.Filter));
+  if (From.Limit)
+    RPCRequest.set_limit(*From.Limit);
+  return RPCRequest;
+}
+
+RelationsRequest Marshaller::toProtobuf(const clangd::RelationsRequest &From) {
+  RelationsRequest RPCRequest;
+  for (const auto &ID : From.Subjects)
+    RPCRequest.add_subjects(ID.str());
+  RPCRequest.set_predicate(static_cast<uint32_t>(From.Predicate));
   if (From.Limit)
     RPCRequest.set_limit(*From.Limit);
   return RPCRequest;
@@ -271,6 +313,19 @@ llvm::Optional<Ref> Marshaller::toProtobuf(const clangd::Ref &From) {
     return llvm::None;
   }
   *Result.mutable_location() = *Location;
+  return Result;
+}
+
+llvm::Optional<Relation> Marshaller::toProtobuf(const clangd::SymbolID &Subject,
+                                                const clangd::Symbol &Object) {
+  Relation Result;
+  *Result.mutable_subject_id() = Subject.str();
+  auto SerializedObject = toProtobuf(Object);
+  if (!SerializedObject) {
+    elog("Can not convert Relation to protobuf (invalid symbol): {0}", Object);
+    return llvm::None;
+  }
+  *Result.mutable_object() = *SerializedObject;
   return Result;
 }
 
