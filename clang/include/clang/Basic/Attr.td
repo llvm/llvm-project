@@ -1881,9 +1881,10 @@ def ObjCBridgeRelated : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def NSErrorDomain : Attr {
+def NSErrorDomain : InheritableAttr {
   let Spellings = [GNU<"ns_error_domain">];
-  let Args = [IdentifierArgument<"ErrorDomain">];
+  let Subjects = SubjectList<[Enum], ErrorDiag>;
+  let Args = [DeclArgument<Var, "ErrorDomain">];
   let Documentation = [NSErrorDomainDocs];
 }
 
