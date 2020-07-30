@@ -90,6 +90,16 @@ func @get_extent(%shape : tensor<?xindex>, %idx : !shape.size) -> !shape.size {
 
 // -----
 
+// Don't lower `rank` if type is not error-free.
+// CHECK-LABEL: @rank
+func @rank(%shape : !shape.shape) {
+  // CHECK: shape.rank
+  %rank = shape.rank %shape : !shape.shape -> !shape.size
+  return
+}
+
+// -----
+
 // Express `get_extent` as `std.dim` when it relies directly on the outcome of a
 // `shape_of` operation.
 // CHECK-LABEL: @get_extent_shape_of

@@ -231,6 +231,10 @@ public:
 LogicalResult
 RankOpConverter::matchAndRewrite(shape::RankOp op, ArrayRef<Value> operands,
                                  ConversionPatternRewriter &rewriter) const {
+  // For now, this lowering supports only error-free types.
+  if (op.getType().isa<SizeType>())
+    return failure();
+
   shape::RankOp::Adaptor transformed(operands);
   rewriter.replaceOpWithNewOp<DimOp>(op, transformed.shape(), 0);
   return success();
