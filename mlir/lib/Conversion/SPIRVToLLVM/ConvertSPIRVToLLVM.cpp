@@ -802,6 +802,25 @@ public:
   }
 };
 
+class TanPattern : public SPIRVToLLVMConversion<spirv::GLSLTanOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLSLTanOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLSLTanOp tanOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = typeConverter.convertType(tanOp.getType());
+    if (!dstType)
+      return failure();
+
+    Location loc = tanOp.getLoc();
+    Value sin = rewriter.create<LLVM::SinOp>(loc, dstType, tanOp.operand());
+    Value cos = rewriter.create<LLVM::CosOp>(loc, dstType, tanOp.operand());
+    rewriter.replaceOpWithNewOp<LLVM::FDivOp>(tanOp, dstType, sin, cos);
+    return success();
+  }
+};
+
 class VariablePattern : public SPIRVToLLVMConversion<spirv::VariableOp> {
 public:
   using SPIRVToLLVMConversion<spirv::VariableOp>::SPIRVToLLVMConversion;
@@ -1025,6 +1044,15 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Function Call op
       FunctionCallPattern,
+
+      // GLSL extended instruction set ops
+      DirectConversionPattern<spirv::GLSLCeilOp, LLVM::FCeilOp>,
+      DirectConversionPattern<spirv::GLSLCosOp, LLVM::CosOp>,
+      DirectConversionPattern<spirv::GLSLExpOp, LLVM::ExpOp>,
+      DirectConversionPattern<spirv::GLSLFAbsOp, LLVM::FAbsOp>,
+      DirectConversionPattern<spirv::GLSLLogOp, LLVM::LogOp>,
+      DirectConversionPattern<spirv::GLSLSinOp, LLVM::SinOp>,
+      DirectConversionPattern<spirv::GLSLSqrtOp, LLVM::SqrtOp>, TanPattern,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
