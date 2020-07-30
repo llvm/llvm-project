@@ -84,6 +84,30 @@ module attributes {
      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
   }
 {
+  func @two_allocs_vector() {
+    %0 = alloc() : memref<4xvector<4xf32>, 3>
+    %1 = alloc() : memref<2xvector<2xi32>, 3>
+    return
+  }
+}
+
+//  CHECK-DAG: spv.globalVariable @__workgroup_mem__{{[0-9]+}}
+// CHECK-SAME:   !spv.ptr<!spv.struct<!spv.array<2 x vector<2xi32>, stride=8>>, Workgroup>
+//  CHECK-DAG: spv.globalVariable @__workgroup_mem__{{[0-9]+}}
+// CHECK-SAME:   !spv.ptr<!spv.struct<!spv.array<4 x vector<4xf32>, stride=16>>, Workgroup>
+//      CHECK: spv.func @two_allocs_vector()
+//      CHECK: spv.Return
+
+
+// -----
+
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  }
+{
   func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : index) {
     // expected-error @+2 {{unhandled allocation type}}
     // expected-error @+1 {{'std.alloc' op operand #0 must be index}}

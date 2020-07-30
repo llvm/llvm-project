@@ -170,7 +170,14 @@ static Optional<int64_t> getTypeNumBytes(Type t) {
       return llvm::None;
     }
     return bitWidth / 8;
-  } else if (auto memRefType = t.dyn_cast<MemRefType>()) {
+  }
+  if (auto vecType = t.dyn_cast<VectorType>()) {
+    auto elementSize = getTypeNumBytes(vecType.getElementType());
+    if (!elementSize)
+      return llvm::None;
+    return vecType.getNumElements() * *elementSize;
+  }
+  if (auto memRefType = t.dyn_cast<MemRefType>()) {
     // TODO: Layout should also be controlled by the ABI attributes. For now
     // using the layout from MemRef.
     int64_t offset;
@@ -343,26 +350,31 @@ static Optional<Type> convertMemrefType(const spirv::TargetEnv &targetEnv,
     return llvm::None;
   }
 
-  auto scalarType = type.getElementType().dyn_cast<spirv::ScalarType>();
-  if (!scalarType) {
-    LLVM_DEBUG(llvm::dbgs()
-               << type << " illegal: cannot convert non-scalar element type\n");
+  Optional<Type> arrayElemType;
+  Type elementType = type.getElementType();
+  if (auto vecType = elementType.dyn_cast<VectorType>()) {
+    arrayElemType = convertVectorType(targetEnv, vecType, storageClass);
+  } else if (auto scalarType = elementType.dyn_cast<spirv::ScalarType>()) {
+    arrayElemType = convertScalarType(targetEnv, scalarType, storageClass);
+  } else {
+    LLVM_DEBUG(
+        llvm::dbgs()
+        << type
+        << " unhandled: can only convert scalar or vector element type\n");
     return llvm::None;
   }
-
-  auto arrayElemType = convertScalarType(targetEnv, scalarType, storageClass);
   if (!arrayElemType)
     return llvm::None;
 
-  Optional<int64_t> scalarSize = getTypeNumBytes(scalarType);
-  if (!scalarSize) {
+  Optional<int64_t> elementSize = getTypeNumBytes(elementType);
+  if (!elementSize) {
     LLVM_DEBUG(llvm::dbgs()
                << type << " illegal: cannot deduce element size\n");
     return llvm::None;
   }
 
   if (!type.hasStaticShape()) {
-    auto arrayType = spirv::RuntimeArrayType::get(*arrayElemType, *scalarSize);
+    auto arrayType = spirv::RuntimeArrayType::get(*arrayElemType, *elementSize);
     // Wrap in a struct to satisfy Vulkan interface requirements.
     auto structType = spirv::StructType::get(arrayType, 0);
     return spirv::PointerType::get(structType, *storageClass);
@@ -375,7 +387,7 @@ static Optional<Type> convertMemrefType(const spirv::TargetEnv &targetEnv,
     return llvm::None;
   }
 
-  auto arrayElemCount = *memrefSize / *scalarSize;
+  auto arrayElemCount = *memrefSize / *elementSize;
 
   Optional<int64_t> arrayElemSize = getTypeNumBytes(*arrayElemType);
   if (!arrayElemSize) {
