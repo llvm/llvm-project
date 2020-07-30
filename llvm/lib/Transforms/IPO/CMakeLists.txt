@@ -18,6 +18,7 @@ add_llvm_component_library(LLVMipo
   GlobalOpt.cpp
   GlobalSplit.cpp
   HotColdSplitting.cpp
+  IPConstantPropagation.cpp
   IPO.cpp
   InferFunctionAttrs.cpp
   InlineSimple.cpp
