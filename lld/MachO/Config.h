@@ -25,6 +25,7 @@ struct SymbolPriorityEntry;
 struct Configuration {
   Symbol *entry;
   bool hasReexports = false;
+  uint32_t headerPad;
   llvm::StringRef installName;
   llvm::StringRef outputFile;
   llvm::MachO::Architecture arch;

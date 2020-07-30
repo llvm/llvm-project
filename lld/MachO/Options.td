@@ -693,7 +693,6 @@ def umbrella : Separate<["-"], "umbrella">,
 def headerpad : Separate<["-"], "headerpad">,
      MetaVarName<"<size>">,
      HelpText<"Allocate hex <size> extra space for future expansion of the load commands via install_name_tool">,
-     Flags<[HelpHidden]>,
      Group<grp_rare>;
 def headerpad_max_install_names : Flag<["-"], "headerpad_max_install_names">,
      HelpText<"Allocate extra space so all load-command paths can expand to MAXPATHLEN via install_name_tool">,
