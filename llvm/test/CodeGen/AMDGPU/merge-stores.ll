@@ -566,7 +566,6 @@ define amdgpu_kernel void @merge_global_store_6_constants_i32(i32 addrspace(1)* 
 ; GCN-LABEL: {{^}}merge_global_store_7_constants_i32:
 ; GCN: buffer_store_dwordx4
 ; SI-DAG: buffer_store_dwordx2
-; SI-DAG: buffer_store_dword v
 ; CI: buffer_store_dwordx3
 define amdgpu_kernel void @merge_global_store_7_constants_i32(i32 addrspace(1)* %out) {
   store i32 34, i32 addrspace(1)* %out, align 4
