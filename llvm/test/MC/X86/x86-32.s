@@ -1120,3 +1120,7 @@ foo:
 // CHECK:  encoding: [0x0f,0x84,A,A,A,A]
 // CHECK:  fixup A - offset: 2, value: foo-4, kind: FK_PCRel_4
 {disp32} je foo
+
+// CHECK: ljmpl *%cs:305419896
+// CHECK:  encoding: [0x2e,0xff,0x2d,0x78,0x56,0x34,0x12]
+ljmp %cs:*0x12345678
