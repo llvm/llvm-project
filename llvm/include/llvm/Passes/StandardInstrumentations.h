@@ -61,7 +61,16 @@ public:
 
 private:
   bool skip(StringRef PassID, Any IR);
+  bool DebugLogging;
+};
 
+// Debug logging for transformation and analysis passes.
+class PrintPassInstrumentation {
+public:
+  PrintPassInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+private:
   bool DebugLogging;
 };
 
@@ -69,12 +78,13 @@ private:
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
   PrintIRInstrumentation PrintIR;
+  PrintPassInstrumentation PrintPass;
   TimePassesHandler TimePasses;
   OptNoneInstrumentation OptNone;
 
 public:
   StandardInstrumentations(bool DebugLogging)
-      : PrintIR(), TimePasses(), OptNone(DebugLogging) {}
+      : PrintPass(DebugLogging), OptNone(DebugLogging) {}
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 

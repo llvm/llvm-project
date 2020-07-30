@@ -510,10 +510,6 @@ public:
       if (!PI.runBeforePass<IRUnitT>(*P, IR))
         continue;
 
-      if (DebugLogging)
-        dbgs() << "Running pass: " << P->name() << " on " << IR.getName()
-               << "\n";
-
       PreservedAnalyses PassPA;
       {
         TimeTraceScope TimeScope(P->name(), IR.getName());
