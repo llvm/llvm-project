@@ -222,8 +222,9 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
 }
 
 int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
-  if (FrameIndices.find(&AI) != FrameIndices.end())
-    return FrameIndices[&AI];
+  auto MapEntry = FrameIndices.find(&AI);
+  if (MapEntry != FrameIndices.end())
+    return MapEntry->second;
 
   uint64_t ElementSize = DL->getTypeAllocSize(AI.getAllocatedType());
   uint64_t Size =
