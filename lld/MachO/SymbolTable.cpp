@@ -94,4 +94,17 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
   return s;
 }
 
+Symbol *SymbolTable::addDSOHandle(const MachHeaderSection *header) {
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(DSOHandle::name);
+  if (!wasInserted) {
+    if (auto *defined = dyn_cast<Defined>(s))
+      error("found defined symbol from " + defined->isec->file->getName() +
+            " with illegal name " + DSOHandle::name);
+  }
+  replaceSymbol<DSOHandle>(s, header);
+  return s;
+}
+
 SymbolTable *macho::symtab;
