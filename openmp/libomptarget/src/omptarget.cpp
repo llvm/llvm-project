@@ -880,14 +880,9 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
           return OFFLOAD_FAIL;
         }
       }
-    } else if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
-      TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBase, sizeof(void *), IsLast,
-                                          false, IsHostPtr);
-      TgtBaseOffset = 0; // no offset for ptrs.
-      DP("Obtained target argument " DPxMOD " from host pointer " DPxMOD " to "
-         "object " DPxMOD "\n",
-         DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBase), DPxPTR(HstPtrBase));
     } else {
+      if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)
+        HstPtrBase = *reinterpret_cast<void **>(HstPtrBase);
       TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, ArgSizes[I], IsLast,
                                           false, IsHostPtr);
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
