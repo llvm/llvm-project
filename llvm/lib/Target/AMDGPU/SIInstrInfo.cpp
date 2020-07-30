@@ -542,7 +542,9 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, MCRegister DestReg,
                                MCRegister SrcReg, bool KillSrc,
-                               RegScavenger &RS) {
+                               RegScavenger &RS,
+                               Register ImpDefSuperReg = Register(),
+                               Register ImpUseSuperReg = Register()) {
   const SIRegisterInfo &RI = TII.getRegisterInfo();
 
   assert(AMDGPU::SReg_32RegClass.contains(SrcReg) ||
@@ -573,8 +575,17 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
       DefOp.setIsKill(false);
     }
 
-    BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32), DestReg)
+    MachineInstrBuilder Builder =
+      BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32), DestReg)
       .add(DefOp);
+    if (ImpDefSuperReg)
+      Builder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
+
+    if (ImpUseSuperReg) {
+      Builder.addReg(ImpUseSuperReg,
+                     getKillRegState(KillSrc) | RegState::Implicit);
+    }
+
     return;
   }
 
@@ -604,9 +615,27 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
     RS.setRegUsed(Tmp);
   }
 
-  TII.copyPhysReg(MBB, MI, DL, Tmp, SrcReg, KillSrc);
-  BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32), DestReg)
+  // Insert copy to temporary VGPR.
+  unsigned TmpCopyOp = AMDGPU::V_MOV_B32_e32;
+  if (AMDGPU::AGPR_32RegClass.contains(SrcReg)) {
+    TmpCopyOp = AMDGPU::V_ACCVGPR_READ_B32;
+  } else {
+    assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
+  }
+
+  MachineInstrBuilder UseBuilder = BuildMI(MBB, MI, DL, TII.get(TmpCopyOp), Tmp)
+    .addReg(SrcReg, getKillRegState(KillSrc));
+  if (ImpUseSuperReg) {
+    UseBuilder.addReg(ImpUseSuperReg,
+                      getKillRegState(KillSrc) | RegState::Implicit);
+  }
+
+  MachineInstrBuilder DefBuilder
+    = BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32), DestReg)
     .addReg(Tmp, RegState::Kill);
+
+  if (ImpDefSuperReg)
+    DefBuilder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
 }
 
 void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -827,10 +856,20 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
   } else if (RI.hasAGPRs(RC)) {
     Opcode = RI.hasVGPRs(RI.getPhysRegClass(SrcReg)) ?
-      AMDGPU::V_ACCVGPR_WRITE_B32 : AMDGPU::COPY;
+      AMDGPU::V_ACCVGPR_WRITE_B32 : AMDGPU::INSTRUCTION_LIST_END;
   } else if (RI.hasVGPRs(RC) && RI.hasAGPRs(RI.getPhysRegClass(SrcReg))) {
     Opcode = AMDGPU::V_ACCVGPR_READ_B32;
   }
+
+  // For the cases where we need an intermediate instruction/temporary register
+  // (the result is an SGPR, and the source is either an SGPR or AGPR), we need
+  // a scavenger.
+  //
+  // FIXME: The pass should maintain this for us so we don't have to re-scan the
+  // whole block for every handled copy.
+  std::unique_ptr<RegScavenger> RS;
+  if (Opcode == AMDGPU::INSTRUCTION_LIST_END)
+    RS.reset(new RegScavenger());
 
   ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, EltSize);
   bool Forward = RI.getHWRegIndex(DestReg) <= RI.getHWRegIndex(SrcReg);
@@ -842,22 +881,24 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     else
       SubIdx = SubIndices[SubIndices.size() - Idx - 1];
 
-    if (Opcode == TargetOpcode::COPY) {
-      copyPhysReg(MBB, MI, DL, RI.getSubReg(DestReg, SubIdx),
-                  RI.getSubReg(SrcReg, SubIdx), KillSrc);
-      continue;
-    }
-
-    MachineInstrBuilder Builder = BuildMI(MBB, MI, DL,
-      get(Opcode), RI.getSubReg(DestReg, SubIdx));
-
-    Builder.addReg(RI.getSubReg(SrcReg, SubIdx));
-
-    if (Idx == 0)
-      Builder.addReg(DestReg, RegState::Define | RegState::Implicit);
 
     bool UseKill = KillSrc && Idx == SubIndices.size() - 1;
-    Builder.addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
+
+    if (Opcode == AMDGPU::INSTRUCTION_LIST_END) {
+      Register ImpDefSuper = Idx == 0 ? Register(DestReg) : Register();
+      Register ImpUseSuper = SrcReg;
+      indirectCopyToAGPR(*this, MBB, MI, DL, RI.getSubReg(DestReg, SubIdx),
+                         RI.getSubReg(SrcReg, SubIdx), UseKill, *RS,
+                         ImpDefSuper, ImpUseSuper);
+    } else {
+      MachineInstrBuilder Builder =
+        BuildMI(MBB, MI, DL, get(Opcode), RI.getSubReg(DestReg, SubIdx))
+        .addReg(RI.getSubReg(SrcReg, SubIdx));
+      if (Idx == 0)
+        Builder.addReg(DestReg, RegState::Define | RegState::Implicit);
+
+      Builder.addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
+    }
   }
 }
 
