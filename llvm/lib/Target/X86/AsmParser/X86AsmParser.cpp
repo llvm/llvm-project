@@ -925,10 +925,8 @@ private:
                                      bool IsUnevaluatedOperand, SMLoc &End,
                                      bool IsParsingOffsetOperator = false);
 
-  std::unique_ptr<X86Operand> ParseMemOperand(unsigned SegReg,
-                                              const MCExpr *Disp,
-                                              SMLoc StartLoc,
-                                              SMLoc EndLoc);
+  bool ParseMemOperand(unsigned SegReg, const MCExpr *Disp, SMLoc StartLoc,
+                       SMLoc EndLoc, OperandVector &Operands);
 
   X86::CondCode ParseConditionCode(StringRef CCode);
 
@@ -2279,11 +2277,7 @@ bool X86AsmParser::ParseATTOperand(OperandVector &Operands) {
       }
     }
     // This is a Memory operand.
-    if (std::unique_ptr<X86Operand> Op = ParseMemOperand(Reg, Expr, Loc, EndLoc)) {
-      Operands.push_back(std::move(Op));
-      return false;
-    }
-    return true;
+    return ParseMemOperand(Reg, Expr, Loc, EndLoc, Operands);
   }
   }
 }
@@ -2417,10 +2411,9 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands) {
 
 /// ParseMemOperand: 'seg : disp(basereg, indexreg, scale)'.  The '%ds:' prefix
 /// has already been parsed if present. disp may be provided as well.
-std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
-                                                          const MCExpr *Disp,
-                                                          SMLoc StartLoc,
-                                                          SMLoc EndLoc) {
+bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
+                                   SMLoc StartLoc, SMLoc EndLoc,
+                                   OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc Loc;
   // Based on the initial passed values, we may be in any of these cases, we are
@@ -2482,7 +2475,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
     // Parse immediate if we're not at a mem operand yet.
     if (!isAtMemOperand()) {
       if (Parser.parseTokenLoc(Loc) || Parser.parseExpression(Disp, EndLoc))
-        return nullptr;
+        return true;
       assert(!isa<X86MCExpr>(Disp) && "Expected non-register here.");
     } else {
       // Disp is implicitly zero if we haven't parsed it yet.
@@ -2495,9 +2488,12 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
 
   if (!parseOptionalToken(AsmToken::LParen)) {
     if (SegReg == 0)
-      return X86Operand::CreateMem(getPointerWidth(), Disp, StartLoc, EndLoc);
-    return X86Operand::CreateMem(getPointerWidth(), SegReg, Disp, 0, 0, 1,
-                                 StartLoc, EndLoc);
+      Operands.push_back(
+          X86Operand::CreateMem(getPointerWidth(), Disp, StartLoc, EndLoc));
+    else
+      Operands.push_back(X86Operand::CreateMem(getPointerWidth(), SegReg, Disp,
+                                               0, 0, 1, StartLoc, EndLoc));
+    return false;
   }
 
   // If we reached here, then eat the '(' and Process
@@ -2511,14 +2507,13 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
   if (getLexer().isNot(AsmToken::Comma) && getLexer().isNot(AsmToken::RParen)) {
     if (Parser.parseExpression(E, EndLoc) ||
         check(!isa<X86MCExpr>(E), BaseLoc, "expected register here"))
-      return nullptr;
+      return true;
 
     // Sanity check register.
     BaseReg = cast<X86MCExpr>(E)->getRegNo();
     if (BaseReg == X86::EIZ || BaseReg == X86::RIZ)
-      return ErrorOperand(BaseLoc,
-                          "eiz and riz can only be used as index registers",
-                          SMRange(BaseLoc, EndLoc));
+      return Error(BaseLoc, "eiz and riz can only be used as index registers",
+                   SMRange(BaseLoc, EndLoc));
   }
 
   if (parseOptionalToken(AsmToken::Comma)) {
@@ -2530,14 +2525,14 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
     // "1(%eax,,1)", the assembler doesn't. Use "eiz" or "riz" for this.
     if (getLexer().isNot(AsmToken::RParen)) {
       if (Parser.parseTokenLoc(Loc) || Parser.parseExpression(E, EndLoc))
-        return nullptr;
+        return true;
 
       if (!isa<X86MCExpr>(E)) {
         // We've parsed an unexpected Scale Value instead of an index
         // register. Interpret it as an absolute.
         int64_t ScaleVal;
         if (!E->evaluateAsAbsolute(ScaleVal, getStreamer().getAssemblerPtr()))
-          return ErrorOperand(Loc, "expected absolute expression");
+          return Error(Loc, "expected absolute expression");
         if (ScaleVal != 1)
           Warning(Loc, "scale factor without index register is ignored");
         Scale = 1;
@@ -2545,10 +2540,10 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
         IndexReg = cast<X86MCExpr>(E)->getRegNo();
 
         if (BaseReg == X86::RIP)
-          return ErrorOperand(
-              Loc, "%rip as base register can not have an index register");
+          return Error(Loc,
+                       "%rip as base register can not have an index register");
         if (IndexReg == X86::RIP)
-          return ErrorOperand(Loc, "%rip is not allowed as an index register");
+          return Error(Loc, "%rip is not allowed as an index register");
 
         if (parseOptionalToken(AsmToken::Comma)) {
           // Parse the scale amount:
@@ -2559,15 +2554,14 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
             int64_t ScaleVal;
             if (Parser.parseTokenLoc(Loc) ||
                 Parser.parseAbsoluteExpression(ScaleVal))
-              return ErrorOperand(Loc, "expected scale expression");
+              return Error(Loc, "expected scale expression");
             Scale = (unsigned)ScaleVal;
             // Validate the scale amount.
             if (X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg) &&
                 Scale != 1)
-              return ErrorOperand(Loc,
-                                  "scale factor in 16-bit address must be 1");
+              return Error(Loc, "scale factor in 16-bit address must be 1");
             if (checkScale(Scale, ErrMsg))
-              return ErrorOperand(Loc, ErrMsg);
+              return Error(Loc, ErrMsg);
           }
         }
       }
@@ -2576,23 +2570,30 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
 
   // Ok, we've eaten the memory operand, verify we have a ')' and eat it too.
   if (parseToken(AsmToken::RParen, "unexpected token in memory operand"))
-    return nullptr;
+    return true;
 
   // This is to support otherwise illegal operand (%dx) found in various
   // unofficial manuals examples (e.g. "out[s]?[bwl]? %al, (%dx)") and must now
   // be supported. Mark such DX variants separately fix only in special cases.
   if (BaseReg == X86::DX && IndexReg == 0 && Scale == 1 && SegReg == 0 &&
-      isa<MCConstantExpr>(Disp) && cast<MCConstantExpr>(Disp)->getValue() == 0)
-    return X86Operand::CreateDXReg(BaseLoc, BaseLoc);
+      isa<MCConstantExpr>(Disp) &&
+      cast<MCConstantExpr>(Disp)->getValue() == 0) {
+    Operands.push_back(X86Operand::CreateDXReg(BaseLoc, BaseLoc));
+    return false;
+  }
 
   if (CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, is64BitMode(),
                                       ErrMsg))
-    return ErrorOperand(BaseLoc, ErrMsg);
+    return Error(BaseLoc, ErrMsg);
 
   if (SegReg || BaseReg || IndexReg)
-    return X86Operand::CreateMem(getPointerWidth(), SegReg, Disp, BaseReg,
-                                 IndexReg, Scale, StartLoc, EndLoc);
-  return X86Operand::CreateMem(getPointerWidth(), Disp, StartLoc, EndLoc);
+    Operands.push_back(X86Operand::CreateMem(getPointerWidth(), SegReg, Disp,
+                                             BaseReg, IndexReg, Scale, StartLoc,
+                                             EndLoc));
+  else
+    Operands.push_back(
+        X86Operand::CreateMem(getPointerWidth(), Disp, StartLoc, EndLoc));
+  return false;
 }
 
 // Parse either a standard primary expression or a register.
