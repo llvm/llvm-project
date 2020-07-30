@@ -3658,13 +3658,13 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
       // to avoid interfering with other uses, so probably requires a new
       // optimization pass.
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), Dst)
-        .addReg(SrcReg, RegState::Undef, SubReg)
+        .addReg(SrcReg, 0, SubReg)
         .addReg(SrcReg, RegState::Implicit)
         .addReg(AMDGPU::M0, RegState::Implicit);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
     } else {
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-        .addReg(SrcReg, RegState::Undef, SubReg)
+        .addReg(SrcReg, 0, SubReg)
         .addReg(SrcReg, RegState::Implicit);
     }
 
@@ -3687,13 +3687,13 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
 
   if (UseGPRIdxMode) {
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOV_B32_e32), Dst)
-      .addReg(SrcReg, RegState::Undef, SubReg)
+      .addReg(SrcReg, 0, SubReg)
       .addReg(SrcReg, RegState::Implicit)
       .addReg(AMDGPU::M0, RegState::Implicit);
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
   } else {
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
-      .addReg(SrcReg, RegState::Undef, SubReg)
+      .addReg(SrcReg, 0, SubReg)
       .addReg(SrcReg, RegState::Implicit);
   }
 
