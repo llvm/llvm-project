@@ -1464,7 +1464,7 @@ ConstantRange ConstantRange::inverse() const {
   return ConstantRange(Upper, Lower);
 }
 
-ConstantRange ConstantRange::abs() const {
+ConstantRange ConstantRange::abs(bool IntMinIsPoison) const {
   if (isEmptySet())
     return getEmpty();
 
@@ -1476,11 +1476,22 @@ ConstantRange ConstantRange::abs() const {
     else
       Lo = APIntOps::umin(Lower, -Upper + 1);
 
-    // SignedMin is included in the result range.
-    return ConstantRange(Lo, APInt::getSignedMinValue(getBitWidth()) + 1);
+    // If SignedMin is not poison, then it is included in the result range.
+    if (IntMinIsPoison)
+      return ConstantRange(Lo, APInt::getSignedMinValue(getBitWidth()));
+    else
+      return ConstantRange(Lo, APInt::getSignedMinValue(getBitWidth()) + 1);
   }
 
   APInt SMin = getSignedMin(), SMax = getSignedMax();
+
+  // Skip SignedMin if it is poison.
+  if (IntMinIsPoison && SMin.isMinSignedValue()) {
+    // The range may become empty if it *only* contains SignedMin.
+    if (SMax.isMinSignedValue())
+      return getEmpty();
+    ++SMin;
+  }
 
   // All non-negative.
   if (SMin.isNonNegative())
