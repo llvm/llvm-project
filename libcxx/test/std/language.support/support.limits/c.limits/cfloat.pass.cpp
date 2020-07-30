@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
- // test cfloat
+// Before Clang 9.0, <float.h> does not define FLT_HAS_SUBNORM & friends in C++.
+// XFAIL: clang-4, clang-5, clang-6, clang-7, clang-8
+
+// test cfloat
 
 #include <cfloat>
 
