@@ -156,6 +156,7 @@ public:
   /// Generator for '#omp parallel'
   ///
   /// \param Loc The insert and source location description.
+  /// \param AllocaIP The insertion points to be used for alloca instructions.
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param PrivCB Callback to copy a given variable (think copy constructor).
   /// \param FiniCB Callback to finalize variable copies.
@@ -166,10 +167,11 @@ public:
   ///
   /// \returns The insertion position *after* the parallel.
   IRBuilder<>::InsertPoint
-  CreateParallel(const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
-                 PrivatizeCallbackTy PrivCB, FinalizeCallbackTy FiniCB,
-                 Value *IfCondition, Value *NumThreads,
-                 omp::ProcBindKind ProcBind, bool IsCancellable);
+  CreateParallel(const LocationDescription &Loc, InsertPointTy AllocaIP,
+                 BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
+                 FinalizeCallbackTy FiniCB, Value *IfCondition,
+                 Value *NumThreads, omp::ProcBindKind ProcBind,
+                 bool IsCancellable);
 
   /// Generator for '#omp flush'
   ///

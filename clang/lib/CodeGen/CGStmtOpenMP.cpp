@@ -1707,9 +1707,11 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 
     CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
     CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
-    Builder.restoreIP(OMPBuilder.CreateParallel(Builder, BodyGenCB, PrivCB,
-                                                FiniCB, IfCond, NumThreads,
-                                                ProcBind, S.hasCancel()));
+    llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
+        AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
+    Builder.restoreIP(
+        OMPBuilder.CreateParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,
+                                  IfCond, NumThreads, ProcBind, S.hasCancel()));
     return;
   }
 
