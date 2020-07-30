@@ -2909,9 +2909,11 @@ static bool isSameTemplateParameter(const NamedDecl *X,
       return false;
     if (TX->hasTypeConstraint() != TY->hasTypeConstraint())
       return false;
-    if (TX->hasTypeConstraint()) {
-      const TypeConstraint *TXTC = TX->getTypeConstraint();
-      const TypeConstraint *TYTC = TY->getTypeConstraint();
+    const TypeConstraint *TXTC = TX->getTypeConstraint();
+    const TypeConstraint *TYTC = TY->getTypeConstraint();
+    if (!TXTC != !TYTC)
+      return false;
+    if (TXTC && TYTC) {
       if (TXTC->getNamedConcept() != TYTC->getNamedConcept())
         return false;
       if (TXTC->hasExplicitTemplateArgs() != TYTC->hasExplicitTemplateArgs())
