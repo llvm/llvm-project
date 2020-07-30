@@ -17,14 +17,10 @@
 // For this test we have to use names of the real checks because otherwise values are ignored.
 // RUN: clang-tidy -dump-config %S/Inputs/config-files/4/44/- -- | FileCheck %s -check-prefix=CHECK-CHILD4
 // CHECK-CHILD4: Checks: {{.*}}modernize-loop-convert,modernize-use-using,llvm-qualified-auto
-// CHECK-CHILD4: - key: llvm-qualified-auto.AddConstToQualified
-// CHECK-CHILD4-NEXT: value: 'true'
-// CHECK-CHILD4: - key: modernize-loop-convert.MaxCopySize
-// CHECK-CHILD4-NEXT: value: '20'
-// CHECK-CHILD4: - key: modernize-loop-convert.MinConfidence
-// CHECK-CHILD4-NEXT: value: reasonable
-// CHECK-CHILD4: - key: modernize-use-using.IgnoreMacros
-// CHECK-CHILD4-NEXT: value: 'false'
+// CHECK-CHILD4-DAG: - key: llvm-qualified-auto.AddConstToQualified{{ *[[:space:]] *}}value: 'true'
+// CHECK-CHILD4-DAG: - key: modernize-loop-convert.MaxCopySize{{ *[[:space:]] *}}value: '20'
+// CHECK-CHILD4-DAG: - key: modernize-loop-convert.MinConfidence{{ *[[:space:]] *}}value: reasonable
+// CHECK-CHILD4-DAG: - key: modernize-use-using.IgnoreMacros{{ *[[:space:]] *}}value: 'false'
 
 // RUN: clang-tidy --explain-config %S/Inputs/config-files/4/44/- -- | FileCheck %s -check-prefix=CHECK-EXPLAIN
 // CHECK-EXPLAIN: 'llvm-qualified-auto' is enabled in the {{.*}}{{[/\\]}}Inputs{{[/\\]}}config-files{{[/\\]}}4{{[/\\]}}44{{[/\\]}}.clang-tidy.
@@ -37,16 +33,13 @@
 // RUN: CheckOptions: [{key: modernize-loop-convert.MaxCopySize, value: 21}]}' \
 // RUN: %S/Inputs/config-files/4/44/- -- | FileCheck %s -check-prefix=CHECK-CHILD5
 // CHECK-CHILD5: Checks: {{.*}}modernize-loop-convert,modernize-use-using,llvm-qualified-auto,-llvm-qualified-auto
-// CHECK-CHILD5: - key: modernize-loop-convert.MaxCopySize
-// CHECK-CHILD5-NEXT: value: '21'
-// CHECK-CHILD5: - key: modernize-loop-convert.MinConfidence
-// CHECK-CHILD5-NEXT: value: reasonable
-// CHECK-CHILD5: - key: modernize-use-using.IgnoreMacros
-// CHECK-CHILD5-NEXT: value: 'false'
+// CHECK-CHILD5-DAG: - key: modernize-loop-convert.MaxCopySize{{ *[[:space:]] *}}value: '21'
+// CHECK-CHILD5-DAG: - key: modernize-loop-convert.MinConfidence{{ *[[:space:]] *}}value: reasonable
+// CHECK-CHILD5-DAG: - key: modernize-use-using.IgnoreMacros{{ *[[:space:]] *}}value: 'false'
 
 // RUN: clang-tidy -dump-config \
 // RUN: --config='{InheritParentConfig: false, \
 // RUN: Checks: -llvm-qualified-auto}' \
 // RUN: %S/Inputs/config-files/4/44/- -- | FileCheck %s -check-prefix=CHECK-CHILD6
-// CHECK-CHILD6: Checks: {{.*}}-llvm-qualified-auto
+// CHECK-CHILD6: Checks: {{.*-llvm-qualified-auto'? *$}}
 // CHECK-CHILD6-NOT: - key: modernize-use-using.IgnoreMacros

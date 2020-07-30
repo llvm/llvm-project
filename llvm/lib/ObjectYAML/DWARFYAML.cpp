@@ -103,11 +103,11 @@ void MappingTraits<DWARFYAML::ARangeDescriptor>::mapping(
 void MappingTraits<DWARFYAML::ARange>::mapping(IO &IO,
                                                DWARFYAML::ARange &ARange) {
   IO.mapOptional("Format", ARange.Format, dwarf::DWARF32);
-  IO.mapRequired("Length", ARange.Length);
+  IO.mapOptional("Length", ARange.Length);
   IO.mapRequired("Version", ARange.Version);
   IO.mapRequired("CuOffset", ARange.CuOffset);
-  IO.mapRequired("AddressSize", ARange.AddrSize);
-  IO.mapRequired("SegmentSelectorSize", ARange.SegSize);
+  IO.mapOptional("AddressSize", ARange.AddrSize);
+  IO.mapOptional("SegmentSelectorSize", ARange.SegSize, 0);
   IO.mapRequired("Descriptors", ARange.Descriptors);
 }
 
