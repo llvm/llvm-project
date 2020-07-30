@@ -456,8 +456,12 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
   llvm::Value *ifCond = nullptr;
   llvm::Value *numThreads = nullptr;
   bool isCancellable = false;
+  // TODO: Determine the actual alloca insertion point, e.g., the function
+  // entry or the alloca insertion point as provided by the body callback
+  // above.
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP(builder.saveIP());
   builder.restoreIP(ompBuilder->CreateParallel(
-      builder, bodyGenCB, privCB, finiCB, ifCond, numThreads,
+      builder, allocaIP, bodyGenCB, privCB, finiCB, ifCond, numThreads,
       llvm::omp::OMP_PROC_BIND_default, isCancellable));
   return success();
 }
