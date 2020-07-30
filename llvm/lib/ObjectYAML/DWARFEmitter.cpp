@@ -126,23 +126,36 @@ Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
 Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto Range : DI.ARanges) {
-    auto HeaderStart = OS.tell();
-
     uint8_t AddrSize;
     if (Range.AddrSize)
       AddrSize = *Range.AddrSize;
     else
       AddrSize = DI.Is64BitAddrSize ? 8 : 4;
 
-    writeInitialLength(Range.Format, Range.Length, OS, DI.IsLittleEndian);
+    uint64_t Length = 4; // sizeof(version) 2 + sizeof(address_size) 1 +
+                         // sizeof(segment_selector_size) 1
+    Length +=
+        Range.Format == dwarf::DWARF64 ? 8 : 4; // sizeof(debug_info_offset)
+
+    const uint64_t HeaderLength =
+        Length + (Range.Format == dwarf::DWARF64
+                      ? 12
+                      : 4); // sizeof(unit_header) = 12 (DWARF64) or 4 (DWARF32)
+    const uint64_t PaddedHeaderLength = alignTo(HeaderLength, AddrSize * 2);
+
+    if (Range.Length) {
+      Length = *Range.Length;
+    } else {
+      Length += PaddedHeaderLength - HeaderLength;
+      Length += AddrSize * 2 * (Range.Descriptors.size() + 1);
+    }
+
+    writeInitialLength(Range.Format, Length, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Range.Version, OS, DI.IsLittleEndian);
     writeDWARFOffset(Range.CuOffset, Range.Format, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.SegSize, OS, DI.IsLittleEndian);
-
-    auto HeaderSize = OS.tell() - HeaderStart;
-    auto FirstDescriptor = alignTo(HeaderSize, AddrSize * 2);
-    ZeroFillBytes(OS, FirstDescriptor - HeaderSize);
+    ZeroFillBytes(OS, PaddedHeaderLength - HeaderLength);
 
     for (auto Descriptor : Range.Descriptors) {
       if (Error Err = writeVariableSizedInteger(Descriptor.Address, AddrSize,
