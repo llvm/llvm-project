@@ -443,13 +443,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // TODO: All multiples of 32, vectors of pointers, all v2s16 pairs, more
   // elements for v3s16
   getActionDefinitionsBuilder(G_PHI)
-    .legalFor({S32, S64, V2S16, V4S16, S1, S128, S256})
+    .legalFor({S32, S64, V2S16, S16, V4S16, S1, S128, S256})
     .legalFor(AllS32Vectors)
     .legalFor(AllS64Vectors)
     .legalFor(AddrSpaces64)
     .legalFor(AddrSpaces32)
     .legalIf(isPointer(0))
-    .clampScalar(0, S32, S256)
+    .clampScalar(0, S16, S256)
     .widenScalarToNextPow2(0, 32)
     .clampMaxNumElements(0, S32, 16)
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
