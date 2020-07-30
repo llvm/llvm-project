@@ -72,17 +72,23 @@ Fortran::lower::CallerInterface::characterize() const {
   // the ProcedureDesignator has no interface.
   if (!characteristic->HasExplicitInterface()) {
     for (const auto &arg : procRef.arguments()) {
-      // Argument cannot be optional with implicit interface
-      const auto *expr = arg.value().UnwrapExpr();
-      assert(expr &&
-             "argument in call with implicit interface cannot be assumed type");
-      auto argCharacteristic =
-          Fortran::evaluate::characteristics::DummyArgument::FromActual(
-              "actual", *expr, foldingContext);
-      assert(argCharacteristic &&
-             "failed to characterize argument in implicit call");
-      characteristic->dummyArguments.emplace_back(
-          std::move(*argCharacteristic));
+      if (arg.value().isAlternateReturn()) {
+        characteristic->dummyArguments.emplace_back(
+            Fortran::evaluate::characteristics::AlternateReturn{});
+      } else {
+        // Argument cannot be optional with implicit interface
+        const auto *expr = arg.value().UnwrapExpr();
+        assert(
+            expr &&
+            "argument in call with implicit interface cannot be assumed type");
+        auto argCharacteristic =
+            Fortran::evaluate::characteristics::DummyArgument::FromActual(
+                "actual", *expr, foldingContext);
+        assert(argCharacteristic &&
+               "failed to characterize argument in implicit call");
+        characteristic->dummyArguments.emplace_back(
+            std::move(*argCharacteristic));
+      }
     }
   }
   return *characteristic;
