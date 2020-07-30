@@ -67,7 +67,9 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   // Notify client that the defined symbols have been assigned addresses.
   LLVM_DEBUG(
       { dbgs() << "Resolving symbols defined in " << G->getName() << "\n"; });
-  Ctx->notifyResolved(*G);
+
+  if (auto Err = Ctx->notifyResolved(*G))
+    return Ctx->notifyFailed(std::move(Err));
 
   auto ExternalSymbols = getExternalSymbolNames();
 
