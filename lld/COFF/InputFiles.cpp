@@ -249,6 +249,11 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     return nullptr;
   }
 
+  if (name == ".llvm.call-graph-profile") {
+    callgraphSec = sec;
+    return nullptr;
+  }
+
   // Object files may have DWARF debug info or MS CodeView debug info
   // (or both).
   //

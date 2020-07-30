@@ -6,50 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Implementation of Call-Chain Clustering from: Optimizing Function Placement
-/// for Large-Scale Data-Center Applications
-/// https://research.fb.com/wp-content/uploads/2017/01/cgo2017-hfsort-final1.pdf
-///
-/// The goal of this algorithm is to improve runtime performance of the final
-/// executable by arranging code sections such that page table and i-cache
-/// misses are minimized.
-///
-/// Definitions:
-/// * Cluster
-///   * An ordered list of input sections which are laid out as a unit. At the
-///     beginning of the algorithm each input section has its own cluster and
-///     the weight of the cluster is the sum of the weight of all incoming
-///     edges.
-/// * Call-Chain Clustering (C³) Heuristic
-///   * Defines when and how clusters are combined. Pick the highest weighted
-///     input section then add it to its most likely predecessor if it wouldn't
-///     penalize it too much.
-/// * Density
-///   * The weight of the cluster divided by the size of the cluster. This is a
-///     proxy for the amount of execution time spent per byte of the cluster.
-///
-/// It does so given a call graph profile by the following:
-/// * Build a weighted call graph from the call graph profile
-/// * Sort input sections by weight
-/// * For each input section starting with the highest weight
-///   * Find its most likely predecessor cluster
-///   * Check if the combined cluster would be too large, or would have too low
-///     a density.
-///   * If not, then combine the clusters.
-/// * Sort non-empty clusters by density
+/// This is based on the ELF port, see ELF/CallGraphSort.cpp for the details
+/// about the algorithm.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "CallGraphSort.h"
-#include "OutputSections.h"
+#include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "lld/Common/ErrorHandler.h"
 
 #include <numeric>
 
 using namespace llvm;
 using namespace lld;
-using namespace lld::elf;
+using namespace lld::coff;
 
 namespace {
 struct Edge {
@@ -78,11 +50,11 @@ class CallGraphSort {
 public:
   CallGraphSort();
 
-  DenseMap<const InputSectionBase *, int> run();
+  DenseMap<const SectionChunk *, int> run();
 
 private:
   std::vector<Cluster> clusters;
-  std::vector<const InputSectionBase *> sections;
+  std::vector<const SectionChunk *> sections;
 };
 
 // Maximum amount the combined cluster density can be worse than the original
@@ -93,17 +65,16 @@ constexpr int MAX_DENSITY_DEGRADATION = 8;
 constexpr uint64_t MAX_CLUSTER_SIZE = 1024 * 1024;
 } // end anonymous namespace
 
-using SectionPair =
-    std::pair<const InputSectionBase *, const InputSectionBase *>;
+using SectionPair = std::pair<const SectionChunk *, const SectionChunk *>;
 
 // Take the edge list in Config->CallGraphProfile, resolve symbol names to
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
 CallGraphSort::CallGraphSort() {
   MapVector<SectionPair, uint64_t> &profile = config->callGraphProfile;
-  DenseMap<const InputSectionBase *, int> secToCluster;
+  DenseMap<const SectionChunk *, int> secToCluster;
 
-  auto getOrCreateNode = [&](const InputSectionBase *isec) -> int {
+  auto getOrCreateNode = [&](const SectionChunk *isec) -> int {
     auto res = secToCluster.try_emplace(isec, clusters.size());
     if (res.second) {
       sections.push_back(isec);
@@ -114,8 +85,8 @@ CallGraphSort::CallGraphSort() {
 
   // Create the graph.
   for (std::pair<SectionPair, uint64_t> &c : profile) {
-    const auto *fromSB = cast<InputSectionBase>(c.first.first->repl);
-    const auto *toSB = cast<InputSectionBase>(c.first.second->repl);
+    const auto *fromSec = cast<SectionChunk>(c.first.first->repl);
+    const auto *toSec = cast<SectionChunk>(c.first.second->repl);
     uint64_t weight = c.second;
 
     // Ignore edges between input sections belonging to different output
@@ -124,11 +95,11 @@ CallGraphSort::CallGraphSort() {
     // output.  This messes with the cluster size and density calculations.  We
     // would also end up moving input sections in other output sections without
     // moving them closer to what calls them.
-    if (fromSB->getOutputSection() != toSB->getOutputSection())
+    if (fromSec->getOutputSection() != toSec->getOutputSection())
       continue;
 
-    int from = getOrCreateNode(fromSB);
-    int to = getOrCreateNode(toSB);
+    int from = getOrCreateNode(fromSec);
+    int to = getOrCreateNode(toSec);
 
     clusters[to].weight += weight;
 
@@ -178,7 +149,7 @@ static void mergeClusters(std::vector<Cluster> &cs, Cluster &into, int intoIdx,
 
 // Group InputSections into clusters using the Call-Chain Clustering heuristic
 // then sort the clusters by density.
-DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
+DenseMap<const SectionChunk *, int> CallGraphSort::run() {
   std::vector<int> sorted(clusters.size());
   std::vector<int> leaders(clusters.size());
 
@@ -221,8 +192,10 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
     return clusters[a].getDensity() > clusters[b].getDensity();
   });
 
-  DenseMap<const InputSectionBase *, int> orderMap;
-  int curOrder = 1;
+  DenseMap<const SectionChunk *, int> orderMap;
+  // Sections will be sorted by increasing order. Absent sections will have
+  // priority 0 and be placed at the end of sections.
+  int curOrder = INT_MIN;
   for (int leader : sorted) {
     for (int i = leader;;) {
       orderMap[sections[i]] = curOrder++;
@@ -238,18 +211,21 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
       error("cannot open " + config->printSymbolOrder + ": " + ec.message());
       return orderMap;
     }
-
     // Print the symbols ordered by C3, in the order of increasing curOrder
     // Instead of sorting all the orderMap, just repeat the loops above.
     for (int leader : sorted)
       for (int i = leader;;) {
+        const SectionChunk *sc = sections[i];
+
         // Search all the symbols in the file of the section
-        // and find out a Defined symbol with name that is within the section.
-        for (Symbol *sym : sections[i]->file->getSymbols())
-          if (!sym->isSection()) // Filter out section-type symbols here.
-            if (auto *d = dyn_cast<Defined>(sym))
-              if (sections[i] == d->section)
-                os << sym->getName() << "\n";
+        // and find out a DefinedCOFF symbol with name that is within the
+        // section.
+        for (Symbol *sym : sc->file->getSymbols())
+          if (auto *d = dyn_cast_or_null<DefinedCOFF>(sym))
+            // Filter out non-COMDAT symbols and section symbols.
+            if (d->isCOMDAT && !d->getCOFFSymbol().isSection() &&
+                sc == d->getChunk())
+              os << sym->getName() << "\n";
         i = clusters[i].next;
         if (i == leader)
           break;
@@ -259,11 +235,11 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
   return orderMap;
 }
 
-// Sort sections by the profile data provided by -callgraph-profile-file
+// Sort sections by the profile data provided by  /call-graph-ordering-file
 //
 // This first builds a call graph based on the profile data then merges sections
 // according to the C³ heuristic. All clusters are then sorted by a density
 // metric to further improve locality.
-DenseMap<const InputSectionBase *, int> elf::computeCallGraphProfileOrder() {
+DenseMap<const SectionChunk *, int> coff::computeCallGraphProfileOrder() {
   return CallGraphSort().run();
 }
