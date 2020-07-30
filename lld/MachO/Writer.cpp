@@ -353,7 +353,8 @@ static int sectionOrder(OutputSection *osec) {
       return -1;
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::binding, -4)
+        .Case(section_names::binding, -5)
+        .Case(section_names::lazyBinding, -4)
         .Case(section_names::export_, -3)
         .Case(section_names::symbolTable, -2)
         .Case(section_names::stringTable, -1)
