@@ -200,7 +200,7 @@ else()
       CFLAGS ${UBSAN_CXXFLAGS}
       PARENT_TARGET ubsan)
 
-    if ((FUCHSIA OR UNIX) AND COMPILER_RT_HAS_VERSION_SCRIPT)
+    if (COMPILER_RT_HAS_VERSION_SCRIPT)
       file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp "")
       add_compiler_rt_object_libraries(RTUbsan_dynamic_version_script_dummy
         ARCHS ${UBSAN_SUPPORTED_ARCH}
