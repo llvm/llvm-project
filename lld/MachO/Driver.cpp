@@ -396,7 +396,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
-  config->headerPad = args::getHex(args, OPT_headerpad, 32);
+  config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   getLibrarySearchPaths(config->librarySearchPaths, args);
   getFrameworkSearchPaths(config->frameworkSearchPaths, args);
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
