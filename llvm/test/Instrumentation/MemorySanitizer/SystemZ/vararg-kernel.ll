@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -march=z13 -msan-kernel=1 -float-abi=soft -passes=msan 2>&1 | FileCheck %s
-; RUN: opt < %s -msan -S -march=z13 -msan-kernel=1 -float-abi=soft | FileCheck %s
+; RUN: opt < %s -S -mcpu=z13 -msan-kernel=1 -float-abi=soft -passes=msan 2>&1 | FileCheck %s
+; RUN: opt < %s -msan -S -mcpu=z13 -msan-kernel=1 -float-abi=soft | FileCheck %s
 
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64"
 target triple = "s390x-unknown-linux-gnu"

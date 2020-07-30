@@ -103,7 +103,7 @@ compiler [:ref:`GCC <amdgpu-dwarf-GCC>`] and the Perforce TotalView HPC debugger
 [:ref:`Perforce-TotalView <amdgpu-dwarf-Perforce-TotalView>`].
 
 However, the proposal is intended to be vendor and architecture neutral. It is
-believed to apply to other heterogeous hardware devices including GPUs, DSPs,
+believed to apply to other heterogenous hardware devices including GPUs, DSPs,
 FPGAs, and other specialized hardware. These collectively include similar
 characteristics and requirements as AMDGPU devices. Parts of the proposal can
 also apply to traditional CPU hardware that supports large vector registers.
@@ -162,11 +162,11 @@ required. See ``DW_AT_LLVM_vector_size``.
 
 If the source language is mapped onto the AMDGPU wavefronts in a SIMT manner,
 then the variable DWARF location expressions must compute the location for a
-single lane of the wavefront. Therefore, a DWARF operation is required to
-denote the current lane, much like ``DW_OP_push_object_address`` denotes the
-current object. The ``DW_OP_*piece`` operations only allow literal indices.
-Therefore, a way to use a computed offset of an arbitrary location description
-(such as a vector register) is required. See ``DW_OP_LLVM_push_lane``,
+single lane of the wavefront. Therefore, a DWARF operation is required to denote
+the current lane, much like ``DW_OP_push_object_address`` denotes the current
+object. The ``DW_OP_*piece`` operations only allow literal indices. Therefore, a
+way to use a computed offset of an arbitrary location description (such as a
+vector register) is required. See ``DW_OP_LLVM_push_lane``,
 ``DW_OP_LLVM_offset``, ``DW_OP_LLVM_offset_uconst``, and
 ``DW_OP_LLVM_bit_offset``.
 
@@ -250,12 +250,12 @@ describe when bytes are in registers, are implicit, or a composite of these, the
 define that integer overflow causes wrap-around. The offset operations can
 operate on location storage of any size. For example, implicit location storage
 could be any number of bits in size. It is simpler to define offsets that exceed
-the size of the location storage as being ill-formed, than having to force an
-implementation to support potentially infinite precision offsets to allow it to
-correctly track a series of positive and negative offsets that may transiently
-overflow or underflow, but end up in range. This is simple for the arithmetic
-operations as they are defined in terms of two's compliment arithmetic on a base
-type of a fixed size.
+the size of the location storage as being an evaluation error, than having to
+force an implementation to support potentially infinite precision offsets to
+allow it to correctly track a series of positive and negative offsets that may
+transiently overflow or underflow, but end up in range. This is simple for the
+arithmetic operations as they are defined in terms of two's compliment
+arithmetic on a base type of a fixed size.
 
 Having the offset operations allows ``DW_OP_push_object_address`` to push a
 location description that may be in a register, or be an implicit value, and the
@@ -276,7 +276,7 @@ larger than the generic type. See ``DW_OP_LLVM_form_aspace_address``.
 If the ``DW_OP_LLVM_form_aspace_address`` operation had to produce a value
 that can be implicitly converted to a memory location description, then it
 would be limited to the size of the generic type which matches the size of the
-default address space. Its value would be unspecified and likely not match any
+default address space. Its value would be undefined and likely not match any
 value in the actual program. By making the result a location description, it
 allows a consumer great freedom in how it implements it. The implicit
 conversion back to a value can be limited only to the default address space to
@@ -317,7 +317,7 @@ consumer on how to implement them. They allow the address space to encode lane
 information so they can be used to read memory with only the memory
 description and no extra arguments. The same set of operations can operate on
 locations independent of their kind of storage. The ``DW_OP_deref*`` therefore
-can be used on any storage kind. ``DW_OP_xderef*`` is unnecessary except to
+can be used on any storage kind. ``DW_OP_xderef*`` is unnecessary, except to
 become a more compact way to convert a non-default address space address
 followed by dereferencing it.
 
@@ -462,10 +462,10 @@ DWARF Expressions
 
 .. note::
 
-  This section, and its nested sections, replaces DWARF Version 5 section 2.5 and
-  section 2.6. The new proposed DWARF expression operations are defined as well
-  as clarifying the extensions to already existing DWARF Version 5 operations. It is
-  based on the text of the existing DWARF Version 5 standard.
+  This section, and its nested sections, replaces DWARF Version 5 section 2.5
+  and section 2.6. The new proposed DWARF expression operations are defined as
+  well as clarifying the extensions to already existing DWARF Version 5
+  operations. It is based on the text of the existing DWARF Version 5 standard.
 
 DWARF expressions describe how to compute a value or specify a location.
 
@@ -473,155 +473,215 @@ DWARF expressions describe how to compute a value or specify a location.
 value of an array bound, the length of a dynamic string, the desired value
 itself, and so on.*
 
-The evaluation of a DWARF expression can either result in a value or a location
-description:
+If the evaluation of a DWARF expression does not encounter an error, then it can
+either result in a value (see :ref:`amdgpu-dwarf-expression-value`) or a
+location description (see :ref:`amdgpu-dwarf-location-description`). When a
+DWARF expression is evaluated, it may be specified whether a value or location
+description is required as the result kind.
 
-*value*
+If a result kind is specified, and the result of the evaluation does not match
+the specified result kind, then the implicit conversions described in
+:ref:`amdgpu-dwarf-memory-location-description-operations` are performed if
+valid. Otherwise, the DWARF expression is ill-formed.
 
-  A value has a type and a literal value. It can represent a literal value of
-  any supported base type of the target architecture. The base type specifies
-  the size and encoding of the literal value.
+If the evaluation of a DWARF expression encounters an evaluation error, then the
+result is an evaluation error.
 
-  .. note::
+.. note::
 
-    It may be desirable to add an implicit pointer base type encoding. It would
-    be used for the type of the value that is produced when the ``DW_OP_deref*``
-    operation retrieves the full contents of an implicit pointer location
-    storage created by the ``DW_OP_implicit_pointer`` or
-    ``DW_OP_LLVM_aspace_implicit_pointer`` operations. The literal value would
-    record the debugging information entry and byte dispacement specified by the
-    associated ``DW_OP_implicit_pointer`` or
-    ``DW_OP_LLVM_aspace_implicit_pointer`` operations.
+  Decided to define the concept of an evaluation error. An alternative is to
+  introduce an undefined value base type in a similar way to location
+  descriptions having an undefined location description. Then operations that
+  encounter an evaluation error can return the undefined location description or
+  value with an undefined base type.
 
-  Instead of a base type, a value can have a distinguished generic type, which
-  is an integral type that has the size of an address in the target architecture
-  default address space and unspecified signedness.
+  All operations that act on values would return an undefined entity if given an
+  undefined value. The expression would then always evaluate to completion, and
+  can be tested to determine if it is an undefined entity.
 
-  *The generic type is the same as the unspecified type used for stack
-  operations defined in DWARF Version 4 and before.*
+  However, this would add considerable additional complexity and does not match
+  that GDB throws an exception when these evaluation errors occur.
 
-  An integral type is a base type that has an encoding of ``DW_ATE_signed``,
-  ``DW_ATE_signed_char``, ``DW_ATE_unsigned``, ``DW_ATE_unsigned_char``,
-  ``DW_ATE_boolean``, or any target architecture defined integral encoding in
-  the inclusive range ``DW_ATE_lo_user`` to ``DW_ATE_hi_user``.
+If a DWARF expression is ill-formed, then the result is undefined.
 
-  .. note::
-
-    It is unclear if ``DW_ATE_address`` is an integral type. GDB does not seem
-    to consider it as integral.
-
-*location description*
-
-  *Debugging information must provide consumers a way to find the location of
-  program variables, determine the bounds of dynamic arrays and strings, and
-  possibly to find the base address of a subprogram’s stack frame or the return
-  address of a subprogram. Furthermore, to meet the needs of recent computer
-  architectures and optimization techniques, debugging information must be able
-  to describe the location of an object whose location changes over the object’s
-  lifetime, and may reside at multiple locations simultaneously during parts of
-  an object's lifetime.*
-
-  Information about the location of program objects is provided by location
-  descriptions.
-
-  Location descriptions can consist of one or more single location descriptions.
-
-  A single location description specifies the location storage that holds a
-  program object and a position within the location storage where the program
-  object starts. The position within the location storage is expressed as a bit
-  offset relative to the start of the location storage.
-
-  A location storage is a linear stream of bits that can hold values. Each
-  location storage has a size in bits and can be accessed using a zero-based bit
-  offset. The ordering of bits within a location storage uses the bit numbering
-  and direction conventions that are appropriate to the current language on the
-  target architecture.
-
-  There are five kinds of location storage:
-
-  *memory location storage*
-    Corresponds to the target architecture memory address spaces.
-
-  *register location storage*
-    Corresponds to the target architecture registers.
-
-  *implicit location storage*
-    Corresponds to fixed values that can only be read.
-
-  *undefined location storage*
-    Indicates no value is available and therefore cannot be read or written.
-
-  *composite location storage*
-    Allows a mixture of these where some bits come from one location storage and
-    some from another location storage, or from disjoint parts of the same
-    location storage.
-
-  .. note::
-
-    It may be better to add an implicit pointer location storage kind used by
-    the ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_aspace_implicit_pointer``
-    operations. It would specify the debugger information entry and byte offset
-    provided by the operations.
-
-  *Location descriptions are a language independent representation of addressing
-  rules. They are created using DWARF operation expressions of arbitrary
-  complexity. They can be the result of evaluting a debugger information entry
-  attribute that specifies an operation expression. In this usage they can
-  describe the location of an object as long as its lifetime is either static or
-  the same as the lexical block (see DWARF Version 5 section 3.5) that owns it,
-  and it does not move during its lifetime. They can be the result of evaluating
-  a debugger information entry attribute that specifies a location list
-  expression. In this usage they can describe the location of an object that has
-  a limited lifetime, changes its location during its lifetime, or has multiple
-  locations over part or all of its lifetime.*
-
-  If a location description has more than one single location description, the
-  DWARF expression is ill-formed if the object value held in each single
-  location description's position within the associated location storage is not
-  the same value, except for the parts of the value that are uninitialized.
-
-  *A location description that has more than one single location description can
-  only be created by a location list expression that has overlapping program
-  location ranges, or certain expression operations that act on a location
-  description that has more than one single location description. There are no
-  operation expression operations that can directly create a location
-  description with more than one single location description.*
-
-  *A location description with more than one single location description can be
-  used to describe objects that reside in more than one piece of storage at the
-  same time. An object may have more than one location as a result of
-  optimization. For example, a value that is only read may be promoted from
-  memory to a register for some region of code, but later code may revert to
-  reading the value from memory as the register may be used for other purposes.
-  For the code region where the value is in a register, any change to the object
-  value must be made in both the register and the memory so both regions of code
-  will read the updated value.*
-
-  *A consumer of a location description with more than one single location
-  description can read the object's value from any of the single location
-  descriptions (since they all refer to location storage that has the same
-  value), but must write any changed value to all the single location
-  descriptions.*
+The following sections detail the rules for when a DWARF expression is
+ill-formed or results in an evaluation error.
 
 A DWARF expression can either be encoded as a operation expression (see
 :ref:`amdgpu-dwarf-operation-expressions`), or as a location list expression
 (see :ref:`amdgpu-dwarf-location-list-expressions`).
 
-A DWARF expression is evaluated in the context of:
+.. _amdgpu-dwarf-expression-evaluation-context:
 
-*A current subprogram*
-  This may be used in the evaluation of register access operations to support
-  virtual unwinding of the call stack (see
+DWARF Expression Evaluation Context
++++++++++++++++++++++++++++++++++++
+
+A DWARF expression is evaluated in a context that can include a number of
+context elements.  If multiple context elements are specified then they must be
+self consistent or the result of the evaluation is undefined. The context
+elements that can be specified are:
+
+*A current result kind*
+
+  The kind of result required by the DWARF expression evaluation. If specified
+  it can be a location description or a value.
+
+*A current thread*
+
+  The target architecture thread identifier of the source program thread of
+  execution for which a user presented expression is currently being evaluated.
+
+  It is required for operations that are related to target architecture threads.
+
+  *For example, the* ``DW_OP_form_tls_address`` *operation and*
+  ``DW_OP_LLVM_form_aspace_address`` *operation when given an address space that
+  is thread specific.*
+
+*A current lane*
+
+  The target architecture lane identifier of the source program thread of
+  execution for which a user presented expression is currently being evaluated.
+  This applies to languages that are implemented using a SIMD or SIMT execution
+  model.
+
+  It is required for operations that are related to target architecture lanes.
+
+  *For example, the* ``DW_OP_LLVM_push_lane`` *operation and*
+  ``DW_OP_LLVM_form_aspace_address`` *operation when given an address space that
+  is lane specific.*
+
+  If specified, it must be consistent with any specified current thread and
+  current target architecture. It is consistent with a thread if it identifies a
+  lane of the thread. It is consistent with a target architecture if it is a
+  valid lane identifier of the target architecture. Otherwise the result is
+  undefined.
+
+*A current call frame*
+
+  The target architecture call frame identifier. It identifies a call frame that
+  corresponds to an active invocation of a subprogram in the current thread. It
+  is identified by its address on the call stack. The address is referred to as
+  the Canonical Frame Address (CFA). The call frame information is used to
+  determine the CFA for the call frames of the current thread's call stack (see
   :ref:`amdgpu-dwarf-call-frame-information`).
 
+  It is required for operations that specify target architecture registers to
+  support virtual unwinding of the call stack.
+
+  *For example, the* ``DW_OP_*reg*`` *operations.*
+
+  If specified, it must be an active call frame in the current thread. If the
+  current lane is specified, then that lane must have been active on entry to
+  the call frame (see the ``DW_AT_LLVM_lane_pc`` attribute). Otherwise the
+  result is undefined.
+
+  If it is the currently executing call frame, then it is termed the top call
+  frame.
+
 *A current program location*
-  This may be used in the evaluation of location list expressions to select
-  amongst multiple program location ranges. It should be the program location
-  corresponding to the current subprogram. If the current subprogram was reached
-  by virtual call stack unwinding, then the program location will correspond to
-  the associated call site.
+
+  The target architecture program location corresponding to the current call
+  frame of the current thread.
+
+  The program location of the top call frame is the target architecture program
+  counter for the current thread. The call frame information is used to obtain
+  the value of the return address register to determine the program location of
+  the other call frames (see :ref:`amdgpu-dwarf-call-frame-information`).
+
+  It is required for the evaluation of location list expressions to select
+  amongst multiple program location ranges. It is required for operations that
+  specify target architecture registers to support virtual unwinding of the call
+  stack (see :ref:`amdgpu-dwarf-call-frame-information`).
+
+  If specified:
+
+  * If the current lane is not specified:
+
+    * If the current call frame is the top call frame, it must be the current
+      target architecture program location.
+
+    * If the current call frame F is not the top call frame, it must be the
+      program location associated with the call site in the current caller frame
+      F that invoked the callee frame.
+
+  * If the current lane is specified and the architecture program location LPC
+    computed by the ``DW_AT_LLVM_lane_pc`` attribute for the current lane is not
+    the undefined location description (indicating the lane was not active on
+    entry to the call frame), it must be LPC.
+
+  * Otherwise the result is undefined.
+
+*A current compilation unit*
+
+  The compilation unit debug information entry that contains the DWARF expression
+  being evaluated.
+
+  It is required for operations that reference debug information associated with
+  the same compilation unit, including indicating if such references use the
+  32-bit or 64-bit DWARF format. It can also provide the default address space
+  address size if no current target architecture is specified.
+
+  *For example, the* ``DW_OP_constx`` *and* ``DW_OP_addrx`` *operations.*
+
+  *Note that this compilation unit may not be the same as the compilation unit
+  determined from the loaded code object corresponding to the current program
+  location. For example, the evaluation of the expression E associated with a
+  ``DW_AT_location`` attribute of the debug information entry operand of the
+  ``DW_OP_call*`` operations is evaluated with the compilation unit that
+  contains E and not the one that contains the ``DW_OP_call*`` operation
+  expression.*
+
+*A current target architecture*
+
+  The target architecture.
+
+  It is required for operations that specify target architecture specific
+  entities.
+
+  *For example, target architecture specific entities include DWARF register
+  identifiers, DWARF lane identifiers, DWARF address space identifiers, the
+  default address space, and the address space address sizes.*
+
+  If specified:
+
+  * If the current thread is specified, then the current target architecture
+    must be the same as the target architecture of the current thread.
+
+  * If the current compilation unit is specified, then the current target
+    architecture default address space address size must be the same as he
+    ``address_size`` field in the header of the current compilation unit and any
+    associated entry in the ``.debug_aranges`` section.
+
+  * If the current program location is specified, then the current target
+    architecture must be the same as the target architecture of any line number
+    information entry (see :ref:`amdgpu-dwarf-line-number-information`)
+    corresponding to the current program location.
+
+  * If the current program location is specified, then the current target
+    architecture default address space address size must be the same as he
+    ``address_size`` field in the header of any entry corresponding to the
+    current program location in the ``.debug_addr``, ``.debug_line``,
+    ``.debug_rnglists``, ``.debug_rnglists.dwo``, ``.debug_loclists``, and
+    ``.debug_loclists.dwo`` sections.
+
+  * Otherwise the result is undefined.
+
+*A current object*
+
+  The location description of a program object.
+
+  It is required for the ``DW_OP_push_object_address`` operation.
+
+  *For example, the* ``DW_AT_data_location`` *attribute on type debug
+  information entries specifies the the program object corresponding to a
+  runtime descriptor as the current object when it evaluates its associated
+  expression.*
+
+  The result is undefined if the location descriptor is invalid (see
+  :ref:`amdgpu-dwarf-location-description`).
 
 *An initial stack*
+
   This is a list of values or location descriptions that will be pushed on the
   operation expression evaluation stack in the order provided before evaluation
   of an operation expression starts.
@@ -630,13 +690,204 @@ A DWARF expression is evaluated in the context of:
   expression value with initial stack entries. In all other cases the initial
   stack is empty.
 
-When a DWARF expression is evaluated, it may be specified whether a value or
-location description is required as the result kind.
+  The result is undefined if any location descriptors are invalid (see
+  :ref:`amdgpu-dwarf-location-description`).
 
-If a result kind is specified, and the result of the evaluation does not match
-the specified result kind, then the implicit conversions described in
-:ref:`amdgpu-dwarf-memory-location-description-operations` are performed if
-valid. Otherwise, the DWARF expression is ill-formed.
+If the evaluation requires a context element that is not specified, then the
+result of the evaluation is an error.
+
+*A DWARF expression for the location description may be able to be evaluated
+without a thread, lane, call frame, program location, or architecture context.
+For example, the location of a global variable may be able to be evaluated
+without such context. If the expression evaluates with an error then it may
+indicate the variable has been optimized and so requires more context.*
+
+*The DWARF expression for call frame information (see
+:ref:`amdgpu-dwarf-call-frame-information`) operations are restricted to those
+that do not require the compilation unit context to be specified.*
+
+The DWARF is ill-formed if all the ``address_size`` fields in the headers of all
+the entries in the ``.debug_info``, ``.debug_addr``, ``.debug_line``,
+``.debug_rnglists``, ``.debug_rnglists.dwo``, ``.debug_loclists``, and
+``.debug_loclists.dwo`` sections corresponding to any given program location do
+not match.
+
+.. _amdgpu-dwarf-expression-value:
+
+DWARF Expression Value
+++++++++++++++++++++++
+
+A value has a type and a literal value. It can represent a literal value of any
+supported base type of the target architecture. The base type specifies the size
+and encoding of the literal value.
+
+.. note::
+
+  It may be desirable to add an implicit pointer base type encoding. It would be
+  used for the type of the value that is produced when the ``DW_OP_deref*``
+  operation retrieves the full contents of an implicit pointer location storage
+  created by the ``DW_OP_implicit_pointer`` or
+  ``DW_OP_LLVM_aspace_implicit_pointer`` operations. The literal value would
+  record the debugging information entry and byte displacement specified by the
+  associated ``DW_OP_implicit_pointer`` or
+  ``DW_OP_LLVM_aspace_implicit_pointer`` operations.
+
+There is a distinguished base type termed the generic type, which is an integral
+type that has the size of an address in the target architecture default address
+space and unspecified signedness.
+
+*The generic type is the same as the unspecified type used for stack operations
+defined in DWARF Version 4 and before.*
+
+An integral type is a base type that has an encoding of ``DW_ATE_signed``,
+``DW_ATE_signed_char``, ``DW_ATE_unsigned``, ``DW_ATE_unsigned_char``,
+``DW_ATE_boolean``, or any target architecture defined integral encoding in the
+inclusive range ``DW_ATE_lo_user`` to ``DW_ATE_hi_user``.
+
+.. note::
+
+  It is unclear if ``DW_ATE_address`` is an integral type. GDB does not seem to
+  consider it as integral.
+
+.. _amdgpu-dwarf-location-description:
+
+DWARF Location Description
+++++++++++++++++++++++++++
+
+*Debugging information must provide consumers a way to find the location of
+program variables, determine the bounds of dynamic arrays and strings, and
+possibly to find the base address of a subprogram’s call frame or the return
+address of a subprogram. Furthermore, to meet the needs of recent computer
+architectures and optimization techniques, debugging information must be able to
+describe the location of an object whose location changes over the object’s
+lifetime, and may reside at multiple locations simultaneously during parts of an
+object's lifetime.*
+
+Information about the location of program objects is provided by location
+descriptions.
+
+Location descriptions can consist of one or more single location descriptions.
+
+A single location description specifies the location storage that holds a
+program object and a position within the location storage where the program
+object starts. The position within the location storage is expressed as a bit
+offset relative to the start of the location storage.
+
+A location storage is a linear stream of bits that can hold values. Each
+location storage has a size in bits and can be accessed using a zero-based bit
+offset. The ordering of bits within a location storage uses the bit numbering
+and direction conventions that are appropriate to the current language on the
+target architecture.
+
+There are five kinds of location storage:
+
+*memory location storage*
+  Corresponds to the target architecture memory address spaces.
+
+*register location storage*
+  Corresponds to the target architecture registers.
+
+*implicit location storage*
+  Corresponds to fixed values that can only be read.
+
+*undefined location storage*
+  Indicates no value is available and therefore cannot be read or written.
+
+*composite location storage*
+  Allows a mixture of these where some bits come from one location storage and
+  some from another location storage, or from disjoint parts of the same
+  location storage.
+
+.. note::
+
+  It may be better to add an implicit pointer location storage kind used by the
+  ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_aspace_implicit_pointer``
+  operations. It would specify the debugger information entry and byte offset
+  provided by the operations.
+
+*Location descriptions are a language independent representation of addressing
+rules. They are created using DWARF operation expressions of arbitrary
+complexity. They can be the result of evaluating a debugger information entry
+attribute that specifies an operation expression. In this usage they can
+describe the location of an object as long as its lifetime is either static or
+the same as the lexical block (see DWARF Version 5 section 3.5) that owns it,
+and it does not move during its lifetime. They can be the result of evaluating a
+debugger information entry attribute that specifies a location list expression.
+In this usage they can describe the location of an object that has a limited
+lifetime, changes its location during its lifetime, or has multiple locations
+over part or all of its lifetime.*
+
+If a location description has more than one single location description, the
+DWARF expression is ill-formed if the object value held in each single location
+description's position within the associated location storage is not the same
+value, except for the parts of the value that are uninitialized.
+
+*A location description that has more than one single location description can
+only be created by a location list expression that has overlapping program
+location ranges, or certain expression operations that act on a location
+description that has more than one single location description. There are no
+operation expression operations that can directly create a location description
+with more than one single location description.*
+
+*A location description with more than one single location description can be
+used to describe objects that reside in more than one piece of storage at the
+same time. An object may have more than one location as a result of
+optimization. For example, a value that is only read may be promoted from memory
+to a register for some region of code, but later code may revert to reading the
+value from memory as the register may be used for other purposes. For the code
+region where the value is in a register, any change to the object value must be
+made in both the register and the memory so both regions of code will read the
+updated value.*
+
+*A consumer of a location description with more than one single location
+description can read the object's value from any of the single location
+descriptions (since they all refer to location storage that has the same value),
+but must write any changed value to all the single location descriptions.*
+
+The evaluation of an expression may require context elements to create a
+location description. If such a location description is accessed, the storage it
+denotes is that associated with the context element values specified when the
+location description was created, which may differ from the context at the time
+it is accessed.
+
+*For example, creating a register location description requires the thread
+context: the location storage is for the specified register of that thread.
+Creating a memory location description for an address space may required a
+thread and a lane context: the location storage is the memory associated with
+that thread and lane.*
+
+If any of the context elements required to create a location description change,
+the location description becomes invalid and accessing it is undefined.
+
+*Examples of context that can invalidate a location description are:*
+
+* *The thread context is required and execution causes the thread to terminate.*
+* *The call frame context is required and further execution causes the call
+  frame to return to the calling frame.*
+* *The program location is required and further execution of the thread occurs.
+  That could change the location list entry or call frame information entry that
+  applies.*
+* *An operation uses call frame information:*
+
+  * *Any of the frames used in the virtual call frame unwinding return.*
+  * *The top call frame is used, the program location is used to select the call
+    frame information entry, and further execution of the thread occurs.*
+
+*A DWARF expression can be used to compute a location description for an object.
+A subsequent DWARF expression evaluation can be given the object location
+description as the object context or initial stack context to compute a
+component of the object. The final result is undefined if the object location
+description becomes invalid between the two expression evaluations.*
+
+A change of a thread's program location may not make a location description
+invalid, yet may still render it as no longer meaningful. Accessing such a
+location description, or using it as the object context or initial stack context
+of an expression evaluation, may produce an undefined result.
+
+*For example, a location description may specify a register that no longer holds
+the intended program object after a program location change. One way to avoid
+such problems is to recompute location descriptions associated with threads when
+their program locations change.*
 
 .. _amdgpu-dwarf-operation-expressions:
 
@@ -658,10 +909,16 @@ operation expression is ill-formed.
 Evaluation of an operation expression starts with an empty stack on which the
 entries from the initial stack provided by the context are pushed in the order
 provided. Then the operations are evaluated, starting with the first operation
-of the stream, until one past the last operation of the stream is reached. The
-result of the evaluation is:
+of the stream. Evaluation continues until either an operation has an evaluation
+error, or until one past the last operation of the stream is reached.
 
-* If evaluation of the DWARF expression requires a location description, then:
+The result of the evaluation is:
+
+* If an operation has an evaluation error, or an operation evaluates an
+  expression that has an evaluation error, then the result is an evaluation
+  error.
+
+* If the current result kind specifies a location description, then:
 
   * If the stack is empty, the result is a location description with one
     undefined location description.
@@ -682,7 +939,7 @@ result of the evaluation is:
       Could define this case as returning an implicit location description as
       if the ``DW_OP_implicit`` operation is performed.
 
-* If evaluation of the DWARF expression requires a value, then:
+* If the current result kind specifies a value, then:
 
   * If the top stack entry is a value, or can be converted to one (see
     :ref:`amdgpu-dwarf-memory-location-description-operations`), then the result
@@ -691,8 +948,7 @@ result of the evaluation is:
 
   * Otherwise the DWARF expression is ill-formed.
 
-* If evaluation of the DWARF expression does not specify if a value or location
-  description is required, then:
+* If the current result kind is not specified, then:
 
   * If the stack is empty, the result is a location description with one
     undefined location description.
@@ -837,24 +1093,43 @@ expression.
     ``DW_OP_call2``, ``DW_OP_call4``, and ``DW_OP_call_ref`` perform DWARF
     procedure calls during evaluation of a DWARF expression.
 
-    ``DW_OP_call2`` and ``DW_OP_call4``, have one operand that is a 2- or 4-byte
-    unsigned offset, respectively, of a debugging information entry D in the
-    current compilation unit.
+    ``DW_OP_call2`` and ``DW_OP_call4``, have one operand that is, respectively,
+    a 2-byte or 4-byte unsigned offset DR that represents the byte offset of a
+    debugging information entry D relative to the beginning of the current
+    compilation unit.
 
     ``DW_OP_call_ref`` has one operand that is a 4-byte unsigned value in the
     32-bit DWARF format, or an 8-byte unsigned value in the 64-bit DWARF format,
-    that represents an offset of a debugging information entry D in a
-    ``.debug_info`` section, which may be contained in an executable or shared
-    object file other than that containing the operation. For references from
-    one executable or shared object file to another, the relocation must be
-    performed by the consumer.
+    that represents the byte offset DR of a debugging information entry D
+    relative to the beginning of the ``.debug_info`` section that contains the
+    current compilation unit. D may not be in the current compilation unit.
 
     .. note:
 
-      It is unclear how crossing from one executable or shared object file to
-      another can work. How would a consumer know which executable or shared
-      object file is being referenced? In an ELF file the DWARF is in a
-      non-ALLOC segment so standard dynamic relocations cannot be used.
+      DWARF Version 5 states that DR can be an offset in a ``.debug_info``
+      section other than the one that contains the current compilation unit. It
+      states that relocation of references from one executable or shared object
+      file to another must be performed by the consumer. But given that DR is
+      defined as an offset in a ``.debug_info`` section this seems impossible.
+      If DR was defined as an implementation defined value, then the consumer
+      could choose to interpret the value in an implementation defined manner to
+      reference a debug information in another executable or shared object.
+
+      In ELF the ``.debug_info`` section is in a non-\ ``PT_LOAD`` segment so
+      standard dynamic relocations cannot be used. But even if they were loaded
+      segments and dynamic relocations were used, DR would need to be the
+      address of D, not an offset in a ``.debug_info`` section. That would also
+      need DR to be the size of a global address. So it would not be possible to
+      use the 32-bit DWARF format in a 64-bit global address space. In addition,
+      the consumer would need to determine what executable or shared object the
+      relocated address was in so it could determine the containing compilation
+      unit.
+
+      GDB only interprets DR as an offset in the ``.debug_info`` section that
+      contains the current compilation unit.
+
+      This comment also applies to ``DW_OP_implicit_pointer`` and
+      ``DW_OP_LLVM_aspace_implicit_pointer``.
 
     *Operand interpretation of* ``DW_OP_call2``\ *,* ``DW_OP_call4``\ *, and*
     ``DW_OP_call_ref`` *is exactly like that for* ``DW_FORM_ref2``\ *,
@@ -867,8 +1142,13 @@ expression.
       operation expression continues from the first operation of E. Execution
       continues until one past the last operation of E is reached, at which
       point execution continues with the operation following the call operation.
-      Since E is evaluated on the same stack as the call, E can use, add, and/or
-      remove entries already on the stack.
+      The operations of E are evaluated with the same current context, except
+      current compilation unit is the one that contains D and the stack is the
+      same as that being used by the call operation. After the call operation
+      has been evaluated, the stack is therefore as it is left by the evaluation
+      of the operations of E. Since E is evaluated on the same stack as the call
+      operation, E can use, and/or remove entries already on the stack, and can
+      add new entries to the stack.
 
       *Values on the stack at the time of the call may be used as parameters by
       the called expression and values left on the stack by the called expression
@@ -877,10 +1157,10 @@ expression.
 
     * If D has a ``DW_AT_location`` attribute that is encoded as a ``loclist`` or
       ``loclistsptr``, then the specified location list expression E is
-      evaluated, and the resulting location description is pushed on the stack.
-      The evaluation of E uses a context that has the same current frame and
-      current program location as the current operation expression, but an empty
-      initial stack.
+      evaluated. The evaluation of E uses the current context, except the result
+      kind is a location description, the compilation unit is the one that
+      contains D, and the initial stack is empty. The location description
+      result is pushed on the stack.
 
       .. note::
 
@@ -909,7 +1189,7 @@ expression.
 
         GDB implements ``DW_OP_call*`` by always executing E on the same stack.
         If the location list has multiple matching entries, it simply picks the
-        first one and ignores the rest. This seems fundementally at odds with
+        first one and ignores the rest. This seems fundamentally at odds with
         the desire to supporting multiple places for variables.
 
         So, it feels like ``DW_OP_call*`` should both support pushing a location
@@ -930,7 +1210,7 @@ expression.
         ``exprproc``, ``loclistproc``, and ``loclistsptrproc`` to indicate that
         the expression is executed on the same stack. ``exprproc`` is the same
         encoding as ``exprloc``. ``loclistproc`` and ``loclistsptrproc`` are the
-        same encoding as their non-\ ``proc`` counterparts except the DWARF is
+        same encoding as their non-\ ``proc`` counterparts, except the DWARF is
         ill-formed if the location list does not match exactly one location list
         entry and a default entry is required. These forms indicate explicitly
         that the matched single operation expression must be executed on the
@@ -951,10 +1231,10 @@ expression.
         information entry. The DWARF would be ill-formed if E is a location list
         expression that does not match exactly one location list entry. In all
         other cases the evaluation of an expression E that is the value of a
-        ``DW_AT_location`` attribute would evaluate E with a context that has
-        the same current frame and current program location as the current
-        operation expression, but an empty initial stack, and push the resulting
-        location description on the stack.
+        ``DW_AT_location`` attribute would evaluate E with the current context,
+        except the result kind is a location description, the compilation unit
+        is the one that contains D, and the initial stack is empty. The location
+        description result is pushed on the stack.
 
     * If D has a ``DW_AT_const_value`` attribute with a value V, then it is as
       if a ``DW_OP_implicit_value V`` operation was executed.
@@ -1070,18 +1350,18 @@ size and the low-order bits used.
 9.  ``DW_OP_const_type``
 
     ``DW_OP_const_type`` has three operands. The first is an unsigned LEB128
-    integer that represents the offset of a debugging information entry D in the
-    current compilation unit, that provides the type of the constant value. The
-    second is a 1-byte unsigned integral constant S. The third is a block of
-    bytes B, with a length equal to S.
+    integer DR that represents the byte offset of a debugging information entry
+    D relative to the beginning of the current compilation unit, that provides
+    the type T of the constant value. The second is a 1-byte unsigned integral
+    constant S. The third is a block of bytes B, with a length equal to S.
 
-    T is the bit size of the type D. The least significant T bits of B are
+    TS is the bit size of the type T. The least significant TS bits of B are
     interpreted as a value V of the type D. It pushes the value V with the type
     D.
 
     The DWARF is ill-formed if D is not a ``DW_TAG_base_type`` debugging
-    information entry, or if T divided by 8 and rounded up to a multiple of 8
-    (the byte size) is not equal to S.
+    information entry in the current compilation unit, or if TS divided by 8
+    (the byte size) and rounded up to a whole number is not equal to S.
 
     *While the size of the byte block B can be inferred from the type D
     definition, it is encoded explicitly into the operation so that the
@@ -1090,9 +1370,8 @@ size and the low-order bits used.
 
 10. ``DW_OP_LLVM_push_lane`` *New*
 
-    ``DW_OP_LLVM_push_lane`` pushes a value with the generic type that is the
-    target architecture specific lane identifier of the thread of execution for
-    which a user presented expression is currently being evaluated.
+    ``DW_OP_LLVM_push_lane`` pushes the target architecture lane identifier of
+    the current lane as a value with the generic type.
 
     *For languages that are implemented using a SIMD or SIMT execution model,
     this is the lane number that corresponds to the source language thread of
@@ -1127,49 +1406,91 @@ There are these special value operations currently defined:
 
     ``DW_OP_regval_type`` has two operands. The first is an unsigned LEB128
     integer that represents a register number R. The second is an unsigned
-    LEB128 integer that represents the offset of a debugging information entry D
-    in the current compilation unit, that provides the type of the register
-    value.
+    LEB128 integer DR that represents the byte offset of a debugging information
+    entry D relative to the beginning of the current compilation unit, that
+    provides the type T of the register value.
 
-    The contents of register R are interpreted as a value V of the type D. The
-    value V is pushed on the stack with the type D.
-
-    The DWARF is ill-formed if D is not a ``DW_TAG_base_type`` debugging
-    information entry, or if the size of type D is not the same as the size of
-    register R.
+    The operation is equivalent to performing ``DW_OP_regx R; DW_OP_deref_type
+    DR``.
 
     .. note::
 
-      Should DWARF allow the type D to be a different size to the size of the
-      register R? Requiring them to be the same bit size avoids any issue of
-      conversion as the bit contents of the register is simply interpreted as a
-      value of the specified type. If a conversion is wanted it can be done
+      Should DWARF allow the type T to be a larger size than the size of the
+      register R? Restricting a larger bit size avoids any issue of conversion
+      as the, possibly truncated, bit contents of the register is simply
+      interpreted as a value of T. If a conversion is wanted it can be done
       explicitly using a ``DW_OP_convert`` operation.
 
       GDB has a per register hook that allows a target specific conversion on a
-      register by register basis. It defaults to truncation of bigger registers,
-      and to actually reading bytes from the next register (or reads out of
-      bounds for the last register) for smaller registers. There are no GDB
-      tests that read a register out of bounds (except an illegal hand written
-      assembly test).
+      register by register basis. It defaults to truncation of bigger registers.
+      Removing use of the target hook does not cause any test failures in common
+      architectures. If the compiler for a target architecture did want some
+      form of conversion, including a larger result type, it could always
+      explicitly used the ``DW_OP_convert`` operation.
+
+      If T is a larger type than the register size, then the default GDB
+      register hook reads bytes from the next register (or reads out of bounds
+      for the last register!). Removing use of the target hook does not cause
+      any test failures in common architectures (except an illegal hand written
+      assembly test). If a target architecture requires this behavior, this
+      proposal allows a composite location description to be used to combine
+      multiple registers.
 
 2.  ``DW_OP_deref``
 
-    The ``DW_OP_deref`` operation pops one stack entry that must be a location
-    description L.
+    S is the bit size of the generic type divided by 8 (the byte size) and
+    rounded up to a whole number. DR is the offset of a hypothetical debug
+    information entry D in the current compilation unit for a base type of the
+    generic type.
 
-    A value of the bit size of the generic type is retrieved from the location
-    storage specified by L. The value V retrieved is pushed on the stack with
-    the generic type.
+    The operation is equivalent to performing ``DW_OP_deref_type S, DR``.
 
-    If any bit of the value is retrieved from the undefined location storage, or
-    the offset of any bit exceeds the size of the location storage specified by
-    L, then the DWARF expression is ill-formed.
+3.  ``DW_OP_deref_size``
 
-    See :ref:`amdgpu-dwarf-implicit-location-descriptions` for special rules
-    concerning implicit location descriptions created by the
-    ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_implicit_aspace_pointer``
-    operations.
+    ``DW_OP_deref_size`` has a single 1-byte unsigned integral constant that
+    represents a byte result size S.
+
+    TS is the smaller of the generic type bit size and S scaled by 8 (the byte
+    size). If TS is smaller than the generic type bit size then T is an unsigned
+    integral type of bit size TS, otherwise T is the generic type. DR is the
+    offset of a hypothetical debug information entry D in the current
+    compilation unit for a base type T.
+
+    .. note::
+
+      Truncating the value when S is larger than the generic type matches what
+      GDB does. This allows the generic type size to not be an integral byte
+      size. It does allow S to be arbitrarily large. Should S be restricted to
+      the size of the generic type rounded up to a multiple of 8?
+
+    The operation is equivalent to performing ``DW_OP_deref_type S, DR``, except
+    if T is not the generic type, the value V pushed is zero-extended to the
+    generic type bit size and its type changed to the generic type.
+
+4.  ``DW_OP_deref_type``
+
+    ``DW_OP_deref_type`` has two operands. The first is a 1-byte unsigned
+    integral constant S. The second is an unsigned LEB128 integer DR that
+    represents the byte offset of a debugging information entry D relative to
+    the beginning of the current compilation unit, that provides the type T of
+    the result value.
+
+    TS is the bit size of the type T.
+
+    *While the size of the pushed value V can be inferred from the type T, it is
+    encoded explicitly as the operand S so that the operation can be parsed
+    easily without reference to the* ``.debug_info`` *section.*
+
+    .. note::
+
+      It is unclear why the operand S is needed. Unlike ``DW_OP_const_type``,
+      the size is not needed for parsing. Any evaluation needs to get the base
+      type T to push with the value to know its encoding and bit size.
+
+    It pops one stack entry that must be a location description L.
+
+    A value V of TS bits is retrieved from the location storage LS specified by
+    one of the single location descriptions SL of L.
 
     *If L, or the location description of any composite location description
     part that is a subcomponent of L, has more than one single location
@@ -1180,69 +1501,41 @@ There are these special value operations currently defined:
     are the concatenation of the N bits from each composite location part PL,
     where N is limited to the size of PL.*
 
-3.  ``DW_OP_deref_size``
-
-    ``DW_OP_deref_size`` has a single 1-byte unsigned integral constant that
-    represents a byte result size S.
-
-    It pops one stack entry that must be a location description L.
-
-    T is the smaller of the generic type size and S scaled by 8 (the byte size).
-    A value V of T bits is retrieved from the location storage specified by L.
-    If V is smaller than the size of the generic type, V is zero-extended to the
-    generic type size. V is pushed onto the stack with the generic type.
-
-    The DWARF expression is ill-formed if any bit of the value is retrieved from
-    the undefined location storage, or if the offset of any bit exceeds the size
-    of the location storage specified by L.
+    V is pushed on the stack with the type T.
 
     .. note::
 
-      Truncating the value when S is larger than the generic type matches what
-      GDB does. This allows the generic type size to not be a integral byte
-      size. It does allow S to be arbitrarily large. Should S be restricted to
-      the size of the generic type rounded up to a multiple of 8?
+      This definition makes it an evaluation error if L is a register location
+      description that has less than TS bits remaining in the register storage.
+      Particularly since this proposal extends location descriptions to have a
+      bit offset, it would be odd to define this as performing sign extension
+      based on the type, or be target architecture dependent, as the number of
+      remaining bits could be any number. This matches the GDB implementation
+      for ``DW_OP_deref_type``.
 
-    See :ref:`amdgpu-dwarf-implicit-location-descriptions` for special rules
-    concerning implicit location descriptions created by the
-    ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_implicit_aspace_pointer``
-    operations.
+      This proposal defines ``DW_OP_*breg*`` in terms of ``DW_OP_regval_type``.
+      ``DW_OP_regval_type`` is defined in terms of ``DW_OP_regx``, which uses a
+      0 bit offset, and ``DW_OP_deref_type``. Therefore, it requires the
+      register size to be greater or equal to the address size of the address
+      space. This matches the GDB implementation for ``DW_OP_*breg*``.
 
-4.  ``DW_OP_deref_type``
-
-    ``DW_OP_deref_type`` has two operands. The first is a 1-byte unsigned
-    integral constant S. The second is an unsigned LEB128 integer that
-    represents the offset of a debugging information entry D in the current
-    compilation unit, that provides the type of the result value.
-
-    It pops one stack entry that must be a location description L. T is the bit
-    size of the type D. A value V of T bits is retrieved from the location
-    storage specified by L. V is pushed on the stack with the type D.
-
-    The DWARF is ill-formed if D is not a ``DW_TAG_base_type`` debugging
-    information entry, if T divided by 8 and rounded up to a multiple of 8 (the
-    byte size) is not equal to S, if any bit of the value is retrieved from the
-    undefined location storage, or if the offset of any bit exceeds the size of
-    the location storage specified by L.
-
-    See :ref:`amdgpu-dwarf-implicit-location-descriptions` for special rules
-    concerning implicit location descriptions created by the
-    ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_implicit_aspace_pointer``
-    operations.
-
-    *While the size of the pushed value V can be inferred from the type D
-    definition, it is encoded explicitly into the operation so that the
-    operation can be parsed easily without reference to the* ``.debug_info``
-    *section.*
+    The DWARF is ill-formed if D is not in the current compilation unit, D is
+    not a ``DW_TAG_base_type`` debugging information entry, or if TS divided by
+    8 (the byte size) and rounded up to a whole number is not equal to S.
 
     .. note::
-
-      It is unclear why the operand S is needed. Unlike ``DW_OP_const_type``,
-      the size is not needed for parsing. Any evaluation needs to get the base
-      type to record with the value to know its encoding and bit size.
 
       This definition allows the base type to be a bit size since there seems no
       reason to restrict it.
+
+    It is an evaluation error if any bit of the value is retrieved from the
+    undefined location storage or the offset of any bit exceeds the size of the
+    location storage LS specified by any single location description SL of L.
+
+    See :ref:`amdgpu-dwarf-implicit-location-descriptions` for special rules
+    concerning implicit location descriptions created by the
+    ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_implicit_aspace_pointer``
+    operations.
 
 5.  ``DW_OP_xderef`` *Deprecated*
 
@@ -1277,9 +1570,10 @@ There are these special value operations currently defined:
 7.  ``DW_OP_xderef_type`` *Deprecated*
 
     ``DW_OP_xderef_type`` has two operands. The first is a 1-byte unsigned
-    integral constant S. The second operand is an unsigned LEB128
-    integer R that represents the offset of a debugging information entry D in
-    the current compilation unit, that provides the type of the result value.
+    integral constant S. The second operand is an unsigned LEB128 integer DR
+    that represents the byte offset of a debugging information entry D relative
+    to the beginning of the current compilation unit, that provides the type T
+    of the result value.
 
     It pops two stack entries. The first must be an integral type value that
     represents an address A. The second must be an integral type value that
@@ -1294,50 +1588,42 @@ There are these special value operations currently defined:
 
 8.  ``DW_OP_entry_value`` *Deprecated*
 
-    ``DW_OP_entry_value`` pushes the value that the described location held upon
-    entering the current subprogram.
+    ``DW_OP_entry_value`` pushes the value of an expression that is evaluated in
+    the context of the calling frame.
+
+    *It may be used to determine the value of arguments on entry to the current
+    call frame provided they are not clobbered.*
 
     It has two operands. The first is an unsigned LEB128 integer S. The second
     is a block of bytes, with a length equal S, interpreted as a DWARF
     operation expression E.
 
-    E is evaluated as if it had been evaluated upon entering the current
-    subprogram with an empty initial stack.
+    E is evaluated with the current context, except the result kind is
+    unspecified, the call frame is the one that called the current frame, the
+    program location is the call site in the calling frame, the object is
+    unspecified, and the initial stack is empty. The calling frame information
+    is obtained by virtually unwinding the current call frame using the call
+    frame information (see :ref:`amdgpu-dwarf-call-frame-information`).
 
-    .. note::
+    If the result of E is a location description L (see
+    :ref:`amdgpu-dwarf-register-location-descriptions`), and the last operation
+    executed by E is a ``DW_OP_reg*`` for register R with a target architecture
+    specific base type of T, then the contents of the register are retrieved as
+    if a ``DW_OP_deref_type DR`` operation was performed where DR is the offset
+    of a hypothetical debug information entry in the current compilation unit
+    for T. The resulting value V s pushed on the stack.
 
-      It is unclear what this means. What is the current program location and
-      current frame that must be used? Does this require reverse execution so
-      the register and memory state are as it was on entry to the current
-      subprogram?
+    *Using* ``DW_OP_reg*`` *provides a more compact form for the case where the
+    value was in a register on entry to the subprogram.*
 
-    The DWARF expression is ill-formed if the evaluation of E executes a
-    ``DW_OP_push_object_address`` operation.
+    .. note:
 
-    If the result of E is a location description with one register location
-    description (see :ref:`amdgpu-dwarf-register-location-descriptions`),
-    ``DW_OP_entry_value`` pushes the value that register had upon entering the
-    current subprogram. The value entry type is the target architecture register
-    base type. If the register value is undefined or the register location
-    description bit offset is not 0, then the DWARF expression is ill-formed.
+      It is unclear how this provides a more compact expression, as
+      ``DW_OP_regval_type`` could be used which is marginally larger.
 
-    *The register location description provides a more compact form for the case
-    where the value was in a register on entry to the subprogram.*
-
-    If the result of E is a value V, ``DW_OP_entry_value`` pushes V on the
-    stack.
+    If the result of E is a value V, then V is pushed on the stack.
 
     Otherwise, the DWARF expression is ill-formed.
-
-    *The values needed to evaluate* ``DW_OP_entry_value`` *could be obtained in
-    several ways. The consumer could suspend execution on entry to the
-    subprogram, record values needed by* ``DW_OP_entry_value`` *expressions
-    within the subprogram, and then continue. When evaluating*
-    ``DW_OP_entry_value``\ *, the consumer would use these recorded values
-    rather than the current values. Or, when evaluating* ``DW_OP_entry_value``\
-    *, the consumer could virtually unwind using the Call Frame Information
-    (see* :ref:`amdgpu-dwarf-call-frame-information`\ *) to recover register
-    values that might have been clobbered since the subprogram entry point.*
 
     *The* ``DW_OP_entry_value`` *operation is deprecated as its main usage is
     provided by other means. DWARF Version 5 added the*
@@ -1351,29 +1637,8 @@ There are these special value operations currently defined:
 
     .. note::
 
-      It is unclear why this operation is defined this way. How would a consumer
-      know what values have to be saved on entry to the subprogram? Does it have
-      to parse every expression of every ``DW_OP_entry_value`` operation to
-      capture all the possible results needed? Or does it have to implement
-      reverse execution so it can evaluate the expression in the context of the
-      entry of the subprogram so it can obtain the entry point register and
-      memory values? Or does the compiler somehow instruct the consumer how to
-      create the saved copies of the variables on entry?
-
-      If the expression is simply using existing variables, then it is just a
-      regular expression and no special operation is needed. If the main purpose
-      is only to read the entry value of a register using CFI then it would be
-      better to have an operation that explicitly does just that such as the
-      proposed ``DW_OP_LLVM_call_frame_entry_reg`` operation.
-
-      GDB only seems to implement ``DW_OP_entry_value`` when E is exactly
-      ``DW_OP_reg*`` or ``DW_OP_breg*; DW_OP_deref*``. It evaluates E in the
-      context of the calling subprogram and the calling call site program
-      location. But the wording suggests that is not the intention.
-
-      Given these issues it is suggested ``DW_OP_entry_value`` is deprecated in
-      favor of using the new facities that have well defined semantics and
-      implementations.
+      GDB only implements ``DW_OP_entry_value`` when E is exactly
+      ``DW_OP_reg*`` or ``DW_OP_breg*; DW_OP_deref*``.
 
 .. _amdgpu-dwarf-location-description-operations:
 
@@ -1395,9 +1660,9 @@ General Location Description Operations
     It adds the value of B scaled by 8 (the byte size) to the bit offset of each
     single location description SL of L, and pushes the updated L.
 
-    If the updated bit offset of any SL is less than 0 or greater than or equal
-    to the size of the location storage specified by SL, then the DWARF
-    expression is ill-formed.
+    It is an evaluation error if the updated bit offset of any SL is less than 0
+    or greater than or equal to the size of the location storage specified by
+    SL.
 
 2.  ``DW_OP_LLVM_offset_uconst`` *New*
 
@@ -1426,25 +1691,36 @@ General Location Description Operations
     It adds the value of B to the bit offset of each single location description
     SL of L, and pushes the updated L.
 
-    If the updated bit offset of any SL is less than 0 or greater than or equal
-    to the size of the location storage specified by SL, then the DWARF
-    expression is ill-formed.
+    It is an evaluation error if the updated bit offset of any SL is less than 0
+    or greater than or equal to the size of the location storage specified by
+    SL.
 
 4.  ``DW_OP_push_object_address``
 
     ``DW_OP_push_object_address`` pushes the location description L of the
-    object currently being evaluated as part of evaluation of a user presented
-    expression.
+    current object.
 
-    This object may correspond to an independent variable described by its own
-    debugging information entry or it may be a component of an array, structure,
-    or class whose address has been dynamically determined by an earlier step
-    during user expression evaluation.
+    *This object may correspond to an independent variable that is part of a
+    user presented expression that is being evaluated. The object location
+    description may be determined from the variable's own debugging information
+    entry or it may be a component of an array, structure, or class whose
+    address has been dynamically determined by an earlier step during user
+    expression evaluation.*
 
     *This operation provides explicit functionality (especially for arrays
     involving descriptions) that is analogous to the implicit push of the base
     location description of a structure prior to evaluation of a
     ``DW_AT_data_member_location`` to access a data member of a structure.*
+
+    .. note::
+
+      This operation could be removed and the object location description
+      specified as the initial stack as for ``DW_AT_data_member_location``.
+
+      The only attribute that specifies a current object is
+      ``DW_AT_data_location`` so the non-normative text seems to overstate how
+      this is being used. Or are there other attributes that need to state they
+      pass an object?
 
 5.  ``DW_OP_LLVM_call_frame_entry_reg`` *New*
 
@@ -1452,13 +1728,15 @@ General Location Description Operations
     operand that represents a target architecture register number R.
 
     It pushes a location description L that holds the value of register R on
-    entry to the current subprogram as defined by the Call Frame Information
+    entry to the current subprogram as defined by the call frame information
     (see :ref:`amdgpu-dwarf-call-frame-information`).
 
-    *If there is no Call Frame Information defined, then the default rules for
+    *If there is no call frame information defined, then the default rules for
     the target architecture are used. If the register rule is* undefined\ *, then
     the undefined location description is pushed. If the register rule is* same
     value\ *, then a register location description for R is pushed.*
+
+.. _amdgpu-dwarf-undefined-location-description-operations:
 
 Undefined Location Description Operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1616,8 +1894,19 @@ type.
     least significant S bits as a twos-complement unsigned value A'.
 
     It pushes a location description L with one memory location description SL
-    on the stack. SL specifies the memory location storage that corresponds to
-    AS with a bit offset equal to A' scaled by 8 (the byte size).
+    on the stack. SL specifies the memory location storage LS that corresponds
+    to AS with a bit offset equal to A' scaled by 8 (the byte size).
+
+    If AS is an address space that is specific to context elements, then LS
+    corresponds to the location storage associated with the current context.
+
+    *For example, if AS is for per thread storage then LS is the location
+    storage for the current thread. For languages that are implemented using a
+    SIMD or SIMT execution model, then if AS is for per lane storage then LS is
+    the location storage for the current lane of the current thread. Therefore,
+    if L is accessed by an operation, the location storage selected when the
+    location description was created is accessed, and not the location storage
+    associated with the current context of the access operation.*
 
     The DWARF expression is ill-formed if AS is not one of the values defined by
     the target architecture specific ``DW_ASPACE_*`` values.
@@ -1630,16 +1919,17 @@ type.
 4.  ``DW_OP_form_tls_address``
 
     ``DW_OP_form_tls_address`` pops one stack entry that must be an integral
-    type value and treats it as a thread-local storage address T.
+    type value and treats it as a thread-local storage address TA.
 
     It pushes a location description L with one memory location description SL
     on the stack. SL is the target architecture specific memory location
-    description that corresponds to the thread-local storage address T.
+    description that corresponds to the thread-local storage address TA.
 
-    The meaning of the thread-local storage address T is defined by the run-time
-    environment. If the run-time environment supports multiple thread-local
-    storage blocks for a single thread, then the block corresponding to the
-    executable or shared library containing this DWARF expression is used.
+    The meaning of the thread-local storage address TA is defined by the
+    run-time environment. If the run-time environment supports multiple
+    thread-local storage blocks for a single thread, then the block
+    corresponding to the executable or shared library containing this DWARF
+    expression is used.
 
     *Some implementations of C, C++, Fortran, and other languages support a
     thread-local storage class. Variables with this storage class have distinct
@@ -1661,15 +1951,15 @@ type.
 5.  ``DW_OP_call_frame_cfa``
 
     ``DW_OP_call_frame_cfa`` pushes the location description L of the Canonical
-    Frame Address (CFA) of the current subprogram, obtained from the Call Frame
-    Information on the stack. See :ref:`amdgpu-dwarf-call-frame-information`.
+    Frame Address (CFA) of the current subprogram, obtained from the call frame
+    information on the stack. See :ref:`amdgpu-dwarf-call-frame-information`.
 
     *Although the value of the* ``DW_AT_frame_base`` *attribute of the debugger
     information entry corresponding to the current subprogram can be computed
     using a location list expression, in some cases this would require an
     extensive location list because the values of the registers used in
-    computing the CFA change during a subprogram execution. If the Call Frame
-    Information is present, then it already encodes such changes, and it is
+    computing the CFA change during a subprogram execution. If the call frame
+    information is present, then it already encodes such changes, and it is
     space efficient to reference that using the* ``DW_OP_call_frame_cfa``
     *operation.*
 
@@ -1701,10 +1991,12 @@ type.
     The address size S is defined as the address bit size of the target
     architecture specific address space corresponding to AS.
 
-    The contents of the register specified by R are retrieved as a
-    twos-complement unsigned value and zero extended to S bits. B is added and
-    the least significant S bits are treated as a twos-complement unsigned value
-    to be used as an address A.
+    The contents of the register specified by R are retrieved as if a
+    ``DW_OP_regval_type R, DR`` operation was performed where DR is the offset
+    of a hypothetical debug information entry in the current compilation unit
+    for an unsigned integral base type of size S bits. B is added and the least
+    significant S bits are treated as an unsigned value to be used as an address
+    A.
 
     They push a location description L comprising one memory location
     description LS on the stack. LS specifies the memory location storage that
@@ -1716,8 +2008,8 @@ type.
     that represents a register number R. The second is a signed LEB128
     integer that represents a byte displacement B.
 
-    The action is the same as for ``DW_OP_breg<N>`` except that R is used as the
-    register number and B is used as the byte displacement.
+    The action is the same as for ``DW_OP_breg<N>``, except that R is used as
+    the register number and B is used as the byte displacement.
 
 9.  ``DW_OP_LLVM_aspace_bregx`` *New*
 
@@ -1727,9 +2019,9 @@ type.
     entry that is required to be an integral type value that represents a target
     architecture specific address space identifier AS.
 
-    The action is the same as for ``DW_OP_breg<N>`` except that R is used as the
-    register number, B is used as the byte displacement, and AS is used as the
-    address space identifier.
+    The action is the same as for ``DW_OP_breg<N>``, except that R is used as
+    the register number, B is used as the byte displacement, and AS is used as
+    the address space identifier.
 
     The DWARF expression is ill-formed if AS is not one of the values defined by
     the target architecture specific ``DW_ASPACE_*`` values.
@@ -1759,18 +2051,32 @@ register starting at the specified bit offset.
     numbered from 0 through 31, inclusive. The target architecture register
     number R corresponds to the N in the operation name.
 
-    They push a location description L that specifies one register location
-    description SL on the stack. SL specifies the register location storage that
-    corresponds to R with a bit offset of 0.
+    The operation is equivalent to performing ``DW_OP_regx R``.
 
 2.  ``DW_OP_regx``
 
     ``DW_OP_regx`` has a single unsigned LEB128 integer operand that represents
     a target architecture register number R.
 
-    It pushes a location description L that specifies one register location
-    description SL on the stack. SL specifies the register location storage that
-    corresponds to R with a bit offset of 0.
+    If the current call frame is the top call frame, it pushes a location
+    description L that specifies one register location description SL on the
+    stack. SL specifies the register location storage that corresponds to R with
+    a bit offset of 0 for the current thread.
+
+    If the current call frame is not the top call frame, call frame information
+    (see :ref:`amdgpu-dwarf-call-frame-information`) is used to determine the
+    location description that holds the register for the current call frame and
+    current program location of the current thread. The resulting location
+    description L is pushed.
+
+    *Note that if call frame information is used, the resulting location
+    description may be register, memory, or undefined.*
+
+    *An implementation may evaluate the call frame information immediately, or
+    may defer evaluation until L is accessed by an operation. If evaluation is
+    defered, R and the current context can be recorded in L. When accessed, the
+    recorded context is used to evaluate the call frame information, not the
+    current context of the access operation.*
 
 *These operations obtain a register location. To fetch the contents of a
 register, it is necessary to use* ``DW_OP_regval_type``\ *, use one of the*
@@ -1844,16 +2150,14 @@ implicit storage value starting at the bit offset.
     to access the dereferenced pointer, even when it cannot access the pointer
     itself.*
 
-    ``DW_OP_implicit_pointer`` has two operands. The first is a 4-byte unsigned
-    value in the 32-bit DWARF format, or an 8-byte unsigned value in the 64-bit
-    DWARF format, that represents a debugging information entry reference R. The
-    second is a signed LEB128 integer that represents a byte displacement B.
+    ``DW_OP_implicit_pointer`` has two operands. The first operand is a 4-byte
+    unsigned value in the 32-bit DWARF format, or an 8-byte unsigned value in
+    the 64-bit DWARF format, that represents the byte offset DR of a debugging
+    information entry D relative to the beginning of the ``.debug_info`` section
+    that contains the current compilation unit. The second operand is a signed
+    LEB128 integer that represents a byte displacement B.
 
-    R is used as the offset of a debugging information entry D in a
-    ``.debug_info`` section, which may be contained in an executable or shared
-    object file other than that containing the operation. For references from one
-    executable or shared object file to another, the relocation must be
-    performed by the consumer.
+    *Note that D may not be in the current compilation unit.*
 
     *The first operand interpretation is exactly like that for*
     ``DW_FORM_ref_addr``\ *.*
@@ -1870,8 +2174,10 @@ implicit storage value starting at the bit offset.
     It pushes a location description L that comprises one implicit location
     description SL on the stack. SL specifies LS with a bit offset of 0.
 
-    If a ``DW_OP_deref*`` operation pops a location description L', and
-    retrieves S bits where both:
+    It is an evaluation error if a ``DW_OP_deref*`` operation pops a location
+    description L', and retrieves S bits, such that any retrieved bits come from
+    an implicit location storage that is the same as LS, unless both the
+    following conditions are met:
 
     1.  All retrieved bits come from an implicit location description that
         refers to an implicit location storage that is the same as LS.
@@ -1884,26 +2190,29 @@ implicit storage value starting at the bit offset.
 
     *These rules are equivalent to retrieving the complete contents of LS.*
 
-    Then the value V pushed by the ``DW_OP_deref*`` operation is an implicit
-    pointer value IPV with a target architecture specific address space of AS, a
-    debugging information entry of D, and a base type of T. If AS is the target
-    architecture default address space, then T is the generic type. Otherwise, T
-    is a target architecture specific integral type with a bit size equal to S.
-
-    Otherwise, if a ``DW_OP_deref*`` operation is applied to a location
-    description such that some retrieved bits come from an implicit location
-    storage that is the same as LS, then the DWARF expression is ill-formed.
+    If both the above conditions are met, then the value V pushed by the
+    ``DW_OP_deref*`` operation is an implicit pointer value IPV with a target
+    architecture specific address space of AS, a debugging information entry of
+    D, and a base type of T. If AS is the target architecture default address
+    space, then T is the generic type. Otherwise, T is a target architecture
+    specific integral type with a bit size equal to S.
 
     If IPV is either implicitly converted to a location description (only done
     if AS is the target architecture default address space) or used by
-    ``DW_OP_LLVM_form_aspace_address`` (only done if the address space specified
-    is AS), then the resulting location description RL is:
+    ``DW_OP_LLVM_form_aspace_address`` (only done if the address space popped by
+    ``DW_OP_LLVM_form_aspace_address`` is AS), then the resulting location
+    description RL is:
 
     * If D has a ``DW_AT_location`` attribute, the DWARF expression E from the
-      ``DW_AT_location`` attribute is evaluated as a location description. The
-      current subprogram and current program location of the evaluation context
-      that is accessing IPV is used for the evaluation context of E, together
-      with an empty initial stack. RL is the expression result.
+      ``DW_AT_location`` attribute is evaluated with the current context, except
+      that the result kind is a location description, the compilation unit is
+      the one that contains D, the object is unspecified, and the initial stack
+      is empty. RL is the expression result.
+
+      *Note that E is evaluated with the context of the expression accessing
+      IPV, and not the context of the expression that contained the*
+      ``DW_OP_implicit_pointer`` *or* ``DW_OP_LLVM_aspace_implicit_pointer``
+      *operation that created L.*
 
     * If D has a ``DW_AT_const_value`` attribute, then an implicit location
       storage RLS is created from the ``DW_AT_const_value`` attribute's value
@@ -1917,7 +2226,7 @@ implicit storage value starting at the bit offset.
         deprecated and instead ``DW_AT_location`` is used with an implicit
         location description, then this rule would not be required.
 
-    * Otherwise the DWARF expression is ill-formed.
+    * Otherwise, it is an evaluation error.
 
     The bit offset of RL is updated as if the ``DW_OP_LLVM_offset_uconst B``
     operation was applied.
@@ -1925,8 +2234,7 @@ implicit storage value starting at the bit offset.
     If a ``DW_OP_stack_value`` operation pops a value that is the same as IPV,
     then it pushes a location description that is the same as L.
 
-    The DWARF expression is ill-formed if it accesses LS or IPV in any other
-    manner.
+    It is an evaluation error if LS or IPV is accessed in any other manner.
 
     *The restrictions on how an implicit pointer location description created
     by* ``DW_OP_implicit_pointer`` *and* ``DW_OP_LLVM_aspace_implicit_pointer``
@@ -1942,11 +2250,17 @@ implicit storage value starting at the bit offset.
     a target architecture specific address space identifier AS.
 
     The location description L that is pushed on the stack is the same as for
-    ``DW_OP_implicit_pointer`` except that the address space identifier used is
+    ``DW_OP_implicit_pointer``, except that the address space identifier used is
     AS.
 
     The DWARF expression is ill-formed if AS is not one of the values defined by
     the target architecture specific ``DW_ASPACE_*`` values.
+
+    .. note::
+
+      This definition of ``DW_OP_LLVM_aspace_implicit_pointer`` may change when
+      full support for address classes is added as required for languages such
+      as OpenCL/SyCL.
 
 *Typically a* ``DW_OP_implicit_pointer`` *or*
 ``DW_OP_LLVM_aspace_implicit_pointer`` *operation is used in a DWARF expression
@@ -2111,7 +2425,7 @@ compatible with the definitions in DWARF Version 5.*
     integer that represents the part bit size S. The second is an unsigned
     LEB128 integer that represents a bit displacement B.
 
-    The action is the same as for ``DW_OP_piece`` except that any part created
+    The action is the same as for ``DW_OP_piece``, except that any part created
     has the bit size S, and the location description PL of any created part is
     updated as if the ``DW_OP_constu B; DW_OP_LLVM_bit_offset`` operations were
     applied.
@@ -2252,17 +2566,31 @@ defined, and there is no following default location description entry, it is
 assumed that the object is not available for the portion of the range that is
 not covered.
 
-The operation expression of each matching location list entry is evaluated as a
-location description and its result is returned as the result of the location
-list entry. The operation expression is evaluated with the same context as the
-location list expression, including the same current frame, current program
-location, and initial stack.
+The result of the evaluation of a DWARF location list expression is:
 
-The result of the evaluation of a DWARF location list expression is a location
-description that is comprised of the union of the single location descriptions
-of the location description result of each matching location list entry. If
-there are no matching location list entries, then the result is a location
-description that comprises one undefined location description.
+* If the current program location is not specified, then it is an evaluation
+  error.
+
+  .. note::
+
+    If the location list only has a single default entry, should that be
+    considered a match if there is no program location? If there are non-default
+    entries then it seems it has to be an evaluation error when there is no
+    program location as that indicates the location depends on the program
+    location which is not known.
+
+* If there are no matching location list entries, then the result is a location
+  description that comprises one undefined location description.
+
+* Otherwise, the operation expression E of each matching location list entry is
+  evaluated with the current context, except that the result kind is a location
+  description, the object is unspecified, and the initial stack is empty. The
+  location list entry result is the location description returned by the
+  evaluation of E.
+
+  The result is a location description that is comprised of the union of the
+  single location descriptions of the location description result of each
+  matching location list entry.
 
 A location list expression can only be used as the value of a debugger
 information entry attribute that is encoded using class ``loclist`` or
@@ -2471,6 +2799,26 @@ DWARF address space identifiers are used by:
   ``DW_AT_address_space`` would be target architecture specific and the same as
   used in ``DW_OP_xderef*``.
 
+.. note::
+
+  Some additional changes will be made to support languages such as OpenCL/SyCL
+  that allow address class pointer casting and queries.
+
+  This requires the compiler to provide the mapping from address space to
+  address class which may be runtime and not target architecture dependent. Some
+  implementations may have a one-to-one mapping from source language address
+  class to target architecture address space, and some may have a many-to-one
+  mapping which requires knowledge of the address class when determining if
+  pointer address class casts are allowed.
+
+  The changes will likely add an attribute that has an expression provided by
+  the compiler to map from address class to address space. The
+  ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_aspace_implicit_pointer``
+  operations may be changed as the current IPV definition may not provide enough
+  information when used to cast between address classes. Other attributes and
+  operations may be needed. The legal casts between address classes may need to
+  be defined on a per language address class basis.
+
 .. _amdgpu-dwarf-debugging-information-entry-attributes:
 
 Debugging Information Entry Attributes
@@ -2488,10 +2836,12 @@ Debugging Information Entry Attributes
     variables and parameters) or common blocks may have a ``DW_AT_location``
     attribute, whose value is a DWARF expression E.
 
-    The result of the attribute is obtained by evaluating E as a location
-    description in the context of the current subprogram, current program
-    location, and with an empty initial stack. See
-    :ref:`amdgpu-dwarf-expressions`.
+    The result of the attribute is obtained by evaluating E with a context that
+    has a result kind of a location description, an unspecified object, the
+    compilation unit that contains E, an empty initial stack, and other context
+    elements corresponding to the source language thread of execution upon which
+    the user is focused, if any. The result of the evaluation is the location
+    description of the base of the data object.
 
     See :ref:`amdgpu-dwarf-control-flow-operations` for special evaluation rules
     used by the ``DW_OP_call*`` operations.
@@ -2535,9 +2885,11 @@ Debugging Information Entry Attributes
     may have a ``DW_AT_frame_base`` attribute, whose value is a DWARF expression
     E.
 
-    The result of the attribute is obtained by evaluating E as a location
-    description in the context of the current subprogram, current program
-    location, and with an empty initial stack.
+    The result of the attribute is obtained by evaluating E with a context that
+    has a result kind of a location description, an unspecified object, the
+    compilation unit that contains E, an empty initial stack, and other context
+    elements corresponding to the source language thread of execution upon which
+    the user is focused, if any.
 
     The DWARF is ill-formed if E contains an ``DW_OP_fbreg`` operation, or the
     resulting location description L is not comprised of one single location
@@ -2584,10 +2936,13 @@ Debugging Information Entry Attributes
         byte.*
 
     2.  Otherwise, the attribute must be a DWARF expression E which is evaluated
-        with a context of the current frame, current program location, and an
-        initial stack comprising the location description of the beginning of
-        the containing entity. The result of the evaluation is the location
-        description of the base of the member entry.
+        with a context that has a result kind of a location description, an
+        unspecified object, the compilation unit that contains E, an initial
+        stack comprising the location description of the beginning of the
+        containing entity, and other context elements corresponding to the
+        source language thread of execution upon which the user is focused, if
+        any. The result of the evaluation is the location description of the
+        base of the member entry.
 
     .. note::
 
@@ -2613,12 +2968,16 @@ Debugging Information Entry Attributes
     location description for a particular object of the given pointer to member
     type and for a particular structure or class instance.
 
-    The result of the attribute is obtained by evaluating E as a location
-    description with the context of the current subprogram, current program
-    location, and an initial stack comprising two entries. The first entry is
-    the value of the pointer to member object itself. The second entry is the
-    location description of the base of the entire class, structure, or union
-    instance containing the member whose location is being calculated.
+    The result of the attribute is obtained by evaluating E with a context that
+    has a result kind of a location description, an unspecified object, the
+    compilation unit that contains E, an initial stack comprising two entries,
+    and other context elements corresponding to the source language thread of
+    execution upon which the user is focused, if any. The first stack entry is
+    the value of the pointer to member object itself. The second stack entry is
+    the location description of the base of the entire class, structure, or
+    union instance containing the member whose location is being calculated. The
+    result of the evaluation is the location description of the member of the
+    class to which the pointer to member entry points.
 
 6.  ``DW_AT_data_location``
 
@@ -2629,9 +2988,13 @@ Debugging Information Entry Attributes
     attribute is omitted, the location description of the data is the same as
     the location description of the object.
 
-    The result of the attribute is obtained by evaluating E as a location
-    description with the context of the current subprogram, current program
-    location, and an empty initial stack.
+    The result of the attribute is obtained by evaluating E with a context that
+    has a result kind of a location description, an object that is the location
+    description of the data descriptor, the compilation unit that contains E, an
+    empty initial stack, and other context elements corresponding to the source
+    language thread of execution upon which the user is focused, if any. The
+    result of the evaluation is the location description of the base of the
+    member entry.
 
     *E will typically involve an operation expression that begins with a*
     ``DW_OP_push_object_address`` *operation which loads the location
@@ -2657,13 +3020,14 @@ Debugging Information Entry Attributes
     An entry for a virtual function also has a ``DW_AT_vtable_elem_location``
     attribute whose value is a DWARF expression E.
 
-    The result of the attribute is obtained by evaluating E as a location
-    description with the context of the current subprogram, current program
-    location, and an initial stack comprising the location description of the
-    object of the enclosing type.
-
-    The resulting location description is the slot for the function within the
-    virtual function table for the enclosing class.
+    The result of the attribute is obtained by evaluating E with a context that
+    has a result kind of a location description, an unspecified object, the
+    compilation unit that contains E, an initial stack comprising the location
+    description of the object of the enclosing type, and other context elements
+    corresponding to the source language thread of execution upon which the user
+    is focused, if any. The result of the evaluation is the location description
+    of the slot for the function within the virtual function table for the
+    enclosing class.
 
 8.  ``DW_AT_static_link``
 
@@ -2671,17 +3035,18 @@ Debugging Information Entry Attributes
     entry is lexically nested, it may have a ``DW_AT_static_link`` attribute,
     whose value is a DWARF expression E.
 
-    The result of the attribute is obtained by evaluating E as a location
-    description with the context of the current subprogram, current program
-    location, and an empty initial stack.
+    The result of the attribute is obtained by evaluating E with a context that
+    has a result kind of a location description, an unspecified object, the
+    compilation unit that contains E, an empty initial stack, and other context
+    elements corresponding to the source language thread of execution upon which
+    the user is focused, if any. The result of the evaluation is the location
+    description L of the *canonical frame address* (see
+    :ref:`amdgpu-dwarf-call-frame-information`) of the relevant call frame of
+    the subprogram instance that immediately lexically encloses the current call
+    frame's subprogram or entry point.
 
-    The DWARF is ill-formed if the resulting location description L is is not
-    comprised of one memory location description in any of the target
-    architecture specific address spaces.
-
-    The resulting L is the *frame base* of the relevant instance of the
-    subprogram that immediately lexically encloses the subprogram or entry
-    point.
+    The DWARF is ill-formed if L is is not comprised of one memory location
+    description for one of the target architecture specific address spaces.
 
 9.  ``DW_AT_return_addr``
 
@@ -2689,45 +3054,39 @@ Debugging Information Entry Attributes
     ``DW_TAG_entry_point`` debugger information entry may have a
     ``DW_AT_return_addr`` attribute, whose value is a DWARF expression E.
 
-    The result of the attribute is obtained by evaluating E as a location
-    description with the context of the current subprogram, current program
-    location, and an empty initial stack.
+    The result of the attribute is obtained by evaluating E with a context that
+    has a result kind of a location description, an unspecified object, the
+    compilation unit that contains E, an empty initial stack, and other context
+    elements corresponding to the source language thread of execution upon which
+    the user is focused, if any. The result of the evaluation is the location
+    description L of the place where the return address for the current call
+    frame's subprogram or entry point is stored.
 
-    The DWARF is ill-formed if the resulting location description L is not
-    comprised one memory location description in any of the target architecture
-    specific address spaces.
-
-    The resulting L is the place where the return address for the subprogram or
-    entry point is stored.
+    The DWARF is ill-formed if L is not comprised of one memory location
+    description for one of the target architecture specific address spaces.
 
     .. note::
 
       It is unclear why ``DW_TAG_inlined_subroutine`` has a
       ``DW_AT_return_addr`` attribute but not a ``DW_AT_frame_base`` or
       ``DW_AT_static_link`` attribute. Seems it would either have all of them or
-      none. Since inlined subprograms do not have a frame it seems they would
-      have none of these attributes.
+      none. Since inlined subprograms do not have a call frame it seems they
+      would have none of these attributes.
 
-10. ``DW_AT_call_value``, ``DW_AT_call_data_location``, and ``DW_AT_call_data_value``
+10. ``DW_AT_call_value``, ``DW_AT_call_data_location``, and
+    ``DW_AT_call_data_value``
 
     A ``DW_TAG_call_site_parameter`` debugger information entry may have a
     ``DW_AT_call_value`` attribute, whose value is a DWARF operation expression
     E\ :sub:`1`\ .
 
     The result of the ``DW_AT_call_value`` attribute is obtained by evaluating
-    E\ :sub:`1` as a value with the context of the call site subprogram, call
-    site program location, and an empty initial stack.
-
-    The call site subprogram is the subprogram containing the
-    ``DW_TAG_call_site_parameter`` debugger information entry. The call site
-    program location is the location of call site in the call site subprogram.
-
-    *The consumer may have to virtually unwind to the call site in order to
-    evaluate the attribute. This will provide both the call site subprogram and
-    call site program location needed to evaluate the expression.*
-
-    The resulting value V\ :sub:`1` is the value of the parameter at the time of
-    the call made by the call site.
+    E\ :sub:`1` with a context that has a result kind of a value, an unspecified
+    object, the compilation unit that contains E, an empty initial stack, and
+    other context elements corresponding to the source language thread of
+    execution upon which the user is focused, if any. The resulting value V\
+    :sub:`1` is the value of the parameter at the time of the call made by the
+    call site.
 
     For parameters passed by reference, where the code passes a pointer to a
     location which contains the parameter, or for reference type parameters, the
@@ -2737,21 +3096,34 @@ Debugging Information Entry Attributes
     value is a DWARF operation expression E\ :sub:`3`\ .
 
     The value of the ``DW_AT_call_data_location`` attribute is obtained by
-    evaluating E\ :sub:`2` as a location description with the context of the
-    call site subprogram, call site program location, and an empty initial
-    stack.
-
-    The resulting location description L\ :sub:`2` is the location where the
+    evaluating E\ :sub:`2` with a context that has a result kind of a location
+    description, an unspecified object, the compilation unit that contains E, an
+    empty initial stack, and other context elements corresponding to the source
+    language thread of execution upon which the user is focused, if any. The
+    resulting location description L\ :sub:`2` is the location where the
     referenced parameter lives during the call made by the call site. If E\
     :sub:`2` would just be a ``DW_OP_push_object_address``, then the
     ``DW_AT_call_data_location`` attribute may be omitted.
 
     The value of the ``DW_AT_call_data_value`` attribute is obtained by
-    evaluating E\ :sub:`3` as a value with the context of the call site
-    subprogram, call site program location, and an empty initial stack.
+    evaluating E\ :sub:`3` with a context that has a result kind of a value, an
+    unspecified object, the compilation unit that contains E, an empty initial
+    stack, and other context elements corresponding to the source language
+    thread of execution upon which the user is focused, if any. The resulting
+    value V\ :sub:`3` is the value in L\ :sub:`2` at the time of the call made
+    by the call site.
 
-    The resulting value V\ :sub:`3` is the value in L\ :sub:`2` at the time of
-    the call made by the call site.
+    The result of these attributes is undefined if the current call frame is
+    not for the subprogram containing the ``DW_TAG_call_site_parameter``
+    debugger information entry or the current program location is not for the
+    call site containing the ``DW_TAG_call_site_parameter`` debugger information
+    entry in the current call frame.
+
+    *The consumer may have to virtually unwind to the call site (see*
+    :ref:`amdgpu-dwarf-call-frame-information`\ *) in order to evaluate these
+    attributes. This will ensure the source language thread of execution upon
+    which the user is focused corresponds to the call site needed to evaluate
+    the expression.*
 
     If it is not possible to avoid the expressions of these attributes from
     accessing registers or memory locations that might be clobbered by the
@@ -2787,9 +3159,11 @@ Debugging Information Entry Attributes
     ``DW_TAG_entry_point`` debugging information entry may have a
     ``DW_AT_LLVM_lane_pc`` attribute whose value is a DWARF expression E.
 
-    The result of the attribute is obtained by evaluating E as a location
-    description with the context of the current subprogram, current program
-    location, and an empty initial stack.
+    The result of the attribute is obtained by evaluating E with a context that
+    has a result kind of a location description, an unspecified object, the
+    compilation unit that contains E, an empty initial stack, and other context
+    elements corresponding to the source language thread of execution upon which
+    the user is focused, if any.
 
     The resulting location description L is for a thread lane count sized vector
     of generic type elements. The thread lane count is the value of the
@@ -2817,9 +3191,11 @@ Debugging Information Entry Attributes
     ``DW_TAG_entry_point`` debugger information entry may have a
     ``DW_AT_LLVM_active_lane`` attribute whose value is a DWARF expression E.
 
-    The result of the attribute is obtained by evaluating E as a value with the
-    context of the current subprogram, current program location, and an empty
-    initial stack.
+    The result of the attribute is obtained by evaluating E with a context that
+    has a result kind of a value, an unspecified object, the compilation unit
+    that contains E, an empty initial stack, and other context elements
+    corresponding to the source language thread of execution upon which the user
+    is focused, if any.
 
     The DWARF is ill-formed if the resulting value V is not an integral value.
 
@@ -3042,13 +3418,15 @@ Call Frame Information
 
 .. note::
 
-  This section provides changes to existing Call Frame Information and defines
+  This section provides changes to existing call frame information and defines
   instructions added by the proposal. Additional support is added for address
   spaces. Register unwind DWARF expressions are generalized to allow any
   location description, including those with composite and implicit location
   descriptions.
 
   These changes would be incorporated into the DWARF Version 5 section 6.1.
+
+.. _amdgpu-dwarf-structure_of-call-frame-information:
 
 Structure of Call Frame Information
 +++++++++++++++++++++++++++++++++++
@@ -3057,24 +3435,43 @@ The register rules are:
 
 *undefined*
   A register that has this rule has no recoverable value in the previous frame.
-  (By convention, it is not preserved by a callee.)
+  The previous value of this register is the undefined location description (see
+  :ref:`amdgpu-dwarf-undefined-location-description-operations`).
+
+  *By convention, the register is not preserved by a callee.*
 
 *same value*
-  This register has not been modified from the previous frame. (By convention,
-  it is preserved by the callee, but the callee has not modified it.)
+  This register has not been modified from the previous caller frame.
+
+  If the current frame is the top frame, then the previous value of this
+  register is the location description L that specifies one register location
+  description SL. SL specifies the register location storage that corresponds to
+  the register with a bit offset of 0 for the current thread.
+
+  If the current frame is not the top frame, then the previous value of this
+  register is the location description obtained using the call frame information
+  for the callee frame and callee program location invoked by the current caller
+  frame for the same register.
+
+  *By convention, the register is preserved by the callee, but the callee has
+  not modified it.*
 
 *offset(N)*
   N is a signed byte offset. The previous value of this register is saved at the
   location description computed as if the DWARF operation expression
-  ``DW_OP_LLVM_offset N`` is evaluated as a location description with an initial
-  stack comprising the location description of the current CFA (see
+  ``DW_OP_LLVM_offset N`` is evaluated with the current context, except the
+  result kind is a location description, the compilation unit is unspecified,
+  the object is unspecified, and an initial stack comprising the location
+  description of the current CFA (see
   :ref:`amdgpu-dwarf-operation-expressions`).
 
 *val_offset(N)*
   N is a signed byte offset. The previous value of this register is the memory
   byte address of the location description computed as if the DWARF operation
-  expression ``DW_OP_LLVM_offset N`` is evaluated as a location description with
-  an initial stack comprising the location description of the current CFA (see
+  expression ``DW_OP_LLVM_offset N`` is evaluated with the current context,
+  except the result kind is a location description, the compilation unit is
+  unspecified, the object is unspecified, and an initial stack comprising the
+  location description of the current CFA (see
   :ref:`amdgpu-dwarf-operation-expressions`).
 
   The DWARF is ill-formed if the CFA location description is not a memory byte
@@ -3103,26 +3500,40 @@ The register rules are:
     test).
 
 *register(R)*
-  The previous value of this register is stored in another register numbered R.
+  This register has been stored in another register numbered R.
 
-  The DWARF is ill-formed if the register sizes do not match.
+  The previous value of this register is the location description obtained using
+  the call frame information for the current frame and current program location
+  for register R.
+
+  The DWARF is ill-formed if the size of this register does not match the size
+  of register R or if there is a cyclic dependency in the call frame
+  information.
+
+  .. note::
+
+    Should this also allow R to be larger than this register? If so is the value
+    stored in the low order bits and it is undefined what is stored in the
+    extra upper bits?
 
 *expression(E)*
   The previous value of this register is located at the location description
   produced by evaluating the DWARF operation expression E (see
   :ref:`amdgpu-dwarf-operation-expressions`).
 
-  E is evaluated as a location description in the context of the current
-  subprogram, current program location, and with an initial stack comprising the
-  location description of the current CFA.
+  E is evaluated with the current context, except the result kind is a location
+  description, the compilation unit is unspecified, the object is unspecified,
+  and an initial stack comprising the location description of the current CFA
+  (see :ref:`amdgpu-dwarf-operation-expressions`).
 
 *val_expression(E)*
   The previous value of this register is the value produced by evaluating the
   DWARF operation expression E (see :ref:`amdgpu-dwarf-operation-expressions`).
 
-  E is evaluated as a value in the context of the current subprogram, current
-  program location, and with an initial stack comprising the location
-  description of the current CFA.
+  E is evaluated with the current context, except the result kind is a value,
+  the compilation unit is unspecified, the object is unspecified, and an initial
+  stack comprising the location description of the current CFA (see
+  :ref:`amdgpu-dwarf-operation-expressions`).
 
   The DWARF is ill-formed if the resulting value type size does not match the
   register size.
@@ -3139,8 +3550,8 @@ The register rules are:
 *architectural*
   The rule is defined externally to this specification by the augmenter.
 
-A Common Information Entry holds information that is shared among many Frame
-Description Entries. There is at least one CIE in every non-empty
+A Common Information Entry (CIE) holds information that is shared among many
+Frame Description Entries (FDE). There is at least one CIE in every non-empty
 ``.debug_frame`` section. A CIE contains the following fields, in order:
 
 1.  ``length`` (initial length)
@@ -3235,6 +3646,10 @@ Description Entries. There is at least one CIE in every non-empty
     An unsigned LEB128 constant that indicates which column in the rule table
     represents the return address of the subprogram. Note that this column might
     not correspond to an actual machine register.
+
+    The value of the return address register is used to determine the program
+    location of the caller frame. The program location of the top frame is the
+    target architecture program counter value of the current thread.
 
 10. ``initial_instructions`` (array of ubyte)
 
@@ -3356,7 +3771,7 @@ CFA Definition Instructions
     result of evaluating the DWARF operation expression ``DW_OP_constu AS;
     DW_OP_aspace_bregx R, B*data_alignment_factor`` as a location description.
 
-    *The action is the same as* ``DW_CFA_def_cfa`` *except that the second
+    *The action is the same as* ``DW_CFA_def_cfa``\ *, except that the second
     operand is signed and factored.*
 
 3.  ``DW_CFA_def_aspace_cfa`` *New*
@@ -3384,7 +3799,7 @@ CFA Definition Instructions
     If AS is not one of the values defined by the target architecture specific
     ``DW_ASPACE_*`` values, then the DWARF expression is ill-formed.
 
-    *The action is the same as* ``DW_CFA_aspace_def_cfa`` *except that the
+    *The action is the same as* ``DW_CFA_aspace_def_cfa``\ *, except that the
     second operand is signed and factored.*
 
 5.  ``DW_CFA_def_cfa_register``
@@ -3423,7 +3838,7 @@ CFA Definition Instructions
     If the subprogram has no current CFA rule, or the rule was defined by a
     ``DW_CFA_def_cfa_expression`` instruction, then the DWARF is ill-formed.
 
-    *The action is the same as* ``DW_CFA_def_cfa_offset`` *except that the
+    *The action is the same as* ``DW_CFA_def_cfa_offset``\ *, except that the
     operand is signed and factored.*
 
 8.  ``DW_CFA_def_cfa_expression``
@@ -3431,8 +3846,9 @@ CFA Definition Instructions
     The ``DW_CFA_def_cfa_expression`` instruction takes a single operand encoded
     as a ``DW_FORM_exprloc`` value representing a DWARF operation expression E.
     The required action is to define the current CFA rule to be the result of
-    evaluating E as a location description in the context of the current
-    subprogram, current program location, and an empty initial stack.
+    evaluating E with the current context, except the result kind is a location
+    description, the compilation unit is unspecified, the object is unspecified,
+    and an empty initial stack.
 
     *See* :ref:`amdgpu-dwarf-call-frame-instructions` *regarding restrictions on
     the DWARF expression operations that can be used in E.*
@@ -3473,7 +3889,7 @@ Register Rule Instructions
 
     The ``DW_CFA_offset_extended`` instruction takes two unsigned LEB128
     operands representing a register number R and a factored displacement B.
-    This instruction is identical to ``DW_CFA_offset`` except for the encoding
+    This instruction is identical to ``DW_CFA_offset``, except for the encoding
     and size of the register operand.
 
     .. note::
@@ -3486,7 +3902,7 @@ Register Rule Instructions
     The ``DW_CFA_offset_extended_sf`` instruction takes two operands: an
     unsigned LEB128 value representing a register number R and a signed LEB128
     factored displacement B. This instruction is identical to
-    ``DW_CFA_offset_extended`` except that B is signed.
+    ``DW_CFA_offset_extended``, except that B is signed.
 
 6.  ``DW_CFA_val_offset``
 
@@ -3510,7 +3926,7 @@ Register Rule Instructions
 
     The ``DW_CFA_val_offset_sf`` instruction takes two operands: an unsigned
     LEB128 value representing a register number R and a signed LEB128 factored
-    displacement B. This instruction is identical to ``DW_CFA_val_offset``
+    displacement B. This instruction is identical to ``DW_CFA_val_offset``,
     except that B is signed.
 
 8.  ``DW_CFA_register``
@@ -3560,7 +3976,7 @@ Register Rule Instructions
 
     The ``DW_CFA_restore_extended`` instruction takes a single unsigned LEB128
     operand that represents a register number R. This instruction is identical
-    to ``DW_CFA_restore`` except for the encoding and size of the register
+    to ``DW_CFA_restore``, except for the encoding and size of the register
     operand.
 
 Row State Instructions
@@ -3692,7 +4108,7 @@ operations.
    DW_OP_LLVM_undefined               0xe7     0
    DW_OP_LLVM_aspace_bregx            0xe8     2     ULEB128 register number,
                                                      ULEB128 byte displacement
-   DW_OP_LLVM_aspace_implicit_pointer 0xe9     2     4- or 8-byte offset of DIE,
+   DW_OP_LLVM_aspace_implicit_pointer 0xe9     2     4-byte or 8-byte offset of DIE,
                                                      SLEB128 byte displacement
    DW_OP_LLVM_piece_end               0xea     0
    DW_OP_LLVM_extend                  0xeb     2     ULEB128 bit size,
@@ -3829,6 +4245,13 @@ Examples
 
 The AMD GPU specific usage of the features in the proposal, including examples,
 is available at :ref:`amdgpu-dwarf-debug-information`.
+
+.. note::
+
+  Change examples to use ``DW_OP_LLVM_offset`` instead of ``DW_OP_add`` when
+  acting on a location description.
+
+  Need to provide examples of new features.
 
 .. _amdgpu-dwarf-references:
 

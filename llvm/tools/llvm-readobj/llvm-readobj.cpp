@@ -183,14 +183,18 @@ namespace opts {
                           cl::aliasopt(ProgramHeaders));
 
   // --string-dump, -p
-  cl::list<std::string> StringDump("string-dump", cl::desc("<number|name>"),
-                                   cl::ZeroOrMore);
+  cl::list<std::string> StringDump(
+      "string-dump", cl::value_desc("number|name"),
+      cl::desc("Display the specified section(s) as a list of strings"),
+      cl::ZeroOrMore);
   cl::alias StringDumpShort("p", cl::desc("Alias for --string-dump"),
                             cl::aliasopt(StringDump), cl::Prefix);
 
   // --hex-dump, -x
-  cl::list<std::string> HexDump("hex-dump", cl::desc("<number|name>"),
-                                cl::ZeroOrMore);
+  cl::list<std::string>
+      HexDump("hex-dump", cl::value_desc("number|name"),
+              cl::desc("Display the specified section(s) as hexadecimal bytes"),
+              cl::ZeroOrMore);
   cl::alias HexDumpShort("x", cl::desc("Alias for --hex-dump"),
                          cl::aliasopt(HexDump), cl::Prefix);
 
