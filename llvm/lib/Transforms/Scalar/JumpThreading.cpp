@@ -693,12 +693,8 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessorsImpl(
     return true;
   }
 
-  // Handle Freeze instructions, in a manner similar to Cast.
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
     Value *Source = FI->getOperand(0);
-    if (!isa<PHINode>(Source) && !isa<CmpInst>(Source) &&
-        !isa<CastInst>(Source))
-      return false;
     ComputeValueKnownInPredecessorsImpl(Source, BB, Result, Preference,
                                         RecursionSet, CxtI);
 
