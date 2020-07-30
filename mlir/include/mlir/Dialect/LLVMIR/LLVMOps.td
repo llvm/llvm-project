@@ -852,6 +852,7 @@ def LLVM_ExpOp : LLVM_UnaryIntrinsicOp<"exp">;
 def LLVM_Exp2Op : LLVM_UnaryIntrinsicOp<"exp2">;
 def LLVM_FAbsOp : LLVM_UnaryIntrinsicOp<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrinsicOp<"ceil">;
+def LLVM_FFloorOp : LLVM_UnaryIntrinsicOp<"floor">;
 def LLVM_FMAOp : LLVM_TernarySameArgsIntrinsicOp<"fma">;
 def LLVM_FMulAddOp : LLVM_TernarySameArgsIntrinsicOp<"fmuladd">;
 def LLVM_Log10Op : LLVM_UnaryIntrinsicOp<"log10">;
@@ -865,6 +866,10 @@ def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrinsicOp<"pow">;
 def LLVM_BitReverseOp : LLVM_UnaryIntrinsicOp<"bitreverse">;
 def LLVM_CtPopOp : LLVM_UnaryIntrinsicOp<"ctpop">;
+def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrinsicOp<"maxnum">;
+def LLVM_MinNumOp : LLVM_BinarySameArgsIntrinsicOp<"minnum">;
+def LLVM_SMaxOp : LLVM_BinarySameArgsIntrinsicOp<"smax">;
+def LLVM_SMinOp : LLVM_BinarySameArgsIntrinsicOp<"smin">;
 
 def LLVM_MemcpyOp : LLVM_ZeroResultIntrOp<"memcpy", [0, 1, 2]>,
                     Arguments<(ins LLVM_Type:$dst, LLVM_Type:$src,

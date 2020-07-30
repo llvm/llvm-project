@@ -90,6 +90,15 @@ llvm.func @ceil_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
   llvm.return
 }
 
+// CHECK-LABEL: @floor_test
+llvm.func @floor_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.floor.f32
+  "llvm.intr.floor"(%arg0) : (!llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.floor.v8f32
+  "llvm.intr.floor"(%arg1) : (!llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
 // CHECK-LABEL: @cos_test
 llvm.func @cos_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
   // CHECK: call float @llvm.cos.f32
@@ -132,6 +141,42 @@ llvm.func @ctpop_test(%arg0: !llvm.i32, %arg1: !llvm<"<8 x i32>">) {
   "llvm.intr.ctpop"(%arg0) : (!llvm.i32) -> !llvm.i32
   // CHECK: call <8 x i32> @llvm.ctpop.v8i32
   "llvm.intr.ctpop"(%arg1) : (!llvm<"<8 x i32>">) -> !llvm<"<8 x i32>">
+  llvm.return
+}
+
+// CHECK-LABEL: @maxnum_test
+llvm.func @maxnum_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<8 x float>">, %arg3: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.maxnum.f32
+  "llvm.intr.maxnum"(%arg0, %arg1) : (!llvm.float, !llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.maxnum.v8f32
+  "llvm.intr.maxnum"(%arg2, %arg3) : (!llvm<"<8 x float>">, !llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
+// CHECK-LABEL: @minnum_test
+llvm.func @minnum_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<8 x float>">, %arg3: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.minnum.f32
+  "llvm.intr.minnum"(%arg0, %arg1) : (!llvm.float, !llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.minnum.v8f32
+  "llvm.intr.minnum"(%arg2, %arg3) : (!llvm<"<8 x float>">, !llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
+// CHECK-LABEL: @smax_test
+llvm.func @smax_test(%arg0: !llvm.i32, %arg1: !llvm.i32, %arg2: !llvm<"<8 x i32>">, %arg3: !llvm<"<8 x i32>">) {
+  // CHECK: call i32 @llvm.smax.i32
+  "llvm.intr.smax"(%arg0, %arg1) : (!llvm.i32, !llvm.i32) -> !llvm.i32
+  // CHECK: call <8 x i32> @llvm.smax.v8i32
+  "llvm.intr.smax"(%arg2, %arg3) : (!llvm<"<8 x i32>">, !llvm<"<8 x i32>">) -> !llvm<"<8 x i32>">
+  llvm.return
+}
+
+// CHECK-LABEL: @smin_test
+llvm.func @smin_test(%arg0: !llvm.i32, %arg1: !llvm.i32, %arg2: !llvm<"<8 x i32>">, %arg3: !llvm<"<8 x i32>">) {
+  // CHECK: call i32 @llvm.smin.i32
+  "llvm.intr.smin"(%arg0, %arg1) : (!llvm.i32, !llvm.i32) -> !llvm.i32
+  // CHECK: call <8 x i32> @llvm.smin.v8i32
+  "llvm.intr.smin"(%arg2, %arg3) : (!llvm<"<8 x i32>">, !llvm<"<8 x i32>">) -> !llvm<"<8 x i32>">
   llvm.return
 }
 
