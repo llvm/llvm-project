@@ -1,4 +1,7 @@
-// RUN: mlir-opt -allow-unregistered-dialect -simplify-affine-structures %s | FileCheck %s
+// RUN: mlir-opt -normalize-memrefs -allow-unregistered-dialect %s | FileCheck %s
+
+// This file tests whether the memref type having non-trivial map layouts
+// are normalized to trivial (identity) layouts.
 
 // CHECK-LABEL: func @permute()
 func @permute() {
@@ -149,4 +152,62 @@ func @alignment() {
   %A = alloc() {alignment = 32 : i64}: memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
   // CHECK-NEXT: alloc() {alignment = 32 : i64} : memref<256x64x128xf32>
   return
+}
+
+#tile = affine_map < (i)->(i floordiv 4, i mod 4) >
+
+// Following test cases check the inter-procedural memref normalization.
+
+// Test case 1: Check normalization for multiple memrefs in a function argument list.
+// CHECK-LABEL: func @multiple_argument_type
+// CHECK-SAME:  (%[[A:arg[0-9]+]]: memref<4x4xf64>, %[[B:arg[0-9]+]]: f64, %[[C:arg[0-9]+]]: memref<2x4xf64>, %[[D:arg[0-9]+]]: memref<24xf64>) -> f64
+func @multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<8xf64, #tile>, %D: memref<24xf64>) -> f64 {
+  %a = affine.load %A[0] : memref<16xf64, #tile>
+  %p = mulf %a, %a : f64
+  affine.store %p, %A[10] : memref<16xf64, #tile>
+  call @single_argument_type(%C): (memref<8xf64, #tile>) -> ()
+  return %B : f64
+}
+
+// CHECK: %[[a:[0-9]+]] = affine.load %[[A]][0, 0] : memref<4x4xf64>
+// CHECK: %[[p:[0-9]+]] = mulf %[[a]], %[[a]] : f64
+// CHECK: affine.store %[[p]], %[[A]][2, 2] : memref<4x4xf64>
+// CHECK: call @single_argument_type(%[[C]]) : (memref<2x4xf64>) -> ()
+// CHECK: return %[[B]] : f64
+
+// Test case 2: Check normalization for single memref argument in a function.
+// CHECK-LABEL: func @single_argument_type
+// CHECK-SAME: (%[[C:arg[0-9]+]]: memref<2x4xf64>)
+func @single_argument_type(%C : memref<8xf64, #tile>) {
+  %a = alloc(): memref<8xf64, #tile>
+  %b = alloc(): memref<16xf64, #tile>
+  %d = constant 23.0 : f64
+  %e = alloc(): memref<24xf64>
+  call @single_argument_type(%a): (memref<8xf64, #tile>) -> ()
+  call @single_argument_type(%C): (memref<8xf64, #tile>) -> ()
+  call @multiple_argument_type(%b, %d, %a, %e): (memref<16xf64, #tile>, f64, memref<8xf64, #tile>, memref<24xf64>) -> f64
+  return
+}
+
+// CHECK: %[[a:[0-9]+]] = alloc() : memref<2x4xf64>
+// CHECK: %[[b:[0-9]+]] = alloc() : memref<4x4xf64>
+// CHECK: %cst = constant 2.300000e+01 : f64
+// CHECK: %[[e:[0-9]+]] = alloc() : memref<24xf64>
+// CHECK: call @single_argument_type(%[[a]]) : (memref<2x4xf64>) -> ()
+// CHECK: call @single_argument_type(%[[C]]) : (memref<2x4xf64>) -> ()
+// CHECK: call @multiple_argument_type(%[[b]], %cst, %[[a]], %[[e]]) : (memref<4x4xf64>, f64, memref<2x4xf64>, memref<24xf64>) -> f64
+
+// Test case 3: Check function returning any other type except memref.
+// CHECK-LABEL: func @non_memref_ret
+// CHECK-SAME: (%[[C:arg[0-9]+]]: memref<2x4xf64>) -> i1
+func @non_memref_ret(%A: memref<8xf64, #tile>) -> i1 {
+  %d = constant 1 : i1
+  return %d : i1
+}
+
+// Test case 4: No normalization should take place because the function is returning the memref.
+// CHECK-LABEL: func @memref_used_in_return
+// CHECK-SAME: (%[[A:arg[0-9]+]]: memref<8xf64, #map{{[0-9]+}}>) -> memref<8xf64, #map{{[0-9]+}}>
+func @memref_used_in_return(%A: memref<8xf64, #tile>) -> (memref<8xf64, #tile>) {
+  return %A : memref<8xf64, #tile>
 }

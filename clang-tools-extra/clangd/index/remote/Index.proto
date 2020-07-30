@@ -18,6 +18,8 @@ service SymbolIndex {
   rpc FuzzyFind(FuzzyFindRequest) returns (stream FuzzyFindReply) {}
 
   rpc Refs(RefsRequest) returns (stream RefsReply) {}
+
+  rpc Relations(RelationsRequest) returns (stream RelationsReply) {}
 }
 
 message LookupRequest { repeated string ids = 1; }
@@ -113,4 +115,26 @@ message Position {
 message HeaderWithReferences {
   string header = 1;
   uint32 references = 2;
+}
+
+message RelationsRequest {
+  repeated string subjects = 1;
+  uint32 predicate = 2;
+  uint32 limit = 3;
+}
+
+// The response is a stream of reference messages, and one terminating has_more
+// message.
+message RelationsReply {
+  oneof kind {
+    Relation stream_result = 1;
+    bool final_result = 2; // HasMore
+  }
+}
+
+// This struct does not mirror clangd::Relation but rather the arguments of
+// SymbolIndex::relations callback.
+message Relation {
+  string subject_id = 1;
+  Symbol object = 2;
 }
