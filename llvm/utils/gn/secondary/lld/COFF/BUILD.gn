@@ -27,6 +27,7 @@ static_library("COFF") {
     "//llvm/lib/WindowsManifest",
   ]
   sources = [
+    "CallGraphSort.cpp",
     "Chunks.cpp",
     "DLL.cpp",
     "DebugTypes.cpp",
