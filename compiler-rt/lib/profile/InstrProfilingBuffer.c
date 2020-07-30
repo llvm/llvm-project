@@ -21,12 +21,20 @@
  * layering is violated. */
 static int ContinuouslySyncProfile = 0;
 
+/* The system page size. Only valid when non-zero. If 0, the page size is
+ * unavailable. */
+static unsigned PageSize = 0;
+
 COMPILER_RT_VISIBILITY int __llvm_profile_is_continuous_mode_enabled(void) {
-  return ContinuouslySyncProfile;
+  return ContinuouslySyncProfile && PageSize;
 }
 
 COMPILER_RT_VISIBILITY void __llvm_profile_enable_continuous_mode(void) {
   ContinuouslySyncProfile = 1;
+}
+
+COMPILER_RT_VISIBILITY void __llvm_profile_set_page_size(unsigned PS) {
+  PageSize = PS;
 }
 
 COMPILER_RT_VISIBILITY
@@ -52,8 +60,7 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
 
 /// Calculate the number of padding bytes needed to add to \p Offset in order
 /// for (\p Offset + Padding) to be page-aligned.
-static uint64_t calculateBytesNeededToPageAlign(uint64_t Offset,
-                                                unsigned PageSize) {
+static uint64_t calculateBytesNeededToPageAlign(uint64_t Offset) {
   uint64_t OffsetModPage = Offset % PageSize;
   if (OffsetModPage > 0)
     return PageSize - OffsetModPage;
@@ -75,15 +82,13 @@ void __llvm_profile_get_padding_sizes_for_counters(
 
   // In continuous mode, the file offsets for headers and for the start of
   // counter sections need to be page-aligned.
-  unsigned PageSize = getpagesize();
   uint64_t DataSizeInBytes = DataSize * sizeof(__llvm_profile_data);
   uint64_t CountersSizeInBytes = CountersSize * sizeof(uint64_t);
   *PaddingBytesBeforeCounters = calculateBytesNeededToPageAlign(
-      sizeof(__llvm_profile_header) + DataSizeInBytes, PageSize);
+      sizeof(__llvm_profile_header) + DataSizeInBytes);
   *PaddingBytesAfterCounters =
-      calculateBytesNeededToPageAlign(CountersSizeInBytes, PageSize);
-  *PaddingBytesAfterNames =
-      calculateBytesNeededToPageAlign(NamesSize, PageSize);
+      calculateBytesNeededToPageAlign(CountersSizeInBytes);
+  *PaddingBytesAfterNames = calculateBytesNeededToPageAlign(NamesSize);
 }
 
 COMPILER_RT_VISIBILITY
