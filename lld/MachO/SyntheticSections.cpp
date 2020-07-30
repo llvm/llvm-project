@@ -47,7 +47,7 @@ void MachHeaderSection::addLoadCommand(LoadCommand *lc) {
 }
 
 uint64_t MachHeaderSection::getSize() const {
-  return sizeof(MachO::mach_header_64) + sizeOfCmds;
+  return sizeof(MachO::mach_header_64) + sizeOfCmds + config->headerPad;
 }
 
 void MachHeaderSection::writeTo(uint8_t *buf) const {
