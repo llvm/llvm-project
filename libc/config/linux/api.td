@@ -88,7 +88,9 @@ def AssertAPI : PublicAPI<"assert.h"> {
 
 def CTypeAPI : PublicAPI<"ctype.h"> {
   let Functions = [
+    "isalnum",
     "isalpha",
+    "isdigit",
   ];
 }
 
