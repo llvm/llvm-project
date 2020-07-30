@@ -82,7 +82,6 @@
 ; CHECK-O-DAG: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
-; CHECK-O-NEXT: Invalidating all non-preserved analyses for:
 ; CHECK-O-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O123-NEXT: Invalidating analysis: LazyCallGraphAnalysis on
 ; CHECK-O123-NEXT: Invalidating analysis: InnerAnalysisManagerProxy

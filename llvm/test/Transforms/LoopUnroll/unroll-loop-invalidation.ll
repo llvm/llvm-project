@@ -23,10 +23,7 @@
 ; CHECK: Running pass: LoopUnrollPass
 ; CHECK: Clearing all analysis results for: inner2.header
 ; CHECK: Clearing all analysis results for: outer.header
-; CHECK: Invalidating all non-preserved analyses for: test
-; CHECK: Invalidating all non-preserved analyses for: inner1.header
 ; CHECK: Invalidating analysis: LoopAccessAnalysis on inner1.header
-; CHECK: Invalidating all non-preserved analyses for: inner1.header.1
 ; CHECK-NOT: Invalidating analysis: LoopAccessAnalysis on inner1.header.1
 ; CHECK: Starting Loop pass manager run.
 ; CHECK: Running pass: LoopAccessInfoPrinterPass

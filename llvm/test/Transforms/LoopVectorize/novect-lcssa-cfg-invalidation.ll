@@ -8,7 +8,6 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define i32 @novect(i32* %p) {
 
 ; CHECK:           Running pass: LoopVectorizePass on novect
-; CHECK:           Invalidating all non-preserved analyses for: novect
 ; CHECK:           Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK:           Invalidating analysis: ScalarEvolutionAnalysis on novect
 ; CHECK-NOT:       Invalidating analysis: BranchProbabilityAnalysis on novect
