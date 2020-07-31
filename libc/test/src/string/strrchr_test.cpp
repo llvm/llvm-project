@@ -49,12 +49,15 @@ TEST(StrRChrTest, FindsNullTerminator) {
   ASSERT_STREQ(src, src_copy);
 }
 
-TEST(StrRChrTest, FindsLastNullTerminator) {
-  const char src[5] = {'a', '\0', 'b', '\0', 'c'};
+TEST(StrRChrTest, FindsLastBehindFirstNullTerminator) {
+  const char src[6] = {'a', 'a', '\0', 'b', '\0', 'c'};
   // 'b' is behind a null terminator, so should not be found.
   ASSERT_STREQ(__llvm_libc::strrchr(src, 'b'), nullptr);
   // Same goes for 'c'.
   ASSERT_STREQ(__llvm_libc::strrchr(src, 'c'), nullptr);
+  
+  // Should find the second of the two a's.
+  ASSERT_STREQ(__llvm_libc::strrchr(src, 'a'), "a");
 }
 
 TEST(StrRChrTest, CharacterNotWithinStringShouldReturnNullptr) {
