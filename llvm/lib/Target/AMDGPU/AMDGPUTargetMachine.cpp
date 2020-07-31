@@ -526,6 +526,12 @@ const R600Subtarget *R600TargetMachine::getSubtargetImpl(
   return I.get();
 }
 
+bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+                                              unsigned DestAS) const {
+  return AMDGPU::isFlatGlobalAddrSpace(SrcAS) &&
+         AMDGPU::isFlatGlobalAddrSpace(DestAS);
+}
+
 TargetTransformInfo
 R600TargetMachine::getTargetTransformInfo(const Function &F) {
   return TargetTransformInfo(R600TTIImpl(this, F));
