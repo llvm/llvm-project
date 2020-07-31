@@ -333,7 +333,7 @@ DWARF:
 # CHECK-NEXT:       AddressSize:         0x08
 # CHECK-NEXT:       Descriptors:
 # CHECK-NEXT:         - Address: 0x0000000100000F50
-# CHECK-NEXT:           Length:  52
+# CHECK-NEXT:           Length:  0x0000000000000034
 
 ## b) Test that if the "debug_aranges" entry is empty, yaml2macho will only emit the
 ## section header.
