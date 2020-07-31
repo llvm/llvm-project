@@ -1,5 +1,11 @@
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
+! CHECK-LABEL: func @_QQmain
+  print*, k(10,20)
+  print*, k(15,15)
+  print*, k(20,10)
+end
+
 ! CHECK-LABEL: func @_QPk
 function k(n1, n2)
   ! CHECK-NOT: ^bb
@@ -23,10 +29,4 @@ subroutine s(n1, *, n2, *)
   ! CHECK: {{.*}} = fir.load [[retval]] : !fir.ref<index>
   ! CHECK-NEXT: return {{.*}} : index
   return
-end
-
-! CHECK-LABEL: func @_QQmain
-  print*, k(10,20)
-  print*, k(15,15)
-  print*, k(20,10)
 end

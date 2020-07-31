@@ -3121,7 +3121,7 @@ void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
   entrySymbol.set_details(std::move(entryDetails));
   SetBindNameOn(entrySymbol);
   entrySymbol.set(subpFlag);
-  Resolve(name, entrySymbol);
+  name.symbol = &entrySymbol;
 }
 
 // A subprogram declared with MODULE PROCEDURE
