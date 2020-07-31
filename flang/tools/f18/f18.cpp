@@ -603,7 +603,7 @@ int main(int argc, char *const argv[]) {
       driver.getSymbolsSources = true;
     } else if (arg == "-byteswapio") {
       driver.byteswapio = true; // TODO: Pass to lowering, generate call
-    } else if (arg == "-help" || arg == "--help" || arg == "-?") {
+    } else if (arg == "-h" || arg == "-help" || arg == "--help" || arg == "-?") {
       llvm::errs()
           << "f18: LLVM Fortran compiler\n"
           << "\n"
