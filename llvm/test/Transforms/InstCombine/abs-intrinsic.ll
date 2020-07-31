@@ -51,3 +51,18 @@ define i32 @abs_trailing_zeros_negative(i32 %x) {
   %and2 = and i32 %abs, -4
   ret i32 %and2
 }
+
+; Make sure we infer this add doesn't overflow. The input to the abs has 3
+; sign bits, the abs reduces this to 2 sign bits.
+define i32 @abs_signbits(i30 %x) {
+; CHECK-LABEL: @abs_signbits(
+; CHECK-NEXT:    [[AND:%.*]] = sext i30 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[AND]], i1 false)
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[ABS]], 1
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %ext = sext i30 %x to i32
+  %abs = call i32 @llvm.abs.i32(i32 %ext, i1 false)
+  %add = add i32 %abs, 1
+  ret i32 %add
+}
