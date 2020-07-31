@@ -2347,14 +2347,23 @@ llvm::Triple SwiftASTContext::GetTriple() const {
   return llvm::Triple(m_compiler_invocation_ap->getTargetTriple());
 }
 
-/// Conditions a triple string to be safe for use with Swift.  Right
-/// now this just strips the Haswell marker off the CPU name.
+/// Conditions a triple string to be safe for use with Swift.
+///
+/// This strips the Haswell marker off the CPU name (for Apple targets).
+///
+/// It also add the GNU environment for Linux.  Although this is technically
+/// incorrect, as the `*-unknown-linux` environment represents the bare-metal
+/// environment, because Swift is currently hosted only, we can get away with
+/// it.
 ///
 /// TODO: Make Swift more robust.
-static std::string GetSwiftFriendlyTriple(StringRef triple) {
-  if (triple.consume_front("x86_64h"))
-    return std::string("x86_64") + triple.str();
-  return triple.str();
+static std::string GetSwiftFriendlyTriple(llvm::Triple triple) {
+  if (triple.getArchName() == "x86_64h")
+    triple.setArch(llvm::Triple::x86_64);
+  if (triple.isOSLinux() &&
+      triple.getEnvironment() == llvm::Triple::UnknownEnvironment)
+    triple.setEnvironment(llvm::Triple::GNU);
+  return triple.normalize();
 }
 
 bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
@@ -2372,7 +2381,7 @@ bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
   }
 
   const unsigned unspecified = 0;
-  std::string adjusted_triple = GetSwiftFriendlyTriple(triple.str());
+  std::string adjusted_triple = GetSwiftFriendlyTriple(triple);
   // If the OS version is unspecified, do fancy things.
   if (triple.getOSMajorVersion() == unspecified) {
     // If a triple is "<arch>-apple-darwin" change it to be
