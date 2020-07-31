@@ -1,0 +1,13 @@
+; RUN: not llvm-windres --no-preprocess --verbose %p/Inputs/tokens-windres.rc %t.res | FileCheck %s
+; llvm-windres fails on this sample because it is an invalid resource file
+; script. We silence the error message and just analyze the output.
+
+; CHECK:  String: L"wide also wide"
+; CHECK-NEXT:  Comma: ,
+; CHECK-NEXT:  String: "narrow also narrow"
+; CHECK-NEXT:  Comma: ,
+; CHECK-NEXT:  String: L"wide more wide"
+
+; RUN: not llvm-windres --no-preprocess --verbose %p/Inputs/tokens-windres-invalid-concat.rc %t.res 2>&1 | FileCheck %s --check-prefix=CONCAT-ERROR
+
+; CONCAT-ERROR: Error parsing file: Cannot concatenate a wide string L"wide" after a narrow one "narrow"

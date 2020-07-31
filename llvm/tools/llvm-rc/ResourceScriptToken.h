@@ -26,6 +26,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/StringSaver.h"
 
 #include <cstdint>
 #include <map>
@@ -74,7 +75,8 @@ private:
 // Tokens returned by this function hold only references to the parts
 // of the Input. Memory buffer containing Input cannot be freed,
 // modified or reallocated.
-Expected<std::vector<RCToken>> tokenizeRC(StringRef Input);
+Expected<std::vector<RCToken>> tokenizeRC(StringRef Input, StringSaver &Saver,
+                                          bool IsWindres);
 
 } // namespace llvm
 

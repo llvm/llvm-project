@@ -2,11 +2,11 @@
 ; from file suffixes.
 
 ; RUN: rm -f %t.res
-; RUN: llvm-windres --no-preprocess %p/Inputs/tag-stringtable-basic.rc %t.res
+; RUN: llvm-windres --no-preprocess %p/Inputs/tag-versioninfo.rc %t.res
 ; RUN: llvm-readobj %t.res | FileCheck %s --check-prefix=CHECK-RES
 
 ; RUN: rm -f %t.o
-; RUN: llvm-windres --no-preprocess -F pe-x86-64 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-windres --no-preprocess -F pe-x86-64 %p/Inputs/tag-versioninfo.rc %t.o
 ; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefix=CHECK-OBJ
 
 ; RUN: rm -f %t.obj
@@ -16,7 +16,7 @@
 ; Check that we can specify the input/output file types explicitly.
 ; Also check options for specifying the input/output file names.
 
-; RUN: cat %p/Inputs/tag-stringtable-basic.rc > %t-anonymous
+; RUN: cat %p/Inputs/tag-versioninfo.rc > %t-anonymous
 ; RUN: rm -f %t-anonymous2
 ; RUN: llvm-windres --no-preprocess -O res -J rc -o %t-anonymous2 -i %t-anonymous
 ; RUN: llvm-readobj %t-anonymous2 | FileCheck %s --check-prefix=CHECK-RES
@@ -25,7 +25,7 @@
 ; RUN: llvm-windres -F pe-x86-64 -J res -O coff -i%t-anonymous2 -o%t-anonymous3
 ; RUN: llvm-readobj --coff-resources %t-anonymous3 | FileCheck %s --check-prefix=CHECK-OBJ
 
-; CHECK-RES: Resource type (int): STRINGTABLE
+; CHECK-RES: Resource type (int):
 
 ; CHECK-OBJ: Format: COFF-x86-64
 ; CHECK-OBJ: Resources [

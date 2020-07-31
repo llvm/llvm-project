@@ -17,13 +17,13 @@
 
 ; Check the actual written object types.
 
-; RUN: llvm-windres --no-preprocess -F i686-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-windres --no-preprocess -F i686-w64-mingw32 %p/Inputs/tag-versioninfo.rc %t.o
 ; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-I686
-; RUN: llvm-windres --no-preprocess -F x86_64-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-windres --no-preprocess -F x86_64-w64-mingw32 %p/Inputs/tag-versioninfo.rc %t.o
 ; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-X86-64
-; RUN: llvm-windres --no-preprocess -F armv7-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-windres --no-preprocess -F armv7-w64-mingw32 %p/Inputs/tag-versioninfo.rc %t.o
 ; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-ARMV7
-; RUN: llvm-windres --no-preprocess -F aarch64-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-windres --no-preprocess -F aarch64-w64-mingw32 %p/Inputs/tag-versioninfo.rc %t.o
 ; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-AARCH64
 
 ; CHECK-OBJ-I686: Format: COFF-i386

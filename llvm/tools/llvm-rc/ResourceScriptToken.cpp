@@ -85,7 +85,9 @@ namespace {
 
 class Tokenizer {
 public:
-  Tokenizer(StringRef Input) : Data(Input), DataLength(Input.size()), Pos(0) {}
+  Tokenizer(StringRef Input, StringSaver &Saver, bool IsWindres)
+      : Data(Input), DataLength(Input.size()), Pos(0), Saver(Saver),
+        IsWindres(IsWindres) {}
 
   Expected<std::vector<RCToken>> run();
 
@@ -141,8 +143,14 @@ private:
   // an identifier describing a block start or end.
   void processIdentifier(RCToken &token) const;
 
+  Expected<RCToken> mergeStringTokens(const RCToken &FirstToken,
+                                      const RCToken &SecondToken);
+
   StringRef Data;
   size_t DataLength, Pos;
+
+  StringSaver &Saver;
+  bool IsWindres;
 };
 
 void Tokenizer::skipCurrentLine() {
@@ -187,6 +195,16 @@ Expected<std::vector<RCToken>> Tokenizer::run() {
         // a 32-bit integer.
         return getStringError("Integer invalid or too large: " +
                               Token.value().str());
+      }
+    } else if (TokenKind == Kind::String && !Result.empty() && IsWindres) {
+      RCToken &Prev = Result.back();
+      if (Prev.kind() == Kind::String) {
+        Expected<RCToken> MergedToken = mergeStringTokens(Prev, Token);
+        if (!MergedToken)
+          return MergedToken.takeError();
+        // Remove the old token and replace the new one with the merged token.
+        Result.pop_back();
+        Token = *MergedToken;
       }
     }
 
@@ -356,12 +374,43 @@ void Tokenizer::processIdentifier(RCToken &Token) const {
     Token = RCToken(Kind::BlockEnd, Name);
 }
 
+Expected<RCToken> Tokenizer::mergeStringTokens(const RCToken &FirstToken,
+                                               const RCToken &SecondToken) {
+  assert(FirstToken.kind() == Kind::String &&
+         SecondToken.kind() == Kind::String);
+  StringRef First = FirstToken.value();
+  StringRef Second = SecondToken.value();
+  bool IsFirstLong = First.starts_with_insensitive("L");
+  bool IsSecondLong = Second.starts_with_insensitive("L");
+  //  "aaa"  "bbb" =  "aaabbb"
+  // L"aaa" L"bbb" = L"aaabbb"
+  // L"aaa"  "bbb" = L"aaabbb"
+  //  "aaa" L"bbb" = <error>
+  if (IsSecondLong && !IsFirstLong)
+    return getStringError("Cannot concatenate a wide string " + Twine(Second) +
+                          " after a narrow one " + Twine(First));
+  if (IsFirstLong)
+    First = First.drop_front();
+  if (IsSecondLong)
+    Second = Second.drop_front();
+  bool FirstUnquoted = First.consume_front("\"") && First.consume_back("\"");
+  bool SecondUnquoted = Second.consume_front("\"") && Second.consume_back("\"");
+  assert(FirstUnquoted && SecondUnquoted);
+  (void)FirstUnquoted;
+  (void)SecondUnquoted;
+
+  StringRef MergedString =
+      Saver.save(Twine(IsFirstLong ? "L" : "") + "\"" + First + Second + "\"");
+  return RCToken(Kind::String, MergedString);
+}
+
 } // anonymous namespace
 
 namespace llvm {
 
-Expected<std::vector<RCToken>> tokenizeRC(StringRef Input) {
-  return Tokenizer(Input).run();
+Expected<std::vector<RCToken>> tokenizeRC(StringRef Input, StringSaver &Saver,
+                                          bool IsWindres) {
+  return Tokenizer(Input, Saver, IsWindres).run();
 }
 
 } // namespace llvm
