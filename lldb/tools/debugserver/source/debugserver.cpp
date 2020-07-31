@@ -156,6 +156,20 @@ RNBRunLoopMode RNBRunLoopGetStartModeFromRemote(RNBRemote *remote) {
   return eRNBRunLoopModeExit;
 }
 
+// Check the name to see if it ends with .app
+static bool is_dot_app (const char *app_name) {
+  size_t len = strlen(app_name);
+  if (len < 4)
+    return false;
+  
+  if (app_name[len - 4] == '.' &&
+      app_name[len - 3] == 'a' && 
+      app_name[len - 2] == 'p' &&
+      app_name[len - 1] == 'p')
+    return true;
+  return false;
+}
+
 // This run loop mode will wait for the process to launch and hit its
 // entry point. It will currently ignore all events except for the
 // process state changed event, where it watches for the process stopped
@@ -200,17 +214,17 @@ RNBRunLoopMode RNBRunLoopLaunchInferior(RNBRemote *remote,
 
 #if defined WITH_FBS
     // Check if we have an app bundle, if so launch using BackBoard Services.
-    if (strstr(inferior_argv[0], ".app")) {
+    if (is_dot_app(inferior_argv[0])) {
       launch_flavor = eLaunchFlavorFBS;
     }
 #elif defined WITH_BKS
     // Check if we have an app bundle, if so launch using BackBoard Services.
-    if (strstr(inferior_argv[0], ".app")) {
+    if (is_dot_app(inferior_argv[0])) {
       launch_flavor = eLaunchFlavorBKS;
     }
 #elif defined WITH_SPRINGBOARD
     // Check if we have an app bundle, if so launch using SpringBoard.
-    if (strstr(inferior_argv[0], ".app")) {
+    if (is_dot_app(inferior_argv[0])) {
       launch_flavor = eLaunchFlavorSpringBoard;
     }
 #endif
@@ -1499,17 +1513,17 @@ int main(int argc, char *argv[]) {
 
 #if defined WITH_FBS
           // Check if we have an app bundle, if so launch using SpringBoard.
-          if (waitfor_pid_name.find(".app") != std::string::npos) {
+          if (is_dot_app(waitfor_pid_name.c_str())) {
             launch_flavor = eLaunchFlavorFBS;
           }
 #elif defined WITH_BKS
           // Check if we have an app bundle, if so launch using SpringBoard.
-          if (waitfor_pid_name.find(".app") != std::string::npos) {
+          if (is_dot_app(waitfor_pid_name.c_str())) {
             launch_flavor = eLaunchFlavorBKS;
           }
 #elif defined WITH_SPRINGBOARD
           // Check if we have an app bundle, if so launch using SpringBoard.
-          if (waitfor_pid_name.find(".app") != std::string::npos) {
+          if (is_dot_app(waitfor_pid_name.c_str())) {
             launch_flavor = eLaunchFlavorSpringBoard;
           }
 #endif
