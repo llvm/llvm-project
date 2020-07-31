@@ -1771,10 +1771,12 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
       // instruction.
       Instruction *Tmp;
       if (Inst->getType()->isIntegerTy())
-        Tmp = cast<Instruction>(Builder.CreateAdd(Inst, Inst));
+        Tmp =
+            cast<Instruction>(Builder.CreateAdd(Inst, Inst, "tmp.lcssa.user"));
       else {
         assert(Inst->getType()->isPointerTy());
-        Tmp = cast<Instruction>(Builder.CreateGEP(Inst, Builder.getInt32(1)));
+        Tmp = cast<Instruction>(
+            Builder.CreateGEP(Inst, Builder.getInt32(1), "tmp.lcssa.user"));
       }
       V = fixupLCSSAFormFor(Tmp, 0);
 
