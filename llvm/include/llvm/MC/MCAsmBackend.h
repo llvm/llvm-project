@@ -177,6 +177,10 @@ public:
   ///
   virtual unsigned getMinimumNopSize() const { return 1; }
 
+  /// Returns the maximum size of a nop in bytes on this target.
+  ///
+  virtual unsigned getMaximumNopSize() const { return 0; }
+
   /// Write an (optimal) nop sequence of Count bytes to the given output. If the
   /// target cannot generate such a sequence, it should return an error.
   ///
