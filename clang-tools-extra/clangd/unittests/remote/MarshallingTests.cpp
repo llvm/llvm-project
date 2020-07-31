@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../TestTU.h"
+#include "Index.pb.h"
 #include "TestFS.h"
 #include "index/Index.h"
 #include "index/Ref.h"
@@ -97,11 +98,11 @@ TEST(RemoteMarshallingTest, URITranslation) {
                   "clangd/unittests/remote/MarshallingTests.cpp",
                   Strings);
   auto Serialized = ProtobufMarshaller.toProtobuf(Original);
-  ASSERT_TRUE(Serialized);
+  ASSERT_TRUE(bool(Serialized));
   EXPECT_EQ(Serialized->location().file_path(),
             "clang-tools-extra/clangd/unittests/remote/MarshallingTests.cpp");
   auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
-  ASSERT_TRUE(Deserialized);
+  ASSERT_TRUE(bool(Deserialized));
   EXPECT_STREQ(Deserialized->Location.FileURI,
                testPathURI("home/my-projects/llvm-project/clang-tools-extra/"
                            "clangd/unittests/remote/MarshallingTests.cpp",
@@ -109,12 +110,16 @@ TEST(RemoteMarshallingTest, URITranslation) {
 
   // Can't have empty paths.
   *Serialized->mutable_location()->mutable_file_path() = std::string();
-  EXPECT_FALSE(ProtobufMarshaller.fromProtobuf(*Serialized));
+  Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
+  EXPECT_FALSE(bool(Deserialized));
+  llvm::consumeError(Deserialized.takeError());
 
   clangd::Ref WithInvalidURI;
   // Invalid URI results in serialization failure.
   WithInvalidURI.Location.FileURI = "This is not a URI";
-  EXPECT_FALSE(ProtobufMarshaller.toProtobuf(WithInvalidURI));
+  auto DeserializedRef = ProtobufMarshaller.toProtobuf(WithInvalidURI);
+  EXPECT_FALSE(bool(DeserializedRef));
+  llvm::consumeError(DeserializedRef.takeError());
 
   // Can not use URIs with scheme different from "file".
   auto UnittestURI =
@@ -122,14 +127,18 @@ TEST(RemoteMarshallingTest, URITranslation) {
   ASSERT_TRUE(bool(UnittestURI));
   WithInvalidURI.Location.FileURI =
       Strings.save(UnittestURI->toString()).begin();
-  EXPECT_FALSE(ProtobufMarshaller.toProtobuf(WithInvalidURI));
+  auto DeserializedSymbol = ProtobufMarshaller.toProtobuf(WithInvalidURI);
+  EXPECT_FALSE(bool(DeserializedSymbol));
+  llvm::consumeError(DeserializedSymbol.takeError());
 
   // Paths transmitted over the wire can not be absolute, they have to be
   // relative.
   Ref WithAbsolutePath;
   *WithAbsolutePath.mutable_location()->mutable_file_path() =
       "/usr/local/user/home/HelloWorld.cpp";
-  EXPECT_FALSE(ProtobufMarshaller.fromProtobuf(WithAbsolutePath));
+  Deserialized = ProtobufMarshaller.fromProtobuf(WithAbsolutePath);
+  EXPECT_FALSE(bool(Deserialized));
+  llvm::consumeError(Deserialized.takeError());
 }
 
 TEST(RemoteMarshallingTest, SymbolSerialization) {
@@ -142,9 +151,9 @@ TEST(RemoteMarshallingTest, SymbolSerialization) {
   // Check that symbols are exactly the same if the path to indexed project is
   // the same on indexing machine and the client.
   auto Serialized = ProtobufMarshaller.toProtobuf(Sym);
-  ASSERT_TRUE(Serialized);
+  ASSERT_TRUE(bool(Serialized));
   auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
-  ASSERT_TRUE(Deserialized);
+  ASSERT_TRUE(bool(Deserialized));
   EXPECT_EQ(toYAML(Sym), toYAML(*Deserialized));
   // Serialized paths are relative and have UNIX slashes.
   EXPECT_EQ(convert_to_slash(Serialized->definition().file_path(),
@@ -156,36 +165,44 @@ TEST(RemoteMarshallingTest, SymbolSerialization) {
   // Missing definition is OK.
   Sym.Definition = clangd::SymbolLocation();
   Serialized = ProtobufMarshaller.toProtobuf(Sym);
-  ASSERT_TRUE(Serialized);
-  EXPECT_TRUE(ProtobufMarshaller.fromProtobuf(*Serialized));
+  ASSERT_TRUE(bool(Serialized));
+  ASSERT_TRUE(bool(ProtobufMarshaller.fromProtobuf(*Serialized)));
 
   // Relative path is absolute.
   *Serialized->mutable_canonical_declaration()->mutable_file_path() =
       convert_to_slash("/path/to/Declaration.h");
-  EXPECT_FALSE(ProtobufMarshaller.fromProtobuf(*Serialized));
+  Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
+  EXPECT_FALSE(bool(Deserialized));
+  llvm::consumeError(Deserialized.takeError());
 
   // Fail with an invalid URI.
   Sym.Definition.FileURI = "Not A URI";
-  EXPECT_FALSE(ProtobufMarshaller.toProtobuf(Sym));
+  Serialized = ProtobufMarshaller.toProtobuf(Sym);
+  EXPECT_FALSE(bool(Serialized));
+  llvm::consumeError(Serialized.takeError());
 
   // Schemes other than "file" can not be used.
   auto UnittestURI = URI::create(testPath("home/SomePath.h"), "unittest");
   ASSERT_TRUE(bool(UnittestURI));
   Sym.Definition.FileURI = Strings.save(UnittestURI->toString()).begin();
-  EXPECT_FALSE(ProtobufMarshaller.toProtobuf(Sym));
+  Serialized = ProtobufMarshaller.toProtobuf(Sym);
+  EXPECT_FALSE(bool(Serialized));
+  llvm::consumeError(Serialized.takeError());
 
   // Passing root that is not prefix of the original file path.
   Sym.Definition.FileURI = testPathURI("home/File.h", Strings);
   // Check that the symbol is valid and passing the correct path works.
   Serialized = ProtobufMarshaller.toProtobuf(Sym);
-  ASSERT_TRUE(Serialized);
+  ASSERT_TRUE(bool(Serialized));
   Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
-  ASSERT_TRUE(Deserialized);
+  ASSERT_TRUE(bool(Deserialized));
   EXPECT_STREQ(Deserialized->Definition.FileURI,
                testPathURI("home/File.h", Strings));
   // Fail with a wrong root.
   Marshaller WrongMarshaller(testPath("nothome/"), testPath("home/"));
-  EXPECT_FALSE(WrongMarshaller.toProtobuf(Sym));
+  Serialized = WrongMarshaller.toProtobuf(Sym);
+  EXPECT_FALSE(Serialized);
+  llvm::consumeError(Serialized.takeError());
 }
 
 TEST(RemoteMarshallingTest, RefSerialization) {
@@ -208,9 +225,9 @@ TEST(RemoteMarshallingTest, RefSerialization) {
                                 testPath("llvm-project/"));
 
   auto Serialized = ProtobufMarshaller.toProtobuf(Ref);
-  ASSERT_TRUE(Serialized);
+  ASSERT_TRUE(bool(Serialized));
   auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
-  ASSERT_TRUE(Deserialized);
+  ASSERT_TRUE(bool(Deserialized));
   EXPECT_EQ(toYAML(Ref), toYAML(*Deserialized));
 }
 
@@ -218,60 +235,60 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
   llvm::BumpPtrAllocator Arena;
   llvm::UniqueStringSaver Strings(Arena);
 
-  llvm::SmallVector<clangd::Symbol::IncludeHeaderWithReferences, 1>
-      ValidHeaders;
+  clangd::Symbol Sym = createSymbol("remote/", Strings);
+
   clangd::Symbol::IncludeHeaderWithReferences Header;
+  // Add only valid headers.
   Header.IncludeHeader = Strings.save(
       URI::createFile("/usr/local/user/home/project/Header.h").toString());
   Header.References = 21;
-  ValidHeaders.push_back(Header);
+  Sym.IncludeHeaders.push_back(Header);
   Header.IncludeHeader = Strings.save("<iostream>");
   Header.References = 100;
-  ValidHeaders.push_back(Header);
+  Sym.IncludeHeaders.push_back(Header);
   Header.IncludeHeader = Strings.save("\"cstdio\"");
   Header.References = 200;
-  ValidHeaders.push_back(Header);
-
-  llvm::SmallVector<clangd::Symbol::IncludeHeaderWithReferences, 1>
-      InvalidHeaders;
-  // This is an absolute path to a header: can not be transmitted over the wire.
-  Header.IncludeHeader = Strings.save(testPath("project/include/Common.h"));
-  Header.References = 42;
-  InvalidHeaders.push_back(Header);
-  // This is not a valid header: can not be transmitted over the wire;
-  Header.IncludeHeader = Strings.save("NotAHeader");
-  Header.References = 5;
-  InvalidHeaders.push_back(Header);
-
-  clangd::Symbol Sym;
-  // Fill in definition and declaration, Symbool will be invalid otherwise.
-  clangd::SymbolLocation Location;
-  Location.Start.setLine(1);
-  Location.Start.setColumn(2);
-  Location.End.setLine(3);
-  Location.End.setColumn(4);
-  Location.FileURI = testPathURI("File.h", Strings);
-  Sym.Definition = Location;
-  Sym.CanonicalDeclaration = Location;
-
-  // Try to serialize all headers but only valid ones will end up in Protobuf
-  // message.
-  auto AllHeaders = ValidHeaders;
-  AllHeaders.insert(AllHeaders.end(), InvalidHeaders.begin(),
-                    InvalidHeaders.end());
-  Sym.IncludeHeaders = AllHeaders;
+  Sym.IncludeHeaders.push_back(Header);
 
   Marshaller ProtobufMarshaller(convert_to_slash("/"), convert_to_slash("/"));
 
   auto Serialized = ProtobufMarshaller.toProtobuf(Sym);
-  ASSERT_TRUE(Serialized);
+  ASSERT_TRUE(bool(Serialized));
   EXPECT_EQ(static_cast<size_t>(Serialized->headers_size()),
-            ValidHeaders.size());
+            Sym.IncludeHeaders.size());
   auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
-  ASSERT_TRUE(Deserialized);
-
-  Sym.IncludeHeaders = ValidHeaders;
+  ASSERT_TRUE(bool(Deserialized));
   EXPECT_EQ(toYAML(Sym), toYAML(*Deserialized));
+
+  // This is an absolute path to a header: can not be transmitted over the wire.
+  Header.IncludeHeader = Strings.save(testPath("project/include/Common.h"));
+  Header.References = 42;
+  Sym.IncludeHeaders.push_back(Header);
+  Serialized = ProtobufMarshaller.toProtobuf(Sym);
+  EXPECT_FALSE(bool(Serialized));
+  llvm::consumeError(Serialized.takeError());
+
+  // Remove last invalid header.
+  Sym.IncludeHeaders.pop_back();
+  // This is not a valid header: can not be transmitted over the wire;
+  Header.IncludeHeader = Strings.save("NotAHeader");
+  Header.References = 5;
+  Sym.IncludeHeaders.push_back(Header);
+  Serialized = ProtobufMarshaller.toProtobuf(Sym);
+  EXPECT_FALSE(bool(Serialized));
+  llvm::consumeError(Serialized.takeError());
+
+  // Try putting an invalid header into already serialized symbol.
+  Sym.IncludeHeaders.pop_back();
+  Serialized = ProtobufMarshaller.toProtobuf(Sym);
+  ASSERT_TRUE(bool(Serialized));
+  HeaderWithReferences InvalidHeader;
+  InvalidHeader.set_header(convert_to_slash("/absolute/path/Header.h"));
+  InvalidHeader.set_references(9000);
+  *Serialized->add_headers() = InvalidHeader;
+  Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
+  EXPECT_FALSE(bool(Deserialized));
+  llvm::consumeError(Deserialized.takeError());
 }
 
 TEST(RemoteMarshallingTest, LookupRequestSerialization) {
@@ -294,7 +311,7 @@ TEST(RemoteMarshallingTest, LookupRequestFailingSerialization) {
   auto Serialized = ProtobufMarshaller.toProtobuf(Request);
   Serialized.add_ids("Invalid Symbol ID");
   auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
-  EXPECT_FALSE(Deserialized);
+  EXPECT_FALSE(bool(Deserialized));
   llvm::consumeError(Deserialized.takeError());
 }
 
@@ -340,7 +357,7 @@ TEST(RemoteMarshallingTest, RefsRequestFailingSerialization) {
   auto Serialized = ProtobufMarshaller.toProtobuf(Request);
   Serialized.add_ids("Invalid Symbol ID");
   auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
-  EXPECT_FALSE(Deserialized);
+  EXPECT_FALSE(bool(Deserialized));
   llvm::consumeError(Deserialized.takeError());
 }
 
@@ -375,7 +392,7 @@ TEST(RemoteMarshallingTest, RelationsRequestFailingSerialization) {
   Serialized.add_subjects("ZZZZZZZZZZZZZZZZ");
   Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
   auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
-  EXPECT_FALSE(Deserialized);
+  EXPECT_FALSE(bool(Deserialized));
   llvm::consumeError(Deserialized.takeError());
 }
 
@@ -387,8 +404,9 @@ TEST(RemoteMarshallingTest, RelationsSerializion) {
   SymbolID ID = llvm::cantFail(SymbolID::fromStr("0000000000000002"));
   Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
   auto Serialized = ProtobufMarshaller.toProtobuf(ID, Sym);
+  ASSERT_TRUE(bool(Serialized));
   auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
-  ASSERT_TRUE(Deserialized);
+  ASSERT_TRUE(bool(Deserialized));
   EXPECT_THAT(Deserialized->first, ID);
   EXPECT_THAT(Deserialized->second.ID, Sym.ID);
 }
@@ -396,11 +414,16 @@ TEST(RemoteMarshallingTest, RelationsSerializion) {
 TEST(RemoteMarshallingTest, RelativePathToURITranslation) {
   Marshaller ProtobufMarshaller(/*RemoteIndexRoot=*/"",
                                 /*LocalIndexRoot=*/testPath("home/project/"));
-  EXPECT_TRUE(ProtobufMarshaller.relativePathToURI("lib/File.cpp"));
+  auto URIString = ProtobufMarshaller.relativePathToURI("lib/File.cpp");
+  ASSERT_TRUE(bool(URIString));
   // RelativePath can not be absolute.
-  EXPECT_FALSE(ProtobufMarshaller.relativePathToURI("/lib/File.cpp"));
+  URIString = ProtobufMarshaller.relativePathToURI("/lib/File.cpp");
+  EXPECT_FALSE(bool(URIString));
+  llvm::consumeError(URIString.takeError());
   // RelativePath can not be empty.
-  EXPECT_FALSE(ProtobufMarshaller.relativePathToURI(std::string()));
+  URIString = ProtobufMarshaller.relativePathToURI(std::string());
+  EXPECT_FALSE(bool(URIString));
+  llvm::consumeError(URIString.takeError());
 }
 
 TEST(RemoteMarshallingTest, URIToRelativePathTranslation) {
@@ -408,14 +431,17 @@ TEST(RemoteMarshallingTest, URIToRelativePathTranslation) {
   llvm::UniqueStringSaver Strings(Arena);
   Marshaller ProtobufMarshaller(/*RemoteIndexRoot=*/testPath("remote/project/"),
                                 /*LocalIndexRoot=*/"");
-  EXPECT_TRUE(ProtobufMarshaller.uriToRelativePath(
-      testPathURI("remote/project/lib/File.cpp", Strings)));
+  auto RelativePath = ProtobufMarshaller.uriToRelativePath(
+      testPathURI("remote/project/lib/File.cpp", Strings));
+  ASSERT_TRUE(bool(RelativePath));
   // RemoteIndexRoot has to be be a prefix of the file path.
   Marshaller WrongMarshaller(
       /*RemoteIndexRoot=*/testPath("remote/other/project/"),
       /*LocalIndexRoot=*/"");
-  EXPECT_FALSE(WrongMarshaller.uriToRelativePath(
-      testPathURI("remote/project/lib/File.cpp", Strings)));
+  RelativePath = WrongMarshaller.uriToRelativePath(
+      testPathURI("remote/project/lib/File.cpp", Strings));
+  EXPECT_FALSE(bool(RelativePath));
+  llvm::consumeError(RelativePath.takeError());
 }
 
 } // namespace
