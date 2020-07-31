@@ -421,11 +421,32 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
   return OFFLOAD_SUCCESS;
 }
 
+namespace {
+/// This structure contains information to deallocate a target pointer, aka.
+/// used to call the function \p DeviceTy::deallocTgtPtr.
+struct DeallocTgtPtrInfo {
+  /// Host pointer used to look up into the map table
+  void *HstPtrBegin;
+  /// Size of the data
+  int64_t DataSize;
+  /// Whether it is forced to be removed from the map table
+  bool ForceDelete;
+  /// Whether it has \p close modifier
+  bool HasCloseModifier;
+
+  DeallocTgtPtrInfo(void *HstPtr, int64_t Size, bool ForceDelete,
+                    bool HasCloseModifier)
+      : HstPtrBegin(HstPtr), DataSize(Size), ForceDelete(ForceDelete),
+        HasCloseModifier(HasCloseModifier) {}
+};
+} // namespace
+
 /// Internal function to undo the mapping and retrieve the data from the device.
 int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
                   void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
                   void **ArgMappers, __tgt_async_info *AsyncInfo) {
   int Ret;
+  std::vector<DeallocTgtPtrInfo> DeallocTgtPtrs;
   // process each input.
   for (int32_t I = ArgNum - 1; I >= 0; --I) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -574,15 +595,34 @@ int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
       }
       Device.ShadowMtx.unlock();
 
-      // Deallocate map
-      if (DelEntry) {
-        Ret = Device.deallocTgtPtr(HstPtrBegin, DataSize, ForceDelete,
-                                   HasCloseModifier);
-        if (Ret != OFFLOAD_SUCCESS) {
-          DP("Deallocating data from device failed.\n");
-          return OFFLOAD_FAIL;
-        }
-      }
+      // Add pointer to the buffer for later deallocation
+      if (DelEntry)
+        DeallocTgtPtrs.emplace_back(HstPtrBegin, DataSize, ForceDelete,
+                                    HasCloseModifier);
+    }
+  }
+
+  // We need to synchronize before deallocating data.
+  // If AsyncInfo is nullptr, the previous data transfer (if has) will be
+  // synchronous, so we don't need to synchronize again. If AsyncInfo->Queue is
+  // nullptr, there is no data transfer happened because once there is,
+  // AsyncInfo->Queue will not be nullptr, so again, we don't need to
+  // synchronize.
+  if (AsyncInfo && AsyncInfo->Queue) {
+    Ret = Device.synchronize(AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS) {
+      DP("Failed to synchronize device.\n");
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  // Deallocate target pointer
+  for (DeallocTgtPtrInfo &Info : DeallocTgtPtrs) {
+    Ret = Device.deallocTgtPtr(Info.HstPtrBegin, Info.DataSize,
+                               Info.ForceDelete, Info.HasCloseModifier);
+    if (Ret != OFFLOAD_SUCCESS) {
+      DP("Deallocating data from device failed.\n");
+      return OFFLOAD_FAIL;
     }
   }
 
@@ -1006,5 +1046,5 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
     return OFFLOAD_FAIL;
   }
 
-  return Device.synchronize(&AsyncInfo);
+  return OFFLOAD_SUCCESS;
 }
