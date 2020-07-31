@@ -61,7 +61,7 @@ struct Abbrev {
 
 struct ARangeDescriptor {
   llvm::yaml::Hex64 Address;
-  uint64_t Length;
+  yaml::Hex64 Length;
 };
 
 struct ARange {
