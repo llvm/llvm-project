@@ -309,9 +309,6 @@ private:
         entryPointList[entryIndex].second->lexicalSuccessor = p;
     } else if (const auto *entryStmt = p->getIf<parser::EntryStmt>()) {
       const auto *sym = std::get<Fortran::parser::Name>(entryStmt->t).symbol;
-      if (sym->IsFuncResult())
-        // Switch to the function sym.
-        sym = sym->owner().parent().FindSymbol(sym->name());
       assert(sym->has<semantics::SubprogramDetails>() &&
              "entry must be a subprogram");
       entryPointList.push_back(std::pair{sym, p});
