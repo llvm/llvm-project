@@ -1436,6 +1436,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
   case Intrinsic::masked_load:
+  case Intrinsic::abs:
   case Intrinsic::smax:
   case Intrinsic::smin:
   case Intrinsic::umax:
@@ -2505,6 +2506,18 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         return ConstantInt::get(Ty, C0->countTrailingZeros());
       else
         return ConstantInt::get(Ty, C0->countLeadingZeros());
+
+    case Intrinsic::abs:
+      // Undef or minimum val operand with poison min --> undef
+      assert(C1 && "Must be constant int");
+      if (C1->isOneValue() && (!C0 || C0->isMinSignedValue()))
+        return UndefValue::get(Ty);
+
+      // Undef operand with no poison min --> 0 (sign bit must be clear)
+      if (C1->isNullValue() && !C0)
+        return Constant::getNullValue(Ty);
+
+      return ConstantInt::get(Ty, C0->abs());
     }
 
     return nullptr;
