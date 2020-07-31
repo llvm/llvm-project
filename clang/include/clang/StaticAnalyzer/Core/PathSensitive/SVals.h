@@ -182,12 +182,6 @@ public:
   /// should continue to the base regions if the region is not symbolic.
   SymbolRef getAsSymbol(bool IncludeBaseRegions = false) const;
 
-  /// getAsSymbolicExpression - If this Sval wraps a symbolic expression then
-  ///  return that expression.  Otherwise return NULL.
-  const SymExpr *getAsSymbolicExpression() const;
-
-  const SymExpr *getAsSymExpr() const;
-
   const MemRegion *getAsRegion() const;
 
   /// printJson - Pretty-prints in JSON format.
