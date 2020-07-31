@@ -605,7 +605,7 @@ bool AMDGPUPromoteAlloca::binaryOpIsDerivedFromSameAlloca(Value *BaseAlloca,
   if (isa<ConstantPointerNull>(OtherOp))
     return true;
 
-  Value *OtherObj = getUnderlyingObject(OtherOp, *DL);
+  Value *OtherObj = getUnderlyingObject(OtherOp);
   if (!isa<AllocaInst>(OtherObj))
     return false;
 

@@ -2524,8 +2524,8 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     // memory within the lifetime of the current function (allocas, byval
     // arguments, globals), then determine the comparison result here.
     SmallVector<const Value *, 8> LHSUObjs, RHSUObjs;
-    getUnderlyingObjects(LHS, LHSUObjs, DL);
-    getUnderlyingObjects(RHS, RHSUObjs, DL);
+    getUnderlyingObjects(LHS, LHSUObjs);
+    getUnderlyingObjects(RHS, RHSUObjs);
 
     // Is the set of underlying objects all noalias calls?
     auto IsNAC = [](ArrayRef<const Value *> Objects) {
