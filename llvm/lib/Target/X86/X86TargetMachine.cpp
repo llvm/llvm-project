@@ -311,6 +311,14 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+                                           unsigned DestAS) const {
+  assert(SrcAS != DestAS && "Expected different address spaces!");
+  if (getPointerSize(SrcAS) != getPointerSize(DestAS))
+    return false;
+  return SrcAS < 256 && DestAS < 256;
+}
+
 //===----------------------------------------------------------------------===//
 // X86 TTI query.
 //===----------------------------------------------------------------------===//

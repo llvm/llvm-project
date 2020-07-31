@@ -1478,11 +1478,6 @@ EVT SITargetLowering::getOptimalMemOpType(
   return MVT::Other;
 }
 
-bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
-                                           unsigned DestAS) const {
-  return isFlatGlobalAddrSpace(SrcAS) && isFlatGlobalAddrSpace(DestAS);
-}
-
 bool SITargetLowering::isMemOpHasNoClobberedMemOperand(const SDNode *N) const {
   const MemSDNode *MemNode = cast<MemSDNode>(N);
   const Value *Ptr = MemNode->getMemOperand()->getValue();
@@ -1497,7 +1492,9 @@ bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS)
     return true;
 
-  return isNoopAddrSpaceCast(SrcAS, DestAS);
+  const GCNTargetMachine &TM =
+      static_cast<const GCNTargetMachine &>(getTargetMachine());
+  return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
 }
 
 bool SITargetLowering::isMemOpUniform(const SDNode *N) const {
@@ -2285,8 +2282,10 @@ SDValue SITargetLowering::LowerFormalArguments(
       if (Arg.Flags.isByRef()) {
         SDValue Ptr = lowerKernArgParameterPtr(DAG, DL, Chain, Offset);
 
-        if (!isNoopAddrSpaceCast(AMDGPUAS::CONSTANT_ADDRESS,
-                                 Arg.Flags.getPointerAddrSpace())) {
+        const GCNTargetMachine &TM =
+            static_cast<const GCNTargetMachine &>(getTargetMachine());
+        if (!TM.isNoopAddrSpaceCast(AMDGPUAS::CONSTANT_ADDRESS,
+                                    Arg.Flags.getPointerAddrSpace())) {
           Ptr = DAG.getAddrSpaceCast(DL, VT, Ptr, AMDGPUAS::CONSTANT_ADDRESS,
                                      Arg.Flags.getPointerAddrSpace());
         }
@@ -8506,7 +8505,7 @@ SDValue SITargetLowering::LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) co
   unsigned AS = AtomicNode->getAddressSpace();
 
   // No custom lowering required for local address space
-  if (!isFlatGlobalAddrSpace(AS))
+  if (!AMDGPU::isFlatGlobalAddrSpace(AS))
     return Op;
 
   // Non-local address space requires custom lowering for atomic compare
