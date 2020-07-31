@@ -1129,9 +1129,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             d.rank == Rank::elementalOrBOZ) {
           continue;
         } else {
+          const IntrinsicDummyArgument &nextParam{dummy[j + 1]};
           messages.Say(
-              "Typeless (BOZ) not allowed for '%s=' argument"_err_en_US,
-              d.keyword);
+              "Typeless (BOZ) not allowed for both '%s=' & '%s=' arguments"_err_en_US, // C7109
+              d.keyword, nextParam.keyword);
         }
       } else {
         // NULL(), procedure, or procedure pointer
