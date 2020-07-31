@@ -36,7 +36,7 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
         context, std::move(funcRef), &Scalar<T>::CONJG);
   } else if (name == "cmplx") {
     using Part = typename T::Part;
-    if (args.size() == 1) {
+    if (args.size() == 2) { // CMPLX(X, [KIND])
       if (auto *x{UnwrapExpr<Expr<SomeComplex>>(args[0])}) {
         return Fold(context, ConvertToType<T>(std::move(*x)));
       }
@@ -46,7 +46,8 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
           Expr<T>{ComplexConstructor<KIND>{ToReal<KIND>(context, std::move(re)),
               ToReal<KIND>(context, std::move(im))}});
     }
-    CHECK(args.size() == 2 || args.size() == 3);
+    // CMPLX(X, [Y, KIND])
+    CHECK(args.size() == 3);
     Expr<SomeType> re{std::move(*args[0].value().UnwrapExpr())};
     Expr<SomeType> im{args[1] ? std::move(*args[1].value().UnwrapExpr())
                               : AsGenericExpr(Constant<Part>{Scalar<Part>{}})};
