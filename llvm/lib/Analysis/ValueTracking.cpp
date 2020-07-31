@@ -1644,13 +1644,24 @@ static void computeKnownBitsFromOperator(const Operator *I,
       default: break;
       case Intrinsic::abs:
         computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
-        // Otherwise, if this call is undefined for INT_MIN, the result is
-        // positive.
-        if (match(II->getArgOperand(1), m_One()))
-          Known.Zero.setSignBit();
+
+        // If the source's MSB is zero then we know the rest of the bits.
+        if (Known2.isNonNegative()) {
+          Known.Zero |= Known2.Zero;
+          Known.One |= Known2.One;
+          break;
+        }
+
         // Absolute value preserves trailing zero count.
         Known.Zero.setLowBits(Known2.Zero.countTrailingOnes());
-        // FIXME: Handle known negative/non-negative input?
+
+        // If this call is undefined for INT_MIN, the result is positive. We
+        // also know it can't be INT_MIN if there is a set bit that isn't the
+        // sign bit.
+        Known2.One.clearSignBit();
+        if (match(II->getArgOperand(1), m_One()) || Known2.One.getBoolValue())
+          Known.Zero.setSignBit();
+        // FIXME: Handle known negative input?
         // FIXME: Calculate the negated Known bits and combine them?
         break;
       case Intrinsic::bitreverse:
