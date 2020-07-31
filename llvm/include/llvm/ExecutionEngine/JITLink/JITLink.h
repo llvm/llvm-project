@@ -963,7 +963,7 @@ public:
       Section &Sec = Sym.getBlock().getSection();
       Sec.removeSymbol(Sym);
     }
-    Sym.makeExternal(createAddressable(false));
+    Sym.makeExternal(createAddressable(0, false));
     ExternalSymbols.insert(&Sym);
   }
 
