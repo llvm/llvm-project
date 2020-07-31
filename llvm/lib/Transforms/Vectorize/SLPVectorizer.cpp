@@ -5912,7 +5912,7 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
         continue;
       if (!isValidElementType(SI->getValueOperand()->getType()))
         continue;
-      Stores[getUnderlyingObject(SI->getPointerOperand(), *DL)].push_back(SI);
+      Stores[getUnderlyingObject(SI->getPointerOperand())].push_back(SI);
     }
 
     // Ignore getelementptr instructions that have more than one index, a

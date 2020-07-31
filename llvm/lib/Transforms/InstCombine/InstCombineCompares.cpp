@@ -5643,10 +5643,10 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   // Try to optimize equality comparisons against alloca-based pointers.
   if (Op0->getType()->isPointerTy() && I.isEquality()) {
     assert(Op1->getType()->isPointerTy() && "Comparing pointer with non-pointer?");
-    if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(Op0, DL)))
+    if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(Op0)))
       if (Instruction *New = foldAllocaCmp(I, Alloca, Op1))
         return New;
-    if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(Op1, DL)))
+    if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(Op1)))
       if (Instruction *New = foldAllocaCmp(I, Alloca, Op0))
         return New;
   }
